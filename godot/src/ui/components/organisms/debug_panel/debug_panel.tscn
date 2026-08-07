@@ -32,32 +32,34 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-theme_override_constants/margin_top = 40
-theme_override_constants/margin_right = 140
-theme_override_constants/margin_bottom = 20
 
 [node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer" unique_id=1367164241]
 layout_mode = 2
 size_flags_horizontal = 8
 size_flags_vertical = 0
+mouse_filter = 2
 
 [node name="HBoxContainer_TopButtons" type="HBoxContainer" parent="MarginContainer/VBoxContainer" unique_id=1776876775]
+unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 0
+mouse_filter = 2
 theme_override_constants/separation = 8
 
 [node name="Button_ShowHide" type="Button" parent="MarginContainer/VBoxContainer/HBoxContainer_TopButtons" unique_id=1347699769]
 unique_name_in_owner = true
 layout_mode = 2
+size_flags_vertical = 4
 focus_mode = 0
 theme = ExtResource("7_nlnrl")
 theme_type_variation = &"SecondaryLittle"
-text = "Debug Panel"
+text = "Console"
 icon = ExtResource("5_34smo")
 
 [node name="Button_ReloadScene" type="Button" parent="MarginContainer/VBoxContainer/HBoxContainer_TopButtons" unique_id=978841142]
 unique_name_in_owner = true
 layout_mode = 2
+size_flags_vertical = 4
 focus_mode = 0
 theme = ExtResource("7_nlnrl")
 theme_type_variation = &"SecondaryLittle"
@@ -80,11 +82,10 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 theme = ExtResource("1_c8oen")
-current_tab = 2
+current_tab = 0
 tab_focus_mode = 0
 
 [node name="Console" type="VBoxContainer" parent="MarginContainer/VBoxContainer/Control_Panel/TabContainer_DebugPanel" unique_id=859584269]
-visible = false
 layout_mode = 2
 metadata/_tab_index = 0
 
@@ -150,6 +151,7 @@ layout_mode = 2
 size_flags_vertical = 3
 
 [node name="Misc&Debugger" type="VBoxContainer" parent="MarginContainer/VBoxContainer/Control_Panel/TabContainer_DebugPanel" unique_id=798233632]
+visible = false
 layout_mode = 2
 metadata/_tab_index = 2
 

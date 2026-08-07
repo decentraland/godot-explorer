@@ -35,17 +35,19 @@ use godot::{
 use std::{
     cell::RefCell,
     collections::{HashMap, HashSet},
-    sync::atomic::AtomicU32,
+    sync::atomic::{AtomicU32, Ordering},
     time::{Duration, Instant},
 };
 use tokio::sync::mpsc::error::TrySendError;
 
 use super::{
     components::pointer_events::{
-        find_active_proximity_entity, get_entity_pointer_event, pointer_events_system,
+        entity_player_distance, event_info_in_range, find_active_proximity_entity,
+        get_entity_pointer_event, pointer_events_system,
     },
     input::InputState,
-    loading_session::LoadingSession,
+    loading_funnel::{LoadingBeginContext, LoadingFunnel},
+    loading_session::{LoadingPhase, LoadingSession},
     pool_manager::PoolManager,
     scene::{
         Dirty, GlobalSceneType, GodotDclRaycastResult, RaycastResult, Scene, SceneState, SceneType,
@@ -68,11 +70,16 @@ pub struct SceneManager {
 
     scenes: HashMap<SceneId, Scene>,
 
-    #[var]
-    player_avatar_node: Gd<Node3D>,
+    // The Player (avatar/body) dies with the Explorer on teardown while the
+    // SceneManager autoload survives. Nullable + validity-filtered getters so a
+    // property read in that window returns null instead of panicking on the
+    // freed instance (GODOT-EXPLORER-1DY family) — a plain #[var] getter would
+    // panic before any GDScript is_instance_valid() check could run.
+    #[var(get = get_player_avatar_node, set = set_player_avatar_node)]
+    player_avatar_node: Option<Gd<Node3D>>,
 
-    #[var]
-    player_body_node: Gd<Node3D>,
+    #[var(get = get_player_body_node, set = set_player_body_node)]
+    player_body_node: Option<Gd<Node3D>>,
 
     #[var]
     console: Callable,
@@ -103,8 +110,22 @@ pub struct SceneManager {
     crashed_scene_ids: Vec<SceneId>,
     global_scene_ids: Vec<SceneId>,
 
+    // Graceful memory management (issue #2002). Frames to wait after a
+    // memory-pressure kill before acting again, so freed memory is reflected.
+    memory_settle_frames: i32,
+    // Latched while a low-memory warning we triggered is on screen, so we don't
+    // re-emit it every frame. Cleared once pressure recovers (level back to OK).
+    memory_modal_active: bool,
+    // Set when the user chose "Continue anyway" on the low-memory warning: from
+    // then on we stop warning and let the scene run (with verbose memory logging)
+    // so we can observe how far it gets before an eventual OOM. Session-scoped.
+    memory_warning_dismissed: bool,
+
     input_state: InputState,
-    last_raycast_result: Option<GodotDclRaycastResult>,
+    // Entity currently in the "active hover" state (raycast target AND within its
+    // interaction range), with the hit captured when it became active. Drives cursor
+    // HOVER_ENTER/LEAVE so they respond to distance changes, not just target changes.
+    last_hover_entity: Option<GodotDclRaycastResult>,
     last_proximity_entity: Option<(SceneId, SceneEntityId)>,
 
     #[var]
@@ -130,6 +151,11 @@ pub struct SceneManager {
     current_loading_session: Option<LoadingSession>,
     next_session_id: u64,
 
+    // Loading funnel: pure per-load accumulator emitted as a single Segment "Loading Event".
+    // Fed from the loading-session lifecycle below plus a few GDScript push-calls
+    // (loading_begin_episode / loading_end_episode / loading_mark_* / loading_realm_change_failed).
+    loading_funnel: LoadingFunnel,
+
     // Benchmark toggles (issue #1862). Set by gp_benchmark_runner.gd from
     // godot/bench/genesis_plaza.config.json before scenes start ticking.
     #[var(get, set)]
@@ -145,6 +171,11 @@ pub static GLOBAL_TIMESTAMP: AtomicU32 = AtomicU32::new(0);
 const MAX_TIME_PER_SCENE_TICK_US: i64 = 8333; // 50% of update time at 60fps
 const MIN_TIME_TO_PROCESS_SCENE_US: i64 = 2083; // 25% of max_time_per_scene_tick_us (4 scenes per frame)
 
+// Frames to wait after a memory-pressure kill before acting again (~1.5s at
+// 60fps), so the scene thread can tear down and Godot/GPU memory is reclaimed
+// before we measure pressure again. See `handle_memory_pressure`.
+const MEMORY_SETTLE_FRAMES: i32 = 90;
+
 #[godot_api]
 impl SceneManager {
     #[signal]
@@ -155,6 +186,14 @@ impl SceneManager {
 
     #[signal]
     fn scene_crashed(scene_id: i32, entity_id: GString);
+
+    /// Emitted when the background memory monitor detects critical pressure and
+    /// there is no farther scene left to evict (only the current parcel +
+    /// globals remain). Instead of killing the scene unilaterally, GDScript shows
+    /// a warning modal letting the user "Continue anyway" or go "Back to
+    /// Discover". Emitted once per pressure episode (issue #2002).
+    #[signal]
+    fn low_memory_warning(scene_id: i32, entity_id: GString, footprint_mb: i32, available_mb: i32);
 
     // Loading session signals
     #[signal]
@@ -184,6 +223,17 @@ impl SceneManager {
         dcl_scene_entity_definition: Gd<DclSceneEntityDefinition>,
         inspect: bool,
     ) -> i32 {
+        // base_ui dies with the Explorer (sign-out / return-to-discover / realm
+        // change), and a cache-hot scene load can resolve before the next
+        // explorer._ready() -> recreate_base_ui(). Cloning the freed control
+        // below would panic and abort the spawn (GODOT-EXPLORER-1DY / -1E0), so
+        // recreate eagerly; a later recreate_base_ui() is harmless because scene
+        // UI roots only attach to the *current* base_ui.
+        if !self.base_ui.is_instance_valid() {
+            tracing::warn!("start_scene: base_ui was freed (explorer teardown) — recreating");
+            self.recreate_base_ui();
+        }
+
         let scene_entity_definition = dcl_scene_entity_definition.bind().get_ref();
 
         let content_mapping = scene_entity_definition.content_mapping.clone();
@@ -300,6 +350,8 @@ impl SceneManager {
         if let Some(session) = &mut self.current_loading_session {
             session.report_scene_spawned(new_scene_id, 0);
         }
+        // Loading funnel: first scene spawned is a funnel milestone.
+        self.loading_funnel.on_scene_spawned(Instant::now());
 
         self.base_mut().call_deferred(
             "emit_signal",
@@ -331,12 +383,28 @@ impl SceneManager {
         self.ui_canvas_information = self.create_ui_canvas_information();
     }
 
+    /// Detach base_ui (and the scene UI roots parented under it) from the dying
+    /// Explorer tree. Called by sign_out()/return_to_discover() right before
+    /// change_scene_to_file so freeing the Explorer can't free UI nodes Rust
+    /// still references (GODOT-EXPLORER-1DY); the orphan is freed by the next
+    /// recreate_base_ui().
+    #[func]
+    fn detach_base_ui(&mut self) {
+        if !self.base_ui.is_instance_valid() {
+            return;
+        }
+        if let Some(mut parent) = self.base_ui.get_parent() {
+            parent.remove_child(&self.base_ui.clone().upcast::<Node>());
+        }
+    }
+
     #[func]
     fn kill_scene(&mut self, scene_id: i32) -> bool {
         let scene_id = SceneId(scene_id);
+        let now_us = (std::time::Instant::now() - self.begin_time).as_micros() as i64;
         if let Some(scene) = self.scenes.get_mut(&scene_id) {
             if let SceneState::Alive = scene.state {
-                scene.state = SceneState::ToKill;
+                scene.state = SceneState::ToKill(now_us);
                 self.dying_scene_ids.push(scene_id);
                 return true;
             }
@@ -346,9 +414,10 @@ impl SceneManager {
 
     #[func]
     fn kill_all_scenes(&mut self) {
+        let now_us = (std::time::Instant::now() - self.begin_time).as_micros() as i64;
         for (scene_id, scene) in self.scenes.iter_mut() {
             if let SceneState::Alive = scene.state {
-                scene.state = SceneState::ToKill;
+                scene.state = SceneState::ToKill(now_us);
                 self.dying_scene_ids.push(*scene_id);
             }
         }
@@ -399,6 +468,15 @@ impl SceneManager {
             "loading_started",
             &[session_id.to_variant(), count.to_variant()],
         );
+        // Loading funnel: begin an "auto" load if none is active yet (streaming into a parcel
+        // with no loading-screen entry point), then record the initial metadata phase.
+        if !self.loading_funnel.is_active() {
+            let ctx = self.make_loading_begin_context("auto".to_string(), String::new());
+            let ev = self.loading_funnel.begin(ctx, Instant::now());
+            self.emit_loading_events(vec![ev]);
+        }
+        self.loading_funnel
+            .on_phase(LoadingPhase::Metadata, Instant::now());
         self.base_mut().emit_signal(
             "loading_phase_changed",
             &[GString::from("metadata").to_variant()],
@@ -621,6 +699,7 @@ impl SceneManager {
                 new_phase,
                 session_id
             );
+            self.loading_funnel.on_phase(new_phase, Instant::now());
             self.base_mut().emit_signal(
                 "loading_phase_changed",
                 &[GString::from(new_phase.as_str()).to_variant()],
@@ -629,6 +708,7 @@ impl SceneManager {
 
         if is_complete {
             tracing::debug!("[LOADING] COMPLETE - session {} finished", session_id);
+            self.loading_funnel.on_complete(Instant::now());
             self.current_loading_session = None;
             self.base_mut()
                 .emit_signal("loading_complete", &[session_id.to_variant()]);
@@ -637,18 +717,21 @@ impl SceneManager {
 
     /// Internal: Emit loading progress
     fn emit_loading_progress(&mut self) {
-        if let Some(session) = &mut self.current_loading_session {
-            let progress = session.calculate_progress();
-            let (ready, total) = session.get_scene_counts();
-            self.base_mut().emit_signal(
-                "loading_progress",
-                &[
-                    progress.to_variant(),
-                    (ready as i32).to_variant(),
-                    (total as i32).to_variant(),
-                ],
-            );
-        }
+        let Some(session) = &mut self.current_loading_session else {
+            return;
+        };
+        let progress = session.calculate_progress();
+        let (ready, total) = session.get_scene_counts();
+        // Loading funnel: accumulate the 25-30% plateau band.
+        self.loading_funnel.on_progress(progress, Instant::now());
+        self.base_mut().emit_signal(
+            "loading_progress",
+            &[
+                progress.to_variant(),
+                (ready as i32).to_variant(),
+                (total as i32).to_variant(),
+            ],
+        );
     }
 
     /// Internal: Check for individual scene timeouts (called from physics_process)
@@ -764,14 +847,155 @@ impl SceneManager {
             }
         }
 
+        let current_parcel = self.current_parcel_scene_id;
+        let mut current_parcel_rendered = false;
         for scene_id in scenes_ready {
             tracing::debug!("[LOADING] Scene {:?} reported READY", scene_id);
             session.report_scene_ready(scene_id);
+            if scene_id == current_parcel {
+                current_parcel_rendered = true;
+            }
+        }
+
+        // Loading funnel: the current parcel scene reaching ready is the "scene rendered" milestone.
+        if current_parcel_rendered {
+            self.loading_funnel.on_scene_rendered(Instant::now());
         }
 
         // Check for phase transitions and emit progress
         self.check_loading_phase_transition();
         self.emit_loading_progress();
+    }
+
+    // ---- Loading funnel (single Segment "Loading Event") -------------------------------------
+    // Session-derived milestones are fed internally from the lifecycle above. A few marks
+    // originate in GDScript UI/realm code (the loading-screen boundary, the /about fetch, scene
+    // discovery, realm-resolution failure, GLTF group failures) and are pushed in through these
+    // #[func]s. The Godot-boundary helpers below read counts / emit so LoadingFunnel stays pure.
+
+    /// Begin a load (loading screen shown). Supersedes any already-open load first.
+    #[func]
+    pub fn loading_begin_episode(&mut self, when: GString, realm: GString) {
+        if self.loading_funnel.is_active() {
+            self.loading_end_episode(GString::from("superseded"));
+        }
+        let ctx = self.make_loading_begin_context(when.to_string(), realm.to_string());
+        let ev = self.loading_funnel.begin(ctx, Instant::now());
+        self.emit_loading_events(vec![ev]);
+    }
+
+    /// End the current load (loading screen hidden, or superseded).
+    #[func]
+    pub fn loading_end_episode(&mut self, reason: GString) {
+        let (loaded, loading, _) = self.loading_content_counts();
+        let frames = Self::loading_process_frames();
+        // Only a fallback for a load that began with no realm at all — the funnel keeps what it
+        // knew at begin otherwise. See `LoadingFunnel::end`.
+        let realm = self.current_realm_string();
+        let events = self.loading_funnel.end(
+            &reason.to_string(),
+            &realm,
+            loaded,
+            loading,
+            frames,
+            Instant::now(),
+        );
+        self.emit_loading_events(events);
+    }
+
+    /// GDScript (realm.gd): the /about fetch returned — realm resolution milestone.
+    #[func]
+    pub fn loading_mark_about_end(&mut self) {
+        self.loading_funnel.mark_about_end(Instant::now());
+    }
+
+    /// GDScript (scene_fetcher.gd): the desired-scene set was produced — discovery milestone.
+    #[func]
+    pub fn loading_mark_discovery(&mut self) {
+        self.loading_funnel.mark_discovery(Instant::now());
+    }
+
+    /// GDScript (realm.gd): realm resolution failed — emit a realm_change_failed event correlated
+    /// to the current load and mark it so it ends as `error`.
+    #[func]
+    pub fn loading_realm_change_failed(&mut self, realm: GString, reason: GString) {
+        let ev = self
+            .loading_funnel
+            .realm_change_failed(&realm.to_string(), &reason.to_string());
+        self.emit_loading_events(vec![ev]);
+    }
+
+    /// GDScript (gltf_loading_coordinator.gd): a source group failed to fetch/load.
+    #[func]
+    pub fn loading_note_asset_failure(&mut self, count: i32) {
+        self.loading_funnel.note_asset_failure(count.max(0) as i64);
+    }
+
+    fn make_loading_begin_context(&self, when: String, realm: String) -> LoadingBeginContext {
+        let realm = if realm.is_empty() {
+            self.current_realm_string()
+        } else {
+            realm
+        };
+        let os = godot::classes::Os::singleton();
+        LoadingBeginContext {
+            when,
+            realm,
+            cpu_count: os.get_processor_count(),
+            platform: os.get_name().to_string(),
+            process_frames: Self::loading_process_frames(),
+        }
+    }
+
+    /// (loaded, loading, download_mbs) from the ContentProvider — 0s if the singleton is gone.
+    fn loading_content_counts(&self) -> (i64, i64, f64) {
+        let Some(global) = DclGlobal::try_singleton() else {
+            return (0, 0, 0.0);
+        };
+        let content_provider = global.bind().content_provider.clone();
+        let cp = content_provider.bind();
+        (
+            cp.count_loaded_resources() as i64,
+            cp.count_loading_resources() as i64,
+            cp.get_download_speed_mbs(),
+        )
+    }
+
+    fn current_realm_string(&self) -> String {
+        let Some(global) = DclGlobal::try_singleton() else {
+            return String::new();
+        };
+        let mut realm = global.bind().realm.clone();
+        realm
+            .call("get_realm_string", &[])
+            .try_to::<GString>()
+            .map(|g| g.to_string())
+            .unwrap_or_default()
+    }
+
+    fn loading_process_frames() -> i64 {
+        godot::classes::Engine::singleton().get_process_frames() as i64
+    }
+
+    fn emit_loading_events(
+        &self,
+        events: Vec<crate::analytics::data_definition::SegmentEventLoading>,
+    ) {
+        if events.is_empty() {
+            return;
+        }
+        let Some(global) = DclGlobal::try_singleton() else {
+            return;
+        };
+        let mut metrics = global.bind().metrics.clone();
+        let mut metrics = metrics.bind_mut();
+        for ev in events {
+            metrics.queue_loading_event(ev);
+        }
+        // Flush right after every loading event so `started` and each `progress` pulse ship
+        // immediately: a load can be abandoned (quit / kill) before the periodic 10s flush would
+        // fire, and the whole point of these events is to survive that.
+        metrics.flush();
     }
 
     // ============== End Loading Session API ==============
@@ -782,6 +1006,7 @@ impl SceneManager {
             emote_urn: emote_id.to_string(),
             r#loop: looping,
             timestamp: 0,
+            mask: None,
         };
 
         // Primary player send to all the scenes
@@ -803,9 +1028,39 @@ impl SceneManager {
         player_body_node: Gd<Node3D>,
         console: Callable,
     ) {
-        self.player_avatar_node = player_avatar_node.clone();
-        self.player_body_node = player_body_node.clone();
+        self.player_avatar_node = Some(player_avatar_node);
+        self.player_body_node = Some(player_body_node);
         self.console = console;
+    }
+
+    /// Validity-filtered: the Player is freed with the Explorer on teardown, so
+    /// a read in that window returns null rather than a dangling handle.
+    #[func]
+    pub fn get_player_avatar_node(&self) -> Option<Gd<Node3D>> {
+        self.player_avatar_node
+            .as_ref()
+            .filter(|node| node.is_instance_valid())
+            .cloned()
+    }
+
+    #[func]
+    fn set_player_avatar_node(&mut self, node: Option<Gd<Node3D>>) {
+        self.player_avatar_node = node;
+    }
+
+    /// Validity-filtered: the Player is freed with the Explorer on teardown, so
+    /// a read in that window returns null rather than a dangling handle.
+    #[func]
+    pub fn get_player_body_node(&self) -> Option<Gd<Node3D>> {
+        self.player_body_node
+            .as_ref()
+            .filter(|node| node.is_instance_valid())
+            .cloned()
+    }
+
+    #[func]
+    fn set_player_body_node(&mut self, node: Option<Gd<Node3D>>) {
+        self.player_body_node = node;
     }
 
     #[func]
@@ -1176,7 +1431,10 @@ impl SceneManager {
     fn compute_scene_distance(&mut self) {
         self.current_parcel_scene_id = SceneId::INVALID;
 
-        let mut player_global_position = self.player_avatar_node.get_global_transform().origin;
+        let Some(player_avatar) = self.get_player_avatar_node() else {
+            return;
+        };
+        let mut player_global_position = player_avatar.get_global_transform().origin;
         player_global_position.x *= 0.0625;
         player_global_position.y *= 0.0625;
         player_global_position.z *= -0.0625;
@@ -1204,6 +1462,12 @@ impl SceneManager {
         // V8/Deno threads. Reaping here guarantees background teardown either way.
         self.reap_dying_scenes();
 
+        // Act on memory pressure detected by the background monitor (issue #2002).
+        // Runs even while paused (the lobby pauses the runner) because a heavy
+        // scene can be loading behind the loading screen — exactly when an OOM
+        // kill strikes.
+        self.handle_memory_pressure();
+
         if self.pause {
             return;
         }
@@ -1211,9 +1475,9 @@ impl SceneManager {
         // SceneManager outlives the Explorer scene (autoload singleton). When the user
         // signs out via change_scene_to_file, player_avatar_node becomes a dangling
         // reference until the next Explorer load reassigns it via set_player_node.
-        if !self.player_avatar_node.is_instance_valid() {
+        let Some(player_avatar) = self.get_player_avatar_node() else {
             return;
-        }
+        };
 
         let start_time_us = (std::time::Instant::now() - self.begin_time).as_micros() as i64;
         let end_time_us = start_time_us + MAX_TIME_PER_SCENE_TICK_US;
@@ -1222,7 +1486,7 @@ impl SceneManager {
 
         self.receive_from_thread();
 
-        let player_global_transform = self.player_avatar_node.get_global_transform();
+        let player_global_transform = player_avatar.get_global_transform();
         let camera_node = self.base().get_viewport().and_then(|x| x.get_camera_3d());
 
         let (camera_global_transform, camera_mode) = match camera_node.as_ref() {
@@ -1379,16 +1643,130 @@ impl SceneManager {
         }
     }
 
+    /// Consume the pressure level published by the background memory monitor
+    /// (issue #2002) and free memory before the OS kills the app. Detection runs
+    /// off-thread so it survives a main-thread freeze; this acts the instant the
+    /// main loop gets a slice of CPU.
+    ///
+    /// Policy: evict the farthest disposable parcel first (silent — the player is
+    /// not in it). When only the current parcel and globals remain and we are
+    /// still CRITICAL, warn once via `low_memory_warning` and let the user decide
+    /// ("Continue anyway" / "Back to Discover") rather than kill the scene they
+    /// are standing in. A settle window after each kill avoids thrashing while
+    /// freed memory is reclaimed.
+    fn handle_memory_pressure(&mut self) {
+        let level = crate::tools::memory_monitor::PRESSURE_LEVEL.load(Ordering::Relaxed);
+
+        if level == 0 {
+            // Pressure cleared: re-arm the warning and drop any settle countdown.
+            self.memory_modal_active = false;
+            self.memory_settle_frames = 0;
+            return;
+        }
+
+        if self.memory_settle_frames > 0 {
+            self.memory_settle_frames -= 1;
+            return;
+        }
+
+        // Pick the farthest non-current, non-global, alive parcel scene.
+        let current = self.current_parcel_scene_id;
+        let mut farthest: Option<(SceneId, f32)> = None;
+        for (id, scene) in self.scenes.iter() {
+            if !matches!(scene.state, SceneState::Alive) {
+                continue;
+            }
+            if *id == current || matches!(scene.scene_type, SceneType::Global(_)) {
+                continue;
+            }
+            if farthest.is_none_or(|(_, best)| scene.distance > best) {
+                farthest = Some((*id, scene.distance));
+            }
+        }
+
+        let available = crate::tools::memory_monitor::AVAILABLE_MB.load(Ordering::Relaxed);
+
+        if let Some((scene_id, distance)) = farthest {
+            let title = self
+                .scenes
+                .get(&scene_id)
+                .map(|s| s.scene_entity_definition.get_title())
+                .unwrap_or_default();
+            crate::tools::memory_monitor::emit_log(&format!(
+                "[MemMonitor] level={} available={}MB -> evict far scene id={} dist={:.1} '{}'",
+                level, available, scene_id.0, distance, title
+            ));
+            self.kill_scene(scene_id.0);
+            self.memory_settle_frames = MEMORY_SETTLE_FRAMES;
+            return;
+        }
+
+        // Nothing disposable left (only the current parcel + globals). Rather
+        // than kill the scene the player is in, warn once under CRITICAL and let
+        // the user decide. If they already chose to continue, stay silent.
+        if level >= 2 && !self.memory_modal_active && !self.memory_warning_dismissed {
+            let entity_id = self
+                .scenes
+                .get(&current)
+                .filter(|s| matches!(s.state, SceneState::Alive))
+                .map(|s| s.scene_entity_definition.id.clone());
+
+            if let Some(entity_id) = entity_id {
+                let footprint = crate::tools::memory_monitor::FOOTPRINT_MB.load(Ordering::Relaxed);
+                crate::tools::memory_monitor::emit_log(&format!(
+                    "[MemMonitor] CRITICAL available={}MB footprint={}MB -> warn user (scene id={})",
+                    available, footprint, current.0
+                ));
+                self.memory_modal_active = true;
+                self.base_mut().emit_signal(
+                    "low_memory_warning",
+                    &[
+                        current.0.to_variant(),
+                        entity_id.to_godot().to_variant(),
+                        footprint.to_variant(),
+                        available.to_variant(),
+                    ],
+                );
+            }
+        }
+    }
+
     /// Advance the kill state machine for every dying scene and free those that
     /// have finished. Runs every frame from the top of `scene_runner_update`,
     /// unconditionally — before the `pause` / avatar-validity early-returns — so
     /// scenes killed on sign-out or realm change are guaranteed to be torn down
     /// (V8/Deno threads joined, Godot nodes freed) even after the lobby pauses the
     /// runner. Without this, killed scenes would linger forever as ToKill.
+    /// Force-terminate a scene's V8 isolate via its handle. Last resort when the
+    /// graceful kill can't be delivered or the thread won't exit on its own. Takes
+    /// no `&self` so it can be called from inside `reap_dying_scenes`'s loop while a
+    /// scene is mutably borrowed. No-op when built without `use_deno`.
+    fn force_terminate_scene_v8(scene_id: &SceneId) {
+        #[cfg(feature = "use_deno")]
+        {
+            if let Ok(handles) = crate::dcl::js::VM_HANDLES.lock() {
+                if let Some(handle) = handles.get(scene_id) {
+                    handle.terminate_execution();
+                    tracing::info!("V8 execution terminated for scene {:?}", scene_id);
+                }
+            }
+        }
+        #[cfg(not(feature = "use_deno"))]
+        {
+            let _ = scene_id;
+        }
+    }
+
     fn reap_dying_scenes(&mut self) {
         if self.dying_scene_ids.is_empty() {
             return;
         }
+
+        // Force-terminate a scene this long after the kill was *requested* if it
+        // still hasn't finished — whether or not we ever managed to deliver the
+        // graceful kill signal. Measured against the kill-request time for
+        // `ToKill` and the kill-signal time for `KillSignal`.
+        const KILL_SCENE_TIMEOUT_US: i64 = 10 * 1_000_000;
 
         let current_time_us = (std::time::Instant::now() - self.begin_time).as_micros() as i64;
         let mut scene_to_remove: HashSet<SceneId> = HashSet::new();
@@ -1403,7 +1781,7 @@ impl SceneManager {
                 continue;
             };
             match scene.state {
-                SceneState::ToKill => {
+                SceneState::ToKill(request_time_us) => {
                     match scene
                         .dcl_scene
                         .main_sender_to_thread
@@ -1424,8 +1802,27 @@ impl SceneManager {
                             );
                             scene.state = SceneState::KillSignal(current_time_us);
                         }
-                        // Capacity-1 channel with the receiver still alive; retry next tick.
-                        Err(TrySendError::Full(_)) => {}
+                        // Capacity-1 channel and the scene thread hasn't drained the
+                        // previous RendererResponse (its JS is wedged and never calls
+                        // op_crdt_recv_wait). We can't deliver the graceful kill, so
+                        // without a timeout here the scene would stay ToKill forever and
+                        // its Godot nodes would never be freed — leaving the old scene
+                        // rendered on top of the new one after a teleport (issue #2229).
+                        // The V8 force-terminate below doesn't need the channel, so apply
+                        // it once we're past the timeout measured from the kill *request*.
+                        Err(TrySendError::Full(_)) => {
+                            let elapsed_from_request_us = current_time_us - request_time_us;
+                            if elapsed_from_request_us > KILL_SCENE_TIMEOUT_US {
+                                tracing::error!(
+                                    "timeout delivering kill to scene {:?} (channel full for {}s), forcing V8 termination",
+                                    scene_id,
+                                    elapsed_from_request_us / 1_000_000
+                                );
+                                Self::force_terminate_scene_v8(scene_id);
+                                // Mark as dead - thread should exit soon after V8 termination
+                                scene.state = SceneState::Dead;
+                            }
+                        }
                     }
                 }
                 SceneState::KillSignal(kill_time_us) => {
@@ -1433,27 +1830,13 @@ impl SceneManager {
                         scene.state = SceneState::Dead;
                     } else {
                         let elapsed_from_kill_us = current_time_us - kill_time_us;
-                        if elapsed_from_kill_us > 10 * 1e6 as i64 {
-                            // 10 seconds from the kill signal - force terminate V8
+                        if elapsed_from_kill_us > KILL_SCENE_TIMEOUT_US {
+                            // Timeout from the kill signal - force terminate V8
                             tracing::error!(
                                 "timeout killing scene {:?}, forcing V8 termination",
                                 scene_id
                             );
-
-                            // Use the V8 isolate handle to force-terminate execution
-                            #[cfg(feature = "use_deno")]
-                            {
-                                if let Ok(handles) = crate::dcl::js::VM_HANDLES.lock() {
-                                    if let Some(handle) = handles.get(scene_id) {
-                                        handle.terminate_execution();
-                                        tracing::info!(
-                                            "V8 execution terminated for scene {:?}",
-                                            scene_id
-                                        );
-                                    }
-                                }
-                            }
-
+                            Self::force_terminate_scene_v8(scene_id);
                             // Mark as dead - thread should exit soon after V8 termination
                             scene.state = SceneState::Dead;
                         }
@@ -1502,6 +1885,10 @@ impl SceneManager {
             return;
         };
         let signal_data = (*scene_id, scene.scene_entity_definition.id.clone());
+
+        // Drop the scene's external-content bookkeeping so a reload restarts
+        // its counters from zero.
+        crate::content::external_content::clear_scene(&scene.scene_entity_definition.id);
 
         // Cleanup trigger areas and release RIDs back to pool
         scene
@@ -1737,9 +2124,14 @@ impl SceneManager {
 
             let scene = self.scenes.get(&SceneId(dcl_scene_id))?;
             let scene_position = scene.godot_dcl_scene.root_node_3d.get_position();
+            // Build the hit from the CAMERA ray origin (not the avatar position) so
+            // `hit.length`/`global_origin`/`direction` are camera-relative, per
+            // raycast_hit.proto. This is what makes `max_distance` a true camera-distance
+            // gate (pointer_events.proto), independent of `max_player_distance` which is
+            // measured from the avatar. Avatar position was an incidental earlier choice.
             let raycast_data = RaycastHit::from_godot_raycast(
                 scene_position,
-                self.player_avatar_node.get_global_position(),
+                raycast_from,
                 &raycast_result,
                 Some(dcl_entity_id as u32),
             )?;
@@ -1881,6 +2273,7 @@ impl SceneManager {
         if let Some(mut global) = DclGlobal::try_singleton() {
             let mut global_bind = global.bind_mut();
             global_bind.reset_input_modifiers();
+            global_bind.reset_touch_controls();
             let was_skybox_active = global_bind.sdk_skybox_time_active;
             global_bind.reset_skybox_time();
             drop(global_bind);
@@ -1902,6 +2295,10 @@ impl SceneManager {
                 video_player_node.bind_mut().set_muted(true);
             }
 
+            // Stop and clear every particle system (idle scenes tick too slowly
+            // for the per-frame reconcile to feel immediate).
+            super::components::particle_system::reconcile_user_presence(scene, false);
+
             // Stop any wind/impulse the player just walked out of.
             scene.active_external_force = Vector3::ZERO;
             scene.pending_impulses.clear();
@@ -1913,10 +2310,14 @@ impl SceneManager {
 
             // leave it orphan! it will be re-added when you are in the scene, and deleted on scene deletion
             // Use call_deferred to avoid "Parent node is busy" errors during rapid scene transitions
-            self.base_ui.call_deferred(
-                "remove_child",
-                &[scene.godot_dcl_scene.root_node_ui.clone().to_variant()],
-            );
+            // The UI root dies with the old Explorer's base_ui subtree on
+            // teardown — cloning it freed would panic (GODOT-EXPLORER-1DY).
+            if scene.godot_dcl_scene.root_node_ui.is_instance_valid() {
+                self.base_ui.call_deferred(
+                    "remove_child",
+                    &[scene.godot_dcl_scene.root_node_ui.clone().to_variant()],
+                );
+            }
         }
 
         if let Some(scene) = self.scenes.get_mut(&self.current_parcel_scene_id) {
@@ -1932,13 +2333,23 @@ impl SceneManager {
                 video_player_node.bind_mut().set_muted(false);
             }
 
+            // Resume particle systems (restarts the ones in PLAYING state).
+            super::components::particle_system::reconcile_user_presence(scene, true);
+
             scene
                 .avatar_scene_updates
                 .internal_player_data
                 .insert(SceneEntityId::PLAYER, InternalPlayerData { inside: true });
 
-            self.base_ui
-                .add_child(&scene.godot_dcl_scene.root_node_ui.clone().upcast::<Node>());
+            // Only a living scene with a live UI root gets re-attached: a ToKill
+            // scene's UI is about to be freed, and a freed root (old Explorer's
+            // base_ui subtree) would panic on clone (GODOT-EXPLORER-1DY).
+            if matches!(scene.state, SceneState::Alive)
+                && scene.godot_dcl_scene.root_node_ui.is_instance_valid()
+            {
+                self.base_ui
+                    .add_child(&scene.godot_dcl_scene.root_node_ui.clone().upcast::<Node>());
+            }
         }
 
         self.last_current_parcel_scene_id = self.current_parcel_scene_id;
@@ -2178,6 +2589,54 @@ impl SceneManager {
             .filter(|scene| scene.state == SceneState::Alive)
             .count() as i32
     }
+
+    /// Enable/disable full-resolution memory logging (issue #2002). Used by the
+    /// "Continue anyway" path on the low-memory warning to capture the run-up to
+    /// a possible crash at every sample instead of ~every 2s.
+    #[func]
+    fn set_memory_verbose_logging(&self, on: bool) {
+        crate::tools::memory_monitor::set_verbose(on);
+    }
+
+    /// The user chose "Continue anyway" on the low-memory warning (issue #2002):
+    /// stop warning for the rest of the session and keep the scene running.
+    #[func]
+    fn dismiss_memory_warning(&mut self) {
+        self.memory_warning_dismissed = true;
+    }
+
+    /// Real process memory usage (resident set) in MB, or -1 when unavailable.
+    /// Cross-platform. Exposed for the preview scene-stats overlay:
+    /// `Performance.MEMORY_STATIC` only counts Godot's own allocator and is
+    /// compiled out of release / mobile export templates (returns 0 there), so
+    /// the overlay reads the real OS-level figure through here.
+    #[func]
+    fn get_process_memory_mb(&self) -> i32 {
+        crate::tools::memory_monitor::used_memory_mb()
+    }
+
+    /// External (non-deployed) content the scene pulled at runtime, for the
+    /// preview scene-stats overlay. Returns:
+    ///   { "files": PackedStringArray of user://content cache filenames
+    ///              (url-sourced textures; sizes are read from disk by the
+    ///              caller), "fetch_bytes": bytes consumed via the scene's JS
+    ///              fetch() (never stored on disk) }
+    /// Empty dictionary when the scene id is unknown. Passive read — no I/O.
+    #[func]
+    fn get_scene_external_content(&self, scene_id: i32) -> VarDictionary {
+        let mut dict = VarDictionary::new();
+        let Some(scene) = self.scenes.get(&SceneId(scene_id)) else {
+            return dict;
+        };
+        let (files, fetch_bytes) =
+            crate::content::external_content::snapshot(&scene.scene_entity_definition.id);
+        dict.set(
+            "files",
+            PackedStringArray::from_iter(files.iter().map(GString::from)),
+        );
+        dict.set("fetch_bytes", fetch_bytes as i64);
+        dict
+    }
 }
 
 #[godot_api]
@@ -2185,6 +2644,10 @@ impl INode for SceneManager {
     fn init(base: Base<Node>) -> Self {
         let (thread_sender_to_main, main_receiver_from_thread) =
             std::sync::mpsc::sync_channel(1000);
+
+        // Start the background memory-pressure monitor (issue #2002). Idempotent
+        // and a no-op on platforms without an OOM killer to anticipate.
+        crate::tools::memory_monitor::start();
 
         let mut base_ui = DclUiControl::new_alloc();
         base_ui.set_anchors_preset(LayoutPreset::FULL_RECT);
@@ -2203,14 +2666,17 @@ impl INode for SceneManager {
             dying_scene_ids: vec![],
             crashed_scene_ids: vec![],
             global_scene_ids: vec![],
+            memory_settle_frames: 0,
+            memory_modal_active: false,
+            memory_warning_dismissed: false,
             current_parcel_scene_id: SceneId(0),
             last_current_parcel_scene_id: SceneId::INVALID,
 
             main_receiver_from_thread,
             thread_sender_to_main,
 
-            player_avatar_node: Node3D::new_alloc(),
-            player_body_node: Node3D::new_alloc(),
+            player_avatar_node: None,
+            player_body_node: None,
 
             player_position: Vector2i::new(-1000, -1000),
 
@@ -2218,7 +2684,7 @@ impl INode for SceneManager {
             begin_time: Instant::now(),
             console: Callable::invalid(),
             input_state: InputState::default(),
-            last_raycast_result: None,
+            last_hover_entity: None,
             last_proximity_entity: None,
             pointer_tooltips: VarArray::new(),
             highlighted_entity: None,
@@ -2237,6 +2703,7 @@ impl INode for SceneManager {
             pool_manager: RefCell::new(PoolManager::new()),
             current_loading_session: None,
             next_session_id: 0,
+            loading_funnel: LoadingFunnel::default(),
             bench_disable_tweens: false,
             bench_disable_transforms: false,
         }
@@ -2259,18 +2726,37 @@ impl INode for SceneManager {
     }
 
     fn physics_process(&mut self, delta: f64) {
+        // Main-thread liveness heartbeat (issue #2002). Incremented unconditionally
+        // at the very top, before any early-return, so the background memory
+        // monitor can tell a real main-thread freeze (heartbeat stops) from a mere
+        // paused/idle runner. Must stay the first statement here.
+        crate::tools::memory_monitor::MAIN_THREAD_HEARTBEAT.fetch_add(1, Ordering::Relaxed);
+
         self.scene_runner_update(delta);
 
         // Check loading session timeouts
         self.check_loading_timeouts();
 
+        // Loading funnel: track peak pending assets and network throughput while a load is active.
+        // Every PULSE_MS the tick returns a `progress` snapshot so a load that never completes
+        // (user quits / client killed mid-load) still leaves its last-known state in Segment.
+        if self.loading_funnel.is_active() {
+            let (loaded, loading, mb_s) = self.loading_content_counts();
+            if let Some(ev) = self
+                .loading_funnel
+                .note_tick(loading - loaded, mb_s, Instant::now())
+            {
+                self.emit_loading_events(vec![ev]);
+            }
+        }
+
         // SceneManager is owned by DclGlobal (autoload) and outlives the Explorer scene.
         // After change_scene_to_file (e.g. Sign Out), `player_avatar_node` becomes a
         // dangling reference until the next Explorer load reassigns it via set_player_node.
         // The pointer/raycast/tooltip block below derefs that node, so bail out here.
-        if !self.player_avatar_node.is_instance_valid() {
+        let Some(player_avatar) = self.get_player_avatar_node() else {
             return;
-        }
+        };
 
         // Note: Trigger area collision detection is now handled via PhysicsServer3D monitor callbacks
         // (area_set_monitor_callback). ENTER/EXIT events are processed in update_trigger_area.
@@ -2367,7 +2853,7 @@ impl INode for SceneManager {
             }
         }
 
-        let player_position = self.player_avatar_node.get_global_position();
+        let player_position = player_avatar.get_global_position();
         let camera_and_viewport = self.base().get_viewport().and_then(|viewport| {
             let size = viewport.get_visible_rect().size;
             viewport.get_camera_3d().map(|camera| (camera, size))
@@ -2382,17 +2868,25 @@ impl INode for SceneManager {
         pointer_events_system(
             &mut self.scenes,
             &changed_inputs,
-            &self.last_raycast_result,
             &current_pointer_raycast_result,
             player_position,
             &camera_and_viewport,
             &mut self.last_proximity_entity,
+            &mut self.last_hover_entity,
         );
 
         let mut tooltips = VarArray::new();
         let mut new_highlighted: Option<Gd<Node3D>> = None;
         if let Some(raycast) = current_pointer_raycast_result.as_ref() {
             let mut should_highlight = false;
+            // Player distance to the hovered entity, for the feedback range gate
+            // (so the overlay respects max_player_distance, matching cursor events).
+            let feedback_player_distance = entity_player_distance(
+                &self.scenes,
+                &raycast.scene_id,
+                &raycast.entity_id,
+                player_position,
+            );
             if let Some(pointer_events) =
                 get_entity_pointer_event(&self.scenes, &raycast.scene_id, &raycast.entity_id)
             {
@@ -2403,8 +2897,14 @@ impl INode for SceneManager {
                     }
                     if let Some(info) = pointer_event.event_info.as_ref() {
                         let show_feedback = info.show_feedback.as_ref().unwrap_or(&true);
-                        let max_distance = *info.max_distance.as_ref().unwrap_or(&10.0);
-                        if !show_feedback || raycast.hit.length > max_distance {
+                        if !show_feedback
+                            || !event_info_in_range(
+                                info.max_distance,
+                                info.max_player_distance,
+                                raycast.hit.length,
+                                feedback_player_distance,
+                            )
+                        {
                             continue;
                         }
 
@@ -2542,7 +3042,6 @@ impl INode for SceneManager {
             self.base_mut().emit_signal("pointer_tooltip_changed", &[]);
         }
 
-        self.last_raycast_result = current_pointer_raycast_result;
         GLOBAL_TICK_NUMBER.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
     }
 
@@ -2557,7 +3056,10 @@ impl INode for SceneManager {
             return;
         };
 
-        let player_transform = self.player_avatar_node.get_global_transform();
+        let Some(player_avatar) = self.get_player_avatar_node() else {
+            return;
+        };
+        let player_transform = player_avatar.get_global_transform();
         let camera_transform = current_camera_node.get_global_transform();
 
         if let Some(scene) = self.scenes.get_mut(&self.current_parcel_scene_id) {

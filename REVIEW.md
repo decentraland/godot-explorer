@@ -87,10 +87,11 @@ Apply this order. Everything below "Correctness" is negotiable; the top tier is 
 3. **Debug prints / commented-out code / dead config left in.** `print("[DEBUG] …")`, `prints(…)`, `print_verbose` left behind, or orphaned `shader_parameter/foo` lines after a shader uniform is removed (see #1823, #1878). Cheap to flag, and the team consistently asks for it.
 4. **Committed `.claude/` memory files.** Files under `.claude/projects/<someone>/memory/*.md` are per-contributor Claude Code state and do not belong in the repo. Call it out whenever it appears (precedent: #1852 existed just to remove them; #1823 was asked to clean them up). If the team eventually adds `.claude/` to `.gitignore`, this check becomes moot — flag that as a worthwhile follow-up if you see the pattern repeat.
 5. **Changes to `project.godot` editor run args, local paths, or personal export presets.** e.g. flipping `--emulate-ios` ↔ `--emulate-android --landscape` is usually someone's local setting that leaked in (#1823). Hardcoded `/Users/<name>/…` absolute paths are always wrong (#1878).
+6. **Non-English code or comments — required for approval.** The codebase is English-only: identifiers, comments, doc comments, and log/diagnostic strings must all be in English. **Any added or modified code that introduces a non-English comment or identifier blocks approval until it is translated** — this is a hard prerequisite, not a nit. Static checks never catch it: `gdlint`/`gdformat`/`clippy` don't read natural language, and comment-only file types (`.gdshader`, `.tscn`, `.tres`, `.glsl`) are invisible to them. Concrete precedent: Spanish comments shipped undetected in `godot/src/ui/components/molecules/button_profile/texture_rect_rounded.gdshader` and `…_rounded_px.gdshader` (`// Radio de las esquinas…`). Scan the diff — including non-`.gd`/`.rs` files — for accented characters (`á é í ó ú ñ ¿ ¡`) and non-English words in comments/identifiers, and hold approval until the author translates them. User-facing UI text that flows through the localization system is exempt (that's translation data, not code); raw string literals and all comments are not.
 
 ### Tier 2 — Correctness
 
-6. **UI tier structure compliance (Atomic Design — `godot/src/ui/`).** PR #2021 (issue [#1876](https://github.com/decentraland/godot-explorer/issues/1876)) reorganized `godot/src/ui/` into a 5-tier Atomic Design layout: `components/atoms/{buttons,inputs,images,controls}/`, `components/molecules/`, `components/organisms/`, `layouts/`, `pages/`. **Any PR that adds or moves UI files must land them in the correct tier.** Reject:
+7. **UI tier structure compliance (Atomic Design — `godot/src/ui/`).** PR #2021 (issue [#1876](https://github.com/decentraland/godot-explorer/issues/1876)) reorganized `godot/src/ui/` into a 5-tier Atomic Design layout: `components/atoms/{buttons,inputs,images,controls}/`, `components/molecules/`, `components/organisms/`, `layouts/`, `pages/`. **Any PR that adds or moves UI files must land them in the correct tier.** Reject:
    - New files at the bare `components/` root (must be under `atoms/`, `molecules/`, or `organisms/`).
    - New feature-grouped folders like `components/profile/`, `components/discover/` — features are pages now (`pages/<feature>/`).
    - A new "Nth button variant" / duplicate input / duplicate toast — `godot/src/ui/COMPONENT_AUDIT.md` lists the 6 known duplication sets; ask the author to pick the canonical one or to file a follow-up issue rather than add another duplicate.
@@ -99,19 +100,24 @@ Apply this order. Everything below "Correctness" is negotiable; the top tier is 
    - Mixed-tier placement (e.g. a reusable molecule buried inside `pages/profile/` when it's used by other pages too).
    The skill `godot-ui-components` (in `.claude/skills/godot-ui-components/SKILL.md`) is the source of truth — it has the decision tree, naming conventions, and verification checklist. The audit doc `godot/src/ui/COMPONENT_AUDIT.md` is the lookup table for current placements and known duplicates.
 
-7. **Cross-platform regressions.** Touch targets, gestures, virtual keyboard sync on Android/iOS, safe-area insets, landscape vs portrait. `DisplayServer.virtual_keyboard_show()` buffer sync after programmatic text insertion is a known class of bug (#1822). Godot `MOUSE_FILTER` behavior differs between `STOP` / `PASS` / `IGNORE` in non-obvious ways — siblings don't propagate (#1875).
-7. **Mouse/input filter and focus stealing.** Buttons that steal focus from a `LineEdit`, containers with fixed `custom_minimum_size` that silently block scene UI underneath, `ScrollContainer` needing dynamic `mouse_filter` based on whether content overflows. Any new UI overlay on the left / bottom of the screen must be tested against SDK-rendered UI underneath.
-8. **Async / race conditions.** Re-entrant `await` inside resize / rotation / teleport handlers (#1823 needed an `_is_switching` guard). Signals connected on a node that hasn't readied yet. Awaits that the caller doesn't `await` on (missing `await` on a coroutine is a real bug class here — see #1851).
-9. **Resource leaks.** Godot does not auto-free bones, nodes outside the tree, or duplicated resources. Historical incident: spring-bone merge never recycled slots across outfit changes → unbounded `Skeleton3D` growth and stale bones silently binding to new meshes (#1849). When you see "add to skeleton / duplicate skin / instantiate on event", ask how it gets removed.
-10. **Persistence.** Blocked users, friends state, profile deploys, per-user settings. Check that state written to disk survives a restart and that load happens before UI reads it (#1872 was an instance of this breaking).
+8. **Cross-platform regressions.** Touch targets, gestures, virtual keyboard sync on Android/iOS, safe-area insets, landscape vs portrait. `DisplayServer.virtual_keyboard_show()` buffer sync after programmatic text insertion is a known class of bug (#1822). Godot `MOUSE_FILTER` behavior differs between `STOP` / `PASS` / `IGNORE` in non-obvious ways — siblings don't propagate (#1875).
+9. **Mouse/input filter and focus stealing.** Buttons that steal focus from a `LineEdit`, containers with fixed `custom_minimum_size` that silently block scene UI underneath, `ScrollContainer` needing dynamic `mouse_filter` based on whether content overflows. Any new UI overlay on the left / bottom of the screen must be tested against SDK-rendered UI underneath.
+10. **Async / race conditions.** Re-entrant `await` inside resize / rotation / teleport handlers (#1823 needed an `_is_switching` guard). Signals connected on a node that hasn't readied yet. Awaits that the caller doesn't `await` on (missing `await` on a coroutine is a real bug class here — see #1851).
+11. **Resource leaks.** Godot does not auto-free bones, nodes outside the tree, or duplicated resources. Historical incident: spring-bone merge never recycled slots across outfit changes → unbounded `Skeleton3D` growth and stale bones silently binding to new meshes (#1849). When you see "add to skeleton / duplicate skin / instantiate on event", ask how it gets removed.
+12. **Persistence.** Blocked users, friends state, profile deploys, per-user settings. Check that state written to disk survives a restart and that load happens before UI reads it (#1872 was an instance of this breaking).
+13. **Log level discipline & Sentry quota.** Every log a PR *adds* has a cost, and the cost depends on its level. Error- and warning-level logs are routed to Godot's error stream and captured by the Sentry SDK in prod/staging builds — each one consumes the shared Sentry **event and attachment quota**, and a mis-leveled log on a hot path (scene-runner update loop, pointer events, per-entity/per-frame scans) can burst into *thousands* of events and exhaust the quota. The team already runs `_before_send` sampling and a `NOISE_PATTERNS` denylist (`godot/src/project_main_loop.gd`) precisely because over-reporting is a recurring problem — review new logs so that machinery doesn't have to. For **every** added log in the diff, ask: *is this an actionable fault a maintainer would want to see as a Sentry issue, or is it expected/recoverable noise?*
+    - **Rust:** `tracing::error!` → Godot error → **Sentry issue**. `tracing::warn!` → Godot warning → Sentry (lower severity). `info!`/`debug!`/`trace!` → plain `godot_print!`, **never** Sentry (see `lib/src/tools/godot_logger.rs`). Debugging/diagnostic output belongs in `tracing::debug!`. Reserve `tracing::error!` for genuine faults we'd actually want paged on. A *missing texture / wearable / optional asset that already has a fallback* is **not** an error — it's a `warn!` (or `debug!` if routine) with a defined `else` branch.
+    - **GDScript:** `push_error` / `printerr` → Godot error → **Sentry**. `push_warning` → warning. `print` / `prints` → console only, not Sentry. Same rule: don't `push_error` for expected-and-handled conditions; use `push_warning` or `print`, and reserve `push_error`/`printerr` for genuinely actionable failures.
+
+    See Section 5 → "Logging discipline & Sentry quota" for the routing table and examples. Flag any new `error!`/`push_error`/`printerr` whose condition is expected, recoverable, or already handled by a fallback, and ask the author to downgrade it.
 
 ### Tier 3 — Quality
 
-11. **Dev-only flags live in release builds.** Deep-link params like `fake-owned-wearables`, `disable-profile-deploy`, `dclenv=zone` parse unconditionally today. Acceptable but worth flagging for gating behind `#[cfg(debug_assertions)]` / a feature flag / a loud warning (#1849).
-12. **Dead code / orphan uniforms / unused imports.** Rust `clippy -D warnings` catches most of this, but `.tres` / `.tscn` / `.gdshader` don't — reviewers catch those manually. A shader uniform removed in `.gdshader` should also be removed from every `.tres`/`.tscn` that set it, and from every material that references a different-typed replacement (#1878 had a `Texture2D → samplerCube` mismatch that would render black silently).
-13. **Performance on the hot path.** The scene-runner update loop, pointer-event loop, and shaders are hot. Watch for per-pixel `acos`/`normalize`/`pow` that can be replaced by compares, per-frame `find_node` / `get_node` lookups, unbounded `for x in all_entities` scans inside scene systems, and JSON serialization on the scene thread.
-14. **Test plan quality.** PR descriptions in this repo follow `## Summary` + `## Test plan` (bulleted checklist). A missing or vague test plan is a legitimate review comment, especially for UI changes. Mobile-visible changes should say *which* platform was tested on.
-15. **Comments that explain "why", not "what".** Consistent with the CLAUDE.md guidance — reviewers flag comments that restate the code, and praise ones that cite a matching Unity file/line or explain a non-obvious Godot quirk.
+14. **Dev-only flags live in release builds.** Deep-link params like `fake-owned-wearables`, `disable-profile-deploy`, `dclenv=zone` parse unconditionally today. Acceptable but worth flagging for gating behind `#[cfg(debug_assertions)]` / a feature flag / a loud warning (#1849).
+15. **Dead code / orphan uniforms / unused imports.** Rust `clippy -D warnings` catches most of this, but `.tres` / `.tscn` / `.gdshader` don't — reviewers catch those manually. A shader uniform removed in `.gdshader` should also be removed from every `.tres`/`.tscn` that set it, and from every material that references a different-typed replacement (#1878 had a `Texture2D → samplerCube` mismatch that would render black silently).
+16. **Performance on the hot path.** The scene-runner update loop, pointer-event loop, and shaders are hot. Watch for per-pixel `acos`/`normalize`/`pow` that can be replaced by compares, per-frame `find_node` / `get_node` lookups, unbounded `for x in all_entities` scans inside scene systems, and JSON serialization on the scene thread.
+17. **Test plan quality.** PR descriptions in this repo follow `## Summary` + `## Test plan` (bulleted checklist). A missing or vague test plan is a legitimate review comment, especially for UI changes. Mobile-visible changes should say *which* platform was tested on. **The QA team runs these by hand on a real phone** (builds auto-distribute via TestFlight / Firebase App Distribution) — a case a tester couldn't reproduce cold (steps that don't start from opening the app, no observable expected result, or non-obvious required state left unsaid) is worth holding on. See Section 4 → "Writing test steps QA can execute" for the required format and a worked example.
+18. **Comments that explain "why", not "what".** Consistent with the CLAUDE.md guidance — reviewers flag comments that restate the code, and praise ones that cite a matching Unity file/line or explain a non-obvious Godot quirk.
 
 ---
 
@@ -130,6 +136,57 @@ Closes #<issue>
 - [ ] <steps>
 ```
 Larger PRs often add a "Root Cause" section before Summary, a Video/Images section after it, and a "Future plans" section at the end. Commit prefixes follow conventional commits: `feat:`, `fix:`, `chore:`, `refactor:`.
+
+### Writing test steps QA can execute
+
+The `## Test plan` section is not just a reviewer checkbox — **the QA team runs each case by hand on a real phone**, using the build that is auto-distributed to them (iOS via **TestFlight**, Android via **Firebase App Distribution**). Because of that, the steps do **not** need build-download, version, or device setup — that's a given. **Start every case from opening the app** and describe plain user actions from there. A tester who has never seen the code must still be able to reproduce every case from the description alone; freeform prose like *"hold the joystick and press the buttons — they should respond"* is a hint, not a test step, because it has no starting point and no pass/fail line.
+
+Write **each case** as a short block:
+
+1. **Setup — only when it's non-obvious.** Omit it for the normal case. Add a line only when the case needs a state a tester wouldn't be in by default: a signed-in profile with specific wearables/emotes equipped, a second account to interact with, guest-vs-signed-in when it matters, or a deeplink / feature flag. A real phone, the latest distributed build, and a normal signed-in session are **assumed** — never restate them.
+2. **Steps** — numbered, **one user action per line, starting from opening the app**. Use concrete values — "Enter Genesis Plaza", the on-screen button name, the menu path — never "navigate to the relevant screen" or "trigger the flow".
+3. **Expected result** — the observable outcome, specific enough to mark pass/fail *without reading code*. "The jump button shows its pressed state and a click SFX plays" — not "it works" / "looks correct" / "no crash".
+
+Add a **regression** line whenever the change touches shared code — the case that confirms the *old* path still works. Describe user actions, not internals: QA can't see an `_is_switching` guard, but they can "rotate the device rapidly while a teleport is loading". Only call out a **platform** when a case is iOS- or Android-specific (or also needs a desktop check) — otherwise both phones are the default.
+
+Format each case as a checklist so QA can tick it off. Full example:
+
+```markdown
+## Test plan
+
+### Case 1 — Emote wheel fires while a finger is already down
+**Setup:** signed-in profile with at least 2 equipped emotes.
+**Steps:**
+1. Open the app and wait for the explorer to load.
+2. Enter Genesis Plaza.
+3. Press and hold the movement joystick with your left thumb — keep it held.
+4. With a second finger, open the emote wheel and tap an emote slot.
+
+- [ ] **Expected:** the tapped slot highlights, the emote plays on the avatar, and the
+      selection SFX fires — even though the joystick finger never lifted.
+- [ ] **Regression — single touch:** release the joystick, reopen the wheel and tap a slot
+      with one finger. Emote still plays as before.
+```
+
+The simplest cases are just the three lines the team already thinks in — no setup needed:
+
+```markdown
+### Case 2 — Emote plays in Genesis Plaza
+**Steps:**
+1. Open the app.
+2. Enter Genesis Plaza.
+3. Open the emote wheel and play an emote.
+
+- [ ] **Expected:** the emote plays on the avatar and its SFX fires; no stutter or freeze.
+```
+
+Anti-patterns that make a case un-executable — a reviewer should ask the author to fix these (see Tier 3 item 17):
+- **"Tested locally, works."** — no steps, no expected result, not reproducible.
+- **Steps that don't start from the app** — begin at "Open the app", then the in-app actions, so QA never has to guess the entry point.
+- **Restating the obvious** — "download the APK / install the TestFlight build / use a phone running vX". Distribution and device are a given; don't spend steps on them.
+- **Non-obvious state left unsaid** — a case that only repros with specific wearables equipped, as a guest, or with a second user present must say so up front.
+- **Vague expected result** — "the UI looks right", "no crash". State *what* correct looks like.
+- **Steps that assume code knowledge** — referencing a private method, signal, or guard by name. Translate it into the user-visible action that exercises it.
 
 ### Naming (from `.gdlintrc`)
 - Classes / scenes / scripts: `PascalCase` (`ConnectionQualityMonitor`, `MentionItem`).
@@ -181,8 +238,30 @@ A `Button` inside a panel that appears over a `LineEdit` will steal focus → ke
 ### Virtual keyboard buffer sync
 After programmatically inserting text into a `LineEdit` on mobile, call `DisplayServer.virtual_keyboard_show(text, …)` to re-sync the OS buffer, or backspace will behave as if the inserted text isn't there (#1822).
 
-### Rust logging
-All `tracing` output is routed through Godot's print functions. `RUST_LOG`, `--rust-log`, and `decentraland://open?rust-log=…` all work. Source file/line metadata is preserved for Sentry. Prefer `tracing::warn!` / `error!` over `godot_print!` for anything that should be in Sentry.
+### Logging discipline & Sentry quota
+**This is the highest-leverage thing to scan a diff for that static checks will never catch.** Logs are not free: error- and warning-level logs flow into Godot's error stream, which the Sentry SDK captures and ships in prod/staging builds. Every such log added in a PR consumes the shared Sentry **event/attachment quota** for the lifetime of that code — and one mis-leveled log on a hot path can exhaust it.
+
+How a log reaches (or doesn't reach) Sentry — verified against `lib/src/tools/godot_logger.rs` and `godot/src/project_main_loop.gd`:
+
+| Source | Macro / call | Routes to | In Sentry? |
+|---|---|---|---|
+| Rust | `tracing::error!` | `print_error` (Godot error, real file:line) | **Yes — opens an issue** |
+| Rust | `tracing::warn!` | `print_warning` (Godot warning) | Yes (lower severity) |
+| Rust | `tracing::info!` / `debug!` / `trace!` | plain `godot_print!` | **No** |
+| GDScript | `push_error` / `printerr` | Godot error | **Yes** |
+| GDScript | `push_warning` | Godot warning | Yes (lower severity) |
+| GDScript | `print` / `prints` | console | **No** |
+
+`RUST_LOG`, `--rust-log`, and `decentraland://open?rust-log=…` all work for filtering at runtime; source file/line metadata is preserved for Sentry and the Godot debugger.
+
+The team already pays for over-reporting with machinery in `project_main_loop.gd`: `_before_send` drops all dev-build events, samples log attachments at 1% (`ATTACH_LOG_SAMPLE_RATE`), and runs a `NOISE_PATTERNS` denylist that throws away engine/driver/livekit spam (keeping a 5% canary). **The existence of that denylist is the tell: every error-level log that fires in a loop is a quota problem.** Review new logs so they never have to be added to it.
+
+The rule for any log added in a diff:
+
+- **`error!` / `push_error` / `printerr` → only for genuine, actionable faults** a maintainer would actually want surfaced as a Sentry issue (a broken invariant, a corrupted response we can't recover from, a state that shouldn't be reachable). If the answer to "would we open a ticket for this?" is no, it's not an error.
+- **Expected-and-handled conditions are not errors.** A missing texture / wearable / optional asset, an absent optional field, a network resource that 404s and falls back — these have a defined `else` branch, so they're a **`warn!` / `push_warning`** at most, or **`debug!` / `print`** if routine. The classic anti-pattern: `error!("texture not found: {url}")` next to a line that already substitutes a placeholder. That's a `warn!` or `debug!`, never an `error!`.
+- **Debugging/diagnostic output is `tracing::debug!` (Rust) or `print` (GDScript)** — never error/warn. Things added to trace a problem during development must not ship as Sentry events.
+- **Hot paths multiply everything.** A log inside the scene-runner update loop, pointer-event loop, per-entity scan, or a per-frame `_process` can fire thousands of times per session. Even a `warn!` there is suspect; an `error!` there is a quota incident. Flag it.
 
 ### Unity parity
 When review cites `SkyboxRenderController.cs:183`, `avatar rotation_y wire convention`, `camera FOV 60°`, or similar, the reference is the **Unity Foundation Client**. The reviewer is comparing byte-for-byte / degree-for-degree, and the PR should match unless it explains why not.
@@ -225,7 +304,11 @@ Length:
 A reviewer should `grep` / eyeball the diff for these before reading logic:
 
 - `print(` / `prints(` / `print_verbose(` in non-tool GDScript → likely debug leftover.
+- New `tracing::error!` (Rust) or `push_error(` / `printerr(` (GDScript) in the diff → these ship to Sentry and cost quota. Confirm the condition is a genuine, actionable fault. If it's expected/recoverable or already has a fallback (missing texture/asset, optional absent, 404-then-default), ask to downgrade to `warn!`/`push_warning` or `debug!`/`print`. See Section 5.
+- New `tracing::error!` / `tracing::warn!` (or `push_error`/`printerr`) inside a loop, per-entity/per-frame scan, `_process`, or the scene-runner/pointer-event hot path → potential Sentry quota burst; flag even warnings here.
+- A `tracing::error!` / `push_error` sitting right next to a fallback/`else`/placeholder assignment → mis-leveled; it's a `warn!`/`debug!`, not an error.
 - `.claude/` under the diff path → memory files.
+- Non-English comment or identifier anywhere in the diff (incl. `.gdshader` / `.tscn` / `.tres` / `.glsl`, which `gdlint`/`clippy` never read) → codebase is English-only. Accented chars (`á é í ó ú ñ ¿ ¡`) or non-English words in comments/identifiers block approval until translated. Localized user-facing strings are exempt; raw literals and comments are not. See Tier 1.
 - `# TODO` / `# FIXME` added in this PR (vs already existed) → ask for an issue link.
 - `await …` inside `_ready` / `_process` / `_input` without guards → re-entrancy risk.
 - New `custom_minimum_size = Vector2(…)` on an overlay container → probable mouse-filter bug.

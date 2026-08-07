@@ -15,12 +15,12 @@
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="12_2iqy8"]
 [ext_resource type="Texture2D" uid="uid://b0rnagailiooj" path="res://assets/ui/wearable_categories/upper_body-icon.svg" id="12_6wpew"]
 [ext_resource type="PackedScene" uid="uid://md6xoha44tbf" path="res://src/ui/pages/backpack/emote_name.tscn" id="16_u1xb7"]
-[ext_resource type="Shader" uid="uid://diwdvth6qfad7" path="res://src/ui/pages/backpack/detail_background.gdshader" id="16_yjmsa"]
 [ext_resource type="Shader" uid="uid://c0qbj6cn3eof4" path="res://src/ui/components/utils/addition_shader.gdshader" id="17_4j6ii"]
 [ext_resource type="Texture2D" uid="uid://bv1rkp8bv6h5q" path="res://src/ui/pages/backpack/avatar_change_vfx.png" id="18_wp3bp"]
 [ext_resource type="PackedScene" uid="uid://cf4f5teas815x" path="res://src/ui/components/molecules/color_carrousel/color_carrousel.tscn" id="19_k780d"]
 [ext_resource type="Script" uid="uid://drm7w13o3wggu" path="res://src/ui/components/atoms/images/animated_texture_rect/animated_texture_rect.gd" id="19_ku1si"]
 [ext_resource type="Texture2D" uid="uid://bfdgcten8x433" path="res://src/ui/pages/discover/icons/back.svg" id="19_t0yet"]
+[ext_resource type="Texture2D" uid="uid://bqeaxvt83xiww" path="res://assets/backgrounds/gradient-background.tres" id="26_ypiwx"]
 [ext_resource type="PackedScene" uid="uid://2n7qh48sy4i4" path="res://src/ui/pages/backpack/no_items_message.tscn" id="27_noitems"]
 [ext_resource type="PackedScene" uid="uid://cse8fx0ei572e" path="res://src/ui/components/organisms/emote_editor/emote_editor.tscn" id="30_vfwc7"]
 [ext_resource type="PackedScene" uid="uid://e8wxgnrt3ge6" path="res://src/ui/components/molecules/marketplace_recommended_section/marketplace_recommended_section.tscn" id="31_mktpl"]
@@ -69,22 +69,20 @@ resource_name = "CollectiblesFilter"
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_yj6kw"]
 
-[sub_resource type="Gradient" id="Gradient_k780d"]
-colors = PackedColorArray(0.27450982, 0.05882353, 0.43529412, 1, 0.20784314, 0.03137255, 0.32941177, 1)
-
-[sub_resource type="GradientTexture1D" id="GradientTexture1D_et6he"]
-gradient = SubResource("Gradient_k780d")
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_k780d"]
-shader = ExtResource("16_yjmsa")
-shader_parameter/tex = SubResource("GradientTexture1D_et6he")
-
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_cq6cy"]
 bg_color = Color(0.27450982, 0.05882353, 0.43529412, 1)
 corner_radius_top_left = 24
 corner_radius_top_right = 24
 shadow_color = Color(0, 0, 0, 0.25)
 shadow_size = 4
+
+[sub_resource type="Gradient" id="Gradient_ypiwx"]
+colors = PackedColorArray(0.20784314, 0.03137255, 0.32941177, 1, 0.27450982, 0.05882353, 0.43529412, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_gdeh7"]
+gradient = SubResource("Gradient_ypiwx")
+fill_from = Vector2(0, 1)
+fill_to = Vector2(0, 0)
 
 [sub_resource type="ButtonGroup" id="ButtonGroup_30sbq"]
 resource_local_to_scene = false
@@ -93,14 +91,6 @@ resource_local_to_scene = false
 
 [sub_resource type="ButtonGroup" id="ButtonGroup_meiko"]
 resource_local_to_scene = false
-
-[sub_resource type="Gradient" id="Gradient_v8iop"]
-colors = PackedColorArray(0.58431375, 0.1764706, 0.7764706, 1, 0.19607843, 0.07450981, 0.29803923, 1)
-
-[sub_resource type="GradientTexture2D" id="GradientTexture2D_yjmsa"]
-gradient = SubResource("Gradient_v8iop")
-fill = 1
-fill_from = Vector2(0.5, 0.5)
 
 [node name="BackpackPortrait" type="Control" unique_id=1935067626]
 layout_mode = 3
@@ -428,6 +418,7 @@ mouse_filter = 2
 
 [node name="TextureProgressBar_AvatarLoading" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/Control_LeftBar" unique_id=2011223973 instance=ExtResource("4_saosw")]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(128, 128)
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -446,7 +437,8 @@ unique_name_in_owner = true
 visible = false
 layout_mode = 1
 
-[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/Control_LeftBar" unique_id=573091625]
+[node name="MarginContainer_Credits" type="MarginContainer" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/Control_LeftBar" unique_id=573091625]
+unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -457,17 +449,19 @@ mouse_filter = 2
 theme_override_constants/margin_left = 48
 theme_override_constants/margin_bottom = 32
 
-[node name="Button_Credits" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/Control_LeftBar/MarginContainer" unique_id=1932276915 instance=ExtResource("32_crbtn")]
+[node name="Button_Credits" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/Control_LeftBar/MarginContainer_Credits" unique_id=1932276915 instance=ExtResource("32_crbtn")]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 size_flags_horizontal = 0
 size_flags_vertical = 8
 
 [node name="RightEditorContainer" type="MarginContainer" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack" unique_id=1039508584]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 730)
 layout_mode = 2
 size_flags_horizontal = 3
-size_flags_vertical = 3
+size_flags_vertical = 8
 size_flags_stretch_ratio = 1.45
 theme_override_constants/margin_left = 0
 theme_override_constants/margin_top = 10
@@ -479,10 +473,19 @@ layout_mode = 2
 
 [node name="WearableEditor" type="PanelContainer" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer" unique_id=258215711]
 unique_name_in_owner = true
-material = SubResource("ShaderMaterial_k780d")
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_styles/panel = SubResource("StyleBoxFlat_cq6cy")
+
+[node name="MarginContainer_Background" type="MarginContainer" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor" unique_id=333854456]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/margin_top = 24
+
+[node name="TextureRect" type="TextureRect" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor/MarginContainer_Background" unique_id=35097427]
+layout_mode = 2
+mouse_filter = 2
+texture = SubResource("GradientTexture2D_gdeh7")
 
 [node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/SafeMarginContainer/HBoxContainer_Backpack/RightEditorContainer/HBoxContainer/WearableEditor" unique_id=907653772]
 layout_mode = 2
@@ -900,6 +903,7 @@ size_flags_horizontal = 3
 [node name="TextureProgressBar_BackpackLoading" parent="." unique_id=1912826069 instance=ExtResource("4_saosw")]
 unique_name_in_owner = true
 visible = false
+custom_minimum_size = Vector2(128, 128)
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -937,7 +941,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-texture = SubResource("GradientTexture2D_yjmsa")
+texture = ExtResource("26_ypiwx")
 
 [connection signal="visibility_changed" from="." to="." method="_on_visibility_changed"]
 [connection signal="pressed" from="VBoxContainer/PanelContainer_Navbar/SafeMarginContainer/HBoxContainer/HBoxContainer2/HBoxContainer2/Button_BackToExplorer" to="." method="_on_button_back_to_explorer_pressed"]

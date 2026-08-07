@@ -34,6 +34,7 @@ var marketplace_url: String = ""
 @onready var panel_container_price: PanelContainer = %PanelContainer_Price
 @onready var label_price: Label = %Label_Price
 @onready var button_action: Button = %Button_Action
+@onready var panel_new_badge: PanelContainer = %PanelContainer_NewBadge
 
 
 func _ready():
@@ -133,6 +134,11 @@ func set_equiped(is_equiped: bool):
 	effect_toggle()
 
 
+## Shows the "NEW" tag (top-right corner) for a recently-acquired wearable (#2300).
+func set_new_badge(is_new: bool) -> void:
+	panel_new_badge.visible = is_new
+
+
 func setup_marketplace(price: int, url: String):
 	is_marketplace_item = true
 	marketplace_price = price
@@ -159,7 +165,7 @@ func _on_action_pressed():
 	if not is_marketplace_item:
 		return
 	if Iap.get_balance() >= marketplace_price and not marketplace_url.is_empty():
-		Global.open_url(marketplace_url)
+		MarketplaceTracker.open_and_track(marketplace_url)
 	else:
 		Global.open_credits.emit()
 

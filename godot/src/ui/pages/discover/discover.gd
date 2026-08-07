@@ -21,7 +21,8 @@ var _generator_statuses: Dictionary = {}
 @onready var label_title: Label = %Label_Title
 @onready var container_content: ScrollRubberContainer = %ScrollContainer_Content
 @onready var friend_jump_in: SidePanelWrapper = %FriendJumpIn
-@onready var button_credits: CreditsBalanceButton = get_node_or_null("%Button_Credits")
+@onready var guest_upgrade_card: GuestUpgradeCard = %GuestUpgradeCard
+@onready var button_credits: CreditsBalanceButton = %Button_Credits
 
 static var _low_spec_warning_shown: bool = false
 
@@ -40,6 +41,8 @@ func _ready():
 	friend_jump_in.jump_in.connect(_on_friend_jump_in)
 	friend_jump_in.jump_in_world.connect(_on_friend_jump_in_world)
 	friend_jump_in.hide()
+
+	places_featured.card_tapped.connect(_on_featured_card_tapped)
 
 	Global.notification_clicked.connect(_on_notification_clicked)
 
@@ -62,6 +65,18 @@ func _ready():
 	places_favorites.generator.report_loading_status.connect(
 		_on_report_loading_status.bind(places_favorites)
 	)
+
+
+func _on_featured_card_tapped(index: int) -> void:
+	var cards = places_featured.get_cards()
+	if index >= 0 and index < cards.size():
+		var card = cards[index]
+		var data = card.get_place_data().duplicate()
+		var tex = card.get_texture()
+		if tex:
+			data["_preloaded_texture"] = tex
+		jump_in.set_data(data)
+		jump_in.open_panel.call_deferred()
 
 
 func on_item_pressed(data):
@@ -170,6 +185,8 @@ func _on_search_bar_opened() -> void:
 	Global.metrics.track_click_button("SEARCH_SELECT_INPUT", "SEARCH_CLICK", "")
 	if button_credits:
 		button_credits.hide()
+	if guest_upgrade_card:
+		guest_upgrade_card.hide()
 
 
 func _on_search_bar_cleared() -> void:
@@ -192,6 +209,10 @@ func set_search_filter_text(new_text: String) -> void:
 		places_favorites.visible = places_favorites.has_items()
 		places_my_places.visible = places_my_places.has_items()
 		places_most_active.title = "Most Actives"
+		if guest_upgrade_card:
+			# Don't force it visible — let the card re-evaluate its own upgrade state
+			# so already-upgraded users never see it flash (#2483).
+			guest_upgrade_card.refresh_visibility()
 	else:
 		friends_online.hide()
 		last_visited.hide()
@@ -199,6 +220,8 @@ func set_search_filter_text(new_text: String) -> void:
 		places_favorites.hide()
 		places_my_places.hide()
 		places_most_active.title = "Scenes"
+		if guest_upgrade_card:
+			guest_upgrade_card.hide()
 	places_most_active.set_search_param(new_text)
 	events.set_search_param(new_text)
 	_scroll_all_carousels_to_start()
@@ -508,8 +531,7 @@ func _on_button_back_to_explorer_pressed() -> void:
 		return
 
 	if Global.get_explorer():
-		if Global.modal_manager.ban_pre_check_active:
-			Global.modal_manager.async_show_ban_pre_check_modal()
+		if Global.modal_manager.reshow_ban_modal():
 			return
 		Global.close_menu.emit()
 		Global.set_orientation_landscape()

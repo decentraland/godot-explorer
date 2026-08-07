@@ -76,8 +76,6 @@ Every path is relative to `godot/src/ui/`. Old paths describe where each file li
 | `button_reminder.tscn` | `pages/events/` | `components/events/` | Event-reminder button |
 | `friends_panel.tscn` | `pages/friends/` | `components/friends/` | Friends side panel |
 | `loading_screen.tscn` | `pages/loading_screen/` | `components/loading_screen/` | Full-screen loading view |
-| `carousel.tscn` | `pages/loading_screen/` | `components/loading_screen/` | Loading-screen tip carousel |
-| `carousel_viewport.tscn` | `pages/loading_screen/` | `components/loading_screen/` | Carousel viewport |
 | `profile.tscn` | `pages/profile/` | `components/profile/` | Profile root |
 | `profile_container.tscn` | `pages/profile/` | `components/profile/` | Profile panel container |
 | `profile_portrait.tscn` | `pages/profile/` | `components/profile/` | Portrait profile layout |
@@ -205,7 +203,7 @@ Layouts ship as scripts only (no `.tscn`); each is a reusable container/wrapper 
 | `debug_panel.tscn` | `components/organisms/debug_panel/` | `components/debug_panel/` | Dev debug panel |
 | `network_inspector_ui.tscn` | `components/organisms/debug_panel/network_inspector/` | `components/debug_panel/network_inspector/` | Network-inspector UI |
 | `request_entry.tscn` | `components/organisms/debug_panel/network_inspector/` | `components/debug_panel/network_inspector/` | Network-inspector row |
-| `livekit_debug_panel.tscn` | `components/organisms/livekit_debug/` | `components/livekit_debug/` | LiveKit voice debug panel |
+| `multiplayer_debug_panel.tscn` | `components/organisms/multiplayer_debug/` | `components/multiplayer_debug/` | Multiplayer comms debug panel |
 
 ## Duplication / unification candidates
 

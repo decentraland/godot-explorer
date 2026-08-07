@@ -7,31 +7,22 @@ signal jump_in_world(realm_str: String)
 var _places: Array[Dictionary] = []
 
 @onready var carousel: Control = %SnapCarousel
-@onready var label_title: Label = %Label_Title
-@onready var label_creator: Label = %Label_Creator
-@onready var label_nickname: Label = %Label_NickNameFTUE
+@onready var label_welcome: RichTextLabel = %Label_Welcome
 @onready var button_jump_in: Button = %Button_JumpIn_FTUE
 @onready var button_skip: Button = %Button_Skip
-@onready var title_skeleton: Control = %TitleSkeleton
-@onready var creator_skeleton: Control = %CreatorSkeleton
-@onready var hbox_creator: HBoxContainer = %HBoxContainer_Creator
 
 
 func _ready() -> void:
-	carousel.card_changed.connect(_on_card_changed)
 	carousel.card_tapped.connect(_on_card_tapped)
-	carousel.all_cards_loaded.connect(_on_all_cards_loaded)
 	carousel.items_loaded.connect(_on_items_loaded)
 	button_jump_in.pressed.connect(_on_button_jump_in_pressed)
 	button_skip.pressed.connect(_on_button_skip_pressed)
-	label_title.hide()
-	hbox_creator.hide()
-	title_skeleton.show()
-	creator_skeleton.show()
 
 
 func set_username(display_name: String) -> void:
-	label_nickname.text = display_name
+	label_welcome.text = (
+		"Welcome [color=#B18AFF]@" + display_name + "[/color]\nLet's get you started"
+	)
 
 
 func load_places() -> void:
@@ -40,26 +31,7 @@ func load_places() -> void:
 
 func _on_items_loaded(places: Array[Dictionary]) -> void:
 	_places.assign(places)
-	_on_card_changed(carousel.selected_index)
 	_track_screen_view()
-
-
-func _on_all_cards_loaded() -> void:
-	label_title.show()
-	hbox_creator.show()
-	title_skeleton.hide()
-	creator_skeleton.hide()
-
-
-func _on_card_changed(index: int) -> void:
-	if index < 0 or index >= _places.size():
-		return
-	var place: Dictionary = _places[index]
-	label_title.text = place.get("title", "")
-	var creator: String = place.get("contact_name", "")
-	if creator.is_empty():
-		creator = place.get("owner", "")
-	label_creator.text = creator
 
 
 func _on_card_tapped(_index: int) -> void:

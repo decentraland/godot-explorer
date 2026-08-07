@@ -23,8 +23,8 @@ pub struct DeepLinkResult {
     pub is_walletconnect_callback: bool,
     /// Numbered profile slot
     pub saved_profile: String,
-    /// LiveKit debug flag
-    pub livekit_debug: bool,
+    /// Multiplayer debug panel flag
+    pub multiplayer_debug: bool,
     /// Routable path (e.g. "/jump", "/events", "/places", "/mobile")
     pub path: String,
     /// Dev/testing: short-circuit profile deploys so local changes never publish.
@@ -42,8 +42,10 @@ pub struct DeepLinkResult {
     pub gp_benchmark: bool,
     /// Show a transparent safe-area debug overlay on every screen
     pub safe_margin_debug: bool,
-    /// Enable IAP UI and StoreKit listening (deep link param: iap_enabled=true)
-    pub iap_enabled: bool,
+    /// Force-enable the Scene Stats / limits overlay in any realm, in every
+    /// build flavor (production included). Lets QA/creators turn it on
+    /// outside preview.
+    pub scene_stats: bool,
 }
 
 impl DeepLinkResult {
@@ -158,8 +160,9 @@ pub fn parse_deep_link(url_str: &str) -> Option<DeepLinkResult> {
                     result.saved_profile = n.to_string();
                 }
             }
-            "livekit_debug" => {
-                result.livekit_debug = value.eq_ignore_ascii_case("true") || value == "1";
+            // "livekit_debug" is the legacy name, kept so old shared links keep working
+            "multiplayer_debug" | "livekit_debug" => {
+                result.multiplayer_debug = value.eq_ignore_ascii_case("true") || value == "1";
             }
             "disable-profile-deploy" => {
                 result.disable_profile_deploy = value.eq_ignore_ascii_case("true") || value == "1";
@@ -190,8 +193,8 @@ pub fn parse_deep_link(url_str: &str) -> Option<DeepLinkResult> {
             "safemargindebug" => {
                 result.safe_margin_debug = value.eq_ignore_ascii_case("true") || value == "1";
             }
-            "iap_enabled" => {
-                result.iap_enabled = value.eq_ignore_ascii_case("true") || value == "1";
+            "scene-stats" => {
+                result.scene_stats = value.eq_ignore_ascii_case("true") || value == "1";
             }
             _ => {}
         }
@@ -477,9 +480,15 @@ mod tests {
     }
 
     #[test]
-    fn livekit_debug() {
+    fn multiplayer_debug() {
+        let r = parse("decentraland://open?multiplayer_debug=true");
+        assert!(r.multiplayer_debug);
+    }
+
+    #[test]
+    fn multiplayer_debug_legacy_alias() {
         let r = parse("decentraland://open?livekit_debug=true");
-        assert!(r.livekit_debug);
+        assert!(r.multiplayer_debug);
     }
 
     #[test]
@@ -560,21 +569,21 @@ mod tests {
     }
 
     #[test]
-    fn iap_enabled_true() {
-        let r = parse("decentraland://open?iap_enabled=true");
-        assert!(r.iap_enabled);
+    fn scene_stats_true() {
+        let r = parse("decentraland://open?scene-stats=true");
+        assert!(r.scene_stats);
     }
 
     #[test]
-    fn iap_enabled_one() {
-        let r = parse("decentraland://open?iap_enabled=1");
-        assert!(r.iap_enabled);
+    fn scene_stats_one() {
+        let r = parse("decentraland://open?scene-stats=1");
+        assert!(r.scene_stats);
     }
 
     #[test]
-    fn iap_enabled_default_off() {
+    fn scene_stats_default_off() {
         let r = parse("decentraland://open");
-        assert!(!r.iap_enabled);
+        assert!(!r.scene_stats);
     }
 
     // ---- Edge cases ---------------------------------------------------------
@@ -629,7 +638,7 @@ mod tests {
         let r = parse("decentraland://open?location=1,2&realm=r1&rust-log=debug&livekit_debug=1");
         assert_eq!(r.location, Some((1, 2)));
         assert_eq!(r.realm, "r1");
-        assert!(r.livekit_debug);
+        assert!(r.multiplayer_debug);
         assert_eq!(get_param(&r, "rust-log"), Some("debug"));
     }
 

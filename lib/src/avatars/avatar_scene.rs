@@ -744,7 +744,7 @@ impl AvatarScene {
         };
 
         let dcl_transform = DclTransformAndParent::from_godot(&transform, Vector3::ZERO);
-        self._update_avatar_transform(&entity_id, dcl_transform);
+        self._update_avatar_transform(&entity_id, dcl_transform, false);
     }
 
     #[func]
@@ -943,10 +943,7 @@ impl AvatarScene {
         let player = SceneEntityId::PLAYER;
         let profile = self.last_updated_profile.get(&player)?;
         let scene_runner = DclGlobal::singleton().bind().scene_runner.clone();
-        let player_node = scene_runner.bind().get_player_avatar_node();
-        if !player_node.is_instance_valid() {
-            return None;
-        }
+        let player_node = scene_runner.bind().get_player_avatar_node()?;
         let pos = player_node.get_global_position();
 
         let mut d = VarDictionary::new();
@@ -968,10 +965,9 @@ impl AvatarScene {
     #[func]
     fn debug_get_local_player_instance_id(&self) -> i64 {
         let scene_runner = DclGlobal::singleton().bind().scene_runner.clone();
-        let player_node = scene_runner.bind().get_player_avatar_node();
-        if !player_node.is_instance_valid() {
+        let Some(player_node) = scene_runner.bind().get_player_avatar_node() else {
             return -1;
-        }
+        };
         player_node.instance_id().to_i64()
     }
 
@@ -1056,6 +1052,7 @@ impl AvatarScene {
             emote_urn: emote_id.to_string(),
             r#loop: looping,
             timestamp: 0,
+            mask: None,
         };
 
         // Push dirty state only in active scenes
@@ -1411,14 +1408,22 @@ impl AvatarScene {
         &mut self,
         avatar_entity_id: &SceneEntityId,
         dcl_transform: DclTransformAndParent,
+        instant: bool,
     ) {
         let avatar_scene = self
             .avatar_godot_scene
             .get_mut(avatar_entity_id)
             .expect("avatar not found");
-        avatar_scene
-            .bind_mut()
-            .set_target_position(dcl_transform.to_godot_transform_3d());
+        if instant {
+            // Teleport: snap, don't interpolate across the jump.
+            avatar_scene
+                .bind_mut()
+                .snap_to_position(dcl_transform.to_godot_transform_3d());
+        } else {
+            avatar_scene
+                .bind_mut()
+                .set_target_position(dcl_transform.to_godot_transform_3d());
+        }
 
         let mut scene_runner = DclGlobal::singleton().bind().scene_runner.clone();
         let mut scene_runner = scene_runner.bind_mut();
@@ -1496,7 +1501,7 @@ impl AvatarScene {
             parent: SceneEntityId::ROOT,
         };
 
-        self._update_avatar_transform(&entity_id, dcl_transform);
+        self._update_avatar_transform(&entity_id, dcl_transform, false);
         self.last_position_index.insert(alias, transform.index);
         true
     }
@@ -1550,7 +1555,7 @@ impl AvatarScene {
             parent: SceneEntityId::ROOT,
         };
 
-        self._update_avatar_transform(&entity_id, dcl_transform);
+        self._update_avatar_transform(&entity_id, dcl_transform, movement.is_instant);
         // Wire-authoritative animation state for remote double-jump / glide.
         if let Some(avatar) = self.avatar_godot_scene.get_mut(&entity_id) {
             avatar.bind_mut().apply_wire_movement_state(
@@ -1607,7 +1612,7 @@ impl AvatarScene {
             parent: SceneEntityId::ROOT,
         };
 
-        self._update_avatar_transform(&entity_id, dcl_transform);
+        self._update_avatar_transform(&entity_id, dcl_transform, false);
         self.last_movement_timestamp.insert(alias, timestamp);
         true
     }
@@ -1627,6 +1632,19 @@ impl AvatarScene {
         if let Some(entity_id) = self.avatar_entity.get(&alias) {
             if let Some(avatar) = self.avatar_godot_scene.get_mut(entity_id) {
                 avatar.call("set_blocked_and_hidden", &[blocked.to_variant()]);
+            }
+        }
+    }
+
+    /// Forward the comms-side profile-fetch state to the avatar so a pending nameplate
+    /// can show "Loading"/"Failed" in dev (see avatar.gd `set_profile_request_state`).
+    pub fn set_avatar_profile_fetch_state(&mut self, alias: u32, failures: i32, banned: bool) {
+        if let Some(entity_id) = self.avatar_entity.get(&alias) {
+            if let Some(avatar) = self.avatar_godot_scene.get_mut(entity_id) {
+                avatar.call(
+                    "set_profile_request_state",
+                    &[failures.to_variant(), banned.to_variant()],
+                );
             }
         }
     }
@@ -1664,6 +1682,27 @@ impl AvatarScene {
         if let Some(avatar_scene) = self.avatar_godot_scene.get_mut(&entity_id) {
             avatar_scene.call("async_play_emote", &[emote_urn.to_variant()]);
         }
+    }
+
+    /// Stop a remote avatar's looping emote (rfc4 `PlayerEmote.is_stopping` — sent by Unity
+    /// peers over LiveKit and synthesized from Pulse `EmoteStopped`). Deliberately does not
+    /// touch the incremental-id dedup: a stop must neither depend on nor affect id ordering.
+    pub fn stop_emote(&mut self, alias: u32) {
+        let Some(entity_id) = self.avatar_entity.get(&alias) else {
+            return;
+        };
+        if let Some(avatar_scene) = self.avatar_godot_scene.get_mut(entity_id) {
+            avatar_scene.call("stop_emote_from_network", &[]);
+        }
+    }
+
+    /// Clear the per-alias movement/emote dedup state. Called by MessageProcessor when a peer's
+    /// preferred transport flips (Pulse ⇄ LiveKit): the two sources use incomparable clocks
+    /// (sender clock vs Pulse server tick), so carrying dedup state across the switch would
+    /// permanently starve the newly-preferred source.
+    pub fn reset_movement_dedup(&mut self, alias: u32) {
+        self.last_movement_timestamp.remove(&alias);
+        self.last_emote_incremental_id.remove(&alias);
     }
 
     pub fn update_avatar(&mut self, entity_id: SceneEntityId, profile: &UserProfile) {

@@ -176,6 +176,29 @@ impl DclAvatar {
         self.update_parcel_position(self.lerp_state.target_position);
     }
 
+    /// Instant reposition (teleport): place the avatar at the target with no interpolation —
+    /// lerping across a discontinuous jump would drag the avatar through the world.
+    #[func]
+    pub fn snap_to_position(&mut self, new_target: Transform3D) {
+        self.walk = false;
+        self.run = false;
+        self.jog = false;
+        self.rise = false;
+        self.fall = false;
+        self.land = true;
+
+        self.lerp_state.initial_position = new_target.origin;
+        self.lerp_state.target_position = new_target.origin;
+        self.lerp_state.factor = 1.0;
+        self.lerp_state.initial_velocity_y = 0.0;
+
+        self.base_mut()
+            .set_global_rotation(new_target.basis.get_euler());
+        self.base_mut().set_global_position(new_target.origin);
+
+        self.update_parcel_position(new_target.origin);
+    }
+
     // This function is called when a parcel scene is created,
     //  it handles the corner case where the avatar is already in the parcel
     //  that is being created
@@ -291,18 +314,35 @@ impl DclAvatar {
                 }
             }
             AvatarMovementType::LerpTwoPoints => {
+                let previous_factor = self.lerp_state.factor;
                 self.lerp_state.factor += 10.0 * dt as f32;
-                if self.lerp_state.factor < 1.0 {
-                    if self.lerp_state.factor > 1.0 {
-                        self.lerp_state.factor = 1.0;
-                    }
-
-                    let new_position = self
-                        .lerp_state
-                        .initial_position
-                        .lerp(self.lerp_state.target_position, self.lerp_state.factor);
+                if previous_factor < 1.0 {
+                    // Clamp the final step so the crossing frame lands exactly on the
+                    // target instead of undershooting by up to one frame's worth.
+                    let new_position = self.lerp_state.initial_position.lerp(
+                        self.lerp_state.target_position,
+                        self.lerp_state.factor.min(1.0),
+                    );
 
                     self.base_mut().set_global_position(new_position);
+                } else if self.lerp_state.factor > 3.0
+                    && (self.walk || self.jog || self.run)
+                    && !self.rise
+                    && !self.fall
+                {
+                    // The locomotion flags are derived per-update in set_target_position from
+                    // the distance to the previous target, so they latch until the next packet.
+                    // LiveKit streams ~10 Hz and self-corrects, but Pulse goes silent when the
+                    // peer stands still (delta protocol) — decay to idle once the stream pauses
+                    // (factor 1.0 == one 100 ms packet interval; 3.0 == 300 ms of silence).
+                    //
+                    // Ground locomotion ONLY, matching Unity (RemotePlayerAnimationSystem):
+                    // air state (rise/fall) latches on silence — a mid-air peer keeps its air
+                    // pose during a packet-loss gap instead of popping to a grounded stance.
+                    self.walk = false;
+                    self.jog = false;
+                    self.run = false;
+                    self.land = true;
                 }
             }
         }

@@ -106,14 +106,26 @@ mod ios {
     pub fn init_logger() {
         let pipe_to_godot = should_pipe_to_godot();
         let filter_layer = create_reload_filter("info");
+        // Feed all Rust log levels (incl. WARN/ERROR) into the log-stream hub
+        // directly — Godot's console output never reaches stdout on iOS, and the
+        // custom Godot logger only sees `print`/`log_message`, not errors.
+        let hub_layer = crate::tools::log_stream::LogHubLayer::new();
 
         if pipe_to_godot {
-            registry().with(filter_layer).with(GodotTracingLayer).init();
+            registry()
+                .with(filter_layer)
+                .with(GodotTracingLayer)
+                .with(hub_layer)
+                .init();
         } else {
             let oslog_layer = IosOsLogLayer {
                 logger: oslog::OsLog::new(env!("CARGO_PKG_NAME"), "default"),
             };
-            registry().with(filter_layer).with(oslog_layer).init();
+            registry()
+                .with(filter_layer)
+                .with(oslog_layer)
+                .with(hub_layer)
+                .init();
         }
     }
 }
@@ -258,6 +270,22 @@ pub struct DclGlobal {
     #[var]
     pub input_modifier_disable_gliding: bool,
 
+    // On-screen touch controls - set by scenes via PBTouchScreenControls on the ROOT entity.
+    // `touch_controls_active` is true while the component is present. `touch_controls_inputs`
+    // is a denylist of per-button overrides (each a dictionary {action, hide, icon}); buttons
+    // not listed keep their default (shown). `touch_controls_main_action` is the godot action
+    // name for the large central button (empty = keep default jump).
+    #[var]
+    pub touch_controls_active: bool,
+    #[var]
+    pub touch_controls_hide_joystick: bool,
+    #[var]
+    pub touch_controls_hide_crosshair: bool,
+    #[var]
+    pub touch_controls_main_action: GString,
+    #[var]
+    pub touch_controls_inputs: VarArray,
+
     // SDK-controlled skybox time - set by scenes via PBSkyboxTime component on ROOT entity
     #[var]
     pub sdk_skybox_time_active: bool,
@@ -323,6 +351,19 @@ impl INode for DclGlobal {
         let mut testing_tools: Gd<DclTestingTools> = DclTestingTools::new_alloc();
         let mut portable_experience_controller: Gd<DclPortableExperienceController> =
             DclPortableExperienceController::new_alloc();
+
+        // Arm the boot-log ring as early as possible — gated by a configured
+        // scene-inspector target (debug/dev only; the export plugin bakes it only
+        // in debug, prod never has it) — so any early boot logs, which fire before
+        // `global.gd` can arm it, are captured into the ring and flushed when a
+        // consumer subscribes. The Rust tracing layer is already installed
+        // (init_logger above) and `push_early_log` needs no sender, so no
+        // capture-sink install is required here; `global.gd` installs the
+        // Godot/native sinks at `_ready`. Without this, iOS misses these early
+        // logs (they're os_log-only and pre-arming).
+        if !cli.bind().scene_inspector.is_empty() {
+            crate::tools::scene_inspector::set_early_log_capture(true);
+        }
 
         tokio_runtime.set_name("tokio_runtime");
         scene_runner.set_name("scene_runner");
@@ -449,6 +490,13 @@ impl INode for DclGlobal {
             input_modifier_disable_double_jump: false,
             input_modifier_disable_gliding: false,
 
+            // On-screen touch controls start inactive (default joystick + gamepad shown)
+            touch_controls_active: false,
+            touch_controls_hide_joystick: false,
+            touch_controls_hide_crosshair: false,
+            touch_controls_main_action: GString::new(),
+            touch_controls_inputs: VarArray::new(),
+
             // SDK skybox time starts as inactive
             sdk_skybox_time_active: false,
             sdk_skybox_fixed_time: 0,
@@ -465,6 +513,23 @@ impl DclGlobal {
     #[func]
     fn set_scene_log_enabled(&self, enabled: bool) {
         set_scene_log_enabled(enabled);
+    }
+
+    /// Logging self-test for the **Rust stack**: emit every `tracing` level plus
+    /// raw `println!`/`eprintln!`, so the unified channel + Sentry pipeline can be
+    /// verified end-to-end. Called from GDScript's `_run_logging_selftest()` when
+    /// `--test-logging` / `?test-logging=true` is set. ERROR/WARN additionally
+    /// exercise the Godot→Sentry path; `println!`/`eprintln!` exercise the iOS fd
+    /// capture (they never go through `tracing`).
+    #[func]
+    fn test_logging(&self) {
+        tracing::trace!("[LOGTEST][rust] trace via tracing::trace!");
+        tracing::debug!("[LOGTEST][rust] debug via tracing::debug!");
+        tracing::info!("[LOGTEST][rust] info via tracing::info!");
+        tracing::warn!("[LOGTEST][rust] warn via tracing::warn! (expect Sentry)");
+        tracing::error!("[LOGTEST][rust] error via tracing::error! (expect Sentry)");
+        println!("[LOGTEST][rust] stdout via println! (iOS: fd capture)");
+        eprintln!("[LOGTEST][rust] stderr via eprintln! (iOS: fd capture)");
     }
 
     #[func]
@@ -547,6 +612,16 @@ impl DclGlobal {
     #[func]
     pub fn get_version() -> GString {
         env!("GODOT_EXPLORER_VERSION").into()
+    }
+
+    /// Clean-semver release string for Sentry (`{major.minor.patch}+{build}`), so
+    /// `release.version` / `release.build` filtering, adoption and regression tracking
+    /// work. Distinct from `get_version()`, which keeps the human/log-facing full string
+    /// (commit hash + `-{env}` suffix). Commit hash and environment reach Sentry via
+    /// `dist` and `environment`. Built in build.rs (`GODOT_EXPLORER_SENTRY_RELEASE`).
+    #[func]
+    pub fn get_sentry_release() -> GString {
+        env!("GODOT_EXPLORER_SENTRY_RELEASE").into()
     }
 
     /// Get version string with environment suffix (e.g., "v1.0.0 - zone")
@@ -637,6 +712,15 @@ impl DclGlobal {
         self.input_modifier_disable_emote = false;
         self.input_modifier_disable_double_jump = false;
         self.input_modifier_disable_gliding = false;
+    }
+
+    /// Reset on-screen touch controls to defaults (joystick + full gamepad shown)
+    pub fn reset_touch_controls(&mut self) {
+        self.touch_controls_active = false;
+        self.touch_controls_hide_joystick = false;
+        self.touch_controls_hide_crosshair = false;
+        self.touch_controls_main_action = GString::new();
+        self.touch_controls_inputs = VarArray::new();
     }
 
     /// Reset SDK skybox time to inactive state

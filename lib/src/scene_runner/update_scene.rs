@@ -83,6 +83,8 @@ fn state_name(state: &super::scene::SceneUpdateState) -> &'static str {
         S::MeshCollider => "MeshCollider",
         S::GltfContainer => "GltfContainer",
         S::SyncGltfContainer => "SyncGltfContainer",
+        S::AssetLoad => "AssetLoad",
+        S::SyncAssetLoad => "SyncAssetLoad",
         S::GltfNodeModifiers => "GltfNodeModifiers",
         S::NftShape => "NftShape",
         S::Animator => "Animator",
@@ -99,10 +101,12 @@ fn state_name(state: &super::scene::SceneUpdateState) -> &'static str {
         S::PhysicsCombinedImpulse => "PhysicsCombinedImpulse",
         S::CameraModeArea => "CameraModeArea",
         S::InputModifier => "InputModifier",
+        S::TouchScreenControls => "TouchScreenControls",
         S::SkyboxTime => "SkyboxTime",
         S::TriggerArea => "TriggerArea",
         S::VirtualCameras => "VirtualCameras",
         S::AudioSource => "AudioSource",
+        S::ParticleSystem => "ParticleSystem",
         S::ProcessRpcs => "ProcessRpcs",
         S::ComputeCrdtState => "ComputeCrdtState",
         S::SendToThread => "SendToThread",
@@ -113,6 +117,7 @@ fn state_name(state: &super::scene::SceneUpdateState) -> &'static str {
 use super::{
     components::{
         animator::update_animator,
+        asset_load::{sync_asset_load_loading_state, update_asset_load},
         audio_source::update_audio_source,
         avatar_attach::update_avatar_attach,
         avatar_data::update_avatar_scene_updates,
@@ -130,12 +135,14 @@ use super::{
         mesh_collider::update_mesh_collider,
         mesh_renderer::update_mesh_renderer,
         nft_shape::update_nft_shape,
+        particle_system::update_particle_system,
         physics_combined::{update_physics_combined_force, update_physics_combined_impulse},
         pointer_events::update_scene_pointer_events,
         raycast::update_raycasts,
         realm_info::sync_realm_info,
         skybox_time::update_skybox_time,
         text_shape::update_text_shape,
+        touch_screen_controls::update_touch_screen_controls,
         transform_and_parent::update_transform_and_parent,
         trigger_area::update_trigger_area,
         tween::update_tween,
@@ -417,6 +424,16 @@ pub fn _process_scene(
                 SceneUpdateState::SyncGltfContainer => {
                     !sync_gltf_loading_state(scene, crdt_state, ref_time, effective_end_time_us)
                 }
+                SceneUpdateState::AssetLoad => {
+                    update_asset_load(scene, crdt_state);
+                    false
+                }
+                SceneUpdateState::SyncAssetLoad => !sync_asset_load_loading_state(
+                    scene,
+                    crdt_state,
+                    ref_time,
+                    effective_end_time_us,
+                ),
                 SceneUpdateState::GltfNodeModifiers => {
                     tracing::debug!("Entering GltfNodeModifiers state");
                     let still_processing = !update_gltf_node_modifiers(
@@ -509,6 +526,10 @@ pub fn _process_scene(
                     update_input_modifier(scene, crdt_state, current_parcel_scene_id);
                     false
                 }
+                SceneUpdateState::TouchScreenControls => {
+                    update_touch_screen_controls(scene, crdt_state, current_parcel_scene_id);
+                    false
+                }
                 SceneUpdateState::SkyboxTime => {
                     update_skybox_time(scene, crdt_state, current_parcel_scene_id);
                     false
@@ -528,6 +549,10 @@ pub fn _process_scene(
                 }
                 SceneUpdateState::AudioSource => {
                     update_audio_source(scene, crdt_state, current_parcel_scene_id);
+                    false
+                }
+                SceneUpdateState::ParticleSystem => {
+                    update_particle_system(scene, crdt_state, current_parcel_scene_id);
                     false
                 }
                 SceneUpdateState::SceneUi => {

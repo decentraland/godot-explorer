@@ -51,6 +51,19 @@ impl DclSceneEntityDefinition {
         scene_display.to_godot()
     }
 
+    /// Relative path (within the scene's content mapping) of the scene.json
+    /// `display.navmapThumbnail` image, or empty when the scene defines none.
+    #[func]
+    fn get_navmap_thumbnail(&self) -> GString {
+        self.inner
+            .scene_meta_scene
+            .display
+            .as_ref()
+            .and_then(|d| d.navmap_thumbnail.as_deref())
+            .unwrap_or("")
+            .into()
+    }
+
     #[func]
     fn is_global(&self) -> bool {
         self.inner.is_global
@@ -103,6 +116,18 @@ impl DclSceneEntityDefinition {
     #[func]
     fn get_global_spawn_position(&self) -> Vector3 {
         self.inner.get_global_spawn_position()
+    }
+
+    /// Whether the auto-generated landscape terrain should be shown around this scene.
+    /// Mirrors the optional `landscapeTerrain` scene.json field (schemas#435): absent or
+    /// true means show terrain; false opts out. Honored only for single-scene worlds and
+    /// local dev by the caller; Genesis City ignores it.
+    #[func]
+    fn is_landscape_terrain_enabled(&self) -> bool {
+        self.inner
+            .scene_meta_scene
+            .landscape_terrain
+            .unwrap_or(true)
     }
 }
 

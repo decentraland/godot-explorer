@@ -8,7 +8,7 @@ signal toggle_fps
 signal toggle_ram
 signal request_pause_scenes(enabled: bool)
 signal request_debug_panel(enabled: bool)
-signal request_livekit_debug(enabled: bool)
+signal request_multiplayer_debug(enabled: bool)
 #signals from advanced settings
 
 var is_in_game: bool = false  # when it is playing in the 3D Game or not
@@ -40,6 +40,7 @@ var _close_node_to_free: PlaceholderManager = null
 @onready var portrait_button_profile: TextureButton = %Portrait_Button_Profile
 
 @onready var account_deletion_pop_up: TextureRect = $AccountDeletionPopUp
+@onready var upgrade_otp_pop_up: TextureRect = $UpgradeOtpPopUp
 
 @onready var static_button_backpack: TextureButton = %StaticButton_Backpack
 @onready var static_button_discover: TextureButton = %StaticButton_Discover
@@ -97,6 +98,7 @@ func _ready():
 	Global.open_profile_editor.connect(async_show_profile_editor)
 	Global.close_menu.connect(async_close)
 	Global.delete_account.connect(_on_account_delete)
+	Global.upgrade_to_otp.connect(_on_upgrade_to_otp)
 
 	if not is_in_game:
 		open.call_deferred()
@@ -197,8 +199,8 @@ func async_show_settings():
 	control_settings.instance.request_debug_panel.connect(
 		func(enabled): request_debug_panel.emit(enabled)
 	)
-	control_settings.instance.request_livekit_debug.connect(
-		func(enabled): request_livekit_debug.emit(enabled)
+	control_settings.instance.request_multiplayer_debug.connect(
+		func(enabled): request_multiplayer_debug.emit(enabled)
 	)
 
 	select_settings_screen()
@@ -370,6 +372,11 @@ func _on_notification_clicked(notification_dict: Dictionary) -> void:
 		# Open the backpack to show the reward
 		async_show_backpack()
 		Global.open_navbar_silently.emit()
+	# MARKETPLACE-IAP-TOAST: a "marketplace_iap" toast tap would route here to open the
+	# backpack and apply the arrival view — read `category` from notification_dict.metadata,
+	# await async_show_backpack(category == "emote"), then have the active Backpack call
+	# apply_marketplace_arrival_view(category) (add a small forwarder on BackpackResponsive
+	# to reach it). Removed pending a portrait-aware toast.
 
 
 func _on_deep_link_received() -> void:
@@ -379,7 +386,10 @@ func _on_deep_link_received() -> void:
 func _async_on_deep_link_jump() -> void:
 	await async_show_discover()
 	if is_instance_valid(control_discover.instance):
-		control_discover.instance.jump_in.open_panel()
+		# Only open the sheet when it actually has a place loaded — a deeplink with no
+		# navigation target must land on Discover itself, not an empty "Scene Title" card.
+		if not control_discover.instance.jump_in.item_data.is_empty():
+			control_discover.instance.jump_in.open_panel()
 
 
 func _async_on_deep_link_open_event(event_id: String) -> void:
@@ -407,3 +417,18 @@ func _on_account_delete() -> void:
 		show()
 		is_open = true
 	account_deletion_pop_up.async_start_flow()
+
+
+func _on_upgrade_to_otp() -> void:
+	if not upgrade_otp_pop_up:
+		return
+	if not is_open:
+		# Kill pending close tweens from a previous close
+		if is_instance_valid(_close_modulate_tween) and _close_modulate_tween.is_running():
+			_close_modulate_tween.kill()
+		if is_instance_valid(_close_hide_tween) and _close_hide_tween.is_running():
+			_close_hide_tween.kill()
+		modulate = Color(1, 1, 1, 1)
+		show()
+		is_open = true
+	upgrade_otp_pop_up.async_start_flow()

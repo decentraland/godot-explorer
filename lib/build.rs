@@ -7,6 +7,8 @@ use std::{
     path::Path,
 };
 
+mod build_quant;
+
 struct Component {
     id: u32,
     pascal_name: String,
@@ -15,11 +17,14 @@ struct Component {
 
 const PROTO_FILES_BASE_DIR: &str = "src/dcl/components/proto/";
 const COMPONENT_BASE_DIR: &str = "src/dcl/components/proto/decentraland/sdk/components/";
-const GROW_ONLY_SET_COMPONENTS: [&str; 4] = [
+const GROW_ONLY_SET_COMPONENTS: [&str; 5] = [
     "PointerEventsResult",
     "VideoEvent",
     "AvatarEmoteCommand",
     "TriggerAreaResult",
+    // The renderer appends one value per-asset transition; the scene-side
+    // SDK reads AssetLoadLoadingState as a GrowOnlyValueSet (protocol PR #339).
+    "AssetLoadLoadingState",
 ];
 
 pub fn snake_to_pascal(input: &str) -> String {
@@ -389,11 +394,20 @@ fn main() -> io::Result<()> {
     proto_files.push(
         format!("{PROTO_FILES_BASE_DIR}decentraland/kernel/comms/rfc5/ws_comms.proto").into(),
     );
-    proto_files
-        .push(format!("{PROTO_FILES_BASE_DIR}decentraland/kernel/comms/rfc4/comms.proto").into());
+    proto_files.push(patched_rfc4_comms_proto());
     proto_files.push(
         format!("{PROTO_FILES_BASE_DIR}decentraland/kernel/comms/v3/archipelago.proto").into(),
     );
+
+    // Pulse comms protos, shipped by the pinned @dcl/protocol tarball (built from protocol
+    // `main`, commit 0ff6038 — see PROTOCOL_FIXED_VERSION_URL in src/install_dependency.rs). Compiled
+    // unconditionally — runtime code is gated by the `use_pulse` feature instead, keeping the
+    // build script feature-free. options.proto must be in the compile set so the
+    // FileDescriptorSet carries the quantization extension values for build_quant.
+    proto_files.push(format!("{PROTO_FILES_BASE_DIR}decentraland/common/options.proto").into());
+    proto_files.push(format!("{PROTO_FILES_BASE_DIR}decentraland/pulse/pulse_shared.proto").into());
+    proto_files.push(format!("{PROTO_FILES_BASE_DIR}decentraland/pulse/pulse_client.proto").into());
+    proto_files.push(format!("{PROTO_FILES_BASE_DIR}decentraland/pulse/pulse_server.proto").into());
 
     // Social service protos (with RPC services)
     proto_files
@@ -432,7 +446,28 @@ fn main() -> io::Result<()> {
     let mut prost_config = prost_build::Config::new();
     prost_config.type_attribute(".", "#[derive(serde::Serialize)]");
     prost_config.service_generator(Box::new(dcl_rpc::codegen::RPCServiceGenerator::new()));
-    prost_config.compile_protos(&proto_files, &["src/dcl/components/proto/"])?;
+    // Emit the descriptor set so build_quant can read the Pulse quantization
+    // field options (the .proto stays the single source of truth for the wire ABI).
+    let descriptor_path = Path::new(&env::var("OUT_DIR").unwrap()).join("proto_descriptor_set.bin");
+    prost_config.file_descriptor_set_path(&descriptor_path);
+    // The patched root goes first so `decentraland/kernel/comms/rfc4/comms.proto`
+    // resolves to the patched copy, not the npm one (same canonical path).
+    let proto_patched_root = Path::new(&env::var("OUT_DIR").unwrap()).join("proto_patched");
+    prost_config.compile_protos(
+        &proto_files,
+        &[
+            proto_patched_root.as_path(),
+            Path::new(PROTO_FILES_BASE_DIR),
+        ],
+    )?;
+
+    let descriptor_bytes = fs::read(&descriptor_path).expect("read proto descriptor set");
+    let quant_path = Path::new(&env::var("OUT_DIR").unwrap()).join("pulse_quant.rs");
+    build_quant::generate(&descriptor_bytes, &quant_path);
+    println!("cargo:rerun-if-changed=build_quant.rs");
+    println!(
+        "cargo:rerun-if-changed={PROTO_FILES_BASE_DIR}decentraland/kernel/comms/rfc4/comms.proto"
+    );
 
     #[cfg(feature = "use_livekit")]
     if env::var("CARGO_CFG_TARGET_OS").unwrap() == "android" {
@@ -447,6 +482,63 @@ fn main() -> io::Result<()> {
     set_godot_explorer_version();
 
     Ok(())
+}
+
+/// The pinned @dcl/protocol build (protocol `main`, commit 0ff6038) has an
+/// rfc4 `comms.proto` that lacks fields the Pulse transport and Unity interop rely on
+/// (they live in protocol `experimental`): `PlayerEmote` 4..=11 (`is_stopping` &
+/// co., bridged from Pulse `EmoteStopped` and already sent by Unity peers over
+/// LiveKit) and `Chat.forwarded_from` (SFU forwarding). The npm tree is gitignored
+/// and wiped by `cargo run -- install`, so it can't be edited in place; instead,
+/// patch a copy under OUT_DIR/proto_patched/ and compile that one (that root is
+/// listed first so the canonical path resolves to the patched copy). Each patch
+/// no-ops once the pinned build ships its fields — delete this when both do.
+fn patched_rfc4_comms_proto() -> std::path::PathBuf {
+    const RFC4_REL: &str = "decentraland/kernel/comms/rfc4/comms.proto";
+    let mut source = fs::read_to_string(format!("{PROTO_FILES_BASE_DIR}{RFC4_REL}"))
+        .expect("read rfc4 comms.proto (run `cargo run -- install` to fetch protos)");
+
+    if !source.contains("is_stopping") {
+        source = insert_fields_before_message_close(
+            &source,
+            "message PlayerEmote {",
+            concat!(
+                "  optional bool is_stopping = 4; // true means the emote has been stopped in the sender's client\n",
+                "  optional bool is_repeating = 5; // true when it is not the first time the looping animation plays\n",
+                "  optional int32 interaction_id = 6; // identifies an interaction univocally\n",
+                "  optional int32 social_emote_outcome = 7; // -1 means it does not use an outcome animation\n",
+                "  optional bool is_reacting = 8; // to a social emote started by other user\n",
+                "  optional string social_emote_initiator = 9; // wallet address of the social emote initiator\n",
+                "  optional string target_avatar = 10; // wallet address of the directed emote target\n",
+                "  optional uint32 mask = 11; // mask for which bones an animation applies to\n",
+            ),
+        );
+    }
+    if !source.contains("forwarded_from") {
+        source = insert_fields_before_message_close(
+            &source,
+            "message Chat {",
+            "  optional string forwarded_from = 3; // original sender when forwarded through an SFU\n",
+        );
+    }
+
+    let dest = Path::new(&env::var("OUT_DIR").unwrap())
+        .join("proto_patched")
+        .join(RFC4_REL);
+    fs::create_dir_all(dest.parent().unwrap()).expect("create proto_patched dir");
+    fs::write(&dest, source).expect("write patched rfc4 comms.proto");
+    dest
+}
+
+fn insert_fields_before_message_close(source: &str, marker: &str, fields: &str) -> String {
+    let start = source.find(marker).unwrap_or_else(|| {
+        panic!("rfc4 comms.proto: `{marker}` not found — update the patch in build.rs")
+    });
+    let close = source[start..]
+        .find('}')
+        .map(|offset| start + offset)
+        .unwrap_or_else(|| panic!("rfc4 comms.proto: closing brace for `{marker}` not found"));
+    format!("{}{}{}", &source[..close], fields, &source[close..])
 }
 
 fn generate_file<P: AsRef<Path>>(path: P, text: &[u8]) {
@@ -512,6 +604,7 @@ fn set_godot_explorer_version() {
     println!("cargo:rerun-if-env-changed=BRANCH_NAME");
     println!("cargo:rerun-if-env-changed=DECENTRALAND_PROD_BUILD");
     println!("cargo:rerun-if-env-changed=DECENTRALAND_STAGING_BUILD");
+    println!("cargo:rerun-if-env-changed=DCL_BUILD_NUMBER");
 
     // Always use git to get the actual checked-out commit (what GitHub checkout uses)
     let commit_hash = match check_safe_repo() {
@@ -549,6 +642,22 @@ fn set_godot_explorer_version() {
     // Get the CARGO_PKG_VERSION env var
     let version = env::var("CARGO_PKG_VERSION").unwrap_or_else(|_| "0.0.0".to_string());
 
+    // Store build number (Android versionCode / iOS CFBundleVersion), allocated per commit by the
+    // Cloudflare Worker and exported via DCL_BUILD_NUMBER. Woven in as a 4th version segment
+    // (`{version}.{build}`) so the baked string carries the exact store build (Sentry release, UI,
+    // logs). Unset on local/fork builds -> the segment is omitted.
+    //
+    // NOTE: in CI the `compute-build-number` step MUST run BEFORE the lib build so this env is set
+    // when build.rs runs (see android_builds.yml / ios_r2_artifact.yml). The build-number axis is
+    // separate from the marketing SemVer and version_gate parses only major.minor.patch, so the
+    // extra `.{build}` segment is ignored by the force-update gate.
+    let build_segment = env::var("DCL_BUILD_NUMBER")
+        .ok()
+        .map(|v| v.trim().to_string())
+        .filter(|v| !v.is_empty() && v.chars().all(|c| c.is_ascii_digit()))
+        .map(|v| format!(".{v}"))
+        .unwrap_or_default();
+
     // Check if this is a production or staging build
     let is_prod_build = env::var("DECENTRALAND_PROD_BUILD").is_ok();
     let is_staging_build = env::var("DECENTRALAND_STAGING_BUILD").is_ok();
@@ -570,18 +679,47 @@ fn set_godot_explorer_version() {
     let mode_suffix = if is_debug { "-debug" } else { "" };
 
     let full_version = match short_hash {
-        // With git hash: {version}-{short_hash}{-debug}-{dev|prod}
-        Some(hash) => format!("{}-{}{}-{}", version, hash, mode_suffix, env_suffix),
+        // With git hash: {version}{.build_number}-{short_hash}{-debug}-{dev|staging|prod}
+        Some(hash) => format!(
+            "{}{}-{}{}-{}",
+            version, build_segment, hash, mode_suffix, env_suffix
+        ),
         // Fallback if no git hash available
         _ => {
             let timestamp = Utc::now()
                 .to_rfc3339()
                 .replace(|c: char| !c.is_ascii_digit(), "");
-            format!("{}-t{}{}-{}", version, timestamp, mode_suffix, env_suffix)
+            format!(
+                "{}{}-t{}{}-{}",
+                version, build_segment, timestamp, mode_suffix, env_suffix
+            )
         }
     };
 
     println!("cargo:rustc-env=GODOT_EXPLORER_VERSION={}", full_version);
+
+    // Sentry-friendly semver release: `{major.minor.patch}+{build}`.
+    //
+    // Sentry only exposes `release.version` / `release.build` (and adoption,
+    // regression detection, "resolved in next release") when the release parses
+    // as clean semver `pkg@major.minor.patch(+build)`. The full `GODOT_EXPLORER_VERSION`
+    // above does NOT: it trails the git hash + `-{env}` into the semver prerelease
+    // slot and puts the build in a 4th dotted segment, so `release.build` stays empty.
+    //
+    // Here the build number goes into the numeric `+build` metadata slot (build number
+    // is globally monotonic per commit, so `release.build:>=N` == "this build or newer").
+    // The commit hash and environment are intentionally dropped — they're already carried
+    // by Sentry `dist` and `environment` respectively (see project_main_loop.gd init).
+    // When no build number is allocated (local/fork builds) the bare `{version}` is still
+    // valid semver.
+    let sentry_release = match build_segment.strip_prefix('.') {
+        Some(build) if !build.is_empty() => format!("{}+{}", version, build),
+        _ => version.clone(),
+    };
+    println!(
+        "cargo:rustc-env=GODOT_EXPLORER_SENTRY_RELEASE={}",
+        sentry_release
+    );
 
     // Get full commit hash for Sentry tags
     let full_commit_hash = commit_hash.clone().unwrap_or_default();

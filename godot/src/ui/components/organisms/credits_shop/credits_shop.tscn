@@ -21,11 +21,6 @@ font = ExtResource("4_frnrg")
 font_size = 38
 font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 
-[sub_resource type="LabelSettings" id="LabelSettings_4pofo"]
-font = ExtResource("6_2k0t8")
-font_size = 24
-font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
-
 [node name="CreditsShop" type="VBoxContainer" unique_id=2110848340]
 anchors_preset = 10
 anchor_right = 1.0
@@ -144,7 +139,7 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_7yfw2")
 layout_mode = 2
 size_flags_horizontal = 1
 title = "What are Credits?"
-description = "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since."
+description = "Credits are a limited digital in-app utility purchased with real money via Apple. You can use Credits to acquire digital content, such as Wearables and Emotes, in the iOS App."
 
 [node name="HSeparator2" type="HSeparator" parent="CreditsFaq" unique_id=895173665]
 layout_mode = 2
@@ -156,7 +151,7 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_7yfw2")
 layout_mode = 2
 size_flags_horizontal = 1
 title = "Do Credits expire?"
-description = "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since."
+description = "Credits do not expire. However, the Foundation may set expiration dates or discontinue them in the future by providing at least 30 days of prior notice."
 
 [node name="HSeparator3" type="HSeparator" parent="CreditsFaq" unique_id=1758333132]
 layout_mode = 2
@@ -164,12 +159,17 @@ mouse_filter = 2
 theme_override_constants/separation = 38
 theme_override_styles/separator = SubResource("StyleBoxEmpty_7yfw2")
 
-[node name="Label_Description" type="Label" parent="CreditsFaq" unique_id=1501175946]
+[node name="Label_Description" type="RichTextLabel" parent="CreditsFaq" unique_id=1501175946]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(1, 1)
 layout_mode = 2
-text = "I agree I am purchasing a limited license to use Credits governed by the Terms of the License. By purchasing Credits, you agree to our Terms of Use and Privacy Policy, including the arbitration clause and revocation policy. You consent to the immediate performance of the contract and acknowledge that you thereby lose your right of withdrawal."
-label_settings = SubResource("LabelSettings_4pofo")
+theme_override_colors/default_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+theme_override_fonts/normal_font = ExtResource("6_2k0t8")
+theme_override_font_sizes/normal_font_size = 24
+bbcode_enabled = true
+text = "I agree that I am purchasing a limited license to use Credits governed by the [color=#E8B9FF][url=\"https://decentraland.org/credits-terms\"]Credits Terms[/url][/color]. By purchasing Credits, you agree to Decentraland's [color=#E8B9FF][url=\"https://decentraland.org/terms\"]Terms of Use[/url][/color] and [color=#E8B9FF][url=\"https://decentraland.org/privacy\"]Privacy Policy[/url][/color]."
+fit_content = true
+scroll_active = false
 autowrap_mode = 2
 
 [node name="HSeparator4" type="HSeparator" parent="CreditsFaq" unique_id=1361122907]

@@ -5,6 +5,7 @@
 [ext_resource type="PackedScene" uid="uid://cbtq7kaarx6mp" path="res://src/logic/player/camera_mode_area_detector.tscn" id="2_rco65"]
 [ext_resource type="PackedScene" uid="uid://qyi7gcf7tphy" path="res://src/logic/player/outline_system.tscn" id="3_sxiuh"]
 [ext_resource type="PackedScene" uid="uid://biigqf0xvnrcj" path="res://src/logic/player/stuck_detector.tscn" id="4_stuck"]
+[ext_resource type="Script" uid="uid://8dutfncs4yky" path="res://src/logic/player/camera_collision_clamp.gd" id="5_clamp"]
 
 [sub_resource type="SeparationRayShape3D" id="SeparationRayShape3D_3217e"]
 length = 1.0779
@@ -36,21 +37,28 @@ collision_mask = 2147483908
 
 [node name="Mount" type="SpringArm3D" parent="." unique_id=185943615]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.71, 0)
+collision_mask = 2
+margin = 0.3
 
-[node name="Camera3D" type="DclCamera3D" parent="Mount" unique_id=172558912]
+[node name="CameraArm" type="Node3D" parent="Mount" unique_id=185943616]
+
+[node name="CameraCollisionClamp" type="Node3D" parent="Mount" unique_id=185943617]
+script = ExtResource("5_clamp")
+
+[node name="Camera3D" type="DclCamera3D" parent="Mount/CameraArm" unique_id=172558912]
 smoothing_speed = 2.0
 target_fov = 60.0
 cull_mask = 524287
 current = true
 far = 100.0
 
-[node name="AvatarRaycast" type="RayCast3D" parent="Mount/Camera3D" unique_id=313603251]
+[node name="AvatarRaycast" type="RayCast3D" parent="Mount/CameraArm/Camera3D" unique_id=313603251]
 target_position = Vector3(0, 0, -10)
 collision_mask = 536870912
 collide_with_areas = true
 collide_with_bodies = false
 
-[node name="OutlineSystem" parent="Mount/Camera3D" unique_id=110737000 instance=ExtResource("3_sxiuh")]
+[node name="OutlineSystem" parent="Mount/CameraArm/Camera3D" unique_id=110737000 instance=ExtResource("3_sxiuh")]
 
 [node name="Avatar" parent="." unique_id=1332077066 instance=ExtResource("2_n22nx")]
 top_level = true
