@@ -400,19 +400,30 @@ func _on_need_open_url(url: String, _description: String, _use_webkit: bool) -> 
 ## Push the safe-area rect (in canvas/logical pixels) to the scene runner so
 ## scenes get correct UiCanvasInformation.interactable_area on every resize,
 ## including --emulate-ios / --emulate-android virtual margins.
-## The rectangle (in SceneUIContainer/canvas coords) where scenes may draw interactive
-## UI without being covered by the client UI: the HUD safe rectangle (device safe area +
-## the 108/32/108/45 symmetric floor from SafeAreaHud) minus the left chat column. The
-## joypad (bottom-right) may still overlap it.
-func get_interactable_area() -> Rect2:
+## The HUD safe rectangle (in SceneUIContainer/canvas coords): device safe area + the
+## symmetric 108/32/108/45 floor from SafeAreaHud, WITHOUT the chat column. This is the
+## "screen inset" area — safe from device insets; the chat may still overlap it.
+func get_safe_area() -> Rect2:
 	var canvas: Vector2 = ui_safe_area.size
 	var m_left: float = safe_area_hud.get_theme_constant("margin_left")
 	var m_right: float = safe_area_hud.get_theme_constant("margin_right")
 	var m_top: float = safe_area_hud.get_theme_constant("margin_top")
 	var m_bottom: float = safe_area_hud.get_theme_constant("margin_bottom")
-	var left: float = m_left + Global.chat_notifications_width
 	return Rect2(
-		left, m_top, maxf(canvas.x - m_right - left, 0.0), maxf(canvas.y - m_bottom - m_top, 0.0)
+		m_left,
+		m_top,
+		maxf(canvas.x - m_left - m_right, 0.0),
+		maxf(canvas.y - m_top - m_bottom, 0.0)
+	)
+
+
+## Where scenes may draw interactive UI without being covered by the client UI: the safe
+## rectangle minus the left chat column. The joypad (bottom-right) may still overlap it.
+func get_interactable_area() -> Rect2:
+	var safe: Rect2 = get_safe_area()
+	var chat: float = Global.chat_notifications_width
+	return Rect2(
+		safe.position.x + chat, safe.position.y, maxf(safe.size.x - chat, 0.0), safe.size.y
 	)
 
 
@@ -423,6 +434,7 @@ func _push_scene_interactable_area() -> void:
 	_update_interactable_area_debug(area)
 	if is_instance_valid(Global.scene_runner) and area.size.x > 0 and area.size.y > 0:
 		Global.scene_runner.set_interactable_area(Rect2i(area))
+		Global.scene_runner.set_safe_area(Rect2i(get_safe_area()))
 
 
 ## Dev-only translucent overlay to verify the computed interactable area on device.
