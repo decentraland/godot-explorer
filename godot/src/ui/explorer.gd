@@ -97,7 +97,7 @@ var _debug_panel_from_settings: bool = false
 @onready var navbar: Control = %Navbar
 @onready var joypad: Control = %Joypad
 @onready var button_show_ui: Button = %Button_ShowUI
-@onready var h_box_container_left_panels: HBoxContainer = %HBoxContainerLeftPanels
+@onready var hud_dismiss_catcher: Control = %HudDismissCatcher
 
 
 func _process(_dt):
@@ -199,6 +199,12 @@ func _ready():
 
 	Global.orientation_changed.connect(_on_orientation_changed)
 	Global.chat_write_mode_changed.connect(_on_chat_write_mode_changed)
+
+	# Keep the full-screen dismiss catcher in sync with what's open.
+	notifications_panel.visibility_changed.connect(_refresh_hud_dismiss)
+	friends_panel.visibility_changed.connect(_refresh_hud_dismiss)
+	settings_panel.visibility_changed.connect(_refresh_hud_dismiss)
+	chat_panel.chat.visibility_changed.connect(_refresh_hud_dismiss)
 
 	player = load("res://src/logic/player/player.tscn").instantiate()
 
@@ -1235,7 +1241,7 @@ func _show_friends_panel() -> void:
 		notifications_panel.hide_panel()
 	if settings_panel.visible:
 		settings_panel.hide()
-	h_box_container_left_panels.mouse_filter = Control.MOUSE_FILTER_STOP
+	_refresh_hud_dismiss()
 	Global.explorer_release_focus()
 	if Global.is_mobile():
 		release_mouse()
@@ -1256,7 +1262,7 @@ func _show_settings_panel() -> void:
 		friends_panel.hide_panel()
 	if notifications_panel.visible:
 		notifications_panel.hide_panel()
-	h_box_container_left_panels.mouse_filter = Control.MOUSE_FILTER_STOP
+	_refresh_hud_dismiss()
 	Global.explorer_release_focus()
 	if Global.is_mobile():
 		release_mouse()
@@ -1278,7 +1284,7 @@ func _show_notifications_panel() -> void:
 		friends_panel.hide_panel()
 	if settings_panel.visible:
 		settings_panel.hide()
-	h_box_container_left_panels.mouse_filter = Control.MOUSE_FILTER_STOP
+	_refresh_hud_dismiss()
 	Global.explorer_release_focus()
 	if Global.is_mobile():
 		release_mouse()
@@ -1461,7 +1467,7 @@ func _on_notification_clicked(notification_d: Dictionary) -> void:
 				notifications_panel.hide_panel()
 			if settings_panel.visible:
 				settings_panel.hide()
-			h_box_container_left_panels.mouse_filter = Control.MOUSE_FILTER_STOP
+			_refresh_hud_dismiss()
 			# Release focus to prevent camera rotation while panel is open
 			Global.explorer_release_focus()
 			if Global.is_mobile():
@@ -1538,7 +1544,7 @@ func _close_all_panels():
 	_on_friends_panel_closed()
 	_on_notifications_panel_closed()
 	_on_settings_panel_closed()
-	h_box_container_left_panels.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_refresh_hud_dismiss()
 	# Restore the chat panel hidden while the navbar was open, unless the main HUD is hidden.
 	if not _session_hide_main_hud:
 		chat_panel.show()
@@ -1557,7 +1563,7 @@ func _enter_menu_screen():
 	_on_friends_panel_closed()
 	_on_notifications_panel_closed()
 	_on_settings_panel_closed()
-	h_box_container_left_panels.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_refresh_hud_dismiss()
 	navbar.set_manually_hidden(true)
 	release_mouse()
 
@@ -1566,7 +1572,7 @@ func _on_menu_open():
 	_on_friends_panel_closed()
 	_on_notifications_panel_closed()
 	_on_settings_panel_closed()
-	h_box_container_left_panels.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_refresh_hud_dismiss()
 	release_mouse()
 
 
@@ -1638,11 +1644,26 @@ func _on_change_parcel(_position: Vector2i):
 	parcel_position = _position
 
 
-func _on_h_box_container_left_panels_gui_input(event: InputEvent) -> void:
+func _on_hud_dismiss_catcher_gui_input(event: InputEvent) -> void:
 	if (event is InputEventMouseButton or event is InputEventScreenTouch) and event.pressed:
 		_close_all_panels()
 		navbar.collapse()
+		Global.close_chat.emit()
 		capture_mouse()
+
+
+## The full-screen dismiss catcher is STOP (catches empty-area taps) only while a left
+## panel is open or the chat is visible; IGNORE otherwise so it never blocks gameplay.
+func _refresh_hud_dismiss() -> void:
+	var open: bool = (
+		notifications_panel.visible
+		or friends_panel.visible
+		or settings_panel.visible
+		or chat_panel.is_chat_visible()
+	)
+	hud_dismiss_catcher.mouse_filter = (
+		Control.MOUSE_FILTER_STOP if open else Control.MOUSE_FILTER_IGNORE
+	)
 
 
 func _on_button_show_ui_pressed() -> void:

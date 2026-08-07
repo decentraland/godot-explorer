@@ -242,6 +242,17 @@ theme_override_constants/outline_size = 4
 theme_override_font_sizes/font_size = 12
 text = "FPS"
 
+[node name="HudDismissCatcher" type="Control" parent="UI" unique_id=146097442]
+unique_name_in_owner = true
+editor_description = "Full-screen tap-catcher that dismisses the left panels and the chat. Active (STOP) only while a left panel is open or the chat is visible; IGNORE otherwise. Sits before SafeAreaHud so panels/chat win their own taps, but it beats the joystick, scene UI and camera input, so an empty-area tap anywhere closes them."
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
 [node name="SafeAreaHud" type="MarginContainer" parent="UI" unique_id=1210894567]
 unique_name_in_owner = true
 editor_description = "Safe-area frame for the interactive HUD (navbar, chat, navbar panels, emotes). Sits AFTER SceneUIContainer so it wins input over scene UI. Shares hud_margins.tres. The fullscreen Control_Menu draws opaque over the navbar (nothing hides it in code), so they never visually overlap."
@@ -283,38 +294,36 @@ mouse_filter = 2
 theme_override_constants/separation = 110
 theme_override_styles/separator = SubResource("StyleBoxEmpty_c5h7v")
 
-[node name="MarginContainer" type="MarginContainer" parent="UI/SafeAreaHud/InteractableHUD/HBoxContainerLeftPanels" unique_id=1719818041]
-layout_mode = 2
-mouse_filter = 2
-
-[node name="VBoxContainer_LeftPanels" type="VBoxContainer" parent="UI/SafeAreaHud/InteractableHUD/HBoxContainerLeftPanels/MarginContainer" unique_id=1190000788]
+[node name="VBoxContainer_LeftPanels" type="VBoxContainer" parent="UI/SafeAreaHud/InteractableHUD/HBoxContainerLeftPanels" unique_id=1190000788]
 custom_minimum_size = Vector2(370, 0)
 layout_mode = 2
 mouse_filter = 2
 
-[node name="NotificationsPanel" parent="UI/SafeAreaHud/InteractableHUD/HBoxContainerLeftPanels/MarginContainer/VBoxContainer_LeftPanels" unique_id=1351118609 instance=ExtResource("14_notif_panel")]
+[node name="NotificationsPanel" parent="UI/SafeAreaHud/InteractableHUD/HBoxContainerLeftPanels/VBoxContainer_LeftPanels" unique_id=1351118609 instance=ExtResource("14_notif_panel")]
 unique_name_in_owner = true
 visible = false
 custom_minimum_size = Vector2(450, 500)
 layout_mode = 2
 size_flags_vertical = 3
 
-[node name="FriendsPanel" parent="UI/SafeAreaHud/InteractableHUD/HBoxContainerLeftPanels/MarginContainer/VBoxContainer_LeftPanels" unique_id=644859130 instance=ExtResource("21_cwgs4")]
+[node name="FriendsPanel" parent="UI/SafeAreaHud/InteractableHUD/HBoxContainerLeftPanels/VBoxContainer_LeftPanels" unique_id=644859130 instance=ExtResource("21_cwgs4")]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 
-[node name="SettingsPanel" type="PanelContainer" parent="UI/SafeAreaHud/InteractableHUD/HBoxContainerLeftPanels/MarginContainer/VBoxContainer_LeftPanels" unique_id=580837958]
+[node name="SettingsPanel" type="PanelContainer" parent="UI/SafeAreaHud/InteractableHUD/HBoxContainerLeftPanels/VBoxContainer_LeftPanels" unique_id=580837958]
 unique_name_in_owner = true
+visible = false
 custom_minimum_size = Vector2(640, 0)
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_styles/panel = SubResource("StyleBoxFlat_settings_bg")
 
-[node name="MarginContainer" type="MarginContainer" parent="UI/SafeAreaHud/InteractableHUD/HBoxContainerLeftPanels/MarginContainer/VBoxContainer_LeftPanels/SettingsPanel" unique_id=1052710726]
+[node name="MarginContainer" type="MarginContainer" parent="UI/SafeAreaHud/InteractableHUD/HBoxContainerLeftPanels/VBoxContainer_LeftPanels/SettingsPanel" unique_id=1052710726]
 layout_mode = 2
 theme_override_constants/margin_top = 28
 
-[node name="Settings" parent="UI/SafeAreaHud/InteractableHUD/HBoxContainerLeftPanels/MarginContainer/VBoxContainer_LeftPanels/SettingsPanel/MarginContainer" unique_id=61276201 instance=ExtResource("33_settings")]
+[node name="Settings" parent="UI/SafeAreaHud/InteractableHUD/HBoxContainerLeftPanels/VBoxContainer_LeftPanels/SettingsPanel/MarginContainer" unique_id=61276201 instance=ExtResource("33_settings")]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
@@ -430,7 +439,7 @@ script = ExtResource("20_064cw")
 [connection signal="load_scenes_pressed" from="UI/SafeAreaHud/InteractableHUD/ChatPanel" to="." method="_on_button_load_scenes_pressed"]
 [connection signal="share_place" from="UI/SafeAreaHud/InteractableHUD/ChatPanel" to="." method="_share_place"]
 [connection signal="submit_message" from="UI/SafeAreaHud/InteractableHUD/ChatPanel" to="." method="_on_panel_chat_submit_message"]
-[connection signal="gui_input" from="UI/SafeAreaHud/InteractableHUD/HBoxContainerLeftPanels" to="." method="_on_h_box_container_left_panels_gui_input"]
+[connection signal="gui_input" from="UI/HudDismissCatcher" to="." method="_on_hud_dismiss_catcher_gui_input"]
 [connection signal="emote_wheel_closed" from="UI/SafeAreaHud/InteractableHUD/EmoteWheel" to="." method="_on_emote_wheel_emote_wheel_closed"]
 [connection signal="emote_wheel_opened" from="UI/SafeAreaHud/InteractableHUD/EmoteWheel" to="." method="_on_emote_wheel_emote_wheel_opened"]
 [connection signal="timeout" from="UI/Timer_FPSLabel" to="." method="_on_timer_fps_label_timeout"]
