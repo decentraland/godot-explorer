@@ -24,7 +24,6 @@ var parcel_position_real: Vector2
 var panel_bottom_left_height: int = 0
 var dirty_save_position: bool = false
 
-var debug_panel = null
 var multiplayer_debug_panel = null
 var scene_stats_panel = null
 var disable_move_to = false
@@ -88,6 +87,11 @@ var _debug_panel_from_settings: bool = false
 @onready var safe_area_controls: MarginContainer = %SafeAreaControls
 @onready var safe_area_hud: MarginContainer = %SafeAreaHud
 @onready var hud_content: Control = %InteractableHUD
+## Static instance placed in the scene (top-left of the safe margin, inside
+## InteractableHUD). Never freed — just shown/hidden by _update_debug_ui; a hidden
+## Control subtree costs nothing and preview needs it available in prod builds too.
+## Untyped (the DebugPanel script has no class_name) so its own methods dispatch cleanly.
+@onready var debug_panel = %DebugPanel
 @onready var virtual_joystick: Control = %VirtualJoystick_Left
 @onready var profile_container: Control = %ProfileContainer
 
@@ -1009,26 +1013,16 @@ func _on_control_menu_request_debug_panel(enabled):
 	_update_debug_ui()
 
 
+## Whether the debug panel is enabled at all (dev toggle or preview realm). The
+## chat/hide-UI handlers use it to restore the panel to the right state.
+func _debug_should_show() -> bool:
+	return _debug_panel_from_settings or _is_in_preview_realm()
+
+
 func _update_debug_ui():
-	var should_show = _debug_panel_from_settings or _is_in_preview_realm()
-
-	if should_show:
-		if not is_instance_valid(debug_panel):
-			debug_panel = (
-				load("res://src/ui/components/organisms/debug_panel/debug_panel.tscn").instantiate()
-			)
-			hbox_debug_tools.add_child(debug_panel)
-			# Console always sits left of the scene-stats overlay in the row.
-			hbox_debug_tools.move_child(debug_panel, 0)
-	else:
-		if is_instance_valid(debug_panel):
-			hbox_debug_tools.remove_child(debug_panel)
-			debug_panel.queue_free()
-			debug_panel = null
-
-	if is_instance_valid(debug_panel):
-		debug_panel.set_reload_scene_visible(should_show)
-
+	var should_show = _debug_should_show()
+	debug_panel.visible = should_show
+	debug_panel.set_reload_scene_visible(should_show)
 	Global.set_scene_log_enabled(should_show)
 	_update_debug_layer_visibility()
 
@@ -1046,9 +1040,11 @@ func _update_scene_stats_ui() -> void:
 				load("res://src/ui/components/organisms/scene_stats_panel/scene_stats_panel.tscn")
 				. instantiate()
 			)
-			# Shares the top-right debug tools row with the console, so both
-			# lay out side by side instead of overlapping.
-			hbox_debug_tools.add_child(scene_stats_panel)
+			# The toggle button docks into the top-right debug-tools row (fixed
+			# inside the safe margin, beside the console); the panel itself floats
+			# on the full-screen UI root, opening below-left of that toggle.
+			scene_stats_panel.toggle_host = hbox_debug_tools
+			ui_root.add_child(scene_stats_panel)
 		scene_stats_panel.set_scene(_preview_scene_id())
 	else:
 		if is_instance_valid(scene_stats_panel):
@@ -1061,9 +1057,9 @@ func _update_scene_stats_ui() -> void:
 ## of them exists. It must be shown explicitly: it was once saved hidden in the
 ## editor (PR #1894), which silently disabled the whole layer.
 func _update_debug_layer_visibility() -> void:
-	safe_margin_container_debug.visible = (
-		is_instance_valid(debug_panel) or is_instance_valid(scene_stats_panel)
-	)
+	# Only the scene-stats monitor toggle lives in this top-right row now; the
+	# debug panel moved to the top-left of the HUD (a static InteractableHUD child).
+	safe_margin_container_debug.visible = is_instance_valid(scene_stats_panel)
 
 
 ## The single scene being previewed (one scene may span multiple parcels):
@@ -1477,6 +1473,7 @@ func _on_chat_write_mode_changed(is_writing: bool) -> void:
 		virtual_joystick.hide()
 		emote_wheel.hide()
 		navbar.hide()
+		debug_panel.hide()
 		_set_scene_ui_visible(false)
 	else:
 		if _onscreen_controls_enabled():
@@ -1484,6 +1481,7 @@ func _on_chat_write_mode_changed(is_writing: bool) -> void:
 			_update_virtual_controls_visibility()
 		emote_wheel.show()
 		navbar._on_size_changed()
+		debug_panel.visible = _debug_should_show()
 		_set_scene_ui_visible(_should_show_scene_ui())
 
 

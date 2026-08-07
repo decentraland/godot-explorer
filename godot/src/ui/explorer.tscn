@@ -15,6 +15,7 @@
 [ext_resource type="PackedScene" uid="uid://cw8x2h5p3y6kn" path="res://src/ui/components/organisms/notifications/notifications_panel.tscn" id="14_notif_panel"]
 [ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="16_karsc"]
 [ext_resource type="PackedScene" uid="uid://bmjwqm6jgri7c" path="res://src/ui/pages/loading_screen/loading_screen.tscn" id="17_0blod"]
+[ext_resource type="PackedScene" uid="uid://dua04n3geh0yf" path="res://src/ui/components/organisms/debug_panel/debug_panel.tscn" id="18_ky6fv"]
 [ext_resource type="Script" uid="uid://dqpk827xdxpcy" path="res://src/ui/components/organisms/voice_chat_recorder/voice_chat_recorder.gd" id="20_064cw"]
 [ext_resource type="PackedScene" uid="uid://e18p6cp0duuu" path="res://src/ui/components/organisms/recording_notification/recording_notification.tscn" id="20_uf6rv"]
 [ext_resource type="PackedScene" uid="uid://btl8ag3s7oanm" path="res://src/ui/components/organisms/navbar/navbar.tscn" id="21_admxk"]
@@ -66,6 +67,7 @@ corner_radius_bottom_left = 100
 script = ExtResource("1_5n8xk")
 metadata/mobile_preview_orientation = "landscape"
 metadata/_edit_horizontal_guides_ = [60.0]
+metadata/_edit_vertical_guides_ = [374.0]
 
 [node name="MarginContainer" type="MarginContainer" parent="." unique_id=253544351]
 visible = false
@@ -187,7 +189,6 @@ mouse_filter = 2
 
 [node name="SafeMarginContainerDebug" type="MarginContainer" parent="UI" unique_id=868273897]
 unique_name_in_owner = true
-visible = false
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -196,9 +197,8 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 script = ExtResource("5_c8ksg")
-use_bottom = false
-min_margin_top = 110
-min_margin_right = 12
+margin_profile = ExtResource("34_hudmg")
+symmetric_horizontal = true
 metadata/_edit_lock_ = true
 
 [node name="HBoxContainer_DebugTools" type="HBoxContainer" parent="UI/SafeMarginContainerDebug" unique_id=169913972]
@@ -342,6 +342,10 @@ anchor_bottom = 0.0
 grow_horizontal = 1
 grow_vertical = 1
 
+[node name="DebugPanel" parent="UI/SafeAreaHud/InteractableHUD" unique_id=1737764806 instance=ExtResource("18_ky6fv")]
+unique_name_in_owner = true
+layout_mode = 1
+
 [node name="Button_ShowUI" type="Button" parent="UI/SafeAreaHud" unique_id=1612256067]
 unique_name_in_owner = true
 editor_description = "Restore affordance. Sibling of InteractableHUD inside SafeAreaHud: hide-UI hides InteractableHUD (the HUD content), NOT the whole SafeAreaHud, so this button survives and stays clickable over scene UI (after the pivot). Inherits SafeAreaHud's rect."
@@ -377,11 +381,10 @@ unique_name_in_owner = true
 editor_description = "Dev-only overlay of the scene interactable area. Position/size are set at runtime by explorer; toggled by show_interactable_area (never in production). Tune color/alpha here. The percentages label is a child so toggling this node toggles both."
 visible = false
 layout_mode = 1
-anchors_preset = 0
 offset_right = 40.0
 offset_bottom = 40.0
-color = Color(0.2, 0.8, 1, 0.15)
 mouse_filter = 2
+color = Color(0.2, 0.8, 1, 0.15)
 
 [node name="InteractableAreaDebugLabel" type="Label" parent="UI/InteractableAreaDebug" unique_id=146097444]
 unique_name_in_owner = true
@@ -394,7 +397,6 @@ offset_top = 8.0
 offset_right = -8.0
 offset_bottom = 78.0
 grow_horizontal = 0
-mouse_filter = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 4
@@ -465,10 +467,10 @@ script = ExtResource("20_064cw")
 
 [node name="ChatHandler" parent="." unique_id=440307884 instance=ExtResource("32_cq187")]
 
+[connection signal="gui_input" from="UI/HudDismissCatcher" to="." method="_on_hud_dismiss_catcher_gui_input"]
 [connection signal="load_scenes_pressed" from="UI/SafeAreaHud/InteractableHUD/ChatPanel" to="." method="_on_button_load_scenes_pressed"]
 [connection signal="share_place" from="UI/SafeAreaHud/InteractableHUD/ChatPanel" to="." method="_share_place"]
 [connection signal="submit_message" from="UI/SafeAreaHud/InteractableHUD/ChatPanel" to="." method="_on_panel_chat_submit_message"]
-[connection signal="gui_input" from="UI/HudDismissCatcher" to="." method="_on_hud_dismiss_catcher_gui_input"]
 [connection signal="emote_wheel_closed" from="UI/SafeAreaHud/InteractableHUD/EmoteWheel" to="." method="_on_emote_wheel_emote_wheel_closed"]
 [connection signal="emote_wheel_opened" from="UI/SafeAreaHud/InteractableHUD/EmoteWheel" to="." method="_on_emote_wheel_emote_wheel_opened"]
 [connection signal="timeout" from="UI/Timer_FPSLabel" to="." method="_on_timer_fps_label_timeout"]

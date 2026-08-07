@@ -6,15 +6,15 @@ extends PanelContainer
 ##   green  = under the soft (recommended) limit
 ##   yellow = between soft and hard
 ##   red    = over the hard limit, annotated with the overpass % (e.g. 200%)
-## A separate red "monitor" icon button (same size as the camera button, placed
-## to its left) shows/hides this panel. Instantiated ONLY in preview by
-## explorer.gd; never created in production.
+## A separate red "monitor" icon button, docked top-right in the debug-tools row
+## (fixed inside the safe margin), shows/hides this panel; the panel floats
+## below-left of it. Instantiated ONLY in preview by explorer.gd; never in production.
 
 enum Status { GREEN, YELLOW, RED }
 
 const REFRESH_INTERVAL: float = 1.5
 const TOGGLE_SIZE: float = 65.0
-const TOGGLE_GAP: float = 12.0
+const TOGGLE_GAP: float = 12.0  # gap between the toggle and the panel below it
 const MONITOR_ICON_PATH: String = "res://assets/ui/scene_stats_monitor.svg"
 
 const COLOR_GREEN: Color = Color(0.30, 0.85, 0.35)
@@ -25,6 +25,9 @@ const COLOR_TEXT: Color = Color(0.90, 0.90, 0.92)
 const COLOR_MONITOR: Color = Color(0.95, 0.18, 0.18)
 
 const UI_FONT: Font = preload("res://assets/themes/fonts/inter/inter_600.ttf")
+
+## Set by explorer.gd before add_child: the debug-tools HBox the toggle docks into.
+var toggle_host: Control = null
 
 var _scene_id: int = -1
 var _parcels: int = 1
@@ -46,10 +49,13 @@ func _ready() -> void:
 	_timer.timeout.connect(_on_timer_timeout)
 	_timer.start()
 	_refresh()
+	# Float freely on the UI root and pin below-left of the toggle each frame.
+	set_anchors_preset(Control.PRESET_TOP_LEFT)
+	_reposition_below_toggle.call_deferred()
 
 
-## Free the external toggle button (it lives under the camera button, not under
-## this panel) when the overlay is torn down.
+## Free the external toggle button (it's docked in the debug-tools row, not
+## parented to this panel) when the overlay is torn down.
 func _exit_tree() -> void:
 	if is_instance_valid(_toggle_btn):
 		_toggle_btn.queue_free()
@@ -85,6 +91,22 @@ func _on_toggle_pressed() -> void:
 	visible = not visible
 	if visible:
 		_refresh()
+		_reposition_below_toggle.call_deferred()
+
+
+func _process(_delta: float) -> void:
+	if visible:
+		_reposition_below_toggle()
+
+
+## Pin the panel below-left of the toggle: right edges aligned, panel dropping
+## from just under the button. The toggle is fixed at the top-right of the safe
+## margin, so the panel always opens left+down from that corner.
+func _reposition_below_toggle() -> void:
+	if not is_instance_valid(_toggle_btn):
+		return
+	var btn_rect: Rect2 = _toggle_btn.get_global_rect()
+	global_position = Vector2(btn_rect.end.x - size.x, btn_rect.end.y + TOGGLE_GAP)
 
 
 func _refresh() -> void:
@@ -265,33 +287,13 @@ func _create_toggle_button() -> void:
 	icon_rect.modulate = COLOR_MONITOR
 	_toggle_btn.add_child(icon_rect)
 
-	var cam: Control = _find_camera_button()
-	if cam != null:
-		cam.get_parent().add_child(_toggle_btn)
-		_toggle_btn.anchor_left = cam.anchor_left
-		_toggle_btn.anchor_top = cam.anchor_top
-		_toggle_btn.anchor_right = cam.anchor_right
-		_toggle_btn.anchor_bottom = cam.anchor_bottom
-		_toggle_btn.grow_horizontal = cam.grow_horizontal
-		_toggle_btn.offset_top = cam.offset_top
-		_toggle_btn.offset_bottom = cam.offset_bottom
-		_toggle_btn.offset_right = cam.offset_left - TOGGLE_GAP
-		_toggle_btn.offset_left = cam.offset_left - TOGGLE_GAP - TOGGLE_SIZE
-	else:
-		get_parent().add_child(_toggle_btn)
-		_toggle_btn.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-		_toggle_btn.grow_horizontal = Control.GROW_DIRECTION_BEGIN
-		_toggle_btn.offset_right = -12.0
-		_toggle_btn.offset_left = -12.0 - TOGGLE_SIZE
-		_toggle_btn.offset_top = 40.0
-		_toggle_btn.offset_bottom = 40.0 + TOGGLE_SIZE
-
-
-func _find_camera_button() -> Control:
-	if not is_inside_tree():
-		return null
-	var node := get_tree().get_root().find_child("Button_Camera", true, false)
-	return node as Control
+	# Dock the toggle into the top-right debug-tools row (HBoxContainer_DebugTools,
+	# fixed inside the safe margin, beside the console). It's a round fixed-size
+	# icon: the HBox would stretch it via the default FILL flags, so shrink it.
+	var host: Control = toggle_host if is_instance_valid(toggle_host) else get_parent()
+	host.add_child(_toggle_btn)
+	_toggle_btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_toggle_btn.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 
 
 func _build_rows() -> void:
