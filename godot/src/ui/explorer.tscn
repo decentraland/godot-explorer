@@ -126,6 +126,7 @@ grow_vertical = 2
 mouse_filter = 2
 script = ExtResource("5_c8ksg")
 margin_profile = ExtResource("34_hudmg")
+symmetric_horizontal = true
 
 [node name="MobileUI" type="Control" parent="UI/SafeAreaControls" unique_id=1539864390]
 unique_name_in_owner = true
@@ -142,6 +143,7 @@ unique_name_in_owner = true
 editor_description = "Virtual joystick to control avatar movement. Direct UI child (full-screen travel); margin_control intentionally unset — it only applies when nested inside a safe-margin container."
 layout_mode = 1
 deadzone_size = 0.0
+_joystick_default_position = Vector2(300, 150)
 
 [node name="Label_Crosshair" type="Label" parent="UI" unique_id=2000293560]
 unique_name_in_owner = true
@@ -252,6 +254,7 @@ grow_vertical = 2
 mouse_filter = 2
 script = ExtResource("5_c8ksg")
 margin_profile = ExtResource("34_hudmg")
+symmetric_horizontal = true
 
 [node name="InteractableHUD" type="Control" parent="UI/SafeAreaHud" unique_id=1898741314]
 unique_name_in_owner = true
@@ -325,6 +328,10 @@ layout_mode = 1
 unique_name_in_owner = true
 layout_mode = 0
 anchors_preset = 0
+anchor_right = 0.0
+anchor_bottom = 0.0
+grow_horizontal = 1
+grow_vertical = 1
 
 [node name="Button_ShowUI" type="Button" parent="UI/SafeAreaHud" unique_id=1612256067]
 unique_name_in_owner = true

@@ -22,6 +22,15 @@ extends MarginContainer
 		if Engine.is_editor_hint() and is_inside_tree():
 			_update_margins_editor()
 
+## When true, left and right margins are kept symmetric: both take the larger of the two
+## resolved insets, so a one-sided device inset (e.g. a landscape camera notch) widens the
+## opposite side to match and the framed rectangle stays centered. Floors still apply first.
+@export var symmetric_horizontal: bool = false:
+	set(value):
+		symmetric_horizontal = value
+		if Engine.is_editor_hint() and is_inside_tree():
+			_update_margins_editor()
+
 
 func _ready() -> void:
 	if Engine.is_editor_hint():
@@ -116,12 +125,18 @@ func _apply_margins(top: int, left: int, bottom: int, right: int) -> void:
 			floor_left = margin_profile.left
 			floor_right = margin_profile.right
 			floor_bottom = margin_profile.bottom
+	var applied_left: int = maxi(left, floor_left)
+	var applied_right: int = maxi(right, floor_right)
+	if symmetric_horizontal:
+		var side: int = maxi(applied_left, applied_right)
+		applied_left = side
+		applied_right = side
 	if use_top:
 		add_theme_constant_override("margin_top", maxi(top, floor_top))
 	if use_left:
-		add_theme_constant_override("margin_left", maxi(left, floor_left))
+		add_theme_constant_override("margin_left", applied_left)
 	if use_right:
-		add_theme_constant_override("margin_right", maxi(right, floor_right))
+		add_theme_constant_override("margin_right", applied_right)
 	if use_bottom:
 		add_theme_constant_override("margin_bottom", maxi(bottom, floor_bottom))
 
