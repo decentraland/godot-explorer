@@ -78,6 +78,7 @@ var check_button_submit_message_closes_chat: CheckButton = %CheckButton_SubmitMe
 @onready var line_edit_custom_preview_url: LineEditCustom = %LineEditCustom_WebSocket
 @onready var process_tick_quota: SettingsSlider = %ProcessTickQuota
 @onready var check_button_raycast_debugger: CheckButton = %CheckButton_RaycastDebugger
+@onready var check_button_show_interactable_area: CheckButton = %CheckButton_ShowInteractableArea
 @onready var check_button_multiplayer_debug: CheckButton = %CheckButton_MultiplayerDebug
 @onready var dropdown_list_realm: DropdownList = %DropdownList_Realm
 
@@ -596,6 +597,9 @@ func _exit_tree() -> void:
 
 func _on_button_developer_pressed() -> void:
 	show_control(container_advanced)
+	var explorer = Global.get_explorer()
+	if is_instance_valid(explorer):
+		check_button_show_interactable_area.set_pressed_no_signal(explorer.show_interactable_area)
 	_async_scroll_to_tab_button(button_developer)
 
 
@@ -940,6 +944,12 @@ func _on_check_button_multiplayer_debug_toggled(toggled_on: bool) -> void:
 
 func _on_check_button_raycast_debugger_toggled(toggled_on: bool) -> void:
 	Global.set_raycast_debugger_enable(toggled_on)
+
+
+func _on_check_button_show_interactable_area_toggled(toggled_on: bool) -> void:
+	var explorer = Global.get_explorer()
+	if is_instance_valid(explorer):
+		explorer.set_interactable_area_visible(toggled_on)
 
 
 func _on_check_button_scene_logs_enabled_toggled(toggled_on: bool) -> void:

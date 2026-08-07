@@ -11,6 +11,11 @@ const _MULTIPLAYER_DEBUG_PANEL_SCENE := preload(
 	"res://src/ui/components/organisms/multiplayer_debug/multiplayer_debug_panel.tscn"
 )
 
+## Dev-only translucent overlay of the scene interactable area, off by default. The
+## production guard in _update_interactable_area_debug always wins; this only toggles it
+## within dev builds, flipped at runtime from Settings > Dev Tools.
+var show_interactable_area: bool = false
+
 var is_genesis_city: bool
 var player: Node3D = null
 var scene_title: String
@@ -98,6 +103,8 @@ var _debug_panel_from_settings: bool = false
 @onready var joypad: Control = %Joypad
 @onready var button_show_ui: Button = %Button_ShowUI
 @onready var hud_dismiss_catcher: Control = %HudDismissCatcher
+@onready var interactable_area_debug: ColorRect = %InteractableAreaDebug
+@onready var interactable_area_debug_label: Label = %InteractableAreaDebugLabel
 
 
 func _process(_dt):
@@ -393,31 +400,63 @@ func _on_need_open_url(url: String, _description: String, _use_webkit: bool) -> 
 ## Push the safe-area rect (in canvas/logical pixels) to the scene runner so
 ## scenes get correct UiCanvasInformation.interactable_area on every resize,
 ## including --emulate-ios / --emulate-android virtual margins.
-func _push_scene_interactable_area() -> void:
-	if not is_instance_valid(Global.scene_runner) or not is_instance_valid(ui_safe_area):
-		return
+## The rectangle (in SceneUIContainer/canvas coords) where scenes may draw interactive
+## UI without being covered by the client UI: the HUD safe rectangle (device safe area +
+## the 108/32/108/45 symmetric floor from SafeAreaHud) minus the left chat column. The
+## joypad (bottom-right) may still overlap it.
+func get_interactable_area() -> Rect2:
 	var canvas: Vector2 = ui_safe_area.size
-	var canvas_w: int = int(canvas.x)
-	var canvas_h: int = int(canvas.y)
-	if canvas_w <= 0 or canvas_h <= 0:
+	var m_left: float = safe_area_hud.get_theme_constant("margin_left")
+	var m_right: float = safe_area_hud.get_theme_constant("margin_right")
+	var m_top: float = safe_area_hud.get_theme_constant("margin_top")
+	var m_bottom: float = safe_area_hud.get_theme_constant("margin_bottom")
+	var left: float = m_left + Global.chat_notifications_width
+	return Rect2(
+		left, m_top, maxf(canvas.x - m_right - left, 0.0), maxf(canvas.y - m_bottom - m_top, 0.0)
+	)
+
+
+func _push_scene_interactable_area() -> void:
+	if not is_instance_valid(ui_safe_area) or not is_instance_valid(safe_area_hud):
 		return
+	var area: Rect2 = get_interactable_area()
+	_update_interactable_area_debug(area)
+	if is_instance_valid(Global.scene_runner) and area.size.x > 0 and area.size.y > 0:
+		Global.scene_runner.set_interactable_area(Rect2i(area))
 
-	var rect := Rect2i(0, 0, canvas_w, canvas_h)
 
-	if Global.is_mobile() or Global.is_emulating_safe_area():
-		var window_size: Vector2i = DisplayServer.window_get_size()
-		if window_size.x > 0 and window_size.y > 0:
-			var safe: Rect2i = Global.get_safe_area()
-			var x_factor: float = canvas.x / float(window_size.x)
-			var y_factor: float = canvas.y / float(window_size.y)
+## Dev-only translucent overlay to verify the computed interactable area on device.
+## Never shows in production; within dev, gated by `show_interactable_area`.
+func _update_interactable_area_debug(area: Rect2) -> void:
+	# The label is a child of the ColorRect, so toggling the rect toggles both.
+	interactable_area_debug.visible = not Global.is_production() and show_interactable_area
+	if not interactable_area_debug.visible:
+		return
+	interactable_area_debug.position = area.position
+	interactable_area_debug.size = area.size
 
-			var pos_x: int = clampi(roundi(safe.position.x * x_factor), 0, canvas_w)
-			var pos_y: int = clampi(roundi(safe.position.y * y_factor), 0, canvas_h)
-			var end_x: int = clampi(roundi(safe.end.x * x_factor), pos_x, canvas_w)
-			var end_y: int = clampi(roundi(safe.end.y * y_factor), pos_y, canvas_h)
-			rect = Rect2i(pos_x, pos_y, end_x - pos_x, end_y - pos_y)
+	var canvas: Vector2 = ui_safe_area.size
+	var m_left: float = safe_area_hud.get_theme_constant("margin_left")
+	var m_right: float = safe_area_hud.get_theme_constant("margin_right")
+	var m_top: float = safe_area_hud.get_theme_constant("margin_top")
+	var m_bottom: float = safe_area_hud.get_theme_constant("margin_bottom")
+	var device_area: float = canvas.x * canvas.y
+	var safe_area: float = (
+		maxf(canvas.x - m_left - m_right, 0.0) * maxf(canvas.y - m_top - m_bottom, 0.0)
+	)
+	var inter_area: float = area.size.x * area.size.y
+	var pct_device: int = int(round(100.0 * inter_area / device_area)) if device_area > 0.0 else 0
+	var pct_safe: int = int(round(100.0 * inter_area / safe_area)) if safe_area > 0.0 else 0
+	interactable_area_debug_label.text = (
+		"%d%% of device\n%d%% of safe area" % [pct_device, pct_safe]
+	)
 
-	Global.scene_runner.set_interactable_area(rect)
+
+## Runtime toggle for the interactable-area overlay (e.g. from Settings > Dev Tools).
+func set_interactable_area_visible(value: bool) -> void:
+	show_interactable_area = value
+	if is_instance_valid(safe_area_hud):
+		_update_interactable_area_debug(get_interactable_area())
 
 
 func _on_player_logout():

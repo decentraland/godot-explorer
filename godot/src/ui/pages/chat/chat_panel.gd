@@ -23,6 +23,9 @@ var _current_state: ChatState = ChatState.CLOSED
 
 
 func _ready() -> void:
+	# Report the fixed notifications column width so explorer can carve the scene
+	# interactable area to the right of the chat without hardcoding it.
+	Global.chat_notifications_width = int(notifications.custom_minimum_size.x)
 	Global.open_chat.connect(_on_global_open_chat)
 	Global.close_chat.connect(_on_global_close_chat)
 	Global.change_virtual_keyboard.connect(_on_change_virtual_keyboard)

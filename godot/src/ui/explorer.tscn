@@ -372,6 +372,35 @@ icon = ExtResource("27_u4dfr")
 icon_alignment = 1
 expand_icon = true
 
+[node name="InteractableAreaDebug" type="ColorRect" parent="UI" unique_id=146097443]
+unique_name_in_owner = true
+editor_description = "Dev-only overlay of the scene interactable area. Position/size are set at runtime by explorer; toggled by show_interactable_area (never in production). Tune color/alpha here. The percentages label is a child so toggling this node toggles both."
+visible = false
+layout_mode = 1
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+color = Color(0.2, 0.8, 1, 0.15)
+mouse_filter = 2
+
+[node name="InteractableAreaDebugLabel" type="Label" parent="UI/InteractableAreaDebug" unique_id=146097444]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -300.0
+offset_top = 8.0
+offset_right = -8.0
+offset_bottom = 78.0
+grow_horizontal = 0
+mouse_filter = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 24
+horizontal_alignment = 2
+
 [node name="Timer_FPSLabel" type="Timer" parent="UI" unique_id=926156601]
 autostart = true
 
