@@ -33,8 +33,14 @@ runs:
     - name: Set branch name for Sentry tags
       shell: bash
       run: |
-        # For PRs, use head_ref (the source branch), otherwise use ref_name
-        if [ -n "${{ github.head_ref }}" ]; then
+        # Prefer the explicit ref input (an on-demand rebuild of a specific branch, where the
+        # triggering event's ref is unrelated), then head_ref (the PR source branch), then ref_name.
+        REF_INPUT="${{ inputs.ref }}"
+        REF_INPUT="${REF_INPUT#refs/heads/}"
+        if [ -n "$REF_INPUT" ]; then
+          echo "BRANCH_NAME=$REF_INPUT" >> $GITHUB_ENV
+          echo "Setting BRANCH_NAME=$REF_INPUT (from ref input)"
+        elif [ -n "${{ github.head_ref }}" ]; then
           echo "BRANCH_NAME=${{ github.head_ref }}" >> $GITHUB_ENV
           echo "Setting BRANCH_NAME=${{ github.head_ref }}"
         else
