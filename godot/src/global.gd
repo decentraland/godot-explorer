@@ -149,6 +149,10 @@ var current_camera_mode: CameraMode = CameraMode.THIRD_PERSON
 var camera_mode_blocked: bool = false
 var session_id: String
 
+# Fixed width (canvas px) of the chat's notifications column, reported by the chat so the
+# scene interactable area can be computed without hardcoding it. Stable per device.
+var chat_notifications_width: int = 0
+
 # Orchestrates the Firebase / Segment glue (EULA gate, login suppression on session recovery,
 # first_move_in_world detection). Instantiated after `metrics` is created.
 var analytics_controller: AnalyticsController = null
