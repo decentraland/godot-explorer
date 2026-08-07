@@ -47,7 +47,13 @@ impl ResourceProvider {
             existing_files: RwLock::new(HashMap::new()),
             max_cache_size: AtomicI64::new(max_cache_size),
             pending_downloads: RwLock::new(HashMap::new()),
-            client: Client::new(),
+            client: Client::builder()
+                // reqwest sends no User-Agent by default; CDN bot protection
+                // (e.g. arweave.net's CDN77) rate-limits UA-less clients to ~1
+                // request per window, 403ing everything else (#1766).
+                .user_agent(crate::USER_AGENT)
+                .build()
+                .expect("failed to build reqwest client"),
             initialized: OnceCell::new(),
             semaphore: Arc::new(CappedSemaphore::new(max_concurrent_downloads)),
             low_priority_semaphore: Arc::new(CappedSemaphore::new(max_concurrent_downloads)),
@@ -667,6 +673,44 @@ mod tests {
             tokio::fs::create_dir_all(path).await?;
         }
         Ok(())
+    }
+
+    /// Arweave images must download through arweave.net's CDN bot protection
+    /// (which 403s clients without a User-Agent — issue #1766).
+    /// Network-dependent, like the httpbin tests above.
+    #[tokio::test]
+    async fn test_arweave_download_with_user_agent() {
+        let path = "./cache_arweave_test";
+        // Clean slate: a previous failed run may have left a poisoned cache entry
+        let _ = tokio::fs::remove_dir_all(path).await;
+        setup_cache_folder(path)
+            .await
+            .expect("Failed to create cache folder");
+
+        #[cfg(feature = "use_resource_tracking")]
+        let resource_download_tracking = Arc::new(ResourceDownloadTracking::new());
+
+        let provider = ResourceProvider::new(
+            path,
+            1024 * 1024 * 100,
+            2,
+            #[cfg(feature = "use_resource_tracking")]
+            resource_download_tracking,
+        );
+
+        let url = "https://2ijy24lhsmfwf3sjzeza7dz45xq5n27wtwgcs4xiruge4nxxayha.arweave.net/0hONcWeTC2LuSckyD4887eHW6_adjCly6I0MTjb3Bg4";
+        let file_hash = "arweave_test_tx".to_string();
+        let absolute_file_path = format!("{}/{}", path, file_hash);
+        let data = provider
+            .fetch_resource_with_data(url, &file_hash, &absolute_file_path)
+            .await
+            .expect("arweave fetch failed");
+
+        // JPEG magic bytes
+        assert_eq!(&data[..3], &[0xFF, 0xD8, 0xFF]);
+
+        provider.clear().await;
+        let _ = tokio::fs::remove_dir(path).await;
     }
 
     #[tokio::test]
