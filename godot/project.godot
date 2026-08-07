@@ -54,6 +54,7 @@ AvatarLODCoordinator="*res://src/decentraland_components/avatar/impostor/avatar_
 DebugWs="*res://src/tool/debug_server/debug_ws_server.gd"
 DevLocalhostRelay="*res://src/tool/dev_localhost_relay.gd"
 GltfLoadingCoordinator="*res://src/decentraland_components/gltf_loading_coordinator.gd"
+LightSourceManager="*res://src/decentraland_components/light_source_manager.gd"
 TouchFeedback="*res://src/ui/touch_feedback/touch_feedback_overlay.gd"
 
 [debug]

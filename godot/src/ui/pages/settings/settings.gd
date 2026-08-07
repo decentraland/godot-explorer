@@ -22,6 +22,10 @@ const CACHE_SIZE_MB: Array[int] = [1024, 2048, 4096]
 		if is_node_ready():
 			_apply_panel_mode()
 
+# Scene LightSource Dev Tools controls, keyed by DclLightSourceComponent.get_light_settings() keys.
+var _light_debug_checks: Dictionary = {}
+var _light_max_lights_spin: SpinBox = null
+
 @onready var label_title: Label = %Label_Title
 @onready var margin_container_nav: MarginContainer = %MarginContainer_Nav
 
@@ -136,6 +140,7 @@ func _ready():
 	_update_dynamic_graphics_status()
 	_setup_impostor_benchmark_button()
 	_setup_fast_day_cycle_toggle()
+	_setup_light_debug_controls()
 	refresh_graphic_settings()
 
 	var j = 0
@@ -702,6 +707,78 @@ func _setup_impostor_benchmark_button() -> void:
 			get_tree().change_scene_to_file("res://src/tools/avatar_impostor_benchmark.tscn")
 	)
 	container_advanced.add_child(bench_button)
+
+
+func _setup_light_debug_controls() -> void:
+	# Scene-authored dynamic light controls (Dev Tools only). Rows are cloned
+	# from an existing settings row so they match the style; no .tscn edits.
+	if Global.is_production():
+		return
+	var template_row := (
+		container_advanced.find_child("SceneLogsEnabled", true, false) as HBoxContainer
+	)
+	if template_row == null:
+		return
+
+	var light_settings: Dictionary = DclLightSourceComponent.get_light_settings()
+
+	_add_light_toggle_row(template_row, "Scene Lights", "lights_enabled", light_settings)
+	_add_light_toggle_row(template_row, "Light Shadows", "shadows_enabled", light_settings)
+	_add_light_toggle_row(template_row, "Light Debug Gizmos", "debug_enabled", light_settings)
+	_add_light_toggle_row(
+		template_row, "Auto Activation Range", "auto_activation_range", light_settings
+	)
+	_add_light_toggle_row(
+		template_row, "Global Light Budget", "use_global_light_budget", light_settings
+	)
+	_add_max_lights_row(template_row, int(light_settings["max_lights"]))
+
+
+func _add_light_toggle_row(
+	template_row: HBoxContainer, title: String, setting_key: String, light_settings: Dictionary
+) -> void:
+	# duplicate(0): skip copying the template's signal connections.
+	var row := template_row.duplicate(0) as HBoxContainer
+	row.name = "Light_" + setting_key
+	var label := row.find_child("Label_Title", false, false) as Label
+	label.text = title
+	var check := row.find_child("CheckButton*", true, false) as CheckButton
+	check.name = "CheckButton_Light_" + setting_key
+	check.set_pressed_no_signal(bool(light_settings[setting_key]))
+	check.toggled.connect(func(_pressed: bool) -> void: _apply_light_settings_from_ui())
+	template_row.get_parent().add_child(row)
+	_light_debug_checks[setting_key] = check
+
+
+func _add_max_lights_row(template_row: HBoxContainer, initial_value: int) -> void:
+	var row := template_row.duplicate(0) as HBoxContainer
+	row.name = "Light_MaxActiveLights"
+	var label := row.find_child("Label_Title", false, false) as Label
+	label.text = "Max Active Lights"
+	var check := row.find_child("CheckButton*", true, false) as CheckButton
+	check.hide()
+
+	_light_max_lights_spin = SpinBox.new()
+	_light_max_lights_spin.min_value = 0
+	_light_max_lights_spin.max_value = 64
+	_light_max_lights_spin.step = 1
+	_light_max_lights_spin.value = initial_value
+	_light_max_lights_spin.value_changed.connect(
+		func(_value: float) -> void: _apply_light_settings_from_ui()
+	)
+	row.add_child(_light_max_lights_spin)
+	template_row.get_parent().add_child(row)
+
+
+func _apply_light_settings_from_ui() -> void:
+	DclLightSourceComponent.apply_light_settings(
+		_light_debug_checks["lights_enabled"].button_pressed,
+		_light_debug_checks["shadows_enabled"].button_pressed,
+		int(_light_max_lights_spin.value),
+		_light_debug_checks["debug_enabled"].button_pressed,
+		_light_debug_checks["auto_activation_range"].button_pressed,
+		_light_debug_checks["use_global_light_budget"].button_pressed
+	)
 
 
 func _setup_fast_day_cycle_toggle() -> void:
