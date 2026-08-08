@@ -270,13 +270,23 @@ pub fn credits_server() -> String {
 pub fn host() -> String {
     format!("https://decentraland.{}", default_suffix())
 }
+// Route the web marketplace is served from, per environment. Zone serves the new
+// storefront at /shop; org keeps /marketplace.
+fn marketplace_path(env: DclEnvironment) -> &'static str {
+    match env {
+        DclEnvironment::Zone => "shop",
+        _ => "marketplace",
+    }
+}
 pub fn marketplace() -> String {
-    if resolved_env(ServiceGroup::Marketplace) == DclEnvironment::Today {
+    let env = resolved_env(ServiceGroup::Marketplace);
+    if env == DclEnvironment::Today {
         "http://localhost:5173".to_string()
     } else {
         format!(
-            "https://decentraland.{}/marketplace",
-            suffix(ServiceGroup::Marketplace)
+            "https://decentraland.{}/{}",
+            suffix(ServiceGroup::Marketplace),
+            marketplace_path(env)
         )
     }
 }
@@ -350,6 +360,14 @@ mod tests {
     #[test]
     fn test_peer_lambdas_uses_peer_base() {
         assert_eq!(peer_lambdas(), format!("{}/lambdas/", peer_base()));
+    }
+
+    #[test]
+    fn test_marketplace_path_per_env() {
+        // Zone moved the storefront to /shop; org (and the localhost dev build,
+        // which ignores the path) stay on /marketplace.
+        assert_eq!(marketplace_path(DclEnvironment::Zone), "shop");
+        assert_eq!(marketplace_path(DclEnvironment::Org), "marketplace");
     }
 
     #[test]
