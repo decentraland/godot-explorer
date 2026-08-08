@@ -841,7 +841,7 @@ dependencies = [
 [[package]]
 name = "dcl-rpc"
 version = "2.3.7"
-source = "git+https://github.com/decentraland/rpc-rust?branch=main#aa2302d6918e2d1c7f2e298aa972d8a6bba6c389"
+source = "git+https://github.com/decentraland/rpc-rust?rev=aa2302d6918e2d1c7f2e298aa972d8a6bba6c389#aa2302d6918e2d1c7f2e298aa972d8a6bba6c389"
 dependencies = [
  "async-channel",
  "async-trait",
@@ -861,7 +861,7 @@ dependencies = [
 
 [[package]]
 name = "dclgodot"
-version = "0.71.0"
+version = "1.12.1"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -888,6 +888,7 @@ dependencies = [
  "image",
  "jni",
  "json5",
+ "libc",
  "livekit",
  "log-panics",
  "meshopt",
@@ -904,10 +905,12 @@ dependencies = [
  "poll-promise",
  "prost 0.11.9",
  "prost-build 0.11.9",
+ "prost-reflect",
  "protobuf",
  "rand",
  "regex",
  "reqwest",
+ "rusty_enet",
  "serde",
  "serde_json",
  "simple-easing",
@@ -2432,7 +2435,7 @@ checksum = "8355be11b20d696c8f18f6cc018c4e372165b1fa8126cef092399c9951984ffa"
 [[package]]
 name = "libwebrtc"
 version = "0.3.6"
-source = "git+https://github.com/robtfm/client-sdk-rust?branch=0.6-h264-false-2#c59f7e4693579dc137dba72153a0e995079305c6"
+source = "git+https://github.com/robtfm/client-sdk-rust?rev=c59f7e4693579dc137dba72153a0e995079305c6#c59f7e4693579dc137dba72153a0e995079305c6"
 dependencies = [
  "cxx",
  "jni",
@@ -2476,7 +2479,7 @@ checksum = "643cb0b8d4fcc284004d5fd0d67ccf61dfffadb7f75e1e71bc420f4688a3a704"
 [[package]]
 name = "livekit"
 version = "0.5.2"
-source = "git+https://github.com/robtfm/client-sdk-rust?branch=0.6-h264-false-2#c59f7e4693579dc137dba72153a0e995079305c6"
+source = "git+https://github.com/robtfm/client-sdk-rust?rev=c59f7e4693579dc137dba72153a0e995079305c6#c59f7e4693579dc137dba72153a0e995079305c6"
 dependencies = [
  "futures-util",
  "lazy_static",
@@ -2496,7 +2499,7 @@ dependencies = [
 [[package]]
 name = "livekit-api"
 version = "0.4.0"
-source = "git+https://github.com/robtfm/client-sdk-rust?branch=0.6-h264-false-2#c59f7e4693579dc137dba72153a0e995079305c6"
+source = "git+https://github.com/robtfm/client-sdk-rust?rev=c59f7e4693579dc137dba72153a0e995079305c6#c59f7e4693579dc137dba72153a0e995079305c6"
 dependencies = [
  "futures-util",
  "http 0.2.12",
@@ -2518,7 +2521,7 @@ dependencies = [
 [[package]]
 name = "livekit-protocol"
 version = "0.3.5"
-source = "git+https://github.com/robtfm/client-sdk-rust?branch=0.6-h264-false-2#c59f7e4693579dc137dba72153a0e995079305c6"
+source = "git+https://github.com/robtfm/client-sdk-rust?rev=c59f7e4693579dc137dba72153a0e995079305c6#c59f7e4693579dc137dba72153a0e995079305c6"
 dependencies = [
  "futures-util",
  "livekit-runtime",
@@ -2535,7 +2538,7 @@ dependencies = [
 [[package]]
 name = "livekit-runtime"
 version = "0.3.0"
-source = "git+https://github.com/robtfm/client-sdk-rust?branch=0.6-h264-false-2#c59f7e4693579dc137dba72153a0e995079305c6"
+source = "git+https://github.com/robtfm/client-sdk-rust?rev=c59f7e4693579dc137dba72153a0e995079305c6#c59f7e4693579dc137dba72153a0e995079305c6"
 dependencies = [
  "tokio",
  "tokio-stream",
@@ -3546,6 +3549,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "prost-reflect"
+version = "0.11.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6b823de344848e011658ac981009100818b322421676740546f8b52ed5249428"
+dependencies = [
+ "once_cell",
+ "prost 0.11.9",
+ "prost-types 0.11.9",
+]
+
+[[package]]
 name = "prost-types"
 version = "0.11.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3951,6 +3965,14 @@ name = "rustversion"
 version = "1.0.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0e819f2bc632f285be6d7cd36e25940d45b2391dd6d9b939e79de557f7014248"
+
+[[package]]
+name = "rusty_enet"
+version = "0.4.0"
+source = "git+https://github.com/dcl-regenesislabs/rusty_enet?rev=8023f9b39e12d4b11a2a054ade49fa8365a5e250#8023f9b39e12d4b11a2a054ade49fa8365a5e250"
+dependencies = [
+ "js-sys",
+]
 
 [[package]]
 name = "ryu"
@@ -5230,7 +5252,7 @@ dependencies = [
 [[package]]
 name = "webrtc-sys"
 version = "0.3.4"
-source = "git+https://github.com/robtfm/client-sdk-rust?branch=0.6-h264-false-2#c59f7e4693579dc137dba72153a0e995079305c6"
+source = "git+https://github.com/robtfm/client-sdk-rust?rev=c59f7e4693579dc137dba72153a0e995079305c6#c59f7e4693579dc137dba72153a0e995079305c6"
 dependencies = [
  "cc",
  "cxx",
@@ -5243,7 +5265,7 @@ dependencies = [
 [[package]]
 name = "webrtc-sys-build"
 version = "0.3.4"
-source = "git+https://github.com/robtfm/client-sdk-rust?branch=0.6-h264-false-2#c59f7e4693579dc137dba72153a0e995079305c6"
+source = "git+https://github.com/robtfm/client-sdk-rust?rev=c59f7e4693579dc137dba72153a0e995079305c6#c59f7e4693579dc137dba72153a0e995079305c6"
 dependencies = [
  "fs2",
  "regex",

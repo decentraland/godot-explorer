@@ -36,14 +36,17 @@ var _is_equipped: bool = false
 var _is_dirty := false
 
 @onready var control_inner := %Control_Inner
-@onready var texture_rect_background := %TextureRect_Background
+@onready var texture_rect_background: TextureRect = get_node_or_null("%TextureRect_Background")
 @onready var texture_rect_selected := %Pressed
-@onready var texture_rect_selected_bold := %Pressed_bold
+@onready var texture_rect_selected_bold: TextureRect = get_node_or_null("%Pressed_bold")
 @onready var texture_rect_equiped := %Equiped
-@onready var texture_rect_equiped_mark := %TextureRect_Equiped
-@onready var texture_rect_skeleton: TextureRect = %TextureRect_Skeleton
+@onready var texture_rect_equiped_mark: Control = get_node_or_null("%TextureRect_Equiped")
+@onready var texture_rect_skeleton: TextureRect = get_node_or_null("%TextureRect_Skeleton")
 @onready var texture_rect_picture: TextureRect = %TextureRect_Picture
 @onready var button_equiped: Button = get_node_or_null("%Button_Equiped")
+@onready var panel_new_badge: PanelContainer = get_node_or_null("%PanelContainer_NewBadge")
+@onready var inner_rect: TextureRect = get_node_or_null("%Inner")
+@onready var glow_rect: TextureRect = get_node_or_null("%Glow")
 
 
 func async_load_from_urn(_emote_urn: String, _index: int = -1):
@@ -93,14 +96,16 @@ func _process(_delta: float) -> void:
 		return
 	set_rarity_background()
 	texture_rect_picture.texture = picture
-	texture_rect_skeleton.hide()
-	texture_rect_background.show()
+	if is_instance_valid(texture_rect_skeleton):
+		texture_rect_skeleton.hide()
+		texture_rect_background.show()
 	_is_dirty = false
 
 
 func _ready():
-	texture_rect_background.hide()
-	texture_rect_skeleton.show()
+	if is_instance_valid(texture_rect_background):
+		texture_rect_background.hide()
+		texture_rect_skeleton.show()
 	_update_equip_ui()
 	if not Engine.is_editor_hint():
 		set_meta("attenuated_sound", true)
@@ -117,28 +122,54 @@ func _ready():
 
 
 func set_rarity_background() -> void:
+	if is_instance_valid(texture_rect_background):
+		match rarity:
+			Wearables.ItemRarity.COMMON:
+				texture_rect_background.texture = common_thumbnail
+			Wearables.ItemRarity.UNCOMMON:
+				texture_rect_background.texture = uncommon_thumbnail
+			Wearables.ItemRarity.RARE:
+				texture_rect_background.texture = rare_thumbnail
+			Wearables.ItemRarity.EPIC:
+				texture_rect_background.texture = epic_thumbnail
+			Wearables.ItemRarity.LEGENDARY:
+				texture_rect_background.texture = legendary_thumbnail
+			Wearables.ItemRarity.EXOTIC:
+				texture_rect_background.texture = exotic_thumbnail
+			Wearables.ItemRarity.MYTHIC:
+				texture_rect_background.texture = mythic_thumbnail
+			Wearables.ItemRarity.UNIQUE:
+				texture_rect_background.texture = unique_thumbnail
+			_:
+				texture_rect_background.texture = base_thumbnail
+		if emote_urn == "":
+			texture_rect_background.texture = empty_thumbnail
+
+	if is_instance_valid(inner_rect):
+		inner_rect.self_modulate = _get_rarity_color()
+		glow_rect.visible = rarity != Wearables.ItemRarity.COMMON
+
+
+func _get_rarity_color() -> Color:
 	match rarity:
 		Wearables.ItemRarity.COMMON:
-			texture_rect_background.texture = common_thumbnail
+			return Wearables.RarityColor.COMMON
 		Wearables.ItemRarity.UNCOMMON:
-			texture_rect_background.texture = uncommon_thumbnail
+			return Wearables.RarityColor.UNCOMMON
 		Wearables.ItemRarity.RARE:
-			texture_rect_background.texture = rare_thumbnail
+			return Wearables.RarityColor.RARE
 		Wearables.ItemRarity.EPIC:
-			texture_rect_background.texture = epic_thumbnail
+			return Wearables.RarityColor.EPIC
 		Wearables.ItemRarity.LEGENDARY:
-			texture_rect_background.texture = legendary_thumbnail
-		Wearables.ItemRarity.EXOTIC:
-			texture_rect_background.texture = exotic_thumbnail
+			return Wearables.RarityColor.LEGENDARY
 		Wearables.ItemRarity.MYTHIC:
-			texture_rect_background.texture = mythic_thumbnail
+			return Wearables.RarityColor.MYTHIC
 		Wearables.ItemRarity.UNIQUE:
-			texture_rect_background.texture = unique_thumbnail
+			return Wearables.RarityColor.UNIQUE
+		Wearables.ItemRarity.EXOTIC:
+			return Wearables.RarityColor.EXOTIC
 		_:
-			texture_rect_background.texture = base_thumbnail
-
-	if emote_urn == "":
-		texture_rect_background.texture = empty_thumbnail
+			return Wearables.RarityColor.BASE
 
 
 # Executed with @tool
@@ -182,18 +213,24 @@ func set_equipped(equipped: bool) -> void:
 	_update_equip_ui()
 
 
+## Shows the "NEW" tag (top-right corner) for a recently-acquired emote (#2300).
+func set_new_badge(is_new: bool) -> void:
+	# The wheel variant (emote_wheel_item.tscn) has no badge node; only square items do.
+	if is_instance_valid(panel_new_badge):
+		panel_new_badge.visible = is_new
+
+
 func set_slot_selected(toggled_on: bool) -> void:
-	texture_rect_selected_bold.set_visible(toggled_on)
+	if is_instance_valid(texture_rect_selected_bold):
+		texture_rect_selected_bold.set_visible(toggled_on)
 	texture_rect_selected.hide()
 
 
 func _update_equip_ui() -> void:
-	if button_equiped == null:
-		texture_rect_equiped.set_visible(_is_equipped)
-		texture_rect_equiped_mark.set_visible(_is_equipped)
+	texture_rect_equiped.set_visible(_is_equipped)
+	if not is_instance_valid(button_equiped):
 		return
 	if not button_pressed:
-		texture_rect_equiped.set_visible(_is_equipped)
 		texture_rect_equiped_mark.set_visible(_is_equipped)
 		button_equiped.hide()
 	else:

@@ -230,6 +230,46 @@ impl AsH160 for String {
     }
 }
 
+/// Sign the Pulse ENet handshake payload and pack the auth chain as the JSON `x-identity-*`
+/// header dictionary the server expects inside `HandshakeRequest.auth_chain` — identical in shape
+/// to the HTTP signed-fetch headers (`sign_request`), just carried as protobuf bytes.
+///
+/// The payload is the signed-fetch string for `connect` on path `/`:
+/// `connect:/:{timestamp_ms}:{}` — deliberately NOT lowercased: the server
+/// (`HandshakeHandler`/`SignedFetch.BuildSignedFetchPayload`) verifies the signature over this
+/// exact string, and Unity/bevy sign it verbatim. (It happens to be all-lowercase today; don't
+/// couple to that.) Re-sign per attempt: the server enforces a ±60s replay window on the
+/// timestamp.
+pub async fn sign_pulse_connect(wallet: &EphemeralAuthChain) -> Result<Vec<u8>, String> {
+    let unix_time = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_err(|e| e.to_string())?
+        .as_millis();
+
+    let payload = format!("connect:/:{unix_time}:{{}}");
+    let signature = wallet
+        .ephemeral_wallet()
+        .sign_message(&payload)
+        .await
+        .map_err(|e| format!("ephemeral sign failed: {e}"))?;
+    let mut auth_chain = wallet.auth_chain().clone();
+    auth_chain.add_signed_entity(payload, signature);
+
+    let mut dict = serde_json::Map::new();
+    for (key, value) in auth_chain.headers() {
+        dict.insert(key, serde_json::Value::String(value));
+    }
+    dict.insert(
+        "x-identity-timestamp".to_owned(),
+        serde_json::Value::String(unix_time.to_string()),
+    );
+    dict.insert(
+        "x-identity-metadata".to_owned(),
+        serde_json::Value::String("{}".to_owned()),
+    );
+    serde_json::to_vec(&dict).map_err(|e| e.to_string())
+}
+
 pub async fn sign_request<META: Serialize>(
     method: &str,
     uri: &Uri,

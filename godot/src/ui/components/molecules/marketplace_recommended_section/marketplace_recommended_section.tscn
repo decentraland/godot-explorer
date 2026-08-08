@@ -18,7 +18,7 @@ script = ExtResource("1_script")
 
 [node name="HSeparator3" type="HSeparator" parent="." unique_id=1709486589]
 layout_mode = 2
-theme_override_constants/separation = 40
+theme_override_constants/separation = 20
 theme_override_styles/separator = SubResource("StyleBoxEmpty_hn18y")
 
 [node name="Label_Title" type="Label" parent="." unique_id=478616753]
@@ -52,3 +52,8 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_hn18y")
 unique_name_in_owner = true
 layout_mode = 2
 theme_type_variation = &"SecondaryMediumOutlined"
+
+[node name="HSeparator4" type="HSeparator" parent="." unique_id=576600377]
+layout_mode = 2
+theme_override_constants/separation = 48
+theme_override_styles/separator = SubResource("StyleBoxEmpty_hn18y")

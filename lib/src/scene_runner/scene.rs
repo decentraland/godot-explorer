@@ -38,7 +38,8 @@ use crate::{
 
 use super::{
     components::{
-        gltf_node_modifiers::GltfNodeModifierState, trigger_area::TriggerAreaState, tween::Tween,
+        asset_load::AssetLoadState, gltf_node_modifiers::GltfNodeModifierState,
+        particle_system::ParticleSystemItem, trigger_area::TriggerAreaState, tween::Tween,
     },
     godot_dcl_scene::GodotDclScene,
 };
@@ -75,7 +76,10 @@ pub struct Dirty {
 #[derive(PartialEq)]
 pub enum SceneState {
     Alive,
-    ToKill,
+    /// Marked for removal. Carries the time (in the SceneManager's `begin_time`
+    /// clock, microseconds) at which the kill was requested, so `reap_dying_scenes`
+    /// can force-terminate a scene that never manages to receive the kill signal.
+    ToKill(i64),
     KillSignal(i64),
     Dead,
 }
@@ -109,6 +113,8 @@ pub enum SceneUpdateState {
     MeshCollider,
     GltfContainer,
     SyncGltfContainer,
+    AssetLoad,
+    SyncAssetLoad,
     GltfNodeModifiers,
     NftShape,
     Animator,
@@ -125,10 +131,12 @@ pub enum SceneUpdateState {
     PhysicsCombinedImpulse,
     CameraModeArea,
     InputModifier,
+    TouchScreenControls,
     SkyboxTime,
     TriggerArea,
     VirtualCameras,
     AudioSource,
+    ParticleSystem,
     ProcessRpcs,
     ComputeCrdtState,
     SendToThread,
@@ -151,7 +159,9 @@ impl SceneUpdateState {
             Self::Billboard => Self::MeshCollider,
             Self::MeshCollider => Self::GltfContainer,
             Self::GltfContainer => Self::SyncGltfContainer,
-            Self::SyncGltfContainer => Self::GltfNodeModifiers,
+            Self::SyncGltfContainer => Self::AssetLoad,
+            Self::AssetLoad => Self::SyncAssetLoad,
+            Self::SyncAssetLoad => Self::GltfNodeModifiers,
             Self::GltfNodeModifiers => Self::NftShape,
             Self::NftShape => Self::Animator,
             Self::Animator => Self::AvatarShape,
@@ -165,11 +175,13 @@ impl SceneUpdateState {
             Self::PhysicsCombinedForce => Self::PhysicsCombinedImpulse,
             Self::PhysicsCombinedImpulse => Self::CameraModeArea,
             Self::CameraModeArea => Self::InputModifier,
-            Self::InputModifier => Self::SkyboxTime,
+            Self::InputModifier => Self::TouchScreenControls,
+            Self::TouchScreenControls => Self::SkyboxTime,
             Self::SkyboxTime => Self::TriggerArea,
             Self::TriggerArea => Self::VirtualCameras,
             Self::VirtualCameras => Self::AudioSource,
-            Self::AudioSource => Self::AvatarAttach,
+            Self::AudioSource => Self::ParticleSystem,
+            Self::ParticleSystem => Self::AvatarAttach,
             Self::AvatarAttach => Self::SceneUi,
             Self::SceneUi => Self::ProcessRpcs,
             Self::ProcessRpcs => Self::ComputeCrdtState,
@@ -241,6 +253,9 @@ pub struct Scene {
     pub materials: HashMap<SceneEntityId, MaterialItem>,
     pub dirty_materials: bool,
 
+    pub particle_systems: HashMap<SceneEntityId, ParticleSystemItem>,
+    pub dirty_particle_systems: bool,
+
     pub scene_type: SceneType,
     pub audio_sources: HashMap<SceneEntityId, Gd<DclAudioSource>>,
 
@@ -273,6 +288,9 @@ pub struct Scene {
     pub gltf_node_modifier_states: HashMap<SceneEntityId, GltfNodeModifierState>,
     // Entities pending GltfNodeModifiers re-application after GLTF loads
     pub gltf_node_modifiers_pending: HashSet<SceneEntityId>,
+
+    // AssetLoad (PBAssetLoad) - scene-driven asset pre-loading state
+    pub asset_load: AssetLoadState,
 
     /// Last known player scene - used to detect when player enters/leaves this scene
     /// for trigger area activation. Initialized to invalid (-1) so first check detects transition.
@@ -388,6 +406,8 @@ impl Scene {
             start_time: Instant::now(),
             materials: HashMap::new(),
             dirty_materials: false,
+            particle_systems: HashMap::new(),
+            dirty_particle_systems: false,
             audio_sources: HashMap::new(),
             audio_streams: HashMap::new(),
             video_players: HashMap::new(),
@@ -404,6 +424,7 @@ impl Scene {
             trigger_areas: TriggerAreaState::default(),
             gltf_node_modifier_states: HashMap::new(),
             gltf_node_modifiers_pending: HashSet::new(),
+            asset_load: AssetLoadState::default(),
             last_player_scene_id: SceneId(-1), // Sentinel: never matches real scene IDs
             paused: false,
             virtual_camera: Default::default(),
@@ -467,6 +488,8 @@ impl Scene {
             start_time: Instant::now(),
             materials: HashMap::new(),
             dirty_materials: false,
+            particle_systems: HashMap::new(),
+            dirty_particle_systems: false,
             scene_type: SceneType::Parcel,
             audio_sources: HashMap::new(),
             audio_streams: HashMap::new(),
@@ -483,6 +506,7 @@ impl Scene {
             trigger_areas: TriggerAreaState::default(),
             gltf_node_modifier_states: HashMap::new(),
             gltf_node_modifiers_pending: HashSet::new(),
+            asset_load: AssetLoadState::default(),
             last_player_scene_id: SceneId(-1), // Sentinel: never matches real scene IDs
             paused: false,
             virtual_camera: Default::default(),
@@ -599,6 +623,12 @@ impl Scene {
         // Free audio sources
         for (_, mut audio_source) in self.audio_sources.drain() {
             audio_source.queue_free();
+        }
+
+        // Free particle systems
+        for (_, item) in self.particle_systems.drain() {
+            let mut node = item.node;
+            node.queue_free();
         }
 
         // Free audio streams

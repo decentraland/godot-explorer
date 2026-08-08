@@ -7,6 +7,10 @@ const _SUBSCRIBE_RETRY_MAX_ATTEMPTS: int = 6
 const _SUBSCRIBE_RETRY_BASE_DELAY: float = 5.0
 const _SUBSCRIBE_RETRY_MAX_DELAY: float = 60.0
 
+const _MULTIPLAYER_DEBUG_PANEL_SCENE := preload(
+	"res://src/ui/components/organisms/multiplayer_debug/multiplayer_debug_panel.tscn"
+)
+
 var is_genesis_city: bool
 var player: Node3D = null
 var scene_title: String
@@ -16,12 +20,13 @@ var panel_bottom_left_height: int = 0
 var dirty_save_position: bool = false
 
 var debug_panel = null
-var livekit_debug_panel = null
+var multiplayer_debug_panel = null
+var scene_stats_panel = null
 var disable_move_to = false
 
 var virtual_joystick_orig_position: Vector2i
 
-var _int_regex := RegEx.create_from_string(r"^-?\d+$")
+var _chat_commands := ChatCommands.new(self)
 var _first_time_refresh_warning = true
 
 var _last_parcel_position: Vector2i = Vector2i.MAX
@@ -48,6 +53,8 @@ var _session_hide_world_interactions: bool = true
 var _session_hide_player_names: bool = true
 var _session_hide_scene_ui: bool = true
 var _mobile_controls_hidden_for_hide_ui: bool = false
+# Applies scene-driven (PBTouchScreenControls) joystick/crosshair hiding; see the class doc.
+var _sdk_touch_controls: SdkTouchControlsApplier = null
 
 ## True when the debug panel was enabled from settings toggle.
 var _debug_panel_from_settings: bool = false
@@ -55,6 +62,7 @@ var _debug_panel_from_settings: bool = false
 @onready var ui_root: Control = %UI
 @onready var ui_safe_area: Control = %SceneUIContainer
 @onready var safe_margin_container_debug: SafeMarginContainer = %SafeMarginContainerDebug
+@onready var hbox_debug_tools: HBoxContainer = %HBoxContainer_DebugTools
 
 @onready var warning_messages = %WarningMessages
 @onready var label_crosshair = %Label_Crosshair
@@ -69,7 +77,6 @@ var _debug_panel_from_settings: bool = false
 @onready var settings_panel: Control = %SettingsPanel
 @onready var label_version = %Label_Version
 @onready var label_fps = %Label_FPS
-@onready var label_ram = %Label_RAM
 @onready var control_menu = %Control_Menu
 @onready var mobile_ui = %MobileUI
 @onready var mobile_camera_input: Control = %MobileCameraInput
@@ -93,6 +100,9 @@ var _debug_panel_from_settings: bool = false
 
 
 func _process(_dt):
+	if not Global.is_xr():
+		_sdk_touch_controls.apply(_mobile_controls_hidden_for_hide_ui)
+
 	parcel_position_real = Vector2(player.position.x * 0.0625, -player.position.z * 0.0625)
 
 	parcel_position = Vector2i(floori(parcel_position_real.x), floori(parcel_position_real.y))
@@ -139,7 +149,6 @@ func _ready():
 
 	if DclGlobal.is_production():
 		label_fps.visible = false
-		label_ram.visible = false
 
 	Global.set_orientation_landscape()
 	UiSounds.install_audio_recusirve(self)
@@ -161,6 +170,9 @@ func _ready():
 	var settings_node = settings_panel.get_node("MarginContainer/Settings")
 	if settings_node:
 		settings_node.request_debug_panel.connect(_on_control_menu_request_debug_panel)
+		# Without this, the in-game "Scene Paused" toggle does nothing (menu.gd wires
+		# request_pause_scenes for the pre-explorer path only).
+		settings_node.request_pause_scenes.connect(_on_control_menu_request_pause_scenes)
 
 	navbar.navbar_closed.connect(_close_all_panels)
 	navbar.navbar_opened.connect(_open_friends_panel)
@@ -198,17 +210,12 @@ func _ready():
 
 	emote_wheel.avatar_node = player.avatar
 
-	loading_ui.enable_loading_screen()
+	loading_ui.enable_loading_screen(Global.get_config().last_realm_joined, "on_explorer_ready")
 	var cmd_params = get_params_from_cmd()
 	var cmd_realm = Global.FORCE_TEST_REALM if Global.FORCE_TEST else cmd_params[0]
 	var cmd_location = cmd_params[1]
 	if Global.FORCE_TEST and cmd_location == null:
 		cmd_location = Global.FORCE_TEST_LOCATION
-	# LOADING_START metric
-	var loading_data = {
-		"position": str(cmd_location), "realm": str(cmd_realm), "when": "on_explorer_ready"
-	}
-	Global.metrics.track_screen_viewed("LOADING_START", JSON.stringify(loading_data))
 
 	# --spawn-avatars
 	if Global.cli.spawn_avatars:
@@ -222,23 +229,18 @@ func _ready():
 	# Show debug panel and reload button if in preview mode or --debug-panel
 	_update_debug_ui()
 
-	# livekit_debug deep link parameter auto-enables the LiveKit debug panel
-	if Global.deep_link_obj.livekit_debug:
-		_on_control_menu_request_livekit_debug(true)
+	# Preview-only scene-stats / limits overlay (never created in production)
+	_update_scene_stats_ui()
 
-	# Scene Inspector: activate bridge if --scene-inspector or ?scene-inspector= is set
-	var scene_inspector_target := ""
-	if not Global.deep_link_obj.scene_inspector.is_empty():
-		scene_inspector_target = Global.deep_link_obj.scene_inspector
-	elif not Global.cli.scene_inspector.is_empty():
-		scene_inspector_target = Global.cli.scene_inspector
-	if not scene_inspector_target.is_empty():
-		# Activate Rust-side instrumentation before any scene is spawned
-		Global.scene_inspector_active = true
-		var bridge = SceneInspectorBridge.new()
-		bridge.set_name("scene_inspector_bridge")
-		add_child(bridge)
-		bridge.setup(scene_inspector_target)
+	# multiplayer_debug deep link parameter auto-enables the multiplayer debug panel.
+	# Checked via the comms flag too: a target-less deeplink is consumed while the
+	# lobby/menu is active, and the Rust-side flag is the carrier that survives into
+	# this later explorer boot. The signal covers deeplinks arriving while in-world.
+	Global.deep_link_router.deep_link_received.connect(_check_multiplayer_debug_deeplink)
+	_check_multiplayer_debug_deeplink()
+
+	# Scene Inspector: the bridge is now dialed from app startup (Global._ready),
+	# not here — so the channel is live from second 0, before login / world entry.
 	# Scene Inspector file output: --scene-inspector-file or ?scene-inspector-file=true
 	var scene_inspector_file: bool = (
 		Global.deep_link_obj.scene_inspector_file or Global.cli.scene_inspector_file
@@ -251,6 +253,7 @@ func _ready():
 
 	virtual_joystick.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	virtual_joystick_orig_position = virtual_joystick.get_position()
+	_sdk_touch_controls = SdkTouchControlsApplier.new(virtual_joystick, label_crosshair)
 
 	if Global.is_xr():
 		mobile_ui.hide()
@@ -261,7 +264,11 @@ func _ready():
 		reset_cursor_position()
 		_update_virtual_controls_visibility()
 	else:
-		mobile_ui.hide()
+		# Desktop is development-only in this build: show the on-screen controls so the
+		# native joystick/joypad (and the TouchscreenInputControls / UiInputBinding features)
+		# stay visible and debuggable. Keep the desktop crosshair/cursor behaviour as-is.
+		mobile_ui.show()
+		_update_virtual_controls_visibility()
 
 	control_pointer_tooltip.hide()
 	var start_parcel_position: Vector2i = Vector2i(Global.get_config().last_parcel_position)
@@ -343,7 +350,7 @@ func _ready():
 	Global.scene_runner.set_pause(false)
 
 	if Global.testing_scene_mode:
-		Global.player_identity.create_guest_account()
+		Global.player_identity.create_disposable_account()
 
 	Global.metrics.update_identity(
 		Global.player_identity.get_address_str(), Global.player_identity.is_guest
@@ -741,208 +748,25 @@ func _on_touch_screen_button_released():
 	Input.action_release("ia_jump")
 
 
-func _is_coordinate_string(text: String) -> bool:
-	var cleaned = text.strip_edges().replace("(", "").replace(")", "").replace(" ", "")
-	var parts = cleaned.split(",")
-	if parts.size() < 2:
-		return false
-	return _int_regex.search(parts[0]) != null and _int_regex.search(parts[1]) != null
-
-
-func _parse_coordinates(coord_string: String) -> Vector2i:
-	# Remove parentheses if present
-	var cleaned = coord_string.strip_edges()
-	cleaned = cleaned.replace("(", "").replace(")", "")
-
-	# Remove all spaces
-	cleaned = cleaned.replace(" ", "")
-
-	# Split by comma
-	var parts = cleaned.split(",")
-	if parts.size() >= 2:
-		var x_str = parts[0].strip_edges()
-		var y_str = parts[1].strip_edges()
-
-		# Validate and parse integers (including negative values)
-		if _int_regex.search(x_str) != null and _int_regex.search(y_str) != null:
-			return Vector2i(int(x_str), int(y_str))
-
-	return Vector2i(0, 0)
-
-
 func _on_panel_chat_submit_message(message: String):
-	if message.length() == 0:
-		return
-
-	var params := message.split(" ")
-	var command_str := params[0].to_lower()
-	if command_str.begins_with("/"):
-		if (command_str == "/go" or command_str == "/goto") and params.size() > 1:
-			var arg_string = " ".join(params.slice(1)).strip_edges()
-			if _is_coordinate_string(arg_string):
-				var dest_vector = _parse_coordinates(arg_string)
-				Global.on_chat_message.emit(
-					"system",
-					"[color=#ccc]🟢 Teleported to " + str(dest_vector) + "[/color]",
-					Time.get_unix_time_from_system()
-				)
-				_on_control_menu_jump_to(dest_vector)
-			elif Realm.is_dcl_ens(arg_string) or not arg_string.contains("."):
-				var world_realm = (
-					arg_string if arg_string.ends_with(".dcl.eth") else arg_string + ".dcl.eth"
-				)
-				Global.async_join_world(world_realm)
-			else:
-				_async_try_change_realm(arg_string, "on_goto_realm")
-		elif command_str == "/changerealm" and params.size() > 1:
-			var target_realm = params[1]
-			if Realm.is_dcl_ens(target_realm):
-				Global.async_join_world(target_realm)
-			else:
-				_async_try_change_realm(target_realm, "on_changerealm")
-
-		elif command_str == "/pos":
-			_emit_pos_command_message()
-		elif command_str == "/clear":
-			Global.realm.async_clear_realm()
-		elif command_str == "/reload":
-			Global.realm.async_set_realm(Global.realm.get_realm_string())
-		elif command_str == "/scenecrash":
-			Global.scene_runner.debug_force_crash_current_scene()
-		elif command_str == "/godotcrash":
-			OS.crash("User crashed on purpose")
-		elif command_str == "/instantcrash":
-			DclCrashGenerator.static_crash()
-		elif command_str == "/delayedcrash":
-			add_child(DclCrashGenerator.new())
-		else:
-			Global.on_chat_message.emit(
-				"system", "[color=#ccc]🔴 Unknown command[/color]", Time.get_unix_time_from_system()
-			)
-	else:
-		Global.comms.send_chat(message)
-		Global.on_chat_message.emit(
-			Global.player_identity.get_address_str(), message, Time.get_unix_time_from_system()
-		)
+	_chat_commands.submit_message(message)
 
 
-func _emit_pos_command_message() -> void:
-	# Coordinates: Decentraland uses X right, Y up, Z forward (north). Godot uses X right, Y up, Z backward.
-	# So DCL position = (godot.x, godot.y, -godot.z). Parcels are 16m; parcel = (floor(x/16), floor(z/16)).
-	var cam = get_viewport().get_camera_3d()
-	if not cam:
-		Global.on_chat_message.emit(
-			"system", "[color=#ccc]🔴 No active camera[/color]", Time.get_unix_time_from_system()
-		)
-		return
-
-	var pos_godot_player := player.global_position
-	var pos_dcl_player := Vector3(pos_godot_player.x, pos_godot_player.y, -pos_godot_player.z)
-	var parcel_player := Vector2i(floori(pos_dcl_player.x / 16.0), floori(pos_dcl_player.z / 16.0))
-
-	var pos_godot_cam: Vector3 = cam.global_position
-	var pos_dcl_cam := Vector3(pos_godot_cam.x, pos_godot_cam.y, -pos_godot_cam.z)
-	var parcel_cam := Vector2i(floori(pos_dcl_cam.x / 16.0), floori(pos_dcl_cam.z / 16.0))
-
-	# Relative to current parcel (origin at parcel corner, 0-16 m on XZ)
-	var rel_parcel_player := Vector3(
-		pos_dcl_player.x - parcel_player.x * 16.0,
-		pos_dcl_player.y,
-		pos_dcl_player.z - parcel_player.y * 16.0
-	)
-	var rel_parcel_cam := Vector3(
-		pos_dcl_cam.x - parcel_cam.x * 16.0, pos_dcl_cam.y, pos_dcl_cam.z - parcel_cam.y * 16.0
-	)
-
-	# Relative to current scene base parcel
-	var current_scene_id: int = Global.scene_runner.get_current_parcel_scene_id()
-	var base_parcel: Vector2i = Global.scene_runner.get_scene_base_parcel(current_scene_id)
-	var rel_base_player := Vector3(
-		pos_dcl_player.x - base_parcel.x * 16.0,
-		pos_dcl_player.y,
-		pos_dcl_player.z - base_parcel.y * 16.0
-	)
-	var rel_base_cam := Vector3(
-		pos_dcl_cam.x - base_parcel.x * 16.0, pos_dcl_cam.y, pos_dcl_cam.z - base_parcel.y * 16.0
-	)
-
-	# Camera forward in Godot is -basis.z; convert to DCL axis (Z_dcl = -Z_godot)
-	var forward_godot: Vector3 = -cam.global_transform.basis.z
-	var forward_dcl := Vector3(forward_godot.x, forward_godot.y, -forward_godot.z)
-	if forward_dcl.length_squared() > 0.0001:
-		forward_dcl = forward_dcl.normalized()
-
-	# Realm: display name and type (main / world / preview)
-	var realm_display: String = Global.realm.get_realm_string()
-	if realm_display.is_empty():
-		realm_display = Global.realm.realm_url
-	var realm_type: String
-	if Realm.is_genesis_city(Global.realm.realm_url):
-		realm_type = "main"
-	elif Realm.is_dcl_ens(realm_display) or realm_display.ends_with(".dcl.eth"):
-		realm_type = "world"
-	elif Realm.is_local_preview(Global.realm.realm_url):
-		realm_type = "preview"
-	else:
-		realm_type = "realm"
-
-	var msg := (
-		(
-			"[color=#cfc][b]Position (DCL)[/b][/color]\n"
-			+ "Realm: %s  [%s]\n"
-			+ "Player world: (%.2f, %.2f, %.2f)  Parcel: (%d, %d)\n"
-			+ "  rel parcel: (%.2f, %.2f, %.2f)  rel base: (%.2f, %.2f, %.2f)\n"
-			+ "Camera world: (%.2f, %.2f, %.2f)  Parcel: (%d, %d)\n"
-			+ "  rel parcel: (%.2f, %.2f, %.2f)  rel base: (%.2f, %.2f, %.2f)\n"
-			+ "Camera dir (unit): (%.4f, %.4f, %.4f)"
-		)
-		% [
-			realm_display,
-			realm_type,
-			pos_dcl_player.x,
-			pos_dcl_player.y,
-			pos_dcl_player.z,
-			parcel_player.x,
-			parcel_player.y,
-			rel_parcel_player.x,
-			rel_parcel_player.y,
-			rel_parcel_player.z,
-			rel_base_player.x,
-			rel_base_player.y,
-			rel_base_player.z,
-			pos_dcl_cam.x,
-			pos_dcl_cam.y,
-			pos_dcl_cam.z,
-			parcel_cam.x,
-			parcel_cam.y,
-			rel_parcel_cam.x,
-			rel_parcel_cam.y,
-			rel_parcel_cam.z,
-			rel_base_cam.x,
-			rel_base_cam.y,
-			rel_base_cam.z,
-			forward_dcl.x,
-			forward_dcl.y,
-			forward_dcl.z
-		]
-	)
-	Global.on_chat_message.emit("system", msg, Time.get_unix_time_from_system())
+func _check_multiplayer_debug_deeplink() -> void:
+	if Global.deep_link_obj.multiplayer_debug or Global.comms.get_multiplayer_debug():
+		_on_control_menu_request_multiplayer_debug(true)
 
 
-func _on_control_menu_request_livekit_debug(enabled):
-	Global.comms.set_livekit_debug(enabled)
+func _on_control_menu_request_multiplayer_debug(enabled):
+	Global.comms.set_multiplayer_debug(enabled)
 	if enabled:
-		if not is_instance_valid(livekit_debug_panel):
-			livekit_debug_panel = (
-				load("res://src/ui/components/organisms/livekit_debug/livekit_debug_panel.tscn")
-				. instantiate()
-			)
-			ui_root.add_child(livekit_debug_panel)
-	else:
-		if is_instance_valid(livekit_debug_panel):
-			ui_root.remove_child(livekit_debug_panel)
-			livekit_debug_panel.queue_free()
-			livekit_debug_panel = null
+		if not is_instance_valid(multiplayer_debug_panel):
+			multiplayer_debug_panel = _MULTIPLAYER_DEBUG_PANEL_SCENE.instantiate()
+			ui_root.add_child(multiplayer_debug_panel)
+	elif is_instance_valid(multiplayer_debug_panel):
+		ui_root.remove_child(multiplayer_debug_panel)
+		multiplayer_debug_panel.queue_free()
+		multiplayer_debug_panel = null
 
 
 func _on_control_menu_request_pause_scenes(enabled):
@@ -964,36 +788,16 @@ func move_to(position: Vector3, skip_loading: bool, check_stuck: bool = true):
 		player.avatar.emote_controller.set_teleport_grace()
 
 	player.move_to(position, check_stuck)
+	# Announce the instant reposition to the Pulse transport so remote peers
+	# snap to it instead of interpolating across the jump (no-op when inactive).
+	Global.comms.notify_player_teleported(position)
 	var cur_parcel_position = Vector2i(
 		floor(player.position.x * 0.0625), -floor(player.position.z * 0.0625)
 	)
 	if not skip_loading:
 		if not Global.scene_fetcher.is_scene_loaded(cur_parcel_position.x, cur_parcel_position.y):
-			loading_ui.enable_loading_screen()
-			# LOADING_START metric
-			var loading_data = {
-				"position": str(position),
-				"realm": Global.realm.get_realm_string(),
-				"when": "on_moveto"
-			}
-			Global.metrics.track_screen_viewed("LOADING_START", JSON.stringify(loading_data))
-
-
-func _async_try_change_realm(realm_string: String, when: String) -> void:
-	Global.on_chat_message.emit(
-		"system",
-		"[color=#ccc]Trying to change to realm " + realm_string + "[/color]",
-		Time.get_unix_time_from_system()
-	)
-	var success = await Global.realm.async_set_realm(realm_string, true)
-	if success:
-		loading_ui.enable_loading_screen()
-		var loading_data = {
-			"position": str(Global.scene_fetcher.current_position),
-			"realm": realm_string,
-			"when": when
-		}
-		Global.metrics.track_screen_viewed("LOADING_START", JSON.stringify(loading_data))
+			if not loading_ui.visible:
+				loading_ui.enable_loading_screen("", "on_moveto")
 
 
 func teleport_to(parcel: Vector2i, realm: String = ""):
@@ -1005,7 +809,8 @@ func _async_teleport_to(parcel: Vector2i, realm: String = "") -> void:
 		var success = await Global.realm.async_set_realm(realm)
 		if not success:
 			return
-		loading_ui.enable_loading_screen()
+		if not loading_ui.visible:
+			loading_ui.enable_loading_screen(realm, "on_teleport")
 
 	var move_to_position = Vector3i(parcel.x * 16 + 8, 3, -parcel.y * 16 - 8)
 	move_to(move_to_position, false)
@@ -1035,7 +840,8 @@ func capture_mouse():
 	if DisplayServer.has_feature(DisplayServer.FEATURE_MOUSE):
 		Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 	if label_crosshair and ui_root:
-		label_crosshair.show()
+		if not Global.touch_controls_hide_crosshair:  # respect scene-driven crosshair hide
+			label_crosshair.show()
 		ui_root.grab_focus.call_deferred()
 
 
@@ -1081,8 +887,14 @@ func _is_ui_hud_mode_exception(node: Node) -> bool:
 	)
 
 
+# Whether the on-screen controls (joypad + virtual joystick) are present. They show on
+# mobile and on desktop (development), but never in XR.
+func _onscreen_controls_enabled() -> bool:
+	return not Global.is_xr()
+
+
 func _apply_mobile_controls_hide_ui(hidden: bool) -> void:
-	if not Global.is_mobile():
+	if not _onscreen_controls_enabled():
 		return
 	_mobile_controls_hidden_for_hide_ui = hidden
 	if hidden:
@@ -1136,10 +948,12 @@ func _update_debug_ui():
 			debug_panel = (
 				load("res://src/ui/components/organisms/debug_panel/debug_panel.tscn").instantiate()
 			)
-			safe_margin_container_debug.add_child(debug_panel)
+			hbox_debug_tools.add_child(debug_panel)
+			# Console always sits left of the scene-stats overlay in the row.
+			hbox_debug_tools.move_child(debug_panel, 0)
 	else:
 		if is_instance_valid(debug_panel):
-			safe_margin_container_debug.remove_child(debug_panel)
+			hbox_debug_tools.remove_child(debug_panel)
 			debug_panel.queue_free()
 			debug_panel = null
 
@@ -1147,6 +961,56 @@ func _update_debug_ui():
 		debug_panel.set_reload_scene_visible(should_show)
 
 	Global.set_scene_log_enabled(should_show)
+	_update_debug_layer_visibility()
+
+
+## Scene-stats overlay. Instantiated in preview, or in any realm when the
+## `scene-stats=true` deep link forces it on — in every build flavor,
+## production included, so creators can measure scenes on store builds. A
+## normal run (no preview, no deep link) still instantiates nothing, so the
+## zero-cost guarantee holds, mirroring _update_debug_ui.
+func _update_scene_stats_ui() -> void:
+	var should_show := _is_in_preview_realm() or Global.deep_link_obj.scene_stats
+	if should_show:
+		if not is_instance_valid(scene_stats_panel):
+			scene_stats_panel = (
+				load("res://src/ui/components/organisms/scene_stats_panel/scene_stats_panel.tscn")
+				. instantiate()
+			)
+			# Shares the top-right debug tools row with the console, so both
+			# lay out side by side instead of overlapping.
+			hbox_debug_tools.add_child(scene_stats_panel)
+		scene_stats_panel.set_scene(_preview_scene_id())
+	else:
+		if is_instance_valid(scene_stats_panel):
+			scene_stats_panel.queue_free()
+			scene_stats_panel = null
+	_update_debug_layer_visibility()
+
+
+## The debug layer hosts the console + scene-stats row; show it only while one
+## of them exists. It must be shown explicitly: it was once saved hidden in the
+## editor (PR #1894), which silently disabled the whole layer.
+func _update_debug_layer_visibility() -> void:
+	safe_margin_container_debug.visible = (
+		is_instance_valid(debug_panel) or is_instance_valid(scene_stats_panel)
+	)
+
+
+## The single scene being previewed (one scene may span multiple parcels):
+## prefer the non-global scene at the player's parcel, else the first non-global
+## scene loaded; -1 if none.
+func _preview_scene_id() -> int:
+	if not is_instance_valid(Global.scene_runner):
+		return -1
+	var sid := int(Global.scene_runner.get_scene_id_by_parcel_position(parcel_position))
+	for child in Global.scene_runner.get_children():
+		if child is DclSceneNode and not child.is_global() and child.get_scene_id() == sid:
+			return sid
+	for node in Global.scene_runner.get_children():
+		if node is DclSceneNode and not node.is_global():
+			return node.get_scene_id()
+	return -1
 
 
 func _on_timer_fps_label_timeout():
@@ -1226,6 +1090,7 @@ func _is_in_preview_realm() -> bool:
 
 func _update_preview_ui(_in_preview: bool) -> void:
 	_update_debug_ui()
+	_update_scene_stats_ui()
 
 
 func _on_notify_pending_loading_scenes(pending: bool) -> void:
@@ -1260,6 +1125,9 @@ func _on_profile_container_visibility_changed() -> void:
 		return
 	if not profile_container.visible:
 		_show_joypad()
+		# Profile page grabs keyboard focus when shown; restore it so jump works.
+		Global.explorer_grab_focus()
+		capture_mouse()
 
 
 func _open_friends_panel() -> void:
@@ -1521,7 +1389,7 @@ func _on_orientation_changed(is_portrait: bool) -> void:
 		navbar.hide()
 		_set_scene_ui_visible(false)
 	else:
-		if Global.is_mobile():
+		if _onscreen_controls_enabled():
 			mobile_ui.show()
 			_update_virtual_controls_visibility()
 		emote_wheel.show()
@@ -1538,7 +1406,7 @@ func _on_chat_write_mode_changed(is_writing: bool) -> void:
 		navbar.hide()
 		_set_scene_ui_visible(false)
 	else:
-		if Global.is_mobile():
+		if _onscreen_controls_enabled():
 			mobile_ui.show()
 			_update_virtual_controls_visibility()
 		emote_wheel.show()
@@ -1599,7 +1467,10 @@ func _notification(what: int) -> void:
 func _on_deep_link_jump() -> void:
 	control_menu.async_show_discover()
 	if is_instance_valid(control_menu.control_discover.instance):
-		control_menu.control_discover.instance.jump_in.open_panel()
+		# Only open the sheet when it actually has a place loaded — a deeplink with no
+		# navigation target must land on Discover itself, not an empty "Scene Title" card.
+		if not control_menu.control_discover.instance.jump_in.item_data.is_empty():
+			control_menu.control_discover.instance.jump_in.open_panel()
 
 
 func _on_deep_link_open_event(event_id: String) -> void:

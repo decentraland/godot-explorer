@@ -1,16 +1,15 @@
 class_name DebugWsServer
 extends Node
 
-## Developer-only WebSocket server that returns rich JSON snapshots of loaded
-## scenes / entities on demand. Off by default — toggled from the Developer
-## section of Settings. Bound to loopback only.
+## Developer-only command backend for live scene / entity / UI / avatar
+## inspection and GDScript `eval`. Exposes `run_command(cmd, args)`, driven by the
+## scene-inspector unified channel (`scene_inspector_bridge.gd`) so the same
+## surface is reachable on desktop and on-device via the debug-hub.
 ##
-## Protocol: each text frame is a JSON object with at least `id` and `cmd`.
-## Reply: `{"id": <id>, "ok": <bool>, "data": ...}` or `{"id": <id>, "ok": false, "error": "..."}`.
-##
-## Implementation: TCPServer + WebSocketPeer.accept_stream() — a vanilla
-## bidirectional WebSocket, NOT the multiplayer routing layer (which injects
-## peer-id sys packets that confuse generic clients like websocat / browsers).
+## Formerly this node also served a loopback `{id,cmd}` WebSocket on 9230; that
+## transport + its protocol were removed — everything now goes over the unified
+## scene-inspector CMD protocol. This node is kept as the shared command backend
+## (and the keyboard-focus tracker for the `focus` cmd).
 ##
 ## Supported commands:
 ##   ping
@@ -26,6 +25,7 @@ extends Node
 ##                                                    subtree by default).
 ##   eval      {code}                                — run GDScript, return result
 ##                                                    (non-production only).
+##   focus                                          — keyboard-focus owner + history
 ##
 ## `ui_scene` / `ui_entity` are identical to their 3D counterparts except the
 ## `godot` block reports the rendered `Control` (rect, anchors, modulate, …)
@@ -37,14 +37,6 @@ extends Node
 ## `value`. The avatar tree uses its own SceneEntityId space; the entity_id
 ## here is not addressable through the `entity` command.
 
-const DEFAULT_PORT: int = 9230
-const DEFAULT_BIND: String = "127.0.0.1"
-const MAX_FRAME_BYTES: int = 65536  ## drop inbound frames larger than this
-## Per-peer outbound buffer. Godot's default is 64 KiB, which a single `scene`
-## or `app_ui` reply trivially exceeds — `send_text` then returns
-## ERR_OUT_OF_MEMORY and the reply is silently dropped, leaving the client
-## hanging. 8 MiB comfortably fits expanded scene snapshots.
-const OUTBOUND_BUFFER_BYTES: int = 8 * 1024 * 1024
 ## Max focus-change entries retained for the `focus` diagnostic cmd.
 const FOCUS_HISTORY_MAX: int = 64
 ## Keywords that mark an `eval` snippet as a statement body, not a bare expression.
@@ -52,11 +44,6 @@ const EVAL_STATEMENT_PREFIXES: Array[String] = [
 	"return", "var", "const", "if", "for", "while", "match", "pass", "print", "assert"
 ]
 const Collector := preload("res://src/tool/debug_server/debug_collector.gd")
-
-var _tcp: TCPServer
-var _peers: Array[WebSocketPeer] = []
-var _running: bool = false
-var _port: int = DEFAULT_PORT
 
 ## Focus tracking: poll the viewport's keyboard-focus owner each frame and log
 ## every change (including release-to-null, which `gui_focus_changed` misses).
@@ -67,225 +54,108 @@ var _last_focus_desc: String = "<unset>"
 
 
 func _ready() -> void:
-	set_process(false)
-	# Debug builds start the server automatically so agents can attach without a
-	# manual toggle. Release/exported builds stay off until the Settings →
-	# Developer toggle. Never in production.
-	if OS.is_debug_build() and not Global.is_production():
-		# DCL_DEBUG_WS_PORT lets a second local instance get its own inspector
-		# (the default port can only be bound by one process).
-		var port := DEFAULT_PORT
-		var env_port := OS.get_environment("DCL_DEBUG_WS_PORT")
-		if env_port.is_valid_int():
-			port = env_port.to_int()
-		start(port)
-
-
-func is_running() -> bool:
-	return _running
-
-
-func get_port() -> int:
-	return _port
-
-
-func start(port: int = DEFAULT_PORT, bind_address: String = DEFAULT_BIND) -> bool:
-	if _running:
-		return true
-	_tcp = TCPServer.new()
-	var err := _tcp.listen(port, bind_address)
-	if err != OK:
-		printerr("DebugWsServer: failed to bind tcp://%s:%d (err=%d)" % [bind_address, port, err])
-		_tcp = null
-		return false
-	_port = port
-	_running = true
-	set_process(true)
-	print("DebugWsServer: listening on ws://%s:%d" % [bind_address, port])
-	return true
-
-
-func stop() -> void:
-	if not _running:
-		return
-	set_process(false)
-	for peer in _peers:
-		peer.close()
-	_peers.clear()
-	if _tcp != null:
-		_tcp.stop()
-		_tcp = null
-	_running = false
-	print("DebugWsServer: stopped")
+	# Poll keyboard focus each frame so the `focus` cmd has history. Same gate the
+	# loopback server used to auto-start under — debug builds (editor / debug
+	# exports), never in production.
+	set_process(OS.is_debug_build() and not Global.is_production())
 
 
 func _process(_dt: float) -> void:
 	_poll_focus()
-	if _tcp == null:
-		return
-
-	# Accept new connections: wrap each TCP stream in a WebSocketPeer that runs
-	# its own RFC6455 handshake.
-	while _tcp.is_connection_available():
-		var stream := _tcp.take_connection()
-		var peer := WebSocketPeer.new()
-		peer.set_outbound_buffer_size(OUTBOUND_BUFFER_BYTES)
-		var err := peer.accept_stream(stream)
-		if err != OK:
-			printerr("DebugWsServer: accept_stream failed err=%d" % err)
-			continue
-		_peers.append(peer)
-
-	# Drive each peer one frame: poll, drain inbound packets, prune closed ones.
-	for i in range(_peers.size() - 1, -1, -1):
-		var peer: WebSocketPeer = _peers[i]
-		peer.poll()
-		var state := peer.get_ready_state()
-		if state == WebSocketPeer.STATE_OPEN:
-			while peer.get_available_packet_count() > 0:
-				var raw := peer.get_packet()
-				if raw.size() > MAX_FRAME_BYTES:
-					_send(
-						peer,
-						{
-							"id": null,
-							"ok": false,
-							"error": "frame too large (max %d bytes)" % MAX_FRAME_BYTES
-						}
-					)
-					continue
-				_handle_message(peer, raw.get_string_from_utf8())
-		elif state == WebSocketPeer.STATE_CLOSED:
-			_peers.remove_at(i)
 
 
 # --------------------------------------------------------------------
 # Dispatch
 
 
-func _handle_message(peer: WebSocketPeer, text: String) -> void:
-	var parsed = JSON.parse_string(text)
-	if not (parsed is Dictionary):
-		_send(peer, {"id": null, "ok": false, "error": "expected a JSON object per frame"})
-		return
-	var msg: Dictionary = parsed
-	var request_id = msg.get("id", null)
-	var cmd: String = str(msg.get("cmd", ""))
-	if cmd.is_empty():
-		_reply(peer, request_id, false, null, "missing 'cmd'")
-		return
-
+## Shared command backend. Returns `{ok:true, data:...}` or `{ok:false, error:...}`.
+## Driven by the scene-inspector unified channel (scene_inspector_bridge.gd) so
+## the inspection/eval surface is transport-agnostic. `p` is the parameter dict
+## (the scene-inspector CMD `args` object).
+func run_command(cmd: String, p: Dictionary) -> Dictionary:
 	match cmd:
 		"ping":
-			_reply(peer, request_id, true, _build_ping_data(), "")
+			return {"ok": true, "data": _build_ping_data()}
 		"focus":
-			_reply(peer, request_id, true, _build_focus_data(), "")
+			return {"ok": true, "data": _build_focus_data()}
 		"scenes":
-			_reply(peer, request_id, true, Collector.collect_scenes_summary(), "")
-		"scene":
-			var scene_id := int(msg.get("scene_id", -1))
-			if scene_id < 0:
-				_reply(peer, request_id, false, null, "missing 'scene_id'")
-				return
-			var filters: Dictionary = msg.get("filters", {})
-			var data: Dictionary = Collector.collect_scene(scene_id, filters)
-			if data.has("error"):
-				_reply(peer, request_id, false, null, str(data["error"]))
-			else:
-				_reply(peer, request_id, true, data, "")
-		"entity":
-			var scene_id_e := int(msg.get("scene_id", -1))
-			var entity_id := int(msg.get("entity_id", -1))
-			if scene_id_e < 0 or entity_id < 0:
-				_reply(peer, request_id, false, null, "missing 'scene_id' or 'entity_id'")
-				return
-			# `entity` and `scene` both take the same `filters` dict.
-			# Backwards-compat: also accept `include_parents` / `include_children`
-			# at the top level of the message, where the old `entity` API put them.
-			var filters_e: Dictionary = (msg.get("filters", {}) as Dictionary).duplicate()
-			if msg.has("include_parents") and not filters_e.has("include_parents"):
-				filters_e["include_parents"] = msg["include_parents"]
-			if msg.has("include_children") and not filters_e.has("include_children"):
-				filters_e["include_children"] = msg["include_children"]
-			var data_e: Dictionary = Collector.collect_entity(scene_id_e, entity_id, filters_e)
-			if data_e.has("error"):
-				_reply(peer, request_id, false, null, str(data_e["error"]))
-			else:
-				_reply(peer, request_id, true, data_e, "")
-		"ui_scene":
-			var ui_scene_id := int(msg.get("scene_id", -1))
-			if ui_scene_id < 0:
-				_reply(peer, request_id, false, null, "missing 'scene_id'")
-				return
-			var ui_filters: Dictionary = (msg.get("filters", {}) as Dictionary).duplicate()
-			ui_filters["tree"] = "ui"
-			var ui_data: Dictionary = Collector.collect_scene(ui_scene_id, ui_filters)
-			if ui_data.has("error"):
-				_reply(peer, request_id, false, null, str(ui_data["error"]))
-			else:
-				_reply(peer, request_id, true, ui_data, "")
-		"ui_entity":
-			var ui_sid := int(msg.get("scene_id", -1))
-			var ui_eid := int(msg.get("entity_id", -1))
-			if ui_sid < 0 or ui_eid < 0:
-				_reply(peer, request_id, false, null, "missing 'scene_id' or 'entity_id'")
-				return
-			var ui_ef: Dictionary = (msg.get("filters", {}) as Dictionary).duplicate()
-			ui_ef["tree"] = "ui"
-			var ui_de: Dictionary = Collector.collect_entity(ui_sid, ui_eid, ui_ef)
-			if ui_de.has("error"):
-				_reply(peer, request_id, false, null, str(ui_de["error"]))
-			else:
-				_reply(peer, request_id, true, ui_de, "")
+			return {"ok": true, "data": Collector.collect_scenes_summary()}
 		"avatars":
-			_reply(peer, request_id, true, Collector.collect_avatars(), "")
-		"app_ui":
-			var app_filters: Dictionary = (msg.get("filters", {}) as Dictionary).duplicate()
-			var app_data: Dictionary = Collector.collect_app_ui(app_filters)
-			if app_data.has("error"):
-				_reply(peer, request_id, false, null, str(app_data["error"]))
-			else:
-				_reply(peer, request_id, true, app_data, "")
-		"avatar":
-			var by: String = str(msg.get("by", ""))
-			if by.is_empty():
-				_reply(
-					peer,
-					request_id,
-					false,
-					null,
-					"missing 'by' (expected address|alias|entity|local)"
-				)
-				return
-			# `local` is keyless — all other modes require `value`.
-			if by != "local" and not msg.has("value"):
-				_reply(peer, request_id, false, null, "missing 'value'")
-				return
-			var a_filters: Dictionary = (msg.get("filters", {}) as Dictionary).duplicate()
-			var av_value: Variant = msg.get("value", null)
-			var av: Dictionary = Collector.collect_avatar(by, av_value, a_filters)
-			if av.has("error"):
-				_reply(peer, request_id, false, null, str(av["error"]))
-			else:
-				_reply(peer, request_id, true, av, "")
+			return {"ok": true, "data": Collector.collect_avatars()}
 		"eval":
-			# Run arbitrary GDScript against the live client and return the
-			# serialized result. Unlike the read-only inspection commands this
-			# can mutate state, so it is hard-gated out of production builds.
-			if Global.is_production():
-				_reply(peer, request_id, false, null, "eval disabled in production builds")
-				return
-			var code: String = str(msg.get("code", ""))
-			if code.is_empty():
-				_reply(peer, request_id, false, null, "missing 'code'")
-				return
-			var res: Dictionary = _eval_gdscript(code)
-			if res.get("ok", false):
-				_reply(peer, request_id, true, res.get("data"), "")
-			else:
-				_reply(peer, request_id, false, null, str(res.get("error", "eval failed")))
+			return _run_eval(p)
 		_:
-			_reply(peer, request_id, false, null, "unknown command: %s" % cmd)
+			return _run_tree_query(cmd, p)
+
+
+## Tree / entity / avatar inspection verbs. Split out of `run_command` to stay
+## under the per-function return-count limit. All read-only; an invalid id falls
+## through to the Collector, which returns a structured `{error}`.
+func _run_tree_query(cmd: String, p: Dictionary) -> Dictionary:
+	match cmd:
+		"scene":
+			return _wrap(Collector.collect_scene(int(p.get("scene_id", -1)), p.get("filters", {})))
+		"entity":
+			# `entity` and `scene` share the `filters` dict. Backwards-compat: also
+			# accept `include_parents` / `include_children` at the top level.
+			var filters_e: Dictionary = (p.get("filters", {}) as Dictionary).duplicate()
+			if p.has("include_parents") and not filters_e.has("include_parents"):
+				filters_e["include_parents"] = p["include_parents"]
+			if p.has("include_children") and not filters_e.has("include_children"):
+				filters_e["include_children"] = p["include_children"]
+			return _wrap(
+				Collector.collect_entity(
+					int(p.get("scene_id", -1)), int(p.get("entity_id", -1)), filters_e
+				)
+			)
+		"ui_scene":
+			var ui_filters: Dictionary = (p.get("filters", {}) as Dictionary).duplicate()
+			ui_filters["tree"] = "ui"
+			return _wrap(Collector.collect_scene(int(p.get("scene_id", -1)), ui_filters))
+		"ui_entity":
+			var ui_ef: Dictionary = (p.get("filters", {}) as Dictionary).duplicate()
+			ui_ef["tree"] = "ui"
+			return _wrap(
+				Collector.collect_entity(
+					int(p.get("scene_id", -1)), int(p.get("entity_id", -1)), ui_ef
+				)
+			)
+		"app_ui":
+			return _wrap(Collector.collect_app_ui((p.get("filters", {}) as Dictionary).duplicate()))
+		"avatar":
+			var by: String = str(p.get("by", ""))
+			if by.is_empty():
+				return {"ok": false, "error": "missing 'by' (expected address|alias|entity|local)"}
+			# `local` is keyless — all other modes require `value`.
+			if by != "local" and not p.has("value"):
+				return {"ok": false, "error": "missing 'value'"}
+			return _wrap(
+				Collector.collect_avatar(
+					by, p.get("value", null), (p.get("filters", {}) as Dictionary).duplicate()
+				)
+			)
+		_:
+			return {"ok": false, "error": "unknown command: %s" % cmd}
+
+
+## Wrap a Collector result (`{...}` or `{error:...}`) into the `{ok, data|error}` shape.
+func _wrap(d: Dictionary) -> Dictionary:
+	if d.has("error"):
+		return {"ok": false, "error": str(d["error"])}
+	return {"ok": true, "data": d}
+
+
+## Run arbitrary GDScript. Hard-gated out of production builds (it can mutate state).
+func _run_eval(p: Dictionary) -> Dictionary:
+	if Global.is_production():
+		return {"ok": false, "error": "eval disabled in production builds"}
+	var code: String = str(p.get("code", ""))
+	if code.is_empty():
+		return {"ok": false, "error": "missing 'code'"}
+	var res: Dictionary = _eval_gdscript(code)
+	if res.get("ok", false):
+		return {"ok": true, "data": res.get("data")}
+	return {"ok": false, "error": str(res.get("error", "eval failed"))}
 
 
 func _poll_focus() -> void:
@@ -403,46 +273,3 @@ func _compile_and_run(code: String, as_expression: bool) -> Dictionary:
 		return {"compiled": true, "ok": false, "error": "internal: eval runner missing _run()"}
 	var result: Variant = instance.call("_run", get_tree(), Global, self)
 	return {"compiled": true, "ok": true, "data": Collector._variant_to_json(result)}
-
-
-# --------------------------------------------------------------------
-# Reply helpers
-
-
-func _reply(peer: WebSocketPeer, request_id, ok: bool, data, err_msg: String) -> void:
-	var reply: Dictionary = {"id": request_id, "ok": ok}
-	if ok:
-		reply["data"] = data
-	else:
-		reply["error"] = err_msg
-	_send(peer, reply)
-
-
-func _send(peer: WebSocketPeer, reply: Dictionary) -> void:
-	if peer.get_ready_state() != WebSocketPeer.STATE_OPEN:
-		return
-	var payload := JSON.stringify(reply)
-	var err := peer.send_text(payload)
-	if err == OK:
-		return
-	# Most common cause: payload exceeds `outbound_buffer_size`. The failed
-	# message is not enqueued, so a tiny replacement frame still fits and the
-	# client gets a usable error instead of hanging on a dropped reply.
-	var fallback := (
-		JSON
-		. stringify(
-			{
-				"id": reply.get("id", null),
-				"ok": false,
-				"error":
-				(
-					(
-						"reply dropped (err=%d, payload=%d bytes, buffer=%d). "
-						+ "Narrow `filters` (e.g. add `component`, set `include_children:false`)."
-					)
-					% [err, payload.length(), OUTBOUND_BUFFER_BYTES]
-				),
-			}
-		)
-	)
-	peer.send_text(fallback)

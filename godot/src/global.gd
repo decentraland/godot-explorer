@@ -28,6 +28,10 @@ signal close_navbar
 signal friends_request_size_changed(size: int)
 signal close_combo
 signal delete_account
+signal upgrade_to_otp
+## Fired by GuestUpgradeCard after the thirdweb network check resolves so other
+## UI (e.g. UpgradeBadge) can sync without duplicating the network call.
+signal guest_upgrade_state_refreshed(is_upgraded: bool)
 ## Sync settings "Hide UI" checkbox with explorer session state (no config persistence).
 signal session_hide_ui_toggle_sync(pressed: bool)
 ## Sync settings "Hide View Profile" / "Hide World Interactions" / etc. checkboxes.
@@ -72,11 +76,34 @@ const FORCE_DEEPLINK = ""
 #const FORCE_DEEPLINK = "decentraland://open?rust-log=dclgodot::analytics::metrics=debug,warn"
 #const FORCE_DEEPLINK = "decentraland://open?dclenv=zone&fake-owned-wearables=urn:decentraland:amoy:collections-v2:0x81004ea82f4af8337e357bef49cc746fce881dee:5"
 
+# DEBUG ONLY. When `true`, get_device_anchor_id() ignores the platform-native
+# device anchor (Android SSAID / iOS Keychain UUID) and uses the per-install
+# UUID in `user://device_anchor.txt` on EVERY platform, so the guest wallet is
+# tied to the app's user data: deleting `user://` (clear app data / reinstall —
+# or the "RESET GUEST WALLET" debug button in the lobby) mints a fresh anchor
+# and a fresh wallet. When `false` the original shipping behavior returns: the
+# device-bound native anchor that survives reinstall.
+#
+# HARD-GATED to non-production: get_device_anchor_id() (and the lobby debug
+# button) only honor this flag when `not is_production()`, so a release cut from
+# main always uses the device-bound native anchor even if this is left `true`.
+const DEBUG_GUEST_ROTATE_ANCHOR_ID: bool = false
+
 # Increase this value for new terms and conditions
 const TERMS_AND_CONDITIONS_VERSION: int = 1
 
 # Increase this value when local assets cache format changes (invalidates cache)
 const LOCAL_ASSETS_CACHE_VERSION: int = 4
+
+# On-disk guest identity artifacts, owned by Rust (keep in sync with
+# lib/src/auth/device_anchor.rs + thirdweb_guest.rs) plus the mobile-BFF
+# attestation session. Wiped when a non-upgraded guest deletes their account
+# (issue #2335) and by the non-prod lobby "reset guest wallet" debug button.
+const GUEST_DEVICE_STORAGE_FILES: Array[String] = [
+	"user://device_anchor.txt",
+	"user://thirdweb_session.json",
+	"user://attest_session.json",
+]
 
 ## Global classes (singleton pattern)
 
@@ -98,6 +125,8 @@ var locations: Node
 
 var modal_manager: ModalManager
 
+var upgrade_nudge_coordinator: UpgradeNudgeCoordinator
+
 var standalone = false
 
 var network_inspector_window: Window = null
@@ -110,6 +139,10 @@ var previous_height_2: int = -1
 var deep_link_obj: DclParseDeepLink = DclParseDeepLink.new()
 var deep_link_url: String = ""
 var deep_link_router := DeepLinkRouter.new()
+
+## true when the env came from --dclenv or a deeplink dclenv=… (incl. dclenv=org).
+## When true, Iap's sandbox auto-switch must NOT override the explicit choice.
+var dcl_env_explicit: bool = false
 
 var player_camera_node: DclCamera3D
 var current_camera_mode: CameraMode = CameraMode.THIRD_PERSON
@@ -131,7 +164,25 @@ var sentry_seeder: SentrySeeder = null
 # child of Global so it can use timers and signals across the session lifetime.
 var attestation: AttestationService = null
 
+# Remote feature flags fetched from the mobile-bff at startup. Query with
+# `Global.feature_flags.is_enabled("flag-name")`; comms-affecting flags are
+# applied automatically when the response arrives — see feature_flags.gd.
+var feature_flags: FeatureFlags = null
+
 var _is_portrait: bool = true
+
+# Opt-in, set by a `decentraland://open?enable-upgraded-deletion=true` deeplink
+# (see deep_link_router.gd). Gates the account-deletion flow so an UPGRADED
+# (email-linked) guest can be fully deleted via a double unlink — see
+# account_deletion_popup.gd and is_upgraded_deletion_enabled(). Sticky for the
+# session once seen; only takes effect on a NON-production build.
+var _enable_upgraded_deletion: bool = false
+
+# Scene Inspector bridge, created lazily at boot when a target is configured.
+var _scene_inspector_bridge: Node = null
+
+# Guard so the logging self-test runs at most once (cli or deeplink trigger).
+var _selftest_done: bool = false
 
 # Cached reference to SafeAreaPresets (loaded dynamically to avoid export issues)
 var _safe_area_presets: GDScript = null
@@ -190,6 +241,102 @@ func is_gp_benchmark() -> bool:
 	return cli.gp_benchmark or (deep_link_obj != null and deep_link_obj.gp_benchmark)
 
 
+## Activate the Scene Inspector bridge from app startup when a target is set via
+## `--scene-inspector=ws://…` (baked into the iOS build / passed on desktop) or
+## `?scene-inspector=` deeplink. Idempotent: the bridge is created at most once;
+## later target changes are handled by the bridge's own deeplink-reconnect.
+##
+## Dialing from boot (instead of in-world) means the channel is up from second 0.
+## In DEBUG builds it also arms the bounded boot-log ring + installs the capture
+## sinks, so startup logs are buffered and flushed on the first `subscribe`. This
+## is gated off production: there, nothing is captured or buffered without a
+## connection (the no-buffering-without-a-peer contract).
+func _activate_scene_inspector_from_config() -> void:
+	if _scene_inspector_bridge != null:
+		return
+	var target := ""
+	if not deep_link_obj.scene_inspector.is_empty():
+		target = deep_link_obj.scene_inspector
+	elif not cli.scene_inspector.is_empty():
+		target = cli.scene_inspector
+	if target.is_empty():
+		# Debug builds with no explicit target default to a local hub over loopback,
+		# so a plain Godot-editor deploy / F5 auto-dials with no --scene-inspector
+		# arg (parity with the iOS export plugin, which bakes the LAN IP). Android
+		# reaches it via `adb reverse tcp:9231 tcp:9231`; desktop hits it directly.
+		# The client retries quietly if no hub is up, and capture stays gated. Never
+		# in production.
+		if OS.is_debug_build() and not is_production():
+			target = "ws://127.0.0.1:9231"
+		else:
+			return
+	scene_inspector_active = true
+	if OS.is_debug_build():
+		scene_inspector_dispatcher.set_early_log_capture(true)
+	_scene_inspector_bridge = SceneInspectorBridge.new()
+	_scene_inspector_bridge.set_name("scene_inspector_bridge")
+	get_tree().root.add_child.call_deferred(_scene_inspector_bridge)
+	_scene_inspector_bridge.setup.call_deferred(target)
+	print("SceneInspectorBridge: activating from boot -> ", target)
+
+
+## Logging self-test, triggered by `--test-logging` / `?test-logging=true`.
+## Exercises every logging form in every stack (GDScript / Rust / Swift / ObjC /
+## Kotlin) so we can confirm each pipes into the unified channel. Grep `[LOGTEST]`
+## to verify. The ERROR/WARN forms (push_error/push_warning, tracing error/warn,
+## NSLog/os_log faults, Log.e) also exercise the Sentry pipeline.
+## Run the logging self-test if requested (via `--test-logging` cli flag or a
+## `?test-logging=true` deeplink), at most once. Called at _ready (covers the cli
+## flag, e.g. iOS's baked arg) and on `deep_link_received` (Android delivers the
+## deeplink async, after _ready — and its launcher strips command-line args).
+func _maybe_run_logging_selftest() -> void:
+	if _selftest_done:
+		return
+	# Never run in production: the self-test deliberately fires push_error /
+	# tracing::error! / ERR_PRINT / Log.e, all of which ship to Sentry — otherwise
+	# reachable in prod via the `?test-logging=true` deeplink. Staging/TestFlight
+	# still run it so the Sentry path can be verified on a real build.
+	if is_production():
+		return
+	var requested := cli.test_logging
+	if not requested and deep_link_obj != null:
+		requested = str(deep_link_obj.params.get("test-logging", "")).to_lower() == "true"
+	if requested:
+		_selftest_done = true
+		_run_logging_selftest.call_deferred()
+
+
+func _run_logging_selftest() -> void:
+	print("[LOGTEST] ===== logging self-test start =====")
+
+	# --- GDScript stack: every logging form ---
+	print("[LOGTEST][gdscript] info via print()")
+	prints("[LOGTEST][gdscript]", "info", "via", "prints()")
+	print_rich("[LOGTEST][gdscript] info via print_rich() [color=yellow]rich[/color]")
+	printraw("[LOGTEST][gdscript] raw via printraw() (no newline)\n")
+	printerr("[LOGTEST][gdscript] error via printerr() (stderr)")
+	push_warning("[LOGTEST][gdscript] warn via push_warning() (expect Sentry)")
+	push_error("[LOGTEST][gdscript] error via push_error() (expect Sentry)")
+
+	# --- Rust stack: all tracing levels + raw println!/eprintln! (DclGlobal) ---
+	test_logging()
+
+	# --- Native stacks: gated by per-platform availability ---
+	if DclSwiftLibPlugin.is_available():
+		print("[LOGTEST][swift] DclSwiftLib.test_logging() -> ", DclSwiftLibPlugin.test_logging())
+	if DclAndroidPlugin.is_available():
+		DclAndroidPlugin.test_logging()
+		print("[LOGTEST][kotlin] invoked DclAndroidPlugin.test_logging()")
+	# has_singleton first: get_singleton logs an ERROR (→ Sentry) when absent.
+	if Engine.has_singleton("DclGodotiOS"):
+		var dcl_ios = Engine.get_singleton("DclGodotiOS")
+		if dcl_ios != null and dcl_ios.has_method("test_logging"):
+			dcl_ios.test_logging()
+			print("[LOGTEST][objc] invoked DclGodotiOS.test_logging()")
+
+	print("[LOGTEST] ===== logging self-test end =====")
+
+
 ## Forward the optimized-content-base-url deeplink param into DclCli so the
 ## scene fetcher / content provider use it for optimized loading. Shared by the
 ## desktop fake-deeplink path (_ready) and the mobile/iOS live path (router).
@@ -218,6 +365,23 @@ func _get_safe_area_presets() -> GDScript:
 	if _safe_area_presets == null:
 		_safe_area_presets = load("res://assets/no-export/safe_area_presets.gd")
 	return _safe_area_presets
+
+
+func _generated_deeplink() -> String:
+	# Baked launch params from `cargo run -- run/build --deeplink|--log-stream`.
+	# Gitignored and optional; absent on a fresh checkout until the first build.
+	# Never honored in a production build: the iOS self-hosted runner exports with
+	# `clean: false`, so a stale build_config.gd left by a prior debug build could
+	# otherwise leak a baked deeplink into a prod IPA.
+	if is_production():
+		return ""
+	var gen_path := "res://src/generated/build_config.gd"
+	if not ResourceLoader.exists(gen_path):
+		return ""
+	var gen_script: GDScript = load(gen_path)
+	if gen_script == null:
+		return ""
+	return gen_script.get_script_constant_map().get("DEEPLINK", "")
 
 
 func get_safe_area() -> Rect2i:
@@ -276,8 +440,13 @@ func _ready():
 	if cli.landscape and (should_emulate_ios() or should_emulate_android()):
 		set_orientation_landscape()
 
-	# Handle fake deep link from CLI or FORCE_DEEPLINK constant (for testing mobile deep links on desktop)
+	# Handle fake deep link. Precedence: --fake-deeplink CLI arg > generated
+	# build_config (baked by `cargo run -- run/build --deeplink|--log-stream`) >
+	# FORCE_DEEPLINK constant. The generated path works on mobile/TestFlight where
+	# no CLI args are available.
 	var fake_deeplink = cli.fake_deeplink
+	if fake_deeplink.is_empty():
+		fake_deeplink = _generated_deeplink()
 	if fake_deeplink.is_empty() and not FORCE_DEEPLINK.is_empty():
 		fake_deeplink = FORCE_DEEPLINK
 	if not fake_deeplink.is_empty():
@@ -303,16 +472,17 @@ func _ready():
 
 		_apply_optimized_content_base_url(deep_link_obj)
 
-		# Toggle the loopback debug WS server from the fake deeplink (desktop/CLI
-		# testing). Same handling as runtime deeplinks in DeepLinkRouter.
-		deep_link_router.apply_debug_ws_param(deep_link_obj.params.get("debug-ws", ""))
+		# Pulse transport params (this fake-deeplink path doesn't route through
+		# deep_link_router.process_deep_link).
+		_apply_comms_deeplink_params(deep_link_obj)
 
 		print("[DEEPLINK] safemargindebug=", deep_link_obj.safe_margin_debug)
 		if deep_link_obj.safe_margin_debug:
 			set_safe_margin_debug_enable(true)
 
-		if deep_link_obj.iap_enabled:
-			Iap.enable()
+		# scene-stats overlay is applied by explorer.gd:_update_scene_stats_ui();
+		# just log here so CLI/QA can confirm the param parsed.
+		print("[DEEPLINK] scene-stats=", deep_link_obj.scene_stats)
 
 	# Connect to iOS deeplink signal
 	if DclIosPlugin.is_available():
@@ -358,6 +528,7 @@ func _ready():
 		env = deep_link_obj.dclenv
 		env_source = "deeplink"
 	DclGlobal.set_dcl_environment(env)
+	dcl_env_explicit = env_source != "default"
 	if env != "org":
 		print("[GLOBAL] Environment set to: ", env, " (source: ", env_source, ")")
 
@@ -369,6 +540,7 @@ func _ready():
 	self.realm = Realm.new()
 	self.realm.set_name("realm")
 	self.realm.realm_change_failed.connect(_on_realm_change_failed_toast)
+	self.realm.realm_access_denied.connect(_on_realm_access_denied)
 
 	self.dcl_tokio_rpc = DclTokioRpc.new()
 	self.dcl_tokio_rpc.set_name("dcl_tokio_rpc")
@@ -394,13 +566,6 @@ func _ready():
 	)
 	await _async_clear_cache_if_needed()
 	print("[Startup] global._async_clear_cache end: %dms" % (Time.get_ticks_msec() - _startup_time))
-
-	# Start the debug WebSocket server if requested via --debug-ws
-	if cli.debug_ws:
-		if DebugWs.start():
-			print("[Startup] Debug WS server listening on port ", DebugWs.get_port())
-		else:
-			push_warning("[Startup] Failed to start Debug WS server")
 
 	# #[itest] only needs a godot context, not the all explorer one
 	if cli.test_runner:
@@ -470,12 +635,16 @@ func _ready():
 	self.modal_manager = load("res://src/ui/components/organisms/modal/modal_manager.gd").new()
 	self.modal_manager.set_name("modal_manager")
 
+	self.upgrade_nudge_coordinator = load("res://src/upgrade_nudge_coordinator.gd").new()
+	self.upgrade_nudge_coordinator.set_name("upgrade_nudge_coordinator")
+
 	get_tree().root.add_child.call_deferred(self.cli)
 	get_tree().root.add_child.call_deferred(self.music_player)
 	get_tree().root.add_child.call_deferred(self.scene_fetcher)
 	get_tree().root.add_child.call_deferred(self.skybox_time)
 	get_tree().root.add_child.call_deferred(self.locations)
 	get_tree().root.add_child.call_deferred(self.modal_manager)
+	get_tree().root.add_child.call_deferred(self.upgrade_nudge_coordinator)
 	get_tree().root.add_child.call_deferred(self.content_provider)
 	get_tree().root.add_child.call_deferred(self.scene_runner)
 	get_tree().root.add_child.call_deferred(self.realm)
@@ -511,10 +680,21 @@ func _ready():
 	# service self-gates on EULA acceptance and caches the issued session token on disk.
 	self.attestation = AttestationService.new()
 	add_child(self.attestation)
+	# Remote feature flags: the node kicks its own fire-and-forget fetch on _ready
+	# and applies comms-affecting flags (e.g. `archipielago`) when they arrive.
+	self.feature_flags = FeatureFlags.new()
+	self.feature_flags.set_name("feature_flags")
+	add_child(self.feature_flags)
 	get_tree().root.add_child.call_deferred(self.network_inspector)
 	get_tree().root.add_child.call_deferred(self.scene_inspector_dispatcher)
 	get_tree().root.add_child.call_deferred(self.social_blacklist)
 	get_tree().root.add_child.call_deferred(self.dynamic_graphics_manager)
+
+	# Scene Inspector: dial the configured hub from app startup (second 0) rather
+	# than in-world, so the channel — and, in debug, boot-log capture — is live
+	# from boot. Also re-checked when a deeplink arrives (idempotent).
+	_activate_scene_inspector_from_config()
+	deep_link_router.deep_link_received.connect(_activate_scene_inspector_from_config)
 
 	if "memory_debugger" in self:
 		get_tree().root.add_child.call_deferred(self.memory_debugger)
@@ -556,6 +736,13 @@ func _ready():
 		open_network_inspector_ui()
 	else:
 		self.network_inspector.set_is_active(false)
+
+	# Logging self-test (debug aid). When --test-logging / ?test-logging=true is
+	# set, exercise every logging form in every stack so we can confirm each pipes
+	# into the unified channel + Sentry. Checked here (cli, e.g. iOS baked arg) AND
+	# on deeplink arrival (Android delivers it async, after _ready), run once.
+	_maybe_run_logging_selftest()
+	deep_link_router.deep_link_received.connect(_maybe_run_logging_selftest)
 
 	DclMeshRenderer.init_primitive_shapes()
 	print("[Startup] global._ready end: %dms" % (Time.get_ticks_msec() - _startup_time))
@@ -767,6 +954,35 @@ func get_explorer() -> Explorer:
 ## realm, scene-fetcher state and the Rust player identity — then returns to a
 ## fresh lobby so the next login starts as if the app had restarted. Every UI
 ## logout button and the disconnect handler funnel through here.
+## Deletes every on-disk guest identity artifact so the next "Play as guest"
+## derives a BRAND-NEW wallet instead of rehydrating the old one, and drops the
+## cached guest look. Returns how many files were removed. This does NOT end the
+## session — pair it with [sign_out] (see the guest account-deletion flow) to
+## actually log the user out. Shared by that flow and the lobby debug reset.
+func clear_guest_device_storage() -> int:
+	var removed := 0
+	for path in GUEST_DEVICE_STORAGE_FILES:
+		if FileAccess.file_exists(path):
+			var err := DirAccess.remove_absolute(path)
+			if err == OK:
+				removed += 1
+			else:
+				push_error("[guest] delete: failed to remove %s (err %d)" % [path, err])
+	# The cached guest profile would otherwise be reused by the fresh wallet.
+	get_config().guest_profile = {}
+	get_config().save_to_settings_file()
+	return removed
+
+
+## True only when deletion of an UPGRADED (email/social-linked) guest is allowed:
+## the `enable-upgraded-deletion=true` deeplink was seen AND this is a
+## NON-production build. Off by default and hard-disabled in prod, so a
+## recoverable account is never force-deleted on a release cut; the upgraded path
+## does a double unlink (guest + email) — see account_deletion_popup.gd.
+func is_upgraded_deletion_enabled() -> bool:
+	return _enable_upgraded_deletion and not is_production()
+
+
 func sign_out() -> void:
 	if _signing_out:
 		return
@@ -836,6 +1052,7 @@ func sign_out() -> void:
 	# avatar editor (issue #1658). Also drop the saved guest look on explicit
 	# sign-out to close the guest->guest leak vector.
 	get_config().guest_profile = {}
+	NamesRequest.invalidate_cache()
 	player_identity.reset_identity()
 	get_config().save_to_settings_file()
 
@@ -843,7 +1060,13 @@ func sign_out() -> void:
 	# landscape screen (e.g. settings panel) doesn't strand the user there.
 	set_orientation_portrait()
 
-	# 8. Swap to a fresh lobby on the next frame, after the current signal/await
+	# 8. Detach scene_runner.base_ui from the dying Explorer so freeing it can't
+	#    free UI nodes Rust still references — a cache-hot scene spawn racing the
+	#    next explorer._ready() would panic on the freed control
+	#    (GODOT-EXPLORER-1DY). The orphan is freed by the next recreate_base_ui().
+	scene_runner.detach_base_ui()
+
+	# 9. Swap to a fresh lobby on the next frame, after the current signal/await
 	#    stack fully unwinds (sign_out may have been reached via the deferred
 	#    logout signal). lobby._ready clears _signing_out.
 	get_tree().change_scene_to_file.call_deferred("res://src/ui/pages/auth/lobby.tscn")
@@ -903,6 +1126,12 @@ func return_to_discover() -> void:
 	# Discover/menu is portrait-only; reset orientation so returning from a
 	# landscape in-world screen (settings) doesn't strand the user in landscape.
 	set_orientation_portrait()
+
+	# Detach scene_runner.base_ui from the dying Explorer so freeing it can't
+	# free UI nodes Rust still references — a cache-hot scene spawn racing the
+	# next explorer._ready() would panic on the freed control
+	# (GODOT-EXPLORER-1DY). The orphan is freed by the next recreate_base_ui().
+	scene_runner.detach_base_ui()
 
 	# Swap to the standalone Discover menu on the next frame, after the current
 	# call stack (the settings button handler) fully unwinds. menu._ready clears
@@ -1047,6 +1276,13 @@ func async_load_threaded(resource_path: String, promise: Promise) -> void:
 
 
 func set_orientation_landscape():
+	# While tearing down the session toward a portrait-only screen (sign-out ->
+	# lobby, or return-to-discover -> Discover), ignore stray landscape flips. The
+	# explorer's loading-screen/chat machinery reacts to the realm being cleared
+	# during teardown and would otherwise flip back to landscape right before the
+	# swap, stranding the lobby/login in landscape (issue #2508).
+	if _signing_out or _returning_to_discover:
+		return
 	# Set orientation BEFORE changing window size so listeners get correct value
 	_is_portrait = false
 	if Global.is_mobile() and !Global.is_virtual_mobile():
@@ -1160,10 +1396,14 @@ func async_check_scene_access(scene_id: String, realm_name: String) -> bool:
 
 
 func async_teleport_to(parcel_position: Vector2i, new_realm: String) -> void:
+	# Block a private world before any navigation (no-op for genesis/parcel teleports); covers
+	# both the active-explorer teleport and the cold-start-from-lobby branch below.
+	if not await _async_precheck_realm_access(new_realm):
+		return
 	var explorer = Global.get_explorer()
 	if is_instance_valid(explorer):
 		# Show loading screen before orientation change to avoid flashing the scene
-		explorer.loading_ui.enable_loading_screen()
+		explorer.loading_ui.enable_loading_screen(new_realm, "on_teleport")
 		explorer.teleport_to(parcel_position, new_realm)
 		explorer.hide_menu()
 		Global.on_chat_message.emit(
@@ -1180,21 +1420,20 @@ func async_teleport_to(parcel_position: Vector2i, new_realm: String) -> void:
 
 
 func async_join_world(world_realm: String) -> void:
+	# Block a private world before any navigation. Covers both cases below: with an active
+	# explorer the modal replaces the loading flash; without one (cold start from the lobby)
+	# it stops us from booting the explorer scene straight into the world we can't enter.
+	if not await _async_precheck_realm_access(world_realm):
+		return
 	var explorer = Global.get_explorer()
 	if is_instance_valid(explorer):
 		# Show loading screen before orientation change to avoid flashing the scene
-		explorer.loading_ui.enable_loading_screen()
+		explorer.loading_ui.enable_loading_screen(world_realm, "on_world")
 		Global.on_chat_message.emit(
 			"system",
 			"[color=#ccc]Trying to change to world " + world_realm + "[/color]",
 			Time.get_unix_time_from_system()
 		)
-		var loading_data = {
-			"position": str(Global.scene_fetcher.current_position),
-			"realm": world_realm,
-			"when": "on_world"
-		}
-		Global.metrics.track_screen_viewed("LOADING_START", JSON.stringify(loading_data))
 		Global.realm.async_set_realm(world_realm, true)
 		explorer.hide_menu()
 		Global.close_menu.emit()
@@ -1231,8 +1470,16 @@ func _http_method_to_string(method: int) -> String:
 
 
 func async_signed_fetch(url: String, method: int, _body: String = ""):
+	# Decentraland signed-fetch (ADR-44) carries the request metadata in the
+	# x-identity-metadata header. The server verifier requires it to be a JSON
+	# object: a bodyless request would otherwise be signed as `null`, which the
+	# credits-server crypto-middleware (>=4.0.0) now rejects with
+	# "Invalid chain metadata". Sign an empty object `{}` for bodyless requests
+	# (backward-compatible: older verifiers accept both), leaving the actual HTTP
+	# body untouched.
+	var metadata := _body if not _body.is_empty() else "{}"
 	var headers_promise = Global.player_identity.async_get_identity_headers(
-		url, _body, _http_method_to_string(method)
+		url, metadata, _http_method_to_string(method)
 	)
 	var headers_result = await PromiseUtils.async_awaiter(headers_promise)
 
@@ -1297,11 +1544,62 @@ func _check_dclenv_change() -> bool:
 
 	print("[DEEPLINK] Environment changed: %s -> %s, restarting..." % [current_env, new_env])
 	DclGlobal.set_dcl_environment(new_env)
+	dcl_env_explicit = true
 	sign_out()
 	return true
 
 
+# Applies the comms deeplink params (pulse-server / pulse / dual-channel / livekit).
+# Shared by deep_link_router.process_deep_link and the desktop --fake-deeplink path,
+# so a new param only has to be added once.
+func _apply_comms_deeplink_params(deep_link) -> void:
+	# `pulse-server=<host:port>` joins a specific Pulse server (shareable — everyone
+	# opening the link lands on the same instance; implies enabling).
+	var pulse_server_value = deep_link.params.get("pulse-server", "")
+	if not pulse_server_value.is_empty():
+		print("[DEEPLINK] pulse-server=", pulse_server_value)
+		comms.set_pulse_server(pulse_server_value)
+	# `pulse=true/false` toggles the transport with the configured endpoint.
+	var pulse_value = deep_link.params.get("pulse", "")
+	if not pulse_value.is_empty():
+		print("[DEEPLINK] pulse=", pulse_value)
+		comms.set_pulse_enabled(pulse_value.to_lower() in ["true", "1", "yes"])
+	# `dual-channel=true/false` (default true): whether movement keeps going over
+	# LiveKit while Pulse is established. false = Pulse-only movement while up.
+	var dual_channel_value = deep_link.params.get("dual-channel", "")
+	if not dual_channel_value.is_empty():
+		print("[DEEPLINK] dual-channel=", dual_channel_value)
+		comms.set_livekit_movement_dual_channel(
+			dual_channel_value.to_lower() in ["true", "1", "yes"]
+		)
+	# `livekit=false`: pulse-only mode — no LiveKit rooms at all (no chat/voice/
+	# scene messages). Dev/testing switch; `livekit=true` re-enables.
+	var livekit_value = deep_link.params.get("livekit", "")
+	if not livekit_value.is_empty():
+		print("[DEEPLINK] livekit=", livekit_value)
+		comms.set_livekit_enabled(livekit_value.to_lower() in ["true", "1", "yes"])
+	# `multiplayer_debug=true` (legacy alias livekit_debug): latch the flag on the
+	# comms manager, which survives scene changes — a deeplink with no navigation
+	# target is consumed while the lobby/menu is active, and the explorer that boots
+	# later re-reads the flag from comms (deep_link_obj is not a reliable carrier
+	# across that flow). Enable-only: absence of the param must not turn the panel
+	# off on a later deeplink.
+	if deep_link.multiplayer_debug:
+		print("[DEEPLINK] multiplayer_debug=true")
+		comms.set_multiplayer_debug(true)
+
+
 func _notification(what: int) -> void:
+	if what == NOTIFICATION_APPLICATION_FOCUS_IN:
+		# Mobile OSes cut app networking shortly after backgrounding, killing every comms
+		# session. Tell the comms manager we're back so it forgives transient reconnect
+		# failures and treats Duplicate* evictions as our own stale session being reclaimed.
+		# Real mobile only: on desktop every alt-tab fires FOCUS_IN, and a 30s grace window
+		# armed that often would retry genuine another-device evictions instead of
+		# surfacing the "session ended" modal.
+		if Global.is_mobile() and !Global.is_virtual_mobile():
+			comms.notify_app_resumed()
+
 	if what == NOTIFICATION_APPLICATION_FOCUS_IN or what == NOTIFICATION_READY:
 		if Global.is_mobile() and !Global.is_virtual_mobile():
 			var new_url: String = ""
@@ -1324,6 +1622,7 @@ func _notification(what: int) -> void:
 				var parsed = DclParseDeepLink.parse_decentraland_link(new_url)
 				if not parsed.dclenv.is_empty():
 					DclGlobal.set_dcl_environment(parsed.dclenv)
+					dcl_env_explicit = true
 
 			deep_link_router.process_deep_link(new_url)
 
@@ -1346,6 +1645,80 @@ func _on_realm_change_failed_toast(new_realm_string: String, reason: String) -> 
 	)
 
 
+func _on_realm_access_denied(_new_realm_string: String, world_name: String) -> void:
+	# The world restricts access and this user is not on its allow-list (#1725). Only
+	# Global.realm is wired here — transient Realm instances (portable experiences) just
+	# fail to load, same as they do for the generic failure toast.
+	_clear_boot_realm_if_denied(world_name)
+	Global.modal_manager.async_show_private_world_modal(world_name)
+	# A cold start straight into a denied world booted the explorer with no realm ever set, so
+	# dismissing the modal would strand the user in an empty scene. Fall back to the main realm
+	# in that case only; an in-session denial (has_realm() true) leaves the user where they were.
+	# Deferred to avoid re-entering async_set_realm from its own denial signal.
+	if is_instance_valid(Global.get_explorer()) and not Global.realm.has_realm():
+		Global.realm.async_set_realm.call_deferred(DclUrls.main_realm())
+
+
+## Checks a realm's private-world access BEFORE any navigation UI is shown, so a world the
+## user can't enter blocks with the modal instantly instead of first flashing a loading
+## transition (#1725). The answer is cached, so the safety-net gate in Realm.async_set_realm
+## reuses it without a second fetch. Non-worlds resolve synchronously with no network hit.
+## Returns false when access was denied (the modal is already up); true otherwise.
+func _async_precheck_realm_access(new_realm_string: String) -> bool:
+	var world_name := WorldPermissionsHelper.world_name_from_realm(
+		new_realm_string, Realm.resolve_realm_url(new_realm_string)
+	)
+	if world_name.is_empty():
+		return true
+	if await WorldPermissionsHelper.async_is_allowed(world_name):
+		return true
+	_on_realm_access_denied(new_realm_string, world_name)
+	return false
+
+
+## Silent access check for a cold-start deeplink realm — like _async_precheck_realm_access but it
+## never shows the modal (the destination the caller routes to surfaces it). True for non-worlds
+## and allowed worlds. Used by the lobby to decide whether a deeplink can boot the explorer.
+func _async_is_realm_access_allowed(realm_string: String) -> bool:
+	var world_name := WorldPermissionsHelper.world_name_from_realm(
+		realm_string, Realm.resolve_realm_url(realm_string)
+	)
+	if world_name.is_empty():
+		return true
+	return await WorldPermissionsHelper.async_is_allowed(world_name)
+
+
+## Fire-and-forget prefetch of a world's access, meant to run when its jump-in card opens.
+## By the time the user taps JUMP IN the answer is cached, so the click-time precheck resolves
+## synchronously: an allowed world goes straight to the loading screen with no visible gap, a
+## private one shows the modal instantly. No-op (and no network) for non-worlds. Silent — it
+## never shows a modal; the decision surfaces only on the actual navigation.
+func warm_realm_access(realm_string: String) -> void:
+	var world_name := WorldPermissionsHelper.world_name_from_realm(
+		realm_string, Realm.resolve_realm_url(realm_string)
+	)
+	if world_name.is_empty():
+		return
+	WorldPermissionsHelper.async_is_allowed(world_name)
+
+
+## async_join_world / async_teleport_to persist the destination *before* the explorer scene
+## gets to run the private-world gate, so a refused world would otherwise stay as the boot
+## realm and re-open this modal on every cold start. Point it back at the main realm.
+func _clear_boot_realm_if_denied(world_name: String) -> void:
+	var config = Global.get_config()
+	var stored: String = config.last_realm_joined
+	if stored.is_empty():
+		return
+	var stored_world := WorldPermissionsHelper.world_name_from_realm(
+		stored, Realm.resolve_realm_url(stored)
+	)
+	if stored_world != world_name:
+		return
+	config.last_realm_joined = DclUrls.main_realm()
+	config.save_to_settings_file()
+
+
 func set_camera_mode(camera_mode: Global.CameraMode) -> void:
 	current_camera_mode = camera_mode
 	camera_mode_set.emit(camera_mode)
@@ -1356,3 +1729,36 @@ func set_camera_mode_blocked(blocked: bool) -> void:
 		return
 	camera_mode_blocked = blocked
 	camera_mode_block_changed.emit(blocked)
+
+
+# Anchor used to derive the thirdweb guest session/wallet. Shared by the lobby
+# guest-login flow and the "Upgrade to OTP" modal so both derive the same wallet.
+#
+# Resolution order:
+#   1. DEBUG_GUEST_ROTATE_ANCHOR_ID on AND non-production build → return "" so
+#      Rust falls back to the resettable per-install UUID in
+#      `user://device_anchor.txt` (delete user:// → fresh guest wallet) on every
+#      platform. The production gate means this can never ship accidentally.
+#   2. Otherwise (shipping): the device-bound native anchor (Android SSAID / iOS
+#      Keychain UUID), which survives reinstall. Desktop has none → returns ""
+#      and Rust uses the user:// UUID anyway.
+#
+# Android note: `has_method()` always returns false for JNISingleton methods
+# (Object.has_method consults ClassDB, the Android plugin method_map is
+# separate). Don't guard the Android call with has_method or it silently no-ops.
+# See: https://github.com/godotengine/godot/issues/106436
+func get_device_anchor_id() -> String:
+	# 1. DEBUG rotate mode: resettable user:// anchor on every platform.
+	#    Gated to non-production so it can never ship even if the flag is left on.
+	if DEBUG_GUEST_ROTATE_ANCHOR_ID and not is_production():
+		return ""
+	# 2. Shipping: device-bound native anchor (persists across reinstall).
+	if self.is_android():
+		var plugin = Engine.get_singleton("dcl-godot-android")
+		if plugin != null:
+			return plugin.getDeviceAnchorId()
+	elif self.is_ios():
+		var plugin = Engine.get_singleton("DclGodotiOS")
+		if plugin != null and plugin.has_method("get_device_anchor_id"):
+			return plugin.get_device_anchor_id()
+	return ""

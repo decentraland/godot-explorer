@@ -42,9 +42,10 @@ pub struct DclParseDeepLink {
     #[var]
     saved_profile: GString,
 
-    /// Enable LiveKit debug panel from deep link (livekit_debug=true)
+    /// Enable the multiplayer debug panel from deep link (multiplayer_debug=true;
+    /// legacy alias: livekit_debug=true)
     #[var]
-    livekit_debug: bool,
+    multiplayer_debug: bool,
 
     /// The URL path component (e.g., "/jump", "/events", "/places", "/mobile")
     #[var]
@@ -81,9 +82,10 @@ pub struct DclParseDeepLink {
     #[var]
     safe_margin_debug: bool,
 
-    /// Enable IAP UI and StoreKit listening (deep link param: iap_enabled=true)
+    /// Force-enable the Scene Stats / limits overlay outside preview
+    /// (deep link param: scene-stats=true). Never shown in production builds.
     #[var]
-    iap_enabled: bool,
+    scene_stats: bool,
 }
 
 #[godot_api]
@@ -107,7 +109,7 @@ impl DclParseDeepLink {
             is_walletconnect_callback: false,
             dclenv: GString::new(),
             saved_profile: GString::new(),
-            livekit_debug: false,
+            multiplayer_debug: false,
             path: GString::new(),
             disable_profile_deploy: false,
             fake_owned_wearables: PackedStringArray::new(),
@@ -116,7 +118,7 @@ impl DclParseDeepLink {
             low_spec_warning: false,
             gp_benchmark: false,
             safe_margin_debug: false,
-            iap_enabled: false,
+            scene_stats: false,
         }
     }
 
@@ -139,7 +141,7 @@ impl DclParseDeepLink {
             dclenv: GString::from(&r.dclenv),
             is_walletconnect_callback: r.is_walletconnect_callback,
             saved_profile: GString::from(&r.saved_profile),
-            livekit_debug: r.livekit_debug,
+            multiplayer_debug: r.multiplayer_debug,
             path: GString::from(&r.path),
             disable_profile_deploy: r.disable_profile_deploy,
             fake_owned_wearables: PackedStringArray::from_iter(
@@ -150,7 +152,7 @@ impl DclParseDeepLink {
             low_spec_warning: r.low_spec_warning,
             gp_benchmark: r.gp_benchmark,
             safe_margin_debug: r.safe_margin_debug,
-            iap_enabled: r.iap_enabled,
+            scene_stats: r.scene_stats,
         }
     }
 }

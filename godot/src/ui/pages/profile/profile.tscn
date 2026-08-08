@@ -21,8 +21,8 @@
 [ext_resource type="Texture2D" uid="uid://cqjwja1mdqpus" path="res://assets/ui/menu-icon.svg" id="18_7xla3"]
 [ext_resource type="PackedScene" uid="uid://7u7y8c3bnf1i" path="res://src/ui/components/organisms/social/mutual_friends.tscn" id="18_61jmm"]
 [ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="18_fhbaj"]
-[ext_resource type="Texture2D" uid="uid://cqfb6d3h3jho1" path="res://src/ui/pages/discover/icons/close.svg" id="19_7xla3"]
 [ext_resource type="Texture2D" uid="uid://71yn28q2vqlq" path="res://assets/ui/copy-icon.svg" id="19_awuqu"]
+[ext_resource type="Texture2D" uid="uid://ce0tola1380xu" path="res://assets/themes/icons/close.svg" id="19_qferq"]
 [ext_resource type="Material" uid="uid://yox6vvdafsgu" path="res://src/ui/pages/discover/carrousel/discover_carrousel_skeleton_material.tres" id="26_doqh1"]
 [ext_resource type="Texture2D" uid="uid://0w50cay6b2b6" path="res://assets/ui/mute.svg" id="27_8iwyo"]
 [ext_resource type="PackedScene" uid="uid://ddgiwkq38wjib" path="res://src/ui/pages/profile/profile_about.tscn" id="40_about"]
@@ -378,7 +378,6 @@ theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 1
 theme_override_fonts/font = ExtResource("7_m8kjd")
 theme_override_font_sizes/font_size = 27
-text = ""
 label_settings = SubResource("LabelSettings_pa1ft")
 vertical_alignment = 1
 
@@ -514,7 +513,7 @@ theme_override_colors/icon_focus_color = Color(0.9098039, 0.7254902, 1, 1)
 theme_override_colors/icon_pressed_color = Color(0.9098039, 0.7254902, 1, 1)
 theme_override_colors/icon_hover_color = Color(0.9098039, 0.7254902, 1, 1)
 theme_override_colors/icon_hover_pressed_color = Color(0.9098039, 0.7254902, 1, 1)
-theme_override_constants/icon_max_width = 35
+theme_override_constants/icon_max_width = 24
 theme_override_styles/normal = SubResource("StyleBoxFlat_ancl8")
 theme_override_styles/normal_mirrored = SubResource("StyleBoxFlat_gsgit")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_dd43y")
@@ -526,7 +525,7 @@ theme_override_styles/hover_pressed_mirrored = SubResource("StyleBoxFlat_cpyjo")
 theme_override_styles/disabled = SubResource("StyleBoxFlat_cwb2j")
 theme_override_styles/disabled_mirrored = SubResource("StyleBoxFlat_fc0ga")
 theme_override_styles/focus = SubResource("StyleBoxFlat_pv147")
-icon = ExtResource("19_7xla3")
+icon = ExtResource("19_qferq")
 icon_alignment = 1
 
 [node name="HBoxContainer2" type="HBoxContainer" parent="MarginContainer2/HBoxContainer_Data/VBoxContainer_info/MarginContainer/ProfileHeader" unique_id=1417316208]
@@ -818,7 +817,7 @@ layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
 
-[node name="ScrollContainer_Equipped" type="ScrollContainer" parent="MarginContainer2/HBoxContainer_PlaceHolder/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Equipped/MarginContainer/VBoxContainer"]
+[node name="ScrollContainer_Equipped" type="ScrollContainer" parent="MarginContainer2/HBoxContainer_PlaceHolder/VBoxContainer_info/ScrollContainer/VBoxContainer/VBoxContainer_Equipped/MarginContainer/VBoxContainer" unique_id=333959958]
 layout_mode = 2
 size_flags_vertical = 4
 horizontal_scroll_mode = 3
@@ -1008,6 +1007,7 @@ layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 108
 theme_override_styles/separator = SubResource("StyleBoxEmpty_dja5r")
+metadata/_edit_lock_ = true
 
 [node name="Control_OwnAndLandscapeMenu" type="VBoxContainer" parent="Menu/HBoxContainer" unique_id=281041086]
 unique_name_in_owner = true

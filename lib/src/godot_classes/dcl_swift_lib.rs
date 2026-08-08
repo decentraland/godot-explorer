@@ -68,6 +68,21 @@ impl DclSwiftLibPlugin {
             .try_to::<GString>()
             .unwrap_or_default()
     }
+
+    /// Logging self-test for the **Swift stack**: invokes `DclSwiftLib.testLogging`
+    /// which logs at every level via every Swift form (print / NSLog / os_log /
+    /// fputs / GD.print). No-op (empty) on non-iOS. Called from GDScript's
+    /// `_run_logging_selftest()`.
+    #[func]
+    pub fn test_logging() -> GString {
+        let Some(mut instance) = Self::try_instantiate() else {
+            return GString::new();
+        };
+        instance
+            .call("test_logging", &[])
+            .try_to::<GString>()
+            .unwrap_or_default()
+    }
 }
 
 /// Typed wrapper around the Swift `DclStoreKit` GDExtension class.

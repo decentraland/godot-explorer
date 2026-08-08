@@ -26,6 +26,11 @@ use crate::godot_classes::floating_islands::{
     PARCEL_HALF_SIZE, PARCEL_HEIGHT_BOUND, PARCEL_SIZE, TERRAIN_MATERIAL_PATH,
 };
 
+/// How long `tick_culling` must keep finding zero candidate parcels in view before it
+/// treats generation as finished. Debounced rather than immediate so a startup frame
+/// where the camera is not yet positioned cannot cut generation short.
+const EMPTY_VIEW_COMPLETE_MS: u64 = 1000;
+
 #[derive(GodotClass)]
 #[class(base=Node)]
 pub struct DclFloatingIslandsManager {
@@ -43,6 +48,9 @@ pub struct DclFloatingIslandsManager {
     generating: bool,
     generated_so_far: i32,
     generation_total: i32,
+    /// Ticks-msec of the first tick that found zero candidates in view while generating;
+    /// 0 whenever the last tick did find some. See `EMPTY_VIEW_COMPLETE_MS`.
+    empty_view_since_msec: u64,
 
     scenario: Rid,
     physics_space: Rid,
@@ -100,6 +108,7 @@ impl INode for DclFloatingIslandsManager {
             generating: false,
             generated_so_far: 0,
             generation_total: 0,
+            empty_view_since_msec: 0,
             scenario: Rid::Invalid,
             physics_space: Rid::Invalid,
             terrain_material: None,
@@ -183,17 +192,26 @@ impl DclFloatingIslandsManager {
             self.candidates.insert((coord.x, coord.y), cfg);
         }
 
-        // Stale active parcels whose corner configuration changed must be
-        // rebuilt — otherwise we'd be left with cliff/overhang geometry that
-        // no longer matches the surrounding scenes (T-junctions, overhangs
-        // pointing at a now-loaded neighbor, etc.). Drop them now and let
-        // `tick_culling` re-enqueue with the fresh config.
+        // Reconcile the active set against the new candidate set:
+        //   * still a candidate, but corner config changed -> rebuild it, else
+        //     we'd keep cliff/overhang geometry that no longer matches the
+        //     surrounding scenes (T-junctions, overhangs pointing at a
+        //     now-loaded neighbor, etc.);
+        //   * no longer a candidate at all -> destroy it. This is the parcel
+        //     that just stopped being empty (a freshly-loaded scene now covers
+        //     it) or an island left over from a location we teleported away
+        //     from. `tick_culling` only ever destroys by *distance*, so an
+        //     orphan within view distance of the player would otherwise linger
+        //     forever — rendering on top of the scene we just teleported onto.
+        // Either way the parcel is dropped here; `tick_culling` re-enqueues any
+        // still-valid candidate with its fresh config.
         let stale_actives: Vec<(i32, i32)> = self
             .active
             .iter()
             .filter_map(|(coord, data)| match self.candidates.get(coord) {
                 Some(new_cfg) if new_cfg != &data.config => Some(*coord),
-                _ => None,
+                Some(_) => None,
+                None => Some(*coord),
             })
             .collect();
         for coord in stale_actives {
@@ -205,6 +223,7 @@ impl DclFloatingIslandsManager {
         self.generating = true;
         self.generated_so_far = 0;
         self.generation_total = self.candidates.len() as i32;
+        self.empty_view_since_msec = 0;
     }
 
     #[func]
@@ -239,6 +258,7 @@ impl DclFloatingIslandsManager {
         self.generating = false;
         self.generated_so_far = 0;
         self.generation_total = 0;
+        self.empty_view_since_msec = 0;
         if let Some(worker) = &self.worker {
             while worker.rx.try_recv().is_ok() {}
         }
@@ -519,12 +539,44 @@ impl DclFloatingIslandsManager {
             );
         }
 
-        if self.generating
-            && in_view_candidates > 0
-            && self.in_view_all_materialized(player, view, &camera)
-        {
-            self.generating = false;
-            self.base_mut().emit_signal("generation_complete", &[]);
+        if self.generating {
+            if in_view_candidates > 0 {
+                self.empty_view_since_msec = 0;
+                if self.in_view_all_materialized(player, view, &camera) {
+                    self.generating = false;
+                    self.base_mut().emit_signal("generation_complete", &[]);
+                }
+            } else if self.empty_view_since_msec == 0 {
+                self.empty_view_since_msec = now_msec;
+            } else if now_msec.saturating_sub(self.empty_view_since_msec) >= EMPTY_VIEW_COMPLETE_MS
+            {
+                // Nothing has been in view for the whole debounce window, so there is
+                // nothing left to materialize and generation is vacuously done.
+                //
+                // Without this, `in_view_candidates == 0` made the branch above
+                // unsatisfiable: no parcel is enqueued, so `generation_progress` never
+                // fires either, and `generating` stays true forever. GDScript's
+                // `generation_complete` handler is the only thing that clears
+                // `waiting_for_floating_islands` on the loading session, and its Assets
+                // phase returns early while that flag is set — so the loading screen
+                // stayed pinned over a fully loaded, fully rendered scene until the user
+                // hit "START ANYWAY".
+                //
+                // Reproduced on a World whose parcels sat within view distance of the
+                // player but were all rejected by the camera-visibility test, with none
+                // in the `dist <= 1` ring that bypasses it. The session held at
+                // `all_loaded=true` for over 8 minutes.
+                tracing::debug!(
+                    "[LOADING] floating islands: completing with no candidates in view \
+                     (candidates={}, player={:?}, view={})",
+                    self.candidates.len(),
+                    (player.x, player.y),
+                    view
+                );
+                self.generating = false;
+                self.empty_view_since_msec = 0;
+                self.base_mut().emit_signal("generation_complete", &[]);
+            }
         }
     }
 

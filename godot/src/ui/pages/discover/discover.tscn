@@ -2,19 +2,17 @@
 
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_tkk7t"]
 [ext_resource type="Script" uid="uid://ba262jda5drvu" path="res://src/ui/pages/discover/discover.gd" id="2_f08es"]
+[ext_resource type="Texture2D" uid="uid://djhqqgo0jyq4t" path="res://assets/backgrounds/gradient-background.png" id="3_7josf"]
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="3_17slp"]
-[ext_resource type="Texture2D" uid="uid://oqsvjlyhmsqc" path="res://assets/ui/discover/discover_background.png" id="3_lvgj0"]
 [ext_resource type="PackedScene" uid="uid://3de823q04ptd" path="res://src/ui/pages/discover/carrousel/discover_carrousel.tscn" id="3_s5vyg"]
 [ext_resource type="Texture2D" uid="uid://bfdgcten8x433" path="res://src/ui/pages/discover/icons/back.svg" id="4_edk0s"]
 [ext_resource type="PackedScene" uid="uid://ci4mkq5dpxbys" path="res://src/ui/pages/discover/places/places_generator.tscn" id="4_q55yj"]
 [ext_resource type="LabelSettings" uid="uid://casqox4mhcv7s" path="res://assets/themes/menu_title_label_settings.tres" id="5_q2sj0"]
 [ext_resource type="Script" uid="uid://bhwm0bl5qoiph" path="res://src/ui/layouts/safe_margin_container.gd" id="6_b1byu"]
-[ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="9_73ifx"]
-[ext_resource type="Texture2D" uid="uid://dbgem6ilug5f2" path="res://assets/ui/iap/credits-icon.svg" id="9_g4fdo"]
 [ext_resource type="PackedScene" uid="uid://vc72j0sq70jq" path="res://src/ui/pages/discover/jump_in/jump_in.tscn" id="9_gh6mh"]
 [ext_resource type="Script" uid="uid://c3wphp306q0w" path="res://src/ui/components/atoms/controls/custom_scroll_rubber_container/custom_scroll_rubber_container.gd" id="10_q2sj0"]
-[ext_resource type="Texture2D" uid="uid://v10kj2je18ti" path="res://assets/ui/iap/purchase-history.svg" id="11_o7fsu"]
 [ext_resource type="Texture2D" uid="uid://cnumtfpu6ckrr" path="res://src/ui/pages/discover/icons/not-found.svg" id="12_g4fdo"]
+[ext_resource type="PackedScene" uid="uid://b07fppc2l5exm" path="res://src/ui/components/molecules/guest_upgrade_card/guest_upgrade_card.tscn" id="13_7josf"]
 [ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="13_73ifx"]
 [ext_resource type="PackedScene" uid="uid://ct64rhq0dtpa3" path="res://src/ui/pages/discover/search_bar/search_suggestions.tscn" id="14_5g6gd"]
 [ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="14_dn5gj"]
@@ -26,8 +24,6 @@
 [ext_resource type="PackedScene" uid="uid://c7n3k8p2xq4rf" path="res://src/ui/pages/discover/friends/friend_jump_in.tscn" id="20_fjump"]
 [ext_resource type="PackedScene" uid="uid://bk7m3n5xp2qrf" path="res://src/ui/pages/discover/friends/friend_discover_skeleton.tscn" id="21_fskel"]
 [ext_resource type="PackedScene" uid="uid://byp4n7u2145fx" path="res://src/ui/components/molecules/snap_carousel/snap_carousel.tscn" id="22_snap"]
-[ext_resource type="PackedScene" uid="uid://bk0bh2bgdycxx" path="res://src/ui/components/organisms/credits_shop/credits_shop.tscn" id="24_qr6ir"]
-[ext_resource type="PackedScene" uid="uid://c7m54lyhw5fwp" path="res://src/ui/components/organisms/credits_history/credits_history.tscn" id="27_ritxv"]
 [ext_resource type="PackedScene" path="res://src/ui/components/molecules/credits_balance_button/credits_balance_button.tscn" id="30_crbtn"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_cwrnu"]
@@ -40,39 +36,6 @@ corner_radius_top_left = 6
 corner_radius_top_right = 6
 corner_radius_bottom_right = 6
 corner_radius_bottom_left = 6
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ritxv"]
-content_margin_left = 18.0
-content_margin_top = 8.0
-content_margin_right = 18.0
-content_margin_bottom = 8.0
-bg_color = Color(0, 0, 0, 0.4)
-corner_radius_top_left = 100
-corner_radius_top_right = 100
-corner_radius_bottom_right = 100
-corner_radius_bottom_left = 100
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_vsmw3"]
-content_margin_left = 18.0
-content_margin_top = 8.0
-content_margin_right = 18.0
-content_margin_bottom = 8.0
-bg_color = Color(0, 0, 0, 0.4)
-corner_radius_top_left = 100
-corner_radius_top_right = 100
-corner_radius_bottom_right = 100
-corner_radius_bottom_left = 100
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ksqvs"]
-content_margin_left = 18.0
-content_margin_top = 8.0
-content_margin_right = 18.0
-content_margin_bottom = 8.0
-bg_color = Color(0, 0, 0, 0.4)
-corner_radius_top_left = 100
-corner_radius_top_right = 100
-corner_radius_bottom_right = 100
-corner_radius_bottom_left = 100
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_242e4"]
 
@@ -108,7 +71,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-texture = ExtResource("3_lvgj0")
+texture = ExtResource("3_7josf")
 expand_mode = 1
 stretch_mode = 6
 
@@ -179,7 +142,6 @@ theme_override_constants/margin_bottom = 24
 
 [node name="ScrollContainer_Content" type="Container" parent="TextureRect/VBoxContainer/MarginContainer" unique_id=1734613381]
 unique_name_in_owner = true
-visible = false
 clip_contents = true
 layout_mode = 2
 script = ExtResource("10_q2sj0")
@@ -294,9 +256,15 @@ horizontal_alignment = 1
 layout_mode = 2
 theme_override_constants/separation = 40
 
+[node name="GuestUpgradeCard" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer/VBoxContainer" unique_id=1116982919 instance=ExtResource("13_7josf")]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+
 [node name="PlacesFeatured" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer/VBoxContainer" unique_id=1265686382 instance=ExtResource("22_snap")]
 unique_name_in_owner = true
 layout_mode = 2
+show_title = false
 auto_fetch = true
 auto_scroll = true
 

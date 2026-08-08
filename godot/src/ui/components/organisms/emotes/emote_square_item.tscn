@@ -35,6 +35,18 @@ bg_color = Color(0.08627451, 0.08235294, 0.09411765, 0.8)
 corner_radius_bottom_right = 10
 corner_radius_bottom_left = 10
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_newbadge"]
+bg_color = Color(1, 0.1764706, 0.33333334, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[sub_resource type="LabelSettings" id="LabelSettings_new"]
+font = ExtResource("7_4d3kq")
+font_size = 18
+font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+
 [node name="EmoteSquareItem" type="TextureButton" unique_id=1890392802]
 custom_minimum_size = Vector2(192, 192)
 offset_right = 118.0
@@ -196,5 +208,29 @@ mouse_filter = 2
 texture = ExtResource("7_lu2c6")
 expand_mode = 3
 stretch_mode = 5
+
+[node name="PanelContainer_NewBadge" type="PanelContainer" parent="Control_Inner" unique_id=800100001]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(52, 22)
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -58.0
+offset_top = 6.0
+offset_right = -6.0
+offset_bottom = 28.0
+grow_horizontal = 0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_newbadge")
+
+[node name="Label_New" type="Label" parent="Control_Inner/PanelContainer_NewBadge" unique_id=800100002]
+layout_mode = 2
+mouse_filter = 2
+text = "NEW"
+label_settings = SubResource("LabelSettings_new")
+horizontal_alignment = 1
+vertical_alignment = 1
 
 [connection signal="item_rect_changed" from="." to="." method="_on_item_rect_changed"]

@@ -84,6 +84,19 @@ impl DclAndroidPlugin {
         godot::classes::Engine::singleton().has_singleton(&StringName::from(SINGLETON_NAME))
     }
 
+    /// Logging self-test for the **Kotlin/Android stack**: invokes the plugin's
+    /// `testLogging`, which logs at every level via every Android form
+    /// (`Log.v/d/i/w/e`, `println`, `System.err`). No-op on non-Android. Called
+    /// from GDScript's `_run_logging_selftest()`.
+    #[func]
+    pub fn test_logging() -> bool {
+        let Some(mut singleton) = Self::try_get_singleton() else {
+            return false;
+        };
+        Self::timed_jni_call(&mut singleton, "testLogging", &[]);
+        true
+    }
+
     /// Show a Decentraland mobile toast notification
     #[func]
     pub fn show_decentraland_mobile_toast() -> bool {

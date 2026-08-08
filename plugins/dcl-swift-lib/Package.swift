@@ -30,5 +30,9 @@ let package = Package(
                 .product(name: "SwiftGodotRuntimeStatic", package: "SwiftGodot"),
             ]
         ),
+        .testTarget(
+            name: "DclSwiftLibTests",
+            dependencies: ["DclSwiftLib"]
+        ),
     ]
 )

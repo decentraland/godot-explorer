@@ -2,6 +2,9 @@ class_name NamesRequest
 
 const NAMES_PAGE_SIZE = 100
 
+static var _cache: LambdaNamesResponse = null
+static var _is_fetching: bool = false
+
 
 class LambdaNameItemResponse:
 	var name: String = ""
@@ -61,11 +64,21 @@ static func async_request_names(page_number: int = 1, page_size: int = 10) -> La
 
 
 static func async_request_all_names() -> LambdaNamesResponse:
+	if _cache != null:
+		return _cache
+
+	if _is_fetching:
+		while _is_fetching:
+			await (Engine.get_main_loop() as SceneTree).process_frame
+		return _cache
+
+	_is_fetching = true
 	var response: LambdaNamesResponse = LambdaNamesResponse.new()
 	var page_number = 1
 	while true:
 		var names = await async_request_names(page_number, NAMES_PAGE_SIZE)
 		if not is_instance_valid(names):
+			_is_fetching = false
 			return response
 		response.total_amount = names.total_amount
 		response.elements.append_array(names.elements)
@@ -74,4 +87,23 @@ static func async_request_all_names() -> LambdaNamesResponse:
 			break
 		page_number += 1
 
-	return response
+	# Always clear the flag before returning, even if invalidate_cache() fired
+	# mid-fetch (in that case we discard the result instead of re-caching it).
+	_is_fetching = false
+	if _cache == null:
+		_cache = response
+	return _cache
+
+
+## Starts the names fetch in the background so the result is cached by the time
+## the profile editor opens. Safe to call multiple times.
+static func pre_fetch() -> void:
+	if _cache != null or _is_fetching:
+		return
+	async_request_all_names()
+
+
+## Clears the cache and breaks any in-flight waiter loop. Call on wallet change.
+static func invalidate_cache() -> void:
+	_cache = null
+	_is_fetching = false

@@ -4,9 +4,11 @@ extends VBoxContainer
 @onready var credits_faq_skeleton: VBoxContainer = %CreditsFaq_Skeleton
 @onready var credits_option_inner = %CreditsOptionInner
 @onready var credits_faq: VBoxContainer = %CreditsFaq
+@onready var faq_footer: RichTextLabel = %Label_Description
 
 
 func _ready() -> void:
+	faq_footer.meta_clicked.connect(_on_footer_meta_clicked)
 	if Iap.get_products().size() > 0:
 		_show_content()
 	else:
@@ -20,6 +22,10 @@ func _exit_tree() -> void:
 
 func _on_products_ready(_products: Array) -> void:
 	_show_content()
+
+
+func _on_footer_meta_clicked(meta: Variant) -> void:
+	Global.open_url(str(meta))
 
 
 func _show_content() -> void:

@@ -53,8 +53,6 @@ pub struct DclCli {
     #[var(get)]
     pub clear_cache_startup: bool,
     #[var(get)]
-    pub debug_ws: bool,
-    #[var(get)]
     pub raycast_debugger: bool,
     #[var(get)]
     pub network_debugger: bool,
@@ -102,6 +100,8 @@ pub struct DclCli {
     pub scene_inspector: GString,
     #[var(get)]
     pub scene_inspector_file: bool,
+    #[var(get)]
+    pub test_logging: bool,
     #[var(get)]
     pub low_spec_warning: bool,
     #[var(get)]
@@ -174,6 +174,26 @@ pub struct DclCli {
     pub avatar_impostor_benchmark_output: GString,
     #[var(get)]
     pub saved_profile: GString,
+
+    // Pulse transport (see comms/pulse/). `pulse` = not locally disabled (--no-pulse).
+    // `pulse_explicit` = --pulse or an explicit endpoint (--pulse-server / PULSE_SERVER)
+    // was passed: force activation even when the server `pulse` feature flag is absent
+    // or unreachable (without it activation is fail-closed on the flag — see
+    // CommunicationManager::pulse_enabled). `pulse_server` empty = default endpoint.
+    #[var(get)]
+    pub pulse: bool,
+    #[var(get)]
+    pub pulse_explicit: bool,
+    #[var(get)]
+    pub pulse_server: GString,
+    // Dual-channel movement kill switch: when set, movement stops going over LiveKit while
+    // Pulse is established (it always resumes if Pulse drops, so it can't cause invisibility).
+    #[var(get)]
+    pub no_livekit_movement: bool,
+    // Pulse-only mode: no LiveKit-backed rooms at all (no chat/voice/scene messages).
+    // Dev/testing switch; deeplink `livekit=false` is the runtime equivalent.
+    #[var(get)]
+    pub no_livekit: bool,
 }
 
 impl DclCli {
@@ -385,12 +405,6 @@ impl DclCli {
                 arg_type: ArgType::Flag,
                 category: "Maintenance".to_string(),
             },
-            ArgDefinition {
-                name: "--debug-ws".to_string(),
-                description: "Start the debug WebSocket server on startup (port 9230)".to_string(),
-                arg_type: ArgType::Flag,
-                category: "Maintenance".to_string(),
-            },
             // Asset Loading
             ArgDefinition {
                 name: "--only-optimized".to_string(),
@@ -529,6 +543,12 @@ impl DclCli {
                 arg_type: ArgType::Flag,
                 category: "Debugging".to_string(),
             },
+            ArgDefinition {
+                name: "--test-logging".to_string(),
+                description: "Run the logging self-test on startup: every component logs at all levels and every form in its stack (Rust/GDScript/Swift/ObjC/Kotlin), to verify the unified channel + Sentry pipeline. Also via deeplink (?test-logging=true)".to_string(),
+                arg_type: ArgType::Flag,
+                category: "Debugging".to_string(),
+            },
             // Logging
             ArgDefinition {
                 name: "--rust-log".to_string(),
@@ -554,6 +574,38 @@ impl DclCli {
                 description: "Simulate low-spec iPhone warnings (for testing on desktop)".to_string(),
                 arg_type: ArgType::Flag,
                 category: "Testing".to_string(),
+            },
+            // Comms
+            ArgDefinition {
+                name: "--pulse".to_string(),
+                description: "Force-enable the Pulse transport (ENet/UDP avatar-state relay) even when the server feature flag is absent or unreachable".to_string(),
+                arg_type: ArgType::Flag,
+                category: "Comms".to_string(),
+            },
+            ArgDefinition {
+                name: "--no-pulse".to_string(),
+                description: "Disable the Pulse transport for this run (LiveKit-only avatar sync)"
+                    .to_string(),
+                arg_type: ArgType::Flag,
+                category: "Comms".to_string(),
+            },
+            ArgDefinition {
+                name: "--pulse-server".to_string(),
+                description: "Pulse server endpoint as host:port (overrides the env default); PULSE_SERVER env var works too".to_string(),
+                arg_type: ArgType::Value("<host:port>".to_string()),
+                category: "Comms".to_string(),
+            },
+            ArgDefinition {
+                name: "--no-livekit-movement".to_string(),
+                description: "Stop sending movement over LiveKit while Pulse is established (dual-channel movement off; auto-resumes if Pulse drops)".to_string(),
+                arg_type: ArgType::Flag,
+                category: "Comms".to_string(),
+            },
+            ArgDefinition {
+                name: "--no-livekit".to_string(),
+                description: "Pulse-only mode: skip all LiveKit rooms (main/island/scene — no chat, voice or scene messages). Dev/testing".to_string(),
+                arg_type: ArgType::Flag,
+                category: "Comms".to_string(),
             },
         ]
     }
@@ -676,7 +728,6 @@ impl INode for DclCli {
         let client_test_mode = args_map.contains_key("--client-test");
         let test_runner = args_map.contains_key("--test-runner");
         let clear_cache_startup = args_map.contains_key("--clear-cache-startup");
-        let debug_ws = args_map.contains_key("--debug-ws");
         let raycast_debugger = args_map.contains_key("--raycast-debugger");
         let network_debugger = args_map.contains_key("--network-debugger");
         let spawn_avatars = args_map.contains_key("--spawn-avatars");
@@ -710,6 +761,7 @@ impl INode for DclCli {
             })
             .unwrap_or_default();
         let scene_inspector_file = args_map.contains_key("--scene-inspector-file");
+        let test_logging = args_map.contains_key("--test-logging");
         let low_spec_warning = args_map.contains_key("--low-spec-warning");
         let fi_benchmark_size = args_map
             .get("--fi-benchmark-size")
@@ -809,6 +861,28 @@ impl INode for DclCli {
             .map(|n| GString::from(&n.to_string()))
             .unwrap_or_default();
 
+        // Pulse transport activation is fail-closed on the server `pulse` feature flag
+        // (see CommunicationManager::pulse_enabled): without an explicit opt-in it stays
+        // off until the flags fetch confirms it. --pulse forces it on for this run
+        // (offline/local testing), and so does naming an endpoint via --pulse-server /
+        // the PULSE_SERVER env var (desktop; bevy parity) — pointing at a server is
+        // explicit intent, matching the pulse-server= deeplink which also self-enables.
+        // --no-pulse forces it off and always wins over the flag. Empty pulse_server =
+        // default endpoint (urls::pulse_server() : PULSE_SERVER_PORT).
+        let pulse_server = args_map
+            .get("--pulse-server")
+            .and_then(|v| v.as_ref())
+            .map(GString::from)
+            .unwrap_or_else(|| {
+                std::env::var("PULSE_SERVER")
+                    .map(|s| GString::from(s.as_str()))
+                    .unwrap_or_default()
+            });
+        let pulse = !args_map.contains_key("--no-pulse");
+        let pulse_explicit = args_map.contains_key("--pulse") || !pulse_server.is_empty();
+        let no_livekit_movement = args_map.contains_key("--no-livekit-movement");
+        let no_livekit = args_map.contains_key("--no-livekit");
+
         // Convert combined args back to PackedStringArray for storage
         let args: PackedStringArray = args_vec.iter().cloned().collect();
 
@@ -828,7 +902,6 @@ impl INode for DclCli {
             client_test_mode,
             test_runner,
             clear_cache_startup,
-            debug_ws,
             raycast_debugger,
             network_debugger,
             spawn_avatars,
@@ -853,6 +926,7 @@ impl INode for DclCli {
             asset_server,
             scene_inspector,
             scene_inspector_file,
+            test_logging,
             low_spec_warning,
             fi_benchmark_size,
             avatar_impostor_benchmark,
@@ -873,6 +947,11 @@ impl INode for DclCli {
             fi_benchmark_output,
             avatar_impostor_benchmark_output,
             saved_profile,
+            pulse,
+            pulse_explicit,
+            pulse_server,
+            no_livekit_movement,
+            no_livekit,
         }
     }
 }

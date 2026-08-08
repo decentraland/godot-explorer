@@ -27,15 +27,11 @@ func _apply_trim_and_size(p_text: String) -> void:
 		p_text, HORIZONTAL_ALIGNMENT_LEFT, max_width, font_size
 	)
 
-	var one_line_h := line_height * 1.2
-	var max_lines_h := line_height * (0.2 + max_lines)
-
-	if full_size.y <= one_line_h:
-		custom_minimum_size.y = one_line_h
-		return
+	var max_lines_h := line_height * max_lines
 
 	if full_size.y <= max_lines_h:
-		custom_minimum_size.y = max_lines_h
+		# Text fits within max_lines: let fit_content handle height naturally
+		custom_minimum_size.y = 0
 		return
 
 	# More than max_lines → trim and set fixed height
@@ -47,7 +43,7 @@ func _trim_to_max_lines(p_text: String) -> String:
 	var font := get_theme_font("normal_font")
 	var font_size := get_theme_font_size("normal_font_size")
 	var max_width := size.x
-	var max_height := font.get_height(font_size) * (0.2 + max_lines)
+	var max_height := font.get_height(font_size) * max_lines
 
 	var best := ""
 	var current := ""
