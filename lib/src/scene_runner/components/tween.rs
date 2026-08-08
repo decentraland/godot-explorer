@@ -502,10 +502,12 @@ pub fn update_tween(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
         // Mark entity as kinematic (has active tween moving it)
         scene.kinematic_entities.insert(*entity);
 
-        // set new transform to the entity
+        // set new transform to the entity (renderer-only, do not echo to JS)
+        crate::dcl::js::engine::TRANSFORM_PUTS_TWEEN
+            .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         crdt_state
             .get_transform_mut()
-            .put(*entity, Some(new_transform));
+            .put_without_dirty(*entity, Some(new_transform));
 
         // set the component as dirty for further processing
         if let Some(dirty) = scene

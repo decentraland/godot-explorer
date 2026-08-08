@@ -49,6 +49,12 @@ static CRDT_RECV_OPS: AtomicU64 = AtomicU64::new(0);
 static CRDT_DIRTY_LWW_ENTRIES: AtomicU64 = AtomicU64::new(0);
 static CRDT_DIRTY_GOS_ENTRIES: AtomicU64 = AtomicU64::new(0);
 
+/// Transform put() attribution (hiccup investigation #2593): counts puts by
+/// source so the ~10k/s Transform dirty traffic can be split tween vs avatar.
+/// Puts >= dirty entries (map dedupes same-entity puts within a tick).
+pub static TRANSFORM_PUTS_TWEEN: AtomicU64 = AtomicU64::new(0);
+pub static TRANSFORM_PUTS_AVATAR: AtomicU64 = AtomicU64::new(0);
+
 /// Gates the per-component breakdown maps. Without it, every recv across all
 /// scene threads contends on a global Mutex<HashMap>, serializing the CRDT
 /// pipeline. The bench runner flips this on right before sampling and the
@@ -91,11 +97,27 @@ pub fn drain_crdt_metrics() -> CrdtMetricsSnapshot {
     }
 }
 
+/// Non-draining cumulative snapshot for the spike logger (issue #2593):
+/// lets a frame spike be attributed to CRDT throughput without disturbing
+/// the benchmark drain cycle.
+pub fn snapshot_crdt_metrics() -> CrdtMetricsSnapshot {
+    CrdtMetricsSnapshot {
+        send_bytes: CRDT_SEND_BYTES.load(Ordering::Relaxed),
+        send_ops: CRDT_SEND_OPS.load(Ordering::Relaxed),
+        recv_bytes: CRDT_RECV_BYTES.load(Ordering::Relaxed),
+        recv_ops: CRDT_RECV_OPS.load(Ordering::Relaxed),
+        dirty_lww_entries: CRDT_DIRTY_LWW_ENTRIES.load(Ordering::Relaxed),
+        dirty_gos_entries: CRDT_DIRTY_GOS_ENTRIES.load(Ordering::Relaxed),
+    }
+}
+
 pub fn reset_crdt_metrics() {
     CRDT_SEND_BYTES.store(0, Ordering::Relaxed);
     CRDT_SEND_OPS.store(0, Ordering::Relaxed);
     CRDT_RECV_BYTES.store(0, Ordering::Relaxed);
     CRDT_RECV_OPS.store(0, Ordering::Relaxed);
+    TRANSFORM_PUTS_TWEEN.store(0, Ordering::Relaxed);
+    TRANSFORM_PUTS_AVATAR.store(0, Ordering::Relaxed);
     CRDT_DIRTY_LWW_ENTRIES.store(0, Ordering::Relaxed);
     CRDT_DIRTY_GOS_ENTRIES.store(0, Ordering::Relaxed);
     if let Ok(mut m) = crdt_dirty_lww_by_component().lock() {

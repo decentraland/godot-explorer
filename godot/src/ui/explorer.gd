@@ -248,6 +248,10 @@ func _ready():
 	if scene_inspector_file:
 		Global.scene_inspector_dispatcher.set_file_logging(true)
 
+	# Frame spike logger: --spike-log or ?spike-log=true (hiccup investigation #2593)
+	if Global.cli.spike_log or Global.deep_link_obj.spike_log or Global.cli.crdt_breakdown:
+		add_child(preload("res://src/tool/spike_logger.gd").new())
+
 	# Clear deep link after initial setup to prevent re-teleporting on first app resume
 	Global.deep_link_router._clear_deep_link()
 

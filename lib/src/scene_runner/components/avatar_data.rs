@@ -35,7 +35,10 @@ pub fn update_avatar_scene_updates(scene: &mut Scene, crdt_state: &mut SceneCrdt
 
     {
         let transform_component = crdt_state.get_transform_mut();
-        for (entity_id, value) in scene.avatar_scene_updates.transform.drain() {
+        let drained: Vec<_> = scene.avatar_scene_updates.transform.drain().collect();
+        crate::dcl::js::engine::TRANSFORM_PUTS_AVATAR
+            .fetch_add(drained.len() as u64, std::sync::atomic::Ordering::Relaxed);
+        for (entity_id, value) in drained {
             transform_component.put(entity_id, value);
         }
     }

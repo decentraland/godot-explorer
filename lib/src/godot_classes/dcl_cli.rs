@@ -151,6 +151,17 @@ pub struct DclCli {
     #[var]
     pub kill_sky: bool,
 
+    // Diagnostic: log every frame slower than 50ms with subsystem context
+    // (GLTF loads, impostor queue, CRDT totals, V8 heap). Hiccup hunting
+    // (issue #2593). Also passable via deeplink (?spike-log=true).
+    #[var(get)]
+    pub spike_log: bool,
+
+    // Diagnostic: enable CRDT per-component breakdown recording and periodic
+    // drain from spike_logger (10s). Hiccup hunting (issue #2593).
+    #[var(get)]
+    pub crdt_breakdown: bool,
+
     // Arguments with values
     #[var(get)]
     pub asset_server_port: i32,
@@ -519,6 +530,18 @@ impl DclCli {
                 category: "Debugging".to_string(),
             },
             ArgDefinition {
+                name: "--spike-log".to_string(),
+                description: "Diagnostic: print one log line per frame slower than 50ms with subsystem context (GLTF loading, impostor queue, CRDT bytes, V8 heap). Also passable via deeplink (?spike-log=true). Default OFF".to_string(),
+                arg_type: ArgType::Flag,
+                category: "Debugging".to_string(),
+            },
+            ArgDefinition {
+                name: "--crdt-breakdown".to_string(),
+                description: "Diagnostic: record per-component CRDT dirty counts and print top-10 every 10s (via spike_logger). Costly mutex — debugging only. Default OFF".to_string(),
+                arg_type: ArgType::Flag,
+                category: "Debugging".to_string(),
+            },
+            ArgDefinition {
                 name: "--inspect-scene-title".to_string(),
                 description: "Attach the V8 inspector (port 9222) to the SDK7 scene whose title matches. Requires `--features enable_inspector`. Empty string = no scene gets inspector (default)".to_string(),
                 arg_type: ArgType::Value("<title>".to_string()),
@@ -783,6 +806,8 @@ impl INode for DclCli {
         }
         let skip_gltf_load = args_map.contains_key("--skip-gltf");
         let kill_sky = args_map.contains_key("--kill-sky");
+        let spike_log = args_map.contains_key("--spike-log");
+        let crdt_breakdown = args_map.contains_key("--crdt-breakdown");
         // bench_mode auto-enabled when gp_benchmark is set, so the desktop
         // CLI doesn't have to pass both. Mobile flips this from
         // deep_link_router.gd when it sees gp-benchmark=true.
@@ -934,6 +959,8 @@ impl INode for DclCli {
             optimized_content_base_url,
             skip_gltf_load,
             kill_sky,
+            spike_log,
+            crdt_breakdown,
             bench_mode,
             inspect_scene_title,
             asset_server_port,

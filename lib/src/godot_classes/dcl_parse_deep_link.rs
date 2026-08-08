@@ -78,6 +78,10 @@ pub struct DclParseDeepLink {
     #[var]
     gp_benchmark: bool,
 
+    /// Frame spike logger trigger (spike-log=true). Mobile alternative to `--spike-log`.
+    #[var]
+    spike_log: bool,
+
     /// Show transparent safe-area debug overlay (deep link param: safemargindebug=true)
     #[var]
     safe_margin_debug: bool,
@@ -117,6 +121,7 @@ impl DclParseDeepLink {
             scene_inspector_file: false,
             low_spec_warning: false,
             gp_benchmark: false,
+            spike_log: false,
             safe_margin_debug: false,
             scene_stats: false,
         }
@@ -151,6 +156,7 @@ impl DclParseDeepLink {
             scene_inspector_file: r.scene_inspector_file,
             low_spec_warning: r.low_spec_warning,
             gp_benchmark: r.gp_benchmark,
+            spike_log: r.spike_log,
             safe_margin_debug: r.safe_margin_debug,
             scene_stats: r.scene_stats,
         }

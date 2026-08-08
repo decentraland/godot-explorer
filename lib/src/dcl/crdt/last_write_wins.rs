@@ -28,6 +28,7 @@ pub trait LastWriteWinsComponentOperation<T> {
         value: Option<T>,
     ) -> bool;
     fn put(&mut self, entity: SceneEntityId, value: Option<T>) -> bool;
+    fn put_without_dirty(&mut self, entity: SceneEntityId, value: Option<T>) -> bool;
     fn get(&self, entity: &SceneEntityId) -> Option<&LWWEntry<T>>;
 }
 
@@ -95,6 +96,23 @@ impl<T> LastWriteWinsComponentOperation<T> for LastWriteWins<T> {
         };
 
         self.set(entity, new_timestamp, value)
+    }
+
+    /// Update the value without marking the entity dirty and without
+    /// advancing the timestamp. Use for renderer-internal updates that must
+    /// be visible to the renderer but should not be echoed back to the
+    /// scene's JS runtime (e.g. tween applied transforms). Keeping the
+    /// timestamp unchanged ensures a later scene write still wins the LWW
+    /// conflict and is marked dirty normally.
+    fn put_without_dirty(&mut self, entity: SceneEntityId, value: Option<T>) -> bool {
+        let timestamp = self
+            .values
+            .get(&entity)
+            .map(|entry| entry.timestamp)
+            .unwrap_or(SceneCrdtTimestamp(0));
+
+        self.values.insert(entity, LWWEntry { timestamp, value });
+        true
     }
 }
 
