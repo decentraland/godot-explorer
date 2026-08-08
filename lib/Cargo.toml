@@ -58,7 +58,7 @@ url = "2.5"
 
 # Pinned to a commit (not a branch) so CI builds are immutable — a moved branch must not
 # change what runs alongside the signing/ASC secrets. Bump deliberately when needed.
-dcl-rpc = { git = "https://github.com/decentraland/rpc-rust", rev = "aa2302d6918e2d1c7f2e298aa972d8a6bba6c389", features=["client", "websockets", "codegen", "server", "tungstenite-rustls"] }
+dcl-rpc = { git = "https://github.com/decentraland/rpc-rust", rev = "63391e28649b5340fb1dc020a2e654df7e1de418", features=["client", "websockets", "codegen", "server", "tungstenite-rustls"] }
 
 tokio-tungstenite = "0.20.1"
 futures-util = "0.3.30"
@@ -136,7 +136,7 @@ prost-reflect = "0.11"
 chrono = "0.4.31"
 # Pinned to a commit (not a branch) so CI builds are immutable — a moved branch must not
 # change what runs alongside the signing/ASC secrets. Bump deliberately when needed.
-dcl-rpc = { git = "https://github.com/decentraland/rpc-rust", rev = "aa2302d6918e2d1c7f2e298aa972d8a6bba6c389", features=["client", "websockets", "codegen", "server", "tungstenite-rustls"] }
+dcl-rpc = { git = "https://github.com/decentraland/rpc-rust", rev = "63391e28649b5340fb1dc020a2e654df7e1de418", features=["client", "websockets", "codegen", "server", "tungstenite-rustls"] }
 
 [profile.release]
 opt-level = 3

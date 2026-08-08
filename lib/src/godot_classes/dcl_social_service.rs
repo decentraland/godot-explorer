@@ -1,4 +1,5 @@
 use godot::prelude::*;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tokio_util::sync::CancellationToken;
@@ -15,6 +16,17 @@ type FriendshipRequestData = (String, String, bool, String, String, i64, String)
 /// Blocked user data: (address, name, has_claimed_name, profile_picture_url, blocked_at)
 type BlockedUserData = (String, String, bool, String, i64);
 
+/// Clears a per-stream "active" flag when dropped, so the flag is released on every
+/// exit path of the owning subscription task (stream end, cancellation, subscribe
+/// failure, or timeout dropping the future mid-flight).
+struct SubscriptionActiveGuard(Arc<AtomicBool>);
+
+impl Drop for SubscriptionActiveGuard {
+    fn drop(&mut self) {
+        self.0.store(false, Ordering::SeqCst);
+    }
+}
+
 #[derive(GodotClass)]
 #[class(base=Node)]
 pub struct DclSocialService {
@@ -25,6 +37,13 @@ pub struct DclSocialService {
     connectivity_updates_cancel: Arc<RwLock<Option<CancellationToken>>>,
     /// Cancellation token for block updates subscription
     block_updates_cancel: Arc<RwLock<Option<CancellationToken>>>,
+    /// Per-stream "a handler task is running" flags. A subscribe call while the flag is
+    /// set is a no-op: the RPC protocol cannot close an idle server stream, so replacing
+    /// a live stream would leave the old one open server-side and every replacement
+    /// would be rejected as a duplicate subscription (closed instantly by the server).
+    friendship_updates_active: Arc<AtomicBool>,
+    connectivity_updates_active: Arc<AtomicBool>,
+    block_updates_active: Arc<AtomicBool>,
     base: Base<Node>,
 }
 
@@ -36,6 +55,9 @@ impl INode for DclSocialService {
             friendship_updates_cancel: Arc::new(RwLock::new(None)),
             connectivity_updates_cancel: Arc::new(RwLock::new(None)),
             block_updates_cancel: Arc::new(RwLock::new(None)),
+            friendship_updates_active: Arc::new(AtomicBool::new(false)),
+            connectivity_updates_active: Arc::new(AtomicBool::new(false)),
+            block_updates_active: Arc::new(AtomicBool::new(false)),
             base,
         }
     }
@@ -139,6 +161,21 @@ impl DclSocialService {
         } else {
             tracing::error!("DclSocialService: Failed to acquire write lock during disconnect");
         }
+
+        // Cancel the stream handler tasks so their "active" flags release; otherwise a
+        // later re-login would treat the dead handlers as live subscriptions and no-op.
+        let cancel_handles = [
+            self.friendship_updates_cancel.clone(),
+            self.connectivity_updates_cancel.clone(),
+            self.block_updates_cancel.clone(),
+        ];
+        TokioRuntime::spawn(async move {
+            for handle in cancel_handles {
+                if let Some(token) = handle.write().await.take() {
+                    token.cancel();
+                }
+            }
+        });
     }
 
     /// Get the list of friends
@@ -298,12 +335,15 @@ impl DclSocialService {
         promise
     }
 
-    /// Subscribe to friendship updates (real-time streaming)
+    /// Subscribe to friendship updates (real-time streaming).
+    /// A live stream is never torn down to open a new one: if a handler for this stream
+    /// is still running, the call resolves Ok without touching it.
     #[func]
     pub fn subscribe_to_updates(&mut self) -> Gd<Promise> {
         let (promise, get_promise) = Promise::make_to_async();
         let manager = self.manager.clone();
         let instance_id = self.base().instance_id();
+        let active = self.friendship_updates_active.clone();
 
         // Create a new cancellation token for this subscription
         let cancel_token = CancellationToken::new();
@@ -311,19 +351,31 @@ impl DclSocialService {
         let cancel_handle = self.friendship_updates_cancel.clone();
 
         TokioRuntime::spawn(async move {
-            // Cancel any existing subscription first
+            if active
+                .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
+                .is_err()
+            {
+                tracing::debug!("subscribe_to_updates: subscription already active - no-op");
+                Self::resolve_simple_promise(get_promise, Ok(()));
+                return;
+            }
+            let active_guard = SubscriptionActiveGuard(active);
+
+            // Any previous token belongs to an exited handler; just replace it
             {
                 let mut guard = cancel_handle.write().await;
-                if let Some(old_token) = guard.take() {
-                    old_token.cancel();
-                }
                 *guard = Some(cancel_token);
             }
 
             // Add timeout to prevent hanging forever
             let result = tokio::time::timeout(
                 std::time::Duration::from_secs(15),
-                Self::async_subscribe_to_updates(manager, instance_id, cancel_token_clone),
+                Self::async_subscribe_to_updates(
+                    manager,
+                    instance_id,
+                    cancel_token_clone,
+                    active_guard,
+                ),
             )
             .await;
 
@@ -373,12 +425,15 @@ impl DclSocialService {
         self.get_connection_state() == 2 // ConnectionState::Connected
     }
 
-    /// Subscribe to friend connectivity updates (ONLINE, OFFLINE, AWAY)
+    /// Subscribe to friend connectivity updates (ONLINE, OFFLINE, AWAY).
+    /// A live stream is never torn down to open a new one: if a handler for this stream
+    /// is still running, the call resolves Ok without touching it.
     #[func]
     pub fn subscribe_to_connectivity_updates(&mut self) -> Gd<Promise> {
         let (promise, get_promise) = Promise::make_to_async();
         let manager = self.manager.clone();
         let instance_id = self.base().instance_id();
+        let active = self.connectivity_updates_active.clone();
 
         // Create a new cancellation token for this subscription
         let cancel_token = CancellationToken::new();
@@ -386,22 +441,48 @@ impl DclSocialService {
         let cancel_handle = self.connectivity_updates_cancel.clone();
 
         TokioRuntime::spawn(async move {
-            // Cancel any existing subscription first
+            if active
+                .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
+                .is_err()
+            {
+                tracing::debug!(
+                    "subscribe_to_connectivity_updates: subscription already active - no-op"
+                );
+                Self::resolve_simple_promise(get_promise, Ok(()));
+                return;
+            }
+            let active_guard = SubscriptionActiveGuard(active);
+
+            // Any previous token belongs to an exited handler; just replace it
             {
                 let mut guard = cancel_handle.write().await;
-                if let Some(old_token) = guard.take() {
-                    old_token.cancel();
-                }
                 *guard = Some(cancel_token);
             }
 
-            let result = Self::async_subscribe_to_connectivity_updates(
-                manager,
-                instance_id,
-                cancel_token_clone,
+            // Add timeout to prevent hanging forever
+            let result = tokio::time::timeout(
+                std::time::Duration::from_secs(15),
+                Self::async_subscribe_to_connectivity_updates(
+                    manager,
+                    instance_id,
+                    cancel_token_clone,
+                    active_guard,
+                ),
             )
             .await;
-            Self::resolve_simple_promise(get_promise, result);
+
+            match result {
+                Ok(inner_result) => {
+                    Self::resolve_simple_promise(get_promise, inner_result);
+                }
+                Err(_) => {
+                    tracing::error!("subscribe_to_connectivity_updates: timeout after 15s");
+                    Self::resolve_simple_promise(
+                        get_promise,
+                        Err("Timeout subscribing to connectivity updates".to_string()),
+                    );
+                }
+            }
         });
 
         promise
@@ -495,12 +576,15 @@ impl DclSocialService {
         promise
     }
 
-    /// Subscribe to block updates (real-time streaming)
+    /// Subscribe to block updates (real-time streaming).
+    /// A live stream is never torn down to open a new one: if a handler for this stream
+    /// is still running, the call resolves Ok without touching it.
     #[func]
     pub fn subscribe_to_block_updates(&mut self) -> Gd<Promise> {
         let (promise, get_promise) = Promise::make_to_async();
         let manager = self.manager.clone();
         let instance_id = self.base().instance_id();
+        let active = self.block_updates_active.clone();
 
         // Create a new cancellation token for this subscription
         let cancel_token = CancellationToken::new();
@@ -508,19 +592,31 @@ impl DclSocialService {
         let cancel_handle = self.block_updates_cancel.clone();
 
         TokioRuntime::spawn(async move {
-            // Cancel any existing subscription first
+            if active
+                .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
+                .is_err()
+            {
+                tracing::debug!("subscribe_to_block_updates: subscription already active - no-op");
+                Self::resolve_simple_promise(get_promise, Ok(()));
+                return;
+            }
+            let active_guard = SubscriptionActiveGuard(active);
+
+            // Any previous token belongs to an exited handler; just replace it
             {
                 let mut guard = cancel_handle.write().await;
-                if let Some(old_token) = guard.take() {
-                    old_token.cancel();
-                }
                 *guard = Some(cancel_token);
             }
 
             // Add timeout to prevent hanging forever
             let result = tokio::time::timeout(
                 std::time::Duration::from_secs(15),
-                Self::async_subscribe_to_block_updates(manager, instance_id, cancel_token_clone),
+                Self::async_subscribe_to_block_updates(
+                    manager,
+                    instance_id,
+                    cancel_token_clone,
+                    active_guard,
+                ),
             )
             .await;
 
@@ -791,6 +887,7 @@ impl DclSocialService {
         manager: Arc<RwLock<Option<Arc<SocialServiceManager>>>>,
         instance_id: InstanceId,
         cancel_token: CancellationToken,
+        active_guard: SubscriptionActiveGuard,
     ) -> Result<(), String> {
         let manager_guard = manager.read().await;
         let mgr = manager_guard
@@ -802,8 +899,9 @@ impl DclSocialService {
             .await
             .map_err(|e| format!("Failed to subscribe to updates: {}", e))?;
 
-        // Spawn update listener task
+        // Spawn update listener task; it owns the active flag until it exits
         tokio::spawn(async move {
+            let _active = active_guard;
             Self::handle_friendship_updates(&mut rx, instance_id, cancel_token).await;
         });
 
@@ -920,6 +1018,7 @@ impl DclSocialService {
         manager: Arc<RwLock<Option<Arc<SocialServiceManager>>>>,
         instance_id: InstanceId,
         cancel_token: CancellationToken,
+        active_guard: SubscriptionActiveGuard,
     ) -> Result<(), String> {
         let manager_guard = manager.read().await;
         let mgr = manager_guard
@@ -931,7 +1030,9 @@ impl DclSocialService {
             .await
             .map_err(|e| format!("Failed to subscribe to connectivity updates: {}", e))?;
 
+        // Spawn update listener task; it owns the active flag until it exits
         tokio::spawn(async move {
+            let _active = active_guard;
             Self::handle_connectivity_updates(&mut rx, instance_id, cancel_token).await;
         });
 
@@ -1274,6 +1375,7 @@ impl DclSocialService {
         manager: Arc<RwLock<Option<Arc<SocialServiceManager>>>>,
         instance_id: InstanceId,
         cancel_token: CancellationToken,
+        active_guard: SubscriptionActiveGuard,
     ) -> Result<(), String> {
         let manager_guard = manager.read().await;
         let mgr = manager_guard
@@ -1285,8 +1387,9 @@ impl DclSocialService {
             .await
             .map_err(|e| format!("Failed to subscribe to block updates: {}", e))?;
 
-        // Spawn update listener task
+        // Spawn update listener task; it owns the active flag until it exits
         tokio::spawn(async move {
+            let _active = active_guard;
             Self::handle_block_updates(&mut rx, instance_id, cancel_token).await;
         });
 
@@ -1334,6 +1437,14 @@ impl DclSocialService {
     }
 
     fn emit_block_update_signal(node: &mut Gd<DclSocialService>, update: BlockUpdate) {
+        // Before ending a stream, the server sends a stream_closed notice (reason +
+        // message). Our proto predates that field, so it decodes as a default BlockUpdate
+        // with an empty address — not a real block event, don't forward it to GDScript.
+        if update.address.is_empty() {
+            tracing::debug!("Ignoring empty BlockUpdate (server stream_closed notice)");
+            return;
+        }
+
         // BlockUpdate has fields: address (string) and is_blocked (bool)
         let address = update.address;
         let is_blocked = update.is_blocked;
