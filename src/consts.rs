@@ -28,10 +28,11 @@ pub const GODOT_BUILD_SHA: &str = "aed178f10";
 /// branch's CI build. An explicit `--branch` on the CLI still takes precedence over this.
 ///
 /// Reset to `None` once the branch is merged and `GODOT_BUILD_SHA` is bumped to the merge commit —
-/// leaving a branch pinned here makes every dev/CI pull an unmerged engine build. Currently `None`:
-/// the issue #2002 iOS main-thread-freeze fix (decentraland/godotengine#17) is merged and
-/// `GODOT_BUILD_SHA` above points at its merge commit.
-pub const GODOT_USE_BRANCH: Option<&str> = None;
+/// leaving a branch pinned here makes every dev/CI pull an unmerged engine build. Currently pinned
+/// to the iOS pixelated-startup-logo fix (decentraland/godotengine#18): it keeps the crisp
+/// launch-screen overlay above the Metal layer and drops it a beat after setup, so the soft iOS boot
+/// frame that #2561 left behind (issue #2386) is never revealed.
+pub const GODOT_USE_BRANCH: Option<&str> = Some("fix/pixelated-ios-startup-logo");
 
 /// Release tag identifying a specific fork build — `<version>.stable.gh.<sha>`, mirroring the
 /// `--version` string. Single source for the release URL path segment, the on-disk template SHA
