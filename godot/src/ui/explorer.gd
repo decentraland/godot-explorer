@@ -1196,6 +1196,9 @@ func _on_profile_container_visibility_changed() -> void:
 
 
 func _open_friends_panel() -> void:
+	# Opening the navbar closes the emote wheel (mutually exclusive). close() no-ops
+	# when the wheel isn't open, so the joystick isn't toggled spuriously.
+	emote_wheel.close()
 	Global.close_menu.emit()
 	Global.open_friends_panel.emit()
 	# Hide the whole chat panel while the navbar is open (redesigned HUD).
@@ -1564,6 +1567,9 @@ func _on_emote_wheel_emote_wheel_closed() -> void:
 
 func _on_emote_wheel_emote_wheel_opened() -> void:
 	virtual_joystick.hide()
+	# Emote wheel and navbar are mutually exclusive: opening one closes the other.
+	if navbar.is_open():
+		navbar.collapse()
 
 
 func _update_virtual_controls_visibility() -> void:
