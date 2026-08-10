@@ -115,6 +115,7 @@ var _wearable_token_urns: Dictionary = {}
 @onready var margin_container_no_items: MarginContainer = %MarginContainer_NoItems
 @onready var button_credits: Control = %Button_Credits
 @onready var margin_container_credits: Control = %MarginContainer_Credits
+@onready var right_editor_container: MarginContainer = %RightEditorContainer
 
 # "NEW" tag (#2300) session state. Per category ("wearable"/"emote"): the baseline snapshot
 # (item_urn -> count) each item must exceed to be tagged new, captured once per app session
@@ -176,6 +177,7 @@ func _ready():
 	filter_indicator.hide()
 
 	container_backpack.hide()
+	right_editor_container.hide()
 	backpack_loading.show()
 	button_back_to_explorer.hide()
 
@@ -281,6 +283,7 @@ func _ready():
 	request_update_avatar = true
 
 	container_backpack.show()
+	right_editor_container.show()
 	backpack_loading.hide()
 	_update_back_to_explorer_visibility()
 
@@ -304,7 +307,6 @@ func _ready():
 func _on_size_changed():
 	var window_size: Vector2i = DisplayServer.window_get_size()
 	var portrait = window_size.x < window_size.y
-	var right_editor_container: MarginContainer = %RightEditorContainer
 	if portrait:
 		right_editor_container.add_theme_constant_override("margin_top", 0)
 		right_editor_container.add_theme_constant_override("margin_left", 0)
