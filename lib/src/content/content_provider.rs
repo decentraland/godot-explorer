@@ -1459,7 +1459,7 @@ impl ContentProvider {
                     "Failed to load baked texture {}, falling back to runtime decode",
                     godot_path
                 );
-                let result = load_image_texture(url, hash_id.clone(), ctx).await;
+                let result = load_image_texture(url, hash_id.clone(), ctx, true).await;
                 then_promise(get_promise, result);
             });
         } else {
@@ -1478,7 +1478,7 @@ impl ContentProvider {
 
                 loading_resources.fetch_add(1, Ordering::Relaxed);
 
-                let result = load_image_texture(url, hash_id.clone(), ctx).await;
+                let result = load_image_texture(url, hash_id.clone(), ctx, true).await;
 
                 #[cfg(feature = "use_resource_tracking")]
                 if let Err(error) = &result {
@@ -1557,7 +1557,7 @@ impl ContentProvider {
 
             loading_resources.fetch_add(1, Ordering::Relaxed);
 
-            let result = load_image_texture(url, hash_id.clone(), ctx).await;
+            let result = load_image_texture(url, hash_id.clone(), ctx, true).await;
 
             #[cfg(feature = "use_resource_tracking")]
             if let Err(error) = &result {
@@ -1616,7 +1616,8 @@ impl ContentProvider {
             loading_resources.fetch_add(1, Ordering::Relaxed);
 
             let url_for_log = url.clone();
-            let result = load_image_texture(url, sent_file_hash, content_provider_context).await;
+            let result =
+                load_image_texture(url, sent_file_hash, content_provider_context, true).await;
             if let Err(error) = &result {
                 tracing::warn!("fetch_texture_by_url failed for {}: {}", url_for_log, error);
             }
@@ -2200,7 +2201,7 @@ impl ContentProvider {
             let texture_hash = format!("avatar_face_{:x}", user_id_h160);
 
             // Step 3: Fetch the texture
-            let result = load_image_texture(face256_url, texture_hash, ctx).await;
+            let result = load_image_texture(face256_url, texture_hash, ctx, true).await;
 
             if let Err(e) = &result {
                 tracing::error!(
@@ -2301,7 +2302,9 @@ impl ContentProvider {
 
             let texture_hash = format!("avatar_body_{:x}", user_id_h160);
 
-            let result = load_image_texture(body_url_raw, texture_hash, ctx).await;
+            // Impostors only consume the raw pixels (resize/mips/PNG cache);
+            // the texture itself is never rendered. Skip ETC2 compression.
+            let result = load_image_texture(body_url_raw, texture_hash, ctx, false).await;
 
             loaded_resources.fetch_add(1, Ordering::Relaxed);
             then_promise(get_promise, result);
@@ -2386,7 +2389,8 @@ impl ContentProvider {
 
             let texture_hash = format!("avatar_body_default_{}", slot);
 
-            let result = load_image_texture(body_url_raw, texture_hash, ctx).await;
+            // Same as fetch_avatar_body_texture: impostor-only, no compression.
+            let result = load_image_texture(body_url_raw, texture_hash, ctx, false).await;
 
             loaded_resources.fetch_add(1, Ordering::Relaxed);
             then_promise(get_promise, result);
