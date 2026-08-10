@@ -56,4 +56,4 @@ binary_cache/
 scripts/bench/.env.bak
 
 .env*
-!.env.example
+!.env.example.pi-subagents/
