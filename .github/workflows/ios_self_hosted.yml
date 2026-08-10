@@ -194,8 +194,14 @@ jobs:
         timeout-minutes: 15
         run: cargo run -- install --targets ios
 
+      # Pass the PR head branch so release* PRs bake --prod (on PR events github.ref is
+      # refs/pull/N/merge and would always map to --staging). Empty on pushes → the action
+      # falls back to github.ref, unchanged behavior. This matters because mobile_distribute's
+      # ios-resolve REUSES this run's R2 export — its baked env must match the distribution's.
       - name: Set prod flag
         uses: ./.github/actions/set-prod-flag
+        with:
+          ref: ${{ github.head_ref }}
 
       # Build the iOS dylib against the iOS 26 SDK (matches ios_r2_artifact.yml). On a WarpBuild
       # macOS image Xcode lives at /Applications/Xcode_26*.app; on a personal Mac it's the default

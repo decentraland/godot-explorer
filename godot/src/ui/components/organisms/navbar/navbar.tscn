@@ -16,6 +16,7 @@
 [ext_resource type="PackedScene" uid="uid://bpx10vkib1ix" path="res://src/ui/components/molecules/button_profile/navbar_profile_button.tscn" id="9_ria76"]
 [ext_resource type="Texture2D" uid="uid://cvxfoyvj0kqtw" path="res://src/ui/components/organisms/menu/icons/settings-outlined.svg" id="12_ih2cn"]
 [ext_resource type="Texture2D" uid="uid://dp6cvwbfawfsa" path="res://src/ui/components/organisms/menu/icons/settings.svg" id="13_4ad3s"]
+[ext_resource type="PackedScene" uid="uid://chpydicpuiujx" path="res://src/ui/components/atoms/controls/upgrade_badge/upgrade_badge.tscn" id="15_iai4k"]
 
 [sub_resource type="Animation" id="Animation_xbtqw"]
 length = 0.001
@@ -162,6 +163,18 @@ corner_radius_bottom_left = 40
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_n2t8a"]
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_3m1fh"]
+bg_color = Color(1, 0.1764706, 0.33333334, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.08627451, 0.08235294, 0.09411765, 1)
+corner_radius_top_left = 100
+corner_radius_top_right = 100
+corner_radius_bottom_right = 100
+corner_radius_bottom_left = 100
+
 [sub_resource type="ButtonGroup" id="ButtonGroup_ckthm"]
 resource_local_to_scene = false
 resource_name = "Tabs"
@@ -263,6 +276,19 @@ texture_pressed = ExtResource("13_4ad3s")
 ignore_texture_size = true
 stretch_mode = 5
 script = ExtResource("8_fmmda")
+
+[node name="UpgradeBadge" parent="Control/Control/PanelContainer/VBoxContainer_Buttons/StaticButton_Settings" unique_id=996992674 instance=ExtResource("15_iai4k")]
+custom_minimum_size = Vector2(15, 15)
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -36.0
+offset_top = 9.0
+offset_right = -20.0
+offset_bottom = 25.0
+grow_horizontal = 0
+theme_override_styles/panel = SubResource("StyleBoxFlat_3m1fh")
 
 [node name="Control" type="Control" parent="Control/Control/PanelContainer/VBoxContainer_Buttons" unique_id=1770223894]
 custom_minimum_size = Vector2(60, 60)
