@@ -93,7 +93,7 @@ fn debug_panel_body_does_not_block_scene_ui() {
         find(
             &nodes,
             "HBoxContainer_TopButtons",
-            "MarginContainer/VBoxContainer",
+            "MarginContainer/VBoxContainer/MarginContainer_Header",
         ),
         "debug_panel",
     );

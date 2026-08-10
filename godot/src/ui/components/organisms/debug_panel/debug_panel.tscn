@@ -162,14 +162,14 @@ visible = false
 layout_mode = 2
 text = "Open chromium browser with url chrome://inspect and pick the scene debugger."
 
-[node name="header" type="MarginContainer" parent="MarginContainer/VBoxContainer" unique_id=1474819563]
+[node name="MarginContainer_Header" type="MarginContainer" parent="MarginContainer/VBoxContainer" unique_id=1474819563]
 layout_mode = 2
 size_flags_vertical = 4
 mouse_filter = 2
 theme_override_constants/margin_top = 12
 theme_override_constants/margin_bottom = 0
 
-[node name="HBoxContainer_TopButtons" type="HBoxContainer" parent="MarginContainer/VBoxContainer/header" unique_id=1776876775]
+[node name="HBoxContainer_TopButtons" type="HBoxContainer" parent="MarginContainer/VBoxContainer/MarginContainer_Header" unique_id=1776876775]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 0
@@ -177,7 +177,7 @@ mouse_filter = 2
 theme_override_constants/separation = 12
 alignment = 2
 
-[node name="Button_ShowHide" type="Button" parent="MarginContainer/VBoxContainer/header/HBoxContainer_TopButtons" unique_id=1347699769]
+[node name="Button_ShowHide" type="Button" parent="MarginContainer/VBoxContainer/MarginContainer_Header/HBoxContainer_TopButtons" unique_id=1347699769]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(66, 66)
 layout_mode = 2
@@ -197,7 +197,7 @@ icon = ExtResource("4_21x4w")
 icon_alignment = 1
 expand_icon = true
 
-[node name="Button_ReloadScene" type="Button" parent="MarginContainer/VBoxContainer/header/HBoxContainer_TopButtons" unique_id=978841142]
+[node name="Button_ReloadScene" type="Button" parent="MarginContainer/VBoxContainer/MarginContainer_Header/HBoxContainer_TopButtons" unique_id=978841142]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(66, 66)
 layout_mode = 2
@@ -218,7 +218,7 @@ icon = ExtResource("5_xx5uf")
 icon_alignment = 1
 expand_icon = true
 
-[node name="Control" type="Control" parent="MarginContainer/VBoxContainer/header/HBoxContainer_TopButtons" unique_id=1895903232]
+[node name="Control" type="Control" parent="MarginContainer/VBoxContainer/MarginContainer_Header/HBoxContainer_TopButtons" unique_id=1895903232]
 custom_minimum_size = Vector2(49, 0)
 layout_mode = 2
 
@@ -231,5 +231,5 @@ layout_mode = 2
 [connection signal="pressed" from="MarginContainer/VBoxContainer/TabContainer_DebugPanel/Misc&Debugger/Button_ShowNetwork" to="." method="_on_button_show_network_pressed"]
 [connection signal="pressed" from="MarginContainer/VBoxContainer/TabContainer_DebugPanel/Misc&Debugger/Button_DebugJS" to="." method="_on_button_debug_js_pressed"]
 [connection signal="pressed" from="MarginContainer/VBoxContainer/TabContainer_DebugPanel/Misc&Debugger/Button_OpenSource" to="." method="_on_button_open_source_pressed"]
-[connection signal="pressed" from="MarginContainer/VBoxContainer/header/HBoxContainer_TopButtons/Button_ShowHide" to="." method="_on_button_show_hide_pressed"]
-[connection signal="pressed" from="MarginContainer/VBoxContainer/header/HBoxContainer_TopButtons/Button_ReloadScene" to="." method="_on_button_reload_scene_pressed"]
+[connection signal="pressed" from="MarginContainer/VBoxContainer/MarginContainer_Header/HBoxContainer_TopButtons/Button_ShowHide" to="." method="_on_button_show_hide_pressed"]
+[connection signal="pressed" from="MarginContainer/VBoxContainer/MarginContainer_Header/HBoxContainer_TopButtons/Button_ReloadScene" to="." method="_on_button_reload_scene_pressed"]
