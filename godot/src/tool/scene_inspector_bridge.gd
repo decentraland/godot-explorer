@@ -138,7 +138,6 @@ func _on_command(cmd: String, args: Dictionary, request_id: String) -> void:
 			var enabled: bool = args.get("enabled", false)
 			dispatcher.set_include_bin_payload(enabled)
 
-<<<<<<< HEAD
 		"node_query":
 			# Generic live node probe for debugging: find nodes by name substring,
 			# dump arbitrary props and call no/any-arg methods.
@@ -161,7 +160,7 @@ func _on_command(cmd: String, args: Dictionary, request_id: String) -> void:
 						entry["call:" + c[0]] = var_to_str(n.callv(c[0], c.slice(1)))
 				results.append(entry)
 			data = {"count": found.size(), "nodes": results}
-=======
+
 		"subscribe":
 			# Opt in to high-volume streams (log / network) and the per-tick
 			# lifecycle firehose. Nothing is captured until a consumer subscribes.
@@ -171,7 +170,6 @@ func _on_command(cmd: String, args: Dictionary, request_id: String) -> void:
 		"unsubscribe":
 			_apply_subscribe(args, false)
 			data = {"streams": args.get("streams", [])}
->>>>>>> origin/main
 
 		_:
 			# Inspection / eval verbs (ping, scenes, scene, entity, ui_scene,
