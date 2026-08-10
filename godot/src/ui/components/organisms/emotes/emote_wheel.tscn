@@ -84,6 +84,7 @@ grow_vertical = 2
 focus_mode = 1
 mouse_filter = 2
 script = ExtResource("1_jcqth")
+metadata/_edit_horizontal_guides_ = [1318.0]
 
 [node name="Control_Wheel" type="Control" parent="." unique_id=1881242977]
 unique_name_in_owner = true
@@ -94,6 +95,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+rotation = 5.1095274e-05
 mouse_filter = 1
 
 [node name="TextureRect_Background" type="TextureRect" parent="Control_Wheel" unique_id=458251650]
@@ -121,162 +123,17 @@ grow_vertical = 0
 mouse_filter = 2
 
 [node name="EmoteWheelItem1" parent="Control_Wheel/TextureRect_Background/EmoteWheelContainer" unique_id=855664452 instance=ExtResource("2_h3qru")]
+unique_name_in_owner = true
 layout_mode = 1
-anchors_preset = 8
+anchors_preset = 5
 anchor_left = 0.5
-anchor_top = 0.5
 anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = 35.747
-offset_top = -213.077
-offset_right = 174.747
-offset_bottom = -73.0766
+offset_left = -70.0
+offset_top = 10.0
+offset_right = 70.0
+offset_bottom = 150.0
 grow_horizontal = 2
-grow_vertical = 2
-picture = ExtResource("3_poid4")
-
-[node name="EmoteWheelItem2" parent="Control_Wheel/TextureRect_Background/EmoteWheelContainer" unique_id=417920524 instance=ExtResource("2_h3qru")]
-layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = 35.747
-offset_top = -213.077
-offset_right = 174.747
-offset_bottom = -73.0766
-grow_horizontal = 2
-grow_vertical = 2
-rotation = 0.615341
-picture = ExtResource("3_poid4")
-
-[node name="EmoteWheelItem3" parent="Control_Wheel/TextureRect_Background/EmoteWheelContainer" unique_id=707135462 instance=ExtResource("2_h3qru")]
-layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = 35.747
-offset_top = -213.077
-offset_right = 174.747
-offset_bottom = -73.0766
-grow_horizontal = 2
-grow_vertical = 2
-rotation = 1.23913
-picture = ExtResource("3_poid4")
-
-[node name="EmoteWheelItem4" parent="Control_Wheel/TextureRect_Background/EmoteWheelContainer" unique_id=2129879118 instance=ExtResource("2_h3qru")]
-layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = 35.747
-offset_top = -213.077
-offset_right = 174.747
-offset_bottom = -73.0766
-grow_horizontal = 2
-grow_vertical = 2
-rotation = 1.8656
-picture = ExtResource("3_poid4")
-
-[node name="EmoteWheelItem5" parent="Control_Wheel/TextureRect_Background/EmoteWheelContainer" unique_id=1830036623 instance=ExtResource("2_h3qru")]
-layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = 35.747
-offset_top = -213.077
-offset_right = 174.747
-offset_bottom = -73.0766
-grow_horizontal = 2
-grow_vertical = 2
-rotation = 2.51246
-picture = ExtResource("3_poid4")
-
-[node name="EmoteWheelItem6" parent="Control_Wheel/TextureRect_Background/EmoteWheelContainer" unique_id=598904763 instance=ExtResource("2_h3qru")]
-layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = 35.747
-offset_top = -213.077
-offset_right = 174.747
-offset_bottom = -73.0766
-grow_horizontal = 2
-grow_vertical = 2
-rotation = -3.12851
-picture = ExtResource("3_poid4")
-
-[node name="EmoteWheelItem7" parent="Control_Wheel/TextureRect_Background/EmoteWheelContainer" unique_id=611697357 instance=ExtResource("2_h3qru")]
-layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = 35.747
-offset_top = -213.077
-offset_right = 174.747
-offset_bottom = -73.0766
-grow_horizontal = 2
-grow_vertical = 2
-rotation = -2.49585
-picture = ExtResource("3_poid4")
-
-[node name="EmoteWheelItem8" parent="Control_Wheel/TextureRect_Background/EmoteWheelContainer" unique_id=1270024619 instance=ExtResource("2_h3qru")]
-layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = 35.747
-offset_top = -213.077
-offset_right = 174.747
-offset_bottom = -73.0766
-grow_horizontal = 2
-grow_vertical = 2
-rotation = -1.87016
-picture = ExtResource("3_poid4")
-
-[node name="EmoteWheelItem9" parent="Control_Wheel/TextureRect_Background/EmoteWheelContainer" unique_id=1984680268 instance=ExtResource("2_h3qru")]
-layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = 35.747
-offset_top = -213.077
-offset_right = 174.747
-offset_bottom = -73.0766
-grow_horizontal = 2
-grow_vertical = 2
-rotation = -1.25254
-picture = ExtResource("3_poid4")
-
-[node name="EmoteWheelItem10" parent="Control_Wheel/TextureRect_Background/EmoteWheelContainer" unique_id=1910266065 instance=ExtResource("2_h3qru")]
-layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = 35.747
-offset_top = -213.077
-offset_right = 174.747
-offset_bottom = -73.0766
-grow_horizontal = 2
-grow_vertical = 2
-rotation = -0.625233
+pivot_offset = Vector2(70, 250)
 picture = ExtResource("3_poid4")
 
 [node name="Label" type="Label" parent="Control_Wheel/TextureRect_Background" unique_id=749110177]
