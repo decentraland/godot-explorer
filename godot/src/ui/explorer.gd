@@ -1067,11 +1067,9 @@ func _update_scene_stats_ui() -> void:
 				load("res://src/ui/components/organisms/scene_stats_panel/scene_stats_panel.tscn")
 				. instantiate()
 			)
-			# The toggle button docks into the top-right debug-tools row (fixed
-			# inside the safe margin, beside the console); the panel itself floats
-			# on the full-screen UI root, opening below-left of that toggle.
-			scene_stats_panel.toggle_host = hbox_debug_tools
-			ui_root.add_child(scene_stats_panel)
+			# Shares the top-right debug tools row with the console, so both
+			# lay out side by side instead of overlapping.
+			hbox_debug_tools.add_child(scene_stats_panel)
 		scene_stats_panel.set_scene(_preview_scene_id())
 	else:
 		if is_instance_valid(scene_stats_panel):
@@ -1614,26 +1612,27 @@ func _on_deep_link_open_place(place_id: String) -> void:
 
 
 func _on_emote_wheel_emote_wheel_closed() -> void:
-	# Restore the chat messages and movement controls hidden while the wheel was open,
-	# unless the main HUD is hidden. Portrait owns the movement controls in its own flow.
+	# Restore the chat messages and the movement joystick hidden while the wheel was open,
+	# unless the main HUD is hidden. The joypad stays visible with the wheel, so it isn't
+	# touched here. Portrait owns the joystick in its own flow.
 	if _session_hide_main_hud:
 		return
 	chat_panel.show_messages()
 	if not Global.is_orientation_portrait():
-		_show_movement_controls()
+		virtual_joystick.show()
 
 
 func _on_emote_wheel_emote_wheel_opened() -> void:
-	# The emote wheel keeps its own button and the chatbar visible, but takes over the
-	# rest of the HUD: collapse the navbar and close its side panels, then hide the chat
-	# messages and movement controls. The hides run last so they win over the restores
-	# emitted while collapsing the navbar.
+	# The emote wheel keeps its own button, the chatbar and the joypad visible, but takes
+	# over the rest of the HUD: collapse the navbar and close its side panels, then hide the
+	# chat messages and the movement joystick. The hides run last so they win over the
+	# restores emitted while collapsing the navbar.
 	if navbar.is_open():
 		navbar.collapse()
 	else:
 		_close_all_panels()
 	chat_panel.hide_messages()
-	_hide_movement_controls()
+	virtual_joystick.hide()
 
 
 func _update_virtual_controls_visibility() -> void:
