@@ -105,8 +105,6 @@ func close() -> void:
 	if not control_wheel.visible:
 		return
 	control_wheel.hide()
-	# Restore the HUD emote button, hidden while the wheel was open.
-	button_emotes.show()
 	emote_wheel_closed.emit()
 	Global.explorer_grab_focus()
 	if button_emotes != null and button_emotes.button_pressed:
@@ -117,8 +115,6 @@ func open() -> void:
 	if control_wheel.visible:
 		return
 	control_wheel.show()
-	# The open wheel replaces the HUD emote button; hide it to avoid overlap.
-	button_emotes.hide()
 	emote_wheel_opened.emit()
 	grab_focus()
 	Global.release_mouse()

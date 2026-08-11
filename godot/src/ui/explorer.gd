@@ -217,6 +217,11 @@ func _ready():
 	settings_panel.visibility_changed.connect(_refresh_hud_dismiss)
 	chat_panel.chat.visibility_changed.connect(_refresh_hud_dismiss)
 
+	# Chat focus (open) overlays the message view: hide the emote button and joypad
+	# while focused, restore them when the chat closes.
+	chat_panel.chat.on_open_chat.connect(_on_chat_focus_entered)
+	chat_panel.chat.on_exit_chat.connect(_on_chat_focus_exited)
+
 	player = load("res://src/logic/player/player.tscn").instantiate()
 
 	player.set_name("Player")
@@ -962,6 +967,10 @@ func _apply_mobile_controls_hide_ui(hidden: bool) -> void:
 	_mobile_controls_hidden_for_hide_ui = hidden
 	if hidden:
 		joypad.hide()
+		# Keep the joystick functional (walking) but fully transparent. A hidden Control
+		# stops receiving input, so show() it and only drop its alpha — an overlay may have
+		# left it hidden before Hide-UI kicked in.
+		virtual_joystick.show()
 		virtual_joystick.modulate.a = 0.0
 	else:
 		joypad.show()
@@ -972,6 +981,19 @@ func _show_joypad() -> void:
 	if _mobile_controls_hidden_for_hide_ui:
 		return
 	joypad.show()
+
+
+## Hide the on-screen movement controls (joypad + left joystick) while an overlay
+## (navbar, chat focus or emote wheel) owns the screen.
+func _hide_movement_controls() -> void:
+	joypad.hide()
+	virtual_joystick.hide()
+
+
+## Restore the on-screen movement controls hidden by _hide_movement_controls().
+func _show_movement_controls() -> void:
+	_show_joypad()
+	virtual_joystick.show()
 
 
 func _set_explorer_hud_elements_visible(full_hud: bool) -> void:
@@ -987,6 +1009,11 @@ func _set_explorer_hud_elements_visible(full_hud: bool) -> void:
 		# must re-assert it here. (Write-mode can't leak a hidden chatbar: writing hides the
 		# navbar, so Settings/hide-UI is unreachable while writing.)
 		chat_panel.show()
+		# Re-assert the emote button too: an overlay (e.g. the navbar) may have left it
+		# hidden before Hide-UI was applied, and hud_content.show() won't re-show a child
+		# whose own visibility is false. Portrait owns it through the orientation flow.
+		if not Global.is_orientation_portrait():
+			emote_wheel.show()
 		for node in _ui_children_hidden_for_hud_mode:
 			if is_instance_valid(node):
 				node.show()
@@ -1196,12 +1223,18 @@ func _on_profile_container_visibility_changed() -> void:
 
 
 func _open_friends_panel() -> void:
-	# Opening the navbar closes the emote wheel (mutually exclusive). close() no-ops
-	# when the wheel isn't open, so the joystick isn't toggled spuriously.
+	# Opening the navbar overlays the HUD. Fully close the chat (not just hide it) so it
+	# reappears un-focused — notifications only, chatbar button un-toggled — when the navbar
+	# collapses. close_chat also resets the chatbar toggle (which exit_chat alone doesn't).
+	# Then close the emote overlay and hide the emote button/wheel, movement controls and
+	# the whole chat. The hides run last so they win over the restores those closes emit.
+	if chat_panel.is_chat_visible():
+		Global.close_chat.emit()
 	emote_wheel.close()
 	Global.close_menu.emit()
 	Global.open_friends_panel.emit()
-	# Hide the whole chat panel while the navbar is open (redesigned HUD).
+	emote_wheel.hide()
+	_hide_movement_controls()
 	chat_panel.hide()
 
 
@@ -1471,21 +1504,40 @@ func _on_orientation_changed(is_portrait: bool) -> void:
 func _on_chat_write_mode_changed(is_writing: bool) -> void:
 	if Global.is_orientation_portrait():
 		return
+	# Emote button and movement controls are hidden for the whole chat-focus session
+	# (owned by _on_chat_focus_entered/_exited). Write mode additionally hides the navbar
+	# bar (focus only collapses its dropdown) and the extra HUD elements the keyboard
+	# needs gone; exiting write restores them while the chat stays focused.
 	if is_writing:
-		mobile_ui.hide()
-		virtual_joystick.hide()
-		emote_wheel.hide()
 		navbar.hide()
 		debug_panel.hide()
 		_set_scene_ui_visible(false)
 	else:
-		if _onscreen_controls_enabled():
-			mobile_ui.show()
-			_update_virtual_controls_visibility()
-		emote_wheel.show()
 		navbar._on_size_changed()
 		debug_panel.visible = _debug_should_show()
 		_set_scene_ui_visible(_should_show_scene_ui())
+
+
+func _on_chat_focus_entered() -> void:
+	# Chat focus closes the navbar (collapse its dropdown/panels, keeping the bar) and
+	# the emote overlay, then hides the emote button and movement controls. The hides run
+	# last so they win over the restores those closes emit. Portrait and Hide-UI own
+	# visibility through their own flows.
+	if _session_hide_main_hud or Global.is_orientation_portrait():
+		return
+	emote_wheel.close()
+	if navbar.is_open():
+		navbar.collapse()
+	emote_wheel.hide()
+	_hide_movement_controls()
+
+
+func _on_chat_focus_exited() -> void:
+	# Restore the emote button and movement controls hidden while the chat was focused.
+	if _session_hide_main_hud or Global.is_orientation_portrait():
+		return
+	emote_wheel.show()
+	_show_movement_controls()
 
 
 func _should_show_scene_ui() -> bool:
@@ -1562,19 +1614,33 @@ func _on_deep_link_open_place(place_id: String) -> void:
 
 
 func _on_emote_wheel_emote_wheel_closed() -> void:
-	virtual_joystick.show()
+	# Restore the chat messages and movement controls hidden while the wheel was open,
+	# unless the main HUD is hidden. Portrait owns the movement controls in its own flow.
+	if _session_hide_main_hud:
+		return
+	chat_panel.show_messages()
+	if not Global.is_orientation_portrait():
+		_show_movement_controls()
 
 
 func _on_emote_wheel_emote_wheel_opened() -> void:
-	virtual_joystick.hide()
-	# Emote wheel and navbar are mutually exclusive: opening one closes the other.
+	# The emote wheel keeps its own button and the chatbar visible, but takes over the
+	# rest of the HUD: collapse the navbar and close its side panels, then hide the chat
+	# messages and movement controls. The hides run last so they win over the restores
+	# emitted while collapsing the navbar.
 	if navbar.is_open():
 		navbar.collapse()
+	else:
+		_close_all_panels()
+	chat_panel.hide_messages()
+	_hide_movement_controls()
 
 
 func _update_virtual_controls_visibility() -> void:
 	if _mobile_controls_hidden_for_hide_ui:
 		joypad.hide()
+		# Transparent but functional, so walking keeps working while the UI is hidden.
+		virtual_joystick.show()
 		virtual_joystick.modulate.a = 0.0
 		return
 	var panel_open := (
@@ -1600,9 +1666,14 @@ func _close_all_panels():
 	_on_notifications_panel_closed()
 	_on_settings_panel_closed()
 	_refresh_hud_dismiss()
-	# Restore the chat panel hidden while the navbar was open, unless the main HUD is hidden.
+	# Restore the chat and emote HUD hidden while the navbar was open, unless the main HUD
+	# is hidden. Keep the emote HUD and joystick hidden in portrait, where the orientation
+	# flow owns them.
 	if not _session_hide_main_hud:
 		chat_panel.show()
+		if not Global.is_orientation_portrait():
+			emote_wheel.show()
+			virtual_joystick.show()
 	_show_joypad()
 
 

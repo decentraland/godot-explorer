@@ -174,6 +174,25 @@ func is_chat_visible() -> bool:
 	return chat.visible
 
 
+## Hide the message reading view and notification bubbles while keeping the chatbar
+## usable. Used when an overlay (e.g. the emote wheel) takes the screen but the user
+## should still be able to open the chat.
+func hide_messages() -> void:
+	chat.hide()
+	notifications.hide()
+
+
+## Restore the messages hidden by hide_messages() by re-applying the current chat state.
+func show_messages() -> void:
+	match _current_state:
+		ChatState.CLOSED:
+			_apply_closed_state()
+		ChatState.OPEN:
+			_apply_open_state()
+		ChatState.WRITING:
+			_apply_writing_state()
+
+
 func _on_orientation_changed(is_portrait: bool) -> void:
 	# Delegate layout/font updates and write-mode close to chat first.
 	# If chat was in write mode, _close_write_mode emits on_exit_write_mode
