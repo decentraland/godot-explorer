@@ -321,6 +321,7 @@ theme_override_constants/separation = 40
 
 [node name="VBoxContainer_Gameplay" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections" unique_id=911633864]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 mouse_filter = 2
 theme = SubResource("Theme_5xlkc")
@@ -1159,7 +1160,6 @@ text = "RETURN TO DISCOVER"
 
 [node name="VBoxContainer_Account" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections" unique_id=1178397413]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
 size_flags_vertical = 3
 mouse_filter = 2
@@ -1168,7 +1168,6 @@ theme_type_variation = &"2"
 theme_override_constants/separation = 72
 
 [node name="GuestUpgradeCard" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Account" unique_id=1116982919 instance=ExtResource("14_sbgvv")]
-visible = false
 layout_mode = 2
 theme_override_constants/margin_left = 0
 theme_override_constants/margin_right = 0
