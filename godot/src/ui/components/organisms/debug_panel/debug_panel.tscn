@@ -3,10 +3,30 @@
 [ext_resource type="Theme" uid="uid://yt0vgau51udk" path="res://src/ui/components/organisms/debug_panel/dark_theme/Dark.theme" id="1_c8oen"]
 [ext_resource type="Script" uid="uid://csxkemel3hrdv" path="res://src/ui/components/organisms/debug_panel/debug_panel.gd" id="2_juhlr"]
 [ext_resource type="Texture2D" uid="uid://7ixgxgtq3wlr" path="res://src/ui/components/organisms/debug_panel/icons/Search.svg" id="3_nth2r"]
+[ext_resource type="Texture2D" uid="uid://c7rx0q1yjyde0" path="res://assets/ui/console_icon.svg" id="4_21x4w"]
 [ext_resource type="Texture2D" uid="uid://ckn18yn0v8tsa" path="res://src/ui/components/organisms/debug_panel/icons/Clear.svg" id="4_k7442"]
 [ext_resource type="Texture2D" uid="uid://cqwsvinsujxri" path="res://src/ui/components/organisms/debug_panel/icons/ActionCopy.svg" id="5_0aohs"]
-[ext_resource type="Texture2D" uid="uid://c0x4ssitmbcrg" path="res://src/ui/components/organisms/debug_panel/icons/GuiVisibilityHidden.svg" id="5_34smo"]
+[ext_resource type="Texture2D" uid="uid://c0n8k2q368jvf" path="res://assets/ui/reload_icon.svg" id="5_xx5uf"]
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="7_nlnrl"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_y67x0"]
+bg_color = Color(0.078431375, 0.023529412, 0.1254902, 1)
+corner_radius_top_left = 100
+corner_radius_top_right = 100
+corner_radius_bottom_right = 100
+corner_radius_bottom_left = 100
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_4xydo"]
+bg_color = Color(0.078431375, 0.023529412, 0.1254902, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.87058824, 0.84313726, 0.9019608, 1)
+corner_radius_top_left = 100
+corner_radius_top_right = 100
+corner_radius_bottom_right = 100
+corner_radius_bottom_left = 100
 
 [node name="DebugPanel" type="Control" unique_id=1737764806]
 custom_minimum_size = Vector2(500, 300)
@@ -34,69 +54,32 @@ grow_vertical = 2
 mouse_filter = 2
 
 [node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer" unique_id=1367164241]
+custom_minimum_size = Vector2(328, 0)
 layout_mode = 2
-size_flags_horizontal = 8
-size_flags_vertical = 0
+size_flags_horizontal = 0
+size_flags_vertical = 8
 mouse_filter = 2
 
-[node name="HBoxContainer_TopButtons" type="HBoxContainer" parent="MarginContainer/VBoxContainer" unique_id=1776876775]
+[node name="TabContainer_DebugPanel" type="TabContainer" parent="MarginContainer/VBoxContainer" unique_id=746749719]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(100, 350)
 layout_mode = 2
-size_flags_vertical = 0
-mouse_filter = 2
-theme_override_constants/separation = 8
-
-[node name="Button_ShowHide" type="Button" parent="MarginContainer/VBoxContainer/HBoxContainer_TopButtons" unique_id=1347699769]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_vertical = 4
-focus_mode = 0
-theme = ExtResource("7_nlnrl")
-theme_type_variation = &"SecondaryLittle"
-text = "Console"
-icon = ExtResource("5_34smo")
-
-[node name="Button_ReloadScene" type="Button" parent="MarginContainer/VBoxContainer/HBoxContainer_TopButtons" unique_id=978841142]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_vertical = 4
-focus_mode = 0
-theme = ExtResource("7_nlnrl")
-theme_type_variation = &"SecondaryLittle"
-text = "Reload Scene"
-
-[node name="Control_Panel" type="Control" parent="MarginContainer/VBoxContainer" unique_id=1510580662]
-custom_minimum_size = Vector2(500, 280)
-layout_mode = 2
-size_flags_horizontal = 8
-size_flags_vertical = 0
-mouse_filter = 2
-
-[node name="TabContainer_DebugPanel" type="TabContainer" parent="MarginContainer/VBoxContainer/Control_Panel" unique_id=746749719]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(500, 250)
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
 theme = ExtResource("1_c8oen")
 current_tab = 0
 tab_focus_mode = 0
 
-[node name="Console" type="VBoxContainer" parent="MarginContainer/VBoxContainer/Control_Panel/TabContainer_DebugPanel" unique_id=859584269]
+[node name="Console" type="VBoxContainer" parent="MarginContainer/VBoxContainer/TabContainer_DebugPanel" unique_id=859584269]
 layout_mode = 2
 metadata/_tab_index = 0
 
-[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer/Control_Panel/TabContainer_DebugPanel/Console" unique_id=352400936]
+[node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer/TabContainer_DebugPanel/Console" unique_id=352400936]
 layout_mode = 2
 
-[node name="Label" type="Label" parent="MarginContainer/VBoxContainer/Control_Panel/TabContainer_DebugPanel/Console/HBoxContainer" unique_id=846602549]
+[node name="Label" type="Label" parent="MarginContainer/VBoxContainer/TabContainer_DebugPanel/Console/HBoxContainer" unique_id=846602549]
 layout_mode = 2
 text = "Filter:"
 
-[node name="LineEdit_Filter" type="LineEdit" parent="MarginContainer/VBoxContainer/Control_Panel/TabContainer_DebugPanel/Console/HBoxContainer" unique_id=815906912]
+[node name="LineEdit_Filter" type="LineEdit" parent="MarginContainer/VBoxContainer/TabContainer_DebugPanel/Console/HBoxContainer" unique_id=815906912]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
@@ -104,17 +87,17 @@ focus_mode = 1
 placeholder_text = "Filter Messages"
 right_icon = ExtResource("3_nth2r")
 
-[node name="Button_Clear" type="Button" parent="MarginContainer/VBoxContainer/Control_Panel/TabContainer_DebugPanel/Console/HBoxContainer" unique_id=2609653]
+[node name="Button_Clear" type="Button" parent="MarginContainer/VBoxContainer/TabContainer_DebugPanel/Console/HBoxContainer" unique_id=2609653]
 layout_mode = 2
 focus_mode = 0
 icon = ExtResource("4_k7442")
 
-[node name="Button_Copy" type="Button" parent="MarginContainer/VBoxContainer/Control_Panel/TabContainer_DebugPanel/Console/HBoxContainer" unique_id=268697916]
+[node name="Button_Copy" type="Button" parent="MarginContainer/VBoxContainer/TabContainer_DebugPanel/Console/HBoxContainer" unique_id=268697916]
 layout_mode = 2
 focus_mode = 0
 icon = ExtResource("5_0aohs")
 
-[node name="Tree_Console" type="Tree" parent="MarginContainer/VBoxContainer/Control_Panel/TabContainer_DebugPanel/Console" unique_id=1202255006]
+[node name="Tree_Console" type="Tree" parent="MarginContainer/VBoxContainer/TabContainer_DebugPanel/Console" unique_id=1202255006]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
@@ -133,61 +116,120 @@ allow_rmb_select = true
 hide_root = true
 select_mode = 1
 
-[node name="Expression" type="VBoxContainer" parent="MarginContainer/VBoxContainer/Control_Panel/TabContainer_DebugPanel" unique_id=1525805381]
+[node name="Expression" type="VBoxContainer" parent="MarginContainer/VBoxContainer/TabContainer_DebugPanel" unique_id=1525805381]
 visible = false
 layout_mode = 2
 metadata/_tab_index = 1
 
-[node name="TextEdit_Expression" type="TextEdit" parent="MarginContainer/VBoxContainer/Control_Panel/TabContainer_DebugPanel/Expression" unique_id=1912460038]
+[node name="TextEdit_Expression" type="TextEdit" parent="MarginContainer/VBoxContainer/TabContainer_DebugPanel/Expression" unique_id=1912460038]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 100)
 layout_mode = 2
 size_flags_vertical = 3
 
-[node name="Label_Expression" type="TextEdit" parent="MarginContainer/VBoxContainer/Control_Panel/TabContainer_DebugPanel/Expression" unique_id=1163594485]
+[node name="Label_Expression" type="TextEdit" parent="MarginContainer/VBoxContainer/TabContainer_DebugPanel/Expression" unique_id=1163594485]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 100)
 layout_mode = 2
 size_flags_vertical = 3
 
-[node name="Misc&Debugger" type="VBoxContainer" parent="MarginContainer/VBoxContainer/Control_Panel/TabContainer_DebugPanel" unique_id=798233632]
+[node name="Misc&Debugger" type="VBoxContainer" parent="MarginContainer/VBoxContainer/TabContainer_DebugPanel" unique_id=798233632]
 visible = false
 layout_mode = 2
 metadata/_tab_index = 2
 
-[node name="Button_ShowNetwork" type="Button" parent="MarginContainer/VBoxContainer/Control_Panel/TabContainer_DebugPanel/Misc&Debugger" unique_id=1965621359]
+[node name="Button_ShowNetwork" type="Button" parent="MarginContainer/VBoxContainer/TabContainer_DebugPanel/Misc&Debugger" unique_id=1965621359]
 unique_name_in_owner = true
 layout_mode = 2
 focus_mode = 0
 text = "Open Network Inpector"
 
-[node name="Button_DebugJS" type="Button" parent="MarginContainer/VBoxContainer/Control_Panel/TabContainer_DebugPanel/Misc&Debugger" unique_id=904865193]
+[node name="Button_DebugJS" type="Button" parent="MarginContainer/VBoxContainer/TabContainer_DebugPanel/Misc&Debugger" unique_id=904865193]
 unique_name_in_owner = true
 layout_mode = 2
 focus_mode = 0
 text = "JS Debugger not available"
 
-[node name="Button_OpenSource" type="Button" parent="MarginContainer/VBoxContainer/Control_Panel/TabContainer_DebugPanel/Misc&Debugger" unique_id=480276084]
+[node name="Button_OpenSource" type="Button" parent="MarginContainer/VBoxContainer/TabContainer_DebugPanel/Misc&Debugger" unique_id=480276084]
 unique_name_in_owner = true
 layout_mode = 2
 focus_mode = 0
 text = "Open Scene Source Code"
 
-[node name="Label_DebugInfo" type="Label" parent="MarginContainer/VBoxContainer/Control_Panel/TabContainer_DebugPanel/Misc&Debugger" unique_id=1806635216]
+[node name="Label_DebugInfo" type="Label" parent="MarginContainer/VBoxContainer/TabContainer_DebugPanel/Misc&Debugger" unique_id=1806635216]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
 text = "Open chromium browser with url chrome://inspect and pick the scene debugger."
 
+[node name="MarginContainer_Header" type="MarginContainer" parent="MarginContainer/VBoxContainer" unique_id=1474819563]
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_bottom = 0
+
+[node name="HBoxContainer_TopButtons" type="HBoxContainer" parent="MarginContainer/VBoxContainer/MarginContainer_Header" unique_id=1776876775]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 0
+mouse_filter = 2
+theme_override_constants/separation = 12
+alignment = 2
+
+[node name="Button_ShowHide" type="Button" parent="MarginContainer/VBoxContainer/MarginContainer_Header/HBoxContainer_TopButtons" unique_id=1347699769]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(66, 66)
+layout_mode = 2
+size_flags_vertical = 4
+focus_mode = 0
+theme = ExtResource("7_nlnrl")
+theme_type_variation = &"SecondaryLittle"
+theme_override_constants/icon_max_width = 38
+theme_override_styles/normal = SubResource("StyleBoxFlat_y67x0")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_4xydo")
+theme_override_styles/pressed_mirrored = SubResource("StyleBoxFlat_4xydo")
+theme_override_styles/hover = SubResource("StyleBoxFlat_y67x0")
+theme_override_styles/hover_mirrored = SubResource("StyleBoxFlat_y67x0")
+theme_override_styles/hover_pressed = SubResource("StyleBoxFlat_4xydo")
+theme_override_styles/hover_pressed_mirrored = SubResource("StyleBoxFlat_4xydo")
+icon = ExtResource("4_21x4w")
+icon_alignment = 1
+expand_icon = true
+
+[node name="Button_ReloadScene" type="Button" parent="MarginContainer/VBoxContainer/MarginContainer_Header/HBoxContainer_TopButtons" unique_id=978841142]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(66, 66)
+layout_mode = 2
+size_flags_vertical = 4
+focus_mode = 0
+theme = ExtResource("7_nlnrl")
+theme_type_variation = &"SecondaryLittle"
+theme_override_constants/icon_max_width = 38
+theme_override_styles/normal = SubResource("StyleBoxFlat_y67x0")
+theme_override_styles/normal_mirrored = SubResource("StyleBoxFlat_y67x0")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_4xydo")
+theme_override_styles/pressed_mirrored = SubResource("StyleBoxFlat_4xydo")
+theme_override_styles/hover = SubResource("StyleBoxFlat_y67x0")
+theme_override_styles/hover_mirrored = SubResource("StyleBoxFlat_y67x0")
+theme_override_styles/hover_pressed = SubResource("StyleBoxFlat_4xydo")
+theme_override_styles/hover_pressed_mirrored = SubResource("StyleBoxFlat_4xydo")
+icon = ExtResource("5_xx5uf")
+icon_alignment = 1
+expand_icon = true
+
+[node name="Control" type="Control" parent="MarginContainer/VBoxContainer/MarginContainer_Header/HBoxContainer_TopButtons" unique_id=1895903232]
+custom_minimum_size = Vector2(49, 0)
+layout_mode = 2
+
 [connection signal="index_pressed" from="PopupMenu" to="." method="_on_popup_menu_index_pressed"]
-[connection signal="pressed" from="MarginContainer/VBoxContainer/HBoxContainer_TopButtons/Button_ShowHide" to="." method="_on_button_show_hide_pressed"]
-[connection signal="pressed" from="MarginContainer/VBoxContainer/HBoxContainer_TopButtons/Button_ReloadScene" to="." method="_on_button_reload_scene_pressed"]
-[connection signal="visibility_changed" from="MarginContainer/VBoxContainer/Control_Panel/TabContainer_DebugPanel" to="." method="_on_tab_container_debug_panel_visibility_changed"]
-[connection signal="text_changed" from="MarginContainer/VBoxContainer/Control_Panel/TabContainer_DebugPanel/Console/HBoxContainer/LineEdit_Filter" to="." method="_on_line_edit_filter_text_changed"]
-[connection signal="pressed" from="MarginContainer/VBoxContainer/Control_Panel/TabContainer_DebugPanel/Console/HBoxContainer/Button_Clear" to="." method="_on_button_clear_pressed"]
-[connection signal="pressed" from="MarginContainer/VBoxContainer/Control_Panel/TabContainer_DebugPanel/Console/HBoxContainer/Button_Copy" to="." method="_on_button_copy_pressed"]
-[connection signal="item_mouse_selected" from="MarginContainer/VBoxContainer/Control_Panel/TabContainer_DebugPanel/Console/Tree_Console" to="." method="_on_tree_console_item_mouse_selected"]
-[connection signal="text_changed" from="MarginContainer/VBoxContainer/Control_Panel/TabContainer_DebugPanel/Expression/TextEdit_Expression" to="." method="_on_text_edit_text_changed"]
-[connection signal="pressed" from="MarginContainer/VBoxContainer/Control_Panel/TabContainer_DebugPanel/Misc&Debugger/Button_ShowNetwork" to="." method="_on_button_show_network_pressed"]
-[connection signal="pressed" from="MarginContainer/VBoxContainer/Control_Panel/TabContainer_DebugPanel/Misc&Debugger/Button_DebugJS" to="." method="_on_button_debug_js_pressed"]
-[connection signal="pressed" from="MarginContainer/VBoxContainer/Control_Panel/TabContainer_DebugPanel/Misc&Debugger/Button_OpenSource" to="." method="_on_button_open_source_pressed"]
+[connection signal="text_changed" from="MarginContainer/VBoxContainer/TabContainer_DebugPanel/Console/HBoxContainer/LineEdit_Filter" to="." method="_on_line_edit_filter_text_changed"]
+[connection signal="pressed" from="MarginContainer/VBoxContainer/TabContainer_DebugPanel/Console/HBoxContainer/Button_Clear" to="." method="_on_button_clear_pressed"]
+[connection signal="pressed" from="MarginContainer/VBoxContainer/TabContainer_DebugPanel/Console/HBoxContainer/Button_Copy" to="." method="_on_button_copy_pressed"]
+[connection signal="item_mouse_selected" from="MarginContainer/VBoxContainer/TabContainer_DebugPanel/Console/Tree_Console" to="." method="_on_tree_console_item_mouse_selected"]
+[connection signal="text_changed" from="MarginContainer/VBoxContainer/TabContainer_DebugPanel/Expression/TextEdit_Expression" to="." method="_on_text_edit_text_changed"]
+[connection signal="pressed" from="MarginContainer/VBoxContainer/TabContainer_DebugPanel/Misc&Debugger/Button_ShowNetwork" to="." method="_on_button_show_network_pressed"]
+[connection signal="pressed" from="MarginContainer/VBoxContainer/TabContainer_DebugPanel/Misc&Debugger/Button_DebugJS" to="." method="_on_button_debug_js_pressed"]
+[connection signal="pressed" from="MarginContainer/VBoxContainer/TabContainer_DebugPanel/Misc&Debugger/Button_OpenSource" to="." method="_on_button_open_source_pressed"]
+[connection signal="pressed" from="MarginContainer/VBoxContainer/MarginContainer_Header/HBoxContainer_TopButtons/Button_ShowHide" to="." method="_on_button_show_hide_pressed"]
+[connection signal="pressed" from="MarginContainer/VBoxContainer/MarginContainer_Header/HBoxContainer_TopButtons/Button_ReloadScene" to="." method="_on_button_reload_scene_pressed"]

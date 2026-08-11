@@ -93,7 +93,7 @@ fn debug_panel_body_does_not_block_scene_ui() {
         find(
             &nodes,
             "HBoxContainer_TopButtons",
-            "MarginContainer/VBoxContainer",
+            "MarginContainer/VBoxContainer/MarginContainer_Header",
         ),
         "debug_panel",
     );
@@ -125,7 +125,7 @@ fn navbar_profile_hitbox_matches_visible_bubble() {
 /// Later siblings draw and hit-test on top. The debug tools row (console +
 /// scene stats) must beat scene UI for input, but render *below* the
 /// Friends/Notifications/Settings panels and the navbar — so it has to sit
-/// after `SceneUIContainer` and before `LeftRightSafeContainer`.
+/// after `SceneUIContainer` and before `SafeAreaHud`.
 #[test]
 fn debug_tools_sit_between_scene_ui_and_right_panels() {
     let nodes = parse_tscn("../godot/src/ui/explorer.tscn");
@@ -142,11 +142,11 @@ fn debug_tools_sit_between_scene_ui_and_right_panels() {
     };
     let scene_ui = idx("SceneUIContainer");
     let debug_tools = idx("SafeMarginContainerDebug");
-    let hud_panels = idx("LeftRightSafeContainer");
+    let hud_panels = idx("SafeAreaHud");
     assert!(
         scene_ui < debug_tools && debug_tools < hud_panels,
         "explorer: SafeMarginContainerDebug (debug console + scene stats) must come \
-         after SceneUIContainer but before LeftRightSafeContainer, so the debug \
+         after SceneUIContainer but before SafeAreaHud, so the debug \
          tools receive input over scene UI yet render below the Friends/\
          Notifications/Settings panels (issue #2578).",
     );
@@ -157,12 +157,5 @@ fn debug_tools_sit_between_scene_ui_and_right_panels() {
 #[test]
 fn version_fps_strip_does_not_block_scene_ui() {
     let nodes = parse_tscn("../godot/src/ui/explorer.tscn");
-    assert_click_through(
-        find(
-            &nodes,
-            "HBoxContainer_VersionFPS",
-            "UI/LeftRightSafeContainer/InteractableHUD",
-        ),
-        "explorer",
-    );
+    assert_click_through(find(&nodes, "HBoxContainer_VersionFPS", "UI"), "explorer");
 }

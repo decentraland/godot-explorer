@@ -6,8 +6,11 @@ signal load_scenes_pressed
 
 enum ChatState { CLOSED, OPEN, WRITING }
 
-const LANDSCAPE_MARGINS := {"left": 0, "top": 0, "right": 0, "bottom": 0}
-const PORTRAIT_MARGINS := {"left": 40, "top": 0, "right": 40, "bottom": 64}
+# Left/top/right margins live on the chat's SafeMarginContainer in explorer.tscn
+# (hud_margins.tres, orientation-aware). Only the bottom stays here because it is
+# state-dependent (open vs writing) and keyboard-aware.
+const LANDSCAPE_BOTTOM := 0
+const PORTRAIT_BOTTOM := 64
 const WIDTH_OPEN := 420
 
 var _current_state: ChatState = ChatState.CLOSED
@@ -20,6 +23,9 @@ var _current_state: ChatState = ChatState.CLOSED
 
 
 func _ready() -> void:
+	# Report the fixed notifications column width so explorer can carve the scene
+	# interactable area to the right of the chat without hardcoding it.
+	Global.chat_notifications_width = int(notifications.custom_minimum_size.x)
 	Global.open_chat.connect(_on_global_open_chat)
 	Global.close_chat.connect(_on_global_close_chat)
 	Global.change_virtual_keyboard.connect(_on_change_virtual_keyboard)
@@ -72,13 +78,11 @@ func _apply_writing_state() -> void:
 
 
 func _apply_default_margins() -> void:
-	var m := PORTRAIT_MARGINS if Global.is_orientation_portrait() else LANDSCAPE_MARGINS
-	add_theme_constant_override("margin_left", m["left"])
-	add_theme_constant_override("margin_top", m["top"])
-	add_theme_constant_override("margin_right", m["right"])
-	var bottom: int = m["bottom"]
-	# In portrait, compensate the safe area bottom margin added by SafeMarginContainerHUD
-	# so the chat sits exactly PORTRAIT_MARGINS.bottom pixels from the screen edge.
+	# Sides/top come from the chat's SafeMarginContainer (hud_margins.tres). Only the
+	# bottom is set here.
+	var bottom: int = PORTRAIT_BOTTOM if Global.is_orientation_portrait() else LANDSCAPE_BOTTOM
+	# In portrait, compensate the safe area bottom margin added by the SafeMarginContainer
+	# so the chat sits exactly PORTRAIT_BOTTOM pixels from the screen edge.
 	if Global.is_orientation_portrait() and _current_state != ChatState.CLOSED:
 		var safe_area := Global.get_safe_area()
 		var window_size := DisplayServer.window_get_size()
@@ -141,8 +145,8 @@ func _on_change_virtual_keyboard(virtual_keyboard_height: int) -> void:
 	var safe_window_height: float = max(float(window_size.y), 1.0)
 	var y_factor: float = viewport_size.y / safe_window_height
 	var adjusted_height: int = virtual_keyboard_height
-	# iOS keyboard height includes the bottom safe area, but SafeMarginContainerHUD
-	# already accounts for it — subtract to avoid double-counting
+	# iOS keyboard height includes the bottom safe area, but the chat's ancestor
+	# SafeMarginContainer (SafeAreaHud) already accounts for it — subtract to avoid double-counting
 	if OS.get_name() == "iOS":
 		var safe_area := Global.get_safe_area()
 		var bottom_inset: int = window_size.y - safe_area.position.y - safe_area.size.y
@@ -168,6 +172,25 @@ func hide_load_scenes_button() -> void:
 
 func is_chat_visible() -> bool:
 	return chat.visible
+
+
+## Hide the message reading view and notification bubbles while keeping the chatbar
+## usable. Used when an overlay (e.g. the emote wheel) takes the screen but the user
+## should still be able to open the chat.
+func hide_messages() -> void:
+	chat.hide()
+	notifications.hide()
+
+
+## Restore the messages hidden by hide_messages() by re-applying the current chat state.
+func show_messages() -> void:
+	match _current_state:
+		ChatState.CLOSED:
+			_apply_closed_state()
+		ChatState.OPEN:
+			_apply_open_state()
+		ChatState.WRITING:
+			_apply_writing_state()
 
 
 func _on_orientation_changed(is_portrait: bool) -> void:
