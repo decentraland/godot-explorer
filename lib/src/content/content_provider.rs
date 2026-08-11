@@ -38,6 +38,7 @@ use crate::godot_classes::dcl_resource_tracker::{
 
 use super::{
     audio::load_audio,
+    cache_file_name::{cache_file_name, cache_file_path},
     gltf::{
         build_dcl_emote_gltf, get_last_16_alphanumeric, load_and_save_emote_gltf,
         load_and_save_scene_gltf, load_and_save_wearable_gltf, DclEmoteGltf,
@@ -521,6 +522,17 @@ impl ContentProvider {
     pub fn get_scene_cache_path(&self, file_hash: GString) -> GString {
         let path = get_scene_path_for_hash(&self.content_folder, &file_hash.to_string());
         GString::from(path.as_str())
+    }
+
+    /// `user://content/<name>` for a downloaded file: the name a hash gets on disk.
+    ///
+    /// Preview hashes (`b64-<base64 of the scene's absolute path>`) can be longer than the
+    /// 255-byte filename limit, so they are folded — GDScript must go through here instead of
+    /// concatenating the raw hash, or it will look for a file the cache never wrote.
+    #[func]
+    pub fn get_cache_file_path(&self, file_hash: GString) -> GString {
+        let name = cache_file_name(&file_hash.to_string()).into_owned();
+        GString::from(format!("user://content/{}", name).as_str())
     }
 
     // =========================================================================
@@ -1263,7 +1275,7 @@ impl ContentProvider {
 
             loading_resources.fetch_add(1, Ordering::Relaxed);
 
-            let absolute_file_path = format!("{}{}", ctx.content_folder, hash_id);
+            let absolute_file_path = cache_file_path(&ctx.content_folder, &hash_id);
 
             if ctx
                 .resource_provider
@@ -1447,7 +1459,7 @@ impl ContentProvider {
                     "Failed to load baked texture {}, falling back to runtime decode",
                     godot_path
                 );
-                let result = load_image_texture(url, hash_id.clone(), ctx).await;
+                let result = load_image_texture(url, hash_id.clone(), ctx, true).await;
                 then_promise(get_promise, result);
             });
         } else {
@@ -1466,7 +1478,7 @@ impl ContentProvider {
 
                 loading_resources.fetch_add(1, Ordering::Relaxed);
 
-                let result = load_image_texture(url, hash_id.clone(), ctx).await;
+                let result = load_image_texture(url, hash_id.clone(), ctx, true).await;
 
                 #[cfg(feature = "use_resource_tracking")]
                 if let Err(error) = &result {
@@ -1545,7 +1557,7 @@ impl ContentProvider {
 
             loading_resources.fetch_add(1, Ordering::Relaxed);
 
-            let result = load_image_texture(url, hash_id.clone(), ctx).await;
+            let result = load_image_texture(url, hash_id.clone(), ctx, true).await;
 
             #[cfg(feature = "use_resource_tracking")]
             if let Err(error) = &result {
@@ -1598,7 +1610,8 @@ impl ContentProvider {
 
             loading_resources.fetch_add(1, Ordering::Relaxed);
 
-            let result = load_image_texture(url, sent_file_hash, content_provider_context).await;
+            let result =
+                load_image_texture(url, sent_file_hash, content_provider_context, true).await;
 
             #[cfg(feature = "use_resource_tracking")]
             if let Err(error) = &result {
@@ -1876,10 +1889,11 @@ impl ContentProvider {
     /// land. Powers the preview scene-stats Content size / External content rows.
     #[func]
     pub fn get_cache_size_for_base_names(&self, base_names: PackedStringArray) -> i64 {
+        // Match against the names the cache actually wrote: long preview hashes are folded.
         let wanted: std::collections::HashSet<String> = base_names
             .as_slice()
             .iter()
-            .map(|s| s.to_string())
+            .map(|s| cache_file_name(&s.to_string()).into_owned())
             .collect();
         self.resource_provider
             .get_cache_size_for_base_names(&wanted)
@@ -2178,7 +2192,7 @@ impl ContentProvider {
             let texture_hash = format!("avatar_face_{:x}", user_id_h160);
 
             // Step 3: Fetch the texture
-            let result = load_image_texture(face256_url, texture_hash, ctx).await;
+            let result = load_image_texture(face256_url, texture_hash, ctx, true).await;
 
             if let Err(e) = &result {
                 tracing::error!(
@@ -2279,7 +2293,9 @@ impl ContentProvider {
 
             let texture_hash = format!("avatar_body_{:x}", user_id_h160);
 
-            let result = load_image_texture(body_url_raw, texture_hash, ctx).await;
+            // Impostors only consume the raw pixels (resize/mips/PNG cache);
+            // the texture itself is never rendered. Skip ETC2 compression.
+            let result = load_image_texture(body_url_raw, texture_hash, ctx, false).await;
 
             loaded_resources.fetch_add(1, Ordering::Relaxed);
             then_promise(get_promise, result);
@@ -2316,7 +2332,11 @@ impl ContentProvider {
         TokioRuntime::spawn(async move {
             loading_resources.fetch_add(1, Ordering::Relaxed);
 
-            let url = format!("{}profiles/default{}", lambda_server_base_url, slot);
+            let url = format!(
+                "{}/profiles/default{}",
+                lambda_server_base_url.trim_end_matches('/'),
+                slot
+            );
             let profile_result =
                 request_lambda_profile_by_url(url, profile_base_url.as_str(), http_requester).await;
 
@@ -2360,7 +2380,8 @@ impl ContentProvider {
 
             let texture_hash = format!("avatar_body_default_{}", slot);
 
-            let result = load_image_texture(body_url_raw, texture_hash, ctx).await;
+            // Same as fetch_avatar_body_texture: impostor-only, no compression.
+            let result = load_image_texture(body_url_raw, texture_hash, ctx, false).await;
 
             loaded_resources.fetch_add(1, Ordering::Relaxed);
             then_promise(get_promise, result);
@@ -2433,7 +2454,7 @@ impl ContentProvider {
     #[func]
     pub fn purge_file(&mut self, file_hash: GString) -> Gd<Promise> {
         let file_hash_str = file_hash.to_string();
-        let absolute_file_path = format!("{}{}", self.content_folder, file_hash);
+        let absolute_file_path = cache_file_path(&self.content_folder, &file_hash_str);
 
         let resource_provider = self.resource_provider.clone();
         let (promise, get_promise) = Promise::make_to_async();

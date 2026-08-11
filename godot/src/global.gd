@@ -164,6 +164,11 @@ var sentry_seeder: SentrySeeder = null
 # child of Global so it can use timers and signals across the session lifetime.
 var attestation: AttestationService = null
 
+# Remote feature flags fetched from the mobile-bff at startup. Query with
+# `Global.feature_flags.is_enabled("flag-name")`; comms-affecting flags are
+# applied automatically when the response arrives — see feature_flags.gd.
+var feature_flags: FeatureFlags = null
+
 var _is_portrait: bool = true
 
 # Opt-in, set by a `decentraland://open?enable-upgraded-deletion=true` deeplink
@@ -467,6 +472,10 @@ func _ready():
 
 		_apply_optimized_content_base_url(deep_link_obj)
 
+		# Pulse transport params (this fake-deeplink path doesn't route through
+		# deep_link_router.process_deep_link).
+		_apply_comms_deeplink_params(deep_link_obj)
+
 		print("[DEEPLINK] safemargindebug=", deep_link_obj.safe_margin_debug)
 		if deep_link_obj.safe_margin_debug:
 			set_safe_margin_debug_enable(true)
@@ -671,6 +680,11 @@ func _ready():
 	# service self-gates on EULA acceptance and caches the issued session token on disk.
 	self.attestation = AttestationService.new()
 	add_child(self.attestation)
+	# Remote feature flags: the node kicks its own fire-and-forget fetch on _ready
+	# and applies comms-affecting flags (e.g. `archipielago`) when they arrive.
+	self.feature_flags = FeatureFlags.new()
+	self.feature_flags.set_name("feature_flags")
+	add_child(self.feature_flags)
 	get_tree().root.add_child.call_deferred(self.network_inspector)
 	get_tree().root.add_child.call_deferred(self.scene_inspector_dispatcher)
 	get_tree().root.add_child.call_deferred(self.social_blacklist)
@@ -1046,7 +1060,13 @@ func sign_out() -> void:
 	# landscape screen (e.g. settings panel) doesn't strand the user there.
 	set_orientation_portrait()
 
-	# 8. Swap to a fresh lobby on the next frame, after the current signal/await
+	# 8. Detach scene_runner.base_ui from the dying Explorer so freeing it can't
+	#    free UI nodes Rust still references — a cache-hot scene spawn racing the
+	#    next explorer._ready() would panic on the freed control
+	#    (GODOT-EXPLORER-1DY). The orphan is freed by the next recreate_base_ui().
+	scene_runner.detach_base_ui()
+
+	# 9. Swap to a fresh lobby on the next frame, after the current signal/await
 	#    stack fully unwinds (sign_out may have been reached via the deferred
 	#    logout signal). lobby._ready clears _signing_out.
 	get_tree().change_scene_to_file.call_deferred("res://src/ui/pages/auth/lobby.tscn")
@@ -1106,6 +1126,12 @@ func return_to_discover() -> void:
 	# Discover/menu is portrait-only; reset orientation so returning from a
 	# landscape in-world screen (settings) doesn't strand the user in landscape.
 	set_orientation_portrait()
+
+	# Detach scene_runner.base_ui from the dying Explorer so freeing it can't
+	# free UI nodes Rust still references — a cache-hot scene spawn racing the
+	# next explorer._ready() would panic on the freed control
+	# (GODOT-EXPLORER-1DY). The orphan is freed by the next recreate_base_ui().
+	scene_runner.detach_base_ui()
 
 	# Swap to the standalone Discover menu on the next frame, after the current
 	# call stack (the settings button handler) fully unwinds. menu._ready clears
@@ -1523,7 +1549,57 @@ func _check_dclenv_change() -> bool:
 	return true
 
 
+# Applies the comms deeplink params (pulse-server / pulse / dual-channel / livekit).
+# Shared by deep_link_router.process_deep_link and the desktop --fake-deeplink path,
+# so a new param only has to be added once.
+func _apply_comms_deeplink_params(deep_link) -> void:
+	# `pulse-server=<host:port>` joins a specific Pulse server (shareable — everyone
+	# opening the link lands on the same instance; implies enabling).
+	var pulse_server_value = deep_link.params.get("pulse-server", "")
+	if not pulse_server_value.is_empty():
+		print("[DEEPLINK] pulse-server=", pulse_server_value)
+		comms.set_pulse_server(pulse_server_value)
+	# `pulse=true/false` toggles the transport with the configured endpoint.
+	var pulse_value = deep_link.params.get("pulse", "")
+	if not pulse_value.is_empty():
+		print("[DEEPLINK] pulse=", pulse_value)
+		comms.set_pulse_enabled(pulse_value.to_lower() in ["true", "1", "yes"])
+	# `dual-channel=true/false` (default true): whether movement keeps going over
+	# LiveKit while Pulse is established. false = Pulse-only movement while up.
+	var dual_channel_value = deep_link.params.get("dual-channel", "")
+	if not dual_channel_value.is_empty():
+		print("[DEEPLINK] dual-channel=", dual_channel_value)
+		comms.set_livekit_movement_dual_channel(
+			dual_channel_value.to_lower() in ["true", "1", "yes"]
+		)
+	# `livekit=false`: pulse-only mode — no LiveKit rooms at all (no chat/voice/
+	# scene messages). Dev/testing switch; `livekit=true` re-enables.
+	var livekit_value = deep_link.params.get("livekit", "")
+	if not livekit_value.is_empty():
+		print("[DEEPLINK] livekit=", livekit_value)
+		comms.set_livekit_enabled(livekit_value.to_lower() in ["true", "1", "yes"])
+	# `multiplayer_debug=true` (legacy alias livekit_debug): latch the flag on the
+	# comms manager, which survives scene changes — a deeplink with no navigation
+	# target is consumed while the lobby/menu is active, and the explorer that boots
+	# later re-reads the flag from comms (deep_link_obj is not a reliable carrier
+	# across that flow). Enable-only: absence of the param must not turn the panel
+	# off on a later deeplink.
+	if deep_link.multiplayer_debug:
+		print("[DEEPLINK] multiplayer_debug=true")
+		comms.set_multiplayer_debug(true)
+
+
 func _notification(what: int) -> void:
+	if what == NOTIFICATION_APPLICATION_FOCUS_IN:
+		# Mobile OSes cut app networking shortly after backgrounding, killing every comms
+		# session. Tell the comms manager we're back so it forgives transient reconnect
+		# failures and treats Duplicate* evictions as our own stale session being reclaimed.
+		# Real mobile only: on desktop every alt-tab fires FOCUS_IN, and a 30s grace window
+		# armed that often would retry genuine another-device evictions instead of
+		# surfacing the "session ended" modal.
+		if Global.is_mobile() and !Global.is_virtual_mobile():
+			comms.notify_app_resumed()
+
 	if what == NOTIFICATION_APPLICATION_FOCUS_IN or what == NOTIFICATION_READY:
 		if Global.is_mobile() and !Global.is_virtual_mobile():
 			var new_url: String = ""

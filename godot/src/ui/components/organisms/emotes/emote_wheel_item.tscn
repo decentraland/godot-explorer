@@ -1,7 +1,9 @@
 [gd_scene format=3 uid="uid://c7bnh6p6qygxu"]
 
-[ext_resource type="Texture2D" uid="uid://c3tpoj72yuxp4" path="res://src/ui/components/organisms/emotes/emote_item.svg" id="1_qctv4"]
 [ext_resource type="Script" uid="uid://cuall0fytf468" path="res://src/ui/components/organisms/emotes/emote_item_ui.gd" id="2_jdnf4"]
+[ext_resource type="Texture2D" uid="uid://byn2ta5gkfyg" path="res://src/ui/components/organisms/emotes/emote_slot_background.svg" id="2_l3874"]
+[ext_resource type="Texture2D" uid="uid://dd5nwhl0n5lo5" path="res://assets/ui/add-icon.svg" id="3_p4x31"]
+[ext_resource type="Texture2D" uid="uid://u1udg2i45c0r" path="res://src/ui/components/organisms/emotes/emote_slot_outline.svg" id="4_kedbx"]
 
 [sub_resource type="Gradient" id="Gradient_mvm8j"]
 colors = PackedColorArray(1, 1, 1, 0.607843, 1, 1, 1, 0)
@@ -26,48 +28,12 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+pivot_offset = Vector2(0, 140)
 mouse_filter = 2
 
-[node name="Equiped" type="TextureRect" parent="Control_Inner" unique_id=1801573588]
+[node name="Inner" type="TextureRect" parent="Control_Inner" unique_id=1042860826]
 unique_name_in_owner = true
-visible = false
-modulate = Color(1, 0.501961, 0, 1)
-texture_filter = 4
-layout_mode = 0
-offset_left = -3.0
-offset_top = -3.0
-offset_right = 143.0
-offset_bottom = 143.0
-mouse_filter = 2
-texture = ExtResource("1_qctv4")
-expand_mode = 2
-
-[node name="Pressed" type="TextureRect" parent="Control_Inner" unique_id=619388594]
-unique_name_in_owner = true
-visible = false
-modulate = Color(0.501961, 0, 0, 1)
-texture_filter = 4
-layout_mode = 0
-offset_left = -4.0
-offset_top = -4.0
-offset_right = 144.0
-offset_bottom = 144.0
-mouse_filter = 2
-texture = ExtResource("1_qctv4")
-expand_mode = 2
-
-[node name="Background" type="TextureRect" parent="Control_Inner" unique_id=1042860826]
-texture_filter = 4
-layout_mode = 1
-offset_right = 139.0
-offset_bottom = 140.0
-mouse_filter = 2
-texture = ExtResource("1_qctv4")
-expand_mode = 1
-
-[node name="Inner" type="TextureRect" parent="Control_Inner/Background" unique_id=1951861724]
-unique_name_in_owner = true
-self_modulate = Color(0.92549, 0.92157, 0.92941, 1)
+self_modulate = Color(0.14117648, 0.011764706, 0.23137255, 0.5019608)
 texture_filter = 4
 layout_mode = 1
 anchors_preset = 8
@@ -75,28 +41,35 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -65.0
-offset_top = -65.0
-offset_right = 65.0
-offset_bottom = 65.0
+offset_left = -64.5
+offset_top = -59.0
+offset_right = 64.5
+offset_bottom = 59.0
 grow_horizontal = 2
 grow_vertical = 2
-pivot_offset = Vector2(-38, 215)
 mouse_filter = 2
-texture = ExtResource("1_qctv4")
-expand_mode = 1
+texture = ExtResource("2_l3874")
+stretch_mode = 4
 
-[node name="Glow" type="TextureRect" parent="Control_Inner/Background/Inner" unique_id=1546861576]
+[node name="Glow" type="TextureRect" parent="Control_Inner/Inner" unique_id=1546861576]
 unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(120, 120)
 layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -32.0
+offset_top = -32.0
+offset_right = 32.0
+offset_bottom = 32.0
 grow_horizontal = 2
 grow_vertical = 2
 texture = SubResource("GradientTexture2D_oacma")
 
-[node name="TextureRect_Picture" type="TextureRect" parent="Control_Inner/Background/Inner" unique_id=176726945]
+[node name="TextureRect_Picture" type="TextureRect" parent="Control_Inner/Inner" unique_id=176726945]
 unique_name_in_owner = true
 texture_filter = 2
 layout_mode = 1
@@ -105,13 +78,54 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -48.0
+offset_left = -40.0
 offset_top = -40.0
-offset_right = 32.0
+offset_right = 40.0
 offset_bottom = 40.0
 grow_horizontal = 2
 grow_vertical = 2
 pivot_offset = Vector2(40, 40)
 expand_mode = 1
+
+[node name="TextureRect_Add" type="TextureRect" parent="Control_Inner/Inner" unique_id=706320442]
+unique_name_in_owner = true
+modulate = Color(0.8627451, 0.79607844, 0.9254902, 1)
+texture_filter = 2
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -28.5
+offset_top = -28.5
+offset_right = 28.5
+offset_bottom = 28.5
+grow_horizontal = 2
+grow_vertical = 2
+pivot_offset = Vector2(27.8, 27.4)
+texture = ExtResource("3_p4x31")
+expand_mode = 1
+
+[node name="Outline" type="TextureRect" parent="Control_Inner" unique_id=1152376084]
+unique_name_in_owner = true
+modulate = Color(0.68235296, 0.5411765, 0.8235294, 1)
+texture_filter = 4
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -64.5
+offset_top = -59.0
+offset_right = 64.5
+offset_bottom = 59.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("4_kedbx")
+expand_mode = 1
+stretch_mode = 4
 
 [connection signal="item_rect_changed" from="." to="." method="_on_item_rect_changed"]

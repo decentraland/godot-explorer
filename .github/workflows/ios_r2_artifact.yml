@@ -308,8 +308,13 @@ jobs:
 
       # libdclgodot.dylib is BUILT here, so its dSYM must be uploaded to Sentry from here
       # (the deploy repo only re-archives the already-built dylib). Best-effort.
+      # continue-on-error: a Sentry hiccup (e.g. server-side "Reported checksum mismatch")
+      # must never fail a build whose export already reached R2 — it only costs us
+      # symbolication. We notify instead.
       - name: Upload libdclgodot to Sentry
+        id: sentry_libdclgodot
         if: success() && ! inputs.dry_run
+        continue-on-error: true
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
@@ -327,3 +332,12 @@ jobs:
           else
             echo "⚠️  libdclgodot not found at $LIBDCLGODOT_PATH"
           fi
+
+      # Notify only — the step above is continue-on-error, so the job stays green.
+      - name: Sentry libdclgodot upload failed — notify (non-blocking)
+        if: always() && steps.sentry_libdclgodot.outcome == 'failure'
+        env:
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          echo "::warning title=Sentry libdclgodot upload failed::iOS native symbols for ${{ inputs.ref }} were not uploaded — crashes may be unsymbolicated. The build itself is unaffected."
+          bash .github/scripts/slack-reply.sh "⚠️ iOS — Sentry libdclgodot symbol upload failed (non-blocking), build unaffected — ${RUN_URL}"
