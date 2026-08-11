@@ -6,9 +6,9 @@ use godot::{
 };
 
 use super::{
-    content_mapping::ContentMappingAndUrlRef, content_provider::ContentProviderContext,
-    file_string::get_extension, packed_array::PackedByteArrayFromVec,
-    thread_safety::GodotSingleThreadSafety,
+    cache_file_name::cache_file_path, content_mapping::ContentMappingAndUrlRef,
+    content_provider::ContentProviderContext, file_string::get_extension,
+    packed_array::PackedByteArrayFromVec, thread_safety::GodotSingleThreadSafety,
 };
 
 pub async fn load_audio(
@@ -29,7 +29,7 @@ pub async fn load_audio(
         .ok_or(anyhow::Error::msg("File not found in the content mappings"))?;
 
     let url = format!("{}{}", content_mapping.base_url, file_hash);
-    let absolute_file_path = format!("{}{}", ctx.content_folder, file_hash);
+    let absolute_file_path = cache_file_path(&ctx.content_folder, file_hash);
 
     let bytes_vec = ctx
         .resource_provider

@@ -16,6 +16,25 @@ extends MarginContainer
 	set(value):
 		side_margin = value
 		_apply_full_width()
+## Top margin (px) applied to the settings card while in landscape (in-game). Portrait settings
+## gets its top spacing from the settings layout; the tighter landscape layout leaves the card
+## flush against the tab buttons, so this restores the separation (issue #2403).
+@export var landscape_settings_top_margin: int = 40:
+	set(value):
+		landscape_settings_top_margin = value
+		_apply_top_margin()
+## Title font size used while the settings card is in landscape (in-game). Portrait keeps the
+## size defined by the scene's LabelSettings (issue #2403 family).
+@export var landscape_title_font_size: int = 34:
+	set(value):
+		landscape_title_font_size = value
+		_apply_font_sizes()
+## Paragraph font size used while the settings card is in landscape (in-game). See
+## landscape_title_font_size.
+@export var landscape_paragraph_font_size: int = 24:
+	set(value):
+		landscape_paragraph_font_size = value
+		_apply_font_sizes()
 
 ## True once the network check has completed with an authoritative result
 ## (prevents re-checking every time the parent becomes visible afterwards).
@@ -26,7 +45,13 @@ var _upgrade_checked: bool = false
 ## "not upgraded" and would flash the card for an already-upgraded user (#2483).
 var _upgrade_check_in_flight: bool = false
 
+## Scene-defined (portrait) LabelSettings, kept as the base to derive sized copies from.
+var _title_base_settings: LabelSettings = null
+var _paragraph_base_settings: LabelSettings = null
+
 @onready var button_add_email: Button = %Button_AddEmail
+@onready var _title_label: Label = get_node_or_null("%Label_Title")
+@onready var _paragraph_label: Label = get_node_or_null("%Label_Content")
 
 
 func _apply_full_width() -> void:
@@ -38,10 +63,65 @@ func _apply_full_width() -> void:
 		add_theme_constant_override("margin_right", side_margin)
 
 
+# Only the landscape (in-game) settings card needs a top margin: portrait settings already gets its
+# spacing from the layout, and discover is untouched. Skipped in the editor where Global is inert.
+func _apply_top_margin() -> void:
+	var top: int = 0
+	if (
+		not Engine.is_editor_hint()
+		and shown_in == "settings"
+		and not Global.is_orientation_portrait()
+	):
+		top = landscape_settings_top_margin
+	add_theme_constant_override("margin_top", top)
+
+
+# Keep the scene's (portrait) LabelSettings as a base. We never mutate it in place — a Label
+# only reliably relayouts when its label_settings *reference* changes — so each apply assigns a
+# freshly sized duplicate. The base is a resource shared across instances, so duplicating (never
+# mutating) also stops the settings card from resizing the discover card's text.
+func _setup_font_sizes() -> void:
+	if is_instance_valid(_title_label):
+		_title_base_settings = _title_label.label_settings
+	if is_instance_valid(_paragraph_label):
+		_paragraph_base_settings = _paragraph_label.label_settings
+
+
+# Landscape (in-game) settings uses its own title/paragraph sizes; every other context keeps
+# the scene's portrait sizes. Mirrors _apply_top_margin's gating.
+func _apply_font_sizes() -> void:
+	if Engine.is_editor_hint():
+		return
+	if _title_base_settings == null or _paragraph_base_settings == null:
+		return
+	var landscape: bool = shown_in == "settings" and not Global.is_orientation_portrait()
+	if landscape:
+		_title_label.label_settings = _sized_settings(
+			_title_base_settings, landscape_title_font_size
+		)
+		_paragraph_label.label_settings = _sized_settings(
+			_paragraph_base_settings, landscape_paragraph_font_size
+		)
+	else:
+		_title_label.label_settings = _title_base_settings
+		_paragraph_label.label_settings = _paragraph_base_settings
+
+
+# A copy of `base` at `size`, so assigning it forces the Label to relayout (in-place font_size
+# mutation on the shared resource does not).
+func _sized_settings(base: LabelSettings, size: int) -> LabelSettings:
+	var settings: LabelSettings = base.duplicate()
+	settings.font_size = size
+	return settings
+
+
 func _ready() -> void:
 	_apply_full_width()
 	if Engine.is_editor_hint():
 		return
+	_apply_top_margin()
+	_setup_font_sizes()
+	_apply_font_sizes()
 	button_add_email.pressed.connect(_async_on_add_email_pressed)
 	visibility_changed.connect(_on_visibility_changed)
 	Global.orientation_changed.connect(_on_orientation_changed)
@@ -50,6 +130,8 @@ func _ready() -> void:
 
 
 func _on_orientation_changed(_is_portrait: bool) -> void:
+	_apply_top_margin()
+	_apply_font_sizes()
 	_async_update_visibility()
 
 
@@ -66,8 +148,6 @@ func refresh_visibility() -> void:
 # gdlint:ignore = async-function-name
 func _async_update_visibility() -> void:
 	visible = false
-	if not Global.is_orientation_portrait():
-		return
 	if Global.player_identity == null or not Global.player_identity.is_thirdweb_guest():
 		return
 
@@ -137,9 +217,25 @@ func _async_on_add_email_pressed() -> void:
 	Global.metrics.track_click_button(
 		"UPGRADE_NOTICE_TAP", "UPGRADE_NOTICE_SHOW", JSON.stringify({"shown_in": _get_shown_in()})
 	)
+	# In-game the Settings panel is landscape but the Add Email modal is portrait-only, so route the
+	# guest through Discover first (which closes Settings and switches the app to portrait) before
+	# starting the flow, so the modal renders in portrait like everywhere else (issue #2403).
+	if shown_in == "settings" and Global.get_explorer():
+		Global.open_discover.emit()
+		await _async_wait_for_portrait()
 	# The full Add Email → OTP → reward flow lives in the modal manager so this notice and the
 	# aspirational upgrade modal share one identical experience (issues #2377 / #2372).
 	await Global.modal_manager.async_start_add_email_flow()
+
+
+# Discover switches the app to portrait asynchronously; wait a few frames so the Add Email modal is
+# created at the portrait size instead of mid-rotation. Bail out after a short cap so we never hang
+# if the orientation never changes.
+func _async_wait_for_portrait() -> void:
+	var frames: int = 0
+	while not Global.is_orientation_portrait() and frames < 30:
+		await get_tree().process_frame
+		frames += 1
 
 
 # The shared flow emits guest_upgrade_state_refreshed(true) once the guest upgrades — hide the
