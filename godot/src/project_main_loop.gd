@@ -28,10 +28,13 @@ const NOISE_PATTERNS := [
 	"StreamProtocol",
 	'Condition "active"',
 	# Friends subscription reconnect loop (#2590): known noise until the root
-	# fix lands (#2591). Covers the GDScript retry errors and the Rust-side
-	# "Failed to subscribe to friendship/connectivity/block updates" variants.
+	# fix lands (#2591). Covers the GDScript retry errors, the Rust-side
+	# "Failed to subscribe to friendship/connectivity/block updates" variants,
+	# and the social-blacklist parse error from the empty BlockUpdate the
+	# server sends before closing a duplicate stream.
 	"FriendsPanel.SubscriptionState",
 	"Failed to subscribe to",
+	"Invalid address format",
 ]
 # Keep this fraction of noise events as a canary — if the shape or volume of
 # engine/driver errors shifts we want to notice, but 100% is wasted quota.
