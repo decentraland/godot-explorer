@@ -587,6 +587,28 @@ impl AvatarScene {
         };
 
         let mut img = image;
+        // The entry image outlives this call (it stays in the content
+        // provider's promise cache): on mobile we compress it to ETC2 at the
+        // end of this function to reclaim RAM, so a recapture re-reads it
+        // compressed. resize/convert/mipmaps all reject compressed formats —
+        // decompress first.
+        if img.is_compressed() {
+            let err = img.decompress();
+            if err != godot::global::Error::OK {
+                tracing::warn!(
+                    "set_impostor_texture: failed to decompress source image for slot {}: {:?}",
+                    impostor_id,
+                    err
+                );
+                return;
+            }
+        }
+        // A recapture also inherits this function's own mutations from the
+        // previous pass (resized, mipmaps appended). Drop the mip chain or the
+        // PNG snapshot below would serialize the whole chain as mip0.
+        if img.has_mipmaps() {
+            img.clear_mipmaps();
+        }
         if img.get_width() != IMPOSTOR_TEX_WIDTH || img.get_height() != IMPOSTOR_TEX_HEIGHT {
             img.resize(IMPOSTOR_TEX_WIDTH, IMPOSTOR_TEX_HEIGHT);
         }
@@ -625,6 +647,21 @@ impl AvatarScene {
         // it gets a real slot (after frustum churn or session restart).
         if let Some(rgba) = png_payload {
             self.save_cached_texture_async(&cache_key, rgba);
+        }
+
+        // Reclaim RAM: the entry image stays alive in the content provider's
+        // promise cache all session. We're done reading pixels, so compress it
+        // (mobile only — a recapture enters through the decompress guard).
+        #[cfg(any(target_os = "ios", target_os = "android"))]
+        if !img.is_compressed() {
+            let err = img.compress(godot::classes::image::CompressMode::ETC2);
+            if err != godot::global::Error::OK {
+                tracing::warn!(
+                    "set_impostor_texture: failed to compress entry image for slot {}: {:?}",
+                    impostor_id,
+                    err
+                );
+            }
         }
     }
 
