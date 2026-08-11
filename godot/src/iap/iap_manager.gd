@@ -45,16 +45,31 @@ signal transaction_history_updated
 # ASC simply returns no product. The credits granted per pack are authoritative
 # on the server (IAP_PRODUCT_CATALOG); this map is only used for the optimistic
 # success modal and must stay in sync with the server catalog.
+#
+# Two tiers exist in ASC: the original `credits_tier{1,2,3}` (approved, live) and
+# the `credits_tier_b{1,2,3}` set, a second price point for the same kind of pack.
+# Both are requested here — StoreKit's `Product.products(for:)` silently drops IDs
+# it can't resolve, so listing a pack that is still a draft in ASC costs nothing
+# and does not affect the ones that do resolve. Which packs are OFFERED is decided
+# by the storefront scene (`credits_option.tscn`), where each card declares its own
+# `product_id` and hides itself when that ID isn't in the loaded catalog; adding an
+# ID here does not put it in front of users.
 const PRODUCT_IDS: PackedStringArray = [
 	"credits_tier1",
 	"credits_tier2",
 	"credits_tier3",
+	"credits_tier_b1",
+	"credits_tier_b2",
+	"credits_tier_b3",
 ]
 
 const _CREDITS_BY_PRODUCT := {
 	"credits_tier1": 30,
 	"credits_tier2": 100,
 	"credits_tier3": 225,
+	"credits_tier_b1": 40,
+	"credits_tier_b2": 100,
+	"credits_tier_b3": 260,
 }
 
 # Bound how long the purchase overlay stays up. StoreKit prompt + validation
