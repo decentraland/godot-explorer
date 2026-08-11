@@ -57,6 +57,3 @@ scripts/bench/.env.bak
 
 .env*
 !.env.example
-
-# pi-subagents artifacts
-.pi-subagents/
