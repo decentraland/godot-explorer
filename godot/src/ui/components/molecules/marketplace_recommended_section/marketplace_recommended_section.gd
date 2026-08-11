@@ -202,8 +202,14 @@ func _setup_card(card: WearableItem, item_data: Dictionary):
 	_set_rarity_background(card, item_data.get("rarity", "common"))
 
 	var price = _parse_price(item_data.get("minPrice", item_data.get("price", "0")))
-	var item_url = item_data.get("url", "")
-	var full_url = str(DclUrls.marketplace()) + item_url if not item_url.is_empty() else ""
+	# Built from the ids, NOT from the API's `url` field: that field is a path in the
+	# classic marketplace's route table ("/contracts/{c}/items/{i}"), which is a 404
+	# under the new shop. DclUrls picks the route table the current env serves.
+	var contract_address = str(item_data.get("contractAddress", ""))
+	var item_id = str(item_data.get("itemId", ""))
+	var full_url = ""
+	if not contract_address.is_empty() and not item_id.is_empty():
+		full_url = str(DclUrls.marketplace_item(contract_address, item_id))
 	card.setup_marketplace(price, full_url)
 
 	card.wearable_id = urn

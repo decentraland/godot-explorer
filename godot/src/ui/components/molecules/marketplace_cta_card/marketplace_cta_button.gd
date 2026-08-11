@@ -43,8 +43,6 @@ func _on_pressed():
 	if _selected_price >= 0:
 		can_afford = balance >= _selected_price
 	if can_afford:
-		MarketplaceTracker.open_and_track(
-			DclUrls.marketplace() + "/browse?section=" + marketplace_section
-		)
+		MarketplaceTracker.open_and_track(DclUrls.marketplace_browse(marketplace_section))
 	else:
 		Global.open_credits.emit()
