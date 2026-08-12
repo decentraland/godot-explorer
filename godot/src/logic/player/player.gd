@@ -98,7 +98,7 @@ var _raycast_exclude: Array[RID] = []
 # A single continuous scalar spanning the whole zoom range. Values in
 # [THIRD_PERSON_MIN_DISTANCE, THIRD_PERSON_MAX_DISTANCE] map straight to the
 # third-person spring length; anything below the min drops into first person.
-# Persists for the session; reset to the default on realm/scene change.
+# Persists while exploring a realm; reset to the default on a realm change.
 var _zoom_level: float = CameraRigHelpers.THIRD_PERSON_CAMERA.z
 # _zoom_level at the start of the active pinch, to report the net direction.
 var _pinch_start_zoom_level: float = 0.0
@@ -267,6 +267,10 @@ func _ready():
 	Global.scene_runner.locomotion_settings_changed.connect(_on_locomotion_settings_changed)
 	_on_scene_changed(Global.scene_runner.get_current_parcel_scene_id())
 
+	# Reset the pinch zoom back to the default third-person view on realm changes.
+	if Global.realm:
+		Global.realm.realm_changed.connect(_on_realm_changed)
+
 	# Cache RIDs to exclude from ground-distance raycasts (player body itself +
 	# avatar subtree colliders, including the TriggerDetector which would
 	# otherwise make the ray report ~0m at all times).
@@ -288,7 +292,6 @@ func _on_player_profile_changed(new_profile: DclUserProfile):
 func _on_scene_changed(_scene_id: int) -> void:
 	_locomotion_settings = Global.scene_runner.get_current_scene_locomotion_settings()
 	_apply_locomotion_settings()
-	_reset_zoom_to_default()
 
 
 func _on_locomotion_settings_changed(settings: DclLocomotionSettings) -> void:
@@ -377,12 +380,18 @@ func _apply_zoom_level() -> void:
 		mount_camera.spring_length = _zoom_level
 
 
-# Reset the zoom to the default third-person distance (issue #2636). Called on
-# realm/scene change. Leaves a first-person user in first person; only the
-# third-person distance is a per-session zoom that resets.
-func _reset_zoom_to_default() -> void:
-	if camera.get_camera_mode() == Global.CameraMode.THIRD_PERSON:
-		_zoom_level = CameraRigHelpers.THIRD_PERSON_CAMERA.z
+# Reset the pinch zoom to the default third-person view on a realm change (issue
+# #2636). The zoom persists while exploring a realm (crossing parcel scenes) and
+# only resets when the player actually moves to a new realm — so a pinch into
+# first person returns to the default third-person distance. Skipped while a
+# scene forces the camera mode.
+func _on_realm_changed() -> void:
+	if camera_mode_change_blocked:
+		return
+	_zoom_level = CameraRigHelpers.THIRD_PERSON_CAMERA.z
+	if camera.get_camera_mode() != Global.CameraMode.THIRD_PERSON:
+		Global.set_camera_mode(Global.CameraMode.THIRD_PERSON)
+	else:
 		if _camera_mode_tween and _camera_mode_tween.is_running():
 			_camera_mode_tween.kill()
 		mount_camera.spring_length = _zoom_level

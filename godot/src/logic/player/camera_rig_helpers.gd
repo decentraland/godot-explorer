@@ -13,8 +13,8 @@ extends RefCounted
 const CAMERA_COLLISION_MASK := 2
 
 # Over-shoulder framing: x = lateral camera offset, z = third-person back distance.
-# THIRD_PERSON_CAMERA.z doubles as the DEFAULT zoom distance (reset target on
-# realm/scene change).
+# THIRD_PERSON_CAMERA.z doubles as the DEFAULT zoom distance (reset target on a
+# realm change).
 const THIRD_PERSON_CAMERA := Vector3(0.75, 0, 3)
 # First person sits just in front of the pivot (inside the head).
 const FIRST_PERSON_SPRING_LENGTH := -0.2
