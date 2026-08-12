@@ -1194,6 +1194,10 @@ func reload_scene(scene_id: String) -> void:
 	if scene != null:
 		# Show the loading screen up front so killing the scene doesn't flash an empty parcel
 		# before it re-loads. Skipped for preview hot-reload, which is meant to be seamless.
+		# If the re-fetch fails it's still taken back down: a null definition completes the
+		# loading session (report_scene_fetched), and any deeper failure is caught by the
+		# loading screen's own watchdog (Timer_CheckProgressTimeout: inactivity / max-time
+		# -> timeout modal + hide), which starts when enable_loading_screen is shown.
 		if not _is_hot_reloading:
 			var explorer = Global.get_explorer()
 			if is_instance_valid(explorer):
