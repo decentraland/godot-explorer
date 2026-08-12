@@ -11,6 +11,11 @@ const _MULTIPLAYER_DEBUG_PANEL_SCENE := preload(
 	"res://src/ui/components/organisms/multiplayer_debug/multiplayer_debug_panel.tscn"
 )
 
+## Dev-only translucent overlay of the scene interactable area, off by default. The
+## production guard in _update_interactable_area_debug always wins; this only toggles it
+## within dev builds, flipped at runtime from Settings > Dev Tools.
+var show_interactable_area: bool = false
+
 var is_genesis_city: bool
 var player: Node3D = null
 var scene_title: String
@@ -19,9 +24,7 @@ var parcel_position_real: Vector2
 var panel_bottom_left_height: int = 0
 var dirty_save_position: bool = false
 
-var debug_panel = null
 var multiplayer_debug_panel = null
-var scene_stats_panel = null
 var disable_move_to = false
 
 var virtual_joystick_orig_position: Vector2i
@@ -61,8 +64,6 @@ var _debug_panel_from_settings: bool = false
 
 @onready var ui_root: Control = %UI
 @onready var ui_safe_area: Control = %SceneUIContainer
-@onready var safe_margin_container_debug: SafeMarginContainer = %SafeMarginContainerDebug
-@onready var hbox_debug_tools: HBoxContainer = %HBoxContainer_DebugTools
 
 @onready var warning_messages = %WarningMessages
 @onready var label_crosshair = %Label_Crosshair
@@ -80,7 +81,12 @@ var _debug_panel_from_settings: bool = false
 @onready var control_menu = %Control_Menu
 @onready var mobile_ui = %MobileUI
 @onready var mobile_camera_input: Control = %MobileCameraInput
-@onready var left_right_safe_container_mobile: MarginContainer = %LeftRightSafeContainerMobile
+@onready var safe_area_controls: MarginContainer = %SafeAreaControls
+@onready var safe_area_hud: MarginContainer = %SafeAreaHud
+@onready var hud_content: Control = %InteractableHUD
+## Preview-mode HUD toolbar (console/scene-stats/reload). Static hidden InteractableHUD child
+## so its console keeps capturing logs; shown only while _preview_panel_active().
+@onready var preview_hud_panel = %PreviewHudPanel
 @onready var virtual_joystick: Control = %VirtualJoystick_Left
 @onready var profile_container: Control = %ProfileContainer
 
@@ -94,9 +100,10 @@ var _debug_panel_from_settings: bool = false
 
 @onready var navbar: Control = %Navbar
 @onready var joypad: Control = %Joypad
-@onready var h_box_container_right_panels: HBoxContainer = %HBoxContainer_RightPanels
 @onready var button_show_ui: Button = %Button_ShowUI
-@onready var margin_container_show_ui: MarginContainer = %MarginContainer_ShowUI
+@onready var hud_dismiss_catcher: Control = %HudDismissCatcher
+@onready var interactable_area_debug: ColorRect = %InteractableAreaDebug
+@onready var interactable_area_debug_label: Label = %InteractableAreaDebugLabel
 
 
 func _process(_dt):
@@ -184,8 +191,8 @@ func _ready():
 	# Connect to notification clicks to handle friend request notifications
 	Global.notification_clicked.connect(_on_notification_clicked)
 
-	# Connect on open emotes backpack
-	Global.open_backpack.connect(_on_backpack_emote_opened)
+	# Connect on open backpack (from the navbar button or the emote wheel)
+	Global.open_backpack.connect(_on_backpack_open)
 
 	# Connect deep link router signals for path-based actions
 	Global.deep_link_router.deep_link_jump.connect(_on_deep_link_jump)
@@ -198,6 +205,17 @@ func _ready():
 
 	Global.orientation_changed.connect(_on_orientation_changed)
 	Global.chat_write_mode_changed.connect(_on_chat_write_mode_changed)
+
+	# Keep the full-screen dismiss catcher in sync with what's open.
+	notifications_panel.visibility_changed.connect(_refresh_hud_dismiss)
+	friends_panel.visibility_changed.connect(_refresh_hud_dismiss)
+	settings_panel.visibility_changed.connect(_refresh_hud_dismiss)
+	chat_panel.chat.visibility_changed.connect(_refresh_hud_dismiss)
+
+	# Chat focus (open) overlays the message view: hide the emote button and joypad
+	# while focused, restore them when the chat closes.
+	chat_panel.chat.on_open_chat.connect(_on_chat_focus_entered)
+	chat_panel.chat.on_exit_chat.connect(_on_chat_focus_exited)
 
 	player = load("res://src/logic/player/player.tscn").instantiate()
 
@@ -226,11 +244,9 @@ func _ready():
 	if Global.cli.debug_panel:
 		_debug_panel_from_settings = true
 
-	# Show debug panel and reload button if in preview mode or --debug-panel
-	_update_debug_ui()
-
-	# Preview-only scene-stats / limits overlay (never created in production)
-	_update_scene_stats_ui()
+	# Preview HUD toolbar (console/reload, plus scene-stats in preview/deep-link).
+	# Replaces the chat panel while active; never created in a normal production run.
+	_update_preview_hud()
 
 	# multiplayer_debug deep link parameter auto-enables the multiplayer debug panel.
 	# Checked via the comms flag too: a target-less deeplink is consumed while the
@@ -387,31 +403,75 @@ func _on_need_open_url(url: String, _description: String, _use_webkit: bool) -> 
 ## Push the safe-area rect (in canvas/logical pixels) to the scene runner so
 ## scenes get correct UiCanvasInformation.interactable_area on every resize,
 ## including --emulate-ios / --emulate-android virtual margins.
-func _push_scene_interactable_area() -> void:
-	if not is_instance_valid(Global.scene_runner) or not is_instance_valid(ui_safe_area):
-		return
+## The HUD safe rectangle (in SceneUIContainer/canvas coords): device safe area + the
+## symmetric 108/32/108/45 floor from SafeAreaHud, WITHOUT the chat column. This is the
+## "screen inset" area — safe from device insets; the chat may still overlap it.
+func get_safe_area() -> Rect2:
 	var canvas: Vector2 = ui_safe_area.size
-	var canvas_w: int = int(canvas.x)
-	var canvas_h: int = int(canvas.y)
-	if canvas_w <= 0 or canvas_h <= 0:
+	var m_left: float = safe_area_hud.get_theme_constant("margin_left")
+	var m_right: float = safe_area_hud.get_theme_constant("margin_right")
+	var m_top: float = safe_area_hud.get_theme_constant("margin_top")
+	var m_bottom: float = safe_area_hud.get_theme_constant("margin_bottom")
+	return Rect2(
+		m_left,
+		m_top,
+		maxf(canvas.x - m_left - m_right, 0.0),
+		maxf(canvas.y - m_top - m_bottom, 0.0)
+	)
+
+
+## Where scenes may draw interactive UI without being covered by the client UI: the safe
+## rectangle minus the left chat column. The joypad (bottom-right) may still overlap it.
+func get_interactable_area() -> Rect2:
+	var safe: Rect2 = get_safe_area()
+	var chat: float = Global.chat_notifications_width
+	return Rect2(
+		safe.position.x + chat, safe.position.y, maxf(safe.size.x - chat, 0.0), safe.size.y
+	)
+
+
+func _push_scene_interactable_area() -> void:
+	if not is_instance_valid(ui_safe_area) or not is_instance_valid(safe_area_hud):
 		return
+	var area: Rect2 = get_interactable_area()
+	_update_interactable_area_debug(area)
+	if is_instance_valid(Global.scene_runner) and area.size.x > 0 and area.size.y > 0:
+		Global.scene_runner.set_interactable_area(Rect2i(area))
+		Global.scene_runner.set_safe_area(Rect2i(get_safe_area()))
 
-	var rect := Rect2i(0, 0, canvas_w, canvas_h)
 
-	if Global.is_mobile() or Global.is_emulating_safe_area():
-		var window_size: Vector2i = DisplayServer.window_get_size()
-		if window_size.x > 0 and window_size.y > 0:
-			var safe: Rect2i = Global.get_safe_area()
-			var x_factor: float = canvas.x / float(window_size.x)
-			var y_factor: float = canvas.y / float(window_size.y)
+## Dev-only translucent overlay to verify the computed interactable area on device.
+## Never shows in production; within dev, gated by `show_interactable_area`.
+func _update_interactable_area_debug(area: Rect2) -> void:
+	# The label is a child of the ColorRect, so toggling the rect toggles both.
+	interactable_area_debug.visible = not Global.is_production() and show_interactable_area
+	if not interactable_area_debug.visible:
+		return
+	interactable_area_debug.position = area.position
+	interactable_area_debug.size = area.size
 
-			var pos_x: int = clampi(roundi(safe.position.x * x_factor), 0, canvas_w)
-			var pos_y: int = clampi(roundi(safe.position.y * y_factor), 0, canvas_h)
-			var end_x: int = clampi(roundi(safe.end.x * x_factor), pos_x, canvas_w)
-			var end_y: int = clampi(roundi(safe.end.y * y_factor), pos_y, canvas_h)
-			rect = Rect2i(pos_x, pos_y, end_x - pos_x, end_y - pos_y)
+	var canvas: Vector2 = ui_safe_area.size
+	var m_left: float = safe_area_hud.get_theme_constant("margin_left")
+	var m_right: float = safe_area_hud.get_theme_constant("margin_right")
+	var m_top: float = safe_area_hud.get_theme_constant("margin_top")
+	var m_bottom: float = safe_area_hud.get_theme_constant("margin_bottom")
+	var device_area: float = canvas.x * canvas.y
+	var safe_area: float = (
+		maxf(canvas.x - m_left - m_right, 0.0) * maxf(canvas.y - m_top - m_bottom, 0.0)
+	)
+	var inter_area: float = area.size.x * area.size.y
+	var pct_device: int = int(round(100.0 * inter_area / device_area)) if device_area > 0.0 else 0
+	var pct_safe: int = int(round(100.0 * inter_area / safe_area)) if safe_area > 0.0 else 0
+	interactable_area_debug_label.text = (
+		"%d%% of device\n%d%% of safe area" % [pct_device, pct_safe]
+	)
 
-	Global.scene_runner.set_interactable_area(rect)
+
+## Runtime toggle for the interactable-area overlay (e.g. from Settings > Dev Tools).
+func set_interactable_area_visible(value: bool) -> void:
+	show_interactable_area = value
+	if is_instance_valid(safe_area_hud):
+		_update_interactable_area_debug(get_interactable_area())
 
 
 func _on_player_logout():
@@ -640,8 +700,8 @@ func _on_scene_console_message(scene_id: int, level: int, timestamp: float, text
 func _scene_console_message(scene_id: int, level: int, timestamp: float, text: String) -> void:
 	var title: String = Global.scene_runner.get_scene_title(scene_id)
 	title += str(Global.scene_runner.get_scene_base_parcel(scene_id))
-	if is_instance_valid(debug_panel):
-		debug_panel.on_console_add(title, level, timestamp, text)
+	if is_instance_valid(preview_hud_panel):
+		preview_hud_panel.on_console_add(title, level, timestamp, text)
 
 
 func _on_pointer_tooltip_changed():
@@ -874,16 +934,17 @@ func set_visible_ui(value: bool, use_hud_mode: bool = false):
 		ui_root.hide()
 
 	if value:
-		margin_container_show_ui.hide()
+		button_show_ui.hide()
 
 
 func _is_ui_hud_mode_exception(node: Node) -> bool:
 	return (
 		node == ui_safe_area
 		or node == control_menu
-		or node == margin_container_show_ui
+		or node == safe_area_hud
 		or node == profile_container
-		or node == left_right_safe_container_mobile
+		or node == safe_area_controls
+		or node == virtual_joystick
 		or node == mobile_camera_input
 	)
 
@@ -900,6 +961,10 @@ func _apply_mobile_controls_hide_ui(hidden: bool) -> void:
 	_mobile_controls_hidden_for_hide_ui = hidden
 	if hidden:
 		joypad.hide()
+		# Keep the joystick functional (walking) but fully transparent. A hidden Control
+		# stops receiving input, so show() it and only drop its alpha — an overlay may have
+		# left it hidden before Hide-UI kicked in.
+		virtual_joystick.show()
 		virtual_joystick.modulate.a = 0.0
 	else:
 		joypad.show()
@@ -912,17 +977,46 @@ func _show_joypad() -> void:
 	joypad.show()
 
 
+## Hide the on-screen movement controls (joypad + left joystick) while an overlay
+## (navbar, chat focus or emote wheel) owns the screen.
+func _hide_movement_controls() -> void:
+	joypad.hide()
+	virtual_joystick.hide()
+
+
+## Restore the on-screen movement controls hidden by _hide_movement_controls().
+func _show_movement_controls() -> void:
+	_show_joypad()
+	virtual_joystick.show()
+
+
 func _set_explorer_hud_elements_visible(full_hud: bool) -> void:
 	ui_root.show()
 	_apply_mobile_controls_hide_ui(not full_hud)
 	if full_hud:
+		# SafeAreaHud stays visible (exception); we toggle its content group so the
+		# Show-UI button (a sibling of hud_content) survives and children keep their state.
+		hud_content.show()
+		# Invariant: showing the HUD always means the bottom-left slot is restored. Hide-UI
+		# is applied on navbar-close, where _close_all_panels' normal "re-show" is suppressed
+		# while hidden — so it is always left hidden by the time we restore, and we must
+		# re-assert it here. In preview this shows the preview HUD toolbar instead of the chat.
+		# (Write-mode can't leak a hidden chatbar: writing hides the navbar, so Settings/hide-UI
+		# is unreachable while writing.)
+		_restore_bottom_left_hud()
+		# Re-assert the emote button too: an overlay (e.g. the navbar) may have left it
+		# hidden before Hide-UI was applied, and hud_content.show() won't re-show a child
+		# whose own visibility is false. Portrait owns it through the orientation flow.
+		if not Global.is_orientation_portrait():
+			emote_wheel.show()
 		for node in _ui_children_hidden_for_hud_mode:
 			if is_instance_valid(node):
 				node.show()
 		_ui_children_hidden_for_hud_mode.clear()
-		margin_container_show_ui.hide()
+		button_show_ui.hide()
 		return
 
+	hud_content.hide()
 	for child in ui_root.get_children():
 		if _is_ui_hud_mode_exception(child):
 			continue
@@ -933,69 +1027,76 @@ func _set_explorer_hud_elements_visible(full_hud: bool) -> void:
 			_ui_children_hidden_for_hud_mode.append(canvas_child)
 			canvas_child.hide()
 
-	margin_container_show_ui.show()
+	button_show_ui.show()
 
 
 func _on_control_menu_request_debug_panel(enabled):
 	_debug_panel_from_settings = enabled
-	_update_debug_ui()
+	_update_preview_hud()
 
 
-func _update_debug_ui():
-	var should_show = _debug_panel_from_settings or _is_in_preview_realm()
-
-	if should_show:
-		if not is_instance_valid(debug_panel):
-			debug_panel = (
-				load("res://src/ui/components/organisms/debug_panel/debug_panel.tscn").instantiate()
-			)
-			hbox_debug_tools.add_child(debug_panel)
-			# Console always sits left of the scene-stats overlay in the row.
-			hbox_debug_tools.move_child(debug_panel, 0)
-	else:
-		if is_instance_valid(debug_panel):
-			hbox_debug_tools.remove_child(debug_panel)
-			debug_panel.queue_free()
-			debug_panel = null
-
-	if is_instance_valid(debug_panel):
-		debug_panel.set_reload_scene_visible(should_show)
-
-	Global.set_scene_log_enabled(should_show)
-	_update_debug_layer_visibility()
+## Whether the preview HUD toolbar should exist at all: the settings Scene Logs
+## toggle (or --debug-panel), a preview realm, or a `scene-stats=true` deep link.
+## The chat/hide-UI restore paths use it to pick chat vs toolbar in the bottom-left slot.
+func _preview_panel_active() -> bool:
+	return _debug_panel_from_settings or _is_in_preview_realm() or Global.deep_link_obj.scene_stats
 
 
-## Scene-stats overlay. Instantiated in preview, or in any realm when the
-## `scene-stats=true` deep link forces it on — in every build flavor,
-## production included, so creators can measure scenes on store builds. A
-## normal run (no preview, no deep link) still instantiates nothing, so the
-## zero-cost guarantee holds, mirroring _update_debug_ui.
-func _update_scene_stats_ui() -> void:
-	var should_show := _is_in_preview_realm() or Global.deep_link_obj.scene_stats
-	if should_show:
-		if not is_instance_valid(scene_stats_panel):
-			scene_stats_panel = (
-				load("res://src/ui/components/organisms/scene_stats_panel/scene_stats_panel.tscn")
-				. instantiate()
-			)
-			# Shares the top-right debug tools row with the console, so both
-			# lay out side by side instead of overlapping.
-			hbox_debug_tools.add_child(scene_stats_panel)
-		scene_stats_panel.set_scene(_preview_scene_id())
-	else:
-		if is_instance_valid(scene_stats_panel):
-			scene_stats_panel.queue_free()
-			scene_stats_panel = null
-	_update_debug_layer_visibility()
+## Whether the scene-stats overlay (and its header button) is offered: only a preview
+## realm or a `scene-stats=true` deep link — not the settings Scene Logs entry, which
+## exposes console + reload only.
+func _scene_stats_available() -> bool:
+	return _is_in_preview_realm() or Global.deep_link_obj.scene_stats
 
 
-## The debug layer hosts the console + scene-stats row; show it only while one
-## of them exists. It must be shown explicitly: it was once saved hidden in the
-## editor (PR #1894), which silently disabled the whole layer.
-func _update_debug_layer_visibility() -> void:
-	safe_margin_container_debug.visible = (
-		is_instance_valid(debug_panel) or is_instance_valid(scene_stats_panel)
+## Keep the (static) preview HUD toolbar in sync: create/free the scene-stats overlay, point
+## it at the previewed scene, gate scene logs, and show/hide the toolbar. The console/debug
+## panel is always present (static) so it keeps capturing logs; only scene-stats is on demand.
+func _update_preview_hud() -> void:
+	if not is_instance_valid(preview_hud_panel):
+		return
+	var active: bool = _preview_panel_active()
+	preview_hud_panel.set_scene_status_available(_scene_stats_available())
+	if active:
+		preview_hud_panel.set_scene(_preview_scene_id())
+	Global.set_scene_log_enabled(active)
+	_restore_bottom_left_hud()
+
+
+## True while a navbar side panel (or the dropdown) is open — the bottom-left slot hides then.
+func _bottom_left_slot_blocked() -> bool:
+	return (
+		navbar.is_open()
+		or friends_panel.visible
+		or notifications_panel.visible
+		or settings_panel.visible
 	)
+
+
+## Restore the bottom-left slot: while a navbar panel is open it stays hidden; otherwise the
+## active toolbar is shown (reset to header-only) and the chat hidden, else the chat owns the
+## slot. Hide-UI still wins (nothing force-shown while the HUD is hidden).
+func _restore_bottom_left_hud() -> void:
+	if _bottom_left_slot_blocked():
+		_hide_bottom_left_hud()
+		return
+	if _preview_panel_active():
+		if is_instance_valid(preview_hud_panel):
+			preview_hud_panel.reset()
+			preview_hud_panel.show()
+		chat_panel.hide()
+	elif not _session_hide_main_hud:
+		if is_instance_valid(preview_hud_panel):
+			preview_hud_panel.hide()
+		chat_panel.show()
+
+
+## Hide the whole bottom-left slot (chat and the preview toolbar, header included) while the
+## navbar is open with a side panel showing; the navbar-collapse path restores it.
+func _hide_bottom_left_hud() -> void:
+	chat_panel.hide()
+	if is_instance_valid(preview_hud_panel):
+		preview_hud_panel.hide()
 
 
 ## The single scene being previewed (one scene may span multiple parcels):
@@ -1090,8 +1191,7 @@ func _is_in_preview_realm() -> bool:
 
 
 func _update_preview_ui(_in_preview: bool) -> void:
-	_update_debug_ui()
-	_update_scene_stats_ui()
+	_update_preview_hud()
 
 
 func _on_notify_pending_loading_scenes(pending: bool) -> void:
@@ -1132,8 +1232,19 @@ func _on_profile_container_visibility_changed() -> void:
 
 
 func _open_friends_panel() -> void:
+	# Opening the navbar overlays the HUD. Fully close the chat (not just hide it) so it
+	# reappears un-focused — notifications only, chatbar button un-toggled — when the navbar
+	# collapses. close_chat also resets the chatbar toggle (which exit_chat alone doesn't).
+	# Then close the emote overlay and hide the emote button/wheel, movement controls and
+	# the whole chat. The hides run last so they win over the restores those closes emit.
+	if chat_panel.is_chat_visible():
+		Global.close_chat.emit()
+	emote_wheel.close()
 	Global.close_menu.emit()
 	Global.open_friends_panel.emit()
+	emote_wheel.hide()
+	_hide_movement_controls()
+	_hide_bottom_left_hud()
 
 
 func _async_open_profile_by_address(user_address: String):
@@ -1222,7 +1333,7 @@ func _show_friends_panel() -> void:
 		notifications_panel.hide_panel()
 	if settings_panel.visible:
 		settings_panel.hide()
-	h_box_container_right_panels.mouse_filter = Control.MOUSE_FILTER_STOP
+	_refresh_hud_dismiss()
 	Global.explorer_release_focus()
 	if Global.is_mobile():
 		release_mouse()
@@ -1243,7 +1354,7 @@ func _show_settings_panel() -> void:
 		friends_panel.hide_panel()
 	if notifications_panel.visible:
 		notifications_panel.hide_panel()
-	h_box_container_right_panels.mouse_filter = Control.MOUSE_FILTER_STOP
+	_refresh_hud_dismiss()
 	Global.explorer_release_focus()
 	if Global.is_mobile():
 		release_mouse()
@@ -1265,7 +1376,7 @@ func _show_notifications_panel() -> void:
 		friends_panel.hide_panel()
 	if settings_panel.visible:
 		settings_panel.hide()
-	h_box_container_right_panels.mouse_filter = Control.MOUSE_FILTER_STOP
+	_refresh_hud_dismiss()
 	Global.explorer_release_focus()
 	if Global.is_mobile():
 		release_mouse()
@@ -1386,6 +1497,7 @@ func _async_run_ban_check() -> void:
 func _on_orientation_changed(is_portrait: bool) -> void:
 	if is_portrait:
 		mobile_ui.hide()
+		virtual_joystick.hide()
 		emote_wheel.hide()
 		navbar.hide()
 		_set_scene_ui_visible(false)
@@ -1401,18 +1513,41 @@ func _on_orientation_changed(is_portrait: bool) -> void:
 func _on_chat_write_mode_changed(is_writing: bool) -> void:
 	if Global.is_orientation_portrait():
 		return
+	# Emote button and movement controls are hidden for the whole chat-focus session
+	# (owned by _on_chat_focus_entered/_exited). Write mode additionally hides the navbar
+	# bar (focus only collapses its dropdown) and the extra HUD elements the keyboard
+	# needs gone; exiting write restores them while the chat stays focused.
+	# The preview HUD toolbar and the chat share the bottom-left slot and never
+	# coexist (the toolbar hides the chat), so chat write mode can't overlap it —
+	# no toolbar handling is needed here.
 	if is_writing:
-		mobile_ui.hide()
-		emote_wheel.hide()
 		navbar.hide()
 		_set_scene_ui_visible(false)
 	else:
-		if _onscreen_controls_enabled():
-			mobile_ui.show()
-			_update_virtual_controls_visibility()
-		emote_wheel.show()
 		navbar._on_size_changed()
 		_set_scene_ui_visible(_should_show_scene_ui())
+
+
+func _on_chat_focus_entered() -> void:
+	# Chat focus closes the navbar (collapse its dropdown/panels, keeping the bar) and
+	# the emote overlay, then hides the emote button and movement controls. The hides run
+	# last so they win over the restores those closes emit. Portrait and Hide-UI own
+	# visibility through their own flows.
+	if _session_hide_main_hud or Global.is_orientation_portrait():
+		return
+	emote_wheel.close()
+	if navbar.is_open():
+		navbar.collapse()
+	emote_wheel.hide()
+	_hide_movement_controls()
+
+
+func _on_chat_focus_exited() -> void:
+	# Restore the emote button and movement controls hidden while the chat was focused.
+	if _session_hide_main_hud or Global.is_orientation_portrait():
+		return
+	emote_wheel.show()
+	_show_movement_controls()
 
 
 func _should_show_scene_ui() -> bool:
@@ -1446,12 +1581,14 @@ func _on_notification_clicked(notification_d: Dictionary) -> void:
 				notifications_panel.hide_panel()
 			if settings_panel.visible:
 				settings_panel.hide()
-			h_box_container_right_panels.mouse_filter = Control.MOUSE_FILTER_STOP
+			_refresh_hud_dismiss()
 			# Release focus to prevent camera rotation while panel is open
 			Global.explorer_release_focus()
 			if Global.is_mobile():
 				release_mouse()
 			joypad.hide()
+			# Keep the bottom-left slot hidden while the navbar friends panel is open.
+			_hide_bottom_left_hud()
 
 
 func _notification(what: int) -> void:
@@ -1487,16 +1624,34 @@ func _on_deep_link_open_place(place_id: String) -> void:
 
 
 func _on_emote_wheel_emote_wheel_closed() -> void:
-	virtual_joystick.show()
+	# Restore the chat messages and the movement joystick hidden while the wheel was open,
+	# unless the main HUD is hidden. The joypad stays visible with the wheel, so it isn't
+	# touched here. Portrait owns the joystick in its own flow.
+	if _session_hide_main_hud:
+		return
+	chat_panel.show_messages()
+	if not Global.is_orientation_portrait():
+		virtual_joystick.show()
 
 
 func _on_emote_wheel_emote_wheel_opened() -> void:
+	# The emote wheel keeps its own button, the chatbar and the joypad visible, but takes
+	# over the rest of the HUD: collapse the navbar and close its side panels, then hide the
+	# chat messages and the movement joystick. The hides run last so they win over the
+	# restores emitted while collapsing the navbar.
+	if navbar.is_open():
+		navbar.collapse()
+	else:
+		_close_all_panels()
+	chat_panel.hide_messages()
 	virtual_joystick.hide()
 
 
 func _update_virtual_controls_visibility() -> void:
 	if _mobile_controls_hidden_for_hide_ui:
 		joypad.hide()
+		# Transparent but functional, so walking keeps working while the UI is hidden.
+		virtual_joystick.show()
 		virtual_joystick.modulate.a = 0.0
 		return
 	var panel_open := (
@@ -1510,11 +1665,10 @@ func _update_virtual_controls_visibility() -> void:
 	virtual_joystick.show()
 
 
-func _on_backpack_emote_opened(on_emotes := false) -> void:
-	if not on_emotes:
-		return
-	navbar.open_navbar_silently()
-	navbar.set_button_pressed(navbar.BUTTON.BACKPACK)
+func _on_backpack_open(_on_emotes := false) -> void:
+	# Backpack is a fullscreen menu screen: collapse and hide the navbar just like
+	# Discover, for both entry points (navbar button and emote wheel).
+	_enter_menu_screen()
 
 
 func _close_all_panels():
@@ -1522,17 +1676,31 @@ func _close_all_panels():
 	_on_friends_panel_closed()
 	_on_notifications_panel_closed()
 	_on_settings_panel_closed()
-	h_box_container_right_panels.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_refresh_hud_dismiss()
+	# Restore the bottom-left slot (chat, or the preview HUD toolbar in preview) and the
+	# emote HUD hidden while the navbar was open, unless the main HUD is hidden. Keep the
+	# emote HUD and joystick hidden in portrait, where the orientation flow owns them.
+	if not _session_hide_main_hud:
+		_restore_bottom_left_hud()
+		if not Global.is_orientation_portrait():
+			emote_wheel.show()
+			virtual_joystick.show()
 	_show_joypad()
 
 
 func _on_discover_open():
+	_enter_menu_screen()
+
+
+# Shared cleanup when entering a fullscreen menu screen (Discover / Backpack):
+# collapse the navbar dropdown, close the side panels and hide the navbar.
+func _enter_menu_screen():
 	navbar.collapse()
 	_show_joypad()
 	_on_friends_panel_closed()
 	_on_notifications_panel_closed()
 	_on_settings_panel_closed()
-	h_box_container_right_panels.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_refresh_hud_dismiss()
 	navbar.set_manually_hidden(true)
 	release_mouse()
 
@@ -1541,7 +1709,7 @@ func _on_menu_open():
 	_on_friends_panel_closed()
 	_on_notifications_panel_closed()
 	_on_settings_panel_closed()
-	h_box_container_right_panels.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_refresh_hud_dismiss()
 	release_mouse()
 
 
@@ -1613,11 +1781,26 @@ func _on_change_parcel(_position: Vector2i):
 	parcel_position = _position
 
 
-func _on_h_box_container_right_panels_gui_input(event: InputEvent) -> void:
+func _on_hud_dismiss_catcher_gui_input(event: InputEvent) -> void:
 	if (event is InputEventMouseButton or event is InputEventScreenTouch) and event.pressed:
 		_close_all_panels()
 		navbar.collapse()
+		Global.close_chat.emit()
 		capture_mouse()
+
+
+## The full-screen dismiss catcher is STOP (catches empty-area taps) only while a left
+## panel is open or the chat is visible; IGNORE otherwise so it never blocks gameplay.
+func _refresh_hud_dismiss() -> void:
+	var open: bool = (
+		notifications_panel.visible
+		or friends_panel.visible
+		or settings_panel.visible
+		or chat_panel.is_chat_visible()
+	)
+	hud_dismiss_catcher.mouse_filter = (
+		Control.MOUSE_FILTER_STOP if open else Control.MOUSE_FILTER_IGNORE
+	)
 
 
 func _on_button_show_ui_pressed() -> void:

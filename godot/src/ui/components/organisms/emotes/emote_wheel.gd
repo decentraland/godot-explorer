@@ -25,6 +25,7 @@ var last_selected_emote_urn: String = ""
 @onready var label_emote_name = %Label_EmoteName
 @onready var control_wheel: Control = %Control_Wheel
 @onready var button_emotes: Button = $Button_Emotes
+@onready var emote_wheel_item_1: EmoteItemUi = %EmoteWheelItem1
 
 
 func _ready():
@@ -35,6 +36,13 @@ func _ready():
 	button_emotes.button_mask = 0
 	button_emotes.gui_input.connect(_on_button_emotes_gui_input)
 	control_wheel.hide()
+	# Clone the template item 9 more times (10 total) and fan them 36° apart. The clone
+	# copies %EmoteWheelItem1's scene-unique-name flag, so clear it to avoid ambiguous %.
+	for i in 9:
+		var new_emote_wheel_item: EmoteItemUi = emote_wheel_item_1.duplicate()
+		new_emote_wheel_item.unique_name_in_owner = false
+		new_emote_wheel_item.rotation_degrees = 36 * (i + 1)
+		emote_wheel_container.add_child(new_emote_wheel_item)
 
 	for child in emote_wheel_container.get_children():
 		if child is EmoteItemUi:
@@ -62,17 +70,24 @@ func _on_avatar_loaded():
 
 func _update_wheel(emote_urns: Array):
 	for i in range(emote_items.size()):
-		# get_emotes() always returns 10 emotes, but just in case
-		if i >= emote_urns.size():
-			# Set default or
+		var emote_item: EmoteItemUi = emote_items[i]
+		# get_emotes() always returns 10 slots; an unequipped slot comes back empty.
+		# Render it as an empty slot instead of leaving the previous (ghost) icon (#2458).
+		if i >= emote_urns.size() or String(emote_urns[i]).is_empty():
+			emote_item.set_empty()
 			continue
 
-		var emote_item: EmoteItemUi = emote_items[i]
 		emote_item.async_load_from_urn(emote_urns[i], i)  # Forget await
 
 
 func _on_play_emote(emote_urn: String):
 	close()
+
+	# Empty slot: nothing to play — send the user to the backpack emotes tab to equip one.
+	if emote_urn.is_empty():
+		Global.open_backpack.emit(true)
+		Global.send_haptic_feedback()
+		return
 
 	# Check if emotes are disabled by the current scene
 	if Global.is_emote_disabled():
@@ -89,12 +104,18 @@ func _on_play_emote(emote_urn: String):
 
 
 func _on_select_emote(selected: bool, emote_urn: String, child: EmoteItemUi):
-	if emote_urn == last_selected_emote_urn and selected:
-		return
-
 	if !selected:
 		label_emote_name.text = "Emotes"
 		last_selected_emote_urn = ""
+		return
+
+	# Empty slot highlighted: hint the equip action instead of an emote name.
+	if emote_urn.is_empty():
+		label_emote_name.text = "Equip Emote"
+		last_selected_emote_urn = ""
+		return
+
+	if emote_urn == last_selected_emote_urn:
 		return
 
 	last_selected_emote_urn = emote_urn
