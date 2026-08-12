@@ -33,11 +33,13 @@ const WEARABLE_CATEGORIES: Array = [
 ## Categories that have no marketplace suggestions.
 const HIDDEN_CATEGORIES: Array = ["body_shape", "all", "all_extras"]
 
-## Hide items priced above the largest credits tier (tier3 = 225 credits): they can't
-## be afforded with a single In-App Purchase, so surfacing them is misleading (#2298).
+## Hide items priced above the largest credits pack currently OFFERED (`credits_tier_b3`
+## = 260 credits): they can't be afforded with a single In-App Purchase, so surfacing
+## them is misleading (#2298). Keep this in sync with the top card in
+## `credits_option.tscn` — swapping the storefront to another price point changes it.
 ## The catalog API takes `maxPrice` in whole MANA/credits — the SAME unit as the existing
 ## `minPrice=1` below, inclusive. NOT wei (the price is parsed server-side).
-const _MAX_PRICE_CREDITS := "225"
+const _MAX_PRICE_CREDITS := "260"
 
 @export var asset_type: String = "wearables"
 

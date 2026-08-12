@@ -46,14 +46,19 @@ signal transaction_history_updated
 # on the server (IAP_PRODUCT_CATALOG); this map is only used for the optimistic
 # success modal and must stay in sync with the server catalog.
 #
-# Two tiers exist in ASC: the original `credits_tier{1,2,3}` (approved, live) and
-# the `credits_tier_b{1,2,3}` set, a second price point for the same kind of pack.
-# Both are requested here — StoreKit's `Product.products(for:)` silently drops IDs
-# it can't resolve, so listing a pack that is still a draft in ASC costs nothing
-# and does not affect the ones that do resolve. Which packs are OFFERED is decided
-# by the storefront scene (`credits_option.tscn`), where each card declares its own
-# `product_id` and hides itself when that ID isn't in the loaded catalog; adding an
-# ID here does not put it in front of users.
+# Two sets exist in ASC: the original `credits_tier{1,2,3}` and `credits_tier_b{1,2,3}`,
+# a second price point for the same kind of pack. Both are requested here — StoreKit's
+# `Product.products(for:)` silently drops IDs it can't resolve, so listing a set that
+# isn't sellable costs nothing and does not affect the ones that do resolve. Keeping the
+# set we no longer offer listed still matters: StoreKit can redeliver an unfinished
+# transaction for a pack that has left the storefront, and its credit amount must map.
+#
+# Which packs are OFFERED is decided by the storefront scene (`credits_option.tscn`),
+# where each card declares its own `product_id` and hides itself when that ID isn't in
+# the loaded catalog — adding an ID here does not put it in front of users. The
+# storefront currently offers the `_b` set (40/100/260); the price points are compared
+# per build rather than side by side, since two cards for the same pack at different
+# prices would only ever sell the cheaper one.
 const PRODUCT_IDS: PackedStringArray = [
 	"credits_tier1",
 	"credits_tier2",
