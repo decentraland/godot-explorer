@@ -681,8 +681,21 @@ func _async_register_token() -> void:
 # gdlint:ignore = async-function-name
 func _async_fetch_balance() -> void:
 	# Reconciles the server-side IAP balance for the signed-in wallet into the
-	# local cache. The credits-server endpoint carries the address in the path
-	# and returns totals in wei; the IAP share is `totals.nonExpiring`.
+	# local cache. The credits-server endpoint carries the address in the path.
+	#
+	# TWO credit rails answer on this one endpoint, and a purchase lands on exactly
+	# one of them:
+	#   - MANA (legacy): `totals.nonExpiring`, in wei.
+	#   - USD (Shop):    a separate `usd` block, in WHOLE credits, sent only by an
+	#                    environment that has the USD rail switched on.
+	# Prefer `usd` whenever it is present. Its presence IS the server saying this
+	# environment credits in dollars, and reading `totals` there reports a balance
+	# that never moves no matter how many packs are bought — which is precisely how
+	# a working purchase looked before this: charged, credited, and invisible.
+	#
+	# Deliberately a choice, not a sum: the two are different units of value (whole
+	# $0.10 credits vs MANA) that merely share the word "credits" in the UI. Adding
+	# them would invent a number that means nothing on either rail.
 	var wallet := _wallet_address()
 	if wallet.is_empty():
 		return
@@ -694,10 +707,16 @@ func _async_fetch_balance() -> void:
 		return
 	if envelope == null:
 		return
-	var totals = envelope.get("totals", {})
-	if not (totals is Dictionary):
-		return
-	_balance = int(round(float(totals.get("nonExpiring", 0)) / _WEI_PER_MANA))
+	var usd = envelope.get("usd", null)
+	if usd is Dictionary:
+		# Already the SPENDABLE figure: the server subtracts whatever an in-flight
+		# authorization is holding before reporting it, so it is safe to show as-is.
+		_balance = int(usd.get("credits", 0))
+	else:
+		var totals = envelope.get("totals", {})
+		if not (totals is Dictionary):
+			return
+		_balance = int(round(float(totals.get("nonExpiring", 0)) / _WEI_PER_MANA))
 	balance_changed.emit(_balance)
 
 
