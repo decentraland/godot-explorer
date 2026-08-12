@@ -524,6 +524,20 @@ impl SceneEntityCoordinator {
 
             self.request_scene_data(entity_base);
         }
+        self.prune_reloadable_entity_bases();
+    }
+
+    /// Drop reloadable bases for scenes no longer desired (fixed or global), so the map doesn't
+    /// grow across scene-set updates within a realm. Runs only on a desired-set change.
+    fn prune_reloadable_entity_bases(&mut self) {
+        let desired: HashSet<String> = self
+            .fixed_desired_entities
+            .iter()
+            .cloned()
+            .chain(self.global_desired_entities.iter().map(|e| e.hash.clone()))
+            .collect();
+        self.reloadable_entity_bases
+            .retain(|hash, _| desired.contains(hash));
     }
 
     /// Fire a scene-data (entity definition) request and track it for the response handler.
@@ -578,6 +592,7 @@ impl SceneEntityCoordinator {
             self.requested_entity.insert(request.id, entity_base);
             self.do_request(request);
         }
+        self.prune_reloadable_entity_bases();
     }
 
     /// Updates the player's current position and requests scenes if needed.
