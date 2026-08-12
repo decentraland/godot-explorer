@@ -56,6 +56,7 @@ theme_override_constants/separation = 0
 
 [node name="MarginContainer" type="MarginContainer" parent="VBoxContainer" unique_id=806649657]
 layout_mode = 2
+mouse_filter = 2
 theme_override_constants/margin_top = 12
 theme_override_constants/margin_bottom = 25
 

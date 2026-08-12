@@ -88,6 +88,30 @@ fn debug_panel_body_does_not_block_scene_ui() {
     assert_click_through(find(&nodes, "VBoxContainer", "."), "debug_panel");
 }
 
+/// The preview HUD toolbar (issue #2679) sits in the bottom-left slot but its layout
+/// containers span the full HUD width while only the three header buttons (and the
+/// console/scene-stats bodies) are interactive. Every container must be IGNORE so the empty
+/// full-width strips don't eat taps meant for the scene UI underneath (same class as #2578).
+#[test]
+fn preview_hud_panel_containers_do_not_block_scene_ui() {
+    let nodes =
+        parse_tscn("../godot/src/ui/components/organisms/preview_hud_panel/preview_hud_panel.tscn");
+    assert_click_through(find(&nodes, "VBoxContainer", "."), "preview_hud_panel");
+    assert_click_through(
+        find(&nodes, "MarginContainer", "VBoxContainer"),
+        "preview_hud_panel",
+    );
+    assert_click_through(
+        find(
+            &nodes,
+            "HBoxContainer_Header",
+            "VBoxContainer/MarginContainer",
+        ),
+        "preview_hud_panel",
+    );
+    assert_click_through(find(&nodes, "Body", "VBoxContainer"), "preview_hud_panel");
+}
+
 /// The navbar's top-right corner Control hosts an 80x80 profile bubble but
 /// measures 120x136; both it and its full-rect toggle Button stole roughly
 /// 2.5x the drawn area from the scene UI underneath.
