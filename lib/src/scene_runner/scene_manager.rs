@@ -8,7 +8,7 @@ use crate::{
                 common::BorderRect,
                 sdk::components::{
                     common::{InputAction, InteractionType, PointerEventType, RaycastHit},
-                    PbAvatarEmoteCommand, PbUiCanvasInformation,
+                    PbAvatarEmoteCommand, PbPrimaryPointerInfo, PbUiCanvasInformation, PointerType,
                 },
             },
             SceneEntityId,
@@ -42,7 +42,8 @@ use tokio::sync::mpsc::error::TrySendError;
 
 use super::{
     components::pointer_events::{
-        find_active_proximity_entity, get_entity_pointer_event, pointer_events_system,
+        entity_player_distance, event_info_in_range, find_active_proximity_entity,
+        get_entity_pointer_event, pointer_events_system,
     },
     input::InputState,
     loading_funnel::{LoadingBeginContext, LoadingFunnel},
@@ -65,7 +66,10 @@ pub struct SceneManager {
     base_ui: Gd<DclUiControl>,
 
     ui_canvas_information: PbUiCanvasInformation,
+    // Where scenes may draw interactive UI (safe rect minus the chat column).
     interactable_area: Rect2i,
+    // Safe rect: device safe area + the HUD margins, WITHOUT the chat column.
+    safe_area: Rect2i,
 
     scenes: HashMap<SceneId, Scene>,
 
@@ -91,6 +95,8 @@ pub struct SceneManager {
 
     // Cached center position of viewport for raycasting
     viewport_center: Vector2,
+    // Previous frame screen point, used to compute PrimaryPointerInfo screen_delta
+    last_cursor_position: Vector2,
     // Cached raycast query for performance
     cached_raycast_query: Gd<PhysicsRayQueryParameters3D>,
 
@@ -121,7 +127,10 @@ pub struct SceneManager {
     memory_warning_dismissed: bool,
 
     input_state: InputState,
-    last_raycast_result: Option<GodotDclRaycastResult>,
+    // Entity currently in the "active hover" state (raycast target AND within its
+    // interaction range), with the hit captured when it became active. Drives cursor
+    // HOVER_ENTER/LEAVE so they respond to distance changes, not just target changes.
+    last_hover_entity: Option<GodotDclRaycastResult>,
     last_proximity_entity: Option<(SceneId, SceneEntityId)>,
 
     #[var]
@@ -1500,6 +1509,43 @@ impl SceneManager {
             None => (player_global_transform, 0),
         };
 
+        // Compute PrimaryPointerInfo (SDK component 1209) once per frame. Written on the
+        // scene RootEntity so scenes reading `worldRayDirection` (e.g. Genesis Plaza's
+        // fishing raycast) get a valid vector instead of `undefined` (issue #2411). Uses the
+        // same screen point selection as `get_current_mouse_entity`.
+        let primary_pointer_info = camera_node.as_ref().map(|camera_node| {
+            let screen_point = if self.raycast_use_cursor_position {
+                self.cursor_position
+            } else {
+                self.viewport_center
+            };
+            let dir = camera_node.project_ray_normal(screen_point);
+            let screen_delta = screen_point - self.last_cursor_position;
+            self.last_cursor_position = screen_point;
+
+            PbPrimaryPointerInfo {
+                pointer_type: Some(PointerType::PotMouse as i32),
+                screen_coordinates: Some(
+                    crate::dcl::components::proto_components::common::Vector2 {
+                        x: screen_point.x,
+                        y: screen_point.y,
+                    },
+                ),
+                screen_delta: Some(crate::dcl::components::proto_components::common::Vector2 {
+                    x: screen_delta.x,
+                    y: screen_delta.y,
+                }),
+                // Godot -> DCL world space flips Z (see raycast.rs / transform_and_parent.rs)
+                world_ray_direction: Some(
+                    crate::dcl::components::proto_components::common::Vector3 {
+                        x: dir.x,
+                        y: dir.y,
+                        z: -dir.z,
+                    },
+                ),
+            }
+        });
+
         let frames_count = godot::classes::Engine::singleton().get_physics_frames();
 
         let player_parcel_position = Vector2i::new(
@@ -1605,6 +1651,7 @@ impl SceneManager {
                     &camera_global_transform,
                     &player_global_transform,
                     camera_mode,
+                    &primary_pointer_info,
                     self.console.clone(),
                     &self.current_parcel_scene_id,
                     &self.begin_time,
@@ -2120,9 +2167,14 @@ impl SceneManager {
 
             let scene = self.scenes.get(&SceneId(dcl_scene_id))?;
             let scene_position = scene.godot_dcl_scene.root_node_3d.get_position();
+            // Build the hit from the CAMERA ray origin (not the avatar position) so
+            // `hit.length`/`global_origin`/`direction` are camera-relative, per
+            // raycast_hit.proto. This is what makes `max_distance` a true camera-distance
+            // gate (pointer_events.proto), independent of `max_player_distance` which is
+            // measured from the avatar. Avatar position was an incidental earlier choice.
             let raycast_data = RaycastHit::from_godot_raycast(
                 scene_position,
-                self.get_player_avatar_node()?.get_global_position(),
+                raycast_from,
                 &raycast_result,
                 Some(dcl_entity_id as u32),
             )?;
@@ -2187,28 +2239,26 @@ impl SceneManager {
         let device_pixel_ratio = window_size.y as f32 / canvas_size.y;
 
         // BorderRect carries indents (in canvas pixels) from each canvas edge to the
-        // safe/interactable rectangle. Clamp to [0, canvas] so a stale or oversized
-        // interactable_area never produces negative or out-of-canvas indents.
-        let ia_pos = self.interactable_area.position;
-        let ia_end = self.interactable_area.end();
-        let top = (ia_pos.y as f32).clamp(0.0, canvas_size.y);
-        let left = (ia_pos.x as f32).clamp(0.0, canvas_size.x);
-        let right = (canvas_size.x - ia_end.x as f32).clamp(0.0, canvas_size.x);
-        let bottom = (canvas_size.y - ia_end.y as f32).clamp(0.0, canvas_size.y);
-
-        let border_rect = BorderRect {
-            top,
-            left,
-            right,
-            bottom,
+        // given rectangle. Clamp to [0, canvas] so a stale or oversized rect never
+        // produces negative or out-of-canvas indents.
+        let to_border = |rect: Rect2i| -> BorderRect {
+            let pos = rect.position;
+            let end = rect.end();
+            BorderRect {
+                top: (pos.y as f32).clamp(0.0, canvas_size.y),
+                left: (pos.x as f32).clamp(0.0, canvas_size.x),
+                right: (canvas_size.x - end.x as f32).clamp(0.0, canvas_size.x),
+                bottom: (canvas_size.y - end.y as f32).clamp(0.0, canvas_size.y),
+            }
         };
 
         PbUiCanvasInformation {
             device_pixel_ratio,
             width: canvas_size.x as i32,
             height: canvas_size.y as i32,
-            interactable_area: Some(border_rect.clone()),
-            screen_inset_area: Some(border_rect),
+            // interactable = safe rect minus the chat column; screen_inset = safe rect only.
+            interactable_area: Some(to_border(self.interactable_area)),
+            screen_inset_area: Some(to_border(self.safe_area)),
         }
     }
 
@@ -2228,6 +2278,12 @@ impl SceneManager {
     #[func]
     fn set_interactable_area(&mut self, interactable_area: Rect2i) {
         self.interactable_area = interactable_area;
+        self.ui_canvas_information = self.create_ui_canvas_information();
+    }
+
+    #[func]
+    fn set_safe_area(&mut self, safe_area: Rect2i) {
+        self.safe_area = safe_area;
         self.ui_canvas_information = self.create_ui_canvas_information();
     }
 
@@ -2675,7 +2731,7 @@ impl INode for SceneManager {
             begin_time: Instant::now(),
             console: Callable::invalid(),
             input_state: InputState::default(),
-            last_raycast_result: None,
+            last_hover_entity: None,
             last_proximity_entity: None,
             pointer_tooltips: VarArray::new(),
             highlighted_entity: None,
@@ -2685,7 +2741,9 @@ impl INode for SceneManager {
                 canvas_size.x as i32,
                 canvas_size.y as i32,
             ),
+            safe_area: Rect2i::from_components(0, 0, canvas_size.x as i32, canvas_size.y as i32),
             viewport_center: Vector2::new(canvas_size.x * 0.5, canvas_size.y * 0.5),
+            last_cursor_position: Vector2::new(canvas_size.x * 0.5, canvas_size.y * 0.5),
             cursor_position: Vector2::new(canvas_size.x * 0.5, canvas_size.y * 0.5),
             raycast_use_cursor_position: false,
             cached_raycast_query: PhysicsRayQueryParameters3D::new_gd(),
@@ -2859,17 +2917,25 @@ impl INode for SceneManager {
         pointer_events_system(
             &mut self.scenes,
             &changed_inputs,
-            &self.last_raycast_result,
             &current_pointer_raycast_result,
             player_position,
             &camera_and_viewport,
             &mut self.last_proximity_entity,
+            &mut self.last_hover_entity,
         );
 
         let mut tooltips = VarArray::new();
         let mut new_highlighted: Option<Gd<Node3D>> = None;
         if let Some(raycast) = current_pointer_raycast_result.as_ref() {
             let mut should_highlight = false;
+            // Player distance to the hovered entity, for the feedback range gate
+            // (so the overlay respects max_player_distance, matching cursor events).
+            let feedback_player_distance = entity_player_distance(
+                &self.scenes,
+                &raycast.scene_id,
+                &raycast.entity_id,
+                player_position,
+            );
             if let Some(pointer_events) =
                 get_entity_pointer_event(&self.scenes, &raycast.scene_id, &raycast.entity_id)
             {
@@ -2880,8 +2946,14 @@ impl INode for SceneManager {
                     }
                     if let Some(info) = pointer_event.event_info.as_ref() {
                         let show_feedback = info.show_feedback.as_ref().unwrap_or(&true);
-                        let max_distance = *info.max_distance.as_ref().unwrap_or(&10.0);
-                        if !show_feedback || raycast.hit.length > max_distance {
+                        if !show_feedback
+                            || !event_info_in_range(
+                                info.max_distance,
+                                info.max_player_distance,
+                                raycast.hit.length,
+                                feedback_player_distance,
+                            )
+                        {
                             continue;
                         }
 
@@ -3019,7 +3091,6 @@ impl INode for SceneManager {
             self.base_mut().emit_signal("pointer_tooltip_changed", &[]);
         }
 
-        self.last_raycast_result = current_pointer_raycast_result;
         GLOBAL_TICK_NUMBER.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
     }
 

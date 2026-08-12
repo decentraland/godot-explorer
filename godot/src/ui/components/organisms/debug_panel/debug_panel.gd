@@ -7,7 +7,6 @@ enum SceneLogLevel {
 }
 
 const ICON_COLUMN_WIDTH = 20
-const NAVBAR_GAP: float = 12.0
 
 var icon_log: Texture2D = preload("res://src/ui/components/organisms/debug_panel/icons/Log.svg")
 var icon_error: Texture2D = preload("res://src/ui/components/organisms/debug_panel/icons/Error.svg")
@@ -18,21 +17,11 @@ var icon_action_copy: Texture2D = preload(
 	"res://src/ui/components/organisms/debug_panel/icons/ActionCopy.svg"
 )
 
-var icon_hidden: Texture2D = preload(
-	"res://src/ui/components/organisms/debug_panel/icons/GuiVisibilityHidden.svg"
-)
-var icon_visible: Texture2D = preload(
-	"res://src/ui/components/organisms/debug_panel/icons/GuiVisibilityVisible.svg"
-)
-
-@onready var top_buttons_row: HBoxContainer = %HBoxContainer_TopButtons
 @onready var text_edit_expression: TextEdit = %TextEdit_Expression
 @onready var label_expression: TextEdit = %Label_Expression
 
 @onready var tree_console: Tree = %Tree_Console
 @onready var tab_container_debug_panel: TabContainer = %TabContainer_DebugPanel
-@onready var button_show_hide: Button = %Button_ShowHide
-@onready var button_reload_scene: Button = %Button_ReloadScene
 @onready var popup_menu: PopupMenu = %PopupMenu
 @onready var button_debug_js = %Button_DebugJS
 @onready var button_open_source = %Button_OpenSource
@@ -54,49 +43,9 @@ func _ready():
 			tab_container_debug_panel.set_tab_hidden(tab_idx, true)
 
 	clear_console()
-	if tab_container_debug_panel.visible:
-		_on_button_show_hide_pressed()
-
-	# Dock the Console / Reload Scene buttons into the top-right HUD row, left
-	# of the scene-stats monitor toggle, so they read as part of the preview
-	# navbar. Deferred so the rest of the HUD is fully laid out first.
-	_dock_buttons_into_navbar.call_deferred()
-
-
-## The buttons row may have been docked into the HUD (outside this panel) —
-## free it explicitly on teardown, mirroring SceneStatsPanel's toggle cleanup.
-func _exit_tree() -> void:
-	if is_instance_valid(top_buttons_row) and not is_ancestor_of(top_buttons_row):
-		top_buttons_row.queue_free()
-
-
-## Reparent the top-buttons row next to the camera button, reserving the slot
-## the scene-stats monitor toggle occupies between them (see
-## SceneStatsPanel._create_toggle_button). When there is no camera button the
-## row simply stays inside the panel, above the console.
-func _dock_buttons_into_navbar() -> void:
-	var cam := _find_camera_button()
-	if cam == null:
-		return
-	top_buttons_row.get_parent().remove_child(top_buttons_row)
-	cam.get_parent().add_child(top_buttons_row)
-	top_buttons_row.anchor_left = cam.anchor_left
-	top_buttons_row.anchor_top = cam.anchor_top
-	top_buttons_row.anchor_right = cam.anchor_right
-	top_buttons_row.anchor_bottom = cam.anchor_bottom
-	top_buttons_row.grow_horizontal = Control.GROW_DIRECTION_BEGIN
-	top_buttons_row.offset_top = cam.offset_top
-	top_buttons_row.offset_bottom = cam.offset_bottom
-	var monitor_slot: float = SceneStatsPanel.TOGGLE_SIZE + SceneStatsPanel.TOGGLE_GAP
-	var right_edge: float = cam.offset_left - monitor_slot - NAVBAR_GAP
-	top_buttons_row.offset_right = right_edge
-	top_buttons_row.offset_left = right_edge - top_buttons_row.get_combined_minimum_size().x
-
-
-func _find_camera_button() -> Control:
-	if not is_inside_tree():
-		return null
-	return get_tree().get_root().find_child("Button_Camera", true, false) as Control
+	# The console starts collapsed; the preview HUD toolbar's Console button drives its
+	# visibility via set_console_visible (this panel no longer has its own header).
+	tab_container_debug_panel.visible = false
 
 
 func clear_console():
@@ -199,11 +148,13 @@ func _on_line_edit_filter_text_changed(new_text):
 		item.visible = not should_hide
 
 
-func set_reload_scene_visible(visible: bool) -> void:
-	button_reload_scene.visible = visible
+## Show or hide the console (the tab container). Driven by the preview HUD toolbar's
+## Console button (issue #2679); this panel no longer has its own header.
+func set_console_visible(console_visible: bool) -> void:
+	tab_container_debug_panel.visible = console_visible
 
 
-func _on_button_reload_scene_pressed():
+func reload_current_scene() -> void:
 	var current_scene = Global.scene_fetcher.get_current_scene_data()
 	if current_scene == null:
 		var scenes = Global.scene_fetcher.loaded_scenes
@@ -213,10 +164,6 @@ func _on_button_reload_scene_pressed():
 		printerr("No current scene to reload")
 		return
 	Global.scene_fetcher.reload_scene(current_scene.id)
-
-
-func _on_button_show_hide_pressed():
-	tab_container_debug_panel.visible = not tab_container_debug_panel.visible
 
 
 func _on_tree_console_item_mouse_selected(tree_position, mouse_button_index):
@@ -262,14 +209,6 @@ func _on_text_edit_text_changed():
 		return
 
 	label_expression.text = "Ok: " + str(result)
-
-
-func _on_tab_container_debug_panel_visibility_changed():
-	if is_instance_valid(tab_container_debug_panel):
-		if tab_container_debug_panel.visible:
-			button_show_hide.icon = icon_visible
-		else:
-			button_show_hide.icon = icon_hidden
 
 
 func _on_button_show_network_pressed():

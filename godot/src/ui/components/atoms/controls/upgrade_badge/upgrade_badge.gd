@@ -35,8 +35,6 @@ func _on_guest_upgrade_state_refreshed(is_upgraded: bool) -> void:
 
 
 func _should_show() -> bool:
-	if not Global.is_orientation_portrait():
-		return false
 	if Global.player_identity == null:
 		return false
 	if not Global.player_identity.is_thirdweb_guest():
