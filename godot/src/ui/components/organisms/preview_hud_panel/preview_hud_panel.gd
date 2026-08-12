@@ -66,8 +66,6 @@ func _ready() -> void:
 ## realm or a `scene-stats=true` deep link offers it; the settings Scene Logs entry exposes
 ## Console + Reload only. The console/debug panel is never torn down — it stays static.
 func set_scene_status_available(available: bool) -> void:
-	if not is_node_ready():
-		await ready
 	button_scene_status.visible = available
 	if available:
 		if not is_instance_valid(scene_stats_panel):
@@ -86,8 +84,6 @@ func set_scene_status_available(available: bool) -> void:
 ## Point the scene-stats overlay at the scene being previewed (forwarded from explorer.gd
 ## on preview / scene changes). No-op until the overlay exists.
 func set_scene(scene_id: int) -> void:
-	if not is_node_ready():
-		await ready
 	if is_instance_valid(scene_stats_panel):
 		scene_stats_panel.set_scene(scene_id)
 
