@@ -1113,6 +1113,22 @@ impl SceneManager {
 
     #[func]
     fn set_player_avatar_node(&mut self, node: Option<Gd<Node3D>>) {
+        // Wire the local player's emote reporting here rather than in GDScript, so
+        // it sits next to the handlers below and mirrors how remote avatars are
+        // connected in AvatarScene. Guarded because the setter runs again whenever
+        // the Explorer scene is rebuilt.
+        if let Some(avatar) = node.as_ref() {
+            let mut avatar = avatar.clone();
+            for (signal, method) in [
+                ("emote_triggered", "on_primary_player_trigger_emote"),
+                ("emote_finished", "on_primary_player_emote_finished"),
+            ] {
+                let callable = self.base().callable(method);
+                if !avatar.is_connected(signal, &callable) {
+                    avatar.connect(signal, &callable);
+                }
+            }
+        }
         self.player_avatar_node = node;
     }
 
