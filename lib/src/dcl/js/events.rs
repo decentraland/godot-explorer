@@ -1,6 +1,9 @@
 use crate::dcl::{
     components::{
-        proto_components::sdk::components::common::{InputAction, PointerEventType, RaycastHit},
+        proto_components::sdk::components::{
+            common::{InputAction, PointerEventType, RaycastHit},
+            pb_avatar_emote_command::EmoteState,
+        },
         SceneComponentId, SceneEntityId,
     },
     crdt::{
@@ -437,10 +440,22 @@ pub fn process_events_players_stateless(
         if new_values_count > 0 {
             if let Some(emote_command) = avatar_emote_command_component.get(&SceneEntityId::PLAYER)
             {
-                for i in 0..new_values_count {
+                // The dirty count refers to the newest entries; the set is grow-only,
+                // so they live at the tail of the VecDeque.
+                let start = emote_command.len().saturating_sub(new_values_count);
+                for i in start..emote_command.len() {
                     let Some(value) = emote_command.get(i) else {
                         continue;
                     };
+
+                    // Terminal entries (ES_FINISHED / ES_INTERRUPTED) report playback
+                    // ending; onPlayerExpression is a start-only event.
+                    if value
+                        .state
+                        .is_some_and(|state| state != EmoteState::EsStarted as i32)
+                    {
+                        continue;
+                    }
 
                     player_expression_sender
                         .inner

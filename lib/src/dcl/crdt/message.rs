@@ -325,7 +325,12 @@ pub fn append_gos_component(
         return Err("Component not found".into());
     };
 
-    for i in 0..*elements_count {
+    // `to_binary` takes a reverse index (0 = newest entry), so iterate the count
+    // backwards to emit the new entries in chronological (append) order — with
+    // several appends in one tick (e.g. an emote's INTERRUPTED terminal entry
+    // followed by the next emote's STARTED) the scene must see them in the order
+    // they happened.
+    for i in (0..*elements_count).rev() {
         // TODO: this can be improved by using the same writer, we don't know the component_data_length in advance to write the right length
         //  but if we have the position written we can overwrite then
         let mut component_buf = Vec::new();

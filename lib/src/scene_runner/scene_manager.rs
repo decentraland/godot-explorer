@@ -8,6 +8,7 @@ use crate::{
                 common::BorderRect,
                 sdk::components::{
                     common::{InputAction, InteractionType, PointerEventType, RaycastHit},
+                    pb_avatar_emote_command::EmoteState,
                     PbAvatarEmoteCommand, PbUiCanvasInformation,
                 },
             },
@@ -1001,15 +1002,77 @@ impl SceneManager {
     // ============== End Loading Session API ==============
 
     #[func]
-    fn on_primary_player_trigger_emote(&mut self, emote_id: GString, looping: bool) {
+    fn on_primary_player_trigger_emote(&mut self, emote_id: GString, looping: bool, mask: i64) {
         let emote_command = PbAvatarEmoteCommand {
             emote_urn: emote_id.to_string(),
             r#loop: looping,
             timestamp: 0,
-            mask: None,
+            mask: crate::avatars::emote_mask::component_mask_from_internal(mask),
+            state: Some(EmoteState::EsStarted as i32),
         };
 
-        // Primary player send to all the scenes
+        self.append_primary_player_emote_command(emote_command);
+    }
+
+    #[func]
+    fn on_primary_player_emote_finished(
+        &mut self,
+        emote_id: GString,
+        interrupted: bool,
+        mask: i64,
+    ) {
+        let state = if interrupted {
+            EmoteState::EsInterrupted
+        } else {
+            EmoteState::EsFinished
+        };
+        let emote_command = PbAvatarEmoteCommand {
+            emote_urn: emote_id.to_string(),
+            r#loop: false,
+            timestamp: 0,
+            mask: crate::avatars::emote_mask::component_mask_from_internal(mask),
+            state: Some(state as i32),
+        };
+
+        self.append_primary_player_emote_command(emote_command);
+    }
+
+    // Terminal state for an emote played on a scene-owned AvatarShape entity (NPC).
+    // Starts are authored by the scene itself, so only endings are appended here.
+    #[func]
+    fn on_avatar_shape_emote_finished(
+        &mut self,
+        scene_id: i32,
+        entity_id: i32,
+        emote_id: GString,
+        interrupted: bool,
+        mask: i64,
+    ) {
+        let state = if interrupted {
+            EmoteState::EsInterrupted
+        } else {
+            EmoteState::EsFinished
+        };
+        let emote_command = PbAvatarEmoteCommand {
+            emote_urn: emote_id.to_string(),
+            r#loop: false,
+            timestamp: 0,
+            mask: crate::avatars::emote_mask::component_mask_from_internal(mask),
+            state: Some(state as i32),
+        };
+
+        if let Some(scene) = self.scenes.get_mut(&SceneId(scene_id)) {
+            scene
+                .avatar_scene_updates
+                .avatar_emote_command
+                .entry(SceneEntityId::from_i32(entity_id))
+                .or_insert(Vec::new())
+                .push(emote_command);
+        }
+    }
+
+    // Primary player: send to all the scenes
+    fn append_primary_player_emote_command(&mut self, emote_command: PbAvatarEmoteCommand) {
         for (_, scene) in self.scenes.iter_mut() {
             let emote_vector = scene
                 .avatar_scene_updates

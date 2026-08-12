@@ -230,7 +230,9 @@ impl PulseRoom {
 
     /// Reliable `EmoteStart`, attaching the last sent `PlayerState` (the server rejects a null
     /// one — skip with a warning if no movement was ever sent on this connection).
-    pub fn send_emote_start(&mut self, urn: &str) {
+    /// `mask` uses the internal convention (-1 = full body, 0 = AM_UPPER_BODY) and is
+    /// encoded with the comms `AvatarEmoteMask` values (absent = full body, 1 = upper body).
+    pub fn send_emote_start(&mut self, urn: &str, mask: i64) {
         if !self.is_established() {
             return;
         }
@@ -244,7 +246,7 @@ impl PulseRoom {
                 emote_id: urn.to_owned(),
                 duration_ms: None,
                 player_state: Some(state),
-                mask: None,
+                mask: crate::avatars::emote_mask::wire_mask_from_internal(mask).map(|m| m as i32),
             }),
             PulseReliability::Reliable,
         );
@@ -570,7 +572,12 @@ impl PulseRoom {
                     PulseEvent::ProfileVersion { address, version } => {
                         self.bridge_profile_version(address, version);
                     }
-                    PulseEvent::EmoteStart { address, urn, tick } => {
+                    PulseEvent::EmoteStart {
+                        address,
+                        urn,
+                        tick,
+                        mask,
+                    } => {
                         self.send_rfc4_to_processor(
                             address,
                             rfc4::packet::Message::PlayerEmote(rfc4::PlayerEmote {
@@ -578,6 +585,7 @@ impl PulseRoom {
                                 urn,
                                 timestamp: 0.0,
                                 is_stopping: Some(false),
+                                mask: mask.map(|m| m as u32),
                                 ..Default::default()
                             }),
                         );

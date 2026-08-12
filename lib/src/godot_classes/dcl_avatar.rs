@@ -143,8 +143,16 @@ impl DclAvatar {
     #[signal]
     fn change_scene_id(new_scene_id: i32, prev_scene_id: i32);
 
+    // `mask` uses the internal convention shared with GDScript: -1 = full body
+    // (absent on the wire), 0 = AvatarMask.AM_UPPER_BODY.
     #[signal]
-    fn emote_triggered(id: GString, looping: bool);
+    fn emote_triggered(id: GString, looping: bool, mask: i64);
+
+    // Emitted once per started emote when playback ends: `interrupted` is false for
+    // the natural end of a non-looping emote, true for movement cancel, explicit
+    // stop, or being superseded by another emote.
+    #[signal]
+    fn emote_finished(id: GString, interrupted: bool, mask: i64);
 
     #[func]
     pub fn set_target_position(&mut self, new_target: Transform3D) {
