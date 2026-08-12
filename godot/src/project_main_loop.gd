@@ -32,12 +32,22 @@ const NOISE_PATTERNS := [
 # engine/driver errors shifts we want to notice, but 100% is wasted quota.
 const NOISE_KEEP_RATE := 0.05
 
+# Error-sampling rate used until the `sentry-sample-rate` feature flag loads —
+# also the effective rate when the fetch fails or the flag is absent. The bff
+# can raise it (currently serves 1.0) or lower it to 0.0 as a kill switch.
+const DEFAULT_SENTRY_SAMPLE_RATE := 0.1
+
 # Environment detection based on version string suffix
 var is_dev_version = false
 var is_staging_version = false
 var is_prod_version = false
 
 var attach_log_sampled := false
+
+# Remote error-sampling rate from the `sentry-sample-rate` feature flag — lets
+# us throttle Sentry volume without shipping a build. Enforced in _before_send
+# because the flag fetch resolves after SentrySDK.init already ran.
+var sentry_sample_rate := DEFAULT_SENTRY_SAMPLE_RATE
 
 
 func _initialize() -> void:
@@ -79,8 +89,9 @@ func _initialize() -> void:
 				options.environment = "development"
 				options.debug = true
 
-			# 1.0 all errors, 0.5 -> 50% errors.
-			# for custom sampling rate, use _before_send
+			# Keep the SDK-level rate at 1.0 — the effective rate is the remote
+			# `sentry-sample-rate` feature flag, enforced in _before_send once
+			# the flags load.
 			options.sample_rate = 1.0
 	)
 
@@ -118,9 +129,19 @@ func _initialize() -> void:
 				SentrySDK.set_tag("commit_hash", commit_hash)
 
 
+## Called by FeatureFlags when the remote flags load.
+func set_sentry_sample_rate(rate: float) -> void:
+	sentry_sample_rate = clampf(rate, 0.0, 1.0)
+
+
 func _before_send(event: SentryEvent) -> SentryEvent:
 	# Discard events for dev builds - only prod and staging report to Sentry
 	if self.is_dev_version:
+		return null
+
+	# Remote throttle (`sentry-sample-rate` feature flag): 1.0 keeps every
+	# event, 0.0 drops them all.
+	if randf() >= sentry_sample_rate:
 		return null
 
 	if randf() >= NOISE_KEEP_RATE:

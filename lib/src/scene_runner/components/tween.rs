@@ -363,9 +363,24 @@ pub fn update_tween(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 transform
             }
             Some(Mode::Rotate(data)) => {
-                let start = data.start.clone().unwrap().to_godot();
-                let end = data.end.clone().unwrap().to_godot();
-                transform.rotation = start + ((end - start) * ease_value);
+                // Normalize each endpoint, guarding against a degenerate (zero-length)
+                // quaternion: `normalized()` on a zero quaternion yields NaN, which
+                // would corrupt the transform. Fall back to identity for such input.
+                let normalize_or_identity = |q: godot::builtin::Quaternion| {
+                    if q.length_squared() > 1e-9 {
+                        q.normalized()
+                    } else {
+                        godot::builtin::Quaternion::new(0.0, 0.0, 0.0, 1.0)
+                    }
+                };
+                let start = normalize_or_identity(data.start.clone().unwrap().to_godot());
+                let end = normalize_or_identity(data.end.clone().unwrap().to_godot());
+                // Use slerp instead of component-wise lerp so the rotation follows the
+                // shortest arc at constant angular velocity. Godot's slerp internally
+                // negates `end` when dot(start, end) < 0, handling the quaternion double
+                // cover (q and -q are the same rotation) — that's what stops the segment
+                // from spinning the long way around and snapping back (issue #2320).
+                transform.rotation = start.slerp(end, ease_value);
                 transform
             }
             Some(Mode::Scale(data)) => {

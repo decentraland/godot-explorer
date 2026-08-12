@@ -97,6 +97,12 @@ func collapse():
 	navbar_closed.emit()
 
 
+## True while the navbar dropdown is expanded. Lets callers collapse it only when
+## needed, avoiding a redundant navbar_closed emit (and its panel teardown).
+func is_open() -> bool:
+	return button.button_pressed
+
+
 func _on_navbar_open_silently_on_backpack() -> void:
 	open_navbar_silently()
 	set_button_pressed(BUTTON.BACKPACK)
