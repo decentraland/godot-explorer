@@ -40,7 +40,12 @@ pub struct DclPlayerIdentity {
     try_connect_account_handle: Option<JoinHandle<()>>,
 
     /// Pending mobile auth state, stored between start_mobile_connect_account
-    /// and complete_mobile_connect_account (when deep link arrives)
+    /// and complete_mobile_connect_account (when deep link arrives).
+    ///
+    /// Process-local and best-effort: a cold start (OS kill during the browser hop) legitimately
+    /// loses it, which is why `complete_mobile_connect_account` does not require it. Read via
+    /// `has_pending_mobile_auth` only to tell "this process started the flow" — i.e. the lobby
+    /// is already showing the spinner — from "the deep link arrived out of the blue".
     pending_mobile_auth: Option<()>,
 
     #[var]
@@ -797,16 +802,17 @@ impl DclPlayerIdentity {
 
     /// Completes mobile auth flow using the identity ID received via deep link.
     /// Should be called when app receives deep link `decentraland://open?signin=${identityId}`
+    ///
+    /// Deliberately NOT gated on `pending_mobile_auth` (#2644). That flag lives only in
+    /// this process's memory, so an OS kill while the user is in the browser wipes it and
+    /// the deep link comes back to a cold start — where refusing to complete threw away a
+    /// sign-in the user had already finished. The flag also carries no data (`Option<()>`):
+    /// everything needed is behind `complete_mobile_auth(identity_id)`, and an invalid or
+    /// expired id already fails there with a real error.
     #[func]
     fn complete_mobile_connect_account(&mut self, identity_id: GString) {
-        if self.pending_mobile_auth.take().is_none() {
-            tracing::error!("No pending mobile auth to complete");
-            self.base_mut().call_deferred(
-                "_error_getting_wallet",
-                &["No pending mobile auth".to_variant()],
-            );
-            return;
-        };
+        // Consume the flag when this process did start the flow; its absence is not an error.
+        self.pending_mobile_auth.take();
 
         let Some(handle) = TokioRuntime::static_clone_handle() else {
             panic!("tokio runtime not initialized")
