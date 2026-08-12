@@ -22,8 +22,6 @@ var icon_action_copy: Texture2D = preload(
 
 @onready var tree_console: Tree = %Tree_Console
 @onready var tab_container_debug_panel: TabContainer = %TabContainer_DebugPanel
-@onready var button_show_hide: Button = %Button_ShowHide
-@onready var button_reload_scene: Button = %Button_ReloadScene
 @onready var popup_menu: PopupMenu = %PopupMenu
 @onready var button_debug_js = %Button_DebugJS
 @onready var button_open_source = %Button_OpenSource
@@ -45,10 +43,8 @@ func _ready():
 			tab_container_debug_panel.set_tab_hidden(tab_idx, true)
 
 	clear_console()
-	# The Show/Hide button is a toggle: its pressed state mirrors console visibility
-	# (drives the pressed/normal styleboxes set in the editor). Start collapsed.
-	button_show_hide.toggle_mode = true
-	button_show_hide.button_pressed = false
+	# The console starts collapsed; the preview HUD toolbar's Console button drives its
+	# visibility via set_console_visible (this panel no longer has its own header).
 	tab_container_debug_panel.visible = false
 
 
@@ -152,11 +148,13 @@ func _on_line_edit_filter_text_changed(new_text):
 		item.visible = not should_hide
 
 
-func set_reload_scene_visible(visible: bool) -> void:
-	button_reload_scene.visible = visible
+## Show or hide the console (the tab container). Driven by the preview HUD toolbar's
+## Console button (issue #2679); this panel no longer has its own header.
+func set_console_visible(console_visible: bool) -> void:
+	tab_container_debug_panel.visible = console_visible
 
 
-func _on_button_reload_scene_pressed():
+func reload_current_scene() -> void:
 	var current_scene = Global.scene_fetcher.get_current_scene_data()
 	if current_scene == null:
 		var scenes = Global.scene_fetcher.loaded_scenes
@@ -166,10 +164,6 @@ func _on_button_reload_scene_pressed():
 		printerr("No current scene to reload")
 		return
 	Global.scene_fetcher.reload_scene(current_scene.id)
-
-
-func _on_button_show_hide_pressed():
-	tab_container_debug_panel.visible = button_show_hide.button_pressed
 
 
 func _on_tree_console_item_mouse_selected(tree_position, mouse_button_index):

@@ -78,25 +78,38 @@ fn assert_click_through(node: &TscnNode, scene: &str) {
     );
 }
 
-/// The debug panel body is a right-aligned VBox whose `Control_Panel` child
-/// reserves 500x280 even while the console is collapsed (`Button_ShowHide`
-/// only toggles the inner `TabContainer`). The VBox and the top-buttons row
-/// must be IGNORE so only the actual buttons/console claim input.
+/// The debug panel Control reserves ~500x300 even while the console is collapsed. Its body
+/// VBox must be IGNORE so the reserved-but-empty area doesn't eat input meant for what's
+/// behind it — only the actual console tab and its buttons claim input. (The console/reload
+/// header moved to the preview HUD toolbar in issue #2679, so there's no top-buttons row here.)
 #[test]
 fn debug_panel_body_does_not_block_scene_ui() {
     let nodes = parse_tscn("../godot/src/ui/components/organisms/debug_panel/debug_panel.tscn");
+    assert_click_through(find(&nodes, "VBoxContainer", "."), "debug_panel");
+}
+
+/// The preview HUD toolbar (issue #2679) sits in the bottom-left slot but its layout
+/// containers span the full HUD width while only the three header buttons (and the
+/// console/scene-stats bodies) are interactive. Every container must be IGNORE so the empty
+/// full-width strips don't eat taps meant for the scene UI underneath (same class as #2578).
+#[test]
+fn preview_hud_panel_containers_do_not_block_scene_ui() {
+    let nodes =
+        parse_tscn("../godot/src/ui/components/organisms/preview_hud_panel/preview_hud_panel.tscn");
+    assert_click_through(find(&nodes, "VBoxContainer", "."), "preview_hud_panel");
     assert_click_through(
-        find(&nodes, "VBoxContainer", "MarginContainer"),
-        "debug_panel",
+        find(&nodes, "MarginContainer", "VBoxContainer"),
+        "preview_hud_panel",
     );
     assert_click_through(
         find(
             &nodes,
-            "HBoxContainer_TopButtons",
-            "MarginContainer/VBoxContainer/MarginContainer_Header",
+            "HBoxContainer_Header",
+            "VBoxContainer/MarginContainer",
         ),
-        "debug_panel",
+        "preview_hud_panel",
     );
+    assert_click_through(find(&nodes, "Body", "VBoxContainer"), "preview_hud_panel");
 }
 
 /// The navbar's top-right corner Control hosts an 80x80 profile bubble but
@@ -119,36 +132,6 @@ fn navbar_profile_hitbox_matches_visible_bubble() {
         Some("15"),
         "navbar: the profile toggle Button must not be full-rect over the \
          corner Control (issue #2578).",
-    );
-}
-
-/// Later siblings draw and hit-test on top. The debug tools row (console +
-/// scene stats) must beat scene UI for input, but render *below* the
-/// Friends/Notifications/Settings panels and the navbar — so it has to sit
-/// after `SceneUIContainer` and before `SafeAreaHud`.
-#[test]
-fn debug_tools_sit_between_scene_ui_and_right_panels() {
-    let nodes = parse_tscn("../godot/src/ui/explorer.tscn");
-    let ui_children: Vec<&str> = nodes
-        .iter()
-        .filter(|n| n.parent.as_deref() == Some("UI"))
-        .map(|n| n.name.as_str())
-        .collect();
-    let idx = |name: &str| {
-        ui_children
-            .iter()
-            .position(|n| *n == name)
-            .unwrap_or_else(|| panic!("{name} not found under UI — was it renamed?"))
-    };
-    let scene_ui = idx("SceneUIContainer");
-    let debug_tools = idx("SafeMarginContainerDebug");
-    let hud_panels = idx("SafeAreaHud");
-    assert!(
-        scene_ui < debug_tools && debug_tools < hud_panels,
-        "explorer: SafeMarginContainerDebug (debug console + scene stats) must come \
-         after SceneUIContainer but before SafeAreaHud, so the debug \
-         tools receive input over scene UI yet render below the Friends/\
-         Notifications/Settings panels (issue #2578).",
     );
 }
 

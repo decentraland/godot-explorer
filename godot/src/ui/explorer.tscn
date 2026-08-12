@@ -15,7 +15,6 @@
 [ext_resource type="PackedScene" uid="uid://cw8x2h5p3y6kn" path="res://src/ui/components/organisms/notifications/notifications_panel.tscn" id="14_notif_panel"]
 [ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="16_karsc"]
 [ext_resource type="PackedScene" uid="uid://bmjwqm6jgri7c" path="res://src/ui/pages/loading_screen/loading_screen.tscn" id="17_0blod"]
-[ext_resource type="PackedScene" uid="uid://dua04n3geh0yf" path="res://src/ui/components/organisms/debug_panel/debug_panel.tscn" id="18_ky6fv"]
 [ext_resource type="Script" uid="uid://dqpk827xdxpcy" path="res://src/ui/components/organisms/voice_chat_recorder/voice_chat_recorder.gd" id="20_064cw"]
 [ext_resource type="PackedScene" uid="uid://e18p6cp0duuu" path="res://src/ui/components/organisms/recording_notification/recording_notification.tscn" id="20_uf6rv"]
 [ext_resource type="PackedScene" uid="uid://btl8ag3s7oanm" path="res://src/ui/components/organisms/navbar/navbar.tscn" id="21_admxk"]
@@ -31,6 +30,7 @@
 [ext_resource type="PackedScene" uid="uid://bycjwh7mskrsd" path="res://src/helpers_components/chat_handler.tscn" id="32_cq187"]
 [ext_resource type="PackedScene" uid="uid://cfuskyu58uo2v" path="res://src/ui/pages/settings/settings.tscn" id="33_settings"]
 [ext_resource type="Resource" uid="uid://ntu4pnce7xxr" path="res://src/ui/layouts/hud_margins.tres" id="34_hudmg"]
+[ext_resource type="PackedScene" uid="uid://v3ktu5kra0ql" path="res://src/ui/components/organisms/preview_hud_panel/preview_hud_panel.tscn" id="35_prevhud"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_c5h7v"]
 
@@ -187,28 +187,6 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="SafeMarginContainerDebug" type="MarginContainer" parent="UI" unique_id=868273897]
-unique_name_in_owner = true
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-script = ExtResource("5_c8ksg")
-margin_profile = ExtResource("34_hudmg")
-symmetric_horizontal = true
-metadata/_edit_lock_ = true
-
-[node name="HBoxContainer_DebugTools" type="HBoxContainer" parent="UI/SafeMarginContainerDebug" unique_id=169913972]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 8
-size_flags_vertical = 0
-mouse_filter = 2
-theme_override_constants/separation = 12
-
 [node name="HBoxContainer_VersionFPS" type="HBoxContainer" parent="UI" unique_id=193054843]
 layout_mode = 1
 anchors_preset = 7
@@ -277,6 +255,10 @@ mouse_filter = 2
 unique_name_in_owner = true
 layout_mode = 1
 
+[node name="PreviewHudPanel" parent="UI/SafeAreaHud/InteractableHUD" unique_id=1534114070 instance=ExtResource("35_prevhud")]
+unique_name_in_owner = true
+layout_mode = 1
+
 [node name="HBoxContainerLeftPanels" type="HBoxContainer" parent="UI/SafeAreaHud/InteractableHUD" unique_id=2005524203]
 unique_name_in_owner = true
 layout_mode = 1
@@ -341,10 +323,6 @@ anchor_right = 0.0
 anchor_bottom = 0.0
 grow_horizontal = 1
 grow_vertical = 1
-
-[node name="DebugPanel" parent="UI/SafeAreaHud/InteractableHUD" unique_id=1737764806 instance=ExtResource("18_ky6fv")]
-unique_name_in_owner = true
-layout_mode = 1
 
 [node name="Button_ShowUI" type="Button" parent="UI/SafeAreaHud" unique_id=1612256067]
 unique_name_in_owner = true
