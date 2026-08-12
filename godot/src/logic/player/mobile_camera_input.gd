@@ -15,9 +15,10 @@ var _joystick: VirtualJoystick = null
 var _touch_positions: Dictionary = {}
 var _drag_index: int = -1
 var _two_fingers: bool = false
-# Two-finger pinch-to-zoom (issue #2636). The two indices captured when the
-# gesture starts and the finger-spread from the previous frame; the gesture ends
-# when either of those fingers lifts.
+# Two-finger pinch-to-zoom (issue #2636). The two indices currently measured and
+# the finger-spread from the previous frame. The gesture ends only when the touch
+# count drops below two — not when a specific finger lifts — so losing one finger
+# of a 3+ finger touch re-seats onto the survivors instead of stranding the state.
 var _pinch_active: bool = false
 var _pinch_index_a: int = -1
 var _pinch_index_b: int = -1
@@ -95,21 +96,29 @@ func _handle_touch(event: InputEventScreenTouch) -> void:
 		if _touch_positions.size() >= 2:
 			_two_fingers = true
 			_drag_index = -1
-			if not _pinch_active:
-				_begin_pinch()
+			_sync_pinch()
 	else:
 		_touch_positions.erase(event.index)
 		if event.index == _drag_index:
 			_drag_index = -1
 		if _touch_positions.size() < 2:
 			_two_fingers = false
-		if _pinch_active and (event.index == _pinch_index_a or event.index == _pinch_index_b):
-			_end_pinch()
+			if _pinch_active:
+				_end_pinch()
+		elif _pinch_active and (event.index == _pinch_index_a or event.index == _pinch_index_b):
+			# A tracked finger lifted but two others remain: re-seat onto them so
+			# the gesture keeps going (and can be restarted) instead of ending.
+			_sync_pinch()
 	accept_event()
 
 
 func _handle_drag(event: InputEventScreenDrag) -> void:
 	_touch_positions[event.index] = event.position
+	# Safety net: if a pinch finger's release was lost (app backgrounded / OS
+	# cancel) the count falls below two while _pinch_active lingers — end it here
+	# so a single finger can look around again instead of being swallowed.
+	if _pinch_active and _touch_positions.size() < 2:
+		_end_pinch()
 	if _pinch_active:
 		if event.index == _pinch_index_a or event.index == _pinch_index_b:
 			_update_pinch()
@@ -121,7 +130,10 @@ func _handle_drag(event: InputEventScreenDrag) -> void:
 	accept_event()
 
 
-func _begin_pinch() -> void:
+# Begin the pinch, or re-seat it onto the current two fingers after one of the
+# tracked pair lifted (3+ finger case). The gesture ends purely on the touch count
+# dropping below two, so a lost pinch finger can't strand _pinch_active.
+func _sync_pinch() -> void:
 	var indices: Array = _touch_positions.keys()
 	if indices.size() < 2:
 		return
@@ -130,9 +142,10 @@ func _begin_pinch() -> void:
 	_pinch_prev_distance = ((_touch_positions[_pinch_index_a] as Vector2).distance_to(
 		_touch_positions[_pinch_index_b]
 	))
-	_pinch_active = true
-	if _player:
-		_player.begin_pinch_zoom()
+	if not _pinch_active:
+		_pinch_active = true
+		if _player:
+			_player.begin_pinch_zoom()
 
 
 func _update_pinch() -> void:

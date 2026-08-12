@@ -70,6 +70,10 @@ var glide_state: int = GLIDE_CLOSED
 
 var camera_mode_change_blocked: bool = false
 var stored_camera_mode_before_block: Global.CameraMode
+# Zoom scalar captured alongside the mode when a scene forces the camera. Forcing
+# first person parks _zoom_level in the FP band, so without this the restore on
+# unblock would read a sub-min value and silently snap back to the default.
+var stored_zoom_level_before_block: float = CameraRigHelpers.THIRD_PERSON_CAMERA.z
 
 var current_direction: Vector3 = Vector3()
 
@@ -123,6 +127,7 @@ func to_xz(pos: Vector3) -> Vector2:
 func _on_camera_mode_area_detector_block_camera_mode(forced_mode):
 	if !camera_mode_change_blocked:  # if it's already blocked, we don't store the state again...
 		stored_camera_mode_before_block = camera.get_camera_mode() as Global.CameraMode
+		stored_zoom_level_before_block = _zoom_level
 		camera_mode_change_blocked = true
 
 	set_camera_mode(forced_mode, false)
@@ -132,6 +137,9 @@ func _on_camera_mode_area_detector_block_camera_mode(forced_mode):
 func _on_camera_mode_area_detector_unblock_camera_mode():
 	camera_mode_change_blocked = false
 	Global.set_camera_mode_blocked(false)
+	# Restore the pre-block zoom before set_camera_mode reads it, so the user's
+	# third-person distance survives a scene that forced first person.
+	_zoom_level = stored_zoom_level_before_block
 	set_camera_mode(stored_camera_mode_before_block, false)
 
 
@@ -267,6 +275,9 @@ func _ready():
 	Global.scene_runner.locomotion_settings_changed.connect(_on_locomotion_settings_changed)
 	_on_scene_changed(Global.scene_runner.get_current_parcel_scene_id())
 
+	# Reset the pinch zoom on a deliberate transition only (see _on_loading_finished).
+	Global.loading_finished.connect(_on_loading_finished)
+
 	# Cache RIDs to exclude from ground-distance raycasts (player body itself +
 	# avatar subtree colliders, including the TriggerDetector which would
 	# otherwise make the ray report ~0m at all times).
@@ -288,11 +299,15 @@ func _on_player_profile_changed(new_profile: DclUserProfile):
 func _on_scene_changed(_scene_id: int) -> void:
 	_locomotion_settings = Global.scene_runner.get_current_scene_locomotion_settings()
 	_apply_locomotion_settings()
-	# On mobile you can't walk between scenes — every scene entry goes through a
-	# loading screen (Discover jump, teleport, realm change), so a scene change is
-	# a deliberate transition and the natural point to reset the pinch zoom back to
-	# the default third-person view. Desktop crosses parcels by walking and has no
-	# pinch input, so it's left untouched.
+
+
+# on_change_scene_id fires every time the current-parcel scene id changes, which
+# on Genesis City includes simply walking across a parcel boundary — not a signal
+# for "the user deliberately went somewhere". loading_finished only fires behind a
+# loading screen (Discover jump, teleport, realm change), so it's the right place
+# to reset the pinch zoom back to the default third-person view. Mobile-only: the
+# pinch input is mobile-only, and desktop users can sit in first person by choice.
+func _on_loading_finished() -> void:
 	if Global.is_mobile():
 		_reset_zoom_to_default()
 
@@ -384,10 +399,9 @@ func _apply_zoom_level() -> void:
 
 
 # Reset the pinch zoom back to the default third-person view (issue #2636).
-# Called on every scene change on mobile (see _on_scene_changed), which is always
-# a loading-screen transition — so a pinch into first person returns to the
-# default third-person distance on the next scene. Skipped while a scene forces
-# the camera mode.
+# Called on every deliberate transition on mobile (see _on_loading_finished) — so
+# a pinch into first person returns to the default third-person distance after the
+# next loading screen. Skipped while a scene forces the camera mode.
 func _reset_zoom_to_default() -> void:
 	if camera_mode_change_blocked:
 		return
