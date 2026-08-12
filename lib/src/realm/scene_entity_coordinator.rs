@@ -66,6 +66,9 @@ struct SceneEntityCoordinator {
 
     // Floating islands mode: fixed scene loading
     fixed_desired_entities: HashSet<String>,
+    // Entity hash -> its EntityBase for every fixed/global scene, so it can be re-fetched on
+    // reload (fixed and global scenes are not re-discovered by position, unlike city-mode).
+    reloadable_entity_bases: HashMap<String, EntityBase>,
     global_desired_entities: Vec<EntityBase>,
 
     // Scene data storage (shared by both modes)
@@ -113,6 +116,7 @@ impl SceneEntityCoordinator {
 
             global_desired_entities: Default::default(),
             fixed_desired_entities: Default::default(),
+            reloadable_entity_bases: Default::default(),
             requested_entity: Default::default(),
             cache_scene_data: Default::default(),
             entities_active_url: Default::default(),
@@ -162,6 +166,7 @@ impl SceneEntityCoordinator {
         self.should_load_city_scenes = should_load_city_scenes;
         self.global_desired_entities.clear();
         self.fixed_desired_entities.clear();
+        self.reloadable_entity_bases.clear();
         self.cache_city_pointers.clear();
         self.cache_scene_data.clear();
         self.requested_city_pointers.clear();
@@ -500,6 +505,8 @@ impl SceneEntityCoordinator {
 
         self.dirty_loadable_scenes = true;
         self.fixed_desired_entities.clear();
+        // reloadable_entity_bases is only cleared on realm change (_config): clearing it here
+        // would wipe the global-scene entries set by _set_fixed_desired_entities_global_urns.
 
         for urn_str in entities.iter() {
             let Some(entity_base) = EntityBase::from_urn(urn_str, &self.content_url) else {
@@ -508,24 +515,32 @@ impl SceneEntityCoordinator {
             };
 
             self.fixed_desired_entities.insert(entity_base.hash.clone());
+            // Remember how to re-fetch this scene (used by reload_scene_data).
+            self.reloadable_entity_bases
+                .insert(entity_base.hash.clone(), entity_base.clone());
             if self.cache_scene_data.contains_key(&entity_base.hash) {
                 continue;
             }
 
-            let url = format!("{}{}", entity_base.base_url, entity_base.hash);
-            let request = RequestOption::new(
-                Self::REQUEST_TYPE_SCENE_DATA,
-                url,
-                http::Method::GET,
-                ResponseType::AsJson,
-                None,
-                None,
-                None,
-            );
-
-            self.requested_entity.insert(request.id, entity_base);
-            self.do_request(request);
+            self.request_scene_data(entity_base);
         }
+    }
+
+    /// Fire a scene-data (entity definition) request and track it for the response handler.
+    fn request_scene_data(&mut self, entity_base: EntityBase) {
+        let url = format!("{}{}", entity_base.base_url, entity_base.hash);
+        let request = RequestOption::new(
+            Self::REQUEST_TYPE_SCENE_DATA,
+            url,
+            http::Method::GET,
+            ResponseType::AsJson,
+            None,
+            None,
+            None,
+        );
+
+        self.requested_entity.insert(request.id, entity_base);
+        self.do_request(request);
     }
 
     pub fn _set_fixed_desired_entities_global_urns(&mut self, entities: Vec<String>) {
@@ -540,6 +555,9 @@ impl SceneEntityCoordinator {
             let Some(entity_base) = EntityBase::from_urn(urn_str, &self.content_url) else {
                 continue;
             };
+            // Remember how to re-fetch this scene (used by reload_scene_data).
+            self.reloadable_entity_bases
+                .insert(entity_base.hash.clone(), entity_base.clone());
             if self.cache_scene_data.contains_key(urn_str) {
                 self.global_desired_entities.push(entity_base);
                 continue;
@@ -771,7 +789,16 @@ impl SceneEntityCoordinator {
         }
 
         self.cache_scene_data.remove(&scene_id);
-        self.update_position(self.current_position.0, self.current_position.1);
+
+        // Fixed scenes (Worlds / floating islands) are not re-discovered by position, so
+        // re-issue their entity fetch directly. City-mode scenes fall back to position
+        // re-discovery, which re-requests the pointers for the current parcel.
+        if let Some(entity_base) = self.reloadable_entity_bases.get(&scene_id).cloned() {
+            self.dirty_loadable_scenes = true;
+            self.request_scene_data(entity_base);
+        } else {
+            self.update_position(self.current_position.0, self.current_position.1);
+        }
     }
 
     #[func]

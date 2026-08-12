@@ -25,7 +25,6 @@ var panel_bottom_left_height: int = 0
 var dirty_save_position: bool = false
 
 var multiplayer_debug_panel = null
-var scene_stats_panel = null
 var disable_move_to = false
 
 var virtual_joystick_orig_position: Vector2i
@@ -65,8 +64,6 @@ var _debug_panel_from_settings: bool = false
 
 @onready var ui_root: Control = %UI
 @onready var ui_safe_area: Control = %SceneUIContainer
-@onready var safe_margin_container_debug: SafeMarginContainer = %SafeMarginContainerDebug
-@onready var hbox_debug_tools: HBoxContainer = %HBoxContainer_DebugTools
 
 @onready var warning_messages = %WarningMessages
 @onready var label_crosshair = %Label_Crosshair
@@ -87,11 +84,9 @@ var _debug_panel_from_settings: bool = false
 @onready var safe_area_controls: MarginContainer = %SafeAreaControls
 @onready var safe_area_hud: MarginContainer = %SafeAreaHud
 @onready var hud_content: Control = %InteractableHUD
-## Static instance placed in the scene (top-left of the safe margin, inside
-## InteractableHUD). Never freed — just shown/hidden by _update_debug_ui; a hidden
-## Control subtree costs nothing and preview needs it available in prod builds too.
-## Untyped (the DebugPanel script has no class_name) so its own methods dispatch cleanly.
-@onready var debug_panel = %DebugPanel
+## Preview-mode HUD toolbar (console/scene-stats/reload). Static hidden InteractableHUD child
+## so its console keeps capturing logs; shown only while _preview_panel_active().
+@onready var preview_hud_panel = %PreviewHudPanel
 @onready var virtual_joystick: Control = %VirtualJoystick_Left
 @onready var profile_container: Control = %ProfileContainer
 
@@ -249,11 +244,9 @@ func _ready():
 	if Global.cli.debug_panel:
 		_debug_panel_from_settings = true
 
-	# Show debug panel and reload button if in preview mode or --debug-panel
-	_update_debug_ui()
-
-	# Preview-only scene-stats / limits overlay (never created in production)
-	_update_scene_stats_ui()
+	# Preview HUD toolbar (console/reload, plus scene-stats in preview/deep-link).
+	# Replaces the chat panel while active; never created in a normal production run.
+	_update_preview_hud()
 
 	# multiplayer_debug deep link parameter auto-enables the multiplayer debug panel.
 	# Checked via the comms flag too: a target-less deeplink is consumed while the
@@ -706,8 +699,8 @@ func _on_scene_console_message(scene_id: int, level: int, timestamp: float, text
 func _scene_console_message(scene_id: int, level: int, timestamp: float, text: String) -> void:
 	var title: String = Global.scene_runner.get_scene_title(scene_id)
 	title += str(Global.scene_runner.get_scene_base_parcel(scene_id))
-	if is_instance_valid(debug_panel):
-		debug_panel.on_console_add(title, level, timestamp, text)
+	if is_instance_valid(preview_hud_panel):
+		preview_hud_panel.on_console_add(title, level, timestamp, text)
 
 
 func _on_pointer_tooltip_changed():
@@ -1003,12 +996,13 @@ func _set_explorer_hud_elements_visible(full_hud: bool) -> void:
 		# SafeAreaHud stays visible (exception); we toggle its content group so the
 		# Show-UI button (a sibling of hud_content) survives and children keep their state.
 		hud_content.show()
-		# Invariant: showing the HUD always means the chat is visible. Hide-UI is applied
-		# on navbar-close, where _close_all_panels' normal "re-show the chat" is suppressed
-		# while hidden — so the chat is always left hidden by the time we restore, and we
-		# must re-assert it here. (Write-mode can't leak a hidden chatbar: writing hides the
-		# navbar, so Settings/hide-UI is unreachable while writing.)
-		chat_panel.show()
+		# Invariant: showing the HUD always means the bottom-left slot is restored. Hide-UI
+		# is applied on navbar-close, where _close_all_panels' normal "re-show" is suppressed
+		# while hidden — so it is always left hidden by the time we restore, and we must
+		# re-assert it here. In preview this shows the preview HUD toolbar instead of the chat.
+		# (Write-mode can't leak a hidden chatbar: writing hides the navbar, so Settings/hide-UI
+		# is unreachable while writing.)
+		_restore_bottom_left_hud()
 		# Re-assert the emote button too: an overlay (e.g. the navbar) may have left it
 		# hidden before Hide-UI was applied, and hud_content.show() won't re-show a child
 		# whose own visibility is false. Portrait owns it through the orientation flow.
@@ -1037,54 +1031,71 @@ func _set_explorer_hud_elements_visible(full_hud: bool) -> void:
 
 func _on_control_menu_request_debug_panel(enabled):
 	_debug_panel_from_settings = enabled
-	_update_debug_ui()
+	_update_preview_hud()
 
 
-## Whether the debug panel is enabled at all (dev toggle or preview realm). The
-## chat/hide-UI handlers use it to restore the panel to the right state.
-func _debug_should_show() -> bool:
-	return _debug_panel_from_settings or _is_in_preview_realm()
+## Whether the preview HUD toolbar should exist at all: the settings Scene Logs
+## toggle (or --debug-panel), a preview realm, or a `scene-stats=true` deep link.
+## The chat/hide-UI restore paths use it to pick chat vs toolbar in the bottom-left slot.
+func _preview_panel_active() -> bool:
+	return _debug_panel_from_settings or _is_in_preview_realm() or Global.deep_link_obj.scene_stats
 
 
-func _update_debug_ui():
-	var should_show = _debug_should_show()
-	debug_panel.visible = should_show
-	debug_panel.set_reload_scene_visible(should_show)
-	Global.set_scene_log_enabled(should_show)
-	_update_debug_layer_visibility()
+## Whether the scene-stats overlay (and its header button) is offered: only a preview
+## realm or a `scene-stats=true` deep link — not the settings Scene Logs entry, which
+## exposes console + reload only.
+func _scene_stats_available() -> bool:
+	return _is_in_preview_realm() or Global.deep_link_obj.scene_stats
 
 
-## Scene-stats overlay. Instantiated in preview, or in any realm when the
-## `scene-stats=true` deep link forces it on — in every build flavor,
-## production included, so creators can measure scenes on store builds. A
-## normal run (no preview, no deep link) still instantiates nothing, so the
-## zero-cost guarantee holds, mirroring _update_debug_ui.
-func _update_scene_stats_ui() -> void:
-	var should_show := _is_in_preview_realm() or Global.deep_link_obj.scene_stats
-	if should_show:
-		if not is_instance_valid(scene_stats_panel):
-			scene_stats_panel = (
-				load("res://src/ui/components/organisms/scene_stats_panel/scene_stats_panel.tscn")
-				. instantiate()
-			)
-			# Shares the top-right debug tools row with the console, so both
-			# lay out side by side instead of overlapping.
-			hbox_debug_tools.add_child(scene_stats_panel)
-		scene_stats_panel.set_scene(_preview_scene_id())
-	else:
-		if is_instance_valid(scene_stats_panel):
-			scene_stats_panel.queue_free()
-			scene_stats_panel = null
-	_update_debug_layer_visibility()
+## Keep the (static) preview HUD toolbar in sync: create/free the scene-stats overlay, point
+## it at the previewed scene, gate scene logs, and show/hide the toolbar. The console/debug
+## panel is always present (static) so it keeps capturing logs; only scene-stats is on demand.
+func _update_preview_hud() -> void:
+	if not is_instance_valid(preview_hud_panel):
+		return
+	var active: bool = _preview_panel_active()
+	preview_hud_panel.set_scene_status_available(_scene_stats_available())
+	if active:
+		preview_hud_panel.set_scene(_preview_scene_id())
+	Global.set_scene_log_enabled(active)
+	_restore_bottom_left_hud()
 
 
-## The debug layer hosts the console + scene-stats row; show it only while one
-## of them exists. It must be shown explicitly: it was once saved hidden in the
-## editor (PR #1894), which silently disabled the whole layer.
-func _update_debug_layer_visibility() -> void:
-	# Only the scene-stats monitor toggle lives in this top-right row now; the
-	# debug panel moved to the top-left of the HUD (a static InteractableHUD child).
-	safe_margin_container_debug.visible = is_instance_valid(scene_stats_panel)
+## True while a navbar side panel (or the dropdown) is open — the bottom-left slot hides then.
+func _bottom_left_slot_blocked() -> bool:
+	return (
+		navbar.is_open()
+		or friends_panel.visible
+		or notifications_panel.visible
+		or settings_panel.visible
+	)
+
+
+## Restore the bottom-left slot: while a navbar panel is open it stays hidden; otherwise the
+## active toolbar is shown (reset to header-only) and the chat hidden, else the chat owns the
+## slot. Hide-UI still wins (nothing force-shown while the HUD is hidden).
+func _restore_bottom_left_hud() -> void:
+	if _bottom_left_slot_blocked():
+		_hide_bottom_left_hud()
+		return
+	if _preview_panel_active():
+		if is_instance_valid(preview_hud_panel):
+			preview_hud_panel.reset()
+			preview_hud_panel.show()
+		chat_panel.hide()
+	elif not _session_hide_main_hud:
+		if is_instance_valid(preview_hud_panel):
+			preview_hud_panel.hide()
+		chat_panel.show()
+
+
+## Hide the whole bottom-left slot (chat and the preview toolbar, header included) while the
+## navbar is open with a side panel showing; the navbar-collapse path restores it.
+func _hide_bottom_left_hud() -> void:
+	chat_panel.hide()
+	if is_instance_valid(preview_hud_panel):
+		preview_hud_panel.hide()
 
 
 ## The single scene being previewed (one scene may span multiple parcels):
@@ -1179,8 +1190,7 @@ func _is_in_preview_realm() -> bool:
 
 
 func _update_preview_ui(_in_preview: bool) -> void:
-	_update_debug_ui()
-	_update_scene_stats_ui()
+	_update_preview_hud()
 
 
 func _on_notify_pending_loading_scenes(pending: bool) -> void:
@@ -1233,7 +1243,7 @@ func _open_friends_panel() -> void:
 	Global.open_friends_panel.emit()
 	emote_wheel.hide()
 	_hide_movement_controls()
-	chat_panel.hide()
+	_hide_bottom_left_hud()
 
 
 func _async_open_profile_by_address(user_address: String):
@@ -1506,13 +1516,14 @@ func _on_chat_write_mode_changed(is_writing: bool) -> void:
 	# (owned by _on_chat_focus_entered/_exited). Write mode additionally hides the navbar
 	# bar (focus only collapses its dropdown) and the extra HUD elements the keyboard
 	# needs gone; exiting write restores them while the chat stays focused.
+	# The preview HUD toolbar and the chat share the bottom-left slot and never
+	# coexist (the toolbar hides the chat), so chat write mode can't overlap it —
+	# no toolbar handling is needed here.
 	if is_writing:
 		navbar.hide()
-		debug_panel.hide()
 		_set_scene_ui_visible(false)
 	else:
 		navbar._on_size_changed()
-		debug_panel.visible = _debug_should_show()
 		_set_scene_ui_visible(_should_show_scene_ui())
 
 
@@ -1575,8 +1586,8 @@ func _on_notification_clicked(notification_d: Dictionary) -> void:
 			if Global.is_mobile():
 				release_mouse()
 			joypad.hide()
-			# Keep chat hidden while the navbar friends panel is open (redesigned HUD).
-			chat_panel.hide()
+			# Keep the bottom-left slot hidden while the navbar friends panel is open.
+			_hide_bottom_left_hud()
 
 
 func _notification(what: int) -> void:
@@ -1665,11 +1676,11 @@ func _close_all_panels():
 	_on_notifications_panel_closed()
 	_on_settings_panel_closed()
 	_refresh_hud_dismiss()
-	# Restore the chat and emote HUD hidden while the navbar was open, unless the main HUD
-	# is hidden. Keep the emote HUD and joystick hidden in portrait, where the orientation
-	# flow owns them.
+	# Restore the bottom-left slot (chat, or the preview HUD toolbar in preview) and the
+	# emote HUD hidden while the navbar was open, unless the main HUD is hidden. Keep the
+	# emote HUD and joystick hidden in portrait, where the orientation flow owns them.
 	if not _session_hide_main_hud:
-		chat_panel.show()
+		_restore_bottom_left_hud()
 		if not Global.is_orientation_portrait():
 			emote_wheel.show()
 			virtual_joystick.show()
