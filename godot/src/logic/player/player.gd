@@ -48,6 +48,10 @@ const JUMP_ACTION_GLIDE_TOGGLE := 2  # open or close the glider
 # triggers, or other non-ground CollisionObject3Ds.
 const GROUND_RAYCAST_MASK := 2
 
+# Meters of third-person camera distance per pixel of finger-spread change during
+# a pinch-to-zoom gesture (issue #2636). Tunable.
+const PINCH_ZOOM_SENSITIVITY := 0.012
+
 var last_position: Vector3
 var actual_velocity_xz: float
 
@@ -90,6 +94,18 @@ var _ground_distance: float = INF
 # PhysicsRayQueryParameters3D.exclude every physics frame.
 var _raycast_exclude: Array[RID] = []
 
+# --- Pinch-to-zoom (mobile, issue #2636) -------------------------------------
+# A single continuous scalar spanning the whole zoom range. Values in
+# [THIRD_PERSON_MIN_DISTANCE, THIRD_PERSON_MAX_DISTANCE] map straight to the
+# third-person spring length; anything below the min drops into first person.
+# Persists for the session; reset to the default on realm/scene change.
+var _zoom_level: float = CameraRigHelpers.THIRD_PERSON_CAMERA.z
+# _zoom_level at the start of the active pinch, to report the net direction.
+var _pinch_start_zoom_level: float = 0.0
+# The active camera-mode / zoom tween, killed before a new one (or a direct,
+# gesture-driven spring-length write) so they never fight.
+var _camera_mode_tween: Tween = null
+
 @onready var mount_camera := $Mount
 @onready var camera: DclCamera3D = $Mount/CameraArm/Camera3D
 @onready var camera_collision_clamp: CameraCollisionClamp = $Mount/CameraCollisionClamp
@@ -127,14 +143,28 @@ func _on_global_camera_mode_set(mode: Global.CameraMode) -> void:
 func set_camera_mode(mode: Global.CameraMode, play_sound: bool = true):
 	camera.set_camera_mode(mode)
 
+	if _camera_mode_tween and _camera_mode_tween.is_running():
+		_camera_mode_tween.kill()
+
 	if mode == Global.CameraMode.THIRD_PERSON:
+		# Enter third person at the persisted zoom distance. A zoom level left in
+		# the first-person band (e.g. after toggling via the settings dropdown)
+		# has no valid third-person distance, so fall back to the default; a
+		# pinch-out that re-enters third person sets the min itself before it
+		# gets here, so it survives this clamp.
+		if _zoom_level < CameraRigHelpers.THIRD_PERSON_MIN_DISTANCE:
+			_zoom_level = CameraRigHelpers.THIRD_PERSON_CAMERA.z
+		_zoom_level = clampf(
+			_zoom_level,
+			CameraRigHelpers.THIRD_PERSON_MIN_DISTANCE,
+			CameraRigHelpers.THIRD_PERSON_MAX_DISTANCE
+		)
 		var targets := CameraRigHelpers.rig_targets(true)
 		var tween_out = create_tween()
+		_camera_mode_tween = tween_out
 		tween_out.set_parallel(true)
-		(
-			tween_out
-			. tween_property(mount_camera, "spring_length", targets.spring_length, 0.25)
-			. set_ease(Tween.EASE_IN_OUT)
+		tween_out.tween_property(mount_camera, "spring_length", _zoom_level, 0.25).set_ease(
+			Tween.EASE_IN_OUT
 		)
 		# Apply X offset for over-shoulder view in third person. The offset lives
 		# on the collision clamp, which positions the camera below the arm so the
@@ -152,8 +182,12 @@ func set_camera_mode(mode: Global.CameraMode, play_sound: bool = true):
 		if play_sound:
 			UiSounds.play_sound("ui_fade_out")
 	elif mode == Global.CameraMode.FIRST_PERSON:
+		# Park the zoom scalar below the min so a pinch-out has to cross the
+		# hysteresis band before it returns to third person.
+		_zoom_level = CameraRigHelpers.FIRST_PERSON_ZOOM_LEVEL
 		var targets := CameraRigHelpers.rig_targets(false)
 		var tween_in = create_tween()
+		_camera_mode_tween = tween_in
 		tween_in.set_parallel(true)
 		(
 			tween_in
@@ -254,6 +288,7 @@ func _on_player_profile_changed(new_profile: DclUserProfile):
 func _on_scene_changed(_scene_id: int) -> void:
 	_locomotion_settings = Global.scene_runner.get_current_scene_locomotion_settings()
 	_apply_locomotion_settings()
+	_reset_zoom_to_default()
 
 
 func _on_locomotion_settings_changed(settings: DclLocomotionSettings) -> void:
@@ -288,6 +323,69 @@ func apply_look_delta(relative: Vector2) -> void:
 	rotate_y(deg_to_rad(-relative.x) * MobileCameraInput.HORIZONTAL_SENS)
 	mount_camera.rotate_x(deg_to_rad(-relative.y) * MobileCameraInput.VERTICAL_SENS)
 	clamp_camera_rotation()
+
+
+## Pinch-to-zoom (mobile). MobileCameraInput calls begin → apply(*) → end around a
+## two-finger pinch. apply() drives the third-person distance continuously and
+## crosses into/out of first person; end() reports the analytics event.
+func begin_pinch_zoom() -> void:
+	_pinch_start_zoom_level = _zoom_level
+
+
+## `pixel_delta` is the change in distance between the two fingers this frame:
+## positive (spreading) pushes the camera out, negative (closing) pulls it in.
+func apply_pinch_zoom(pixel_delta: float) -> void:
+	if camera_mode_change_blocked:
+		return
+	_zoom_level = clampf(
+		_zoom_level + pixel_delta * PINCH_ZOOM_SENSITIVITY,
+		CameraRigHelpers.FIRST_PERSON_ZOOM_LEVEL,
+		CameraRigHelpers.THIRD_PERSON_MAX_DISTANCE
+	)
+	_apply_zoom_level()
+
+
+func end_pinch_zoom() -> void:
+	if camera_mode_change_blocked:
+		return
+	if is_equal_approx(_zoom_level, _pinch_start_zoom_level):
+		return  # no net change — nothing to report
+	var zoom_direction: String = "zoom_in" if _zoom_level < _pinch_start_zoom_level else "zoom_out"
+	if Global.metrics:
+		Global.metrics.track_click_button(
+			"ZOOM", "IN_WORLD", JSON.stringify({"zoom_direction": zoom_direction})
+		)
+
+
+# Reconcile the current zoom scalar with the camera mode and spring length. Mode
+# crossings route through Global.set_camera_mode so the settings dropdown and the
+# Rust camera stay in sync; staying in third person just writes the spring length
+# live (the gesture is already continuous, so no tween).
+func _apply_zoom_level() -> void:
+	var mode: Global.CameraMode = camera.get_camera_mode() as Global.CameraMode
+	if _zoom_level < CameraRigHelpers.THIRD_PERSON_MIN_DISTANCE:
+		if mode != Global.CameraMode.FIRST_PERSON:
+			Global.set_camera_mode(Global.CameraMode.FIRST_PERSON)
+		return
+	if mode != Global.CameraMode.THIRD_PERSON:
+		# Re-enter third person exactly at the near clamp.
+		_zoom_level = CameraRigHelpers.THIRD_PERSON_MIN_DISTANCE
+		Global.set_camera_mode(Global.CameraMode.THIRD_PERSON)
+	else:
+		if _camera_mode_tween and _camera_mode_tween.is_running():
+			_camera_mode_tween.kill()
+		mount_camera.spring_length = _zoom_level
+
+
+# Reset the zoom to the default third-person distance (issue #2636). Called on
+# realm/scene change. Leaves a first-person user in first person; only the
+# third-person distance is a per-session zoom that resets.
+func _reset_zoom_to_default() -> void:
+	if camera.get_camera_mode() == Global.CameraMode.THIRD_PERSON:
+		_zoom_level = CameraRigHelpers.THIRD_PERSON_CAMERA.z
+		if _camera_mode_tween and _camera_mode_tween.is_running():
+			_camera_mode_tween.kill()
+		mount_camera.spring_length = _zoom_level
 
 
 func _physics_process(dt: float) -> void:

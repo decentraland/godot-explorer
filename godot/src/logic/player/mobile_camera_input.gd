@@ -15,6 +15,13 @@ var _joystick: VirtualJoystick = null
 var _touch_positions: Dictionary = {}
 var _drag_index: int = -1
 var _two_fingers: bool = false
+# Two-finger pinch-to-zoom (issue #2636). The two indices captured when the
+# gesture starts and the finger-spread from the previous frame; the gesture ends
+# when either of those fingers lifts.
+var _pinch_active: bool = false
+var _pinch_index_a: int = -1
+var _pinch_index_b: int = -1
+var _pinch_prev_distance: float = 0.0
 # Adopted scene-UI swipe gestures, keyed by touch index → AdoptedMode. Keyed per
 # finger so concurrent breakouts don't clobber each other's state.
 var _adopted: Dictionary = {}
@@ -88,21 +95,64 @@ func _handle_touch(event: InputEventScreenTouch) -> void:
 		if _touch_positions.size() >= 2:
 			_two_fingers = true
 			_drag_index = -1
+			if not _pinch_active:
+				_begin_pinch()
 	else:
 		_touch_positions.erase(event.index)
 		if event.index == _drag_index:
 			_drag_index = -1
 		if _touch_positions.size() < 2:
 			_two_fingers = false
+		if _pinch_active and (event.index == _pinch_index_a or event.index == _pinch_index_b):
+			_end_pinch()
 	accept_event()
 
 
 func _handle_drag(event: InputEventScreenDrag) -> void:
 	_touch_positions[event.index] = event.position
+	if _pinch_active:
+		if event.index == _pinch_index_a or event.index == _pinch_index_b:
+			_update_pinch()
+		accept_event()
+		return
 	if _two_fingers or event.index != _drag_index:
 		return
 	_player.apply_look_delta(event.relative)
 	accept_event()
+
+
+func _begin_pinch() -> void:
+	var indices: Array = _touch_positions.keys()
+	if indices.size() < 2:
+		return
+	_pinch_index_a = indices[0]
+	_pinch_index_b = indices[1]
+	_pinch_prev_distance = ((_touch_positions[_pinch_index_a] as Vector2).distance_to(
+		_touch_positions[_pinch_index_b]
+	))
+	_pinch_active = true
+	if _player:
+		_player.begin_pinch_zoom()
+
+
+func _update_pinch() -> void:
+	if not _touch_positions.has(_pinch_index_a) or not _touch_positions.has(_pinch_index_b):
+		return
+	var distance: float = (_touch_positions[_pinch_index_a] as Vector2).distance_to(
+		_touch_positions[_pinch_index_b]
+	)
+	var delta: float = distance - _pinch_prev_distance
+	_pinch_prev_distance = distance
+	if _player and not is_zero_approx(delta):
+		_player.apply_pinch_zoom(delta)
+
+
+func _end_pinch() -> void:
+	_pinch_active = false
+	_pinch_index_a = -1
+	_pinch_index_b = -1
+	if _player:
+		_player.end_pinch_zoom()
 
 
 # --- Gesture handoff from scene UI ---------------------------------------------
