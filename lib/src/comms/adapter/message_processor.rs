@@ -9,6 +9,7 @@ use std::cmp::Ordering;
 use tokio::sync::mpsc;
 
 use crate::{
+    auth::wallet::AsH160,
     avatars::avatar_scene::AvatarScene,
     comms::{
         consts::{
@@ -60,11 +61,14 @@ pub enum MessageType {
     VideoFrame(VideoFrameData),
     InitStreamerAudio(StreamerAudioInitData),
     StreamerAudioFrame(StreamerAudioFrameData),
-    PeerJoined,                     // Peer joined a room
-    PeerLeft,                       // Peer left a room
-    Disconnected(DisconnectReason), // Disconnected from the server
-    PeerMetadata(String),           // Peer metadata (e.g., version info for staging/dev builds)
-    RoomMetadataChanged(String),    // Room metadata changed (e.g., ban list update)
+    VideoTrackEnded(String), // Video track ended/unsubscribed (sid)
+    VideoTrackMuted { sid: String, muted: bool },
+    ActiveSpeakersChanged(Vec<String>), // Ordered speaker identities, loudest first
+    PeerJoined,                         // Peer joined a room
+    PeerLeft,                           // Peer left a room
+    Disconnected(DisconnectReason),     // Disconnected from the server
+    PeerMetadata(String),               // Peer metadata (e.g., version info for staging/dev builds)
+    RoomMetadataChanged(String),        // Room metadata changed (e.g., ban list update)
 }
 
 #[derive(Debug, Clone)]
@@ -85,10 +89,25 @@ pub struct VoiceFrameData {
     pub data: Vec<i16>,
 }
 
+/// LiveKit video track source, mapped from `livekit::track::TrackSource`.
+/// Screenshare ranks above cameras in stream selection (see `best_video_track`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum VideoTrackSourceKind {
+    Screenshare,
+    Camera,
+    Unknown,
+}
+
 #[derive(Debug, Clone)]
 pub struct VideoInitData {
     pub width: u32,
     pub height: u32,
+    /// LiveKit track sid — the registry key for this video stream.
+    pub sid: String,
+    /// LiveKit participant identity that published the track.
+    pub identity: String,
+    pub source: VideoTrackSourceKind,
+    pub muted: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -96,6 +115,7 @@ pub struct VideoFrameData {
     pub data: Vec<u8>,
     pub width: u32,
     pub height: u32,
+    pub sid: String,
 }
 
 // Streamer audio data (separate from voice chat - for video player audio)
@@ -153,11 +173,89 @@ struct ProfileFetchFailure {
 }
 
 struct VideoTrackInfo {
+    /// LiveKit participant identity that published this track.
+    identity: String,
+    /// Wallet address when the identity is one (used for the block-list check).
+    /// Streamer identities (`stream:…`, `presentation-bot:…`, `…-streamer`) have none.
+    identity_h160: Option<H160>,
+    source: VideoTrackSourceKind,
+    muted: bool,
     #[allow(dead_code)]
     width: u32,
     #[allow(dead_code)]
     height: u32,
+    #[allow(dead_code)]
     last_frame_time: Instant,
+    /// Monotonic arrival index — "first available" tie-breaker in selection.
+    order: u64,
+}
+
+/// Participants whose identity starts with this prefix are authoritative video
+/// sources (slides / playback bots) and always hold the stream.
+const PRESENTATION_BOT_IDENTITY_PREFIX: &str = "presentation-bot:";
+
+/// Minimum hold before the stream may follow a new active speaker, preventing
+/// flicker during rapid speaker changes (mirrors unity-explorer).
+const MIN_SPEAKER_HOLD: Duration = Duration::from_millis(1500);
+
+/// Pick the video track to route to `livekit-video://` players. Mirror of
+/// unity-explorer `LivekitPlayer.BestFollowCandidate`/`BestInitialVideoKey`:
+/// presentation bot → unmuted screen share → dominant active speaker with a
+/// video track (only once the hold elapsed; the current speaker keeps it) →
+/// keep the current track → first available.
+fn best_video_track(
+    tracks: &HashMap<String, VideoTrackInfo>,
+    current_sid: Option<&str>,
+    active_speakers: &[String],
+    hold_elapsed: bool,
+) -> Option<String> {
+    let first_by_order = |mut candidates: Vec<(&String, &VideoTrackInfo)>| -> Option<String> {
+        candidates.sort_by_key(|(_, info)| info.order);
+        candidates.first().map(|(sid, _)| (*sid).clone())
+    };
+
+    let bots: Vec<_> = tracks
+        .iter()
+        .filter(|(_, info)| info.identity.starts_with(PRESENTATION_BOT_IDENTITY_PREFIX))
+        .collect();
+    if let Some(sid) = first_by_order(bots) {
+        return Some(sid);
+    }
+
+    // A muted (paused) share falls through so video follows speakers until it resumes.
+    let shares: Vec<_> = tracks
+        .iter()
+        .filter(|(_, info)| info.source == VideoTrackSourceKind::Screenshare && !info.muted)
+        .collect();
+    if let Some(sid) = first_by_order(shares) {
+        return Some(sid);
+    }
+
+    let current_identity = current_sid
+        .and_then(|sid| tracks.get(sid))
+        .map(|info| info.identity.as_str());
+    if hold_elapsed {
+        for speaker in active_speakers {
+            if Some(speaker.as_str()) == current_identity {
+                break; // the current source is the dominant speaker — keep it
+            }
+            let speaker_tracks: Vec<_> = tracks
+                .iter()
+                .filter(|(_, info)| info.identity == *speaker)
+                .collect();
+            if let Some(sid) = first_by_order(speaker_tracks) {
+                return Some(sid);
+            }
+        }
+    }
+
+    if let Some(sid) = current_sid {
+        if tracks.contains_key(sid) {
+            return Some(sid.to_string());
+        }
+    }
+
+    first_by_order(tracks.iter().collect())
 }
 
 /// Central message processor that handles all incoming and outgoing messages
@@ -218,8 +316,15 @@ pub struct MessageProcessor {
     cached_blocked: HashSet<H160>,
     cached_muted: HashSet<H160>,
 
-    // Video track management
-    active_video_tracks: HashMap<H160, VideoTrackInfo>,
+    // Video track management — keyed by LiveKit track sid. Only the selected
+    // track's frames are forwarded to the scenes' livekit video players.
+    active_video_tracks: HashMap<String, VideoTrackInfo>,
+    video_track_order_counter: u64,
+    selected_video_sid: Option<String>,
+    // Ordered speaker identities (loudest first) from the latest
+    // ActiveSpeakersChanged event of any connected room.
+    active_speakers: Vec<String>,
+    video_switched_at: Instant,
 
     // Disconnect reason if disconnected from the server, along with the room_id
     disconnect_reason: Option<(DisconnectReason, String)>,
@@ -285,6 +390,10 @@ impl MessageProcessor {
             cached_blocked: HashSet::new(),
             cached_muted: HashSet::new(),
             active_video_tracks: HashMap::new(),
+            video_track_order_counter: 0,
+            selected_video_sid: None,
+            active_speakers: Vec::new(),
+            video_switched_at: Instant::now(),
             disconnect_reason: None,
             room_metadata_banned: false,
         }
@@ -631,45 +740,80 @@ impl MessageProcessor {
         match message.message {
             MessageType::InitVideo(video_init) => {
                 tracing::debug!(
-                    "InitVideo from {:#x}: {}x{}",
-                    message.address,
+                    "InitVideo track {} from '{}' ({:?}): {}x{}",
+                    video_init.sid,
+                    video_init.identity,
+                    video_init.source,
                     video_init.width,
                     video_init.height
                 );
 
+                let order = self.video_track_order_counter;
+                self.video_track_order_counter += 1;
                 self.active_video_tracks.insert(
-                    message.address,
+                    video_init.sid,
                     VideoTrackInfo {
+                        identity_h160: video_init.identity.as_str().as_h160(),
+                        identity: video_init.identity,
+                        source: video_init.source,
+                        muted: video_init.muted,
                         width: video_init.width,
                         height: video_init.height,
                         last_frame_time: Instant::now(),
+                        order,
                     },
                 );
+                self.reselect_video_track();
             }
             MessageType::VideoFrame(video_frame) => {
-                // Filter blocked users
-                if self.cached_blocked.contains(&message.address) {
+                self.reselect_video_track(); // cheap; applies speaker-hold expiry
+                let Some(track_info) = self.active_video_tracks.get_mut(&video_frame.sid) else {
+                    // Frames can race ahead of InitVideo or trail VideoTrackEnded.
+                    return;
+                };
+                track_info.last_frame_time = Instant::now();
+
+                // Filter blocked users (wallet-identity publishers only)
+                if let Some(address) = track_info.identity_h160 {
+                    if self.cached_blocked.contains(&address) {
+                        return;
+                    }
+                }
+
+                // Forward only the selected track to the scenes' livekit video players
+                if self.selected_video_sid.as_deref() != Some(video_frame.sid.as_str()) {
                     return;
                 }
+                use crate::godot_classes::dcl_global::DclGlobal;
+                let mut scene_runner = DclGlobal::singleton().bind().scene_runner.clone();
+                let mut scene_runner = scene_runner.bind_mut();
 
-                if let Some(track_info) = self.active_video_tracks.get_mut(&message.address) {
-                    track_info.last_frame_time = Instant::now();
-
-                    // Forward to all scenes (any video track goes to all livekit video players)
-                    use crate::godot_classes::dcl_global::DclGlobal;
-                    let mut scene_runner = DclGlobal::singleton().bind().scene_runner.clone();
-                    let mut scene_runner = scene_runner.bind_mut();
-
-                    for (_, scene) in scene_runner.get_all_scenes_mut().iter_mut() {
-                        scene.process_livekit_video_frame(
-                            video_frame.width,
-                            video_frame.height,
-                            &video_frame.data,
-                        );
-                    }
-                } else {
-                    tracing::warn!("VideoFrame from {:#x} without InitVideo", message.address);
+                for (_, scene) in scene_runner.get_all_scenes_mut().iter_mut() {
+                    scene.process_livekit_video_frame(
+                        video_frame.width,
+                        video_frame.height,
+                        &video_frame.data,
+                    );
                 }
+            }
+            MessageType::VideoTrackEnded(sid) => {
+                if self.active_video_tracks.remove(&sid).is_some() {
+                    tracing::debug!("Video track {} ended", sid);
+                }
+                if self.selected_video_sid.as_deref() == Some(sid.as_str()) {
+                    self.selected_video_sid = None;
+                }
+                self.reselect_video_track();
+            }
+            MessageType::VideoTrackMuted { sid, muted } => {
+                if let Some(track_info) = self.active_video_tracks.get_mut(&sid) {
+                    track_info.muted = muted;
+                    self.reselect_video_track();
+                }
+            }
+            MessageType::ActiveSpeakersChanged(speakers) => {
+                self.active_speakers = speakers;
+                self.reselect_video_track();
             }
             MessageType::InitStreamerAudio(audio_init) => {
                 tracing::debug!(
@@ -711,6 +855,27 @@ impl MessageProcessor {
                 }
             }
             _ => {} // Other message types are not media messages
+        }
+    }
+
+    /// Re-run stream selection and log when the routed source changes. Switching
+    /// resets the speaker-hold timer (mirrors unity-explorer's debounce).
+    fn reselect_video_track(&mut self) {
+        let hold_elapsed = self.video_switched_at.elapsed() >= MIN_SPEAKER_HOLD;
+        let next = best_video_track(
+            &self.active_video_tracks,
+            self.selected_video_sid.as_deref(),
+            &self.active_speakers,
+            hold_elapsed,
+        );
+        if next != self.selected_video_sid {
+            tracing::debug!(
+                "🎬 livekit video source: {:?} → {:?}",
+                self.selected_video_sid,
+                next
+            );
+            self.selected_video_sid = next;
+            self.video_switched_at = Instant::now();
         }
     }
 
@@ -780,7 +945,10 @@ impl MessageProcessor {
             MessageType::InitVideo(_)
             | MessageType::VideoFrame(_)
             | MessageType::InitStreamerAudio(_)
-            | MessageType::StreamerAudioFrame(_) => {
+            | MessageType::StreamerAudioFrame(_)
+            | MessageType::VideoTrackEnded(_)
+            | MessageType::VideoTrackMuted { .. }
+            | MessageType::ActiveSpeakersChanged(_) => {
                 self.process_media_message(message);
                 return;
             }
@@ -957,7 +1125,10 @@ impl MessageProcessor {
             MessageType::InitVideo(_)
             | MessageType::VideoFrame(_)
             | MessageType::InitStreamerAudio(_)
-            | MessageType::StreamerAudioFrame(_) => {
+            | MessageType::StreamerAudioFrame(_)
+            | MessageType::VideoTrackEnded(_)
+            | MessageType::VideoTrackMuted { .. }
+            | MessageType::ActiveSpeakersChanged(_) => {
                 unreachable!("Media messages are handled before peer lifecycle check");
             }
             MessageType::Rfc4(rfc4_msg) => {
@@ -1124,8 +1295,15 @@ impl MessageProcessor {
                 // Clean up chat timestamp tracking for removed peer
                 self.last_chat_timestamps.remove(&address);
 
-                // Clean up video tracks
-                self.active_video_tracks.remove(&address);
+                // Clean up video tracks published under this peer's identity
+                self.active_video_tracks
+                    .retain(|_, info| info.identity_h160 != Some(address));
+                if let Some(sid) = self.selected_video_sid.clone() {
+                    if !self.active_video_tracks.contains_key(&sid) {
+                        self.selected_video_sid = None;
+                        self.reselect_video_track();
+                    }
+                }
             }
         }
     }
@@ -2001,5 +2179,168 @@ mod tests {
             MessageProcessor::sanitize_lambdas_endpoint("https://peer.decentraland.org/lam bdas"),
             None
         );
+    }
+
+    // --- best_video_track: mirror of unity-explorer LivekitPlayer selection ---
+
+    fn track(
+        identity: &str,
+        source: VideoTrackSourceKind,
+        muted: bool,
+        order: u64,
+    ) -> VideoTrackInfo {
+        VideoTrackInfo {
+            identity: identity.to_string(),
+            identity_h160: identity.as_h160(),
+            source,
+            muted,
+            width: 640,
+            height: 360,
+            last_frame_time: Instant::now(),
+            order,
+        }
+    }
+
+    fn tracks(entries: Vec<(&str, VideoTrackInfo)>) -> HashMap<String, VideoTrackInfo> {
+        entries
+            .into_iter()
+            .map(|(sid, info)| (sid.to_string(), info))
+            .collect()
+    }
+
+    #[test]
+    fn presentation_bot_outranks_screenshare_and_camera() {
+        let map = tracks(vec![
+            (
+                "cam",
+                track("0xaaaa", VideoTrackSourceKind::Camera, false, 0),
+            ),
+            (
+                "share",
+                track("stream:p:1", VideoTrackSourceKind::Screenshare, false, 1),
+            ),
+            (
+                "bot",
+                track("presentation-bot:r", VideoTrackSourceKind::Camera, false, 2),
+            ),
+        ]);
+        assert_eq!(
+            best_video_track(&map, None, &[], true),
+            Some("bot".to_string())
+        );
+    }
+
+    #[test]
+    fn screenshare_outranks_camera_but_muted_share_is_skipped() {
+        let map = tracks(vec![
+            (
+                "cam",
+                track("0xaaaa", VideoTrackSourceKind::Camera, false, 0),
+            ),
+            (
+                "share",
+                track("stream:p:1", VideoTrackSourceKind::Screenshare, false, 1),
+            ),
+        ]);
+        assert_eq!(
+            best_video_track(&map, None, &[], true),
+            Some("share".to_string())
+        );
+
+        let map = tracks(vec![
+            (
+                "cam",
+                track("0xaaaa", VideoTrackSourceKind::Camera, false, 0),
+            ),
+            (
+                "share",
+                track("stream:p:1", VideoTrackSourceKind::Screenshare, true, 1),
+            ),
+        ]);
+        assert_eq!(
+            best_video_track(&map, None, &[], true),
+            Some("cam".to_string())
+        );
+    }
+
+    #[test]
+    fn follows_dominant_active_speaker_with_video_after_hold() {
+        let map = tracks(vec![
+            (
+                "cam_a",
+                track("0xaaaa", VideoTrackSourceKind::Camera, false, 0),
+            ),
+            (
+                "cam_b",
+                track("0xbbbb", VideoTrackSourceKind::Camera, false, 1),
+            ),
+        ]);
+        let speakers = vec!["0xbbbb".to_string()];
+        assert_eq!(
+            best_video_track(&map, Some("cam_a"), &speakers, true),
+            Some("cam_b".to_string())
+        );
+        // Hold not elapsed: stays on the current track.
+        assert_eq!(
+            best_video_track(&map, Some("cam_a"), &speakers, false),
+            Some("cam_a".to_string())
+        );
+    }
+
+    #[test]
+    fn keeps_current_when_dominant_speaker_is_already_playing() {
+        let map = tracks(vec![
+            (
+                "cam_a",
+                track("0xaaaa", VideoTrackSourceKind::Camera, false, 0),
+            ),
+            (
+                "cam_b",
+                track("0xbbbb", VideoTrackSourceKind::Camera, false, 1),
+            ),
+        ]);
+        // Current speaker is dominant; the runner-up must NOT steal the stream.
+        let speakers = vec!["0xaaaa".to_string(), "0xbbbb".to_string()];
+        assert_eq!(
+            best_video_track(&map, Some("cam_a"), &speakers, true),
+            Some("cam_a".to_string())
+        );
+    }
+
+    #[test]
+    fn speaker_without_video_falls_through_to_next_speaker() {
+        let map = tracks(vec![(
+            "cam_b",
+            track("0xbbbb", VideoTrackSourceKind::Camera, false, 0),
+        )]);
+        let speakers = vec!["0xcccc".to_string(), "0xbbbb".to_string()];
+        assert_eq!(
+            best_video_track(&map, None, &speakers, true),
+            Some("cam_b".to_string())
+        );
+    }
+
+    #[test]
+    fn falls_back_to_first_available_when_current_track_died() {
+        let map = tracks(vec![
+            (
+                "cam_b",
+                track("0xbbbb", VideoTrackSourceKind::Camera, false, 5),
+            ),
+            (
+                "cam_c",
+                track("0xcccc", VideoTrackSourceKind::Camera, false, 2),
+            ),
+        ]);
+        assert_eq!(
+            best_video_track(&map, Some("dead_sid"), &[], true),
+            Some("cam_c".to_string())
+        );
+    }
+
+    #[test]
+    fn no_tracks_yields_none() {
+        let map: HashMap<String, VideoTrackInfo> = HashMap::new();
+        assert_eq!(best_video_track(&map, None, &[], true), None);
     }
 }
