@@ -1,6 +1,5 @@
 use directories::ProjectDirs;
 use flate2::read::GzDecoder;
-use reqwest::blocking::Client;
 use std::env;
 use std::fs::{self, File};
 use std::io::{self};
@@ -9,7 +8,7 @@ use tar::Archive;
 use zip::ZipArchive;
 
 use crate::consts::*;
-use crate::download_file::download_file;
+use crate::download_file::{download_file, http_get_bytes};
 use crate::export::prepare_templates;
 use crate::helpers::BinPaths;
 use crate::platform::{
@@ -57,7 +56,10 @@ fn get_protocol_url() -> Result<String, anyhow::Error> {
     }
 
     let manifest_url = format!("https://registry.npmjs.org/@dcl/protocol/{PROTOCOL_NPM_DIST_TAG}");
-    let manifest: serde_json::Value = Client::new().get(&manifest_url).send()?.json()?;
+    let manifest: serde_json::Value = serde_json::from_slice(&http_get_bytes(
+        &manifest_url,
+        "Fetch of the @dcl/protocol npm manifest",
+    )?)?;
     manifest
         .get("dist")
         .and_then(|d| d.get("tarball"))
@@ -78,9 +80,7 @@ pub fn install_dcl_protocol() -> Result<(), anyhow::Error> {
 
     let spinner = create_spinner("Downloading protocol files...");
 
-    let client = Client::new();
-    let response = client.get(protocol_url).send()?;
-    let tarball = response.bytes()?;
+    let tarball = http_get_bytes(&protocol_url, "Download of the @dcl/protocol tarball")?;
 
     let decoder = GzDecoder::new(&tarball[..]);
     let mut archive = Archive::new(decoder);
