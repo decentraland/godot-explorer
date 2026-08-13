@@ -46,6 +46,19 @@ func _resolve_player() -> void:
 		_joystick = explorer.virtual_joystick as VirtualJoystick
 
 
+# Backgrounding the app or an OS gesture-cancel can drop the touch-release events,
+# leaving stale entries in _touch_positions that would seed a bogus finger-spread
+# on the next pinch. Clear all touch state on focus loss so the next gesture (and
+# any single-finger look) starts clean.
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_APPLICATION_FOCUS_OUT:
+		_touch_positions.clear()
+		_two_fingers = false
+		_drag_index = -1
+		if _pinch_active:
+			_end_pinch()
+
+
 func _is_chat_visible() -> bool:
 	if not is_instance_valid(_chat_panel):
 		var explorer := Global.get_explorer()
@@ -114,11 +127,6 @@ func _handle_touch(event: InputEventScreenTouch) -> void:
 
 func _handle_drag(event: InputEventScreenDrag) -> void:
 	_touch_positions[event.index] = event.position
-	# Safety net: if a pinch finger's release was lost (app backgrounded / OS
-	# cancel) the count falls below two while _pinch_active lingers — end it here
-	# so a single finger can look around again instead of being swallowed.
-	if _pinch_active and _touch_positions.size() < 2:
-		_end_pinch()
 	if _pinch_active:
 		if event.index == _pinch_index_a or event.index == _pinch_index_b:
 			_update_pinch()
