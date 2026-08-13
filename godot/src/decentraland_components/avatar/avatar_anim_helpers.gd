@@ -1,15 +1,16 @@
-class_name AvatarLODHelpers
+class_name AvatarAnimHelpers
 extends RefCounted
 
-# Per-state node toggles used by Avatar._on_lod_state_changed, plus the
-# animation freeze/throttle policy (resolve_anim_drive / apply_screen_freeze /
-# ensure_anim_active). Extracted from avatar.gd to keep that file under the
-# gdlint max-file-lines cap and so the freeze/throttle invariant is unit-testable
-# headless without a full Avatar scene (see test/avatar/test_avatar_anim_throttle.gd).
+# Per-state node toggles used by Avatar._on_lod_state_changed, the animation
+# freeze/throttle policy (resolve_anim_drive / apply_screen_freeze /
+# ensure_anim_active), and the AnimationTree locomotion condition mapping
+# (locomotion_conditions). Extracted from avatar.gd to keep that file under
+# the gdlint max-file-lines cap and so these invariants are unit-testable
+# headless without a full Avatar scene (see test/avatar/).
 
 # Mirror of Avatar.LODState. Kept local so this helper and its unit test don't
 # pull in the full Avatar class (avoids a cyclic class_name reference, since
-# Avatar already depends on AvatarLODHelpers). Must stay in sync with avatar.gd;
+# Avatar already depends on AvatarAnimHelpers). Must stay in sync with avatar.gd;
 # the test asserts the values match.
 const LOD_FULL := 0
 const LOD_MID := 1
@@ -80,6 +81,16 @@ static func resolve_anim_drive(on_screen: bool, lod_state: int) -> Dictionary:
 			return {"active": true, "throttle": true}
 		_:
 			return {"active": false, "throttle": false}
+
+
+static func locomotion_conditions(
+	walk: bool, jog: bool, run: bool, is_grounded: bool
+) -> Dictionary:
+	return {
+		"walk": walk and is_grounded,
+		"jog": jog and is_grounded,
+		"run": run and is_grounded,
+	}
 
 
 # Freeze the AnimationTree while the avatar is not being drawn, restore it when
