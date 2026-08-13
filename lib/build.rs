@@ -391,6 +391,8 @@ fn main() -> io::Result<()> {
         }
     }
 
+    clear_patched_proto_root();
+
     proto_files.push(
         format!("{PROTO_FILES_BASE_DIR}decentraland/kernel/comms/rfc5/ws_comms.proto").into(),
     );
@@ -452,7 +454,7 @@ fn main() -> io::Result<()> {
     prost_config.file_descriptor_set_path(&descriptor_path);
     // The patched root goes first so `decentraland/kernel/comms/rfc4/comms.proto`
     // resolves to the patched copy, not the npm one (same canonical path).
-    let proto_patched_root = Path::new(&env::var("OUT_DIR").unwrap()).join("proto_patched");
+    let proto_patched_root = patched_proto_root();
     prost_config.compile_protos(
         &proto_files,
         &[
@@ -493,6 +495,34 @@ fn main() -> io::Result<()> {
 /// patch a copy under OUT_DIR/proto_patched/ and compile that one (that root is
 /// listed first so the canonical path resolves to the patched copy). Each patch
 /// no-ops once the pinned build ships its fields — delete this when both do.
+/// Root of the build-time patched protos, listed first on protoc's include path
+/// (see `patched_rfc4_comms_proto`).
+fn patched_proto_root() -> std::path::PathBuf {
+    Path::new(&env::var("OUT_DIR").unwrap()).join("proto_patched")
+}
+
+/// Wipes the patched-proto root before this build repopulates it.
+///
+/// `OUT_DIR` survives across builds and — on the self-hosted CI runners, which
+/// reuse a single checkout and `target/` for every branch — is shared between
+/// branches. A patched copy written by *another* branch would otherwise linger
+/// here and, because this root comes first on the include path, shadow the npm
+/// file that this branch passes to protoc as an input:
+///
+/// ```text
+/// protoc failed: src/dcl/components/proto/decentraland/sdk/components/avatar_emote_command.proto:
+/// Input is shadowed in the --proto_path by ".../out/proto_patched/decentraland/sdk/components/avatar_emote_command.proto".
+/// ```
+///
+/// Every build re-derives the patches it needs from the npm tree, so starting
+/// from an empty root costs nothing and keeps the set exact.
+fn clear_patched_proto_root() {
+    let root = patched_proto_root();
+    if root.exists() {
+        fs::remove_dir_all(&root).expect("clear proto_patched dir");
+    }
+}
+
 fn patched_rfc4_comms_proto() -> std::path::PathBuf {
     const RFC4_REL: &str = "decentraland/kernel/comms/rfc4/comms.proto";
     let mut source = fs::read_to_string(format!("{PROTO_FILES_BASE_DIR}{RFC4_REL}"))
@@ -522,9 +552,7 @@ fn patched_rfc4_comms_proto() -> std::path::PathBuf {
         );
     }
 
-    let dest = Path::new(&env::var("OUT_DIR").unwrap())
-        .join("proto_patched")
-        .join(RFC4_REL);
+    let dest = patched_proto_root().join(RFC4_REL);
     fs::create_dir_all(dest.parent().unwrap()).expect("create proto_patched dir");
     fs::write(&dest, source).expect("write patched rfc4 comms.proto");
     dest
