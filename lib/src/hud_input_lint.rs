@@ -1,0 +1,144 @@
+//! Guards issue #2578: HUD overlays layered above the SDK scene's UI
+//! (`SceneUIContainer` in `explorer.tscn`) must be click-through wherever they
+//! don't draw interactive content.
+//!
+//! In Godot only `MOUSE_FILTER_IGNORE` (2) lets an event reach a *lower
+//! sibling*: `PASS` (1) — the default for every `*Container` — still claims the
+//! hit and only bubbles to ancestors. Because the whole HUD and the scene UI
+//! live in one Control tree ordered by sibling index, any container above
+//! `SceneUIContainer` without an explicit `mouse_filter = 2` is an invisible
+//! input wall over the scene, even when it draws nothing (the bug: the debug
+//! panel's collapsed body still blocked a 500x280 region of scene UI).
+//!
+//! These checks parse the `.tscn` files as text so they run in plain
+//! `cargo test`, with no Godot runtime.
+
+use std::collections::HashMap;
+
+struct TscnNode {
+    name: String,
+    parent: Option<String>,
+    props: HashMap<String, String>,
+}
+
+fn parse_tscn(relative_path: &str) -> Vec<TscnNode> {
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join(relative_path);
+    let content = std::fs::read_to_string(&path)
+        .unwrap_or_else(|e| panic!("failed to read {}: {e}", path.display()));
+
+    let mut nodes: Vec<TscnNode> = Vec::new();
+    for line in content.lines() {
+        let line = line.trim();
+        if line.starts_with("[node ") {
+            nodes.push(TscnNode {
+                name: extract_attribute(line, "name").expect("[node] without name"),
+                parent: extract_attribute(line, "parent"),
+                props: HashMap::new(),
+            });
+        } else if line.starts_with('[') {
+            // A [sub_resource], [connection], etc. section ends the current node block.
+            nodes.push(TscnNode {
+                name: String::new(),
+                parent: None,
+                props: HashMap::new(),
+            });
+        } else if let Some((key, value)) = line.split_once(" = ") {
+            if let Some(node) = nodes.last_mut() {
+                node.props.insert(key.to_string(), value.to_string());
+            }
+        }
+    }
+    nodes.retain(|n| !n.name.is_empty());
+    nodes
+}
+
+fn extract_attribute(header: &str, attribute: &str) -> Option<String> {
+    let marker = format!("{attribute}=\"");
+    let start = header.find(&marker)? + marker.len();
+    let end = header[start..].find('"')? + start;
+    Some(header[start..end].to_string())
+}
+
+fn find<'a>(nodes: &'a [TscnNode], name: &str, parent: &str) -> &'a TscnNode {
+    nodes
+        .iter()
+        .find(|n| n.name == name && n.parent.as_deref() == Some(parent))
+        .unwrap_or_else(|| panic!("node {name} with parent {parent} not found — was it renamed?"))
+}
+
+fn assert_click_through(node: &TscnNode, scene: &str) {
+    assert_eq!(
+        node.props.get("mouse_filter").map(String::as_str),
+        Some("2"),
+        "{scene}: node '{}' (parent '{}') must declare mouse_filter = 2 (IGNORE). \
+         Containers default to PASS, which still swallows clicks meant for the \
+         SDK scene UI below it (issue #2578).",
+        node.name,
+        node.parent.as_deref().unwrap_or(""),
+    );
+}
+
+/// The debug panel Control reserves ~500x300 even while the console is collapsed. Its body
+/// VBox must be IGNORE so the reserved-but-empty area doesn't eat input meant for what's
+/// behind it — only the actual console tab and its buttons claim input. (The console/reload
+/// header moved to the preview HUD toolbar in issue #2679, so there's no top-buttons row here.)
+#[test]
+fn debug_panel_body_does_not_block_scene_ui() {
+    let nodes = parse_tscn("../godot/src/ui/components/organisms/debug_panel/debug_panel.tscn");
+    assert_click_through(find(&nodes, "VBoxContainer", "."), "debug_panel");
+}
+
+/// The preview HUD toolbar (issue #2679) sits in the bottom-left slot but its layout
+/// containers span the full HUD width while only the three header buttons (and the
+/// console/scene-stats bodies) are interactive. Every container must be IGNORE so the empty
+/// full-width strips don't eat taps meant for the scene UI underneath (same class as #2578).
+#[test]
+fn preview_hud_panel_containers_do_not_block_scene_ui() {
+    let nodes =
+        parse_tscn("../godot/src/ui/components/organisms/preview_hud_panel/preview_hud_panel.tscn");
+    assert_click_through(find(&nodes, "VBoxContainer", "."), "preview_hud_panel");
+    assert_click_through(
+        find(&nodes, "MarginContainer", "VBoxContainer"),
+        "preview_hud_panel",
+    );
+    assert_click_through(
+        find(
+            &nodes,
+            "HBoxContainer_Header",
+            "VBoxContainer/MarginContainer",
+        ),
+        "preview_hud_panel",
+    );
+    assert_click_through(find(&nodes, "Body", "VBoxContainer"), "preview_hud_panel");
+}
+
+/// The navbar's top-right corner Control hosts an 80x80 profile bubble but
+/// measures 120x136; both it and its full-rect toggle Button stole roughly
+/// 2.5x the drawn area from the scene UI underneath.
+#[test]
+fn navbar_profile_hitbox_matches_visible_bubble() {
+    let nodes = parse_tscn("../godot/src/ui/components/organisms/navbar/navbar.tscn");
+    assert_click_through(find(&nodes, "Control", "."), "navbar");
+
+    let button = find(&nodes, "Button", "Control");
+    assert_eq!(
+        button.props.get("custom_minimum_size").map(String::as_str),
+        Some("Vector2(80, 80)"),
+        "navbar: the profile toggle Button hitbox must match the visible 80x80 \
+         Panel_Profile bubble, not the whole 120x136 corner Control (issue #2578).",
+    );
+    assert_ne!(
+        button.props.get("anchors_preset").map(String::as_str),
+        Some("15"),
+        "navbar: the profile toggle Button must not be full-rect over the \
+         corner Control (issue #2578).",
+    );
+}
+
+/// The bottom-center version/FPS strip is an HBoxContainer of Labels; the
+/// Labels ignore input but the HBox itself defaulted to PASS.
+#[test]
+fn version_fps_strip_does_not_block_scene_ui() {
+    let nodes = parse_tscn("../godot/src/ui/explorer.tscn");
+    assert_click_through(find(&nodes, "HBoxContainer_VersionFPS", "UI"), "explorer");
+}

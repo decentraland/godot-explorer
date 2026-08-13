@@ -39,7 +39,7 @@ use crate::{
 use super::{
     components::{
         asset_load::AssetLoadState, gltf_node_modifiers::GltfNodeModifierState,
-        trigger_area::TriggerAreaState, tween::Tween,
+        particle_system::ParticleSystemItem, trigger_area::TriggerAreaState, tween::Tween,
     },
     godot_dcl_scene::GodotDclScene,
 };
@@ -136,6 +136,7 @@ pub enum SceneUpdateState {
     TriggerArea,
     VirtualCameras,
     AudioSource,
+    ParticleSystem,
     ProcessRpcs,
     ComputeCrdtState,
     SendToThread,
@@ -179,7 +180,8 @@ impl SceneUpdateState {
             Self::SkyboxTime => Self::TriggerArea,
             Self::TriggerArea => Self::VirtualCameras,
             Self::VirtualCameras => Self::AudioSource,
-            Self::AudioSource => Self::AvatarAttach,
+            Self::AudioSource => Self::ParticleSystem,
+            Self::ParticleSystem => Self::AvatarAttach,
             Self::AvatarAttach => Self::SceneUi,
             Self::SceneUi => Self::ProcessRpcs,
             Self::ProcessRpcs => Self::ComputeCrdtState,
@@ -250,6 +252,9 @@ pub struct Scene {
 
     pub materials: HashMap<SceneEntityId, MaterialItem>,
     pub dirty_materials: bool,
+
+    pub particle_systems: HashMap<SceneEntityId, ParticleSystemItem>,
+    pub dirty_particle_systems: bool,
 
     pub scene_type: SceneType,
     pub audio_sources: HashMap<SceneEntityId, Gd<DclAudioSource>>,
@@ -401,6 +406,8 @@ impl Scene {
             start_time: Instant::now(),
             materials: HashMap::new(),
             dirty_materials: false,
+            particle_systems: HashMap::new(),
+            dirty_particle_systems: false,
             audio_sources: HashMap::new(),
             audio_streams: HashMap::new(),
             video_players: HashMap::new(),
@@ -481,6 +488,8 @@ impl Scene {
             start_time: Instant::now(),
             materials: HashMap::new(),
             dirty_materials: false,
+            particle_systems: HashMap::new(),
+            dirty_particle_systems: false,
             scene_type: SceneType::Parcel,
             audio_sources: HashMap::new(),
             audio_streams: HashMap::new(),
@@ -614,6 +623,12 @@ impl Scene {
         // Free audio sources
         for (_, mut audio_source) in self.audio_sources.drain() {
             audio_source.queue_free();
+        }
+
+        // Free particle systems
+        for (_, item) in self.particle_systems.drain() {
+            let mut node = item.node;
+            node.queue_free();
         }
 
         // Free audio streams

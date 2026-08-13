@@ -2,7 +2,7 @@ extends Control
 
 signal request_debug_panel(enabled: bool)
 signal request_pause_scenes(enabled: bool)
-signal request_livekit_debug(enabled: bool)
+signal request_multiplayer_debug(enabled: bool)
 signal panel_closed
 
 enum SceneLogLevel {
@@ -41,6 +41,8 @@ const CACHE_SIZE_MB: Array[int] = [1024, 2048, 4096]
 
 @onready
 var check_button_submit_message_closes_chat: CheckButton = %CheckButton_SubmitMessageClosesChat
+@onready var dropdown_list_camera_mode: DropdownList = %DropdownList_CameraMode
+@onready var camera_mode_warning: Control = %CameraModeWarning
 @onready var check_button_hide_explorer_ui: CheckButton = %CheckButton_HideExplorerUI
 @onready var check_button_hide_view_profile: CheckButton = %CheckButton_HideViewProfile
 @onready var check_button_hide_world_interactions: CheckButton = %CheckButton_HideWorldInteractions
@@ -51,6 +53,7 @@ var check_button_submit_message_closes_chat: CheckButton = %CheckButton_SubmitMe
 @onready var hide_player_names_row: HBoxContainer = %HidePlayerNames
 @onready var hide_scene_ui_row: HBoxContainer = %HideSceneUI
 @onready var container_interface: MarginContainer = %Container_Interface
+@onready var container_camera: Control = %Container_Camera
 
 #Audio items
 @onready var general_volume: SettingsSlider = %GeneralVolume
@@ -75,6 +78,8 @@ var check_button_submit_message_closes_chat: CheckButton = %CheckButton_SubmitMe
 @onready var line_edit_custom_preview_url: LineEditCustom = %LineEditCustom_WebSocket
 @onready var process_tick_quota: SettingsSlider = %ProcessTickQuota
 @onready var check_button_raycast_debugger: CheckButton = %CheckButton_RaycastDebugger
+@onready var check_button_show_interactable_area: CheckButton = %CheckButton_ShowInteractableArea
+@onready var check_button_multiplayer_debug: CheckButton = %CheckButton_MultiplayerDebug
 @onready var dropdown_list_realm: DropdownList = %DropdownList_Realm
 
 @onready var button_graphics: Button = %Button_Graphics
@@ -108,6 +113,16 @@ func _ready():
 	check_button_submit_message_closes_chat.button_pressed = (
 		Global.get_config().submit_message_closes_chat
 	)
+	dropdown_list_camera_mode.add_item("First person", Global.CameraMode.FIRST_PERSON)
+	dropdown_list_camera_mode.add_item("Third person", Global.CameraMode.THIRD_PERSON)
+	dropdown_list_camera_mode.item_selected.connect(_on_dropdown_list_camera_mode_item_selected)
+	_refresh_camera_mode_row()
+	# Keep the camera dropdown in sync with runtime changes (scene locks the mode / forces
+	# cinematic, or the other Settings instance toggles it) — both instances listen globally.
+	if not Global.camera_mode_set.is_connected(_on_camera_mode_set):
+		Global.camera_mode_set.connect(_on_camera_mode_set)
+	if not Global.camera_mode_block_changed.is_connected(_on_camera_mode_block_changed):
+		Global.camera_mode_block_changed.connect(_on_camera_mode_block_changed)
 
 	if not Global.session_hide_ui_toggle_sync.is_connected(_on_session_hide_ui_toggle_sync):
 		Global.session_hide_ui_toggle_sync.connect(_on_session_hide_ui_toggle_sync)
@@ -342,6 +357,8 @@ func refresh_values():
 	process_tick_quota.value = Global.get_config().process_tick_quota_ms
 	if is_instance_valid(Global.raycast_debugger):
 		check_button_raycast_debugger.set_pressed_no_signal(true)
+	if is_instance_valid(Global.comms):
+		check_button_multiplayer_debug.set_pressed_no_signal(Global.comms.get_multiplayer_debug())
 
 
 func _on_button_connect_preview_pressed():
@@ -440,6 +457,49 @@ func _on_check_button_submit_message_closes_chat_toggled(toggled_on: bool) -> vo
 		Global.get_config().save_to_settings_file()
 
 
+# Camera mode (first/third person) is runtime-only state, not persisted config: the
+# dropdown just drives Global.set_camera_mode(), reusing the logic the removed HUD
+# camera button used. The camera only exists inside the explorer; before entering a
+# place there is nothing to switch and Global.set_camera_mode() would be lost (player.gd
+# forces THIRD_PERSON on spawn), leaving the dropdown out of sync. So hide the whole row
+# until we're in the explorer, matching the Hide-UI section. When a scene locks the mode
+# or forces cinematic the dropdown is disabled and the "set by the creator" warning shows.
+func _refresh_camera_mode_row() -> void:
+	var in_explorer: bool = is_instance_valid(Global.get_explorer())
+	container_camera.visible = in_explorer
+	if not in_explorer:
+		return
+	var locked: bool = (
+		Global.camera_mode_blocked or Global.current_camera_mode == Global.CameraMode.CINEMATIC
+	)
+	dropdown_list_camera_mode.disabled = locked
+	camera_mode_warning.visible = locked
+	var first_person: bool = Global.current_camera_mode == Global.CameraMode.FIRST_PERSON
+	dropdown_list_camera_mode.select(
+		Global.CameraMode.FIRST_PERSON if first_person else Global.CameraMode.THIRD_PERSON
+	)
+
+
+func _on_dropdown_list_camera_mode_item_selected(index: int) -> void:
+	if not is_instance_valid(Global.get_explorer()) or Global.camera_mode_blocked:
+		_refresh_camera_mode_row()
+		return
+	var mode: Global.CameraMode = (
+		Global.CameraMode.FIRST_PERSON
+		if index == Global.CameraMode.FIRST_PERSON
+		else Global.CameraMode.THIRD_PERSON
+	)
+	Global.set_camera_mode(mode)
+
+
+func _on_camera_mode_set(_camera_mode: Global.CameraMode) -> void:
+	_refresh_camera_mode_row()
+
+
+func _on_camera_mode_block_changed(_blocked: bool) -> void:
+	_refresh_camera_mode_row()
+
+
 func _on_check_button_hide_explorer_ui_toggled(toggled_on: bool) -> void:
 	Global.metrics.track_click_button("HIDE_UI", "SETTINGS", "")
 	var explorer = Global.get_explorer()
@@ -529,10 +589,17 @@ func _exit_tree() -> void:
 		Global.session_hide_ui_toggle_sync.disconnect(_on_session_hide_ui_toggle_sync)
 	if Global.session_hide_ui_options_sync.is_connected(_on_session_hide_ui_options_sync):
 		Global.session_hide_ui_options_sync.disconnect(_on_session_hide_ui_options_sync)
+	if Global.camera_mode_set.is_connected(_on_camera_mode_set):
+		Global.camera_mode_set.disconnect(_on_camera_mode_set)
+	if Global.camera_mode_block_changed.is_connected(_on_camera_mode_block_changed):
+		Global.camera_mode_block_changed.disconnect(_on_camera_mode_block_changed)
 
 
 func _on_button_developer_pressed() -> void:
 	show_control(container_advanced)
+	var explorer = Global.get_explorer()
+	if is_instance_valid(explorer):
+		check_button_show_interactable_area.set_pressed_no_signal(explorer.show_interactable_area)
 	_async_scroll_to_tab_button(button_developer)
 
 
@@ -544,6 +611,7 @@ func _on_button_graphics_pressed() -> void:
 func _on_button_gameplay_pressed() -> void:
 	show_control(container_gameplay)
 	_refresh_hide_explorer_ui_row()
+	_refresh_camera_mode_row()
 	_async_scroll_to_tab_button(button_gameplay)
 
 
@@ -559,6 +627,11 @@ func _on_button_account_pressed() -> void:
 
 func _on_button_delete_account_pressed() -> void:
 	Global.delete_account.emit()
+
+
+func _on_button_show_reward_modal_pressed() -> void:
+	# Dev Tools shortcut: preview the wearable claim modal without doing a full email upgrade.
+	Global.modal_manager.async_show_reward_modal(RewardCampaigns.CAMPAIGNS["MobilePet"])
 
 
 func _on_button_test_notification_pressed() -> void:
@@ -865,12 +938,18 @@ func _on_check_button_scene_processing_paused_toggled(toggled_on: bool) -> void:
 	emit_signal("request_pause_scenes", toggled_on)
 
 
-func _on_check_button_livekit_debug_toggled(toggled_on: bool) -> void:
-	request_livekit_debug.emit(toggled_on)
+func _on_check_button_multiplayer_debug_toggled(toggled_on: bool) -> void:
+	request_multiplayer_debug.emit(toggled_on)
 
 
 func _on_check_button_raycast_debugger_toggled(toggled_on: bool) -> void:
 	Global.set_raycast_debugger_enable(toggled_on)
+
+
+func _on_check_button_show_interactable_area_toggled(toggled_on: bool) -> void:
+	var explorer = Global.get_explorer()
+	if is_instance_valid(explorer):
+		explorer.set_interactable_area_visible(toggled_on)
 
 
 func _on_check_button_scene_logs_enabled_toggled(toggled_on: bool) -> void:

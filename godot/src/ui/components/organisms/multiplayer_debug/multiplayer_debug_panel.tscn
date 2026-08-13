@@ -1,0 +1,69 @@
+[gd_scene format=3 uid="uid://hif3grdgg3c4"]
+
+[ext_resource type="Script" uid="uid://be8ew7ydyt5fw" path="res://src/ui/components/organisms/multiplayer_debug/multiplayer_debug_panel.gd" id="1_script"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bg"]
+content_margin_left = 12.0
+content_margin_top = 8.0
+content_margin_right = 12.0
+content_margin_bottom = 8.0
+bg_color = Color(0, 0, 0, 0.7)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[node name="MultiplayerDebugPanel" type="PanelContainer" unique_id=273984283]
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -220.0
+offset_right = 220.0
+offset_bottom = 120.0
+grow_horizontal = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_bg")
+script = ExtResource("1_script")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=273984911]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="Header" type="HBoxContainer" parent="VBoxContainer" unique_id=273984912]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="TitleLabel" type="RichTextLabel" parent="VBoxContainer/Header" unique_id=273984913]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_colors/default_color = Color(0.85, 0.85, 0.85, 1)
+theme_override_font_sizes/normal_font_size = 12
+bbcode_enabled = true
+text = "[b]Multiplayer Debug[/b]"
+fit_content = true
+
+[node name="CollapseButton" type="Button" parent="VBoxContainer/Header" unique_id=273984914]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(72, 44)
+layout_mode = 2
+size_flags_horizontal = 8
+focus_mode = 0
+theme_override_font_sizes/font_size = 24
+text = "▾"
+flat = true
+
+[node name="RichTextLabel" type="RichTextLabel" parent="VBoxContainer" unique_id=252622328]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/default_color = Color(0.85, 0.85, 0.85, 1)
+theme_override_font_sizes/normal_font_size = 12
+bbcode_enabled = true
+text = ""
+fit_content = true
+
+[node name="Timer" type="Timer" parent="." unique_id=233221733]
+unique_name_in_owner = true
+autostart = true

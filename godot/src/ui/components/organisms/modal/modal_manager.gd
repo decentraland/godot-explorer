@@ -16,6 +16,8 @@ const MODAL_SCENE_PATH = "res://src/ui/components/organisms/modal/modal.tscn"
 const TRAVEL_MODAL_SCENE_PATH = "res://src/ui/components/organisms/modal/travel_modal.tscn"
 const INPUT_MODAL_SCENE_PATH = "res://src/ui/components/organisms/input_modal/input_modal.tscn"
 const CODE_MODAL_SCENE_PATH = "res://src/ui/components/organisms/code_modal/code_modal.tscn"
+const REWARD_MODAL_SCENE_PATH = "res://src/ui/components/organisms/reward_modal/reward_modal.tscn"
+const UPGRADE_MODAL_SCENE_PATH = "res://src/ui/components/organisms/upgrade_modal/upgrade_modal.tscn"
 
 # Modal text constants
 const EXTERNAL_LINK_TITLE = "Open external link?"
@@ -46,6 +48,10 @@ const LOW_MEMORY_SECONDARY = "BACK TO DISCOVER"
 const BAN_PRE_CHECK_TITLE = "You can't enter"
 const BAN_PRE_CHECK_BODY = "You're banned from this scene.\nPlease contact support for more information."
 const BAN_PRE_CHECK_PRIMARY = "BACK TO DISCOVER"
+
+const PRIVATE_WORLD_TITLE = "%s is private"
+const PRIVATE_WORLD_BODY = "Only invited people can enter."
+const PRIVATE_WORLD_PRIMARY = "OK"
 
 const BAN_KICKED_TITLE = "You've been banned"
 const BAN_KICKED_BODY = "Please contact support for more information."
@@ -104,10 +110,14 @@ var current_modal: Modal = null
 var current_travel_modal: TravelModal = null
 var current_input_modal: InputModal = null
 var current_code_modal: CodeModal = null
+var current_reward_modal: RewardModal = null
+var current_upgrade_modal: UpgradeModal = null
 var modal_scene: PackedScene = null
 var travel_modal_scene: PackedScene = null
 var input_modal_scene: PackedScene = null
 var code_modal_scene: PackedScene = null
+var reward_modal_scene: PackedScene = null
+var upgrade_modal_scene: PackedScene = null
 var ban_pre_check_active: bool = false
 ## Suppresses a stale ban_kicked_modal triggered by comms after a pre-check was already handled.
 var _suppress_ban_kicked: bool = false
@@ -115,6 +125,10 @@ var _canvas_layer: CanvasLayer = null
 var _travel_canvas_layer: CanvasLayer = null
 var _input_canvas_layer: CanvasLayer = null
 var _code_canvas_layer: CanvasLayer = null
+var _reward_canvas_layer: CanvasLayer = null
+var _upgrade_canvas_layer: CanvasLayer = null
+
+static var _add_email_regex: RegEx = RegEx.create_from_string("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")
 
 
 func _ready() -> void:
@@ -130,6 +144,14 @@ func _ready() -> void:
 	code_modal_scene = load(CODE_MODAL_SCENE_PATH)
 	if not code_modal_scene:
 		push_error("ModalManager: Could not load code modal scene at: " + CODE_MODAL_SCENE_PATH)
+	reward_modal_scene = load(REWARD_MODAL_SCENE_PATH)
+	if not reward_modal_scene:
+		push_error("ModalManager: Could not load reward modal scene at: " + REWARD_MODAL_SCENE_PATH)
+	upgrade_modal_scene = load(UPGRADE_MODAL_SCENE_PATH)
+	if not upgrade_modal_scene:
+		push_error(
+			"ModalManager: Could not load upgrade modal scene at: " + UPGRADE_MODAL_SCENE_PATH
+		)
 	Global.on_menu_close.connect(_on_menu_close_ban_recheck)
 	Global.loading_finished.connect(_on_loading_finished_clear_suppress)
 
@@ -379,6 +401,29 @@ func async_show_ban_pre_check_modal() -> void:
 
 	_disconnect_button_signals()
 	current_modal.button_primary.pressed.connect(_on_ban_pre_check_go_to_discover)
+
+
+## Shows the private-world modal (#1725): the target world restricts access to an
+## allow-list the user is not on, so the realm change was refused before loading.
+## @param world_name: The world being refused, e.g. "myworld.dcl.eth"
+func async_show_private_world_modal(world_name: String) -> void:
+	_force_hide_loading_screen()
+
+	if not current_modal:
+		if not await _async_create_modal():
+			return
+
+	current_modal.blocker = true
+	current_modal.set_title(PRIVATE_WORLD_TITLE % world_name.trim_suffix(".dcl.eth"))
+	current_modal.set_body(PRIVATE_WORLD_BODY)
+	current_modal.set_primary_button_text(PRIVATE_WORLD_PRIMARY)
+	current_modal.show_icon(Modal.MODAL_BLOCK_ICON)
+	current_modal.hide_url()
+	current_modal.button_secondary.hide()
+	current_modal.show()
+
+	_disconnect_button_signals()
+	current_modal.button_primary.pressed.connect(close_current_modal)
 
 
 ## Shows a ban kicked modal (when kicked from a scene in real-time)
@@ -1014,10 +1059,19 @@ func _force_hide_loading_screen() -> void:
 
 
 func _on_menu_close_ban_recheck() -> void:
-	if not ban_pre_check_active:
-		return
-	# Re-show the ban modal and re-open discover
-	async_show_ban_pre_check_modal.call_deferred()
+	# Re-show the ban pre-check modal if it is still active and re-open discover
+	if ban_pre_check_active:
+		async_show_ban_pre_check_modal.call_deferred()
+
+
+## Re-shows the ban pre-check modal if it is still keeping the user out of the explorer.
+## Returns true when it was re-shown, so callers can stop their own navigation. The private
+## world modal is intentionally not covered here — its OK button just dismisses.
+func reshow_ban_modal() -> bool:
+	if ban_pre_check_active:
+		async_show_ban_pre_check_modal()
+		return true
+	return false
 
 
 ## Clear suppress flag after loading finishes.
@@ -1176,3 +1230,312 @@ func _remove_code_modal() -> void:
 	if _code_canvas_layer and is_instance_valid(_code_canvas_layer):
 		_code_canvas_layer.queue_free()
 		_code_canvas_layer = null
+
+
+## Shows the reward modal for a claimable campaign.
+## @param campaign: { campaign_id, campaign_key, urn } — see RewardCampaigns.CAMPAIGNS.
+## Fetches the item thumbnail (when a urn is provided) before revealing the modal.
+## Returns true only if the modal was actually created and revealed, so callers can
+## gate analytics / cadence bookkeeping on a real appearance.
+func async_show_reward_modal(campaign: Dictionary) -> bool:
+	var modal = await _async_create_reward_modal()
+	if not modal:
+		return false
+	await modal.async_setup(campaign)
+	return true
+
+
+func close_reward_modal() -> void:
+	if current_reward_modal:
+		current_reward_modal.hide()
+		_remove_reward_modal()
+
+
+func _async_create_reward_modal() -> RewardModal:
+	if current_reward_modal:
+		close_reward_modal()
+
+	if not reward_modal_scene:
+		push_error("ModalManager: Reward modal scene is not loaded")
+		return null
+
+	var modal = reward_modal_scene.instantiate() as RewardModal
+	if not modal:
+		push_error("ModalManager: Could not instantiate reward modal")
+		return null
+
+	if _reward_canvas_layer and is_instance_valid(_reward_canvas_layer):
+		_reward_canvas_layer.get_parent().remove_child(_reward_canvas_layer)
+		_reward_canvas_layer.queue_free()
+
+	_reward_canvas_layer = CanvasLayer.new()
+	_reward_canvas_layer.layer = 100
+
+	var root = get_tree().root
+	if not root:
+		push_error("ModalManager: Could not get scene tree root")
+		return null
+
+	root.add_child(_reward_canvas_layer)
+	_reward_canvas_layer.add_child(modal)
+	current_reward_modal = modal
+
+	current_reward_modal.tree_exited.connect(_on_reward_modal_tree_exited)
+
+	await get_tree().process_frame
+	await get_tree().process_frame
+
+	return modal
+
+
+func _on_reward_modal_tree_exited() -> void:
+	if current_reward_modal:
+		current_reward_modal = null
+
+
+func _remove_reward_modal() -> void:
+	if current_reward_modal:
+		if current_reward_modal.tree_exited.is_connected(_on_reward_modal_tree_exited):
+			current_reward_modal.tree_exited.disconnect(_on_reward_modal_tree_exited)
+		current_reward_modal.queue_free()
+		current_reward_modal = null
+	if _reward_canvas_layer and is_instance_valid(_reward_canvas_layer):
+		_reward_canvas_layer.queue_free()
+		_reward_canvas_layer = null
+
+
+## Shows the aspirational guest-upgrade nudge modal (issue #2372). Returns true only if the
+## modal was actually created and opened, so the coordinator advances its cadence only then.
+func async_show_upgrade_modal() -> bool:
+	var modal = await _async_create_upgrade_modal()
+	if not modal:
+		return false
+	modal.open()
+	return true
+
+
+func close_upgrade_modal() -> void:
+	if current_upgrade_modal:
+		current_upgrade_modal.hide()
+		_remove_upgrade_modal()
+
+
+func _async_create_upgrade_modal() -> UpgradeModal:
+	if current_upgrade_modal:
+		close_upgrade_modal()
+
+	if not upgrade_modal_scene:
+		push_error("ModalManager: Upgrade modal scene is not loaded")
+		return null
+
+	var modal = upgrade_modal_scene.instantiate() as UpgradeModal
+	if not modal:
+		push_error("ModalManager: Could not instantiate upgrade modal")
+		return null
+
+	if _upgrade_canvas_layer and is_instance_valid(_upgrade_canvas_layer):
+		_upgrade_canvas_layer.get_parent().remove_child(_upgrade_canvas_layer)
+		_upgrade_canvas_layer.queue_free()
+
+	_upgrade_canvas_layer = CanvasLayer.new()
+	_upgrade_canvas_layer.layer = 100
+
+	var root = get_tree().root
+	if not root:
+		push_error("ModalManager: Could not get scene tree root")
+		return null
+
+	root.add_child(_upgrade_canvas_layer)
+	_upgrade_canvas_layer.add_child(modal)
+	current_upgrade_modal = modal
+
+	current_upgrade_modal.tree_exited.connect(_on_upgrade_modal_tree_exited)
+
+	await get_tree().process_frame
+	await get_tree().process_frame
+
+	return modal
+
+
+func _on_upgrade_modal_tree_exited() -> void:
+	if current_upgrade_modal:
+		current_upgrade_modal = null
+
+
+func _remove_upgrade_modal() -> void:
+	if current_upgrade_modal:
+		if current_upgrade_modal.tree_exited.is_connected(_on_upgrade_modal_tree_exited):
+			current_upgrade_modal.tree_exited.disconnect(_on_upgrade_modal_tree_exited)
+		current_upgrade_modal.queue_free()
+		current_upgrade_modal = null
+	if _upgrade_canvas_layer and is_instance_valid(_upgrade_canvas_layer):
+		_upgrade_canvas_layer.queue_free()
+		_upgrade_canvas_layer = null
+
+
+# --- Add Email (guest upgrade) OTP flow (issue #2377) --------------------------------------
+# Shared entry point that links an email to the active thirdweb guest wallet. Used by both the
+# Discover/Settings upgrade notice (guest_upgrade_card) and the aspirational upgrade modal, so
+# the "Add Email" experience is identical everywhere. On success it grants the reward wearable
+# (issue #2372) and notifies the app that the guest upgraded.
+
+
+static func is_valid_email(text: String) -> bool:
+	return _add_email_regex.search(text) != null
+
+
+## Opens the "Add Email" input modal and drives the full OTP link flow (email → code → verify →
+## reward). Callers fire their own entry CLICK_BUTTON metric before calling this.
+func async_start_add_email_flow() -> void:
+	var modal = await async_show_input_modal(
+		"Add Email", "My email", "name@email.com", "ADD", "CANCEL", is_valid_email
+	)
+	if modal:
+		# Add Email modal shown — the OTP upgrade funnel has started (issue #2377).
+		Global.metrics.track_screen_viewed("UPGRADE_OTP_START", "")
+		modal.dismissable = false
+		modal.dcl_text_edit.wrap_text = false
+		modal.dcl_text_edit.validate_on_blur = true
+		modal.set_submit_handler(_async_add_email_submit)
+		modal.confirmed.connect(_async_add_email_code_sent)
+		modal.failed.connect(_async_add_email_send_failed)
+
+
+# gdlint:ignore = async-function-name
+func _async_add_email_submit(email: String) -> Dictionary:
+	Global.metrics.track_screen_viewed("UPGRADE_OTP_SUBMIT", "")
+	return await _async_add_email_send_code(email)
+
+
+# Shared "send verification code" routine used by both the initial submit and resend.
+# gdlint:ignore = async-function-name
+func _async_add_email_send_code(email: String) -> Dictionary:
+	var promise: Promise = Global.player_identity.async_link_email_start(email)
+	var result = await PromiseUtils.async_awaiter(promise)
+	if result is PromiseError:
+		var raw: String = result.get_error()
+		push_warning("Upgrade to OTP - send code failed: " + raw)
+		if _add_email_is_invalid_error(raw):
+			Global.metrics.track_screen_viewed("UPGRADE_OTP_EMAIL_INVALID", "")
+			return {"status": InputModal.SUBMIT_INVALID, "message": "Invalid email"}
+		return {"status": InputModal.SUBMIT_ERROR, "message": raw}
+	print("[UpgradeOTP] send_code OK for: ", email)
+	return {"status": InputModal.SUBMIT_OK}
+
+
+# Code was sent successfully (Add Email modal already closed): open the code step.
+# gdlint:ignore = async-function-name
+func _async_add_email_code_sent(email: String) -> void:
+	var code_modal = await async_show_code_modal(email)
+	if code_modal:
+		Global.metrics.track_screen_viewed("UPGRADE_OTP_ENTERCODE", "")
+		code_modal.set_verifier(_async_add_email_verify.bind(email))
+		code_modal.set_resend_handler(_async_add_email_resend.bind(email))
+		code_modal.confirmed.connect(_async_add_email_confirmed.bind(email))
+		code_modal.cancelled.connect(close_code_modal)
+
+
+# gdlint:ignore = async-function-name
+func _async_add_email_resend(email: String) -> Dictionary:
+	Global.metrics.track_click_button("RESEND_OTP", "UPGRADE_OTP_ENTERCODE", "")
+	return await _async_add_email_send_code(email)
+
+
+# gdlint:ignore = async-function-name
+func _async_add_email_send_failed(_message: String) -> void:
+	await _async_add_email_error_modal(
+		"Something went wrong", "Something went wrong. Please try again later."
+	)
+
+
+func _add_email_is_invalid_error(raw: String) -> bool:
+	var lower := raw.to_lower()
+	if lower.contains("invalid email"):
+		return true
+	return (
+		lower.contains("email") and (lower.contains("zoderror") or lower.contains("invalid_string"))
+	)
+
+
+# Returns "" on success, or a friendly error string the code modal shows inline.
+# gdlint:ignore = async-function-name
+func _async_add_email_verify(code: String, email: String) -> String:
+	Global.metrics.track_screen_viewed("UPGRADE_OTP_VERIFY", "")
+	var anchor: String = Global.get_device_anchor_id()
+	var promise: Promise = Global.player_identity.async_link_email_verify(email, code, anchor)
+	var result = await PromiseUtils.async_awaiter(promise)
+	print("[UpgradeOTP] verify result: ", result)
+	if result is PromiseError:
+		var raw: String = result.get_error()
+		push_warning("[UpgradeOTP] verify FAILED: " + raw)
+		if _add_email_is_already_linked_error(raw):
+			Global.metrics.track_screen_viewed("UPGRADE_OTP_EMAIL_BUSY", "")
+			close_code_modal.call_deferred()
+			_async_add_email_in_use.call_deferred()
+			return " "
+		Global.metrics.track_screen_viewed("UPGRADE_OTP_CODE_INVALID", "")
+		return _add_email_friendly_error(raw)
+	print("[UpgradeOTP] verify OK")
+	return ""
+
+
+func _add_email_is_already_linked_error(raw: String) -> bool:
+	var lower := raw.to_lower()
+	return lower.contains("already") or lower.contains("linked") or lower.contains("conflict")
+
+
+func _async_add_email_in_use() -> void:
+	await _async_add_email_error_modal(
+		"Email already in use",
+		"This email is already linked to another account.\nTry a different email.",
+	)
+
+
+# gdlint:ignore = async-function-name
+func _async_add_email_confirmed(_code: String, _email: String) -> void:
+	# Verification already succeeded inside the code modal before `confirmed` fired.
+	Global.metrics.track_screen_viewed("ACCOUNT_UPGRADE_SUCCESS", JSON.stringify({"method": "otp"}))
+	# Mirror the lobby's AUTH_SUCCESS so the funnel sees the upgraded user as registered.
+	Global.metrics.track_screen_viewed(
+		"AUTH_SUCCESS", JSON.stringify({"login_type": "fully_registered"})
+	)
+	close_code_modal()
+	# Grant the exclusive upgrade wearable via the reward modal (issue #2372). The reward
+	# modal IS the success screen ("Your email has been verified. Enjoy the free wearable!").
+	# Report the SCREEN_VIEW only once the modal has actually been revealed.
+	var reward_shown := await async_show_reward_modal(RewardCampaigns.CAMPAIGNS["MobilePet"])
+	if reward_shown:
+		Global.metrics.track_screen_viewed(
+			"ACCOUNT_UPGRADE_REWARD_SHOW", JSON.stringify({"method": "otp"})
+		)
+	# The guest is now upgraded (Rust set the cached flag on link) — notify the app so the
+	# Discover/Settings notice, badge, credits button, etc. update without a network call.
+	Global.guest_upgrade_state_refreshed.emit(true)
+
+
+# Maps raw thirdweb errors to friendly copy. The raw error is still logged.
+func _add_email_friendly_error(raw: String) -> String:
+	var lower := raw.to_lower()
+	if lower.contains("429") or lower.contains("rate"):
+		return "Too many attempts. Please wait a moment and try again."
+	if lower.contains("already") or lower.contains("linked") or lower.contains("conflict"):
+		return "This email is already linked to another account."
+	if lower.contains("invalid") or lower.contains("code") or lower.contains("400"):
+		return "The code is invalid or expired. Please resend code."
+	return "Something went wrong. Please try again."
+
+
+func _async_add_email_error_modal(title: String, body: String) -> void:
+	var modal = await _async_create_modal()
+	if not modal:
+		return
+	modal.set_title(title)
+	modal.set_body(body)
+	modal.set_primary_button_text("OK")
+	modal.show_icon(Modal.MODAL_ALERT_ICON)
+	modal.button_secondary.hide()
+	modal.hide_url()
+	modal.blocker = true
+	modal.show()
+	await modal.button_primary.pressed
+	close_current_modal()

@@ -8,7 +8,7 @@ use crate::{
                 common::BorderRect,
                 sdk::components::{
                     common::{InputAction, InteractionType, PointerEventType, RaycastHit},
-                    PbAvatarEmoteCommand, PbUiCanvasInformation,
+                    PbAvatarEmoteCommand, PbPrimaryPointerInfo, PbUiCanvasInformation, PointerType,
                 },
             },
             SceneEntityId,
@@ -42,7 +42,8 @@ use tokio::sync::mpsc::error::TrySendError;
 
 use super::{
     components::pointer_events::{
-        find_active_proximity_entity, get_entity_pointer_event, pointer_events_system,
+        entity_player_distance, event_info_in_range, find_active_proximity_entity,
+        get_entity_pointer_event, pointer_events_system,
     },
     input::InputState,
     loading_funnel::{LoadingBeginContext, LoadingFunnel},
@@ -65,15 +66,23 @@ pub struct SceneManager {
     base_ui: Gd<DclUiControl>,
 
     ui_canvas_information: PbUiCanvasInformation,
+    // Where scenes may draw interactive UI (safe rect minus the chat column).
     interactable_area: Rect2i,
+    // Safe rect: device safe area + the HUD margins, WITHOUT the chat column.
+    safe_area: Rect2i,
 
     scenes: HashMap<SceneId, Scene>,
 
-    #[var]
-    player_avatar_node: Gd<Node3D>,
+    // The Player (avatar/body) dies with the Explorer on teardown while the
+    // SceneManager autoload survives. Nullable + validity-filtered getters so a
+    // property read in that window returns null instead of panicking on the
+    // freed instance (GODOT-EXPLORER-1DY family) — a plain #[var] getter would
+    // panic before any GDScript is_instance_valid() check could run.
+    #[var(get = get_player_avatar_node, set = set_player_avatar_node)]
+    player_avatar_node: Option<Gd<Node3D>>,
 
-    #[var]
-    player_body_node: Gd<Node3D>,
+    #[var(get = get_player_body_node, set = set_player_body_node)]
+    player_body_node: Option<Gd<Node3D>>,
 
     #[var]
     console: Callable,
@@ -86,6 +95,8 @@ pub struct SceneManager {
 
     // Cached center position of viewport for raycasting
     viewport_center: Vector2,
+    // Previous frame screen point, used to compute PrimaryPointerInfo screen_delta
+    last_cursor_position: Vector2,
     // Cached raycast query for performance
     cached_raycast_query: Gd<PhysicsRayQueryParameters3D>,
 
@@ -116,7 +127,10 @@ pub struct SceneManager {
     memory_warning_dismissed: bool,
 
     input_state: InputState,
-    last_raycast_result: Option<GodotDclRaycastResult>,
+    // Entity currently in the "active hover" state (raycast target AND within its
+    // interaction range), with the hit captured when it became active. Drives cursor
+    // HOVER_ENTER/LEAVE so they respond to distance changes, not just target changes.
+    last_hover_entity: Option<GodotDclRaycastResult>,
     last_proximity_entity: Option<(SceneId, SceneEntityId)>,
 
     #[var]
@@ -214,6 +228,17 @@ impl SceneManager {
         dcl_scene_entity_definition: Gd<DclSceneEntityDefinition>,
         inspect: bool,
     ) -> i32 {
+        // base_ui dies with the Explorer (sign-out / return-to-discover / realm
+        // change), and a cache-hot scene load can resolve before the next
+        // explorer._ready() -> recreate_base_ui(). Cloning the freed control
+        // below would panic and abort the spawn (GODOT-EXPLORER-1DY / -1E0), so
+        // recreate eagerly; a later recreate_base_ui() is harmless because scene
+        // UI roots only attach to the *current* base_ui.
+        if !self.base_ui.is_instance_valid() {
+            tracing::warn!("start_scene: base_ui was freed (explorer teardown) — recreating");
+            self.recreate_base_ui();
+        }
+
         let scene_entity_definition = dcl_scene_entity_definition.bind().get_ref();
 
         let content_mapping = scene_entity_definition.content_mapping.clone();
@@ -361,6 +386,21 @@ impl SceneManager {
         base_ui.connect("resized", &callable_on_ui_resize);
         self.base_ui = base_ui;
         self.ui_canvas_information = self.create_ui_canvas_information();
+    }
+
+    /// Detach base_ui (and the scene UI roots parented under it) from the dying
+    /// Explorer tree. Called by sign_out()/return_to_discover() right before
+    /// change_scene_to_file so freeing the Explorer can't free UI nodes Rust
+    /// still references (GODOT-EXPLORER-1DY); the orphan is freed by the next
+    /// recreate_base_ui().
+    #[func]
+    fn detach_base_ui(&mut self) {
+        if !self.base_ui.is_instance_valid() {
+            return;
+        }
+        if let Some(mut parent) = self.base_ui.get_parent() {
+            parent.remove_child(&self.base_ui.clone().upcast::<Node>());
+        }
     }
 
     #[func]
@@ -993,9 +1033,39 @@ impl SceneManager {
         player_body_node: Gd<Node3D>,
         console: Callable,
     ) {
-        self.player_avatar_node = player_avatar_node.clone();
-        self.player_body_node = player_body_node.clone();
+        self.player_avatar_node = Some(player_avatar_node);
+        self.player_body_node = Some(player_body_node);
         self.console = console;
+    }
+
+    /// Validity-filtered: the Player is freed with the Explorer on teardown, so
+    /// a read in that window returns null rather than a dangling handle.
+    #[func]
+    pub fn get_player_avatar_node(&self) -> Option<Gd<Node3D>> {
+        self.player_avatar_node
+            .as_ref()
+            .filter(|node| node.is_instance_valid())
+            .cloned()
+    }
+
+    #[func]
+    fn set_player_avatar_node(&mut self, node: Option<Gd<Node3D>>) {
+        self.player_avatar_node = node;
+    }
+
+    /// Validity-filtered: the Player is freed with the Explorer on teardown, so
+    /// a read in that window returns null rather than a dangling handle.
+    #[func]
+    pub fn get_player_body_node(&self) -> Option<Gd<Node3D>> {
+        self.player_body_node
+            .as_ref()
+            .filter(|node| node.is_instance_valid())
+            .cloned()
+    }
+
+    #[func]
+    fn set_player_body_node(&mut self, node: Option<Gd<Node3D>>) {
+        self.player_body_node = node;
     }
 
     #[func]
@@ -1366,7 +1436,10 @@ impl SceneManager {
     fn compute_scene_distance(&mut self) {
         self.current_parcel_scene_id = SceneId::INVALID;
 
-        let mut player_global_position = self.player_avatar_node.get_global_transform().origin;
+        let Some(player_avatar) = self.get_player_avatar_node() else {
+            return;
+        };
+        let mut player_global_position = player_avatar.get_global_transform().origin;
         player_global_position.x *= 0.0625;
         player_global_position.y *= 0.0625;
         player_global_position.z *= -0.0625;
@@ -1407,9 +1480,9 @@ impl SceneManager {
         // SceneManager outlives the Explorer scene (autoload singleton). When the user
         // signs out via change_scene_to_file, player_avatar_node becomes a dangling
         // reference until the next Explorer load reassigns it via set_player_node.
-        if !self.player_avatar_node.is_instance_valid() {
+        let Some(player_avatar) = self.get_player_avatar_node() else {
             return;
-        }
+        };
 
         let start_time_us = (std::time::Instant::now() - self.begin_time).as_micros() as i64;
         let end_time_us = start_time_us + MAX_TIME_PER_SCENE_TICK_US;
@@ -1418,7 +1491,7 @@ impl SceneManager {
 
         self.receive_from_thread();
 
-        let player_global_transform = self.player_avatar_node.get_global_transform();
+        let player_global_transform = player_avatar.get_global_transform();
         let camera_node = self.base().get_viewport().and_then(|x| x.get_camera_3d());
 
         let (camera_global_transform, camera_mode) = match camera_node.as_ref() {
@@ -1435,6 +1508,43 @@ impl SceneManager {
 
             None => (player_global_transform, 0),
         };
+
+        // Compute PrimaryPointerInfo (SDK component 1209) once per frame. Written on the
+        // scene RootEntity so scenes reading `worldRayDirection` (e.g. Genesis Plaza's
+        // fishing raycast) get a valid vector instead of `undefined` (issue #2411). Uses the
+        // same screen point selection as `get_current_mouse_entity`.
+        let primary_pointer_info = camera_node.as_ref().map(|camera_node| {
+            let screen_point = if self.raycast_use_cursor_position {
+                self.cursor_position
+            } else {
+                self.viewport_center
+            };
+            let dir = camera_node.project_ray_normal(screen_point);
+            let screen_delta = screen_point - self.last_cursor_position;
+            self.last_cursor_position = screen_point;
+
+            PbPrimaryPointerInfo {
+                pointer_type: Some(PointerType::PotMouse as i32),
+                screen_coordinates: Some(
+                    crate::dcl::components::proto_components::common::Vector2 {
+                        x: screen_point.x,
+                        y: screen_point.y,
+                    },
+                ),
+                screen_delta: Some(crate::dcl::components::proto_components::common::Vector2 {
+                    x: screen_delta.x,
+                    y: screen_delta.y,
+                }),
+                // Godot -> DCL world space flips Z (see raycast.rs / transform_and_parent.rs)
+                world_ray_direction: Some(
+                    crate::dcl::components::proto_components::common::Vector3 {
+                        x: dir.x,
+                        y: dir.y,
+                        z: -dir.z,
+                    },
+                ),
+            }
+        });
 
         let frames_count = godot::classes::Engine::singleton().get_physics_frames();
 
@@ -1541,6 +1651,7 @@ impl SceneManager {
                     &camera_global_transform,
                     &player_global_transform,
                     camera_mode,
+                    &primary_pointer_info,
                     self.console.clone(),
                     &self.current_parcel_scene_id,
                     &self.begin_time,
@@ -2056,9 +2167,14 @@ impl SceneManager {
 
             let scene = self.scenes.get(&SceneId(dcl_scene_id))?;
             let scene_position = scene.godot_dcl_scene.root_node_3d.get_position();
+            // Build the hit from the CAMERA ray origin (not the avatar position) so
+            // `hit.length`/`global_origin`/`direction` are camera-relative, per
+            // raycast_hit.proto. This is what makes `max_distance` a true camera-distance
+            // gate (pointer_events.proto), independent of `max_player_distance` which is
+            // measured from the avatar. Avatar position was an incidental earlier choice.
             let raycast_data = RaycastHit::from_godot_raycast(
                 scene_position,
-                self.player_avatar_node.get_global_position(),
+                raycast_from,
                 &raycast_result,
                 Some(dcl_entity_id as u32),
             )?;
@@ -2123,28 +2239,26 @@ impl SceneManager {
         let device_pixel_ratio = window_size.y as f32 / canvas_size.y;
 
         // BorderRect carries indents (in canvas pixels) from each canvas edge to the
-        // safe/interactable rectangle. Clamp to [0, canvas] so a stale or oversized
-        // interactable_area never produces negative or out-of-canvas indents.
-        let ia_pos = self.interactable_area.position;
-        let ia_end = self.interactable_area.end();
-        let top = (ia_pos.y as f32).clamp(0.0, canvas_size.y);
-        let left = (ia_pos.x as f32).clamp(0.0, canvas_size.x);
-        let right = (canvas_size.x - ia_end.x as f32).clamp(0.0, canvas_size.x);
-        let bottom = (canvas_size.y - ia_end.y as f32).clamp(0.0, canvas_size.y);
-
-        let border_rect = BorderRect {
-            top,
-            left,
-            right,
-            bottom,
+        // given rectangle. Clamp to [0, canvas] so a stale or oversized rect never
+        // produces negative or out-of-canvas indents.
+        let to_border = |rect: Rect2i| -> BorderRect {
+            let pos = rect.position;
+            let end = rect.end();
+            BorderRect {
+                top: (pos.y as f32).clamp(0.0, canvas_size.y),
+                left: (pos.x as f32).clamp(0.0, canvas_size.x),
+                right: (canvas_size.x - end.x as f32).clamp(0.0, canvas_size.x),
+                bottom: (canvas_size.y - end.y as f32).clamp(0.0, canvas_size.y),
+            }
         };
 
         PbUiCanvasInformation {
             device_pixel_ratio,
             width: canvas_size.x as i32,
             height: canvas_size.y as i32,
-            interactable_area: Some(border_rect.clone()),
-            screen_inset_area: Some(border_rect),
+            // interactable = safe rect minus the chat column; screen_inset = safe rect only.
+            interactable_area: Some(to_border(self.interactable_area)),
+            screen_inset_area: Some(to_border(self.safe_area)),
         }
     }
 
@@ -2164,6 +2278,12 @@ impl SceneManager {
     #[func]
     fn set_interactable_area(&mut self, interactable_area: Rect2i) {
         self.interactable_area = interactable_area;
+        self.ui_canvas_information = self.create_ui_canvas_information();
+    }
+
+    #[func]
+    fn set_safe_area(&mut self, safe_area: Rect2i) {
+        self.safe_area = safe_area;
         self.ui_canvas_information = self.create_ui_canvas_information();
     }
 
@@ -2222,6 +2342,10 @@ impl SceneManager {
                 video_player_node.bind_mut().set_muted(true);
             }
 
+            // Stop and clear every particle system (idle scenes tick too slowly
+            // for the per-frame reconcile to feel immediate).
+            super::components::particle_system::reconcile_user_presence(scene, false);
+
             // Stop any wind/impulse the player just walked out of.
             scene.active_external_force = Vector3::ZERO;
             scene.pending_impulses.clear();
@@ -2233,10 +2357,14 @@ impl SceneManager {
 
             // leave it orphan! it will be re-added when you are in the scene, and deleted on scene deletion
             // Use call_deferred to avoid "Parent node is busy" errors during rapid scene transitions
-            self.base_ui.call_deferred(
-                "remove_child",
-                &[scene.godot_dcl_scene.root_node_ui.clone().to_variant()],
-            );
+            // The UI root dies with the old Explorer's base_ui subtree on
+            // teardown — cloning it freed would panic (GODOT-EXPLORER-1DY).
+            if scene.godot_dcl_scene.root_node_ui.is_instance_valid() {
+                self.base_ui.call_deferred(
+                    "remove_child",
+                    &[scene.godot_dcl_scene.root_node_ui.clone().to_variant()],
+                );
+            }
         }
 
         if let Some(scene) = self.scenes.get_mut(&self.current_parcel_scene_id) {
@@ -2252,13 +2380,23 @@ impl SceneManager {
                 video_player_node.bind_mut().set_muted(false);
             }
 
+            // Resume particle systems (restarts the ones in PLAYING state).
+            super::components::particle_system::reconcile_user_presence(scene, true);
+
             scene
                 .avatar_scene_updates
                 .internal_player_data
                 .insert(SceneEntityId::PLAYER, InternalPlayerData { inside: true });
 
-            self.base_ui
-                .add_child(&scene.godot_dcl_scene.root_node_ui.clone().upcast::<Node>());
+            // Only a living scene with a live UI root gets re-attached: a ToKill
+            // scene's UI is about to be freed, and a freed root (old Explorer's
+            // base_ui subtree) would panic on clone (GODOT-EXPLORER-1DY).
+            if matches!(scene.state, SceneState::Alive)
+                && scene.godot_dcl_scene.root_node_ui.is_instance_valid()
+            {
+                self.base_ui
+                    .add_child(&scene.godot_dcl_scene.root_node_ui.clone().upcast::<Node>());
+            }
         }
 
         self.last_current_parcel_scene_id = self.current_parcel_scene_id;
@@ -2584,8 +2722,8 @@ impl INode for SceneManager {
             main_receiver_from_thread,
             thread_sender_to_main,
 
-            player_avatar_node: Node3D::new_alloc(),
-            player_body_node: Node3D::new_alloc(),
+            player_avatar_node: None,
+            player_body_node: None,
 
             player_position: Vector2i::new(-1000, -1000),
 
@@ -2593,7 +2731,7 @@ impl INode for SceneManager {
             begin_time: Instant::now(),
             console: Callable::invalid(),
             input_state: InputState::default(),
-            last_raycast_result: None,
+            last_hover_entity: None,
             last_proximity_entity: None,
             pointer_tooltips: VarArray::new(),
             highlighted_entity: None,
@@ -2603,7 +2741,9 @@ impl INode for SceneManager {
                 canvas_size.x as i32,
                 canvas_size.y as i32,
             ),
+            safe_area: Rect2i::from_components(0, 0, canvas_size.x as i32, canvas_size.y as i32),
             viewport_center: Vector2::new(canvas_size.x * 0.5, canvas_size.y * 0.5),
+            last_cursor_position: Vector2::new(canvas_size.x * 0.5, canvas_size.y * 0.5),
             cursor_position: Vector2::new(canvas_size.x * 0.5, canvas_size.y * 0.5),
             raycast_use_cursor_position: false,
             cached_raycast_query: PhysicsRayQueryParameters3D::new_gd(),
@@ -2663,9 +2803,9 @@ impl INode for SceneManager {
         // After change_scene_to_file (e.g. Sign Out), `player_avatar_node` becomes a
         // dangling reference until the next Explorer load reassigns it via set_player_node.
         // The pointer/raycast/tooltip block below derefs that node, so bail out here.
-        if !self.player_avatar_node.is_instance_valid() {
+        let Some(player_avatar) = self.get_player_avatar_node() else {
             return;
-        }
+        };
 
         // Note: Trigger area collision detection is now handled via PhysicsServer3D monitor callbacks
         // (area_set_monitor_callback). ENTER/EXIT events are processed in update_trigger_area.
@@ -2762,7 +2902,7 @@ impl INode for SceneManager {
             }
         }
 
-        let player_position = self.player_avatar_node.get_global_position();
+        let player_position = player_avatar.get_global_position();
         let camera_and_viewport = self.base().get_viewport().and_then(|viewport| {
             let size = viewport.get_visible_rect().size;
             viewport.get_camera_3d().map(|camera| (camera, size))
@@ -2777,17 +2917,25 @@ impl INode for SceneManager {
         pointer_events_system(
             &mut self.scenes,
             &changed_inputs,
-            &self.last_raycast_result,
             &current_pointer_raycast_result,
             player_position,
             &camera_and_viewport,
             &mut self.last_proximity_entity,
+            &mut self.last_hover_entity,
         );
 
         let mut tooltips = VarArray::new();
         let mut new_highlighted: Option<Gd<Node3D>> = None;
         if let Some(raycast) = current_pointer_raycast_result.as_ref() {
             let mut should_highlight = false;
+            // Player distance to the hovered entity, for the feedback range gate
+            // (so the overlay respects max_player_distance, matching cursor events).
+            let feedback_player_distance = entity_player_distance(
+                &self.scenes,
+                &raycast.scene_id,
+                &raycast.entity_id,
+                player_position,
+            );
             if let Some(pointer_events) =
                 get_entity_pointer_event(&self.scenes, &raycast.scene_id, &raycast.entity_id)
             {
@@ -2798,8 +2946,14 @@ impl INode for SceneManager {
                     }
                     if let Some(info) = pointer_event.event_info.as_ref() {
                         let show_feedback = info.show_feedback.as_ref().unwrap_or(&true);
-                        let max_distance = *info.max_distance.as_ref().unwrap_or(&10.0);
-                        if !show_feedback || raycast.hit.length > max_distance {
+                        if !show_feedback
+                            || !event_info_in_range(
+                                info.max_distance,
+                                info.max_player_distance,
+                                raycast.hit.length,
+                                feedback_player_distance,
+                            )
+                        {
                             continue;
                         }
 
@@ -2937,7 +3091,6 @@ impl INode for SceneManager {
             self.base_mut().emit_signal("pointer_tooltip_changed", &[]);
         }
 
-        self.last_raycast_result = current_pointer_raycast_result;
         GLOBAL_TICK_NUMBER.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
     }
 
@@ -2952,7 +3105,10 @@ impl INode for SceneManager {
             return;
         };
 
-        let player_transform = self.player_avatar_node.get_global_transform();
+        let Some(player_avatar) = self.get_player_avatar_node() else {
+            return;
+        };
+        let player_transform = player_avatar.get_global_transform();
         let camera_transform = current_camera_node.get_global_transform();
 
         if let Some(scene) = self.scenes.get_mut(&self.current_parcel_scene_id) {

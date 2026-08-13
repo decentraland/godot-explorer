@@ -861,7 +861,7 @@ dependencies = [
 
 [[package]]
 name = "dclgodot"
-version = "1.12.0"
+version = "1.13.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -905,10 +905,12 @@ dependencies = [
  "poll-promise",
  "prost 0.11.9",
  "prost-build 0.11.9",
+ "prost-reflect",
  "protobuf",
  "rand",
  "regex",
  "reqwest",
+ "rusty_enet",
  "serde",
  "serde_json",
  "simple-easing",
@@ -3547,6 +3549,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "prost-reflect"
+version = "0.11.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6b823de344848e011658ac981009100818b322421676740546f8b52ed5249428"
+dependencies = [
+ "once_cell",
+ "prost 0.11.9",
+ "prost-types 0.11.9",
+]
+
+[[package]]
 name = "prost-types"
 version = "0.11.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3952,6 +3965,14 @@ name = "rustversion"
 version = "1.0.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0e819f2bc632f285be6d7cd36e25940d45b2391dd6d9b939e79de557f7014248"
+
+[[package]]
+name = "rusty_enet"
+version = "0.4.0"
+source = "git+https://github.com/dcl-regenesislabs/rusty_enet?rev=8023f9b39e12d4b11a2a054ade49fa8365a5e250#8023f9b39e12d4b11a2a054ade49fa8365a5e250"
+dependencies = [
+ "js-sys",
+]
 
 [[package]]
 name = "ryu"

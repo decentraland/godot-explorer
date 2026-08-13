@@ -106,6 +106,7 @@ fn state_name(state: &super::scene::SceneUpdateState) -> &'static str {
         S::TriggerArea => "TriggerArea",
         S::VirtualCameras => "VirtualCameras",
         S::AudioSource => "AudioSource",
+        S::ParticleSystem => "ParticleSystem",
         S::ProcessRpcs => "ProcessRpcs",
         S::ComputeCrdtState => "ComputeCrdtState",
         S::SendToThread => "SendToThread",
@@ -134,6 +135,7 @@ use super::{
         mesh_collider::update_mesh_collider,
         mesh_renderer::update_mesh_renderer,
         nft_shape::update_nft_shape,
+        particle_system::update_particle_system,
         physics_combined::{update_physics_combined_force, update_physics_combined_impulse},
         pointer_events::update_scene_pointer_events,
         raycast::update_raycasts,
@@ -157,7 +159,8 @@ use crate::{
     dcl::{
         components::{
             proto_components::sdk::components::{
-                PbCameraMode, PbEngineInfo, PbMainCamera, PbPointerLock, PbUiCanvasInformation,
+                PbCameraMode, PbEngineInfo, PbMainCamera, PbPointerLock, PbPrimaryPointerInfo,
+                PbUiCanvasInformation,
             },
             transform_and_parent::DclTransformAndParent,
             SceneComponentId, SceneEntityId,
@@ -184,6 +187,7 @@ pub fn _process_scene(
     camera_global_transform: &Transform3D,
     player_global_transform: &Transform3D,
     camera_mode: i32,
+    primary_pointer_info: &Option<PbPrimaryPointerInfo>,
     console: Callable,
     current_parcel_scene_id: &SceneId,
     ref_time: &Instant,
@@ -549,6 +553,10 @@ pub fn _process_scene(
                     update_audio_source(scene, crdt_state, current_parcel_scene_id);
                     false
                 }
+                SceneUpdateState::ParticleSystem => {
+                    update_particle_system(scene, crdt_state, current_parcel_scene_id);
+                    false
+                }
                 SceneUpdateState::SceneUi => {
                     update_scene_ui(
                         scene,
@@ -630,6 +638,20 @@ pub fn _process_scene(
                         let pointer_lock_component = PbPointerLock { is_pointer_locked };
                         SceneCrdtStateProtoComponents::get_pointer_lock_mut(crdt_state)
                             .put(SceneEntityId::CAMERA, Some(pointer_lock_component));
+                    }
+
+                    // Set PrimaryPointerInfo on the RootEntity (issue #2411). Provides a
+                    // valid world_ray_direction so scenes feeding it into serialized
+                    // components (e.g. Raycast) don't crash on an undefined vector.
+                    if let Some(info) = primary_pointer_info {
+                        let current =
+                            SceneCrdtStateProtoComponents::get_primary_pointer_info(crdt_state)
+                                .get(&SceneEntityId::ROOT)
+                                .and_then(|v| v.value.as_ref());
+                        if current != Some(info) {
+                            SceneCrdtStateProtoComponents::get_primary_pointer_info_mut(crdt_state)
+                                .put(SceneEntityId::ROOT, Some(info.clone()));
+                        }
                     }
 
                     // Process pointer events

@@ -220,6 +220,12 @@ func _on_scene_runner_loading_started(_session_id: int, _expected_count: int) ->
 	if _loading_cancelled or _place_data_set:
 		return
 	var pos = Global.scene_fetcher.current_position
+	# Local preview scenes are not in the places catalog — a position query would return
+	# whatever Genesis City scene owns that parcel. Use the preview scene's own
+	# scene.json metadata (display.title / display.navmapThumbnail) instead.
+	if Global.cli.preview_mode or not Global.deep_link_obj.preview.is_empty():
+		_set_place_data_from_scene_definition(pos)
+		return
 	# For genesis (no intended world realm) a valid parcel is required for the API call.
 	# For DCL worlds the fetch is by realm name and position is irrelevant.
 	if _intended_realm.is_empty() and pos == SceneFetcher.INVALID_PARCEL:
@@ -244,6 +250,24 @@ func _async_fetch_place_data(pos: Vector2i, generation: int) -> void:
 	if data_array.is_empty():
 		return
 	set_place_data(data_array[0])
+
+
+func _set_place_data_from_scene_definition(pos: Vector2i) -> void:
+	var scene_definition: DclSceneEntityDefinition = Global.scene_fetcher.get_scene_definition_at(
+		pos
+	)
+	if scene_definition == null:
+		return
+	var data := {"title": String(scene_definition.get_title())}
+	var thumbnail_file := String(scene_definition.get_navmap_thumbnail())
+	if not thumbnail_file.is_empty():
+		var content_mapping := scene_definition.get_content_mapping()
+		var file_hash := String(content_mapping.get_hash(thumbnail_file))
+		if file_hash.is_empty():
+			printerr("Preview scene thumbnail not in content mapping: ", thumbnail_file)
+		else:
+			data["image"] = String(content_mapping.get_base_url()) + file_hash
+	set_place_data(data)
 
 
 func set_place_data(data: Dictionary) -> void:

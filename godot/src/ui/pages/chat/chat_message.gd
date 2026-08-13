@@ -55,6 +55,11 @@ func _configure_richtext_theme(richtext_label: RichTextLabel) -> void:
 	custom_theme.set_stylebox("normal", "LinkButton", link_style)
 	richtext_label.theme = custom_theme
 
+	# WORD only breaks on spaces, so a long space-less token (URL, wallet address,
+	# unbroken string) never wraps and overflows the panel. WORD_SMART keeps normal
+	# word wrapping but breaks a token when it can't fit on a line by itself.
+	richtext_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+
 	const MULTILINGUAL_REGULAR := preload(
 		"res://assets/themes/fonts/multilanguage/multilanguage_font-Regular.tres"
 	)

@@ -2,8 +2,6 @@
 class_name GuestUpgradeCard
 extends MarginContainer
 
-signal email_added(email: String)
-
 ## Screen location for metrics tracking. "discover" auto-differentiates between
 ## discover_pregame and discover_ingame based on whether explorer is active.
 @export_enum("discover", "settings") var shown_in = "discover"
@@ -18,6 +16,25 @@ signal email_added(email: String)
 	set(value):
 		side_margin = value
 		_apply_full_width()
+## Top margin (px) applied to the settings card while in landscape (in-game). Portrait settings
+## gets its top spacing from the settings layout; the tighter landscape layout leaves the card
+## flush against the tab buttons, so this restores the separation (issue #2403).
+@export var landscape_settings_top_margin: int = 40:
+	set(value):
+		landscape_settings_top_margin = value
+		_apply_top_margin()
+## Title font size used while the settings card is in landscape (in-game). Portrait keeps the
+## size defined by the scene's LabelSettings (issue #2403 family).
+@export var landscape_title_font_size: int = 34:
+	set(value):
+		landscape_title_font_size = value
+		_apply_font_sizes()
+## Paragraph font size used while the settings card is in landscape (in-game). See
+## landscape_title_font_size.
+@export var landscape_paragraph_font_size: int = 24:
+	set(value):
+		landscape_paragraph_font_size = value
+		_apply_font_sizes()
 
 ## True once the network check has completed with an authoritative result
 ## (prevents re-checking every time the parent becomes visible afterwards).
@@ -28,13 +45,13 @@ var _upgrade_checked: bool = false
 ## "not upgraded" and would flash the card for an already-upgraded user (#2483).
 var _upgrade_check_in_flight: bool = false
 
+## Scene-defined (portrait) LabelSettings, kept as the base to derive sized copies from.
+var _title_base_settings: LabelSettings = null
+var _paragraph_base_settings: LabelSettings = null
+
 @onready var button_add_email: Button = %Button_AddEmail
-
-static var _email_regex: RegEx = RegEx.create_from_string("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")
-
-
-static func is_valid_email(text: String) -> bool:
-	return _email_regex.search(text) != null
+@onready var _title_label: Label = get_node_or_null("%Label_Title")
+@onready var _paragraph_label: Label = get_node_or_null("%Label_Content")
 
 
 func _apply_full_width() -> void:
@@ -46,17 +63,75 @@ func _apply_full_width() -> void:
 		add_theme_constant_override("margin_right", side_margin)
 
 
+# Only the landscape (in-game) settings card needs a top margin: portrait settings already gets its
+# spacing from the layout, and discover is untouched. Skipped in the editor where Global is inert.
+func _apply_top_margin() -> void:
+	var top: int = 0
+	if (
+		not Engine.is_editor_hint()
+		and shown_in == "settings"
+		and not Global.is_orientation_portrait()
+	):
+		top = landscape_settings_top_margin
+	add_theme_constant_override("margin_top", top)
+
+
+# Keep the scene's (portrait) LabelSettings as a base. We never mutate it in place — a Label
+# only reliably relayouts when its label_settings *reference* changes — so each apply assigns a
+# freshly sized duplicate. The base is a resource shared across instances, so duplicating (never
+# mutating) also stops the settings card from resizing the discover card's text.
+func _setup_font_sizes() -> void:
+	if is_instance_valid(_title_label):
+		_title_base_settings = _title_label.label_settings
+	if is_instance_valid(_paragraph_label):
+		_paragraph_base_settings = _paragraph_label.label_settings
+
+
+# Landscape (in-game) settings uses its own title/paragraph sizes; every other context keeps
+# the scene's portrait sizes. Mirrors _apply_top_margin's gating.
+func _apply_font_sizes() -> void:
+	if Engine.is_editor_hint():
+		return
+	if _title_base_settings == null or _paragraph_base_settings == null:
+		return
+	var landscape: bool = shown_in == "settings" and not Global.is_orientation_portrait()
+	if landscape:
+		_title_label.label_settings = _sized_settings(
+			_title_base_settings, landscape_title_font_size
+		)
+		_paragraph_label.label_settings = _sized_settings(
+			_paragraph_base_settings, landscape_paragraph_font_size
+		)
+	else:
+		_title_label.label_settings = _title_base_settings
+		_paragraph_label.label_settings = _paragraph_base_settings
+
+
+# A copy of `base` at `size`, so assigning it forces the Label to relayout (in-place font_size
+# mutation on the shared resource does not).
+func _sized_settings(base: LabelSettings, size: int) -> LabelSettings:
+	var settings: LabelSettings = base.duplicate()
+	settings.font_size = size
+	return settings
+
+
 func _ready() -> void:
 	_apply_full_width()
 	if Engine.is_editor_hint():
 		return
+	_apply_top_margin()
+	_setup_font_sizes()
+	_apply_font_sizes()
 	button_add_email.pressed.connect(_async_on_add_email_pressed)
 	visibility_changed.connect(_on_visibility_changed)
 	Global.orientation_changed.connect(_on_orientation_changed)
+	Global.guest_upgrade_state_refreshed.connect(_on_guest_upgrade_state_refreshed)
 	_async_update_visibility()
 
 
 func _on_orientation_changed(_is_portrait: bool) -> void:
+	_apply_top_margin()
+	_apply_font_sizes()
 	_async_update_visibility()
 
 
@@ -73,8 +148,6 @@ func refresh_visibility() -> void:
 # gdlint:ignore = async-function-name
 func _async_update_visibility() -> void:
 	visible = false
-	if not Global.is_orientation_portrait():
-		return
 	if Global.player_identity == null or not Global.player_identity.is_thirdweb_guest():
 		return
 
@@ -144,207 +217,29 @@ func _async_on_add_email_pressed() -> void:
 	Global.metrics.track_click_button(
 		"UPGRADE_NOTICE_TAP", "UPGRADE_NOTICE_SHOW", JSON.stringify({"shown_in": _get_shown_in()})
 	)
-	var modal = await (
-		Global
-		. modal_manager
-		. async_show_input_modal(
-			"Add Email",
-			"My email",
-			"name@email.com",
-			"ADD",
-			"CANCEL",
-			is_valid_email,
-		)
-	)
-	if modal:
-		# Add Email modal shown — the OTP upgrade funnel has started (issue #2377).
-		Global.metrics.track_screen_viewed("UPGRADE_OTP_START", "")
-		modal.dismissable = false
-		modal.dcl_text_edit.wrap_text = false
-		modal.dcl_text_edit.validate_on_blur = true
-		# The modal owns the spinner + close timing now: it runs _async_on_submit_email
-		# while showing a spinner, keeps itself open (inline error) for a bad
-		# address, or closes and emits confirmed/failed for the other outcomes.
-		modal.set_submit_handler(_async_on_submit_email)
-		modal.confirmed.connect(_async_on_code_sent)
-		modal.failed.connect(_async_on_send_code_failed)
+	# In-game the Settings panel is landscape but the Add Email modal is portrait-only, so route the
+	# guest through Discover first (which closes Settings and switches the app to portrait) before
+	# starting the flow, so the modal renders in portrait like everywhere else (issue #2403).
+	if shown_in == "settings" and Global.get_explorer():
+		Global.open_discover.emit()
+		await _async_wait_for_portrait()
+	# The full Add Email → OTP → reward flow lives in the modal manager so this notice and the
+	# aspirational upgrade modal share one identical experience (issues #2377 / #2372).
+	await Global.modal_manager.async_start_add_email_flow()
 
 
-# Submit handler for the Add Email modal: the user tapped "ADD" on the email step.
-# gdlint:ignore = async-function-name
-func _async_on_submit_email(email: String) -> Dictionary:
-	Global.metrics.track_screen_viewed("UPGRADE_OTP_SUBMIT", "")
-	return await _async_send_code(email)
+# Discover switches the app to portrait asynchronously; wait a few frames so the Add Email modal is
+# created at the portrait size instead of mid-rotation. Bail out after a short cap so we never hang
+# if the orientation never changes.
+func _async_wait_for_portrait() -> void:
+	var frames: int = 0
+	while not Global.is_orientation_portrait() and frames < 30:
+		await get_tree().process_frame
+		frames += 1
 
 
-# Shared "send verification code" routine used by both the initial submit and the
-# resend wrapper. Maps the outcome to the modal's status contract: a malformed
-# address stays inline as "Invalid email"; any other failure closes the modal and
-# bubbles up via `failed`; success closes the modal and emits `confirmed`.
-# gdlint:ignore = async-function-name
-func _async_send_code(email: String) -> Dictionary:
-	# No CLICK_BUTTON here: this routine is shared by the initial submit and every
-	# resend, so a click would double-count. The submit action is captured by the
-	# UPGRADE_OTP_SUBMIT screen view (fired once in _async_on_submit_email) and each
-	# resend by RESEND_OTP. There is no "ADD" click in the #2377 taxonomy.
-	# async_link_email_start both validates the address server-side and sends the
-	# verification code to the thirdweb guest wallet.
-	var promise: Promise = Global.player_identity.async_link_email_start(email)
-	var result = await PromiseUtils.async_awaiter(promise)
-	if result is PromiseError:
-		var raw: String = result.get_error()
-		# Expected/recoverable (bad email, transient network) — the user retries
-		# inline, so keep it out of the error stream / Sentry.
-		push_warning("Upgrade to OTP - send code failed: " + raw)
-		if _is_invalid_email_error(raw):
-			Global.metrics.track_screen_viewed("UPGRADE_OTP_EMAIL_INVALID", "")
-			return {"status": InputModal.SUBMIT_INVALID, "message": "Invalid email"}
-		return {"status": InputModal.SUBMIT_ERROR, "message": raw}
-	print("[UpgradeOTP] send_code OK for: ", email)
-	return {"status": InputModal.SUBMIT_OK}
-
-
-# Code was sent successfully (Add Email modal already closed): open the code step.
-# gdlint:ignore = async-function-name
-func _async_on_code_sent(email: String) -> void:
-	var code_modal = await Global.modal_manager.async_show_code_modal(email)
-	if code_modal:
-		# Code-entry step shown (issue #2377).
-		Global.metrics.track_screen_viewed("UPGRADE_OTP_ENTERCODE", "")
-		# The code modal owns the spinner + inline error UI; it calls back into
-		# _async_verify_code and only emits `confirmed` once verification succeeds.
-		code_modal.set_verifier(_async_verify_code.bind(email))
-		code_modal.set_resend_handler(_async_on_resend_code.bind(email))
-		code_modal.confirmed.connect(_async_on_code_confirmed.bind(email))
-		code_modal.cancelled.connect(Global.modal_manager.close_code_modal)
-
-
-# Resend handler for the code modal: the user tapped "Resend code" on the
-# code-entry step. Re-sends the verification code via the shared send routine.
-# gdlint:ignore = async-function-name
-func _async_on_resend_code(email: String) -> Dictionary:
-	Global.metrics.track_click_button("RESEND_OTP", "UPGRADE_OTP_ENTERCODE", "")
-	return await _async_send_code(email)
-
-
-# Non-recoverable send-code failure (Add Email modal already closed): show a
-# generic retry-later message.
-# gdlint:ignore = async-function-name
-func _async_on_send_code_failed(_message: String) -> void:
-	await _async_show_error_modal(
-		"Something went wrong", "Something went wrong. Please try again later."
-	)
-
-
-# True only when thirdweb rejected the address itself as malformed (HTTP 400 /
-# Zod email validation), which we surface inline. Network/5xx/rate-limit and
-# every other failure are treated as transient and shown after closing the modal.
-func _is_invalid_email_error(raw: String) -> bool:
-	var lower := raw.to_lower()
-	if lower.contains("invalid email"):
-		return true
-	return (
-		lower.contains("email") and (lower.contains("zoderror") or lower.contains("invalid_string"))
-	)
-
-
-# Returns "" on success, or a friendly error string the code modal shows inline.
-# gdlint:ignore = async-function-name
-func _async_verify_code(code: String, email: String) -> String:
-	# No CLICK_BUTTON here either: the verify action is captured by the
-	# UPGRADE_OTP_VERIFY screen view below, and #2377 defines no such click.
-	Global.metrics.track_screen_viewed("UPGRADE_OTP_VERIFY", "")
-	var anchor: String = Global.get_device_anchor_id()
-	var promise: Promise = Global.player_identity.async_link_email_verify(email, code, anchor)
-	var result = await PromiseUtils.async_awaiter(promise)
-	print("[UpgradeOTP] verify result: ", result)
-	if result is PromiseError:
-		var raw: String = result.get_error()
-		# Expected/recoverable (wrong/expired code, already-linked email) — surfaced
-		# inline for the user, so keep it out of the error stream / Sentry.
-		push_warning("[UpgradeOTP] verify FAILED: " + raw)
-		if _is_already_linked_error(raw):
-			Global.metrics.track_screen_viewed("UPGRADE_OTP_EMAIL_BUSY", "")
-			Global.modal_manager.close_code_modal.call_deferred()
-			_async_show_email_in_use_modal.call_deferred()
-			# Return non-empty so the code modal doesn't emit confirmed
-			# (it will try _show_error but the deferred close frees it first).
-			return " "
-		Global.metrics.track_screen_viewed("UPGRADE_OTP_CODE_INVALID", "")
-		return _friendly_error(raw)
-	print("[UpgradeOTP] verify OK")
-	return ""
-
-
-func _is_already_linked_error(raw: String) -> bool:
-	var lower := raw.to_lower()
-	return lower.contains("already") or lower.contains("linked") or lower.contains("conflict")
-
-
-func _async_show_email_in_use_modal() -> void:
-	await _async_show_error_modal(
-		"Email already in use",
-		"This email is already linked to another account.\nTry a different email.",
-	)
-
-
-# gdlint:ignore = async-function-name
-func _async_on_code_confirmed(_code: String, email: String) -> void:
-	# Verification already succeeded inside the code modal before `confirmed` fired.
-	Global.metrics.track_screen_viewed("ACCOUNT_UPGRADE_SUCCESS", JSON.stringify({"method": "otp"}))
-	# The guest is now a fully-registered account — mirror the lobby's AUTH_SUCCESS so
-	# the funnel sees the upgraded user as registered (matches a fresh fully_registered login).
-	Global.metrics.track_screen_viewed(
-		"AUTH_SUCCESS", JSON.stringify({"login_type": "fully_registered"})
-	)
-	Global.modal_manager.close_code_modal()
-	await _async_show_success_modal()
-	email_added.emit(email)
-	# Now upgraded (Rust set the cached flag on link) — hide the affordance and
-	# notify other UI (badge) so they also update without a separate network call.
-	visible = false
-	Global.guest_upgrade_state_refreshed.emit(true)
-
-
-# Maps raw thirdweb errors to friendly copy. The raw error is still logged.
-func _friendly_error(raw: String) -> String:
-	var lower := raw.to_lower()
-	if lower.contains("429") or lower.contains("rate"):
-		return "Too many attempts. Please wait a moment and try again."
-	if lower.contains("already") or lower.contains("linked") or lower.contains("conflict"):
-		return "This email is already linked to another account."
-	if lower.contains("invalid") or lower.contains("code") or lower.contains("400"):
-		return "The code is invalid or expired. Please resend code."
-	return "Something went wrong. Please try again."
-
-
-func _async_show_success_modal() -> void:
-	var modal = await Global.modal_manager._async_create_modal()
-	if not modal:
-		return
-	modal.set_title("You're all set")
-	modal.set_body("Your email has been added to your account.")
-	modal.set_primary_button_text("GOT IT")
-	modal.button_secondary.hide()
-	modal.hide_url()
-	modal.hide_icon()
-	modal.blocker = true
-	modal.show()
-	await modal.button_primary.pressed
-	Global.modal_manager.close_current_modal()
-
-
-func _async_show_error_modal(title: String, body: String) -> void:
-	var modal = await Global.modal_manager._async_create_modal()
-	if not modal:
-		return
-	modal.set_title(title)
-	modal.set_body(body)
-	modal.set_primary_button_text("OK")
-	modal.show_icon(Modal.MODAL_ALERT_ICON)
-	modal.button_secondary.hide()
-	modal.hide_url()
-	modal.blocker = true
-	modal.show()
-	await modal.button_primary.pressed
-	Global.modal_manager.close_current_modal()
+# The shared flow emits guest_upgrade_state_refreshed(true) once the guest upgrades — hide the
+# notice so it doesn't linger over the now-registered account.
+func _on_guest_upgrade_state_refreshed(is_upgraded: bool) -> void:
+	if is_upgraded:
+		visible = false

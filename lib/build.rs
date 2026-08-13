@@ -7,6 +7,8 @@ use std::{
     path::Path,
 };
 
+mod build_quant;
+
 struct Component {
     id: u32,
     pascal_name: String,
@@ -389,14 +391,25 @@ fn main() -> io::Result<()> {
         }
     }
 
+    clear_patched_proto_root();
+
     proto_files.push(
         format!("{PROTO_FILES_BASE_DIR}decentraland/kernel/comms/rfc5/ws_comms.proto").into(),
     );
-    proto_files
-        .push(format!("{PROTO_FILES_BASE_DIR}decentraland/kernel/comms/rfc4/comms.proto").into());
+    proto_files.push(patched_rfc4_comms_proto());
     proto_files.push(
         format!("{PROTO_FILES_BASE_DIR}decentraland/kernel/comms/v3/archipelago.proto").into(),
     );
+
+    // Pulse comms protos, shipped by the pinned @dcl/protocol tarball (built from protocol
+    // `main`, commit 0ff6038 — see PROTOCOL_FIXED_VERSION_URL in src/install_dependency.rs). Compiled
+    // unconditionally — runtime code is gated by the `use_pulse` feature instead, keeping the
+    // build script feature-free. options.proto must be in the compile set so the
+    // FileDescriptorSet carries the quantization extension values for build_quant.
+    proto_files.push(format!("{PROTO_FILES_BASE_DIR}decentraland/common/options.proto").into());
+    proto_files.push(format!("{PROTO_FILES_BASE_DIR}decentraland/pulse/pulse_shared.proto").into());
+    proto_files.push(format!("{PROTO_FILES_BASE_DIR}decentraland/pulse/pulse_client.proto").into());
+    proto_files.push(format!("{PROTO_FILES_BASE_DIR}decentraland/pulse/pulse_server.proto").into());
 
     // Social service protos (with RPC services)
     proto_files
@@ -435,7 +448,28 @@ fn main() -> io::Result<()> {
     let mut prost_config = prost_build::Config::new();
     prost_config.type_attribute(".", "#[derive(serde::Serialize)]");
     prost_config.service_generator(Box::new(dcl_rpc::codegen::RPCServiceGenerator::new()));
-    prost_config.compile_protos(&proto_files, &["src/dcl/components/proto/"])?;
+    // Emit the descriptor set so build_quant can read the Pulse quantization
+    // field options (the .proto stays the single source of truth for the wire ABI).
+    let descriptor_path = Path::new(&env::var("OUT_DIR").unwrap()).join("proto_descriptor_set.bin");
+    prost_config.file_descriptor_set_path(&descriptor_path);
+    // The patched root goes first so `decentraland/kernel/comms/rfc4/comms.proto`
+    // resolves to the patched copy, not the npm one (same canonical path).
+    let proto_patched_root = patched_proto_root();
+    prost_config.compile_protos(
+        &proto_files,
+        &[
+            proto_patched_root.as_path(),
+            Path::new(PROTO_FILES_BASE_DIR),
+        ],
+    )?;
+
+    let descriptor_bytes = fs::read(&descriptor_path).expect("read proto descriptor set");
+    let quant_path = Path::new(&env::var("OUT_DIR").unwrap()).join("pulse_quant.rs");
+    build_quant::generate(&descriptor_bytes, &quant_path);
+    println!("cargo:rerun-if-changed=build_quant.rs");
+    println!(
+        "cargo:rerun-if-changed={PROTO_FILES_BASE_DIR}decentraland/kernel/comms/rfc4/comms.proto"
+    );
 
     #[cfg(feature = "use_livekit")]
     if env::var("CARGO_CFG_TARGET_OS").unwrap() == "android" {
@@ -450,6 +484,89 @@ fn main() -> io::Result<()> {
     set_godot_explorer_version();
 
     Ok(())
+}
+
+/// The pinned @dcl/protocol build (protocol `main`, commit 0ff6038) has an
+/// rfc4 `comms.proto` that lacks fields the Pulse transport and Unity interop rely on
+/// (they live in protocol `experimental`): `PlayerEmote` 4..=11 (`is_stopping` &
+/// co., bridged from Pulse `EmoteStopped` and already sent by Unity peers over
+/// LiveKit) and `Chat.forwarded_from` (SFU forwarding). The npm tree is gitignored
+/// and wiped by `cargo run -- install`, so it can't be edited in place; instead,
+/// patch a copy under OUT_DIR/proto_patched/ and compile that one (that root is
+/// listed first so the canonical path resolves to the patched copy). Each patch
+/// no-ops once the pinned build ships its fields — delete this when both do.
+/// Root of the build-time patched protos, listed first on protoc's include path
+/// (see `patched_rfc4_comms_proto`).
+fn patched_proto_root() -> std::path::PathBuf {
+    Path::new(&env::var("OUT_DIR").unwrap()).join("proto_patched")
+}
+
+/// Wipes the patched-proto root before this build repopulates it.
+///
+/// `OUT_DIR` survives across builds and — on the self-hosted CI runners, which
+/// reuse a single checkout and `target/` for every branch — is shared between
+/// branches. A patched copy written by *another* branch would otherwise linger
+/// here and, because this root comes first on the include path, shadow the npm
+/// file that this branch passes to protoc as an input:
+///
+/// ```text
+/// protoc failed: src/dcl/components/proto/decentraland/sdk/components/avatar_emote_command.proto:
+/// Input is shadowed in the --proto_path by ".../out/proto_patched/decentraland/sdk/components/avatar_emote_command.proto".
+/// ```
+///
+/// Every build re-derives the patches it needs from the npm tree, so starting
+/// from an empty root costs nothing and keeps the set exact.
+fn clear_patched_proto_root() {
+    let root = patched_proto_root();
+    if root.exists() {
+        fs::remove_dir_all(&root).expect("clear proto_patched dir");
+    }
+}
+
+fn patched_rfc4_comms_proto() -> std::path::PathBuf {
+    const RFC4_REL: &str = "decentraland/kernel/comms/rfc4/comms.proto";
+    let mut source = fs::read_to_string(format!("{PROTO_FILES_BASE_DIR}{RFC4_REL}"))
+        .expect("read rfc4 comms.proto (run `cargo run -- install` to fetch protos)");
+
+    if !source.contains("is_stopping") {
+        source = insert_fields_before_message_close(
+            &source,
+            "message PlayerEmote {",
+            concat!(
+                "  optional bool is_stopping = 4; // true means the emote has been stopped in the sender's client\n",
+                "  optional bool is_repeating = 5; // true when it is not the first time the looping animation plays\n",
+                "  optional int32 interaction_id = 6; // identifies an interaction univocally\n",
+                "  optional int32 social_emote_outcome = 7; // -1 means it does not use an outcome animation\n",
+                "  optional bool is_reacting = 8; // to a social emote started by other user\n",
+                "  optional string social_emote_initiator = 9; // wallet address of the social emote initiator\n",
+                "  optional string target_avatar = 10; // wallet address of the directed emote target\n",
+                "  optional uint32 mask = 11; // mask for which bones an animation applies to\n",
+            ),
+        );
+    }
+    if !source.contains("forwarded_from") {
+        source = insert_fields_before_message_close(
+            &source,
+            "message Chat {",
+            "  optional string forwarded_from = 3; // original sender when forwarded through an SFU\n",
+        );
+    }
+
+    let dest = patched_proto_root().join(RFC4_REL);
+    fs::create_dir_all(dest.parent().unwrap()).expect("create proto_patched dir");
+    fs::write(&dest, source).expect("write patched rfc4 comms.proto");
+    dest
+}
+
+fn insert_fields_before_message_close(source: &str, marker: &str, fields: &str) -> String {
+    let start = source.find(marker).unwrap_or_else(|| {
+        panic!("rfc4 comms.proto: `{marker}` not found — update the patch in build.rs")
+    });
+    let close = source[start..]
+        .find('}')
+        .map(|offset| start + offset)
+        .unwrap_or_else(|| panic!("rfc4 comms.proto: closing brace for `{marker}` not found"));
+    format!("{}{}{}", &source[..close], fields, &source[close..])
 }
 
 fn generate_file<P: AsRef<Path>>(path: P, text: &[u8]) {

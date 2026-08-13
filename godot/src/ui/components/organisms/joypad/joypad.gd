@@ -274,10 +274,27 @@ func _set_attenuated_sound_for_buttons(node: Node) -> void:
 		_set_attenuated_sound_for_buttons(child)
 
 
+func _notification(what: int) -> void:
+	# Collapse the "+" overflow menu whenever the joypad is hidden (by any flow), so it
+	# never comes back open the next time the joypad is shown.
+	if what == NOTIFICATION_VISIBILITY_CHANGED and not is_visible_in_tree():
+		_close_combo()
+
+
 func _on_button_combo_toggled(toggled_on: bool) -> void:
 	combo_opened = toggled_on
 	if _combo_column:
 		_combo_column.visible = toggled_on
+
+
+## Collapse the "+" overflow menu and reset the toggle without re-emitting `toggled`.
+func _close_combo() -> void:
+	if not combo_opened:
+		return
+	combo_opened = false
+	button_combo.set_pressed_no_signal(false)
+	if _combo_column:
+		_combo_column.visible = false
 
 
 func _on_combo_action_changed(pressed: bool) -> void:
