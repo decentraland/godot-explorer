@@ -160,6 +160,7 @@ impl DclAvatar {
         self.rise = y_velocity > 1.0;
         self.fall = y_velocity < -1.0;
         self.land = !self.rise && !self.fall;
+        self.is_grounded = self.land && self.glide_state == 0;
 
         self.lerp_state.initial_position = self.lerp_state.target_position;
         self.lerp_state.target_position = new_target.origin;
@@ -186,6 +187,7 @@ impl DclAvatar {
         self.rise = false;
         self.fall = false;
         self.land = true;
+        self.is_grounded = self.glide_state == 0;
 
         self.lerp_state.initial_position = new_target.origin;
         self.lerp_state.target_position = new_target.origin;
