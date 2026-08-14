@@ -2,6 +2,11 @@ extends SceneTree
 
 # Regression test for the avatar.tscn state-machine graph itself (#2603).
 #
+# Caveat: unconditional (at-end) edges are treated as always traversable, but
+# an at-end edge out of a LOOPING animation never fires at runtime. This check
+# is necessary but not sufficient — a state whose only escape is at-end on a
+# looping anim would pass here while still trapping in-game.
+#
 # Several bugs shared one shape: the AnimationTree lands in a state that has
 # no outgoing transition for the current world condition, so the avatar stays
 # frozen in a stale pose — walking mid-air, standing while gliding, etc.

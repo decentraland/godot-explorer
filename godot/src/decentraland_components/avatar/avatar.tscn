@@ -442,7 +442,6 @@ xfade_time = 0.1
 advance_mode = 2
 advance_condition = &"fall"
 
-
 [sub_resource type="AnimationNodeStateMachineTransition" id="AnimationNodeStateMachineTransition_em2jf"]
 xfade_time = 0.1
 advance_mode = 2

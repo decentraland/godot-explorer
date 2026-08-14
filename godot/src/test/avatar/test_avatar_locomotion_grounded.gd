@@ -23,6 +23,7 @@ func _initialize() -> void:
 	_test_mapping()
 	_test_state_machine_picks_fall_when_airborne()
 	_test_glide_reopens_from_idle()
+	_test_glide_beats_walk_when_airborne()
 	_test_rig_detects_unguarded_walk()
 	_finish()
 
@@ -130,6 +131,24 @@ func _test_glide_reopens_from_idle() -> void:
 	tree.queue_free()
 	if state != "Gliding_Start":
 		_fail("glide reopen from Idle: expected Gliding_Start, got '%s'" % state)
+
+
+# Remote glider on the compressed update path: horizontal movement flags are
+# on but is_grounded stays false (dcl_avatar.rs derivation excludes glide
+# states), so the walk condition is gated off and gliding must win even though
+# Idle -> Walk is ordered before Idle -> Gliding_Start.
+func _test_glide_beats_walk_when_airborne() -> void:
+	var tree := _make_tree()
+	var playback: AnimationNodeStateMachinePlayback = tree.get("parameters/playback")
+	playback.start("Idle")
+	var loco: Dictionary = H.locomotion_conditions(true, false, false, false)
+	tree.set("parameters/conditions/walk", loco.walk)
+	tree.set("parameters/conditions/gliding", true)
+	tree.advance(0.05)
+	var state: String = playback.get_current_node()
+	tree.queue_free()
+	if state != "Gliding_Start":
+		_fail("airborne gliding peer: expected Gliding_Start, got '%s'" % state)
 
 
 # Guard that the rig actually mirrors production ordering: with the old

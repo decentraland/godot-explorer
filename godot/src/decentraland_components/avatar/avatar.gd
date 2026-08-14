@@ -247,6 +247,10 @@ var _anim_throttle_active: bool = false
 func _ready():
 	_mesh_assembler = AvatarMeshAssembler.new(body_shape_skeleton_3d)
 	_mesh_assembler.apply_toon_material_recursive(glider_prop)
+	# Seed one tree evaluation so an avatar that spawns off-screen/FAR (tree
+	# immediately frozen) still gets a pose instead of staying in bind pose.
+	animation_tree.active = true
+	animation_tree.advance(0.0)
 	var billboard_mode = (
 		BaseMaterial3D.BillboardMode.BILLBOARD_FIXED_Y
 		if Global.is_xr()
@@ -330,6 +334,11 @@ func _notification(what: int) -> void:
 ## Setup trigger detection for this avatar (local player and remote avatars only).
 ## - For local player: entity_id=SceneEntityId.PLAYER (0x10000)
 ## - For remote avatars: entity_id=assigned entity from avatar_scene.rs
+func apply_toon_material_to(node: Node) -> void:
+	if _mesh_assembler != null:
+		_mesh_assembler.apply_toon_material_recursive(node)
+
+
 func setup_trigger_detection(p_entity_id: int) -> void:
 	dcl_entity_id = p_entity_id
 
