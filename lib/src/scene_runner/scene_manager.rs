@@ -66,7 +66,10 @@ pub struct SceneManager {
     base_ui: Gd<DclUiControl>,
 
     ui_canvas_information: PbUiCanvasInformation,
+    // Where scenes may draw interactive UI (safe rect minus the chat column).
     interactable_area: Rect2i,
+    // Safe rect: device safe area + the HUD margins, WITHOUT the chat column.
+    safe_area: Rect2i,
 
     scenes: HashMap<SceneId, Scene>,
 
@@ -2236,28 +2239,26 @@ impl SceneManager {
         let device_pixel_ratio = window_size.y as f32 / canvas_size.y;
 
         // BorderRect carries indents (in canvas pixels) from each canvas edge to the
-        // safe/interactable rectangle. Clamp to [0, canvas] so a stale or oversized
-        // interactable_area never produces negative or out-of-canvas indents.
-        let ia_pos = self.interactable_area.position;
-        let ia_end = self.interactable_area.end();
-        let top = (ia_pos.y as f32).clamp(0.0, canvas_size.y);
-        let left = (ia_pos.x as f32).clamp(0.0, canvas_size.x);
-        let right = (canvas_size.x - ia_end.x as f32).clamp(0.0, canvas_size.x);
-        let bottom = (canvas_size.y - ia_end.y as f32).clamp(0.0, canvas_size.y);
-
-        let border_rect = BorderRect {
-            top,
-            left,
-            right,
-            bottom,
+        // given rectangle. Clamp to [0, canvas] so a stale or oversized rect never
+        // produces negative or out-of-canvas indents.
+        let to_border = |rect: Rect2i| -> BorderRect {
+            let pos = rect.position;
+            let end = rect.end();
+            BorderRect {
+                top: (pos.y as f32).clamp(0.0, canvas_size.y),
+                left: (pos.x as f32).clamp(0.0, canvas_size.x),
+                right: (canvas_size.x - end.x as f32).clamp(0.0, canvas_size.x),
+                bottom: (canvas_size.y - end.y as f32).clamp(0.0, canvas_size.y),
+            }
         };
 
         PbUiCanvasInformation {
             device_pixel_ratio,
             width: canvas_size.x as i32,
             height: canvas_size.y as i32,
-            interactable_area: Some(border_rect.clone()),
-            screen_inset_area: Some(border_rect),
+            // interactable = safe rect minus the chat column; screen_inset = safe rect only.
+            interactable_area: Some(to_border(self.interactable_area)),
+            screen_inset_area: Some(to_border(self.safe_area)),
         }
     }
 
@@ -2277,6 +2278,12 @@ impl SceneManager {
     #[func]
     fn set_interactable_area(&mut self, interactable_area: Rect2i) {
         self.interactable_area = interactable_area;
+        self.ui_canvas_information = self.create_ui_canvas_information();
+    }
+
+    #[func]
+    fn set_safe_area(&mut self, safe_area: Rect2i) {
+        self.safe_area = safe_area;
         self.ui_canvas_information = self.create_ui_canvas_information();
     }
 
@@ -2734,6 +2741,7 @@ impl INode for SceneManager {
                 canvas_size.x as i32,
                 canvas_size.y as i32,
             ),
+            safe_area: Rect2i::from_components(0, 0, canvas_size.x as i32, canvas_size.y as i32),
             viewport_center: Vector2::new(canvas_size.x * 0.5, canvas_size.y * 0.5),
             last_cursor_position: Vector2::new(canvas_size.x * 0.5, canvas_size.y * 0.5),
             cursor_position: Vector2::new(canvas_size.x * 0.5, canvas_size.y * 0.5),

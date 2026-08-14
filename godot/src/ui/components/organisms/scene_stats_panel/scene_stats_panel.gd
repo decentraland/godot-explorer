@@ -7,18 +7,15 @@ extends PanelContainer
 ##   green  = under the soft (recommended) limit
 ##   orange = between soft and hard
 ##   red    = over the hard limit — track dims and a warning icon appears
-## A circular "monitor" button (same size as the camera button, placed to its
-## left) shows/hides this panel: white icon when closed, ruby icon + ring when
-## open. The Performance row shows a "?" badge; tapping anywhere on that row
-## toggles a tooltip explaining the metric. Instantiated ONLY in preview by
-## explorer.gd; never created in production.
+## Visibility is driven by the preview HUD toolbar's Scene Status button
+## (PreviewHudPanel, issue #2679); this overlay only renders content. The
+## Performance row shows a "?" badge; tapping anywhere on that row toggles a
+## tooltip explaining the metric. Instantiated ONLY in preview by explorer.gd
+## (inside the preview HUD panel); never created in production.
 
 enum Status { GREEN, YELLOW, RED }
 
 const REFRESH_INTERVAL: float = 1.5
-const TOGGLE_SIZE: float = 65.0
-const TOGGLE_GAP: float = 12.0
-const MONITOR_ICON_PATH: String = "res://assets/ui/scene_stats_monitor.svg"
 const WARNING_ICON_PATH: String = "res://assets/ui/scene_stats_warning.svg"
 const TOOLTIP_ARROW_PATH: String = "res://assets/ui/scene_stats_tooltip_arrow.svg"
 
@@ -36,10 +33,11 @@ const COLOR_RED: Color = Color("ff2d55")
 const COLOR_TEXT: Color = Color("fcfcfc")
 const COLOR_SHADOW_BG: Color = Color("161518")
 const COLOR_SCROLLBAR: Color = Color("966ac5")
-const COLOR_MONITOR: Color = Color("ff2d55")
 
-const TOOLTIP_TEXT: String = "Percentage of the FPS target the client runs at for this scene"
-const TOOLTIP_MIN_SIZE: Vector2 = Vector2(260.0, 52.0)
+# Explicit line break: the design shows exactly two lines; autowrap at a fixed
+# width put it on three.
+const TOOLTIP_TEXT: String = "Percentage of the FPS target\nthe client runs at for this scene"
+const TOOLTIP_PANEL_GAP: float = 12.0
 const TOOLTIP_ARROW_SIZE: Vector2 = Vector2(10.0, 22.0)
 const TOOLTIP_HIDE_DELAY: float = 5.0
 
@@ -53,8 +51,6 @@ var _rows: Dictionary = {}
 var _fill_styles: Dictionary = {}
 var _track_style: StyleBoxFlat = null
 var _track_style_red: StyleBoxFlat = null
-var _toggle_btn: Button = null
-var _toggle_icon: TextureRect = null
 var _fps_row: HBoxContainer = null
 var _tooltip: Control = null
 var _tooltip_bubble: PanelContainer = null
@@ -74,7 +70,7 @@ func _ready() -> void:
 	_build_styleboxes()
 	_build_rows()
 	_style_scrollbar()
-	_create_toggle_button()
+	visibility_changed.connect(_on_visibility_changed)
 	_timer.wait_time = REFRESH_INTERVAL
 	_timer.timeout.connect(_on_timer_timeout)
 	_timer.start()
@@ -99,14 +95,6 @@ func _input(event: InputEvent) -> void:
 	if mouse_press or touch_press:
 		_hide_tooltip()
 		get_viewport().set_input_as_handled()
-
-
-## Free the external toggle button (it lives under the camera button, not under
-## this panel) when the overlay is torn down.
-func _exit_tree() -> void:
-	if is_instance_valid(_toggle_btn):
-		_toggle_btn.queue_free()
-		_toggle_btn = null
 
 
 ## Point the overlay at a scene (called by explorer.gd on preview / scene change).
@@ -134,9 +122,9 @@ func _on_timer_timeout() -> void:
 	_refresh()
 
 
-func _on_toggle_pressed() -> void:
-	visible = not visible
-	_apply_toggle_state()
+## Visibility is driven externally by the preview HUD toolbar (issue #2679).
+## Refresh on show; drop any open tooltip on hide.
+func _on_visibility_changed() -> void:
 	if visible:
 		_refresh()
 	else:
@@ -298,20 +286,6 @@ func _make_fill(c: Color) -> StyleBoxFlat:
 	return sb
 
 
-func _make_circle(c: Color, ring: bool) -> StyleBoxFlat:
-	var sb: StyleBoxFlat = StyleBoxFlat.new()
-	sb.bg_color = c
-	sb.set_corner_radius_all(int(TOGGLE_SIZE / 2.0))
-	sb.content_margin_left = 12.0
-	sb.content_margin_right = 12.0
-	sb.content_margin_top = 12.0
-	sb.content_margin_bottom = 12.0
-	if ring:
-		sb.set_border_width_all(2)
-		sb.border_color = COLOR_MONITOR
-	return sb
-
-
 ## 4px scrollbar: dark track, purple grabber (Figma "Group 3107").
 func _style_scrollbar() -> void:
 	var vsb: VScrollBar = _scroll.get_v_scroll_bar()
@@ -323,71 +297,6 @@ func _style_scrollbar() -> void:
 	grabber.bg_color = COLOR_SCROLLBAR
 	for style_name in ["grabber", "grabber_highlight", "grabber_pressed"]:
 		vsb.add_theme_stylebox_override(style_name, grabber)
-
-
-## Build the monitor toggle button and place it to the LEFT of the camera
-## (1st/3rd person) button at the same size; fall back to the panel's parent.
-func _create_toggle_button() -> void:
-	_toggle_btn = Button.new()
-	_toggle_btn.custom_minimum_size = Vector2(TOGGLE_SIZE, TOGGLE_SIZE)
-	_toggle_btn.focus_mode = Control.FOCUS_NONE
-	_toggle_btn.pressed.connect(_on_toggle_pressed)
-
-	# Icon as a centered child TextureRect — guarantees centering and sizing
-	# regardless of Button icon-layout quirks.
-	_toggle_icon = TextureRect.new()
-	_toggle_icon.texture = load(MONITOR_ICON_PATH)
-	_toggle_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	_toggle_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	_toggle_icon.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_toggle_icon.offset_left = 15.0
-	_toggle_icon.offset_top = 15.0
-	_toggle_icon.offset_right = -15.0
-	_toggle_icon.offset_bottom = -15.0
-	_toggle_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_toggle_btn.add_child(_toggle_icon)
-	_apply_toggle_state()
-
-	var cam: Control = _find_camera_button()
-	if cam != null:
-		cam.get_parent().add_child(_toggle_btn)
-		_toggle_btn.anchor_left = cam.anchor_left
-		_toggle_btn.anchor_top = cam.anchor_top
-		_toggle_btn.anchor_right = cam.anchor_right
-		_toggle_btn.anchor_bottom = cam.anchor_bottom
-		_toggle_btn.grow_horizontal = cam.grow_horizontal
-		_toggle_btn.offset_top = cam.offset_top
-		_toggle_btn.offset_bottom = cam.offset_bottom
-		_toggle_btn.offset_right = cam.offset_left - TOGGLE_GAP
-		_toggle_btn.offset_left = cam.offset_left - TOGGLE_GAP - TOGGLE_SIZE
-	else:
-		get_parent().add_child(_toggle_btn)
-		_toggle_btn.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-		_toggle_btn.grow_horizontal = Control.GROW_DIRECTION_BEGIN
-		_toggle_btn.offset_right = -12.0
-		_toggle_btn.offset_left = -12.0 - TOGGLE_SIZE
-		_toggle_btn.offset_top = 40.0
-		_toggle_btn.offset_bottom = 40.0 + TOGGLE_SIZE
-
-
-## Closed: white icon on a plain dark circle. Open: ruby icon + ruby ring
-## (Figma "Performance-Close" / "Performance-Open" frames).
-func _apply_toggle_state() -> void:
-	if _toggle_btn == null:
-		return
-	var open: bool = visible
-	_toggle_btn.add_theme_stylebox_override("normal", _make_circle(Color(0, 0, 0, 0.62), open))
-	var active: StyleBoxFlat = _make_circle(Color(0.22, 0.22, 0.28, 0.85), open)
-	_toggle_btn.add_theme_stylebox_override("hover", active)
-	_toggle_btn.add_theme_stylebox_override("pressed", active)
-	_toggle_icon.modulate = COLOR_MONITOR if open else Color.WHITE
-
-
-func _find_camera_button() -> Control:
-	if not is_inside_tree():
-		return null
-	var node := get_tree().get_root().find_child("Button_Camera", true, false)
-	return node as Control
 
 
 func _build_rows() -> void:
@@ -572,15 +481,17 @@ func _toggle_tooltip() -> void:
 	_tooltip.visible = true
 	_tooltip_opened_frame = Engine.get_process_frames()
 	_update_badge_style()
-	# Just left of the panel, vertically centered on the Performance row, with
+	# Just right of the panel, vertically centered on the Performance row, with
 	# the arrow pointing at the row. Sized from the bubble's real minimum so a
 	# longer text (more wrapped lines) keeps the arrow on the bubble's middle.
 	var bubble_size: Vector2 = _tooltip_bubble.get_combined_minimum_size()
 	_tooltip_bubble.size = bubble_size
+	_tooltip_bubble.position = Vector2(TOOLTIP_ARROW_SIZE.x, 0.0)
 	var arrow_y: float = (bubble_size.y - TOOLTIP_ARROW_SIZE.y) / 2.0
-	_tooltip_arrow.position = Vector2(bubble_size.x, arrow_y)
+	_tooltip_arrow.position = Vector2(0.0, arrow_y)
 	var row_rect: Rect2 = _fps_row.get_global_rect()
-	var x: float = get_global_rect().position.x - bubble_size.x - TOOLTIP_ARROW_SIZE.x
+	var panel_rect: Rect2 = get_global_rect()
+	var x: float = panel_rect.position.x + panel_rect.size.x + TOOLTIP_PANEL_GAP
 	var y: float = row_rect.position.y + (row_rect.size.y - bubble_size.y) / 2.0
 	_tooltip.global_position = Vector2(x, y)
 	_tooltip_timer.start()
@@ -596,7 +507,8 @@ func _hide_tooltip() -> void:
 
 
 ## Speech bubble: StyleBoxFlat body + the design's exported arrow SVG attached
-## to its right edge (Figma "Tooltip" component).
+## to its left edge, flipped to point back at the panel (Figma "Tooltip"
+## component).
 func _build_tooltip() -> void:
 	_tooltip = Control.new()
 	_tooltip.top_level = true
@@ -605,7 +517,6 @@ func _build_tooltip() -> void:
 	add_child(_tooltip)
 
 	var bubble: PanelContainer = PanelContainer.new()
-	bubble.custom_minimum_size = TOOLTIP_MIN_SIZE
 	bubble.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var sb: StyleBoxFlat = StyleBoxFlat.new()
 	sb.bg_color = Color(COLOR_SHADOW_BG, 0.8)
@@ -617,10 +528,6 @@ func _build_tooltip() -> void:
 	bubble.add_theme_stylebox_override("panel", sb)
 	var lbl: Label = Label.new()
 	lbl.text = TOOLTIP_TEXT
-	lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	# Fixed wrap width — without it an autowrap Label reports its minimum size
-	# at longest-word width, which inflates the bubble's minimum height.
-	lbl.custom_minimum_size = Vector2(TOOLTIP_MIN_SIZE.x - 18.0, 0)
 	lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	lbl.add_theme_font_override("font", FONT_MEDIUM)
@@ -634,6 +541,7 @@ func _build_tooltip() -> void:
 	arrow.texture = load(TOOLTIP_ARROW_PATH)
 	arrow.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	arrow.stretch_mode = TextureRect.STRETCH_SCALE
+	arrow.flip_h = true
 	arrow.size = TOOLTIP_ARROW_SIZE
 	arrow.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_tooltip.add_child(arrow)

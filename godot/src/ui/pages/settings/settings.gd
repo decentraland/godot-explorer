@@ -22,6 +22,10 @@ const CACHE_SIZE_MB: Array[int] = [1024, 2048, 4096]
 		if is_node_ready():
 			_apply_panel_mode()
 
+# Scene LightSource Dev Tools controls, keyed by DclLightSourceComponent.get_light_settings() keys.
+var _light_debug_checks: Dictionary = {}
+var _light_max_lights_spin: SpinBox = null
+
 @onready var label_title: Label = %Label_Title
 @onready var margin_container_nav: MarginContainer = %MarginContainer_Nav
 
@@ -41,6 +45,8 @@ const CACHE_SIZE_MB: Array[int] = [1024, 2048, 4096]
 
 @onready
 var check_button_submit_message_closes_chat: CheckButton = %CheckButton_SubmitMessageClosesChat
+@onready var dropdown_list_camera_mode: DropdownList = %DropdownList_CameraMode
+@onready var camera_mode_warning: Control = %CameraModeWarning
 @onready var check_button_hide_explorer_ui: CheckButton = %CheckButton_HideExplorerUI
 @onready var check_button_hide_view_profile: CheckButton = %CheckButton_HideViewProfile
 @onready var check_button_hide_world_interactions: CheckButton = %CheckButton_HideWorldInteractions
@@ -51,6 +57,7 @@ var check_button_submit_message_closes_chat: CheckButton = %CheckButton_SubmitMe
 @onready var hide_player_names_row: HBoxContainer = %HidePlayerNames
 @onready var hide_scene_ui_row: HBoxContainer = %HideSceneUI
 @onready var container_interface: MarginContainer = %Container_Interface
+@onready var container_camera: Control = %Container_Camera
 
 #Audio items
 @onready var general_volume: SettingsSlider = %GeneralVolume
@@ -75,6 +82,7 @@ var check_button_submit_message_closes_chat: CheckButton = %CheckButton_SubmitMe
 @onready var line_edit_custom_preview_url: LineEditCustom = %LineEditCustom_WebSocket
 @onready var process_tick_quota: SettingsSlider = %ProcessTickQuota
 @onready var check_button_raycast_debugger: CheckButton = %CheckButton_RaycastDebugger
+@onready var check_button_show_interactable_area: CheckButton = %CheckButton_ShowInteractableArea
 @onready var check_button_multiplayer_debug: CheckButton = %CheckButton_MultiplayerDebug
 @onready var dropdown_list_realm: DropdownList = %DropdownList_Realm
 
@@ -109,6 +117,16 @@ func _ready():
 	check_button_submit_message_closes_chat.button_pressed = (
 		Global.get_config().submit_message_closes_chat
 	)
+	dropdown_list_camera_mode.add_item("First person", Global.CameraMode.FIRST_PERSON)
+	dropdown_list_camera_mode.add_item("Third person", Global.CameraMode.THIRD_PERSON)
+	dropdown_list_camera_mode.item_selected.connect(_on_dropdown_list_camera_mode_item_selected)
+	_refresh_camera_mode_row()
+	# Keep the camera dropdown in sync with runtime changes (scene locks the mode / forces
+	# cinematic, or the other Settings instance toggles it) — both instances listen globally.
+	if not Global.camera_mode_set.is_connected(_on_camera_mode_set):
+		Global.camera_mode_set.connect(_on_camera_mode_set)
+	if not Global.camera_mode_block_changed.is_connected(_on_camera_mode_block_changed):
+		Global.camera_mode_block_changed.connect(_on_camera_mode_block_changed)
 
 	if not Global.session_hide_ui_toggle_sync.is_connected(_on_session_hide_ui_toggle_sync):
 		Global.session_hide_ui_toggle_sync.connect(_on_session_hide_ui_toggle_sync)
@@ -136,6 +154,7 @@ func _ready():
 	_update_dynamic_graphics_status()
 	_setup_impostor_benchmark_button()
 	_setup_fast_day_cycle_toggle()
+	_setup_light_debug_controls()
 	refresh_graphic_settings()
 
 	var j = 0
@@ -443,6 +462,49 @@ func _on_check_button_submit_message_closes_chat_toggled(toggled_on: bool) -> vo
 		Global.get_config().save_to_settings_file()
 
 
+# Camera mode (first/third person) is runtime-only state, not persisted config: the
+# dropdown just drives Global.set_camera_mode(), reusing the logic the removed HUD
+# camera button used. The camera only exists inside the explorer; before entering a
+# place there is nothing to switch and Global.set_camera_mode() would be lost (player.gd
+# forces THIRD_PERSON on spawn), leaving the dropdown out of sync. So hide the whole row
+# until we're in the explorer, matching the Hide-UI section. When a scene locks the mode
+# or forces cinematic the dropdown is disabled and the "set by the creator" warning shows.
+func _refresh_camera_mode_row() -> void:
+	var in_explorer: bool = is_instance_valid(Global.get_explorer())
+	container_camera.visible = in_explorer
+	if not in_explorer:
+		return
+	var locked: bool = (
+		Global.camera_mode_blocked or Global.current_camera_mode == Global.CameraMode.CINEMATIC
+	)
+	dropdown_list_camera_mode.disabled = locked
+	camera_mode_warning.visible = locked
+	var first_person: bool = Global.current_camera_mode == Global.CameraMode.FIRST_PERSON
+	dropdown_list_camera_mode.select(
+		Global.CameraMode.FIRST_PERSON if first_person else Global.CameraMode.THIRD_PERSON
+	)
+
+
+func _on_dropdown_list_camera_mode_item_selected(index: int) -> void:
+	if not is_instance_valid(Global.get_explorer()) or Global.camera_mode_blocked:
+		_refresh_camera_mode_row()
+		return
+	var mode: Global.CameraMode = (
+		Global.CameraMode.FIRST_PERSON
+		if index == Global.CameraMode.FIRST_PERSON
+		else Global.CameraMode.THIRD_PERSON
+	)
+	Global.set_camera_mode(mode)
+
+
+func _on_camera_mode_set(_camera_mode: Global.CameraMode) -> void:
+	_refresh_camera_mode_row()
+
+
+func _on_camera_mode_block_changed(_blocked: bool) -> void:
+	_refresh_camera_mode_row()
+
+
 func _on_check_button_hide_explorer_ui_toggled(toggled_on: bool) -> void:
 	Global.metrics.track_click_button("HIDE_UI", "SETTINGS", "")
 	var explorer = Global.get_explorer()
@@ -532,10 +594,17 @@ func _exit_tree() -> void:
 		Global.session_hide_ui_toggle_sync.disconnect(_on_session_hide_ui_toggle_sync)
 	if Global.session_hide_ui_options_sync.is_connected(_on_session_hide_ui_options_sync):
 		Global.session_hide_ui_options_sync.disconnect(_on_session_hide_ui_options_sync)
+	if Global.camera_mode_set.is_connected(_on_camera_mode_set):
+		Global.camera_mode_set.disconnect(_on_camera_mode_set)
+	if Global.camera_mode_block_changed.is_connected(_on_camera_mode_block_changed):
+		Global.camera_mode_block_changed.disconnect(_on_camera_mode_block_changed)
 
 
 func _on_button_developer_pressed() -> void:
 	show_control(container_advanced)
+	var explorer = Global.get_explorer()
+	if is_instance_valid(explorer):
+		check_button_show_interactable_area.set_pressed_no_signal(explorer.show_interactable_area)
 	_async_scroll_to_tab_button(button_developer)
 
 
@@ -547,6 +616,7 @@ func _on_button_graphics_pressed() -> void:
 func _on_button_gameplay_pressed() -> void:
 	show_control(container_gameplay)
 	_refresh_hide_explorer_ui_row()
+	_refresh_camera_mode_row()
 	_async_scroll_to_tab_button(button_gameplay)
 
 
@@ -702,6 +772,78 @@ func _setup_impostor_benchmark_button() -> void:
 			get_tree().change_scene_to_file("res://src/tools/avatar_impostor_benchmark.tscn")
 	)
 	container_advanced.add_child(bench_button)
+
+
+func _setup_light_debug_controls() -> void:
+	# Scene-authored dynamic light controls (Dev Tools only). Rows are cloned
+	# from an existing settings row so they match the style; no .tscn edits.
+	if Global.is_production():
+		return
+	var template_row := (
+		container_advanced.find_child("SceneLogsEnabled", true, false) as HBoxContainer
+	)
+	if template_row == null:
+		return
+
+	var light_settings: Dictionary = DclLightSourceComponent.get_light_settings()
+
+	_add_light_toggle_row(template_row, "Scene Lights", "lights_enabled", light_settings)
+	_add_light_toggle_row(template_row, "Light Shadows", "shadows_enabled", light_settings)
+	_add_light_toggle_row(template_row, "Light Debug Gizmos", "debug_enabled", light_settings)
+	_add_light_toggle_row(
+		template_row, "Auto Activation Range", "auto_activation_range", light_settings
+	)
+	_add_light_toggle_row(
+		template_row, "Global Light Budget", "use_global_light_budget", light_settings
+	)
+	_add_max_lights_row(template_row, int(light_settings["max_lights"]))
+
+
+func _add_light_toggle_row(
+	template_row: HBoxContainer, title: String, setting_key: String, light_settings: Dictionary
+) -> void:
+	# duplicate(0): skip copying the template's signal connections.
+	var row := template_row.duplicate(0) as HBoxContainer
+	row.name = "Light_" + setting_key
+	var label := row.find_child("Label_Title", false, false) as Label
+	label.text = title
+	var check := row.find_child("CheckButton*", true, false) as CheckButton
+	check.name = "CheckButton_Light_" + setting_key
+	check.set_pressed_no_signal(bool(light_settings[setting_key]))
+	check.toggled.connect(func(_pressed: bool) -> void: _apply_light_settings_from_ui())
+	template_row.get_parent().add_child(row)
+	_light_debug_checks[setting_key] = check
+
+
+func _add_max_lights_row(template_row: HBoxContainer, initial_value: int) -> void:
+	var row := template_row.duplicate(0) as HBoxContainer
+	row.name = "Light_MaxActiveLights"
+	var label := row.find_child("Label_Title", false, false) as Label
+	label.text = "Max Active Lights"
+	var check := row.find_child("CheckButton*", true, false) as CheckButton
+	check.hide()
+
+	_light_max_lights_spin = SpinBox.new()
+	_light_max_lights_spin.min_value = 0
+	_light_max_lights_spin.max_value = 64
+	_light_max_lights_spin.step = 1
+	_light_max_lights_spin.value = initial_value
+	_light_max_lights_spin.value_changed.connect(
+		func(_value: float) -> void: _apply_light_settings_from_ui()
+	)
+	row.add_child(_light_max_lights_spin)
+	template_row.get_parent().add_child(row)
+
+
+func _apply_light_settings_from_ui() -> void:
+	DclLightSourceComponent.apply_light_settings(
+		_light_debug_checks["lights_enabled"].button_pressed,
+		_light_debug_checks["shadows_enabled"].button_pressed,
+		int(_light_max_lights_spin.value),
+		_light_debug_checks["debug_enabled"].button_pressed,
+		_light_debug_checks["auto_activation_range"].button_pressed,
+		_light_debug_checks["use_global_light_budget"].button_pressed
+	)
 
 
 func _setup_fast_day_cycle_toggle() -> void:
@@ -879,6 +1021,12 @@ func _on_check_button_multiplayer_debug_toggled(toggled_on: bool) -> void:
 
 func _on_check_button_raycast_debugger_toggled(toggled_on: bool) -> void:
 	Global.set_raycast_debugger_enable(toggled_on)
+
+
+func _on_check_button_show_interactable_area_toggled(toggled_on: bool) -> void:
+	var explorer = Global.get_explorer()
+	if is_instance_valid(explorer):
+		explorer.set_interactable_area_visible(toggled_on)
 
 
 func _on_check_button_scene_logs_enabled_toggled(toggled_on: bool) -> void:
