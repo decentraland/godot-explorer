@@ -392,9 +392,15 @@ pub fn marketplace_item(contract_address: &str, item_id: &str) -> String {
 // player's wallet. Otherwise (e.g. profile::zone) the catalog returns org/Polygon
 // URNs the zone wallet doesn't own and the zone avatar loader can't resolve, so
 // the recommendations can't be equipped.
+//
+// `/v3/catalog/unified` rather than `/v2/catalog`: it reports `priceCredits`, the
+// price in the same whole credits the IAP balance is denominated in. v2 only
+// reports MANA (wei), a DIFFERENT unit worth ~0.63 credits, so pricing cards off
+// it asks the player for more credits than the item costs. The two endpoints do
+// not share a response shape — see `marketplace_recommended_section.gd`.
 pub fn marketplace_catalog_api() -> String {
     format!(
-        "https://marketplace-api.decentraland.{}/v2/catalog",
+        "https://marketplace-api.decentraland.{}/v3/catalog/unified",
         suffix(ServiceGroup::Profile)
     )
 }
