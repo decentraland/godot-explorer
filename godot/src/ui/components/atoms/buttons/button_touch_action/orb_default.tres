@@ -1,0 +1,27 @@
+[gd_resource type="ShaderMaterial" load_steps=2 format=3]
+
+[ext_resource type="Shader" path="res://src/ui/components/atoms/buttons/button_touch_action/orb_skin.gdshader" id="1"]
+
+[resource]
+shader = ExtResource("1")
+shader_parameter/body_radius = 0.8
+shader_parameter/depth = 0.12
+shader_parameter/fill_start = 0.0
+shader_parameter/fill_inner = Color(0.1450980, 0.1019608, 0.2313725, 0.9)
+shader_parameter/fill_outer = Color(0.0862745, 0.0823529, 0.0941176, 0.9)
+shader_parameter/fill_opacity = 1.0
+shader_parameter/outline_color = Color(0.8745098, 0.8156863, 1, 1)
+shader_parameter/outline_width = 0.006
+shader_parameter/outline_angular = true
+shader_parameter/glow_color = Color(0.8745098, 0.6117647, 1, 0.7)
+shader_parameter/glow_strength = 0.0
+shader_parameter/glow_softness = 0.18
+shader_parameter/inner_shadow_color = Color(0.8196078, 0.6784314, 1, 0.6)
+shader_parameter/inner_shadow_strength = 0.6
+shader_parameter/inner_shadow_offset = Vector2(0.02, 0.02)
+shader_parameter/inner_shadow_blur = 0.04
+shader_parameter/light_angle_deg = -45.0
+shader_parameter/spec_strength = 0.7
+shader_parameter/spec_sharpness = 40.0
+shader_parameter/fresnel_strength = 0.25
+shader_parameter/opacity = 0.5
