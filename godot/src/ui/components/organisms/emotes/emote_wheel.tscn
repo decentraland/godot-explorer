@@ -7,6 +7,7 @@
 [ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="6_lttyx"]
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="7_0irnm"]
 [ext_resource type="Texture2D" uid="uid://b2mc65ohvctmu" path="res://assets/ui/emotes2.svg" id="7_lttyx"]
+[ext_resource type="Texture2D" uid="uid://bwewpxyh0r7lg" path="res://src/ui/components/organisms/emotes/emote_default.png" id="8_emdef"]
 
 [sub_resource type="Gradient" id="Gradient_rhu8p"]
 offsets = PackedFloat32Array(0, 0.565789, 0.70614, 1)
@@ -204,23 +205,21 @@ theme_override_styles/focus = SubResource("StyleBoxFlat_33uqc")
 text = "Edit"
 alignment = 0
 
-[node name="Button_Emotes" type="Button" parent="." unique_id=357823938]
+[node name="Button_Emotes" type="TextureButton" parent="." unique_id=357823938]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(65, 65)
+custom_minimum_size = Vector2(91, 91)
 layout_mode = 1
 anchors_preset = 2
 anchor_top = 1.0
 anchor_bottom = 1.0
-offset_top = -65.0
-offset_right = 65.0
+offset_top = -91.0
+offset_right = 91.0
 grow_vertical = 0
 focus_mode = 0
-theme = ExtResource("7_0irnm")
-theme_type_variation = &"TouchableButton"
-theme_override_constants/icon_max_width = 25
 toggle_mode = true
-icon = ExtResource("7_lttyx")
-icon_alignment = 1
+ignore_texture_size = true
+stretch_mode = 5
+texture_normal = ExtResource("8_emdef")
 
 [connection signal="gui_input" from="Control_Wheel" to="." method="_on_control_wheel_gui_input"]
 [connection signal="pressed" from="Control_Wheel/TextureRect_Background/VBoxContainer/Button_Edit" to="." method="_on_button_edit_pressed"]

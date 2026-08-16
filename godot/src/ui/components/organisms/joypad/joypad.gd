@@ -280,8 +280,11 @@ func _close_combo() -> void:
 
 func _on_combo_action_changed(pressed: bool) -> void:
 	if not pressed and combo_opened:
-		button_combo.toggled.emit(false)
+		# Clear the toggle BEFORE emitting `toggled(false)`: the handler refreshes the "+"
+		# OrbSkin, which reads button_pressed — clearing it first lets the orb fall back to
+		# Default instead of sticking on Pressed (set_pressed_no_signal fires no refresh).
 		button_combo.set_pressed_no_signal(false)
+		button_combo.toggled.emit(false)
 
 
 ## Applies PBTouchScreenControls (Global.touch_controls_*). No component (inactive) → the

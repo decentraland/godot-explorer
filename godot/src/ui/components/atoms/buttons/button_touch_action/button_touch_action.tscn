@@ -3,9 +3,10 @@
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="2_asumd"]
 [ext_resource type="Script" uid="uid://dn3hlhbknm1ej" path="res://src/ui/components/atoms/buttons/button_touch_action/button_touch_action.gd" id="2_c0jk1"]
 [ext_resource type="Script" path="res://src/ui/components/atoms/buttons/button_touch_action/orb_skin.gd" id="3_orbsk"]
-[ext_resource type="Material" path="res://src/ui/components/atoms/buttons/button_touch_action/orb_default.tres" id="4_orbdf"]
-[ext_resource type="Material" path="res://src/ui/components/atoms/buttons/button_touch_action/orb_pressed.tres" id="5_orbpr"]
-[ext_resource type="Material" path="res://src/ui/components/atoms/buttons/button_touch_action/orb_hold.tres" id="6_orbhd"]
+[ext_resource type="Texture2D" uid="uid://dk0wxh4uovqgc" path="res://src/ui/components/atoms/buttons/button_touch_action/orb_default.png" id="4_orbdf"]
+[ext_resource type="Texture2D" uid="uid://bkcp3v1swj1kk" path="res://src/ui/components/atoms/buttons/button_touch_action/orb_pressed.png" id="5_orbpr"]
+[ext_resource type="Texture2D" uid="uid://53y0kswva0qr" path="res://src/ui/components/atoms/buttons/button_touch_action/orb_hold.png" id="6_orbhd"]
+[ext_resource type="Texture2D" uid="uid://dqmtwlmxcel40" path="res://src/ui/components/atoms/buttons/button_touch_action/orb_disabled.png" id="7_orbdis"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_nxgap"]
 
@@ -57,9 +58,8 @@ flat = true
 icon_alignment = 1
 script = ExtResource("2_c0jk1")
 
-[node name="OrbSkin" type="ColorRect" parent="." unique_id=513919794]
+[node name="OrbSkin" type="TextureRect" parent="." unique_id=513919794]
 show_behind_parent = true
-material = ExtResource("4_orbdf")
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -67,11 +67,11 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-color = Color(0, 0, 0, 0)
 script = ExtResource("3_orbsk")
-default_material = ExtResource("4_orbdf")
-pressed_material = ExtResource("5_orbpr")
-hold_material = ExtResource("6_orbhd")
+default_texture = ExtResource("4_orbdf")
+pressed_texture = ExtResource("5_orbpr")
+hold_texture = ExtResource("6_orbhd")
+disabled_texture = ExtResource("7_orbdis")
 
 [node name="CustomIcon" type="TextureRect" parent="." unique_id=1532661068]
 editor_description = "Scene-provided icon overlay (PBTouchScreenControls). Hidden by default; toggled by button_touch_action.gd set_custom_icon / clear_custom_icon so it never disturbs the native glyph."

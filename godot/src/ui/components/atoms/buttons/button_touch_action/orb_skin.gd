@@ -1,14 +1,15 @@
 @tool
 class_name OrbSkin
-extends ColorRect
+extends TextureRect
 
-# Shader-driven "orb" skin for a circular touch button. Drop this as a child of a
-# Button (e.g. the TouchableButton variation used across the joypad): on ready it
-# blanks the theme styleboxes so the flat circle stops drawing, then renders the
-# orb *behind* the button's glyph (show_behind_parent) and swaps material by state.
+# Texture-based "orb" skin for a circular touch button. Drop this as a child of a Button
+# (e.g. the TouchableButton variation used across the joypad): on ready it blanks the theme
+# styleboxes so the flat circle stops drawing, then renders a pre-baked orb texture *behind*
+# the button's glyph (show_behind_parent) and swaps texture + icon by state.
 #
-# State: Default (normal) / Pressed (button held) / Hold (external latch, e.g. the
-# glider active state) — set the latch via set_hold(). Disabled dims via modulate.
+# States: Default (normal) / Pressed (button held) / Hold (external latch, e.g. the glider
+# active state, via set_hold()) / Disabled. The textures already bake the fill, outline and
+# glow at a consistent scale, so no per-state geometry is needed here.
 #
 # @tool so the Default look renders live in the editor when the scene is open.
 
@@ -36,16 +37,17 @@ const _ICON_COLOR_SLOTS: Array[StringName] = [
 	&"font_hover_pressed_color",
 ]
 
-@export var default_material: ShaderMaterial:
+@export var default_texture: Texture2D:
 	set(value):
-		default_material = value
+		default_texture = value
 		if is_node_ready():
 			_refresh()
-@export var pressed_material: ShaderMaterial
-@export var hold_material: ShaderMaterial
+@export var pressed_texture: Texture2D
+@export var hold_texture: Texture2D
+@export var disabled_texture: Texture2D
 
 # Per-state glyphs. When set, the parent button's icon tracks the state alongside the
-# material. hold_icon is optional (only the glider has one).
+# texture. hold_icon is optional (only the glider has one).
 @export var normal_icon: Texture2D
 @export var pressed_icon: Texture2D
 @export var hold_icon: Texture2D
@@ -56,7 +58,8 @@ var _held: bool = false
 func _ready() -> void:
 	show_behind_parent = true
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	color = Color(0, 0, 0, 0)
+	expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 
 	var btn := get_parent() as Button
 	if btn != null:
@@ -102,18 +105,21 @@ func set_icons(normal: Texture2D, pressed: Texture2D, hold: Texture2D) -> void:
 
 func _refresh(_unused_arg: Variant = null) -> void:
 	var btn := get_parent() as Button
-	var mat: ShaderMaterial = default_material
+	var tex: Texture2D = default_texture
 	var ic: Texture2D = normal_icon
-	if _held:
-		mat = hold_material
+	if btn != null and btn.disabled:
+		if disabled_texture != null:
+			tex = disabled_texture
+	elif _held:
+		if hold_texture != null:
+			tex = hold_texture
 		if hold_icon != null:
 			ic = hold_icon
 	elif btn != null and btn.button_pressed:
-		mat = pressed_material
+		if pressed_texture != null:
+			tex = pressed_texture
 		if pressed_icon != null:
 			ic = pressed_icon
-	material = mat if mat != null else default_material
-	if btn != null:
-		modulate.a = 0.5 if btn.disabled else 1.0
-		if normal_icon != null or pressed_icon != null or hold_icon != null:
-			btn.icon = ic
+	texture = tex
+	if btn != null and (normal_icon != null or pressed_icon != null or hold_icon != null):
+		btn.icon = ic

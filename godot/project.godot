@@ -11,9 +11,9 @@ config_version=5
 [_mobile_preview]
 
 active=true
-is_ios=false
+is_ios=true
 is_portrait=false
-viewport_width=1600
+viewport_width=1561
 viewport_height=720
 
 [animation]
@@ -31,7 +31,6 @@ config/features=PackedStringArray("4.6")
 boot_splash/bg_color=Color(0.411765, 0.121569, 0.662745, 1)
 boot_splash/stretch_mode=0
 boot_splash/image="res://assets/ui/splash-isotype.png"
-boot_splash/show_image=true
 config/icon="res://decentraland_logo_squared.png"
 boot_splash/minimum_display_time=300
 
@@ -68,7 +67,7 @@ memory/limits/message_queue/max_size_mb=64
 
 [display]
 
-window/size/viewport_width=1600
+window/size/viewport_width=1561
 window/size/viewport_height=720
 window/size/window_width_override=720
 window/size/window_height_override=1280
@@ -77,6 +76,7 @@ window/handheld/orientation=6
 
 [editor]
 
+run/main_run_args="--emulate-ios --landscape"
 import/use_multiple_threads=false
 
 [editor_plugins]

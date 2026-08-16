@@ -3,6 +3,16 @@ extends Control
 signal emote_wheel_opened
 signal emote_wheel_closed
 
+# Orb button textures (icon baked in). Swapped by state on the emote toggle:
+# Default (closed) → Pressed (while the finger is down) → Hold (wheel open, after release).
+const EMOTE_TEX_DEFAULT: Texture2D = preload(
+	"res://src/ui/components/organisms/emotes/emote_default.png"
+)
+const EMOTE_TEX_PRESSED: Texture2D = preload(
+	"res://src/ui/components/organisms/emotes/emote_pressed.png"
+)
+const EMOTE_TEX_HOLD: Texture2D = preload("res://src/ui/components/organisms/emotes/emote_hold.png")
+
 @export var avatar_node: Avatar = null:
 	set(value):
 		if value != avatar_node:  # Prevent redundant assignments
@@ -21,10 +31,13 @@ var emote_items: Array[EmoteItemUi] = []
 
 var last_selected_emote_urn: String = ""
 
+# True while the finger is physically down on the emote button (the transient Pressed look).
+var _emote_pressing: bool = false
+
 @onready var emote_wheel_container = %EmoteWheelContainer
 @onready var label_emote_name = %Label_EmoteName
 @onready var control_wheel: Control = %Control_Wheel
-@onready var button_emotes: Button = $Button_Emotes
+@onready var button_emotes: TextureButton = $Button_Emotes
 @onready var emote_wheel_item_1: EmoteItemUi = %EmoteWheelItem1
 
 
@@ -36,6 +49,7 @@ func _ready():
 	button_emotes.button_mask = 0
 	button_emotes.gui_input.connect(_on_button_emotes_gui_input)
 	control_wheel.hide()
+	_update_emote_texture()
 	# Clone the template item 9 more times (10 total) and fan them 36° apart. The clone
 	# copies %EmoteWheelItem1's scene-unique-name flag, so clear it to avoid ambiguous %.
 	for i in 9:
@@ -130,6 +144,7 @@ func close() -> void:
 	Global.explorer_grab_focus()
 	if button_emotes != null and button_emotes.button_pressed:
 		button_emotes.set_pressed_no_signal(false)
+	_update_emote_texture()
 
 
 func open() -> void:
@@ -139,6 +154,7 @@ func open() -> void:
 	emote_wheel_opened.emit()
 	grab_focus()
 	Global.release_mouse()
+	_update_emote_texture()
 
 
 func _on_control_wheel_gui_input(event: InputEvent) -> void:
@@ -155,10 +171,31 @@ func _on_emote_item_gui_input(event: InputEvent, item: EmoteItemUi) -> void:
 
 
 func _on_button_emotes_gui_input(event: InputEvent) -> void:
-	if event is InputEventScreenTouch and event.pressed:
-		# Flipping button_pressed emits `toggled`, which open()/close()s the wheel.
-		button_emotes.button_pressed = not button_emotes.button_pressed
+	if event is InputEventScreenTouch:
+		if event.pressed:
+			# Show the transient Pressed look while the finger is down, then flip
+			# button_pressed (emits `toggled` → open()/close(), which re-skins the button).
+			_emote_pressing = true
+			button_emotes.button_pressed = not button_emotes.button_pressed
+			_update_emote_texture()
+		else:
+			# Released: settle onto Hold (wheel open) or Default (closed).
+			_emote_pressing = false
+			_update_emote_texture()
 		button_emotes.accept_event()
+
+
+## Skins the emote button by state: Pressed while the finger is down, else Hold when the
+## wheel is open, else Default. Called from press/release and from open()/close().
+func _update_emote_texture() -> void:
+	if button_emotes == null:
+		return
+	var tex: Texture2D = EMOTE_TEX_DEFAULT
+	if _emote_pressing:
+		tex = EMOTE_TEX_PRESSED
+	elif button_emotes.button_pressed:
+		tex = EMOTE_TEX_HOLD
+	button_emotes.texture_normal = tex
 
 
 func _on_button_toggled(toggled_on: bool) -> void:
