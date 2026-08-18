@@ -34,7 +34,10 @@ use crate::{
         },
     },
     godot_classes::dcl_global::DclGlobal,
-    scene_runner::scene::{Scene, SceneType},
+    scene_runner::{
+        godot_dcl_scene::add_own_visual_child,
+        scene::{Scene, SceneType},
+    },
 };
 
 /// Hard cap of live particles per emitter, regardless of what the scene requests.
@@ -200,7 +203,7 @@ pub fn update_particle_system(
             } else {
                 let mut new_node = GpuParticles3D::new_alloc();
                 new_node.set_name("ParticleSystem");
-                node_3d.add_child(&new_node.clone().upcast::<Node>());
+                add_own_visual_child(&mut node_3d, &new_node.clone().upcast::<Node>());
                 new_node
             };
 

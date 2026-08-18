@@ -156,7 +156,7 @@ func _on_command(cmd: String, args: Dictionary, request_id: String) -> void:
 				for p in qprops:
 					entry[p] = var_to_str(n.get(p))
 				for c in args.get("calls", []):
-					if n.has_method(c[0]):
+					if c is Array and not c.is_empty() and n.has_method(c[0]):
 						entry["call:" + c[0]] = var_to_str(n.callv(c[0], c.slice(1)))
 				results.append(entry)
 			data = {"count": found.size(), "nodes": results}
