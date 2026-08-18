@@ -67,13 +67,8 @@ jobs:
       - name: Run avatar test
         run: |
           mkdir -p avatars-output
-          # --only-no-optimized: the optimized-bundle fetch races local decoding
-          # and ETC2-baked textures render slightly differently, making the
-          # snapshot comparison flip between ~100% and ~88% depending on runner
-          # network timing. Force runtime decoding for deterministic output.
-          podman run --rm \
-            -e PRESET_ARGS="--avatar-renderer --avatars avatars.json --only-no-optimized" \
-            -v $(pwd)/tests/avatars-test-input.json:/app/avatars.json \
+          podman run --rm -v \
+            $(pwd)/tests/avatars-test-input.json:/app/avatars.json \
             -v $(pwd)/avatars-output:/app/output localhost/godot-explorer:${{ github.sha }}
 
       - name: Compare images with snapshots
