@@ -93,6 +93,17 @@ func _initialize() -> void:
 			# `sentry-sample-rate` feature flag, enforced in _before_send once
 			# the flags load.
 			options.sample_rate = 1.0
+
+			# Clamp the logger's own limiter. The addon defaults (20 events per
+			# 10s, same source line re-reported every 1s) let a single device
+			# emit ~172k events/day when an engine ERR_FAIL_COND fires inside a
+			# per-frame loop, which is what drained the quota. These values cap
+			# a device at ~5 events/min (~7k/day) and re-report a given source
+			# line at most once a minute; _before_send still filters on top.
+			options.logger_limits.events_per_frame = 2
+			options.logger_limits.repeated_error_window_ms = 60000
+			options.logger_limits.throttle_events = 5
+			options.logger_limits.throttle_window_ms = 60000
 	)
 
 	# Tag every event so we can filter sampled-vs-unsampled in the Sentry UI.
