@@ -925,7 +925,13 @@ mod tests {
 
     /// Arweave images must download through arweave.net's CDN bot protection
     /// (which 403s clients without a User-Agent — issue #1766).
-    /// Network-dependent, unlike the localhost-server tests above.
+    ///
+    /// #[ignore]: hits the public arweave.net gateway, so running it in default
+    /// CI would make unrelated PRs flaky on gateway outages / rate-limits on
+    /// shared runner egress IPs (the sibling httpbin tests were replaced with
+    /// a localhost server for this exact reason). Manual repro for #1766:
+    ///   cargo test --release -- --ignored test_arweave_download_with_user_agent
+    #[ignore]
     #[tokio::test]
     async fn test_arweave_download_with_user_agent() {
         let dir = std::env::temp_dir().join(format!("dcl-rp-arweave-test-{}", std::process::id()));
@@ -953,8 +959,12 @@ mod tests {
             .await
             .expect("arweave fetch failed");
 
-        // JPEG magic bytes
-        assert_eq!(&data[..3], &[0xFF, 0xD8, 0xFF]);
+        // JPEG magic bytes (starts_with fails cleanly instead of slicing a short body)
+        assert!(
+            data.starts_with(&[0xFF, 0xD8, 0xFF]),
+            "expected JPEG magic bytes, got only {} bytes",
+            data.len()
+        );
 
         provider.clear().await;
         let _ = tokio::fs::remove_dir_all(path).await;
