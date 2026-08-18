@@ -48,6 +48,33 @@ pub struct DclPlayerIdentity {
     /// is already showing the spinner — from "the deep link arrived out of the blue".
     pending_mobile_auth: Option<()>,
 
+    /// Set when the user cancels a browser sign-in this process started — the Cancel on
+    /// AUTH_BROWSER_OPEN, via `abort_try_connect_account`, gated on `mobile_auth_started`.
+    ///
+    /// A cold start cannot have this set — the process is new — which is exactly what makes
+    /// it able to tell "the user cancelled" apart from "the OS killed us mid-browser" now
+    /// that `complete_mobile_connect_account` no longer requires `pending_mobile_auth`
+    /// (#2644). Without it, a deep link returning after a cancel is indistinguishable from
+    /// the cold start and completes the sign-in the user just refused.
+    ///
+    /// Cleared by `start_mobile_connect_account` and by `logout`, so neither a deliberate new
+    /// attempt nor the next account inherits it.
+    mobile_auth_cancelled: bool,
+
+    /// True once `start_mobile_connect_account` ran in this process, i.e. this process is the
+    /// one that sent the user to the browser.
+    ///
+    /// Gates `mobile_auth_cancelled`, because `abort_try_connect_account` is shared with
+    /// sign-in flows that never open our browser hop — the Android native WalletConnect path
+    /// (`login.gd:_on_button_wallet_connect_pressed`) shows the same AUTH_BROWSER_OPEN screen,
+    /// Cancel included, without starting a mobile auth. Without this gate, cancelling MetaMask
+    /// would discard a late `?signin=` token from an earlier process: exactly the #2644 loss
+    /// this branch exists to stop.
+    ///
+    /// Set synchronously, unlike `pending_mobile_auth`, which is only set when the spawned
+    /// `start_mobile_auth` resolves — so it is already true during the browser-opening window.
+    mobile_auth_started: bool,
+
     #[var]
     is_guest: bool,
 
@@ -85,6 +112,8 @@ impl INode for DclPlayerIdentity {
             is_thirdweb_guest_upgraded: false,
             try_connect_account_handle: None,
             pending_mobile_auth: None,
+            mobile_auth_cancelled: false,
+            mobile_auth_started: false,
         }
     }
 }
@@ -739,6 +768,17 @@ impl DclPlayerIdentity {
         }
         // Also clear any pending mobile auth
         self.pending_mobile_auth = None;
+        // Remember the cancel for the rest of this process. Clearing the flag above is not
+        // enough to make the cancel stick: a deep link arriving afterwards would look exactly
+        // like the cold start #2644 rescues, and complete the sign-in anyway.
+        //
+        // Only when this process actually opened the browser, though — this abort is shared
+        // with the native WalletConnect path, which shows the same Cancel without starting a
+        // mobile auth, and marking that as cancelled would throw away a legitimate late token.
+        // Gating on `mobile_auth_started` rather than `pending_mobile_auth` still covers the
+        // case that needs it most, where start_mobile_connect_account's un-abortable spawn has
+        // not set the pending flag yet.
+        self.mobile_auth_cancelled = self.mobile_auth_started;
     }
 
     /// Starts mobile auth flow. Opens browser and returns immediately.
@@ -751,6 +791,11 @@ impl DclPlayerIdentity {
         user_id: GString,
         session_id: GString,
     ) {
+        // This process is now the one that owns the browser hop, and a deliberate new attempt
+        // retires any earlier cancel.
+        self.mobile_auth_started = true;
+        self.mobile_auth_cancelled = false;
+
         let Some(handle) = TokioRuntime::static_clone_handle() else {
             panic!("tokio runtime not initialized")
         };
@@ -821,7 +866,11 @@ impl DclPlayerIdentity {
         let instance_id = self.base().instance_id();
         let identity_id = identity_id.to_string();
 
-        handle.spawn(async move {
+        // Tracked, unlike the other spawns here, so `abort_try_connect_account` can actually
+        // stop it. The lobby shows a Cancel button while this runs — including on the
+        // cold-start resume (#2644), where the user has no other way out — and an untracked
+        // handle made that button a lie: the sign-in landed anyway, moments after the cancel.
+        let complete_handle = handle.spawn(async move {
             let result = complete_mobile_auth(identity_id).await;
             let Ok(mut this) = Gd::<DclPlayerIdentity>::try_from_instance_id(instance_id) else {
                 return;
@@ -852,12 +901,22 @@ impl DclPlayerIdentity {
                 }
             }
         });
+
+        self.try_connect_account_handle = Some(complete_handle);
     }
 
     /// Returns true if there's a pending mobile auth waiting for deep link
     #[func]
     fn has_pending_mobile_auth(&self) -> bool {
         self.pending_mobile_auth.is_some()
+    }
+
+    /// Returns true if the user cancelled an in-flight sign-in in this process. The deep-link
+    /// router checks this before anything else, so a `?signin=` token that arrives after a
+    /// cancel is refused instead of being mistaken for the #2644 cold start.
+    #[func]
+    fn was_mobile_auth_cancelled(&self) -> bool {
+        self.mobile_auth_cancelled
     }
 
     /// Generates ephemeral identity data for external signing (e.g., WalletConnect).
@@ -1291,6 +1350,11 @@ impl DclPlayerIdentity {
         self.profile = None;
         self.is_thirdweb_guest = false;
         self.is_thirdweb_guest_upgraded = false;
+        // The next account starts from a clean sign-in slate: no pending browser hop, and no
+        // cancel from the previous session left to refuse its deep link.
+        self.pending_mobile_auth = None;
+        self.mobile_auth_cancelled = false;
+        self.mobile_auth_started = false;
         self.base_mut()
             .call_deferred("emit_signal", &["logout".to_variant()]);
     }

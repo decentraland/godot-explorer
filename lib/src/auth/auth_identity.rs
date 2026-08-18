@@ -110,12 +110,25 @@ pub async fn complete_mobile_auth(
         .unwrap_or(&identity.ephemeral_identity.private_key);
     let ephemeral_keys = hex::decode(private_key_hex)
         .map_err(|e| anyhow::Error::msg(format!("Invalid ephemeral private key: {}", e)))?;
+    // Reject a key that hex-decodes but is not a valid secp256k1 scalar (wrong length, zero,
+    // or >= the curve order) before EphemeralAuthChain::new reaches it — that constructor
+    // `.unwrap()`s this very parse (ephemeral_auth_chain.rs:33). Everything here comes from the
+    // auth server's response body, and the caller runs on a spawned task whose JoinHandle is
+    // dropped, so a panic would die unobserved: neither wallet_connected nor auth_error would
+    // fire and the sign-in spinner would stay up forever. As an Err it becomes auth_error.
+    LocalWallet::from_bytes(&ephemeral_keys)
+        .map_err(|e| anyhow::Error::msg(format!("Invalid ephemeral private key: {}", e)))?;
 
     // Parse expiration date
     let expiration = chrono::DateTime::parse_from_rfc3339(&identity.expiration)
         .map_err(|e| anyhow::Error::msg(format!("Invalid expiration date: {}", e)))?;
+    // Same reasoning: a pre-epoch timestamp wraps through `as u64` into ~584 billion years and
+    // overflows the SystemTime addition, which panics on the same un-observed task.
+    let expiration_secs = u64::try_from(expiration.timestamp())
+        .map_err(|_| anyhow::Error::msg("Expiration date is before the Unix epoch"))?;
     let expiration_system_time = std::time::SystemTime::UNIX_EPOCH
-        + std::time::Duration::from_secs(expiration.timestamp() as u64);
+        .checked_add(std::time::Duration::from_secs(expiration_secs))
+        .ok_or_else(|| anyhow::Error::msg("Expiration date is out of range"))?;
 
     // Convert auth chain from server format to our SimpleAuthChain
     let chain_links: Vec<ChainLink> = identity

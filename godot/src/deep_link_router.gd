@@ -229,10 +229,29 @@ func _route_teleport() -> void:
 ## The token is self-contained — complete_mobile_connect_account fetches the identity by id
 ## — so the only question is who drives the UI while that fetch runs.
 func _handle_signin_deep_link(identity_id: String) -> void:
+	# The user cancelled a sign-in in this process, so this token is the flow they refused.
+	# Checked ahead of the pending branch on purpose: abort_try_connect_account() clears
+	# pending_mobile_auth, but start_mobile_connect_account's spawn is not abortable and sets
+	# it again when it resolves, so a cancel during the browser-opening window leaves the
+	# pending flag *true* and the warm branch below would complete the sign-in regardless.
+	if Global.player_identity.was_mobile_auth_cancelled():
+		print("[DEEPLINK] Ignoring signin token: the user cancelled this sign-in")
+		return
+
 	if Global.player_identity.has_pending_mobile_auth():
 		# Warm resume: this same process opened the browser, so the lobby is alive with the
 		# AUTH_BROWSER_OPEN spinner up and its auth signals connected. Complete right here.
 		Global.player_identity.complete_mobile_connect_account(identity_id)
+		return
+
+	# Already signed in, so this link cannot be the cold start we are here to rescue — that
+	# user never lost a sign-in. Parking it would leave a token with no consumer (the lobby
+	# is gone), and Global.sign_out() swaps in a *fresh* lobby whose _ready redeems it: the
+	# user asks to sign out and gets signed straight back in, as whoever the link belongs to
+	# rather than as themselves. Drop it instead — the account in use is not a link's call.
+	var connected_address: String = Global.player_identity.get_address_str()
+	if not connected_address.is_empty():
+		print("[DEEPLINK] Ignoring signin token: a wallet is already connected in this session")
 		return
 
 	# Cold start (#2644). The OS killed the process during the browser hop, taking the

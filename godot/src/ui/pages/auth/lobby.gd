@@ -55,6 +55,11 @@ var _redirecting_by_deep_link: bool = false
 # True while finishing a sign-in resumed from a parked `?signin=` deep-link token (#2644).
 # Read by _on_auth_error to recover the session that _ready skipped for it.
 var _resumed_signin_from_deep_link: bool = false
+# True while _ready is committed to restoring the stored session but has not started it yet
+# (it awaits the IAP env first). Neither waiting_for_new_wallet nor loading_first_profile is
+# set during that await, so _on_deep_link_signin_parked needs this to see the in-flight
+# recovery and not kick off a second, concurrent identity flow.
+var _recovering_session: bool = false
 var _last_panel: Control = null
 var _playing: String
 var _logo_tap_count: int = 0
@@ -505,6 +510,7 @@ func _ready():
 	# the usual case after the version-gate round-trip). Only when there's a real
 	# session to restore — guest/preview cleared session_account above.
 	if not session_account.is_empty():
+		_recovering_session = true
 		await Iap.async_await_env_resolved()
 
 	# Flag the wallet_connected emission produced by try_recover_account so the analytics
@@ -513,6 +519,7 @@ func _ready():
 	if Global.analytics_controller != null:
 		Global.analytics_controller.mark_wallet_connected_as_recovery()
 	var recovered := Global.player_identity.try_recover_account(session_account)
+	_recovering_session = false
 	if recovered:
 		loading_first_profile = true
 		show_dcl_splash_screen()
@@ -907,6 +914,17 @@ func _on_button_cancel_pressed():
 	Global.metrics.track_click_button("cancel", current_screen_name, "")
 
 	Global.player_identity.abort_try_connect_account()
+
+	# Cancelling a resumed cold start has to undo what _ready skipped for it (#2644): the
+	# parked token took precedence over session recovery and _ready returned before running
+	# it, so without this the user lands on ACCOUNT_HOME signed out with a session still on
+	# disk, unrestored until the next launch.
+	if _resumed_signin_from_deep_link:
+		_resumed_signin_from_deep_link = false
+		waiting_for_new_wallet = false
+		if _fall_back_to_stored_session():
+			return
+
 	show_auth_home_screen()
 
 
@@ -933,6 +951,13 @@ func _async_resume_signin_from_deep_link() -> bool:
 	waiting_for_new_wallet = true
 	# Distinct auth_method: AUTH_BROWSER_OPEN is the same screen, but this one is a resumed
 	# cold start, and the funnel needs to tell the two apart to measure the fix.
+	#
+	# Cancel stays available here, and it has to keep working: this screen can be the first
+	# thing a user sees on a cold start, so it must never become a dead end. Three things
+	# hold that up — complete_mobile_connect_account is tracked so abort really aborts,
+	# _on_button_cancel_pressed runs the recovery _ready skipped, and complete_mobile_auth
+	# validates the server's key/expiration instead of panicking on an un-observed task
+	# (a panic there would emit neither wallet_connected nor auth_error). Keep all three.
 	show_auth_browser_open_screen("Finishing sign in...", "deeplink_cold_start")
 	# Same reason the session-recovery path below awaits it: on a sandbox StoreKit build the
 	# hybrid env has to be settled before the profile fetch this kicks off, or the profile
@@ -942,12 +967,38 @@ func _async_resume_signin_from_deep_link() -> bool:
 	return true
 
 
+## Late-landing token: Android can deliver the launch intent after _ready already finished,
+## so unlike the _ready call site this one has to look at what the lobby is already doing.
 func _on_deep_link_signin_parked() -> void:
+	if waiting_for_new_wallet or loading_first_profile or _recovering_session:
+		# An identity flow is already in flight — usually the session recovery _ready started
+		# before the intent landed. Redeeming now would run a second one concurrently, and
+		# _async_on_profile_changed handles only the first arrival: whichever profile lands
+		# first takes the loading_first_profile branch and returns, so the
+		# waiting_for_new_wallet branch never runs and the user enters the app with no
+		# Welcome Back while the other identity is still being applied.
+		#
+		# Consume the token rather than leaving it parked: nothing else in this lobby will
+		# redeem it (this signal has already fired), and a token left behind stays live for
+		# PENDING_SIGNIN_MAX_AGE_MS for some later lobby to pick up.
+		var dropped: String = Global.deep_link_router.take_pending_signin_identity_id()
+		if not dropped.is_empty():
+			print("[DEEPLINK] Dropping parked signin token: an identity flow is already running")
+		return
+
 	_async_resume_signin_from_deep_link()
 
 
 func _show_auth_error(error_message: String):
 	track_lobby_screen("AUTH_ERROR")
+	# Re-assert the sign-in panel rather than assuming it is still up. show_panel is what
+	# dismisses the global SplashOverlay, and _on_auth_error can now reach here with the
+	# splash raised: its cold-start fallback calls show_dcl_splash_screen() before it knows
+	# whether try_recover_account will succeed, and on failure falls through to this screen.
+	# The overlay is opaque, sits on layer 100 and is MOUSE_FILTER_STOP, so without this the
+	# user stares at a spinner with TRY AGAIN buried underneath it and no way to tap it.
+	container_sign_in_step2.show()
+	show_panel(control_signin)
 	auth_spinner_container.hide()
 	label_step2_title.text = "Authentication failed"
 	auth_error_label_main.text = error_message
@@ -957,23 +1008,37 @@ func _show_auth_error(error_message: String):
 	button_try_again.show()
 
 
+## Run the session recovery that _ready skipped in favour of a parked `?signin=` token
+## (#2644). Returns true when a recovery actually started, in which case the caller must not
+## navigate anywhere else — the profile_changed chain owns the screen from here.
+func _fall_back_to_stored_session() -> bool:
+	var session_account: Dictionary = Global.get_config().session_account
+	if session_account.is_empty():
+		return false
+
+	print("[DEEPLINK] Falling back to the stored session the sign-in resume stood in for")
+	waiting_for_new_wallet = false
+	loading_first_profile = true
+	show_dcl_splash_screen()
+	if Global.analytics_controller != null:
+		Global.analytics_controller.mark_wallet_connected_as_recovery()
+	if Global.player_identity.try_recover_account(session_account):
+		return true
+
+	# Recovery declined it (usually an expired auth chain, which is why the user was signing
+	# in). Undo the splash state so the caller can show a real screen over it.
+	loading_first_profile = false
+	return false
+
+
 func _on_auth_error(error_message: String):
 	# A cold-start resume that fails must not strand a user who did have a session: _ready
 	# skipped session recovery in favour of the deep-link token (an expired one still fails
 	# here), so run the recovery it stood in for instead of showing AUTH_ERROR over nothing.
 	if _resumed_signin_from_deep_link:
 		_resumed_signin_from_deep_link = false
-		var session_account: Dictionary = Global.get_config().session_account
-		if not session_account.is_empty():
-			print("[DEEPLINK] Sign-in resume failed — falling back to the stored session")
-			waiting_for_new_wallet = false
-			loading_first_profile = true
-			show_dcl_splash_screen()
-			if Global.analytics_controller != null:
-				Global.analytics_controller.mark_wallet_connected_as_recovery()
-			if Global.player_identity.try_recover_account(session_account):
-				return
-			loading_first_profile = false
+		if _fall_back_to_stored_session():
+			return
 
 	_show_auth_error(error_message)
 
