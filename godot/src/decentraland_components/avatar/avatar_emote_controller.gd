@@ -468,6 +468,13 @@ func _async_load_emote(emote_urn: String):
 	# Standard wearable emote loading
 	await WearableRequest.async_fetch_emote(emote_urn)
 
+	# The fetch spans a network round-trip during which the avatar can be freed
+	# (player left, realm change). This controller is RefCounted, so the engine's
+	# freed-instance resume abort never fires for it — re-validate before touching
+	# the avatar (see NodeGuard, #2714).
+	if not NodeGuard.is_alive(avatar, "AvatarEmoteController._async_load_emote"):
+		return
+
 	var emote = Global.content_provider.get_wearable(emote_urn)
 	if emote == null:
 		printerr("Error: emote is null for URN: " + emote_urn)
@@ -592,6 +599,14 @@ func load_emote_from_dcl_emote_gltf(urn: String, obj: DclEmoteGltf, file_hash: S
 func _load_emote_from_gltf_internal(
 	urn: String, obj: DclEmoteGltf, file_hash: String, from_scene: bool, looping: bool
 ):
+	# Reached only after several awaits (emote download + GLTF processing), so the
+	# avatar — and with it animation_player / animation_tree, children of its scene —
+	# may be freed by now. RefCounted self gets no freed-instance resume abort, and
+	# avatar.add_child() on a freed avatar is a native crash (Node::_update_children_cache)
+	# under the release template. Bail out instead — see NodeGuard, #2714.
+	if not NodeGuard.is_alive(avatar, "AvatarEmoteController._load_emote_from_gltf_internal"):
+		return
+
 	# Avoid adding the emote twice
 	if _has_emote(urn):
 		return
