@@ -145,7 +145,7 @@ func _before_send(event: SentryEvent) -> SentryEvent:
 		return null
 
 	if randf() >= NOISE_KEEP_RATE:
-		var msg: String = event.message
+		var msg := _event_text(event)
 		if not msg.is_empty():
 			for pattern in NOISE_PATTERNS:
 				if pattern in msg:
@@ -156,3 +156,15 @@ func _before_send(event: SentryEvent) -> SentryEvent:
 	#	event.message = event.message.replace("Bruno", "REDACTED")
 
 	return event
+
+
+# SentryGodotLogger builds engine/Rust errors with `add_exception()` and never
+# calls `set_message()`, so `event.message` is empty for every event the noise
+# filter is meant to catch. Read the exception value first and fall back to
+# `message` for events captured directly via SentrySDK.capture_message().
+func _event_text(event: SentryEvent) -> String:
+	if event.get_exception_count() > 0:
+		var value := event.get_exception_value(0)
+		if not value.is_empty():
+			return value
+	return event.message
