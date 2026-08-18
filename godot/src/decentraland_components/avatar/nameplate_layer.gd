@@ -19,14 +19,18 @@ const FADE_START := 10.0
 const FADE_END := 15.0
 # Alpha units/sec for smooth occlusion fade in/out.
 const FADE_SPEED := 6.0
-# Occlude ONLY against solid world geometry — the same CL_PHYSICS bodies the player
-# physically collides with (Player.collision_mask == CL_PHYSICS), i.e. the walls/floor
-# that "make you no-walk there". We deliberately do NOT occlude against avatars or any
-# Area3D: avatar bodies/trigger detectors and (nodeless, pooled) DCL scene sensor areas
-# are not walls, and one of those layer-4 scene spheres sits right in front of a third-
-# person camera and was hiding every tag. Bodies only, no areas → no phantom occluders.
+# Occlusion needs to see (a) solid world geometry + avatar bodies, and (b) remote
+# avatar ClickArea areas. We split into two raycasts because a single query cannot
+# target both without also hitting the nodeless, pooled DCL scene-sensor Area3Ds on
+# layer 4 that sit in front of the third-person camera and hide every tag (#2321).
+# Query A (bodies only) uses CL_PHYSICS|CL_BODY, so layer-4 AREAs cannot collide.
+# Query B (areas only) uses CL_AVATAR, so layer-4 phantoms are not in the mask.
+# See #2637.
 const CL_PHYSICS := 2
-const OCCLUSION_MASK := CL_PHYSICS
+const CL_BODY := 4
+const CL_AVATAR := 536870912
+const BODY_MASK := CL_PHYSICS | CL_BODY
+const AREA_MASK := CL_AVATAR
 # Frames between occlusion raycasts per avatar (staggered) — not every frame.
 const OCCLUSION_PERIOD := 6
 # Small gap above the computed bounds top (clearance already covers head/hat
@@ -38,6 +42,7 @@ const NAMETAG_MARGIN := 0.1
 static var debug_disable_occlusion := false
 
 static var _root: Control = null
+static var _camera_area: Node = null
 
 
 ## The Control to parent nameplates under (screen-space). Created on first use.
@@ -152,14 +157,49 @@ static func _anchor(avatar) -> Vector3:
 	return anchor
 
 
-## True if solid world geometry (a CL_PHYSICS body — the walls/floor the player collides
-## with) sits between camera and anchor. Bodies only: avatars and Area3D sensors don't
-## occlude, so no exclude list is needed (the player/avatar colliders live on other layers).
+## True if something sits between camera and anchor. Uses two raycasts so remote avatar
+## ClickArea areas occlude the tag while the nodeless, pooled DCL scene-sensor Area3Ds
+## on layer 4 cannot. See the BODY_MASK/AREA_MASK comment above.
 static func _occluded(avatar, from: Vector3, to: Vector3) -> bool:
 	var space = avatar.get_world_3d().direct_space_state
 	if space == null:
 		return false
-	var query := PhysicsRayQueryParameters3D.create(from, to)
-	query.collision_mask = OCCLUSION_MASK
-	query.collide_with_areas = false
-	return not space.intersect_ray(query).is_empty()
+
+	var exclude: Array[RID] = []
+	if is_instance_valid(avatar.click_area):
+		exclude.append(avatar.click_area.get_rid())
+	if is_instance_valid(avatar.trigger_detector):
+		exclude.append(avatar.trigger_detector.get_rid())
+	if avatar.is_local_player:
+		var parent = avatar.get_parent()
+		if parent is CollisionObject3D:
+			exclude.append(parent.get_rid())
+	var camera_area := _get_camera_area()
+	if camera_area != null:
+		exclude.append(camera_area.get_rid())
+
+	var body_query := PhysicsRayQueryParameters3D.create(from, to)
+	body_query.collision_mask = BODY_MASK
+	body_query.collide_with_areas = false
+	body_query.exclude = exclude
+	if not space.intersect_ray(body_query).is_empty():
+		return true
+
+	var area_query := PhysicsRayQueryParameters3D.create(from, to)
+	area_query.collision_mask = AREA_MASK
+	area_query.collide_with_areas = true
+	area_query.collide_with_bodies = false
+	area_query.exclude = exclude
+	return not space.intersect_ray(area_query).is_empty()
+
+
+## Cached reference to the local player's camera-mode area detector, excluded from
+## occlusion raycasts so it cannot hide the local avatar's own tag.
+static func _get_camera_area() -> CollisionObject3D:
+	if is_instance_valid(_camera_area):
+		return _camera_area as CollisionObject3D
+	var explorer = Global.get_explorer()
+	if explorer == null or not is_instance_valid(explorer.player):
+		return null
+	_camera_area = explorer.player.get_node_or_null("camera_mode_area_detector")
+	return _camera_area as CollisionObject3D
