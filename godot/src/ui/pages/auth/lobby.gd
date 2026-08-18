@@ -991,14 +991,13 @@ func _on_deep_link_signin_parked() -> void:
 
 func _show_auth_error(error_message: String):
 	track_lobby_screen("AUTH_ERROR")
-	# Re-assert the sign-in panel rather than assuming it is still up. show_panel is what
-	# dismisses the global SplashOverlay, and _on_auth_error can now reach here with the
-	# splash raised: its cold-start fallback calls show_dcl_splash_screen() before it knows
-	# whether try_recover_account will succeed, and on failure falls through to this screen.
-	# The overlay is opaque, sits on layer 100 and is MOUSE_FILTER_STOP, so without this the
-	# user stares at a spinner with TRY AGAIN buried underneath it and no way to tap it.
-	container_sign_in_step2.show()
-	show_panel(control_signin)
+	# This is the only screen setter that does not route through show_panel, which is what
+	# dismisses the global SplashOverlay — and that overlay is opaque, on layer 100 and
+	# MOUSE_FILTER_STOP, so anything shown under it is unreachable. Callers are expected to
+	# have the sign-in panel up already (that is why this only toggles containers), so assert
+	# the one invariant that matters instead of re-showing panels behind their backs.
+	# Idempotent: fade_out no-ops once dismissed.
+	SplashOverlay.fade_out()
 	auth_spinner_container.hide()
 	label_step2_title.text = "Authentication failed"
 	auth_error_label_main.text = error_message
@@ -1017,18 +1016,23 @@ func _fall_back_to_stored_session() -> bool:
 		return false
 
 	print("[DEEPLINK] Falling back to the stored session the sign-in resume stood in for")
+	# The deep-link sign-in is over either way.
 	waiting_for_new_wallet = false
-	loading_first_profile = true
-	show_dcl_splash_screen()
+	# Must precede try_recover_account: it flags the wallet_connected this is about to emit.
 	if Global.analytics_controller != null:
 		Global.analytics_controller.mark_wallet_connected_as_recovery()
-	if Global.player_identity.try_recover_account(session_account):
-		return true
 
-	# Recovery declined it (usually an expired auth chain, which is why the user was signing
-	# in). Undo the splash state so the caller can show a real screen over it.
-	loading_first_profile = false
-	return false
+	# Raise the splash only once recovery has actually taken, the same order _ready uses.
+	# try_recover_account is synchronous, so there is no window to cover by showing it first —
+	# and showing it first means a declined recovery (an expired auth chain, i.e. the very
+	# reason the user was signing in) leaves the caller drawing its screen underneath an
+	# opaque, input-blocking overlay.
+	if not Global.player_identity.try_recover_account(session_account):
+		return false
+
+	loading_first_profile = true
+	show_dcl_splash_screen()
+	return true
 
 
 func _on_auth_error(error_message: String):
