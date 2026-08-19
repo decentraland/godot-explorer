@@ -375,6 +375,10 @@ fn main() -> io::Result<()> {
         println!("cargo:rustc-link-arg=/FORCE:MULTIPLE");
     }
 
+    // Must run before ANY patch is written, or it deletes the copies produced
+    // below (the component loop patches avatar_emote_command.proto).
+    clear_patched_proto_root();
+
     let mut proto_components = vec![];
     let mut proto_files = vec![];
     let dir_path = Path::new(COMPONENT_BASE_DIR);
@@ -398,8 +402,6 @@ fn main() -> io::Result<()> {
             }
         }
     }
-
-    clear_patched_proto_root();
 
     proto_files.push(
         format!("{PROTO_FILES_BASE_DIR}decentraland/kernel/comms/rfc5/ws_comms.proto").into(),
@@ -576,9 +578,11 @@ fn patched_rfc4_comms_proto() -> std::path::PathBuf {
 /// the `EmoteState` lifecycle enum and `PBAvatarEmoteCommand.state` (field 5) so scenes
 /// can observe emote completion/interruption. Same idiom as `patched_rfc4_comms_proto`:
 /// patch a copy under OUT_DIR/proto_patched/ and compile that one instead of the npm
-/// copy (which `cargo run -- install` rewrites). The enum is nested inside the message
-/// here while upstream declares it at file scope — wire-identical either way, and it
-/// keeps the patch a single insertion. No-ops once the pinned build ships the field.
+/// copy (which `cargo run -- install` rewrites). The enum is declared at FILE scope to
+/// match upstream exactly: prost maps a nested enum to `pb_avatar_emote_command::EmoteState`
+/// and a file-scope one to `sdk::components::EmoteState`, so declaring it anywhere else
+/// would break every import site the day the pin bumps. This way that bump is a true
+/// no-op. No-ops once the pinned build ships the field.
 fn patched_avatar_emote_command_proto() -> std::path::PathBuf {
     const REL: &str = "decentraland/sdk/components/avatar_emote_command.proto";
     let mut source = fs::read_to_string(format!("{PROTO_FILES_BASE_DIR}{REL}"))
@@ -588,15 +592,19 @@ fn patched_avatar_emote_command_proto() -> std::path::PathBuf {
         source = insert_fields_before_message_close(
             &source,
             "message PBAvatarEmoteCommand {",
+            "  // When absent (older explorers), defaults to ES_STARTED.\n  optional EmoteState state = 5;\n",
+        );
+        // File-scope enum, inserted before the message that references it.
+        source = source.replace(
+            "message PBAvatarEmoteCommand {",
             concat!(
-                "  // EmoteState describes the lifecycle event for this emote entry.\n",
-                "  enum EmoteState {\n",
-                "    ES_STARTED = 0; // zero value: entries from older explorers read as \"started\"\n",
-                "    ES_FINISHED = 1; // non-looping emote completed naturally\n",
-                "    ES_INTERRUPTED = 2; // cancelled: movement, stop, superseded, or scene change\n",
-                "  }\n",
-                "  // When absent (older explorers), defaults to ES_STARTED.\n",
-                "  optional EmoteState state = 5;\n",
+                "// EmoteState describes the lifecycle state of an emote playback.\n",
+                "enum EmoteState {\n",
+                "  ES_STARTED = 0; // zero value: entries from older explorers read as \"started\"\n",
+                "  ES_FINISHED = 1; // non-looping emote completed naturally\n",
+                "  ES_INTERRUPTED = 2; // cancelled: movement, stop, superseded, or scene change\n",
+                "}\n\n",
+                "message PBAvatarEmoteCommand {"
             ),
         );
     }

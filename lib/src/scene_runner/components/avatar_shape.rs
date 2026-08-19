@@ -4,7 +4,8 @@ use crate::{
     dcl::{
         components::{
             proto_components::{
-                common::Color3, sdk::components::pb_avatar_emote_command::EmoteState,
+                common::Color3,
+                sdk::components::{EmoteState, PbAvatarEmoteCommand},
             },
             SceneComponentId,
         },
@@ -59,6 +60,27 @@ fn color3_to_avatar_color(color: Color3) -> AvatarColor {
     }
 }
 
+/// Pull the emote still mid-playback off an avatar node about to be freed and turn
+/// it into an `ES_INTERRUPTED` entry. Returns None when nothing was playing.
+fn take_unfinished_emote(avatar_node: &mut Gd<Node>) -> Option<PbAvatarEmoteCommand> {
+    let info = avatar_node
+        .call("take_unfinished_emote", &[])
+        .try_to::<VarArray>()
+        .ok()?;
+    if info.len() != 2 {
+        return None;
+    }
+    let urn = info.at(0).try_to::<GString>().ok()?.to_string();
+    let mask = info.at(1).try_to::<i64>().unwrap_or(-1);
+    Some(PbAvatarEmoteCommand {
+        emote_urn: urn,
+        r#loop: false,
+        timestamp: 0,
+        mask: crate::avatars::emote_mask::component_mask_from_internal(mask),
+        state: Some(EmoteState::EsInterrupted as i32),
+    })
+}
+
 pub fn update_avatar_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
     let godot_dcl_scene = &mut scene.godot_dcl_scene;
     let dirty_lww_components = &scene.current_dirty.lww_components;
@@ -79,6 +101,17 @@ pub fn update_avatar_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
 
             if new_value.is_none() {
                 if let Some(mut avatar_node) = existing {
+                    // Report a still-running emote before the node dies: its
+                    // `emote_finished` signal is deferred and would never land, so a
+                    // scene awaiting the terminal EmoteState would wait forever.
+                    if let Some(terminal) = take_unfinished_emote(&mut avatar_node) {
+                        scene
+                            .avatar_scene_updates
+                            .avatar_emote_command
+                            .entry(*entity)
+                            .or_default()
+                            .push(terminal);
+                    }
                     avatar_node.queue_free();
                     node_3d.remove_child(&avatar_node);
                 }

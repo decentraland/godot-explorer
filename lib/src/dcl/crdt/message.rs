@@ -424,3 +424,60 @@ pub fn filter_known_crdt_messages(raw: &[u8], scene_crdt_state: &SceneCrdtState)
 
     out
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::dcl::components::proto_components::sdk::components::PbAvatarEmoteCommand;
+    use crate::dcl::crdt::grow_only_set::GenericGrowOnlySetComponentOperation;
+    use crate::dcl::crdt::SceneCrdtStateProtoComponents;
+
+    /// `GrowOnlySet::to_binary` takes a REVERSE index (0 = newest entry), so walking
+    /// `0..elements_count` forward emitted a tick's new entries newest-first. Scenes
+    /// that consume entries in arrival order — rather than sorting by timestamp — then
+    /// saw an emote's ES_INTERRUPTED ahead of the ES_STARTED it followed, and video
+    /// events arrived newest-first and were dropped as stale by the SDK's dedup.
+    ///
+    /// Guards every grow-only component, not just emotes: whenever more than one entry
+    /// lands in a single tick, delivery order must match append order.
+    #[test]
+    fn append_gos_component_emits_entries_in_append_order() {
+        // from_proto (not default) registers the generated proto components.
+        let mut crdt_state = SceneCrdtState::from_proto();
+        let entity = SceneEntityId::PLAYER;
+
+        let commands = SceneCrdtStateProtoComponents::get_avatar_emote_command_mut(&mut crdt_state);
+        for urn in ["first-urn", "second-urn", "third-urn"] {
+            commands.append(
+                entity,
+                PbAvatarEmoteCommand {
+                    emote_urn: urn.to_string(),
+                    ..Default::default()
+                },
+            );
+        }
+
+        let mut buf = Vec::new();
+        let mut writer = DclWriter::new(&mut buf);
+        append_gos_component(
+            &crdt_state,
+            &entity,
+            &SceneComponentId::AVATAR_EMOTE_COMMAND,
+            &3,
+            &mut writer,
+        )
+        .expect("the three appended entries should serialize");
+
+        // The urns are plain UTF-8 in the protobuf payload, so their byte offsets in
+        // the stream reveal the emitted order without re-implementing the parser.
+        let stream = String::from_utf8_lossy(&buf);
+        let first = stream.find("first-urn").expect("first entry missing");
+        let second = stream.find("second-urn").expect("second entry missing");
+        let third = stream.find("third-urn").expect("third entry missing");
+
+        assert!(
+            first < second && second < third,
+            "entries must be emitted oldest-first; got offsets {first}, {second}, {third}"
+        );
+    }
+}

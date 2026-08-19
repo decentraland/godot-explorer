@@ -10,21 +10,25 @@ const TELEPORT_GRACE_SECONDS: float = 0.5
 # AvatarMask.AM_UPPER_BODY in the internal mask convention (-1 = full body).
 const MASK_UPPER_BODY: int = 0
 
-# Tracks an upper-body emote must NOT drive: root motion and the lower body stay
-# with the locomotion state machine (matches Unity's UpperBodyAvatarMask, which
-# also excludes Avatar_Hips so walking keeps owning the pelvis). A Dictionary
-# (used as a set) so the per-track lookup below is a hash probe, not a scan.
-const MASKED_EMOTE_EXCLUDED_TRACKS: Dictionary = {
-	"Armature": true,
-	"Armature/Skeleton3D:Avatar_Hips": true,
-	"Armature/Skeleton3D:Avatar_LeftUpLeg": true,
-	"Armature/Skeleton3D:Avatar_LeftLeg": true,
-	"Armature/Skeleton3D:Avatar_LeftFoot": true,
-	"Armature/Skeleton3D:Avatar_LeftToeBase": true,
-	"Armature/Skeleton3D:Avatar_RightUpLeg": true,
-	"Armature/Skeleton3D:Avatar_RightLeg": true,
-	"Armature/Skeleton3D:Avatar_RightFoot": true,
-	"Armature/Skeleton3D:Avatar_RightToeBase": true,
+# Bones an upper-body emote must NOT drive: the lower body stays with the locomotion
+# state machine (matches Unity's UpperBodyAvatarMask, which also excludes Avatar_Hips
+# so walking keeps owning the pelvis). A Dictionary (used as a set) so the per-track
+# lookup is a hash probe, not a scan.
+#
+# Keyed by BONE NAME (the part after ':') rather than the full track path: a
+# scene-authored emote GLB may carry a different armature/skeleton prefix, and
+# matching the whole path would silently let its hips and legs through the filter
+# to fight the locomotion state machine.
+const MASKED_EMOTE_EXCLUDED_BONES: Dictionary = {
+	"Avatar_Hips": true,
+	"Avatar_LeftUpLeg": true,
+	"Avatar_LeftLeg": true,
+	"Avatar_LeftFoot": true,
+	"Avatar_LeftToeBase": true,
+	"Avatar_RightUpLeg": true,
+	"Avatar_RightLeg": true,
+	"Avatar_RightFoot": true,
+	"Avatar_RightToeBase": true,
 }
 
 # Preallocated AnimationTree parameter paths: `process()` polls `active` every
@@ -225,6 +229,20 @@ func stop_emote():
 	_stop_generation += 1
 
 
+## Hand back the emote still mid-playback (if any) and clear it, so nothing reports
+## it a second time. Used by the teardown paths in Rust right before this avatar's
+## node is freed: `_emit_emote_finished` defers its signal, and a deferred emit on a
+## dying node is dropped — the scene would then wait forever for a terminal state.
+## Returns [urn, mask], or an empty array when nothing is playing.
+func take_unfinished_emote() -> Array:
+	if current_emote_urn == "":
+		return []
+	var info := [current_emote_urn, current_emote_mask]
+	current_emote_urn = ""
+	current_emote_mask = -1
+	return info
+
+
 ## Report the end of the currently playing emote, exactly once per started emote.
 ## Deferred like `emote_triggered`, so a supersede emits finished before the new
 ## emote's triggered and the scene sees the entries in stop-then-start order.
@@ -338,18 +356,50 @@ func _play_masked_emote(anim_path: String) -> bool:
 	for path in _masked_filter_paths:
 		masked_one_shot_node.set_filter_path(path, false)
 	_masked_filter_paths.clear()
+	var excluded_count := 0
 	for track_idx in animation.get_track_count():
 		var track_path := animation.track_get_path(track_idx)
-		if MASKED_EMOTE_EXCLUDED_TRACKS.has(String(track_path)):
+		if _is_excluded_from_mask(track_path):
+			excluded_count += 1
 			continue
 		masked_one_shot_node.set_filter_path(track_path, true)
 		_masked_filter_paths.push_back(track_path)
 
+	# A clip that excluded nothing is animating no lower body at all — either it is
+	# genuinely upper-body-only, or its bones are named unexpectedly and the mask is
+	# silently a no-op. Say so rather than shipping a broken-looking avatar.
+	if excluded_count == 0:
+		push_warning(
+			"Masked emote '%s' matched no lower-body track; the mask may have no effect" % anim_path
+		)
+
 	animation_masked_emote_node.animation = anim_path
+	# Loop inside the node rather than re-firing the OneShot each iteration: a
+	# re-fire has to wait a frame for `active` to drop and then replays
+	# `fadein_time`, which shows up as a blend seam once per loop.
+	# `loop_mode` is only honoured with a custom timeline, whose length defaults to
+	# 1s — so it has to be set from the clip or every loop would be clipped to that.
+	animation_masked_emote_node.use_custom_timeline = playing_loop
+	if playing_loop:
+		animation_masked_emote_node.timeline_length = animation.length
+		animation_masked_emote_node.loop_mode = Animation.LOOP_LINEAR
+	else:
+		animation_masked_emote_node.loop_mode = Animation.LOOP_NONE
 	animation_tree.set(MASKED_REQUEST_PARAM, AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
 	_masked_fired_frame = Engine.get_process_frames()
 	playing_masked = true
 	return true
+
+
+## True for tracks the masked layer must NOT drive: root motion, and the lower body
+## matched on bone name so a differently-prefixed armature still filters correctly.
+func _is_excluded_from_mask(track_path: NodePath) -> bool:
+	var path := String(track_path)
+	var colon := path.rfind(":")
+	if colon == -1:
+		# No subpath: the armature/root motion track itself.
+		return not path.begins_with("Armature_Prop")
+	return MASKED_EMOTE_EXCLUDED_BONES.has(path.substr(colon + 1))
 
 
 ## Mechanically stop the masked layer (no emote_finished emission — callers
@@ -1015,19 +1065,14 @@ func process(idle: bool):
 	if playing_masked:
 		# `active` may not reflect a FIRE request until the tree has processed a
 		# frame, so skip the frame the request was set on.
-		if Engine.get_process_frames() > _masked_fired_frame:
+		# A looping masked emote loops inside the AnimationNodeAnimation, so the
+		# OneShot stays active forever — only stop_emote/supersede ends it.
+		if not playing_loop and Engine.get_process_frames() > _masked_fired_frame:
 			var one_shot_active: bool = animation_tree.get(MASKED_ACTIVE_PARAM)
 			if not one_shot_active:
-				if playing_loop:
-					animation_tree.set(
-						MASKED_REQUEST_PARAM, AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE
-					)
-					_masked_fired_frame = Engine.get_process_frames()
-				else:
-					_emit_emote_finished(false)
-					playing_masked = false
-					playing_loop = false
-					_hide_all_props()
+				_emit_emote_finished(false)
+				playing_masked = false
+				_hide_all_props()
 
 	if playing_single or playing_mixed:
 		# Check for actual player input - this cancels the grace period

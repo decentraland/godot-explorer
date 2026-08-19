@@ -2,7 +2,7 @@ use crate::dcl::{
     components::{
         proto_components::sdk::components::{
             common::{InputAction, PointerEventType, RaycastHit},
-            pb_avatar_emote_command::EmoteState,
+            EmoteState,
         },
         SceneComponentId, SceneEntityId,
     },

@@ -8,8 +8,8 @@ use crate::{
                 common::BorderRect,
                 sdk::components::{
                     common::{InputAction, InteractionType, PointerEventType, RaycastHit},
-                    pb_avatar_emote_command::EmoteState,
-                    PbAvatarEmoteCommand, PbPrimaryPointerInfo, PbUiCanvasInformation, PointerType,
+                    EmoteState, PbAvatarEmoteCommand, PbPrimaryPointerInfo, PbUiCanvasInformation,
+                    PointerType,
                 },
             },
             SceneEntityId,

@@ -17,7 +17,7 @@ use crate::{
             internal_player_data::InternalPlayerData,
             proto_components::{
                 kernel::comms::rfc4,
-                sdk::components::{pb_avatar_emote_command::EmoteState, PbAvatarEmoteCommand},
+                sdk::components::{EmoteState, PbAvatarEmoteCommand},
             },
             transform_and_parent::DclTransformAndParent,
             SceneEntityId,
@@ -1470,8 +1470,46 @@ impl AvatarScene {
         }
     }
 
+    /// Report an emote still mid-playback as interrupted while the avatar node is
+    /// alive. The node is about to be freed, and `emote_finished` is emitted
+    /// deferred — a deferred emit on a dying node never lands, so without this a
+    /// scene awaiting the terminal EmoteState would wait forever (a disconnecting
+    /// peer is the common case).
+    fn flush_unfinished_emote(&self, entity_id: SceneEntityId) {
+        let Some(avatar) = self.avatar_godot_scene.get(&entity_id) else {
+            return;
+        };
+        let info = avatar.clone().call("take_unfinished_emote", &[]);
+        let Ok(info) = info.try_to::<VarArray>() else {
+            return;
+        };
+        if info.len() != 2 {
+            return;
+        }
+        let urn = info
+            .at(0)
+            .try_to::<GString>()
+            .unwrap_or_default()
+            .to_string();
+        let mask = info.at(1).try_to::<i64>().unwrap_or(-1);
+
+        self.append_avatar_emote_command(
+            entity_id.as_i32(),
+            PbAvatarEmoteCommand {
+                emote_urn: urn,
+                r#loop: false,
+                timestamp: 0,
+                mask: crate::avatars::emote_mask::component_mask_from_internal(mask),
+                state: Some(EmoteState::EsInterrupted as i32),
+            },
+        );
+    }
+
     pub fn remove_avatar(&mut self, alias: u32) {
         if let Some(entity_id) = self.avatar_entity.remove(&alias) {
+            // Before anything is unregistered — append_avatar_emote_command still
+            // needs the node to resolve which scenes the avatar is in.
+            self.flush_unfinished_emote(entity_id);
             if let Some(avatar) = self.avatar_godot_scene.get(&entity_id) {
                 let impostor_id = avatar.instance_id().to_i64();
                 self.clear_impostor(impostor_id);
