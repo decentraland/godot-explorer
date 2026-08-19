@@ -1589,6 +1589,11 @@ impl ContentProvider {
         if let Some(promise) = self.get_cached_promise(&file_hash) {
             return promise;
         }
+        tracing::debug!(
+            "fetch_texture_by_url_with_quality: {} -> {}",
+            url,
+            file_hash
+        );
         let url = url.to_string();
         let (promise, get_promise) = Promise::make_to_async();
 
@@ -1610,8 +1615,12 @@ impl ContentProvider {
 
             loading_resources.fetch_add(1, Ordering::Relaxed);
 
+            let url_for_log = url.clone();
             let result =
                 load_image_texture(url, sent_file_hash, content_provider_context, true).await;
+            if let Err(error) = &result {
+                tracing::warn!("fetch_texture_by_url failed for {}: {}", url_for_log, error);
+            }
 
             #[cfg(feature = "use_resource_tracking")]
             if let Err(error) = &result {

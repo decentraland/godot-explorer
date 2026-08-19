@@ -61,7 +61,12 @@ impl HttpQueueRequester {
         inspector_sender: Option<NetworkInspectorSender>,
     ) -> Self {
         Self {
-            client: Arc::new(Client::new()),
+            client: Arc::new(
+                Client::builder()
+                    .user_agent(crate::USER_AGENT)
+                    .build()
+                    .expect("failed to build reqwest client"),
+            ),
             queue: Arc::new(Mutex::new(BinaryHeap::new())),
             semaphore: Arc::new(Semaphore::new(max_parallel_requests)),
             inspector_sender,

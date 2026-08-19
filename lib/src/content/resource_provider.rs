@@ -100,6 +100,10 @@ impl ResourceProvider {
             max_cache_size: AtomicI64::new(max_cache_size),
             pending_downloads: RwLock::new(HashMap::new()),
             client: Client::builder()
+                // reqwest sends no User-Agent by default; CDN bot protection
+                // (e.g. arweave.net's CDN77) rate-limits UA-less clients to ~1
+                // request per window, 403ing everything else (#1766).
+                .user_agent(crate::USER_AGENT)
                 .connect_timeout(CONNECT_TIMEOUT)
                 .build()
                 .expect("Failed to build ResourceProvider HTTP client"),
@@ -875,6 +879,7 @@ mod tests {
 
         #[cfg(feature = "use_resource_tracking")]
         let resource_download_tracking = Arc::new(ResourceDownloadTracking::new());
+
         let provider = Arc::new(ResourceProvider::new(
             path,
             1024 * 1024,
@@ -913,6 +918,53 @@ mod tests {
             .fetch_resource(good_url, file_hash.clone(), absolute_file_path.clone())
             .await
             .expect("retry after a failed download should succeed, not hang");
+
+        provider.clear().await;
+        let _ = tokio::fs::remove_dir_all(path).await;
+    }
+
+    /// Arweave images must download through arweave.net's CDN bot protection
+    /// (which 403s clients without a User-Agent — issue #1766).
+    ///
+    /// #[ignore]: hits the public arweave.net gateway, so running it in default
+    /// CI would make unrelated PRs flaky on gateway outages / rate-limits on
+    /// shared runner egress IPs (the sibling httpbin tests were replaced with
+    /// a localhost server for this exact reason). Manual repro for #1766:
+    ///   cargo test --release -- --ignored test_arweave_download_with_user_agent
+    #[ignore]
+    #[tokio::test]
+    async fn test_arweave_download_with_user_agent() {
+        let dir = std::env::temp_dir().join(format!("dcl-rp-arweave-test-{}", std::process::id()));
+        let path = dir.to_str().expect("temp dir path is valid utf-8");
+        setup_cache_folder(path)
+            .await
+            .expect("Failed to create cache folder");
+
+        #[cfg(feature = "use_resource_tracking")]
+        let resource_download_tracking = Arc::new(ResourceDownloadTracking::new());
+
+        let provider = ResourceProvider::new(
+            path,
+            1024 * 1024 * 100,
+            2,
+            #[cfg(feature = "use_resource_tracking")]
+            resource_download_tracking,
+        );
+
+        let url = "https://2ijy24lhsmfwf3sjzeza7dz45xq5n27wtwgcs4xiruge4nxxayha.arweave.net/0hONcWeTC2LuSckyD4887eHW6_adjCly6I0MTjb3Bg4";
+        let file_hash = "arweave_test_tx".to_string();
+        let absolute_file_path = format!("{}/{}", path, file_hash);
+        let data = provider
+            .fetch_resource_with_data(url, &file_hash, &absolute_file_path)
+            .await
+            .expect("arweave fetch failed");
+
+        // JPEG magic bytes (starts_with fails cleanly instead of slicing a short body)
+        assert!(
+            data.starts_with(&[0xFF, 0xD8, 0xFF]),
+            "expected JPEG magic bytes, got only {} bytes",
+            data.len()
+        );
 
         provider.clear().await;
         let _ = tokio::fs::remove_dir_all(path).await;
