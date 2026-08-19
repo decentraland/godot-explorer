@@ -914,6 +914,12 @@ func _on_button_cancel_pressed():
 	Global.metrics.track_click_button("cancel", current_screen_name, "")
 
 	Global.player_identity.abort_try_connect_account()
+	# Every browser sign-in arms this (login.gd), not just a resumed one, so clear it for all
+	# of them: abort() cannot unwind a completion that already passed its only await, and a
+	# lobby left armed turns that lost race into a Welcome Back for the sign-in the user just
+	# cancelled. The attempt token in DclPlayerIdentity is what actually drops the result;
+	# this makes sure the lobby is not waiting for it either.
+	waiting_for_new_wallet = false
 
 	# Cancelling a resumed cold start has to undo what _ready skipped for it (#2644): the
 	# parked token took precedence over session recovery and _ready returned before running
@@ -921,7 +927,6 @@ func _on_button_cancel_pressed():
 	# disk, unrestored until the next launch.
 	if _resumed_signin_from_deep_link:
 		_resumed_signin_from_deep_link = false
-		waiting_for_new_wallet = false
 		if _fall_back_to_stored_session():
 			return
 
