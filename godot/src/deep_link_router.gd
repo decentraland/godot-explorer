@@ -235,6 +235,13 @@ func _handle_signin_deep_link(identity_id: String) -> void:
 		Global.player_identity.complete_mobile_connect_account(identity_id)
 		return
 
+	# Already signed in, so this cannot be the cold start we rescue. Parking it leaves a token
+	# with no consumer until sign_out() swaps in a fresh lobby, whose _ready redeems it — the
+	# user asks to sign out and is signed back in as whoever the link belongs to.
+	if not Global.player_identity.get_address_str().is_empty():
+		print("[DEEPLINK] Ignoring signin token: a wallet is already connected")
+		return
+
 	# Cold start (#2644). The OS killed the process during the browser hop, taking the
 	# in-memory pending flag with it, and the deep link came back to a fresh boot. This used
 	# to `printerr` and drop the token, stranding the user on ACCOUNT_HOME after a sign-in
