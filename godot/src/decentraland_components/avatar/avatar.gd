@@ -1072,7 +1072,11 @@ func async_load_wearables():
 		if file_hash.is_empty():
 			continue
 		# Use emote_loader from emote_controller to get the cached emote (threaded loading)
-		var obj = await emote_controller.emote_loader.async_get_emote_gltf(file_hash)
+		var obj = await emote_controller.emote_loader.async_get_emote_gltf(
+			file_hash,
+			emote.get_representation_main_file(avatar_data.get_body_shape()),
+			emote.get_content_mapping()
+		)
 		if obj != null:
 			emote_controller.load_emote_from_dcl_emote_gltf(emote_urn, obj, file_hash)
 
