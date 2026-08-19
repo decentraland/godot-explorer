@@ -13,6 +13,11 @@ const ADAPTATION_LAYER_URL: String = "https://renderer-artifacts.decentraland.or
 const FIXED_LOCAL_ADAPTATION_LAYER: String = ""
 const INVALID_PARCEL := Vector2i(-1000, -1000)
 
+## How long a deleted model keeps swallowing change events for its own path.
+## Slightly above the preview server's 800ms debounce, so the trailing event a
+## delete emits lands inside the window while a human re-creating a file does not.
+const REMOVED_MODEL_GRACE_MS := 1500
+
 
 class SceneItem:
 	extends RefCounted
@@ -88,6 +93,15 @@ var _pending_empty_parcel_spawn: Vector2i = INVALID_PARCEL
 
 # Preview WebSocket for hot reload
 var _preview_ws := PreviewWebSocket.new()
+
+# Models dropped by an UMT_REMOVE, as src -> Time.get_ticks_msec().
+#
+# Deleting a file makes the server emit *both* an immediate UMT_REMOVE and, up to
+# one debounce window later, an UMT_CHANGE for the same (now missing) path. Both
+# arrive as "change event with no mapping entry", which is also what a re-created
+# file looks like — so without this the paired event is mistaken for a recovery
+# and triggers a pointless full reload right after every delete.
+var _recently_removed_models: Dictionary = {}
 
 
 func get_preview_ws() -> PreviewWebSocket:
@@ -1265,18 +1279,36 @@ func async_on_preview_model_update(
 	# would point the container at an unrelated cache entry. Since a path-derived
 	# hash cannot change when the contents do, the mapping is already correct for
 	# an edit — only a deletion has to touch it.
-	if (
-		removed
-		and not Global.scene_runner.update_scene_content_entry(scene_number_id, lower_src, "")
-	):
+	var mapping := Global.scene_runner.get_scene_content_mapping(scene_number_id)
+	var old_hash := mapping.get_hash(lower_src)
+
+	if not removed and old_hash.is_empty():
+		var removed_at: int = _recently_removed_models.get(lower_src, -1)
+		if removed_at >= 0 and Time.get_ticks_msec() - removed_at < REMOVED_MODEL_GRACE_MS:
+			# The delete's own trailing change event — the file is still gone, so
+			# there is nothing to reload.
+			return
+
+		# The file is back after a delete dropped its mapping entry, and the entry
+		# cannot be rebuilt here: the hash comes from the absolute path plus a
+		# machine id that only the server knows. A full reload refetches the scene
+		# definition, which brings the entry back with the right hash.
+		_recently_removed_models.erase(lower_src)
 		_on_preview_scene_update(scene_id)
 		return
+
+	if removed:
+		if not Global.scene_runner.update_scene_content_entry(scene_number_id, lower_src, ""):
+			_on_preview_scene_update(scene_id)
+			return
+		_recently_removed_models[lower_src] = Time.get_ticks_msec()
+	else:
+		_recently_removed_models.erase(lower_src)
 
 	# Same reason the hash is stable: every cache layer keyed by it now holds
 	# stale bytes and must be dropped unconditionally. Awaited, because the
 	# re-request below would otherwise race the (async) delete and re-import the
 	# file we just evicted.
-	var old_hash: String = containers[0].dcl_gltf_hash
 	if not old_hash.is_empty():
 		await PromiseUtils.async_awaiter(Global.content_provider.purge_file(old_hash))
 
