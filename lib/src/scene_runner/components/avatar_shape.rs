@@ -2,13 +2,20 @@ use crate::{
     avatars::avatar_type::DclAvatarWireFormat,
     comms::profile::{AvatarColor, AvatarColor3, AvatarEmote, AvatarWireFormat},
     dcl::{
-        components::{proto_components::common::Color3, SceneComponentId},
+        components::{
+            proto_components::{
+                common::Color3,
+                sdk::components::{EmoteState, PbAvatarEmoteCommand},
+            },
+            SceneComponentId,
+        },
         crdt::{
             grow_only_set::GenericGrowOnlySetComponentOperation,
             last_write_wins::LastWriteWinsComponentOperation, SceneCrdtState,
             SceneCrdtStateProtoComponents,
         },
     },
+    godot_classes::dcl_global::DclGlobal,
     scene_runner::{godot_dcl_scene::add_own_visual_child, scene::Scene},
 };
 use godot::{classes::Node, prelude::*};
@@ -53,6 +60,27 @@ fn color3_to_avatar_color(color: Color3) -> AvatarColor {
     }
 }
 
+/// Pull the emote still mid-playback off an avatar node about to be freed and turn
+/// it into an `ES_INTERRUPTED` entry. Returns None when nothing was playing.
+fn take_unfinished_emote(avatar_node: &mut Gd<Node>) -> Option<PbAvatarEmoteCommand> {
+    let info = avatar_node
+        .call("take_unfinished_emote", &[])
+        .try_to::<VarArray>()
+        .ok()?;
+    if info.len() != 2 {
+        return None;
+    }
+    let urn = info.at(0).try_to::<GString>().ok()?.to_string();
+    let mask = info.at(1).try_to::<i64>().unwrap_or(-1);
+    Some(PbAvatarEmoteCommand {
+        emote_urn: urn,
+        r#loop: false,
+        timestamp: 0,
+        mask: crate::avatars::emote_mask::component_mask_from_internal(mask),
+        state: Some(EmoteState::EsInterrupted as i32),
+    })
+}
+
 pub fn update_avatar_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
     let godot_dcl_scene = &mut scene.godot_dcl_scene;
     let dirty_lww_components = &scene.current_dirty.lww_components;
@@ -73,6 +101,17 @@ pub fn update_avatar_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
 
             if new_value.is_none() {
                 if let Some(mut avatar_node) = existing {
+                    // Report a still-running emote before the node dies: its
+                    // `emote_finished` signal is deferred and would never land, so a
+                    // scene awaiting the terminal EmoteState would wait forever.
+                    if let Some(terminal) = take_unfinished_emote(&mut avatar_node) {
+                        scene
+                            .avatar_scene_updates
+                            .avatar_emote_command
+                            .entry(*entity)
+                            .or_default()
+                            .push(terminal);
+                    }
                     avatar_node.queue_free();
                     node_3d.remove_child(&avatar_node);
                 }
@@ -189,6 +228,47 @@ pub fn update_avatar_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                     // Remove trigger detection for AvatarShapes - scene NPCs should not trigger areas
                     new_avatar_shape.call("remove_trigger_detection", &[]);
 
+                    // Report emote terminal states (finished/interrupted) back to this
+                    // scene's AvatarEmoteCommand set. Starts are scene-authored, so only
+                    // the ending is appended by the explorer.
+                    let scene_id = scene.scene_id.0;
+                    let entity_id = entity.as_i32();
+                    let emote_finished_callable = Callable::from_fn(
+                        "on_avatar_shape_emote_finished",
+                        move |args: &[&Variant]| {
+                            if args.len() != 3 {
+                                return Variant::nil();
+                            }
+                            let Ok(emote_id) = args[0].try_to::<GString>() else {
+                                return Variant::nil();
+                            };
+                            let Ok(interrupted) = args[1].try_to::<bool>() else {
+                                return Variant::nil();
+                            };
+                            let Ok(mask) = args[2].try_to::<i64>() else {
+                                return Variant::nil();
+                            };
+
+                            DclGlobal::singleton()
+                                .bind()
+                                .scene_runner
+                                .clone()
+                                .call_deferred(
+                                    "on_avatar_shape_emote_finished",
+                                    &[
+                                        scene_id.to_variant(),
+                                        entity_id.to_variant(),
+                                        emote_id.to_variant(),
+                                        interrupted.to_variant(),
+                                        mask.to_variant(),
+                                    ],
+                                );
+
+                            Variant::nil()
+                        },
+                    );
+                    new_avatar_shape.connect("emote_finished", &emote_finished_callable);
+
                     new_avatar_shape.call_deferred(
                         "async_update_avatar",
                         &[
@@ -212,7 +292,7 @@ pub fn update_avatar_shape_emote_command(scene: &mut Scene, crdt_state: &mut Sce
     if let Some(avatar_emote_command_dirty) =
         dirty_gos_components.get(&SceneComponentId::AVATAR_EMOTE_COMMAND)
     {
-        for entity in avatar_emote_command_dirty.keys() {
+        for (entity, new_entries_count) in avatar_emote_command_dirty.iter() {
             let Some(emotes) = avatar_shape_component.get(entity) else {
                 continue;
             };
@@ -227,9 +307,17 @@ pub fn update_avatar_shape_emote_command(scene: &mut Scene, crdt_state: &mut Sce
                 continue;
             };
 
-            let emote = emotes
-                .back()
-                .expect("emotes should have at least one element");
+            // Among the newly appended entries, play the newest ES_STARTED one.
+            // Terminal entries (ES_FINISHED / ES_INTERRUPTED) are appended by the
+            // explorer itself to report playback ending — replaying those would
+            // re-trigger the emote in a loop.
+            let Some(emote) = emotes.iter().rev().take(*new_entries_count).find(|emote| {
+                emote
+                    .state
+                    .is_none_or(|state| state == EmoteState::EsStarted as i32)
+            }) else {
+                continue;
+            };
 
             let local_emote = emote.emote_urn.contains(".glb") || emote.emote_urn.contains(".gltf");
             tracing::debug!(
@@ -279,13 +367,27 @@ pub fn update_avatar_shape_emote_command(scene: &mut Scene, crdt_state: &mut Sce
                 );
 
                 // Call the SAME function as wearable emotes!
-                avatar_node.call_deferred("async_play_emote", &[scene_emote_urn.to_variant()]);
+                avatar_node.call_deferred(
+                    "async_play_emote",
+                    &[
+                        scene_emote_urn.to_variant(),
+                        crate::avatars::emote_mask::internal_from_component_mask(emote.mask)
+                            .to_variant(),
+                    ],
+                );
             } else {
                 tracing::debug!(
                     "AvatarEmoteCommand: playing wearable emote urn={}",
                     emote.emote_urn
                 );
-                avatar_node.call_deferred("async_play_emote", &[emote.emote_urn.to_variant()]);
+                avatar_node.call_deferred(
+                    "async_play_emote",
+                    &[
+                        emote.emote_urn.to_variant(),
+                        crate::avatars::emote_mask::internal_from_component_mask(emote.mask)
+                            .to_variant(),
+                    ],
+                );
             }
         }
     }

@@ -284,7 +284,8 @@ pub struct CommunicationManager {
     /// EmoteStart at press time gets chased by the per-frame animation poll's EmoteStop,
     /// cancelling it remotely before it ever plays. Overwritten by every new trigger.
     #[cfg(feature = "use_pulse")]
-    pending_pulse_emote_urn: Option<String>,
+    // (urn, internal mask) of an emote start deferred until playback is live.
+    pending_pulse_emote_urn: Option<(String, i64)>,
     /// Runtime "pulse-only" switch (deeplink `livekit=false`, CLI `--no-livekit`): `None`
     /// follows the CLI. While disabled, no LiveKit-backed rooms are created or kept (main
     /// livekit room, archipelago island room, scene rooms) — chat/voice/scene messages are
@@ -1832,8 +1833,11 @@ impl CommunicationManager {
         sent
     }
 
+    /// `mask` uses the internal convention (-1 = full body, 0 = AM_UPPER_BODY);
+    /// on the wire it becomes the comms `AvatarEmoteMask` encoding (absent/0 =
+    /// full body, 1 = upper body), matching Unity.
     #[func]
-    pub fn send_emote(&mut self, emote_urn: GString) -> bool {
+    pub fn send_emote(&mut self, emote_urn: GString, mask: i64) -> bool {
         let timestamp = godot::classes::Time::singleton().get_unix_time_from_system() * 1000.0;
         self.send_chat(GString::from(
             format!("␐{} {}", emote_urn, timestamp).as_str(),
@@ -1847,6 +1851,7 @@ impl CommunicationManager {
                 incremental_id: self.last_emote_incremental_id,
                 timestamp: self.start_time.elapsed().as_secs_f32(),
                 is_stopping: None,
+                mask: crate::avatars::emote_mask::wire_mask_from_internal(mask),
                 ..Default::default()
             })),
             protocol_version: DEFAULT_PROTOCOL_VERSION,
@@ -1874,7 +1879,7 @@ impl CommunicationManager {
         // is > 0.1, so a press-time state (still decelerating) delays/loses the emote there.
         #[cfg(feature = "use_pulse")]
         {
-            self.pending_pulse_emote_urn = Some(emote_urn.to_string());
+            self.pending_pulse_emote_urn = Some((emote_urn.to_string(), mask));
         }
 
         sent
@@ -1889,9 +1894,9 @@ impl CommunicationManager {
                 // Playback is live — flush the deferred EmoteStart (see send_emote). Checked on
                 // every `true`, not just the false→true edge, so re-triggering while an emote is
                 // already playing (no edge) still announces the new emote.
-                if let Some(urn) = self.pending_pulse_emote_urn.take() {
+                if let Some((urn, mask)) = self.pending_pulse_emote_urn.take() {
                     if let Some(pulse_room) = &mut self.pulse_room {
-                        pulse_room.send_emote_start(&urn);
+                        pulse_room.send_emote_start(&urn, mask);
                     }
                 }
             } else if self.is_emoting {

@@ -6,6 +6,8 @@ var emote_test_index: int = 0
 var emote_test_list: Array = []
 var emote_test_delay: float = 3  # seconds between each emote
 var auto_mode: bool = false
+# When true, emotes play upper-body-only (AvatarMask.AM_UPPER_BODY). Toggle with M.
+var masked_mode: bool = false
 
 @onready var avatar_preview: AvatarPreview = $AvatarPreview
 @onready var avatar: Avatar = $AvatarPreview.avatar
@@ -132,10 +134,17 @@ func _play_next_emote():
 
 	print("[%d/%d] %s" % [emote_test_index + 1, emote_test_list.size(), emote_name])
 
-	avatar.emote_controller.async_play_emote(emote_urn)
+	var mask = AvatarEmoteController.MASK_UPPER_BODY if masked_mode else -1
+	avatar.emote_controller.async_play_emote(emote_urn, mask)
 
 	emote_test_index += 1
 	timer.start(emote_test_delay)
+
+
+func _unhandled_key_input(event: InputEvent):
+	if event is InputEventKey and event.pressed and event.keycode == KEY_M:
+		masked_mode = not masked_mode
+		print("Masked (upper body) mode: %s" % masked_mode)
 
 
 func _on_timer_timeout():
