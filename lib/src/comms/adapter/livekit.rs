@@ -1,9 +1,6 @@
-use std::{
-    collections::HashMap,
-    sync::{
-        atomic::{AtomicU8, Ordering},
-        Arc,
-    },
+use std::sync::{
+    atomic::{AtomicU8, Ordering},
+    Arc,
 };
 
 use ethers_core::types::H160;
@@ -33,12 +30,46 @@ use super::{
     adapter_trait::Adapter,
     message_processor::{
         IncomingMessage, MessageType, Rfc4Message, StreamerAudioFrameData, StreamerAudioInitData,
-        VideoFrameData, VideoInitData, VoiceFrameData, VoiceInitData,
+        VideoFrameData, VideoInitData, VideoTrackSourceKind, VoiceFrameData, VoiceInitData,
     },
 };
 
 // Constants
 const CHANNEL_SIZE: usize = 1000;
+
+/// True when a LiveKit participant identity belongs to a media streamer rather
+/// than a regular player. Streamer identities come in three shapes
+/// (see decentraland/comms-gatekeeper `src/logic/cast/cast.ts`):
+/// - `{identity}-streamer` — legacy RTMP ingress participants
+/// - `stream:{placeId}:{uuid}` — DCL Cast v2 browser streamers
+/// - `presentation-bot:{...}` — presentation bots (slides / video playback)
+fn is_streamer_identity(identity: &str) -> bool {
+    identity.ends_with("-streamer")
+        || identity.starts_with("stream:")
+        || identity.starts_with("presentation-bot:")
+}
+
+/// Split a `livekit:`-style connection string into the websocket address and the
+/// access token. The authority (host AND port) is preserved — production URLs
+/// carry no explicit port, but local/self-hosted servers do.
+fn parse_conn_string(remote_address: &str) -> Option<(String, String)> {
+    let url = Uri::try_from(remote_address).ok()?;
+    let address = format!(
+        "{}://{}{}",
+        url.scheme_str().unwrap_or_default(),
+        url.authority().map(|a| a.as_str()).unwrap_or_default(),
+        url.path()
+    );
+    let token = url
+        .query()
+        .unwrap_or_default()
+        .split('&')
+        .filter_map(|par| par.split_once('='))
+        .find(|(key, _)| *key == "access_token")
+        .map(|(_, value)| value.to_owned())
+        .unwrap_or_default();
+    Some((address, token))
+}
 
 // Connection state values shared with the background livekit thread
 const LK_STATE_CONNECTING: u8 = 0;
@@ -286,20 +317,11 @@ fn spawn_livekit_task(
     lambdas_endpoint: String,
     connection_state: Arc<AtomicU8>,
 ) {
-    let url = Uri::try_from(remote_address).unwrap();
-    let address = format!(
-        "{}://{}{}",
-        url.scheme_str().unwrap_or_default(),
-        url.host().unwrap_or_default(),
-        url.path()
-    );
-    let params: HashMap<String, String> =
-        HashMap::from_iter(url.query().unwrap_or_default().split('&').flat_map(|par| {
-            par.split_once('=')
-                .map(|(a, b)| (a.to_owned(), b.to_owned()))
-        }));
-    tracing::debug!("{params:?}");
-    let token = params.get("access_token").cloned().unwrap_or_default();
+    let Some((address, token)) = parse_conn_string(&remote_address) else {
+        tracing::warn!("invalid livekit connection string for room '{}'", room_id);
+        connection_state.store(LK_STATE_DISCONNECTED, Ordering::Relaxed);
+        return;
+    };
 
     let rt = Arc::new(
         tokio::runtime::Builder::new_current_thread()
@@ -404,18 +426,25 @@ fn spawn_livekit_task(
                         livekit::RoomEvent::Connected { participants_with_tracks } => {
                             tracing::debug!("Connected to LiveKit room with {} participants", participants_with_tracks.len());
 
-                            // Subscribe to video tracks from streamers already in the room
+                            // Subscribe to media tracks already in the room
                             // and check metadata from existing participants
                             for (participant, publications) in participants_with_tracks {
                                 let identity = participant.identity();
                                 let identity_str = identity.0.as_str();
 
-                                // Check if this is a streamer (identity ends with "-streamer")
-                                if identity_str.ends_with("-streamer") {
+                                // Streamer publications (audio + video) are subscribed by
+                                // identity. Video-kind publications are subscribed from ANY
+                                // participant: player tokens are mic-only (gatekeeper), so
+                                // every video track is an authorized stream (e.g. a cast
+                                // presenter promoted from the audience).
+                                let is_streamer = is_streamer_identity(identity_str);
+                                if is_streamer {
                                     tracing::debug!("Found streamer {} with {} publications", identity_str, publications.len());
-                                    for publication in publications {
-                                        tracing::debug!("Subscribing to streamer publication: {:?} (kind: {:?})",
-                                            publication.sid(), publication.kind());
+                                }
+                                for publication in publications {
+                                    if is_streamer || publication.kind() == livekit::track::TrackKind::Video {
+                                        tracing::debug!("Subscribing to media publication from {}: {:?} (kind: {:?})",
+                                            identity_str, publication.sid(), publication.kind());
                                         publication.set_subscribed(true);
                                     }
                                 }
@@ -444,9 +473,13 @@ fn spawn_livekit_task(
                             let identity = participant.identity();
                             let identity_str = identity.0.as_str();
 
-                            // Auto-subscribe to video tracks from streamers
-                            if identity_str.ends_with("-streamer") {
-                                tracing::debug!("Streamer {} published track: {:?} (kind: {:?})",
+                            // Subscribe to streamer publications (by identity) and to
+                            // video-kind publications from any participant — player tokens
+                            // are mic-only, so a video track is always an authorized stream.
+                            if is_streamer_identity(identity_str)
+                                || publication.kind() == livekit::track::TrackKind::Video
+                            {
+                                tracing::debug!("Media publication from {}: {:?} (kind: {:?}) — subscribing",
                                     identity_str, publication.sid(), publication.kind());
                                 publication.set_subscribed(true);
                             }
@@ -489,11 +522,17 @@ fn spawn_livekit_task(
                                 break 'stream;
                             }
                         },
-                        livekit::RoomEvent::TrackSubscribed { track, publication: _, participant } => {
+                        livekit::RoomEvent::TrackSubscribed { track, publication, participant } => {
                             let identity = participant.identity();
                             let identity_str = identity.0.as_str();
                             let address = identity_str.as_h160();
-                            let is_streamer = identity_str.ends_with("-streamer");
+                            let is_streamer = is_streamer_identity(identity_str);
+                            let track_source = match publication.source() {
+                                livekit::track::TrackSource::Screenshare => VideoTrackSourceKind::Screenshare,
+                                livekit::track::TrackSource::Camera => VideoTrackSourceKind::Camera,
+                                _ => VideoTrackSourceKind::Unknown,
+                            };
+                            let track_muted = publication.is_muted();
 
                             match track {
                                 livekit::track::RemoteTrack::Audio(audio) => {
@@ -617,13 +656,16 @@ fn spawn_livekit_task(
                                     }
                                 },
                                 livekit::track::RemoteTrack::Video(video) => {
-                                    // Video tracks: accept from streamers (no address needed) or participants with addresses
-                                    if is_streamer || address.is_some() {
+                                    // Accept every subscribed video track: we only subscribe
+                                    // to authorized streams (streamer identities or video-kind
+                                    // publications), so no further identity gating is needed.
+                                    {
                                         let sender = sender.clone();
                                         let room_id_clone = room_id.clone();
                                         // Use zero address for streamers without ethereum identity
                                         let address = address.unwrap_or_default();
                                         let identity_owned = identity_str.to_string();
+                                        let sid = video.sid().to_string();
 
                                         rt2.spawn(async move {
                                             use livekit::webrtc::video_stream::native::NativeVideoStream;
@@ -632,7 +674,7 @@ fn spawn_livekit_task(
 
                                             let mut stream = NativeVideoStream::new(video.rtc_track());
 
-                                            tracing::debug!("video track subscribed from {:?}", identity_owned);
+                                            tracing::debug!("video track {} subscribed from {:?}", sid, identity_owned);
 
                                             // Get first frame for initialization
                                             let Some(frame) = stream.next().await else {
@@ -652,6 +694,10 @@ fn spawn_livekit_task(
                                                 message: MessageType::InitVideo(VideoInitData {
                                                     width,
                                                     height,
+                                                    sid: sid.clone(),
+                                                    identity: identity_owned.clone(),
+                                                    source: track_source,
+                                                    muted: track_muted,
                                                 }),
                                                 address,
                                                 room_id: room_id_clone.clone(),
@@ -697,6 +743,7 @@ fn spawn_livekit_task(
                                                         data: rgba_data,
                                                         width,
                                                         height,
+                                                        sid: sid.clone(),
                                                     }),
                                                     address,
                                                     room_id: room_id_clone.clone(),
@@ -717,6 +764,7 @@ fn spawn_livekit_task(
                                                             data: rgba_data,
                                                             width,
                                                             height,
+                                                            sid: sid.clone(),
                                                         }),
                                                         address,
                                                         room_id: room_id_clone.clone(),
@@ -733,7 +781,12 @@ fn spawn_livekit_task(
                                                 }
                                             }
 
-                                            tracing::debug!("video track ended, exiting task");
+                                            tracing::debug!("video track {} ended, exiting task", sid);
+                                            let _ = sender.send(IncomingMessage {
+                                                message: MessageType::VideoTrackEnded(sid),
+                                                address,
+                                                room_id: room_id_clone,
+                                            }).await;
                                         });
                                     }
                                 },
@@ -835,6 +888,46 @@ fn spawn_livekit_task(
                                 }
                             }
                         }
+                        livekit::RoomEvent::TrackMuted { participant: _, publication } => {
+                            let _ = sender.send(IncomingMessage {
+                                message: MessageType::VideoTrackMuted {
+                                    sid: publication.sid().to_string(),
+                                    muted: true,
+                                },
+                                address: H160::zero(),
+                                room_id: room_id.clone(),
+                            }).await;
+                        }
+                        livekit::RoomEvent::TrackUnmuted { participant: _, publication } => {
+                            let _ = sender.send(IncomingMessage {
+                                message: MessageType::VideoTrackMuted {
+                                    sid: publication.sid().to_string(),
+                                    muted: false,
+                                },
+                                address: H160::zero(),
+                                room_id: room_id.clone(),
+                            }).await;
+                        }
+                        livekit::RoomEvent::TrackUnsubscribed { track, .. } => {
+                            // The frame task also notices the stream draining, but this
+                            // prunes the selection registry promptly on explicit unsubscribes.
+                            let _ = sender.send(IncomingMessage {
+                                message: MessageType::VideoTrackEnded(track.sid().to_string()),
+                                address: H160::zero(),
+                                room_id: room_id.clone(),
+                            }).await;
+                        }
+                        livekit::RoomEvent::ActiveSpeakersChanged { speakers } => {
+                            let identities: Vec<String> = speakers
+                                .iter()
+                                .map(|p| p.identity().0.clone())
+                                .collect();
+                            let _ = sender.send(IncomingMessage {
+                                message: MessageType::ActiveSpeakersChanged(identities),
+                                address: H160::zero(),
+                                room_id: room_id.clone(),
+                            }).await;
+                        }
                         _ => { tracing::debug!("Event: {:?}", incoming); }
                     };
                 }
@@ -901,5 +994,73 @@ pub mod android {
     pub extern "C" fn Java_org_webrtc_LibaomAv1Decoder_nativeIsSupported() -> bool {
         tracing::debug!("nativeIsSupported");
         true
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{is_streamer_identity, parse_conn_string};
+
+    #[test]
+    fn parse_conn_string_keeps_host_and_extracts_token() {
+        let (address, token) =
+            parse_conn_string("wss://dcl.livekit.cloud?access_token=abc123").unwrap();
+        assert_eq!(address, "wss://dcl.livekit.cloud/");
+        assert_eq!(token, "abc123");
+    }
+
+    #[test]
+    fn parse_conn_string_preserves_explicit_port() {
+        let (address, token) = parse_conn_string("ws://127.0.0.1:7880?access_token=tok").unwrap();
+        assert_eq!(address, "ws://127.0.0.1:7880/");
+        assert_eq!(token, "tok");
+    }
+
+    #[test]
+    fn parse_conn_string_finds_token_after_other_params() {
+        let (_, token) = parse_conn_string("wss://example.com?foo=bar&access_token=tok2").unwrap();
+        assert_eq!(token, "tok2");
+    }
+
+    #[test]
+    fn parse_conn_string_without_token_yields_empty_token() {
+        let (address, token) = parse_conn_string("wss://example.com/path").unwrap();
+        assert_eq!(address, "wss://example.com/path");
+        assert_eq!(token, "");
+    }
+
+    #[test]
+    fn parse_conn_string_rejects_invalid_uri() {
+        assert!(parse_conn_string("not a uri at all ::").is_none());
+    }
+
+    #[test]
+    fn detects_legacy_rtmp_ingress_streamer_suffix() {
+        assert!(is_streamer_identity(
+            "0x95e9a6bf9f8130bbfdb7b09ac1caefc8fda806f5-streamer"
+        ));
+    }
+
+    #[test]
+    fn detects_cast_v2_browser_streamer_prefix() {
+        assert!(is_streamer_identity(
+            "stream:6da24e2c-8557-4a67-96b0-1e6a56f1e546:9f0c4f9b-2f6a-4a6e-8f0e-2b8b8c0d1e2f"
+        ));
+    }
+
+    #[test]
+    fn detects_presentation_bot_prefix() {
+        assert!(is_streamer_identity("presentation-bot:room-42"));
+    }
+
+    #[test]
+    fn rejects_regular_wallet_identities() {
+        assert!(!is_streamer_identity(
+            "0x7d272f93f85d4094c889d386690a1ce925deaee7"
+        ));
+        assert!(!is_streamer_identity("authoritative-server"));
+        assert!(!is_streamer_identity(
+            "watch:world-prd-scene-room-gather.dcl.eth-bafkreid:uuid"
+        ));
     }
 }

@@ -634,6 +634,7 @@ func _load_emote_from_gltf_internal(
 					prop_anim_player.queue_free()
 
 				avatar.add_child(armature_prop)
+				avatar.apply_toon_material_to(armature_prop)
 				armature_prop.hide()
 
 				if not _prop_armature_names.has(armature_prop.name):

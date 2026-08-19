@@ -275,21 +275,13 @@ fn setup_v8_bindings(
     }
 
     // Download the binding file if it does not already exist.
+    // Uses `download_file` (instead of plain `curl`) so it retries transient
+    // GitHub failures and never leaves a partial/error-page file behind.
     if !binding_file_path.exists() {
-        let status = std::process::Command::new("curl")
-            .args([
-                "-L",
-                "-o",
-                binding_file_path.to_str().unwrap(),
-                &v8_binding_url,
-            ])
-            .status()?;
-        if !status.success() {
-            return Err(anyhow::anyhow!(
-                "Failed to download V8 binding file from {}",
-                v8_binding_url
-            ));
-        }
+        let destination = binding_file_path.to_str().unwrap();
+        crate::download_file::download_file(&v8_binding_url, destination).map_err(|err| {
+            anyhow::anyhow!("Failed to download V8 binding file from {v8_binding_url}: {err}")
+        })?;
     }
     Ok(())
 }

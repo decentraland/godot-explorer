@@ -10,7 +10,7 @@ extends SceneTree
 # the on-screen check flagged as off-screen (screen edge / camera-pan lag) but
 # that Godot still drew appeared frozen on a stale pose instead of throttling.
 #
-# The fix routes every throttle change through AvatarLODHelpers.set_animation_throttle
+# The fix routes every throttle change through AvatarAnimHelpers.set_animation_throttle
 # (callback mode and flag move together) and drives the freeze off the real
 # VisibleOnScreenNotifier3D state. This test pins the invariant that makes the
 # bug impossible: the tree is never left "active + MANUAL + throttle-off".
@@ -21,9 +21,9 @@ extends SceneTree
 
 # Preload only the (Global-free, RefCounted) helper so this test compiles
 # standalone under --script, without dragging in avatar.gd / the Global autoload.
-const H := preload("res://src/decentraland_components/avatar/impostor/avatar_lod_helpers.gd")
+const H := preload("res://src/decentraland_components/avatar/avatar_anim_helpers.gd")
 
-# LODState values (mirror of Avatar.LODState / AvatarLODHelpers.LOD_*).
+# LODState values (mirror of Avatar.LODState / AvatarAnimHelpers.LOD_*).
 const FULL := 0
 const MID := 1
 const CROSSFADE := 2
@@ -32,7 +32,7 @@ const FAR := 3
 var _failures: Array[String] = []
 
 
-# Duck-typed stand-in for Avatar: exposes exactly the fields AvatarLODHelpers
+# Duck-typed stand-in for Avatar: exposes exactly the fields AvatarAnimHelpers
 # reads/writes, plus a real (minimal) AnimationTree so advance()/active/callback
 # behave like production without needing the full Avatar scene.
 class FakeAvatar:
