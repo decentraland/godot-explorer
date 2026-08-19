@@ -19,9 +19,12 @@
 //!   OS kills it.
 //!   - iOS: `os_proc_available_memory()` — bytes left before jetsam. Cheap,
 //!     off-thread-safe, and already reflects the *dynamic* per-device limit.
-//!   - Android: heuristic `budget(MemTotal) - RSS` from `/proc` (no precise
-//!     per-app headroom call exists, and JNI is not thread-safe to call here;
-//!     `/proc` files are readable from any thread).
+//!   - Android: the smaller of the kernel's `MemAvailable` and a per-app budget
+//!     `budget(MemTotal) - RSS`, both from `/proc` (no precise per-app headroom
+//!     call exists, and JNI is not thread-safe to call here; `/proc` files are
+//!     readable from any thread). `MemAvailable` is the signal that tracks what
+//!     lowmemorykiller acts on — the budget alone cannot see a device that is
+//!     already full because of everything *else* running on it.
 //!
 //! * **Secondary hard-stop — `phys_footprint`** (iOS only, via
 //!   `proc_pid_rusage`). This is the value jetsam actually compares against and,
@@ -124,6 +127,23 @@ pub fn start() {
                 emit_log(&format!(
                     "[MemMonitor] total_ram={}MB -> phys_footprint CRITICAL ceiling={}MB",
                     total_ram_mb, ceiling
+                ));
+            }
+        }
+
+        #[cfg(target_os = "android")]
+        {
+            // Record the device's memory shape once, so a logcat capture is
+            // self-contained: total RAM, the per-app budget, and the headroom
+            // each level fires at. Reading /proc is safe from any thread.
+            let total_ram_mb = read_meminfo_mb("MemTotal:");
+            if total_ram_mb > 0 {
+                emit_log(&format!(
+                    "[MemMonitor] total_ram={}MB app_budget={}MB WARNING<={}MB CRITICAL<={}MB",
+                    total_ram_mb,
+                    (total_ram_mb as f32 * ANDROID_BUDGET_FRACTION) as i32,
+                    WARNING_MB,
+                    CRITICAL_MB
                 ));
             }
         }
@@ -264,6 +284,7 @@ pub fn used_memory_mb() -> i32 {
 /// `print()` path does not reach the iOS `devicectl` console (and is lost when
 /// the app freezes), but native writes to fd 1/2 do — this is the only logging
 /// that survives the freeze we are trying to diagnose. Cheap; safe off-thread.
+#[cfg(not(target_os = "android"))]
 pub fn emit_log(line: &str) {
     use std::io::Write;
     let mut stdout = std::io::stdout();
@@ -274,6 +295,42 @@ pub fn emit_log(line: &str) {
     let _ = stderr.write_all(line.as_bytes());
     let _ = stderr.write_all(b"\n");
     let _ = stderr.flush();
+}
+
+/// Android routes a process's stdout/stderr to /dev/null, so the fd 1/2 writes
+/// used everywhere else reach nothing on device — every `[MemMonitor]` and
+/// `[MainThreadStall]` line was invisible in logcat, warnings and evictions
+/// included. Write through liblog instead. It is thread-safe and, unlike Godot's
+/// `print()`, safe to call from this thread: the monitor exists to keep
+/// reporting while the main thread is frozen, so it must not touch the Godot API.
+/// The `godot` tag matches the engine's own so these lines land in the same
+/// logcat stream as the rest of the app's output.
+#[cfg(target_os = "android")]
+pub fn emit_log(line: &str) {
+    // <android/log.h>: ANDROID_LOG_INFO
+    const ANDROID_LOG_INFO: i32 = 4;
+
+    #[link(name = "log")]
+    extern "C" {
+        fn __android_log_write(
+            prio: i32,
+            tag: *const std::os::raw::c_char,
+            text: *const std::os::raw::c_char,
+        ) -> i32;
+    }
+
+    // Interior NULs cannot be logged; drop the line rather than panic.
+    let (Ok(tag), Ok(msg)) = (
+        std::ffi::CString::new("godot"),
+        std::ffi::CString::new(line),
+    ) else {
+        return;
+    };
+
+    // SAFETY: both pointers are NUL-terminated CStrings that outlive the call.
+    unsafe {
+        __android_log_write(ANDROID_LOG_INFO, tag.as_ptr(), msg.as_ptr());
+    }
 }
 
 /// Compute the pressure level from the two metrics. The `phys_footprint`
@@ -391,36 +448,59 @@ fn read_footprint_mb() -> i32 {
 
 #[cfg(target_os = "android")]
 fn read_available_mb() -> i32 {
-    // Headroom estimate: a budget fraction of MemTotal minus our resident set
-    // (shared reader: /proc/self/statm via `used_memory_mb`).
+    // Two independent limits; the binding one is whichever is smaller.
+    //
+    // * System headroom (`MemAvailable`): what the kernel thinks it can hand out
+    //   without reclaiming. This is the quantity lowmemorykiller actually acts
+    //   on, and it moves with everything else running on the device.
+    // * Per-app budget (`budget(MemTotal) - RSS`): our own share of total RAM, so
+    //   one app still cannot grow without bound on an otherwise-idle device.
+    //
+    // The budget alone was blind to system pressure: it is a function of our own
+    // RSS and a constant, so it cannot see a device that is already full. On a
+    // 4GB phone it scored ~760MB of headroom (LEVEL_OK) at the instant
+    // lowmemorykiller killed the app at ~1.3GB RSS — WARNING would have needed
+    // ~1.5GB RSS and CRITICAL ~1.7GB, both *above* the point where the OS kills
+    // us, so the monitor could never fire and no eviction or warning ever ran.
     let rss_mb = used_memory_mb();
     if rss_mb < 0 {
         return -1;
     }
 
-    let total_mb = read_mem_total_mb();
+    let total_mb = read_meminfo_mb("MemTotal:");
     if total_mb <= 0 {
         return -1;
     }
     let budget = (total_mb as f32 * ANDROID_BUDGET_FRACTION) as i32;
-    (budget - rss_mb).max(0)
+    let budget_headroom = (budget - rss_mb).max(0);
+
+    // MemAvailable is absent on pre-3.14 kernels; fall back to the budget alone.
+    let system_headroom = read_meminfo_mb("MemAvailable:");
+    if system_headroom < 0 {
+        return budget_headroom;
+    }
+    budget_headroom.min(system_headroom)
 }
 
 #[cfg(target_os = "android")]
 fn read_footprint_mb() -> i32 {
-    // No precise phys_footprint equivalent on Android; the /proc headroom
-    // estimate above already folds in RSS. Report unknown.
-    -1
+    // No `phys_footprint` equivalent on Android, but RSS is what lowmemorykiller
+    // reports when it kills us, so report it: it is the number the low-memory
+    // warning shows the user and the one to compare against a kill line in
+    // logcat. `FOOTPRINT_CRITICAL_MB` is never set on Android, so this stays
+    // reporting-only and does not add a second CRITICAL trigger.
+    used_memory_mb()
 }
 
+/// Read a `/proc/meminfo` field (`"MemTotal:"`, `"MemAvailable:"`, ...) in MB.
+/// -1 when the file or the key is unavailable. Values there are in kB.
 #[cfg(target_os = "android")]
-fn read_mem_total_mb() -> i32 {
-    // MemTotal is reported in kB on the first line of /proc/meminfo.
+fn read_meminfo_mb(key: &str) -> i32 {
     let Ok(meminfo) = std::fs::read_to_string("/proc/meminfo") else {
         return -1;
     };
     for line in meminfo.lines() {
-        if let Some(rest) = line.strip_prefix("MemTotal:") {
+        if let Some(rest) = line.strip_prefix(key) {
             if let Some(kb) = rest
                 .split_whitespace()
                 .next()
