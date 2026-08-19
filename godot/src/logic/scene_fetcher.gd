@@ -99,6 +99,7 @@ func _ready():
 
 	add_child(_preview_ws)
 	_preview_ws.scene_update.connect(_on_preview_scene_update)
+	_preview_ws.model_update.connect(async_on_preview_model_update)
 
 	# Initialize wall manager and base floor manager only for floating islands mode
 	if is_using_floating_islands():
@@ -1229,6 +1230,77 @@ func set_preview_url(url: String) -> void:
 func _on_preview_scene_update(scene_id: String) -> void:
 	_is_hot_reloading = true
 	reload_scene(scene_id)
+
+
+## A single .glb/.gltf changed on the preview server. Swaps just that model in
+## place, so the rest of the scene keeps its state.
+##
+## Falls back to a full (loading-screen-free) reload whenever the swap can't be
+## done precisely: unknown scene, non-model file, or no container using that src.
+##
+## `_hash` is unused on purpose — see the comment below.
+func async_on_preview_model_update(
+	scene_id: String, src: String, _hash: String, removed: bool
+) -> void:
+	var scene = loaded_scenes.get(scene_id)
+	var lower_src := src.to_lower()
+	var is_model := lower_src.ends_with(".glb") or lower_src.ends_with(".gltf")
+
+	if scene == null or not is_model:
+		_on_preview_scene_update(scene_id)
+		return
+
+	var scene_number_id: int = scene.scene_number_id
+	var containers := _find_gltf_containers(scene_number_id, lower_src)
+	if containers.is_empty():
+		# The file isn't in use by any live container — it may be referenced by a
+		# component that hasn't loaded yet, so let the full reload pick it up.
+		_on_preview_scene_update(scene_id)
+		return
+
+	# `_hash` from the message is deliberately NOT written into the content mapping.
+	# Both sides derive hashes from the file path, but from *different* paths: the
+	# file watcher hashes the project-relative path, while the scene definition
+	# hashes the absolute one. They never match, and adopting the message's hash
+	# would point the container at an unrelated cache entry. Since a path-derived
+	# hash cannot change when the contents do, the mapping is already correct for
+	# an edit — only a deletion has to touch it.
+	if (
+		removed
+		and not Global.scene_runner.update_scene_content_entry(scene_number_id, lower_src, "")
+	):
+		_on_preview_scene_update(scene_id)
+		return
+
+	# Same reason the hash is stable: every cache layer keyed by it now holds
+	# stale bytes and must be dropped unconditionally. Awaited, because the
+	# re-request below would otherwise race the (async) delete and re-import the
+	# file we just evicted.
+	var old_hash: String = containers[0].dcl_gltf_hash
+	if not old_hash.is_empty():
+		await PromiseUtils.async_awaiter(Global.content_provider.purge_file(old_hash))
+
+	for container in containers:
+		if is_instance_valid(container):
+			container.force_reload_gltf()
+
+
+## Live DclGltfContainer nodes in `scene_number_id` whose source is `lower_src`.
+## Scene roots are children of the scene runner, so the walk starts there.
+func _find_gltf_containers(scene_number_id: int, lower_src: String) -> Array:
+	var found: Array = []
+	var stack: Array = [Global.scene_runner]
+	while not stack.is_empty():
+		var node: Node = stack.pop_back()
+		if (
+			node.is_class("DclGltfContainer")
+			and node.dcl_scene_id == scene_number_id
+			and node.dcl_gltf_src.to_lower() == lower_src
+		):
+			found.append(node)
+		for child in node.get_children():
+			stack.append(child)
+	return found
 
 
 func set_debugging_js_scene_id(id: String) -> void:

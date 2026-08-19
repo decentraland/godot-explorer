@@ -411,6 +411,13 @@ fn main() -> io::Result<()> {
     proto_files.push(format!("{PROTO_FILES_BASE_DIR}decentraland/pulse/pulse_client.proto").into());
     proto_files.push(format!("{PROTO_FILES_BASE_DIR}decentraland/pulse/pulse_server.proto").into());
 
+    // Preview hot-reload protocol: the sdk-commands preview server broadcasts
+    // WsSceneMessage frames over the preview WebSocket (see PreviewWebSocket).
+    proto_files.push(
+        format!("{PROTO_FILES_BASE_DIR}decentraland/sdk/development/local_development.proto")
+            .into(),
+    );
+
     // Social service protos (with RPC services)
     proto_files
         .push(format!("{PROTO_FILES_BASE_DIR}decentraland/social_service/errors.proto").into());
