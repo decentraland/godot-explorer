@@ -973,6 +973,9 @@ func _on_deep_link_signin_parked() -> void:
 
 func _show_auth_error(error_message: String):
 	track_lobby_screen("AUTH_ERROR")
+	# The only screen setter that skips show_panel, which is where SplashOverlay.fade_out()
+	# lives. Idempotent once dismissed.
+	SplashOverlay.fade_out()
 	auth_spinner_container.hide()
 	label_step2_title.text = "Authentication failed"
 	auth_error_label_main.text = error_message
@@ -991,16 +994,19 @@ func _fall_back_to_stored_session() -> bool:
 
 	print("[DEEPLINK] Falling back to the stored session the sign-in resume stood in for")
 	waiting_for_new_wallet = false
-	loading_first_profile = true
-	show_dcl_splash_screen()
 	# Must precede try_recover_account: it flags the wallet_connected about to be emitted.
 	if Global.analytics_controller != null:
 		Global.analytics_controller.mark_wallet_connected_as_recovery()
-	if Global.player_identity.try_recover_account(session_account):
-		return true
 
-	loading_first_profile = false
-	return false
+	# Raise the splash only once recovery took, the order _ready uses. try_recover_account is
+	# synchronous, so showing it first covers no window — and a declined recovery would then
+	# leave the caller drawing its screen under an opaque, input-blocking overlay.
+	if not Global.player_identity.try_recover_account(session_account):
+		return false
+
+	loading_first_profile = true
+	show_dcl_splash_screen()
+	return true
 
 
 func _on_auth_error(error_message: String):
