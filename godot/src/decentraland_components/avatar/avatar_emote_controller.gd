@@ -7,6 +7,35 @@ const MAX_DEFERRED_RETRIES: int = 3
 # Grace period after teleport where emote won't be cancelled by movement
 const TELEPORT_GRACE_SECONDS: float = 0.5
 
+# AvatarMask.AM_UPPER_BODY in the internal mask convention (-1 = full body).
+const MASK_UPPER_BODY: int = 0
+
+# Bones an upper-body emote must NOT drive: the lower body stays with the locomotion
+# state machine (matches Unity's UpperBodyAvatarMask, which also excludes Avatar_Hips
+# so walking keeps owning the pelvis). A Dictionary (used as a set) so the per-track
+# lookup is a hash probe, not a scan.
+#
+# Keyed by BONE NAME (the part after ':') rather than the full track path: a
+# scene-authored emote GLB may carry a different armature/skeleton prefix, and
+# matching the whole path would silently let its hips and legs through the filter
+# to fight the locomotion state machine.
+const MASKED_EMOTE_EXCLUDED_BONES: Dictionary = {
+	"Avatar_Hips": true,
+	"Avatar_LeftUpLeg": true,
+	"Avatar_LeftLeg": true,
+	"Avatar_LeftFoot": true,
+	"Avatar_LeftToeBase": true,
+	"Avatar_RightUpLeg": true,
+	"Avatar_RightLeg": true,
+	"Avatar_RightFoot": true,
+	"Avatar_RightToeBase": true,
+}
+
+# Preallocated AnimationTree parameter paths: `process()` polls `active` every
+# frame per avatar, so avoid re-interning a String on each call.
+const MASKED_ACTIVE_PARAM := &"parameters/MaskedOneShot/active"
+const MASKED_REQUEST_PARAM := &"parameters/MaskedOneShot/request"
+
 # Signal-based emote loader for threaded loading
 var emote_loader: EmoteLoader = null
 
@@ -84,6 +113,16 @@ var loaded_emotes_by_urn: Dictionary
 var playing_single: bool = false
 var playing_mixed: bool = false
 var playing_loop: bool = false
+# True while an upper-body (masked) emote plays on the OneShot layer above the
+# locomotion state machine. Mutually exclusive with playing_single/playing_mixed.
+var playing_masked: bool = false
+
+# URN (or utility id) of the emote currently playing, "" when none. Set when
+# `emote_triggered` is emitted and cleared by `_emit_emote_finished`, so every
+# started emote reports exactly one terminal state (finished or interrupted).
+var current_emote_urn: String = ""
+# Mask of the current emote: -1 = full body (absent), 0 = AvatarMask.AM_UPPER_BODY.
+var current_emote_mask: int = -1
 
 # Reference by parent avatar
 var avatar: Avatar = null
@@ -95,6 +134,16 @@ var idle_anim: Animation
 
 var animation_single_emote_node: AnimationNodeAnimation
 var animation_mix_emote_node: AnimationNodeBlendTree
+# Upper-body emote layer: `EmoteMasked` holds the clip, `MaskedOneShot` blends it
+# over the locomotion state machine on the filtered (upper-body) tracks only.
+var animation_masked_emote_node: AnimationNodeAnimation
+var masked_one_shot_node: AnimationNodeOneShot
+
+# Frame stamp of the last OneShot fire: `active` may still read false on the same
+# frame the FIRE request is set, so natural-end detection skips that frame.
+var _masked_fired_frame: int = -1
+# Track paths currently filter-enabled on the OneShot, cleared before each play.
+var _masked_filter_paths: Array[NodePath] = []
 
 # Guard to prevent concurrent modifications to animation system
 var _is_modifying_animations: bool = false
@@ -132,9 +181,15 @@ func _init(_avatar: Avatar, _animation_player: AnimationPlayer, _animation_tree:
 	#	Maybe related to https://github.com/godotengine/godot/issues/82421
 	animation_tree.tree_root = animation_tree.tree_root.duplicate(true)
 
-	# Direct dependencies
-	animation_single_emote_node = animation_tree.tree_root.get_node("Emote")
-	animation_mix_emote_node = animation_tree.tree_root.get_node("Emote_Mix")
+	# Direct dependencies. The tree root is a blend tree wrapping the locomotion
+	# state machine ("Locomotion") with the masked-emote OneShot layer above it.
+	var locomotion_state_machine: AnimationNodeStateMachine = animation_tree.tree_root.get_node(
+		"Locomotion"
+	)
+	animation_single_emote_node = locomotion_state_machine.get_node("Emote")
+	animation_mix_emote_node = locomotion_state_machine.get_node("Emote_Mix")
+	animation_masked_emote_node = animation_tree.tree_root.get_node("EmoteMasked")
+	masked_one_shot_node = animation_tree.tree_root.get_node("MaskedOneShot")
 	assert(animation_mix_emote_node.get_node("A") != null)
 	assert(animation_mix_emote_node.get_node("B") != null)
 
@@ -143,6 +198,7 @@ func _init(_avatar: Avatar, _animation_player: AnimationPlayer, _animation_tree:
 	animation_single_emote_node.animation = "idle/Anim"
 	animation_mix_emote_node.get_node("A").animation = "idle/Anim"
 	animation_mix_emote_node.get_node("B").animation = "idle/Anim"
+	animation_masked_emote_node.animation = "idle/Anim"
 
 	# Idle Anim Duplication (so it makes mutable and non-shared-reference)
 	var idle_animation_library = animation_player.get_animation_library("idle")
@@ -162,14 +218,52 @@ func _init(_avatar: Avatar, _animation_player: AnimationPlayer, _animation_tree:
 
 
 func stop_emote():
+	_emit_emote_finished(true)
+	if playing_masked:
+		animation_tree.set(MASKED_REQUEST_PARAM, AnimationNodeOneShot.ONE_SHOT_REQUEST_FADE_OUT)
+		playing_masked = false
+		_hide_all_props()
 	playing_single = false
 	playing_mixed = false
 	playing_loop = false
 	_stop_generation += 1
 
 
+## Hand back the emote still mid-playback (if any) and clear it, so nothing reports
+## it a second time. Used by the teardown paths in Rust right before this avatar's
+## node is freed: `_emit_emote_finished` defers its signal, and a deferred emit on a
+## dying node is dropped — the scene would then wait forever for a terminal state.
+## Returns [urn, mask], or an empty array when nothing is playing.
+func take_unfinished_emote() -> Array:
+	if current_emote_urn == "":
+		return []
+	var info := [current_emote_urn, current_emote_mask]
+	current_emote_urn = ""
+	current_emote_mask = -1
+	return info
+
+
+## Report the end of the currently playing emote, exactly once per started emote.
+## Deferred like `emote_triggered`, so a supersede emits finished before the new
+## emote's triggered and the scene sees the entries in stop-then-start order.
+func _emit_emote_finished(interrupted: bool):
+	if current_emote_urn == "":
+		return
+	# Clear first: stop_emote() runs on teardown paths too, where the avatar may
+	# already be gone — the state must still reset so a reused controller can't
+	# report a stale emote later.
+	var urn := current_emote_urn
+	var mask := current_emote_mask
+	current_emote_urn = ""
+	current_emote_mask = -1
+	if avatar == null or not is_instance_valid(avatar):
+		return
+	avatar.call_deferred("emit_signal", "emote_finished", urn, interrupted, mask)
+
+
 ## Play an emote by ID or URN (supports both wearable and scene emotes).
-func play_emote(id: String):
+## mask: -1 = full body (default), 0 = AvatarMask.AM_UPPER_BODY.
+func play_emote(id: String, mask: int = -1):
 	# Return if its an empty emote
 	if id == "":
 		return
@@ -186,20 +280,26 @@ func play_emote(id: String):
 	if not id.begins_with("urn"):
 		# Check if it's a utility action (local) or base emote (remote)
 		if Emotes.is_emote_utility(id):
+			# Utility actions are always full body.
+			mask = -1
 			triggered = _play_utility_emote(id)
 		elif Emotes.is_emote_default(id):
 			# Base emotes are loaded remotely, play via URN
 			var urn = Emotes.get_base_emote_urn(id)
-			triggered = _play_loaded_emote(urn)
+			triggered = _play_loaded_emote(urn, mask)
 		else:
 			printerr("Unknown emote: %s" % id)
 	else:
-		triggered = _play_loaded_emote(id)
+		triggered = _play_loaded_emote(id, mask)
 
 	if triggered:
+		# A still-playing emote is being superseded: report its interruption first.
+		_emit_emote_finished(true)
+		current_emote_urn = id
+		current_emote_mask = mask
 		if avatar != null and avatar.is_local_player:
 			_track_emote(id)
-		avatar.call_deferred("emit_signal", "emote_triggered", id, playing_loop)
+		avatar.call_deferred("emit_signal", "emote_triggered", id, playing_loop, mask)
 
 
 func _play_utility_emote(utility_emote_id: String) -> bool:
@@ -214,8 +314,10 @@ func _play_utility_emote(utility_emote_id: String) -> bool:
 		)
 		return false
 
+	_abort_masked_emote()
+
 	animation_single_emote_node.animation = anim_name
-	var pb: AnimationNodeStateMachinePlayback = animation_tree.get("parameters/playback")
+	var pb: AnimationNodeStateMachinePlayback = animation_tree.get("parameters/Locomotion/playback")
 	var cur_node = pb.get_current_node()
 	if cur_node == "Emote":
 		pb.start("Emote", true)
@@ -228,7 +330,89 @@ func _play_utility_emote(utility_emote_id: String) -> bool:
 	return true
 
 
-func _play_loaded_emote(emote_urn: String) -> bool:
+## Play an emote on the masked (upper-body) OneShot layer, leaving the locomotion
+## state machine in control of the excluded tracks. The emote keeps playing while
+## the player walks, runs or jumps.
+func _play_masked_emote(anim_path: String) -> bool:
+	# A full-body emote can't coexist with the masked layer: release the state
+	# machine back to locomotion first (play_emote reports the interruption).
+	if playing_single or playing_mixed:
+		playing_single = false
+		playing_mixed = false
+		animation_tree.set("parameters/Locomotion/conditions/emote", false)
+		animation_tree.set("parameters/Locomotion/conditions/nemote", true)
+
+	# Hide props from any previous emote; the new clip's own visibility track
+	# shows its prop again (prop tracks pass the filter).
+	_hide_all_props()
+
+	var animation: Animation = animation_player.get_animation(anim_path)
+	if animation == null:
+		return false
+
+	# Filter the OneShot layer to exactly this clip's tracks minus lower body and
+	# root motion: filtered tracks play the emote, everything else (including any
+	# upper-body bone the clip doesn't animate) keeps locomotion.
+	for path in _masked_filter_paths:
+		masked_one_shot_node.set_filter_path(path, false)
+	_masked_filter_paths.clear()
+	var excluded_count := 0
+	for track_idx in animation.get_track_count():
+		var track_path := animation.track_get_path(track_idx)
+		if _is_excluded_from_mask(track_path):
+			excluded_count += 1
+			continue
+		masked_one_shot_node.set_filter_path(track_path, true)
+		_masked_filter_paths.push_back(track_path)
+
+	# A clip that excluded nothing is animating no lower body at all — either it is
+	# genuinely upper-body-only, or its bones are named unexpectedly and the mask is
+	# silently a no-op. Say so rather than shipping a broken-looking avatar.
+	if excluded_count == 0:
+		push_warning(
+			"Masked emote '%s' matched no lower-body track; the mask may have no effect" % anim_path
+		)
+
+	animation_masked_emote_node.animation = anim_path
+	# Loop inside the node rather than re-firing the OneShot each iteration: a
+	# re-fire has to wait a frame for `active` to drop and then replays
+	# `fadein_time`, which shows up as a blend seam once per loop.
+	# `loop_mode` is only honoured with a custom timeline, whose length defaults to
+	# 1s — so it has to be set from the clip or every loop would be clipped to that.
+	animation_masked_emote_node.use_custom_timeline = playing_loop
+	if playing_loop:
+		animation_masked_emote_node.timeline_length = animation.length
+		animation_masked_emote_node.loop_mode = Animation.LOOP_LINEAR
+	else:
+		animation_masked_emote_node.loop_mode = Animation.LOOP_NONE
+	animation_tree.set(MASKED_REQUEST_PARAM, AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
+	_masked_fired_frame = Engine.get_process_frames()
+	playing_masked = true
+	return true
+
+
+## True for tracks the masked layer must NOT drive: root motion, and the lower body
+## matched on bone name so a differently-prefixed armature still filters correctly.
+func _is_excluded_from_mask(track_path: NodePath) -> bool:
+	var path := String(track_path)
+	var colon := path.rfind(":")
+	if colon == -1:
+		# No subpath: the armature/root motion track itself.
+		return not path.begins_with("Armature_Prop")
+	return MASKED_EMOTE_EXCLUDED_BONES.has(path.substr(colon + 1))
+
+
+## Mechanically stop the masked layer (no emote_finished emission — callers
+## report the interruption themselves when one is due).
+func _abort_masked_emote():
+	if not playing_masked:
+		return
+	animation_tree.set(MASKED_REQUEST_PARAM, AnimationNodeOneShot.ONE_SHOT_REQUEST_ABORT)
+	playing_masked = false
+	_hide_all_props()
+
+
+func _play_loaded_emote(emote_urn: String, mask: int = -1) -> bool:
 	if not _has_emote(emote_urn):
 		printerr("Emote %s not found from player '%s'" % [emote_urn, avatar.get_avatar_name()])
 		return false
@@ -248,6 +432,19 @@ func _play_loaded_emote(emote_urn: String) -> bool:
 			return false
 		playing_loop = emote_data.get_emote_loop()
 
+	# Play merged animation (avatar + prop tracks combined) through AnimationTree
+	var anim_path = "emotes/" + emote_item_data.default_anim_name
+	if not animation_player.has_animation(anim_path):
+		printerr("Animation not found in player: %s" % anim_path)
+		return false
+
+	if mask == MASK_UPPER_BODY:
+		return _play_masked_emote(anim_path)
+
+	# A masked emote may still be running on the OneShot layer: a full-body emote
+	# supersedes it (play_emote reports the interruption).
+	_abort_masked_emote()
+
 	# Reset avatar state before playing new emote
 	_hide_all_props()
 	_reset_skeleton_to_rest_pose()
@@ -255,13 +452,7 @@ func _play_loaded_emote(emote_urn: String) -> bool:
 	playing_single = true
 	playing_mixed = false
 
-	var pb: AnimationNodeStateMachinePlayback = animation_tree.get("parameters/playback")
-
-	# Play merged animation (avatar + prop tracks combined) through AnimationTree
-	var anim_path = "emotes/" + emote_item_data.default_anim_name
-	if not animation_player.has_animation(anim_path):
-		printerr("Animation not found in player: %s" % anim_path)
-		return false
+	var pb: AnimationNodeStateMachinePlayback = animation_tree.get("parameters/Locomotion/playback")
 
 	animation_single_emote_node.animation = anim_path
 
@@ -280,8 +471,8 @@ func _play_loaded_emote(emote_urn: String) -> bool:
 
 	# Set the emote condition BEFORE travel - the transition requires this condition
 	# (avatar.gd's _process() also sets this, but too late for immediate travel)
-	animation_tree.set("parameters/conditions/emote", true)
-	animation_tree.set("parameters/conditions/nemote", false)
+	animation_tree.set("parameters/Locomotion/conditions/emote", true)
+	animation_tree.set("parameters/Locomotion/conditions/nemote", false)
 
 	# Use travel() to follow state machine transitions, then start() to restart if already there
 	if pb.get_current_node() == "Emote":
@@ -325,11 +516,11 @@ func _force_play_emote(emote_urn: String):
 	animation_single_emote_node.animation = anim_path
 
 	# Set the emote conditions for the state machine
-	animation_tree.set("parameters/conditions/emote", true)
-	animation_tree.set("parameters/conditions/nemote", false)
+	animation_tree.set("parameters/Locomotion/conditions/emote", true)
+	animation_tree.set("parameters/Locomotion/conditions/nemote", false)
 
 	# Force the state machine to the Emote state
-	var pb: AnimationNodeStateMachinePlayback = animation_tree.get("parameters/playback")
+	var pb: AnimationNodeStateMachinePlayback = animation_tree.get("parameters/Locomotion/playback")
 	pb.start("Emote", true)
 
 	playing_single = true
@@ -393,7 +584,8 @@ func _reset_skeleton_to_rest_pose():
 
 ## Load and play an emote (supports both wearable and scene emotes).
 ## Scene emotes are detected by URN pattern and loaded via unified path.
-func async_play_emote(emote_id_or_urn: String) -> void:
+## mask: -1 = full body (default), 0 = AvatarMask.AM_UPPER_BODY.
+func async_play_emote(emote_id_or_urn: String, mask: int = -1) -> void:
 	# Return if empty emote
 	if emote_id_or_urn == "":
 		return
@@ -413,7 +605,7 @@ func async_play_emote(emote_id_or_urn: String) -> void:
 	if not emote_id_or_urn.begins_with("urn"):
 		# Utility emotes are local, play directly
 		if Emotes.is_emote_utility(emote_id_or_urn):
-			play_emote(emote_id_or_urn)
+			play_emote(emote_id_or_urn, mask)
 			return
 		# Base emotes need to be converted to URN for remote fetch
 		if Emotes.is_emote_default(emote_id_or_urn):
@@ -424,7 +616,7 @@ func async_play_emote(emote_id_or_urn: String) -> void:
 
 	# Does it need to be loaded? (works for both wearable and scene emotes)
 	if _has_emote(emote_urn):
-		play_emote(emote_urn)
+		play_emote(emote_urn, mask)
 		return
 
 	# Set loading lock
@@ -456,7 +648,7 @@ func async_play_emote(emote_id_or_urn: String) -> void:
 		return
 
 	# Use call_deferred to ensure playback happens on main thread after async loading
-	play_emote.call_deferred(emote_urn)
+	play_emote.call_deferred(emote_urn, mask)
 
 
 func _async_load_emote(emote_urn: String):
@@ -614,6 +806,7 @@ func _load_emote_from_gltf_internal(
 	animation_single_emote_node.animation = "idle/Anim"
 	animation_mix_emote_node.get_node("A").animation = "idle/Anim"
 	animation_mix_emote_node.get_node("B").animation = "idle/Anim"
+	animation_masked_emote_node.animation = "idle/Anim"
 
 	var armature_prop: Node3D = null
 
@@ -759,6 +952,7 @@ func clean_unused_emotes():
 	animation_single_emote_node.animation = "idle/Anim"
 	animation_mix_emote_node.get_node("A").animation = "idle/Anim"
 	animation_mix_emote_node.get_node("B").animation = "idle/Anim"
+	animation_masked_emote_node.animation = "idle/Anim"
 
 	for urn in to_delete_emote_urns:
 		var emote_item_data: EmoteItemData = loaded_emotes_by_urn[urn]
@@ -811,6 +1005,13 @@ func play_emote_audio(file_hash: String):
 
 
 func freeze_on_idle():
+	_emit_emote_finished(true)
+	# Abort the masked layer before disabling the tree: a OneShot left in its
+	# fired state would resume the emote (with stale filters) whenever the tree
+	# is reactivated — LOD promotion or a preview screen reusing this avatar.
+	if playing_masked:
+		animation_tree.set(MASKED_REQUEST_PARAM, AnimationNodeOneShot.ONE_SHOT_REQUEST_ABORT)
+		playing_masked = false
 	animation_tree.process_mode = Node.PROCESS_MODE_DISABLED
 
 	animation_player.stop()
@@ -848,7 +1049,7 @@ func async_fetch_emote(emote_urn: String, body_shape_id: String) -> Array:
 
 
 func is_playing() -> bool:
-	return playing_single || playing_mixed
+	return playing_single || playing_mixed || playing_masked
 
 
 ## Set a grace period during which emote cancellation is blocked.
@@ -861,6 +1062,20 @@ func set_teleport_grace() -> void:
 ## Process emote state. Cancel emote if player is moving (not idle).
 ## idle: true if player is not moving
 func process(idle: bool):
+	# Masked (upper-body) emotes coexist with locomotion, so movement never
+	# cancels them; only their natural end is tracked here — independent of idle.
+	if playing_masked:
+		# `active` may not reflect a FIRE request until the tree has processed a
+		# frame, so skip the frame the request was set on.
+		# A looping masked emote loops inside the AnimationNodeAnimation, so the
+		# OneShot stays active forever — only stop_emote/supersede ends it.
+		if not playing_loop and Engine.get_process_frames() > _masked_fired_frame:
+			var one_shot_active: bool = animation_tree.get(MASKED_ACTIVE_PARAM)
+			if not one_shot_active:
+				_emit_emote_finished(false)
+				playing_masked = false
+				_hide_all_props()
+
 	if playing_single or playing_mixed:
 		# Check for actual player input - this cancels the grace period
 		var input_dir := Input.get_vector("ia_left", "ia_right", "ia_forward", "ia_backward")
@@ -872,12 +1087,15 @@ func process(idle: bool):
 
 		if not idle and not in_grace_period:
 			# Cancel emote when player moves (unless in grace period without player input)
+			_emit_emote_finished(true)
 			playing_single = false
 			playing_mixed = false
 			# Hide props when interrupted
 			_hide_all_props()
 		elif idle:
-			var pb: AnimationNodeStateMachinePlayback = animation_tree.get("parameters/playback")
+			var pb: AnimationNodeStateMachinePlayback = animation_tree.get(
+				"parameters/Locomotion/playback"
+			)
 			var cur_node: StringName = pb.get_current_node()
 			if cur_node == "Emote" or cur_node == "Emote_Mix":
 				# BUG: Looks like pb.is_playing() is not working well
@@ -886,6 +1104,7 @@ func process(idle: bool):
 					if playing_loop:
 						pb.start(cur_node, true)
 					else:
+						_emit_emote_finished(false)
 						playing_single = false
 						playing_mixed = false
 						# Hide props when emote ends
