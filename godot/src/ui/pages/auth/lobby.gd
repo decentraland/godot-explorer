@@ -910,6 +910,14 @@ func _on_button_cancel_pressed():
 	# login.gd arms this for every browser sign-in, not just a resumed one. Left set, a
 	# completion that won the abort race lands as a Welcome Back for the refused sign-in.
 	waiting_for_new_wallet = false
+
+	# _ready returned early past session recovery in favour of the parked token, so cancelling
+	# without this leaves the user signed out with a session on disk, unrestored until relaunch.
+	if _resumed_signin_from_deep_link:
+		_resumed_signin_from_deep_link = false
+		if _fall_back_to_stored_session():
+			return
+
 	show_auth_home_screen()
 
 
@@ -960,23 +968,35 @@ func _show_auth_error(error_message: String):
 	button_try_again.show()
 
 
+## Run the session recovery _ready skipped in favour of a parked `?signin=` token (#2644).
+## True when one actually started, in which case the caller must not navigate elsewhere.
+func _fall_back_to_stored_session() -> bool:
+	var session_account: Dictionary = Global.get_config().session_account
+	if session_account.is_empty():
+		return false
+
+	print("[DEEPLINK] Falling back to the stored session the sign-in resume stood in for")
+	waiting_for_new_wallet = false
+	loading_first_profile = true
+	show_dcl_splash_screen()
+	# Must precede try_recover_account: it flags the wallet_connected about to be emitted.
+	if Global.analytics_controller != null:
+		Global.analytics_controller.mark_wallet_connected_as_recovery()
+	if Global.player_identity.try_recover_account(session_account):
+		return true
+
+	loading_first_profile = false
+	return false
+
+
 func _on_auth_error(error_message: String):
 	# A cold-start resume that fails must not strand a user who did have a session: _ready
 	# skipped session recovery in favour of the deep-link token (an expired one still fails
 	# here), so run the recovery it stood in for instead of showing AUTH_ERROR over nothing.
 	if _resumed_signin_from_deep_link:
 		_resumed_signin_from_deep_link = false
-		var session_account: Dictionary = Global.get_config().session_account
-		if not session_account.is_empty():
-			print("[DEEPLINK] Sign-in resume failed — falling back to the stored session")
-			waiting_for_new_wallet = false
-			loading_first_profile = true
-			show_dcl_splash_screen()
-			if Global.analytics_controller != null:
-				Global.analytics_controller.mark_wallet_connected_as_recovery()
-			if Global.player_identity.try_recover_account(session_account):
-				return
-			loading_first_profile = false
+		if _fall_back_to_stored_session():
+			return
 
 	_show_auth_error(error_message)
 
