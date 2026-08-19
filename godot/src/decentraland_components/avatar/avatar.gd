@@ -156,6 +156,7 @@ var _glide_forward_blend: float = 0.0
 # profile fetch. Playing it now would resolve against the default body shape and
 # be wiped by the rebuild anyway, so it's latched and replayed on avatar_ready.
 var _pending_network_emote: String = ""
+var _pending_network_emote_mask: int = -1
 
 # Registry for scene emote content URLs: scene_id -> {base_url, emotes: {glb_hash -> audio_hash}}
 var _scene_emote_registry: Dictionary = {}
@@ -1101,8 +1102,10 @@ func async_load_wearables():
 	# stored announcement Pulse delivers at join for a peer already mid-emote).
 	if not _pending_network_emote.is_empty():
 		var pending_network_urn := _pending_network_emote
+		var pending_network_mask := _pending_network_emote_mask
 		_pending_network_emote = ""
-		async_play_emote(pending_network_urn)
+		_pending_network_emote_mask = -1
+		async_play_emote(pending_network_urn, pending_network_mask)
 
 
 func apply_color_and_facial():
@@ -1330,6 +1333,12 @@ func _release_impostor() -> void:
 
 
 func _on_lod_state_changed(new_state: int, _prev_state: int) -> void:
+	# At FAR the avatar is an impostor and its AnimationTree stops advancing, so a
+	# running emote would never reach its natural end and the scene would wait
+	# forever for a terminal EmoteState. Report it as interrupted now.
+	if new_state == LODState.FAR and emote_controller != null and emote_controller.is_playing():
+		emote_controller.stop_emote()
+
 	var full: bool = new_state == LODState.FULL
 	AvatarAnimHelpers.set_meshes_visible(self, new_state != LODState.FAR)
 	AvatarAnimHelpers.set_particles_visible(self, full)
@@ -1417,31 +1426,37 @@ func _process(delta):
 	)
 	emote_controller.process(self_idle)
 
-	var is_emoting = self_idle && emote_controller.is_playing()
+	# Masked (upper-body) emotes keep playing while moving, so idle can't gate
+	# them — otherwise Pulse would broadcast EmoteStop for a walking emote.
+	var is_emoting = (
+		emote_controller.is_playing() and (self_idle or emote_controller.playing_masked)
+	)
 	if is_local_player:
 		Global.comms.set_emoting(is_emoting)
 
-	animation_tree.set("parameters/conditions/idle", self_idle)
-	animation_tree.set("parameters/conditions/emote", emote_controller.playing_single)
-	animation_tree.set("parameters/conditions/nemote", not emote_controller.playing_single)
-	animation_tree.set("parameters/conditions/emix", emote_controller.playing_mixed)
-	animation_tree.set("parameters/conditions/nemix", not emote_controller.playing_mixed)
+	animation_tree.set("parameters/Locomotion/conditions/idle", self_idle)
+	animation_tree.set("parameters/Locomotion/conditions/emote", emote_controller.playing_single)
+	animation_tree.set(
+		"parameters/Locomotion/conditions/nemote", not emote_controller.playing_single
+	)
+	animation_tree.set("parameters/Locomotion/conditions/emix", emote_controller.playing_mixed)
+	animation_tree.set("parameters/Locomotion/conditions/nemix", not emote_controller.playing_mixed)
 
 	var loco := AvatarAnimHelpers.locomotion_conditions(
 		self.walk, self.jog, self.run, self.is_grounded
 	)
-	animation_tree.set("parameters/conditions/run", loco.run)
-	animation_tree.set("parameters/conditions/jog", loco.jog)
-	animation_tree.set("parameters/conditions/walk", loco.walk)
+	animation_tree.set("parameters/Locomotion/conditions/run", loco.run)
+	animation_tree.set("parameters/Locomotion/conditions/jog", loco.jog)
+	animation_tree.set("parameters/Locomotion/conditions/walk", loco.walk)
 
-	animation_tree.set("parameters/conditions/rise", self.rise)
-	animation_tree.set("parameters/conditions/fall", self.fall)
-	animation_tree.set("parameters/conditions/land", self.land)
+	animation_tree.set("parameters/Locomotion/conditions/rise", self.rise)
+	animation_tree.set("parameters/Locomotion/conditions/fall", self.fall)
+	animation_tree.set("parameters/Locomotion/conditions/land", self.land)
 	# #b3: nfall reads is_grounded directly (not `land`). `land` is a short pulse
 	# locally (in_grace_time) and was previously overridden to is_grounded for
 	# remotes, causing asymmetric behavior. is_grounded is the same shape on
 	# both sides, and fall's 1-2 frame deadband at apex is still avoided.
-	animation_tree.set("parameters/conditions/nfall", self.is_grounded)
+	animation_tree.set("parameters/Locomotion/conditions/nfall", self.is_grounded)
 
 	# Rising-edge detection for one-frame AnimationTree condition pulses.
 	var jump_rising_edge: bool = self.jump_count > _last_jump_count and self.jump_count >= 2
@@ -1454,14 +1469,16 @@ func _process(delta):
 	_last_jump_count = self.jump_count
 	var gliding_now: bool = self.glide_state == 1 or self.glide_state == 2
 
-	animation_tree.set("parameters/conditions/double_jump", jump_rising_edge)
-	animation_tree.set("parameters/conditions/gliding", gliding_now)
-	animation_tree.set("parameters/conditions/ngliding", not gliding_now)
+	animation_tree.set("parameters/Locomotion/conditions/double_jump", jump_rising_edge)
+	animation_tree.set("parameters/Locomotion/conditions/gliding", gliding_now)
+	animation_tree.set("parameters/Locomotion/conditions/ngliding", not gliding_now)
 
 	var glide_moving: bool = self.walk or self.jog or self.run
 	var glide_forward_target: float = 1.0 if glide_moving else 0.0
 	_glide_forward_blend = move_toward(_glide_forward_blend, glide_forward_target, delta * 4.0)
-	animation_tree.set("parameters/Gliding_Idle/Blend2/blend_amount", _glide_forward_blend)
+	animation_tree.set(
+		"parameters/Locomotion/Gliding_Idle/Blend2/blend_amount", _glide_forward_blend
+	)
 
 	if jump_rising_edge:
 		audio_player_double_jump.play()
@@ -1687,19 +1704,33 @@ func _play_emote_audio(file_hash: String):
 	emote_controller.play_emote_audio(file_hash)
 
 
-func async_play_emote(emote_urn: String):
+## mask: -1 = full body (default), 0 = AvatarMask.AM_UPPER_BODY.
+func async_play_emote(emote_urn: String, mask: int = -1):
 	if not avatar_ready:
 		_pending_network_emote = emote_urn
+		_pending_network_emote_mask = mask
 		return
-	await emote_controller.async_play_emote(emote_urn)
+	await emote_controller.async_play_emote(emote_urn, mask)
 
 
 ## Stop a looping emote on network request (rfc4 PlayerEmote.is_stopping /
 ## Pulse EmoteStopped). Called from Rust (AvatarScene::stop_emote).
 func stop_emote_from_network():
 	_pending_network_emote = ""
+	_pending_network_emote_mask = -1
 	if emote_controller:
 		emote_controller.stop_emote()
+
+
+## Called from Rust immediately before this avatar's node is freed, so a still-running
+## emote can be reported as interrupted while the node is alive. See
+## AvatarEmoteController.take_unfinished_emote.
+func take_unfinished_emote() -> Array:
+	_pending_network_emote = ""
+	_pending_network_emote_mask = -1
+	if emote_controller == null:
+		return []
+	return emote_controller.take_unfinished_emote()
 
 
 ## Register scene emote content info for later retrieval.
