@@ -142,12 +142,18 @@ async fn op_teleport_to(
         .map_err(|e| anyhow!(e))
 }
 
+// `mask` uses the internal convention: -1 = full body (absent), 0 = AM_UPPER_BODY.
+// A sentinel instead of Option because #[op2(fast)] can't take optional params
+// (same idiom as movePlayerTo's NaN sentinels in RestrictedActions.js).
 #[op2(fast)]
-fn op_trigger_emote(op_state: Rc<RefCell<OpState>>, #[string] emote_id: String) {
+fn op_trigger_emote(op_state: Rc<RefCell<OpState>>, #[string] emote_id: String, #[smi] mask: i32) {
     op_state
         .borrow_mut()
         .borrow_mut::<Vec<RpcCall>>()
-        .push(RpcCall::TriggerEmote { emote_id });
+        .push(RpcCall::TriggerEmote {
+            emote_id,
+            mask: mask as i64,
+        });
 }
 
 #[op2(fast)]
@@ -155,9 +161,14 @@ fn op_trigger_scene_emote(
     op_state: Rc<RefCell<OpState>>,
     #[string] emote_src: String,
     looping: bool,
+    #[smi] mask: i32,
 ) {
     op_state
         .borrow_mut()
         .borrow_mut::<Vec<RpcCall>>()
-        .push(RpcCall::TriggerSceneEmote { emote_src, looping });
+        .push(RpcCall::TriggerSceneEmote {
+            emote_src,
+            looping,
+            mask: mask as i64,
+        });
 }
