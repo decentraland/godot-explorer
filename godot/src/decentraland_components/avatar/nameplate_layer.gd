@@ -22,14 +22,17 @@ const FADE_SPEED := 6.0
 # Occlusion needs to see (a) solid world geometry + avatar bodies, and (b) remote
 # avatar ClickArea areas. We split into two raycasts because a single query cannot
 # target both without also hitting the nodeless, pooled DCL scene-sensor Area3Ds on
-# layer 4 that sit in front of the third-person camera and hide every tag (#2321).
-# Query A (bodies only) uses CL_PHYSICS|CL_BODY, so layer-4 AREAs cannot collide.
-# Query B (areas only) uses CL_AVATAR, so layer-4 phantoms are not in the mask.
-# See #2637.
+# CL_PLAYER (layer 3, mask value 4) that sat in front of the third-person camera and
+# hid every tag (#2321). Query A (bodies only) uses CL_PHYSICS|CL_PLAYER, so scene-sensor AREAs
+# cannot collide. Query B (areas only) uses CL_AVATAR, so those phantoms are not in
+# the mask. See #2637.
 const CL_PHYSICS := 2
-const CL_BODY := 4
+# CL_PLAYER = layer 3 (mask value 4), per project.godot — avatar TriggerDetectors +
+# the local player's CharacterBody3D.
+const CL_PLAYER := 4
+# CL_CLICKABLE_AVATAR = layer 30 (mask value 2^29) — avatar ClickAreas.
 const CL_AVATAR := 536870912
-const BODY_MASK := CL_PHYSICS | CL_BODY
+const BODY_MASK := CL_PHYSICS | CL_PLAYER
 const AREA_MASK := CL_AVATAR
 # Frames between occlusion raycasts per avatar (staggered) — not every frame.
 const OCCLUSION_PERIOD := 6
@@ -42,7 +45,6 @@ const NAMETAG_MARGIN := 0.1
 static var debug_disable_occlusion := false
 
 static var _root: Control = null
-static var _camera_area: Node = null
 
 
 ## The Control to parent nameplates under (screen-space). Created on first use.
@@ -159,31 +161,34 @@ static func _anchor(avatar) -> Vector3:
 
 ## True if something sits between camera and anchor. Uses two raycasts so remote avatar
 ## ClickArea areas occlude the tag while the nodeless, pooled DCL scene-sensor Area3Ds
-## on layer 4 cannot. See the BODY_MASK/AREA_MASK comment above.
+## on CL_PLAYER (layer 3, mask value 4) cannot. See the BODY_MASK/AREA_MASK comment above.
 static func _occluded(avatar, from: Vector3, to: Vector3) -> bool:
 	var space = avatar.get_world_3d().direct_space_state
 	if space == null:
 		return false
 
+	# Exclude this avatar's own colliders (so it never occludes its own tag) plus the
+	# local player's colliders (in third person they sit right next to the camera, in
+	# the path of every remote tag's ray — the #2321 failure mode).
 	var exclude: Array[RID] = []
 	if is_instance_valid(avatar.click_area):
 		exclude.append(avatar.click_area.get_rid())
 	if is_instance_valid(avatar.trigger_detector):
 		exclude.append(avatar.trigger_detector.get_rid())
-	if avatar.is_local_player:
-		var parent = avatar.get_parent()
-		if parent is CollisionObject3D:
-			exclude.append(parent.get_rid())
-	var camera_area := _get_camera_area()
-	if camera_area != null:
-		exclude.append(camera_area.get_rid())
+	exclude.append_array(_local_player_rids())
 
+	# Query A: solid bodies — world geometry + TriggerDetector/player bodies. A hit on
+	# a hidden avatar's collider (blocked / modifier-area hidden) doesn't count: the
+	# invisible avatar must not hide the tags behind it.
 	var body_query := PhysicsRayQueryParameters3D.create(from, to)
 	body_query.collision_mask = BODY_MASK
 	body_query.collide_with_areas = false
 	body_query.exclude = exclude
-	if not space.intersect_ray(body_query).is_empty():
-		return true
+	var body_hit: Dictionary = space.intersect_ray(body_query)
+	if not body_hit.is_empty():
+		var collider = body_hit.get("collider")
+		if not (collider is Node3D) or collider.is_visible_in_tree():
+			return true
 
 	var area_query := PhysicsRayQueryParameters3D.create(from, to)
 	area_query.collision_mask = AREA_MASK
@@ -193,13 +198,17 @@ static func _occluded(avatar, from: Vector3, to: Vector3) -> bool:
 	return not space.intersect_ray(area_query).is_empty()
 
 
-## Cached reference to the local player's camera-mode area detector, excluded from
-## occlusion raycasts so it cannot hide the local avatar's own tag.
-static func _get_camera_area() -> CollisionObject3D:
-	if is_instance_valid(_camera_area):
-		return _camera_area as CollisionObject3D
-	var explorer = Global.get_explorer()
+## RIDs of the local player's CharacterBody3D and its avatar's TriggerDetector.
+## Recomputed per (throttled) ray: cheap, and survives player/avatar node swaps.
+static func _local_player_rids() -> Array[RID]:
+	var explorer := Global.get_explorer()
 	if explorer == null or not is_instance_valid(explorer.player):
-		return null
-	_camera_area = explorer.player.get_node_or_null("camera_mode_area_detector")
-	return _camera_area as CollisionObject3D
+		return []
+	var rids: Array[RID] = []
+	var player = explorer.player
+	if player is CollisionObject3D:
+		rids.append(player.get_rid())
+	var player_avatar = player.get("avatar")
+	if player_avatar != null and is_instance_valid(player_avatar.trigger_detector):
+		rids.append(player_avatar.trigger_detector.get_rid())
+	return rids
