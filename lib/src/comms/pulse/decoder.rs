@@ -146,10 +146,12 @@ pub enum PulseEvent {
     ProfileVersion { address: H160, version: i32 },
     /// Subject started an emote. Emitted alongside the piggybacked `Movement`. `tick` is the
     /// server tick, used downstream only as a monotonic id so re-triggering the same urn replays.
+    /// `mask` carries the raw comms `AvatarEmoteMask` value (absent/0 = full body, 1 = upper body).
     EmoteStart {
         address: H160,
         urn: String,
         tick: u32,
+        mask: Option<i32>,
     },
     /// Subject's emote stopped (one-shot completed or looping cancelled).
     EmoteStop { address: H160 },
@@ -345,6 +347,7 @@ impl PulseDecoder {
                         address: subject.wallet,
                         urn: e.emote_id,
                         tick: e.server_tick,
+                        mask: e.mask,
                     });
                 }
                 events
