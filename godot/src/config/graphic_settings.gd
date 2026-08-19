@@ -9,6 +9,13 @@ class_name GraphicSettings extends RefCounted
 ## threshold makes that chain do real work by swapping farther/smaller MIs
 ## to LOD1/2/3 sooner. Tuned per profile so HIGH stays visually crisp
 ## while lower profiles trade detail for fragment cost.
+##
+## dcl_lights / dcl_light_shadows / dcl_max_lights / dcl_light_range_cap:
+## scene-authored dynamic lights. Mobile renderer allows 8 lights per mesh,
+## and each active light adds per-fragment cost — so lower profiles cap the
+## global active-light budget hard and disable dynamic light shadows.
+## range_cap clamps the intensity-derived auto activation range so very
+## bright authored lights can't activate from across the scene.
 const PROFILE_DEFINITIONS: Array[Dictionary] = [
 	# Very Low (0) - Maximum battery savings
 	{
@@ -19,7 +26,11 @@ const PROFILE_DEFINITIONS: Array[Dictionary] = [
 		"texture": 0,
 		"fps": ConfigData.FpsLimitMode.FPS_18,
 		"scale": 0.5,
-		"mesh_lod_threshold": 8.0
+		"mesh_lod_threshold": 8.0,
+		"dcl_lights": false,
+		"dcl_light_shadows": false,
+		"dcl_max_lights": 0,
+		"dcl_light_range_cap": 15.0
 	},
 	# Low (1) - Battery savings with better visuals
 	{
@@ -30,7 +41,11 @@ const PROFILE_DEFINITIONS: Array[Dictionary] = [
 		"texture": 0,
 		"fps": ConfigData.FpsLimitMode.FPS_30,
 		"scale": 0.75,
-		"mesh_lod_threshold": 6.0
+		"mesh_lod_threshold": 6.0,
+		"dcl_lights": true,
+		"dcl_light_shadows": false,
+		"dcl_max_lights": 2,
+		"dcl_light_range_cap": 20.0
 	},
 	# Medium (2) - Balanced performance and quality. AA off (MSAA_DISABLED)
 	# because A/B on Mali-G68 showed it costs ~8ms gpu in Genesis Plaza
@@ -43,7 +58,11 @@ const PROFILE_DEFINITIONS: Array[Dictionary] = [
 		"texture": 1,
 		"fps": ConfigData.FpsLimitMode.FPS_30,
 		"scale": 1.0,
-		"mesh_lod_threshold": 3.0
+		"mesh_lod_threshold": 3.0,
+		"dcl_lights": true,
+		"dcl_light_shadows": false,
+		"dcl_max_lights": 4,
+		"dcl_light_range_cap": 30.0
 	},
 	# High (3) - Best quality. shadow capped at 1 (Low) because Genesis
 	# Plaza bench on Mali-G68 showed shadow_quality=2 costs ~10ms gpu
@@ -59,7 +78,11 @@ const PROFILE_DEFINITIONS: Array[Dictionary] = [
 		"texture": 2,
 		"fps": ConfigData.FpsLimitMode.FPS_60,
 		"scale": 1.0,
-		"mesh_lod_threshold": 2.0
+		"mesh_lod_threshold": 2.0,
+		"dcl_lights": true,
+		"dcl_light_shadows": true,
+		"dcl_max_lights": 8,
+		"dcl_light_range_cap": 40.0
 	},
 ]
 
@@ -262,3 +285,11 @@ static func apply_graphic_profile(profile_index: int) -> void:
 		# how aggressively the renderer picks LOD1/2/3 at distance.
 		var lod_thr: float = profile.get("mesh_lod_threshold", 1.0)
 		viewport.mesh_lod_threshold = lod_thr
+
+	# Scene dynamic lights follow the profile. Dev Tools can override at runtime.
+	DclLightSourceComponent.apply_graphic_profile_settings(
+		profile.get("dcl_lights", false),
+		profile.get("dcl_light_shadows", false),
+		profile.get("dcl_max_lights", 0),
+		profile.get("dcl_light_range_cap", 15.0)
+	)

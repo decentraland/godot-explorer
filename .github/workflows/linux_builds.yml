@@ -52,6 +52,9 @@ jobs:
       - name: Validate GDScript
         run: cargo run -- check-gdscript
 
+      - name: Avatar regression tests
+        run: cargo run -- test-avatar
+
       - name: Export
         run: cargo run -- export
 
