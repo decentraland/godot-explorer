@@ -907,6 +907,9 @@ func _on_button_cancel_pressed():
 	Global.metrics.track_click_button("cancel", current_screen_name, "")
 
 	Global.player_identity.abort_try_connect_account()
+	# login.gd arms this for every browser sign-in, not just a resumed one. Left set, a
+	# completion that won the abort race lands as a Welcome Back for the refused sign-in.
+	waiting_for_new_wallet = false
 	show_auth_home_screen()
 
 

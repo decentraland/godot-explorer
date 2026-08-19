@@ -58,6 +58,11 @@ pub struct DclPlayerIdentity {
     /// the same Cancel without ever opening our browser hop.
     mobile_auth_started: bool,
 
+    /// Monotonic attempt token, like lobby.gd's `_guest_login_attempt`. `abort()` only unwinds
+    /// a task at a yield point and everything after the completion's single `.await` is
+    /// synchronous, so the result is re-checked against this on the main thread instead.
+    mobile_auth_attempt: u32,
+
     #[var]
     is_guest: bool,
 
@@ -97,6 +102,7 @@ impl INode for DclPlayerIdentity {
             pending_mobile_auth: None,
             mobile_auth_cancelled: false,
             mobile_auth_started: false,
+            mobile_auth_attempt: 0,
         }
     }
 }
@@ -754,6 +760,8 @@ impl DclPlayerIdentity {
         // Clearing the flag is not enough to make the cancel stick: the returning deep link
         // would then look exactly like a cold start and complete the sign-in anyway.
         self.mobile_auth_cancelled = self.mobile_auth_started;
+        // Retire any in-flight attempt; a completion past its await cannot be aborted.
+        self.mobile_auth_attempt = self.mobile_auth_attempt.wrapping_add(1);
     }
 
     /// Starts mobile auth flow. Opens browser and returns immediately.
@@ -768,6 +776,7 @@ impl DclPlayerIdentity {
     ) {
         self.mobile_auth_started = true;
         self.mobile_auth_cancelled = false;
+        self.mobile_auth_attempt = self.mobile_auth_attempt.wrapping_add(1);
 
         let Some(handle) = TokioRuntime::static_clone_handle() else {
             panic!("tokio runtime not initialized")
@@ -838,8 +847,9 @@ impl DclPlayerIdentity {
 
         let instance_id = self.base().instance_id();
         let identity_id = identity_id.to_string();
+        let attempt = self.mobile_auth_attempt;
 
-        handle.spawn(async move {
+        let complete_handle = handle.spawn(async move {
             let result = complete_mobile_auth(identity_id).await;
             let Ok(mut this) = Gd::<DclPlayerIdentity>::try_from_instance_id(instance_id) else {
                 return;
@@ -853,8 +863,9 @@ impl DclPlayerIdentity {
                             .expect("serialize ephemeral auth chain");
 
                     this.call_deferred(
-                        "try_set_remote_wallet",
+                        "_mobile_auth_completed",
                         &[
+                            attempt.to_variant(),
                             format!("{:#x}", address).to_variant(),
                             chain_id.to_variant(),
                             ephemeral_auth_chain_json_str.to_variant(),
@@ -864,12 +875,49 @@ impl DclPlayerIdentity {
                 Err(err) => {
                     tracing::error!("Error completing mobile auth: {:?}", err);
                     this.call_deferred(
-                        "_error_getting_wallet",
-                        &[format!("Mobile auth completion error: {}", err).to_variant()],
+                        "_mobile_auth_failed",
+                        &[
+                            attempt.to_variant(),
+                            format!("Mobile auth completion error: {}", err).to_variant(),
+                        ],
                     );
                 }
             }
         });
+
+        // Abort rather than drop: dropping a tokio JoinHandle detaches the task.
+        if let Some(previous) = self.try_connect_account_handle.replace(complete_handle) {
+            previous.abort();
+        }
+    }
+
+    /// Main-thread landing for a completed mobile sign-in, guarded by the attempt token so a
+    /// result the user cancelled is discarded instead of applied.
+    #[func]
+    fn _mobile_auth_completed(
+        &mut self,
+        attempt: u32,
+        address: GString,
+        chain_id: u64,
+        ephemeral_auth_chain: GString,
+    ) {
+        if attempt != self.mobile_auth_attempt {
+            tracing::info!("Discarding a completed mobile sign-in: attempt was retired");
+            return;
+        }
+        self.try_set_remote_wallet(address, chain_id, ephemeral_auth_chain);
+    }
+
+    /// Same guard for the failure arm: a cancelled attempt must not surface an error over
+    /// whatever screen the user moved on to.
+    #[func]
+    fn _mobile_auth_failed(&mut self, attempt: u32, error_message: GString) {
+        if attempt != self.mobile_auth_attempt {
+            tracing::info!("Discarding a failed mobile sign-in: attempt was retired");
+            return;
+        }
+        self.base_mut()
+            .call_deferred("_error_getting_wallet", &[error_message.to_variant()]);
     }
 
     /// Returns true if there's a pending mobile auth waiting for deep link
