@@ -55,6 +55,9 @@ var _redirecting_by_deep_link: bool = false
 # True while finishing a sign-in resumed from a parked `?signin=` deep-link token (#2644).
 # Read by _on_auth_error to recover the session that _ready skipped for it.
 var _resumed_signin_from_deep_link: bool = false
+# True while _ready is committed to restoring the stored session but still suspended on the
+# IAP env await, where neither flag below is set yet.
+var _recovering_session: bool = false
 var _last_panel: Control = null
 var _playing: String
 var _logo_tap_count: int = 0
@@ -505,6 +508,7 @@ func _ready():
 	# the usual case after the version-gate round-trip). Only when there's a real
 	# session to restore — guest/preview cleared session_account above.
 	if not session_account.is_empty():
+		_recovering_session = true
 		await Iap.async_await_env_resolved()
 
 	# Flag the wallet_connected emission produced by try_recover_account so the analytics
@@ -513,6 +517,7 @@ func _ready():
 	if Global.analytics_controller != null:
 		Global.analytics_controller.mark_wallet_connected_as_recovery()
 	var recovered := Global.player_identity.try_recover_account(session_account)
+	_recovering_session = false
 	if recovered:
 		loading_first_profile = true
 		show_dcl_splash_screen()
@@ -954,6 +959,15 @@ func _async_resume_signin_from_deep_link() -> bool:
 
 
 func _on_deep_link_signin_parked() -> void:
+	if waiting_for_new_wallet or loading_first_profile or _recovering_session:
+		# A second concurrent flow would be invisible to _async_on_profile_changed: whichever
+		# profile lands first takes the loading_first_profile branch and returns, so the
+		# waiting_for_new_wallet branch never runs. Consume the token rather than leaving it
+		# parked for a later lobby — this signal has already fired.
+		if not Global.deep_link_router.take_pending_signin_identity_id().is_empty():
+			print("[DEEPLINK] Dropping parked signin token: an identity flow is already running")
+		return
+
 	_async_resume_signin_from_deep_link()
 
 
