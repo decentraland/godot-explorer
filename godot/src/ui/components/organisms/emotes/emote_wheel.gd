@@ -97,7 +97,8 @@ func _on_play_emote(emote_urn: String):
 		var emote_controller = avatar_node.emote_controller
 		# Use async_play_emote to ensure base emotes are loaded from remote
 		emote_controller.async_play_emote(emote_urn)
-		Global.comms.send_emote(emote_urn)
+		# -1 = full body: wheel emotes carry no avatar mask.
+		Global.comms.send_emote(emote_urn, -1)
 	else:
 		printerr("No avatar node in EmoteWheel!")
 

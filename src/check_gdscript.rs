@@ -41,3 +41,32 @@ pub fn check_gdscript() -> Result<()> {
         Err(anyhow::anyhow!("GDScript validation failed"))
     }
 }
+
+pub fn test_avatar() -> Result<()> {
+    print_section("Avatar Regression Tests");
+
+    let godot_bin = get_godot_path();
+    for test in [
+        "test_avatar_locomotion_grounded",
+        "test_avatar_state_machine_graph",
+        "test_avatar_autoplay_stomp",
+        "test_avatar_anim_throttle",
+    ] {
+        print_message(MessageType::Info, &format!("Running {test}..."));
+        let output = cmd!(
+            godot_bin.clone(),
+            "--headless",
+            "--path",
+            GODOT_PROJECT_FOLDER,
+            "--script",
+            &format!("res://src/test/avatar/{test}.gd")
+        )
+        .run()?;
+        if !output.status.success() {
+            print_message(MessageType::Error, &format!("{test} FAILED"));
+            return Err(anyhow::anyhow!("avatar regression test failed: {test}"));
+        }
+    }
+    print_message(MessageType::Success, "All avatar regression tests passed!");
+    Ok(())
+}
