@@ -48,6 +48,16 @@ pub struct DclPlayerIdentity {
     /// is already showing the spinner — from "the deep link arrived out of the blue".
     pending_mobile_auth: Option<()>,
 
+    /// Set when the user cancels a browser sign-in this process started. A cold start cannot
+    /// have it set, which is how the router tells a cancel apart from the #2644 OS kill now
+    /// that completing no longer requires `pending_mobile_auth`.
+    mobile_auth_cancelled: bool,
+
+    /// True once `start_mobile_connect_account` ran here. Gates the flag above:
+    /// `abort_try_connect_account` is shared with the native WalletConnect path, which shows
+    /// the same Cancel without ever opening our browser hop.
+    mobile_auth_started: bool,
+
     #[var]
     is_guest: bool,
 
@@ -85,6 +95,8 @@ impl INode for DclPlayerIdentity {
             is_thirdweb_guest_upgraded: false,
             try_connect_account_handle: None,
             pending_mobile_auth: None,
+            mobile_auth_cancelled: false,
+            mobile_auth_started: false,
         }
     }
 }
@@ -739,6 +751,9 @@ impl DclPlayerIdentity {
         }
         // Also clear any pending mobile auth
         self.pending_mobile_auth = None;
+        // Clearing the flag is not enough to make the cancel stick: the returning deep link
+        // would then look exactly like a cold start and complete the sign-in anyway.
+        self.mobile_auth_cancelled = self.mobile_auth_started;
     }
 
     /// Starts mobile auth flow. Opens browser and returns immediately.
@@ -751,6 +766,9 @@ impl DclPlayerIdentity {
         user_id: GString,
         session_id: GString,
     ) {
+        self.mobile_auth_started = true;
+        self.mobile_auth_cancelled = false;
+
         let Some(handle) = TokioRuntime::static_clone_handle() else {
             panic!("tokio runtime not initialized")
         };
@@ -858,6 +876,12 @@ impl DclPlayerIdentity {
     #[func]
     fn has_pending_mobile_auth(&self) -> bool {
         self.pending_mobile_auth.is_some()
+    }
+
+    /// True if the user cancelled a browser sign-in in this process.
+    #[func]
+    fn was_mobile_auth_cancelled(&self) -> bool {
+        self.mobile_auth_cancelled
     }
 
     /// Generates ephemeral identity data for external signing (e.g., WalletConnect).
@@ -1291,6 +1315,10 @@ impl DclPlayerIdentity {
         self.profile = None;
         self.is_thirdweb_guest = false;
         self.is_thirdweb_guest_upgraded = false;
+        // The next account starts from a clean sign-in slate.
+        self.pending_mobile_auth = None;
+        self.mobile_auth_cancelled = false;
+        self.mobile_auth_started = false;
         self.base_mut()
             .call_deferred("emit_signal", &["logout".to_variant()]);
     }

@@ -229,6 +229,13 @@ func _route_teleport() -> void:
 ## The token is self-contained — complete_mobile_connect_account fetches the identity by id
 ## — so the only question is who drives the UI while that fetch runs.
 func _handle_signin_deep_link(identity_id: String) -> void:
+	# Checked ahead of the pending branch: abort_try_connect_account clears
+	# pending_mobile_auth, but start_mobile_connect_account's spawn is not abortable and sets
+	# it again on resolve, so a cancel during the browser-opening window leaves it true.
+	if Global.player_identity.was_mobile_auth_cancelled():
+		print("[DEEPLINK] Ignoring signin token: the user cancelled this sign-in")
+		return
+
 	if Global.player_identity.has_pending_mobile_auth():
 		# Warm resume: this same process opened the browser, so the lobby is alive with the
 		# AUTH_BROWSER_OPEN spinner up and its auth signals connected. Complete right here.
