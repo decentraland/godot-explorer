@@ -1986,7 +1986,12 @@ impl MessageProcessor {
                 // Let avatar_scene handle emotes
                 let mut avatar_scene_ref = self.avatars.clone();
                 let mut avatar_scene = avatar_scene_ref.bind_mut();
-                avatar_scene.play_emote(peer_alias, player_emote.incremental_id, &player_emote.urn);
+                avatar_scene.play_emote(
+                    peer_alias,
+                    player_emote.incremental_id,
+                    &player_emote.urn,
+                    crate::avatars::emote_mask::internal_from_wire_mask(player_emote.mask),
+                );
             }
             rfc4::packet::Message::SceneEmote(_) => {
                 tracing::warn!("Not implemented: SceneEmote handling in message_processor");
