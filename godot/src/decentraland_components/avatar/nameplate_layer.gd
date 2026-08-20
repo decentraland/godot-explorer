@@ -167,15 +167,18 @@ static func _occluded(avatar, from: Vector3, to: Vector3) -> bool:
 	if space == null:
 		return false
 
-	# Exclude this avatar's own colliders (so it never occludes its own tag) plus the
-	# local player's colliders (in third person they sit right next to the camera, in
-	# the path of every remote tag's ray — the #2321 failure mode).
+	# Exclude this avatar's own colliders (so it never occludes its own tag). The
+	# local player's body is deliberately NOT excluded from other avatars' rays:
+	# your own avatar legitimately blocks tags behind it in third person.
 	var exclude: Array[RID] = []
 	if is_instance_valid(avatar.click_area):
 		exclude.append(avatar.click_area.get_rid())
 	if is_instance_valid(avatar.trigger_detector):
 		exclude.append(avatar.trigger_detector.get_rid())
-	exclude.append_array(_local_player_rids())
+	if avatar.is_local_player:
+		var parent = avatar.get_parent()
+		if parent is CollisionObject3D:
+			exclude.append(parent.get_rid())
 
 	# Query A: solid bodies — world geometry + TriggerDetector/player bodies. A hit on
 	# a hidden avatar's collider (blocked / modifier-area hidden) doesn't count: the
@@ -196,19 +199,3 @@ static func _occluded(avatar, from: Vector3, to: Vector3) -> bool:
 	area_query.collide_with_bodies = false
 	area_query.exclude = exclude
 	return not space.intersect_ray(area_query).is_empty()
-
-
-## RIDs of the local player's CharacterBody3D and its avatar's TriggerDetector.
-## Recomputed per (throttled) ray: cheap, and survives player/avatar node swaps.
-static func _local_player_rids() -> Array[RID]:
-	var explorer := Global.get_explorer()
-	if explorer == null or not is_instance_valid(explorer.player):
-		return []
-	var rids: Array[RID] = []
-	var player = explorer.player
-	if player is CollisionObject3D:
-		rids.append(player.get_rid())
-	var player_avatar = player.get("avatar")
-	if player_avatar != null and is_instance_valid(player_avatar.trigger_detector):
-		rids.append(player_avatar.trigger_detector.get_rid())
-	return rids
