@@ -111,6 +111,18 @@ const _OUTCOME_REJECTED := 1
 const _OUTCOME_RETRY := 2
 const _OUTCOME_DEFERRED := 3
 
+# Order statuses from /credit-orders worth showing. `credited` is a completed purchase and
+# `reversed` is one whose whole grant was clawed back, which the row renders as a negative.
+# Everything else a checkout can be — initiated / processing / crediting / abandoned / failed —
+# never moved credit, and listing those would show the buyer money they did not spend.
+#
+# `partially_reversed` is deliberately listed as the purchase it was rather than as a refund:
+# the endpoint reports the grant, not how much of it came back, so rendering a refund line here
+# would have to invent the amount. It reads as the full purchase until the server carries the
+# reversed figure.
+const _ORDER_STATUS_REVERSED := "reversed"
+const _HISTORY_ORDER_STATUSES := ["credited", "reversed", "partially_reversed"]
+
 # After a purchase the credit is minted server-side (by /verify or, racing it, the
 # webhook), but the reported balance can lag a moment behind the mint. Poll the
 # balance every _POST_PURCHASE_POLL_INTERVAL_SEC, for up to _POST_PURCHASE_POLL_ATTEMPTS
@@ -723,39 +735,44 @@ func _async_fetch_balance() -> void:
 
 # gdlint:ignore = async-function-name
 func _async_fetch_history() -> void:
-	# Builds the history view from the wallet's on-chain credits. credits-server
-	# has no per-transaction history endpoint; we derive entries from the IAP
-	# credits returned by GET /users/:address/credits. Refunded credits are not
-	# returned by this endpoint, so entries are always non-refund here.
+	# The buyer's credit-PURCHASE history, from GET /users/:address/credit-orders. That endpoint
+	# lists every rail a credit pack can be bought on — the Stripe card checkout on the web and
+	# the Apple in-app purchase here — so a wallet that topped up on either surface sees one list.
+	#
+	# It replaced deriving entries from the `credits[]` array on GET /users/:address/credits,
+	# which is hard-filtered to `denomination = 'MANA'` server-side. Once IAP moved to crediting
+	# the USD rail that array stopped growing, and every new purchase was charged, credited,
+	# spendable — and absent from this screen.
 	var wallet := _wallet_address()
 	if wallet.is_empty():
 		return
 	var envelope = await _async_signed_iap(
-		"/users/" + wallet + "/credits", HTTPClient.METHOD_GET, ""
+		"/users/" + wallet + "/credit-orders", HTTPClient.METHOD_GET, ""
 	)
 	if _wallet_address() != wallet:
 		return
 	if envelope == null:
 		return
-	var credits = envelope.get("credits", [])
-	if not (credits is Array):
+	var orders = envelope.get("orders", [])
+	if not (orders is Array):
 		return
 	var history: Array = []
-	for entry in credits:
+	for entry in orders:
 		if not (entry is Dictionary):
 			continue
-		if str(entry.get("creditSource", "")) != "iap":
+		var status := str(entry.get("status", ""))
+		if not _HISTORY_ORDER_STATUSES.has(status):
 			continue
-		# amount is wei (a string, to avoid int64 overflow); timestamp is in ms.
-		var mana := int(round(float(str(entry.get("amount", "0"))) / _WEI_PER_MANA))
-		var ts_ms := float(entry.get("timestamp", 0))
-		var dt = Time.get_datetime_dict_from_unix_time(int(ts_ms / 1000.0))
+		# createdAt is epoch ms.
+		var dt = Time.get_datetime_dict_from_unix_time(
+			int(float(entry.get("createdAt", 0)) / 1000.0)
+		)
 		(
 			history
 			. append(
 				{
-					"credits": mana,
-					"is_refund": false,
+					"credits": int(entry.get("credits", 0)),
+					"is_refund": status == _ORDER_STATUS_REVERSED,
 					"timestamp": "%04d.%02d.%02d" % [dt.year, dt.month, dt.day],
 				}
 			)
