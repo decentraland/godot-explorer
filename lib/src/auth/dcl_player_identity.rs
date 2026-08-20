@@ -1113,12 +1113,17 @@ impl DclPlayerIdentity {
         self.ephemeral_auth_chain.as_ref()
     }
 
+    /// `lowercase_metadata` folds the metadata before signing it and transmits it folded,
+    /// so the signature verifies under both `@dcl/crypto-middleware` generations. It costs
+    /// the metadata's casing, so only pass it for a service that never reads the metadata
+    /// back — credits-server is the one such caller today. See `wallet::SignedMetadata`.
     #[func]
     pub fn async_get_identity_headers(
         &self,
         uri: GString,
         metadata: GString,
         method: GString,
+        lowercase_metadata: bool,
     ) -> Gd<Promise> {
         let promise = Promise::new_alloc();
         let promise_instance_id = promise.instance_id();
@@ -1148,6 +1153,11 @@ impl DclPlayerIdentity {
 
             let method = method.to_string();
             let metadata = metadata.to_string();
+            let metadata_format = if lowercase_metadata {
+                super::wallet::SignedMetadata::Lowercase
+            } else {
+                super::wallet::SignedMetadata::Verbatim
+            };
 
             handle.spawn(async move {
                 // Parse metadata from string to JSON value
@@ -1177,6 +1187,7 @@ impl DclPlayerIdentity {
                     &uri,
                     &ephemeral_auth_chain,
                     metadata_json,
+                    metadata_format,
                 )
                 .await;
 

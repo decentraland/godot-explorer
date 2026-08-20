@@ -807,8 +807,12 @@ func _async_signed_iap(path: String, method: int, body: String) -> Variant:
 	# (GET /users/:address/credits) return the object directly, so callers inspect
 	# the fields they expect themselves.
 	# Resolve the base URL per call so a runtime environment switch is picked up.
+	# Signed with folded metadata: credits-server runs crypto-middleware >=6.0.0, which
+	# rebuilds the payload with the metadata verbatim, so a folded signature only matches a
+	# folded header. Safe here and nowhere else on this client — credits-server reads
+	# `productId` off the body and never touches `authMetadata`.
 	var url := DclUrls.credits_server() + path
-	var response = await Global.async_signed_fetch(url, method, body)
+	var response = await Global.async_signed_fetch(url, method, body, true)
 	if response is PromiseError:
 		printerr("[IAP] ", path, " transport/auth error: ", response.get_error())
 		return null
