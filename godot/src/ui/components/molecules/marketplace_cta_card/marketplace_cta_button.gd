@@ -34,7 +34,7 @@ func _update_text():
 	elif _selected_price >= 0 and balance < _selected_price:
 		text = "GET CREDITS"
 	else:
-		text = "GO TO MARKETPLACE"
+		text = "GO TO SHOP"
 
 
 func _on_pressed():

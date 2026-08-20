@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" path="res://src/ui/components/molecules/credits_balance_button/credits_balance_button.gd" id="1_script"]
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="2_dcl"]
-[ext_resource type="Texture2D" uid="uid://dbgem6ilug5f2" path="res://assets/ui/iap/credits-icon.svg" id="3_icon"]
+[ext_resource type="Texture2D" uid="uid://c2wb73yrhr02x" path="res://assets/ui/iap/credits-icon.png" id="3_icon"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_pill"]
 content_margin_left = 18.0

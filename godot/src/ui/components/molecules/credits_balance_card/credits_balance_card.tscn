@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" uid="uid://bdqo325fk1snd" path="res://src/ui/components/molecules/credits_balance_card/credits_balance_card.gd" id="1_script"]
 [ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="2_ehtta"]
-[ext_resource type="Texture2D" uid="uid://dbgem6ilug5f2" path="res://assets/ui/iap/credits-icon.svg" id="3_vahx0"]
+[ext_resource type="Texture2D" uid="uid://c2wb73yrhr02x" path="res://assets/ui/iap/credits-icon.png" id="3_vahx0"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_fagdn"]
 bg_color = Color(0, 0, 0, 0.4)
