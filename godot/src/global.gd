@@ -1546,6 +1546,24 @@ func _check_dclenv_change() -> bool:
 	if new_env == current_env:
 		return false
 
+	# A sign-in callback (`decentraland://open?signin=...&dclenv=...`) echoes the env the
+	# web flow authenticated against. That is a byproduct of the round trip, never a
+	# request to switch. Acting on it restarts the session in the middle of the login:
+	# sign_out() rebuilds the lobby, and the `true` returned below makes the router drop
+	# the deeplink before it reaches _handle_signin_deep_link, so the auth goes with it.
+	# The callback also carries the plain env (`zone`), which can never match a composed
+	# one (`catalyst::org,...,profile::zone,zone`), so on those setups it fired every time.
+	if deep_link_obj.is_signin_request():
+		print("[DEEPLINK] dclenv=%s on a signin callback, keeping %s" % [new_env, current_env])
+		return false
+
+	# An env chosen explicitly (--dclenv, or an earlier deeplink) outranks what a later
+	# deeplink carries. Switching from the default env still works; switching again
+	# afterwards needs an app restart.
+	if dcl_env_explicit:
+		print("[DEEPLINK] dclenv=%s ignored, %s was set explicitly" % [new_env, current_env])
+		return false
+
 	print("[DEEPLINK] Environment changed: %s -> %s, restarting..." % [current_env, new_env])
 	DclGlobal.set_dcl_environment(new_env)
 	dcl_env_explicit = true

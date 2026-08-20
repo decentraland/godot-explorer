@@ -428,6 +428,7 @@ func _async_begin_purchase(product_id: String, wallet: String) -> void:
 	if not envelope.get("ok", false):
 		var code := str(envelope.get("code", ""))
 		var reason := str(envelope.get("reason", ""))
+		printerr("[IAP] quote denied for ", product_id, ": code=", code, " reason=", reason)
 		_finish_purchase_flow()
 		_show_quote_denied_modal(code, reason)
 		purchase_failed.emit(product_id, "not allowed: " + code)
@@ -792,9 +793,11 @@ func _async_signed_iap(path: String, method: int, body: String) -> Variant:
 	var url := DclUrls.credits_server() + path
 	var response = await Global.async_signed_fetch(url, method, body)
 	if response is PromiseError:
+		printerr("[IAP] ", path, " transport/auth error: ", response.get_error())
 		return null
 	var json = response.get_string_response_as_json()
 	if not (json is Dictionary):
+		printerr("[IAP] ", path, " unparseable response: ", response.get_string_response())
 		return null
 	return json
 

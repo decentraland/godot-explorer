@@ -281,7 +281,18 @@ pub async fn sign_request<META: Serialize>(
         .unwrap()
         .as_millis();
 
-    let meta = serde_json::to_string(&meta).unwrap();
+    // The signed payload is lowercased (ADR-44 reference behaviour), and the
+    // `x-identity-metadata` header MUST carry the same string the signature covers —
+    // the server rebuilds the expected payload from that header and compares. Lowercasing
+    // only the payload signed `{"productid":...}` while transmitting `{"productId":...}`,
+    // so every signed request whose metadata held an uppercase character was rejected with
+    // "Invalid final authority". It stayed hidden because every other signed body in this
+    // client is snake_case with lowercase values, where the lowercase is a no-op.
+    //
+    // The HTTP body is NOT touched here: it keeps its original casing, which is what the
+    // API itself validates (credits-server answers `productId is required` to a lowercased
+    // body). Metadata and body are independent as far as the server is concerned.
+    let meta = serde_json::to_string(&meta).unwrap().to_lowercase();
     let payload = format!("{}:{}:{}:{}", method, uri.path(), unix_time, meta).to_lowercase();
 
     let signature = wallet
