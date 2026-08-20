@@ -92,11 +92,7 @@ func _ready() -> void:
 
 	var btn := get_parent() as Button
 	if btn != null:
-		for slot in _STYLE_SLOTS:
-			btn.add_theme_stylebox_override(slot, StyleBoxEmpty.new())
-		if not recolor_icon_by_state:
-			for slot in _ICON_COLOR_SLOTS:
-				btn.add_theme_color_override(slot, _ICON_LIGHT)
+		_apply_style_overrides()
 		# Fill the parent explicitly: anchors don't resolve reliably under a
 		# non-container Button, and the orb must track the button's size.
 		_fit()
@@ -107,6 +103,43 @@ func _ready() -> void:
 			btn.button_up.connect(func() -> void: _refresh.call_deferred())
 			btn.toggled.connect(func(_on: bool) -> void: _refresh())
 	_refresh()
+
+
+# The blanking overrides are applied live (also in-editor via @tool, for preview) but must
+# NOT be serialized into the host scene — that bakes one StyleBoxEmpty per slot per button
+# into the .tscn (110+ on the joypad). Mirror SafeMarginContainer: strip them right before
+# the editor writes the file, then re-apply so the open scene keeps rendering the orb.
+func _notification(what: int) -> void:
+	if not Engine.is_editor_hint():
+		return
+	if what == NOTIFICATION_EDITOR_PRE_SAVE:
+		_clear_style_overrides()
+	elif what == NOTIFICATION_EDITOR_POST_SAVE:
+		_apply_style_overrides()
+		_refresh()
+
+
+func _apply_style_overrides() -> void:
+	var btn := get_parent() as Button
+	if btn == null:
+		return
+	for slot in _STYLE_SLOTS:
+		btn.add_theme_stylebox_override(slot, StyleBoxEmpty.new())
+	if not recolor_icon_by_state:
+		for slot in _ICON_COLOR_SLOTS:
+			btn.add_theme_color_override(slot, _ICON_LIGHT)
+
+
+func _clear_style_overrides() -> void:
+	var btn := get_parent() as Button
+	if btn == null:
+		return
+	for slot in _STYLE_SLOTS:
+		btn.remove_theme_stylebox_override(slot)
+	for slot in _ICON_COLOR_SLOTS:
+		btn.remove_theme_color_override(slot)
+	for slot in _ALL_ICON_COLOR_SLOTS:
+		btn.remove_theme_color_override(slot)
 
 
 func _fit() -> void:
