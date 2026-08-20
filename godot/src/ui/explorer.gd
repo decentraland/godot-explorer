@@ -302,7 +302,6 @@ func _ready():
 	Global.scene_runner.player_body_node = player
 	Global.scene_runner.console = self._on_scene_console_message
 	Global.scene_runner.pointer_tooltip_changed.connect(self._on_pointer_tooltip_changed)
-	player.avatar.emote_triggered.connect(Global.scene_runner.on_primary_player_trigger_emote)
 	# Recreate base_ui before use: the previous instance is freed when the Explorer
 	# scene is torn down (logout/change_scene_to_file), leaving a dangling reference.
 	Global.scene_runner.recreate_base_ui()

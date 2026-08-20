@@ -34,8 +34,10 @@ const COLOR_TEXT: Color = Color("fcfcfc")
 const COLOR_SHADOW_BG: Color = Color("161518")
 const COLOR_SCROLLBAR: Color = Color("966ac5")
 
-const TOOLTIP_TEXT: String = "Percentage of the FPS target the client runs at for this scene"
-const TOOLTIP_MIN_SIZE: Vector2 = Vector2(260.0, 52.0)
+# Explicit line break: the design shows exactly two lines; autowrap at a fixed
+# width put it on three.
+const TOOLTIP_TEXT: String = "Percentage of the FPS target\nthe client runs at for this scene"
+const TOOLTIP_PANEL_GAP: float = 12.0
 const TOOLTIP_ARROW_SIZE: Vector2 = Vector2(10.0, 22.0)
 const TOOLTIP_HIDE_DELAY: float = 5.0
 
@@ -479,15 +481,17 @@ func _toggle_tooltip() -> void:
 	_tooltip.visible = true
 	_tooltip_opened_frame = Engine.get_process_frames()
 	_update_badge_style()
-	# Just left of the panel, vertically centered on the Performance row, with
+	# Just right of the panel, vertically centered on the Performance row, with
 	# the arrow pointing at the row. Sized from the bubble's real minimum so a
 	# longer text (more wrapped lines) keeps the arrow on the bubble's middle.
 	var bubble_size: Vector2 = _tooltip_bubble.get_combined_minimum_size()
 	_tooltip_bubble.size = bubble_size
+	_tooltip_bubble.position = Vector2(TOOLTIP_ARROW_SIZE.x, 0.0)
 	var arrow_y: float = (bubble_size.y - TOOLTIP_ARROW_SIZE.y) / 2.0
-	_tooltip_arrow.position = Vector2(bubble_size.x, arrow_y)
+	_tooltip_arrow.position = Vector2(0.0, arrow_y)
 	var row_rect: Rect2 = _fps_row.get_global_rect()
-	var x: float = get_global_rect().position.x - bubble_size.x - TOOLTIP_ARROW_SIZE.x
+	var panel_rect: Rect2 = get_global_rect()
+	var x: float = panel_rect.position.x + panel_rect.size.x + TOOLTIP_PANEL_GAP
 	var y: float = row_rect.position.y + (row_rect.size.y - bubble_size.y) / 2.0
 	_tooltip.global_position = Vector2(x, y)
 	_tooltip_timer.start()
@@ -503,7 +507,8 @@ func _hide_tooltip() -> void:
 
 
 ## Speech bubble: StyleBoxFlat body + the design's exported arrow SVG attached
-## to its right edge (Figma "Tooltip" component).
+## to its left edge, flipped to point back at the panel (Figma "Tooltip"
+## component).
 func _build_tooltip() -> void:
 	_tooltip = Control.new()
 	_tooltip.top_level = true
@@ -512,7 +517,6 @@ func _build_tooltip() -> void:
 	add_child(_tooltip)
 
 	var bubble: PanelContainer = PanelContainer.new()
-	bubble.custom_minimum_size = TOOLTIP_MIN_SIZE
 	bubble.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var sb: StyleBoxFlat = StyleBoxFlat.new()
 	sb.bg_color = Color(COLOR_SHADOW_BG, 0.8)
@@ -524,10 +528,6 @@ func _build_tooltip() -> void:
 	bubble.add_theme_stylebox_override("panel", sb)
 	var lbl: Label = Label.new()
 	lbl.text = TOOLTIP_TEXT
-	lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	# Fixed wrap width — without it an autowrap Label reports its minimum size
-	# at longest-word width, which inflates the bubble's minimum height.
-	lbl.custom_minimum_size = Vector2(TOOLTIP_MIN_SIZE.x - 18.0, 0)
 	lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	lbl.add_theme_font_override("font", FONT_MEDIUM)
@@ -541,6 +541,7 @@ func _build_tooltip() -> void:
 	arrow.texture = load(TOOLTIP_ARROW_PATH)
 	arrow.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	arrow.stretch_mode = TextureRect.STRETCH_SCALE
+	arrow.flip_h = true
 	arrow.size = TOOLTIP_ARROW_SIZE
 	arrow.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_tooltip.add_child(arrow)
