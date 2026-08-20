@@ -23,8 +23,8 @@
 [ext_resource type="PackedScene" uid="uid://dx873niilktrw" path="res://src/ui/components/organisms/warning_messages/warning_messages.tscn" id="23_bi432"]
 [ext_resource type="PackedScene" uid="uid://bectasdgy1btu" path="res://src/ui/pages/profile/profile_container.tscn" id="25_c5h7v"]
 [ext_resource type="PackedScene" uid="uid://75a0brb4fw2g" path="res://src/helpers_components/scene_music_changer.tscn" id="26_5hhk2"]
-[ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="26_smf4l"]
-[ext_resource type="Texture2D" uid="uid://07umsp1mjry1" path="res://assets/themes/dark_dcl_theme/icons/Exit.svg" id="27_u4dfr"]
+[ext_resource type="Texture2D" uid="uid://bvy28sbaj0cx6" path="res://assets/ui/show_ui/show_ui_default.png" id="26_showdef"]
+[ext_resource type="Texture2D" uid="uid://wottdp11iqpc" path="res://assets/ui/show_ui/show_ui_pressed.png" id="27_showpr"]
 [ext_resource type="PackedScene" uid="uid://qbcqm5fskyho" path="res://src/ui/components/organisms/url_popup/url_popup.tscn" id="27_url_popup"]
 [ext_resource type="PackedScene" uid="uid://ks0sxu8dsf66" path="res://src/ui/components/organisms/jump_in_popup/jump_in_popup.tscn" id="28_jump_in_popup"]
 [ext_resource type="PackedScene" uid="uid://bycjwh7mskrsd" path="res://src/helpers_components/chat_handler.tscn" id="32_cq187"]
@@ -40,28 +40,6 @@ corner_radius_top_left = 24
 corner_radius_top_right = 24
 corner_radius_bottom_right = 24
 corner_radius_bottom_left = 24
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_smf4l"]
-content_margin_left = 7.0
-content_margin_top = 7.0
-content_margin_right = 7.0
-content_margin_bottom = 7.0
-bg_color = Color(0, 0, 0, 0.8)
-corner_radius_top_left = 100
-corner_radius_top_right = 100
-corner_radius_bottom_right = 100
-corner_radius_bottom_left = 100
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_u4dfr"]
-content_margin_left = 7.0
-content_margin_top = 7.0
-content_margin_right = 7.0
-content_margin_bottom = 7.0
-bg_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
-corner_radius_top_left = 100
-corner_radius_top_right = 100
-corner_radius_bottom_right = 100
-corner_radius_bottom_left = 100
 
 [node name="explorer" type="Node" unique_id=1276646984]
 script = ExtResource("1_5n8xk")
@@ -324,35 +302,19 @@ anchor_bottom = 0.0
 grow_horizontal = 1
 grow_vertical = 1
 
-[node name="Button_ShowUI" type="Button" parent="UI/SafeAreaHud" unique_id=1612256067]
+[node name="Button_ShowUI" type="TextureButton" parent="UI/SafeAreaHud" unique_id=1612256067]
 unique_name_in_owner = true
-editor_description = "Restore affordance. Sibling of InteractableHUD inside SafeAreaHud: hide-UI hides InteractableHUD (the HUD content), NOT the whole SafeAreaHud, so this button survives and stays clickable over scene UI (after the pivot). Inherits SafeAreaHud's rect."
+editor_description = "Restore affordance. Sibling of InteractableHUD inside SafeAreaHud: hide-UI hides InteractableHUD (the HUD content), NOT the whole SafeAreaHud, so this button survives and stays clickable over scene UI (after the pivot). EXPAND without FILL keeps it at custom_minimum_size, top-left of the safe area. Orb texture (glyph baked in); momentary — swaps to show_ui_pressed while held, then restores the HUD."
 visible = false
-custom_minimum_size = Vector2(50, 50)
+custom_minimum_size = Vector2(57, 57)
 layout_mode = 2
 size_flags_horizontal = 2
 size_flags_vertical = 2
 focus_mode = 0
-theme = ExtResource("26_smf4l")
-theme_type_variation = &"SecondaryButton"
-theme_override_colors/font_pressed_color = Color(0.08627451, 0.08235294, 0.09411765, 1)
-theme_override_colors/font_hover_color = Color(0.08627451, 0.08235294, 0.09411765, 1)
-theme_override_colors/font_hover_pressed_color = Color(0.08627451, 0.08235294, 0.09411765, 1)
-theme_override_colors/icon_pressed_color = Color(0.08627451, 0.08235294, 0.09411765, 1)
-theme_override_colors/icon_hover_color = Color(0.08627451, 0.08235294, 0.09411765, 1)
-theme_override_colors/icon_hover_pressed_color = Color(0.08627451, 0.08235294, 0.09411765, 1)
-theme_override_constants/icon_max_width = 72
-theme_override_styles/normal = SubResource("StyleBoxFlat_smf4l")
-theme_override_styles/normal_mirrored = SubResource("StyleBoxFlat_smf4l")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_u4dfr")
-theme_override_styles/pressed_mirrored = SubResource("StyleBoxFlat_u4dfr")
-theme_override_styles/hover = SubResource("StyleBoxFlat_u4dfr")
-theme_override_styles/hover_mirrored = SubResource("StyleBoxFlat_u4dfr")
-theme_override_styles/hover_pressed = SubResource("StyleBoxFlat_u4dfr")
-theme_override_styles/hover_pressed_mirrored = SubResource("StyleBoxFlat_u4dfr")
-icon = ExtResource("27_u4dfr")
-icon_alignment = 1
-expand_icon = true
+texture_normal = ExtResource("26_showdef")
+texture_pressed = ExtResource("27_showpr")
+ignore_texture_size = true
+stretch_mode = 5
 
 [node name="InteractableAreaDebug" type="ColorRect" parent="UI" unique_id=146097443]
 unique_name_in_owner = true
