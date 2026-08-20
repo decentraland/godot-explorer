@@ -4,8 +4,8 @@
 [ext_resource type="Script" uid="uid://rsrj8osixsoo" path="res://src/ui/layouts/hide_orientation.gd" id="2_ai0av"]
 [ext_resource type="Texture2D" uid="uid://en7h0ciphyak" path="res://src/ui/components/organisms/chatbar/chat_default.png" id="2_chdef"]
 [ext_resource type="Texture2D" uid="uid://cytpdlax4ble0" path="res://src/ui/components/organisms/menu/icons/discover-outlined.svg" id="3_2fmgn"]
-[ext_resource type="Texture2D" uid="uid://cfncbhirsbuo" path="res://assets/flip-button-default.svg" id="5_grvqo"]
-[ext_resource type="Texture2D" uid="uid://l2psogj3gtew" path="res://assets/flip-button-pressed.svg" id="6_akf1h"]
+[ext_resource type="Script" uid="uid://di30mxklw1rhe" path="res://src/ui/components/atoms/buttons/button_touch_action/orb_skin.gd" id="5_orb"]
+[ext_resource type="Texture2D" uid="uid://cupwnl8mymqxs" path="res://assets/flip-icon.svg" id="6_flip"]
 [ext_resource type="Texture2D" uid="uid://gamhtrgpywdx" path="res://assets/tooltip-arrow-left.svg" id="7_tw2ns"]
 [ext_resource type="FontFile" uid="uid://d2vlaexk003yw" path="res://assets/themes/fonts/inter/Inter-Medium.ttf" id="8_vm240"]
 [ext_resource type="Texture2D" uid="uid://c4vnarw7wx36n" path="res://assets/ui/Reset.png" id="9_reset"]
@@ -24,12 +24,7 @@ corner_radius_top_right = 40
 corner_radius_bottom_right = 40
 corner_radius_bottom_left = 40
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_button_bg"]
-bg_color = Color(0, 0, 0, 0.75)
-corner_radius_top_left = 24
-corner_radius_top_right = 24
-corner_radius_bottom_right = 24
-corner_radius_bottom_left = 24
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_disc"]
 
 [node name="Chatbar" type="MarginContainer" unique_id=1474819563]
 offset_right = 276.0
@@ -73,7 +68,7 @@ texture_normal = ExtResource("2_chdef")
 ignore_texture_size = true
 stretch_mode = 5
 
-[node name="Button_Flip" type="TextureButton" parent="VBoxContainer/HBoxContainer" unique_id=1364102949]
+[node name="Button_Flip" type="Button" parent="VBoxContainer/HBoxContainer" unique_id=1364102949]
 unique_name_in_owner = true
 visible = false
 custom_minimum_size = Vector2(66, 66)
@@ -81,10 +76,20 @@ layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
 focus_mode = 0
-texture_normal = ExtResource("5_grvqo")
-texture_pressed = ExtResource("6_akf1h")
-ignore_texture_size = true
-stretch_mode = 5
+theme_override_constants/icon_max_width = 44
+icon = ExtResource("6_flip")
+icon_alignment = 1
+
+[node name="OrbSkin" type="TextureRect" parent="VBoxContainer/HBoxContainer/Button_Flip" unique_id=915784412]
+show_behind_parent = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("5_orb")
+recolor_icon_by_state = true
 
 [node name="HBoxContainer_Tooltip" type="HBoxContainer" parent="VBoxContainer/HBoxContainer" unique_id=1598671432]
 unique_name_in_owner = true
@@ -124,7 +129,7 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(60, 0)
 layout_mode = 2
 size_flags_vertical = 4
-theme_override_styles/panel = SubResource("StyleBoxFlat_tw2ns")
+theme_override_styles/panel = SubResource("StyleBoxEmpty_disc")
 
 [node name="VBoxContainer_Buttons" type="HBoxContainer" parent="VBoxContainer/HBoxContainer/DiscoverPanel" unique_id=135716532]
 layout_mode = 2
@@ -137,12 +142,19 @@ size_flags_horizontal = 4
 size_flags_vertical = 4
 focus_mode = 0
 theme_override_constants/icon_max_width = 54
-theme_override_styles/normal = SubResource("StyleBoxFlat_button_bg")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_button_bg")
-theme_override_styles/hover = SubResource("StyleBoxFlat_button_bg")
 icon = ExtResource("3_2fmgn")
-flat = true
 icon_alignment = 1
+
+[node name="OrbSkin" type="TextureRect" parent="VBoxContainer/HBoxContainer/DiscoverPanel/VBoxContainer_Buttons/HudButton_Discover" unique_id=915784413]
+show_behind_parent = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("5_orb")
+recolor_icon_by_state = true
 
 [node name="Panel_LoadScenes" type="PanelContainer" parent="VBoxContainer/HBoxContainer" unique_id=1690380546]
 unique_name_in_owner = true

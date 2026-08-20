@@ -21,7 +21,7 @@ var _chat_pressing: bool = false
 
 @onready var hbox: HBoxContainer = $HBoxContainer
 @onready var button_chat: TextureButton = %Button_Chat
-@onready var button_flip: TextureButton = %Button_Flip
+@onready var button_flip: Button = %Button_Flip
 @onready var tooltip: HBoxContainer = %HBoxContainer_Tooltip
 @onready var discover_panel: PanelContainer = %DiscoverPanel
 @onready var panel_load_scenes: PanelContainer = %Panel_LoadScenes

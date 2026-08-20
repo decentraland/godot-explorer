@@ -37,20 +37,49 @@ const _ICON_COLOR_SLOTS: Array[StringName] = [
 	&"font_hover_pressed_color",
 ]
 
-@export var default_texture: Texture2D:
+# Every icon color slot a Button honors — driven together by recolor_icon_by_state so the
+# glyph shows one color regardless of which state slot the theme happens to pick.
+const _ALL_ICON_COLOR_SLOTS: Array[StringName] = [
+	&"icon_normal_color",
+	&"icon_hover_color",
+	&"icon_pressed_color",
+	&"icon_hover_pressed_color",
+	&"icon_focus_color",
+	&"icon_disabled_color",
+]
+
+# The generic orb backdrop, shared across every orb button. Any host that needs a bespoke
+# baked orb overrides these in its scene (e.g. the joypad atoms).
+@export var default_texture: Texture2D = preload(
+	"res://src/ui/components/atoms/buttons/button_touch_action/orb_default.png"
+):
 	set(value):
 		default_texture = value
 		if is_node_ready():
 			_refresh()
-@export var pressed_texture: Texture2D
-@export var hold_texture: Texture2D
-@export var disabled_texture: Texture2D
+@export var pressed_texture: Texture2D = preload(
+	"res://src/ui/components/atoms/buttons/button_touch_action/orb_pressed.png"
+)
+@export var hold_texture: Texture2D = preload(
+	"res://src/ui/components/atoms/buttons/button_touch_action/orb_hold.png"
+)
+@export var disabled_texture: Texture2D = preload(
+	"res://src/ui/components/atoms/buttons/button_touch_action/orb_disabled.png"
+)
 
 # Per-state glyphs. When set, the parent button's icon tracks the state alongside the
-# texture. hold_icon is optional (only the glider has one).
+# texture. hold_icon is optional (only the glider has one). Buttons that keep a single icon
+# (flip, discover, debug) leave these null and set the icon on the Button itself.
 @export var normal_icon: Texture2D
 @export var pressed_icon: Texture2D
 @export var hold_icon: Texture2D
+
+@export_group("Icon recolor")
+## Opt-in: tint the parent Button's icon by state (Default vs Pressed/Hold). Off by default
+## so existing hosts (joypad) keep their theme-driven glyph color untouched.
+@export var recolor_icon_by_state: bool = false
+@export var default_icon_color: Color = Color("DFD0FF")
+@export var pressed_icon_color: Color = Color("DF9CFF")
 
 var _held: bool = false
 
@@ -65,8 +94,9 @@ func _ready() -> void:
 	if btn != null:
 		for slot in _STYLE_SLOTS:
 			btn.add_theme_stylebox_override(slot, StyleBoxEmpty.new())
-		for slot in _ICON_COLOR_SLOTS:
-			btn.add_theme_color_override(slot, _ICON_LIGHT)
+		if not recolor_icon_by_state:
+			for slot in _ICON_COLOR_SLOTS:
+				btn.add_theme_color_override(slot, _ICON_LIGHT)
 		# Fill the parent explicitly: anchors don't resolve reliably under a
 		# non-container Button, and the orb must track the button's size.
 		_fit()
@@ -107,15 +137,18 @@ func _refresh(_unused_arg: Variant = null) -> void:
 	var btn := get_parent() as Button
 	var tex: Texture2D = default_texture
 	var ic: Texture2D = normal_icon
+	var pressed_state: bool = false
 	if btn != null and btn.disabled:
 		if disabled_texture != null:
 			tex = disabled_texture
 	elif _held:
+		pressed_state = true
 		if hold_texture != null:
 			tex = hold_texture
 		if hold_icon != null:
 			ic = hold_icon
 	elif btn != null and btn.button_pressed:
+		pressed_state = true
 		if pressed_texture != null:
 			tex = pressed_texture
 		if pressed_icon != null:
@@ -123,3 +156,7 @@ func _refresh(_unused_arg: Variant = null) -> void:
 	texture = tex
 	if btn != null and (normal_icon != null or pressed_icon != null or hold_icon != null):
 		btn.icon = ic
+	if btn != null and recolor_icon_by_state:
+		var col: Color = pressed_icon_color if pressed_state else default_icon_color
+		for slot in _ALL_ICON_COLOR_SLOTS:
+			btn.add_theme_color_override(slot, col)
