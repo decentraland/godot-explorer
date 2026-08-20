@@ -277,6 +277,9 @@ func _ready():
 	avatar_modifier_area_detector.unset_avatar_modifier_area.connect(
 		self._unset_avatar_modifier_area
 	)
+	# Detector._ready() (child, runs first) may have already scanned overlaps before
+	# these signals were connected — re-evaluate now so a spawn-inside-area isn't lost.
+	avatar_modifier_area_detector.check_areas()
 
 	if non_3d_audio:
 		var audio_player_name = audio_player_emote.get_name()
@@ -390,21 +393,29 @@ func try_show():
 	avatar_modifier_area_detector.check_areas()
 
 
-func _on_set_avatar_modifier_area(area: DclAvatarModifierArea3D):
-	_unset_avatar_modifier_area()  # Reset state
+func _on_set_avatar_modifier_area(areas: Array):
+	# Reset modifier state, then apply the UNION of every overlapping area's
+	# modifiers. The detector used to report only the most-recently-entered area,
+	# so entering a second area (e.g. DisablePassports) wiped an active
+	# HideNameTags from an area the avatar never left (#2665).
+	if not hidden:
+		show()
+		_set_click_area_enabled(true)
+	passport_disabled = false
+	nametag_hidden = false
 
-	if AvatarExcludeIdMatcher.is_excluded(avatar_id, area.exclude_ids):
-		return  # the avatar is not going to be modified
-
-	for modifier in area.avatar_modifiers:
-		if modifier == 0:  # hide avatar
-			hide()
-			_hide_impostor_render()
-			_set_click_area_enabled(false)
-		elif modifier == 1:  # disable passport
-			passport_disabled = true
-		elif modifier == 2:  # hide nametag
-			nametag_hidden = true
+	for area in areas:
+		if AvatarExcludeIdMatcher.is_excluded(avatar_id, area.exclude_ids):
+			continue  # this area does not modify the avatar
+		for modifier in area.avatar_modifiers:
+			if modifier == 0:  # hide avatar
+				hide()
+				_hide_impostor_render()
+				_set_click_area_enabled(false)
+			elif modifier == 1:  # disable passport
+				passport_disabled = true
+			elif modifier == 2:  # hide nametag
+				nametag_hidden = true
 
 	_apply_nickname_visibility()
 
@@ -466,12 +477,8 @@ func _set_click_area_enabled(enabled: bool) -> void:
 
 
 func _unset_avatar_modifier_area():
-	if not hidden:
-		show()
-		_set_click_area_enabled(true)
-	passport_disabled = false
-	nametag_hidden = false
-	_apply_nickname_visibility()
+	# Kept for the detector's legacy unset path: same as receiving an empty list.
+	_on_set_avatar_modifier_area([])
 
 
 func async_update_avatar_from_profile(profile: DclUserProfile):
