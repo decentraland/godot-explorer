@@ -28,76 +28,78 @@ static func get_notification_header(notif_type: String, metadata: Dictionary) ->
 	match notif_type:
 		# Friend notifications
 		"social_service_friendship_request":
-			return "Friend Request Received"
+			return TranslationServer.translate("NOTIF_HEADER_FRIEND_REQUEST_RECEIVED")
 		"social_service_friendship_accepted":
-			return "Friend Request Accepted!"
+			return TranslationServer.translate("NOTIF_HEADER_FRIEND_REQUEST_ACCEPTED")
 		# Community notifications
 		"community_invite_received":
-			return "Community Invite Received"
+			return TranslationServer.translate("NOTIF_HEADER_COMMUNITY_INVITE_RECEIVED")
 		"community_member_banned":
-			return "Banned From Community"
+			return TranslationServer.translate("NOTIF_HEADER_BANNED_FROM_COMMUNITY")
 		"community_member_removed":
-			return "Removed from Community"
+			return TranslationServer.translate("NOTIF_HEADER_REMOVED_FROM_COMMUNITY")
 		"community_request_to_join_accepted":
-			return "Membership Request Accepted"
+			return TranslationServer.translate("NOTIF_HEADER_MEMBERSHIP_REQUEST_ACCEPTED")
 		"community_request_to_join_received":
-			return "Membership Request Received"
+			return TranslationServer.translate("NOTIF_HEADER_MEMBERSHIP_REQUEST_RECEIVED")
 		"community_deleted":
-			return "Community Deleted"
+			return TranslationServer.translate("NOTIF_HEADER_COMMUNITY_DELETED")
 		"community_deleted_content_violation":
-			return "Your Community Has Been Deleted"
+			return TranslationServer.translate("NOTIF_HEADER_YOUR_COMMUNITY_HAS_BEEN_DELETED")
 		"event_created":
-			return "Community Event Added"
+			return TranslationServer.translate("NOTIF_HEADER_COMMUNITY_EVENT_ADDED")
 		"community_renamed":
-			return "Community Renamed"
+			return TranslationServer.translate("NOTIF_HEADER_COMMUNITY_RENAMED")
 
 		# Badge notifications - use metadata title
 		"badge_granted":
-			return metadata.get("title", "New Badge Unlocked!")
+			return metadata.get(
+				"title", TranslationServer.translate("NOTIF_HEADER_NEW_BADGE_UNLOCKED")
+			)
 
 		# Marketplace/Credits - use metadata title
 		"credits_reminder_do_not_miss_out":
-			return "Don't Miss Out!"
+			return TranslationServer.translate("NOTIF_HEADER_DONT_MISS_OUT")
 		"item_sold", "bid_accepted", "bid_received", "royalties_earned":
 			return metadata.get("title", "Notification")
 
 		# Governance
 		"governance_announcement":
-			return "DAO Announcement"
+			return TranslationServer.translate("NOTIF_HEADER_DAO_ANNOUNCEMENT")
 		"governance_proposal_enacted":
-			return "Proposal Enacted"
+			return TranslationServer.translate("NOTIF_HEADER_PROPOSAL_ENACTED")
 		"governance_voting_ended":
-			return "Voting Ended"
+			return TranslationServer.translate("NOTIF_HEADER_VOTING_ENDED")
 		"governance_coauthor_requested":
-			return "Co-Author Requested"
+			return TranslationServer.translate("NOTIF_HEADER_CO_AUTHOR_REQUESTED")
 
 		# Land
 		"land":
-			return "Land Update"
+			return TranslationServer.translate("NOTIF_HEADER_LAND_UPDATE")
 
 		# Worlds
 		"worlds_access_restored":
-			return "World Access Restored"
+			return TranslationServer.translate("NOTIF_HEADER_WORLD_ACCESS_RESTORED")
 		"worlds_access_restricted":
-			return "World Access Restricted"
+			return TranslationServer.translate("NOTIF_HEADER_WORLD_ACCESS_RESTRICTED")
 		"worlds_missing_resources":
-			return "World Missing Resources"
+			return TranslationServer.translate("NOTIF_HEADER_WORLD_MISSING_RESOURCES")
 		"worlds_permission_granted":
-			return "World Permission Granted"
+			return TranslationServer.translate("NOTIF_HEADER_WORLD_PERMISSION_GRANTED")
 		"worlds_permission_revoked":
-			return "World Permission Revoked"
+			return TranslationServer.translate("NOTIF_HEADER_WORLD_PERMISSION_REVOKED")
 
 		# Events
 		"events_started":
-			return metadata.get("title", "Event Started")
+			return metadata.get("title", TranslationServer.translate("NOTIF_HEADER_EVENT_STARTED"))
 		"events_ended":
-			return metadata.get("title", "Event Ended")
+			return metadata.get("title", TranslationServer.translate("NOTIF_HEADER_EVENT_ENDED"))
 
 		# Rewards
 		"reward_assigned":
-			return "Reward Assigned"
+			return TranslationServer.translate("NOTIF_HEADER_REWARD_ASSIGNED")
 		"reward_in_progress":
-			return "Reward In Progress"
+			return TranslationServer.translate("NOTIF_HEADER_REWARD_IN_PROGRESS")
 
 		_:
 			return metadata.get("title", "Notification")
@@ -116,7 +118,7 @@ static func get_notification_title(notif_type: String, metadata: Dictionary) -> 
 
 				if has_claimed_name:
 					return (
-						"[color=#%s]%s [color=#ECEBED]wants to be your friend!"
+						TranslationServer.translate("NOTIF_TITLE_WANTS_TO_BE_YOUR_FRIEND_2")
 						% [color_hex, sender_name]
 					)
 
@@ -125,10 +127,10 @@ static func get_notification_title(notif_type: String, metadata: Dictionary) -> 
 					address.substr(address.length() - 4) if address.length() > 4 else address
 				)
 				return (
-					"[color=#%s]%s[color=#A09BA8]#%s [color=#ECEBED]wants to be your friend!"
+					TranslationServer.translate("NOTIF_TITLE_WANTS_TO_BE_YOUR_FRIEND_3")
 					% [color_hex, sender_name, short_address]
 				)
-			return "wants to be your friend!"
+			return TranslationServer.translate("NOTIF_TITLE_WANTS_TO_BE_YOUR_FRIEND")
 
 		"social_service_friendship_accepted":
 			if "sender" in metadata and metadata["sender"] is Dictionary:
@@ -139,7 +141,7 @@ static func get_notification_title(notif_type: String, metadata: Dictionary) -> 
 
 				if has_claimed_name:
 					return (
-						"[color=#%s]%s [color=#ECEBED]accepted your friend request."
+						TranslationServer.translate("NOTIF_TITLE_ACCEPTED_YOUR_FRIEND_REQUEST_2")
 						% [color_hex, sender_name]
 					)
 
@@ -148,47 +150,84 @@ static func get_notification_title(notif_type: String, metadata: Dictionary) -> 
 					address.substr(address.length() - 4) if address.length() > 4 else address
 				)
 				return (
-					"[color=#%s]%s[color=#A09BA8]#%s [color=#ECEBED]accepted your friend request."
+					TranslationServer.translate("NOTIF_TITLE_ACCEPTED_YOUR_FRIEND_REQUEST_3")
 					% [color_hex, sender_name, short_address]
 				)
-			return "accepted your friend request."
+			return TranslationServer.translate("NOTIF_TITLE_ACCEPTED_YOUR_FRIEND_REQUEST")
 
 		# Community notifications
 		"community_invite_received":
-			var community_name = metadata.get("communityName", "Unknown Community")
-			return "You've been invited to join the [b][%s][/b] Community." % community_name
+			var community_name = metadata.get(
+				"communityName", TranslationServer.translate("NOTIF_TITLE_UNKNOWN_COMMUNITY")
+			)
+			return (
+				TranslationServer.translate("NOTIF_TITLE_YOUVE_BEEN_INVITED_TO_JOIN_THE")
+				% community_name
+			)
 
 		"community_member_banned":
-			var community_name = metadata.get("communityName", "Unknown Community")
-			return "You've been banned from the [b][%s][/b] Community." % community_name
+			var community_name = metadata.get(
+				"communityName", TranslationServer.translate("NOTIF_TITLE_UNKNOWN_COMMUNITY")
+			)
+			return (
+				TranslationServer.translate("NOTIF_TITLE_YOUVE_BEEN_BANNED_FROM_THE_COMMUNITY")
+				% community_name
+			)
 
 		"community_member_removed":
-			var community_name = metadata.get("communityName", "Unknown Community")
-			return "You've been removed from the [b][%s][/b] Community." % community_name
+			var community_name = metadata.get(
+				"communityName", TranslationServer.translate("NOTIF_TITLE_UNKNOWN_COMMUNITY")
+			)
+			return (
+				TranslationServer.translate("NOTIF_TITLE_YOUVE_BEEN_REMOVED_FROM_THE_COMMUNITY")
+				% community_name
+			)
 
 		"community_request_to_join_accepted":
-			var community_name = metadata.get("communityName", "Unknown Community")
-			return "Congrats! You're now a member of the [b][%s][/b] Community." % community_name
+			var community_name = metadata.get(
+				"communityName", TranslationServer.translate("NOTIF_TITLE_UNKNOWN_COMMUNITY")
+			)
+			return (
+				TranslationServer.translate("NOTIF_TITLE_CONGRATS_YOURE_NOW_A_MEMBER_OF")
+				% community_name
+			)
 
 		"community_user_request_to_join":
 			var user_name = metadata.get("userName", "Someone")
-			var community_name = metadata.get("communityName", "Unknown Community")
-			return "[b]%s[/b] wants to join the [b]%s[/b] Community." % [user_name, community_name]
+			var community_name = metadata.get(
+				"communityName", TranslationServer.translate("NOTIF_TITLE_UNKNOWN_COMMUNITY")
+			)
+			return (
+				TranslationServer.translate("NOTIF_TITLE_WANTS_TO_JOIN_THE_COMMUNITY")
+				% [user_name, community_name]
+			)
 
 		"community_deleted":
-			var community_name = metadata.get("communityName", "Unknown Community")
-			return "The [b][%s][/b] Community has been deleted." % community_name
+			var community_name = metadata.get(
+				"communityName", TranslationServer.translate("NOTIF_TITLE_UNKNOWN_COMMUNITY")
+			)
+			return (
+				TranslationServer.translate("NOTIF_TITLE_THE_COMMUNITY_HAS_BEEN_DELETED")
+				% community_name
+			)
 
 		"community_deleted_content_violation":
-			var community_name = metadata.get("communityName", "Unknown Community")
+			var community_name = metadata.get(
+				"communityName", TranslationServer.translate("NOTIF_TITLE_UNKNOWN_COMMUNITY")
+			)
 			return (
-				"The [b][%s][/b] Community was deleted for violating Decentraland's Guidelines."
+				TranslationServer.translate("NOTIF_TITLE_THE_COMMUNITY_WAS_DELETED_FOR_VIOLATING")
 				% community_name
 			)
 
 		"event_created":
-			var community_name = metadata.get("communityName", "Unknown Community")
-			return "The [b][%s][/b] Community has added a new event." % community_name
+			var community_name = metadata.get(
+				"communityName", TranslationServer.translate("NOTIF_TITLE_UNKNOWN_COMMUNITY")
+			)
+			return (
+				TranslationServer.translate("NOTIF_TITLE_THE_COMMUNITY_HAS_ADDED_A_NEW")
+				% community_name
+			)
 
 		"community_renamed":
 			var old_name = metadata.get("oldCommunityName", "Unknown")
@@ -199,51 +238,88 @@ static func get_notification_title(notif_type: String, metadata: Dictionary) -> 
 
 		# Badge notifications - use metadata description
 		"badge_granted":
-			return metadata.get("description", "You've unlocked a new badge!")
+			return metadata.get(
+				"description", TranslationServer.translate("NOTIF_TITLE_YOUVE_UNLOCKED_A_NEW_BADGE")
+			)
 
 		# Marketplace/Credits - use metadata description
 		"credits_reminder_do_not_miss_out":
-			return "Explore Decentraland and earn rewards!"
+			return TranslationServer.translate("NOTIF_TITLE_EXPLORE_DECENTRALAND_AND_EARN_REWARDS")
 		"item_sold", "bid_accepted", "bid_received", "royalties_earned":
 			return metadata.get("description", "")
 
 		# Governance
 		"governance_announcement":
-			return metadata.get("description", "New governance announcement")
+			return metadata.get(
+				"description",
+				TranslationServer.translate("NOTIF_TITLE_NEW_GOVERNANCE_ANNOUNCEMENT")
+			)
 		"governance_proposal_enacted":
-			return metadata.get("description", "A proposal has been enacted")
+			return metadata.get(
+				"description",
+				TranslationServer.translate("NOTIF_TITLE_A_PROPOSAL_HAS_BEEN_ENACTED")
+			)
 		"governance_voting_ended":
-			return metadata.get("description", "Voting has ended")
+			return metadata.get(
+				"description", TranslationServer.translate("NOTIF_TITLE_VOTING_HAS_ENDED")
+			)
 		"governance_coauthor_requested":
-			return metadata.get("description", "You've been requested as co-author")
+			return metadata.get(
+				"description",
+				TranslationServer.translate("NOTIF_TITLE_YOUVE_BEEN_REQUESTED_AS_CO_AUTHOR")
+			)
 
 		# Land
 		"land":
-			return metadata.get("description", "Land update notification")
+			return metadata.get(
+				"description", TranslationServer.translate("NOTIF_TITLE_LAND_UPDATE_NOTIFICATION")
+			)
 
 		# Worlds
 		"worlds_access_restored":
-			return metadata.get("description", "Your world access has been restored")
+			return metadata.get(
+				"description",
+				TranslationServer.translate("NOTIF_TITLE_YOUR_WORLD_ACCESS_HAS_BEEN_RESTORED")
+			)
 		"worlds_access_restricted":
-			return metadata.get("description", "Your world access has been restricted")
+			return metadata.get(
+				"description",
+				TranslationServer.translate("NOTIF_TITLE_YOUR_WORLD_ACCESS_HAS_BEEN_RESTRICTED")
+			)
 		"worlds_missing_resources":
-			return metadata.get("description", "Your world is missing resources")
+			return metadata.get(
+				"description",
+				TranslationServer.translate("NOTIF_TITLE_YOUR_WORLD_IS_MISSING_RESOURCES")
+			)
 		"worlds_permission_granted":
-			return metadata.get("description", "World permission granted")
+			return metadata.get(
+				"description", TranslationServer.translate("NOTIF_TITLE_WORLD_PERMISSION_GRANTED")
+			)
 		"worlds_permission_revoked":
-			return metadata.get("description", "World permission revoked")
+			return metadata.get(
+				"description", TranslationServer.translate("NOTIF_TITLE_WORLD_PERMISSION_REVOKED")
+			)
 
 		# Events
 		"events_started":
-			return metadata.get("description", "An event has started")
+			return metadata.get(
+				"description", TranslationServer.translate("NOTIF_TITLE_AN_EVENT_HAS_STARTED")
+			)
 		"events_ended":
-			return metadata.get("description", "An event has ended")
+			return metadata.get(
+				"description", TranslationServer.translate("NOTIF_TITLE_AN_EVENT_HAS_ENDED")
+			)
 
 		# Rewards
 		"reward_assigned":
-			return metadata.get("description", "You've been assigned a reward")
+			return metadata.get(
+				"description",
+				TranslationServer.translate("NOTIF_TITLE_YOUVE_BEEN_ASSIGNED_A_REWARD")
+			)
 		"reward_in_progress":
-			return metadata.get("description", "Your reward is in progress")
+			return metadata.get(
+				"description", TranslationServer.translate("NOTIF_TITLE_YOUR_REWARD_IS_IN_PROGRESS")
+			)
 
 		_:
 			return metadata.get("description", "")

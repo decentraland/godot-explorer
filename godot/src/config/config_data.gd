@@ -32,6 +32,7 @@ enum ConfigParams {
 	SKYBOX_TIME,
 	DYNAMIC_GRAPHICS_ENABLED,
 	AVATAR_IMPOSTORS_ENABLED,
+	LOCALE,
 }
 
 # Graphics profile index for Custom (manual settings)
@@ -47,6 +48,13 @@ var local_content_dir: String = OS.get_user_data_dir() + "/content":
 var max_cache_size: int = 1:
 	set(value):
 		max_cache_size = value
+
+# UI language. Empty string means "follow the device locale" (the first-launch default).
+# Otherwise one of LocaleSettings.SUPPORTED_LOCALES, e.g. "en", "es", "pt_BR".
+var locale: String = "":
+	set(value):
+		locale = value
+		param_changed.emit(ConfigParams.LOCALE)
 
 # 0: Windowed, 1: Borderless, 2: Full Screen
 var window_mode: int = 0:
@@ -324,6 +332,8 @@ func load_from_default():
 	self.local_content_dir = OS.get_user_data_dir() + "/content"
 	self.max_cache_size = 1
 
+	self.locale = ""
+
 	self.show_fps = true
 
 	self.dynamic_skybox = true
@@ -391,6 +401,7 @@ func load_from_settings_file():
 	self.max_cache_size = settings_file.get_value(
 		"config", "max_cache_size", data_default.max_cache_size
 	)
+	self.locale = settings_file.get_value("config", "locale", data_default.locale)
 	self.show_fps = settings_file.get_value("config", "show_fps", data_default.show_fps)
 
 	self.dynamic_skybox = settings_file.get_value(
@@ -536,6 +547,7 @@ func save_to_settings_file():
 	new_settings_file.set_value("config", "dynamic_graphics_enabled", self.dynamic_graphics_enabled)
 	new_settings_file.set_value("config", "local_content_dir", self.local_content_dir)
 	new_settings_file.set_value("config", "max_cache_size", self.max_cache_size)
+	new_settings_file.set_value("config", "locale", self.locale)
 	new_settings_file.set_value("config", "show_fps", self.show_fps)
 	new_settings_file.set_value("config", "dynamic_skybox", self.dynamic_skybox)
 	new_settings_file.set_value("config", "skybox_time", self.skybox_time)

@@ -105,13 +105,13 @@ func _on_play_emote(emote_urn: String):
 
 func _on_select_emote(selected: bool, emote_urn: String, child: EmoteItemUi):
 	if !selected:
-		label_emote_name.text = "Emotes"
+		label_emote_name.text = tr("EMOTES_EMOTES")
 		last_selected_emote_urn = ""
 		return
 
 	# Empty slot highlighted: hint the equip action instead of an emote name.
 	if emote_urn.is_empty():
-		label_emote_name.text = "Equip Emote"
+		label_emote_name.text = tr("EMOTES_EQUIP_EMOTE")
 		last_selected_emote_urn = ""
 		return
 

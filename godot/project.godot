@@ -211,6 +211,16 @@ ia_open_emote_wheel={
 
 pointing/emulate_touch_from_mouse=true
 
+[internationalization]
+
+locale/translations=PackedStringArray("res://locale/en.en.translation")
+locale/fallback="en"
+pseudolocalization/replace_with_accents=false
+pseudolocalization/expansion_ratio=0.4
+pseudolocalization/prefix="«"
+pseudolocalization/suffix="»"
+pseudolocalization/skip_placeholders=true
+
 [layer_names]
 
 3d_render/layer_20="OUTLINE_SYSTEM_DEPTH"

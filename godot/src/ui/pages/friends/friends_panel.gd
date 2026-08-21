@@ -304,19 +304,19 @@ func _update_dropdown_visibility() -> void:
 		v_box_container_request.hide()
 	else:
 		v_box_container_request.show()
-		request_button.text = "REQUESTS (" + str(pending_count) + ")"
+		request_button.text = tr("FRIENDS_REQUESTS_COUNT") % pending_count
 
 	if online_count == 0:
 		v_box_container_online.hide()
 	else:
 		v_box_container_online.show()
-		online_button.text = "ONLINE (" + str(online_count) + ")"
+		online_button.text = tr("FRIENDS_ONLINE_COUNT") % online_count
 
 	if offline_count == 0:
 		v_box_container_offline.hide()
 	else:
 		v_box_container_offline.show()
-		offline_button.text = "OFFLINE (" + str(offline_count) + ")"
+		offline_button.text = tr("FRIENDS_OFFLINE_COUNT") % offline_count
 
 	# Show error message only if we got explicit errors from the lists
 	if has_service_error:

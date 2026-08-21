@@ -88,7 +88,7 @@ func _parse_iso_timestamp(iso_string: String) -> int:
 
 
 func _show_live_state() -> void:
-	label_live_pill.text = "LIVE"
+	label_live_pill.text = tr("DISCOVER_LIVE")
 	live_pill.show()
 	time_pill.hide()
 	if users_pill:
@@ -133,21 +133,21 @@ func _format_timestamp(timestamp: int) -> String:
 
 	# Less than 1 hour: IN XX MINUTES
 	if hours_diff < 1:
-		return "IN " + str(int(minutes_diff)) + " MINS"
+		var mins := int(minutes_diff)
+		return tr_n("EVENT_PILL_IN_MIN", "EVENT_PILL_IN_MIN_PLURAL", mins) % mins
 
 	# Less than 48 hours: IN XX HOURS
 	if hours_diff < 48:
-		if hours_diff > 2:
-			return "IN " + str(int(hours_diff)) + " HRS"
-		return "IN " + str(int(hours_diff)) + " HR"
+		var hrs := int(hours_diff)
+		return tr_n("EVENT_PILL_IN_HR", "EVENT_PILL_IN_HR_PLURAL", hrs) % hrs
 
 	# 7 days or less: IN X DAYS
 	if days_diff <= 7:
-		return "IN " + str(int(days_diff)) + " DAYS"
+		var days := int(days_diff)
+		return tr_n("EVENT_PILL_IN_DAY", "EVENT_PILL_IN_DAY_PLURAL", days) % days
 
-	# More than 7 days: date format e.g. SEPT 31
+	# More than 7 days: date format e.g. SEP 31. Month order is locale-dependent, so it is a key.
 	var time_dict = Time.get_datetime_dict_from_unix_time(timestamp)
-	var month_names = [
-		"", "JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"
-	]
-	return month_names[time_dict.month] + " " + str(time_dict.day)
+	return tr("EVENT_PILL_DATE").format(
+		{"month": LocaleFormat.month_name(time_dict.month).to_upper(), "day": time_dict.day}
+	)

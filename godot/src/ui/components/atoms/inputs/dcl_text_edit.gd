@@ -152,7 +152,7 @@ func _check_error() -> void:
 		text_edit.add_theme_stylebox_override("normal", LINE_EDIT_ERROR)
 		text_edit.add_theme_stylebox_override("focus", LINE_EDIT_ERROR)
 		if errors.size() > 1:
-			label_error.text = "Invalid format"
+			label_error.text = tr("INPUTS_INVALID_FORMAT")
 		else:
 			label_error.text = errors[0]
 		label_error.show()

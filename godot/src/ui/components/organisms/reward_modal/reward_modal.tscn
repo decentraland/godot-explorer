@@ -390,7 +390,7 @@ alignment = 2
 unique_name_in_owner = true
 custom_minimum_size = Vector2(50, 0)
 layout_mode = 2
-text = "You're all set"
+text = "REWARD_MODAL_YOURE_ALL_SET"
 label_settings = SubResource("LabelSettings_cdbdq")
 horizontal_alignment = 1
 autowrap_mode = 2
@@ -404,8 +404,7 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_f7bpt")
 unique_name_in_owner = true
 custom_minimum_size = Vector2(50, 0)
 layout_mode = 2
-text = "Your email has been verified. 
-Enjoy the free wearable!"
+text = "REWARD_MODAL_YOUR_EMAIL_HAS_BEEN_VERIFIED_ENJOY"
 label_settings = SubResource("LabelSettings_jepox")
 horizontal_alignment = 1
 autowrap_mode = 2
@@ -421,7 +420,7 @@ layout_mode = 2
 size_flags_horizontal = 3
 theme = ExtResource("6_sgp5i")
 theme_override_font_sizes/font_size = 24
-text = "CLAIM REWARD"
+text = "REWARD_MODAL_CLAIM_REWARD"
 
 [node name="HSeparator" type="HSeparator" parent="VBoxContainer"]
 layout_mode = 2
@@ -432,7 +431,7 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_f7bpt")
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
-text = "Tap to continue"
+text = "COMMON_TAP_TO_CONTINUE"
 label_settings = SubResource("LabelSettings_vfn1r")
 horizontal_alignment = 1
 

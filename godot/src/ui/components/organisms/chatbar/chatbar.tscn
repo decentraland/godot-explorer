@@ -118,7 +118,7 @@ layout_mode = 2
 theme_override_colors/default_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 theme_override_fonts/normal_font = ExtResource("8_vm240")
 theme_override_font_sizes/normal_font_size = 18
-text = "You can switch vertical chat mode"
+text = "CHATBAR_YOU_CAN_SWITCH_VERTICAL_CHAT_MODE"
 vertical_alignment = 1
 
 [node name="DiscoverPanel" type="PanelContainer" parent="VBoxContainer/HBoxContainer" unique_id=876948222]

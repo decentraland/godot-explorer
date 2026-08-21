@@ -174,7 +174,7 @@ layout_mode = 2
 theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
 theme_override_fonts/font = ExtResource("4_ntwf1")
 theme_override_font_sizes/font_size = 28
-text = "Emotes"
+text = "EMOTES_EMOTES"
 horizontal_alignment = 1
 autowrap_mode = 3
 
@@ -201,7 +201,7 @@ theme_override_styles/pressed = SubResource("StyleBoxFlat_lttyx")
 theme_override_styles/hover = SubResource("StyleBoxFlat_r42xh")
 theme_override_styles/disabled = SubResource("StyleBoxFlat_6yi1n")
 theme_override_styles/focus = SubResource("StyleBoxFlat_33uqc")
-text = "Edit"
+text = "EMOTES_EDIT"
 alignment = 0
 
 [node name="Button_Emotes" type="Button" parent="." unique_id=357823938]

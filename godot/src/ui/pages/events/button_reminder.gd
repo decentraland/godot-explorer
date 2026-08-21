@@ -160,11 +160,11 @@ func update_styles(toggled_on):
 	var guest_profile := Global.player_identity.is_guest
 	if guest_profile:
 		disabled = true
-		label.text = "SIGN IN TO USE REMINDERS"
+		label.text = tr("EVENTS_SIGN_IN_TO_USE_REMINDERS")
 		texture_rect_icon.texture = null
 	else:
 		disabled = false
-		label.text = "REMINDER SET" if toggled_on else "REMIND ME"
+		label.text = tr("EVENTS_REMINDER_SET") if toggled_on else "REMIND ME"
 		if toggled_on:
 			texture_rect_icon.texture = check_texture
 			texture_rect_icon.modulate = COLOR_PRESSED

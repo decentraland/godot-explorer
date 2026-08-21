@@ -297,7 +297,7 @@ theme_override_constants/separation = 8
 
 [node name="Label_by" type="Label" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/VBoxContainer/HBoxContainer_Creator" unique_id=1656743858]
 layout_mode = 2
-text = "by"
+text = "COMMON_BY"
 label_settings = SubResource("LabelSettings_i8f38")
 
 [node name="Label_Creator" type="Label" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/VBoxContainer/HBoxContainer_Creator" unique_id=693197006]
@@ -487,7 +487,7 @@ layout_mode = 2
 theme_override_colors/font_color = Color(0.443137, 0.419608, 0.486275, 1)
 theme_override_fonts/font = ExtResource("4_wln2f")
 theme_override_font_sizes/font_size = 12
-text = "DESCRIPTION"
+text = "COMMON_DESCRIPTION"
 label_settings = SubResource("LabelSettings_4wgrb")
 clip_text = true
 
@@ -594,7 +594,7 @@ alignment = 1
 
 [node name="Label" type="Label" parent="PanelContainer_Footer/MarginContainer/HBoxContainer3/Button_JumpIn/HBoxContainer_Content" unique_id=888049014]
 layout_mode = 2
-text = "JUMP IN"
+text = "COMMON_JUMP_IN"
 label_settings = SubResource("LabelSettings_db46w")
 
 [node name="MarginContainer" type="MarginContainer" parent="PanelContainer_Footer/MarginContainer/HBoxContainer3/Button_JumpIn/HBoxContainer_Content" unique_id=2077763562]

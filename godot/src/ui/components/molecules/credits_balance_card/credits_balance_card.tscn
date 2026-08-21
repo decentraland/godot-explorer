@@ -44,7 +44,7 @@ theme_override_constants/margin_left = 5
 
 [node name="Label" type="Label" parent="MarginContainer/VBoxContainer/MarginContainer" unique_id=1652610989]
 layout_mode = 2
-text = "My Credits"
+text = "CREDITS_BALANCE_CARD_MY_CREDITS"
 label_settings = SubResource("LabelSettings_6wsqp")
 
 [node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer" unique_id=1980946219]

@@ -29,7 +29,7 @@ func _exit_tree() -> void:
 
 
 func _show_shop() -> void:
-	label_title.text = "Credits"
+	label_title.text = tr("CREDITS_CREDITS")
 	credits_option.show()
 	credits_history.hide()
 	button_history.show()
@@ -38,7 +38,7 @@ func _show_shop() -> void:
 
 
 func _show_history() -> void:
-	label_title.text = "Purchases"
+	label_title.text = tr("CREDITS_PURCHASES")
 	credits_option.hide()
 	credits_history.show()
 	button_history.hide()

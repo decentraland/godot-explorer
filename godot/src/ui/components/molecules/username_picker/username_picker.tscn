@@ -55,7 +55,7 @@ layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_fonts/font = ExtResource("1_l1ey1")
 theme_override_font_sizes/font_size = 14
-text = "Username"
+text = "USERNAME_PICKER_USERNAME"
 label_settings = ExtResource("2_s23dl")
 
 [node name="HSeparator2" type="HSeparator" parent="." unique_id=1349838456]
@@ -87,7 +87,7 @@ theme_override_styles/disabled = SubResource("StyleBoxEmpty_oanea")
 theme_override_styles/focus = SubResource("StyleBoxEmpty_vb6sw")
 toggle_mode = true
 button_pressed = true
-text = "UNIQUE NAME"
+text = "USERNAME_PICKER_UNIQUE_NAME"
 
 [node name="Button_NonUnique" type="Button" parent="VBoxContainer_Tabs/HBoxContainer" unique_id=948873676]
 unique_name_in_owner = true
@@ -103,7 +103,7 @@ theme_override_styles/hover_pressed = SubResource("StyleBoxFlat_2fmm2")
 theme_override_styles/disabled = SubResource("StyleBoxEmpty_oanea")
 theme_override_styles/focus = SubResource("StyleBoxEmpty_vb6sw")
 toggle_mode = true
-text = "NON-UNIQUE NAME"
+text = "USERNAME_PICKER_NON_UNIQUE_NAME"
 
 [node name="HSeparator3" type="HSeparator" parent="VBoxContainer_Tabs" unique_id=155376971]
 layout_mode = 2
@@ -134,7 +134,7 @@ offset_right = 0.0
 offset_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-place_holder = "Name"
+place_holder = "USERNAME_PICKER_NAME"
 is_optional = false
 wrap_text = false
 validate_no_symbols = true

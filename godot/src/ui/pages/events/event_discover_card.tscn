@@ -180,7 +180,7 @@ layout_mode = 2
 
 [node name="Label_by" type="Label" parent="VBoxContainer/HBoxContainer_UserName" unique_id=1376451054]
 layout_mode = 2
-text = "by"
+text = "COMMON_BY"
 label_settings = SubResource("LabelSettings_mwxpt")
 
 [node name="Label_UserName" type="Label" parent="VBoxContainer/HBoxContainer_UserName" unique_id=148179250]

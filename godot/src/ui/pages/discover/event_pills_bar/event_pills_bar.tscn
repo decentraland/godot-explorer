@@ -172,7 +172,7 @@ theme_override_constants/margin_right = 8
 [node name="Label" type="Label" parent="HBoxContainer3/FeaturedPill/MarginContainer" unique_id=2121768779]
 layout_mode = 2
 size_flags_vertical = 1
-text = "Featured"
+text = "DISCOVER_FEATURED"
 label_settings = SubResource("LabelSettings_kdyy4")
 horizontal_alignment = 1
 vertical_alignment = 1
@@ -198,7 +198,7 @@ theme_override_constants/margin_right = 8
 [node name="Label" type="Label" parent="HBoxContainer3/TrendingPill/MarginContainer" unique_id=340272572]
 layout_mode = 2
 size_flags_vertical = 1
-text = "Trending"
+text = "DISCOVER_TRENDING"
 label_settings = SubResource("LabelSettings_kdyy4")
 horizontal_alignment = 1
 vertical_alignment = 1

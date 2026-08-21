@@ -53,10 +53,14 @@ func refresh(profile: DclUserProfile) -> void:
 
 	about_data_country.set_value(profile.get_country())
 	about_data_language.set_value(profile.get_language())
-	about_data_pronouns.set_value(profile.get_pronouns())
-	about_data_gender.set_value(profile.get_gender())
-	about_data_relationship_status.set_value(profile.get_relationship_status())
-	about_data_sexual_orientation.set_value(profile.get_sexual_orientation())
+	about_data_pronouns.set_value(ProfileConstants.display_name("pronouns", profile.get_pronouns()))
+	about_data_gender.set_value(ProfileConstants.display_name("gender", profile.get_gender()))
+	about_data_relationship_status.set_value(
+		ProfileConstants.display_name("relationship", profile.get_relationship_status())
+	)
+	about_data_sexual_orientation.set_value(
+		ProfileConstants.display_name("sexual_orientation", profile.get_sexual_orientation())
+	)
 	about_data_employment_status.set_value(profile.get_employment_status())
 	about_data_profession.set_value(profile.get_profession())
 	about_data_real_name.set_value(profile.get_real_name())
@@ -128,21 +132,21 @@ func _set_compact_view() -> void:
 			_compact_description()
 			margin_container_data_about.hide()
 			margin_container_see_more.visible = _description_truncated
-			label_see_more.text = "SEE MORE"
+			label_see_more.text = tr("PROFILE_SEE_MORE")
 		AboutMode.ABOUT_DATA_ONLY:
 			show()
 			margin_container_description.hide()
 			margin_container_data_about.show()
 			_show_about_data_limited(3)
 			margin_container_see_more.visible = _about_data_count > 3
-			label_see_more.text = "SEE MORE"
+			label_see_more.text = tr("PROFILE_SEE_MORE")
 		AboutMode.BOTH:
 			show()
 			margin_container_description.show()
 			_compact_description()
 			margin_container_data_about.hide()
 			margin_container_see_more.show()
-			label_see_more.text = "SEE MORE"
+			label_see_more.text = tr("PROFILE_SEE_MORE")
 	_update_separator()
 
 
@@ -150,16 +154,16 @@ func _set_expand_view() -> void:
 	match _about_mode:
 		AboutMode.DESCRIPTION_ONLY:
 			_expand_description()
-			label_see_more.text = "SEE LESS"
+			label_see_more.text = tr("PROFILE_SEE_LESS")
 		AboutMode.ABOUT_DATA_ONLY:
 			margin_container_data_about.show()
 			_show_all_about_data()
-			label_see_more.text = "SEE LESS"
+			label_see_more.text = tr("PROFILE_SEE_LESS")
 		AboutMode.BOTH:
 			_expand_description()
 			margin_container_data_about.show()
 			_show_all_about_data()
-			label_see_more.text = "SEE LESS"
+			label_see_more.text = tr("PROFILE_SEE_LESS")
 	_update_separator()
 
 

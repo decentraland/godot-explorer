@@ -109,7 +109,8 @@ func set_progress(new_progress: float):
 		last_activity_time = Time.get_ticks_msec()
 	progress = new_progress
 
-	loading_progress_label.text = "%d%%" % floor(progress)
+	# Percent spacing is locale-dependent (es/pt use "50 %"), so the layout is a key.
+	loading_progress_label.text = tr("LOADING_PERCENT").format({"value": int(floor(progress))})
 	texture_progress_bar.value = progress
 
 
@@ -294,7 +295,7 @@ func set_place_creator(creator: String) -> void:
 		rich_text_label_creator.hide()
 		return
 	rich_text_label_creator.show()
-	rich_text_label_creator.text = "[color=#DF9CFF]By[/color] [b]" + creator + "[/b]"
+	rich_text_label_creator.text = tr("LOADING_CREATED_BY") % creator
 
 
 func set_place_image(image_url: String) -> void:

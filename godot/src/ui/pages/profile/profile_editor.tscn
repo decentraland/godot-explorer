@@ -77,7 +77,7 @@ unique_name_in_owner = true
 layout_mode = 2
 theme_override_fonts/font = ExtResource("5_bold")
 theme_override_font_sizes/font_size = 28
-text = "Edit Profile"
+text = "PROFILE_EDIT_PROFILE"
 label_settings = ExtResource("6_menu")
 
 [node name="ScrollContainer" type="ScrollContainer" parent="VBoxContainer" unique_id=2064999249]
@@ -138,7 +138,7 @@ layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_fonts/font = ExtResource("11_semi")
 theme_override_font_sizes/font_size = 14
-text = "Description"
+text = "PROFILE_DESCRIPTION"
 label_settings = ExtResource("12_title")
 
 [node name="HSeparator2" type="HSeparator" parent="VBoxContainer/ScrollContainer/MarginContainer_Content/VBoxContainer_Content/VBoxContainer/VBoxContainer2" unique_id=1693228063]
@@ -152,7 +152,7 @@ layout_mode = 2
 theme_override_colors/font_color = Color(0.7, 0.7, 0.7, 1)
 theme_override_fonts/font = ExtResource("13_reg")
 theme_override_font_sizes/font_size = 12
-text = "Describe yourself in a few words."
+text = "PROFILE_DESCRIBE_YOURSELF_IN_A_FEW_WORDS"
 label_settings = ExtResource("14_desc")
 text_overrun_behavior = 4
 
@@ -178,7 +178,7 @@ layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_fonts/font = ExtResource("11_semi")
 theme_override_font_sizes/font_size = 14
-text = "Links"
+text = "PROFILE_LINKS"
 label_settings = ExtResource("12_title")
 
 [node name="HSeparator2" type="HSeparator" parent="VBoxContainer/ScrollContainer/MarginContainer_Content/VBoxContainer_Content/VBoxContainer/VBoxContainer_Links" unique_id=1535234879]
@@ -192,7 +192,7 @@ layout_mode = 2
 theme_override_colors/font_color = Color(0.7, 0.7, 0.7, 1)
 theme_override_fonts/font = ExtResource("13_reg")
 theme_override_font_sizes/font_size = 12
-text = "Add up to 5 links to your website or social profiles."
+text = "PROFILE_ADD_UP_TO_5_LINKS_TO"
 label_settings = ExtResource("14_desc")
 text_overrun_behavior = 4
 
@@ -219,7 +219,7 @@ theme_type_variation = &"SecondaryButton"
 theme_override_constants/h_separation = 7
 theme_override_constants/icon_max_width = 22
 theme_override_font_sizes/font_size = 20
-text = "ADD LINK"
+text = "PROFILE_ADD_LINK_CAPS"
 icon = ExtResource("14_7drl0")
 
 [node name="VBoxContainer3" type="VBoxContainer" parent="VBoxContainer/ScrollContainer/MarginContainer_Content/VBoxContainer_Content/VBoxContainer" unique_id=871328674]
@@ -232,7 +232,7 @@ layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_fonts/font = ExtResource("11_semi")
 theme_override_font_sizes/font_size = 14
-text = "Country"
+text = "PROFILE_COUNTRY"
 label_settings = ExtResource("12_title")
 
 [node name="HSeparator" type="HSeparator" parent="VBoxContainer/ScrollContainer/MarginContainer_Content/VBoxContainer_Content/VBoxContainer/VBoxContainer3" unique_id=193564198]
@@ -244,7 +244,7 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_0s0um")
 [node name="DclTextEdit_Country" parent="VBoxContainer/ScrollContainer/MarginContainer_Content/VBoxContainer_Content/VBoxContainer/VBoxContainer3" unique_id=1676995310 instance=ExtResource("13_1msoc")]
 unique_name_in_owner = true
 layout_mode = 2
-place_holder = "Country"
+place_holder = "PROFILE_COUNTRY"
 max_length = 30
 wrap_text = false
 validate_no_symbols = true
@@ -256,7 +256,7 @@ layout_mode = 2
 focus_mode = 2
 mouse_filter = 1
 are_names = false
-title = "Pronouns"
+title = "PROFILE_PRONOUNS"
 
 [node name="DropdownList_Gender" parent="VBoxContainer/ScrollContainer/MarginContainer_Content/VBoxContainer_Content/VBoxContainer" unique_id=2109445764 instance=ExtResource("8_dd")]
 unique_name_in_owner = true
@@ -264,7 +264,7 @@ layout_mode = 2
 focus_mode = 2
 mouse_filter = 1
 are_names = false
-title = "Gender"
+title = "PROFILE_GENDER"
 
 [node name="DropdownList_SexualOrientation" parent="VBoxContainer/ScrollContainer/MarginContainer_Content/VBoxContainer_Content/VBoxContainer" unique_id=918411708 instance=ExtResource("8_dd")]
 unique_name_in_owner = true
@@ -272,7 +272,7 @@ layout_mode = 2
 focus_mode = 2
 mouse_filter = 1
 are_names = false
-title = "Sexual Orientation"
+title = "PROFILE_SEXUAL_ORIENTATION"
 
 [node name="DropdownList_Relationship" parent="VBoxContainer/ScrollContainer/MarginContainer_Content/VBoxContainer_Content/VBoxContainer" unique_id=1799109648 instance=ExtResource("8_dd")]
 unique_name_in_owner = true
@@ -280,7 +280,7 @@ layout_mode = 2
 focus_mode = 2
 mouse_filter = 1
 are_names = false
-title = "Relationship"
+title = "PROFILE_RELATIONSHIP"
 
 [node name="VBoxContainer4" type="VBoxContainer" parent="VBoxContainer/ScrollContainer/MarginContainer_Content/VBoxContainer_Content/VBoxContainer" unique_id=2142712962]
 layout_mode = 2
@@ -292,7 +292,7 @@ layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_fonts/font = ExtResource("11_semi")
 theme_override_font_sizes/font_size = 14
-text = "Employment Status"
+text = "PROFILE_EMPLOYMENT_STATUS"
 label_settings = ExtResource("12_title")
 
 [node name="HSeparator" type="HSeparator" parent="VBoxContainer/ScrollContainer/MarginContainer_Content/VBoxContainer_Content/VBoxContainer/VBoxContainer4" unique_id=99342121]
@@ -304,7 +304,7 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_0s0um")
 [node name="DclTextEdit_EmploymentStatus" parent="VBoxContainer/ScrollContainer/MarginContainer_Content/VBoxContainer_Content/VBoxContainer/VBoxContainer4" unique_id=255567835 instance=ExtResource("13_1msoc")]
 unique_name_in_owner = true
 layout_mode = 2
-place_holder = "Employment Status"
+place_holder = "PROFILE_EMPLOYMENT_STATUS"
 max_length = 30
 wrap_text = false
 
@@ -318,7 +318,7 @@ layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_fonts/font = ExtResource("11_semi")
 theme_override_font_sizes/font_size = 14
-text = "Profession"
+text = "PROFILE_PROFESSION"
 label_settings = ExtResource("12_title")
 
 [node name="HSeparator" type="HSeparator" parent="VBoxContainer/ScrollContainer/MarginContainer_Content/VBoxContainer_Content/VBoxContainer/VBoxContainer5" unique_id=174534876]
@@ -330,7 +330,7 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_0s0um")
 [node name="DclTextEdit_Profession" parent="VBoxContainer/ScrollContainer/MarginContainer_Content/VBoxContainer_Content/VBoxContainer/VBoxContainer5" unique_id=616343029 instance=ExtResource("13_1msoc")]
 unique_name_in_owner = true
 layout_mode = 2
-place_holder = "Profession"
+place_holder = "PROFILE_PROFESSION"
 max_length = 30
 wrap_text = false
 
@@ -344,7 +344,7 @@ layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_fonts/font = ExtResource("11_semi")
 theme_override_font_sizes/font_size = 14
-text = "Real Name"
+text = "PROFILE_REAL_NAME"
 label_settings = ExtResource("12_title")
 
 [node name="HSeparator" type="HSeparator" parent="VBoxContainer/ScrollContainer/MarginContainer_Content/VBoxContainer_Content/VBoxContainer/VBoxContainer6" unique_id=1988768080]
@@ -356,7 +356,7 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_0s0um")
 [node name="DclTextEdit_RealName" parent="VBoxContainer/ScrollContainer/MarginContainer_Content/VBoxContainer_Content/VBoxContainer/VBoxContainer6" unique_id=117402295 instance=ExtResource("13_1msoc")]
 unique_name_in_owner = true
 layout_mode = 2
-place_holder = "Real Name"
+place_holder = "PROFILE_REAL_NAME"
 max_length = 30
 wrap_text = false
 
@@ -370,7 +370,7 @@ layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_fonts/font = ExtResource("11_semi")
 theme_override_font_sizes/font_size = 14
-text = "Hobby"
+text = "PROFILE_HOBBY"
 label_settings = ExtResource("12_title")
 
 [node name="HSeparator" type="HSeparator" parent="VBoxContainer/ScrollContainer/MarginContainer_Content/VBoxContainer_Content/VBoxContainer/VBoxContainer7" unique_id=408096282]
@@ -382,7 +382,7 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_0s0um")
 [node name="DclTextEdit_Hobby" parent="VBoxContainer/ScrollContainer/MarginContainer_Content/VBoxContainer_Content/VBoxContainer/VBoxContainer7" unique_id=381657891 instance=ExtResource("13_1msoc")]
 unique_name_in_owner = true
 layout_mode = 2
-place_holder = "Hobby"
+place_holder = "PROFILE_HOBBY"
 max_length = 30
 wrap_text = false
 
@@ -414,7 +414,7 @@ focus_mode = 0
 theme = ExtResource("10_theme")
 theme_type_variation = &"SecondaryButton"
 theme_override_font_sizes/font_size = 30
-text = "CANCEL"
+text = "COMMON_CANCEL"
 icon_alignment = 2
 expand_icon = true
 
@@ -426,7 +426,7 @@ size_flags_horizontal = 3
 focus_mode = 0
 theme = ExtResource("10_theme")
 theme_override_font_sizes/font_size = 30
-text = "SAVE"
+text = "PROFILE_SAVE"
 icon_alignment = 2
 expand_icon = true
 

@@ -39,7 +39,7 @@ custom_minimum_size = Vector2(0, 28)
 layout_mode = 2
 theme_override_colors/font_color = Color(0, 0, 0, 1)
 theme_override_font_sizes/font_size = 20
-text = "Loading NFT..."
+text = "DIALOGS_LOADING_NFT"
 
 [node name="HBoxContainer_Body" type="HBoxContainer" parent="VBoxContainer_Main" unique_id=578851563]
 layout_mode = 2
@@ -84,7 +84,7 @@ layout_mode = 2
 layout_mode = 2
 theme_override_colors/font_color = Color(0.388235, 0.388235, 0.478431, 1)
 theme_override_font_sizes/font_size = 14
-text = "OWNER"
+text = "DIALOGS_OWNER"
 
 [node name="RichTextBox_Owner" type="RichTextLabel" parent="VBoxContainer_Main/HBoxContainer_Body/VBoxContainer_InfoPanel" unique_id=1021154821]
 unique_name_in_owner = true
@@ -107,7 +107,7 @@ layout_mode = 2
 layout_mode = 2
 theme_override_colors/font_color = Color(0.388235, 0.388235, 0.478431, 1)
 theme_override_font_sizes/font_size = 14
-text = "DESCRIPTION"
+text = "DIALOGS_DESCRIPTION"
 
 [node name="Label_Description" type="Label" parent="VBoxContainer_Main/HBoxContainer_Body/VBoxContainer_InfoPanel" unique_id=532595245]
 unique_name_in_owner = true
@@ -127,7 +127,7 @@ layout_mode = 2
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 12
-text = "CANCEL"
+text = "COMMON_CANCEL"
 
 [node name="Button_ViewOnOpenSea" type="Button" parent="VBoxContainer_Main/HBoxContainer_Body/VBoxContainer_InfoPanel/HBoxContainer_Buttons" unique_id=1464405155]
 unique_name_in_owner = true
@@ -135,7 +135,7 @@ layout_mode = 2
 size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 12
 disabled = true
-text = "VIEW ON OPENSEA"
+text = "DIALOGS_VIEW_ON_OPENSEA"
 
 [node name="LoadingAnimation" type="Control" parent="." unique_id=1284621777]
 unique_name_in_owner = true
@@ -166,7 +166,7 @@ offset_right = 75.0
 offset_bottom = -96.0
 grow_horizontal = 2
 grow_vertical = 0
-text = "Cancel"
+text = "DIALOGS_CANCEL"
 
 [connection signal="visibility_changed" from="." to="." method="_on_visibility_changed"]
 [connection signal="meta_clicked" from="VBoxContainer_Main/HBoxContainer_Body/VBoxContainer_InfoPanel/RichTextBox_Owner" to="." method="_on_rich_text_box_owner_meta_clicked"]

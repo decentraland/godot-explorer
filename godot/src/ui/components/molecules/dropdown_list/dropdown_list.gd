@@ -312,7 +312,7 @@ func _update_selected_text():
 			if selected >= 0 and selected < _items.size():
 				_selected_label.text = _items[selected].text
 			else:
-				_selected_label.text = "Select"
+				_selected_label.text = tr("DROPDOWN_LIST_SELECT")
 			if disabled:
 				_selected_label.label_settings = load(
 					"res://assets/themes/unselected_dropdown_settings_disabled.tres"

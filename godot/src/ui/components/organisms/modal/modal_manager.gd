@@ -1517,12 +1517,12 @@ func _async_add_email_confirmed(_code: String, _email: String) -> void:
 func _add_email_friendly_error(raw: String) -> String:
 	var lower := raw.to_lower()
 	if lower.contains("429") or lower.contains("rate"):
-		return "Too many attempts. Please wait a moment and try again."
+		return tr("COMMON_TOO_MANY_ATTEMPTS")
 	if lower.contains("already") or lower.contains("linked") or lower.contains("conflict"):
-		return "This email is already linked to another account."
+		return tr("COMMON_EMAIL_ALREADY_LINKED")
 	if lower.contains("invalid") or lower.contains("code") or lower.contains("400"):
-		return "The code is invalid or expired. Please resend code."
-	return "Something went wrong. Please try again."
+		return tr("MODAL_CODE_INVALID_OR_EXPIRED")
+	return tr("COMMON_SOMETHING_WENT_WRONG_RETRY")
 
 
 func _async_add_email_error_modal(title: String, body: String) -> void:

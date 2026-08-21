@@ -199,7 +199,7 @@ speed_scale = 2.0
 [node name="Label" type="Label" parent="Main/AccountHomeLoading/VBoxContainer" unique_id=1992961129]
 custom_minimum_size = Vector2(348, 0)
 layout_mode = 2
-text = "Getting you ready..."
+text = "AUTH_GETTING_READY"
 label_settings = SubResource("LabelSettings_65md3")
 horizontal_alignment = 1
 autowrap_mode = 2
@@ -246,14 +246,14 @@ layout_mode = 2
 theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
 theme_override_fonts/font = ExtResource("4_ghcwt")
 theme_override_font_sizes/font_size = 36
-text = "New Version Available"
+text = "AUTH_UPDATE_TITLE"
 label_settings = ExtResource("18_ypsmd")
 
 [node name="Label_Subtitle" type="Label" parent="Main/VersionUpgrade/MarginContainer/VBoxFixed/VBoxContainer" unique_id=1581916913]
 custom_minimum_size = Vector2(200, 0)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
-text = "A new version of Decentraland is available. Update for the best experience."
+text = "AUTH_UPDATE_BODY"
 label_settings = ExtResource("22_eula")
 autowrap_mode = 2
 
@@ -269,7 +269,7 @@ size_flags_horizontal = 3
 focus_mode = 0
 theme = ExtResource("9_ypsmd")
 theme_override_font_sizes/font_size = 30
-text = "UPDATE"
+text = "COMMON_UPDATE"
 icon_alignment = 2
 
 [node name="HSeparator3" type="HSeparator" parent="Main/VersionUpgrade/MarginContainer/VBoxFixed/VBoxContainer" unique_id=853067341]
@@ -285,7 +285,7 @@ focus_mode = 0
 theme = ExtResource("9_ypsmd")
 theme_type_variation = &"SecondaryButton"
 theme_override_font_sizes/font_size = 30
-text = "NOT NOW"
+text = "COMMON_NOT_NOW"
 
 [node name="AccountHome" type="Control" parent="Main" unique_id=1437503699]
 unique_name_in_owner = true
@@ -330,7 +330,7 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
 
 [node name="Label_Title" type="Label" parent="Main/AccountHome/MarginContainer/VBoxFixed/VBoxContainer" unique_id=619938163]
 layout_mode = 2
-text = "Welcome to Decentraland"
+text = "AUTH_WELCOME_TITLE"
 label_settings = ExtResource("18_ypsmd")
 horizontal_alignment = 1
 autowrap_mode = 2
@@ -344,8 +344,7 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
 custom_minimum_size = Vector2(200, 0)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
-text = "Discover a world shaped
-by its community"
+text = "AUTH_WELCOME_TAGLINE"
 label_settings = ExtResource("22_eula")
 horizontal_alignment = 1
 autowrap_mode = 2
@@ -365,7 +364,7 @@ theme = ExtResource("9_ypsmd")
 theme_override_constants/icon_max_width = 24
 theme_override_fonts/font = ExtResource("4_ghcwt")
 theme_override_font_sizes/font_size = 30
-text = "PLAY AS GUEST"
+text = "AUTH_PLAY_AS_GUEST"
 icon_alignment = 2
 
 [node name="HSeparator3" type="HSeparator" parent="Main/AccountHome/MarginContainer/VBoxFixed/VBoxContainer" unique_id=694716102]
@@ -380,7 +379,7 @@ focus_mode = 0
 theme = ExtResource("9_ypsmd")
 theme_type_variation = &"SecondaryOutlinedButton"
 theme_override_font_sizes/font_size = 30
-text = "SIGN IN"
+text = "AUTH_SIGN_IN_BUTTON"
 
 [node name="HSeparator4" type="HSeparator" parent="Main/AccountHome/MarginContainer/VBoxFixed/VBoxContainer" unique_id=960017658]
 layout_mode = 2
@@ -399,7 +398,7 @@ theme_override_font_sizes/bold_italics_font_size = 30
 theme_override_font_sizes/italics_font_size = 30
 theme_override_font_sizes/mono_font_size = 30
 bbcode_enabled = true
-text = "By continuing, you agree to Decentraland’s [color=#A0ABFF][url=\"https://decentraland.org/terms/\"]Terms of Service[/url][/color], [color=#A0ABFF][url=\"https://decentraland.org/privacy/\"]Privacy Policy[/url][/color] and [color=#A0ABFF][url=\"https://decentraland.org/content/\"]Content Policy[/url][/color]."
+text = "AUTH_LEGAL_CONSENT"
 fit_content = true
 scroll_active = false
 horizontal_alignment = 1
@@ -463,7 +462,7 @@ theme_override_constants/margin_bottom = 0
 [node name="Label_Title" type="Label" parent="Main/AvatarCreate/VBoxContainer/PanelContainer/VBoxContainer2/MarginContainer_Title" unique_id=172447248]
 layout_mode = 2
 size_flags_vertical = 0
-text = "Choose your look"
+text = "AUTH_CHOOSE_LOOK_TITLE"
 label_settings = SubResource("LabelSettings_l114c")
 horizontal_alignment = 1
 vertical_alignment = 1
@@ -499,7 +498,7 @@ theme_type_variation = &"SecondaryButton"
 theme_override_constants/icon_max_width = 24
 theme_override_fonts/font = ExtResource("15_vtvnx")
 theme_override_font_sizes/font_size = 30
-text = "EDIT"
+text = "COMMON_EDIT"
 icon_alignment = 2
 
 [node name="Button_Next" type="Button" parent="Main/AvatarCreate/VBoxContainer/PanelContainer2/MarginContainer_Footer/AvatarCreateFooter" unique_id=1796377866]
@@ -511,7 +510,7 @@ theme = ExtResource("9_ypsmd")
 theme_override_constants/icon_max_width = 24
 theme_override_fonts/font = ExtResource("15_vtvnx")
 theme_override_font_sizes/font_size = 30
-text = "NEXT"
+text = "COMMON_NEXT"
 icon_alignment = 2
 
 [node name="AvatarCustomize" type="Control" parent="Main" unique_id=1314744326]
@@ -564,7 +563,7 @@ size_flags_horizontal = 3
 focus_mode = 0
 theme = ExtResource("9_ypsmd")
 theme_override_font_sizes/font_size = 30
-text = "DONE"
+text = "COMMON_DONE"
 icon_alignment = 2
 
 [node name="AvatarNaming" type="Control" parent="Main" unique_id=1478473587]
@@ -607,7 +606,7 @@ layout_mode = 2
 theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
 theme_override_fonts/font = ExtResource("4_ghcwt")
 theme_override_font_sizes/font_size = 20
-text = "Pick your name"
+text = "AUTH_PICK_NAME_TITLE"
 label_settings = ExtResource("10_3tlbd")
 horizontal_alignment = 1
 
@@ -624,7 +623,7 @@ theme_override_constants/separation = 12
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
-hint = "Name"
+hint = "AUTH_NAME_FIELD_LABEL"
 
 [node name="Button_RandomName" type="Button" parent="Main/AvatarNaming/VBoxContainer2/MarginContainer/VBoxContainer/ChooseNameHead/HBoxContainer" unique_id=513877461]
 texture_filter = 4
@@ -675,7 +674,7 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_65md3")
 
 [node name="Label_Advice" type="Label" parent="Main/AvatarNaming/VBoxContainer2/ChooseNameFooter" unique_id=1941322325]
 layout_mode = 2
-text = "*Avoid using your real name for safety"
+text = "AUTH_NAME_SAFETY_HINT"
 label_settings = SubResource("LabelSettings_2q7xc")
 horizontal_alignment = 1
 vertical_alignment = 1
@@ -710,7 +709,7 @@ theme_override_constants/icon_max_width = 24
 theme_override_fonts/font = ExtResource("4_ghcwt")
 theme_override_font_sizes/font_size = 30
 disabled = true
-text = "LET'S GO"
+text = "AUTH_LETS_GO"
 icon_alignment = 2
 
 [node name="Comeback" type="Control" parent="Main" unique_id=2144423057]
@@ -751,14 +750,14 @@ layout_mode = 2
 theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
 theme_override_fonts/font = ExtResource("4_ghcwt")
 theme_override_font_sizes/font_size = 20
-text = "Welcome back"
+text = "AUTH_WELCOME_BACK"
 label_settings = SubResource("LabelSettings_vtvnx")
 horizontal_alignment = 1
 
 [node name="Label_SignedAsName" type="Label" parent="Main/Comeback/MarginContainer/VBoxContainer/RestoreNameHead" unique_id=1203727920]
 unique_name_in_owner = true
 layout_mode = 2
-text = "You're signed in as"
+text = "AUTH_SIGNED_IN_AS"
 label_settings = ExtResource("17_s1tin")
 horizontal_alignment = 1
 
@@ -821,7 +820,7 @@ theme = ExtResource("9_ypsmd")
 theme_override_constants/icon_max_width = 24
 theme_override_fonts/font = ExtResource("15_vtvnx")
 theme_override_font_sizes/font_size = 30
-text = "LET'S GO"
+text = "AUTH_LETS_GO"
 icon_alignment = 2
 
 [node name="HSeparator4" type="HSeparator" parent="Main/Comeback/MarginContainer/VBoxContainer/RestoreNameFooter" unique_id=533125989]
@@ -833,7 +832,7 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_8mib7")
 [node name="UnderlinedButton_DifferentAccount" parent="Main/Comeback/MarginContainer/VBoxContainer/RestoreNameFooter" unique_id=176247384 instance=ExtResource("23_65md3")]
 custom_minimum_size = Vector2(0, 80)
 layout_mode = 2
-underlined_text = "Use another account"
+underlined_text = "AUTH_USE_ANOTHER_ACCOUNT"
 color = Color(1, 1, 1, 0.7019608)
 font = ExtResource("15_vtvnx")
 font_size = 30
@@ -874,7 +873,7 @@ custom_minimum_size = Vector2(425, 176)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
 theme_override_fonts/font = ExtResource("4_ghcwt")
-text = "Sign in to Decentraland"
+text = "AUTH_SIGN_IN_TITLE"
 label_settings = SubResource("LabelSettings_dkwv7")
 horizontal_alignment = 1
 autowrap_mode = 2
@@ -896,7 +895,7 @@ focus_mode = 0
 theme = ExtResource("9_ypsmd")
 theme_type_variation = &"SecondaryButton"
 theme_override_font_sizes/font_size = 24
-text = "QUICK DIVE (DISPOSABLE ACCOUNT)"
+text = "AUTH_QUICK_DIVE"
 expand_icon = true
 
 [node name="HSeparator6" type="HSeparator" parent="Main/SignIn/MarginContainer/VBoxContainer/VBoxContainer_SignInStep1" unique_id=1674660532]
@@ -917,7 +916,7 @@ theme_override_font_sizes/bold_italics_font_size = 30
 theme_override_font_sizes/italics_font_size = 30
 theme_override_font_sizes/mono_font_size = 30
 bbcode_enabled = true
-text = "By continuing, you agree to Decentraland’s [color=#A0ABFF][url=\"https://decentraland.org/terms/\"]Terms of Service[/url][/color], [color=#A0ABFF][url=\"https://decentraland.org/privacy/\"]Privacy Policy[/url][/color] and [color=#A0ABFF][url=\"https://decentraland.org/content/\"]Content Policy[/url][/color]."
+text = "AUTH_LEGAL_CONSENT"
 fit_content = true
 scroll_active = false
 horizontal_alignment = 1
@@ -937,7 +936,7 @@ layout_mode = 2
 theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
 theme_override_fonts/font = ExtResource("4_ghcwt")
 theme_override_font_sizes/font_size = 64
-text = "Authentication failed"
+text = "AUTH_FAILED_TITLE"
 label_settings = SubResource("LabelSettings_dkwv7")
 horizontal_alignment = 1
 autowrap_mode = 2
@@ -965,7 +964,7 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(200, 0)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
-text = "Ups! Something went wrong"
+text = "COMMON_SOMETHING_WENT_WRONG"
 label_settings = ExtResource("22_eula")
 autowrap_mode = 2
 
@@ -988,7 +987,7 @@ theme_type_variation = &"SecondaryButton"
 theme_override_constants/icon_max_width = 40
 theme_override_fonts/font = ExtResource("12_s6a2k")
 theme_override_font_sizes/font_size = 30
-text = "CANCEL"
+text = "COMMON_CANCEL"
 expand_icon = true
 
 [node name="Button_TryAgain" type="Button" parent="Main/SignIn/MarginContainer/VBoxContainer/VBoxContainer_SignInStep2" unique_id=69373175]
@@ -1001,7 +1000,7 @@ theme = ExtResource("9_ypsmd")
 theme_override_constants/icon_max_width = 24
 theme_override_fonts/font = ExtResource("4_ghcwt")
 theme_override_font_sizes/font_size = 30
-text = "TRY AGAIN"
+text = "COMMON_TRY_AGAIN"
 icon_alignment = 2
 
 [node name="Control" type="Control" parent="Main/SignIn/MarginContainer/VBoxContainer/VBoxContainer_SignInStep2" unique_id=2066026985]

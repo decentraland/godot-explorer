@@ -144,10 +144,12 @@ func _on_close() -> void:
 
 
 func _populate_dropdown(dropdown: DropdownList, options: Array) -> void:
+	# Shows the translated label but keeps options[i]["id"] as the value: _get_dropdown_value()
+	# and _find_option_index() both work on the stable ID, which is what gets published.
 	dropdown.clear()
-	dropdown.add_item("Select", 0)
+	dropdown.add_item(tr("PROFILE_SELECT"), 0)
 	for i in range(options.size()):
-		dropdown.add_item(options[i], i + 1)
+		dropdown.add_item(tr(options[i]["key"]), i + 1)
 	dropdown.placeholder_index = 0
 	dropdown.select(0)
 
@@ -157,7 +159,7 @@ func _find_option_index(options: Array, value: String) -> int:
 		return 0
 	var lower_value := value.to_lower()
 	for i in range(options.size()):
-		if options[i].to_lower() == lower_value:
+		if options[i]["id"].to_lower() == lower_value:
 			return i + 1
 	return 0
 
@@ -229,7 +231,8 @@ func _get_dropdown_value(options: Array, index: int) -> String:
 	var array_idx := index - 1
 	if array_idx < 0 or array_idx >= options.size():
 		return ""
-	return options[array_idx]
+	# The stable ID, never the label: this value is published to the user's profile.
+	return options[array_idx]["id"]
 
 
 func _async_save_profile() -> void:

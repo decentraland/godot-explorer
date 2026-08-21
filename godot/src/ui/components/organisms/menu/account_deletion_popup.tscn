@@ -82,7 +82,7 @@ stretch_mode = 5
 [node name="Label" type="Label" parent="MarginContainer/ConfirmationDialog/VBoxContainer2" unique_id=1337025529]
 custom_minimum_size = Vector2(300, 0)
 layout_mode = 2
-text = "Request Account Deletion?"
+text = "MENU_REQUEST_ACCOUNT_DELETION"
 label_settings = SubResource("LabelSettings_3chh0")
 horizontal_alignment = 1
 autowrap_mode = 2
@@ -95,7 +95,7 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_2wy27")
 [node name="Label2" type="Label" parent="MarginContainer/ConfirmationDialog/VBoxContainer2" unique_id=589114880]
 custom_minimum_size = Vector2(300, 0)
 layout_mode = 2
-text = "All your progress, purchases and data will be lost. This action is permanent and cannot be undone."
+text = "MENU_ALL_YOUR_PROGRESS_PURCHASES_AND_DATA"
 label_settings = SubResource("LabelSettings_eeec6")
 horizontal_alignment = 1
 autowrap_mode = 2
@@ -123,7 +123,7 @@ layout_mode = 2
 size_flags_horizontal = 3
 theme = ExtResource("4_8nog7")
 theme_override_font_sizes/font_size = 30
-text = "YES, DELETE"
+text = "MENU_YES_DELETE"
 
 [node name="Control" type="Control" parent="MarginContainer/ConfirmationDialog/VBoxContainer/HBoxContainer" unique_id=1617105060]
 layout_mode = 2
@@ -147,7 +147,7 @@ size_flags_horizontal = 3
 theme = ExtResource("4_8nog7")
 theme_type_variation = &"SecondaryButton"
 theme_override_font_sizes/font_size = 30
-text = "CANCEL"
+text = "COMMON_CANCEL"
 
 [node name="Control2" type="Control" parent="MarginContainer/ConfirmationDialog/VBoxContainer/HBoxContainer2" unique_id=1200840702]
 layout_mode = 2
@@ -168,7 +168,7 @@ alignment = 1
 [node name="Label" type="Label" parent="MarginContainer/ProcessingScreen" unique_id=127498003]
 custom_minimum_size = Vector2(300, 0)
 layout_mode = 2
-text = "Processing"
+text = "MENU_PROCESSING"
 label_settings = SubResource("LabelSettings_3chh0")
 horizontal_alignment = 1
 autowrap_mode = 2
@@ -196,7 +196,7 @@ alignment = 1
 [node name="Label" type="Label" parent="MarginContainer/DoneDialog/VBoxContainer2" unique_id=319725703]
 custom_minimum_size = Vector2(300, 0)
 layout_mode = 2
-text = "Deletion Requested"
+text = "MENU_DELETION_REQUESTED"
 label_settings = SubResource("LabelSettings_3chh0")
 horizontal_alignment = 1
 autowrap_mode = 2
@@ -204,7 +204,7 @@ autowrap_mode = 2
 [node name="Label2" type="Label" parent="MarginContainer/DoneDialog/VBoxContainer2" unique_id=2115946537]
 custom_minimum_size = Vector2(300, 0)
 layout_mode = 2
-text = "This process can take up to 30d to complete."
+text = "MENU_THIS_PROCESS_CAN_TAKE_UP_TO"
 label_settings = SubResource("LabelSettings_eeec6")
 horizontal_alignment = 1
 autowrap_mode = 2
@@ -212,7 +212,7 @@ autowrap_mode = 2
 [node name="Label3" type="Label" parent="MarginContainer/DoneDialog/VBoxContainer2" unique_id=1320224548]
 custom_minimum_size = Vector2(300, 0)
 layout_mode = 2
-text = "We’ll keep you updated on the process through the email address used to register the account."
+text = "MENU_WE_LL_KEEP_YOU_UPDATED_ON"
 label_settings = SubResource("LabelSettings_eeec6")
 horizontal_alignment = 1
 autowrap_mode = 2
@@ -238,7 +238,7 @@ layout_mode = 2
 size_flags_horizontal = 3
 theme = ExtResource("4_8nog7")
 theme_override_font_sizes/font_size = 30
-text = "OK"
+text = "MENU_OK"
 
 [node name="Control2" type="Control" parent="MarginContainer/DoneDialog/VBoxContainer/HBoxContainer" unique_id=292836876]
 layout_mode = 2
@@ -263,7 +263,7 @@ size_flags_horizontal = 3
 theme = ExtResource("4_8nog7")
 theme_type_variation = &"SecondaryButton"
 theme_override_font_sizes/font_size = 30
-text = "CANCEL DELETION"
+text = "MENU_CANCEL_DELETION"
 
 [node name="Control2" type="Control" parent="MarginContainer/DoneDialog/VBoxContainer/HBoxContainer2" unique_id=882179608]
 layout_mode = 2
@@ -282,7 +282,7 @@ hide_on_portrait = true
 custom_minimum_size = Vector2(300, 0)
 layout_mode = 2
 size_flags_horizontal = 3
-text = "*If you registered your Decentraland account via a non custodial wallet, there is no data to be removed as we don’t store your data."
+text = "MENU_IF_YOU_REGISTERED_YOUR_DECENTRALAND_ACCOUNT"
 label_settings = SubResource("LabelSettings_p3g0a")
 autowrap_mode = 2
 
@@ -312,8 +312,7 @@ stretch_mode = 5
 [node name="Label" type="Label" parent="MarginContainer/FailDialog/VBoxContainer" unique_id=524494]
 layout_mode = 2
 size_flags_vertical = 0
-text = "Ooops... Something
-Went Wrong"
+text = "MENU_OOOPS_SOMETHING_WENT_WRONG"
 label_settings = SubResource("LabelSettings_3chh0")
 horizontal_alignment = 1
 autowrap_mode = 2
@@ -326,8 +325,7 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_p3g0a")
 [node name="Label2" type="Label" parent="MarginContainer/FailDialog/VBoxContainer" unique_id=1900161172]
 custom_minimum_size = Vector2(300, 0)
 layout_mode = 2
-text = "We couldn’t process your request.
-Please try again later"
+text = "MENU_WE_COULDN_T_PROCESS_YOUR_REQUEST"
 label_settings = SubResource("LabelSettings_eeec6")
 horizontal_alignment = 1
 autowrap_mode = 2
@@ -352,7 +350,7 @@ layout_mode = 2
 size_flags_horizontal = 3
 theme = ExtResource("4_8nog7")
 theme_override_font_sizes/font_size = 30
-text = "OK"
+text = "MENU_OK"
 
 [node name="Control2" type="Control" parent="MarginContainer/FailDialog/VBoxContainer2/HBoxContainer" unique_id=1106422918]
 layout_mode = 2

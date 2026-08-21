@@ -119,7 +119,7 @@ layout_mode = 2
 size_flags_horizontal = 3
 theme_override_fonts/font = ExtResource("3_17slp")
 theme_override_font_sizes/font_size = 28
-text = "Discover"
+text = "DISCOVER_DISCOVER"
 label_settings = ExtResource("5_q2sj0")
 
 [node name="SearchBar" parent="TextureRect/VBoxContainer/SafeTopMarginContainer/VBoxContainer/HBoxContainer" unique_id=1551021918 instance=ExtResource("18_sbar")]
@@ -167,7 +167,7 @@ layout_mode = 2
 layout_mode = 0
 offset_right = 40.0
 offset_bottom = 20.0
-text = "Searching!"
+text = "DISCOVER_SEARCHING"
 
 [node name="MessageNoResultsFound" type="VBoxContainer" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer" unique_id=318965605]
 unique_name_in_owner = true
@@ -194,7 +194,7 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_242e4")
 
 [node name="Label" type="Label" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer/MessageNoResultsFound" unique_id=149979491]
 layout_mode = 2
-text = "No result found"
+text = "DISCOVER_NO_RESULT_FOUND"
 label_settings = SubResource("LabelSettings_iyg6d")
 horizontal_alignment = 1
 
@@ -205,8 +205,7 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_86ojj")
 
 [node name="Label2" type="Label" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer/MessageNoResultsFound" unique_id=1453431553]
 layout_mode = 2
-text = "Try searching with
-different keywords."
+text = "DISCOVER_TRY_SEARCHING_WITH_DIFFERENT_KEYWORDS"
 label_settings = SubResource("LabelSettings_8uyq4")
 horizontal_alignment = 1
 
@@ -235,8 +234,7 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_242e4")
 
 [node name="Label" type="Label" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer/MessageError" unique_id=412916740]
 layout_mode = 2
-text = "Something
-went wrong"
+text = "DISCOVER_SOMETHING_WENT_WRONG"
 label_settings = SubResource("LabelSettings_iyg6d")
 horizontal_alignment = 1
 
@@ -247,8 +245,7 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_86ojj")
 
 [node name="Label2" type="Label" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer/MessageError" unique_id=1908489445]
 layout_mode = 2
-text = "We couldn’t load the results.
-Please try again."
+text = "DISCOVER_WE_COULDN_T_LOAD_THE_RESULTS"
 label_settings = SubResource("LabelSettings_8uyq4")
 horizontal_alignment = 1
 
@@ -274,7 +271,7 @@ layout_mode = 2
 generator = NodePath("FriendsGenerator")
 skeleton_scene = ExtResource("21_fskel")
 skeleton_height = 225.0
-title = "Friends"
+title = "DISCOVER_FRIENDS"
 
 [node name="FriendsGenerator" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer/VBoxContainer/FriendsOnline" unique_id=1004775239 node_paths=PackedStringArray("discover") instance=ExtResource("19_fgen")]
 discover = NodePath("../../../../../../../..")
@@ -285,7 +282,7 @@ layout_mode = 2
 generator = NodePath("EventsGenerator")
 skeleton_scene = ExtResource("16_skel")
 skeleton_height = 359.0
-title = "Events"
+title = "DISCOVER_EVENTS"
 
 [node name="EventsGenerator" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer/VBoxContainer/Events" unique_id=703296619 node_paths=PackedStringArray("discover") instance=ExtResource("15_edk0s")]
 discover = NodePath("../../../../../../../..")
@@ -294,7 +291,7 @@ discover = NodePath("../../../../../../../..")
 unique_name_in_owner = true
 layout_mode = 2
 generator = NodePath("LastVisitGenerator")
-title = "Last Visited"
+title = "DISCOVER_LAST_VISITED"
 
 [node name="LastVisitGenerator" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer/VBoxContainer/LastVisited" unique_id=846206327 node_paths=PackedStringArray("discover") instance=ExtResource("4_q55yj")]
 unique_name_in_owner = true
@@ -305,7 +302,7 @@ discover = NodePath("../../../../../../../..")
 unique_name_in_owner = true
 layout_mode = 2
 generator = NodePath("PlacesGenerator")
-title = "Most Actives"
+title = "DISCOVER_MOST_ACTIVES"
 
 [node name="PlacesGenerator" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer/VBoxContainer/PlacesMostActive" unique_id=967342122 node_paths=PackedStringArray("discover") instance=ExtResource("4_q55yj")]
 order_by = 1
@@ -315,7 +312,7 @@ discover = NodePath("../../../../../../../..")
 unique_name_in_owner = true
 layout_mode = 2
 generator = NodePath("PlacesGenerator")
-title = "Favorites"
+title = "DISCOVER_FAVORITES"
 
 [node name="PlacesGenerator" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer/VBoxContainer/PlacesFavorites" unique_id=1688057200 node_paths=PackedStringArray("discover") instance=ExtResource("4_q55yj")]
 order_by = 1
@@ -326,7 +323,7 @@ discover = NodePath("../../../../../../../..")
 unique_name_in_owner = true
 layout_mode = 2
 generator = NodePath("PlacesGenerator")
-title = "My Places"
+title = "DISCOVER_MY_PLACES"
 
 [node name="PlacesGenerator" parent="TextureRect/VBoxContainer/MarginContainer/ScrollContainer_Content/VBoxContainer/VBoxContainer/PlacesMyPlaces" unique_id=1133896643 node_paths=PackedStringArray("discover") instance=ExtResource("4_q55yj")]
 only_my_places = true

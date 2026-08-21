@@ -574,7 +574,7 @@ func _on_button_reset_guest_debug_pressed() -> void:
 	var modal = await Global.modal_manager._async_create_modal()
 	if not modal:
 		return
-	modal.set_title("Guest wallet reset")
+	modal.set_title(tr("LOBBY_GUEST_WALLET_RESET"))
 	modal.set_body(
 		(
 			"Cleared the local guest anchor + session. "
@@ -671,7 +671,7 @@ func _async_on_profile_changed(new_profile: DclUserProfile):
 		waiting_for_new_wallet = false
 		if profile_has_name():
 			# User has an existing profile: show Welcome Back screen
-			label_signed_as_name.set_text("You're signed in as\n%s." % [new_profile.get_name()])
+			label_signed_as_name.set_text(tr("AUTH_SIGNED_IN_AS_NAME") % [new_profile.get_name()])
 			show_comeback_screen()
 			_show_avatar_preview()
 			Global.metrics.update_identity(
@@ -817,7 +817,7 @@ func _set_random_name():
 func _on_button_go_to_sign_in_pressed():
 	Global.metrics.track_click_button("SIGN_IN", "ACCOUNT_HOME", "")
 	_request_notification_permission_if_needed()
-	sign_in_title.text = "Sign in to Decentraland"
+	sign_in_title.text = tr("AUTH_SIGN_IN_TITLE")
 	is_creating_account = false
 	show_auth_home_screen()
 
@@ -842,7 +842,7 @@ func _async_confirm_discard_edit() -> void:
 	var modal = await Global.modal_manager._async_create_modal()
 	if not modal:
 		return
-	modal.set_title("Discard changes?")
+	modal.set_title(tr("LOBBY_DISCARD_CHANGES"))
 	modal.set_body("Your avatar changes won't be saved.")
 	modal.set_primary_button_text("DISCARD")
 	modal.set_secondary_button_text("CANCEL")
@@ -901,7 +901,7 @@ func _on_button_try_again_pressed():
 func _show_auth_error(error_message: String):
 	track_lobby_screen("AUTH_ERROR")
 	auth_spinner_container.hide()
-	label_step2_title.text = "Authentication failed"
+	label_step2_title.text = tr("AUTH_FAILED_TITLE")
 	auth_error_label_main.text = error_message
 	auth_error_label_code.text = ""
 	auth_error_container.show()
@@ -1033,7 +1033,7 @@ func _async_show_guest_login_error() -> void:
 	var modal = await Global.modal_manager._async_create_modal()
 	if not modal:
 		return
-	modal.set_title("Something went wrong")
+	modal.set_title(tr("LOBBY_SOMETHING_WENT_WRONG"))
 	modal.set_body("We couldn't start your guest session. Please try again.")
 	modal.set_primary_button_text("TRY AGAIN")
 	modal.show_icon(Modal.MODAL_ALERT_ICON)

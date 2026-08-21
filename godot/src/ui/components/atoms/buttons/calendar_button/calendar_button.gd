@@ -13,13 +13,6 @@ var _event_description: String = ""
 var _event_location: Vector2i = Vector2i.ZERO
 var _server: String = "main"
 
-var _weekday_short: PackedStringArray = PackedStringArray(
-	["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
-)
-var _month_short: PackedStringArray = PackedStringArray(
-	["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
-)
-
 @onready var h_box_container_text: HBoxContainer = $HBoxContainer_Text
 @onready var label_day: Label = $HBoxContainer_Text/Label_Day
 @onready var label_time: Label = $HBoxContainer_Text/Label_Time
@@ -123,14 +116,7 @@ func _update_labels() -> void:
 
 
 func _format_day(unix_sec: int) -> String:
-	var dt: Dictionary = Time.get_datetime_dict_from_unix_time(unix_sec)
-	var wd: int = dt.get("weekday", 0)
-	var month: int = dt.get("month", 1)
-	var day: int = dt.get("day", 1)
-	return (
-		"%s, %s %d."
-		% [_weekday_short[clampi(wd, 0, 6)], _month_short[clampi(month - 1, 0, 11)], day]
-	)
+	return LocaleFormat.short_date(unix_sec)
 
 
 func _format_time_range(start_unix_sec: int, duration_ms: int) -> String:
@@ -138,20 +124,14 @@ func _format_time_range(start_unix_sec: int, duration_ms: int) -> String:
 	var end_unix_sec: int = start_unix_sec + (duration_ms / 1000)
 	var end_dt: Dictionary = Time.get_datetime_dict_from_unix_time(end_unix_sec)
 	var tz_str: String = _get_local_timezone_string()
-	return (
-		"%s to %s %s"
-		% [
-			_format_12h(start_dt.hour, start_dt.minute),
-			_format_12h(end_dt.hour, end_dt.minute),
-			tz_str
-		]
+	# Named placeholders: a locale may put the timezone first, and "to" is not universal.
+	return tr("CALENDAR_TIME_RANGE").format(
+		{
+			"start": LocaleFormat.time_of_day(start_dt.hour, start_dt.minute),
+			"end": LocaleFormat.time_of_day(end_dt.hour, end_dt.minute),
+			"tz": tz_str
+		}
 	)
-
-
-func _format_12h(hour: int, minute: int) -> String:
-	var h: int = 12 if (hour == 0 or hour == 12) else (hour - 12 if hour >= 12 else hour)
-	var am_pm: String = "pm" if hour >= 12 else "am"
-	return "%02d:%02d%s" % [h, minute, am_pm]
 
 
 func _get_local_timezone_string() -> String:

@@ -206,7 +206,7 @@ theme_override_constants/h_separation = 16
 theme_override_font_sizes/font_size = 32
 custom_icon = ExtResource("3_lhp2a")
 custom_icon_pressed = ExtResource("3_lhp2a")
-custom_text = "EDIT PROFILE"
+custom_text = "PROFILE_EDIT_PROFILE_CAPS"
 
 [node name="HSeparator2" type="HSeparator" parent="MarginContainer/VBoxContainer" unique_id=454747124]
 unique_name_in_owner = true

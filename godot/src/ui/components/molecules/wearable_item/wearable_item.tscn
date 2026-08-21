@@ -219,7 +219,7 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_newbadge")
 [node name="Label_New" type="Label" parent="MarginContainer/PanelContainer_White/TextureRect_Preview/PanelContainer_NewBadge" unique_id=800000002]
 layout_mode = 2
 mouse_filter = 2
-text = "NEW"
+text = "WEARABLE_ITEM_NEW"
 label_settings = SubResource("LabelSettings_new")
 horizontal_alignment = 1
 vertical_alignment = 1

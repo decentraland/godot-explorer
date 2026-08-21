@@ -39,6 +39,7 @@ var _light_max_lights_spin: SpinBox = null
 
 #Storage items:
 @onready var dropdown_list_max_cache_size: DropdownList = %DropdownList_MaxCacheSize
+@onready var dropdown_list_language: DropdownList = %DropdownList_Language
 @onready var label_current_cache_value: Label = %Label_CurrentCacheValue
 @onready var progress_bar_current_cache_size: ProgressBar = %ProgressBar_CurrentCacheSize
 @onready var button_clear_cache: Button = %Button_ClearCache
@@ -117,8 +118,7 @@ func _ready():
 	check_button_submit_message_closes_chat.button_pressed = (
 		Global.get_config().submit_message_closes_chat
 	)
-	dropdown_list_camera_mode.add_item("First person", Global.CameraMode.FIRST_PERSON)
-	dropdown_list_camera_mode.add_item("Third person", Global.CameraMode.THIRD_PERSON)
+	_populate_camera_mode_items()
 	dropdown_list_camera_mode.item_selected.connect(_on_dropdown_list_camera_mode_item_selected)
 	_refresh_camera_mode_row()
 	# Keep the camera dropdown in sync with runtime changes (scene locks the mode / forces
@@ -134,9 +134,9 @@ func _ready():
 		Global.session_hide_ui_options_sync.connect(_on_session_hide_ui_options_sync)
 	_refresh_hide_explorer_ui_row()
 
-	dropdown_list_max_cache_size.add_item("1 GB", 0)
-	dropdown_list_max_cache_size.add_item("2 GB", 1)
-	dropdown_list_max_cache_size.add_item("4 GB", 2)
+	_setup_language_dropdown()
+
+	_populate_cache_size_items()
 	var cache_index := clampi(Global.get_config().max_cache_size, 0, CACHE_SIZE_MB.size() - 1)
 	dropdown_list_max_cache_size.select(cache_index)
 	progress_bar_current_cache_size.max_value = CACHE_SIZE_MB[cache_index]
@@ -407,6 +407,34 @@ func _on_h_slider_music_volume_value_changed(value):
 	Global.get_config().save_to_settings_file()
 
 
+func _setup_language_dropdown() -> void:
+	# Only worth showing once there is something to choose between. SUPPORTED_LOCALES stays at
+	# ["en"] until a locale's catalogue is complete (see unity-explorer#270), so today this hides
+	# itself rather than offering a one-item list.
+	var supported := LocaleSettings.SUPPORTED_LOCALES
+	if supported.size() < 2:
+		dropdown_list_language.hide()
+		return
+
+	_populate_language_dropdown()
+	dropdown_list_language.item_selected.connect(_on_dropdown_list_language_item_selected)
+
+
+func _populate_language_dropdown() -> void:
+	var supported := LocaleSettings.SUPPORTED_LOCALES
+	var current := LocaleSettings.resolve_locale()
+	for i in supported.size():
+		dropdown_list_language.add_item(LocaleSettings.get_display_name(supported[i]), i)
+	dropdown_list_language.select(maxi(supported.find(current), 0))
+
+
+func _on_dropdown_list_language_item_selected(index: int) -> void:
+	var supported := LocaleSettings.SUPPORTED_LOCALES
+	if index < 0 or index >= supported.size():
+		return
+	LocaleSettings.set_locale(supported[index])
+
+
 func _on_dropdown_list_max_cache_size_item_selected(index: int) -> void:
 	Global.get_config().max_cache_size = index
 	GeneralSettings.apply_max_cache_size()
@@ -420,9 +448,13 @@ func _update_current_cache_size():
 		float(Global.content_provider.get_cache_folder_total_size()) / 1000.0 / 1000.0
 	)
 	if current_size_mb >= 1024.0:
-		label_current_cache_value.text = "%.1f GB" % (current_size_mb / 1024.0)
+		label_current_cache_value.text = (tr("SETTINGS_CACHE_SIZE_GB").format(
+			{"size": LocaleFormat.number(current_size_mb / 1024.0, 1)}
+		))
 	elif current_size_mb > 0.0:
-		label_current_cache_value.text = "%.1f MB" % current_size_mb
+		label_current_cache_value.text = (tr("SETTINGS_CACHE_SIZE_MB").format(
+			{"size": LocaleFormat.number(current_size_mb, 1)}
+		))
 	else:
 		label_current_cache_value.text = "0 MB"
 	progress_bar_current_cache_size.value = current_size_mb
@@ -766,7 +798,7 @@ func _setup_impostor_benchmark_button() -> void:
 		return
 	var bench_button := Button.new()
 	bench_button.name = "Button_RunImpostorBenchmark"
-	bench_button.text = "Run Avatar Impostor Benchmark"
+	bench_button.text = tr("SETTINGS_RUN_AVATAR_IMPOSTOR_BENCHMARK")
 	bench_button.pressed.connect(
 		func() -> void:
 			get_tree().change_scene_to_file("res://src/tools/avatar_impostor_benchmark.tscn")
@@ -819,7 +851,7 @@ func _add_max_lights_row(template_row: HBoxContainer, initial_value: int) -> voi
 	var row := template_row.duplicate(0) as HBoxContainer
 	row.name = "Light_MaxActiveLights"
 	var label := row.find_child("Label_Title", false, false) as Label
-	label.text = "Max Active Lights"
+	label.text = tr("SETTINGS_MAX_ACTIVE_LIGHTS")
 	var check := row.find_child("CheckButton*", true, false) as CheckButton
 	check.hide()
 
@@ -861,7 +893,7 @@ func _setup_fast_day_cycle_toggle() -> void:
 	var row := template_row.duplicate(0) as HBoxContainer
 	row.name = "FastDayCycle"
 	var label := row.find_child("Label_Title", false, false) as Label
-	label.text = "Fast Day/Night Cycle (10s)"
+	label.text = tr("SETTINGS_FAST_DAY_NIGHT_CYCLE_10S")
 	var check := row.find_child("CheckButton*", true, false) as CheckButton
 	check.name = "CheckButton_FastDayCycle"
 	check.button_pressed = false
@@ -1062,3 +1094,48 @@ func _on_button_return_to_discover_pressed() -> void:
 	# Dev Tools: leave the current world and return to the Discover menu while
 	# staying signed in (soft sign-out). See Global.return_to_discover().
 	Global.return_to_discover()
+
+
+## Dropdown items are plain strings once added, so unlike a scene `text` property they do not
+## re-translate themselves on NOTIFICATION_TRANSLATION_CHANGED. Only the dropdowns whose items are
+## translated are rebuilt; realm URLs, graphic profile names and skybox names are data.
+func _populate_camera_mode_items() -> void:
+	var previous := dropdown_list_camera_mode.selected
+	dropdown_list_camera_mode.clear()
+	dropdown_list_camera_mode.add_item(
+		tr("SETTINGS_CAMERA_FIRST_PERSON"), Global.CameraMode.FIRST_PERSON
+	)
+	dropdown_list_camera_mode.add_item(
+		tr("SETTINGS_CAMERA_THIRD_PERSON"), Global.CameraMode.THIRD_PERSON
+	)
+	if previous >= 0:
+		dropdown_list_camera_mode.select(previous)
+
+
+func _populate_cache_size_items() -> void:
+	var previous := dropdown_list_max_cache_size.selected
+	dropdown_list_max_cache_size.clear()
+	for gigabytes in [1, 2, 4]:
+		dropdown_list_max_cache_size.add_item(
+			tr("SETTINGS_CACHE_SIZE_GB").format({"size": gigabytes}), gigabytes
+		)
+	if previous >= 0:
+		dropdown_list_max_cache_size.select(previous)
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_TRANSLATION_CHANGED and is_node_ready():
+		_populate_camera_mode_items()
+		_populate_cache_size_items()
+		_populate_language_dropdown_items()
+		_update_current_cache_size()
+
+
+func _populate_language_dropdown_items() -> void:
+	if LocaleSettings.SUPPORTED_LOCALES.size() < 2:
+		return
+	var previous := dropdown_list_language.selected
+	dropdown_list_language.clear()
+	_populate_language_dropdown()
+	if previous >= 0:
+		dropdown_list_language.select(previous)

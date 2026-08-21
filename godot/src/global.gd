@@ -514,6 +514,11 @@ func _ready():
 	# Create GDScript extensions of Rust classes
 	self.config = ConfigData.new()
 	config.load_from_settings_file()
+
+	# Resolve the UI language before any scene renders. Godot picks the OS locale at boot, which
+	# would surface a partially-translated locale the moment its .po has content; LocaleSettings
+	# gates on SUPPORTED_LOCALES so an incomplete language is never selected (see #270, #2062).
+	LocaleSettings.apply_locale()
 	# Bench-only: keep limit_fps at NO_LIMIT after the settings file load (which
 	# would otherwise restore a saved FPS_18/FPS_30 cap) so no later
 	# `apply_fps_limit()` re-pins the engine. Real users keep their saved cap.

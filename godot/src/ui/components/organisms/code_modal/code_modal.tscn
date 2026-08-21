@@ -175,7 +175,7 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_vtc1u")
 
 [node name="Label_Title" type="Label" parent="Blur/PanelContainer2/MarginContainer/VBoxContainer" unique_id=1851632747]
 layout_mode = 2
-text = "Enter verification code"
+text = "CODE_MODAL_ENTER_VERIFICATION_CODE"
 label_settings = SubResource("LabelSettings_5r5ws")
 horizontal_alignment = 1
 autowrap_mode = 2
@@ -196,7 +196,7 @@ theme_override_font_sizes/bold_italics_font_size = 26
 theme_override_font_sizes/italics_font_size = 26
 theme_override_font_sizes/mono_font_size = 26
 bbcode_enabled = true
-text = "One time password sent to [b]your@email.com[/b]. Please enter the code below to complete verification."
+text = "CODE_MODAL_SENT_TO"
 fit_content = true
 autowrap_mode = 2
 horizontal_alignment = 1
@@ -333,7 +333,7 @@ virtual_keyboard_enabled = false
 [node name="Label_Error" type="Label" parent="Blur/PanelContainer2/MarginContainer/VBoxContainer/Container" unique_id=1219482550]
 unique_name_in_owner = true
 layout_mode = 2
-text = "The code is invalid or expired. Please resend code."
+text = "CODE_MODAL_THE_CODE_IS_INVALID_OR_EXPIRED"
 label_settings = SubResource("LabelSettings_6ee1p")
 horizontal_alignment = 1
 
@@ -362,7 +362,7 @@ size_flags_vertical = 4
 [node name="Label_Title2" type="Label" parent="Blur/PanelContainer2/MarginContainer/VBoxContainer/VBoxContainer/HBoxContainer_Verifying" unique_id=934715643]
 custom_minimum_size = Vector2(128, 0)
 layout_mode = 2
-text = "Verifying..."
+text = "CODE_MODAL_VERIFYING"
 label_settings = SubResource("LabelSettings_8bykb")
 autowrap_mode = 2
 
@@ -378,7 +378,7 @@ theme_override_font_sizes/bold_italics_font_size = 26
 theme_override_font_sizes/italics_font_size = 26
 theme_override_font_sizes/mono_font_size = 26
 bbcode_enabled = true
-text = "Didn't get an email? [u][color=A0ABFF]Resend email"
+text = "CODE_MODAL_RESEND_PROMPT"
 fit_content = true
 autowrap_mode = 2
 horizontal_alignment = 1

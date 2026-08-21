@@ -82,7 +82,7 @@ func _async_claim() -> void:
 		return
 
 	if _campaign_id.is_empty() or _campaign_key.is_empty():
-		_show_error("This reward is not available right now.")
+		_show_error(tr("REWARD_NOT_AVAILABLE"))
 		return
 
 	_start_processing()
@@ -163,7 +163,7 @@ func _handle_claim_json(json: Dictionary) -> void:
 		ok == false
 		and code in ["campaign_key_uninitiated", "campaign_disabled", "campaign_finished"]
 	):
-		_show_error("This reward is not available right now.")
+		_show_error(tr("REWARD_NOT_AVAILABLE"))
 		return
 
 	# Any other non-ok response: friendly copy, never the raw code (already logged above).
@@ -174,7 +174,7 @@ func _handle_claim_json(json: Dictionary) -> void:
 	var data = json.get("data", [])
 	# ok but nothing granted → out of stock.
 	if not (data is Array) or data.is_empty():
-		_show_error("This reward is out of stock.")
+		_show_error(tr("REWARD_OUT_OF_STOCK"))
 		return
 
 	# Already owned: assigned more than the window ago (a fresh claim echoes back a recent date).
@@ -203,7 +203,7 @@ func _show_success() -> void:
 ## re-claim (or re-open) shows the "you've got it" state instead of a bare line of text.
 func _show_already_claimed() -> void:
 	_reveal_claimed()
-	label_text.text = "You already have this reward."
+	label_text.text = tr("REWARD_MODAL_YOU_ALREADY_HAVE_THIS_REWARD")
 
 
 ## Shared "claimed" end state (design: OTP-Claimed): stop the spinner, bring the reward art back
@@ -214,7 +214,7 @@ func _reveal_claimed() -> void:
 	_claimed = true
 	_claiming = false
 	button_claim.disabled = true
-	button_claim.text = "CLAIMED"
+	button_claim.text = tr("REWARD_MODAL_CLAIMED")
 	if is_instance_valid(loading_spinner):
 		loading_spinner.visible = false
 	if is_instance_valid(texture_rect_reward):
@@ -230,14 +230,14 @@ func _reveal_claimed() -> void:
 func _friendly_claim_error(code: String) -> String:
 	match code:
 		"campaign_not_found", "campaign_key_not_found", "campaign_not_owner":
-			return "This reward is not available right now."
+			return tr("REWARD_NOT_AVAILABLE")
 		"already_claimed", "user_already_claimed":
-			return "You already have this reward."
+			return tr("REWARD_ALREADY_OWNED")
 		"supply_reached", "out_of_stock":
-			return "This reward is out of stock."
+			return tr("REWARD_OUT_OF_STOCK")
 		"catalyst_invalid", "catalyst_unreachable", "user_address_not_connected", "user_address_position":
-			return "We couldn't verify your session. Please try again in a moment."
-	return "Something went wrong claiming your reward. Please try again."
+			return tr("REWARD_SESSION_UNVERIFIED")
+	return tr("REWARD_CLAIM_FAILED")
 
 
 func _show_error(message: String) -> void:
@@ -248,5 +248,5 @@ func _show_error(message: String) -> void:
 	if is_instance_valid(texture_rect_reward):
 		texture_rect_reward.visible = true
 	button_claim.disabled = false
-	button_claim.text = "CLAIM REWARD"
+	button_claim.text = tr("REWARD_MODAL_CLAIM_REWARD")
 	label_text.text = message

@@ -360,7 +360,7 @@ theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 1
 theme_override_fonts/font = ExtResource("7_m8kjd")
 theme_override_font_sizes/font_size = 27
-text = "Nickname"
+text = "PROFILE_NICKNAME"
 label_settings = SubResource("LabelSettings_awuqu")
 
 [node name="MarginContainer_Tag" type="MarginContainer" parent="MarginContainer2/HBoxContainer_Data/VBoxContainer_info/MarginContainer/ProfileHeader/HBoxContainer3/HBoxContainer/HBoxContainer" unique_id=1454372201]
@@ -405,7 +405,7 @@ theme_override_constants/h_separation = 16
 theme_override_font_sizes/font_size = 20
 custom_icon = ExtResource("9_ybu4s")
 custom_icon_pressed = ExtResource("9_ybu4s")
-custom_text = "EDIT PROFILE"
+custom_text = "PROFILE_EDIT_PROFILE_CAPS"
 
 [node name="Button_Friend" parent="MarginContainer2/HBoxContainer_Data/VBoxContainer_info/MarginContainer/ProfileHeader/HBoxContainer3/HBoxContainer2" unique_id=1094644081 instance=ExtResource("12_7xla3")]
 unique_name_in_owner = true
@@ -415,7 +415,7 @@ layout_mode = 2
 theme_type_variation = &"SecondaryLittle"
 custom_icon = ExtResource("13_pa1ft")
 custom_icon_pressed = ExtResource("13_pa1ft")
-custom_text = "FRIEND"
+custom_text = "PROFILE_FRIEND"
 
 [node name="Button_Pending" parent="MarginContainer2/HBoxContainer_Data/VBoxContainer_info/MarginContainer/ProfileHeader/HBoxContainer3/HBoxContainer2" unique_id=952246903 instance=ExtResource("12_7xla3")]
 unique_name_in_owner = true
@@ -425,7 +425,7 @@ layout_mode = 2
 theme_type_variation = &"SecondaryLittle"
 custom_icon = ExtResource("14_7xla3")
 custom_icon_pressed = ExtResource("14_7xla3")
-custom_text = "PENDING"
+custom_text = "PROFILE_PENDING"
 
 [node name="Button_CancelRequest" parent="MarginContainer2/HBoxContainer_Data/VBoxContainer_info/MarginContainer/ProfileHeader/HBoxContainer3/HBoxContainer2" unique_id=2129687283 instance=ExtResource("12_7xla3")]
 unique_name_in_owner = true
@@ -445,7 +445,7 @@ theme_override_styles/disabled = SubResource("StyleBoxFlat_aoppn")
 theme_override_styles/focus = SubResource("StyleBoxFlat_pa1ft")
 custom_icon = ExtResource("15_pa1ft")
 custom_icon_pressed = ExtResource("15_pa1ft")
-custom_text = "CANCEL REQUEST"
+custom_text = "PROFILE_CANCEL_REQUEST"
 
 [node name="Button_Blocked" parent="MarginContainer2/HBoxContainer_Data/VBoxContainer_info/MarginContainer/ProfileHeader/HBoxContainer3/HBoxContainer2" unique_id=1628868722 instance=ExtResource("12_7xla3")]
 unique_name_in_owner = true
@@ -465,7 +465,7 @@ theme_override_styles/disabled = SubResource("StyleBoxFlat_aoppn")
 theme_override_styles/focus = SubResource("StyleBoxFlat_pa1ft")
 custom_icon = ExtResource("15_pa1ft")
 custom_icon_pressed = ExtResource("15_pa1ft")
-custom_text = "BLOCKED"
+custom_text = "COMMON_BLOCKED"
 
 [node name="Button_AddFriend" parent="MarginContainer2/HBoxContainer_Data/VBoxContainer_info/MarginContainer/ProfileHeader/HBoxContainer3/HBoxContainer2" unique_id=1444914885 instance=ExtResource("12_7xla3")]
 unique_name_in_owner = true
@@ -475,7 +475,7 @@ layout_mode = 2
 theme_type_variation = &"ButtonLittle"
 custom_icon = ExtResource("16_aoppn")
 custom_icon_pressed = ExtResource("16_aoppn")
-custom_text = "ADD FRIEND"
+custom_text = "PROFILE_ADD_FRIEND"
 
 [node name="Button_Menu" type="Button" parent="MarginContainer2/HBoxContainer_Data/VBoxContainer_info/MarginContainer/ProfileHeader/HBoxContainer3/HBoxContainer2" unique_id=339281591]
 unique_name_in_owner = true
@@ -939,7 +939,7 @@ size_flags_vertical = 4
 focus_mode = 0
 theme = ExtResource("12_dja5r")
 theme_type_variation = &"ProfileMenuButton"
-text = "Mute chat"
+text = "PROFILE_MUTE_CHAT"
 icon = ExtResource("27_8iwyo")
 alignment = 0
 expand_icon = true
@@ -955,7 +955,7 @@ size_flags_vertical = 4
 focus_mode = 0
 theme = ExtResource("12_dja5r")
 theme_type_variation = &"ProfileMenuButtonRed"
-text = "Unmute chat"
+text = "PROFILE_UNMUTE_CHAT"
 icon = ExtResource("27_8iwyo")
 alignment = 0
 expand_icon = true
@@ -969,7 +969,7 @@ size_flags_vertical = 4
 focus_mode = 0
 theme = ExtResource("12_dja5r")
 theme_type_variation = &"ProfileMenuButton"
-text = "Block"
+text = "PROFILE_BLOCK"
 icon = ExtResource("13_quy3q")
 alignment = 0
 expand_icon = true
@@ -983,7 +983,7 @@ size_flags_vertical = 4
 focus_mode = 0
 theme = ExtResource("12_dja5r")
 theme_type_variation = &"ProfileMenuButtonRed"
-text = "Unblock"
+text = "PROFILE_UNBLOCK"
 icon = ExtResource("13_quy3q")
 alignment = 0
 expand_icon = true
@@ -997,7 +997,7 @@ size_flags_vertical = 4
 focus_mode = 0
 theme = ExtResource("12_dja5r")
 theme_type_variation = &"ProfileMenuButton"
-text = "Unfriend"
+text = "PROFILE_UNFRIEND"
 icon = ExtResource("14_ur8se")
 alignment = 0
 expand_icon = true

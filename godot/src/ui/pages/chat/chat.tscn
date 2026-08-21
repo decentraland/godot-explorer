@@ -189,7 +189,7 @@ stretch_mode = 5
 [node name="Label" type="Label" parent="VBoxContainer/HBoxContainer/PanelContainer/VBoxContainer2/PanelContainer_Header/HBoxContainer" unique_id=2054773896]
 layout_mode = 2
 size_flags_horizontal = 3
-text = "NEARBY"
+text = "COMMON_NEARBY"
 label_settings = SubResource("LabelSettings_8p6lu")
 
 [node name="TextureButton" type="Button" parent="VBoxContainer/HBoxContainer/PanelContainer/VBoxContainer2/PanelContainer_Header/HBoxContainer" unique_id=1835704905]
@@ -274,7 +274,7 @@ theme_override_styles/hover_pressed_mirrored = SubResource("StyleBoxFlat_bhyuy")
 theme_override_styles/disabled = SubResource("StyleBoxFlat_bhyuy")
 theme_override_styles/disabled_mirrored = SubResource("StyleBoxFlat_bhyuy")
 theme_override_styles/focus = SubResource("StyleBoxFlat_bhyuy")
-text = "Write a message"
+text = "CHAT_WRITE_A_MESSAGE"
 alignment = 0
 
 [node name="AutocompletePanel" type="PanelContainer" parent="VBoxContainer/HBoxContainer/PanelContainer" unique_id=83779740]
@@ -412,7 +412,7 @@ theme_override_font_sizes/font_size = 20
 theme_override_styles/normal = SubResource("StyleBoxFlat_16cr1")
 theme_override_styles/read_only = SubResource("StyleBoxFlat_2je12")
 theme_override_styles/focus = SubResource("StyleBoxFlat_rmgsi")
-placeholder_text = "Write a message..."
+placeholder_text = "CHAT_WRITE_A_MESSAGE_ELLIPSIS"
 max_length = 155
 keep_editing_on_text_submit = true
 deselect_on_focus_loss_enabled = false
@@ -432,7 +432,7 @@ theme_override_colors/font_hover_pressed_color = Color(0.9098039, 0.7254902, 1, 
 theme_override_colors/font_disabled_color = Color(0.9098039, 0.7254902, 1, 0.4)
 theme_override_constants/icon_max_width = 16
 theme_override_font_sizes/font_size = 20
-text = "SEND"
+text = "CHAT_SEND"
 flat = true
 icon_alignment = 2
 

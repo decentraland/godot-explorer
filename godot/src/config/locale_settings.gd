@@ -1,0 +1,89 @@
+class_name LocaleSettings extends RefCounted
+
+## UI language handling.
+##
+## Mirrors the static-apply pattern of GeneralSettings / GraphicSettings / AudioSettings:
+## a `class_name` helper with no autoload wiring, called as `LocaleSettings.apply_locale()`.
+## Locale logic deliberately lives here rather than on `Global` — `global.gd` sits exactly at
+## gdlint's `max-public-methods: 45` ceiling, so adding methods there fails static checks.
+##
+## Translations are per-locale CSV catalogues under `res://locale/` (en.csv, es.csv, pt_BR.csv),
+## imported by Godot's built-in `csv_translation` importer into `.translation` resources that are
+## listed in project.godot under `[internationalization]`.
+
+## Locales the language picker may offer.
+##
+## A locale MUST NOT be listed here until its catalogue is complete. An incomplete table is the
+## failure mode behind unity-explorer#270 (ES/IT rolled back after shipping half-translated)
+## and #2062 (a Spanish OS locale hung the desktop loading screen). English is the fallback
+## and is always available.
+const SUPPORTED_LOCALES: PackedStringArray = ["en"]
+
+## Display name per locale, shown in the Settings picker. Deliberately written in the
+## language itself — a user who cannot read the current UI language still needs to find
+## their own in the list.
+const LOCALE_DISPLAY_NAMES: Dictionary = {
+	"en": "English",
+	"es": "Español",
+	"pt_BR": "Português (Brasil)",
+}
+
+const FALLBACK_LOCALE: String = "en"
+
+
+## Resolve the locale to actually use: the saved override when it is still supported,
+## otherwise the device locale, otherwise English.
+static func resolve_locale() -> String:
+	var configured: String = Global.get_config().locale
+	if not configured.is_empty() and configured in SUPPORTED_LOCALES:
+		return configured
+	return detect_device_locale()
+
+
+## Best-supported match for the device's locale, falling back to English.
+##
+## Regional variants fold to their base language when the base is supported but the exact
+## variant is not, so es_AR / es_MX / es_419 all resolve to "es".
+static func detect_device_locale() -> String:
+	var device: String = OS.get_locale()  # e.g. "es_AR", "pt_BR", "en_US"
+	if device in SUPPORTED_LOCALES:
+		return device
+
+	var language: String = OS.get_locale_language()  # e.g. "es"
+	if language in SUPPORTED_LOCALES:
+		return language
+
+	# A supported regional variant of the same language is better than English.
+	for supported in SUPPORTED_LOCALES:
+		if supported.begins_with(language + "_"):
+			return supported
+
+	return FALLBACK_LOCALE
+
+
+## Push the resolved locale into the TranslationServer.
+##
+## Control nodes re-translate themselves on NOTIFICATION_TRANSLATION_CHANGED, so scene `text`
+## properties update live. Text assigned from GDScript does NOT — those components refresh
+## themselves via `_notification(NOTIFICATION_TRANSLATION_CHANGED)`.
+static func apply_locale() -> void:
+	TranslationServer.set_locale(resolve_locale())
+
+
+## Persist a language choice and apply it immediately.
+##
+## Pass an empty string to clear the override and follow the device locale again.
+static func set_locale(new_locale: String) -> void:
+	if not new_locale.is_empty() and not new_locale in SUPPORTED_LOCALES:
+		push_warning("LocaleSettings: ignoring unsupported locale '%s'" % new_locale)
+		return
+
+	var config := Global.get_config()
+	config.locale = new_locale
+	config.save_to_settings_file()
+	apply_locale()
+
+
+## Human-readable name for a locale, for the Settings picker.
+static func get_display_name(locale: String) -> String:
+	return LOCALE_DISPLAY_NAMES.get(locale, locale)

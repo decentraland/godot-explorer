@@ -1,0 +1,216 @@
+# Display strings that must never be translated, one per line as <path>\t<string>.
+#
+# Unlike unkeyed_baseline.txt (debt that shrinks to zero as phases land), these are permanent
+# decisions. Add an entry only when the string is never shown to a user as prose:
+#   - a design-time placeholder overwritten at runtime
+#   - a raw error code or identifier from a third-party SDK
+#   - a version string
+#   - a debug-only control
+#
+# Keep the justification comment above each entry.
+
+# Overwritten at runtime by DclGlobal.get_version_with_env() (lobby.gd:382).
+godot/src/ui/pages/auth/lobby.tscn	v0.0.0
+
+# Placeholder for a raw Magic SDK error code; cleared at lobby.gd:906 and filled with SDK text.
+godot/src/ui/pages/auth/lobby.tscn	Magic Error 
+
+# Debug-only button, only built when the debug guest-wallet reset is enabled.
+godot/src/ui/pages/auth/lobby.gd	RESET GUEST WALLET (DEBUG)
+
+# Design-time placeholder; the real string is composed at loading_screen.gd:140.
+godot/src/ui/pages/loading_screen/loading_screen.tscn	0000/0000 resouces at 000.00 mb/s - Opt
+
+# Design-time placeholder; overwritten at loading_screen.gd:297 with the real creator name.
+godot/src/ui/pages/loading_screen/loading_screen.tscn	[color=#DF9CFF]By[/color] Decentraland
+
+
+# ---- Phase 2: shared components ----
+
+# date/time formatted at runtime (Phase 5)
+godot/src/ui/components/atoms/buttons/calendar_button/calendar_button.tscn	04:10pm to 06:10pm (UTC-3)
+# date formatted at runtime (Phase 5)
+godot/src/ui/components/atoms/buttons/calendar_button/calendar_button.tscn	Mon, Jan 19.
+# slider name set by the instancing scene
+godot/src/ui/components/atoms/controls/custom_slider/custom_background_slider.tscn	CUSTOM SLIDER NAME
+# slider name set by the instancing scene
+godot/src/ui/components/atoms/controls/custom_slider/custom_slider.tscn	CUSTOM SLIDER NAME
+# design placeholder
+godot/src/ui/components/atoms/controls/marquee_label/marquee_label.tscn	Marquee Label
+# design placeholder
+godot/src/ui/components/atoms/inputs/dcl_line_edit.tscn	Error example
+# design placeholder
+godot/src/ui/components/atoms/inputs/dcl_line_edit.tscn	Hint
+# dummy text
+godot/src/ui/components/atoms/inputs/line_edit_custom/line_edit_custom.tscn	Casa
+# runtime composes this at credits_history_item.gd:14
+godot/src/ui/components/molecules/credits_history_item/credits_history_item.tscn	Purchased 10 CREDITS
+# item label supplied by add_item()
+godot/src/ui/components/molecules/dropdown_list/dropdown_item.tscn	Name
+# @export var title, set per instance
+godot/src/ui/components/molecules/dropdown_list/dropdown_list.tscn	Title
+# dummy text
+godot/src/ui/components/molecules/faq_collapsable/faq_collapsable.tscn	ASD
+# dummy text
+godot/src/ui/components/molecules/faq_collapsable/faq_collapsable.tscn	asdasdasdasdasd
+# dummy avatar name
+godot/src/ui/components/molecules/label_avatar_name/label_avatar_name.tscn	Kiko
+# tooltip text set at runtime
+godot/src/ui/components/molecules/pointer_tooltip/tooltip_label.tscn	Text
+# ellipsis-test dummy
+godot/src/ui/components/molecules/snap_carousel/snap_carousel_card.tscn	Experience Name 2 lines example elipsis name 
+# unused component, no callers
+godot/src/ui/components/organisms/dialogs/confirm_dialog.tscn	Description
+# unused component, no callers
+godot/src/ui/components/organisms/dialogs/confirm_dialog.tscn	Title
+# runtime sets via set_text("Tabs: %d")
+godot/src/ui/components/organisms/dialogs/dialog_stack.tscn	Tabs: 5
+# dummy body copy
+godot/src/ui/components/organisms/dialogs/nft_dialog.tscn	Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.
+# runtime composes "Credits x%d"
+godot/src/ui/components/organisms/iap_purchase_success_modal/iap_purchase_success_modal.tscn	Credits x0
+# place name supplied at runtime
+godot/src/ui/components/organisms/jump_in_popup/jump_in_popup.tscn	Scene Title
+# creator name supplied at runtime
+godot/src/ui/components/organisms/jump_in_popup/jump_in_popup.tscn	creator
+# generic modal template, set by caller
+godot/src/ui/components/organisms/modal/modal.tscn	Checkbox Text
+# generic modal template, set by caller
+godot/src/ui/components/organisms/modal/modal.tscn	PRIMARY
+# generic modal template, set by caller
+godot/src/ui/components/organisms/modal/modal.tscn	SECONDARY
+# width-sizing filler
+godot/src/ui/components/organisms/modal/modal.tscn	wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww
+# creator name supplied at runtime
+godot/src/ui/components/organisms/modal/travel_modal.tscn	Creator
+# place name supplied at runtime
+godot/src/ui/components/organisms/modal/travel_modal.tscn	Place Name
+# overwritten at alert_toast.gd:36
+godot/src/ui/components/organisms/notifications/alert_toast.tscn	Description
+# runtime composes the count
+godot/src/ui/components/organisms/social/mutual_friends.tscn	# Mutual
+# dummy URL
+godot/src/ui/components/organisms/url_popup/url_popup.tscn	www.test.com
+
+
+# ---- Phase 3: in-game menus ----
+
+# dummy emote name
+godot/src/ui/pages/backpack/emote_name.tscn	Emote nameeeeee
+# design placeholder (sic)
+godot/src/ui/pages/discover/carrousel/discover_carrousel.tscn	Section Tittle
+# place name supplied at runtime
+godot/src/ui/pages/discover/carrousel/place_discover_card.tscn	Scene Title
+# category supplied at runtime
+godot/src/ui/pages/discover/categories/category_tag.tscn	ART
+# countdown composed at runtime
+godot/src/ui/pages/discover/event_pills_bar/event_pills_bar.tscn	IN 35 MINS
+# design placeholder; the shipped label is LIVE from the .gd
+godot/src/ui/pages/discover/event_pills_bar/event_pills_bar.tscn	live
+# dummy
+godot/src/ui/pages/discover/friends/friend_discover_card.tscn	Experience Name...
+# dummy
+godot/src/ui/pages/discover/friends/friend_discover_card.tscn	User p name
+# dummy place name
+godot/src/ui/pages/discover/friends/panel_friend_detail_portrait.tscn	Meta Residence Tower 
+# dummy user name
+godot/src/ui/pages/discover/friends/panel_friend_detail_portrait.tscn	Namemracte
+# dummy creator name
+godot/src/ui/pages/discover/jump_in/panel_jump_in_portrait.tscn	Lazaro
+# dummy place name
+godot/src/ui/pages/discover/jump_in/panel_jump_in_portrait.tscn	Scene Title Scene 
+# dummy long-title overflow test
+godot/src/ui/pages/discover/jump_in/panel_jump_in_portrait.tscn	🧉 Chiri Storytelling Community 🍕🧉 Chiri Storytelling Community 🍕🧉 Chiri Storytelling Community 🍕🧉 Chiri Storytelling Community 🍕🧉 Chiri Storytelling Community 🍕🧉 Chiri Storytelling Community 🍕🧉 Chiri Storytelling Community 🍕🧉 Chiri Storytelling Community 🍕🧉 Chiri Storytelling Community 🍕🧉 Chiri Storytelling Community 🍕🧉 Chiri Storytelling Community 🍕🧉 Chiri Storytelling Community 🍕🧉 Chiri Storytelling Community 🍕🧉 Chiri Storytelling Community 🍕🧉 Chiri Storytelling Community 🍕🧉 Chiri Storytelling Community 🍕🧉 Chiri Storytelling Community 🍕🧉 Chiri Storytelling Community 🍕🧉 Chiri Storytelling Community 🍕🧉 Chiri Storytelling Community 🍕🧉 Chiri Storytelling Community 🍕
+# keyword supplied at runtime
+godot/src/ui/pages/discover/search_keyword.tscn	label
+# duration formatted at runtime (Phase 5)
+godot/src/ui/pages/events/event_details_portrait.tscn	1 Hr
+# dummy event name
+godot/src/ui/pages/events/event_details_portrait.tscn	DCL Japan Lab beta
+# dummy creator name
+godot/src/ui/pages/events/event_details_portrait.tscn	Lazaro
+# dummy place name
+godot/src/ui/pages/events/event_details_portrait.tscn	Scene Title Scene 
+# dummy long-title overflow test
+godot/src/ui/pages/events/event_details_portrait.tscn	🧉 Chiri Storytelling Community 🍕🧉 Chiri Storytelling Community 🍕🧉 Chiri Storytelling Community 🍕🧉 Chiri Storytelling Community 🍕🧉 Chiri Storytelling Community 🍕🧉 Chiri Storytelling Community 🍕🧉 Chiri Storytelling Community 🍕🧉 Chiri Storytelling Community 🍕🧉 Chiri Storytelling Community 🍕🧉 Chiri Storytelling Community 🍕🧉 Chiri Storytelling Community 🍕🧉 Chiri Storytelling Community 🍕🧉 Chiri Storytelling Community 🍕🧉 Chiri Storytelling Community 🍕🧉 Chiri Storytelling Community 🍕🧉 Chiri Storytelling Community 🍕🧉 Chiri Storytelling Community 🍕🧉 Chiri Storytelling Community 🍕🧉 Chiri Storytelling Community 🍕🧉 Chiri Storytelling Community 🍕🧉 
+# dummy creator name
+godot/src/ui/pages/events/event_discover_card.tscn	Lazaro
+# dummy place name
+godot/src/ui/pages/events/event_discover_card.tscn	Scene Title Scene 
+# design placeholder, literally "Message"
+godot/src/ui/pages/friends/friends_panel.tscn	No Blocked Accounts Message
+# design placeholder, literally "Message"
+godot/src/ui/pages/friends/friends_panel.tscn	No Friends Yet Message
+# count composed at friends_panel.gd:313
+godot/src/ui/pages/friends/friends_panel.tscn	OFFLINE (0)
+# count composed at friends_panel.gd:319
+godot/src/ui/pages/friends/friends_panel.tscn	ONLINE (0)
+# count composed at friends_panel.gd:307
+godot/src/ui/pages/friends/friends_panel.tscn	REQUESTS (0)
+# field label supplied by the caller
+godot/src/ui/pages/profile/about_data.tscn	Title
+# field value supplied by the caller
+godot/src/ui/pages/profile/about_data.tscn	Value
+# dummy wallet address
+godot/src/ui/pages/profile/profile.tscn	0x4e1...1c13B
+# field value supplied by the caller
+godot/src/ui/pages/profile/profile_field_option.tscn	Value
+# field label supplied by the caller
+godot/src/ui/pages/profile/profile_field_option.tscn	title
+# field label supplied by the caller
+godot/src/ui/pages/profile/profile_field_text.tscn	Title
+# link label supplied at runtime
+godot/src/ui/pages/profile/profile_link_button.tscn	LINK LABEL
+# dummy wallet address
+godot/src/ui/pages/profile/profile_portrait_content.tscn	0x4e1...1c13B
+# dummy section title
+godot/src/ui/pages/settings/section_title.tscn	Section asdAsd
+# cache size computed at runtime
+godot/src/ui/pages/settings/settings.gd	0 MB
+# cache size computed at settings.gd:423
+godot/src/ui/pages/settings/settings.tscn	0.5 GB
+# slider title supplied by the instancing scene
+godot/src/ui/pages/settings/slider.tscn	General
+# button label supplied by the caller
+godot/src/ui/pages/settings/underlined_button.tscn	Text
+
+# ---- Phase 3: HUD placeholders ----
+
+# Overwritten at explorer.gd:1117, which composes "- <n> FPS" at runtime.
+godot/src/ui/explorer.tscn	FPS
+
+# Overwritten at explorer.gd:155 by DclGlobal.get_version_with_env().
+godot/src/ui/explorer.tscn	v0.1.0-alpha-abcd1f
+
+# ---- Phase 4: pure markup and pure number formatting ----
+# These carry no prose: nothing in them differs between languages, so a key would give a
+# translator an empty decision. Numeric *units* and percent spacing DO vary by locale, but those
+# sites are tracked for Phase 5 rather than exempted here.
+
+# Coordinate formatting, no prose.
+godot/src/ui/components/atoms/buttons/mini_map_button/mini_map_button.gd	%d,%d
+godot/src/ui/components/molecules/place_item/place_item.gd	%s, %s
+godot/src/ui/components/molecules/place_item/place_item.gd	(%s,%s)
+
+# A bare number rendered into a label.
+godot/src/ui/components/molecules/wearable_item/wearable_item.gd	%d
+godot/src/ui/pages/discover/friends/friends_generator.gd	%d
+
+# Bold-wrapping markup around a runtime value; the value itself is data, not copy.
+godot/src/ui/components/organisms/notifications/notification_content.gd	[b]
+godot/src/ui/components/organisms/notifications/notification_item.gd	[b]
+
+# Design-time placeholder; overwritten at notification_item.gd:45 with the real timestamp.
+godot/src/ui/components/organisms/notifications/notification_item.tscn	[b]5m ago[/b]
+
+# ---- Step 3: coordinate and counter formatting ----
+# Positional formatting only: the translated part is the %s that gets substituted in, and the
+# parenthesis/comma layout is not language-dependent.
+
+# Parcel coordinates.
+godot/src/ui/pages/discover/friends/friends_generator.gd	%d, %d
+godot/src/ui/pages/settings/settings.gd	%s (%d, %d)
+
+# A translated label followed by its count; the label itself is already keyed.
+godot/src/ui/pages/friends/friends_panel.gd	%s (%d)
+godot/src/ui/pages/friends/friends_panel.gd	%s (99+)

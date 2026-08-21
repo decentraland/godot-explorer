@@ -69,7 +69,7 @@ alignment = 1
 [node name="Equiped" type="Label" parent="EquippedNotification/HBoxContainer" unique_id=810861956]
 custom_minimum_size = Vector2(0, 56)
 layout_mode = 2
-text = "Equipped"
+text = "BACKPACK_EQUIPPED"
 label_settings = SubResource("LabelSettings_k5k0a")
 horizontal_alignment = 1
 vertical_alignment = 1

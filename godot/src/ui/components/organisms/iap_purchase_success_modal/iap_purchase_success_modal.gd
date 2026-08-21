@@ -25,7 +25,7 @@ func _ready() -> void:
 
 func _apply_credits() -> void:
 	if _credits_label != null:
-		_credits_label.text = "Credits x%d" % _pending_credits
+		_credits_label.text = tr("CREDITS_QUANTITY") % _pending_credits
 
 
 func _on_backdrop_gui_input(_event: InputEvent) -> void:

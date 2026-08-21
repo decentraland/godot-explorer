@@ -45,21 +45,21 @@ func async_load_place_position():
 
 	if json.data.is_empty():
 		label_creator.show()
-		label_creator.text = "Created by Unknown"
-		label_title.text = "Empty parcel"
+		label_creator.text = tr("JUMP_IN_POPUP_CREATED_BY_UNKNOWN")
+		label_title.text = tr("COMMON_EMPTY_PARCEL")
 		texture_rect.texture = texture_placeholder
 	else:
 		var creator = json.data[0].get("contact_name", "Unknown")
 		if creator != "Unknown" and creator:
 			label_creator.show()
-			label_creator.text = "Created by " + creator
+			label_creator.text = tr("JUMP_IN_POPUP_CREATED_BY") + creator
 		else:
 			label_creator.hide()
 		var title = json.data[0].get("title", "interactive-text")
 		if title != "interactive-text":
 			label_title.text = title
 		else:
-			label_title.text = "Unknown Place"
+			label_title.text = tr("COMMON_UNKNOWN_PLACE")
 		var image_url = json.data[0].get("image", "")
 		_async_download_image(image_url)
 	show()

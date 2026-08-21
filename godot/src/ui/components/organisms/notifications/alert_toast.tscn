@@ -78,7 +78,7 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 20)
 layout_mode = 2
 size_flags_vertical = 3
-text = "Poor Connection"
+text = "NOTIFICATIONS_POOR_CONNECTION"
 label_settings = SubResource("LabelSettings_1v63a")
 vertical_alignment = 1
 

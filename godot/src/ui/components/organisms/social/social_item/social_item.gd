@@ -433,13 +433,13 @@ func _async_fetch_place_data() -> void:
 
 	if result is PromiseError:
 		printerr("Error fetching place data: ", result.get_error())
-		label_place.text = "Unknown Location"
+		label_place.text = tr("SOCIAL_ITEM_UNKNOWN_LOCATION")
 		return
 
 	var json: Dictionary = result.get_string_response_as_json()
 
 	if json.data.is_empty():
-		label_place.text = "Empty parcel"
+		label_place.text = tr("COMMON_EMPTY_PARCEL")
 		# Add to known_locations even if empty to avoid refetching
 		var location_entry = {"coord": parcel.duplicate(), "title": "Empty parcel"}
 		Global.locations.known_locations.append(location_entry)
@@ -621,10 +621,10 @@ func _update_jump_button_visibility() -> void:
 							break
 
 		if not found_location:
-			label_place.text = "Somewhere"
+			label_place.text = tr("SOCIAL_ITEM_SOMEWHERE")
 			_async_fetch_place_data()
 	else:
-		label_place.text = "Somewhere"
+		label_place.text = tr("SOCIAL_ITEM_SOMEWHERE")
 		button_jump.hide()
 		parcel.clear()
 

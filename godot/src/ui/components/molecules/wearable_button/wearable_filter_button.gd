@@ -57,14 +57,18 @@ func _update_category_icon():
 
 
 func _update_category_text():
-	var category_text = type_to_text(filter_category)
-	if category_text != "":
+	# type_to_text() returns a translation key, so uppercasing happens on the *translation*.
+	# Kept because `uppercase` is a per-instance styling flag, but note it is a display transform
+	# on translated text: a locale that should not be shouted needs a styling fix, not a to_upper.
+	var category_key = type_to_text(filter_category)
+	if category_key != "":
+		var category_text := tr(category_key)
 		if uppercase:
 			self.text = category_text.to_upper()
 		else:
 			self.text = category_text
 	else:
-		self.text = "Unknown"
+		self.text = tr("WEARABLE_BUTTON_UNKNOWN")
 
 
 func _ready():
@@ -134,64 +138,65 @@ func type_to_category(category_enum: WearableCategoryEnum) -> String:
 	return result
 
 
+# i18n-keys: WEARABLE_CATEGORY_*
 func type_to_text(category_enum: WearableCategoryEnum) -> String:
-	var text := "Unknown"
+	var text := "WEARABLE_BUTTON_UNKNOWN"
 	match category_enum:
 		WearableCategoryEnum.ALL:
-			text = "All"
+			text = "WEARABLE_CATEGORY_ALL"
 		WearableCategoryEnum.BODY:
-			text = "Body"
+			text = "WEARABLE_CATEGORY_BODY"
 		WearableCategoryEnum.HEAD:
-			text = "Head"
+			text = "WEARABLE_CATEGORY_HEAD"
 		#WearableCategoryEnum.CHEST:
 		#	text = "Chest"
 		#WearableCategoryEnum.LEGS:
 		#	text = "Legs"
 		WearableCategoryEnum.HAIR:
-			text = "Hair"
+			text = "WEARABLE_CATEGORY_HAIR"
 		WearableCategoryEnum.EYEBROWS:
-			text = "Eyebrows"
+			text = "WEARABLE_CATEGORY_EYEBROWS"
 		WearableCategoryEnum.EYES:
-			text = "Eyes"
+			text = "WEARABLE_CATEGORY_EYES"
 		WearableCategoryEnum.MOUTH:
-			text = "Mouth"
+			text = "WEARABLE_CATEGORY_MOUTH"
 		WearableCategoryEnum.FACIAL_HAIR:
-			text = "Facial Hair"
+			text = "WEARABLE_CATEGORY_FACIAL_HAIR"
 		WearableCategoryEnum.UPPER_BODY:
-			text = "Chest"  #"Upper Body"
+			text = "WEARABLE_CATEGORY_CHEST"  #"Upper Body"
 		WearableCategoryEnum.HANDWEAR:
-			text = "Hands"
+			text = "WEARABLE_CATEGORY_HANDS"
 		WearableCategoryEnum.LOWER_BODY:
-			text = "Legs"  #"Lower Body"
+			text = "WEARABLE_CATEGORY_LEGS"  #"Lower Body"
 		WearableCategoryEnum.FEET:
-			text = "Feet"  #"Footwear"
+			text = "WEARABLE_CATEGORY_FEET"  #"Footwear"
 		WearableCategoryEnum.HAT:
-			text = "Hats"
+			text = "WEARABLE_CATEGORY_HATS"
 		WearableCategoryEnum.EYEWEAR:
-			text = "Glasses"
+			text = "WEARABLE_CATEGORY_GLASSES"
 		WearableCategoryEnum.EARRING:
-			text = "Earrings"
+			text = "WEARABLE_CATEGORY_EARRINGS"
 		WearableCategoryEnum.MASK:
-			text = "Masks"
+			text = "WEARABLE_CATEGORY_MASKS"
 		WearableCategoryEnum.TIARA:
-			text = "Tiaras"
+			text = "WEARABLE_CATEGORY_TIARAS"
 		WearableCategoryEnum.TOP_HEAD:
-			text = "Top Head"
+			text = "WEARABLE_CATEGORY_TOP_HEAD"
 		WearableCategoryEnum.HELMET:
-			text = "Helmets"
+			text = "WEARABLE_CATEGORY_HELMETS"
 		WearableCategoryEnum.SKIN:
-			text = "Skin"
+			text = "WEARABLE_CATEGORY_SKIN"
 		WearableCategoryEnum.BODY_SHAPE:
-			text = "Shape"
+			text = "WEARABLE_CATEGORY_SHAPE"
 
 		WearableCategoryEnum.FACE:
-			text = "Face"
+			text = "WEARABLE_CATEGORY_FACE"
 		WearableCategoryEnum.CLOTHING:
-			text = "Clothing"
+			text = "WEARABLE_CATEGORY_CLOTHING"
 		WearableCategoryEnum.EXTRAS:
-			text = "Extras"
+			text = "WEARABLE_CATEGORY_EXTRAS"
 		WearableCategoryEnum.ALL_EXTRAS:
-			text = "All"
+			text = "WEARABLE_CATEGORY_ALL"
 	return text
 
 
@@ -200,3 +205,10 @@ func _on_toggled(_button_pressed):
 		filter_type.emit(type_to_category(filter_category))
 	else:
 		clear_filter.emit()
+
+
+## The label is assigned from GDScript, so it does not re-translate itself the way a scene `text`
+## property does. These buttons persist across a locale change rather than being rebuilt on open.
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_TRANSLATION_CHANGED and is_node_ready():
+		_update_category_text()

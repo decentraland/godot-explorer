@@ -1,6 +1,10 @@
 class_name ProfileConstants
 extends Node
 
+# Resolved through TranslationServer.translate() from the tables below, so no tr("LITERAL")
+# scan can see them. Declared here instead; the glob also fails if a key is misspelt.
+# i18n-keys: PROFILE_*
+
 const COUNTRIES = [
 	"Afghanistan",
 	"Albania",
@@ -295,48 +299,86 @@ const LANGUAGES = [
 ]
 
 const GENDERS = [
-	"Female",
-	"Male",
-	"Transgender",
-	"Neutral",
-	"Non-Binary",
-	"Fluid",
-	"Agender",
-	"Pangender",
-	"Queer",
-	"Two-Spirit",
-	"Other"
+	{"id": "Female", "key": "PROFILE_GENDER_FEMALE"},
+	{"id": "Male", "key": "PROFILE_GENDER_MALE"},
+	{"id": "Transgender", "key": "PROFILE_GENDER_TRANSGENDER"},
+	{"id": "Neutral", "key": "PROFILE_GENDER_NEUTRAL"},
+	{"id": "Non-Binary", "key": "PROFILE_GENDER_NON_BINARY"},
+	{"id": "Fluid", "key": "PROFILE_GENDER_FLUID"},
+	{"id": "Agender", "key": "PROFILE_GENDER_AGENDER"},
+	{"id": "Pangender", "key": "PROFILE_GENDER_PANGENDER"},
+	{"id": "Queer", "key": "PROFILE_GENDER_QUEER"},
+	{"id": "Two-Spirit", "key": "PROFILE_GENDER_TWO_SPIRIT"},
+	{"id": "Other", "key": "PROFILE_GENDER_OTHER"},
 ]
 
 const SEXUAL_ORIENTATIONS = [
-	"Heterosexual",
-	"Bisexual",
-	"Lesbian",
-	"Gay",
-	"Asexual",
-	"Queer",
-	"Polysexual",
-	"Pansexual",
-	"Other"
+	{"id": "Heterosexual", "key": "PROFILE_ORIENTATION_HETEROSEXUAL"},
+	{"id": "Bisexual", "key": "PROFILE_ORIENTATION_BISEXUAL"},
+	{"id": "Lesbian", "key": "PROFILE_ORIENTATION_LESBIAN"},
+	{"id": "Gay", "key": "PROFILE_ORIENTATION_GAY"},
+	{"id": "Asexual", "key": "PROFILE_ORIENTATION_ASEXUAL"},
+	{"id": "Queer", "key": "PROFILE_ORIENTATION_QUEER"},
+	{"id": "Polysexual", "key": "PROFILE_ORIENTATION_POLYSEXUAL"},
+	{"id": "Pansexual", "key": "PROFILE_ORIENTATION_PANSEXUAL"},
+	{"id": "Other", "key": "PROFILE_ORIENTATION_OTHER"},
 ]
 
 const PRONOUNS = [
-	"He / Him", "She / Her", "They / Them", "Ze / Zir", "Xe / Xem", "Ze / Hir", "Per / Per", "Other"
+	{"id": "He / Him", "key": "PROFILE_PRONOUN_HE_HIM"},
+	{"id": "She / Her", "key": "PROFILE_PRONOUN_SHE_HER"},
+	{"id": "They / Them", "key": "PROFILE_PRONOUN_THEY_THEM"},
+	{"id": "Ze / Zir", "key": "PROFILE_PRONOUN_ZE_ZIR"},
+	{"id": "Xe / Xem", "key": "PROFILE_PRONOUN_XE_XEM"},
+	{"id": "Ze / Hir", "key": "PROFILE_PRONOUN_ZE_HIR"},
+	{"id": "Per / Per", "key": "PROFILE_PRONOUN_PER_PER"},
+	{"id": "Other", "key": "PROFILE_PRONOUN_OTHER"},
 ]
 
 const RELATIONSHIP_STATUS = [
-	"Single",
-	"In a relationship",
-	"Engaged",
-	"Married",
-	"It's complicated",
-	"In an open relationship",
-	"Widowed",
-	"Separated",
-	"Divorced",
-	"Other"
+	{"id": "Single", "key": "PROFILE_RELATIONSHIP_SINGLE"},
+	{"id": "In a relationship", "key": "PROFILE_RELATIONSHIP_IN_A_RELATIONSHIP"},
+	{"id": "Engaged", "key": "PROFILE_RELATIONSHIP_ENGAGED"},
+	{"id": "Married", "key": "PROFILE_RELATIONSHIP_MARRIED"},
+	{"id": "It's complicated", "key": "PROFILE_RELATIONSHIP_IT_S_COMPLICATED"},
+	{"id": "In an open relationship", "key": "PROFILE_RELATIONSHIP_IN_AN_OPEN_RELATIONSHIP"},
+	{"id": "Widowed", "key": "PROFILE_RELATIONSHIP_WIDOWED"},
+	{"id": "Separated", "key": "PROFILE_RELATIONSHIP_SEPARATED"},
+	{"id": "Divorced", "key": "PROFILE_RELATIONSHIP_DIVORCED"},
+	{"id": "Other", "key": "PROFILE_RELATIONSHIP_OTHER"},
 ]
 
 const EMPLOYMENT_STATUS = [
 	"Studying", "Working", "Chilling", "Looking for a job", "Home/Family", "Retired", "Other"
 ]
+
+## Which option table backs each profile field.
+const FIELD_OPTIONS := {
+	"pronouns": PRONOUNS,
+	"gender": GENDERS,
+	"sexual_orientation": SEXUAL_ORIENTATIONS,
+	"relationship": RELATIONSHIP_STATUS,
+}
+
+
+## Display label for a stored option value.
+##
+## The "id" of each option is a STABLE ID, not copy: profile_editor writes it straight into the
+## published profile via set_gender() / set_pronouns() and other clients read it back, so it must
+## never be translated. Each option carries its own "key" instead, which is what gets shown.
+##
+## id and key live in the same entry deliberately — a separate lookup table can drift out of step
+## with the array, and the failure is silent (the label falls back to raw English).
+##
+## Keys are per field because "Other" appears in all four tables and "Queer" in two, and they
+## inflect differently by category in ES/PT. Unknown values pass through unchanged, so a value
+## written by a newer client still displays rather than vanishing.
+static func display_name(field: String, value: String) -> String:
+	if value.is_empty():
+		return ""
+	for option in FIELD_OPTIONS.get(field, []):
+		if option["id"] == value:
+			# TranslationServer.translate() rather than tr(): tr() is a non-static Object method
+			# and cannot be called from a static function.
+			return TranslationServer.translate(option["key"])
+	return value
