@@ -413,6 +413,10 @@ func _apply_zoom_level() -> void:
 		if _camera_mode_tween and _camera_mode_tween.is_running():
 			_camera_mode_tween.kill()
 		mount_camera.spring_length = _zoom_level
+		# The killed tween was also animating the over-shoulder lateral offset; keep
+		# it pinned so a pinch that crosses into third person doesn't leave the avatar
+		# centered (the offset animation would otherwise be cut short).
+		camera_collision_clamp.lateral_offset = CameraRigHelpers.THIRD_PERSON_CAMERA.x
 
 
 # Reset the pinch zoom back to the default third-person view (issue #2636).
@@ -429,6 +433,7 @@ func _reset_zoom_to_default() -> void:
 		if _camera_mode_tween and _camera_mode_tween.is_running():
 			_camera_mode_tween.kill()
 		mount_camera.spring_length = _zoom_level
+		camera_collision_clamp.lateral_offset = CameraRigHelpers.THIRD_PERSON_CAMERA.x
 
 
 func _physics_process(dt: float) -> void:

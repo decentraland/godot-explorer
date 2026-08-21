@@ -9,29 +9,18 @@ enum AdoptedMode { NONE, CAMERA, JOYSTICK }
 const HORIZONTAL_SENS: float = 0.5
 const VERTICAL_SENS: float = 0.5
 
-# --- Full-screen pinch recognizer (issue #2636 follow-up) --------------------
-# Two-finger pinch is recognized GLOBALLY (from _input, which sees every touch
-# regardless of which control is under it) so it works over the whole screen —
-# including the joystick's dynamic active area (the whole left third), where the
-# gui_input path never sees the finger because the joystick consumes it.
+# --- Pinch-to-zoom recognizer (issue #2636 follow-up) ------------------------
+# Roblox model: pinch belongs to the CAMERA area only — the joystick's active rect
+# is movement (walk + its own second-finger look), so a touch there is never a
+# pinch candidate. That alone kills the walk-left + look-right false positive (the
+# walk finger simply isn't eligible), so no reach/clampzone heuristic is needed.
+# Both candidate fingers live in the camera area; the pinch and the joystick run
+# independently (you can walk and zoom at once).
 #
-# To avoid stealing legitimate concurrent gestures, a pinch only COMMITS when all
-# three hold for the two candidate fingers:
-#   1. both fingers moved (rejects joystick-walk + button-TAP: the tap is static);
-#   2. the finger spread crossed a threshold (ignores incidental jitter);
-#   3. most of that motion is AXIAL-opposing — the fingers move along the line
-#      between them, apart or together (rejects walk + look, whose two fingers
-#      move in unrelated directions).
-# Only on commit does it take over: it cancels the joystick (so the avatar stops
-# the instant the pinch wins) and stops the single-finger look. Until then every
-# touch flows normally, so walk / look / button taps are untouched.
-const PINCH_MIN_FINGER_MOVE: float = 8.0
-const PINCH_COMMIT_SPREAD: float = 20.0
-const PINCH_AXIAL_FRACTION: float = 0.6
-# A pinch finger that started over the joystick's active area must travel this far
-# before it counts — past the joystick clampzone (~75px), where a walk tilt
-# settles. Below it, the finger is treated as walking, not pinching.
-const PINCH_JOYSTICK_MIN_TRAVEL: float = 90.0
+# With no competing gesture in the camera area, a pinch is simply the finger spread
+# changing past this threshold — no "both fingers must move" / axial gate (those were
+# anti-walk+look heuristics, now moot), so a thumb-anchored or angled pinch is caught.
+const PINCH_COMMIT_SPREAD: float = 16.0
 
 var _player: Player = null
 var _chat_panel: Control = null
@@ -41,6 +30,11 @@ var _joystick: VirtualJoystick = null
 # finger over the joystick / a button / scene UI never looks. Independent from the
 # global pinch tracking below.
 var _look_index: int = -1
+# Roblox-style: a SECOND finger INSIDE the joystick's active area drives the camera
+# (the thumbstick keeps only its first finger). The joystick ignores extra touches
+# and its STOP filter eats them from gui_input, so this look is driven from the
+# global _input where the touch is still visible.
+var _js_look_index: int = -1
 
 # Every active touch (index → position), tracked in _input so pinch recognition
 # is independent of what UI owns each finger.
@@ -84,6 +78,7 @@ func _notification(what: int) -> void:
 	if what == NOTIFICATION_APPLICATION_FOCUS_OUT:
 		_touches.clear()
 		_look_index = -1
+		_js_look_index = -1
 		if _pinch_active:
 			_end_pinch()
 
@@ -122,6 +117,8 @@ func _input(event: InputEvent) -> void:
 				_pinch_active and (event.index == _pinch_a or event.index == _pinch_b)
 			)
 			_touches.erase(event.index)
+			if event.index == _js_look_index:
+				_js_look_index = -1
 			_on_touch_count_changed()
 			# Swallow a pinch finger's release so gui_input doesn't read it as a look end.
 			if was_pinch_finger:
@@ -132,31 +129,51 @@ func _input(event: InputEvent) -> void:
 			if event.index == _pinch_a or event.index == _pinch_b:
 				_update_pinch()
 				get_viewport().set_input_as_handled()
-		elif _touches.size() >= 2:
+			return
+		if _pinch_a != -1 and _pinch_b != -1:
 			_try_recognize_pinch()
 			if _pinch_active:
 				get_viewport().set_input_as_handled()
+				return
+		_drive_joystick_area_look(event)
 
 
 # (Re)establish the candidate pair when the touch count changes; end the pinch
 # when it drops below two.
 func _on_touch_count_changed() -> void:
-	if _touches.size() < 2:
+	# Only camera-area touches are pinch candidates — the joystick rect is movement.
+	var cam: Array = _camera_area_touch_indices()
+	if cam.size() < 2:
 		if _pinch_active:
 			_end_pinch()
+		else:
+			_pinch_a = -1
+			_pinch_b = -1
 		return
 	if not _pinch_active:
-		_seed_pinch_candidate()
+		_seed_pinch_candidate(cam)
 	elif not _touches.has(_pinch_a) or not _touches.has(_pinch_b):
-		# A committed pinch finger lifted but two others remain: re-seat onto the
-		# survivors so the gesture keeps going instead of stranding.
-		_reseat_pinch()
+		# A committed pinch finger lifted but two camera-area ones remain: re-seat
+		# onto the survivors so the gesture keeps going instead of stranding.
+		_reseat_pinch(cam)
 
 
-func _seed_pinch_candidate() -> void:
-	var indices: Array = _touches.keys()
-	_pinch_a = indices[0]
-	_pinch_b = indices[1]
+func _in_joystick_area(pos: Vector2) -> bool:
+	return _joystick != null and _joystick.get_active_area_global_rect().has_point(pos)
+
+
+# Touch indices in the camera area (everywhere except the joystick's active rect).
+func _camera_area_touch_indices() -> Array:
+	var out: Array = []
+	for idx in _touches:
+		if not _in_joystick_area(_touches[idx]):
+			out.append(idx)
+	return out
+
+
+func _seed_pinch_candidate(cam: Array) -> void:
+	_pinch_a = cam[0]
+	_pinch_b = cam[1]
 	_pinch_start_a = _touches[_pinch_a]
 	_pinch_start_b = _touches[_pinch_b]
 	_pinch_prev_distance = _pinch_start_a.distance_to(_pinch_start_b)
@@ -167,57 +184,44 @@ func _try_recognize_pinch() -> void:
 		return
 	var a: Vector2 = _touches[_pinch_a]
 	var b: Vector2 = _touches[_pinch_b]
-	var move_a: float = a.distance_to(_pinch_start_a)
-	var move_b: float = b.distance_to(_pinch_start_b)
-	# 1. Each finger must move past its threshold. A static finger (a button tap)
-	# is never a pinch. A finger that started over the joystick's active area must
-	# travel PAST the joystick clampzone: walk-left + look-right is geometrically
-	# a pinch-out (fingers spreading), and the one thing that separates a walk from
-	# a pinch is reach — a walk tilt settles inside the clampzone (pushing further
-	# does nothing), only a deliberate pinch spread exceeds it. This lets the pinch
-	# work over the joystick (true full-screen) without walk+look hijacking a zoom.
-	if move_a < _finger_pinch_threshold(_pinch_start_a):
-		return
-	if move_b < _finger_pinch_threshold(_pinch_start_b):
-		return
-	var axis: Vector2 = _pinch_start_b - _pinch_start_a
-	if axis.length() < 1.0:
-		return
-	axis = axis.normalized()
-	# Positive = fingers spreading apart along their axis, negative = closing.
-	var axial_spread: float = (b - _pinch_start_b).dot(axis) - (a - _pinch_start_a).dot(axis)
-	# 2. Spread must cross the threshold.
-	if absf(axial_spread) < PINCH_COMMIT_SPREAD:
-		return
-	# 3. Most of the motion must be axial-opposing — rejects walk + look, whose
-	# fingers move in unrelated directions (low axial fraction of total travel).
-	if absf(axial_spread) < PINCH_AXIAL_FRACTION * (move_a + move_b):
-		return
-	_commit_pinch(a, b)
+	# The finger spread must change past the threshold from where the pair formed.
+	var start_distance: float = _pinch_start_a.distance_to(_pinch_start_b)
+	var distance: float = a.distance_to(b)
+	if absf(distance - start_distance) >= PINCH_COMMIT_SPREAD:
+		_commit_pinch(a, b)
 
 
-## Minimum travel for a finger to count toward a pinch. A finger that started over
-## the joystick's active area must exceed the clampzone (a walk tilt settles inside
-## it); anywhere else the small default applies.
-func _finger_pinch_threshold(start_pos: Vector2) -> float:
-	if _joystick != null and _joystick.get_active_area_global_rect().has_point(start_pos):
-		return PINCH_JOYSTICK_MIN_TRAVEL
-	return PINCH_MIN_FINGER_MOVE
+## Drive the camera from a second finger inside the joystick's active area. Latches
+## onto the first such finger (lazily, so a two-finger simultaneous touchdown still
+## catches it once the joystick has claimed its primary) and looks until it lifts or
+## a pinch takes over.
+func _drive_joystick_area_look(event: InputEventScreenDrag) -> void:
+	if _joystick == null or _player == null:
+		return
+	if _js_look_index == -1:
+		if (
+			_joystick.touch_index != -1
+			and event.index != _joystick.touch_index
+			and _joystick.get_active_area_global_rect().has_point(event.position)
+		):
+			_js_look_index = event.index
+	if event.index == _js_look_index:
+		_player.apply_look_delta(event.relative)
 
 
 func _commit_pinch(a: Vector2, b: Vector2) -> void:
 	_pinch_active = true
 	_pinch_prev_distance = a.distance_to(b)
-	# Take the two fingers away from whatever they were driving.
-	if _joystick:
-		_joystick.cancel_gesture()
+	# Both fingers are in the camera area (never the joystick's), so the walk keeps
+	# running — only the free single-finger look yields to the zoom.
 	_look_index = -1
+	_js_look_index = -1
 	if _player:
 		_player.begin_pinch_zoom()
 
 
-func _reseat_pinch() -> void:
-	var indices: Array = _touches.keys()
+func _reseat_pinch(cam: Array) -> void:
+	var indices: Array = cam
 	if indices.size() < 2:
 		return
 	_pinch_a = indices[0]

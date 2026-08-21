@@ -19,26 +19,6 @@ joystick_mode = 1
 visibility_mode = 1
 metadata/mobile_preview_orientation = "landscape"
 
-[node name="ActiveArea" type="Control" parent="." unique_id=1699828300]
-layout_mode = 1
-anchor_right = 0.352
-anchor_bottom = 1.0
-offset_right = 171.45801
-grow_horizontal = 2
-grow_vertical = 0
-script = ExtResource("2_gh23i")
-
-[node name="ColorRect" type="ColorRect" parent="ActiveArea" unique_id=297031327]
-visible = false
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-color = Color(1, 0, 1, 0.1764706)
-
 [node name="Dynamic" type="ColorRect" parent="." unique_id=1077449630]
 material = ExtResource("3_naunr")
 layout_mode = 1
@@ -54,5 +34,26 @@ color = Color(1, 1, 1, 0.47843137)
 [node name="SprintTimer" type="Timer" parent="." unique_id=427000184]
 unique_name_in_owner = true
 wait_time = 0.5
+
+[node name="ActiveArea" type="Control" parent="." unique_id=1699828300]
+layout_mode = 1
+anchor_top = 0.333
+anchor_right = 0.4
+anchor_bottom = 1.0
+grow_vertical = 0
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 2.0
+script = ExtResource("2_gh23i")
+
+[node name="ColorRect" type="ColorRect" parent="ActiveArea" unique_id=297031327]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(1, 0, 1, 0.1764706)
 
 [connection signal="resized" from="." to="." method="_on_resized"]

@@ -120,13 +120,14 @@ func _on_gui_input(event: InputEvent) -> void:
 				Global.explorer_grab_focus()
 			if touch_index != -1:
 				return
-			if joystick_mode == JoystickMode.FIXED and not _is_point_inside_base(event.position):
+			var pos: Vector2 = _to_render_space(event.position)
+			if joystick_mode == JoystickMode.FIXED and not _is_point_inside_base(pos):
 				return
 			if joystick_mode == JoystickMode.DYNAMIC:
-				_move_base(event.position)
+				_move_base(pos)
 				get_tree().create_timer(0.25).timeout.connect(_on_show_joystick_timer)
 			touch_index = event.index
-			_update_joystick(event.position)
+			_update_joystick(pos)
 			_consume_if_not_cinematic()
 		elif event.index == touch_index:
 			_reset()
@@ -137,8 +138,16 @@ func _on_gui_input(event: InputEvent) -> void:
 			_consume_if_not_cinematic()
 	elif event is InputEventScreenDrag:
 		if event.index == touch_index:
-			_update_joystick(event.position)
+			_update_joystick(_to_render_space(event.position))
 			_consume_if_not_cinematic()
+
+
+# gui_input positions are local to ActiveArea; the shader (on the full-screen
+# Dynamic sibling) draws in the joystick's own space. Now that ActiveArea is anchored
+# to a sub-rect (bottom-left), shift by its offset so the drawn joystick tracks the
+# finger instead of the screen edge.
+func _to_render_space(local_pos: Vector2) -> Vector2:
+	return local_pos + _active_area.position
 
 
 func _consume_if_not_cinematic() -> void:
@@ -169,20 +178,6 @@ func external_update(position: Vector2) -> void:
 
 func external_end() -> void:
 	if touch_index != EXTERNAL_TOUCH_INDEX:
-		return
-	_reset()
-	if _joystick_visible:
-		_dynamic_material.set_shader_parameter("state", 2)
-		_joystick_visible = false
-	emit_signal("stick_position", Vector2.ZERO)
-
-
-## Abort the active gesture (regular OR external) and release movement. Called by
-## MobileCameraInput when a two-finger pinch takes over a finger that was driving
-## the joystick — _reset() zeroes the output and releases the movement actions so
-## the avatar stops walking the instant the pinch wins.
-func cancel_gesture() -> void:
-	if touch_index == -1:
 		return
 	_reset()
 	if _joystick_visible:
