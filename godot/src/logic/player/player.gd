@@ -350,6 +350,23 @@ func apply_look_delta(relative: Vector2) -> void:
 ## two-finger pinch. apply() drives the third-person distance continuously and
 ## crosses into/out of first person; end() reports the analytics event.
 func begin_pinch_zoom() -> void:
+	# Self-heal any zoom↔mode desync before the gesture starts, so a stuck state
+	# (the QA "pinch stops responding, only Settings→POV toggle recovers it")
+	# can't persist across gestures: every pinch begins from a zoom level that is
+	# consistent with the actual camera mode. THIRD with a zoom parked in the
+	# first-person band (or vice versa) is exactly the state where _apply_zoom_level
+	# stops writing spring_length and the gesture reads as frozen.
+	var mode: Global.CameraMode = camera.get_camera_mode() as Global.CameraMode
+	if (
+		mode == Global.CameraMode.THIRD_PERSON
+		and _zoom_level < CameraRigHelpers.THIRD_PERSON_MIN_DISTANCE
+	):
+		_zoom_level = CameraRigHelpers.THIRD_PERSON_MIN_DISTANCE
+	elif (
+		mode == Global.CameraMode.FIRST_PERSON
+		and _zoom_level >= CameraRigHelpers.THIRD_PERSON_MIN_DISTANCE
+	):
+		_zoom_level = CameraRigHelpers.FIRST_PERSON_ZOOM_LEVEL
 	_pinch_start_zoom_level = _zoom_level
 
 

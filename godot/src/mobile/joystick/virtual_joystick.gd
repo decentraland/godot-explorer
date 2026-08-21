@@ -177,6 +177,20 @@ func external_end() -> void:
 	emit_signal("stick_position", Vector2.ZERO)
 
 
+## Abort the active gesture (regular OR external) and release movement. Called by
+## MobileCameraInput when a two-finger pinch takes over a finger that was driving
+## the joystick — _reset() zeroes the output and releases the movement actions so
+## the avatar stops walking the instant the pinch wins.
+func cancel_gesture() -> void:
+	if touch_index == -1:
+		return
+	_reset()
+	if _joystick_visible:
+		_dynamic_material.set_shader_parameter("state", 2)
+		_joystick_visible = false
+	emit_signal("stick_position", Vector2.ZERO)
+
+
 func get_active_area_global_rect() -> Rect2:
 	return _active_area.get_global_rect()
 
