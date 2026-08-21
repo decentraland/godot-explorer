@@ -409,9 +409,9 @@ func _on_h_slider_music_volume_value_changed(value):
 
 func _setup_language_dropdown() -> void:
 	# Only worth showing once there is something to choose between. SUPPORTED_LOCALES stays at
-	# ["en"] until a locale's catalogue is complete (see unity-explorer#270), so today this hides
-	# itself rather than offering a one-item list.
-	var supported := LocaleSettings.SUPPORTED_LOCALES
+	# ["en"] until a locale's catalogue is complete (see unity-explorer#270); debug builds also
+	# offer the QA pseudolocale, so the row appears there even before any translation exists.
+	var supported := LocaleSettings.selectable_locales()
 	if supported.size() < 2:
 		dropdown_list_language.hide()
 		return
@@ -421,15 +421,18 @@ func _setup_language_dropdown() -> void:
 
 
 func _populate_language_dropdown() -> void:
-	var supported := LocaleSettings.SUPPORTED_LOCALES
-	var current := LocaleSettings.resolve_locale()
+	var supported := LocaleSettings.selectable_locales()
+	# Not resolve_locale(): it deliberately maps the pseudolocale to "en", so reopening Settings
+	# would show "English" selected while pseudolocalization was still active.
+	var configured: String = Global.get_config().locale
+	var current: String = configured if configured in supported else LocaleSettings.resolve_locale()
 	for i in supported.size():
 		dropdown_list_language.add_item(LocaleSettings.get_display_name(supported[i]), i)
 	dropdown_list_language.select(maxi(supported.find(current), 0))
 
 
 func _on_dropdown_list_language_item_selected(index: int) -> void:
-	var supported := LocaleSettings.SUPPORTED_LOCALES
+	var supported := LocaleSettings.selectable_locales()
 	if index < 0 or index >= supported.size():
 		return
 	LocaleSettings.set_locale(supported[index])
@@ -456,7 +459,9 @@ func _update_current_cache_size():
 			{"size": LocaleFormat.number(current_size_mb, 1)}
 		))
 	else:
-		label_current_cache_value.text = "0 MB"
+		label_current_cache_value.text = (tr("SETTINGS_CACHE_SIZE_MB").format(
+			{"size": LocaleFormat.number(0, 1)}
+		))
 	progress_bar_current_cache_size.value = current_size_mb
 	button_clear_cache.disabled = current_size_mb == 0
 
@@ -1132,7 +1137,7 @@ func _notification(what: int) -> void:
 
 
 func _populate_language_dropdown_items() -> void:
-	if LocaleSettings.SUPPORTED_LOCALES.size() < 2:
+	if LocaleSettings.selectable_locales().size() < 2:
 		return
 	var previous := dropdown_list_language.selected
 	dropdown_list_language.clear()

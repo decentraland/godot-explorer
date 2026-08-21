@@ -4,10 +4,13 @@ extends ColorRect
 signal confirmed(value: String)
 signal cancelled
 
+# The consts below hold translation KEYS, not copy: a const cannot call tr() at parse
+# time, so callers resolve them (Control.text auto-translates).
+# i18n-keys: CODE_MODAL_*
 const RESEND_COOLDOWN_SEC: int = 90
-const _RESEND_PREFIX = "Didn't get an email? "
-const _RESEND_LINK_ACTIVE = "[u][color=#A0ABFF]Resend email[/color][/u]"
-const _RESEND_LINK_DIMMED = "[u][color=#A0ABFFB3]Resend email (%d:%02d)[/color][/u]"
+const _RESEND_PREFIX = "CODE_MODAL_RESEND_PREFIX"
+const _RESEND_LINK_ACTIVE = "CODE_MODAL_RESEND_LINK_ACTIVE"
+const _RESEND_LINK_DIMMED = "CODE_MODAL_RESEND_LINK_DIMMED"
 
 var _code_inputs: Array[LineEdit] = []
 var _hidden_input: LineEdit

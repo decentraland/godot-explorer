@@ -29,7 +29,7 @@ func _async_set_fav(toggled_on) -> void:
 		return
 
 	set_pressed_no_signal(toggled_on)
-	var button_text := "FAVORITE" if toggled_on else "UNFAVORITE"
+	var button_text := "FAVORITE" if toggled_on else tr("FAV_BUTTON_UNFAVORITE")
 	(
 		Global
 		. metrics

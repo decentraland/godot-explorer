@@ -31,6 +31,8 @@ import catalogue as cat  # noqa: E402
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 UI_ROOT = os.path.join(REPO_ROOT, "godot", "src", "ui")
+# Additional roots that render or declare UI text (locale_format.gd builds dates and numbers).
+EXTRA_ROOTS = [os.path.join(REPO_ROOT, "godot", "src", "config")]
 BASELINE_PATH = os.path.join(REPO_ROOT, "tools", "i18n", "unkeyed_baseline.txt")
 EXEMPT_PATH = os.path.join(REPO_ROOT, "tools", "i18n", "not_translatable.txt")
 
@@ -57,7 +59,9 @@ GD_ASSIGN_RE = re.compile(r'\.(text|tooltip_text|placeholder_text)\s*=\s*"((?:[^
 # A translation key being resolved. tr() covers the common case; TranslationServer.translate()
 # is how a *static* function must do it, since tr() is a non-static Object method.
 KEY_CALL_RE = re.compile(
-    r'(?:\btr_?n?|TranslationServer\.translate(?:_plural)?)\(\s*"((?:[^"\\]|\\.)*)"'
+    # `translate(` is matched on its own because gdformat splits long chains across lines, so
+    # `TranslationServer` and `. translate("KEY")` can end up on different lines.
+    r'(?:\btr_?n?|\btranslate(?:_plural)?)\(\s*"((?:[^"\\]|\\.)*)"'
 )
 
 # Display text that never passes through a `.text =` assignment: returned from a helper, handed
@@ -65,8 +69,16 @@ KEY_CALL_RE = re.compile(
 HELPER_PATTERNS = [
     re.compile(r'^\s*return\s+"((?:[^"\\]|\\.)+)"\s*$'),
     re.compile(r'^\s*return\s+.*?"((?:[^"\\]|\\.)+)".*[+%]'),
-    re.compile(r'\b(?:set_text|set_value|set_title|set_warning_text|append_text|add_item)\(\s*"((?:[^"\\]|\\.)+)"'),
+    re.compile(r'\b(?:set_text|set_value|set_title|set_warning_text|append_text|add_item|set_body|set_primary_button_text|set_secondary_button_text)\(\s*"((?:[^"\\]|\\.)+)"'),
     re.compile(r'^\s*(?:var\s+)?\w+\s*(?::=|=)\s*"((?:[^"\\]|\\.)+)"\s*[+%]'),
+    # ternary else-branch: `x.text = tr("A") if c else "B"` — the assignment regex only sees
+    # the head of the expression, so the else literal slipped through.
+    re.compile(r'\belse\s+"((?:[^"\\]|\\.)+)"'),
+    # a wrapped return whose literal and its % land on the same line inside parentheses
+    re.compile(r'^\s*"((?:[^"\\]|\\.)+)"\s*%'),
+    # `const SOME_LABEL = "Open external link?"` — modal_manager keeps 40+ titles, bodies and
+    # button labels this way, and no assignment or setter pattern sees a bare const.
+    re.compile(r'^\s*const\s+\w+\s*(?::\s*\w+\s*)?=\s*"((?:[^"\\]|\\.)+)"'),
 ]
 
 # snake_case / kebab-case identifiers: "temp-file", "notification_bell", "feet", "green".
@@ -82,7 +94,13 @@ def is_excluded(path):
 
 
 def walk(extension, ui_root=None):
-    for root, _dirs, files in os.walk(ui_root or UI_ROOT):
+    roots = [ui_root] if ui_root else [UI_ROOT] + EXTRA_ROOTS
+    for scan_root in roots:
+        yield from _walk_one(extension, scan_root)
+
+
+def _walk_one(extension, scan_root):
+    for root, _dirs, files in os.walk(scan_root):
         if is_excluded(root):
             continue
         for name in sorted(files):
@@ -111,8 +129,14 @@ def looks_like_prose(value):
     not_translatable.txt with a justification — over-surfacing beats silently missing prose.
     """
     value = value.strip()
-    if IDENTIFIER_RE.match(value) or " " not in value:
+    if IDENTIFIER_RE.match(value):
         return False
+    if " " not in value:
+        # A single token is usually an id ("temp-file", "green", "feet"). But a single ALL-CAPS
+        # word is almost always a button label — "EQUIP", "OK", "SAVE" — and those hid here
+        # until now, because requiring an embedded space excluded every one of them.
+        if not (value.isupper() and value.isalpha() and len(value) > 1):
+            return False
     return needs_key(value) and not KEY_RE.match(value)
 
 
@@ -149,7 +173,9 @@ def collect(ui_root=None, repo_root=None):
                     elif needs_key(value):
                         unkeyed.append((rel(path, repo_root), value))
                 for match in KEY_CALL_RE.finditer(line):
-                    if KEY_RE.match(match.group(1)):
+                    # No KEY_RE filter: if it is passed to tr(), it is a key by definition and
+                    # must exist in the catalogue. Filtering on shape hid single-word keys.
+                    if match.group(1):
                         keys.append((rel(path, repo_root), match.group(1)))
 
                 # Prose returned from helpers, or built by concatenation, never reaches a

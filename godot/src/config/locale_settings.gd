@@ -26,15 +26,44 @@ const LOCALE_DISPLAY_NAMES: Dictionary = {
 	"en": "English",
 	"es": "Español",
 	"pt_BR": "Português (Brasil)",
+	PSEUDO_LOCALE: "Pseudolocale (QA)",
 }
 
 const FALLBACK_LOCALE: String = "en"
+
+## Pseudolocale — a QA aid, not a language.
+##
+## Selecting it keeps the UI in English but turns on Godot's pseudolocalization, which brackets
+## and pads every translated string (`«____Sign Out____»`). The padding simulates ES/PT running
+## 20-30% longer, so clipping, truncation and bad wrapping show up before any translation exists.
+##
+## Offered only in non-production debug builds, the same gate the debug `eval` command uses.
+##
+## Note it does NOT prove a string is translated: Godot pseudolocalizes the untranslated fallback
+## too, so a hardcoded English string is bracketed just the same. See tools/i18n/README.md.
+const PSEUDO_LOCALE: String = "xx-pseudo"
+
+
+## Whether the pseudolocale may be offered in the picker.
+static func is_pseudolocale_available() -> bool:
+	return OS.is_debug_build() and not Global.is_production()
+
+
+## The locales the picker should list, including the pseudolocale in debug builds.
+static func selectable_locales() -> PackedStringArray:
+	var locales := PackedStringArray(SUPPORTED_LOCALES)
+	if is_pseudolocale_available():
+		locales.append(PSEUDO_LOCALE)
+	return locales
 
 
 ## Resolve the locale to actually use: the saved override when it is still supported,
 ## otherwise the device locale, otherwise English.
 static func resolve_locale() -> String:
 	var configured: String = Global.get_config().locale
+	if configured == PSEUDO_LOCALE and is_pseudolocale_available():
+		# The pseudolocale renders English through Godot's pseudolocalization filter.
+		return FALLBACK_LOCALE
 	if not configured.is_empty() and configured in SUPPORTED_LOCALES:
 		return configured
 	return detect_device_locale()
@@ -68,13 +97,15 @@ static func detect_device_locale() -> String:
 ## themselves via `_notification(NOTIFICATION_TRANSLATION_CHANGED)`.
 static func apply_locale() -> void:
 	TranslationServer.set_locale(resolve_locale())
+	var pseudo: bool = Global.get_config().locale == PSEUDO_LOCALE and is_pseudolocale_available()
+	TranslationServer.set_pseudolocalization_enabled(pseudo)
 
 
 ## Persist a language choice and apply it immediately.
 ##
 ## Pass an empty string to clear the override and follow the device locale again.
 static func set_locale(new_locale: String) -> void:
-	if not new_locale.is_empty() and not new_locale in SUPPORTED_LOCALES:
+	if not new_locale.is_empty() and not new_locale in selectable_locales():
 		push_warning("LocaleSettings: ignoring unsupported locale '%s'" % new_locale)
 		return
 

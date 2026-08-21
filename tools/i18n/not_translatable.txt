@@ -214,3 +214,11 @@ godot/src/ui/pages/settings/settings.gd	%s (%d, %d)
 # A translated label followed by its count; the label itself is already keyed.
 godot/src/ui/pages/friends/friends_panel.gd	%s (%d)
 godot/src/ui/pages/friends/friends_panel.gd	%s (99+)
+
+# ---- Code review follow-up: non-UI strings ----
+
+# push_warning() diagnostic, never rendered (lobby.gd:1008).
+godot/src/ui/pages/auth/lobby.gd	Guest login watchdog: stuck on loading screen after %ss
+
+# interactable_area_debug_label — a debug overlay, not shipped UI.
+godot/src/ui/explorer.gd	%d%% of device\\n%d%% of safe area

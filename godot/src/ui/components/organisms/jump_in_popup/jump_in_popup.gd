@@ -52,7 +52,7 @@ func async_load_place_position():
 		var creator = json.data[0].get("contact_name", "Unknown")
 		if creator != "Unknown" and creator:
 			label_creator.show()
-			label_creator.text = tr("JUMP_IN_POPUP_CREATED_BY") + creator
+			label_creator.text = tr("JUMP_IN_POPUP_CREATED_BY") % creator
 		else:
 			label_creator.hide()
 		var title = json.data[0].get("title", "interactive-text")

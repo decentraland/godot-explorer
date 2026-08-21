@@ -12,6 +12,9 @@ signal session_ended_sign_in
 signal session_ended_retry
 signal session_ended_exit
 
+# The consts below hold translation KEYS, not copy: a const cannot call tr() at parse
+# time, so callers resolve them (Control.text auto-translates).
+# i18n-keys: MODAL_*
 const MODAL_SCENE_PATH = "res://src/ui/components/organisms/modal/modal.tscn"
 const TRAVEL_MODAL_SCENE_PATH = "res://src/ui/components/organisms/modal/travel_modal.tscn"
 const INPUT_MODAL_SCENE_PATH = "res://src/ui/components/organisms/input_modal/input_modal.tscn"
@@ -20,91 +23,91 @@ const REWARD_MODAL_SCENE_PATH = "res://src/ui/components/organisms/reward_modal/
 const UPGRADE_MODAL_SCENE_PATH = "res://src/ui/components/organisms/upgrade_modal/upgrade_modal.tscn"
 
 # Modal text constants
-const EXTERNAL_LINK_TITLE = "Open external link?"
-const EXTERNAL_LINK_BODY = "You're about to visit an external website. Make sure you trust this site before continuing."
-const EXTERNAL_LINK_PRIMARY = "OPEN LINK"
-const EXTERNAL_LINK_SECONDARY = "CANCEL"
+const EXTERNAL_LINK_TITLE = "MODAL_EXTERNAL_LINK_TITLE"
+const EXTERNAL_LINK_BODY = "MODAL_EXTERNAL_LINK_BODY"
+const EXTERNAL_LINK_PRIMARY = "MODAL_EXTERNAL_LINK_PRIMARY"
+const EXTERNAL_LINK_SECONDARY = "MODAL_EXTERNAL_LINK_SECONDARY"
 
-const SCENE_TIMEOUT_TITLE = "Loading  is taking longer than expected"
-const SCENE_TIMEOUT_BODY = "You can reload the experience, or jump in now, it should keep loading in the background."
-const SCENE_TIMEOUT_PRIMARY = "RELOAD"
-const SCENE_TIMEOUT_SECONDARY = "START ANYWAY"
+const SCENE_TIMEOUT_TITLE = "MODAL_SCENE_TIMEOUT_TITLE"
+const SCENE_TIMEOUT_BODY = "MODAL_SCENE_TIMEOUT_BODY"
+const SCENE_TIMEOUT_PRIMARY = "MODAL_SCENE_TIMEOUT_PRIMARY"
+const SCENE_TIMEOUT_SECONDARY = "MODAL_SCENE_TIMEOUT_SECONDARY"
 
-const CONNECTION_LOST_TITLE = "Connection lost"
-const CONNECTION_LOST_BODY = "Please check your internet connection and try again."
-const CONNECTION_LOST_PRIMARY = "RETRY"
-const CONNECTION_LOST_SECONDARY = "EXIT"
+const CONNECTION_LOST_TITLE = "MODAL_CONNECTION_LOST_TITLE"
+const CONNECTION_LOST_BODY = "MODAL_CONNECTION_LOST_BODY"
+const CONNECTION_LOST_PRIMARY = "MODAL_CONNECTION_LOST_PRIMARY"
+const CONNECTION_LOST_SECONDARY = "MODAL_CONNECTION_LOST_SECONDARY"
 
-const SCENE_CRASH_TITLE = "Scene error"
-const SCENE_CRASH_BODY = "This scene stopped working. Please reload or go back to discover."
-const SCENE_CRASH_PRIMARY = "RELOAD"
-const SCENE_CRASH_SECONDARY = "BACK"
+const SCENE_CRASH_TITLE = "MODAL_SCENE_CRASH_TITLE"
+const SCENE_CRASH_BODY = "MODAL_SCENE_CRASH_BODY"
+const SCENE_CRASH_PRIMARY = "MODAL_SCENE_CRASH_PRIMARY"
+const SCENE_CRASH_SECONDARY = "MODAL_SCENE_CRASH_SECONDARY"
 
-const LOW_MEMORY_TITLE = "Low memory"
-const LOW_MEMORY_BODY = "This place may not run smoothly on your device and could close unexpectedly."
-const LOW_MEMORY_PRIMARY = "CONTINUE"
-const LOW_MEMORY_SECONDARY = "BACK TO DISCOVER"
+const LOW_MEMORY_TITLE = "MODAL_LOW_MEMORY_TITLE"
+const LOW_MEMORY_BODY = "MODAL_LOW_MEMORY_BODY"
+const LOW_MEMORY_PRIMARY = "MODAL_LOW_MEMORY_PRIMARY"
+const LOW_MEMORY_SECONDARY = "MODAL_LOW_MEMORY_SECONDARY"
 
-const BAN_PRE_CHECK_TITLE = "You can't enter"
-const BAN_PRE_CHECK_BODY = "You're banned from this scene.\nPlease contact support for more information."
-const BAN_PRE_CHECK_PRIMARY = "BACK TO DISCOVER"
+const BAN_PRE_CHECK_TITLE = "MODAL_BAN_PRE_CHECK_TITLE"
+const BAN_PRE_CHECK_BODY = "MODAL_BAN_PRE_CHECK_BODY"
+const BAN_PRE_CHECK_PRIMARY = "MODAL_BAN_PRE_CHECK_PRIMARY"
 
-const PRIVATE_WORLD_TITLE = "%s is private"
-const PRIVATE_WORLD_BODY = "Only invited people can enter."
-const PRIVATE_WORLD_PRIMARY = "OK"
+const PRIVATE_WORLD_TITLE = "MODAL_PRIVATE_WORLD_TITLE"
+const PRIVATE_WORLD_BODY = "MODAL_PRIVATE_WORLD_BODY"
+const PRIVATE_WORLD_PRIMARY = "MODAL_PRIVATE_WORLD_PRIMARY"
 
-const BAN_KICKED_TITLE = "You've been banned"
-const BAN_KICKED_BODY = "Please contact support for more information."
-const BAN_KICKED_PRIMARY = "BACK TO DISCOVER"
+const BAN_KICKED_TITLE = "MODAL_BAN_KICKED_TITLE"
+const BAN_KICKED_BODY = "MODAL_BAN_KICKED_BODY"
+const BAN_KICKED_PRIMARY = "MODAL_BAN_KICKED_PRIMARY"
 
-const LOW_SPEC_IPHONE_TITLE = "Limited performance"
-const LOW_SPEC_IPHONE_BODY = "Your device is below our recommended specs (iPhone 13/SE 2023). You may notice slowdowns, crashes or heating issues while playing."
-const LOW_SPEC_IPHONE_PRIMARY = "OK"
+const LOW_SPEC_IPHONE_TITLE = "MODAL_LOW_SPEC_IPHONE_TITLE"
+const LOW_SPEC_IPHONE_BODY = "MODAL_LOW_SPEC_IPHONE_BODY"
+const LOW_SPEC_IPHONE_PRIMARY = "MODAL_LOW_SPEC_IPHONE_PRIMARY"
 
-const PURCHASE_FAILED_TITLE = "Something\nwent wrong"
-const PURCHASE_FAILED_BODY = "Your purchase could not be completed"
-const PURCHASE_FAILED_PRIMARY = "OK"
+const PURCHASE_FAILED_TITLE = "MODAL_PURCHASE_FAILED_TITLE"
+const PURCHASE_FAILED_BODY = "MODAL_PURCHASE_FAILED_BODY"
+const PURCHASE_FAILED_PRIMARY = "MODAL_PURCHASE_FAILED_PRIMARY"
 
-const CREDIT_LIMIT_TITLE = "Limit reached"
-const CREDIT_LIMIT_TOTAL_BODY = "You can't buy more credits because you've reached maximum holding limit. Spend your credits to buy more."
-const CREDIT_LIMIT_DAILY_BODY = "You've reached the maximum amount of credits you can buy today."
-const CREDIT_LIMIT_PRIMARY = "OK"
+const CREDIT_LIMIT_TITLE = "MODAL_CREDIT_LIMIT_TITLE"
+const CREDIT_LIMIT_TOTAL_BODY = "MODAL_CREDIT_LIMIT_TOTAL_BODY"
+const CREDIT_LIMIT_DAILY_BODY = "MODAL_CREDIT_LIMIT_DAILY_BODY"
+const CREDIT_LIMIT_PRIMARY = "MODAL_CREDIT_LIMIT_PRIMARY"
 
-const PURCHASE_IN_FLIGHT_TITLE = "Purchase in progress"
-const PURCHASE_IN_FLIGHT_BODY = "A purchase is already being processed. Please wait for it to complete before starting a new one."
-const PURCHASE_IN_FLIGHT_PRIMARY = "OK"
+const PURCHASE_IN_FLIGHT_TITLE = "MODAL_PURCHASE_IN_FLIGHT_TITLE"
+const PURCHASE_IN_FLIGHT_BODY = "MODAL_PURCHASE_IN_FLIGHT_BODY"
+const PURCHASE_IN_FLIGHT_PRIMARY = "MODAL_PURCHASE_IN_FLIGHT_PRIMARY"
 
 # Shown at quote time when the server hit its global daily credit ceiling — nothing
 # was charged, the user should try again later.
 const PURCHASE_UNAVAILABLE_TITLE = "Temporarily\nunavailable"
-const PURCHASE_UNAVAILABLE_BODY = "Credit purchases are temporarily unavailable. Please try again later."
-const PURCHASE_UNAVAILABLE_PRIMARY = "OK"
+const PURCHASE_UNAVAILABLE_BODY = "MODAL_PURCHASE_UNAVAILABLE_BODY"
+const PURCHASE_UNAVAILABLE_PRIMARY = "MODAL_PURCHASE_UNAVAILABLE_PRIMARY"
 
 # Shown after a successful charge whose credits are still being applied (the server
 # was at its daily ceiling; the Apple webhook will credit shortly).
-const PURCHASE_PROCESSING_TITLE = "Almost there"
-const PURCHASE_PROCESSING_BODY = "Your purchase went through and your credits will be added shortly."
-const PURCHASE_PROCESSING_PRIMARY = "OK"
+const PURCHASE_PROCESSING_TITLE = "MODAL_PURCHASE_PROCESSING_TITLE"
+const PURCHASE_PROCESSING_BODY = "MODAL_PURCHASE_PROCESSING_BODY"
+const PURCHASE_PROCESSING_PRIMARY = "MODAL_PURCHASE_PROCESSING_PRIMARY"
 
-const IAP_TERMS_TITLE = "Terms of Use"
+const IAP_TERMS_TITLE = "MODAL_IAP_TERMS_TITLE"
 const IAP_TERMS_CHECKBOX_BBCODE = (
 	'I have read and accept Decentraland\'s [color=#E8B9FF][url="https://decentraland.org/terms"]Terms of Use[/url][/color], '
 	+ '[color=#E8B9FF][url="https://decentraland.org/privacy"]Privacy Policy[/url][/color], '
 	+ '[color=#E8B9FF][url="https://decentraland.org/content"]Content Policy[/url][/color] and '
 	+ '[color=#E8B9FF][url="https://decentraland.org/credits-terms"]Credits Terms of Use[/url][/color].'
 )
-const IAP_TERMS_PRIMARY = "CONFIRM"
-const IAP_TERMS_SECONDARY = "CANCEL"
+const IAP_TERMS_PRIMARY = "MODAL_IAP_TERMS_PRIMARY"
+const IAP_TERMS_SECONDARY = "MODAL_IAP_TERMS_SECONDARY"
 
-const SESSION_ENDED_DUPLICATE_TITLE = "Session Ended"
-const SESSION_ENDED_DUPLICATE_BODY = "Your session was ended because your account logged in from another location."
-const SESSION_ENDED_ROOM_CLOSED_TITLE = "Room Closed"
-const SESSION_ENDED_ROOM_CLOSED_BODY = "The room you were in has been closed."
+const SESSION_ENDED_DUPLICATE_TITLE = "MODAL_SESSION_ENDED_DUPLICATE_TITLE"
+const SESSION_ENDED_DUPLICATE_BODY = "MODAL_SESSION_ENDED_DUPLICATE_BODY"
+const SESSION_ENDED_ROOM_CLOSED_TITLE = "MODAL_SESSION_ENDED_ROOM_CLOSED_TITLE"
+const SESSION_ENDED_ROOM_CLOSED_BODY = "MODAL_SESSION_ENDED_ROOM_CLOSED_BODY"
 const SESSION_ENDED_OTHER_TITLE = "Disconnected"
-const SESSION_ENDED_OTHER_BODY = "You have been disconnected from the server. Please try again later."
-const SESSION_ENDED_SIGN_IN_PRIMARY = "SIGN IN"
-const SESSION_ENDED_RETRY_PRIMARY = "RECONNECT"
-const SESSION_ENDED_SECONDARY = "EXIT"
+const SESSION_ENDED_OTHER_BODY = "MODAL_SESSION_ENDED_OTHER_BODY"
+const SESSION_ENDED_SIGN_IN_PRIMARY = "MODAL_SESSION_ENDED_SIGN_IN_PRIMARY"
+const SESSION_ENDED_RETRY_PRIMARY = "MODAL_SESSION_ENDED_RETRY_PRIMARY"
+const SESSION_ENDED_SECONDARY = "MODAL_SESSION_ENDED_SECONDARY"
 
 var current_modal: Modal = null
 var current_travel_modal: TravelModal = null
@@ -1531,7 +1534,7 @@ func _async_add_email_error_modal(title: String, body: String) -> void:
 		return
 	modal.set_title(title)
 	modal.set_body(body)
-	modal.set_primary_button_text("OK")
+	modal.set_primary_button_text(tr("MENU_OK"))
 	modal.show_icon(Modal.MODAL_ALERT_ICON)
 	modal.button_secondary.hide()
 	modal.hide_url()

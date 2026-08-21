@@ -581,7 +581,7 @@ func _on_button_reset_guest_debug_pressed() -> void:
 			+ "Tap Play as guest to mint a brand-new guest wallet."
 		)
 	)
-	modal.set_primary_button_text("OK")
+	modal.set_primary_button_text(tr("MENU_OK"))
 	modal.show_icon(Modal.MODAL_ALERT_ICON)
 	modal.button_secondary.hide()
 	modal.hide_url()
@@ -843,9 +843,9 @@ func _async_confirm_discard_edit() -> void:
 	if not modal:
 		return
 	modal.set_title(tr("LOBBY_DISCARD_CHANGES"))
-	modal.set_body("Your avatar changes won't be saved.")
-	modal.set_primary_button_text("DISCARD")
-	modal.set_secondary_button_text("CANCEL")
+	modal.set_body(tr("LOBBY_DISCARD_BODY"))
+	modal.set_primary_button_text(tr("LOBBY_DISCARD"))
+	modal.set_secondary_button_text(tr("COMMON_CANCEL"))
 	modal.hide_url()
 	modal.hide_icon()
 	modal.blocker = true
@@ -1034,8 +1034,8 @@ func _async_show_guest_login_error() -> void:
 	if not modal:
 		return
 	modal.set_title(tr("LOBBY_SOMETHING_WENT_WRONG"))
-	modal.set_body("We couldn't start your guest session. Please try again.")
-	modal.set_primary_button_text("TRY AGAIN")
+	modal.set_body(tr("LOBBY_GUEST_SESSION_FAILED"))
+	modal.set_primary_button_text(tr("COMMON_TRY_AGAIN"))
 	modal.show_icon(Modal.MODAL_ALERT_ICON)
 	modal.button_secondary.hide()
 	modal.hide_url()

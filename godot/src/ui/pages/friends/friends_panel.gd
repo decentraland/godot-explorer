@@ -461,9 +461,7 @@ func _on_friend_connectivity_updated(address: String, status: int) -> void:
 func _send_friend_online_chat_message(friend_name: String) -> void:
 	var nickname_color = DclAvatar.get_nickname_color(friend_name)
 	var color_hex = nickname_color.to_html(false)
-	var message = (
-		"[color=#%s]%s[/color] [color=#8f8]is now online[/color]" % [color_hex, friend_name]
-	)
+	var message = tr("FRIENDS_NOW_ONLINE") % [color_hex, friend_name]
 	Global.on_chat_message.emit("system", message, Time.get_unix_time_from_system())
 
 
@@ -596,7 +594,7 @@ func _on_blocked_list_size_changed() -> void:
 ## If amount is > 99 show "99+".
 ## Else show the amount from list_size.
 func _on_nearby_list_size_changed() -> void:
-	var nearby_text := tr("NEARBY")
+	var nearby_text := tr("COMMON_NEARBY")
 	if nearby_list.list_size > 99:
 		nearby_text = "%s (99+)" % nearby_text
 	elif nearby_list.list_size > 0:

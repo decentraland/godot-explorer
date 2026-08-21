@@ -83,7 +83,10 @@ static func number(value: float, decimals: int = 0) -> String:
 
 	if parts.size() > 1:
 		grouped += rule["decimal"] + parts[1]
-	return ("-" if value < 0 else "") + grouped
+	# Sign from the ROUNDED magnitude, not the input: number(-0.04, 1) rounded to "0.0",
+	# and taking the sign from the raw value rendered it as "-0.0".
+	var is_negative := value < 0 and text.to_float() != 0.0
+	return ("-" if is_negative else "") + grouped
 
 
 ## Time of day, using the locale's 12- or 24-hour convention.

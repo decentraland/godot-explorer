@@ -233,7 +233,7 @@ static func get_notification_title(notif_type: String, metadata: Dictionary) -> 
 			var old_name = metadata.get("oldCommunityName", "Unknown")
 			var new_name = metadata.get("newCommunityName", "Unknown")
 			return (
-				"The [b][%s][/b] Community has been renamed to [b][%s][/b]." % [old_name, new_name]
+				TranslationServer.translate("NOTIF_TITLE_COMMUNITY_RENAMED") % [old_name, new_name]
 			)
 
 		# Badge notifications - use metadata description

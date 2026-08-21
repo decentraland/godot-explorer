@@ -166,7 +166,7 @@ func add_event_to_calendar() -> void:
 		description_str += "\n\n"
 	description_str += "jump in: " + _build_jump_in_url(_event_location)
 	var event_location_str: String = (
-		"Decentraland at %d,%d" % [_event_location.x, _event_location.y]
+		tr("CALENDAR_EVENT_LOCATION") % [_event_location.x, _event_location.y]
 	)
 	if DclAndroidPlugin.is_available():
 		DclAndroidPlugin.add_calendar_event(

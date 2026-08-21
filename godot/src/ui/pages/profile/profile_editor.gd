@@ -419,3 +419,21 @@ func _async_ensure_field_visible() -> void:
 
 	await get_tree().process_frame
 	scroll_container.scroll_vertical += int(overlap)
+
+
+## Dropdown items are plain strings once added, so they do not re-translate themselves the way a
+## scene `text` property does. Repopulating preserves each current selection.
+func _notification(what: int) -> void:
+	if what != NOTIFICATION_TRANSLATION_CHANGED or not is_node_ready():
+		return
+	for pair in [
+		[dropdown_list_pronouns, ProfileConstants.PRONOUNS],
+		[dropdown_list_gender, ProfileConstants.GENDERS],
+		[dropdown_list_sexual_orientation, ProfileConstants.SEXUAL_ORIENTATIONS],
+		[dropdown_list_relationship, ProfileConstants.RELATIONSHIP_STATUS],
+	]:
+		var dropdown: DropdownList = pair[0]
+		var previous := dropdown.selected
+		_populate_dropdown(dropdown, pair[1])
+		if previous >= 0:
+			dropdown.select(previous)
