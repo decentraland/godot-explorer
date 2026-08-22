@@ -36,9 +36,13 @@ var _look_index: int = -1
 # global _input where the touch is still visible.
 var _js_look_index: int = -1
 
-# Every active touch (index → position), tracked in _input so pinch recognition
-# is independent of what UI owns each finger.
+# Every active touch (index → position), tracked in _input. Positions live here;
+# _free_touches (below) decides which are pinch-eligible.
 var _touches: Dictionary = {}
+# Touches that reached _on_gui_input, i.e. NOT consumed by any UI (scene UI, HUD
+# panels, chat, the joystick). Only these are pinch candidates, so a pinch over
+# interactive UI never steals its drags. Added in gui_input, dropped on release.
+var _free_touches: Dictionary = {}
 var _pinch_active: bool = false
 var _pinch_a: int = -1
 var _pinch_b: int = -1
@@ -77,6 +81,7 @@ func _resolve_player() -> void:
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_APPLICATION_FOCUS_OUT:
 		_touches.clear()
+		_free_touches.clear()
 		_look_index = -1
 		_js_look_index = -1
 		if _pinch_active:
@@ -102,27 +107,32 @@ func _input(event: InputEvent) -> void:
 	if event is InputEventScreenTouch and not event.pressed and _adopted.has(event.index):
 		_end_adopted(event.index)
 
+	# Releases are processed FIRST, unconditionally — a touch-up arriving during
+	# cinematic/pointer mode (or before the player resolves) must never be dropped,
+	# or a phantom finger lingers and a lone real finger confirms a spurious pinch.
+	if event is InputEventScreenTouch and not event.pressed:
+		var was_pinch_finger: bool = (
+			_pinch_active and (event.index == _pinch_a or event.index == _pinch_b)
+		)
+		_touches.erase(event.index)
+		_free_touches.erase(event.index)
+		if event.index == _js_look_index:
+			_js_look_index = -1
+		_on_touch_count_changed()
+		# Swallow a pinch finger's release so gui_input doesn't read it as a look end.
+		if was_pinch_finger:
+			get_viewport().set_input_as_handled()
+		return
+
 	if _player == null:
 		return
 	# No zoom in cinematic / pointer mode — gui_input drives the pointer there.
 	if Global.scene_runner.raycast_use_cursor_position:
 		return
 
-	if event is InputEventScreenTouch:
-		if event.pressed:
-			_touches[event.index] = event.position
-			_on_touch_count_changed()
-		else:
-			var was_pinch_finger: bool = (
-				_pinch_active and (event.index == _pinch_a or event.index == _pinch_b)
-			)
-			_touches.erase(event.index)
-			if event.index == _js_look_index:
-				_js_look_index = -1
-			_on_touch_count_changed()
-			# Swallow a pinch finger's release so gui_input doesn't read it as a look end.
-			if was_pinch_finger:
-				get_viewport().set_input_as_handled()
+	if event is InputEventScreenTouch:  # pressed
+		_touches[event.index] = event.position
+		_on_touch_count_changed()
 	elif event is InputEventScreenDrag:
 		_touches[event.index] = event.position
 		if _pinch_active:
@@ -130,6 +140,11 @@ func _input(event: InputEvent) -> void:
 				_update_pinch()
 				get_viewport().set_input_as_handled()
 			return
+		# Re-seed on drag too: the free-touch set is filled by gui_input, which runs
+		# AFTER _input, so a just-pressed free finger may not have been eligible on
+		# its press event.
+		if _pinch_a == -1 or _pinch_b == -1:
+			_on_touch_count_changed()
 		if _pinch_a != -1 and _pinch_b != -1:
 			_try_recognize_pinch()
 			if _pinch_active:
@@ -141,8 +156,8 @@ func _input(event: InputEvent) -> void:
 # (Re)establish the candidate pair when the touch count changes; end the pinch
 # when it drops below two.
 func _on_touch_count_changed() -> void:
-	# Only camera-area touches are pinch candidates — the joystick rect is movement.
-	var cam: Array = _camera_area_touch_indices()
+	# Only FREE touches are pinch candidates (not the joystick, scene UI, HUD, chat).
+	var cam: Array = _free_pinch_candidates()
 	if cam.size() < 2:
 		if _pinch_active:
 			_end_pinch()
@@ -162,11 +177,12 @@ func _in_joystick_area(pos: Vector2) -> bool:
 	return _joystick != null and _joystick.get_active_area_global_rect().has_point(pos)
 
 
-# Touch indices in the camera area (everywhere except the joystick's active rect).
-func _camera_area_touch_indices() -> Array:
+# Free touch indices — those seen by gui_input, so owned by no UI (not the joystick,
+# scene UI, HUD or chat). Only these can form a pinch.
+func _free_pinch_candidates() -> Array:
 	var out: Array = []
-	for idx in _touches:
-		if not _in_joystick_area(_touches[idx]):
+	for idx in _free_touches:
+		if _touches.has(idx):
 			out.append(idx)
 	return out
 
@@ -267,13 +283,17 @@ func _on_gui_input(event: InputEvent) -> void:
 	if _player == null:
 		return
 	# A committed pinch consumes its fingers in _input, so they never arrive here;
-	# single-finger look just tracks whichever free finger it first sees.
+	# single-finger look just tracks whichever free finger it first sees. Reaching
+	# gui_input at all marks the touch FREE (no UI consumed it) → pinch-eligible.
 	if event is InputEventScreenTouch:
 		if event.pressed:
+			_free_touches[event.index] = true
 			if _look_index == -1:
 				_look_index = event.index
-		elif event.index == _look_index:
-			_look_index = -1
+		else:
+			_free_touches.erase(event.index)
+			if event.index == _look_index:
+				_look_index = -1
 		accept_event()
 	elif event is InputEventScreenDrag:
 		if not _pinch_active and event.index == _look_index:
