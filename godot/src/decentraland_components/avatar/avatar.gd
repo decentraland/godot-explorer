@@ -4,7 +4,9 @@ extends DclAvatar
 
 signal avatar_loaded
 
-# LOD state: FULL (close), MID (15-25m), CROSSFADE (25-30m), FAR (>=30m)
+# LOD state: FULL (<15m), MID (15-80m, throttled anim), FAR (>=80m, billboard)
+# or FAR via pool overflow (see AvatarPoolPolicy). CROSSFADE kept in the enum
+# for compatibility but no band produces it anymore.
 enum LODState { FULL, MID, CROSSFADE, FAR }
 
 # Debug to store each avatar loaded in user://avatars
@@ -154,6 +156,7 @@ var _glide_forward_blend: float = 0.0
 # profile fetch. Playing it now would resolve against the default body shape and
 # be wiped by the rebuild anyway, so it's latched and replayed on avatar_ready.
 var _pending_network_emote: String = ""
+var _pending_network_emote_mask: int = -1
 
 # Registry for scene emote content URLs: scene_id -> {base_url, emotes: {glb_hash -> audio_hash}}
 var _scene_emote_registry: Dictionary = {}
@@ -183,8 +186,8 @@ var _nametag_clearance := 0.3
 var _impostor_layer: int = -1
 var _lod_phase: int = 0
 var _mesh_lod_visibility_captured: bool = false
-# Written by AvatarLODCoordinator each tick. Caps the natural distance LOD so
-# only the N closest avatars stay FULL, the next M MID/CROSSFADE, rest FAR.
+# Written by AvatarLODCoordinator each tick. Demotes the natural distance
+# LOD to MID (throttled anim) or FAR (billboard) by pool rank.
 var _lod_rank_cap: int = LODState.FULL
 # Set by AvatarLODCoordinator: true when this avatar's rank is beyond the real
 # impostor layer cap. Such avatars borrow another slot's texture and render
@@ -216,7 +219,7 @@ var _anim_frozen_off_screen: bool = false
 # catch-up, so the CPU saving from the freeze is preserved.
 var _anim_freeze_start_ms: int = 0
 
-# Skinning throttle (MID/CROSSFADE only): drive AnimationTree manually and
+# Skinning throttle (MID only): drive AnimationTree manually and
 # advance every N frames so the skeleton bones update at ~20fps instead of
 # ~60fps. Imperceptible at 15-30m distance and a sizeable CPU saving when
 # many avatars share the screen.
@@ -246,6 +249,11 @@ var _anim_throttle_active: bool = false
 
 func _ready():
 	_mesh_assembler = AvatarMeshAssembler.new(body_shape_skeleton_3d)
+	_mesh_assembler.apply_toon_material_recursive(glider_prop)
+	# Seed one tree evaluation so an avatar that spawns off-screen/FAR (tree
+	# immediately frozen) still gets a pose instead of staying in bind pose.
+	animation_tree.active = true
+	animation_tree.advance(0.0)
 	var billboard_mode = (
 		BaseMaterial3D.BillboardMode.BILLBOARD_FIXED_Y
 		if Global.is_xr()
@@ -329,6 +337,11 @@ func _notification(what: int) -> void:
 ## Setup trigger detection for this avatar (local player and remote avatars only).
 ## - For local player: entity_id=SceneEntityId.PLAYER (0x10000)
 ## - For remote avatars: entity_id=assigned entity from avatar_scene.rs
+func apply_toon_material_to(node: Node) -> void:
+	if _mesh_assembler != null:
+		_mesh_assembler.apply_toon_material_recursive(node)
+
+
 func setup_trigger_detection(p_entity_id: int) -> void:
 	dcl_entity_id = p_entity_id
 
@@ -1089,8 +1102,10 @@ func async_load_wearables():
 	# stored announcement Pulse delivers at join for a peer already mid-emote).
 	if not _pending_network_emote.is_empty():
 		var pending_network_urn := _pending_network_emote
+		var pending_network_mask := _pending_network_emote_mask
 		_pending_network_emote = ""
-		async_play_emote(pending_network_urn)
+		_pending_network_emote_mask = -1
+		async_play_emote(pending_network_urn, pending_network_mask)
 
 
 func apply_color_and_facial():
@@ -1218,16 +1233,12 @@ func _update_lod() -> void:
 	var fade_alpha: float = 0.0
 	var tint_strength: float = 0.0
 
+	# Distance bands: mesh always, billboard only past the 80m safety valve.
+	# Crowding is handled by the pool rank cap below, not by distance.
 	if dist < AvatarImpostorConfig.MID_RANGE_NEAR:
 		new_state = LODState.FULL
-	elif dist < AvatarImpostorConfig.DISTANCE_NEAR:
-		new_state = LODState.MID
 	elif dist < AvatarImpostorConfig.DISTANCE_FAR:
-		new_state = LODState.CROSSFADE
-		var span: float = AvatarImpostorConfig.DISTANCE_FAR - AvatarImpostorConfig.DISTANCE_NEAR
-		var t: float = (dist - AvatarImpostorConfig.DISTANCE_NEAR) / span
-		dither_alpha = 1.0 - t
-		fade_alpha = t
+		new_state = LODState.MID
 	else:
 		new_state = LODState.FAR
 		dither_alpha = 0.0
@@ -1237,9 +1248,10 @@ func _update_lod() -> void:
 		)
 		tint_strength = clamp((dist - AvatarImpostorConfig.DISTANCE_FAR) / tint_span, 0.0, 1.0)
 
-	# Concurrency cap: only the closest N stay FULL, the next M stay
-	# MID/CROSSFADE, the rest are demoted to FAR. Applies to emoters too — mass
-	# emote scenarios shouldn't bypass the budget.
+	# Pool cap: closest FULL_RATE_CAP run full-rate, rest of the pool (per
+	# graphics profile) keeps the mesh throttled (MID), beyond the pool FAR
+	# billboards. Applies to emoters too — mass emote scenarios shouldn't
+	# bypass the budget.
 	if _lod_rank_cap > new_state:
 		new_state = _lod_rank_cap
 		if new_state == LODState.FAR:
@@ -1253,7 +1265,7 @@ func _update_lod() -> void:
 	# Reconcile against the notifier's current state in case a screen_entered /
 	# screen_exited signal was missed; idempotent thanks to the _anim_frozen_off_screen
 	# latch. Unfreezing still happens immediately in the signal handler.
-	AvatarLODHelpers.apply_screen_freeze(self)
+	AvatarAnimHelpers.apply_screen_freeze(self)
 
 
 func _apply_lod_state(
@@ -1263,7 +1275,7 @@ func _apply_lod_state(
 	var prev_state: int = _lod_state
 	_lod_state = state
 
-	AvatarLODHelpers.set_dither_alpha(self, dither_alpha)
+	AvatarAnimHelpers.set_dither_alpha(self, dither_alpha)
 
 	if _off_frustum:
 		# Off-frustum: avatar is invisible to the camera. Drop the slot
@@ -1274,7 +1286,7 @@ func _apply_lod_state(
 			Global.avatars.clear_impostor(get_instance_id())
 			_impostor_layer = -1
 			_impostor_layer_is_overflow = false
-	elif state == LODState.FAR or state == LODState.CROSSFADE:
+	elif state == LODState.FAR:
 		_ensure_impostor_layer(distance)
 		if _impostor_layer >= 0 and Global.avatars != null:
 			Global.avatars.set_impostor_state(
@@ -1321,18 +1333,24 @@ func _release_impostor() -> void:
 
 
 func _on_lod_state_changed(new_state: int, _prev_state: int) -> void:
+	# At FAR the avatar is an impostor and its AnimationTree stops advancing, so a
+	# running emote would never reach its natural end and the scene would wait
+	# forever for a terminal EmoteState. Report it as interrupted now.
+	if new_state == LODState.FAR and emote_controller != null and emote_controller.is_playing():
+		emote_controller.stop_emote()
+
 	var full: bool = new_state == LODState.FULL
-	AvatarLODHelpers.set_meshes_visible(self, new_state != LODState.FAR)
-	AvatarLODHelpers.set_particles_visible(self, full)
-	AvatarLODHelpers.set_click_active(self, full)
-	AvatarLODHelpers.set_animation_speed(self, 1.0)
+	AvatarAnimHelpers.set_meshes_visible(self, new_state != LODState.FAR)
+	AvatarAnimHelpers.set_particles_visible(self, full)
+	AvatarAnimHelpers.set_click_active(self, full)
+	AvatarAnimHelpers.set_animation_speed(self, 1.0)
 	# Animation drive is on-screen-aware so an off-screen avatar that changes LOD
 	# stays frozen rather than re-animating; apply_screen_freeze restores it on
 	# re-entry. Single source of truth shared with the freeze, so callback mode
 	# and throttle flag can never drift into the frozen-while-drawn state.
-	var drive: Dictionary = AvatarLODHelpers.resolve_anim_drive(_on_screen, new_state)
-	AvatarLODHelpers.set_animation_active(self, drive.active)
-	AvatarLODHelpers.set_animation_throttle(self, drive.throttle)
+	var drive: Dictionary = AvatarAnimHelpers.resolve_anim_drive(_on_screen, new_state)
+	AvatarAnimHelpers.set_animation_active(self, drive.active)
+	AvatarAnimHelpers.set_animation_throttle(self, drive.throttle)
 	_apply_nickname_visibility()
 
 
@@ -1350,12 +1368,12 @@ func _setup_screen_notifier() -> void:
 
 func _on_avatar_screen_entered() -> void:
 	_on_screen = true
-	AvatarLODHelpers.apply_screen_freeze(self)
+	AvatarAnimHelpers.apply_screen_freeze(self)
 
 
 func _on_avatar_screen_exited() -> void:
 	_on_screen = false
-	AvatarLODHelpers.apply_screen_freeze(self)
+	AvatarAnimHelpers.apply_screen_freeze(self)
 
 
 func _tick_animation_throttle(delta: float) -> void:
@@ -1399,7 +1417,7 @@ func _process(delta):
 
 	# Ensure animation tree is active for normal avatars — but never undo an
 	# off-screen freeze (that re-activation is what left frozen avatars stuck).
-	AvatarLODHelpers.ensure_anim_active(self)
+	AvatarAnimHelpers.ensure_anim_active(self)
 
 	# #b18: `is_grounded` guard suppresses the all-false condition window at the
 	# jump apex (rise/fall ±0.3 deadband) so Idle doesn't leak in mid-air.
@@ -1408,28 +1426,37 @@ func _process(delta):
 	)
 	emote_controller.process(self_idle)
 
-	var is_emoting = self_idle && emote_controller.is_playing()
+	# Masked (upper-body) emotes keep playing while moving, so idle can't gate
+	# them — otherwise Pulse would broadcast EmoteStop for a walking emote.
+	var is_emoting = (
+		emote_controller.is_playing() and (self_idle or emote_controller.playing_masked)
+	)
 	if is_local_player:
 		Global.comms.set_emoting(is_emoting)
 
-	animation_tree.set("parameters/conditions/idle", self_idle)
-	animation_tree.set("parameters/conditions/emote", emote_controller.playing_single)
-	animation_tree.set("parameters/conditions/nemote", not emote_controller.playing_single)
-	animation_tree.set("parameters/conditions/emix", emote_controller.playing_mixed)
-	animation_tree.set("parameters/conditions/nemix", not emote_controller.playing_mixed)
+	animation_tree.set("parameters/Locomotion/conditions/idle", self_idle)
+	animation_tree.set("parameters/Locomotion/conditions/emote", emote_controller.playing_single)
+	animation_tree.set(
+		"parameters/Locomotion/conditions/nemote", not emote_controller.playing_single
+	)
+	animation_tree.set("parameters/Locomotion/conditions/emix", emote_controller.playing_mixed)
+	animation_tree.set("parameters/Locomotion/conditions/nemix", not emote_controller.playing_mixed)
 
-	animation_tree.set("parameters/conditions/run", self.run)
-	animation_tree.set("parameters/conditions/jog", self.jog)
-	animation_tree.set("parameters/conditions/walk", self.walk)
+	var loco := AvatarAnimHelpers.locomotion_conditions(
+		self.walk, self.jog, self.run, self.is_grounded
+	)
+	animation_tree.set("parameters/Locomotion/conditions/run", loco.run)
+	animation_tree.set("parameters/Locomotion/conditions/jog", loco.jog)
+	animation_tree.set("parameters/Locomotion/conditions/walk", loco.walk)
 
-	animation_tree.set("parameters/conditions/rise", self.rise)
-	animation_tree.set("parameters/conditions/fall", self.fall)
-	animation_tree.set("parameters/conditions/land", self.land)
+	animation_tree.set("parameters/Locomotion/conditions/rise", self.rise)
+	animation_tree.set("parameters/Locomotion/conditions/fall", self.fall)
+	animation_tree.set("parameters/Locomotion/conditions/land", self.land)
 	# #b3: nfall reads is_grounded directly (not `land`). `land` is a short pulse
 	# locally (in_grace_time) and was previously overridden to is_grounded for
 	# remotes, causing asymmetric behavior. is_grounded is the same shape on
 	# both sides, and fall's 1-2 frame deadband at apex is still avoided.
-	animation_tree.set("parameters/conditions/nfall", self.is_grounded)
+	animation_tree.set("parameters/Locomotion/conditions/nfall", self.is_grounded)
 
 	# Rising-edge detection for one-frame AnimationTree condition pulses.
 	var jump_rising_edge: bool = self.jump_count > _last_jump_count and self.jump_count >= 2
@@ -1440,24 +1467,18 @@ func _process(delta):
 		jump_rising_edge = false
 		_jump_count_sync_pending = false
 	_last_jump_count = self.jump_count
-	# #b16: start_glide is sustained for the whole OPENING window, not a one-
-	# frame edge. An edge pulse is lost when the AnimationTree sits in a state
-	# without an outgoing `start_glide` transition (Jump_Mid, Run_Jump_Mid,
-	# Idle, Jump_Start, …), leaving the avatar stuck in Jump_Fall while
-	# glide_state == GLIDING. Holding the condition for the full 0.5s window
-	# gives the state machine time to pass through a source state.
-	var glide_opening: bool = self.glide_state == 1
 	var gliding_now: bool = self.glide_state == 1 or self.glide_state == 2
 
-	animation_tree.set("parameters/conditions/double_jump", jump_rising_edge)
-	animation_tree.set("parameters/conditions/start_glide", glide_opening)
-	animation_tree.set("parameters/conditions/gliding", gliding_now)
-	animation_tree.set("parameters/conditions/ngliding", not gliding_now)
+	animation_tree.set("parameters/Locomotion/conditions/double_jump", jump_rising_edge)
+	animation_tree.set("parameters/Locomotion/conditions/gliding", gliding_now)
+	animation_tree.set("parameters/Locomotion/conditions/ngliding", not gliding_now)
 
 	var glide_moving: bool = self.walk or self.jog or self.run
 	var glide_forward_target: float = 1.0 if glide_moving else 0.0
 	_glide_forward_blend = move_toward(_glide_forward_blend, glide_forward_target, delta * 4.0)
-	animation_tree.set("parameters/Gliding_Idle/Blend2/blend_amount", _glide_forward_blend)
+	animation_tree.set(
+		"parameters/Locomotion/Gliding_Idle/Blend2/blend_amount", _glide_forward_blend
+	)
 
 	if jump_rising_edge:
 		audio_player_double_jump.play()
@@ -1683,19 +1704,33 @@ func _play_emote_audio(file_hash: String):
 	emote_controller.play_emote_audio(file_hash)
 
 
-func async_play_emote(emote_urn: String):
+## mask: -1 = full body (default), 0 = AvatarMask.AM_UPPER_BODY.
+func async_play_emote(emote_urn: String, mask: int = -1):
 	if not avatar_ready:
 		_pending_network_emote = emote_urn
+		_pending_network_emote_mask = mask
 		return
-	await emote_controller.async_play_emote(emote_urn)
+	await emote_controller.async_play_emote(emote_urn, mask)
 
 
 ## Stop a looping emote on network request (rfc4 PlayerEmote.is_stopping /
 ## Pulse EmoteStopped). Called from Rust (AvatarScene::stop_emote).
 func stop_emote_from_network():
 	_pending_network_emote = ""
+	_pending_network_emote_mask = -1
 	if emote_controller:
 		emote_controller.stop_emote()
+
+
+## Called from Rust immediately before this avatar's node is freed, so a still-running
+## emote can be reported as interrupted while the node is alive. See
+## AvatarEmoteController.take_unfinished_emote.
+func take_unfinished_emote() -> Array:
+	_pending_network_emote = ""
+	_pending_network_emote_mask = -1
+	if emote_controller == null:
+		return []
+	return emote_controller.take_unfinished_emote()
 
 
 ## Register scene emote content info for later retrieval.
