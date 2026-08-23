@@ -116,6 +116,8 @@ func _input(event: InputEvent) -> void:
 		)
 		_touches.erase(event.index)
 		_free_touches.erase(event.index)
+		if event.index == _look_index:
+			_look_index = -1
 		if event.index == _js_look_index:
 			_js_look_index = -1
 		_on_touch_count_changed()
@@ -171,10 +173,6 @@ func _on_touch_count_changed() -> void:
 		# A committed pinch finger lifted but two camera-area ones remain: re-seat
 		# onto the survivors so the gesture keeps going instead of stranding.
 		_reseat_pinch(cam)
-
-
-func _in_joystick_area(pos: Vector2) -> bool:
-	return _joystick != null and _joystick.get_active_area_global_rect().has_point(pos)
 
 
 # Free touch indices — those seen by gui_input, so owned by no UI (not the joystick,
