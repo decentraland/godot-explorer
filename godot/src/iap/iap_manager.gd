@@ -20,9 +20,8 @@ extends Node
 #   - POST /credits/iap/verify   : after StoreKit success, submit the JWS to be
 #                                  verified + credited. Idempotent with the
 #                                  webhook (server dedupes by Apple tx id).
-#   - GET  /users/:address/credits : reconcile the on-chain balance (the IAP
-#                                  share is `totals.nonExpiring`, in wei) and
-#                                  build the history view.
+#   - GET  /users/:address/credits : reconcile the balance (the `usd` block, in
+#                                  whole credits).
 #
 # Owns the global purchase overlay (full-screen blocking spinner). The overlay
 # is shown the moment a purchase is initiated and stays up until the flow
@@ -92,10 +91,6 @@ const _SUCCESS_MODAL_SCENE_PATH := "res://src/ui/components/organisms/iap_purcha
 # switch takes effect immediately. The host isn't part of the signed payload, so
 # repointing it doesn't affect the signing path.
 
-# credits-server stores amounts in wei (1 MANA = 1e18). The IAP balance is
-# reported as `totals.nonExpiring` in wei; divide to get whole MANA (== credits).
-const _WEI_PER_MANA := 1e18
-
 # Outcomes of POST /credits/iap/verify, mapped to StoreKit's redelivery contract:
 # OK — credited (or already credited, idempotent); finish the tx.
 # REJECTED — server refused permanently (invalid_jws, token_mismatch,
@@ -163,6 +158,8 @@ var _products: Array = []
 # Local cache of the server-authoritative balance, reconciled from
 # GET /users/:address/credits. Server is the source of truth.
 var _balance: int = 0
+# One-shot guard for the "this environment has no USD rail" notice.
+var _warned_no_usd_rail: bool = false
 # Tx-id dedup. Apple delivers the same transaction twice on a fresh purchase
 # (once via `purchaseCompleted`, once via the `Transaction.updates` listener
 # that picks up any unfinished tx). Cleared on relaunch like `_balance`.
@@ -374,6 +371,8 @@ func get_products() -> Array:
 	return _products
 
 
+## The balance, always in the unit the Shop prices in: whole USD credits. Never the
+## legacy MANA rail — see `_async_fetch_balance`.
 func get_balance() -> int:
 	return _balance
 
@@ -696,19 +695,19 @@ func _async_fetch_balance() -> void:
 	# Reconciles the server-side IAP balance for the signed-in wallet into the
 	# local cache. The credits-server endpoint carries the address in the path.
 	#
-	# TWO credit rails answer on this one endpoint, and a purchase lands on exactly
-	# one of them:
-	#   - MANA (legacy): `totals.nonExpiring`, in wei.
-	#   - USD (Shop):    a separate `usd` block, in WHOLE credits, sent only by an
-	#                    environment that has the USD rail switched on.
-	# Prefer `usd` whenever it is present. Its presence IS the server saying this
-	# environment credits in dollars, and reading `totals` there reports a balance
-	# that never moves no matter how many packs are bought — which is precisely how
-	# a working purchase looked before this: charged, credited, and invisible.
+	# ONLY the `usd` block, which is the rail the Shop prices in and the rail an In-App
+	# Purchase credits. The same endpoint also answers a legacy MANA total under
+	# `totals.nonExpiring`, and this client deliberately does not read it: MANA is a
+	# different unit of value that merely shares the word "credits" in the UI, and every
+	# surface that compares this number against a price compares it against
+	# `priceCredits`. Showing MANA there asks for ~1.6x what an item costs, and no
+	# conversion is available to fix it — `manaWei` is null on about half the primary
+	# listings the catalog serves.
 	#
-	# Deliberately a choice, not a sum: the two are different units of value (whole
-	# $0.10 credits vs MANA) that merely share the word "credits" in the UI. Adding
-	# them would invent a number that means nothing on either rail.
+	# So an environment with `core-shop-usd-credits` off reports 0 rather than a figure
+	# in the wrong currency. 0 is the true answer to "how much can this wallet spend in
+	# the Shop" there, and it puts the UI in its GET CREDITS state instead of offering
+	# items the player cannot pay for.
 	var wallet := _wallet_address()
 	if wallet.is_empty():
 		return
@@ -726,10 +725,12 @@ func _async_fetch_balance() -> void:
 		# authorization is holding before reporting it, so it is safe to show as-is.
 		_balance = int(usd.get("credits", 0))
 	else:
-		var totals = envelope.get("totals", {})
-		if not (totals is Dictionary):
-			return
-		_balance = int(round(float(totals.get("nonExpiring", 0)) / _WEI_PER_MANA))
+		_balance = 0
+		# Once per session: the condition is a server-side flag, not a client fault, and
+		# it holds for every refresh while it lasts.
+		if not _warned_no_usd_rail:
+			_warned_no_usd_rail = true
+			print("[IAP] no `usd` block on the balance; this environment credits MANA")
 	balance_changed.emit(_balance)
 
 
