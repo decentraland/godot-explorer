@@ -65,6 +65,7 @@ layout_mode = 2
 theme_override_constants/margin_top = 0
 
 [node name="Label_InfoDescription" type="Label" parent="MarginContainer_Description" unique_id=1798021201]
+auto_translate_mode = 2
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3

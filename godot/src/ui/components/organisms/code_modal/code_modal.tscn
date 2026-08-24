@@ -186,6 +186,7 @@ theme_override_constants/separation = 22
 theme_override_styles/separator = SubResource("StyleBoxEmpty_vtc1u")
 
 [node name="Label_Subtitle" type="RichTextLabel" parent="Blur/PanelContainer2/MarginContainer/VBoxContainer" unique_id=1085977058]
+auto_translate_mode = 2
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 10)
 layout_mode = 2
@@ -331,6 +332,7 @@ emoji_menu_enabled = false
 virtual_keyboard_enabled = false
 
 [node name="Label_Error" type="Label" parent="Blur/PanelContainer2/MarginContainer/VBoxContainer/Container" unique_id=1219482550]
+auto_translate_mode = 2
 unique_name_in_owner = true
 layout_mode = 2
 text = "CODE_MODAL_THE_CODE_IS_INVALID_OR_EXPIRED"

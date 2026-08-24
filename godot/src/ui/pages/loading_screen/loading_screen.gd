@@ -33,6 +33,9 @@ static var _low_spec_toast_shown: bool = false
 
 
 func _ready() -> void:
+	# The place-name node never auto-translates (it shows a server-supplied place
+	# title), so its pre-place-data copy is resolved here rather than in the scene.
+	rich_text_label_place_name.text = tr("LOADING_ENJOY_EXPERIENCE")
 	last_activity_time = Time.get_ticks_msec()
 	Global.scene_runner.loading_started.connect(_on_scene_runner_loading_started)
 

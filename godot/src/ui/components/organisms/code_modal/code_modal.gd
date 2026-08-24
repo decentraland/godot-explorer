@@ -254,8 +254,11 @@ func _async_submit_code() -> void:
 
 func _show_error(message: String = "") -> void:
 	_set_verifying_children_visible(false)
-	if not message.is_empty():
-		_label_error.text = message
+	# Server-supplied text: the node never auto-translates, so the generic fallback
+	# is resolved here instead of relying on the scene default.
+	_label_error.text = (
+		message if not message.is_empty() else tr("CODE_MODAL_THE_CODE_IS_INVALID_OR_EXPIRED")
+	)
 	_label_error.show()
 	for input in _code_inputs:
 		input.add_theme_stylebox_override("read_only", _error_style)
@@ -285,11 +288,11 @@ func open(email: String = "") -> void:
 	_clear_inputs()
 	_hidden_input.editable = true
 	_set_verifying_children_visible(false)
-	if email != "" and _label_subtitle:
-		_label_subtitle.text = (
-			"One time password sent to [b]%s[/b]. Please enter the code below to complete verification."
-			% email
-		)
+	if _label_subtitle:
+		if email != "":
+			_label_subtitle.text = tr("CODE_MODAL_OTP_SENT_TO") % email
+		else:
+			_label_subtitle.text = tr("CODE_MODAL_SENT_TO")
 	_start_resend_cooldown()
 	show()
 	_hidden_input.grab_focus()

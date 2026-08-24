@@ -58,6 +58,9 @@ var _dirty := false
 
 
 func _ready() -> void:
+	# The node never auto-translates (set_title receives an already-composed string),
+	# so the default title is resolved here instead of by the scene.
+	color_swatch_title.text = tr("COLOR_CARROUSEL_HAIR_COLOR")
 	color_swatch_title.hide()
 	title_separator.hide()
 	refresh_buttons()

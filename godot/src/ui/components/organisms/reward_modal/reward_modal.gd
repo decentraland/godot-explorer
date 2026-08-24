@@ -33,6 +33,12 @@ func async_setup(campaign: Dictionary) -> void:
 	show()
 
 
+func _ready() -> void:
+	# Label_Text never auto-translates (its error state carries server text), and
+	# _show_success() deliberately leaves this copy in place, so seed it here.
+	label_text.text = tr("REWARD_MODAL_YOUR_EMAIL_HAS_BEEN_VERIFIED_ENJOY")
+
+
 func _on_gui_input(event: InputEvent) -> void:
 	# Never dismiss while a claim request is in flight.
 	if _claiming:
@@ -78,7 +84,7 @@ func _async_claim() -> void:
 	# — a non-empty address plus the signed fetch is what actually matters.
 	var beneficiary := Global.player_identity.get_address_str()
 	if beneficiary.is_empty():
-		_show_error("You must be connected with a wallet to claim rewards.")
+		_show_error(tr("REWARD_ERROR_WALLET_REQUIRED"))
 		return
 
 	if _campaign_id.is_empty() or _campaign_key.is_empty():
@@ -142,12 +148,12 @@ func _process_claim_response(response) -> void:
 		printerr("RewardModal: claim failed — ", reason)
 		json = JSON.parse_string(reason)
 		if not (json is Dictionary):
-			_show_error("Error reaching the rewards server.")
+			_show_error(tr("REWARD_ERROR_SERVER_UNREACHABLE"))
 			return
 	else:
 		json = response.get_string_response_as_json()
 		if not (json is Dictionary):
-			_show_error("Invalid response from the rewards server.")
+			_show_error(tr("REWARD_ERROR_INVALID_RESPONSE"))
 			return
 
 	_handle_claim_json(json)

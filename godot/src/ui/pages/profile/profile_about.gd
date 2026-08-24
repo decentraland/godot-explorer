@@ -80,6 +80,10 @@ func refresh(profile: DclUserProfile) -> void:
 		label_info_description.text = description
 		label_info_description.max_lines_visible = -1
 		_description_truncated = label_info_description.get_line_count() > 2
+	else:
+		# The node never auto-translates (it carries the user's own words), so the
+		# empty-state hint has to be resolved here instead of by the scene default.
+		label_info_description.text = tr("PROFILE_USE_THIS_SPACE_TO_DESCRIBE_YOURSELF")
 
 	if has_description and has_about_data:
 		_about_mode = AboutMode.BOTH

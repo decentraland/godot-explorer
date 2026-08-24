@@ -152,6 +152,7 @@ theme_override_constants/separation = 24
 theme_override_styles/separator = SubResource("StyleBoxEmpty_xmi2h")
 
 [node name="RichTextLabel_PlaceName" type="RichTextLabel" parent="SafeMarginContainer/MarginContainer_Content/VBoxContainer/VBoxContainer_Data" unique_id=251786867]
+auto_translate_mode = 2
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/default_color = Color(0.9882353, 0.9882353, 0.9882353, 1)

@@ -416,8 +416,10 @@ func _setup_language_dropdown() -> void:
 		dropdown_list_language.hide()
 		return
 
+	# item_selected is wired in the scene, like the other scene-declared dropdowns
+	# (GraphicProfiles / CustomSkybox / Realm). Connecting here too raised
+	# "Signal 'item_selected' is already connected" on every Settings open.
 	_populate_language_dropdown()
-	dropdown_list_language.item_selected.connect(_on_dropdown_list_language_item_selected)
 
 
 func _populate_language_dropdown() -> void:

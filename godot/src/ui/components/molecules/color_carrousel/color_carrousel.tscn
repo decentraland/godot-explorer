@@ -24,6 +24,7 @@ script = ExtResource("1_wr7xx")
 metadata/_edit_horizontal_guides_ = [168.0, 224.0]
 
 [node name="ColorSwatchTitle" type="Button" parent="." unique_id=1118852477]
+auto_translate_mode = 2
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/icon_max_width = 56

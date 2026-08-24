@@ -31,8 +31,14 @@ import catalogue as cat  # noqa: E402
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 UI_ROOT = os.path.join(REPO_ROOT, "godot", "src", "ui")
-# Additional roots that render or declare UI text (locale_format.gd builds dates and numbers).
-EXTRA_ROOTS = [os.path.join(REPO_ROOT, "godot", "src", "config")]
+# Additional roots that render or declare UI text even though they sit outside src/ui:
+# locale_format.gd builds dates and numbers, src/logic emits chat system messages, and
+# global.gd emits them too. A path here may be a directory or a single file.
+EXTRA_ROOTS = [
+    os.path.join(REPO_ROOT, "godot", "src", "config"),
+    os.path.join(REPO_ROOT, "godot", "src", "logic"),
+    os.path.join(REPO_ROOT, "godot", "src", "global.gd"),
+]
 BASELINE_PATH = os.path.join(REPO_ROOT, "tools", "i18n", "unkeyed_baseline.txt")
 EXEMPT_PATH = os.path.join(REPO_ROOT, "tools", "i18n", "not_translatable.txt")
 
@@ -105,6 +111,10 @@ def walk(extension, ui_root=None):
 
 
 def _walk_one(extension, scan_root):
+    if os.path.isfile(scan_root):
+        if scan_root.endswith(extension) and not is_excluded(scan_root):
+            yield scan_root
+        return
     for root, _dirs, files in os.walk(scan_root):
         if is_excluded(root):
             continue

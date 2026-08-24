@@ -1417,7 +1417,7 @@ func async_teleport_to(parcel_position: Vector2i, new_realm: String) -> void:
 		explorer.hide_menu()
 		Global.on_chat_message.emit(
 			"system",
-			"[color=#ccc]🟢 Teleported to " + str(parcel_position) + "[/color]",
+			tr("CHAT_SYSTEM_TELEPORTED") % str(parcel_position),
 			Time.get_unix_time_from_system()
 		)
 	else:
@@ -1440,7 +1440,7 @@ func async_join_world(world_realm: String) -> void:
 		explorer.loading_ui.enable_loading_screen(world_realm, "on_world")
 		Global.on_chat_message.emit(
 			"system",
-			"[color=#ccc]Trying to change to world " + world_realm + "[/color]",
+			tr("CHAT_SYSTEM_CHANGING_WORLD") % world_realm,
 			Time.get_unix_time_from_system()
 		)
 		Global.realm.async_set_realm(world_realm, true)

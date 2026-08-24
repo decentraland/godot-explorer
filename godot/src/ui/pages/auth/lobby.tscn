@@ -961,6 +961,7 @@ layout_mode = 2
 size_flags_vertical = 3
 
 [node name="AuthErrorLabel" type="Label" parent="Main/SignIn/MarginContainer/VBoxContainer/VBoxContainer_SignInStep2/VBoxContainer_AuthError" unique_id=987918245]
+auto_translate_mode = 2
 unique_name_in_owner = true
 custom_minimum_size = Vector2(200, 0)
 layout_mode = 2

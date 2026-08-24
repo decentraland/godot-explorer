@@ -24,6 +24,7 @@ const HEADER_HEIGHT_PORTRAIT := 66
 const HEADER_SEPARATION_PORTRAIT := 12
 const HEADER_ICON_PORTRAIT := 44
 const HEADER_FONT_PORTRAIT := 27
+# i18n-keys: CHAT_HEADER_NEARBY
 const HEADER_LABEL_PORTRAIT := "CHAT_HEADER_NEARBY"
 
 ## Design specs — write button landscape
@@ -82,9 +83,7 @@ func _ready():
 func async_show_welcome_message() -> void:
 	await Global.loading_finished
 	Global.on_chat_message.emit(
-		"system",
-		"[color=#cfc][b]Welcome to Decentraland! Respect others and have fun.[/b][/color]",
-		Time.get_unix_time_from_system()
+		"system", tr("CHAT_SYSTEM_WELCOME"), Time.get_unix_time_from_system()
 	)
 
 

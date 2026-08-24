@@ -44,7 +44,6 @@ godot/src/ui/components/molecules/faq_collapsable/faq_collapsable.tscn	ASD
 # dummy text
 godot/src/ui/components/molecules/faq_collapsable/faq_collapsable.tscn	asdasdasdasdasd
 # tooltip text set at runtime
-godot/src/ui/components/molecules/pointer_tooltip/tooltip_label.tscn	Text
 # unused component, no callers
 godot/src/ui/components/organisms/dialogs/confirm_dialog.tscn	Description
 # unused component, no callers
@@ -135,3 +134,21 @@ godot/src/ui/pages/auth/lobby.gd	Guest login watchdog: stuck on loading screen a
 
 # interactable_area_debug_label — a debug overlay, not shipped UI.
 godot/src/ui/explorer.gd	%d%% of device\\n%d%% of safe area
+
+# HTTP method names in the request helper — protocol tokens, not UI copy. They
+# only look keyable because a lone ALL-CAPS word is indistinguishable from a key.
+godot/src/global.gd	CONNECT
+godot/src/global.gd	DELETE
+godot/src/global.gd	GET
+godot/src/global.gd	HEAD
+godot/src/global.gd	OPTIONS
+godot/src/global.gd	PATCH
+godot/src/global.gd	POST
+godot/src/global.gd	PUT
+godot/src/global.gd	TRACE
+
+# Startup timing trace, printed to the log.
+godot/src/global.gd	[Startup] global._async_clear_cache start: %dms
+
+# push_warning() diagnostic, never rendered.
+godot/src/logic/world_permissions_helper.gd	World permissions request failed for %s: %s

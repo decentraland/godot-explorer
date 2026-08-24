@@ -29,6 +29,8 @@ const LOGO_TAP_TIMEOUT: float = 0.5  # seconds to reset tap count
 # the "Getting you ready..." screen forever. Cap the wait and surface a retry.
 const GUEST_LOGIN_TIMEOUT_SEC: float = 20.0
 ## [opening, waiting] key pairs for the auth hand-off step.
+# i18n-keys: AUTH_BROWSER_OPENING, AUTH_BROWSER_WAITING
+# i18n-keys: AUTH_WALLET_OPENING_METAMASK, AUTH_WALLET_WAITING_METAMASK
 const BROWSER_TARGET_KEYS: PackedStringArray = ["AUTH_BROWSER_OPENING", "AUTH_BROWSER_WAITING"]
 const METAMASK_TARGET_KEYS: PackedStringArray = [
 	"AUTH_WALLET_OPENING_METAMASK", "AUTH_WALLET_WAITING_METAMASK"
@@ -920,7 +922,11 @@ func _show_auth_error(error_message: String):
 	track_lobby_screen("AUTH_ERROR")
 	auth_spinner_container.hide()
 	label_step2_title.text = tr("AUTH_FAILED_TITLE")
-	auth_error_label_main.text = error_message
+	# Errors come from player_identity (server/SDK text), so the node never
+	# auto-translates; an empty error still needs generic copy rather than a blank box.
+	auth_error_label_main.text = (
+		error_message if not error_message.is_empty() else tr("COMMON_SOMETHING_WENT_WRONG")
+	)
 	auth_error_label_code.text = ""
 	auth_error_container.show()
 	button_cancel.hide()
