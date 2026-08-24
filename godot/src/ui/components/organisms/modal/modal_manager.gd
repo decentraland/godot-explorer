@@ -162,9 +162,11 @@ func _ready() -> void:
 ## Shows an EXTERNAL_LINK type modal
 ## @param external_url: The external URL to open
 func async_show_external_link_modal(external_url: String) -> void:
-	if not current_modal:
+	if not is_instance_valid(current_modal):
 		if not await _async_create_modal():
 			print("NOT CREATED MODAL")
+			return
+		if not NodeGuard.is_alive(current_modal, "ModalManager.async_show_external_link_modal"):
 			return
 
 	current_modal.set_title(EXTERNAL_LINK_TITLE)
@@ -183,9 +185,11 @@ func async_show_external_link_modal(external_url: String) -> void:
 
 ## Shows a SCENE_TIMEOUT type modal
 func async_show_scene_timeout_modal() -> void:
-	if not current_modal:
+	if not is_instance_valid(current_modal):
 		if not await _async_create_modal():
 			print("NOT CREATED MODAL")
+			return
+		if not NodeGuard.is_alive(current_modal, "ModalManager.async_show_scene_timeout_modal"):
 			return
 
 	current_modal.set_title(SCENE_TIMEOUT_TITLE)
@@ -204,9 +208,11 @@ func async_show_scene_timeout_modal() -> void:
 ## Shows a CONNECTION_LOST type modal
 ## @param hide_buttons: If true, hides all buttons (used on iOS after retry fails)
 func async_show_connection_lost_modal(hide_buttons: bool = false) -> void:
-	if not current_modal:
+	if not is_instance_valid(current_modal):
 		if not await _async_create_modal():
 			print("NOT CREATED MODAL")
+			return
+		if not NodeGuard.is_alive(current_modal, "ModalManager.async_show_connection_lost_modal"):
 			return
 
 	current_modal.blocker = true
@@ -240,6 +246,8 @@ func async_show_teleport_modal(location: Vector2i, realm: String = "") -> void:
 	var destination_realm = realm if not realm.is_empty() else DclUrls.main_realm()
 
 	if not await _async_create_travel_modal():
+		return
+	if not NodeGuard.is_alive(current_travel_modal, "ModalManager.async_show_teleport_modal"):
 		return
 
 	current_travel_modal.closed.connect(close_travel_modal)
@@ -282,6 +290,8 @@ func async_show_world_modal(world_name: String) -> void:
 
 	if not await _async_create_travel_modal():
 		return
+	if not NodeGuard.is_alive(current_travel_modal, "ModalManager.async_show_world_modal"):
+		return
 
 	current_travel_modal.closed.connect(close_travel_modal)
 	current_travel_modal.jump_in_pressed.connect(_on_world_jump_in.bind(world_name))
@@ -306,6 +316,8 @@ func async_show_world_modal(world_name: String) -> void:
 func async_show_change_realm_modal(realm_name: String, _message: String = "") -> void:
 	if not await _async_create_travel_modal():
 		return
+	if not NodeGuard.is_alive(current_travel_modal, "ModalManager.async_show_change_realm_modal"):
+		return
 
 	current_travel_modal.closed.connect(close_travel_modal)
 	current_travel_modal.jump_in_pressed.connect(_on_change_realm_primary.bind(realm_name))
@@ -321,8 +333,10 @@ func async_show_change_realm_modal(realm_name: String, _message: String = "") ->
 ## Shows a SCENE_CRASH type modal
 ## @param entity_id: The entity ID of the crashed scene
 func async_show_scene_crash_modal(entity_id: String) -> void:
-	if not current_modal:
+	if not is_instance_valid(current_modal):
 		if not await _async_create_modal():
+			return
+		if not NodeGuard.is_alive(current_modal, "ModalManager.async_show_scene_crash_modal"):
 			return
 
 	current_modal.blocker = true
@@ -350,8 +364,12 @@ func async_show_scene_crash_modal(entity_id: String) -> void:
 func async_show_low_memory_warning_modal(
 	entity_id: String, footprint_mb: int = -1, available_mb: int = -1
 ) -> void:
-	if not current_modal:
+	if not is_instance_valid(current_modal):
 		if not await _async_create_modal():
+			return
+		if not NodeGuard.is_alive(
+			current_modal, "ModalManager.async_show_low_memory_warning_modal"
+		):
 			return
 
 	current_modal.blocker = true
@@ -389,8 +407,10 @@ func async_show_low_memory_warning_modal(
 func async_show_ban_pre_check_modal() -> void:
 	_force_hide_loading_screen()
 
-	if not current_modal:
+	if not is_instance_valid(current_modal):
 		if not await _async_create_modal():
+			return
+		if not NodeGuard.is_alive(current_modal, "ModalManager.async_show_ban_pre_check_modal"):
 			return
 
 	current_modal.blocker = true
@@ -412,8 +432,10 @@ func async_show_ban_pre_check_modal() -> void:
 func async_show_private_world_modal(world_name: String) -> void:
 	_force_hide_loading_screen()
 
-	if not current_modal:
+	if not is_instance_valid(current_modal):
 		if not await _async_create_modal():
+			return
+		if not NodeGuard.is_alive(current_modal, "ModalManager.async_show_private_world_modal"):
 			return
 
 	current_modal.blocker = true
@@ -437,8 +459,10 @@ func async_show_ban_kicked_modal() -> void:
 	if _suppress_ban_kicked:
 		_suppress_ban_kicked = false
 		return
-	if not current_modal:
+	if not is_instance_valid(current_modal):
 		if not await _async_create_modal():
+			return
+		if not NodeGuard.is_alive(current_modal, "ModalManager.async_show_ban_kicked_modal"):
 			return
 
 	current_modal.blocker = true
@@ -489,8 +513,10 @@ func async_show_disconnected_modal() -> void:
 func _async_show_disconnect_modal(
 	title: String, body: String, primary_label: String, primary_handler: Callable
 ) -> void:
-	if not current_modal:
+	if not is_instance_valid(current_modal):
 		if not await _async_create_modal():
+			return
+		if not NodeGuard.is_alive(current_modal, "ModalManager._async_show_disconnect_modal"):
 			return
 
 	current_modal.blocker = true
@@ -524,8 +550,10 @@ func _on_session_ended_secondary() -> void:
 
 ## Shows a low-spec iPhone warning modal (lobby popup)
 func async_show_low_spec_iphone_modal() -> void:
-	if not current_modal:
+	if not is_instance_valid(current_modal):
 		if not await _async_create_modal():
+			return
+		if not NodeGuard.is_alive(current_modal, "ModalManager.async_show_low_spec_iphone_modal"):
 			return
 
 	current_modal.set_title(LOW_SPEC_IPHONE_TITLE)
@@ -544,8 +572,10 @@ func async_show_low_spec_iphone_modal() -> void:
 
 ## Shows a purchase failed modal
 func async_show_purchase_failed_modal() -> void:
-	if not current_modal:
+	if not is_instance_valid(current_modal):
 		if not await _async_create_modal():
+			return
+		if not NodeGuard.is_alive(current_modal, "ModalManager.async_show_purchase_failed_modal"):
 			return
 
 	current_modal.set_title(PURCHASE_FAILED_TITLE)
@@ -562,8 +592,12 @@ func async_show_purchase_failed_modal() -> void:
 
 ## Shows a total credit limit reached modal
 func async_show_credit_limit_total_modal() -> void:
-	if not current_modal:
+	if not is_instance_valid(current_modal):
 		if not await _async_create_modal():
+			return
+		if not NodeGuard.is_alive(
+			current_modal, "ModalManager.async_show_credit_limit_total_modal"
+		):
 			return
 
 	current_modal.set_title(CREDIT_LIMIT_TITLE)
@@ -580,8 +614,12 @@ func async_show_credit_limit_total_modal() -> void:
 
 ## Shows a daily credit limit reached modal
 func async_show_credit_limit_daily_modal() -> void:
-	if not current_modal:
+	if not is_instance_valid(current_modal):
 		if not await _async_create_modal():
+			return
+		if not NodeGuard.is_alive(
+			current_modal, "ModalManager.async_show_credit_limit_daily_modal"
+		):
 			return
 
 	current_modal.set_title(CREDIT_LIMIT_TITLE)
@@ -598,8 +636,12 @@ func async_show_credit_limit_daily_modal() -> void:
 
 ## Shows a purchase-in-flight modal when the user tries to buy while another purchase is pending
 func async_show_purchase_in_flight_modal() -> void:
-	if not current_modal:
+	if not is_instance_valid(current_modal):
 		if not await _async_create_modal():
+			return
+		if not NodeGuard.is_alive(
+			current_modal, "ModalManager.async_show_purchase_in_flight_modal"
+		):
 			return
 
 	current_modal.set_title(PURCHASE_IN_FLIGHT_TITLE)
@@ -616,8 +658,12 @@ func async_show_purchase_in_flight_modal() -> void:
 
 ## Shows a modal when credit purchases are temporarily unavailable (server daily cap)
 func async_show_purchase_unavailable_modal() -> void:
-	if not current_modal:
+	if not is_instance_valid(current_modal):
 		if not await _async_create_modal():
+			return
+		if not NodeGuard.is_alive(
+			current_modal, "ModalManager.async_show_purchase_unavailable_modal"
+		):
 			return
 
 	current_modal.set_title(PURCHASE_UNAVAILABLE_TITLE)
@@ -634,8 +680,12 @@ func async_show_purchase_unavailable_modal() -> void:
 
 ## Shows a modal when a purchase succeeded but its credits are still being applied
 func async_show_purchase_processing_modal() -> void:
-	if not current_modal:
+	if not is_instance_valid(current_modal):
 		if not await _async_create_modal():
+			return
+		if not NodeGuard.is_alive(
+			current_modal, "ModalManager.async_show_purchase_processing_modal"
+		):
 			return
 
 	current_modal.set_title(PURCHASE_PROCESSING_TITLE)
@@ -652,8 +702,10 @@ func async_show_purchase_processing_modal() -> void:
 
 ## Shows IAP terms of use modal with a checkbox that must be accepted before confirming
 func async_show_iap_terms_modal() -> void:
-	if not current_modal:
+	if not is_instance_valid(current_modal):
 		if not await _async_create_modal():
+			return
+		if not NodeGuard.is_alive(current_modal, "ModalManager.async_show_iap_terms_modal"):
 			return
 
 	current_modal.set_title(IAP_TERMS_TITLE)
@@ -677,7 +729,7 @@ func async_show_iap_terms_modal() -> void:
 
 
 func _on_iap_terms_checkbox_toggled(checked: bool) -> void:
-	if current_modal:
+	if is_instance_valid(current_modal):
 		current_modal.button_primary.disabled = not checked
 
 
@@ -711,7 +763,7 @@ func async_show_input_modal(
 	validation: Callable,
 ) -> InputModal:
 	var modal = await _async_create_input_modal()
-	if not modal:
+	if not is_instance_valid(modal):
 		return null
 	modal.setup(title, subtitle, placeholder, confirm_text, cancel_text, validation)
 	modal.open()
@@ -720,28 +772,28 @@ func async_show_input_modal(
 
 ## Closes the current input modal if it exists
 func close_input_modal() -> void:
-	if current_input_modal:
+	if is_instance_valid(current_input_modal):
 		current_input_modal.close()
 		_remove_input_modal()
 
 
 ## Closes the current travel modal if it exists
 func close_travel_modal() -> void:
-	if current_travel_modal:
+	if is_instance_valid(current_travel_modal):
 		current_travel_modal.hide()
 		_remove_travel_modal()
 
 
 ## Closes the current modal if it exists
 func close_current_modal() -> void:
-	if current_modal:
+	if is_instance_valid(current_modal):
 		current_modal.hide()
 		_remove_modal()
 
 
 ## Disconnects all button signals from the current modal
 func _disconnect_button_signals() -> void:
-	if not current_modal:
+	if not is_instance_valid(current_modal):
 		return
 
 	# Disconnect all connections from primary button
@@ -772,7 +824,7 @@ func _dismiss_chat_input_for_modal() -> void:
 func _async_create_modal() -> Modal:
 	_dismiss_chat_input_for_modal()
 	# If there's already a modal open, close it first
-	if current_modal:
+	if is_instance_valid(current_modal):
 		close_current_modal()
 
 	if not modal_scene:
@@ -785,7 +837,7 @@ func _async_create_modal() -> Modal:
 		return null
 
 	# Wrap in a CanvasLayer with high layer to ensure modals render above all overlays
-	if _canvas_layer and is_instance_valid(_canvas_layer):
+	if is_instance_valid(_canvas_layer):
 		_canvas_layer.get_parent().remove_child(_canvas_layer)
 		_canvas_layer.queue_free()
 
@@ -813,12 +865,16 @@ func _async_create_modal() -> Modal:
 	await get_tree().process_frame
 	await get_tree().process_frame
 
+	# Those two frames are a window in which the modal can be freed — see NodeGuard.
+	if not NodeGuard.is_alive(modal, "ModalManager._async_create_modal"):
+		return null
+
 	return modal
 
 
 func _async_create_travel_modal() -> TravelModal:
 	_dismiss_chat_input_for_modal()
-	if current_travel_modal:
+	if is_instance_valid(current_travel_modal):
 		close_travel_modal()
 
 	if not travel_modal_scene:
@@ -830,7 +886,7 @@ func _async_create_travel_modal() -> TravelModal:
 		push_error("ModalManager: Could not instantiate travel modal")
 		return null
 
-	if _travel_canvas_layer and is_instance_valid(_travel_canvas_layer):
+	if is_instance_valid(_travel_canvas_layer):
 		_travel_canvas_layer.get_parent().remove_child(_travel_canvas_layer)
 		_travel_canvas_layer.queue_free()
 
@@ -850,6 +906,10 @@ func _async_create_travel_modal() -> TravelModal:
 
 	await get_tree().process_frame
 	await get_tree().process_frame
+
+	# Those two frames are a window in which the modal can be freed — see NodeGuard.
+	if not NodeGuard.is_alive(modal, "ModalManager._async_create_travel_modal"):
+		return null
 
 	return modal
 
@@ -1038,14 +1098,14 @@ func _on_ban_go_to_discover() -> void:
 
 
 func _on_modal_tree_exited() -> void:
-	# Modal was removed from tree, clear reference
-	if current_modal:
-		current_modal = null
+	# Modal left the tree. Drop the reference whether or not the instance is still alive:
+	# a freed-but-not-cleared member is exactly the dangling pointer we are removing.
+	current_modal = null
 
 
 func _on_travel_modal_tree_exited() -> void:
-	if current_travel_modal:
-		current_travel_modal = null
+	# Cleared unconditionally — see _on_modal_tree_exited.
+	current_travel_modal = null
 
 
 ## Instantly kills the loading screen and runs the normal post-loading cleanup
@@ -1085,19 +1145,19 @@ func _on_loading_finished_clear_suppress() -> void:
 
 
 func _remove_modal() -> void:
-	if current_modal:
+	if is_instance_valid(current_modal):
 		_disconnect_button_signals()
 		if current_modal.tree_exited.is_connected(_on_modal_tree_exited):
 			current_modal.tree_exited.disconnect(_on_modal_tree_exited)
 		current_modal.queue_free()
-		current_modal = null
-	if _canvas_layer and is_instance_valid(_canvas_layer):
+	current_modal = null
+	if is_instance_valid(_canvas_layer):
 		_canvas_layer.queue_free()
-		_canvas_layer = null
+	_canvas_layer = null
 
 
 func _disconnect_travel_signals() -> void:
-	if not current_travel_modal:
+	if not is_instance_valid(current_travel_modal):
 		return
 	for connection in current_travel_modal.closed.get_connections():
 		current_travel_modal.closed.disconnect(connection.callable)
@@ -1106,19 +1166,19 @@ func _disconnect_travel_signals() -> void:
 
 
 func _remove_travel_modal() -> void:
-	if current_travel_modal:
+	if is_instance_valid(current_travel_modal):
 		_disconnect_travel_signals()
 		if current_travel_modal.tree_exited.is_connected(_on_travel_modal_tree_exited):
 			current_travel_modal.tree_exited.disconnect(_on_travel_modal_tree_exited)
 		current_travel_modal.queue_free()
-		current_travel_modal = null
-	if _travel_canvas_layer and is_instance_valid(_travel_canvas_layer):
+	current_travel_modal = null
+	if is_instance_valid(_travel_canvas_layer):
 		_travel_canvas_layer.queue_free()
-		_travel_canvas_layer = null
+	_travel_canvas_layer = null
 
 
 func _async_create_input_modal() -> InputModal:
-	if current_input_modal:
+	if is_instance_valid(current_input_modal):
 		close_input_modal()
 
 	if not input_modal_scene:
@@ -1130,7 +1190,7 @@ func _async_create_input_modal() -> InputModal:
 		push_error("ModalManager: Could not instantiate input modal")
 		return null
 
-	if _input_canvas_layer and is_instance_valid(_input_canvas_layer):
+	if is_instance_valid(_input_canvas_layer):
 		_input_canvas_layer.get_parent().remove_child(_input_canvas_layer)
 		_input_canvas_layer.queue_free()
 
@@ -1151,41 +1211,45 @@ func _async_create_input_modal() -> InputModal:
 	await get_tree().process_frame
 	await get_tree().process_frame
 
+	# Those two frames are a window in which the modal can be freed — see NodeGuard.
+	if not NodeGuard.is_alive(modal, "ModalManager._async_create_input_modal"):
+		return null
+
 	return modal
 
 
 func _on_input_modal_tree_exited() -> void:
-	if current_input_modal:
-		current_input_modal = null
+	# Cleared unconditionally — see _on_modal_tree_exited.
+	current_input_modal = null
 
 
 func _remove_input_modal() -> void:
-	if current_input_modal:
+	if is_instance_valid(current_input_modal):
 		if current_input_modal.tree_exited.is_connected(_on_input_modal_tree_exited):
 			current_input_modal.tree_exited.disconnect(_on_input_modal_tree_exited)
 		current_input_modal.queue_free()
-		current_input_modal = null
-	if _input_canvas_layer and is_instance_valid(_input_canvas_layer):
+	current_input_modal = null
+	if is_instance_valid(_input_canvas_layer):
 		_input_canvas_layer.queue_free()
-		_input_canvas_layer = null
+	_input_canvas_layer = null
 
 
 func async_show_code_modal(email: String = "") -> CodeModal:
 	var modal = await _async_create_code_modal()
-	if not modal:
+	if not is_instance_valid(modal):
 		return null
 	modal.open(email)
 	return modal
 
 
 func close_code_modal() -> void:
-	if current_code_modal:
+	if is_instance_valid(current_code_modal):
 		current_code_modal.close()
 		_remove_code_modal()
 
 
 func _async_create_code_modal() -> CodeModal:
-	if current_code_modal:
+	if is_instance_valid(current_code_modal):
 		close_code_modal()
 
 	if not code_modal_scene:
@@ -1197,7 +1261,7 @@ func _async_create_code_modal() -> CodeModal:
 		push_error("ModalManager: Could not instantiate code modal")
 		return null
 
-	if _code_canvas_layer and is_instance_valid(_code_canvas_layer):
+	if is_instance_valid(_code_canvas_layer):
 		_code_canvas_layer.get_parent().remove_child(_code_canvas_layer)
 		_code_canvas_layer.queue_free()
 
@@ -1218,23 +1282,27 @@ func _async_create_code_modal() -> CodeModal:
 	await get_tree().process_frame
 	await get_tree().process_frame
 
+	# Those two frames are a window in which the modal can be freed — see NodeGuard.
+	if not NodeGuard.is_alive(modal, "ModalManager._async_create_code_modal"):
+		return null
+
 	return modal
 
 
 func _on_code_modal_tree_exited() -> void:
-	if current_code_modal:
-		current_code_modal = null
+	# Cleared unconditionally — see _on_modal_tree_exited.
+	current_code_modal = null
 
 
 func _remove_code_modal() -> void:
-	if current_code_modal:
+	if is_instance_valid(current_code_modal):
 		if current_code_modal.tree_exited.is_connected(_on_code_modal_tree_exited):
 			current_code_modal.tree_exited.disconnect(_on_code_modal_tree_exited)
 		current_code_modal.queue_free()
-		current_code_modal = null
-	if _code_canvas_layer and is_instance_valid(_code_canvas_layer):
+	current_code_modal = null
+	if is_instance_valid(_code_canvas_layer):
 		_code_canvas_layer.queue_free()
-		_code_canvas_layer = null
+	_code_canvas_layer = null
 
 
 ## Shows the reward modal for a claimable campaign.
@@ -1244,20 +1312,20 @@ func _remove_code_modal() -> void:
 ## gate analytics / cadence bookkeeping on a real appearance.
 func async_show_reward_modal(campaign: Dictionary) -> bool:
 	var modal = await _async_create_reward_modal()
-	if not modal:
+	if not is_instance_valid(modal):
 		return false
 	await modal.async_setup(campaign)
 	return true
 
 
 func close_reward_modal() -> void:
-	if current_reward_modal:
+	if is_instance_valid(current_reward_modal):
 		current_reward_modal.hide()
 		_remove_reward_modal()
 
 
 func _async_create_reward_modal() -> RewardModal:
-	if current_reward_modal:
+	if is_instance_valid(current_reward_modal):
 		close_reward_modal()
 
 	if not reward_modal_scene:
@@ -1269,7 +1337,7 @@ func _async_create_reward_modal() -> RewardModal:
 		push_error("ModalManager: Could not instantiate reward modal")
 		return null
 
-	if _reward_canvas_layer and is_instance_valid(_reward_canvas_layer):
+	if is_instance_valid(_reward_canvas_layer):
 		_reward_canvas_layer.get_parent().remove_child(_reward_canvas_layer)
 		_reward_canvas_layer.queue_free()
 
@@ -1290,43 +1358,47 @@ func _async_create_reward_modal() -> RewardModal:
 	await get_tree().process_frame
 	await get_tree().process_frame
 
+	# Those two frames are a window in which the modal can be freed — see NodeGuard.
+	if not NodeGuard.is_alive(modal, "ModalManager._async_create_reward_modal"):
+		return null
+
 	return modal
 
 
 func _on_reward_modal_tree_exited() -> void:
-	if current_reward_modal:
-		current_reward_modal = null
+	# Cleared unconditionally — see _on_modal_tree_exited.
+	current_reward_modal = null
 
 
 func _remove_reward_modal() -> void:
-	if current_reward_modal:
+	if is_instance_valid(current_reward_modal):
 		if current_reward_modal.tree_exited.is_connected(_on_reward_modal_tree_exited):
 			current_reward_modal.tree_exited.disconnect(_on_reward_modal_tree_exited)
 		current_reward_modal.queue_free()
-		current_reward_modal = null
-	if _reward_canvas_layer and is_instance_valid(_reward_canvas_layer):
+	current_reward_modal = null
+	if is_instance_valid(_reward_canvas_layer):
 		_reward_canvas_layer.queue_free()
-		_reward_canvas_layer = null
+	_reward_canvas_layer = null
 
 
 ## Shows the aspirational guest-upgrade nudge modal (issue #2372). Returns true only if the
 ## modal was actually created and opened, so the coordinator advances its cadence only then.
 func async_show_upgrade_modal() -> bool:
 	var modal = await _async_create_upgrade_modal()
-	if not modal:
+	if not is_instance_valid(modal):
 		return false
 	modal.open()
 	return true
 
 
 func close_upgrade_modal() -> void:
-	if current_upgrade_modal:
+	if is_instance_valid(current_upgrade_modal):
 		current_upgrade_modal.hide()
 		_remove_upgrade_modal()
 
 
 func _async_create_upgrade_modal() -> UpgradeModal:
-	if current_upgrade_modal:
+	if is_instance_valid(current_upgrade_modal):
 		close_upgrade_modal()
 
 	if not upgrade_modal_scene:
@@ -1338,7 +1410,7 @@ func _async_create_upgrade_modal() -> UpgradeModal:
 		push_error("ModalManager: Could not instantiate upgrade modal")
 		return null
 
-	if _upgrade_canvas_layer and is_instance_valid(_upgrade_canvas_layer):
+	if is_instance_valid(_upgrade_canvas_layer):
 		_upgrade_canvas_layer.get_parent().remove_child(_upgrade_canvas_layer)
 		_upgrade_canvas_layer.queue_free()
 
@@ -1359,23 +1431,27 @@ func _async_create_upgrade_modal() -> UpgradeModal:
 	await get_tree().process_frame
 	await get_tree().process_frame
 
+	# Those two frames are a window in which the modal can be freed — see NodeGuard.
+	if not NodeGuard.is_alive(modal, "ModalManager._async_create_upgrade_modal"):
+		return null
+
 	return modal
 
 
 func _on_upgrade_modal_tree_exited() -> void:
-	if current_upgrade_modal:
-		current_upgrade_modal = null
+	# Cleared unconditionally — see _on_modal_tree_exited.
+	current_upgrade_modal = null
 
 
 func _remove_upgrade_modal() -> void:
-	if current_upgrade_modal:
+	if is_instance_valid(current_upgrade_modal):
 		if current_upgrade_modal.tree_exited.is_connected(_on_upgrade_modal_tree_exited):
 			current_upgrade_modal.tree_exited.disconnect(_on_upgrade_modal_tree_exited)
 		current_upgrade_modal.queue_free()
-		current_upgrade_modal = null
-	if _upgrade_canvas_layer and is_instance_valid(_upgrade_canvas_layer):
+	current_upgrade_modal = null
+	if is_instance_valid(_upgrade_canvas_layer):
 		_upgrade_canvas_layer.queue_free()
-		_upgrade_canvas_layer = null
+	_upgrade_canvas_layer = null
 
 
 # --- Add Email (guest upgrade) OTP flow (issue #2377) --------------------------------------
@@ -1395,7 +1471,7 @@ func async_start_add_email_flow() -> void:
 	var modal = await async_show_input_modal(
 		"Add Email", "My email", "name@email.com", "ADD", "CANCEL", is_valid_email
 	)
-	if modal:
+	if is_instance_valid(modal):
 		# Add Email modal shown — the OTP upgrade funnel has started (issue #2377).
 		Global.metrics.track_screen_viewed("UPGRADE_OTP_START", "")
 		modal.dismissable = false
@@ -1432,7 +1508,7 @@ func _async_add_email_send_code(email: String) -> Dictionary:
 # gdlint:ignore = async-function-name
 func _async_add_email_code_sent(email: String) -> void:
 	var code_modal = await async_show_code_modal(email)
-	if code_modal:
+	if is_instance_valid(code_modal):
 		Global.metrics.track_screen_viewed("UPGRADE_OTP_ENTERCODE", "")
 		code_modal.set_verifier(_async_add_email_verify.bind(email))
 		code_modal.set_resend_handler(_async_add_email_resend.bind(email))
@@ -1532,7 +1608,7 @@ func _add_email_friendly_error(raw: String) -> String:
 
 func _async_add_email_error_modal(title: String, body: String) -> void:
 	var modal = await _async_create_modal()
-	if not modal:
+	if not is_instance_valid(modal):
 		return
 	modal.set_title(title)
 	modal.set_body(body)

@@ -121,7 +121,15 @@ func async_load_emote_from_mapping(
 ## Get a DclEmoteGltf from cached scene using threaded loading.
 ## Uses ContentProvider's extract_emote_from_scene which extracts animations properly.
 ## Handles both optimized assets (res:// paths) and runtime-processed assets (user:// paths).
-func async_get_emote_gltf(file_hash: String) -> DclEmoteGltf:
+##
+## Pass file_name + content_mapping (when the emote entity is at hand) to enable the
+## broken-bake fallback: some optimized zips carry a prop *animation* but lost the prop
+## *geometry* at bake time (prop armature named e.g. "Armature_prop" — the baker's
+## node lookup was case-sensitive). The mesh isn't in the zip, so nothing extraction-side
+## can recover it; those emotes are re-processed from the original GLB at runtime instead.
+func async_get_emote_gltf(
+	file_hash: String, file_name: String = "", content_mapping: DclContentMappingAndUrl = null
+) -> DclEmoteGltf:
 	# First check _completed_loads (handles optimized res:// paths)
 	var scene_path = _completed_loads.get(file_hash, "")
 	if scene_path.is_empty():
@@ -132,6 +140,34 @@ func async_get_emote_gltf(file_hash: String) -> DclEmoteGltf:
 		printerr("EmoteLoader: no scene_path for hash ", file_hash)
 		return null
 
+	var obj = await _async_extract_from_path(scene_path, file_hash)
+
+	if (
+		obj != null
+		and obj.prop_animation != null
+		and obj.armature_prop == null
+		and scene_path.begins_with("res://")
+		and content_mapping != null
+		and not file_name.is_empty()
+	):
+		print(
+			"EmoteLoader: optimized bake for ",
+			file_hash,
+			" has a prop animation but no prop node — re-processing the GLB at runtime"
+		)
+		var runtime_path = await async_load_emote_from_mapping(
+			file_hash, file_name, content_mapping, true
+		)
+		if not runtime_path.is_empty() and not runtime_path.begins_with("res://"):
+			var healed = await _async_extract_from_path(runtime_path, file_hash)
+			if healed != null:
+				return healed
+
+	return obj
+
+
+## Threaded-load a PackedScene from scene_path and extract the emote data from it.
+func _async_extract_from_path(scene_path: String, file_hash: String) -> DclEmoteGltf:
 	# Check if scene exists - use appropriate method for path type
 	if scene_path.begins_with("res://"):
 		# Optimized asset loaded via resource pack - use ResourceLoader.exists()

@@ -215,7 +215,10 @@ func _async_open_popup() -> void:
 
 	# Sync shadow rect with popup panel (position, size, and offset)
 	await get_tree().process_frame
-	if _shadow_rect:
+	# Closing the dropdown during that frame frees the popup — see NodeGuard.
+	if not NodeGuard.is_alive(_popup_panel, "DropdownList._async_open_popup"):
+		return
+	if is_instance_valid(_shadow_rect):
 		# Get corner radius from popup style
 		var popup_style_shadow: StyleBoxFlat = (
 			_popup_panel.get_theme_stylebox("panel") as StyleBoxFlat

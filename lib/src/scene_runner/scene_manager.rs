@@ -1630,7 +1630,11 @@ impl SceneManager {
             }
         });
 
-        let frames_count = godot::classes::Engine::singleton().get_physics_frames();
+        // EngineInfo.frame_number must count rendered/main-loop frames (Unity
+        // reports Time.frameCount). Physics frames advance at a fixed 60 Hz in
+        // wall time even when rendering is slow, so they hide the real client
+        // frame rate from scenes that diff frame_number between ticks.
+        let frames_count = godot::classes::Engine::singleton().get_process_frames();
 
         let player_parcel_position = Vector2i::new(
             (player_global_transform.origin.x / 16.0).floor() as i32,
