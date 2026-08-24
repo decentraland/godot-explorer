@@ -197,13 +197,17 @@ func _async_fetch_items(category: String):
 
 
 func _async_fetch_total(category: String) -> int:
+	# `first=0` asks for the count without the page. The unified endpoint doesn't reject
+	# it and reports the same `total` the paged call does — verified on org and zone, for
+	# both wearables and emotes — it just clamps the page to one row, which is thrown
+	# away here. `total` is what gates the whole section, so this contract is a QA case.
 	var url = _build_catalog_url(category, 0, 0)
 	var promise = Global.http_requester.request_json(url, HTTPClient.METHOD_GET, "", {})
 	var result = await PromiseUtils.async_awaiter(promise)
 	if result is PromiseError:
 		return 0
 	var json = result.get_string_response_as_json()
-	return json.get("total", 0)
+	return _int_field(json, "total")
 
 
 func _populate_cards(items: Array):
@@ -234,7 +238,7 @@ func _setup_card(card: WearableItem, item_data: Dictionary, urn: String):
 	# unit as the balance the card compares it against to choose between DETAIL and
 	# GET CREDITS. The entry also carries `manaWei`, a different currency: 1 MANA is
 	# worth ~0.63 credits, so its figure reads about 1.6x too expensive.
-	var price := int(item_data.get("priceCredits", 0))
+	var price := _int_field(item_data, "priceCredits")
 	# The link is built from the entry's ids for the same reason the urn above is:
 	# the catalog carries neither. DclUrls picks the route table the current env
 	# serves — the classic marketplace's "/contracts/{c}/items/{i}" is a 404 under
@@ -297,7 +301,7 @@ func _set_rarity_background(card: WearableItem, rarity: String):
 ## Everything downstream of a card (equipping the preview, the selection signals, the
 ## price lookup) keys off the urn, so an entry that can't produce one is skipped.
 func _item_urn(item_data: Dictionary) -> String:
-	var chain := str(_URN_CHAIN_BY_ID.get(int(item_data.get("chainId", 0)), ""))
+	var chain := str(_URN_CHAIN_BY_ID.get(_int_field(item_data, "chainId"), ""))
 	var contract_address := _string_field(item_data, "contractAddress")
 	var item_id := _string_field(item_data, "itemId")
 	if chain.is_empty() or contract_address.is_empty() or item_id.is_empty():
@@ -324,6 +328,15 @@ func _matches_player_gender(item_data: Dictionary) -> bool:
 func _string_field(item_data: Dictionary, key: String) -> String:
 	var value = item_data.get(key)
 	return str(value) if value != null else ""
+
+
+## Same, for the numeric fields. `Dictionary.get(key, default)` only falls back when the
+## key is MISSING, and this feed sends it present-and-null instead — `manaWei`, `tokenId`,
+## `seller` and `issuedId` all arrive that way. `int(null)` doesn't quietly give 0; it
+## pushes a Godot error (→ Sentry) on the way there.
+func _int_field(item_data: Dictionary, key: String) -> int:
+	var value = item_data.get(key)
+	return int(value) if value != null else 0
 
 
 func _async_load_thumbnail(card: WearableItem, url: String):

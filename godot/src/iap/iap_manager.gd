@@ -118,6 +118,11 @@ const _OUTCOME_DEFERRED := 3
 const _ORDER_STATUS_REVERSED := "reversed"
 const _HISTORY_ORDER_STATUSES := ["credited", "reversed", "partially_reversed"]
 
+## How much of an unparseable response body reaches the log (and therefore Sentry).
+## The body is wallet-scoped purchase data, and a failure here is usually an edge
+## proxy's HTML error page — enough to identify it, not enough to ship the payload.
+const _ERROR_BODY_EXCERPT_CHARS := 200
+
 # After a purchase the credit is minted server-side (by /verify or, racing it, the
 # webhook), but the reported balance can lag a moment behind the mint. Poll the
 # balance every _POST_PURCHASE_POLL_INTERVAL_SEC, for up to _POST_PURCHASE_POLL_ATTEMPTS
@@ -439,7 +444,10 @@ func _async_begin_purchase(product_id: String, wallet: String) -> void:
 	if not envelope.get("ok", false):
 		var code := str(envelope.get("code", ""))
 		var reason := str(envelope.get("reason", ""))
-		printerr("[IAP] quote denied for ", product_id, ": code=", code, " reason=", reason)
+		# `print`, not `printerr`: a denial is an expected outcome with a user-facing
+		# modal on the next line — a guest tapping buy and a buyer at the daily cap both
+		# land here, and neither is an incident.
+		print("[IAP] quote denied for ", product_id, ": code=", code, " reason=", reason)
 		_finish_purchase_flow()
 		_show_quote_denied_modal(code, reason)
 		purchase_failed.emit(product_id, "not allowed: " + code)
@@ -723,7 +731,7 @@ func _async_fetch_balance() -> void:
 	if usd is Dictionary:
 		# Already the SPENDABLE figure: the server subtracts whatever an in-flight
 		# authorization is holding before reporting it, so it is safe to show as-is.
-		_balance = int(usd.get("credits", 0))
+		_balance = _int_field(usd, "credits")
 	else:
 		_balance = 0
 		# Once per session: the condition is a server-side flag, not a client fault, and
@@ -766,13 +774,22 @@ func _async_fetch_history() -> void:
 			continue
 		# createdAt is epoch ms.
 		var dt = Time.get_datetime_dict_from_unix_time(
-			int(float(entry.get("createdAt", 0)) / 1000.0)
+			int(_float_field(entry, "createdAt") / 1000.0)
 		)
 		(
 			history
 			. append(
 				{
-					"credits": int(entry.get("credits", 0)),
+					"credits": _int_field(entry, "credits"),
+					# Deliberately NOT the money. `orders[].usdCents` looks like the charge
+					# but only is one on the Stripe rail: the Apple rail stores the credits'
+					# $0.10 face value (`credits * 10`), so a 40-credit pack reports $4.00
+					# against an $8.59 charge. Nothing else carries the real figure either —
+					# `iap_credits` has no price or currency column, and the transaction the
+					# client submits doesn't include one. StoreKit knows TODAY's price for a
+					# product, which is not what was charged once a price or a storefront
+					# changes. So the row shows the credits until the server persists the
+					# price off Apple's signed transaction.
 					"is_refund": status == _ORDER_STATUS_REVERSED,
 					"timestamp": "%04d.%02d.%02d" % [dt.year, dt.month, dt.day],
 				}
@@ -815,11 +832,22 @@ func _async_signed_iap(path: String, method: int, body: String) -> Variant:
 	var url := DclUrls.credits_server() + path
 	var response = await Global.async_signed_fetch(url, method, body, true)
 	if response is PromiseError:
-		printerr("[IAP] ", path, " transport/auth error: ", response.get_error())
+		# `print`, not `printerr`: `_async_poll_balance_after_purchase` calls this
+		# _POST_PURCHASE_POLL_ATTEMPTS times, so a phone that drops connectivity right
+		# after a purchase would emit that many identical error events. The retry loop
+		# already recovers from it.
+		print("[IAP] ", path, " transport/auth error: ", response.get_error())
 		return null
 	var json = response.get_string_response_as_json()
 	if not (json is Dictionary):
-		printerr("[IAP] ", path, " unparseable response: ", response.get_string_response())
+		# Truncated on purpose: this body is wallet-scoped purchase data, and when the
+		# failure is an edge proxy's HTML error page it is multi-KB of no use anyway.
+		printerr(
+			"[IAP] ",
+			path,
+			" unparseable response: ",
+			response.get_string_response().substr(0, _ERROR_BODY_EXCERPT_CHARS)
+		)
 		return null
 	return json
 
@@ -828,6 +856,22 @@ func _wallet_address() -> String:
 	if Global.player_identity == null:
 		return ""
 	return Global.player_identity.get_address_str()
+
+
+## Reads a numeric field, treating a JSON null as absent.
+##
+## `Dictionary.get(key, default)` only returns the default when the key is MISSING, and
+## these feeds send the key with a null instead (`manaWei`, `tokenId` and `seller` all
+## arrive that way on the catalog). `int(null)` doesn't yield 0 — it pushes a Godot
+## error first, which is a Sentry event for a value the server is entitled to omit.
+func _int_field(data: Dictionary, key: String) -> int:
+	var value = data.get(key)
+	return int(value) if value != null else 0
+
+
+func _float_field(data: Dictionary, key: String) -> float:
+	var value = data.get(key)
+	return float(value) if value != null else 0.0
 
 
 func _show_overlay() -> void:
