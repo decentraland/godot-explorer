@@ -131,6 +131,7 @@ expand_mode = 3
 stretch_mode = 6
 
 [node name="Label_Version" type="Label" parent="." unique_id=292290744]
+auto_translate_mode = 2
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 2

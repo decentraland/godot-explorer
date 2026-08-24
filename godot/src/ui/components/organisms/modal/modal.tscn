@@ -178,6 +178,7 @@ theme_override_constants/separation = 14
 theme_override_styles/separator = SubResource("StyleBoxEmpty_figov")
 
 [node name="Label_Url" type="Label" parent="PanelContainer/MarginContainer_Content/VBoxContainer" unique_id=1342742156]
+auto_translate_mode = 2
 unique_name_in_owner = true
 clip_contents = true
 custom_minimum_size = Vector2(50, 10)

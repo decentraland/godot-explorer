@@ -54,7 +54,9 @@ KEY_RE = re.compile(r"^[A-Z][A-Z0-9]*(_[A-Z0-9]+)+$")
 SCENE_PROP_RE = re.compile(r'(?m)^([a-z_]+) = "((?:[^"\\]|\\.)*)"')
 
 # GDScript display-text assignment, e.g. `label.text = "Hello"`.
-GD_ASSIGN_RE = re.compile(r'\.(text|tooltip_text|placeholder_text)\s*=\s*"((?:[^"\\]|\\.)*)"')
+# `.title` is included because DiscoverCarrousel exposes an exported `title` that assigns
+# straight to a Label — three carousel headers shipped in English behind that gap.
+GD_ASSIGN_RE = re.compile(r'\.(text|tooltip_text|placeholder_text|title)\s*=\s*"((?:[^"\\]|\\.)*)"')
 
 # A translation key being resolved. tr() covers the common case; TranslationServer.translate()
 # is how a *static* function must do it, since tr() is a non-static Object method.
@@ -80,6 +82,9 @@ HELPER_PATTERNS = [
     # button labels this way, and no assignment or setter pattern sees a bare const.
     re.compile(r'^\s*const\s+\w+\s*(?::\s*\w+\s*)?=\s*"((?:[^"\\]|\\.)+)"'),
 ]
+
+# `auto_translate_mode = 2` is Node.AUTO_TRANSLATE_MODE_DISABLED.
+AUTO_TRANSLATE_DISABLED_RE = re.compile(r"(?m)^auto_translate_mode\s*=\s*2\s*$")
 
 # snake_case / kebab-case identifiers: "temp-file", "notification_bell", "feet", "green".
 IDENTIFIER_RE = re.compile(r"^[a-z0-9]+([_-][a-z0-9]+)*$")
@@ -151,6 +156,13 @@ def collect(ui_root=None, repo_root=None):
         # Only look inside [node ...] blocks, so resource defaults are not treated as UI text.
         for block in re.split(r"(?m)^(?=\[)", content):
             if not block.startswith("[node"):
+                continue
+            # A node with auto_translate_mode = 2 (DISABLED) never runs its text through a
+            # translation lookup, so its text cannot need a key — it is showing server or
+            # user-generated data. The flag lives beside the node, which makes it survive
+            # renames and rewording, unlike a not_translatable.txt entry matched on
+            # (path, exact string).
+            if AUTO_TRANSLATE_DISABLED_RE.search(block):
                 continue
             for match in SCENE_PROP_RE.finditer(block):
                 prop, value = match.group(1), match.group(2)

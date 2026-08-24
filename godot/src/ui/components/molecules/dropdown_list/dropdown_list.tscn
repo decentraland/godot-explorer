@@ -91,6 +91,7 @@ mouse_filter = 2
 theme_override_constants/separation = 8
 
 [node name="Label_Selected" type="Label" parent="VBoxContainer/PanelContainer_Button/HBoxContainer" unique_id=1393568308]
+auto_translate_mode = 2
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.086, 0.082, 0.094, 1)

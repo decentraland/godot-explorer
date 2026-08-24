@@ -257,6 +257,7 @@ expand_mode = 1
 stretch_mode = 5
 
 [node name="Label_Price" type="Label" parent="MarginContainer/PanelContainer_White/TextureRect_Preview/MarginContainer/PanelContainer_Price/HBoxContainer" unique_id=229030389]
+auto_translate_mode = 2
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4

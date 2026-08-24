@@ -352,6 +352,7 @@ mouse_filter = 2
 theme_override_constants/separation = 12
 
 [node name="Label_Nickname" type="Label" parent="MarginContainer2/HBoxContainer_Data/VBoxContainer_info/MarginContainer/ProfileHeader/HBoxContainer3/HBoxContainer/HBoxContainer" unique_id=810898146]
+auto_translate_mode = 2
 unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 0
@@ -369,6 +370,7 @@ layout_mode = 2
 theme_override_constants/margin_top = 6
 
 [node name="Label_Tag" type="Label" parent="MarginContainer2/HBoxContainer_Data/VBoxContainer_info/MarginContainer/ProfileHeader/HBoxContainer3/HBoxContainer/HBoxContainer/MarginContainer_Tag" unique_id=931200006]
+auto_translate_mode = 2
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 1
@@ -537,6 +539,7 @@ layout_mode = 2
 theme_override_constants/separation = 20
 
 [node name="Label_Address" type="Label" parent="MarginContainer2/HBoxContainer_Data/VBoxContainer_info/MarginContainer/ProfileHeader/HBoxContainer2/HBoxContainer" unique_id=763917136]
+auto_translate_mode = 2
 unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 0

@@ -157,6 +157,7 @@ theme_override_constants/separation = 0
 alignment = 2
 
 [node name="Label_Tag" type="Label" parent="Control_TextEdit/MarginContainer/HBoxContainer_Tag" unique_id=2100569959]
+auto_translate_mode = 2
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 8

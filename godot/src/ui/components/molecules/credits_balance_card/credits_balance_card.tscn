@@ -59,6 +59,7 @@ expand_mode = 3
 stretch_mode = 4
 
 [node name="Label_Balance" type="Label" parent="MarginContainer/VBoxContainer/HBoxContainer" unique_id=1590138690]
+auto_translate_mode = 2
 unique_name_in_owner = true
 layout_mode = 2
 text = "20"

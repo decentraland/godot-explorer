@@ -149,6 +149,7 @@ theme_override_constants/separation = 20
 theme_override_styles/separator = SubResource("StyleBoxEmpty_xxfdn")
 
 [node name="RichTextLabel_EventName" type="RichTextLabel" parent="VBoxContainer" unique_id=223887812]
+auto_translate_mode = 2
 unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 1
@@ -184,6 +185,7 @@ text = "COMMON_BY"
 label_settings = SubResource("LabelSettings_mwxpt")
 
 [node name="Label_UserName" type="Label" parent="VBoxContainer/HBoxContainer_UserName" unique_id=148179250]
+auto_translate_mode = 2
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3

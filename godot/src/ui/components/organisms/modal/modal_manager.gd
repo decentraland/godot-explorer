@@ -417,7 +417,9 @@ func async_show_private_world_modal(world_name: String) -> void:
 			return
 
 	current_modal.blocker = true
-	current_modal.set_title(PRIVATE_WORLD_TITLE % world_name.trim_suffix(".dcl.eth"))
+	# tr() first: PRIVATE_WORLD_TITLE is the KEY, which has no %s — the placeholder lives in
+	# the catalogue value ("%s is private"). Formatting the key produced a broken title.
+	current_modal.set_title(tr(PRIVATE_WORLD_TITLE) % world_name.trim_suffix(".dcl.eth"))
 	current_modal.set_body(PRIVATE_WORLD_BODY)
 	current_modal.set_primary_button_text(PRIVATE_WORLD_PRIMARY)
 	current_modal.show_icon(Modal.MODAL_BLOCK_ICON)

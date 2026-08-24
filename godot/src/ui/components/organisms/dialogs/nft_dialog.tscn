@@ -87,6 +87,7 @@ theme_override_font_sizes/font_size = 14
 text = "DIALOGS_OWNER"
 
 [node name="RichTextBox_Owner" type="RichTextLabel" parent="VBoxContainer_Main/HBoxContainer_Body/VBoxContainer_InfoPanel" unique_id=1021154821]
+auto_translate_mode = 2
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 20)
 layout_mode = 2
@@ -110,6 +111,7 @@ theme_override_font_sizes/font_size = 14
 text = "DIALOGS_DESCRIPTION"
 
 [node name="Label_Description" type="Label" parent="VBoxContainer_Main/HBoxContainer_Body/VBoxContainer_InfoPanel" unique_id=532595245]
+auto_translate_mode = 2
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 180)
 layout_mode = 2

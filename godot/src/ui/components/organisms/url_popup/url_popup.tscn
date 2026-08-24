@@ -86,6 +86,7 @@ horizontal_alignment = 1
 autowrap_mode = 2
 
 [node name="Label_Url" type="Label" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer" unique_id=1106956728]
+auto_translate_mode = 2
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 100)
 layout_mode = 2

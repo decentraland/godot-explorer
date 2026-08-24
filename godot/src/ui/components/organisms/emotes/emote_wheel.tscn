@@ -168,6 +168,7 @@ alignment = 1
 metadata/_edit_use_anchors_ = true
 
 [node name="Label_EmoteName" type="Label" parent="Control_Wheel/TextureRect_Background/VBoxContainer" unique_id=1821808245]
+auto_translate_mode = 2
 unique_name_in_owner = true
 custom_minimum_size = Vector2(20, 20)
 layout_mode = 2

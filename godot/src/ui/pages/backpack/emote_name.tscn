@@ -31,6 +31,7 @@ grow_vertical = 0
 script = ExtResource("1_l6o2s")
 
 [node name="EmoteName" type="Label" parent="." unique_id=950469410]
+auto_translate_mode = 2
 visible = false
 custom_minimum_size = Vector2(196, 56)
 layout_mode = 1

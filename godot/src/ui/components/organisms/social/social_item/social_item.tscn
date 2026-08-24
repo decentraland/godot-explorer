@@ -185,6 +185,7 @@ layout_mode = 2
 mouse_filter = 2
 
 [node name="Nickname" type="Label" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Data/VBoxContainer_Nickname/HBoxContainer" unique_id=666961752]
+auto_translate_mode = 2
 unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 1
@@ -208,6 +209,7 @@ expand_mode = 2
 stretch_mode = 4
 
 [node name="Label_Place" type="Label" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Data/VBoxContainer_Nickname" unique_id=955882978]
+auto_translate_mode = 2
 unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 1

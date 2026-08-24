@@ -265,6 +265,7 @@ layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_3v1ow")
 
 [node name="Label_Title" type="Label" parent="PanelContainer/PanelContainer_Background/BoxContainer/PanelContainer_Content/MarginContainer_Content/VBoxContainer" unique_id=1244832168]
+auto_translate_mode = 2
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_font_sizes/font_size = 38
@@ -298,6 +299,7 @@ text = "MODAL_BY"
 label_settings = SubResource("LabelSettings_fyrwt")
 
 [node name="Label_Creator" type="Label" parent="PanelContainer/PanelContainer_Background/BoxContainer/PanelContainer_Content/MarginContainer_Content/VBoxContainer/HBoxContainer_Creator" unique_id=2011523422]
+auto_translate_mode = 2
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3

@@ -74,6 +74,7 @@ theme_override_constants/separation = 2
 alignment = 1
 
 [node name="LabelTitle" type="Label" parent="Panel/MarginContainer/HBoxContainer/VBoxContainer" unique_id=583479352]
+auto_translate_mode = 2
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 20)
 layout_mode = 2
@@ -83,6 +84,7 @@ label_settings = SubResource("LabelSettings_1v63a")
 vertical_alignment = 1
 
 [node name="LabelDescription" type="RichTextLabel" parent="Panel/MarginContainer/HBoxContainer/VBoxContainer" unique_id=1078677248]
+auto_translate_mode = 2
 unique_name_in_owner = true
 visible = false
 custom_minimum_size = Vector2(0, 20)

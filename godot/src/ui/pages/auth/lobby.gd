@@ -28,6 +28,11 @@ const LOGO_TAP_TIMEOUT: float = 0.5  # seconds to reset tap count
 # Guest-login (thirdweb) can hang on a flaky network and leave the user stuck on
 # the "Getting you ready..." screen forever. Cap the wait and surface a retry.
 const GUEST_LOGIN_TIMEOUT_SEC: float = 20.0
+## [opening, waiting] key pairs for the auth hand-off step.
+const BROWSER_TARGET_KEYS: PackedStringArray = ["AUTH_BROWSER_OPENING", "AUTH_BROWSER_WAITING"]
+const METAMASK_TARGET_KEYS: PackedStringArray = [
+	"AUTH_WALLET_OPENING_METAMASK", "AUTH_WALLET_WAITING_METAMASK"
+]
 const BG_GRADIENT = preload("res://assets/backgrounds/gradient-background.png")
 const BG_DISCOVER = preload("res://assets/backgrounds/photo-background.png")
 const BG_AVATAR = preload("res://assets/backgrounds/gradient-background.tres")
@@ -46,6 +51,9 @@ var current_screen_name: String = ""
 # Debug-only "reset guest wallet" button, created at runtime in non-prod and
 # revealed alongside the disposable-account button by the secret logo double-tap.
 var button_reset_guest_debug: Button = null
+
+## Which [opening, waiting] pair the current hand-off step is showing.
+var _auth_target_keys: PackedStringArray = []
 
 var _skip_lobby: bool = false
 var _skip_lobby_to_menu: bool = false
@@ -247,8 +255,13 @@ func show_auth_home_screen():
 	show_panel(control_signin)
 
 
+## Show the "opening the browser / wallet" step.
+##
+## `target_keys` is the [opening, waiting] key pair for whatever is being opened. Two states are
+## needed because once the external app takes the foreground the client is no longer *opening*
+## anything — it is waiting for the user to come back (see _notification below).
 func show_auth_browser_open_screen(
-	message: String = "Opening browser...", auth_method: String = ""
+	target_keys: PackedStringArray = BROWSER_TARGET_KEYS, auth_method: String = ""
 ):
 	current_screen_name = "AUTH_BROWSER_OPEN"
 	var extra := JSON.stringify({"method": auth_method}) if not auth_method.is_empty() else ""
@@ -259,7 +272,8 @@ func show_auth_browser_open_screen(
 	button_back.hide()
 	show_panel(control_signin)
 
-	label_step2_title.text = message
+	_auth_target_keys = target_keys
+	label_step2_title.text = tr(target_keys[0])
 	label_step2_title.show()
 	auth_error_container.hide()
 	auth_spinner_container.show()
@@ -528,8 +542,12 @@ func _notification(what: int) -> void:
 		return
 
 	if what == NOTIFICATION_APPLICATION_FOCUS_OUT:
-		if current_screen_name == "AUTH_BROWSER_OPEN":
-			label_step2_title.text = label_step2_title.text.replace("Opening", "Waiting")
+		# The external app now has the foreground, so switch "Opening X" to "Waiting for X".
+		# Re-rendering from the stored key rather than editing the visible text: a
+		# .replace("Opening", ...) matches nothing once the label is translated, and would
+		# silently leave the user on "Opening" forever.
+		if current_screen_name == "AUTH_BROWSER_OPEN" and _auth_target_keys.size() > 1:
+			label_step2_title.text = tr(_auth_target_keys[1])
 
 
 func _process(delta: float) -> void:

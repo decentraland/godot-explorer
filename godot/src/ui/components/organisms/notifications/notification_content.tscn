@@ -78,6 +78,7 @@ theme_override_constants/separation = 0
 alignment = 1
 
 [node name="LabelTitle" type="RichTextLabel" parent="VBoxContainer" unique_id=2082664271]
+auto_translate_mode = 2
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 20)
 layout_mode = 2
@@ -93,6 +94,7 @@ text = "NOTIFICATION_NEW_PLACEHOLDER"
 scroll_active = false
 
 [node name="LabelDescription" type="RichTextLabel" parent="VBoxContainer" unique_id=1103578988]
+auto_translate_mode = 2
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 30)
 layout_mode = 2

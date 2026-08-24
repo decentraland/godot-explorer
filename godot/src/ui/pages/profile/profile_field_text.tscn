@@ -101,6 +101,7 @@ wrap_mode = 1
 caret_blink = true
 
 [node name="Label_Value" type="Label" parent="VBoxContainer" unique_id=1338730589]
+auto_translate_mode = 2
 unique_name_in_owner = true
 visible = false
 custom_minimum_size = Vector2(100, 0)

@@ -264,6 +264,7 @@ size_flags_horizontal = 3
 size_flags_vertical = 4
 
 [node name="RichTextLabel_Title" type="RichTextLabel" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/VBoxContainer/HBoxContainer/HBoxContainer2" unique_id=1894746059]
+auto_translate_mode = 2
 unique_name_in_owner = true
 custom_minimum_size = Vector2(200, 54)
 layout_mode = 2
@@ -301,6 +302,7 @@ text = "COMMON_BY"
 label_settings = SubResource("LabelSettings_i8f38")
 
 [node name="Label_Creator" type="Label" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/VBoxContainer/HBoxContainer_Creator" unique_id=693197006]
+auto_translate_mode = 2
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
@@ -419,6 +421,7 @@ expand_mode = 1
 stretch_mode = 5
 
 [node name="Label_Location" type="Label" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/HBoxContainer_Stats/HBoxContainer_Location" unique_id=1259360647]
+auto_translate_mode = 2
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
@@ -446,6 +449,7 @@ expand_mode = 1
 stretch_mode = 5
 
 [node name="Label_Likes" type="Label" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/HBoxContainer_Stats/HBoxContainer_Likes" unique_id=945315326]
+auto_translate_mode = 2
 unique_name_in_owner = true
 layout_mode = 2
 theme = ExtResource("5_jnv06")
@@ -498,6 +502,7 @@ theme_override_constants/separation = 16
 theme_override_styles/separator = SubResource("StyleBoxEmpty_4wgrb")
 
 [node name="Label_Description" type="RichTextLabel" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/VBoxContainer_Description" unique_id=841829180]
+auto_translate_mode = 2
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 20)
 layout_mode = 2
