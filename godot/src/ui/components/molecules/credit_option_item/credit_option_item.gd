@@ -25,12 +25,18 @@ extends PanelContainer
 @onready var texture_rect: TextureRect = $MarginContainer/HBoxContainer/TextureRect
 @onready var label_credits: Label = $MarginContainer/HBoxContainer/Label_Credits
 @onready var button_price: Button = $MarginContainer/HBoxContainer/Button_Price
+@onready var button_card: Button = $Button_Card
 
 
 func _ready():
 	label_credits.text = str(credits)
 	texture_rect.texture = texture
 	button_price.pressed.connect(_on_button_price_pressed)
+	# The whole card buys the pack, not just the price pill. `Button_Card` sits behind
+	# the content (the PanelContainer sizes every child to its full rect) and everything
+	# in front of it ignores the mouse, so a tap anywhere lands here — except on
+	# `Button_Price`, which stops the event so this doesn't fire a second time.
+	button_card.pressed.connect(_on_button_price_pressed)
 	if Engine.is_editor_hint():
 		return
 	Iap.products_ready.connect(_on_iap_products_ready)
@@ -72,7 +78,7 @@ func _on_button_price_pressed() -> void:
 
 
 func _async_show_terms_then_purchase() -> void:
-	button_price.disabled = true
+	_set_purchase_enabled(false)
 	# Wire the one-shot BEFORE awaiting the modal: connecting after the await
 	# leaves a window where an instant confirm could fire iap_terms_accepted
 	# before we're listening, dropping the purchase.
@@ -83,6 +89,11 @@ func _async_show_terms_then_purchase() -> void:
 	var modal = Global.modal_manager.current_modal
 	if modal and not modal.tree_exited.is_connected(_on_terms_modal_exited):
 		modal.tree_exited.connect(_on_terms_modal_exited, CONNECT_ONE_SHOT)
+	else:
+		# No modal left to wait on — it closed while we were awaiting, or another one
+		# replaced it. Re-enable now: there is nothing else that would, and a card stuck
+		# disabled draws in the washed-out red that reads as a broken pressed state.
+		_on_terms_modal_exited()
 
 
 func _on_iap_terms_accepted() -> void:
@@ -90,8 +101,15 @@ func _on_iap_terms_accepted() -> void:
 
 
 func _on_terms_modal_exited() -> void:
-	button_price.disabled = false
+	_set_purchase_enabled(true)
 	# If the user cancelled, the one-shot is still connected — clean it up
 	# so a later accept on a different item doesn't trigger this product.
 	if Global.modal_manager.iap_terms_accepted.is_connected(_on_iap_terms_accepted):
 		Global.modal_manager.iap_terms_accepted.disconnect(_on_iap_terms_accepted)
+
+
+## Both tap targets move together — disabling only the pill would leave the rest of the
+## card buying while the terms modal is up.
+func _set_purchase_enabled(enabled: bool) -> void:
+	button_price.disabled = not enabled
+	button_card.disabled = not enabled

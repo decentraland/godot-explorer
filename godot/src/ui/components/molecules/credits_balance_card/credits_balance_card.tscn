@@ -36,7 +36,7 @@ theme_override_constants/margin_bottom = 32
 
 [node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer" unique_id=1469834969]
 layout_mode = 2
-theme_override_constants/separation = 8
+theme_override_constants/separation = 16
 
 [node name="MarginContainer" type="MarginContainer" parent="MarginContainer/VBoxContainer" unique_id=454099315]
 layout_mode = 2
@@ -49,10 +49,10 @@ label_settings = SubResource("LabelSettings_6wsqp")
 
 [node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer" unique_id=1980946219]
 layout_mode = 2
-theme_override_constants/separation = 6
+theme_override_constants/separation = 18
 
 [node name="TextureRect" type="TextureRect" parent="MarginContainer/VBoxContainer/HBoxContainer" unique_id=977949302]
-custom_minimum_size = Vector2(64, 64)
+custom_minimum_size = Vector2(56, 56)
 layout_mode = 2
 texture = ExtResource("3_vahx0")
 expand_mode = 3

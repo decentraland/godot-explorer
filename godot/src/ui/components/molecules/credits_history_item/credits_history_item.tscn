@@ -50,6 +50,7 @@ label_settings = SubResource("LabelSettings_g7rjq")
 [node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer" unique_id=978267799]
 layout_mode = 2
 mouse_filter = 2
+theme_override_constants/separation = 10
 
 [node name="Label_Detail" type="Label" parent="MarginContainer/VBoxContainer/HBoxContainer" unique_id=1599885672]
 unique_name_in_owner = true
