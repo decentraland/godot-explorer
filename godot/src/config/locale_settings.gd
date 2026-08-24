@@ -17,7 +17,7 @@ class_name LocaleSettings extends RefCounted
 ## failure mode behind unity-explorer#270 (ES/IT rolled back after shipping half-translated)
 ## and #2062 (a Spanish OS locale hung the desktop loading screen). English is the fallback
 ## and is always available.
-const SUPPORTED_LOCALES: PackedStringArray = ["en"]
+const SUPPORTED_LOCALES: PackedStringArray = ["en", "es", "pt_BR"]
 
 ## Display name per locale, shown in the Settings picker. Deliberately written in the
 ## language itself — a user who cannot read the current UI language still needs to find

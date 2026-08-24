@@ -212,7 +212,7 @@ pointing/emulate_touch_from_mouse=true
 
 [internationalization]
 
-locale/translations=PackedStringArray("res://locale/en.en.translation")
+locale/translations=PackedStringArray("res://locale/en.en.translation", "res://locale/es.es.translation", "res://locale/pt_BR.pt_BR.translation")
 pseudolocalization/replace_with_accents=false
 pseudolocalization/expansion_ratio=0.4
 pseudolocalization/prefix="«"

@@ -23,6 +23,10 @@ var _failures: Array[String] = []
 
 
 func _initialize() -> void:
+	# The expected values below are the English catalogue's. Without pinning, the locale
+	# resolves from the machine (OS.get_locale()), so this suite failed on any es/pt_BR
+	# host the moment those locales became supported.
+	TranslationServer.set_locale("en")
 	_test_construction()
 	_test_is_valid()
 	_test_resolution()

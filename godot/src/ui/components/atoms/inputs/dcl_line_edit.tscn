@@ -79,6 +79,7 @@ vertical_alignment = 1
 layout_mode = 2
 
 [node name="Label_Error" type="RichTextLabel" parent="HBoxContainer2" unique_id=1725063823]
+auto_translate_mode = 2
 unique_name_in_owner = true
 visible = false
 layout_mode = 2

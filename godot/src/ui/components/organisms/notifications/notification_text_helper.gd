@@ -112,7 +112,9 @@ static func get_notification_title(notif_type: String, metadata: Dictionary) -> 
 		"social_service_friendship_request":
 			if "sender" in metadata and metadata["sender"] is Dictionary:
 				var sender = metadata["sender"]
-				var sender_name = sender.get("name", "Unknown")
+				var sender_name = sender.get(
+					"name", TranslationServer.translate("COMMON_UNKNOWN_USER")
+				)
 				var has_claimed_name = sender.get("hasClaimedName", false)
 				var color_hex = _get_avatar_color_hex(sender_name)
 
@@ -135,7 +137,9 @@ static func get_notification_title(notif_type: String, metadata: Dictionary) -> 
 		"social_service_friendship_accepted":
 			if "sender" in metadata and metadata["sender"] is Dictionary:
 				var sender = metadata["sender"]
-				var sender_name = sender.get("name", "Unknown")
+				var sender_name = sender.get(
+					"name", TranslationServer.translate("COMMON_UNKNOWN_USER")
+				)
 				var has_claimed_name = sender.get("hasClaimedName", false)
 				var color_hex = _get_avatar_color_hex(sender_name)
 
@@ -193,7 +197,7 @@ static func get_notification_title(notif_type: String, metadata: Dictionary) -> 
 			)
 
 		"community_user_request_to_join":
-			var user_name = metadata.get("userName", "Someone")
+			var user_name = metadata.get("userName", TranslationServer.translate("COMMON_SOMEONE"))
 			var community_name = metadata.get(
 				"communityName", TranslationServer.translate("NOTIF_TITLE_UNKNOWN_COMMUNITY")
 			)
@@ -230,8 +234,12 @@ static func get_notification_title(notif_type: String, metadata: Dictionary) -> 
 			)
 
 		"community_renamed":
-			var old_name = metadata.get("oldCommunityName", "Unknown")
-			var new_name = metadata.get("newCommunityName", "Unknown")
+			var old_name = metadata.get(
+				"oldCommunityName", TranslationServer.translate("NOTIF_TITLE_UNKNOWN_COMMUNITY")
+			)
+			var new_name = metadata.get(
+				"newCommunityName", TranslationServer.translate("NOTIF_TITLE_UNKNOWN_COMMUNITY")
+			)
 			return (
 				TranslationServer.translate("NOTIF_TITLE_COMMUNITY_RENAMED") % [old_name, new_name]
 			)

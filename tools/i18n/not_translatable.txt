@@ -30,8 +30,6 @@ godot/src/ui/components/atoms/controls/custom_slider/custom_background_slider.ts
 # slider name set by the instancing scene
 godot/src/ui/components/atoms/controls/custom_slider/custom_slider.tscn	CUSTOM SLIDER NAME
 # design placeholder
-godot/src/ui/components/atoms/inputs/dcl_line_edit.tscn	Error example
-# design placeholder
 godot/src/ui/components/atoms/inputs/dcl_line_edit.tscn	Hint
 # dummy text
 godot/src/ui/components/atoms/inputs/line_edit_custom/line_edit_custom.tscn	Casa
