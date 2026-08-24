@@ -1139,8 +1139,7 @@ func _notification(what: int) -> void:
 func _populate_language_dropdown_items() -> void:
 	if LocaleSettings.selectable_locales().size() < 2:
 		return
-	var previous := dropdown_list_language.selected
+	# Re-derive the selection from the saved config rather than restoring the previous index:
+	# the two diverge whenever the locale changed by any route other than this dropdown.
 	dropdown_list_language.clear()
 	_populate_language_dropdown()
-	if previous >= 0:
-		dropdown_list_language.select(previous)

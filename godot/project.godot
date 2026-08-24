@@ -31,7 +31,6 @@ config/features=PackedStringArray("4.6")
 boot_splash/bg_color=Color(0.411765, 0.121569, 0.662745, 1)
 boot_splash/stretch_mode=0
 boot_splash/image="res://assets/ui/splash-isotype.png"
-boot_splash/show_image=true
 config/icon="res://decentraland_logo_squared.png"
 boot_splash/minimum_display_time=300
 
@@ -214,12 +213,10 @@ pointing/emulate_touch_from_mouse=true
 [internationalization]
 
 locale/translations=PackedStringArray("res://locale/en.en.translation")
-locale/fallback="en"
 pseudolocalization/replace_with_accents=false
 pseudolocalization/expansion_ratio=0.4
 pseudolocalization/prefix="«"
 pseudolocalization/suffix="»"
-pseudolocalization/skip_placeholders=true
 
 [layer_names]
 

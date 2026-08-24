@@ -327,6 +327,26 @@ theme = SubResource("Theme_5xlkc")
 theme_type_variation = &"2"
 theme_override_constants/separation = 72
 
+[node name="Container_Language" type="MarginContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Gameplay" unique_id=1774390022]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/margin_left = 0
+theme_override_constants/margin_right = 0
+
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Language" unique_id=1774390023]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="SectionTittle_Language" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Language/VBoxContainer" unique_id=1774390024 instance=ExtResource("15_h5vs5")]
+layout_mode = 2
+title = "SETTINGS_LANGUAGE_CAPS"
+
+[node name="DropdownList_Language" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Language/VBoxContainer" unique_id=1774390021 instance=ExtResource("20_67hd5")]
+unique_name_in_owner = true
+layout_mode = 2
+title = "SETTINGS_LANGUAGE"
+description = "SETTINGS_LANGUAGE_DESCRIPTION"
+
 [node name="Container_ChatAndSocial" type="MarginContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Gameplay" unique_id=1938018452]
 unique_name_in_owner = true
 layout_mode = 2
@@ -459,12 +479,6 @@ theme_override_constants/separation = 0
 [node name="SectionTittle_Interface" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Interface/VBoxContainer" unique_id=850332111 instance=ExtResource("15_h5vs5")]
 layout_mode = 2
 title = "SETTINGS_INTERFACE_CAPS"
-
-[node name="DropdownList_Language" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Interface/VBoxContainer" unique_id=1774390021 instance=ExtResource("20_67hd5")]
-unique_name_in_owner = true
-layout_mode = 2
-title = "SETTINGS_LANGUAGE"
-description = "SETTINGS_LANGUAGE_DESCRIPTION"
 
 [node name="HSeparator" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Interface/VBoxContainer" unique_id=1015605874]
 layout_mode = 2
@@ -1499,7 +1513,7 @@ font = ExtResource("25_jf4mt")
 [connection signal="visibility_changed" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Storage" to="." method="_on_container_storage_visibility_changed"]
 [connection signal="pressed" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Storage/Button_ClearCache" to="." method="_on_button_clear_cache_pressed"]
 [connection signal="toggled" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Graphics/SectionPerformance/VBoxContainer/DynamicGraphics/CheckButton_DynamicGraphics" to="." method="_on_check_button_dynamic_graphics_toggled"]
-[connection signal="item_selected" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Interface/VBoxContainer/DropdownList_Language" to="." method="_on_dropdown_list_language_item_selected"]
+[connection signal="item_selected" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Language/VBoxContainer/DropdownList_Language" to="." method="_on_dropdown_list_language_item_selected"]
 [connection signal="item_selected" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Graphics/SectionPerformance/VBoxContainer/DropdownList_GraphicProfiles" to="." method="_on_dropdown_list_graphic_profiles_item_selected"]
 [connection signal="toggled" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Graphics/SectionVisual/VBoxContainer/DynamicSkybox/CheckButton_DynamicSkybox" to="." method="_on_check_button_dynamic_skybox_toggled"]
 [connection signal="item_selected" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Graphics/SectionVisual/VBoxContainer/DropdownList_CustomSkybox" to="." method="_on_dropdown_list_custom_skybox_item_selected"]
