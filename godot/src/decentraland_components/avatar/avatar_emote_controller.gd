@@ -684,7 +684,9 @@ func _async_load_emote(emote_urn: String):
 		printerr("Error: failed to load emote scene for: ", emote_urn)
 		return
 
-	var obj = await emote_loader.async_get_emote_gltf(file_hash)
+	var obj = await emote_loader.async_get_emote_gltf(
+		file_hash, emote.get_representation_main_file(body_shape_id), emote.get_content_mapping()
+	)
 	if obj == null:
 		printerr("Failed to extract emote GLTF for: %s (hash: %s)" % [emote_urn, file_hash])
 		return

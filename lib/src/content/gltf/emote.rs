@@ -46,6 +46,32 @@ fn strip_blender_suffix(name: &str) -> String {
     name.to_string()
 }
 
+/// Find the emote's prop armature by name, case-insensitively.
+///
+/// The docs say the prop armature must be called "Armature_Prop", but shipped
+/// emotes deviate in casing (e.g. Decentraland's WatchingTV emote uses
+/// "Armature_prop"). A case-sensitive `find_child("Armature_Prop")` silently
+/// drops those props at processing time — the saved scene then has the prop
+/// *animation* (animation-name matching lowercases) but no prop *geometry*.
+/// Matches any Node whose name starts with "armature_prop" (case-insensitive),
+/// which also covers Blender-duplicate suffixes like "Armature_Prop_001".
+fn find_prop_node(node: &Gd<Node>) -> Option<Gd<Node>> {
+    for child in node.get_children().iter_shared() {
+        if child
+            .get_name()
+            .to_string()
+            .to_lowercase()
+            .starts_with("armature_prop")
+        {
+            return Some(child);
+        }
+        if let Some(found) = find_prop_node(&child) {
+            return Some(found);
+        }
+    }
+    None
+}
+
 /// Get the last 16 alphanumeric characters from a hash (used for animation naming).
 pub fn get_last_16_alphanumeric(input: &str) -> String {
     let alphanumeric: String = input
@@ -76,7 +102,14 @@ pub fn process_emote_animations(
     Option<Gd<Animation>>,
 )> {
     let anim_sufix_from_hash = get_last_16_alphanumeric(file_hash);
-    let armature_prop_node = gltf_node.find_child("Armature_Prop");
+    let armature_prop_node = find_prop_node(&gltf_node.clone().upcast::<Node>());
+
+    // The prop's authored name, used to recognize its animation tracks below.
+    // Falls back to the documented name when there is no prop node.
+    let prop_source_name = armature_prop_node
+        .as_ref()
+        .map(|n| n.get_name().to_string())
+        .unwrap_or_else(|| "Armature_Prop".to_string());
 
     let anim_player = gltf_node.try_get_node_as::<AnimationPlayer>("AnimationPlayer")?;
 
@@ -220,7 +253,7 @@ pub fn process_emote_animations(
             let track_path = anim.track_get_path(track_idx).to_string();
 
             // Skip tracks that already have Skeleton3D or are prop tracks
-            if track_path.contains("Skeleton3D") || track_path.contains("Armature_Prop") {
+            if track_path.contains("Skeleton3D") || track_path.contains(&prop_source_name) {
                 continue;
             }
 
@@ -329,9 +362,11 @@ pub fn process_emote_animations(
                 let bone_name = strip_blender_suffix(last_track_name);
 
                 // Check if this is a prop track (Armature_Prop/...) or avatar track (Armature/...)
-                if track_path.starts_with("Armature_Prop") {
-                    // Check if it's a root prop track (just "Armature_Prop")
-                    if track_path == "Armature_Prop" {
+                // Match against the prop's AUTHORED name — creators deviate in casing
+                // (e.g. "Armature_prop"), and the GLTF tracks use the authored name.
+                if track_path.starts_with(&prop_source_name) {
+                    // Check if it's a root prop track (just the prop node itself)
+                    if track_path == prop_source_name {
                         // Rename to Armature_Prop_{hash} for root motion
                         let new_track_path = format!("Armature_Prop_{}", anim_sufix_from_hash);
                         tracing::debug!(
@@ -355,8 +390,8 @@ pub fn process_emote_animations(
                     let new_track_path = format!("Armature/Skeleton3D:{}", bone_name);
                     anim.track_set_path(track_idx, &NodePath::from(&new_track_path));
                 }
-            } else if track_path.contains("Armature_Prop/Skeleton3D")
-                || track_path.contains("Armature_Prop:")
+            } else if track_path.contains(&format!("{}/Skeleton3D", prop_source_name))
+                || track_path.contains(&format!("{}:", prop_source_name))
             {
                 // Already has Skeleton3D, just rename the Armature_Prop to include hash
                 let track_subname = track_path.split(':').next_back().unwrap_or_default();
