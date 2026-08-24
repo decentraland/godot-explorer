@@ -4,7 +4,6 @@
 
 use std::sync::Arc;
 
-use godot::classes::image::CompressMode;
 use godot::classes::resource_saver::SaverFlags;
 use godot::classes::{Image, Os, Resource, ResourceSaver};
 use godot::prelude::*;
@@ -13,11 +12,12 @@ use tokio::sync::Semaphore;
 use crate::content::content_mapping::{ContentMappingAndUrl, ContentMappingAndUrlRef};
 use crate::content::content_provider::SceneGltfContext;
 use crate::content::gltf::{
-    get_dependencies, load_and_save_emote_gltf, load_and_save_scene_gltf,
+    get_dependencies, load_and_save_emote_gltf, load_and_save_scene_gltf_ex,
     load_and_save_wearable_gltf,
 };
 use crate::content::packed_array::PackedByteArrayFromVec;
 use crate::content::resource_provider::ResourceProvider;
+use crate::content::texture::create_compressed_texture;
 use crate::content::thread_safety::GodotSingleThreadSafety;
 use crate::godot_classes::dcl_config::TextureQuality;
 use crate::utils::infer_mime;
@@ -52,7 +52,10 @@ impl ProcessorContext {
 
     /// Convert to SceneGltfContext for GLTF loading functions.
     /// Sets force_compress=true since asset server always produces mobile-optimized output.
-    pub fn to_scene_context(&self) -> SceneGltfContext {
+    /// `external_texture_refs` is only valid for scene GLBs: the scene pipeline
+    /// bakes every texture of the entity into its own `-mobile.zip` and the
+    /// client mounts those before the .scn; wearables/emotes have no such packs.
+    pub fn to_scene_context(&self, external_texture_refs: bool) -> SceneGltfContext {
         SceneGltfContext {
             content_folder: self.content_folder.clone(),
             resource_provider: self.resource_provider.clone(),
@@ -60,6 +63,7 @@ impl ProcessorContext {
             texture_quality: self.texture_quality.clone(),
             force_compress: true, // Asset server always compresses for mobile
             apply_optimizations: true, // Bake split/LODs/shadows/materials into the .scn
+            external_texture_refs,
         }
     }
 
@@ -233,15 +237,32 @@ async fn process_scene_gltf(
     let gltf_dependencies =
         extract_gltf_texture_dependencies(&gltf_file_path, &base_path, &content_mapping).await;
 
-    let scene_ctx = ctx.to_scene_context();
+    let scene_ctx = ctx.to_scene_context(true);
 
-    let optimized_path = load_and_save_scene_gltf(
+    let (optimized_path, externalized) = load_and_save_scene_gltf_ex(
         file_path,
         request.hash.clone(),
         content_mapping.clone(),
         scene_ctx,
     )
     .await?;
+
+    // The .scn now references its textures as `res://content/{hash}.res`
+    // ExtResources, so `externalSceneDependencies` must list exactly the
+    // hashes the client has to mount before loading it. The extension-based
+    // scan is only a cross-check here.
+    let unexpected: Vec<&String> = externalized
+        .iter()
+        .filter(|h| !gltf_dependencies.contains(h))
+        .collect();
+    if !unexpected.is_empty() {
+        tracing::warn!(
+            "GLB {} externalized textures not found by the dependency scan: {:?}",
+            request.hash,
+            unexpected
+        );
+    }
+    let gltf_dependencies = externalized;
 
     // Get file size
     let optimized_file_size = std::fs::metadata(&optimized_path).ok().map(|m| m.len());
@@ -288,7 +309,7 @@ async fn process_wearable_gltf(
     let gltf_dependencies =
         extract_gltf_texture_dependencies(&gltf_file_path, &base_path, &content_mapping).await;
 
-    let scene_ctx = ctx.to_scene_context();
+    let scene_ctx = ctx.to_scene_context(false);
 
     let optimized_path = load_and_save_wearable_gltf(
         file_path,
@@ -343,7 +364,7 @@ async fn process_emote_gltf(
     let gltf_dependencies =
         extract_gltf_texture_dependencies(&gltf_file_path, &base_path, &content_mapping).await;
 
-    let scene_ctx = ctx.to_scene_context();
+    let scene_ctx = ctx.to_scene_context(false);
 
     let optimized_path = load_and_save_emote_gltf(
         file_path,
@@ -477,53 +498,29 @@ async fn process_texture(
         image_format
     );
 
-    // Resize if needed based on texture quality
+    // Resize (pixel budget) + ETC2 with the same helper the GLB bake uses, so a
+    // texture referenced from a baked `.scn` as `res://content/{hash}.res` is
+    // byte-identical to what the GLB path would have embedded.
     let max_size = ctx.texture_quality.to_max_size();
-    resize_image_if_needed(&mut image, max_size);
+    let texture = create_compressed_texture(&mut image, max_size);
 
-    // Compress the image using ETC2 (mobile-optimized format)
-    // Pad dimensions to multiples of 4 (ETC2 operates on 4x4 blocks)
-    if !image.is_compressed() {
-        let w = image.get_width();
-        let h = image.get_height();
-        let pw = ((w + 3) / 4) * 4;
-        let ph = ((h + 3) / 4) * 4;
-        if w != pw || h != ph {
-            image.resize(pw, ph);
-        }
-
-        tracing::debug!(
-            "Compressing image {}x{} with ETC2",
-            image.get_width(),
-            image.get_height()
-        );
-        let result = image.compress(CompressMode::ETC2);
-        if result != godot::global::Error::OK {
-            tracing::warn!(
-                "ETC2 compression failed ({}x{}, error {:?}), saving uncompressed",
-                image.get_width(),
-                image.get_height(),
-                result
-            );
-        }
-    }
-
-    if image.get_width() == 0 || image.get_height() == 0 {
+    // `create_compressed_texture` returns a 2x2 magenta placeholder when the
+    // PCT2 could not be built — never ship that as a real asset.
+    if texture.get_width() <= 2 && texture.get_height() <= 2 {
         return Err(anyhow::anyhow!(
-            "Texture compression failed - resulting image has no dimensions"
+            "Texture compression failed for {} ({}x{})",
+            request.hash,
+            original_width,
+            original_height
         ));
     }
 
-    // Save the compressed `Image` resource directly. ResourceSaver writes the
-    // Image's CPU byte buffer (ETC2) verbatim — there is no GPU readback, so the
-    // asset-server's software GL (llvmpipe) can't decompress it to RGBA8. The
-    // device loads it back as an `Image` and wraps it in an `ImageTexture` (see
-    // `load_baked_texture_entry`), which round-trips correctly on real GPUs.
-    // We previously stored a `PortableCompressedTexture2D` to dodge the readback,
-    // but PCT2 reloads as a solid-magenta texture on devices — so both the bake
-    // and the device now use a plain `Image`/`ImageTexture` (matches `main`).
+    // Save the `PortableCompressedTexture2D` (ETC2 buffer kept verbatim, no GPU
+    // readback). Baked `.scn` files reference this exact path as an
+    // ExtResource of type PortableCompressedTexture2D, and the client's
+    // `load_baked_texture_entry` accepts any `Texture2D` for SDK materials.
     let err = ResourceSaver::singleton()
-        .save_ex(&image.upcast::<Resource>())
+        .save_ex(&texture.upcast::<Resource>())
         .path(&res_file_path)
         .flags(SaverFlags::COMPRESS)
         .done();
@@ -554,26 +551,6 @@ async fn process_texture(
         optimized_file_size,
         gltf_dependencies: None,
     })
-}
-
-/// Resize image if it exceeds max size while maintaining aspect ratio.
-fn resize_image_if_needed(image: &mut Gd<Image>, max_size: i32) {
-    let width = image.get_width();
-    let height = image.get_height();
-
-    if width <= max_size && height <= max_size {
-        return;
-    }
-
-    let (new_width, new_height) = if width > height {
-        let ratio = max_size as f32 / width as f32;
-        (max_size, (height as f32 * ratio) as i32)
-    } else {
-        let ratio = max_size as f32 / height as f32;
-        ((width as f32 * ratio) as i32, max_size)
-    };
-
-    image.resize(new_width, new_height);
 }
 
 /// Find the file path that maps to a given hash.

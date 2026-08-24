@@ -289,6 +289,60 @@ impl JobManager {
         }
     }
 
+    /// Fail every completed GLTF job of `batch_id` whose external texture
+    /// dependencies did not all complete. A baked `.scn` references those
+    /// textures as `res://content/{hash}.res` ExtResources; shipping it without
+    /// them makes the client abort the whole GLB load, so it is better to drop
+    /// the pack (the client falls back to runtime processing of the source GLB).
+    /// Returns `(gltf_hash, missing_texture_hashes)` for each job failed.
+    pub async fn fail_jobs_with_missing_dependencies(
+        &self,
+        batch_id: &str,
+    ) -> Vec<(String, Vec<String>)> {
+        let batches = self.batches.read().await;
+        let Some(batch) = batches.get(batch_id) else {
+            return Vec::new();
+        };
+        let mut jobs = self.jobs.write().await;
+
+        let completed: HashSet<String> = batch
+            .job_ids
+            .iter()
+            .filter_map(|id| jobs.get(id))
+            .filter(|job| job.status == JobStatus::Completed)
+            .map(|job| job.hash.clone())
+            .collect();
+
+        let mut failed = Vec::new();
+        for job_id in &batch.job_ids {
+            let Some(job) = jobs.get_mut(job_id) else {
+                continue;
+            };
+            if job.status != JobStatus::Completed {
+                continue;
+            }
+            let Some(deps) = job.gltf_dependencies.as_ref() else {
+                continue;
+            };
+            let missing: Vec<String> = deps
+                .iter()
+                .filter(|dep| !completed.contains(*dep))
+                .cloned()
+                .collect();
+            if missing.is_empty() {
+                continue;
+            }
+            job.status = JobStatus::Failed;
+            job.error = Some(format!(
+                "external texture dependencies not baked: {}",
+                missing.join(", ")
+            ));
+            job.updated_at = Instant::now();
+            failed.push((job.hash.clone(), missing));
+        }
+        failed
+    }
+
     /// Build scene optimization metadata from completed jobs in a batch.
     pub async fn build_scene_metadata(&self, batch_id: &str) -> SceneOptimizationMetadata {
         let batches = self.batches.read().await;

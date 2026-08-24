@@ -1,17 +1,19 @@
 //! Common utilities and pipeline for GLTF loading.
 
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use godot::{
-    builtin::GString,
+    builtin::{GString, StringName, VarArray, VarDictionary},
     classes::{
         base_material_3d::{ShadingMode, TextureParam},
         mesh::{ArrayType, PrimitiveType},
-        BaseMaterial3D, GltfDocument, GltfState, ImageTexture, MeshInstance3D, Node, Node3D,
+        AnimationPlayer, BaseMaterial3D, GltfDocument, GltfState, ImageTexture, MeshInstance3D,
+        Node, Node3D, PortableCompressedTexture2D, Texture2D,
     },
     global::Error,
     meta::ToGodot,
-    obj::Gd,
+    obj::{Gd, InstanceId},
     prelude::*,
 };
 use meshopt::{simplify, SimplifyOptions, VertexDataAdapter};
@@ -33,50 +35,207 @@ use crate::godot_classes::dcl_resource_tracker::{
     report_resource_error, report_resource_loaded, report_resource_start,
 };
 
+/// Per-GLB texture state for `post_import_process`.
+pub struct TextureBakeState {
+    pub max_size: i32,
+    pub force_compress: bool,
+    /// Source `ImageTexture` instance → content hash of the standalone baked
+    /// texture (`res://content/{hash}.res`). Empty unless the asset server is
+    /// baking a scene GLB with `external_texture_refs`.
+    pub external: HashMap<InstanceId, String>,
+    /// Source `ImageTexture` instance → the texture that replaced it. The glTF
+    /// importer hands the same `ImageTexture` to every material slot that uses
+    /// an image (metallic + roughness share the ORM map, several materials
+    /// share a palette), so without this cache each slot got its own
+    /// compressed copy embedded in the .scn.
+    pub cache: HashMap<InstanceId, Gd<Texture2D>>,
+    /// Content hashes this GLB now references externally.
+    pub externalized: HashSet<String>,
+    /// One placeholder per external hash. Several glTF `images[]` entries can
+    /// resolve to the same content hash (the same file listed twice, or two
+    /// byte-identical files); they must share one pathed resource, because
+    /// `take_over_path` on a second object steals the path from the first,
+    /// which is then serialized as an empty embedded sub-resource.
+    pub external_placeholders: HashMap<String, Gd<Texture2D>>,
+}
+
+impl TextureBakeState {
+    pub fn new(max_size: i32, force_compress: bool) -> Self {
+        Self {
+            max_size,
+            force_compress,
+            external: HashMap::new(),
+            cache: HashMap::new(),
+            externalized: HashSet::new(),
+            external_placeholders: HashMap::new(),
+        }
+    }
+}
+
 /// Post-import texture processing for all GLTF types.
-/// Resizes and optionally compresses images according to max_size limits.
-///
-/// # Arguments
-/// * `node_to_inspect` - The root node to process
-/// * `max_size` - Maximum texture dimension
-/// * `force_compress` - If true, always compress with ETC2 (for asset server)
-pub fn post_import_process(node_to_inspect: Gd<Node>, max_size: i32, force_compress: bool) {
+/// Resizes and optionally compresses images according to max_size limits,
+/// processing each source image once (see `TextureBakeState::cache`), and —
+/// when `state.external` maps it — replaces it with an external reference to
+/// the standalone baked texture instead of embedding a copy.
+pub fn post_import_process(node_to_inspect: Gd<Node>, state: &mut TextureBakeState) {
     let should_compress =
-        force_compress || std::env::consts::OS == "ios" || std::env::consts::OS == "android";
+        state.force_compress || std::env::consts::OS == "ios" || std::env::consts::OS == "android";
 
     for child in node_to_inspect.get_children().iter_shared() {
         if let Ok(mesh_instance_3d) = child.clone().try_cast::<MeshInstance3D>() {
             if let Some(mesh) = mesh_instance_3d.get_mesh() {
                 for surface_index in 0..mesh.get_surface_count() {
-                    if let Some(material) = mesh.surface_get_material(surface_index) {
-                        if let Ok(mut base_material) = material.try_cast::<BaseMaterial3D>() {
-                            // Resize/compress images
-                            for ord in 0..TextureParam::MAX.ord() {
-                                let texture_param = TextureParam::from_ord(ord);
-                                if let Some(texture) = base_material.get_texture(texture_param) {
-                                    if let Ok(mut texture_image) =
-                                        texture.try_cast::<ImageTexture>()
-                                    {
-                                        if let Some(mut image) = texture_image.get_image() {
-                                            if should_compress {
-                                                let texture =
-                                                    create_compressed_texture(&mut image, max_size);
-                                                base_material.set_texture(texture_param, &texture);
-                                            } else if resize_image(&mut image, max_size) {
-                                                texture_image.set_image(&image);
-                                            }
-                                        }
-                                    }
-                                }
-                            }
+                    let Some(material) = mesh.surface_get_material(surface_index) else {
+                        continue;
+                    };
+                    let Ok(mut base_material) = material.try_cast::<BaseMaterial3D>() else {
+                        continue;
+                    };
+                    for ord in 0..TextureParam::MAX.ord() {
+                        let texture_param = TextureParam::from_ord(ord);
+                        let Some(texture) = base_material.get_texture(texture_param) else {
+                            continue;
+                        };
+                        let Ok(mut texture_image) = texture.try_cast::<ImageTexture>() else {
+                            continue;
+                        };
+                        let id = texture_image.instance_id();
+                        if let Some(cached) = state.cache.get(&id) {
+                            base_material.set_texture(texture_param, cached);
+                            continue;
                         }
+
+                        let replacement: Gd<Texture2D> = if let Some(hash) = state.external.get(&id)
+                        {
+                            if let Some(existing) = state.external_placeholders.get(hash) {
+                                existing.clone()
+                            } else {
+                                // A pathed resource is written by ResourceSaver as an
+                                // ExtResource (no bytes in the .scn); the device
+                                // resolves it from the texture's own -mobile.zip,
+                                // mounted before this .scn by
+                                // `fetch_optimized_asset_with_dependencies`.
+                                let mut pct2 = PortableCompressedTexture2D::new_gd();
+                                let path = format!("res://content/{}.res", hash);
+                                pct2.take_over_path(&GString::from(&path));
+                                state.externalized.insert(hash.clone());
+                                let placeholder: Gd<Texture2D> = pct2.upcast();
+                                state
+                                    .external_placeholders
+                                    .insert(hash.clone(), placeholder.clone());
+                                placeholder
+                            }
+                        } else if let Some(mut image) = texture_image.get_image() {
+                            if should_compress {
+                                create_compressed_texture(&mut image, state.max_size)
+                            } else {
+                                if resize_image(&mut image, state.max_size) {
+                                    texture_image.set_image(&image);
+                                }
+                                texture_image.clone().upcast()
+                            }
+                        } else {
+                            continue;
+                        };
+                        base_material.set_texture(texture_param, &replacement);
+                        state.cache.insert(id, replacement);
                     }
                 }
             }
         }
 
-        post_import_process(child, max_size, force_compress);
+        post_import_process(child, state);
     }
+}
+
+/// Image extensions the asset server bakes into standalone `.res` textures
+/// (mirror of `asset_server::processor::IMAGE_EXTENSIONS`). Only those can be
+/// referenced externally — anything else must stay embedded.
+const EXTERNALIZABLE_IMAGE_EXTENSIONS: &[&str] = &[
+    ".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tga", ".ktx", ".ktx2",
+];
+
+/// Map every glTF image that resolved to a bakeable content hash to the
+/// `ImageTexture` instance the generated materials hold.
+///
+/// `custom_gltf_importer.gd` rewrites `images[i].uri` to the cache file name
+/// before parsing, and `GltfState.get_images()` is index-aligned with
+/// `json["images"]` (GLTFDocument hands `state.images[i]` straight to the
+/// materials), so the mapping is by index.
+fn map_gltf_images_to_hashes(
+    state: &mut Gd<GltfState>,
+    dependencies_hash: &[(String, String)],
+) -> HashMap<InstanceId, String> {
+    let name_to_hash: HashMap<String, String> = dependencies_hash
+        .iter()
+        .filter(|(file_path, _)| {
+            let lower = file_path.to_lowercase();
+            EXTERNALIZABLE_IMAGE_EXTENSIONS
+                .iter()
+                .any(|ext| lower.ends_with(ext))
+        })
+        .map(|(_, hash)| (cache_file_name(hash).into_owned(), hash.clone()))
+        .collect();
+
+    let images = state.get_images();
+    let json = state.get_json();
+    let Some(images_json) = json.get("images").and_then(|v| v.try_to::<VarArray>().ok()) else {
+        return HashMap::new();
+    };
+
+    let mut out = HashMap::new();
+    for (index, entry) in images_json.iter_shared().enumerate() {
+        let Ok(dict) = entry.try_to::<VarDictionary>() else {
+            continue;
+        };
+        let Some(uri) = dict.get("uri").and_then(|v| v.try_to::<GString>().ok()) else {
+            continue;
+        };
+        let Some(hash) = name_to_hash.get(&uri.to_string()) else {
+            continue;
+        };
+        if let Some(texture) = images.get(index) {
+            out.insert(texture.instance_id(), hash.clone());
+        }
+    }
+    out
+}
+
+/// Optimize every animation of every `AnimationPlayer` under `root`
+/// (`Animation::optimize`, the same key-culling pass the editor importer runs
+/// by default). The glTF importer bakes tracks at a fixed fps, which makes
+/// sparse-keyframe animations several times larger in the saved .scn;
+/// optimizing drops the redundant linear keys again.
+///
+/// Deliberately NOT `Animation::compress()`: at its default 8 KB page size it
+/// never returns (and allocates unboundedly) on animations with a few hundred
+/// tracks — Genesis Plaza's `Aisha.glb` (274 tracks) reproduces it; a page
+/// size of 64 KB avoids it, but a bake step that can wedge the asset server
+/// is not worth the extra ~30%.
+///
+/// Returns the number of animations optimized.
+pub fn optimize_scene_animations(root: Gd<Node>) -> u32 {
+    let mut count = 0;
+    let mut stack = vec![root];
+    while let Some(node) = stack.pop() {
+        for child in node.get_children().iter_shared() {
+            stack.push(child);
+        }
+        let Ok(player) = node.try_cast::<AnimationPlayer>() else {
+            continue;
+        };
+        for name in player.get_animation_list().as_slice() {
+            let Some(mut animation) = player.get_animation(&StringName::from(name)) else {
+                continue;
+            };
+            if animation.get_track_count() == 0 {
+                continue;
+            }
+            animation.optimize();
+            count += 1;
+        }
+    }
+    count
 }
 
 /// Walk the post-generate scene tree and bake LODs into every MeshInstance3D's
@@ -936,7 +1095,7 @@ pub async fn load_gltf_pipeline<F, R>(
     content_mapping: ContentMappingAndUrlRef,
     ctx: SceneGltfContext,
     processor: F,
-) -> Result<(R, i64), anyhow::Error>
+) -> Result<(R, i64, HashSet<String>), anyhow::Error>
 where
     F: FnOnce(Gd<Node3D>, &str, &SceneGltfContext) -> Result<(R, i64), anyhow::Error>,
 {
@@ -1029,7 +1188,7 @@ where
         .ok_or(anyhow::Error::msg("Failed to acquire thread safety guard"))?;
 
     // Process GLTF using Godot (all Godot objects are scoped here to drop before await)
-    let (result, file_size) = {
+    let (result, file_size, externalized) = {
         // Load the GLTF using Godot
         let mut new_gltf = GltfDocument::new_gd();
         let mut new_gltf_state = GltfState::new_gd();
@@ -1065,6 +1224,11 @@ where
             return Err(anyhow::Error::msg(format!("Error loading gltf: {:?}", err)));
         }
 
+        let mut bake = TextureBakeState::new(ctx.texture_quality.to_max_size(), ctx.force_compress);
+        if ctx.external_texture_refs {
+            bake.external = map_gltf_images_to_hashes(&mut new_gltf_state, &dependencies_hash);
+        }
+
         let node = new_gltf
             .generate_scene(&new_gltf_state)
             .ok_or(anyhow::Error::msg("Error generating scene from gltf"))?;
@@ -1096,8 +1260,15 @@ where
             verify_lods_in_generated_scene(node.clone());
         }
 
-        let max_size = ctx.texture_quality.to_max_size();
-        post_import_process(node.clone(), max_size, ctx.force_compress);
+        post_import_process(node.clone(), &mut bake);
+        if ctx.external_texture_refs {
+            godot::global::godot_print!(
+                "[textures-post] {}: unique_textures={} externalized={}",
+                file_hash,
+                bake.cache.len(),
+                bake.externalized.len()
+            );
+        }
 
         let mut node = node
             .try_cast::<Node3D>()
@@ -1116,7 +1287,8 @@ where
             // nodes (our blocker source).
         }
 
-        processor(node, &file_hash, &ctx)?
+        let (result, file_size) = processor(node, &file_hash, &ctx)?;
+        (result, file_size, bake.externalized)
     };
     // All Godot objects are now dropped, safe to await
 
@@ -1131,5 +1303,5 @@ where
     #[cfg(feature = "use_resource_tracking")]
     report_resource_loaded(&file_hash);
 
-    Ok((result, file_size))
+    Ok((result, file_size, externalized))
 }

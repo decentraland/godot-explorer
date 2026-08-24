@@ -130,7 +130,7 @@ pub struct DclCli {
     // Override the default optimized-content base URL. When set, runtime
     // fetches `<base_url>/<hash>-mobile.zip` instead of the hardcoded
     // production endpoint. Empty = use default
-    // (https://optimized-assets.dclregenesislabs.xyz/v4).
+    // (https://optimized-assets.dclregenesislabs.xyz/v5).
     //
     // Custom setter mirrors the value into a thread-safe static
     // (`OPTIMIZED_URL_OVERRIDE` in content_provider.rs) because tokio
@@ -502,7 +502,7 @@ impl DclCli {
             },
             ArgDefinition {
                 name: "--optimized-content-base-url".to_string(),
-                description: "Override the default optimized-content base URL (default: https://optimized-assets.dclregenesislabs.xyz/v4). Also accepted as deeplink param.".to_string(),
+                description: "Override the default optimized-content base URL (default: https://optimized-assets.dclregenesislabs.xyz/v5). Also accepted as deeplink param.".to_string(),
                 arg_type: ArgType::Value("<url>".to_string()),
                 category: "Performance".to_string(),
             },
