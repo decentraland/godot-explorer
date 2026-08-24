@@ -46,12 +46,18 @@ pub fn copy_if_modified<P: AsRef<Path>, Q: AsRef<Path>>(
         // forever inside dyld's slice validation, and the stuck processes
         // survive SIGKILL. Renaming publishes a fresh inode, so new loads get a
         // clean file and whoever still has the old one keeps it.
+        //
+        // The temp name carries the pid: two xtask invocations aiming at the same
+        // output (a build racing an export) would otherwise share one temp path, so
+        // their copies interleave into the same file and either one's error-path
+        // cleanup can delete the other's temp before it is renamed.
         let tmp_path = dest_path.with_file_name(format!(
-            "{}.tmp",
+            "{}.{}.tmp",
             dest_path
                 .file_name()
                 .map(|n| n.to_string_lossy().into_owned())
-                .unwrap_or_default()
+                .unwrap_or_default(),
+            std::process::id()
         ));
         let _ = fs::remove_file(&tmp_path);
         if let Err(e) = fs::copy(src_path, &tmp_path) {
