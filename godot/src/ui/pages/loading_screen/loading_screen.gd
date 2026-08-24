@@ -113,7 +113,9 @@ func set_progress(new_progress: float):
 	progress = new_progress
 
 	# Percent spacing is locale-dependent (es/pt use "50 %"), so the layout is a key.
-	loading_progress_label.text = tr("LOADING_PERCENT").format({"value": int(floor(progress))})
+	loading_progress_label.text = TranslationKey.new("LOADING_PERCENT").format_named(
+		{"value": int(floor(progress))}
+	)
 	texture_progress_bar.value = progress
 
 

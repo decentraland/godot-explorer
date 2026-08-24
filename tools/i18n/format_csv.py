@@ -131,6 +131,30 @@ def validate(locale_dir=None, sources=None):
                 )
             seen.add(ident)
 
+            # The plural companion must be named <KEY>_PLURAL. Godot never registers it
+            # as a message of its own — it lives in the ?plural column — so the only way
+            # to answer "does this key exist?" for it is to strip the suffix back to the
+            # singular, which TranslationKey.is_known() does. Enforcing the name here is
+            # what keeps that lookup honest.
+            if entry.is_plural and entry.plural_key != entry.key + "_PLURAL":
+                problems.append(
+                    "%s: plural of %r is %r, expected %r"
+                    % (name, entry.key, entry.plural_key, entry.key + "_PLURAL")
+                )
+
+            # unescape_translations=false (see README): the importer hands the cell through
+            # verbatim, so a literal backslash-n stays two characters and renders as "\n" on
+            # screen instead of a line break. Real newlines belong in the quoted cell itself,
+            # which CSV supports and 12 entries already use.
+            for index, form in enumerate(entry.forms):
+                for escape, label in (("\\n", "backslash-n"), ("\\t", "backslash-t")):
+                    if escape in form:
+                        problems.append(
+                            "%s: %r form %d contains a literal %s escape; embed the real "
+                            "character in the quoted cell instead"
+                            % (name, entry.key, index, label)
+                        )
+
             expected_forms = nplurals if entry.is_plural and nplurals else 1
             if len(entry.forms) != expected_forms:
                 problems.append(

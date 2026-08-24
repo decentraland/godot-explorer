@@ -1221,7 +1221,7 @@ func open_url(url: String, use_webkit: bool = false):
 
 
 func async_create_popup_warning(
-	warning_type: PopupWarning.WarningType, title: String, description: String
+	warning_type: PopupWarning.WarningType, title: TranslationKey, description: TranslationKey
 ):
 	var explorer = get_explorer()
 	if is_instance_valid(explorer):
@@ -1649,8 +1649,8 @@ func _on_realm_change_failed_toast(new_realm_string: String, reason: String) -> 
 	# Realm instances created elsewhere (e.g. portable experiences) are not wired
 	# to this handler.
 	NotificationsManager.show_system_toast(
-		"World unavailable",
-		'Could not load "%s": %s' % [new_realm_string, reason],
+		tr("TOAST_WORLD_UNAVAILABLE_TITLE"),
+		tr("TOAST_WORLD_UNAVAILABLE_BODY") % [new_realm_string, reason],
 		"error",
 		"alert"
 	)

@@ -6,22 +6,6 @@ const ICON_LEFT_CLICK = preload("uid://cljfaeb8np0ma")
 const ICON_INTERACTIVE_POINTER = preload("uid://72xpjysoxgwo")
 const ICON_JUMP = preload("uid://ck3atqpytstpo")
 
-# The second element is a translation *key*, not copy: the label node has
-# auto_translate_mode = 2 (it normally shows creator-authored PointerEvents text,
-# which must never be looked up), so these fallbacks are resolved with tr() here
-# instead. Only used when the scene supplies no hover text of its own.
-# i18n-keys: TOOLTIP_ACTION_*
-const MOBILE_ACTION_MAP := {
-	"ia_pointer": [ICON_INTERACTIVE_POINTER, "TOOLTIP_ACTION_TAP"],
-	"ia_jump": [ICON_JUMP, "TOOLTIP_ACTION_JUMP"],
-	"ia_primary": ["E", "TOOLTIP_ACTION_PRIMARY"],
-	"ia_secondary": ["F", "TOOLTIP_ACTION_SECONDARY"],
-	"ia_action_3": ["1", "TOOLTIP_ACTION_1"],
-	"ia_action_4": ["2", "TOOLTIP_ACTION_2"],
-	"ia_action_5": ["3", "TOOLTIP_ACTION_3"],
-	"ia_action_6": ["4", "TOOLTIP_ACTION_4"],
-}
-
 var action_to_trigger: String = ""
 var text_down := ""
 var text_up := ""
@@ -36,6 +20,21 @@ var _custom_icon_hash: String = ""
 @onready var panel_container_inputs: PanelContainer = %PanelContainer_Inputs
 @onready var label_text = %Label_Text
 @onready var margin_container_icons: MarginContainer = %MarginContainer_Icons
+
+# The second element is a translation *key*, not copy: the label node has
+# auto_translate_mode = 2 (it normally shows creator-authored PointerEvents text,
+# which must never be looked up), so these fallbacks are resolved with tr() here
+# instead. Only used when the scene supplies no hover text of its own.
+static var mobile_action_map := {
+	"ia_pointer": [ICON_INTERACTIVE_POINTER, TranslationKey.new("TOOLTIP_ACTION_TAP")],
+	"ia_jump": [ICON_JUMP, TranslationKey.new("TOOLTIP_ACTION_JUMP")],
+	"ia_primary": ["E", TranslationKey.new("TOOLTIP_ACTION_PRIMARY")],
+	"ia_secondary": ["F", TranslationKey.new("TOOLTIP_ACTION_SECONDARY")],
+	"ia_action_3": ["1", TranslationKey.new("TOOLTIP_ACTION_1")],
+	"ia_action_4": ["2", TranslationKey.new("TOOLTIP_ACTION_2")],
+	"ia_action_5": ["3", TranslationKey.new("TOOLTIP_ACTION_3")],
+	"ia_action_6": ["4", TranslationKey.new("TOOLTIP_ACTION_4")],
+}
 
 
 func _ready():
@@ -62,9 +61,9 @@ func set_tooltip_data(text_pet_down: String, text_pet_up, action: String):
 	if not label_text:
 		return
 
-	if Global.is_mobile() and action_lower in MOBILE_ACTION_MAP:
-		var mapping: Array = MOBILE_ACTION_MAP[action_lower]
-		var mobile_label: String = tr(mapping[1])
+	if Global.is_mobile() and action_lower in mobile_action_map:
+		var mapping: Array = mobile_action_map[action_lower]
+		var mobile_label: String = mapping[1].text()
 		if mapping[0] is Texture2D:
 			_show_keyboard_icon(mapping[0])
 		else:

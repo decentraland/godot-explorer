@@ -38,6 +38,8 @@ EXTRA_ROOTS = [
     os.path.join(REPO_ROOT, "godot", "src", "config"),
     os.path.join(REPO_ROOT, "godot", "src", "logic"),
     os.path.join(REPO_ROOT, "godot", "src", "global.gd"),
+    os.path.join(REPO_ROOT, "godot", "src", "connection_quality_monitor.gd"),
+    os.path.join(REPO_ROOT, "godot", "src", "notifications_manager.gd"),
 ]
 BASELINE_PATH = os.path.join(REPO_ROOT, "tools", "i18n", "unkeyed_baseline.txt")
 EXEMPT_PATH = os.path.join(REPO_ROOT, "tools", "i18n", "not_translatable.txt")
@@ -71,6 +73,18 @@ KEY_CALL_RE = re.compile(
     # `TranslationServer` and `. translate("KEY")` can end up on different lines.
     r'(?:\btr_?n?|\btranslate(?:_plural)?)\(\s*"((?:[^"\\]|\\.)*)"'
 )
+
+# A key wrapped in the TranslationKey type. The type makes "passed English where a key belongs"
+# a parse error at the call site (check-gdscript catches it), which is why this scanner does not
+# need to learn every display API's parameter list. Here it does two jobs: register the key as
+# in-use, and flag the argument when it is prose that slipped past the debug guard in _init.
+TRANSLATION_KEY_RE = re.compile(r'\bTranslationKey\.new\(\s*"((?:[^"\\]|\\.)*)"')
+
+# The bulk form, TranslationKey.many(["A", "B"]) — used for the ordered tables (month
+# names, weekday names, tip rotations). The bracket body is captured whole and its string
+# literals pulled out, so line breaks inside the list do not matter.
+TRANSLATION_KEY_MANY_RE = re.compile(r"\bTranslationKey\.many\(\s*\[(.*?)\]", re.S)
+QUOTED_RE = re.compile(r'"((?:[^"\\]|\\.)*)"')
 
 # Display text that never passes through a `.text =` assignment: returned from a helper, handed
 # to a setter, or used as the head of a concatenation.
@@ -185,29 +199,49 @@ def collect(ui_root=None, repo_root=None):
 
     for path in walk(".gd", ui_root):
         with open(path, encoding="utf-8") as handle:
-            for line in handle:
-                if line.lstrip().startswith("#"):
-                    continue
-                for match in GD_ASSIGN_RE.finditer(line):
-                    value = match.group(2)
-                    if KEY_RE.match(value):
-                        keys.append((rel(path, repo_root), value))
-                    elif needs_key(value):
-                        unkeyed.append((rel(path, repo_root), value))
-                for match in KEY_CALL_RE.finditer(line):
-                    # No KEY_RE filter: if it is passed to tr(), it is a key by definition and
-                    # must exist in the catalogue. Filtering on shape hid single-word keys.
-                    if match.group(1):
-                        keys.append((rel(path, repo_root), match.group(1)))
+            source = handle.read()
 
-                # Prose returned from helpers, or built by concatenation, never reaches a
-                # `.text =` assignment, so the scan above cannot see it. These patterns do.
-                for pattern in HELPER_PATTERNS:
-                    for match in pattern.finditer(line):
-                        value = match.group(1)
-                        if KEY_RE.match(value) or not looks_like_prose(value):
-                            continue
-                        unkeyed.append((rel(path, repo_root), value))
+        # Scanned over the whole file, not line by line: gdformat splits a long call into
+        # `TranslationKey.new(` / `"KEY"` / `)` on separate lines, and a per-line pattern
+        # cannot see across that. (The same split already caught out the tr() scan once.)
+        # Comment lines are dropped first, or the class's own doc examples get flagged.
+        code_only = "\n".join(
+            line for line in source.splitlines() if not line.lstrip().startswith("#")
+        )
+        found = [m.group(1) for m in TRANSLATION_KEY_RE.finditer(code_only)]
+        for match in TRANSLATION_KEY_MANY_RE.finditer(code_only):
+            found.extend(QUOTED_RE.findall(match.group(1)))
+        for value in found:
+            if not value:
+                continue
+            if KEY_RE.match(value):
+                keys.append((rel(path, repo_root), value))
+            else:
+                unkeyed.append((rel(path, repo_root), value))
+
+        for line in source.splitlines(keepends=True):
+            if line.lstrip().startswith("#"):
+                continue
+            for match in GD_ASSIGN_RE.finditer(line):
+                value = match.group(2)
+                if KEY_RE.match(value):
+                    keys.append((rel(path, repo_root), value))
+                elif needs_key(value):
+                    unkeyed.append((rel(path, repo_root), value))
+            for match in KEY_CALL_RE.finditer(line):
+                # No KEY_RE filter: if it is passed to tr(), it is a key by definition and
+                # must exist in the catalogue. Filtering on shape hid single-word keys.
+                if match.group(1):
+                    keys.append((rel(path, repo_root), match.group(1)))
+
+            # Prose returned from helpers, or built by concatenation, never reaches a
+            # `.text =` assignment, so the scan above cannot see it. These patterns do.
+            for pattern in HELPER_PATTERNS:
+                for match in pattern.finditer(line):
+                    value = match.group(1)
+                    if KEY_RE.match(value) or not looks_like_prose(value):
+                        continue
+                    unkeyed.append((rel(path, repo_root), value))
 
     return keys, unkeyed
 

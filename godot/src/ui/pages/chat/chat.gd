@@ -17,15 +17,12 @@ const HEADER_HEIGHT_LANDSCAPE := 53
 const HEADER_SEPARATION_LANDSCAPE := 8
 const HEADER_ICON_LANDSCAPE := 29
 const HEADER_FONT_LANDSCAPE := 17
-const HEADER_LABEL_LANDSCAPE := "COMMON_NEARBY"
 
 ## Design specs — header portrait
 const HEADER_HEIGHT_PORTRAIT := 66
 const HEADER_SEPARATION_PORTRAIT := 12
 const HEADER_ICON_PORTRAIT := 44
 const HEADER_FONT_PORTRAIT := 27
-# i18n-keys: CHAT_HEADER_NEARBY
-const HEADER_LABEL_PORTRAIT := "CHAT_HEADER_NEARBY"
 
 ## Design specs — write button landscape
 const WRITE_HEIGHT_LANDSCAPE := 48
@@ -61,6 +58,9 @@ var _autocomplete_queued: bool = false
 @onready var _autocomplete_panel: PanelContainer = %AutocompletePanel
 @onready var _autocomplete_scroll: ScrollContainer = %AutocompleteScroll
 @onready var _autocomplete_container: VBoxContainer = %AutocompleteItems
+
+static var header_label_landscape := TranslationKey.new("COMMON_NEARBY")
+static var header_label_portrait := TranslationKey.new("CHAT_HEADER_NEARBY")
 
 
 func _ready():
@@ -377,7 +377,7 @@ func apply_orientation(is_portrait: bool) -> void:
 		_header.custom_minimum_size.y = HEADER_HEIGHT_PORTRAIT
 		_header_hbox.add_theme_constant_override("separation", HEADER_SEPARATION_PORTRAIT)
 		_header_icon.custom_minimum_size = Vector2(HEADER_ICON_PORTRAIT, HEADER_ICON_PORTRAIT)
-		_header_label.text = HEADER_LABEL_PORTRAIT
+		_header_label.text = header_label_portrait.raw()
 		_header_label.label_settings.font_size = HEADER_FONT_PORTRAIT
 		button_write.custom_minimum_size.y = WRITE_HEIGHT_PORTRAIT
 		button_write.add_theme_font_size_override("font_size", ChatMessage.PORTRAIT_BOLD_SIZE)
@@ -388,7 +388,7 @@ func apply_orientation(is_portrait: bool) -> void:
 		_header.custom_minimum_size.y = HEADER_HEIGHT_LANDSCAPE
 		_header_hbox.add_theme_constant_override("separation", HEADER_SEPARATION_LANDSCAPE)
 		_header_icon.custom_minimum_size = Vector2(HEADER_ICON_LANDSCAPE, HEADER_ICON_LANDSCAPE)
-		_header_label.text = HEADER_LABEL_LANDSCAPE
+		_header_label.text = header_label_landscape.raw()
 		_header_label.label_settings.font_size = HEADER_FONT_LANDSCAPE
 		button_write.custom_minimum_size.y = WRITE_HEIGHT_LANDSCAPE
 		button_write.add_theme_font_size_override("font_size", ChatMessage.LANDSCAPE_BOLD_SIZE)

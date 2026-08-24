@@ -107,6 +107,7 @@ text = "0/15"
 label_settings = SubResource("LabelSettings_evgii")
 
 [node name="Label_Error" type="Label" parent="HBoxContainer" unique_id=1623370836]
+auto_translate_mode = 2
 unique_name_in_owner = true
 visible = false
 layout_mode = 2

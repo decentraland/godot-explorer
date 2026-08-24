@@ -6,11 +6,7 @@ signal cancelled
 
 # The consts below hold translation KEYS, not copy: a const cannot call tr() at parse
 # time, so callers resolve them (Control.text auto-translates).
-# i18n-keys: CODE_MODAL_*
 const RESEND_COOLDOWN_SEC: int = 90
-const _RESEND_PREFIX = "CODE_MODAL_RESEND_PREFIX"
-const _RESEND_LINK_ACTIVE = "CODE_MODAL_RESEND_LINK_ACTIVE"
-const _RESEND_LINK_DIMMED = "CODE_MODAL_RESEND_LINK_DIMMED"
 
 var _code_inputs: Array[LineEdit] = []
 var _hidden_input: LineEdit
@@ -35,6 +31,10 @@ var _resend_timer: Timer = null
 @onready var _label_subtitle: RichTextLabel = %Label_Subtitle
 @onready var _label_resend: RichTextLabel = %RichTextLabel_ResendCode
 @onready var _modal_panel: ResponsiveContainer = $Blur/PanelContainer2
+
+static var _resend_prefix := TranslationKey.new("CODE_MODAL_RESEND_PREFIX")
+static var _resend_link_active := TranslationKey.new("CODE_MODAL_RESEND_LINK_ACTIVE")
+static var _resend_link_dimmed := TranslationKey.new("CODE_MODAL_RESEND_LINK_DIMMED")
 
 
 func _ready() -> void:
@@ -220,12 +220,17 @@ func _on_resend_timer_tick() -> void:
 
 
 func _update_resend_label() -> void:
+	# Two catalogue entries joined, plus a countdown formatted into the second. Both
+	# halves must be translated *before* joining: concatenating the keys produced
+	# "CODE_MODAL_RESEND_PREFIXCODE_MODAL_RESEND_LINK_ACTIVE", which matched nothing and
+	# drew the raw keys on screen. Resolving here means the label must not look up again.
+	_label_resend.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 	if _resend_cooldown_remaining <= 0:
-		_label_resend.text = _RESEND_PREFIX + _RESEND_LINK_ACTIVE
+		_label_resend.text = TranslationKey.join([_resend_prefix, _resend_link_active], "")
 		return
 	var minutes: int = _resend_cooldown_remaining / 60
 	var seconds: int = _resend_cooldown_remaining % 60
-	_label_resend.text = _RESEND_PREFIX + _RESEND_LINK_DIMMED % [minutes, seconds]
+	_label_resend.text = _resend_prefix.text() + _resend_link_dimmed.format([minutes, seconds])
 
 
 # gdlint:ignore = async-function-name

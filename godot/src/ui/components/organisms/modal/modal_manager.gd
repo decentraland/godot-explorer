@@ -14,100 +14,12 @@ signal session_ended_exit
 
 # The consts below hold translation KEYS, not copy: a const cannot call tr() at parse
 # time, so callers resolve them (Control.text auto-translates).
-# i18n-keys: MODAL_*
 const MODAL_SCENE_PATH = "res://src/ui/components/organisms/modal/modal.tscn"
 const TRAVEL_MODAL_SCENE_PATH = "res://src/ui/components/organisms/modal/travel_modal.tscn"
 const INPUT_MODAL_SCENE_PATH = "res://src/ui/components/organisms/input_modal/input_modal.tscn"
 const CODE_MODAL_SCENE_PATH = "res://src/ui/components/organisms/code_modal/code_modal.tscn"
 const REWARD_MODAL_SCENE_PATH = "res://src/ui/components/organisms/reward_modal/reward_modal.tscn"
 const UPGRADE_MODAL_SCENE_PATH = "res://src/ui/components/organisms/upgrade_modal/upgrade_modal.tscn"
-
-# Modal text constants
-const EXTERNAL_LINK_TITLE = "MODAL_EXTERNAL_LINK_TITLE"
-const EXTERNAL_LINK_BODY = "MODAL_EXTERNAL_LINK_BODY"
-const EXTERNAL_LINK_PRIMARY = "MODAL_EXTERNAL_LINK_PRIMARY"
-const EXTERNAL_LINK_SECONDARY = "MODAL_EXTERNAL_LINK_SECONDARY"
-
-const SCENE_TIMEOUT_TITLE = "MODAL_SCENE_TIMEOUT_TITLE"
-const SCENE_TIMEOUT_BODY = "MODAL_SCENE_TIMEOUT_BODY"
-const SCENE_TIMEOUT_PRIMARY = "MODAL_SCENE_TIMEOUT_PRIMARY"
-const SCENE_TIMEOUT_SECONDARY = "MODAL_SCENE_TIMEOUT_SECONDARY"
-
-const CONNECTION_LOST_TITLE = "MODAL_CONNECTION_LOST_TITLE"
-const CONNECTION_LOST_BODY = "MODAL_CONNECTION_LOST_BODY"
-const CONNECTION_LOST_PRIMARY = "MODAL_CONNECTION_LOST_PRIMARY"
-const CONNECTION_LOST_SECONDARY = "MODAL_CONNECTION_LOST_SECONDARY"
-
-const SCENE_CRASH_TITLE = "MODAL_SCENE_CRASH_TITLE"
-const SCENE_CRASH_BODY = "MODAL_SCENE_CRASH_BODY"
-const SCENE_CRASH_PRIMARY = "MODAL_SCENE_CRASH_PRIMARY"
-const SCENE_CRASH_SECONDARY = "MODAL_SCENE_CRASH_SECONDARY"
-
-const LOW_MEMORY_TITLE = "MODAL_LOW_MEMORY_TITLE"
-const LOW_MEMORY_BODY = "MODAL_LOW_MEMORY_BODY"
-const LOW_MEMORY_PRIMARY = "MODAL_LOW_MEMORY_PRIMARY"
-const LOW_MEMORY_SECONDARY = "MODAL_LOW_MEMORY_SECONDARY"
-
-const BAN_PRE_CHECK_TITLE = "MODAL_BAN_PRE_CHECK_TITLE"
-const BAN_PRE_CHECK_BODY = "MODAL_BAN_PRE_CHECK_BODY"
-const BAN_PRE_CHECK_PRIMARY = "MODAL_BAN_PRE_CHECK_PRIMARY"
-
-const PRIVATE_WORLD_TITLE = "MODAL_PRIVATE_WORLD_TITLE"
-const PRIVATE_WORLD_BODY = "MODAL_PRIVATE_WORLD_BODY"
-const PRIVATE_WORLD_PRIMARY = "MODAL_PRIVATE_WORLD_PRIMARY"
-
-const BAN_KICKED_TITLE = "MODAL_BAN_KICKED_TITLE"
-const BAN_KICKED_BODY = "MODAL_BAN_KICKED_BODY"
-const BAN_KICKED_PRIMARY = "MODAL_BAN_KICKED_PRIMARY"
-
-const LOW_SPEC_IPHONE_TITLE = "MODAL_LOW_SPEC_IPHONE_TITLE"
-const LOW_SPEC_IPHONE_BODY = "MODAL_LOW_SPEC_IPHONE_BODY"
-const LOW_SPEC_IPHONE_PRIMARY = "MODAL_LOW_SPEC_IPHONE_PRIMARY"
-
-const PURCHASE_FAILED_TITLE = "MODAL_PURCHASE_FAILED_TITLE"
-const PURCHASE_FAILED_BODY = "MODAL_PURCHASE_FAILED_BODY"
-const PURCHASE_FAILED_PRIMARY = "MODAL_PURCHASE_FAILED_PRIMARY"
-
-const CREDIT_LIMIT_TITLE = "MODAL_CREDIT_LIMIT_TITLE"
-const CREDIT_LIMIT_TOTAL_BODY = "MODAL_CREDIT_LIMIT_TOTAL_BODY"
-const CREDIT_LIMIT_DAILY_BODY = "MODAL_CREDIT_LIMIT_DAILY_BODY"
-const CREDIT_LIMIT_PRIMARY = "MODAL_CREDIT_LIMIT_PRIMARY"
-
-const PURCHASE_IN_FLIGHT_TITLE = "MODAL_PURCHASE_IN_FLIGHT_TITLE"
-const PURCHASE_IN_FLIGHT_BODY = "MODAL_PURCHASE_IN_FLIGHT_BODY"
-const PURCHASE_IN_FLIGHT_PRIMARY = "MODAL_PURCHASE_IN_FLIGHT_PRIMARY"
-
-# Shown at quote time when the server hit its global daily credit ceiling — nothing
-# was charged, the user should try again later.
-const PURCHASE_UNAVAILABLE_TITLE = "Temporarily\nunavailable"
-const PURCHASE_UNAVAILABLE_BODY = "MODAL_PURCHASE_UNAVAILABLE_BODY"
-const PURCHASE_UNAVAILABLE_PRIMARY = "MODAL_PURCHASE_UNAVAILABLE_PRIMARY"
-
-# Shown after a successful charge whose credits are still being applied (the server
-# was at its daily ceiling; the Apple webhook will credit shortly).
-const PURCHASE_PROCESSING_TITLE = "MODAL_PURCHASE_PROCESSING_TITLE"
-const PURCHASE_PROCESSING_BODY = "MODAL_PURCHASE_PROCESSING_BODY"
-const PURCHASE_PROCESSING_PRIMARY = "MODAL_PURCHASE_PROCESSING_PRIMARY"
-
-const IAP_TERMS_TITLE = "MODAL_IAP_TERMS_TITLE"
-const IAP_TERMS_CHECKBOX_BBCODE = (
-	'I have read and accept Decentraland\'s [color=#E8B9FF][url="https://decentraland.org/terms"]Terms of Use[/url][/color], '
-	+ '[color=#E8B9FF][url="https://decentraland.org/privacy"]Privacy Policy[/url][/color], '
-	+ '[color=#E8B9FF][url="https://decentraland.org/content"]Content Policy[/url][/color] and '
-	+ '[color=#E8B9FF][url="https://decentraland.org/credits-terms"]Credits Terms of Use[/url][/color].'
-)
-const IAP_TERMS_PRIMARY = "MODAL_IAP_TERMS_PRIMARY"
-const IAP_TERMS_SECONDARY = "MODAL_IAP_TERMS_SECONDARY"
-
-const SESSION_ENDED_DUPLICATE_TITLE = "MODAL_SESSION_ENDED_DUPLICATE_TITLE"
-const SESSION_ENDED_DUPLICATE_BODY = "MODAL_SESSION_ENDED_DUPLICATE_BODY"
-const SESSION_ENDED_ROOM_CLOSED_TITLE = "MODAL_SESSION_ENDED_ROOM_CLOSED_TITLE"
-const SESSION_ENDED_ROOM_CLOSED_BODY = "MODAL_SESSION_ENDED_ROOM_CLOSED_BODY"
-const SESSION_ENDED_OTHER_TITLE = "Disconnected"
-const SESSION_ENDED_OTHER_BODY = "MODAL_SESSION_ENDED_OTHER_BODY"
-const SESSION_ENDED_SIGN_IN_PRIMARY = "MODAL_SESSION_ENDED_SIGN_IN_PRIMARY"
-const SESSION_ENDED_RETRY_PRIMARY = "MODAL_SESSION_ENDED_RETRY_PRIMARY"
-const SESSION_ENDED_SECONDARY = "MODAL_SESSION_ENDED_SECONDARY"
 
 var current_modal: Modal = null
 var current_travel_modal: TravelModal = null
@@ -130,6 +42,96 @@ var _input_canvas_layer: CanvasLayer = null
 var _code_canvas_layer: CanvasLayer = null
 var _reward_canvas_layer: CanvasLayer = null
 var _upgrade_canvas_layer: CanvasLayer = null
+
+# Modal text constants
+static var external_link_title := TranslationKey.new("MODAL_EXTERNAL_LINK_TITLE")
+static var external_link_body := TranslationKey.new("MODAL_EXTERNAL_LINK_BODY")
+static var external_link_primary := TranslationKey.new("MODAL_EXTERNAL_LINK_PRIMARY")
+static var external_link_secondary := TranslationKey.new("MODAL_EXTERNAL_LINK_SECONDARY")
+
+static var scene_timeout_title := TranslationKey.new("MODAL_SCENE_TIMEOUT_TITLE")
+static var scene_timeout_body := TranslationKey.new("MODAL_SCENE_TIMEOUT_BODY")
+static var scene_timeout_primary := TranslationKey.new("MODAL_SCENE_TIMEOUT_PRIMARY")
+static var scene_timeout_secondary := TranslationKey.new("MODAL_SCENE_TIMEOUT_SECONDARY")
+
+static var connection_lost_title := TranslationKey.new("MODAL_CONNECTION_LOST_TITLE")
+static var connection_lost_body := TranslationKey.new("MODAL_CONNECTION_LOST_BODY")
+static var connection_lost_primary := TranslationKey.new("MODAL_CONNECTION_LOST_PRIMARY")
+static var connection_lost_secondary := TranslationKey.new("MODAL_CONNECTION_LOST_SECONDARY")
+
+static var scene_crash_title := TranslationKey.new("MODAL_SCENE_CRASH_TITLE")
+static var scene_crash_body := TranslationKey.new("MODAL_SCENE_CRASH_BODY")
+static var scene_crash_primary := TranslationKey.new("MODAL_SCENE_CRASH_PRIMARY")
+static var scene_crash_secondary := TranslationKey.new("MODAL_SCENE_CRASH_SECONDARY")
+
+static var low_memory_title := TranslationKey.new("MODAL_LOW_MEMORY_TITLE")
+static var low_memory_body := TranslationKey.new("MODAL_LOW_MEMORY_BODY")
+static var low_memory_primary := TranslationKey.new("MODAL_LOW_MEMORY_PRIMARY")
+static var low_memory_secondary := TranslationKey.new("MODAL_LOW_MEMORY_SECONDARY")
+
+static var ban_pre_check_title := TranslationKey.new("MODAL_BAN_PRE_CHECK_TITLE")
+static var ban_pre_check_body := TranslationKey.new("MODAL_BAN_PRE_CHECK_BODY")
+static var ban_pre_check_primary := TranslationKey.new("MODAL_BAN_PRE_CHECK_PRIMARY")
+
+static var private_world_title := TranslationKey.new("MODAL_PRIVATE_WORLD_TITLE")
+static var private_world_body := TranslationKey.new("MODAL_PRIVATE_WORLD_BODY")
+static var private_world_primary := TranslationKey.new("MODAL_PRIVATE_WORLD_PRIMARY")
+
+static var ban_kicked_title := TranslationKey.new("MODAL_BAN_KICKED_TITLE")
+static var ban_kicked_body := TranslationKey.new("MODAL_BAN_KICKED_BODY")
+static var ban_kicked_primary := TranslationKey.new("MODAL_BAN_KICKED_PRIMARY")
+
+static var low_spec_iphone_title := TranslationKey.new("MODAL_LOW_SPEC_IPHONE_TITLE")
+static var low_spec_iphone_body := TranslationKey.new("MODAL_LOW_SPEC_IPHONE_BODY")
+static var low_spec_iphone_primary := TranslationKey.new("MODAL_LOW_SPEC_IPHONE_PRIMARY")
+
+static var purchase_failed_title := TranslationKey.new("MODAL_PURCHASE_FAILED_TITLE")
+static var purchase_failed_body := TranslationKey.new("MODAL_PURCHASE_FAILED_BODY")
+static var purchase_failed_primary := TranslationKey.new("MODAL_PURCHASE_FAILED_PRIMARY")
+
+static var credit_limit_title := TranslationKey.new("MODAL_CREDIT_LIMIT_TITLE")
+static var credit_limit_total_body := TranslationKey.new("MODAL_CREDIT_LIMIT_TOTAL_BODY")
+static var credit_limit_daily_body := TranslationKey.new("MODAL_CREDIT_LIMIT_DAILY_BODY")
+static var credit_limit_primary := TranslationKey.new("MODAL_CREDIT_LIMIT_PRIMARY")
+
+static var purchase_in_flight_title := TranslationKey.new("MODAL_PURCHASE_IN_FLIGHT_TITLE")
+static var purchase_in_flight_body := TranslationKey.new("MODAL_PURCHASE_IN_FLIGHT_BODY")
+static var purchase_in_flight_primary := TranslationKey.new("MODAL_PURCHASE_IN_FLIGHT_PRIMARY")
+
+# Shown at quote time when the server hit its global daily credit ceiling — nothing
+# was charged, the user should try again later.
+static var purchase_unavailable_title := TranslationKey.new("MODAL_PURCHASE_UNAVAILABLE_TITLE")
+static var purchase_unavailable_body := TranslationKey.new("MODAL_PURCHASE_UNAVAILABLE_BODY")
+static var purchase_unavailable_primary := TranslationKey.new("MODAL_PURCHASE_UNAVAILABLE_PRIMARY")
+
+# Shown after a successful charge whose credits are still being applied (the server
+# was at its daily ceiling; the Apple webhook will credit shortly).
+static var purchase_processing_title := TranslationKey.new("MODAL_PURCHASE_PROCESSING_TITLE")
+static var purchase_processing_body := TranslationKey.new("MODAL_PURCHASE_PROCESSING_BODY")
+static var purchase_processing_primary := TranslationKey.new("MODAL_PURCHASE_PROCESSING_PRIMARY")
+
+static var iap_terms_title := TranslationKey.new("MODAL_IAP_TERMS_TITLE")
+static var iap_terms_checkbox_bbcode := TranslationKey.new("MODAL_IAP_TERMS_CHECKBOX")
+static var iap_terms_primary := TranslationKey.new("MODAL_IAP_TERMS_PRIMARY")
+static var iap_terms_secondary := TranslationKey.new("MODAL_IAP_TERMS_SECONDARY")
+
+static var session_ended_duplicate_title := TranslationKey.new(
+	"MODAL_SESSION_ENDED_DUPLICATE_TITLE"
+)
+static var session_ended_duplicate_body := TranslationKey.new("MODAL_SESSION_ENDED_DUPLICATE_BODY")
+static var session_ended_room_closed_title := TranslationKey.new(
+	"MODAL_SESSION_ENDED_ROOM_CLOSED_TITLE"
+)
+static var session_ended_room_closed_body := TranslationKey.new(
+	"MODAL_SESSION_ENDED_ROOM_CLOSED_BODY"
+)
+static var session_ended_other_title := TranslationKey.new("MODAL_SESSION_ENDED_OTHER_TITLE")
+static var session_ended_other_body := TranslationKey.new("MODAL_SESSION_ENDED_OTHER_BODY")
+static var session_ended_sign_in_primary := TranslationKey.new(
+	"MODAL_SESSION_ENDED_SIGN_IN_PRIMARY"
+)
+static var session_ended_retry_primary := TranslationKey.new("MODAL_SESSION_ENDED_RETRY_PRIMARY")
+static var session_ended_secondary := TranslationKey.new("MODAL_SESSION_ENDED_SECONDARY")
 
 static var _add_email_regex: RegEx = RegEx.create_from_string("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")
 
@@ -169,10 +171,10 @@ func async_show_external_link_modal(external_url: String) -> void:
 		if not NodeGuard.is_alive(current_modal, "ModalManager.async_show_external_link_modal"):
 			return
 
-	current_modal.set_title(EXTERNAL_LINK_TITLE)
-	current_modal.set_body(EXTERNAL_LINK_BODY)
-	current_modal.set_primary_button_text(EXTERNAL_LINK_PRIMARY)
-	current_modal.set_secondary_button_text(EXTERNAL_LINK_SECONDARY)
+	current_modal.set_title(external_link_title)
+	current_modal.set_body(external_link_body)
+	current_modal.set_primary_button_text(external_link_primary)
+	current_modal.set_secondary_button_text(external_link_secondary)
 	current_modal.show_url(external_url)
 	current_modal.show_icon(Modal.MODAL_ALERT_ICON)
 	current_modal.show()
@@ -192,10 +194,10 @@ func async_show_scene_timeout_modal() -> void:
 		if not NodeGuard.is_alive(current_modal, "ModalManager.async_show_scene_timeout_modal"):
 			return
 
-	current_modal.set_title(SCENE_TIMEOUT_TITLE)
-	current_modal.set_body(SCENE_TIMEOUT_BODY)
-	current_modal.set_primary_button_text(SCENE_TIMEOUT_PRIMARY)
-	current_modal.set_secondary_button_text(SCENE_TIMEOUT_SECONDARY)
+	current_modal.set_title(scene_timeout_title)
+	current_modal.set_body(scene_timeout_body)
+	current_modal.set_primary_button_text(scene_timeout_primary)
+	current_modal.set_secondary_button_text(scene_timeout_secondary)
 	current_modal.show_icon(Modal.MODAL_ALERT_ICON)
 	current_modal.show()
 
@@ -216,10 +218,10 @@ func async_show_connection_lost_modal(hide_buttons: bool = false) -> void:
 			return
 
 	current_modal.blocker = true
-	current_modal.set_title(CONNECTION_LOST_TITLE)
-	current_modal.set_body(CONNECTION_LOST_BODY)
-	current_modal.set_primary_button_text(CONNECTION_LOST_PRIMARY)
-	current_modal.set_secondary_button_text(CONNECTION_LOST_SECONDARY)
+	current_modal.set_title(connection_lost_title)
+	current_modal.set_body(connection_lost_body)
+	current_modal.set_primary_button_text(connection_lost_primary)
+	current_modal.set_secondary_button_text(connection_lost_secondary)
 	current_modal.show_icon(Modal.MODAL_CONNECTION_ICON)
 	current_modal.hide_url()
 	current_modal.show()
@@ -234,7 +236,9 @@ func async_show_connection_lost_modal(hide_buttons: bool = false) -> void:
 			# No buttons at all — modal auto-closes only when connection restores
 			current_modal.buttons_container.hide()
 			current_modal.buttons_separator.hide()
-			current_modal.set_body(CONNECTION_LOST_BODY + "\n \n Try restarting the app.")
+			current_modal.set_body_parts(
+				[connection_lost_body, TranslationKey.new("MODAL_TRY_RESTARTING_APP")]
+			)
 	else:
 		current_modal.button_secondary.pressed.connect(_on_connection_lost_secondary)
 
@@ -274,7 +278,10 @@ func async_show_world_modal(world_name: String) -> void:
 	if result is PromiseError:
 		printerr("World not found or error: ", world_name, " ", result.get_error())
 		NotificationsManager.show_system_toast(
-			"World not found", world_name + " could not be reached.", "error", "alert"
+			tr("TOAST_WORLD_NOT_FOUND_TITLE"),
+			tr("TOAST_WORLD_UNREACHABLE_BODY") % world_name,
+			"error",
+			"alert"
 		)
 		return
 
@@ -282,7 +289,10 @@ func async_show_world_modal(world_name: String) -> void:
 	if not json.has("data") or json.data.is_empty():
 		printerr("World does not exist: ", world_name)
 		NotificationsManager.show_system_toast(
-			"World not found", world_name + " does not exist.", "error", "alert"
+			tr("TOAST_WORLD_NOT_FOUND_TITLE"),
+			tr("TOAST_WORLD_NOT_EXIST_BODY") % world_name,
+			"error",
+			"alert"
 		)
 		return
 
@@ -340,10 +350,10 @@ func async_show_scene_crash_modal(entity_id: String) -> void:
 			return
 
 	current_modal.blocker = true
-	current_modal.set_title(SCENE_CRASH_TITLE)
-	current_modal.set_body(SCENE_CRASH_BODY)
-	current_modal.set_primary_button_text(SCENE_CRASH_PRIMARY)
-	current_modal.set_secondary_button_text(SCENE_CRASH_SECONDARY)
+	current_modal.set_title(scene_crash_title)
+	current_modal.set_body(scene_crash_body)
+	current_modal.set_primary_button_text(scene_crash_primary)
+	current_modal.set_secondary_button_text(scene_crash_secondary)
 	current_modal.show_icon(Modal.MODAL_ALERT_ICON)
 	current_modal.hide_url()
 	current_modal.show()
@@ -373,10 +383,10 @@ func async_show_low_memory_warning_modal(
 			return
 
 	current_modal.blocker = true
-	current_modal.set_title(LOW_MEMORY_TITLE)
-	current_modal.set_body(LOW_MEMORY_BODY)
-	current_modal.set_primary_button_text(LOW_MEMORY_PRIMARY)
-	current_modal.set_secondary_button_text(LOW_MEMORY_SECONDARY)
+	current_modal.set_title(low_memory_title)
+	current_modal.set_body(low_memory_body)
+	current_modal.set_primary_button_text(low_memory_primary)
+	current_modal.set_secondary_button_text(low_memory_secondary)
 	current_modal.show_icon(Modal.MODAL_ALERT_ICON)
 	current_modal.hide_url()
 	current_modal.show()
@@ -414,9 +424,9 @@ func async_show_ban_pre_check_modal() -> void:
 			return
 
 	current_modal.blocker = true
-	current_modal.set_title(BAN_PRE_CHECK_TITLE)
-	current_modal.set_body(BAN_PRE_CHECK_BODY)
-	current_modal.set_primary_button_text(BAN_PRE_CHECK_PRIMARY)
+	current_modal.set_title(ban_pre_check_title)
+	current_modal.set_body(ban_pre_check_body)
+	current_modal.set_primary_button_text(ban_pre_check_primary)
 	current_modal.show_icon(Modal.MODAL_BAN_ICON)
 	current_modal.hide_url()
 	current_modal.button_secondary.hide()
@@ -439,11 +449,11 @@ func async_show_private_world_modal(world_name: String) -> void:
 			return
 
 	current_modal.blocker = true
-	# tr() first: PRIVATE_WORLD_TITLE is the KEY, which has no %s — the placeholder lives in
+	# tr() first: private_world_title is the KEY, which has no %s — the placeholder lives in
 	# the catalogue value ("%s is private"). Formatting the key produced a broken title.
-	current_modal.set_title(tr(PRIVATE_WORLD_TITLE) % world_name.trim_suffix(".dcl.eth"))
-	current_modal.set_body(PRIVATE_WORLD_BODY)
-	current_modal.set_primary_button_text(PRIVATE_WORLD_PRIMARY)
+	current_modal.set_title_text(private_world_title.format(world_name.trim_suffix(".dcl.eth")))
+	current_modal.set_body(private_world_body)
+	current_modal.set_primary_button_text(private_world_primary)
 	current_modal.show_icon(Modal.MODAL_BLOCK_ICON)
 	current_modal.hide_url()
 	current_modal.button_secondary.hide()
@@ -466,9 +476,9 @@ func async_show_ban_kicked_modal() -> void:
 			return
 
 	current_modal.blocker = true
-	current_modal.set_title(BAN_KICKED_TITLE)
-	current_modal.set_body(BAN_KICKED_BODY)
-	current_modal.set_primary_button_text(BAN_KICKED_PRIMARY)
+	current_modal.set_title(ban_kicked_title)
+	current_modal.set_body(ban_kicked_body)
+	current_modal.set_primary_button_text(ban_kicked_primary)
 	current_modal.show_icon(Modal.MODAL_BAN_ICON)
 	current_modal.hide_url()
 	current_modal.button_secondary.hide()
@@ -482,9 +492,9 @@ func async_show_ban_kicked_modal() -> void:
 ## Primary action signs the user out and returns them to the sign-in screen.
 func async_show_session_ended_modal() -> void:
 	await _async_show_disconnect_modal(
-		SESSION_ENDED_DUPLICATE_TITLE,
-		SESSION_ENDED_DUPLICATE_BODY,
-		SESSION_ENDED_SIGN_IN_PRIMARY,
+		session_ended_duplicate_title,
+		session_ended_duplicate_body,
+		session_ended_sign_in_primary,
 		_on_session_ended_sign_in
 	)
 
@@ -492,9 +502,9 @@ func async_show_session_ended_modal() -> void:
 ## Shows the modal for a RoomClosed disconnect. Primary action retries the connection.
 func async_show_room_closed_modal() -> void:
 	await _async_show_disconnect_modal(
-		SESSION_ENDED_ROOM_CLOSED_TITLE,
-		SESSION_ENDED_ROOM_CLOSED_BODY,
-		SESSION_ENDED_RETRY_PRIMARY,
+		session_ended_room_closed_title,
+		session_ended_room_closed_body,
+		session_ended_retry_primary,
 		_on_session_ended_retry
 	)
 
@@ -503,15 +513,18 @@ func async_show_room_closed_modal() -> void:
 ## Primary action retries the connection.
 func async_show_disconnected_modal() -> void:
 	await _async_show_disconnect_modal(
-		SESSION_ENDED_OTHER_TITLE,
-		SESSION_ENDED_OTHER_BODY,
-		SESSION_ENDED_RETRY_PRIMARY,
+		session_ended_other_title,
+		session_ended_other_body,
+		session_ended_retry_primary,
 		_on_session_ended_retry
 	)
 
 
 func _async_show_disconnect_modal(
-	title: String, body: String, primary_label: String, primary_handler: Callable
+	title: TranslationKey,
+	body: TranslationKey,
+	primary_label: TranslationKey,
+	primary_handler: Callable
 ) -> void:
 	if not is_instance_valid(current_modal):
 		if not await _async_create_modal():
@@ -523,7 +536,7 @@ func _async_show_disconnect_modal(
 	current_modal.set_title(title)
 	current_modal.set_body(body)
 	current_modal.set_primary_button_text(primary_label)
-	current_modal.set_secondary_button_text(SESSION_ENDED_SECONDARY)
+	current_modal.set_secondary_button_text(session_ended_secondary)
 	current_modal.show_icon(Modal.MODAL_CONNECTION_ICON)
 	current_modal.hide_url()
 	current_modal.show()
@@ -556,9 +569,9 @@ func async_show_low_spec_iphone_modal() -> void:
 		if not NodeGuard.is_alive(current_modal, "ModalManager.async_show_low_spec_iphone_modal"):
 			return
 
-	current_modal.set_title(LOW_SPEC_IPHONE_TITLE)
-	current_modal.set_body(LOW_SPEC_IPHONE_BODY)
-	current_modal.set_primary_button_text(LOW_SPEC_IPHONE_PRIMARY)
+	current_modal.set_title(low_spec_iphone_title)
+	current_modal.set_body(low_spec_iphone_body)
+	current_modal.set_primary_button_text(low_spec_iphone_primary)
 	current_modal.set_primary_button_font_size(24)
 	current_modal.show_icon(Modal.MODAL_ALERT_ICON)
 	current_modal.hide_url()
@@ -578,9 +591,9 @@ func async_show_purchase_failed_modal() -> void:
 		if not NodeGuard.is_alive(current_modal, "ModalManager.async_show_purchase_failed_modal"):
 			return
 
-	current_modal.set_title(PURCHASE_FAILED_TITLE)
-	current_modal.set_body(PURCHASE_FAILED_BODY)
-	current_modal.set_primary_button_text(PURCHASE_FAILED_PRIMARY)
+	current_modal.set_title(purchase_failed_title)
+	current_modal.set_body(purchase_failed_body)
+	current_modal.set_primary_button_text(purchase_failed_primary)
 	current_modal.show_icon(Modal.MODAL_ALERT_ICON)
 	current_modal.hide_url()
 	current_modal.button_secondary.hide()
@@ -600,9 +613,9 @@ func async_show_credit_limit_total_modal() -> void:
 		):
 			return
 
-	current_modal.set_title(CREDIT_LIMIT_TITLE)
-	current_modal.set_body(CREDIT_LIMIT_TOTAL_BODY)
-	current_modal.set_primary_button_text(CREDIT_LIMIT_PRIMARY)
+	current_modal.set_title(credit_limit_title)
+	current_modal.set_body(credit_limit_total_body)
+	current_modal.set_primary_button_text(credit_limit_primary)
 	current_modal.show_icon(Modal.MODAL_ALERT_ICON)
 	current_modal.hide_url()
 	current_modal.button_secondary.hide()
@@ -622,9 +635,9 @@ func async_show_credit_limit_daily_modal() -> void:
 		):
 			return
 
-	current_modal.set_title(CREDIT_LIMIT_TITLE)
-	current_modal.set_body(CREDIT_LIMIT_DAILY_BODY)
-	current_modal.set_primary_button_text(CREDIT_LIMIT_PRIMARY)
+	current_modal.set_title(credit_limit_title)
+	current_modal.set_body(credit_limit_daily_body)
+	current_modal.set_primary_button_text(credit_limit_primary)
 	current_modal.show_icon(Modal.MODAL_ALERT_ICON)
 	current_modal.hide_url()
 	current_modal.button_secondary.hide()
@@ -644,9 +657,9 @@ func async_show_purchase_in_flight_modal() -> void:
 		):
 			return
 
-	current_modal.set_title(PURCHASE_IN_FLIGHT_TITLE)
-	current_modal.set_body(PURCHASE_IN_FLIGHT_BODY)
-	current_modal.set_primary_button_text(PURCHASE_IN_FLIGHT_PRIMARY)
+	current_modal.set_title(purchase_in_flight_title)
+	current_modal.set_body(purchase_in_flight_body)
+	current_modal.set_primary_button_text(purchase_in_flight_primary)
 	current_modal.show_icon(Modal.MODAL_ALERT_ICON)
 	current_modal.hide_url()
 	current_modal.button_secondary.hide()
@@ -666,9 +679,9 @@ func async_show_purchase_unavailable_modal() -> void:
 		):
 			return
 
-	current_modal.set_title(PURCHASE_UNAVAILABLE_TITLE)
-	current_modal.set_body(PURCHASE_UNAVAILABLE_BODY)
-	current_modal.set_primary_button_text(PURCHASE_UNAVAILABLE_PRIMARY)
+	current_modal.set_title(purchase_unavailable_title)
+	current_modal.set_body(purchase_unavailable_body)
+	current_modal.set_primary_button_text(purchase_unavailable_primary)
 	current_modal.show_icon(Modal.MODAL_ALERT_ICON)
 	current_modal.hide_url()
 	current_modal.button_secondary.hide()
@@ -688,9 +701,9 @@ func async_show_purchase_processing_modal() -> void:
 		):
 			return
 
-	current_modal.set_title(PURCHASE_PROCESSING_TITLE)
-	current_modal.set_body(PURCHASE_PROCESSING_BODY)
-	current_modal.set_primary_button_text(PURCHASE_PROCESSING_PRIMARY)
+	current_modal.set_title(purchase_processing_title)
+	current_modal.set_body(purchase_processing_body)
+	current_modal.set_primary_button_text(purchase_processing_primary)
 	current_modal.show_icon(Modal.MODAL_ALERT_ICON)
 	current_modal.hide_url()
 	current_modal.button_secondary.hide()
@@ -708,16 +721,16 @@ func async_show_iap_terms_modal() -> void:
 		if not NodeGuard.is_alive(current_modal, "ModalManager.async_show_iap_terms_modal"):
 			return
 
-	current_modal.set_title(IAP_TERMS_TITLE)
-	current_modal.set_body("")
-	current_modal.set_primary_button_text(IAP_TERMS_PRIMARY)
-	current_modal.set_secondary_button_text(IAP_TERMS_SECONDARY)
+	current_modal.set_title(iap_terms_title)
+	current_modal.set_body_text("")
+	current_modal.set_primary_button_text(iap_terms_primary)
+	current_modal.set_secondary_button_text(iap_terms_secondary)
 	current_modal.hide_icon()
 	current_modal.hide_url()
 	current_modal.blocker = true
 	current_modal.button_primary.disabled = true
 
-	current_modal.show_checkbox(IAP_TERMS_CHECKBOX_BBCODE)
+	current_modal.show_checkbox(iap_terms_checkbox_bbcode)
 	current_modal.checkbox.toggled.connect(_on_iap_terms_checkbox_toggled)
 	current_modal.checkbox_text.meta_clicked.connect(_on_iap_terms_link_clicked)
 
@@ -755,11 +768,11 @@ func clear_suppress_ban_kicked() -> void:
 ## Shows a generic input modal. Returns the InputModal instance so callers
 ## can connect to its confirmed/cancelled signals.
 func async_show_input_modal(
-	title: String,
-	subtitle: String,
-	placeholder: String,
-	confirm_text: String,
-	cancel_text: String,
+	title: TranslationKey,
+	subtitle: TranslationKey,
+	placeholder: TranslationKey,
+	confirm_text: TranslationKey,
+	cancel_text: TranslationKey,
 	validation: Callable,
 ) -> InputModal:
 	var modal = await _async_create_input_modal()
@@ -1469,7 +1482,12 @@ static func is_valid_email(text: String) -> bool:
 ## reward). Callers fire their own entry CLICK_BUTTON metric before calling this.
 func async_start_add_email_flow() -> void:
 	var modal = await async_show_input_modal(
-		"Add Email", "My email", "name@email.com", "ADD", "CANCEL", is_valid_email
+		TranslationKey.new("MODAL_ADD_EMAIL_TITLE"),
+		TranslationKey.new("MODAL_ADD_EMAIL_SUBTITLE"),
+		TranslationKey.new("MODAL_ADD_EMAIL_PLACEHOLDER"),
+		TranslationKey.new("INPUT_MODAL_ADD"),
+		TranslationKey.new("COMMON_CANCEL"),
+		is_valid_email
 	)
 	if is_instance_valid(modal):
 		# Add Email modal shown — the OTP upgrade funnel has started (issue #2377).
@@ -1498,7 +1516,7 @@ func _async_add_email_send_code(email: String) -> Dictionary:
 		push_warning("Upgrade to OTP - send code failed: " + raw)
 		if _add_email_is_invalid_error(raw):
 			Global.metrics.track_screen_viewed("UPGRADE_OTP_EMAIL_INVALID", "")
-			return {"status": InputModal.SUBMIT_INVALID, "message": "Invalid email"}
+			return {"status": InputModal.SUBMIT_INVALID, "message": tr("MODAL_EMAIL_INVALID")}
 		return {"status": InputModal.SUBMIT_ERROR, "message": raw}
 	print("[UpgradeOTP] send_code OK for: ", email)
 	return {"status": InputModal.SUBMIT_OK}
@@ -1525,7 +1543,8 @@ func _async_add_email_resend(email: String) -> Dictionary:
 # gdlint:ignore = async-function-name
 func _async_add_email_send_failed(_message: String) -> void:
 	await _async_add_email_error_modal(
-		"Something went wrong", "Something went wrong. Please try again later."
+		TranslationKey.new("MODAL_ADD_EMAIL_ERROR_TITLE"),
+		TranslationKey.new("MODAL_ADD_EMAIL_ERROR_BODY")
 	)
 
 
@@ -1567,8 +1586,8 @@ func _add_email_is_already_linked_error(raw: String) -> bool:
 
 func _async_add_email_in_use() -> void:
 	await _async_add_email_error_modal(
-		"Email already in use",
-		"This email is already linked to another account.\nTry a different email.",
+		TranslationKey.new("MODAL_EMAIL_IN_USE_TITLE"),
+		TranslationKey.new("MODAL_EMAIL_IN_USE_BODY")
 	)
 
 
@@ -1606,13 +1625,13 @@ func _add_email_friendly_error(raw: String) -> String:
 	return tr("COMMON_SOMETHING_WENT_WRONG_RETRY")
 
 
-func _async_add_email_error_modal(title: String, body: String) -> void:
+func _async_add_email_error_modal(title: TranslationKey, body: TranslationKey) -> void:
 	var modal = await _async_create_modal()
 	if not is_instance_valid(modal):
 		return
 	modal.set_title(title)
 	modal.set_body(body)
-	modal.set_primary_button_text(tr("MENU_OK"))
+	modal.set_primary_button_text(TranslationKey.new("MENU_OK"))
 	modal.show_icon(Modal.MODAL_ALERT_ICON)
 	modal.button_secondary.hide()
 	modal.hide_url()

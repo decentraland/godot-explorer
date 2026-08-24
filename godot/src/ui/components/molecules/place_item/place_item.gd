@@ -782,13 +782,13 @@ func _format_duration(duration: int) -> String:
 	var hours: int = duration / (1000 * 60 * 60)
 	if hours < 1:
 		var minutes: int = duration / (1000 * 60)
-		return tr_n("PLACE_DURATION_MIN", "PLACE_DURATION_MIN_PLURAL", minutes) % minutes
+		return TranslationKey.new("PLACE_DURATION_MIN").plural(minutes)
 
 	if hours < 72:
-		return tr_n("PLACE_DURATION_HR", "PLACE_DURATION_HR_PLURAL", hours) % hours
+		return TranslationKey.new("PLACE_DURATION_HR").plural(hours)
 
 	var days: int = hours / 24
-	return tr_n("PLACE_DURATION_DAY", "PLACE_DURATION_DAY_PLURAL", days) % days
+	return TranslationKey.new("PLACE_DURATION_DAY").plural(days)
 
 
 func _on_event_pressed() -> void:

@@ -125,7 +125,7 @@ func _format_time_range(start_unix_sec: int, duration_ms: int) -> String:
 	var end_dt: Dictionary = Time.get_datetime_dict_from_unix_time(end_unix_sec)
 	var tz_str: String = _get_local_timezone_string()
 	# Named placeholders: a locale may put the timezone first, and "to" is not universal.
-	return tr("CALENDAR_TIME_RANGE").format(
+	return TranslationKey.new("CALENDAR_TIME_RANGE").format_named(
 		{
 			"start": LocaleFormat.time_of_day(start_dt.hour, start_dt.minute),
 			"end": LocaleFormat.time_of_day(end_dt.hour, end_dt.minute),

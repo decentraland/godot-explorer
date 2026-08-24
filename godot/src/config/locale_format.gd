@@ -25,31 +25,34 @@ const RULES := {
 
 const FALLBACK_RULE := {"decimal": ".", "group": ",", "clock24": false}
 
-# i18n-keys: DATE_MONTH_*, DATE_WEEKDAY_*, DATE_AM, DATE_PM
-const MONTH_KEYS: PackedStringArray = [
-	"DATE_MONTH_JAN",
-	"DATE_MONTH_FEB",
-	"DATE_MONTH_MAR",
-	"DATE_MONTH_APR",
-	"DATE_MONTH_MAY",
-	"DATE_MONTH_JUN",
-	"DATE_MONTH_JUL",
-	"DATE_MONTH_AUG",
-	"DATE_MONTH_SEP",
-	"DATE_MONTH_OCT",
-	"DATE_MONTH_NOV",
-	"DATE_MONTH_DEC",
-]
+static var month_keys: Array[TranslationKey] = TranslationKey.many(
+	[
+		"DATE_MONTH_JAN",
+		"DATE_MONTH_FEB",
+		"DATE_MONTH_MAR",
+		"DATE_MONTH_APR",
+		"DATE_MONTH_MAY",
+		"DATE_MONTH_JUN",
+		"DATE_MONTH_JUL",
+		"DATE_MONTH_AUG",
+		"DATE_MONTH_SEP",
+		"DATE_MONTH_OCT",
+		"DATE_MONTH_NOV",
+		"DATE_MONTH_DEC"
+	]
+)
 
-const WEEKDAY_KEYS: PackedStringArray = [
-	"DATE_WEEKDAY_SUN",
-	"DATE_WEEKDAY_MON",
-	"DATE_WEEKDAY_TUE",
-	"DATE_WEEKDAY_WED",
-	"DATE_WEEKDAY_THU",
-	"DATE_WEEKDAY_FRI",
-	"DATE_WEEKDAY_SAT",
-]
+static var weekday_keys: Array[TranslationKey] = TranslationKey.many(
+	[
+		"DATE_WEEKDAY_SUN",
+		"DATE_WEEKDAY_MON",
+		"DATE_WEEKDAY_TUE",
+		"DATE_WEEKDAY_WED",
+		"DATE_WEEKDAY_THU",
+		"DATE_WEEKDAY_FRI",
+		"DATE_WEEKDAY_SAT"
+	]
+)
 
 
 static func rules() -> Dictionary:
@@ -58,12 +61,12 @@ static func rules() -> Dictionary:
 
 ## Abbreviated month name for a 1-based month number.
 static func month_name(month: int) -> String:
-	return TranslationServer.translate(MONTH_KEYS[clampi(month - 1, 0, 11)])
+	return month_keys[clampi(month - 1, 0, 11)].text()
 
 
 ## Abbreviated weekday name for Godot's 0-based weekday (0 = Sunday).
 static func weekday_name(weekday: int) -> String:
-	return TranslationServer.translate(WEEKDAY_KEYS[clampi(weekday, 0, 6)])
+	return weekday_keys[clampi(weekday, 0, 6)].text()
 
 
 ## A number with the locale's decimal separator and thousands grouping.
@@ -94,7 +97,10 @@ static func time_of_day(hour: int, minute: int) -> String:
 	if rules()["clock24"]:
 		return "%02d:%02d" % [hour, minute]
 	var display_hour: int = 12 if (hour == 0 or hour == 12) else (hour - 12 if hour >= 12 else hour)
-	var suffix := TranslationServer.translate("DATE_PM" if hour >= 12 else "DATE_AM")
+	# Both branches hold a key, so both are visible to the checker — a ternary that hid
+	# "DATE_AM" behind a matched "DATE_PM" is exactly how a key goes missing.
+	var meridiem := TranslationKey.new("DATE_PM") if hour >= 12 else TranslationKey.new("DATE_AM")
+	var suffix := meridiem.text()
 	return "%02d:%02d%s" % [display_hour, minute, suffix]
 
 

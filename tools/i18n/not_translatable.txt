@@ -152,3 +152,17 @@ godot/src/global.gd	[Startup] global._async_clear_cache start: %dms
 
 # push_warning() diagnostic, never rendered.
 godot/src/logic/world_permissions_helper.gd	World permissions request failed for %s: %s
+
+# notifications_manager debug dump (print()) — status labels and elapsed time in a
+# developer listing, never rendered as UI.
+godot/src/notifications_manager.gd	%d min
+godot/src/notifications_manager.gd	EXPIRED
+godot/src/notifications_manager.gd	PENDING
+
+# Log prefixes and SQL fragments.
+godot/src/notifications_manager.gd	Event notifications sync complete: added=%d, removed=%d
+godot/src/notifications_manager.gd	Fetch error: 
+godot/src/notifications_manager.gd	Found %d attended events (filtered from %d total)
+godot/src/notifications_manager.gd	Mark as read error: 
+godot/src/notifications_manager.gd	is_scheduled = 0 AND trigger_timestamp > %d
+godot/src/notifications_manager.gd	trigger_timestamp > %d

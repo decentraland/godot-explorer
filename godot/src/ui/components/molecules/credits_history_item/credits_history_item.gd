@@ -11,7 +11,5 @@ func setup(credits: int, is_refund: bool, timestamp: String) -> void:
 		label_detail.text = tr("CREDITS_HISTORY_ITEM_REFUND_DEDUCTION")
 		label_amount.text = tr("CREDITS_AMOUNT_DEDUCTED") % credits
 	else:
-		label_detail.text = (
-			tr_n("CREDITS_PURCHASED", "CREDITS_PURCHASED_PLURAL", credits) % credits
-		)
+		label_detail.text = (TranslationKey.new("CREDITS_PURCHASED").plural(credits))
 		label_amount.text = str(credits)

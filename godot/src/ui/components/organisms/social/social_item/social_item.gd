@@ -482,7 +482,9 @@ func _async_unblock_user(address: String) -> void:
 			unblock_button.disabled = false
 		var error_msg := PromiseUtils.get_error_message(promise)
 		printerr("Unblock failed: ", error_msg)
-		NotificationsManager.show_system_toast("Unblock failed", error_msg, "error", "alert")
+		NotificationsManager.show_system_toast(
+			tr("TOAST_UNBLOCK_FAILED"), error_msg, "error", "alert"
+		)
 		return
 
 	Global.social_blacklist.remove_blocked(address)  # Update local cache

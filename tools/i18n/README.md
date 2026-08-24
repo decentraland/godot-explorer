@@ -29,6 +29,50 @@ Adding a locale means: create `<locale>.csv`, add it to `locale/translations` in
 reference would dangle), and add it to `SUPPORTED_LOCALES` in `locale_settings.gd` only when the
 catalogue is complete — see unity-explorer#270.
 
+## Passing keys through APIs
+
+A display API takes **one of two things**, and which one is not obvious from `String`:
+
+| The node it writes to | What the caller must pass |
+|---|---|
+| auto-translates (no `auto_translate_mode`) | a **key** — the node looks it up, and re-looks-it-up on a language change |
+| `auto_translate_mode = 2` | **finished text** — usually `tr(...)`, or data that must never be looked up |
+
+Guessing wrong fails silently in both directions: a key sent to a mode-2 node renders as
+`MODAL_ADD_EMAIL_TITLE` on screen, and prose sent to an auto-translating node simply misses the
+lookup and looks fine in English forever. An entire modal system, an OTP flow and nine toasts
+shipped in English behind that ambiguity.
+
+**New display APIs should type the parameter** so the engine settles it:
+
+```gdscript
+func set_body(body: TranslationKey) -> void      # give me a key, I translate it
+func show_toast(text: String) -> void            # give me finished text or data
+```
+
+Passing a literal to the first is a **parse error**, caught by `cargo run -- check-gdscript`.
+`Array[TranslationKey]` works the same way. `TranslationKey` lives in
+`godot/src/config/translation_key.gd`; `raw()` gives the key for an auto-translating node, `text()`
+the translated string for a mode-2 one, plus `format()`, `format_named()`, `plural()` and `upper()`.
+
+**Never concatenate a key with a literal.** `set_body(CONNECTION_LOST_BODY + " Try again.")`
+produces a string matching no key, so the lookup misses and the raw key is drawn on screen — that
+shipped. Pass the pieces:
+
+```gdscript
+modal.set_body(TranslationKey.join([
+	TranslationKey.new("MODAL_CONNECTION_LOST_BODY"),
+	TranslationKey.new("MODAL_TRY_RESTARTING_APP"),
+]))
+```
+
+Each piece is translated on its own, so a translator can rewrite one paragraph without touching the
+others and the separator stays presentation rather than copy.
+
+Existing APIs still take `String`; they are converted opportunistically when a file is touched, not
+in one sweep. The checker recognises `TranslationKey.new("KEY")` as key usage, and flags prose
+passed to it.
+
 ## Declaring keys the scanner cannot see
 
 An escape hatch, meant to stay rare (3 uses today). Only where a key lives in a data table or a

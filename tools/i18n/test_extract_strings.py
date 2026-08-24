@@ -205,6 +205,22 @@ class TestHelperComposedStrings(ExtractorTestCase):
         self.assertEqual(self.fx.keys(), {"NOTIF_HEADER"})
         self.assertEqual(self.fx.unkeyed(), set())
 
+    def test_translation_key_type_counts_as_key_usage(self):
+        # TranslationKey makes the mistake a parse error at the call site, so the scanner only
+        # has to notice the key here rather than learn every display API's parameter list.
+        self.fx.script("a.gd", 'func f() -> void:\n\tmodal.set_body(TranslationKey.new("MODAL_BODY"))\n')
+        self.assertEqual(self.fx.keys(), {"MODAL_BODY"})
+        self.assertEqual(self.fx.unkeyed(), set())
+
+    def test_prose_inside_translation_key_is_flagged(self):
+        # The type stops a String reaching a TranslationKey *parameter*, but
+        # TranslationKey.new("Try again.") is still type-legal — the debug guard in _init
+        # catches it at runtime, and this catches it in CI.
+        self.fx.script("a.gd", 'func f() -> void:\n\tmodal.set_body(TranslationKey.new("Try restarting the app."))\n')
+        self.assertEqual(
+            self.fx.unkeyed(), {("godot/src/ui/a.gd", "Try restarting the app.")}
+        )
+
     def test_debug_surfaces_are_excluded_wholesale(self):
         for excluded in ["multiplayer_debug", "scene_stats_panel"]:
             with self.subTest(dir=excluded):
@@ -421,19 +437,19 @@ class TestCatalogue(ExtractorTestCase):
         self.assertEqual(got, values)
 
     def test_plural_group_round_trips_through_continuation_rows(self):
-        self.fx.csv("en", [("K", ["%d friend", "%d friends"], "", "K_MANY")])
+        self.fx.csv("en", [("K", ["%d friend", "%d friends"], "", "K_PLURAL")])
         entry = cat.read(cat.locale_path("en", self.fx.locale)).by_key()[("K", "")]
-        self.assertEqual(entry.plural_key, "K_MANY")
+        self.assertEqual(entry.plural_key, "K_PLURAL")
         self.assertEqual(entry.forms, ["%d friend", "%d friends"])
 
     def test_untranslated_plural_keeps_all_its_forms(self):
         # The normal pre-translation state: a plural entry with every form empty. Its continuation
         # row is a row of empty cells, which must NOT be mistaken for a blank line and dropped —
         # doing so silently turned a 2-form entry into a 1-form one and failed validation.
-        self.fx.csv("es", [("K", ["", ""], "", "K_MANY")])
+        self.fx.csv("es", [("K", ["", ""], "", "K_PLURAL")])
         entry = cat.read(cat.locale_path("es", self.fx.locale)).by_key()[("K", "")]
         self.assertEqual(entry.forms, ["", ""])
-        self.fx.csv("en", [("K", ["one", "many"], "", "K_MANY")])
+        self.fx.csv("en", [("K", ["one", "many"], "", "K_PLURAL")])
         self.assertEqual(self.fx.translation_problems(), [])
 
     def test_context_distinguishes_two_entries_with_one_key(self):
@@ -495,17 +511,26 @@ class TestValidation(ExtractorTestCase):
         self.assertIn("not in en.csv", problems[0])
 
     def test_plural_forms_are_each_checked(self):
-        self.fx.csv("en", [("K", ["%d friend", "%d friends"], "", "K_MANY")])
-        self.fx.csv("es", [("K", ["%d amigo", "amigos"], "", "K_MANY")])
+        self.fx.csv("en", [("K", ["%d friend", "%d friends"], "", "K_PLURAL")])
+        self.fx.csv("es", [("K", ["%d amigo", "amigos"], "", "K_PLURAL")])
         problems = self.fx.translation_problems()
         self.assertEqual(len(problems), 1)
         self.assertIn("[1]", problems[0])
 
     def test_wrong_plural_row_count_is_reported(self):
         # nplurals=2 but only one form: a dropped continuation row must not pass silently.
-        self.fx.csv("en", [("K", ["%d friend"], "", "K_MANY")])
+        self.fx.csv("en", [("K", ["%d friend"], "", "K_PLURAL")])
         problems = self.fx.translation_problems()
         self.assertTrue(any("expected 2" in p for p in problems), problems)
+
+    def test_plural_key_must_be_named_after_its_singular(self):
+        # Godot never registers the plural companion as a message of its own (it lives in
+        # the ?plural column), so the only way to answer "does K_PLURAL exist?" is to strip
+        # the suffix back to K -- which TranslationKey.is_known() does. If the name drifts,
+        # that lookup silently reports a real key as missing.
+        self.fx.csv("en", [("K", ["%d friend", "%d friends"], "", "K_MANY")])
+        problems = self.fx.translation_problems()
+        self.assertTrue(any("expected 'K_PLURAL'" in p for p in problems), problems)
 
     def test_duplicate_key_is_reported(self):
         self.fx.csv("en", [("K", "one"), ("K", "two")])

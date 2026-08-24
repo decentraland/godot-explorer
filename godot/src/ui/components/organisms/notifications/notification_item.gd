@@ -54,7 +54,7 @@ func _format_timestamp(timestamp_ms: int) -> String:
 	var current_time = Time.get_unix_time_from_system()
 	var diff = current_time - timestamp_sec
 
-	# tr_n() rather than an English singular/plural branch: the plural rule lives in each
+	# TranslationKey.plural() rather than an English singular/plural branch: the rule lives in each
 	# catalogue, so a locale that splits differently (pt_BR at n=0, or a 3-form language) is
 	# handled by its own ?pluralrule instead of this code.
 	if diff < 60:
@@ -62,20 +62,18 @@ func _format_timestamp(timestamp_ms: int) -> String:
 
 	if diff < 3600:
 		var minutes := int(diff / 60)
-		return (
-			tr_n("NOTIFICATION_MINUTES_AGO", "NOTIFICATION_MINUTES_AGO_PLURAL", minutes) % minutes
-		)
+		return TranslationKey.new("NOTIFICATION_MINUTES_AGO").plural(minutes)
 
 	if diff < 86400:
 		var hours := int(diff / 3600)
-		return tr_n("NOTIFICATION_HOURS_AGO", "NOTIFICATION_HOURS_AGO_PLURAL", hours) % hours
+		return TranslationKey.new("NOTIFICATION_HOURS_AGO").plural(hours)
 
 	if diff < 172800:  # Less than 2 days (86400 * 2)
 		return tr("NOTIFICATION_YESTERDAY")
 
 	# For all older notifications, show days ago
 	var days := int(diff / 86400)
-	return tr_n("NOTIFICATION_DAYS_AGO", "NOTIFICATION_DAYS_AGO_PLURAL", days) % days
+	return TranslationKey.new("NOTIFICATION_DAYS_AGO").plural(days)
 
 
 func _input(event: InputEvent) -> void:

@@ -60,15 +60,10 @@ func _update_category_text():
 	# type_to_text() returns a translation key, so uppercasing happens on the *translation*.
 	# Kept because `uppercase` is a per-instance styling flag, but note it is a display transform
 	# on translated text: a locale that should not be shouted needs a styling fix, not a to_upper.
-	var category_key = type_to_text(filter_category)
-	if category_key != "":
-		var category_text := tr(category_key)
-		if uppercase:
-			self.text = category_text.to_upper()
-		else:
-			self.text = category_text
-	else:
-		self.text = tr("WEARABLE_BUTTON_UNKNOWN")
+	# type_to_text() always returns a key — it defaults to WEARABLE_BUTTON_UNKNOWN — so
+	# there is no empty case to guard. The old `!= ""` check was already unreachable.
+	var category_key := type_to_text(filter_category)
+	self.text = category_key.upper() if uppercase else category_key.text()
 
 
 func _ready():
@@ -138,65 +133,66 @@ func type_to_category(category_enum: WearableCategoryEnum) -> String:
 	return result
 
 
-# i18n-keys: WEARABLE_CATEGORY_*
-func type_to_text(category_enum: WearableCategoryEnum) -> String:
-	var text := "WEARABLE_BUTTON_UNKNOWN"
+## Returns the catalogue key for a category. Typed, so every branch is visibly a key and
+## the checker needs no marker to find them.
+func type_to_text(category_enum: WearableCategoryEnum) -> TranslationKey:
+	var text := TranslationKey.new("WEARABLE_BUTTON_UNKNOWN")
 	match category_enum:
 		WearableCategoryEnum.ALL:
-			text = "WEARABLE_CATEGORY_ALL"
+			text = TranslationKey.new("WEARABLE_CATEGORY_ALL")
 		WearableCategoryEnum.BODY:
-			text = "WEARABLE_CATEGORY_BODY"
+			text = TranslationKey.new("WEARABLE_CATEGORY_BODY")
 		WearableCategoryEnum.HEAD:
-			text = "WEARABLE_CATEGORY_HEAD"
+			text = TranslationKey.new("WEARABLE_CATEGORY_HEAD")
 		#WearableCategoryEnum.CHEST:
 		#	text = "Chest"
 		#WearableCategoryEnum.LEGS:
 		#	text = "Legs"
 		WearableCategoryEnum.HAIR:
-			text = "WEARABLE_CATEGORY_HAIR"
+			text = TranslationKey.new("WEARABLE_CATEGORY_HAIR")
 		WearableCategoryEnum.EYEBROWS:
-			text = "WEARABLE_CATEGORY_EYEBROWS"
+			text = TranslationKey.new("WEARABLE_CATEGORY_EYEBROWS")
 		WearableCategoryEnum.EYES:
-			text = "WEARABLE_CATEGORY_EYES"
+			text = TranslationKey.new("WEARABLE_CATEGORY_EYES")
 		WearableCategoryEnum.MOUTH:
-			text = "WEARABLE_CATEGORY_MOUTH"
+			text = TranslationKey.new("WEARABLE_CATEGORY_MOUTH")
 		WearableCategoryEnum.FACIAL_HAIR:
-			text = "WEARABLE_CATEGORY_FACIAL_HAIR"
+			text = TranslationKey.new("WEARABLE_CATEGORY_FACIAL_HAIR")
 		WearableCategoryEnum.UPPER_BODY:
-			text = "WEARABLE_CATEGORY_CHEST"  #"Upper Body"
+			text = TranslationKey.new("WEARABLE_CATEGORY_CHEST")  #"Upper Body"
 		WearableCategoryEnum.HANDWEAR:
-			text = "WEARABLE_CATEGORY_HANDS"
+			text = TranslationKey.new("WEARABLE_CATEGORY_HANDS")
 		WearableCategoryEnum.LOWER_BODY:
-			text = "WEARABLE_CATEGORY_LEGS"  #"Lower Body"
+			text = TranslationKey.new("WEARABLE_CATEGORY_LEGS")  #"Lower Body"
 		WearableCategoryEnum.FEET:
-			text = "WEARABLE_CATEGORY_FEET"  #"Footwear"
+			text = TranslationKey.new("WEARABLE_CATEGORY_FEET")  #"Footwear"
 		WearableCategoryEnum.HAT:
-			text = "WEARABLE_CATEGORY_HATS"
+			text = TranslationKey.new("WEARABLE_CATEGORY_HATS")
 		WearableCategoryEnum.EYEWEAR:
-			text = "WEARABLE_CATEGORY_GLASSES"
+			text = TranslationKey.new("WEARABLE_CATEGORY_GLASSES")
 		WearableCategoryEnum.EARRING:
-			text = "WEARABLE_CATEGORY_EARRINGS"
+			text = TranslationKey.new("WEARABLE_CATEGORY_EARRINGS")
 		WearableCategoryEnum.MASK:
-			text = "WEARABLE_CATEGORY_MASKS"
+			text = TranslationKey.new("WEARABLE_CATEGORY_MASKS")
 		WearableCategoryEnum.TIARA:
-			text = "WEARABLE_CATEGORY_TIARAS"
+			text = TranslationKey.new("WEARABLE_CATEGORY_TIARAS")
 		WearableCategoryEnum.TOP_HEAD:
-			text = "WEARABLE_CATEGORY_TOP_HEAD"
+			text = TranslationKey.new("WEARABLE_CATEGORY_TOP_HEAD")
 		WearableCategoryEnum.HELMET:
-			text = "WEARABLE_CATEGORY_HELMETS"
+			text = TranslationKey.new("WEARABLE_CATEGORY_HELMETS")
 		WearableCategoryEnum.SKIN:
-			text = "WEARABLE_CATEGORY_SKIN"
+			text = TranslationKey.new("WEARABLE_CATEGORY_SKIN")
 		WearableCategoryEnum.BODY_SHAPE:
-			text = "WEARABLE_CATEGORY_SHAPE"
+			text = TranslationKey.new("WEARABLE_CATEGORY_SHAPE")
 
 		WearableCategoryEnum.FACE:
-			text = "WEARABLE_CATEGORY_FACE"
+			text = TranslationKey.new("WEARABLE_CATEGORY_FACE")
 		WearableCategoryEnum.CLOTHING:
-			text = "WEARABLE_CATEGORY_CLOTHING"
+			text = TranslationKey.new("WEARABLE_CATEGORY_CLOTHING")
 		WearableCategoryEnum.EXTRAS:
-			text = "WEARABLE_CATEGORY_EXTRAS"
+			text = TranslationKey.new("WEARABLE_CATEGORY_EXTRAS")
 		WearableCategoryEnum.ALL_EXTRAS:
-			text = "WEARABLE_CATEGORY_ALL"
+			text = TranslationKey.new("WEARABLE_CATEGORY_ALL")
 	return text
 
 
