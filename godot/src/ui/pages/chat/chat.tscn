@@ -370,6 +370,7 @@ theme_override_constants/margin_right = 3
 theme_override_constants/margin_bottom = 3
 
 [node name="Label_NewMessages" type="Label" parent="VBoxContainer/HBoxContainer/VSeparator/MarginContainer_GoToNewMessages/Button_GoToLast/PanelContainer_NewMessages/MarginContainer" unique_id=1660260250]
+auto_translate_mode = 2
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 1

@@ -148,6 +148,7 @@ deadzone_size = 0.0
 _joystick_default_position = Vector2(300, 150)
 
 [node name="Label_Crosshair" type="Label" parent="UI" unique_id=2000293560]
+auto_translate_mode = 2
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 8

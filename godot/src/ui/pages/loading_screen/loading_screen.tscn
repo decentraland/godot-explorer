@@ -222,6 +222,7 @@ text = "0000/0000 resouces at 000.00 mb/s - Opt"
 label_settings = SubResource("LabelSettings_ky3me")
 
 [node name="Label_LoadingProgress" type="Label" parent="SafeMarginContainer/MarginContainer_Content/VBoxContainer_Progress/HBoxContainer" unique_id=1665532642]
+auto_translate_mode = 2
 unique_name_in_owner = true
 layout_mode = 2
 text = "00%"
