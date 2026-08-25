@@ -283,6 +283,10 @@ jobs:
       SHA:         ${{ needs.prepare.outputs.sha }}
       SAFE_BRANCH: ${{ needs.prepare.outputs.safe_branch }}
       GH_TOKEN:    ${{ secrets.GITHUB_TOKEN }}
+      # ios_self_hosted.yml is DISABLED (the `dcl-ios` Mac was shut down), so no self-hosted export
+      # will ever appear for a commit — don't burn 20 minutes polling for one. Flip back to 'true'
+      # together with that workflow's triggers if the runner comes back.
+      IOS_SELF_HOSTED_ENABLED: 'false'
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
@@ -307,6 +311,8 @@ jobs:
           if have_export; then
             echo "✅ Export already present."
             have=true
+          elif [ "$IOS_SELF_HOSTED_ENABLED" != "true" ]; then
+            echo "ℹ️  self-hosted iOS runner is disabled → building on CI."
           else
             # The self-hosted build for this commit may still be in flight (~12 min). Poll for it,
             # but stop the moment that run concludes without a usable export (→ build on CI).
