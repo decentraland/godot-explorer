@@ -30,6 +30,11 @@ var last_selected_emote_urn: String = ""
 
 func _ready():
 	button_emotes.set_meta("attenuated_sound", true)
+	# Toggle the wheel from raw touch so a second finger opens it while the joystick is held
+	# (Godot only synthesizes a mouse event from the primary touch). button_mask = 0 routes all
+	# activation through _on_button_emotes_gui_input, covering both fingers + desktop mouse.
+	button_emotes.button_mask = 0
+	button_emotes.gui_input.connect(_on_button_emotes_gui_input)
 	control_wheel.hide()
 	# Clone the template item 9 more times (10 total) and fan them 36° apart. The clone
 	# copies %EmoteWheelItem1's scene-unique-name flag, so clear it to avoid ambiguous %.
@@ -150,6 +155,26 @@ func _on_emote_item_gui_input(event: InputEvent, item: EmoteItemUi) -> void:
 		# in _on_play_emote, and the equip SFX connected by UISounds).
 		item.play_emote.emit(item.emote_urn)
 		item.accept_event()
+
+
+func _on_button_emotes_gui_input(event: InputEvent) -> void:
+	# Toggle open/close from any finger's touch so a second finger works while the joystick is
+	# held. On desktop (no touchscreen) fall back to the left mouse button — guarded so the mouse
+	# event Godot synthesizes from the primary touch can't double-toggle on mobile. Flipping
+	# button_pressed drives both open/close (_on_button_toggled) and the HudButton orb skin.
+	var should_toggle: bool = false
+	if event is InputEventScreenTouch and event.pressed:
+		should_toggle = true
+	elif (
+		event is InputEventMouseButton
+		and event.pressed
+		and event.button_index == MOUSE_BUTTON_LEFT
+		and not DisplayServer.is_touchscreen_available()
+	):
+		should_toggle = true
+	if should_toggle:
+		button_emotes.button_pressed = not button_emotes.button_pressed
+		button_emotes.accept_event()
 
 
 func _on_button_toggled(toggled_on: bool) -> void:
