@@ -20,6 +20,8 @@ pub enum AvatarMovementType {
 struct LerpState {
     initial_position: Vector3,
     target_position: Vector3,
+    initial_rotation_y: f32,
+    target_rotation_y: f32,
     factor: f32,
     initial_velocity_y: f32,
 }
@@ -170,17 +172,19 @@ impl DclAvatar {
         self.land = !self.rise && !self.fall;
         self.is_grounded = self.land && self.glide_state == 0;
 
-        self.lerp_state.initial_position = self.lerp_state.target_position;
+        // Start interpolation from where the avatar actually is, not from the
+        // previous target. If a packet arrives before the last lerp finished,
+        // snapping back to the old target causes a visible teleport.
+        let current_position = self.base().get_global_position();
+        let current_rotation_y = self.base().get_global_rotation().y;
+        self.lerp_state.initial_position = current_position;
         self.lerp_state.target_position = new_target.origin;
+        self.lerp_state.initial_rotation_y = current_rotation_y;
+        self.lerp_state.target_rotation_y = new_target.basis.get_euler().y;
         self.lerp_state.factor = 0.0;
         self.lerp_state.initial_velocity_y = y_velocity;
 
-        let initial_position = self.lerp_state.initial_position;
-
-        // TODO: check euler order
-        self.base_mut()
-            .set_global_rotation(new_target.basis.get_euler());
-        self.base_mut().set_global_position(initial_position);
+        self.base_mut().set_global_position(current_position);
 
         self.update_parcel_position(self.lerp_state.target_position);
     }
@@ -197,8 +201,11 @@ impl DclAvatar {
         self.land = true;
         self.is_grounded = self.glide_state == 0;
 
+        let target_rotation_y = new_target.basis.get_euler().y;
         self.lerp_state.initial_position = new_target.origin;
         self.lerp_state.target_position = new_target.origin;
+        self.lerp_state.initial_rotation_y = target_rotation_y;
+        self.lerp_state.target_rotation_y = target_rotation_y;
         self.lerp_state.factor = 1.0;
         self.lerp_state.initial_velocity_y = 0.0;
 
@@ -329,12 +336,20 @@ impl DclAvatar {
                 if previous_factor < 1.0 {
                     // Clamp the final step so the crossing frame lands exactly on the
                     // target instead of undershooting by up to one frame's worth.
-                    let new_position = self.lerp_state.initial_position.lerp(
-                        self.lerp_state.target_position,
-                        self.lerp_state.factor.min(1.0),
+                    let t = self.lerp_state.factor.min(1.0);
+                    let new_position = self
+                        .lerp_state
+                        .initial_position
+                        .lerp(self.lerp_state.target_position, t);
+                    let new_rotation_y = lerp_angle(
+                        self.lerp_state.initial_rotation_y,
+                        self.lerp_state.target_rotation_y,
+                        t,
                     );
 
                     self.base_mut().set_global_position(new_position);
+                    self.base_mut()
+                        .set_global_rotation(Vector3::new(0.0, new_rotation_y, 0.0));
                 } else if self.lerp_state.factor > 3.0
                     && (self.walk || self.jog || self.run)
                     && !self.rise
@@ -370,4 +385,16 @@ impl DclAvatar {
         // Call the GDScript set_hidden method
         self.base_mut().call("set_hidden", &[value.to_variant()]);
     }
+}
+
+/// Interpolate an angle in radians along the shortest arc.
+fn lerp_angle(from: f32, to: f32, weight: f32) -> f32 {
+    let mut diff = to - from;
+    while diff < -std::f32::consts::PI {
+        diff += 2.0 * std::f32::consts::PI;
+    }
+    while diff > std::f32::consts::PI {
+        diff -= 2.0 * std::f32::consts::PI;
+    }
+    from + diff * weight
 }
