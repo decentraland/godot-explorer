@@ -7,10 +7,13 @@ const CONNECTIVITY_ONLINE: int = 0
 const CONNECTIVITY_OFFLINE: int = 1
 const CONNECTIVITY_AWAY: int = 2
 
-const NO_SERVICE_MESSAGE: String = """Something went wrong and we couldn't retrieve your friends."""
-const NO_FRIENDS_MESSAGE: String = """View someone's Profile or tap on 'Add Friend' button in the nearby list."""
-const NO_BLOCKED_MESSAGE: String = """If you block someone, you will not be able to see each other in-world or exchange any messages in private or public chats.
-You can block another user by going to the tree (3) dots menu available in their Profile."""
+# Translation KEYS, not copy. The three labels auto-translate, so assigning the key lets the
+# engine re-resolve them on a language change; assigning resolved text would freeze the old
+# locale. NO_SERVICE reuses the key the rest of the panel already had.
+# i18n-keys: FRIENDS_NO_FRIENDS_MESSAGE, FRIENDS_NO_BLOCKED_MESSAGE
+const NO_SERVICE_MESSAGE: String = "FRIENDS_SOMETHING_WENT_WRONG_AND_WE_COULDN"
+const NO_FRIENDS_MESSAGE: String = "FRIENDS_NO_FRIENDS_MESSAGE"
+const NO_BLOCKED_MESSAGE: String = "FRIENDS_NO_BLOCKED_MESSAGE"
 
 var down_arrow_icon: Texture2D = load("res://assets/ui/down_arrow.svg")
 var up_arrow_icon: Texture2D = load("res://assets/ui/up_arrow.svg")

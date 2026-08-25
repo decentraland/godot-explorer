@@ -42,6 +42,17 @@ class Fixture:
             handle.write(body)
         return path
 
+    def raw_scene(self, name, *lines):
+        """Write a .tscn node block verbatim, for properties that are not quoted strings.
+
+        scene() quotes every value, which cannot express `auto_translate_mode = 2`.
+        """
+        body = '[gd_scene format=3]\n\n[node name="Root" type="Control"]\n' + "\n".join(lines)
+        path = os.path.join(self.ui, name)
+        with open(path, "w", encoding="utf-8") as handle:
+            handle.write(body + "\n")
+        return path
+
     def script(self, name, body):
         path = os.path.join(self.ui, name)
         with open(path, "w", encoding="utf-8") as handle:
@@ -69,6 +80,14 @@ class Fixture:
 
     def keys(self):
         return set(key for _path, key in self.collect()[0])
+
+    def drawn_keys(self, known):
+        return set(
+            (node, prop, key)
+            for _path, node, prop, key in ex.keys_on_untranslated_nodes(
+                known, ui_root=self.ui, repo_root=self.root
+            )
+        )
 
     def write_baseline(self, entries):
         ex.write_baseline(entries, path=self.baseline)
@@ -246,6 +265,26 @@ class TestHelperComposedStrings(ExtractorTestCase):
         self.assertEqual(
             self.fx.unkeyed(), {("godot/src/ui/a.gd", "Try restarting the app.")}
         )
+
+    def test_key_on_an_untranslated_node_is_reported(self):
+        # auto_translate_mode = 2 means "never look this up", so a real key there is drawn
+        # verbatim. This is how EMOTES_EMOTES reached the emote wheel: collect() skips these
+        # nodes entirely and the key does exist, so nothing else in this file catches it.
+        self.fx.raw_scene("a.tscn", "auto_translate_mode = 2", 'text = "EMOTES_EMOTES"')
+        self.assertEqual(
+            self.fx.drawn_keys({"EMOTES_EMOTES"}), {("Root", "text", "EMOTES_EMOTES")}
+        )
+
+    def test_key_shaped_literal_that_is_not_a_key_is_ignored(self):
+        # A SCREAMING_SNAKE literal that is not in the catalogue resolves to itself, so it is
+        # an ordinary design-time placeholder, not the bug this check is for.
+        self.fx.raw_scene("a.tscn", "auto_translate_mode = 2", 'text = "SOME_PLACEHOLDER"')
+        self.assertEqual(self.fx.drawn_keys({"EMOTES_EMOTES"}), set())
+
+    def test_key_on_an_auto_translating_node_is_ignored(self):
+        # Without the flag the node looks the key up, which is the normal, correct pattern.
+        self.fx.scene("a.tscn", ("text", "EMOTES_EMOTES"))
+        self.assertEqual(self.fx.drawn_keys({"EMOTES_EMOTES"}), set())
 
     def test_debug_surfaces_are_excluded_wholesale(self):
         for excluded in ["multiplayer_debug", "scene_stats_panel"]:

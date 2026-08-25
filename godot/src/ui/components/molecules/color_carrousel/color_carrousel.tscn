@@ -34,7 +34,6 @@ theme_override_styles/normal = SubResource("StyleBoxFlat_7s3ux")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_7s3ux")
 theme_override_styles/hover = SubResource("StyleBoxFlat_7s3ux")
 theme_override_styles/focus = SubResource("StyleBoxFlat_7s3ux")
-text = "COLOR_CARROUSEL_HAIR_COLOR"
 icon = ExtResource("3_8hv1p")
 flat = true
 alignment = 0

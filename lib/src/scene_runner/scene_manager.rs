@@ -3163,7 +3163,10 @@ impl INode for SceneManager {
             let passport_disabled: bool = avatar.get("passport_disabled").try_to().unwrap_or(false);
             if !is_avatar_shape && !avatar_id.is_empty() && !passport_disabled {
                 let mut profile_dict = VarDictionary::new();
-                profile_dict.set("text_pet_down", "View profile");
+                // A translation key, resolved in tooltip_label.gd. The tooltip label cannot
+                // auto-translate (it normally carries creator-authored PointerEvents text), and
+                // explorer.gd matches this same value to honour the "Hide View Profile" setting.
+                profile_dict.set("text_pet_down", "TOOLTIP_VIEW_PROFILE");
                 profile_dict.set("action", "ia_pointer");
                 tooltips.push(&profile_dict.to_variant());
             }

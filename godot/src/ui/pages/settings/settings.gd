@@ -146,11 +146,7 @@ func _ready():
 	)
 
 	# graphic
-	var i = 0
-	for profile in GraphicSettings.PROFILE_NAMES:
-		if profile != "Custom":
-			dropdown_list_graphic_profiles.add_item(profile, i)
-			i += 1
+	_populate_graphic_profile_items()
 	_setup_dynamic_graphics()
 	_update_dynamic_graphics_status()
 	_setup_impostor_benchmark_button()
@@ -158,10 +154,7 @@ func _ready():
 	_setup_light_debug_controls()
 	refresh_graphic_settings()
 
-	var j = 0
-	for profile in GraphicSettings.SKYBOX_TIME_NAMES:
-		dropdown_list_custom_skybox.add_item(profile.name, j)
-		j += 1
+	_populate_skybox_items()
 
 	if Global.get_config().dynamic_skybox:
 		check_button_dynamic_skybox.button_pressed = true
@@ -1108,7 +1101,7 @@ func _on_button_return_to_discover_pressed() -> void:
 
 ## Dropdown items are plain strings once added, so unlike a scene `text` property they do not
 ## re-translate themselves on NOTIFICATION_TRANSLATION_CHANGED. Only the dropdowns whose items are
-## translated are rebuilt; realm URLs, graphic profile names and skybox names are data.
+## translated are rebuilt; realm URLs are data and stay as they are.
 func _populate_camera_mode_items() -> void:
 	var previous := dropdown_list_camera_mode.selected
 	dropdown_list_camera_mode.clear()
@@ -1120,6 +1113,32 @@ func _populate_camera_mode_items() -> void:
 	)
 	if previous >= 0:
 		dropdown_list_camera_mode.select(previous)
+
+
+func _populate_graphic_profile_items() -> void:
+	# DropdownList items are finished text, not keys: both display nodes are
+	# auto_translate_mode = 2 (dropdown_list.tscn, dropdown_item.tscn).
+	var previous := dropdown_list_graphic_profiles.selected
+	dropdown_list_graphic_profiles.clear()
+	var i := 0
+	for index in GraphicSettings.PROFILE_NAMES.size():
+		if GraphicSettings.PROFILE_NAMES[index] == "Custom":
+			continue
+		dropdown_list_graphic_profiles.add_item(tr(GraphicSettings.PROFILE_KEYS[index]), i)
+		i += 1
+	if previous >= 0:
+		dropdown_list_graphic_profiles.select(previous)
+
+
+func _populate_skybox_items() -> void:
+	var previous := dropdown_list_custom_skybox.selected
+	dropdown_list_custom_skybox.clear()
+	for index in GraphicSettings.SKYBOX_TIME_NAMES.size():
+		dropdown_list_custom_skybox.add_item(
+			tr(GraphicSettings.SKYBOX_TIME_NAMES[index].key), index
+		)
+	if previous >= 0:
+		dropdown_list_custom_skybox.select(previous)
 
 
 func _populate_cache_size_items() -> void:
@@ -1143,6 +1162,8 @@ func _notification(what: int) -> void:
 	if what == NOTIFICATION_TRANSLATION_CHANGED and is_node_ready():
 		_populate_camera_mode_items()
 		_populate_cache_size_items()
+		_populate_graphic_profile_items()
+		_populate_skybox_items()
 		_populate_language_dropdown_items()
 		_update_current_cache_size()
 

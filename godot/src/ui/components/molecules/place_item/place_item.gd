@@ -668,6 +668,21 @@ func set_duration(_duration: int) -> void:
 		duration_label.text = _format_duration(_duration)
 
 
+## The events API sends a lowercase enum ("daily" / "weekly" / "monthly"), which the client used
+## to just capitalize(). It is our mapping, not server copy, so it is translatable. An unknown
+## value falls back to the capitalized raw string rather than drawing nothing.
+static func _recurrent_frequency_text(frequency: String) -> String:
+	match frequency.to_lower():
+		"daily":
+			return TranslationServer.translate("EVENT_FREQUENCY_DAILY")
+		"weekly":
+			return TranslationServer.translate("EVENT_FREQUENCY_WEEKLY")
+		"monthly":
+			return TranslationServer.translate("EVENT_FREQUENCY_MONTHLY")
+		_:
+			return frequency.capitalize()
+
+
 func set_recurrent(_recurrent_frequency: String) -> void:
 	var label = _get_recurrent_label()
 	var separator_recurrent = _get_separator_recurrent()
@@ -675,7 +690,7 @@ func set_recurrent(_recurrent_frequency: String) -> void:
 		if _recurrent_frequency != "":
 			label.get_parent().show()
 			separator_recurrent.show()
-			label.text = _recurrent_frequency.capitalize()
+			label.text = _recurrent_frequency_text(_recurrent_frequency)
 		else:
 			label.get_parent().hide()
 			separator_recurrent.hide()

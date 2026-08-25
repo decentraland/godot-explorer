@@ -40,6 +40,9 @@ EXTRA_ROOTS = [
     os.path.join(REPO_ROOT, "godot", "src", "global.gd"),
     os.path.join(REPO_ROOT, "godot", "src", "connection_quality_monitor.gd"),
     os.path.join(REPO_ROOT, "godot", "src", "notifications_manager.gd"),
+    # notification_utils.gd composes the titles and bodies of locally scheduled event
+    # reminders — user-facing text that lived outside every scanned root.
+    os.path.join(REPO_ROOT, "godot", "src", "notifications"),
 ]
 BASELINE_PATH = os.path.join(REPO_ROOT, "tools", "i18n", "unkeyed_baseline.txt")
 EXEMPT_PATH = os.path.join(REPO_ROOT, "tools", "i18n", "not_translatable.txt")
@@ -171,6 +174,39 @@ def looks_like_prose(value):
         if not (value.isupper() and value.isalpha() and len(value) > 1):
             return False
     return needs_key(value) and not KEY_RE.match(value)
+
+
+def keys_on_untranslated_nodes(known_keys, ui_root=None, repo_root=None):
+    """Scene nodes with auto_translate_mode = 2 whose text property holds a translation key.
+
+    Mode 2 means "never look this up", so a key there is drawn on screen verbatim. It is always
+    a bug, and it is invisible to every other check here: collect() skips these nodes entirely
+    (they normally carry server or user data), and the key exists in the catalogue, so the
+    missing-key check is happy too. That combination shipped EMOTES_EMOTES to the emote wheel.
+
+    Either the node should auto-translate, or the text should be assigned from GDScript with
+    tr()/TranslationKey — which is the right fix when the node also shows data at other times.
+    """
+    found = []
+    props = SCENE_TEXT_PROPS + SCENE_CUSTOM_PROPS
+    for path in walk(".tscn", ui_root):
+        with open(path, encoding="utf-8") as handle:
+            content = handle.read()
+        for block in re.split(r"(?m)^(?=\[)", content):
+            if not block.startswith("[node") or not AUTO_TRANSLATE_DISABLED_RE.search(block):
+                continue
+            name = re.match(r'\[node name="([^"]+)"', block)
+            for match in SCENE_PROP_RE.finditer(block):
+                prop, value = match.group(1), match.group(2)
+                # Catalogue membership, not merely key-shaped: a SCREAMING_SNAKE literal that
+                # is not a key resolves to itself, which is an ordinary design-time placeholder.
+                # Requiring a real key makes this check exact — the lookup would have succeeded
+                # anywhere else, so mode 2 is the whole reason it renders raw.
+                if prop in props and value in known_keys:
+                    found.append(
+                        (rel(path, repo_root), name.group(1) if name else "?", prop, value)
+                    )
+    return found
 
 
 def collect(ui_root=None, repo_root=None):
@@ -399,6 +435,26 @@ def main():
             return 0
 
     failed = False
+
+    # A key on a node that never translates renders raw on screen. Checked before the rest,
+    # because it is unambiguous: there is no legitimate reason for a key to sit there.
+    catalogue_keys = set(
+        entry.key for entry in cat.read(cat.locale_path(cat.REFERENCE_LOCALE)).entries
+    )
+    drawn_keys = keys_on_untranslated_nodes(catalogue_keys)
+    if drawn_keys:
+        print(
+            "ERROR: %d node(s) with auto_translate_mode = 2 hold a translation key, which is"
+            "\ndrawn on screen verbatim:\n" % len(drawn_keys)
+        )
+        for path, node, prop, key in drawn_keys:
+            print("  %s: %s.%s = %s" % (path, node, prop, key))
+        print(
+            "\nEither let the node auto-translate (drop auto_translate_mode), or clear the"
+            "\nscene value and assign it from GDScript with tr()/TranslationKey — the right fix"
+            "\nwhen the node also shows server or user data at other times."
+        )
+        failed = True
 
     # Every key used in the UI must exist in the English catalogue. A key that is missing renders
     # raw on screen, which is the one failure mode the issue explicitly forbids.

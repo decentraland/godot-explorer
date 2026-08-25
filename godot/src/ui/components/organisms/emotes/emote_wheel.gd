@@ -28,7 +28,23 @@ var last_selected_emote_urn: String = ""
 @onready var emote_wheel_item_1: EmoteItemUi = %EmoteWheelItem1
 
 
+## The label node is auto_translate_mode = 2, because _on_select_emote() writes a creator-authored
+## emote name into it, which must never go through a lookup. That makes the default title this
+## component's job: the scene used to carry the literal "EMOTES_EMOTES", which is a key, so a
+## mode-2 node drew it verbatim on screen until the first hover.
+func _reset_emote_name() -> void:
+	label_emote_name.text = tr("EMOTES_EMOTES")
+
+
+func _notification(what: int) -> void:
+	# Only the default title re-translates; a selected emote name is data, not copy.
+	if what == NOTIFICATION_TRANSLATION_CHANGED and is_node_ready():
+		if last_selected_emote_urn.is_empty():
+			_reset_emote_name()
+
+
 func _ready():
+	_reset_emote_name()
 	button_emotes.set_meta("attenuated_sound", true)
 	# Drive the toggle from raw touch so it works for every finger, not just the
 	# primary one Godot synthesizes a mouse event from. button_mask = 0 makes the
@@ -105,7 +121,7 @@ func _on_play_emote(emote_urn: String):
 
 func _on_select_emote(selected: bool, emote_urn: String, child: EmoteItemUi):
 	if !selected:
-		label_emote_name.text = tr("EMOTES_EMOTES")
+		_reset_emote_name()
 		last_selected_emote_urn = ""
 		return
 
@@ -136,6 +152,8 @@ func close() -> void:
 func open() -> void:
 	if control_wheel.visible:
 		return
+	_reset_emote_name()
+	last_selected_emote_urn = ""
 	control_wheel.show()
 	emote_wheel_opened.emit()
 	grab_focus()

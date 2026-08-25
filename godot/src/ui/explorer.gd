@@ -735,8 +735,11 @@ func change_tooltips():
 		var filtered = []
 		for i in tooltip_data.size():
 			var entry = tooltip_data[i]
+			# Matches the key scene_manager.rs emits, not English prose, so this keeps working
+			# in every locale.
 			var is_view_profile = (
-				entry is Dictionary and entry.get("text_pet_down", "") == "View profile"
+				entry is Dictionary
+				and entry.get("text_pet_down", "") == TooltipLabel.VIEW_PROFILE_KEY
 			)
 			if is_view_profile and _session_hide_view_profile:
 				continue

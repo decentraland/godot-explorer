@@ -405,7 +405,6 @@ auto_translate_mode = 2
 unique_name_in_owner = true
 custom_minimum_size = Vector2(50, 0)
 layout_mode = 2
-text = "REWARD_MODAL_YOUR_EMAIL_HAS_BEEN_VERIFIED_ENJOY"
 label_settings = SubResource("LabelSettings_jepox")
 horizontal_alignment = 1
 autowrap_mode = 2

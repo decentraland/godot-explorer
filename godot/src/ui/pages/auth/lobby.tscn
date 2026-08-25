@@ -966,7 +966,6 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(200, 0)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
-text = "COMMON_SOMETHING_WENT_WRONG"
 label_settings = ExtResource("22_eula")
 autowrap_mode = 2
 

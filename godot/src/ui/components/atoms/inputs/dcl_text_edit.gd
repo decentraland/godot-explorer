@@ -9,7 +9,9 @@ const LINE_EDIT_FOCUSED = preload("res://assets/themes/line_edit_focused.tres")
 const LINE_EDIT_ERROR = preload("res://assets/themes/line_edit_error.tres")
 const LONG_PRESS_DURATION := 0.5
 
-@export var place_holder: String = "Type text here..."
+## A translation KEY, not copy: _ready() pushes this into TextEdit.placeholder_text, which
+## auto-translates. An English default here silently clobbers the key the scene supplies.
+@export var place_holder: String = "INPUTS_TYPE_TEXT_HERE"
 @export var has_max_length: bool = true
 @export var max_length: int = 15
 @export var is_optional: bool = true

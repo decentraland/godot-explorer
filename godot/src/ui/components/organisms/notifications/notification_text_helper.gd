@@ -51,17 +51,23 @@ static func get_notification_header(notif_type: String, metadata: Dictionary) ->
 		"community_renamed":
 			return TranslationServer.translate("NOTIF_HEADER_COMMUNITY_RENAMED")
 
-		# Badge notifications - use metadata title
+		# Badge notifications. The header is a category label we own, so our key wins; the
+		# server's `title` is English-only and used to shadow it. The per-notification
+		# specifics still come from the server, in get_notification_title() below.
 		"badge_granted":
-			return metadata.get(
-				"title", TranslationServer.translate("NOTIF_HEADER_NEW_BADGE_UNLOCKED")
-			)
+			return TranslationServer.translate("NOTIF_HEADER_NEW_BADGE_UNLOCKED")
 
 		# Marketplace/Credits - use metadata title
 		"credits_reminder_do_not_miss_out":
 			return TranslationServer.translate("NOTIF_HEADER_DONT_MISS_OUT")
-		"item_sold", "bid_accepted", "bid_received", "royalties_earned":
-			return metadata.get("title", TranslationServer.translate("NOTIF_HEADER_NOTIFICATION"))
+		"item_sold":
+			return TranslationServer.translate("NOTIF_HEADER_ITEM_SOLD")
+		"bid_accepted":
+			return TranslationServer.translate("NOTIF_HEADER_BID_ACCEPTED")
+		"bid_received":
+			return TranslationServer.translate("NOTIF_HEADER_BID_RECEIVED")
+		"royalties_earned":
+			return TranslationServer.translate("NOTIF_HEADER_ROYALTIES_EARNED")
 
 		# Governance
 		"governance_announcement":
@@ -91,9 +97,9 @@ static func get_notification_header(notif_type: String, metadata: Dictionary) ->
 
 		# Events
 		"events_started":
-			return metadata.get("title", TranslationServer.translate("NOTIF_HEADER_EVENT_STARTED"))
+			return TranslationServer.translate("NOTIF_HEADER_EVENT_STARTED")
 		"events_ended":
-			return metadata.get("title", TranslationServer.translate("NOTIF_HEADER_EVENT_ENDED"))
+			return TranslationServer.translate("NOTIF_HEADER_EVENT_ENDED")
 
 		# Rewards
 		"reward_assigned":
@@ -101,6 +107,7 @@ static func get_notification_header(notif_type: String, metadata: Dictionary) ->
 		"reward_in_progress":
 			return TranslationServer.translate("NOTIF_HEADER_REWARD_IN_PROGRESS")
 
+		# Unrecognised type: there is no key to prefer, so the server's title is all we have.
 		_:
 			return metadata.get("title", TranslationServer.translate("NOTIF_HEADER_NOTIFICATION"))
 
