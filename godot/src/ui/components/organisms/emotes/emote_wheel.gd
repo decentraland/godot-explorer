@@ -21,6 +21,9 @@ var emote_items: Array[EmoteItemUi] = []
 
 var last_selected_emote_urn: String = ""
 
+# Owning finger index for the raw-touch open/close (see _on_button_emotes_gui_input). -1 = none.
+var _emote_touch_index: int = -1
+
 @onready var emote_wheel_container = %EmoteWheelContainer
 @onready var label_emote_name = %Label_EmoteName
 @onready var control_wheel: Control = %Control_Wheel
@@ -158,22 +161,35 @@ func _on_emote_item_gui_input(event: InputEvent, item: EmoteItemUi) -> void:
 
 
 func _on_button_emotes_gui_input(event: InputEvent) -> void:
-	# Toggle open/close from any finger's touch so a second finger works while the joystick is
-	# held. On desktop (no touchscreen) fall back to the left mouse button — guarded so the mouse
-	# event Godot synthesizes from the primary touch can't double-toggle on mobile. Flipping
-	# button_pressed drives both open/close (_on_button_toggled) and the HudButton orb skin.
-	var should_toggle: bool = false
-	if event is InputEventScreenTouch and event.pressed:
-		should_toggle = true
+	# Full raw-touch handling (mirrors ButtonTouchAction) so a second finger opens the wheel while
+	# the joystick is held AND the orb shows its pressed state during the hold. We own a single
+	# finger index and drive button_down/up + the open/close toggle by hand — button_mask = 0 stops
+	# the base Button from doing it (it's mouse-only, so blind to the second finger). Emitting
+	# button_down/up flips HudButton's pressed orb; flipping button_pressed opens/closes the wheel.
+	if event is InputEventScreenTouch:
+		if event.pressed:
+			if _emote_touch_index == -1:
+				_emote_touch_index = event.index
+				button_emotes.button_down.emit()
+				button_emotes.button_pressed = not button_emotes.button_pressed
+			button_emotes.accept_event()
+		elif event.index == _emote_touch_index:
+			_emote_touch_index = -1
+			button_emotes.button_up.emit()
+			button_emotes.accept_event()
 	elif (
 		event is InputEventMouseButton
-		and event.pressed
 		and event.button_index == MOUSE_BUTTON_LEFT
 		and not DisplayServer.is_touchscreen_available()
 	):
-		should_toggle = true
-	if should_toggle:
-		button_emotes.button_pressed = not button_emotes.button_pressed
+		# Desktop fallback (no touchscreen): mirror the same down/up so testing works with a mouse.
+		# Guarded by is_touchscreen_available so the mouse Godot synthesizes from the primary touch
+		# never runs on mobile (that would double-drive the state).
+		if event.pressed:
+			button_emotes.button_down.emit()
+			button_emotes.button_pressed = not button_emotes.button_pressed
+		else:
+			button_emotes.button_up.emit()
 		button_emotes.accept_event()
 
 
