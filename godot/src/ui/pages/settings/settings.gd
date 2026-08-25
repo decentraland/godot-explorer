@@ -39,6 +39,7 @@ var _light_max_lights_spin: SpinBox = null
 
 #Storage items:
 @onready var dropdown_list_max_cache_size: DropdownList = %DropdownList_MaxCacheSize
+@onready var container_language: MarginContainer = %Container_Language
 @onready var dropdown_list_language: DropdownList = %DropdownList_Language
 @onready var label_current_cache_value: Label = %Label_CurrentCacheValue
 @onready var progress_bar_current_cache_size: ProgressBar = %ProgressBar_CurrentCacheSize
@@ -413,7 +414,9 @@ func _setup_language_dropdown() -> void:
 	# offer the QA pseudolocale, so the row appears there even before any translation exists.
 	var supported := LocaleSettings.selectable_locales()
 	if supported.size() < 2:
-		dropdown_list_language.hide()
+		# The whole section, not just the dropdown: hiding the DropdownList alone leaves the
+		# "LANGUAGE" header behind with nothing under it.
+		container_language.hide()
 		return
 
 	# item_selected is wired in the scene, like the other scene-declared dropdowns
@@ -1122,10 +1125,15 @@ func _populate_camera_mode_items() -> void:
 func _populate_cache_size_items() -> void:
 	var previous := dropdown_list_max_cache_size.selected
 	dropdown_list_max_cache_size.clear()
-	for gigabytes in [1, 2, 4]:
+	# The id is the index, because that is what _on_dropdown_list_max_cache_size_item_selected()
+	# stores in max_cache_size and what indexes CACHE_SIZE_MB. Sizes are derived from
+	# CACHE_SIZE_MB rather than a second literal list, so the two cannot drift apart.
+	for i in CACHE_SIZE_MB.size():
 		dropdown_list_max_cache_size.add_item(
-			TranslationKey.new("SETTINGS_CACHE_SIZE_GB").format_named({"size": gigabytes}),
-			gigabytes
+			TranslationKey.new("SETTINGS_CACHE_SIZE_GB").format_named(
+				{"size": CACHE_SIZE_MB[i] / 1024}
+			),
+			i
 		)
 	if previous >= 0:
 		dropdown_list_max_cache_size.select(previous)

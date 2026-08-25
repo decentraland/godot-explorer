@@ -61,7 +61,7 @@ static func get_notification_header(notif_type: String, metadata: Dictionary) ->
 		"credits_reminder_do_not_miss_out":
 			return TranslationServer.translate("NOTIF_HEADER_DONT_MISS_OUT")
 		"item_sold", "bid_accepted", "bid_received", "royalties_earned":
-			return metadata.get("title", "Notification")
+			return metadata.get("title", TranslationServer.translate("NOTIF_HEADER_NOTIFICATION"))
 
 		# Governance
 		"governance_announcement":
@@ -102,7 +102,7 @@ static func get_notification_header(notif_type: String, metadata: Dictionary) ->
 			return TranslationServer.translate("NOTIF_HEADER_REWARD_IN_PROGRESS")
 
 		_:
-			return metadata.get("title", "Notification")
+			return metadata.get("title", TranslationServer.translate("NOTIF_HEADER_NOTIFICATION"))
 
 
 ## Get the description/title text for a notification based on its type and metadata
@@ -119,18 +119,16 @@ static func get_notification_title(notif_type: String, metadata: Dictionary) -> 
 				var color_hex = _get_avatar_color_hex(sender_name)
 
 				if has_claimed_name:
-					return (
-						TranslationServer.translate("NOTIF_TITLE_WANTS_TO_BE_YOUR_FRIEND_2")
-						% [color_hex, sender_name]
+					return TranslationKey.new("NOTIF_TITLE_WANTS_TO_BE_YOUR_FRIEND_2").format_named(
+						{"color": color_hex, "name": sender_name}
 					)
 
 				var address = sender.get("address", "")
 				var short_address = (
 					address.substr(address.length() - 4) if address.length() > 4 else address
 				)
-				return (
-					TranslationServer.translate("NOTIF_TITLE_WANTS_TO_BE_YOUR_FRIEND_3")
-					% [color_hex, sender_name, short_address]
+				return TranslationKey.new("NOTIF_TITLE_WANTS_TO_BE_YOUR_FRIEND_3").format_named(
+					{"color": color_hex, "name": sender_name, "tag": short_address}
 				)
 			return TranslationServer.translate("NOTIF_TITLE_WANTS_TO_BE_YOUR_FRIEND")
 
@@ -145,8 +143,9 @@ static func get_notification_title(notif_type: String, metadata: Dictionary) -> 
 
 				if has_claimed_name:
 					return (
-						TranslationServer.translate("NOTIF_TITLE_ACCEPTED_YOUR_FRIEND_REQUEST_2")
-						% [color_hex, sender_name]
+						TranslationKey
+						. new("NOTIF_TITLE_ACCEPTED_YOUR_FRIEND_REQUEST_2")
+						. format_named({"color": color_hex, "name": sender_name})
 					)
 
 				var address = sender.get("address", "")
@@ -154,8 +153,9 @@ static func get_notification_title(notif_type: String, metadata: Dictionary) -> 
 					address.substr(address.length() - 4) if address.length() > 4 else address
 				)
 				return (
-					TranslationServer.translate("NOTIF_TITLE_ACCEPTED_YOUR_FRIEND_REQUEST_3")
-					% [color_hex, sender_name, short_address]
+					TranslationKey
+					. new("NOTIF_TITLE_ACCEPTED_YOUR_FRIEND_REQUEST_3")
+					. format_named({"color": color_hex, "name": sender_name, "tag": short_address})
 				)
 			return TranslationServer.translate("NOTIF_TITLE_ACCEPTED_YOUR_FRIEND_REQUEST")
 

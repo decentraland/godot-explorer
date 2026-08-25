@@ -221,6 +221,32 @@ class TestHelperComposedStrings(ExtractorTestCase):
             self.fx.unkeyed(), {("godot/src/ui/a.gd", "Try restarting the app.")}
         )
 
+    def test_gdformat_split_before_the_method_still_counts_as_key_usage(self):
+        # gdformat breaks a long call before the method, not only inside the parens:
+        #     TranslationKey
+        #     . new("KEY")
+        #     . format_named({...})
+        # A dot-only pattern misses that and the key silently reads as unused.
+        self.fx.script(
+            "a.gd",
+            "func f() -> String:\n\treturn (\n\t\tTranslationKey\n\t\t. new"
+            '("MODAL_BODY")\n\t\t. format_named({"a": 1})\n\t)\n',
+        )
+        self.assertEqual(self.fx.keys(), {"MODAL_BODY"})
+        self.assertEqual(self.fx.unkeyed(), set())
+
+    def test_gdformat_split_before_the_method_still_flags_prose(self):
+        # The same blind spot in the other direction: prose must not escape the unkeyed
+        # check just because the call happened to be long enough to wrap.
+        self.fx.script(
+            "a.gd",
+            "func f() -> String:\n\treturn (\n\t\tTranslationKey\n\t\t. new"
+            '("Try restarting the app.")\n\t\t. format_named({"a": 1})\n\t)\n',
+        )
+        self.assertEqual(
+            self.fx.unkeyed(), {("godot/src/ui/a.gd", "Try restarting the app.")}
+        )
+
     def test_debug_surfaces_are_excluded_wholesale(self):
         for excluded in ["multiplayer_debug", "scene_stats_panel"]:
             with self.subTest(dir=excluded):

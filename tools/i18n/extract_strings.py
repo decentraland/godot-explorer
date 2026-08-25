@@ -78,12 +78,16 @@ KEY_CALL_RE = re.compile(
 # a parse error at the call site (check-gdscript catches it), which is why this scanner does not
 # need to learn every display API's parameter list. Here it does two jobs: register the key as
 # in-use, and flag the argument when it is prose that slipped past the debug guard in _init.
-TRANSLATION_KEY_RE = re.compile(r'\bTranslationKey\.new\(\s*"((?:[^"\\]|\\.)*)"')
+# `\s*\.\s*` rather than a bare dot: gdformat breaks a long call *before* the method too,
+# as `TranslationKey\n. new("KEY")`. A dot-only pattern misses that, and the miss is silent
+# in both directions — a used key reads as unused, and prose handed to TranslationKey
+# escapes the unkeyed check entirely.
+TRANSLATION_KEY_RE = re.compile(r'\bTranslationKey\s*\.\s*new\(\s*"((?:[^"\\]|\\.)*)"')
 
 # The bulk form, TranslationKey.many(["A", "B"]) — used for the ordered tables (month
 # names, weekday names, tip rotations). The bracket body is captured whole and its string
 # literals pulled out, so line breaks inside the list do not matter.
-TRANSLATION_KEY_MANY_RE = re.compile(r"\bTranslationKey\.many\(\s*\[(.*?)\]", re.S)
+TRANSLATION_KEY_MANY_RE = re.compile(r"\bTranslationKey\s*\.\s*many\(\s*\[(.*?)\]", re.S)
 QUOTED_RE = re.compile(r'"((?:[^"\\]|\\.)*)"')
 
 # Display text that never passes through a `.text =` assignment: returned from a helper, handed

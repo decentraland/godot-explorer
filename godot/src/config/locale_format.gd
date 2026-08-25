@@ -108,9 +108,9 @@ static func time_of_day(hour: int, minute: int) -> String:
 static func short_date(unix_sec: int) -> String:
 	var dt: Dictionary = Time.get_datetime_dict_from_unix_time(unix_sec)
 	return (
-		TranslationServer
-		. translate("DATE_SHORT_FORMAT")
-		. format(
+		TranslationKey
+		. new("DATE_SHORT_FORMAT")
+		. format_named(
 			{
 				"weekday": weekday_name(dt.get("weekday", 0)),
 				"month": month_name(dt.get("month", 1)),
