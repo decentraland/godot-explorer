@@ -9,7 +9,14 @@ use crate::{
     scene_runner::scene::Scene,
 };
 
-/// Updates the locomotion settings for the scene.
+/// Updates the locomotion settings for the scene from the `PBAvatarLocomotionSettings`
+/// component on the PLAYER entity (id = 1), which is where scenes address it:
+/// `AvatarLocomotionSettings.createOrReplace(engine.PlayerEntity, { ... })`.
+///
+/// This mirrors the other player-targeted components (`InputModifier`,
+/// `PhysicsCombinedForce`) and the reference implementation. The component is
+/// ignored on any other entity.
+///
 /// Returns `true` if the settings were changed, `false` otherwise.
 pub fn update_avatar_locomotion_settings(
     scene: &mut Scene,
@@ -17,25 +24,25 @@ pub fn update_avatar_locomotion_settings(
 ) -> bool {
     let dirty_lww_components = &scene.current_dirty.lww_components;
 
-    if let Some(locomotion_dirty) =
-        dirty_lww_components.get(&SceneComponentId::AVATAR_LOCOMOTION_SETTINGS)
-    {
-        // Only process ROOT_ENTITY (id = 0)
-        if locomotion_dirty.contains(&SceneEntityId::ROOT) {
-            let locomotion_component =
-                SceneCrdtStateProtoComponents::get_avatar_locomotion_settings(crdt_state);
+    let is_dirty = dirty_lww_components
+        .get(&SceneComponentId::AVATAR_LOCOMOTION_SETTINGS)
+        .is_some_and(|dirty| dirty.contains(&SceneEntityId::PLAYER));
 
-            if let Some(value) = locomotion_component.get(&SceneEntityId::ROOT) {
-                if let Some(proto) = &value.value {
-                    scene.locomotion_settings.bind_mut().set_from_proto(proto);
-                } else {
-                    scene.locomotion_settings.bind_mut().reset_to_defaults();
-                }
-            } else {
-                scene.locomotion_settings.bind_mut().reset_to_defaults();
-            }
-            return true;
-        }
+    if !is_dirty {
+        return false;
     }
-    false
+
+    let locomotion_component =
+        SceneCrdtStateProtoComponents::get_avatar_locomotion_settings(crdt_state);
+    let player_settings = locomotion_component.get(&SceneEntityId::PLAYER);
+
+    // A missing entry or a cleared value means the scene removed the component:
+    // fall back to the engine defaults.
+    let mut settings = scene.locomotion_settings.bind_mut();
+    match player_settings.and_then(|entry| entry.value.as_ref()) {
+        Some(proto) => settings.set_from_proto(proto),
+        None => settings.reset_to_defaults(),
+    }
+
+    true
 }
