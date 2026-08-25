@@ -79,6 +79,8 @@ var _joystick_visible := false
 
 
 func _ready() -> void:
+	# _process only drives the editor preview; at runtime it has nothing to do per frame.
+	set_process(Engine.is_editor_hint())
 	if Engine.is_editor_hint():
 		# Editor preview: draw the resting base at its computed position (no touch/timers/Global).
 		_dynamic_material.set_shader_parameter("state", 0)
@@ -258,8 +260,8 @@ func _update_input_actions():
 ## Editor-only: keep the resting preview in sync with the mobile-preview safe area and the
 ## _joystick_default_position value (SafeAreaControls recomputes its insets every frame too).
 func _process(_delta: float) -> void:
-	if Engine.is_editor_hint():
-		_reset()
+	# Enabled only in-editor (see set_process in _ready): keep the preview synced to size/margin edits.
+	_reset()
 
 
 func _reset():

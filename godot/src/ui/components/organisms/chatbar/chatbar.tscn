@@ -132,6 +132,7 @@ icon_pressed = ExtResource("7_dscpre")
 
 [node name="Panel_LoadScenes" type="PanelContainer" parent="VBoxContainer/HBoxContainer" unique_id=1690380546]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_tw2ns")
 

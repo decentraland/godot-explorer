@@ -7,7 +7,7 @@
 [ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="6_lttyx"]
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="7_0irnm"]
 [ext_resource type="Texture2D" uid="uid://b2mc65ohvctmu" path="res://assets/ui/emotes2.svg" id="7_lttyx"]
-[ext_resource type="PackedScene" uid="uid://bhudbtnscene1" path="res://src/ui/components/atoms/buttons/hud_button/hud_button.tscn" id="8_hud"]
+[ext_resource type="PackedScene" uid="uid://bdlssvxebe4kt" path="res://src/ui/components/atoms/buttons/hud_button/hud_button.tscn" id="8_hud"]
 [ext_resource type="Texture2D" uid="uid://cy8w5o1gj280t" path="res://src/ui/components/atoms/buttons/hud_button/icons/hud-emotes-default.svg" id="9_emdef"]
 [ext_resource type="Texture2D" uid="uid://fp5js43vr85b" path="res://src/ui/components/atoms/buttons/hud_button/icons/hud-emotes-pressed.svg" id="10_empre"]
 

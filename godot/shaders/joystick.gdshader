@@ -8,16 +8,12 @@ uniform vec2 joystick_position;
 uniform vec2 tip_position;
 uniform int state;
 
-uniform float tip_radius;
-uniform float tip_center_radius;
-uniform float bubble_radius;
-uniform float max_bubble_distance;
+// Edge-to-edge gap (px) between consecutive comet-tail bubbles while dragging (NOT a
+// center-to-center distance). max_chain_length clamps how far the tip can travel from the base.
+uniform float bubble_edge_gap;
 uniform float max_chain_length;
 
 varying vec2 pixel_pos;
-
-const int link_amount = 6;
-const float link_max_size_at = 0.9;
 
 // Palette (from Figma). ORB_INNER/OUTER = radial gradient stops; LILAC = inner shadow; OUTLINE = stroke.
 const vec3 ORB_INNER = vec3(0.1451, 0.1020, 0.2314);  // #251A3B (radial center)
@@ -116,7 +112,7 @@ void fragment() {
 		float prev_edge = 40.0;  // thumb radius (edge of the 80px thumb from its center)
 		for (int j = 0; j < 5; j++) {
 			float r = (j <= 1) ? 16.0 : ((j == 2) ? 9.0 : ((j == 3) ? 6.0 : 4.0));
-			float gap = (j == 0) ? 20.0 : max_bubble_distance;
+			float gap = (j == 0) ? 20.0 : bubble_edge_gap;
 			float center = prev_edge + gap + r;
 			if (center > chain) {
 				break;
