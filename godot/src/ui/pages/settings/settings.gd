@@ -26,6 +26,15 @@ const CACHE_SIZE_MB: Array[int] = [1024, 2048, 4096]
 var _light_debug_checks: Dictionary = {}
 var _light_max_lights_spin: SpinBox = null
 
+# Custom profile controls (visible only when graphic_profile == PROFILE_CUSTOM).
+var _custom_view_distance_row: HBoxContainer = null
+var _custom_view_distance_slider: HSlider = null
+var _custom_view_distance_value_label: Label = null
+var _custom_particles_row: HBoxContainer = null
+var _custom_particles_dropdown: DropdownList = null
+var _custom_max_lights_row: HBoxContainer = null
+var _custom_max_lights_spin: SpinBox = null
+
 @onready var label_title: Label = %Label_Title
 @onready var margin_container_nav: MarginContainer = %MarginContainer_Nav
 
@@ -152,6 +161,7 @@ func _ready():
 	_setup_impostor_benchmark_button()
 	_setup_fast_day_cycle_toggle()
 	_setup_light_debug_controls()
+	_setup_custom_profile_controls()
 	refresh_graphic_settings()
 
 	_populate_skybox_items()
@@ -255,6 +265,8 @@ func _apply_layout(is_orientation_portrait: bool) -> void:
 func refresh_graphic_settings():
 	var graphic_profile = Global.get_config().graphic_profile
 	dropdown_list_graphic_profiles.select(graphic_profile)
+	_sync_light_controls_for_profile()
+	_sync_custom_profile_controls()
 
 
 func show_control(control: Control):
@@ -645,6 +657,7 @@ func _on_button_developer_pressed() -> void:
 	var explorer = Global.get_explorer()
 	if is_instance_valid(explorer):
 		check_button_show_interactable_area.set_pressed_no_signal(explorer.show_interactable_area)
+	_sync_light_controls_for_profile()
 	_async_scroll_to_tab_button(button_developer)
 
 
@@ -876,6 +889,8 @@ func _add_max_lights_row(template_row: HBoxContainer, initial_value: int) -> voi
 
 
 func _apply_light_settings_from_ui() -> void:
+	if Global.get_config().graphic_profile != ConfigData.PROFILE_CUSTOM:
+		return
 	DclLightSourceComponent.apply_light_settings(
 		_light_debug_checks["lights_enabled"].button_pressed,
 		_light_debug_checks["shadows_enabled"].button_pressed,
@@ -911,6 +926,160 @@ func _setup_fast_day_cycle_toggle() -> void:
 	var rows_container := template_row.get_parent()
 	rows_container.add_child(row)
 	rows_container.move_child(row, 0)
+
+
+func _sync_light_controls_for_profile() -> void:
+	if _light_debug_checks.is_empty() and _light_max_lights_spin == null:
+		return
+
+	var is_custom := Global.get_config().graphic_profile == ConfigData.PROFILE_CUSTOM
+	if is_custom:
+		for check in _light_debug_checks.values():
+			if is_instance_valid(check):
+				check.disabled = false
+		if is_instance_valid(_light_max_lights_spin):
+			_light_max_lights_spin.editable = true
+		_apply_light_settings_from_ui()
+	else:
+		var light_settings := DclLightSourceComponent.get_light_settings()
+		for key in _light_debug_checks:
+			var check: CheckButton = _light_debug_checks[key]
+			if is_instance_valid(check):
+				check.disabled = true
+				check.set_pressed_no_signal(bool(light_settings.get(key, false)))
+		if is_instance_valid(_light_max_lights_spin):
+			_light_max_lights_spin.editable = false
+			_light_max_lights_spin.set_value_no_signal(int(light_settings.get("max_lights", 0)))
+
+
+func _sync_custom_profile_controls() -> void:
+	if _custom_view_distance_row == null:
+		return
+
+	var is_custom := Global.get_config().graphic_profile == ConfigData.PROFILE_CUSTOM
+	_custom_view_distance_row.visible = is_custom
+	_custom_particles_row.visible = is_custom
+	_custom_max_lights_row.visible = is_custom
+
+	if not is_custom:
+		return
+
+	var view_distance := Global.get_config().view_distance
+	_custom_view_distance_slider.set_value_no_signal(view_distance)
+	_sync_custom_view_distance_label(view_distance)
+	_custom_particles_dropdown.select(Global.get_config().particle_quality)
+	_custom_max_lights_spin.set_value_no_signal(
+		int(DclLightSourceComponent.get_light_settings().get("max_lights", 0))
+	)
+
+
+func _sync_custom_view_distance_label(value: float) -> void:
+	if is_instance_valid(_custom_view_distance_value_label):
+		_custom_view_distance_value_label.text = "%dm" % int(value)
+
+
+func _setup_custom_profile_controls() -> void:
+	# Three per-setting rows that only appear for the Custom profile.
+	var template_row := (
+		container_advanced.find_child("SceneLogsEnabled", true, false) as HBoxContainer
+	)
+	if template_row == null:
+		return
+	var rows_container := dropdown_list_graphic_profiles.get_parent()
+	if rows_container == null:
+		return
+
+	var profile_idx := dropdown_list_graphic_profiles.get_index()
+
+	# View Distance
+	_custom_view_distance_row = _make_custom_profile_row(
+		template_row, "CustomViewDistance", "View Distance"
+	)
+	_custom_view_distance_slider = HSlider.new()
+	_custom_view_distance_slider.min_value = 20
+	_custom_view_distance_slider.max_value = 320
+	_custom_view_distance_slider.step = 10
+	_custom_view_distance_slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_custom_view_distance_slider.value_changed.connect(_on_custom_view_distance_changed)
+
+	_custom_view_distance_value_label = Label.new()
+	_custom_view_distance_value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+
+	var view_controls := HBoxContainer.new()
+	view_controls.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	view_controls.add_child(_custom_view_distance_slider)
+	view_controls.add_child(_custom_view_distance_value_label)
+	_custom_view_distance_row.add_child(view_controls)
+	rows_container.add_child(_custom_view_distance_row)
+	rows_container.move_child(_custom_view_distance_row, profile_idx + 1)
+
+	# Particles
+	_custom_particles_row = _make_custom_profile_row(template_row, "CustomParticles", "Particles")
+	_custom_particles_dropdown = DropdownList.new()
+	_custom_particles_dropdown.add_item("Off", 0)
+	_custom_particles_dropdown.add_item("Low", 1)
+	_custom_particles_dropdown.add_item("Medium", 2)
+	_custom_particles_dropdown.add_item("High", 3)
+	_custom_particles_dropdown.item_selected.connect(_on_custom_particles_changed)
+	_custom_particles_row.add_child(_custom_particles_dropdown)
+	rows_container.add_child(_custom_particles_row)
+	rows_container.move_child(_custom_particles_row, profile_idx + 2)
+
+	# Max Active Lights
+	_custom_max_lights_row = _make_custom_profile_row(
+		template_row, "CustomMaxLights", "Max Active Lights"
+	)
+	_custom_max_lights_spin = SpinBox.new()
+	_custom_max_lights_spin.min_value = 0
+	_custom_max_lights_spin.max_value = 64
+	_custom_max_lights_spin.step = 1
+	_custom_max_lights_spin.value_changed.connect(_on_custom_max_lights_changed)
+	_custom_max_lights_row.add_child(_custom_max_lights_spin)
+	rows_container.add_child(_custom_max_lights_row)
+	rows_container.move_child(_custom_max_lights_row, profile_idx + 3)
+
+	_sync_custom_profile_controls()
+
+
+func _make_custom_profile_row(
+	template_row: HBoxContainer, name: String, title: String
+) -> HBoxContainer:
+	var row := template_row.duplicate(0) as HBoxContainer
+	row.name = name
+	row.visible = false
+	var label := row.find_child("Label_Title", false, false) as Label
+	label.text = title
+	var check := row.find_child("CheckButton*", true, false) as CheckButton
+	if check != null:
+		check.queue_free()
+	return row
+
+
+func _on_custom_view_distance_changed(value: float) -> void:
+	Global.get_config().view_distance = value
+	if is_instance_valid(Global.player_camera_node):
+		Global.player_camera_node.far = value
+	Global.get_config().save_to_settings_file()
+	_sync_custom_view_distance_label(value)
+
+
+func _on_custom_particles_changed(index: int) -> void:
+	Global.get_config().particle_quality = index
+	AvatarAnimHelpers.apply_particles_enabled(index > 0)
+	Global.get_config().save_to_settings_file()
+
+
+func _on_custom_max_lights_changed(value: float) -> void:
+	var light_settings := DclLightSourceComponent.get_light_settings()
+	DclLightSourceComponent.apply_light_settings(
+		light_settings["lights_enabled"],
+		light_settings["shadows_enabled"],
+		int(value),
+		light_settings["debug_enabled"],
+		light_settings["auto_activation_range"],
+		light_settings["use_global_light_budget"]
+	)
+	Global.get_config().save_to_settings_file()
 
 
 func _setup_dynamic_graphics() -> void:

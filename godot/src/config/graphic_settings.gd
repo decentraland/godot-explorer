@@ -1,7 +1,7 @@
 class_name GraphicSettings extends RefCounted
 
 ## Profile definitions as data - easier to tune without code changes
-## Keys: aa, shadow, bloom, skybox, texture, fps, scale, mesh_lod_threshold
+## Keys: aa, shadow, bloom, skybox, texture, fps, scale, mesh_lod_threshold, view_distance, particle_quality
 ##
 ## mesh_lod_threshold (pixels of screen-space error before swapping to a
 ## lower-detail LOD). Default Godot=1.0 — very conservative. Genesis Plaza
@@ -27,6 +27,8 @@ const PROFILE_DEFINITIONS: Array[Dictionary] = [
 		"fps": ConfigData.FpsLimitMode.FPS_18,
 		"scale": 0.5,
 		"mesh_lod_threshold": 8.0,
+		"view_distance": 40.0,
+		"particle_quality": 0,
 		"dcl_lights": false,
 		"dcl_light_shadows": false,
 		"dcl_max_lights": 0,
@@ -42,6 +44,8 @@ const PROFILE_DEFINITIONS: Array[Dictionary] = [
 		"fps": ConfigData.FpsLimitMode.FPS_30,
 		"scale": 0.75,
 		"mesh_lod_threshold": 6.0,
+		"view_distance": 60.0,
+		"particle_quality": 1,
 		"dcl_lights": true,
 		"dcl_light_shadows": false,
 		"dcl_max_lights": 2,
@@ -59,6 +63,8 @@ const PROFILE_DEFINITIONS: Array[Dictionary] = [
 		"fps": ConfigData.FpsLimitMode.FPS_30,
 		"scale": 1.0,
 		"mesh_lod_threshold": 3.0,
+		"view_distance": 80.0,
+		"particle_quality": 2,
 		"dcl_lights": true,
 		"dcl_light_shadows": false,
 		"dcl_max_lights": 4,
@@ -79,6 +85,8 @@ const PROFILE_DEFINITIONS: Array[Dictionary] = [
 		"fps": ConfigData.FpsLimitMode.FPS_60,
 		"scale": 1.0,
 		"mesh_lod_threshold": 2.0,
+		"view_distance": 300.0,
+		"particle_quality": 3,
 		"dcl_lights": true,
 		"dcl_light_shadows": true,
 		"dcl_max_lights": 8,
@@ -285,10 +293,16 @@ static func apply_graphic_profile(profile_index: int) -> void:
 	config.texture_quality = profile.texture
 	config.limit_fps = profile.fps
 	config.resolution_3d_scale = profile.scale
+	config.view_distance = profile.view_distance
+	config.particle_quality = profile.particle_quality
 	config.graphic_profile = profile_index
 
 	# Apply FPS limit immediately
 	apply_fps_limit()
+
+	# Apply view distance immediately
+	if is_instance_valid(Global.player_camera_node):
+		Global.player_camera_node.far = profile.view_distance
 
 	# Apply 3D resolution scale to viewport
 	var viewport := Global.get_tree().root.get_viewport()
@@ -300,6 +314,9 @@ static func apply_graphic_profile(profile_index: int) -> void:
 		# how aggressively the renderer picks LOD1/2/3 at distance.
 		var lod_thr: float = profile.get("mesh_lod_threshold", 1.0)
 		viewport.mesh_lod_threshold = lod_thr
+
+	# Avatar move/jump/land dust particles follow the profile.
+	AvatarAnimHelpers.apply_particles_enabled(profile.particle_quality > 0)
 
 	# Scene dynamic lights follow the profile. Dev Tools can override at runtime.
 	DclLightSourceComponent.apply_graphic_profile_settings(

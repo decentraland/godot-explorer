@@ -297,6 +297,7 @@ func _ready():
 	player.look_at(16 * Vector3(start_parcel_position.x + 1, 0, -(start_parcel_position.y + 1)))
 
 	Global.player_camera_node = player.camera
+	Global.player_camera_node.far = Global.get_config().view_distance
 	Global.scene_runner.player_avatar_node = player.avatar
 	Global.scene_runner.player_body_node = player
 	Global.scene_runner.console = self._on_scene_console_message
