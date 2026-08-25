@@ -40,8 +40,28 @@ pub struct DclPlayerIdentity {
     try_connect_account_handle: Option<JoinHandle<()>>,
 
     /// Pending mobile auth state, stored between start_mobile_connect_account
-    /// and complete_mobile_connect_account (when deep link arrives)
+    /// and complete_mobile_connect_account (when deep link arrives).
+    ///
+    /// Process-local and best-effort: a cold start (OS kill during the browser hop) legitimately
+    /// loses it, which is why `complete_mobile_connect_account` does not require it. Read via
+    /// `has_pending_mobile_auth` only to tell "this process started the flow" — i.e. the lobby
+    /// is already showing the spinner — from "the deep link arrived out of the blue".
     pending_mobile_auth: Option<()>,
+
+    /// Set when the user cancels a browser sign-in this process started. A cold start cannot
+    /// have it set, which is how the router tells a cancel apart from the #2644 OS kill now
+    /// that completing no longer requires `pending_mobile_auth`.
+    mobile_auth_cancelled: bool,
+
+    /// True once `start_mobile_connect_account` ran here. Gates the flag above:
+    /// `abort_try_connect_account` is shared with the native WalletConnect path, which shows
+    /// the same Cancel without ever opening our browser hop.
+    mobile_auth_started: bool,
+
+    /// Monotonic attempt token, like lobby.gd's `_guest_login_attempt`. `abort()` only unwinds
+    /// a task at a yield point and everything after the completion's single `.await` is
+    /// synchronous, so the result is re-checked against this on the main thread instead.
+    mobile_auth_attempt: u32,
 
     #[var]
     is_guest: bool,
@@ -80,6 +100,9 @@ impl INode for DclPlayerIdentity {
             is_thirdweb_guest_upgraded: false,
             try_connect_account_handle: None,
             pending_mobile_auth: None,
+            mobile_auth_cancelled: false,
+            mobile_auth_started: false,
+            mobile_auth_attempt: 0,
         }
     }
 }
@@ -734,6 +757,11 @@ impl DclPlayerIdentity {
         }
         // Also clear any pending mobile auth
         self.pending_mobile_auth = None;
+        // Clearing the flag is not enough to make the cancel stick: the returning deep link
+        // would then look exactly like a cold start and complete the sign-in anyway.
+        self.mobile_auth_cancelled = self.mobile_auth_started;
+        // Retire any in-flight attempt; a completion past its await cannot be aborted.
+        self.mobile_auth_attempt = self.mobile_auth_attempt.wrapping_add(1);
     }
 
     /// Starts mobile auth flow. Opens browser and returns immediately.
@@ -746,6 +774,10 @@ impl DclPlayerIdentity {
         user_id: GString,
         session_id: GString,
     ) {
+        self.mobile_auth_started = true;
+        self.mobile_auth_cancelled = false;
+        self.mobile_auth_attempt = self.mobile_auth_attempt.wrapping_add(1);
+
         let Some(handle) = TokioRuntime::static_clone_handle() else {
             panic!("tokio runtime not initialized")
         };
@@ -797,16 +829,17 @@ impl DclPlayerIdentity {
 
     /// Completes mobile auth flow using the identity ID received via deep link.
     /// Should be called when app receives deep link `decentraland://open?signin=${identityId}`
+    ///
+    /// Deliberately NOT gated on `pending_mobile_auth` (#2644). That flag lives only in
+    /// this process's memory, so an OS kill while the user is in the browser wipes it and
+    /// the deep link comes back to a cold start — where refusing to complete threw away a
+    /// sign-in the user had already finished. The flag also carries no data (`Option<()>`):
+    /// everything needed is behind `complete_mobile_auth(identity_id)`, and an invalid or
+    /// expired id already fails there with a real error.
     #[func]
     fn complete_mobile_connect_account(&mut self, identity_id: GString) {
-        if self.pending_mobile_auth.take().is_none() {
-            tracing::error!("No pending mobile auth to complete");
-            self.base_mut().call_deferred(
-                "_error_getting_wallet",
-                &["No pending mobile auth".to_variant()],
-            );
-            return;
-        };
+        // Consume the flag when this process did start the flow; its absence is not an error.
+        self.pending_mobile_auth.take();
 
         let Some(handle) = TokioRuntime::static_clone_handle() else {
             panic!("tokio runtime not initialized")
@@ -814,8 +847,9 @@ impl DclPlayerIdentity {
 
         let instance_id = self.base().instance_id();
         let identity_id = identity_id.to_string();
+        let attempt = self.mobile_auth_attempt;
 
-        handle.spawn(async move {
+        let complete_handle = handle.spawn(async move {
             let result = complete_mobile_auth(identity_id).await;
             let Ok(mut this) = Gd::<DclPlayerIdentity>::try_from_instance_id(instance_id) else {
                 return;
@@ -829,8 +863,9 @@ impl DclPlayerIdentity {
                             .expect("serialize ephemeral auth chain");
 
                     this.call_deferred(
-                        "try_set_remote_wallet",
+                        "_mobile_auth_completed",
                         &[
+                            attempt.to_variant(),
                             format!("{:#x}", address).to_variant(),
                             chain_id.to_variant(),
                             ephemeral_auth_chain_json_str.to_variant(),
@@ -840,18 +875,61 @@ impl DclPlayerIdentity {
                 Err(err) => {
                     tracing::error!("Error completing mobile auth: {:?}", err);
                     this.call_deferred(
-                        "_error_getting_wallet",
-                        &[format!("Mobile auth completion error: {}", err).to_variant()],
+                        "_mobile_auth_failed",
+                        &[
+                            attempt.to_variant(),
+                            format!("Mobile auth completion error: {}", err).to_variant(),
+                        ],
                     );
                 }
             }
         });
+
+        // Abort rather than drop: dropping a tokio JoinHandle detaches the task.
+        if let Some(previous) = self.try_connect_account_handle.replace(complete_handle) {
+            previous.abort();
+        }
+    }
+
+    /// Main-thread landing for a completed mobile sign-in, guarded by the attempt token so a
+    /// result the user cancelled is discarded instead of applied.
+    #[func]
+    fn _mobile_auth_completed(
+        &mut self,
+        attempt: u32,
+        address: GString,
+        chain_id: u64,
+        ephemeral_auth_chain: GString,
+    ) {
+        if attempt != self.mobile_auth_attempt {
+            tracing::info!("Discarding a completed mobile sign-in: attempt was retired");
+            return;
+        }
+        self.try_set_remote_wallet(address, chain_id, ephemeral_auth_chain);
+    }
+
+    /// Same guard for the failure arm: a cancelled attempt must not surface an error over
+    /// whatever screen the user moved on to.
+    #[func]
+    fn _mobile_auth_failed(&mut self, attempt: u32, error_message: GString) {
+        if attempt != self.mobile_auth_attempt {
+            tracing::info!("Discarding a failed mobile sign-in: attempt was retired");
+            return;
+        }
+        self.base_mut()
+            .call_deferred("_error_getting_wallet", &[error_message.to_variant()]);
     }
 
     /// Returns true if there's a pending mobile auth waiting for deep link
     #[func]
     fn has_pending_mobile_auth(&self) -> bool {
         self.pending_mobile_auth.is_some()
+    }
+
+    /// True if the user cancelled a browser sign-in in this process.
+    #[func]
+    fn was_mobile_auth_cancelled(&self) -> bool {
+        self.mobile_auth_cancelled
     }
 
     /// Generates ephemeral identity data for external signing (e.g., WalletConnect).
@@ -1296,6 +1374,10 @@ impl DclPlayerIdentity {
         self.profile = None;
         self.is_thirdweb_guest = false;
         self.is_thirdweb_guest_upgraded = false;
+        // The next account starts from a clean sign-in slate.
+        self.pending_mobile_auth = None;
+        self.mobile_auth_cancelled = false;
+        self.mobile_auth_started = false;
         self.base_mut()
             .call_deferred("emit_signal", &["logout".to_variant()]);
     }
