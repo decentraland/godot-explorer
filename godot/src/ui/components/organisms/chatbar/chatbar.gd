@@ -3,25 +3,13 @@ extends Control
 signal share_place
 signal load_scenes_pressed
 
-# Orb button textures (icon baked in). Swapped by state on the chat toggle:
-# Default (closed) → Pressed (while the finger is down) → Hold (chat open, after release).
-const CHAT_TEX_DEFAULT: Texture2D = preload(
-	"res://src/ui/components/organisms/chatbar/chat_default.png"
-)
-const CHAT_TEX_PRESSED: Texture2D = preload(
-	"res://src/ui/components/organisms/chatbar/chat_pressed.png"
-)
-const CHAT_TEX_HOLD: Texture2D = preload("res://src/ui/components/organisms/chatbar/chat_hold.png")
-
 var _tooltip_tween: Tween = null
 var _tooltip_shown: bool = false
 
-# True while the finger is physically down on the chat button (the transient Pressed look).
-var _chat_pressing: bool = false
-
 @onready var hbox: HBoxContainer = $HBoxContainer
-@onready var button_chat: TextureButton = %Button_Chat
-@onready var button_flip: Button = %Button_Flip
+@onready var button_chat: HudButton = %Button_Chat
+@onready var button_flip: HudButton = %Button_Flip
+@onready var button_discover: HudButton = %HudButton_Discover
 @onready var tooltip: HBoxContainer = %HBoxContainer_Tooltip
 @onready var discover_panel: PanelContainer = %DiscoverPanel
 @onready var panel_load_scenes: PanelContainer = %Panel_LoadScenes
@@ -29,11 +17,22 @@ var _chat_pressing: bool = false
 
 func _ready() -> void:
 	Global.close_chat.connect(_on_chat_closed)
-	# Drive the transient Pressed look from raw down/up; the toggle itself stays on the
-	# existing `pressed` signal path (_on_button_chat_pressed).
-	button_chat.button_down.connect(_on_button_chat_down)
-	button_chat.button_up.connect(_on_button_chat_up)
-	_update_chat_texture()
+	Global.orientation_changed.connect(_on_orientation_changed)
+	# The orb buttons scale with orientation: landscape → SMALL (66 disc), portrait → LARGE (96).
+	_apply_button_sizes()
+
+
+func _on_orientation_changed(_is_portrait: bool) -> void:
+	_apply_button_sizes()
+
+
+func _apply_button_sizes() -> void:
+	var preset: HudButton.Size = (
+		HudButton.Size.LARGE if Global.is_orientation_portrait() else HudButton.Size.SMALL
+	)
+	button_chat.size_preset = preset
+	button_flip.size_preset = preset
+	button_discover.size_preset = preset
 
 
 func _on_hud_button_discover_pressed() -> void:
@@ -48,43 +47,22 @@ func _on_hud_button_share_pressed() -> void:
 
 func _on_button_chat_pressed() -> void:
 	Global.send_haptic_feedback()
+	# HudButton skins itself from its toggle state (default → pressed → selected); we only drive
+	# the chat open/close side effects here.
 	if button_chat.button_pressed:
 		_enter_chat_mode()
 		Global.open_chat.emit()
 	else:
 		_exit_chat_mode()
 		Global.close_chat.emit()
-	_update_chat_texture()
-
-
-func _on_button_chat_down() -> void:
-	_chat_pressing = true
-	_update_chat_texture()
-
-
-func _on_button_chat_up() -> void:
-	_chat_pressing = false
-	_update_chat_texture()
-
-
-## Skins the chat button by state: Pressed while the finger is down, else Hold when the
-## chat is open, else Default. Called from press/release and from _on_chat_closed().
-func _update_chat_texture() -> void:
-	if button_chat == null:
-		return
-	var tex: Texture2D = CHAT_TEX_DEFAULT
-	if _chat_pressing:
-		tex = CHAT_TEX_PRESSED
-	elif button_chat.button_pressed:
-		tex = CHAT_TEX_HOLD
-	button_chat.texture_normal = tex
 
 
 func _on_chat_closed() -> void:
+	# Clear the toggle via button_pressed (not set_pressed_no_signal) so the HudButton's `toggled`
+	# handler repaints back to the default orb; `pressed` is not re-emitted by a programmatic set.
 	if button_chat.button_pressed:
-		button_chat.set_pressed_no_signal(false)
+		button_chat.button_pressed = false
 	_exit_chat_mode()
-	_update_chat_texture()
 
 
 func _enter_chat_mode() -> void:

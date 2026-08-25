@@ -23,11 +23,13 @@ use crate::{
 /// parcel scene) to the native on-screen controls via `DclGlobal`:
 /// - `hide_joystick` hides the native virtual joystick
 /// - `touch_inputs` lists per-button overrides (hide / custom icon) — buttons not listed
-///   keep their default (shown)
+///   keep their default: shown for most, but the joypad hides the two overflow actions
+///   ia_action_5 / ia_action_6 ("3" / "4") by default so the "+" combo shows 2, not 4; a
+///   scene re-shows either by listing it with hide=false (see joypad.gd DEFAULT_HIDDEN)
 /// - `main_action` chooses which action the large central button triggers
 ///
-/// When the scene sets no component the controls are reset to their defaults (nothing
-/// hidden, jump as the central button), so legacy scenes are unaffected.
+/// When the scene sets no component the controls are reset to their defaults (the joypad's
+/// default-hidden overflow applied, jump as the central button), so legacy scenes are unaffected.
 pub fn update_touch_screen_controls(
     scene: &mut Scene,
     crdt_state: &mut SceneCrdtState,

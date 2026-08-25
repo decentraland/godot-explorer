@@ -12,7 +12,7 @@ dest_files=["res://.godot/imported/jump-normal.svg-3a753b64752b6a6d517934201805b
 
 [params]
 
-base_scale=2.0
+base_scale=3.0
 saturation=1.0
 color_map={}
 compress=true

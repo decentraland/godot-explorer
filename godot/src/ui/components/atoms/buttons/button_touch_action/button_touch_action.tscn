@@ -2,33 +2,9 @@
 
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="2_asumd"]
 [ext_resource type="Script" uid="uid://dn3hlhbknm1ej" path="res://src/ui/components/atoms/buttons/button_touch_action/button_touch_action.gd" id="2_c0jk1"]
-[ext_resource type="Script" path="res://src/ui/components/atoms/buttons/button_touch_action/orb_skin.gd" id="3_orbsk"]
+[ext_resource type="Script" uid="uid://di30mxklw1rhe" path="res://src/ui/components/atoms/buttons/button_touch_action/orb_skin.gd" id="3_orbsk"]
 [ext_resource type="Texture2D" uid="uid://dk0wxh4uovqgc" path="res://src/ui/components/atoms/buttons/button_touch_action/orb_default.png" id="4_orbdf"]
-[ext_resource type="Texture2D" uid="uid://bkcp3v1swj1kk" path="res://src/ui/components/atoms/buttons/button_touch_action/orb_pressed.png" id="5_orbpr"]
-[ext_resource type="Texture2D" uid="uid://53y0kswva0qr" path="res://src/ui/components/atoms/buttons/button_touch_action/orb_hold.png" id="6_orbhd"]
-[ext_resource type="Texture2D" uid="uid://dqmtwlmxcel40" path="res://src/ui/components/atoms/buttons/button_touch_action/orb_disabled.png" id="7_orbdis"]
-
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_nxgap"]
-
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_typ7n"]
-
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_hqc73"]
-
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_cus28"]
-
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_rd6tx"]
-
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_gn6hn"]
-
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_rtjpm"]
-
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_mr876"]
-
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_w12dx"]
-
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_ilh4b"]
-
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_c6kht"]
+[ext_resource type="Texture2D" uid="uid://72h2xkpj1hgk" path="res://src/ui/components/organisms/joypad/f-normal.svg" id="5_y158e"]
 
 [node name="Button_TouchAction" type="Button" unique_id=1532661067]
 modulate = Color(0.9882353, 0.9882353, 0.9882353, 1)
@@ -38,22 +14,6 @@ offset_bottom = 55.0
 focus_mode = 0
 theme = ExtResource("2_asumd")
 theme_type_variation = &"TouchableButton"
-theme_override_colors/font_pressed_color = Color(0.9098039, 0.8509804, 1, 1)
-theme_override_colors/font_hover_pressed_color = Color(0.9098039, 0.8509804, 1, 1)
-theme_override_colors/icon_pressed_color = Color(0.9098039, 0.8509804, 1, 1)
-theme_override_colors/icon_hover_pressed_color = Color(0.9098039, 0.8509804, 1, 1)
-theme_override_styles/normal = SubResource("StyleBoxEmpty_nxgap")
-theme_override_styles/normal_mirrored = SubResource("StyleBoxEmpty_typ7n")
-theme_override_styles/pressed = SubResource("StyleBoxEmpty_hqc73")
-theme_override_styles/pressed_mirrored = SubResource("StyleBoxEmpty_cus28")
-theme_override_styles/hover = SubResource("StyleBoxEmpty_rd6tx")
-theme_override_styles/hover_mirrored = SubResource("StyleBoxEmpty_gn6hn")
-theme_override_styles/hover_pressed = SubResource("StyleBoxEmpty_rtjpm")
-theme_override_styles/hover_pressed_mirrored = SubResource("StyleBoxEmpty_mr876")
-theme_override_styles/disabled = SubResource("StyleBoxEmpty_w12dx")
-theme_override_styles/disabled_mirrored = SubResource("StyleBoxEmpty_ilh4b")
-theme_override_styles/focus = SubResource("StyleBoxEmpty_c6kht")
-text = "E"
 flat = true
 icon_alignment = 1
 script = ExtResource("2_c0jk1")
@@ -67,26 +27,24 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
+texture = ExtResource("4_orbdf")
+expand_mode = 1
+stretch_mode = 5
 script = ExtResource("3_orbsk")
-default_texture = ExtResource("4_orbdf")
-pressed_texture = ExtResource("5_orbpr")
-hold_texture = ExtResource("6_orbhd")
-disabled_texture = ExtResource("7_orbdis")
 
 [node name="CustomIcon" type="TextureRect" parent="." unique_id=1532661068]
 editor_description = "Scene-provided icon overlay (PBTouchScreenControls). Hidden by default; toggled by button_touch_action.gd set_custom_icon / clear_custom_icon so it never disturbs the native glyph."
-visible = false
+custom_minimum_size = Vector2(56, 56)
 layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = 6.0
-offset_top = 6.0
-offset_right = -6.0
-offset_bottom = -6.0
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
+texture = ExtResource("5_y158e")
 expand_mode = 1
 stretch_mode = 5
 

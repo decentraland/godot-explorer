@@ -2,11 +2,13 @@
 
 [ext_resource type="Script" uid="uid://iot0yhkloep2" path="res://src/ui/components/organisms/chatbar/chatbar.gd" id="1_8wxvk"]
 [ext_resource type="Script" uid="uid://rsrj8osixsoo" path="res://src/ui/layouts/hide_orientation.gd" id="2_ai0av"]
-[ext_resource type="Texture2D" uid="uid://en7h0ciphyak" path="res://src/ui/components/organisms/chatbar/chat_default.png" id="2_chdef"]
-[ext_resource type="Texture2D" uid="uid://cytpdlax4ble0" path="res://src/ui/components/organisms/menu/icons/discover-outlined.svg" id="3_2fmgn"]
-[ext_resource type="Script" uid="uid://di30mxklw1rhe" path="res://src/ui/components/atoms/buttons/button_touch_action/orb_skin.gd" id="5_orb"]
-[ext_resource type="Texture2D" uid="uid://cupwnl8mymqxs" path="res://assets/flip-icon.svg" id="6_flip"]
+[ext_resource type="PackedScene" uid="uid://bdlssvxebe4kt" path="res://src/ui/components/atoms/buttons/hud_button/hud_button.tscn" id="3_hud"]
+[ext_resource type="Texture2D" uid="uid://dma5nopqnm6rk" path="res://src/ui/components/atoms/buttons/hud_button/icons/hud-chat-default.svg" id="4_chdef"]
+[ext_resource type="Texture2D" uid="uid://jte1fei2oaui" path="res://src/ui/components/atoms/buttons/hud_button/icons/hud-chat-pressed.svg" id="5_chpre"]
+[ext_resource type="Texture2D" uid="uid://c45wn4gunr5go" path="res://src/ui/components/atoms/buttons/hud_button/icons/hud-discover-default.svg" id="6_dscdef"]
+[ext_resource type="Texture2D" uid="uid://ceihtq3itnap6" path="res://src/ui/components/atoms/buttons/hud_button/icons/hud-discover-pressed.svg" id="7_dscpre"]
 [ext_resource type="Texture2D" uid="uid://gamhtrgpywdx" path="res://assets/tooltip-arrow-left.svg" id="7_tw2ns"]
+[ext_resource type="Texture2D" uid="uid://btkyyrt63j7tv" path="res://src/ui/components/atoms/buttons/hud_button/icons/hud-flip-orientation.svg" id="8_flip"]
 [ext_resource type="FontFile" uid="uid://d2vlaexk003yw" path="res://assets/themes/fonts/inter/Inter-Medium.ttf" id="8_vm240"]
 [ext_resource type="Texture2D" uid="uid://c4vnarw7wx36n" path="res://assets/ui/Reset.png" id="9_reset"]
 
@@ -17,14 +19,14 @@ corner_radius_top_right = 16
 corner_radius_bottom_right = 16
 corner_radius_bottom_left = 16
 
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_disc"]
+
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_tw2ns"]
 bg_color = Color(0, 0, 0, 0.9019608)
 corner_radius_top_left = 40
 corner_radius_top_right = 40
 corner_radius_bottom_right = 40
 corner_radius_bottom_left = 40
-
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_disc"]
 
 [node name="Chatbar" type="MarginContainer" unique_id=1474819563]
 offset_right = 276.0
@@ -48,48 +50,32 @@ hide_on_portrait = true
 layout_mode = 2
 size_flags_horizontal = 0
 size_flags_vertical = 0
-theme_override_constants/separation = 12
+theme_override_constants/separation = 32
 
 [node name="Control" type="Control" parent="VBoxContainer/HBoxContainer" unique_id=2144406003]
-custom_minimum_size = Vector2(109, 0)
+custom_minimum_size = Vector2(86, 0)
 layout_mode = 2
 script = ExtResource("2_ai0av")
 hide_on_portrait = true
 
-[node name="Button_Chat" type="TextureButton" parent="VBoxContainer/HBoxContainer" unique_id=1791709263]
+[node name="Button_Chat" parent="VBoxContainer/HBoxContainer" unique_id=2024031052 instance=ExtResource("3_hud")]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(75, 75)
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
-focus_mode = 0
 toggle_mode = true
-texture_normal = ExtResource("2_chdef")
-ignore_texture_size = true
-stretch_mode = 5
+icon = ExtResource("4_chdef")
+icon_normal = ExtResource("4_chdef")
+icon_pressed = ExtResource("5_chpre")
 
-[node name="Button_Flip" type="Button" parent="VBoxContainer/HBoxContainer" unique_id=1364102949]
+[node name="Button_Flip" parent="VBoxContainer/HBoxContainer" unique_id=816408265 instance=ExtResource("3_hud")]
 unique_name_in_owner = true
 visible = false
-custom_minimum_size = Vector2(66, 66)
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
-focus_mode = 0
-theme_override_constants/icon_max_width = 44
-icon = ExtResource("6_flip")
-icon_alignment = 1
-
-[node name="OrbSkin" type="TextureRect" parent="VBoxContainer/HBoxContainer/Button_Flip" unique_id=915784412]
-show_behind_parent = true
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-script = ExtResource("5_orb")
-recolor_icon_by_state = true
+icon = ExtResource("8_flip")
+icon_normal = ExtResource("8_flip")
 
 [node name="HBoxContainer_Tooltip" type="HBoxContainer" parent="VBoxContainer/HBoxContainer" unique_id=1598671432]
 unique_name_in_owner = true
@@ -135,30 +121,17 @@ theme_override_styles/panel = SubResource("StyleBoxEmpty_disc")
 layout_mode = 2
 alignment = 1
 
-[node name="HudButton_Discover" type="Button" parent="VBoxContainer/HBoxContainer/DiscoverPanel/VBoxContainer_Buttons" unique_id=552290416]
-custom_minimum_size = Vector2(66, 66)
+[node name="HudButton_Discover" parent="VBoxContainer/HBoxContainer/DiscoverPanel/VBoxContainer_Buttons" unique_id=1860449953 instance=ExtResource("3_hud")]
+unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
-focus_mode = 0
-theme_override_constants/icon_max_width = 54
-icon = ExtResource("3_2fmgn")
-icon_alignment = 1
-
-[node name="OrbSkin" type="TextureRect" parent="VBoxContainer/HBoxContainer/DiscoverPanel/VBoxContainer_Buttons/HudButton_Discover" unique_id=915784413]
-show_behind_parent = true
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-script = ExtResource("5_orb")
-recolor_icon_by_state = true
+icon = ExtResource("6_dscdef")
+icon_normal = ExtResource("6_dscdef")
+icon_pressed = ExtResource("7_dscpre")
 
 [node name="Panel_LoadScenes" type="PanelContainer" parent="VBoxContainer/HBoxContainer" unique_id=1690380546]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_tw2ns")
 

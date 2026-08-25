@@ -12,7 +12,7 @@ dest_files=["res://.godot/imported/interact-pressed.svg-6a3d3a46215e7dc587a22946
 
 [params]
 
-base_scale=2.0
+base_scale=3.0
 saturation=1.0
 color_map={}
 compress=true

@@ -100,7 +100,7 @@ var _debug_panel_from_settings: bool = false
 
 @onready var navbar: Control = %Navbar
 @onready var joypad: Control = %Joypad
-@onready var button_show_ui: TextureButton = %Button_ShowUI
+@onready var button_show_ui: HudButton = %Button_ShowUI
 @onready var hud_dismiss_catcher: Control = %HudDismissCatcher
 @onready var interactable_area_debug: ColorRect = %InteractableAreaDebug
 @onready var interactable_area_debug_label: Label = %InteractableAreaDebugLabel

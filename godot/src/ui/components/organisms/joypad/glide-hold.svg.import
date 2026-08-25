@@ -12,7 +12,7 @@ dest_files=["res://.godot/imported/glide-hold.svg-851d0b6e77d1961977cb94accd56ed
 
 [params]
 
-base_scale=2.0
+base_scale=3.0
 saturation=1.0
 color_map={}
 compress=true

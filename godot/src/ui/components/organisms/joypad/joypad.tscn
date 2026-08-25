@@ -2,15 +2,18 @@
 
 [ext_resource type="PackedScene" uid="uid://nn0iih4xpn2e" path="res://src/ui/components/atoms/buttons/button_touch_action/button_touch_action.tscn" id="1_81cx4"]
 [ext_resource type="Script" uid="uid://dwlnsnbe4h0b0" path="res://src/ui/components/organisms/joypad/joypad.gd" id="1_il1fe"]
-[ext_resource type="Texture2D" uid="uid://cio1wsarij08p" path="res://assets/themes/dark_dcl_theme/icons/pointer_small.svg" id="2_6enwl"]
-[ext_resource type="Texture2D" uid="uid://ck3atqpytstpo" path="res://assets/themes/dark_dcl_theme/icons/Jump.svg" id="3_il1fe"]
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="4_8at3g"]
-[ext_resource type="Texture2D" uid="uid://0vj8slip287r" path="res://assets/themes/dark_dcl_theme/icons/plus.svg" id="5_il1fe"]
 [ext_resource type="Script" uid="uid://di30mxklw1rhe" path="res://src/ui/components/atoms/buttons/button_touch_action/orb_skin.gd" id="6_orbsk"]
 [ext_resource type="Texture2D" uid="uid://dk0wxh4uovqgc" path="res://src/ui/components/atoms/buttons/button_touch_action/orb_default.png" id="7_orbdf"]
-[ext_resource type="Texture2D" uid="uid://bkcp3v1swj1kk" path="res://src/ui/components/atoms/buttons/button_touch_action/orb_pressed.png" id="8_orbpr"]
-[ext_resource type="Texture2D" uid="uid://53y0kswva0qr" path="res://src/ui/components/atoms/buttons/button_touch_action/orb_hold.png" id="9_orbhd"]
-[ext_resource type="Texture2D" uid="uid://dqmtwlmxcel40" path="res://src/ui/components/atoms/buttons/button_touch_action/orb_disabled.png" id="10_orbdis"]
+[ext_resource type="Material" uid="uid://cq1dvbbcpt82c" path="res://src/ui/components/molecules/button_profile/texture_rect_rounded_material.tres" id="9_ah7yu"]
+
+[sub_resource type="Gradient" id="Gradient_gqjtl"]
+offsets = PackedFloat32Array(0, 0.9964953)
+colors = PackedColorArray(0, 0, 0, 0.10980392, 0.019859813, 0.019859813, 0.019859813, 0.12748305)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_mrvwt"]
+gradient = SubResource("Gradient_gqjtl")
+width = 254
 
 [node name="Joypad" type="Control" unique_id=400349512]
 editor_description = "Figma: RightSideControls (organism). File skocZRe2lV9IjqV4rF6EYs. Per-count satellite frames: 3=5:1141, 2=3:1187, 1=3:1274."
@@ -34,16 +37,14 @@ anchor_left = 1.0
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = -180.0
-offset_top = -180.0
-offset_right = 20.0
-offset_bottom = 20.0
+offset_left = -186.0
+offset_top = -185.0
+offset_right = 14.0
+offset_bottom = 15.0
 grow_horizontal = 0
 grow_vertical = 0
 mouse_force_pass_scroll_events = false
 theme_override_constants/icon_max_width = 85
-text = ""
-icon = ExtResource("3_il1fe")
 expand_icon = true
 trigger_action = "ia_jump"
 
@@ -62,18 +63,16 @@ grow_horizontal = 0
 grow_vertical = 0
 mouse_filter = 2
 
-[node name="Button_Jump" parent="Button_Press/Control" unique_id=1651527188 instance=ExtResource("1_81cx4")]
+[node name="Button_Interact" parent="Button_Press/Control" unique_id=1651527188 instance=ExtResource("1_81cx4")]
 editor_description = "Satellite: pointer (ia_pointer). Figma SecondaryButton, icon = pointer_small.svg (node 3:869, heavier relative stroke tuned for the small button). When this action is promoted to the central button, joypad.gd swaps in pointer_large.svg (node 3:1008) so the outline weight stays constant across sizes."
 custom_minimum_size = Vector2(100, 100)
 layout_mode = 1
-offset_left = -306.0
-offset_top = -100.0
-offset_right = -206.0
-offset_bottom = 0.0
+offset_left = -305.0
+offset_top = -98.0
+offset_right = -205.0
+offset_bottom = 2.0
 mouse_force_pass_scroll_events = false
 theme_override_constants/icon_max_width = 27
-text = ""
-icon = ExtResource("2_6enwl")
 trigger_action = "ia_pointer"
 
 [node name="Button_Primary" parent="Button_Press/Control" unique_id=125286180 instance=ExtResource("1_81cx4")]
@@ -90,12 +89,11 @@ mouse_force_pass_scroll_events = false
 editor_description = "Satellite: F (ia_secondary). Figma SecondaryButton; arc slot position in joypad.gd LAYOUTS."
 custom_minimum_size = Vector2(100, 100)
 layout_mode = 1
-offset_left = -209.0
-offset_top = -289.0
-offset_right = -109.0
-offset_bottom = -189.0
+offset_left = -218.0
+offset_top = -290.0
+offset_right = -118.0
+offset_bottom = -190.0
 mouse_force_pass_scroll_events = false
-text = "F"
 trigger_action = "ia_secondary"
 
 [node name="Button_Quaternary" parent="Button_Press/Control" unique_id=1522992834 instance=ExtResource("1_81cx4")]
@@ -114,16 +112,16 @@ unique_name_in_owner = true
 editor_description = "Figma: MultiAction (the + combo toggle). Raw toggle Button (NOT the touch-action atom): reveals the 1/2/3/4 column, fires no input. It is the LAST arc element (topmost), reflowed with the others via joypad.gd LAYOUTS. Icon is plus.svg, matching Figma node 3:874 (Group 3088): a 32x32 '+' of two 4px round-cap white strokes."
 custom_minimum_size = Vector2(100, 100)
 layout_mode = 1
-offset_left = -100.0
-offset_top = -302.0
-offset_bottom = -202.0
+offset_left = -97.0
+offset_top = -304.0
+offset_right = 3.0
+offset_bottom = -204.0
 focus_mode = 0
 mouse_force_pass_scroll_events = false
 theme = ExtResource("4_8at3g")
 theme_type_variation = &"TouchableButton"
 theme_override_constants/icon_max_width = 30
 toggle_mode = true
-icon = ExtResource("5_il1fe")
 icon_alignment = 1
 
 [node name="OrbSkin" type="TextureRect" parent="Button_Press/Control/Button_Combo" unique_id=956671328]
@@ -139,10 +137,6 @@ texture = ExtResource("7_orbdf")
 expand_mode = 1
 stretch_mode = 5
 script = ExtResource("6_orbsk")
-default_texture = ExtResource("7_orbdf")
-pressed_texture = ExtResource("8_orbpr")
-hold_texture = ExtResource("9_orbhd")
-disabled_texture = ExtResource("10_orbdis")
 
 [node name="ComboColumn" type="VBoxContainer" parent="Button_Press/Control/Button_Combo" unique_id=724900001]
 unique_name_in_owner = true
@@ -152,7 +146,7 @@ offset_top = -497.0
 offset_right = 100.0
 offset_bottom = -31.0
 mouse_filter = 2
-theme_override_constants/separation = 12
+theme_override_constants/separation = 20
 
 [node name="Button_Combo4" parent="Button_Press/Control/Button_Combo/ComboColumn" unique_id=1373996340 instance=ExtResource("1_81cx4")]
 unique_name_in_owner = true
@@ -162,7 +156,6 @@ layout_mode = 2
 size_flags_horizontal = 4
 mouse_force_pass_scroll_events = false
 theme_override_font_sizes/font_size = 28
-text = "4"
 trigger_action = "ia_action_6"
 
 [node name="Button_Combo3" parent="Button_Press/Control/Button_Combo/ComboColumn" unique_id=852013040 instance=ExtResource("1_81cx4")]
@@ -173,7 +166,6 @@ layout_mode = 2
 size_flags_horizontal = 4
 mouse_force_pass_scroll_events = false
 theme_override_font_sizes/font_size = 28
-text = "3"
 trigger_action = "ia_action_5"
 
 [node name="Button_Combo2" parent="Button_Press/Control/Button_Combo/ComboColumn" unique_id=2066115093 instance=ExtResource("1_81cx4")]
@@ -184,7 +176,6 @@ layout_mode = 2
 size_flags_horizontal = 4
 mouse_force_pass_scroll_events = false
 theme_override_font_sizes/font_size = 28
-text = "2"
 trigger_action = "ia_action_4"
 
 [node name="Button_Combo1" parent="Button_Press/Control/Button_Combo/ComboColumn" unique_id=1787809682 instance=ExtResource("1_81cx4")]
@@ -196,7 +187,26 @@ size_flags_horizontal = 4
 mouse_force_pass_scroll_events = false
 theme_override_constants/icon_max_width = 25
 theme_override_font_sizes/font_size = 28
-text = "1"
 trigger_action = "ia_action_3"
+
+[node name="TextureRect_ToAlign" type="TextureRect" parent="Button_Press" unique_id=1598357337]
+unique_name_in_owner = true
+show_behind_parent = true
+material = ExtResource("9_ah7yu")
+custom_minimum_size = Vector2(254, 254)
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -127.0
+offset_top = -127.0
+offset_right = 127.0
+offset_bottom = 127.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = SubResource("GradientTexture1D_mrvwt")
 
 [connection signal="toggled" from="Button_Press/Control/Button_Combo" to="." method="_on_button_combo_toggled"]

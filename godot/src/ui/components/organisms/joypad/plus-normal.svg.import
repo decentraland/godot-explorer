@@ -12,7 +12,7 @@ dest_files=["res://.godot/imported/plus-normal.svg-67c09b91d1aa4c81b6302aa3dc24a
 
 [params]
 
-base_scale=1.0
+base_scale=3.0
 saturation=1.0
 color_map={}
 compress=true

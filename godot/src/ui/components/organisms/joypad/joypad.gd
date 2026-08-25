@@ -55,6 +55,16 @@ const PRIORITY_ORDER := [
 	"ia_action_6",
 ]
 
+# Overflow actions hidden in the DEFAULT layout, so the "+" combo shows 2 buttons out of the
+# box instead of 4 (HUD 2nd iteration). This is a joypad-presentation default that diverges from
+# the SDK "unlisted = shown" rule for these two only: a scene re-enables either by listing it
+# with hide=false in its PBTouchScreenControls.touch_inputs (see _apply_touch_controls). The
+# buttons still exist, so a scene can surface up to 4 again.
+const DEFAULT_HIDDEN: Dictionary = {
+	"ia_action_5": true,
+	"ia_action_6": true,
+}
+
 # Adaptive gamepad arc. The arc around the main button is, clockwise: the visible satellites
 # followed by the "+" overflow toggle as the LAST / topmost element. They reflow together
 # based on the number of visible arc elements, so the "+" always lands at the top when shown.
@@ -62,17 +72,19 @@ const PRIORITY_ORDER := [
 # Satellites anchor), slot 0 = lower-left (~9 o'clock) up to the last slot = top (~12).
 # Design source (Figma file skocZRe2lV9IjqV4rF6EYs): N=4 is the full arc (3 satellites + "+"),
 # from the "RightSideControls" HUD frame; the satellite-only counts come from the per-count
-# frames (3 -> 5:1141, 2 -> 3:1187, 1 -> 3:1274).
+# frames (3 -> 5:1141, 2 -> 3:1187, 1 -> 3:1274). The N=4 entry mirrors the authored offsets of
+# the arc nodes in joypad.tscn (Button_Interact / Button_Primary / Button_Secondary / Button_Combo);
+# keep the two in sync when nudging the default arc in the editor.
 const LAYOUTS := {
 	1: [Vector2(-226, -62)],
 	2: [Vector2(-226, -62), Vector2(-162, -200)],
 	3: [Vector2(-229, -57), Vector2(-188, -175), Vector2(-57, -219)],
 	4:
 	[
-		Vector2(-306, -100),
+		Vector2(-305, -98),
 		Vector2(-296, -209),
-		Vector2(-209, -289),
-		Vector2(-100, -302),
+		Vector2(-218, -290),
+		Vector2(-97, -304),
 	],
 }
 
@@ -114,6 +126,12 @@ var _quaternary_btn: Button
 
 
 func _ready() -> void:
+	# Editor-only alignment guide (a centered disc to line the buttons up against); it lives in
+	# the scene purely as a visual check and must never render at runtime.
+	var align_guide: Control = get_node_or_null("%TextureRect_ToAlign")
+	if align_guide != null:
+		align_guide.visible = false
+
 	for btn in _combo_action_buttons:
 		btn.touch_action_changed.connect(_on_combo_action_changed)
 	# Toggle the combo menu from raw touch so it opens with a second finger too
@@ -127,7 +145,7 @@ func _ready() -> void:
 	_set_attenuated_sound_for_buttons(self)
 	_apply_jump_icon(ICON_DOUBLE_JUMP)
 
-	_pointer_btn = $Button_Press/Control/Button_Jump
+	_pointer_btn = $Button_Press/Control/Button_Interact
 	_primary_btn = $Button_Press/Control/Button_Primary
 	_secondary_btn = $Button_Press/Control/Button_Secondary
 	_quaternary_btn = $Button_Press/Control/Button_Quaternary
@@ -138,7 +156,7 @@ func _ready() -> void:
 	_arc_slots = [_pointer_btn, _primary_btn, _secondary_btn, _quaternary_btn]
 	_combo_slots = [%Button_Combo1, %Button_Combo2, %Button_Combo3, %Button_Combo4]
 
-	_layout({}, {}, "")
+	_layout(DEFAULT_HIDDEN, {}, "")
 
 
 func _on_button_combo_gui_input(event: InputEvent) -> void:
@@ -288,9 +306,10 @@ func _on_combo_action_changed(pressed: bool) -> void:
 
 
 ## Applies PBTouchScreenControls (Global.touch_controls_*). No component (inactive) → the
-## default priority-stack layout. Active → the stack is recomputed from the `hide` denylist
-## and the `main_action` override (see _layout). The joypad governs its own visibility (shown
-## on desktop too), so this runs regardless of platform.
+## default priority-stack layout (with DEFAULT_HIDDEN applied, so the combo shows 2). Active →
+## the stack is recomputed from DEFAULT_HIDDEN plus the scene's `hide` denylist, with a listed
+## `hide=false` re-showing a default-hidden action, and the `main_action` override (see _layout).
+## The joypad governs its own visibility (shown on desktop too), so this runs regardless of platform.
 func _apply_touch_controls() -> void:
 	var active: bool = Global.touch_controls_active
 	var inputs: Array = Global.touch_controls_inputs
@@ -303,17 +322,20 @@ func _apply_touch_controls() -> void:
 	if not active:
 		if _tc_active_applied:
 			_tc_active_applied = false
-			_layout({}, {}, "")
+			_layout(DEFAULT_HIDDEN, {}, "")
 		return
 
 	_tc_active_applied = true
 
-	var hidden := {}
+	var hidden: Dictionary = DEFAULT_HIDDEN.duplicate()
 	var icons := {}  # action -> { "hash": String, "url": String }
 	for entry in inputs:
 		var action := String(entry.get("action", ""))
 		if bool(entry.get("hide", false)):
 			hidden[action] = true
+		else:
+			# Explicit show: a listed hide=false re-enables a default-hidden action (opt-in).
+			hidden.erase(action)
 		var custom_icon := SdkTouchControlsApplier.get_custom_icon_for_action(action)
 		if not custom_icon.is_empty():
 			icons[action] = custom_icon
@@ -407,11 +429,12 @@ func _assign_slots(visible: Array, icons: Dictionary) -> void:
 	# The combo column sits directly on top of the "+" toggle; collapsed unless open. Size it
 	# to its visible content (min size) so the buttons pack tightly with no overlap and no
 	# centering gap — the authored .tscn frame is a fixed box that would otherwise clip / float
-	# the buttons as their count changes.
+	# the buttons as their count changes. The 32 px lifts the first (bottom) combo button that
+	# far above the "+"; the inter-button gap is the column's `separation` (design: 20 px).
 	if _combo_column:
 		var col_size := _combo_column.get_combined_minimum_size()
 		_combo_column.position = Vector2(
-			(button_combo.size.x - col_size.x) / 2.0, -col_size.y - 8.0
+			(button_combo.size.x - col_size.x) / 2.0, -col_size.y - 32.0
 		)
 		_combo_column.size = col_size
 		_combo_column.visible = combo_opened and show_plus

@@ -1,4 +1,4 @@
-[gd_resource type="ShaderMaterial" load_steps=2 format=3 uid="uid://beinfjlq7dgke"]
+[gd_resource type="ShaderMaterial" format=3 uid="uid://beinfjlq7dgke"]
 
 [ext_resource type="Shader" uid="uid://ed0cprk8sc8m" path="res://shaders/joystick.gdshader" id="1_j862r"]
 

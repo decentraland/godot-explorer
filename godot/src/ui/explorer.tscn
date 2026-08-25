@@ -23,8 +23,8 @@
 [ext_resource type="PackedScene" uid="uid://dx873niilktrw" path="res://src/ui/components/organisms/warning_messages/warning_messages.tscn" id="23_bi432"]
 [ext_resource type="PackedScene" uid="uid://bectasdgy1btu" path="res://src/ui/pages/profile/profile_container.tscn" id="25_c5h7v"]
 [ext_resource type="PackedScene" uid="uid://75a0brb4fw2g" path="res://src/helpers_components/scene_music_changer.tscn" id="26_5hhk2"]
-[ext_resource type="Texture2D" uid="uid://bvy28sbaj0cx6" path="res://assets/ui/show_ui/show_ui_default.png" id="26_showdef"]
-[ext_resource type="Texture2D" uid="uid://wottdp11iqpc" path="res://assets/ui/show_ui/show_ui_pressed.png" id="27_showpr"]
+[ext_resource type="PackedScene" uid="uid://bdlssvxebe4kt" path="res://src/ui/components/atoms/buttons/hud_button/hud_button.tscn" id="26_hud"]
+[ext_resource type="Texture2D" uid="uid://chv1fooem0pg6" path="res://src/ui/components/atoms/buttons/hud_button/icons/hud-close.svg" id="27_close"]
 [ext_resource type="PackedScene" uid="uid://qbcqm5fskyho" path="res://src/ui/components/organisms/url_popup/url_popup.tscn" id="27_url_popup"]
 [ext_resource type="PackedScene" uid="uid://ks0sxu8dsf66" path="res://src/ui/components/organisms/jump_in_popup/jump_in_popup.tscn" id="28_jump_in_popup"]
 [ext_resource type="PackedScene" uid="uid://bycjwh7mskrsd" path="res://src/helpers_components/chat_handler.tscn" id="32_cq187"]
@@ -120,10 +120,10 @@ layout_mode = 1
 
 [node name="VirtualJoystick_Left" parent="UI" unique_id=858042680 instance=ExtResource("9_lxw33")]
 unique_name_in_owner = true
-editor_description = "Virtual joystick to control avatar movement. Direct UI child (full-screen travel); margin_control intentionally unset — it only applies when nested inside a safe-margin container."
+editor_description = "Virtual joystick to control avatar movement. Direct UI child (full-screen travel). margin_profile (hud_margins.tres) supplies the safe-area insets so the resting position (_joystick_default_position, safe-area-relative) adapts per device without constraining travel. A Resource ref is used (not a node path) so it survives editor re-saves."
 layout_mode = 1
 deadzone_size = 0.0
-_joystick_default_position = Vector2(300, 150)
+margin_profile = ExtResource("34_hudmg")
 
 [node name="Label_Crosshair" type="Label" parent="UI" unique_id=2000293560]
 unique_name_in_owner = true
@@ -235,6 +235,7 @@ layout_mode = 1
 
 [node name="PreviewHudPanel" parent="UI/SafeAreaHud/InteractableHUD" unique_id=1534114070 instance=ExtResource("35_prevhud")]
 unique_name_in_owner = true
+visible = false
 layout_mode = 1
 
 [node name="HBoxContainerLeftPanels" type="HBoxContainer" parent="UI/SafeAreaHud/InteractableHUD" unique_id=2005524203]
@@ -302,19 +303,15 @@ anchor_bottom = 0.0
 grow_horizontal = 1
 grow_vertical = 1
 
-[node name="Button_ShowUI" type="TextureButton" parent="UI/SafeAreaHud" unique_id=1612256067]
+[node name="Button_ShowUI" parent="UI/SafeAreaHud" unique_id=36862358 instance=ExtResource("26_hud")]
 unique_name_in_owner = true
-editor_description = "Restore affordance. Sibling of InteractableHUD inside SafeAreaHud: hide-UI hides InteractableHUD (the HUD content), NOT the whole SafeAreaHud, so this button survives and stays clickable over scene UI (after the pivot). EXPAND without FILL keeps it at custom_minimum_size, top-left of the safe area. Orb texture (glyph baked in); momentary — swaps to show_ui_pressed while held, then restores the HUD."
+editor_description = "Restore affordance (hide/show HUD). Momentary HudButton (SMALL, close/X icon). Sibling of InteractableHUD inside SafeAreaHud so it survives hide-UI and stays clickable over scene UI; EXPAND-without-FILL keeps it at the disc size, top-left of the safe area."
 visible = false
-custom_minimum_size = Vector2(57, 57)
 layout_mode = 2
 size_flags_horizontal = 2
 size_flags_vertical = 2
-focus_mode = 0
-texture_normal = ExtResource("26_showdef")
-texture_pressed = ExtResource("27_showpr")
-ignore_texture_size = true
-stretch_mode = 5
+icon = ExtResource("27_close")
+icon_normal = ExtResource("27_close")
 
 [node name="InteractableAreaDebug" type="ColorRect" parent="UI" unique_id=146097443]
 unique_name_in_owner = true
