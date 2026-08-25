@@ -56,6 +56,11 @@ func process_deep_link(url: String) -> void:
 
 	Global._apply_optimized_content_base_url(Global.deep_link_obj)
 
+	# Ad/referrer campaign token (#2670). Captured before any routing decision: on a cold
+	# start the link may also be what boots the app, and the token has to survive whichever
+	# branch below consumes the deeplink.
+	Global._capture_campaign_token(Global.deep_link_obj)
+
 	# `skip-gltf` toggle has to be set BEFORE any scene's GLTF_CONTAINER
 	# component dirty-set is processed by `update_gltf_container`. The
 	# bench runner's `_apply_deeplink_overrides` runs too late — by then

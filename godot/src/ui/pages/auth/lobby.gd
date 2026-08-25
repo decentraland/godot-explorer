@@ -280,13 +280,69 @@ func show_auth_email_screen():
 	show_panel(sign_in_with_email)
 
 
-func show_discover_ftue_screen():
+func show_discover_ftue_screen(campaign_resolution: Dictionary = {}):
 	current_screen_name = "DISCOVER_FTUE"
 	button_back.hide()
+	# Campaign first: the welcome copy and the CTA label are campaign-dependent.
+	ftue_screen.set_campaign(campaign_resolution)
 	if current_profile:
 		ftue_screen.set_username(current_profile.get_name())
 	show_panel(control_discover_ftue)
 	ftue_screen.load_places()
+
+
+## Entry point to the first-time experience, after the profile deploy.
+##
+## An install attributed to a campaign either boots straight into the scene the ad sold
+## (`bypass`) or renders the FTUE with that campaign's content (`ftue`). Anything that does
+## not resolve — no token, unknown/expired/consumed token, resolver unreachable, unusable
+## target — falls through to today's FTUE, which stays the default path, not a degraded one.
+func _async_start_ftue() -> void:
+	var resolution := await Global.campaigns.async_resolve_pending()
+	var campaign: Dictionary = resolution.get("campaign", {})
+
+	if campaign.is_empty():
+		show_discover_ftue_screen(resolution)
+		return
+
+	Global.campaigns.mark_consumed()
+
+	if String(campaign.get("mode", "")) == CampaignResolution.MODE_BYPASS:
+		if _try_boot_into_campaign_target(campaign, resolution):
+			return
+		# Unusable target: fall back to the FTUE rather than stranding the user.
+		resolution["fallback_reason"] = CampaignResolution.FALLBACK_UNKNOWN_TOKEN
+		resolution["campaign"] = {}
+
+	show_discover_ftue_screen(resolution)
+
+
+## Boots the explorer straight into the campaign target. Returns false when the target
+## cannot be turned into a destination, leaving the caller to render the FTUE.
+##
+## Routes through the shared cold-start deeplink path on purpose: _async_redirect_by_deep_link
+## applies the pre-boot private-world gate (#2569), and explorer.gd's get_params_from_cmd
+## already reads realm/location off deep_link_obj. Reproducing either here would fork two
+## behaviours that must stay identical.
+func _try_boot_into_campaign_target(campaign: Dictionary, resolution: Dictionary) -> bool:
+	var position_and_realm := CampaignResolution.target_position_and_realm(campaign)
+	if position_and_realm.is_empty():
+		push_warning("[CAMPAIGN] unusable target, falling back to FTUE: " + str(campaign))
+		return false
+
+	Global.metrics.track_screen_viewed(
+		"CAMPAIGN_BYPASS", JSON.stringify(CampaignResolution.metrics_context(resolution))
+	)
+
+	if CampaignResolution.is_world_target(campaign):
+		Global.deep_link_obj.realm = position_and_realm[1]
+		Global.deep_link_obj.location = Vector2i.MAX
+	else:
+		Global.deep_link_obj.realm = ""
+		Global.deep_link_obj.location = position_and_realm[0]
+
+	_async_redirect_by_deep_link()
+	return true
 
 
 func async_show_avatar_create_screen():
@@ -823,7 +879,7 @@ func _on_button_lets_go_pressed():
 		current_profile.set_avatar(avatar)
 		Global.player_identity.set_profile(current_profile)
 
-	show_discover_ftue_screen()
+	await _async_start_ftue()
 
 
 func _on_button_random_name_pressed():
