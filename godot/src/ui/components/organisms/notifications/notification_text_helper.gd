@@ -126,7 +126,7 @@ static func get_notification_title(notif_type: String, metadata: Dictionary) -> 
 				var color_hex = _get_avatar_color_hex(sender_name)
 
 				if has_claimed_name:
-					return TranslationKey.new("NOTIF_TITLE_WANTS_TO_BE_YOUR_FRIEND_2").format_named(
+					return TranslationKey.new("NOTIF_TITLE_WANTS_TO_BE_YOUR_FRIEND_2").format(
 						{"color": color_hex, "name": sender_name}
 					)
 
@@ -134,7 +134,7 @@ static func get_notification_title(notif_type: String, metadata: Dictionary) -> 
 				var short_address = (
 					address.substr(address.length() - 4) if address.length() > 4 else address
 				)
-				return TranslationKey.new("NOTIF_TITLE_WANTS_TO_BE_YOUR_FRIEND_3").format_named(
+				return TranslationKey.new("NOTIF_TITLE_WANTS_TO_BE_YOUR_FRIEND_3").format(
 					{"color": color_hex, "name": sender_name, "tag": short_address}
 				)
 			return TranslationServer.translate("NOTIF_TITLE_WANTS_TO_BE_YOUR_FRIEND")
@@ -149,20 +149,16 @@ static func get_notification_title(notif_type: String, metadata: Dictionary) -> 
 				var color_hex = _get_avatar_color_hex(sender_name)
 
 				if has_claimed_name:
-					return (
-						TranslationKey
-						. new("NOTIF_TITLE_ACCEPTED_YOUR_FRIEND_REQUEST_2")
-						. format_named({"color": color_hex, "name": sender_name})
+					return TranslationKey.new("NOTIF_TITLE_ACCEPTED_YOUR_FRIEND_REQUEST_2").format(
+						{"color": color_hex, "name": sender_name}
 					)
 
 				var address = sender.get("address", "")
 				var short_address = (
 					address.substr(address.length() - 4) if address.length() > 4 else address
 				)
-				return (
-					TranslationKey
-					. new("NOTIF_TITLE_ACCEPTED_YOUR_FRIEND_REQUEST_3")
-					. format_named({"color": color_hex, "name": sender_name, "tag": short_address})
+				return TranslationKey.new("NOTIF_TITLE_ACCEPTED_YOUR_FRIEND_REQUEST_3").format(
+					{"color": color_hex, "name": sender_name, "tag": short_address}
 				)
 			return TranslationServer.translate("NOTIF_TITLE_ACCEPTED_YOUR_FRIEND_REQUEST")
 
@@ -171,9 +167,8 @@ static func get_notification_title(notif_type: String, metadata: Dictionary) -> 
 			var community_name = metadata.get(
 				"communityName", TranslationServer.translate("NOTIF_TITLE_UNKNOWN_COMMUNITY")
 			)
-			return (
-				TranslationServer.translate("NOTIF_TITLE_YOUVE_BEEN_INVITED_TO_JOIN_THE")
-				% community_name
+			return TranslationServer.translate("NOTIF_TITLE_YOUVE_BEEN_INVITED_TO_JOIN_THE").format(
+				{"community": community_name}
 			)
 
 		"community_member_banned":
@@ -181,8 +176,9 @@ static func get_notification_title(notif_type: String, metadata: Dictionary) -> 
 				"communityName", TranslationServer.translate("NOTIF_TITLE_UNKNOWN_COMMUNITY")
 			)
 			return (
-				TranslationServer.translate("NOTIF_TITLE_YOUVE_BEEN_BANNED_FROM_THE_COMMUNITY")
-				% community_name
+				TranslationServer
+				. translate("NOTIF_TITLE_YOUVE_BEEN_BANNED_FROM_THE_COMMUNITY")
+				. format({"community": community_name})
 			)
 
 		"community_member_removed":
@@ -190,17 +186,17 @@ static func get_notification_title(notif_type: String, metadata: Dictionary) -> 
 				"communityName", TranslationServer.translate("NOTIF_TITLE_UNKNOWN_COMMUNITY")
 			)
 			return (
-				TranslationServer.translate("NOTIF_TITLE_YOUVE_BEEN_REMOVED_FROM_THE_COMMUNITY")
-				% community_name
+				TranslationServer
+				. translate("NOTIF_TITLE_YOUVE_BEEN_REMOVED_FROM_THE_COMMUNITY")
+				. format({"community": community_name})
 			)
 
 		"community_request_to_join_accepted":
 			var community_name = metadata.get(
 				"communityName", TranslationServer.translate("NOTIF_TITLE_UNKNOWN_COMMUNITY")
 			)
-			return (
-				TranslationServer.translate("NOTIF_TITLE_CONGRATS_YOURE_NOW_A_MEMBER_OF")
-				% community_name
+			return TranslationServer.translate("NOTIF_TITLE_CONGRATS_YOURE_NOW_A_MEMBER_OF").format(
+				{"community": community_name}
 			)
 
 		"community_user_request_to_join":
@@ -208,18 +204,16 @@ static func get_notification_title(notif_type: String, metadata: Dictionary) -> 
 			var community_name = metadata.get(
 				"communityName", TranslationServer.translate("NOTIF_TITLE_UNKNOWN_COMMUNITY")
 			)
-			return (
-				TranslationServer.translate("NOTIF_TITLE_WANTS_TO_JOIN_THE_COMMUNITY")
-				% [user_name, community_name]
+			return TranslationServer.translate("NOTIF_TITLE_WANTS_TO_JOIN_THE_COMMUNITY").format(
+				{"name": user_name, "community": community_name}
 			)
 
 		"community_deleted":
 			var community_name = metadata.get(
 				"communityName", TranslationServer.translate("NOTIF_TITLE_UNKNOWN_COMMUNITY")
 			)
-			return (
-				TranslationServer.translate("NOTIF_TITLE_THE_COMMUNITY_HAS_BEEN_DELETED")
-				% community_name
+			return TranslationServer.translate("NOTIF_TITLE_THE_COMMUNITY_HAS_BEEN_DELETED").format(
+				{"community": community_name}
 			)
 
 		"community_deleted_content_violation":
@@ -227,17 +221,17 @@ static func get_notification_title(notif_type: String, metadata: Dictionary) -> 
 				"communityName", TranslationServer.translate("NOTIF_TITLE_UNKNOWN_COMMUNITY")
 			)
 			return (
-				TranslationServer.translate("NOTIF_TITLE_THE_COMMUNITY_WAS_DELETED_FOR_VIOLATING")
-				% community_name
+				TranslationServer
+				. translate("NOTIF_TITLE_THE_COMMUNITY_WAS_DELETED_FOR_VIOLATING")
+				. format({"community": community_name})
 			)
 
 		"event_created":
 			var community_name = metadata.get(
 				"communityName", TranslationServer.translate("NOTIF_TITLE_UNKNOWN_COMMUNITY")
 			)
-			return (
-				TranslationServer.translate("NOTIF_TITLE_THE_COMMUNITY_HAS_ADDED_A_NEW")
-				% community_name
+			return TranslationServer.translate("NOTIF_TITLE_THE_COMMUNITY_HAS_ADDED_A_NEW").format(
+				{"community": community_name}
 			)
 
 		"community_renamed":
@@ -247,8 +241,8 @@ static func get_notification_title(notif_type: String, metadata: Dictionary) -> 
 			var new_name = metadata.get(
 				"newCommunityName", TranslationServer.translate("NOTIF_TITLE_UNKNOWN_COMMUNITY")
 			)
-			return (
-				TranslationServer.translate("NOTIF_TITLE_COMMUNITY_RENAMED") % [old_name, new_name]
+			return TranslationServer.translate("NOTIF_TITLE_COMMUNITY_RENAMED").format(
+				{"old_name": old_name, "new_name": new_name}
 			)
 
 		# Badge notifications - use metadata description

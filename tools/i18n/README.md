@@ -53,7 +53,36 @@ func show_toast(text: String) -> void            # give me finished text or data
 Passing a literal to the first is a **parse error**, caught by `cargo run -- check-gdscript`.
 `Array[TranslationKey]` works the same way. `TranslationKey` lives in
 `godot/src/config/translation_key.gd`; `raw()` gives the key for an auto-translating node, `text()`
-the translated string for a mode-2 one, plus `format()`, `format_named()`, `plural()` and `upper()`.
+the translated string for a mode-2 one, plus `format()`, `plural()` and `upper()`.
+
+## Placeholders are named, never positional
+
+`format_csv.py --check` **rejects any `%` specifier in the catalogue**. A positional argument
+pins the word order to English, and word order is the first thing a translation changes:
+`"I like %s %s"` cannot become *"me gustan las flores rojas"*, because the adjective has to move.
+Worse, the old parity check compared only an ordered list of conversion *types*, so a translator
+swapping two `%s` validated clean and rendered them in each other's slots — on
+`NOTIF_TITLE_COMMUNITY_RENAMED` that silently reverses the old and new names.
+
+Named fields may be reordered and repeated; the check compares the *set* of names, and fails on
+one dropped or invented. That matters because `String.format()` leaves an unfilled `{field}` in
+the output, so a typo is drawn on screen as literal braces.
+
+**Godot's `String.format()` substitutes text and nothing else.** There is no width, precision or
+padding syntax — `{n:.2f}` is emitted verbatim, not applied. Render the value first, in the
+caller, usually via `LocaleFormat`:
+
+```gdscript
+key.format({"seconds": "%02d" % secs, "size": LocaleFormat.number(mb, 1)})
+```
+
+Plurals follow the same split: `plural()` picks the grammatical form and returns it
+**unsubstituted**, and `format()` fills it. Selecting and filling are separate steps, so a count
+that needs locale-aware rendering no longer has to be smuggled through a second parameter:
+
+```gdscript
+TranslationKey.new("SOCIAL_MUTUAL_FRIENDS").plural(n).format({"friends": LocaleFormat.number(n)})
+```
 
 **Never concatenate a key with a literal.** `set_body(CONNECTION_LOST_BODY + " Try again.")`
 produces a string matching no key, so the lookup misses and the raw key is drawn on screen — that

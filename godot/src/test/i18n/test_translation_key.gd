@@ -7,7 +7,7 @@ extends SceneTree
 # key scanner has to notice. This test pins the runtime half of that contract:
 #   1. construction and raw() round-trip
 #   2. is_valid() accepts keys and rejects prose
-#   3. text()/format()/format_named()/upper() resolve through the catalogue
+#   3. text()/format()/format()/upper() resolve through the catalogue
 #   4. join() translates each piece separately (the concatenation fix)
 #   5. _to_string() is loud, so stray interpolation is visible in a log
 #
@@ -68,10 +68,13 @@ func _test_resolution() -> void:
 	var missing := TranslationKey.new("NO_SUCH_KEY_AT_ALL")
 	_expect_eq("unknown key falls back to itself", missing.text(), "NO_SUCH_KEY_AT_ALL")
 
-	# %-format and named format.
+	# Named format. Positional %-format is gone: it pins the word order to English, which is
+	# the first thing a translation changes, and format_csv.py now rejects a % specifier.
 	var unreachable := TranslationKey.new("TOAST_WORLD_UNREACHABLE_BODY")
 	_expect_eq(
-		"format() fills %s", unreachable.format("my-world"), "my-world could not be reached."
+		"format() fills a named field",
+		unreachable.format({"world": "my-world"}),
+		"my-world could not be reached."
 	)
 
 

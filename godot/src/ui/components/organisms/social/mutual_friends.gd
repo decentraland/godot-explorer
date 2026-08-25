@@ -28,7 +28,9 @@ func async_set_mutual_friends(address):
 		hide()
 	else:
 		var count: int = mutual_friends.size()
-		label.text = TranslationKey.new("SOCIAL_MUTUAL_FRIENDS").plural(count)
+		label.text = (TranslationKey.new("SOCIAL_MUTUAL_FRIENDS").plural(count).format(
+			{"friends": LocaleFormat.number(count)}
+		))
 		_clear_profile_pictures()
 		await _add_profile_pictures(mutual_friends)
 

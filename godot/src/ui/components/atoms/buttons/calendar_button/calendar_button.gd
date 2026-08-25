@@ -125,7 +125,7 @@ func _format_time_range(start_unix_sec: int, duration_ms: int) -> String:
 	var end_dt: Dictionary = Time.get_datetime_dict_from_unix_time(end_unix_sec)
 	var tz_str: String = _get_local_timezone_string()
 	# Named placeholders: a locale may put the timezone first, and "to" is not universal.
-	return TranslationKey.new("CALENDAR_TIME_RANGE").format_named(
+	return TranslationKey.new("CALENDAR_TIME_RANGE").format(
 		{
 			"start": LocaleFormat.time_of_day(start_dt.hour, start_dt.minute),
 			"end": LocaleFormat.time_of_day(end_dt.hour, end_dt.minute),
@@ -165,8 +165,8 @@ func add_event_to_calendar() -> void:
 	if not description_str.is_empty():
 		description_str += "\n\n"
 	description_str += "jump in: " + _build_jump_in_url(_event_location)
-	var event_location_str: String = (
-		tr("CALENDAR_EVENT_LOCATION") % [_event_location.x, _event_location.y]
+	var event_location_str: String = tr("CALENDAR_EVENT_LOCATION").format(
+		{"x": _event_location.x, "y": _event_location.y}
 	)
 	if DclAndroidPlugin.is_available():
 		DclAndroidPlugin.add_calendar_event(

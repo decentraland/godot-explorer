@@ -719,7 +719,9 @@ func _async_on_profile_changed(new_profile: DclUserProfile):
 		waiting_for_new_wallet = false
 		if profile_has_name():
 			# User has an existing profile: show Welcome Back screen
-			label_signed_as_name.set_text(tr("AUTH_SIGNED_IN_AS_NAME") % [new_profile.get_name()])
+			label_signed_as_name.set_text(
+				tr("AUTH_SIGNED_IN_AS_NAME").format({"name": new_profile.get_name()})
+			)
 			show_comeback_screen()
 			_show_avatar_preview()
 			Global.metrics.update_identity(

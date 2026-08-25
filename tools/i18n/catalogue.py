@@ -209,3 +209,15 @@ def dumps(catalogue):
 def format_specs(text):
     """Ordered conversion types, e.g. 'a %s b %d' -> ['s', 'd']."""
     return [m.group(1) for m in FORMAT_SPEC_RE.finditer(text) if m.group(1)]
+
+
+NAMED_FIELD_RE = re.compile(r"\{(\w+)\}")
+
+
+def named_fields(text):
+    """The set of `{field}` names, e.g. 'a {x} b {y} {x}' -> {'x', 'y'}.
+
+    A set, not a list: unlike a positional specifier a named field may be reordered freely,
+    and may legitimately appear more than once. Only the names have to agree.
+    """
+    return set(NAMED_FIELD_RE.findall(text))

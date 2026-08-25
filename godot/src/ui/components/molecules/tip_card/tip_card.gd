@@ -20,7 +20,7 @@ static var tip_card_format := TranslationKey.new("TIP_CARD_FORMAT")
 
 func _ready() -> void:
 	_current_index = randi() % tip_keys.size()
-	rich_text_label_tip.text = tip_card_format.format(tip_keys[_current_index].text())
+	rich_text_label_tip.text = tip_card_format.format({"tip": tip_keys[_current_index].text()})
 	timer.wait_time = tip_interval
 	timer.timeout.connect(_on_timer_timeout)
 	timer.start()
@@ -28,9 +28,9 @@ func _ready() -> void:
 
 func _on_timer_timeout() -> void:
 	_current_index = (_current_index + 1) % tip_keys.size()
-	rich_text_label_tip.text = tip_card_format.format(tip_keys[_current_index].text())
+	rich_text_label_tip.text = tip_card_format.format({"tip": tip_keys[_current_index].text()})
 
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_TRANSLATION_CHANGED and is_node_ready():
-		rich_text_label_tip.text = tip_card_format.format(tip_keys[_current_index].text())
+		rich_text_label_tip.text = tip_card_format.format({"tip": tip_keys[_current_index].text()})

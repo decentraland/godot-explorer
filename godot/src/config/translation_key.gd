@@ -66,28 +66,44 @@ func text() -> String:
 	return tr(key)
 
 
-## Translated, then %-formatted. Positional, so a translator cannot reorder the
-## arguments — prefer [method format_named] for more than one placeholder.
-func format(values) -> String:
-	return tr(key) % values
-
-
-## Translated, then filled by name, so a translator can reorder the placeholders.
-func format_named(values: Dictionary) -> String:
+## Translated, then filled by name.
+##
+## Named only: positional [code]%s[/code] pins the word order to English, and word order is the
+## first thing a translation changes. "I like %s %s" cannot become "las flores rojas" — the
+## adjective has to move. Named fields let the translator put them where the sentence needs
+## them, and format_csv.py rejects a [code]%[/code] specifier in the catalogue for that reason.
+##
+## Godot's [method String.format] substitutes text and nothing else: it has no width, precision
+## or padding syntax, and [code]{n:.2f}[/code] is emitted verbatim rather than applied. Anything
+## that needs rendering — decimals, grouping, zero padding — is rendered by the caller first,
+## usually through [LocaleFormat].
+## [codeblock]
+## key.format({"seconds": "%02d" % secs, "size": LocaleFormat.number(mb, 1)})
+## [/codeblock]
+## A field the string does not use is ignored; a field the string uses but the caller omits is
+## drawn as a literal [code]{name}[/code], which is why the parity check exists.
+func format(values: Dictionary) -> String:
 	return tr(key).format(values)
 
 
-## The plural form for [param count], with the count substituted.
+## The plural form for [param count], [b]unsubstituted[/b] — fill it with [method String.format].
 ##
-## The companion key is derived rather than passed: format_csv.py enforces that a plural
-## entry is named [code]<KEY>_PLURAL[/code], so there is nothing for a caller to get wrong.
-## Every plural entry takes exactly one [code]%d[/code], which the validator also checks
-## per form, so the substitution is safe.
+## Selecting the form and filling the placeholders are separate steps on purpose. Doing both at
+## once forced the count to be the substituted value too, so any number that needed
+## locale-aware formatting had to be smuggled in through a second parameter.
+## [codeblock]
+## TranslationKey.new("SOCIAL_MUTUAL_FRIENDS").plural(n).format({"friends": LocaleFormat.number(n)})
+## [/codeblock]
+## [param count] selects the grammatical form; what the reader sees is whatever the caller puts
+## in [code]{count}[/code], so the two can differ without a special case.
+##
+## The companion key is derived rather than passed: format_csv.py enforces that a plural entry
+## is named [code]<KEY>_PLURAL[/code], so there is nothing for a caller to get wrong.
 ##
 ## Note [code]auto_translate[/code] calls [code]tr()[/code] and never [code]tr_n()[/code],
 ## so a plural string can only ever be set from code — never left to a scene default.
 func plural(count: int) -> String:
-	return tr_n(key, key + PLURAL_SUFFIX, count) % count
+	return tr_n(key, key + PLURAL_SUFFIX, count)
 
 
 ## Translated and upper-cased, for the labels this project renders in caps.

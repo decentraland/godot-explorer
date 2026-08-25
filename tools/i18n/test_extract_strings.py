@@ -535,27 +535,33 @@ class TestCatalogue(ExtractorTestCase):
 
 
 class TestValidation(ExtractorTestCase):
-    def test_matching_format_specifiers_pass(self):
-        self.fx.csv("en", [("K", "sent to %s")])
-        self.fx.csv("es", [("K", "enviado a %s")])
+    def test_matching_named_fields_pass(self):
+        self.fx.csv("en", [("K", "sent to {email}")])
+        self.fx.csv("es", [("K", "enviado a {email}")])
         self.assertEqual(self.fx.translation_problems(), [])
 
-    def test_mismatched_format_specifier_is_reported(self):
+    def test_positional_specifier_is_rejected_outright(self):
+        # Was a parity check between locales; it is now a ban. A positional arg fixes the word
+        # order to English, and format_specs() compares only conversion *types*, so swapping
+        # two %s validated clean and rendered them in the wrong slots.
         self.fx.csv("en", [("K", "sent to %s")])
-        self.fx.csv("es", [("K", "enviado a %d")])
+        self.fx.csv("es", [("K", "enviado a %s")])
         problems = self.fx.translation_problems()
-        self.assertEqual(len(problems), 1)
-        self.assertIn("expects ['s'] but has ['d']", problems[0])
+        self.assertEqual(len(problems), 2, problems)
+        self.assertTrue(all("positional %s" in problem for problem in problems), problems)
 
-    def test_reordered_specifiers_are_reported(self):
-        self.fx.csv("en", [("K", "%s has %d")])
-        self.fx.csv("es", [("K", "%d tiene %s")])
-        self.assertEqual(len(self.fx.translation_problems()), 1)
+    def test_reordered_named_fields_pass(self):
+        # The reason for naming them at all.
+        self.fx.csv("en", [("K", "{who} has {count}")])
+        self.fx.csv("es", [("K", "{count} de {who}")])
+        self.assertEqual(self.fx.translation_problems(), [])
 
-    def test_dropped_specifier_is_reported(self):
-        self.fx.csv("en", [("K", "sent to %s")])
+    def test_dropped_named_field_is_reported(self):
+        self.fx.csv("en", [("K", "sent to {email}")])
         self.fx.csv("es", [("K", "enviado")])
-        self.assertEqual(len(self.fx.translation_problems()), 1)
+        problems = self.fx.translation_problems()
+        self.assertEqual(len(problems), 1, problems)
+        self.assertIn("missing {email}", problems[0])
 
     def test_literal_percent_is_not_a_specifier(self):
         self.fx.csv("en", [("K", "100%% done")])
@@ -564,7 +570,7 @@ class TestValidation(ExtractorTestCase):
 
     def test_empty_translation_is_allowed(self):
         # Untranslated falls back to English; that is the normal mid-translation state.
-        self.fx.csv("en", [("K", "sent to %s")])
+        self.fx.csv("en", [("K", "sent to {email}")])
         self.fx.csv("es", [("K", "")])
         self.assertEqual(self.fx.translation_problems(), [])
 
@@ -576,15 +582,17 @@ class TestValidation(ExtractorTestCase):
         self.assertIn("not in en.csv", problems[0])
 
     def test_plural_forms_are_each_checked(self):
-        self.fx.csv("en", [("K", ["%d friend", "%d friends"], "", "K_PLURAL")])
-        self.fx.csv("es", [("K", ["%d amigo", "amigos"], "", "K_PLURAL")])
+        # Per form, not per entry: a plural whose singular is right and whose plural dropped
+        # the field renders braces only for counts != 1.
+        self.fx.csv("en", [("K", ["{count} friend", "{count} friends"], "", "K_PLURAL")])
+        self.fx.csv("es", [("K", ["{count} amigo", "amigos"], "", "K_PLURAL")])
         problems = self.fx.translation_problems()
-        self.assertEqual(len(problems), 1)
+        self.assertEqual(len(problems), 1, problems)
         self.assertIn("[1]", problems[0])
 
     def test_wrong_plural_row_count_is_reported(self):
         # nplurals=2 but only one form: a dropped continuation row must not pass silently.
-        self.fx.csv("en", [("K", ["%d friend"], "", "K_PLURAL")])
+        self.fx.csv("en", [("K", ["{count} friend"], "", "K_PLURAL")])
         problems = self.fx.translation_problems()
         self.assertTrue(any("expected 2" in p for p in problems), problems)
 

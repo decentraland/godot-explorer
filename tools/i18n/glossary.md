@@ -60,9 +60,12 @@ beyond a bare `s` (`Wearables`, `Emotes`).
 
 ## Mechanical rules
 
-- **Placeholders are code.** `{name}`, `%s`, `%d` must survive verbatim. Named placeholders may
-  be **reordered** to suit the target grammar — that is why they are named — but never renamed,
-  never dropped, never added. `format_csv.py --check` fails the build on a mismatch.
+- **Placeholders are code, and always named.** `{name}` must survive verbatim. Reorder them
+  freely to suit the target grammar — that is exactly why they are named, and why positional
+  `%s` is rejected outright — but never rename, drop or invent one. `format_csv.py --check`
+  fails the build on both. An unfilled field renders as literal `{braces}` on screen.
+- **Padding and decimals are not the translator's problem.** `String.format()` has no format
+  spec, so any such rendering happens in the calling code before substitution.
 - **BBCode is markup.** `[b]`, `[color=#RRGGBB]`, `[/color]` pass through untouched; translate
   only the text between tags.
 - **Never translate the key**, only the locale column.

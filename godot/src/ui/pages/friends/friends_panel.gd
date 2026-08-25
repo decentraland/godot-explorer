@@ -307,19 +307,19 @@ func _update_dropdown_visibility() -> void:
 		v_box_container_request.hide()
 	else:
 		v_box_container_request.show()
-		request_button.text = tr("FRIENDS_REQUESTS_COUNT") % pending_count
+		request_button.text = tr("FRIENDS_REQUESTS_COUNT").format({"count": pending_count})
 
 	if online_count == 0:
 		v_box_container_online.hide()
 	else:
 		v_box_container_online.show()
-		online_button.text = tr("FRIENDS_ONLINE_COUNT") % online_count
+		online_button.text = tr("FRIENDS_ONLINE_COUNT").format({"count": online_count})
 
 	if offline_count == 0:
 		v_box_container_offline.hide()
 	else:
 		v_box_container_offline.show()
-		offline_button.text = tr("FRIENDS_OFFLINE_COUNT") % offline_count
+		offline_button.text = tr("FRIENDS_OFFLINE_COUNT").format({"count": offline_count})
 
 	# Show error message only if we got explicit errors from the lists
 	if has_service_error:
@@ -464,7 +464,7 @@ func _on_friend_connectivity_updated(address: String, status: int) -> void:
 func _send_friend_online_chat_message(friend_name: String) -> void:
 	var nickname_color = DclAvatar.get_nickname_color(friend_name)
 	var color_hex = nickname_color.to_html(false)
-	var message = tr("FRIENDS_NOW_ONLINE") % [color_hex, friend_name]
+	var message = tr("FRIENDS_NOW_ONLINE").format({"color": color_hex, "name": friend_name})
 	Global.on_chat_message.emit("system", message, Time.get_unix_time_from_system())
 
 

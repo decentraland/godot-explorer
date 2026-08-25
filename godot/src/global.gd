@@ -1419,7 +1419,7 @@ func async_teleport_to(parcel_position: Vector2i, new_realm: String) -> void:
 		explorer.hide_menu()
 		Global.on_chat_message.emit(
 			"system",
-			tr("CHAT_SYSTEM_TELEPORTED") % str(parcel_position),
+			tr("CHAT_SYSTEM_TELEPORTED").format({"location": str(parcel_position)}),
 			Time.get_unix_time_from_system()
 		)
 	else:
@@ -1442,7 +1442,7 @@ func async_join_world(world_realm: String) -> void:
 		explorer.loading_ui.enable_loading_screen(world_realm, "on_world")
 		Global.on_chat_message.emit(
 			"system",
-			tr("CHAT_SYSTEM_CHANGING_WORLD") % world_realm,
+			tr("CHAT_SYSTEM_CHANGING_WORLD").format({"world": world_realm}),
 			Time.get_unix_time_from_system()
 		)
 		Global.realm.async_set_realm(world_realm, true)
@@ -1650,7 +1650,7 @@ func _on_realm_change_failed_toast(new_realm_string: String, reason: String) -> 
 	# to this handler.
 	NotificationsManager.show_system_toast(
 		tr("TOAST_WORLD_UNAVAILABLE_TITLE"),
-		tr("TOAST_WORLD_UNAVAILABLE_BODY") % [new_realm_string, reason],
+		tr("TOAST_WORLD_UNAVAILABLE_BODY").format({"world": new_realm_string, "error": reason}),
 		"error",
 		"alert"
 	)

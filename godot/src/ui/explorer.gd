@@ -1752,7 +1752,7 @@ func _share_place():
 
 	if scene_title.length() == 0:
 		scene_title = "Decentraland"
-	msg = tr("SHARE_SCENE_MESSAGE") % [scene_title, url]
+	msg = tr("SHARE_SCENE_MESSAGE").format({"scene": scene_title, "link": url})
 	#+ "\n\n If you haven't installed the app yet -> https://install-mobile.decentraland.org 📲"
 
 	if Global.is_android():

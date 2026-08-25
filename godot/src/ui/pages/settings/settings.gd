@@ -449,15 +449,15 @@ func _update_current_cache_size():
 		float(Global.content_provider.get_cache_folder_total_size()) / 1000.0 / 1000.0
 	)
 	if current_size_mb >= 1024.0:
-		label_current_cache_value.text = (TranslationKey.new("SETTINGS_CACHE_SIZE_GB").format_named(
+		label_current_cache_value.text = (TranslationKey.new("SETTINGS_CACHE_SIZE_GB").format(
 			{"size": LocaleFormat.number(current_size_mb / 1024.0, 1)}
 		))
 	elif current_size_mb > 0.0:
-		label_current_cache_value.text = (TranslationKey.new("SETTINGS_CACHE_SIZE_MB").format_named(
+		label_current_cache_value.text = (TranslationKey.new("SETTINGS_CACHE_SIZE_MB").format(
 			{"size": LocaleFormat.number(current_size_mb, 1)}
 		))
 	else:
-		label_current_cache_value.text = (TranslationKey.new("SETTINGS_CACHE_SIZE_MB").format_named(
+		label_current_cache_value.text = (TranslationKey.new("SETTINGS_CACHE_SIZE_MB").format(
 			{"size": LocaleFormat.number(0, 1)}
 		))
 	progress_bar_current_cache_size.value = current_size_mb
@@ -1149,9 +1149,7 @@ func _populate_cache_size_items() -> void:
 	# CACHE_SIZE_MB rather than a second literal list, so the two cannot drift apart.
 	for i in CACHE_SIZE_MB.size():
 		dropdown_list_max_cache_size.add_item(
-			TranslationKey.new("SETTINGS_CACHE_SIZE_GB").format_named(
-				{"size": CACHE_SIZE_MB[i] / 1024}
-			),
+			TranslationKey.new("SETTINGS_CACHE_SIZE_GB").format({"size": CACHE_SIZE_MB[i] / 1024}),
 			i
 		)
 	if previous >= 0:

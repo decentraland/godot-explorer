@@ -62,18 +62,20 @@ func _format_timestamp(timestamp_ms: int) -> String:
 
 	if diff < 3600:
 		var minutes := int(diff / 60)
-		return TranslationKey.new("NOTIFICATION_MINUTES_AGO").plural(minutes)
+		return TranslationKey.new("NOTIFICATION_MINUTES_AGO").plural(minutes).format(
+			{"minutes": minutes}
+		)
 
 	if diff < 86400:
 		var hours := int(diff / 3600)
-		return TranslationKey.new("NOTIFICATION_HOURS_AGO").plural(hours)
+		return TranslationKey.new("NOTIFICATION_HOURS_AGO").plural(hours).format({"hours": hours})
 
 	if diff < 172800:  # Less than 2 days (86400 * 2)
 		return tr("NOTIFICATION_YESTERDAY")
 
 	# For all older notifications, show days ago
 	var days := int(diff / 86400)
-	return TranslationKey.new("NOTIFICATION_DAYS_AGO").plural(days)
+	return TranslationKey.new("NOTIFICATION_DAYS_AGO").plural(days).format({"days": days})
 
 
 func _input(event: InputEvent) -> void:

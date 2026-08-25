@@ -230,7 +230,12 @@ func _update_resend_label() -> void:
 		return
 	var minutes: int = _resend_cooldown_remaining / 60
 	var seconds: int = _resend_cooldown_remaining % 60
-	_label_resend.text = _resend_prefix.text() + _resend_link_dimmed.format([minutes, seconds])
+	# Zero padding is applied here: String.format substitutes text only, so "%02d" cannot
+	# live in the catalogue entry.
+	_label_resend.text = (
+		_resend_prefix.text()
+		+ _resend_link_dimmed.format({"minutes": minutes, "seconds": "%02d" % seconds})
+	)
 
 
 # gdlint:ignore = async-function-name
@@ -295,7 +300,7 @@ func open(email: String = "") -> void:
 	_set_verifying_children_visible(false)
 	if _label_subtitle:
 		if email != "":
-			_label_subtitle.text = tr("CODE_MODAL_OTP_SENT_TO") % email
+			_label_subtitle.text = tr("CODE_MODAL_OTP_SENT_TO").format({"email": email})
 		else:
 			_label_subtitle.text = tr("CODE_MODAL_SENT_TO")
 	_start_resend_cooldown()

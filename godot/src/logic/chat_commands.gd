@@ -26,7 +26,7 @@ func submit_message(message: String) -> void:
 				var dest_vector = _parse_coordinates(arg_string)
 				Global.on_chat_message.emit(
 					"system",
-					tr("CHAT_SYSTEM_TELEPORTED") % str(dest_vector),
+					tr("CHAT_SYSTEM_TELEPORTED").format({"location": str(dest_vector)}),
 					Time.get_unix_time_from_system()
 				)
 				_explorer._on_control_menu_jump_to(dest_vector)
@@ -100,7 +100,9 @@ func _parse_coordinates(coord_string: String) -> Vector2i:
 
 func _async_try_change_realm(realm_string: String, when: String) -> void:
 	Global.on_chat_message.emit(
-		"system", tr("CHAT_SYSTEM_CHANGING_REALM") % realm_string, Time.get_unix_time_from_system()
+		"system",
+		tr("CHAT_SYSTEM_CHANGING_REALM").format({"realm": realm_string}),
+		Time.get_unix_time_from_system()
 	)
 	Global.get_config().last_realm_joined = realm_string
 	_explorer.loading_ui.enable_loading_screen(realm_string, when)

@@ -20,7 +20,7 @@ func _ready() -> void:
 
 
 func set_username(display_name: String) -> void:
-	label_welcome.text = tr("FTUE_WELCOME") % display_name
+	label_welcome.text = tr("FTUE_WELCOME").format({"name": display_name})
 
 
 func load_places() -> void:

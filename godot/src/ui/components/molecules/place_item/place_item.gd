@@ -493,7 +493,9 @@ func set_download_warning(item_data: Dictionary) -> void:
 			parcel_count = 20
 		max_size_mb = mini(parcel_count * 15, 300)
 
-	download_warning.set_warning_text(tr("PLACE_DOWNLOAD_WARNING") % max_size_mb)
+	download_warning.set_warning_text(
+		tr("PLACE_DOWNLOAD_WARNING").format({"megabytes": max_size_mb})
+	)
 
 
 func set_data(item_data):
@@ -797,13 +799,13 @@ func _format_duration(duration: int) -> String:
 	var hours: int = duration / (1000 * 60 * 60)
 	if hours < 1:
 		var minutes: int = duration / (1000 * 60)
-		return TranslationKey.new("PLACE_DURATION_MIN").plural(minutes)
+		return TranslationKey.new("PLACE_DURATION_MIN").plural(minutes).format({"minutes": minutes})
 
 	if hours < 72:
-		return TranslationKey.new("PLACE_DURATION_HR").plural(hours)
+		return TranslationKey.new("PLACE_DURATION_HR").plural(hours).format({"hours": hours})
 
 	var days: int = hours / 24
-	return TranslationKey.new("PLACE_DURATION_DAY").plural(days)
+	return TranslationKey.new("PLACE_DURATION_DAY").plural(days).format({"days": days})
 
 
 func _on_event_pressed() -> void:
@@ -882,9 +884,9 @@ func _share_place_or_event() -> void:
 
 	var msg: String
 	if is_event:
-		msg = tr("SHARE_EVENT_MESSAGE") % [share_title, url]
+		msg = tr("SHARE_EVENT_MESSAGE").format({"event": share_title, "link": url})
 	else:
-		msg = tr("SHARE_PLACE_MESSAGE") % [share_title, url]
+		msg = tr("SHARE_PLACE_MESSAGE").format({"place": share_title, "link": url})
 
 	if Global.is_android():
 		DclAndroidPlugin.share_text(msg)

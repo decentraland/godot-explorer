@@ -110,7 +110,7 @@ static func short_date(unix_sec: int) -> String:
 	return (
 		TranslationKey
 		. new("DATE_SHORT_FORMAT")
-		. format_named(
+		. format(
 			{
 				"weekday": weekday_name(dt.get("weekday", 0)),
 				"month": month_name(dt.get("month", 1)),

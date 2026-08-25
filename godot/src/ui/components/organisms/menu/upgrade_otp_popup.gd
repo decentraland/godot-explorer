@@ -60,7 +60,7 @@ func _show_processing() -> void:
 
 func _show_code_step() -> void:
 	_hide_all()
-	label_code_subtitle.text = tr("OTP_CODE_SENT_TO") % _email
+	label_code_subtitle.text = tr("OTP_CODE_SENT_TO").format({"email": _email})
 	code_step.show()
 	line_edit_code.grab_focus()
 

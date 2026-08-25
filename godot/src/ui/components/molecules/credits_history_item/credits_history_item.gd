@@ -9,7 +9,9 @@ func setup(credits: int, is_refund: bool, timestamp: String) -> void:
 	label_date.text = timestamp
 	if is_refund:
 		label_detail.text = tr("CREDITS_HISTORY_ITEM_REFUND_DEDUCTION")
-		label_amount.text = tr("CREDITS_AMOUNT_DEDUCTED") % credits
+		label_amount.text = tr("CREDITS_AMOUNT_DEDUCTED").format({"amount": credits})
 	else:
-		label_detail.text = (TranslationKey.new("CREDITS_PURCHASED").plural(credits))
+		label_detail.text = (TranslationKey.new("CREDITS_PURCHASED").plural(credits).format(
+			{"credits": LocaleFormat.number(credits)}
+		))
 		label_amount.text = str(credits)

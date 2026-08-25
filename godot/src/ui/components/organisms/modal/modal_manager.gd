@@ -279,7 +279,7 @@ func async_show_world_modal(world_name: String) -> void:
 		printerr("World not found or error: ", world_name, " ", result.get_error())
 		NotificationsManager.show_system_toast(
 			tr("TOAST_WORLD_NOT_FOUND_TITLE"),
-			tr("TOAST_WORLD_UNREACHABLE_BODY") % world_name,
+			tr("TOAST_WORLD_UNREACHABLE_BODY").format({"world": world_name}),
 			"error",
 			"alert"
 		)
@@ -290,7 +290,7 @@ func async_show_world_modal(world_name: String) -> void:
 		printerr("World does not exist: ", world_name)
 		NotificationsManager.show_system_toast(
 			tr("TOAST_WORLD_NOT_FOUND_TITLE"),
-			tr("TOAST_WORLD_NOT_EXIST_BODY") % world_name,
+			tr("TOAST_WORLD_NOT_EXIST_BODY").format({"world": world_name}),
 			"error",
 			"alert"
 		)
@@ -451,7 +451,9 @@ func async_show_private_world_modal(world_name: String) -> void:
 	current_modal.blocker = true
 	# tr() first: private_world_title is the KEY, which has no %s — the placeholder lives in
 	# the catalogue value ("%s is private"). Formatting the key produced a broken title.
-	current_modal.set_title_text(private_world_title.format(world_name.trim_suffix(".dcl.eth")))
+	current_modal.set_title_text(
+		private_world_title.format({"world": world_name.trim_suffix(".dcl.eth")})
+	)
 	current_modal.set_body(private_world_body)
 	current_modal.set_primary_button_text(private_world_primary)
 	current_modal.show_icon(Modal.MODAL_BLOCK_ICON)

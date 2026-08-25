@@ -134,20 +134,20 @@ func _format_timestamp(timestamp: int) -> String:
 	# Less than 1 hour: IN XX MINUTES
 	if hours_diff < 1:
 		var mins := int(minutes_diff)
-		return TranslationKey.new("EVENT_PILL_IN_MIN").plural(mins)
+		return TranslationKey.new("EVENT_PILL_IN_MIN").plural(mins).format({"minutes": mins})
 
 	# Less than 48 hours: IN XX HOURS
 	if hours_diff < 48:
 		var hrs := int(hours_diff)
-		return TranslationKey.new("EVENT_PILL_IN_HR").plural(hrs)
+		return TranslationKey.new("EVENT_PILL_IN_HR").plural(hrs).format({"hours": hrs})
 
 	# 7 days or less: IN X DAYS
 	if days_diff <= 7:
 		var days := int(days_diff)
-		return TranslationKey.new("EVENT_PILL_IN_DAY").plural(days)
+		return TranslationKey.new("EVENT_PILL_IN_DAY").plural(days).format({"days": days})
 
 	# More than 7 days: date format e.g. SEP 31. Month order is locale-dependent, so it is a key.
 	var time_dict = Time.get_datetime_dict_from_unix_time(timestamp)
-	return TranslationKey.new("EVENT_PILL_DATE").format_named(
+	return TranslationKey.new("EVENT_PILL_DATE").format(
 		{"month": LocaleFormat.month_name(time_dict.month).to_upper(), "day": time_dict.day}
 	)

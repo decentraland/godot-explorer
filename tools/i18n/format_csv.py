@@ -155,6 +155,25 @@ def validate(locale_dir=None, sources=None):
                             % (name, entry.key, index, label)
                         )
 
+            # Positional specifiers are banned. "%s likes %s red flowers" pins the word order
+            # to English, and word order is the first thing a translation changes — Spanish
+            # needs the adjective after the noun. format_specs() only compares an ordered list
+            # of conversion *types*, so two same-type args swapped by a translator validate
+            # clean and silently render in the wrong slots. Named fields cannot be misordered.
+            for index, form in enumerate(entry.forms):
+                specs = cat.format_specs(form)
+                if specs:
+                    problems.append(
+                        "%s: %r%s uses positional %s; use a named {field} instead and render "
+                        "any padding or decimals in the caller"
+                        % (
+                            name,
+                            entry.key,
+                            "[%d]" % index if len(entry.forms) > 1 else "",
+                            ", ".join("%" + spec for spec in specs),
+                        )
+                    )
+
             expected_forms = nplurals if entry.is_plural and nplurals else 1
             if len(entry.forms) != expected_forms:
                 problems.append(
@@ -174,16 +193,25 @@ def validate(locale_dir=None, sources=None):
                 if not form:
                     continue  # untranslated: falls back to English, which is the normal state
                 ref_form = ref.forms[index] if index < len(ref.forms) else ref.text
-                want, got = cat.format_specs(ref_form), cat.format_specs(form)
+                # Names, not order: a translation is free to move a field, and to repeat one.
+                # What it must not do is drop or invent one — String.format() leaves an
+                # unfilled {field} in the output, so a typo is drawn on screen as braces.
+                want, got = cat.named_fields(ref_form), cat.named_fields(form)
                 if want != got:
+                    missing = sorted(want - got)
+                    extra = sorted(got - want)
+                    detail = []
+                    if missing:
+                        detail.append("missing " + ", ".join("{%s}" % f for f in missing))
+                    if extra:
+                        detail.append("unknown " + ", ".join("{%s}" % f for f in extra))
                     problems.append(
-                        "%s: %r%s expects %s but has %s"
+                        "%s: %r%s %s"
                         % (
                             name,
                             entry.key,
                             "[%d]" % index if len(entry.forms) > 1 else "",
-                            want or "no format specifiers",
-                            got or "none",
+                            "; ".join(detail),
                         )
                     )
 
