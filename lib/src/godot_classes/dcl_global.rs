@@ -272,12 +272,9 @@ pub struct DclGlobal {
 
     // On-screen touch controls - set by scenes via PBTouchScreenControls on the ROOT entity.
     // `touch_controls_active` is true while the component is present. `touch_controls_inputs`
-    // is a list of per-button overrides (each a dictionary {action, hide, icon}); buttons not
-    // listed keep their default. That default is "shown" for most, but the joypad hides the two
-    // overflow actions ia_action_5 / ia_action_6 (the "3" / "4" combo buttons) by default so the
-    // "+" combo shows 2, not 4 — a scene re-shows either by listing it with hide=false (see
-    // joypad.gd DEFAULT_HIDDEN). `touch_controls_main_action` is the godot action name for the
-    // large central button (empty = keep default jump).
+    // is a denylist of per-button overrides (each a dictionary {action, hide, icon}); buttons
+    // not listed keep their default (shown). `touch_controls_main_action` is the godot action
+    // name for the large central button (empty = keep default jump).
     #[var]
     pub touch_controls_active: bool,
     #[var]

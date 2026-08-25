@@ -55,16 +55,6 @@ const PRIORITY_ORDER := [
 	"ia_action_6",
 ]
 
-# Overflow actions hidden in the DEFAULT layout, so the "+" combo shows 2 buttons out of the
-# box instead of 4 (HUD 2nd iteration). This is a joypad-presentation default that diverges from
-# the SDK "unlisted = shown" rule for these two only: a scene re-enables either by listing it
-# with hide=false in its PBTouchScreenControls.touch_inputs (see _apply_touch_controls). The
-# buttons still exist, so a scene can surface up to 4 again.
-const DEFAULT_HIDDEN: Dictionary = {
-	"ia_action_5": true,
-	"ia_action_6": true,
-}
-
 # Adaptive gamepad arc. The arc around the main button is, clockwise: the visible satellites
 # followed by the "+" overflow toggle as the LAST / topmost element. They reflow together
 # based on the number of visible arc elements, so the "+" always lands at the top when shown.
@@ -156,7 +146,7 @@ func _ready() -> void:
 	_arc_slots = [_pointer_btn, _primary_btn, _secondary_btn, _quaternary_btn]
 	_combo_slots = [%Button_Combo1, %Button_Combo2, %Button_Combo3, %Button_Combo4]
 
-	_layout(DEFAULT_HIDDEN, {}, "")
+	_layout({}, {}, "")
 
 
 func _on_button_combo_gui_input(event: InputEvent) -> void:
@@ -306,10 +296,9 @@ func _on_combo_action_changed(pressed: bool) -> void:
 
 
 ## Applies PBTouchScreenControls (Global.touch_controls_*). No component (inactive) → the
-## default priority-stack layout (with DEFAULT_HIDDEN applied, so the combo shows 2). Active →
-## the stack is recomputed from DEFAULT_HIDDEN plus the scene's `hide` denylist, with a listed
-## `hide=false` re-showing a default-hidden action, and the `main_action` override (see _layout).
-## The joypad governs its own visibility (shown on desktop too), so this runs regardless of platform.
+## default priority-stack layout. Active → the stack is recomputed from the `hide` denylist
+## and the `main_action` override (see _layout). The joypad governs its own visibility (shown
+## on desktop too), so this runs regardless of platform.
 func _apply_touch_controls() -> void:
 	var active: bool = Global.touch_controls_active
 	var inputs: Array = Global.touch_controls_inputs
@@ -322,20 +311,17 @@ func _apply_touch_controls() -> void:
 	if not active:
 		if _tc_active_applied:
 			_tc_active_applied = false
-			_layout(DEFAULT_HIDDEN, {}, "")
+			_layout({}, {}, "")
 		return
 
 	_tc_active_applied = true
 
-	var hidden: Dictionary = DEFAULT_HIDDEN.duplicate()
+	var hidden := {}
 	var icons := {}  # action -> { "hash": String, "url": String }
 	for entry in inputs:
 		var action := String(entry.get("action", ""))
 		if bool(entry.get("hide", false)):
 			hidden[action] = true
-		else:
-			# Explicit show: a listed hide=false re-enables a default-hidden action (opt-in).
-			hidden.erase(action)
 		var custom_icon := SdkTouchControlsApplier.get_custom_icon_for_action(action)
 		if not custom_icon.is_empty():
 			icons[action] = custom_icon
