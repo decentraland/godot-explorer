@@ -1246,11 +1246,22 @@ func _on_preview_scene_update(scene_id: String) -> void:
 	reload_scene(scene_id)
 
 
-## A single .glb/.gltf changed on the preview server. Swaps just that model in
-## place, so the rest of the scene keeps its state.
+## A single .glb changed on the preview server. Swaps just that model in place,
+## so the rest of the scene keeps its state.
 ##
 ## Falls back to a full (loading-screen-free) reload whenever the swap can't be
-## done precisely: unknown scene, non-model file, or no container using that src.
+## done precisely: unknown scene, non-swappable file, or no container using that
+## src.
+##
+## Only .glb is swapped, even though the server reports .gltf too. A .glb embeds
+## its buffers and textures; a .gltf is JSON pointing at sibling .bin/texture
+## files that the importer resolves through the scene's content mapping. Those
+## siblings are not models, so they get no updateModel of their own, and the
+## server's shared debounce usually drops their events entirely — leaving the
+## mapping without them. Swapping the .gltf alone then either fails outright
+## ("There are some missing dependencies in the gltf") or, when the new model
+## reuses the old filenames, rebuilds it from stale cached buffers. Only the full
+## reload refetches the scene definition, which is what repopulates the mapping.
 ##
 ## `_hash` is unused on purpose — see the comment below.
 func async_on_preview_model_update(
@@ -1258,9 +1269,8 @@ func async_on_preview_model_update(
 ) -> void:
 	var scene = loaded_scenes.get(scene_id)
 	var lower_src := src.to_lower()
-	var is_model := lower_src.ends_with(".glb") or lower_src.ends_with(".gltf")
 
-	if scene == null or not is_model:
+	if scene == null or not lower_src.ends_with(".glb"):
 		_on_preview_scene_update(scene_id)
 		return
 
