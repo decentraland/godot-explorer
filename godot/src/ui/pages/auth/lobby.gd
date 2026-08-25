@@ -305,16 +305,19 @@ func _async_start_ftue() -> void:
 		show_discover_ftue_screen(resolution)
 		return
 
-	Global.campaigns.mark_consumed()
-
 	if String(campaign.get("mode", "")) == CampaignResolution.MODE_BYPASS:
 		if _try_boot_into_campaign_target(campaign, resolution):
 			return
-		# Unusable target: fall back to the FTUE rather than stranding the user.
-		resolution["fallback_reason"] = CampaignResolution.FALLBACK_UNKNOWN_TOKEN
+		# Unusable target: fall back to the FTUE rather than stranding the user, and say so
+		# rather than reporting it as a token the server did not know.
+		resolution["fallback_reason"] = CampaignResolution.FALLBACK_UNUSABLE_TARGET
 		resolution["campaign"] = {}
 
 	show_discover_ftue_screen(resolution)
+	# Marked only once the screen the campaign paid for is actually up. Consuming before
+	# rendering means an app kill in between burns the campaign for good.
+	if not campaign.is_empty():
+		Global.campaigns.mark_consumed()
 
 
 ## Boots the explorer straight into the campaign target. Returns false when the target
@@ -333,6 +336,8 @@ func _try_boot_into_campaign_target(campaign: Dictionary, resolution: Dictionary
 	Global.metrics.track_screen_viewed(
 		"CAMPAIGN_BYPASS", JSON.stringify(CampaignResolution.metrics_context(resolution))
 	)
+	# The boot is committed from here on, so the campaign is spent.
+	Global.campaigns.mark_consumed()
 
 	if CampaignResolution.is_world_target(campaign):
 		Global.deep_link_obj.realm = position_and_realm[1]

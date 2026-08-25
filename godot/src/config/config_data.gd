@@ -193,16 +193,14 @@ var install_referrer_sent: bool = false
 # install carried no campaign.
 var campaign_token: String = ""
 
-# Unix timestamp the token was attributed. For the deeplink path this is capture time; the
-# install-referrer path passes the install timestamp instead, so a reinstall months later
-# (the referrer survives 90 days) cannot replay a dead campaign.
+# Unix timestamp the token was attributed. The deeplink path — the only one wired today —
+# records capture time. The freshness bound exists for the install-referrer path that will
+# feed this next: the referrer survives 90 days and only changes on reinstall, so without it
+# a reinstall months later would replay a dead campaign.
 var campaign_token_captured_at: int = 0
 
 # One campaign per install: set once a launch has acted on the token.
 var campaign_consumed: bool = false
-
-# Last-known-good campaign map, so a resolve can answer before the network does.
-var campaigns_cache: String = ""
 
 # One-shot flag for the Firebase `first_move_in_world` event (set once the user's first real
 # horizontal movement has been detected post-loading_finished, persisted across sessions).
@@ -525,10 +523,6 @@ func load_from_settings_file():
 		"user", "campaign_consumed", data_default.campaign_consumed
 	)
 
-	self.campaigns_cache = settings_file.get_value(
-		"user", "campaigns_cache", data_default.campaigns_cache
-	)
-
 	self.first_move_in_world_sent = settings_file.get_value(
 		"user", "first_move_in_world_sent", data_default.first_move_in_world_sent
 	)
@@ -618,7 +612,6 @@ func save_to_settings_file():
 		"user", "campaign_token_captured_at", self.campaign_token_captured_at
 	)
 	new_settings_file.set_value("user", "campaign_consumed", self.campaign_consumed)
-	new_settings_file.set_value("user", "campaigns_cache", self.campaigns_cache)
 	new_settings_file.set_value("user", "first_move_in_world_sent", self.first_move_in_world_sent)
 	new_settings_file.set_value(
 		"user", "local_assets_cache_version", self.local_assets_cache_version

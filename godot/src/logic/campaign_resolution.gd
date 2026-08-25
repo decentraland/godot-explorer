@@ -21,6 +21,8 @@ const FALLBACK_UNKNOWN_TOKEN := "unknown_token"
 const FALLBACK_EXPIRED_TOKEN := "expired_token"
 const FALLBACK_ALREADY_CONSUMED := "already_consumed"
 const FALLBACK_RESOLVER_UNAVAILABLE := "resolver_unavailable"
+## The campaign resolved but its target cannot be turned into a destination.
+const FALLBACK_UNUSABLE_TARGET := "unusable_target"
 
 
 ## Extracts the campaign map from the mobile-bff response:

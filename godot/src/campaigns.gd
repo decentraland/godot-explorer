@@ -9,10 +9,13 @@ extends Node
 ## FTUE hangs off. The token is captured at boot and resolved here, against the map served
 ## by the mobile-bff, into either a personalized FTUE or a direct boot into the target.
 ##
-## Same fetch shape as feature_flags.gd: fire-and-forget on _ready, raced against a
-## timeout, fail-open. The difference is the cache — the FTUE only ever runs on a first
-## launch, when there is no cached map yet, so a live map matters here and callers use
-## async_resolve_pending() to give the in-flight fetch a bounded chance to land.
+## Same fetch shape as feature_flags.gd: fire-and-forget on _ready, raced against a timeout,
+## fail-open. Unlike the flags there is deliberately NO disk cache: the window that decides
+## whether a campaign is still live is evaluated server-side, so a cached map is a map that
+## can resurrect a campaign the server has already retired — and the payload carries no end
+## date for the client to re-check locally. The FTUE only ever runs on a first launch, where
+## a cache is empty by definition, so it would buy almost nothing for that risk. Callers use
+## async_resolve_pending(), which gives the in-flight fetch a bounded chance to land.
 ##
 ## Every failure path (no token, unknown token, expired token, already consumed, resolver
 ## unreachable) resolves to an empty campaign, which callers render as today's FTUE.
@@ -32,11 +35,12 @@ const TOKEN_MAX_AGE_SECONDS := 7 * 86400
 
 var _campaigns: Dictionary = {}
 var _loaded := false
+# Whether the fetch actually came back. Separate from `_loaded`, which only says the attempt
+# finished: a failed fetch must resolve as "resolver unavailable", not as "unknown token".
+var _fetch_ok := false
 
 
 func _ready() -> void:
-	# Last-known-good map first, so a resolve can answer before the network does.
-	_campaigns = _parse_cache(Global.get_config().campaigns_cache)
 	_async_load.call_deferred()
 
 
@@ -77,7 +81,7 @@ func async_resolve_pending() -> Dictionary:
 	if not _loaded:
 		await _async_wait_for_load()
 
-	if not _loaded and _campaigns.is_empty():
+	if not _fetch_ok:
 		return _fallback(token, CampaignResolution.FALLBACK_RESOLVER_UNAVAILABLE)
 
 	var campaign := resolve(token)
@@ -134,29 +138,13 @@ func _async_load() -> void:
 
 	var result = await PromiseUtils.async_race([http_fn, timeout_fn])
 	if result is PromiseError:
-		# Expected on offline/slow cold starts — the cached map (if any) stays in place
-		# and an unresolved token just renders today's FTUE, so this is not error-level.
-		push_warning("[Campaigns] fetch failed (keeping cache): " + str(result.get_error()))
+		# Expected on offline/slow cold starts. The launch simply gets today's FTUE, so this
+		# is not error-level (Sentry quota).
+		push_warning("[Campaigns] fetch failed: " + str(result.get_error()))
 	else:
-		var fetched := CampaignResolution.parse_response(result.get_string_response_as_json())
-		_campaigns = fetched
-		_store_cache(fetched)
-		print("[Campaigns] loaded: ", fetched.keys())
+		_campaigns = CampaignResolution.parse_response(result.get_string_response_as_json())
+		_fetch_ok = true
+		print("[Campaigns] loaded: ", _campaigns.keys())
 
 	_loaded = true
 	campaigns_loaded.emit()
-
-
-func _store_cache(campaigns: Dictionary) -> void:
-	var config := Global.get_config()
-	config.campaigns_cache = JSON.stringify(campaigns)
-	config.save_to_settings_file()
-
-
-func _parse_cache(raw: String) -> Dictionary:
-	if raw.is_empty():
-		return {}
-	var parsed = JSON.parse_string(raw)
-	if typeof(parsed) != TYPE_DICTIONARY:
-		return {}
-	return parsed

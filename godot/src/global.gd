@@ -369,6 +369,10 @@ func _apply_optimized_content_base_url(obj: DclParseDeepLink) -> void:
 ##
 ## First capture wins and is never overwritten: an install has exactly one campaign, and a
 ## later in-session deeplink must not repaint it.
+##
+## `occurred_at` overrides the recorded attribution time. No caller passes it yet — it is the
+## seam for the install-referrer path, which must record the install timestamp rather than
+## the moment the app happened to read it.
 func _capture_campaign_token(obj: DclParseDeepLink, occurred_at: int = 0) -> void:
 	var token: String = String(obj.params.get("c", "")).strip_edges()
 	if token.is_empty():

@@ -64,7 +64,7 @@ func _get_subtitle() -> String:
 # gdlint:ignore = async-function-name
 func _async_load_campaign_places(place_ids: Array) -> void:
 	var places := await FeaturedDataProvider.async_fetch_places_by_ids(place_ids)
-	if not is_instance_valid(self):
+	if not NodeGuard.is_alive(self, "FtueScreen._async_load_campaign_places"):
 		return
 	if places.is_empty():
 		# The curated set resolved to nothing — the campaign copy still applies, but the
