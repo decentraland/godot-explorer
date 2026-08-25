@@ -35,9 +35,12 @@ func _ready():
 	button_emotes.set_meta("attenuated_sound", true)
 	# Toggle the wheel from raw touch so a second finger opens it while the joystick is held
 	# (Godot only synthesizes a mouse event from the primary touch). button_mask = 0 routes all
-	# activation through _on_button_emotes_gui_input, covering both fingers + desktop mouse.
+	# activation through _on_button_emotes_gui_input, covering both fingers (desktop clicks arrive
+	# as emulated InputEventScreenTouch). visibility_changed clears a stuck press if the button is
+	# hidden mid-touch.
 	button_emotes.button_mask = 0
 	button_emotes.gui_input.connect(_on_button_emotes_gui_input)
+	button_emotes.visibility_changed.connect(_on_button_emotes_visibility_changed)
 	control_wheel.hide()
 	# Clone the template item 9 more times (10 total) and fan them 36° apart. The clone
 	# copies %EmoteWheelItem1's scene-unique-name flag, so clear it to avoid ambiguous %.
@@ -166,6 +169,8 @@ func _on_button_emotes_gui_input(event: InputEvent) -> void:
 	# finger index and drive button_down/up + the open/close toggle by hand — button_mask = 0 stops
 	# the base Button from doing it (it's mouse-only, so blind to the second finger). Emitting
 	# button_down/up flips HudButton's pressed orb; flipping button_pressed opens/closes the wheel.
+	# Touch-only, like ButtonTouchAction: on desktop `emulate_touch_from_mouse` (project.godot) turns
+	# clicks into InputEventScreenTouch, so the mouse is covered here without a separate branch.
 	if event is InputEventScreenTouch:
 		if event.pressed:
 			if _emote_touch_index == -1:
@@ -177,20 +182,14 @@ func _on_button_emotes_gui_input(event: InputEvent) -> void:
 			_emote_touch_index = -1
 			button_emotes.button_up.emit()
 			button_emotes.accept_event()
-	elif (
-		event is InputEventMouseButton
-		and event.button_index == MOUSE_BUTTON_LEFT
-		and not DisplayServer.is_touchscreen_available()
-	):
-		# Desktop fallback (no touchscreen): mirror the same down/up so testing works with a mouse.
-		# Guarded by is_touchscreen_available so the mouse Godot synthesizes from the primary touch
-		# never runs on mobile (that would double-drive the state).
-		if event.pressed:
-			button_emotes.button_down.emit()
-			button_emotes.button_pressed = not button_emotes.button_pressed
-		else:
-			button_emotes.button_up.emit()
-		button_emotes.accept_event()
+
+
+func _on_button_emotes_visibility_changed() -> void:
+	# If the button is hidden mid-press (hide-UI, orientation change, teardown) the release touch
+	# never arrives — release the owned finger and settle the orb so it doesn't stay stuck pressed.
+	if _emote_touch_index != -1 and not button_emotes.is_visible_in_tree():
+		_emote_touch_index = -1
+		button_emotes.button_up.emit()
 
 
 func _on_button_toggled(toggled_on: bool) -> void:
