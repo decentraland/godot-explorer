@@ -2,9 +2,9 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://53y0kswva0qr"
-path.bptc="res://.godot/imported/orb_hold.png-8104777b39409ecfc99243e9de58082d.bptc.ctex"
-path.astc="res://.godot/imported/orb_hold.png-8104777b39409ecfc99243e9de58082d.astc.ctex"
+uid="uid://c8jpdutgdubrt"
+path.bptc="res://.godot/imported/orb-hold.png-87efc2644062386c03d382f228a9ad61.bptc.ctex"
+path.astc="res://.godot/imported/orb-hold.png-87efc2644062386c03d382f228a9ad61.astc.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
@@ -12,8 +12,8 @@ metadata={
 
 [deps]
 
-source_file="res://src/ui/components/atoms/buttons/button_touch_action/orb_hold.png"
-dest_files=["res://.godot/imported/orb_hold.png-8104777b39409ecfc99243e9de58082d.bptc.ctex", "res://.godot/imported/orb_hold.png-8104777b39409ecfc99243e9de58082d.astc.ctex"]
+source_file="res://src/ui/components/atoms/buttons/button_touch_action/orb-hold.png"
+dest_files=["res://.godot/imported/orb-hold.png-87efc2644062386c03d382f228a9ad61.bptc.ctex", "res://.godot/imported/orb-hold.png-87efc2644062386c03d382f228a9ad61.astc.ctex"]
 
 [params]
 

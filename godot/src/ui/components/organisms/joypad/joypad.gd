@@ -22,7 +22,7 @@ const IC_DJUMP_NORMAL = preload("uid://df6fla5fsgl2s")
 const IC_DJUMP_PRESSED = preload("uid://dmosa0apyje0c")
 const IC_GLIDE_NORMAL = preload("uid://baojgdd2swsg1")
 const IC_GLIDE_PRESSED = preload("uid://c52srwv13315")
-const IC_GLIDE_HOLD = preload("uid://dio6yg4glplys")
+const IC_GLIDE_HOLD = preload("uid://c8jb31i47s7jy")
 const IC_PLUS_NORMAL = preload("uid://b14xrn24tfgpr")
 const IC_PLUS_PRESSED = preload("uid://npyym5xkix66")
 

@@ -61,7 +61,7 @@ const _ALL_ICON_COLOR_SLOTS: Array[StringName] = [
 	"res://src/ui/components/atoms/buttons/button_touch_action/orb_pressed.png"
 )
 @export var hold_texture: Texture2D = preload(
-	"res://src/ui/components/atoms/buttons/button_touch_action/orb_hold.png"
+	"res://src/ui/components/atoms/buttons/button_touch_action/orb-hold.png"
 )
 @export var disabled_texture: Texture2D = preload(
 	"res://src/ui/components/atoms/buttons/button_touch_action/orb_disabled.png"
