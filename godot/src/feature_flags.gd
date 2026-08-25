@@ -11,9 +11,9 @@ extends Node
 ## gracefully (e.g. tearing archipelago down while keeping scene rooms alive).
 ##
 ## Fail-open: on timeout, network error or malformed payload every flag keeps
-## its default and the feature stays enabled. Exception: `pulse` is fail-closed —
-## the transport activates only when the payload explicitly enables it (see
-## _apply_flags).
+## its default and the feature stays enabled. Exceptions: `pulse` and
+## `sentry-error-events` are fail-closed — they activate only when the payload
+## explicitly enables them (see _apply_flags).
 
 signal flags_loaded
 
@@ -24,6 +24,9 @@ const FLAG_ARCHIPELAGO := "archipielago"
 const FLAG_PULSE := "pulse"
 # Sentry error-event sampling, served as a number in [0, 1].
 const FLAG_SENTRY_SAMPLE_RATE := "sentry-sample-rate"
+# Report ERROR-level Sentry events (the engine/Rust error firehose). Fail-closed:
+# absent flag = crash/fatal-only reporting — see ProjectMainLoop._before_send.
+const FLAG_SENTRY_ERROR_EVENTS := "sentry-error-events"
 # The bff also serves `sentry-traces-sample-rate`, but sentry-godot exposes no
 # performance-tracing API yet — there is nothing to apply it to until the SDK
 # grows one.
@@ -117,3 +120,4 @@ func _apply_flags() -> void:
 		main_loop.set_sentry_sample_rate(
 			get_number(FLAG_SENTRY_SAMPLE_RATE, ProjectMainLoop.DEFAULT_SENTRY_SAMPLE_RATE)
 		)
+		main_loop.set_sentry_error_events_enabled(is_enabled(FLAG_SENTRY_ERROR_EVENTS, false))
