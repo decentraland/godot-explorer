@@ -18,7 +18,10 @@ import android.graphics.Bitmap
 import android.net.Uri
 import android.os.BatteryManager
 import android.os.Build
+import android.graphics.BitmapFactory
+import android.graphics.Matrix
 import android.provider.CalendarContract
+import android.provider.MediaStore
 import android.provider.Settings
 import android.util.Log
 import android.webkit.WebResourceRequest
@@ -31,6 +34,7 @@ import androidx.browser.customtabs.CustomTabsIntent
 import androidx.browser.customtabs.CustomTabsService
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.exifinterface.media.ExifInterface
 import org.decentraland.godotexplorer.NotificationReceiver
 import org.godotengine.godot.Dictionary
 import org.godotengine.godot.Godot
@@ -39,6 +43,7 @@ import org.godotengine.godot.plugin.SignalInfo
 import org.godotengine.godot.plugin.UsedByGodot
 import java.io.File
 import java.io.FileOutputStream
+import java.io.ByteArrayOutputStream
 
 // Reown/WalletConnect Sign SDK imports (without Compose UI)
 import com.android.installreferrer.api.InstallReferrerClient
@@ -102,7 +107,11 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
             // POST_NOTIFICATIONS dialog result. requestNotificationPermission() returns
             // before the user answers, so the real outcome ("granted"/"denied") is
             // delivered here once onMainRequestPermissionsResult fires.
-            SignalInfo("notification_permission_result", String::class.java)
+            SignalInfo("notification_permission_result", String::class.java),
+            // Gallery pick result (one shot per pickImageFromGallery() call).
+            // `bytes` holds a JPEG-encoded image and `error` is empty on success;
+            // on cancel or failure `bytes` is empty and `error` says why.
+            SignalInfo("image_picked", ByteArray::class.java, String::class.java)
         )
     }
 
@@ -1029,6 +1038,197 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
             grantResults[0] == PackageManager.PERMISSION_GRANTED
         Log.d(pluginName, "POST_NOTIFICATIONS result: ${if (granted) "granted" else "denied"}")
         emitSignal("notification_permission_result", if (granted) "granted" else "denied")
+    }
+
+    // ==================== Photo Gallery Picker ====================
+    //
+    // Backs ImagePickerService.gd — lets the player attach a screenshot to a
+    // bug report. Deliberately permissionless on every API level:
+    //   API 33+ : MediaStore.ACTION_PICK_IMAGES, the system photo picker.
+    //   API <33 : Intent.ACTION_OPEN_DOCUMENT (SAF), which also grants access
+    //             to just the chosen document.
+    // Neither needs READ_MEDIA_IMAGES / READ_EXTERNAL_STORAGE, so no runtime
+    // permission dialog and no manifest change.
+    //
+    // registerForActivityResult() is not usable here: the Godot activity is
+    // already STARTED by the time onGodotSetupCompleted() runs, and
+    // registering after STARTED throws. Hence startActivityForResult plus the
+    // onMainActivityResult hook below.
+
+    // Longest edge and JPEG quality for the in-flight pick, captured at launch
+    // so the result handler doesn't need them passed back through the Intent.
+    private var pickImageMaxDimension: Int = 1920
+    private var pickImageJpegQuality: Int = 85
+    private var pickImageInFlight: Boolean = false
+
+    /**
+     * Opens the system photo picker. Always emits exactly one `image_picked`
+     * signal: JPEG bytes with an empty error on success, an empty buffer with
+     * "cancelled" when the user backs out, or a failure reason otherwise.
+     *
+     * @param maxDimension longest edge of the returned image in pixels (no upscaling)
+     * @param jpegQuality  1..100
+     */
+    @UsedByGodot
+    fun pickImageFromGallery(maxDimension: Int, jpegQuality: Int) {
+        val act = activity ?: run {
+            emitImagePicked(ByteArray(0), "no_activity")
+            return
+        }
+
+        runOnUiThread {
+            // GDScript guards against this too, but a dropped result would hang
+            // an awaiter forever, so refuse here as well.
+            if (pickImageInFlight) {
+                emitImagePicked(ByteArray(0), "already_picking")
+                return@runOnUiThread
+            }
+
+            pickImageMaxDimension = maxDimension
+            pickImageJpegQuality = jpegQuality.coerceIn(1, 100)
+
+            val intent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                Intent(MediaStore.ACTION_PICK_IMAGES).apply {
+                    type = "image/*"
+                }
+            } else {
+                Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                    addCategory(Intent.CATEGORY_OPENABLE)
+                    type = "image/*"
+                }
+            }
+
+            try {
+                pickImageInFlight = true
+                act.startActivityForResult(intent, PICK_IMAGE_REQUEST_CODE)
+            } catch (e: ActivityNotFoundException) {
+                pickImageInFlight = false
+                Log.e(pluginName, "No gallery picker available: ${e.message}")
+                emitImagePicked(ByteArray(0), "no_picker_available")
+            }
+        }
+    }
+
+    override fun onMainActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        if (requestCode != PICK_IMAGE_REQUEST_CODE) {
+            return
+        }
+        pickImageInFlight = false
+
+        val uri = data?.data
+        if (resultCode != Activity.RESULT_OK || uri == null) {
+            Log.d(pluginName, "Gallery pick cancelled")
+            emitImagePicked(ByteArray(0), "cancelled")
+            return
+        }
+
+        val maxDimension = pickImageMaxDimension
+        val quality = pickImageJpegQuality
+
+        // Decoding a 12MP photo on the UI thread would drop frames; the URI
+        // read permission survives for the lifetime of this activity, so a
+        // plain background thread is enough.
+        Thread {
+            try {
+                val bytes = decodePickedImage(uri, maxDimension, quality)
+                if (bytes == null) {
+                    emitImagePicked(ByteArray(0), "decode_failed")
+                } else {
+                    Log.d(pluginName, "Gallery pick decoded to ${bytes.size} bytes")
+                    emitImagePicked(bytes, "")
+                }
+            } catch (e: Exception) {
+                Log.e(pluginName, "Gallery pick failed: ${e.message}")
+                emitImagePicked(ByteArray(0), "read_failed")
+            }
+        }.start()
+    }
+
+    /**
+     * Reads the picked image, downscales it to `maxDimension`, applies the EXIF
+     * rotation and re-encodes as JPEG. Returns null when the URI isn't a
+     * decodable image.
+     *
+     * The bounds-only pass first so a large photo is never fully inflated:
+     * inSampleSize gets it within 2x of the target before any pixels are
+     * allocated, and the exact resize happens afterwards.
+     */
+    private fun decodePickedImage(uri: Uri, maxDimension: Int, quality: Int): ByteArray? {
+        val resolver = activity?.contentResolver ?: return null
+
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        resolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
+        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) {
+            return null
+        }
+
+        var sampleSize = 1
+        if (maxDimension > 0) {
+            var longest = maxOf(bounds.outWidth, bounds.outHeight)
+            while (longest / 2 >= maxDimension) {
+                longest /= 2
+                sampleSize *= 2
+            }
+        }
+
+        val decodeOptions = BitmapFactory.Options().apply { inSampleSize = sampleSize }
+        var bitmap = resolver.openInputStream(uri)?.use {
+            BitmapFactory.decodeStream(it, null, decodeOptions)
+        } ?: return null
+
+        // EXIF orientation is metadata, not baked into the pixels, so a photo
+        // shot in landscape decodes sideways unless it is applied here.
+        val rotation = resolver.openInputStream(uri)?.use { stream ->
+            when (ExifInterface(stream).getAttributeInt(
+                ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL
+            )) {
+                ExifInterface.ORIENTATION_ROTATE_90 -> 90f
+                ExifInterface.ORIENTATION_ROTATE_180 -> 180f
+                ExifInterface.ORIENTATION_ROTATE_270 -> 270f
+                else -> 0f
+            }
+        } ?: 0f
+
+        // Exact resize after sampling: inSampleSize only halves, so the bitmap
+        // can still be up to 2x the requested longest edge.
+        val longest = maxOf(bitmap.width, bitmap.height)
+        if (maxDimension > 0 && longest > maxDimension) {
+            val scale = maxDimension.toFloat() / longest
+            val scaled = Bitmap.createScaledBitmap(
+                bitmap,
+                (bitmap.width * scale).toInt().coerceAtLeast(1),
+                (bitmap.height * scale).toInt().coerceAtLeast(1),
+                true
+            )
+            if (scaled != bitmap) {
+                bitmap.recycle()
+                bitmap = scaled
+            }
+        }
+
+        if (rotation != 0f) {
+            val matrix = Matrix().apply { postRotate(rotation) }
+            val rotated = Bitmap.createBitmap(
+                bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true
+            )
+            if (rotated != bitmap) {
+                bitmap.recycle()
+                bitmap = rotated
+            }
+        }
+
+        val out = ByteArrayOutputStream()
+        bitmap.compress(Bitmap.CompressFormat.JPEG, quality, out)
+        bitmap.recycle()
+        return out.toByteArray()
+    }
+
+    private fun emitImagePicked(bytes: ByteArray, error: String) {
+        try {
+            emitSignal("image_picked", bytes, error)
+        } catch (e: Exception) {
+            Log.w(pluginName, "emitSignal(image_picked) failed: ${e.message}")
+        }
     }
 
     /**
@@ -1969,6 +2169,7 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
     companion object {
         private const val CALENDAR_PERMISSION_REQUEST_CODE = 1001
         private const val NOTIFICATION_PERMISSION_REQUEST_CODE = 1002
+        private const val PICK_IMAGE_REQUEST_CODE = 1003
         // Debounce delay before resuming video playback after app returns to foreground
         private const val RESUME_DEBOUNCE_MS = 500L
     }

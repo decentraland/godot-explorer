@@ -92,6 +92,10 @@ var check_button_submit_message_closes_chat: CheckButton = %CheckButton_SubmitMe
 @onready var button_account: Button = %Button_Account
 @onready var button_storage: Button = %Button_Storage
 @onready var button_developer: Button = %Button_Developer
+# TEMPORARY — dev-only harness for the native gallery picker (issue #2652).
+# Remove once the real bug-report attachment UI exists.
+@onready var button_pick_image: Button = %Button_PickImage
+@onready var texture_rect_picked_image: TextureRect = %TextureRect_PickedImage
 
 @onready var tabs_scroll_container: ScrollContainer = %TabsScrollContainer
 @onready var dropdown_list_graphic_profiles: DropdownList = %DropdownList_GraphicProfiles
@@ -606,6 +610,30 @@ func _on_button_developer_pressed() -> void:
 	if is_instance_valid(explorer):
 		check_button_show_interactable_area.set_pressed_no_signal(explorer.show_interactable_area)
 	_async_scroll_to_tab_button(button_developer)
+
+
+# TEMPORARY dev-only harness for ImagePickerService (issue #2652). Opens the
+# native gallery picker and shows the chosen image next to the button.
+# Remove together with the ImagePickerTest row in settings.tscn once the real
+# bug-report attachment UI lands.
+func _on_button_pick_image_pressed() -> void:
+	_async_pick_image_test()
+
+
+func _async_pick_image_test() -> void:
+	if not ImagePickerService.is_supported():
+		button_pick_image.text = "N/A"
+		return
+	button_pick_image.disabled = true
+	button_pick_image.text = "..."
+	var image := await ImagePickerService.async_pick_image()
+	button_pick_image.disabled = false
+	if image == null:
+		button_pick_image.text = "Cancel/err"
+		texture_rect_picked_image.texture = null
+		return
+	button_pick_image.text = "%dx%d" % [image.get_width(), image.get_height()]
+	texture_rect_picked_image.texture = ImageTexture.create_from_image(image)
 
 
 func _on_button_graphics_pressed() -> void:

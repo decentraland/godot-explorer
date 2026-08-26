@@ -8,7 +8,7 @@ deinitialization="unregister_dcl_godot_ios_types"
 [dependencies]
 linked=[]
 embedded=[]
-system=["SafariServices", "AuthenticationServices", "Network", "EventKit", "EventKitUI", "DeviceCheck"]
+system=["SafariServices", "AuthenticationServices", "Network", "EventKit", "EventKitUI", "DeviceCheck", "Photos", "PhotosUI"]
 
 capabilities=[]
 
@@ -16,3 +16,4 @@ files=[]
 
 [plist]
 NSCalendarsUsageDescription="This app needs to add events to your calendar for events and places"
+NSPhotoLibraryUsageDescription="Decentraland needs access to your photos so you can attach screenshots to a bug report."
