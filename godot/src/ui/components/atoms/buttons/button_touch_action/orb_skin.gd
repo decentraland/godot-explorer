@@ -48,6 +48,15 @@ const _ALL_ICON_COLOR_SLOTS: Array[StringName] = [
 	&"icon_disabled_color",
 ]
 
+# The orb PNGs are 600x600 but the opaque circle is only 512x512 (44px of transparent
+# padding per side). To make the visible circle fill the button rect, the TextureRect is
+# drawn larger than the button by this factor and centered, so the padding overflows
+# symmetrically outside the button instead of shrinking the circle inside it. All four
+# state textures bake the circle at the same scale, so one factor covers every state.
+const _ORB_TEXTURE_SIZE := 600.0
+const _ORB_CIRCLE_SIZE := 512.0
+const _ORB_OVERSCAN := _ORB_TEXTURE_SIZE / _ORB_CIRCLE_SIZE
+
 # The generic orb backdrop, shared across every orb button. Any host that needs a bespoke
 # baked orb overrides these in its scene (e.g. the joypad atoms).
 @export var default_texture: Texture2D = preload(
@@ -87,6 +96,8 @@ var _held: bool = false
 func _ready() -> void:
 	show_behind_parent = true
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# Clear the editor-time minimum floor so the overscanned size is honored exactly.
+	custom_minimum_size = Vector2.ZERO
 	expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 
@@ -145,8 +156,11 @@ func _clear_style_overrides() -> void:
 func _fit() -> void:
 	var btn := get_parent() as Control
 	if btn != null:
-		position = Vector2.ZERO
-		size = btn.size
+		# Oversize by the padding factor and center: the circle ends up == btn.size while
+		# the transparent margin (and glow) spills symmetrically beyond the button rect.
+		var orb_size: Vector2 = btn.size * _ORB_OVERSCAN
+		size = orb_size
+		position = (btn.size - orb_size) * 0.5
 
 
 ## External latch for the Hold look (kept through press/release until cleared).
