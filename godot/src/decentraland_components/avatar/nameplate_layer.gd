@@ -302,11 +302,17 @@ static func _occluded(avatar, from: Vector3, to: Vector3) -> bool:
 	body_query.collision_mask = BODY_MASK
 	body_query.collide_with_areas = false
 	body_query.exclude = exclude
-	var body_hit: Dictionary = space.intersect_ray(body_query)
-	if not body_hit.is_empty():
+	# A hit on a hidden avatar's collider (blocked / modifier-area hidden) doesn't
+	# count: the invisible avatar must not hide the tags behind it. Skip it and
+	# re-ray so real geometry behind it is still tested (bounded retries).
+	for _i in 3:
+		var body_hit: Dictionary = space.intersect_ray(body_query)
+		if body_hit.is_empty():
+			break
 		var collider = body_hit.get("collider")
 		if not (collider is Node3D) or collider.is_visible_in_tree():
 			return true
+		body_query.exclude = body_query.exclude + [body_hit.get("rid")]
 
 	return _blocked_by_avatar(avatar, from, to)
 
