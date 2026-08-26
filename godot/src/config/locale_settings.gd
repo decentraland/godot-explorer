@@ -37,7 +37,8 @@ const FALLBACK_LOCALE: String = "en"
 ## and pads every translated string (`«____Sign Out____»`). The padding simulates ES/PT running
 ## 20-30% longer, so clipping, truncation and bad wrapping show up before any translation exists.
 ##
-## Offered only in non-production debug builds, the same gate the debug `eval` command uses.
+## Offered in every non-production build, which is the same gate the Dev Tools tab uses
+## (`settings.gd`: `button_developer.visible = !Global.is_production()`).
 ##
 ## Note it does NOT prove a string is translated: Godot pseudolocalizes the untranslated fallback
 ## too, so a hardcoded English string is bracketed just the same. See tools/i18n/README.md.
@@ -45,8 +46,12 @@ const PSEUDO_LOCALE: String = "xx-pseudo"
 
 
 ## Whether the pseudolocale may be offered in the picker.
+##
+## Deliberately not gated on [method OS.is_debug_build]: CI exports with `--export-release`, so
+## that check hid the option from the very builds QA installs. `is_production()` is what actually
+## separates a shippable build from an internal one — only `release*` branches are built `--prod`.
 static func is_pseudolocale_available() -> bool:
-	return OS.is_debug_build() and not Global.is_production()
+	return not Global.is_production()
 
 
 ## The locales the picker should list, including the pseudolocale in debug builds.
