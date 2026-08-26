@@ -332,6 +332,7 @@ func _exit_tree() -> void:
 	# our _process) is paused meanwhile, so a last-visible tag would otherwise linger frozen.
 	# The real free happens in _notification(NOTIFICATION_PREDELETE) when the avatar dies.
 	if _use_2d_nameplate and is_instance_valid(nickname_ui):
+		NameplateLayer._untrack_plate(nickname_ui)
 		nickname_ui.modulate.a = 0.0
 		nickname_ui.hide()
 

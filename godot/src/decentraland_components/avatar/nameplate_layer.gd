@@ -30,8 +30,6 @@ const CL_PHYSICS := 2
 # the local player's CharacterBody3D.
 const CL_PLAYER := 4
 const BODY_MASK := CL_PHYSICS | CL_PLAYER
-# Analytic avatar-occluder fallback dimensions (per-avatar mesh bounds win).
-const AVATAR_OCCLUSION_RADIUS := 0.4
 # Frames between occlusion raycasts per avatar (staggered) — not every frame.
 const OCCLUSION_PERIOD := 6
 # Small gap above the computed bounds top (clearance already covers head/hat
@@ -71,9 +69,6 @@ static var _plate_alphas: Dictionary = {}
 # visible iff the camera can see the spot where it is actually drawn — otherwise a
 # cluster behind one occluder would lose every tag, even the stacked ones.
 static var _plate_ray_targets: Dictionary = {}
-# Screen rects placed this frame (ui instance_id -> Rect2) for de-overlap stacking.
-static var _placed: Dictionary = {}
-static var _placed_frame: int = -1
 
 
 ## The Control to parent nameplates under (screen-space). Created on first use.
@@ -121,6 +116,7 @@ static func attach(avatar) -> void:
 ## Free the reparented NicknameUI (it lives in the shared layer, not under the avatar).
 static func detach(avatar) -> void:
 	if is_instance_valid(avatar.nickname_ui):
+		_untrack_plate(avatar.nickname_ui)
 		avatar.nickname_ui.queue_free()
 
 
@@ -218,7 +214,10 @@ static func _stack_position(
 	# penetration (sideways when that's cheaper, upward otherwise — no name
 	# towers), computed from their last placed collision rects. Fixed point per
 	# frame, so no limit cycle. Only the higher-instance-id plate yields: if both
-	# moved, a pair would escalate without bound.
+	# moved, a pair would escalate without bound. ponytail: yield order is arbitrary
+	# (instance id = spawn order, not depth); with 3+ mutually overlapping plates
+	# the outcome is insertion-order dependent. Rank by distance/alpha if it ever
+	# looks wrong in crowds — the per-frame relaxation hides most of it.
 	var target := Vector2.ZERO
 	for other_id in _plate_rects:
 		if other_id == id or id < other_id:
@@ -264,6 +263,7 @@ static func _untrack_plate(ui: Control) -> void:
 	_plate_rects.erase(id)
 	_plate_offsets.erase(id)
 	_plate_alphas.erase(id)
+	_plate_ray_targets.erase(id)
 
 
 ## 3D point the nameplate floats at: head anchor horizontally (follows the
@@ -347,6 +347,11 @@ static func _blocked_by_avatar(avatar, from: Vector3, to: Vector3) -> bool:
 		if d_xz_len_sq > 0.0001:
 			t = clampf(Vector2(o.x - from.x, o.z - from.z).dot(d_xz) / d_xz_len_sq, 0.0, 1.0)
 		var closest := from + delta * t
+		# Camera-inside-the-occluder degenerate case (spring arm collapsed against a
+		# wall in third person): the camera sitting inside a visible avatar must not
+		# blank every tag on screen — the #2321 symptom with a smaller trigger.
+		if from.distance_squared_to(closest) < 0.25:
+			continue
 		if closest.y < o.y - 0.1 or closest.y > top_y:
 			continue
 		var dx := closest.x - o.x
