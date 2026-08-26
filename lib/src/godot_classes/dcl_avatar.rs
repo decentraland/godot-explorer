@@ -16,14 +16,110 @@ pub enum AvatarMovementType {
     LerpTwoPoints = 1,
 }
 
+/// Buffered remote-avatar interpolation. Renders the avatar ~1.25 packet
+/// intervals in the PAST along a small ring of recent packets — the classic
+/// networked-avatar delay buffer. The previous design (lerp toward the latest
+/// packet, zero buffer) cannot absorb arrival jitter: Pulse fan-out quantizes
+/// to the server tick grid and UDP adds its own, so measured gaps swing
+/// 30-190 ms around the nominal cadence. A zero-buffer lerp freezes on every
+/// late packet and cuts short on every early one; a 2-packet buffer with a
+/// fixed delay clamps at segment edges and produces speed spikes. Rendering
+/// in the past across a ring of packets decouples us from jitter entirely at
+/// the cost of ~one interval of extra lag.
 #[derive(Default)]
 struct LerpState {
-    initial_position: Vector3,
-    target_position: Vector3,
-    initial_rotation_y: f32,
-    target_rotation_y: f32,
+    /// Recent packets, oldest first. Capacity 4: covers ~3 intervals of
+    /// history for the render clock to interpolate across.
+    buffer: std::collections::VecDeque<Packet>,
+    /// Local clock in seconds; accumulates in `process`, never resets. All
+    /// arrival timestamps are on this clock (local, monotonic — wire
+    /// timestamps mix sender/server epochs and can't be compared).
+    clock: f32,
+    /// Parcel-update throttle for ExternalController avatars.
     factor: f32,
-    initial_velocity_y: f32,
+    /// Measured seconds between movement packets (EMA). LiveKit streams at
+    /// 10 Hz, but Pulse's server tick is 50 ms with spatial LOD: tier-0 peers
+    /// (<=20 m) arrive at 20 Hz, tier-2 at 5 Hz.
+    packet_interval: f32,
+    /// Seconds since the last movement packet; sampled + reset in
+    /// `set_target_position`, accumulated in `process`.
+    since_last_packet: f32,
+    /// EMA of per-packet horizontal speed (m/s). Smoothing kills the flicker
+    /// from wire quantization (Pulse position steps are ~6.3 cm, so a slow
+    /// walk arrives as alternating 0 / step-sized jumps).
+    smoothed_speed: f32,
+}
+
+/// One buffered movement packet: world position, yaw, local arrival time.
+#[derive(Default, Clone, Copy)]
+struct Packet {
+    position: Vector3,
+    rotation_y: f32,
+    arrival: f32,
+}
+
+const PACKET_BUFFER_CAPACITY: usize = 4;
+
+impl LerpState {
+    /// Arrival interval in seconds; defaults to the LiveKit 10 Hz cadence
+    /// until two packets have been seen.
+    fn interval(&self) -> f32 {
+        if self.packet_interval > 0.0 {
+            self.packet_interval
+        } else {
+            0.1
+        }
+    }
+
+    /// Latest buffered position, or world origin before the first packet.
+    fn target_position(&self) -> Vector3 {
+        self.buffer.back().map(|p| p.position).unwrap_or_default()
+    }
+
+    /// Push a packet onto the ring, stamped with the current local clock.
+    fn push_packet(&mut self, position: Vector3, rotation_y: f32) {
+        self.buffer.push_back(Packet {
+            position,
+            rotation_y,
+            arrival: self.clock,
+        });
+        while self.buffer.len() > PACKET_BUFFER_CAPACITY {
+            self.buffer.pop_front();
+        }
+    }
+
+    /// Render delay in seconds: how far in the past the avatar is drawn.
+    fn render_delay(&self) -> f32 {
+        (1.25 * self.interval()).clamp(0.05, 0.5)
+    }
+
+    /// Interpolated (position, yaw) for the current render clock.
+    fn render_transform(&self) -> (Vector3, f32) {
+        let Some(newest) = self.buffer.back().copied() else {
+            return (Vector3::ZERO, 0.0);
+        };
+        if self.buffer.len() == 1 {
+            return (newest.position, newest.rotation_y);
+        }
+        let render_t = self.clock - self.render_delay();
+        // Newest-first search for the segment containing render_t; falls back
+        // to the newest segment (starvation: extrapolate) or the oldest
+        // (render_t older than the whole ring: clamp to its start).
+        let mut i = self.buffer.len() - 2;
+        while i > 0 && self.buffer[i].arrival > render_t {
+            i -= 1;
+        }
+        let a = self.buffer[i];
+        let b = self.buffer[i + 1];
+        let seg_dt = (b.arrival - a.arrival).max(0.005);
+        // t > 1.0 under stream starvation: extrapolate up to half a segment
+        // past the latest packet (dead reckoning), then hold.
+        let t = ((render_t - a.arrival) / seg_dt).clamp(0.0, 1.5);
+        (
+            a.position.lerp(b.position, t),
+            lerp_angle(a.rotation_y, b.rotation_y, t),
+        )
+    }
 }
 
 #[derive(GodotClass)]
@@ -158,35 +254,59 @@ impl DclAvatar {
 
     #[func]
     pub fn set_target_position(&mut self, new_target: Transform3D) {
-        let mut diff_xz_plane = new_target.origin - self.lerp_state.target_position;
-        let y_velocity = 10.0 * diff_xz_plane.y; // divide by 0.1s
+        // Measure the real arrival cadence instead of assuming 10 Hz (see
+        // LerpState::packet_interval). Same-frame duplicate packets (dual-room
+        // broadcast) are ignored so they don't collapse the EMA.
+        let measured = self.lerp_state.since_last_packet;
+        self.lerp_state.since_last_packet = 0.0;
+        if measured > 0.01 {
+            let clamped = measured.clamp(0.03, 0.5);
+            self.lerp_state.packet_interval = if self.lerp_state.packet_interval <= 0.0 {
+                clamped
+            } else {
+                self.lerp_state.packet_interval * 0.7 + clamped * 0.3
+            };
+        }
+        let interval = self.lerp_state.interval();
+
+        let mut diff_xz_plane = new_target.origin - self.lerp_state.target_position();
+        let y_velocity = diff_xz_plane.y / interval;
         diff_xz_plane.y = 0.0;
         let target_forward_distance = diff_xz_plane.length();
+        let instant_speed = target_forward_distance / interval;
+        self.lerp_state.smoothed_speed = if self.lerp_state.smoothed_speed <= 0.0 {
+            instant_speed
+        } else {
+            self.lerp_state.smoothed_speed * 0.6 + instant_speed * 0.4
+        };
+        let speed = self.lerp_state.smoothed_speed;
 
-        // TODO: define const with these values
-        self.walk = target_forward_distance < 0.4 && target_forward_distance > 0.01;
-        self.run = target_forward_distance >= 0.65;
-        self.jog = !(self.walk || self.run) && target_forward_distance > 0.01;
+        // Classify by SPEED, not per-packet distance: the old thresholds
+        // (0.4 m / 0.65 m) were calibrated for 100 ms packets and misclassified
+        // everything one class down at Pulse tier-0's 50 ms cadence.
+        // Same bounds as before, expressed in m/s (distance / 0.1 s).
+        self.walk = speed < 4.0 && speed > 0.1;
+        self.run = speed >= 6.5;
+        self.jog = !(self.walk || self.run) && speed > 0.1;
         self.rise = y_velocity > 1.0;
         self.fall = y_velocity < -1.0;
         self.land = !self.rise && !self.fall;
         self.is_grounded = self.land && self.glide_state == 0;
 
-        // Start interpolation from where the avatar actually is, not from the
-        // previous target. If a packet arrives before the last lerp finished,
-        // snapping back to the old target causes a visible teleport.
-        let current_position = self.base().get_global_position();
-        let current_rotation_y = self.base().get_global_rotation().y;
-        self.lerp_state.initial_position = current_position;
-        self.lerp_state.target_position = new_target.origin;
-        self.lerp_state.initial_rotation_y = current_rotation_y;
-        self.lerp_state.target_rotation_y = new_target.basis.get_euler().y;
-        self.lerp_state.factor = 0.0;
-        self.lerp_state.initial_velocity_y = y_velocity;
+        // Shift the buffer: the old latest packet becomes the segment start.
+        // The render clock interpolates between the two in `process`.
+        let new_yaw = new_target.basis.get_euler().y;
+        let first = self.lerp_state.buffer.is_empty();
+        self.lerp_state.push_packet(new_target.origin, new_yaw);
+        if first {
+            // First packet: no segment yet — snap, interpolating from a zeroed
+            // state would drag the avatar across the world.
+            self.base_mut().set_global_position(new_target.origin);
+            self.base_mut()
+                .set_global_rotation(new_target.basis.get_euler());
+        }
 
-        self.base_mut().set_global_position(current_position);
-
-        self.update_parcel_position(self.lerp_state.target_position);
+        self.update_parcel_position(self.lerp_state.target_position());
     }
 
     /// Instant reposition (teleport): place the avatar at the target with no interpolation —
@@ -202,12 +322,11 @@ impl DclAvatar {
         self.is_grounded = self.glide_state == 0;
 
         let target_rotation_y = new_target.basis.get_euler().y;
-        self.lerp_state.initial_position = new_target.origin;
-        self.lerp_state.target_position = new_target.origin;
-        self.lerp_state.initial_rotation_y = target_rotation_y;
-        self.lerp_state.target_rotation_y = target_rotation_y;
-        self.lerp_state.factor = 1.0;
-        self.lerp_state.initial_velocity_y = 0.0;
+        self.lerp_state.buffer.clear();
+        self.lerp_state
+            .push_packet(new_target.origin, target_rotation_y);
+        self.lerp_state.smoothed_speed = 0.0;
+        self.lerp_state.since_last_packet = 0.0;
 
         self.base_mut()
             .set_global_rotation(new_target.basis.get_euler());
@@ -331,35 +450,32 @@ impl DclAvatar {
                 }
             }
             AvatarMovementType::LerpTwoPoints => {
-                let previous_factor = self.lerp_state.factor;
-                self.lerp_state.factor += 10.0 * dt as f32;
-                if previous_factor < 1.0 {
-                    // Clamp the final step so the crossing frame lands exactly on the
-                    // target instead of undershooting by up to one frame's worth.
-                    let t = self.lerp_state.factor.min(1.0);
-                    let new_position = self
-                        .lerp_state
-                        .initial_position
-                        .lerp(self.lerp_state.target_position, t);
-                    let new_rotation_y = lerp_angle(
-                        self.lerp_state.initial_rotation_y,
-                        self.lerp_state.target_rotation_y,
-                        t,
-                    );
+                let dt = dt as f32;
+                self.lerp_state.clock += dt;
+                self.lerp_state.since_last_packet += dt;
+
+                if !self.lerp_state.buffer.is_empty() {
+                    // Render ~1.25 packet intervals in the past (see LerpState docs).
+                    let (new_position, new_rotation_y) = self.lerp_state.render_transform();
 
                     self.base_mut().set_global_position(new_position);
                     self.base_mut()
                         .set_global_rotation(Vector3::new(0.0, new_rotation_y, 0.0));
-                } else if self.lerp_state.factor > 3.0
+                }
+
+                if self.lerp_state.since_last_packet > (1.5 * self.lerp_state.interval()).max(0.3)
                     && (self.walk || self.jog || self.run)
                     && !self.rise
                     && !self.fall
                 {
-                    // The locomotion flags are derived per-update in set_target_position from
-                    // the distance to the previous target, so they latch until the next packet.
-                    // LiveKit streams ~10 Hz and self-corrects, but Pulse goes silent when the
-                    // peer stands still (delta protocol) — decay to idle once the stream pauses
-                    // (factor 1.0 == one 100 ms packet interval; 3.0 == 300 ms of silence).
+                    // Decay ground locomotion to idle on stream silence. ABSOLUTE time,
+                    // not factor-scaled: a LiveKit peer standing still keeps a 1 Hz
+                    // keepalive that inflates the interval EMA — a factor-scaled decay
+                    // (3 x interval) would land past the keepalive period and never fire,
+                    // leaving the avatar walking in place (~7 s of moonwalk) while the
+                    // speed EMA drains one packet at a time. 1.5x interval fires before
+                    // the 1 s keepalive; the 300 ms floor keeps pre-change behavior at
+                    // 10-20 Hz streams and tolerates one late/lost packet.
                     //
                     // Ground locomotion ONLY, matching Unity (RemotePlayerAnimationSystem):
                     // air state (rise/fall) latches on silence — a mid-air peer keeps its air
@@ -368,6 +484,10 @@ impl DclAvatar {
                     self.jog = false;
                     self.run = false;
                     self.land = true;
+                    // Drain the speed EMA too: otherwise the next 1 Hz keepalive
+                    // (zero-distance packet) still reads a stale speed > walk threshold
+                    // and re-latches walk — the moonwalk would come back.
+                    self.lerp_state.smoothed_speed = 0.0;
                 }
             }
         }
@@ -397,4 +517,99 @@ fn lerp_angle(from: f32, to: f32, weight: f32) -> f32 {
         diff -= 2.0 * std::f32::consts::PI;
     }
     from + diff * weight
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::f32::consts::PI;
+
+    #[test]
+    fn lerp_angle_takes_shortest_arc() {
+        // 10° -> 350° must go backwards through 0°, not the long way around.
+        let from = 10.0_f32.to_radians();
+        let to = 350.0_f32.to_radians();
+        let mid = lerp_angle(from, to, 0.5);
+        assert!(mid.abs() < 1e-6, "mid was {mid}");
+        assert_eq!(lerp_angle(from, to, 0.0), from);
+        let end = lerp_angle(from, to, 1.0);
+        let mut delta = end - to;
+        while delta > PI {
+            delta -= 2.0 * PI;
+        }
+        while delta < -PI {
+            delta += 2.0 * PI;
+        }
+        assert!(delta.abs() < 1e-6);
+    }
+
+    #[test]
+    fn interval_defaults_to_livekit_cadence() {
+        assert_eq!(LerpState::default().interval(), 0.1);
+        let mut state = LerpState::default();
+        state.packet_interval = 0.05; // Pulse tier-0
+        assert_eq!(state.interval(), 0.05);
+    }
+
+    /// Feed a jittered 10 Hz packet stream (real captured gaps: 30-190 ms)
+    /// through the buffered interpolator and assert the rendered motion is
+    /// continuous: no teleport-backs, no freeze tails beyond the extrapolation
+    /// budget, and bounded frame-to-frame speed error.
+    #[test]
+    fn buffered_lerp_smooths_jittered_stream() {
+        let mut state = LerpState {
+            packet_interval: 0.1,
+            ..Default::default()
+        };
+        // Nominal 100 ms cadence with captured-style jitter (sums to ~100 ms
+        // on average, swings like the real Pulse fan-out + UDP).
+        let gaps = [
+            0.13f32, 0.07, 0.16, 0.04, 0.09, 0.19, 0.03, 0.12, 0.11, 0.06,
+        ];
+        let peer_speed = 2.0f32; // m/s along +x
+        let frame = 1.0f32 / 30.0; // 30 fps render (iOS thermal cap)
+
+        // Peer truth: moves continuously; packets sample it at jittered times.
+        let mut peer_t = 0.0f32;
+        let mut next_packet_in = 0.0f32;
+        let mut gap_idx = 0usize;
+        let mut prev_render = Vector3::ZERO;
+        let mut max_speed_err = 0.0f32;
+        let mut max_backtrack = 0.0f32;
+
+        for step in 0..300 {
+            state.clock += frame;
+            peer_t += frame;
+            next_packet_in -= frame;
+            if next_packet_in <= 0.0 {
+                let gap = gaps[gap_idx % gaps.len()];
+                gap_idx += 1;
+                next_packet_in = gap;
+                let pos = Vector3::new(peer_t * peer_speed, 0.0, 0.0);
+                state.push_packet(pos, 0.0);
+            }
+            let (render, _) = state.render_transform();
+            if step > 0 {
+                let dx = render.x - prev_render.x;
+                max_backtrack = max_backtrack.max(-dx);
+                let render_speed = dx / frame;
+                max_speed_err = max_speed_err.max((render_speed - peer_speed).abs());
+            }
+            prev_render = render;
+        }
+
+        assert!(
+            max_backtrack < 0.01,
+            "rendered position backtracked {max_backtrack} m"
+        );
+        // Dead-reckoning extrapolation during the long gaps can overshoot, but
+        // steady-state speed error must stay well under visible-stutter range.
+        assert!(
+            max_speed_err < peer_speed * 1.5,
+            "render speed error {max_speed_err} m/s"
+        );
+        // And the avatar actually tracks the peer (lag only, no stall).
+        let lag = peer_t * peer_speed - prev_render.x;
+        assert!(lag > 0.1 && lag < 2.0, "final lag {lag} m");
+    }
 }

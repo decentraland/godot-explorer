@@ -162,6 +162,7 @@ impl INode for AvatarScene {
 
     fn process(&mut self, _delta: f64) {
         self.update_impostor_transforms();
+        self.push_interpolated_transforms_to_scenes();
         self.maybe_run_cache_cleanup();
     }
 }
@@ -1580,6 +1581,19 @@ impl AvatarScene {
                 .set_target_position(dcl_transform.to_godot_transform_3d());
         }
 
+        self.push_avatar_transform_to_scenes(avatar_entity_id, dcl_transform);
+    }
+
+    /// Push an avatar transform into the scene CRDT state and the active
+    /// scenes' dirty sets (world coordinates, matching the historical path).
+    fn push_avatar_transform_to_scenes(
+        &mut self,
+        avatar_entity_id: &SceneEntityId,
+        dcl_transform: DclTransformAndParent,
+    ) {
+        let Some(avatar_scene) = self.avatar_godot_scene.get(avatar_entity_id) else {
+            return;
+        };
         let mut scene_runner = DclGlobal::singleton().bind().scene_runner.clone();
         let mut scene_runner = scene_runner.bind_mut();
 
@@ -1595,15 +1609,6 @@ impl AvatarScene {
         // Push dirty state only in active scenes
         for scene_id in avatar_active_scene_ids {
             if let Some(scene) = scene_runner.get_scene_mut(&scene_id) {
-                let mut avatar_scene_transform = dcl_transform.clone();
-                avatar_scene_transform.translation.x -=
-                    (scene.scene_entity_definition.get_base_parcel().x as f32) * 16.0;
-
-                // TODO: I think this is working fine but
-                //   Should it be added instead of subtracted? (z is inverted in godot and dcl)
-                avatar_scene_transform.translation.z -=
-                    (scene.scene_entity_definition.get_base_parcel().y as f32) * 16.0;
-
                 scene
                     .avatar_scene_updates
                     .transform
@@ -1614,6 +1619,40 @@ impl AvatarScene {
         self.crdt_state
             .get_transform_mut()
             .put(*avatar_entity_id, Some(dcl_transform));
+    }
+
+    /// Push each remote avatar's RENDERED (interpolated) transform into the
+    /// scene CRDT every frame. Movement packets only arrive at network cadence
+    /// (5-20 Hz), so scenes that poll avatar transforms (e.g. flagtag sticking
+    /// the flag to whoever holds it) would otherwise see the position jump per
+    /// packet while the rendered avatar moves smoothly ~one interval behind.
+    fn push_interpolated_transforms_to_scenes(&mut self) {
+        let mut updates: Vec<(SceneEntityId, DclTransformAndParent)> = Vec::new();
+        for (entity_id, avatar) in self.avatar_godot_scene.iter() {
+            // Only remote avatars interpolate; the local player
+            // (ExternalController) already feeds scenes its exact transform.
+            if avatar.bind().get_movement_type() != AvatarMovementType::LerpTwoPoints as i32 {
+                continue;
+            }
+            let transform = avatar.get_global_transform();
+            let dcl_transform = DclTransformAndParent::from_godot(&transform, Vector3::ZERO);
+            // Skip scene spam while the avatar is effectively stationary.
+            let unchanged = self
+                .crdt_state
+                .get_transform()
+                .get(entity_id)
+                .and_then(|entry| entry.value.as_ref())
+                .is_some_and(|prev| {
+                    prev.translation.distance_to(dcl_transform.translation) < 0.001
+                        && prev.rotation.angle_to(dcl_transform.rotation) < 0.001
+                });
+            if !unchanged {
+                updates.push((*entity_id, dcl_transform));
+            }
+        }
+        for (entity_id, dcl_transform) in updates {
+            self.push_avatar_transform_to_scenes(&entity_id, dcl_transform);
+        }
     }
 
     pub fn update_avatar_transform_with_rfc4_position(

@@ -8,6 +8,11 @@ const SPRINTING_CAMERA_FOV = 75.0
 const MAX_AIR_JUMPS := 1
 const JUMP_BUFFER_WINDOW := 0.15
 const JUMP_COOLDOWN := 0.3
+# Coyote-style debounce on the ANIMATION grounded flag: keep reporting grounded
+# this long after losing floor contact. At mobile physics rates (18-30 Hz) a
+# single tick of is_on_floor() flicker re-fires Jump_Fall -> Jump_End via
+# `nfall`, replaying the landing pose — reads as "bouncing off the floor".
+const GROUNDED_GRACE_WINDOW := 0.15
 const AIR_JUMP_HEIGHT := 2.0
 const AIR_JUMP_DELAY := 0.2
 const AIR_JUMP_DIRECTION_IMPULSE := 8.0
@@ -363,6 +368,9 @@ func _physics_process(dt: float) -> void:
 
 	var on_floor = is_on_floor() or position.y <= 0.0
 	var was_falling = avatar.fall
+	# Fall time up to this tick, captured before the reset below so the landing
+	# branch can still read it for the hard-landing check.
+	var fall_duration := time_falling
 
 	if !on_floor:
 		time_falling += dt
@@ -472,7 +480,7 @@ func _physics_process(dt: float) -> void:
 	else:
 		if not avatar.land:
 			avatar.land = true
-			if was_falling and hard_landing_cooldown > 0 and time_falling > 1.0:
+			if was_falling and hard_landing_cooldown > 0 and fall_duration > 1.0:
 				_hard_landing_timer = hard_landing_cooldown
 
 		velocity.y = 0
@@ -536,7 +544,14 @@ func _physics_process(dt: float) -> void:
 	# AnimationTree off the same numbers for both local and remote avatars.
 	avatar.jump_count = jump_count
 	avatar.glide_state = glide_state
-	avatar.is_grounded = on_floor
+	# Debounced ungrounding (GROUNDED_GRACE_WINDOW): a 1-tick is_on_floor()
+	# flicker must not flip the AnimationTree out of grounded state. Suppressed
+	# while jump is held so real takeoffs unground immediately. The jump-pad
+	# override below (combined_vy > 0.3) runs after this and still wins.
+	avatar.is_grounded = (
+		on_floor
+		or (time_falling < GROUNDED_GRACE_WINDOW and not Input.is_action_pressed("ia_jump"))
+	)
 
 	_apply_scene_physics(dt, external_acceleration, scene_pending_impulses, on_floor)
 
