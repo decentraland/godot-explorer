@@ -16,20 +16,20 @@ pub enum AvatarMovementType {
     LerpTwoPoints = 1,
 }
 
-/// Buffered remote-avatar interpolation. Renders the avatar ~1.25 packet
-/// intervals in the PAST along a small ring of recent packets — the classic
-/// networked-avatar delay buffer. The previous design (lerp toward the latest
-/// packet, zero buffer) cannot absorb arrival jitter: Pulse fan-out quantizes
-/// to the server tick grid and UDP adds its own, so measured gaps swing
-/// 30-190 ms around the nominal cadence. A zero-buffer lerp freezes on every
-/// late packet and cuts short on every early one; a 2-packet buffer with a
-/// fixed delay clamps at segment edges and produces speed spikes. Rendering
-/// in the past across a ring of packets decouples us from jitter entirely at
-/// the cost of ~one interval of extra lag.
+/// Buffered remote-avatar interpolation. Renders the avatar in the PAST along
+/// a small ring of recent packets — the classic networked-avatar delay
+/// buffer. The previous design (lerp toward the latest packet, zero buffer)
+/// cannot absorb arrival jitter: Pulse fan-out quantizes to the server tick
+/// grid and UDP adds its own, so measured gaps swing 30-190 ms around the
+/// nominal cadence. A zero-buffer lerp freezes on every late packet and cuts
+/// short on every early one. The delay is a fixed 2x the measured interval
+/// (smooth by construction) and the render clock never extrapolates past the
+/// newest packet (extrapolation snap-back reads as ping-pong).
 #[derive(Default)]
 struct LerpState {
-    /// Recent packets, oldest first. Capacity 4: covers ~3 intervals of
-    /// history for the render clock to interpolate across.
+    /// Recent packets, oldest first. Capacity 8: the render delay tracks the
+    /// worst gap in the ring, so the ring must span several minimum-sized
+    /// gaps (captured minimum ~30 ms) to always cover it.
     buffer: std::collections::VecDeque<Packet>,
     /// Local clock in seconds; accumulates in `process`, never resets. All
     /// arrival timestamps are on this clock (local, monotonic — wire
@@ -41,6 +41,17 @@ struct LerpState {
     /// 10 Hz, but Pulse's server tick is 50 ms with spatial LOD: tier-0 peers
     /// (<=20 m) arrive at 20 Hz, tier-2 at 5 Hz.
     packet_interval: f32,
+    /// Slow EMA of the packet interval (alpha 0.15), feeds the delay TARGET.
+    /// The classification EMA (alpha 0.3) is intentionally responsive, but a
+    /// delay derived from it lurches the render clock back and forth on
+    /// jittery streams — measured as visible ~0.13 m frame steps on the
+    /// captured gap pattern.
+    delay_interval: f32,
+    /// Actual render delay in seconds; slewed toward the target in `process`
+    /// (grow 0.2 s/s, shrink 0.02 s/s) so delay changes themselves never
+    /// lurch the render clock. Asymmetric: growing late risks brief holds,
+    /// shrinking fast produced visible forward jumps.
+    delay: f32,
     /// Seconds since the last movement packet; sampled + reset in
     /// `set_target_position`, accumulated in `process`.
     since_last_packet: f32,
@@ -58,7 +69,7 @@ struct Packet {
     arrival: f32,
 }
 
-const PACKET_BUFFER_CAPACITY: usize = 4;
+const PACKET_BUFFER_CAPACITY: usize = 8;
 
 impl LerpState {
     /// Arrival interval in seconds; defaults to the LiveKit 10 Hz cadence
@@ -76,6 +87,26 @@ impl LerpState {
         self.buffer.back().map(|p| p.position).unwrap_or_default()
     }
 
+    /// Update both interval EMAs from a measured inter-packet gap.
+    fn note_packet_gap(&mut self, measured: f32) {
+        if measured <= 0.01 {
+            // Same-frame duplicate packets (dual-room broadcast) would
+            // collapse the EMAs.
+            return;
+        }
+        let clamped = measured.clamp(0.03, 0.5);
+        self.packet_interval = if self.packet_interval <= 0.0 {
+            clamped
+        } else {
+            self.packet_interval * 0.7 + clamped * 0.3
+        };
+        self.delay_interval = if self.delay_interval <= 0.0 {
+            clamped
+        } else {
+            self.delay_interval * 0.85 + clamped * 0.15
+        };
+    }
+
     /// Push a packet onto the ring, stamped with the current local clock.
     fn push_packet(&mut self, position: Vector3, rotation_y: f32) {
         self.buffer.push_back(Packet {
@@ -88,9 +119,27 @@ impl LerpState {
         }
     }
 
-    /// Render delay in seconds: how far in the past the avatar is drawn.
-    fn render_delay(&self) -> f32 {
-        (1.25 * self.interval()).clamp(0.05, 0.5)
+    /// Delay target in seconds: 2x the slow interval EMA, covering up to a
+    /// 2x late packet without starving.
+    fn delay_target(&self) -> f32 {
+        let interval = if self.delay_interval > 0.0 {
+            self.delay_interval
+        } else {
+            self.interval()
+        };
+        (2.0 * interval).clamp(0.05, 0.5)
+    }
+
+    /// Slew the actual delay toward the target; call once per frame.
+    fn advance_delay(&mut self, dt: f32) {
+        let target = self.delay_target();
+        if self.delay <= 0.0 {
+            self.delay = target;
+        } else if target > self.delay {
+            self.delay = (self.delay + 0.2 * dt).min(target);
+        } else {
+            self.delay = (self.delay - 0.02 * dt).max(target);
+        }
     }
 
     /// Interpolated (position, yaw) for the current render clock.
@@ -101,10 +150,10 @@ impl LerpState {
         if self.buffer.len() == 1 {
             return (newest.position, newest.rotation_y);
         }
-        let render_t = self.clock - self.render_delay();
+        let render_t = self.clock - self.delay.max(0.05);
         // Newest-first search for the segment containing render_t; falls back
-        // to the newest segment (starvation: extrapolate) or the oldest
-        // (render_t older than the whole ring: clamp to its start).
+        // to the newest segment (starvation beyond the ring) or the oldest
+        // (render_t older than the whole ring).
         let mut i = self.buffer.len() - 2;
         while i > 0 && self.buffer[i].arrival > render_t {
             i -= 1;
@@ -112,9 +161,10 @@ impl LerpState {
         let a = self.buffer[i];
         let b = self.buffer[i + 1];
         let seg_dt = (b.arrival - a.arrival).max(0.005);
-        // t > 1.0 under stream starvation: extrapolate up to half a segment
-        // past the latest packet (dead reckoning), then hold.
-        let t = ((render_t - a.arrival) / seg_dt).clamp(0.0, 1.5);
+        // Hard clamp: NO extrapolation. Extrapolating past the newest packet
+        // renders future positions that snap back when the next packet arrives
+        // (visible ping-pong, worse than a brief hold at the last known pose).
+        let t = ((render_t - a.arrival) / seg_dt).clamp(0.0, 1.0);
         (
             a.position.lerp(b.position, t),
             lerp_angle(a.rotation_y, b.rotation_y, t),
@@ -255,18 +305,10 @@ impl DclAvatar {
     #[func]
     pub fn set_target_position(&mut self, new_target: Transform3D) {
         // Measure the real arrival cadence instead of assuming 10 Hz (see
-        // LerpState::packet_interval). Same-frame duplicate packets (dual-room
-        // broadcast) are ignored so they don't collapse the EMA.
+        // LerpState::packet_interval).
         let measured = self.lerp_state.since_last_packet;
         self.lerp_state.since_last_packet = 0.0;
-        if measured > 0.01 {
-            let clamped = measured.clamp(0.03, 0.5);
-            self.lerp_state.packet_interval = if self.lerp_state.packet_interval <= 0.0 {
-                clamped
-            } else {
-                self.lerp_state.packet_interval * 0.7 + clamped * 0.3
-            };
-        }
+        self.lerp_state.note_packet_gap(measured);
         let interval = self.lerp_state.interval();
 
         let mut diff_xz_plane = new_target.origin - self.lerp_state.target_position();
@@ -453,6 +495,7 @@ impl DclAvatar {
                 let dt = dt as f32;
                 self.lerp_state.clock += dt;
                 self.lerp_state.since_last_packet += dt;
+                self.lerp_state.advance_delay(dt);
 
                 if !self.lerp_state.buffer.is_empty() {
                     // Render ~1.25 packet intervals in the past (see LerpState docs).
@@ -550,6 +593,125 @@ mod tests {
         state.packet_interval = 0.05; // Pulse tier-0
         assert_eq!(state.interval(), 0.05);
     }
+}
+
+// godot::test itests must live in a non-cfg(test) module so they compile into
+// the extension and register with the Godot test runner (pattern: billboard.rs).
+mod itest {
+    use super::*;
+
+    /// E2E regression test for #2734 (remote avatars rendering as discrete
+    /// frames): a real `DclAvatar` node in the scene tree receives a jittered
+    /// 10 Hz packet stream (gap pattern captured live from Pulse) while
+    /// `process` runs at 30 fps. The pre-fix zero-buffer lerp visibly froze /
+    /// cut short on this exact input; the buffered interpolator must keep the
+    /// per-frame render step close to the ideal continuous step.
+    #[godot::test::itest]
+    fn itest_remote_avatar_smooth_under_pulse_jitter(ctx: &crate::framework::TestContext) {
+        let mut avatar = DclAvatar::new_alloc();
+        ctx.scene_tree
+            .clone()
+            .add_child(&avatar.clone().upcast::<Node>());
+        avatar
+            .bind_mut()
+            .set_movement_type(AvatarMovementType::LerpTwoPoints as i32);
+        // Keep update_parcel_position away from DclGlobal (not available in
+        // the test runner): pretend we're settled in parcel (0,0), scene 1.
+        avatar.set("current_parcel_position", &Vector2i::ZERO.to_variant());
+        avatar.set("current_parcel_scene_id", &1_i32.to_variant());
+
+        // Peer walks a circle (radius 2 m at 1 rad/s => 2 m/s) centered inside
+        // parcel (0,0); packets sample it with the captured jitter.
+        let gaps = [
+            0.13f64, 0.07, 0.16, 0.04, 0.09, 0.19, 0.03, 0.12, 0.11, 0.06,
+        ];
+        let frame = 1.0f64 / 30.0;
+        let mut clock = 0.0f64;
+        let mut next_packet_in = 0.0f64;
+        let mut gap_idx = 0usize;
+        let mut prev = Vector3::ZERO;
+        let mut max_step = 0.0f32;
+        let mut rendered_path = 0.0f32;
+
+        for step in 0..300usize {
+            clock += frame;
+            next_packet_in -= frame;
+            if next_packet_in <= 0.0 {
+                next_packet_in = gaps[gap_idx % gaps.len()];
+                gap_idx += 1;
+                let angle = clock as f32;
+                let pos = Vector3::new(8.0 + 2.0 * angle.cos(), 0.0, -8.0 + 2.0 * angle.sin());
+                avatar
+                    .bind_mut()
+                    .set_target_position(Transform3D::new(Basis::IDENTITY, pos));
+            }
+            avatar.bind_mut().process(frame);
+            let pos = avatar.get_global_position();
+            if step > 0 {
+                let step_len = pos.distance_to(prev);
+                max_step = max_step.max(step_len);
+                rendered_path += step_len;
+            }
+            prev = pos;
+        }
+
+        // Ideal continuous step at 2 m/s and 30 fps is ~0.067 m. The old
+        // zero-buffer lerp produced freeze-then-jump steps several times that;
+        // tolerate 1.8x for interpolation edge effects.
+        assert!(
+            max_step < 0.12,
+            "per-frame render step {max_step} m exceeds smoothness budget"
+        );
+        // And the avatar actually tracks the peer's 20 m path (lag, not stall).
+        assert!(
+            rendered_path > 12.0,
+            "rendered path {rendered_path} m — avatar stalled"
+        );
+    }
+
+    /// Same jitter pattern as the itest, but driving the pure LerpState with
+    /// the REAL EMA update path (note_packet_gap). Debug-friendly: runs under
+    /// plain cargo test without Godot.
+    #[test]
+    fn buffered_lerp_smooths_jittered_circle_with_emas() {
+        let mut state = LerpState::default();
+        let gaps = [
+            0.13f32, 0.07, 0.16, 0.04, 0.09, 0.19, 0.03, 0.12, 0.11, 0.06,
+        ];
+        let frame = 1.0f32 / 30.0;
+        let mut clock = 0.0f32;
+        let mut next_packet_in = 0.0f32;
+        let mut gap_idx = 0usize;
+        let mut prev = Vector3::ZERO;
+        let mut max_step = 0.0f32;
+
+        for step in 0..300usize {
+            clock += frame;
+            state.clock += frame;
+            state.since_last_packet += frame;
+            state.advance_delay(frame);
+            next_packet_in -= frame;
+            if next_packet_in <= 0.0 {
+                let gap = gaps[gap_idx % gaps.len()];
+                gap_idx += 1;
+                next_packet_in = gap;
+                state.note_packet_gap(state.since_last_packet);
+                state.since_last_packet = 0.0;
+                let angle = clock;
+                let pos = Vector3::new(8.0 + 2.0 * angle.cos(), 0.0, -8.0 + 2.0 * angle.sin());
+                state.push_packet(pos, 0.0);
+            }
+            let (render, _) = state.render_transform();
+            if step > 0 {
+                let step_len = render.distance_to(prev);
+                if step_len > max_step {
+                    max_step = step_len;
+                }
+            }
+            prev = render;
+        }
+        assert!(max_step < 0.12, "max_step {max_step}");
+    }
 
     /// Feed a jittered 10 Hz packet stream (real captured gaps: 30-190 ms)
     /// through the buffered interpolator and assert the rendered motion is
@@ -579,6 +741,7 @@ mod tests {
 
         for step in 0..300 {
             state.clock += frame;
+            state.advance_delay(frame);
             peer_t += frame;
             next_packet_in -= frame;
             if next_packet_in <= 0.0 {
