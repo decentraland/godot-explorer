@@ -11,7 +11,8 @@ mod wearable;
 // Re-export public API (maintains compatibility with content_provider.rs)
 pub use common::get_dependencies;
 pub use emote::{
-    build_dcl_emote_gltf, get_last_16_alphanumeric, load_and_save_emote_gltf, DclEmoteGltf,
+    build_dcl_emote_gltf, get_last_16_alphanumeric, load_and_save_emote_gltf,
+    process_emote_animations, DclEmoteGltf,
 };
 pub use scene::load_and_save_scene_gltf;
 pub use wearable::load_and_save_wearable_gltf;
