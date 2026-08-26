@@ -546,11 +546,18 @@ func _physics_process(dt: float) -> void:
 	avatar.glide_state = glide_state
 	# Debounced ungrounding (GROUNDED_GRACE_WINDOW): a 1-tick is_on_floor()
 	# flicker must not flip the AnimationTree out of grounded state. Suppressed
-	# while jump is held so real takeoffs unground immediately. The jump-pad
-	# override below (combined_vy > 0.3) runs after this and still wins.
+	# while jump is held AND during the jump cooldown — a tap-jump released
+	# before the next physics tick still reads is_action_pressed == false, so
+	# the cooldown check (same as in_grace_time above) is what actually keeps a
+	# fresh jump from lingering grounded. The jump-pad override below
+	# (combined_vy > 0.3) runs after this and still wins.
 	avatar.is_grounded = (
 		on_floor
-		or (time_falling < GROUNDED_GRACE_WINDOW and not Input.is_action_pressed("ia_jump"))
+		or (
+			time_falling < GROUNDED_GRACE_WINDOW
+			and not Input.is_action_pressed("ia_jump")
+			and _time_since_last_jump >= JUMP_COOLDOWN
+		)
 	)
 
 	_apply_scene_physics(dt, external_acceleration, scene_pending_impulses, on_floor)
