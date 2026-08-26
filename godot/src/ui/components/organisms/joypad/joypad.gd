@@ -41,6 +41,10 @@ const ICON_SINGLE_JUMP := 0
 const ICON_DOUBLE_JUMP := 1
 const ICON_GLIDER := 2
 
+# Combo column glyph size (design: 23x25 on the 72px disc). The source number icons are square,
+# so icon_max_width caps both sides equally; this overrides the generic small-button size (56).
+const COMBO_ICON_MAX_WIDTH := 25
+
 # Single priority stack (issue #2518): all on-screen buttons form one ordered list and fill
 # fixed screen positions from the top down. Hiding an action cascades the rest up; the first
 # visible action is the big central button; a scene main_action moves its action to the front.
@@ -394,6 +398,9 @@ func _assign_slots(visible: Array, icons: Dictionary) -> void:
 		if i < overflow.size():
 			slot.visible = true
 			_render_action_on(slot, overflow[i], icons.get(overflow[i], {}), false)
+			# Combo buttons carry a smaller glyph than the arc satellites; override the size
+			# _render_action_on applied so their number icons match the design (~23x25).
+			slot.add_theme_constant_override("icon_max_width", COMBO_ICON_MAX_WIDTH)
 		else:
 			slot.visible = false
 

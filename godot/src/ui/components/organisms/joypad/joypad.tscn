@@ -170,7 +170,7 @@ alignment = 2
 [node name="Button_Combo4" parent="Button_Press/Control/Button_Combo/ComboColumn" unique_id=1373996340 instance=ExtResource("1_81cx4")]
 unique_name_in_owner = true
 editor_description = "Figma: Frame 3089 column button 4 (ia_action_6)."
-custom_minimum_size = Vector2(100, 100)
+custom_minimum_size = Vector2(72, 72)
 layout_mode = 2
 size_flags_horizontal = 4
 mouse_force_pass_scroll_events = false
@@ -180,7 +180,7 @@ trigger_action = "ia_action_6"
 [node name="Button_Combo3" parent="Button_Press/Control/Button_Combo/ComboColumn" unique_id=852013040 instance=ExtResource("1_81cx4")]
 unique_name_in_owner = true
 editor_description = "Figma: Frame 3089 column button 3 (ia_action_5)."
-custom_minimum_size = Vector2(100, 100)
+custom_minimum_size = Vector2(72, 72)
 layout_mode = 2
 size_flags_horizontal = 4
 mouse_force_pass_scroll_events = false
@@ -190,7 +190,7 @@ trigger_action = "ia_action_5"
 [node name="Button_Combo2" parent="Button_Press/Control/Button_Combo/ComboColumn" unique_id=2066115093 instance=ExtResource("1_81cx4")]
 unique_name_in_owner = true
 editor_description = "Figma: Frame 3089 column button 2 (ia_action_4)."
-custom_minimum_size = Vector2(100, 100)
+custom_minimum_size = Vector2(72, 72)
 layout_mode = 2
 size_flags_horizontal = 4
 mouse_force_pass_scroll_events = false
@@ -200,7 +200,7 @@ trigger_action = "ia_action_4"
 [node name="Button_Combo1" parent="Button_Press/Control/Button_Combo/ComboColumn" unique_id=1787809682 instance=ExtResource("1_81cx4")]
 unique_name_in_owner = true
 editor_description = "Figma: Frame 3089 column button 1 (ia_action_3)."
-custom_minimum_size = Vector2(100, 100)
+custom_minimum_size = Vector2(72, 72)
 layout_mode = 2
 size_flags_horizontal = 4
 mouse_force_pass_scroll_events = false
