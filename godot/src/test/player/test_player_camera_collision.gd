@@ -54,6 +54,7 @@ func _initialize() -> void:
 	await _test_clamp_fully_blocked_stays_out_of_wall()
 	_test_rig_targets_third_person()
 	_test_rig_targets_first_person()
+	_test_zoom_clamp_constants()
 	_test_scene_pivot_centered_and_masked()
 	_test_scene_has_collision_clamp()
 	_finish()
@@ -446,6 +447,43 @@ func _test_rig_targets_first_person() -> void:
 	var t := CameraRig.rig_targets(false)
 	_expect_eq("1st person spring_length", CameraRig.FIRST_PERSON_SPRING_LENGTH, t.spring_length)
 	_expect_eq("1st person camera_offset_x", 0.0, t.camera_offset_x)
+
+
+# Pinch-to-zoom (issue #2636) relies on these ordering invariants: the first-
+# person park level sits BELOW the near clamp (the hysteresis band that stops
+# the mode flickering at the boundary), the near clamp is below the far clamp,
+# and the default distance falls inside the third-person range so a scene reset
+# lands on a valid zoom.
+func _test_zoom_clamp_constants() -> void:
+	if CameraRig.FIRST_PERSON_ZOOM_LEVEL >= CameraRig.THIRD_PERSON_MIN_DISTANCE:
+		_fail(
+			(
+				"zoom: FIRST_PERSON_ZOOM_LEVEL (%.2f) must be below THIRD_PERSON_MIN_DISTANCE (%.2f)"
+				% [CameraRig.FIRST_PERSON_ZOOM_LEVEL, CameraRig.THIRD_PERSON_MIN_DISTANCE]
+			)
+		)
+	if CameraRig.THIRD_PERSON_MIN_DISTANCE >= CameraRig.THIRD_PERSON_MAX_DISTANCE:
+		_fail(
+			(
+				"zoom: THIRD_PERSON_MIN_DISTANCE (%.2f) must be below THIRD_PERSON_MAX_DISTANCE (%.2f)"
+				% [CameraRig.THIRD_PERSON_MIN_DISTANCE, CameraRig.THIRD_PERSON_MAX_DISTANCE]
+			)
+		)
+	var default_distance: float = CameraRig.THIRD_PERSON_CAMERA.z
+	if (
+		default_distance < CameraRig.THIRD_PERSON_MIN_DISTANCE
+		or default_distance > CameraRig.THIRD_PERSON_MAX_DISTANCE
+	):
+		_fail(
+			(
+				"zoom: default distance (%.2f) must fall within [%.2f, %.2f]"
+				% [
+					default_distance,
+					CameraRig.THIRD_PERSON_MIN_DISTANCE,
+					CameraRig.THIRD_PERSON_MAX_DISTANCE
+				]
+			)
+		)
 
 
 # Guard the actual scene: the Mount pivot stays centered (no lateral X in its
