@@ -4,6 +4,11 @@ const EMOTE: String = "␐"
 const REQUEST_PING: String = "␑"
 const ACK: String = "␆"
 
+## Synthetic/non-player sender address (H160::zero() on the Rust side, formatted as
+## "0x000...000"). Room-level/relay participants can end up attached to this address;
+## such messages must never be rendered in chat as if a real user sent them (#2775).
+const ZERO_ADDRESS: String = "0x0000000000000000000000000000000000000000"
+
 
 func _ready():
 	Global.comms.chat_message.connect(self._on_chats_arrived)
@@ -14,6 +19,11 @@ func _on_chats_arrived(chats: Array):
 		var chat = chats[i]
 		var address: String = chat[0]
 		var timestamp: float = chat[1]
+
+		if address == ZERO_ADDRESS:
+			# Debug/relay message from a synthetic sender — drop it instead of showing it
+			# as a fake user message (#2775).
+			continue
 
 		var avatar: DclAvatar
 		if address == Global.player_identity.get_address_str():
