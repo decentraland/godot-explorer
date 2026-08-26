@@ -32,10 +32,13 @@ const NOISE_PATTERNS := [
 # engine/driver errors shifts we want to notice, but 100% is wasted quota.
 const NOISE_KEEP_RATE := 0.05
 
-# Error-sampling rate used until the `sentry-sample-rate` feature flag loads —
-# also the effective rate when the fetch fails or the flag is absent. The bff
-# can raise it (currently serves 1.0) or lower it to 0.0 as a kill switch.
-const DEFAULT_SENTRY_SAMPLE_RATE := 0.1
+# Sampling rate used until the `sentry-sample-rate` feature flag loads — also
+# the effective rate when the fetch fails or the flag is absent. 1.0 because
+# crash-only mode (below) is the volume control now: pre-flag traffic is just
+# crashes and NodeGuard messages, and sampling those would randomly drop the
+# events we care about most (early-session crashes). The bff flag remains the
+# remote kill switch (0.0 drops everything).
+const DEFAULT_SENTRY_SAMPLE_RATE := 1.0
 
 # Environment detection based on version string suffix
 var is_dev_version = false
@@ -48,6 +51,14 @@ var attach_log_sampled := false
 # us throttle Sentry volume without shipping a build. Enforced in _before_send
 # because the flag fetch resolves after SentrySDK.init already ran.
 var sentry_sample_rate := DEFAULT_SENTRY_SAMPLE_RATE
+
+# When false (default), only crashes reach Sentry as events: exception events
+# below FATAL — the engine/Rust error firehose captured by SentryGodotLogger —
+# are dropped in _before_send. The `sentry-error-events` feature flag turns
+# ERROR reporting back on remotely (e.g. to debug a release for a day) without
+# shipping a build. Errors keep flowing as breadcrumbs either way (the logger's
+# breadcrumb mask is untouched), so crash events retain the recent-error trail.
+var sentry_error_events_enabled := false
 
 
 func _initialize() -> void:
@@ -93,6 +104,17 @@ func _initialize() -> void:
 			# `sentry-sample-rate` feature flag, enforced in _before_send once
 			# the flags load.
 			options.sample_rate = 1.0
+
+			# Clamp the logger's own limiter. The addon defaults (20 events per
+			# 10s, same source line re-reported every 1s) let a single device
+			# emit ~172k events/day when an engine ERR_FAIL_COND fires inside a
+			# per-frame loop, which is what drained the quota. These values cap
+			# a device at ~5 events/min (~7k/day) and re-report a given source
+			# line at most once a minute; _before_send still filters on top.
+			options.logger_limits.events_per_frame = 2
+			options.logger_limits.repeated_error_window_ms = 60000
+			options.logger_limits.throttle_events = 5
+			options.logger_limits.throttle_window_ms = 60000
 	)
 
 	# Tag every event so we can filter sampled-vs-unsampled in the Sentry UI.
@@ -134,10 +156,25 @@ func set_sentry_sample_rate(rate: float) -> void:
 	sentry_sample_rate = clampf(rate, 0.0, 1.0)
 
 
+## Called by FeatureFlags when the remote flags load.
+func set_sentry_error_events_enabled(enabled: bool) -> void:
+	sentry_error_events_enabled = enabled
+
+
 func _before_send(event: SentryEvent) -> SentryEvent:
 	# Discard events for dev builds - only prod and staging report to Sentry
 	if self.is_dev_version:
 		return null
+
+	# Crash-only mode (default): drop sub-fatal exception events — engine and
+	# Rust errors auto-captured by SentryGodotLogger. FATAL events (native
+	# crashes; the OS-level crash handler may also bypass this callback
+	# entirely, which is fine) and exception-less events (explicit
+	# capture_message instrumentation, e.g. NodeGuard — deliberate and
+	# self-rate-limited) always pass.
+	if not sentry_error_events_enabled:
+		if event.get_exception_count() > 0 and event.level != SentrySDK.LEVEL_FATAL:
+			return null
 
 	# Remote throttle (`sentry-sample-rate` feature flag): 1.0 keeps every
 	# event, 0.0 drops them all.
@@ -145,7 +182,7 @@ func _before_send(event: SentryEvent) -> SentryEvent:
 		return null
 
 	if randf() >= NOISE_KEEP_RATE:
-		var msg: String = event.message
+		var msg := _event_text(event)
 		if not msg.is_empty():
 			for pattern in NOISE_PATTERNS:
 				if pattern in msg:
@@ -156,3 +193,15 @@ func _before_send(event: SentryEvent) -> SentryEvent:
 	#	event.message = event.message.replace("Bruno", "REDACTED")
 
 	return event
+
+
+# SentryGodotLogger builds engine/Rust errors with `add_exception()` and never
+# calls `set_message()`, so `event.message` is empty for every event the noise
+# filter is meant to catch. Read the exception value first and fall back to
+# `message` for events captured directly via SentrySDK.capture_message().
+func _event_text(event: SentryEvent) -> String:
+	if event.get_exception_count() > 0:
+		var value := event.get_exception_value(0)
+		if not value.is_empty():
+			return value
+	return event.message
