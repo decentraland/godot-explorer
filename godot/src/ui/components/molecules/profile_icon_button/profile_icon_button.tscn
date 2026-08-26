@@ -8,7 +8,7 @@
 [ext_resource type="Texture2D" uid="uid://bnhbq0fn26dny" path="res://src/ui/components/organisms/navbar/navbar-pressed.png" id="4_glow"]
 
 [node name="ProfileIconButton" type="TextureButton" unique_id=56875761]
-custom_minimum_size = Vector2(80, 80)
+custom_minimum_size = Vector2(82, 82)
 focus_mode = 0
 texture_normal = ExtResource("2_bg")
 texture_pressed = ExtResource("2_lloxn")
