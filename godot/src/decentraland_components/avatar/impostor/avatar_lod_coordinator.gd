@@ -2,10 +2,11 @@ extends Node
 
 # Centralized LOD coordinator. Each Avatar registers on _ready. Every N frames
 # the coordinator partitions avatars into in-frustum and off-screen, ranks the
-# in-frustum ones by camera distance, and writes back caps. Off-screen avatars
-# are forced to FAR + overflow so the closest 8/32 FULL/MID slots go to
-# avatars actually visible on screen, not the ones nearest in 3D space (which
-# could be behind the camera).
+# in-frustum ones by camera distance, and writes back caps. The closest
+# FULL_RATE_CAP avatars run full-rate, the rest of the 40-avatar pool keep
+# their mesh with throttled anim; everyone beyond the pool is forced to FAR
+# (billboard impostor). Off-screen avatars release their impostor slot so pool slots go
+# to avatars actually visible on screen.
 
 # Bounding sphere around the avatar (center at torso, radius covers head and
 # feet plus a little margin). Frustum check pulls a representative point on
@@ -79,25 +80,30 @@ func _process(_delta: float) -> void:
 
 	entries.sort_custom(_sort_by_distance)
 
-	var max_full: int = AvatarImpostorConfig.MAX_FULL_AVATARS
-	var max_throttled: int = AvatarImpostorConfig.MAX_THROTTLED_AVATARS
-	# Real impostor layers are a finite VRAM resource. Beyond max_full+max_layers,
-	# avatars borrow another slot's texture and render fully tinted — looks like
-	# a distant silhouette, no capture cost, no LRU thrash.
+	# Pool budget: 8 full-rate + 32 throttled meshes, then billboards. Inline
+	# the partition here (no per-avatar allocation on the main thread every
+	# tick); the pure partition lives in AvatarPoolPolicy.assign_caps for
+	# headless tests.
+	# Real impostor layers are a finite VRAM resource. Beyond pool+max_layers,
+	# avatars borrow another slot's texture and render fully tinted.
 	var max_real_impostors: int = (
 		Global.avatars.impostor_max_layers() if Global.avatars != null else 128
 	)
+	var full_rate: int = AvatarPoolPolicy.full_rate_for(AvatarPoolPolicy.POOL_SIZE)
+	var overflow: int = AvatarPoolPolicy.overflow_start(
+		AvatarPoolPolicy.POOL_SIZE, max_real_impostors
+	)
 	for i in range(entries.size()):
 		var avatar = entries[i][1]
-		if i < max_full:
+		if i < full_rate:
 			avatar._lod_rank_cap = Avatar.LODState.FULL
 			avatar._use_overflow_impostor = false
-		elif i < max_full + max_throttled:
+		elif i < AvatarPoolPolicy.POOL_SIZE:
 			avatar._lod_rank_cap = Avatar.LODState.MID
 			avatar._use_overflow_impostor = false
 		else:
 			avatar._lod_rank_cap = Avatar.LODState.FAR
-			avatar._use_overflow_impostor = i >= max_full + max_real_impostors
+			avatar._use_overflow_impostor = i >= overflow
 
 
 func _sort_by_distance(a: Array, b: Array) -> bool:

@@ -4,7 +4,9 @@ extends DclAvatar
 
 signal avatar_loaded
 
-# LOD state: FULL (close), MID (15-25m), CROSSFADE (25-30m), FAR (>=30m)
+# LOD state: FULL (<15m), MID (15-80m, throttled anim), FAR (>=80m, billboard)
+# or FAR via pool overflow (see AvatarPoolPolicy). CROSSFADE kept in the enum
+# for compatibility but no band produces it anymore.
 enum LODState { FULL, MID, CROSSFADE, FAR }
 
 # Debug to store each avatar loaded in user://avatars
@@ -189,8 +191,8 @@ var _nametag_clearance := 0.3
 var _impostor_layer: int = -1
 var _lod_phase: int = 0
 var _mesh_lod_visibility_captured: bool = false
-# Written by AvatarLODCoordinator each tick. Caps the natural distance LOD so
-# only the N closest avatars stay FULL, the next M MID/CROSSFADE, rest FAR.
+# Written by AvatarLODCoordinator each tick. Demotes the natural distance
+# LOD to MID (throttled anim) or FAR (billboard) by pool rank.
 var _lod_rank_cap: int = LODState.FULL
 # Set by AvatarLODCoordinator: true when this avatar's rank is beyond the real
 # impostor layer cap. Such avatars borrow another slot's texture and render
@@ -222,7 +224,7 @@ var _anim_frozen_off_screen: bool = false
 # catch-up, so the CPU saving from the freeze is preserved.
 var _anim_freeze_start_ms: int = 0
 
-# Skinning throttle (MID/CROSSFADE only): drive AnimationTree manually and
+# Skinning throttle (MID only): drive AnimationTree manually and
 # advance every N frames so the skeleton bones update at ~20fps instead of
 # ~60fps. Imperceptible at 15-30m distance and a sizeable CPU saving when
 # many avatars share the screen.
@@ -1096,7 +1098,11 @@ func async_load_wearables():
 		if file_hash.is_empty():
 			continue
 		# Use emote_loader from emote_controller to get the cached emote (threaded loading)
-		var obj = await emote_controller.emote_loader.async_get_emote_gltf(file_hash)
+		var obj = await emote_controller.emote_loader.async_get_emote_gltf(
+			file_hash,
+			emote.get_representation_main_file(avatar_data.get_body_shape()),
+			emote.get_content_mapping()
+		)
 		if obj != null:
 			emote_controller.load_emote_from_dcl_emote_gltf(emote_urn, obj, file_hash)
 
@@ -1254,16 +1260,12 @@ func _update_lod() -> void:
 	var fade_alpha: float = 0.0
 	var tint_strength: float = 0.0
 
+	# Distance bands: mesh always, billboard only past the 80m safety valve.
+	# Crowding is handled by the pool rank cap below, not by distance.
 	if dist < AvatarImpostorConfig.MID_RANGE_NEAR:
 		new_state = LODState.FULL
-	elif dist < AvatarImpostorConfig.DISTANCE_NEAR:
-		new_state = LODState.MID
 	elif dist < AvatarImpostorConfig.DISTANCE_FAR:
-		new_state = LODState.CROSSFADE
-		var span: float = AvatarImpostorConfig.DISTANCE_FAR - AvatarImpostorConfig.DISTANCE_NEAR
-		var t: float = (dist - AvatarImpostorConfig.DISTANCE_NEAR) / span
-		dither_alpha = 1.0 - t
-		fade_alpha = t
+		new_state = LODState.MID
 	else:
 		new_state = LODState.FAR
 		dither_alpha = 0.0
@@ -1273,9 +1275,10 @@ func _update_lod() -> void:
 		)
 		tint_strength = clamp((dist - AvatarImpostorConfig.DISTANCE_FAR) / tint_span, 0.0, 1.0)
 
-	# Concurrency cap: only the closest N stay FULL, the next M stay
-	# MID/CROSSFADE, the rest are demoted to FAR. Applies to emoters too — mass
-	# emote scenarios shouldn't bypass the budget.
+	# Pool cap: closest FULL_RATE_CAP run full-rate, rest of the pool (per
+	# graphics profile) keeps the mesh throttled (MID), beyond the pool FAR
+	# billboards. Applies to emoters too — mass emote scenarios shouldn't
+	# bypass the budget.
 	if _lod_rank_cap > new_state:
 		new_state = _lod_rank_cap
 		if new_state == LODState.FAR:
@@ -1310,7 +1313,7 @@ func _apply_lod_state(
 			Global.avatars.clear_impostor(get_instance_id())
 			_impostor_layer = -1
 			_impostor_layer_is_overflow = false
-	elif state == LODState.FAR or state == LODState.CROSSFADE:
+	elif state == LODState.FAR:
 		_ensure_impostor_layer(distance)
 		if _impostor_layer >= 0 and Global.avatars != null:
 			Global.avatars.set_impostor_state(

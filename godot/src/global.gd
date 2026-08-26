@@ -93,7 +93,9 @@ const DEBUG_GUEST_ROTATE_ANCHOR_ID: bool = false
 const TERMS_AND_CONDITIONS_VERSION: int = 1
 
 # Increase this value when local assets cache format changes (invalidates cache)
-const LOCAL_ASSETS_CACHE_VERSION: int = 4
+# v5: runtime-processed emote .tscn saved before the case-insensitive prop lookup
+# (find_prop_node in emote.rs) are missing their prop geometry — re-process them.
+const LOCAL_ASSETS_CACHE_VERSION: int = 5
 
 # On-disk guest identity artifacts, owned by Rust (keep in sync with
 # lib/src/auth/device_anchor.rs + thirdweb_guest.rs) plus the mobile-BFF
