@@ -104,6 +104,11 @@ var avatar_id: String = ""
 var hidden: bool = false
 var passport_disabled: bool = false
 var nametag_hidden: bool = false
+# Horizontal occlusion radius for nametag raycasts (NameplateLayer): max mesh
+# half-extent, so giant head wearables actually hide the tags behind them.
+# Clamped: floor = normal body width, ceiling keeps a 3m-wide wearable from
+# blacking out half the screen.
+var occlusion_radius := 0.4
 var avatar_ready: bool = false
 var has_connected_web3: bool = false  # Whether the user has connected a web3 wallet (not a guest)
 
@@ -258,6 +263,11 @@ func _ready():
 		else BaseMaterial3D.BillboardMode.BILLBOARD_ENABLED
 	)
 	nickname_quad.billboard = billboard_mode
+
+	# Scene NPCs (AvatarShape) live outside Global.avatars (comms-only) and have no
+	# physics colliders, so nameplate occlusion finds them via this group.
+	if is_avatar_shape:
+		add_to_group("avatar_shapes")
 
 	# Personal-space dissolve for any avatar near the world camera (issue #1814).
 	var proximity_fade := AvatarProximityFade.new()
@@ -694,10 +704,16 @@ func _recompute_nametag_clearance() -> void:
 			rest_top, (skeleton_xform * body_shape_skeleton_3d.get_bone_global_rest(i).origin).y
 		)
 	var mesh_top := -INF
+	var head_rad := -INF
 	for child in body_shape_skeleton_3d.get_children():
 		if child is MeshInstance3D and child.visible:
 			var aabb: AABB = child.transform * child.get_aabb()
 			mesh_top = maxf(mesh_top, aabb.end.y)
+			# Occlusion radius only from head-zone meshes (y > 1.2m): T-pose arms
+			# inflate full-body AABBs to ~0.9m, hiding tags the body doesn't block.
+			if (aabb.get_center().y) > 1.2:
+				head_rad = maxf(head_rad, maxf(aabb.size.x, aabb.size.z) * 0.5)
+	occlusion_radius = clampf(head_rad, 0.4, 1.5) if head_rad != -INF else 0.4
 	if mesh_top == -INF or rest_top == -INF:
 		_nametag_clearance = 0.3
 		return
