@@ -6,6 +6,7 @@
 [ext_resource type="Script" uid="uid://di30mxklw1rhe" path="res://src/ui/components/atoms/buttons/button_touch_action/orb_skin.gd" id="6_orbsk"]
 [ext_resource type="Texture2D" uid="uid://dk0wxh4uovqgc" path="res://src/ui/components/atoms/buttons/button_touch_action/orb_default.png" id="7_orbdf"]
 [ext_resource type="Material" uid="uid://cq1dvbbcpt82c" path="res://src/ui/components/molecules/button_profile/texture_rect_rounded_material.tres" id="9_ah7yu"]
+[ext_resource type="Script" uid="uid://pu4yhyrav2vp" path="res://src/ui/components/organisms/joypad/joypad_arc.gd" id="10_jarc"]
 
 [sub_resource type="Gradient" id="Gradient_gqjtl"]
 offsets = PackedFloat32Array(0, 0.9964953)
@@ -30,17 +31,17 @@ metadata/mobile_preview_orientation = "landscape"
 
 [node name="Button_Press" parent="." unique_id=2084128393 instance=ExtResource("1_81cx4")]
 editor_description = "Figma: InteractButton (node 5:1161) - the large central main/jump button. Skin: TouchableButton in dcl_theme.tres."
-custom_minimum_size = Vector2(200, 200)
+custom_minimum_size = Vector2(156, 156)
 layout_mode = 1
 anchors_preset = 3
 anchor_left = 1.0
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = -186.0
-offset_top = -185.0
-offset_right = 14.0
-offset_bottom = 15.0
+offset_left = -156.0
+offset_top = -156.0
+offset_right = 0.0
+offset_bottom = 0.0
 grow_horizontal = 0
 grow_vertical = 0
 mouse_force_pass_scroll_events = false
@@ -55,51 +56,54 @@ anchor_left = 1.0
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = -10.0
-offset_top = -10.0
-offset_right = 10.0
-offset_bottom = 10.0
+offset_left = -20.0
+offset_top = -20.0
 grow_horizontal = 0
 grow_vertical = 0
 mouse_filter = 2
+script = ExtResource("10_jarc")
+single_node_t = 0.0
 
 [node name="Button_Interact" parent="Button_Press/Control" unique_id=1651527188 instance=ExtResource("1_81cx4")]
 editor_description = "Satellite: pointer (ia_pointer). Figma SecondaryButton, icon = pointer_small.svg (node 3:869, heavier relative stroke tuned for the small button). When this action is promoted to the central button, joypad.gd swaps in pointer_large.svg (node 3:1008) so the outline weight stays constant across sizes."
-custom_minimum_size = Vector2(100, 100)
 layout_mode = 1
-offset_left = -305.0
-offset_top = -98.0
-offset_right = -205.0
-offset_bottom = 2.0
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -280.6192
+offset_top = -80.0
+offset_right = -200.6192
+offset_bottom = 0.0
+grow_horizontal = 0
+grow_vertical = 0
 mouse_force_pass_scroll_events = false
 theme_override_constants/icon_max_width = 27
 trigger_action = "ia_pointer"
 
 [node name="Button_Primary" parent="Button_Press/Control" unique_id=125286180 instance=ExtResource("1_81cx4")]
-editor_description = "Satellite: E (ia_primary). Figma SecondaryButton; arc slot position in joypad.gd LAYOUTS."
-custom_minimum_size = Vector2(100, 100)
+editor_description = "Satellite: E (ia_primary). Figma SecondaryButton; arc slot placed by JoypadArc."
 layout_mode = 1
-offset_left = -296.0
-offset_top = -209.0
-offset_right = -196.0
-offset_bottom = -109.0
+offset_left = -248.58612
+offset_top = -170.19987
+offset_right = -168.58612
+offset_bottom = -90.199875
 mouse_force_pass_scroll_events = false
 
 [node name="Button_Secondary" parent="Button_Press/Control" unique_id=1522992833 instance=ExtResource("1_81cx4")]
-editor_description = "Satellite: F (ia_secondary). Figma SecondaryButton; arc slot position in joypad.gd LAYOUTS."
-custom_minimum_size = Vector2(100, 100)
+editor_description = "Satellite: F (ia_secondary). Figma SecondaryButton; arc slot placed by JoypadArc."
 layout_mode = 1
-offset_left = -218.0
-offset_top = -290.0
-offset_right = -118.0
-offset_bottom = -190.0
+offset_left = -170.19987
+offset_top = -248.58612
+offset_right = -90.199875
+offset_bottom = -168.58612
 mouse_force_pass_scroll_events = false
 trigger_action = "ia_secondary"
 
 [node name="Button_Quaternary" parent="Button_Press/Control" unique_id=1522992834 instance=ExtResource("1_81cx4")]
 editor_description = "Satellite slot 4 (no fixed action). Occupies the topmost arc position when exactly 5 buttons are visible, so the '+' toggle isn't needed; hidden and replaced by the '+' when there are more. Any action can be rendered here — see joypad.gd _render_action_on."
 visible = false
-custom_minimum_size = Vector2(100, 100)
 layout_mode = 1
 offset_left = -57.0
 offset_top = -219.0
@@ -109,13 +113,19 @@ mouse_force_pass_scroll_events = false
 
 [node name="Button_Combo" type="Button" parent="Button_Press/Control" unique_id=1321390859]
 unique_name_in_owner = true
-editor_description = "Figma: MultiAction (the + combo toggle). Raw toggle Button (NOT the touch-action atom): reveals the 1/2/3/4 column, fires no input. It is the LAST arc element (topmost), reflowed with the others via joypad.gd LAYOUTS. Icon is plus.svg, matching Figma node 3:874 (Group 3088): a 32x32 '+' of two 4px round-cap white strokes."
-custom_minimum_size = Vector2(100, 100)
+editor_description = "Figma: MultiAction (the + combo toggle). Raw toggle Button (NOT the touch-action atom): reveals the 1/2/3/4 column, fires no input. It is the LAST arc element (topmost), reflowed with the others by JoypadArc. Icon is plus.svg, matching Figma node 3:874 (Group 3088): a 32x32 '+' of two 4px round-cap white strokes."
+custom_minimum_size = Vector2(80, 80)
 layout_mode = 1
-offset_left = -97.0
-offset_top = -304.0
-offset_right = 3.0
-offset_bottom = -204.0
+anchors_preset = 6
+anchor_left = 1.0
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+offset_left = -80.0
+offset_top = -270.6192
+offset_bottom = -190.6192
+grow_horizontal = 0
+grow_vertical = 2
 focus_mode = 0
 mouse_force_pass_scroll_events = false
 theme = ExtResource("4_8at3g")
@@ -130,6 +140,10 @@ layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+offset_left = -6.875
+offset_top = -6.875
+offset_right = 6.875
+offset_bottom = 6.875
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
@@ -142,11 +156,16 @@ script = ExtResource("6_orbsk")
 unique_name_in_owner = true
 editor_description = "Figma: Frame 3089 - the 1/2/3/4 combo column. Revealed by the 12 toggle; collapsed by default. Positioned + sized to its visible buttons by joypad.gd _assign_slots."
 layout_mode = 1
-offset_top = -497.0
-offset_right = 100.0
-offset_bottom = -31.0
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_top = -464.0
+offset_right = 80.0
+offset_bottom = -96.0
+grow_vertical = 0
 mouse_filter = 2
-theme_override_constants/separation = 20
+theme_override_constants/separation = 16
+alignment = 2
 
 [node name="Button_Combo4" parent="Button_Press/Control/Button_Combo/ComboColumn" unique_id=1373996340 instance=ExtResource("1_81cx4")]
 unique_name_in_owner = true

@@ -55,28 +55,11 @@ const PRIORITY_ORDER := [
 	"ia_action_6",
 ]
 
-# Adaptive gamepad arc. The arc around the main button is, clockwise: the visible satellites
-# followed by the "+" overflow toggle as the LAST / topmost element. They reflow together
-# based on the number of visible arc elements, so the "+" always lands at the top when shown.
-# LAYOUTS: key = number of visible arc elements, value = positions (top-left, relative to the
-# Satellites anchor), slot 0 = lower-left (~9 o'clock) up to the last slot = top (~12).
-# Design source (Figma file skocZRe2lV9IjqV4rF6EYs): N=4 is the full arc (3 satellites + "+"),
-# from the "RightSideControls" HUD frame; the satellite-only counts come from the per-count
-# frames (3 -> 5:1141, 2 -> 3:1187, 1 -> 3:1274). The N=4 entry mirrors the authored offsets of
-# the arc nodes in joypad.tscn (Button_Interact / Button_Primary / Button_Secondary / Button_Combo);
-# keep the two in sync when nudging the default arc in the editor.
-const LAYOUTS := {
-	1: [Vector2(-226, -62)],
-	2: [Vector2(-226, -62), Vector2(-162, -200)],
-	3: [Vector2(-229, -57), Vector2(-188, -175), Vector2(-57, -219)],
-	4:
-	[
-		Vector2(-305, -98),
-		Vector2(-296, -209),
-		Vector2(-218, -290),
-		Vector2(-97, -304),
-	],
-}
+# Adaptive gamepad arc. The arc around the main button is, in order: the visible satellites
+# followed by the "+" overflow toggle as the LAST / topmost element. They reflow together based
+# on the number of visible arc elements, so the "+" always lands at the top when shown. The
+# placement itself is computed by JoypadArc (see joypad_arc.gd) from the button diameters — first
+# satellite tangent to the joypad's bottom edge, last to the right edge, the rest spread evenly.
 
 var combo_opened: bool = false
 
@@ -90,7 +73,7 @@ var _jump_icon_overridden: bool = false
 var _jump_slot_is_big: bool = true
 
 # Physical slots (see joypad.tscn): the big central button, the three arc satellites (in
-# fixed screen order matching LAYOUTS slots 0..2), and the four overflow-column buttons
+# arc order 0..2, placed by JoypadArc), and the four overflow-column buttons
 # (priority order, index 0 = first overflow). The "+" toggle is `button_combo` below.
 var _big_slot: Button
 var _arc_slots: Array[Button] = []
@@ -105,6 +88,9 @@ var _quaternary_btn: Button
 
 @onready var button_combo: Button = %Button_Combo
 @onready var button_press: Button = $Button_Press
+# The satellites' anchor Control carries the JoypadArc @tool script, which places the arc from
+# the button diameters (null if the script isn't attached to Button_Press/Control yet).
+@onready var _arc: JoypadArc = $Button_Press/Control as JoypadArc
 @onready var _combo_column: VBoxContainer = %ComboColumn
 
 @onready var _combo_action_buttons: Array[Button] = [
@@ -388,16 +374,15 @@ func _assign_slots(visible: Array, icons: Dictionary) -> void:
 	# The "+" overflow toggle occupies the topmost arc slot only when there are extra buttons.
 	button_combo.visible = show_plus
 
-	# Position the arc (satellites first, "+" last) from LAYOUTS by the arc element count.
+	# Position the arc procedurally (satellites first, "+" last): first node tangent to the
+	# joypad's bottom edge, last to the right edge, the rest spread evenly between — see JoypadArc.
 	var arc_nodes: Array = []
 	for i in range(arc_actions.size()):
 		arc_nodes.append(_arc_slots[i])
 	if show_plus:
 		arc_nodes.append(button_combo)
-	var positions: Array = LAYOUTS.get(arc_nodes.size(), [])
-	for i in range(arc_nodes.size()):
-		if i < positions.size():
-			arc_nodes[i].position = positions[i]
+	if _arc != null:
+		_arc.arrange(arc_nodes)
 
 	# Overflow column (indices 4+). Rendered now but only shown while the "+" menu is open.
 	var overflow: Array = []
