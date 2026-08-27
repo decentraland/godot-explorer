@@ -256,6 +256,39 @@ func _on_button_combo_toggled(toggled_on: bool) -> void:
 	_set_combo_hold(toggled_on)
 	if _combo_column:
 		_combo_column.visible = toggled_on
+		# Re-place on open: if the last _assign_slots ran mid scene-transition (combo actions
+		# just re-shown), the column geometry may be stale — recompute it now that it's settled.
+		if toggled_on:
+			_position_combo_column()
+
+
+## Sizes the combo column to its currently-visible buttons and pins it centered just above the
+## "+" toggle. The height is summed from the buttons directly rather than read from the
+## VBoxContainer's cached minimum size, which lags a frame behind their visibility changing:
+## returning from a scene that hid the combo actions used to leave the column mis-sized and
+## floating far above the "+" (only the first button stayed on screen). Forcing top-left
+## anchoring keeps the manual placement from fighting the node's authored anchors.
+func _position_combo_column() -> void:
+	if _combo_column == null:
+		return
+	var visible_buttons: Array[Button] = []
+	for btn in _combo_action_buttons:
+		if btn.visible:
+			visible_buttons.append(btn)
+	if visible_buttons.is_empty():
+		return
+	var separation: float = float(_combo_column.get_theme_constant("separation"))
+	var width: float = 0.0
+	var height: float = separation * float(visible_buttons.size() - 1)
+	for btn in visible_buttons:
+		var btn_min: Vector2 = btn.get_combined_minimum_size()
+		width = maxf(width, btn_min.x)
+		height += btn_min.y
+	# Gap from the first (bottom) combo button to the "+" equals the inter-button separation,
+	# so the whole stack is evenly spaced.
+	_combo_column.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	_combo_column.size = Vector2(width, height)
+	_combo_column.position = Vector2((button_combo.size.x - width) * 0.5, -height - separation)
 
 
 ## Latches the "+" orb into Hold while the overflow menu is open (like the glider).
@@ -404,18 +437,10 @@ func _assign_slots(visible: Array, icons: Dictionary) -> void:
 		else:
 			slot.visible = false
 
-	# The combo column sits directly on top of the "+" toggle; collapsed unless open. Size it
-	# to its visible content (min size) so the buttons pack tightly with no overlap and no
-	# centering gap — the authored .tscn frame is a fixed box that would otherwise clip / float
-	# the buttons as their count changes. The 32 px lifts the first (bottom) combo button that
-	# far above the "+"; the inter-button gap is the column's `separation` (design: 20 px).
+	# The combo column sits directly on top of the "+" toggle; collapsed unless open.
 	if _combo_column:
-		var col_size := _combo_column.get_combined_minimum_size()
-		_combo_column.position = Vector2(
-			(button_combo.size.x - col_size.x) / 2.0, -col_size.y - 32.0
-		)
-		_combo_column.size = col_size
 		_combo_column.visible = combo_opened and show_plus
+	_position_combo_column()
 
 	_jump_slot_is_big = n > 0 and visible[0] == "ia_jump"
 
