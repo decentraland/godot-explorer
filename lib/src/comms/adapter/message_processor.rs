@@ -1434,6 +1434,7 @@ impl MessageProcessor {
                     pos,
                     rotation_rad,
                     timestamp,
+                    velocity.y,
                 );
             }
             rfc4::packet::Message::Chat(chat) => {

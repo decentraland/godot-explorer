@@ -1750,12 +1750,14 @@ impl AvatarScene {
         };
 
         self._update_avatar_transform(&entity_id, dcl_transform, movement.is_instant);
-        // Wire-authoritative animation state for remote double-jump / glide.
+        // Wire-authoritative animation state for remote double-jump / glide /
+        // air state.
         if let Some(avatar) = self.avatar_godot_scene.get_mut(&entity_id) {
             avatar.bind_mut().apply_wire_movement_state(
                 movement.jump_count,
                 movement.glide_state,
                 movement.is_grounded,
+                movement.velocity_y,
             );
         }
         self.last_movement_timestamp
@@ -1769,6 +1771,7 @@ impl AvatarScene {
         position: godot::prelude::Vector3,
         rotation_rad: f32,
         timestamp: f32,
+        velocity_y: f32,
     ) -> bool {
         let entity_id = if let Some(entity_id) = self.avatar_entity.get(&alias) {
             *entity_id
@@ -1807,6 +1810,13 @@ impl AvatarScene {
         };
 
         self._update_avatar_transform(&entity_id, dcl_transform, false);
+        // Compressed packets carry no jump/glide/grounded state; they do carry
+        // the sender's velocity. Drive air state from it (the local dy/interval
+        // estimate spikes on quantization + jitter — see apply_wire_air_state).
+        if let Some(avatar) = self.avatar_godot_scene.get_mut(&entity_id) {
+            let grounded = avatar.bind().get_is_grounded();
+            avatar.bind_mut().apply_wire_air_state(grounded, velocity_y);
+        }
         self.last_movement_timestamp.insert(alias, timestamp);
         true
     }

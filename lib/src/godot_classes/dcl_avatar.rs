@@ -406,21 +406,32 @@ impl DclAvatar {
         }
     }
 
+    /// Drive air state from the sender's velocity: `grounded_gate` suppresses
+    /// rise/fall while grounded (wire value when available, local `land`
+    /// otherwise). The previous local estimate (per-packet dy / measured
+    /// arrival interval) spiked on wire position quantization + arrival
+    /// jitter and replayed Jump_Fall -> Jump_End on grounded peers — the
+    /// remote "bounce".
+    pub fn apply_wire_air_state(&mut self, grounded_gate: bool, velocity_y: f32) {
+        self.rise = !grounded_gate && velocity_y > 1.0;
+        self.fall = !grounded_gate && velocity_y < -1.0;
+        self.land = !self.rise && !self.fall;
+    }
+
     // Applies authoritative movement state from the wire (remote avatars) to
     // the DclAvatar fields consumed by avatar.gd's animation edge detection.
-    // #b3: do NOT override `land` here — `land` is a short pulse on the local
-    // side (in_grace_time) and overriding it with `is_grounded` produced an
-    // asymmetry vs remotes. `nfall` now reads `is_grounded` directly in
-    // avatar.gd, so `land` stays untouched.
+    // Air state uses the sender's PHYSICS velocity (see apply_wire_air_state).
     pub fn apply_wire_movement_state(
         &mut self,
         jump_count: i32,
         glide_state: i32,
         is_grounded: bool,
+        velocity_y: f32,
     ) {
         self.jump_count = jump_count;
         self.glide_state = glide_state;
         self.is_grounded = is_grounded;
+        self.apply_wire_air_state(is_grounded, velocity_y);
     }
 
     #[func]
@@ -599,6 +610,48 @@ mod tests {
 // the extension and register with the Godot test runner (pattern: billboard.rs).
 mod itest {
     use super::*;
+
+    /// Regression test for the REMOTE landing bounce: air state must come from
+    /// wire data (sender velocity + is_grounded), never from the local
+    /// dy/interval estimate. The key case: a grounded peer whose landing-tick
+    /// sample still carries downward velocity must NOT flicker `fall` — that
+    /// replayed Jump_Fall -> Jump_End every packet (the bounce).
+    #[godot::test::itest]
+    fn itest_wire_air_state_no_landing_replay(ctx: &crate::framework::TestContext) {
+        let mut avatar = DclAvatar::new_alloc();
+        ctx.scene_tree
+            .clone()
+            .add_child(&avatar.clone().upcast::<Node>());
+
+        // Grounded with a downward-velocity sample: no air state at all.
+        avatar
+            .bind_mut()
+            .apply_wire_movement_state(0, 0, true, -8.0);
+        assert!(!avatar.bind().fall, "grounded peer flickered fall");
+        assert!(!avatar.bind().rise);
+        assert!(avatar.bind().land);
+        assert!(avatar.bind().is_grounded);
+
+        // Airborne: rise, fall, and apex (near-zero velocity stays airborne,
+        // no grounded pop).
+        avatar
+            .bind_mut()
+            .apply_wire_movement_state(1, 0, false, 6.0);
+        assert!(avatar.bind().rise);
+        assert!(!avatar.bind().fall);
+        assert!(!avatar.bind().land);
+        avatar
+            .bind_mut()
+            .apply_wire_movement_state(1, 0, false, -6.0);
+        assert!(avatar.bind().fall);
+        assert!(!avatar.bind().rise);
+        avatar
+            .bind_mut()
+            .apply_wire_movement_state(1, 0, false, 0.0);
+        assert!(!avatar.bind().rise);
+        assert!(!avatar.bind().fall);
+        assert!(!avatar.bind().is_grounded);
+    }
 
     /// E2E regression test for #2734 (remote avatars rendering as discrete
     /// frames): a real `DclAvatar` node in the scene tree receives a jittered
