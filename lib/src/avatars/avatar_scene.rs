@@ -1621,11 +1621,9 @@ impl AvatarScene {
             .put(*avatar_entity_id, Some(dcl_transform));
     }
 
-    /// Push each remote avatar's RENDERED (interpolated) transform into the
-    /// scene CRDT every frame. Movement packets only arrive at network cadence
-    /// (5-20 Hz), so scenes that poll avatar transforms (e.g. flagtag sticking
-    /// the flag to whoever holds it) would otherwise see the position jump per
-    /// packet while the rendered avatar moves smoothly ~one interval behind.
+    /// Push each remote avatar's RENDERED transform into the scene CRDT every
+    /// frame — scenes polling avatar positions (e.g. flagtag's flag) would
+    /// otherwise see per-packet jumps while the avatar moves smoothly.
     fn push_interpolated_transforms_to_scenes(&mut self) {
         let mut updates: Vec<(SceneEntityId, DclTransformAndParent)> = Vec::new();
         for (entity_id, avatar) in self.avatar_godot_scene.iter() {
@@ -1814,10 +1812,8 @@ impl AvatarScene {
             parent: SceneEntityId::ROOT,
         };
 
-        // Snapshot the grounded gate BEFORE _update_avatar_transform: the
-        // compressed path has no wire is_grounded, and set_target_position's
-        // local fallback (dy/interval) rewrites it with the spiky estimate —
-        // gating on the pre-packet value keeps one packet of hysteresis.
+        // Grounded gate snapshotted BEFORE _update_avatar_transform rewrites
+        // it with the spiky local fallback (one packet of hysteresis).
         let grounded_gate = self
             .avatar_godot_scene
             .get(&entity_id)
@@ -1825,10 +1821,8 @@ impl AvatarScene {
             .unwrap_or(true);
 
         self._update_avatar_transform(&entity_id, dcl_transform, false);
-        // Compressed packets carry no jump/glide/grounded state; they do carry
-        // the sender's velocity. Drive air state AND locomotion from it (the
-        // local dy/interval estimate spikes on quantization + jitter and
-        // misses slow walks — see apply_wire_movement_state).
+        // Compressed packets carry velocity but no grounded/jump state:
+        // drive air state AND locomotion from it (see apply_wire_movement_state).
         if let Some(avatar) = self.avatar_godot_scene.get_mut(&entity_id) {
             let mut avatar = avatar.bind_mut();
             avatar.apply_wire_air_state(grounded_gate, velocity.y);

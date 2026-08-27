@@ -8,10 +8,8 @@ const SPRINTING_CAMERA_FOV = 75.0
 const MAX_AIR_JUMPS := 1
 const JUMP_BUFFER_WINDOW := 0.15
 const JUMP_COOLDOWN := 0.3
-# Coyote-style debounce on the ANIMATION grounded flag: keep reporting grounded
-# this long after losing floor contact. At mobile physics rates (18-30 Hz) a
-# single tick of is_on_floor() flicker re-fires Jump_Fall -> Jump_End via
-# `nfall`, replaying the landing pose — reads as "bouncing off the floor".
+# Coyote-style debounce on the ANIMATION grounded flag: at mobile physics
+# rates a 1-tick is_on_floor() flicker replayed the landing pose (the "bounce").
 const GROUNDED_GRACE_WINDOW := 0.15
 const AIR_JUMP_HEIGHT := 2.0
 const AIR_JUMP_DELAY := 0.2
@@ -296,12 +294,9 @@ func apply_look_delta(relative: Vector2) -> void:
 
 
 # Pure grounded-flag resolution, extracted for regression testing (#2732).
-# A 1-tick is_on_floor() flicker must not flip the AnimationTree out of
-# grounded state (it replayed Jump_Fall -> Jump_End = the "bounce"). Grace is
-# suppressed while jump is held AND during the jump cooldown: a tap-jump
-# released before the next physics tick still reads jump_pressed == false, so
-# the cooldown check (same as in_grace_time) is what actually keeps a fresh
-# jump from lingering grounded.
+# Grace is suppressed while jump is held AND during the jump cooldown — the
+# cooldown check is what keeps tap-jumps (released before the next tick reads
+# jump_held == false) from lingering grounded.
 static func resolve_is_grounded(
 	on_floor: bool, fall_elapsed: float, jump_held: bool, since_last_jump: float
 ) -> bool:
@@ -564,8 +559,8 @@ func _physics_process(dt: float) -> void:
 	# AnimationTree off the same numbers for both local and remote avatars.
 	avatar.jump_count = jump_count
 	avatar.glide_state = glide_state
-	# Debounced ungrounding (GROUNDED_GRACE_WINDOW): see resolve_is_grounded.
-	# The jump-pad override below (combined_vy > 0.3) runs after this and still wins.
+	# Debounced ungrounding: see resolve_is_grounded. The jump-pad override
+	# below (combined_vy > 0.3) runs after this and still wins.
 	avatar.is_grounded = resolve_is_grounded(
 		on_floor, time_falling, Input.is_action_pressed("ia_jump"), _time_since_last_jump
 	)
