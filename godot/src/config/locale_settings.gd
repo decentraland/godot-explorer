@@ -53,6 +53,16 @@ const PSEUDO_LOCALE: String = "xx-pseudo"
 const FOLLOW_DEVICE_LOCALE: bool = false
 
 
+## TEMPORARY: whether the Settings language picker is offered at all.
+##
+## Same gate as the pseudolocale and the Dev Tools tab. Together with
+## [constant FOLLOW_DEVICE_LOCALE] this makes a production build behave exactly as it did before
+## the localization work landed — English, with no way to change it — while internal builds get
+## the full picker. Remove this gate (and flip the constant) to ship the locales.
+static func is_language_picker_available() -> bool:
+	return not Global.is_production()
+
+
 ## Whether the pseudolocale may be offered in the picker.
 ##
 ## Deliberately not gated on [method OS.is_debug_build]: CI exports with `--export-release`, so
@@ -76,6 +86,12 @@ static func selectable_locales() -> PackedStringArray:
 ## While [constant FOLLOW_DEVICE_LOCALE] is false the device step is skipped, so an install with
 ## no saved choice resolves to English regardless of the system language.
 static func resolve_locale() -> String:
+	# TEMPORARY: a production build is English regardless of what is saved. The setting persists
+	# in user data that a non-production build may have written (same app id, same device), so
+	# hiding the picker alone would still let a stored "es" surface in a store build.
+	if not is_language_picker_available():
+		return FALLBACK_LOCALE
+
 	var configured: String = Global.get_config().locale
 	if configured == PSEUDO_LOCALE and is_pseudolocale_available():
 		# The pseudolocale renders English through Godot's pseudolocalization filter.

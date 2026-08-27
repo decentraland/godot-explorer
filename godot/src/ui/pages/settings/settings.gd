@@ -412,6 +412,11 @@ func _setup_language_dropdown() -> void:
 		container_language.hide()
 		return
 
+	if not LocaleSettings.is_language_picker_available():
+		# TEMPORARY: production ships English only, so the row is not offered there.
+		container_language.hide()
+		return
+
 	# item_selected is wired in the scene, like the other scene-declared dropdowns
 	# (GraphicProfiles / CustomSkybox / Realm). Connecting here too raised
 	# "Signal 'item_selected' is already connected" on every Settings open.
