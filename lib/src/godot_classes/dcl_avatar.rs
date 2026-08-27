@@ -59,11 +59,6 @@ struct LerpState {
     /// from wire quantization (Pulse position steps are ~6.3 cm, so a slow
     /// walk arrives as alternating 0 / step-sized jumps).
     smoothed_speed: f32,
-    /// Current rendered yaw, chased toward the newest wire yaw in `process`.
-    /// Rotation does NOT use the buffered render clock: sharing the position
-    /// delay (~2 intervals) makes fast turns look drunk. An exponential chase
-    /// is continuous (no snaps) and settles in ~3x the time constant.
-    current_rotation_y: f32,
 }
 
 /// One buffered movement packet: world position, yaw, local arrival time.
@@ -114,10 +109,6 @@ impl LerpState {
 
     /// Push a packet onto the ring, stamped with the current local clock.
     fn push_packet(&mut self, position: Vector3, rotation_y: f32) {
-        if self.buffer.is_empty() {
-            // First packet: start the rotation chase from the wire yaw.
-            self.current_rotation_y = rotation_y;
-        }
         self.buffer.push_back(Packet {
             position,
             rotation_y,
@@ -149,11 +140,6 @@ impl LerpState {
         } else {
             self.delay = (self.delay - 0.02 * dt).max(target);
         }
-    }
-
-    /// Newest wire yaw, target of the rotation chase.
-    fn target_rotation_y(&self) -> f32 {
-        self.buffer.back().map(|p| p.rotation_y).unwrap_or(0.0)
     }
 
     /// Interpolated (position, yaw) for the current render clock.
@@ -351,15 +337,16 @@ impl DclAvatar {
 
         // Shift the buffer: the old latest packet becomes the segment start.
         // The render clock interpolates between the two in `process`.
+        // Rotation applies INSTANTLY here — see process().
         let new_yaw = new_target.basis.get_euler().y;
         let first = self.lerp_state.buffer.is_empty();
         self.lerp_state.push_packet(new_target.origin, new_yaw);
+        self.base_mut()
+            .set_global_rotation(new_target.basis.get_euler());
         if first {
             // First packet: no segment yet — snap, interpolating from a zeroed
             // state would drag the avatar across the world.
             self.base_mut().set_global_position(new_target.origin);
-            self.base_mut()
-                .set_global_rotation(new_target.basis.get_euler());
         }
 
         self.update_parcel_position(self.lerp_state.target_position());
@@ -524,22 +511,11 @@ impl DclAvatar {
 
                 if !self.lerp_state.buffer.is_empty() {
                     // Position: buffered render clock (see LerpState docs).
+                    // Rotation is INSTANT (set in set_target_position):
+                    // interpolating it — buffered or chased — always read worse
+                    // than snapping on fast turns.
                     let (new_position, _) = self.lerp_state.render_transform();
-                    // Rotation: exponential chase toward the newest wire yaw
-                    // (~80 ms time constant) — sharing the position delay made
-                    // fast turns look drunk.
-                    const ROTATION_TAU: f32 = 0.08;
-                    let k = 1.0 - (-dt / ROTATION_TAU).exp();
-                    let new_rotation_y = lerp_angle(
-                        self.lerp_state.current_rotation_y,
-                        self.lerp_state.target_rotation_y(),
-                        k,
-                    );
-                    self.lerp_state.current_rotation_y = new_rotation_y;
-
                     self.base_mut().set_global_position(new_position);
-                    self.base_mut()
-                        .set_global_rotation(Vector3::new(0.0, new_rotation_y, 0.0));
                 }
 
                 if self.lerp_state.since_last_packet > (1.5 * self.lerp_state.interval()).max(0.3)
