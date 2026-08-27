@@ -97,5 +97,4 @@ theme_override_font_sizes/bold_font_size = 12
 theme_override_font_sizes/bold_italics_font_size = 12
 theme_override_font_sizes/italics_font_size = 12
 bbcode_enabled = true
-text = "Description"
 scroll_active = false

@@ -24,8 +24,6 @@ var _wc_polling_start_time: int = 0
 @onready var button_wallet_connect: Button = %Button_WalletConnect
 @onready var button_metamask: Button = %Button_MetaMask
 
-@onready var texture_rect_google: TextureRect = $Button_Google/TextureRect_Google
-
 
 func _ready():
 	if Global.is_ios_or_emulating():
