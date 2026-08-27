@@ -1,8 +1,9 @@
 extends Timer
 
 # Tuning constants
-const POSITION_THRESHOLD := 0.05  # 5 cm
+const POSITION_THRESHOLD := 0.0275  # ~2.75 cm (0.5 m/s at the 55 ms timer)
 const ROTATION_THRESHOLD := 0.01  # Approx ~0.57 degrees (in radians)
+const IDLE_KEEPALIVE_TICKS := 18  # ~1 s of no changes between forced sends
 
 @export var player_node: Node3D
 
@@ -37,7 +38,7 @@ func _on_timeout():
 
 	if not position_changed and not rotation_changed and not anim_state_changed:
 		counter += 1
-		if counter < 10:
+		if counter < IDLE_KEEPALIVE_TICKS:
 			return
 
 	counter = 0

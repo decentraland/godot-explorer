@@ -61,12 +61,29 @@ struct LerpState {
     smoothed_speed: f32,
 }
 
-/// One buffered movement packet: world position, yaw, local arrival time.
+/// One buffered movement packet: world position, yaw, local arrival time, and
+/// the animation state that was authoritative when it arrived. The render
+/// clock applies the anim state of the segment being rendered, so the
+/// AnimationTree follows what the player SEES (position/rotation/anim all on
+/// the same clock) instead of the network truth ~1 delay ahead.
 #[derive(Default, Clone, Copy)]
 struct Packet {
     position: Vector3,
     rotation_y: f32,
     arrival: f32,
+    anim: AnimState,
+}
+
+/// Animation flags consumed by avatar.gd's AnimationTree conditions.
+#[derive(Default, Clone, Copy)]
+struct AnimState {
+    walk: bool,
+    jog: bool,
+    run: bool,
+    rise: bool,
+    fall: bool,
+    land: bool,
+    is_grounded: bool,
 }
 
 const PACKET_BUFFER_CAPACITY: usize = 8;
@@ -108,11 +125,12 @@ impl LerpState {
     }
 
     /// Push a packet onto the ring, stamped with the current local clock.
-    fn push_packet(&mut self, position: Vector3, rotation_y: f32) {
+    fn push_packet(&mut self, position: Vector3, rotation_y: f32, anim: AnimState) {
         self.buffer.push_back(Packet {
             position,
             rotation_y,
             arrival: self.clock,
+            anim,
         });
         while self.buffer.len() > PACKET_BUFFER_CAPACITY {
             self.buffer.pop_front();
@@ -142,13 +160,17 @@ impl LerpState {
         }
     }
 
-    /// Interpolated (position, yaw) for the current render clock.
-    fn render_transform(&self) -> (Vector3, f32) {
+    /// Everything the render clock needs for the current frame: interpolated
+    /// position, segment yaw, the anim state of the segment being rendered,
+    /// and whether render_t is inside the buffered timeline (false = starved,
+    /// holding at the newest packet — the silence decay owns the anim flags
+    /// there).
+    fn render(&self) -> (Vector3, f32, AnimState, bool) {
         let Some(newest) = self.buffer.back().copied() else {
-            return (Vector3::ZERO, 0.0);
+            return (Vector3::ZERO, 0.0, AnimState::default(), false);
         };
         if self.buffer.len() == 1 {
-            return (newest.position, newest.rotation_y);
+            return (newest.position, newest.rotation_y, newest.anim, true);
         }
         let render_t = self.clock - self.delay.max(0.05);
         // Newest-first search for the segment containing render_t; falls back
@@ -168,6 +190,10 @@ impl LerpState {
         (
             a.position.lerp(b.position, t),
             lerp_angle(a.rotation_y, b.rotation_y, t),
+            // The displacement of segment a->b produced packet b: its anim
+            // state is the one that belongs to this motion.
+            b.anim,
+            render_t <= newest.arrival,
         )
     }
 }
@@ -308,45 +334,66 @@ impl DclAvatar {
         // LerpState::packet_interval).
         let measured = self.lerp_state.since_last_packet;
         self.lerp_state.since_last_packet = 0.0;
-        self.lerp_state.note_packet_gap(measured);
+        let first = self.lerp_state.buffer.is_empty();
+        if !first {
+            // Measure the real arrival cadence instead of assuming 10 Hz (see
+            // LerpState::packet_interval). Skipped on the first packet: it
+            // would seed both EMAs with the spawn-to-arrival time (clamped to
+            // 0.5 s), pinning the render delay at max for ~15 s of slew.
+            self.lerp_state.note_packet_gap(measured);
+        }
         let interval = self.lerp_state.interval();
 
-        let mut diff_xz_plane = new_target.origin - self.lerp_state.target_position();
-        let y_velocity = diff_xz_plane.y / interval;
-        diff_xz_plane.y = 0.0;
-        let target_forward_distance = diff_xz_plane.length();
-        let instant_speed = target_forward_distance / interval;
-        self.lerp_state.smoothed_speed = if self.lerp_state.smoothed_speed <= 0.0 {
-            instant_speed
+        if first {
+            // No previous target to measure against — classifying the delta vs
+            // the zeroed default reads as a huge speed spike that takes ~10
+            // stationary packets to drain from the speed EMA.
+            self.walk = false;
+            self.jog = false;
+            self.run = false;
+            self.rise = false;
+            self.fall = false;
+            self.land = true;
+            self.is_grounded = self.glide_state == 0;
+            self.lerp_state.smoothed_speed = 0.0;
         } else {
-            self.lerp_state.smoothed_speed * 0.6 + instant_speed * 0.4
-        };
-        let speed = self.lerp_state.smoothed_speed;
+            let mut diff_xz_plane = new_target.origin - self.lerp_state.target_position();
+            let y_velocity = diff_xz_plane.y / interval;
+            diff_xz_plane.y = 0.0;
+            let target_forward_distance = diff_xz_plane.length();
+            let instant_speed = target_forward_distance / interval;
+            // No seeding: starting the EMA at 0 means one fast packet after
+            // idle reads 0.4x instant (quantization spikes stay under the idle
+            // floor) while real walks (>= 1.25 m/s instant) still cross 0.5 on
+            // the first packet.
+            self.lerp_state.smoothed_speed =
+                self.lerp_state.smoothed_speed * 0.6 + instant_speed * 0.4;
+            let speed = self.lerp_state.smoothed_speed;
 
-        // Classify by SPEED, not per-packet distance: the old thresholds
-        // (0.4 m / 0.65 m) were calibrated for 100 ms packets and misclassified
-        // everything one class down at Pulse tier-0's 50 ms cadence.
-        // Same bounds as before, expressed in m/s (distance / 0.1 s).
-        self.walk = speed < 4.0 && speed > 0.1;
-        self.run = speed >= 6.5;
-        self.jog = !(self.walk || self.run) && speed > 0.1;
-        self.rise = y_velocity > 1.0;
-        self.fall = y_velocity < -1.0;
-        self.land = !self.rise && !self.fall;
-        self.is_grounded = self.land && self.glide_state == 0;
+            // Classify by SPEED, not per-packet distance: the old thresholds
+            // (0.4 m / 0.65 m) were calibrated for 100 ms packets and misclassified
+            // everything one class down at Pulse tier-0's 50 ms cadence.
+            self.classify_locomotion(speed);
+            self.rise = y_velocity > 1.0;
+            self.fall = y_velocity < -1.0;
+            self.land = !self.rise && !self.fall;
+            self.is_grounded = self.land && self.glide_state == 0;
+        }
 
         // Shift the buffer: the old latest packet becomes the segment start.
-        // The render clock interpolates between the two in `process`.
-        // Rotation applies INSTANTLY here — see process().
+        // Position, rotation AND anim state all render off this ring on the
+        // same clock (see LerpState docs) — what the player sees, not the
+        // network truth ~1 delay ahead.
         let new_yaw = new_target.basis.get_euler().y;
-        let first = self.lerp_state.buffer.is_empty();
-        self.lerp_state.push_packet(new_target.origin, new_yaw);
-        self.base_mut()
-            .set_global_rotation(new_target.basis.get_euler());
+        let anim = self.anim_snapshot();
+        self.lerp_state
+            .push_packet(new_target.origin, new_yaw, anim);
         if first {
             // First packet: no segment yet — snap, interpolating from a zeroed
             // state would drag the avatar across the world.
             self.base_mut().set_global_position(new_target.origin);
+            self.base_mut()
+                .set_global_rotation(new_target.basis.get_euler());
         }
 
         self.update_parcel_position(self.lerp_state.target_position());
@@ -366,8 +413,9 @@ impl DclAvatar {
 
         let target_rotation_y = new_target.basis.get_euler().y;
         self.lerp_state.buffer.clear();
+        let anim = self.anim_snapshot();
         self.lerp_state
-            .push_packet(new_target.origin, target_rotation_y);
+            .push_packet(new_target.origin, target_rotation_y, anim);
         self.lerp_state.smoothed_speed = 0.0;
         self.lerp_state.since_last_packet = 0.0;
 
@@ -407,6 +455,54 @@ impl DclAvatar {
         }
     }
 
+    /// Snapshot of the anim flags as they are RIGHT NOW (post classification
+    /// and/or wire state) — stored into the packet being buffered.
+    fn anim_snapshot(&self) -> AnimState {
+        AnimState {
+            walk: self.walk,
+            jog: self.jog,
+            run: self.run,
+            rise: self.rise,
+            fall: self.fall,
+            land: self.land,
+            is_grounded: self.is_grounded,
+        }
+    }
+
+    /// Apply a buffered packet's anim flags to the live fields consumed by
+    /// avatar.gd — called from `process` for the segment being rendered.
+    fn apply_anim(&mut self, anim: &AnimState) {
+        self.walk = anim.walk;
+        self.jog = anim.jog;
+        self.run = anim.run;
+        self.rise = anim.rise;
+        self.fall = anim.fall;
+        self.land = anim.land;
+        self.is_grounded = anim.is_grounded;
+    }
+
+    /// Re-snapshot the newest buffered packet's anim state. Called after
+    /// wire-authoritative state (apply_wire_movement_state / apply_wire_air_state)
+    /// updates the flags, which happens AFTER set_target_position pushed the
+    /// packet.
+    pub fn sync_newest_packet_anim(&mut self) {
+        let anim = self.anim_snapshot();
+        if let Some(newest) = self.lerp_state.buffer.back_mut() {
+            newest.anim = anim;
+        }
+    }
+
+    /// Classify walk/jog/run from a horizontal speed (m/s). Idle floor 0.5:
+    /// below it the walk anim plays with no visible displacement (broadcast
+    /// threshold crossings, quantization micro-steps). Boundaries match the
+    /// historical per-100ms distance thresholds expressed as m/s.
+    fn classify_locomotion(&mut self, speed: f32) {
+        const IDLE_SPEED_FLOOR: f32 = 0.5;
+        self.walk = speed < 4.0 && speed > IDLE_SPEED_FLOOR;
+        self.run = speed >= 6.5;
+        self.jog = !(self.walk || self.run) && speed > IDLE_SPEED_FLOOR;
+    }
+
     /// Drive air state from the sender's velocity: `grounded_gate` suppresses
     /// rise/fall while grounded (wire value when available, local `land`
     /// otherwise). The previous local estimate (per-packet dy / measured
@@ -421,18 +517,30 @@ impl DclAvatar {
 
     // Applies authoritative movement state from the wire (remote avatars) to
     // the DclAvatar fields consumed by avatar.gd's animation edge detection.
-    // Air state uses the sender's PHYSICS velocity (see apply_wire_air_state).
+    // Locomotion AND air state use the sender's PHYSICS velocity: the local
+    // dy/interval estimate both spiked on quantization (bounce) and missed
+    // short fast bursts / genuine slow walks (no anim).
     pub fn apply_wire_movement_state(
         &mut self,
         jump_count: i32,
         glide_state: i32,
         is_grounded: bool,
-        velocity_y: f32,
+        velocity: Vector3,
     ) {
         self.jump_count = jump_count;
         self.glide_state = glide_state;
         self.is_grounded = is_grounded;
-        self.apply_wire_air_state(is_grounded, velocity_y);
+        self.apply_wire_air_state(is_grounded, velocity.y);
+        let wire_speed = Vector2::new(velocity.x, velocity.z).length();
+        self.apply_wire_locomotion(wire_speed);
+    }
+
+    /// Locomotion from the sender's wire velocity (EMA-smoothed, see
+    /// classify_locomotion for thresholds).
+    pub fn apply_wire_locomotion(&mut self, wire_speed: f32) {
+        self.lerp_state.smoothed_speed = self.lerp_state.smoothed_speed * 0.6 + wire_speed * 0.4;
+        let speed = self.lerp_state.smoothed_speed;
+        self.classify_locomotion(speed);
     }
 
     #[func]
@@ -510,12 +618,16 @@ impl DclAvatar {
                 self.lerp_state.advance_delay(dt);
 
                 if !self.lerp_state.buffer.is_empty() {
-                    // Position: buffered render clock (see LerpState docs).
-                    // Rotation is INSTANT (set in set_target_position):
-                    // interpolating it — buffered or chased — always read worse
-                    // than snapping on fast turns.
-                    let (new_position, _) = self.lerp_state.render_transform();
+                    // Everything renders off the buffered clock: position,
+                    // rotation, and the anim state of the visible segment —
+                    // the model the player sees, not the network truth.
+                    let (new_position, new_yaw, anim, on_timeline) = self.lerp_state.render();
                     self.base_mut().set_global_position(new_position);
+                    self.base_mut()
+                        .set_global_rotation(Vector3::new(0.0, new_yaw, 0.0));
+                    if on_timeline {
+                        self.apply_anim(&anim);
+                    }
                 }
 
                 if self.lerp_state.since_last_packet > (1.5 * self.lerp_state.interval()).max(0.3)
@@ -612,6 +724,99 @@ mod tests {
 mod itest {
     use super::*;
 
+    /// Slow-speed packets (below the idle floor) must NOT engage the walk
+    /// anim: broadcast threshold crossings and wire quantization read as
+    /// 0.3-0.5 m/s on stationary peers.
+    #[godot::test::itest]
+    fn itest_slow_speed_stays_idle(ctx: &crate::framework::TestContext) {
+        let mut avatar = DclAvatar::new_alloc();
+        ctx.scene_tree
+            .clone()
+            .add_child(&avatar.clone().upcast::<Node>());
+        avatar
+            .bind_mut()
+            .set_movement_type(AvatarMovementType::LerpTwoPoints as i32);
+        avatar.set("current_parcel_position", &Vector2i::ZERO.to_variant());
+        avatar.set("current_parcel_scene_id", &1_i32.to_variant());
+
+        // ~3 cm per 55 ms packet ≈ 0.55 m/s instantaneous — but alternate
+        // zero-movement packets like the 6.3 cm quantization does, averaging
+        // ~0.27 m/s. Must never read as walking.
+        let frame = 1.0f64 / 30.0;
+        let mut last_pos = Vector3::new(8.0, 0.0, -8.0);
+        for step in 0..120i32 {
+            if step % 2 == 0 {
+                let n = step / 2;
+                if n % 3 == 0 && n > 0 {
+                    last_pos = Vector3::new(8.0 + 0.063 * (n / 3) as f32, 0.0, -8.0);
+                }
+                avatar
+                    .bind_mut()
+                    .set_target_position(Transform3D::new(Basis::IDENTITY, last_pos));
+            }
+            avatar.bind_mut().process(frame);
+        }
+        let avatar = avatar.bind();
+        assert!(!avatar.walk, "slow quantization steps read as walk");
+        assert!(!avatar.jog, "slow quantization steps read as jog");
+        assert!(!avatar.run, "slow quantization steps read as run");
+    }
+
+    /// Coherence test: the walk anim must start when the RENDERED body starts
+    /// moving, not when the packet arrives. Before anim state rode the packet
+    /// ring, the avatar walked in place for ~1 render delay before moving.
+    #[godot::test::itest]
+    fn itest_anim_state_tracks_rendered_motion(ctx: &crate::framework::TestContext) {
+        let mut avatar = DclAvatar::new_alloc();
+        ctx.scene_tree
+            .clone()
+            .add_child(&avatar.clone().upcast::<Node>());
+        avatar
+            .bind_mut()
+            .set_movement_type(AvatarMovementType::LerpTwoPoints as i32);
+        avatar.set("current_parcel_position", &Vector2i::ZERO.to_variant());
+        avatar.set("current_parcel_scene_id", &1_i32.to_variant());
+
+        let frame = 1.0f64 / 30.0;
+        // 1 s of stationary packets (peer idle), then continuous walking.
+        let mut first_move_frame: i32 = -1;
+        let mut first_walk_frame: i32 = -1;
+        let mut prev = Vector3::ZERO;
+        for step in 0..120i32 {
+            let t = step as f64 * frame;
+            if step % 3 == 0 {
+                // ~18 Hz packet cadence
+                let pos = if t < 1.0 {
+                    Vector3::new(8.0, 0.0, -8.0)
+                } else {
+                    Vector3::new(8.0 + 2.0 * (t - 1.0) as f32, 0.0, -8.0)
+                };
+                avatar
+                    .bind_mut()
+                    .set_target_position(Transform3D::new(Basis::IDENTITY, pos));
+            }
+            avatar.bind_mut().process(frame);
+            let pos = avatar.get_global_position();
+            if step > 0 {
+                if first_move_frame < 0 && pos.distance_to(prev) > 0.005 {
+                    first_move_frame = step;
+                }
+                if first_walk_frame < 0 && avatar.bind().walk {
+                    first_walk_frame = step;
+                }
+            }
+            prev = pos;
+        }
+
+        assert!(first_move_frame > 0, "avatar never moved");
+        assert!(first_walk_frame > 0, "walk anim never engaged");
+        let gap_frames = (first_walk_frame - first_move_frame).abs();
+        assert!(
+            gap_frames <= 2,
+            "anim/motion skew {gap_frames} frames (walk@{first_walk_frame} move@{first_move_frame})"
+        );
+    }
+
     /// Regression test for the REMOTE landing bounce: air state must come from
     /// wire data (sender velocity + is_grounded), never from the local
     /// dy/interval estimate. The key case: a grounded peer whose landing-tick
@@ -627,7 +832,7 @@ mod itest {
         // Grounded with a downward-velocity sample: no air state at all.
         avatar
             .bind_mut()
-            .apply_wire_movement_state(0, 0, true, -8.0);
+            .apply_wire_movement_state(0, 0, true, Vector3::new(0.0, -8.0, 0.0));
         assert!(!avatar.bind().fall, "grounded peer flickered fall");
         assert!(!avatar.bind().rise);
         assert!(avatar.bind().land);
@@ -637,21 +842,60 @@ mod itest {
         // no grounded pop).
         avatar
             .bind_mut()
-            .apply_wire_movement_state(1, 0, false, 6.0);
+            .apply_wire_movement_state(1, 0, false, Vector3::new(0.0, 6.0, 0.0));
         assert!(avatar.bind().rise);
         assert!(!avatar.bind().fall);
         assert!(!avatar.bind().land);
         avatar
             .bind_mut()
-            .apply_wire_movement_state(1, 0, false, -6.0);
+            .apply_wire_movement_state(1, 0, false, Vector3::new(0.0, -6.0, 0.0));
         assert!(avatar.bind().fall);
         assert!(!avatar.bind().rise);
         avatar
             .bind_mut()
-            .apply_wire_movement_state(1, 0, false, 0.0);
+            .apply_wire_movement_state(1, 0, false, Vector3::ZERO);
         assert!(!avatar.bind().rise);
         assert!(!avatar.bind().fall);
         assert!(!avatar.bind().is_grounded);
+    }
+
+    /// Wire-velocity locomotion: genuine slow walks must still animate (the
+    /// idle floor only filters sub-0.5 m/s sway), and short fast bursts must
+    /// classify by the sender's real speed.
+    #[godot::test::itest]
+    fn itest_wire_locomotion_from_velocity(ctx: &crate::framework::TestContext) {
+        let mut avatar = DclAvatar::new_alloc();
+        ctx.scene_tree
+            .clone()
+            .add_child(&avatar.clone().upcast::<Node>());
+
+        // Idle sway: no anim.
+        avatar
+            .bind_mut()
+            .apply_wire_movement_state(0, 0, true, Vector3::new(0.3, 0.0, 0.0));
+        assert!(!avatar.bind().walk && !avatar.bind().jog && !avatar.bind().run);
+        // Genuine slow walk (1 m/s): engages — wire velocity needs no
+        // interval math, so it crosses the floor on the first packets.
+        avatar
+            .bind_mut()
+            .apply_wire_movement_state(0, 0, true, Vector3::new(1.0, 0.0, 0.0));
+        avatar
+            .bind_mut()
+            .apply_wire_movement_state(0, 0, true, Vector3::new(1.0, 0.0, 0.0));
+        assert!(avatar.bind().walk, "slow walk read as idle");
+        // Jog and run boundaries.
+        for _ in 0..3 {
+            avatar
+                .bind_mut()
+                .apply_wire_movement_state(0, 0, true, Vector3::new(5.0, 0.0, 0.0));
+        }
+        assert!(avatar.bind().jog, "5 m/s not jog");
+        for _ in 0..5 {
+            avatar
+                .bind_mut()
+                .apply_wire_movement_state(0, 0, true, Vector3::new(7.0, 0.0, 0.0));
+        }
+        assert!(avatar.bind().run, "7 m/s not run");
     }
 
     /// E2E regression test for #2734 (remote avatars rendering as discrete
@@ -753,9 +997,9 @@ mod itest {
                 state.since_last_packet = 0.0;
                 let angle = clock;
                 let pos = Vector3::new(8.0 + 2.0 * angle.cos(), 0.0, -8.0 + 2.0 * angle.sin());
-                state.push_packet(pos, 0.0);
+                state.push_packet(pos, 0.0, AnimState::default());
             }
-            let (render, _) = state.render_transform();
+            let (render, _, _, _) = state.render();
             if step > 0 {
                 let step_len = render.distance_to(prev);
                 if step_len > max_step {
@@ -803,9 +1047,9 @@ mod itest {
                 gap_idx += 1;
                 next_packet_in = gap;
                 let pos = Vector3::new(peer_t * peer_speed, 0.0, 0.0);
-                state.push_packet(pos, 0.0);
+                state.push_packet(pos, 0.0, AnimState::default());
             }
-            let (render, _) = state.render_transform();
+            let (render, _, _, _) = state.render();
             if step > 0 {
                 let dx = render.x - prev_render.x;
                 max_backtrack = max_backtrack.max(-dx);

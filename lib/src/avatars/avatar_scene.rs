@@ -1757,8 +1757,13 @@ impl AvatarScene {
                 movement.jump_count,
                 movement.glide_state,
                 movement.is_grounded,
-                movement.velocity_y,
+                godot::prelude::Vector3::new(
+                    movement.velocity_x,
+                    movement.velocity_y,
+                    movement.velocity_z,
+                ),
             );
+            avatar.bind_mut().sync_newest_packet_anim();
         }
         self.last_movement_timestamp
             .insert(alias, movement.timestamp);
@@ -1771,7 +1776,7 @@ impl AvatarScene {
         position: godot::prelude::Vector3,
         rotation_rad: f32,
         timestamp: f32,
-        velocity_y: f32,
+        velocity: godot::prelude::Vector3,
     ) -> bool {
         let entity_id = if let Some(entity_id) = self.avatar_entity.get(&alias) {
             *entity_id
@@ -1809,13 +1814,27 @@ impl AvatarScene {
             parent: SceneEntityId::ROOT,
         };
 
+        // Snapshot the grounded gate BEFORE _update_avatar_transform: the
+        // compressed path has no wire is_grounded, and set_target_position's
+        // local fallback (dy/interval) rewrites it with the spiky estimate —
+        // gating on the pre-packet value keeps one packet of hysteresis.
+        let grounded_gate = self
+            .avatar_godot_scene
+            .get(&entity_id)
+            .map(|avatar| avatar.bind().get_is_grounded())
+            .unwrap_or(true);
+
         self._update_avatar_transform(&entity_id, dcl_transform, false);
         // Compressed packets carry no jump/glide/grounded state; they do carry
-        // the sender's velocity. Drive air state from it (the local dy/interval
-        // estimate spikes on quantization + jitter — see apply_wire_air_state).
+        // the sender's velocity. Drive air state AND locomotion from it (the
+        // local dy/interval estimate spikes on quantization + jitter and
+        // misses slow walks — see apply_wire_movement_state).
         if let Some(avatar) = self.avatar_godot_scene.get_mut(&entity_id) {
-            let grounded = avatar.bind().get_is_grounded();
-            avatar.bind_mut().apply_wire_air_state(grounded, velocity_y);
+            let mut avatar = avatar.bind_mut();
+            avatar.apply_wire_air_state(grounded_gate, velocity.y);
+            let wire_speed = godot::prelude::Vector2::new(velocity.x, velocity.z).length();
+            avatar.apply_wire_locomotion(wire_speed);
+            avatar.sync_newest_packet_anim();
         }
         self.last_movement_timestamp.insert(alias, timestamp);
         true
