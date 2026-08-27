@@ -59,6 +59,11 @@ struct LerpState {
     /// from wire quantization (Pulse position steps are ~6.3 cm, so a slow
     /// walk arrives as alternating 0 / step-sized jumps).
     smoothed_speed: f32,
+    /// Current rendered yaw, chased toward the newest wire yaw in `process`.
+    /// Rotation does NOT use the buffered render clock: sharing the position
+    /// delay (~2 intervals) makes fast turns look drunk. An exponential chase
+    /// is continuous (no snaps) and settles in ~3x the time constant.
+    current_rotation_y: f32,
 }
 
 /// One buffered movement packet: world position, yaw, local arrival time.
@@ -109,6 +114,10 @@ impl LerpState {
 
     /// Push a packet onto the ring, stamped with the current local clock.
     fn push_packet(&mut self, position: Vector3, rotation_y: f32) {
+        if self.buffer.is_empty() {
+            // First packet: start the rotation chase from the wire yaw.
+            self.current_rotation_y = rotation_y;
+        }
         self.buffer.push_back(Packet {
             position,
             rotation_y,
@@ -140,6 +149,11 @@ impl LerpState {
         } else {
             self.delay = (self.delay - 0.02 * dt).max(target);
         }
+    }
+
+    /// Newest wire yaw, target of the rotation chase.
+    fn target_rotation_y(&self) -> f32 {
+        self.buffer.back().map(|p| p.rotation_y).unwrap_or(0.0)
     }
 
     /// Interpolated (position, yaw) for the current render clock.
@@ -509,8 +523,19 @@ impl DclAvatar {
                 self.lerp_state.advance_delay(dt);
 
                 if !self.lerp_state.buffer.is_empty() {
-                    // Render ~1.25 packet intervals in the past (see LerpState docs).
-                    let (new_position, new_rotation_y) = self.lerp_state.render_transform();
+                    // Position: buffered render clock (see LerpState docs).
+                    let (new_position, _) = self.lerp_state.render_transform();
+                    // Rotation: exponential chase toward the newest wire yaw
+                    // (~80 ms time constant) — sharing the position delay made
+                    // fast turns look drunk.
+                    const ROTATION_TAU: f32 = 0.08;
+                    let k = 1.0 - (-dt / ROTATION_TAU).exp();
+                    let new_rotation_y = lerp_angle(
+                        self.lerp_state.current_rotation_y,
+                        self.lerp_state.target_rotation_y(),
+                        k,
+                    );
+                    self.lerp_state.current_rotation_y = new_rotation_y;
 
                     self.base_mut().set_global_position(new_position);
                     self.base_mut()
