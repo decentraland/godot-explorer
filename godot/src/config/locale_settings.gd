@@ -44,6 +44,14 @@ const FALLBACK_LOCALE: String = "en"
 ## too, so a hardcoded English string is bracketed just the same. See tools/i18n/README.md.
 const PSEUDO_LOCALE: String = "xx-pseudo"
 
+## TEMPORARY: start every install in English rather than following the device locale.
+##
+## Only the default changes — the picker still offers every supported locale and an explicit
+## choice is still honoured and persisted. Flip this back to `true` to restore device detection;
+## [method detect_device_locale] is deliberately left untouched so that is a one-line change
+## rather than a rewrite.
+const FOLLOW_DEVICE_LOCALE: bool = false
+
 
 ## Whether the pseudolocale may be offered in the picker.
 ##
@@ -64,6 +72,9 @@ static func selectable_locales() -> PackedStringArray:
 
 ## Resolve the locale to actually use: the saved override when it is still supported,
 ## otherwise the device locale, otherwise English.
+##
+## While [constant FOLLOW_DEVICE_LOCALE] is false the device step is skipped, so an install with
+## no saved choice resolves to English regardless of the system language.
 static func resolve_locale() -> String:
 	var configured: String = Global.get_config().locale
 	if configured == PSEUDO_LOCALE and is_pseudolocale_available():
@@ -71,7 +82,7 @@ static func resolve_locale() -> String:
 		return FALLBACK_LOCALE
 	if not configured.is_empty() and configured in SUPPORTED_LOCALES:
 		return configured
-	return detect_device_locale()
+	return detect_device_locale() if FOLLOW_DEVICE_LOCALE else FALLBACK_LOCALE
 
 
 ## Best-supported match for the device's locale, falling back to English.
