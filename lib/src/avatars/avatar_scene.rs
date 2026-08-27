@@ -1790,6 +1790,7 @@ impl AvatarScene {
         rotation_rad: f32,
         timestamp: f32,
         velocity: godot::prelude::Vector3,
+        is_grounded: bool,
     ) -> bool {
         let entity_id = if let Some(entity_id) = self.avatar_entity.get(&alias) {
             *entity_id
@@ -1827,24 +1828,15 @@ impl AvatarScene {
             parent: SceneEntityId::ROOT,
         };
 
-        // Grounded gate snapshotted BEFORE _update_avatar_transform rewrites
-        // it with the spiky local fallback (one packet of hysteresis).
-        let grounded_gate = self
-            .avatar_godot_scene
-            .get(&entity_id)
-            .map(|avatar| avatar.bind().get_is_grounded())
-            .unwrap_or(true);
-
         self._update_avatar_transform(&entity_id, dcl_transform, false);
-        // Compressed packets carry velocity but no grounded/jump state:
-        // drive air state AND locomotion from it (see apply_wire_movement_state).
+        // The temporal bitfield DOES carry grounded (and jump/falling) — treat
+        // this path like the uncompressed one. jump_count/glide are zero by
+        // construction: the sender forces uncompressed when either carries info.
         if let Some(avatar) = self.avatar_godot_scene.get_mut(&entity_id) {
-            let mut avatar = avatar.bind_mut();
-            avatar.apply_wire_air_state(grounded_gate, velocity.y);
-            avatar.set_grounded_from_air_state();
-            let wire_speed = godot::prelude::Vector2::new(velocity.x, velocity.z).length();
-            avatar.apply_wire_locomotion(wire_speed);
-            avatar.sync_newest_packet_anim();
+            avatar
+                .bind_mut()
+                .apply_wire_movement_state(0, 0, is_grounded, velocity);
+            avatar.bind_mut().sync_newest_packet_anim();
         }
         self.last_movement_timestamp.insert(alias, timestamp);
         true

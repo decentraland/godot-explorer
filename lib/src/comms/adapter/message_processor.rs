@@ -1416,6 +1416,7 @@ impl MessageProcessor {
                 let pos = movement.position(self.realm_min, self.realm_max);
                 let velocity = movement.velocity();
                 let rotation_rad = movement.temporal.rotation_f32();
+                let is_grounded = movement.temporal.grounded();
 
                 tracing::debug!(
                     "Received MovementCompressed from {:#x}: pos({}, {}, {}), rot_rad({}), vel({}, {}, {}), timestamp({})", 
@@ -1435,6 +1436,7 @@ impl MessageProcessor {
                     rotation_rad,
                     timestamp,
                     velocity,
+                    is_grounded,
                 );
             }
             rfc4::packet::Message::Chat(chat) => {

@@ -502,13 +502,6 @@ impl DclAvatar {
         self.apply_wire_locomotion(wire_speed);
     }
 
-    /// is_grounded derived from the current air state (compressed path has no
-    /// wire grounded flag). Separate from apply_wire_air_state: the
-    /// uncompressed path sets is_grounded from the wire AFTER calling it.
-    pub fn set_grounded_from_air_state(&mut self) {
-        self.is_grounded = self.land && self.glide_state == 0;
-    }
-
     /// Locomotion from the sender's wire velocity (EMA-smoothed, see
     /// classify_locomotion for thresholds).
     pub fn apply_wire_locomotion(&mut self, wire_speed: f32) {
@@ -779,44 +772,39 @@ mod itest {
         );
     }
 
-    /// Compressed-path regression (review P1): after a landing-tick packet
-    /// with a spiky dy, the wire-driven sequence must leave `land` and
-    /// `is_grounded` COHERENT — before set_grounded_from_air_state the avatar
-    /// sat at land==true / is_grounded==false and replayed the landing anim.
+    /// Compressed-path lifecycle: the wire `grounded` bit (temporal bitfield)
+    /// must drive is_grounded — an earlier version derived it from the air
+    /// state gated on the PREVIOUS grounded value, which latched peers
+    /// permanently grounded (jumps never animated). Covers grounded -> jump
+    /// -> fall -> landing, asserting every transition.
     #[godot::test::itest]
-    fn itest_compressed_path_grounded_coherent(ctx: &crate::framework::TestContext) {
+    fn itest_compressed_path_grounded_lifecycle(ctx: &crate::framework::TestContext) {
         let mut avatar = DclAvatar::new_alloc();
         ctx.scene_tree
             .clone()
             .add_child(&avatar.clone().upcast::<Node>());
-        avatar.set("current_parcel_position", &Vector2i::ZERO.to_variant());
-        avatar.set("current_parcel_scene_id", &1_i32.to_variant());
 
-        // Peer standing: first packet grounds the avatar.
-        avatar.bind_mut().set_target_position(Transform3D::new(
-            Basis::IDENTITY,
-            Vector3::new(8.0, 0.0, -8.0),
-        ));
+        let send = |avatar: &mut Gd<DclAvatar>, grounded: bool, vy: f32| {
+            avatar
+                .bind_mut()
+                .apply_wire_movement_state(0, 0, grounded, Vector3::new(0.0, vy, 0.0));
+        };
+
+        send(&mut avatar, true, 0.0);
         assert!(avatar.bind().is_grounded);
-
-        // Hysteresis gate: grounded state BEFORE the next packet (matches
-        // update_avatar_transform_with_movement_compressed).
-        let gate = avatar.bind().is_grounded;
-
-        // Landing-tick packet: 0.5 m downward dy — the local fallback spikes
-        // fall=true and is_grounded=false.
-        avatar.bind_mut().set_target_position(Transform3D::new(
-            Basis::IDENTITY,
-            Vector3::new(8.0, -0.5, -8.0),
-        ));
-
-        // Compressed-path sequence: wire air state + grounded derived from it.
-        avatar.bind_mut().apply_wire_air_state(gate, -8.0);
-        avatar.bind_mut().set_grounded_from_air_state();
-
+        // Jump: wire grounded=false MUST unground (the latch kept this true).
+        send(&mut avatar, false, 6.0);
+        assert!(avatar.bind().rise, "jump never animated (latch)");
+        assert!(!avatar.bind().is_grounded, "grounded latched true");
+        // Fall.
+        send(&mut avatar, false, -6.0);
+        assert!(avatar.bind().fall);
+        assert!(!avatar.bind().is_grounded);
+        // Landing: grounded with a downward sample — coherent, no fall flicker.
+        send(&mut avatar, true, -8.0);
         let avatar = avatar.bind();
-        assert!(avatar.is_grounded, "is_grounded left spiky (dy-derived)");
-        assert!(avatar.land, "land/is_grounded incoherent");
+        assert!(avatar.is_grounded);
+        assert!(avatar.land);
         assert!(!avatar.fall, "grounded peer flickered fall");
     }
 
