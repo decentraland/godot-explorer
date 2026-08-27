@@ -1584,43 +1584,6 @@ impl AvatarScene {
         self.push_avatar_transform_to_scenes(avatar_entity_id, dcl_transform);
     }
 
-    /// Push an avatar transform into the scene CRDT state and the active
-    /// scenes' dirty sets (world coordinates, matching the historical path).
-    fn push_avatar_transform_to_scenes(
-        &mut self,
-        avatar_entity_id: &SceneEntityId,
-        dcl_transform: DclTransformAndParent,
-    ) {
-        let Some(avatar_scene) = self.avatar_godot_scene.get(avatar_entity_id) else {
-            return;
-        };
-        let mut scene_runner = DclGlobal::singleton().bind().scene_runner.clone();
-        let mut scene_runner = scene_runner.bind_mut();
-
-        let avatar_current_parcel_scene_id = avatar_scene.bind().get_current_parcel_scene_id();
-        let avatar_active_scene_ids = {
-            let mut scene_ids = scene_runner.get_global_scene_ids().clone();
-            if avatar_current_parcel_scene_id != SceneId::INVALID.0 {
-                scene_ids.push(SceneId(avatar_current_parcel_scene_id));
-            }
-            scene_ids
-        };
-
-        // Push dirty state only in active scenes
-        for scene_id in avatar_active_scene_ids {
-            if let Some(scene) = scene_runner.get_scene_mut(&scene_id) {
-                scene
-                    .avatar_scene_updates
-                    .transform
-                    .insert(*avatar_entity_id, Some(dcl_transform.clone()));
-            }
-        }
-
-        self.crdt_state
-            .get_transform_mut()
-            .put(*avatar_entity_id, Some(dcl_transform));
-    }
-
     /// Push each remote avatar's RENDERED transform into the scene CRDT every
     /// frame — scenes polling avatar positions (e.g. flagtag's flag) would
     /// otherwise see per-packet jumps while the avatar moves smoothly.
@@ -1648,9 +1611,61 @@ impl AvatarScene {
                 updates.push((*entity_id, dcl_transform));
             }
         }
-        for (entity_id, dcl_transform) in updates {
-            self.push_avatar_transform_to_scenes(&entity_id, dcl_transform);
+        if updates.is_empty() {
+            return;
         }
+        // One scene-runner bind for the whole batch (was one per avatar).
+        let mut scene_runner = DclGlobal::singleton().bind().scene_runner.clone();
+        let mut scene_runner = scene_runner.bind_mut();
+        for (entity_id, dcl_transform) in updates {
+            self.push_avatar_transform_with_runner(&mut scene_runner, &entity_id, dcl_transform);
+        }
+    }
+
+    /// Packet-cadence wrapper: binds the scene runner per call (fine at packet
+    /// rates; the per-frame path binds once for the whole batch — see
+    /// push_interpolated_transforms_to_scenes).
+    fn push_avatar_transform_to_scenes(
+        &mut self,
+        avatar_entity_id: &SceneEntityId,
+        dcl_transform: DclTransformAndParent,
+    ) {
+        let mut scene_runner = DclGlobal::singleton().bind().scene_runner.clone();
+        let mut scene_runner = scene_runner.bind_mut();
+        self.push_avatar_transform_with_runner(&mut scene_runner, avatar_entity_id, dcl_transform);
+    }
+
+    fn push_avatar_transform_with_runner(
+        &mut self,
+        scene_runner: &mut godot::obj::GdMut<'_, crate::scene_runner::scene_manager::SceneManager>,
+        avatar_entity_id: &SceneEntityId,
+        dcl_transform: DclTransformAndParent,
+    ) {
+        let Some(avatar_scene) = self.avatar_godot_scene.get(avatar_entity_id) else {
+            return;
+        };
+        let avatar_current_parcel_scene_id = avatar_scene.bind().get_current_parcel_scene_id();
+        let avatar_active_scene_ids = {
+            let mut scene_ids = scene_runner.get_global_scene_ids().clone();
+            if avatar_current_parcel_scene_id != SceneId::INVALID.0 {
+                scene_ids.push(SceneId(avatar_current_parcel_scene_id));
+            }
+            scene_ids
+        };
+
+        // Push dirty state only in active scenes
+        for scene_id in avatar_active_scene_ids {
+            if let Some(scene) = scene_runner.get_scene_mut(&scene_id) {
+                scene
+                    .avatar_scene_updates
+                    .transform
+                    .insert(*avatar_entity_id, Some(dcl_transform.clone()));
+            }
+        }
+
+        self.crdt_state
+            .get_transform_mut()
+            .put(*avatar_entity_id, Some(dcl_transform));
     }
 
     pub fn update_avatar_transform_with_rfc4_position(
@@ -1826,6 +1841,7 @@ impl AvatarScene {
         if let Some(avatar) = self.avatar_godot_scene.get_mut(&entity_id) {
             let mut avatar = avatar.bind_mut();
             avatar.apply_wire_air_state(grounded_gate, velocity.y);
+            avatar.set_grounded_from_air_state();
             let wire_speed = godot::prelude::Vector2::new(velocity.x, velocity.z).length();
             avatar.apply_wire_locomotion(wire_speed);
             avatar.sync_newest_packet_anim();

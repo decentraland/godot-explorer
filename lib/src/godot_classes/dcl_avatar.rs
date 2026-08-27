@@ -26,7 +26,9 @@ struct LerpState {
     /// captured minimum gap (~30 ms).
     buffer: std::collections::VecDeque<Packet>,
     /// Local monotonic clock (s). Wire timestamps mix sender/server epochs.
-    clock: f32,
+    /// f64: at f32 precision, ulp hits ~1 ms at ~2.3 h uptime — visible
+    /// interpolation quantization on long sessions.
+    clock: f64,
     /// Parcel-update throttle for ExternalController avatars.
     factor: f32,
     /// Inter-packet interval EMA (alpha 0.3). Pulse tier cadences: 20/10/5 Hz.
@@ -50,7 +52,7 @@ struct LerpState {
 struct Packet {
     position: Vector3,
     rotation_y: f32,
-    arrival: f32,
+    arrival: f64,
     anim: AnimState,
 }
 
@@ -150,7 +152,7 @@ impl LerpState {
         if self.buffer.len() == 1 {
             return (newest.position, newest.rotation_y, newest.anim, true);
         }
-        let render_t = self.clock - self.delay.max(0.05);
+        let render_t = self.clock - self.delay.max(0.05) as f64;
         // Newest-first search for the segment containing render_t.
         let mut i = self.buffer.len() - 2;
         while i > 0 && self.buffer[i].arrival > render_t {
@@ -158,9 +160,9 @@ impl LerpState {
         }
         let a = self.buffer[i];
         let b = self.buffer[i + 1];
-        let seg_dt = (b.arrival - a.arrival).max(0.005);
+        let seg_dt = (b.arrival - a.arrival).max(0.005) as f32;
         // Hard clamp: no extrapolation past the newest packet (snap-back).
-        let t = ((render_t - a.arrival) / seg_dt).clamp(0.0, 1.0);
+        let t = ((render_t - a.arrival) as f32 / seg_dt).clamp(0.0, 1.0);
         (
             a.position.lerp(b.position, t),
             lerp_angle(a.rotation_y, b.rotation_y, t),
@@ -195,6 +197,10 @@ pub struct DclAvatar {
 
     #[var]
     current_parcel_position: Vector2i,
+
+    // Peer streams wire locomotion/grounded state (Movement or compressed):
+    // the local dy/interval classification in set_target_position is skipped.
+    wire_classification: bool,
 
     #[export]
     walk: bool,
@@ -238,6 +244,7 @@ impl INode3D for DclAvatar {
             movement_type: AvatarMovementType::ExternalController,
             current_parcel_scene_id: SceneId::INVALID.0,
             current_parcel_position: Vector2i::new(i32::MAX, i32::MAX),
+            wire_classification: false,
             lerp_state: Default::default(),
             base,
             walk: false,
@@ -325,6 +332,10 @@ impl DclAvatar {
             self.land = true;
             self.is_grounded = self.glide_state == 0;
             self.lerp_state.smoothed_speed = 0.0;
+        } else if self.wire_classification {
+            // Wire-driven peer: locomotion/air/grounded come from the wire
+            // (apply_wire_*). Blending the dy estimate in would still carry
+            // ~25% of a signal we've already diagnosed as spiky.
         } else {
             let mut diff_xz_plane = new_target.origin - self.lerp_state.target_position();
             let y_velocity = diff_xz_plane.y / interval;
@@ -491,9 +502,17 @@ impl DclAvatar {
         self.apply_wire_locomotion(wire_speed);
     }
 
+    /// is_grounded derived from the current air state (compressed path has no
+    /// wire grounded flag). Separate from apply_wire_air_state: the
+    /// uncompressed path sets is_grounded from the wire AFTER calling it.
+    pub fn set_grounded_from_air_state(&mut self) {
+        self.is_grounded = self.land && self.glide_state == 0;
+    }
+
     /// Locomotion from the sender's wire velocity (EMA-smoothed, see
     /// classify_locomotion for thresholds).
     pub fn apply_wire_locomotion(&mut self, wire_speed: f32) {
+        self.wire_classification = true;
         self.lerp_state.smoothed_speed = self.lerp_state.smoothed_speed * 0.6 + wire_speed * 0.4;
         let speed = self.lerp_state.smoothed_speed;
         self.classify_locomotion(speed);
@@ -569,7 +588,7 @@ impl DclAvatar {
             }
             AvatarMovementType::LerpTwoPoints => {
                 let dt = dt as f32;
-                self.lerp_state.clock += dt;
+                self.lerp_state.clock += dt as f64;
                 self.lerp_state.since_last_packet += dt;
                 self.lerp_state.advance_delay(dt);
 
@@ -760,6 +779,47 @@ mod itest {
         );
     }
 
+    /// Compressed-path regression (review P1): after a landing-tick packet
+    /// with a spiky dy, the wire-driven sequence must leave `land` and
+    /// `is_grounded` COHERENT — before set_grounded_from_air_state the avatar
+    /// sat at land==true / is_grounded==false and replayed the landing anim.
+    #[godot::test::itest]
+    fn itest_compressed_path_grounded_coherent(ctx: &crate::framework::TestContext) {
+        let mut avatar = DclAvatar::new_alloc();
+        ctx.scene_tree
+            .clone()
+            .add_child(&avatar.clone().upcast::<Node>());
+        avatar.set("current_parcel_position", &Vector2i::ZERO.to_variant());
+        avatar.set("current_parcel_scene_id", &1_i32.to_variant());
+
+        // Peer standing: first packet grounds the avatar.
+        avatar.bind_mut().set_target_position(Transform3D::new(
+            Basis::IDENTITY,
+            Vector3::new(8.0, 0.0, -8.0),
+        ));
+        assert!(avatar.bind().is_grounded);
+
+        // Hysteresis gate: grounded state BEFORE the next packet (matches
+        // update_avatar_transform_with_movement_compressed).
+        let gate = avatar.bind().is_grounded;
+
+        // Landing-tick packet: 0.5 m downward dy — the local fallback spikes
+        // fall=true and is_grounded=false.
+        avatar.bind_mut().set_target_position(Transform3D::new(
+            Basis::IDENTITY,
+            Vector3::new(8.0, -0.5, -8.0),
+        ));
+
+        // Compressed-path sequence: wire air state + grounded derived from it.
+        avatar.bind_mut().apply_wire_air_state(gate, -8.0);
+        avatar.bind_mut().set_grounded_from_air_state();
+
+        let avatar = avatar.bind();
+        assert!(avatar.is_grounded, "is_grounded left spiky (dy-derived)");
+        assert!(avatar.land, "land/is_grounded incoherent");
+        assert!(!avatar.fall, "grounded peer flickered fall");
+    }
+
     /// Remote bounce regression: air state from wire data only. A grounded
     /// peer with a downward landing-tick sample must NOT flicker `fall`.
     #[godot::test::itest]
@@ -911,9 +971,9 @@ mod itest {
         let gaps = [
             0.13f32, 0.07, 0.16, 0.04, 0.09, 0.19, 0.03, 0.12, 0.11, 0.06,
         ];
-        let frame = 1.0f32 / 30.0;
-        let mut clock = 0.0f32;
-        let mut next_packet_in = 0.0f32;
+        let frame = 1.0f64 / 30.0;
+        let mut clock = 0.0f64;
+        let mut next_packet_in = 0.0f64;
         let mut gap_idx = 0usize;
         let mut prev = Vector3::ZERO;
         let mut max_step = 0.0f32;
@@ -921,16 +981,16 @@ mod itest {
         for step in 0..300usize {
             clock += frame;
             state.clock += frame;
-            state.since_last_packet += frame;
-            state.advance_delay(frame);
+            state.since_last_packet += frame as f32;
+            state.advance_delay(frame as f32);
             next_packet_in -= frame;
             if next_packet_in <= 0.0 {
                 let gap = gaps[gap_idx % gaps.len()];
                 gap_idx += 1;
-                next_packet_in = gap;
+                next_packet_in = gap as f64;
                 state.note_packet_gap(state.since_last_packet);
                 state.since_last_packet = 0.0;
-                let angle = clock;
+                let angle = clock as f32;
                 let pos = Vector3::new(8.0 + 2.0 * angle.cos(), 0.0, -8.0 + 2.0 * angle.sin());
                 state.push_packet(pos, 0.0, AnimState::default());
             }
@@ -971,7 +1031,7 @@ mod itest {
         let mut max_backtrack = 0.0f32;
 
         for step in 0..300 {
-            state.clock += frame;
+            state.clock += frame as f64;
             state.advance_delay(frame);
             peer_t += frame;
             next_packet_in -= frame;
