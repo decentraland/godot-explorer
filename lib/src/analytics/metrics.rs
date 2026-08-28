@@ -31,7 +31,7 @@ use super::{
         SegmentEventScreenViewed, SegmentEventUnfriend,
     },
     frame::Frame,
-    install_referrer::InstallReferrer,
+    install_attribution::InstallAttribution,
 };
 
 #[derive(Clone, Copy)]
@@ -82,8 +82,10 @@ pub struct Metrics {
     // Debug level: 0=disabled, 1=enabled (full JSON output)
     debug_level: u8,
 
-    // Install referrer tracker (Android only, None when not applicable or already sent)
-    install_referrer: Option<InstallReferrer>,
+    // Install attribution tracker (Android only, None when not applicable or already sent)
+    install_attribution: Option<InstallAttribution>,
+    // Campaign token the attribution resolved to, read by GDScript after the event fires
+    resolved_campaign_token: String,
 
     // Consent gate. While the user has not accepted the EULA, events are queued in `self.events`
     // but never serialized or shipped (neither to Segment nor to Firebase).
@@ -127,7 +129,8 @@ impl INode for Metrics {
             mobile_platform: None,
             device_info: None,
             debug_level: 0,
-            install_referrer: None,
+            install_attribution: None,
+            resolved_campaign_token: String::new(),
             eula_accepted: false,
             firebase_init_queued: false,
             flush_timer: None,
@@ -235,10 +238,17 @@ impl Metrics {
             return;
         }
 
-        // Poll install referrer (Android only, auto-completes after first success)
-        if let Some(ref mut referrer) = self.install_referrer {
-            if let Some(event) = referrer.poll() {
-                self.install_referrer = None;
+        // Poll install attribution (Android only, auto-completes once settled). Both
+        // mechanisms are polled behind this: the GA4F deferred deep link and the Play
+        // install referrer, resolved into one event that names which one won.
+        if let Some(ref mut attribution) = self.install_attribution {
+            if let Some(event) = attribution.poll() {
+                self.install_attribution = None;
+                if let SegmentEvent::InstallAttribution(ref data) = event {
+                    if let Some(token) = data.campaign_token.as_ref() {
+                        self.resolved_campaign_token = token.clone();
+                    }
+                }
                 self.queue_event("Install Attribution", event);
             }
         }
@@ -261,16 +271,27 @@ impl Metrics {
         }
     }
 
-    /// Start fetching the Google Play install referrer.
+    /// Start resolving install attribution from both Android mechanisms (issue #2670):
+    /// the GA4F deferred deep link and the Play install referrer.
     /// GDScript should call this only once per install (gated by a config flag).
     #[func]
     pub fn track_install_referrer(&mut self) {
         if !matches!(self.mobile_platform, Some(MobilePlatform::Android)) {
             return;
         }
-        if self.install_referrer.is_none() {
-            self.install_referrer = Some(InstallReferrer::start());
+        if self.install_attribution.is_none() {
+            self.install_attribution = Some(InstallAttribution::start());
         }
+    }
+
+    /// Campaign token the install attribution resolved to, or "" when there was none.
+    ///
+    /// Only meaningful once the `Install Attribution` event has fired; GDScript polls this
+    /// alongside its own resolution so an ad-driven install can boot into the target rather
+    /// than the default FTUE.
+    #[func]
+    pub fn get_resolved_campaign_token(&self) -> GString {
+        GString::from(self.resolved_campaign_token.as_str())
     }
 
     #[func]
@@ -286,7 +307,8 @@ impl Metrics {
             mobile_platform: None,
             device_info: None,
             debug_level: 0,
-            install_referrer: None,
+            install_attribution: None,
+            resolved_campaign_token: String::new(),
             eula_accepted: false,
             firebase_init_queued: false,
             flush_timer: None,

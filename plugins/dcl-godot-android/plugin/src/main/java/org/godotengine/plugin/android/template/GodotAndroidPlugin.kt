@@ -2383,6 +2383,104 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
         return pending
     }
 
+    // --- GA4F deferred deep link (issue #2670) ---
+    //
+    // Google Analytics for Firebase writes the ad group's deep link into a private
+    // SharedPreferences file on first launch after an ad-driven install. This is the only
+    // path that carries a campaign token for Google Ads traffic: those installs arrive with
+    // a bare `gclid` in the Play referrer and nothing of ours.
+    //
+    // The write is asynchronous and races app startup, so both a direct read and a change
+    // listener are needed — the direct read covers "GA4F already wrote it", the listener
+    // covers "it lands a moment later".
+
+    private val deferredDeepLinkPrefsName = "google.analytics.deferred.deeplink.prefs"
+
+    @Volatile private var deferredDeepLinkData: Dictionary? = null
+    private var deferredDeepLinkStarted = false
+
+    // Held in a field on purpose: SharedPreferences keeps only a weak reference to the
+    // listener, so a local would be collected and the callback would never fire.
+    private var deferredDeepLinkListener:
+        android.content.SharedPreferences.OnSharedPreferenceChangeListener? = null
+
+    private fun readDeferredDeepLinkPrefs(
+        prefs: android.content.SharedPreferences
+    ): Dictionary? {
+        val link = prefs.getString("deeplink", null)
+        if (link.isNullOrEmpty()) {
+            return null
+        }
+        val result = Dictionary()
+        result["status"] = "ok"
+        result["deeplink"] = link
+        // GA4F stores milliseconds; the referrer API uses seconds. Normalize here so the
+        // engine compares both against one unit.
+        result["click_timestamp"] = prefs.getLong("timestamp", 0L) / 1000L
+        result["gclid"] = prefs.getString("gclid", "") ?: ""
+        return result
+    }
+
+    /**
+     * Deferred deep link written by Google Analytics for Firebase, if any.
+     *
+     * Mirrors [getInstallReferrer]: the first call starts watching and returns
+     * {status: "pending"}; later calls return the cached result. Statuses are "ok",
+     * "pending", "not_available" (no link — organic install, or GA4F disabled) and "error".
+     */
+    @UsedByGodot
+    fun getDeferredDeepLink(): Dictionary {
+        deferredDeepLinkData?.let { return it }
+
+        val ctx = activity?.applicationContext
+        if (ctx == null) {
+            val errorDict = Dictionary()
+            errorDict["status"] = "error"
+            errorDict["error"] = "Context is null"
+            return errorDict
+        }
+
+        try {
+            val prefs = ctx.getSharedPreferences(
+                deferredDeepLinkPrefsName,
+                android.content.Context.MODE_PRIVATE
+            )
+
+            readDeferredDeepLinkPrefs(prefs)?.let {
+                deferredDeepLinkData = it
+                Log.i(pluginName, "[DDL] Deferred deep link already present: ${it["deeplink"]}")
+                return it
+            }
+
+            if (!deferredDeepLinkStarted) {
+                deferredDeepLinkStarted = true
+                val listener = android.content.SharedPreferences
+                    .OnSharedPreferenceChangeListener { changed, _ ->
+                        if (deferredDeepLinkData == null) {
+                            readDeferredDeepLinkPrefs(changed)?.let {
+                                deferredDeepLinkData = it
+                                Log.i(pluginName, "[DDL] Deferred deep link arrived: ${it["deeplink"]}")
+                            }
+                        }
+                    }
+                deferredDeepLinkListener = listener
+                prefs.registerOnSharedPreferenceChangeListener(listener)
+                Log.i(pluginName, "[DDL] Watching $deferredDeepLinkPrefsName for a deferred deep link")
+            }
+        } catch (e: Throwable) {
+            Log.e(pluginName, "[DDL] Failed to read the deferred deep link prefs", e)
+            val errorDict = Dictionary()
+            errorDict["status"] = "error"
+            errorDict["error"] = "${e.javaClass.simpleName}: ${e.message}"
+            deferredDeepLinkData = errorDict
+            return errorDict
+        }
+
+        val pending = Dictionary()
+        pending["status"] = "pending"
+        return pending
+    }
+
     // --- Play Integrity (platform attestation for /sign-message) ---
 
     /**

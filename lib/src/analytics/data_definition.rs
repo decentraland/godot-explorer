@@ -555,6 +555,19 @@ pub struct SegmentEventInstallAttribution {
     pub install_timestamp: i64,
     // Whether the app was launched as a Google Play Instant app
     pub google_play_instant: bool,
+    // Which mechanism carried the attribution (issue #2670). The two cover disjoint
+    // traffic: Google Ads installs arrive with a bare `gclid` in the referrer and only
+    // GA4F carries a usable destination, while owned/organic links carry UTM params the
+    // referrer preserves. Knowing which one fired is what makes the two comparable.
+    //   "ga4f_deferred_deeplink" | "play_install_referrer" | "none"
+    pub attribution_source: String,
+    // Campaign token resolved out of whichever source won, when there was one.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub campaign_token: Option<String>,
+    // Raw GA4F deep link, when that is the source. Kept for debugging a token that did
+    // not parse — the referrer field plays the same role for the other source.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub deferred_deep_link: Option<String>,
 }
 
 // Emitted once per attestation cycle attempt (FSM in attestation_service.gd).

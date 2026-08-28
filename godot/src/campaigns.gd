@@ -33,6 +33,13 @@ const RESOLVE_MAX_WAIT_SECONDS := 3.0
 ## later would replay a long-dead campaign.
 const TOKEN_MAX_AGE_SECONDS := 7 * 86400
 
+## Bounded wait for install attribution to produce a token (Android). The Rust resolver
+## already gives GA4F 10s before falling back to the referrer; this covers the tail of that
+## plus the referrer round trip, and expires quietly on an organic install, which never
+## produces a token at all.
+const ATTRIBUTION_MAX_WAIT_SECONDS := 12.0
+const ATTRIBUTION_POLL_SECONDS := 0.5
+
 var _campaigns: Dictionary = {}
 var _loaded := false
 # Whether the fetch actually came back. Separate from `_loaded`, which only says the attempt
@@ -66,6 +73,14 @@ func resolve(token: String) -> Dictionary:
 ## campaign is empty on every failure path, and `fallback_reason` says which one it was.
 func async_resolve_pending() -> Dictionary:
 	var config := Global.get_config()
+
+	# An ad-driven install has no deeplink to carry the token: the app did not exist when the
+	# ad was clicked. On Android the token arrives instead through install attribution (GA4F
+	# deferred deep link, or the Play install referrer), which resolves asynchronously and can
+	# still be in flight by the time the FTUE is reached.
+	if config.campaign_token.is_empty():
+		await _async_capture_attribution_token()
+
 	var token: String = config.campaign_token
 
 	if token.is_empty():
@@ -105,6 +120,29 @@ func mark_consumed() -> void:
 
 func _fallback(token: String, reason: String) -> Dictionary:
 	return {"token": token, "campaign": {}, "fallback_reason": reason}
+
+
+## Polls the Rust attribution resolver for a campaign token and captures it like a deeplink
+## one, so everything downstream (freshness bound, consumption, resolution) is shared.
+##
+## Bounded: the resolver itself waits on GA4F before falling back to the referrer, and an
+## organic install never produces a token at all — so this must not block the FTUE waiting
+## for something that will never arrive.
+func _async_capture_attribution_token() -> void:
+	if not Global.is_android() or Global.metrics == null:
+		return
+
+	var deadline := Time.get_ticks_msec() + int(ATTRIBUTION_MAX_WAIT_SECONDS * 1000.0)
+	while Time.get_ticks_msec() < deadline:
+		var token := String(Global.metrics.get_resolved_campaign_token()).strip_edges()
+		if not token.is_empty():
+			var config := Global.get_config()
+			config.campaign_token = token
+			config.campaign_token_captured_at = int(Time.get_unix_time_from_system())
+			config.save_to_settings_file()
+			print("[CAMPAIGN] captured token from install attribution: ", token)
+			return
+		await get_tree().create_timer(ATTRIBUTION_POLL_SECONDS).timeout
 
 
 func _async_wait_for_load() -> void:
