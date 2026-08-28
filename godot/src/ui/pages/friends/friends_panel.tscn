@@ -9,6 +9,8 @@
 [ext_resource type="Texture2D" uid="uid://bldchilj3kjhx" path="res://assets/ui/warning-triangle.svg" id="7_ekuv1"]
 [ext_resource type="Texture2D" uid="uid://dkp2m2ov71fv5" path="res://assets/ui/friends-color.svg" id="8_nlw6c"]
 [ext_resource type="Texture2D" uid="uid://b31mnquvn8hus" path="res://assets/ui/block.svg" id="9_2vk4g"]
+[ext_resource type="Texture2D" uid="uid://6a1y26ld57bf" path="res://src/ui/components/organisms/menu/icons/social-outlined.svg" id="9_bqxsg"]
+[ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="10_pa08s"]
 [ext_resource type="FontFile" uid="uid://di6yadh02vrla" path="res://assets/themes/fonts/inter/Inter-Regular.ttf" id="11_ekuv1"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_087fk"]
@@ -52,27 +54,32 @@ font_color = Color(0.8745098, 0.8156863, 1, 1)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_nlw6c"]
 bg_color = Color(0.6, 0.6, 0.6, 0)
-border_width_left = 3
-border_width_top = 3
-border_width_right = 3
-border_width_bottom = 3
-border_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
-corner_radius_top_left = 12
-corner_radius_top_right = 12
-corner_radius_bottom_right = 12
-corner_radius_bottom_left = 12
+border_width_left = 4
+border_width_top = 4
+border_width_right = 4
+border_width_bottom = 4
+border_color = Color(0.8627451, 0.79607844, 0.9254902, 1)
+corner_radius_top_left = 24
+corner_radius_top_right = 24
+corner_radius_bottom_right = 24
+corner_radius_bottom_left = 24
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_vy1pd"]
 
 [sub_resource type="LabelSettings" id="LabelSettings_2vk4g"]
 font = ExtResource("2_wese4")
-font_size = 21
-font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+font_size = 32
+font_color = Color(0.8627451, 0.79607844, 0.9254902, 1)
 
 [sub_resource type="LabelSettings" id="LabelSettings_7cbs5"]
 font = ExtResource("11_ekuv1")
 font_size = 19
 font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+
+[sub_resource type="LabelSettings" id="LabelSettings_5uuh7"]
+font = ExtResource("10_pa08s")
+font_size = 24
+font_color = Color(0.8627451, 0.79607844, 0.9254902, 1)
 
 [node name="FriendsPanel" type="PanelContainer" unique_id=1649513820]
 clip_children = 2
@@ -85,6 +92,7 @@ size_flags_vertical = 3
 theme_override_styles/panel = SubResource("StyleBoxFlat_087fk")
 script = ExtResource("1_v2dsn")
 metadata/_edit_vertical_guides_ = [87.0, 64.0]
+metadata/mobile_preview_orientation = "landscape"
 
 [node name="TextureRect" type="TextureRect" parent="." unique_id=165986175]
 layout_mode = 2
@@ -95,7 +103,7 @@ unique_name_in_owner = true
 wait_time = 15.0
 
 [node name="MarginContainer" type="MarginContainer" parent="." unique_id=401963503]
-custom_minimum_size = Vector2(624, 0)
+custom_minimum_size = Vector2(624, 640)
 layout_mode = 2
 theme_override_constants/margin_left = 48
 theme_override_constants/margin_top = 32
@@ -277,6 +285,7 @@ size_flags_vertical = 3
 
 [node name="FriendsList" type="VBoxContainer" parent="MarginContainer/VBoxContainer2/VBoxContainer/ScrollContainer_Friends/VBoxContainer" unique_id=1146355648]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
@@ -532,47 +541,53 @@ horizontal_alignment = 1
 vertical_alignment = 1
 autowrap_mode = 3
 
-[node name="VBoxContainer_NoFriends" type="VBoxContainer" parent="MarginContainer/VBoxContainer2/VBoxContainer/ScrollContainer_Friends/VBoxContainer" unique_id=136612733]
+[node name="MarginContainer" type="MarginContainer" parent="MarginContainer/VBoxContainer2/VBoxContainer/ScrollContainer_Friends/VBoxContainer" unique_id=1829756853]
+layout_mode = 2
+theme_override_constants/margin_left = 72
+theme_override_constants/margin_top = 64
+theme_override_constants/margin_right = 72
+
+[node name="VBoxContainer_NoFriends" type="VBoxContainer" parent="MarginContainer/VBoxContainer2/VBoxContainer/ScrollContainer_Friends/VBoxContainer/MarginContainer" unique_id=136612733]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
-theme_override_constants/separation = 8
-alignment = 1
+theme_override_constants/separation = 16
 
-[node name="PanelContainer" type="PanelContainer" parent="MarginContainer/VBoxContainer2/VBoxContainer/ScrollContainer_Friends/VBoxContainer/VBoxContainer_NoFriends" unique_id=1572775642]
-custom_minimum_size = Vector2(60, 60)
+[node name="PanelContainer" type="PanelContainer" parent="MarginContainer/VBoxContainer2/VBoxContainer/ScrollContainer_Friends/VBoxContainer/MarginContainer/VBoxContainer_NoFriends" unique_id=1572775642]
+custom_minimum_size = Vector2(120, 120)
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
 theme_override_styles/panel = SubResource("StyleBoxFlat_nlw6c")
 
-[node name="MarginContainer" type="MarginContainer" parent="MarginContainer/VBoxContainer2/VBoxContainer/ScrollContainer_Friends/VBoxContainer/VBoxContainer_NoFriends/PanelContainer" unique_id=2034373383]
+[node name="TextureRect" type="TextureRect" parent="MarginContainer/VBoxContainer2/VBoxContainer/ScrollContainer_Friends/VBoxContainer/MarginContainer/VBoxContainer_NoFriends/PanelContainer" unique_id=2046823228]
+modulate = Color(0.8627451, 0.79607844, 0.9254902, 1)
+custom_minimum_size = Vector2(100, 100)
 layout_mode = 2
-theme_override_constants/margin_left = 12
-theme_override_constants/margin_top = 12
-theme_override_constants/margin_right = 12
-theme_override_constants/margin_bottom = 12
-
-[node name="TextureRect" type="TextureRect" parent="MarginContainer/VBoxContainer2/VBoxContainer/ScrollContainer_Friends/VBoxContainer/VBoxContainer_NoFriends/PanelContainer/MarginContainer" unique_id=2046823228]
-layout_mode = 2
-texture = ExtResource("8_nlw6c")
+size_flags_horizontal = 4
+size_flags_vertical = 4
+texture = ExtResource("9_bqxsg")
 expand_mode = 4
 
-[node name="Label" type="Label" parent="MarginContainer/VBoxContainer2/VBoxContainer/ScrollContainer_Friends/VBoxContainer/VBoxContainer_NoFriends" unique_id=2023803526]
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/VBoxContainer2/VBoxContainer/ScrollContainer_Friends/VBoxContainer/MarginContainer/VBoxContainer_NoFriends" unique_id=525971319]
 layout_mode = 2
-text = "Time to Make Some Friends!"
+theme_override_constants/separation = 6
+
+[node name="Label" type="Label" parent="MarginContainer/VBoxContainer2/VBoxContainer/ScrollContainer_Friends/VBoxContainer/MarginContainer/VBoxContainer_NoFriends/VBoxContainer" unique_id=2023803526]
+layout_mode = 2
+text = "No friends yet"
 label_settings = SubResource("LabelSettings_2vk4g")
 horizontal_alignment = 1
 
-[node name="Label_NoFriends" type="Label" parent="MarginContainer/VBoxContainer2/VBoxContainer/ScrollContainer_Friends/VBoxContainer/VBoxContainer_NoFriends" unique_id=597960210]
+[node name="Label_NoFriends" type="Label" parent="MarginContainer/VBoxContainer2/VBoxContainer/ScrollContainer_Friends/VBoxContainer/MarginContainer/VBoxContainer_NoFriends/VBoxContainer" unique_id=597960210]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(50, 0)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.6, 0.6, 0.6, 1)
 theme_override_font_sizes/font_size = 14
-text = "No Friends Yet Message"
+text = "Meet people nearby and add them as friends."
+label_settings = SubResource("LabelSettings_5uuh7")
 horizontal_alignment = 1
 vertical_alignment = 1
 autowrap_mode = 3

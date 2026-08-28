@@ -29,6 +29,19 @@ expand_margin_top = 1.0
 expand_margin_right = 1.0
 expand_margin_bottom = 1.0
 
+[sub_resource type="Shader" id="Shader_circle"]
+code = "shader_type canvas_item;
+
+// Masks the profile texture to a centered circle so square avatar snapshots don't show their
+// corners outside the round frame (clip_children clips to the rect, not the rounded stylebox).
+void fragment() {
+	float d = distance(UV, vec2(0.5));
+	COLOR.a *= 1.0 - smoothstep(0.5 - fwidth(d), 0.5, d);
+}"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_circle"]
+shader = SubResource("Shader_circle")
+
 [node name="ProfilePicture" type="Control" unique_id=916442602]
 custom_minimum_size = Vector2(40, 40)
 layout_mode = 3
@@ -42,7 +55,6 @@ picture_size = 2
 
 [node name="Panel_Background" type="PanelContainer" parent="." unique_id=980945521]
 unique_name_in_owner = true
-clip_children = 2
 custom_minimum_size = Vector2(32, 32)
 layout_mode = 1
 anchors_preset = 15
@@ -55,6 +67,7 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_h41qx")
 
 [node name="TextureRect_Profile" type="TextureRect" parent="Panel_Background" unique_id=414527700]
 unique_name_in_owner = true
+material = SubResource("ShaderMaterial_circle")
 layout_mode = 2
 mouse_filter = 2
 texture = ExtResource("2_q0svu")
