@@ -273,30 +273,31 @@ theme_override_constants/separation = 0
 [node name="VSeparator" type="VSeparator" parent="UI/SafeAreaHud/InteractableHUD/HBoxContainerLeftPanels" unique_id=834468868]
 layout_mode = 2
 mouse_filter = 2
-theme_override_constants/separation = 110
+theme_override_constants/separation = 100
 theme_override_styles/separator = SubResource("StyleBoxEmpty_c5h7v")
 
 [node name="VBoxContainer_LeftPanels" type="VBoxContainer" parent="UI/SafeAreaHud/InteractableHUD/HBoxContainerLeftPanels" unique_id=1190000788]
-custom_minimum_size = Vector2(370, 0)
+custom_minimum_size = Vector2(624, 640)
 layout_mode = 2
 mouse_filter = 2
 
 [node name="NotificationsPanel" parent="UI/SafeAreaHud/InteractableHUD/HBoxContainerLeftPanels/VBoxContainer_LeftPanels" unique_id=1351118609 instance=ExtResource("14_notif_panel")]
 unique_name_in_owner = true
 visible = false
-custom_minimum_size = Vector2(450, 500)
+custom_minimum_size = Vector2(500, 640)
 layout_mode = 2
 size_flags_vertical = 3
 
 [node name="FriendsPanel" parent="UI/SafeAreaHud/InteractableHUD/HBoxContainerLeftPanels/VBoxContainer_LeftPanels" unique_id=644859130 instance=ExtResource("21_cwgs4")]
 unique_name_in_owner = true
 visible = false
+custom_minimum_size = Vector2(500, 640)
 layout_mode = 2
 
 [node name="SettingsPanel" type="PanelContainer" parent="UI/SafeAreaHud/InteractableHUD/HBoxContainerLeftPanels/VBoxContainer_LeftPanels" unique_id=580837958]
 unique_name_in_owner = true
 visible = false
-custom_minimum_size = Vector2(640, 0)
+custom_minimum_size = Vector2(500, 640)
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_styles/panel = SubResource("StyleBoxFlat_settings_bg")

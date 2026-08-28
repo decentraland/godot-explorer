@@ -26,8 +26,9 @@ var _streaming_subscription_failed: bool = true
 var _is_loading: bool = false
 
 @onready var color_rect_friends: ColorRect = %ColorRect_Friends
+@onready var color_rect_requests: ColorRect = %ColorRect_Requests
 @onready var color_rect_nearby: ColorRect = %ColorRect_Nearby
-@onready var color_rect_blocked: ColorRect = %ColorRect_Blocked
+
 @onready var scroll_container_friends: ScrollContainer = %ScrollContainer_Friends
 @onready var scroll_container_nearby: ScrollContainer = %ScrollContainer_Nearby
 @onready var scroll_container_blocked: ScrollContainer = %ScrollContainer_Blocked
@@ -59,8 +60,11 @@ var _is_loading: bool = false
 @onready var timer: Timer = %Timer
 @onready var friends_list: VBoxContainer = %FriendsList
 @onready var button_nearby: Button = %Button_Nearby
-@onready var v_box_container_friends_tab: VBoxContainer = %VBoxContainer_FriendsTab
 @onready var v_box_container_loading: VBoxContainer = %VBoxContainer_Loading
+
+@onready var h_box_container_friends_tab: HBoxContainer = %HBoxContainer_FriendsTab
+@onready var h_box_container_requests_tab: HBoxContainer = %HBoxContainer_RequestsTab
+@onready var h_box_container_nearby_tab: HBoxContainer = %HBoxContainer_NearbyTab
 
 
 func _ready() -> void:
@@ -140,10 +144,10 @@ func show_panel_on_friends_tab() -> void:
 	_load_unloaded_items()
 	_hide_all_drowpdown_highlights()
 	if not Global.player_identity.is_guest:
-		v_box_container_friends_tab.show()
+		h_box_container_friends_tab.show()
 		button_friends.button_pressed = true
 	else:
-		v_box_container_friends_tab.hide()
+		h_box_container_friends_tab.hide()
 		button_nearby.button_pressed = true
 
 
@@ -219,7 +223,7 @@ func async_refresh_friends() -> void:
 func _hide_all() -> void:
 	color_rect_friends.self_modulate = Color.TRANSPARENT
 	color_rect_nearby.self_modulate = Color.TRANSPARENT
-	color_rect_blocked.self_modulate = Color.TRANSPARENT
+	color_rect_requests.self_modulate = Color.TRANSPARENT
 	scroll_container_nearby.hide()
 	scroll_container_friends.hide()
 	scroll_container_blocked.hide()
@@ -253,7 +257,7 @@ func _on_button_blocked_toggled(toggled_on: bool) -> void:
 		Global.metrics.track_click_button("blocked_menu_opened", "SOCIAL_PANEL", "")
 
 		_hide_all()
-		color_rect_blocked.self_modulate = Color.WHITE
+		color_rect_requests.self_modulate = Color.WHITE
 		scroll_container_blocked.show()
 		_check_blocked_list_size()
 
