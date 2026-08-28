@@ -104,15 +104,32 @@ func process_deep_link(url: String) -> void:
 		Global.set_safe_margin_debug_enable(true)
 
 	# Returning from the in-app marketplace webview: the web fires a
-	# decentraland://...?urn=<urn> deep link to bring the app back. The native side
-	# dismisses the SFSafariViewController directly, which never fires the tracker's
-	# webview_closed signal — so drive the post-return poll + balance refresh here
-	# (against the pre-purchase baseline), otherwise the credits and the just-bought
-	# wearable never refresh. Then swallow the urn so it doesn't fall through to the
-	# "/open" routing below and pop the jump-in panel (scene title + placeholders).
-	if not Global.deep_link_obj.params.get("urn", "").is_empty():
-		print("[DEEPLINK] marketplace return (urn=...) — driving tracker poll, no routing")
+	# decentraland://open?iap_enabled=true[&urn=<urn>] deep link to bring the app back. The
+	# native side dismisses the SFSafariViewController directly, which never fires the
+	# tracker's webview_closed signal — so drive the post-return handling here (restore the
+	# landscape the portrait-only IAP view took away, then poll for the purchase against the
+	# pre-purchase baseline and refresh the balance).
+	#
+	# `urn` is OPTIONAL — the web leaves it out whenever it has no purchased item in context
+	# — yet it used to be the only thing that triggered ANY of this. A urn-less return then
+	# did nothing at all: the app stayed in the forced portrait, where the backpack's
+	# landscape-only back button is hidden and the menu's portrait bottom bar has already
+	# been freed (clean_orientation.gd, when the menu was built in landscape), leaving no way
+	# out of the backpack; and the tracker stayed armed forever, so the purchase never
+	# surfaced either. So recognise the return by the TRACKER's own state, and use the
+	# `iap_enabled`/`urn` params only to decide whether the link is ours to swallow.
+	var return_urn: String = str(Global.deep_link_obj.params.get("urn", ""))
+	var iap_marker: String = str(Global.deep_link_obj.params.get("iap_enabled", ""))
+	var is_marketplace_return: bool = not return_urn.is_empty() or not iap_marker.is_empty()
+	if is_marketplace_return or MarketplaceTracker.is_awaiting_return():
+		print("[DEEPLINK] marketplace return — driving tracker return handling")
+		# A no-op unless a round-trip is actually in flight, so a duplicate delivery (iOS
+		# fires application:openURL: twice for a single tap) or a stale link is harmless.
 		MarketplaceTracker.notify_marketplace_return()
+	if is_marketplace_return:
+		# Swallow it so it doesn't fall through to the "/open" routing below and pop the
+		# jump-in panel (scene title + placeholders). A deep link that merely arrived while
+		# the tracker was armed is NOT ours, so it keeps routing normally.
 		_clear_deep_link()
 		return
 
