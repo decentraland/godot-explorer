@@ -33,11 +33,9 @@ const RESOLVE_MAX_WAIT_SECONDS := 3.0
 ## later would replay a long-dead campaign.
 const TOKEN_MAX_AGE_SECONDS := 7 * 86400
 
-## Bounded wait for install attribution to produce a token (Android). The Rust resolver
-## already gives GA4F 10s before falling back to the referrer; this covers the tail of that
-## plus the referrer round trip, and expires quietly on an organic install, which never
-## produces a token at all.
-const ATTRIBUTION_MAX_WAIT_SECONDS := 12.0
+## Bounded wait for install attribution to settle (Android). The Rust resolver bounds itself
+## (10s for GA4F, 25s overall), so this only has to outlast that.
+const ATTRIBUTION_MAX_WAIT_SECONDS := 30.0
 const ATTRIBUTION_POLL_SECONDS := 0.5
 
 var _campaigns: Dictionary = {}
@@ -45,10 +43,14 @@ var _loaded := false
 # Whether the fetch actually came back. Separate from `_loaded`, which only says the attempt
 # finished: a failed fetch must resolve as "resolver unavailable", not as "unknown token".
 var _fetch_ok := false
+# Whether install attribution has finished resolving, with or without a token. Distinct from
+# "there is a token": an organic install settles with none, and waiting on the token alone
+# would stall every campaign-less launch for the whole timeout.
+var _attribution_settled := false
 
 
 func _ready() -> void:
-	_async_load.call_deferred()
+	_async_watch_attribution.call_deferred()
 
 
 func is_loaded() -> bool:
@@ -75,11 +77,11 @@ func async_resolve_pending() -> Dictionary:
 	var config := Global.get_config()
 
 	# An ad-driven install has no deeplink to carry the token: the app did not exist when the
-	# ad was clicked. On Android the token arrives instead through install attribution (GA4F
-	# deferred deep link, or the Play install referrer), which resolves asynchronously and can
-	# still be in flight by the time the FTUE is reached.
+	# ad was clicked. On Android the token arrives instead through install attribution, which
+	# _async_watch_attribution persists as soon as it resolves. It can still be in flight by
+	# the time the FTUE is reached, so give it a bounded chance to land.
 	if config.campaign_token.is_empty():
-		await _async_capture_attribution_token()
+		await _async_wait_for_attribution()
 
 	var token: String = config.campaign_token
 
@@ -93,7 +95,11 @@ func async_resolve_pending() -> Dictionary:
 	if config.campaign_token_captured_at <= 0 or age > TOKEN_MAX_AGE_SECONDS:
 		return _fallback(token, CampaignResolution.FALLBACK_EXPIRED_TOKEN)
 
+	# Fetched lazily, only once a token actually needs resolving. Fetching on every boot would
+	# put every install on the campaigns endpoint — and while that endpoint is pinned to the
+	# dev deployment (see urls::campaigns), that would be every production client hitting dev.
 	if not _loaded:
+		_async_load.call_deferred()
 		await _async_wait_for_load()
 
 	if not _fetch_ok:
@@ -122,14 +128,18 @@ func _fallback(token: String, reason: String) -> Dictionary:
 	return {"token": token, "campaign": {}, "fallback_reason": reason}
 
 
-## Polls the Rust attribution resolver for a campaign token and captures it like a deeplink
-## one, so everything downstream (freshness bound, consumption, resolution) is shared.
+## Persists the campaign token install attribution resolves to, as soon as it resolves.
 ##
-## Bounded: the resolver itself waits on GA4F before falling back to the referrer, and an
-## organic install never produces a token at all — so this must not block the FTUE waiting
-## for something that will never arrive.
-func _async_capture_attribution_token() -> void:
+## Runs from _ready rather than from the FTUE on purpose. The resolved token lives only in
+## Rust memory, and attribution starts once per install — so if the process dies before the
+## FTUE is reached (backgrounded during avatar creation, or killed), a token only read at the
+## FTUE would be lost for good, on the exact flow this feature exists for.
+##
+## Residual gap: a process killed before attribution settles still loses it, since there is
+## nothing to persist yet and the once-per-install flag has already been written.
+func _async_watch_attribution() -> void:
 	if not Global.is_android() or Global.metrics == null:
+		_attribution_settled = true
 		return
 
 	var deadline := Time.get_ticks_msec() + int(ATTRIBUTION_MAX_WAIT_SECONDS * 1000.0)
@@ -137,20 +147,29 @@ func _async_capture_attribution_token() -> void:
 		var token := String(Global.metrics.get_resolved_campaign_token()).strip_edges()
 		if not token.is_empty():
 			var config := Global.get_config()
-			config.campaign_token = token
-			config.campaign_token_captured_at = int(Time.get_unix_time_from_system())
-			config.save_to_settings_file()
-			print("[CAMPAIGN] captured token from install attribution: ", token)
+			# The deeplink path wins if it already captured one: it is the more specific
+			# signal, and _capture_campaign_token never replaces a stored token either.
+			if config.campaign_token.is_empty():
+				config.campaign_token = token
+				config.campaign_token_captured_at = int(Time.get_unix_time_from_system())
+				config.save_to_settings_file()
+				print("[CAMPAIGN] captured token from install attribution: ", token)
+			_attribution_settled = true
 			return
-		# Stop on "settled", not on "no token yet": the two look identical from here, and an
-		# install with no campaign — the common case — would otherwise stall the FTUE behind
-		# a spinner for the whole timeout. Attribution also never starts after the first
-		# launch, which would make that stall permanent.
 		if not Global.metrics.is_install_attribution_pending():
+			_attribution_settled = true
 			return
 		if Time.get_ticks_msec() >= deadline:
-			push_warning("[CAMPAIGN] install attribution still pending, falling back to the FTUE")
+			push_warning("[CAMPAIGN] install attribution never settled")
+			_attribution_settled = true
 			return
+		await get_tree().create_timer(ATTRIBUTION_POLL_SECONDS).timeout
+
+
+## Bounded wait for the watcher above, for callers that need the answer now.
+func _async_wait_for_attribution() -> void:
+	var deadline := Time.get_ticks_msec() + int(ATTRIBUTION_MAX_WAIT_SECONDS * 1000.0)
+	while not _attribution_settled and Time.get_ticks_msec() < deadline:
 		await get_tree().create_timer(ATTRIBUTION_POLL_SECONDS).timeout
 
 

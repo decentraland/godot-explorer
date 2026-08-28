@@ -299,10 +299,15 @@ func show_discover_ftue_screen(campaign_resolution: Dictionary = {}):
 ## degraded one.
 func _async_start_ftue() -> void:
 	var resolution := await Global.campaigns.async_resolve_pending()
+	# That await can suspend for tens of seconds (attribution, then the campaign map). Anything
+	# that changes scene meanwhile — a deeplink redirect, the version gate, a sign-out — frees
+	# this lobby, and resuming onto it would touch a freed instance.
+	if not is_inside_tree():
+		return
 	var campaign: Dictionary = resolution.get("campaign", {})
 
 	if not campaign.is_empty():
-		if _try_boot_into_campaign_target(campaign, resolution):
+		if await _async_try_boot_into_campaign_target(campaign, resolution):
 			# The boot is committed, so the campaign is spent: one per install.
 			Global.campaigns.mark_consumed()
 			return
@@ -323,7 +328,7 @@ func _async_start_ftue() -> void:
 ## applies the pre-boot private-world gate (#2569), and explorer.gd's get_params_from_cmd
 ## already reads realm/location off deep_link_obj. Reproducing either here would fork two
 ## behaviours that must stay identical.
-func _try_boot_into_campaign_target(campaign: Dictionary, resolution: Dictionary) -> bool:
+func _async_try_boot_into_campaign_target(campaign: Dictionary, resolution: Dictionary) -> bool:
 	var position_and_realm := CampaignResolution.target_position_and_realm(campaign)
 	if position_and_realm.is_empty():
 		push_warning("[CAMPAIGN] unusable target, falling back to FTUE: " + str(campaign))
@@ -340,8 +345,11 @@ func _try_boot_into_campaign_target(campaign: Dictionary, resolution: Dictionary
 		Global.deep_link_obj.realm = ""
 		Global.deep_link_obj.location = position_and_realm[0]
 
-	_async_redirect_by_deep_link()
-	return true
+	# Awaited, and its answer is the return value. Firing and assuming success would consume
+	# the campaign on a launch that never reached the target — a private world routes to
+	# Discover, and a redirect already in flight declines outright. Either way the user would
+	# see no FTUE and no campaign, with the token spent for good.
+	return await _async_redirect_by_deep_link()
 
 
 func async_show_avatar_create_screen():
@@ -685,9 +693,12 @@ func go_to_explorer():
 ## instead, where the deeplink router surfaces the modal over Discover (matching iOS and the
 ## in-session behaviour). Everything else — allowed worlds, locations, non-world realms and the
 ## whole desktop path — boots the explorer exactly as before.
-func _async_redirect_by_deep_link() -> void:
+## Returns whether the explorer was actually booted. A false means the redirect was declined
+## — the guard was already set, or a private world sent the user to Discover instead — and the
+## caller must not treat the destination as reached.
+func _async_redirect_by_deep_link() -> bool:
 	if _redirecting_by_deep_link:
-		return
+		return false
 	_redirecting_by_deep_link = true
 
 	if Global.is_mobile() and not Global.is_virtual_mobile():
@@ -703,9 +714,10 @@ func _async_redirect_by_deep_link() -> void:
 			# router raises the modal over Discover (its precheck reuses this cached decision).
 			if is_inside_tree():
 				get_tree().change_scene_to_file("res://src/ui/components/organisms/menu/menu.tscn")
-			return
+			return false
 
 	go_to_explorer()
+	return true
 
 
 ## Check if any deeplink parameter should redirect to explorer (preview, realm, or location)
@@ -1274,7 +1286,11 @@ func _on_avatar_preview_gui_input(event: InputEvent) -> void:
 
 
 func _on_deep_link_received():
-	if ready_for_redirect_by_deep_link:
+	# The same guard the other two call sites use. Without it any deeplink redirects — and a
+	# campaign link carries only an opaque `?c=` token, which is meant to be inert to routing.
+	# Redirecting on one boots the explorer past avatar creation and the FTUE, which is the
+	# screen the campaign was supposed to personalize.
+	if ready_for_redirect_by_deep_link and _should_go_to_explorer_from_deeplink():
 		_async_redirect_by_deep_link.call_deferred()
 
 

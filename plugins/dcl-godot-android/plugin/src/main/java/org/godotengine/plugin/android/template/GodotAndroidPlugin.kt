@@ -2414,10 +2414,16 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
         val result = Dictionary()
         result["status"] = "ok"
         result["deeplink"] = link
-        // GA4F stores milliseconds; the referrer API uses seconds. Normalize here so the
-        // engine compares both against one unit.
-        result["click_timestamp"] = prefs.getLong("timestamp", 0L) / 1000L
-        result["gclid"] = prefs.getString("gclid", "") ?: ""
+        // GA4F stores this as Double.doubleToRawLongBits(seconds), NOT as a number — verified
+        // in play-services-measurement-impl 22.3.0, zzqd.zzb(String, double). Reading it as a
+        // plain Long yields ~4.79e15 for a real click time, which is not rescalable garbage.
+        // Decode the bits back to a double first. The unit is seconds-with-fraction (the same
+        // scale the referrer API reports), so it is truncated to whole seconds to match.
+        // That method writes only "deeplink" and "timestamp" and then commits, so there is no
+        // gclid to read here despite what the GA4F docs imply.
+        val rawBits = prefs.getLong("timestamp", 0L)
+        val clickSeconds = if (rawBits == 0L) 0L else Double.fromBits(rawBits).toLong()
+        result["click_timestamp"] = clickSeconds
         return result
     }
 
@@ -2448,7 +2454,7 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
 
             readDeferredDeepLinkPrefs(prefs)?.let {
                 deferredDeepLinkData = it
-                Log.i(pluginName, "[DDL] Deferred deep link already present: ${it["deeplink"]}")
+                Log.i(pluginName, "[DDL] Deferred deep link already present")
                 return it
             }
 
@@ -2456,11 +2462,19 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
                 deferredDeepLinkStarted = true
                 val listener = android.content.SharedPreferences
                     .OnSharedPreferenceChangeListener { changed, _ ->
-                        if (deferredDeepLinkData == null) {
-                            readDeferredDeepLinkPrefs(changed)?.let {
-                                deferredDeepLinkData = it
-                                Log.i(pluginName, "[DDL] Deferred deep link arrived: ${it["deeplink"]}")
+                        // SharedPreferences dispatches listeners on the main thread, so an
+                        // uncaught throw here takes the process down rather than surfacing as
+                        // an error dict. The read touches a GMS-written value whose encoding
+                        // is already surprising once, so it is not assumed to stay a Long.
+                        try {
+                            if (deferredDeepLinkData == null) {
+                                readDeferredDeepLinkPrefs(changed)?.let {
+                                    deferredDeepLinkData = it
+                                    Log.i(pluginName, "[DDL] Deferred deep link arrived")
+                                }
                             }
+                        } catch (e: Throwable) {
+                            Log.e(pluginName, "[DDL] Failed to read the deferred deep link", e)
                         }
                     }
                 deferredDeepLinkListener = listener

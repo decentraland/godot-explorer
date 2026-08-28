@@ -27,7 +27,11 @@ pub struct InstallAttribution {
     done: bool,
     /// GA4F cannot say "there will never be a link" — an organic install simply never gets
     /// one, so its read stays pending forever. Past this deadline the referrer answers alone.
-    deadline: Instant,
+    ga4f_deadline: Instant,
+    /// The referrer can hang too: its status only changes from a Play service callback, and a
+    /// binding that never calls back leaves it pending forever. Without a second bound no
+    /// event is ever emitted, and attribution runs once per install so it is never retried.
+    overall_deadline: Instant,
     started: Instant,
 }
 
@@ -35,6 +39,10 @@ pub struct InstallAttribution {
 /// first launch, within a second or two of the Firebase SDK initializing; this leaves room
 /// for a cold start on a slow device without stalling the event indefinitely.
 const GA4F_WAIT: Duration = Duration::from_secs(10);
+
+/// Hard bound on the whole resolution. Past this the event is emitted with whatever is
+/// known, so a source that never answers cannot swallow the install entirely.
+const OVERALL_WAIT: Duration = Duration::from_secs(25);
 
 const SOURCE_GA4F: &str = "ga4f_deferred_deeplink";
 const SOURCE_REFERRER: &str = "play_install_referrer";
@@ -54,9 +62,19 @@ impl InstallAttribution {
         let now = Instant::now();
         Self {
             done: false,
-            deadline: now + GA4F_WAIT,
+            ga4f_deadline: now + GA4F_WAIT,
+            overall_deadline: now + OVERALL_WAIT,
             started: now,
         }
+    }
+
+    /// Whether resolution has finished, event or not.
+    ///
+    /// Callers must drop the tracker on this rather than on `poll()` returning an event: two
+    /// settle paths legitimately have nothing to report, and treating those as "still
+    /// running" strands every consumer waiting on it.
+    pub fn is_done(&self) -> bool {
+        self.done
     }
 
     /// Poll both sources. Returns a `SegmentEvent` once the attribution is settled, or
@@ -69,11 +87,22 @@ impl InstallAttribution {
         let ga4f = read_status(DclAndroidPlugin::get_deferred_deep_link_internal());
         let referrer = read_status(DclAndroidPlugin::get_install_referrer_internal());
 
-        // GA4F answered with a link: it wins outright, no need to wait on the referrer.
+        // The referrer's own fields are only meaningful once it says "ok"; a pending dict
+        // carries just a status, and reading through it would ship zeros as if they were data.
+        let settled_referrer = referrer
+            .as_ref()
+            .filter(|(_, status)| status == "ok")
+            .map(|(dict, _)| dict);
+
+        // GA4F wins only when its link actually carries a token. Winning on status alone would
+        // discard a valid referrer token whenever the ad group's link has none, and the
+        // campaign is lost for good: attribution runs once per install.
         if let Some((ref dict, ref status)) = ga4f {
             if status == "ok" {
-                self.done = true;
-                return Some(self.build_from_ga4f(dict, referrer.as_ref().map(|(d, _)| d)));
+                if let Some(token) = extract_token(&get_string(dict, "deeplink")) {
+                    self.done = true;
+                    return Some(self.build_from_ga4f(dict, settled_referrer, token));
+                }
             }
         }
 
@@ -82,7 +111,8 @@ impl InstallAttribution {
             Some((_, ref status)) => status != "pending",
             None => true, // no plugin (non-Android, or the method is missing) — nothing to wait for
         };
-        if !ga4f_settled && Instant::now() < self.deadline {
+        let now = Instant::now();
+        if !ga4f_settled && now < self.ga4f_deadline {
             return None;
         }
 
@@ -93,7 +123,13 @@ impl InstallAttribution {
             return None;
         };
         if status == "pending" {
-            return None;
+            if now < self.overall_deadline {
+                return None;
+            }
+            // The referrer never answered. Report the install anyway rather than losing it.
+            self.done = true;
+            tracing::warn!("[attribution] referrer never resolved, reporting without it");
+            return Some(self.build_from_referrer(&VarDictionary::new()));
         }
 
         self.done = true;
@@ -111,13 +147,15 @@ impl InstallAttribution {
         &self,
         ga4f: &VarDictionary,
         referrer: Option<&VarDictionary>,
+        token: String,
     ) -> SegmentEvent {
         let deeplink = get_string(ga4f, "deeplink");
-        let token = extract_token(&deeplink);
 
         // The referrer still carries the install timestamps and the raw string, which stay
         // worth reporting even when GA4F decided the destination.
-        let referrer_string = referrer.map(|d| get_string(d, "referrer")).unwrap_or_default();
+        let referrer_string = referrer
+            .map(|d| get_string(d, "referrer"))
+            .unwrap_or_default();
         let utm = parse_utm_params(&referrer_string);
 
         tracing::debug!(
@@ -136,12 +174,14 @@ impl InstallAttribution {
             utm_term: utm.get("utm_term").cloned(),
             // GA4F reports its own click time; the install time only exists on the referrer.
             click_timestamp: get_i64(ga4f, "click_timestamp"),
-            install_timestamp: referrer.map(|d| get_i64(d, "install_timestamp")).unwrap_or(0),
+            install_timestamp: referrer
+                .map(|d| get_i64(d, "install_timestamp"))
+                .unwrap_or(0),
             google_play_instant: referrer
                 .map(|d| get_bool(d, "google_play_instant"))
                 .unwrap_or(false),
             attribution_source: SOURCE_GA4F.to_string(),
-            campaign_token: token,
+            campaign_token: Some(token),
             deferred_deep_link: Some(deeplink),
         })
     }
@@ -228,7 +268,6 @@ fn extract_token(input: &str) -> Option<String> {
                 return Some(decoded);
             }
             tracing::warn!("[attribution] ignoring malformed campaign token '{decoded}'");
-            return None;
         }
     }
     None
@@ -343,9 +382,9 @@ mod tests {
         assert!(is_valid_token("a"));
 
         assert!(!is_valid_token(""));
-        assert!(!is_valid_token("Summer"));      // uppercase
-        assert!(!is_valid_token("-lead"));       // leading dash
-        assert!(!is_valid_token("trail-"));      // trailing dash
+        assert!(!is_valid_token("Summer")); // uppercase
+        assert!(!is_valid_token("-lead")); // leading dash
+        assert!(!is_valid_token("trail-")); // trailing dash
         assert!(!is_valid_token("double--dash"));
         assert!(!is_valid_token("under_score"));
         assert!(!is_valid_token(&"a".repeat(65)));

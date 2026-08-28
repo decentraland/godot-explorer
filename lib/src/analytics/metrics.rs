@@ -242,14 +242,21 @@ impl Metrics {
         // mechanisms are polled behind this: the GA4F deferred deep link and the Play
         // install referrer, resolved into one event that names which one won.
         if let Some(ref mut attribution) = self.install_attribution {
-            if let Some(event) = attribution.poll() {
-                self.install_attribution = None;
+            let event = attribution.poll();
+            // Dropped on `is_done`, not on there being an event: two settle paths legitimately
+            // have nothing to report, and leaving the tracker in place there would report
+            // attribution as forever-pending to everything waiting on it.
+            let settled = attribution.is_done();
+            if let Some(event) = event {
                 if let SegmentEvent::InstallAttribution(ref data) = event {
                     if let Some(token) = data.campaign_token.as_ref() {
                         self.resolved_campaign_token = token.clone();
                     }
                 }
                 self.queue_event("Install Attribution", event);
+            }
+            if settled {
+                self.install_attribution = None;
             }
         }
 
