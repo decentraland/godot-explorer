@@ -7,6 +7,8 @@ signal navbar_closed
 enum BUTTON { FRIENDS, NOTIFICATIONS, BACKPACK, SETTINGS }
 
 var _manually_hidden: bool = false
+# Navbar buttons ordered to match Control_Selection1..6 (top to bottom); filled in _ready.
+var _selection_buttons: Array[BaseButton] = []
 
 @onready var animation_player: AnimationPlayer = %AnimationPlayer
 @onready var panel_container: PanelContainer = %PanelContainer
@@ -17,18 +19,41 @@ var _manually_hidden: bool = false
 @onready var portrait_button_profile: TextureButton = %Portrait_Button_Profile
 @onready var static_button_backpack: TextureButton = %StaticButton_Backpack
 @onready var static_button_settings: TextureButton = %StaticButton_Settings
+@onready var static_button_discover: TextureButton = %StaticButton_Discover
+
+# One shared selection effect (%Control_Effect) that reparents into the slot of the pressed
+# button. `_selection_buttons` and `_selection_slots` are index-aligned, top-to-bottom.
+@onready var _selection_effect: Control = %Control_Effect
+@onready var _selection_slots: Array[Control] = [
+	%Control_Selection1,
+	%Control_Selection2,
+	%Control_Selection3,
+	%Control_Selection4,
+	%Control_Selection5,
+	%Control_Selection6,
+]
 
 
 func _ready() -> void:
 	var btn_group = ButtonGroup.new()
 	btn_group.allow_unpress = false
-	static_button_friends.button_group = btn_group
-	static_button_notifications.button_group = btn_group
-	static_button_backpack.button_group = btn_group
-	static_button_settings.button_group = btn_group
-	portrait_button_profile.button_group = btn_group
-	# Ensure there's always a pressed button at startup
-	# The ButtonGroup with allow_unpress = false ensures one is always pressed
+	# Ordered to match Control_Selection1..6 in VBoxContainer_Selection (top to bottom).
+	_selection_buttons = [
+		static_button_discover,
+		static_button_friends,
+		static_button_notifications,
+		static_button_backpack,
+		static_button_settings,
+		portrait_button_profile,
+	]
+	for selection_button in _selection_buttons:
+		selection_button.button_group = btn_group
+	# The ButtonGroup with allow_unpress = false ensures one is always pressed; move the shared
+	# selection effect into the pressed button's slot, now and on every change.
+	btn_group.pressed.connect(_on_selection_button_pressed)
+	var pressed_button: BaseButton = btn_group.get_pressed_button()
+	if pressed_button != null:
+		_on_selection_button_pressed(pressed_button)
 
 	Global.close_navbar.connect(_on_navbar_close)
 	Global.open_navbar_silently.connect(_on_navbar_open_silently_on_backpack)
@@ -60,6 +85,17 @@ func _on_size_changed():
 
 func _on_navbar_close() -> void:
 	collapse()
+
+
+## Reparents the shared selection effect into the slot matching the pressed navbar button, so the
+## highlight follows the selection. Full-rect anchors let it fill whichever slot it lands in.
+func _on_selection_button_pressed(pressed_button: BaseButton) -> void:
+	var index: int = _selection_buttons.find(pressed_button)
+	if index == -1:
+		return
+	var target: Control = _selection_slots[index]
+	if _selection_effect.get_parent() != target:
+		_selection_effect.reparent(target, false)
 
 
 func _on_button_toggled(toggled_on: bool) -> void:
