@@ -1,3 +1,4 @@
+@tool
 class_name VirtualJoystick
 
 extends Control
@@ -48,9 +49,9 @@ const EXTERNAL_TOUCH_INDEX: int = -2
 @export var action_walk := "ia_walk"
 @export var action_sprint := "ia_sprint"
 
-## Margin node, to offset allowing to
-## render on the entire screen
-@export var margin_control: Control
+## Shared HUD safe-area inset profile (assign hud_margins.tres). Places the resting joystick
+## relative to the safe area. A Resource ref (unlike a node path) survives editor re-saves.
+@export var margin_profile: SafeAreaMargins
 
 # PUBLIC VARIABLES
 
@@ -78,6 +79,14 @@ var _joystick_visible := false
 
 
 func _ready() -> void:
+	# _process only drives the editor preview; at runtime it has nothing to do per frame.
+	set_process(Engine.is_editor_hint())
+	if Engine.is_editor_hint():
+		# Editor preview: draw the resting base at its computed position (no touch/timers/Global).
+		_dynamic_material.set_shader_parameter("state", 0)
+		_reset()
+		return
+
 	_sprint_timer.timeout.connect(func(): Input.action_press(action_sprint))
 
 	if (
@@ -248,26 +257,41 @@ func _update_input_actions():
 		_sprint_timer.start()
 
 
+## Editor-only: keep the resting preview in sync with the mobile-preview safe area and the
+## _joystick_default_position value (SafeAreaControls recomputes its insets every frame too).
+func _process(_delta: float) -> void:
+	# Enabled only in-editor (see set_process in _ready): keep the preview synced to size/margin edits.
+	_reset()
+
+
 func _reset():
 	is_pressed = false
-	emit_signal("is_holded", false)
+	if not Engine.is_editor_hint():
+		emit_signal("is_holded", false)
 	output = Vector2.ZERO
 	touch_index = -1
 
-	var base_position := _joystick_default_position
-	base_position.y = size.y - base_position.y
-
-	# Expand VirtualJoystick outside the Safe Margin
-	if margin_control:
-		var margin_top: float = margin_control.get_theme_constant("margin_top")
-		var margin_left: float = margin_control.get_theme_constant("margin_left")
-		var margin_bottom: float = margin_control.get_theme_constant("margin_bottom")
-		offset_left = -margin_left
-		offset_top = -margin_top
-		offset_right = 0
-		offset_bottom = -margin_bottom
-		base_position.y += margin_bottom
-		base_position.x += margin_left
+	# `_joystick_default_position` is relative to the SAFE AREA (x from the left edge, y from the
+	# bottom). Offset it by the safe-area inset so the resting spot adapts per device. Uses the shared
+	# HUD margin PROFILE (108/45 landscape; same one the joypad/chat frame use) floored against the
+	# live device safe-area inset. A Resource @export (not a node-path) is used because node-path
+	# exports get dropped from the .tscn when the editor re-saves an instanced scene.
+	var safe_left := 0.0
+	var safe_bottom := 0.0
+	if margin_profile:
+		var portrait: bool = (not Engine.is_editor_hint()) and Global.is_orientation_portrait()
+		safe_left = float(margin_profile.portrait_left if portrait else margin_profile.left)
+		safe_bottom = float(margin_profile.portrait_bottom if portrait else margin_profile.bottom)
+	if not Engine.is_editor_hint() and (Global.is_mobile() or Global.is_emulating_safe_area()):
+		var sa: Rect2i = Global.get_safe_area()
+		var win: Vector2i = DisplayServer.window_get_size()
+		var vp: Vector2 = get_viewport().get_visible_rect().size
+		safe_left = maxf(safe_left, float(sa.position.x) * (vp.x / float(win.x)))
+		safe_bottom = maxf(safe_bottom, float(abs(sa.end.y - win.y)) * (vp.y / float(win.y)))
+	var base_position := Vector2(
+		_joystick_default_position.x + safe_left,
+		size.y - _joystick_default_position.y - safe_bottom
+	)
 
 	_dynamic_material.set_shader_parameter("max_chain_length", size.length() * 0.25)
 
@@ -276,7 +300,7 @@ func _reset():
 	_tip_position = _tip_default_position
 	_move_tip(_tip_position)
 
-	if use_input_actions:
+	if use_input_actions and not Engine.is_editor_hint():
 		if Input.is_action_pressed(action_left) or Input.is_action_just_pressed(action_left):
 			Input.action_release(action_left)
 		if Input.is_action_pressed(action_right) or Input.is_action_just_pressed(action_right):

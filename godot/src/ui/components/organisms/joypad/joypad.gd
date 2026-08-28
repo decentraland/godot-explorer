@@ -1,45 +1,49 @@
 extends Control
 
-const GLIDER_ICON_MAX_WIDTH = 85
-const GLIDER_ICON = preload("uid://dnosnq2stqu11")  # "res://assets/themes/dark_dcl_theme/icons/Glider.svg"
+# Per-action glyphs (normal / pressed; glide also has a hold variant). Swapped by button state
+# via each button's OrbSkin. Icons are 100x100, sized to the button through expand_icon.
+const IC_INTERACT_NORMAL = preload("uid://c55dfgqwdxs8f")
+const IC_INTERACT_PRESSED = preload("uid://ct0wqa804vtni")
+const IC_E_NORMAL = preload("uid://ck3e0eaelc3rq")
+const IC_E_PRESSED = preload("uid://01qlcj0sqqnw")
+const IC_F_NORMAL = preload("uid://72h2xkpj1hgk")
+const IC_F_PRESSED = preload("uid://c5u8stl6jg8cl")
+const IC_1_NORMAL = preload("uid://e0ug4dbj1y10")
+const IC_1_PRESSED = preload("uid://ddrk8qdneg8lw")
+const IC_2_NORMAL = preload("uid://cqxtpai3pix5u")
+const IC_2_PRESSED = preload("uid://bbqcb676u1mrv")
+const IC_3_NORMAL = preload("uid://sw0euo71n3gv")
+const IC_3_PRESSED = preload("uid://dm5mjc6eto6v1")
+const IC_4_NORMAL = preload("uid://dvpirmcnk4c2a")
+const IC_4_PRESSED = preload("uid://dx8f2nledowsj")
+const IC_JUMP_NORMAL = preload("uid://d4neuk8df8m4y")
+const IC_JUMP_PRESSED = preload("uid://dykud4ptnkdei")
+const IC_DJUMP_NORMAL = preload("uid://df6fla5fsgl2s")
+const IC_DJUMP_PRESSED = preload("uid://dmosa0apyje0c")
+const IC_GLIDE_NORMAL = preload("uid://baojgdd2swsg1")
+const IC_GLIDE_PRESSED = preload("uid://c52srwv13315")
+const IC_GLIDE_HOLD = preload("uid://c8jb31i47s7jy")
+const IC_PLUS_NORMAL = preload("uid://b14xrn24tfgpr")
+const IC_PLUS_PRESSED = preload("uid://npyym5xkix66")
 
-const DOUBLE_JUMP_ICON_MAX_WIDTH = 52
-const DOUBLE_JUMP_ICON = preload("uid://euvimxirt85b")  # "res://assets/themes/dark_dcl_theme/icons/DoubleJump.svg"
-
-const SINGLE_JUMP_ICON_MAX_WIDTH = 85
-const SINGLE_JUMP_ICON = preload("uid://ck3atqpytstpo")  # "res://assets/themes/dark_dcl_theme/icons/Jump.svg"
-
-# Pointer glyph has two hand-tuned variants (Figma nodes 3:869 small / 3:1008 large) so the
-# outline weight stays visually constant instead of scaling with the button. The small variant
-# is authored on the satellite (joypad.tscn); the large one is swapped onto the central button
-# when the pointer is promoted to the main action. See _apply_main_action.
-const POINTER_SMALL_ICON = preload("uid://cio1wsarij08p")  # pointer_small.svg (node 3:869)
-const POINTER_LARGE_ICON = preload("uid://5nfo22llcuuv")  # pointer_large.svg (node 3:1008)
-const POINTER_LARGE_ICON_MAX_WIDTH = 55  # 54/118 of the Figma big button, on the 120px center
-
-# Button SKIN (border/fill/radius/colors) is owned by the theme, not this organism: the
-# `TouchableButton` variation in assets/themes/dcl_theme.tres -> touchable_normal.tres. The
-# joypad only swaps these two styleboxes onto the central button for the glider inverted state.
-const TOUCHABLE_NORMAL_STYLEBOX = preload("uid://b66geet5bo5yf")  # touchable_normal.tres (black bg)
-const TOUCHABLE_PRESSED_STYLEBOX = preload("uid://cvducxvis7n6e")  # touchable_pressed.tres (white bg)
-
-const TOUCHABLE_ICON_LIGHT := Color(0.9882353, 0.9882353, 0.9882353, 1)
-const TOUCHABLE_ICON_DARK := Color(0, 0, 0, 0.7019608)
-
-const INVERTED_NORMAL_STYLES: Array[StringName] = [
-	&"normal", &"normal_mirrored", &"hover", &"hover_mirrored"
-]
-const INVERTED_PRESSED_STYLES: Array[StringName] = [
-	&"pressed", &"pressed_mirrored", &"hover_pressed", &"hover_pressed_mirrored"
-]
-const INVERTED_NORMAL_ICON_COLORS: Array[StringName] = [&"icon_normal_color", &"icon_hover_color"]
-const INVERTED_PRESSED_ICON_COLORS: Array[StringName] = [
-	&"icon_pressed_color", &"icon_hover_pressed_color"
-]
+# action -> [normal, pressed]. Jump is dynamic (see _apply_jump_icon); pointer maps to interact.
+const ACTION_ICONS := {
+	"ia_pointer": [IC_INTERACT_NORMAL, IC_INTERACT_PRESSED],
+	"ia_primary": [IC_E_NORMAL, IC_E_PRESSED],
+	"ia_secondary": [IC_F_NORMAL, IC_F_PRESSED],
+	"ia_action_3": [IC_1_NORMAL, IC_1_PRESSED],
+	"ia_action_4": [IC_2_NORMAL, IC_2_PRESSED],
+	"ia_action_5": [IC_3_NORMAL, IC_3_PRESSED],
+	"ia_action_6": [IC_4_NORMAL, IC_4_PRESSED],
+}
 
 const ICON_SINGLE_JUMP := 0
 const ICON_DOUBLE_JUMP := 1
 const ICON_GLIDER := 2
+
+# Combo column glyph size (design: 50x50 on the 72px disc). The source number icons are square,
+# so icon_max_width caps both sides equally; this overrides the generic small-button size (56).
+const COMBO_ICON_MAX_WIDTH := 50
 
 # Single priority stack (issue #2518): all on-screen buttons form one ordered list and fill
 # fixed screen positions from the top down. Hiding an action cascades the rest up; the first
@@ -55,42 +59,25 @@ const PRIORITY_ORDER := [
 	"ia_action_6",
 ]
 
-# Adaptive gamepad arc. The arc around the main button is, clockwise: the visible satellites
-# followed by the "+" overflow toggle as the LAST / topmost element. They reflow together
-# based on the number of visible arc elements, so the "+" always lands at the top when shown.
-# LAYOUTS: key = number of visible arc elements, value = positions (top-left, relative to the
-# Satellites anchor), slot 0 = lower-left (~9 o'clock) up to the last slot = top (~12).
-# Design source (Figma file skocZRe2lV9IjqV4rF6EYs): N=4 is the full arc (3 satellites + "+"),
-# from the "RightSideControls" HUD frame; the satellite-only counts come from the per-count
-# frames (3 -> 5:1141, 2 -> 3:1187, 1 -> 3:1274).
-const LAYOUTS := {
-	1: [Vector2(-226, -62)],
-	2: [Vector2(-226, -62), Vector2(-162, -200)],
-	3: [Vector2(-229, -57), Vector2(-188, -175), Vector2(-57, -219)],
-	4: [Vector2(-229, -57), Vector2(-208, -145), Vector2(-140, -202), Vector2(-57, -219)],
-}
-
-# Jump rendered on a small satellite (when demoted from the center) uses a static glyph sized
-# for the 65px satellite, instead of the dynamic/glider logic reserved for the big button.
-const JUMP_SATELLITE_ICON_MAX_WIDTH := 40
+# Adaptive gamepad arc. The arc around the main button is, in order: the visible satellites
+# followed by the "+" overflow toggle as the LAST / topmost element. They reflow together based
+# on the number of visible arc elements, so the "+" always lands at the top when shown. The
+# placement itself is computed by JoypadArc (see joypad_arc.gd) from the button diameters — first
+# satellite tangent to the joypad's bottom edge, last to the right edge, the rest spread evenly.
 
 var combo_opened: bool = false
 
 var _current_icon: int = ICON_DOUBLE_JUMP
-var _showing_inverted_colors: bool = false
+# True while the glider is actively providing lift (latches the button's Hold look).
+var _gliding: bool = false
 
-# PBTouchScreenControls (Global.touch_controls_*): the joypad renders any action on any
-# physical slot each layout pass (see _layout). `_action_defaults` snapshots each action's
-# authored glyph (icon / text / theme overrides), keyed by action so a slot can render
-# whatever action the priority stack assigns to it. Populated in _ready.
-var _action_defaults: Dictionary = {}
 var _tc_active_applied: bool = false
 var _last_tc_hash: int = 0
 var _jump_icon_overridden: bool = false
 var _jump_slot_is_big: bool = true
 
 # Physical slots (see joypad.tscn): the big central button, the three arc satellites (in
-# fixed screen order matching LAYOUTS slots 0..2), and the four overflow-column buttons
+# arc order 0..2, placed by JoypadArc), and the four overflow-column buttons
 # (priority order, index 0 = first overflow). The "+" toggle is `button_combo` below.
 var _big_slot: Button
 var _arc_slots: Array[Button] = []
@@ -105,6 +92,9 @@ var _quaternary_btn: Button
 
 @onready var button_combo: Button = %Button_Combo
 @onready var button_press: Button = $Button_Press
+# The satellites' anchor Control carries the JoypadArc @tool script, which places the arc from
+# the button diameters (null if the script isn't attached to Button_Press/Control yet).
+@onready var _arc: JoypadArc = $Button_Press/Control as JoypadArc
 @onready var _combo_column: VBoxContainer = %ComboColumn
 
 @onready var _combo_action_buttons: Array[Button] = [
@@ -116,6 +106,12 @@ var _quaternary_btn: Button
 
 
 func _ready() -> void:
+	# Editor-only alignment guide (a centered disc to line the buttons up against); it lives in
+	# the scene purely as a visual check and must never render at runtime.
+	var align_guide: Control = get_node_or_null("%TextureRect_ToAlign")
+	if align_guide != null:
+		align_guide.visible = false
+
 	for btn in _combo_action_buttons:
 		btn.touch_action_changed.connect(_on_combo_action_changed)
 	# Toggle the combo menu from raw touch so it opens with a second finger too
@@ -123,10 +119,13 @@ func _ready() -> void:
 	# a single, consistent input path.
 	button_combo.button_mask = 0
 	button_combo.gui_input.connect(_on_button_combo_gui_input)
+	# The "+" is a raw toggle (not a rendered action): skin its icon once. While the overflow
+	# menu is open it latches into Hold (purple orb + plus-pressed), like the glider.
+	_set_slot_icons(button_combo, IC_PLUS_NORMAL, IC_PLUS_PRESSED, IC_PLUS_PRESSED, false)
 	_set_attenuated_sound_for_buttons(self)
 	_apply_jump_icon(ICON_DOUBLE_JUMP)
 
-	_pointer_btn = $Button_Press/Control/Button_Jump
+	_pointer_btn = $Button_Press/Control/Button_Interact
 	_primary_btn = $Button_Press/Control/Button_Primary
 	_secondary_btn = $Button_Press/Control/Button_Secondary
 	_quaternary_btn = $Button_Press/Control/Button_Quaternary
@@ -136,33 +135,6 @@ func _ready() -> void:
 	# hidden in favor of the "+" toggle when the overflow menu is needed.
 	_arc_slots = [_pointer_btn, _primary_btn, _secondary_btn, _quaternary_btn]
 	_combo_slots = [%Button_Combo1, %Button_Combo2, %Button_Combo3, %Button_Combo4]
-
-	# Snapshot each action's authored default presentation from its home node, so any slot can
-	# later render any action's glyph. Keyed by action (independent of node).
-	var home := {
-		"ia_jump": button_press,
-		"ia_pointer": _pointer_btn,
-		"ia_primary": _primary_btn,
-		"ia_secondary": _secondary_btn,
-		"ia_action_3": %Button_Combo1,
-		"ia_action_4": %Button_Combo2,
-		"ia_action_5": %Button_Combo3,
-		"ia_action_6": %Button_Combo4,
-	}
-	for action in home:
-		var btn := home[action] as Button
-		var imw := -1
-		if btn.has_theme_constant_override("icon_max_width"):
-			imw = btn.get_theme_constant("icon_max_width")
-		var fs := -1
-		if btn.has_theme_font_size_override("font_size"):
-			fs = btn.get_theme_font_size("font_size")
-		_action_defaults[action] = {
-			"icon": btn.icon,
-			"text": btn.text,
-			"imw": imw,
-			"fs": fs,
-		}
 
 	_layout({}, {}, "")
 
@@ -183,7 +155,9 @@ func _update_jump_icon() -> void:
 	# The central button's icon is dynamic only while jump occupies the big slot and is not
 	# overridden by a scene icon. When jump is demoted / hidden, drop any inverted styling.
 	if not _jump_slot_is_big or _jump_icon_overridden:
-		_showing_inverted_colors = false
+		if _gliding:
+			_gliding = false
+			button_press.set_hold(false)
 		return
 	var player := Global.scene_runner.player_body_node as Player
 	if player == null:
@@ -226,44 +200,40 @@ func _update_jump_icon() -> void:
 		and not (player.is_on_floor() or player.position.y <= 0.0)
 		and not glide_disabled_in_scene
 	)
-	if glide_active != _showing_inverted_colors:
-		_showing_inverted_colors = glide_active
-		_apply_inverted_colors(button_press, glide_active)
+	if glide_active != _gliding:
+		_gliding = glide_active
+		button_press.set_hold(glide_active)
 
 
 func _apply_jump_icon(icon_id: int) -> void:
 	_current_icon = icon_id
 	match icon_id:
 		ICON_GLIDER:
-			button_press.icon = GLIDER_ICON
-			button_press.add_theme_constant_override("icon_max_width", GLIDER_ICON_MAX_WIDTH)
+			_set_slot_icons(button_press, IC_GLIDE_NORMAL, IC_GLIDE_PRESSED, IC_GLIDE_HOLD, true)
 		ICON_SINGLE_JUMP:
-			button_press.icon = SINGLE_JUMP_ICON
-			button_press.add_theme_constant_override("icon_max_width", SINGLE_JUMP_ICON_MAX_WIDTH)
+			_set_slot_icons(button_press, IC_JUMP_NORMAL, IC_JUMP_PRESSED, null, true)
 		_:
-			button_press.icon = DOUBLE_JUMP_ICON
-			button_press.add_theme_constant_override("icon_max_width", DOUBLE_JUMP_ICON_MAX_WIDTH)
+			_set_slot_icons(button_press, IC_DJUMP_NORMAL, IC_DJUMP_PRESSED, null, true)
 
 
-func _apply_inverted_colors(btn: Button, inverted: bool) -> void:
-	if inverted:
-		for style in INVERTED_NORMAL_STYLES:
-			btn.add_theme_stylebox_override(style, TOUCHABLE_PRESSED_STYLEBOX)
-		for style in INVERTED_PRESSED_STYLES:
-			btn.add_theme_stylebox_override(style, TOUCHABLE_NORMAL_STYLEBOX)
-		for color_name in INVERTED_NORMAL_ICON_COLORS:
-			btn.add_theme_color_override(color_name, TOUCHABLE_ICON_DARK)
-		for color_name in INVERTED_PRESSED_ICON_COLORS:
-			btn.add_theme_color_override(color_name, TOUCHABLE_ICON_LIGHT)
-	else:
-		for style in INVERTED_NORMAL_STYLES:
-			btn.remove_theme_stylebox_override(style)
-		for style in INVERTED_PRESSED_STYLES:
-			btn.remove_theme_stylebox_override(style)
-		for color_name in INVERTED_NORMAL_ICON_COLORS:
-			btn.remove_theme_color_override(color_name)
-		for color_name in INVERTED_PRESSED_ICON_COLORS:
-			btn.remove_theme_color_override(color_name)
+## Finds the OrbSkin child that skins a button (null if the button isn't orb-skinned).
+func _orb(node: Node) -> OrbSkin:
+	for child in node.get_children():
+		if child is OrbSkin:
+			return child
+	return null
+
+
+## Assigns the per-state glyphs to a button's OrbSkin and sizes the icon (100 big / 56 small).
+func _set_slot_icons(
+	node: Button, normal: Texture2D, pressed: Texture2D, hold: Texture2D, is_big: bool
+) -> void:
+	var orb := _orb(node)
+	if orb != null:
+		orb.set_icons(normal, pressed, hold)
+	node.text = ""
+	node.expand_icon = true
+	node.add_theme_constant_override("icon_max_width", 100 if is_big else 56)
 
 
 func _set_attenuated_sound_for_buttons(node: Node) -> void:
@@ -283,8 +253,49 @@ func _notification(what: int) -> void:
 
 func _on_button_combo_toggled(toggled_on: bool) -> void:
 	combo_opened = toggled_on
+	_set_combo_hold(toggled_on)
 	if _combo_column:
 		_combo_column.visible = toggled_on
+		# Re-place on open: if the last _assign_slots ran mid scene-transition (combo actions
+		# just re-shown), the column geometry may be stale — recompute it now that it's settled.
+		if toggled_on:
+			_position_combo_column()
+
+
+## Sizes the combo column to its currently-visible buttons and pins it centered just above the
+## "+" toggle. The height is summed from the buttons directly rather than read from the
+## VBoxContainer's cached minimum size, which lags a frame behind their visibility changing:
+## returning from a scene that hid the combo actions used to leave the column mis-sized and
+## floating far above the "+" (only the first button stayed on screen). Forcing top-left
+## anchoring keeps the manual placement from fighting the node's authored anchors.
+func _position_combo_column() -> void:
+	if _combo_column == null:
+		return
+	var visible_buttons: Array[Button] = []
+	for btn in _combo_action_buttons:
+		if btn.visible:
+			visible_buttons.append(btn)
+	if visible_buttons.is_empty():
+		return
+	var separation: float = float(_combo_column.get_theme_constant("separation"))
+	var width: float = 0.0
+	var height: float = separation * float(visible_buttons.size() - 1)
+	for btn in visible_buttons:
+		var btn_min: Vector2 = btn.get_combined_minimum_size()
+		width = maxf(width, btn_min.x)
+		height += btn_min.y
+	# Gap from the first (bottom) combo button to the "+" equals the inter-button separation,
+	# so the whole stack is evenly spaced.
+	_combo_column.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	_combo_column.size = Vector2(width, height)
+	_combo_column.position = Vector2((button_combo.size.x - width) * 0.5, -height - separation)
+
+
+## Latches the "+" orb into Hold while the overflow menu is open (like the glider).
+func _set_combo_hold(on: bool) -> void:
+	var orb := _orb(button_combo)
+	if orb != null:
+		orb.set_hold(on)
 
 
 ## Collapse the "+" overflow menu and reset the toggle without re-emitting `toggled`.
@@ -293,14 +304,18 @@ func _close_combo() -> void:
 		return
 	combo_opened = false
 	button_combo.set_pressed_no_signal(false)
+	_set_combo_hold(false)
 	if _combo_column:
 		_combo_column.visible = false
 
 
 func _on_combo_action_changed(pressed: bool) -> void:
 	if not pressed and combo_opened:
-		button_combo.toggled.emit(false)
+		# Clear the toggle BEFORE emitting `toggled(false)`: the handler refreshes the "+"
+		# OrbSkin, which reads button_pressed — clearing it first lets the orb fall back to
+		# Default instead of sticking on Pressed (set_pressed_no_signal fires no refresh).
 		button_combo.set_pressed_no_signal(false)
+		button_combo.toggled.emit(false)
 
 
 ## Applies PBTouchScreenControls (Global.touch_controls_*). No component (inactive) → the
@@ -396,16 +411,15 @@ func _assign_slots(visible: Array, icons: Dictionary) -> void:
 	# The "+" overflow toggle occupies the topmost arc slot only when there are extra buttons.
 	button_combo.visible = show_plus
 
-	# Position the arc (satellites first, "+" last) from LAYOUTS by the arc element count.
+	# Position the arc procedurally (satellites first, "+" last): first node tangent to the
+	# joypad's bottom edge, last to the right edge, the rest spread evenly between — see JoypadArc.
 	var arc_nodes: Array = []
 	for i in range(arc_actions.size()):
 		arc_nodes.append(_arc_slots[i])
 	if show_plus:
 		arc_nodes.append(button_combo)
-	var positions: Array = LAYOUTS.get(arc_nodes.size(), [])
-	for i in range(arc_nodes.size()):
-		if i < positions.size():
-			arc_nodes[i].position = positions[i]
+	if _arc != null:
+		_arc.arrange(arc_nodes)
 
 	# Overflow column (indices 4+). Rendered now but only shown while the "+" menu is open.
 	var overflow: Array = []
@@ -417,28 +431,24 @@ func _assign_slots(visible: Array, icons: Dictionary) -> void:
 		if i < overflow.size():
 			slot.visible = true
 			_render_action_on(slot, overflow[i], icons.get(overflow[i], {}), false)
+			# Combo buttons carry a smaller glyph than the arc satellites; override the size
+			# _render_action_on applied so their number icons match the design (~50x50).
+			slot.add_theme_constant_override("icon_max_width", COMBO_ICON_MAX_WIDTH)
 		else:
 			slot.visible = false
 
-	# The combo column sits directly on top of the "+" toggle; collapsed unless open. Size it
-	# to its visible content (min size) so the buttons pack tightly with no overlap and no
-	# centering gap — the authored .tscn frame is a fixed box that would otherwise clip / float
-	# the buttons as their count changes.
+	# The combo column sits directly on top of the "+" toggle; collapsed unless open.
 	if _combo_column:
-		var col_size := _combo_column.get_combined_minimum_size()
-		_combo_column.position = Vector2(
-			(button_combo.size.x - col_size.x) / 2.0, -col_size.y - 8.0
-		)
-		_combo_column.size = col_size
 		_combo_column.visible = combo_opened and show_plus
+	_position_combo_column()
 
 	_jump_slot_is_big = n > 0 and visible[0] == "ia_jump"
 
 
 ## Renders `action` onto physical `node`: sets its trigger_action, clears any prior occupant's
 ## visuals, then applies either a scene icon override (`icon` = { hash, url }) or the action's
-## canonical glyph. `is_big` selects size-specific glyphs (pointer) and the dynamic jump logic
-## (big central button only).
+## normal/pressed glyph pair (via the button's OrbSkin). `is_big` sizes the icon (100 big /
+## 56 small) and selects the dynamic jump logic (big central button only).
 func _render_action_on(node: Button, action: String, icon: Dictionary, is_big: bool) -> void:
 	node.trigger_action = action
 	_reset_node_visuals(node)
@@ -453,36 +463,23 @@ func _render_action_on(node: Button, action: String, icon: Dictionary, is_big: b
 	# Jump on the big central button keeps its dynamic glider / double-jump behavior.
 	if action == "ia_jump" and is_big:
 		_jump_icon_overridden = false
-		node.text = ""
 		_apply_jump_icon(_current_icon)
 		return
 
-	var d: Dictionary = _action_defaults.get(action, {})
-	var glyph_icon: Texture2D = d.get("icon")
-	var glyph_text := String(d.get("text", ""))
-	var imw: int = d.get("imw", -1)
-	var fs: int = d.get("fs", -1)
+	# Jump demoted to a satellite: static double/single-jump glyph, no glider / hold.
+	if action == "ia_jump":
+		var dj_off := Global.is_double_jump_disabled()
+		var jump_normal := IC_JUMP_NORMAL if dj_off else IC_DJUMP_NORMAL
+		var jump_pressed := IC_JUMP_PRESSED if dj_off else IC_DJUMP_PRESSED
+		_set_slot_icons(node, jump_normal, jump_pressed, null, is_big)
+		return
 
-	if action == "ia_pointer":
-		# Pointer uses a size-specific variant so the outline weight matches the design.
-		glyph_text = ""
-		if is_big:
-			glyph_icon = POINTER_LARGE_ICON
-			imw = POINTER_LARGE_ICON_MAX_WIDTH
-		else:
-			glyph_icon = POINTER_SMALL_ICON
-	elif action == "ia_jump":
-		# Jump demoted to a satellite: static glyph, no glider / inverted styling.
-		glyph_text = ""
-		glyph_icon = SINGLE_JUMP_ICON if Global.is_double_jump_disabled() else DOUBLE_JUMP_ICON
-		imw = JUMP_SATELLITE_ICON_MAX_WIDTH
-
-	node.icon = glyph_icon
-	node.text = glyph_text
-	if imw >= 0:
-		node.add_theme_constant_override("icon_max_width", imw)
-	if fs >= 0:
-		node.add_theme_font_size_override("font_size", fs)
+	# Mapped actions (pointer / E / F / 1-4) → their orb-swapped normal+pressed icon pair.
+	# Every action in PRIORITY_ORDER is covered above; an unmapped action just keeps the
+	# cleared (glyph-less) orb from _reset_node_visuals.
+	if ACTION_ICONS.has(action):
+		var pair: Array = ACTION_ICONS[action]
+		_set_slot_icons(node, pair[0], pair[1], null, is_big)
 
 
 ## Clears any prior occupant's presentation so a repurposed slot starts from a clean state.
@@ -490,7 +487,11 @@ func _reset_node_visuals(node: Button) -> void:
 	node.set_meta("tc_icon_hash", "")
 	if node.has_method("clear_custom_icon"):
 		node.clear_custom_icon()
-	_apply_inverted_colors(node, false)
+	if node.has_method("set_hold"):
+		node.set_hold(false)
+	var orb := _orb(node)
+	if orb != null:
+		orb.set_icons(null, null, null)
 	node.icon = null
 	node.text = ""
 	node.remove_theme_constant_override("icon_max_width")
