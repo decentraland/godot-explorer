@@ -188,6 +188,20 @@ var version_gate_snooze_until: int = 0
 
 var install_referrer_sent: bool = false
 
+# Ad/referrer campaign token captured from the `?c=` deeplink param on a first launch
+# (issue #2670). Resolved against the mobile-bff campaign map by Campaigns; empty when the
+# install carried no campaign.
+var campaign_token: String = ""
+
+# Unix timestamp the token was attributed. The deeplink path — the only one wired today —
+# records capture time. The freshness bound exists for the install-referrer path that will
+# feed this next: the referrer survives 90 days and only changes on reinstall, so without it
+# a reinstall months later would replay a dead campaign.
+var campaign_token_captured_at: int = 0
+
+# One campaign per install: set once a launch has acted on the token.
+var campaign_consumed: bool = false
+
 # One-shot flag for the Firebase `first_move_in_world` event (set once the user's first real
 # horizontal movement has been detected post-loading_finished, persisted across sessions).
 var first_move_in_world_sent: bool = false
@@ -497,6 +511,18 @@ func load_from_settings_file():
 		"user", "install_referrer_sent", data_default.install_referrer_sent
 	)
 
+	self.campaign_token = settings_file.get_value(
+		"user", "campaign_token", data_default.campaign_token
+	)
+
+	self.campaign_token_captured_at = settings_file.get_value(
+		"user", "campaign_token_captured_at", data_default.campaign_token_captured_at
+	)
+
+	self.campaign_consumed = settings_file.get_value(
+		"user", "campaign_consumed", data_default.campaign_consumed
+	)
+
 	self.first_move_in_world_sent = settings_file.get_value(
 		"user", "first_move_in_world_sent", data_default.first_move_in_world_sent
 	)
@@ -581,6 +607,11 @@ func save_to_settings_file():
 	new_settings_file.set_value("user", "backpack_owned_counts", self.backpack_owned_counts)
 	new_settings_file.set_value("user", "version_gate_snooze_until", self.version_gate_snooze_until)
 	new_settings_file.set_value("user", "install_referrer_sent", self.install_referrer_sent)
+	new_settings_file.set_value("user", "campaign_token", self.campaign_token)
+	new_settings_file.set_value(
+		"user", "campaign_token_captured_at", self.campaign_token_captured_at
+	)
+	new_settings_file.set_value("user", "campaign_consumed", self.campaign_consumed)
 	new_settings_file.set_value("user", "first_move_in_world_sent", self.first_move_in_world_sent)
 	new_settings_file.set_value(
 		"user", "local_assets_cache_version", self.local_assets_cache_version

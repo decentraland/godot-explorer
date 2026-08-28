@@ -248,6 +248,13 @@ pub fn feature_flags() -> String {
         suffix(ServiceGroup::MobileBff)
     )
 }
+pub fn campaigns() -> String {
+    // TODO: restore the per-environment form once the campaigns endpoint ships to
+    // production. It only exists on the dev deployment today (`.org` returns 404), so
+    // resolving by environment would break the org build rather than fall back:
+    //     format!("https://mobile-bff.decentraland.{}/campaigns", suffix(ServiceGroup::MobileBff))
+    "https://mobile-bff.decentraland.zone/campaigns".to_string()
+}
 
 // Notifications
 pub fn notifications_api() -> String {

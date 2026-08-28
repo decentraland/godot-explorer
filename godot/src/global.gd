@@ -175,6 +175,11 @@ var attestation: AttestationService = null
 # applied automatically when the response arrives — see feature_flags.gd.
 var feature_flags: FeatureFlags = null
 
+# Ad/referrer campaign map fetched from the mobile-bff at startup. Resolves the `?c=`
+# token captured at boot into a personalized FTUE or a direct boot into the target scene
+# — see campaigns.gd.
+var campaigns: Campaigns = null
+
 var _is_portrait: bool = true
 
 # Opt-in, set by a `decentraland://open?enable-upgraded-deletion=true` deeplink
@@ -353,6 +358,39 @@ func _apply_optimized_content_base_url(obj: DclParseDeepLink) -> void:
 		cli.optimized_content_base_url = opt_url
 
 
+## Capture the ad/referrer campaign token carried by a deeplink as `?c=<token>` (#2670).
+## Shared by the desktop fake-deeplink path (_ready) and the mobile/iOS live path (router).
+##
+## The token is opaque and inert to every existing deeplink branch: it is not a location,
+## realm or preview, so it does not trip _should_go_to_explorer_from_deeplink, and the
+## router's "/open" handler treats a params-only link as config-only. That is the point —
+## a link carrying the destination would boot the explorer and skip the very FTUE this
+## personalizes.
+##
+## First capture wins and is never overwritten: an install has exactly one campaign, and a
+## later in-session deeplink must not repaint it.
+##
+## `occurred_at` overrides the recorded attribution time. No caller passes it yet — it is the
+## seam for the install-referrer path, which must record the install timestamp rather than
+## the moment the app happened to read it.
+func _capture_campaign_token(obj: DclParseDeepLink, occurred_at: int = 0) -> void:
+	var token: String = String(obj.params.get("c", "")).strip_edges()
+	if token.is_empty():
+		return
+
+	var config := get_config()
+	if not config.campaign_token.is_empty():
+		print("[CAMPAIGN] token already captured (", config.campaign_token, "), ignoring: ", token)
+		return
+
+	config.campaign_token = token
+	config.campaign_token_captured_at = (
+		occurred_at if occurred_at > 0 else int(Time.get_unix_time_from_system())
+	)
+	config.save_to_settings_file()
+	print("[CAMPAIGN] captured token=", token, " at=", config.campaign_token_captured_at)
+
+
 ## Lazy-init the GltfContainer load-timeout coalescer. Replaces the
 ## per-container Timer (~1419 in Genesis Plaza). Called from
 ## gltf_container.gd; created on first use, persists for the app's lifetime.
@@ -516,6 +554,13 @@ func _ready():
 	# Create GDScript extensions of Rust classes
 	self.config = ConfigData.new()
 	config.load_from_settings_file()
+
+	# Campaign token (#2670). Deliberately after the config load: the fake/baked deeplink is
+	# parsed further up in _ready, long before ConfigData exists, so capturing there wrote to
+	# a config that was then replaced by the one read from disk. deep_link_obj is eagerly
+	# constructed, so this is a no-op when no deeplink carried a token. The live mobile path
+	# captures from deep_link_router instead, which already runs well after this point.
+	_capture_campaign_token(deep_link_obj)
 	# Bench-only: keep limit_fps at NO_LIMIT after the settings file load (which
 	# would otherwise restore a saved FPS_18/FPS_30 cap) so no later
 	# `apply_fps_limit()` re-pins the engine. Real users keep their saved cap.
@@ -691,6 +736,11 @@ func _ready():
 	self.feature_flags = FeatureFlags.new()
 	self.feature_flags.set_name("feature_flags")
 	add_child(self.feature_flags)
+	# Campaign map: same fire-and-forget shape. Kicked here (not lazily at the FTUE) so the
+	# fetch has the whole auth + avatar-creation flow to land before it is read.
+	self.campaigns = Campaigns.new()
+	self.campaigns.set_name("campaigns")
+	add_child(self.campaigns)
 	get_tree().root.add_child.call_deferred(self.network_inspector)
 	get_tree().root.add_child.call_deferred(self.scene_inspector_dispatcher)
 	get_tree().root.add_child.call_deferred(self.social_blacklist)
@@ -1759,12 +1809,14 @@ func get_device_anchor_id() -> String:
 	if DEBUG_GUEST_ROTATE_ANCHOR_ID and not is_production():
 		return ""
 	# 2. Shipping: device-bound native anchor (persists across reinstall).
+	var native_anchor := ""
 	if self.is_android():
 		var plugin = Engine.get_singleton("dcl-godot-android")
 		if plugin != null:
-			return plugin.getDeviceAnchorId()
+			native_anchor = plugin.getDeviceAnchorId()
 	elif self.is_ios():
 		var plugin = Engine.get_singleton("DclGodotiOS")
 		if plugin != null and plugin.has_method("get_device_anchor_id"):
-			return plugin.get_device_anchor_id()
-	return ""
+			native_anchor = plugin.get_device_anchor_id()
+
+	return native_anchor

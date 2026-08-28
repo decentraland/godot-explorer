@@ -6,6 +6,12 @@ signal jump_in_world(realm_str: String)
 
 var _places: Array[Dictionary] = []
 
+# How the campaign token resolved for this launch (issue #2670). The screen itself is
+# unchanged either way — a resolved campaign never reaches the FTUE, it boots straight into
+# its target — so this only rides along on the metrics, naming which failure sent a launch
+# here instead.
+var _campaign_resolution: Dictionary = {}
+
 @onready var carousel: Control = %SnapCarousel
 @onready var label_welcome: RichTextLabel = %Label_Welcome
 @onready var button_jump_in: Button = %Button_JumpIn_FTUE
@@ -23,6 +29,11 @@ func set_username(display_name: String) -> void:
 	label_welcome.text = (
 		"Welcome [color=#B18AFF]@" + display_name + "[/color]\nLet's get you started"
 	)
+
+
+## Records how the campaign token resolved, for the metrics this screen already emits.
+func set_campaign_context(resolution: Dictionary) -> void:
+	_campaign_resolution = resolution
 
 
 func load_places() -> void:
@@ -43,21 +54,19 @@ func _on_button_jump_in_pressed() -> void:
 		return
 	var index = carousel.get_current_index()
 	var place: Dictionary = _places[index]
-	(
-		Global
-		. metrics
-		. track_click_button(
-			"JUMP_IN",
-			"DISCOVER_FTUE",
-			JSON.stringify({"place_id": place.get("id", ""), "position": index}),
-		)
-	)
+	var payload := {"place_id": place.get("id", ""), "position": index}
+	payload.merge(CampaignResolution.metrics_context(_campaign_resolution))
+	Global.metrics.track_click_button("JUMP_IN", "DISCOVER_FTUE", JSON.stringify(payload))
 	ftue_completed.emit()
 	_do_jump_in(place)
 
 
 func _on_button_skip_pressed() -> void:
-	Global.metrics.track_click_button("SKIP", "DISCOVER_FTUE", "")
+	Global.metrics.track_click_button(
+		"SKIP",
+		"DISCOVER_FTUE",
+		JSON.stringify(CampaignResolution.metrics_context(_campaign_resolution))
+	)
 	ftue_completed.emit()
 
 
@@ -74,6 +83,6 @@ func _track_screen_view() -> void:
 	var carousel_items = []
 	for i in _places.size():
 		carousel_items.append({"position": i, "place_id": _places[i].get("id", "")})
-	Global.metrics.track_screen_viewed(
-		"DISCOVER_FTUE", JSON.stringify({"carousel": carousel_items})
-	)
+	var payload := {"carousel": carousel_items}
+	payload.merge(CampaignResolution.metrics_context(_campaign_resolution))
+	Global.metrics.track_screen_viewed("DISCOVER_FTUE", JSON.stringify(payload))
