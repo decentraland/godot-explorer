@@ -56,6 +56,10 @@ func process_deep_link(url: String) -> void:
 
 	Global._apply_optimized_content_base_url(Global.deep_link_obj)
 
+	# QA affordance, non-production only: mint a brand-new guest so the FTUE is reachable
+	# again on a device whose native anchor survives reinstall.
+	Global._capture_debug_guest_rotate(Global.deep_link_obj)
+
 	# Ad/referrer campaign token (#2670). Captured before any routing decision: on a cold
 	# start the link may also be what boots the app, and the token has to survive whichever
 	# branch below consumes the deeplink.

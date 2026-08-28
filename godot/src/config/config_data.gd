@@ -202,6 +202,14 @@ var campaign_token_captured_at: int = 0
 # One campaign per install: set once a launch has acted on the token.
 var campaign_consumed: bool = false
 
+# QA affordance: rotate the guest anchor so the next guest wallet is brand new, which is the
+# only way to reach the FTUE again on a device whose native anchor survives reinstall
+# (Android SSAID, iOS Keychain). Set by a `rotate-guest=true` deeplink and persisted, so the
+# tester flips it once instead of editing a constant and rebuilding.
+# HARD-GATED to non-production in Global.get_device_anchor_id(); a release cut from main
+# ignores it even if it somehow ends up true.
+var debug_rotate_guest_anchor: bool = false
+
 # One-shot flag for the Firebase `first_move_in_world` event (set once the user's first real
 # horizontal movement has been detected post-loading_finished, persisted across sessions).
 var first_move_in_world_sent: bool = false
@@ -523,6 +531,10 @@ func load_from_settings_file():
 		"user", "campaign_consumed", data_default.campaign_consumed
 	)
 
+	self.debug_rotate_guest_anchor = settings_file.get_value(
+		"user", "debug_rotate_guest_anchor", data_default.debug_rotate_guest_anchor
+	)
+
 	self.first_move_in_world_sent = settings_file.get_value(
 		"user", "first_move_in_world_sent", data_default.first_move_in_world_sent
 	)
@@ -612,6 +624,7 @@ func save_to_settings_file():
 		"user", "campaign_token_captured_at", self.campaign_token_captured_at
 	)
 	new_settings_file.set_value("user", "campaign_consumed", self.campaign_consumed)
+	new_settings_file.set_value("user", "debug_rotate_guest_anchor", self.debug_rotate_guest_anchor)
 	new_settings_file.set_value("user", "first_move_in_world_sent", self.first_move_in_world_sent)
 	new_settings_file.set_value(
 		"user", "local_assets_cache_version", self.local_assets_cache_version

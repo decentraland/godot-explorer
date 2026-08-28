@@ -294,6 +294,17 @@ impl Metrics {
         GString::from(self.resolved_campaign_token.as_str())
     }
 
+    /// Whether install attribution is still resolving.
+    ///
+    /// An empty token is ambiguous on its own — it reads the same whether the sources have
+    /// not answered yet or answered with no campaign, and the second case is the common one.
+    /// Callers must stop waiting on this rather than on the token, or every campaign-less
+    /// launch stalls for the full timeout.
+    #[func]
+    pub fn is_install_attribution_pending(&self) -> bool {
+        self.install_attribution.is_some()
+    }
+
     #[func]
     pub fn create_metrics(user_id: String, session_id: String) -> Gd<Metrics> {
         Gd::from_init_fn(|base| Self {

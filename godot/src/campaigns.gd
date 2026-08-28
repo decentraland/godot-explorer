@@ -133,7 +133,7 @@ func _async_capture_attribution_token() -> void:
 		return
 
 	var deadline := Time.get_ticks_msec() + int(ATTRIBUTION_MAX_WAIT_SECONDS * 1000.0)
-	while Time.get_ticks_msec() < deadline:
+	while true:
 		var token := String(Global.metrics.get_resolved_campaign_token()).strip_edges()
 		if not token.is_empty():
 			var config := Global.get_config()
@@ -141,6 +141,15 @@ func _async_capture_attribution_token() -> void:
 			config.campaign_token_captured_at = int(Time.get_unix_time_from_system())
 			config.save_to_settings_file()
 			print("[CAMPAIGN] captured token from install attribution: ", token)
+			return
+		# Stop on "settled", not on "no token yet": the two look identical from here, and an
+		# install with no campaign — the common case — would otherwise stall the FTUE behind
+		# a spinner for the whole timeout. Attribution also never starts after the first
+		# launch, which would make that stall permanent.
+		if not Global.metrics.is_install_attribution_pending():
+			return
+		if Time.get_ticks_msec() >= deadline:
+			push_warning("[CAMPAIGN] install attribution still pending, falling back to the FTUE")
 			return
 		await get_tree().create_timer(ATTRIBUTION_POLL_SECONDS).timeout
 

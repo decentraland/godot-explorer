@@ -373,6 +373,34 @@ func _apply_optimized_content_base_url(obj: DclParseDeepLink) -> void:
 ## `occurred_at` overrides the recorded attribution time. No caller passes it yet — it is the
 ## seam for the install-referrer path, which must record the install timestamp rather than
 ## the moment the app happened to read it.
+## QA affordance: `decentraland://open?rotate-guest=true` mints a brand-new guest on the next
+## launch, which is the only way back to the FTUE on a device whose native anchor survives
+## reinstall (Android SSAID, iOS Keychain). Persisted, so it survives the relaunch it causes.
+##
+## Also wipes the on-disk guest identity and the campaign state, so the FTUE is reachable
+## from this launch rather than only the one after it, and so the QA scenarios can be run
+## repeatedly in any order.
+##
+## HARD-GATED to non-production, like the constant it overrides.
+func _capture_debug_guest_rotate(obj: DclParseDeepLink) -> void:
+	if is_production():
+		return
+	if String(obj.params.get("rotate-guest", "")).to_lower() != "true":
+		return
+
+	var config := get_config()
+	config.debug_rotate_guest_anchor = true
+	# Campaign state is reset too, or the QA steps would only work once: a stored token is
+	# never replaced (see _capture_campaign_token) and a consumed one resolves to the default
+	# FTUE, so a second run of the campaign scenario would pass for the wrong reason.
+	config.campaign_token = ""
+	config.campaign_token_captured_at = 0
+	config.campaign_consumed = false
+	config.save_to_settings_file()
+	var removed := clear_guest_device_storage()
+	print("[DEEPLINK] rotate-guest=true: cleared %d guest file(s) + campaign state" % removed)
+
+
 func _capture_campaign_token(obj: DclParseDeepLink, occurred_at: int = 0) -> void:
 	var token: String = String(obj.params.get("c", "")).strip_edges()
 	if token.is_empty():
@@ -560,6 +588,7 @@ func _ready():
 	# a config that was then replaced by the one read from disk. deep_link_obj is eagerly
 	# constructed, so this is a no-op when no deeplink carried a token. The live mobile path
 	# captures from deep_link_router instead, which already runs well after this point.
+	_capture_debug_guest_rotate(deep_link_obj)
 	_capture_campaign_token(deep_link_obj)
 	# Bench-only: keep limit_fps at NO_LIMIT after the settings file load (which
 	# would otherwise restore a saved FPS_18/FPS_30 cap) so no later
@@ -1804,9 +1833,13 @@ func set_camera_mode_blocked(blocked: bool) -> void:
 # separate). Don't guard the Android call with has_method or it silently no-ops.
 # See: https://github.com/godotengine/godot/issues/106436
 func get_device_anchor_id() -> String:
-	# 1. DEBUG rotate mode: resettable user:// anchor on every platform.
-	#    Gated to non-production so it can never ship even if the flag is left on.
-	if DEBUG_GUEST_ROTATE_ANCHOR_ID and not is_production():
+	# 1. DEBUG rotate mode: resettable user:// anchor on every platform. Either the
+	#    compile-time constant or the persisted `rotate-guest=true` deeplink override.
+	#    Gated to non-production so neither can ever ship even if left on.
+	if (
+		(DEBUG_GUEST_ROTATE_ANCHOR_ID or get_config().debug_rotate_guest_anchor)
+		and not is_production()
+	):
 		return ""
 	# 2. Shipping: device-bound native anchor (persists across reinstall).
 	var native_anchor := ""
