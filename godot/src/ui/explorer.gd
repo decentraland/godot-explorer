@@ -1455,6 +1455,7 @@ func _on_loading_started() -> void:
 	Global.session_hide_ui_toggle_sync.emit(false)
 	Global.session_hide_ui_options_sync.emit(true, true, true, true)
 	_apply_hide_ui_to_avatar_nicks(false)
+	navbar.collapse()  # → navbar_closed → _close_all_panels: closes menu + FriendsPanel + panels
 
 
 func _on_loading_finished() -> void:
