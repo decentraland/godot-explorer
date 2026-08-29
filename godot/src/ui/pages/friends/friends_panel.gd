@@ -7,8 +7,8 @@ const CONNECTIVITY_ONLINE: int = 0
 const CONNECTIVITY_OFFLINE: int = 1
 const CONNECTIVITY_AWAY: int = 2
 
-var down_arrow_icon: Texture2D = load("res://assets/ui/down_arrow.svg")
-var up_arrow_icon: Texture2D = load("res://assets/ui/up_arrow.svg")
+var down_arrow_icon: Texture2D = load("res://src/ui/pages/discover/friends/icons/down-arrow.svg")
+var up_arrow_icon: Texture2D = load("res://src/ui/pages/discover/friends/icons/up-arrow.svg")
 
 # Track which friends are online (address -> true if online)
 var _online_friends: Dictionary = {}
@@ -60,7 +60,6 @@ var _is_loading: bool = false
 
 @onready var v_box_container_no_service: VBoxContainer = %VBoxContainer_NoService
 @onready var v_box_container_loading: VBoxContainer = %VBoxContainer_Loading
-@onready var label_out_of_service: Label = %Label_OutOfService
 @onready var friends_list: VBoxContainer = %FriendsList
 
 @onready var button_friends: Button = %Button_Friends

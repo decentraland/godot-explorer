@@ -353,10 +353,6 @@ corner_radius_top_right = 100
 corner_radius_bottom_right = 100
 corner_radius_bottom_left = 100
 
-[sub_resource type="ButtonGroup" id="ButtonGroup_ckthm"]
-resource_local_to_scene = false
-resource_name = "Tabs"
-
 [sub_resource type="Gradient" id="Gradient_uqptt"]
 offsets = PackedFloat32Array(0, 0.5, 1)
 colors = PackedColorArray(1, 1, 1, 0, 0.9098039, 0.7254902, 1, 1, 1, 1, 1, 0)
@@ -501,8 +497,6 @@ offset_right = 22.5
 offset_bottom = 22.5
 grow_horizontal = 2
 grow_vertical = 2
-button_group = SubResource("ButtonGroup_ckthm")
-metadata/_edit_group_ = true
 
 [node name="VBoxContainer_Selection" type="VBoxContainer" parent="Control/Control/PanelContainer" unique_id=1294523655]
 unique_name_in_owner = true
