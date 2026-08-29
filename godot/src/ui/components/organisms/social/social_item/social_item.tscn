@@ -151,6 +151,18 @@ corner_radius_top_right = 8
 corner_radius_bottom_right = 8
 corner_radius_bottom_left = 8
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_t24r6"]
+bg_color = Color(0, 0, 0, 0.3019608)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.9882353, 0.9882353, 0.9882353, 0.3019608)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_e0f5y"]
 bg_color = Color(0, 0, 0, 0.4)
 border_width_left = 2
@@ -158,6 +170,18 @@ border_width_top = 2
 border_width_right = 2
 border_width_bottom = 2
 border_color = Color(0.20392157, 0.80784315, 0.4627451, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_24mql"]
+bg_color = Color(0, 0, 0, 0.3019608)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.9882353, 0.9882353, 0.9882353, 0.3019608)
 corner_radius_top_left = 8
 corner_radius_top_right = 8
 corner_radius_bottom_right = 8
@@ -313,7 +337,7 @@ alignment = 1
 [node name="Button_DM" type="Button" parent="Panel_NearbyPlayerItem/HBoxContainer/Data/HBoxContainer_Online" unique_id=202684637]
 unique_name_in_owner = true
 visible = false
-custom_minimum_size = Vector2(40, 40)
+custom_minimum_size = Vector2(40, 54)
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
@@ -362,7 +386,6 @@ icon_alignment = 1
 
 [node name="HBoxContainer_Nearby" type="HBoxContainer" parent="Panel_NearbyPlayerItem/HBoxContainer/Data" unique_id=182771294]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
 size_flags_vertical = 4
 mouse_filter = 2
@@ -419,7 +442,7 @@ label_settings = SubResource("LabelSettings_7xvkt")
 
 [node name="PanelContainer_Request" type="PanelContainer" parent="Panel_NearbyPlayerItem/HBoxContainer/Data/HBoxContainer_Nearby" unique_id=1717622638]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(139, 36)
+custom_minimum_size = Vector2(139, 54)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_40r3o")
 
@@ -458,6 +481,7 @@ theme_override_styles/hover = SubResource("StyleBoxFlat_7xvkt")
 theme_override_styles/hover_mirrored = SubResource("StyleBoxFlat_7xvkt")
 theme_override_styles/hover_pressed = SubResource("StyleBoxFlat_27tdp")
 theme_override_styles/hover_pressed_mirrored = SubResource("StyleBoxFlat_27tdp")
+theme_override_styles/disabled = SubResource("StyleBoxFlat_t24r6")
 icon = ExtResource("14_ockp6")
 icon_alignment = 1
 expand_icon = true
@@ -484,6 +508,7 @@ theme_override_styles/hover = SubResource("StyleBoxFlat_7xvkt")
 theme_override_styles/hover_mirrored = SubResource("StyleBoxFlat_7xvkt")
 theme_override_styles/hover_pressed = SubResource("StyleBoxFlat_e0f5y")
 theme_override_styles/hover_pressed_mirrored = SubResource("StyleBoxFlat_e0f5y")
+theme_override_styles/disabled = SubResource("StyleBoxFlat_24mql")
 icon = ExtResource("16_uurwy")
 icon_alignment = 1
 

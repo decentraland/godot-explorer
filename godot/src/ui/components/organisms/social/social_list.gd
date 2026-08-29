@@ -44,7 +44,7 @@ func _ready():
 		Global.social_service.friendship_deleted.connect(_on_friendship_request_changed)
 	if player_list_type == SOCIAL_TYPE.BLOCKED:
 		Global.social_blacklist.blacklist_changed.connect(self.async_update_list)
-	if player_list_type == SOCIAL_TYPE.REQUEST:
+	if player_list_type == SOCIAL_TYPE.REQUEST or player_list_type == SOCIAL_TYPE.REQUEST_SENT:
 		# Reload request list when blacklist changes to pick up previously hidden requests
 		Global.social_blacklist.blacklist_changed.connect(self.async_update_list)
 
@@ -156,7 +156,11 @@ func _add_item_for_avatar(avatar: Avatar) -> void:
 
 func _async_on_blacklist_changed() -> void:
 	# Handle blacklist changes for NEARBY and REQUEST lists
-	if player_list_type != SOCIAL_TYPE.NEARBY and player_list_type != SOCIAL_TYPE.REQUEST:
+	if (
+		player_list_type != SOCIAL_TYPE.NEARBY
+		and player_list_type != SOCIAL_TYPE.REQUEST
+		and player_list_type != SOCIAL_TYPE.REQUEST_SENT
+	):
 		return
 
 	# Items will handle their own visibility via blacklist_changed signal
@@ -276,7 +280,7 @@ func async_update_list(_remote_avatars: Array = []) -> void:
 			await _async_reload_online_list(current_request_id)
 		SOCIAL_TYPE.OFFLINE:
 			await _async_reload_offline_list(current_request_id)
-		SOCIAL_TYPE.REQUEST:
+		SOCIAL_TYPE.REQUEST, SOCIAL_TYPE.REQUEST_SENT:
 			remove_items()
 			await _async_reload_request_list(current_request_id)
 
@@ -489,7 +493,12 @@ func _get_friends_panel():
 
 
 func _async_reload_request_list(request_id: int) -> void:
-	var promise = Global.social_service.get_pending_requests(100, 0)
+	# REQUEST_SENT fetches the outgoing (sent) requests; REQUEST the incoming (received) ones.
+	var promise: Promise
+	if player_list_type == SOCIAL_TYPE.REQUEST_SENT:
+		promise = Global.social_service.get_sent_requests(100, 0)
+	else:
+		promise = Global.social_service.get_pending_requests(100, 0)
 	await PromiseUtils.async_awaiter(promise)
 
 	# Check if this request is still valid (no newer request started)

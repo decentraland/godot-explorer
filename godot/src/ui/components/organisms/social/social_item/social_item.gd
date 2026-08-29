@@ -284,20 +284,23 @@ func _update_elements_visibility() -> void:
 					_check_and_update_friend_status()
 		SOCIAL_TYPE.ONLINE:
 			h_box_container_online.show()
-			profile_picture.set_online()
 			_update_jump_button_visibility()
-		SOCIAL_TYPE.OFFLINE:
-			profile_picture.set_offline()
 		SOCIAL_TYPE.REQUEST:
 			h_box_container_request.show()
 			# Guest users cannot accept/reject friend requests
 			if Global.player_identity.is_guest or is_guest:
 				button_accept.hide()
 				button_reject.hide()
+		SOCIAL_TYPE.REQUEST_SENT:
+			# Sent requests can only be cancelled: show just the reject (X) button as "cancel".
+			h_box_container_request.show()
+			button_accept.hide()
+			if Global.player_identity.is_guest or is_guest:
+				button_reject.hide()
 		SOCIAL_TYPE.BLOCKED:
 			h_box_container_blocked.show()
 		_:
-			profile_picture.hide_status()
+			pass
 
 
 func _hide_all_buttons() -> void:
@@ -305,7 +308,6 @@ func _hide_all_buttons() -> void:
 	h_box_container_nearby.hide()
 	h_box_container_request.hide()
 	h_box_container_blocked.hide()
-	profile_picture.hide_status()
 	label_place.hide()
 	button_add_friend.hide()
 	panel_container_request.hide()
@@ -322,7 +324,11 @@ func set_type(type: SocialItemData.SocialType) -> void:
 	_update_elements_visibility()
 	# Subscribe to blacklist changes for NEARBY and REQUEST items to hide/show themselves
 	if (
-		(item_type == SOCIAL_TYPE.NEARBY or item_type == SOCIAL_TYPE.REQUEST)
+		(
+			item_type == SOCIAL_TYPE.NEARBY
+			or item_type == SOCIAL_TYPE.REQUEST
+			or item_type == SOCIAL_TYPE.REQUEST_SENT
+		)
 		and not Global.social_blacklist.blacklist_changed.is_connected(_on_blacklist_changed)
 	):
 		Global.social_blacklist.blacklist_changed.connect(_on_blacklist_changed)
@@ -351,6 +357,9 @@ func _async_on_button_add_friend_pressed() -> void:
 	current_friendship_status = Global.FriendshipStatus.REQUEST_SENT
 	button_add_friend.hide()
 	panel_container_request.show()
+
+	# Notify the friends panel so the new outgoing request appears in the SENT list live.
+	Global.friendship_request_sent.emit(social_data.address)
 
 
 func _async_on_button_accept_pressed() -> void:
@@ -383,6 +392,10 @@ func _async_on_button_accept_pressed() -> void:
 
 
 func _async_on_button_reject_pressed() -> void:
+	# On a sent request this same button acts as "cancel"; on a received one it's "reject".
+	if item_type == SOCIAL_TYPE.REQUEST_SENT:
+		await _async_cancel_sent_request()
+		return
 	button_accept.disabled = true
 	button_reject.disabled = true
 	var promise = Global.social_service.reject_friend_request(social_data.address)
@@ -414,6 +427,25 @@ func _async_on_button_reject_pressed() -> void:
 
 	# Emit signal locally since the service doesn't stream back our own actions
 	Global.social_service.friendship_request_rejected.emit(social_data.address)
+
+
+## Cancels a request WE sent (REQUEST_SENT items) and removes the row from its SENT list.
+func _async_cancel_sent_request() -> void:
+	button_reject.disabled = true
+	var promise = Global.social_service.cancel_friend_request(social_data.address)
+	await PromiseUtils.async_awaiter(promise)
+
+	if promise.is_rejected():
+		printerr("Failed to cancel friend request: ", PromiseUtils.get_error_message(promise))
+		button_reject.disabled = false
+		return
+
+	# friend_request_cancel metric
+	Global.metrics.track_click_button("friend_request_cancel", "SOCIAL_PANEL", "")
+
+	# Emit locally (the service doesn't echo our own actions): the friends panel drops it from the
+	# SENT list and nearby items re-enable their Add Friend button.
+	Global.social_service.friendship_request_cancelled.emit(social_data.address)
 
 
 func _on_button_jump_in_pressed() -> void:
@@ -514,7 +546,6 @@ func _async_check_friend_status_with_loading() -> void:
 
 
 func _update_button_visibility_from_status() -> void:
-	profile_picture.unset_friend()
 	if Global.player_identity.is_guest or is_guest:
 		return
 	# Update button and label visibility based on pre-checked friendship status
@@ -530,10 +561,10 @@ func _update_button_visibility_from_status() -> void:
 		# ACCEPTED - Hide both button and label
 		button_add_friend.hide()
 		panel_container_request.hide()
-		profile_picture.set_friend()
 	else:
 		# NONE, CANCELED, REJECTED, DELETED, or UNKNOWN
-		# Show button, hide label (can send new request)
+		# Show button (re-enabled — a prior send left it disabled), hide the pending label.
+		button_add_friend.disabled = false
 		button_add_friend.show()
 		panel_container_request.hide()
 
@@ -641,8 +672,12 @@ func _on_blacklist_changed() -> void:
 
 
 func _update_blocked_visibility_for_type() -> void:
-	# Only applies to NEARBY and REQUEST items
-	if item_type != SOCIAL_TYPE.NEARBY and item_type != SOCIAL_TYPE.REQUEST:
+	# Only applies to NEARBY and REQUEST (received/sent) items
+	if (
+		item_type != SOCIAL_TYPE.NEARBY
+		and item_type != SOCIAL_TYPE.REQUEST
+		and item_type != SOCIAL_TYPE.REQUEST_SENT
+	):
 		return
 
 	# Need social_data and address to check
