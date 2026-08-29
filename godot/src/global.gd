@@ -1478,7 +1478,9 @@ func _http_method_to_string(method: int) -> String:
 			return "GET"  # Default fallback
 
 
-func async_signed_fetch(url: String, method: int, _body: String = ""):
+func async_signed_fetch(
+	url: String, method: int, _body: String = "", lowercase_metadata: bool = false
+):
 	# Decentraland signed-fetch (ADR-44) carries the request metadata in the
 	# x-identity-metadata header. The server verifier requires it to be a JSON
 	# object: a bodyless request would otherwise be signed as `null`, which the
@@ -1486,9 +1488,15 @@ func async_signed_fetch(url: String, method: int, _body: String = ""):
 	# "Invalid chain metadata". Sign an empty object `{}` for bodyless requests
 	# (backward-compatible: older verifiers accept both), leaving the actual HTTP
 	# body untouched.
+	#
+	# `lowercase_metadata` folds the metadata before it is signed, which is what a
+	# crypto-middleware >=6.0.0 service needs from us: 6.0.0 stopped lowercasing the
+	# metadata when it rebuilds the payload, so a signature over a folded one only
+	# matches if the header carries the same folded bytes. It costs the metadata its
+	# casing, so pass it only for a service that reads the body and never the metadata.
 	var metadata := _body if not _body.is_empty() else "{}"
 	var headers_promise = Global.player_identity.async_get_identity_headers(
-		url, metadata, _http_method_to_string(method)
+		url, metadata, _http_method_to_string(method), lowercase_metadata
 	)
 	var headers_result = await PromiseUtils.async_awaiter(headers_promise)
 
@@ -1549,6 +1557,24 @@ func _check_dclenv_change() -> bool:
 
 	var current_env := DclGlobal.get_dcl_environment() as String
 	if new_env == current_env:
+		return false
+
+	# A sign-in callback (`decentraland://open?signin=...&dclenv=...`) echoes the env the
+	# web flow authenticated against. That is a byproduct of the round trip, never a
+	# request to switch. Acting on it restarts the session in the middle of the login:
+	# sign_out() rebuilds the lobby, and the `true` returned below makes the router drop
+	# the deeplink before it reaches _handle_signin_deep_link, so the auth goes with it.
+	# The callback also carries the plain env (`zone`), which can never match a composed
+	# one (`catalyst::org,...,profile::zone,zone`), so on those setups it fired every time.
+	if deep_link_obj.is_signin_request():
+		print("[DEEPLINK] dclenv=%s on a signin callback, keeping %s" % [new_env, current_env])
+		return false
+
+	# An env chosen explicitly (--dclenv, or an earlier deeplink) outranks what a later
+	# deeplink carries. Switching from the default env still works; switching again
+	# afterwards needs an app restart.
+	if dcl_env_explicit:
+		print("[DEEPLINK] dclenv=%s ignored, %s was set explicitly" % [new_env, current_env])
 		return false
 
 	print("[DEEPLINK] Environment changed: %s -> %s, restarting..." % [current_env, new_env])

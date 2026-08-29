@@ -20,6 +20,7 @@ var _selection_buttons: Array[BaseButton] = []
 @onready var static_button_backpack: TextureButton = %StaticButton_Backpack
 @onready var static_button_settings: TextureButton = %StaticButton_Settings
 @onready var static_button_discover: TextureButton = %StaticButton_Discover
+@onready var panel_profile: ProfileIconButton = %Panel_Profile
 
 # One shared selection effect (%Control_Effect) that reparents into the slot of the pressed
 # button. `_selection_buttons` and `_selection_slots` are index-aligned, top-to-bottom.
@@ -57,6 +58,10 @@ func _ready() -> void:
 
 	Global.close_navbar.connect(_on_navbar_close)
 	Global.open_navbar_silently.connect(_on_navbar_open_silently_on_backpack)
+
+	# Sync the profile glow to the navbar's initial (collapsed) state so it doesn't
+	# show before the first open/close toggle.
+	panel_profile.set_glow(button.button_pressed)
 
 	get_window().size_changed.connect(self._on_size_changed)
 	_on_size_changed()
@@ -100,6 +105,7 @@ func _on_selection_button_pressed(pressed_button: BaseButton) -> void:
 
 func _on_button_toggled(toggled_on: bool) -> void:
 	Global.send_haptic_feedback()
+	panel_profile.set_glow(toggled_on)
 	if toggled_on:
 		animation_player.play("open")
 		set_button_pressed(BUTTON.FRIENDS)
@@ -129,6 +135,7 @@ func capture_mouse():
 
 func collapse():
 	button.set_pressed_no_signal(false)
+	panel_profile.set_glow(false)
 	animation_player.play("close")
 	navbar_closed.emit()
 
@@ -147,6 +154,7 @@ func _on_navbar_open_silently_on_backpack() -> void:
 func open_navbar_silently() -> void:
 	if not button.button_pressed:
 		button.set_pressed_no_signal(true)
+		panel_profile.set_glow(true)
 		animation_player.play("open")
 
 

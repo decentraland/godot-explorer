@@ -2,6 +2,9 @@
 
 [ext_resource type="Script" uid="uid://d1svh7aeoa8qn" path="res://src/ui/components/molecules/credit_option_item/credit_option_item.gd" id="1_xgw18"]
 [ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="2_xgw18"]
+[ext_resource type="StyleBox" uid="uid://dy12hpu2ygekh" path="res://assets/themes/primary.tres" id="3_primary"]
+[ext_resource type="StyleBox" uid="uid://cc8ohwj28642h" path="res://assets/themes/primary_pressed_hover.tres" id="4_pressed"]
+[ext_resource type="StyleBox" uid="uid://bwtnv6ee45sva" path="res://assets/themes/primary_disabled.tres" id="5_disabled"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_c5avl"]
 bg_color = Color(0, 0, 0, 0.4)
@@ -23,25 +26,34 @@ mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_c5avl")
 script = ExtResource("1_xgw18")
 
+[node name="Button_Card" type="Button" parent="." unique_id=1044820551]
+layout_mode = 2
+focus_mode = 0
+flat = true
+
 [node name="MarginContainer" type="MarginContainer" parent="." unique_id=679787996]
 layout_mode = 2
+mouse_filter = 2
 theme_override_constants/margin_left = 40
 theme_override_constants/margin_right = 40
 
 [node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer" unique_id=749257498]
 layout_mode = 2
+mouse_filter = 2
 theme_override_constants/separation = 16
 
 [node name="TextureRect" type="TextureRect" parent="MarginContainer/HBoxContainer" unique_id=62650532]
-custom_minimum_size = Vector2(179, 140)
+custom_minimum_size = Vector2(182, 182)
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
+mouse_filter = 2
 expand_mode = 4
 stretch_mode = 5
 
 [node name="Label_Credits" type="Label" parent="MarginContainer/HBoxContainer" unique_id=1823082458]
 layout_mode = 2
+mouse_filter = 2
 size_flags_horizontal = 3
 theme_override_colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 theme_override_fonts/font = ExtResource("2_xgw18")
@@ -50,10 +62,17 @@ text = "10"
 label_settings = SubResource("LabelSettings_c5avl")
 
 [node name="Button_Price" type="Button" parent="MarginContainer/HBoxContainer" unique_id=422830307]
-custom_minimum_size = Vector2(132, 54)
+custom_minimum_size = Vector2(134, 56)
 layout_mode = 2
 size_flags_horizontal = 10
 size_flags_vertical = 4
-mouse_filter = 1
-theme_override_font_sizes/font_size = 22
+focus_mode = 0
+theme_override_colors/font_disabled_color = Color(0.9882353, 0.9882353, 0.9882353, 0.49803922)
+theme_override_font_sizes/font_size = 24
+theme_override_styles/normal = ExtResource("3_primary")
+theme_override_styles/hover = ExtResource("4_pressed")
+theme_override_styles/pressed = ExtResource("4_pressed")
+theme_override_styles/hover_pressed = ExtResource("4_pressed")
+theme_override_styles/focus = ExtResource("3_primary")
+theme_override_styles/disabled = ExtResource("5_disabled")
 text = "$59.99"

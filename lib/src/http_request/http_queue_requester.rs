@@ -162,7 +162,9 @@ impl HttpQueueRequester {
                                 Ok((
                                     NetworkInspectResponsePayload {
                                         status_code: response.status_code,
-                                        headers: response.headers.take(),
+                                        // Clone, don't take: `take()` left `None` behind
+                                        // on the response the caller still holds.
+                                        headers: response.headers.clone(),
                                     },
                                     response_data,
                                 ))

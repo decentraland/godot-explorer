@@ -590,7 +590,6 @@ mouse_filter = 2
 
 [node name="Panel_Profile" parent="Control" unique_id=404304726 instance=ExtResource("2_1xf7s")]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(80, 80)
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -606,7 +605,7 @@ grow_vertical = 2
 
 [node name="Button" type="Button" parent="Control" unique_id=1319177368]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(80, 80)
+custom_minimum_size = Vector2(82, 82)
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
