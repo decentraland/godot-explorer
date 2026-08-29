@@ -1286,12 +1286,26 @@ func _on_avatar_preview_gui_input(event: InputEvent) -> void:
 
 
 func _on_deep_link_received():
-	# The same guard the other two call sites use. Without it any deeplink redirects — and a
-	# campaign link carries only an opaque `?c=` token, which is meant to be inert to routing.
-	# Redirecting on one boots the explorer past avatar creation and the FTUE, which is the
-	# screen the campaign was supposed to personalize.
-	if ready_for_redirect_by_deep_link and _should_go_to_explorer_from_deeplink():
+	if ready_for_redirect_by_deep_link and _deeplink_has_explorer_destination():
 		_async_redirect_by_deep_link.call_deferred()
+
+
+## Whether a live deeplink has somewhere for the explorer to go.
+##
+## Wider than _should_go_to_explorer_from_deeplink(), which only answers the cold-start
+## teleport question: /events and /places open a panel the explorer owns, so the lobby still
+## has to get out of the way for them.
+##
+## Narrower than "any deeplink", which is what this used to be. A campaign link carries only
+## an opaque `?c=` token and is meant to be inert to routing — redirecting on one boots the
+## explorer past avatar creation and the FTUE, the screen the campaign exists to personalize.
+func _deeplink_has_explorer_destination() -> bool:
+	if _should_go_to_explorer_from_deeplink():
+		return true
+	var path: String = String(Global.deep_link_obj.path).rstrip("/")
+	if path != "/events" and path != "/places":
+		return false
+	return not String(Global.deep_link_obj.params.get("id", "")).is_empty()
 
 
 func _on_dcl_line_edit_dcl_line_edit_changed() -> void:

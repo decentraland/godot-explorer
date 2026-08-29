@@ -24,9 +24,11 @@ signal campaigns_loaded
 
 const TIMEOUT_SECONDS := 5.0
 
-## Bounded wait callers grant an in-flight fetch before falling back (the FTUE is reached
-## tens of seconds after boot, so this is a backstop, not the normal path).
-const RESOLVE_MAX_WAIT_SECONDS := 3.0
+## Bounded wait callers grant the fetch before falling back. Must outlast TIMEOUT_SECONDS:
+## the fetch is lazy, so it starts when a token needs resolving rather than at boot, and a
+## shorter wait would give up on a request that is still within its own timeout — losing the
+## campaign on exactly the slow cold starts where the map arrives a second later.
+const RESOLVE_MAX_WAIT_SECONDS := TIMEOUT_SECONDS + 1.0
 
 ## A captured token stops being honored after this. The Play install referrer survives for
 ## 90 days and only changes on reinstall, so without a freshness bound a reinstall months

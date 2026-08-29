@@ -232,35 +232,45 @@ impl Metrics {
 
     #[func]
     fn timer_timeout(&mut self) {
+        // Install attribution is polled BEFORE the consent gate, on purpose. Polling only reads
+        // local state and queues an event; nothing leaves the device until
+        // process_and_send_events runs below, which stays gated. Behind the gate the sources
+        // would go unread until the user taps through the lobby, and their own deadlines would
+        // expire first — so the GA4F path, which the whole feature depends on, would never fire.
+        self.poll_install_attribution();
+
         // Consent gate: never ship anything until the user has accepted the EULA. Events keep
         // accumulating in `self.events` and will flow through once the gate opens.
         if !self.eula_accepted {
             return;
         }
 
-        // Poll install attribution (Android only, auto-completes once settled). Both
-        // mechanisms are polled behind this: the GA4F deferred deep link and the Play
-        // install referrer, resolved into one event that names which one won.
-        if let Some(ref mut attribution) = self.install_attribution {
-            let event = attribution.poll();
-            // Dropped on `is_done`, not on there being an event: two settle paths legitimately
-            // have nothing to report, and leaving the tracker in place there would report
-            // attribution as forever-pending to everything waiting on it.
-            let settled = attribution.is_done();
-            if let Some(event) = event {
-                if let SegmentEvent::InstallAttribution(ref data) = event {
-                    if let Some(token) = data.campaign_token.as_ref() {
-                        self.resolved_campaign_token = token.clone();
-                    }
-                }
-                self.queue_event("Install Attribution", event);
-            }
-            if settled {
-                self.install_attribution = None;
-            }
-        }
-
         self.process_and_send_events(false);
+    }
+
+    /// Polls both attribution mechanisms (Android only, auto-completes once settled) and
+    /// queues the resulting event. Queuing is not sending — the consent gate still decides
+    /// when anything leaves the device.
+    fn poll_install_attribution(&mut self) {
+        let Some(ref mut attribution) = self.install_attribution else {
+            return;
+        };
+        let event = attribution.poll();
+        // Dropped on `is_done`, not on there being an event: two settle paths legitimately
+        // have nothing to report, and leaving the tracker in place there would report
+        // attribution as forever-pending to everything waiting on it.
+        let settled = attribution.is_done();
+        if let Some(event) = event {
+            if let SegmentEvent::InstallAttribution(ref data) = event {
+                if let Some(token) = data.campaign_token.as_ref() {
+                    self.resolved_campaign_token = token.clone();
+                }
+            }
+            self.queue_event("Install Attribution", event);
+        }
+        if settled {
+            self.install_attribution = None;
+        }
     }
 
     /// Adjust the periodic auto-flush interval. Restarts the timer so the new cadence takes effect

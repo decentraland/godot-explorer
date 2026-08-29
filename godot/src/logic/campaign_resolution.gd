@@ -13,6 +13,7 @@ extends RefCounted
 
 const TARGET_GENESIS := "genesis"
 const TARGET_WORLD := "world"
+const TOKEN_MAX_LENGTH := 64
 
 # Why a resolve fell back to the default FTUE. Shipped on the existing FTUE metrics so
 # personalized-vs-default can be compared without a new pipeline.
@@ -41,6 +42,24 @@ static func parse_response(json) -> Dictionary:
 	return campaigns
 
 
+## Mirrors the token rule the mobile-bff enforces on save (kebab-case, max 64), and the one
+## the Rust attribution path applies. The deeplink capture path needs it too: a token stored
+## from a link is never replaced, so an unvalidated junk `?c=` would permanently block the
+## real install-attribution token on that install.
+static func is_valid_token(token: String) -> bool:
+	# Equivalent to the BFF's ^[a-z0-9]+(-[a-z0-9]+)*$ and to is_valid_token in
+	# lib/src/analytics/install_attribution.rs, written out rather than as a regex so the
+	# three copies of this rule read the same way.
+	if token.is_empty() or token.length() > TOKEN_MAX_LENGTH:
+		return false
+	if token.begins_with("-") or token.ends_with("-") or token.contains("--"):
+		return false
+	for c in token:
+		if not ((c >= "a" and c <= "z") or (c >= "0" and c <= "9") or c == "-"):
+			return false
+	return true
+
+
 ## Reads a campaign's target as [position, realm], the pair Global.async_teleport_to and the
 ## FTUE jump signals already speak. Returns [] when the target is unusable, which callers
 ## treat as "render the default FTUE" rather than stranding the user somewhere.
@@ -63,7 +82,14 @@ static func target_position_and_realm(campaign: Dictionary) -> Array:
 		var parts := String(target.get("position", "")).split(",")
 		if parts.size() != 2:
 			return []
-		return [Vector2i(int(parts[0]), int(parts[1])), String(DclUrls.main_realm())]
+		var x_raw := parts[0].strip_edges()
+		var y_raw := parts[1].strip_edges()
+		# int() answers 0 for anything it cannot parse, so an unparseable position would read
+		# as the perfectly valid parcel 0,0: the boot would "succeed", the token would be
+		# consumed, and every install of that campaign would land on the Genesis spawn.
+		if not x_raw.is_valid_int() or not y_raw.is_valid_int():
+			return []
+		return [Vector2i(int(x_raw), int(y_raw)), String(DclUrls.main_realm())]
 
 	return []
 

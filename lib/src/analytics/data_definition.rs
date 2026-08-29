@@ -568,6 +568,11 @@ pub struct SegmentEventInstallAttribution {
     // not parse — the referrer field plays the same role for the other source.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub deferred_deep_link: Option<String>,
+    // Whether the Play referrer actually answered. When false the referrer-derived fields
+    // above (referrer, utm_*, the timestamps, google_play_instant) are placeholders rather
+    // than data — the source never resolved. Without this they are indistinguishable from a
+    // referrer that genuinely reported empty values.
+    pub referrer_settled: bool,
 }
 
 // Emitted once per attestation cycle attempt (FSM in attestation_service.gd).

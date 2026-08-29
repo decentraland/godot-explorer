@@ -381,7 +381,9 @@ func _apply_optimized_content_base_url(obj: DclParseDeepLink) -> void:
 ## from this launch rather than only the one after it, and so the QA scenarios can be run
 ## repeatedly in any order.
 ##
-## HARD-GATED to non-production, like the constant it overrides.
+## Gated to non-production, like the constant it overrides — which means builds from `main`
+## (TestFlight included) honour it, and only a `release*` build ignores it. Recoverable:
+## uninstalling clears the flag with user://, and the native anchor is never touched.
 func _capture_debug_guest_rotate(obj: DclParseDeepLink) -> void:
 	if is_production():
 		return
@@ -404,6 +406,12 @@ func _capture_debug_guest_rotate(obj: DclParseDeepLink) -> void:
 func _capture_campaign_token(obj: DclParseDeepLink, occurred_at: int = 0) -> void:
 	var token: String = String(obj.params.get("c", "")).strip_edges()
 	if token.is_empty():
+		return
+	# A stored token is never replaced, so an unvalidated one would permanently block the real
+	# install-attribution token on this install — and it would also ride along on every FTUE
+	# metrics payload. Same rule the BFF and the attribution path apply.
+	if not CampaignResolution.is_valid_token(token):
+		push_warning("[CAMPAIGN] ignoring malformed token from deeplink: " + token)
 		return
 
 	var config := get_config()

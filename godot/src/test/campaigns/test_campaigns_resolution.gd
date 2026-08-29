@@ -23,6 +23,7 @@ var failures := 0
 func _ready() -> void:
 	_test_parse_response()
 	_test_target_position_and_realm()
+	_test_is_valid_token()
 	_test_metrics_context()
 
 	if failures == 0:
@@ -61,6 +62,24 @@ func _test_target_position_and_realm() -> void:
 	var genesis := C.target_position_and_realm({"target": {"type": "genesis", "position": "-9,-9"}})
 	_expect(genesis.size() == 2, "genesis target resolves")
 	_expect(genesis[0] == Vector2i(-9, -9), "genesis parcel is parsed")
+
+	# int() answers 0 for anything unparseable, so without an explicit check these would all
+	# resolve to the valid parcel 0,0: the boot would "succeed", the token would be consumed,
+	# and every install of that campaign would land on the Genesis spawn instead.
+	for bad in ["abc,def", "10,def", "abc,20", "x=10,y=20", ",", " , "]:
+		_expect(
+			(
+				C
+				. target_position_and_realm({"target": {"type": "genesis", "position": bad}})
+				. is_empty()
+			),
+			"unparseable genesis position rejected: '%s'" % bad
+		)
+	# Whitespace around real numbers is still accepted.
+	var padded := C.target_position_and_realm(
+		{"target": {"type": "genesis", "position": " 10 , -20 "}}
+	)
+	_expect(padded.size() == 2 and padded[0] == Vector2i(10, -20), "padded parcel is parsed")
 	_expect(
 		String(genesis[1]) == String(DclUrls.main_realm()), "genesis target uses the main realm"
 	)
@@ -98,6 +117,24 @@ func _test_target_position_and_realm() -> void:
 		{"target": {"type": "genesis", "position": "0,0,0"}},
 	]:
 		_expect(C.target_position_and_realm(bad).is_empty(), "unusable target rejected: %s" % [bad])
+
+
+func _test_is_valid_token() -> void:
+	# Mirrors the BFF's save rule and the Rust attribution path. A token that would be
+	# rejected there must not be stored from a deeplink either: a stored token is never
+	# replaced, so a junk one blocks the real install-attribution token on that install.
+	_expect(C.is_valid_token("summer2022"), "plain alphanumeric token")
+	_expect(C.is_valid_token("launch-26"), "dash-separated token")
+	_expect(C.is_valid_token("a"), "single character token")
+
+	_expect(not C.is_valid_token(""), "empty token")
+	_expect(not C.is_valid_token("Summer2022"), "uppercase rejected")
+	_expect(not C.is_valid_token("-lead"), "leading dash rejected")
+	_expect(not C.is_valid_token("trail-"), "trailing dash rejected")
+	_expect(not C.is_valid_token("double--dash"), "consecutive dashes rejected")
+	_expect(not C.is_valid_token("under_score"), "underscore rejected")
+	_expect(not C.is_valid_token("with space"), "space rejected")
+	_expect(not C.is_valid_token("a".repeat(65)), "over-long token rejected")
 
 
 func _test_metrics_context() -> void:

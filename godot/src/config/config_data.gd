@@ -206,8 +206,12 @@ var campaign_consumed: bool = false
 # only way to reach the FTUE again on a device whose native anchor survives reinstall
 # (Android SSAID, iOS Keychain). Set by a `rotate-guest=true` deeplink and persisted, so the
 # tester flips it once instead of editing a constant and rebuilding.
-# HARD-GATED to non-production in Global.get_device_anchor_id(); a release cut from main
-# ignores it even if it somehow ends up true.
+# Gated to non-production in Global.get_device_anchor_id(). Note that "production" means a
+# build cut from a `release*` branch (is_production() reads a compile-time version string set
+# by .github/actions/set-prod-flag): builds from `main`, including the TestFlight ones, DO
+# honour this. That is deliberate — QA needs it on the artifact they are given — and it is
+# recoverable: the flag lives in user://, so uninstalling clears it, and the native device
+# anchor is never touched, so the original guest wallet comes back on reinstall.
 var debug_rotate_guest_anchor: bool = false
 
 # One-shot flag for the Firebase `first_move_in_world` event (set once the user's first real

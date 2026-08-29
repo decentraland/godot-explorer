@@ -129,7 +129,7 @@ impl InstallAttribution {
             // The referrer never answered. Report the install anyway rather than losing it.
             self.done = true;
             tracing::warn!("[attribution] referrer never resolved, reporting without it");
-            return Some(self.build_from_referrer(&VarDictionary::new()));
+            return Some(self.build_from_referrer(&VarDictionary::new(), false));
         }
 
         self.done = true;
@@ -140,7 +140,7 @@ impl InstallAttribution {
             return None;
         }
 
-        Some(self.build_from_referrer(&dict))
+        Some(self.build_from_referrer(&dict, true))
     }
 
     fn build_from_ga4f(
@@ -183,18 +183,21 @@ impl InstallAttribution {
             attribution_source: SOURCE_GA4F.to_string(),
             campaign_token: Some(token),
             deferred_deep_link: Some(deeplink),
+            referrer_settled: referrer.is_some(),
         })
     }
 
-    fn build_from_referrer(&self, dict: &VarDictionary) -> SegmentEvent {
+    fn build_from_referrer(&self, dict: &VarDictionary, settled: bool) -> SegmentEvent {
         let referrer = get_string(dict, "referrer");
         let utm = parse_utm_params(&referrer);
         let token = extract_token(&referrer);
 
-        // A referrer that carries no token of ours is still an attributed install worth
-        // reporting — it is what a Google Ads `gclid` install looks like. Naming the source
-        // `none` there keeps "we had no campaign" separate from "the referrer path won".
-        let source = if token.is_some() {
+        // Names the mechanism that answered, NOT whether a campaign was found. A Google Ads
+        // install arrives through the referrer with a bare gclid and no token of ours — that
+        // is still the referrer path, and it is 87% of attributed installs. Reporting `none`
+        // there would make the referrer look like it barely fires. Whether a campaign was
+        // resolved is already answered by campaign_token being present.
+        let source = if settled {
             SOURCE_REFERRER
         } else {
             SOURCE_NONE
@@ -220,6 +223,7 @@ impl InstallAttribution {
             attribution_source: source.to_string(),
             campaign_token: token,
             deferred_deep_link: None,
+            referrer_settled: settled,
         })
     }
 }
