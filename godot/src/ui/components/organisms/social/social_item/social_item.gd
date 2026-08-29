@@ -15,17 +15,17 @@ var social_data: SocialItemData
 var current_friendship_status: int = Global.FriendshipStatus.UNKNOWN
 var load_state: LoadState = LoadState.UNLOADED
 var parcel: Array = []  # Parcel coordinates [x, y] when user is in genesis city
+# ENS name of the world the friend is in (empty when in Genesis City or nowhere). Read from
+# Global.locations.online_locations; drives the world place label and jump-in.
+var world_name: String = ""
 var _avatar_ref: WeakRef = null  # Weak reference to avatar for nearby items
 var _is_loading: bool = false
 var _load_start_time: float = 0.0
-var _nearby_panel_stylebox_default: StyleBox = null
-var _nearby_panel_stylebox_loading: StyleBox = null
 
 @onready var h_box_container_online: HBoxContainer = %HBoxContainer_Online
 @onready var h_box_container_nearby: HBoxContainer = %HBoxContainer_Nearby
 @onready var h_box_container_request: HBoxContainer = %HBoxContainer_Request
 @onready var h_box_container_blocked: HBoxContainer = %HBoxContainer_Blocked
-@onready var panel_nearby_player_item: Panel = %Panel_NearbyPlayerItem
 @onready var nickname: Label = %Nickname
 @onready var label_place: Label = %Label_Place
 @onready var profile_picture: ProfilePicture = %ProfilePicture
@@ -43,7 +43,6 @@ var _nearby_panel_stylebox_loading: StyleBox = null
 
 func _ready():
 	add_to_group("blacklist_ui_sync")
-	_cache_nearby_panel_styleboxes()
 	_set_loading(true)
 	_update_elements_visibility()
 	# Connect accept/reject buttons for friend requests
@@ -54,20 +53,7 @@ func _ready():
 	button_unblock.pressed.connect(_on_button_unblock_pressed)
 	# Connect to locations signal to update jump button visibility
 	if Global.locations:
-		Global.locations.in_genesis_city_changed.connect(_on_in_genesis_city_changed)
-
-
-func _cache_nearby_panel_styleboxes() -> void:
-	if not is_instance_valid(panel_nearby_player_item):
-		return
-	var sb := panel_nearby_player_item.get_theme_stylebox("panel")
-	if sb == null:
-		return
-	_nearby_panel_stylebox_default = sb.duplicate()
-	var loading_sb := sb.duplicate()
-	if loading_sb is StyleBoxFlat:
-		loading_sb.bg_color.a = 0.0
-	_nearby_panel_stylebox_loading = loading_sb
+		Global.locations.online_locations_changed.connect(_on_online_locations_changed)
 
 
 func set_data(data: SocialItemData, should_load: bool = true) -> void:
@@ -238,20 +224,6 @@ func _load_data_from_avatar(avatar_param: Avatar) -> void:
 
 	# Notify parent that we're ready (for list size updates)
 	_notify_parent_size_changed()
-
-
-func _on_mouse_entered() -> void:
-	# Don't show hover background while skeleton/loading is visible.
-	if skeleton_container and skeleton_container.visible:
-		return
-	panel_nearby_player_item.self_modulate = "#ffffff"
-
-
-func _on_mouse_exited() -> void:
-	# Don't change background while skeleton/loading is visible.
-	if skeleton_container and skeleton_container.visible:
-		return
-	panel_nearby_player_item.self_modulate = "#ffffff00"
 
 
 func _notify_other_components_of_change() -> void:
@@ -449,12 +421,14 @@ func _async_cancel_sent_request() -> void:
 
 
 func _on_button_jump_in_pressed() -> void:
-	if parcel.size() >= 2:
+	if not world_name.is_empty():
+		# Friend is in a world — join it directly (parcel is ignored for worlds).
+		Global.async_teleport_to(Vector2i.ZERO, world_name)
+	elif parcel.size() >= 2:
 		var parcel_position = Vector2i(parcel[0], parcel[1])
-		# Fixed realm to main because we only know our friends positions in Genesis City
 		Global.async_teleport_to(parcel_position, DclUrls.main_realm())
 	else:
-		push_error("Invalid parcel coordinates")
+		push_error("Invalid jump-in location")
 
 
 func _async_fetch_place_data() -> void:
@@ -486,6 +460,21 @@ func _async_fetch_place_data() -> void:
 		}
 		# Add to known_locations for future reference
 		Global.locations.known_locations.append(location_entry)
+
+
+## Resolves the world's place title (mirrors the Discover friends carousel) and shows it.
+func _async_fetch_world_place(world: String) -> void:
+	var result = await PlacesHelper.async_get_by_names(world)
+	# Ignore if the friend moved on (or the item was recycled) while fetching.
+	if world_name != world:
+		return
+	var title: String = world.trim_suffix(".dcl.eth")
+	if result != null and not (result is PromiseError):
+		var json: Dictionary = result.get_string_response_as_json()
+		if not json.data.is_empty():
+			title = json.data[0].get("title", title)
+	Global.locations.known_worlds[world] = title
+	label_place.text = shorten_tittle(title, trim_value)
 
 
 func update_location() -> void:
@@ -611,7 +600,7 @@ func _on_pressed() -> void:
 	Global.open_profile_by_address.emit(social_data.address)
 
 
-func _on_in_genesis_city_changed(_players: Array) -> void:
+func _on_online_locations_changed() -> void:
 	if item_type == SOCIAL_TYPE.ONLINE:
 		_update_jump_button_visibility()
 
@@ -626,38 +615,46 @@ func _update_jump_button_visibility() -> void:
 		return
 
 	label_place.show()
-	# Check if address exists in in_genesis_city array
-	var is_in_genesis_city = false
-	for player in Global.locations.in_genesis_city:
-		if player.has("address") and player["address"] == social_data.address:
-			is_in_genesis_city = true
-			# Store parcel coordinates
-			if player.has("parcel"):
-				parcel = player["parcel"].duplicate()
-			break
+	# Read this friend's location from the shared dict that locations.gd refreshes each cycle
+	# (Genesis parcel or World), instead of each item firing its own world request.
+	var location = Global.locations.online_locations.get(social_data.address.to_lower(), null)
 
-	if is_in_genesis_city:
-		button_jump.show()
-		# Check if parcel exists in known_locations
-		var found_location = false
-		var title = ""
-		if parcel.size() >= 2:
-			for location in Global.locations.known_locations:
-				if location.has("coord") and location["coord"].size() >= 2:
-					if location["coord"][0] == parcel[0] and location["coord"][1] == parcel[1]:
-						if location.has("title"):
-							title = location["title"]
-							label_place.text = shorten_tittle(title, trim_value)
-							found_location = true
-							break
-
-		if not found_location:
-			label_place.text = "Somewhere"
-			_async_fetch_place_data()
-	else:
+	if location == null:
+		# Not resolved yet this cycle (or online in an unknown place).
+		world_name = ""
+		parcel.clear()
 		label_place.text = "Somewhere"
 		button_jump.hide()
+		return
+
+	if location.has("world_name"):
+		# Friend is in a World.
 		parcel.clear()
+		world_name = location["world_name"]
+		button_jump.show()
+		var cached_title: String = Global.locations.known_worlds.get(world_name, "")
+		if cached_title.is_empty():
+			_async_fetch_world_place(world_name)
+		else:
+			label_place.text = shorten_tittle(cached_title, trim_value)
+		return
+
+	# Friend is in Genesis City.
+	world_name = ""
+	parcel = location["parcel"].duplicate()
+	button_jump.show()
+	var found_location = false
+	for known in Global.locations.known_locations:
+		if known.has("coord") and known["coord"].size() >= 2:
+			if known["coord"][0] == parcel[0] and known["coord"][1] == parcel[1]:
+				if known.has("title"):
+					label_place.text = shorten_tittle(known["title"], trim_value)
+					found_location = true
+					break
+
+	if not found_location:
+		label_place.text = "Somewhere"
+		_async_fetch_place_data()
 
 
 func shorten_tittle(title: String, max_length: int) -> String:
@@ -705,21 +702,3 @@ func _set_loading(loading: bool) -> void:
 	data_container.visible = not loading
 	skeleton_container.visible = loading
 	disabled = loading
-
-	# For NEARBY items, ensure the row is actually visible while loading.
-	# The base panel uses self_modulate alpha 0 by default and becomes visible only on hover.
-	# During loading we want the skeleton to be seen without requiring hover, but without
-	# showing the hover background panel.
-	if item_type == SOCIAL_TYPE.NEARBY and is_instance_valid(panel_nearby_player_item):
-		if loading:
-			if _nearby_panel_stylebox_loading != null:
-				panel_nearby_player_item.add_theme_stylebox_override(
-					"panel", _nearby_panel_stylebox_loading
-				)
-			panel_nearby_player_item.self_modulate = Color(1, 1, 1, 1)
-		else:
-			if _nearby_panel_stylebox_default != null:
-				panel_nearby_player_item.add_theme_stylebox_override(
-					"panel", _nearby_panel_stylebox_default
-				)
-			panel_nearby_player_item.self_modulate = Color(1, 1, 1, 0)

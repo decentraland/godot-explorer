@@ -10,23 +10,6 @@ corner_radius_top_right = 500
 corner_radius_bottom_right = 500
 corner_radius_bottom_left = 500
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_wm7ac"]
-draw_center = false
-border_width_left = 2
-border_width_top = 2
-border_width_right = 2
-border_width_bottom = 2
-border_color = Color(0.720301, 0.000135729, 0.629692, 1)
-corner_radius_top_left = 500
-corner_radius_top_right = 500
-corner_radius_bottom_right = 500
-corner_radius_bottom_left = 500
-corner_detail = 10
-expand_margin_left = 1.0
-expand_margin_top = 1.0
-expand_margin_right = 1.0
-expand_margin_bottom = 1.0
-
 [sub_resource type="Shader" id="Shader_circle"]
 code = "shader_type canvas_item;
 
@@ -40,16 +23,30 @@ void fragment() {
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_circle"]
 shader = SubResource("Shader_circle")
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_j8d4h"]
+draw_center = false
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.720301, 0.000135729, 0.629692, 1)
+corner_radius_top_left = 500
+corner_radius_top_right = 500
+corner_radius_bottom_right = 500
+corner_radius_bottom_left = 500
+corner_detail = 10
+anti_aliasing = false
+
 [node name="ProfilePicture" type="Control" unique_id=916442602]
-custom_minimum_size = Vector2(40, 40)
+custom_minimum_size = Vector2(60, 60)
 layout_mode = 3
 anchors_preset = 0
-offset_right = 40.0
-offset_bottom = 40.0
+offset_right = 60.0
+offset_bottom = 60.0
 size_flags_horizontal = 4
 size_flags_vertical = 4
 script = ExtResource("1_xkyte")
-picture_size = 2
+picture_size = 1
 
 [node name="Panel_Background" type="PanelContainer" parent="." unique_id=980945521]
 unique_name_in_owner = true
@@ -76,6 +73,6 @@ stretch_mode = 5
 unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_wm7ac")
+theme_override_styles/panel = SubResource("StyleBoxFlat_j8d4h")
 
 [connection signal="gui_input" from="." to="." method="_on_gui_input"]

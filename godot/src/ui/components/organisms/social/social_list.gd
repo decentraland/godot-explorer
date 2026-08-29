@@ -354,6 +354,10 @@ func _async_reload_online_list(request_id: int) -> void:
 		if friends_panel and friends_panel.is_friend_online(friend.address):
 			desired_online[friend.address.to_lower()] = friend
 
+	# Refresh the shared location dict (Genesis + Worlds) for these online friends so each social
+	# item reads its place/jump-in from one place instead of firing its own per-friend request.
+	Global.locations.async_update_online_locations(desired_online.keys())
+
 	var should_load := _is_panel_visible()
 
 	# 1) Move any existing items that are no longer desired ONLINE to OFFLINE.
