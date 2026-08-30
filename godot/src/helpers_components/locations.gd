@@ -85,11 +85,11 @@ func _on_request_completed(
 ## archipelago /comms/peers request; Worlds are resolved per-address (8 concurrent), same as the
 ## Discover friends carousel. Call this with the set of ONLINE friend addresses on each refresh.
 func async_update_online_locations(addresses: Array) -> void:
+	if _online_locations_in_progress:
+		return
 	if addresses.is_empty():
 		online_locations = {}
 		online_locations_changed.emit()
-		return
-	if _online_locations_in_progress:
 		return
 	_online_locations_in_progress = true
 
@@ -110,6 +110,11 @@ func async_update_online_locations(addresses: Array) -> void:
 				"parcel": [int(peer["parcel"][0]), int(peer["parcel"][1])]
 			}
 
+	# Publish Genesis right away so those rows get their place/jump without waiting on the Worlds
+	# stage (which can take up to WORLD_BATCH_TIMEOUT). Worlds are merged and re-published below.
+	online_locations = new_locations
+	online_locations_changed.emit()
+
 	# Stage 2: Worlds for those not in Genesis (per-address, throttled).
 	var not_in_genesis: Array = []
 	for address in wanted.keys():
@@ -120,10 +125,10 @@ func async_update_online_locations(addresses: Array) -> void:
 		var worlds: Dictionary = await _async_resolve_worlds(not_in_genesis)
 		for address in worlds.keys():
 			new_locations[address] = {"world_name": worlds[address]}
+		if not worlds.is_empty():
+			online_locations_changed.emit()
 
-	online_locations = new_locations
 	_online_locations_in_progress = false
-	online_locations_changed.emit()
 
 
 ## Fetches archipelago peers and returns the raw peers array. Owns its own HTTPRequest so it never

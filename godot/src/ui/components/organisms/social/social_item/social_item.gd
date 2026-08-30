@@ -411,7 +411,8 @@ func _async_cancel_sent_request() -> void:
 	await PromiseUtils.async_awaiter(promise)
 
 	if promise.is_rejected():
-		printerr("Failed to cancel friend request: ", PromiseUtils.get_error_message(promise))
+		# Recoverable network failure — warn, don't printerr (keeps it out of Sentry).
+		push_warning("Failed to cancel friend request: " + PromiseUtils.get_error_message(promise))
 		button_reject.disabled = false
 		return
 
@@ -425,8 +426,8 @@ func _async_cancel_sent_request() -> void:
 
 func _on_button_jump_in_pressed() -> void:
 	if not world_name.is_empty():
-		# Friend is in a world — join it directly (parcel is ignored for worlds).
-		Global.async_teleport_to(Vector2i.ZERO, world_name)
+		# Join via the realm path so we land at the world's spawn, not parcel (0,0).
+		Global.async_join_world(world_name)
 	elif parcel.size() >= 2:
 		var parcel_position = Vector2i(parcel[0], parcel[1])
 		Global.async_teleport_to(parcel_position, DclUrls.main_realm())
@@ -439,6 +440,9 @@ func _async_fetch_place_data() -> void:
 		return
 
 	var result = await PlacesHelper.async_get_by_position(Vector2i(parcel[0], parcel[1]))
+
+	if not NodeGuard.is_alive(self, "SocialItem._async_fetch_place_data"):
+		return
 
 	if result is PromiseError:
 		printerr("Error fetching place data: ", result.get_error())
@@ -468,6 +472,8 @@ func _async_fetch_place_data() -> void:
 ## Resolves the world's place title (mirrors the Discover friends carousel) and shows it.
 func _async_fetch_world_place(world: String) -> void:
 	var result = await PlacesHelper.async_get_by_names(world)
+	if not NodeGuard.is_alive(self, "SocialItem._async_fetch_world_place"):
+		return
 	# Ignore if the friend moved on (or the item was recycled) while fetching.
 	if world_name != world:
 		return
