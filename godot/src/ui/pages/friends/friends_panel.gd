@@ -326,6 +326,9 @@ func _update_dropdown_visibility() -> void:
 	var online_count = online_list.list_size
 	var offline_count = offline_list.list_size
 	var blocked_count = blocked_list.list_size
+	# NOTE: blocked counts toward `total`, so a user with only blocked users sees the BLOCKED
+	# section instead of the "No friends yet" empty state (their blocked rows stay visible).
+	# Kept intentionally — design to confirm the intended behavior for this case.
 	var total = online_count + offline_count + blocked_count
 
 	_update_dropdown_section(v_box_container_online, label_online_count, online_count)

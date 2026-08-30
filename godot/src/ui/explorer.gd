@@ -1455,7 +1455,8 @@ func _on_loading_started() -> void:
 	Global.session_hide_ui_toggle_sync.emit(false)
 	Global.session_hide_ui_options_sync.emit(true, true, true, true)
 	_apply_hide_ui_to_avatar_nicks(false)
-	navbar.collapse()  # → navbar_closed → _close_all_panels: closes menu + FriendsPanel + panels
+	if navbar.is_open():  # avoid a redundant navbar_closed + teardown when nothing is open
+		navbar.collapse()
 
 
 func _on_loading_finished() -> void:
@@ -1676,9 +1677,8 @@ func _close_all_panels():
 	_on_notifications_panel_closed()
 	_on_settings_panel_closed()
 	_refresh_hud_dismiss()
-	# Restore the bottom-left slot (chat, or the preview HUD toolbar in preview) and the
-	# emote HUD hidden while the navbar was open, unless the main HUD is hidden. Keep the
-	# emote HUD and joystick hidden in portrait, where the orientation flow owns them.
+	# Restore the bottom-left slot (chat / preview toolbar) and the emote HUD hidden while the
+	# navbar was open, unless the main HUD is hidden; in portrait the orientation flow owns them.
 	if not _session_hide_main_hud:
 		_restore_bottom_left_hud()
 		if not Global.is_orientation_portrait():

@@ -2,10 +2,9 @@
 class_name TapArea
 extends Control
 
-## Padding extra de área tapeable por lado, en px. El tamaño visual del botón NO cambia;
-## sólo crece la zona de hit. Seteás sólo los lados que necesites (top/bottom, o laterales).
-## Sirve para cualquier botón basado en Control (Button, TextureButton, ...).
-## En el editor dibuja un rectángulo amarillo mostrando el área resultante.
+## Extra tappable padding per side, in px. The button's visual size does NOT change; only the hit
+## area grows. Set only the sides you need (top/bottom, or lateral). Works on any Control-based
+## button (Button, TextureButton, ...). In the editor it draws a yellow rect showing the result.
 @export_group("Tap growth (px)")
 @export var grow_left: float = 0.0:
 	set(value):
@@ -44,5 +43,5 @@ func _draw() -> void:
 		return
 	var rect: Rect2 = _tap_rect()
 	var yellow: Color = Color(1.0, 0.85, 0.0)
-	draw_rect(rect, Color(yellow, 0.08), true)  # relleno tenue
-	draw_rect(rect, Color(yellow, 0.9), false, 1.0)  # contorno
+	draw_rect(rect, Color(yellow, 0.08), true)  # faint fill
+	draw_rect(rect, Color(yellow, 0.9), false, 1.0)  # outline
