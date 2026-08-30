@@ -2,6 +2,7 @@
 
 [ext_resource type="Script" uid="uid://cmhycf7qy54n5" path="res://src/ui/components/organisms/navbar/navbar.gd" id="1_40xfh"]
 [ext_resource type="PackedScene" uid="uid://dg3ev4a5gn1up" path="res://src/ui/components/molecules/profile_icon_button/profile_icon_button.tscn" id="2_1xf7s"]
+[ext_resource type="Script" uid="uid://bmmfqy7sboclt" path="res://src/ui/pages/discover/discover_button.gd" id="3_dscvr"]
 [ext_resource type="Script" uid="uid://dqervv7c0nbk0" path="res://src/ui/pages/friends/friends_button.gd" id="3_lur8b"]
 [ext_resource type="Texture2D" uid="uid://bomepth83v1j2" path="res://src/ui/components/organisms/navbar/icons/discover-outlined.svg" id="4_uqptt"]
 [ext_resource type="Texture2D" uid="uid://knht5u13xvqs" path="res://src/ui/components/organisms/navbar/icons/discover.svg" id="5_ljng8"]
@@ -428,7 +429,7 @@ texture_normal = ExtResource("4_uqptt")
 texture_pressed = ExtResource("5_ljng8")
 ignore_texture_size = true
 stretch_mode = 5
-script = ExtResource("3_lur8b")
+script = ExtResource("3_dscvr")
 
 [node name="StaticButton_Friends" parent="Control/Control/PanelContainer/VBoxContainer_Buttons" unique_id=845596369 instance=ExtResource("7_ckthm")]
 unique_name_in_owner = true
