@@ -322,7 +322,11 @@ func _async_reload_blocked_list(request_id: int) -> void:
 	remove_items()
 	var should_load = _is_panel_visible()
 	add_items_by_social_item_data(blocked_social_items, should_load)
-	_update_list_size()
+	# Size directly from the data we just rendered — counting tree children here would still include
+	# the old rows pending queue_free, leaving a stale count (an unblock-to-zero stays shown). Blocked
+	# rows are always visible, so this is exact.
+	list_size = blocked_social_items.size()
+	size_changed.emit()
 
 
 func _async_reload_online_list(request_id: int) -> void:
