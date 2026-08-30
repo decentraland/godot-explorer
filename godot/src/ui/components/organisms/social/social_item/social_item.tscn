@@ -220,56 +220,72 @@ corner_radius_top_right = 4
 corner_radius_bottom_right = 4
 corner_radius_bottom_left = 4
 
-[node name="SocialItem" type="Button" unique_id=146684494]
-custom_minimum_size = Vector2(280, 100)
+[node name="SocialItem" type="Control" unique_id=1853612080]
+custom_minimum_size = Vector2(528, 100)
+layout_mode = 3
+anchors_preset = 0
 offset_right = 464.0
-offset_bottom = 53.0
+offset_bottom = 100.0
 scale = Vector2(1.0018516, 1)
 size_flags_horizontal = 3
 mouse_filter = 1
-flat = true
 script = ExtResource("1_qmekl")
 
-[node name="HBoxContainer" type="HBoxContainer" parent="." unique_id=945861205]
+[node name="Data" type="HBoxContainer" parent="." unique_id=229731733]
+unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+size_flags_horizontal = 3
 mouse_filter = 2
-theme_override_constants/separation = 9
+theme_override_constants/separation = 19
 
-[node name="Data" type="HBoxContainer" parent="HBoxContainer" unique_id=229731733]
+[node name="Button_Profile" type="Button" parent="Data" unique_id=1198337793]
 unique_name_in_owner = true
 layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 1
+flat = true
+
+[node name="HBoxContainer_Profile" type="HBoxContainer" parent="Data/Button_Profile" unique_id=282564911]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 size_flags_horizontal = 3
 mouse_filter = 2
 theme_override_constants/separation = 16
 
-[node name="MarginContainer" type="MarginContainer" parent="HBoxContainer/Data" unique_id=434748626]
-layout_mode = 2
-
-[node name="ProfilePicture" parent="HBoxContainer/Data/MarginContainer" unique_id=1253382352 instance=ExtResource("3_yus00")]
-unique_name_in_owner = true
-layout_mode = 2
-mouse_default_cursor_shape = 2
-
-[node name="VBoxContainer_Nickname" type="VBoxContainer" parent="HBoxContainer/Data" unique_id=1854485016]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_constants/separation = 2
-alignment = 1
-
-[node name="HBoxContainer" type="HBoxContainer" parent="HBoxContainer/Data/VBoxContainer_Nickname" unique_id=2032713502]
+[node name="MarginContainer" type="MarginContainer" parent="Data/Button_Profile/HBoxContainer_Profile" unique_id=434748626]
 layout_mode = 2
 mouse_filter = 2
 
-[node name="Nickname" type="Label" parent="HBoxContainer/Data/VBoxContainer_Nickname/HBoxContainer" unique_id=666961752]
+[node name="ProfilePicture" parent="Data/Button_Profile/HBoxContainer_Profile/MarginContainer" unique_id=1253382352 instance=ExtResource("3_yus00")]
 unique_name_in_owner = true
 layout_mode = 2
-mouse_filter = 1
+mouse_filter = 2
+mouse_default_cursor_shape = 2
+
+[node name="VBoxContainer_Nickname" type="VBoxContainer" parent="Data/Button_Profile/HBoxContainer_Profile" unique_id=1854485016]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+theme_override_constants/separation = 2
+alignment = 1
+
+[node name="HBoxContainer" type="HBoxContainer" parent="Data/Button_Profile/HBoxContainer_Profile/VBoxContainer_Nickname" unique_id=2032713502]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="Nickname" type="Label" parent="Data/Button_Profile/HBoxContainer_Profile/VBoxContainer_Nickname/HBoxContainer" unique_id=666961752]
+unique_name_in_owner = true
+layout_mode = 2
 mouse_default_cursor_shape = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
@@ -280,7 +296,7 @@ theme_override_font_sizes/font_size = 18
 text = "PlayerName"
 label_settings = SubResource("LabelSettings_ockp6")
 
-[node name="TextureRect_ClaimedCheckmark" type="TextureRect" parent="HBoxContainer/Data/VBoxContainer_Nickname/HBoxContainer" unique_id=1143898859]
+[node name="TextureRect_ClaimedCheckmark" type="TextureRect" parent="Data/Button_Profile/HBoxContainer_Profile/VBoxContainer_Nickname/HBoxContainer" unique_id=1143898859]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(24, 24)
 layout_mode = 2
@@ -290,10 +306,9 @@ texture = ExtResource("6_b8cqn")
 expand_mode = 2
 stretch_mode = 4
 
-[node name="Label_Place" type="Label" parent="HBoxContainer/Data/VBoxContainer_Nickname" unique_id=955882978]
+[node name="Label_Place" type="Label" parent="Data/Button_Profile/HBoxContainer_Profile/VBoxContainer_Nickname" unique_id=955882978]
 unique_name_in_owner = true
 layout_mode = 2
-mouse_filter = 1
 mouse_default_cursor_shape = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
@@ -304,15 +319,16 @@ theme_override_font_sizes/font_size = 16
 text = "Place"
 label_settings = SubResource("LabelSettings_uurwy")
 
-[node name="HBoxContainer_Online" type="HBoxContainer" parent="HBoxContainer/Data" unique_id=432456480]
+[node name="HBoxContainer_Online" type="HBoxContainer" parent="Data" unique_id=432456480]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 size_flags_vertical = 4
 mouse_filter = 2
 theme_override_constants/separation = 10
 alignment = 1
 
-[node name="Button_JumpIn" type="Button" parent="HBoxContainer/Data/HBoxContainer_Online" unique_id=1704308251]
+[node name="Button_JumpIn" type="Button" parent="Data/HBoxContainer_Online" unique_id=1704308251]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(54, 54)
 layout_mode = 2
@@ -342,7 +358,7 @@ grow_left = 18.0
 grow_top = 23.0
 grow_bottom = 23.0
 
-[node name="HBoxContainer_Nearby" type="HBoxContainer" parent="HBoxContainer/Data" unique_id=182771294]
+[node name="HBoxContainer_Nearby" type="HBoxContainer" parent="Data" unique_id=182771294]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 4
@@ -350,7 +366,7 @@ mouse_filter = 2
 theme_override_constants/separation = 10
 alignment = 1
 
-[node name="Button_AddFriend" type="Button" parent="HBoxContainer/Data/HBoxContainer_Nearby" unique_id=93844031]
+[node name="Button_AddFriend" type="Button" parent="Data/HBoxContainer_Nearby" unique_id=93844031]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(230, 54)
 layout_mode = 2
@@ -378,7 +394,7 @@ script = ExtResource("13_7xvkt")
 grow_top = 23.0
 grow_bottom = 23.0
 
-[node name="HBoxContainer" type="HBoxContainer" parent="HBoxContainer/Data/HBoxContainer_Nearby/Button_AddFriend" unique_id=911804076]
+[node name="HBoxContainer" type="HBoxContainer" parent="Data/HBoxContainer_Nearby/Button_AddFriend" unique_id=911804076]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -388,7 +404,7 @@ grow_vertical = 2
 theme_override_constants/separation = 6
 alignment = 1
 
-[node name="TextureRect" type="TextureRect" parent="HBoxContainer/Data/HBoxContainer_Nearby/Button_AddFriend/HBoxContainer" unique_id=899196175]
+[node name="TextureRect" type="TextureRect" parent="Data/HBoxContainer_Nearby/Button_AddFriend/HBoxContainer" unique_id=899196175]
 custom_minimum_size = Vector2(26, 0)
 layout_mode = 2
 size_flags_horizontal = 4
@@ -397,33 +413,35 @@ texture = ExtResource("13_5r2pa")
 expand_mode = 5
 stretch_mode = 5
 
-[node name="Label" type="Label" parent="HBoxContainer/Data/HBoxContainer_Nearby/Button_AddFriend/HBoxContainer" unique_id=679695437]
+[node name="Label" type="Label" parent="Data/HBoxContainer_Nearby/Button_AddFriend/HBoxContainer" unique_id=679695437]
 layout_mode = 2
 text = "ADD FRIEND"
 label_settings = SubResource("LabelSettings_7xvkt")
 
-[node name="PanelContainer_Request" type="PanelContainer" parent="HBoxContainer/Data/HBoxContainer_Nearby" unique_id=1717622638]
+[node name="PanelContainer_Request" type="PanelContainer" parent="Data/HBoxContainer_Nearby" unique_id=1717622638]
 unique_name_in_owner = true
+visible = false
 custom_minimum_size = Vector2(139, 54)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_40r3o")
 
-[node name="Label_PendingRequest" type="Label" parent="HBoxContainer/Data/HBoxContainer_Nearby/PanelContainer_Request" unique_id=584033093]
+[node name="Label_PendingRequest" type="Label" parent="Data/HBoxContainer_Nearby/PanelContainer_Request" unique_id=584033093]
 unique_name_in_owner = true
 layout_mode = 2
 text = "PENDING"
 label_settings = SubResource("LabelSettings_m2rwh")
 horizontal_alignment = 1
 
-[node name="HBoxContainer_Request" type="HBoxContainer" parent="HBoxContainer/Data" unique_id=960121202]
+[node name="HBoxContainer_Request" type="HBoxContainer" parent="Data" unique_id=960121202]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 size_flags_vertical = 4
 mouse_filter = 2
 theme_override_constants/separation = 24
 alignment = 1
 
-[node name="Button_Reject" type="Button" parent="HBoxContainer/Data/HBoxContainer_Request" unique_id=247280560]
+[node name="Button_Reject" type="Button" parent="Data/HBoxContainer_Request" unique_id=247280560]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(54, 54)
 layout_mode = 2
@@ -453,7 +471,7 @@ grow_top = 23.0
 grow_right = 12.0
 grow_bottom = 23.0
 
-[node name="Button_Accept" type="Button" parent="HBoxContainer/Data/HBoxContainer_Request" unique_id=1013018104]
+[node name="Button_Accept" type="Button" parent="Data/HBoxContainer_Request" unique_id=1013018104]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(54, 54)
 layout_mode = 2
@@ -484,7 +502,7 @@ grow_left = 12.0
 grow_top = 23.0
 grow_bottom = 23.0
 
-[node name="HBoxContainer_Blocked" type="HBoxContainer" parent="HBoxContainer/Data" unique_id=1460046681]
+[node name="HBoxContainer_Blocked" type="HBoxContainer" parent="Data" unique_id=1460046681]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
@@ -493,7 +511,7 @@ mouse_filter = 2
 theme_override_constants/separation = 10
 alignment = 1
 
-[node name="Button_Unblock" type="Button" parent="HBoxContainer/Data/HBoxContainer_Blocked" unique_id=217194580]
+[node name="Button_Unblock" type="Button" parent="Data/HBoxContainer_Blocked" unique_id=217194580]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(139, 54)
 layout_mode = 2
@@ -541,5 +559,3 @@ layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 4
 theme_override_styles/panel = SubResource("StyleBoxFlat_463mj")
-
-[connection signal="pressed" from="." to="." method="_on_pressed"]

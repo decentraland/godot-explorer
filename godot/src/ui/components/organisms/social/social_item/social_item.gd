@@ -1,4 +1,4 @@
-extends Button
+extends Control
 
 enum LoadState { UNLOADED, LOADING, LOADED, FAILED }
 
@@ -35,6 +35,7 @@ var _load_start_time: float = 0.0
 @onready var button_accept: Button = %Button_Accept
 @onready var button_reject: Button = %Button_Reject
 @onready var button_jump: Button = %Button_JumpIn
+@onready var button_profile: Button = %Button_Profile
 @onready var data_container: HBoxContainer = %Data
 @onready var skeleton_container: HBoxContainer = %Skeleton
 @onready var panel_container_request: PanelContainer = %PanelContainer_Request
@@ -51,6 +52,8 @@ func _ready():
 	button_reject.pressed.connect(_async_on_button_reject_pressed)
 	button_jump.pressed.connect(_on_button_jump_in_pressed)
 	button_unblock.pressed.connect(_on_button_unblock_pressed)
+	# Profile opens from Button_Profile (its own drag-vs-tap detection), not the whole row.
+	button_profile.pressed.connect(_on_pressed)
 	# Connect to locations signal to update jump button visibility
 	if Global.locations:
 		Global.locations.online_locations_changed.connect(_on_online_locations_changed)
@@ -477,10 +480,6 @@ func _async_fetch_world_place(world: String) -> void:
 	label_place.text = shorten_tittle(title, trim_value)
 
 
-func update_location() -> void:
-	pass
-
-
 func _on_button_unblock_pressed() -> void:
 	# user_unblock metric
 	Global.metrics.track_click_button("user_unblock", "SOCIAL_PANEL", "")
@@ -701,4 +700,4 @@ func _set_loading(loading: bool) -> void:
 		return
 	data_container.visible = not loading
 	skeleton_container.visible = loading
-	disabled = loading
+	button_profile.disabled = loading
