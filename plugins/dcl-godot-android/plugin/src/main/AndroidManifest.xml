@@ -25,7 +25,7 @@
         flag GA4F never writes the deep link, so the ad-group destination cannot be read
         on first launch. It is the only path that carries a campaign token for Google Ads
         traffic: those installs arrive with a bare `gclid` in the Play referrer and nothing
-        of ours (87% of attributed installs, measured on Segment over 30 days).
+        of ours.
         -->
         <meta-data
             android:name="google_analytics_deferred_deep_link_enabled"

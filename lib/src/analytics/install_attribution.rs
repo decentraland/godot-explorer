@@ -13,9 +13,9 @@ use super::data_definition::{SegmentEvent, SegmentEventInstallAttribution};
 /// They cover disjoint traffic, which is why both are needed:
 ///
 /// - **GA4F deferred deep link** — the only path that carries a destination for Google Ads
-///   installs. Those arrive with a bare `gclid` in the Play referrer and nothing of ours
-///   (87% of attributed installs over 30 days, measured on Segment), so tagging the landing
-///   page does nothing for them.
+///   installs. Those arrive with a bare `gclid` in the Play referrer and nothing of ours, so
+///   tagging the landing page does nothing for them. They are the large majority of
+///   attributed installs.
 /// - **Play Install Referrer** — preserves the query string of an owned/organic link, so a
 ///   token added there survives the install.
 ///
@@ -368,8 +368,8 @@ mod tests {
             Some("aesironline".to_string())
         );
 
-        // A Google Ads install: a bare click id, nothing of ours. This is 87% of attributed
-        // installs, and it must not produce a token.
+        // A Google Ads install: a bare click id, nothing of ours. This is the majority shape,
+        // and it must not produce a token.
         assert_eq!(extract_token("gclid%3DCj0KCQjwp9vTBhCWARIsANaUrjv"), None);
         assert_eq!(extract_token("gbraid=0AAAAA_KoQHo8&gad_source=2"), None);
         // Our own organic tagging, before anyone adds a token to it
