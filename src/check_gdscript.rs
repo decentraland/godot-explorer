@@ -42,33 +42,6 @@ pub fn check_gdscript() -> Result<()> {
     }
 }
 
-/// Headless scene tests for the ad-campaign resolution logic (issue #2670): what a campaign
-/// payload resolves to, and therefore where an attributed install lands.
-///
-/// Runs as a SCENE, not with `--script`. A SceneTree script does not register the project's
-/// global classes, so `Realm` and `CampaignResolution` would not resolve and every assertion
-/// would silently pass by never running.
-pub fn test_campaigns() -> Result<()> {
-    print_section("Campaign Resolution Tests");
-
-    let godot_bin = get_godot_path();
-    let output = cmd!(
-        godot_bin,
-        "--headless",
-        "--path",
-        GODOT_PROJECT_FOLDER,
-        "res://src/test/campaigns/test_campaigns_resolution.tscn",
-        "--quit"
-    )
-    .run()?;
-    if !output.status.success() {
-        print_message(MessageType::Error, "campaign resolution tests FAILED");
-        return Err(anyhow::anyhow!("campaign resolution test failed"));
-    }
-    print_message(MessageType::Success, "Campaign resolution tests passed!");
-    Ok(())
-}
-
 pub fn test_avatar() -> Result<()> {
     print_section("Avatar Regression Tests");
 

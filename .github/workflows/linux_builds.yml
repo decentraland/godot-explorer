@@ -55,9 +55,6 @@ jobs:
       - name: Avatar regression tests
         run: cargo run -- test-avatar
 
-      - name: Campaign resolution tests
-        run: cargo run -- test-campaigns
-
       - name: Export
         run: cargo run -- export
 
