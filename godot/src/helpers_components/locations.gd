@@ -5,6 +5,8 @@ signal online_locations_changed
 
 const MAX_CONCURRENT_WORLD_REQUESTS: int = 8
 const WORLD_BATCH_TIMEOUT: float = 15.0
+# Don't re-hit a failing world-title lookup on every online_locations_changed emit.
+const WORLD_TITLE_RETRY_COOLDOWN: float = 60.0
 
 var known_locations: Array = []  # Array of objects {coord: [x,y], title: String}
 var known_worlds: Dictionary = {}  # world_name -> place title (cache; mirrors known_locations)
@@ -15,6 +17,11 @@ var in_genesis_city: Array = []  # Array of objects {address: String, parcel: [i
 # to `online_locations_changed` instead of each firing its own per-friend world request.
 var online_locations: Dictionary = {}
 var _online_locations_in_progress: bool = false
+# World-title lookups are shared across all rows in the same world: dedupe concurrent requests
+# (in-flight) and remember failures with a cooldown so an unresolvable world doesn't re-fire a
+# request per row on every `online_locations_changed` emit.
+var _world_title_in_progress: Dictionary = {}  # world_name -> true
+var _world_title_failed_at: Dictionary = {}  # world_name -> Time.get_ticks_msec() of last failure
 
 
 func fetch_peers():
@@ -131,6 +138,43 @@ func async_update_online_locations(addresses: Array) -> void:
 	_online_locations_in_progress = false
 
 
+## Resolves a World's place title once for ALL rows in that world, caching the result in
+## `known_worlds` and re-emitting `online_locations_changed` so listening rows swap their
+## fallback (trimmed ENS) label for the real title. Deduped three ways: skips if already
+## cached, if a request is in flight, or if the last lookup failed within the cooldown — so an
+## unresolvable world can't re-fire a request per row on every emit.
+func async_resolve_world_title(world: String) -> void:
+	if world.is_empty() or known_worlds.has(world):
+		return
+	if _world_title_in_progress.has(world):
+		return
+	var failed_at: int = int(_world_title_failed_at.get(world, -1))
+	if failed_at != -1:
+		var elapsed: int = Time.get_ticks_msec() - failed_at
+		if elapsed < int(WORLD_TITLE_RETRY_COOLDOWN * 1000.0):
+			return
+	_world_title_in_progress[world] = true
+
+	var result = await PlacesHelper.async_get_by_names(world)
+	_world_title_in_progress.erase(world)
+
+	var title: String = ""
+	if result != null and not (result is PromiseError):
+		var json: Dictionary = result.get_string_response_as_json()
+		if not json.data.is_empty():
+			title = json.data[0].get("title", "")
+
+	if title.is_empty():
+		# Lookup failed (or the place has no title): don't poison known_worlds with a fallback —
+		# record the failure so we retry only after the cooldown; rows keep the trimmed ENS.
+		_world_title_failed_at[world] = Time.get_ticks_msec()
+		return
+
+	_world_title_failed_at.erase(world)
+	known_worlds[world] = title
+	online_locations_changed.emit()
+
+
 ## Fetches archipelago peers and returns the raw peers array. Owns its own HTTPRequest so it never
 ## races with the shared `fetch_peers()` + `in_genesis_city_changed` signal path.
 func _async_fetch_peers_raw() -> Array:
@@ -198,7 +242,7 @@ func _launch_world_request(base_url: String, address: String, responses: Diction
 	var http_request: HTTPRequest = HTTPRequest.new()
 	http_request.timeout = 10.0  # so a stuck world endpoint frees the node instead of leaking
 	add_child(http_request)
-	var url: String = base_url + "/wallet/" + str(address) + "/connected-world"
+	var url: String = base_url + "/wallet/" + str(address).uri_encode() + "/connected-world"
 	http_request.request_completed.connect(
 		_on_world_request_completed.bind(address, http_request, responses)
 	)

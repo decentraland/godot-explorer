@@ -432,7 +432,9 @@ func _on_button_jump_in_pressed() -> void:
 		var parcel_position = Vector2i(parcel[0], parcel[1])
 		Global.async_teleport_to(parcel_position, DclUrls.main_realm())
 	else:
-		push_error("Invalid jump-in location")
+		# Benign race: the location can be cleared by a fresh online_locations_changed emit
+		# between the button showing and this press. Warn (not push_error → Sentry).
+		push_warning("Jump-in pressed with no resolved location")
 
 
 func _async_fetch_place_data() -> void:
@@ -467,23 +469,6 @@ func _async_fetch_place_data() -> void:
 		}
 		# Add to known_locations for future reference
 		Global.locations.known_locations.append(location_entry)
-
-
-## Resolves the world's place title (mirrors the Discover friends carousel) and shows it.
-func _async_fetch_world_place(world: String) -> void:
-	var result = await PlacesHelper.async_get_by_names(world)
-	if not NodeGuard.is_alive(self, "SocialItem._async_fetch_world_place"):
-		return
-	# Ignore if the friend moved on (or the item was recycled) while fetching.
-	if world_name != world:
-		return
-	var title: String = world.trim_suffix(".dcl.eth")
-	if result != null and not (result is PromiseError):
-		var json: Dictionary = result.get_string_response_as_json()
-		if not json.data.is_empty():
-			title = json.data[0].get("title", title)
-	Global.locations.known_worlds[world] = title
-	label_place.text = shorten_tittle(title, trim_value)
 
 
 func _on_button_unblock_pressed() -> void:
@@ -638,10 +623,14 @@ func _update_jump_button_visibility() -> void:
 		world_name = location["world_name"]
 		button_jump.show()
 		var cached_title: String = Global.locations.known_worlds.get(world_name, "")
-		if cached_title.is_empty():
-			_async_fetch_world_place(world_name)
-		else:
+		if not cached_title.is_empty():
 			label_place.text = shorten_tittle(cached_title, trim_value)
+		else:
+			# Show the trimmed ENS right away, then resolve the real title once (deduped in
+			# locations.gd). Resolution re-emits online_locations_changed, so this row swaps in
+			# the title when it lands — no per-row request storm on every emit.
+			label_place.text = shorten_tittle(world_name.trim_suffix(".dcl.eth"), trim_value)
+			Global.locations.async_resolve_world_title(world_name)
 		return
 
 	# Friend is in Genesis City.

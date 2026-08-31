@@ -65,7 +65,6 @@ var _is_loading: bool = false
 @onready var button_friends: Button = %Button_Friends
 @onready var button_requests: Button = %Button_Requests
 @onready var button_nearby: Button = %Button_Nearby
-@onready var timer: Timer = %Timer
 
 @onready var h_box_container_friends_tab: HBoxContainer = %HBoxContainer_FriendsTab
 @onready var h_box_container_requests_tab: HBoxContainer = %HBoxContainer_RequestsTab
@@ -268,8 +267,9 @@ func _on_button_requests_toggled(toggled_on: bool) -> void:
 		scroll_container_requests.show()
 		_expand_request_lists()
 		# Received updates live via the friendship_request_received signal; sent requests have no
-		# stream (the service doesn't echo our own actions), so re-fetch them on tab open.
-		sent_list.async_update_list()
+		# stream (the service doesn't echo our own actions), so re-fetch them on tab open. Await so
+		# the SENT count reflects the fresh list instead of the stale one.
+		await sent_list.async_update_list()
 		_update_requests()
 
 
@@ -572,7 +572,8 @@ func _async_update_all_lists() -> void:
 	# Update lists sequentially.
 	# Skeleton placeholders are handled in `_update_dropdown_visibility()` to keep UX responsive.
 	await request_list.async_update_list()
-	sent_list.async_update_list()
+	# Await SENT too: otherwise loading ends (and the SENT count settles) before it resolves.
+	await sent_list.async_update_list()
 	await online_list.async_update_list()
 	await offline_list.async_update_list()
 	# Don't wait for nearby and blocked as they're not critical for friends tab loading
@@ -667,17 +668,8 @@ func _on_nearby_list_size_changed() -> void:
 		nearby_list.show()
 
 
-func _on_timer_timeout() -> void:
-	if visible:
-		Global.locations.fetch_peers()
-	else:
-		timer.stop()
-
-
 func _on_visibility_changed() -> void:
-	Global.locations.fetch_peers()
-	if timer:
-		if visible:
-			timer.start(0)
-		else:
-			timer.stop()
+	# Kick an immediate online-list refresh on open so friend locations aren't stale up to the
+	# 15s reconcile cadence (SocialList's per-list reconcile timer owns the periodic refresh).
+	if visible and online_list != null:
+		online_list.async_update_list()

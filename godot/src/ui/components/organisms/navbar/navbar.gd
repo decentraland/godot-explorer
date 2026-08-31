@@ -95,7 +95,9 @@ func _on_navbar_close() -> void:
 ## highlight follows the selection. Full-rect anchors let it fill whichever slot it lands in.
 func _on_selection_button_pressed(pressed_button: BaseButton) -> void:
 	var index: int = _selection_buttons.find(pressed_button)
-	if index == -1:
+	# Guard the slot lookup: _selection_buttons and _selection_slots are index-aligned, but a
+	# future 7th button added to the group without a matching slot would index out of bounds.
+	if index == -1 or index >= _selection_slots.size():
 		return
 	var target: Control = _selection_slots[index]
 	if _selection_effect.get_parent() != target:

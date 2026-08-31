@@ -107,10 +107,6 @@ metadata/mobile_preview_orientation = "landscape"
 layout_mode = 2
 texture = SubResource("GradientTexture2D_bqxsg")
 
-[node name="Timer" type="Timer" parent="." unique_id=2000908590]
-unique_name_in_owner = true
-wait_time = 15.0
-
 [node name="MarginContainer" type="MarginContainer" parent="." unique_id=401963503]
 custom_minimum_size = Vector2(624, 640)
 layout_mode = 2
@@ -904,7 +900,6 @@ theme_override_constants/separation = 28
 theme_override_styles/separator = SubResource("StyleBoxEmpty_f3m5e")
 
 [connection signal="visibility_changed" from="." to="." method="_on_visibility_changed"]
-[connection signal="timeout" from="Timer" to="." method="_on_timer_timeout"]
 [connection signal="toggled" from="MarginContainer/VBoxContainer2/MarginContainer_Header/Header/HBoxContainer_FriendsTab/Button_Friends" to="." method="_on_button_friends_toggled"]
 [connection signal="toggled" from="MarginContainer/VBoxContainer2/MarginContainer_Header/Header/HBoxContainer_RequestsTab/Button_Requests" to="." method="_on_button_requests_toggled"]
 [connection signal="toggled" from="MarginContainer/VBoxContainer2/MarginContainer_Header/Header/HBoxContainer_NearbyTab/Button_Nearby" to="." method="_on_button_nearby_toggled"]
