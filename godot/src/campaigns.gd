@@ -9,12 +9,10 @@ extends Node
 ## FTUE hangs off. The token is captured at boot and resolved here, against the map served
 ## by the mobile-bff, into either a personalized FTUE or a direct boot into the target.
 ##
-## Same fetch shape as feature_flags.gd: fire-and-forget on _ready, raced against a timeout,
-## fail-open. Unlike the flags there is deliberately NO disk cache: the window that decides
-## whether a campaign is still live is evaluated server-side, so a cached map is a map that
-## can resurrect a campaign the server has already retired — and the payload carries no end
-## date for the client to re-check locally. The FTUE only ever runs on a first launch, where
-## a cache is empty by definition, so it would buy almost nothing for that risk. Callers use
+## Fetched lazily and raced against a timeout, fail-open. There is deliberately NO disk cache:
+## a campaign is retired by deleting it, so a cached map is one that can still resolve a token
+## the server no longer knows. The FTUE only ever runs on a first launch, where a cache is
+## empty by definition, so it would buy almost nothing for that risk. Callers use
 ## async_resolve_pending(), which gives the in-flight fetch a bounded chance to land.
 ##
 ## Every failure path (no token, unknown token, expired token, already consumed, resolver
@@ -59,9 +57,9 @@ func is_loaded() -> bool:
 	return _loaded
 
 
-## Resolves a token against the current map. Returns {} when the token is unknown — which
-## includes a campaign the server disabled or whose window closed, since the map only ever
-## carries active ones.
+## Resolves a token against the current map. Returns {} when the token is unknown, which
+## includes a campaign that was deleted — the shipped BFF has no enabled flag and no active
+## window, so deletion is how a campaign is retired.
 func resolve(token: String) -> Dictionary:
 	if token.is_empty():
 		return {}
@@ -97,9 +95,16 @@ func async_resolve_pending() -> Dictionary:
 	if config.campaign_token_captured_at <= 0 or age > TOKEN_MAX_AGE_SECONDS:
 		return _fallback(token, CampaignResolution.FALLBACK_EXPIRED_TOKEN)
 
+	# Hard stop in production. urls::campaigns() is pinned to the dev deployment because the
+	# endpoint does not exist on .org yet, so resolving there would let whoever can write a row
+	# in the dev backoffice choose where a real ad-attributed install lands. Costs nothing: the
+	# endpoint 404s on .org anyway, so the fallback is the same default FTUE. Lift this in the
+	# same change that restores the per-environment URL.
+	if Global.is_production():
+		return _fallback(token, CampaignResolution.FALLBACK_RESOLVER_UNAVAILABLE)
+
 	# Fetched lazily, only once a token actually needs resolving. Fetching on every boot would
-	# put every install on the campaigns endpoint — and while that endpoint is pinned to the
-	# dev deployment (see urls::campaigns), that would be every production client hitting dev.
+	# put every install on the campaigns endpoint.
 	if not _loaded:
 		_async_load.call_deferred()
 		await _async_wait_for_load()
@@ -140,7 +145,7 @@ func _fallback(token: String, reason: String) -> Dictionary:
 ## Residual gap: a process killed before attribution settles still loses it, since there is
 ## nothing to persist yet and the once-per-install flag has already been written.
 func _async_watch_attribution() -> void:
-	if not Global.is_android() or Global.metrics == null:
+	if OS.get_name() != "Android" or Global.metrics == null:
 		_attribution_settled = true
 		return
 

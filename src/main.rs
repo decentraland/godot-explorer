@@ -117,6 +117,10 @@ fn main() -> Result<(), anyhow::Error> {
         .subcommand(Command::new("doctor").about("Check system health and dependencies"))
         .subcommand(Command::new("check-gdscript").about("Validate all GDScript files for syntax errors"))
         .subcommand(Command::new("test-avatar").about("Run headless avatar animation regression tests"))
+        .subcommand(
+            Command::new("test-campaigns")
+                .about("Run headless ad-campaign resolution tests"),
+        )
         .subcommand(Command::new("version-check").about("Check version consistency across files"))
         .subcommand(
             Command::new("fi-benchmark")
@@ -991,6 +995,7 @@ fn main() -> Result<(), anyhow::Error> {
         ("doctor", _) => doctor::run_doctor(),
         ("check-gdscript", _) => check_gdscript::check_gdscript(),
         ("test-avatar", _) => check_gdscript::test_avatar(),
+        ("test-campaigns", _) => check_gdscript::test_campaigns(),
         ("update-ios-xcode", sm) => ios_xcode::update_ios_xcode(
             sm.is_present("godot"),
             sm.is_present("plugin"),

@@ -28,6 +28,10 @@ const FALLBACK_ALREADY_CONSUMED := "already_consumed"
 const FALLBACK_RESOLVER_UNAVAILABLE := "resolver_unavailable"
 ## The campaign resolved but its target cannot be turned into a destination.
 const FALLBACK_UNUSABLE_TARGET := "unusable_target"
+## The target was routable but the boot did not happen — the pre-boot gate sent the user to
+## Discover (a private world), or another redirect was already in flight. Distinct from
+## `unusable_target` so the metric does not blame the campaign data for a routing decision.
+const FALLBACK_BOOT_DECLINED := "boot_declined"
 
 
 ## Extracts the campaign map from the mobile-bff response:

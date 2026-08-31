@@ -307,36 +307,48 @@ func _async_start_ftue() -> void:
 	var campaign: Dictionary = resolution.get("campaign", {})
 
 	if not campaign.is_empty():
-		if await _async_try_boot_into_campaign_target(campaign, resolution):
+		var boot_failure := await _async_try_boot_into_campaign_target(campaign, resolution)
+		if boot_failure.is_empty():
 			# The boot is committed, so the campaign is spent: one per install.
 			Global.campaigns.mark_consumed()
 			return
-		# Unusable target: fall back to the FTUE rather than stranding the user, and say so
-		# rather than reporting it as a token the server did not know. Deliberately NOT
+		# The boot may have changed scene on its way out — the pre-boot gate routes a private
+		# world to Discover — so this lobby can be freed by the time that await returns.
+		# Rendering the FTUE onto it would run the carousel's fetch against a dying node.
+		if not is_inside_tree():
+			return
+		# Fall back to the FTUE rather than stranding the user, naming why. Deliberately NOT
 		# consumed — the target is server-side data, so a corrected one can still land on a
 		# later launch instead of the campaign being burnt by a typo.
-		resolution["fallback_reason"] = CampaignResolution.FALLBACK_UNUSABLE_TARGET
+		resolution["fallback_reason"] = boot_failure
 		resolution["campaign"] = {}
 
 	show_discover_ftue_screen(resolution)
 
 
-## Boots the explorer straight into the campaign target. Returns false when the target
-## cannot be turned into a destination, leaving the caller to render the FTUE.
+## Boots the explorer straight into the campaign target. Returns "" when the boot is
+## committed, otherwise the fallback reason the caller should report: the target could not be
+## turned into a destination, or it could but the redirect declined it.
 ##
 ## Routes through the shared cold-start deeplink path on purpose: _async_redirect_by_deep_link
 ## applies the pre-boot private-world gate (#2569), and explorer.gd's get_params_from_cmd
 ## already reads realm/location off deep_link_obj. Reproducing either here would fork two
 ## behaviours that must stay identical.
-func _async_try_boot_into_campaign_target(campaign: Dictionary, resolution: Dictionary) -> bool:
+func _async_try_boot_into_campaign_target(campaign: Dictionary, resolution: Dictionary) -> String:
 	var position_and_realm := CampaignResolution.target_position_and_realm(campaign)
 	if position_and_realm.is_empty():
 		push_warning("[CAMPAIGN] unusable target, falling back to FTUE: " + str(campaign))
-		return false
+		return CampaignResolution.FALLBACK_UNUSABLE_TARGET
 
 	Global.metrics.track_screen_viewed(
 		"CAMPAIGN_BYPASS", JSON.stringify(CampaignResolution.metrics_context(resolution))
 	)
+
+	# Snapshotted because the write below is on the shared deep_link_obj: if the redirect
+	# declines, another one already in flight would otherwise read the campaign's destination
+	# instead of its own.
+	var previous_realm: String = Global.deep_link_obj.realm
+	var previous_location: Vector2i = Global.deep_link_obj.location
 
 	if CampaignResolution.is_world_target(campaign):
 		Global.deep_link_obj.realm = position_and_realm[1]
@@ -345,11 +357,16 @@ func _async_try_boot_into_campaign_target(campaign: Dictionary, resolution: Dict
 		Global.deep_link_obj.realm = ""
 		Global.deep_link_obj.location = position_and_realm[0]
 
-	# Awaited, and its answer is the return value. Firing and assuming success would consume
+	# Awaited, and its answer decides the return. Firing and assuming success would consume
 	# the campaign on a launch that never reached the target — a private world routes to
 	# Discover, and a redirect already in flight declines outright. Either way the user would
 	# see no FTUE and no campaign, with the token spent for good.
-	return await _async_redirect_by_deep_link()
+	if await _async_redirect_by_deep_link():
+		return ""
+
+	Global.deep_link_obj.realm = previous_realm
+	Global.deep_link_obj.location = previous_location
+	return CampaignResolution.FALLBACK_BOOT_DECLINED
 
 
 func async_show_avatar_create_screen():
