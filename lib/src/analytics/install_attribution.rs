@@ -149,7 +149,15 @@ impl InstallAttribution {
             // Not on Android, or no plugin at all: there is genuinely nothing to report.
             return None;
         }
-        Some(self.build(ga4f_ok, None, None, SOURCE_NONE))
+        // GA4F may still have answered with a link that carried no token. That is the GA4F
+        // path, not "nothing answered" — reporting `none` would make it indistinguishable in
+        // Segment from an install where neither source ever replied.
+        let source = if ga4f_ok.is_some() {
+            SOURCE_GA4F
+        } else {
+            SOURCE_NONE
+        };
+        Some(self.build(ga4f_ok, None, None, source))
     }
 
     /// Builds the event from whichever sources answered.
@@ -171,13 +179,17 @@ impl InstallAttribution {
         let utm = parse_utm_params(&referrer_string);
         let deeplink = ga4f.map(|d| get_string(d, "deeplink"));
 
-        // GA4F reports its own click time; the install time only ever exists on the referrer.
-        // Prefer whichever source is present, GA4F first since it is the more specific signal.
-        let click_timestamp = ga4f
-            .map(|d| get_i64(d, "click_timestamp"))
-            .filter(|t| *t > 0)
-            .or_else(|| referrer.map(|d| get_i64(d, "click_timestamp")))
-            .unwrap_or(0);
+        // Both sources report a click time in seconds, but they describe different clicks.
+        // It follows whichever source decided this event, so it always matches the campaign
+        // token beside it; the install time only ever exists on the referrer.
+        let click_timestamp = if source == SOURCE_REFERRER {
+            referrer.map(|d| get_i64(d, "click_timestamp")).unwrap_or(0)
+        } else {
+            ga4f.map(|d| get_i64(d, "click_timestamp"))
+                .filter(|t| *t > 0)
+                .or_else(|| referrer.map(|d| get_i64(d, "click_timestamp")))
+                .unwrap_or(0)
+        };
 
         tracing::debug!(
             "[attribution] settled: source={} token={:?} ga4f={} referrer={} after {:?}",

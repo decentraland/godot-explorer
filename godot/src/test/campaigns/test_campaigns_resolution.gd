@@ -78,7 +78,22 @@ func _test_target_position_and_realm() -> void:
 	# is_valid_int() only checks characters, so a value too large for the int32 inside Vector2i
 	# truncates to something else entirely — "4294967296" lands on 0,0, the exact failure the
 	# character check was added to stop.
-	for huge in ["4294967296,0", "0,4294967296", "2147483648,0", "99999999999999999999,0"]:
+	# The negative twins matter as much as the positive ones: to_int() saturates to INT64_MIN
+	# on both underflow AND positive overflow, and absi(INT64_MIN) is itself negative — so a
+	# bound written with absi() lets them through and Vector2i truncates them to 0.
+	var huge_values := [
+		"4294967296,0",
+		"0,4294967296",
+		"2147483648,0",
+		"99999999999999999999,0",
+		"-99999999999999999999,0",
+		"0,-99999999999999999999",
+		"-9223372036854775808,0",
+		"9223372036854775808,0",
+		"10000,0",
+		"0,-10000",
+	]
+	for huge in huge_values:
 		_expect(
 			(
 				C

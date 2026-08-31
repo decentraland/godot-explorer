@@ -1310,8 +1310,13 @@ func _deeplink_has_explorer_destination() -> bool:
 	var path: String = String(Global.deep_link_obj.path).rstrip("/")
 	if path == "/events" or path == "/places":
 		return true
-	if path == "/jump" or path == "/open" or path.is_empty():
+	if path == "/jump" or path == "/open":
 		return Global.deep_link_obj.params.is_empty()
+	# Deliberately not matching an empty path: the parser returns its default — empty path,
+	# no params — for every link it rejects (bad URL, unknown host, unknown scheme), so
+	# accepting it here would boot the explorer on garbage. The router sends an empty path to
+	# _route_teleport(), which no-ops without a destination, and a destination is already
+	# answered above.
 	return false
 
 

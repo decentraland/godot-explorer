@@ -98,7 +98,12 @@ static func target_position_and_realm(campaign: Dictionary) -> Array:
 		# position that cannot have been stored is not routed either.
 		var x := int(x_raw)
 		var y := int(y_raw)
-		if absi(x) > POSITION_ABS_MAX or absi(y) > POSITION_ABS_MAX:
+		# Compared without absi(): absi(INT64_MIN) is INT64_MIN, so it would pass the bound and
+		# then truncate to 0 in Vector2i. to_int() saturates to INT64_MIN on both negative
+		# underflow and positive overflow, so that is a reachable input, not a curiosity.
+		if x < -POSITION_ABS_MAX or x > POSITION_ABS_MAX:
+			return []
+		if y < -POSITION_ABS_MAX or y > POSITION_ABS_MAX:
 			return []
 		return [Vector2i(x, y), String(DclUrls.main_realm())]
 
