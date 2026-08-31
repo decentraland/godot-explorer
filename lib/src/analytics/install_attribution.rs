@@ -47,6 +47,10 @@ const GA4F_WAIT: Duration = Duration::from_secs(10);
 /// known, so a source that never answers cannot swallow the install entirely.
 const OVERALL_WAIT: Duration = Duration::from_secs(25);
 
+// Which mechanism reported, in precedence order: GA4F when it answered at all, otherwise the
+// referrer when it answered, otherwise neither did. Deliberately independent of whether a
+// campaign token came back — `campaign_token` answers that, and tying the two together would
+// label two identical ad installs differently based on whether Play happened to reply.
 const SOURCE_GA4F: &str = "ga4f_deferred_deeplink";
 const SOURCE_REFERRER: &str = "play_install_referrer";
 const SOURCE_NONE: &str = "none";
@@ -136,7 +140,16 @@ impl InstallAttribution {
 
         if let Some(dict) = referrer_ok {
             let token = extract_token(&get_string(dict, "referrer"));
-            return Some(self.build(ga4f_ok, Some(dict), token, SOURCE_REFERRER));
+            // GA4F still names the source when it answered, even though the referrer supplied
+            // the token: the label says which mechanism reported, and GA4F is the more
+            // specific one. Deciding it on token presence instead would put two identical ad
+            // installs in different buckets depending on whether Play happened to answer.
+            let source = if ga4f_ok.is_some() {
+                SOURCE_GA4F
+            } else {
+                SOURCE_REFERRER
+            };
+            return Some(self.build(ga4f_ok, Some(dict), token, source));
         }
 
         // The referrer never answered, or answered not_available/error (no Play Store, or the
@@ -179,16 +192,15 @@ impl InstallAttribution {
         let utm = parse_utm_params(&referrer_string);
         let deeplink = ga4f.map(|d| get_string(d, "deeplink"));
 
-        // Both sources report a click time in seconds, but they describe different clicks.
-        // It follows whichever source decided this event, so it always matches the campaign
-        // token beside it; the install time only ever exists on the referrer.
-        let click_timestamp = if source == SOURCE_REFERRER {
-            referrer.map(|d| get_i64(d, "click_timestamp")).unwrap_or(0)
+        // Both sources report a click time in seconds, but they describe different clicks, so
+        // this is read from the one `attribution_source` names and never falls back to the
+        // other. A 0 here means that source reported no click time — which GA4F does whenever
+        // its timestamp pref is missing — and is more honest than silently substituting a
+        // different click. The install time only ever exists on the referrer.
+        let click_timestamp = if source == SOURCE_GA4F {
+            ga4f.map(|d| get_i64(d, "click_timestamp")).unwrap_or(0)
         } else {
-            ga4f.map(|d| get_i64(d, "click_timestamp"))
-                .filter(|t| *t > 0)
-                .or_else(|| referrer.map(|d| get_i64(d, "click_timestamp")))
-                .unwrap_or(0)
+            referrer.map(|d| get_i64(d, "click_timestamp")).unwrap_or(0)
         };
 
         tracing::debug!(

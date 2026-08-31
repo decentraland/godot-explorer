@@ -98,9 +98,10 @@ static func target_position_and_realm(campaign: Dictionary) -> Array:
 		# position that cannot have been stored is not routed either.
 		var x := int(x_raw)
 		var y := int(y_raw)
-		# Compared without absi(): absi(INT64_MIN) is INT64_MIN, so it would pass the bound and
-		# then truncate to 0 in Vector2i. to_int() saturates to INT64_MIN on both negative
-		# underflow and positive overflow, so that is a reachable input, not a curiosity.
+		# Compared without absi(): absi(INT64_MIN) is INT64_MIN, not a positive number, so it
+		# would pass the bound and then truncate to 0 in Vector2i. to_int() clamps out-of-range
+		# input to INT64_MIN/INT64_MAX and wraps "9223372036854775808" to INT64_MIN, so such a
+		# value is reachable rather than a curiosity.
 		if x < -POSITION_ABS_MAX or x > POSITION_ABS_MAX:
 			return []
 		if y < -POSITION_ABS_MAX or y > POSITION_ABS_MAX:
