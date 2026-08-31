@@ -1,15 +1,9 @@
 class_name CampaignResolution
 extends RefCounted
 
-## Pure resolution logic for ad/referrer campaigns (issues #2670 / #2669).
-##
-## A campaign is always a destination: an attributed install boots straight into its target
-## and skips the FTUE. An install with no campaign — or one that does not resolve — gets
-## today's FTUE, unchanged.
-##
-## Deliberately free of Global and of any node state so it can be exercised headless — see
-## src/test/campaigns/test_campaigns_resolution.gd. The fetching, caching and token
-## lifecycle live in campaigns.gd, which is the node that owns the IO.
+## Pure resolution logic for ad/referrer campaigns (issues #2670 / #2669). Free of Global and
+## of node state so it can be exercised headless — see src/test/campaigns/. The fetching,
+## caching and token lifecycle live in campaigns.gd, which owns the IO.
 
 const TARGET_GENESIS := "genesis"
 const TARGET_WORLD := "world"
@@ -28,9 +22,9 @@ const FALLBACK_ALREADY_CONSUMED := "already_consumed"
 const FALLBACK_RESOLVER_UNAVAILABLE := "resolver_unavailable"
 ## The campaign resolved but its target cannot be turned into a destination.
 const FALLBACK_UNUSABLE_TARGET := "unusable_target"
-## The target was routable but the boot did not happen — the pre-boot gate sent the user to
-## Discover (a private world), or another redirect was already in flight. Distinct from
-## `unusable_target` so the metric does not blame the campaign data for a routing decision.
+## Routable target, but the boot did not happen: the pre-boot gate sent the user to Discover
+## (private world), or a redirect was already in flight. Distinct from `unusable_target` so
+## the metric does not blame campaign data for a routing decision.
 const FALLBACK_BOOT_DECLINED := "boot_declined"
 
 
@@ -49,14 +43,9 @@ static func parse_response(json) -> Dictionary:
 	return campaigns
 
 
-## Mirrors the token rule the mobile-bff enforces on save (kebab-case, max 64), and the one
-## the Rust attribution path applies. The deeplink capture path needs it too: a token stored
-## from a link is never replaced, so an unvalidated junk `?c=` would permanently block the
-## real install-attribution token on that install.
+## The BFF's ^[a-z0-9]+(-[a-z0-9]+)*$, written out rather than as a regex so this and its two
+## copies (the BFF, install_attribution.rs) read the same way.
 static func is_valid_token(token: String) -> bool:
-	# Equivalent to the BFF's ^[a-z0-9]+(-[a-z0-9]+)*$ and to is_valid_token in
-	# lib/src/analytics/install_attribution.rs, written out rather than as a regex so the
-	# three copies of this rule read the same way.
 	if token.is_empty() or token.length() > TOKEN_MAX_LENGTH:
 		return false
 	if token.begins_with("-") or token.ends_with("-") or token.contains("--"):
@@ -91,21 +80,17 @@ static func target_position_and_realm(campaign: Dictionary) -> Array:
 			return []
 		var x_raw := parts[0].strip_edges()
 		var y_raw := parts[1].strip_edges()
-		# int() answers 0 for anything it cannot parse, so an unparseable position would read
-		# as the perfectly valid parcel 0,0: the boot would "succeed", the token would be
-		# consumed, and every install of that campaign would land on the Genesis spawn.
+		# Both guards exist to keep a junk position from reading as the valid parcel 0,0 — the
+		# boot would "succeed" and burn the token on the Genesis spawn. int() answers 0 for
+		# what it cannot parse; is_valid_int() only checks characters, so a value too large for
+		# Vector2i's int32 truncates to 0 too.
 		if not x_raw.is_valid_int() or not y_raw.is_valid_int():
 			return []
-		# is_valid_int() only checks the characters, so a value too large for the int32 in
-		# Vector2i still truncates — "4294967296" lands on 0,0 exactly like the case above.
-		# The bound matches the 1-4 digits the BFF regex and the DB CHECK both enforce, so a
-		# position that cannot have been stored is not routed either.
 		var x := int(x_raw)
 		var y := int(y_raw)
-		# Compared without absi(): absi(INT64_MIN) is INT64_MIN, not a positive number, so it
-		# would pass the bound and then truncate to 0 in Vector2i. to_int() clamps out-of-range
-		# input to INT64_MIN/INT64_MAX and wraps "9223372036854775808" to INT64_MIN, so such a
-		# value is reachable rather than a curiosity.
+		# Bounded without absi(): absi(INT64_MIN) is INT64_MIN, which would pass the bound and
+		# then truncate to 0. to_int() wraps "9223372036854775808" to INT64_MIN, so it is
+		# reachable input, not a curiosity.
 		if x < -POSITION_ABS_MAX or x > POSITION_ABS_MAX:
 			return []
 		if y < -POSITION_ABS_MAX or y > POSITION_ABS_MAX:

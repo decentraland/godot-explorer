@@ -358,17 +358,14 @@ func _apply_optimized_content_base_url(obj: DclParseDeepLink) -> void:
 		cli.optimized_content_base_url = opt_url
 
 
-## QA affordance: `decentraland://open?rotate-guest=true` mints a brand-new guest on the next
-## launch, which is the only way back to the FTUE on a device whose native anchor survives
-## reinstall (Android SSAID, iOS Keychain). Persisted, so it survives the relaunch it causes.
+## QA affordance: `decentraland://open?rotate-guest=true` mints a brand-new guest, the only
+## way back to the FTUE on a device whose native anchor survives reinstall (Android SSAID,
+## iOS Keychain). Also wipes the on-disk guest identity, so the FTUE is reachable from this
+## launch rather than the next one.
 ##
-## Also wipes the on-disk guest identity and the campaign state, so the FTUE is reachable
-## from this launch rather than only the one after it, and so the QA scenarios can be run
-## repeatedly in any order.
-##
-## Gated to non-production, like the constant it overrides — which means builds from `main`
-## (TestFlight included) honour it, and only a `release*` build ignores it. Recoverable:
-## uninstalling clears the flag with user://, and the native anchor is never touched.
+## Non-production means anything not cut from `release*`, so builds from `main` — TestFlight
+## included — honour it. Recoverable: the flag lives in user:// and the native anchor is
+## never touched, so reinstalling restores the original wallet.
 func _capture_debug_guest_rotate(obj: DclParseDeepLink) -> void:
 	if is_production():
 		return
@@ -377,9 +374,8 @@ func _capture_debug_guest_rotate(obj: DclParseDeepLink) -> void:
 
 	var config := get_config()
 	config.debug_rotate_guest_anchor = true
-	# Campaign state is reset too, or the QA steps would only work once: a stored token is
-	# never replaced (see _capture_campaign_token) and a consumed one resolves to the default
-	# FTUE, so a second run of the campaign scenario would pass for the wrong reason.
+	# Campaign state too, or the scenario would only work once: a stored token is never
+	# replaced and a consumed one falls back to the default FTUE.
 	config.campaign_token = ""
 	config.campaign_token_captured_at = 0
 	config.campaign_consumed = false
@@ -391,27 +387,13 @@ func _capture_debug_guest_rotate(obj: DclParseDeepLink) -> void:
 ## Capture the ad/referrer campaign token carried by a deeplink as `?c=<token>` (#2670).
 ## Shared by the desktop fake-deeplink path (_ready) and the mobile/iOS live path (router).
 ##
-## The token is opaque and carries no destination, so it is not a location, realm or preview
-## and does not trip _should_go_to_explorer_from_deeplink. Staying out of the explorer from
-## the lobby also takes the guard in Lobby._on_deep_link_received, which this feature added.
-## That is the point — a link carrying the destination would boot the explorer and skip the
-## very FTUE this personalizes.
-##
-## First capture wins and is never overwritten: an install has exactly one campaign, and a
-## later in-session deeplink must not repaint it. That is why the token is validated here
-## rather than only where it is used — an unvalidated junk token would take the slot the
-## real install-attribution token needs.
-##
-## `occurred_at` overrides the recorded attribution time. No caller passes it: the
-## attribution path stamps its own capture time in Campaigns._async_watch_attribution, so
-## this remains a seam rather than a used parameter.
-func _capture_campaign_token(obj: DclParseDeepLink, occurred_at: int = 0) -> void:
+## First capture wins: an install has exactly one campaign, and a later in-session deeplink
+## must not repaint it. Hence the validation here rather than only at the point of use — a
+## junk token would take the slot the real install-attribution token needs.
+func _capture_campaign_token(obj: DclParseDeepLink) -> void:
 	var token: String = String(obj.params.get("c", "")).strip_edges()
 	if token.is_empty():
 		return
-	# A stored token is never replaced, so an unvalidated one would permanently block the real
-	# install-attribution token on this install — and it would also ride along on every FTUE
-	# metrics payload. Same rule the BFF and the attribution path apply.
 	if not CampaignResolution.is_valid_token(token):
 		push_warning("[CAMPAIGN] ignoring malformed token from deeplink: " + token)
 		return
@@ -422,9 +404,7 @@ func _capture_campaign_token(obj: DclParseDeepLink, occurred_at: int = 0) -> voi
 		return
 
 	config.campaign_token = token
-	config.campaign_token_captured_at = (
-		occurred_at if occurred_at > 0 else int(Time.get_unix_time_from_system())
-	)
+	config.campaign_token_captured_at = int(Time.get_unix_time_from_system())
 	config.save_to_settings_file()
 	print("[CAMPAIGN] captured token=", token, " at=", config.campaign_token_captured_at)
 

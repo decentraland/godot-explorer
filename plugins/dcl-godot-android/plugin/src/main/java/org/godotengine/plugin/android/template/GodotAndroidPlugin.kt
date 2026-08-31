@@ -2386,13 +2386,9 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
     // --- GA4F deferred deep link (issue #2670) ---
     //
     // Google Analytics for Firebase writes the ad group's deep link into a private
-    // SharedPreferences file on first launch after an ad-driven install. This is the only
-    // path that carries a campaign token for Google Ads traffic: those installs arrive with
-    // a bare `gclid` in the Play referrer and nothing of ours.
-    //
-    // The write is asynchronous and races app startup, so both a direct read and a change
-    // listener are needed — the direct read covers "GA4F already wrote it", the listener
-    // covers "it lands a moment later".
+    // SharedPreferences file on first launch after an ad-driven install. The write is
+    // asynchronous and races app startup, hence both a direct read ("already written") and a
+    // change listener ("lands a moment later").
 
     private val deferredDeepLinkPrefsName = "google.analytics.deferred.deeplink.prefs"
 
@@ -2414,13 +2410,9 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
         val result = Dictionary()
         result["status"] = "ok"
         result["deeplink"] = link
-        // GA4F stores this as Double.doubleToRawLongBits(seconds), NOT as a number — verified
-        // in play-services-measurement-impl 22.3.0, zzqd.zzb(String, double). Reading it as a
-        // plain Long yields ~4.79e15 for a real click time, which is not rescalable garbage.
-        // Decode the bits back to a double first. The unit is seconds-with-fraction (the same
-        // scale the referrer API reports), so it is truncated to whole seconds to match.
-        // That method writes only "deeplink" and "timestamp" and then commits, so there is no
-        // gclid to read here despite what the GA4F docs imply.
+        // Stored as Double.doubleToRawLongBits(seconds), NOT as a number (play-services-
+        // measurement-impl 22.3.0, zzqd.zzb): read as a plain Long a real click time comes
+        // back as ~4.79e15. Decode the bits, then truncate to whole seconds like the referrer.
         val rawBits = prefs.getLong("timestamp", 0L)
         val clickSeconds = if (rawBits == 0L) 0L else Double.fromBits(rawBits).toLong()
         result["click_timestamp"] = clickSeconds
@@ -2431,10 +2423,9 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
      * Deferred deep link written by Google Analytics for Firebase, if any.
      *
      * Mirrors [getInstallReferrer]: the first call starts watching and returns
-     * {status: "pending"}; later calls return the cached result. Statuses are "ok",
-     * "pending" and "error" — there is deliberately no "not_available": GA4F cannot report
-     * the absence of a link, so an organic install stays "pending" forever. The engine side
-     * relies on that and bounds its own wait (see GA4F_WAIT in install_attribution.rs).
+     * {status: "pending"}; later calls return the cached result. No "not_available" status —
+     * GA4F cannot report the absence of a link, so an organic install stays "pending" forever
+     * and the engine bounds its own wait (GA4F_WAIT in install_attribution.rs).
      */
     @UsedByGodot
     fun getDeferredDeepLink(): Dictionary {

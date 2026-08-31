@@ -75,12 +75,9 @@ func _test_target_position_and_realm() -> void:
 			),
 			"unparseable genesis position rejected: '%s'" % bad
 		)
-	# is_valid_int() only checks characters, so a value too large for the int32 inside Vector2i
-	# truncates to something else entirely — "4294967296" lands on 0,0, the exact failure the
-	# character check was added to stop.
-	# The negative twins matter as much as the positive ones: to_int() clamps out-of-range
-	# input to INT64_MIN/INT64_MAX, and absi(INT64_MIN) is itself negative — so a bound written
-	# with absi() lets those through and Vector2i truncates them to 0.
+	# Values that pass the character check but truncate inside Vector2i's int32 — "4294967296"
+	# lands on 0,0. The negative twins matter as much: absi(INT64_MIN) is itself negative, so a
+	# bound written with absi() would let them through.
 	var huge_values := [
 		"4294967296,0",
 		"0,4294967296",

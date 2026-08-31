@@ -555,14 +555,11 @@ pub struct SegmentEventInstallAttribution {
     pub install_timestamp: i64,
     // Whether the app was launched as a Google Play Instant app
     pub google_play_instant: bool,
-    // Which mechanism reported (issue #2670), in precedence order: GA4F when it answered,
-    // otherwise the Play referrer when it answered, otherwise neither did.
-    //   "ga4f_deferred_deeplink" | "play_install_referrer" | "none"
-    // It does NOT say whether a campaign was found — `campaign_token` does. A count of
-    // GA4F-attributed *campaigns* is therefore this field plus a non-null campaign_token.
+    // Which mechanism reported (#2670): "ga4f_deferred_deeplink" | "play_install_referrer" |
+    // "none". Does NOT say whether a campaign was found — `campaign_token` does, so counting
+    // GA4F-attributed campaigns means this field plus a non-null token.
     pub attribution_source: String,
-    // Campaign token, from whichever source carried one. GA4F is preferred when its link has
-    // a token; otherwise the referrer's is used, including when GA4F answered without one.
+    // Campaign token, from whichever source carried one (GA4F first).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub campaign_token: Option<String>,
     // Raw GA4F deep link, when that is the source. Kept for debugging a token that did

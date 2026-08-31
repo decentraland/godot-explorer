@@ -232,11 +232,9 @@ impl Metrics {
 
     #[func]
     fn timer_timeout(&mut self) {
-        // Install attribution is polled BEFORE the consent gate, on purpose. Polling only reads
-        // local state and queues an event; nothing leaves the device until
-        // process_and_send_events runs below, which stays gated. Behind the gate the sources
-        // would go unread until the user taps through the lobby, and their own deadlines would
-        // expire first — so the GA4F path, which the whole feature depends on, would never fire.
+        // Polled BEFORE the consent gate on purpose: this only reads local state and queues,
+        // nothing leaves the device until the gated send below. Behind the gate the sources
+        // would go unread until the user taps through and their own deadlines had expired.
         self.poll_install_attribution();
 
         // Consent gate: never ship anything until the user has accepted the EULA. Events keep
@@ -301,22 +299,17 @@ impl Metrics {
         }
     }
 
-    /// Campaign token the install attribution resolved to, or "" when there was none.
-    ///
-    /// Only meaningful once the `Install Attribution` event has fired; GDScript polls this
-    /// alongside its own resolution so an ad-driven install can boot into the target rather
-    /// than the default FTUE.
+    /// Campaign token the install attribution resolved to, or "" when there was none. Only
+    /// meaningful once the `Install Attribution` event has fired.
     #[func]
     pub fn get_resolved_campaign_token(&self) -> GString {
         GString::from(self.resolved_campaign_token.as_str())
     }
 
-    /// Whether install attribution is still resolving.
-    ///
-    /// An empty token is ambiguous on its own — it reads the same whether the sources have
-    /// not answered yet or answered with no campaign, and the second case is the common one.
-    /// Callers must stop waiting on this rather than on the token, or every campaign-less
-    /// launch stalls for the full timeout.
+    /// Whether install attribution is still resolving. Callers must stop waiting on this and
+    /// not on the token: an empty token reads the same whether the sources have not answered
+    /// or answered with no campaign, so every campaign-less launch would stall for the
+    /// full timeout.
     #[func]
     pub fn is_install_attribution_pending(&self) -> bool {
         self.install_attribution.is_some()

@@ -3,34 +3,26 @@ extends Node
 
 ## Ad / referrer campaign resolver (issues #2670, #2669).
 ##
-## An ad or referrer link carries an opaque token as `?c=<token>`. The token is NOT the
-## destination: a deeplink carrying position/realm redirects straight to the explorer
-## (see Lobby._should_go_to_explorer_from_deeplink), skipping the avatar creation flow the
-## FTUE hangs off. The token is captured at boot and resolved here, against the map served
-## by the mobile-bff, into either a personalized FTUE or a direct boot into the target.
+## An ad link carries an opaque token as `?c=<token>`, captured at boot and resolved here
+## against the map served by the mobile-bff into the target the install boots into. The token
+## is NOT the destination: a deeplink carrying position/realm would redirect straight to the
+## explorer, skipping the avatar creation flow the FTUE hangs off.
 ##
-## Fetched lazily and raced against a timeout, fail-open. There is deliberately NO disk cache:
-## a campaign is retired by deleting it, so a cached map is one that can still resolve a token
-## the server no longer knows. The FTUE only ever runs on a first launch, where a cache is
-## empty by definition, so it would buy almost nothing for that risk. Callers use
-## async_resolve_pending(), which gives the in-flight fetch a bounded chance to land.
-##
-## Every failure path (no token, unknown token, expired token, already consumed, resolver
-## unreachable) resolves to an empty campaign, which callers render as today's FTUE.
+## Fetched lazily, raced against a timeout, fail-open — every failure path resolves to an
+## empty campaign, which callers render as today's FTUE. No disk cache on purpose: a campaign
+## is retired by deleting it, so a cached map can still resolve a token the server no longer
+## knows, and the FTUE only runs on a first launch where a cache is empty anyway.
 
 signal campaigns_loaded
 
 const TIMEOUT_SECONDS := 5.0
 
-## Bounded wait callers grant the fetch before falling back. Must outlast TIMEOUT_SECONDS:
-## the fetch is lazy, so it starts when a token needs resolving rather than at boot, and a
-## shorter wait would give up on a request that is still within its own timeout — losing the
-## campaign on exactly the slow cold starts where the map arrives a second later.
+## Must outlast TIMEOUT_SECONDS: a shorter wait would give up on a fetch still within its own
+## timeout, losing the campaign on the slow cold starts where the map arrives a second later.
 const RESOLVE_MAX_WAIT_SECONDS := TIMEOUT_SECONDS + 1.0
 
-## A captured token stops being honored after this. The Play install referrer survives for
-## 90 days and only changes on reinstall, so without a freshness bound a reinstall months
-## later would replay a long-dead campaign.
+## Freshness bound. The Play install referrer survives 90 days and only changes on reinstall,
+## so without one a reinstall months later would replay a long-dead campaign.
 const TOKEN_MAX_AGE_SECONDS := 7 * 86400
 
 ## Bounded wait for install attribution to settle (Android). The Rust resolver bounds itself
@@ -57,9 +49,8 @@ func is_loaded() -> bool:
 	return _loaded
 
 
-## Resolves a token against the current map. Returns {} when the token is unknown, which
-## includes a campaign that was deleted — the shipped BFF has no enabled flag and no active
-## window, so deletion is how a campaign is retired.
+## Resolves a token against the current map. {} when unknown, which includes a deleted
+## campaign — the BFF has no enabled flag, so deletion is how one is retired.
 func resolve(token: String) -> Dictionary:
 	if token.is_empty():
 		return {}
@@ -76,10 +67,8 @@ func resolve(token: String) -> Dictionary:
 func async_resolve_pending() -> Dictionary:
 	var config := Global.get_config()
 
-	# An ad-driven install has no deeplink to carry the token: the app did not exist when the
-	# ad was clicked. On Android the token arrives instead through install attribution, which
-	# _async_watch_attribution persists as soon as it resolves. It can still be in flight by
-	# the time the FTUE is reached, so give it a bounded chance to land.
+	# An ad-driven install has no deeplink — the app did not exist when the ad was clicked — so
+	# the token arrives through install attribution, which can still be in flight here.
 	if config.campaign_token.is_empty():
 		await _async_wait_for_attribution()
 
@@ -95,8 +84,7 @@ func async_resolve_pending() -> Dictionary:
 	if config.campaign_token_captured_at <= 0 or age > TOKEN_MAX_AGE_SECONDS:
 		return _fallback(token, CampaignResolution.FALLBACK_EXPIRED_TOKEN)
 
-	# Fetched lazily, only once a token actually needs resolving. Fetching on every boot would
-	# put every install on the campaigns endpoint.
+	# Lazy: fetching on every boot would put every install on the campaigns endpoint.
 	if not _loaded:
 		_async_load.call_deferred()
 		await _async_wait_for_load()
@@ -113,8 +101,7 @@ func async_resolve_pending() -> Dictionary:
 	}
 
 
-## One campaign per install: once a launch has acted on the token (personalized FTUE shown
-## or target booted), it never runs again.
+## One campaign per install: once a launch has booted into the target, it never runs again.
 func mark_consumed() -> void:
 	var config := Global.get_config()
 	if config.campaign_consumed:
@@ -127,15 +114,11 @@ func _fallback(token: String, reason: String) -> Dictionary:
 	return {"token": token, "campaign": {}, "fallback_reason": reason}
 
 
-## Persists the campaign token install attribution resolves to, as soon as it resolves.
+## Persists the token install attribution resolves to, as soon as it resolves.
 ##
-## Runs from _ready rather than from the FTUE on purpose. The resolved token lives only in
-## Rust memory, and attribution starts once per install — so if the process dies before the
-## FTUE is reached (backgrounded during avatar creation, or killed), a token only read at the
-## FTUE would be lost for good, on the exact flow this feature exists for.
-##
-## Residual gap: a process killed before attribution settles still loses it, since there is
-## nothing to persist yet and the once-per-install flag has already been written.
+## Runs from _ready, not from the FTUE: the resolved token lives only in Rust memory and
+## attribution starts once per install, so a process killed before the FTUE is reached would
+## lose it for good. Residual gap: a kill before attribution settles still loses it.
 func _async_watch_attribution() -> void:
 	if OS.get_name() != "Android" or Global.metrics == null:
 		_attribution_settled = true

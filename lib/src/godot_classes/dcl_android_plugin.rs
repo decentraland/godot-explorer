@@ -301,11 +301,8 @@ impl DclAndroidPlugin {
     }
 
     /// Deferred deep link written by Google Analytics for Firebase, if any (issue #2670).
-    ///
     /// Same shape as `get_install_referrer_internal`: the first call starts watching and
-    /// returns `{status: "pending"}`, later calls return the cached result. This is the only
-    /// attribution path that carries a campaign token for Google Ads traffic — those installs
-    /// arrive with a bare `gclid` in the Play referrer and nothing of ours.
+    /// returns `{status: "pending"}`, later calls return the cached result.
     pub(crate) fn get_deferred_deep_link_internal() -> Option<VarDictionary> {
         let mut singleton = Self::try_get_singleton()?;
         let result = Self::timed_jni_call(&mut singleton, "getDeferredDeepLink", &[]);

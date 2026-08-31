@@ -188,32 +188,21 @@ var version_gate_snooze_until: int = 0
 
 var install_referrer_sent: bool = false
 
-# Ad/referrer campaign token (issue #2670), from either source: the `?c=` deeplink param, or
-# Android install attribution (GA4F deferred deep link / Play install referrer) once it
-# resolves. Resolved against the mobile-bff campaign map by Campaigns; empty when the install
-# carried no campaign.
+# Ad/referrer campaign token (#2670), from the `?c=` deeplink param or Android install
+# attribution. Resolved against the mobile-bff campaign map by Campaigns.
 var campaign_token: String = ""
 
-# Unix timestamp the token was attributed. Both paths record capture time, not click time.
-# The freshness bound below it is therefore weaker than it looks for the referrer path: the
-# referrer survives 90 days and a reinstall re-reads it and re-stamps it as fresh. Replaying
-# a retired campaign is prevented server-side instead — the map only serves campaigns that
-# still exist, so a dead token resolves to nothing and falls back to the default FTUE.
+# Capture time, not click time: the Play referrer survives 90 days and a reinstall re-stamps
+# it as fresh, so the freshness bound is weaker than it looks. A retired campaign is stopped
+# server-side instead — its row is gone, so the token resolves to nothing.
 var campaign_token_captured_at: int = 0
 
 # One campaign per install: set once a launch has acted on the token.
 var campaign_consumed: bool = false
 
-# QA affordance: rotate the guest anchor so the next guest wallet is brand new, which is the
-# only way to reach the FTUE again on a device whose native anchor survives reinstall
-# (Android SSAID, iOS Keychain). Set by a `rotate-guest=true` deeplink and persisted, so the
-# tester flips it once instead of editing a constant and rebuilding.
-# Gated to non-production in Global.get_device_anchor_id(). Note that "production" means a
-# build cut from a `release*` branch (is_production() reads a compile-time version string set
-# by .github/actions/set-prod-flag): builds from `main`, including the TestFlight ones, DO
-# honour this. That is deliberate — QA needs it on the artifact they are given — and it is
-# recoverable: the flag lives in user://, so uninstalling clears it, and the native device
-# anchor is never touched, so the original guest wallet comes back on reinstall.
+# QA: mint a brand-new guest wallet on next launch, the only way back to the FTUE on a device
+# whose native anchor survives reinstall. Set by `rotate-guest=true`; see
+# Global._capture_debug_guest_rotate.
 var debug_rotate_guest_anchor: bool = false
 
 # One-shot flag for the Firebase `first_move_in_world` event (set once the user's first real

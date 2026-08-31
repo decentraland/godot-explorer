@@ -8,56 +8,41 @@ use crate::godot_classes::dcl_android_plugin::DclAndroidPlugin;
 use super::data_definition::{SegmentEvent, SegmentEventInstallAttribution};
 
 /// Install attribution from the two Android mechanisms that can carry a campaign, resolved
-/// into one event (issue #2670).
+/// into one event (issue #2670). Both are needed because they cover disjoint traffic: GA4F
+/// deferred deep links are the only path that reaches Google Ads installs (which arrive with
+/// a bare `gclid` and nothing of ours), the Play referrer preserves the query string of an
+/// owned or organic link.
 ///
-/// They cover disjoint traffic, which is why both are needed:
-///
-/// - **GA4F deferred deep link** — the only path that carries a destination for Google Ads
-///   installs. Those arrive with a bare `gclid` in the Play referrer and nothing of ours, so
-///   tagging the landing page does nothing for them. They are the large majority of
-///   attributed installs.
-/// - **Play Install Referrer** — preserves the query string of an owned/organic link, so a
-///   token added there survives the install.
-///
-/// GA4F decides the destination when its link carries a token: an ad group's link is more
-/// specific than whatever referrer Google happened to attach. It does not win on merely
-/// having answered — most Google Ads links carry no token of ours, and letting those beat a
-/// referrer that does have one would lose the campaign for good. Whichever source loses still
-/// contributes its own fields to the event.
-///
-/// Persistence (fire-once-per-install) is handled by GDScript via a config flag.
+/// GA4F wins only when its link carries a token — most do not, and letting those beat a
+/// referrer that has one would lose the campaign for good. The loser still contributes its
+/// own fields. Fire-once-per-install is persisted by GDScript via a config flag.
 pub struct InstallAttribution {
     done: bool,
     /// GA4F cannot say "there will never be a link" — an organic install simply never gets
     /// one, so its read stays pending forever. Past this deadline the referrer answers alone.
     ga4f_deadline: Instant,
-    /// The referrer can hang too: its status only changes from a Play service callback, and a
-    /// binding that never calls back leaves it pending forever. Without a second bound no
-    /// event is ever emitted, and attribution runs once per install so it is never retried.
+    /// The referrer can hang too (its status only changes from a Play callback), and
+    /// attribution runs once per install, so without a second bound the event is never sent.
     overall_deadline: Instant,
     started: Instant,
 }
 
-/// How long to let GA4F answer before falling back to the referrer. The write happens on
-/// first launch, within a second or two of the Firebase SDK initializing; this leaves room
-/// for a cold start on a slow device without stalling the event indefinitely.
+/// How long to let GA4F answer before falling back to the referrer. It writes within a second
+/// or two of Firebase init; this leaves room for a cold start on a slow device.
 const GA4F_WAIT: Duration = Duration::from_secs(10);
 
 /// Hard bound on the whole resolution. Past this the event is emitted with whatever is
 /// known, so a source that never answers cannot swallow the install entirely.
 const OVERALL_WAIT: Duration = Duration::from_secs(25);
 
-// Which mechanism reported, in precedence order: GA4F when it answered at all, otherwise the
-// referrer when it answered, otherwise neither did. Deliberately independent of whether a
-// campaign token came back — `campaign_token` answers that, and tying the two together would
-// label two identical ad installs differently based on whether Play happened to reply.
+// Which mechanism reported. Independent of whether a token came back — `campaign_token`
+// answers that, and tying them together would label two identical ad installs differently.
 const SOURCE_GA4F: &str = "ga4f_deferred_deeplink";
 const SOURCE_REFERRER: &str = "play_install_referrer";
 const SOURCE_NONE: &str = "none";
 
-/// The query param carrying the campaign token, in both the deferred deep link and the
-/// referrer. Deliberately not `utm_content`: that already carries a platform label on our
-/// owned links (`utm_content=android`), and overloading it would make every existing
+/// The query param carrying the campaign token, in both sources. Not `utm_content`: that
+/// already carries a platform label on our owned links, so overloading it would make every
 /// organic install look like a campaign whose token does not resolve.
 const TOKEN_PARAM: &str = "c";
 
@@ -75,11 +60,9 @@ impl InstallAttribution {
         }
     }
 
-    /// Whether resolution has finished, event or not.
-    ///
-    /// Callers must drop the tracker on this rather than on `poll()` returning an event: two
-    /// settle paths legitimately have nothing to report, and treating those as "still
-    /// running" strands every consumer waiting on it.
+    /// Whether resolution has finished, event or not. Callers must drop the tracker on this
+    /// rather than on `poll()` returning an event: two settle paths have nothing to report,
+    /// and treating those as "still running" strands every consumer waiting on it.
     pub fn is_done(&self) -> bool {
         self.done
     }
@@ -94,11 +77,9 @@ impl InstallAttribution {
         let ga4f = read_status(DclAndroidPlugin::get_deferred_deep_link_internal());
         let referrer = read_status(DclAndroidPlugin::get_install_referrer_internal());
 
-        // The referrer's own fields are only meaningful once it says "ok"; a pending or failed
-        // dict carries just a status, and reading through it would ship zeros as if they were
-        // data. The GA4F dict is kept whenever it answered, token or not: the deep link and its
-        // click time are worth reporting even when the ad group's link carries no campaign,
-        // which is the shape most Google Ads installs have.
+        // The referrer's fields are only meaningful once it says "ok" — a pending dict carries
+        // just a status, and reading through it would ship zeros as data. GA4F is kept whenever
+        // it answered, token or not: the link and its click time are worth reporting.
         let ga4f_ok = ga4f
             .as_ref()
             .filter(|(_, status)| status == "ok")
@@ -173,12 +154,9 @@ impl InstallAttribution {
         Some(self.build(ga4f_ok, None, None, source))
     }
 
-    /// Builds the event from whichever sources answered.
-    ///
-    /// Both dicts are optional and independent: GA4F can answer with a link that carries no
-    /// campaign while the referrer supplies the token, and the referrer can be unusable while
-    /// GA4F still has something worth reporting. Fields are only read from a dict that is
-    /// present, so a source that never answered contributes nothing rather than zeros.
+    /// Builds the event from whichever sources answered. Both dicts are optional and
+    /// independent, and fields are only read from one that is present, so a source that never
+    /// answered contributes nothing rather than zeros.
     fn build(
         &self,
         ga4f: Option<&VarDictionary>,

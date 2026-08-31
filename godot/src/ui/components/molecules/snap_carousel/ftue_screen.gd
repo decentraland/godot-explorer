@@ -6,10 +6,8 @@ signal jump_in_world(realm_str: String)
 
 var _places: Array[Dictionary] = []
 
-# How the campaign token resolved for this launch (issue #2670). The screen itself is
-# unchanged either way — a resolved campaign never reaches the FTUE, it boots straight into
-# its target — so this only rides along on the metrics, naming which failure sent a launch
-# here instead.
+# How the campaign token resolved (#2670). Metrics only: a resolved campaign never reaches
+# this screen, so this just names which failure sent the launch here.
 var _campaign_resolution: Dictionary = {}
 
 @onready var carousel: Control = %SnapCarousel
