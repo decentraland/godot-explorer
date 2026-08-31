@@ -56,6 +56,14 @@ func process_deep_link(url: String) -> void:
 
 	Global._apply_optimized_content_base_url(Global.deep_link_obj)
 
+	# QA affordance, non-production only: mint a brand-new guest so the FTUE is reachable
+	# again on a device whose native anchor survives reinstall.
+	Global._capture_debug_guest_rotate(Global.deep_link_obj)
+
+	# Before any routing decision: the token has to survive whichever branch below consumes
+	# the deeplink (#2670).
+	Global._capture_campaign_token(Global.deep_link_obj)
+
 	# `skip-gltf` toggle has to be set BEFORE any scene's GLTF_CONTAINER
 	# component dirty-set is processed by `update_gltf_container`. The
 	# bench runner's `_apply_deeplink_overrides` runs too late — by then
