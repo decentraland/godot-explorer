@@ -62,11 +62,6 @@ static void dcl_finish_image_pick(NSData *jpeg, NSString *error) {
         }
         dcl_pick_finished = true;
         dcl_active_picker_delegate = nil;
-        if (OS::get_singleton() != nullptr) {
-            print_line(vformat("[IMAGE_PICKER] finish: bytes=%d error=%s",
-                (int)(jpeg != nil ? jpeg.length : 0),
-                String::utf8(error != nil ? [error UTF8String] : "")));
-        }
         dcl_emit_image_picked(jpeg, error);
     });
 }
@@ -107,10 +102,6 @@ static UIImage *dcl_downscale_image(UIImage *image, int maxDimension) {
 - (void)picker:(PHPickerViewController *)picker
     didFinishPicking:(NSArray<PHPickerResult *> *)results {
     [picker dismissViewControllerAnimated:YES completion:nil];
-
-    if (OS::get_singleton() != nullptr) {
-        print_line(vformat("[IMAGE_PICKER] didFinishPicking results=%d", (int)results.count));
-    }
 
     // An empty result set is how PHPicker reports "user tapped Cancel".
     if (results.count == 0) {
@@ -157,9 +148,6 @@ static UIImage *dcl_downscale_image(UIImage *image, int maxDimension) {
 // and the calling UI stays stuck. The emit-once guard makes the overlap with
 // didFinishPicking: harmless.
 - (void)presentationControllerDidDismiss:(UIPresentationController *)presentationController {
-    if (OS::get_singleton() != nullptr) {
-        print_line("[IMAGE_PICKER] presentationControllerDidDismiss");
-    }
     dcl_finish_image_pick(nil, @"cancelled");
 }
 
@@ -198,9 +186,6 @@ void dcl_present_image_picker(int max_dimension, float jpeg_quality) {
         picker.presentationController.delegate = delegate;
 
         dcl_pick_finished = false;
-        if (OS::get_singleton() != nullptr) {
-            print_line("[IMAGE_PICKER] presenting picker");
-        }
         [rootVC presentViewController:picker animated:YES completion:nil];
     });
 }

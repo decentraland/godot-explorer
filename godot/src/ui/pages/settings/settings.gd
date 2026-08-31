@@ -92,10 +92,6 @@ var check_button_submit_message_closes_chat: CheckButton = %CheckButton_SubmitMe
 @onready var button_account: Button = %Button_Account
 @onready var button_storage: Button = %Button_Storage
 @onready var button_developer: Button = %Button_Developer
-# TEMPORARY — dev-only harness for the native gallery picker (issue #2652).
-# Remove once the real bug-report attachment UI exists.
-@onready var button_pick_image: Button = %Button_PickImage
-@onready var texture_rect_picked_image: TextureRect = %TextureRect_PickedImage
 
 @onready var tabs_scroll_container: ScrollContainer = %TabsScrollContainer
 @onready var dropdown_list_graphic_profiles: DropdownList = %DropdownList_GraphicProfiles
@@ -612,30 +608,6 @@ func _on_button_developer_pressed() -> void:
 	_async_scroll_to_tab_button(button_developer)
 
 
-# TEMPORARY dev-only harness for ImagePickerService (issue #2652). Opens the
-# native gallery picker and shows the chosen image next to the button.
-# Remove together with the ImagePickerTest row in settings.tscn once the real
-# bug-report attachment UI lands.
-func _on_button_pick_image_pressed() -> void:
-	_async_pick_image_test()
-
-
-func _async_pick_image_test() -> void:
-	if not ImagePickerService.is_supported():
-		button_pick_image.text = "N/A"
-		return
-	button_pick_image.disabled = true
-	button_pick_image.text = "..."
-	var image := await ImagePickerService.async_pick_image()
-	button_pick_image.disabled = false
-	if image == null:
-		button_pick_image.text = "Cancel/err"
-		texture_rect_picked_image.texture = null
-		return
-	button_pick_image.text = "%dx%d" % [image.get_width(), image.get_height()]
-	texture_rect_picked_image.texture = ImageTexture.create_from_image(image)
-
-
 func _on_button_graphics_pressed() -> void:
 	show_control(container_graphics)
 	_async_scroll_to_tab_button(button_graphics)
@@ -691,59 +663,36 @@ func _on_button_test_notification_pressed() -> void:
 		printerr("Failed to schedule test notification")
 
 
+## Opens the native bug report form (issue #2652). Replaces the old Google Form
+## deep link, which required an external browser and a Google sign-in to attach
+## images — the reason it was removed.
 func _on_button_report_bug_pressed() -> void:
-	var form_id = "1FAIpQLScWjnb3Ya7yV8xFn0R-yf_SMejzBGDiDTZbHaddOFEmJwAM6g"
-	var base_url = "https://docs.google.com/forms/d/e/" + form_id + "/viewform"
+	_async_open_bug_report()
 
-	var params = []
-	var platform = "desktop"
-	var device_brand = ""
-	var device_model = ""
-	var os_version = OS.get_name()
-	var app_version = DclGlobal.get_version()
-	var environment = ""
-	if DclAndroidPlugin.is_available():
-		var android_singleton = Engine.get_singleton("dcl-godot-android")
-		if android_singleton:
-			var device_info = android_singleton.getMobileDeviceInfo()
-			device_brand = device_info.get("device_brand", "")
-			device_model = device_info.get("device_model", "")
-			os_version = device_info.get("os_version", OS.get_name())
-		platform = "mobile"
-	elif DclIosPlugin.is_available():
-		var ios_singleton = Engine.get_singleton("DclGodotiOS")
-		if ios_singleton:
-			var device_info = ios_singleton.get_mobile_device_info()
-			device_brand = device_info.get("device_brand", "")
-			device_model = device_info.get("device_model", "")
-			os_version = device_info.get("os_version", OS.get_name())
-		platform = "mobile"
 
-	params.append("entry.908487542=" + os_version.uri_encode())
-	params.append("entry.1825988508=" + app_version.uri_encode())
-	params.append("entry.902053507=" + platform.uri_encode())
-	params.append("entry.983493489=" + Global.player_identity.get_address_str().uri_encode())
-	params.append("entry.519686692=" + RenderingServer.get_video_adapter_name().uri_encode())
-	params.append("entry.69678037=" + Global.session_id.uri_encode())
+func _async_open_bug_report() -> void:
+	# The screenshot was captured when this panel opened, so it shows the game
+	# rather than Settings — see BugReportCapture.
+	var modal := await Global.modal_manager.async_show_bug_report_modal(BugReportCapture.latest())
+	if not is_instance_valid(modal):
+		return
+	modal.submitted.connect(_on_bug_report_submitted)
+	modal.failed.connect(_on_bug_report_failed)
 
-	if "dev" in app_version:
-		environment = "develop"
-	else:
-		environment = "production"
 
-	params.append("entry.1045647501=" + environment.uri_encode())
+func _on_bug_report_submitted(_ticket_id: String) -> void:
+	NotificationsManager.show_system_toast(
+		"Report sent", "Thanks — our support team will take a look.", "system", "alert"
+	)
 
-	if device_brand != "":
-		params.append("entry.942533991=" + device_brand.uri_encode())
 
-	if device_model != "":
-		params.append("entry.264855991=" + device_model.uri_encode())
-
-	var url = base_url
-	if params.size() > 0:
-		url += "?" + "&".join(params)
-
-	Global.open_url(url)
+func _on_bug_report_failed(message: String) -> void:
+	# The message is a proxy/transport error, not something a player can act on,
+	# so it goes to the log while the toast stays generic.
+	push_warning("Bug report failed: %s" % message)
+	NotificationsManager.show_system_toast(
+		"Couldn't send report", "Something went wrong. Please try again.", "system", "alert"
+	)
 
 
 func _on_button_open_user_data_pressed() -> void:

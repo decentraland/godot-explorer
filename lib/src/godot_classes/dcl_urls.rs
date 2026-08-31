@@ -160,6 +160,14 @@ impl DclUrls {
         urls::account_deletion().to_godot()
     }
     #[func]
+    pub fn intercom_tickets() -> GString {
+        urls::intercom_tickets().to_godot()
+    }
+    #[func]
+    pub fn intercom_origin() -> GString {
+        urls::intercom_origin().to_godot()
+    }
+    #[func]
     pub fn app_versions() -> GString {
         urls::app_versions().to_godot()
     }

@@ -80,7 +80,6 @@ static func async_pick_image() -> Image:
 	# declared types can't make the call bind fail silently.
 	var received: Array = []
 	var on_picked := func(picked_bytes, picked_error) -> void:
-		print("[IMAGE_PICKER] gdscript received error='%s'" % str(picked_error))
 		received.assign([picked_bytes, picked_error])
 	plugin.connect(SIGNAL_NAME, on_picked, CONNECT_ONE_SHOT)
 

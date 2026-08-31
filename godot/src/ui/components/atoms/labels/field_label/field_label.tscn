@@ -1,0 +1,12 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://src/ui/components/atoms/labels/field_label/field_label.gd" id="1_fieldlabel"]
+[ext_resource type="FontFile" uid="uid://d2vlaexk003yw" path="res://assets/themes/fonts/inter/Inter-Medium.ttf" id="2_medium"]
+
+[node name="FieldLabel" type="RichTextLabel"]
+custom_minimum_size = Vector2(0, 40)
+bbcode_enabled = true
+fit_content = true
+scroll_active = false
+theme_override_fonts/normal_font = ExtResource("2_medium")
+script = ExtResource("1_fieldlabel")

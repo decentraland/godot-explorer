@@ -1,0 +1,75 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://src/ui/components/organisms/modal_shell/modal_shell.gd" id="1_shell"]
+[ext_resource type="Material" uid="uid://ckiy5eidu1d5t" path="res://src/ui/components/atoms/images/blur_background/quick_blur.tres" id="2_blur"]
+[ext_resource type="Script" uid="uid://b5n8gac80dncv" path="res://src/ui/layouts/responsive_container.gd" id="3_responsive"]
+[ext_resource type="Texture2D" uid="uid://bth12b5lxd4ul" path="res://assets/ui/modal-background.png" id="4_bg"]
+
+[sub_resource type="StyleBoxFlat" id="SB_rounded"]
+corner_radius_top_left = 24
+corner_radius_top_right = 24
+corner_radius_bottom_right = 24
+corner_radius_bottom_left = 24
+
+[node name="ModalShell" type="ColorRect"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.5)
+script = ExtResource("1_shell")
+metadata/mobile_preview_orientation = "portrait"
+
+[node name="Blur" type="ColorRect" parent="."]
+material = ExtResource("2_blur")
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0, 0, 0, 0.63529414)
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Blur"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Panel" type="PanelContainer" parent="Blur/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_styles/panel = SubResource("SB_rounded")
+script = ExtResource("3_responsive")
+portrait_width = 0.87
+portrait_min_height = 0.1
+landscape_min_height = 0.1
+
+[node name="Background" type="PanelContainer" parent="Blur/VBoxContainer/Panel"]
+clip_children = 1
+layout_mode = 2
+theme_override_styles/panel = SubResource("SB_rounded")
+
+[node name="TextureRect" type="TextureRect" parent="Blur/VBoxContainer/Panel/Background"]
+layout_mode = 2
+texture = ExtResource("4_bg")
+expand_mode = 1
+
+[node name="MarginContainer" type="MarginContainer" parent="Blur/VBoxContainer/Panel"]
+layout_mode = 2
+theme_override_constants/margin_left = 56
+theme_override_constants/margin_top = 64
+theme_override_constants/margin_right = 56
+theme_override_constants/margin_bottom = 60
+
+[node name="ContentContainer" type="VBoxContainer" parent="Blur/VBoxContainer/Panel/MarginContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[connection signal="gui_input" from="." to="." method="_on_gui_input"]
+[connection signal="visibility_changed" from="." to="." method="_on_visibility_changed"]

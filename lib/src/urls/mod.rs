@@ -249,6 +249,25 @@ pub fn feature_flags() -> String {
     )
 }
 
+// Intercom ticket proxy (native bug reports, issue #2652).
+//
+// The proxy holds the Intercom workspace token and forwards ticket creation; the
+// client never talks to Intercom directly. It verifies Decentraland signed-fetch
+// and allowlists the `Origin` header per environment, so `intercom_origin()` must
+// accompany every request or the proxy answers 403.
+pub fn intercom_tickets() -> String {
+    format!(
+        "https://intercom-proxy.decentraland.{}/intercom/tickets",
+        suffix(ServiceGroup::IntercomProxy)
+    )
+}
+pub fn intercom_origin() -> String {
+    format!(
+        "https://play.decentraland.{}",
+        suffix(ServiceGroup::IntercomProxy)
+    )
+}
+
 // Notifications
 pub fn notifications_api() -> String {
     format!(
@@ -388,6 +407,8 @@ mod tests {
             content_policy(),
             jump_events(),
             account_deletion(),
+            intercom_tickets(),
+            intercom_origin(),
             open_sea_proxy(),
             origin(),
         ];
