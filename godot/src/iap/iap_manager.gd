@@ -20,9 +20,8 @@ extends Node
 #   - POST /credits/iap/verify   : after StoreKit success, submit the JWS to be
 #                                  verified + credited. Idempotent with the
 #                                  webhook (server dedupes by Apple tx id).
-#   - GET  /users/:address/credits : reconcile the on-chain balance (the IAP
-#                                  share is `totals.nonExpiring`, in wei) and
-#                                  build the history view.
+#   - GET  /users/:address/credits : reconcile the balance (the `usd` block, in
+#                                  whole credits).
 #
 # Owns the global purchase overlay (full-screen blocking spinner). The overlay
 # is shown the moment a purchase is initiated and stays up until the flow
@@ -45,16 +44,36 @@ signal transaction_history_updated
 # ASC simply returns no product. The credits granted per pack are authoritative
 # on the server (IAP_PRODUCT_CATALOG); this map is only used for the optimistic
 # success modal and must stay in sync with the server catalog.
+#
+# Two sets exist in ASC: the original `credits_tier{1,2,3}` and `credits_tier_b{1,2,3}`,
+# a second price point for the same kind of pack. Both are requested here — StoreKit's
+# `Product.products(for:)` silently drops IDs it can't resolve, so listing a set that
+# isn't sellable costs nothing and does not affect the ones that do resolve. Keeping the
+# set we no longer offer listed still matters: StoreKit can redeliver an unfinished
+# transaction for a pack that has left the storefront, and its credit amount must map.
+#
+# Which packs are OFFERED is decided by the storefront scene (`credits_option.tscn`),
+# where each card declares its own `product_id` and hides itself when that ID isn't in
+# the loaded catalog — adding an ID here does not put it in front of users. The
+# storefront currently offers the `_b` set (40/100/260); the price points are compared
+# per build rather than side by side, since two cards for the same pack at different
+# prices would only ever sell the cheaper one.
 const PRODUCT_IDS: PackedStringArray = [
 	"credits_tier1",
 	"credits_tier2",
 	"credits_tier3",
+	"credits_tier_b1",
+	"credits_tier_b2",
+	"credits_tier_b3",
 ]
 
 const _CREDITS_BY_PRODUCT := {
 	"credits_tier1": 30,
 	"credits_tier2": 100,
 	"credits_tier3": 225,
+	"credits_tier_b1": 40,
+	"credits_tier_b2": 100,
+	"credits_tier_b3": 260,
 }
 
 # Bound how long the purchase overlay stays up. StoreKit prompt + validation
@@ -72,10 +91,6 @@ const _SUCCESS_MODAL_SCENE_PATH := "res://src/ui/components/organisms/iap_purcha
 # switch takes effect immediately. The host isn't part of the signed payload, so
 # repointing it doesn't affect the signing path.
 
-# credits-server stores amounts in wei (1 MANA = 1e18). The IAP balance is
-# reported as `totals.nonExpiring` in wei; divide to get whole MANA (== credits).
-const _WEI_PER_MANA := 1e18
-
 # Outcomes of POST /credits/iap/verify, mapped to StoreKit's redelivery contract:
 # OK — credited (or already credited, idempotent); finish the tx.
 # REJECTED — server refused permanently (invalid_jws, token_mismatch,
@@ -90,6 +105,23 @@ const _OUTCOME_OK := 0
 const _OUTCOME_REJECTED := 1
 const _OUTCOME_RETRY := 2
 const _OUTCOME_DEFERRED := 3
+
+# Order statuses from /credit-orders worth showing. `credited` is a completed purchase and
+# `reversed` is one whose whole grant was clawed back, which the row renders as a negative.
+# Everything else a checkout can be — initiated / processing / crediting / abandoned / failed —
+# never moved credit, and listing those would show the buyer money they did not spend.
+#
+# `partially_reversed` is deliberately listed as the purchase it was rather than as a refund:
+# the endpoint reports the grant, not how much of it came back, so rendering a refund line here
+# would have to invent the amount. It reads as the full purchase until the server carries the
+# reversed figure.
+const _ORDER_STATUS_REVERSED := "reversed"
+const _HISTORY_ORDER_STATUSES := ["credited", "reversed", "partially_reversed"]
+
+## How much of an unparseable response body reaches the log (and therefore Sentry).
+## The body is wallet-scoped purchase data, and a failure here is usually an edge
+## proxy's HTML error page — enough to identify it, not enough to ship the payload.
+const _ERROR_BODY_EXCERPT_CHARS := 200
 
 # After a purchase the credit is minted server-side (by /verify or, racing it, the
 # webhook), but the reported balance can lag a moment behind the mint. Poll the
@@ -131,6 +163,8 @@ var _products: Array = []
 # Local cache of the server-authoritative balance, reconciled from
 # GET /users/:address/credits. Server is the source of truth.
 var _balance: int = 0
+# One-shot guard for the "this environment has no USD rail" notice.
+var _warned_no_usd_rail: bool = false
 # Tx-id dedup. Apple delivers the same transaction twice on a fresh purchase
 # (once via `purchaseCompleted`, once via the `Transaction.updates` listener
 # that picks up any unfinished tx). Cleared on relaunch like `_balance`.
@@ -342,6 +376,8 @@ func get_products() -> Array:
 	return _products
 
 
+## The balance, always in the unit the Shop prices in: whole USD credits. Never the
+## legacy MANA rail — see `_async_fetch_balance`.
 func get_balance() -> int:
 	return _balance
 
@@ -408,6 +444,10 @@ func _async_begin_purchase(product_id: String, wallet: String) -> void:
 	if not envelope.get("ok", false):
 		var code := str(envelope.get("code", ""))
 		var reason := str(envelope.get("reason", ""))
+		# `print`, not `printerr`: a denial is an expected outcome with a user-facing
+		# modal on the next line — a guest tapping buy and a buyer at the daily cap both
+		# land here, and neither is an incident.
+		print("[IAP] quote denied for ", product_id, ": code=", code, " reason=", reason)
 		_finish_purchase_flow()
 		_show_quote_denied_modal(code, reason)
 		purchase_failed.emit(product_id, "not allowed: " + code)
@@ -661,8 +701,21 @@ func _async_register_token() -> void:
 # gdlint:ignore = async-function-name
 func _async_fetch_balance() -> void:
 	# Reconciles the server-side IAP balance for the signed-in wallet into the
-	# local cache. The credits-server endpoint carries the address in the path
-	# and returns totals in wei; the IAP share is `totals.nonExpiring`.
+	# local cache. The credits-server endpoint carries the address in the path.
+	#
+	# ONLY the `usd` block, which is the rail the Shop prices in and the rail an In-App
+	# Purchase credits. The same endpoint also answers a legacy MANA total under
+	# `totals.nonExpiring`, and this client deliberately does not read it: MANA is a
+	# different unit of value that merely shares the word "credits" in the UI, and every
+	# surface that compares this number against a price compares it against
+	# `priceCredits`. Showing MANA there asks for ~1.6x what an item costs, and no
+	# conversion is available to fix it — `manaWei` is null on about half the primary
+	# listings the catalog serves.
+	#
+	# So an environment with `core-shop-usd-credits` off reports 0 rather than a figure
+	# in the wrong currency. 0 is the true answer to "how much can this wallet spend in
+	# the Shop" there, and it puts the UI in its GET CREDITS state instead of offering
+	# items the player cannot pay for.
 	var wallet := _wallet_address()
 	if wallet.is_empty():
 		return
@@ -674,48 +727,70 @@ func _async_fetch_balance() -> void:
 		return
 	if envelope == null:
 		return
-	var totals = envelope.get("totals", {})
-	if not (totals is Dictionary):
-		return
-	_balance = int(round(float(totals.get("nonExpiring", 0)) / _WEI_PER_MANA))
+	var usd = envelope.get("usd", null)
+	if usd is Dictionary:
+		# Already the SPENDABLE figure: the server subtracts whatever an in-flight
+		# authorization is holding before reporting it, so it is safe to show as-is.
+		_balance = _int_field(usd, "credits")
+	else:
+		_balance = 0
+		# Once per session: the condition is a server-side flag, not a client fault, and
+		# it holds for every refresh while it lasts.
+		if not _warned_no_usd_rail:
+			_warned_no_usd_rail = true
+			print("[IAP] no `usd` block on the balance; this environment credits MANA")
 	balance_changed.emit(_balance)
 
 
 # gdlint:ignore = async-function-name
 func _async_fetch_history() -> void:
-	# Builds the history view from the wallet's on-chain credits. credits-server
-	# has no per-transaction history endpoint; we derive entries from the IAP
-	# credits returned by GET /users/:address/credits. Refunded credits are not
-	# returned by this endpoint, so entries are always non-refund here.
+	# The buyer's credit-PURCHASE history, from GET /users/:address/credit-orders. That endpoint
+	# lists every rail a credit pack can be bought on — the Stripe card checkout on the web and
+	# the Apple in-app purchase here — so a wallet that topped up on either surface sees one list.
+	#
+	# It replaced deriving entries from the `credits[]` array on GET /users/:address/credits,
+	# which is hard-filtered to `denomination = 'MANA'` server-side. Once IAP moved to crediting
+	# the USD rail that array stopped growing, and every new purchase was charged, credited,
+	# spendable — and absent from this screen.
 	var wallet := _wallet_address()
 	if wallet.is_empty():
 		return
 	var envelope = await _async_signed_iap(
-		"/users/" + wallet + "/credits", HTTPClient.METHOD_GET, ""
+		"/users/" + wallet + "/credit-orders", HTTPClient.METHOD_GET, ""
 	)
 	if _wallet_address() != wallet:
 		return
 	if envelope == null:
 		return
-	var credits = envelope.get("credits", [])
-	if not (credits is Array):
+	var orders = envelope.get("orders", [])
+	if not (orders is Array):
 		return
 	var history: Array = []
-	for entry in credits:
+	for entry in orders:
 		if not (entry is Dictionary):
 			continue
-		if str(entry.get("creditSource", "")) != "iap":
+		var status := str(entry.get("status", ""))
+		if not _HISTORY_ORDER_STATUSES.has(status):
 			continue
-		# amount is wei (a string, to avoid int64 overflow); timestamp is in ms.
-		var mana := int(round(float(str(entry.get("amount", "0"))) / _WEI_PER_MANA))
-		var ts_ms := float(entry.get("timestamp", 0))
-		var dt = Time.get_datetime_dict_from_unix_time(int(ts_ms / 1000.0))
+		# createdAt is epoch ms.
+		var dt = Time.get_datetime_dict_from_unix_time(
+			int(_float_field(entry, "createdAt") / 1000.0)
+		)
 		(
 			history
 			. append(
 				{
-					"credits": mana,
-					"is_refund": false,
+					"credits": _int_field(entry, "credits"),
+					# Deliberately NOT the money. `orders[].usdCents` looks like the charge
+					# but only is one on the Stripe rail: the Apple rail stores the credits'
+					# $0.10 face value (`credits * 10`), so a 40-credit pack reports $4.00
+					# against an $8.59 charge. Nothing else carries the real figure either —
+					# `iap_credits` has no price or currency column, and the transaction the
+					# client submits doesn't include one. StoreKit knows TODAY's price for a
+					# product, which is not what was charged once a price or a storefront
+					# changes. So the row shows the credits until the server persists the
+					# price off Apple's signed transaction.
+					"is_refund": status == _ORDER_STATUS_REVERSED,
 					"timestamp": "%04d.%02d.%02d" % [dt.year, dt.month, dt.day],
 				}
 			)
@@ -750,12 +825,29 @@ func _async_signed_iap(path: String, method: int, body: String) -> Variant:
 	# (GET /users/:address/credits) return the object directly, so callers inspect
 	# the fields they expect themselves.
 	# Resolve the base URL per call so a runtime environment switch is picked up.
+	# Signed with folded metadata: credits-server runs crypto-middleware >=6.0.0, which
+	# rebuilds the payload with the metadata verbatim, so a folded signature only matches a
+	# folded header. Safe here and nowhere else on this client — credits-server reads
+	# `productId` off the body and never touches `authMetadata`.
 	var url := DclUrls.credits_server() + path
-	var response = await Global.async_signed_fetch(url, method, body)
+	var response = await Global.async_signed_fetch(url, method, body, true)
 	if response is PromiseError:
+		# `print`, not `printerr`: `_async_poll_balance_after_purchase` calls this
+		# _POST_PURCHASE_POLL_ATTEMPTS times, so a phone that drops connectivity right
+		# after a purchase would emit that many identical error events. The retry loop
+		# already recovers from it.
+		print("[IAP] ", path, " transport/auth error: ", response.get_error())
 		return null
 	var json = response.get_string_response_as_json()
 	if not (json is Dictionary):
+		# Truncated on purpose: this body is wallet-scoped purchase data, and when the
+		# failure is an edge proxy's HTML error page it is multi-KB of no use anyway.
+		printerr(
+			"[IAP] ",
+			path,
+			" unparseable response: ",
+			response.get_string_response().substr(0, _ERROR_BODY_EXCERPT_CHARS)
+		)
 		return null
 	return json
 
@@ -764,6 +856,22 @@ func _wallet_address() -> String:
 	if Global.player_identity == null:
 		return ""
 	return Global.player_identity.get_address_str()
+
+
+## Reads a numeric field, treating a JSON null as absent.
+##
+## `Dictionary.get(key, default)` only returns the default when the key is MISSING, and
+## these feeds send the key with a null instead (`manaWei`, `tokenId` and `seller` all
+## arrive that way on the catalog). `int(null)` doesn't yield 0 — it pushes a Godot
+## error first, which is a Sentry event for a value the server is entitled to omit.
+func _int_field(data: Dictionary, key: String) -> int:
+	var value = data.get(key)
+	return int(value) if value != null else 0
+
+
+func _float_field(data: Dictionary, key: String) -> float:
+	var value = data.get(key)
+	return float(value) if value != null else 0.0
 
 
 func _show_overlay() -> void:

@@ -34,7 +34,7 @@ func _update_text():
 	elif _selected_price >= 0 and balance < _selected_price:
 		text = "GET CREDITS"
 	else:
-		text = "GO TO MARKETPLACE"
+		text = "GO TO SHOP"
 
 
 func _on_pressed():
@@ -43,8 +43,6 @@ func _on_pressed():
 	if _selected_price >= 0:
 		can_afford = balance >= _selected_price
 	if can_afford:
-		MarketplaceTracker.open_and_track(
-			DclUrls.marketplace() + "/browse?section=" + marketplace_section
-		)
+		MarketplaceTracker.open_and_track(DclUrls.marketplace_browse(marketplace_section))
 	else:
 		Global.open_credits.emit()
