@@ -266,11 +266,15 @@ func _on_button_requests_toggled(toggled_on: bool) -> void:
 		color_rect_requests.self_modulate = Color.WHITE
 		scroll_container_requests.show()
 		_expand_request_lists()
-		# Received updates live via the friendship_request_received signal; sent requests have no
-		# stream (the service doesn't echo our own actions), so re-fetch them on tab open. Await so
-		# the SENT count reflects the fresh list instead of the stale one.
-		await sent_list.async_update_list()
-		_update_requests()
+		_async_refresh_sent_requests()
+
+
+## Received updates live via the friendship_request_received signal; sent requests have no stream
+## (the service doesn't echo our own actions), so re-fetch them on tab open. Awaited so the SENT
+## count reflects the fresh list instead of the stale one.
+func _async_refresh_sent_requests() -> void:
+	await sent_list.async_update_list()
+	_update_requests()
 
 
 func _on_button_nearby_toggled(toggled_on: bool) -> void:
