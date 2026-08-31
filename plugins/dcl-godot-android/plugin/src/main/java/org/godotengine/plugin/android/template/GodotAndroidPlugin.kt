@@ -2383,6 +2383,111 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
         return pending
     }
 
+    // --- GA4F deferred deep link (issue #2670) ---
+    //
+    // Google Analytics for Firebase writes the ad group's deep link into a private
+    // SharedPreferences file on first launch after an ad-driven install. The write is
+    // asynchronous and races app startup, hence both a direct read ("already written") and a
+    // change listener ("lands a moment later").
+
+    private val deferredDeepLinkPrefsName = "google.analytics.deferred.deeplink.prefs"
+
+    @Volatile private var deferredDeepLinkData: Dictionary? = null
+    private var deferredDeepLinkStarted = false
+
+    // Held in a field on purpose: SharedPreferences keeps only a weak reference to the
+    // listener, so a local would be collected and the callback would never fire.
+    private var deferredDeepLinkListener:
+        android.content.SharedPreferences.OnSharedPreferenceChangeListener? = null
+
+    private fun readDeferredDeepLinkPrefs(
+        prefs: android.content.SharedPreferences
+    ): Dictionary? {
+        val link = prefs.getString("deeplink", null)
+        if (link.isNullOrEmpty()) {
+            return null
+        }
+        val result = Dictionary()
+        result["status"] = "ok"
+        result["deeplink"] = link
+        // Stored as Double.doubleToRawLongBits(seconds), NOT as a number (play-services-
+        // measurement-impl 22.3.0, zzqd.zzb): read as a plain Long a real click time comes
+        // back as ~4.79e15. Decode the bits, then truncate to whole seconds like the referrer.
+        val rawBits = prefs.getLong("timestamp", 0L)
+        val clickSeconds = if (rawBits == 0L) 0L else Double.fromBits(rawBits).toLong()
+        result["click_timestamp"] = clickSeconds
+        return result
+    }
+
+    /**
+     * Deferred deep link written by Google Analytics for Firebase, if any.
+     *
+     * Mirrors [getInstallReferrer]: the first call starts watching and returns
+     * {status: "pending"}; later calls return the cached result. No "not_available" status —
+     * GA4F cannot report the absence of a link, so an organic install stays "pending" forever
+     * and the engine bounds its own wait (GA4F_WAIT in install_attribution.rs).
+     */
+    @UsedByGodot
+    fun getDeferredDeepLink(): Dictionary {
+        deferredDeepLinkData?.let { return it }
+
+        val ctx = activity?.applicationContext
+        if (ctx == null) {
+            val errorDict = Dictionary()
+            errorDict["status"] = "error"
+            errorDict["error"] = "Context is null"
+            return errorDict
+        }
+
+        try {
+            val prefs = ctx.getSharedPreferences(
+                deferredDeepLinkPrefsName,
+                android.content.Context.MODE_PRIVATE
+            )
+
+            readDeferredDeepLinkPrefs(prefs)?.let {
+                deferredDeepLinkData = it
+                Log.i(pluginName, "[DDL] Deferred deep link already present")
+                return it
+            }
+
+            if (!deferredDeepLinkStarted) {
+                deferredDeepLinkStarted = true
+                val listener = android.content.SharedPreferences
+                    .OnSharedPreferenceChangeListener { changed, _ ->
+                        // SharedPreferences dispatches listeners on the main thread, so an
+                        // uncaught throw here takes the process down rather than surfacing as
+                        // an error dict. The read touches a GMS-written value whose encoding
+                        // is already surprising once, so it is not assumed to stay a Long.
+                        try {
+                            if (deferredDeepLinkData == null) {
+                                readDeferredDeepLinkPrefs(changed)?.let {
+                                    deferredDeepLinkData = it
+                                    Log.i(pluginName, "[DDL] Deferred deep link arrived")
+                                }
+                            }
+                        } catch (e: Throwable) {
+                            Log.e(pluginName, "[DDL] Failed to read the deferred deep link", e)
+                        }
+                    }
+                deferredDeepLinkListener = listener
+                prefs.registerOnSharedPreferenceChangeListener(listener)
+                Log.i(pluginName, "[DDL] Watching $deferredDeepLinkPrefsName for a deferred deep link")
+            }
+        } catch (e: Throwable) {
+            Log.e(pluginName, "[DDL] Failed to read the deferred deep link prefs", e)
+            val errorDict = Dictionary()
+            errorDict["status"] = "error"
+            errorDict["error"] = "${e.javaClass.simpleName}: ${e.message}"
+            deferredDeepLinkData = errorDict
+            return errorDict
+        }
+
+        val pending = Dictionary()
+        pending["status"] = "pending"
+        return pending
+    }
+
     // --- Play Integrity (platform attestation for /sign-message) ---
 
     /**
