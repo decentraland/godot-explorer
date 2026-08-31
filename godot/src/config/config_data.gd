@@ -188,15 +188,17 @@ var version_gate_snooze_until: int = 0
 
 var install_referrer_sent: bool = false
 
-# Ad/referrer campaign token captured from the `?c=` deeplink param on a first launch
-# (issue #2670). Resolved against the mobile-bff campaign map by Campaigns; empty when the
-# install carried no campaign.
+# Ad/referrer campaign token (issue #2670), from either source: the `?c=` deeplink param, or
+# Android install attribution (GA4F deferred deep link / Play install referrer) once it
+# resolves. Resolved against the mobile-bff campaign map by Campaigns; empty when the install
+# carried no campaign.
 var campaign_token: String = ""
 
-# Unix timestamp the token was attributed. The deeplink path — the only one wired today —
-# records capture time. The freshness bound exists for the install-referrer path that will
-# feed this next: the referrer survives 90 days and only changes on reinstall, so without it
-# a reinstall months later would replay a dead campaign.
+# Unix timestamp the token was attributed. Both paths record capture time, not click time.
+# The freshness bound below it is therefore weaker than it looks for the referrer path: the
+# referrer survives 90 days and a reinstall re-reads it and re-stamps it as fresh. Replaying
+# a retired campaign is prevented server-side instead — the map only serves campaigns that
+# still exist, so a dead token resolves to nothing and falls back to the default FTUE.
 var campaign_token_captured_at: int = 0
 
 # One campaign per install: set once a launch has acted on the token.

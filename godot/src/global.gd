@@ -358,21 +358,6 @@ func _apply_optimized_content_base_url(obj: DclParseDeepLink) -> void:
 		cli.optimized_content_base_url = opt_url
 
 
-## Capture the ad/referrer campaign token carried by a deeplink as `?c=<token>` (#2670).
-## Shared by the desktop fake-deeplink path (_ready) and the mobile/iOS live path (router).
-##
-## The token is opaque and inert to every existing deeplink branch: it is not a location,
-## realm or preview, so it does not trip _should_go_to_explorer_from_deeplink, and the
-## router's "/open" handler treats a params-only link as config-only. That is the point —
-## a link carrying the destination would boot the explorer and skip the very FTUE this
-## personalizes.
-##
-## First capture wins and is never overwritten: an install has exactly one campaign, and a
-## later in-session deeplink must not repaint it.
-##
-## `occurred_at` overrides the recorded attribution time. No caller passes it yet — it is the
-## seam for the install-referrer path, which must record the install timestamp rather than
-## the moment the app happened to read it.
 ## QA affordance: `decentraland://open?rotate-guest=true` mints a brand-new guest on the next
 ## launch, which is the only way back to the FTUE on a device whose native anchor survives
 ## reinstall (Android SSAID, iOS Keychain). Persisted, so it survives the relaunch it causes.
@@ -403,6 +388,23 @@ func _capture_debug_guest_rotate(obj: DclParseDeepLink) -> void:
 	print("[DEEPLINK] rotate-guest=true: cleared %d guest file(s) + campaign state" % removed)
 
 
+## Capture the ad/referrer campaign token carried by a deeplink as `?c=<token>` (#2670).
+## Shared by the desktop fake-deeplink path (_ready) and the mobile/iOS live path (router).
+##
+## The token is opaque and carries no destination, so it is not a location, realm or preview
+## and does not trip _should_go_to_explorer_from_deeplink. Staying out of the explorer from
+## the lobby also takes the guard in Lobby._on_deep_link_received, which this feature added.
+## That is the point — a link carrying the destination would boot the explorer and skip the
+## very FTUE this personalizes.
+##
+## First capture wins and is never overwritten: an install has exactly one campaign, and a
+## later in-session deeplink must not repaint it. That is why the token is validated here
+## rather than only where it is used — an unvalidated junk token would take the slot the
+## real install-attribution token needs.
+##
+## `occurred_at` overrides the recorded attribution time. No caller passes it: the
+## attribution path stamps its own capture time in Campaigns._async_watch_attribution, so
+## this remains a seam rather than a used parameter.
 func _capture_campaign_token(obj: DclParseDeepLink, occurred_at: int = 0) -> void:
 	var token: String = String(obj.params.get("c", "")).strip_edges()
 	if token.is_empty():
@@ -773,8 +775,10 @@ func _ready():
 	self.feature_flags = FeatureFlags.new()
 	self.feature_flags.set_name("feature_flags")
 	add_child(self.feature_flags)
-	# Campaign map: same fire-and-forget shape. Kicked here (not lazily at the FTUE) so the
-	# fetch has the whole auth + avatar-creation flow to land before it is read.
+	# Campaign resolver. Unlike the flags above it does NOT fetch on _ready: the map is only
+	# requested once a token actually needs resolving, so an install with no campaign — the
+	# large majority — never touches the endpoint. What starts here is the watcher that
+	# persists a token coming from install attribution.
 	self.campaigns = Campaigns.new()
 	self.campaigns.set_name("campaigns")
 	add_child(self.campaigns)

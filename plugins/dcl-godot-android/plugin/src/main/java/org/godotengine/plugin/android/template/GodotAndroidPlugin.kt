@@ -2432,7 +2432,9 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
      *
      * Mirrors [getInstallReferrer]: the first call starts watching and returns
      * {status: "pending"}; later calls return the cached result. Statuses are "ok",
-     * "pending", "not_available" (no link — organic install, or GA4F disabled) and "error".
+     * "pending" and "error" — there is deliberately no "not_available": GA4F cannot report
+     * the absence of a link, so an organic install stays "pending" forever. The engine side
+     * relies on that and bounds its own wait (see GA4F_WAIT in install_attribution.rs).
      */
     @UsedByGodot
     fun getDeferredDeepLink(): Dictionary {
