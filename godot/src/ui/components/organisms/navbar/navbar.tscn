@@ -27,7 +27,7 @@ length = 0.001
 tracks/0/type = "value"
 tracks/0/imported = false
 tracks/0/enabled = true
-tracks/0/path = NodePath("Control/Control/PanelContainer:size")
+tracks/0/path = NodePath("Control/Control_Menu:size")
 tracks/0/interp = 1
 tracks/0/loop_wrap = true
 tracks/0/keys = {
@@ -39,7 +39,7 @@ tracks/0/keys = {
 tracks/1/type = "value"
 tracks/1/imported = false
 tracks/1/enabled = true
-tracks/1/path = NodePath("Control/Control/PanelContainer:visible")
+tracks/1/path = NodePath("Control/Control_Menu:visible")
 tracks/1/interp = 1
 tracks/1/loop_wrap = true
 tracks/1/keys = {
@@ -51,7 +51,7 @@ tracks/1/keys = {
 tracks/2/type = "value"
 tracks/2/imported = false
 tracks/2/enabled = true
-tracks/2/path = NodePath("Control/Control/PanelContainer:position")
+tracks/2/path = NodePath("Control/Control_Menu:position")
 tracks/2/interp = 1
 tracks/2/loop_wrap = true
 tracks/2/keys = {
@@ -63,7 +63,7 @@ tracks/2/keys = {
 tracks/3/type = "value"
 tracks/3/imported = false
 tracks/3/enabled = true
-tracks/3/path = NodePath("Control/Control/PanelContainer:modulate")
+tracks/3/path = NodePath("Control/Control_Menu:modulate")
 tracks/3/interp = 1
 tracks/3/loop_wrap = true
 tracks/3/keys = {
@@ -127,7 +127,7 @@ length = 0.1
 tracks/0/type = "value"
 tracks/0/imported = false
 tracks/0/enabled = true
-tracks/0/path = NodePath("Control/Control/PanelContainer:visible")
+tracks/0/path = NodePath("Control/Control_Menu:visible")
 tracks/0/interp = 1
 tracks/0/loop_wrap = true
 tracks/0/keys = {
@@ -139,7 +139,7 @@ tracks/0/keys = {
 tracks/1/type = "value"
 tracks/1/imported = false
 tracks/1/enabled = true
-tracks/1/path = NodePath("Control/Control/PanelContainer:position")
+tracks/1/path = NodePath("Control/Control_Menu:position")
 tracks/1/interp = 1
 tracks/1/loop_wrap = true
 tracks/1/keys = {
@@ -151,7 +151,7 @@ tracks/1/keys = {
 tracks/2/type = "value"
 tracks/2/imported = false
 tracks/2/enabled = true
-tracks/2/path = NodePath("Control/Control/PanelContainer:modulate")
+tracks/2/path = NodePath("Control/Control_Menu:modulate")
 tracks/2/interp = 1
 tracks/2/loop_wrap = true
 tracks/2/keys = {
@@ -215,7 +215,7 @@ length = 0.15
 tracks/0/type = "value"
 tracks/0/imported = false
 tracks/0/enabled = true
-tracks/0/path = NodePath("Control/Control/PanelContainer:visible")
+tracks/0/path = NodePath("Control/Control_Menu:visible")
 tracks/0/interp = 1
 tracks/0/loop_wrap = true
 tracks/0/keys = {
@@ -227,7 +227,7 @@ tracks/0/keys = {
 tracks/1/type = "value"
 tracks/1/imported = false
 tracks/1/enabled = true
-tracks/1/path = NodePath("Control/Control/PanelContainer:position")
+tracks/1/path = NodePath("Control/Control_Menu:position")
 tracks/1/interp = 1
 tracks/1/loop_wrap = true
 tracks/1/keys = {
@@ -239,7 +239,7 @@ tracks/1/keys = {
 tracks/2/type = "value"
 tracks/2/imported = false
 tracks/2/enabled = true
-tracks/2/path = NodePath("Control/Control/PanelContainer:modulate")
+tracks/2/path = NodePath("Control/Control_Menu:modulate")
 tracks/2/interp = 1
 tracks/2/loop_wrap = true
 tracks/2/keys = {
@@ -304,11 +304,6 @@ _data = {
 &"open": SubResource("Animation_n2t8a")
 }
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_t6uoc"]
-bg_color = Color(0.101960786, 0.03529412, 0.14509805, 0.8980392)
-corner_radius_top_left = 10
-corner_radius_bottom_left = 10
-
 [sub_resource type="Shader" id="Shader_icort"]
 code = "shader_type canvas_item;
 
@@ -341,6 +336,11 @@ shader_parameter/radius_top_left = 10.0
 shader_parameter/radius_bottom_left = 10.0
 shader_parameter/radius_top_right = 0.0
 shader_parameter/radius_bottom_right = 0.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_t6uoc"]
+bg_color = Color(0.101960786, 0.03529412, 0.14509805, 0.8980392)
+corner_radius_top_left = 10
+corner_radius_bottom_left = 10
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_3m1fh"]
 bg_color = Color(1, 0.1764706, 0.33333334, 1)
@@ -391,17 +391,25 @@ offset_right = 90.0
 offset_bottom = 90.0
 mouse_filter = 2
 
-[node name="Control" type="Control" parent="Control" unique_id=2089287654]
-clip_contents = true
+[node name="Control_Menu" type="Control" parent="Control" unique_id=638869833]
 custom_minimum_size = Vector2(100, 640)
 layout_mode = 1
-anchors_preset = 0
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_bottom = 550.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="TextureRect" type="ColorRect" parent="Control/Control_Menu" unique_id=1964519334]
+material = SubResource("ShaderMaterial_dxp8w")
+layout_mode = 0
 offset_right = 100.0
 offset_bottom = 640.0
-mouse_filter = 2
+color = Color(0.101960786, 0.03529412, 0.14509805, 0.8980392)
 
-[node name="PanelContainer" type="PanelContainer" parent="Control/Control" unique_id=2146671690]
-unique_name_in_owner = true
+[node name="PanelContainer" type="PanelContainer" parent="Control/Control_Menu" unique_id=1200369384]
+clip_children = 2
 custom_minimum_size = Vector2(100, 640)
 layout_mode = 1
 anchors_preset = 15
@@ -411,18 +419,13 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_t6uoc")
 
-[node name="TextureRect" type="ColorRect" parent="Control/Control/PanelContainer" unique_id=1964519334]
-material = SubResource("ShaderMaterial_dxp8w")
-layout_mode = 2
-color = Color(0.101960786, 0.03529412, 0.14509805, 0.8980392)
-
-[node name="VBoxContainer_Buttons" type="VBoxContainer" parent="Control/Control/PanelContainer" unique_id=568324077]
+[node name="VBoxContainer_Buttons" type="VBoxContainer" parent="Control/Control_Menu/PanelContainer" unique_id=568324077]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 38
 alignment = 1
 
-[node name="StaticButton_Discover" parent="Control/Control/PanelContainer/VBoxContainer_Buttons" unique_id=2127315255 instance=ExtResource("7_ckthm")]
+[node name="StaticButton_Discover" parent="Control/Control_Menu/PanelContainer/VBoxContainer_Buttons" unique_id=2127315255 instance=ExtResource("7_ckthm")]
 unique_name_in_owner = true
 layout_mode = 2
 texture_normal = ExtResource("4_uqptt")
@@ -431,7 +434,7 @@ ignore_texture_size = true
 stretch_mode = 5
 script = ExtResource("3_dscvr")
 
-[node name="StaticButton_Friends" parent="Control/Control/PanelContainer/VBoxContainer_Buttons" unique_id=845596369 instance=ExtResource("7_ckthm")]
+[node name="StaticButton_Friends" parent="Control/Control_Menu/PanelContainer/VBoxContainer_Buttons" unique_id=845596369 instance=ExtResource("7_ckthm")]
 unique_name_in_owner = true
 layout_mode = 2
 texture_normal = ExtResource("7_8loqq")
@@ -440,7 +443,7 @@ ignore_texture_size = true
 stretch_mode = 5
 script = ExtResource("3_lur8b")
 
-[node name="StaticButton_Notifications" parent="Control/Control/PanelContainer/VBoxContainer_Buttons" unique_id=425783197 instance=ExtResource("7_ckthm")]
+[node name="StaticButton_Notifications" parent="Control/Control_Menu/PanelContainer/VBoxContainer_Buttons" unique_id=425783197 instance=ExtResource("7_ckthm")]
 unique_name_in_owner = true
 layout_mode = 2
 texture_normal = ExtResource("9_dxp8w")
@@ -449,7 +452,7 @@ ignore_texture_size = true
 stretch_mode = 5
 script = ExtResource("5_ly2kd")
 
-[node name="StaticButton_Backpack" parent="Control/Control/PanelContainer/VBoxContainer_Buttons" unique_id=408963304 instance=ExtResource("7_ckthm")]
+[node name="StaticButton_Backpack" parent="Control/Control_Menu/PanelContainer/VBoxContainer_Buttons" unique_id=408963304 instance=ExtResource("7_ckthm")]
 unique_name_in_owner = true
 layout_mode = 2
 texture_normal = ExtResource("12_uqptt")
@@ -458,7 +461,7 @@ ignore_texture_size = true
 stretch_mode = 5
 script = ExtResource("7_ly2kd")
 
-[node name="StaticButton_Settings" parent="Control/Control/PanelContainer/VBoxContainer_Buttons" unique_id=908925018 instance=ExtResource("7_ckthm")]
+[node name="StaticButton_Settings" parent="Control/Control_Menu/PanelContainer/VBoxContainer_Buttons" unique_id=908925018 instance=ExtResource("7_ckthm")]
 unique_name_in_owner = true
 layout_mode = 2
 texture_normal = ExtResource("15_uqptt")
@@ -467,7 +470,7 @@ ignore_texture_size = true
 stretch_mode = 5
 script = ExtResource("8_fmmda")
 
-[node name="UpgradeBadge" parent="Control/Control/PanelContainer/VBoxContainer_Buttons/StaticButton_Settings" unique_id=996992674 instance=ExtResource("15_iai4k")]
+[node name="UpgradeBadge" parent="Control/Control_Menu/PanelContainer/VBoxContainer_Buttons/StaticButton_Settings" unique_id=996992674 instance=ExtResource("15_iai4k")]
 custom_minimum_size = Vector2(15, 15)
 layout_mode = 1
 anchors_preset = 1
@@ -480,11 +483,11 @@ offset_bottom = 25.0
 grow_horizontal = 0
 theme_override_styles/panel = SubResource("StyleBoxFlat_3m1fh")
 
-[node name="Control" type="Control" parent="Control/Control/PanelContainer/VBoxContainer_Buttons" unique_id=1770223894]
+[node name="Control" type="Control" parent="Control/Control_Menu/PanelContainer/VBoxContainer_Buttons" unique_id=1770223894]
 custom_minimum_size = Vector2(60, 60)
 layout_mode = 2
 
-[node name="Portrait_Button_Profile" parent="Control/Control/PanelContainer/VBoxContainer_Buttons/Control" unique_id=426752335 instance=ExtResource("9_ria76")]
+[node name="Portrait_Button_Profile" parent="Control/Control_Menu/PanelContainer/VBoxContainer_Buttons/Control" unique_id=426752335 instance=ExtResource("9_ria76")]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 8
@@ -499,20 +502,20 @@ offset_bottom = 22.5
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="VBoxContainer_Selection" type="VBoxContainer" parent="Control/Control/PanelContainer" unique_id=1294523655]
+[node name="VBoxContainer_Selection" type="VBoxContainer" parent="Control/Control_Menu/PanelContainer" unique_id=1294523655]
 unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 28
 alignment = 1
 
-[node name="Control_Selection1" type="Control" parent="Control/Control/PanelContainer/VBoxContainer_Selection" unique_id=531560469]
+[node name="Control_Selection1" type="Control" parent="Control/Control_Menu/PanelContainer/VBoxContainer_Selection" unique_id=531560469]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 70)
 layout_mode = 2
 mouse_filter = 2
 
-[node name="Control_Effect" type="Control" parent="Control/Control/PanelContainer/VBoxContainer_Selection/Control_Selection1" unique_id=1897257764]
+[node name="Control_Effect" type="Control" parent="Control/Control_Menu/PanelContainer/VBoxContainer_Selection/Control_Selection1" unique_id=1897257764]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 15
@@ -522,7 +525,7 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="ColorRect" type="ColorRect" parent="Control/Control/PanelContainer/VBoxContainer_Selection/Control_Selection1/Control_Effect" unique_id=1239918831]
+[node name="ColorRect" type="ColorRect" parent="Control/Control_Menu/PanelContainer/VBoxContainer_Selection/Control_Selection1/Control_Effect" unique_id=1239918831]
 material = ExtResource("20_ljng8")
 custom_minimum_size = Vector2(75, 95)
 layout_mode = 1
@@ -540,7 +543,7 @@ grow_vertical = 2
 mouse_filter = 2
 color = Color(0.9098039, 0.7254902, 1, 1)
 
-[node name="TextureRect" type="TextureRect" parent="Control/Control/PanelContainer/VBoxContainer_Selection/Control_Selection1/Control_Effect" unique_id=510537132]
+[node name="TextureRect" type="TextureRect" parent="Control/Control_Menu/PanelContainer/VBoxContainer_Selection/Control_Selection1/Control_Effect" unique_id=510537132]
 custom_minimum_size = Vector2(2, 0)
 layout_mode = 1
 anchors_preset = 11
@@ -553,31 +556,31 @@ grow_vertical = 2
 mouse_filter = 2
 texture = SubResource("GradientTexture2D_ljng8")
 
-[node name="Control_Selection2" type="Control" parent="Control/Control/PanelContainer/VBoxContainer_Selection" unique_id=1859792608]
+[node name="Control_Selection2" type="Control" parent="Control/Control_Menu/PanelContainer/VBoxContainer_Selection" unique_id=1859792608]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 70)
 layout_mode = 2
 mouse_filter = 2
 
-[node name="Control_Selection3" type="Control" parent="Control/Control/PanelContainer/VBoxContainer_Selection" unique_id=1412032395]
+[node name="Control_Selection3" type="Control" parent="Control/Control_Menu/PanelContainer/VBoxContainer_Selection" unique_id=1412032395]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 70)
 layout_mode = 2
 mouse_filter = 2
 
-[node name="Control_Selection4" type="Control" parent="Control/Control/PanelContainer/VBoxContainer_Selection" unique_id=1433464981]
+[node name="Control_Selection4" type="Control" parent="Control/Control_Menu/PanelContainer/VBoxContainer_Selection" unique_id=1433464981]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 70)
 layout_mode = 2
 mouse_filter = 2
 
-[node name="Control_Selection5" type="Control" parent="Control/Control/PanelContainer/VBoxContainer_Selection" unique_id=149172914]
+[node name="Control_Selection5" type="Control" parent="Control/Control_Menu/PanelContainer/VBoxContainer_Selection" unique_id=149172914]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 70)
 layout_mode = 2
 mouse_filter = 2
 
-[node name="Control_Selection6" type="Control" parent="Control/Control/PanelContainer/VBoxContainer_Selection" unique_id=1598186082]
+[node name="Control_Selection6" type="Control" parent="Control/Control_Menu/PanelContainer/VBoxContainer_Selection" unique_id=1598186082]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 70)
 layout_mode = 2

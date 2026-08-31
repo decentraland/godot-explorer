@@ -11,7 +11,6 @@ var _manually_hidden: bool = false
 var _selection_buttons: Array[BaseButton] = []
 
 @onready var animation_player: AnimationPlayer = %AnimationPlayer
-@onready var panel_container: PanelContainer = %PanelContainer
 @onready var v_box_container_buttons: VBoxContainer = %VBoxContainer_Buttons
 @onready var static_button_friends: TextureButton = %StaticButton_Friends
 @onready var static_button_notifications: TextureButton = %StaticButton_Notifications
