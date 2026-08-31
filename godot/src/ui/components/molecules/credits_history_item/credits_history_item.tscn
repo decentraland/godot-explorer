@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" uid="uid://blg21iqka3ahy" path="res://src/ui/components/molecules/credits_history_item/credits_history_item.gd" id="1_script"]
 [ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="2_whpm5"]
-[ext_resource type="Texture2D" uid="uid://dbgem6ilug5f2" path="res://assets/ui/iap/credits-icon.svg" id="3_e0556"]
+[ext_resource type="Texture2D" uid="uid://c2wb73yrhr02x" path="res://assets/ui/iap/credits-icon.png" id="3_e0556"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_8rb0h"]
 draw_center = false
@@ -50,6 +50,7 @@ label_settings = SubResource("LabelSettings_g7rjq")
 [node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer" unique_id=978267799]
 layout_mode = 2
 mouse_filter = 2
+theme_override_constants/separation = 10
 
 [node name="Label_Detail" type="Label" parent="MarginContainer/VBoxContainer/HBoxContainer" unique_id=1599885672]
 unique_name_in_owner = true
@@ -59,9 +60,12 @@ text = "Purchased 10 CREDITS"
 label_settings = SubResource("LabelSettings_wfl54")
 
 [node name="TextureRect" type="TextureRect" parent="MarginContainer/VBoxContainer/HBoxContainer" unique_id=733754281]
+custom_minimum_size = Vector2(32, 32)
 layout_mode = 2
 mouse_filter = 2
 texture = ExtResource("3_e0556")
+expand_mode = 1
+stretch_mode = 5
 
 [node name="Label_Amount" type="Label" parent="MarginContainer/VBoxContainer/HBoxContainer" unique_id=1076454542]
 unique_name_in_owner = true

@@ -98,7 +98,7 @@ grow_vertical = 2
 size_flags_horizontal = 4
 mouse_filter = 2
 texture = ExtResource("4_kkbo3")
-expand_mode = 3
+expand_mode = 1
 stretch_mode = 4
 
 [node name="Margin" type="MarginContainer" parent="Backdrop/Blur/VBoxContainer/Panel/TextureRect" unique_id=1478608377]

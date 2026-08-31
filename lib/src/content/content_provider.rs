@@ -2578,13 +2578,28 @@ impl ContentProvider {
         let file_hash_str = file_hash.to_string();
         let absolute_file_path = cache_file_path(&self.content_folder, &file_hash_str);
 
+        let scene_path = get_scene_path_for_hash(&self.content_folder, &file_hash_str);
+
         let resource_provider = self.resource_provider.clone();
         let (promise, get_promise) = Promise::make_to_async();
 
         self.promises.remove(&file_hash_str);
+        // GLTFs are cached under a prefixed key and as a derived .scn next to the
+        // raw download (see `load_scene_gltf`); dropping only the raw entry would
+        // leave a stale model behind whenever a hash is reused — which the preview
+        // server does on every edit, since it hashes file paths, not contents.
+        self.promises.remove(&format!("scene_{file_hash_str}"));
 
         TokioRuntime::spawn(async move {
             resource_provider.delete_file(&absolute_file_path).await;
+            // Both calls are needed for the .scn. `delete_file` drops the
+            // `existing_files` entry, which is what `load_scene_gltf`'s cache check
+            // actually consults (`file_exists_by_path` reads that map, not the
+            // disk) — but it only unlinks paths it is tracking, and a .scn written
+            // by the scene saver in an earlier session isn't in the map, so the
+            // file itself would survive and be re-adopted later.
+            resource_provider.delete_file(&scene_path).await;
+            let _ = tokio::fs::remove_file(&scene_path).await;
             then_promise(get_promise, Ok(None));
         });
 

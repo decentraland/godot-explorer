@@ -52,7 +52,12 @@ static func async_submit(
 
 	# The proxy signs `{}` and leaves the body unsigned, unlike most DCL services.
 	var response = await Global.async_signed_fetch(
-		url, HTTPClient.METHOD_POST, body, "{}", {"Origin": String(DclUrls.intercom_origin())}
+		url,
+		HTTPClient.METHOD_POST,
+		body,
+		false,
+		"{}",
+		{"Origin": String(DclUrls.intercom_origin())}
 	)
 
 	if response is PromiseError:
