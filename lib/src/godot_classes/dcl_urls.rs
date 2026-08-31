@@ -181,6 +181,11 @@ impl DclUrls {
         urls::feature_flags().to_godot()
     }
 
+    #[func]
+    pub fn campaigns() -> GString {
+        urls::campaigns().to_godot()
+    }
+
     // Proxy
     #[func]
     pub fn open_sea_proxy() -> GString {
