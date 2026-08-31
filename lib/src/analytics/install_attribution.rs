@@ -19,8 +19,11 @@ use super::data_definition::{SegmentEvent, SegmentEventInstallAttribution};
 /// - **Play Install Referrer** — preserves the query string of an owned/organic link, so a
 ///   token added there survives the install.
 ///
-/// GA4F wins when both are present: an ad group's link is more specific than whatever
-/// referrer Google happened to attach.
+/// GA4F decides the destination when its link carries a token: an ad group's link is more
+/// specific than whatever referrer Google happened to attach. It does not win on merely
+/// having answered — most Google Ads links carry no token of ours, and letting those beat a
+/// referrer that does have one would lose the campaign for good. Whichever source loses still
+/// contributes its own fields to the event.
 ///
 /// Persistence (fire-once-per-install) is handled by GDScript via a config flag.
 pub struct InstallAttribution {
@@ -87,22 +90,27 @@ impl InstallAttribution {
         let ga4f = read_status(DclAndroidPlugin::get_deferred_deep_link_internal());
         let referrer = read_status(DclAndroidPlugin::get_install_referrer_internal());
 
-        // The referrer's own fields are only meaningful once it says "ok"; a pending dict
-        // carries just a status, and reading through it would ship zeros as if they were data.
-        let settled_referrer = referrer
+        // The referrer's own fields are only meaningful once it says "ok"; a pending or failed
+        // dict carries just a status, and reading through it would ship zeros as if they were
+        // data. The GA4F dict is kept whenever it answered, token or not: the deep link and its
+        // click time are worth reporting even when the ad group's link carries no campaign,
+        // which is the shape most Google Ads installs have.
+        let ga4f_ok = ga4f
+            .as_ref()
+            .filter(|(_, status)| status == "ok")
+            .map(|(dict, _)| dict);
+        let referrer_ok = referrer
             .as_ref()
             .filter(|(_, status)| status == "ok")
             .map(|(dict, _)| dict);
 
-        // GA4F wins only when its link actually carries a token. Winning on status alone would
-        // discard a valid referrer token whenever the ad group's link has none, and the
-        // campaign is lost for good: attribution runs once per install.
-        if let Some((ref dict, ref status)) = ga4f {
-            if status == "ok" {
-                if let Some(token) = extract_token(&get_string(dict, "deeplink")) {
-                    self.done = true;
-                    return Some(self.build_from_ga4f(dict, settled_referrer, token));
-                }
+        // GA4F decides the destination only when its link actually carries a token. Winning on
+        // status alone would discard a valid referrer token whenever the ad group's link has
+        // none, and the campaign is lost for good: attribution runs once per install.
+        if let Some(dict) = ga4f_ok {
+            if let Some(token) = extract_token(&get_string(dict, "deeplink")) {
+                self.done = true;
+                return Some(self.build(Some(dict), referrer_ok, Some(token), SOURCE_GA4F));
             }
         }
 
@@ -116,52 +124,67 @@ impl InstallAttribution {
             return None;
         }
 
-        // Fall back to the referrer.
-        let Some((dict, status)) = referrer else {
-            // Not on Android, or no plugin: nothing to report at all.
-            self.done = true;
+        // The referrer decides from here. It gets its own deadline: its status only changes
+        // from a Play service callback, and a binding that never calls back would otherwise
+        // swallow the install entirely, unretryably.
+        let referrer_status = referrer.as_ref().map(|(_, s)| s.as_str()).unwrap_or("none");
+        if referrer_status == "pending" && now < self.overall_deadline {
             return None;
-        };
-        if status == "pending" {
-            if now < self.overall_deadline {
-                return None;
-            }
-            // The referrer never answered. Report the install anyway rather than losing it.
-            self.done = true;
-            tracing::warn!("[attribution] referrer never resolved, reporting without it");
-            return Some(self.build_from_referrer(&VarDictionary::new(), false));
         }
 
         self.done = true;
 
-        if status != "ok" {
-            let error = get_string(&dict, "error");
-            tracing::warn!("Install referrer not available: status='{status}' error='{error}'");
-            return None;
+        if let Some(dict) = referrer_ok {
+            let token = extract_token(&get_string(dict, "referrer"));
+            return Some(self.build(ga4f_ok, Some(dict), token, SOURCE_REFERRER));
         }
 
-        Some(self.build_from_referrer(&dict, true))
+        // The referrer never answered, or answered not_available/error (no Play Store, or the
+        // service is down). Report what is known rather than dropping the install: on a device
+        // where GA4F answered, that still carries the deep link.
+        if referrer_status != "none" {
+            tracing::warn!("[attribution] referrer unusable (status='{referrer_status}')");
+        }
+        if ga4f_ok.is_none() && referrer.is_none() {
+            // Not on Android, or no plugin at all: there is genuinely nothing to report.
+            return None;
+        }
+        Some(self.build(ga4f_ok, None, None, SOURCE_NONE))
     }
 
-    fn build_from_ga4f(
+    /// Builds the event from whichever sources answered.
+    ///
+    /// Both dicts are optional and independent: GA4F can answer with a link that carries no
+    /// campaign while the referrer supplies the token, and the referrer can be unusable while
+    /// GA4F still has something worth reporting. Fields are only read from a dict that is
+    /// present, so a source that never answered contributes nothing rather than zeros.
+    fn build(
         &self,
-        ga4f: &VarDictionary,
+        ga4f: Option<&VarDictionary>,
         referrer: Option<&VarDictionary>,
-        token: String,
+        token: Option<String>,
+        source: &str,
     ) -> SegmentEvent {
-        let deeplink = get_string(ga4f, "deeplink");
-
-        // The referrer still carries the install timestamps and the raw string, which stay
-        // worth reporting even when GA4F decided the destination.
         let referrer_string = referrer
             .map(|d| get_string(d, "referrer"))
             .unwrap_or_default();
         let utm = parse_utm_params(&referrer_string);
+        let deeplink = ga4f.map(|d| get_string(d, "deeplink"));
+
+        // GA4F reports its own click time; the install time only ever exists on the referrer.
+        // Prefer whichever source is present, GA4F first since it is the more specific signal.
+        let click_timestamp = ga4f
+            .map(|d| get_i64(d, "click_timestamp"))
+            .filter(|t| *t > 0)
+            .or_else(|| referrer.map(|d| get_i64(d, "click_timestamp")))
+            .unwrap_or(0);
 
         tracing::debug!(
-            "[attribution] GA4F deferred deep link won: token={:?} link='{}' after {:?}",
+            "[attribution] settled: source={} token={:?} ga4f={} referrer={} after {:?}",
+            source,
             token,
-            deeplink,
+            ga4f.is_some(),
+            referrer.is_some(),
             self.started.elapsed()
         );
 
@@ -172,58 +195,17 @@ impl InstallAttribution {
             utm_campaign: utm.get("utm_campaign").cloned(),
             utm_content: utm.get("utm_content").cloned(),
             utm_term: utm.get("utm_term").cloned(),
-            // GA4F reports its own click time; the install time only exists on the referrer.
-            click_timestamp: get_i64(ga4f, "click_timestamp"),
+            click_timestamp,
             install_timestamp: referrer
                 .map(|d| get_i64(d, "install_timestamp"))
                 .unwrap_or(0),
             google_play_instant: referrer
                 .map(|d| get_bool(d, "google_play_instant"))
                 .unwrap_or(false),
-            attribution_source: SOURCE_GA4F.to_string(),
-            campaign_token: Some(token),
-            deferred_deep_link: Some(deeplink),
-            referrer_settled: referrer.is_some(),
-        })
-    }
-
-    fn build_from_referrer(&self, dict: &VarDictionary, settled: bool) -> SegmentEvent {
-        let referrer = get_string(dict, "referrer");
-        let utm = parse_utm_params(&referrer);
-        let token = extract_token(&referrer);
-
-        // Names the mechanism that answered, NOT whether a campaign was found. A Google Ads
-        // install arrives through the referrer with a bare gclid and no token of ours — that
-        // is still the referrer path, and it is 87% of attributed installs. Reporting `none`
-        // there would make the referrer look like it barely fires. Whether a campaign was
-        // resolved is already answered by campaign_token being present.
-        let source = if settled {
-            SOURCE_REFERRER
-        } else {
-            SOURCE_NONE
-        };
-
-        tracing::debug!(
-            "[attribution] referrer path: source={} token={:?} referrer='{}'",
-            source,
-            token,
-            referrer
-        );
-
-        SegmentEvent::InstallAttribution(SegmentEventInstallAttribution {
-            referrer,
-            utm_source: utm.get("utm_source").cloned(),
-            utm_medium: utm.get("utm_medium").cloned(),
-            utm_campaign: utm.get("utm_campaign").cloned(),
-            utm_content: utm.get("utm_content").cloned(),
-            utm_term: utm.get("utm_term").cloned(),
-            click_timestamp: get_i64(dict, "click_timestamp"),
-            install_timestamp: get_i64(dict, "install_timestamp"),
-            google_play_instant: get_bool(dict, "google_play_instant"),
             attribution_source: source.to_string(),
             campaign_token: token,
-            deferred_deep_link: None,
-            referrer_settled: settled,
+            deferred_deep_link: deeplink,
+            referrer_settled: referrer.is_some(),
         })
     }
 }

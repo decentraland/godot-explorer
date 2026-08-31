@@ -14,6 +14,9 @@ extends RefCounted
 const TARGET_GENESIS := "genesis"
 const TARGET_WORLD := "world"
 const TOKEN_MAX_LENGTH := 64
+## Matches POSITION_ABS_MAX in mobile-bff and the campaigns_position_format CHECK: at most
+## four digits per coordinate. Also keeps the parsed value inside the int32 Vector2i holds.
+const POSITION_ABS_MAX := 9999
 
 # Why a resolve fell back to the default FTUE. Shipped on the existing FTUE metrics so
 # personalized-vs-default can be compared without a new pipeline.
@@ -89,7 +92,15 @@ static func target_position_and_realm(campaign: Dictionary) -> Array:
 		# consumed, and every install of that campaign would land on the Genesis spawn.
 		if not x_raw.is_valid_int() or not y_raw.is_valid_int():
 			return []
-		return [Vector2i(int(x_raw), int(y_raw)), String(DclUrls.main_realm())]
+		# is_valid_int() only checks the characters, so a value too large for the int32 in
+		# Vector2i still truncates — "4294967296" lands on 0,0 exactly like the case above.
+		# The bound matches the 1-4 digits the BFF regex and the DB CHECK both enforce, so a
+		# position that cannot have been stored is not routed either.
+		var x := int(x_raw)
+		var y := int(y_raw)
+		if absi(x) > POSITION_ABS_MAX or absi(y) > POSITION_ABS_MAX:
+			return []
+		return [Vector2i(x, y), String(DclUrls.main_realm())]
 
 	return []
 

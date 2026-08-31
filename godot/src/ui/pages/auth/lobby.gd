@@ -1302,10 +1302,17 @@ func _on_deep_link_received():
 func _deeplink_has_explorer_destination() -> bool:
 	if _should_go_to_explorer_from_deeplink():
 		return true
+	# Mirror what DeepLinkRouter.route() would emit, so the lobby steps aside for exactly the
+	# links the explorer acts on and no others. /events and /places open a panel with an id
+	# and Discover without one; a bare /jump or /open raises the jump-in panel. A link with
+	# params but no destination — a campaign token, a config-only param — is what must NOT
+	# redirect: it would boot the explorer past avatar creation and the FTUE.
 	var path: String = String(Global.deep_link_obj.path).rstrip("/")
-	if path != "/events" and path != "/places":
-		return false
-	return not String(Global.deep_link_obj.params.get("id", "")).is_empty()
+	if path == "/events" or path == "/places":
+		return true
+	if path == "/jump" or path == "/open" or path.is_empty():
+		return Global.deep_link_obj.params.is_empty()
+	return false
 
 
 func _on_dcl_line_edit_dcl_line_edit_changed() -> void:

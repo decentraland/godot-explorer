@@ -75,6 +75,25 @@ func _test_target_position_and_realm() -> void:
 			),
 			"unparseable genesis position rejected: '%s'" % bad
 		)
+	# is_valid_int() only checks characters, so a value too large for the int32 inside Vector2i
+	# truncates to something else entirely — "4294967296" lands on 0,0, the exact failure the
+	# character check was added to stop.
+	for huge in ["4294967296,0", "0,4294967296", "2147483648,0", "99999999999999999999,0"]:
+		_expect(
+			(
+				C
+				. target_position_and_realm({"target": {"type": "genesis", "position": huge}})
+				. is_empty()
+			),
+			"out-of-range genesis position rejected: '%s'" % huge
+		)
+	# The bound matches the BFF regex and the DB CHECK (1-4 digits), so the widest storable
+	# position still resolves.
+	var edge := C.target_position_and_realm(
+		{"target": {"type": "genesis", "position": "-9999,9999"}}
+	)
+	_expect(edge.size() == 2 and edge[0] == Vector2i(-9999, 9999), "widest storable parcel")
+
 	# Whitespace around real numbers is still accepted.
 	var padded := C.target_position_and_realm(
 		{"target": {"type": "genesis", "position": " 10 , -20 "}}
