@@ -95,14 +95,6 @@ func async_resolve_pending() -> Dictionary:
 	if config.campaign_token_captured_at <= 0 or age > TOKEN_MAX_AGE_SECONDS:
 		return _fallback(token, CampaignResolution.FALLBACK_EXPIRED_TOKEN)
 
-	# Hard stop in production. urls::campaigns() is pinned to the dev deployment because the
-	# endpoint does not exist on .org yet, so resolving there would let whoever can write a row
-	# in the dev backoffice choose where a real ad-attributed install lands. Costs nothing: the
-	# endpoint 404s on .org anyway, so the fallback is the same default FTUE. Lift this in the
-	# same change that restores the per-environment URL.
-	if Global.is_production():
-		return _fallback(token, CampaignResolution.FALLBACK_RESOLVER_UNAVAILABLE)
-
 	# Fetched lazily, only once a token actually needs resolving. Fetching on every boot would
 	# put every install on the campaigns endpoint.
 	if not _loaded:
