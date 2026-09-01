@@ -88,6 +88,19 @@ fn avatar_sync_over_livekit(dual_channel: bool, pulse_established: bool) -> bool
     dual_channel || !pulse_established
 }
 
+/// Effective dual-channel setting. An explicit local choice (CLI `--livekit-movement` /
+/// `--no-livekit-movement`, deeplink `dual-channel=`) always wins; otherwise the deployment's
+/// `dual-channel` feature flag decides, defaulting to ON until the flags fetch settles.
+///
+/// The flag is the rollout control for this cutover, and it defaults ON deliberately: an
+/// authoritative server only stops needing the LiveKit copy of avatar state once it ingests
+/// Pulse as a scene listener, and that is a property of the *deployment*, not of this client.
+/// Flipping the flag off is what hands avatar sync to Pulse fleet-wide, reversibly.
+#[cfg(feature = "use_pulse")]
+fn dual_channel_effective(local_override: Option<bool>, flag_enabled: bool) -> bool {
+    local_override.unwrap_or(flag_enabled)
+}
+
 /// Decides whether the scene-room reconnect loop should spawn a new attempt now.
 /// Pure (no Godot/Tokio deps) so the in-flight guard is unit-testable. The guard:
 /// don't start a reconnect while one is already in flight, unless it has been
@@ -276,14 +289,17 @@ pub struct CommunicationManager {
     /// the Pulse TeleportRequest.
     #[cfg(feature = "use_pulse")]
     last_dcl_position: Option<Vector3>,
-    /// Dual-channel avatar sync: whether movement and emotes keep going over LiveKit while
-    /// Pulse is established. **Off by default** — Pulse is the carrier, and the authoritative
-    /// server reads avatar state from it as a scene listener, so the LiveKit copy is pure
-    /// duplication. Turned back on via `--livekit-movement`, the `dual-channel=true` deeplink
-    /// or the setter. Either way the gate is `established`-scoped: LiveKit sending auto-resumes
-    /// the moment Pulse drops, so this can never make the player invisible.
+    /// Explicit local dual-channel choice (CLI `--livekit-movement` / `--no-livekit-movement`,
+    /// deeplink `dual-channel=`): `None` follows the server flag. See `dual_channel_effective`.
     #[cfg(feature = "use_pulse")]
-    livekit_movement_dual_channel: bool,
+    dual_channel_override: Option<bool>,
+    /// Deployment `dual-channel` flag: whether movement and emotes keep going over LiveKit while
+    /// Pulse is established. Defaults ON (today's behaviour) and is reported by feature_flags.gd
+    /// once the fetch settles — flipping it off is what makes Pulse the sole avatar-sync carrier.
+    /// Either way the gate is `established`-scoped: LiveKit sending auto-resumes the moment Pulse
+    /// drops, so neither setting can make the player invisible.
+    #[cfg(feature = "use_pulse")]
+    dual_channel_flag: bool,
     /// Runtime activation override (deeplink `pulse=true/false`): `None` follows the CLI/env.
     #[cfg(feature = "use_pulse")]
     pulse_runtime_enabled: Option<bool>,
@@ -393,7 +409,9 @@ impl INode for CommunicationManager {
             #[cfg(feature = "use_pulse")]
             last_dcl_position: None,
             #[cfg(feature = "use_pulse")]
-            livekit_movement_dual_channel: false,
+            dual_channel_override: None,
+            #[cfg(feature = "use_pulse")]
+            dual_channel_flag: true,
             #[cfg(feature = "use_pulse")]
             pulse_runtime_enabled: None,
             #[cfg(feature = "use_pulse")]
@@ -812,14 +830,16 @@ impl CommunicationManager {
     /// confirms the flag is on (fetch failure or an absent flag keeps it off). A server
     /// flag can never force-enable Pulse over a local opt-out.
     ///
-    /// `--preview` self-enables for the same reason `--pulse-server` does: Local Scene
-    /// Development is where the authoritative server listens for this player, and a preview
-    /// run has no meaningful feature-flag verdict to wait on. `--no-pulse` still wins.
+    /// `--preview` deliberately does NOT self-enable: a Local Scene Development run reaches
+    /// Pulse through the same explicit opt-ins as anything else (`--pulse-realm` — what
+    /// sdk-commands passes when its own gate is on — `--pulse-server`, or `--pulse`). Otherwise
+    /// every plain preview would dial the default (production) Pulse and announce a realm key
+    /// that encodes the developer's absolute project path and hostname, with no remote way to
+    /// turn it off.
     #[cfg(feature = "use_pulse")]
     fn pulse_enabled(&self, cli: &crate::godot_classes::dcl_cli::DclCli) -> bool {
         self.pulse_runtime_enabled.unwrap_or_else(|| {
-            cli.pulse
-                && (cli.pulse_explicit || cli.preview_mode || self.pulse_flag_enabled == Some(true))
+            cli.pulse && (cli.pulse_explicit || self.pulse_flag_enabled == Some(true))
         })
     }
 
@@ -856,7 +876,9 @@ impl CommunicationManager {
             return;
         }
         if cli.livekit_movement {
-            self.livekit_movement_dual_channel = true;
+            self.dual_channel_override = Some(true);
+        } else if cli.no_livekit_movement {
+            self.dual_channel_override = Some(false);
         }
 
         let (host, port) = self.resolve_pulse_endpoint(&cli);
@@ -1362,7 +1384,7 @@ impl CommunicationManager {
     fn set_livekit_movement_dual_channel(&mut self, enabled: bool) {
         #[cfg(feature = "use_pulse")]
         {
-            self.livekit_movement_dual_channel = enabled;
+            self.dual_channel_override = Some(enabled);
         }
         #[cfg(not(feature = "use_pulse"))]
         let _ = enabled;
@@ -1372,7 +1394,7 @@ impl CommunicationManager {
     fn is_livekit_movement_dual_channel(&self) -> bool {
         #[cfg(feature = "use_pulse")]
         {
-            self.livekit_movement_dual_channel
+            dual_channel_effective(self.dual_channel_override, self.dual_channel_flag)
         }
         // Without Pulse there is nothing to hand avatar sync over to: LiveKit carries it.
         #[cfg(not(feature = "use_pulse"))]
@@ -1405,6 +1427,20 @@ impl CommunicationManager {
         }
         #[cfg(not(feature = "use_pulse"))]
         let _ = host_port;
+    }
+
+    /// Deployment `dual-channel` flag, reported by feature_flags.gd once the fetch settles.
+    /// Only the default: an explicit local choice (`--livekit-movement` /
+    /// `--no-livekit-movement`, deeplink `dual-channel=`) always wins. No-op without use_pulse.
+    #[func]
+    pub fn set_dual_channel_flag_enabled(&mut self, enabled: bool) {
+        #[cfg(feature = "use_pulse")]
+        {
+            self.dual_channel_flag = enabled;
+            tracing::info!("pulse: dual-channel flag = {enabled}");
+        }
+        #[cfg(not(feature = "use_pulse"))]
+        let _ = enabled;
     }
 
     /// Runtime (deeplink `pulse-realm=<realm>`): announce a specific realm instead of the
@@ -1785,7 +1821,7 @@ impl CommunicationManager {
         let pulse_established = false;
         #[cfg(feature = "use_pulse")]
         let movement_over_livekit =
-            avatar_sync_over_livekit(self.livekit_movement_dual_channel, pulse_established);
+            avatar_sync_over_livekit(self.is_livekit_movement_dual_channel(), pulse_established);
         #[cfg(not(feature = "use_pulse"))]
         let movement_over_livekit = true;
 
@@ -1956,7 +1992,7 @@ impl CommunicationManager {
         // older clients read.
         #[cfg(feature = "use_pulse")]
         let emote_over_livekit = avatar_sync_over_livekit(
-            self.livekit_movement_dual_channel,
+            self.is_livekit_movement_dual_channel(),
             self.pulse_room
                 .as_ref()
                 .is_some_and(|pulse| pulse.is_established()),
@@ -2963,7 +2999,7 @@ impl CommunicationManager {
             );
             dict.set(
                 "dual_channel".to_variant(),
-                self.livekit_movement_dual_channel.to_variant(),
+                self.is_livekit_movement_dual_channel().to_variant(),
             );
             // The announced realm is the whole visibility contract and is matched exactly, so
             // surfacing it is the difference between "I see nobody" and "I am in lsd:b64-…"
@@ -3465,11 +3501,26 @@ mod tests {
             assert!(avatar_sync_over_livekit(false, false));
         }
 
-        /// The debugging escape hatch still forces both channels at once.
+        /// The escape hatch still forces both channels at once.
         #[test]
         fn dual_channel_forces_livekit_regardless() {
             assert!(avatar_sync_over_livekit(true, true));
             assert!(avatar_sync_over_livekit(true, false));
+        }
+
+        /// Until the deployment flips `dual-channel` off, LiveKit keeps carrying avatar sync —
+        /// an authoritative server that does not yet ingest Pulse must not be starved of it.
+        #[test]
+        fn flag_defaults_on_so_the_cutover_is_opt_in_per_deployment() {
+            assert!(dual_channel_effective(None, true));
+            assert!(!dual_channel_effective(None, false));
+        }
+
+        /// A local choice outranks the flag in both directions, so a dev can force either mode.
+        #[test]
+        fn local_override_beats_the_flag() {
+            assert!(dual_channel_effective(Some(true), false));
+            assert!(!dual_channel_effective(Some(false), true));
         }
     }
 

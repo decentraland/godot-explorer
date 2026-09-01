@@ -191,11 +191,13 @@ pub struct DclCli {
     // (see CommunicationManager::pulse_realm_name).
     #[var(get)]
     pub pulse_realm: GString,
-    // Dual-channel opt-in: keep movement and emotes going over LiveKit while Pulse is
-    // established. Off by default — Pulse carries avatar sync, and LiveKit resumes on its own
-    // whenever Pulse is not established, so this can't cause invisibility either way.
+    // Explicit local dual-channel choice; either one outranks the deployment's `dual-channel`
+    // flag for this run (see CommunicationManager::dual_channel_effective). Neither can cause
+    // invisibility: LiveKit resumes on its own whenever Pulse is not established.
     #[var(get)]
     pub livekit_movement: bool,
+    #[var(get)]
+    pub no_livekit_movement: bool,
     // Pulse-only mode: no LiveKit-backed rooms at all (no chat/voice/scene messages).
     // Dev/testing switch; deeplink `livekit=false` is the runtime equivalent.
     #[var(get)]
@@ -609,13 +611,13 @@ impl DclCli {
             },
             ArgDefinition {
                 name: "--livekit-movement".to_string(),
-                description: "Keep sending movement and emotes over LiveKit while Pulse is established (dual-channel). Off by default — Pulse is the avatar-sync carrier".to_string(),
+                description: "Force dual-channel ON for this run: keep sending movement and emotes over LiveKit while Pulse is established, whatever the deployment's dual-channel flag says".to_string(),
                 arg_type: ArgType::Flag,
                 category: "Comms".to_string(),
             },
             ArgDefinition {
                 name: "--no-livekit-movement".to_string(),
-                description: "Legacy no-op — dual-channel is off by default. Use --livekit-movement to turn it back on".to_string(),
+                description: "Force dual-channel OFF for this run: Pulse becomes the only carrier for movement and emotes while it is established (auto-resumes if Pulse drops)".to_string(),
                 arg_type: ArgType::Flag,
                 category: "Comms".to_string(),
             },
@@ -911,6 +913,7 @@ impl INode for DclCli {
         let pulse_explicit =
             args_map.contains_key("--pulse") || !pulse_server.is_empty() || !pulse_realm.is_empty();
         let livekit_movement = args_map.contains_key("--livekit-movement");
+        let no_livekit_movement = args_map.contains_key("--no-livekit-movement");
         let no_livekit = args_map.contains_key("--no-livekit");
 
         // Convert combined args back to PackedStringArray for storage
@@ -982,6 +985,7 @@ impl INode for DclCli {
             pulse_server,
             pulse_realm,
             livekit_movement,
+            no_livekit_movement,
             no_livekit,
         }
     }
