@@ -110,12 +110,20 @@ pub async fn complete_mobile_auth(
         .unwrap_or(&identity.ephemeral_identity.private_key);
     let ephemeral_keys = hex::decode(private_key_hex)
         .map_err(|e| anyhow::Error::msg(format!("Invalid ephemeral private key: {}", e)))?;
+    // EphemeralAuthChain::new unwraps this same parse, and our caller spawns us with the
+    // JoinHandle dropped — a panic here emits no signal at all and hangs the sign-in spinner.
+    LocalWallet::from_bytes(&ephemeral_keys)
+        .map_err(|e| anyhow::Error::msg(format!("Invalid ephemeral private key: {}", e)))?;
 
     // Parse expiration date
     let expiration = chrono::DateTime::parse_from_rfc3339(&identity.expiration)
         .map_err(|e| anyhow::Error::msg(format!("Invalid expiration date: {}", e)))?;
+    // Same: a pre-epoch timestamp wraps through `as u64` and overflows the addition.
+    let expiration_secs = u64::try_from(expiration.timestamp())
+        .map_err(|_| anyhow::Error::msg("Expiration date is before the Unix epoch"))?;
     let expiration_system_time = std::time::SystemTime::UNIX_EPOCH
-        + std::time::Duration::from_secs(expiration.timestamp() as u64);
+        .checked_add(std::time::Duration::from_secs(expiration_secs))
+        .ok_or_else(|| anyhow::Error::msg("Expiration date is out of range"))?;
 
     // Convert auth chain from server format to our SimpleAuthChain
     let chain_links: Vec<ChainLink> = identity

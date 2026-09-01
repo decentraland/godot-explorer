@@ -32,8 +32,7 @@ func _show_shop() -> void:
 	label_title.text = "Credits"
 	credits_option.show()
 	credits_history.hide()
-	button_history.show()
-	button_history.disabled = Iap.get_transaction_history().size() == 0
+	_update_history_button()
 	button_credits.visible = Iap.is_available()
 
 
@@ -56,7 +55,18 @@ func _on_button_history_pressed() -> void:
 	_show_history()
 
 
+## Single rule for the Purchases button, applied both when the shop view is shown and
+## when a history fetch lands.
+##
+## The two used to disagree: a completed fetch enabled the button unconditionally, even
+## when it had brought back nothing, while returning from the history view disabled it
+## on an empty list. So an empty history let the user in once, and coming back locked
+## the button for good — nothing fires `transaction_history_updated` again from there.
+func _update_history_button() -> void:
+	button_history.show()
+	button_history.disabled = Iap.get_transaction_history().is_empty()
+
+
 func _on_transaction_history_updated() -> void:
 	if credits_option.visible:
-		button_history.show()
-		button_history.disabled = false
+		_update_history_button()

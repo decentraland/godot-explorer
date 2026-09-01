@@ -41,7 +41,8 @@ use super::{
     cache_file_name::{cache_file_name, cache_file_path},
     gltf::{
         build_dcl_emote_gltf, get_last_16_alphanumeric, load_and_save_emote_gltf,
-        load_and_save_scene_gltf, load_and_save_wearable_gltf, DclEmoteGltf,
+        load_and_save_scene_gltf, load_and_save_wearable_gltf, process_emote_animations,
+        DclEmoteGltf,
     },
     profile::{
         prepare_request_requirements, request_lambda_profile, request_lambda_profile_by_url,
@@ -953,16 +954,62 @@ impl ContentProvider {
             .collect();
         tracing::debug!("[extract_emote] Root children: {:?}", children);
 
-        // Read armature_prop (first Node3D child that's not AnimationPlayer)
+        // Pre-baked optimized assets come in two generations. Processed bakes went
+        // through `process_emote_animations` at bake time: an "EmoteAnimations"
+        // player, hash-suffix animation names, a prop renamed "Armature_Prop_{hash}"
+        // that was 180°-flipped, and a baked `Armature_Prop_{hash}:visible` track.
+        // Raw bakes are a plain GLTF->scn conversion: a raw "AnimationPlayer" with
+        // Blender animation names, a prop named exactly "Armature_Prop", no flip and
+        // NO `visible` track — the controller hides props at load and visibility is
+        // purely animation-driven, so a raw prop can be extracted correctly and still
+        // never show. Detect the raw shape and run the exact same processing the
+        // runtime pipeline applies to a freshly imported emote GLTF.
+        if root
+            .try_get_node_as::<AnimationPlayer>("EmoteAnimations")
+            .is_none()
+            && root
+                .try_get_node_as::<AnimationPlayer>("AnimationPlayer")
+                .is_some()
+        {
+            tracing::debug!(
+                "[extract_emote] hash={}: raw (unprocessed) bake detected, running emote processing",
+                file_hash
+            );
+            return Self::extract_raw_emote_from_root(root, &file_hash);
+        }
+
+        // Processed bake: read armature_prop by NAME, the way the runtime pipeline
+        // named it (`gltf::emote::process_emote_animations`). Position alone is not
+        // enough: `avatar_emote_controller` only accepts names starting with
+        // "Armature_Prop" (so it can't destroy the avatar skeleton), and silently
+        // drops anything else.
         let mut armature_prop: Option<Gd<Node3D>> = None;
+        let mut first_node3d: Option<Gd<Node3D>> = None;
         for child in root.get_children().iter_shared() {
             if child.is_class("AnimationPlayer") {
                 continue;
             }
+            let named_prop = child.get_name().to_string().starts_with("Armature_Prop");
             if let Ok(node3d) = child.try_cast::<Node3D>() {
-                armature_prop = Some(node3d);
-                break;
+                if named_prop {
+                    armature_prop = Some(node3d);
+                    break;
+                }
+                if first_node3d.is_none() {
+                    first_node3d = Some(node3d);
+                }
             }
+        }
+        if armature_prop.is_none() {
+            if let Some(node) = first_node3d.as_ref() {
+                tracing::warn!(
+                    "[extract_emote] hash={}: no 'Armature_Prop*' child; falling back to '{}'. \
+                     Consumers that match on the name will drop this prop.",
+                    file_hash,
+                    node.get_name()
+                );
+            }
+            armature_prop = first_node3d;
         }
 
         // Read animations from embedded AnimationPlayer
@@ -1072,6 +1119,72 @@ impl ContentProvider {
         }
 
         // Free the loaded scene root
+        root.free();
+
+        Some(build_dcl_emote_gltf(
+            armature_prop,
+            default_animation,
+            prop_animation,
+        ))
+    }
+
+    /// Extract emote data from a raw (unprocessed) emote scene — an optimized bake
+    /// that skipped `process_emote_animations` at bake time.
+    ///
+    /// Animations on a PackedScene are shared `Resource`s across every
+    /// `instantiate()` of that scene, and `process_emote_animations` mutates them
+    /// in place (renames, track remaps, added visible/audio tracks). Make them
+    /// instance-local first, so extracting the same emote again for another avatar
+    /// can't process the shared animations twice.
+    fn extract_raw_emote_from_root(
+        root: Gd<Node3D>,
+        file_hash: &GString,
+    ) -> Option<Gd<DclEmoteGltf>> {
+        use godot::classes::{Animation, AnimationLibrary, AnimationPlayer};
+
+        let mut anim_player = root.try_get_node_as::<AnimationPlayer>("AnimationPlayer")?;
+
+        let lib_names: Vec<StringName> = anim_player
+            .get_animation_library_list()
+            .iter_shared()
+            .collect();
+        for lib_name in lib_names {
+            let Some(lib) = anim_player.get_animation_library(&lib_name) else {
+                continue;
+            };
+            let mut local_lib = AnimationLibrary::new_gd();
+            for anim_name in lib.get_animation_list().iter_shared() {
+                let Some(anim) = lib.get_animation(&anim_name) else {
+                    continue;
+                };
+                let Some(dup) = anim.duplicate() else {
+                    continue;
+                };
+                let Ok(mut dup) = dup.try_cast::<Animation>() else {
+                    continue;
+                };
+                dup.set_name(&anim.get_name());
+                local_lib.add_animation(&anim_name, &dup);
+            }
+            anim_player.remove_animation_library(&lib_name);
+            anim_player.add_animation_library(&lib_name, &local_lib);
+        }
+
+        let processed = process_emote_animations(&file_hash.to_string(), &root);
+
+        let Some((mut armature_prop, default_animation, prop_animation)) = processed else {
+            tracing::debug!("[extract_emote] FAILED: raw emote processing returned None");
+            root.free();
+            return None;
+        };
+
+        // Detach the prop before freeing the scene so it survives; the animations
+        // are Resources and survive independently.
+        if let Some(ref mut prop) = armature_prop {
+            if let Some(mut parent) = prop.get_parent() {
+                parent.remove_child(&prop.clone().upcast::<Node>());
+            }
+        }
         root.free();
 
         Some(build_dcl_emote_gltf(
@@ -1589,6 +1702,11 @@ impl ContentProvider {
         if let Some(promise) = self.get_cached_promise(&file_hash) {
             return promise;
         }
+        tracing::debug!(
+            "fetch_texture_by_url_with_quality: {} -> {}",
+            url,
+            file_hash
+        );
         let url = url.to_string();
         let (promise, get_promise) = Promise::make_to_async();
 
@@ -1610,8 +1728,12 @@ impl ContentProvider {
 
             loading_resources.fetch_add(1, Ordering::Relaxed);
 
+            let url_for_log = url.clone();
             let result =
                 load_image_texture(url, sent_file_hash, content_provider_context, true).await;
+            if let Err(error) = &result {
+                tracing::warn!("fetch_texture_by_url failed for {}: {}", url_for_log, error);
+            }
 
             #[cfg(feature = "use_resource_tracking")]
             if let Err(error) = &result {
@@ -2456,13 +2578,28 @@ impl ContentProvider {
         let file_hash_str = file_hash.to_string();
         let absolute_file_path = cache_file_path(&self.content_folder, &file_hash_str);
 
+        let scene_path = get_scene_path_for_hash(&self.content_folder, &file_hash_str);
+
         let resource_provider = self.resource_provider.clone();
         let (promise, get_promise) = Promise::make_to_async();
 
         self.promises.remove(&file_hash_str);
+        // GLTFs are cached under a prefixed key and as a derived .scn next to the
+        // raw download (see `load_scene_gltf`); dropping only the raw entry would
+        // leave a stale model behind whenever a hash is reused — which the preview
+        // server does on every edit, since it hashes file paths, not contents.
+        self.promises.remove(&format!("scene_{file_hash_str}"));
 
         TokioRuntime::spawn(async move {
             resource_provider.delete_file(&absolute_file_path).await;
+            // Both calls are needed for the .scn. `delete_file` drops the
+            // `existing_files` entry, which is what `load_scene_gltf`'s cache check
+            // actually consults (`file_exists_by_path` reads that map, not the
+            // disk) — but it only unlinks paths it is tracking, and a .scn written
+            // by the scene saver in an earlier session isn't in the map, so the
+            // file itself would survive and be re-adopted later.
+            resource_provider.delete_file(&scene_path).await;
+            let _ = tokio::fs::remove_file(&scene_path).await;
             then_promise(get_promise, Ok(None));
         });
 

@@ -186,6 +186,12 @@ func apply_toon_material(node_to_apply: Node) -> void:
 		node_to_apply.set_surface_override_material(surface_idx, cached)
 
 
+func apply_toon_material_recursive(node: Node) -> void:
+	apply_toon_material(node)
+	for child in node.get_children():
+		apply_toon_material_recursive(child)
+
+
 func _convert_to_toon(base_mat: BaseMaterial3D) -> ShaderMaterial:
 	var is_alpha_scissor = base_mat.transparency == BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
 	var is_alpha_blend = (
