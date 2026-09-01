@@ -1674,9 +1674,9 @@ func _apply_comms_deeplink_params(deep_link) -> void:
 	if not pulse_value.is_empty():
 		print("[DEEPLINK] pulse=", pulse_value)
 		comms.set_pulse_enabled(pulse_value.to_lower() in ["true", "1", "yes"])
-	# `dual-channel=true/false` (default false): whether movement and emotes keep
-	# going over LiveKit while Pulse is established. Pulse is the carrier by
-	# default; true restores the old both-at-once behaviour for debugging.
+	# `dual-channel=true/false`: whether movement and emotes keep going over
+	# LiveKit while Pulse is established. Overrides the deployment's
+	# `dual-channel` feature flag for this run (the flag defaults true).
 	var dual_channel_value = deep_link.params.get("dual-channel", "")
 	if not dual_channel_value.is_empty():
 		print("[DEEPLINK] dual-channel=", dual_channel_value)
