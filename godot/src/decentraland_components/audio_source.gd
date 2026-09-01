@@ -127,6 +127,16 @@ func _async_refresh_data(time_specified: bool):
 
 
 func _on_audio_loaded(audio_stream):
+	# A resolved promise carrying no stream is still a failure: it used to pass
+	# as READY and leave a silent player behind (#2741).
+	if not audio_stream is AudioStream:
+		self.stop()
+		self.stream = null
+		valid = false
+		dcl_clip_state = CLIP_STATE_ERROR
+		printerr("Audio clip resolved with no stream: ", last_loaded_audio_clip)
+		return
+
 	self.stream = audio_stream
 	valid = true
 	dcl_clip_state = CLIP_STATE_READY
