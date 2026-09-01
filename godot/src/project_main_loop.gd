@@ -6,31 +6,40 @@ extends SceneTree
 # the Sentry attachment quota.
 const ATTACH_LOG_SAMPLE_RATE := 0.01
 
-# Substring patterns for messages classified as Sentry noise. These all
-# originate in Godot internals, GPU drivers, or third-party crates
-# (livekit-rust); we can't act on them and they fire in tight loops,
-# dominating our quota.
-const NOISE_PATTERNS := [
-	"VK_SUCCESS",
-	"vkWaitForFences",
-	"QueuePresentKHR",
-	"Uniforms supplied",
-	"p_mipmap",
-	"det == 0",
-	"!is_inside_tree",
-	"err != OK",
-	"Bones array",
-	"Skin bind",
-	"must be a normalized",
-	"Mouse is not supported",
-	"utf16 surrogate",
-	"ClientMessagesHandler",
-	"StreamProtocol",
-	'Condition "active"',
-]
-# Keep this fraction of noise events as a canary — if the shape or volume of
-# engine/driver errors shifts we want to notice, but 100% is wasted quota.
-const NOISE_KEEP_RATE := 0.05
+# Text prefixes stamped by the Rust tracing layer (lib/src/tools/godot_logger.rs):
+# every event it forwards arrives as "[Rust:{target}] {msg} ({file}:{line})".
+# Scene JS console.error is funnelled through op_error (lib/src/dcl/js/mod.rs)
+# so it always carries the dcl::js target. These nest, so they must be tested
+# most-specific first: scene, then our crate, then any dependency.
+const RUST_SCENE_PREFIX := "[Rust:dclgodot::dcl::js]"
+const RUST_APP_PREFIX := "[Rust:dclgodot"
+const RUST_PREFIX := "[Rust:"
+
+# Event source taxonomy, reported as the `source` tag so the Sentry UI can split
+# engine vs. our Rust vs. dependency vs. scene content in one click.
+const SOURCE_CRASH := "crash"
+const SOURCE_CAPTURE := "capture"
+const SOURCE_SCENE := "scene"
+const SOURCE_RUST_APP := "rust_app"
+const SOURCE_RUST_DEP := "rust_dep"
+const SOURCE_ENGINE := "engine"
+
+# Fraction of each source kept once `sentry-error-events` is on, applied on top
+# of the remote `sentry-sample-rate`. Sources we author and can act on stay at
+# 1.0. The unbounded ones - scene content we do not write, third-party crates,
+# and engine/driver errors we cannot fix - keep a canary slice so a shift in
+# shape or volume is still visible without paying for the firehose.
+const SOURCE_KEEP_RATE := {
+	SOURCE_CRASH: 1.0,
+	SOURCE_CAPTURE: 1.0,
+	SOURCE_RUST_APP: 1.0,
+	SOURCE_RUST_DEP: 0.05,
+	SOURCE_SCENE: 0.01,
+	SOURCE_ENGINE: 0.01,
+}
+
+# Keep rate for a source not listed above - i.e. a bug in _classify.
+const UNKNOWN_SOURCE_KEEP_RATE := 0.01
 
 # Sampling rate used until the `sentry-sample-rate` feature flag loads — also
 # the effective rate when the fetch fails or the flag is absent. 1.0 because
@@ -162,37 +171,74 @@ func set_sentry_error_events_enabled(enabled: bool) -> void:
 
 
 func _before_send(event: SentryEvent) -> SentryEvent:
-	# Discard events for dev builds - only prod and staging report to Sentry
+	# Discard events for dev builds - only prod and staging report to Sentry.
 	if self.is_dev_version:
 		return null
 
-	# Crash-only mode (default): drop sub-fatal exception events — engine and
-	# Rust errors auto-captured by SentryGodotLogger. FATAL events (native
-	# crashes; the OS-level crash handler may also bypass this callback
-	# entirely, which is fine) and exception-less events (explicit
-	# capture_message instrumentation, e.g. NodeGuard — deliberate and
-	# self-rate-limited) always pass.
-	if not sentry_error_events_enabled:
-		if event.get_exception_count() > 0 and event.level != SentrySDK.LEVEL_FATAL:
-			return null
+	# These two are tested first, and in this order, both deliberately. The addon
+	# routes its on_crash hook through this same callback, and a crashpad crash
+	# event carries no exception values - so is_crash() must be tested before the
+	# exception count, or every native crash would classify as an explicit
+	# capture. Neither needs the event text, so the classifier never runs here.
+	if event.is_crash() or event.level == SentrySDK.LEVEL_FATAL:
+		return _keep(event, SOURCE_CRASH)
+	# An event with no exception came from an explicit SentrySDK.capture_* call:
+	# deliberate instrumentation, today only NodeGuard (node_guard.gd), which caps
+	# itself at one report per site per session. Note this is a shape test, not an
+	# intent test - any future capture_message inherits the same bypass.
+	if event.get_exception_count() == 0:
+		return _keep(event, SOURCE_CAPTURE)
 
-	# Remote throttle (`sentry-sample-rate` feature flag): 1.0 keeps every
-	# event, 0.0 drops them all.
-	if randf() >= sentry_sample_rate:
+	# Everything below is the SentryGodotLogger firehose, off by default and
+	# re-enabled remotely by `sentry-error-events`. Errors keep flowing as
+	# breadcrumbs either way, so a later crash still carries the recent-error
+	# trail. Gating here rather than after classification means the text work
+	# never runs at all in the default configuration.
+	if not sentry_error_events_enabled:
 		return null
 
-	if randf() >= NOISE_KEEP_RATE:
-		var msg := _event_text(event)
-		if not msg.is_empty():
-			for pattern in NOISE_PATTERNS:
-				if pattern in msg:
-					return null
+	return _keep(event, _classify(event))
 
-	# if event.message.contains("Bruno"):
-	#	# Scrub sensitive information from the event.
-	#	event.message = event.message.replace("Bruno", "REDACTED")
 
+## Rolls the remote rate and then the per-source rate, and tags the survivor.
+## Every set_tag lives here so tagging cannot drift out of step with dropping.
+##
+## Note randf() runs on whichever thread raised the error - the addon's logger
+## does not marshal to the main thread - so draws can correlate across threads.
+## That is fine for sampling; do not build anything on them being independent.
+func _keep(event: SentryEvent, source: String) -> SentryEvent:
+	# The remote kill switch has to be total, crashes included.
+	if sentry_sample_rate <= 0.0:
+		return null
+	# Crashes otherwise bypass the remote rate: they are a fraction of a percent
+	# of volume, and sampling them randomly drops the events we most need.
+	if source != SOURCE_CRASH and randf() >= sentry_sample_rate:
+		return null
+	var keep_rate: float = SOURCE_KEEP_RATE.get(source, UNKNOWN_SOURCE_KEEP_RATE)
+	if keep_rate < 1.0 and randf() >= keep_rate:
+		return null
+	event.set_tag("source", source)
 	return event
+
+
+## Buckets a logger event by its text. SentryGodotLogger leaves `message` empty
+## and puts the error in exception 0, and SentryEvent in sentry-godot 1.6.0
+## exposes no exception type, culprit or stack frames - so that one string is
+## everything there is to work with.
+##
+## Anything without a Rust prefix is an engine print. That includes GDScript
+## push_error: it expands to ERR_PRINT -> ERR_HANDLER_ERROR, indistinguishable
+## from a C++ engine error without serializing the whole event. Splitting those
+## out needs a marker at the call site, not a richer test here.
+func _classify(event: SentryEvent) -> String:
+	var text := _event_text(event)
+	if text.begins_with(RUST_SCENE_PREFIX):
+		return SOURCE_SCENE
+	if text.begins_with(RUST_APP_PREFIX):
+		return SOURCE_RUST_APP
+	if text.begins_with(RUST_PREFIX):
+		return SOURCE_RUST_DEP
+	return SOURCE_ENGINE
 
 
 # SentryGodotLogger builds engine/Rust errors with `add_exception()` and never
