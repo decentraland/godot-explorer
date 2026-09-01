@@ -287,6 +287,9 @@ func _ready():
 
 		audio_player_emote = AudioStreamPlayer.new()
 		audio_player_emote.bus = &"AvatarAndEmotes"
+		# The 3D node carries this in the scene; the 2D replacement has to
+		# repeat it or emotes play at full volume (Unity's prefab is at 0.5).
+		audio_player_emote.volume_db = linear_to_db(0.5)
 		add_child(audio_player_emote)
 		audio_player_emote.name = audio_player_name
 
