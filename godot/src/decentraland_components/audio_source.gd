@@ -7,6 +7,12 @@ const MIN_VOLUME_DB := -80.0
 ## 1 m; Godot's default `unit_size` of 10 is +20 dB louder past a metre.
 const UNIT_SIZE := 1.0
 
+# Clip states, matching the Rust CLIP_STATE_* constants.
+const CLIP_STATE_NONE = 0
+const CLIP_STATE_LOADING = 1
+const CLIP_STATE_READY = 2
+const CLIP_STATE_ERROR = 3
+
 var last_loaded_audio_clip := ""
 var valid := false
 var _time_specified := false
@@ -94,8 +100,12 @@ func _async_refresh_data(time_specified: bool):
 		var audio_clip_file_hash = content_mapping.get_hash(last_loaded_audio_clip)
 		if audio_clip_file_hash.is_empty():
 			# TODO: log file not found
+			dcl_clip_state = (
+				CLIP_STATE_NONE if last_loaded_audio_clip.is_empty() else CLIP_STATE_ERROR
+			)
 			return
 
+		dcl_clip_state = CLIP_STATE_LOADING
 		var promise: Promise = Global.content_provider.fetch_audio(
 			last_loaded_audio_clip, content_mapping
 		)
@@ -103,6 +113,7 @@ func _async_refresh_data(time_specified: bool):
 		if res is PromiseError:
 			self.stop()
 			self.stream = null
+			dcl_clip_state = CLIP_STATE_ERROR
 			printerr("Error on fetch audio: ", res.get_error())
 		else:
 			_on_audio_loaded(res)
@@ -111,6 +122,7 @@ func _async_refresh_data(time_specified: bool):
 func _on_audio_loaded(audio_stream):
 	self.stream = audio_stream
 	valid = true
+	dcl_clip_state = CLIP_STATE_READY
 
 	apply_audio_props(true)
 
