@@ -14,7 +14,10 @@ use crate::{
     godot_classes::dcl_audio_source::{
         DclAudioSource, CLIP_STATE_ERROR, CLIP_STATE_LOADING, CLIP_STATE_READY,
     },
-    scene_runner::scene::{Scene, SceneType},
+    scene_runner::{
+        components::audio_analysis::update_audio_analysis,
+        scene::{Scene, SceneType},
+    },
 };
 use godot::prelude::*;
 
@@ -92,6 +95,7 @@ pub fn update_audio_source(
     }
 
     poll_audio_events(scene, crdt_state);
+    update_audio_analysis(scene, crdt_state);
 }
 
 /// Mirrors Unity's `GetAudioSourceState`.
