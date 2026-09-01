@@ -13,7 +13,8 @@ use crate::{
         SceneId,
     },
     godot_classes::dcl_audio_stream::{
-        DclAudioStream, STREAM_STATE_ERROR, STREAM_STATE_PAUSED, STREAM_STATE_PLAYING,
+        DclAudioStream, STREAM_STATE_ERROR, STREAM_STATE_LOADING, STREAM_STATE_PAUSED,
+        STREAM_STATE_PLAYING, STREAM_STATE_READY,
     },
     scene_runner::scene::{Scene, SceneType},
 };
@@ -103,8 +104,10 @@ pub fn update_audio_stream(
                     _ => {
                         audio_stream_node.bind_mut().backend_dispose();
 
-                        // Streams have no LiveKit variant: `from_source` only ever
-                        // returns the platform's native player or Noop for them.
+                        // `from_source` still returns LiveKit for a
+                        // `livekit-video://` url, which is not a stream source.
+                        // `to_gd_int()` maps it to 0, which falls through the
+                        // GDScript `match` into the noop backend.
                         let backend_type = BackendType::from_source(&next_value.url);
                         audio_stream_node.bind_mut().init_backend(
                             backend_type.to_gd_int(),
@@ -131,12 +134,18 @@ pub fn update_audio_stream(
     poll_audio_stream_events(scene, crdt_state);
 }
 
-/// Mirrors Unity's `GetAudioStreamState`, which is a direct cast of the media
-/// player state. Unity's state machine never produces `MS_LOADING` or
-/// `MS_READY` for a stream — a stream that is loading or finished reads
-/// `MS_NONE` — so neither is emitted here.
+/// Unity's `GetAudioStreamState` is a bare cast of the media player state, so
+/// every state the player reports reaches the scene. This maps the whole set
+/// through for the same reason, and to match `poll_video_events` in
+/// `video_player.rs`, which does it off these same wrappers.
+///
+/// `MS_BUFFERING` and `MS_SEEKING` stay unreachable: the wrappers expose only
+/// duration, position and is-playing, so there is no signal for either without
+/// extending the Kotlin and Swift plugins.
 fn media_state(stream_state: i32) -> MediaState {
     match stream_state {
+        STREAM_STATE_LOADING => MediaState::MsLoading,
+        STREAM_STATE_READY => MediaState::MsReady,
         STREAM_STATE_PLAYING => MediaState::MsPlaying,
         STREAM_STATE_PAUSED => MediaState::MsPaused,
         STREAM_STATE_ERROR => MediaState::MsError,

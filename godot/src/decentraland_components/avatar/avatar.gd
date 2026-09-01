@@ -1574,6 +1574,9 @@ func _hide_glider_prop() -> void:
 		glider_prop.visible = false
 
 
+## The three glider players keep `max_distance = 50` for the same reason as
+## `avatar_sfxs.gd`: a cheap per-avatar cutoff, traded against Unity-exact
+## rolloff. See the comment there.
 func _play_glider_audio(node_name: String) -> void:
 	var player := glider_prop.get_node_or_null(node_name) as AudioStreamPlayer3D
 	if player != null:
