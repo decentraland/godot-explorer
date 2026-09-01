@@ -1,11 +1,24 @@
 extends DclAudioSource
 
+## Linear volume units per second, matching Unity's `AudioSourcesPlugin.FadeSpeed`.
+const FADE_SPEED := 1.0
+const MIN_VOLUME_DB := -80.0
+## Distance where attenuation starts. Unity leaves `minDistance` at its default of
+## 1 m; Godot's default `unit_size` of 10 is +20 dB louder past a metre.
+const UNIT_SIZE := 1.0
+
 var last_loaded_audio_clip := ""
 var valid := false
 var _time_specified := false
+## Faded gain, ramping toward `dcl_volume` inside the scene and toward 0 outside.
+var _faded_volume := 0.0
+var _fade_initialized := false
+var _last_sdk_volume := -1.0
 
 
 func apply_audio_props(action_on_playing: bool):
+	_sync_volume_from_sdk()
+
 	if not valid:
 		return
 
@@ -16,20 +29,54 @@ func apply_audio_props(action_on_playing: bool):
 	else:
 		attenuation_model = AudioStreamPlayer3D.ATTENUATION_INVERSE_DISTANCE
 
-	if not dcl_enable:
-		self.max_db = -100
-	else:
-		self.max_db = 0
-
-	# TODO: Check if it should be 10 instead 20 to talk in terms of power
-	self.volume_db = 20 * log(dcl_volume)
-	# -80 = 20 log 0.00001, so muted is when (volume <= 0.00001)
+	self.unit_size = UNIT_SIZE
+	# Godot's `max_distance` hard-mutes past the limit and adds a linear ramp
+	# across the whole range, so it can't stand in for Unity's `maxDistance`.
+	self.max_distance = 0.0
 
 	if action_on_playing:
 		if self.playing and not dcl_playing:
 			self.stop()
 		elif dcl_playing and (not self.playing or _time_specified):
 			self.play(dcl_current_time)
+
+
+## An SDK `volume` change snaps; only entering/leaving the scene crossfades.
+func _sync_volume_from_sdk() -> void:
+	if not _fade_initialized:
+		_fade_initialized = true
+		# Spawned outside the scene means silent, so entering fades in instead of
+		# blasting a neighbouring scene's first frames (unity-explorer#4790).
+		_faded_volume = dcl_volume if dcl_enable else 0.0
+	elif dcl_enable and not is_equal_approx(dcl_volume, _last_sdk_volume):
+		_faded_volume = dcl_volume
+
+	_last_sdk_volume = dcl_volume
+	_apply_volume()
+
+
+func _process(delta: float) -> void:
+	var target: float = dcl_volume if dcl_enable else 0.0
+	if is_equal_approx(_faded_volume, target):
+		return
+
+	if _faded_volume < target:
+		_faded_volume = minf(target, _faded_volume + delta * FADE_SPEED)
+	else:
+		_faded_volume = maxf(target, _faded_volume - delta * FADE_SPEED)
+
+	_apply_volume()
+
+
+func _apply_volume() -> void:
+	var gain_db: float = (
+		MIN_VOLUME_DB if _faded_volume <= 0.0 else maxf(MIN_VOLUME_DB, linear_to_db(_faded_volume))
+	)
+	self.volume_db = gain_db
+	# Godot clamps `attenuation + volume_db` to `max_db`. Clamping at 0 would drop
+	# the SDK volume wherever attenuation is positive; clamping at `volume_db`
+	# gives `volume * min(1, unit_size / distance)`, which is Unity's rolloff.
+	self.max_db = gain_db
 
 
 func _async_refresh_data(time_specified: bool):
