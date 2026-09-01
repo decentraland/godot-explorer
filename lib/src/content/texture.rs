@@ -479,7 +479,7 @@ pub fn create_compressed_texture(image: &mut Gd<Image>, max_size: i32) -> Gd<Tex
         portable_compressed_texture_2d::CompressionMode::ETC2,
     );
     if pct2.get_width() == 0 || pct2.get_height() == 0 {
-        tracing::error!(
+        tracing::warn!(
             "Failed to create PCT2 from image ({}x{}), using placeholder",
             image.get_width(),
             image.get_height()
@@ -553,11 +553,11 @@ fn assert_pct2_serialization_ok() {
         let pixels = PackedByteArray::from_vec(&[255u8; 4 * 4 * 4]);
         let Some(mut img) = Image::create_from_data(4, 4, false, GodotFormat::RGBA8, &pixels)
         else {
-            tracing::error!("[pct2-selfcheck] failed to build probe image; skipping");
+            tracing::warn!("[pct2-selfcheck] failed to build probe image; skipping");
             return;
         };
         if img.compress(CompressMode::ETC2) != Error::OK {
-            tracing::error!("[pct2-selfcheck] ETC2 compress failed on probe image; skipping");
+            tracing::warn!("[pct2-selfcheck] ETC2 compress failed on probe image; skipping");
             return;
         }
         let mut pct2 = PortableCompressedTexture2D::new_gd();
@@ -569,7 +569,7 @@ fn assert_pct2_serialization_ok() {
             .path(probe_path)
             .done();
         if save_err != Error::OK {
-            tracing::error!(
+            tracing::warn!(
                 "[pct2-selfcheck] ResourceSaver.save failed ({:?}); skipping",
                 save_err
             );

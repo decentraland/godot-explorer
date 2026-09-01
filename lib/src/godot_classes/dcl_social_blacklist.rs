@@ -47,7 +47,7 @@ impl DclSocialBlacklist {
             }
             changed
         } else {
-            godot_error!("Invalid address format: {}", address);
+            tracing::debug!("Invalid address format: {}", address);
             false
         }
     }
@@ -62,7 +62,7 @@ impl DclSocialBlacklist {
             }
             changed
         } else {
-            godot_error!("Invalid address format: {}", address);
+            tracing::debug!("Invalid address format: {}", address);
             false
         }
     }
@@ -87,7 +87,7 @@ impl DclSocialBlacklist {
             }
             changed
         } else {
-            godot_error!("Invalid address format: {}", address);
+            tracing::debug!("Invalid address format: {}", address);
             false
         }
     }
@@ -102,7 +102,7 @@ impl DclSocialBlacklist {
             }
             changed
         } else {
-            godot_error!("Invalid address format: {}", address);
+            tracing::debug!("Invalid address format: {}", address);
             false
         }
     }
@@ -127,7 +127,7 @@ impl DclSocialBlacklist {
                     changed = true;
                 }
             } else {
-                godot_error!("Invalid address format: {}", address);
+                tracing::debug!("Invalid address format: {}", address);
             }
         }
         if changed {
@@ -145,7 +145,7 @@ impl DclSocialBlacklist {
                     changed = true;
                 }
             } else {
-                godot_error!("Invalid address format: {}", address);
+                tracing::debug!("Invalid address format: {}", address);
             }
         }
         if changed {
@@ -207,7 +207,7 @@ impl DclSocialBlacklist {
             if let Ok(addr) = address_str.parse::<H160>() {
                 self.blocked_addresses.insert(addr);
             } else {
-                godot_error!("Invalid address format in blocking status: {}", address_str);
+                tracing::debug!("Invalid address format in blocking status: {}", address_str);
             }
         }
 
