@@ -1652,7 +1652,8 @@ func _check_dclenv_change() -> bool:
 	return true
 
 
-# Applies the comms deeplink params (pulse-server / pulse / dual-channel / livekit).
+# Applies the comms deeplink params (pulse-server / pulse-realm / pulse / dual-channel /
+# livekit).
 # Shared by deep_link_router.process_deep_link and the desktop --fake-deeplink path,
 # so a new param only has to be added once.
 func _apply_comms_deeplink_params(deep_link) -> void:
@@ -1662,13 +1663,20 @@ func _apply_comms_deeplink_params(deep_link) -> void:
 	if not pulse_server_value.is_empty():
 		print("[DEEPLINK] pulse-server=", pulse_server_value)
 		comms.set_pulse_server(pulse_server_value)
+	# `pulse-realm=<realm>` announces a specific realm instead of the derived one
+	# (Pulse matches realms by exact string; implies enabling).
+	var pulse_realm_value = deep_link.params.get("pulse-realm", "")
+	if not pulse_realm_value.is_empty():
+		print("[DEEPLINK] pulse-realm=", pulse_realm_value)
+		comms.set_pulse_realm(pulse_realm_value)
 	# `pulse=true/false` toggles the transport with the configured endpoint.
 	var pulse_value = deep_link.params.get("pulse", "")
 	if not pulse_value.is_empty():
 		print("[DEEPLINK] pulse=", pulse_value)
 		comms.set_pulse_enabled(pulse_value.to_lower() in ["true", "1", "yes"])
-	# `dual-channel=true/false` (default true): whether movement keeps going over
-	# LiveKit while Pulse is established. false = Pulse-only movement while up.
+	# `dual-channel=true/false` (default false): whether movement and emotes keep
+	# going over LiveKit while Pulse is established. Pulse is the carrier by
+	# default; true restores the old both-at-once behaviour for debugging.
 	var dual_channel_value = deep_link.params.get("dual-channel", "")
 	if not dual_channel_value.is_empty():
 		print("[DEEPLINK] dual-channel=", dual_channel_value)

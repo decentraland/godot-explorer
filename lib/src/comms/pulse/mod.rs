@@ -5,8 +5,10 @@
 //! - `native` — the `pulse-enet` driver thread (rusty_enet, ENet-CSharp modified protocol)
 //! - [`decoder`] — quantized state → `rfc4::Movement` reconstruction + parcel grid
 //! - [`pulse_room`] — connection state machine, handshake, `MessageProcessor` bridging
+//! - [`lsd_realm`] — Local Scene Development preview → Pulse realm key (cross-repo contract)
 
 pub mod decoder;
+pub mod lsd_realm;
 mod native;
 pub mod pulse_room;
 pub mod transport;
