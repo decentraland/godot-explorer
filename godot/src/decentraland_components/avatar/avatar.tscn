@@ -1124,6 +1124,7 @@ attenuation_model = 3
 volume_db = -6.0206
 max_db = 0.0
 max_distance = 15.0
+attenuation_filter_cutoff_hz = 20500.0
 bus = &"AvatarAndEmotes"
 
 [node name="Avatar_SFXs" parent="." unique_id=1309443920 instance=ExtResource("7_xt6ge")]
@@ -1140,6 +1141,7 @@ stream = ExtResource("10_dblj")
 max_distance = 50.0
 unit_size = 1.0
 max_db = 0.0
+attenuation_filter_cutoff_hz = 20500.0
 bus = &"AvatarAndEmotes"
 
 [node name="TriggerDetector" type="StaticBody3D" parent="." unique_id=863967537]

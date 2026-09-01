@@ -10,6 +10,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.31567, 0)
 max_distance = 50.0
 unit_size = 1.0
 max_db = 0.0
+attenuation_filter_cutoff_hz = 20500.0
 bus = &"AvatarAndEmotes"
 
 [node name="AudioPlayer_Effects" type="AudioStreamPlayer3D" parent="." unique_id=2010234368]
@@ -17,4 +18,5 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.31567, 0)
 max_distance = 50.0
 unit_size = 1.0
 max_db = 0.0
+attenuation_filter_cutoff_hz = 20500.0
 bus = &"AvatarAndEmotes"

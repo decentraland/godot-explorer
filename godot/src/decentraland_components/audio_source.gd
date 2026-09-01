@@ -6,6 +6,9 @@ const MIN_VOLUME_DB := -80.0
 ## Distance where attenuation starts. Unity leaves `minDistance` at its default of
 ## 1 m; Godot's default `unit_size` of 10 is +20 dB louder past a metre.
 const UNIT_SIZE := 1.0
+## Top of Godot's `attenuation_filter_cutoff_hz` range: the high-shelf ends up
+## above the audible band, which is how the filter is switched off.
+const FILTER_DISABLED_HZ := 20500.0
 
 # Clip states, matching the Rust CLIP_STATE_* constants.
 const CLIP_STATE_NONE = 0
@@ -39,6 +42,10 @@ func apply_audio_props(action_on_playing: bool):
 	# Godot's `max_distance` hard-mutes past the limit and adds a linear ramp
 	# across the whole range, so it can't stand in for Unity's `maxDistance`.
 	self.max_distance = 0.0
+	# Godot ties a high-shelf to the attenuation multiplier, so a source at 5 m
+	# would lose 19 dB above 5 kHz on top of the gain. Unity's rolloff is
+	# gain-only, so push the filter above hearing.
+	self.attenuation_filter_cutoff_hz = FILTER_DISABLED_HZ
 
 	if action_on_playing:
 		if self.playing and not dcl_playing:
