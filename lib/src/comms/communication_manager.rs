@@ -88,6 +88,34 @@ fn avatar_sync_over_livekit(dual_channel: bool, pulse_established: bool) -> bool
     dual_channel || !pulse_established
 }
 
+/// Whether the Pulse transport activates. Pure so the precedence is unit-testable.
+///
+/// `locally_enabled` is `!--no-pulse`, which always wins. `explicit_opt_in` is `--pulse`, an
+/// endpoint (`--pulse-server` / PULSE_SERVER) or a realm (`--pulse-realm` / PULSE_REALM).
+/// Otherwise the deployment's `pulse` flag decides, fail-closed — except in `--preview`.
+///
+/// **A local preview never joins Pulse on the strength of the flag alone.** Its realm key is
+/// `lsd:` + the preview scene's entity id, which is reversible base64 of the developer's
+/// absolute project path and hostname; letting a fleet-wide flag push that to the default
+/// (production) Pulse from every `dcl start` would be a surprise. `sdk-commands` gates its own
+/// `--pulse-realm` off by default for the same reason, so Local Scene Development opts in
+/// explicitly — which is exactly what the orchestrator and `DCL_SERVER_PULSE_REALM=1` do.
+#[cfg(feature = "use_pulse")]
+fn pulse_activation(
+    locally_enabled: bool,
+    explicit_opt_in: bool,
+    preview_mode: bool,
+    flag_enabled: Option<bool>,
+) -> bool {
+    if !locally_enabled {
+        return false;
+    }
+    if explicit_opt_in {
+        return true;
+    }
+    !preview_mode && flag_enabled == Some(true)
+}
+
 /// Effective dual-channel setting. An explicit local choice (CLI `--livekit-movement` /
 /// `--no-livekit-movement`, deeplink `dual-channel=`) always wins; otherwise the deployment's
 /// `dual-channel` feature flag decides, defaulting to ON until the flags fetch settles.
@@ -830,16 +858,16 @@ impl CommunicationManager {
     /// confirms the flag is on (fetch failure or an absent flag keeps it off). A server
     /// flag can never force-enable Pulse over a local opt-out.
     ///
-    /// `--preview` deliberately does NOT self-enable: a Local Scene Development run reaches
-    /// Pulse through the same explicit opt-ins as anything else (`--pulse-realm` — what
-    /// sdk-commands passes when its own gate is on — `--pulse-server`, or `--pulse`). Otherwise
-    /// every plain preview would dial the default (production) Pulse and announce a realm key
-    /// that encodes the developer's absolute project path and hostname, with no remote way to
-    /// turn it off.
+    /// In `--preview` the flag alone is not enough — see [`pulse_activation`].
     #[cfg(feature = "use_pulse")]
     fn pulse_enabled(&self, cli: &crate::godot_classes::dcl_cli::DclCli) -> bool {
         self.pulse_runtime_enabled.unwrap_or_else(|| {
-            cli.pulse && (cli.pulse_explicit || self.pulse_flag_enabled == Some(true))
+            pulse_activation(
+                cli.pulse,
+                cli.pulse_explicit,
+                cli.preview_mode,
+                self.pulse_flag_enabled,
+            )
         })
     }
 
@@ -3521,6 +3549,47 @@ mod tests {
         fn local_override_beats_the_flag() {
             assert!(dual_channel_effective(Some(true), false));
             assert!(!dual_channel_effective(Some(false), true));
+        }
+    }
+
+    // ==========================================
+    // Tests for pulse_activation (who gets to turn the transport on)
+    // ==========================================
+
+    #[cfg(feature = "use_pulse")]
+    mod pulse_activation_rules {
+        use super::*;
+
+        /// Outside preview the deployment flag decides, fail-closed on absent/unfetched.
+        #[test]
+        fn flag_decides_outside_preview() {
+            assert!(pulse_activation(true, false, false, Some(true)));
+            assert!(!pulse_activation(true, false, false, Some(false)));
+            assert!(!pulse_activation(true, false, false, None));
+        }
+
+        /// The point of the preview carve-out: a plain `dcl start` preview must not be pushed
+        /// onto production Pulse by a fleet-wide flag, because its realm key carries the
+        /// developer's project path and hostname.
+        #[test]
+        fn preview_ignores_the_flag_without_an_explicit_opt_in() {
+            assert!(!pulse_activation(true, false, true, Some(true)));
+        }
+
+        /// ...but an explicit opt-in (--pulse-realm / --pulse-server / --pulse) still works,
+        /// which is how the orchestrator and DCL_SERVER_PULSE_REALM=1 drive Local Scene
+        /// Development.
+        #[test]
+        fn preview_joins_on_an_explicit_opt_in() {
+            assert!(pulse_activation(true, true, true, Some(true)));
+            assert!(pulse_activation(true, true, true, None));
+        }
+
+        /// --no-pulse always wins, everywhere.
+        #[test]
+        fn local_opt_out_always_wins() {
+            assert!(!pulse_activation(false, true, false, Some(true)));
+            assert!(!pulse_activation(false, true, true, Some(true)));
         }
     }
 
