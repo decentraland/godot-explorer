@@ -45,7 +45,9 @@ pub fn update_avatar_attach(scene: &mut Scene, crdt_state: &mut SceneCrdtState) 
                         .get(entity)
                         .and_then(|entry| entry.value.clone())
                         .unwrap_or_default();
-                    apply_dcl_transform_to_node_3d(&mut transform, &mut node_3d);
+                    // A rejected (non-finite) transform simply leaves the node
+                    // where it is; update_transform_and_parent does the reporting.
+                    let _ = apply_dcl_transform_to_node_3d(&mut transform, &mut node_3d);
                 }
             } else if let Some(new_value) = new_value {
                 let (mut avatar_attach_node, is_new) = if let Some(avatar_attach_node) = existing {
