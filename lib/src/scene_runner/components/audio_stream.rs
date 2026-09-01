@@ -1,26 +1,29 @@
 use crate::{
+    av::backend::BackendType,
     dcl::{
-        components::SceneComponentId,
+        components::{
+            proto_components::sdk::components::{common::MediaState, PbAudioEvent},
+            SceneComponentId, SceneEntityId,
+        },
         crdt::{
+            grow_only_set::GenericGrowOnlySetComponentOperation,
             last_write_wins::LastWriteWinsComponentOperation, SceneCrdtState,
             SceneCrdtStateProtoComponents,
         },
         SceneId,
     },
-    godot_classes::dcl_audio_stream::DclAudioStream,
+    godot_classes::dcl_audio_stream::{
+        DclAudioStream, STREAM_STATE_ERROR, STREAM_STATE_PAUSED, STREAM_STATE_PLAYING,
+    },
     scene_runner::scene::{Scene, SceneType},
 };
-use godot::{
-    classes::{AudioStream, AudioStreamGenerator, AudioStreamPlayer},
-    prelude::*,
-};
+use godot::prelude::*;
+
 enum AudioUpdateMode {
     OnlyChangeValues,
     ChangeAudio,
     FirstSpawnAudio,
 }
-
-use crate::av::{stream_processor::AVCommand, video_stream::av_sinks};
 
 pub fn update_audio_stream(
     scene: &mut Scene,
@@ -52,7 +55,7 @@ pub fn update_audio_stream(
                 let playing = next_value.playing.unwrap_or(true);
 
                 let (godot_entity_node, mut node_3d) = godot_dcl_scene.ensure_node_3d(entity);
-                let update_mode = if let Some((url, _)) = godot_entity_node.audio_stream.as_ref() {
+                let update_mode = if let Some(url) = godot_entity_node.audio_stream.as_ref() {
                     if next_value.url != *url {
                         AudioUpdateMode::ChangeAudio
                     } else {
@@ -62,113 +65,116 @@ pub fn update_audio_stream(
                     AudioUpdateMode::FirstSpawnAudio
                 };
 
-                match update_mode {
-                    AudioUpdateMode::OnlyChangeValues => {
-                        let audio_stream_data = godot_entity_node
-                            .audio_stream
-                            .as_ref()
-                            .expect("audio_stream_data not found in node");
-
-                        let mut audio_stream_node = node_3d
-                            .get_node_or_null("AudioStream")
-                            .expect("enters on change audio branch but a AudioStream wasn't found there")
-                            .try_cast::<DclAudioStream>()
-                            .expect("the expected AudioStream wasn't a DclAudioStream");
-
-                        audio_stream_node.bind_mut().set_dcl_volume(dcl_volume);
-                        audio_stream_node
-                            .bind_mut()
-                            .set_muted(muted_by_current_scene);
-
-                        if next_value.playing.unwrap_or(true) {
-                            let _ = audio_stream_data.1.command_sender.try_send(AVCommand::Play);
-                        } else {
-                            let _ = audio_stream_data
-                                .1
-                                .command_sender
-                                .try_send(AVCommand::Pause);
-                        }
-                    }
-                    AudioUpdateMode::ChangeAudio => {
-                        if let Some(audio_stream_data) = godot_entity_node.audio_stream.as_ref() {
-                            let _ = audio_stream_data
-                                .1
-                                .command_sender
-                                .try_send(AVCommand::Dispose);
-                        }
-
-                        let mut audio_stream_node = node_3d.get_node_or_null("AudioStream").expect(
-                            "enters on change audio branch but a AudioStream wasn't found there",
-                        ).try_cast::<DclAudioStream>().expect("the expected AudioStream wasn't a DclAudioStream");
-
-                        audio_stream_node.bind_mut().set_dcl_volume(dcl_volume);
-                        audio_stream_node
-                            .bind_mut()
-                            .set_muted(muted_by_current_scene);
-
-                        let (_, audio_sink) = av_sinks(
-                            next_value.url.clone(),
-                            None,
-                            audio_stream_node.clone().upcast::<AudioStreamPlayer>(),
-                            playing,
-                            false,
-                            None,
-                        );
-
-                        godot_entity_node.audio_stream = Some((next_value.url.clone(), audio_sink));
-                    }
+                let mut audio_stream_node = match update_mode {
                     AudioUpdateMode::FirstSpawnAudio => {
-                        let mut audio_stream_node = godot::tools::load::<PackedScene>(
+                        let mut node = godot::tools::load::<PackedScene>(
                             "res://src/decentraland_components/audio_stream.tscn",
                         )
                         .instantiate()
-                        .unwrap()
+                        .expect("Failed to instantiate audio_stream.tscn")
                         .cast::<DclAudioStream>();
 
-                        audio_stream_node.set_name("AudioStream");
+                        node.set_name("AudioStream");
+                        node.bind_mut().set_dcl_scene_id(scene.scene_id.0);
+                        node_3d.add_child(&node.clone().upcast::<Node>());
+                        scene.audio_streams.insert(*entity, node.clone());
+                        node
+                    }
+                    _ => node_3d
+                        .get_node_or_null("AudioStream")
+                        .expect("audio_stream node missing for an entity that already had one")
+                        .try_cast::<DclAudioStream>()
+                        .expect("the expected AudioStream wasn't a DclAudioStream"),
+                };
 
-                        let audio_stream_generator = AudioStreamGenerator::new_gd();
-                        audio_stream_node
-                            .set_stream(&audio_stream_generator.upcast::<AudioStream>());
+                audio_stream_node.bind_mut().set_volume(dcl_volume);
+                audio_stream_node
+                    .bind_mut()
+                    .set_muted(muted_by_current_scene);
 
-                        node_3d.add_child(&audio_stream_node.clone().upcast::<Node>());
-                        audio_stream_node.play();
+                match update_mode {
+                    AudioUpdateMode::OnlyChangeValues => {
+                        if playing {
+                            audio_stream_node.bind_mut().backend_play();
+                        } else {
+                            audio_stream_node.bind_mut().backend_pause();
+                        }
+                    }
+                    _ => {
+                        audio_stream_node.bind_mut().backend_dispose();
 
-                        audio_stream_node.bind_mut().set_dcl_volume(dcl_volume);
-                        audio_stream_node
-                            .bind_mut()
-                            .set_muted(muted_by_current_scene);
-
-                        let (_, audio_sink) = av_sinks(
-                            next_value.url.clone(),
-                            None,
-                            audio_stream_node.clone().upcast::<AudioStreamPlayer>(),
+                        // Streams have no LiveKit variant: `from_source` only ever
+                        // returns the platform's native player or Noop for them.
+                        let backend_type = BackendType::from_source(&next_value.url);
+                        audio_stream_node.bind_mut().init_backend(
+                            backend_type.to_gd_int(),
+                            next_value.url.to_godot(),
                             playing,
-                            false,
-                            None,
                         );
-
-                        godot_entity_node.audio_stream = Some((next_value.url.clone(), audio_sink));
-
-                        scene
-                            .audio_streams
-                            .insert(*entity, audio_stream_node.clone());
+                        godot_entity_node.audio_stream = Some(next_value.url.clone());
                     }
                 }
             } else if exist_current_node {
+                if let Some(mut node) = scene.audio_streams.remove(entity) {
+                    node.bind_mut().backend_dispose();
+                    node.queue_free();
+                }
+
                 let Some(node) = godot_dcl_scene.get_godot_entity_node_mut(entity) else {
                     continue;
                 };
-
-                if let Some(audio_stream_data) = node.audio_stream.as_ref() {
-                    let _ = audio_stream_data
-                        .1
-                        .command_sender
-                        .try_send(AVCommand::Dispose);
-                }
-
                 node.audio_stream = None;
             }
         }
+    }
+
+    poll_audio_stream_events(scene, crdt_state);
+}
+
+/// Mirrors Unity's `GetAudioStreamState`, which is a direct cast of the media
+/// player state. Unity's state machine never produces `MS_LOADING` or
+/// `MS_READY` for a stream — a stream that is loading or finished reads
+/// `MS_NONE` — so neither is emitted here.
+fn media_state(stream_state: i32) -> MediaState {
+    match stream_state {
+        STREAM_STATE_PLAYING => MediaState::MsPlaying,
+        STREAM_STATE_PAUSED => MediaState::MsPaused,
+        STREAM_STATE_ERROR => MediaState::MsError,
+        _ => MediaState::MsNone,
+    }
+}
+
+fn poll_audio_stream_events(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
+    if scene.audio_streams.is_empty() {
+        return;
+    }
+
+    let tick_number = scene.tick_number;
+    let mut events: Vec<(SceneEntityId, MediaState)> = Vec::new();
+
+    for (entity_id, audio_stream_node) in scene.audio_streams.iter_mut() {
+        let mut stream = audio_stream_node.bind_mut();
+        let state = media_state(stream.get_stream_state());
+        if state as i32 == stream.last_media_state {
+            continue;
+        }
+
+        stream.last_media_state = state as i32;
+        events.push((*entity_id, state));
+    }
+
+    if events.is_empty() {
+        return;
+    }
+
+    let audio_event_component = SceneCrdtStateProtoComponents::get_audio_event_mut(crdt_state);
+    for (entity_id, state) in events {
+        audio_event_component.append(
+            entity_id,
+            PbAudioEvent {
+                state: state as i32,
+                timestamp: tick_number,
+            },
+        );
     }
 }
