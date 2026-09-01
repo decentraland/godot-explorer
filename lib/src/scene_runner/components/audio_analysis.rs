@@ -26,11 +26,6 @@ use crate::{
     scene_runner::scene::Scene,
 };
 
-/// Frames pulled from the shadow playback per analysed source per tick. A power
-/// of two, so the whole buffer is used: the FFT window is the largest power of
-/// two that fits.
-pub const ANALYSIS_FRAMES: i32 = 2048;
-
 const BANDS: usize = 8;
 const DEFAULT_AMPLITUDE_GAIN: f32 = 5.0;
 const DEFAULT_BANDS_GAIN: f32 = 0.05;
@@ -135,7 +130,8 @@ pub fn analyze(
     if n < 2 {
         return zero;
     }
-    let window = &samples[..n];
+    // The tail: the caller hands us a rolling history, newest last.
+    let window = &samples[samples.len() - n..];
 
     let amplitude_raw = rms(window);
 
@@ -217,7 +213,7 @@ pub fn update_audio_analysis(scene: &mut Scene, crdt_state: &mut SceneCrdtState)
             continue;
         };
 
-        let samples = source.bind_mut().read_analysis_samples(ANALYSIS_FRAMES);
+        let samples = source.bind_mut().read_analysis_samples(sample_rate);
         // No new audio this tick: Unity leaves the last values in place rather
         // than resetting them, so we skip the write too.
         if samples.is_empty() {
