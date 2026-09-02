@@ -7,10 +7,13 @@ const CONNECTIVITY_ONLINE: int = 0
 const CONNECTIVITY_OFFLINE: int = 1
 const CONNECTIVITY_AWAY: int = 2
 
-const NO_SERVICE_MESSAGE: String = """Something went wrong and we couldn't retrieve your friends."""
-const NO_FRIENDS_MESSAGE: String = """View someone's Profile or tap on 'Add Friend' button in the nearby list."""
-const NO_BLOCKED_MESSAGE: String = """If you block someone, you will not be able to see each other in-world or exchange any messages in private or public chats.
-You can block another user by going to the tree (3) dots menu available in their Profile."""
+# Translation KEYS, not copy. The three labels auto-translate, so assigning the key lets the
+# engine re-resolve them on a language change; assigning resolved text would freeze the old
+# locale. NO_SERVICE reuses the key the rest of the panel already had.
+# i18n-keys: FRIENDS_NO_FRIENDS_MESSAGE, FRIENDS_NO_BLOCKED_MESSAGE
+const NO_SERVICE_MESSAGE: String = "FRIENDS_SOMETHING_WENT_WRONG_AND_WE_COULDN"
+const NO_FRIENDS_MESSAGE: String = "FRIENDS_NO_FRIENDS_MESSAGE"
+const NO_BLOCKED_MESSAGE: String = "FRIENDS_NO_BLOCKED_MESSAGE"
 
 var down_arrow_icon: Texture2D = load("res://assets/ui/down_arrow.svg")
 var up_arrow_icon: Texture2D = load("res://assets/ui/up_arrow.svg")
@@ -304,19 +307,19 @@ func _update_dropdown_visibility() -> void:
 		v_box_container_request.hide()
 	else:
 		v_box_container_request.show()
-		request_button.text = "REQUESTS (" + str(pending_count) + ")"
+		request_button.text = tr("FRIENDS_REQUESTS_COUNT").format({"count": pending_count})
 
 	if online_count == 0:
 		v_box_container_online.hide()
 	else:
 		v_box_container_online.show()
-		online_button.text = "ONLINE (" + str(online_count) + ")"
+		online_button.text = tr("FRIENDS_ONLINE_COUNT").format({"count": online_count})
 
 	if offline_count == 0:
 		v_box_container_offline.hide()
 	else:
 		v_box_container_offline.show()
-		offline_button.text = "OFFLINE (" + str(offline_count) + ")"
+		offline_button.text = tr("FRIENDS_OFFLINE_COUNT").format({"count": offline_count})
 
 	# Show error message only if we got explicit errors from the lists
 	if has_service_error:
@@ -461,9 +464,7 @@ func _on_friend_connectivity_updated(address: String, status: int) -> void:
 func _send_friend_online_chat_message(friend_name: String) -> void:
 	var nickname_color = DclAvatar.get_nickname_color(friend_name)
 	var color_hex = nickname_color.to_html(false)
-	var message = (
-		"[color=#%s]%s[/color] [color=#8f8]is now online[/color]" % [color_hex, friend_name]
-	)
+	var message = tr("FRIENDS_NOW_ONLINE").format({"color": color_hex, "name": friend_name})
 	Global.on_chat_message.emit("system", message, Time.get_unix_time_from_system())
 
 
@@ -596,7 +597,7 @@ func _on_blocked_list_size_changed() -> void:
 ## If amount is > 99 show "99+".
 ## Else show the amount from list_size.
 func _on_nearby_list_size_changed() -> void:
-	var nearby_text := tr("NEARBY")
+	var nearby_text := tr("COMMON_NEARBY")
 	if nearby_list.list_size > 99:
 		nearby_text = "%s (99+)" % nearby_text
 	elif nearby_list.list_size > 0:

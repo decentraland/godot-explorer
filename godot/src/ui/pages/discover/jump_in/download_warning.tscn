@@ -49,5 +49,5 @@ layout_mode = 2
 theme_override_colors/font_color = Color(0.8784314, 0, 0, 1)
 theme_override_fonts/font = ExtResource("2_wk0wp")
 theme_override_font_sizes/font_size = 20
-text = "Downloads up to 1GB of data"
+text = "DISCOVER_DOWNLOADS_UP_TO_1GB_OF_DATA"
 label_settings = SubResource("LabelSettings_ovwtc")

@@ -208,7 +208,7 @@ func set_search_filter_text(new_text: String) -> void:
 		places_featured.show()
 		places_favorites.visible = places_favorites.has_items()
 		places_my_places.visible = places_my_places.has_items()
-		places_most_active.title = "Most Actives"
+		places_most_active.title = "DISCOVER_MOST_ACTIVES"
 		if guest_upgrade_card:
 			# Don't force it visible — let the card re-evaluate its own upgrade state
 			# so already-upgraded users never see it flash (#2483).
@@ -219,7 +219,7 @@ func set_search_filter_text(new_text: String) -> void:
 		places_featured.hide()
 		places_favorites.hide()
 		places_my_places.hide()
-		places_most_active.title = "Scenes"
+		places_most_active.title = "DISCOVER_SCENES"
 		if guest_upgrade_card:
 			guest_upgrade_card.hide()
 	places_most_active.set_search_param(new_text)

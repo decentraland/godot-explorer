@@ -126,6 +126,7 @@ deadzone_size = 0.0
 margin_profile = ExtResource("34_hudmg")
 
 [node name="Label_Crosshair" type="Label" parent="UI" unique_id=2000293560]
+auto_translate_mode = 2
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 8
@@ -181,6 +182,7 @@ grow_vertical = 0
 mouse_filter = 2
 
 [node name="Label_Version" type="Label" parent="UI/HBoxContainer_VersionFPS" unique_id=2080384115]
+auto_translate_mode = 2
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 0.705882)
@@ -190,6 +192,7 @@ theme_override_font_sizes/font_size = 12
 text = "v0.1.0-alpha-abcd1f"
 
 [node name="Label_FPS" type="Label" parent="UI/HBoxContainer_VersionFPS" unique_id=1795956625]
+auto_translate_mode = 2
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 0.705882)

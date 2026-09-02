@@ -86,12 +86,27 @@ const PROFILE_DEFINITIONS: Array[Dictionary] = [
 	},
 ]
 
+## English, and deliberately so: these feed print() logs (global.gd, settings.gd) and the debug
+## FPS overlay (explorer.gd), which stay English. The user-facing dropdown uses PROFILE_KEYS.
+# i18n-keys: SETTINGS_GRAPHIC_PROFILE_*, SETTINGS_SKYBOX_*
 const PROFILE_NAMES: Array[String] = ["Very Low", "Low", "Medium", "High", "Custom"]
+
+## Display keys for PROFILE_NAMES, same order. A parallel table rather than a rename, so the
+## log/overlay call sites keep their English names.
+const PROFILE_KEYS: Array[String] = [
+	"SETTINGS_GRAPHIC_PROFILE_VERY_LOW",
+	"SETTINGS_GRAPHIC_PROFILE_LOW",
+	"SETTINGS_GRAPHIC_PROFILE_MEDIUM",
+	"SETTINGS_GRAPHIC_PROFILE_HIGH",
+	"SETTINGS_GRAPHIC_PROFILE_CUSTOM",
+]
+## `secs` is the value that is stored and matched; `name` is English for logs and `key` is what
+## the Settings dropdown shows.
 const SKYBOX_TIME_NAMES: Array[Dictionary] = [
-	{"name": "Midnight", "secs": 86400},
-	{"name": "Afternoon", "secs": 64800},
-	{"name": "Midday", "secs": 43200},
-	{"name": "Morning", "secs": 21600}
+	{"name": "Midnight", "key": "SETTINGS_SKYBOX_MIDNIGHT", "secs": 86400},
+	{"name": "Afternoon", "key": "SETTINGS_SKYBOX_AFTERNOON", "secs": 64800},
+	{"name": "Midday", "key": "SETTINGS_SKYBOX_MIDDAY", "secs": 43200},
+	{"name": "Morning", "key": "SETTINGS_SKYBOX_MORNING", "secs": 21600}
 ]
 
 

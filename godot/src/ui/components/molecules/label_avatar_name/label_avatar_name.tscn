@@ -24,6 +24,7 @@ theme_override_constants/separation = 0
 alignment = 1
 
 [node name="Label_Name" type="Label" parent="Container_Label" unique_id=55778102]
+auto_translate_mode = 2
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
@@ -32,6 +33,7 @@ text = "Kiko"
 vertical_alignment = 1
 
 [node name="Label_Subaddress" type="Label" parent="Container_Label" unique_id=750153987]
+auto_translate_mode = 2
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.501961, 0.501961, 0.501961, 1)

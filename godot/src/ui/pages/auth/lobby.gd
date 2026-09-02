@@ -28,6 +28,9 @@ const LOGO_TAP_TIMEOUT: float = 0.5  # seconds to reset tap count
 # Guest-login (thirdweb) can hang on a flaky network and leave the user stuck on
 # the "Getting you ready..." screen forever. Cap the wait and surface a retry.
 const GUEST_LOGIN_TIMEOUT_SEC: float = 20.0
+## [opening, waiting] key pairs for the auth hand-off step.
+## Resumed cold-start sign-in: the browser round-trip already happened, so there is no
+## "waiting" state to fall back to — a one-element pair leaves the title alone on focus-out.
 const BG_GRADIENT = preload("res://assets/backgrounds/gradient-background.png")
 const BG_DISCOVER = preload("res://assets/backgrounds/photo-background.png")
 const BG_AVATAR = preload("res://assets/backgrounds/gradient-background.tres")
@@ -46,6 +49,9 @@ var current_screen_name: String = ""
 # Debug-only "reset guest wallet" button, created at runtime in non-prod and
 # revealed alongside the disposable-account button by the secret logo double-tap.
 var button_reset_guest_debug: Button = null
+
+## Which [opening, waiting] pair the current hand-off step is showing.
+var _auth_target_keys: Array[TranslationKey] = []
 
 var _skip_lobby: bool = false
 var _skip_lobby_to_menu: bool = false
@@ -107,6 +113,18 @@ var _guest_login_attempt: int = 0
 @onready var control_discover_ftue = %DiscoverFtue
 @onready var ftue_screen = %DiscoverFtue/FTUE
 @onready var control_with_discover_bg = [control_account_home, control_account_home_loading]
+
+## [opening, waiting] key pairs for the auth hand-off step. The resumed cold start has no
+## waiting state, so its one-element list leaves the title alone on focus-out.
+static var browser_target_keys: Array[TranslationKey] = TranslationKey.many(
+	["AUTH_BROWSER_OPENING", "AUTH_BROWSER_WAITING"]
+)
+static var metamask_target_keys: Array[TranslationKey] = TranslationKey.many(
+	["AUTH_WALLET_OPENING_METAMASK", "AUTH_WALLET_WAITING_METAMASK"]
+)
+static var deeplink_target_keys: Array[TranslationKey] = TranslationKey.many(
+	["AUTH_DEEPLINK_FINISHING"]
+)
 
 
 func set_background(texture: Texture2D) -> void:
@@ -253,8 +271,13 @@ func show_auth_home_screen():
 	show_panel(control_signin)
 
 
+## Show the "opening the browser / wallet" step.
+##
+## `target_keys` is the [opening, waiting] key pair for whatever is being opened. Two states are
+## needed because once the external app takes the foreground the client is no longer *opening*
+## anything — it is waiting for the user to come back (see _notification below).
 func show_auth_browser_open_screen(
-	message: String = "Opening browser...", auth_method: String = ""
+	target_keys: Array[TranslationKey] = browser_target_keys, auth_method: String = ""
 ):
 	current_screen_name = "AUTH_BROWSER_OPEN"
 	var extra := JSON.stringify({"method": auth_method}) if not auth_method.is_empty() else ""
@@ -265,7 +288,8 @@ func show_auth_browser_open_screen(
 	button_back.hide()
 	show_panel(control_signin)
 
-	label_step2_title.text = message
+	_auth_target_keys = target_keys
+	label_step2_title.text = target_keys[0].raw()
 	label_step2_title.show()
 	auth_error_container.hide()
 	auth_spinner_container.show()
@@ -617,8 +641,12 @@ func _notification(what: int) -> void:
 		return
 
 	if what == NOTIFICATION_APPLICATION_FOCUS_OUT:
-		if current_screen_name == "AUTH_BROWSER_OPEN":
-			label_step2_title.text = label_step2_title.text.replace("Opening", "Waiting")
+		# The external app now has the foreground, so switch "Opening X" to "Waiting for X".
+		# Re-rendering from the stored key rather than editing the visible text: a
+		# .replace("Opening", ...) matches nothing once the label is translated, and would
+		# silently leave the user on "Opening" forever.
+		if current_screen_name == "AUTH_BROWSER_OPEN" and _auth_target_keys.size() > 1:
+			label_step2_title.text = _auth_target_keys[1].raw()
 
 
 func _process(delta: float) -> void:
@@ -663,14 +691,14 @@ func _on_button_reset_guest_debug_pressed() -> void:
 	var modal = await Global.modal_manager._async_create_modal()
 	if not modal:
 		return
-	modal.set_title("Guest wallet reset")
-	modal.set_body(
+	modal.set_title(TranslationKey.new("LOBBY_GUEST_WALLET_RESET"))
+	modal.set_body_text(
 		(
 			"Cleared the local guest anchor + session. "
 			+ "Tap Play as guest to mint a brand-new guest wallet."
 		)
 	)
-	modal.set_primary_button_text("OK")
+	modal.set_primary_button_text(TranslationKey.new("MENU_OK"))
 	modal.show_icon(Modal.MODAL_ALERT_ICON)
 	modal.button_secondary.hide()
 	modal.hide_url()
@@ -764,7 +792,9 @@ func _async_on_profile_changed(new_profile: DclUserProfile):
 		waiting_for_new_wallet = false
 		if profile_has_name():
 			# User has an existing profile: show Welcome Back screen
-			label_signed_as_name.set_text("You're signed in as\n%s." % [new_profile.get_name()])
+			label_signed_as_name.set_text(
+				tr("AUTH_SIGNED_IN_AS_NAME").format({"name": new_profile.get_name()})
+			)
 			show_comeback_screen()
 			_show_avatar_preview()
 			Global.metrics.update_identity(
@@ -913,7 +943,7 @@ func _set_random_name():
 func _on_button_go_to_sign_in_pressed():
 	Global.metrics.track_click_button("SIGN_IN", "ACCOUNT_HOME", "")
 	_request_notification_permission_if_needed()
-	sign_in_title.text = "Sign in to Decentraland"
+	sign_in_title.text = tr("AUTH_SIGN_IN_TITLE")
 	is_creating_account = false
 	show_auth_home_screen()
 
@@ -938,10 +968,10 @@ func _async_confirm_discard_edit() -> void:
 	var modal = await Global.modal_manager._async_create_modal()
 	if not modal:
 		return
-	modal.set_title("Discard changes?")
-	modal.set_body("Your avatar changes won't be saved.")
-	modal.set_primary_button_text("DISCARD")
-	modal.set_secondary_button_text("CANCEL")
+	modal.set_title(TranslationKey.new("LOBBY_DISCARD_CHANGES"))
+	modal.set_body(TranslationKey.new("LOBBY_DISCARD_BODY"))
+	modal.set_primary_button_text(TranslationKey.new("LOBBY_DISCARD"))
+	modal.set_secondary_button_text(TranslationKey.new("COMMON_CANCEL"))
 	modal.hide_url()
 	modal.hide_icon()
 	modal.blocker = true
@@ -1022,7 +1052,7 @@ func _async_resume_signin_from_deep_link() -> bool:
 	waiting_for_new_wallet = true
 	# Distinct auth_method: AUTH_BROWSER_OPEN is the same screen, but this one is a resumed
 	# cold start, and the funnel needs to tell the two apart to measure the fix.
-	show_auth_browser_open_screen("Finishing sign in...", "deeplink_cold_start")
+	show_auth_browser_open_screen(deeplink_target_keys, "deeplink_cold_start")
 	# Same reason the session-recovery path below awaits it: on a sandbox StoreKit build the
 	# hybrid env has to be settled before the profile fetch this kicks off, or the profile
 	# loads from the wrong backend. No-op off iOS, and capped at 5s.
@@ -1050,8 +1080,12 @@ func _show_auth_error(error_message: String):
 	# lives. Idempotent once dismissed.
 	SplashOverlay.fade_out()
 	auth_spinner_container.hide()
-	label_step2_title.text = "Authentication failed"
-	auth_error_label_main.text = error_message
+	label_step2_title.text = tr("AUTH_FAILED_TITLE")
+	# Errors come from player_identity (server/SDK text), so the node never
+	# auto-translates; an empty error still needs generic copy rather than a blank box.
+	auth_error_label_main.text = (
+		error_message if not error_message.is_empty() else tr("COMMON_SOMETHING_WENT_WRONG")
+	)
 	auth_error_label_code.text = ""
 	auth_error_container.show()
 	button_cancel.hide()
@@ -1214,9 +1248,9 @@ func _async_show_guest_login_error() -> void:
 	var modal = await Global.modal_manager._async_create_modal()
 	if not modal:
 		return
-	modal.set_title("Something went wrong")
-	modal.set_body("We couldn't start your guest session. Please try again.")
-	modal.set_primary_button_text("TRY AGAIN")
+	modal.set_title(TranslationKey.new("LOBBY_SOMETHING_WENT_WRONG"))
+	modal.set_body(TranslationKey.new("LOBBY_GUEST_SESSION_FAILED"))
+	modal.set_primary_button_text(TranslationKey.new("COMMON_TRY_AGAIN"))
 	modal.show_icon(Modal.MODAL_ALERT_ICON)
 	modal.button_secondary.hide()
 	modal.hide_url()

@@ -32,8 +32,6 @@ var _wc_polling_start_time: int = 0
 @onready var button_wallet_connect: Button = %Button_WalletConnect
 @onready var button_metamask: Button = %Button_MetaMask
 
-@onready var texture_rect_google: TextureRect = $Button_Google/TextureRect_Google
-
 
 func _ready():
 	if Global.is_ios_or_emulating():
@@ -107,7 +105,7 @@ func async_login(provider: String = ""):
 		Global.player_identity.try_connect_account()
 
 	lobby.waiting_for_new_wallet = true
-	lobby.show_auth_browser_open_screen("Opening browser...", provider)
+	lobby.show_auth_browser_open_screen(lobby.BROWSER_TARGET_KEYS, provider)
 
 
 func switch_google_with_apple():
@@ -385,9 +383,8 @@ func _on_button_wallet_connect_pressed() -> void:
 
 		if native_result == true:
 			lobby.waiting_for_new_wallet = true
-			var wallet_name = "MetaMask" if Global.is_android() else "Wallet"
 			var method_name = "metamask_native" if Global.is_android() else "wallet_connect_native"
-			lobby.show_auth_browser_open_screen("Opening " + wallet_name + "...", method_name)
+			lobby.show_auth_browser_open_screen(lobby.METAMASK_TARGET_KEYS, method_name)
 			var metric_name = "metamask_native" if Global.is_android() else "wallet_connect_native"
 			Global.metrics.track_click_button(metric_name, lobby.current_screen_name, "")
 			return

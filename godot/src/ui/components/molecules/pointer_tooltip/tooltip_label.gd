@@ -1,21 +1,19 @@
+class_name TooltipLabel
 extends PanelContainer
+
+## The avatar "View profile" prompt, emitted as a KEY by scene_manager.rs rather than as English
+## prose. Label_Text is auto_translate_mode = 2 because it normally carries creator-authored
+## PointerEvents text, which must never be looked up — so only this one known marker is resolved
+## here, never the scene-supplied strings around it. explorer.gd matches on the same constant to
+## filter the prompt for the "Hide View Profile" setting.
+# i18n-keys: TOOLTIP_VIEW_PROFILE
+const VIEW_PROFILE_KEY: String = "TOOLTIP_VIEW_PROFILE"
 
 const BG_COLOR_NORMAL: String = "#00000080"
 const BG_COLOR_PRESSED: String = "#44444480"
 const ICON_LEFT_CLICK = preload("uid://cljfaeb8np0ma")
 const ICON_INTERACTIVE_POINTER = preload("uid://72xpjysoxgwo")
 const ICON_JUMP = preload("uid://ck3atqpytstpo")
-
-const MOBILE_ACTION_MAP := {
-	"ia_pointer": [ICON_INTERACTIVE_POINTER, "Tap"],
-	"ia_jump": [ICON_JUMP, "Jump"],
-	"ia_primary": ["E", "Primary"],
-	"ia_secondary": ["F", "Secondary"],
-	"ia_action_3": ["1", "Action 1"],
-	"ia_action_4": ["2", "Action 2"],
-	"ia_action_5": ["3", "Action 3"],
-	"ia_action_6": ["4", "Action 4"],
-}
 
 var action_to_trigger: String = ""
 var text_down := ""
@@ -32,6 +30,21 @@ var _custom_icon_hash: String = ""
 @onready var label_text = %Label_Text
 @onready var margin_container_icons: MarginContainer = %MarginContainer_Icons
 
+# The second element is a translation *key*, not copy: the label node has
+# auto_translate_mode = 2 (it normally shows creator-authored PointerEvents text,
+# which must never be looked up), so these fallbacks are resolved with tr() here
+# instead. Only used when the scene supplies no hover text of its own.
+static var mobile_action_map := {
+	"ia_pointer": [ICON_INTERACTIVE_POINTER, TranslationKey.new("TOOLTIP_ACTION_TAP")],
+	"ia_jump": [ICON_JUMP, TranslationKey.new("TOOLTIP_ACTION_JUMP")],
+	"ia_primary": ["E", TranslationKey.new("TOOLTIP_ACTION_PRIMARY")],
+	"ia_secondary": ["F", TranslationKey.new("TOOLTIP_ACTION_SECONDARY")],
+	"ia_action_3": ["1", TranslationKey.new("TOOLTIP_ACTION_1")],
+	"ia_action_4": ["2", TranslationKey.new("TOOLTIP_ACTION_2")],
+	"ia_action_5": ["3", TranslationKey.new("TOOLTIP_ACTION_3")],
+	"ia_action_6": ["4", TranslationKey.new("TOOLTIP_ACTION_4")],
+}
+
 
 func _ready():
 	stylebox = self.get_theme_stylebox("panel").duplicate()
@@ -46,9 +59,14 @@ func set_bg_color(color):
 	stylebox.bg_color = color
 
 
+## Resolve only our own prompts. Anything else is creator copy and passes through untouched.
+static func _resolve(value: String) -> String:
+	return TranslationServer.translate(value) if value == VIEW_PROFILE_KEY else value
+
+
 func set_tooltip_data(text_pet_down: String, text_pet_up, action: String):
-	text_down = text_pet_down if !text_pet_down.is_empty() else text_pet_up
-	text_up = text_pet_up if !text_pet_up.is_empty() else text_pet_down
+	text_down = _resolve(text_pet_down if !text_pet_down.is_empty() else text_pet_up)
+	text_up = _resolve(text_pet_up if !text_pet_up.is_empty() else text_pet_down)
 
 	var action_lower: String = action.to_lower()
 	# Reset any pending custom-icon load from a previous action on this reused node.
@@ -57,9 +75,9 @@ func set_tooltip_data(text_pet_down: String, text_pet_up, action: String):
 	if not label_text:
 		return
 
-	if Global.is_mobile() and action_lower in MOBILE_ACTION_MAP:
-		var mapping: Array = MOBILE_ACTION_MAP[action_lower]
-		var mobile_label: String = mapping[1]
+	if Global.is_mobile() and action_lower in mobile_action_map:
+		var mapping: Array = mobile_action_map[action_lower]
+		var mobile_label: String = mapping[1].text()
 		if mapping[0] is Texture2D:
 			_show_keyboard_icon(mapping[0])
 		else:

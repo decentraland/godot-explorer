@@ -256,12 +256,12 @@ func _async_on_change_nick_popup_update_name_on_profile(nickname: String) -> voi
 
 func _copy_name_and_tag() -> void:
 	DisplayServer.clipboard_set(label_nickname.text + label_tag.text)
-	NotificationsManager.show_system_toast("Copied", "Name copied to clipboard")
+	NotificationsManager.show_system_toast(tr("TOAST_COPIED"), tr("TOAST_NAME_COPIED"))
 
 
 func _copy_address() -> void:
 	DisplayServer.clipboard_set(address)
-	NotificationsManager.show_system_toast("Copied", "Address copied to clipboard")
+	NotificationsManager.show_system_toast(tr("TOAST_COPIED"), tr("TOAST_ADDRESS_COPIED"))
 
 
 func _on_label_nickname_gui_input(event: InputEvent) -> void:
@@ -368,7 +368,9 @@ func _async_block_user(user_address: String) -> void:
 	if promise.is_rejected():
 		var error_msg := PromiseUtils.get_error_message(promise)
 		printerr("Block failed: ", error_msg)
-		NotificationsManager.show_system_toast("Block failed", error_msg, "error", "alert")
+		NotificationsManager.show_system_toast(
+			tr("TOAST_BLOCK_FAILED"), error_msg, "error", "alert"
+		)
 		return
 
 	# Block User metric (track whether blocked user was a friend)
@@ -391,7 +393,9 @@ func _async_unblock_user_from_profile(user_address: String) -> void:
 	if promise.is_rejected():
 		var error_msg := PromiseUtils.get_error_message(promise)
 		printerr("Unblock failed: ", error_msg)
-		NotificationsManager.show_system_toast("Unblock failed", error_msg, "error", "alert")
+		NotificationsManager.show_system_toast(
+			tr("TOAST_UNBLOCK_FAILED"), error_msg, "error", "alert"
+		)
 		return
 
 	Global.social_blacklist.remove_blocked(user_address)  # Update local cache
