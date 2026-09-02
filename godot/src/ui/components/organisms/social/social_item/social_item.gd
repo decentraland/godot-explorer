@@ -3,14 +3,12 @@ extends Control
 enum LoadState { UNLOADED, LOADING, LOADED, FAILED }
 
 const SOCIAL_TYPE = SocialItemData.SocialType
-const MAX_DISPLAY_NAME_LENGTH: int = 15
 const LOAD_TIMEOUT_SECONDS: float = 5.0
 const MIN_SKELETON_VISIBLE_SECONDS: float = 0.3
 
 @export var item_type: SocialItemData.SocialType
 
 var is_guest = false
-var trim_value = 20
 var social_data: SocialItemData
 var current_friendship_status: int = Global.FriendshipStatus.UNKNOWN
 var load_state: LoadState = LoadState.UNLOADED
@@ -58,6 +56,10 @@ func _ready():
 	if Global.locations:
 		Global.locations.online_locations_changed.connect(_on_online_locations_changed)
 
+	# Place label ellipsizes on width (clip_text lets the overrun trim to the available room)
+	# instead of a fixed character cap that cut long titles short while space was left.
+	label_place.clip_text = true
+
 
 func set_data(data: SocialItemData, should_load: bool = true) -> void:
 	social_data = data
@@ -88,8 +90,8 @@ func _apply_data_to_ui() -> void:
 	else:
 		texture_rect_claimed_checkmark.show()
 
-	if display_name.length() > MAX_DISPLAY_NAME_LENGTH:
-		display_name = display_name.left(MAX_DISPLAY_NAME_LENGTH) + "..."
+	# The nickname row (EllipsisNameLabel) clips on width now, so keep the full name here instead
+	# of a hard character cap.
 	nickname.text = display_name
 
 	var nickname_color = DclAvatar.get_nickname_color(social_data.name)
@@ -98,6 +100,11 @@ func _apply_data_to_ui() -> void:
 		texture_rect_claimed_checkmark.show()
 	else:
 		texture_rect_claimed_checkmark.hide()
+
+	# Name text and check visibility both changed; re-fit so the check stays glued to the name.
+	var nickname_row := nickname.get_parent()
+	if nickname_row is EllipsisNameLabel:
+		nickname_row.refresh.call_deferred()
 
 
 func load_item() -> void:
@@ -332,6 +339,8 @@ func _async_on_button_add_friend_pressed() -> void:
 	current_friendship_status = Global.FriendshipStatus.REQUEST_SENT
 	button_add_friend.hide()
 	panel_container_request.show()
+	# Now pending: re-sort so it moves into the pending bucket of the nearby list.
+	_notify_parent_reorder()
 
 	# Notify the friends panel so the new outgoing request appears in the SENT list live.
 	Global.friendship_request_sent.emit(social_data.address)
@@ -464,9 +473,7 @@ func _async_fetch_place_data() -> void:
 		if title == "interactive-text":
 			title = "Unknown Place"
 
-		var location_entry = {
-			"coord": parcel.duplicate(), "title": shorten_tittle(title, trim_value)
-		}
+		var location_entry = {"coord": parcel.duplicate(), "title": title}
 		# Add to known_locations for future reference
 		Global.locations.known_locations.append(location_entry)
 
@@ -624,12 +631,12 @@ func _update_jump_button_visibility() -> void:
 		button_jump.show()
 		var cached_title: String = Global.locations.known_worlds.get(world_name, "")
 		if not cached_title.is_empty():
-			label_place.text = shorten_tittle(cached_title, trim_value)
+			label_place.text = cached_title
 		else:
-			# Show the trimmed ENS right away, then resolve the real title once (deduped in
-			# locations.gd). Resolution re-emits online_locations_changed, so this row swaps in
-			# the title when it lands — no per-row request storm on every emit.
-			label_place.text = shorten_tittle(world_name.trim_suffix(".dcl.eth"), trim_value)
+			# Show the ENS right away, then resolve the real title once (deduped in locations.gd).
+			# Resolution re-emits online_locations_changed, so this row swaps in the title when it
+			# lands — no per-row request storm on every emit.
+			label_place.text = world_name.trim_suffix(".dcl.eth")
 			Global.locations.async_resolve_world_title(world_name)
 		return
 
@@ -642,19 +649,13 @@ func _update_jump_button_visibility() -> void:
 		if known.has("coord") and known["coord"].size() >= 2:
 			if known["coord"][0] == parcel[0] and known["coord"][1] == parcel[1]:
 				if known.has("title"):
-					label_place.text = shorten_tittle(known["title"], trim_value)
+					label_place.text = known["title"]
 					found_location = true
 					break
 
 	if not found_location:
 		label_place.text = "Somewhere"
 		_async_fetch_place_data()
-
-
-func shorten_tittle(title: String, max_length: int) -> String:
-	if title.length() > max_length:
-		return title.left(max_length) + "..."
-	return title
 
 
 func _on_blacklist_changed() -> void:

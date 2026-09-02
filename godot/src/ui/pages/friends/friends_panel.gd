@@ -57,14 +57,15 @@ var _is_loading: bool = false
 @onready var label_sent_count: Label = %Label_SentCount
 
 @onready var nearby_list: SocialList = %NearbyList
+@onready var margin_container_no_service: MarginContainer = %MarginContainer_NoService
 
-@onready var v_box_container_no_service: VBoxContainer = %VBoxContainer_NoService
 @onready var v_box_container_loading: VBoxContainer = %VBoxContainer_Loading
 @onready var friends_list: VBoxContainer = %FriendsList
 
 @onready var button_friends: Button = %Button_Friends
 @onready var button_requests: Button = %Button_Requests
 @onready var button_nearby: Button = %Button_Nearby
+@onready var requests_badge: Panel = %RequestsBadge
 
 @onready var h_box_container_friends_tab: HBoxContainer = %HBoxContainer_FriendsTab
 @onready var h_box_container_requests_tab: HBoxContainer = %HBoxContainer_RequestsTab
@@ -112,7 +113,7 @@ func _ready() -> void:
 	v_box_container_offline.hide()
 	v_box_container_blocked.hide()
 	margin_container_no_friends.hide()
-	v_box_container_no_service.hide()
+	margin_container_no_service.hide()
 	v_box_container_loading.hide()
 	friends_list.hide()
 	_on_nearby_list_size_changed()
@@ -309,13 +310,12 @@ func _update_dropdown_visibility() -> void:
 		# While loading, show the sections from the start so `social_item` skeletons are visible
 		# while each avatar finishes loading.
 		v_box_container_loading.hide()
-		v_box_container_no_service.hide()
+		margin_container_no_service.hide()
 		margin_container_no_friends.hide()
 		friends_list.show()
 		v_box_container_online.show()
 		v_box_container_offline.show()
-		# Blocked only shows if there are elements (avoid the "flash" while list_size is 0).
-		v_box_container_blocked.visible = blocked_list.list_size > 0
+		v_box_container_blocked.show()
 		return
 
 	# Hide loading container when not loading
@@ -330,9 +330,8 @@ func _update_dropdown_visibility() -> void:
 	var online_count = online_list.list_size
 	var offline_count = offline_list.list_size
 	var blocked_count = blocked_list.list_size
-	# NOTE: blocked counts toward `total`, so a user with only blocked users sees the BLOCKED
-	# section instead of the "No friends yet" empty state (their blocked rows stay visible).
-	# Kept intentionally — design to confirm the intended behavior for this case.
+	# Blocked counts toward the total: even a single online/offline/blocked entry shows all three
+	# lists; only a truly empty friends set (total == 0) shows the "No friends yet" notice.
 	var total = online_count + offline_count + blocked_count
 
 	_update_dropdown_section(v_box_container_online, label_online_count, online_count)
@@ -341,35 +340,47 @@ func _update_dropdown_visibility() -> void:
 
 	# Show error message only if we got explicit errors from the lists
 	if has_service_error:
-		v_box_container_no_service.show()
+		margin_container_no_service.show()
 		margin_container_no_friends.hide()
 		friends_list.hide()
 	elif total == 0 and not is_guest:
-		v_box_container_no_service.hide()
+		# No friends at all: show the empty-state notice instead of the (all-zero) sections.
+		margin_container_no_service.hide()
 		margin_container_no_friends.show()
 		friends_list.hide()
 	else:
-		v_box_container_no_service.hide()
+		# At least one entry (incl. blocked): show the friends list with all three sections.
+		margin_container_no_service.hide()
 		margin_container_no_friends.hide()
 		friends_list.show()
 
 
-## Shows/hides a FRIENDS-tab section by its count and refreshes its "(n)" count label.
+## Refreshes a FRIENDS-tab section's "(n)" count. The section stays visible even at 0 (per design)
+## so the user always sees the Online / Offline / Blocked headers.
 func _update_dropdown_section(section: VBoxContainer, count_label: Label, count: int) -> void:
-	if count == 0:
-		section.hide()
-	else:
-		section.show()
-		count_label.text = "(%d)" % count
+	section.show()
+	count_label.text = "(%d)" % count
 
 
-## REQUESTS tab: show/hide the Received and Sent sections by their counts, plus the empty state.
+## REQUESTS tab: both the Received and Sent sections stay visible even at 0 (per design), so the
+## user always sees where incoming/outgoing requests will land. Only the "(n)" counts refresh.
 func _update_requests() -> void:
 	var received_count = request_list.list_size
 	var sent_count = sent_list.list_size
-	_update_dropdown_section(v_box_container_received, label_received_count, received_count)
-	_update_dropdown_section(v_box_container_sent, label_sent_count, sent_count)
-	margin_container_no_requests.visible = received_count + sent_count == 0
+	v_box_container_received.show()
+	v_box_container_sent.show()
+	label_received_count.text = "(%d)" % received_count
+	label_sent_count.text = "(%d)" % sent_count
+	# Sections are always shown now, so the separate "no requests" empty state is redundant.
+	margin_container_no_requests.hide()
+	_update_requests_tab_badge()
+
+
+## Shows a red dot on the REQUESTS tab while there are incoming (received) requests, mirroring the
+## navbar count badge. Null-guarded so it's a no-op until the badge node exists in the scene.
+func _update_requests_tab_badge() -> void:
+	if requests_badge != null:
+		requests_badge.visible = request_list.list_size > 0
 
 
 func _on_received_button_pressed() -> void:
@@ -632,8 +643,9 @@ func _expand_all_friend_lists() -> void:
 	online_button.icon = up_arrow_icon
 	offline_list.show()
 	offline_button.icon = up_arrow_icon
-	blocked_list.show()
-	blocked_button.icon = up_arrow_icon
+	# Blocked always starts minimized (per design); the user expands it manually.
+	blocked_list.hide()
+	blocked_button.icon = down_arrow_icon
 
 
 func _on_offline_button_mouse_entered() -> void:

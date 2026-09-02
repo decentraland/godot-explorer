@@ -258,7 +258,6 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_c5h7v")
 [node name="VBoxContainer_LeftPanels" type="VBoxContainer" parent="UI/SafeAreaHud/InteractableHUD/HBoxContainerLeftPanels" unique_id=1190000788]
 custom_minimum_size = Vector2(624, 640)
 layout_mode = 2
-size_flags_vertical = 0
 mouse_filter = 2
 
 [node name="NotificationsPanel" parent="UI/SafeAreaHud/InteractableHUD/HBoxContainerLeftPanels/VBoxContainer_LeftPanels" unique_id=1351118609 instance=ExtResource("14_notif_panel")]
@@ -298,12 +297,11 @@ layout_mode = 1
 
 [node name="Navbar" parent="UI/SafeAreaHud/InteractableHUD" unique_id=1143439956 instance=ExtResource("21_admxk")]
 unique_name_in_owner = true
-layout_mode = 0
-anchors_preset = 0
+custom_minimum_size = Vector2(100, 556)
+layout_mode = 1
+anchors_preset = 9
 anchor_right = 0.0
-anchor_bottom = 0.0
 grow_horizontal = 1
-grow_vertical = 1
 
 [node name="Button_ShowUI" parent="UI/SafeAreaHud" unique_id=36862358 instance=ExtResource("26_hud")]
 unique_name_in_owner = true

@@ -209,8 +209,8 @@ func _request_reorder() -> void:
 
 
 func _reorder_items() -> void:
-	# Use insertion sort to maintain order: friends first, then non-friends, alphabetically
-	# This is more efficient than rebuilding the entire order for small changes
+	# Use insertion sort to maintain order: non-friends first, then pending, then friends, each
+	# alphabetically. This is more efficient than rebuilding the entire order for small changes.
 	var children = get_children()
 	if children.size() <= 1:
 		return
@@ -235,22 +235,33 @@ func _reorder_items() -> void:
 
 
 func _should_come_before(a, b) -> bool:
-	# Returns true if 'a' should come before 'b' in the sorted order
-	# Order: friends first (alphabetically), then non-friends (alphabetically)
+	# Returns true if 'a' should come before 'b' in the sorted order.
+	# Order: non-friends first, then pending, then friends; alphabetically within each category.
 	if not is_instance_valid(a) or not is_instance_valid(b):
 		return false
 
-	var a_is_friend = a.has_method("is_friend") and a.is_friend()
-	var b_is_friend = b.has_method("is_friend") and b.is_friend()
-
-	# Friends come before non-friends
-	if a_is_friend and not b_is_friend:
-		return true
-	if not a_is_friend and b_is_friend:
-		return false
+	var rank_a = _category_rank(a)
+	var rank_b = _category_rank(b)
+	if rank_a != rank_b:
+		return rank_a < rank_b
 
 	# Same category: sort alphabetically by name
 	return _compare_by_name(a, b)
+
+
+## Sort bucket for the nearby list: 0 = non-friend, 1 = pending request (sent or received),
+## 2 = friend. Lower ranks are listed first.
+func _category_rank(item) -> int:
+	if not is_instance_valid(item) or not ("current_friendship_status" in item):
+		return 0
+
+	match item.current_friendship_status:
+		Global.FriendshipStatus.ACCEPTED:
+			return 2
+		Global.FriendshipStatus.REQUEST_SENT, Global.FriendshipStatus.REQUEST_RECEIVED:
+			return 1
+		_:
+			return 0
 
 
 func _compare_by_name(a, b) -> bool:

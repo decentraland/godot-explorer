@@ -7,13 +7,13 @@
 [ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="7_m2rwh"]
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="10_2kre2"]
 [ext_resource type="Texture2D" uid="uid://bpaccmjtefhdy" path="res://src/ui/pages/discover/icons/jump-in.svg" id="12_ockp6"]
-[ext_resource type="Texture2D" uid="uid://cnainsx10j8v1" path="res://assets/ui/add.svg" id="13_5r2pa"]
 [ext_resource type="Script" uid="uid://f35v8fcwq7yc" path="res://src/ui/components/atoms/tap_area/tap_area.gd" id="13_7xvkt"]
 [ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="13_m2rwh"]
 [ext_resource type="Texture2D" uid="uid://ce0tola1380xu" path="res://assets/themes/icons/close.svg" id="14_ockp6"]
 [ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="14_uurwy"]
 [ext_resource type="Material" uid="uid://yox6vvdafsgu" path="res://src/ui/pages/discover/carrousel/discover_carrousel_skeleton_material.tres" id="16_m2rwh"]
 [ext_resource type="Texture2D" uid="uid://cg8riejty6306" path="res://src/ui/components/molecules/dropdown_list/icons/check.svg" id="16_uurwy"]
+[ext_resource type="Script" uid="uid://6uk3lswmpo66" path="res://src/ui/components/atoms/labels/ellipsis_name_label/ellipsis_name_label.gd" id="17_enl"]
 
 [sub_resource type="LabelSettings" id="LabelSettings_ockp6"]
 font = ExtResource("13_m2rwh")
@@ -95,11 +95,6 @@ corner_radius_top_left = 10
 corner_radius_top_right = 10
 corner_radius_bottom_right = 10
 corner_radius_bottom_left = 10
-
-[sub_resource type="LabelSettings" id="LabelSettings_7xvkt"]
-font = ExtResource("14_uurwy")
-font_size = 24
-font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_40r3o"]
 content_margin_left = 24.0
@@ -224,7 +219,7 @@ corner_radius_bottom_left = 4
 custom_minimum_size = Vector2(528, 100)
 layout_mode = 3
 anchors_preset = 0
-offset_right = 464.0
+offset_right = 528.0
 offset_bottom = 100.0
 size_flags_horizontal = 3
 mouse_filter = 1
@@ -240,7 +235,7 @@ grow_horizontal = 2
 grow_vertical = 2
 size_flags_horizontal = 3
 mouse_filter = 2
-theme_override_constants/separation = 19
+theme_override_constants/separation = 0
 
 [node name="Button_Profile" type="Button" parent="Data" unique_id=1198337793]
 unique_name_in_owner = true
@@ -278,12 +273,16 @@ mouse_filter = 2
 theme_override_constants/separation = 2
 alignment = 1
 
-[node name="HBoxContainer" type="HBoxContainer" parent="Data/Button_Profile/HBoxContainer_Profile/VBoxContainer_Nickname" unique_id=2032713502]
+[node name="HBoxContainer" type="HBoxContainer" parent="Data/Button_Profile/HBoxContainer_Profile/VBoxContainer_Nickname" unique_id=2032713502 node_paths=PackedStringArray("label", "trailing")]
 layout_mode = 2
 mouse_filter = 2
+script = ExtResource("17_enl")
+label = NodePath("Nickname")
+trailing = NodePath("TextureRect_ClaimedCheckmark")
 
 [node name="Nickname" type="Label" parent="Data/Button_Profile/HBoxContainer_Profile/VBoxContainer_Nickname/HBoxContainer" unique_id=666961752]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(145, 0)
 layout_mode = 2
 mouse_default_cursor_shape = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
@@ -294,6 +293,8 @@ theme_override_fonts/font = ExtResource("5_iy8au")
 theme_override_font_sizes/font_size = 18
 text = "PlayerName"
 label_settings = SubResource("LabelSettings_ockp6")
+clip_text = true
+text_overrun_behavior = 5
 
 [node name="TextureRect_ClaimedCheckmark" type="TextureRect" parent="Data/Button_Profile/HBoxContainer_Profile/VBoxContainer_Nickname/HBoxContainer" unique_id=1143898859]
 unique_name_in_owner = true
@@ -317,6 +318,12 @@ theme_override_fonts/font = ExtResource("7_m2rwh")
 theme_override_font_sizes/font_size = 16
 text = "Place"
 label_settings = SubResource("LabelSettings_uurwy")
+text_overrun_behavior = 5
+
+[node name="Control_Space" type="Control" parent="Data/Button_Profile/HBoxContainer_Profile" unique_id=1438490276]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(28, 0)
+layout_mode = 2
 
 [node name="HBoxContainer_Online" type="HBoxContainer" parent="Data" unique_id=432456480]
 unique_name_in_owner = true
@@ -367,7 +374,7 @@ alignment = 1
 
 [node name="Button_AddFriend" type="Button" parent="Data/HBoxContainer_Nearby" unique_id=93844031]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(230, 54)
+custom_minimum_size = Vector2(170, 54)
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
@@ -377,7 +384,7 @@ mouse_default_cursor_shape = 2
 theme = ExtResource("10_2kre2")
 theme_type_variation = &"ButtonLittle"
 theme_override_constants/icon_max_width = 20
-theme_override_font_sizes/font_size = 15
+theme_override_font_sizes/font_size = 24
 theme_override_styles/normal = SubResource("StyleBoxFlat_fkduy")
 theme_override_styles/normal_mirrored = SubResource("StyleBoxFlat_fkduy")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_4fpp1")
@@ -389,38 +396,15 @@ theme_override_styles/disabled = SubResource("StyleBoxFlat_o0a4w")
 theme_override_styles/disabled_mirrored = SubResource("StyleBoxFlat_5x3e0")
 theme_override_styles/focus = SubResource("StyleBoxFlat_4fpp1")
 toggle_mode = true
+text = "ADD FRIEND"
 script = ExtResource("13_7xvkt")
 grow_top = 23.0
 grow_bottom = 23.0
 
-[node name="HBoxContainer" type="HBoxContainer" parent="Data/HBoxContainer_Nearby/Button_AddFriend" unique_id=911804076]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-theme_override_constants/separation = 6
-alignment = 1
-
-[node name="TextureRect" type="TextureRect" parent="Data/HBoxContainer_Nearby/Button_AddFriend/HBoxContainer" unique_id=899196175]
-custom_minimum_size = Vector2(26, 0)
-layout_mode = 2
-size_flags_horizontal = 4
-size_flags_vertical = 4
-texture = ExtResource("13_5r2pa")
-expand_mode = 5
-stretch_mode = 5
-
-[node name="Label" type="Label" parent="Data/HBoxContainer_Nearby/Button_AddFriend/HBoxContainer" unique_id=679695437]
-layout_mode = 2
-text = "ADD FRIEND"
-label_settings = SubResource("LabelSettings_7xvkt")
-
 [node name="PanelContainer_Request" type="PanelContainer" parent="Data/HBoxContainer_Nearby" unique_id=1717622638]
 unique_name_in_owner = true
 visible = false
-custom_minimum_size = Vector2(139, 54)
+custom_minimum_size = Vector2(170, 54)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_40r3o")
 
