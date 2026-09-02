@@ -375,6 +375,10 @@ fn main() -> io::Result<()> {
         println!("cargo:rustc-link-arg=/FORCE:MULTIPLE");
     }
 
+    // Must run before ANY patch is written, or it deletes the copies produced
+    // below (the component loop patches avatar_emote_command.proto).
+    clear_patched_proto_root();
+
     let mut proto_components = vec![];
     let mut proto_files = vec![];
     let dir_path = Path::new(COMPONENT_BASE_DIR);
@@ -384,14 +388,20 @@ fn main() -> io::Result<()> {
     {
         if let Some(extension) = entry.path().extension() {
             if extension == "proto" {
-                proto_files.push(entry.path());
-
+                // Component id/name derivation always uses the pristine npm copy;
+                // the compiled source may be swapped for a patched copy below.
                 proto_components.push(get_component_id_and_name(entry.path().to_str().unwrap()));
+
+                if entry.path().file_name().and_then(|n| n.to_str())
+                    == Some("avatar_emote_command.proto")
+                {
+                    proto_files.push(patched_avatar_emote_command_proto());
+                } else {
+                    proto_files.push(entry.path());
+                }
             }
         }
     }
-
-    clear_patched_proto_root();
 
     proto_files.push(
         format!("{PROTO_FILES_BASE_DIR}decentraland/kernel/comms/rfc5/ws_comms.proto").into(),
@@ -410,6 +420,13 @@ fn main() -> io::Result<()> {
     proto_files.push(format!("{PROTO_FILES_BASE_DIR}decentraland/pulse/pulse_shared.proto").into());
     proto_files.push(format!("{PROTO_FILES_BASE_DIR}decentraland/pulse/pulse_client.proto").into());
     proto_files.push(format!("{PROTO_FILES_BASE_DIR}decentraland/pulse/pulse_server.proto").into());
+
+    // Preview hot-reload protocol: the sdk-commands preview server broadcasts
+    // WsSceneMessage frames over the preview WebSocket (see PreviewWebSocket).
+    proto_files.push(
+        format!("{PROTO_FILES_BASE_DIR}decentraland/sdk/development/local_development.proto")
+            .into(),
+    );
 
     // Social service protos (with RPC services)
     proto_files
@@ -469,6 +486,12 @@ fn main() -> io::Result<()> {
     println!("cargo:rerun-if-changed=build_quant.rs");
     println!(
         "cargo:rerun-if-changed={PROTO_FILES_BASE_DIR}decentraland/kernel/comms/rfc4/comms.proto"
+    );
+    // Both patched protos compile from an OUT_DIR copy, so the loop below only
+    // watches files this script rewrites itself — watch the npm sources too, or
+    // `cargo run -- install` updating @dcl/protocol leaves codegen stale.
+    println!(
+        "cargo:rerun-if-changed={PROTO_FILES_BASE_DIR}decentraland/sdk/components/avatar_emote_command.proto"
     );
 
     #[cfg(feature = "use_livekit")]
@@ -555,6 +578,49 @@ fn patched_rfc4_comms_proto() -> std::path::PathBuf {
     let dest = patched_proto_root().join(RFC4_REL);
     fs::create_dir_all(dest.parent().unwrap()).expect("create proto_patched dir");
     fs::write(&dest, source).expect("write patched rfc4 comms.proto");
+    dest
+}
+
+/// The pinned @dcl/protocol build (commit 0ff6038) predates protocol#459, which added
+/// the `EmoteState` lifecycle enum and `PBAvatarEmoteCommand.state` (field 5) so scenes
+/// can observe emote completion/interruption. Same idiom as `patched_rfc4_comms_proto`:
+/// patch a copy under OUT_DIR/proto_patched/ and compile that one instead of the npm
+/// copy (which `cargo run -- install` rewrites). The enum is declared at FILE scope to
+/// match upstream exactly: prost maps a nested enum to `pb_avatar_emote_command::EmoteState`
+/// and a file-scope one to `sdk::components::EmoteState`, so declaring it anywhere else
+/// would break every import site the day the pin bumps. This way that bump is a true
+/// no-op. No-ops once the pinned build ships the field.
+fn patched_avatar_emote_command_proto() -> std::path::PathBuf {
+    const REL: &str = "decentraland/sdk/components/avatar_emote_command.proto";
+    let mut source = fs::read_to_string(format!("{PROTO_FILES_BASE_DIR}{REL}"))
+        .expect("read avatar_emote_command.proto (run `cargo run -- install` to fetch protos)");
+
+    if !source.contains("EmoteState") {
+        source = insert_fields_before_message_close(
+            &source,
+            "message PBAvatarEmoteCommand {",
+            "  // When absent (older explorers), defaults to ES_STARTED.\n  optional EmoteState state = 5;\n",
+        );
+        // File-scope enum, inserted before the message that references it.
+        source = source.replace(
+            "message PBAvatarEmoteCommand {",
+            concat!(
+                "// EmoteState describes the lifecycle state of an emote playback.\n",
+                "enum EmoteState {\n",
+                "  ES_STARTED = 0; // zero value: entries from older explorers read as \"started\"\n",
+                "  ES_FINISHED = 1; // non-looping emote completed naturally\n",
+                "  ES_INTERRUPTED = 2; // cancelled: movement, stop, superseded, or scene change\n",
+                "}\n\n",
+                "message PBAvatarEmoteCommand {"
+            ),
+        );
+    }
+
+    let dest = Path::new(&env::var("OUT_DIR").unwrap())
+        .join("proto_patched")
+        .join(REL);
+    fs::create_dir_all(dest.parent().unwrap()).expect("create proto_patched dir");
+    fs::write(&dest, source).expect("write patched avatar_emote_command.proto");
     dest
 }
 

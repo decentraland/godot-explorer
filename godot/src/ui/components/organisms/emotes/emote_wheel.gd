@@ -21,20 +21,26 @@ var emote_items: Array[EmoteItemUi] = []
 
 var last_selected_emote_urn: String = ""
 
+# Owning finger index for the raw-touch open/close (see _on_button_emotes_gui_input). -1 = none.
+var _emote_touch_index: int = -1
+
 @onready var emote_wheel_container = %EmoteWheelContainer
 @onready var label_emote_name = %Label_EmoteName
 @onready var control_wheel: Control = %Control_Wheel
-@onready var button_emotes: Button = $Button_Emotes
+@onready var button_emotes: HudButton = $Button_Emotes
 @onready var emote_wheel_item_1: EmoteItemUi = %EmoteWheelItem1
 
 
 func _ready():
 	button_emotes.set_meta("attenuated_sound", true)
-	# Drive the toggle from raw touch so it works for every finger, not just the
-	# primary one Godot synthesizes a mouse event from. button_mask = 0 makes the
-	# base Button ignore the emulated mouse so there's a single, consistent path.
+	# Toggle the wheel from raw touch so a second finger opens it while the joystick is held
+	# (Godot only synthesizes a mouse event from the primary touch). button_mask = 0 routes all
+	# activation through _on_button_emotes_gui_input, covering both fingers (desktop clicks arrive
+	# as emulated InputEventScreenTouch). visibility_changed clears a stuck press if the button is
+	# hidden mid-touch.
 	button_emotes.button_mask = 0
 	button_emotes.gui_input.connect(_on_button_emotes_gui_input)
+	button_emotes.visibility_changed.connect(_on_button_emotes_visibility_changed)
 	control_wheel.hide()
 	# Clone the template item 9 more times (10 total) and fan them 36° apart. The clone
 	# copies %EmoteWheelItem1's scene-unique-name flag, so clear it to avoid ambiguous %.
@@ -97,7 +103,8 @@ func _on_play_emote(emote_urn: String):
 		var emote_controller = avatar_node.emote_controller
 		# Use async_play_emote to ensure base emotes are loaded from remote
 		emote_controller.async_play_emote(emote_urn)
-		Global.comms.send_emote(emote_urn)
+		# -1 = full body: wheel emotes carry no avatar mask.
+		Global.comms.send_emote(emote_urn, -1)
 	else:
 		printerr("No avatar node in EmoteWheel!")
 
@@ -128,8 +135,10 @@ func close() -> void:
 	control_wheel.hide()
 	emote_wheel_closed.emit()
 	Global.explorer_grab_focus()
+	# Clearing via button_pressed (not set_pressed_no_signal) lets HudButton's `toggled` handler
+	# repaint to the default orb; the re-entrant close() early-returns since the wheel is hidden.
 	if button_emotes != null and button_emotes.button_pressed:
-		button_emotes.set_pressed_no_signal(false)
+		button_emotes.button_pressed = false
 
 
 func open() -> void:
@@ -155,10 +164,32 @@ func _on_emote_item_gui_input(event: InputEvent, item: EmoteItemUi) -> void:
 
 
 func _on_button_emotes_gui_input(event: InputEvent) -> void:
-	if event is InputEventScreenTouch and event.pressed:
-		# Flipping button_pressed emits `toggled`, which open()/close()s the wheel.
-		button_emotes.button_pressed = not button_emotes.button_pressed
-		button_emotes.accept_event()
+	# Full raw-touch handling (mirrors ButtonTouchAction) so a second finger opens the wheel while
+	# the joystick is held AND the orb shows its pressed state during the hold. We own a single
+	# finger index and drive button_down/up + the open/close toggle by hand — button_mask = 0 stops
+	# the base Button from doing it (it's mouse-only, so blind to the second finger). Emitting
+	# button_down/up flips HudButton's pressed orb; flipping button_pressed opens/closes the wheel.
+	# Touch-only, like ButtonTouchAction: on desktop `emulate_touch_from_mouse` (project.godot) turns
+	# clicks into InputEventScreenTouch, so the mouse is covered here without a separate branch.
+	if event is InputEventScreenTouch:
+		if event.pressed:
+			if _emote_touch_index == -1:
+				_emote_touch_index = event.index
+				button_emotes.button_down.emit()
+				button_emotes.button_pressed = not button_emotes.button_pressed
+			button_emotes.accept_event()
+		elif event.index == _emote_touch_index:
+			_emote_touch_index = -1
+			button_emotes.button_up.emit()
+			button_emotes.accept_event()
+
+
+func _on_button_emotes_visibility_changed() -> void:
+	# If the button is hidden mid-press (hide-UI, orientation change, teardown) the release touch
+	# never arrives — release the owned finger and settle the orb so it doesn't stay stuck pressed.
+	if _emote_touch_index != -1 and not button_emotes.is_visible_in_tree():
+		_emote_touch_index = -1
+		button_emotes.button_up.emit()
 
 
 func _on_button_toggled(toggled_on: bool) -> void:

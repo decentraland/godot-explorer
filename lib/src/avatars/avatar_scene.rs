@@ -15,7 +15,10 @@ use crate::{
     dcl::{
         components::{
             internal_player_data::InternalPlayerData,
-            proto_components::{kernel::comms::rfc4, sdk::components::PbAvatarEmoteCommand},
+            proto_components::{
+                kernel::comms::rfc4,
+                sdk::components::{EmoteState, PbAvatarEmoteCommand},
+            },
             transform_and_parent::DclTransformAndParent,
             SceneEntityId,
         },
@@ -159,6 +162,7 @@ impl INode for AvatarScene {
 
     fn process(&mut self, _delta: f64) {
         self.update_impostor_transforms();
+        self.push_interpolated_transforms_to_scenes();
         self.maybe_run_cache_cleanup();
     }
 }
@@ -846,7 +850,7 @@ impl AvatarScene {
 
         let emote_triggered_callable =
             Callable::from_fn("on_avatar_trigger_emote", move |args: &[&Variant]| {
-                if args.len() != 2 {
+                if args.len() != 3 {
                     return Variant::nil();
                 }
 
@@ -856,6 +860,9 @@ impl AvatarScene {
                 let Ok(looping) = args[1].try_to::<bool>() else {
                     return Variant::nil();
                 };
+                let Ok(mask) = args[2].try_to::<i64>() else {
+                    return Variant::nil();
+                };
 
                 if let Ok(mut avatar_scene) = Gd::<AvatarScene>::try_from_instance_id(instance_id) {
                     avatar_scene.call_deferred(
@@ -863,6 +870,38 @@ impl AvatarScene {
                         &[
                             emote_id.to_variant(),
                             looping.to_variant(),
+                            mask.to_variant(),
+                            avatar_entity_id.as_i32().to_variant(),
+                        ],
+                    );
+                }
+
+                Variant::nil()
+            });
+
+        let emote_finished_callable =
+            Callable::from_fn("on_avatar_emote_finished", move |args: &[&Variant]| {
+                if args.len() != 3 {
+                    return Variant::nil();
+                }
+
+                let Ok(emote_id) = args[0].try_to::<String>() else {
+                    return Variant::nil();
+                };
+                let Ok(interrupted) = args[1].try_to::<bool>() else {
+                    return Variant::nil();
+                };
+                let Ok(mask) = args[2].try_to::<i64>() else {
+                    return Variant::nil();
+                };
+
+                if let Ok(mut avatar_scene) = Gd::<AvatarScene>::try_from_instance_id(instance_id) {
+                    avatar_scene.call_deferred(
+                        "on_avatar_emote_finished",
+                        &[
+                            emote_id.to_variant(),
+                            interrupted.to_variant(),
+                            mask.to_variant(),
                             avatar_entity_id.as_i32().to_variant(),
                         ],
                     );
@@ -873,6 +912,7 @@ impl AvatarScene {
 
         new_avatar.connect("change_scene_id", &avatar_changed_scene_callable);
         new_avatar.connect("emote_triggered", &emote_triggered_callable);
+        new_avatar.connect("emote_finished", &emote_finished_callable);
 
         self.base_mut().add_child(&new_avatar);
 
@@ -1066,12 +1106,60 @@ impl AvatarScene {
     }
 
     #[func]
-    fn on_avatar_trigger_emote(&self, emote_id: GString, looping: bool, avatar_entity_id: i32) {
+    fn on_avatar_trigger_emote(
+        &self,
+        emote_id: GString,
+        looping: bool,
+        mask: i64,
+        avatar_entity_id: i32,
+    ) {
+        let emote_command = PbAvatarEmoteCommand {
+            emote_urn: emote_id.to_string(),
+            r#loop: looping,
+            timestamp: 0,
+            mask: crate::avatars::emote_mask::component_mask_from_internal(mask),
+            state: Some(EmoteState::EsStarted as i32),
+        };
+
+        self.append_avatar_emote_command(avatar_entity_id, emote_command);
+    }
+
+    #[func]
+    fn on_avatar_emote_finished(
+        &self,
+        emote_id: GString,
+        interrupted: bool,
+        mask: i64,
+        avatar_entity_id: i32,
+    ) {
+        let state = if interrupted {
+            EmoteState::EsInterrupted
+        } else {
+            EmoteState::EsFinished
+        };
+        let emote_command = PbAvatarEmoteCommand {
+            emote_urn: emote_id.to_string(),
+            r#loop: false,
+            timestamp: 0,
+            mask: crate::avatars::emote_mask::component_mask_from_internal(mask),
+            state: Some(state as i32),
+        };
+
+        self.append_avatar_emote_command(avatar_entity_id, emote_command);
+    }
+
+    // Push the command to the scenes the avatar is active in (global scenes + its
+    // current parcel scene).
+    fn append_avatar_emote_command(
+        &self,
+        avatar_entity_id: i32,
+        emote_command: PbAvatarEmoteCommand,
+    ) {
         let avatar_entity_id = SceneEntityId::from_i32(avatar_entity_id);
-        let avatar_scene = self
-            .avatar_godot_scene
-            .get(&avatar_entity_id)
-            .expect("avatar not found");
+        let Some(avatar_scene) = self.avatar_godot_scene.get(&avatar_entity_id) else {
+            // The avatar may have been removed between the deferred signal and now.
+            return;
+        };
 
         let mut scene_runner = DclGlobal::singleton().bind().scene_runner.clone();
         let mut scene_runner = scene_runner.bind_mut();
@@ -1083,13 +1171,6 @@ impl AvatarScene {
                 scene_ids.push(SceneId(avatar_current_parcel_scene_id));
             }
             scene_ids
-        };
-
-        let emote_command = PbAvatarEmoteCommand {
-            emote_urn: emote_id.to_string(),
-            r#loop: looping,
-            timestamp: 0,
-            mask: None,
         };
 
         // Push dirty state only in active scenes
@@ -1390,8 +1471,46 @@ impl AvatarScene {
         }
     }
 
+    /// Report an emote still mid-playback as interrupted while the avatar node is
+    /// alive. The node is about to be freed, and `emote_finished` is emitted
+    /// deferred — a deferred emit on a dying node never lands, so without this a
+    /// scene awaiting the terminal EmoteState would wait forever (a disconnecting
+    /// peer is the common case).
+    fn flush_unfinished_emote(&self, entity_id: SceneEntityId) {
+        let Some(avatar) = self.avatar_godot_scene.get(&entity_id) else {
+            return;
+        };
+        let info = avatar.clone().call("take_unfinished_emote", &[]);
+        let Ok(info) = info.try_to::<VarArray>() else {
+            return;
+        };
+        if info.len() != 2 {
+            return;
+        }
+        let urn = info
+            .at(0)
+            .try_to::<GString>()
+            .unwrap_or_default()
+            .to_string();
+        let mask = info.at(1).try_to::<i64>().unwrap_or(-1);
+
+        self.append_avatar_emote_command(
+            entity_id.as_i32(),
+            PbAvatarEmoteCommand {
+                emote_urn: urn,
+                r#loop: false,
+                timestamp: 0,
+                mask: crate::avatars::emote_mask::component_mask_from_internal(mask),
+                state: Some(EmoteState::EsInterrupted as i32),
+            },
+        );
+    }
+
     pub fn remove_avatar(&mut self, alias: u32) {
         if let Some(entity_id) = self.avatar_entity.remove(&alias) {
+            // Before anything is unregistered — append_avatar_emote_command still
+            // needs the node to resolve which scenes the avatar is in.
+            self.flush_unfinished_emote(entity_id);
             if let Some(avatar) = self.avatar_godot_scene.get(&entity_id) {
                 let impostor_id = avatar.instance_id().to_i64();
                 self.clear_impostor(impostor_id);
@@ -1462,9 +1581,69 @@ impl AvatarScene {
                 .set_target_position(dcl_transform.to_godot_transform_3d());
         }
 
+        self.push_avatar_transform_to_scenes(avatar_entity_id, dcl_transform);
+    }
+
+    /// Push each remote avatar's RENDERED transform into the scene CRDT every
+    /// frame — scenes polling avatar positions (e.g. flagtag's flag) would
+    /// otherwise see per-packet jumps while the avatar moves smoothly.
+    fn push_interpolated_transforms_to_scenes(&mut self) {
+        let mut updates: Vec<(SceneEntityId, DclTransformAndParent)> = Vec::new();
+        for (entity_id, avatar) in self.avatar_godot_scene.iter() {
+            // Only remote avatars interpolate; the local player
+            // (ExternalController) already feeds scenes its exact transform.
+            if avatar.bind().get_movement_type() != AvatarMovementType::LerpTwoPoints as i32 {
+                continue;
+            }
+            let transform = avatar.get_global_transform();
+            let dcl_transform = DclTransformAndParent::from_godot(&transform, Vector3::ZERO);
+            // Skip scene spam while the avatar is effectively stationary.
+            let unchanged = self
+                .crdt_state
+                .get_transform()
+                .get(entity_id)
+                .and_then(|entry| entry.value.as_ref())
+                .is_some_and(|prev| {
+                    prev.translation.distance_to(dcl_transform.translation) < 0.001
+                        && prev.rotation.angle_to(dcl_transform.rotation) < 0.001
+                });
+            if !unchanged {
+                updates.push((*entity_id, dcl_transform));
+            }
+        }
+        if updates.is_empty() {
+            return;
+        }
+        // One scene-runner bind for the whole batch (was one per avatar).
         let mut scene_runner = DclGlobal::singleton().bind().scene_runner.clone();
         let mut scene_runner = scene_runner.bind_mut();
+        for (entity_id, dcl_transform) in updates {
+            self.push_avatar_transform_with_runner(&mut scene_runner, &entity_id, dcl_transform);
+        }
+    }
 
+    /// Packet-cadence wrapper: binds the scene runner per call (fine at packet
+    /// rates; the per-frame path binds once for the whole batch — see
+    /// push_interpolated_transforms_to_scenes).
+    fn push_avatar_transform_to_scenes(
+        &mut self,
+        avatar_entity_id: &SceneEntityId,
+        dcl_transform: DclTransformAndParent,
+    ) {
+        let mut scene_runner = DclGlobal::singleton().bind().scene_runner.clone();
+        let mut scene_runner = scene_runner.bind_mut();
+        self.push_avatar_transform_with_runner(&mut scene_runner, avatar_entity_id, dcl_transform);
+    }
+
+    fn push_avatar_transform_with_runner(
+        &mut self,
+        scene_runner: &mut godot::obj::GdMut<'_, crate::scene_runner::scene_manager::SceneManager>,
+        avatar_entity_id: &SceneEntityId,
+        dcl_transform: DclTransformAndParent,
+    ) {
+        let Some(avatar_scene) = self.avatar_godot_scene.get(avatar_entity_id) else {
+            return;
+        };
         let avatar_current_parcel_scene_id = avatar_scene.bind().get_current_parcel_scene_id();
         let avatar_active_scene_ids = {
             let mut scene_ids = scene_runner.get_global_scene_ids().clone();
@@ -1477,15 +1656,6 @@ impl AvatarScene {
         // Push dirty state only in active scenes
         for scene_id in avatar_active_scene_ids {
             if let Some(scene) = scene_runner.get_scene_mut(&scene_id) {
-                let mut avatar_scene_transform = dcl_transform.clone();
-                avatar_scene_transform.translation.x -=
-                    (scene.scene_entity_definition.get_base_parcel().x as f32) * 16.0;
-
-                // TODO: I think this is working fine but
-                //   Should it be added instead of subtracted? (z is inverted in godot and dcl)
-                avatar_scene_transform.translation.z -=
-                    (scene.scene_entity_definition.get_base_parcel().y as f32) * 16.0;
-
                 scene
                     .avatar_scene_updates
                     .transform
@@ -1593,13 +1763,20 @@ impl AvatarScene {
         };
 
         self._update_avatar_transform(&entity_id, dcl_transform, movement.is_instant);
-        // Wire-authoritative animation state for remote double-jump / glide.
+        // Wire-authoritative animation state for remote double-jump / glide /
+        // air state.
         if let Some(avatar) = self.avatar_godot_scene.get_mut(&entity_id) {
             avatar.bind_mut().apply_wire_movement_state(
                 movement.jump_count,
                 movement.glide_state,
                 movement.is_grounded,
+                godot::prelude::Vector3::new(
+                    movement.velocity_x,
+                    movement.velocity_y,
+                    movement.velocity_z,
+                ),
             );
+            avatar.bind_mut().sync_newest_packet_anim();
         }
         self.last_movement_timestamp
             .insert(alias, movement.timestamp);
@@ -1612,6 +1789,8 @@ impl AvatarScene {
         position: godot::prelude::Vector3,
         rotation_rad: f32,
         timestamp: f32,
+        velocity: godot::prelude::Vector3,
+        is_grounded: bool,
     ) -> bool {
         let entity_id = if let Some(entity_id) = self.avatar_entity.get(&alias) {
             *entity_id
@@ -1650,6 +1829,15 @@ impl AvatarScene {
         };
 
         self._update_avatar_transform(&entity_id, dcl_transform, false);
+        // The temporal bitfield DOES carry grounded (and jump/falling) — treat
+        // this path like the uncompressed one. jump_count/glide are zero by
+        // construction: the sender forces uncompressed when either carries info.
+        if let Some(avatar) = self.avatar_godot_scene.get_mut(&entity_id) {
+            avatar
+                .bind_mut()
+                .apply_wire_movement_state(0, 0, is_grounded, velocity);
+            avatar.bind_mut().sync_newest_packet_anim();
+        }
         self.last_movement_timestamp.insert(alias, timestamp);
         true
     }
@@ -1692,7 +1880,8 @@ impl AvatarScene {
         }
     }
 
-    pub fn play_emote(&mut self, alias: u32, incremental_id: u32, emote_urn: &String) {
+    /// `mask` uses the internal convention: -1 = full body, 0 = AM_UPPER_BODY.
+    pub fn play_emote(&mut self, alias: u32, incremental_id: u32, emote_urn: &String, mask: i64) {
         let entity_id = if let Some(entity_id) = self.avatar_entity.get(&alias) {
             *entity_id
         } else {
@@ -1717,7 +1906,10 @@ impl AvatarScene {
         self.last_emote_incremental_id.insert(alias, incremental_id);
 
         if let Some(avatar_scene) = self.avatar_godot_scene.get_mut(&entity_id) {
-            avatar_scene.call("async_play_emote", &[emote_urn.to_variant()]);
+            avatar_scene.call(
+                "async_play_emote",
+                &[emote_urn.to_variant(), mask.to_variant()],
+            );
         }
     }
 

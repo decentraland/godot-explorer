@@ -100,7 +100,7 @@ var _debug_panel_from_settings: bool = false
 
 @onready var navbar: Control = %Navbar
 @onready var joypad: Control = %Joypad
-@onready var button_show_ui: Button = %Button_ShowUI
+@onready var button_show_ui: HudButton = %Button_ShowUI
 @onready var hud_dismiss_catcher: Control = %HudDismissCatcher
 @onready var interactable_area_debug: ColorRect = %InteractableAreaDebug
 @onready var interactable_area_debug_label: Label = %InteractableAreaDebugLabel
@@ -302,7 +302,6 @@ func _ready():
 	Global.scene_runner.player_body_node = player
 	Global.scene_runner.console = self._on_scene_console_message
 	Global.scene_runner.pointer_tooltip_changed.connect(self._on_pointer_tooltip_changed)
-	player.avatar.emote_triggered.connect(Global.scene_runner.on_primary_player_trigger_emote)
 	# Recreate base_ui before use: the previous instance is freed when the Explorer
 	# scene is torn down (logout/change_scene_to_file), leaving a dangling reference.
 	Global.scene_runner.recreate_base_ui()

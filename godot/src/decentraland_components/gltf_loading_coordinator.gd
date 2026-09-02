@@ -54,6 +54,8 @@ class LoadGroup:
 	var optimized := false
 	var state := 0
 	var scene_path := ""
+	# Bypass ResourceLoader's cache for this load — see `request(force_fresh)`.
+	var force_fresh := false
 	var packed_scene: PackedScene = null
 	var waiters: Array = []
 
@@ -76,10 +78,25 @@ var _load_pump_running := false
 ## a hash creates the group and enqueues it for download; later requesters just
 ## attach and are realized when the shared load completes (or immediately queued
 ## for realize if the bytes are already fetched).
+##
+## `force_fresh` re-reads the .scn from disk instead of reusing ResourceLoader's
+## cached copy. Only preview hot-reload needs it: the preview server hashes file
+## *paths*, so an edited model keeps its hash and therefore its .scn path, and a
+## cached load would hand back the previous version of the file.
 func request(
-	container, hash: String, src: String, scene_id: int, optimized: bool, content_mapping
+	container,
+	hash: String,
+	src: String,
+	scene_id: int,
+	optimized: bool,
+	content_mapping,
+	force_fresh: bool = false
 ) -> void:
 	var group: LoadGroup = _groups.get(hash)
+	if group != null and force_fresh:
+		group.force_fresh = true
+		group.packed_scene = null
+
 	if group == null:
 		group = LoadGroup.new()
 		group.hash = hash
@@ -87,6 +104,7 @@ func request(
 		group.scene_id = scene_id
 		group.content_mapping = content_mapping
 		group.optimized = optimized
+		group.force_fresh = force_fresh
 		group.state = STATE_PENDING
 		group.waiters.append(container)
 		_groups[hash] = group
@@ -248,7 +266,12 @@ func _load_and_realize_group(group: LoadGroup) -> void:
 		# embeds ETC2 texture atlases + mesh textures that upload to the GPU
 		# during load; doing that on the WorkerThreadPool raced the render
 		# thread over the RenderingServer command lock and DEADLOCKED on Mali.
-		var resource := ResourceLoader.load(group.scene_path)
+		var cache_mode := (
+			ResourceLoader.CACHE_MODE_REPLACE
+			if group.force_fresh
+			else ResourceLoader.CACHE_MODE_REUSE
+		)
+		var resource := ResourceLoader.load(group.scene_path, "", cache_mode)
 		if resource == null or not resource is PackedScene:
 			_notify_group_error(group, "loaded resource is null")
 			return

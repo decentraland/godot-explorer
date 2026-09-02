@@ -139,10 +139,13 @@ pub enum RpcCall {
     },
     TriggerEmote {
         emote_id: String,
+        // -1 = full body (absent), 0 = AvatarMask::AM_UPPER_BODY
+        mask: i64,
     },
     TriggerSceneEmote {
         emote_src: String,
         looping: bool,
+        mask: i64,
     },
     // Portable Experiences
     SpawnPortable {
