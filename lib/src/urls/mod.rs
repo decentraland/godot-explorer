@@ -248,6 +248,12 @@ pub fn feature_flags() -> String {
         suffix(ServiceGroup::MobileBff)
     )
 }
+pub fn campaigns() -> String {
+    format!(
+        "https://mobile-bff.decentraland.{}/campaigns",
+        suffix(ServiceGroup::MobileBff)
+    )
+}
 
 // Notifications
 pub fn notifications_api() -> String {
@@ -270,24 +276,137 @@ pub fn credits_server() -> String {
 pub fn host() -> String {
     format!("https://decentraland.{}", default_suffix())
 }
+/// Which web app serves the storefront in an environment.
+///
+/// The two apps answer on the same domain under a different path AND with a
+/// DIFFERENT route table, so a deep link cannot be built by concatenating a path
+/// onto `marketplace()`: a legacy path under `/shop` lands on the shop's "Page not
+/// found" (that is what broke the backpack recommendations and the "go to
+/// marketplace" CTAs on zone).
+///
+/// | destination | `decentraland/marketplace`      | `decentraland/shop`      |
+/// |-------------|---------------------------------|--------------------------|
+/// | browse      | `/browse?section=wearables`     | `/items?category=wearable` |
+/// | item detail | `/contracts/{c}/items/{i}`      | `/item/{c}/{i}`          |
+/// | claim NAME  | `/names/claim`                  | `/items?category=names`  |
+///
+/// Sources: `webapp/src/modules/routing/locations.ts` (marketplace) and
+/// `app/src/App.tsx` + `app/src/lib/routes.ts` (shop).
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum Storefront {
+    /// The classic marketplace, served at `/marketplace`.
+    Marketplace,
+    /// The new shop, served at `/shop`.
+    Shop,
+}
+
+impl Storefront {
+    /// Path segment the app is served from on a decentraland.<env> host. Unused by
+    /// the `today` dev server, which serves its app at the root of localhost.
+    fn path(self) -> &'static str {
+        match self {
+            Self::Marketplace => "marketplace",
+            Self::Shop => "shop",
+        }
+    }
+}
+
+/// Storefront serving an environment. Zone moved to the new shop; org stays on the
+/// classic marketplace, which is also the only one that fires the
+/// `decentraland://open?iap_enabled=true&urn=` return deep link the IAP tracker
+/// relies on. `today` points at a local dev server and keeps the classic routes.
+fn storefront(env: DclEnvironment) -> Storefront {
+    match env {
+        DclEnvironment::Zone => Storefront::Shop,
+        _ => Storefront::Marketplace,
+    }
+}
+
+/// Storefront root. Both apps redirect it to their own landing page, so it is safe
+/// to open directly — but every deeper destination must go through the builders
+/// below instead of appending to this.
 pub fn marketplace() -> String {
-    if resolved_env(ServiceGroup::Marketplace) == DclEnvironment::Today {
+    let env = resolved_env(ServiceGroup::Marketplace);
+    if env == DclEnvironment::Today {
         "http://localhost:5173".to_string()
     } else {
         format!(
-            "https://decentraland.{}/marketplace",
-            suffix(ServiceGroup::Marketplace)
+            "https://decentraland.{}/{}",
+            suffix(ServiceGroup::Marketplace),
+            storefront(env).path()
         )
     }
+}
+
+// The route table lives in these three pure functions so both storefronts can be
+// asserted without touching the process-wide environment.
+
+fn browse_path(sf: Storefront, section: &str) -> String {
+    match sf {
+        Storefront::Marketplace => format!("/browse?section={}", section),
+        Storefront::Shop => match section {
+            "wearables" => "/items?category=wearable".to_string(),
+            "emotes" => "/items?category=emote".to_string(),
+            // Unknown section → the unfiltered grid, never a 404.
+            _ => "/items".to_string(),
+        },
+    }
+}
+
+fn item_path(sf: Storefront, contract_address: &str, item_id: &str) -> String {
+    match sf {
+        Storefront::Marketplace => format!("/contracts/{}/items/{}", contract_address, item_id),
+        Storefront::Shop => format!("/item/{}/{}", contract_address, item_id),
+    }
+}
+
+fn claim_name_path(sf: Storefront) -> &'static str {
+    match sf {
+        Storefront::Marketplace => "/names/claim",
+        // The shop has no separate claim route: NAMEs is a category that swaps the
+        // grid for the registration page (`Assets.tsx` → `NamesPage`).
+        Storefront::Shop => "/items?category=names",
+    }
+}
+
+fn current_storefront() -> Storefront {
+    storefront(resolved_env(ServiceGroup::Marketplace))
+}
+
+/// Catalog listing for a backpack section — `"wearables"` or `"emotes"`, the values
+/// the backpack CTA and the empty-state message already use.
+pub fn marketplace_browse(section: &str) -> String {
+    format!(
+        "{}{}",
+        marketplace(),
+        browse_path(current_storefront(), section)
+    )
+}
+
+/// Detail page for a primary/catalog item, from the `contractAddress` + `itemId`
+/// the catalog API returns. NOT for a specific token: the shop routes those through
+/// `/token/{contract}/{tokenId}` precisely so a tokenId never reaches the item page.
+pub fn marketplace_item(contract_address: &str, item_id: &str) -> String {
+    format!(
+        "{}{}",
+        marketplace(),
+        item_path(current_storefront(), contract_address, item_id)
+    )
 }
 // Catalog of wearables/items for the recommendations panel. Follows the identity
 // env (ServiceGroup::Profile) so the listed items live on the same network as the
 // player's wallet. Otherwise (e.g. profile::zone) the catalog returns org/Polygon
 // URNs the zone wallet doesn't own and the zone avatar loader can't resolve, so
 // the recommendations can't be equipped.
+//
+// `/v3/catalog/unified` rather than `/v2/catalog`: it reports `priceCredits`, the
+// price in the same whole credits the IAP balance is denominated in. v2 only
+// reports MANA (wei), a DIFFERENT unit worth ~0.63 credits, so pricing cards off
+// it asks the player for more credits than the item costs. The two endpoints do
+// not share a response shape — see `marketplace_recommended_section.gd`.
 pub fn marketplace_catalog_api() -> String {
     format!(
-        "https://marketplace-api.decentraland.{}/v2/catalog",
+        "https://marketplace-api.decentraland.{}/v3/catalog/unified",
         suffix(ServiceGroup::Profile)
     )
 }
@@ -302,11 +421,11 @@ pub fn marketplace_api() -> String {
         suffix(ServiceGroup::Marketplace)
     )
 }
+/// NAME registration. Follows the marketplace service group like every other
+/// storefront link (it used to hardcode `/marketplace` on the default env, which
+/// ignored a `marketplace::` override and 404s once the env is on the shop).
 pub fn marketplace_claim_name() -> String {
-    format!(
-        "https://decentraland.{}/marketplace/names/claim",
-        default_suffix()
-    )
+    format!("{}{}", marketplace(), claim_name_path(current_storefront()))
 }
 pub fn privacy_policy() -> String {
     format!("https://decentraland.{}/privacy", default_suffix())
@@ -350,6 +469,48 @@ mod tests {
     #[test]
     fn test_peer_lambdas_uses_peer_base() {
         assert_eq!(peer_lambdas(), format!("{}/lambdas/", peer_base()));
+    }
+
+    #[test]
+    fn test_storefront_routes_per_env() {
+        // Zone moved the storefront to /shop; org (and the localhost dev build,
+        // which ignores the path) stay on /marketplace.
+        assert_eq!(storefront(DclEnvironment::Zone), Storefront::Shop);
+        assert_eq!(storefront(DclEnvironment::Org), Storefront::Marketplace);
+        assert_eq!(storefront(DclEnvironment::Today), Storefront::Marketplace);
+
+        // Every destination the client links to, in both route tables. The shop
+        // does not answer the classic paths at all, so a mix-up is a 404 rather
+        // than a redirect — which is exactly how this broke on zone.
+        for (sf, browse, item, claim) in [
+            (
+                Storefront::Marketplace,
+                "/browse?section=wearables",
+                "/contracts/0xabc/items/3",
+                "/names/claim",
+            ),
+            (
+                Storefront::Shop,
+                "/items?category=wearable",
+                "/item/0xabc/3",
+                "/items?category=names",
+            ),
+        ] {
+            assert_eq!(browse_path(sf, "wearables"), browse);
+            assert_eq!(item_path(sf, "0xabc", "3"), item);
+            assert_eq!(claim_name_path(sf), claim);
+        }
+
+        assert_eq!(
+            browse_path(Storefront::Marketplace, "emotes"),
+            "/browse?section=emotes"
+        );
+        assert_eq!(
+            browse_path(Storefront::Shop, "emotes"),
+            "/items?category=emote"
+        );
+        // An unrecognized section must still land on a real page.
+        assert_eq!(browse_path(Storefront::Shop, "hats"), "/items");
     }
 
     #[test]

@@ -129,7 +129,7 @@ theme_override_constants/separation = 14
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_fonts/font = ExtResource("3_1ym31")
-text = "Settings"
+text = "SETTINGS_SETTINGS"
 label_settings = ExtResource("6_sa1v7")
 
 [node name="MarginContainer_Nav" type="MarginContainer" parent="VBoxContainer" unique_id=225568042]
@@ -167,7 +167,7 @@ theme_type_variation = &"SettingsButton"
 toggle_mode = true
 button_pressed = true
 button_group = SubResource("ButtonGroup_jdndg")
-text = "Graphics"
+text = "SETTINGS_GRAPHICS"
 icon = ExtResource("5_lso3q")
 alignment = 0
 
@@ -182,7 +182,7 @@ theme = ExtResource("12_sa1v7")
 theme_type_variation = &"SettingsButton"
 toggle_mode = true
 button_group = SubResource("ButtonGroup_jdndg")
-text = "Audio"
+text = "SETTINGS_AUDIO"
 icon = ExtResource("6_q1ods")
 alignment = 0
 
@@ -197,7 +197,7 @@ theme = ExtResource("12_sa1v7")
 theme_type_variation = &"SettingsButton"
 toggle_mode = true
 button_group = SubResource("ButtonGroup_jdndg")
-text = "Gameplay"
+text = "SETTINGS_GAMEPLAY"
 icon = ExtResource("9_67hd5")
 alignment = 0
 
@@ -212,7 +212,7 @@ theme = ExtResource("12_sa1v7")
 theme_type_variation = &"SettingsButton"
 toggle_mode = true
 button_group = SubResource("ButtonGroup_jdndg")
-text = "Account"
+text = "SETTINGS_ACCOUNT"
 icon = ExtResource("11_6mcfd")
 alignment = 0
 
@@ -239,7 +239,7 @@ theme = ExtResource("12_sa1v7")
 theme_type_variation = &"SettingsButton"
 toggle_mode = true
 button_group = SubResource("ButtonGroup_jdndg")
-text = "Storage"
+text = "SETTINGS_STORAGE"
 icon = ExtResource("12_6mcfd")
 alignment = 0
 
@@ -254,7 +254,7 @@ theme = ExtResource("12_sa1v7")
 theme_type_variation = &"SettingsButton"
 toggle_mode = true
 button_group = SubResource("ButtonGroup_jdndg")
-text = "Dev Tools"
+text = "SETTINGS_DEV_TOOLS"
 icon = ExtResource("6_br0rl")
 alignment = 0
 
@@ -279,8 +279,7 @@ mouse_filter = 1
 theme = ExtResource("12_sa1v7")
 theme_type_variation = &"SettingsButton"
 theme_override_constants/h_separation = 0
-text = "RESET ALL
-"
+text = "SETTINGS_RESET_ALL"
 alignment = 0
 
 [node name="MarginContainer_Content" type="MarginContainer" parent="VBoxContainer" unique_id=663736676]
@@ -328,6 +327,26 @@ theme = SubResource("Theme_5xlkc")
 theme_type_variation = &"2"
 theme_override_constants/separation = 72
 
+[node name="Container_Language" type="MarginContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Gameplay" unique_id=1774390022]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/margin_left = 0
+theme_override_constants/margin_right = 0
+
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Language" unique_id=1774390023]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="SectionTittle_Language" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Language/VBoxContainer" unique_id=1774390024 instance=ExtResource("15_h5vs5")]
+layout_mode = 2
+title = "SETTINGS_LANGUAGE_CAPS"
+
+[node name="DropdownList_Language" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Language/VBoxContainer" unique_id=1774390021 instance=ExtResource("20_67hd5")]
+unique_name_in_owner = true
+layout_mode = 2
+title = "SETTINGS_LANGUAGE"
+description = "SETTINGS_LANGUAGE_DESCRIPTION"
+
 [node name="Container_ChatAndSocial" type="MarginContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Gameplay" unique_id=1938018452]
 unique_name_in_owner = true
 layout_mode = 2
@@ -343,7 +362,7 @@ theme_override_constants/separation = 0
 
 [node name="SectionTittle_ChatAndSocial" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_ChatAndSocial/SectionChatAndSocial/VBoxContainer" unique_id=696878895 instance=ExtResource("15_h5vs5")]
 layout_mode = 2
-title = "CHAT & SOCIAL"
+title = "SETTINGS_CHAT_SOCIAL"
 
 [node name="HSeparator" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_ChatAndSocial/SectionChatAndSocial/VBoxContainer" unique_id=657247258]
 layout_mode = 2
@@ -361,7 +380,7 @@ size_flags_horizontal = 3
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_fonts/font = ExtResource("16_blskf")
 theme_override_font_sizes/font_size = 14
-text = "Close Chat After Sending"
+text = "SETTINGS_CLOSE_CHAT_AFTER_SENDING"
 label_settings = ExtResource("17_67hd5")
 
 [node name="CheckButton_SubmitMessageClosesChat" type="CheckButton" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_ChatAndSocial/SectionChatAndSocial/VBoxContainer/CloseChatAfterSending" unique_id=521781121]
@@ -385,7 +404,7 @@ theme_override_constants/separation = 0
 
 [node name="SectionTittle_Camera" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Camera/SectionCamera/VBoxContainer" unique_id=1716650739 instance=ExtResource("15_h5vs5")]
 layout_mode = 2
-title = "CAMERA"
+title = "SETTINGS_CAMERA"
 
 [node name="HSeparator" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Camera/SectionCamera/VBoxContainer" unique_id=307181499]
 layout_mode = 2
@@ -441,7 +460,7 @@ size_flags_horizontal = 3
 theme_override_colors/font_color = Color(0.7, 0.7, 0.7, 1)
 theme_override_fonts/font = ExtResource("18_xewta")
 theme_override_font_sizes/font_size = 12
-text = "The camera mode is set by the creator. It can't be changed."
+text = "SETTINGS_THE_CAMERA_MODE_IS_SET_BY"
 label_settings = SubResource("LabelSettings_ep3jl")
 vertical_alignment = 1
 autowrap_mode = 2
@@ -459,7 +478,7 @@ theme_override_constants/separation = 0
 
 [node name="SectionTittle_Interface" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Interface/VBoxContainer" unique_id=850332111 instance=ExtResource("15_h5vs5")]
 layout_mode = 2
-title = "INTERFACE"
+title = "SETTINGS_INTERFACE_CAPS"
 
 [node name="HSeparator" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Interface/VBoxContainer" unique_id=1015605874]
 layout_mode = 2
@@ -482,7 +501,7 @@ size_flags_horizontal = 3
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_fonts/font = ExtResource("16_blskf")
 theme_override_font_sizes/font_size = 14
-text = "Hide Interface"
+text = "SETTINGS_HIDE_INTERFACE"
 label_settings = ExtResource("17_67hd5")
 
 [node name="HSeparator2" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Interface/VBoxContainer/HideExplorerUI/VBoxContainer" unique_id=271447150]
@@ -497,7 +516,7 @@ layout_mode = 2
 theme_override_colors/font_color = Color(0.7, 0.7, 0.7, 1)
 theme_override_fonts/font = ExtResource("18_xewta")
 theme_override_font_sizes/font_size = 12
-text = "Hide the on-screen interface to take clean screenshots"
+text = "SETTINGS_HIDE_THE_ON_SCREEN_INTERFACE_TO"
 label_settings = ExtResource("19_t1cvu")
 autowrap_mode = 2
 max_lines_visible = 2
@@ -525,7 +544,7 @@ size_flags_horizontal = 3
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_fonts/font = ExtResource("16_blskf")
 theme_override_font_sizes/font_size = 14
-text = "Hide Player Names"
+text = "SETTINGS_HIDE_PLAYER_NAMES"
 label_settings = ExtResource("17_67hd5")
 
 [node name="CheckButton_HidePlayerNames" type="CheckButton" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Interface/VBoxContainer/HidePlayerNames" unique_id=726596558]
@@ -552,7 +571,7 @@ size_flags_horizontal = 3
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_fonts/font = ExtResource("16_blskf")
 theme_override_font_sizes/font_size = 14
-text = "Hide \"View Profile\""
+text = "SETTINGS_HIDE_VIEW_PROFILE"
 label_settings = ExtResource("17_67hd5")
 
 [node name="CheckButton_HideViewProfile" type="CheckButton" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Interface/VBoxContainer/HideViewProfile" unique_id=1079372807]
@@ -579,7 +598,7 @@ size_flags_horizontal = 3
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_fonts/font = ExtResource("16_blskf")
 theme_override_font_sizes/font_size = 14
-text = "Hide Interaction Prompts"
+text = "SETTINGS_HIDE_INTERACTION_PROMPTS"
 label_settings = ExtResource("17_67hd5")
 
 [node name="CheckButton_HideWorldInteractions" type="CheckButton" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Interface/VBoxContainer/HideWorldInteractions" unique_id=971659080]
@@ -606,7 +625,7 @@ size_flags_horizontal = 3
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_fonts/font = ExtResource("16_blskf")
 theme_override_font_sizes/font_size = 14
-text = "Hide Scene Interface"
+text = "SETTINGS_HIDE_SCENE_INTERFACE"
 label_settings = ExtResource("17_67hd5")
 
 [node name="CheckButton_HideSceneUI" type="CheckButton" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Interface/VBoxContainer/HideSceneUI" unique_id=1747745546]
@@ -632,7 +651,7 @@ theme_override_constants/separation = 0
 
 [node name="SectionTittle_TemporaryFiles" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Storage" unique_id=505514174 instance=ExtResource("15_h5vs5")]
 layout_mode = 2
-title = "TEMPORARY FILES"
+title = "SETTINGS_TEMPORARY_FILES"
 
 [node name="HSeparator3" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Storage" unique_id=1622187471]
 layout_mode = 2
@@ -659,7 +678,7 @@ unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 theme = SubResource("Theme_eontw")
-text = "Current Cache Size"
+text = "SETTINGS_CURRENT_CACHE_SIZE"
 label_settings = ExtResource("17_67hd5")
 
 [node name="Label_CurrentCacheValue" type="Label" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Storage/CurrentCacheSize/TitleRow" unique_id=1168212893]
@@ -698,8 +717,8 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_xewta")
 [node name="DropdownList_MaxCacheSize" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Storage" unique_id=1673477868 instance=ExtResource("20_67hd5")]
 unique_name_in_owner = true
 layout_mode = 2
-title = "Max Cache Size"
-description = "Sets how much storage the app can use."
+title = "SETTINGS_MAX_CACHE_SIZE"
+description = "SETTINGS_SETS_HOW_MUCH_STORAGE_THE_APP"
 
 [node name="HSeparator" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Storage" unique_id=221018430]
 layout_mode = 2
@@ -715,7 +734,7 @@ focus_mode = 0
 mouse_filter = 1
 theme = ExtResource("12_sa1v7")
 theme_type_variation = &"SecondaryOutlinedButton"
-text = "CLEAN CACHE"
+text = "SETTINGS_CLEAN_CACHE"
 
 [node name="HSeparator4" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Storage" unique_id=604752219]
 layout_mode = 2
@@ -729,7 +748,7 @@ layout_mode = 2
 theme_override_colors/font_color = Color(0.7, 0.7, 0.7, 1)
 theme_override_fonts/font = ExtResource("18_xewta")
 theme_override_font_sizes/font_size = 12
-text = "Clears downloaded files used to speed up loading. Safe to delete."
+text = "SETTINGS_CLEARS_DOWNLOADED_FILES_USED_TO_SPEED"
 label_settings = ExtResource("19_t1cvu")
 autowrap_mode = 2
 text_overrun_behavior = 4
@@ -757,7 +776,7 @@ theme_override_constants/separation = 0
 
 [node name="SectionTittle_Performance" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Graphics/SectionPerformance/VBoxContainer" unique_id=133082826 instance=ExtResource("15_h5vs5")]
 layout_mode = 2
-title = "PERFORMANCE"
+title = "SETTINGS_PERFORMANCE"
 
 [node name="HSeparator" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Graphics/SectionPerformance/VBoxContainer" unique_id=1945411460]
 layout_mode = 2
@@ -788,7 +807,7 @@ layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_fonts/font = ExtResource("16_blskf")
 theme_override_font_sizes/font_size = 14
-text = "Dynamic Graphics"
+text = "SETTINGS_DYNAMIC_GRAPHICS"
 label_settings = ExtResource("17_67hd5")
 
 [node name="HSeparator2" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Graphics/SectionPerformance/VBoxContainer/DynamicGraphics/VBoxContainer" unique_id=853843564]
@@ -803,7 +822,7 @@ layout_mode = 2
 theme_override_colors/font_color = Color(0.7, 0.7, 0.7, 1)
 theme_override_fonts/font = ExtResource("18_xewta")
 theme_override_font_sizes/font_size = 12
-text = "Adjusts graphics automatically for optimal performance."
+text = "SETTINGS_ADJUSTS_GRAPHICS_AUTOMATICALLY_FOR_OPTIMAL_PERFORMANCE"
 label_settings = ExtResource("19_t1cvu")
 autowrap_mode = 2
 text_overrun_behavior = 4
@@ -829,8 +848,8 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_xewta")
 [node name="DropdownList_GraphicProfiles" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Graphics/SectionPerformance/VBoxContainer" unique_id=271477785 instance=ExtResource("20_67hd5")]
 unique_name_in_owner = true
 layout_mode = 2
-title = "Graphics Profile"
-description = "Sets a graphics quality preset for your device."
+title = "SETTINGS_GRAPHICS_PROFILE"
+description = "SETTINGS_SETS_A_GRAPHICS_QUALITY_PRESET_FOR"
 
 [node name="SectionVisual" type="MarginContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Graphics" unique_id=1104699618]
 layout_mode = 2
@@ -841,7 +860,7 @@ theme_override_constants/separation = 0
 
 [node name="SectionTittle_Visual" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Graphics/SectionVisual/VBoxContainer" unique_id=1992145860 instance=ExtResource("15_h5vs5")]
 layout_mode = 2
-title = "VISUAL"
+title = "SETTINGS_VISUAL"
 
 [node name="HSeparator" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Graphics/SectionVisual/VBoxContainer" unique_id=357859541]
 layout_mode = 2
@@ -872,7 +891,7 @@ layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_fonts/font = ExtResource("16_blskf")
 theme_override_font_sizes/font_size = 14
-text = "Dynamic Skybox"
+text = "SETTINGS_DYNAMIC_SKYBOX"
 label_settings = ExtResource("17_67hd5")
 
 [node name="HSeparator2" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Graphics/SectionVisual/VBoxContainer/DynamicSkybox/VBoxContainer" unique_id=1522542225]
@@ -887,7 +906,7 @@ layout_mode = 2
 theme_override_colors/font_color = Color(0.7, 0.7, 0.7, 1)
 theme_override_fonts/font = ExtResource("18_xewta")
 theme_override_font_sizes/font_size = 12
-text = "The sky changes over time as you play."
+text = "SETTINGS_THE_SKY_CHANGES_OVER_TIME_AS"
 label_settings = ExtResource("19_t1cvu")
 autowrap_mode = 2
 text_overrun_behavior = 4
@@ -913,7 +932,7 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_xewta")
 [node name="DropdownList_CustomSkybox" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Graphics/SectionVisual/VBoxContainer" unique_id=1356632552 instance=ExtResource("20_67hd5")]
 unique_name_in_owner = true
 layout_mode = 2
-title = "Custom Skybox"
+title = "SETTINGS_CUSTOM_SKYBOX"
 
 [node name="HBoxContainer_SkyboxWarning" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Graphics/SectionVisual/VBoxContainer" unique_id=1001903030]
 unique_name_in_owner = true
@@ -957,7 +976,7 @@ size_flags_horizontal = 3
 theme_override_colors/font_color = Color(0.7, 0.7, 0.7, 1)
 theme_override_fonts/font = ExtResource("18_xewta")
 theme_override_font_sizes/font_size = 12
-text = "The skybox is set by the creator. It can’t be changed."
+text = "SETTINGS_THE_SKYBOX_IS_SET_BY_THE"
 label_settings = SubResource("LabelSettings_ep3jl")
 vertical_alignment = 1
 autowrap_mode = 2
@@ -976,7 +995,7 @@ alignment = 1
 [node name="Label" type="Label" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Graphics/SectionVisual/VBoxContainer/GraphicProfile" unique_id=793317670]
 layout_mode = 2
 theme_override_font_sizes/font_size = 24
-text = "Graphic Profile"
+text = "SETTINGS_GRAPHIC_PROFILE"
 
 [node name="VBoxContainer_Audio" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections" unique_id=1100264795]
 unique_name_in_owner = true
@@ -988,7 +1007,7 @@ theme_override_constants/separation = 24
 
 [node name="SectionTittle_Volume" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Audio" unique_id=448378259 instance=ExtResource("15_h5vs5")]
 layout_mode = 2
-title = "VOLUME"
+title = "SETTINGS_VOLUME"
 
 [node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Audio" unique_id=19322585]
 layout_mode = 2
@@ -1002,25 +1021,25 @@ is_percentage = true
 [node name="SceneVolume" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Audio/VBoxContainer" unique_id=1982029507 instance=ExtResource("21_xewta")]
 unique_name_in_owner = true
 layout_mode = 2
-title = "Scene"
+title = "SETTINGS_SCENE"
 is_percentage = true
 
 [node name="UIVolume" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Audio/VBoxContainer" unique_id=220592792 instance=ExtResource("21_xewta")]
 unique_name_in_owner = true
 layout_mode = 2
-title = "Interface"
+title = "SETTINGS_INTERFACE"
 is_percentage = true
 
 [node name="MusicVolume" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Audio/VBoxContainer" unique_id=823143729 instance=ExtResource("21_xewta")]
 unique_name_in_owner = true
 layout_mode = 2
-title = "Music & Ambient"
+title = "SETTINGS_MUSIC_AMBIENT"
 is_percentage = true
 
 [node name="AvatarAndEmotesVolume" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Audio/VBoxContainer" unique_id=1185349385 instance=ExtResource("21_xewta")]
 unique_name_in_owner = true
 layout_mode = 2
-title = "Avatar & Emote"
+title = "SETTINGS_AVATAR_EMOTE"
 is_percentage = true
 
 [node name="HSeparator" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Audio/VBoxContainer" unique_id=1769091546]
@@ -1032,14 +1051,14 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_47ptg")
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
-title = "Voice Chat"
+title = "SETTINGS_VOICE_CHAT"
 is_percentage = true
 
 [node name="MicAmplification" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Audio/VBoxContainer" unique_id=809507567 instance=ExtResource("21_xewta")]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
-title = "Mic Amplification"
+title = "SETTINGS_MIC_AMPLIFICATION"
 is_percentage = true
 
 [node name="VBoxContainer_Advanced" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections" unique_id=2077198387]
@@ -1053,7 +1072,7 @@ theme_override_constants/separation = 0
 
 [node name="Section_Title" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Advanced" unique_id=1752756732 instance=ExtResource("15_h5vs5")]
 layout_mode = 2
-title = "DEV TOOLS"
+title = "SETTINGS_DEV_TOOLS_CAPS"
 
 [node name="HSeparator5" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Advanced" unique_id=1763454153]
 layout_mode = 2
@@ -1076,7 +1095,7 @@ size_flags_horizontal = 3
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_fonts/font = ExtResource("16_blskf")
 theme_override_font_sizes/font_size = 14
-text = "Scene Logs Enabled"
+text = "SETTINGS_SCENE_LOGS_ENABLED"
 label_settings = ExtResource("17_67hd5")
 
 [node name="CheckButton_SceneLogsEnabled" type="CheckButton" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/SceneLogsEnabled" unique_id=215869023]
@@ -1094,7 +1113,7 @@ size_flags_horizontal = 3
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_fonts/font = ExtResource("16_blskf")
 theme_override_font_sizes/font_size = 14
-text = "Raycast Debugger"
+text = "SETTINGS_RAYCAST_DEBUGGER"
 label_settings = ExtResource("17_67hd5")
 
 [node name="CheckButton_RaycastDebugger" type="CheckButton" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/RaycastDebugger" unique_id=1830649888]
@@ -1113,7 +1132,7 @@ size_flags_horizontal = 3
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_fonts/font = ExtResource("16_blskf")
 theme_override_font_sizes/font_size = 14
-text = "Show Interactable Area"
+text = "SETTINGS_SHOW_INTERACTABLE_AREA"
 label_settings = ExtResource("17_67hd5")
 
 [node name="CheckButton_ShowInteractableArea" type="CheckButton" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/ShowInteractableArea" unique_id=146097447]
@@ -1132,7 +1151,7 @@ size_flags_horizontal = 3
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_fonts/font = ExtResource("16_blskf")
 theme_override_font_sizes/font_size = 14
-text = "Scene Paused"
+text = "SETTINGS_SCENE_PAUSED"
 label_settings = ExtResource("17_67hd5")
 
 [node name="CheckButton_SceneProcessingPaused" type="CheckButton" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/SceneProcessingPaused" unique_id=259046827]
@@ -1150,7 +1169,7 @@ size_flags_horizontal = 3
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_fonts/font = ExtResource("16_blskf")
 theme_override_font_sizes/font_size = 14
-text = "Multiplayer Debug"
+text = "SETTINGS_MULTIPLAYER_DEBUG"
 label_settings = ExtResource("17_67hd5")
 
 [node name="CheckButton_MultiplayerDebug" type="CheckButton" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/MultiplayerDebug" unique_id=2142717050]
@@ -1162,7 +1181,7 @@ theme = ExtResource("12_sa1v7")
 [node name="DropdownList_Realm" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Advanced" unique_id=791522404 instance=ExtResource("20_67hd5")]
 unique_name_in_owner = true
 layout_mode = 2
-title = "Realm"
+title = "SETTINGS_REALM"
 
 [node name="VBoxContainer_Connection" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Advanced" unique_id=304917100]
 custom_minimum_size = Vector2(400, 0)
@@ -1175,10 +1194,10 @@ alignment = 1
 [node name="LineEditCustom_WebSocket" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Advanced/VBoxContainer_Connection" unique_id=1258088545 instance=ExtResource("24_47ptg")]
 unique_name_in_owner = true
 layout_mode = 2
-title = "WebSocket URL"
+title = "SETTINGS_WEBSOCKET_URL"
 text_button = "Connect!"
-description = "WebSocket state:"
-placeholder_text = "URL"
+description = "SETTINGS_WEBSOCKET_STATE"
+placeholder_text = "SETTINGS_URL"
 
 [node name="HSeparator8" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Advanced" unique_id=1728747471]
 layout_mode = 2
@@ -1189,7 +1208,7 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_ewc0a")
 [node name="ProcessTickQuota" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Advanced" unique_id=1866204853 instance=ExtResource("21_xewta")]
 unique_name_in_owner = true
 layout_mode = 2
-title = "Process Tick Quota"
+title = "SETTINGS_PROCESS_TICK_QUOTA"
 value = 1.0
 min_value = 1.0
 max_value = 16.0
@@ -1207,7 +1226,7 @@ layout_mode = 2
 focus_mode = 0
 theme = ExtResource("12_sa1v7")
 theme_type_variation = &"SecondaryOutlinedButton"
-text = "Test Notification with Emojis"
+text = "SETTINGS_TEST_NOTIFICATION_WITH_EMOJIS"
 
 [node name="HSeparator10" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Advanced" unique_id=1352809114]
 layout_mode = 2
@@ -1222,7 +1241,7 @@ layout_mode = 2
 focus_mode = 0
 theme = ExtResource("12_sa1v7")
 theme_type_variation = &"SecondaryOutlinedButton"
-text = "Show Reward Modal (MobilePet)"
+text = "SETTINGS_SHOW_REWARD_MODAL_MOBILEPET"
 
 [node name="HSeparator_RewardModal" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Advanced" unique_id=771122336]
 layout_mode = 2
@@ -1237,7 +1256,7 @@ layout_mode = 2
 focus_mode = 0
 theme = ExtResource("12_sa1v7")
 theme_type_variation = &"SecondaryOutlinedButton"
-text = "Open User Data Folder"
+text = "SETTINGS_OPEN_USER_DATA_FOLDER"
 
 [node name="HSeparator11" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Advanced" unique_id=1189455202]
 layout_mode = 2
@@ -1252,7 +1271,7 @@ layout_mode = 2
 focus_mode = 0
 theme = ExtResource("12_sa1v7")
 theme_type_variation = &"SecondaryOutlinedButton"
-text = "RETURN TO DISCOVER"
+text = "SETTINGS_RETURN_TO_DISCOVER"
 
 [node name="VBoxContainer_Account" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections" unique_id=1178397413]
 unique_name_in_owner = true
@@ -1280,7 +1299,7 @@ theme_override_constants/separation = 0
 
 [node name="SectionTittle_Report" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Account/SectionReport/VBoxContainer" unique_id=743024906 instance=ExtResource("15_h5vs5")]
 layout_mode = 2
-title = "REPORT"
+title = "SETTINGS_REPORT"
 
 [node name="HSeparator" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Account/SectionReport/VBoxContainer" unique_id=520825988]
 layout_mode = 2
@@ -1303,7 +1322,7 @@ theme_override_constants/h_separation = 16
 theme_override_constants/icon_max_width = 32
 theme_override_fonts/font = ExtResource("23_c03rv")
 theme_override_font_sizes/font_size = 30
-text = "Report Bug"
+text = "SETTINGS_REPORT_BUG"
 icon = ExtResource("24_jf4mt")
 flat = true
 alignment = 0
@@ -1321,7 +1340,7 @@ theme_override_constants/h_separation = 16
 theme_override_constants/icon_max_width = 32
 theme_override_fonts/font = ExtResource("23_c03rv")
 theme_override_font_sizes/font_size = 30
-text = "Report Content"
+text = "SETTINGS_REPORT_CONTENT"
 icon = ExtResource("24_jf4mt")
 flat = true
 alignment = 0
@@ -1337,7 +1356,7 @@ theme_override_constants/separation = 0
 
 [node name="SectionTittle_Help" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Account/SectionHelp/VBoxContainer" unique_id=938811847 instance=ExtResource("15_h5vs5")]
 layout_mode = 2
-title = "HELP"
+title = "SETTINGS_HELP_CAPS"
 
 [node name="HSeparator" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Account/SectionHelp/VBoxContainer" unique_id=1492023059]
 layout_mode = 2
@@ -1360,7 +1379,7 @@ theme_override_constants/h_separation = 16
 theme_override_constants/icon_max_width = 32
 theme_override_fonts/font = ExtResource("23_c03rv")
 theme_override_font_sizes/font_size = 30
-text = "Help"
+text = "SETTINGS_HELP"
 icon = ExtResource("24_jf4mt")
 flat = true
 alignment = 0
@@ -1378,7 +1397,7 @@ theme_override_constants/h_separation = 16
 theme_override_constants/icon_max_width = 32
 theme_override_fonts/font = ExtResource("23_c03rv")
 theme_override_font_sizes/font_size = 30
-text = "Privacy Policy"
+text = "SETTINGS_PRIVACY_POLICY"
 icon = ExtResource("24_jf4mt")
 flat = true
 alignment = 0
@@ -1396,7 +1415,7 @@ theme_override_constants/h_separation = 16
 theme_override_constants/icon_max_width = 32
 theme_override_fonts/font = ExtResource("23_c03rv")
 theme_override_font_sizes/font_size = 30
-text = "Content Policy"
+text = "SETTINGS_CONTENT_POLICY"
 icon = ExtResource("24_jf4mt")
 flat = true
 alignment = 0
@@ -1414,7 +1433,7 @@ theme_override_constants/h_separation = 16
 theme_override_constants/icon_max_width = 32
 theme_override_fonts/font = ExtResource("23_c03rv")
 theme_override_font_sizes/font_size = 30
-text = "Terms of Use"
+text = "SETTINGS_TERMS_OF_USE"
 icon = ExtResource("24_jf4mt")
 flat = true
 alignment = 0
@@ -1432,7 +1451,7 @@ theme_override_constants/h_separation = 16
 theme_override_constants/icon_max_width = 32
 theme_override_fonts/font = ExtResource("23_c03rv")
 theme_override_font_sizes/font_size = 30
-text = "Discord"
+text = "SETTINGS_DISCORD"
 icon = ExtResource("24_jf4mt")
 flat = true
 alignment = 0
@@ -1450,7 +1469,7 @@ theme_override_constants/h_separation = 16
 theme_override_constants/icon_max_width = 32
 theme_override_fonts/font = ExtResource("23_c03rv")
 theme_override_font_sizes/font_size = 30
-text = "Marketplace"
+text = "SETTINGS_SHOP"
 icon = ExtResource("24_jf4mt")
 flat = true
 alignment = 0
@@ -1474,7 +1493,7 @@ layout_mode = 2
 [node name="UnderlinedButton_DeleteAccount" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Account/MarginContainer/VBoxContainer" unique_id=911061775 instance=ExtResource("25_mwb5b")]
 custom_minimum_size = Vector2(0, 30)
 layout_mode = 2
-underlined_text = "Delete Account"
+underlined_text = "SETTINGS_DELETE_ACCOUNT"
 color = Color(1, 0.37254903, 0.46666667, 1)
 font = ExtResource("25_jf4mt")
 
@@ -1494,6 +1513,7 @@ font = ExtResource("25_jf4mt")
 [connection signal="visibility_changed" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Storage" to="." method="_on_container_storage_visibility_changed"]
 [connection signal="pressed" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Storage/Button_ClearCache" to="." method="_on_button_clear_cache_pressed"]
 [connection signal="toggled" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Graphics/SectionPerformance/VBoxContainer/DynamicGraphics/CheckButton_DynamicGraphics" to="." method="_on_check_button_dynamic_graphics_toggled"]
+[connection signal="item_selected" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Language/VBoxContainer/DropdownList_Language" to="." method="_on_dropdown_list_language_item_selected"]
 [connection signal="item_selected" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Graphics/SectionPerformance/VBoxContainer/DropdownList_GraphicProfiles" to="." method="_on_dropdown_list_graphic_profiles_item_selected"]
 [connection signal="toggled" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Graphics/SectionVisual/VBoxContainer/DynamicSkybox/CheckButton_DynamicSkybox" to="." method="_on_check_button_dynamic_skybox_toggled"]
 [connection signal="item_selected" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Graphics/SectionVisual/VBoxContainer/DropdownList_CustomSkybox" to="." method="_on_dropdown_list_custom_skybox_item_selected"]

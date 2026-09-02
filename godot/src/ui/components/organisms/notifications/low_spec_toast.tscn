@@ -82,7 +82,7 @@ alignment = 1
 
 [node name="LabelTitle" type="Label" parent="Panel/MarginContainer/HBoxContainer/VBoxContainer" unique_id=1175912147]
 layout_mode = 2
-text = "Limited performance"
+text = "NOTIFICATIONS_LIMITED_PERFORMANCE"
 label_settings = SubResource("LabelSettings_title")
 
 [node name="LabelDescription" type="Label" parent="Panel/MarginContainer/HBoxContainer/VBoxContainer" unique_id=1987865061]
@@ -90,4 +90,4 @@ layout_mode = 2
 theme_override_colors/font_color = Color(0.988, 0.988, 0.988, 1)
 theme_override_fonts/font = ExtResource("4_font_regular")
 theme_override_font_sizes/font_size = 26
-text = "Your device is below our recommended specs (iPhone 13/SE 2023)"
+text = "NOTIFICATIONS_YOUR_DEVICE_IS_BELOW_OUR_RECOMMENDED"

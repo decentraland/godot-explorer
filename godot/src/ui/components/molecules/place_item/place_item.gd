@@ -493,7 +493,9 @@ func set_download_warning(item_data: Dictionary) -> void:
 			parcel_count = 20
 		max_size_mb = mini(parcel_count * 15, 300)
 
-	download_warning.set_warning_text("May download up to %dMB of data" % max_size_mb)
+	download_warning.set_warning_text(
+		tr("PLACE_DOWNLOAD_WARNING").format({"megabytes": max_size_mb})
+	)
 
 
 func set_data(item_data):
@@ -668,6 +670,21 @@ func set_duration(_duration: int) -> void:
 		duration_label.text = _format_duration(_duration)
 
 
+## The events API sends a lowercase enum ("daily" / "weekly" / "monthly"), which the client used
+## to just capitalize(). It is our mapping, not server copy, so it is translatable. An unknown
+## value falls back to the capitalized raw string rather than drawing nothing.
+static func _recurrent_frequency_text(frequency: String) -> String:
+	match frequency.to_lower():
+		"daily":
+			return TranslationServer.translate("EVENT_FREQUENCY_DAILY")
+		"weekly":
+			return TranslationServer.translate("EVENT_FREQUENCY_WEEKLY")
+		"monthly":
+			return TranslationServer.translate("EVENT_FREQUENCY_MONTHLY")
+		_:
+			return frequency.capitalize()
+
+
 func set_recurrent(_recurrent_frequency: String) -> void:
 	var label = _get_recurrent_label()
 	var separator_recurrent = _get_separator_recurrent()
@@ -675,7 +692,7 @@ func set_recurrent(_recurrent_frequency: String) -> void:
 		if _recurrent_frequency != "":
 			label.get_parent().show()
 			separator_recurrent.show()
-			label.text = _recurrent_frequency.capitalize()
+			label.text = _recurrent_frequency_text(_recurrent_frequency)
 		else:
 			label.get_parent().hide()
 			separator_recurrent.hide()
@@ -782,17 +799,13 @@ func _format_duration(duration: int) -> String:
 	var hours: int = duration / (1000 * 60 * 60)
 	if hours < 1:
 		var minutes: int = duration / (1000 * 60)
-		if minutes == 1:
-			return "1 MIN"
-		return str(minutes) + " MINS"
+		return TranslationKey.new("PLACE_DURATION_MIN").plural(minutes).format({"minutes": minutes})
 
 	if hours < 72:
-		if hours == 1:
-			return "1 HR"
-		return str(hours) + " HRS"
+		return TranslationKey.new("PLACE_DURATION_HR").plural(hours).format({"hours": hours})
 
 	var days: int = hours / 24
-	return str(days) + " DAYS"
+	return TranslationKey.new("PLACE_DURATION_DAY").plural(days).format({"days": days})
 
 
 func _on_event_pressed() -> void:
@@ -871,9 +884,9 @@ func _share_place_or_event() -> void:
 
 	var msg: String
 	if is_event:
-		msg = "📍 Visit the event '" + share_title + "' following this link: " + url
+		msg = tr("SHARE_EVENT_MESSAGE").format({"event": share_title, "link": url})
 	else:
-		msg = "📍 Join me at " + share_title + " following this link: " + url
+		msg = tr("SHARE_PLACE_MESSAGE").format({"place": share_title, "link": url})
 
 	if Global.is_android():
 		DclAndroidPlugin.share_text(msg)

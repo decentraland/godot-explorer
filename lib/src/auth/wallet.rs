@@ -301,6 +301,13 @@ pub async fn sign_request<META: Serialize>(
         .unwrap()
         .as_millis();
 
+    // Whatever goes into the signature must also go into `x-identity-metadata`: the server
+    // rebuilds the expected payload from that header and compares. Signing `{"productid":...}`
+    // while transmitting `{"productId":...}` is what made every 6.x-verified request fail with
+    // "Invalid final authority" -- so the serialized metadata below is used for both, once.
+    //
+    // The HTTP body is never touched here. credits-server answers `productId is required` to a
+    // lowercased body, which is how we know metadata and body are independent to the server.
     let meta = serde_json::to_string(&meta).unwrap();
     let payload = signed_fetch_payload(method, uri.path(), unix_time, &meta);
 

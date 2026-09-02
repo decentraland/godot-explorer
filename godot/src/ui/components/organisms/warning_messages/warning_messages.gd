@@ -4,7 +4,7 @@ const POPUP_WARNING = preload("res://src/ui/components/organisms/popup_warning/p
 
 
 func async_create_popup_warning(
-	warning_type: PopupWarning.WarningType, title: String, description: String
+	warning_type: PopupWarning.WarningType, title: TranslationKey, description: TranslationKey
 ):
 	var popup_warning = POPUP_WARNING.instantiate()
 	popup_warning.modulate = Color.TRANSPARENT

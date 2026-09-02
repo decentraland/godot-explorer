@@ -32,6 +32,7 @@ enum ConfigParams {
 	SKYBOX_TIME,
 	DYNAMIC_GRAPHICS_ENABLED,
 	AVATAR_IMPOSTORS_ENABLED,
+	LOCALE,
 }
 
 # Graphics profile index for Custom (manual settings)
@@ -47,6 +48,13 @@ var local_content_dir: String = OS.get_user_data_dir() + "/content":
 var max_cache_size: int = 1:
 	set(value):
 		max_cache_size = value
+
+# UI language. Empty string means "follow the device locale" (the first-launch default).
+# Otherwise one of LocaleSettings.SUPPORTED_LOCALES, e.g. "en", "es", "pt_BR".
+var locale: String = "":
+	set(value):
+		locale = value
+		param_changed.emit(ConfigParams.LOCALE)
 
 # 0: Windowed, 1: Borderless, 2: Full Screen
 var window_mode: int = 0:
@@ -188,6 +196,23 @@ var version_gate_snooze_until: int = 0
 
 var install_referrer_sent: bool = false
 
+# Ad/referrer campaign token (#2670), from the `?c=` deeplink param or Android install
+# attribution. Resolved against the mobile-bff campaign map by Campaigns.
+var campaign_token: String = ""
+
+# Capture time, not click time: the Play referrer survives 90 days and a reinstall re-stamps
+# it as fresh, so the freshness bound is weaker than it looks. A retired campaign is stopped
+# server-side instead — its row is gone, so the token resolves to nothing.
+var campaign_token_captured_at: int = 0
+
+# One campaign per install: set once a launch has acted on the token.
+var campaign_consumed: bool = false
+
+# QA: mint a brand-new guest wallet on next launch, the only way back to the FTUE on a device
+# whose native anchor survives reinstall. Set by `rotate-guest=true`; see
+# Global._capture_debug_guest_rotate.
+var debug_rotate_guest_anchor: bool = false
+
 # One-shot flag for the Firebase `first_move_in_world` event (set once the user's first real
 # horizontal movement has been detected post-loading_finished, persisted across sessions).
 var first_move_in_world_sent: bool = false
@@ -324,6 +349,8 @@ func load_from_default():
 	self.local_content_dir = OS.get_user_data_dir() + "/content"
 	self.max_cache_size = 1
 
+	self.locale = ""
+
 	self.show_fps = true
 
 	self.dynamic_skybox = true
@@ -391,6 +418,7 @@ func load_from_settings_file():
 	self.max_cache_size = settings_file.get_value(
 		"config", "max_cache_size", data_default.max_cache_size
 	)
+	self.locale = settings_file.get_value("config", "locale", data_default.locale)
 	self.show_fps = settings_file.get_value("config", "show_fps", data_default.show_fps)
 
 	self.dynamic_skybox = settings_file.get_value(
@@ -497,6 +525,22 @@ func load_from_settings_file():
 		"user", "install_referrer_sent", data_default.install_referrer_sent
 	)
 
+	self.campaign_token = settings_file.get_value(
+		"user", "campaign_token", data_default.campaign_token
+	)
+
+	self.campaign_token_captured_at = settings_file.get_value(
+		"user", "campaign_token_captured_at", data_default.campaign_token_captured_at
+	)
+
+	self.campaign_consumed = settings_file.get_value(
+		"user", "campaign_consumed", data_default.campaign_consumed
+	)
+
+	self.debug_rotate_guest_anchor = settings_file.get_value(
+		"user", "debug_rotate_guest_anchor", data_default.debug_rotate_guest_anchor
+	)
+
 	self.first_move_in_world_sent = settings_file.get_value(
 		"user", "first_move_in_world_sent", data_default.first_move_in_world_sent
 	)
@@ -536,6 +580,7 @@ func save_to_settings_file():
 	new_settings_file.set_value("config", "dynamic_graphics_enabled", self.dynamic_graphics_enabled)
 	new_settings_file.set_value("config", "local_content_dir", self.local_content_dir)
 	new_settings_file.set_value("config", "max_cache_size", self.max_cache_size)
+	new_settings_file.set_value("config", "locale", self.locale)
 	new_settings_file.set_value("config", "show_fps", self.show_fps)
 	new_settings_file.set_value("config", "dynamic_skybox", self.dynamic_skybox)
 	new_settings_file.set_value("config", "skybox_time", self.skybox_time)
@@ -581,6 +626,12 @@ func save_to_settings_file():
 	new_settings_file.set_value("user", "backpack_owned_counts", self.backpack_owned_counts)
 	new_settings_file.set_value("user", "version_gate_snooze_until", self.version_gate_snooze_until)
 	new_settings_file.set_value("user", "install_referrer_sent", self.install_referrer_sent)
+	new_settings_file.set_value("user", "campaign_token", self.campaign_token)
+	new_settings_file.set_value(
+		"user", "campaign_token_captured_at", self.campaign_token_captured_at
+	)
+	new_settings_file.set_value("user", "campaign_consumed", self.campaign_consumed)
+	new_settings_file.set_value("user", "debug_rotate_guest_anchor", self.debug_rotate_guest_anchor)
 	new_settings_file.set_value("user", "first_move_in_world_sent", self.first_move_in_world_sent)
 	new_settings_file.set_value(
 		"user", "local_assets_cache_version", self.local_assets_cache_version

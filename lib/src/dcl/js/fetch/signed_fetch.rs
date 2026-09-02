@@ -4,7 +4,10 @@ use deno_core::{error::AnyError, op2, OpState};
 use http::Uri;
 
 use crate::{
-    auth::{ephemeral_auth_chain::EphemeralAuthChain, wallet::sign_request},
+    auth::{
+        ephemeral_auth_chain::EphemeralAuthChain,
+        wallet::sign_request,
+    },
     dcl::DclSceneRealmData,
     realm::scene_definition::SceneEntityDefinition,
 };
@@ -78,6 +81,10 @@ pub async fn op_signed_fetch_headers(
             signer: "decentraland-kernel-scene".to_owned(),
         };
 
+        // Verbatim: services behind an SDK7 `signedFetch` authorize on
+        // `authMetadata.sceneId` / `.realm.serverName`, and folding the metadata would
+        // deliver those keys lowercased — read back as undefined, after a successful
+        // verification.
         let headers = sign_request(
             method.as_deref().unwrap_or("get"),
             &Uri::try_from(uri)?,

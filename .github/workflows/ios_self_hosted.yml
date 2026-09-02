@@ -35,15 +35,22 @@ name: 🍏 iOS (self-hosted)
 # this workflow. The `if:` gates are correctness/convenience only. The runner/VM setup scripts are
 # kept LOCAL (outside this repo) and provision the `dcl-ios`-labelled runner this workflow targets.
 
+# ⛔ DISABLED: the self-hosted `dcl-ios` Mac has been shut down, so the automatic triggers are
+# commented out — otherwise every push/PR would queue a job against a runner that never comes
+# online. iOS builds are served entirely by mobile_distribute.yml (WarpBuild). `workflow_dispatch`
+# is kept so the workflow can still be run by hand if the Mac is ever brought back.
+# To re-enable: restore the triggers below AND flip IOS_SELF_HOSTED_ENABLED back to 'true' in
+# mobile_distribute.yml (its `ios-resolve` job otherwise skips waiting for this workflow's export).
 on:
-  push:
-    branches:
-      - main
-      - release
-  pull_request:
-    # `labeled` is included so adding the `build` label re-triggers this workflow; combined with
-    # the `if` skip + concurrency below, that cancels any per-push run already queued on the Mac.
-    types: [opened, synchronize, reopened, labeled]
+  workflow_dispatch:
+  # push:
+  #   branches:
+  #     - main
+  #     - release
+  # pull_request:
+  #   # `labeled` is included so adding the `build` label re-triggers this workflow; combined with
+  #   # the `if` skip + concurrency below, that cancels any per-push run already queued on the Mac.
+  #   types: [opened, synchronize, reopened, labeled]
 
 permissions:
   contents: read

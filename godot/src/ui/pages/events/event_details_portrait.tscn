@@ -266,6 +266,7 @@ layout_mode = 2
 theme_override_constants/margin_right = 30
 
 [node name="RichTextLabel_EventName" type="RichTextLabel" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/HBoxContainer/VBoxContainer/HBoxContainer2" unique_id=1511044767]
+auto_translate_mode = 2
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/default_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
@@ -292,10 +293,11 @@ theme_override_constants/separation = 8
 
 [node name="Label_by" type="Label" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/HBoxContainer/VBoxContainer/HBoxContainer_Creator" unique_id=81327896]
 layout_mode = 2
-text = "by"
+text = "COMMON_BY"
 label_settings = SubResource("LabelSettings_i8f38")
 
 [node name="Label_UserName" type="Label" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/HBoxContainer/VBoxContainer/HBoxContainer_Creator" unique_id=1217893860]
+auto_translate_mode = 2
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
@@ -409,12 +411,13 @@ expand_mode = 1
 stretch_mode = 5
 
 [node name="Label_Recurrent" type="Label" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/HBoxContainer4/Recurrent" unique_id=250357414]
+auto_translate_mode = 2
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
 theme_override_fonts/font = ExtResource("17_lrnxc")
 theme_override_font_sizes/font_size = 13
-text = "Weekly"
+text = "EVENTS_WEEKLY"
 label_settings = ExtResource("14_bmyvb")
 
 [node name="VSeparator_Recurrent" type="VSeparator" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/HBoxContainer4" unique_id=1962653081]
@@ -442,6 +445,7 @@ expand_mode = 1
 stretch_mode = 5
 
 [node name="Label_Duration" type="Label" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/HBoxContainer4/Duration" unique_id=644104692]
+auto_translate_mode = 2
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.0862745, 0.0823529, 0.0941176, 1)
@@ -480,7 +484,7 @@ layout_mode = 2
 theme_override_colors/font_color = Color(0.443137, 0.419608, 0.486275, 1)
 theme_override_fonts/font = ExtResource("18_w1sx5")
 theme_override_font_sizes/font_size = 12
-text = "DESCRIPTION"
+text = "COMMON_DESCRIPTION"
 label_settings = SubResource("LabelSettings_4wgrb")
 clip_text = true
 
@@ -491,6 +495,7 @@ theme_override_constants/separation = 16
 theme_override_styles/separator = SubResource("StyleBoxEmpty_4wgrb")
 
 [node name="Label_Description" type="RichTextLabel" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/VBoxContainer_Description" unique_id=1364779962]
+auto_translate_mode = 2
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 20)
 layout_mode = 2
@@ -536,12 +541,14 @@ layout_mode = 2
 theme_override_constants/separation = 7
 
 [node name="Label_EventLocationName" type="Label" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/VBoxContainer_Description/MarginContainer/HBoxContainer" unique_id=311215141]
+auto_translate_mode = 2
 unique_name_in_owner = true
 layout_mode = 2
 text = "DCL Japan Lab beta"
 label_settings = SubResource("LabelSettings_dbho5")
 
 [node name="Label_EventLocationCoords" type="Label" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/VBoxContainer_Description/MarginContainer/HBoxContainer" unique_id=697104575]
+auto_translate_mode = 2
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
@@ -629,7 +636,7 @@ alignment = 1
 
 [node name="Label" type="Label" parent="PanelContainer_Footer/MarginContainer/HBoxContainer_Buttons/Button_JumpToEvent/HBoxContainer_Content" unique_id=519267158]
 layout_mode = 2
-text = "JUMP IN"
+text = "COMMON_JUMP_IN"
 label_settings = SubResource("LabelSettings_hxdex")
 
 [node name="TextureRect_Add" type="TextureRect" parent="PanelContainer_Footer/MarginContainer/HBoxContainer_Buttons/Button_JumpToEvent/HBoxContainer_Content" unique_id=1809682944]
