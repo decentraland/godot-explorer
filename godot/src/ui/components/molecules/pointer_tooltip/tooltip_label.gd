@@ -126,6 +126,7 @@ func _async_apply_custom_icon_override(action: String) -> void:
 
 	var icon_hash := String(custom_icon.get("hash", ""))
 	var icon_url := String(custom_icon.get("url", ""))
+	var scene_id := int(custom_icon.get("scene_id", -1))
 	_custom_icon_hash = icon_hash
 
 	var cached: Texture2D = Global.content_provider.get_texture_from_hash(icon_hash)
@@ -133,7 +134,15 @@ func _async_apply_custom_icon_override(action: String) -> void:
 		_show_keyboard_icon(cached)
 		return
 
-	var promise: Promise = Global.content_provider.fetch_texture_by_url(icon_hash, icon_url)
+	# Fetch by hash through the declaring scene's mapping so this shares the cache slot with
+	# the scene's own UI and gets purged on a preview hot-reload (#2796); the by-URL path is
+	# the fallback for an already-unloaded scene. Same rationale as joypad.gd.
+	var mapping: DclContentMappingAndUrl = Global.scene_runner.get_scene_content_mapping(scene_id)
+	var promise: Promise
+	if mapping.get_base_url().is_empty():
+		promise = Global.content_provider.fetch_texture_by_url(icon_hash, icon_url)
+	else:
+		promise = Global.content_provider.fetch_texture_by_hash(icon_hash, mapping)
 	var res = await PromiseUtils.async_awaiter(promise)
 	# Bail if the tooltip was reused for another action while we were awaiting.
 	if _custom_icon_hash != icon_hash:
