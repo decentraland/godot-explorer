@@ -8,13 +8,17 @@ use godot::{
         image::Format,
         mesh::PrimitiveType,
         particle_process_material::{EmissionShape, Parameter, ParticleFlags},
-        ArrayMesh, GpuParticles3D, Gradient, GradientTexture1D, Image, ImageTexture, Material,
-        Mesh, ParticleProcessMaterial, QuadMesh, StandardMaterial3D, Texture2D,
+        ArrayMesh, CpuParticles3D, GpuParticles3D, Gradient, GradientTexture1D, Image,
+        ImageTexture, Material, Mesh, ParticleProcessMaterial, QuadMesh, StandardMaterial3D,
+        Texture2D,
     },
     prelude::*,
 };
 
-use std::time::Instant;
+use std::{
+    sync::atomic::{AtomicBool, AtomicI32, Ordering},
+    time::Instant,
+};
 
 use rand::Rng;
 
@@ -41,10 +45,21 @@ use crate::{
 };
 
 /// Hard cap of live particles per emitter, regardless of what the scene requests.
-const MAX_AMOUNT_PER_EMITTER: i32 = 5_000;
+/// Runtime-tunable: the graphic profile sets this via `set_particle_profile_budgets`.
+static MAX_AMOUNT_PER_EMITTER: AtomicI32 = AtomicI32::new(5_000);
 /// Budget of live particles summed across every emitter of a single scene.
-/// TODO: scale down on mobile / low-end (hook into dynamic graphics manager).
-const SCENE_PARTICLE_BUDGET: i32 = 50_000;
+/// Runtime-tunable per graphic profile (0 = scene particles disabled).
+static SCENE_PARTICLE_BUDGET: AtomicI32 = AtomicI32::new(50_000);
+/// Whether scene emitters are created as CPUParticles3D (low profiles) instead
+/// of GPUParticles3D. CPU emitters skip manual burst emission (no `emit_particle`).
+static USE_CPU_PARTICLES: AtomicBool = AtomicBool::new(false);
+
+/// Called from GDScript (via DclGlobal) when the graphic profile changes.
+pub fn set_particle_profile_budgets(scene_budget: i32, emitter_cap: i32, use_cpu: bool) {
+    SCENE_PARTICLE_BUDGET.store(scene_budget.max(0), Ordering::Relaxed);
+    MAX_AMOUNT_PER_EMITTER.store(emitter_cap.max(0), Ordering::Relaxed);
+    USE_CPU_PARTICLES.store(use_cpu, Ordering::Relaxed);
+}
 /// Gravity the `gravity` field multiplies (matches Explorer's physics gravity).
 const DCL_GRAVITY: f32 = -9.81;
 /// Burst cycle length in seconds. Matches the Unity Explorer reference, whose
@@ -75,7 +90,10 @@ fn dcl_quat_to_godot(x: f32, y: f32, z: f32, w: f32) -> Quaternion {
 }
 
 pub struct ParticleSystemItem {
-    pub node: Gd<GpuParticles3D>,
+    /// GPU or CPU emitter depending on the active graphic profile. Stored as
+    /// Node3D because godot-rust doesn't expose the abstract Particles3D base;
+    /// use `ps_set_emitting`/`ps_restart` for the shared API.
+    pub node: Gd<Node3D>,
     pub material: Gd<StandardMaterial3D>,
     pub last_value: PbParticleSystem,
     pub amount: i32,
@@ -174,7 +192,19 @@ pub fn update_particle_system(
             let (_godot_entity_node, mut node_3d) = scene.godot_dcl_scene.ensure_node_3d(entity);
 
             let new_value = new_value.value.clone();
-            let existing = node_3d.try_get_node_as::<GpuParticles3D>("ParticleSystem");
+            let use_cpu = USE_CPU_PARTICLES.load(Ordering::Relaxed);
+            // Profile switched CPU<->GPU: drop the old emitter so it is recreated
+            // with the new node class.
+            let mut existing = node_3d.try_get_node_as::<Node3D>("ParticleSystem");
+            if let Some(stale) = existing
+                .as_ref()
+                .filter(|n| n.is_class("CPUParticles3D") != use_cpu)
+            {
+                let mut stale = stale.clone();
+                node_3d.remove_child(&stale);
+                stale.queue_free();
+                existing = None;
+            }
 
             if new_value.is_none() {
                 if let Some(mut particle_node) = existing {
@@ -198,17 +228,27 @@ pub fn update_particle_system(
                 tracing::debug!("ParticleSystem apply entity {:?}: {}", entity, json);
             }
 
-            let mut particle_node = if let Some(particle_node) = existing {
+            let particle_node = if let Some(particle_node) = existing {
                 particle_node
             } else {
-                let mut new_node = GpuParticles3D::new_alloc();
+                let mut new_node: Gd<Node3D> = if use_cpu {
+                    CpuParticles3D::new_alloc().upcast()
+                } else {
+                    GpuParticles3D::new_alloc().upcast()
+                };
                 new_node.set_name("ParticleSystem");
                 add_own_visual_child(&mut node_3d, &new_node.clone().upcast::<Node>());
                 new_node
             };
 
             let (material, amount) =
-                apply_particle_system(scene, *entity, &mut particle_node, &new_value);
+                if let Ok(mut gpu) = particle_node.clone().try_cast::<GpuParticles3D>() {
+                    apply_particle_system(scene, *entity, &mut gpu, &new_value)
+                } else if let Ok(mut cpu) = particle_node.clone().try_cast::<CpuParticles3D>() {
+                    apply_particle_system_cpu(scene, *entity, &mut cpu, &new_value)
+                } else {
+                    unreachable!("ParticleSystem node is neither GPU nor CPU particles");
+                };
 
             // Kick off texture fetch (async, polled below on following frames).
             // The content provider keys textures by content hash, so resolve the
@@ -264,7 +304,7 @@ pub fn update_particle_system(
             if !user_in_scene {
                 // Created while the user is elsewhere: don't emit until they enter
                 // (mirrors Unity, which doesn't even instance the ParticleSystem).
-                particle_node.set_emitting(false);
+                ps_set_emitting(&particle_node, false);
             }
 
             scene.particle_systems.insert(
@@ -315,8 +355,8 @@ pub fn reconcile_user_presence(scene: &mut Scene, user_in_scene: bool) {
                 if item.playing {
                     // restart() clears live particles but force-enables emitting,
                     // so the stop must come after it.
-                    item.node.restart();
-                    item.node.set_emitting(false);
+                    ps_restart(&item.node);
+                    ps_set_emitting(&item.node, false);
                 }
             }
             (false, true) => {
@@ -327,8 +367,8 @@ pub fn reconcile_user_presence(scene: &mut Scene, user_in_scene: bool) {
                     for burst in &mut item.bursts {
                         burst.reset_for_new_cycle();
                     }
-                    item.node.set_emitting(true);
-                    item.node.restart();
+                    ps_set_emitting(&item.node, true);
+                    ps_restart(&item.node);
                 }
             }
             _ => {}
@@ -378,7 +418,7 @@ fn drive_bursts(scene: &mut Scene) {
 
         for (count, probability) in pending {
             if rng.gen::<f32>() <= probability {
-                emit_burst_particles(&mut item.node, &item.last_value, count, &mut rng);
+                emit_burst_particles(&item.node, &item.last_value, count, &mut rng);
             }
         }
     }
@@ -432,54 +472,9 @@ fn apply_particle_system(
     let lifetime = value.lifetime.unwrap_or(5.0).max(0.01) as f64;
     let rate = value.rate.unwrap_or(10.0).max(0.0);
     let max_particles = value.max_particles.unwrap_or(1000);
+    let (amount, authored_amount) =
+        compute_amount(scene, entity, value, lifetime, rate, max_particles);
 
-    // Godot emits `amount` particles per `lifetime` cycle, so amount = rate * lifetime
-    // gives the requested rate. Manually-driven bursts also draw from this pool, so
-    // reserve room for the particles they can have alive simultaneously.
-    let burst_capacity = value
-        .bursts
-        .as_ref()
-        .map(|bursts| {
-            bursts
-                .values
-                .iter()
-                .map(|burst| {
-                    let interval = burst.interval.unwrap_or(0.01).max(0.001);
-                    let window = (lifetime as f32 - burst.time.max(0.0)).max(0.0);
-                    let max_fires = (window / interval) as u32 + 1;
-                    let fires = match burst.cycles.unwrap_or(1) {
-                        cycles if cycles <= 0 => max_fires,
-                        cycles => (cycles as u32).min(max_fires),
-                    };
-                    burst.count.saturating_mul(fires)
-                })
-                .sum::<u32>()
-        })
-        .unwrap_or(0);
-
-    // Clamp by the component cap, the per-emitter hard cap and the per-scene budget.
-    let upper_cap = (max_particles as i32).clamp(1, MAX_AMOUNT_PER_EMITTER);
-    let continuous = ((rate * lifetime as f32).ceil() as i32).max(0);
-    let mut amount = continuous.max(burst_capacity as i32).clamp(1, upper_cap);
-    // Authored per-emitter amount (post per-emitter caps, pre scene-budget clamp),
-    // exposed for the scene-stats overlay: `amount` saturates at the runtime
-    // budget, so it can never signal an over-budget scene.
-    let authored_amount = amount;
-    let used_elsewhere: i32 = scene
-        .particle_systems
-        .iter()
-        .filter(|(e, _)| **e != entity)
-        .map(|(_, item)| item.amount)
-        .sum();
-    let remaining_budget = (SCENE_PARTICLE_BUDGET - used_elsewhere).max(0);
-    if amount > remaining_budget {
-        tracing::warn!(
-            "ParticleSystem on entity {:?} clamped from {} to {} particles (scene budget)",
-            entity,
-            amount,
-            remaining_budget
-        );
-        amount = remaining_budget.max(1);
     }
 
     node.set_amount(amount);
@@ -553,6 +548,234 @@ fn apply_particle_system(
         position: Vector3::new(-reach, -reach, -reach),
         size: Vector3::new(reach * 2.0, reach * 2.0, reach * 2.0),
     });
+
+    (material, amount)
+}
+
+/// Shared amount calculation: component cap, per-emitter hard cap and
+/// per-scene budget (all profile-tunable).
+fn compute_amount(
+    scene: &Scene,
+    entity: SceneEntityId,
+    value: &PbParticleSystem,
+    lifetime: f64,
+    rate: f32,
+    max_particles: u32,
+) -> (i32, i32) {
+    // Godot emits `amount` particles per `lifetime` cycle, so amount = rate * lifetime
+    // gives the requested rate. Manually-driven bursts also draw from this pool, so
+    // reserve room for the particles they can have alive simultaneously.
+    let burst_capacity = value
+        .bursts
+        .as_ref()
+        .map(|bursts| {
+            bursts
+                .values
+                .iter()
+                .map(|burst| {
+                    let interval = burst.interval.unwrap_or(0.01).max(0.001);
+                    let window = (lifetime as f32 - burst.time.max(0.0)).max(0.0);
+                    let max_fires = (window / interval) as u32 + 1;
+                    let fires = match burst.cycles.unwrap_or(1) {
+                        cycles if cycles <= 0 => max_fires,
+                        cycles => (cycles as u32).min(max_fires),
+                    };
+                    burst.count.saturating_mul(fires)
+                })
+                .sum::<u32>()
+        })
+        .unwrap_or(0);
+
+    // Clamp by the component cap, the per-emitter hard cap and the per-scene budget.
+    let emitter_cap = MAX_AMOUNT_PER_EMITTER.load(Ordering::Relaxed).max(1);
+    let upper_cap = (max_particles as i32).clamp(1, emitter_cap);
+    let continuous = ((rate * lifetime as f32).ceil() as i32).max(0);
+    let mut amount = continuous.max(burst_capacity as i32).clamp(1, upper_cap);
+    // Authored per-emitter amount (post per-emitter caps, pre scene-budget clamp),
+    // exposed for the scene-stats overlay: `amount` saturates at the runtime
+    // budget, so it can never signal an over-budget scene.
+    let authored_amount = amount;
+    let used_elsewhere: i32 = scene
+        .particle_systems
+        .iter()
+        .filter(|(e, _)| **e != entity)
+        .map(|(_, item)| item.amount)
+        .sum();
+    let scene_budget = SCENE_PARTICLE_BUDGET.load(Ordering::Relaxed);
+    let remaining_budget = (scene_budget - used_elsewhere).max(0);
+    if amount > remaining_budget {
+        tracing::warn!(
+            "ParticleSystem on entity {:?} clamped from {} to {} particles (scene budget)",
+            entity,
+            amount,
+            remaining_budget
+        );
+        amount = remaining_budget.max(1);
+    }
+
+    (amount, authored_amount)
+}
+
+/// `set_emitting` for either emitter class (godot-rust doesn't expose the
+/// abstract Particles3D base, so we cast).
+fn ps_set_emitting(node: &Gd<Node3D>, emitting: bool) {
+    if let Ok(mut gpu) = node.clone().try_cast::<GpuParticles3D>() {
+        gpu.set_emitting(emitting);
+    } else if let Ok(mut cpu) = node.clone().try_cast::<CpuParticles3D>() {
+        cpu.set_emitting(emitting);
+    }
+}
+
+fn ps_restart(node: &Gd<Node3D>) {
+    if let Ok(mut gpu) = node.clone().try_cast::<GpuParticles3D>() {
+        gpu.restart();
+    } else if let Ok(mut cpu) = node.clone().try_cast::<CpuParticles3D>() {
+        cpu.restart();
+    }
+}
+
+/// CPU emitter variant for low graphic profiles. CPUParticles3D doesn't take a
+/// ParticleProcessMaterial, so the proto is mapped onto its own properties.
+/// Simplified vs the GPU path: no bursts (no emit_particle), no sprite sheet,
+/// no velocity-limit curve. Fine for the budgets these profiles allow.
+fn apply_particle_system_cpu(
+    scene: &Scene,
+    entity: SceneEntityId,
+    node: &mut Gd<CpuParticles3D>,
+    value: &PbParticleSystem,
+) -> (Gd<StandardMaterial3D>, i32) {
+    use godot::classes::cpu_particles_3d::{EmissionShape, Parameter, ParticleFlags};
+
+    let lifetime = value.lifetime.unwrap_or(5.0).max(0.01) as f64;
+    let rate = value.rate.unwrap_or(10.0).max(0.0);
+    let max_particles = value.max_particles.unwrap_or(1000);
+    let (amount, authored_amount) =
+        compute_amount(scene, entity, value, lifetime, rate, max_particles);
+
+    if SCENE_PARTICLE_BUDGET.load(Ordering::Relaxed) == 0 {
+        node.set_emitting(false);
+    }
+
+    node.set_amount(amount);
+    node.set_meta("dcl_authored_amount", &authored_amount.to_variant());
+    node.set_lifetime(lifetime);
+
+    let looping = value.r#loop.unwrap_or(true);
+    node.set_one_shot(!looping);
+    node.set_pre_process_time(if value.prewarm.unwrap_or(false) && looping {
+        lifetime
+    } else {
+        0.0
+    });
+
+    let world_space =
+        value.simulation_space == Some(pb_particle_system::SimulationSpace::PssWorld as i32);
+    node.set_use_local_coordinates(!world_space);
+
+    let active = value.active.unwrap_or(true);
+    let playback = value
+        .playback_state
+        .unwrap_or(pb_particle_system::PlaybackState::PsPlaying as i32);
+    match playback {
+        x if x == pb_particle_system::PlaybackState::PsPaused as i32 => {
+            node.set_emitting(false);
+            node.set_speed_scale(0.0);
+        }
+        x if x == pb_particle_system::PlaybackState::PsStopped as i32 => {
+            node.set_speed_scale(1.0);
+            node.restart();
+            node.set_emitting(false);
+        }
+        _ => {
+            node.set_speed_scale(1.0);
+            node.set_emitting(active);
+        }
+    }
+
+    // Emission rate: CPU emitters take emission rate via `amount` per lifetime
+    // cycle too, so the amount computed above already encodes it.
+    match &value.shape {
+        Some(pb_particle_system::Shape::Sphere(sphere)) => {
+            node.set_emission_shape(EmissionShape::SPHERE);
+            node.set_emission_sphere_radius(sphere.radius.unwrap_or(1.0));
+            node.set_spread(180.0);
+        }
+        Some(pb_particle_system::Shape::Cone(cone)) => {
+            node.set_emission_shape(EmissionShape::RING);
+            node.set_emission_ring_axis(EMISSION_AXIS);
+            node.set_emission_ring_radius(cone.radius.unwrap_or(1.0));
+            node.set_emission_ring_inner_radius(0.0);
+            node.set_emission_ring_height(0.0);
+            node.set_direction(EMISSION_AXIS);
+            node.set_spread(cone.angle.unwrap_or(25.0).clamp(0.0, 90.0));
+        }
+        Some(pb_particle_system::Shape::Box(b)) => {
+            node.set_emission_shape(EmissionShape::BOX);
+            let size = b.size.clone().unwrap_or(
+                crate::dcl::components::proto_components::common::Vector3 {
+                    x: 1.0,
+                    y: 1.0,
+                    z: 1.0,
+                },
+            );
+            node.set_emission_box_extents(Vector3::new(size.x * 0.5, size.y * 0.5, size.z * 0.5));
+            node.set_direction(EMISSION_AXIS);
+            node.set_spread(0.0);
+        }
+        _ => {
+            node.set_emission_shape(EmissionShape::POINT);
+            node.set_spread(180.0);
+        }
+    }
+
+    let (speed_min, speed_max) = float_range(value.initial_velocity_speed.as_ref(), 1.0, 1.0);
+    node.set_param_min(Parameter::INITIAL_LINEAR_VELOCITY, speed_min);
+    node.set_param_max(Parameter::INITIAL_LINEAR_VELOCITY, speed_max);
+
+    let gravity = value.gravity.unwrap_or(0.0) * DCL_GRAVITY;
+    let mut gravity_vec = Vector3::new(0.0, gravity, 0.0);
+    if let Some(force) = &value.additional_force {
+        gravity_vec += dcl_world_to_godot(force);
+    }
+    node.set_gravity(gravity_vec);
+
+    let (size_min, size_max) = float_range(value.initial_size.as_ref(), 1.0, 1.0);
+    node.set_param_min(Parameter::SCALE, size_min);
+    node.set_param_max(Parameter::SCALE, size_max);
+
+    if let Some(rotation) = &value.initial_rotation {
+        let angle = quaternion_z_degrees(rotation.x, rotation.y, rotation.z, rotation.w);
+        node.set_param_min(Parameter::ANGLE, angle);
+        node.set_param_max(Parameter::ANGLE, angle);
+    }
+    if let Some(rotation) = &value.rotation_over_time {
+        let angular_velocity = quaternion_z_degrees(rotation.x, rotation.y, rotation.z, rotation.w);
+        node.set_param_min(Parameter::ANGULAR_VELOCITY, angular_velocity);
+        node.set_param_max(Parameter::ANGULAR_VELOCITY, angular_velocity);
+    }
+
+    node.set_particle_flag(
+        ParticleFlags::ALIGN_Y_TO_VELOCITY,
+        value.face_travel_direction.unwrap_or(false),
+    );
+
+    if let Some(initial_color) = &value.initial_color {
+        let mut ramp = Gradient::new_gd();
+        ramp.set_color(0, color_or_white(initial_color.start.as_ref()));
+        ramp.set_color(1, color_or_white(initial_color.end.as_ref()));
+        node.set_color_initial_ramp(&ramp);
+    }
+    if let Some(color_over_time) = &value.color_over_time {
+        let mut ramp = Gradient::new_gd();
+        ramp.set_color(0, color_or_white(color_over_time.start.as_ref()));
+        ramp.set_color(1, color_or_white(color_over_time.end.as_ref()));
+        node.set_color_ramp(&ramp);
+    }
+
+    // Draw mesh: same textured quad as the GPU draw pass.
+    let material = build_draw_material(value);
+    let mesh = build_draw_mesh(value, &material);
+    node.set_mesh(&mesh);
 
     (material, amount)
 }
@@ -848,11 +1071,17 @@ fn gradient_texture(start: Color, end: Color) -> Gd<GradientTexture1D> {
 /// the emitter shape and speed/color from the component ranges (mirrors the
 /// randomization the process material does for natural emission).
 fn emit_burst_particles(
-    node: &mut Gd<GpuParticles3D>,
+    node: &Gd<Node3D>,
     value: &PbParticleSystem,
     count: u32,
     rng: &mut rand::rngs::ThreadRng,
 ) {
+    // `emit_particle` only exists on GPUParticles3D; CPU emitters (low
+    // profiles) rely on continuous emission and skip manual bursts.
+    let Ok(mut node) = node.clone().try_cast::<GpuParticles3D>() else {
+        return;
+    };
+    let node = &mut node;
     let (speed_min, speed_max) = float_range(value.initial_velocity_speed.as_ref(), 1.0, 1.0);
     let world_space =
         value.simulation_space == Some(pb_particle_system::SimulationSpace::PssWorld as i32);
@@ -862,7 +1091,7 @@ fn emit_burst_particles(
         Transform3D::IDENTITY
     };
 
-    for _ in 0..count.min(MAX_AMOUNT_PER_EMITTER as u32) {
+    for _ in 0..count.min(MAX_AMOUNT_PER_EMITTER.load(Ordering::Relaxed).max(0) as u32) {
         let (local_pos, local_dir) = sample_shape(value.shape.as_ref(), rng);
         let speed = if (speed_max - speed_min).abs() < f32::EPSILON {
             speed_min

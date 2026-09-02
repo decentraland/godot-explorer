@@ -932,7 +932,7 @@ func _sync_light_controls_for_profile() -> void:
 	if _light_debug_checks.is_empty() and _light_max_lights_spin == null:
 		return
 
-	var is_custom := Global.get_config().graphic_profile == ConfigData.PROFILE_CUSTOM
+	var is_custom: bool = Global.get_config().graphic_profile == ConfigData.PROFILE_CUSTOM
 	if is_custom:
 		for check in _light_debug_checks.values():
 			if is_instance_valid(check):
@@ -956,7 +956,7 @@ func _sync_custom_profile_controls() -> void:
 	if _custom_view_distance_row == null:
 		return
 
-	var is_custom := Global.get_config().graphic_profile == ConfigData.PROFILE_CUSTOM
+	var is_custom: bool = Global.get_config().graphic_profile == ConfigData.PROFILE_CUSTOM
 	_custom_view_distance_row.visible = is_custom
 	_custom_particles_row.visible = is_custom
 	_custom_max_lights_row.visible = is_custom
@@ -964,7 +964,7 @@ func _sync_custom_profile_controls() -> void:
 	if not is_custom:
 		return
 
-	var view_distance := Global.get_config().view_distance
+	var view_distance: float = Global.get_config().view_distance
 	_custom_view_distance_slider.set_value_no_signal(view_distance)
 	_sync_custom_view_distance_label(view_distance)
 	_custom_particles_dropdown.select(Global.get_config().particle_quality)
@@ -1066,6 +1066,7 @@ func _on_custom_view_distance_changed(value: float) -> void:
 func _on_custom_particles_changed(index: int) -> void:
 	Global.get_config().particle_quality = index
 	AvatarAnimHelpers.apply_particles_enabled(index > 0)
+	GraphicSettings.apply_particle_quality(index)
 	Global.get_config().save_to_settings_file()
 
 

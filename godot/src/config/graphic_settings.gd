@@ -325,3 +325,18 @@ static func apply_graphic_profile(profile_index: int) -> void:
 		profile.get("dcl_max_lights", 0),
 		profile.get("dcl_light_range_cap", 15.0)
 	)
+
+
+## particle_quality 0-3 -> (scene budget, per-emitter cap, use CPU emitters).
+## 0 = scene particles off. Low profiles use CPUParticles3D (cheaper on mobile
+## GPUs); bursts are skipped there (no emit_particle on CPU emitters).
+static func apply_particle_quality(quality: int) -> void:
+	match quality:
+		0:
+			DclGlobal.set_particle_profile_budgets(0, 0, true)
+		1:
+			DclGlobal.set_particle_profile_budgets(2_000, 500, true)
+		2:
+			DclGlobal.set_particle_profile_budgets(15_000, 2_000, false)
+		_:
+			DclGlobal.set_particle_profile_budgets(50_000, 5_000, false)

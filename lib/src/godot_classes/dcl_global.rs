@@ -814,4 +814,16 @@ impl DclGlobal {
             Err(e) => godot_error!("Failed to update Rust log filter: {}", e),
         }
     }
+
+    /// Per-profile particle budgets, applied on graphic profile change.
+    /// scene_budget: max live particles summed over a scene's emitters (0 = off).
+    /// emitter_cap: hard cap per emitter. use_cpu: create CPUParticles3D emitters.
+    #[func]
+    pub fn set_particle_profile_budgets(scene_budget: i32, emitter_cap: i32, use_cpu: bool) {
+        crate::scene_runner::components::particle_system::set_particle_profile_budgets(
+            scene_budget,
+            emitter_cap,
+            use_cpu,
+        );
+    }
 }
