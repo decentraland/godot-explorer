@@ -270,29 +270,24 @@ pub async fn sign_pulse_connect(wallet: &EphemeralAuthChain) -> Result<Vec<u8>, 
     serde_json::to_vec(&dict).map_err(|e| e.to_string())
 }
 
-/// Which bytes `sign_request` signs, and therefore which `@dcl/crypto-middleware`
-/// generation accepts the signature. The two disagree on how the payload is built:
+/// Builds the ADR-44 payload an auth chain is signed over.
 ///
-/// ```text
-/// 5.x  [method, path, timestamp, metadata].join(":").toLowerCase()
-/// 6.x  [method.toLowerCase(), path.toLowerCase(), timestamp, metadata].join(":")
-/// ```
+/// The method and path are lowercased; the timestamp and metadata are interpolated verbatim. That
+/// last part is the point: folding the whole string, as this did before, left the metadata's casing
+/// outside the signature while `x-identity-metadata` still delivered it unfolded. A key or value
+/// could therefore be re-cased between signing and delivery and still verify, and services read
+/// that header -- so they were authorizing on bytes the signature never covered.
 ///
-/// 6.0.0 stopped folding the metadata, so no single signature satisfies both — unless
-/// the metadata is already all-lowercase, in which case the two payloads are identical
-/// byte for byte. That is the only lever a client has, and it costs the metadata.
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub enum SignedMetadata {
-    /// ADR-44: fold the payload, transmit the metadata as serialized. This is what every
-    /// other explorer sends and what services read `authMetadata.sceneId` / `.realmName`
-    /// back out of, so it is the default. A 6.x service rejects it with 401 whenever the
-    /// metadata carries an uppercase character.
-    Verbatim,
-    /// Fold the metadata too, and transmit it folded so the header still matches what was
-    /// signed. The same bytes then verify under both generations. Only use it where the
-    /// service does not read the metadata back: folding destroys camelCase keys and any
-    /// case-sensitive value.
-    Lowercase,
+/// Matches `createPayload` in `@dcl/crypto-middleware` 6.x, so what is signed here is exactly what
+/// every Decentraland verifier reconstructs.
+pub fn signed_fetch_payload(method: &str, path: &str, unix_time: u128, meta: &str) -> String {
+    format!(
+        "{}:{}:{}:{}",
+        method.to_lowercase(),
+        path.to_lowercase(),
+        unix_time,
+        meta
+    )
 }
 
 pub async fn sign_request<META: Serialize>(
@@ -300,7 +295,6 @@ pub async fn sign_request<META: Serialize>(
     uri: &Uri,
     wallet: &EphemeralAuthChain,
     meta: META,
-    metadata_format: SignedMetadata,
 ) -> Vec<(String, String)> {
     let unix_time = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -310,21 +304,12 @@ pub async fn sign_request<META: Serialize>(
     // Whatever goes into the signature must also go into `x-identity-metadata`: the server
     // rebuilds the expected payload from that header and compares. Signing `{"productid":...}`
     // while transmitting `{"productId":...}` is what made every 6.x-verified request fail with
-    // "Invalid final authority".
-    //
-    // The joined payload is folded in both modes, which is ADR-44 and costs nothing against a
-    // 6.x server either: it lowercases method and path itself, and the timestamp is digits.
-    // The metadata is the only component the two generations treat differently, so it is the
-    // only thing this mode decides.
+    // "Invalid final authority" -- so the serialized metadata below is used for both, once.
     //
     // The HTTP body is never touched here. credits-server answers `productId is required` to a
     // lowercased body, which is how we know metadata and body are independent to the server.
     let meta = serde_json::to_string(&meta).unwrap();
-    let meta = match metadata_format {
-        SignedMetadata::Verbatim => meta,
-        SignedMetadata::Lowercase => meta.to_lowercase(),
-    };
-    let payload = format!("{}:{}:{}:{}", method, uri.path(), unix_time, meta).to_lowercase();
+    let payload = signed_fetch_payload(method, uri.path(), unix_time, &meta);
 
     let signature = wallet
         .ephemeral_wallet()
