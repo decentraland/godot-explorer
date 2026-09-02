@@ -2944,8 +2944,17 @@ async fn check_gatekeeper_access(
         .map_err(|e| format!("Invalid gatekeeper URL: {}", e))?;
     let method = http::Method::POST;
 
-    let headers =
-        wallet::sign_request(method.as_str(), &uri, ephemeral_auth_chain, request_body).await;
+    // Verbatim: comms-gatekeeper reads `sceneId` / `realmName` off the metadata header
+    // (`oldValidate`), not off the body, and rejects the request outright when `realmName`
+    // is missing — which is what a folded `realmname` key looks like to it.
+    let headers = wallet::sign_request(
+        method.as_str(),
+        &uri,
+        ephemeral_auth_chain,
+        request_body,
+        wallet::SignedMetadata::Verbatim,
+    )
+    .await;
 
     let request_option = RequestOption::new(
         0,
@@ -3016,11 +3025,14 @@ async fn get_scene_adapter(
 
     // Sign the request
     tracing::debug!("🔐 Signing request with ephemeral auth chain");
+    // Verbatim, for the same reason as the access check above: the gatekeeper authorizes
+    // on the metadata header's `sceneId` / `realmName`.
     let headers = wallet::sign_request(
         method.as_str(),
         &uri,
         ephemeral_auth_chain,
         request_body, // Pass the serde_json::Value directly, not the string
+        wallet::SignedMetadata::Verbatim,
     )
     .await;
 

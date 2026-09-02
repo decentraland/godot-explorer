@@ -8,6 +8,11 @@ extends RefCounted
 ## compatible with the player's body shape are surfaced — equipping an item that
 ## has no representation for the player's body shape renders the avatar naked for
 ## that slot. Preserves any existing query string (e.g. ?section=).
+##
+## `view=mobile-iap` is read by both storefronts (the shop's `lib/iap.ts` uses the
+## same spelling on purpose). `genders` is a classic-marketplace filter only — the
+## shop's browse grid has no gender filter and ignores the param, so on an env
+## served by the shop the grid is unfiltered rather than misfiltered.
 static func with_mobile_iap(url: String) -> String:
 	var separator := "&" if "?" in url else "?"
 	var result := url + separator + "view=mobile-iap"

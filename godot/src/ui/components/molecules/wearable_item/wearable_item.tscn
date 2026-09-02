@@ -8,7 +8,7 @@
 [ext_resource type="Texture2D" uid="uid://vnikogxsqjwe" path="res://assets/ui/Subtract.svg" id="5_dtfap"]
 [ext_resource type="Texture2D" uid="uid://dw4mn6l1jn25f" path="res://assets/ui/Intersect.svg" id="6_ckipv"]
 [ext_resource type="Texture2D" uid="uid://bygnpeber2qmc" path="res://assets/ui/wearable_categories/mask-icon.svg" id="7_h4p8s"]
-[ext_resource type="Texture2D" uid="uid://dbgem6ilug5f2" path="res://assets/ui/iap/credits-icon.svg" id="7_jpiph"]
+[ext_resource type="Texture2D" uid="uid://c2wb73yrhr02x" path="res://assets/ui/iap/credits-icon.png" id="7_jpiph"]
 [ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="8_ys8dn"]
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="9_jpiph"]
 [ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="10_nwsor"]

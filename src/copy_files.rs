@@ -38,8 +38,37 @@ pub fn copy_if_modified<P: AsRef<Path>, Q: AsRef<Path>>(
         fs::hard_link(src_path, dest_path)
             .map(|_| println!("Link {}", dest_path.to_string_lossy()))?;
     } else {
-        fs::copy(src_path, dest_path)
-            .map(|_| println!("Copying {}", dest_path.to_string_lossy()))?;
+        // Copy to a sibling temp file and rename it into place instead of
+        // writing over the destination directly. `fs::copy` truncates and
+        // rewrites the existing file, so the inode stays the same -- and on
+        // macOS, rewriting a code-signed dylib that another process still has
+        // mapped wedges the vnode: every later `dlopen` of that path blocks
+        // forever inside dyld's slice validation, and the stuck processes
+        // survive SIGKILL. Renaming publishes a fresh inode, so new loads get a
+        // clean file and whoever still has the old one keeps it.
+        //
+        // The temp name carries the pid: two xtask invocations aiming at the same
+        // output (a build racing an export) would otherwise share one temp path, so
+        // their copies interleave into the same file and either one's error-path
+        // cleanup can delete the other's temp before it is renamed.
+        let tmp_path = dest_path.with_file_name(format!(
+            "{}.{}.tmp",
+            dest_path
+                .file_name()
+                .map(|n| n.to_string_lossy().into_owned())
+                .unwrap_or_default(),
+            std::process::id()
+        ));
+        let _ = fs::remove_file(&tmp_path);
+        if let Err(e) = fs::copy(src_path, &tmp_path) {
+            let _ = fs::remove_file(&tmp_path);
+            return Err(e);
+        }
+        if let Err(e) = fs::rename(&tmp_path, dest_path) {
+            let _ = fs::remove_file(&tmp_path);
+            return Err(e);
+        }
+        println!("Copying {}", dest_path.to_string_lossy());
     }
     Ok(())
 }

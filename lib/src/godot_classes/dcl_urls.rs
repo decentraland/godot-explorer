@@ -127,6 +127,19 @@ impl DclUrls {
     pub fn marketplace() -> GString {
         urls::marketplace().to_godot()
     }
+    /// Catalog listing for a backpack section ("wearables" / "emotes"). Use this
+    /// instead of appending a path to `marketplace()`: the classic marketplace and
+    /// the new shop have different route tables.
+    #[func]
+    pub fn marketplace_browse(section: GString) -> GString {
+        urls::marketplace_browse(&section.to_string()).to_godot()
+    }
+    /// Detail page for a catalog item, from the `contractAddress` + `itemId` the
+    /// catalog API returns.
+    #[func]
+    pub fn marketplace_item(contract_address: GString, item_id: GString) -> GString {
+        urls::marketplace_item(&contract_address.to_string(), &item_id.to_string()).to_godot()
+    }
     #[func]
     pub fn marketplace_catalog_api() -> GString {
         urls::marketplace_catalog_api().to_godot()
@@ -166,6 +179,11 @@ impl DclUrls {
     #[func]
     pub fn feature_flags() -> GString {
         urls::feature_flags().to_godot()
+    }
+
+    #[func]
+    pub fn campaigns() -> GString {
+        urls::campaigns().to_godot()
     }
 
     // Proxy

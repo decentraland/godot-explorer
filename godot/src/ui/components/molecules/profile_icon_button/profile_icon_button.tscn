@@ -2,58 +2,21 @@
 
 [ext_resource type="Script" uid="uid://bkf51txjwjnm5" path="res://src/ui/components/molecules/profile_icon_button/profile_icon_button.gd" id="1_0g3fx"]
 [ext_resource type="Texture2D" uid="uid://bxgklimw13m4d" path="res://assets/themes/dark_dcl_theme/icons/Profile.svg" id="1_uo4jm"]
+[ext_resource type="Texture2D" uid="uid://vi0y7typ76j" path="res://src/ui/components/molecules/button_profile/profile-background-1.svg" id="2_bg"]
+[ext_resource type="Texture2D" uid="uid://bhj1gnflt1erb" path="res://src/ui/components/molecules/button_profile/profile-background-2.svg" id="2_lloxn"]
+[ext_resource type="Material" uid="uid://cq1dvbbcpt82c" path="res://src/ui/components/molecules/button_profile/texture_rect_rounded_material.tres" id="3_mat"]
+[ext_resource type="Texture2D" uid="uid://bnhbq0fn26dny" path="res://src/ui/components/organisms/navbar/navbar-pressed.png" id="4_glow"]
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_uo7mg"]
-bg_color = Color(0.92549, 0.921569, 0.929412, 1)
-border_width_left = 4
-border_width_top = 4
-border_width_right = 4
-border_width_bottom = 4
-border_color = Color(0.988235, 0.988235, 0.988235, 1)
-corner_radius_top_left = 50
-corner_radius_top_right = 50
-corner_radius_bottom_right = 50
-corner_radius_bottom_left = 50
-corner_detail = 16
-expand_margin_left = 4.0
-expand_margin_top = 4.0
-expand_margin_right = 4.0
-expand_margin_bottom = 4.0
-anti_aliasing_size = 0.5
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ttf05"]
-bg_color = Color(1, 1, 1, 0)
-border_width_left = 4
-border_width_top = 4
-border_width_right = 4
-border_width_bottom = 4
-border_color = Color(0.988235, 0.988235, 0.988235, 1)
-corner_radius_top_left = 50
-corner_radius_top_right = 50
-corner_radius_bottom_right = 50
-corner_radius_bottom_left = 50
-corner_detail = 16
-expand_margin_left = 4.0
-expand_margin_top = 4.0
-expand_margin_right = 4.0
-expand_margin_bottom = 4.0
-anti_aliasing_size = 0.5
-
-[node name="ProfileIconButton" type="Panel" unique_id=56875761]
-clip_children = 2
-anchors_preset = 1
-anchor_left = 1.0
-anchor_right = 1.0
-offset_left = -100.0
-offset_top = 20.0
-offset_right = -20.0
-offset_bottom = 100.0
-grow_horizontal = 0
-theme_override_styles/panel = SubResource("StyleBoxFlat_uo7mg")
+[node name="ProfileIconButton" type="TextureButton" unique_id=56875761]
+custom_minimum_size = Vector2(82, 82)
+focus_mode = 0
+texture_normal = ExtResource("2_bg")
+texture_pressed = ExtResource("2_lloxn")
+ignore_texture_size = true
+stretch_mode = 0
 script = ExtResource("1_0g3fx")
 
-[node name="TextureRect_Profile" type="TextureRect" parent="." unique_id=631848140]
-unique_name_in_owner = true
+[node name="MarginContainer" type="MarginContainer" parent="." unique_id=1052710727]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -61,18 +24,32 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
+theme_override_constants/margin_left = 1
+theme_override_constants/margin_top = 1
+theme_override_constants/margin_right = 1
+theme_override_constants/margin_bottom = 1
+
+[node name="TextureRect_Profile" type="TextureRect" parent="MarginContainer" unique_id=631848140]
+unique_name_in_owner = true
+material = ExtResource("3_mat")
+layout_mode = 2
+mouse_filter = 2
 texture = ExtResource("1_uo4jm")
 expand_mode = 1
-stretch_mode = 4
+stretch_mode = 5
 
-[node name="Panel_Border" type="Panel" parent="." unique_id=773213466]
-clip_children = 2
+[node name="TextureRect_Border" type="TextureRect" parent="." unique_id=773213467]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(95, 95)
 layout_mode = 1
-anchors_preset = 1
-anchor_left = 1.0
-anchor_right = 1.0
-offset_left = -80.0
-offset_bottom = 80.0
-grow_horizontal = 0
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+grow_horizontal = 2
+grow_vertical = 2
 mouse_filter = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_ttf05")
+texture = ExtResource("4_glow")
+expand_mode = 1
+stretch_mode = 5
