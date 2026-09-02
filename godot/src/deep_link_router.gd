@@ -11,6 +11,22 @@ signal deep_link_received
 signal deep_link_jump
 signal deep_link_open_event(event_id: String)
 signal deep_link_open_place(place_id: String)
+## A `?signin=` token was parked because no in-process auth was pending (#2644). The lobby
+## listens so it can redeem it when the deep link lands after its own _ready; when it lands
+## before, lobby._ready reads the parked token directly. Both go through
+## take_pending_signin_identity_id(), which only hands it out once.
+signal deep_link_signin_parked
+
+# How long a parked `?signin=` token stays redeemable. Only meant to cover the boot it
+# arrived on (lobby._ready lands a couple of seconds in); the cap exists so a token nobody
+# consumed can't be replayed on an unrelated later visit to the lobby and surface a bogus
+# "Authentication failed". See _handle_signin_deep_link.
+const PENDING_SIGNIN_MAX_AGE_MS: int = 5 * 60 * 1000
+
+# Parked `?signin=` identity id + when it was parked. Read through
+# take_pending_signin_identity_id() only; lobby.gd is the single consumer.
+var _pending_signin_identity_id: String = ""
+var _pending_signin_parked_at_ms: int = 0
 
 
 ## Parse and store a deep link URL, then emit deep_link_received.
@@ -34,7 +50,19 @@ func process_deep_link(url: String) -> void:
 		print("[DEEPLINK] Found rust-log param: ", rust_log_value)
 		DclGlobal.set_rust_log_filter(rust_log_value)
 
+	# Pulse transport params (pulse-server / pulse / dual-channel / livekit); the
+	# shared helper no-ops on builds without the use_pulse feature.
+	Global._apply_comms_deeplink_params(Global.deep_link_obj)
+
 	Global._apply_optimized_content_base_url(Global.deep_link_obj)
+
+	# QA affordance, non-production only: mint a brand-new guest so the FTUE is reachable
+	# again on a device whose native anchor survives reinstall.
+	Global._capture_debug_guest_rotate(Global.deep_link_obj)
+
+	# Before any routing decision: the token has to survive whichever branch below consumes
+	# the deeplink (#2670).
+	Global._capture_campaign_token(Global.deep_link_obj)
 
 	# `skip-gltf` toggle has to be set BEFORE any scene's GLTF_CONTAINER
 	# component dirty-set is processed by `update_gltf_container`. The
@@ -50,6 +78,13 @@ func process_deep_link(url: String) -> void:
 	if not kill_sky_value.is_empty():
 		Global.cli.set_kill_sky(kill_sky_value.to_lower() in ["true", "1", "yes"])
 		print("[DEEPLINK] kill-sky=", Global.cli.get_kill_sky())
+
+	# Touch-feedback debug overlay (issue #2562): off by default, enabled on demand.
+	var touch_feedback_value: String = Global.deep_link_obj.params.get("touch-feedback", "")
+	if not touch_feedback_value.is_empty():
+		var touch_feedback_enable: bool = touch_feedback_value.to_lower() in ["true", "1", "yes"]
+		TouchFeedback.set_enabled(touch_feedback_enable)
+		print("[DEEPLINK] touch-feedback=", touch_feedback_enable)
 
 	# Opt-in gate for deleting an UPGRADED (email-linked) guest. Sticky-on for the
 	# session; only takes effect on a NON-production build (see
@@ -77,15 +112,32 @@ func process_deep_link(url: String) -> void:
 		Global.set_safe_margin_debug_enable(true)
 
 	# Returning from the in-app marketplace webview: the web fires a
-	# decentraland://...?urn=<urn> deep link to bring the app back. The native side
-	# dismisses the SFSafariViewController directly, which never fires the tracker's
-	# webview_closed signal — so drive the post-return poll + balance refresh here
-	# (against the pre-purchase baseline), otherwise the credits and the just-bought
-	# wearable never refresh. Then swallow the urn so it doesn't fall through to the
-	# "/open" routing below and pop the jump-in panel (scene title + placeholders).
-	if not Global.deep_link_obj.params.get("urn", "").is_empty():
-		print("[DEEPLINK] marketplace return (urn=...) — driving tracker poll, no routing")
+	# decentraland://open?iap_enabled=true[&urn=<urn>] deep link to bring the app back. The
+	# native side dismisses the SFSafariViewController directly, which never fires the
+	# tracker's webview_closed signal — so drive the post-return handling here (restore the
+	# landscape the portrait-only IAP view took away, then poll for the purchase against the
+	# pre-purchase baseline and refresh the balance).
+	#
+	# `urn` is OPTIONAL — the web leaves it out whenever it has no purchased item in context
+	# — yet it used to be the only thing that triggered ANY of this. A urn-less return then
+	# did nothing at all: the app stayed in the forced portrait, where the backpack's
+	# landscape-only back button is hidden and the menu's portrait bottom bar has already
+	# been freed (clean_orientation.gd, when the menu was built in landscape), leaving no way
+	# out of the backpack; and the tracker stayed armed forever, so the purchase never
+	# surfaced either. So recognise the return by the TRACKER's own state, and use the
+	# `iap_enabled`/`urn` params only to decide whether the link is ours to swallow.
+	var return_urn: String = str(Global.deep_link_obj.params.get("urn", ""))
+	var iap_marker: String = str(Global.deep_link_obj.params.get("iap_enabled", ""))
+	var is_marketplace_return: bool = not return_urn.is_empty() or not iap_marker.is_empty()
+	if is_marketplace_return or MarketplaceTracker.is_awaiting_return():
+		print("[DEEPLINK] marketplace return — driving tracker return handling")
+		# A no-op unless a round-trip is actually in flight, so a duplicate delivery (iOS
+		# fires application:openURL: twice for a single tap) or a stale link is harmless.
 		MarketplaceTracker.notify_marketplace_return()
+	if is_marketplace_return:
+		# Swallow it so it doesn't fall through to the "/open" routing below and pop the
+		# jump-in panel (scene title + placeholders). A deep link that merely arrived while
+		# the tracker was armed is NOT ours, so it keeps routing normally.
 		_clear_deep_link()
 		return
 
@@ -148,8 +200,11 @@ func route() -> void:
 				or not Global.deep_link_obj.preview.is_empty()
 			):
 				_route_teleport()
-			else:
+			elif Global.deep_link_obj.params.is_empty():
 				deep_link_jump.emit()
+			# else: config-only params (multiplayer_debug, pulse, rust-log, scene-stats,
+			# …) were already applied in process_deep_link — a link with no navigation
+			# target must not pop an empty jump-in panel over Discover.
 		"/events":
 			var event_id: String = Global.deep_link_obj.params.get("id", "")
 			if not event_id.is_empty():
@@ -173,29 +228,90 @@ func _route_teleport() -> void:
 	var realm = Global.deep_link_obj.preview
 	if realm.is_empty():
 		realm = Global.deep_link_obj.realm
+	else:
+		# A deeplink that arrives while the explorer is already running — scanning the preview
+		# QR without closing the app — reaches this realm switch but never explorer._ready(),
+		# which is the only other place that points the preview WebSocket at the new server
+		# (explorer.gd:334). Without this the realm follows the deeplink while the socket stays
+		# on the previous host, so hot-reload goes silently dead with nothing logged (#2795).
+		# Re-pointing a live socket is supported: set_url() only stores the pending URL and
+		# PreviewWebSocket._process closes and reconnects on the next frames.
+		Global.scene_fetcher.set_preview_url(realm)
+	var location: Vector2i = Global.deep_link_obj.location
+	var has_location := Global.deep_link_obj.is_location_defined()
+
+	# The deeplink target is captured above and consumed now — clear realm/location on the shared
+	# deep_link_obj so a later explorer boot (e.g. teleporting away after a private-world block)
+	# can't re-read this stale realm and re-trigger the modal (#2569 review, iOS). preview is left
+	# untouched: it drives preview/hot-reload mode with its own lifecycle.
+	Global.deep_link_obj.realm = ""
+	Global.deep_link_obj.location = Vector2i.MAX
 
 	# World realm without explicit location → join_world, skip ban pre-check (deferred post-loading)
-	if (
-		not realm.is_empty()
-		and Realm.is_dcl_ens(realm)
-		and not Global.deep_link_obj.is_location_defined()
-	):
+	if not realm.is_empty() and Realm.is_dcl_ens(realm) and not has_location:
 		Global.async_join_world(realm)
-		return
-
-	if Global.deep_link_obj.is_location_defined():
+	elif has_location:
 		if realm.is_empty():
 			realm = DclUrls.main_realm()
-		Global.async_teleport_to(Global.deep_link_obj.location, realm)
+		Global.async_teleport_to(location, realm)
 	elif not realm.is_empty():
 		Global.async_teleport_to(Vector2i.ZERO, realm)
 
 
+## Redeem a `decentraland://open?signin=<identityId>` token.
+##
+## The token is self-contained — complete_mobile_connect_account fetches the identity by id
+## — so the only question is who drives the UI while that fetch runs.
 func _handle_signin_deep_link(identity_id: String) -> void:
+	# Checked ahead of the pending branch: abort_try_connect_account clears
+	# pending_mobile_auth, but start_mobile_connect_account's spawn is not abortable and sets
+	# it again on resolve, so a cancel during the browser-opening window leaves it true.
+	if Global.player_identity.was_mobile_auth_cancelled():
+		print("[DEEPLINK] Ignoring signin token: the user cancelled this sign-in")
+		return
+
 	if Global.player_identity.has_pending_mobile_auth():
+		# Warm resume: this same process opened the browser, so the lobby is alive with the
+		# AUTH_BROWSER_OPEN spinner up and its auth signals connected. Complete right here.
 		Global.player_identity.complete_mobile_connect_account(identity_id)
-	else:
-		printerr("[DEEPLINK] Received signin deep link but no pending mobile auth")
+		return
+
+	# Already signed in, so this cannot be the cold start we rescue. Parking it leaves a token
+	# with no consumer until sign_out() swaps in a fresh lobby, whose _ready redeems it — the
+	# user asks to sign out and is signed back in as whoever the link belongs to.
+	if not Global.player_identity.get_address_str().is_empty():
+		print("[DEEPLINK] Ignoring signin token: a wallet is already connected")
+		return
+
+	# Cold start (#2644). The OS killed the process during the browser hop, taking the
+	# in-memory pending flag with it, and the deep link came back to a fresh boot. This used
+	# to `printerr` and drop the token, stranding the user on ACCOUNT_HOME after a sign-in
+	# they had already completed — ~26% of logins that hit a cold start survived it.
+	#
+	# Don't complete it here: on a cold start this runs from Global._notification, before the
+	# first scene exists, so wallet_connected/profile_changed could fire into a lobby that
+	# hasn't connected them yet. Park the token and let the lobby redeem it on its own terms.
+	print("[DEEPLINK] signin token arrived with no pending auth (cold start) — parking it")
+	_pending_signin_identity_id = identity_id
+	_pending_signin_parked_at_ms = Time.get_ticks_msec()
+	deep_link_signin_parked.emit.call_deferred()
+
+
+## Consume a parked `?signin=` identity id. Returns "" when there is none or it went stale
+## (see PENDING_SIGNIN_MAX_AGE_MS). Single-shot: the token is cleared on read, so the two
+## lobby entry points (its _ready and the deep_link_signin_parked signal) can both call
+## this and only whichever gets there first acts on it.
+func take_pending_signin_identity_id() -> String:
+	var identity_id := _pending_signin_identity_id
+	_pending_signin_identity_id = ""
+	if identity_id.is_empty():
+		return ""
+
+	var age_ms := Time.get_ticks_msec() - _pending_signin_parked_at_ms
+	if age_ms > PENDING_SIGNIN_MAX_AGE_MS:
+		print("[DEEPLINK] Dropping parked signin token, %ss old" % (age_ms / 1000))
+		return ""
+	return identity_id
 
 
 func _clear_deep_link() -> void:

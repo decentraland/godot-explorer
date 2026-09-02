@@ -42,6 +42,7 @@ theme_override_constants/margin_top = 0
 theme_override_constants/margin_right = 48
 theme_override_constants/margin_bottom = 0
 script = ExtResource("1")
+landscape_paragraph_font_size = 23
 
 [node name="GuestUpgradeCard" type="PanelContainer" parent="." unique_id=1116982919]
 layout_mode = 2
@@ -60,7 +61,8 @@ theme_override_constants/margin_bottom = 24
 layout_mode = 2
 theme_override_constants/separation = 0
 
-[node name="Label" type="Label" parent="GuestUpgradeCard/MarginContainer/VBoxContainer" unique_id=25987838]
+[node name="Label_Title" type="Label" parent="GuestUpgradeCard/MarginContainer/VBoxContainer" unique_id=25987838]
+unique_name_in_owner = true
 layout_mode = 2
 text = "Unlock the full experience"
 label_settings = SubResource("LabelSettings_dheir")
@@ -70,11 +72,12 @@ layout_mode = 2
 theme_override_constants/separation = 8
 theme_override_styles/separator = SubResource("StyleBoxEmpty_qvy7f")
 
-[node name="Label2" type="Label" parent="GuestUpgradeCard/MarginContainer/VBoxContainer" unique_id=167207626]
+[node name="Label_Content" type="Label" parent="GuestUpgradeCard/MarginContainer/VBoxContainer" unique_id=167207626]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 10)
 layout_mode = 2
 size_flags_vertical = 1
-text = "Add email to play across mobile and desktop, and claim an exclusive wearable."
+text = "Add email to play across mobile and desktop, and claim an exclusive Wearable."
 label_settings = SubResource("LabelSettings_vwd20")
 autowrap_mode = 2
 

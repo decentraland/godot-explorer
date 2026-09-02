@@ -154,6 +154,15 @@ var last_parcel_position: Vector2i = Vector2i(72, -10):
 
 var terms_and_conditions_version: int = 0
 
+# Guest upgrade nudge cadence (issue #2372). Time-based, relative to the previous appearance (see
+# UpgradeNudgeCoordinator): Modal 1 fires a fixed offset after upgrade_modal_first_seen_unix (the
+# install anchor, stamped once and never changed); Modals 2 and 3 fire a fixed offset after
+# upgrade_modal_last_shown_unix (when the previous modal actually showed — so it gates 2 and 3, not
+# just a record). upgrade_modal_shown_count enforces the max of 3.
+var upgrade_modal_shown_count: int = 0
+var upgrade_modal_last_shown_unix: int = 0
+var upgrade_modal_first_seen_unix: int = 0
+
 # Unix timestamp (seconds) of the last OS notification-permission prompt. Throttles
 # re-prompts (see NotificationsManager.PERMISSION_PROMPT_COOLDOWN_SEC): a denied
 # request — which on Android returns immediately without a dialog — isn't re-attempted
@@ -178,6 +187,23 @@ var backpack_owned_counts: Dictionary = {}
 var version_gate_snooze_until: int = 0
 
 var install_referrer_sent: bool = false
+
+# Ad/referrer campaign token (#2670), from the `?c=` deeplink param or Android install
+# attribution. Resolved against the mobile-bff campaign map by Campaigns.
+var campaign_token: String = ""
+
+# Capture time, not click time: the Play referrer survives 90 days and a reinstall re-stamps
+# it as fresh, so the freshness bound is weaker than it looks. A retired campaign is stopped
+# server-side instead — its row is gone, so the token resolves to nothing.
+var campaign_token_captured_at: int = 0
+
+# One campaign per install: set once a launch has acted on the token.
+var campaign_consumed: bool = false
+
+# QA: mint a brand-new guest wallet on next launch, the only way back to the FTUE on a device
+# whose native anchor survives reinstall. Set by `rotate-guest=true`; see
+# Global._capture_debug_guest_rotate.
+var debug_rotate_guest_anchor: bool = false
 
 # One-shot flag for the Firebase `first_move_in_world` event (set once the user's first real
 # horizontal movement has been detected post-loading_finished, persisted across sessions).
@@ -456,6 +482,18 @@ func load_from_settings_file():
 		"user", "terms_and_conditions_version", data_default.terms_and_conditions_version
 	)
 
+	self.upgrade_modal_shown_count = settings_file.get_value(
+		"user", "upgrade_modal_shown_count", data_default.upgrade_modal_shown_count
+	)
+
+	self.upgrade_modal_last_shown_unix = settings_file.get_value(
+		"user", "upgrade_modal_last_shown_unix", data_default.upgrade_modal_last_shown_unix
+	)
+
+	self.upgrade_modal_first_seen_unix = settings_file.get_value(
+		"user", "upgrade_modal_first_seen_unix", data_default.upgrade_modal_first_seen_unix
+	)
+
 	self.notif_permission_last_prompt_unix = settings_file.get_value(
 		"user", "notif_permission_last_prompt_unix", data_default.notif_permission_last_prompt_unix
 	)
@@ -474,6 +512,22 @@ func load_from_settings_file():
 
 	self.install_referrer_sent = settings_file.get_value(
 		"user", "install_referrer_sent", data_default.install_referrer_sent
+	)
+
+	self.campaign_token = settings_file.get_value(
+		"user", "campaign_token", data_default.campaign_token
+	)
+
+	self.campaign_token_captured_at = settings_file.get_value(
+		"user", "campaign_token_captured_at", data_default.campaign_token_captured_at
+	)
+
+	self.campaign_consumed = settings_file.get_value(
+		"user", "campaign_consumed", data_default.campaign_consumed
+	)
+
+	self.debug_rotate_guest_anchor = settings_file.get_value(
+		"user", "debug_rotate_guest_anchor", data_default.debug_rotate_guest_anchor
 	)
 
 	self.first_move_in_world_sent = settings_file.get_value(
@@ -560,6 +614,12 @@ func save_to_settings_file():
 	new_settings_file.set_value("user", "backpack_owned_counts", self.backpack_owned_counts)
 	new_settings_file.set_value("user", "version_gate_snooze_until", self.version_gate_snooze_until)
 	new_settings_file.set_value("user", "install_referrer_sent", self.install_referrer_sent)
+	new_settings_file.set_value("user", "campaign_token", self.campaign_token)
+	new_settings_file.set_value(
+		"user", "campaign_token_captured_at", self.campaign_token_captured_at
+	)
+	new_settings_file.set_value("user", "campaign_consumed", self.campaign_consumed)
+	new_settings_file.set_value("user", "debug_rotate_guest_anchor", self.debug_rotate_guest_anchor)
 	new_settings_file.set_value("user", "first_move_in_world_sent", self.first_move_in_world_sent)
 	new_settings_file.set_value(
 		"user", "local_assets_cache_version", self.local_assets_cache_version
@@ -571,5 +631,12 @@ func save_to_settings_file():
 		"config", "day1_notification_scheduled", self.day1_notification_scheduled
 	)
 	new_settings_file.set_value("config", "low_spec_warning_shown", self.low_spec_warning_shown)
+	new_settings_file.set_value("user", "upgrade_modal_shown_count", self.upgrade_modal_shown_count)
+	new_settings_file.set_value(
+		"user", "upgrade_modal_last_shown_unix", self.upgrade_modal_last_shown_unix
+	)
+	new_settings_file.set_value(
+		"user", "upgrade_modal_first_seen_unix", self.upgrade_modal_first_seen_unix
+	)
 	new_settings_file.set_value("analytics", "user_id", self.analytics_user_id)
 	new_settings_file.save(DclConfig.get_settings_file_path())

@@ -299,7 +299,7 @@ pub fn teleport_to(
     response.send(Ok(()));
 }
 
-pub fn trigger_emote(scene: &Scene, current_parcel_scene_id: &SceneId, emote_id: &str) {
+pub fn trigger_emote(scene: &Scene, current_parcel_scene_id: &SceneId, emote_id: &str, mask: i64) {
     // Check if player is inside the scene that requested the move
     if !_player_is_inside_scene(scene, current_parcel_scene_id) {
         tracing::warn!("triggerEmote failed: Primary Player is outside the scene");
@@ -307,14 +307,17 @@ pub fn trigger_emote(scene: &Scene, current_parcel_scene_id: &SceneId, emote_id:
     }
 
     let mut avatar_node = get_avatar_node(scene);
-    avatar_node.call("async_play_emote", &[emote_id.to_variant()]);
+    avatar_node.call(
+        "async_play_emote",
+        &[emote_id.to_variant(), mask.to_variant()],
+    );
 
     // Broadcast emote to other players via comms
     DclGlobal::singleton()
         .bind()
         .get_comms()
         .bind_mut()
-        .send_emote(emote_id.to_godot());
+        .send_emote(emote_id.to_godot(), mask);
 }
 
 pub fn trigger_scene_emote(
@@ -322,6 +325,7 @@ pub fn trigger_scene_emote(
     current_parcel_scene_id: &SceneId,
     emote_src: &str,
     looping: &bool,
+    mask: i64,
 ) {
     tracing::debug!(
         "SCENE_EMOTE_TRIGGERED: src={}, loop={}, scene={}",
@@ -382,7 +386,10 @@ pub fn trigger_scene_emote(
     );
 
     // Call the SAME function as wearable emotes!
-    avatar_node.call("async_play_emote", &[scene_emote_urn.to_variant()]);
+    avatar_node.call(
+        "async_play_emote",
+        &[scene_emote_urn.to_variant(), mask.to_variant()],
+    );
 
     // Broadcast to other players
     tracing::info!("triggerSceneEmote: broadcasting URN={}", scene_emote_urn);
@@ -390,5 +397,5 @@ pub fn trigger_scene_emote(
         .bind()
         .get_comms()
         .bind_mut()
-        .send_emote(scene_emote_urn.to_godot());
+        .send_emote(scene_emote_urn.to_godot(), mask);
 }

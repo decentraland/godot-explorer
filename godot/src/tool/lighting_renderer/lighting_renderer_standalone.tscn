@@ -1,0 +1,10 @@
+[gd_scene format=3 uid="uid://b4l1ghtn1gsnpsh0t"]
+
+[ext_resource type="Script" path="res://src/tool/lighting_renderer/lighting_renderer_standalone.gd" id="1_lghtr"]
+
+[node name="LightingRendererScene" type="Node"]
+script = ExtResource("1_lghtr")
+
+[node name="SubViewport" type="SubViewport" parent="."]
+size = Vector2i(1280, 720)
+render_target_update_mode = 4

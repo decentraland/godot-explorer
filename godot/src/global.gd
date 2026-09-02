@@ -92,13 +92,10 @@ const DEBUG_GUEST_ROTATE_ANCHOR_ID: bool = false
 # Increase this value for new terms and conditions
 const TERMS_AND_CONDITIONS_VERSION: int = 1
 
-# Hide the Play-as-Guest entry path on iOS while Apple reviews the guest + IAP flow
-# (issue #2308): the lobby skips the ACCOUNT_HOME chooser and lands directly on the
-# sign-in screen. Flip to false (or pass ?disable-guest-gating=true) to restore guest.
-const IOS_GUEST_ENTRY_DISABLED := true
-
 # Increase this value when local assets cache format changes (invalidates cache)
-const LOCAL_ASSETS_CACHE_VERSION: int = 4
+# v5: runtime-processed emote .tscn saved before the case-insensitive prop lookup
+# (find_prop_node in emote.rs) are missing their prop geometry — re-process them.
+const LOCAL_ASSETS_CACHE_VERSION: int = 5
 
 # On-disk guest identity artifacts, owned by Rust (keep in sync with
 # lib/src/auth/device_anchor.rs + thirdweb_guest.rs) plus the mobile-BFF
@@ -130,6 +127,8 @@ var locations: Node
 
 var modal_manager: ModalManager
 
+var upgrade_nudge_coordinator: UpgradeNudgeCoordinator
+
 var standalone = false
 
 var network_inspector_window: Window = null
@@ -152,6 +151,10 @@ var current_camera_mode: CameraMode = CameraMode.THIRD_PERSON
 var camera_mode_blocked: bool = false
 var session_id: String
 
+# Fixed width (canvas px) of the chat's notifications column, reported by the chat so the
+# scene interactable area can be computed without hardcoding it. Stable per device.
+var chat_notifications_width: int = 0
+
 # Orchestrates the Firebase / Segment glue (EULA gate, login suppression on session recovery,
 # first_move_in_world detection). Instantiated after `metrics` is created.
 var analytics_controller: AnalyticsController = null
@@ -166,6 +169,16 @@ var sentry_seeder: SentrySeeder = null
 # `await Global.attestation.async_get_valid_jwt()`. Instantiated in _ready as a Node
 # child of Global so it can use timers and signals across the session lifetime.
 var attestation: AttestationService = null
+
+# Remote feature flags fetched from the mobile-bff at startup. Query with
+# `Global.feature_flags.is_enabled("flag-name")`; comms-affecting flags are
+# applied automatically when the response arrives — see feature_flags.gd.
+var feature_flags: FeatureFlags = null
+
+# Ad/referrer campaign map fetched from the mobile-bff at startup. Resolves the `?c=`
+# token captured at boot into a personalized FTUE or a direct boot into the target scene
+# — see campaigns.gd.
+var campaigns: Campaigns = null
 
 var _is_portrait: bool = true
 
@@ -345,6 +358,57 @@ func _apply_optimized_content_base_url(obj: DclParseDeepLink) -> void:
 		cli.optimized_content_base_url = opt_url
 
 
+## QA affordance: `decentraland://open?rotate-guest=true` mints a brand-new guest, the only
+## way back to the FTUE on a device whose native anchor survives reinstall (Android SSAID,
+## iOS Keychain). Also wipes the on-disk guest identity, so the FTUE is reachable from this
+## launch rather than the next one.
+##
+## Non-production means anything not cut from `release*`, so builds from `main` — TestFlight
+## included — honour it. Recoverable: the flag lives in user:// and the native anchor is
+## never touched, so reinstalling restores the original wallet.
+func _capture_debug_guest_rotate(obj: DclParseDeepLink) -> void:
+	if is_production():
+		return
+	if String(obj.params.get("rotate-guest", "")).to_lower() != "true":
+		return
+
+	var config := get_config()
+	config.debug_rotate_guest_anchor = true
+	# Campaign state too, or the scenario would only work once: a stored token is never
+	# replaced and a consumed one falls back to the default FTUE.
+	config.campaign_token = ""
+	config.campaign_token_captured_at = 0
+	config.campaign_consumed = false
+	config.save_to_settings_file()
+	var removed := clear_guest_device_storage()
+	print("[DEEPLINK] rotate-guest=true: cleared %d guest file(s) + campaign state" % removed)
+
+
+## Capture the ad/referrer campaign token carried by a deeplink as `?c=<token>` (#2670).
+## Shared by the desktop fake-deeplink path (_ready) and the mobile/iOS live path (router).
+##
+## First capture wins: an install has exactly one campaign, and a later in-session deeplink
+## must not repaint it. Hence the validation here rather than only at the point of use — a
+## junk token would take the slot the real install-attribution token needs.
+func _capture_campaign_token(obj: DclParseDeepLink) -> void:
+	var token: String = String(obj.params.get("c", "")).strip_edges()
+	if token.is_empty():
+		return
+	if not CampaignResolution.is_valid_token(token):
+		push_warning("[CAMPAIGN] ignoring malformed token from deeplink: " + token)
+		return
+
+	var config := get_config()
+	if not config.campaign_token.is_empty():
+		print("[CAMPAIGN] token already captured (", config.campaign_token, "), ignoring: ", token)
+		return
+
+	config.campaign_token = token
+	config.campaign_token_captured_at = int(Time.get_unix_time_from_system())
+	config.save_to_settings_file()
+	print("[CAMPAIGN] captured token=", token, " at=", config.campaign_token_captured_at)
+
+
 ## Lazy-init the GltfContainer load-timeout coalescer. Replaces the
 ## per-container Timer (~1419 in Genesis Plaza). Called from
 ## gltf_container.gd; created on first use, persists for the app's lifetime.
@@ -470,6 +534,10 @@ func _ready():
 
 		_apply_optimized_content_base_url(deep_link_obj)
 
+		# Pulse transport params (this fake-deeplink path doesn't route through
+		# deep_link_router.process_deep_link).
+		_apply_comms_deeplink_params(deep_link_obj)
+
 		print("[DEEPLINK] safemargindebug=", deep_link_obj.safe_margin_debug)
 		if deep_link_obj.safe_margin_debug:
 			set_safe_margin_debug_enable(true)
@@ -504,6 +572,14 @@ func _ready():
 	# Create GDScript extensions of Rust classes
 	self.config = ConfigData.new()
 	config.load_from_settings_file()
+
+	# Campaign token (#2670). Deliberately after the config load: the fake/baked deeplink is
+	# parsed further up in _ready, long before ConfigData exists, so capturing there wrote to
+	# a config that was then replaced by the one read from disk. deep_link_obj is eagerly
+	# constructed, so this is a no-op when no deeplink carried a token. The live mobile path
+	# captures from deep_link_router instead, which already runs well after this point.
+	_capture_debug_guest_rotate(deep_link_obj)
+	_capture_campaign_token(deep_link_obj)
 	# Bench-only: keep limit_fps at NO_LIMIT after the settings file load (which
 	# would otherwise restore a saved FPS_18/FPS_30 cap) so no later
 	# `apply_fps_limit()` re-pins the engine. Real users keep their saved cap.
@@ -534,6 +610,7 @@ func _ready():
 	self.realm = Realm.new()
 	self.realm.set_name("realm")
 	self.realm.realm_change_failed.connect(_on_realm_change_failed_toast)
+	self.realm.realm_access_denied.connect(_on_realm_access_denied)
 
 	self.dcl_tokio_rpc = DclTokioRpc.new()
 	self.dcl_tokio_rpc.set_name("dcl_tokio_rpc")
@@ -628,12 +705,16 @@ func _ready():
 	self.modal_manager = load("res://src/ui/components/organisms/modal/modal_manager.gd").new()
 	self.modal_manager.set_name("modal_manager")
 
+	self.upgrade_nudge_coordinator = load("res://src/upgrade_nudge_coordinator.gd").new()
+	self.upgrade_nudge_coordinator.set_name("upgrade_nudge_coordinator")
+
 	get_tree().root.add_child.call_deferred(self.cli)
 	get_tree().root.add_child.call_deferred(self.music_player)
 	get_tree().root.add_child.call_deferred(self.scene_fetcher)
 	get_tree().root.add_child.call_deferred(self.skybox_time)
 	get_tree().root.add_child.call_deferred(self.locations)
 	get_tree().root.add_child.call_deferred(self.modal_manager)
+	get_tree().root.add_child.call_deferred(self.upgrade_nudge_coordinator)
 	get_tree().root.add_child.call_deferred(self.content_provider)
 	get_tree().root.add_child.call_deferred(self.scene_runner)
 	get_tree().root.add_child.call_deferred(self.realm)
@@ -669,6 +750,18 @@ func _ready():
 	# service self-gates on EULA acceptance and caches the issued session token on disk.
 	self.attestation = AttestationService.new()
 	add_child(self.attestation)
+	# Remote feature flags: the node kicks its own fire-and-forget fetch on _ready
+	# and applies comms-affecting flags (e.g. `archipielago`) when they arrive.
+	self.feature_flags = FeatureFlags.new()
+	self.feature_flags.set_name("feature_flags")
+	add_child(self.feature_flags)
+	# Campaign resolver. Unlike the flags above it does NOT fetch on _ready: the map is only
+	# requested once a token actually needs resolving, so an install with no campaign — the
+	# large majority — never touches the endpoint. What starts here is the watcher that
+	# persists a token coming from install attribution.
+	self.campaigns = Campaigns.new()
+	self.campaigns.set_name("campaigns")
+	add_child(self.campaigns)
 	get_tree().root.add_child.call_deferred(self.network_inspector)
 	get_tree().root.add_child.call_deferred(self.scene_inspector_dispatcher)
 	get_tree().root.add_child.call_deferred(self.social_blacklist)
@@ -1036,6 +1129,7 @@ func sign_out() -> void:
 	# avatar editor (issue #1658). Also drop the saved guest look on explicit
 	# sign-out to close the guest->guest leak vector.
 	get_config().guest_profile = {}
+	NamesRequest.invalidate_cache()
 	player_identity.reset_identity()
 	get_config().save_to_settings_file()
 
@@ -1043,7 +1137,13 @@ func sign_out() -> void:
 	# landscape screen (e.g. settings panel) doesn't strand the user there.
 	set_orientation_portrait()
 
-	# 8. Swap to a fresh lobby on the next frame, after the current signal/await
+	# 8. Detach scene_runner.base_ui from the dying Explorer so freeing it can't
+	#    free UI nodes Rust still references — a cache-hot scene spawn racing the
+	#    next explorer._ready() would panic on the freed control
+	#    (GODOT-EXPLORER-1DY). The orphan is freed by the next recreate_base_ui().
+	scene_runner.detach_base_ui()
+
+	# 9. Swap to a fresh lobby on the next frame, after the current signal/await
 	#    stack fully unwinds (sign_out may have been reached via the deferred
 	#    logout signal). lobby._ready clears _signing_out.
 	get_tree().change_scene_to_file.call_deferred("res://src/ui/pages/auth/lobby.tscn")
@@ -1103,6 +1203,12 @@ func return_to_discover() -> void:
 	# Discover/menu is portrait-only; reset orientation so returning from a
 	# landscape in-world screen (settings) doesn't strand the user in landscape.
 	set_orientation_portrait()
+
+	# Detach scene_runner.base_ui from the dying Explorer so freeing it can't
+	# free UI nodes Rust still references — a cache-hot scene spawn racing the
+	# next explorer._ready() would panic on the freed control
+	# (GODOT-EXPLORER-1DY). The orphan is freed by the next recreate_base_ui().
+	scene_runner.detach_base_ui()
 
 	# Swap to the standalone Discover menu on the next frame, after the current
 	# call stack (the settings button handler) fully unwinds. menu._ready clears
@@ -1367,6 +1473,10 @@ func async_check_scene_access(scene_id: String, realm_name: String) -> bool:
 
 
 func async_teleport_to(parcel_position: Vector2i, new_realm: String) -> void:
+	# Block a private world before any navigation (no-op for genesis/parcel teleports); covers
+	# both the active-explorer teleport and the cold-start-from-lobby branch below.
+	if not await _async_precheck_realm_access(new_realm):
+		return
 	var explorer = Global.get_explorer()
 	if is_instance_valid(explorer):
 		# Show loading screen before orientation change to avoid flashing the scene
@@ -1387,6 +1497,11 @@ func async_teleport_to(parcel_position: Vector2i, new_realm: String) -> void:
 
 
 func async_join_world(world_realm: String) -> void:
+	# Block a private world before any navigation. Covers both cases below: with an active
+	# explorer the modal replaces the loading flash; without one (cold start from the lobby)
+	# it stops us from booting the explorer scene straight into the world we can't enter.
+	if not await _async_precheck_realm_access(world_realm):
+		return
 	var explorer = Global.get_explorer()
 	if is_instance_valid(explorer):
 		# Show loading screen before orientation change to avoid flashing the scene
@@ -1431,7 +1546,9 @@ func _http_method_to_string(method: int) -> String:
 			return "GET"  # Default fallback
 
 
-func async_signed_fetch(url: String, method: int, _body: String = ""):
+func async_signed_fetch(
+	url: String, method: int, _body: String = "", lowercase_metadata: bool = false
+):
 	# Decentraland signed-fetch (ADR-44) carries the request metadata in the
 	# x-identity-metadata header. The server verifier requires it to be a JSON
 	# object: a bodyless request would otherwise be signed as `null`, which the
@@ -1439,9 +1556,15 @@ func async_signed_fetch(url: String, method: int, _body: String = ""):
 	# "Invalid chain metadata". Sign an empty object `{}` for bodyless requests
 	# (backward-compatible: older verifiers accept both), leaving the actual HTTP
 	# body untouched.
+	#
+	# `lowercase_metadata` folds the metadata before it is signed, which is what a
+	# crypto-middleware >=6.0.0 service needs from us: 6.0.0 stopped lowercasing the
+	# metadata when it rebuilds the payload, so a signature over a folded one only
+	# matches if the header carries the same folded bytes. It costs the metadata its
+	# casing, so pass it only for a service that reads the body and never the metadata.
 	var metadata := _body if not _body.is_empty() else "{}"
 	var headers_promise = Global.player_identity.async_get_identity_headers(
-		url, metadata, _http_method_to_string(method)
+		url, metadata, _http_method_to_string(method), lowercase_metadata
 	)
 	var headers_result = await PromiseUtils.async_awaiter(headers_promise)
 
@@ -1504,6 +1627,24 @@ func _check_dclenv_change() -> bool:
 	if new_env == current_env:
 		return false
 
+	# A sign-in callback (`decentraland://open?signin=...&dclenv=...`) echoes the env the
+	# web flow authenticated against. That is a byproduct of the round trip, never a
+	# request to switch. Acting on it restarts the session in the middle of the login:
+	# sign_out() rebuilds the lobby, and the `true` returned below makes the router drop
+	# the deeplink before it reaches _handle_signin_deep_link, so the auth goes with it.
+	# The callback also carries the plain env (`zone`), which can never match a composed
+	# one (`catalyst::org,...,profile::zone,zone`), so on those setups it fired every time.
+	if deep_link_obj.is_signin_request():
+		print("[DEEPLINK] dclenv=%s on a signin callback, keeping %s" % [new_env, current_env])
+		return false
+
+	# An env chosen explicitly (--dclenv, or an earlier deeplink) outranks what a later
+	# deeplink carries. Switching from the default env still works; switching again
+	# afterwards needs an app restart.
+	if dcl_env_explicit:
+		print("[DEEPLINK] dclenv=%s ignored, %s was set explicitly" % [new_env, current_env])
+		return false
+
 	print("[DEEPLINK] Environment changed: %s -> %s, restarting..." % [current_env, new_env])
 	DclGlobal.set_dcl_environment(new_env)
 	dcl_env_explicit = true
@@ -1511,7 +1652,57 @@ func _check_dclenv_change() -> bool:
 	return true
 
 
+# Applies the comms deeplink params (pulse-server / pulse / dual-channel / livekit).
+# Shared by deep_link_router.process_deep_link and the desktop --fake-deeplink path,
+# so a new param only has to be added once.
+func _apply_comms_deeplink_params(deep_link) -> void:
+	# `pulse-server=<host:port>` joins a specific Pulse server (shareable — everyone
+	# opening the link lands on the same instance; implies enabling).
+	var pulse_server_value = deep_link.params.get("pulse-server", "")
+	if not pulse_server_value.is_empty():
+		print("[DEEPLINK] pulse-server=", pulse_server_value)
+		comms.set_pulse_server(pulse_server_value)
+	# `pulse=true/false` toggles the transport with the configured endpoint.
+	var pulse_value = deep_link.params.get("pulse", "")
+	if not pulse_value.is_empty():
+		print("[DEEPLINK] pulse=", pulse_value)
+		comms.set_pulse_enabled(pulse_value.to_lower() in ["true", "1", "yes"])
+	# `dual-channel=true/false` (default true): whether movement keeps going over
+	# LiveKit while Pulse is established. false = Pulse-only movement while up.
+	var dual_channel_value = deep_link.params.get("dual-channel", "")
+	if not dual_channel_value.is_empty():
+		print("[DEEPLINK] dual-channel=", dual_channel_value)
+		comms.set_livekit_movement_dual_channel(
+			dual_channel_value.to_lower() in ["true", "1", "yes"]
+		)
+	# `livekit=false`: pulse-only mode — no LiveKit rooms at all (no chat/voice/
+	# scene messages). Dev/testing switch; `livekit=true` re-enables.
+	var livekit_value = deep_link.params.get("livekit", "")
+	if not livekit_value.is_empty():
+		print("[DEEPLINK] livekit=", livekit_value)
+		comms.set_livekit_enabled(livekit_value.to_lower() in ["true", "1", "yes"])
+	# `multiplayer_debug=true` (legacy alias livekit_debug): latch the flag on the
+	# comms manager, which survives scene changes — a deeplink with no navigation
+	# target is consumed while the lobby/menu is active, and the explorer that boots
+	# later re-reads the flag from comms (deep_link_obj is not a reliable carrier
+	# across that flow). Enable-only: absence of the param must not turn the panel
+	# off on a later deeplink.
+	if deep_link.multiplayer_debug:
+		print("[DEEPLINK] multiplayer_debug=true")
+		comms.set_multiplayer_debug(true)
+
+
 func _notification(what: int) -> void:
+	if what == NOTIFICATION_APPLICATION_FOCUS_IN:
+		# Mobile OSes cut app networking shortly after backgrounding, killing every comms
+		# session. Tell the comms manager we're back so it forgives transient reconnect
+		# failures and treats Duplicate* evictions as our own stale session being reclaimed.
+		# Real mobile only: on desktop every alt-tab fires FOCUS_IN, and a 30s grace window
+		# armed that often would retry genuine another-device evictions instead of
+		# surfacing the "session ended" modal.
+		if Global.is_mobile() and !Global.is_virtual_mobile():
+			comms.notify_app_resumed()
+
 	if what == NOTIFICATION_APPLICATION_FOCUS_IN or what == NOTIFICATION_READY:
 		if Global.is_mobile() and !Global.is_virtual_mobile():
 			var new_url: String = ""
@@ -1557,6 +1748,80 @@ func _on_realm_change_failed_toast(new_realm_string: String, reason: String) -> 
 	)
 
 
+func _on_realm_access_denied(_new_realm_string: String, world_name: String) -> void:
+	# The world restricts access and this user is not on its allow-list (#1725). Only
+	# Global.realm is wired here — transient Realm instances (portable experiences) just
+	# fail to load, same as they do for the generic failure toast.
+	_clear_boot_realm_if_denied(world_name)
+	Global.modal_manager.async_show_private_world_modal(world_name)
+	# A cold start straight into a denied world booted the explorer with no realm ever set, so
+	# dismissing the modal would strand the user in an empty scene. Fall back to the main realm
+	# in that case only; an in-session denial (has_realm() true) leaves the user where they were.
+	# Deferred to avoid re-entering async_set_realm from its own denial signal.
+	if is_instance_valid(Global.get_explorer()) and not Global.realm.has_realm():
+		Global.realm.async_set_realm.call_deferred(DclUrls.main_realm())
+
+
+## Checks a realm's private-world access BEFORE any navigation UI is shown, so a world the
+## user can't enter blocks with the modal instantly instead of first flashing a loading
+## transition (#1725). The answer is cached, so the safety-net gate in Realm.async_set_realm
+## reuses it without a second fetch. Non-worlds resolve synchronously with no network hit.
+## Returns false when access was denied (the modal is already up); true otherwise.
+func _async_precheck_realm_access(new_realm_string: String) -> bool:
+	var world_name := WorldPermissionsHelper.world_name_from_realm(
+		new_realm_string, Realm.resolve_realm_url(new_realm_string)
+	)
+	if world_name.is_empty():
+		return true
+	if await WorldPermissionsHelper.async_is_allowed(world_name):
+		return true
+	_on_realm_access_denied(new_realm_string, world_name)
+	return false
+
+
+## Silent access check for a cold-start deeplink realm — like _async_precheck_realm_access but it
+## never shows the modal (the destination the caller routes to surfaces it). True for non-worlds
+## and allowed worlds. Used by the lobby to decide whether a deeplink can boot the explorer.
+func _async_is_realm_access_allowed(realm_string: String) -> bool:
+	var world_name := WorldPermissionsHelper.world_name_from_realm(
+		realm_string, Realm.resolve_realm_url(realm_string)
+	)
+	if world_name.is_empty():
+		return true
+	return await WorldPermissionsHelper.async_is_allowed(world_name)
+
+
+## Fire-and-forget prefetch of a world's access, meant to run when its jump-in card opens.
+## By the time the user taps JUMP IN the answer is cached, so the click-time precheck resolves
+## synchronously: an allowed world goes straight to the loading screen with no visible gap, a
+## private one shows the modal instantly. No-op (and no network) for non-worlds. Silent — it
+## never shows a modal; the decision surfaces only on the actual navigation.
+func warm_realm_access(realm_string: String) -> void:
+	var world_name := WorldPermissionsHelper.world_name_from_realm(
+		realm_string, Realm.resolve_realm_url(realm_string)
+	)
+	if world_name.is_empty():
+		return
+	WorldPermissionsHelper.async_is_allowed(world_name)
+
+
+## async_join_world / async_teleport_to persist the destination *before* the explorer scene
+## gets to run the private-world gate, so a refused world would otherwise stay as the boot
+## realm and re-open this modal on every cold start. Point it back at the main realm.
+func _clear_boot_realm_if_denied(world_name: String) -> void:
+	var config = Global.get_config()
+	var stored: String = config.last_realm_joined
+	if stored.is_empty():
+		return
+	var stored_world := WorldPermissionsHelper.world_name_from_realm(
+		stored, Realm.resolve_realm_url(stored)
+	)
+	if stored_world != world_name:
+		return
+	config.last_realm_joined = DclUrls.main_realm()
+	config.save_to_settings_file()
+
+
 func set_camera_mode(camera_mode: Global.CameraMode) -> void:
 	current_camera_mode = camera_mode
 	camera_mode_set.emit(camera_mode)
@@ -1586,17 +1851,23 @@ func set_camera_mode_blocked(blocked: bool) -> void:
 # separate). Don't guard the Android call with has_method or it silently no-ops.
 # See: https://github.com/godotengine/godot/issues/106436
 func get_device_anchor_id() -> String:
-	# 1. DEBUG rotate mode: resettable user:// anchor on every platform.
-	#    Gated to non-production so it can never ship even if the flag is left on.
-	if DEBUG_GUEST_ROTATE_ANCHOR_ID and not is_production():
+	# 1. DEBUG rotate mode: resettable user:// anchor on every platform. Either the
+	#    compile-time constant or the persisted `rotate-guest=true` deeplink override.
+	#    Gated to non-production so neither can ever ship even if left on.
+	if (
+		(DEBUG_GUEST_ROTATE_ANCHOR_ID or get_config().debug_rotate_guest_anchor)
+		and not is_production()
+	):
 		return ""
 	# 2. Shipping: device-bound native anchor (persists across reinstall).
+	var native_anchor := ""
 	if self.is_android():
 		var plugin = Engine.get_singleton("dcl-godot-android")
 		if plugin != null:
-			return plugin.getDeviceAnchorId()
+			native_anchor = plugin.getDeviceAnchorId()
 	elif self.is_ios():
 		var plugin = Engine.get_singleton("DclGodotiOS")
 		if plugin != null and plugin.has_method("get_device_anchor_id"):
-			return plugin.get_device_anchor_id()
-	return ""
+			native_anchor = plugin.get_device_anchor_id()
+
+	return native_anchor

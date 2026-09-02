@@ -21,8 +21,11 @@ use tokio::sync::Semaphore;
 use crate::content::texture::resize_image;
 
 use super::super::{
-    content_mapping::ContentMappingAndUrlRef, content_provider::SceneGltfContext,
-    file_string::get_base_dir, texture::create_compressed_texture,
+    cache_file_name::{cache_file_name, cache_file_path},
+    content_mapping::ContentMappingAndUrlRef,
+    content_provider::SceneGltfContext,
+    file_string::get_base_dir,
+    texture::create_compressed_texture,
 };
 
 #[cfg(feature = "use_resource_tracking")]
@@ -940,7 +943,7 @@ where
     // Download the main GLTF file
     let base_path = Arc::new(get_base_dir(&file_path));
     let url = format!("{}{}", content_mapping.base_url, file_hash);
-    let absolute_file_path = format!("{}{}", ctx.content_folder, file_hash);
+    let absolute_file_path = cache_file_path(&ctx.content_folder, &file_hash);
 
     #[cfg(feature = "use_resource_tracking")]
     report_resource_start(&file_hash, "gltf");
@@ -994,7 +997,7 @@ where
             report_resource_start(&dep_hash, "gltf_dep");
 
             let url = format!("{}{}", content_mapping.base_url, dep_hash);
-            let absolute_file_path = format!("{}{}", ctx.content_folder, dep_hash);
+            let absolute_file_path = cache_file_path(&ctx.content_folder, &dep_hash);
             let result = ctx
                 .resource_provider
                 .fetch_resource(url, dep_hash.clone(), absolute_file_path)
@@ -1031,11 +1034,16 @@ where
         let mut new_gltf = GltfDocument::new_gd();
         let mut new_gltf_state = GltfState::new_gd();
 
-        let mappings = VarDictionary::from_iter(
-            dependencies_hash
-                .iter()
-                .map(|(file_path, hash)| (file_path.to_variant(), hash.to_variant())),
-        );
+        // The importer rewrites each buffer/image `uri` to the value found here and Godot
+        // resolves it against `base_path` (the cache folder), so these must be the on-disk
+        // cache file names, not the raw hashes.
+        let mappings =
+            VarDictionary::from_iter(dependencies_hash.iter().map(|(file_path, hash)| {
+                (
+                    file_path.to_variant(),
+                    cache_file_name(hash).as_ref().to_variant(),
+                )
+            }));
 
         new_gltf_state.set_additional_data("base_path", &"some".to_variant());
         new_gltf_state.set_additional_data("mappings", &mappings.to_variant());

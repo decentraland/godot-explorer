@@ -230,18 +230,100 @@ impl AsH160 for String {
     }
 }
 
+/// Sign the Pulse ENet handshake payload and pack the auth chain as the JSON `x-identity-*`
+/// header dictionary the server expects inside `HandshakeRequest.auth_chain` — identical in shape
+/// to the HTTP signed-fetch headers (`sign_request`), just carried as protobuf bytes.
+///
+/// The payload is the signed-fetch string for `connect` on path `/`:
+/// `connect:/:{timestamp_ms}:{}` — deliberately NOT lowercased: the server
+/// (`HandshakeHandler`/`SignedFetch.BuildSignedFetchPayload`) verifies the signature over this
+/// exact string, and Unity/bevy sign it verbatim. (It happens to be all-lowercase today; don't
+/// couple to that.) Re-sign per attempt: the server enforces a ±60s replay window on the
+/// timestamp.
+pub async fn sign_pulse_connect(wallet: &EphemeralAuthChain) -> Result<Vec<u8>, String> {
+    let unix_time = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_err(|e| e.to_string())?
+        .as_millis();
+
+    let payload = format!("connect:/:{unix_time}:{{}}");
+    let signature = wallet
+        .ephemeral_wallet()
+        .sign_message(&payload)
+        .await
+        .map_err(|e| format!("ephemeral sign failed: {e}"))?;
+    let mut auth_chain = wallet.auth_chain().clone();
+    auth_chain.add_signed_entity(payload, signature);
+
+    let mut dict = serde_json::Map::new();
+    for (key, value) in auth_chain.headers() {
+        dict.insert(key, serde_json::Value::String(value));
+    }
+    dict.insert(
+        "x-identity-timestamp".to_owned(),
+        serde_json::Value::String(unix_time.to_string()),
+    );
+    dict.insert(
+        "x-identity-metadata".to_owned(),
+        serde_json::Value::String("{}".to_owned()),
+    );
+    serde_json::to_vec(&dict).map_err(|e| e.to_string())
+}
+
+/// Which bytes `sign_request` signs, and therefore which `@dcl/crypto-middleware`
+/// generation accepts the signature. The two disagree on how the payload is built:
+///
+/// ```text
+/// 5.x  [method, path, timestamp, metadata].join(":").toLowerCase()
+/// 6.x  [method.toLowerCase(), path.toLowerCase(), timestamp, metadata].join(":")
+/// ```
+///
+/// 6.0.0 stopped folding the metadata, so no single signature satisfies both — unless
+/// the metadata is already all-lowercase, in which case the two payloads are identical
+/// byte for byte. That is the only lever a client has, and it costs the metadata.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum SignedMetadata {
+    /// ADR-44: fold the payload, transmit the metadata as serialized. This is what every
+    /// other explorer sends and what services read `authMetadata.sceneId` / `.realmName`
+    /// back out of, so it is the default. A 6.x service rejects it with 401 whenever the
+    /// metadata carries an uppercase character.
+    Verbatim,
+    /// Fold the metadata too, and transmit it folded so the header still matches what was
+    /// signed. The same bytes then verify under both generations. Only use it where the
+    /// service does not read the metadata back: folding destroys camelCase keys and any
+    /// case-sensitive value.
+    Lowercase,
+}
+
 pub async fn sign_request<META: Serialize>(
     method: &str,
     uri: &Uri,
     wallet: &EphemeralAuthChain,
     meta: META,
+    metadata_format: SignedMetadata,
 ) -> Vec<(String, String)> {
     let unix_time = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap()
         .as_millis();
 
+    // Whatever goes into the signature must also go into `x-identity-metadata`: the server
+    // rebuilds the expected payload from that header and compares. Signing `{"productid":...}`
+    // while transmitting `{"productId":...}` is what made every 6.x-verified request fail with
+    // "Invalid final authority".
+    //
+    // The joined payload is folded in both modes, which is ADR-44 and costs nothing against a
+    // 6.x server either: it lowercases method and path itself, and the timestamp is digits.
+    // The metadata is the only component the two generations treat differently, so it is the
+    // only thing this mode decides.
+    //
+    // The HTTP body is never touched here. credits-server answers `productId is required` to a
+    // lowercased body, which is how we know metadata and body are independent to the server.
     let meta = serde_json::to_string(&meta).unwrap();
+    let meta = match metadata_format {
+        SignedMetadata::Verbatim => meta,
+        SignedMetadata::Lowercase => meta.to_lowercase(),
+    };
     let payload = format!("{}:{}:{}:{}", method, uri.path(), unix_time, meta).to_lowercase();
 
     let signature = wallet

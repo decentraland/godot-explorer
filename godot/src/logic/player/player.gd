@@ -3,12 +3,14 @@ extends CharacterBody3D
 
 const DEFAULT_CAMERA_FOV = 60.0
 const SPRINTING_CAMERA_FOV = 75.0
-const THIRD_PERSON_CAMERA = Vector3(0.75, 0, 3)  # X offset for over-shoulder view
 
 # Double-jump + glide tuning (values mirror Unity CharacterControllerSettings.asset).
 const MAX_AIR_JUMPS := 1
 const JUMP_BUFFER_WINDOW := 0.15
 const JUMP_COOLDOWN := 0.3
+# Coyote-style debounce on the ANIMATION grounded flag: at mobile physics
+# rates a 1-tick is_on_floor() flicker replayed the landing pose (the "bounce").
+const GROUNDED_GRACE_WINDOW := 0.15
 const AIR_JUMP_HEIGHT := 2.0
 const AIR_JUMP_DELAY := 0.2
 const AIR_JUMP_DIRECTION_IMPULSE := 8.0
@@ -92,9 +94,10 @@ var _ground_distance: float = INF
 var _raycast_exclude: Array[RID] = []
 
 @onready var mount_camera := $Mount
-@onready var camera: DclCamera3D = $Mount/Camera3D
-@onready var avatar_raycast: RayCast3D = $Mount/Camera3D/AvatarRaycast
-@onready var outline_system: OutlineSystem = $Mount/Camera3D/OutlineSystem
+@onready var camera: DclCamera3D = $Mount/CameraArm/Camera3D
+@onready var camera_collision_clamp: CameraCollisionClamp = $Mount/CameraCollisionClamp
+@onready var avatar_raycast: RayCast3D = $Mount/CameraArm/Camera3D/AvatarRaycast
+@onready var outline_system: OutlineSystem = $Mount/CameraArm/Camera3D/OutlineSystem
 @onready var direction: Vector3 = Vector3(0, 0, 0)
 @onready var avatar := $Avatar
 @onready var stuck_detector := $StuckDetector
@@ -128,29 +131,46 @@ func set_camera_mode(mode: Global.CameraMode, play_sound: bool = true):
 	camera.set_camera_mode(mode)
 
 	if mode == Global.CameraMode.THIRD_PERSON:
+		var targets := CameraRigHelpers.rig_targets(true)
 		var tween_out = create_tween()
 		tween_out.set_parallel(true)
 		(
 			tween_out
-			. tween_property(mount_camera, "spring_length", THIRD_PERSON_CAMERA.length(), 0.25)
+			. tween_property(mount_camera, "spring_length", targets.spring_length, 0.25)
 			. set_ease(Tween.EASE_IN_OUT)
 		)
-		# Apply X offset for over-shoulder view in third person
-		tween_out.tween_property(mount_camera, "position:x", THIRD_PERSON_CAMERA.x, 0.25).set_ease(
-			Tween.EASE_IN_OUT
+		# Apply X offset for over-shoulder view in third person. The offset lives
+		# on the collision clamp, which positions the camera below the arm so the
+		# spring-arm pivot stays centered on the player capsule and sweeps a
+		# sphere to the real (offset) camera position every physics frame.
+		(
+			tween_out
+			. tween_property(
+				camera_collision_clamp, "lateral_offset", targets.camera_offset_x, 0.25
+			)
+			. set_ease(Tween.EASE_IN_OUT)
 		)
 		avatar.set_hidden(false)
 		avatar.set_rotation(Vector3(0, rotation.y, 0))
 		if play_sound:
 			UiSounds.play_sound("ui_fade_out")
 	elif mode == Global.CameraMode.FIRST_PERSON:
+		var targets := CameraRigHelpers.rig_targets(false)
 		var tween_in = create_tween()
 		tween_in.set_parallel(true)
-		tween_in.tween_property(mount_camera, "spring_length", -.2, 0.25).set_ease(
-			Tween.EASE_IN_OUT
+		(
+			tween_in
+			. tween_property(mount_camera, "spring_length", targets.spring_length, 0.25)
+			. set_ease(Tween.EASE_IN_OUT)
 		)
 		# Remove X offset for centered view in first person
-		tween_in.tween_property(mount_camera, "position:x", 0.0, 0.25).set_ease(Tween.EASE_IN_OUT)
+		(
+			tween_in
+			. tween_property(
+				camera_collision_clamp, "lateral_offset", targets.camera_offset_x, 0.25
+			)
+			. set_ease(Tween.EASE_IN_OUT)
+		)
 		if camera.current:
 			avatar.set_hidden(true)
 		if play_sound:
@@ -273,6 +293,23 @@ func apply_look_delta(relative: Vector2) -> void:
 	clamp_camera_rotation()
 
 
+# Pure grounded-flag resolution, extracted for regression testing (#2732).
+# Grace is suppressed while jump is held AND during the jump cooldown — the
+# cooldown check is what keeps tap-jumps (released before the next tick reads
+# jump_held == false) from lingering grounded.
+static func resolve_is_grounded(
+	on_floor: bool, fall_elapsed: float, jump_held: bool, since_last_jump: float
+) -> bool:
+	return (
+		on_floor
+		or (
+			fall_elapsed < GROUNDED_GRACE_WINDOW
+			and not jump_held
+			and since_last_jump >= JUMP_COOLDOWN
+		)
+	)
+
+
 func _physics_process(dt: float) -> void:
 	# Sample scene-driven physics before gravity — force.y feeds effective_gravity below.
 	var scene_external_force: Vector3 = Global.scene_runner.get_active_external_force()
@@ -346,6 +383,9 @@ func _physics_process(dt: float) -> void:
 
 	var on_floor = is_on_floor() or position.y <= 0.0
 	var was_falling = avatar.fall
+	# Fall time up to this tick, captured before the reset below so the landing
+	# branch can still read it for the hard-landing check.
+	var fall_duration := time_falling
 
 	if !on_floor:
 		time_falling += dt
@@ -455,7 +495,7 @@ func _physics_process(dt: float) -> void:
 	else:
 		if not avatar.land:
 			avatar.land = true
-			if was_falling and hard_landing_cooldown > 0 and time_falling > 1.0:
+			if was_falling and hard_landing_cooldown > 0 and fall_duration > 1.0:
 				_hard_landing_timer = hard_landing_cooldown
 
 		velocity.y = 0
@@ -519,7 +559,11 @@ func _physics_process(dt: float) -> void:
 	# AnimationTree off the same numbers for both local and remote avatars.
 	avatar.jump_count = jump_count
 	avatar.glide_state = glide_state
-	avatar.is_grounded = on_floor
+	# Debounced ungrounding: see resolve_is_grounded. The jump-pad override
+	# below (combined_vy > 0.3) runs after this and still wins.
+	avatar.is_grounded = resolve_is_grounded(
+		on_floor, time_falling, Input.is_action_pressed("ia_jump"), _time_since_last_jump
+	)
 
 	_apply_scene_physics(dt, external_acceleration, scene_pending_impulses, on_floor)
 

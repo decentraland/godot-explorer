@@ -40,22 +40,6 @@ Label/colors/font_color = Color(0.164706, 0.164706, 0.164706, 1)
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_xewta"]
 
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_ep3jl"]
-
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_47ptg"]
-
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_c03rv"]
-
-[sub_resource type="Theme" id="Theme_eontw"]
-Label/font_sizes/font_size = 23
-
-[sub_resource type="LabelSettings" id="LabelSettings_m1jcl"]
-font = ExtResource("17_ewc0a")
-font_size = 30
-font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
-
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_blskf"]
-
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_47ptg"]
 bg_color = Color(0, 0, 0, 0.4)
 border_width_left = 1
@@ -76,6 +60,22 @@ line_spacing = -3.0
 font = ExtResource("23_c03rv")
 font_size = 26
 font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_ep3jl"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_47ptg"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_c03rv"]
+
+[sub_resource type="Theme" id="Theme_eontw"]
+Label/font_sizes/font_size = 23
+
+[sub_resource type="LabelSettings" id="LabelSettings_m1jcl"]
+font = ExtResource("17_ewc0a")
+font_size = 30
+font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_blskf"]
 
 [sub_resource type="Theme" id="Theme_3h20j"]
 Label/colors/font_color = Color(0.164706, 0.164706, 0.164706, 1)
@@ -321,6 +321,7 @@ theme_override_constants/separation = 40
 
 [node name="VBoxContainer_Gameplay" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections" unique_id=911633864]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 mouse_filter = 2
 theme = SubResource("Theme_5xlkc")
@@ -368,6 +369,83 @@ unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 0
 theme = ExtResource("12_sa1v7")
+
+[node name="Container_Camera" type="MarginContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Gameplay" unique_id=1854347]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/margin_left = 0
+theme_override_constants/margin_right = 0
+
+[node name="SectionCamera" type="MarginContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Camera" unique_id=899213898]
+layout_mode = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Camera/SectionCamera" unique_id=1315421628]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="SectionTittle_Camera" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Camera/SectionCamera/VBoxContainer" unique_id=1716650739 instance=ExtResource("15_h5vs5")]
+layout_mode = 2
+title = "CAMERA"
+
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Camera/SectionCamera/VBoxContainer" unique_id=307181499]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 24
+theme_override_styles/separator = SubResource("StyleBoxEmpty_xewta")
+
+[node name="DropdownList_CameraMode" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Camera/SectionCamera/VBoxContainer" unique_id=1973191162 instance=ExtResource("20_67hd5")]
+unique_name_in_owner = true
+layout_mode = 2
+max_visible_items = 2
+title = ""
+
+[node name="CameraModeWarning" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Camera/SectionCamera/VBoxContainer" unique_id=491620087]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="HSeparator5" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Camera/SectionCamera/VBoxContainer/CameraModeWarning" unique_id=1657068228]
+custom_minimum_size = Vector2(0, 28)
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 28
+theme_override_styles/separator = SubResource("StyleBoxEmpty_xewta")
+
+[node name="Panel_Camera" type="PanelContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Camera/SectionCamera/VBoxContainer/CameraModeWarning" unique_id=188998951]
+custom_minimum_size = Vector2(0, 30)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_47ptg")
+
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Camera/SectionCamera/VBoxContainer/CameraModeWarning/Panel_Camera" unique_id=445547336]
+layout_mode = 2
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 16
+
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Camera/SectionCamera/VBoxContainer/CameraModeWarning/Panel_Camera/MarginContainer" unique_id=1608477618]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="TextureRect" type="TextureRect" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Camera/SectionCamera/VBoxContainer/CameraModeWarning/Panel_Camera/MarginContainer/HBoxContainer" unique_id=900220253]
+custom_minimum_size = Vector2(54, 54)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+texture = ExtResource("22_ewc0a")
+expand_mode = 1
+
+[node name="Label_Description" type="Label" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Camera/SectionCamera/VBoxContainer/CameraModeWarning/Panel_Camera/MarginContainer/HBoxContainer" unique_id=352132082]
+custom_minimum_size = Vector2(0, 64)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.7, 0.7, 0.7, 1)
+theme_override_fonts/font = ExtResource("18_xewta")
+theme_override_font_sizes/font_size = 12
+text = "The camera mode is set by the creator. It can't be changed."
+label_settings = SubResource("LabelSettings_ep3jl")
+vertical_alignment = 1
+autowrap_mode = 2
+text_overrun_behavior = 4
 
 [node name="Container_Interface" type="MarginContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Gameplay" unique_id=1096616038]
 unique_name_in_owner = true
@@ -885,31 +963,6 @@ vertical_alignment = 1
 autowrap_mode = 2
 text_overrun_behavior = 4
 
-[node name="HSeparator3" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Graphics/SectionVisual/VBoxContainer" unique_id=1500984168]
-layout_mode = 2
-mouse_filter = 2
-theme_override_constants/separation = 28
-theme_override_styles/separator = SubResource("StyleBoxEmpty_xewta")
-
-[node name="PreviewViewportContainer" type="SubViewportContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Graphics/SectionVisual/VBoxContainer" unique_id=1269517432]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 351)
-layout_mode = 2
-size_flags_vertical = 4
-mouse_filter = 2
-stretch = true
-
-[node name="SubViewport" type="SubViewport" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Graphics/SectionVisual/VBoxContainer/PreviewViewportContainer" unique_id=1504030425]
-handle_input_locally = false
-size = Vector2i(480, 351)
-render_target_clear_mode = 2
-render_target_update_mode = 0
-
-[node name="PreviewCamera3D" type="Camera3D" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Graphics/SectionVisual/VBoxContainer/PreviewViewportContainer/SubViewport" unique_id=2101831196]
-unique_name_in_owner = true
-cull_mask = 524287
-current = true
-
 [node name="HSeparator4" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Graphics/SectionVisual/VBoxContainer" unique_id=1479196808]
 layout_mode = 2
 theme_override_constants/separation = 32
@@ -1050,6 +1103,25 @@ layout_mode = 2
 size_flags_vertical = 0
 theme = ExtResource("12_sa1v7")
 
+[node name="ShowInteractableArea" type="HBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5" unique_id=146097445]
+layout_mode = 2
+theme_override_constants/separation = 32
+
+[node name="Label_Title" type="Label" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/ShowInteractableArea" unique_id=146097446]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_fonts/font = ExtResource("16_blskf")
+theme_override_font_sizes/font_size = 14
+text = "Show Interactable Area"
+label_settings = ExtResource("17_67hd5")
+
+[node name="CheckButton_ShowInteractableArea" type="CheckButton" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/ShowInteractableArea" unique_id=146097447]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 0
+theme = ExtResource("12_sa1v7")
+
 [node name="SceneProcessingPaused" type="HBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5" unique_id=16607184]
 layout_mode = 2
 theme_override_constants/separation = 32
@@ -1068,20 +1140,21 @@ layout_mode = 2
 size_flags_vertical = 0
 theme = ExtResource("12_sa1v7")
 
-[node name="LiveKitDebug" type="HBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5" unique_id=520005061]
+[node name="MultiplayerDebug" type="HBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5" unique_id=520005061]
 layout_mode = 2
 theme_override_constants/separation = 32
 
-[node name="Label_Title" type="Label" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/LiveKitDebug" unique_id=1801219375]
+[node name="Label_Title" type="Label" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/MultiplayerDebug" unique_id=1801219375]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_fonts/font = ExtResource("16_blskf")
 theme_override_font_sizes/font_size = 14
-text = "LiveKit Debug"
+text = "Multiplayer Debug"
 label_settings = ExtResource("17_67hd5")
 
-[node name="CheckButton_LiveKitDebug" type="CheckButton" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/LiveKitDebug" unique_id=2142717050]
+[node name="CheckButton_MultiplayerDebug" type="CheckButton" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/MultiplayerDebug" unique_id=2142717050]
+unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 0
 theme = ExtResource("12_sa1v7")
@@ -1142,6 +1215,21 @@ mouse_filter = 2
 theme_override_constants/separation = 74
 theme_override_styles/separator = SubResource("StyleBoxEmpty_ewc0a")
 
+[node name="Button_ShowRewardModal" type="Button" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Advanced" unique_id=771122335]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(300, 96)
+layout_mode = 2
+focus_mode = 0
+theme = ExtResource("12_sa1v7")
+theme_type_variation = &"SecondaryOutlinedButton"
+text = "Show Reward Modal (MobilePet)"
+
+[node name="HSeparator_RewardModal" type="HSeparator" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Advanced" unique_id=771122336]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 74
+theme_override_styles/separator = SubResource("StyleBoxEmpty_ewc0a")
+
 [node name="Button_OpenUserData" type="Button" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Advanced" unique_id=1475551528]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(300, 96)
@@ -1168,7 +1256,6 @@ text = "RETURN TO DISCOVER"
 
 [node name="VBoxContainer_Account" type="VBoxContainer" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections" unique_id=1178397413]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
 size_flags_vertical = 3
 mouse_filter = 2
@@ -1177,7 +1264,6 @@ theme_type_variation = &"2"
 theme_override_constants/separation = 72
 
 [node name="GuestUpgradeCard" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Account" unique_id=1116982919 instance=ExtResource("14_sbgvv")]
-visible = false
 layout_mode = 2
 theme_override_constants/margin_left = 0
 theme_override_constants/margin_right = 0
@@ -1364,7 +1450,7 @@ theme_override_constants/h_separation = 16
 theme_override_constants/icon_max_width = 32
 theme_override_fonts/font = ExtResource("23_c03rv")
 theme_override_font_sizes/font_size = 30
-text = "Marketplace"
+text = "Shop"
 icon = ExtResource("24_jf4mt")
 flat = true
 alignment = 0
@@ -1420,10 +1506,12 @@ font = ExtResource("25_jf4mt")
 [connection signal="value_changed" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Audio/VBoxContainer/MicAmplification" to="." method="_on_h_slider_mic_amplification_value_changed"]
 [connection signal="toggled" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/SceneLogsEnabled/CheckButton_SceneLogsEnabled" to="." method="_on_check_button_scene_logs_enabled_toggled"]
 [connection signal="toggled" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/RaycastDebugger/CheckButton_RaycastDebugger" to="." method="_on_check_button_raycast_debugger_toggled"]
+[connection signal="toggled" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/ShowInteractableArea/CheckButton_ShowInteractableArea" to="." method="_on_check_button_show_interactable_area_toggled"]
 [connection signal="toggled" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/SceneProcessingPaused/CheckButton_SceneProcessingPaused" to="." method="_on_check_button_scene_processing_paused_toggled"]
-[connection signal="toggled" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/LiveKitDebug/CheckButton_LiveKitDebug" to="." method="_on_check_button_livekit_debug_toggled"]
+[connection signal="toggled" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/MultiplayerDebug/CheckButton_MultiplayerDebug" to="." method="_on_check_button_multiplayer_debug_toggled"]
 [connection signal="item_selected" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Advanced/DropdownList_Realm" to="." method="_on_dropdown_list_realm_item_selected"]
 [connection signal="pressed" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Advanced/Button_TestNotification" to="." method="_on_button_test_notification_pressed"]
+[connection signal="pressed" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Advanced/Button_ShowRewardModal" to="." method="_on_button_show_reward_modal_pressed"]
 [connection signal="pressed" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Advanced/Button_OpenUserData" to="." method="_on_button_open_user_data_pressed"]
 [connection signal="pressed" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Advanced/Button_ReturnToDiscover" to="." method="_on_button_return_to_discover_pressed"]
 [connection signal="pressed" from="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Account/SectionReport/VBoxContainer/VBoxContainer/Button_ReportBug" to="." method="_on_button_report_bug_pressed"]

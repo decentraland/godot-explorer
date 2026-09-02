@@ -95,6 +95,8 @@ func apply(resolved: Dictionary) -> void:
 	_label.modulate = resolved.fill_color
 	_label.outline_modulate = resolved.outline_color
 	_label.font_size = resolved.godot_font_size
+	# Per-face line-spacing so the line pitch matches Unity after the glyph-size shrink.
+	_label.line_spacing = TextLayout.line_spacing_px(_font, resolved.godot_font_size)
 	# Prefer the fork's float outline (smooth, no integer stepping); fall back to the integer
 	# outline_size on stock.
 	var ow: float = resolved.get("outline_size_f", float(resolved.outline_size))
@@ -114,6 +116,9 @@ func apply(resolved: Dictionary) -> void:
 	_label.position = Vector3(
 		resolved.width_meter * resolved.x_pos, resolved.height_meter * resolved.y_pos, 0.0
 	)
+	# Match Unity TMP's first-line placement (Label3D hangs from the ascent line, TMP anchors
+	# via the rect/pivot slightly lower). Per-face offset. See TextLayout.anchor_offset / #2371.
+	_label.position.y += TextLayout.anchor_offset(_font, resolved.godot_font_size, resolved.v_align)
 
 
 # Trim each line's edge whitespace ourselves (Label3D's own trimming is disabled so

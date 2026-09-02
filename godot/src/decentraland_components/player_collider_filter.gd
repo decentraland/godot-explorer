@@ -63,8 +63,13 @@ func _is_filter_still_needed(_collider: Node) -> bool:
 
 
 func _on_tree_changed():
+	# During scene teardown this node can outlive its parent — tree_changed
+	# still fires after removal, and get_parent() is null then.
+	var parent := self.get_parent()
+	if parent == null:
+		return
 	var colliders: Array[Node] = []
-	_get_collider_tree(self.get_parent(), colliders)
+	_get_collider_tree(parent, colliders)
 	_update_colliders(colliders)
 
 

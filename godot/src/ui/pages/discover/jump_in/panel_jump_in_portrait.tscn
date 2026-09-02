@@ -64,15 +64,15 @@ font = ExtResource("5_i8f38")
 font_size = 26
 font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_db46w"]
-bg_color = Color(0.20784314, 0.03137255, 0.32941177, 0.5019608)
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_u7byp"]
+bg_color = Color(0.2901961, 0.12941177, 0.39607844, 1)
 corner_radius_top_left = 17
 corner_radius_top_right = 17
 corner_radius_bottom_right = 17
 corner_radius_bottom_left = 17
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_u7byp"]
-bg_color = Color(0, 0, 0, 1)
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_db46w"]
+bg_color = Color(0.20784314, 0.03137255, 0.32941177, 0.5019608)
 corner_radius_top_left = 17
 corner_radius_top_right = 17
 corner_radius_bottom_right = 17
@@ -318,6 +318,34 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_6ifc4")
 custom_minimum_size = Vector2(0, 368)
 layout_mode = 2
 
+[node name="Panel_Container_Image" type="Panel" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/Control" unique_id=493842471]
+unique_name_in_owner = true
+clip_children = 2
+custom_minimum_size = Vector2(0, 368)
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_u7byp")
+
+[node name="TextureRect_Image" type="TextureRect" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/Control/Panel_Container_Image" unique_id=309673259]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(50, 0)
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_vertical = 3
+size_flags_stretch_ratio = 210.0
+theme = ExtResource("1_fg6xg")
+expand_mode = 1
+stretch_mode = 6
+
 [node name="Panel_Container_NoImage" type="PanelContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/Control" unique_id=736941098]
 unique_name_in_owner = true
 clip_children = 2
@@ -341,31 +369,6 @@ theme = ExtResource("1_fg6xg")
 texture = ExtResource("7_7t5hv")
 expand_mode = 3
 stretch_mode = 5
-
-[node name="Panel_Container_Image" type="Panel" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/Control" unique_id=493842471]
-unique_name_in_owner = true
-clip_children = 2
-custom_minimum_size = Vector2(0, 368)
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_u7byp")
-
-[node name="TextureRect_Image" type="TextureRect" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/Control/Panel_Container_Image" unique_id=309673259]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(50, 0)
-layout_mode = 0
-offset_right = 624.0
-offset_bottom = 368.0
-size_flags_vertical = 3
-size_flags_stretch_ratio = 210.0
-theme = ExtResource("1_fg6xg")
-expand_mode = 1
-stretch_mode = 6
 
 [node name="PanelContainer2" type="PanelContainer" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/Control" unique_id=319145159]
 layout_mode = 1

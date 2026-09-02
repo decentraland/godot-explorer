@@ -1,6 +1,5 @@
 use directories::ProjectDirs;
 use flate2::read::GzDecoder;
-use reqwest::blocking::Client;
 use std::env;
 use std::fs::{self, File};
 use std::io::{self};
@@ -9,7 +8,7 @@ use tar::Archive;
 use zip::ZipArchive;
 
 use crate::consts::*;
-use crate::download_file::download_file;
+use crate::download_file::{download_file, http_get_bytes};
 use crate::export::prepare_templates;
 use crate::helpers::BinPaths;
 use crate::platform::{
@@ -34,15 +33,20 @@ fn create_directory_all(path: &Path) -> io::Result<()> {
 // Resolve @dcl/protocol from the npm `next` dist-tag (see PROTOCOL_NPM_DIST_TAG),
 // unless PROTOCOL_FIXED_VERSION_URL pins a specific tarball.
 //
-// Pinned for the 1.11.0 RC: tracking `next` re-resolves on every CI run, so an
+// Pinning rationale: tracking `next` re-resolves on every CI run, so an
 // upstream protocol publish can break or change builds with no repo change
 // (e.g. PBBillboard.target_entity landed mid-RC and broke the billboard itest).
-// Bump the pin deliberately — grab the new tarball URL from
-// `https://registry.npmjs.org/@dcl/protocol/next` (dist.tarball), update any
-// affected generated-struct usages, and set it here. Reset to `None` to track
-// @next again after the release is cut.
+// Bump the pin deliberately and update any affected generated-struct usages.
+//
+// Pinned to the npm `next` release built from protocol `main` commit 0ff6038
+// (PR #449 merged) — ships the decentraland/pulse protos + options.proto
+// (quantization FieldOptions) for the Pulse transport, plus PR #426
+// TouchscreenInputControls/UiInputBinding that godot main's components need.
+// It does NOT carry the `experimental`-only rfc4 fields (PlayerEmote.is_stopping
+// & co., Chat.forwarded_from) — those are re-added by the build-time patch in
+// lib/build.rs (`patched_rfc4_comms_proto`).
 const PROTOCOL_FIXED_VERSION_URL: Option<&str> = Some(
-    "https://registry.npmjs.org/@dcl/protocol/-/protocol-1.0.0-28974105118.commit-a598406.tgz",
+    "https://registry.npmjs.org/@dcl/protocol/-/protocol-1.0.0-30827383791.commit-0ff6038.tgz",
 );
 const PROTOCOL_NPM_DIST_TAG: &str = "next";
 
@@ -52,7 +56,10 @@ fn get_protocol_url() -> Result<String, anyhow::Error> {
     }
 
     let manifest_url = format!("https://registry.npmjs.org/@dcl/protocol/{PROTOCOL_NPM_DIST_TAG}");
-    let manifest: serde_json::Value = Client::new().get(&manifest_url).send()?.json()?;
+    let manifest: serde_json::Value = serde_json::from_slice(&http_get_bytes(
+        &manifest_url,
+        "Fetch of the @dcl/protocol npm manifest",
+    )?)?;
     manifest
         .get("dist")
         .and_then(|d| d.get("tarball"))
@@ -73,9 +80,7 @@ pub fn install_dcl_protocol() -> Result<(), anyhow::Error> {
 
     let spinner = create_spinner("Downloading protocol files...");
 
-    let client = Client::new();
-    let response = client.get(protocol_url).send()?;
-    let tarball = response.bytes()?;
+    let tarball = http_get_bytes(&protocol_url, "Download of the @dcl/protocol tarball")?;
 
     let decoder = GzDecoder::new(&tarball[..]);
     let mut archive = Archive::new(decoder);

@@ -29,7 +29,9 @@ run/main_scene="res://src/main.tscn"
 run/main_loop_type="ProjectMainLoop"
 config/features=PackedStringArray("4.6")
 boot_splash/bg_color=Color(0.411765, 0.121569, 0.662745, 1)
-boot_splash/image="uid://de6dww6t0a7v"
+boot_splash/stretch_mode=0
+boot_splash/image="res://assets/ui/splash-isotype.png"
+boot_splash/show_image=true
 config/icon="res://decentraland_logo_squared.png"
 boot_splash/minimum_display_time=300
 
@@ -41,6 +43,7 @@ general/ios/session_category=3
 
 UiSounds="*res://src/helpers_components/ui_sounds.gd"
 Global="*res://src/global.gd"
+SplashOverlay="*res://src/ui/splash_overlay/splash_overlay.gd"
 NotificationsManager="*res://src/notifications_manager.gd"
 ConnectionQualityMonitor="*res://src/connection_quality_monitor.gd"
 EmptyParcelProps="*res://assets/empty-scenes/empty_parcel_props.tscn"
@@ -50,6 +53,9 @@ ImpostorCapturer="*res://src/decentraland_components/avatar/impostor/impostor_ca
 AvatarLODCoordinator="*res://src/decentraland_components/avatar/impostor/avatar_lod_coordinator.gd"
 DebugWs="*res://src/tool/debug_server/debug_ws_server.gd"
 DevLocalhostRelay="*res://src/tool/dev_localhost_relay.gd"
+GltfLoadingCoordinator="*res://src/decentraland_components/gltf_loading_coordinator.gd"
+LightSourceManager="*res://src/decentraland_components/light_source_manager.gd"
+TouchFeedback="*res://src/ui/touch_feedback/touch_feedback_overlay.gd"
 
 [debug]
 
@@ -246,6 +252,7 @@ environment/ssao/quality=0
 environment/ssil/quality=0
 environment/glow/upscale_mode=0
 environment/subsurface_scattering/subsurface_scattering_quality=0
+environment/defaults/default_clear_color=Color(0.411765, 0.121569, 0.662745, 1)
 lights_and_shadows/positional_shadow/atlas_size=2048
 lights_and_shadows/positional_shadow/atlas_quadrant_3_subdiv=3
 environment/screen_space_reflection/roughness_quality=0

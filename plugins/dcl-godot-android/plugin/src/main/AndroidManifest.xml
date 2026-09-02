@@ -13,6 +13,25 @@
 
     <application>
         <!--
+        Predictive back opt-out: targetSdk 36 stops calling onBackPressed(), which Godot 4.6.2
+        still relies on for NOTIFICATION_WM_GO_BACK_REQUEST. Stops working at targetSdk 37.
+        -->
+        <activity
+            android:name="com.godot.game.GodotApp"
+            android:enableOnBackInvokedCallback="false" />
+
+        <!--
+        Google Analytics for Firebase deferred deep linking (issue #2670). Without this
+        flag GA4F never writes the deep link, so the ad-group destination cannot be read
+        on first launch. It is the only path that carries a campaign token for Google Ads
+        traffic: those installs arrive with a bare `gclid` in the Play referrer and nothing
+        of ours.
+        -->
+        <meta-data
+            android:name="google_analytics_deferred_deep_link_enabled"
+            android:value="true"/>
+
+        <!--
         Plugin metadata:
 
         - In the `android:name` attribute, the `org.godotengine.plugin.v2` prefix

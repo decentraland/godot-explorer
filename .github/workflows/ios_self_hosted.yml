@@ -35,15 +35,22 @@ name: 🍏 iOS (self-hosted)
 # this workflow. The `if:` gates are correctness/convenience only. The runner/VM setup scripts are
 # kept LOCAL (outside this repo) and provision the `dcl-ios`-labelled runner this workflow targets.
 
+# ⛔ DISABLED: the self-hosted `dcl-ios` Mac has been shut down, so the automatic triggers are
+# commented out — otherwise every push/PR would queue a job against a runner that never comes
+# online. iOS builds are served entirely by mobile_distribute.yml (WarpBuild). `workflow_dispatch`
+# is kept so the workflow can still be run by hand if the Mac is ever brought back.
+# To re-enable: restore the triggers below AND flip IOS_SELF_HOSTED_ENABLED back to 'true' in
+# mobile_distribute.yml (its `ios-resolve` job otherwise skips waiting for this workflow's export).
 on:
-  push:
-    branches:
-      - main
-      - release
-  pull_request:
-    # `labeled` is included so adding the `build` label re-triggers this workflow; combined with
-    # the `if` skip + concurrency below, that cancels any per-push run already queued on the Mac.
-    types: [opened, synchronize, reopened, labeled]
+  workflow_dispatch:
+  # push:
+  #   branches:
+  #     - main
+  #     - release
+  # pull_request:
+  #   # `labeled` is included so adding the `build` label re-triggers this workflow; combined with
+  #   # the `if` skip + concurrency below, that cancels any per-push run already queued on the Mac.
+  #   types: [opened, synchronize, reopened, labeled]
 
 permissions:
   contents: read
@@ -194,8 +201,14 @@ jobs:
         timeout-minutes: 15
         run: cargo run -- install --targets ios
 
+      # Pass the PR head branch so release* PRs bake --prod (on PR events github.ref is
+      # refs/pull/N/merge and would always map to --staging). Empty on pushes → the action
+      # falls back to github.ref, unchanged behavior. This matters because mobile_distribute's
+      # ios-resolve REUSES this run's R2 export — its baked env must match the distribution's.
       - name: Set prod flag
         uses: ./.github/actions/set-prod-flag
+        with:
+          ref: ${{ github.head_ref }}
 
       # Build the iOS dylib against the iOS 26 SDK (matches ios_r2_artifact.yml). On a WarpBuild
       # macOS image Xcode lives at /Applications/Xcode_26*.app; on a personal Mac it's the default

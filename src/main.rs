@@ -30,7 +30,6 @@ mod log_server;
 mod path;
 mod platform;
 mod run;
-mod sentry_metrics;
 mod tests;
 mod ui;
 mod update_snapshots;
@@ -117,6 +116,7 @@ fn main() -> Result<(), anyhow::Error> {
         .subcommand(Command::new("docs"))
         .subcommand(Command::new("doctor").about("Check system health and dependencies"))
         .subcommand(Command::new("check-gdscript").about("Validate all GDScript files for syntax errors"))
+        .subcommand(Command::new("test-avatar").about("Run headless avatar animation regression tests"))
         .subcommand(Command::new("version-check").about("Check version consistency across files"))
         .subcommand(
             Command::new("fi-benchmark")
@@ -420,36 +420,6 @@ fn main() -> Result<(), anyhow::Error> {
                         .help("Device-facing bind address (default: 0.0.0.0)")
                         .takes_value(true)
                         .default_value("0.0.0.0"),
-                ),
-        ).subcommand(
-            Command::new("get-metrics")
-                .about("(TEMPORARY) Get Sentry metrics for godot-explorer")
-                .arg(
-                    Arg::new("from")
-                        .help("Start date (YYYY-MM-DD)")
-                        .required(true)
-                        .index(1),
-                )
-                .arg(
-                    Arg::new("to")
-                        .help("End date (YYYY-MM-DD, inclusive)")
-                        .required(true)
-                        .index(2),
-                ),
-        ).subcommand(
-            Command::new("push-metrics")
-                .about("(TEMPORARY) Push Sentry metrics to Slack")
-                .arg(
-                    Arg::new("from")
-                        .help("Start date (YYYY-MM-DD)")
-                        .required(true)
-                        .index(1),
-                )
-                .arg(
-                    Arg::new("to")
-                        .help("End date (YYYY-MM-DD, inclusive)")
-                        .required(true)
-                        .index(2),
                 ),
         ).subcommand(
             Command::new("update-ios-xcode")
@@ -1020,6 +990,7 @@ fn main() -> Result<(), anyhow::Error> {
         ),
         ("doctor", _) => doctor::run_doctor(),
         ("check-gdscript", _) => check_gdscript::check_gdscript(),
+        ("test-avatar", _) => check_gdscript::test_avatar(),
         ("update-ios-xcode", sm) => ios_xcode::update_ios_xcode(
             sm.is_present("godot"),
             sm.is_present("plugin"),
@@ -1038,16 +1009,6 @@ fn main() -> Result<(), anyhow::Error> {
         ),
         ("version-check", _) => version_check::run_version_check(),
         ("explorer-version", sm) => version::get_godot_explorer_version(sm.is_present("verbose")),
-        ("get-metrics", sm) => {
-            let from = sm.value_of("from").unwrap();
-            let to = sm.value_of("to").unwrap();
-            sentry_metrics::get_metrics(from, to)
-        }
-        ("push-metrics", sm) => {
-            let from = sm.value_of("from").unwrap();
-            let to = sm.value_of("to").unwrap();
-            sentry_metrics::push_metrics(from, to)
-        }
         ("fi-benchmark", sm) => fi_benchmark::run_fi_benchmark(sm.get_flag("headless")),
         ("avatar-impostor-benchmark", sm) => {
             let target: &str = sm

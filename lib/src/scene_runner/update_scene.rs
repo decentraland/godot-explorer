@@ -76,6 +76,7 @@ fn state_name(state: &super::scene::SceneUpdateState) -> &'static str {
         S::TransformAndParent => "TransformAndParent",
         S::VisibilityComponent => "VisibilityComponent",
         S::MeshRenderer => "MeshRenderer",
+        S::LightSource => "LightSource",
         S::ScenePointerEvents => "ScenePointerEvents",
         S::Material => "Material",
         S::TextShape => "TextShape",
@@ -83,6 +84,8 @@ fn state_name(state: &super::scene::SceneUpdateState) -> &'static str {
         S::MeshCollider => "MeshCollider",
         S::GltfContainer => "GltfContainer",
         S::SyncGltfContainer => "SyncGltfContainer",
+        S::AssetLoad => "AssetLoad",
+        S::SyncAssetLoad => "SyncAssetLoad",
         S::GltfNodeModifiers => "GltfNodeModifiers",
         S::NftShape => "NftShape",
         S::Animator => "Animator",
@@ -99,10 +102,12 @@ fn state_name(state: &super::scene::SceneUpdateState) -> &'static str {
         S::PhysicsCombinedImpulse => "PhysicsCombinedImpulse",
         S::CameraModeArea => "CameraModeArea",
         S::InputModifier => "InputModifier",
+        S::TouchScreenControls => "TouchScreenControls",
         S::SkyboxTime => "SkyboxTime",
         S::TriggerArea => "TriggerArea",
         S::VirtualCameras => "VirtualCameras",
         S::AudioSource => "AudioSource",
+        S::ParticleSystem => "ParticleSystem",
         S::ProcessRpcs => "ProcessRpcs",
         S::ComputeCrdtState => "ComputeCrdtState",
         S::SendToThread => "SendToThread",
@@ -113,6 +118,7 @@ fn state_name(state: &super::scene::SceneUpdateState) -> &'static str {
 use super::{
     components::{
         animator::update_animator,
+        asset_load::{sync_asset_load_loading_state, update_asset_load},
         audio_source::update_audio_source,
         avatar_attach::update_avatar_attach,
         avatar_data::update_avatar_scene_updates,
@@ -126,16 +132,19 @@ use super::{
             update_gltf_node_modifiers, update_modifier_textures, update_modifier_video_textures,
         },
         input_modifier::update_input_modifier,
+        light_source::update_light_source,
         material::{update_material, update_video_material_textures},
         mesh_collider::update_mesh_collider,
         mesh_renderer::update_mesh_renderer,
         nft_shape::update_nft_shape,
+        particle_system::update_particle_system,
         physics_combined::{update_physics_combined_force, update_physics_combined_impulse},
         pointer_events::update_scene_pointer_events,
         raycast::update_raycasts,
         realm_info::sync_realm_info,
         skybox_time::update_skybox_time,
         text_shape::update_text_shape,
+        touch_screen_controls::update_touch_screen_controls,
         transform_and_parent::update_transform_and_parent,
         trigger_area::update_trigger_area,
         tween::update_tween,
@@ -152,7 +161,8 @@ use crate::{
     dcl::{
         components::{
             proto_components::sdk::components::{
-                PbCameraMode, PbEngineInfo, PbMainCamera, PbPointerLock, PbUiCanvasInformation,
+                PbCameraMode, PbEngineInfo, PbMainCamera, PbPointerLock, PbPrimaryPointerInfo,
+                PbUiCanvasInformation,
             },
             transform_and_parent::DclTransformAndParent,
             SceneComponentId, SceneEntityId,
@@ -179,6 +189,7 @@ pub fn _process_scene(
     camera_global_transform: &Transform3D,
     player_global_transform: &Transform3D,
     camera_mode: i32,
+    primary_pointer_info: &Option<PbPrimaryPointerInfo>,
     console: Callable,
     current_parcel_scene_id: &SceneId,
     ref_time: &Instant,
@@ -389,6 +400,9 @@ pub fn _process_scene(
                 SceneUpdateState::MeshRenderer => {
                     !update_mesh_renderer(scene, crdt_state, ref_time, effective_end_time_us)
                 }
+                SceneUpdateState::LightSource => {
+                    !update_light_source(scene, crdt_state, ref_time, effective_end_time_us)
+                }
                 SceneUpdateState::ScenePointerEvents => {
                     update_scene_pointer_events(scene, crdt_state);
                     false
@@ -417,6 +431,16 @@ pub fn _process_scene(
                 SceneUpdateState::SyncGltfContainer => {
                     !sync_gltf_loading_state(scene, crdt_state, ref_time, effective_end_time_us)
                 }
+                SceneUpdateState::AssetLoad => {
+                    update_asset_load(scene, crdt_state);
+                    false
+                }
+                SceneUpdateState::SyncAssetLoad => !sync_asset_load_loading_state(
+                    scene,
+                    crdt_state,
+                    ref_time,
+                    effective_end_time_us,
+                ),
                 SceneUpdateState::GltfNodeModifiers => {
                     tracing::debug!("Entering GltfNodeModifiers state");
                     let still_processing = !update_gltf_node_modifiers(
@@ -509,6 +533,10 @@ pub fn _process_scene(
                     update_input_modifier(scene, crdt_state, current_parcel_scene_id);
                     false
                 }
+                SceneUpdateState::TouchScreenControls => {
+                    update_touch_screen_controls(scene, crdt_state, current_parcel_scene_id);
+                    false
+                }
                 SceneUpdateState::SkyboxTime => {
                     update_skybox_time(scene, crdt_state, current_parcel_scene_id);
                     false
@@ -528,6 +556,10 @@ pub fn _process_scene(
                 }
                 SceneUpdateState::AudioSource => {
                     update_audio_source(scene, crdt_state, current_parcel_scene_id);
+                    false
+                }
+                SceneUpdateState::ParticleSystem => {
+                    update_particle_system(scene, crdt_state, current_parcel_scene_id);
                     false
                 }
                 SceneUpdateState::SceneUi => {
@@ -611,6 +643,20 @@ pub fn _process_scene(
                         let pointer_lock_component = PbPointerLock { is_pointer_locked };
                         SceneCrdtStateProtoComponents::get_pointer_lock_mut(crdt_state)
                             .put(SceneEntityId::CAMERA, Some(pointer_lock_component));
+                    }
+
+                    // Set PrimaryPointerInfo on the RootEntity (issue #2411). Provides a
+                    // valid world_ray_direction so scenes feeding it into serialized
+                    // components (e.g. Raycast) don't crash on an undefined vector.
+                    if let Some(info) = primary_pointer_info {
+                        let current =
+                            SceneCrdtStateProtoComponents::get_primary_pointer_info(crdt_state)
+                                .get(&SceneEntityId::ROOT)
+                                .and_then(|v| v.value.as_ref());
+                        if current != Some(info) {
+                            SceneCrdtStateProtoComponents::get_primary_pointer_info_mut(crdt_state)
+                                .put(SceneEntityId::ROOT, Some(info.clone()));
+                        }
                     }
 
                     // Process pointer events

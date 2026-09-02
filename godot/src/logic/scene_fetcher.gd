@@ -13,6 +13,11 @@ const ADAPTATION_LAYER_URL: String = "https://renderer-artifacts.decentraland.or
 const FIXED_LOCAL_ADAPTATION_LAYER: String = ""
 const INVALID_PARCEL := Vector2i(-1000, -1000)
 
+## How long a deleted model keeps swallowing change events for its own path.
+## Slightly above the preview server's 800ms debounce, so the trailing event a
+## delete emits lands inside the window while a human re-creating a file does not.
+const REMOVED_MODEL_GRACE_MS := 1500
+
 
 class SceneItem:
 	extends RefCounted
@@ -89,6 +94,15 @@ var _pending_empty_parcel_spawn: Vector2i = INVALID_PARCEL
 # Preview WebSocket for hot reload
 var _preview_ws := PreviewWebSocket.new()
 
+# Models dropped by an UMT_REMOVE, as src -> Time.get_ticks_msec().
+#
+# Deleting a file makes the server emit *both* an immediate UMT_REMOVE and, up to
+# one debounce window later, an UMT_CHANGE for the same (now missing) path. Both
+# arrive as "change event with no mapping entry", which is also what a re-created
+# file looks like — so without this the paired event is mistaken for a recovery
+# and triggers a pointless full reload right after every delete.
+var _recently_removed_models: Dictionary = {}
+
 
 func get_preview_ws() -> PreviewWebSocket:
 	return _preview_ws
@@ -99,6 +113,7 @@ func _ready():
 
 	add_child(_preview_ws)
 	_preview_ws.scene_update.connect(_on_preview_scene_update)
+	_preview_ws.model_update.connect(async_on_preview_model_update)
 
 	# Initialize wall manager and base floor manager only for floating islands mode
 	if is_using_floating_islands():
@@ -189,6 +204,15 @@ func get_scene_data(coord: Vector2i) -> SceneItem:
 		return null
 
 	return loaded_scenes.get(scene_entity_id)
+
+
+## Returns the scene entity definition covering the given parcel, or null when
+## the coordinator has not (yet) mapped that parcel to a scene.
+func get_scene_definition_at(coord: Vector2i) -> DclSceneEntityDefinition:
+	var scene_entity_id := scene_entity_coordinator.get_scene_entity_id(coord)
+	if scene_entity_id.is_empty():
+		return null
+	return scene_entity_coordinator.get_scene_definition(scene_entity_id)
 
 
 func get_scene_data_by_scene_id(scene_id: int) -> SceneItem:
@@ -302,6 +326,7 @@ func _is_there_any_new_scene_to_load() -> bool:
 func _async_on_desired_scene_changed():
 	var desired_scenes = scene_entity_coordinator.get_desired_scenes()
 	var loadable_scenes = desired_scenes.get("loadable_scenes", [])
+	Global.scene_runner.loading_mark_discovery()
 
 	_scene_changed_counter += 1
 	var counter_this_call := _scene_changed_counter
@@ -619,10 +644,42 @@ func _request_regenerate_floating_islands() -> void:
 	_regenerate_floating_islands.call_deferred()
 
 
+## Returns true when the single loaded world / local-dev scene opts out of the
+## auto-generated landscape terrain via scene.json `landscapeTerrain: false`.
+## Genesis City always ignores the flag, and multi-scene setups are deferred
+## (terrain stays on) to match Unity Explorer's feature-parity behavior.
+func _should_disable_landscape_terrain() -> bool:
+	if Global.realm == null:
+		return false
+	if Realm.is_genesis_city(Global.realm.realm_name):
+		return false
+
+	var single_scene: SceneItem = null
+	for scene_id in loaded_scenes.keys():
+		var scene: SceneItem = loaded_scenes[scene_id]
+		if scene.is_global:
+			continue
+		if single_scene != null:
+			return false
+		single_scene = scene
+
+	if single_scene == null or single_scene.scene_entity_definition == null:
+		return false
+	return not single_scene.scene_entity_definition.is_landscape_terrain_enabled()
+
+
 func _regenerate_floating_islands() -> void:
 	_regen_scheduled = false
 	# Guard against overlapping generation
 	if islands_manager == null:
+		return
+
+	# Honor scene.json `landscapeTerrain: false`: skip terrain for opted-out single-scene
+	# worlds. Never starts the floating-islands loading phase, so no "terrain loaded" event
+	# fires and the loading session treats it as skipped (reaches 100%).
+	if _should_disable_landscape_terrain():
+		_clear_floating_islands_state()
+		last_scene_group_hash = ""
 		return
 
 	# Collect parcels from ALL loaded scenes (not just player's current scene)
@@ -908,7 +965,9 @@ func async_load_scene(
 	if scene_entity_definition.is_sdk7():
 		var script_path := scene_entity_definition.get_main_js_path()
 		script_promise = Global.content_provider.fetch_file(script_path, content_mapping)
-		local_main_js_path = "user://content/" + scene_entity_definition.get_main_js_hash()
+		local_main_js_path = Global.content_provider.get_cache_file_path(
+			scene_entity_definition.get_main_js_hash()
+		)
 	else:
 		if (
 			not FIXED_LOCAL_ADAPTATION_LAYER.is_empty()
@@ -943,7 +1002,7 @@ func async_load_scene(
 	var main_crdt_file_hash := scene_entity_definition.get_main_crdt_hash()
 	var local_main_crdt_path: String = String()
 	if not main_crdt_file_hash.is_empty():
-		local_main_crdt_path = "user://content/" + main_crdt_file_hash
+		local_main_crdt_path = Global.content_provider.get_cache_file_path(main_crdt_file_hash)
 		var promise: Promise = Global.content_provider.fetch_file("main.crdt", content_mapping)
 
 		var res = await PromiseUtils.async_awaiter(promise)
@@ -1088,6 +1147,16 @@ func send_scene_failed_metrics(
 func _on_try_spawn_scene(
 	scene_item: SceneItem, local_main_js_path: String, local_main_crdt_path: String
 ):
+	# Between Explorer teardown (sign-out / return-to-discover / realm change)
+	# and the next explorer._ready() there is nothing to spawn into — a
+	# cache-hot load resolving in that window used to reach start_scene() with
+	# a freed base_ui (GODOT-EXPLORER-1DY / -1E0). Drop the entry so the
+	# regular position scan re-fetches it once the Explorer is back.
+	if not is_instance_valid(Global.get_explorer()):
+		printerr("Skipping scene spawn, no explorer: ", scene_item.id)
+		loaded_scenes.erase(scene_item.id)
+		return false
+
 	if not local_main_js_path.is_empty() and not FileAccess.file_exists(local_main_js_path):
 		printerr("Couldn't get main.js file:", local_main_js_path)
 		local_main_js_path = ""
@@ -1138,6 +1207,16 @@ func _on_try_spawn_scene(
 func reload_scene(scene_id: String) -> void:
 	var scene = loaded_scenes.get(scene_id)
 	if scene != null:
+		# Show the loading screen up front so killing the scene doesn't flash an empty parcel
+		# before it re-loads. Skipped for preview hot-reload, which is meant to be seamless.
+		# If the re-fetch fails it's still taken back down: a null definition completes the
+		# loading session (report_scene_fetched), and any deeper failure is caught by the
+		# loading screen's own watchdog (Timer_CheckProgressTimeout: inactivity / max-time
+		# -> timeout modal + hide), which starts when enable_loading_screen is shown.
+		if not _is_hot_reloading:
+			var explorer = Global.get_explorer()
+			if is_instance_valid(explorer):
+				explorer.loading_ui.enable_loading_screen("", "on_reload")
 		var scene_number_id: int = scene.scene_number_id
 		if scene_number_id != -1:
 			Global.scene_runner.kill_scene(scene_number_id)
@@ -1165,6 +1244,105 @@ func set_preview_url(url: String) -> void:
 func _on_preview_scene_update(scene_id: String) -> void:
 	_is_hot_reloading = true
 	reload_scene(scene_id)
+
+
+## A single .glb changed on the preview server. Swaps just that model in place,
+## so the rest of the scene keeps its state.
+##
+## Falls back to a full (loading-screen-free) reload whenever the swap can't be
+## done precisely: unknown scene, non-swappable file, or no container using that
+## src.
+##
+## Only .glb is swapped, even though the server reports .gltf too. A .glb embeds
+## its buffers and textures; a .gltf is JSON pointing at sibling .bin/texture
+## files that the importer resolves through the scene's content mapping. Those
+## siblings are not models, so they get no updateModel of their own, and the
+## server's shared debounce usually drops their events entirely — leaving the
+## mapping without them. Swapping the .gltf alone then either fails outright
+## ("There are some missing dependencies in the gltf") or, when the new model
+## reuses the old filenames, rebuilds it from stale cached buffers. Only the full
+## reload refetches the scene definition, which is what repopulates the mapping.
+##
+## `_hash` is unused on purpose — see the comment below.
+func async_on_preview_model_update(
+	scene_id: String, src: String, _hash: String, removed: bool
+) -> void:
+	var scene = loaded_scenes.get(scene_id)
+	var lower_src := src.to_lower()
+
+	if scene == null or not lower_src.ends_with(".glb"):
+		_on_preview_scene_update(scene_id)
+		return
+
+	var scene_number_id: int = scene.scene_number_id
+	var containers := _find_gltf_containers(scene_number_id, lower_src)
+	if containers.is_empty():
+		# The file isn't in use by any live container — it may be referenced by a
+		# component that hasn't loaded yet, so let the full reload pick it up.
+		_on_preview_scene_update(scene_id)
+		return
+
+	# `_hash` from the message is deliberately NOT written into the content mapping.
+	# Both sides derive hashes from the file path, but from *different* paths: the
+	# file watcher hashes the project-relative path, while the scene definition
+	# hashes the absolute one. They never match, and adopting the message's hash
+	# would point the container at an unrelated cache entry. Since a path-derived
+	# hash cannot change when the contents do, the mapping is already correct for
+	# an edit — only a deletion has to touch it.
+	var mapping := Global.scene_runner.get_scene_content_mapping(scene_number_id)
+	var old_hash := mapping.get_hash(lower_src)
+
+	if not removed and old_hash.is_empty():
+		var removed_at: int = _recently_removed_models.get(lower_src, -1)
+		if removed_at >= 0 and Time.get_ticks_msec() - removed_at < REMOVED_MODEL_GRACE_MS:
+			# The delete's own trailing change event — the file is still gone, so
+			# there is nothing to reload.
+			return
+
+		# The file is back after a delete dropped its mapping entry, and the entry
+		# cannot be rebuilt here: the hash comes from the absolute path plus a
+		# machine id that only the server knows. A full reload refetches the scene
+		# definition, which brings the entry back with the right hash.
+		_recently_removed_models.erase(lower_src)
+		_on_preview_scene_update(scene_id)
+		return
+
+	if removed:
+		if not Global.scene_runner.update_scene_content_entry(scene_number_id, lower_src, ""):
+			_on_preview_scene_update(scene_id)
+			return
+		_recently_removed_models[lower_src] = Time.get_ticks_msec()
+	else:
+		_recently_removed_models.erase(lower_src)
+
+	# Same reason the hash is stable: every cache layer keyed by it now holds
+	# stale bytes and must be dropped unconditionally. Awaited, because the
+	# re-request below would otherwise race the (async) delete and re-import the
+	# file we just evicted.
+	if not old_hash.is_empty():
+		await PromiseUtils.async_awaiter(Global.content_provider.purge_file(old_hash))
+
+	for container in containers:
+		if is_instance_valid(container):
+			container.force_reload_gltf()
+
+
+## Live DclGltfContainer nodes in `scene_number_id` whose source is `lower_src`.
+## Scene roots are children of the scene runner, so the walk starts there.
+func _find_gltf_containers(scene_number_id: int, lower_src: String) -> Array:
+	var found: Array = []
+	var stack: Array = [Global.scene_runner]
+	while not stack.is_empty():
+		var node: Node = stack.pop_back()
+		if (
+			node.is_class("DclGltfContainer")
+			and node.dcl_scene_id == scene_number_id
+			and node.dcl_gltf_src.to_lower() == lower_src
+		):
+			found.append(node)
+		for child in node.get_children():
+			stack.append(child)
+	return found
 
 
 func set_debugging_js_scene_id(id: String) -> void:

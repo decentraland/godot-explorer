@@ -9,7 +9,9 @@ name: 📱 Mobile Build & Distribute (iOS TestFlight + Android APK)
 #              here via android_builds.yml) → surface the R2 download link (Slack + PR comment)
 #
 # Triggered by:
-#   - Every push to `release` (full distribution)
+#   - Every push to `release` (full distribution). Versioned release-* branches are NOT
+#     push-triggered — distribute them via the `build` label on their PR (bakes --prod)
+#     or a manual dispatch.
 #   - A weekday (Mon–Fri) 09:00 UTC cron on `main` — only when main changed since the
 #     last successful main distribution (no point re-shipping an identical commit)
 #   - The `build` label on a PR (alias: `build-ios` for backward compatibility)
@@ -30,13 +32,10 @@ on:
   workflow_dispatch:
     inputs:
       ref:
-        description: 'Branch to build & distribute'
+        description: 'Branch to build & distribute (main or any release* branch)'
         required: true
-        type: choice
+        type: string
         default: 'main'
-        options:
-          - main
-          - release
       whats_new:
         description: 'TestFlight "What to Test" notes (optional; auto-generated from the commit when empty)'
         required: false
@@ -284,6 +283,10 @@ jobs:
       SHA:         ${{ needs.prepare.outputs.sha }}
       SAFE_BRANCH: ${{ needs.prepare.outputs.safe_branch }}
       GH_TOKEN:    ${{ secrets.GITHUB_TOKEN }}
+      # ios_self_hosted.yml is DISABLED (the `dcl-ios` Mac was shut down), so no self-hosted export
+      # will ever appear for a commit — don't burn 20 minutes polling for one. Flip back to 'true'
+      # together with that workflow's triggers if the runner comes back.
+      IOS_SELF_HOSTED_ENABLED: 'false'
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
@@ -308,6 +311,8 @@ jobs:
           if have_export; then
             echo "✅ Export already present."
             have=true
+          elif [ "$IOS_SELF_HOSTED_ENABLED" != "true" ]; then
+            echo "ℹ️  self-hosted iOS runner is disabled → building on CI."
           else
             # The self-hosted build for this commit may still be in flight (~12 min). Poll for it,
             # but stop the moment that run concludes without a usable export (→ build on CI).
@@ -753,12 +758,12 @@ jobs:
           bash .github/scripts/slack-reply.sh "❌ Android — APK not produced for ${SHA} (CI build failed)"
           ANDROID_LINE="❌ CI build failed" python3 .github/scripts/slack-root.py
 
-      # The AAB (Play Store artifact) is only published for main/release builds, so we
-      # surface it for any main/release distribution (manual dispatch, push-to-release,
+      # The AAB (Play Store artifact) is only published for main/release* builds, so we
+      # surface it for any main/release* distribution (manual dispatch, push-to-release,
       # or the weekday main cron). Best-effort: if the AAB isn't in R2 we warn and skip
       # rather than failing the job.
       - name: Wait for Android AAB in R2
-        if: success() && (needs.prepare.outputs.ref == 'main' || needs.prepare.outputs.ref == 'release')
+        if: success() && (needs.prepare.outputs.ref == 'main' || startsWith(needs.prepare.outputs.ref, 'release'))
         run: |
           KEY="android/${SAFE_BRANCH}/${SHA}/decentraland.godot.client.aab"
           echo "Waiting for s3://${AWS_S3_BUCKET}/${KEY}"

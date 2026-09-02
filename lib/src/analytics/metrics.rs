@@ -26,11 +26,12 @@ use super::{
         SegmentEventAttestationAttempt, SegmentEventAttestationSessionCacheLoaded,
         SegmentEventBlockUser, SegmentEventChatMessageSent, SegmentEventClickButton,
         SegmentEventCommonExplorerFields, SegmentEventExplorerMoveToParcel,
-        SegmentEventFirebaseInit, SegmentEventIosStoreKitEnvironment, SegmentEventRequestFriend,
+        SegmentEventFirebaseInit, SegmentEventGuestWalletCreation,
+        SegmentEventIosStoreKitEnvironment, SegmentEventLoading, SegmentEventRequestFriend,
         SegmentEventScreenViewed, SegmentEventUnfriend,
     },
     frame::Frame,
-    install_referrer::InstallReferrer,
+    install_attribution::InstallAttribution,
 };
 
 #[derive(Clone, Copy)]
@@ -81,8 +82,10 @@ pub struct Metrics {
     // Debug level: 0=disabled, 1=enabled (full JSON output)
     debug_level: u8,
 
-    // Install referrer tracker (Android only, None when not applicable or already sent)
-    install_referrer: Option<InstallReferrer>,
+    // Install attribution tracker (Android only, None when not applicable or already sent)
+    install_attribution: Option<InstallAttribution>,
+    // Campaign token the attribution resolved to, read by GDScript after the event fires
+    resolved_campaign_token: String,
 
     // Consent gate. While the user has not accepted the EULA, events are queued in `self.events`
     // but never serialized or shipped (neither to Segment nor to Firebase).
@@ -126,7 +129,8 @@ impl INode for Metrics {
             mobile_platform: None,
             device_info: None,
             debug_level: 0,
-            install_referrer: None,
+            install_attribution: None,
+            resolved_campaign_token: String::new(),
             eula_accepted: false,
             firebase_init_queued: false,
             flush_timer: None,
@@ -228,21 +232,43 @@ impl Metrics {
 
     #[func]
     fn timer_timeout(&mut self) {
+        // Polled BEFORE the consent gate on purpose: this only reads local state and queues,
+        // nothing leaves the device until the gated send below. Behind the gate the sources
+        // would go unread until the user taps through and their own deadlines had expired.
+        self.poll_install_attribution();
+
         // Consent gate: never ship anything until the user has accepted the EULA. Events keep
         // accumulating in `self.events` and will flow through once the gate opens.
         if !self.eula_accepted {
             return;
         }
 
-        // Poll install referrer (Android only, auto-completes after first success)
-        if let Some(ref mut referrer) = self.install_referrer {
-            if let Some(event) = referrer.poll() {
-                self.install_referrer = None;
-                self.queue_event("Install Attribution", event);
-            }
-        }
-
         self.process_and_send_events(false);
+    }
+
+    /// Polls both attribution mechanisms (Android only, auto-completes once settled) and
+    /// queues the resulting event. Queuing is not sending — the consent gate still decides
+    /// when anything leaves the device.
+    fn poll_install_attribution(&mut self) {
+        let Some(ref mut attribution) = self.install_attribution else {
+            return;
+        };
+        let event = attribution.poll();
+        // Dropped on `is_done`, not on there being an event: two settle paths legitimately
+        // have nothing to report, and leaving the tracker in place there would report
+        // attribution as forever-pending to everything waiting on it.
+        let settled = attribution.is_done();
+        if let Some(event) = event {
+            if let SegmentEvent::InstallAttribution(ref data) = event {
+                if let Some(token) = data.campaign_token.as_ref() {
+                    self.resolved_campaign_token = token.clone();
+                }
+            }
+            self.queue_event("Install Attribution", event);
+        }
+        if settled {
+            self.install_attribution = None;
+        }
     }
 
     /// Adjust the periodic auto-flush interval. Restarts the timer so the new cadence takes effect
@@ -260,16 +286,33 @@ impl Metrics {
         }
     }
 
-    /// Start fetching the Google Play install referrer.
+    /// Start resolving install attribution from both Android mechanisms (issue #2670):
+    /// the GA4F deferred deep link and the Play install referrer.
     /// GDScript should call this only once per install (gated by a config flag).
     #[func]
     pub fn track_install_referrer(&mut self) {
         if !matches!(self.mobile_platform, Some(MobilePlatform::Android)) {
             return;
         }
-        if self.install_referrer.is_none() {
-            self.install_referrer = Some(InstallReferrer::start());
+        if self.install_attribution.is_none() {
+            self.install_attribution = Some(InstallAttribution::start());
         }
+    }
+
+    /// Campaign token the install attribution resolved to, or "" when there was none. Only
+    /// meaningful once the `Install Attribution` event has fired.
+    #[func]
+    pub fn get_resolved_campaign_token(&self) -> GString {
+        GString::from(self.resolved_campaign_token.as_str())
+    }
+
+    /// Whether install attribution is still resolving. Callers must stop waiting on this and
+    /// not on the token: an empty token reads the same whether the sources have not answered
+    /// or answered with no campaign, so every campaign-less launch would stall for the
+    /// full timeout.
+    #[func]
+    pub fn is_install_attribution_pending(&self) -> bool {
+        self.install_attribution.is_some()
     }
 
     #[func]
@@ -285,7 +328,8 @@ impl Metrics {
             mobile_platform: None,
             device_info: None,
             debug_level: 0,
-            install_referrer: None,
+            install_attribution: None,
+            resolved_campaign_token: String::new(),
             eula_accepted: false,
             firebase_init_queued: false,
             flush_timer: None,
@@ -414,6 +458,20 @@ impl Metrics {
         self.queue_event("Screen Viewed", event);
     }
 
+    // ---------------------------------------------------------------------------
+    // Loading-pipeline funnel + diagnostics (#1602 / #1640 / #2450). A SINGLE
+    // "Loading Event", discriminated by `type` and correlated across one full load by
+    // `loading_id`. The typed payload is built by the pure `LoadingFunnel`
+    // (scene_runner/loading_funnel.rs) and emitted from `DclSceneManager` — there is no
+    // JSON round-trip and no GDScript-owned schema. See SegmentEventLoading.
+    // ---------------------------------------------------------------------------
+
+    /// Queue one already-built loading funnel event. Called from Rust (DclSceneManager),
+    /// not GDScript — the funnel owns the schema end-to-end.
+    pub fn queue_loading_event(&mut self, event: SegmentEventLoading) {
+        self.queue_event("Loading Event", SegmentEvent::Loading(Box::new(event)));
+    }
+
     #[func]
     pub fn track_request_friend(&mut self, receiver_id: String) {
         let event = SegmentEvent::RequestFriend(SegmentEventRequestFriend { receiver_id });
@@ -514,6 +572,40 @@ impl Metrics {
             session_ttl_s: opt_i64(5),
         });
         self.queue_event("Attestation Attempt", event);
+    }
+
+    /// One per silent thirdweb guest-login attempt. See
+    /// data_definition::SegmentEventGuestWalletCreation for field meanings.
+    ///
+    /// GDScript-friendly sentinels (gdext doesn't surface Option<T> across FFI):
+    ///   - `failure_reason`: empty string ("") == None (success path).
+    ///   - `http_status`: -1 == None.
+    ///   - `duration_ms`: clamped to >= 0.
+    #[func]
+    pub fn track_guest_wallet_creation(
+        &mut self,
+        outcome: String,
+        is_new_user: bool,
+        failure_reason: String,
+        http_status: i64,
+        duration_ms: i64,
+    ) {
+        let event = SegmentEvent::GuestWalletCreation(SegmentEventGuestWalletCreation {
+            outcome,
+            is_new_user,
+            failure_reason: if failure_reason.is_empty() {
+                None
+            } else {
+                Some(failure_reason)
+            },
+            http_status: if http_status < 0 {
+                None
+            } else {
+                Some(http_status as u32)
+            },
+            duration_ms: duration_ms.max(0) as u32,
+        });
+        self.queue_event("Guest Wallet Creation", event);
     }
 
     /// Boot-time cache probe event. `remaining_s` is -1 (becomes None) for any

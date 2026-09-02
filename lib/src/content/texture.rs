@@ -1,8 +1,8 @@
 use crate::utils::infer_mime;
 
 use super::{
-    content_provider::ContentProviderContext, packed_array::PackedByteArrayFromVec,
-    thread_safety::GodotSingleThreadSafety,
+    cache_file_name::cache_file_path, content_provider::ContentProviderContext,
+    packed_array::PackedByteArrayFromVec, thread_safety::GodotSingleThreadSafety,
 };
 use godot::{
     builtin::{GString, PackedByteArray, Variant, Vector2i},
@@ -238,12 +238,20 @@ fn decode_animated_webp_to_texture(
     Ok((animated_texture.upcast(), original_size, first_frame))
 }
 
+/// Loads an image into a TextureEntry (image + texture).
+///
+/// `compress`: on mobile, ETC2-compress the image for VRAM savings. Pass false
+/// when only the raw pixels (`TextureEntry.image`) are consumed and the texture
+/// is never rendered — compressing would be pure waste (extra CPU + a PCT2 held
+/// in memory for nothing) and leaves `image` in a format that rejects
+/// resize/convert/mipmaps (the avatar-impostor upload path).
 pub async fn load_image_texture(
     url: String,
     file_hash: String,
     ctx: ContentProviderContext,
+    compress: bool,
 ) -> Result<Option<Variant>, anyhow::Error> {
-    let absolute_file_path = format!("{}{}", ctx.content_folder, file_hash);
+    let absolute_file_path = cache_file_path(&ctx.content_folder, &file_hash);
     let bytes_vec = ctx
         .resource_provider
         .fetch_resource_with_data(&url, &file_hash, &absolute_file_path)
@@ -381,9 +389,15 @@ pub async fn load_image_texture(
     let original_size = image.get_size();
 
     let max_size = ctx.texture_quality.to_max_size();
-    let mut texture: Gd<Texture2D> = if std::env::consts::OS == "ios"
-        || std::env::consts::OS == "android"
-    {
+    let mut texture: Gd<Texture2D> = if !compress {
+        // compress=false means: the caller only reads the raw `image` pixels and
+        // nothing ever renders this `texture` (avatar body snapshots: the
+        // impostor copies the pixels into its own TextureArray). So we skip
+        // building a real texture entirely — no VRAM, no compression. If a
+        // future caller does render it, they'll see magenta pixels: build a
+        // real texture here instead.
+        create_placeholder_texture()
+    } else if std::env::consts::OS == "ios" || std::env::consts::OS == "android" {
         create_compressed_texture(&mut image, max_size)
     } else {
         resize_image(&mut image, max_size);

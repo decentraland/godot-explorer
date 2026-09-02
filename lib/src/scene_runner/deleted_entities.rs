@@ -4,6 +4,7 @@ use crate::dcl::components::{
 use godot::classes::Node;
 
 use super::{
+    components::asset_load::release_entity_preloads,
     components::trigger_area::unregister_trigger_area, pool_manager::PoolManager, scene::Scene,
 };
 
@@ -42,6 +43,7 @@ pub fn update_deleted_entities(scene: &mut Scene, pools: &mut PoolManager) {
         godot_dcl_scene.entities.remove(deleted_entity);
 
         scene.audio_sources.remove(deleted_entity);
+        scene.particle_systems.remove(deleted_entity);
         scene.audio_streams.remove(deleted_entity);
         scene.video_players.remove(deleted_entity);
         scene.dup_animator.remove(deleted_entity);
@@ -55,6 +57,9 @@ pub fn update_deleted_entities(scene: &mut Scene, pools: &mut PoolManager) {
         scene.continuos_raycast.remove(deleted_entity);
         scene.tweens.remove(deleted_entity);
         scene.texture_animations.remove(deleted_entity);
+        // Release any PBAssetLoad preloads this entity held (drops refcounts and
+        // the retained PackedScene, and stops per-tick iteration over it).
+        release_entity_preloads(&mut scene.asset_load, deleted_entity);
 
         // Clean up trigger area - unregister from monitor and release back to pool
         if let Some(instance) = scene.trigger_areas.instances.remove(deleted_entity) {

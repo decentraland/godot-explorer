@@ -1,0 +1,113 @@
+[gd_scene format=3 uid="uid://v3ktu5kra0ql"]
+
+[ext_resource type="Script" uid="uid://k1ucbqns4fyy" path="res://src/ui/components/organisms/preview_hud_panel/preview_hud_panel.gd" id="1_script"]
+[ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="2_theme"]
+[ext_resource type="Texture2D" uid="uid://c7rx0q1yjyde0" path="res://assets/ui/console_icon.svg" id="3_console"]
+[ext_resource type="Texture2D" uid="uid://dgchxj5lqd237" path="res://assets/ui/scene_stats_monitor.svg" id="4_monitor"]
+[ext_resource type="Texture2D" uid="uid://c0n8k2q368jvf" path="res://assets/ui/reload_icon.svg" id="5_reload"]
+[ext_resource type="PackedScene" uid="uid://dua04n3geh0yf" path="res://src/ui/components/organisms/debug_panel/debug_panel.tscn" id="6_debug"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_normal"]
+bg_color = Color(0.078431375, 0.023529412, 0.1254902, 1)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+corner_radius_top_left = 100
+corner_radius_top_right = 100
+corner_radius_bottom_right = 100
+corner_radius_bottom_left = 100
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bbus7"]
+bg_color = Color(0.078431375, 0.023529412, 0.1254902, 1)
+corner_radius_top_left = 100
+corner_radius_top_right = 100
+corner_radius_bottom_right = 100
+corner_radius_bottom_left = 100
+
+[node name="PreviewHudPanel" type="MarginContainer" unique_id=1534114070]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/margin_right = 0
+script = ExtResource("1_script")
+metadata/mobile_preview_orientation = "landscape"
+
+[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=900190433]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 0
+
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer" unique_id=806649657]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_bottom = 25
+
+[node name="HBoxContainer_Header" type="HBoxContainer" parent="VBoxContainer/MarginContainer" unique_id=1388692376]
+layout_mode = 2
+size_flags_horizontal = 0
+mouse_filter = 2
+theme_override_constants/separation = 20
+
+[node name="Control" type="Control" parent="VBoxContainer/MarginContainer/HBoxContainer_Header" unique_id=849984911]
+custom_minimum_size = Vector2(101, 0)
+layout_mode = 2
+mouse_filter = 2
+
+[node name="Button_Console" type="Button" parent="VBoxContainer/MarginContainer/HBoxContainer_Header" unique_id=1761087111]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(66, 66)
+layout_mode = 2
+size_flags_vertical = 4
+focus_mode = 0
+theme = ExtResource("2_theme")
+theme_type_variation = &"SecondaryLittle"
+theme_override_constants/icon_max_width = 38
+theme_override_styles/normal = SubResource("StyleBoxFlat_normal")
+icon = ExtResource("3_console")
+icon_alignment = 1
+expand_icon = true
+
+[node name="Button_SceneStatus" type="Button" parent="VBoxContainer/MarginContainer/HBoxContainer_Header" unique_id=1272115698]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(66, 66)
+layout_mode = 2
+size_flags_vertical = 4
+focus_mode = 0
+theme = ExtResource("2_theme")
+theme_type_variation = &"SecondaryLittle"
+theme_override_constants/icon_max_width = 38
+theme_override_styles/normal = SubResource("StyleBoxFlat_normal")
+icon = ExtResource("4_monitor")
+icon_alignment = 1
+expand_icon = true
+
+[node name="Button_Reload" type="Button" parent="VBoxContainer/MarginContainer/HBoxContainer_Header" unique_id=265092282]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(66, 66)
+layout_mode = 2
+size_flags_vertical = 4
+focus_mode = 0
+theme = ExtResource("2_theme")
+theme_type_variation = &"SecondaryLittle"
+theme_override_constants/icon_max_width = 38
+theme_override_styles/normal = SubResource("StyleBoxFlat_bbus7")
+icon = ExtResource("5_reload")
+icon_alignment = 1
+expand_icon = true
+
+[node name="Body" type="VBoxContainer" parent="VBoxContainer" unique_id=1879917654]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 0
+mouse_filter = 2
+theme_override_constants/separation = 8
+
+[node name="DebugPanel" parent="VBoxContainer/Body" unique_id=287381210 instance=ExtResource("6_debug")]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3

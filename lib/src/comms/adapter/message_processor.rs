@@ -9,13 +9,14 @@ use std::cmp::Ordering;
 use tokio::sync::mpsc;
 
 use crate::{
+    auth::wallet::AsH160,
     avatars::avatar_scene::AvatarScene,
     comms::{
         consts::{
             truncate_utf8_safe, DEFAULT_PROTOCOL_VERSION, INACTIVE_PEER_THRESHOLD_SECS,
             MAX_CHAT_MESSAGES, MAX_CHAT_MESSAGE_SIZE, MAX_SCENE_IDS, MAX_SCENE_MESSAGES_PER_SCENE,
             MESSAGE_CHANNEL_SIZE, OUTGOING_CHANNEL_SIZE, PROFILE_REQUEST_INTERVAL_SECS,
-            PROFILE_UPDATE_CHANNEL_SIZE,
+            PROFILE_UPDATE_CHANNEL_SIZE, PULSE_ROOM_ID,
         },
         profile::{SerializedProfile, UserProfile},
     },
@@ -60,11 +61,14 @@ pub enum MessageType {
     VideoFrame(VideoFrameData),
     InitStreamerAudio(StreamerAudioInitData),
     StreamerAudioFrame(StreamerAudioFrameData),
-    PeerJoined,                     // Peer joined a room
-    PeerLeft,                       // Peer left a room
-    Disconnected(DisconnectReason), // Disconnected from the server
-    PeerMetadata(String),           // Peer metadata (e.g., version info for staging/dev builds)
-    RoomMetadataChanged(String),    // Room metadata changed (e.g., ban list update)
+    VideoTrackEnded(String), // Video track ended/unsubscribed (sid)
+    VideoTrackMuted { sid: String, muted: bool },
+    ActiveSpeakersChanged(Vec<String>), // Ordered speaker identities, loudest first
+    PeerJoined,                         // Peer joined a room
+    PeerLeft,                           // Peer left a room
+    Disconnected(DisconnectReason),     // Disconnected from the server
+    PeerMetadata(String),               // Peer metadata (e.g., version info for staging/dev builds)
+    RoomMetadataChanged(String),        // Room metadata changed (e.g., ban list update)
 }
 
 #[derive(Debug, Clone)]
@@ -85,10 +89,25 @@ pub struct VoiceFrameData {
     pub data: Vec<i16>,
 }
 
+/// LiveKit video track source, mapped from `livekit::track::TrackSource`.
+/// Screenshare ranks above cameras in stream selection (see `best_video_track`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum VideoTrackSourceKind {
+    Screenshare,
+    Camera,
+    Unknown,
+}
+
 #[derive(Debug, Clone)]
 pub struct VideoInitData {
     pub width: u32,
     pub height: u32,
+    /// LiveKit track sid — the registry key for this video stream.
+    pub sid: String,
+    /// LiveKit participant identity that published the track.
+    pub identity: String,
+    pub source: VideoTrackSourceKind,
+    pub muted: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -96,6 +115,7 @@ pub struct VideoFrameData {
     pub data: Vec<u8>,
     pub width: u32,
     pub height: u32,
+    pub sid: String,
 }
 
 // Streamer audio data (separate from voice chat - for video player audio)
@@ -133,6 +153,12 @@ struct Peer {
     lambdas_endpoint: Option<String>, // Peer's lambda URL from LiveKit metadata (lambdasEndpoint)
     last_movement_timestamp: f32,     // Dedup: last movement timestamp received
     last_emote_incremental_id: u32,   // Dedup: last emote incremental ID received
+    /// Transport-preference gate: true while this peer is a live member of the "pulse" room
+    /// (set on any pulse-bridged message, cleared by a pulse PeerLeft). While set, this peer's
+    /// movement/emotes from LiveKit rooms are DISCARDED — never merged: LiveKit timestamps are
+    /// the sender's clock and Pulse timestamps are the server tick, so comparing them starves
+    /// one source permanently. On either flip both dedup layers are reset for the same reason.
+    pulse_live: bool,
 }
 
 struct ProfileUpdate {
@@ -147,11 +173,89 @@ struct ProfileFetchFailure {
 }
 
 struct VideoTrackInfo {
+    /// LiveKit participant identity that published this track.
+    identity: String,
+    /// Wallet address when the identity is one (used for the block-list check).
+    /// Streamer identities (`stream:…`, `presentation-bot:…`, `…-streamer`) have none.
+    identity_h160: Option<H160>,
+    source: VideoTrackSourceKind,
+    muted: bool,
     #[allow(dead_code)]
     width: u32,
     #[allow(dead_code)]
     height: u32,
+    #[allow(dead_code)]
     last_frame_time: Instant,
+    /// Monotonic arrival index — "first available" tie-breaker in selection.
+    order: u64,
+}
+
+/// Participants whose identity starts with this prefix are authoritative video
+/// sources (slides / playback bots) and always hold the stream.
+const PRESENTATION_BOT_IDENTITY_PREFIX: &str = "presentation-bot:";
+
+/// Minimum hold before the stream may follow a new active speaker, preventing
+/// flicker during rapid speaker changes (mirrors unity-explorer).
+const MIN_SPEAKER_HOLD: Duration = Duration::from_millis(1500);
+
+/// Pick the video track to route to `livekit-video://` players. Mirror of
+/// unity-explorer `LivekitPlayer.BestFollowCandidate`/`BestInitialVideoKey`:
+/// presentation bot → unmuted screen share → dominant active speaker with a
+/// video track (only once the hold elapsed; the current speaker keeps it) →
+/// keep the current track → first available.
+fn best_video_track(
+    tracks: &HashMap<String, VideoTrackInfo>,
+    current_sid: Option<&str>,
+    active_speakers: &[String],
+    hold_elapsed: bool,
+) -> Option<String> {
+    let first_by_order = |mut candidates: Vec<(&String, &VideoTrackInfo)>| -> Option<String> {
+        candidates.sort_by_key(|(_, info)| info.order);
+        candidates.first().map(|(sid, _)| (*sid).clone())
+    };
+
+    let bots: Vec<_> = tracks
+        .iter()
+        .filter(|(_, info)| info.identity.starts_with(PRESENTATION_BOT_IDENTITY_PREFIX))
+        .collect();
+    if let Some(sid) = first_by_order(bots) {
+        return Some(sid);
+    }
+
+    // A muted (paused) share falls through so video follows speakers until it resumes.
+    let shares: Vec<_> = tracks
+        .iter()
+        .filter(|(_, info)| info.source == VideoTrackSourceKind::Screenshare && !info.muted)
+        .collect();
+    if let Some(sid) = first_by_order(shares) {
+        return Some(sid);
+    }
+
+    let current_identity = current_sid
+        .and_then(|sid| tracks.get(sid))
+        .map(|info| info.identity.as_str());
+    if hold_elapsed {
+        for speaker in active_speakers {
+            if Some(speaker.as_str()) == current_identity {
+                break; // the current source is the dominant speaker — keep it
+            }
+            let speaker_tracks: Vec<_> = tracks
+                .iter()
+                .filter(|(_, info)| info.identity == *speaker)
+                .collect();
+            if let Some(sid) = first_by_order(speaker_tracks) {
+                return Some(sid);
+            }
+        }
+    }
+
+    if let Some(sid) = current_sid {
+        if tracks.contains_key(sid) {
+            return Some(sid.to_string());
+        }
+    }
+
+    first_by_order(tracks.iter().collect())
 }
 
 /// Central message processor that handles all incoming and outgoing messages
@@ -212,8 +316,15 @@ pub struct MessageProcessor {
     cached_blocked: HashSet<H160>,
     cached_muted: HashSet<H160>,
 
-    // Video track management
-    active_video_tracks: HashMap<H160, VideoTrackInfo>,
+    // Video track management — keyed by LiveKit track sid. Only the selected
+    // track's frames are forwarded to the scenes' livekit video players.
+    active_video_tracks: HashMap<String, VideoTrackInfo>,
+    video_track_order_counter: u64,
+    selected_video_sid: Option<String>,
+    // Ordered speaker identities (loudest first) from the latest
+    // ActiveSpeakersChanged event of any connected room.
+    active_speakers: Vec<String>,
+    video_switched_at: Instant,
 
     // Disconnect reason if disconnected from the server, along with the room_id
     disconnect_reason: Option<(DisconnectReason, String)>,
@@ -279,9 +390,52 @@ impl MessageProcessor {
             cached_blocked: HashSet::new(),
             cached_muted: HashSet::new(),
             active_video_tracks: HashMap::new(),
+            video_track_order_counter: 0,
+            selected_video_sid: None,
+            active_speakers: Vec::new(),
+            video_switched_at: Instant::now(),
             disconnect_reason: None,
             room_metadata_banned: false,
         }
+    }
+
+    /// Which rfc4 messages the transport-preference gate applies to: exactly the avatar-sync
+    /// slice that rides Pulse (movement in its three encodings, and emotes). Everything else
+    /// either never rides Pulse (chat, scene, profile request/response) or is idempotent
+    /// (profile-version announcements) and flows from both transports untouched.
+    fn is_gated_by_pulse_preference(message: &rfc4::packet::Message) -> bool {
+        matches!(
+            message,
+            rfc4::packet::Message::Position(_)
+                | rfc4::packet::Message::Movement(_)
+                | rfc4::packet::Message::MovementCompressed(_)
+                | rfc4::packet::Message::PlayerEmote(_)
+        )
+    }
+
+    /// Compares two lambdas endpoints ignoring trailing-slash style — Godot
+    /// publishes `…/lambdas/` in its LiveKit metadata while Unity publishes
+    /// `…/lambdas`, and the slash-only mismatch must not make the realm's own
+    /// endpoint look like a different catalyst.
+    fn is_same_lambda_endpoint(a: &str, b: &str) -> bool {
+        a.trim_end_matches('/') == b.trim_end_matches('/')
+    }
+
+    /// Validates a peer-advertised `lambdasEndpoint` (untrusted LiveKit
+    /// metadata). Anything that isn't a plausible http(s) URL is discarded so
+    /// the profile fetch keeps using the realm's own lambda endpoint instead.
+    fn sanitize_lambdas_endpoint(endpoint: &str) -> Option<&str> {
+        let trimmed = endpoint.trim();
+        let host_and_path = trimmed
+            .strip_prefix("https://")
+            .or_else(|| trimmed.strip_prefix("http://"))?;
+        if host_and_path.is_empty()
+            || host_and_path.starts_with('/')
+            || trimmed.chars().any(char::is_whitespace)
+        {
+            return None;
+        }
+        Some(trimmed)
     }
 
     /// Returns true if the address looks like a real player (non-synthetic Ethereum address).
@@ -500,9 +654,16 @@ impl MessageProcessor {
         for (address, peer) in self.peer_identities.iter_mut() {
             let mut inactive_rooms = Vec::new();
 
-            // Check each room the peer has been seen in
+            // Check each room the peer has been seen in.
+            // "pulse" is exempt: its server stops sending deltas for static distant peers by
+            // design (interest-management tiers), so activity is not a liveness signal there.
+            // Membership is authoritative instead — reliable PlayerJoined/PlayerLeft, plus the
+            // synthetic PeerLeft flood PulseRoom emits on any teardown.
             let rooms_to_check: Vec<String> = peer.room_activity.keys().cloned().collect();
             for room_id in rooms_to_check {
+                if room_id == PULSE_ROOM_ID {
+                    continue;
+                }
                 if let Some(&last_seen) = peer.room_activity.get(&room_id) {
                     if last_seen.elapsed() > inactive_threshold {
                         inactive_rooms.push(room_id);
@@ -579,45 +740,80 @@ impl MessageProcessor {
         match message.message {
             MessageType::InitVideo(video_init) => {
                 tracing::debug!(
-                    "InitVideo from {:#x}: {}x{}",
-                    message.address,
+                    "InitVideo track {} from '{}' ({:?}): {}x{}",
+                    video_init.sid,
+                    video_init.identity,
+                    video_init.source,
                     video_init.width,
                     video_init.height
                 );
 
+                let order = self.video_track_order_counter;
+                self.video_track_order_counter += 1;
                 self.active_video_tracks.insert(
-                    message.address,
+                    video_init.sid,
                     VideoTrackInfo {
+                        identity_h160: video_init.identity.as_str().as_h160(),
+                        identity: video_init.identity,
+                        source: video_init.source,
+                        muted: video_init.muted,
                         width: video_init.width,
                         height: video_init.height,
                         last_frame_time: Instant::now(),
+                        order,
                     },
                 );
+                self.reselect_video_track();
             }
             MessageType::VideoFrame(video_frame) => {
-                // Filter blocked users
-                if self.cached_blocked.contains(&message.address) {
+                self.reselect_video_track(); // cheap; applies speaker-hold expiry
+                let Some(track_info) = self.active_video_tracks.get_mut(&video_frame.sid) else {
+                    // Frames can race ahead of InitVideo or trail VideoTrackEnded.
+                    return;
+                };
+                track_info.last_frame_time = Instant::now();
+
+                // Filter blocked users (wallet-identity publishers only)
+                if let Some(address) = track_info.identity_h160 {
+                    if self.cached_blocked.contains(&address) {
+                        return;
+                    }
+                }
+
+                // Forward only the selected track to the scenes' livekit video players
+                if self.selected_video_sid.as_deref() != Some(video_frame.sid.as_str()) {
                     return;
                 }
+                use crate::godot_classes::dcl_global::DclGlobal;
+                let mut scene_runner = DclGlobal::singleton().bind().scene_runner.clone();
+                let mut scene_runner = scene_runner.bind_mut();
 
-                if let Some(track_info) = self.active_video_tracks.get_mut(&message.address) {
-                    track_info.last_frame_time = Instant::now();
-
-                    // Forward to all scenes (any video track goes to all livekit video players)
-                    use crate::godot_classes::dcl_global::DclGlobal;
-                    let mut scene_runner = DclGlobal::singleton().bind().scene_runner.clone();
-                    let mut scene_runner = scene_runner.bind_mut();
-
-                    for (_, scene) in scene_runner.get_all_scenes_mut().iter_mut() {
-                        scene.process_livekit_video_frame(
-                            video_frame.width,
-                            video_frame.height,
-                            &video_frame.data,
-                        );
-                    }
-                } else {
-                    tracing::warn!("VideoFrame from {:#x} without InitVideo", message.address);
+                for (_, scene) in scene_runner.get_all_scenes_mut().iter_mut() {
+                    scene.process_livekit_video_frame(
+                        video_frame.width,
+                        video_frame.height,
+                        &video_frame.data,
+                    );
                 }
+            }
+            MessageType::VideoTrackEnded(sid) => {
+                if self.active_video_tracks.remove(&sid).is_some() {
+                    tracing::debug!("Video track {} ended", sid);
+                }
+                if self.selected_video_sid.as_deref() == Some(sid.as_str()) {
+                    self.selected_video_sid = None;
+                }
+                self.reselect_video_track();
+            }
+            MessageType::VideoTrackMuted { sid, muted } => {
+                if let Some(track_info) = self.active_video_tracks.get_mut(&sid) {
+                    track_info.muted = muted;
+                    self.reselect_video_track();
+                }
+            }
+            MessageType::ActiveSpeakersChanged(speakers) => {
+                self.active_speakers = speakers;
+                self.reselect_video_track();
             }
             MessageType::InitStreamerAudio(audio_init) => {
                 tracing::debug!(
@@ -659,6 +855,27 @@ impl MessageProcessor {
                 }
             }
             _ => {} // Other message types are not media messages
+        }
+    }
+
+    /// Re-run stream selection and log when the routed source changes. Switching
+    /// resets the speaker-hold timer (mirrors unity-explorer's debounce).
+    fn reselect_video_track(&mut self) {
+        let hold_elapsed = self.video_switched_at.elapsed() >= MIN_SPEAKER_HOLD;
+        let next = best_video_track(
+            &self.active_video_tracks,
+            self.selected_video_sid.as_deref(),
+            &self.active_speakers,
+            hold_elapsed,
+        );
+        if next != self.selected_video_sid {
+            tracing::debug!(
+                "🎬 livekit video source: {:?} → {:?}",
+                self.selected_video_sid,
+                next
+            );
+            self.selected_video_sid = next;
+            self.video_switched_at = Instant::now();
         }
     }
 
@@ -728,7 +945,10 @@ impl MessageProcessor {
             MessageType::InitVideo(_)
             | MessageType::VideoFrame(_)
             | MessageType::InitStreamerAudio(_)
-            | MessageType::StreamerAudioFrame(_) => {
+            | MessageType::StreamerAudioFrame(_)
+            | MessageType::VideoTrackEnded(_)
+            | MessageType::VideoTrackMuted { .. }
+            | MessageType::ActiveSpeakersChanged(_) => {
                 self.process_media_message(message);
                 return;
             }
@@ -808,6 +1028,7 @@ impl MessageProcessor {
                     lambdas_endpoint: None,
                     last_movement_timestamp: f32::NEG_INFINITY,
                     last_emote_incremental_id: 0,
+                    pulse_live: false,
                 },
             );
 
@@ -857,6 +1078,12 @@ impl MessageProcessor {
             new_alias
         };
 
+        // Any pulse-bridged message (except the departure itself) marks the peer as live on
+        // Pulse, engaging the transport-preference gate; the flip resets the dedup layers.
+        if room_id == PULSE_ROOM_ID && !matches!(message.message, MessageType::PeerLeft) {
+            self.set_peer_pulse_live(message.address, true);
+        }
+
         // Handle non-RFC4 messages that need avatar_scene
         match &message.message {
             MessageType::InitVoice(voice_init) => {
@@ -898,12 +1125,20 @@ impl MessageProcessor {
             MessageType::InitVideo(_)
             | MessageType::VideoFrame(_)
             | MessageType::InitStreamerAudio(_)
-            | MessageType::StreamerAudioFrame(_) => {
+            | MessageType::StreamerAudioFrame(_)
+            | MessageType::VideoTrackEnded(_)
+            | MessageType::VideoTrackMuted { .. }
+            | MessageType::ActiveSpeakersChanged(_) => {
                 unreachable!("Media messages are handled before peer lifecycle check");
             }
             MessageType::Rfc4(rfc4_msg) => {
                 // Handle RFC4 messages
-                self.handle_rfc4_message(rfc4_msg.message.clone(), peer_alias, message.address);
+                self.handle_rfc4_message(
+                    rfc4_msg.message.clone(),
+                    peer_alias,
+                    message.address,
+                    &room_id,
+                );
             }
             MessageType::PeerJoined => {
                 // Peer joined event - ensure peer exists and update room activity
@@ -947,7 +1182,11 @@ impl MessageProcessor {
                             }
                         }
                     }
-                    if let Some(endpoint) = json.get("lambdasEndpoint").and_then(|v| v.as_str()) {
+                    if let Some(endpoint) = json
+                        .get("lambdasEndpoint")
+                        .and_then(|v| v.as_str())
+                        .and_then(Self::sanitize_lambdas_endpoint)
+                    {
                         if let Some(peer) = self.peer_identities.get_mut(&message.address) {
                             if peer.lambdas_endpoint.as_deref() != Some(endpoint) {
                                 tracing::debug!(
@@ -998,7 +1237,37 @@ impl MessageProcessor {
         }
     }
 
+    /// Flip a peer's transport preference. On EITHER flip direction, both dedup layers (the
+    /// per-peer fields here and the per-alias state in AvatarScene) reset: LiveKit and Pulse
+    /// timestamps come from incomparable clocks, so stale dedup state from the previous source
+    /// would permanently starve the new one (see `Peer::pulse_live`).
+    fn set_peer_pulse_live(&mut self, address: H160, live: bool) {
+        let Some(peer) = self.peer_identities.get_mut(&address) else {
+            return;
+        };
+        if peer.pulse_live == live {
+            return;
+        }
+        peer.pulse_live = live;
+        peer.last_movement_timestamp = f32::NEG_INFINITY;
+        peer.last_emote_incremental_id = 0;
+        let alias = peer.alias;
+        tracing::debug!(
+            "🔀 Peer {:#x} (alias: {}) transport preference → {}",
+            address,
+            alias,
+            if live { "pulse" } else { "livekit" }
+        );
+        let mut avatar_scene_ref = self.avatars.clone();
+        avatar_scene_ref.bind_mut().reset_movement_dedup(alias);
+    }
+
     fn handle_peer_left(&mut self, address: H160, room_id: String) {
+        // Leaving the pulse room (a real PlayerLeft or PulseRoom's teardown flood) hands the
+        // peer back to LiveKit-driven rendering within this same frame.
+        if room_id == PULSE_ROOM_ID {
+            self.set_peer_pulse_live(address, false);
+        }
         if let Some(peer) = self.peer_identities.get_mut(&address) {
             peer.room_activity.remove(&room_id);
             tracing::debug!(
@@ -1026,8 +1295,15 @@ impl MessageProcessor {
                 // Clean up chat timestamp tracking for removed peer
                 self.last_chat_timestamps.remove(&address);
 
-                // Clean up video tracks
-                self.active_video_tracks.remove(&address);
+                // Clean up video tracks published under this peer's identity
+                self.active_video_tracks
+                    .retain(|_, info| info.identity_h160 != Some(address));
+                if let Some(sid) = self.selected_video_sid.clone() {
+                    if !self.active_video_tracks.contains_key(&sid) {
+                        self.selected_video_sid = None;
+                        self.reselect_video_track();
+                    }
+                }
             }
         }
     }
@@ -1037,7 +1313,27 @@ impl MessageProcessor {
         message: rfc4::packet::Message,
         peer_alias: u32,
         address: H160,
+        room_id: &str,
     ) {
+        // Transport-preference gate: while a peer is live on Pulse, its avatar-sync messages
+        // from LiveKit rooms are discarded outright (see `Peer::pulse_live` for why merging is
+        // impossible). Chat/Scene/ProfileRequest/Response never ride Pulse and ProfileVersion
+        // is idempotent — none of those are gated.
+        if room_id != PULSE_ROOM_ID
+            && Self::is_gated_by_pulse_preference(&message)
+            && self
+                .peer_identities
+                .get(&address)
+                .is_some_and(|peer| peer.pulse_live)
+        {
+            tracing::trace!(
+                "🔀 Discarding LiveKit avatar-sync message from pulse-live peer {:#x} (room '{}')",
+                address,
+                room_id
+            );
+            return;
+        }
+
         match message {
             rfc4::packet::Message::Position(position) => {
                 tracing::debug!(
@@ -1058,18 +1354,25 @@ impl MessageProcessor {
                 avatar_scene.update_avatar_transform_with_rfc4_position(peer_alias, &position);
             }
             rfc4::packet::Message::Movement(movement) => {
-                // Deduplicate: skip if timestamp is not newer (dual-room broadcasting)
-                if let Some(peer) = self.peer_identities.get_mut(&address) {
-                    if movement.timestamp <= peer.last_movement_timestamp {
-                        tracing::debug!(
-                            "Discarding duplicate Movement from {:#x}: timestamp {} <= {}",
-                            address,
-                            movement.timestamp,
-                            peer.last_movement_timestamp
-                        );
-                        return;
+                // Deduplicate: skip if timestamp is not newer (dual-room broadcasting).
+                // NOT for the pulse room: its movements are already strictly ordered by the
+                // decoder's per-subject sequence window, and its timestamps are the server
+                // tick in f32 seconds — at large server uptimes (>~2^20 s) the f32 ULP
+                // exceeds the 100 ms packet interval, so consecutive updates quantize equal
+                // and a `<=` check here would silently drop them.
+                if room_id != PULSE_ROOM_ID {
+                    if let Some(peer) = self.peer_identities.get_mut(&address) {
+                        if movement.timestamp <= peer.last_movement_timestamp {
+                            tracing::debug!(
+                                "Discarding duplicate Movement from {:#x}: timestamp {} <= {}",
+                                address,
+                                movement.timestamp,
+                                peer.last_movement_timestamp
+                            );
+                            return;
+                        }
+                        peer.last_movement_timestamp = movement.timestamp;
                     }
-                    peer.last_movement_timestamp = movement.timestamp;
                 }
 
                 tracing::debug!(
@@ -1113,6 +1416,7 @@ impl MessageProcessor {
                 let pos = movement.position(self.realm_min, self.realm_max);
                 let velocity = movement.velocity();
                 let rotation_rad = movement.temporal.rotation_f32();
+                let is_grounded = movement.temporal.grounded();
 
                 tracing::debug!(
                     "Received MovementCompressed from {:#x}: pos({}, {}, {}), rot_rad({}), vel({}, {}, {}), timestamp({})", 
@@ -1131,6 +1435,8 @@ impl MessageProcessor {
                     pos,
                     rotation_rad,
                     timestamp,
+                    velocity,
+                    is_grounded,
                 );
             }
             rfc4::packet::Message::Chat(chat) => {
@@ -1174,7 +1480,7 @@ impl MessageProcessor {
                             "{}...",
                             truncate_utf8_safe(&chat.message, MAX_CHAT_MESSAGE_SIZE)
                         ),
-                        timestamp: chat.timestamp,
+                        ..chat
                     }
                 } else {
                     chat
@@ -1298,8 +1604,13 @@ impl MessageProcessor {
                         let version_ok = |r: &Result<UserProfile, _>| matches!(r, Ok(p) if p.version >= announced_version_for_retry);
 
                         // Determine fetch endpoint: peer's lambdas endpoint if available, else realm lambda
-                        let fetch_endpoint = match peer_lambdas_endpoint.as_deref() {
-                            Some(endpoint) if endpoint != lamda_server_base_url => {
+                        let mut fetch_endpoint = match peer_lambdas_endpoint.as_deref() {
+                            Some(endpoint)
+                                if !Self::is_same_lambda_endpoint(
+                                    endpoint,
+                                    &lamda_server_base_url,
+                                ) =>
+                            {
                                 endpoint.to_string()
                             }
                             _ => lamda_server_base_url.clone(),
@@ -1330,6 +1641,36 @@ impl MessageProcessor {
                             if version_ok(&result) {
                                 break;
                             }
+                            // A hard error from the peer-advertised endpoint (bad metadata,
+                            // unreachable catalyst) must not burn the whole retry chain:
+                            // switch to the realm endpoint for the remaining attempts and
+                            // try it right away. An Ok-but-stale response keeps retrying
+                            // the same endpoint — that's catalyst propagation lag, not a
+                            // broken URL.
+                            if result.is_err()
+                                && !Self::is_same_lambda_endpoint(
+                                    &fetch_endpoint,
+                                    &lamda_server_base_url,
+                                )
+                            {
+                                tracing::debug!(
+                                    "peer lambdas endpoint {} failed for {:#x}, falling back to realm endpoint {}",
+                                    fetch_endpoint,
+                                    address,
+                                    lamda_server_base_url
+                                );
+                                fetch_endpoint = lamda_server_base_url.clone();
+                                result = request_lambda_profile(
+                                    address,
+                                    fetch_endpoint.as_str(),
+                                    profile_base_url.as_str(),
+                                    http_requester.clone(),
+                                )
+                                .await;
+                                if version_ok(&result) {
+                                    break;
+                                }
+                            }
                         }
 
                         // Step 2: asset-bundle-registry fallback (for legacy clients without lambdasEndpoint)
@@ -1348,7 +1689,10 @@ impl MessageProcessor {
                         // Step 3: realm lambda fallback (if peer endpoint != realm and registry also failed)
                         let result = if version_ok(&result) {
                             result
-                        } else if fetch_endpoint != lamda_server_base_url {
+                        } else if !Self::is_same_lambda_endpoint(
+                            &fetch_endpoint,
+                            &lamda_server_base_url,
+                        ) {
                             tracing::debug!(
                                 "Falling back to realm lambda for {:#x}: {}",
                                 address,
@@ -1612,6 +1956,16 @@ impl MessageProcessor {
             }
             rfc4::packet::Message::Voice(_voice) => {}
             rfc4::packet::Message::PlayerEmote(player_emote) => {
+                // A stop signal ends the looping emote. Handled BEFORE the incremental-id
+                // dedup: a stop must neither depend on nor affect id ordering (Pulse stops
+                // carry no meaningful id; Unity's LiveKit stops reuse the start's id).
+                if player_emote.is_stopping == Some(true) {
+                    tracing::debug!("Received PlayerEmote stop from {:#x}", address);
+                    let mut avatar_scene_ref = self.avatars.clone();
+                    avatar_scene_ref.bind_mut().stop_emote(peer_alias);
+                    return;
+                }
+
                 // Deduplicate: skip if incremental_id is not newer (dual-room broadcasting)
                 if let Some(peer) = self.peer_identities.get_mut(&address) {
                     if player_emote.incremental_id <= peer.last_emote_incremental_id {
@@ -1635,7 +1989,12 @@ impl MessageProcessor {
                 // Let avatar_scene handle emotes
                 let mut avatar_scene_ref = self.avatars.clone();
                 let mut avatar_scene = avatar_scene_ref.bind_mut();
-                avatar_scene.play_emote(peer_alias, player_emote.incremental_id, &player_emote.urn);
+                avatar_scene.play_emote(
+                    peer_alias,
+                    player_emote.incremental_id,
+                    &player_emote.urn,
+                    crate::avatars::emote_mask::internal_from_wire_mask(player_emote.mask),
+                );
             }
             rfc4::packet::Message::SceneEmote(_) => {
                 tracing::warn!("Not implemented: SceneEmote handling in message_processor");
@@ -1687,28 +2046,309 @@ impl MessageProcessor {
     }
 
     /// Returns room connectivity info for each peer.
-    /// Each entry is (address, room_description) where room_description is
-    /// "Scene", "Archipelago", or "Both".
-    pub fn get_peer_room_info(&self) -> Vec<(H160, String)> {
+    /// Each entry is (address, room_description, name) where room_description lists
+    /// every room the peer is seen in, joined with " + " — e.g. "PULSE + SCENE +
+    /// ARCHIPELAGO", "SCENE + ARCHIPELAGO", "PULSE", or "NONE". A trailing '*' on
+    /// PULSE marks that Pulse is the source currently driving the avatar
+    /// (transport-preference gate). `name` is the profile display name, empty while
+    /// the profile hasn't been resolved yet.
+    pub fn get_peer_room_info(&self) -> Vec<(H160, String, String)> {
         let mut result = Vec::new();
         for (address, peer) in &self.peer_identities {
             let mut has_scene = false;
             let mut has_archipelago = false;
+            let mut has_pulse = false;
             for room_id in peer.room_activity.keys() {
                 if room_id.starts_with("scene-") {
                     has_scene = true;
+                } else if room_id == PULSE_ROOM_ID {
+                    has_pulse = true;
                 } else {
                     has_archipelago = true;
                 }
             }
-            let room_desc = match (has_scene, has_archipelago) {
-                (true, true) => "Both".to_string(),
-                (true, false) => "Scene".to_string(),
-                (false, true) => "Archipelago".to_string(),
-                (false, false) => "None".to_string(),
+            let mut parts: Vec<&str> = Vec::new();
+            if has_pulse {
+                // Mark which source is actually driving the avatar right now.
+                parts.push(if peer.pulse_live { "PULSE*" } else { "PULSE" });
+            }
+            if has_scene {
+                parts.push("SCENE");
+            }
+            if has_archipelago {
+                parts.push("ARCHIPELAGO");
+            }
+            let room_desc = if parts.is_empty() {
+                "NONE".to_string()
+            } else {
+                parts.join(" + ")
             };
-            result.push((*address, room_desc));
+            let name = peer
+                .profile
+                .as_ref()
+                .map(|profile| profile.content.name.clone())
+                .unwrap_or_default();
+            result.push((*address, room_desc, name));
         }
         result
+    }
+}
+
+// MessageProcessor itself needs a live Godot engine (Gd<AvatarScene>), so the full
+// interleaved pulse/livekit sequences are covered by the cross-client QA matrix; what IS
+// engine-free — the gate's message classification — is pinned here.
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn pulse_preference_gates_exactly_the_avatar_sync_slice() {
+        use rfc4::packet::Message;
+
+        // Gated: the avatar-sync slice that rides Pulse.
+        assert!(MessageProcessor::is_gated_by_pulse_preference(
+            &Message::Movement(rfc4::Movement::default())
+        ));
+        assert!(MessageProcessor::is_gated_by_pulse_preference(
+            &Message::MovementCompressed(rfc4::MovementCompressed::default())
+        ));
+        assert!(MessageProcessor::is_gated_by_pulse_preference(
+            &Message::Position(rfc4::Position::default())
+        ));
+        assert!(MessageProcessor::is_gated_by_pulse_preference(
+            &Message::PlayerEmote(rfc4::PlayerEmote::default())
+        ));
+
+        // Never gated: doesn't ride Pulse, or idempotent.
+        assert!(!MessageProcessor::is_gated_by_pulse_preference(
+            &Message::Chat(rfc4::Chat::default())
+        ));
+        assert!(!MessageProcessor::is_gated_by_pulse_preference(
+            &Message::Scene(rfc4::Scene::default())
+        ));
+        assert!(!MessageProcessor::is_gated_by_pulse_preference(
+            &Message::ProfileVersion(rfc4::AnnounceProfileVersion::default())
+        ));
+        assert!(!MessageProcessor::is_gated_by_pulse_preference(
+            &Message::ProfileRequest(rfc4::ProfileRequest::default())
+        ));
+        assert!(!MessageProcessor::is_gated_by_pulse_preference(
+            &Message::ProfileResponse(rfc4::ProfileResponse::default())
+        ));
+    }
+
+    #[test]
+    fn lambda_endpoint_comparison_ignores_trailing_slash_style() {
+        // Godot metadata carries `…/lambdas/`, Unity metadata carries `…/lambdas` —
+        // same catalyst, must compare equal so the realm endpoint isn't treated
+        // as a different fetch target.
+        assert!(MessageProcessor::is_same_lambda_endpoint(
+            "https://peer.decentraland.org/lambdas",
+            "https://peer.decentraland.org/lambdas/"
+        ));
+        assert!(MessageProcessor::is_same_lambda_endpoint(
+            "https://peer.decentraland.org/lambdas/",
+            "https://peer.decentraland.org/lambdas/"
+        ));
+        assert!(!MessageProcessor::is_same_lambda_endpoint(
+            "https://peer.decentraland.org/lambdas",
+            "https://peer-ec2.decentraland.org/lambdas/"
+        ));
+    }
+
+    #[test]
+    fn sanitize_lambdas_endpoint_accepts_only_plausible_http_urls() {
+        assert_eq!(
+            MessageProcessor::sanitize_lambdas_endpoint(" https://peer.decentraland.org/lambdas "),
+            Some("https://peer.decentraland.org/lambdas")
+        );
+        assert_eq!(
+            MessageProcessor::sanitize_lambdas_endpoint("http://localhost:7070/lambdas/"),
+            Some("http://localhost:7070/lambdas/")
+        );
+        assert_eq!(MessageProcessor::sanitize_lambdas_endpoint(""), None);
+        assert_eq!(
+            MessageProcessor::sanitize_lambdas_endpoint("not a url"),
+            None
+        );
+        assert_eq!(
+            MessageProcessor::sanitize_lambdas_endpoint("ftp://peer.decentraland.org/lambdas"),
+            None
+        );
+        assert_eq!(
+            MessageProcessor::sanitize_lambdas_endpoint("https://"),
+            None
+        );
+        assert_eq!(
+            MessageProcessor::sanitize_lambdas_endpoint("https:///lambdas"),
+            None
+        );
+        assert_eq!(
+            MessageProcessor::sanitize_lambdas_endpoint("https://peer.decentraland.org/lam bdas"),
+            None
+        );
+    }
+
+    // --- best_video_track: mirror of unity-explorer LivekitPlayer selection ---
+
+    fn track(
+        identity: &str,
+        source: VideoTrackSourceKind,
+        muted: bool,
+        order: u64,
+    ) -> VideoTrackInfo {
+        VideoTrackInfo {
+            identity: identity.to_string(),
+            identity_h160: identity.as_h160(),
+            source,
+            muted,
+            width: 640,
+            height: 360,
+            last_frame_time: Instant::now(),
+            order,
+        }
+    }
+
+    fn tracks(entries: Vec<(&str, VideoTrackInfo)>) -> HashMap<String, VideoTrackInfo> {
+        entries
+            .into_iter()
+            .map(|(sid, info)| (sid.to_string(), info))
+            .collect()
+    }
+
+    #[test]
+    fn presentation_bot_outranks_screenshare_and_camera() {
+        let map = tracks(vec![
+            (
+                "cam",
+                track("0xaaaa", VideoTrackSourceKind::Camera, false, 0),
+            ),
+            (
+                "share",
+                track("stream:p:1", VideoTrackSourceKind::Screenshare, false, 1),
+            ),
+            (
+                "bot",
+                track("presentation-bot:r", VideoTrackSourceKind::Camera, false, 2),
+            ),
+        ]);
+        assert_eq!(
+            best_video_track(&map, None, &[], true),
+            Some("bot".to_string())
+        );
+    }
+
+    #[test]
+    fn screenshare_outranks_camera_but_muted_share_is_skipped() {
+        let map = tracks(vec![
+            (
+                "cam",
+                track("0xaaaa", VideoTrackSourceKind::Camera, false, 0),
+            ),
+            (
+                "share",
+                track("stream:p:1", VideoTrackSourceKind::Screenshare, false, 1),
+            ),
+        ]);
+        assert_eq!(
+            best_video_track(&map, None, &[], true),
+            Some("share".to_string())
+        );
+
+        let map = tracks(vec![
+            (
+                "cam",
+                track("0xaaaa", VideoTrackSourceKind::Camera, false, 0),
+            ),
+            (
+                "share",
+                track("stream:p:1", VideoTrackSourceKind::Screenshare, true, 1),
+            ),
+        ]);
+        assert_eq!(
+            best_video_track(&map, None, &[], true),
+            Some("cam".to_string())
+        );
+    }
+
+    #[test]
+    fn follows_dominant_active_speaker_with_video_after_hold() {
+        let map = tracks(vec![
+            (
+                "cam_a",
+                track("0xaaaa", VideoTrackSourceKind::Camera, false, 0),
+            ),
+            (
+                "cam_b",
+                track("0xbbbb", VideoTrackSourceKind::Camera, false, 1),
+            ),
+        ]);
+        let speakers = vec!["0xbbbb".to_string()];
+        assert_eq!(
+            best_video_track(&map, Some("cam_a"), &speakers, true),
+            Some("cam_b".to_string())
+        );
+        // Hold not elapsed: stays on the current track.
+        assert_eq!(
+            best_video_track(&map, Some("cam_a"), &speakers, false),
+            Some("cam_a".to_string())
+        );
+    }
+
+    #[test]
+    fn keeps_current_when_dominant_speaker_is_already_playing() {
+        let map = tracks(vec![
+            (
+                "cam_a",
+                track("0xaaaa", VideoTrackSourceKind::Camera, false, 0),
+            ),
+            (
+                "cam_b",
+                track("0xbbbb", VideoTrackSourceKind::Camera, false, 1),
+            ),
+        ]);
+        // Current speaker is dominant; the runner-up must NOT steal the stream.
+        let speakers = vec!["0xaaaa".to_string(), "0xbbbb".to_string()];
+        assert_eq!(
+            best_video_track(&map, Some("cam_a"), &speakers, true),
+            Some("cam_a".to_string())
+        );
+    }
+
+    #[test]
+    fn speaker_without_video_falls_through_to_next_speaker() {
+        let map = tracks(vec![(
+            "cam_b",
+            track("0xbbbb", VideoTrackSourceKind::Camera, false, 0),
+        )]);
+        let speakers = vec!["0xcccc".to_string(), "0xbbbb".to_string()];
+        assert_eq!(
+            best_video_track(&map, None, &speakers, true),
+            Some("cam_b".to_string())
+        );
+    }
+
+    #[test]
+    fn falls_back_to_first_available_when_current_track_died() {
+        let map = tracks(vec![
+            (
+                "cam_b",
+                track("0xbbbb", VideoTrackSourceKind::Camera, false, 5),
+            ),
+            (
+                "cam_c",
+                track("0xcccc", VideoTrackSourceKind::Camera, false, 2),
+            ),
+        ]);
+        assert_eq!(
+            best_video_track(&map, Some("dead_sid"), &[], true),
+            Some("cam_c".to_string())
+        );
+    }
+
+    #[test]
+    fn no_tracks_yields_none() {
+        let map: HashMap<String, VideoTrackInfo> = HashMap::new();
+        assert_eq!(best_video_track(&map, None, &[], true), None);
     }
 }
