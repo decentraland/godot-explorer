@@ -73,6 +73,12 @@ const SCENE_ROOM_RECONNECT_BASE_SECS: u64 = 5;
 #[cfg(feature = "use_livekit")]
 const SCENE_ROOM_RECONNECT_MAX_SECS: u64 = 60;
 
+/// Entity-id prefix the SDK preview server stamps on the scenes it serves
+/// (`b64-<base64(absoluteProjectRoot + "-" + machineId)>`). Marks a scene as a local-preview
+/// one on every path into a preview — CLI `--preview` and the QR/deeplink `preview=` alike.
+#[cfg(feature = "use_pulse")]
+const PREVIEW_SCENE_ID_PREFIX: &str = "b64-";
+
 /// Whether avatar sync — movement and emotes — still goes over LiveKit.
 ///
 /// Pulse is the carrier: while it is established, LiveKit gets none of it (main room,
@@ -345,6 +351,11 @@ pub struct CommunicationManager {
     /// PULSE_REALM, then the derivation in `pulse_realm_name`.
     #[cfg(feature = "use_pulse")]
     pulse_realm_override: Option<String>,
+    /// Whether the connected realm is a local preview, reported by realm.gd from the realm's own
+    /// `about` (which advertises `localSceneParcels`). Equivalent to `--preview` for activation,
+    /// and the only signal on the QR/deeplink preview path, which never sets the CLI flag.
+    #[cfg(feature = "use_pulse")]
+    local_scene_development: bool,
     /// Pulse EmoteStart deferred from `send_emote` (press time) to `set_emoting` (playback
     /// start). Pressing the wheel precedes the async emote load and the idle gate — an
     /// EmoteStart at press time gets chased by the per-frame animation poll's EmoteStop,
@@ -448,6 +459,8 @@ impl INode for CommunicationManager {
             pulse_endpoint_override: None,
             #[cfg(feature = "use_pulse")]
             pulse_realm_override: None,
+            #[cfg(feature = "use_pulse")]
+            local_scene_development: false,
             #[cfg(feature = "use_pulse")]
             pending_pulse_emote_urn: None,
             #[cfg(feature = "use_livekit")]
@@ -865,7 +878,7 @@ impl CommunicationManager {
             pulse_activation(
                 cli.pulse,
                 cli.pulse_explicit,
-                cli.preview_mode,
+                cli.preview_mode || self.local_scene_development,
                 self.pulse_flag_enabled,
             )
         })
@@ -1034,9 +1047,12 @@ impl CommunicationManager {
     /// Precedence:
     /// 1. the runtime/CLI override (`pulse-realm=` deeplink, `--pulse-realm` / PULSE_REALM) —
     ///    what the orchestrator states to an engine it spawned;
-    /// 2. in `--preview`, the Local Scene Development key derived from the preview scene's
+    /// 2. in a local preview, the Local Scene Development key derived from the preview scene's
     ///    entity id (see [`lsd_realm::lsd_realm_key`]) — the same string sdk-commands mints and
-    ///    the other explorers derive;
+    ///    the other explorers derive. Detected from the entity id itself (`b64-` = served by a
+    ///    preview server, the same test `get_scene_adapter` already uses), not from `--preview`,
+    ///    so a QR/deeplink preview (`decentraland://open?preview=http://…`, which never sets the
+    ///    CLI flag) announces the same realm as a desktop `--preview` run;
     /// 3. otherwise the realm's own `about.configurations.realmName` — `main` for Genesis City,
     ///    the world name for a world, which is exactly what the orchestrator states on
     ///    add-scene. `realm.gd`'s `no_realm_name` fallback is not a realm.
@@ -1056,19 +1072,20 @@ impl CommunicationManager {
             return Some(override_realm);
         }
 
-        if cli.bind().preview_mode {
-            // The preview server already serves the id this key is built from, so it is read
-            // back rather than re-derived from the project path — one less place to drift.
-            let scene_runner = global.bind().get_scene_runner();
-            let scene_id = scene_runner.bind().get_current_parcel_scene_id();
-            let entity_id = scene_runner
-                .bind()
-                .get_scene_entity_id(scene_id)
-                .to_string();
-            if entity_id.is_empty() {
-                return None; // not standing in a scene yet — retried on the next poll
-            }
+        // The preview server already serves the id this key is built from, so it is read back
+        // rather than re-derived from the project path — one less place to drift. Its `b64-`
+        // prefix is also what marks the scene as a preview one at all.
+        let scene_runner = global.bind().get_scene_runner();
+        let scene_id = scene_runner.bind().get_current_parcel_scene_id();
+        let entity_id = scene_runner
+            .bind()
+            .get_scene_entity_id(scene_id)
+            .to_string();
+        if entity_id.starts_with(PREVIEW_SCENE_ID_PREFIX) {
             return Some(lsd_realm::lsd_realm_key(&entity_id));
+        }
+        if (cli.bind().preview_mode || self.local_scene_development) && entity_id.is_empty() {
+            return None; // preview realm, not standing in its scene yet — retried next poll
         }
 
         let realm_name = global
@@ -1455,6 +1472,39 @@ impl CommunicationManager {
         }
         #[cfg(not(feature = "use_pulse"))]
         let _ = host_port;
+    }
+
+    /// Reported by realm.gd on every realm change: whether this realm is a local preview (its
+    /// `about` advertises `localSceneParcels`). Equivalent to `--preview` for Pulse activation,
+    /// so the QR/deeplink preview path — which never sets the CLI flag — gets the same
+    /// explicit-opt-in rule. Tears an already-built room down if we only learn this after it was
+    /// created; an opted-in run rebuilds it through the realm change's `ensure_pulse_room`.
+    #[func]
+    pub fn set_local_scene_development(&mut self, is_preview: bool) {
+        #[cfg(feature = "use_pulse")]
+        {
+            if self.local_scene_development == is_preview {
+                return;
+            }
+            self.local_scene_development = is_preview;
+            tracing::info!("pulse: local scene development realm = {is_preview}");
+
+            let global = DclGlobal::singleton();
+            let cli = global.bind().cli.clone();
+            let enabled = self.pulse_enabled(&cli.bind());
+            if !enabled {
+                if let Some(mut pulse_room) = self.pulse_room.take() {
+                    tracing::info!(
+                        "pulse: leaving — a local preview joins only on an explicit opt-in"
+                    );
+                    pulse_room.clean();
+                    self.pulse_teleport_pending = false;
+                    self.pending_pulse_emote_urn = None;
+                }
+            }
+        }
+        #[cfg(not(feature = "use_pulse"))]
+        let _ = is_preview;
     }
 
     /// Deployment `dual-channel` flag, reported by feature_flags.gd once the fetch settles.

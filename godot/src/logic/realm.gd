@@ -266,6 +266,13 @@ func async_set_realm(new_realm_string: String, search_new_pos: bool = false) -> 
 	realm_name = configuration.get("realmName", "no_realm_name")
 	network_id = int(configuration.get("networkId", 1))  # 1=Ethereum
 
+	# A local preview realm advertises the parcels it serves locally. This is the only signal
+	# available on the QR/deeplink preview path (`decentraland://open?preview=http://…`), which
+	# never sets the `--preview` CLI flag — Pulse uses it to apply the same explicit-opt-in rule
+	# there as on desktop, and to announce the LSD realm key instead of `LocalPreview`.
+	var is_local_preview: bool = not configuration.get("localSceneParcels", []).is_empty()
+	Global.comms.set_local_scene_development(is_local_preview)
+
 	# get minimap
 	var map_config = configuration.get("map", {})
 	var sizes = map_config.get("sizes", [])
