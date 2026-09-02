@@ -50,6 +50,7 @@ label_settings = SubResource("LabelSettings_ebo02")
 uppercase = true
 
 [node name="Label_Value" type="Label" parent="." unique_id=600282692]
+auto_translate_mode = 2
 unique_name_in_owner = true
 layout_mode = 2
 text = "Value"

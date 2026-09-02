@@ -69,8 +69,12 @@ pub fn update_touch_screen_controls(
                 let mut dict = VarDictionary::new();
                 dict.set("action", GString::from(action_name));
                 dict.set("hide", input.hide);
-                // Resolve the scene-relative icon path to a content hash + URL so the
-                // (scene-less) global joypad can fetch it. Unresolved -> empty (built-in glyph).
+                // Resolve the scene-relative icon path to a content hash for the global
+                // joypad. Unresolved -> empty (built-in glyph). The URL is kept as a
+                // fallback for when the scene is already gone by the time the icon is
+                // applied; `scene_id` lets the consumers re-resolve the mapping instead,
+                // so they share the plain-hash cache entry with the scene's own UI — which
+                // is what `purge_file` drops on a preview hot-reload (see #2796).
                 // Only the `Texture` variant of TextureUnion is supported for button icons;
                 // avatar / video textures fall back to the built-in glyph (with a warning).
                 let icon_path = match input.icon.as_ref().and_then(|tex| tex.tex.as_ref()) {
@@ -92,6 +96,7 @@ pub fn update_touch_screen_controls(
                 };
                 dict.set("icon_hash", GString::from(icon_hash.as_str()));
                 dict.set("icon_url", GString::from(icon_url.as_str()));
+                dict.set("scene_id", scene.scene_id.0);
                 inputs.push(&dict.to_variant());
             }
 

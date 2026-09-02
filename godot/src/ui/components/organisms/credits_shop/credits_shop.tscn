@@ -126,7 +126,7 @@ theme_override_constants/separation = 0
 
 [node name="Label_Title" type="Label" parent="CreditsFaq" unique_id=505089774]
 layout_mode = 2
-text = "FAQ"
+text = "CREDITS_SHOP_FAQ"
 label_settings = SubResource("LabelSettings_a02fn")
 
 [node name="HSeparator" type="HSeparator" parent="CreditsFaq" unique_id=1486703698]
@@ -138,8 +138,8 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_7yfw2")
 [node name="FaqCollapsable1" parent="CreditsFaq" unique_id=1032732015 instance=ExtResource("5_uc6fc")]
 layout_mode = 2
 size_flags_horizontal = 1
-title = "What are Credits?"
-description = "Credits are a limited digital in-app utility purchased with real money via Apple. You can use Credits to acquire digital content, such as Wearables and Emotes, in the iOS App."
+title = "CREDITS_SHOP_WHAT_ARE_CREDITS"
+description = "CREDITS_SHOP_CREDITS_ARE_A_LIMITED_DIGITAL_IN"
 
 [node name="HSeparator2" type="HSeparator" parent="CreditsFaq" unique_id=895173665]
 layout_mode = 2
@@ -150,8 +150,8 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_7yfw2")
 [node name="FaqCollapsable2" parent="CreditsFaq" unique_id=671593998 instance=ExtResource("5_uc6fc")]
 layout_mode = 2
 size_flags_horizontal = 1
-title = "Do Credits expire?"
-description = "Credits do not expire. However, the Foundation may set expiration dates or discontinue them in the future by providing at least 30 days of prior notice."
+title = "CREDITS_SHOP_DO_CREDITS_EXPIRE"
+description = "CREDITS_SHOP_CREDITS_DO_NOT_EXPIRE_HOWEVER_THE"
 
 [node name="HSeparator3" type="HSeparator" parent="CreditsFaq" unique_id=1758333132]
 layout_mode = 2
@@ -167,7 +167,7 @@ theme_override_colors/default_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 theme_override_fonts/normal_font = ExtResource("6_2k0t8")
 theme_override_font_sizes/normal_font_size = 24
 bbcode_enabled = true
-text = "I agree that I am purchasing a limited license to use Credits governed by the [color=#E8B9FF][url=\"https://decentraland.org/credits-terms\"]Credits Terms[/url][/color]. By purchasing Credits, you agree to Decentraland's [color=#E8B9FF][url=\"https://decentraland.org/terms\"]Terms of Use[/url][/color] and [color=#E8B9FF][url=\"https://decentraland.org/privacy\"]Privacy Policy[/url][/color]."
+text = "CREDITS_SHOP_LICENCE"
 fit_content = true
 scroll_active = false
 autowrap_mode = 2

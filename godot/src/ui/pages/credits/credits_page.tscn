@@ -101,7 +101,7 @@ layout_mode = 2
 size_flags_horizontal = 3
 theme_override_fonts/font = ExtResource("5_font")
 theme_override_font_sizes/font_size = 28
-text = "Credits"
+text = "CREDITS_CREDITS"
 label_settings = ExtResource("6_label")
 
 [node name="Button_History" type="Button" parent="TextureRect/VBoxContainer/SafeTopMarginContainer/VBoxContainer/HBoxContainer"]
