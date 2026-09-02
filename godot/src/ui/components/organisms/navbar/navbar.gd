@@ -6,11 +6,22 @@ signal navbar_closed
 
 enum BUTTON { FRIENDS, NOTIFICATIONS, BACKPACK, SETTINGS }
 
+# Open/close timeline tuning. The navbar dropdown fades its alpha in; the side-panel surface
+# grows from the navbar edge to its full width (scale.x 0 -> 1), leading with the fade.
+const FADE_TIME: float = 0.12
+const GROW_TIME: float = 0.16
+const GROW_DELAY: float = 0.04
+const CLOSE_TIME: float = 0.1
+
 var _manually_hidden: bool = false
 # Navbar buttons ordered to match Control_Selection1..6 (top to bottom); filled in _ready.
 var _selection_buttons: Array[BaseButton] = []
+# The side-panel surface (VBoxContainer_LeftPanels) injected by explorer via set_reveal_surface.
+# The navbar owns its reveal/collapse so the fade and the grow stay on one timeline. It is not a
+# child of the navbar, so we only ever touch its scale/pivot — never its layout or visibility.
+var _reveal_surface: Control = null
+var _open_tween: Tween = null
 
-@onready var animation_player: AnimationPlayer = %AnimationPlayer
 @onready var v_box_container_buttons: VBoxContainer = %VBoxContainer_Buttons
 @onready var static_button_friends: TextureButton = %StaticButton_Friends
 @onready var static_button_notifications: TextureButton = %StaticButton_Notifications
@@ -20,6 +31,10 @@ var _selection_buttons: Array[BaseButton] = []
 @onready var static_button_settings: TextureButton = %StaticButton_Settings
 @onready var static_button_discover: TextureButton = %StaticButton_Discover
 @onready var panel_profile: ProfileIconButton = %Panel_Profile
+
+# The dropdown that fades in (%Control_Menu) and the collapsed profile toggle it swaps with.
+@onready var _dropdown: Control = $Control_Menu
+@onready var _collapsed: Control = $Control
 
 # One shared selection effect (%Control_Effect) that reparents into the slot of the pressed
 # button. `_selection_buttons` and `_selection_slots` are index-aligned, top-to-bottom.
@@ -57,6 +72,10 @@ func _ready() -> void:
 
 	Global.close_navbar.connect(_on_navbar_close)
 	Global.open_navbar_silently.connect(_on_navbar_open_silently_on_backpack)
+
+	# Initial collapsed visuals (previously set by the AnimationPlayer's autoplay "close").
+	_dropdown.visible = false
+	_collapsed.visible = true
 
 	# Sync the profile glow to the navbar's initial (collapsed) state so it doesn't
 	# show before the first open/close toggle.
@@ -104,16 +123,74 @@ func _on_selection_button_pressed(pressed_button: BaseButton) -> void:
 		_selection_effect.reparent(target, false)
 
 
+## Injects the side-panel surface the navbar reveals on open. Called once by explorer. The surface
+## grows from its left edge (adjacent to the navbar) via scale.x, so we pin its pivot there and
+## start it collapsed. Scale is a GPU transform: no per-frame relayout while it animates.
+func set_reveal_surface(surface: Control) -> void:
+	_reveal_surface = surface
+	if _reveal_surface != null:
+		_reveal_surface.pivot_offset = Vector2.ZERO
+		_reveal_surface.scale = Vector2(0.0, 1.0)
+
+
+func _kill_open_tween() -> void:
+	if _open_tween != null and _open_tween.is_valid():
+		_open_tween.kill()
+	_open_tween = null
+
+
+## Fade the dropdown in, then grow the side-panel surface from the navbar edge. Panel content is
+## already shown by explorer (surface starts at scale.x 0, so it's revealed by the grow).
+func _animate_open() -> void:
+	_kill_open_tween()
+	_collapsed.visible = false
+	_dropdown.visible = true
+	_dropdown.modulate.a = 0.0
+	_open_tween = create_tween()
+	_open_tween.set_parallel(true)
+	_open_tween.tween_property(_dropdown, "modulate:a", 1.0, FADE_TIME)
+	if _reveal_surface != null:
+		_reveal_surface.scale = Vector2(0.0, 1.0)
+		(
+			_open_tween
+			. tween_property(_reveal_surface, "scale:x", 1.0, GROW_TIME)
+			. set_delay(GROW_DELAY)
+			. set_trans(Tween.TRANS_CUBIC)
+			. set_ease(Tween.EASE_OUT)
+		)
+
+
+## Collapse the surface and fade the dropdown out, then restore the collapsed profile toggle.
+func _animate_close() -> void:
+	_kill_open_tween()
+	_open_tween = create_tween()
+	_open_tween.set_parallel(true)
+	_open_tween.tween_property(_dropdown, "modulate:a", 0.0, CLOSE_TIME)
+	if _reveal_surface != null:
+		(
+			_open_tween
+			. tween_property(_reveal_surface, "scale:x", 0.0, CLOSE_TIME)
+			. set_trans(Tween.TRANS_CUBIC)
+			. set_ease(Tween.EASE_IN)
+		)
+	_open_tween.chain().tween_callback(_finish_close)
+
+
+func _finish_close() -> void:
+	_dropdown.visible = false
+	_collapsed.visible = true
+
+
 func _on_button_toggled(toggled_on: bool) -> void:
 	Global.send_haptic_feedback()
 	panel_profile.set_glow(toggled_on)
 	if toggled_on:
-		animation_player.play("open")
 		set_button_pressed(BUTTON.FRIENDS)
 		navbar_opened.emit()
+		_animate_open()
 	else:
-		animation_player.play("close")
 		navbar_closed.emit()
+		_animate_close()
 
 
 ## Set a button as pressed
@@ -137,8 +214,8 @@ func capture_mouse():
 func collapse():
 	button.set_pressed_no_signal(false)
 	panel_profile.set_glow(false)
-	animation_player.play("close")
 	navbar_closed.emit()
+	_animate_close()
 
 
 ## True while the navbar dropdown is expanded. Lets callers collapse it only when
@@ -156,7 +233,7 @@ func open_navbar_silently() -> void:
 	if not button.button_pressed:
 		button.set_pressed_no_signal(true)
 		panel_profile.set_glow(true)
-		animation_player.play("open")
+		_animate_open()
 
 
 func set_manually_hidden(is_hidden: bool) -> void:

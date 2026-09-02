@@ -256,6 +256,7 @@ theme_override_constants/separation = 99
 theme_override_styles/separator = SubResource("StyleBoxEmpty_c5h7v")
 
 [node name="VBoxContainer_LeftPanels" type="VBoxContainer" parent="UI/SafeAreaHud/InteractableHUD/HBoxContainerLeftPanels" unique_id=1190000788]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(624, 640)
 layout_mode = 2
 mouse_filter = 2

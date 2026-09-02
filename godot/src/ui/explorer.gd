@@ -167,10 +167,7 @@ func _ready():
 	Global.on_menu_open.connect(_on_menu_open)
 	Global.on_menu_close.connect(_on_menu_close)
 
-	# Connect friends button
 	Global.open_friends_panel.connect(_show_friends_panel)
-
-	# Connect settings panel button
 	Global.open_settings_panel.connect(_show_settings_panel)
 
 	# Connect debug panel signal from landscape settings panel
@@ -183,6 +180,8 @@ func _ready():
 
 	navbar.navbar_closed.connect(_close_all_panels)
 	navbar.navbar_opened.connect(_open_friends_panel)
+	# Navbar owns the reveal/collapse of the side-panel surface (fade + grow on one timeline).
+	navbar.set_reveal_surface(%VBoxContainer_LeftPanels)
 	profile_container.visibility_changed.connect(_on_profile_container_visibility_changed)
 
 	# Connect to NotificationsManager queue signals
