@@ -103,17 +103,19 @@ static func _walk_scene_resources(
 	elif node is CollisionShape3D:
 		acc["colliders"] += 1
 	elif node is GPUParticles3D:
-		# SDK particle systems live under scene entities; avatar particles are
-		# under the global AvatarScene and never reached by this scene-rooted walk.
+		# Authored, not playback state: every emitter counts (the runtime forces
+		# emitting off for scenes the player isn't standing in, and for paused /
+		# stopped / one-shot systems). The particle total reads the pre-clamp
+		# authored amount — ps.amount is already clamped by the runtime budgets
+		# and would saturate at the cap, never signalling an over-budget scene.
 		var ps: GPUParticles3D = node
-		if ps.emitting:
-			acc["emitters"] += 1
-			acc["live_particles"] += ps.amount
+		acc["emitters"] += 1
+		acc["live_particles"] += int(ps.get_meta("dcl_authored_amount", ps.amount))
 	elif node is DclLightSourceComponent:
 		# Authored counts, not budgeted — but skip lights authored off
-		# (active=false): they never emit, so they don't hit perf.
+		# (active=false) or torn down (no Light3D): they never emit.
 		var dcl_light := node as DclLightSourceComponent
-		if dcl_light.runtime_light_enabled:
+		if dcl_light.runtime_light_enabled and dcl_light.current_light != null:
 			acc["lights"] += 1
 			if dcl_light.runtime_shadows_enabled:
 				acc["shadow_casters"] += 1
