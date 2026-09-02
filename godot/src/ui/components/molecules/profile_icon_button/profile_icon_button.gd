@@ -1,8 +1,10 @@
-extends Control
+class_name ProfileIconButton
+extends TextureButton
 
 signal open_profile
 
 @onready var texture_rect_profile = %TextureRect_Profile
+@onready var texture_rect_border: TextureRect = %TextureRect_Border
 
 
 func _ready():
@@ -21,6 +23,12 @@ func _on_gui_input(event: InputEvent):
 	if event is InputEventScreenTouch:
 		if event.pressed == false:
 			open_profile.emit()
+
+
+## Lights up the glow border texture. Driven by the navbar's open/close state so the
+## ring shows whenever the navbar is expanded and hides when it collapses.
+func set_glow(is_on: bool) -> void:
+	texture_rect_border.visible = is_on
 
 
 func _async_on_profile_changed(new_profile: DclUserProfile):

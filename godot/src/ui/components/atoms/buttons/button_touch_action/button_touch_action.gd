@@ -24,6 +24,13 @@ func _ready() -> void:
 	button_mask = 0
 
 
+## Latch the orb "Hold" look (e.g. glider active). No-op until an OrbSkin child is present.
+func set_hold(on: bool) -> void:
+	for child in get_children():
+		if child is OrbSkin:
+			child.set_hold(on)
+
+
 ## Show a scene-provided icon on the overlay (leaves the native glyph untouched underneath).
 func set_custom_icon(texture: Texture2D) -> void:
 	if _custom_icon == null:

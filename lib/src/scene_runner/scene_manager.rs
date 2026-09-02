@@ -37,6 +37,7 @@ use std::{
     cell::RefCell,
     collections::{HashMap, HashSet},
     sync::atomic::{AtomicU32, Ordering},
+    sync::Arc,
     time::{Duration, Instant},
 };
 use tokio::sync::mpsc::error::TrySendError;
@@ -1156,6 +1157,36 @@ impl SceneManager {
         }
     }
 
+    /// Republishes a single file->hash entry in a running scene's content mapping,
+    /// so the next asset request for `src` resolves to the new hash. An empty
+    /// `hash` drops the entry (the file was deleted).
+    ///
+    /// Preview hot-reload only: the sdk-commands server sends an `UpdateModel`
+    /// when a .glb changes, and the affected GltfContainers re-resolve their hash
+    /// through `get_scene_content_mapping` on reload.
+    ///
+    /// Only `Scene::content_mapping` is updated, not the `SceneEntityDefinition`
+    /// it was built from — a full scene reload re-fetches the definition from the
+    /// preview server anyway, so the two can't drift into a stale state.
+    ///
+    /// Returns false when the scene isn't loaded, so callers can fall back to a
+    /// full scene reload.
+    #[func]
+    fn update_scene_content_entry(&mut self, scene_id: i32, src: GString, hash: GString) -> bool {
+        let Some(scene) = self.scenes.get_mut(&SceneId(scene_id)) else {
+            return false;
+        };
+
+        let hash = hash.to_string();
+        let hash = (!hash.is_empty()).then_some(hash);
+        scene.content_mapping = Arc::new(
+            scene
+                .content_mapping
+                .with_entry(&src.to_string(), hash.as_deref()),
+        );
+        true
+    }
+
     #[func]
     fn get_scene_title(&self, scene_id: i32) -> GString {
         if let Some(scene) = self.scenes.get(&SceneId(scene_id)) {
@@ -1625,7 +1656,11 @@ impl SceneManager {
             }
         });
 
-        let frames_count = godot::classes::Engine::singleton().get_physics_frames();
+        // EngineInfo.frame_number must count rendered/main-loop frames (Unity
+        // reports Time.frameCount). Physics frames advance at a fixed 60 Hz in
+        // wall time even when rendering is slow, so they hide the real client
+        // frame rate from scenes that diff frame_number between ticks.
+        let frames_count = godot::classes::Engine::singleton().get_process_frames();
 
         let player_parcel_position = Vector2i::new(
             (player_global_transform.origin.x / 16.0).floor() as i32,

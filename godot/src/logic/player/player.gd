@@ -8,6 +8,9 @@ const SPRINTING_CAMERA_FOV = 75.0
 const MAX_AIR_JUMPS := 1
 const JUMP_BUFFER_WINDOW := 0.15
 const JUMP_COOLDOWN := 0.3
+# Coyote-style debounce on the ANIMATION grounded flag: at mobile physics
+# rates a 1-tick is_on_floor() flicker replayed the landing pose (the "bounce").
+const GROUNDED_GRACE_WINDOW := 0.15
 const AIR_JUMP_HEIGHT := 2.0
 const AIR_JUMP_DELAY := 0.2
 const AIR_JUMP_DIRECTION_IMPULSE := 8.0
@@ -290,6 +293,23 @@ func apply_look_delta(relative: Vector2) -> void:
 	clamp_camera_rotation()
 
 
+# Pure grounded-flag resolution, extracted for regression testing (#2732).
+# Grace is suppressed while jump is held AND during the jump cooldown — the
+# cooldown check is what keeps tap-jumps (released before the next tick reads
+# jump_held == false) from lingering grounded.
+static func resolve_is_grounded(
+	on_floor: bool, fall_elapsed: float, jump_held: bool, since_last_jump: float
+) -> bool:
+	return (
+		on_floor
+		or (
+			fall_elapsed < GROUNDED_GRACE_WINDOW
+			and not jump_held
+			and since_last_jump >= JUMP_COOLDOWN
+		)
+	)
+
+
 func _physics_process(dt: float) -> void:
 	# Sample scene-driven physics before gravity — force.y feeds effective_gravity below.
 	var scene_external_force: Vector3 = Global.scene_runner.get_active_external_force()
@@ -363,6 +383,9 @@ func _physics_process(dt: float) -> void:
 
 	var on_floor = is_on_floor() or position.y <= 0.0
 	var was_falling = avatar.fall
+	# Fall time up to this tick, captured before the reset below so the landing
+	# branch can still read it for the hard-landing check.
+	var fall_duration := time_falling
 
 	if !on_floor:
 		time_falling += dt
@@ -472,7 +495,7 @@ func _physics_process(dt: float) -> void:
 	else:
 		if not avatar.land:
 			avatar.land = true
-			if was_falling and hard_landing_cooldown > 0 and time_falling > 1.0:
+			if was_falling and hard_landing_cooldown > 0 and fall_duration > 1.0:
 				_hard_landing_timer = hard_landing_cooldown
 
 		velocity.y = 0
@@ -536,7 +559,11 @@ func _physics_process(dt: float) -> void:
 	# AnimationTree off the same numbers for both local and remote avatars.
 	avatar.jump_count = jump_count
 	avatar.glide_state = glide_state
-	avatar.is_grounded = on_floor
+	# Debounced ungrounding: see resolve_is_grounded. The jump-pad override
+	# below (combined_vy > 0.3) runs after this and still wins.
+	avatar.is_grounded = resolve_is_grounded(
+		on_floor, time_falling, Input.is_action_pressed("ia_jump"), _time_since_last_jump
+	)
 
 	_apply_scene_physics(dt, external_acceleration, scene_pending_impulses, on_floor)
 
