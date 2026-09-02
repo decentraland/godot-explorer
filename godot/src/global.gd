@@ -1555,7 +1555,7 @@ func _http_method_to_string(method: int) -> String:
 
 
 func _capture_for_bug_report() -> void:
-	BugReportCapture.capture(get_viewport())
+	BugReportCapture.capture_for_settings(get_viewport())
 
 
 func async_signed_fetch(

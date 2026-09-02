@@ -84,7 +84,7 @@ static func async_submit(
 # Every value must be a String — the proxy rejects non-string attribute values.
 static func _build_attributes(issue_type_uuid: String, description: String) -> Dictionary:
 	var device := _collect_device_info()
-	return {
+	var attributes := {
 		"_default_title_": "Bug Report: %s" % _label_for_uuid(issue_type_uuid),
 		"_default_description_": _compose_description(description),
 		"Issue Type": issue_type_uuid,
@@ -93,6 +93,26 @@ static func _build_attributes(issue_type_uuid: String, description: String) -> D
 		"RAM": device["ram"],
 		"Client version": String(DclGlobal.get_version()),
 	}
+
+	# Omitted rather than sent empty: Intercom leaves an absent attribute unset,
+	# while "" renders as a filled-in blank. Same rule the Unity client applies.
+	var sdk_version := _current_scene_sdk_version()
+	if not sdk_version.is_empty():
+		attributes["SDK version"] = sdk_version
+
+	return attributes
+
+
+# `runtimeVersion` of the scene the reporter is standing in ("7" for SDK7),
+# mirroring Unity's SceneSdkVersion. Empty in the lobby, where there is no scene.
+static func _current_scene_sdk_version() -> String:
+	var fetcher = Global.scene_fetcher
+	if fetcher == null:
+		return ""
+	var scene_data = fetcher.get_current_scene_data()
+	if scene_data == null or scene_data.scene_entity_definition == null:
+		return ""
+	return String(scene_data.scene_entity_definition.get_runtime_version())
 
 
 # Mirrors Unity's ComposeTicketDescription so both clients read the same in

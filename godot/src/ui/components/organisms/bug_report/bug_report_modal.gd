@@ -31,6 +31,13 @@ const GAP_FULL := 20
 const SLOT_WIDTH := 170
 const SLOT_HEIGHT := 170
 
+# Orientation to return to when the modal closes. The form is portrait-only by
+# design, but in-game the app runs landscape and the modal was being clipped
+# (PR #2779 review). Follows the existing precedent: the lobby and Discover pin
+# portrait via Global.set_orientation_portrait(), and chatbar.gd toggles it at
+# runtime.
+var _restore_landscape: bool = false
+
 # Attached images in slot order. Slot 0 is pre-filled with the viewport captured
 # when Settings opened, unless the user removes it.
 var _images: Array[Image] = []
@@ -43,6 +50,11 @@ var _images: Array[Image] = []
 
 func _ready() -> void:
 	super()
+	_force_portrait()
+	# Covers the paths that bypass close(): the modal being freed by
+	# ModalManager, or the whole screen going away. Leaving the game stuck in
+	# portrait would be far worse than a redundant restore.
+	tree_exiting.connect(_restore_orientation)
 	_populate_issue_types()
 	_rebuild_screenshot_slots()
 	_update_submit_enabled()
@@ -196,4 +208,19 @@ func _on_cancel_pressed() -> void:
 
 
 func close() -> void:
+	_restore_orientation()
 	hide()
+
+
+func _force_portrait() -> void:
+	_restore_landscape = not Global.is_orientation_portrait()
+	if _restore_landscape:
+		Global.set_orientation_portrait()
+
+
+# Idempotent: close() and tree_exiting can both fire for one modal.
+func _restore_orientation() -> void:
+	if not _restore_landscape:
+		return
+	_restore_landscape = false
+	Global.set_orientation_landscape()

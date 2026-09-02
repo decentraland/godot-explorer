@@ -17,6 +17,10 @@ const TRAVEL_MODAL_SCENE_PATH = "res://src/ui/components/organisms/modal/travel_
 const INPUT_MODAL_SCENE_PATH = "res://src/ui/components/organisms/input_modal/input_modal.tscn"
 const CODE_MODAL_SCENE_PATH = "res://src/ui/components/organisms/code_modal/code_modal.tscn"
 const BUG_REPORT_MODAL_SCENE_PATH = "res://src/ui/components/organisms/bug_report/bug_report_modal.tscn"
+
+const BUG_REPORT_SUCCESS_TITLE = "Bug Report Submitted!"
+const BUG_REPORT_SUCCESS_BODY = "Thanks for helping improve Decentraland. Our team will review your report."
+const BUG_REPORT_SUCCESS_PRIMARY = "CLOSE"
 const REWARD_MODAL_SCENE_PATH = "res://src/ui/components/organisms/reward_modal/reward_modal.tscn"
 const UPGRADE_MODAL_SCENE_PATH = "res://src/ui/components/organisms/upgrade_modal/upgrade_modal.tscn"
 
@@ -575,6 +579,30 @@ func async_show_low_spec_iphone_modal() -> void:
 
 
 ## Shows a purchase failed modal
+## Confirmation shown after a bug report is filed (issue #2652). Reuses the
+## generic Modal, which already floats its icon over the panel's top edge the
+## way the design calls for.
+func async_show_bug_report_success_modal() -> void:
+	if not is_instance_valid(current_modal):
+		if not await _async_create_modal():
+			return
+		if not NodeGuard.is_alive(
+			current_modal, "ModalManager.async_show_bug_report_success_modal"
+		):
+			return
+
+	current_modal.set_title(BUG_REPORT_SUCCESS_TITLE)
+	current_modal.set_body(BUG_REPORT_SUCCESS_BODY)
+	current_modal.set_primary_button_text(BUG_REPORT_SUCCESS_PRIMARY)
+	current_modal.show_icon(Modal.MODAL_SUCCESS_ICON)
+	current_modal.hide_url()
+	current_modal.button_secondary.hide()
+	current_modal.show()
+
+	_disconnect_button_signals()
+	current_modal.button_primary.pressed.connect(close_current_modal)
+
+
 func async_show_purchase_failed_modal() -> void:
 	if not is_instance_valid(current_modal):
 		if not await _async_create_modal():

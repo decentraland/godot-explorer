@@ -42,6 +42,18 @@ static func capture(viewport: Viewport) -> void:
 	_latest = image
 
 
+## Capture from the Settings-opened path.
+##
+## In landscape the side navbar opens BEFORE Settings and covers the world, so
+## navbar.gd takes the clean frame itself; capturing again here would overwrite
+## it with a navbar-covered one. The navbar is landscape-only, so the portrait
+## and lobby paths — which have no navbar — still capture here.
+static func capture_for_settings(viewport: Viewport) -> void:
+	if not Global.is_orientation_portrait() and Global.get_explorer() != null:
+		return
+	capture(viewport)
+
+
 ## The last capture, or null. Not consumed — reopening the form reuses it.
 static func latest() -> Image:
 	return _latest

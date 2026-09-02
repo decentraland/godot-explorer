@@ -71,6 +71,10 @@ func _on_button_toggled(toggled_on: bool) -> void:
 	Global.send_haptic_feedback()
 	panel_profile.set_glow(toggled_on)
 	if toggled_on:
+		# Grab the frame BEFORE the open animation starts: this is the last
+		# moment the world is unobstructed, and it is what the bug report form
+		# pre-fills its screenshot slot with (issue #2652).
+		BugReportCapture.capture(get_viewport())
 		animation_player.play("open")
 		set_button_pressed(BUTTON.FRIENDS)
 		navbar_opened.emit()

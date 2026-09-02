@@ -681,9 +681,7 @@ func _async_open_bug_report() -> void:
 
 
 func _on_bug_report_submitted(_ticket_id: String) -> void:
-	NotificationsManager.show_system_toast(
-		"Report sent", "Thanks — our support team will take a look.", "system", "alert"
-	)
+	Global.modal_manager.async_show_bug_report_success_modal()
 
 
 func _on_bug_report_failed(message: String) -> void:
