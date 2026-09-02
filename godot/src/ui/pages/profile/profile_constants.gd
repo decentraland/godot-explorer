@@ -1,6 +1,9 @@
 class_name ProfileConstants
 extends Node
 
+# Resolved through TranslationServer.translate() from the tables below, so no tr("LITERAL")
+# scan can see them. Declared here instead; the glob also fails if a key is misspelt.
+
 const COUNTRIES = [
 	"Afghanistan",
 	"Albania",
@@ -294,49 +297,95 @@ const LANGUAGES = [
 	"Other"
 ]
 
-const GENDERS = [
-	"Female",
-	"Male",
-	"Transgender",
-	"Neutral",
-	"Non-Binary",
-	"Fluid",
-	"Agender",
-	"Pangender",
-	"Queer",
-	"Two-Spirit",
-	"Other"
-]
-
-const SEXUAL_ORIENTATIONS = [
-	"Heterosexual",
-	"Bisexual",
-	"Lesbian",
-	"Gay",
-	"Asexual",
-	"Queer",
-	"Polysexual",
-	"Pansexual",
-	"Other"
-]
-
-const PRONOUNS = [
-	"He / Him", "She / Her", "They / Them", "Ze / Zir", "Xe / Xem", "Ze / Hir", "Per / Per", "Other"
-]
-
-const RELATIONSHIP_STATUS = [
-	"Single",
-	"In a relationship",
-	"Engaged",
-	"Married",
-	"It's complicated",
-	"In an open relationship",
-	"Widowed",
-	"Separated",
-	"Divorced",
-	"Other"
-]
-
 const EMPLOYMENT_STATUS = [
 	"Studying", "Working", "Chilling", "Looking for a job", "Home/Family", "Retired", "Other"
 ]
+
+## Which option table backs each profile field.
+
+static var genders = [
+	{"id": "Female", "key": TranslationKey.new("PROFILE_GENDER_FEMALE")},
+	{"id": "Male", "key": TranslationKey.new("PROFILE_GENDER_MALE")},
+	{"id": "Transgender", "key": TranslationKey.new("PROFILE_GENDER_TRANSGENDER")},
+	{"id": "Neutral", "key": TranslationKey.new("PROFILE_GENDER_NEUTRAL")},
+	{"id": "Non-Binary", "key": TranslationKey.new("PROFILE_GENDER_NON_BINARY")},
+	{"id": "Fluid", "key": TranslationKey.new("PROFILE_GENDER_FLUID")},
+	{"id": "Agender", "key": TranslationKey.new("PROFILE_GENDER_AGENDER")},
+	{"id": "Pangender", "key": TranslationKey.new("PROFILE_GENDER_PANGENDER")},
+	{"id": "Queer", "key": TranslationKey.new("PROFILE_GENDER_QUEER")},
+	{"id": "Two-Spirit", "key": TranslationKey.new("PROFILE_GENDER_TWO_SPIRIT")},
+	{"id": "Other", "key": TranslationKey.new("PROFILE_GENDER_OTHER")},
+]
+
+static var sexual_orientations = [
+	{"id": "Heterosexual", "key": TranslationKey.new("PROFILE_ORIENTATION_HETEROSEXUAL")},
+	{"id": "Bisexual", "key": TranslationKey.new("PROFILE_ORIENTATION_BISEXUAL")},
+	{"id": "Lesbian", "key": TranslationKey.new("PROFILE_ORIENTATION_LESBIAN")},
+	{"id": "Gay", "key": TranslationKey.new("PROFILE_ORIENTATION_GAY")},
+	{"id": "Asexual", "key": TranslationKey.new("PROFILE_ORIENTATION_ASEXUAL")},
+	{"id": "Queer", "key": TranslationKey.new("PROFILE_ORIENTATION_QUEER")},
+	{"id": "Polysexual", "key": TranslationKey.new("PROFILE_ORIENTATION_POLYSEXUAL")},
+	{"id": "Pansexual", "key": TranslationKey.new("PROFILE_ORIENTATION_PANSEXUAL")},
+	{"id": "Other", "key": TranslationKey.new("PROFILE_ORIENTATION_OTHER")},
+]
+
+static var pronouns = [
+	{"id": "He / Him", "key": TranslationKey.new("PROFILE_PRONOUN_HE_HIM")},
+	{"id": "She / Her", "key": TranslationKey.new("PROFILE_PRONOUN_SHE_HER")},
+	{"id": "They / Them", "key": TranslationKey.new("PROFILE_PRONOUN_THEY_THEM")},
+	{"id": "Ze / Zir", "key": TranslationKey.new("PROFILE_PRONOUN_ZE_ZIR")},
+	{"id": "Xe / Xem", "key": TranslationKey.new("PROFILE_PRONOUN_XE_XEM")},
+	{"id": "Ze / Hir", "key": TranslationKey.new("PROFILE_PRONOUN_ZE_HIR")},
+	{"id": "Per / Per", "key": TranslationKey.new("PROFILE_PRONOUN_PER_PER")},
+	{"id": "Other", "key": TranslationKey.new("PROFILE_PRONOUN_OTHER")},
+]
+
+static var relationship_status = [
+	{"id": "Single", "key": TranslationKey.new("PROFILE_RELATIONSHIP_SINGLE")},
+	{
+		"id": "In a relationship",
+		"key": TranslationKey.new("PROFILE_RELATIONSHIP_IN_A_RELATIONSHIP")
+	},
+	{"id": "Engaged", "key": TranslationKey.new("PROFILE_RELATIONSHIP_ENGAGED")},
+	{"id": "Married", "key": TranslationKey.new("PROFILE_RELATIONSHIP_MARRIED")},
+	{"id": "It's complicated", "key": TranslationKey.new("PROFILE_RELATIONSHIP_IT_S_COMPLICATED")},
+	{
+		"id": "In an open relationship",
+		"key": TranslationKey.new("PROFILE_RELATIONSHIP_IN_AN_OPEN_RELATIONSHIP")
+	},
+	{"id": "Widowed", "key": TranslationKey.new("PROFILE_RELATIONSHIP_WIDOWED")},
+	{"id": "Separated", "key": TranslationKey.new("PROFILE_RELATIONSHIP_SEPARATED")},
+	{"id": "Divorced", "key": TranslationKey.new("PROFILE_RELATIONSHIP_DIVORCED")},
+	{"id": "Other", "key": TranslationKey.new("PROFILE_RELATIONSHIP_OTHER")},
+]
+
+static var field_options := {
+	"pronouns": pronouns,
+	"gender": genders,
+	"sexual_orientation": sexual_orientations,
+	"relationship": relationship_status,
+}
+
+
+## Display label for a stored option value.
+##
+## The "id" of each option is a STABLE ID, not copy: profile_editor writes it straight into the
+## published profile via set_gender() / set_pronouns() and other clients read it back, so it must
+## never be translated. Each option carries its own "key" instead, which is what gets shown.
+##
+## id and key live in the same entry deliberately — a separate lookup table can drift out of step
+## with the array, and the failure is silent (the label falls back to raw English).
+##
+## Keys are per field because "Other" appears in all four tables and "Queer" in two, and they
+## inflect differently by category in ES/PT. Unknown values pass through unchanged, so a value
+## written by a newer client still displays rather than vanishing.
+static func display_name(field: String, value: String) -> String:
+	if value.is_empty():
+		return ""
+	for option in field_options.get(field, []):
+		if option["id"] == value:
+			# A TranslationKey instance can resolve itself even from here: tr() is a
+			# non-static Object method, so the restriction is on static *functions*, not
+			# on instances held by one.
+			return option["key"].text()
+	return value

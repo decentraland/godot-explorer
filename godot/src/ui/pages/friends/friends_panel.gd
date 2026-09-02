@@ -548,9 +548,7 @@ func _on_friend_connectivity_updated(address: String, status: int) -> void:
 func _send_friend_online_chat_message(friend_name: String) -> void:
 	var nickname_color = DclAvatar.get_nickname_color(friend_name)
 	var color_hex = nickname_color.to_html(false)
-	var message = (
-		"[color=#%s]%s[/color] [color=#8f8]is now online[/color]" % [color_hex, friend_name]
-	)
+	var message = tr("FRIENDS_NOW_ONLINE").format({"color": color_hex, "name": friend_name})
 	Global.on_chat_message.emit("system", message, Time.get_unix_time_from_system())
 
 

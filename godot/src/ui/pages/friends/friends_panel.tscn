@@ -120,7 +120,7 @@ theme_override_constants/separation = 22
 
 [node name="Label" type="Label" parent="MarginContainer/VBoxContainer2" unique_id=1886744167]
 layout_mode = 2
-text = "Social"
+text = "FRIENDS_SOCIAL"
 label_settings = SubResource("LabelSettings_bqxsg")
 
 [node name="MarginContainer_Header" type="MarginContainer" parent="MarginContainer/VBoxContainer2" unique_id=443181987]
@@ -164,7 +164,7 @@ theme_override_styles/disabled_mirrored = SubResource("StyleBoxEmpty_pa08s")
 theme_override_styles/focus = SubResource("StyleBoxEmpty_pa08s")
 toggle_mode = true
 button_group = SubResource("ButtonGroup_v2dsn")
-text = "FRIENDS"
+text = "FRIENDS_FRIENDS"
 flat = true
 
 [node name="ColorRect_Friends" type="ColorRect" parent="MarginContainer/VBoxContainer2/MarginContainer_Header/Header/HBoxContainer_FriendsTab/Button_Friends" unique_id=2078883186]
@@ -210,7 +210,7 @@ theme_override_styles/disabled_mirrored = SubResource("StyleBoxEmpty_pa08s")
 theme_override_styles/focus = SubResource("StyleBoxEmpty_pa08s")
 toggle_mode = true
 button_group = SubResource("ButtonGroup_v2dsn")
-text = "REQUESTS"
+text = "FRIENDS_REQUESTS"
 flat = true
 
 [node name="ColorRect_Requests" type="ColorRect" parent="MarginContainer/VBoxContainer2/MarginContainer_Header/Header/HBoxContainer_RequestsTab/Button_Requests" unique_id=1791342904]
@@ -271,7 +271,7 @@ theme_override_styles/disabled_mirrored = SubResource("StyleBoxEmpty_pa08s")
 theme_override_styles/focus = SubResource("StyleBoxEmpty_pa08s")
 toggle_mode = true
 button_group = SubResource("ButtonGroup_v2dsn")
-text = "NEARBY"
+text = "COMMON_NEARBY"
 flat = true
 
 [node name="ColorRect_Nearby" type="ColorRect" parent="MarginContainer/VBoxContainer2/MarginContainer_Header/Header/HBoxContainer_NearbyTab/Button_Nearby" unique_id=435976666]
@@ -364,7 +364,7 @@ layout_mode = 2
 
 [node name="Label" type="Label" parent="MarginContainer/VBoxContainer2/VBoxContainer/ScrollContainer_Friends/VBoxContainer/FriendsList/VBoxContainer_Online/OnlineContainer/VBoxContainer/OnlineButton/MarginContainer/HBoxContainer" unique_id=998863094]
 layout_mode = 2
-text = "ONLINE"
+text = "FRIENDS_ONLINE"
 label_settings = SubResource("LabelSettings_087fk")
 vertical_alignment = 2
 
@@ -432,7 +432,7 @@ layout_mode = 2
 
 [node name="Label" type="Label" parent="MarginContainer/VBoxContainer2/VBoxContainer/ScrollContainer_Friends/VBoxContainer/FriendsList/VBoxContainer_Offline/OfflineContainer/VBoxContainer/OfflineButton/MarginContainer/HBoxContainer" unique_id=8972909]
 layout_mode = 2
-text = "OFFLINE"
+text = "FRIENDS_OFFLINE"
 label_settings = SubResource("LabelSettings_087fk")
 vertical_alignment = 2
 
@@ -502,7 +502,7 @@ layout_mode = 2
 
 [node name="Label" type="Label" parent="MarginContainer/VBoxContainer2/VBoxContainer/ScrollContainer_Friends/VBoxContainer/FriendsList/VBoxContainer_Blocked/BlockedContainer/VBoxContainer/BlockedButton/MarginContainer/HBoxContainer" unique_id=1359123032]
 layout_mode = 2
-text = "BLOCKED"
+text = "COMMON_BLOCKED"
 label_settings = SubResource("LabelSettings_087fk")
 vertical_alignment = 2
 
@@ -561,7 +561,7 @@ theme_override_constants/separation = 6
 
 [node name="Label" type="Label" parent="MarginContainer/VBoxContainer2/VBoxContainer/ScrollContainer_Friends/VBoxContainer/MarginContainer_NoService/VBoxContainer_NoFriends/VBoxContainer" unique_id=1919969968]
 layout_mode = 2
-text = "Friends couldn't load"
+text = "FRIENDS_FRIENDS_COULDNT_LOAD"
 label_settings = SubResource("LabelSettings_2vk4g")
 horizontal_alignment = 1
 
@@ -570,8 +570,7 @@ custom_minimum_size = Vector2(50, 0)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.6, 0.6, 0.6, 1)
 theme_override_font_sizes/font_size = 14
-text = "Something went wrong while loading your friends.
-Try again later."
+text = "FRIENDS_SOMETHING_WENT_WRONG_LOADING"
 label_settings = SubResource("LabelSettings_5uuh7")
 horizontal_alignment = 1
 vertical_alignment = 1
@@ -613,7 +612,7 @@ theme_override_constants/separation = 6
 
 [node name="Label" type="Label" parent="MarginContainer/VBoxContainer2/VBoxContainer/ScrollContainer_Friends/VBoxContainer/MarginContainer_NoFriends/VBoxContainer_NoFriends/VBoxContainer" unique_id=2023803526]
 layout_mode = 2
-text = "No friends yet"
+text = "FRIENDS_NO_FRIENDS_YET"
 label_settings = SubResource("LabelSettings_2vk4g")
 horizontal_alignment = 1
 
@@ -623,7 +622,7 @@ custom_minimum_size = Vector2(50, 0)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.6, 0.6, 0.6, 1)
 theme_override_font_sizes/font_size = 14
-text = "Meet people nearby and add them as friends."
+text = "FRIENDS_MEET_PEOPLE_NEARBY"
 label_settings = SubResource("LabelSettings_5uuh7")
 horizontal_alignment = 1
 vertical_alignment = 1
@@ -704,7 +703,7 @@ layout_mode = 2
 
 [node name="Label" type="Label" parent="MarginContainer/VBoxContainer2/VBoxContainer/ScrollContainer_Requests/VBoxContainer/VBoxContainer_Received/ReceivedContainer/VBoxContainer/ReceivedButton/MarginContainer/HBoxContainer" unique_id=-2094967289]
 layout_mode = 2
-text = "RECEIVED"
+text = "FRIENDS_RECEIVED"
 label_settings = SubResource("LabelSettings_087fk")
 vertical_alignment = 2
 
@@ -775,7 +774,7 @@ layout_mode = 2
 
 [node name="Label" type="Label" parent="MarginContainer/VBoxContainer2/VBoxContainer/ScrollContainer_Requests/VBoxContainer/VBoxContainer_Sent/SentContainer/VBoxContainer/SentButton/MarginContainer/HBoxContainer" unique_id=-2094967280]
 layout_mode = 2
-text = "SENT"
+text = "FRIENDS_SENT"
 label_settings = SubResource("LabelSettings_087fk")
 vertical_alignment = 2
 
@@ -830,7 +829,7 @@ theme_override_constants/separation = 6
 
 [node name="Label" type="Label" parent="MarginContainer/VBoxContainer2/VBoxContainer/ScrollContainer_Requests/VBoxContainer/MarginContainer_NoRequests/VBoxContainer_NoRequests/VBoxContainer" unique_id=837482253]
 layout_mode = 2
-text = "No pending requests"
+text = "FRIENDS_NO_PENDING_REQUESTS"
 label_settings = SubResource("LabelSettings_2vk4g")
 horizontal_alignment = 1
 
@@ -898,7 +897,7 @@ theme_override_constants/separation = 6
 
 [node name="Label" type="Label" parent="MarginContainer/VBoxContainer2/VBoxContainer/ScrollContainer_Nearby/VBoxContainer/MarginContainer_NoNearby/VBoxContainer_NoNearby/VBoxContainer" unique_id=278990461]
 layout_mode = 2
-text = "No one nearby"
+text = "FRIENDS_NO_ONE_NEARBY"
 label_settings = SubResource("LabelSettings_2vk4g")
 horizontal_alignment = 1
 
@@ -907,7 +906,7 @@ custom_minimum_size = Vector2(50, 0)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.6, 0.6, 0.6, 1)
 theme_override_font_sizes/font_size = 14
-text = "Try traveling somewhere else to meet new people."
+text = "FRIENDS_TRY_TRAVELING_SOMEWHERE_ELSE_TO_MEET"
 label_settings = SubResource("LabelSettings_5uuh7")
 horizontal_alignment = 1
 vertical_alignment = 1

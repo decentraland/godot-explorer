@@ -457,13 +457,13 @@ func _async_fetch_place_data() -> void:
 
 	if result is PromiseError:
 		printerr("Error fetching place data: ", result.get_error())
-		label_place.text = "Unknown Location"
+		label_place.text = tr("SOCIAL_ITEM_UNKNOWN_LOCATION")
 		return
 
 	var json: Dictionary = result.get_string_response_as_json()
 
 	if json.data.is_empty():
-		label_place.text = "Empty parcel"
+		label_place.text = tr("COMMON_EMPTY_PARCEL")
 		# Add to known_locations even if empty to avoid refetching
 		var location_entry = {"coord": parcel.duplicate(), "title": "Empty parcel"}
 		Global.locations.known_locations.append(location_entry)
@@ -500,7 +500,9 @@ func _async_unblock_user(address: String) -> void:
 			unblock_button.disabled = false
 		var error_msg := PromiseUtils.get_error_message(promise)
 		printerr("Unblock failed: ", error_msg)
-		NotificationsManager.show_system_toast("Unblock failed", error_msg, "error", "alert")
+		NotificationsManager.show_system_toast(
+			tr("TOAST_UNBLOCK_FAILED"), error_msg, "error", "alert"
+		)
 		return
 
 	Global.social_blacklist.remove_blocked(address)  # Update local cache
@@ -620,7 +622,7 @@ func _update_jump_button_visibility() -> void:
 		# Not resolved yet this cycle (or online in an unknown place).
 		world_name = ""
 		parcel.clear()
-		label_place.text = "Somewhere"
+		label_place.text = tr("SOCIAL_ITEM_SOMEWHERE")
 		button_jump.hide()
 		return
 
@@ -654,7 +656,7 @@ func _update_jump_button_visibility() -> void:
 					break
 
 	if not found_location:
-		label_place.text = "Somewhere"
+		label_place.text = tr("SOCIAL_ITEM_SOMEWHERE")
 		_async_fetch_place_data()
 
 

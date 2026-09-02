@@ -583,6 +583,11 @@ func _ready():
 	# captures from deep_link_router instead, which already runs well after this point.
 	_capture_debug_guest_rotate(deep_link_obj)
 	_capture_campaign_token(deep_link_obj)
+
+	# Resolve the UI language before any scene renders. Godot picks the OS locale at boot, which
+	# would surface a partially-translated locale the moment its .po has content; LocaleSettings
+	# gates on SUPPORTED_LOCALES so an incomplete language is never selected (see #270, #2062).
+	LocaleSettings.apply_locale()
 	# Bench-only: keep limit_fps at NO_LIMIT after the settings file load (which
 	# would otherwise restore a saved FPS_18/FPS_30 cap) so no later
 	# `apply_fps_limit()` re-pins the engine. Real users keep their saved cap.
@@ -1290,7 +1295,7 @@ func open_url(url: String, use_webkit: bool = false):
 
 
 func async_create_popup_warning(
-	warning_type: PopupWarning.WarningType, title: String, description: String
+	warning_type: PopupWarning.WarningType, title: TranslationKey, description: TranslationKey
 ):
 	var explorer = get_explorer()
 	if is_instance_valid(explorer):
@@ -1488,7 +1493,7 @@ func async_teleport_to(parcel_position: Vector2i, new_realm: String) -> void:
 		explorer.hide_menu()
 		Global.on_chat_message.emit(
 			"system",
-			"[color=#ccc]🟢 Teleported to " + str(parcel_position) + "[/color]",
+			tr("CHAT_SYSTEM_TELEPORTED").format({"location": str(parcel_position)}),
 			Time.get_unix_time_from_system()
 		)
 	else:
@@ -1511,7 +1516,7 @@ func async_join_world(world_realm: String) -> void:
 		explorer.loading_ui.enable_loading_screen(world_realm, "on_world")
 		Global.on_chat_message.emit(
 			"system",
-			"[color=#ccc]Trying to change to world " + world_realm + "[/color]",
+			tr("CHAT_SYSTEM_CHANGING_WORLD").format({"world": world_realm}),
 			Time.get_unix_time_from_system()
 		)
 		Global.realm.async_set_realm(world_realm, true)
@@ -1744,8 +1749,8 @@ func _on_realm_change_failed_toast(new_realm_string: String, reason: String) -> 
 	# Realm instances created elsewhere (e.g. portable experiences) are not wired
 	# to this handler.
 	NotificationsManager.show_system_toast(
-		"World unavailable",
-		'Could not load "%s": %s' % [new_realm_string, reason],
+		tr("TOAST_WORLD_UNAVAILABLE_TITLE"),
+		tr("TOAST_WORLD_UNAVAILABLE_BODY").format({"world": new_realm_string, "error": reason}),
 		"error",
 		"alert"
 	)

@@ -28,7 +28,7 @@ const BG_OTHER := Color(0, 0, 0, 0.4)
 const BG_OWN := Color(0, 0, 0, 0.7)
 const BG_SYSTEM := Color(0, 0, 0, 0.4)
 
-var nickname: String = "Unknown"
+var nickname: String = tr("COMMON_UNKNOWN_USER")
 var tag: String = ""
 var nickname_color_hex: String = "ffffff"
 var is_own_message: bool = false
@@ -121,7 +121,7 @@ func _build_chat_rich_text(processed_message: String) -> String:
 
 func set_avatar(avatar: DclAvatar) -> void:
 	if avatar == null or not is_instance_valid(avatar):
-		nickname = "Unknown"
+		nickname = tr("COMMON_UNKNOWN_USER")
 		tag = ""
 		has_claimed_name = false
 		nickname_color_hex = "ffffff"
@@ -143,7 +143,7 @@ func set_avatar(avatar: DclAvatar) -> void:
 
 
 func _set_system_sender() -> void:
-	nickname = "System"
+	nickname = tr("CHAT_SYSTEM_SENDER")
 	tag = ""
 	nickname_color_hex = "00ff00"
 	has_claimed_name = false

@@ -256,8 +256,8 @@ func _on_poor_connection() -> void:
 	if not Global.get_explorer():
 		return
 	NotificationsManager.show_system_toast(
-		"Poor connection",
-		"Your connection is unstable. Some features may not work properly.",
+		tr("TOAST_POOR_CONNECTION_TITLE"),
+		tr("TOAST_POOR_CONNECTION_BODY"),
 		"poor_connection",
 		"alert"
 	)

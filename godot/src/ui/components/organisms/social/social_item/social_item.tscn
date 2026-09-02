@@ -281,6 +281,7 @@ label = NodePath("Nickname")
 trailing = NodePath("TextureRect_ClaimedCheckmark")
 
 [node name="Nickname" type="Label" parent="Data/Button_Profile/HBoxContainer_Profile/VBoxContainer_Nickname/HBoxContainer" unique_id=666961752]
+auto_translate_mode = 2
 unique_name_in_owner = true
 custom_minimum_size = Vector2(145, 0)
 layout_mode = 2
@@ -307,6 +308,7 @@ expand_mode = 2
 stretch_mode = 4
 
 [node name="Label_Place" type="Label" parent="Data/Button_Profile/HBoxContainer_Profile/VBoxContainer_Nickname" unique_id=955882978]
+auto_translate_mode = 2
 unique_name_in_owner = true
 layout_mode = 2
 mouse_default_cursor_shape = 2
@@ -396,7 +398,7 @@ theme_override_styles/disabled = SubResource("StyleBoxFlat_o0a4w")
 theme_override_styles/disabled_mirrored = SubResource("StyleBoxFlat_5x3e0")
 theme_override_styles/focus = SubResource("StyleBoxFlat_4fpp1")
 toggle_mode = true
-text = "ADD FRIEND"
+text = "SOCIAL_ITEM_ADD_FRIEND"
 script = ExtResource("13_7xvkt")
 grow_top = 23.0
 grow_bottom = 23.0
@@ -411,7 +413,7 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_40r3o")
 [node name="Label_PendingRequest" type="Label" parent="Data/HBoxContainer_Nearby/PanelContainer_Request" unique_id=584033093]
 unique_name_in_owner = true
 layout_mode = 2
-text = "PENDING"
+text = "SOCIAL_ITEM_PENDING"
 label_settings = SubResource("LabelSettings_m2rwh")
 horizontal_alignment = 1
 
@@ -513,7 +515,7 @@ theme_override_styles/hover = SubResource("StyleBoxFlat_oe6a2")
 theme_override_styles/hover_mirrored = SubResource("StyleBoxFlat_oe6a2")
 theme_override_styles/hover_pressed = SubResource("StyleBoxFlat_r608x")
 theme_override_styles/hover_pressed_mirrored = SubResource("StyleBoxFlat_r608x")
-text = "UNBLOCK"
+text = "SOCIAL_ITEM_UNBLOCK"
 icon_alignment = 1
 expand_icon = true
 

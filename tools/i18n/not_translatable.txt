@@ -1,0 +1,155 @@
+# Display strings that must never be translated, one per line as <path>\t<string>.
+#
+# Unlike unkeyed_baseline.txt (debt that shrinks to zero as phases land), these are permanent
+# decisions. Add an entry only when the string is never shown to a user as prose:
+#   - a design-time placeholder overwritten at runtime
+#   - a raw error code or identifier from a third-party SDK
+#   - a version string
+#   - a debug-only control
+#
+# Keep the justification comment above each entry.
+
+
+# Placeholder for a raw Magic SDK error code; cleared at lobby.gd:906 and filled with SDK text.
+godot/src/ui/pages/auth/lobby.tscn	Magic Error 
+
+# Debug-only button, only built when the debug guest-wallet reset is enabled.
+godot/src/ui/pages/auth/lobby.gd	RESET GUEST WALLET (DEBUG)
+
+# Design-time placeholder; the real string is composed at loading_screen.gd:140.
+godot/src/ui/pages/loading_screen/loading_screen.tscn	0000/0000 resouces at 000.00 mb/s - Opt
+
+# Design-time placeholder; overwritten at loading_screen.gd:297 with the real creator name.
+godot/src/ui/pages/loading_screen/loading_screen.tscn	[color=#DF9CFF]By[/color] Decentraland
+
+
+# ---- Phase 2: shared components ----
+
+# slider name set by the instancing scene
+godot/src/ui/components/atoms/controls/custom_slider/custom_background_slider.tscn	CUSTOM SLIDER NAME
+# slider name set by the instancing scene
+godot/src/ui/components/atoms/controls/custom_slider/custom_slider.tscn	CUSTOM SLIDER NAME
+# design placeholder
+godot/src/ui/components/atoms/inputs/dcl_line_edit.tscn	Hint
+# dummy text
+godot/src/ui/components/atoms/inputs/line_edit_custom/line_edit_custom.tscn	Casa
+# runtime composes this at credits_history_item.gd:14
+godot/src/ui/components/molecules/credits_history_item/credits_history_item.tscn	Purchased 10 CREDITS
+# @export var title, set per instance
+godot/src/ui/components/molecules/dropdown_list/dropdown_list.tscn	Title
+# dummy text
+godot/src/ui/components/molecules/faq_collapsable/faq_collapsable.tscn	ASD
+# dummy text
+godot/src/ui/components/molecules/faq_collapsable/faq_collapsable.tscn	asdasdasdasdasd
+# tooltip text set at runtime
+# unused component, no callers
+godot/src/ui/components/organisms/dialogs/confirm_dialog.tscn	Description
+# unused component, no callers
+godot/src/ui/components/organisms/dialogs/confirm_dialog.tscn	Title
+# runtime sets via set_text("Tabs: %d")
+godot/src/ui/components/organisms/dialogs/dialog_stack.tscn	Tabs: 5
+# runtime composes "Credits x%d"
+godot/src/ui/components/organisms/iap_purchase_success_modal/iap_purchase_success_modal.tscn	Credits x0
+# generic modal template, set by caller
+godot/src/ui/components/organisms/modal/modal.tscn	Checkbox Text
+# generic modal template, set by caller
+godot/src/ui/components/organisms/modal/modal.tscn	PRIMARY
+# generic modal template, set by caller
+godot/src/ui/components/organisms/modal/modal.tscn	SECONDARY
+# runtime composes the count
+godot/src/ui/components/organisms/social/mutual_friends.tscn	# Mutual
+
+
+# ---- Phase 3: in-game menus ----
+
+# design placeholder (sic)
+godot/src/ui/pages/discover/carrousel/discover_carrousel.tscn	Section Tittle
+# field label supplied by the caller
+godot/src/ui/pages/profile/about_data.tscn	Title
+# field value supplied by the caller
+godot/src/ui/pages/profile/profile_field_option.tscn	Value
+# field label supplied by the caller
+godot/src/ui/pages/profile/profile_field_option.tscn	title
+# field label supplied by the caller
+godot/src/ui/pages/profile/profile_field_text.tscn	Title
+# dummy section title
+godot/src/ui/pages/settings/section_title.tscn	Section asdAsd
+# cache size computed at settings.gd:423
+godot/src/ui/pages/settings/settings.tscn	0.5 GB
+# slider title supplied by the instancing scene
+godot/src/ui/pages/settings/slider.tscn	General
+# button label supplied by the caller
+godot/src/ui/pages/settings/underlined_button.tscn	Text
+
+# ---- Phase 3: HUD placeholders ----
+
+
+# ---- Phase 4: pure markup and pure number formatting ----
+# These carry no prose: nothing in them differs between languages, so a key would give a
+# translator an empty decision. Numeric *units* and percent spacing DO vary by locale, but those
+# sites are tracked for Phase 5 rather than exempted here.
+
+# Coordinate formatting, no prose.
+godot/src/ui/components/atoms/buttons/mini_map_button/mini_map_button.gd	%d,%d
+godot/src/ui/components/molecules/place_item/place_item.gd	%s, %s
+godot/src/ui/components/molecules/place_item/place_item.gd	(%s,%s)
+
+# A bare number rendered into a label.
+godot/src/ui/components/molecules/wearable_item/wearable_item.gd	%d
+godot/src/ui/pages/discover/friends/friends_generator.gd	%d
+
+# Bold-wrapping markup around a runtime value; the value itself is data, not copy.
+godot/src/ui/components/organisms/notifications/notification_content.gd	[b]
+godot/src/ui/components/organisms/notifications/notification_item.gd	[b]
+
+
+# ---- Step 3: coordinate and counter formatting ----
+# Positional formatting only: the translated part is the %s that gets substituted in, and the
+# parenthesis/comma layout is not language-dependent.
+
+# Parcel coordinates.
+godot/src/ui/pages/discover/friends/friends_generator.gd	%d, %d
+godot/src/ui/pages/settings/settings.gd	%s (%d, %d)
+
+# Section count "(n)" composed at runtime; the section label itself is keyed.
+godot/src/ui/pages/friends/friends_panel.gd	(%d)
+
+# ---- Code review follow-up: non-UI strings ----
+
+# push_warning() diagnostic, never rendered (lobby.gd:1008).
+godot/src/ui/pages/auth/lobby.gd	Guest login watchdog: stuck on loading screen after %ss
+
+# interactable_area_debug_label — a debug overlay, not shipped UI.
+godot/src/ui/explorer.gd	%d%% of device\\n%d%% of safe area
+
+# HTTP method names in the request helper — protocol tokens, not UI copy. They
+# only look keyable because a lone ALL-CAPS word is indistinguishable from a key.
+godot/src/global.gd	CONNECT
+godot/src/global.gd	DELETE
+godot/src/global.gd	GET
+godot/src/global.gd	HEAD
+godot/src/global.gd	OPTIONS
+godot/src/global.gd	PATCH
+godot/src/global.gd	POST
+godot/src/global.gd	PUT
+godot/src/global.gd	TRACE
+
+# Startup timing trace, printed to the log.
+godot/src/global.gd	[Startup] global._async_clear_cache start: %dms
+
+# push_warning() diagnostic, never rendered.
+godot/src/logic/world_permissions_helper.gd	World permissions request failed for %s: %s
+
+# notifications_manager debug dump (print()) — status labels and elapsed time in a
+# developer listing, never rendered as UI.
+godot/src/notifications_manager.gd	%d min
+godot/src/notifications_manager.gd	EXPIRED
+godot/src/notifications_manager.gd	PENDING
+
+# Log prefixes and SQL fragments.
+godot/src/notifications_manager.gd	Event notifications sync complete: added=%d, removed=%d
+godot/src/notifications_manager.gd	Fetch error: 
+godot/src/notifications_manager.gd	Found %d attended events (filtered from %d total)
+godot/src/notifications_manager.gd	Mark as read error: 
+godot/src/notifications_manager.gd	is_scheduled = 0 AND trigger_timestamp > %d
+godot/src/notifications_manager.gd	trigger_timestamp > %d

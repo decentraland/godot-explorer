@@ -73,11 +73,11 @@ layout_mode = 2
 unique_name_in_owner = true
 layout_mode = 2
 theme_type_variation = &"BlackButton"
-text = "No"
+text = "DIALOGS_NO"
 
 [node name="OkButton" type="Button" parent="PanelContainer/MarginContainer/VBoxContainer/CenterContainer/HBoxContainer" unique_id=39821420]
 unique_name_in_owner = true
 layout_mode = 2
-text = "Yes"
+text = "DIALOGS_YES"
 
 [connection signal="visibility_changed" from="." to="." method="_on_visibility_changed"]

@@ -83,7 +83,7 @@ theme_override_constants/separation = 0
 
 [node name="Label_Title" type="Label" parent="SafeMarginContainer/VBoxContainer/PanelContainer/MarginContainer/VBoxContainer" unique_id=1176176155]
 layout_mode = 2
-text = "Add Link"
+text = "PROFILE_ADD_LINK"
 label_settings = SubResource("LabelSettings_6715j")
 horizontal_alignment = 1
 
@@ -94,7 +94,7 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_e5d0b")
 
 [node name="Label_Title2" type="Label" parent="SafeMarginContainer/VBoxContainer/PanelContainer/MarginContainer/VBoxContainer" unique_id=2140817259]
 layout_mode = 2
-text = "Link Title"
+text = "PROFILE_LINK_TITLE"
 label_settings = SubResource("LabelSettings_e5d0b")
 
 [node name="HSeparator2" type="HSeparator" parent="SafeMarginContainer/VBoxContainer/PanelContainer/MarginContainer/VBoxContainer" unique_id=944434456]
@@ -105,7 +105,7 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_e5d0b")
 [node name="DclTextEdit_LinkTitle" parent="SafeMarginContainer/VBoxContainer/PanelContainer/MarginContainer/VBoxContainer" unique_id=1827056618 instance=ExtResource("4_e5d0b")]
 unique_name_in_owner = true
 layout_mode = 2
-place_holder = "e.g. Instagram"
+place_holder = "PROFILE_E_G_INSTAGRAM"
 is_optional = false
 wrap_text = false
 validate_no_edge_spaces = true
@@ -117,7 +117,7 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_e5d0b")
 
 [node name="Label_Title3" type="Label" parent="SafeMarginContainer/VBoxContainer/PanelContainer/MarginContainer/VBoxContainer" unique_id=1881021894]
 layout_mode = 2
-text = "Link"
+text = "PROFILE_LINK"
 label_settings = SubResource("LabelSettings_e5d0b")
 
 [node name="HSeparator5" type="HSeparator" parent="SafeMarginContainer/VBoxContainer/PanelContainer/MarginContainer/VBoxContainer" unique_id=1543980638]
@@ -128,7 +128,7 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_e5d0b")
 [node name="DclTextEdit_LinkUrl" parent="SafeMarginContainer/VBoxContainer/PanelContainer/MarginContainer/VBoxContainer" unique_id=1883187717 instance=ExtResource("4_e5d0b")]
 unique_name_in_owner = true
 layout_mode = 2
-place_holder = "Link URL (\"https://\")"
+place_holder = "PROFILE_LINK_URL_HTTPS"
 has_max_length = false
 is_optional = false
 wrap_text = false
@@ -153,7 +153,7 @@ size_flags_horizontal = 3
 theme = ExtResource("5_6715j")
 theme_type_variation = &"SecondaryButton"
 theme_override_font_sizes/font_size = 30
-text = "CANCEL"
+text = "COMMON_CANCEL"
 
 [node name="Button_NewLinkSave" type="Button" parent="SafeMarginContainer/VBoxContainer/PanelContainer/MarginContainer/VBoxContainer/HBoxContainer2" unique_id=750007325]
 unique_name_in_owner = true
@@ -163,7 +163,7 @@ size_flags_horizontal = 3
 theme = ExtResource("5_6715j")
 theme_override_font_sizes/font_size = 30
 disabled = true
-text = "SAVE"
+text = "PROFILE_SAVE"
 
 [node name="HSeparator_Keyboard" type="HSeparator" parent="SafeMarginContainer/VBoxContainer" unique_id=313791795]
 unique_name_in_owner = true

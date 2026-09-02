@@ -734,8 +734,11 @@ func change_tooltips():
 		var filtered = []
 		for i in tooltip_data.size():
 			var entry = tooltip_data[i]
+			# Matches the key scene_manager.rs emits, not English prose, so this keeps working
+			# in every locale.
 			var is_view_profile = (
-				entry is Dictionary and entry.get("text_pet_down", "") == "View profile"
+				entry is Dictionary
+				and entry.get("text_pet_down", "") == TooltipLabel.VIEW_PROFILE_KEY
 			)
 			if is_view_profile and _session_hide_view_profile:
 				continue
@@ -1197,13 +1200,10 @@ func _on_notify_pending_loading_scenes(pending: bool) -> void:
 		if _first_time_refresh_warning:
 			if loading_ui.visible:
 				return
-			(
-				warning_messages
-				. async_create_popup_warning(
-					PopupWarning.WarningType.MESSAGE,
-					"Load the scenes arround you",
-					"[center]You have scenes pending to be loaded. To maintain a smooth experience, loading will occur only when you change scenes. If you prefer to load them immediately, please press the [b]Refresh[/b] button at the Top Left of the screen with icon [img]res://assets/ui/Reset.png[/img][/center]"
-				)
+			warning_messages.async_create_popup_warning(
+				PopupWarning.WarningType.MESSAGE,
+				TranslationKey.new("POPUP_WARNING_LOAD_THE_SCENES_ARROUND_YOU"),
+				TranslationKey.new("POPUP_WARNING_PENDING_SCENES")
 			)
 			_first_time_refresh_warning = false
 	else:
@@ -1752,7 +1752,7 @@ func _share_place():
 
 	if scene_title.length() == 0:
 		scene_title = "Decentraland"
-	msg = "📍 Join Me At " + scene_title + " following this link: " + url
+	msg = tr("SHARE_SCENE_MESSAGE").format({"scene": scene_title, "link": url})
 	#+ "\n\n If you haven't installed the app yet -> https://install-mobile.decentraland.org 📲"
 
 	if Global.is_android():
