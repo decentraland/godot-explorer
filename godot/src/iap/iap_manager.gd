@@ -830,7 +830,7 @@ func _async_signed_iap(path: String, method: int, body: String) -> Variant:
 	# folded header. Safe here and nowhere else on this client — credits-server reads
 	# `productId` off the body and never touches `authMetadata`.
 	var url := DclUrls.credits_server() + path
-	var response = await Global.async_signed_fetch(url, method, body, true)
+	var response = await Global.async_signed_fetch(url, method, body)
 	if response is PromiseError:
 		# `print`, not `printerr`: `_async_poll_balance_after_purchase` calls this
 		# _POST_PURCHASE_POLL_ATTEMPTS times, so a phone that drops connectivity right

@@ -1554,9 +1554,7 @@ func _http_method_to_string(method: int) -> String:
 			return "GET"  # Default fallback
 
 
-func async_signed_fetch(
-	url: String, method: int, _body: String = "", lowercase_metadata: bool = false
-):
+func async_signed_fetch(url: String, method: int, _body: String = ""):
 	# Decentraland signed-fetch (ADR-44) carries the request metadata in the
 	# x-identity-metadata header. The server verifier requires it to be a JSON
 	# object: a bodyless request would otherwise be signed as `null`, which the
@@ -1564,15 +1562,9 @@ func async_signed_fetch(
 	# "Invalid chain metadata". Sign an empty object `{}` for bodyless requests
 	# (backward-compatible: older verifiers accept both), leaving the actual HTTP
 	# body untouched.
-	#
-	# `lowercase_metadata` folds the metadata before it is signed, which is what a
-	# crypto-middleware >=6.0.0 service needs from us: 6.0.0 stopped lowercasing the
-	# metadata when it rebuilds the payload, so a signature over a folded one only
-	# matches if the header carries the same folded bytes. It costs the metadata its
-	# casing, so pass it only for a service that reads the body and never the metadata.
 	var metadata := _body if not _body.is_empty() else "{}"
 	var headers_promise = Global.player_identity.async_get_identity_headers(
-		url, metadata, _http_method_to_string(method), lowercase_metadata
+		url, metadata, _http_method_to_string(method)
 	)
 	var headers_result = await PromiseUtils.async_awaiter(headers_promise)
 
