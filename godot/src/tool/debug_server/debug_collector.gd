@@ -52,10 +52,19 @@ static func collect_scenes_summary() -> Array:
 ## entity count — the ONE scene-scoped resource walker (also feeds the preview
 ## SceneStatsPanel); extend it here instead of adding another subtree walk.
 ## Returns: { triangles, bodies, colliders, entities, geometries, materials,
-## textures }. `tri_cache` (mesh instance_id -> triangles) is caller-owned so
-## repeated refresh ticks stay cheap; pass {} to skip caching.
+## textures, emitters, live_particles, lights, shadow_casters }. `tri_cache`
+## (mesh instance_id -> triangles) is caller-owned so repeated refresh ticks
+## stay cheap; pass {} to skip caching.
 static func collect_scene_resources(scene_id: int, tri_cache: Dictionary) -> Dictionary:
-	var acc: Dictionary = {"triangles": 0, "bodies": 0, "colliders": 0}
+	var acc: Dictionary = {
+		"triangles": 0,
+		"bodies": 0,
+		"colliders": 0,
+		"emitters": 0,
+		"live_particles": 0,
+		"lights": 0,
+		"shadow_casters": 0,
+	}
 	var geos: Dictionary = {}
 	var mats: Dictionary = {}
 	var texs: Dictionary = {}
@@ -93,6 +102,21 @@ static func _walk_scene_resources(
 					_collect_material_textures(mat, texs)
 	elif node is CollisionShape3D:
 		acc["colliders"] += 1
+	elif node is GPUParticles3D:
+		# SDK particle systems live under scene entities; avatar particles are
+		# under the global AvatarScene and never reached by this scene-rooted walk.
+		var ps: GPUParticles3D = node
+		if ps.emitting:
+			acc["emitters"] += 1
+			acc["live_particles"] += ps.amount
+	elif node is DclLightSourceComponent:
+		# Authored counts, not budgeted — but skip lights authored off
+		# (active=false): they never emit, so they don't hit perf.
+		var dcl_light := node as DclLightSourceComponent
+		if dcl_light.runtime_light_enabled:
+			acc["lights"] += 1
+			if dcl_light.runtime_shadows_enabled:
+				acc["shadow_casters"] += 1
 	for c in node.get_children():
 		_walk_scene_resources(c, acc, geos, mats, texs, tri_cache)
 
