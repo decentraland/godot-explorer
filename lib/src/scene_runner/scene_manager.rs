@@ -116,6 +116,11 @@ pub struct SceneManager {
     dying_scene_ids: Vec<SceneId>,
     crashed_scene_ids: Vec<SceneId>,
     global_scene_ids: Vec<SceneId>,
+    // Scenes (of any type) that died without going through the kill handshake,
+    // with the best reason known at that point. Consumed by
+    // finalize_scene_removal to emit `scene_crash_report`; crashed_scene_ids
+    // above stays Parcel-only because it drives the crash modal.
+    abnormal_exits: HashMap<SceneId, String>,
 
     // Graceful memory management (issue #2002). Frames to wait after a
     // memory-pressure kill before acting again, so freed memory is reflected.
@@ -183,6 +188,48 @@ const MIN_TIME_TO_PROCESS_SCENE_US: i64 = 2083; // 25% of max_time_per_scene_tic
 // before we measure pressure again. See `handle_memory_pressure`.
 const MEMORY_SETTLE_FRAMES: i32 = 90;
 
+const EXIT_WITHOUT_KILL_SIGNAL: &str = "scene thread exited without kill signal";
+const MAX_CRASH_REASON_CHARS: usize = 512;
+
+/// Single-line, bounded head of a crash reason. Scene runtimes throw whatever
+/// the content wants, including multi-KB JS stacks, and Sentry's tag and
+/// message limits are small; the bound lives here so GDScript never sees the
+/// raw payload.
+fn crash_reason_summary(raw: &str) -> String {
+    raw.split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+        .chars()
+        .take(MAX_CRASH_REASON_CHARS)
+        .collect()
+}
+
+/// Payload of the `scene_crash_report` signal, captured while the `Scene` is
+/// still around (its definition is gone from the runner by the time GDScript
+/// hears `scene_killed` / `scene_crashed`).
+struct SceneCrashReport {
+    scene_id: SceneId,
+    entity_id: String,
+    title: String,
+    base_parcel: Vector2i,
+    reason: String,
+    uptime_s: i32,
+}
+
+impl SceneCrashReport {
+    fn from_scene(scene: &Scene, reason: &str) -> Self {
+        let definition = &scene.scene_entity_definition;
+        Self {
+            scene_id: scene.scene_id,
+            entity_id: definition.id.clone(),
+            title: definition.get_title(),
+            base_parcel: definition.get_base_parcel(),
+            reason: crash_reason_summary(reason),
+            uptime_s: scene.start_time.elapsed().as_secs().min(i32::MAX as u64) as i32,
+        }
+    }
+}
+
 #[godot_api]
 impl SceneManager {
     #[signal]
@@ -193,6 +240,21 @@ impl SceneManager {
 
     #[signal]
     fn scene_crashed(scene_id: i32, entity_id: GString);
+
+    /// Emitted right after `scene_crashed` for every abnormal scene exit, parcel
+    /// or global: JS thread panic, runtime error, or a thread that ended without
+    /// a kill signal. Carries what Sentry needs to file the death as its own
+    /// issue while the definition is still in hand (consumed by SentrySeeder).
+    /// `reason` is single-line and bounded (see `crash_reason_summary`).
+    #[signal]
+    fn scene_crash_report(
+        scene_id: i32,
+        entity_id: GString,
+        title: GString,
+        base_parcel: Vector2i,
+        reason: GString,
+        uptime_s: i32,
+    );
 
     /// Emitted when the background memory monitor detects critical pressure and
     /// there is no farther scene left to evict (only the current parcel +
@@ -1735,10 +1797,20 @@ impl SceneManager {
                     continue;
                 }
                 if scene.dcl_scene.thread_join_handle.is_finished() {
-                    tracing::error!("scene closed without kill signal");
+                    // Breadcrumb only; the structured event is emitted from
+                    // finalize_scene_removal once the panic payload is known.
+                    tracing::warn!(
+                        "scene closed without kill signal: {} \"{}\" @ {:?}",
+                        scene.scene_entity_definition.id,
+                        scene.scene_entity_definition.get_title(),
+                        scene.scene_entity_definition.get_base_parcel()
+                    );
                     if matches!(scene.scene_type, SceneType::Parcel) {
                         self.crashed_scene_ids.push(*scene_id);
                     }
+                    self.abnormal_exits
+                        .entry(*scene_id)
+                        .or_insert_with(|| EXIT_WITHOUT_KILL_SIGNAL.to_string());
                     scene_to_remove.insert(*scene_id);
                     continue;
                 }
@@ -2004,8 +2076,16 @@ impl SceneManager {
                 }
                 _ => {
                     if scene.dcl_scene.thread_join_handle.is_finished() {
-                        tracing::error!("scene closed without kill signal");
+                        tracing::warn!(
+                            "scene closed without kill signal: {} \"{}\" @ {:?}",
+                            scene.scene_entity_definition.id,
+                            scene.scene_entity_definition.get_title(),
+                            scene.scene_entity_definition.get_base_parcel()
+                        );
                         scene.state = SceneState::Dead;
+                        self.abnormal_exits
+                            .entry(*scene_id)
+                            .or_insert_with(|| EXIT_WITHOUT_KILL_SIGNAL.to_string());
                     }
                 }
             }
@@ -2068,16 +2148,32 @@ impl SceneManager {
             }
         }
 
+        // Built before the join below moves the thread handle out of `scene`
+        // (a partial move that would forbid borrowing `scene` afterwards).
+        let recorded_reason = self.abnormal_exits.remove(scene_id);
+        let mut is_abnormal = recorded_reason.is_some();
+        let mut crash_report = SceneCrashReport::from_scene(
+            &scene,
+            recorded_reason
+                .as_deref()
+                .unwrap_or(EXIT_WITHOUT_KILL_SIGNAL),
+        );
+
         if scene.dcl_scene.thread_join_handle.is_finished() {
             if let Err(err) = scene.dcl_scene.thread_join_handle.join() {
-                let msg = if let Some(panic_info) = err.downcast_ref::<&str>() {
-                    format!("Thread panicked with: {}", panic_info)
+                let payload = if let Some(panic_info) = err.downcast_ref::<&str>() {
+                    panic_info.to_string()
                 } else if let Some(panic_info) = err.downcast_ref::<String>() {
-                    format!("Thread panicked with: {}", panic_info)
+                    panic_info.clone()
                 } else {
-                    "Thread panicked with an unknown payload".to_string()
+                    "unknown panic payload".to_string()
                 };
-                tracing::error!("scene {} thread result: {:?}", scene_id.0, msg);
+                let reason = crash_reason_summary(&format!("thread panicked: {}", payload));
+                tracing::warn!("scene {} {}", scene_id.0, reason);
+                // A panic is the most precise reason there is; it wins over
+                // whatever the bookkeeping recorded when the death was noticed.
+                crash_report.reason = reason;
+                is_abnormal = true;
             }
         }
 
@@ -2093,6 +2189,24 @@ impl SceneManager {
                 &[signal_data.0 .0.to_variant(), signal_data.1.to_variant()],
             );
         }
+
+        if is_abnormal {
+            self.emit_scene_crash_report(crash_report);
+        }
+    }
+
+    fn emit_scene_crash_report(&mut self, report: SceneCrashReport) {
+        self.base_mut().emit_signal(
+            "scene_crash_report",
+            &[
+                report.scene_id.0.to_variant(),
+                report.entity_id.to_variant(),
+                report.title.to_variant(),
+                report.base_parcel.to_variant(),
+                report.reason.to_variant(),
+                report.uptime_s.to_variant(),
+            ],
+        );
     }
 
     fn receive_from_thread(&mut self) {
@@ -2147,6 +2261,13 @@ impl SceneManager {
                                 if matches!(scene.scene_type, SceneType::Parcel) {
                                     self.crashed_scene_ids.push(scene_id);
                                 }
+                                // The runtime's last console line is the best
+                                // description of why it bailed out.
+                                let reason = logs
+                                    .last()
+                                    .map(|log| log.message.clone())
+                                    .unwrap_or_else(|| "scene runtime removed itself".to_string());
+                                self.abnormal_exits.insert(scene_id, reason);
                                 self.dying_scene_ids.push(scene_id);
                             }
                         }
@@ -2413,11 +2534,15 @@ impl SceneManager {
         let scene_id = self.current_parcel_scene_id;
         if let Some(scene) = self.scenes.get(&scene_id) {
             let entity_id = scene.scene_entity_definition.id.clone();
+            let report = SceneCrashReport::from_scene(scene, "debug: forced via /scenecrash");
             tracing::info!("Forcing crash signal for scene {:?}", scene_id);
             self.base_mut().emit_signal(
                 "scene_crashed",
                 &[scene_id.0.to_variant(), entity_id.to_variant()],
             );
+            // Same report the real path emits, so /scenecrash exercises the
+            // whole Sentry pipeline (seeder -> _before_send -> issue).
+            self.emit_scene_crash_report(report);
         }
     }
 
@@ -2776,6 +2901,22 @@ impl SceneManager {
         crate::tools::memory_monitor::used_memory_mb()
     }
 
+    /// Headroom before the OS kills the process, in MB, as computed by the
+    /// background memory monitor. -1 on desktop (monitor not running) and
+    /// before its first sample. Read by SentrySeeder for the `memory` context.
+    #[func]
+    fn get_available_memory_mb(&self) -> i32 {
+        crate::tools::memory_monitor::available_memory_mb()
+    }
+
+    /// Current pressure level: 0 ok, 1 warning, 2 critical (memory_monitor
+    /// LEVEL_*). 0 wherever the monitor does not run.
+    #[func]
+    fn get_memory_pressure_level(&self) -> i32 {
+        crate::tools::memory_monitor::PRESSURE_LEVEL.load(std::sync::atomic::Ordering::Relaxed)
+            as i32
+    }
+
     /// External (non-deployed) content the scene pulled at runtime, for the
     /// preview scene-stats overlay. Returns:
     ///   { "files": PackedStringArray of user://content cache filenames
@@ -2827,6 +2968,7 @@ impl INode for SceneManager {
             dying_scene_ids: vec![],
             crashed_scene_ids: vec![],
             global_scene_ids: vec![],
+            abnormal_exits: HashMap::new(),
             memory_settle_frames: 0,
             memory_modal_active: false,
             memory_warning_dismissed: false,
