@@ -78,13 +78,33 @@ func _on_request_completed(
 
 	for peer in peers:
 		if peer.has("address") and peer.has("parcel"):
-			var player = {
-				"address": str(peer["address"]),
-				"parcel": [int(peer["parcel"][0]), int(peer["parcel"][1])]
-			}
-			in_genesis_city.append(player)
+			var parcel = _parse_parcel(peer["parcel"])
+			if parcel == null:
+				continue
+			in_genesis_city.append({"address": str(peer["address"]), "parcel": parcel})
 
 	in_genesis_city_changed.emit(in_genesis_city)
+
+
+## Safely converts a raw archipelago "parcel" field ([x, y]) to an [int, int] array, or null when
+## it is malformed (missing, wrong length, or a non-numeric / null entry). Guards int() against
+## JSON nulls and nested values, which otherwise raise "Nonexistent 'int' constructor" at runtime.
+func _parse_parcel(raw) -> Variant:
+	if not (raw is Array) or raw.size() < 2:
+		return null
+	var x = _to_coord(raw[0])
+	var y = _to_coord(raw[1])
+	if x == null or y == null:
+		return null
+	return [x, y]
+
+
+func _to_coord(value) -> Variant:
+	if value is int or value is float:
+		return int(value)
+	if value is String and value.is_valid_float():
+		return int(float(value))
+	return null
 
 
 ## Resolves each address's current location (Genesis parcel or World) in one pass and publishes
@@ -113,9 +133,10 @@ func async_update_online_locations(addresses: Array) -> void:
 			continue
 		var peer_address: String = str(peer["address"]).to_lower()
 		if wanted.has(peer_address):
-			new_locations[peer_address] = {
-				"parcel": [int(peer["parcel"][0]), int(peer["parcel"][1])]
-			}
+			var parcel = _parse_parcel(peer["parcel"])
+			if parcel == null:
+				continue
+			new_locations[peer_address] = {"parcel": parcel}
 
 	# Publish Genesis right away so those rows get their place/jump without waiting on the Worlds
 	# stage (which can take up to WORLD_BATCH_TIMEOUT). Worlds are merged and re-published below.
