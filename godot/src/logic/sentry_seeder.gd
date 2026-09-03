@@ -286,6 +286,10 @@ func _refresh_profile_tags() -> void:
 
 func _setup_memory_polling() -> void:
 	_total_ram_mb = _read_total_ram_mb()
+	# OS.get_memory_info() reports -1 on Android, so the tag set at SDK init
+	# only covers desktop; the native plugins know the real figure here.
+	if _total_ram_mb > 0:
+		SentrySDK.set_tag("total_ram_mb", str(_total_ram_mb))
 	_memory_timer = Timer.new()
 	_memory_timer.name = "SentryMemoryPoll"
 	_memory_timer.wait_time = MEMORY_POLL_SECONDS
@@ -370,10 +374,14 @@ func _setup_android_exit_diagnostics() -> void:
 	var plugin = Engine.get_singleton("dcl-godot-android")
 	if plugin == null:
 		return
-	if plugin.has_signal("memory_trim"):
-		plugin.connect("memory_trim", _on_memory_trim)
-	if not plugin.has_method("getPreviousExitReasons"):
+	# JNISingleton dispatches plugin methods through callp() only: has_method()
+	# and get_method_list() never see them, so probing getPreviousExitReasons
+	# would disable this path on every device. The memory_trim signal ships in
+	# the same plugin revision and IS introspectable, so it is the capability
+	# marker for the exit-reason methods too.
+	if not plugin.has_signal("memory_trim"):
 		return
+	plugin.connect("memory_trim", _on_memory_trim)
 	var newest_timestamp := 0
 	for exit_info in plugin.getPreviousExitReasons():
 		newest_timestamp = maxi(newest_timestamp, int(exit_info.get("timestamp", 0)))

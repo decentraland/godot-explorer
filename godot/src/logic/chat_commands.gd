@@ -103,7 +103,9 @@ func _emit_system_message(text: String) -> void:
 func _debug_block_ui_thread() -> void:
 	if Global.is_android() and Engine.has_singleton("dcl-godot-android"):
 		var plugin = Engine.get_singleton("dcl-godot-android")
-		if plugin != null and plugin.has_method("debugBlockUiThread"):
+		# has_method() never sees JNISingleton methods; the memory_trim signal
+		# marks the plugin revision that also ships debugBlockUiThread.
+		if plugin != null and plugin.has_signal("memory_trim"):
 			_emit_system_message(
 				(
 					"Blocking the Android UI thread for %ds - keep tapping the screen"

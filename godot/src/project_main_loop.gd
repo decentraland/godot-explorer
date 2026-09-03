@@ -160,7 +160,8 @@ func _initialize() -> void:
 	var commit_hash := DclGlobal.get_commit_hash()
 	if not commit_hash.is_empty():
 		SentrySDK.set_tag("commit_hash", commit_hash)
-	# OS_Unix reads /proc/meminfo, so this works on Android without the plugin.
+	# Desktop only: on Android OS.get_memory_info() reports -1 for every field,
+	# and SentrySeeder sets this same tag from the native plugin instead.
 	var physical_bytes: int = OS.get_memory_info().get("physical", -1)
 	if physical_bytes > 0:
 		SentrySDK.set_tag("total_ram_mb", str(physical_bytes / 1048576))
