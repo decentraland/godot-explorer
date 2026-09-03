@@ -44,23 +44,21 @@ const FALLBACK_LOCALE: String = "en"
 ## too, so a hardcoded English string is bracketed just the same. See tools/i18n/README.md.
 const PSEUDO_LOCALE: String = "xx-pseudo"
 
-## TEMPORARY: start every install in English rather than following the device locale.
+## Whether a fresh install follows the device locale.
 ##
-## Only the default changes — the picker still offers every supported locale and an explicit
-## choice is still honoured and persisted. Flip this back to `true` to restore device detection;
-## [method detect_device_locale] is deliberately left untouched so that is a one-line change
-## rather than a rewrite.
-const FOLLOW_DEVICE_LOCALE: bool = false
+## An explicit choice is always honoured and persisted; this only decides what happens before
+## the user has made one. Set to `true` in v1.5 (issue #2825) so a device set to Spanish or
+## Portuguese starts in that language.
+const FOLLOW_DEVICE_LOCALE: bool = true
 
 
-## TEMPORARY: whether the Settings language picker is offered at all.
+## Whether the Settings language picker is offered at all.
 ##
-## Same gate as the pseudolocale and the Dev Tools tab. Together with
-## [constant FOLLOW_DEVICE_LOCALE] this makes a production build behave exactly as it did before
-## the localization work landed — English, with no way to change it — while internal builds get
-## the full picker. Remove this gate (and flip the constant) to ship the locales.
+## Always true since v1.5 (#2825): ES and pt-BR ship, so the picker is offered everywhere. Kept
+## as a method rather than inlined at the call site so there is one place to gate a locale
+## rollout again if one is ever pulled.
 static func is_language_picker_available() -> bool:
-	return not Global.is_production()
+	return true
 
 
 ## Whether the pseudolocale may be offered in the picker.
@@ -83,15 +81,9 @@ static func selectable_locales() -> PackedStringArray:
 ## Resolve the locale to actually use: the saved override when it is still supported,
 ## otherwise the device locale, otherwise English.
 ##
-## While [constant FOLLOW_DEVICE_LOCALE] is false the device step is skipped, so an install with
-## no saved choice resolves to English regardless of the system language.
+## With [constant FOLLOW_DEVICE_LOCALE] true, an install with no saved choice takes the device
+## language when it maps to a supported locale, and English otherwise.
 static func resolve_locale() -> String:
-	# TEMPORARY: a production build is English regardless of what is saved. The setting persists
-	# in user data that a non-production build may have written (same app id, same device), so
-	# hiding the picker alone would still let a stored "es" surface in a store build.
-	if not is_language_picker_available():
-		return FALLBACK_LOCALE
-
 	var configured: String = Global.get_config().locale
 	if configured == PSEUDO_LOCALE and is_pseudolocale_available():
 		# The pseudolocale renders English through Godot's pseudolocalization filter.

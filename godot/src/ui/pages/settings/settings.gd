@@ -402,18 +402,13 @@ func _on_h_slider_music_volume_value_changed(value):
 
 
 func _setup_language_dropdown() -> void:
-	# Only worth showing once there is something to choose between. SUPPORTED_LOCALES stays at
-	# ["en"] until a locale's catalogue is complete (see unity-explorer#270); debug builds also
-	# offer the QA pseudolocale, so the row appears there even before any translation exists.
+	# Only worth showing once there is something to choose between: a locale joins
+	# SUPPORTED_LOCALES only when its catalogue is complete (see unity-explorer#270). Non-production
+	# builds also offer the QA pseudolocale.
 	var supported := LocaleSettings.selectable_locales()
-	if supported.size() < 2:
+	if supported.size() < 2 or not LocaleSettings.is_language_picker_available():
 		# The whole section, not just the dropdown: hiding the DropdownList alone leaves the
 		# "LANGUAGE" header behind with nothing under it.
-		container_language.hide()
-		return
-
-	if not LocaleSettings.is_language_picker_available():
-		# TEMPORARY: production ships English only, so the row is not offered there.
 		container_language.hide()
 		return
 
@@ -1163,6 +1158,17 @@ func _notification(what: int) -> void:
 		_populate_skybox_items()
 		_populate_language_dropdown_items()
 		_update_current_cache_size()
+		# Tab labels change width with the language, so the scroll offset computed for the old
+		# labels can leave the active tab half-cut (#2825).
+		_scroll_to_active_tab()
+
+
+## Brings the currently selected tab fully into view. The strip scrolls horizontally by design;
+## this only ensures the selection is not the part that is cut off.
+func _scroll_to_active_tab() -> void:
+	var active: Button = button_graphics.button_group.get_pressed_button()
+	if active != null:
+		_async_scroll_to_tab_button(active)
 
 
 func _populate_language_dropdown_items() -> void:

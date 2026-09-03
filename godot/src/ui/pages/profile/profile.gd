@@ -760,11 +760,11 @@ func _update_friendship_buttons() -> void:
 			button_cancel_request.show()
 		Global.FriendshipStatus.REQUEST_RECEIVED:
 			button_add_friend.show()
-			button_add_friend.custom_text = "ACCEPT"
+			button_add_friend.custom_text = "SOCIAL_ITEM_ACCEPT"
 		_:  # NONE, UNKNOWN, or other statuses
 			if not is_blocked_user:
 				button_add_friend.show()
-				button_add_friend.custom_text = "ADD FRIEND"
+				button_add_friend.custom_text = "PROFILE_ADD_FRIEND"
 
 
 func _is_social_service_available() -> bool:

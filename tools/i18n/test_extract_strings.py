@@ -158,6 +158,17 @@ class TestDetection(ExtractorTestCase):
         self.fx.script("a.gd", 'func f():\n\tlabel.text = "Hello there"\n')
         self.assertEqual(self.fx.unkeyed(), {("godot/src/ui/a.gd", "Hello there")})
 
+    def test_custom_text_assignment_is_scanned(self):
+        # CustomButton's exported label. An English literal assigned here silently clobbers the
+        # key set in the .tscn, which is how the profile ADD FRIEND button shipped in English
+        # to every locale (#2825).
+        self.fx.script("a.gd", 'func f():\n\tbutton.custom_text = "ADD FRIEND"\n')
+        self.assertEqual(self.fx.unkeyed(), {("godot/src/ui/a.gd", "ADD FRIEND")})
+
+    def test_custom_text_assigned_a_key_is_not_flagged(self):
+        self.fx.script("a.gd", 'func f():\n\tbutton.custom_text = "PROFILE_ADD_FRIEND"\n')
+        self.assertEqual(self.fx.unkeyed(), set())
+
     def test_gdscript_comments_are_ignored(self):
         self.fx.script("a.gd", 'func f():\n\t# label.text = "Commented out"\n')
         self.assertEqual(self.fx.unkeyed(), set())
