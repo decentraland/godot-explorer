@@ -96,6 +96,7 @@ Trigger: you're about to copy-paste a Control subtree into two pages, or you not
 - **Don't introduce a duplicate of an existing atom/molecule.** Check `COMPONENT_AUDIT.md` § "Duplication audit" first — there are already known duplicate sets (text inputs, button family, toast variants, modal vs dialog, profile buttons, list-item scaffolds). If your new component would be a 7th button variant, push back and pick from the canonical set instead.
 - **Don't mix tiers within a single feature folder.** A page is for state/data; its building blocks live in `organisms/` or `molecules/`. Don't put `pages/profile/profile_button.gd` if `button_profile/` is a real molecule used by other pages too.
 - **Don't put pure-logic helpers in `atoms/`.** Atoms are UI controls. Behavior helpers (debouncers, throttlers, formatters) stay in `components/utils/`.
+- **Don't hardcode user-facing text.** Every player-visible string is a translation key in `godot/locale/en.csv`, and CI fails on new hardcoded UI text. Which node gets a raw key and which gets `tr(...)` depends on `auto_translate_mode`, and guessing wrong fails *silently* in both directions. Nor should you pad a label with spaces or newlines for layout — a translated string re-centres and the padding stops lining up; use `separation`, a container, or `custom_minimum_size`. See the **i18n** skill.
 
 ## Verification checklist (before committing a UI change)
 
@@ -107,6 +108,7 @@ Trigger: you're about to copy-paste a Control subtree into two pages, or you not
 - [ ] `gdformat godot/` and `gdlint godot/` pass.
 - [ ] If a Rust file was touched: `cd lib && cargo fmt --all && cargo clippy -- -D warnings`.
 - [ ] For PNG/JPG moves: the sibling `.import` file's `source_file=` matches the new path.
+- [ ] Any user-facing text is keyed and present in all three catalogues; `python3 tools/i18n/extract_strings.py --check` and `python3 tools/i18n/format_csv.py --check` pass. See the **i18n** skill.
 
 ## Why this exists
 

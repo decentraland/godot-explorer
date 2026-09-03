@@ -19,7 +19,7 @@ use std::{
 };
 
 use super::components::ui::{scene_ui::UiResults, style::UiTransform};
-use crate::av::backend::{AudioSink, BackendType};
+use crate::av::backend::BackendType;
 use godot::classes::ImageTexture;
 
 pub struct GodotDclScene {
@@ -150,7 +150,8 @@ pub struct GodotEntityNode {
     pub material: Option<DclMaterial>,
     pub pointer_events: Option<proto_components::sdk::components::PbPointerEvents>,
     pub video_player_data: Option<VideoPlayerData>,
-    pub audio_stream: Option<(String, AudioSink)>,
+    /// The stream URL currently applied to the node's native backend.
+    pub audio_stream: Option<String>,
 
     pub base_ui: Option<UiNode>,
 }

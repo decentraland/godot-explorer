@@ -92,7 +92,7 @@ theme_override_constants/separation = 8
 [node name="Label" type="Label" parent="MarginContainer/VBoxContainer/Header" unique_id=410791484]
 layout_mode = 2
 size_flags_horizontal = 3
-text = "NOTIFICATIONS"
+text = "NOTIFICATIONS_NOTIFICATIONS"
 label_settings = SubResource("LabelSettings_6tk6y")
 
 [node name="ButtonMarkAllRead" type="Button" parent="MarginContainer/VBoxContainer/Header" unique_id=108721669]
@@ -105,7 +105,7 @@ theme_override_font_sizes/font_size = 14
 theme_override_styles/normal = SubResource("StyleBoxFlat_button")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_oy6x2")
 theme_override_styles/hover = SubResource("StyleBoxFlat_button")
-text = "READ ALL"
+text = "NOTIFICATIONS_READ_ALL"
 
 [node name="ScrollContainer" type="ScrollContainer" parent="MarginContainer/VBoxContainer" unique_id=2124518937]
 unique_name_in_owner = true
@@ -164,7 +164,7 @@ expand_mode = 4
 
 [node name="Label" type="Label" parent="MarginContainer/VBoxContainer/VBoxContainer_NoNotifications" unique_id=1543563618]
 layout_mode = 2
-text = "No notifications yet"
+text = "NOTIFICATIONS_NO_NOTIFICATIONS_YET"
 label_settings = SubResource("LabelSettings_wd782")
 horizontal_alignment = 1
 
@@ -175,7 +175,7 @@ layout_mode = 2
 size_flags_horizontal = 4
 theme_override_colors/font_color = Color(0.6, 0.6, 0.6, 1)
 theme_override_font_sizes/font_size = 14
-text = "Check back later for updates!"
+text = "NOTIFICATIONS_CHECK_BACK_LATER_FOR_UPDATES"
 horizontal_alignment = 1
 vertical_alignment = 1
 autowrap_mode = 3

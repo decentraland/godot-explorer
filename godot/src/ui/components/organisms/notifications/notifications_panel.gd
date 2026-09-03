@@ -181,7 +181,7 @@ func _show_guest_message() -> void:
 
 	# Show custom message for guests
 	v_box_container_no_notifications.visible = true
-	label_no_notifications.text = "Sign in to get notifications!"
+	label_no_notifications.text = tr("NOTIFICATIONS_SIGN_IN_TO_GET_NOTIFICATIONS")
 
 
 func _update_gradient_visibility() -> void:

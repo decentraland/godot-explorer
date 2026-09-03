@@ -40,6 +40,7 @@ text = "General"
 label_settings = ExtResource("1_k0spq")
 
 [node name="ValueLabel" type="Label" parent="TitleRow" unique_id=1669938457]
+auto_translate_mode = 2
 unique_name_in_owner = true
 layout_mode = 2
 theme = SubResource("Theme_eontw")
