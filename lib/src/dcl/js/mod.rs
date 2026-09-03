@@ -182,9 +182,28 @@ pub fn create_runtime(inspect: bool) -> (deno_core::JsRuntime, Option<InspectorS
 
 /// Helper to send RemoveGodotScene response to the main thread.
 /// This properly notifies the scene manager that the thread is exiting.
-fn send_remove_godot_scene(state: &Rc<RefCell<OpState>>, scene_id: SceneId) {
+/// `failure` is the error that ended the runtime, if any: it is appended as the
+/// last log line so the scene manager reports it as the crash reason (and the
+/// in-app console shows why the scene died) instead of whatever the content
+/// happened to log last.
+fn send_remove_godot_scene(
+    state: &Rc<RefCell<OpState>>,
+    scene_id: SceneId,
+    failure: Option<String>,
+) {
     let mut op_state = state.borrow_mut();
-    let logs = op_state.take::<SceneLogs>();
+    let mut logs = op_state.take::<SceneLogs>();
+    if let Some(message) = failure {
+        let timestamp = op_state
+            .try_borrow::<SceneElapsedTime>()
+            .map(|t| t.0 as f64)
+            .unwrap_or(0.0);
+        logs.0.push(SceneLogMessage {
+            timestamp,
+            level: SceneLogLevel::SystemError,
+            message,
+        });
+    }
     let sender = op_state.borrow_mut::<std::sync::mpsc::SyncSender<SceneResponse>>();
     let _ = sender.send(SceneResponse::RemoveGodotScene(scene_id, logs.0));
 }
@@ -428,7 +447,7 @@ pub(crate) fn scene_thread(
     let script = match script {
         Err(e) => {
             tracing::error!("{} script load error: {}", log_info.prefix(), e);
-            send_remove_godot_scene(&state, scene_id);
+            send_remove_godot_scene(&state, scene_id, Some(format!("script load error: {}", e)));
             return;
         }
         Ok(script) => script,
@@ -466,7 +485,11 @@ pub(crate) fn scene_thread(
             );
         }
 
-        send_remove_godot_scene(&state, scene_id);
+        send_remove_godot_scene(
+            &state,
+            scene_id,
+            Some(format!("script onStart error: {}", e)),
+        );
         return;
     }
 
@@ -625,7 +648,7 @@ pub(crate) fn scene_thread(
         );
     }
 
-    send_remove_godot_scene(&state, scene_id);
+    send_remove_godot_scene(&state, scene_id, None);
     runtime.v8_isolate().terminate_execution();
 
     tracing::debug!("{} thread exited", log_info.prefix());
