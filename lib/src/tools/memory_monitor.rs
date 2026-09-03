@@ -20,11 +20,39 @@
 //!   - iOS: `os_proc_available_memory()` — bytes left before jetsam. Cheap,
 //!     off-thread-safe, and already reflects the *dynamic* per-device limit.
 //!   - Android: the smaller of the kernel's `MemAvailable` and a per-app budget
-//!     `budget(MemTotal) - RSS`, both from `/proc` (no precise per-app headroom
-//!     call exists, and JNI is not thread-safe to call here; `/proc` files are
-//!     readable from any thread). `MemAvailable` is the signal that tracks what
-//!     lowmemorykiller acts on — the budget alone cannot see a device that is
-//!     already full because of everything *else* running on it.
+//!     `budget(MemTotal) - (RSS + VmSwap)`, both from `/proc` (no precise per-app
+//!     headroom call exists, and JNI is not thread-safe to call here; `/proc`
+//!     files are readable from any thread). `MemAvailable` tracks how full the
+//!     device is because of everything *else* running on it, which the budget
+//!     alone cannot see; the budget counts swapped-out anonymous memory so a
+//!     device that pages our cold pages to zram does not read as a recovery.
+//!
+//! ### What Android does *not* let us see (measured, do not retry)
+//!
+//! Headroom in MB answers "how much is left", never "is reclaim still keeping
+//! up" — and that second question is the one that predicts a kill. On a Galaxy
+//! A54 (Android 16) lowmemorykiller killed the app while `MemAvailable` still
+//! read 510-570MB, i.e. LEVEL_OK by the bands below, because what ran out was
+//! the free-page watermark while reclaim fell behind. The signals that would
+//! have shown it coming are all denied to an unprivileged app by SELinux —
+//! verified from inside the sandbox with `run-as`:
+//!
+//! * `/proc/pressure/memory` (PSI, the signal lmkd itself acts on) — denied,
+//!   labelled `proc_pressure_mem`. The denial is `dontaudit`, so it does not
+//!   even show up as an avc line: the read just fails.
+//! * `/proc/vmstat` (direct-reclaim / allocstall counters) — denied.
+//! * `/proc/zoneinfo` (the kernel watermarks lmkd compares against) — denied.
+//!
+//! `ComponentCallbacks2.onTrimMemory`, the framework's own way of telling an app
+//! memory is tight, does reach the process (HWUI trims on it) but Godot 4.6.2
+//! does not forward it to `NOTIFICATION_OS_MEMORY_WARNING`, so it is not
+//! reachable from here either without an engine change.
+//!
+//! What is left to us is `/proc/meminfo` and our own `/proc/self/status`. That
+//! is enough to see *our own* growth honestly — the case this monitor exists for
+//! — but it cannot anticipate a kill driven by system-wide pressure from other
+//! apps. Do not add a signal here without checking it is readable under
+//! `run-as` first.
 //!
 //! * **Secondary hard-stop — `phys_footprint`** (iOS only, via
 //!   `proc_pid_rusage`). This is the value jetsam actually compares against and,
@@ -63,6 +91,14 @@ pub static MAIN_THREAD_HEARTBEAT: AtomicU32 = AtomicU32::new(0);
 /// so we capture the headroom trajectory at full resolution right up to a
 /// potential OOM crash — to learn how far a heavy scene gets before dying.
 pub static VERBOSE: AtomicBool = AtomicBool::new(false);
+
+/// True while the OS has the app paused (screen off, task switch). Set from the
+/// main thread in `SceneManager::on_notification`. The heartbeat legitimately
+/// stops while paused, so the stall detector has to hold instead of reporting:
+/// without this gate a locked screen reads as one continuous "main thread
+/// UNRESPONSIVE" for as long as the screen stays off (measured: ~321 s on a
+/// Galaxy A54, reported every 2 s).
+pub static APP_PAUSED: AtomicBool = AtomicBool::new(false);
 
 /// `phys_footprint` ceiling in MB above which we force CRITICAL, computed at
 /// [`start`] from device RAM so it scales across devices. 0 = disabled (unknown
@@ -139,11 +175,12 @@ pub fn start() {
             let total_ram_mb = read_meminfo_mb("MemTotal:");
             if total_ram_mb > 0 {
                 emit_log(&format!(
-                    "[MemMonitor] total_ram={}MB app_budget={}MB WARNING<={}MB CRITICAL<={}MB",
+                    "[MemMonitor] total_ram={}MB app_budget={}MB WARNING<={}MB CRITICAL<={}MB swap_total={}MB",
                     total_ram_mb,
                     (total_ram_mb as f32 * ANDROID_BUDGET_FRACTION) as i32,
                     WARNING_MB,
-                    CRITICAL_MB
+                    CRITICAL_MB,
+                    read_meminfo_mb("SwapTotal:")
                 ));
             }
         }
@@ -372,6 +409,9 @@ fn monitor_loop() {
         let footprint = read_footprint_mb();
         let level = level_for(available, footprint);
 
+        #[cfg(target_os = "android")]
+        SWAPPED_MB.store(read_self_status_mb("VmSwap:"), Ordering::Relaxed);
+
         AVAILABLE_MB.store(available, Ordering::Relaxed);
         FOOTPRINT_MB.store(footprint, Ordering::Relaxed);
         PRESSURE_LEVEL.store(level, Ordering::Relaxed);
@@ -380,9 +420,13 @@ fn monitor_loop() {
         // so we can watch the trajectory right up to (and through) a main-thread
         // freeze or an eventual OOM after "Continue anyway".
         if level > 0 || VERBOSE.load(Ordering::Relaxed) || tick % 8 == 0 {
+            #[cfg(target_os = "android")]
+            let swap_note = format!(" swap={}MB", SWAPPED_MB.load(Ordering::Relaxed));
+            #[cfg(not(target_os = "android"))]
+            let swap_note = "";
             emit_log(&format!(
-                "[MemMonitor] available={}MB footprint={}MB level={}",
-                available, footprint, level
+                "[MemMonitor] available={}MB footprint={}MB{} level={}",
+                available, footprint, swap_note, level
             ));
         }
 
@@ -390,7 +434,15 @@ fn monitor_loop() {
         // Plaza freeze happens with plenty of headroom (a CPU/GPU/lock stall, not
         // an OOM). This survives the freeze because it runs off the main thread.
         let hb = MAIN_THREAD_HEARTBEAT.load(Ordering::Relaxed);
-        if hb != last_hb {
+        if APP_PAUSED.load(Ordering::Relaxed) {
+            // Paused by the OS: the main loop is stopped on purpose, so a frozen
+            // heartbeat means nothing here. Hold the accounting rather than report
+            // a "freeze" that lasts as long as the screen is off.
+            last_hb = hb;
+            stall_ms = 0;
+            stall_reported = false;
+            last_report_ms = 0;
+        } else if hb != last_hb {
             if stall_reported {
                 emit_log(&format!(
                     "[MainThreadStall] RECOVERED after ~{}ms (available={}MB)",
@@ -471,8 +523,16 @@ fn read_available_mb() -> i32 {
     if total_mb <= 0 {
         return -1;
     }
+    // Charge the budget for what the app *owns*, not for what is resident.
+    // Android pushes cold anonymous pages to zram / RAM Plus, which drops RSS
+    // without the app freeing anything: measured on a Galaxy A54, 2816MB of
+    // allocations with ~800MB swapped out made this headroom "recover" from
+    // 533MB to 1076MB with nothing released — a WARNING that disarms itself
+    // while the app is still holding every byte. VmSwap puts them back on the
+    // bill; it is 0 on a device without swap, leaving the old behaviour.
+    let swap_mb = read_self_status_mb("VmSwap:").max(0);
     let budget = (total_mb as f32 * ANDROID_BUDGET_FRACTION) as i32;
-    let budget_headroom = (budget - rss_mb).max(0);
+    let budget_headroom = (budget - rss_mb - swap_mb).max(0);
 
     // MemAvailable is absent on pre-3.14 kernels; fall back to the budget alone.
     let system_headroom = read_meminfo_mb("MemAvailable:");
@@ -481,6 +541,12 @@ fn read_available_mb() -> i32 {
     }
     budget_headroom.min(system_headroom)
 }
+
+/// Anonymous memory of ours the kernel has pushed to zram / RAM Plus, in MB.
+/// Published so a log line stays self-explanatory: `footprint` is RSS (what lmkd
+/// reports when it kills us) while the budget headroom also charges this, so
+/// without it the two numbers cannot be reconciled from a capture. -1 elsewhere.
+pub static SWAPPED_MB: AtomicI32 = AtomicI32::new(-1);
 
 #[cfg(target_os = "android")]
 fn read_footprint_mb() -> i32 {
@@ -493,13 +559,27 @@ fn read_footprint_mb() -> i32 {
 }
 
 /// Read a `/proc/meminfo` field (`"MemTotal:"`, `"MemAvailable:"`, ...) in MB.
-/// -1 when the file or the key is unavailable. Values there are in kB.
+/// -1 when the file or the key is unavailable.
 #[cfg(target_os = "android")]
 fn read_meminfo_mb(key: &str) -> i32 {
-    let Ok(meminfo) = std::fs::read_to_string("/proc/meminfo") else {
+    read_kb_field_mb("/proc/meminfo", key)
+}
+
+/// Read a `/proc/self/status` field (`"VmSwap:"`, `"VmRSS:"`, ...) in MB.
+/// -1 when the file or the key is unavailable.
+#[cfg(target_os = "android")]
+fn read_self_status_mb(key: &str) -> i32 {
+    read_kb_field_mb("/proc/self/status", key)
+}
+
+/// Read a `<key> <value> kB` field out of a /proc file, in MB. -1 when the file
+/// or the key is unavailable. These files report kB.
+#[cfg(target_os = "android")]
+fn read_kb_field_mb(path: &str, key: &str) -> i32 {
+    let Ok(contents) = std::fs::read_to_string(path) else {
         return -1;
     };
-    for line in meminfo.lines() {
+    for line in contents.lines() {
         if let Some(rest) = line.strip_prefix(key) {
             if let Some(kb) = rest
                 .split_whitespace()
