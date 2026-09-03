@@ -10,6 +10,10 @@ const LINEEDIT_FOCUS_ERROR = preload("uid://bcoprda85lwd5")
 const LINEEDIT_NORMAL = preload("uid://o0x3mbwnvobx")
 const LINEEDIT_NORMAL_ERROR = preload("uid://bmwt0rbi3myn3")
 
+## The warning sign stays out of the catalogue: it is presentation, identical in every
+## locale, and gluing it into the key would produce a string matching no entry.
+const _ERROR_PREFIX := "\u26a0\ufe0f "
+
 @export var character_limit: int = 15
 @export var allow_spaces: bool = true
 @export var allow_edge_spaces: bool = false
@@ -41,10 +45,13 @@ func has_leading_or_trailing_spaces(value: String) -> bool:
 	return regex.search(value) != null
 
 
-func _append_error_message(msg: String) -> void:
+func _append_error_message(key: TranslationKey) -> void:
 	if error_message.length() > 0:
 		error_message += "\n"
-	error_message += msg
+	# Label_Error is auto_translate_mode = 2, because the messages are joined here into one
+	# multi-line string that matches no key. Resolving each piece with text() is therefore
+	# this component's job, and _notification() re-runs it on a language change.
+	error_message += _ERROR_PREFIX + key.text()
 
 
 func _check_error():
@@ -53,11 +60,11 @@ func _check_error():
 
 	if character_limit != 0 and line_edit.text.length() > character_limit:
 		error = true
-		_append_error_message("⚠️ Characters limit reached")
+		_append_error_message(TranslationKey.new("INPUT_ERROR_CHARACTER_LIMIT"))
 
 	if not allow_spaces and line_edit.text.contains(" "):
 		error = true
-		_append_error_message("⚠️ Spaces aren't allowed")
+		_append_error_message(TranslationKey.new("INPUT_ERROR_NO_SPACES"))
 
 	if (
 		not allow_special_characters
@@ -65,7 +72,7 @@ func _check_error():
 		and line_edit.text.length() > 0
 	):
 		error = true
-		_append_error_message("⚠️ Special characters aren't allowed")
+		_append_error_message(TranslationKey.new("INPUT_ERROR_NO_SPECIAL_CHARACTERS"))
 
 	if (
 		not allow_edge_spaces
@@ -73,7 +80,7 @@ func _check_error():
 		and line_edit.text.length() > 0
 	):
 		error = true
-		_append_error_message("⚠️ Edge spaces aren't allowed")
+		_append_error_message(TranslationKey.new("INPUT_ERROR_NO_EDGE_SPACES"))
 
 	if line_edit.text.length() <= 0:
 		error = true
@@ -99,6 +106,13 @@ func _check_error():
 		line_edit.set("theme_override_styles/focus", LINEEDIT_FOCUS)
 		line_edit.set("theme_override_styles/normal", LINEEDIT_NORMAL)
 		label_error.hide()
+
+
+func _notification(what: int) -> void:
+	# Composed in GDScript, so unlike a scene `text` property it does not re-translate
+	# itself. Rebuilding the message is enough; _check_error() reassigns the label.
+	if what == NOTIFICATION_TRANSLATION_CHANGED and is_node_ready():
+		_check_error()
 
 
 func _ready() -> void:

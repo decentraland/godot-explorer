@@ -457,7 +457,9 @@ func _render_action_on(node: Button, action: String, icon: Dictionary, is_big: b
 	if not icon_hash.is_empty():
 		if action == "ia_jump" and is_big:
 			_jump_icon_overridden = true
-		_async_set_button_icon(node, icon_hash, String(icon.get("url", "")))
+		_async_set_button_icon(
+			node, icon_hash, String(icon.get("url", "")), int(icon.get("scene_id", -1))
+		)
 		return
 
 	# Jump on the big central button keeps its dynamic glider / double-jump behavior.
@@ -498,10 +500,17 @@ func _reset_node_visuals(node: Button) -> void:
 	node.remove_theme_font_size_override("font_size")
 
 
-## Async-loads a scene content texture (by content hash + URL) into a button's icon, reusing
-## the shared content provider. A per-button meta guards against stale applies (the config
-## may change while awaiting). Falls back to the current glyph on cache-miss/failure.
-func _async_set_button_icon(btn: Button, icon_hash: String, icon_url: String) -> void:
+## Async-loads a scene content texture into a button's icon, reusing the shared content
+## provider. A per-button meta guards against stale applies (the config may change while
+## awaiting). Falls back to the current glyph on cache-miss/failure.
+##
+## Fetching by hash through `scene_id`'s content mapping puts the icon in the same cache slot
+## the scene's own UI uses, so a preview hot-reload's `purge_file` drops it too (#2796). The
+## by-URL path is only for when that scene is already unloaded (empty mapping), which caches
+## under `<hash>_q<quality>` and would go stale on a reload.
+func _async_set_button_icon(
+	btn: Button, icon_hash: String, icon_url: String, scene_id: int
+) -> void:
 	btn.set_meta("tc_icon_hash", icon_hash)
 
 	var cached: Texture2D = Global.content_provider.get_texture_from_hash(icon_hash)
@@ -509,7 +518,12 @@ func _async_set_button_icon(btn: Button, icon_hash: String, icon_url: String) ->
 		_apply_custom_icon(btn, cached)
 		return
 
-	var promise: Promise = Global.content_provider.fetch_texture_by_url(icon_hash, icon_url)
+	var mapping: DclContentMappingAndUrl = Global.scene_runner.get_scene_content_mapping(scene_id)
+	var promise: Promise
+	if mapping.get_base_url().is_empty():
+		promise = Global.content_provider.fetch_texture_by_url(icon_hash, icon_url)
+	else:
+		promise = Global.content_provider.fetch_texture_by_hash(icon_hash, mapping)
 	var res = await PromiseUtils.async_awaiter(promise)
 	# Bail if the button's desired icon changed while we were awaiting.
 	if String(btn.get_meta("tc_icon_hash", "")) != icon_hash:

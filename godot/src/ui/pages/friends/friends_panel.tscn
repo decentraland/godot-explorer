@@ -126,7 +126,7 @@ layout_mode = 2
 focus_mode = 0
 toggle_mode = true
 button_group = SubResource("ButtonGroup_v2dsn")
-text = "FRIENDS"
+text = "FRIENDS_FRIENDS"
 flat = true
 
 [node name="ColorRect_Friends" type="ColorRect" parent="VBoxContainer/PanelContainer/MarginContainer_Header/Header/VBoxContainer_FriendsTab" unique_id=2078883186]
@@ -148,7 +148,7 @@ layout_mode = 2
 focus_mode = 0
 toggle_mode = true
 button_group = SubResource("ButtonGroup_v2dsn")
-text = "NEARBY"
+text = "COMMON_NEARBY"
 flat = true
 
 [node name="ColorRect_Nearby" type="ColorRect" parent="VBoxContainer/PanelContainer/MarginContainer_Header/Header/VBoxContainer_NearbyTab" unique_id=1791342904]
@@ -169,7 +169,7 @@ layout_mode = 2
 focus_mode = 0
 toggle_mode = true
 button_group = SubResource("ButtonGroup_v2dsn")
-text = "BLOCKED"
+text = "COMMON_BLOCKED"
 flat = true
 
 [node name="ColorRect_Blocked" type="ColorRect" parent="VBoxContainer/PanelContainer/MarginContainer_Header/Header/VBoxContainer_BlockedTab" unique_id=435976666]
@@ -379,8 +379,7 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_vy1pd")
 
 [node name="Label" type="Label" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/VBoxContainer_NoService" unique_id=1634144704]
 layout_mode = 2
-text = "Whoops...
-Friends System is Down!"
+text = "FRIENDS_WHOOPS_FRIENDS_SYSTEM_IS_DOWN"
 label_settings = SubResource("LabelSettings_2vk4g")
 horizontal_alignment = 1
 
@@ -396,7 +395,7 @@ layout_mode = 2
 size_flags_horizontal = 4
 theme_override_colors/font_color = Color(0.6, 0.6, 0.6, 1)
 theme_override_font_sizes/font_size = 14
-text = "Something went wrong and we couldn’t retrieve your friends."
+text = "FRIENDS_SOMETHING_WENT_WRONG_AND_WE_COULDN"
 label_settings = SubResource("LabelSettings_7cbs5")
 horizontal_alignment = 1
 vertical_alignment = 1
@@ -432,7 +431,7 @@ expand_mode = 4
 
 [node name="Label" type="Label" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Friends/VBoxContainer/VBoxContainer_NoFriends" unique_id=2023803526]
 layout_mode = 2
-text = "Time to Make Some Friends!"
+text = "FRIENDS_TIME_TO_MAKE_SOME_FRIENDS"
 label_settings = SubResource("LabelSettings_2vk4g")
 horizontal_alignment = 1
 
@@ -512,7 +511,7 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_vy1pd")
 
 [node name="Label" type="Label" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Nearby/VBoxContainer/VBoxContainer_NoNearbyPlayers" unique_id=11384551]
 layout_mode = 2
-text = "No One Nearby"
+text = "FRIENDS_NO_ONE_NEARBY"
 label_settings = SubResource("LabelSettings_2vk4g")
 horizontal_alignment = 1
 
@@ -527,7 +526,7 @@ layout_mode = 2
 size_flags_horizontal = 4
 theme_override_colors/font_color = Color(0.6, 0.6, 0.6, 1)
 theme_override_font_sizes/font_size = 14
-text = "Try traveling somewhere else to meet new people."
+text = "FRIENDS_TRY_TRAVELING_SOMEWHERE_ELSE_TO_MEET"
 label_settings = SubResource("LabelSettings_7cbs5")
 horizontal_alignment = 1
 vertical_alignment = 1
@@ -587,7 +586,7 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_vy1pd")
 
 [node name="Label" type="Label" parent="VBoxContainer/MarginContainer/MarginContainer/ScrollContainer_Blocked/VBoxContainer/VBoxContainer_NoBlockeds" unique_id=973907473]
 layout_mode = 2
-text = "No Blocked Accounts Yet"
+text = "FRIENDS_NO_BLOCKED_ACCOUNTS_YET"
 label_settings = SubResource("LabelSettings_2vk4g")
 horizontal_alignment = 1
 

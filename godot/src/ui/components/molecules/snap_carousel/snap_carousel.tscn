@@ -30,7 +30,7 @@ theme_override_constants/margin_bottom = 9
 
 [node name="Title" type="Label" parent="TitleContainer" unique_id=19343611]
 layout_mode = 2
-text = "RECOMMENDED PLACES"
+text = "SNAP_CAROUSEL_RECOMMENDED_PLACES"
 label_settings = SubResource("LabelSettings_ecuem")
 
 [node name="CardArea" type="Control" parent="." unique_id=1951379499]

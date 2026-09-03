@@ -42,7 +42,7 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_hp11i")
 
 [node name="Label" type="Label" parent="VBoxContainer_Content" unique_id=1490803548]
 layout_mode = 2
-text = "Nothing here yet"
+text = "BACKPACK_NOTHING_HERE_YET"
 label_settings = SubResource("LabelSettings_title")
 horizontal_alignment = 1
 
@@ -52,8 +52,7 @@ mouse_filter = 1
 theme_override_fonts/normal_font = ExtResource("4_font400")
 theme_override_font_sizes/normal_font_size = 28
 bbcode_enabled = true
-text = "Find new ones in the
-[color=#A0ABFF][url]Marketplace[/url][/color]"
+text = "BACKPACK_FIND_NEW_ONES_IN_THE_MARKETPLACE"
 fit_content = true
 scroll_active = false
 autowrap_mode = 2
@@ -63,7 +62,7 @@ horizontal_alignment = 1
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
-text = "Nothing here yet"
+text = "BACKPACK_NOTHING_HERE_YET"
 label_settings = SubResource("LabelSettings_cym58")
 horizontal_alignment = 1
 

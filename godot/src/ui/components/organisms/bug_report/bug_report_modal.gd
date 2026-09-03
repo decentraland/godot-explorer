@@ -74,8 +74,10 @@ func set_initial_screenshot(image: Image) -> void:
 
 func _populate_issue_types() -> void:
 	dropdown_issue_type.clear()
-	for label in BugReportCategories.labels():
-		dropdown_issue_type.add_item(label)
+	# Finished text, not keys: DropdownList items are shown by a mode-2 label, the
+	# same contract settings.gd uses for the graphics presets.
+	for key in BugReportCategories.keys():
+		dropdown_issue_type.add_item(tr(key))
 	# Left unselected on purpose: Issue Type is required, and DropdownList shows
 	# its "Select" placeholder while `selected` is -1.
 

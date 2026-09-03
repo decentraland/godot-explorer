@@ -38,7 +38,7 @@ stretch_mode = 5
 
 [node name="Label_Title" type="Label" parent="Blur/VBoxContainer/Panel/MarginContainer/ContentContainer" index="1"]
 layout_mode = 2
-text = "Bug Report"
+text = "BUG_REPORT_TITLE"
 label_settings = ExtResource("8_title")
 horizontal_alignment = 1
 
@@ -57,7 +57,7 @@ theme_override_constants/separation = 20
 
 [node name="FieldLabel_IssueType" parent="Blur/VBoxContainer/Panel/MarginContainer/ContentContainer/VBox_Fields/VBox_IssueType" instance=ExtResource("4_fieldlabel")]
 layout_mode = 2
-text_value = "Issue Type"
+text_value = "BUG_REPORT_ISSUE_TYPE"
 required = true
 
 [node name="DropdownList_IssueType" parent="Blur/VBoxContainer/Panel/MarginContainer/ContentContainer/VBox_Fields/VBox_IssueType" instance=ExtResource("6_dropdown")]
@@ -75,14 +75,14 @@ theme_override_constants/separation = 18
 
 [node name="FieldLabel_Description" parent="Blur/VBoxContainer/Panel/MarginContainer/ContentContainer/VBox_Fields/VBox_Description" instance=ExtResource("4_fieldlabel")]
 layout_mode = 2
-text_value = "Description"
+text_value = "BUG_REPORT_DESCRIPTION"
 required = true
 
 [node name="DclTextEdit" parent="Blur/VBoxContainer/Panel/MarginContainer/ContentContainer/VBox_Fields/VBox_Description" instance=ExtResource("5_textedit")]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 248)
 layout_mode = 2
-place_holder = "Briefly describe what happened."
+place_holder = "BUG_REPORT_DESCRIPTION_PLACEHOLDER"
 has_max_length = true
 max_length = 300
 font_size = 28
@@ -94,7 +94,7 @@ theme_override_constants/separation = 18
 
 [node name="FieldLabel_Screenshot" parent="Blur/VBoxContainer/Panel/MarginContainer/ContentContainer/VBox_Fields/VBox_Screenshot" instance=ExtResource("4_fieldlabel")]
 layout_mode = 2
-text_value = "Screenshot"
+text_value = "BUG_REPORT_SCREENSHOT"
 
 [node name="HBox_Screenshots" type="HBoxContainer" parent="Blur/VBoxContainer/Panel/MarginContainer/ContentContainer/VBox_Fields/VBox_Screenshot"]
 unique_name_in_owner = true

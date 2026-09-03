@@ -287,6 +287,9 @@ func _ready():
 
 		audio_player_emote = AudioStreamPlayer.new()
 		audio_player_emote.bus = &"AvatarAndEmotes"
+		# The 3D node carries this in the scene; the 2D replacement has to
+		# repeat it or emotes play at full volume (Unity's prefab is at 0.5).
+		audio_player_emote.volume_db = linear_to_db(0.5)
 		add_child(audio_player_emote)
 		audio_player_emote.name = audio_player_name
 
@@ -1571,6 +1574,9 @@ func _hide_glider_prop() -> void:
 		glider_prop.visible = false
 
 
+## The three glider players keep `max_distance = 50` for the same reason as
+## `avatar_sfxs.gd`: a cheap per-avatar cutoff, traded against Unity-exact
+## rolloff. See the comment there.
 func _play_glider_audio(node_name: String) -> void:
 	var player := glider_prop.get_node_or_null(node_name) as AudioStreamPlayer3D
 	if player != null:

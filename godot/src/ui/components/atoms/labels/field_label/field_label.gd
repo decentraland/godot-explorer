@@ -14,6 +14,9 @@ extends RichTextLabel
 const COLOR_TEXT := "#fcfcfc"
 const COLOR_REQUIRED := "#ff2d55"
 
+## A translation KEY, not copy: _refresh() wraps it in BBCode and assigns the result
+## to `text`, so the node cannot look it up itself (the lookup would be against the
+## whole BBCode string). The RichTextLabel is auto_translate_mode = 2 to match.
 @export var text_value: String = "Label":
 	set(value):
 		text_value = value
@@ -40,5 +43,12 @@ func _refresh() -> void:
 	var marker := "[color=%s][b]*[/b][/color]" % COLOR_REQUIRED if required else ""
 	text = (
 		"[font_size=%d][color=%s]%s[/color]%s[/font_size]"
-		% [font_size, COLOR_TEXT, text_value, marker]
+		% [font_size, COLOR_TEXT, tr(text_value), marker]
 	)
+
+
+# Text assigned from code does not re-translate itself, so rebuild it when the
+# player switches language.
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_TRANSLATION_CHANGED:
+		_refresh()

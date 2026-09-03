@@ -4,6 +4,7 @@
 [ext_resource type="FontFile" uid="uid://d2vlaexk003yw" path="res://assets/themes/fonts/inter/Inter-Medium.ttf" id="2_medium"]
 
 [node name="FieldLabel" type="RichTextLabel"]
+auto_translate_mode = 2
 bbcode_enabled = true
 fit_content = true
 scroll_active = false

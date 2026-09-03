@@ -288,7 +288,7 @@ func _update_title() -> void:
 		return
 
 	var count := _current_addresses.size()
-	carousel.title = "Friends"
+	carousel.title = "DISCOVER_FRIENDS"
 
 	# Create or update the count label next to the title
 	var title_label = carousel.get_node_or_null("%Label_Title")
@@ -297,6 +297,8 @@ func _update_title() -> void:
 
 	if _count_label == null:
 		_count_label = Label.new()
+		# A number, not copy — created at runtime so the flag cannot live in a scene.
+		_count_label.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 		_count_label.add_theme_color_override("font_color", Color("E8B9FF"))
 		_count_label.add_theme_font_override("font", title_label.get_theme_font("font"))
 		_count_label.add_theme_font_size_override(

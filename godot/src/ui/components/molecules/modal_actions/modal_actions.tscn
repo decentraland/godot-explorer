@@ -15,7 +15,7 @@ size_flags_horizontal = 3
 theme = ExtResource("2_theme")
 theme_type_variation = &"SecondaryButton"
 theme_override_font_sizes/font_size = 24
-text = "CANCEL"
+text = "COMMON_CANCEL"
 
 [node name="Button_Primary" type="Button" parent="."]
 unique_name_in_owner = true
@@ -25,7 +25,7 @@ size_flags_horizontal = 3
 theme = ExtResource("2_theme")
 theme_override_font_sizes/font_size = 24
 disabled = true
-text = "SUBMIT"
+text = "COMMON_SUBMIT"
 
 [connection signal="pressed" from="Button_Secondary" to="." method="_on_button_secondary_pressed"]
 [connection signal="pressed" from="Button_Primary" to="." method="_on_button_primary_pressed"]

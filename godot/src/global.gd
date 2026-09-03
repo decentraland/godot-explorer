@@ -588,6 +588,11 @@ func _ready():
 	# captures from deep_link_router instead, which already runs well after this point.
 	_capture_debug_guest_rotate(deep_link_obj)
 	_capture_campaign_token(deep_link_obj)
+
+	# Resolve the UI language before any scene renders. Godot picks the OS locale at boot, which
+	# would surface a partially-translated locale the moment its .po has content; LocaleSettings
+	# gates on SUPPORTED_LOCALES so an incomplete language is never selected (see #270, #2062).
+	LocaleSettings.apply_locale()
 	# Bench-only: keep limit_fps at NO_LIMIT after the settings file load (which
 	# would otherwise restore a saved FPS_18/FPS_30 cap) so no later
 	# `apply_fps_limit()` re-pins the engine. Real users keep their saved cap.
@@ -1295,7 +1300,7 @@ func open_url(url: String, use_webkit: bool = false):
 
 
 func async_create_popup_warning(
-	warning_type: PopupWarning.WarningType, title: String, description: String
+	warning_type: PopupWarning.WarningType, title: TranslationKey, description: TranslationKey
 ):
 	var explorer = get_explorer()
 	if is_instance_valid(explorer):
@@ -1493,7 +1498,7 @@ func async_teleport_to(parcel_position: Vector2i, new_realm: String) -> void:
 		explorer.hide_menu()
 		Global.on_chat_message.emit(
 			"system",
-			"[color=#ccc]🟢 Teleported to " + str(parcel_position) + "[/color]",
+			tr("CHAT_SYSTEM_TELEPORTED").format({"location": str(parcel_position)}),
 			Time.get_unix_time_from_system()
 		)
 	else:
@@ -1516,7 +1521,7 @@ func async_join_world(world_realm: String) -> void:
 		explorer.loading_ui.enable_loading_screen(world_realm, "on_world")
 		Global.on_chat_message.emit(
 			"system",
-			"[color=#ccc]Trying to change to world " + world_realm + "[/color]",
+			tr("CHAT_SYSTEM_CHANGING_WORLD").format({"world": world_realm}),
 			Time.get_unix_time_from_system()
 		)
 		Global.realm.async_set_realm(world_realm, true)
@@ -1562,7 +1567,6 @@ func async_signed_fetch(
 	url: String,
 	method: int,
 	_body: String = "",
-	lowercase_metadata: bool = false,
 	_metadata_override: String = "",
 	_extra_headers: Dictionary = {}
 ):
@@ -1574,12 +1578,6 @@ func async_signed_fetch(
 	# (backward-compatible: older verifiers accept both), leaving the actual HTTP
 	# body untouched.
 	#
-	# `lowercase_metadata` folds the metadata before it is signed, which is what a
-	# crypto-middleware >=6.0.0 service needs from us: 6.0.0 stopped lowercasing the
-	# metadata when it rebuilds the payload, so a signature over a folded one only
-	# matches if the header carries the same folded bytes. It costs the metadata its
-	# casing, so pass it only for a service that reads the body and never the metadata.
-	#
 	# Most DCL services verify the body as the signed metadata. Some don't: the
 	# intercom-proxy signs `{}` and leaves the JSON body unsigned, so callers can
 	# override rather than fork this helper.
@@ -1587,7 +1585,7 @@ func async_signed_fetch(
 	if metadata.is_empty():
 		metadata = _body if not _body.is_empty() else "{}"
 	var headers_promise = Global.player_identity.async_get_identity_headers(
-		url, metadata, _http_method_to_string(method), lowercase_metadata
+		url, metadata, _http_method_to_string(method)
 	)
 	var headers_result = await PromiseUtils.async_awaiter(headers_promise)
 
@@ -1766,8 +1764,8 @@ func _on_realm_change_failed_toast(new_realm_string: String, reason: String) -> 
 	# Realm instances created elsewhere (e.g. portable experiences) are not wired
 	# to this handler.
 	NotificationsManager.show_system_toast(
-		"World unavailable",
-		'Could not load "%s": %s' % [new_realm_string, reason],
+		tr("TOAST_WORLD_UNAVAILABLE_TITLE"),
+		tr("TOAST_WORLD_UNAVAILABLE_BODY").format({"world": new_realm_string, "error": reason}),
 		"error",
 		"alert"
 	)

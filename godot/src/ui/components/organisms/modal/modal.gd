@@ -38,20 +38,53 @@ func _notification(what: int) -> void:
 			_async_update_modal_size()
 
 
-## Sets the modal title
-func set_title(title: String) -> void:
+## Sets the modal title. Takes a key, not text: Label_Title auto-translates, so the
+## raw key is what keeps it correct across a language change.
+func set_title(title: TranslationKey) -> void:
+	label_title.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_INHERIT
+	label_title.text = title.raw()
+
+
+## Sets the modal title from text already composed by the caller — a key filled with a
+## place name, a server string. Use [method set_title] whenever a plain key will do; this
+## exists because a formatted result is no longer a key and must not be looked up.
+func set_title_text(title: String) -> void:
+	label_title.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 	label_title.text = title
 
 
-## Sets the modal body text
-func set_body(body: String) -> void:
+## Sets the modal body from one catalogue entry.
+func set_body(body: TranslationKey) -> void:
+	# Symmetric with set_body_parts, which has to disable this: a modal reused for a
+	# single-key body would otherwise draw the raw key.
+	label_body.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_INHERIT
+	label_body.text = body.raw()
+	_async_update_modal_size()
+
+
+## Sets the modal body from text already composed by the caller, or clears it. Prefer
+## [method set_body]; this exists for a formatted result, which is no longer a key.
+func set_body_text(body: String) -> void:
+	label_body.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 	label_body.text = body
 	_async_update_modal_size()
 
 
+## Sets the modal body from several entries, rendered as separate paragraphs.
+##
+## Each is translated on its own, so a translator can rewrite one without the others.
+## Never build this by concatenating a key with a literal — the result matches no key,
+## the lookup misses, and the raw key is drawn on screen.
+func set_body_parts(parts: Array[TranslationKey]) -> void:
+	# Joining forces resolution here, so the label must not look the result up again.
+	label_body.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	label_body.text = TranslationKey.join(parts)
+	_async_update_modal_size()
+
+
 ## Sets the primary button text
-func set_primary_button_text(text: String) -> void:
-	button_primary.text = text
+func set_primary_button_text(text: TranslationKey) -> void:
+	button_primary.text = text.raw()
 
 
 ## Sets the primary button font size
@@ -60,8 +93,8 @@ func set_primary_button_font_size(size: int) -> void:
 
 
 ## Sets the secondary button text
-func set_secondary_button_text(text: String) -> void:
-	button_secondary.text = text
+func set_secondary_button_text(text: TranslationKey) -> void:
+	button_secondary.text = text.raw()
 
 
 ## Shows an icon in the modal
@@ -97,10 +130,10 @@ func hide_url() -> void:
 	_async_update_modal_size()
 
 
-## Updates the modal size to fit its content
-func show_checkbox(bbcode_text: String) -> void:
+## Shows the consent checkbox, whose label is BBCode from the catalogue.
+func show_checkbox(bbcode_text: TranslationKey) -> void:
 	checkbox.button_pressed = false
-	checkbox_text.text = bbcode_text
+	checkbox_text.text = bbcode_text.raw()
 	checkbox_container.show()
 	label_body.hide()
 	_async_update_modal_size()

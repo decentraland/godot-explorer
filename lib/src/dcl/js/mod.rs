@@ -12,6 +12,7 @@ mod restricted_actions;
 mod runtime;
 mod scene_inspector_ops;
 mod testing;
+mod text_encoding;
 mod websocket;
 
 use crate::comms::truncate_utf8_safe;
@@ -106,6 +107,7 @@ pub fn create_runtime(inspect: bool) -> (deno_core::JsRuntime, Option<InspectorS
         runtime::ops(),
         fetch::ops(),
         websocket::ops(),
+        text_encoding::ops(),
         restricted_actions::ops(),
         portables::ops(),
         players::ops(),
@@ -711,6 +713,7 @@ fn op_require(
         }
         "fetch" => Ok(include_str!("js_modules/fetch.js").to_owned()),
         "ws" => Ok(include_str!("js_modules/ws.js").to_owned()),
+        "text_encoding" => Ok(include_str!("js_modules/text_encoding.js").to_owned()),
         "~system/Runtime" => Ok(include_str!("js_modules/Runtime.js").to_owned()),
         "~system/Scene" => Ok(include_str!("js_modules/Scene.js").to_owned()),
         "~system/SignedFetch" => Ok(include_str!("js_modules/SignedFetch.js").to_owned()),

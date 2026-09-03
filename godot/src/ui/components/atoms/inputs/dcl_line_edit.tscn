@@ -64,6 +64,7 @@ mouse_filter = 2
 theme_override_constants/margin_right = 60
 
 [node name="Label_Tag" type="Label" parent="Control/MarginContainer" unique_id=692498589]
+auto_translate_mode = 2
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
@@ -78,6 +79,7 @@ vertical_alignment = 1
 layout_mode = 2
 
 [node name="Label_Error" type="RichTextLabel" parent="HBoxContainer2" unique_id=1725063823]
+auto_translate_mode = 2
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
@@ -92,6 +94,7 @@ fit_content = true
 autowrap_mode = 2
 
 [node name="Label_Length" type="Label" parent="HBoxContainer2" unique_id=827561636]
+auto_translate_mode = 2
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 1

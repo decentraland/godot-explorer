@@ -31,7 +31,23 @@ var _emote_touch_index: int = -1
 @onready var emote_wheel_item_1: EmoteItemUi = %EmoteWheelItem1
 
 
+## The label node is auto_translate_mode = 2, because _on_select_emote() writes a creator-authored
+## emote name into it, which must never go through a lookup. That makes the default title this
+## component's job: the scene used to carry the literal "EMOTES_EMOTES", which is a key, so a
+## mode-2 node drew it verbatim on screen until the first hover.
+func _reset_emote_name() -> void:
+	label_emote_name.text = tr("EMOTES_EMOTES")
+
+
+func _notification(what: int) -> void:
+	# Only the default title re-translates; a selected emote name is data, not copy.
+	if what == NOTIFICATION_TRANSLATION_CHANGED and is_node_ready():
+		if last_selected_emote_urn.is_empty():
+			_reset_emote_name()
+
+
 func _ready():
+	_reset_emote_name()
 	button_emotes.set_meta("attenuated_sound", true)
 	# Toggle the wheel from raw touch so a second finger opens it while the joystick is held
 	# (Godot only synthesizes a mouse event from the primary touch). button_mask = 0 routes all
@@ -111,13 +127,13 @@ func _on_play_emote(emote_urn: String):
 
 func _on_select_emote(selected: bool, emote_urn: String, child: EmoteItemUi):
 	if !selected:
-		label_emote_name.text = "Emotes"
+		_reset_emote_name()
 		last_selected_emote_urn = ""
 		return
 
 	# Empty slot highlighted: hint the equip action instead of an emote name.
 	if emote_urn.is_empty():
-		label_emote_name.text = "Equip Emote"
+		label_emote_name.text = tr("EMOTES_EQUIP_EMOTE")
 		last_selected_emote_urn = ""
 		return
 
@@ -144,6 +160,8 @@ func close() -> void:
 func open() -> void:
 	if control_wheel.visible:
 		return
+	_reset_emote_name()
+	last_selected_emote_urn = ""
 	control_wheel.show()
 	emote_wheel_opened.emit()
 	grab_focus()

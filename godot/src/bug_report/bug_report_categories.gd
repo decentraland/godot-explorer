@@ -13,23 +13,62 @@ extends RefCounted
 ## Hangouts/Events, Outfits, Communities, Map & Minimap, Rewards, Gifting and Scene
 ## are deliberately absent. Order matches the Figma dropdown.
 
+## `label` is the ENGLISH wording and must stay English: it composes the Intercom
+## ticket title, which support reads. `key` is what the player sees in the dropdown.
+## The two are separate on purpose — translating the ticket title would make the
+## Intercom queue unsearchable for a support team working in English.
+##
+# i18n-keys: BUG_REPORT_CATEGORY_*
 const CATEGORIES: Array[Dictionary] = [
-	{"label": "Performance", "uuid": "84d3e47f-396f-40be-bb93-a8b36196cf97"},
-	{"label": "Crash / Freeze", "uuid": "10ab00f9-e944-4a7f-8b75-c8bf4e4ff270"},
-	{"label": "Chat", "uuid": "b2db7b2e-3634-4c9d-9f55-b732bfe41319"},
-	{"label": "Streaming", "uuid": "dbceaef0-c69c-409b-afb3-5e9523a4dec5"},
-	{"label": "Friends", "uuid": "4d3a9289-da5a-47a6-a3e0-772effdd78f0"},
-	{"label": "Wearables/Emotes", "uuid": "e4e9abb6-8304-48eb-a622-b2516e0a1719"},
-	{"label": "Profile", "uuid": "30f4a7a7-6366-4e05-9393-d1419a5b4008"},
-	{"label": "Other", "uuid": "30b90385-7138-4d42-99aa-87eeb1c85619"},
+	{
+		"label": "Performance",
+		"key": "BUG_REPORT_CATEGORY_PERFORMANCE",
+		"uuid": "84d3e47f-396f-40be-bb93-a8b36196cf97"
+	},
+	{
+		"label": "Crash / Freeze",
+		"key": "BUG_REPORT_CATEGORY_CRASH",
+		"uuid": "10ab00f9-e944-4a7f-8b75-c8bf4e4ff270"
+	},
+	{
+		"label": "Chat",
+		"key": "BUG_REPORT_CATEGORY_CHAT",
+		"uuid": "b2db7b2e-3634-4c9d-9f55-b732bfe41319"
+	},
+	{
+		"label": "Streaming",
+		"key": "BUG_REPORT_CATEGORY_STREAMING",
+		"uuid": "dbceaef0-c69c-409b-afb3-5e9523a4dec5"
+	},
+	{
+		"label": "Friends",
+		"key": "BUG_REPORT_CATEGORY_FRIENDS",
+		"uuid": "4d3a9289-da5a-47a6-a3e0-772effdd78f0"
+	},
+	{
+		"label": "Wearables/Emotes",
+		"key": "BUG_REPORT_CATEGORY_WEARABLES",
+		"uuid": "e4e9abb6-8304-48eb-a622-b2516e0a1719"
+	},
+	{
+		"label": "Profile",
+		"key": "BUG_REPORT_CATEGORY_PROFILE",
+		"uuid": "30f4a7a7-6366-4e05-9393-d1419a5b4008"
+	},
+	{
+		"label": "Other",
+		"key": "BUG_REPORT_CATEGORY_OTHER",
+		"uuid": "30b90385-7138-4d42-99aa-87eeb1c85619"
+	},
 ]
 
 
-## Labels in dropdown order.
-static func labels() -> PackedStringArray:
+## Translation keys in dropdown order. The caller resolves them — DropdownList
+## items carry finished text, matching how settings.gd feeds the graphics presets.
+static func keys() -> PackedStringArray:
 	var out := PackedStringArray()
 	for category in CATEGORIES:
-		out.append(category["label"])
+		out.append(category["key"])
 	return out
 
 

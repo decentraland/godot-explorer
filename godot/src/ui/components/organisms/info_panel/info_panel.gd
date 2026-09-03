@@ -23,8 +23,8 @@ func _on_button_more_or_less_toggled(button_pressed):
 	if button_pressed:
 		panel.size = expanded
 		control.show()
-		button_more_or_less.text = "LESS"
+		button_more_or_less.text = tr("INFO_PANEL_LESS")
 	else:
 		panel.size = collapsed
 		control.hide()
-		button_more_or_less.text = "MORE"
+		button_more_or_less.text = tr("INFO_PANEL_MORE")
