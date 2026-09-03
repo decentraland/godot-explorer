@@ -4,18 +4,21 @@ extends Control
 ##
 ## Shared component for displaying notification content.
 ## Used by both NotificationItem and NotificationToast to ensure consistent styling.
+##
+## The image area holds three pre-built, mutually-exclusive nodes (added in the scene, styled from
+## the node) and this script only toggles which one is visible and feeds it data — so we never
+## manipulate corners/borders at runtime:
+##   - ProfilePictureFriend (round avatar, reused from social_item) for friend notifications
+##   - EventImage (rounded thumbnail, #E8B9FF outline) for events and any other type
+##   - ItemImage (rounded thumbnail, rarity-coloured outline) for received items/rewards
 
 var notification_data: Dictionary = {}
 
-@onready var notification_image: TextureRect = %NotificationImage
-@onready var icon_texture: TextureRect = %IconTexture
-@onready var image_container: Panel = %ImageContainer
+@onready var profile_picture_friend: ProfilePicture = %ProfilePictureFriend
+@onready var event_image: AsyncImage = %EventImage
+@onready var item_image: AsyncImage = %ItemImage
 @onready var label_title: RichTextLabel = %LabelTitle
 @onready var label_description: RichTextLabel = %LabelDescription
-
-
-func _ready() -> void:
-	pass  # Initialization if needed
 
 
 func set_notification(notification: Dictionary) -> void:
@@ -27,197 +30,82 @@ func _update_ui() -> void:
 	if notification_data.is_empty():
 		return
 
-	# Get notification type and metadata
 	var notif_type = notification_data.get("type", "")
 	var metadata: Dictionary = (
 		notification_data.get("metadata", {}) if "metadata" in notification_data else {}
 	)
 
-	# Generate header (title) and title (description) using helper
-	# Wrap title in [b] tags for bold
-	var title_text = NotificationTextHelper.get_notification_header(notif_type, metadata)
-	label_title.text = "[b]" + title_text + "[/b]"
+	# Title carries only the subject (coloured player name / event name / item label); the node owns
+	# the font weight, so the helper adds only the [color] tag when needed.
+	label_title.text = NotificationTextHelper.get_notification_header(notif_type, metadata)
 	label_description.text = NotificationTextHelper.get_notification_title(notif_type, metadata)
 
-	# Apply profile-style background for friend notifications first (before loading images)
-	_apply_friend_notification_styling(notif_type, metadata)
-
-	# Load notification image (main image)
-	_load_notification_image()
-
-	# Set icon based on notification type (small icon overlay)
-	_set_icon_for_type(notif_type)
+	_update_image(notif_type, metadata)
 
 
-func _load_notification_image() -> void:
-	var image_url = ""
-
-	# Try to get image from metadata based on notification type
-	if "metadata" in notification_data and notification_data["metadata"] is Dictionary:
-		var metadata: Dictionary = notification_data["metadata"]
-
-		# Check for different image sources based on notification type
-		var notif_type = notification_data.get("type", "")
-
-		match notif_type:
-			"community_invite_received":
-				image_url = metadata.get("thumbnailUrl", "")
-			"badge_granted":
-				image_url = metadata.get("image", "")
-			"reward_assignment", "reward_in_progress":
-				# Use tokenImage for reward notifications
-				image_url = metadata.get("tokenImage", "")
-			"social_service_friendship_request":
-				# Use sender's profile image
-				if "sender" in metadata and metadata["sender"] is Dictionary:
-					image_url = metadata["sender"].get("profileImageUrl", "")
-			_:
-				# Try generic image field
-				image_url = metadata.get("image", metadata.get("thumbnailUrl", ""))
-
-	# If we have a URL, load it
-	if not image_url.is_empty():
-		_async_load_image_from_url(image_url)
-	else:
-		# Use default notification image based on type
-		_set_default_notification_image(notification_data.get("type", ""))
-
-
-func _async_load_image_from_url(url: String) -> void:
-	# Use Global.content_provider to fetch texture
-	var hash = _get_hash_from_url(url)
-	var promise = Global.content_provider.fetch_texture_by_url(hash, url)
-	var result = await PromiseUtils.async_awaiter(promise)
-
-	if result is PromiseError:
-		_set_default_notification_image(notification_data.get("type", ""))
-		return
-
-	notification_image.texture = result.texture
-
-
-func _get_hash_from_url(url: String) -> String:
-	if url.contains("/content/contents/"):
-		var parts = url.split("/")
-		return parts[parts.size() - 1]  # Return the last part
-
-	# Convert URL to a hexadecimal hash
-	var context := HashingContext.new()
-	if context.start(HashingContext.HASH_SHA256) == OK:
-		context.update(url.to_utf8_buffer())
-		var url_hash: PackedByteArray = context.finish()
-		return url_hash.hex_encode()
-
-	return "temp-file"
-
-
-func _set_default_notification_image(_notif_type: String) -> void:
-	# Use type-specific images for certain notification types
-	var image_path := ""
-
-	match _notif_type:
-		"credits_reminder_do_not_miss_out", "item_sold", "bid_accepted", "bid_received", "royalties_earned":
-			image_path = "res://assets/ui/notifications/RewardNotification.png"
-		"governance_announcement", "governance_proposal_enacted", "governance_voting_ended":
-			image_path = "res://assets/ui/notifications/ProposalFinishedNotification.png"
-		"social_service_friendship_request", "social_service_friendship_accepted":
-			image_path = "res://assets/ui/notifications/FriendNotification.png"
-		_:
-			image_path = "res://assets/ui/notifications/DefaultNotification.png"
-
-	if ResourceLoader.exists(image_path):
-		notification_image.texture = load(image_path)
-
-
-func _set_icon_for_type(notif_type: String) -> void:
-	# Map notification types to small icons (overlay)
-	var icon_path := ""
+## Shows the one image node that matches the notification type and hides the other two.
+func _update_image(notif_type: String, metadata: Dictionary) -> void:
+	profile_picture_friend.hide()
+	event_image.hide()
+	item_image.hide()
 
 	match notif_type:
-		"item_sold", "bid_accepted", "bid_received", "royalties_earned":
-			icon_path = "res://assets/ui/notifications/RewardNotification.png"
-		"governance_announcement", "governance_proposal_enacted", "governance_voting_ended":
-			icon_path = "res://assets/ui/notifications/ProposalFinishedNotification.png"
-		"governance_coauthor_requested":
-			icon_path = "res://assets/ui/notifications/CoauthorNotification.png"
-		"land":
-			icon_path = "res://assets/ui/notifications/LandRentedNotification.png"
-		"worlds_access_restored":
-			icon_path = "res://assets/ui/notifications/WorldAccessRestoredNotification.png"
-		"worlds_access_restricted", "worlds_missing_resources":
-			icon_path = "res://assets/ui/notifications/WorldUnaccessibleNotification.png"
-		"worlds_permission_granted", "worlds_permission_revoked":
-			icon_path = "res://assets/ui/notifications/WorldAccessRestoredNotification.png"
 		"social_service_friendship_request", "social_service_friendship_accepted":
-			icon_path = "res://assets/ui/notifications/FriendNotification.png"
-		"community_invite_received":
-			icon_path = "res://assets/ui/notifications/DefaultNotification.png"
-		"badge_granted":
-			icon_path = "res://assets/ui/notifications/RewardNotification.png"
-		"credits_reminder_do_not_miss_out":
-			icon_path = "res://assets/ui/notifications/RewardNotification.png"
+			_show_friend(metadata)
+		"reward_assignment", "reward_assigned", "reward_in_progress", "badge_granted":
+			_show_item(metadata)
 		_:
-			icon_path = "res://assets/ui/notifications/DefaultNotification.png"
-
-	if ResourceLoader.exists(icon_path):
-		icon_texture.texture = load(icon_path)
+			# Events and every other type: a rounded thumbnail from whatever image the server sent.
+			_show_event(metadata)
 
 
-func _apply_friend_notification_styling(notif_type: String, metadata: Dictionary) -> void:
-	# Only apply to friend notifications
-	var friend_notification_types = [
-		"social_service_friendship_request",
-		"social_service_friendship_accepted",
-	]
-	if notif_type not in friend_notification_types:
-		return
-
-	# Get sender/friend name based on notification type
-	var sender_name = ""
+## Friend: round avatar via the shared ProfilePicture (owns its own circular mask + name colour).
+func _show_friend(metadata: Dictionary) -> void:
+	profile_picture_friend.show()
+	var data := SocialItemData.new()
 	if "sender" in metadata and metadata["sender"] is Dictionary:
-		sender_name = metadata["sender"].get("name", "")
-	elif "sender_name" in metadata:
-		sender_name = metadata.get("sender_name", "")
-	elif "friend_name" in metadata:
-		sender_name = metadata.get("friend_name", "")
-
-	if sender_name.is_empty():
-		return
-
-	# Get the avatar color for this username
-	var color = _get_avatar_color(sender_name)
-	if color == Color.WHITE:  # Default fallback
-		return
-
-	# Create a new StyleBoxFlat for the avatar with circular border
-	var style_box = StyleBoxFlat.new()
-	style_box.bg_color = color.darkened(0.6)  # Darker background
-	style_box.border_color = color  # Border is the avatar color
-	# Same properties as profile button to make it completely circular
-	style_box.border_width_left = 4
-	style_box.border_width_top = 4
-	style_box.border_width_right = 4
-	style_box.border_width_bottom = 4
-	style_box.corner_radius_top_left = 9999
-	style_box.corner_radius_top_right = 9999
-	style_box.corner_radius_bottom_right = 9999
-	style_box.corner_radius_bottom_left = 9999
-	style_box.corner_detail = 16
-	style_box.anti_aliasing = true
-	style_box.anti_aliasing_size = 0.5
-
-	# Apply the style to the image container
-	if image_container is Panel:
-		image_container.add_theme_stylebox_override("panel", style_box)
+		var sender: Dictionary = metadata["sender"]
+		data.name = sender.get("name", "")
+		data.address = sender.get("address", "")
+		data.profile_picture_url = sender.get("profileImageUrl", "")
+		data.has_claimed_name = sender.get("hasClaimedName", false)
+	profile_picture_friend.async_update_profile_picture(data)
 
 
-func _get_avatar_color(username: String) -> Color:
-	var explorer = Global.get_explorer()
-	if explorer == null or explorer.player == null:
-		return Color.WHITE
+## Event / generic: rounded thumbnail with the scene's #E8B9FF outline.
+func _show_event(metadata: Dictionary) -> void:
+	event_image.show()
+	var url: String = metadata.get(
+		"image", metadata.get("thumbnailUrl", metadata.get("thumbnail", ""))
+	)
+	event_image.load_from_url(url)
 
-	var player_avatar = explorer.player.avatar
-	if player_avatar == null:
-		return Color.WHITE
 
-	return DclAvatar.get_nickname_color(username)
+## Received item/reward: rounded thumbnail with an outline coloured by its rarity.
+func _show_item(metadata: Dictionary) -> void:
+	item_image.show()
+	item_image.border_color = _rarity_color(metadata.get("tokenRarity", ""))
+	var url: String = metadata.get("tokenImage", metadata.get("image", ""))
+	item_image.load_from_url(url)
+
+
+func _rarity_color(rarity: String) -> Color:
+	match rarity.to_lower():
+		Wearables.ItemRarity.COMMON:
+			return Wearables.RarityColor.COMMON
+		Wearables.ItemRarity.UNCOMMON:
+			return Wearables.RarityColor.UNCOMMON
+		Wearables.ItemRarity.RARE:
+			return Wearables.RarityColor.RARE
+		Wearables.ItemRarity.EPIC:
+			return Wearables.RarityColor.EPIC
+		Wearables.ItemRarity.LEGENDARY:
+			return Wearables.RarityColor.LEGENDARY
+		Wearables.ItemRarity.MYTHIC:
+			return Wearables.RarityColor.MYTHIC
+		Wearables.ItemRarity.UNIQUE:
+			return Wearables.RarityColor.UNIQUE
+		Wearables.ItemRarity.EXOTIC:
+			return Wearables.RarityColor.EXOTIC
+		_:
+			return Wearables.RarityColor.BASE

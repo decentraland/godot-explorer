@@ -2,31 +2,23 @@
 
 [ext_resource type="Script" uid="uid://bka3ybfk1troc" path="res://src/ui/components/organisms/notifications/notification_item.gd" id="1_notification_item"]
 [ext_resource type="PackedScene" uid="uid://bkst8nn51e4iu" path="res://src/ui/components/organisms/notifications/notification_content.tscn" id="2_content"]
+[ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="3_cmnm7"]
+[ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="4_pwcjt"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_notif_panel"]
 resource_local_to_scene = true
-bg_color = Color(0.133333, 0.129412, 0.141176, 1)
-corner_radius_top_left = 6
-corner_radius_top_right = 6
-corner_radius_bottom_right = 6
-corner_radius_bottom_left = 6
+bg_color = Color(0, 0, 0, 0.4)
+corner_radius_top_left = 16
+corner_radius_top_right = 16
+corner_radius_bottom_right = 16
+corner_radius_bottom_left = 16
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_item_image"]
-bg_color = Color(0.2, 0.2, 0.2, 1)
-corner_radius_top_left = 8
-corner_radius_top_right = 8
-corner_radius_bottom_right = 8
-corner_radius_bottom_left = 8
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_unread_dot"]
-bg_color = Color(0.9, 0.2, 0.2, 1)
-corner_radius_top_left = 4
-corner_radius_top_right = 4
-corner_radius_bottom_right = 4
-corner_radius_bottom_left = 4
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_cmnm7"]
 
 [node name="NotificationItem" type="PanelContainer" unique_id=1020598395]
 custom_minimum_size = Vector2(280, 83)
+offset_right = 715.0
+offset_bottom = 135.0
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_notif_panel")
 script = ExtResource("1_notification_item")
@@ -34,10 +26,10 @@ script = ExtResource("1_notification_item")
 [node name="MarginContainer" type="MarginContainer" parent="." unique_id=1626130664]
 layout_mode = 2
 mouse_filter = 2
-theme_override_constants/margin_left = 10
-theme_override_constants/margin_top = 8
-theme_override_constants/margin_right = 10
-theme_override_constants/margin_bottom = 8
+theme_override_constants/margin_left = 22
+theme_override_constants/margin_top = 22
+theme_override_constants/margin_right = 22
+theme_override_constants/margin_bottom = 22
 
 [node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer" unique_id=1708681351]
 layout_mode = 2
@@ -48,12 +40,19 @@ theme_override_constants/separation = 10
 unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 2
+theme_override_constants/separation = 24
 
 [node name="ImageContainerWrapper" parent="MarginContainer/HBoxContainer/NotificationContent" index="0" unique_id=128714356]
-custom_minimum_size = Vector2(50, 50)
+custom_minimum_size = Vector2(80, 80)
 
-[node name="ImageContainer" parent="MarginContainer/HBoxContainer/NotificationContent/ImageContainerWrapper" index="0" unique_id=134717449]
-theme_override_styles/panel = SubResource("StyleBoxFlat_item_image")
+[node name="ProfilePictureFriend" parent="MarginContainer/HBoxContainer/NotificationContent/ImageContainerWrapper" index="0" unique_id=1700000001]
+visible = true
+custom_minimum_size = Vector2(80, 80)
+offset_left = -40.0
+offset_top = -40.0
+offset_right = 40.0
+offset_bottom = 40.0
+show_border = false
 
 [node name="VBoxContainer" parent="MarginContainer/HBoxContainer/NotificationContent" index="1" unique_id=1170504368]
 size_flags_vertical = 4
@@ -61,48 +60,49 @@ size_flags_vertical = 4
 [node name="LabelTitle" parent="MarginContainer/HBoxContainer/NotificationContent/VBoxContainer" index="0" unique_id=2082664271]
 custom_minimum_size = Vector2(0, 0)
 size_flags_vertical = 1
-theme_override_font_sizes/normal_font_size = 14
-theme_override_font_sizes/bold_font_size = 14
-theme_override_font_sizes/bold_italics_font_size = 14
-theme_override_font_sizes/italics_font_size = 14
-theme_override_font_sizes/mono_font_size = 14
+theme_override_fonts/normal_font = ExtResource("3_cmnm7")
+theme_override_font_sizes/normal_font_size = 26
+theme_override_font_sizes/bold_font_size = 26
+theme_override_font_sizes/bold_italics_font_size = 26
+theme_override_font_sizes/italics_font_size = 26
+theme_override_font_sizes/mono_font_size = 26
 fit_content = true
 
-[node name="LabelDescription" parent="MarginContainer/HBoxContainer/NotificationContent/VBoxContainer" index="1" unique_id=1103578988]
+[node name="HSeparator" type="HSeparator" parent="MarginContainer/HBoxContainer/NotificationContent/VBoxContainer" index="1" unique_id=1288858199]
+layout_mode = 2
+theme_override_constants/separation = 6
+theme_override_styles/separator = SubResource("StyleBoxEmpty_cmnm7")
+
+[node name="LabelDescription" parent="MarginContainer/HBoxContainer/NotificationContent/VBoxContainer" index="2" unique_id=1103578988]
 clip_contents = false
 custom_minimum_size = Vector2(0, 0)
 size_flags_vertical = 2
+theme_override_colors/default_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+theme_override_fonts/normal_font = ExtResource("4_pwcjt")
+theme_override_font_sizes/normal_font_size = 22
 theme_override_font_sizes/mono_font_size = 14
 fit_content = true
 
-[node name="LabelTimestamp" type="RichTextLabel" parent="MarginContainer/HBoxContainer/NotificationContent/VBoxContainer" index="2" unique_id=808828855]
-auto_translate_mode = 2
+[node name="HSeparator2" type="HSeparator" parent="MarginContainer/HBoxContainer/NotificationContent/VBoxContainer" index="3" unique_id=1915615617]
+layout_mode = 2
+theme_override_constants/separation = 4
+theme_override_styles/separator = SubResource("StyleBoxEmpty_cmnm7")
+
+[node name="LabelTimestamp" type="RichTextLabel" parent="MarginContainer/HBoxContainer/NotificationContent/VBoxContainer" index="4" unique_id=808828855]
 unique_name_in_owner = true
+auto_translate_mode = 2
 layout_mode = 2
 mouse_filter = 2
-theme_override_colors/default_color = Color(0.6, 0.6, 0.6, 1)
-theme_override_font_sizes/normal_font_size = 12
+theme_override_colors/default_color = Color(0.627451, 0.60784316, 0.65882355, 1)
+theme_override_fonts/normal_font = ExtResource("4_pwcjt")
+theme_override_font_sizes/normal_font_size = 15
 theme_override_font_sizes/bold_font_size = 12
 theme_override_font_sizes/bold_italics_font_size = 12
 theme_override_font_sizes/italics_font_size = 12
 theme_override_font_sizes/mono_font_size = 12
 bbcode_enabled = true
-text = "[b]5m ago[/b]"
+text = "5m ago"
 fit_content = true
 scroll_active = false
-
-[node name="RightContainer" type="VBoxContainer" parent="MarginContainer/HBoxContainer" unique_id=1662610435]
-layout_mode = 2
-size_flags_vertical = 4
-mouse_filter = 2
-theme_override_constants/separation = 5
-
-[node name="UnreadDot" type="Panel" parent="MarginContainer/HBoxContainer/RightContainer" unique_id=760950720]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(8, 8)
-layout_mode = 2
-size_flags_horizontal = 4
-mouse_filter = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_unread_dot")
 
 [editable path="MarginContainer/HBoxContainer/NotificationContent"]

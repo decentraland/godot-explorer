@@ -60,8 +60,8 @@ layout_mode = 2
 [node name="ImageContainerWrapper" parent="Panel/MarginContainer/NotificationContent" index="0" unique_id=128714356]
 custom_minimum_size = Vector2(50, 50)
 
-[node name="ImageContainer" parent="Panel/MarginContainer/NotificationContent/ImageContainerWrapper" index="0" unique_id=134717449]
-theme_override_styles/panel = SubResource("StyleBoxFlat_image")
+[node name="ProfilePictureFriend" parent="Panel/MarginContainer/NotificationContent/ImageContainerWrapper" index="0" unique_id=1700000001]
+picture_size = 5
 
 [node name="VBoxContainer" parent="Panel/MarginContainer/NotificationContent" index="1" unique_id=1170504368]
 theme_override_constants/separation = 2

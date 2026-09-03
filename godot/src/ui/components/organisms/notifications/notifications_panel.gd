@@ -11,7 +11,6 @@ var _notification_items: Array[Control] = []
 @onready var scroll_container: ScrollContainer = %ScrollContainer
 @onready var notifications_list: VBoxContainer = %NotificationsList
 @onready var button_mark_all_read: Button = %ButtonMarkAllRead
-@onready var fade_overlay: TextureRect = %FadeOverlay
 @onready var v_box_container_no_notifications: VBoxContainer = %VBoxContainer_NoNotifications
 @onready var label_no_notifications: Label = %Label_NoNotifications
 
@@ -75,7 +74,6 @@ func async_display_notifications(notifications: Array) -> void:
 		v_box_container_no_notifications.visible = true
 		scroll_container.visible = false
 		button_mark_all_read.visible = false
-		fade_overlay.visible = false
 		return
 
 	v_box_container_no_notifications.visible = false
@@ -104,10 +102,6 @@ func async_display_notifications(notifications: Array) -> void:
 		item.notification_clicked.connect(_on_notification_clicked)
 
 		_notification_items.append(item)
-
-	# Update gradient visibility after items are added (next frame)
-	await get_tree().process_frame
-	_update_gradient_visibility()
 
 
 func _on_new_notifications(notifications: Array) -> void:
@@ -177,17 +171,7 @@ func _show_guest_message() -> void:
 	# Hide scroll container and button
 	scroll_container.visible = false
 	button_mark_all_read.visible = false
-	fade_overlay.visible = false
 
 	# Show custom message for guests
 	v_box_container_no_notifications.visible = true
 	label_no_notifications.text = tr("NOTIFICATIONS_SIGN_IN_TO_GET_NOTIFICATIONS")
-
-
-func _update_gradient_visibility() -> void:
-	# Check if scrollbar is visible (content exceeds container height)
-	var v_scroll = scroll_container.get_v_scroll_bar()
-	if v_scroll:
-		fade_overlay.visible = v_scroll.visible
-	else:
-		fade_overlay.visible = false

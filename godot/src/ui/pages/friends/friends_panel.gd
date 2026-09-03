@@ -173,6 +173,19 @@ func show_panel_on_friends_tab() -> void:
 		button_nearby.button_pressed = true
 
 
+## Opens the friends panel on the Requests tab (e.g. from an incoming friend-request notification).
+func show_panel_on_requests_tab() -> void:
+	show()
+	_load_unloaded_items()
+	_hide_all_drowpdown_highlights()
+	if not Global.player_identity.is_guest:
+		h_box_container_friends_tab.show()
+		button_requests.button_pressed = true
+	else:
+		h_box_container_friends_tab.hide()
+		button_nearby.button_pressed = true
+
+
 func hide_panel() -> void:
 	hide()
 	panel_closed.emit()

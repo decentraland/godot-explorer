@@ -1,18 +1,8 @@
 [gd_scene format=3 uid="uid://bkst8nn51e4iu"]
 
 [ext_resource type="Script" uid="uid://tvxd1qqaqmaj" path="res://src/ui/components/organisms/notifications/notification_content.gd" id="1_content"]
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ld77n"]
-bg_color = Color(0.779291, 0.779291, 0.779291, 1)
-border_width_left = 1
-border_width_top = 1
-border_width_right = 1
-border_width_bottom = 1
-border_color = Color(0, 0, 0, 1)
-corner_radius_top_left = 12
-corner_radius_top_right = 12
-corner_radius_bottom_right = 12
-corner_radius_bottom_left = 12
+[ext_resource type="PackedScene" uid="uid://c6jl46ahx31ud" path="res://src/ui/components/atoms/images/profile_picture/profile_picture.tscn" id="2_profile"]
+[ext_resource type="PackedScene" uid="uid://chxo1eeeses1w" path="res://src/ui/components/atoms/images/async_image/async_image.tscn" id="3_async"]
 
 [node name="NotificationContent" type="HBoxContainer" unique_id=1021925750]
 size_flags_horizontal = 3
@@ -25,49 +15,43 @@ layout_mode = 2
 size_flags_vertical = 4
 mouse_filter = 2
 
-[node name="ImageContainer" type="Panel" parent="ImageContainerWrapper" unique_id=134717449]
-unique_name_in_owner = true
-clip_children = 2
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_ld77n")
-
-[node name="NotificationImage" type="TextureRect" parent="ImageContainerWrapper/ImageContainer" unique_id=1415805150]
-unique_name_in_owner = true
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-expand_mode = 1
-stretch_mode = 5
-
-[node name="IconTexture" type="TextureRect" parent="ImageContainerWrapper" unique_id=1034901061]
+[node name="ProfilePictureFriend" parent="ImageContainerWrapper" unique_id=1700000001 instance=ExtResource("2_profile")]
 unique_name_in_owner = true
 visible = false
-custom_minimum_size = Vector2(24, 24)
 layout_mode = 1
-anchors_preset = 3
-anchor_left = 1.0
-anchor_top = 1.0
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+picture_size = 7
+
+[node name="EventImage" parent="ImageContainerWrapper" unique_id=1700000002 instance=ExtResource("3_async")]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = -26.0
-offset_top = -26.0
-offset_right = -2.0
-offset_bottom = -2.0
-grow_horizontal = 0
-grow_vertical = 0
+grow_horizontal = 2
+grow_vertical = 2
 mouse_filter = 2
-expand_mode = 1
-stretch_mode = 5
+border_radius = 8
+
+[node name="ItemImage" parent="ImageContainerWrapper" unique_id=1700000003 instance=ExtResource("3_async")]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+border_radius = 8
 
 [node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=1170504368]
 layout_mode = 2
