@@ -41,9 +41,20 @@ static func async_submit(
 	if trimmed.is_empty():
 		return {"ok": false, "id": "", "error": "missing description"}
 
-	var payload := {"ticket_attributes": _build_attributes(issue_type_uuid, trimmed)}
+	# Encoded once and shared: the Sentry copy matters most precisely when the
+	# ticket has to go without the image, so re-encoding here would both double
+	# the work on the UI thread and defeat the reason for attaching it.
+	var jpeg_bytes := _encode_image(images)
 
-	var evidence := _build_evidence(images)
+	# Before the POST: the returned link is an input to the description. Returns
+	# "" whenever Sentry is unavailable, and the report is filed regardless.
+	var diagnostics_link := SentryUserFeedback.submit(trimmed, jpeg_bytes)
+
+	var payload := {
+		"ticket_attributes": _build_attributes(issue_type_uuid, trimmed, diagnostics_link)
+	}
+
+	var evidence := _build_evidence(jpeg_bytes)
 	if not evidence.is_empty():
 		payload["evidence"] = evidence
 
@@ -82,11 +93,13 @@ static func async_submit(
 
 
 # Every value must be a String — the proxy rejects non-string attribute values.
-static func _build_attributes(issue_type_uuid: String, description: String) -> Dictionary:
+static func _build_attributes(
+	issue_type_uuid: String, description: String, diagnostics_link: String
+) -> Dictionary:
 	var device := _collect_device_info()
 	var attributes := {
 		"_default_title_": "Bug Report: %s" % _label_for_uuid(issue_type_uuid),
-		"_default_description_": _compose_description(description),
+		"_default_description_": _compose_description(description, diagnostics_link),
 		"Issue Type": issue_type_uuid,
 		"Operating System": device["os"],
 		"Graphic Card": device["gpu"],
@@ -116,15 +129,17 @@ static func _current_scene_sdk_version() -> String:
 
 
 # Mirrors Unity's ComposeTicketDescription so both clients read the same in
-# Intercom. `Internal diagnostics` is the Sentry deep link there; we have no
-# retrievable log buffer in production yet, so it stays "unavailable" — the same
-# string Unity emits when its Sentry step fails.
-static func _compose_description(description: String) -> String:
+# Intercom. `Internal diagnostics` is a Sentry deep link to the event carrying the
+# log tail and screenshot; it falls back to "unavailable" — the same string Unity
+# emits when its Sentry step fails — whenever SentryUserFeedback returns nothing,
+# which is every dev build, since _before_send discards those events.
+static func _compose_description(description: String, diagnostics_link: String) -> String:
 	var lines := [description, "", "---"]
 	var position = Global.get_config().last_parcel_position
 	if position != null:
 		lines.append("Coordinates: %d,%d" % [position.x, position.y])
-	lines.append("Internal diagnostics: unavailable")
+	var diagnostics := diagnostics_link if not diagnostics_link.is_empty() else "unavailable"
+	lines.append("Internal diagnostics: %s" % diagnostics)
 	return "\n".join(lines)
 
 
@@ -167,20 +182,29 @@ static func _collect_device_info() -> Dictionary:
 	}
 
 
-# One image only. Returns {} when there is nothing to attach or the encode is
-# too large — an oversized image must not take the whole ticket down with it.
-static func _build_evidence(images: Array) -> Dictionary:
+# The first image only, as JPEG bytes; empty when there is nothing to attach or
+# the encode fails. Split out from _build_evidence so the same bytes can also go
+# to Sentry, which is the only place an over-cap image survives.
+static func _encode_image(images: Array) -> PackedByteArray:
 	if images.is_empty():
-		return {}
+		return PackedByteArray()
 	if images[0] == null or not (images[0] is Image):
-		return {}
+		return PackedByteArray()
 	var image: Image = images[0]
 	if image.is_empty():
-		return {}
+		return PackedByteArray()
 
 	var bytes: PackedByteArray = image.save_jpg_to_buffer(JPEG_QUALITY)
 	if bytes.is_empty():
 		push_warning("BugReportService: could not encode the attached image")
+	return bytes
+
+
+# Returns {} when there is nothing to attach or the encode is too large — an
+# oversized image must not take the whole ticket down with it. It still reaches
+# Sentry via SentryUserFeedback, so it is dropped from the ticket, not lost.
+static func _build_evidence(bytes: PackedByteArray) -> Dictionary:
+	if bytes.is_empty():
 		return {}
 	if bytes.size() > MAX_EVIDENCE_BYTES:
 		push_warning(
