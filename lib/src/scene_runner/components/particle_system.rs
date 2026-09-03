@@ -458,6 +458,10 @@ fn apply_particle_system(
     let upper_cap = (max_particles as i32).clamp(1, MAX_AMOUNT_PER_EMITTER);
     let continuous = ((rate * lifetime as f32).ceil() as i32).max(0);
     let mut amount = continuous.max(burst_capacity as i32).clamp(1, upper_cap);
+    // Authored per-emitter amount (post per-emitter caps, pre scene-budget clamp),
+    // exposed for the scene-stats overlay: `amount` saturates at the runtime
+    // budget, so it can never signal an over-budget scene.
+    let authored_amount = amount;
     let used_elsewhere: i32 = scene
         .particle_systems
         .iter()
@@ -476,6 +480,7 @@ fn apply_particle_system(
     }
 
     node.set_amount(amount);
+    node.set_meta("dcl_authored_amount", &authored_amount.to_variant());
     node.set_lifetime(lifetime);
 
     let looping = value.r#loop.unwrap_or(true);
