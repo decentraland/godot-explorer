@@ -452,7 +452,7 @@ impl DclUiBackground {
                 tracing::debug!("[UI_BKG] _on_texture_loaded: first shot, will retry");
                 self.first_texture_load_shot = false;
             } else {
-                tracing::error!("trying to set texture not found: {}", self.waiting_hash);
+                tracing::debug!("trying to set texture not found: {}", self.waiting_hash);
             }
             return;
         };

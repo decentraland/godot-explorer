@@ -184,6 +184,12 @@ fn main() -> Result<(), anyhow::Error> {
                         .help("show detailed messages")
                         .takes_value(false),
                 )
+                .arg(
+                    Arg::new("sentry-release")
+                        .long("sentry-release")
+                        .help("print the Sentry release string ({version}+{build}) the runtime reports, instead of the full version")
+                        .takes_value(false),
+                )
         )
         .subcommand(
             Command::new("install")
@@ -1008,7 +1014,10 @@ fn main() -> Result<(), anyhow::Error> {
             sm.value_of("branch"),
         ),
         ("version-check", _) => version_check::run_version_check(),
-        ("explorer-version", sm) => version::get_godot_explorer_version(sm.is_present("verbose")),
+        ("explorer-version", sm) => version::get_godot_explorer_version(
+            sm.is_present("verbose"),
+            sm.is_present("sentry-release"),
+        ),
         ("fi-benchmark", sm) => fi_benchmark::run_fi_benchmark(sm.get_flag("headless")),
         ("avatar-impostor-benchmark", sm) => {
             let target: &str = sm

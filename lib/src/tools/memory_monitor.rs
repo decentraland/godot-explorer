@@ -299,6 +299,21 @@ fn level_for(available_mb: i32, footprint_mb: i32) -> u8 {
     }
 }
 
+/// Consecutive samples a new pressure level must hold before it is reported
+/// through `tracing` (1s at POLL_MS). The bands have no hysteresis, so a
+/// process hovering on a boundary would otherwise flip every sample.
+#[cfg(any(target_os = "ios", target_os = "android"))]
+const LEVEL_TRANSITION_SAMPLES: u32 = 4;
+
+#[cfg(any(target_os = "ios", target_os = "android"))]
+fn level_name(level: u8) -> &'static str {
+    match level {
+        LEVEL_CRITICAL => "critical",
+        LEVEL_WARNING => "warning",
+        _ => "ok",
+    }
+}
+
 #[cfg(any(target_os = "ios", target_os = "android"))]
 fn monitor_loop() {
     let mut tick: u64 = 0;
@@ -310,6 +325,13 @@ fn monitor_loop() {
     let mut stall_reported = false;
     let mut last_report_ms: u64 = 0;
 
+    // Pressure level as last reported through `tracing`. Transitions (and only
+    // transitions) go through `tracing::warn!` so they reach Godot's warning
+    // stream and become Sentry breadcrumbs: the memory trajectory in the
+    // minutes before a crash. `emit_log` below stays the per-sample record.
+    let mut logged_level: u8 = LEVEL_OK;
+    let mut level_streak: u32 = 0;
+
     loop {
         let available = read_available_mb();
         let footprint = read_footprint_mb();
@@ -318,6 +340,23 @@ fn monitor_loop() {
         AVAILABLE_MB.store(available, Ordering::Relaxed);
         FOOTPRINT_MB.store(footprint, Ordering::Relaxed);
         PRESSURE_LEVEL.store(level, Ordering::Relaxed);
+
+        if level != logged_level {
+            level_streak += 1;
+            if level_streak >= LEVEL_TRANSITION_SAMPLES {
+                tracing::warn!(
+                    "[MemMonitor] pressure {} -> {} (available={}MB footprint={}MB)",
+                    level_name(logged_level),
+                    level_name(level),
+                    available,
+                    footprint
+                );
+                logged_level = level;
+                level_streak = 0;
+            }
+        } else {
+            level_streak = 0;
+        }
 
         // Log every sample under pressure or when verbose; otherwise ~every 2s,
         // so we can watch the trajectory right up to (and through) a main-thread
@@ -339,6 +378,11 @@ fn monitor_loop() {
                     "[MainThreadStall] RECOVERED after ~{}ms (available={}MB)",
                     stall_ms, available
                 ));
+                tracing::warn!(
+                    "[MainThreadStall] recovered after ~{}ms (available={}MB)",
+                    stall_ms,
+                    available
+                );
             }
             last_hb = hb;
             stall_ms = 0;
@@ -354,6 +398,17 @@ fn monitor_loop() {
                     "[MainThreadStall] main thread UNRESPONSIVE ~{}ms (available={}MB footprint={}MB level={})",
                     stall_ms, available, footprint, level
                 ));
+                // Breadcrumb only on the first crossing; the re-reports stay
+                // in the raw log so a long freeze does not flood the trail.
+                if !stall_reported {
+                    tracing::warn!(
+                        "[MainThreadStall] main thread unresponsive ~{}ms (available={}MB footprint={}MB level={})",
+                        stall_ms,
+                        available,
+                        footprint,
+                        level
+                    );
+                }
                 stall_reported = true;
                 last_report_ms = stall_ms;
             }

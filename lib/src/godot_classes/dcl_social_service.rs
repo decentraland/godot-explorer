@@ -332,7 +332,7 @@ impl DclSocialService {
                     Self::resolve_simple_promise(get_promise, inner_result);
                 }
                 Err(_) => {
-                    tracing::error!("subscribe_to_updates: timeout after 15s");
+                    tracing::debug!("subscribe_to_updates: timeout after 15s");
                     Self::resolve_simple_promise(
                         get_promise,
                         Err("Timeout subscribing to updates".to_string()),
@@ -529,7 +529,7 @@ impl DclSocialService {
                     Self::resolve_simple_promise(get_promise, inner_result);
                 }
                 Err(_) => {
-                    tracing::error!("subscribe_to_block_updates: timeout after 15s");
+                    tracing::debug!("subscribe_to_block_updates: timeout after 15s");
                     Self::resolve_simple_promise(
                         get_promise,
                         Err("Timeout subscribing to block updates".to_string()),

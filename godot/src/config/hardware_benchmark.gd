@@ -119,7 +119,7 @@ func _finish_benchmark() -> void:
 	var ram_gb: float = _get_system_ram_gb()
 
 	# Determine optimal profile
-	var optimal_profile: int = _determine_profile(gpu_score, ram_gb)
+	var optimal_profile: int = determine_profile(gpu_score, ram_gb)
 
 	print(
 		(
@@ -170,7 +170,10 @@ func _get_system_ram_gb() -> float:
 	return 4.0
 
 
-func _determine_profile(gpu_score: float, ram_gb: float) -> int:
+## Maps a benchmark result to a profile index (0..3). Static so the Sentry
+## seeder can re-derive the device tier from the persisted scores without
+## re-running the benchmark.
+static func determine_profile(gpu_score: float, ram_gb: float) -> int:
 	# Find the HIGHEST profile where ALL metrics meet requirements
 	# Start from highest (3=High) and go down
 	for i in range(PROFILE_THRESHOLDS.size() - 1, -1, -1):
