@@ -73,7 +73,7 @@ func async_display_notifications(notifications: Array) -> void:
 	if notifications.size() == 0:
 		v_box_container_no_notifications.visible = true
 		scroll_container.visible = false
-		button_mark_all_read.visible = false
+		button_mark_all_read.disabled = true
 		return
 
 	v_box_container_no_notifications.visible = false
@@ -85,11 +85,8 @@ func async_display_notifications(notifications: Array) -> void:
 		if not notif.get("read", false):
 			unread_count += 1
 
-	# Update header
-	if unread_count > 0:
-		button_mark_all_read.visible = true
-	else:
-		button_mark_all_read.visible = false
+	# Nothing to mark when there are no unread notifications — disable it, don't hide it.
+	button_mark_all_read.disabled = unread_count == 0
 
 	# Create notification items
 	for notif in notifications:
@@ -168,9 +165,9 @@ func _is_user_authenticated() -> bool:
 
 
 func _show_guest_message() -> void:
-	# Hide scroll container and button
+	# Hide the scroll container; keep the button visible but disabled.
 	scroll_container.visible = false
-	button_mark_all_read.visible = false
+	button_mark_all_read.disabled = true
 
 	# Show custom message for guests
 	v_box_container_no_notifications.visible = true
