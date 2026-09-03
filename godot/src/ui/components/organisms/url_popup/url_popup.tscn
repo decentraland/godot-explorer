@@ -73,19 +73,20 @@ stretch_mode = 4
 
 [node name="Label_Title" type="Label" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer" unique_id=369686573]
 layout_mode = 2
-text = "Are you sure you want to follow this link?"
+text = "URL_POPUP_ARE_YOU_SURE_YOU_WANT_TO"
 label_settings = ExtResource("2_qbeay")
 horizontal_alignment = 1
 
 [node name="Label_Message" type="Label" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer" unique_id=1241096369]
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
-text = "Continuing will open the link in your browser. Make sure it's a website you trust before proceeding."
+text = "URL_POPUP_CONTINUING_WILL_OPEN_THE_LINK_IN"
 label_settings = ExtResource("3_2hcht")
 horizontal_alignment = 1
 autowrap_mode = 2
 
 [node name="Label_Url" type="Label" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer" unique_id=1106956728]
+auto_translate_mode = 2
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 100)
 layout_mode = 2
@@ -106,7 +107,7 @@ custom_minimum_size = Vector2(150, 38)
 layout_mode = 2
 size_flags_horizontal = 3
 theme_type_variation = &"DarkButton"
-text = "CANCEL"
+text = "COMMON_CANCEL"
 
 [node name="Button_GoToLinkContinue" type="Button" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer2" unique_id=1430247645]
 unique_name_in_owner = true
@@ -114,7 +115,7 @@ custom_minimum_size = Vector2(150, 38)
 layout_mode = 2
 size_flags_horizontal = 3
 theme = ExtResource("5_oxsjn")
-text = "CONTINUE"
+text = "URL_POPUP_CONTINUE"
 
 [connection signal="gui_input" from="." to="." method="_on_gui_input"]
 [connection signal="pressed" from="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer2/Button_GoToLinkCancel" to="." method="_on_button_go_to_link_cancel_pressed"]

@@ -74,15 +74,17 @@ theme_override_constants/separation = 2
 alignment = 1
 
 [node name="LabelTitle" type="Label" parent="Panel/MarginContainer/HBoxContainer/VBoxContainer" unique_id=583479352]
+auto_translate_mode = 2
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 20)
 layout_mode = 2
 size_flags_vertical = 3
-text = "Poor Connection"
+text = "NOTIFICATIONS_POOR_CONNECTION"
 label_settings = SubResource("LabelSettings_1v63a")
 vertical_alignment = 1
 
 [node name="LabelDescription" type="RichTextLabel" parent="Panel/MarginContainer/HBoxContainer/VBoxContainer" unique_id=1078677248]
+auto_translate_mode = 2
 unique_name_in_owner = true
 visible = false
 custom_minimum_size = Vector2(0, 20)
@@ -95,5 +97,4 @@ theme_override_font_sizes/bold_font_size = 12
 theme_override_font_sizes/bold_italics_font_size = 12
 theme_override_font_sizes/italics_font_size = 12
 bbcode_enabled = true
-text = "Description"
 scroll_active = false

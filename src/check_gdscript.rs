@@ -42,31 +42,51 @@ pub fn check_gdscript() -> Result<()> {
     }
 }
 
-pub fn test_avatar() -> Result<()> {
-    print_section("Avatar Regression Tests");
+/// Runs a set of headless GDScript unit tests, each a `SceneTree` script that
+/// exits non-zero on failure. `scripts` are paths under `godot/`, given in full so
+/// tests are not confined to one directory.
+fn run_script_tests(section: &str, kind: &str, scripts: &[&str]) -> Result<()> {
+    print_section(section);
 
     let godot_bin = get_godot_path();
-    for test in [
-        "test_avatar_locomotion_grounded",
-        "test_avatar_state_machine_graph",
-        "test_avatar_autoplay_stomp",
-        "test_avatar_anim_throttle",
-    ] {
-        print_message(MessageType::Info, &format!("Running {test}..."));
+    for script in scripts {
+        let name = script.rsplit('/').next().unwrap_or(script);
+        print_message(MessageType::Info, &format!("Running {name}..."));
         let output = cmd!(
             godot_bin.clone(),
             "--headless",
             "--path",
             GODOT_PROJECT_FOLDER,
             "--script",
-            &format!("res://src/test/avatar/{test}.gd")
+            &format!("res://{script}")
         )
         .run()?;
         if !output.status.success() {
-            print_message(MessageType::Error, &format!("{test} FAILED"));
-            return Err(anyhow::anyhow!("avatar regression test failed: {test}"));
+            print_message(MessageType::Error, &format!("{name} FAILED"));
+            return Err(anyhow::anyhow!("{kind} test failed: {name}"));
         }
     }
-    print_message(MessageType::Success, "All avatar regression tests passed!");
+    print_message(MessageType::Success, &format!("All {kind} tests passed!"));
     Ok(())
+}
+
+pub fn test_avatar() -> Result<()> {
+    run_script_tests(
+        "Avatar Regression Tests",
+        "avatar regression",
+        &[
+            "src/test/avatar/test_avatar_locomotion_grounded.gd",
+            "src/test/avatar/test_avatar_state_machine_graph.gd",
+            "src/test/avatar/test_avatar_autoplay_stomp.gd",
+            "src/test/avatar/test_avatar_anim_throttle.gd",
+        ],
+    )
+}
+
+pub fn test_i18n() -> Result<()> {
+    run_script_tests(
+        "Localization Tests",
+        "localization",
+        &["src/test/i18n/test_translation_key.gd"],
+    )
 }

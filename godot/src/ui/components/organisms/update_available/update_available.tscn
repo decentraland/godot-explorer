@@ -97,13 +97,13 @@ stretch_mode = 5
 
 [node name="Title" type="Label" parent="Margin/VBox" unique_id=717545927]
 layout_mode = 2
-text = "Update available"
+text = "UPDATE_AVAILABLE_UPDATE_AVAILABLE"
 label_settings = SubResource("LabelSettings_title")
 autowrap_mode = 2
 
 [node name="Description" type="Label" parent="Margin/VBox" unique_id=1007308851]
 layout_mode = 2
-text = "A new version of Decentraland is available. Update now for the latest fixes and improvements."
+text = "UPDATE_AVAILABLE_A_NEW_VERSION_OF_DECENTRALAND_IS"
 label_settings = SubResource("LabelSettings_desc")
 autowrap_mode = 2
 
@@ -127,7 +127,7 @@ theme_override_styles/normal = SubResource("StyleBoxFlat_update")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_update")
 theme_override_styles/hover = SubResource("StyleBoxFlat_update")
 theme_override_styles/focus = SubResource("StyleBoxFlat_update")
-text = "UPDATE"
+text = "UPDATE_AVAILABLE_UPDATE"
 
 [node name="LaterButton" type="Button" parent="Margin/VBox" unique_id=474508362]
 unique_name_in_owner = true
@@ -145,4 +145,4 @@ theme_override_styles/normal = SubResource("StyleBoxFlat_later")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_later")
 theme_override_styles/hover = SubResource("StyleBoxFlat_later")
 theme_override_styles/focus = SubResource("StyleBoxFlat_later")
-text = "LATER"
+text = "UPDATE_AVAILABLE_LATER"

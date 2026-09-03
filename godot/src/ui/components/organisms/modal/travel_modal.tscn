@@ -265,6 +265,7 @@ layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_3v1ow")
 
 [node name="Label_Title" type="Label" parent="PanelContainer/PanelContainer_Background/BoxContainer/PanelContainer_Content/MarginContainer_Content/VBoxContainer" unique_id=1244832168]
+auto_translate_mode = 2
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_font_sizes/font_size = 38
@@ -294,10 +295,11 @@ theme_override_constants/separation = 8
 
 [node name="Label_by" type="Label" parent="PanelContainer/PanelContainer_Background/BoxContainer/PanelContainer_Content/MarginContainer_Content/VBoxContainer/HBoxContainer_Creator" unique_id=1074516478]
 layout_mode = 2
-text = "by"
+text = "MODAL_BY"
 label_settings = SubResource("LabelSettings_fyrwt")
 
 [node name="Label_Creator" type="Label" parent="PanelContainer/PanelContainer_Background/BoxContainer/PanelContainer_Content/MarginContainer_Content/VBoxContainer/HBoxContainer_Creator" unique_id=2011523422]
+auto_translate_mode = 2
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
@@ -332,7 +334,7 @@ alignment = 1
 
 [node name="Label" type="Label" parent="PanelContainer/PanelContainer_Background/BoxContainer/PanelContainer_Content/MarginContainer_Content/VBoxContainer/Button_JumpIn/HBoxContainer_Content" unique_id=1241383603]
 layout_mode = 2
-text = "JUMP IN"
+text = "COMMON_JUMP_IN"
 label_settings = SubResource("LabelSettings_jumpin")
 
 [node name="TextureRect" type="TextureRect" parent="PanelContainer/PanelContainer_Background/BoxContainer/PanelContainer_Content/MarginContainer_Content/VBoxContainer/Button_JumpIn/HBoxContainer_Content" unique_id=677959267]

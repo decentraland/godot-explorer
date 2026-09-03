@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use http::{Method, Uri};
 
 use crate::{
-    auth::ephemeral_auth_chain::EphemeralAuthChain,
+    auth::{ephemeral_auth_chain::EphemeralAuthChain, wallet::signed_fetch_payload},
     godot_classes::dcl_global::DclGlobal,
     http_request::{
         http_queue_requester::HttpQueueRequester,
@@ -64,7 +64,8 @@ impl SignedLogin {
                 .as_millis();
 
             let meta = serde_json::to_string(&meta).unwrap();
-            let payload = format!("post:{}:{}:{}", uri.path(), unix_time, meta).to_lowercase();
+            // Same format as `sign_request`; the method is already the literal "post".
+            let payload = signed_fetch_payload("post", uri.path(), unix_time, &meta);
 
             let signature = ephemeral_auth_chain
                 .ephemeral_wallet()
