@@ -135,9 +135,16 @@ static func _current_scene_sdk_version() -> String:
 # which is every dev build, since _before_send discards those events.
 static func _compose_description(description: String, diagnostics_link: String) -> String:
 	var lines := [description, "", "---"]
-	var position = Global.get_config().last_parcel_position
-	if position != null:
-		lines.append("Coordinates: %d,%d" % [position.x, position.y])
+	# Only in-world. `last_parcel_position` is persisted spawn config (config_data.gd),
+	# not a live position — explorer.gd writes it as the player moves and reads it back
+	# to pick a spawn. In the lobby it therefore still holds the previous session's
+	# parcel, or the (72,-10) default on a fresh install, and reporting a parcel the
+	# player is demonstrably not standing in is worse than reporting none. Omitted
+	# rather than blanked, matching how the optional ticket attributes behave.
+	if Global.get_explorer() != null:
+		var position = Global.get_config().last_parcel_position
+		if position != null:
+			lines.append("Coordinates: %d,%d" % [position.x, position.y])
 	var diagnostics := diagnostics_link if not diagnostics_link.is_empty() else "unavailable"
 	lines.append("Internal diagnostics: %s" % diagnostics)
 	return "\n".join(lines)
