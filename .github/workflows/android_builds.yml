@@ -210,6 +210,20 @@ jobs:
         run: |
           cargo run -- export --target android --format aab --release
 
+      # Play Console symbolicates native crashes from the symbols AGP embeds in the bundle
+      # (debugSymbolLevel FULL in the engine's gradle template). Warn, don't fail, if they are
+      # missing: the bundle still ships, but the store's crash view would be unreadable.
+      - name: Check AAB carries native debug symbols
+        if: success() && (env.BRANCH_NAME == 'main' || startsWith(env.BRANCH_NAME, 'release'))
+        shell: bash
+        run: |
+          AAB=$(ls exports/*.aab | head -1)
+          if unzip -l "$AAB" | grep -q "BUNDLE-METADATA/com.android.tools.build.debugsymbols"; then
+            echo "✅ $AAB includes native debug symbols"
+          else
+            echo "::warning title=AAB without native debug symbols::$AAB has no BUNDLE-METADATA/com.android.tools.build.debugsymbols entry - Play Console crash stacks will be unreadable."
+          fi
+
       # Decode and setup keystore for AAB signing
       - name: Setup AAB Signing Keystore
         if: success() && (env.BRANCH_NAME == 'main' || startsWith(env.BRANCH_NAME, 'release'))
@@ -367,7 +381,11 @@ jobs:
           path: android-debug-symbols/
           if-no-files-found: error
         
-      # Upload debug symbols to Sentry for production builds (main/release* only).
+      # Upload debug symbols to Sentry and register the release, for production builds
+      # (main/release* only). Only the libraries that actually ship: our Rust lib and the engine
+      # lib straight from the AAR Godot's gradle template packages (unstripped there, same build-id
+      # as the stripped copy inside the APK/AAB). The release must be exactly the string the
+      # runtime reports (`{version}+{build}`, lib/build.rs) or Sentry sees two different releases.
       # continue-on-error: the APK/AAB are already built and uploaded by this point, so a
       # Sentry hiccup (e.g. server-side "Reported checksum mismatch") must never fail the
       # build — it only costs us symbolication. We notify instead.
@@ -376,101 +394,79 @@ jobs:
         if: success() && (env.BRANCH_NAME == 'main' || startsWith(env.BRANCH_NAME, 'release'))
         continue-on-error: true
         shell: bash
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+          SENTRY_CLI_VERSION: "3.7.0"
         run: |
+          set -euo pipefail
           EXPLORER_VERSION=$(cargo run -- explorer-version)
           echo "Explorer version: $EXPLORER_VERSION"
-
-          # Check if this is a production build (no -dev suffix)
-          if [[ ! "$EXPLORER_VERSION" =~ -dev$ ]]; then
-            echo "Production build detected, uploading debug symbols to Sentry..."
-            RELEASE_NAME="org.decentraland.godotexplorer@$EXPLORER_VERSION"
-            echo "Release name: $RELEASE_NAME"
-
-            # Install sentry-cli
-            curl -sL https://sentry.io/get-cli/ | bash
-
-            # Upload libdclgodot.so (our Rust library with embedded debug symbols)
-            LIBDCLGODOT_PATH="lib/target/libdclgodot_android/libdclgodot.so"
-
-            if [ -f "$LIBDCLGODOT_PATH" ]; then
-              echo "Uploading libdclgodot debug symbols..."
-              ls -lh "$LIBDCLGODOT_PATH"
-
-              sentry-cli upload-dif \
-                --org ${{ secrets.SENTRY_ORG }} \
-                --project ${{ secrets.SENTRY_PROJECT }} \
-                --auth-token ${{ secrets.SENTRY_AUTH_TOKEN }} \
-                --include-sources \
-                --wait \
-                "$LIBDCLGODOT_PATH"
-
-              echo "✅ libdclgodot debug symbols uploaded"
-            else
-              echo "⚠️  libdclgodot.so not found at $LIBDCLGODOT_PATH"
-            fi
-
-            # Upload libgodot_android debug symbols from native-debug-symbols.zip
-            # Search for the file as the path varies by build variant
-            NATIVE_DEBUG_ZIP=$(find godot/android/build/build/outputs/native-debug-symbols -name "native-debug-symbols.zip" 2>/dev/null | head -1 || true)
-
-            if [ -n "$NATIVE_DEBUG_ZIP" ] && [ -f "$NATIVE_DEBUG_ZIP" ]; then
-              echo "Found native-debug-symbols.zip at: $NATIVE_DEBUG_ZIP"
-              echo "Extracting Godot debug symbols..."
-              mkdir -p /tmp/godot-debug-symbols
-              unzip -o "$NATIVE_DEBUG_ZIP" "*/libgodot_android.so.dbg" -d /tmp/godot-debug-symbols || true
-
-              GODOT_DBG=$(find /tmp/godot-debug-symbols -name "libgodot_android.so.dbg" 2>/dev/null | head -1 || true)
-              if [ -n "$GODOT_DBG" ]; then
-                echo "Uploading libgodot_android debug symbols..."
-                ls -lh "$GODOT_DBG"
-
-                sentry-cli upload-dif \
-                  --org ${{ secrets.SENTRY_ORG }} \
-                  --project ${{ secrets.SENTRY_PROJECT }} \
-                  --auth-token ${{ secrets.SENTRY_AUTH_TOKEN }} \
-                  --wait \
-                  "$GODOT_DBG"
-
-                echo "✅ libgodot_android debug symbols uploaded"
-              else
-                echo "⚠️  libgodot_android.so.dbg not found in zip"
-              fi
-            else
-              echo "⚠️  native-debug-symbols.zip not found, trying AAR fallback..."
-
-              # Fallback: extract from godot-lib AAR (contains unstripped .so with debug symbols)
-              GODOT_AAR="godot/android/build/libs/release/godot-lib.template_release.aar"
-              if [ -f "$GODOT_AAR" ]; then
-                echo "Extracting libgodot_android.so from AAR..."
-                mkdir -p /tmp/godot-aar
-                unzip -o "$GODOT_AAR" "jni/arm64-v8a/libgodot_android.so" -d /tmp/godot-aar
-
-                GODOT_SO=$(find /tmp/godot-aar -name "libgodot_android.so" 2>/dev/null | head -1 || true)
-                if [ -n "$GODOT_SO" ]; then
-                  echo "Uploading libgodot_android from AAR..."
-                  ls -lh "$GODOT_SO"
-
-                  sentry-cli upload-dif \
-                    --org ${{ secrets.SENTRY_ORG }} \
-                    --project ${{ secrets.SENTRY_PROJECT }} \
-                    --auth-token ${{ secrets.SENTRY_AUTH_TOKEN }} \
-                    --wait \
-                    "$GODOT_SO"
-
-                  echo "✅ libgodot_android uploaded from AAR"
-                else
-                  echo "⚠️  libgodot_android.so not found in AAR"
-                fi
-              else
-                echo "⚠️  Godot AAR not found at $GODOT_AAR"
-                find godot/android/build -name "*.aar" 2>/dev/null || true
-              fi
-            fi
-
-            echo "Debug symbols uploaded successfully to release: $RELEASE_NAME"
-          else
+          if [[ "$EXPLORER_VERSION" =~ -dev$ ]]; then
             echo "Development build detected (-dev suffix found), skipping Sentry upload"
+            exit 0
           fi
+          SENTRY_RELEASE="org.decentraland.godotexplorer@$(cargo run -- explorer-version --sentry-release)"
+          echo "Sentry release: $SENTRY_RELEASE"
+
+          # Pinned through SENTRY_CLI_VERSION (the install script honors it).
+          curl -sL https://sentry.io/get-cli/ | bash
+          sentry-cli --version
+
+          upload_dif() {  # <label> <path> [extra sentry-cli flags]
+            local label="$1" path="$2"
+            shift 2
+            if [ -e "$path" ]; then
+              ls -lh "$path"
+              sentry-cli debug-files upload --org "$SENTRY_ORG" --project "$SENTRY_PROJECT" --wait "$@" "$path"
+              echo "✅ $label uploaded"
+            else
+              echo "⚠️  $label not found at $path"
+            fi
+          }
+
+          # 1. Our Rust library, with sources so Sentry shows the Rust code inline.
+          upload_dif "libdclgodot.so" "lib/target/libdclgodot_android/libdclgodot.so" --include-sources
+
+          # 2. The engine library from the AAR. (build/outputs/native-debug-symbols is not
+          #    usable: Godot's export runs `gradle clean` first, so the zip is gone by now.)
+          GODOT_AAR="godot/android/build/libs/release/godot-lib.template_release.aar"
+          if [ -f "$GODOT_AAR" ]; then
+            rm -rf /tmp/godot-aar && mkdir -p /tmp/godot-aar
+            unzip -o -q "$GODOT_AAR" "jni/arm64-v8a/libgodot_android.so" -d /tmp/godot-aar
+            upload_dif "libgodot_android.so" "/tmp/godot-aar/jni/arm64-v8a/libgodot_android.so"
+          else
+            echo "⚠️  Godot AAR not found at $GODOT_AAR"
+          fi
+
+          # 3. sentry-godot's own native lib, so a crash inside the SDK is readable too. Its
+          #    debug files are a separate asset of the pinned release (src/consts.rs); the
+          #    server already has them after the first build of a given SDK version.
+          SENTRY_ADDON_URL=$(grep -o 'https://github.com/getsentry/sentry-godot/releases/download/[^"]*' src/consts.rs | head -1)
+          SENTRY_ADDON_SYMBOLS_URL="${SENTRY_ADDON_URL/sentry-godot-/sentry-godot-debug-symbols-}"
+          if curl -sfL -o /tmp/sentry-godot-symbols.zip "$SENTRY_ADDON_SYMBOLS_URL"; then
+            rm -rf /tmp/sentry-godot-symbols && mkdir -p /tmp/sentry-godot-symbols
+            unzip -o -q /tmp/sentry-godot-symbols.zip "addons/sentry/bin/android/*" -d /tmp/sentry-godot-symbols
+            upload_dif "sentry-godot android symbols" "/tmp/sentry-godot-symbols/addons/sentry/bin/android"
+          else
+            echo "⚠️  could not download $SENTRY_ADDON_SYMBOLS_URL"
+          fi
+
+          # 4. Register the release under the runtime's name, attach commits and mark it
+          #    deployed to the environment this build targets, so issues get "first seen in",
+          #    suspect commits and regression detection.
+          case "${PROD_FLAG:-}" in
+            --prod) SENTRY_ENV=production ;;
+            *) SENTRY_ENV=staging ;;
+          esac
+          sentry-cli releases new "$SENTRY_RELEASE" --org "$SENTRY_ORG" --project "$SENTRY_PROJECT"
+          sentry-cli releases set-commits "$SENTRY_RELEASE" --org "$SENTRY_ORG" --auto --ignore-missing \
+            || sentry-cli releases set-commits "$SENTRY_RELEASE" --org "$SENTRY_ORG" --local --ignore-missing \
+            || echo "⚠️  could not associate commits with $SENTRY_RELEASE"
+          sentry-cli releases finalize "$SENTRY_RELEASE" --org "$SENTRY_ORG"
+          sentry-cli releases deploys "$SENTRY_RELEASE" new --org "$SENTRY_ORG" -e "$SENTRY_ENV"
+          echo "✅ Sentry release $SENTRY_RELEASE finalized ($SENTRY_ENV)"
 
       # Notify only — the step above is continue-on-error, so the job stays green.
       - name: Sentry symbol upload failed — notify (non-blocking)
