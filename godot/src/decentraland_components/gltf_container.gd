@@ -10,6 +10,9 @@ enum GltfContainerLoadingState {
 
 var dcl_gltf_hash := ""
 var optimized := false
+# Set by force_reload_gltf(): makes the next request bypass ResourceLoader's
+# cache, which would otherwise serve the pre-edit model on a reused .scn path.
+var _force_fresh_load := false
 # Once entity is known to move, all colliders should spawn as KINEMATIC
 var _kinematic_requested := false
 # Content hash this container is registered under in GltfLoadingCoordinator
@@ -97,8 +100,15 @@ func async_load_gltf():
 	self.optimized = use_optimized
 	_requested_hash = file_hash
 	GltfLoadingCoordinator.request(
-		self, file_hash, dcl_gltf_src, dcl_scene_id, use_optimized, content_mapping
+		self,
+		file_hash,
+		dcl_gltf_src,
+		dcl_scene_id,
+		use_optimized,
+		content_mapping,
+		_force_fresh_load
 	)
+	_force_fresh_load = false
 
 
 #endregion
@@ -425,6 +435,34 @@ func change_gltf(
 	elif masks_changed and gltf_node != null:
 		# Same GLTF but masks changed - just update colliders
 		update_mask_colliders(gltf_node)
+
+
+## Re-runs the load for the current src, even though the src string is unchanged.
+##
+## `change_gltf` deliberately no-ops when the src is the same, but that is
+## exactly the preview hot-reload case: the file changed underneath a src (and
+## hash) that both stayed put. Tears down like the gltf_changed branch above and
+## re-enters `async_load_gltf`, re-resolving against the (already updated) scene
+## content mapping — including the missing-entry case, which lands in NOT_FOUND
+## and is what a deleted file should look like.
+func force_reload_gltf() -> void:
+	var gltf_node := get_gltf_resource()
+	optimized = false
+	_force_fresh_load = true
+
+	if not _requested_hash.is_empty():
+		GltfLoadingCoordinator.unregister(self, _requested_hash)
+		_requested_hash = ""
+
+	if gltf_node != null:
+		remove_child(gltf_node)
+		gltf_node.queue_free()
+
+	if dcl_pending_node != null:
+		dcl_pending_node.queue_free()
+		dcl_pending_node = null
+
+	async_load_gltf.call_deferred()
 
 
 ## Invoked from GltfLoadTimeoutCoalescer when the load-timeout deadline

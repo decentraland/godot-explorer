@@ -207,7 +207,7 @@ func _is_on_active_menu_screen() -> bool:
 	var node: Node = get_parent()
 	while node != null:
 		if "current_screen_name" in node:
-			var prefix := "SETTINGS" if shown_in == "settings" else "DISCOVER"
+			var prefix := "SETTINGS" if shown_in == "settings" else tr("GUEST_UPGRADE_DISCOVER")
 			return String(node.current_screen_name).begins_with(prefix)
 		node = node.get_parent()
 	return true

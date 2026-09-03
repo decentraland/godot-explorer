@@ -29,6 +29,7 @@ use crate::{
 use godot::{
     classes::{
         control::{LayoutPreset, MouseFilter},
+        node::AutoTranslateMode,
         PhysicsRayQueryParameters3D,
     },
     prelude::*,
@@ -37,6 +38,7 @@ use std::{
     cell::RefCell,
     collections::{HashMap, HashSet},
     sync::atomic::{AtomicU32, Ordering},
+    sync::Arc,
     time::{Duration, Instant},
 };
 use tokio::sync::mpsc::error::TrySendError;
@@ -382,6 +384,10 @@ impl SceneManager {
         let mut base_ui = DclUiControl::new_alloc();
         base_ui.set_anchors_preset(LayoutPreset::FULL_RECT);
         base_ui.set_mouse_filter(MouseFilter::IGNORE);
+        // SDK scene UI is creator-authored content, never explorer copy: the scene
+        // decides what language it speaks. Set on the root so the whole per-scene UI
+        // subtree inherits it and no Label/Button added later gets silently localized.
+        base_ui.set_auto_translate_mode(AutoTranslateMode::DISABLED);
         base_ui.set_name("scenes_ui");
         let callable_on_ui_resize = self.base().callable("_on_ui_resize");
         base_ui.connect("resized", &callable_on_ui_resize);
@@ -1154,6 +1160,36 @@ impl SceneManager {
         } else {
             DclContentMappingAndUrl::empty()
         }
+    }
+
+    /// Republishes a single file->hash entry in a running scene's content mapping,
+    /// so the next asset request for `src` resolves to the new hash. An empty
+    /// `hash` drops the entry (the file was deleted).
+    ///
+    /// Preview hot-reload only: the sdk-commands server sends an `UpdateModel`
+    /// when a .glb changes, and the affected GltfContainers re-resolve their hash
+    /// through `get_scene_content_mapping` on reload.
+    ///
+    /// Only `Scene::content_mapping` is updated, not the `SceneEntityDefinition`
+    /// it was built from — a full scene reload re-fetches the definition from the
+    /// preview server anyway, so the two can't drift into a stale state.
+    ///
+    /// Returns false when the scene isn't loaded, so callers can fall back to a
+    /// full scene reload.
+    #[func]
+    fn update_scene_content_entry(&mut self, scene_id: i32, src: GString, hash: GString) -> bool {
+        let Some(scene) = self.scenes.get_mut(&SceneId(scene_id)) else {
+            return false;
+        };
+
+        let hash = hash.to_string();
+        let hash = (!hash.is_empty()).then_some(hash);
+        scene.content_mapping = Arc::new(
+            scene
+                .content_mapping
+                .with_entry(&src.to_string(), hash.as_deref()),
+        );
+        true
     }
 
     #[func]
@@ -2845,6 +2881,8 @@ impl INode for SceneManager {
         let callable_on_ui_resize = self.base().callable("_on_ui_resize");
 
         self.base_ui.connect("resized", &callable_on_ui_resize);
+        self.base_ui
+            .set_auto_translate_mode(AutoTranslateMode::DISABLED);
         self.base_ui.set_name("scenes_ui");
         self.ui_canvas_information = self.create_ui_canvas_information();
 
@@ -3156,7 +3194,10 @@ impl INode for SceneManager {
             let passport_disabled: bool = avatar.get("passport_disabled").try_to().unwrap_or(false);
             if !is_avatar_shape && !avatar_id.is_empty() && !passport_disabled {
                 let mut profile_dict = VarDictionary::new();
-                profile_dict.set("text_pet_down", "View profile");
+                // A translation key, resolved in tooltip_label.gd. The tooltip label cannot
+                // auto-translate (it normally carries creator-authored PointerEvents text), and
+                // explorer.gd matches this same value to honour the "Hide View Profile" setting.
+                profile_dict.set("text_pet_down", "TOOLTIP_VIEW_PROFILE");
                 profile_dict.set("action", "ia_pointer");
                 tooltips.push(&profile_dict.to_variant());
             }
