@@ -31,10 +31,11 @@ pub const GODOT_BUILD_SHA: &str = "6289a3b2b";
 /// branch's CI build. An explicit `--branch` on the CLI still takes precedence over this.
 ///
 /// Reset to `None` once the branch is merged and `GODOT_BUILD_SHA` is bumped to the merge commit —
-/// leaving a branch pinned here makes every dev/CI pull an unmerged engine build. Currently `None`:
-/// the iOS pixelated-splash-logo fix (decentraland/godotengine#18) is merged and
-/// `GODOT_BUILD_SHA` above points at its merge commit.
-pub const GODOT_USE_BRANCH: Option<&str> = None;
+/// leaving a branch pinned here makes every dev/CI pull an unmerged engine build. Currently pinned
+/// to the Android sha1 build-id fix (decentraland/godotengine#20): without it every engine frame of
+/// an Android tombstone crash is unsymbolicated in Sentry. Once #20 merges into `4.6.2`, bump
+/// `GODOT_BUILD_SHA` to the merge commit and set this back to `None`.
+pub const GODOT_USE_BRANCH: Option<&str> = Some("fix/android-sha1-build-id");
 
 /// Release tag identifying a specific fork build — `<version>.stable.gh.<sha>`, mirroring the
 /// `--version` string. Single source for the release URL path segment, the on-disk template SHA
