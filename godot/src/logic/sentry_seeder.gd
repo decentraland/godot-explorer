@@ -29,6 +29,7 @@ const PRESSURE_NAMES := ["ok", "warning", "critical"]
 # has to live here.
 const MAX_SCENE_CRASH_REPORTS := 10
 const SCENE_CRASH_MESSAGE_REASON_MAX := 160
+const EXIT_DESCRIPTION_MESSAGE_MAX := 160
 
 # Android exit reasons that are not a session death worth an event.
 const BENIGN_EXIT_REASONS := [
@@ -403,7 +404,11 @@ func _report_exit_reason(exit_info: Dictionary) -> void:
 	# A death of the previous run, never a crash of this session: WARNING keeps
 	# it out of crash-free rates while the fingerprint keeps it countable.
 	event.level = SentrySDK.LEVEL_WARNING
-	event.message = "Previous run ended: %s (%s)" % [reason, description]
+	# ANR descriptions carry the whole dispatcher reason; the title only needs
+	# the head of it, the full text is in the exit_info context.
+	event.message = (
+		"Previous run ended: %s (%s)" % [reason, description.left(EXIT_DESCRIPTION_MESSAGE_MAX)]
+	)
 	event.set_fingerprint(PackedStringArray(["android-exit", reason]))
 	event.set_tag("event_kind", "exit_reason")
 	event.set_tag("exit_reason", reason)
