@@ -317,6 +317,8 @@ static func apply_graphic_profile(profile_index: int) -> void:
 
 	# Avatar move/jump/land dust particles follow the profile.
 	AvatarAnimHelpers.apply_particles_enabled(profile.particle_quality > 0)
+	# Scene particle budgets + CPU/GPU emitter selection (Rust side).
+	apply_particle_quality(profile.particle_quality)
 
 	# Scene dynamic lights follow the profile. Dev Tools can override at runtime.
 	DclLightSourceComponent.apply_graphic_profile_settings(

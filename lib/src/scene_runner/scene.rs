@@ -257,6 +257,8 @@ pub struct Scene {
 
     pub particle_systems: HashMap<SceneEntityId, ParticleSystemItem>,
     pub dirty_particle_systems: bool,
+    /// Last particle-profile generation applied (see PARTICLE_PROFILE_GENERATION).
+    pub particle_profile_generation: u32,
 
     pub scene_type: SceneType,
     pub audio_sources: HashMap<SceneEntityId, Gd<DclAudioSource>>,
@@ -410,6 +412,7 @@ impl Scene {
             dirty_materials: false,
             particle_systems: HashMap::new(),
             dirty_particle_systems: false,
+            particle_profile_generation: 0,
             audio_sources: HashMap::new(),
             audio_streams: HashMap::new(),
             video_players: HashMap::new(),
@@ -492,6 +495,7 @@ impl Scene {
             dirty_materials: false,
             particle_systems: HashMap::new(),
             dirty_particle_systems: false,
+            particle_profile_generation: 0,
             scene_type: SceneType::Parcel,
             audio_sources: HashMap::new(),
             audio_streams: HashMap::new(),

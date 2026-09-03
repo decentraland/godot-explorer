@@ -16,7 +16,7 @@ use godot::{
 };
 
 use std::{
-    sync::atomic::{AtomicBool, AtomicI32, Ordering},
+    sync::atomic::{AtomicBool, AtomicI32, AtomicU32, Ordering},
     time::Instant,
 };
 
@@ -53,12 +53,27 @@ static SCENE_PARTICLE_BUDGET: AtomicI32 = AtomicI32::new(50_000);
 /// Whether scene emitters are created as CPUParticles3D (low profiles) instead
 /// of GPUParticles3D. CPU emitters skip manual burst emission (no `emit_particle`).
 static USE_CPU_PARTICLES: AtomicBool = AtomicBool::new(false);
+/// Bumped on every profile change; scenes re-apply their live emitters when
+/// they see a new generation (budgets and CPU/GPU class take effect immediately
+/// instead of waiting for the next CRDT update).
+static PARTICLE_PROFILE_GENERATION: AtomicU32 = AtomicU32::new(0);
 
 /// Called from GDScript (via DclGlobal) when the graphic profile changes.
 pub fn set_particle_profile_budgets(scene_budget: i32, emitter_cap: i32, use_cpu: bool) {
     SCENE_PARTICLE_BUDGET.store(scene_budget.max(0), Ordering::Relaxed);
     MAX_AMOUNT_PER_EMITTER.store(emitter_cap.max(0), Ordering::Relaxed);
     USE_CPU_PARTICLES.store(use_cpu, Ordering::Relaxed);
+    PARTICLE_PROFILE_GENERATION.fetch_add(1, Ordering::Relaxed);
+}
+
+/// Current (scene_budget, emitter_cap, use_cpu) — used by the profile tests to
+/// assert the GDScript -> Rust mapping.
+pub fn get_particle_profile_budgets() -> (i32, i32, bool) {
+    (
+        SCENE_PARTICLE_BUDGET.load(Ordering::Relaxed),
+        MAX_AMOUNT_PER_EMITTER.load(Ordering::Relaxed),
+        USE_CPU_PARTICLES.load(Ordering::Relaxed),
+    )
 }
 /// Gravity the `gravity` field multiplies (matches Explorer's physics gravity).
 const DCL_GRAVITY: f32 = -9.81;
@@ -330,6 +345,84 @@ pub fn update_particle_system(
         }
     }
 
+    // Graphic profile changed since this scene last applied particles: re-apply
+    // every live emitter now (new budgets, new CPU/GPU node class) instead of
+    // waiting for the scene to dirty its ParticleSystem components again.
+    let generation = PARTICLE_PROFILE_GENERATION.load(Ordering::Relaxed);
+    if scene.particle_profile_generation != generation {
+        scene.particle_profile_generation = generation;
+        let mut content_provider = DclGlobal::singleton().bind().get_content_provider();
+        let use_cpu = USE_CPU_PARTICLES.load(Ordering::Relaxed);
+        let entities: Vec<SceneEntityId> = scene.particle_systems.keys().cloned().collect();
+        for entity in entities {
+            let Some((new_value, texture_hash)) = scene
+                .particle_systems
+                .get(&entity)
+                .map(|item| (item.last_value.clone(), item.texture_hash.clone()))
+            else {
+                continue;
+            };
+
+            let (_godot_entity_node, mut node_3d) = scene.godot_dcl_scene.ensure_node_3d(&entity);
+            // Recreate the emitter unconditionally: the node class (CPU vs GPU)
+            // may have changed and applying on a fresh node is idempotent.
+            if let Some(mut old) = node_3d.get_node_or_null("ParticleSystem") {
+                node_3d.remove_child(&old);
+                old.queue_free();
+            }
+            let mut particle_node: Gd<Node3D> = if use_cpu {
+                CpuParticles3D::new_alloc().upcast()
+            } else {
+                GpuParticles3D::new_alloc().upcast()
+            };
+            particle_node.set_name("ParticleSystem");
+            add_own_visual_child(&mut node_3d, &particle_node.clone().upcast::<Node>());
+
+            let (material, amount) =
+                if let Ok(mut gpu) = particle_node.clone().try_cast::<GpuParticles3D>() {
+                    apply_particle_system(scene, entity, &mut gpu, &new_value)
+                } else if let Ok(mut cpu) = particle_node.clone().try_cast::<CpuParticles3D>() {
+                    apply_particle_system_cpu(scene, entity, &mut cpu, &new_value)
+                } else {
+                    unreachable!("ParticleSystem node is neither GPU nor CPU particles");
+                };
+
+            // Re-fetch the texture (hash was resolved on the first apply).
+            let waiting_texture = if let Some(hash) = &texture_hash {
+                content_provider.call_deferred(
+                    "fetch_texture_by_hash",
+                    &[
+                        hash.to_godot().to_variant(),
+                        DclContentMappingAndUrl::from_ref(scene.content_mapping.clone())
+                            .to_variant(),
+                    ],
+                );
+                true
+            } else {
+                false
+            };
+
+            if !user_in_scene {
+                ps_set_emitting(&particle_node, false);
+            }
+
+            if let Some(item) = scene.particle_systems.get_mut(&entity) {
+                item.node = particle_node;
+                item.material = material;
+                item.amount = amount;
+                item.waiting_texture = waiting_texture;
+                item.bursts = new_value
+                    .bursts
+                    .as_ref()
+                    .map(|b| b.values.iter().map(BurstRuntime::from_proto).collect())
+                    .unwrap_or_default();
+                item.started_at = Instant::now();
+                item.last_cycle = 0;
+            }
+            scene.dirty_particle_systems = true;
+        }
+    }
+
     if scene.dirty_particle_systems {
         poll_particle_textures(scene);
     }
@@ -475,8 +568,6 @@ fn apply_particle_system(
     let (amount, authored_amount) =
         compute_amount(scene, entity, value, lifetime, rate, max_particles);
 
-    }
-
     node.set_amount(amount);
     node.set_meta("dcl_authored_amount", &authored_amount.to_variant());
     node.set_lifetime(lifetime);
@@ -510,7 +601,8 @@ fn apply_particle_system(
         }
         _ => {
             node.set_speed_scale(1.0);
-            node.set_emitting(active);
+            // Budget 0 (Very Low profile): particles stay off entirely.
+            node.set_emitting(active && SCENE_PARTICLE_BUDGET.load(Ordering::Relaxed) > 0);
         }
     }
 
@@ -604,7 +696,7 @@ fn compute_amount(
     let scene_budget = SCENE_PARTICLE_BUDGET.load(Ordering::Relaxed);
     let remaining_budget = (scene_budget - used_elsewhere).max(0);
     if amount > remaining_budget {
-        tracing::warn!(
+        tracing::debug!(
             "ParticleSystem on entity {:?} clamped from {} to {} particles (scene budget)",
             entity,
             amount,
@@ -652,10 +744,6 @@ fn apply_particle_system_cpu(
     let (amount, authored_amount) =
         compute_amount(scene, entity, value, lifetime, rate, max_particles);
 
-    if SCENE_PARTICLE_BUDGET.load(Ordering::Relaxed) == 0 {
-        node.set_emitting(false);
-    }
-
     node.set_amount(amount);
     node.set_meta("dcl_authored_amount", &authored_amount.to_variant());
     node.set_lifetime(lifetime);
@@ -688,7 +776,8 @@ fn apply_particle_system_cpu(
         }
         _ => {
             node.set_speed_scale(1.0);
-            node.set_emitting(active);
+            // Budget 0 (Very Low profile): particles stay off entirely.
+            node.set_emitting(active && SCENE_PARTICLE_BUDGET.load(Ordering::Relaxed) > 0);
         }
     }
 

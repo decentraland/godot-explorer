@@ -993,7 +993,7 @@ func _setup_custom_profile_controls() -> void:
 
 	# View Distance
 	_custom_view_distance_row = _make_custom_profile_row(
-		template_row, "CustomViewDistance", "View Distance"
+		template_row, "CustomViewDistance", tr("SETTINGS_VIEW_DISTANCE")
 	)
 	_custom_view_distance_slider = HSlider.new()
 	_custom_view_distance_slider.min_value = 20
@@ -1014,12 +1014,14 @@ func _setup_custom_profile_controls() -> void:
 	rows_container.move_child(_custom_view_distance_row, profile_idx + 1)
 
 	# Particles
-	_custom_particles_row = _make_custom_profile_row(template_row, "CustomParticles", "Particles")
+	_custom_particles_row = _make_custom_profile_row(
+		template_row, "CustomParticles", tr("SETTINGS_PARTICLES")
+	)
 	_custom_particles_dropdown = DropdownList.new()
-	_custom_particles_dropdown.add_item("Off", 0)
-	_custom_particles_dropdown.add_item("Low", 1)
-	_custom_particles_dropdown.add_item("Medium", 2)
-	_custom_particles_dropdown.add_item("High", 3)
+	_custom_particles_dropdown.add_item(tr("SETTINGS_PARTICLES_OFF"), 0)
+	_custom_particles_dropdown.add_item(tr("SETTINGS_GRAPHIC_PROFILE_LOW"), 1)
+	_custom_particles_dropdown.add_item(tr("SETTINGS_GRAPHIC_PROFILE_MEDIUM"), 2)
+	_custom_particles_dropdown.add_item(tr("SETTINGS_GRAPHIC_PROFILE_HIGH"), 3)
 	_custom_particles_dropdown.item_selected.connect(_on_custom_particles_changed)
 	_custom_particles_row.add_child(_custom_particles_dropdown)
 	rows_container.add_child(_custom_particles_row)
@@ -1027,7 +1029,7 @@ func _setup_custom_profile_controls() -> void:
 
 	# Max Active Lights
 	_custom_max_lights_row = _make_custom_profile_row(
-		template_row, "CustomMaxLights", "Max Active Lights"
+		template_row, "CustomMaxLights", tr("SETTINGS_MAX_ACTIVE_LIGHTS")
 	)
 	_custom_max_lights_spin = SpinBox.new()
 	_custom_max_lights_spin.min_value = 0
@@ -1287,14 +1289,11 @@ func _populate_camera_mode_items() -> void:
 func _populate_graphic_profile_items() -> void:
 	# DropdownList items are finished text, not keys: both display nodes are
 	# auto_translate_mode = 2 (dropdown_list.tscn, dropdown_item.tscn).
+	# Custom included: it's what makes the Custom-only controls below reachable.
 	var previous := dropdown_list_graphic_profiles.selected
 	dropdown_list_graphic_profiles.clear()
-	var i := 0
-	for index in GraphicSettings.PROFILE_NAMES.size():
-		if GraphicSettings.PROFILE_NAMES[index] == "Custom":
-			continue
-		dropdown_list_graphic_profiles.add_item(tr(GraphicSettings.PROFILE_KEYS[index]), i)
-		i += 1
+	for index in GraphicSettings.PROFILE_KEYS.size():
+		dropdown_list_graphic_profiles.add_item(tr(GraphicSettings.PROFILE_KEYS[index]))
 	if previous >= 0:
 		dropdown_list_graphic_profiles.select(previous)
 

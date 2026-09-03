@@ -48,6 +48,16 @@ func _test_profiles_apply_all_keys() -> void:
 			AvatarAnimHelpers.particles_enabled == (profile.particle_quality > 0),
 			"profile %d: avatar particles gate matches particle_quality" % i
 		)
+		# Rust-side mapping (would have caught apply_particle_quality not being
+		# called from apply_graphic_profile).
+		var budgets: Array = DclGlobal.get_particle_profile_budgets()
+		var expected: Array = [
+			[0, 0, true], [2000, 500, true], [15000, 2000, false], [50000, 5000, false]
+		][i]
+		_expect(
+			budgets[0] == expected[0] and budgets[1] == expected[1] and budgets[2] == expected[2],
+			"profile %d: rust particle budgets %s == %s" % [i, budgets, expected]
+		)
 
 
 func _test_custom_is_noop() -> void:

@@ -826,4 +826,13 @@ impl DclGlobal {
             use_cpu,
         );
     }
+
+    /// Current particle budgets as [scene_budget, emitter_cap, use_cpu].
+    /// Exists for the graphic-profile tests (asserts the GDScript mapping).
+    #[func]
+    pub fn get_particle_profile_budgets() -> VarArray {
+        let (budget, cap, use_cpu) =
+            crate::scene_runner::components::particle_system::get_particle_profile_budgets();
+        varray![budget, cap, use_cpu]
+    }
 }

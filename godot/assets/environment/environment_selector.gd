@@ -36,7 +36,6 @@ func set_view_distance(far: float):
 	environment.fog_depth_begin = far * 0.6
 	environment.fog_depth_end = far * 0.9
 	environment.fog_depth_curve = 1.0
-	environment.fog_light_color = Color(0.7, 0.75, 0.8)
 	environment.fog_sky_affect = 0.0
 
 
