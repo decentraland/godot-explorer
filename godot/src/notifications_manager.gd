@@ -168,7 +168,8 @@ func clear_notification_history() -> void:
 ## Get currently cached notifications sorted by timestamp descending (newest first)
 func get_notifications() -> Array:
 	var sorted = _notifications.duplicate()
-	sorted.sort_custom(func(a, b): return a.get("timestamp", 0) > b.get("timestamp", 0))
+	# Cast: some notifications carry the timestamp as a String, and String > int raises at runtime.
+	sorted.sort_custom(func(a, b): return int(a.get("timestamp", 0)) > int(b.get("timestamp", 0)))
 	return sorted
 
 
@@ -266,7 +267,8 @@ func _generate_fake_notification() -> Dictionary:
 			"metadata":
 			{
 				"tokenName": "Test token name",
-				"tokenImage": "https://peer.decentraland.org/lambdas/collections/contents/urn:decentraland:off-chain:base-avatars:green_hoodie/thumbnail",
+				"tokenImage":
+				"https://peer.decentraland.org/lambdas/collections/contents/urn:decentraland:off-chain:base-avatars:green_hoodie/thumbnail",
 				"tokenRarity": "rare",
 				"title": "A test NFT",
 				"description": "This is a test NFT"
@@ -279,7 +281,8 @@ func _generate_fake_notification() -> Dictionary:
 			"metadata":
 			{
 				"tokenName": "Test token name",
-				"tokenImage": "https://peer.decentraland.org/lambdas/collections/contents/urn:decentraland:off-chain:base-avatars:green_hoodie/thumbnail",
+				"tokenImage":
+				"https://peer.decentraland.org/lambdas/collections/contents/urn:decentraland:off-chain:base-avatars:soccer_shirt/thumbnail",
 				"tokenRarity": "rare",
 				"tokenCategory": "Lowerbody",
 				"title": "A test NFT",
