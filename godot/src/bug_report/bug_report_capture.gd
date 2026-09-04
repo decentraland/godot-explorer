@@ -18,6 +18,24 @@ const MAX_DIMENSION := 1920
 static var _latest: Image = null
 
 
+## Subscribes to both Settings-open signals on `global`, so the frame is grabbed
+## before the panel covers it.
+##
+## Owned here rather than in global.gd because Settings is reachable from two
+## places — `open_settings_panel` in-world and `open_settings` from the lobby menu,
+## where no explorer exists — and because global.gd sits against its 1900-line lint
+## cap. Global is an autoload, so it connects before either UI does and this runs
+## first.
+static func listen_for_settings(global: Node) -> void:
+	var on_opened := Callable(BugReportCapture, "_on_settings_opened").bind(global)
+	global.open_settings_panel.connect(on_opened)
+	global.open_settings.connect(on_opened)
+
+
+static func _on_settings_opened(global: Node) -> void:
+	capture_for_settings(global.get_viewport())
+
+
 ## Grabs the currently rendered frame. Call before the covering UI is shown.
 ## Failures are silent: a missing screenshot must never block opening Settings.
 static func capture(viewport: Viewport) -> void:

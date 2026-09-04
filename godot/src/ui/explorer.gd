@@ -167,10 +167,7 @@ func _ready():
 	Global.on_menu_open.connect(_on_menu_open)
 	Global.on_menu_close.connect(_on_menu_close)
 
-	# Connect friends button
 	Global.open_friends_panel.connect(_show_friends_panel)
-
-	# Connect settings panel button
 	Global.open_settings_panel.connect(_show_settings_panel)
 
 	# Connect debug panel signal from landscape settings panel
@@ -183,6 +180,8 @@ func _ready():
 
 	navbar.navbar_closed.connect(_close_all_panels)
 	navbar.navbar_opened.connect(_open_friends_panel)
+	# Navbar owns the reveal/collapse of the side-panel surface (fade + grow on one timeline).
+	navbar.set_reveal_surface(%VBoxContainer_LeftPanels)
 	profile_container.visibility_changed.connect(_on_profile_container_visibility_changed)
 
 	# Connect to NotificationsManager queue signals
@@ -298,6 +297,7 @@ func _ready():
 	player.look_at(16 * Vector3(start_parcel_position.x + 1, 0, -(start_parcel_position.y + 1)))
 
 	Global.player_camera_node = player.camera
+	Global.player_camera_node.far = Global.get_config().view_distance
 	Global.scene_runner.player_avatar_node = player.avatar
 	Global.scene_runner.player_body_node = player
 	Global.scene_runner.console = self._on_scene_console_message
@@ -1455,6 +1455,8 @@ func _on_loading_started() -> void:
 	Global.session_hide_ui_toggle_sync.emit(false)
 	Global.session_hide_ui_options_sync.emit(true, true, true, true)
 	_apply_hide_ui_to_avatar_nicks(false)
+	if navbar.is_open():  # avoid a redundant navbar_closed + teardown when nothing is open
+		navbar.collapse()
 
 
 func _on_loading_finished() -> void:
@@ -1675,9 +1677,8 @@ func _close_all_panels():
 	_on_notifications_panel_closed()
 	_on_settings_panel_closed()
 	_refresh_hud_dismiss()
-	# Restore the bottom-left slot (chat, or the preview HUD toolbar in preview) and the
-	# emote HUD hidden while the navbar was open, unless the main HUD is hidden. Keep the
-	# emote HUD and joystick hidden in portrait, where the orientation flow owns them.
+	# Restore the bottom-left slot (chat / preview toolbar) and the emote HUD hidden while the
+	# navbar was open, unless the main HUD is hidden; in portrait the orientation flow owns them.
 	if not _session_hide_main_hud:
 		_restore_bottom_left_hud()
 		if not Global.is_orientation_portrait():

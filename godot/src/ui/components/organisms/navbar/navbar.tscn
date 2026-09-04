@@ -2,166 +2,63 @@
 
 [ext_resource type="Script" uid="uid://cmhycf7qy54n5" path="res://src/ui/components/organisms/navbar/navbar.gd" id="1_40xfh"]
 [ext_resource type="PackedScene" uid="uid://dg3ev4a5gn1up" path="res://src/ui/components/molecules/profile_icon_button/profile_icon_button.tscn" id="2_1xf7s"]
+[ext_resource type="Script" uid="uid://bmmfqy7sboclt" path="res://src/ui/pages/discover/discover_button.gd" id="3_dscvr"]
 [ext_resource type="Script" uid="uid://dqervv7c0nbk0" path="res://src/ui/pages/friends/friends_button.gd" id="3_lur8b"]
-[ext_resource type="Texture2D" uid="uid://6a1y26ld57bf" path="res://src/ui/components/organisms/menu/icons/social-outlined.svg" id="3_voda5"]
-[ext_resource type="Texture2D" uid="uid://dqnlhp7trkdt5" path="res://src/ui/components/organisms/menu/icons/social.svg" id="4_i4dir"]
+[ext_resource type="Texture2D" uid="uid://bomepth83v1j2" path="res://src/ui/components/organisms/navbar/icons/discover-outlined.svg" id="4_uqptt"]
+[ext_resource type="Texture2D" uid="uid://knht5u13xvqs" path="res://src/ui/components/organisms/navbar/icons/discover.svg" id="5_ljng8"]
 [ext_resource type="Script" uid="uid://cfwp61u2tjxyh" path="res://src/ui/components/organisms/notifications/notification_bell_button.gd" id="5_ly2kd"]
-[ext_resource type="Texture2D" uid="uid://dn70p8tcgx06" path="res://src/ui/components/organisms/menu/icons/notifications-outlined.svg" id="6_ih2cn"]
-[ext_resource type="Texture2D" uid="uid://cslbppiolt2mr" path="res://src/ui/components/organisms/menu/icons/notifications.svg" id="7_4ad3s"]
+[ext_resource type="Texture2D" uid="uid://6rllxshyjlcw" path="res://src/ui/components/organisms/navbar/icons/social-outlined.svg" id="7_8loqq"]
 [ext_resource type="PackedScene" uid="uid://cqnj0gb2vybsi" path="res://src/ui/components/atoms/buttons/static_button/static_button.tscn" id="7_ckthm"]
 [ext_resource type="Script" uid="uid://b82gx3oh0t8sj" path="res://src/ui/pages/backpack/backpack_button.gd" id="7_ly2kd"]
 [ext_resource type="Script" uid="uid://cn2owlrctidqy" path="res://src/ui/pages/settings/settings_button.gd" id="8_fmmda"]
-[ext_resource type="Texture2D" uid="uid://jdyo4awvfkmt" path="res://src/ui/components/organisms/menu/icons/backpack-outlined.svg" id="8_voda5"]
-[ext_resource type="Texture2D" uid="uid://dfgfvtt5o5r30" path="res://src/ui/components/organisms/menu/icons/backpack.svg" id="9_i4dir"]
+[ext_resource type="Texture2D" uid="uid://d06gbe31cv04x" path="res://src/ui/components/organisms/navbar/icons/social.svg" id="8_icort"]
+[ext_resource type="Texture2D" uid="uid://ryij4anwkffe" path="res://src/ui/components/organisms/navbar/icons/notifications-outlined.svg" id="9_dxp8w"]
 [ext_resource type="PackedScene" uid="uid://bpx10vkib1ix" path="res://src/ui/components/molecules/button_profile/navbar_profile_button.tscn" id="9_ria76"]
-[ext_resource type="Texture2D" uid="uid://cvxfoyvj0kqtw" path="res://src/ui/components/organisms/menu/icons/settings-outlined.svg" id="12_ih2cn"]
-[ext_resource type="Texture2D" uid="uid://dp6cvwbfawfsa" path="res://src/ui/components/organisms/menu/icons/settings.svg" id="13_4ad3s"]
+[ext_resource type="Texture2D" uid="uid://caohycu0j5jch" path="res://src/ui/components/organisms/navbar/icons/notifications.svg" id="10_wgbce"]
+[ext_resource type="Texture2D" uid="uid://bm40aujklhtji" path="res://src/ui/components/organisms/navbar/icons/backpack-outlined.svg" id="12_uqptt"]
+[ext_resource type="Texture2D" uid="uid://7x04i7nu8w6x" path="res://src/ui/components/organisms/navbar/icons/backpack.svg" id="13_ljng8"]
 [ext_resource type="PackedScene" uid="uid://chpydicpuiujx" path="res://src/ui/components/atoms/controls/upgrade_badge/upgrade_badge.tscn" id="15_iai4k"]
+[ext_resource type="Texture2D" uid="uid://bgmhal8gfw384" path="res://src/ui/components/organisms/navbar/icons/settings-outlined.svg" id="15_uqptt"]
+[ext_resource type="Texture2D" uid="uid://cfyke7crn2bp8" path="res://src/ui/components/organisms/navbar/icons/settings.svg" id="16_ljng8"]
+[ext_resource type="Material" uid="uid://xnp5mcvsl5dk" path="res://src/ui/components/atoms/images/blur_background/soft_ellipse.tres" id="20_ljng8"]
 
-[sub_resource type="Animation" id="Animation_xbtqw"]
-length = 0.001
-tracks/0/type = "value"
-tracks/0/imported = false
-tracks/0/enabled = true
-tracks/0/path = NodePath("Control/Control/PanelContainer:size")
-tracks/0/interp = 1
-tracks/0/loop_wrap = true
-tracks/0/keys = {
-"times": PackedFloat32Array(0),
-"transitions": PackedFloat32Array(1),
-"update": 0,
-"values": [Vector2(80, 0)]
-}
-tracks/1/type = "value"
-tracks/1/imported = false
-tracks/1/enabled = true
-tracks/1/path = NodePath("Control/Control/PanelContainer:visible")
-tracks/1/interp = 1
-tracks/1/loop_wrap = true
-tracks/1/keys = {
-"times": PackedFloat32Array(0),
-"transitions": PackedFloat32Array(1),
-"update": 1,
-"values": [true]
-}
-tracks/2/type = "value"
-tracks/2/imported = false
-tracks/2/enabled = true
-tracks/2/path = NodePath("Control/Control/PanelContainer:position")
-tracks/2/interp = 1
-tracks/2/loop_wrap = true
-tracks/2/keys = {
-"times": PackedFloat32Array(0),
-"transitions": PackedFloat32Array(1),
-"update": 0,
-"values": [Vector2(0, 0)]
-}
-tracks/3/type = "value"
-tracks/3/imported = false
-tracks/3/enabled = true
-tracks/3/path = NodePath("Control/Control/PanelContainer:modulate")
-tracks/3/interp = 1
-tracks/3/loop_wrap = true
-tracks/3/keys = {
-"times": PackedFloat32Array(0),
-"transitions": PackedFloat32Array(1),
-"update": 0,
-"values": [Color(1, 1, 1, 1)]
-}
+[sub_resource type="Shader" id="Shader_icort"]
+code = "shader_type canvas_item;
 
-[sub_resource type="Animation" id="Animation_1xf7s"]
-resource_name = "close"
-length = 0.1
-tracks/0/type = "value"
-tracks/0/imported = false
-tracks/0/enabled = true
-tracks/0/path = NodePath("Control/Control/PanelContainer:visible")
-tracks/0/interp = 1
-tracks/0/loop_wrap = true
-tracks/0/keys = {
-"times": PackedFloat32Array(0.1),
-"transitions": PackedFloat32Array(1),
-"update": 1,
-"values": [false]
-}
-tracks/1/type = "value"
-tracks/1/imported = false
-tracks/1/enabled = true
-tracks/1/path = NodePath("Control/Control/PanelContainer:position")
-tracks/1/interp = 1
-tracks/1/loop_wrap = true
-tracks/1/keys = {
-"times": PackedFloat32Array(0, 0.1),
-"transitions": PackedFloat32Array(1, 1),
-"update": 0,
-"values": [Vector2(0, 0), Vector2(0, -500)]
-}
-tracks/2/type = "value"
-tracks/2/imported = false
-tracks/2/enabled = true
-tracks/2/path = NodePath("Control/Control/PanelContainer:modulate")
-tracks/2/interp = 1
-tracks/2/loop_wrap = true
-tracks/2/keys = {
-"times": PackedFloat32Array(0, 0.1),
-"transitions": PackedFloat32Array(1, 1),
-"update": 0,
-"values": [Color(1, 1, 1, 1), Color(1, 1, 1, 0)]
-}
+uniform float blur_amount : hint_range(0.0, 8.0) = 2.0;
 
-[sub_resource type="Animation" id="Animation_n2t8a"]
-resource_name = "open"
-length = 0.15
-tracks/0/type = "value"
-tracks/0/imported = false
-tracks/0/enabled = true
-tracks/0/path = NodePath("Control/Control/PanelContainer:visible")
-tracks/0/interp = 1
-tracks/0/loop_wrap = true
-tracks/0/keys = {
-"times": PackedFloat32Array(0),
-"transitions": PackedFloat32Array(1),
-"update": 1,
-"values": [true]
-}
-tracks/1/type = "value"
-tracks/1/imported = false
-tracks/1/enabled = true
-tracks/1/path = NodePath("Control/Control/PanelContainer:position")
-tracks/1/interp = 1
-tracks/1/loop_wrap = true
-tracks/1/keys = {
-"times": PackedFloat32Array(0, 0.1),
-"transitions": PackedFloat32Array(1, 1),
-"update": 0,
-"values": [Vector2(0, -500), Vector2(0, 0)]
-}
-tracks/2/type = "value"
-tracks/2/imported = false
-tracks/2/enabled = true
-tracks/2/path = NodePath("Control/Control/PanelContainer:modulate")
-tracks/2/interp = 1
-tracks/2/loop_wrap = true
-tracks/2/keys = {
-"times": PackedFloat32Array(0, 0.1),
-"transitions": PackedFloat32Array(1, 1),
-"update": 0,
-"values": [Color(1, 1, 1, 0), Color(1, 1, 1, 1)]
-}
+uniform sampler2D screen_texture : hint_screen_texture, filter_linear_mipmap;
 
-[sub_resource type="AnimationLibrary" id="AnimationLibrary_lur8b"]
-_data = {
-&"RESET": SubResource("Animation_xbtqw"),
-&"close": SubResource("Animation_1xf7s"),
-&"open": SubResource("Animation_n2t8a")
-}
+// Per-corner radii in pixels (0 = square) to clip the blur to the panel's rounded rect. The rect
+// size is derived from the UV derivative (fwidth), so no size uniform or script is needed.
+uniform float radius_top_left = 0.0;
+uniform float radius_bottom_left = 0.0;
+uniform float radius_top_right = 0.0;
+uniform float radius_bottom_right = 0.0;
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_5wifw"]
-bg_color = Color(0, 0, 0, 0.9019608)
-corner_radius_bottom_right = 40
-corner_radius_bottom_left = 40
+void fragment() {
+	vec4 color = textureLod(screen_texture, SCREEN_UV, blur_amount);
+	vec2 size = 1.0 / fwidth(UV);
+	vec2 p = (UV - 0.5) * size;
+	float r = (p.x < 0.0) ? ((p.y < 0.0) ? radius_top_left : radius_bottom_left) : ((p.y < 0.0) ? radius_top_right : radius_bottom_right);
+	vec2 q = abs(p) - size * 0.5 + r;
+	float dist = min(max(q.x, q.y), 0.0) + length(max(q, 0.0)) - r;
+	color.a *= 1.0 - smoothstep(0.0, 1.0, dist);
+	COLOR = color;
+}"
 
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_n2t8a"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_dxp8w"]
+shader = SubResource("Shader_icort")
+shader_parameter/blur_amount = 3.0000001425
+shader_parameter/radius_top_left = 10.0
+shader_parameter/radius_bottom_left = 10.0
+shader_parameter/radius_top_right = 0.0
+shader_parameter/radius_bottom_right = 0.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_t6uoc"]
+bg_color = Color(0.101960786, 0.03529412, 0.14509805, 0.8980392)
+corner_radius_top_left = 10
+corner_radius_bottom_left = 10
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_3m1fh"]
 bg_color = Color(1, 0.1764706, 0.33333334, 1)
@@ -175,11 +72,16 @@ corner_radius_top_right = 100
 corner_radius_bottom_right = 100
 corner_radius_bottom_left = 100
 
-[sub_resource type="ButtonGroup" id="ButtonGroup_ckthm"]
-resource_local_to_scene = false
-resource_name = "Tabs"
+[sub_resource type="Gradient" id="Gradient_uqptt"]
+offsets = PackedFloat32Array(0, 0.5, 1)
+colors = PackedColorArray(1, 1, 1, 0, 0.9098039, 0.7254902, 1, 1, 1, 1, 1, 0)
+metadata/_snap_count = 6
+metadata/_snap_enabled = true
 
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_xbtqw"]
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_ljng8"]
+gradient = SubResource("Gradient_uqptt")
+width = 2
+fill_to = Vector2(0, 1)
 
 [node name="Navbar" type="Control" unique_id=1103853487]
 layout_mode = 3
@@ -188,93 +90,95 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
 mouse_filter = 2
 script = ExtResource("1_40xfh")
 metadata/_edit_horizontal_guides_ = [60.0]
+metadata/mobile_preview_orientation = "landscape"
+metadata/_edit_use_anchors_ = true
 
-[node name="AnimationPlayer" type="AnimationPlayer" parent="." unique_id=2004698123]
-unique_name_in_owner = true
-libraries/ = SubResource("AnimationLibrary_lur8b")
-autoplay = &"close"
-speed_scale = 0.5
-
-[node name="Control" type="Control" parent="." unique_id=634999954]
-custom_minimum_size = Vector2(90, 90)
+[node name="Control_Menu" type="Control" parent="." unique_id=638869833]
+custom_minimum_size = Vector2(100, 0)
 layout_mode = 1
-anchors_preset = 0
-offset_right = 90.0
-offset_bottom = 90.0
-mouse_filter = 2
+anchors_preset = 9
+anchor_bottom = 1.0
+offset_right = 100.0
+grow_vertical = 2
 
-[node name="Control" type="Control" parent="Control" unique_id=2089287654]
-clip_contents = true
-custom_minimum_size = Vector2(80, 500)
+[node name="TextureRect" type="ColorRect" parent="Control_Menu" unique_id=1964519334]
+material = SubResource("ShaderMaterial_dxp8w")
 layout_mode = 1
-anchors_preset = 5
-anchor_left = 0.5
-anchor_right = 0.5
-offset_left = -40.0
-offset_top = 45.0
-offset_right = 40.0
-offset_bottom = 545.0
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
 grow_horizontal = 2
-mouse_filter = 2
+grow_vertical = 2
+color = Color(0.101960786, 0.03529412, 0.14509805, 0.8980392)
 
-[node name="PanelContainer" type="PanelContainer" parent="Control/Control" unique_id=2146671690]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(80, 0)
-layout_mode = 0
-offset_right = 80.0
-offset_bottom = 404.0
-theme_override_styles/panel = SubResource("StyleBoxFlat_5wifw")
+[node name="PanelContainer" type="PanelContainer" parent="Control_Menu" unique_id=1200369384]
+clip_children = 2
+custom_minimum_size = Vector2(100, 640)
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_t6uoc")
 
-[node name="VBoxContainer_Buttons" type="VBoxContainer" parent="Control/Control/PanelContainer" unique_id=568324077]
+[node name="VBoxContainer_Buttons" type="VBoxContainer" parent="Control_Menu/PanelContainer" unique_id=568324077]
 unique_name_in_owner = true
 layout_mode = 2
+theme_override_constants/separation = 38
 alignment = 1
 
-[node name="Separator" type="HSeparator" parent="Control/Control/PanelContainer/VBoxContainer_Buttons" unique_id=124456420]
-custom_minimum_size = Vector2(0, 60)
-layout_mode = 2
-theme_override_styles/separator = SubResource("StyleBoxEmpty_n2t8a")
-
-[node name="StaticButton_Friends" parent="Control/Control/PanelContainer/VBoxContainer_Buttons" unique_id=845596369 instance=ExtResource("7_ckthm")]
+[node name="StaticButton_Discover" parent="Control_Menu/PanelContainer/VBoxContainer_Buttons" unique_id=2127315255 instance=ExtResource("7_ckthm")]
 unique_name_in_owner = true
 layout_mode = 2
-texture_normal = ExtResource("3_voda5")
-texture_pressed = ExtResource("4_i4dir")
+texture_normal = ExtResource("4_uqptt")
+texture_pressed = ExtResource("5_ljng8")
+ignore_texture_size = true
+stretch_mode = 5
+script = ExtResource("3_dscvr")
+
+[node name="StaticButton_Friends" parent="Control_Menu/PanelContainer/VBoxContainer_Buttons" unique_id=845596369 instance=ExtResource("7_ckthm")]
+unique_name_in_owner = true
+layout_mode = 2
+texture_normal = ExtResource("7_8loqq")
+texture_pressed = ExtResource("8_icort")
 ignore_texture_size = true
 stretch_mode = 5
 script = ExtResource("3_lur8b")
 
-[node name="StaticButton_Notifications" parent="Control/Control/PanelContainer/VBoxContainer_Buttons" unique_id=425783197 instance=ExtResource("7_ckthm")]
+[node name="StaticButton_Notifications" parent="Control_Menu/PanelContainer/VBoxContainer_Buttons" unique_id=425783197 instance=ExtResource("7_ckthm")]
 unique_name_in_owner = true
 layout_mode = 2
-texture_normal = ExtResource("6_ih2cn")
-texture_pressed = ExtResource("7_4ad3s")
+texture_normal = ExtResource("9_dxp8w")
+texture_pressed = ExtResource("10_wgbce")
 ignore_texture_size = true
 stretch_mode = 5
 script = ExtResource("5_ly2kd")
 
-[node name="StaticButton_Backpack" parent="Control/Control/PanelContainer/VBoxContainer_Buttons" unique_id=408963304 instance=ExtResource("7_ckthm")]
+[node name="StaticButton_Backpack" parent="Control_Menu/PanelContainer/VBoxContainer_Buttons" unique_id=408963304 instance=ExtResource("7_ckthm")]
 unique_name_in_owner = true
 layout_mode = 2
-texture_normal = ExtResource("8_voda5")
-texture_pressed = ExtResource("9_i4dir")
+texture_normal = ExtResource("12_uqptt")
+texture_pressed = ExtResource("13_ljng8")
 ignore_texture_size = true
 stretch_mode = 5
 script = ExtResource("7_ly2kd")
 
-[node name="StaticButton_Settings" parent="Control/Control/PanelContainer/VBoxContainer_Buttons" unique_id=908925018 instance=ExtResource("7_ckthm")]
+[node name="StaticButton_Settings" parent="Control_Menu/PanelContainer/VBoxContainer_Buttons" unique_id=908925018 instance=ExtResource("7_ckthm")]
 unique_name_in_owner = true
 layout_mode = 2
-texture_normal = ExtResource("12_ih2cn")
-texture_pressed = ExtResource("13_4ad3s")
+texture_normal = ExtResource("15_uqptt")
+texture_pressed = ExtResource("16_ljng8")
 ignore_texture_size = true
 stretch_mode = 5
 script = ExtResource("8_fmmda")
 
-[node name="UpgradeBadge" parent="Control/Control/PanelContainer/VBoxContainer_Buttons/StaticButton_Settings" unique_id=996992674 instance=ExtResource("15_iai4k")]
+[node name="UpgradeBadge" parent="Control_Menu/PanelContainer/VBoxContainer_Buttons/StaticButton_Settings" unique_id=996992674 instance=ExtResource("15_iai4k")]
 custom_minimum_size = Vector2(15, 15)
 layout_mode = 1
 anchors_preset = 1
@@ -287,11 +191,11 @@ offset_bottom = 25.0
 grow_horizontal = 0
 theme_override_styles/panel = SubResource("StyleBoxFlat_3m1fh")
 
-[node name="Control" type="Control" parent="Control/Control/PanelContainer/VBoxContainer_Buttons" unique_id=1770223894]
+[node name="Control" type="Control" parent="Control_Menu/PanelContainer/VBoxContainer_Buttons" unique_id=1770223894]
 custom_minimum_size = Vector2(60, 60)
 layout_mode = 2
 
-[node name="Portrait_Button_Profile" parent="Control/Control/PanelContainer/VBoxContainer_Buttons/Control" unique_id=426752335 instance=ExtResource("9_ria76")]
+[node name="Portrait_Button_Profile" parent="Control_Menu/PanelContainer/VBoxContainer_Buttons/Control" unique_id=426752335 instance=ExtResource("9_ria76")]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 8
@@ -305,40 +209,122 @@ offset_right = 22.5
 offset_bottom = 22.5
 grow_horizontal = 2
 grow_vertical = 2
-button_group = SubResource("ButtonGroup_ckthm")
-metadata/_edit_group_ = true
 
-[node name="Separator2" type="HSeparator" parent="Control/Control/PanelContainer/VBoxContainer_Buttons" unique_id=244196032]
-custom_minimum_size = Vector2(0, 20)
-layout_mode = 2
-theme_override_styles/separator = SubResource("StyleBoxEmpty_xbtqw")
-
-[node name="Panel_Profile" parent="Control" unique_id=404304726 instance=ExtResource("2_1xf7s")]
+[node name="VBoxContainer_Selection" type="VBoxContainer" parent="Control_Menu/PanelContainer" unique_id=1294523655]
 unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 28
+alignment = 1
+
+[node name="Control_Selection1" type="Control" parent="Control_Menu/PanelContainer/VBoxContainer_Selection" unique_id=531560469]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 70)
+layout_mode = 2
+mouse_filter = 2
+
+[node name="Control_Effect" type="Control" parent="Control_Menu/PanelContainer/VBoxContainer_Selection/Control_Selection1" unique_id=1897257764]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="ColorRect" type="ColorRect" parent="Control_Menu/PanelContainer/VBoxContainer_Selection/Control_Selection1/Control_Effect" unique_id=1239918831]
+material = ExtResource("20_ljng8")
+custom_minimum_size = Vector2(75, 95)
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -40.0
-offset_top = -40.0
-offset_right = 40.0
-offset_bottom = 40.0
+offset_left = 14.0
+offset_top = -47.5
+offset_right = 99.0
+offset_bottom = 47.5
 grow_horizontal = 2
 grow_vertical = 2
+mouse_filter = 2
+color = Color(0.9098039, 0.7254902, 1, 1)
+
+[node name="TextureRect" type="TextureRect" parent="Control_Menu/PanelContainer/VBoxContainer_Selection/Control_Selection1/Control_Effect" unique_id=510537132]
+custom_minimum_size = Vector2(2, 0)
+layout_mode = 1
+anchors_preset = 11
+anchor_left = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -2.0
+grow_horizontal = 0
+grow_vertical = 2
+mouse_filter = 2
+texture = SubResource("GradientTexture2D_ljng8")
+
+[node name="Control_Selection2" type="Control" parent="Control_Menu/PanelContainer/VBoxContainer_Selection" unique_id=1859792608]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 70)
+layout_mode = 2
+mouse_filter = 2
+
+[node name="Control_Selection3" type="Control" parent="Control_Menu/PanelContainer/VBoxContainer_Selection" unique_id=1412032395]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 70)
+layout_mode = 2
+mouse_filter = 2
+
+[node name="Control_Selection4" type="Control" parent="Control_Menu/PanelContainer/VBoxContainer_Selection" unique_id=1433464981]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 70)
+layout_mode = 2
+mouse_filter = 2
+
+[node name="Control_Selection5" type="Control" parent="Control_Menu/PanelContainer/VBoxContainer_Selection" unique_id=149172914]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 70)
+layout_mode = 2
+mouse_filter = 2
+
+[node name="Control_Selection6" type="Control" parent="Control_Menu/PanelContainer/VBoxContainer_Selection" unique_id=1598186082]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 70)
+layout_mode = 2
+mouse_filter = 2
+
+[node name="Control" type="Control" parent="." unique_id=634999954]
+custom_minimum_size = Vector2(100, 90)
+layout_mode = 1
+anchors_preset = 9
+anchor_bottom = 1.0
+offset_right = 100.0
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Panel_Profile" parent="Control" unique_id=404304726 instance=ExtResource("2_1xf7s")]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -41.0
+offset_right = 41.0
+offset_bottom = 82.0
+grow_horizontal = 2
 
 [node name="Button" type="Button" parent="Control" unique_id=1319177368]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(82, 82)
 layout_mode = 1
-anchors_preset = 8
+anchors_preset = 5
 anchor_left = 0.5
-anchor_top = 0.5
 anchor_right = 0.5
-anchor_bottom = 0.5
+offset_left = -41.0
+offset_right = 41.0
+offset_bottom = 82.0
 grow_horizontal = 2
-grow_vertical = 2
 focus_mode = 0
 toggle_mode = true
 flat = true

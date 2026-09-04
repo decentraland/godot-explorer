@@ -7,6 +7,9 @@ signal loading_finished
 signal change_parcel(new_parcel: Vector2i)
 signal open_profile_by_avatar(avatar: DclAvatar)
 signal open_profile_by_address(address: String)
+# Emitted locally when WE send a friend request (the social service doesn't stream our own
+# actions), so the friends panel can add it to the SENT list live.
+signal friendship_request_sent(address: String)
 signal on_chat_message(address: String, message: String, timestamp: float)
 signal change_virtual_keyboard(height: int)
 signal notification_clicked(notification: Dictionary)
@@ -472,14 +475,7 @@ func send_haptic_feedback(duration_ms: int = 20, amplitude: float = -1.0) -> voi
 # gdlint: ignore=async-function-name
 func _ready():
 	print("[Startup] global._ready start: %dms" % (Time.get_ticks_msec() - _startup_time))
-	# Grab the on-screen frame whenever Settings opens, before the panel covers
-	# it — this is what the bug report form pre-fills its first screenshot slot
-	# with (issue #2652). Connected here rather than in explorer.gd because
-	# Settings is reachable from two places: `open_settings_panel` in-world and
-	# `open_settings` from the lobby menu, where no explorer exists. Global is an
-	# autoload, so it connects before either UI does and its handler runs first.
-	open_settings_panel.connect(_capture_for_bug_report)
-	open_settings.connect(_capture_for_bug_report)
+	BugReportCapture.listen_for_settings(self)
 	# Bench-only: uncap FPS / disable vsync before any code path can re-pin
 	# Engine.max_fps. Real users keep their saved cap + vsync; mobile bench
 	# uncaps via gp_benchmark_runner at the load->settling transition.
@@ -580,6 +576,12 @@ func _ready():
 	# Create GDScript extensions of Rust classes
 	self.config = ConfigData.new()
 	config.load_from_settings_file()
+
+	# Restore profile particle budgets + avatar dust gate: the Rust atomics and
+	# the GDScript toggle default to full-budget, and nothing re-applies them
+	# until the user picks a profile again.
+	GraphicSettings.apply_particle_quality(config.particle_quality)
+	AvatarAnimHelpers.apply_particles_enabled(config.particle_quality > 0)
 
 	# Campaign token (#2670). Deliberately after the config load: the fake/baked deeplink is
 	# parsed further up in _ready, long before ConfigData exists, so capturing there wrote to
@@ -1557,10 +1559,6 @@ func _http_method_to_string(method: int) -> String:
 			return "TRACE"
 		_:
 			return "GET"  # Default fallback
-
-
-func _capture_for_bug_report() -> void:
-	BugReportCapture.capture_for_settings(get_viewport())
 
 
 func async_signed_fetch(

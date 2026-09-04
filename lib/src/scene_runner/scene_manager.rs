@@ -30,6 +30,7 @@ use godot::{
     classes::{
         control::{LayoutPreset, MouseFilter},
         node::AutoTranslateMode,
+        notify::NodeNotification,
         PhysicsRayQueryParameters3D,
     },
     prelude::*,
@@ -2892,6 +2893,22 @@ impl INode for SceneManager {
             let viewport_size = viewport.get_visible_rect();
             self.viewport_center =
                 Vector2::new(viewport_size.size.x * 0.5, viewport_size.size.y * 0.5);
+        }
+    }
+
+    /// Tell the memory monitor when the OS pauses us. The main-thread heartbeat
+    /// stops on its own while the app is backgrounded (screen off, task switch),
+    /// which is not a freeze — without this the stall detector reports one
+    /// continuous "main thread UNRESPONSIVE" for as long as the screen is off.
+    fn on_notification(&mut self, what: NodeNotification) {
+        match what {
+            NodeNotification::APPLICATION_PAUSED => {
+                crate::tools::memory_monitor::APP_PAUSED.store(true, Ordering::Relaxed);
+            }
+            NodeNotification::APPLICATION_RESUMED => {
+                crate::tools::memory_monitor::APP_PAUSED.store(false, Ordering::Relaxed);
+            }
+            _ => {}
         }
     }
 
