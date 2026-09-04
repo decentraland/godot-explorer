@@ -134,9 +134,11 @@ static func ensure_anim_active(avatar) -> void:
 
 static func apply_particles_enabled(enabled: bool) -> void:
 	particles_enabled = enabled
-	if not is_instance_valid(Global.get_tree()):
+	# No Global here: --script test runs don't load autoloads.
+	var tree := Engine.get_main_loop() as SceneTree
+	if tree == null:
 		return
-	var root := Global.get_tree().root
+	var root := tree.root
 	if not is_instance_valid(root):
 		return
 	for avatar in root.find_children("*", "DclAvatar", true, false):
