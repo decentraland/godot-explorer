@@ -29,8 +29,8 @@ use crate::{
 use godot::{
     classes::{
         control::{LayoutPreset, MouseFilter},
-        notify::NodeNotification,
         node::AutoTranslateMode,
+        notify::NodeNotification,
         PhysicsRayQueryParameters3D,
     },
     prelude::*,
