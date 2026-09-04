@@ -12,18 +12,27 @@ extends Control
 ##   - EventImage (rounded thumbnail, #E8B9FF outline) for events and any other type
 ##   - ItemImage (rounded thumbnail, rarity-coloured outline) for received items/rewards
 
+# Fallback shown when a notification carries no image URL, so the framed slot is never empty.
+const DEFAULT_IMAGE: Texture2D = preload("res://assets/ui/notifications/DefaultNotification.png")
+
 var notification_data: Dictionary = {}
 
 @onready var profile_picture_friend: ProfilePicture = %ProfilePictureFriend
 @onready var event_image: AsyncImage = %EventImage
 @onready var item_image: AsyncImage = %ItemImage
 @onready var label_title: RichTextLabel = %LabelTitle
-@onready var label_description: RichTextLabel = %LabelDescription
+@onready var label_description: Label = %LabelDescription
 
 
 func set_notification(notification: Dictionary) -> void:
 	notification_data = notification
 	_update_ui()
+
+
+func _notification(what: int) -> void:
+	# Title/description are assigned from code, so they don't auto-retranslate on a language change.
+	if what == NOTIFICATION_TRANSLATION_CHANGED:
+		_update_ui()
 
 
 func _update_ui() -> void:
@@ -52,7 +61,7 @@ func _update_image(notif_type: String, metadata: Dictionary) -> void:
 	match notif_type:
 		"social_service_friendship_request", "social_service_friendship_accepted":
 			_show_friend(metadata)
-		"reward_assignment", "reward_assigned", "reward_in_progress", "badge_granted":
+		"reward_assignment", "reward_in_progress", "badge_granted":
 			_show_item(metadata)
 		_:
 			# Events and every other type: a rounded thumbnail from whatever image the server sent.
@@ -78,7 +87,10 @@ func _show_event(metadata: Dictionary) -> void:
 	var url: String = metadata.get(
 		"image", metadata.get("thumbnailUrl", metadata.get("thumbnail", ""))
 	)
-	event_image.load_from_url(url)
+	if url.is_empty():
+		event_image.set_texture(DEFAULT_IMAGE)
+	else:
+		event_image.load_from_url(url)
 
 
 ## Received item/reward: rounded thumbnail with an outline coloured by its rarity.
@@ -86,7 +98,10 @@ func _show_item(metadata: Dictionary) -> void:
 	item_image.show()
 	item_image.border_color = _rarity_color(metadata.get("tokenRarity", ""))
 	var url: String = metadata.get("tokenImage", metadata.get("image", ""))
-	item_image.load_from_url(url)
+	if url.is_empty():
+		item_image.set_texture(DEFAULT_IMAGE)
+	else:
+		item_image.load_from_url(url)
 
 
 func _rarity_color(rarity: String) -> Color:

@@ -50,6 +50,12 @@ func _update_ui() -> void:
 		modulate = Color.WHITE
 
 
+func _notification(what: int) -> void:
+	# The timestamp is assigned from code, so refresh it on a language change.
+	if what == NOTIFICATION_TRANSLATION_CHANGED and "timestamp" in notification_data:
+		label_timestamp.text = _format_timestamp(int(notification_data["timestamp"]))
+
+
 func _format_timestamp(timestamp_ms: int) -> String:
 	var timestamp_sec = timestamp_ms / 1000
 	var current_time = Time.get_unix_time_from_system()

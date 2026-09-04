@@ -17,8 +17,6 @@ corner_radius_bottom_left = 16
 
 [node name="NotificationItem" type="PanelContainer" unique_id=1020598395]
 custom_minimum_size = Vector2(280, 83)
-offset_right = 715.0
-offset_bottom = 135.0
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_notif_panel")
 script = ExtResource("1_notification_item")
@@ -74,14 +72,11 @@ theme_override_constants/separation = 6
 theme_override_styles/separator = SubResource("StyleBoxEmpty_cmnm7")
 
 [node name="LabelDescription" parent="MarginContainer/HBoxContainer/NotificationContent/VBoxContainer" index="2" unique_id=1103578988]
-clip_contents = false
 custom_minimum_size = Vector2(0, 0)
 size_flags_vertical = 2
-theme_override_colors/default_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
-theme_override_fonts/normal_font = ExtResource("4_pwcjt")
-theme_override_font_sizes/normal_font_size = 22
-theme_override_font_sizes/mono_font_size = 14
-fit_content = true
+theme_override_colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+theme_override_fonts/font = ExtResource("4_pwcjt")
+theme_override_font_sizes/font_size = 22
 
 [node name="HSeparator2" type="HSeparator" parent="MarginContainer/HBoxContainer/NotificationContent/VBoxContainer" index="3" unique_id=1915615617]
 layout_mode = 2

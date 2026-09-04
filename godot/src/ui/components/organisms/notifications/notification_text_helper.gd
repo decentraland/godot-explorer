@@ -30,7 +30,8 @@ static func _get_sender_name_colored(metadata: Dictionary) -> String:
 	if "sender" in metadata and metadata["sender"] is Dictionary:
 		sender_name = metadata["sender"].get("name", sender_name)
 	var color_hex = _get_avatar_color_hex(sender_name)
-	return "[color=#%s]%s[/color]" % [color_hex, sender_name]
+	# Escape BBCode in the (user-controlled) name before it reaches the bbcode_enabled title label.
+	return "[color=#%s]%s[/color]" % [color_hex, sender_name.replace("[", "[lb]")]
 
 
 ## Get the header/title for a notification based on its type
@@ -112,7 +113,7 @@ static func get_notification_header(notif_type: String, metadata: Dictionary) ->
 			return TranslationServer.translate("NOTIF_HEADER_EVENT")
 
 		# Rewards: a wearable/item landed in the user's inventory.
-		"reward_assignment", "reward_assigned":
+		"reward_assignment":
 			return TranslationServer.translate("NOTIF_HEADER_NEW_ITEM_RECEIVED")
 		"reward_in_progress":
 			return TranslationServer.translate("NOTIF_HEADER_REWARD_IN_PROGRESS")
@@ -290,12 +291,9 @@ static func get_notification_title(notif_type: String, metadata: Dictionary) -> 
 				"description", TranslationServer.translate("NOTIF_TITLE_AN_EVENT_HAS_ENDED")
 			)
 
-		# Rewards
-		"reward_assigned":
-			return metadata.get(
-				"description",
-				TranslationServer.translate("NOTIF_TITLE_YOUVE_BEEN_ASSIGNED_A_REWARD")
-			)
+		# Rewards: the description line is just the wearable's name (the label clips it to one line).
+		"reward_assignment":
+			return metadata.get("tokenName", "")
 		"reward_in_progress":
 			return metadata.get(
 				"description", TranslationServer.translate("NOTIF_TITLE_YOUR_REWARD_IS_IN_PROGRESS")

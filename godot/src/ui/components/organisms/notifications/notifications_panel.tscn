@@ -6,6 +6,7 @@
 [ext_resource type="Texture2D" uid="uid://bpq2p8ej3umfx" path="res://assets/ui/unsubscribe.svg" id="4_ap3ic"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel_bg"]
+bg_color = Color(0.20784314, 0.03137255, 0.32941177, 1)
 corner_radius_top_right = 10
 corner_radius_bottom_right = 10
 
@@ -88,7 +89,6 @@ size_flags_horizontal = 3
 size_flags_vertical = 3
 theme_override_styles/panel = SubResource("StyleBoxFlat_panel_bg")
 script = ExtResource("1_notifications_panel")
-metadata/mobile_preview_orientation = "landscape"
 
 [node name="TextureRect" type="TextureRect" parent="." unique_id=165986175]
 layout_mode = 2
