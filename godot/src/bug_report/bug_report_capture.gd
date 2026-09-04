@@ -10,12 +10,21 @@ extends RefCounted
 ##
 ## Only one capture is kept — the form pre-fills slot 0 from it, and the player
 ## can delete it or add more from their gallery.
+##
+## Stored as encoded JPEG bytes, not an `Image`. A raw 1920px frame is ~7MB of
+## RGBA8 held for the process lifetime, and the encode had to happen anyway —
+## doing it here, when Settings opens, keeps it off the submit path where the
+## player is waiting on a spinner (PR #2779 review).
 
 # Longest edge, matching ImagePickerService so gallery picks and captures are
 # sized alike before they reach the 3MB evidence cap.
 const MAX_DIMENSION := 1920
 
-static var _latest: Image = null
+# Matches BugReportService and ImagePickerService, so every attachment reaching
+# the 3MB evidence cap was encoded the same way.
+const JPEG_QUALITY := 0.85
+
+static var _latest_jpeg: PackedByteArray = PackedByteArray()
 
 
 ## Subscribes to both Settings-open signals on `global`, so the frame is grabbed
@@ -57,7 +66,11 @@ static func capture(viewport: Viewport) -> void:
 			Image.INTERPOLATE_BILINEAR
 		)
 
-	_latest = image
+	var bytes := image.save_jpg_to_buffer(JPEG_QUALITY)
+	if bytes.is_empty():
+		push_warning("BugReportCapture: could not encode the captured frame")
+		return
+	_latest_jpeg = bytes
 
 
 ## Capture from the Settings-opened path.
@@ -72,10 +85,11 @@ static func capture_for_settings(viewport: Viewport) -> void:
 	capture(viewport)
 
 
-## The last capture, or null. Not consumed — reopening the form reuses it.
-static func latest() -> Image:
-	return _latest
+## The last capture as JPEG bytes, empty when there is none. Not consumed —
+## reopening the form reuses it.
+static func latest_jpeg() -> PackedByteArray:
+	return _latest_jpeg
 
 
 static func clear() -> void:
-	_latest = null
+	_latest_jpeg = PackedByteArray()

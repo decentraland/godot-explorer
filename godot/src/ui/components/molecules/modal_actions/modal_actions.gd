@@ -17,13 +17,18 @@ const LOADING_SPINNER = preload(
 	"res://src/ui/components/atoms/controls/loading_spinner/loading_spinner.tscn"
 )
 
-@export var secondary_text: String = "CANCEL":
+## Translation KEYS, not copy: _ready() pushes these into Button.text, which
+## auto-translates. An English default here silently clobbers the key the scene
+## supplies — which is exactly what shipped, leaving the buttons in English on
+## every locale while COMMON_SUBMIT sat unused in all three catalogues (PR #2779
+## review).
+@export var secondary_text: String = "COMMON_CANCEL":
 	set(value):
 		secondary_text = value
 		if is_node_ready():
 			button_secondary.text = value
 
-@export var primary_text: String = "SUBMIT":
+@export var primary_text: String = "COMMON_SUBMIT":
 	set(value):
 		primary_text = value
 		_primary_label = value
@@ -31,7 +36,9 @@ const LOADING_SPINNER = preload(
 			button_primary.text = value
 
 var _busy: bool = false
-var _primary_label: String = "SUBMIT"
+# Restored into button_primary.text when the spinner clears, so it has to be a key
+# too — otherwise the label reverts to English after the first submit.
+var _primary_label: String = "COMMON_SUBMIT"
 var _spinner: Control = null
 
 @onready var button_secondary: Button = %Button_Secondary

@@ -726,23 +726,31 @@ func _on_button_report_bug_pressed() -> void:
 func _async_open_bug_report() -> void:
 	# The screenshot was captured when this panel opened, so it shows the game
 	# rather than Settings — see BugReportCapture.
-	var modal := await Global.modal_manager.async_show_bug_report_modal(BugReportCapture.latest())
+	var modal := await Global.modal_manager.async_show_bug_report_modal(
+		BugReportCapture.latest_jpeg()
+	)
 	if not is_instance_valid(modal):
 		return
-	modal.submitted.connect(_on_bug_report_submitted)
+	modal.submitted.connect(_async_on_bug_report_submitted)
 	modal.failed.connect(_on_bug_report_failed)
 
 
-func _on_bug_report_submitted(_ticket_id: String) -> void:
-	Global.modal_manager.async_show_bug_report_success_modal()
+func _async_on_bug_report_submitted(_ticket_id: String) -> void:
+	await Global.modal_manager.async_show_bug_report_success_modal()
 
 
 func _on_bug_report_failed(message: String) -> void:
 	# The message is a proxy/transport error, not something a player can act on,
 	# so it goes to the log while the toast stays generic.
 	push_warning("Bug report failed: %s" % message)
+	# tr() on both: strings passed as function arguments are invisible to
+	# extract_strings.py, so a raw literal here ships English on every locale and
+	# CI cannot catch it (PR #2779 review).
 	NotificationsManager.show_system_toast(
-		"Couldn't send report", "Something went wrong. Please try again.", "system", "alert"
+		tr("TOAST_BUG_REPORT_FAILED_TITLE"),
+		tr("COMMON_SOMETHING_WENT_WRONG_RETRY"),
+		"system",
+		"alert"
 	)
 
 

@@ -27,12 +27,15 @@ const JPEG_QUALITY := 0.85
 const DESCRIPTION_MAX_LENGTH := 300
 
 
-## Files a bug report. `images` may be empty; only the first is attached, because
-## the proxy's `evidence` field holds a single image.
+## Files a bug report. `jpeg_bytes` may be empty.
+##
+## Takes already-encoded bytes rather than an `Image`: the screenshot is encoded
+## when it is captured or picked, so the submit path — which the player waits on
+## behind a spinner — does no image work at all (PR #2779 review).
 ##
 ## Returns {ok: bool, id: String, error: String}. Never throws.
 static func async_submit(
-	issue_type_uuid: String, description: String, images: Array = []
+	issue_type_uuid: String, description: String, jpeg_bytes: PackedByteArray = PackedByteArray()
 ) -> Dictionary:
 	if issue_type_uuid.is_empty():
 		return {"ok": false, "id": "", "error": "missing issue type"}
@@ -40,11 +43,6 @@ static func async_submit(
 	var trimmed := description.strip_edges()
 	if trimmed.is_empty():
 		return {"ok": false, "id": "", "error": "missing description"}
-
-	# Encoded once and shared: the Sentry copy matters most precisely when the
-	# ticket has to go without the image, so re-encoding here would both double
-	# the work on the UI thread and defeat the reason for attaching it.
-	var jpeg_bytes := _encode_image(images)
 
 	# Before the POST: the returned link is an input to the description. Returns
 	# "" whenever Sentry is unavailable, and the report is filed regardless.
@@ -182,24 +180,6 @@ static func _collect_device_info() -> Dictionary:
 		"gpu": RenderingServer.get_video_adapter_name(),
 		"ram": ram,
 	}
-
-
-# The first image only, as JPEG bytes; empty when there is nothing to attach or
-# the encode fails. Split out from _build_evidence so the same bytes can also go
-# to Sentry, which is the only place an over-cap image survives.
-static func _encode_image(images: Array) -> PackedByteArray:
-	if images.is_empty():
-		return PackedByteArray()
-	if images[0] == null or not (images[0] is Image):
-		return PackedByteArray()
-	var image: Image = images[0]
-	if image.is_empty():
-		return PackedByteArray()
-
-	var bytes: PackedByteArray = image.save_jpg_to_buffer(JPEG_QUALITY)
-	if bytes.is_empty():
-		push_warning("BugReportService: could not encode the attached image")
-	return bytes
 
 
 # Returns {} when there is nothing to attach or the encode is too large — an

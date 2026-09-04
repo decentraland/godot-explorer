@@ -825,7 +825,9 @@ func async_show_input_modal(
 ## Opens the native bug report form (issue #2652). `initial_screenshot` pre-fills
 ## the first slot — the viewport captured when Settings opened. Returns the modal
 ## so the caller can connect `submitted` / `failed`.
-func async_show_bug_report_modal(initial_screenshot: Image = null) -> BugReportModal:
+func async_show_bug_report_modal(
+	initial_screenshot: PackedByteArray = PackedByteArray()
+) -> BugReportModal:
 	var modal = await _async_create_bug_report_modal()
 	if not is_instance_valid(modal):
 		return null

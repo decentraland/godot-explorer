@@ -42,9 +42,14 @@ const SLOT_HEIGHT := 170
 # runtime.
 var _restore_landscape: bool = false
 
-# Attached images in slot order. Slot 0 is pre-filled with the viewport captured
-# when Settings opened, unless the user removes it.
-var _images: Array[Image] = []
+# Attachments in slot order, each {bytes, image}. Slot 0 is pre-filled with the
+# viewport captured when Settings opened, unless the user removes it.
+#
+# Both representations are kept on purpose: `bytes` is what gets transmitted, and
+# holding it already-encoded keeps the JPEG encode off the submit path; `image`
+# is only for the slot preview, decoded once when the shot is added rather than
+# on every slot rebuild (which happens twice per submit, on the busy toggle).
+var _shots: Array[Dictionary] = []
 
 @onready var dropdown_issue_type: DropdownList = %DropdownList_IssueType
 @onready var dcl_text_edit: DclTextEdit = %DclTextEdit
@@ -65,15 +70,27 @@ func _ready() -> void:
 	UiSounds.install_audio_recusirve(self)
 
 
-## Pre-fills slot 0 with an already-captured image (the viewport grabbed when
-## Settings opened). Safe to call with null.
-func set_initial_screenshot(image: Image) -> void:
-	if image == null or image.is_empty():
+## Pre-fills slot 0 from an already-captured JPEG (the viewport grabbed when
+## Settings opened). Safe to call with an empty buffer.
+func set_initial_screenshot(jpeg_bytes: PackedByteArray) -> void:
+	var shot := _make_shot(jpeg_bytes)
+	if shot.is_empty():
 		return
-	_images.clear()
-	_images.append(image)
+	_shots.clear()
+	_shots.append(shot)
 	if is_node_ready():
 		_rebuild_screenshot_slots()
+
+
+# Pairs the transmitted bytes with a decoded preview. Empty when the buffer is
+# missing or undecodable, so callers can treat that as "no screenshot".
+func _make_shot(jpeg_bytes: PackedByteArray) -> Dictionary:
+	if jpeg_bytes.is_empty():
+		return {}
+	var image := ImagePickerService.decode(jpeg_bytes)
+	if image == null or image.is_empty():
+		return {}
+	return {"bytes": jpeg_bytes, "image": image}
 
 
 func _populate_issue_types() -> void:
@@ -92,22 +109,22 @@ func _rebuild_screenshot_slots() -> void:
 	for child in hbox_screenshots.get_children():
 		child.queue_free()
 
-	var slot_count := _images.size() + (1 if _images.size() < MAX_SCREENSHOTS else 0)
+	var slot_count := _shots.size() + (1 if _shots.size() < MAX_SCREENSHOTS else 0)
 	# Design keeps tiles at their natural 170px until the row is full, then lets
 	# them flex (to ~157) with a tighter gap so three still fit the content column.
 	var is_full := slot_count >= MAX_SCREENSHOTS
 	hbox_screenshots.add_theme_constant_override("separation", GAP_FULL if is_full else GAP_SPARSE)
 
-	for i in _images.size():
+	for i in _shots.size():
 		var slot: ScreenshotSlot = SCREENSHOT_SLOT.instantiate()
 		hbox_screenshots.add_child(slot)
 		_size_slot(slot)
 		slot.locked = modal_actions.is_busy()
-		slot.set_image(_images[i])
+		slot.set_image(_shots[i]["image"])
 		slot.delete_pressed.connect(_on_slot_delete_pressed.bind(i))
 		slot.replace_pressed.connect(_on_slot_replace_pressed.bind(i))
 
-	if _images.size() < MAX_SCREENSHOTS:
+	if _shots.size() < MAX_SCREENSHOTS:
 		var add_slot: ScreenshotSlot = SCREENSHOT_SLOT.instantiate()
 		hbox_screenshots.add_child(add_slot)
 		_size_slot(add_slot)
@@ -127,9 +144,9 @@ func _size_slot(slot: ScreenshotSlot) -> void:
 
 
 func _on_slot_delete_pressed(index: int) -> void:
-	if modal_actions.is_busy() or index < 0 or index >= _images.size():
+	if modal_actions.is_busy() or index < 0 or index >= _shots.size():
 		return
-	_images.remove_at(index)
+	_shots.remove_at(index)
 	_rebuild_screenshot_slots()
 
 
@@ -138,13 +155,13 @@ func _on_slot_replace_pressed(index: int) -> void:
 
 
 func _async_replace_screenshot(index: int) -> void:
-	if modal_actions.is_busy() or index < 0 or index >= _images.size():
+	if modal_actions.is_busy() or index < 0 or index >= _shots.size():
 		return
-	var image := await ImagePickerService.async_pick_image()
+	var shot := _make_shot(await ImagePickerService.async_pick_image_bytes())
 	# Cancelling a replace must leave the existing screenshot alone.
-	if image == null:
+	if shot.is_empty():
 		return
-	_images[index] = image
+	_shots[index] = shot
 	_rebuild_screenshot_slots()
 
 
@@ -153,14 +170,14 @@ func _on_slot_add_pressed() -> void:
 
 
 func _async_add_screenshot() -> void:
-	if modal_actions.is_busy() or _images.size() >= MAX_SCREENSHOTS:
+	if modal_actions.is_busy() or _shots.size() >= MAX_SCREENSHOTS:
 		return
-	var image := await ImagePickerService.async_pick_image()
-	# Null covers cancel, an unsupported platform and a decode failure alike —
+	var shot := _make_shot(await ImagePickerService.async_pick_image_bytes())
+	# Empty covers cancel, an unsupported platform and a decode failure alike —
 	# none of which should disturb what the user has already filled in.
-	if image == null:
+	if shot.is_empty():
 		return
-	_images.append(image)
+	_shots.append(shot)
 	_rebuild_screenshot_slots()
 
 
@@ -191,7 +208,16 @@ func _async_submit() -> void:
 
 	modal_actions.set_busy(true)
 	_rebuild_screenshot_slots()
-	var result := await BugReportService.async_submit(uuid, dcl_text_edit.get_text_value(), _images)
+	# Yield one frame so the busy state actually paints: async_submit() does its
+	# JPEG encode, log-tail read and Sentry capture BEFORE its first await, so
+	# without this the spinner's frame never renders (PR #2779 review).
+	await get_tree().process_frame
+	var jpeg_bytes: PackedByteArray = (
+		_shots[0]["bytes"] if not _shots.is_empty() else PackedByteArray()
+	)
+	var result := await BugReportService.async_submit(
+		uuid, dcl_text_edit.get_text_value(), jpeg_bytes
+	)
 	modal_actions.set_busy(false)
 	_rebuild_screenshot_slots()
 	_update_submit_enabled()

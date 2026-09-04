@@ -315,6 +315,20 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
 
     override fun onMainResume() {
         super.onMainResume()
+
+        // Backstop for the image picker guard. `pickImageInFlight` is normally cleared in
+        // onMainActivityResult, but that callback never lands if our activity is recreated
+        // while the picker is up — leaving the flag latched true, so every later pick
+        // answers "already_picking" for the rest of the process while GDScript's watchdog
+        // resets after 300s and the two sides drift apart (PR #2779 review).
+        //
+        // Safe here: onActivityResult is delivered before onResume, so the happy path has
+        // already cleared the flag by the time we get here.
+        if (pickImageInFlight) {
+            Log.d(pluginName, "onMainResume: clearing latched pickImageInFlight")
+            pickImageInFlight = false
+        }
+
         Log.d(pluginName, "onMainResume: scheduling resume for ${playersPlayingBeforeBackground.size} ExoPlayers")
 
         // Check WalletConnect state on resume and try to recover if needed

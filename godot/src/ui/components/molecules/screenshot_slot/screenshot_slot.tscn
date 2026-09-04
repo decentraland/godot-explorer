@@ -162,26 +162,57 @@ theme_override_styles/disabled = SubResource("SB_transparent")
 
 [node name="Button_Delete" type="Button" parent="."]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(32, 32)
+custom_minimum_size = Vector2(84, 84)
 layout_mode = 1
 anchors_preset = 1
 anchor_left = 1.0
 anchor_right = 1.0
-offset_left = -25.0
-offset_top = -9.0
-offset_right = 7.0
-offset_bottom = 23.0
+offset_left = -51.0
+offset_top = -35.0
+offset_right = 33.0
+offset_bottom = 49.0
 grow_horizontal = 0
-theme_override_styles/normal = SubResource("SB_badge")
-theme_override_styles/hover = SubResource("SB_badge")
-theme_override_styles/pressed = SubResource("SB_badge")
-theme_override_styles/focus = SubResource("SB_badge")
-theme_override_styles/disabled = SubResource("SB_badge")
-theme_override_constants/icon_max_width = 12
-icon = ExtResource("2_close")
-alignment = 1
-icon_alignment = 1
-expand_icon = false
+theme_override_styles/normal = SubResource("SB_transparent")
+theme_override_styles/hover = SubResource("SB_transparent")
+theme_override_styles/pressed = SubResource("SB_transparent")
+theme_override_styles/focus = SubResource("SB_transparent")
+theme_override_styles/disabled = SubResource("SB_transparent")
+
+[node name="Panel_Badge" type="Panel" parent="Button_Delete"]
+custom_minimum_size = Vector2(32, 32)
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -16.0
+offset_top = -16.0
+offset_right = 16.0
+offset_bottom = 16.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("SB_badge")
+
+[node name="TextureRect_Icon" type="TextureRect" parent="Button_Delete/Panel_Badge"]
+custom_minimum_size = Vector2(12, 12)
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -6.0
+offset_top = -6.0
+offset_right = 6.0
+offset_bottom = 6.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_close")
+expand_mode = 1
+stretch_mode = 5
 
 [connection signal="pressed" from="Button_Add" to="." method="_on_button_add_pressed"]
 [connection signal="pressed" from="Button_Delete" to="." method="_on_button_delete_pressed"]

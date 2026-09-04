@@ -52,19 +52,22 @@ static func is_supported() -> bool:
 	return _get_plugin() != null
 
 
-## Opens the native gallery picker and waits for the user to choose an image.
+## Opens the native gallery picker and returns the chosen image as the JPEG
+## buffer the native side produced.
 ##
-## Returns the decoded image, or null when the user cancelled, the platform is
-## unsupported, another pick is already in flight, or decoding failed.
-static func async_pick_image() -> Image:
+## Returns an empty buffer when the user cancelled, the platform is unsupported,
+## another pick is already in flight, or the native side never answered. The
+## bytes are handed over undecoded so a caller that only forwards them — the bug
+## report attachment path — never pays a decode/re-encode round trip.
+static func async_pick_image_bytes() -> PackedByteArray:
 	var plugin := _get_plugin()
 	if plugin == null:
 		push_warning("ImagePickerService: not supported on %s" % OS.get_name())
-		return null
+		return PackedByteArray()
 
 	if _picking:
 		push_warning("ImagePickerService: a pick is already in flight, ignoring")
-		return null
+		return PackedByteArray()
 
 	_picking = true
 	# Capture the result via an explicit one-shot connection rather than
@@ -100,7 +103,7 @@ static func async_pick_image() -> Image:
 
 	if received.is_empty():
 		push_warning("ImagePickerService: native did not respond within %ds" % (TIMEOUT_MS / 1000))
-		return null
+		return PackedByteArray()
 
 	var bytes: PackedByteArray = received[0]
 	var error: String = received[1]
@@ -110,12 +113,20 @@ static func async_pick_image() -> Image:
 		# reporting to Sentry.
 		if error != "cancelled":
 			push_warning("ImagePickerService: pick failed: %s" % error)
-		return null
+		return PackedByteArray()
 
 	if bytes.is_empty():
 		push_warning("ImagePickerService: native returned an empty buffer")
-		return null
+		return PackedByteArray()
 
+	return bytes
+
+
+## Decodes a buffer returned by async_pick_image_bytes(), or null when it isn't
+## an image we can read.
+static func decode(bytes: PackedByteArray) -> Image:
+	if bytes.is_empty():
+		return null
 	var image := Image.new()
 	# The native side always encodes JPEG, but fall back to PNG so a future
 	# native change can't silently break this path.
@@ -123,8 +134,14 @@ static func async_pick_image() -> Image:
 		if image.load_png_from_buffer(bytes) != OK:
 			push_warning("ImagePickerService: could not decode the returned buffer")
 			return null
-
 	return image
+
+
+## Opens the native gallery picker and returns the decoded image, or null.
+## Prefer async_pick_image_bytes() when the buffer is going to be transmitted:
+## decoding and re-encoding costs quality and time for nothing.
+static func async_pick_image() -> Image:
+	return decode(await async_pick_image_bytes())
 
 
 # Resolves the platform plugin singleton, or null when there isn't one.
