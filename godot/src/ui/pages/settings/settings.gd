@@ -1018,10 +1018,7 @@ func _setup_custom_profile_controls() -> void:
 		template_row, "CustomParticles", tr("SETTINGS_PARTICLES")
 	)
 	_custom_particles_dropdown = DropdownList.new()
-	_custom_particles_dropdown.add_item(tr("SETTINGS_PARTICLES_OFF"), 0)
-	_custom_particles_dropdown.add_item(tr("SETTINGS_GRAPHIC_PROFILE_LOW"), 1)
-	_custom_particles_dropdown.add_item(tr("SETTINGS_GRAPHIC_PROFILE_MEDIUM"), 2)
-	_custom_particles_dropdown.add_item(tr("SETTINGS_GRAPHIC_PROFILE_HIGH"), 3)
+	_populate_custom_particles_items()
 	_custom_particles_dropdown.item_selected.connect(_on_custom_particles_changed)
 	_custom_particles_row.add_child(_custom_particles_dropdown)
 	rows_container.add_child(_custom_particles_row)
@@ -1332,6 +1329,37 @@ func _notification(what: int) -> void:
 		_populate_skybox_items()
 		_populate_language_dropdown_items()
 		_update_current_cache_size()
+		_retranslate_custom_profile_rows()
+
+
+func _populate_custom_particles_items() -> void:
+	if _custom_particles_dropdown == null:
+		return
+	var previous := _custom_particles_dropdown.selected
+	_custom_particles_dropdown.clear()
+	_custom_particles_dropdown.add_item(tr("SETTINGS_PARTICLES_OFF"), 0)
+	_custom_particles_dropdown.add_item(tr("SETTINGS_GRAPHIC_PROFILE_LOW"), 1)
+	_custom_particles_dropdown.add_item(tr("SETTINGS_GRAPHIC_PROFILE_MEDIUM"), 2)
+	_custom_particles_dropdown.add_item(tr("SETTINGS_GRAPHIC_PROFILE_HIGH"), 3)
+	if previous >= 0:
+		_custom_particles_dropdown.select(previous)
+
+
+## The Custom rows are built at runtime with tr()-resolved strings, so they need
+## manual re-translation on locale change (same convention as the dropdowns above).
+func _retranslate_custom_profile_rows() -> void:
+	if _custom_view_distance_row == null:
+		return
+	(_custom_view_distance_row.find_child("Label_Title", false, false) as Label).text = tr(
+		"SETTINGS_VIEW_DISTANCE"
+	)
+	(_custom_particles_row.find_child("Label_Title", false, false) as Label).text = tr(
+		"SETTINGS_PARTICLES"
+	)
+	(_custom_max_lights_row.find_child("Label_Title", false, false) as Label).text = tr(
+		"SETTINGS_MAX_ACTIVE_LIGHTS"
+	)
+	_populate_custom_particles_items()
 
 
 func _populate_language_dropdown_items() -> void:

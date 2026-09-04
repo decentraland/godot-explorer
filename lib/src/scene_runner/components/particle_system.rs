@@ -60,10 +60,26 @@ static PARTICLE_PROFILE_GENERATION: AtomicU32 = AtomicU32::new(0);
 
 /// Called from GDScript (via DclGlobal) when the graphic profile changes.
 pub fn set_particle_profile_budgets(scene_budget: i32, emitter_cap: i32, use_cpu: bool) {
-    SCENE_PARTICLE_BUDGET.store(scene_budget.max(0), Ordering::Relaxed);
-    MAX_AMOUNT_PER_EMITTER.store(emitter_cap.max(0), Ordering::Relaxed);
+    let scene_budget = scene_budget.max(0);
+    let emitter_cap = emitter_cap.max(0);
+    // No-op (e.g. dynamic graphics manager re-applying the same profile):
+    // skip the generation bump so live scenes don't rebuild their emitters.
+    if SCENE_PARTICLE_BUDGET.load(Ordering::Relaxed) == scene_budget
+        && MAX_AMOUNT_PER_EMITTER.load(Ordering::Relaxed) == emitter_cap
+        && USE_CPU_PARTICLES.load(Ordering::Relaxed) == use_cpu
+    {
+        return;
+    }
+    SCENE_PARTICLE_BUDGET.store(scene_budget, Ordering::Relaxed);
+    MAX_AMOUNT_PER_EMITTER.store(emitter_cap, Ordering::Relaxed);
     USE_CPU_PARTICLES.store(use_cpu, Ordering::Relaxed);
     PARTICLE_PROFILE_GENERATION.fetch_add(1, Ordering::Relaxed);
+}
+
+/// Current generation; Scene::new seeds from this so fresh scenes don't
+/// instantly tear down and rebuild their just-created emitters.
+pub fn current_particle_profile_generation() -> u32 {
+    PARTICLE_PROFILE_GENERATION.load(Ordering::Relaxed)
 }
 
 /// Current (scene_budget, emitter_cap, use_cpu) — used by the profile tests to
@@ -364,19 +380,28 @@ pub fn update_particle_system(
             };
 
             let (_godot_entity_node, mut node_3d) = scene.godot_dcl_scene.ensure_node_3d(&entity);
-            // Recreate the emitter unconditionally: the node class (CPU vs GPU)
-            // may have changed and applying on a fresh node is idempotent.
-            if let Some(mut old) = node_3d.get_node_or_null("ParticleSystem") {
-                node_3d.remove_child(&old);
-                old.queue_free();
-            }
-            let mut particle_node: Gd<Node3D> = if use_cpu {
-                CpuParticles3D::new_alloc().upcast()
-            } else {
-                GpuParticles3D::new_alloc().upcast()
-            };
-            particle_node.set_name("ParticleSystem");
-            add_own_visual_child(&mut node_3d, &particle_node.clone().upcast::<Node>());
+            // Recreate the emitter only when the class (CPU vs GPU) changed;
+            // budget-only changes re-apply in place (dynamic graphics manager
+            // auto-switches shouldn't tear down live emitters mid-play).
+            let existing = node_3d.try_get_node_as::<Node3D>("ParticleSystem");
+            let particle_node: Gd<Node3D> =
+                match existing.filter(|n| n.is_class("CPUParticles3D") == use_cpu) {
+                    Some(node) => node,
+                    None => {
+                        if let Some(mut old) = node_3d.get_node_or_null("ParticleSystem") {
+                            node_3d.remove_child(&old);
+                            old.queue_free();
+                        }
+                        let mut new_node: Gd<Node3D> = if use_cpu {
+                            CpuParticles3D::new_alloc().upcast()
+                        } else {
+                            GpuParticles3D::new_alloc().upcast()
+                        };
+                        new_node.set_name("ParticleSystem");
+                        add_own_visual_child(&mut node_3d, &new_node.clone().upcast::<Node>());
+                        new_node
+                    }
+                };
 
             let (material, amount) =
                 if let Ok(mut gpu) = particle_node.clone().try_cast::<GpuParticles3D>() {
@@ -460,7 +485,10 @@ pub fn reconcile_user_presence(scene: &mut Scene, user_in_scene: bool) {
                     for burst in &mut item.bursts {
                         burst.reset_for_new_cycle();
                     }
-                    ps_set_emitting(&item.node, true);
+                    ps_set_emitting(
+                        &item.node,
+                        SCENE_PARTICLE_BUDGET.load(Ordering::Relaxed) > 0,
+                    );
                     ps_restart(&item.node);
                 }
             }

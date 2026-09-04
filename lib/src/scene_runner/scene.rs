@@ -412,7 +412,8 @@ impl Scene {
             dirty_materials: false,
             particle_systems: HashMap::new(),
             dirty_particle_systems: false,
-            particle_profile_generation: 0,
+            particle_profile_generation:
+                crate::scene_runner::components::particle_system::current_particle_profile_generation(),
             audio_sources: HashMap::new(),
             audio_streams: HashMap::new(),
             video_players: HashMap::new(),
@@ -495,7 +496,8 @@ impl Scene {
             dirty_materials: false,
             particle_systems: HashMap::new(),
             dirty_particle_systems: false,
-            particle_profile_generation: 0,
+            particle_profile_generation:
+                crate::scene_runner::components::particle_system::current_particle_profile_generation(),
             scene_type: SceneType::Parcel,
             audio_sources: HashMap::new(),
             audio_streams: HashMap::new(),
