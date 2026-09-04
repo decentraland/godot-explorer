@@ -7,6 +7,8 @@ const NotificationItemScene = preload(
 )
 
 var _notification_items: Array[Control] = []
+# Signature (ids + read states) of the currently displayed set, to skip needless rebuilds.
+var _displayed_signature: String = ""
 
 @onready var scroll_container: ScrollContainer = %ScrollContainer
 @onready var notifications_list: VBoxContainer = %NotificationsList
@@ -64,6 +66,18 @@ func _refresh_notifications() -> void:
 
 
 func async_display_notifications(notifications: Array) -> void:
+	# Skip the full teardown+rebuild when nothing changed (same ids + read states). Rebuilding frees
+	# each item mid-flight, cancelling its async thumbnail load (the "blank image" bug); the 30s poll
+	# and the paired new_notifications/notifications_updated emits would otherwise rebuild constantly.
+	var signature: String = _notifications_signature(notifications)
+	if signature == _displayed_signature and not _notification_items.is_empty():
+		# Same set (e.g. the 30s poll returned no changes): refresh the "X ago" timestamps in place
+		# instead of tearing items down, which would cancel their in-flight thumbnail loads.
+		for item in _notification_items:
+			item.call("refresh_timestamp")
+		return
+	_displayed_signature = signature
+
 	# Clear existing items
 	for item in _notification_items:
 		item.queue_free()
@@ -99,6 +113,13 @@ func async_display_notifications(notifications: Array) -> void:
 		item.notification_clicked.connect(_on_notification_clicked)
 
 		_notification_items.append(item)
+
+
+func _notifications_signature(notifications: Array) -> String:
+	var parts = PackedStringArray()
+	for n in notifications:
+		parts.append(str(n.get("id", "")) + ":" + str(n.get("read", false)))
+	return "|".join(parts)
 
 
 func _on_new_notifications(notifications: Array) -> void:

@@ -50,10 +50,16 @@ func _update_ui() -> void:
 		modulate = Color.WHITE
 
 
-func _notification(what: int) -> void:
-	# The timestamp is assigned from code, so refresh it on a language change.
-	if what == NOTIFICATION_TRANSLATION_CHANGED and "timestamp" in notification_data:
+## Re-renders the "X ago" label. Called by the panel on a no-change refresh, and on a locale change,
+## so the timestamp stays current without a full item rebuild (which cancels thumbnail loads).
+func refresh_timestamp() -> void:
+	if "timestamp" in notification_data:
 		label_timestamp.text = _format_timestamp(int(notification_data["timestamp"]))
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_TRANSLATION_CHANGED:
+		refresh_timestamp()
 
 
 func _format_timestamp(timestamp_ms: int) -> String:
@@ -68,34 +74,34 @@ func _format_timestamp(timestamp_ms: int) -> String:
 		return tr("NOTIFICATION_JUST_NOW")
 
 	if diff < 3600:
-		var minutes := int(diff / 60)
+		var minutes = int(diff / 60)
 		return TranslationKey.new("NOTIFICATION_MINUTES_AGO").plural(minutes).format(
 			{"minutes": minutes}
 		)
 
 	if diff < 86400:
-		var hours := int(diff / 3600)
+		var hours = int(diff / 3600)
 		return TranslationKey.new("NOTIFICATION_HOURS_AGO").plural(hours).format({"hours": hours})
 
 	if diff < 172800:  # 24–47 h
 		return tr("NOTIFICATION_YESTERDAY")
 
-	var days := int(diff / 86400)
+	var days = int(diff / 86400)
 	if days < 7:  # 2–6 days
 		return TranslationKey.new("NOTIFICATION_DAYS_AGO").plural(days).format({"days": days})
 
 	if days < 30:  # 7–29 days -> 1–4 weeks
-		var weeks := int(days / 7)
+		var weeks = int(days / 7)
 		return TranslationKey.new("NOTIFICATION_WEEKS_AGO").plural(weeks).format({"weeks": weeks})
 
-	var months := int(days / 30)
+	var months = int(days / 30)
 	if months < 12:  # 1–11 months
 		return TranslationKey.new("NOTIFICATION_MONTHS_AGO").plural(months).format(
 			{"months": months}
 		)
 
 	# 12+ months -> years
-	var years := int(months / 12)
+	var years = int(months / 12)
 	return TranslationKey.new("NOTIFICATION_YEARS_AGO").plural(years).format({"years": years})
 
 

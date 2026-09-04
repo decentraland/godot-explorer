@@ -71,7 +71,7 @@ func _update_image(notif_type: String, metadata: Dictionary) -> void:
 ## Friend: round avatar via the shared ProfilePicture (owns its own circular mask + name colour).
 func _show_friend(metadata: Dictionary) -> void:
 	profile_picture_friend.show()
-	var data := SocialItemData.new()
+	var data = SocialItemData.new()
 	if "sender" in metadata and metadata["sender"] is Dictionary:
 		var sender: Dictionary = metadata["sender"]
 		data.name = sender.get("name", "")
@@ -109,7 +109,7 @@ func _show_item(metadata: Dictionary) -> void:
 func _is_loadable_url(url: String) -> bool:
 	if url.is_empty():
 		return false
-	var scheme_end := url.find("://")
+	var scheme_end = url.find("://")
 	if scheme_end == -1:
 		return true
 	return scheme_end + 3 < url.length()
