@@ -292,12 +292,8 @@ static func get_notification_title(notif_type: String, metadata: Dictionary) -> 
 			)
 
 		# Rewards: the description line is just the wearable's name (the label clips it to one line).
-		"reward_assignment":
+		"reward_assignment", "reward_in_progress":
 			return metadata.get("tokenName", "")
-		"reward_in_progress":
-			return metadata.get(
-				"description", TranslationServer.translate("NOTIF_TITLE_YOUR_REWARD_IS_IN_PROGRESS")
-			)
 
 		_:
 			return metadata.get("description", "")

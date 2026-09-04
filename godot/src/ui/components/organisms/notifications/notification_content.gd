@@ -87,10 +87,10 @@ func _show_event(metadata: Dictionary) -> void:
 	var url: String = metadata.get(
 		"image", metadata.get("thumbnailUrl", metadata.get("thumbnail", ""))
 	)
-	if url.is_empty():
-		event_image.set_texture(DEFAULT_IMAGE)
-	else:
+	if _is_loadable_url(url):
 		event_image.load_from_url(url)
+	else:
+		event_image.set_texture(DEFAULT_IMAGE)
 
 
 ## Received item/reward: rounded thumbnail with an outline coloured by its rarity.
@@ -98,10 +98,21 @@ func _show_item(metadata: Dictionary) -> void:
 	item_image.show()
 	item_image.border_color = _rarity_color(metadata.get("tokenRarity", ""))
 	var url: String = metadata.get("tokenImage", metadata.get("image", ""))
-	if url.is_empty():
-		item_image.set_texture(DEFAULT_IMAGE)
-	else:
+	if _is_loadable_url(url):
 		item_image.load_from_url(url)
+	else:
+		item_image.set_texture(DEFAULT_IMAGE)
+
+
+## True when the URL is worth handing to AsyncImage. Guards against placeholders like "https://"
+## (fixtures / incomplete payloads) that would otherwise resolve to a blank framed box.
+func _is_loadable_url(url: String) -> bool:
+	if url.is_empty():
+		return false
+	var scheme_end := url.find("://")
+	if scheme_end == -1:
+		return true
+	return scheme_end + 3 < url.length()
 
 
 func _rarity_color(rarity: String) -> Color:
