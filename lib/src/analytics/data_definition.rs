@@ -674,7 +674,9 @@ pub struct SegmentEventRequestResult {
     // False covers transport failure, non-2xx, unparseable body, and a business
     // refusal (HTTP 200 + ok:false) — the same outcome from the caller's side.
     pub ok: bool,
-    // HTTP status when there was one. None on a transport failure or a non-HTTP call.
+    // HTTP status when the caller could recover one. None for a non-HTTP call and for
+    // any failure surfaced as a rejected promise, which is every non-2xx — those carry
+    // the server's reason in `error` instead.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub status: Option<u32>,
     // Failure bucket or server code ("transport", "unparseable", "cap_exceeded", ...).

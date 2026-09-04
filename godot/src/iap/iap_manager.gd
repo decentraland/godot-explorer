@@ -408,7 +408,13 @@ func _track_request(
 func _on_purchase_outcome(
 	outcome: String, product_id: String, reason: String, credits: int
 ) -> void:
-	var extra := {"product_id": product_id, "outcome": outcome}
+	# purchase_completed also fires for transactions StoreKit redelivers at launch, which
+	# never went through purchase(); flag them so they aren't counted as presses.
+	var extra := {
+		"product_id": product_id,
+		"outcome": outcome,
+		"user_initiated": _purchase_started_ms > 0,
+	}
 	if credits >= 0:
 		extra["credits_granted"] = credits
 	# 0 when the press never reached purchase(); report the outcome anyway.
@@ -949,7 +955,11 @@ func _async_signed_iap(path: String, method: int, body: String, context: String 
 		# after a purchase would emit that many identical error events. The retry loop
 		# already recovers from it.
 		print("[IAP] ", path, " transport/auth error: ", response.get_error())
-		_track_request(context, endpoint, method_name, false, -1, "transport", started)
+		# The promise is rejected for ANY non-2xx, so this is not only transport
+		# failures: the reason carries the server body, or the canonical status text
+		# when it was empty. Truncated like the unparseable-body log below.
+		var reason := str(response.get_error()).substr(0, _ERROR_BODY_EXCERPT_CHARS)
+		_track_request(context, endpoint, method_name, false, -1, reason, started)
 		return null
 	var status: int = response.status_code()
 	var json = response.get_string_response_as_json()

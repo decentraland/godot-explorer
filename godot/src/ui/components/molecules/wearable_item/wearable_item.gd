@@ -167,7 +167,7 @@ func _on_action_pressed():
 	if Iap.get_balance() >= marketplace_price and not marketplace_url.is_empty():
 		MarketplaceTracker.open_and_track(marketplace_url)
 	else:
-		Global.open_credits.emit("wearable_item")
+		Global.open_credits.emit("WEARABLE_ITEM")
 
 
 func _update_category_icon(wearable: DclItemEntityDefinition):

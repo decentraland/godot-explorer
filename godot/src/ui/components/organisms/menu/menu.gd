@@ -155,7 +155,7 @@ func async_show_discover(open_menu := true):
 		_open()
 
 
-func async_show_credits(source: String = "unknown"):
+func async_show_credits(source: String = "UNKNOWN"):
 	if is_instance_valid(_credits_page):
 		return
 	# Tracked here, not per button: the one place the page is instantiated, so a new
