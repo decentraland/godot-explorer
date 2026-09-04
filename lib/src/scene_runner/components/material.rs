@@ -28,6 +28,14 @@ use godot::{
 
 use crate::dcl::components::proto_components::sdk::components::MaterialTransparencyMode;
 
+/// Convert a DCL/Unity UV offset.y to Godot's V-down UV space.
+/// Primitive/glTF UVs are stored V-flipped vs Unity (`v_godot = 1 - v_unity`),
+/// so the offset must be compensated to land in the same texture window.
+/// Identity for the defaults (tiling=1, offset=0).
+pub(crate) fn dcl_uv_offset_y(tiling_y: f32, offset_y: f32) -> f32 {
+    1.0 - tiling_y - offset_y
+}
+
 /// Load the unlit alpha shader. Godot's ResourceLoader caches loaded resources internally.
 fn get_unlit_alpha_shader() -> Option<Gd<Shader>> {
     ResourceLoader::singleton()
@@ -344,7 +352,7 @@ pub fn apply_dcl_material_properties(
             if let Some(texture) = &unlit.texture {
                 godot_material.set_uv1_offset(godot::builtin::Vector3::new(
                     texture.offset.0.x,
-                    texture.offset.0.y,
+                    dcl_uv_offset_y(texture.tiling.0.y, texture.offset.0.y),
                     0.0,
                 ));
                 godot_material.set_uv1_scale(godot::builtin::Vector3::new(
@@ -414,7 +422,7 @@ pub fn apply_dcl_material_properties(
             if let Some(texture) = &pbr.texture {
                 godot_material.set_uv1_offset(godot::builtin::Vector3::new(
                     texture.offset.0.x,
-                    texture.offset.0.y,
+                    dcl_uv_offset_y(texture.tiling.0.y, texture.offset.0.y),
                     0.0,
                 ));
                 godot_material.set_uv1_scale(godot::builtin::Vector3::new(
@@ -479,7 +487,11 @@ fn apply_unlit_shader_properties(shader_mat: &mut Gd<ShaderMaterial>, unlit: &Dc
     if let Some(tex) = &unlit.texture {
         shader_mat.set_shader_parameter(
             "uv_offset",
-            &Vector2::new(tex.offset.0.x, tex.offset.0.y).to_variant(),
+            &Vector2::new(
+                tex.offset.0.x,
+                dcl_uv_offset_y(tex.tiling.0.y, tex.offset.0.y),
+            )
+            .to_variant(),
         );
         shader_mat.set_shader_parameter(
             "uv_scale",
@@ -828,5 +840,36 @@ pub fn update_video_material_textures(scene: &mut Scene) {
                 material.set_texture(param, &placeholder);
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::dcl_uv_offset_y;
+
+    /// Regression test for #2719: texture offset/tiling V direction must match Unity.
+    /// Unity samples texture V window [v*t + o]; our V-flipped UVs must land in the
+    /// same texture rows (texture row = 1 - v in top-left image space).
+    #[test]
+    fn uv_offset_y_matches_unity_texture_window() {
+        // Identity for defaults: untiled textures unchanged
+        assert_eq!(dcl_uv_offset_y(1.0, 0.0), 0.0);
+
+        // Repro from the issue: tiling 0.25, offset 0.25.
+        // Unity samples v_unity*t+o over v_unity in [0.25, 0.5]
+        //   -> texture rows [1-(0.5*0.25+0.25), 1-(0.25*0.25+0.25)] = [0.625, 0.6875]
+        // Godot with flipped UVs (v_godot = 1-v_unity in [0.5, 0.75]) and compensated
+        // offset must sample the same rows.
+        let offset_y = dcl_uv_offset_y(0.25, 0.25);
+        assert_eq!(offset_y, 0.5);
+        let godot_lo = 0.5 * 0.25 + offset_y;
+        let godot_hi = 0.75 * 0.25 + offset_y;
+        let unity_lo = 1.0 - (0.5 * 0.25 + 0.25);
+        let unity_hi = 1.0 - (0.25 * 0.25 + 0.25);
+        assert!((godot_lo - unity_lo).abs() < 1e-6);
+        assert!((godot_hi - unity_hi).abs() < 1e-6);
+
+        // Pure scroll (tiling=1, offset=0.3): Godot offset must be -offset
+        assert_eq!(dcl_uv_offset_y(1.0, 0.3), -0.3);
     }
 }
