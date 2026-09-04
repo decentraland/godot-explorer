@@ -17,7 +17,7 @@ use crate::{
         VIDEO_STATE_PAUSED, VIDEO_STATE_PLAYING, VIDEO_STATE_READY, VIDEO_STATE_SEEKING,
     },
     scene_runner::{
-        godot_dcl_scene::VideoPlayerData,
+        godot_dcl_scene::{add_own_visual_child, VideoPlayerData},
         scene::{Scene, SceneType},
     },
 };
@@ -299,7 +299,7 @@ fn get_or_create_video_player_node(parent: &mut Gd<Node3D>, scene_id: i32) -> Gd
     let texture = ImageTexture::create_from_image(&image).expect("couldn't create video texture");
     video_player_node.bind_mut().set_dcl_texture(Some(texture));
 
-    parent.add_child(&video_player_node.clone().upcast::<Node>());
+    add_own_visual_child(parent, &video_player_node.clone().upcast::<Node>());
 
     video_player_node
 }

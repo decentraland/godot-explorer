@@ -1015,12 +1015,6 @@ func _on_button_discord_pressed() -> void:
 	Global.open_url(DISCORD_URL)
 
 
-func _on_button_marketplace_pressed() -> void:
-	# SFSafariViewController on iOS (same webview as Apple Sign In) and
-	# Chrome Custom Tabs on Android. Desktop falls back to shell_open.
-	MarketplaceTracker.open_and_track(DclUrls.marketplace())
-
-
 func _on_button_storage_pressed() -> void:
 	show_control(container_storage)
 	_async_scroll_to_tab_button(%Button_Storage)

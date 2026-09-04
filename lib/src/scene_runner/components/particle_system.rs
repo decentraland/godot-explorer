@@ -34,7 +34,10 @@ use crate::{
         },
     },
     godot_classes::dcl_global::DclGlobal,
-    scene_runner::scene::{Scene, SceneType},
+    scene_runner::{
+        godot_dcl_scene::add_own_visual_child,
+        scene::{Scene, SceneType},
+    },
 };
 
 /// Hard cap of live particles per emitter, regardless of what the scene requests.
@@ -200,7 +203,7 @@ pub fn update_particle_system(
             } else {
                 let mut new_node = GpuParticles3D::new_alloc();
                 new_node.set_name("ParticleSystem");
-                node_3d.add_child(&new_node.clone().upcast::<Node>());
+                add_own_visual_child(&mut node_3d, &new_node.clone().upcast::<Node>());
                 new_node
             };
 
@@ -458,6 +461,10 @@ fn apply_particle_system(
     let upper_cap = (max_particles as i32).clamp(1, MAX_AMOUNT_PER_EMITTER);
     let continuous = ((rate * lifetime as f32).ceil() as i32).max(0);
     let mut amount = continuous.max(burst_capacity as i32).clamp(1, upper_cap);
+    // Authored per-emitter amount (post per-emitter caps, pre scene-budget clamp),
+    // exposed for the scene-stats overlay: `amount` saturates at the runtime
+    // budget, so it can never signal an over-budget scene.
+    let authored_amount = amount;
     let used_elsewhere: i32 = scene
         .particle_systems
         .iter()
@@ -476,6 +483,7 @@ fn apply_particle_system(
     }
 
     node.set_amount(amount);
+    node.set_meta("dcl_authored_amount", &authored_amount.to_variant());
     node.set_lifetime(lifetime);
 
     let looping = value.r#loop.unwrap_or(true);
