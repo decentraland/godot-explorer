@@ -1,0 +1,8 @@
+[gd_resource type="ShaderMaterial" format=3 uid="uid://xnp5mcvsl5dk"]
+
+[ext_resource type="Shader" uid="uid://w5vflhqtaguc" path="res://src/ui/components/atoms/images/blur_background/soft_ellipse.gdshader" id="1_shdr"]
+
+[resource]
+shader = ExtResource("1_shdr")
+shader_parameter/core = 0.0
+shader_parameter/falloff = 2.80000004172336

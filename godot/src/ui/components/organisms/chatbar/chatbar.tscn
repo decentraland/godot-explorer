@@ -5,8 +5,6 @@
 [ext_resource type="PackedScene" uid="uid://bdlssvxebe4kt" path="res://src/ui/components/atoms/buttons/hud_button/hud_button.tscn" id="3_hud"]
 [ext_resource type="Texture2D" uid="uid://dma5nopqnm6rk" path="res://src/ui/components/atoms/buttons/hud_button/icons/hud-chat-default.svg" id="4_chdef"]
 [ext_resource type="Texture2D" uid="uid://jte1fei2oaui" path="res://src/ui/components/atoms/buttons/hud_button/icons/hud-chat-pressed.svg" id="5_chpre"]
-[ext_resource type="Texture2D" uid="uid://c45wn4gunr5go" path="res://src/ui/components/atoms/buttons/hud_button/icons/hud-discover-default.svg" id="6_dscdef"]
-[ext_resource type="Texture2D" uid="uid://ceihtq3itnap6" path="res://src/ui/components/atoms/buttons/hud_button/icons/hud-discover-pressed.svg" id="7_dscpre"]
 [ext_resource type="Texture2D" uid="uid://gamhtrgpywdx" path="res://assets/tooltip-arrow-left.svg" id="7_tw2ns"]
 [ext_resource type="Texture2D" uid="uid://btkyyrt63j7tv" path="res://src/ui/components/atoms/buttons/hud_button/icons/hud-flip-orientation.svg" id="8_flip"]
 [ext_resource type="FontFile" uid="uid://d2vlaexk003yw" path="res://assets/themes/fonts/inter/Inter-Medium.ttf" id="8_vm240"]
@@ -18,8 +16,6 @@ corner_radius_top_left = 16
 corner_radius_top_right = 16
 corner_radius_bottom_right = 16
 corner_radius_bottom_left = 16
-
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_disc"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_tw2ns"]
 bg_color = Color(0, 0, 0, 0.9019608)
@@ -110,26 +106,6 @@ theme_override_font_sizes/normal_font_size = 18
 text = "CHATBAR_YOU_CAN_SWITCH_VERTICAL_CHAT_MODE"
 vertical_alignment = 1
 
-[node name="DiscoverPanel" type="PanelContainer" parent="VBoxContainer/HBoxContainer" unique_id=876948222]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(60, 0)
-layout_mode = 2
-size_flags_vertical = 4
-theme_override_styles/panel = SubResource("StyleBoxEmpty_disc")
-
-[node name="VBoxContainer_Buttons" type="HBoxContainer" parent="VBoxContainer/HBoxContainer/DiscoverPanel" unique_id=135716532]
-layout_mode = 2
-alignment = 1
-
-[node name="HudButton_Discover" parent="VBoxContainer/HBoxContainer/DiscoverPanel/VBoxContainer_Buttons" unique_id=1860449953 instance=ExtResource("3_hud")]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 4
-size_flags_vertical = 4
-icon = ExtResource("6_dscdef")
-icon_normal = ExtResource("6_dscdef")
-icon_pressed = ExtResource("7_dscpre")
-
 [node name="Panel_LoadScenes" type="PanelContainer" parent="VBoxContainer/HBoxContainer" unique_id=1690380546]
 unique_name_in_owner = true
 visible = false
@@ -149,5 +125,4 @@ expand_icon = true
 
 [connection signal="pressed" from="VBoxContainer/HBoxContainer/Button_Chat" to="." method="_on_button_chat_pressed"]
 [connection signal="pressed" from="VBoxContainer/HBoxContainer/Button_Flip" to="." method="_on_button_flip_pressed"]
-[connection signal="pressed" from="VBoxContainer/HBoxContainer/DiscoverPanel/VBoxContainer_Buttons/HudButton_Discover" to="." method="_on_hud_button_discover_pressed"]
 [connection signal="pressed" from="VBoxContainer/HBoxContainer/Panel_LoadScenes/Button_LoadScenes" to="." method="_on_button_load_scenes_pressed"]
