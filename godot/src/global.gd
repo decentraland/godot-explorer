@@ -576,6 +576,12 @@ func _ready():
 	self.config = ConfigData.new()
 	config.load_from_settings_file()
 
+	# Restore profile particle budgets + avatar dust gate: the Rust atomics and
+	# the GDScript toggle default to full-budget, and nothing re-applies them
+	# until the user picks a profile again.
+	GraphicSettings.apply_particle_quality(config.particle_quality)
+	AvatarAnimHelpers.apply_particles_enabled(config.particle_quality > 0)
+
 	# Campaign token (#2670). Deliberately after the config load: the fake/baked deeplink is
 	# parsed further up in _ready, long before ConfigData exists, so capturing there wrote to
 	# a config that was then replaced by the one read from disk. deep_link_obj is eagerly

@@ -17,6 +17,9 @@ const LOD_MID := 1
 const LOD_CROSSFADE := 2
 const LOD_FAR := 3
 
+# Global toggle for avatar move/jump/land dust particles. Set from graphic profile.
+static var particles_enabled: bool = true
+
 
 static func set_meshes_visible(avatar, visible: bool) -> void:
 	if not avatar._mesh_lod_visibility_captured:
@@ -129,7 +132,24 @@ static func ensure_anim_active(avatar) -> void:
 		avatar.animation_tree.active = true
 
 
+static func apply_particles_enabled(enabled: bool) -> void:
+	particles_enabled = enabled
+	# No Global here: --script test runs don't load autoloads.
+	var tree := Engine.get_main_loop() as SceneTree
+	if tree == null:
+		return
+	var root := tree.root
+	if not is_instance_valid(root):
+		return
+	for avatar in root.find_children("*", "DclAvatar", true, false):
+		if not is_instance_valid(avatar):
+			continue
+		var show: bool = enabled and avatar._lod_state == avatar.LODState.FULL
+		set_particles_visible(avatar, show)
+
+
 static func set_particles_visible(avatar, visible: bool) -> void:
+	visible = visible and particles_enabled
 	for node_name in ["GPUParticles3D_Move", "GPUParticles3D_Jump", "GPUParticles3D_Land"]:
 		var node = avatar.get_node_or_null(node_name)
 		if node == null:
