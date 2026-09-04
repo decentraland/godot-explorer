@@ -16,7 +16,7 @@ use crate::{
         },
     },
     godot_classes::dcl_global::DclGlobal,
-    scene_runner::scene::Scene,
+    scene_runner::{godot_dcl_scene::add_own_visual_child, scene::Scene},
 };
 use godot::{classes::Node, prelude::*};
 
@@ -223,7 +223,7 @@ pub fn update_avatar_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                     // the default "NPC" tag flashes on screen until that deferred call lands.
                     new_avatar_shape.set("is_avatar_shape", &true.to_variant());
                     new_avatar_shape.set_name("AvatarShape");
-                    node_3d.add_child(&new_avatar_shape.clone().upcast::<Node>());
+                    add_own_visual_child(&mut node_3d, &new_avatar_shape.clone().upcast::<Node>());
 
                     // Remove trigger detection for AvatarShapes - scene NPCs should not trigger areas
                     new_avatar_shape.call("remove_trigger_detection", &[]);

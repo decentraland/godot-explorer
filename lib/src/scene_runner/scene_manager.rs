@@ -30,6 +30,7 @@ use godot::{
     classes::{
         control::{LayoutPreset, MouseFilter},
         notify::NodeNotification,
+        node::AutoTranslateMode,
         PhysicsRayQueryParameters3D,
     },
     prelude::*,
@@ -384,6 +385,10 @@ impl SceneManager {
         let mut base_ui = DclUiControl::new_alloc();
         base_ui.set_anchors_preset(LayoutPreset::FULL_RECT);
         base_ui.set_mouse_filter(MouseFilter::IGNORE);
+        // SDK scene UI is creator-authored content, never explorer copy: the scene
+        // decides what language it speaks. Set on the root so the whole per-scene UI
+        // subtree inherits it and no Label/Button added later gets silently localized.
+        base_ui.set_auto_translate_mode(AutoTranslateMode::DISABLED);
         base_ui.set_name("scenes_ui");
         let callable_on_ui_resize = self.base().callable("_on_ui_resize");
         base_ui.connect("resized", &callable_on_ui_resize);
@@ -2877,6 +2882,8 @@ impl INode for SceneManager {
         let callable_on_ui_resize = self.base().callable("_on_ui_resize");
 
         self.base_ui.connect("resized", &callable_on_ui_resize);
+        self.base_ui
+            .set_auto_translate_mode(AutoTranslateMode::DISABLED);
         self.base_ui.set_name("scenes_ui");
         self.ui_canvas_information = self.create_ui_canvas_information();
 
@@ -3204,7 +3211,10 @@ impl INode for SceneManager {
             let passport_disabled: bool = avatar.get("passport_disabled").try_to().unwrap_or(false);
             if !is_avatar_shape && !avatar_id.is_empty() && !passport_disabled {
                 let mut profile_dict = VarDictionary::new();
-                profile_dict.set("text_pet_down", "View profile");
+                // A translation key, resolved in tooltip_label.gd. The tooltip label cannot
+                // auto-translate (it normally carries creator-authored PointerEvents text), and
+                // explorer.gd matches this same value to honour the "Hide View Profile" setting.
+                profile_dict.set("text_pet_down", "TOOLTIP_VIEW_PROFILE");
                 profile_dict.set("action", "ia_pointer");
                 tooltips.push(&profile_dict.to_variant());
             }

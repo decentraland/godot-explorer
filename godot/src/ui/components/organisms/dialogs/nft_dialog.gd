@@ -5,6 +5,9 @@ var opensea_url = "https://decentraland.org/"
 
 
 func _ready():
+	# Label_Title never auto-translates (it ends up holding the NFT's own name),
+	# so the loading placeholder is resolved here rather than in the scene.
+	%Label_Title.text = tr("DIALOGS_LOADING_NFT")
 	%VBoxContainer_InfoPanel.hide()
 	%Button_ViewOnOpenSea.disabled = true
 

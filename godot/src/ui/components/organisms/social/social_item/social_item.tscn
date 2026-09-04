@@ -185,6 +185,7 @@ layout_mode = 2
 mouse_filter = 2
 
 [node name="Nickname" type="Label" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Data/VBoxContainer_Nickname/HBoxContainer" unique_id=666961752]
+auto_translate_mode = 2
 unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 1
@@ -208,6 +209,7 @@ expand_mode = 2
 stretch_mode = 4
 
 [node name="Label_Place" type="Label" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Data/VBoxContainer_Nickname" unique_id=955882978]
+auto_translate_mode = 2
 unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 1
@@ -263,7 +265,7 @@ mouse_default_cursor_shape = 2
 theme = ExtResource("10_2kre2")
 theme_type_variation = &"ButtonLittle"
 theme_override_font_sizes/font_size = 16
-text = "JUMP"
+text = "SOCIAL_ITEM_JUMP"
 icon = ExtResource("14_pm4ta")
 expand_icon = true
 
@@ -297,7 +299,7 @@ theme_override_styles/disabled = SubResource("StyleBoxFlat_o0a4w")
 theme_override_styles/disabled_mirrored = SubResource("StyleBoxFlat_5x3e0")
 theme_override_styles/focus = SubResource("StyleBoxFlat_4fpp1")
 toggle_mode = true
-text = "ADD FRIEND"
+text = "SOCIAL_ITEM_ADD_FRIEND"
 icon = ExtResource("13_5r2pa")
 
 [node name="PanelContainer_Request" type="PanelContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Data/HBoxContainer_Nearby" unique_id=1717622638]
@@ -309,7 +311,7 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_40r3o")
 [node name="Label_PendingRequest" type="Label" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Data/HBoxContainer_Nearby/PanelContainer_Request" unique_id=584033093]
 unique_name_in_owner = true
 layout_mode = 2
-text = "PENDING"
+text = "SOCIAL_ITEM_PENDING"
 label_settings = SubResource("LabelSettings_m2rwh")
 horizontal_alignment = 1
 
@@ -349,7 +351,7 @@ theme = ExtResource("10_2kre2")
 theme_type_variation = &"ButtonLittle"
 theme_override_constants/icon_max_width = 20
 theme_override_font_sizes/font_size = 16
-text = "ACCEPT"
+text = "SOCIAL_ITEM_ACCEPT"
 icon = ExtResource("15_0guw6")
 
 [node name="HBoxContainer_Blocked" type="HBoxContainer" parent="MarginContainer/Panel_NearbyPlayerItem/MarginContainer/HBoxContainer/Data" unique_id=1460046681]
@@ -371,7 +373,7 @@ mouse_default_cursor_shape = 2
 theme = ExtResource("10_2kre2")
 theme_type_variation = &"SecondaryLittle"
 theme_override_font_sizes/font_size = 16
-text = "UNBLOCK"
+text = "SOCIAL_ITEM_UNBLOCK"
 icon_alignment = 1
 expand_icon = true
 

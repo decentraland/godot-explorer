@@ -264,6 +264,7 @@ size_flags_horizontal = 3
 size_flags_vertical = 4
 
 [node name="RichTextLabel_Title" type="RichTextLabel" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/VBoxContainer/HBoxContainer/HBoxContainer2" unique_id=1894746059]
+auto_translate_mode = 2
 unique_name_in_owner = true
 custom_minimum_size = Vector2(200, 54)
 layout_mode = 2
@@ -297,10 +298,11 @@ theme_override_constants/separation = 8
 
 [node name="Label_by" type="Label" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/VBoxContainer/HBoxContainer_Creator" unique_id=1656743858]
 layout_mode = 2
-text = "by"
+text = "COMMON_BY"
 label_settings = SubResource("LabelSettings_i8f38")
 
 [node name="Label_Creator" type="Label" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/VBoxContainer/HBoxContainer_Creator" unique_id=693197006]
+auto_translate_mode = 2
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
@@ -419,6 +421,7 @@ expand_mode = 1
 stretch_mode = 5
 
 [node name="Label_Location" type="Label" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/HBoxContainer_Stats/HBoxContainer_Location" unique_id=1259360647]
+auto_translate_mode = 2
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
@@ -446,6 +449,7 @@ expand_mode = 1
 stretch_mode = 5
 
 [node name="Label_Likes" type="Label" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/HBoxContainer_Stats/HBoxContainer_Likes" unique_id=945315326]
+auto_translate_mode = 2
 unique_name_in_owner = true
 layout_mode = 2
 theme = ExtResource("5_jnv06")
@@ -487,7 +491,7 @@ layout_mode = 2
 theme_override_colors/font_color = Color(0.443137, 0.419608, 0.486275, 1)
 theme_override_fonts/font = ExtResource("4_wln2f")
 theme_override_font_sizes/font_size = 12
-text = "DESCRIPTION"
+text = "COMMON_DESCRIPTION"
 label_settings = SubResource("LabelSettings_4wgrb")
 clip_text = true
 
@@ -498,6 +502,7 @@ theme_override_constants/separation = 16
 theme_override_styles/separator = SubResource("StyleBoxEmpty_4wgrb")
 
 [node name="Label_Description" type="RichTextLabel" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/VBoxContainer_Description" unique_id=841829180]
+auto_translate_mode = 2
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 20)
 layout_mode = 2
@@ -594,7 +599,7 @@ alignment = 1
 
 [node name="Label" type="Label" parent="PanelContainer_Footer/MarginContainer/HBoxContainer3/Button_JumpIn/HBoxContainer_Content" unique_id=888049014]
 layout_mode = 2
-text = "JUMP IN"
+text = "COMMON_JUMP_IN"
 label_settings = SubResource("LabelSettings_db46w")
 
 [node name="MarginContainer" type="MarginContainer" parent="PanelContainer_Footer/MarginContainer/HBoxContainer3/Button_JumpIn/HBoxContainer_Content" unique_id=2077763562]
