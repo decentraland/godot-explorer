@@ -266,7 +266,7 @@ func _generate_fake_notification() -> Dictionary:
 			"metadata":
 			{
 				"tokenName": "Test token name",
-				"tokenImage": "https://",
+				"tokenImage": "https://peer.decentraland.org/lambdas/collections/contents/urn:decentraland:off-chain:base-avatars:green_hoodie/thumbnail",
 				"tokenRarity": "rare",
 				"title": "A test NFT",
 				"description": "This is a test NFT"
@@ -279,7 +279,7 @@ func _generate_fake_notification() -> Dictionary:
 			"metadata":
 			{
 				"tokenName": "Test token name",
-				"tokenImage": "https://",
+				"tokenImage": "https://peer.decentraland.org/lambdas/collections/contents/urn:decentraland:off-chain:base-avatars:green_hoodie/thumbnail",
 				"tokenRarity": "rare",
 				"tokenCategory": "Lowerbody",
 				"title": "A test NFT",
