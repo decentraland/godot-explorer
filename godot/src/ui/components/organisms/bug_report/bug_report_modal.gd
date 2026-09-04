@@ -2,16 +2,17 @@ class_name BugReportModal
 extends ModalShell
 
 ## Native bug report form (issue #2652). Collects an issue type, a description
-## and up to three screenshots, then files an Intercom ticket via
-## BugReportService.
+## and a screenshot, then files an Intercom ticket via BugReportService.
 ##
 ## The chrome comes from ModalShell and every control is a library component
 ## (DropdownList, DclTextEdit, FieldLabel, ScreenshotSlot, ModalActions), so this
 ## script holds only form logic — no styling.
 ##
-## Only the FIRST screenshot is transmitted: the intercom-proxy's `evidence`
-## field holds a single image. The three slots exist because the approved design
-## calls for them; sending the rest needs a proxy change (see issue #2652).
+## TEMPORARY: the approved design has three screenshot slots, but the
+## intercom-proxy's `evidence` field carries a single image, so slots 2 and 3
+## offered an upload that was silently dropped at submit — worse than not
+## offering it. They are hidden until the proxy accepts multiple images; see
+## MAX_SCREENSHOTS.
 
 signal submitted(ticket_id: String)
 signal cancelled
@@ -21,7 +22,10 @@ const SCREENSHOT_SLOT = preload(
 	"res://src/ui/components/molecules/screenshot_slot/screenshot_slot.tscn"
 )
 
-const MAX_SCREENSHOTS := 3
+# TEMPORARY: 3 in the approved design, capped at 1 while the proxy accepts only one
+# image (issue #2652). Restoring the design row is this constant and nothing else —
+# the slot/gap logic below is already written for the three-tile case.
+const MAX_SCREENSHOTS := 1
 
 # Design uses a wider gap when the row isn't full, and tightens it at three so
 # the tiles still fit the content column.
