@@ -42,7 +42,9 @@ func set_texture(texture: Texture2D) -> void:
 	texture_no_image.hide()
 	_image_ready = true
 	_is_loading = false
-	_apply_loaded_style(Color.WHITE)
+	# Use the configured background so a texture with transparency shows it (e.g. a rarity fill)
+	# instead of a hard white panel. Opaque images cover it, so existing full-bleed uses are unchanged.
+	_apply_loaded_style(background_color)
 	image_loaded.emit()
 
 

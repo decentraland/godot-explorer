@@ -96,7 +96,11 @@ func _show_event(metadata: Dictionary) -> void:
 ## Received item/reward: rounded thumbnail with an outline coloured by its rarity.
 func _show_item(metadata: Dictionary) -> void:
 	item_image.show()
-	item_image.border_color = _rarity_color(metadata.get("tokenRarity", ""))
+	# Rarity gives the frame its bright edge and a darker fill behind the (often transparent)
+	# wearable thumbnail — the backpack look — so an alpha image no longer sits on hard white.
+	var rarity_color = _rarity_color(metadata.get("tokenRarity", ""))
+	item_image.border_color = rarity_color
+	item_image.background_color = rarity_color.darkened(0.5)
 	var url: String = metadata.get("tokenImage", metadata.get("image", ""))
 	if _is_loadable_url(url):
 		item_image.load_from_url(url)
