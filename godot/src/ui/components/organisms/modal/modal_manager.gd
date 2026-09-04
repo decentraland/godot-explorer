@@ -18,6 +18,8 @@ const MODAL_SCENE_PATH = "res://src/ui/components/organisms/modal/modal.tscn"
 const TRAVEL_MODAL_SCENE_PATH = "res://src/ui/components/organisms/modal/travel_modal.tscn"
 const INPUT_MODAL_SCENE_PATH = "res://src/ui/components/organisms/input_modal/input_modal.tscn"
 const CODE_MODAL_SCENE_PATH = "res://src/ui/components/organisms/code_modal/code_modal.tscn"
+const BUG_REPORT_MODAL_SCENE_PATH = "res://src/ui/components/organisms/bug_report/bug_report_modal.tscn"
+
 const REWARD_MODAL_SCENE_PATH = "res://src/ui/components/organisms/reward_modal/reward_modal.tscn"
 const UPGRADE_MODAL_SCENE_PATH = "res://src/ui/components/organisms/upgrade_modal/upgrade_modal.tscn"
 
@@ -25,11 +27,13 @@ var current_modal: Modal = null
 var current_travel_modal: TravelModal = null
 var current_input_modal: InputModal = null
 var current_code_modal: CodeModal = null
+var current_bug_report_modal: BugReportModal = null
 var current_reward_modal: RewardModal = null
 var current_upgrade_modal: UpgradeModal = null
 var modal_scene: PackedScene = null
 var travel_modal_scene: PackedScene = null
 var input_modal_scene: PackedScene = null
+var bug_report_modal_scene: PackedScene = null
 var code_modal_scene: PackedScene = null
 var reward_modal_scene: PackedScene = null
 var upgrade_modal_scene: PackedScene = null
@@ -39,6 +43,7 @@ var _suppress_ban_kicked: bool = false
 var _canvas_layer: CanvasLayer = null
 var _travel_canvas_layer: CanvasLayer = null
 var _input_canvas_layer: CanvasLayer = null
+var _bug_report_canvas_layer: CanvasLayer = null
 var _code_canvas_layer: CanvasLayer = null
 var _reward_canvas_layer: CanvasLayer = null
 var _upgrade_canvas_layer: CanvasLayer = null
@@ -85,6 +90,9 @@ static var low_spec_iphone_title := TranslationKey.new("MODAL_LOW_SPEC_IPHONE_TI
 static var low_spec_iphone_body := TranslationKey.new("MODAL_LOW_SPEC_IPHONE_BODY")
 static var low_spec_iphone_primary := TranslationKey.new("MODAL_LOW_SPEC_IPHONE_PRIMARY")
 
+static var bug_report_success_title := TranslationKey.new("MODAL_BUG_REPORT_SUCCESS_TITLE")
+static var bug_report_success_body := TranslationKey.new("MODAL_BUG_REPORT_SUCCESS_BODY")
+static var bug_report_success_primary := TranslationKey.new("MODAL_BUG_REPORT_SUCCESS_PRIMARY")
 static var purchase_failed_title := TranslationKey.new("MODAL_PURCHASE_FAILED_TITLE")
 static var purchase_failed_body := TranslationKey.new("MODAL_PURCHASE_FAILED_BODY")
 static var purchase_failed_primary := TranslationKey.new("MODAL_PURCHASE_FAILED_PRIMARY")
@@ -149,6 +157,11 @@ func _ready() -> void:
 	code_modal_scene = load(CODE_MODAL_SCENE_PATH)
 	if not code_modal_scene:
 		push_error("ModalManager: Could not load code modal scene at: " + CODE_MODAL_SCENE_PATH)
+	bug_report_modal_scene = load(BUG_REPORT_MODAL_SCENE_PATH)
+	if not bug_report_modal_scene:
+		push_error(
+			"ModalManager: Could not load bug report modal scene at: " + BUG_REPORT_MODAL_SCENE_PATH
+		)
 	reward_modal_scene = load(REWARD_MODAL_SCENE_PATH)
 	if not reward_modal_scene:
 		push_error("ModalManager: Could not load reward modal scene at: " + REWARD_MODAL_SCENE_PATH)
@@ -586,6 +599,30 @@ func async_show_low_spec_iphone_modal() -> void:
 
 
 ## Shows a purchase failed modal
+## Confirmation shown after a bug report is filed (issue #2652). Reuses the
+## generic Modal, which already floats its icon over the panel's top edge the
+## way the design calls for.
+func async_show_bug_report_success_modal() -> void:
+	if not is_instance_valid(current_modal):
+		if not await _async_create_modal():
+			return
+		if not NodeGuard.is_alive(
+			current_modal, "ModalManager.async_show_bug_report_success_modal"
+		):
+			return
+
+	current_modal.set_title(bug_report_success_title)
+	current_modal.set_body(bug_report_success_body)
+	current_modal.set_primary_button_text(bug_report_success_primary)
+	current_modal.show_icon(Modal.MODAL_SUCCESS_ICON)
+	current_modal.hide_url()
+	current_modal.button_secondary.hide()
+	current_modal.show()
+
+	_disconnect_button_signals()
+	current_modal.button_primary.pressed.connect(close_current_modal)
+
+
 func async_show_purchase_failed_modal() -> void:
 	if not is_instance_valid(current_modal):
 		if not await _async_create_modal():
@@ -783,6 +820,27 @@ func async_show_input_modal(
 	modal.setup(title, subtitle, placeholder, confirm_text, cancel_text, validation)
 	modal.open()
 	return modal
+
+
+## Opens the native bug report form (issue #2652). `initial_screenshot` pre-fills
+## the first slot — the viewport captured when Settings opened. Returns the modal
+## so the caller can connect `submitted` / `failed`.
+func async_show_bug_report_modal(
+	initial_screenshot: PackedByteArray = PackedByteArray()
+) -> BugReportModal:
+	var modal = await _async_create_bug_report_modal()
+	if not is_instance_valid(modal):
+		return null
+	modal.set_initial_screenshot(initial_screenshot)
+	modal.show()
+	return modal
+
+
+## Closes the current bug report modal if it exists
+func close_bug_report_modal() -> void:
+	if is_instance_valid(current_bug_report_modal):
+		current_bug_report_modal.close()
+		_remove_bug_report_modal()
 
 
 ## Closes the current input modal if it exists
@@ -1231,6 +1289,63 @@ func _async_create_input_modal() -> InputModal:
 		return null
 
 	return modal
+
+
+func _async_create_bug_report_modal() -> BugReportModal:
+	if is_instance_valid(current_bug_report_modal):
+		close_bug_report_modal()
+
+	if not bug_report_modal_scene:
+		push_error("ModalManager: Bug report modal scene is not loaded")
+		return null
+
+	var modal = bug_report_modal_scene.instantiate() as BugReportModal
+	if not modal:
+		push_error("ModalManager: Could not instantiate bug report modal")
+		return null
+
+	if is_instance_valid(_bug_report_canvas_layer):
+		_bug_report_canvas_layer.get_parent().remove_child(_bug_report_canvas_layer)
+		_bug_report_canvas_layer.queue_free()
+
+	_bug_report_canvas_layer = CanvasLayer.new()
+	_bug_report_canvas_layer.layer = 100
+
+	var root = get_tree().root
+	if not root:
+		push_error("ModalManager: Could not get scene tree root")
+		return null
+
+	root.add_child(_bug_report_canvas_layer)
+	_bug_report_canvas_layer.add_child(modal)
+	current_bug_report_modal = modal
+
+	current_bug_report_modal.tree_exited.connect(_on_bug_report_modal_tree_exited)
+
+	await get_tree().process_frame
+	await get_tree().process_frame
+
+	# Those two frames are a window in which the modal can be freed — see NodeGuard.
+	if not NodeGuard.is_alive(modal, "ModalManager._async_create_bug_report_modal"):
+		return null
+
+	return modal
+
+
+func _on_bug_report_modal_tree_exited() -> void:
+	# Cleared unconditionally — see _on_modal_tree_exited.
+	current_bug_report_modal = null
+
+
+func _remove_bug_report_modal() -> void:
+	if is_instance_valid(current_bug_report_modal):
+		if current_bug_report_modal.tree_exited.is_connected(_on_bug_report_modal_tree_exited):
+			current_bug_report_modal.tree_exited.disconnect(_on_bug_report_modal_tree_exited)
+		current_bug_report_modal.queue_free()
+	current_bug_report_modal = null
+	if is_instance_valid(_bug_report_canvas_layer):
+		_bug_report_canvas_layer.queue_free()
+	_bug_report_canvas_layer = null
 
 
 func _on_input_modal_tree_exited() -> void:

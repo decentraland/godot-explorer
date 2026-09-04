@@ -240,7 +240,7 @@ size_flags_horizontal = 4
 size_flags_vertical = 0
 texture = ExtResource("6_rvkw6")
 expand_mode = 1
-stretch_mode = 4
+stretch_mode = 5
 
 [connection signal="gui_input" from="." to="." method="_on_gui_input"]
 [connection signal="pressed" from="PanelContainer/MarginContainer_Content/VBoxContainer/HBoxContainer_Buttons/Button_Secondary" to="." method="_on_button_secondary_pressed"]

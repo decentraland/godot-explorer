@@ -160,3 +160,9 @@ godot/src/notifications_manager.gd	Found %d attended events (filtered from %d to
 godot/src/notifications_manager.gd	Mark as read error: 
 godot/src/notifications_manager.gd	is_scheduled = 0 AND trigger_timestamp > %d
 godot/src/notifications_manager.gd	trigger_timestamp > %d
+
+# Intercom ticket attribute values, never shown in the app: "%d MB" fills the ticket's RAM
+# field and "%s (%s)" composes "<os> (<brand> <model>)" for its Operating System field. The
+# support team reads these in Intercom, in English.
+godot/src/bug_report/bug_report_service.gd	%d MB
+godot/src/bug_report/bug_report_service.gd	%s (%s)

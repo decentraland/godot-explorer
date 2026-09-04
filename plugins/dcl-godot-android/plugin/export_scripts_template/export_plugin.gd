@@ -41,6 +41,8 @@ class AndroidExportPlugin extends EditorExportPlugin:
 	func _get_android_dependencies(platform, debug):
 		return PackedStringArray([
 			"androidx.browser:browser:1.5.0",
+			# EXIF orientation for photos picked from the gallery
+			"androidx.exifinterface:exifinterface:1.3.7",
 			# ExoPlayer dependencies for video playback
 			"androidx.media3:media3-exoplayer:1.4.1",
 			"androidx.media3:media3-exoplayer-dash:1.4.1",

@@ -73,6 +73,8 @@ android {
 dependencies {
     implementation("org.godotengine:godot:4.3.0.stable")
     implementation("androidx.browser:browser:1.5.0")
+    // EXIF orientation for photos picked from the gallery
+    implementation("androidx.exifinterface:exifinterface:1.3.7")
 
     // ExoPlayer dependencies for video playback
     // Using 'api' instead of 'implementation' to make dependencies transitive

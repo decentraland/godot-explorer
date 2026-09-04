@@ -1311,7 +1311,6 @@ layout_mode = 2
 theme_override_constants/separation = 44
 
 [node name="Button_ReportBug" type="Button" parent="VBoxContainer/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Account/SectionReport/VBoxContainer/VBoxContainer" unique_id=331652276]
-visible = false
 custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 size_flags_horizontal = 0

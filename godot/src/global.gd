@@ -475,6 +475,7 @@ func send_haptic_feedback(duration_ms: int = 20, amplitude: float = -1.0) -> voi
 # gdlint: ignore=async-function-name
 func _ready():
 	print("[Startup] global._ready start: %dms" % (Time.get_ticks_msec() - _startup_time))
+	BugReportCapture.listen_for_settings(self)
 	# Bench-only: uncap FPS / disable vsync before any code path can re-pin
 	# Engine.max_fps. Real users keep their saved cap + vsync; mobile bench
 	# uncaps via gp_benchmark_runner at the load->settling transition.
@@ -1560,7 +1561,13 @@ func _http_method_to_string(method: int) -> String:
 			return "GET"  # Default fallback
 
 
-func async_signed_fetch(url: String, method: int, _body: String = ""):
+func async_signed_fetch(
+	url: String,
+	method: int,
+	_body: String = "",
+	_metadata_override: String = "",
+	_extra_headers: Dictionary = {}
+):
 	# Decentraland signed-fetch (ADR-44) carries the request metadata in the
 	# x-identity-metadata header. The server verifier requires it to be a JSON
 	# object: a bodyless request would otherwise be signed as `null`, which the
@@ -1568,7 +1575,13 @@ func async_signed_fetch(url: String, method: int, _body: String = ""):
 	# "Invalid chain metadata". Sign an empty object `{}` for bodyless requests
 	# (backward-compatible: older verifiers accept both), leaving the actual HTTP
 	# body untouched.
-	var metadata := _body if not _body.is_empty() else "{}"
+	#
+	# Most DCL services verify the body as the signed metadata. Some don't: the
+	# intercom-proxy signs `{}` and leaves the JSON body unsigned, so callers can
+	# override rather than fork this helper.
+	var metadata := _metadata_override
+	if metadata.is_empty():
+		metadata = _body if not _body.is_empty() else "{}"
 	var headers_promise = Global.player_identity.async_get_identity_headers(
 		url, metadata, _http_method_to_string(method)
 	)
@@ -1580,6 +1593,8 @@ func async_signed_fetch(url: String, method: int, _body: String = ""):
 	var headers: Dictionary = headers_result
 	if not _body.is_empty():
 		headers["Content-Type"] = "application/json"
+	for key in _extra_headers:
+		headers[key] = _extra_headers[key]
 
 	var response_promise: Promise = Global.http_requester.request_json(url, method, _body, headers)
 

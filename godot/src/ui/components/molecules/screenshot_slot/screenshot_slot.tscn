@@ -1,0 +1,218 @@
+[gd_scene load_steps=11 format=3]
+
+[ext_resource type="Script" path="res://src/ui/components/molecules/screenshot_slot/screenshot_slot.gd" id="1_slot"]
+[ext_resource type="Texture2D" path="res://assets/themes/icons/close.svg" id="2_close"]
+[ext_resource type="Texture2D" path="res://assets/themes/dark_dcl_theme/icons/plus.svg" id="3_plus"]
+
+[sub_resource type="StyleBoxFlat" id="SB_filled"]
+bg_color = Color(0, 0, 0, 1)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+shadow_color = Color(0, 0, 0, 0.25)
+shadow_size = 2
+shadow_offset = Vector2(0, 4)
+
+[sub_resource type="StyleBoxFlat" id="SB_border_pressed"]
+bg_color = Color(0, 0, 0, 0)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.8745098, 0.6117647, 1, 1)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
+[sub_resource type="StyleBoxFlat" id="SB_empty_pressed"]
+bg_color = Color(0, 0, 0, 0.4)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.8745098, 0.6117647, 1, 1)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
+[sub_resource type="StyleBoxFlat" id="SB_border"]
+bg_color = Color(0, 0, 0, 0)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.9254902, 0.9215686, 0.9294118, 1)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
+[sub_resource type="StyleBoxFlat" id="SB_empty"]
+bg_color = Color(0, 0, 0, 0.4)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.08627451, 0.08235294, 0.09411765, 1)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+shadow_color = Color(0, 0, 0, 0.25)
+shadow_size = 2
+shadow_offset = Vector2(0, 4)
+
+[sub_resource type="StyleBoxFlat" id="SB_badge"]
+bg_color = Color(0.08627451, 0.08235294, 0.09411765, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxEmpty" id="SB_transparent"]
+
+[node name="ScreenshotSlot" type="Control"]
+custom_minimum_size = Vector2(0, 170)
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_slot")
+
+[node name="Panel_Filled" type="PanelContainer" parent="."]
+unique_name_in_owner = true
+clip_children = 1
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("SB_filled")
+
+[node name="TextureRect_Image" type="TextureRect" parent="Panel_Filled"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 6
+
+[node name="Panel_Border" type="PanelContainer" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("SB_border")
+
+[node name="Panel_Empty" type="PanelContainer" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("SB_empty")
+
+[node name="TextureRect_Plus" type="TextureRect" parent="."]
+unique_name_in_owner = true
+modulate = Color(0.9882353, 0.9882353, 0.9882353, 0.3)
+custom_minimum_size = Vector2(32, 32)
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -16.0
+offset_top = -16.0
+offset_right = 16.0
+offset_bottom = 16.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("3_plus")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Button_Add" type="Button" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/normal = SubResource("SB_transparent")
+theme_override_styles/hover = SubResource("SB_transparent")
+theme_override_styles/pressed = SubResource("SB_transparent")
+theme_override_styles/focus = SubResource("SB_transparent")
+theme_override_styles/disabled = SubResource("SB_transparent")
+
+[node name="Button_Delete" type="Button" parent="."]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(84, 84)
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -51.0
+offset_top = -35.0
+offset_right = 33.0
+offset_bottom = 49.0
+grow_horizontal = 0
+theme_override_styles/normal = SubResource("SB_transparent")
+theme_override_styles/hover = SubResource("SB_transparent")
+theme_override_styles/pressed = SubResource("SB_transparent")
+theme_override_styles/focus = SubResource("SB_transparent")
+theme_override_styles/disabled = SubResource("SB_transparent")
+
+[node name="Panel_Badge" type="Panel" parent="Button_Delete"]
+custom_minimum_size = Vector2(32, 32)
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -16.0
+offset_top = -16.0
+offset_right = 16.0
+offset_bottom = 16.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("SB_badge")
+
+[node name="TextureRect_Icon" type="TextureRect" parent="Button_Delete/Panel_Badge"]
+custom_minimum_size = Vector2(12, 12)
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -6.0
+offset_top = -6.0
+offset_right = 6.0
+offset_bottom = 6.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_close")
+expand_mode = 1
+stretch_mode = 5
+
+[connection signal="pressed" from="Button_Add" to="." method="_on_button_add_pressed"]
+[connection signal="pressed" from="Button_Delete" to="." method="_on_button_delete_pressed"]
