@@ -76,8 +76,7 @@ const _CREDITS_BY_PRODUCT := {
 	"credits_tier_b3": 260,
 }
 
-# HTTP verb names for the Request Result event. Godot has no built-in mapping and
-# only these two are used by the IAP endpoints.
+# Godot has no built-in verb mapping; only these two are used here.
 const _METHOD_NAMES := {
 	HTTPClient.METHOD_GET: "GET",
 	HTTPClient.METHOD_POST: "POST",
@@ -185,16 +184,11 @@ var _transaction_history: Array = []
 var _overlay_token: int = 0
 var _overlay: CanvasLayer = null
 var _purchase_in_flight: bool = false
-# Authoritative StoreKit environment and how it was determined, retained after
-# _on_environment_resolved so analytics_context() can report which backend this
-# device is actually pointed at.
+# Retained from _on_environment_resolved for analytics_context().
 var _env_authoritative: String = ""
 var _env_source: String = ""
 var _can_make_payments: bool = false
-# Whether _apply_storekit_env switched to Option D, and — when it did not — which
-# gate stopped it. A sandbox device that never switched is talking to the
-# production credits-server and cannot complete a purchase; nothing else we emit
-# records that.
+# Whether _apply_storekit_env switched, and which gate stopped it if not.
 var _option_d_applied: bool = false
 var _option_d_skip_reason: String = ""
 # Time.get_ticks_msec() at the last purchase() press, for the outcome's duration.
@@ -240,7 +234,6 @@ func report_environment_to_analytics() -> void:
 func _on_environment_resolved(environment: String, source: String, resolve_ms: float) -> void:
 	var env_at_ms := Time.get_ticks_msec() - Global._startup_time
 	var matched := environment == _env_sync_value
-	# Retained for analytics_context().
 	_env_authoritative = environment
 	_env_source = source
 	_can_make_payments = _store_kit.can_make_payments()
@@ -298,9 +291,7 @@ func _on_environment_resolved(environment: String, source: String, resolve_ms: f
 # before this has applied.
 #
 # Gated on two conditions so it never overrides a developer/QA choice:
-#  - PRODUCTION builds only (release export template). A debug/dev build run on a
-#    device with a sandbox Apple ID also reports `sandbox`, but there the dev's
-#    chosen env (default org or --dclenv) must be respected.
+#  - Not on `-dev` builds: there the dev's chosen env (default org or --dclenv) wins.
 #  - Only an EXPLICIT `dclenv=org` exempts from the switch. Passing
 #    `decentraland://open?dclenv=org` (or `--dclenv org`) means "really use the prod
 #    .org backend" and wins. Any OTHER explicit env is not special-cased here — it
@@ -310,15 +301,13 @@ func _on_environment_resolved(environment: String, source: String, resolve_ms: f
 # environment on every launch.
 func _apply_storekit_env(environment: String) -> void:
 	if environment != "sandbox":
-		# The correct no-op: a real App Store install belongs on .org.
 		_option_d_skip_reason = "not_sandbox"
 		return
-	# Only production (release export template) builds auto-switch. A debug/dev build
-	# run on a device with a sandbox Apple ID also reports "sandbox", but there we must
-	# respect the dev's chosen env (org by default or --dclenv).
-	if OS.is_debug_build():
-		print("[IAP] StoreKit sandbox on a debug build — not forcing the Option D env")
-		_option_d_skip_reason = "debug_build"
+	# NOT OS.is_debug_build(): the iOS export always uses the debug template, so that
+	# check disabled this switch on every shipped build, review included.
+	if Global.is_dev():
+		print("[IAP] StoreKit sandbox on a dev build — not forcing the Option D env")
+		_option_d_skip_reason = "dev_build"
 		return
 	var current := str(DclGlobal.get_dcl_environment())
 	# The only explicit override that exempts from the switch is dclenv=org
@@ -363,13 +352,8 @@ func async_await_env_resolved(timeout_sec: float = 5.0) -> void:
 		)
 
 
-## The backend-selection snapshot, as a JSON string for an analytics event's
-## `extra_properties`. Attached to every credits click and to every IAP request
-## result, because the question those events exist to answer is which backend the
-## device was talking to — and `option_d_applied` is the field that answers it.
-##
-## Safe to call before the StoreKit environment has resolved: the storekit_* fields
-## are simply empty until then.
+## Which backend this device is pointed at, as JSON for an event's `extra_properties`.
+## Safe before the StoreKit env resolves — the storekit_* fields are empty until then.
 func analytics_context() -> String:
 	return (
 		JSON
@@ -402,8 +386,7 @@ func _track_request(
 	started_ms: int,
 	extra: Dictionary = {}
 ) -> void:
-	# Opt-in: a call site that passes no context reports nothing. Keeps the event a
-	# set of deliberately-watched calls rather than a traffic log.
+	# Opt-in: no context, no event.
 	if context.is_empty() or Global.metrics == null:
 		return
 	var payload := JSON.parse_string(analytics_context()) as Dictionary
@@ -420,20 +403,15 @@ func _track_request(
 	)
 
 
-# The StoreKit purchase round-trip reported through the same generic event as the
-# backend calls: it is a request with a wait and an outcome, and keeping it here
-# means one query answers "what happened after the user pressed buy".
-#
-# Wired to our own outcome signals rather than to each of the eight emit sites, so
-# a new exit path reports itself for free.
+# Wired to our own outcome signals rather than to each of the eight emit sites, so a
+# new exit path reports itself for free.
 func _on_purchase_outcome(
 	outcome: String, product_id: String, reason: String, credits: int
 ) -> void:
 	var extra := {"product_id": product_id, "outcome": outcome}
 	if credits >= 0:
 		extra["credits_granted"] = credits
-	# _purchase_started_ms is 0 when the press never reached purchase() (it bailed on
-	# a missing wallet); report the outcome anyway rather than inventing a duration.
+	# 0 when the press never reached purchase(); report the outcome anyway.
 	var started: int = _purchase_started_ms if _purchase_started_ms > 0 else Time.get_ticks_msec()
 	_track_request(
 		"iap_purchase",
@@ -986,10 +964,8 @@ func _async_signed_iap(path: String, method: int, body: String, context: String 
 		)
 		_track_request(context, endpoint, method_name, false, status, "unparseable", started)
 		return null
-	# A business refusal is HTTP 200 with ok:false + a `code`. From the caller's side
-	# that is the same outcome as a transport failure, so it reports as not-ok with the
-	# server's own code as the error — which is what makes `cap_exceeded` and
-	# `service_daily_limit` groupable next to the transport failures.
+	# A business refusal (HTTP 200 + ok:false) is the same outcome as a transport
+	# failure for the caller, so it reports as not-ok with the server's code.
 	var ok := true
 	var error := ""
 	if json.has("ok") and not json.get("ok", false):
@@ -999,8 +975,7 @@ func _async_signed_iap(path: String, method: int, body: String, context: String 
 	return json
 
 
-# Wallet-scoped paths must not become high-cardinality event values, and an address
-# has no business being in analytics as a path segment.
+# Keeps wallet-scoped paths from becoming high-cardinality event values.
 func _normalize_endpoint(path: String) -> String:
 	var wallet := _wallet_address()
 	if wallet.is_empty():

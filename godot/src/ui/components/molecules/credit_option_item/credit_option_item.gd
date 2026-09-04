@@ -71,9 +71,8 @@ func _find_product(pid: String) -> Dictionary:
 func _on_button_price_pressed() -> void:
 	if product_id.is_empty():
 		return
-	# The press itself, before the terms gate and before StoreKit. A press with no
-	# matching "Request Result" for context iap_purchase is the signal that the flow
-	# died on the way — which is exactly what we could not see during App Review.
+	# The press itself, before the terms gate and before StoreKit: a press with no
+	# matching iap_purchase result means the flow died on the way.
 	if Global.metrics != null:
 		var extra := JSON.parse_string(Iap.analytics_context()) as Dictionary
 		extra["product_id"] = product_id

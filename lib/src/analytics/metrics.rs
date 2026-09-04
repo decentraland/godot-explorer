@@ -565,13 +565,9 @@ impl Metrics {
         self.queue_event("Guest Wallet Creation", event);
     }
 
-    /// One watched request outcome. See data_definition::SegmentEventRequestResult —
-    /// it is opt-in by `context`, and anything feature-specific rides in
-    /// `extra_properties` rather than becoming a new column.
+    /// One watched request outcome. See data_definition::SegmentEventRequestResult.
     ///
-    /// GDScript-friendly sentinels (gdext doesn't surface Option<T> across FFI):
-    ///   - `status`: -1 == None (transport failure, or a non-HTTP call).
-    ///   - `error` / `extra_properties`: empty string == None.
+    /// GDScript-friendly sentinels: `status` -1 == None, empty string == None.
     #[func]
     #[allow(clippy::too_many_arguments)]
     pub fn track_request_result(
