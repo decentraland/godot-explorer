@@ -38,7 +38,7 @@ const DEBUG_DAY1_SHORT_DELAY = false
 const SUPPORTED_NOTIFICATION_TYPES = [
 	"events_started",  # Events: Event has started (we only notify on start, not "starts soon")
 	"reward_assignment",  # Rewards: Reward assigned/received
-	"reward_in_progress",  # Rewards: Reward being processed
+	# "reward_in_progress" disabled for now — its wearable thumbnail doesn't render (image not ready).
 	"social_service_friendship_request",  # Friends: Friend request received (server notification)
 	"social_service_friendship_accepted",  # Friends: Friend request accepted (server notification)
 ]
