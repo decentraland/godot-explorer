@@ -36,8 +36,7 @@ const DEBUG_DAY1_SHORT_DELAY = false
 ## Supported notification types (whitelist)
 ## Only these types will be shown to the user (systems that are implemented)
 const SUPPORTED_NOTIFICATION_TYPES = [
-	"events_starts_soon",  # Events: Event starts soon
-	"events_started",  # Events: Event has started
+	"events_started",  # Events: Event has started (we only notify on start, not "starts soon")
 	"reward_assignment",  # Rewards: Reward assigned/received
 	"reward_in_progress",  # Rewards: Reward being processed
 	"social_service_friendship_request",  # Friends: Friend request received (server notification)
