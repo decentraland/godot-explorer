@@ -76,6 +76,12 @@ const _CREDITS_BY_PRODUCT := {
 	"credits_tier_b3": 260,
 }
 
+# Godot has no built-in verb mapping; only these two are used here.
+const _METHOD_NAMES := {
+	HTTPClient.METHOD_GET: "GET",
+	HTTPClient.METHOD_POST: "POST",
+}
+
 # Bound how long the purchase overlay stays up. StoreKit prompt + validation
 # should land well inside this; past it we assume something stuck (network
 # drop, redelivery loop, missing signal) and let the user retry.
@@ -178,6 +184,15 @@ var _transaction_history: Array = []
 var _overlay_token: int = 0
 var _overlay: CanvasLayer = null
 var _purchase_in_flight: bool = false
+# Retained from _on_environment_resolved for analytics_context().
+var _env_authoritative: String = ""
+var _env_source: String = ""
+var _can_make_payments: bool = false
+# Whether _apply_storekit_env switched, and which gate stopped it if not.
+var _option_d_applied: bool = false
+var _option_d_skip_reason: String = ""
+# Time.get_ticks_msec() at the last purchase() press, for the outcome's duration.
+var _purchase_started_ms: int = 0
 
 
 func _ready() -> void:
@@ -219,6 +234,9 @@ func report_environment_to_analytics() -> void:
 func _on_environment_resolved(environment: String, source: String, resolve_ms: float) -> void:
 	var env_at_ms := Time.get_ticks_msec() - Global._startup_time
 	var matched := environment == _env_sync_value
+	_env_authoritative = environment
+	_env_source = source
+	_can_make_payments = _store_kit.can_make_payments()
 	print(
 		(
 			"[IAP] StoreKit env: authoritative=%s (%s) sync=%s match=%s resolve=%dms sync@%dms env@%dms"
@@ -273,9 +291,7 @@ func _on_environment_resolved(environment: String, source: String, resolve_ms: f
 # before this has applied.
 #
 # Gated on two conditions so it never overrides a developer/QA choice:
-#  - PRODUCTION builds only (release export template). A debug/dev build run on a
-#    device with a sandbox Apple ID also reports `sandbox`, but there the dev's
-#    chosen env (default org or --dclenv) must be respected.
+#  - Not on `-dev` builds: there the dev's chosen env (default org or --dclenv) wins.
 #  - Only an EXPLICIT `dclenv=org` exempts from the switch. Passing
 #    `decentraland://open?dclenv=org` (or `--dclenv org`) means "really use the prod
 #    .org backend" and wins. Any OTHER explicit env is not special-cased here — it
@@ -285,12 +301,13 @@ func _on_environment_resolved(environment: String, source: String, resolve_ms: f
 # environment on every launch.
 func _apply_storekit_env(environment: String) -> void:
 	if environment != "sandbox":
+		_option_d_skip_reason = "not_sandbox"
 		return
-	# Only production (release export template) builds auto-switch. A debug/dev build
-	# run on a device with a sandbox Apple ID also reports "sandbox", but there we must
-	# respect the dev's chosen env (org by default or --dclenv).
-	if OS.is_debug_build():
-		print("[IAP] StoreKit sandbox on a debug build — not forcing the Option D env")
+	# NOT OS.is_debug_build(): the iOS export always uses the debug template, so that
+	# check disabled this switch on every shipped build, review included.
+	if Global.is_dev():
+		print("[IAP] StoreKit sandbox on a dev build — not forcing the Option D env")
+		_option_d_skip_reason = "dev_build"
 		return
 	var current := str(DclGlobal.get_dcl_environment())
 	# The only explicit override that exempts from the switch is dclenv=org
@@ -299,12 +316,16 @@ func _apply_storekit_env(environment: String) -> void:
 	# check below.
 	if Global.dcl_env_explicit and current == "org":
 		print("[IAP] StoreKit sandbox, but explicit dclenv=org — staying on .org")
+		_option_d_skip_reason = "explicit_org"
 		return
 	if current != "org":
 		print("[IAP] StoreKit sandbox, but dclenv already '", current, "' — leaving as-is")
+		_option_d_skip_reason = "already_overridden"
 		return
 	print("[IAP] StoreKit sandbox → switching to Option D hybrid env: ", _SANDBOX_DCLENV)
 	DclGlobal.set_dcl_environment(_SANDBOX_DCLENV)
+	_option_d_applied = true
+	_option_d_skip_reason = ""
 
 
 # Blocks the caller until the AUTHORITATIVE StoreKit environment has resolved and
@@ -329,6 +350,86 @@ func async_await_env_resolved(timeout_sec: float = 5.0) -> void:
 		printerr(
 			"[IAP] env resolve timed out after ", timeout_sec, "s; proceeding with current env"
 		)
+
+
+## Which backend this device is pointed at, as JSON for an event's `extra_properties`.
+## Safe before the StoreKit env resolves — the storekit_* fields are empty until then.
+func analytics_context() -> String:
+	return (
+		JSON
+		. stringify(
+			{
+				"dcl_environment": str(DclGlobal.get_dcl_environment()),
+				"option_d_applied": _option_d_applied,
+				"option_d_skip_reason": _option_d_skip_reason,
+				"storekit_environment": _env_authoritative,
+				"storekit_environment_sync": _env_sync_value,
+				"storekit_source": _env_source,
+				"can_make_payments": _can_make_payments,
+				"credits_server": DclUrls.credits_server(),
+				"balance": _balance,
+				# 0 means an empty storefront — the user saw no packs at all, which is a
+				# different failure from a refused charge.
+				"products_loaded": _products.size(),
+			}
+		)
+	)
+
+
+func _track_request(
+	context: String,
+	endpoint: String,
+	method: String,
+	ok: bool,
+	status: int,
+	error: String,
+	started_ms: int,
+	extra: Dictionary = {}
+) -> void:
+	# Opt-in: no context, no event.
+	if context.is_empty() or Global.metrics == null:
+		return
+	var payload := JSON.parse_string(analytics_context()) as Dictionary
+	payload.merge(extra, true)
+	Global.metrics.track_request_result(
+		context,
+		endpoint,
+		method,
+		ok,
+		status,
+		error,
+		Time.get_ticks_msec() - started_ms,
+		JSON.stringify(payload)
+	)
+
+
+# Wired to our own outcome signals rather than to each of the eight emit sites, so a
+# new exit path reports itself for free.
+func _on_purchase_outcome(
+	outcome: String, product_id: String, reason: String, credits: int
+) -> void:
+	# purchase_completed also fires for transactions StoreKit redelivers at launch, which
+	# never went through purchase(); flag them so they aren't counted as presses.
+	var extra := {
+		"product_id": product_id,
+		"outcome": outcome,
+		"user_initiated": _purchase_started_ms > 0,
+	}
+	if credits >= 0:
+		extra["credits_granted"] = credits
+	# 0 when the press never reached purchase(); report the outcome anyway.
+	var started: int = _purchase_started_ms if _purchase_started_ms > 0 else Time.get_ticks_msec()
+	_track_request(
+		"iap_purchase",
+		"storekit/purchase",
+		"STOREKIT",
+		outcome == "completed",
+		-1,
+		"" if outcome == "completed" else reason if not reason.is_empty() else outcome,
+		started,
+		extra
+	)
+	_purchase_started_ms = 0
 
 
 # Idempotent. Called from _ready on iOS. Performs the StoreKit wiring (signal
@@ -359,6 +460,15 @@ func enable() -> void:
 	print("[IAP] starting StoreKit listener; can_make_payments=", _store_kit.can_make_payments())
 	_store_kit.start_listening()
 	_store_kit.load_products(PRODUCT_IDS)
+
+	purchase_completed.connect(
+		func(pid: String, credits: int): _on_purchase_outcome("completed", pid, "", credits)
+	)
+	purchase_failed.connect(
+		func(pid: String, reason: String): _on_purchase_outcome("failed", pid, reason, -1)
+	)
+	purchase_cancelled.connect(func(pid: String): _on_purchase_outcome("cancelled", pid, "", -1))
+	purchase_pending.connect(func(pid: String): _on_purchase_outcome("pending", pid, "", -1))
 
 	# Global.player_identity is created during Global._ready (earlier in the
 	# autoload chain) but added to the tree via call_deferred — defer so the
@@ -420,6 +530,7 @@ func purchase(product_id: String) -> void:
 	# authoritative pre-purchase gate; only on `allowed` do we hand off to
 	# StoreKit. _async_begin_purchase owns the flow from here.
 	_purchase_in_flight = true
+	_purchase_started_ms = Time.get_ticks_msec()
 	_show_overlay()
 	_async_begin_purchase(product_id, wallet)
 
@@ -431,7 +542,9 @@ func _async_begin_purchase(product_id: String, wallet: String) -> void:
 	# On `allowed` the server also registers this wallet's appAccountToken so the
 	# webhook can resolve who to credit.
 	var body := JSON.stringify({"productId": product_id})
-	var envelope = await _async_signed_iap("/credits/iap/quote", HTTPClient.METHOD_POST, body)
+	var envelope = await _async_signed_iap(
+		"/credits/iap/quote", HTTPClient.METHOD_POST, body, "iap_quote"
+	)
 	# null == transport/auth failure (non-2xx, timeout). Fail closed: do NOT charge.
 	if envelope == null:
 		_finish_purchase_flow()
@@ -631,7 +744,9 @@ func _async_credit_with_backend(tx: Dictionary) -> int:
 		printerr("[IAP] missing JWS; cannot credit")
 		return _OUTCOME_REJECTED
 	var body := JSON.stringify({"jwsRepresentation": jws})
-	var envelope = await _async_signed_iap("/credits/iap/verify", HTTPClient.METHOD_POST, body)
+	var envelope = await _async_signed_iap(
+		"/credits/iap/verify", HTTPClient.METHOD_POST, body, "iap_verify"
+	)
 	# null == transport error (non-2xx / HTTP 500 / timeout) -> transient -> RETRY.
 	if envelope == null:
 		printerr("[IAP] verify transport error; will retry on next launch")
@@ -695,7 +810,7 @@ func _async_register_token() -> void:
 	# later launch that never went through a fresh quote. Idempotent server-side.
 	if _wallet_address().is_empty():
 		return
-	await _async_signed_iap("/credits/iap/register", HTTPClient.METHOD_POST, "{}")
+	await _async_signed_iap("/credits/iap/register", HTTPClient.METHOD_POST, "{}", "iap_register")
 
 
 # gdlint:ignore = async-function-name
@@ -818,7 +933,7 @@ func _async_poll_balance_after_purchase() -> void:
 
 
 # gdlint:ignore = async-function-name
-func _async_signed_iap(path: String, method: int, body: String) -> Variant:
+func _async_signed_iap(path: String, method: int, body: String, context: String = "") -> Variant:
 	# DCL signed-fetch (ADR-44) call to the IAP backend. Returns the parsed JSON
 	# response on any HTTP 2xx, or null on a transport error (non-2xx, timeout,
 	# unparseable). Some endpoints wrap their result in {ok, data, ...} and others
@@ -830,6 +945,9 @@ func _async_signed_iap(path: String, method: int, body: String) -> Variant:
 	# folded header. Safe here and nowhere else on this client — credits-server reads
 	# `productId` off the body and never touches `authMetadata`.
 	var url := DclUrls.credits_server() + path
+	var endpoint := _normalize_endpoint(path)
+	var method_name := _METHOD_NAMES.get(method, "OTHER") as String
+	var started := Time.get_ticks_msec()
 	var response = await Global.async_signed_fetch(url, method, body, true)
 	if response is PromiseError:
 		# `print`, not `printerr`: `_async_poll_balance_after_purchase` calls this
@@ -837,7 +955,13 @@ func _async_signed_iap(path: String, method: int, body: String) -> Variant:
 		# after a purchase would emit that many identical error events. The retry loop
 		# already recovers from it.
 		print("[IAP] ", path, " transport/auth error: ", response.get_error())
+		# The promise is rejected for ANY non-2xx, so this is not only transport
+		# failures: the reason carries the server body, or the canonical status text
+		# when it was empty. Truncated like the unparseable-body log below.
+		var reason := str(response.get_error()).substr(0, _ERROR_BODY_EXCERPT_CHARS)
+		_track_request(context, endpoint, method_name, false, -1, reason, started)
 		return null
+	var status: int = response.status_code()
 	var json = response.get_string_response_as_json()
 	if not (json is Dictionary):
 		# Truncated on purpose: this body is wallet-scoped purchase data, and when the
@@ -848,8 +972,25 @@ func _async_signed_iap(path: String, method: int, body: String) -> Variant:
 			" unparseable response: ",
 			response.get_string_response().substr(0, _ERROR_BODY_EXCERPT_CHARS)
 		)
+		_track_request(context, endpoint, method_name, false, status, "unparseable", started)
 		return null
+	# A business refusal (HTTP 200 + ok:false) is the same outcome as a transport
+	# failure for the caller, so it reports as not-ok with the server's code.
+	var ok := true
+	var error := ""
+	if json.has("ok") and not json.get("ok", false):
+		ok = false
+		error = str(json.get("code", "denied"))
+	_track_request(context, endpoint, method_name, ok, status, error, started)
 	return json
+
+
+# Keeps wallet-scoped paths from becoming high-cardinality event values.
+func _normalize_endpoint(path: String) -> String:
+	var wallet := _wallet_address()
+	if wallet.is_empty():
+		return path
+	return path.replace(wallet, ":address")
 
 
 func _wallet_address() -> String:

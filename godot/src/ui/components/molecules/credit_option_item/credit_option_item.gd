@@ -71,6 +71,13 @@ func _find_product(pid: String) -> Dictionary:
 func _on_button_price_pressed() -> void:
 	if product_id.is_empty():
 		return
+	# The press itself, before the terms gate and before StoreKit: a press with no
+	# matching iap_purchase result means the flow died on the way.
+	if Global.metrics != null:
+		var extra := JSON.parse_string(Iap.analytics_context()) as Dictionary
+		extra["product_id"] = product_id
+		extra["terms_accepted"] = Iap.are_terms_accepted()
+		Global.metrics.track_click_button("BUY_PACK", "CREDITS_SHOP", JSON.stringify(extra))
 	if not Iap.are_terms_accepted():
 		_async_show_terms_then_purchase()
 		return

@@ -79,6 +79,7 @@ pub enum SegmentEvent {
     // (see SegmentEventLoading). Boxed: it is the largest variant by far.
     Loading(Box<SegmentEventLoading>),
     GuestWalletCreation(SegmentEventGuestWalletCreation),
+    RequestResult(SegmentEventRequestResult),
 }
 
 /// Cross-system correlation anchor. The ONLY Segment event that carries the Firebase Analytics
@@ -658,6 +659,36 @@ pub struct SegmentEventGuestWalletCreation {
     pub duration_ms: u32,
 }
 
+// Outcome of one watched request. Opt-in: a call site passes a `context` and gets one
+// event per call — this is not wired into the HTTP layer wholesale. "Request" is read
+// broadly; the StoreKit purchase round-trip reports through here too. Feature-specific
+// fields belong in `extra_properties`, like SegmentEventClickButton.
+#[derive(Serialize, Clone)]
+pub struct SegmentEventRequestResult {
+    // What was attempted: "iap_quote" | "iap_verify" | "iap_purchase" | ... .
+    pub context: String,
+    // Normalised path, never a full URL: no wallet addresses, no ids.
+    pub endpoint: String,
+    // "GET" | "POST" | ... . "STOREKIT" for the native purchase round-trip.
+    pub method: String,
+    // False covers transport failure, non-2xx, unparseable body, and a business
+    // refusal (HTTP 200 + ok:false) — the same outcome from the caller's side.
+    pub ok: bool,
+    // HTTP status when the caller could recover one. None for a non-HTTP call and for
+    // any failure surfaced as a rejected promise, which is every non-2xx — those carry
+    // the server's reason in `error` instead.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub status: Option<u32>,
+    // Failure bucket or server code ("transport", "unparseable", "cap_exceeded", ...).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+    // Wall-clock duration of the attempt in milliseconds.
+    pub duration_ms: u32,
+    // JSON with extra payload, in case we need to track additional metadata.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub extra_properties: Option<String>,
+}
+
 pub fn build_segment_event_batch_item(
     user_id: String,
     common: &SegmentEventCommonExplorerFields,
@@ -763,6 +794,11 @@ pub fn build_segment_event_batch_item(
         ),
         SegmentEvent::GuestWalletCreation(event) => (
             "Guest Wallet Creation".to_string(),
+            serde_json::to_value(event).unwrap(),
+            None,
+        ),
+        SegmentEvent::RequestResult(event) => (
+            "Request Result".to_string(),
             serde_json::to_value(event).unwrap(),
             None,
         ),

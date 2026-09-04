@@ -28,7 +28,7 @@ use super::{
         SegmentEventCommonExplorerFields, SegmentEventExplorerMoveToParcel,
         SegmentEventFirebaseInit, SegmentEventGuestWalletCreation,
         SegmentEventIosStoreKitEnvironment, SegmentEventLoading, SegmentEventRequestFriend,
-        SegmentEventScreenViewed, SegmentEventUnfriend,
+        SegmentEventRequestResult, SegmentEventScreenViewed, SegmentEventUnfriend,
     },
     frame::Frame,
     install_referrer::InstallReferrer,
@@ -563,6 +563,40 @@ impl Metrics {
             duration_ms: duration_ms.max(0) as u32,
         });
         self.queue_event("Guest Wallet Creation", event);
+    }
+
+    /// One watched request outcome. See data_definition::SegmentEventRequestResult.
+    ///
+    /// GDScript-friendly sentinels: `status` -1 == None, empty string == None.
+    #[func]
+    #[allow(clippy::too_many_arguments)]
+    pub fn track_request_result(
+        &mut self,
+        context: String,
+        endpoint: String,
+        method: String,
+        ok: bool,
+        status: i64,
+        error: String,
+        duration_ms: i64,
+        extra_properties: String,
+    ) {
+        let opt_str = |s: String| if s.is_empty() { None } else { Some(s) };
+        let event = SegmentEvent::RequestResult(SegmentEventRequestResult {
+            context,
+            endpoint,
+            method,
+            ok,
+            status: if status < 0 {
+                None
+            } else {
+                Some(status as u32)
+            },
+            error: opt_str(error),
+            duration_ms: duration_ms.max(0) as u32,
+            extra_properties: opt_str(extra_properties),
+        });
+        self.queue_event("Request Result", event);
     }
 
     /// Boot-time cache probe event. `remaining_s` is -1 (becomes None) for any
