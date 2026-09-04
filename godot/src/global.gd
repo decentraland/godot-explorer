@@ -19,7 +19,9 @@ signal open_settings
 signal open_settings_panel
 signal open_backpack(on_emotes: bool)
 signal open_discover
-signal open_credits
+## Opens the credits shop. Carries the entry point that asked for it, so the one
+## place that instantiates the page can report it (see Menu.async_show_credits).
+signal open_credits(source: String)
 signal open_own_profile
 signal open_profile_editor
 signal open_navbar_silently

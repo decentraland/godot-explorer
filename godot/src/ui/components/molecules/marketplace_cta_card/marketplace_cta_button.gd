@@ -45,4 +45,4 @@ func _on_pressed():
 	if can_afford:
 		MarketplaceTracker.open_and_track(DclUrls.marketplace_browse(marketplace_section))
 	else:
-		Global.open_credits.emit()
+		Global.open_credits.emit("marketplace_cta")

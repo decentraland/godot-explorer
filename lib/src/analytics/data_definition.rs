@@ -79,6 +79,7 @@ pub enum SegmentEvent {
     // (see SegmentEventLoading). Boxed: it is the largest variant by far.
     Loading(Box<SegmentEventLoading>),
     GuestWalletCreation(SegmentEventGuestWalletCreation),
+    RequestResult(SegmentEventRequestResult),
 }
 
 /// Cross-system correlation anchor. The ONLY Segment event that carries the Firebase Analytics
@@ -658,6 +659,48 @@ pub struct SegmentEventGuestWalletCreation {
     pub duration_ms: u32,
 }
 
+// Outcome of one watched request. Deliberately generic and OPT-IN: a call site
+// passes a `context` tag and gets one event per call. It is not wired into the
+// HTTP layer wholesale — the point is a handful of deliberately-watched calls,
+// not a traffic log, and Segment volume is not free.
+//
+// "Request" is read broadly: anything with a call, a wait and an outcome. The
+// StoreKit purchase round-trip reports through here too (`endpoint` =
+// "storekit/purchase"), so a flow's UI clicks and its outcomes stay in two tables
+// instead of one bespoke table per feature.
+//
+// Anything feature-specific belongs in `extra_properties`, exactly like
+// SegmentEventClickButton — that is what keeps this event from growing a column
+// per caller.
+#[derive(Serialize, Clone)]
+pub struct SegmentEventRequestResult {
+    // What was being attempted: "iap_quote" | "iap_verify" | "iap_balance" |
+    // "iap_purchase" | ... . Group by this first.
+    pub context: String,
+    // Normalised path, never a full URL: no wallet addresses, no ids. The host is
+    // implied by the environment and belongs in `extra_properties` when it matters
+    // (for IAP it does — it is the whole question).
+    pub endpoint: String,
+    // "GET" | "POST" | ... . "STOREKIT" for the native purchase round-trip.
+    pub method: String,
+    // Whether the caller got what it asked for. False covers a transport failure, a
+    // non-2xx, an unparseable body AND a business-level refusal (HTTP 200 + ok:false),
+    // because from the caller's side those are the same outcome.
+    pub ok: bool,
+    // HTTP status when there was one. None on a transport failure or a non-HTTP call.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub status: Option<u32>,
+    // Short failure bucket or server error code ("transport", "unparseable",
+    // "cap_exceeded", "user_cancelled", ...). None when ok.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+    // Wall-clock duration of the attempt in milliseconds.
+    pub duration_ms: u32,
+    // JSON with extra payload, in case we need to track additional metadata.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub extra_properties: Option<String>,
+}
+
 pub fn build_segment_event_batch_item(
     user_id: String,
     common: &SegmentEventCommonExplorerFields,
@@ -763,6 +806,11 @@ pub fn build_segment_event_batch_item(
         ),
         SegmentEvent::GuestWalletCreation(event) => (
             "Guest Wallet Creation".to_string(),
+            serde_json::to_value(event).unwrap(),
+            None,
+        ),
+        SegmentEvent::RequestResult(event) => (
+            "Request Result".to_string(),
             serde_json::to_value(event).unwrap(),
             None,
         ),

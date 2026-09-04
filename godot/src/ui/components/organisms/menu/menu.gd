@@ -155,9 +155,15 @@ func async_show_discover(open_menu := true):
 		_open()
 
 
-func async_show_credits():
+func async_show_credits(source: String = "unknown"):
 	if is_instance_valid(_credits_page):
 		return
+	# Tracked here rather than on each button: this is the one place the page is
+	# instantiated, so a new entry point reports itself for free. Two of the three
+	# existing ones had no telemetry at all, which is why a reviewer opening the shop
+	# and finding nothing to buy left no trace.
+	if Global.metrics != null:
+		Global.metrics.track_click_button("OPEN_CREDITS", source, Iap.analytics_context())
 	_open()
 	_credits_was_portrait = Global.is_orientation_portrait()
 	Global.set_orientation_portrait()
