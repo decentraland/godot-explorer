@@ -50,6 +50,15 @@ func _update_ui() -> void:
 		modulate = Color.WHITE
 
 
+## Lightweight update for a reused item (same notification id): refresh the read dimming and the
+## timestamp, keeping the already-loaded thumbnail — no content re-render, no image re-fetch.
+func refresh(notification: Dictionary) -> void:
+	notification_data = notification
+	var is_read: bool = notification.get("read", false)
+	modulate = Color(1.0, 1.0, 1.0, 0.4) if is_read else Color.WHITE
+	refresh_timestamp()
+
+
 ## Re-renders the "X ago" label. Called by the panel on a no-change refresh, and on a locale change,
 ## so the timestamp stays current without a full item rebuild (which cancels thumbnail loads).
 func refresh_timestamp() -> void:

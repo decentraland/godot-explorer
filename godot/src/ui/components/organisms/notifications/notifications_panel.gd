@@ -6,9 +6,9 @@ const NotificationItemScene = preload(
 	"res://src/ui/components/organisms/notifications/notification_item.tscn"
 )
 
-var _notification_items: Array[Control] = []
-# Signature (ids + read states) of the currently displayed set, to skip needless rebuilds.
-var _displayed_signature: String = ""
+# Live items keyed by notification id, so a refresh reuses them (keeping their loaded thumbnail)
+# instead of tearing everything down — a full rebuild cancels the newest item's in-flight image load.
+var _items_by_id: Dictionary = {}
 
 @onready var scroll_container: ScrollContainer = %ScrollContainer
 @onready var notifications_list: VBoxContainer = %NotificationsList
@@ -66,25 +66,9 @@ func _refresh_notifications() -> void:
 
 
 func async_display_notifications(notifications: Array) -> void:
-	# Skip the full teardown+rebuild when nothing changed (same ids + read states). Rebuilding frees
-	# each item mid-flight, cancelling its async thumbnail load (the "blank image" bug); the 30s poll
-	# and the paired new_notifications/notifications_updated emits would otherwise rebuild constantly.
-	var signature: String = _notifications_signature(notifications)
-	if signature == _displayed_signature and not _notification_items.is_empty():
-		# Same set (e.g. the 30s poll returned no changes): refresh the "X ago" timestamps in place
-		# instead of tearing items down, which would cancel their in-flight thumbnail loads.
-		for item in _notification_items:
-			item.call("refresh_timestamp")
-		return
-	_displayed_signature = signature
-
-	# Clear existing items
-	for item in _notification_items:
-		item.queue_free()
-	_notification_items.clear()
-
-	# Show empty state if no notifications
+	# Empty state
 	if notifications.size() == 0:
+		_clear_items()
 		v_box_container_no_notifications.visible = true
 		scroll_container.visible = false
 		button_mark_all_read.disabled = true
@@ -93,33 +77,46 @@ func async_display_notifications(notifications: Array) -> void:
 	v_box_container_no_notifications.visible = false
 	scroll_container.visible = true
 
-	# Count unread notifications
+	# Mark-all-read is enabled only while there's something unread.
 	var unread_count = 0
 	for notif in notifications:
 		if not notif.get("read", false):
 			unread_count += 1
-
-	# Nothing to mark when there are no unread notifications — disable it, don't hide it.
 	button_mark_all_read.disabled = unread_count == 0
 
-	# Create notification items
-	for notif in notifications:
-		var item = NotificationItemScene.instantiate()
-		notifications_list.add_child(item)
-		item.set_notification(notif)
+	# Incremental update: reuse the item already showing each notification id (keeping its loaded
+	# thumbnail) and only build items for genuinely new ids, then reorder. A full teardown would
+	# cancel the newest item's in-flight image load — the "blank thumbnail" bug.
+	var desired: Dictionary = {}
+	for i in notifications.size():
+		var notif = notifications[i]
+		var id = str(notif.get("id", ""))
+		desired[id] = true
+		var item
+		if _items_by_id.has(id):
+			# Same notification: refresh only read state + timestamp; the thumbnail stays loaded.
+			item = _items_by_id[id]
+			item.call("refresh", notif)
+		else:
+			item = NotificationItemScene.instantiate()
+			notifications_list.add_child(item)
+			item.set_notification(notif)
+			item.mark_as_read_clicked.connect(_async_on_notification_mark_as_read)
+			item.notification_clicked.connect(_on_notification_clicked)
+			_items_by_id[id] = item
+		notifications_list.move_child(item, i)
 
-		# Connect signals
-		item.mark_as_read_clicked.connect(_async_on_notification_mark_as_read)
-		item.notification_clicked.connect(_on_notification_clicked)
+	# Drop items whose notification is no longer present.
+	for id in _items_by_id.keys():
+		if not desired.has(id):
+			_items_by_id[id].queue_free()
+			_items_by_id.erase(id)
 
-		_notification_items.append(item)
 
-
-func _notifications_signature(notifications: Array) -> String:
-	var parts = PackedStringArray()
-	for n in notifications:
-		parts.append(str(n.get("id", "")) + ":" + str(n.get("read", false)))
-	return "|".join(parts)
+func _clear_items() -> void:
+	for item in _items_by_id.values():
+		item.queue_free()
+	_items_by_id.clear()
 
 
 func _on_new_notifications(notifications: Array) -> void:
@@ -187,6 +184,7 @@ func _is_user_authenticated() -> bool:
 
 func _show_guest_message() -> void:
 	# Hide the scroll container; keep the button visible but disabled.
+	_clear_items()
 	scroll_container.visible = false
 	button_mark_all_read.disabled = true
 
