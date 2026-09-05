@@ -388,26 +388,35 @@ func _reward_is_emote(metadata: Dictionary) -> bool:
 	return Emotes.CATEGORIES.has(str(metadata.get("tokenCategory", "")).to_lower())
 
 
+## True when the string is a canonical UUID (8-4-4-4-12 hex). Keeps an event id from escaping the
+## events API path (e.g. a "../" segment) once it's concatenated into the URL.
+func _is_uuid(value: String) -> bool:
+	var re: RegEx = RegEx.new()
+	re.compile("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")
+	return re.search(value) != null
+
+
 ## Opens the same travel modal a chat place/world link does, from the event's coords/realm.
 func _async_open_event_travel_modal(notification_dict: Dictionary) -> void:
 	var metadata: Dictionary = notification_dict.get("metadata", {})
 	var link: String = metadata.get("link", "")
 	if link.is_empty():
-		printerr("Menu: event notification missing link in metadata")
+		push_warning("Menu: event notification missing link in metadata")
 		return
 	# DclParseDeepLink only accepts decentraland.org/.zone/mobile hosts; a foreign link yields no id.
 	var event_id: String = DclParseDeepLink.parse_decentraland_link(link).params.get("id", "")
-	if event_id.is_empty():
-		printerr("Menu: could not extract event id from link: ", link)
+	# Validate the id shape before putting it in a URL — a stray "../" would walk the events API path.
+	if not _is_uuid(event_id):
+		push_warning("Menu: event link has no valid event id: " + link)
 		return
 	var url: String = "https://events.decentraland.org/api/events/" + event_id
 	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_GET, "")
 	if response is PromiseError:
-		printerr("Menu: failed to fetch event data: ", response.get_error())
+		push_warning("Menu: failed to fetch event data: " + str(response.get_error()))
 		return
 	var json: Dictionary = response.get_string_response_as_json()
 	if not json.has("data"):
-		printerr("Menu: invalid event response format")
+		push_warning("Menu: invalid event response format")
 		return
 	var event_data: Dictionary = json["data"]
 	if PlacesHelper.is_world(event_data):

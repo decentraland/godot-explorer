@@ -62,10 +62,10 @@ func _refresh_notifications() -> void:
 		return
 
 	var notifications = NotificationsManager.get_notifications()
-	async_display_notifications(notifications)
+	display_notifications(notifications)
 
 
-func async_display_notifications(notifications: Array) -> void:
+func display_notifications(notifications: Array) -> void:
 	# Empty state
 	if notifications.size() == 0:
 		_clear_items()
@@ -123,7 +123,7 @@ func _clear_items() -> void:
 
 
 func _on_new_notifications(notifications: Array) -> void:
-	async_display_notifications(notifications)
+	display_notifications(notifications)
 
 
 func _on_notifications_updated() -> void:
