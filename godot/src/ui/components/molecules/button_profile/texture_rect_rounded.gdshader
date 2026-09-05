@@ -14,9 +14,9 @@ void fragment() {
 	vec2 half_size = vec2(0.5, 0.5);
 	float dist = rounded_box_sdf(uv - center, half_size, corner_radius);
 
-	vec4 tex_color = texture(TEXTURE, UV);
+	// COLOR already holds modulate * texture(TEXTURE, UV); only clip the corners on its alpha so the
+	// texture isn't sampled twice and the parent modulate is kept.
 	if (dist > 0.0) {
-		tex_color.a = 0.0;
+		COLOR.a = 0.0;
 	}
-	COLOR = tex_color;
 }

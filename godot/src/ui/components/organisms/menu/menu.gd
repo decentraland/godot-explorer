@@ -47,6 +47,9 @@ var _close_node_to_free: PlaceholderManager = null
 @onready var static_button_settings: TextureButton = %StaticButton_Settings
 @onready var control_modal: Control = %Control_Modal
 
+# Compiled once, reused by _is_uuid() to validate an event id before it reaches the events API URL.
+static var _uuid_regex: RegEx = null
+
 
 func _ready():
 	# Back on the standalone Discover screen — release the soft sign-out guard so a
@@ -364,19 +367,69 @@ func _async_request_hide_menu():
 
 
 func _on_notification_clicked(notification_dict: Dictionary) -> void:
-	# Handle notification clicks - open backpack for reward notifications
+	# Rewards open the backpack; events open the travel modal. Both navigate away, so collapse the
+	# navbar here — this handler runs for both entry points (panel item and toast), keeping them in sync.
 	var notif_type = notification_dict.get("type", "")
 
-	# Check if this is a reward notification
 	if notif_type in ["reward_assignment", "reward_in_progress"]:
-		# Open the backpack to show the reward
-		async_show_backpack()
-		Global.open_navbar_silently.emit()
-	# MARKETPLACE-IAP-TOAST: a "marketplace_iap" toast tap would route here to open the
-	# backpack and apply the arrival view — read `category` from notification_dict.metadata,
-	# await async_show_backpack(category == "emote"), then have the active Backpack call
-	# apply_marketplace_arrival_view(category) (add a small forwarder on BackpackResponsive
-	# to reach it). Removed pending a portrait-aware toast.
+		Global.close_navbar.emit()
+		# Backpack on the Emotes tab when the reward is an emote.
+		var metadata: Dictionary = notification_dict.get("metadata", {})
+		async_show_backpack(_reward_is_emote(metadata))
+		# MARKETPLACE-IAP-TOAST: a "marketplace_iap" toast tap would route here to open the
+		# backpack and apply the arrival view — read `category` from notification_dict.metadata,
+		# await async_show_backpack(category == "emote"), then have the active Backpack call
+		# apply_marketplace_arrival_view(category) (add a small forwarder on BackpackResponsive
+		# to reach it). Removed pending a portrait-aware toast.
+	elif notif_type in ["event_created", "events_starts_soon", "events_started"]:
+		Global.close_navbar.emit()
+		_async_open_event_travel_modal(notification_dict)
+
+
+## True when a reward is an emote (emotes carry an emote-specific tokenCategory: "fun", "dance", …).
+func _reward_is_emote(metadata: Dictionary) -> bool:
+	return Emotes.CATEGORIES.has(str(metadata.get("tokenCategory", "")).to_lower())
+
+
+## True when the string is a canonical UUID (8-4-4-4-12 hex). Keeps an event id from escaping the
+## events API path (e.g. a "../" segment) once it's concatenated into the URL.
+func _is_uuid(value: String) -> bool:
+	if _uuid_regex == null:
+		_uuid_regex = RegEx.new()
+		_uuid_regex.compile(
+			"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+		)
+	return _uuid_regex.search(value) != null
+
+
+## Opens the same travel modal a chat place/world link does, from the event's coords/realm.
+func _async_open_event_travel_modal(notification_dict: Dictionary) -> void:
+	var metadata: Dictionary = notification_dict.get("metadata", {})
+	var link: String = metadata.get("link", "")
+	if link.is_empty():
+		push_warning("Menu: event notification missing link in metadata")
+		return
+	# DclParseDeepLink only accepts decentraland.org/.zone/mobile hosts; a foreign link yields no id.
+	var event_id: String = DclParseDeepLink.parse_decentraland_link(link).params.get("id", "")
+	# Validate the id shape before putting it in a URL — a stray "../" would walk the events API path.
+	if not _is_uuid(event_id):
+		push_warning("Menu: event link has no valid event id: " + link)
+		return
+	var url: String = "https://events.decentraland.org/api/events/" + event_id
+	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_GET, "")
+	if response is PromiseError:
+		push_warning("Menu: failed to fetch event data: " + str(response.get_error()))
+		return
+	var json: Dictionary = response.get_string_response_as_json()
+	if not json.has("data"):
+		push_warning("Menu: invalid event response format")
+		return
+	var event_data: Dictionary = json["data"]
+	if PlacesHelper.is_world(event_data):
+		var realm: String = PlacesHelper.get_position_and_realm(event_data)[1]
+		Global.modal_manager.async_show_world_modal(realm)
+	else:
+		Global.modal_manager.async_show_teleport_modal(PlacesHelper.parse_position(event_data))
 
 
 func _on_deep_link_received() -> void:

@@ -8,29 +8,37 @@ extends RefCounted
 
 
 ## Get avatar color from username (uses DclAvatar's color algorithm)
-static func _get_avatar_color_hex(username: String) -> String:
+## The sender's plain nickname (server data), or "Unknown". Colour is applied separately by the
+## title label, so the title stays a plain Label — no BBCode, so nothing to escape.
+static func _get_sender_name(metadata: Dictionary) -> String:
+	var sender_name = TranslationServer.translate("COMMON_UNKNOWN_USER")
+	if "sender" in metadata and metadata["sender"] is Dictionary:
+		sender_name = metadata["sender"].get("name", sender_name)
+	return sender_name
+
+
+## A nickname's avatar colour; white when no player avatar is available.
+static func _get_avatar_color(username: String) -> Color:
 	var explorer = Global.get_explorer()
-	if explorer == null or explorer.player == null:
-		return "FFFFFF"  # Default white if no player
+	if explorer == null or explorer.player == null or explorer.player.avatar == null:
+		return Color.WHITE
+	return DclAvatar.get_nickname_color(username)
 
-	var player_avatar = explorer.player.avatar
-	if player_avatar == null:
-		return "FFFFFF"  # Default white if no player avatar
 
-	# Use player's avatar instance to calculate the color
-	var color = DclAvatar.get_nickname_color(username)
-	# Return as hex string without #
-	return color.to_html(false)
+## Colour for the title: a friend's avatar colour, white for every other type.
+static func get_notification_header_color(notif_type: String, metadata: Dictionary) -> Color:
+	if notif_type in ["social_service_friendship_request", "social_service_friendship_accepted"]:
+		return _get_avatar_color(_get_sender_name(metadata))
+	return Color.WHITE
 
 
 ## Get the header/title for a notification based on its type
 static func get_notification_header(notif_type: String, metadata: Dictionary) -> String:
 	match notif_type:
-		# Friend notifications
-		"social_service_friendship_request":
-			return TranslationServer.translate("NOTIF_HEADER_FRIEND_REQUEST_RECEIVED")
-		"social_service_friendship_accepted":
-			return TranslationServer.translate("NOTIF_HEADER_FRIEND_REQUEST_ACCEPTED")
+		# Friend notifications: the title is the sender's nickname tinted with their avatar colour;
+		# the action ("wants to be your friend!", …) moves to the description below.
+		"social_service_friendship_request", "social_service_friendship_accepted":
+			return _get_sender_name(metadata)
 		# Community notifications
 		"community_invite_received":
 			return TranslationServer.translate("NOTIF_HEADER_COMMUNITY_INVITE_RECEIVED")
@@ -95,15 +103,16 @@ static func get_notification_header(notif_type: String, metadata: Dictionary) ->
 		"worlds_permission_revoked":
 			return TranslationServer.translate("NOTIF_HEADER_WORLD_PERMISSION_REVOKED")
 
-		# Events
-		"events_started":
-			return TranslationServer.translate("NOTIF_HEADER_EVENT_STARTED")
-		"events_ended":
-			return TranslationServer.translate("NOTIF_HEADER_EVENT_ENDED")
+		# Events: the title is the event's own name (server metadata), not a category label.
+		"events_starts_soon", "events_started", "events_ended":
+			var event_name: String = metadata.get("title", "")
+			if not event_name.is_empty():
+				return event_name
+			return TranslationServer.translate("NOTIF_HEADER_EVENT")
 
-		# Rewards
-		"reward_assigned":
-			return TranslationServer.translate("NOTIF_HEADER_REWARD_ASSIGNED")
+		# Rewards: a wearable/item landed in the user's inventory.
+		"reward_assignment":
+			return TranslationServer.translate("NOTIF_HEADER_NEW_ITEM_RECEIVED")
 		"reward_in_progress":
 			return TranslationServer.translate("NOTIF_HEADER_REWARD_IN_PROGRESS")
 
@@ -115,52 +124,13 @@ static func get_notification_header(notif_type: String, metadata: Dictionary) ->
 ## Get the description/title text for a notification based on its type and metadata
 static func get_notification_title(notif_type: String, metadata: Dictionary) -> String:
 	match notif_type:
-		# Friend notifications
+		# Friend notifications: the action line. The sender's coloured nickname is the title
+		# (see get_notification_header), so the description carries only the action copy.
 		"social_service_friendship_request":
-			if "sender" in metadata and metadata["sender"] is Dictionary:
-				var sender = metadata["sender"]
-				var sender_name = sender.get(
-					"name", TranslationServer.translate("COMMON_UNKNOWN_USER")
-				)
-				var has_claimed_name = sender.get("hasClaimedName", false)
-				var color_hex = _get_avatar_color_hex(sender_name)
-
-				if has_claimed_name:
-					return TranslationKey.new("NOTIF_TITLE_WANTS_TO_BE_YOUR_FRIEND_2").format(
-						{"color": color_hex, "name": sender_name}
-					)
-
-				var address = sender.get("address", "")
-				var short_address = (
-					address.substr(address.length() - 4) if address.length() > 4 else address
-				)
-				return TranslationKey.new("NOTIF_TITLE_WANTS_TO_BE_YOUR_FRIEND_3").format(
-					{"color": color_hex, "name": sender_name, "tag": short_address}
-				)
-			return TranslationServer.translate("NOTIF_TITLE_WANTS_TO_BE_YOUR_FRIEND")
+			return TranslationServer.translate("NOTIF_BODY_WANT_TO_BE_YOUR_FRIEND")
 
 		"social_service_friendship_accepted":
-			if "sender" in metadata and metadata["sender"] is Dictionary:
-				var sender = metadata["sender"]
-				var sender_name = sender.get(
-					"name", TranslationServer.translate("COMMON_UNKNOWN_USER")
-				)
-				var has_claimed_name = sender.get("hasClaimedName", false)
-				var color_hex = _get_avatar_color_hex(sender_name)
-
-				if has_claimed_name:
-					return TranslationKey.new("NOTIF_TITLE_ACCEPTED_YOUR_FRIEND_REQUEST_2").format(
-						{"color": color_hex, "name": sender_name}
-					)
-
-				var address = sender.get("address", "")
-				var short_address = (
-					address.substr(address.length() - 4) if address.length() > 4 else address
-				)
-				return TranslationKey.new("NOTIF_TITLE_ACCEPTED_YOUR_FRIEND_REQUEST_3").format(
-					{"color": color_hex, "name": sender_name, "tag": short_address}
-				)
-			return TranslationServer.translate("NOTIF_TITLE_ACCEPTED_YOUR_FRIEND_REQUEST")
+			return TranslationServer.translate("NOTIF_BODY_ACCEPT_YOUR_FRIEND_REQUEST")
 
 		# Community notifications
 		"community_invite_received":
@@ -319,16 +289,9 @@ static func get_notification_title(notif_type: String, metadata: Dictionary) -> 
 				"description", TranslationServer.translate("NOTIF_TITLE_AN_EVENT_HAS_ENDED")
 			)
 
-		# Rewards
-		"reward_assigned":
-			return metadata.get(
-				"description",
-				TranslationServer.translate("NOTIF_TITLE_YOUVE_BEEN_ASSIGNED_A_REWARD")
-			)
-		"reward_in_progress":
-			return metadata.get(
-				"description", TranslationServer.translate("NOTIF_TITLE_YOUR_REWARD_IS_IN_PROGRESS")
-			)
+		# Rewards: the description line is just the wearable's name (the label clips it to one line).
+		"reward_assignment", "reward_in_progress":
+			return metadata.get("tokenName", "")
 
 		_:
 			return metadata.get("description", "")

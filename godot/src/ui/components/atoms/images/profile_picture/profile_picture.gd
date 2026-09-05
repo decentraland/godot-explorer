@@ -12,6 +12,13 @@ const DECENTRALAND_LOGO = preload("res://decentraland_logo.png")
 		if Engine.is_editor_hint():
 			notify_property_list_changed()
 
+## Show the circular border ring. Defaults to true so existing usages are unaffected; set false
+## for a borderless avatar (e.g. notifications).
+@export var show_border: bool = true:
+	set(value):
+		show_border = value
+		_update_border_visibility()
+
 var border_width: int
 var avatar: DclAvatar
 
@@ -24,6 +31,12 @@ func _ready() -> void:
 	_update_size()
 	if panel_border:
 		_update_border_style()
+	_update_border_visibility()
+
+
+func _update_border_visibility() -> void:
+	if panel_border:
+		panel_border.visible = show_border
 
 
 func _get_configuration_warnings():
