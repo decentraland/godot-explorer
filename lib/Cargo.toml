@@ -75,6 +75,8 @@ taffy = "0.5.2"
 tracing-test = "0.2.4"
 
 base64 = "0.21.5"
+hex = "0.4.3"
+sha2 = "0.10"
 chrono = "0.4.31"
 
 simple-easing = "1.0.1"
