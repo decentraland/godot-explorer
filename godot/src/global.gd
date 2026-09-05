@@ -98,7 +98,11 @@ const TERMS_AND_CONDITIONS_VERSION: int = 1
 # Increase this value when local assets cache format changes (invalidates cache)
 # v5: runtime-processed emote .tscn saved before the case-insensitive prop lookup
 # (find_prop_node in emote.rs) are missing their prop geometry — re-process them.
-const LOCAL_ASSETS_CACHE_VERSION: int = 5
+# v6: optimized packs moved to the /v5 bucket with a new texture format
+# (PortableCompressedTexture2D .res, ExtResource-based .scn). Cached v4 packs
+# share the same {hash}-mobile.zip filenames and would be permanent stale hits,
+# mixing Image-typed .res into scenes that expect PCT2 ExtResources.
+const LOCAL_ASSETS_CACHE_VERSION: int = 6
 
 # On-disk guest identity artifacts, owned by Rust (keep in sync with
 # lib/src/auth/device_anchor.rs + thirdweb_guest.rs) plus the mobile-BFF

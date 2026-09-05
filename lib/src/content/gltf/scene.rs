@@ -30,7 +30,7 @@ use super::super::{
     content_provider::SceneGltfContext,
     scene_saver::{get_scene_path_for_hash, save_node_as_scene},
 };
-use super::common::{count_nodes, load_gltf_pipeline};
+use super::common::{count_nodes, load_gltf_pipeline, optimize_scene_animations};
 
 /// Load and save a scene GLTF to disk.
 ///
@@ -48,9 +48,25 @@ pub async fn load_and_save_scene_gltf(
     content_mapping: ContentMappingAndUrlRef,
     ctx: SceneGltfContext,
 ) -> Result<String, anyhow::Error> {
+    load_and_save_scene_gltf_ex(file_path, file_hash, content_mapping, ctx)
+        .await
+        .map(|(scene_path, _)| scene_path)
+}
+
+/// Same as `load_and_save_scene_gltf`, additionally returning the content
+/// hashes of the textures the saved .scn references externally
+/// (`res://content/{hash}.res`) — empty unless `ctx.external_texture_refs`.
+/// The asset server publishes exactly this list as the GLB's
+/// `externalSceneDependencies`, which the client mounts before loading.
+pub async fn load_and_save_scene_gltf_ex(
+    file_path: String,
+    file_hash: String,
+    content_mapping: ContentMappingAndUrlRef,
+    ctx: SceneGltfContext,
+) -> Result<(String, Vec<String>), anyhow::Error> {
     let ctx_clone = ctx.clone();
 
-    let (scene_path, file_size) = load_gltf_pipeline(
+    let (scene_path, file_size, externalized) = load_gltf_pipeline(
         file_path,
         file_hash.clone(),
         content_mapping,
@@ -60,6 +76,16 @@ pub async fn load_and_save_scene_gltf(
             let root_node = node.clone();
 
             create_scene_colliders(node.clone().upcast(), root_node.clone());
+
+            // The glTF importer bakes every animation track at a fixed fps, so
+            // a sparse-keyframe animation balloons in the saved .scn. Drop the
+            // redundant keys again (editor-importer default optimizer).
+            if ctx.apply_optimizations {
+                let optimized = optimize_scene_animations(node.clone().upcast());
+                if optimized > 0 {
+                    tracing::debug!("Optimized {} animations for {}", optimized, hash);
+                }
+            }
 
             // Save the processed scene to disk (in the same cache folder as other content)
             let scene_path = get_scene_path_for_hash(&ctx.content_folder, hash);
@@ -95,7 +121,9 @@ pub async fn load_and_save_scene_gltf(
         .register_local_file(&scene_path, file_size)
         .await;
 
-    Ok(scene_path)
+    let mut externalized: Vec<String> = externalized.into_iter().collect();
+    externalized.sort();
+    Ok((scene_path, externalized))
 }
 
 /// Get the StaticBody3D collider from a MeshInstance3D (created by create_trimesh_collision)

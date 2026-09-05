@@ -165,13 +165,19 @@ pub struct SceneGltfContext {
     /// pipeline is expensive and is meant to be baked once into the saved
     /// .scn, not re-run on every phone load.
     pub apply_optimizations: bool,
+    /// Reference every glTF image that has a content hash as an external
+    /// `res://content/{hash}.res` (the standalone baked texture) instead of
+    /// embedding a copy in the .scn. Asset-server scene bakes only: the client
+    /// mounts each `externalSceneDependencies` zip before loading the .scn
+    /// (`fetch_optimized_asset_with_dependencies`), so the paths resolve.
+    pub external_texture_refs: bool,
 }
 
 unsafe impl Send for SceneGltfContext {}
 
 /// Default optimized-assets bucket. The CLI `--optimized-content-base-url`
 /// override (see `optimized_url_override`) takes precedence when set.
-const ASSET_OPTIMIZED_BASE_URL: &str = "https://optimized-assets.dclregenesislabs.xyz/v4";
+const ASSET_OPTIMIZED_BASE_URL: &str = "https://optimized-assets.dclregenesislabs.xyz/v5";
 
 /// CLI override for the optimized-content base URL (`--optimized-content-base-url`),
 /// mirrored from the main thread for lock-free reads on tokio workers.
@@ -225,23 +231,29 @@ fn resolved_optimized_base_url() -> String {
 fn load_baked_texture_entry(godot_path: &str, original_size: Option<ImageSize>) -> Option<Variant> {
     let resource = ResourceLoader::singleton().load(&GString::from(godot_path))?;
 
-    // Baked variants are stored as a compressed `Image` (ETC2) and wrapped in an
-    // `ImageTexture` here — that round-trips correctly on real-GPU devices,
-    // unlike a serialized `PortableCompressedTexture2D` (which reloads magenta).
-    // Older bakes stored a `Texture2D` directly; accept both for compatibility.
+    // v5 bakes store a `PortableCompressedTexture2D` (ETC2 buffer, shared with
+    // the .scn ExtResources of every GLB that uses the texture). Older bakes
+    // stored a compressed `Image`; wrap those in an `ImageTexture`. Never read
+    // the image back from a `Texture2D` here — on device that is a GPU readback
+    // and nothing consumes `TextureEntry.image` for baked textures.
     let (image, texture): (Gd<godot::classes::Image>, Gd<godot::classes::Texture2D>) =
         if let Ok(img) = resource.clone().try_cast::<godot::classes::Image>() {
             let tex = godot::classes::ImageTexture::create_from_image(&img)?;
             (img, tex.upcast())
         } else {
             let tex = resource.try_cast::<godot::classes::Texture2D>().ok()?;
-            let img = tex.get_image()?;
+            let img = godot::classes::Image::create_empty(
+                1,
+                1,
+                false,
+                godot::classes::image::Format::RGBA8,
+            )?;
             (img, tex)
         };
     let original_size = if let Some(original_size) = original_size {
         Vector2i::new(original_size.width, original_size.height)
     } else {
-        image.get_size()
+        texture.get_size().cast_int()
     };
     let texture_entry = Gd::from_init_fn(|_base| TextureEntry {
         original_size,
@@ -461,6 +473,7 @@ impl ContentProvider {
             texture_quality: self.texture_quality.clone(),
             force_compress: false,
             apply_optimizations: false,
+            external_texture_refs: false,
         };
 
         let file_hash_clone = file_hash.clone();
@@ -611,6 +624,7 @@ impl ContentProvider {
             texture_quality: self.texture_quality.clone(),
             force_compress: false,
             apply_optimizations: false,
+            external_texture_refs: false,
         };
 
         let file_hash_clone = file_hash.clone();
@@ -758,6 +772,7 @@ impl ContentProvider {
             texture_quality: self.texture_quality.clone(),
             force_compress: false,
             apply_optimizations: false,
+            external_texture_refs: false,
         };
 
         let file_hash_clone = file_hash.clone();
@@ -833,6 +848,7 @@ impl ContentProvider {
             texture_quality: self.texture_quality.clone(),
             force_compress: false,
             apply_optimizations: false,
+            external_texture_refs: false,
         };
 
         let file_hash_clone = file_hash.clone();

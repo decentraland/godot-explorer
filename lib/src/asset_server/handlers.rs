@@ -517,6 +517,21 @@ async fn watch_and_pack_scene_batch(
         .update_batch_status(&batch_id, BatchStatus::Packing)
         .await;
 
+    // A scene .scn references its textures as external `res://content/*.res`;
+    // never ship one whose textures failed to bake.
+    for (hash, missing) in job_manager
+        .fail_jobs_with_missing_dependencies(&batch_id)
+        .await
+    {
+        tracing::error!(
+            "Scene batch {}: dropping GLB {} — {} external texture(s) failed to bake: {:?}",
+            batch_id,
+            hash,
+            missing.len(),
+            missing
+        );
+    }
+
     let results = job_manager.get_batch_results(&batch_id).await;
     tracing::debug!(
         "Scene batch {} has {} results with optimized_path",
