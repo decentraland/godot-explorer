@@ -54,6 +54,10 @@ layout_mode = 2
 custom_minimum_size = Vector2(50, 50)
 
 [node name="ProfilePictureFriend" parent="Panel/MarginContainer/NotificationContent/ImageContainerWrapper" index="0" unique_id=1700000001]
+offset_left = -19.0
+offset_top = -19.0
+offset_right = 19.0
+offset_bottom = 19.0
 picture_size = 5
 
 [node name="VBoxContainer" parent="Panel/MarginContainer/NotificationContent" index="1" unique_id=1170504368]

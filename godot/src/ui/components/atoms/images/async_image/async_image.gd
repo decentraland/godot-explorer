@@ -22,6 +22,7 @@ const NO_IMAGE_BACKGROUND: Color = Color(0.20784314, 0.03137255, 0.32941177, 0.5
 		border_radius = value
 		if is_node_ready():
 			_apply_corner_radius()
+			_reapply_current_style()
 @export var border_color: Color = Color("E8B9FF")
 ## Border thickness in px; 0 hides the outline. Defaults to the historical 1px.
 @export var border_width: int = 1
@@ -50,6 +51,17 @@ func _apply_corner_radius() -> void:
 			var mat: ShaderMaterial = tex.material.duplicate()
 			mat.set_shader_parameter("corner_radius_px", float(border_radius))
 			tex.material = mat
+
+
+## Re-runs the current state's panel/border style so a runtime border_radius change takes effect now
+## instead of waiting for the next load transition.
+func _reapply_current_style() -> void:
+	if _is_loading:
+		_apply_loading_style()
+	elif is_instance_valid(texture_image) and texture_image.visible:
+		_apply_loaded_style()
+	else:
+		_apply_no_image_style()
 
 
 func is_image_ready() -> bool:
