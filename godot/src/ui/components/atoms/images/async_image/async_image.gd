@@ -1,8 +1,8 @@
 class_name AsyncImage
 extends Control
 
-## Reusable image component with loading skeleton and async fetch.
-## Single panel that switches style between loading (skeleton) and loaded (border).
+## Reusable image component. The image textures (loaded + no-image) carry their own rounded-corner
+## shader and use their alpha directly; the Panel is only the loading skeleton and hides once done.
 
 signal image_loaded
 
@@ -12,14 +12,11 @@ signal image_loaded
 ## TextureQuality in lib/src/godot_classes/dcl_config.rs.
 enum ForcedQuality { NONE = -1, LOW = 0, MEDIUM = 1, HIGH = 2, SOURCE = 3 }
 
-# Backdrop for the no-image / error state, kept separate so a transparent loaded bg still shows it.
-const NO_IMAGE_BACKGROUND: Color = Color(0.20784314, 0.03137255, 0.32941177, 0.5)
-
 @export var forced_quality: ForcedQuality = ForcedQuality.NONE
 @export var border_radius: int = 12
 @export var border_color: Color = Color("E8B9FF")
-## Backing behind a loaded texture; opaque white by default. Set transparent to reveal a node behind.
-@export var background_color: Color = Color(1, 1, 1, 1)
+## Border thickness in px; 0 hides the outline. Defaults to the historical 1px.
+@export var border_width: int = 1
 
 var _image_ready: bool = false
 var _is_loading: bool = true
@@ -33,7 +30,18 @@ var _skeleton_material: Material = null
 
 func _ready() -> void:
 	_skeleton_material = panel.material
+	_apply_corner_radius()
 	_apply_loading_style()
+
+
+## Drives the image textures' rounded-corner shader from border_radius. Materials are duplicated per
+## instance so AsyncImages with different radii don't fight over one shared material.
+func _apply_corner_radius() -> void:
+	for tex in [texture_image, texture_no_image]:
+		if is_instance_valid(tex) and tex.material is ShaderMaterial:
+			var mat: ShaderMaterial = tex.material.duplicate()
+			mat.set_shader_parameter("corner_radius_px", float(border_radius))
+			tex.material = mat
 
 
 func is_image_ready() -> bool:
@@ -46,7 +54,7 @@ func set_texture(texture: Texture2D) -> void:
 	texture_no_image.hide()
 	_image_ready = true
 	_is_loading = false
-	_apply_loaded_style(background_color)
+	_apply_loaded_style()
 	image_loaded.emit()
 
 
@@ -69,39 +77,41 @@ func _finish_with_error() -> void:
 	texture_no_image.show()
 	_image_ready = true
 	_is_loading = false
-	_apply_loaded_style(NO_IMAGE_BACKGROUND)
+	_apply_loaded_style()
 	image_loaded.emit()
 
 
 func _apply_loading_style() -> void:
 	if not is_inside_tree():
 		return
+	# Skeleton only: the panel is the shimmer; the image textures stay hidden until they resolve.
+	texture_image.hide()
+	texture_no_image.hide()
 	if is_instance_valid(panel):
 		panel.material = _skeleton_material
 		var style := StyleBoxFlat.new()
 		style.bg_color = Color(1, 1, 1, 0.08)
 		_set_radius(style)
 		panel.add_theme_stylebox_override("panel", style)
+		panel.show()
 	if is_instance_valid(panel_border):
 		panel_border.hide()
 
 
-func _apply_loaded_style(bg: Color) -> void:
+func _apply_loaded_style() -> void:
 	if not is_inside_tree():
 		return
+	# The panel is only the loading skeleton — hide it so the image's own alpha shows what's behind
+	# the component instead of a solid backdrop.
 	if is_instance_valid(panel):
-		panel.material = null
-		var style := StyleBoxFlat.new()
-		style.bg_color = bg
-		_set_radius(style)
-		panel.add_theme_stylebox_override("panel", style)
+		panel.hide()
 	if is_instance_valid(panel_border):
 		var border_style := StyleBoxFlat.new()
 		border_style.draw_center = false
-		border_style.border_width_left = 1
-		border_style.border_width_top = 1
-		border_style.border_width_right = 1
-		border_style.border_width_bottom = 1
+		border_style.border_width_left = border_width
+		border_style.border_width_top = border_width
+		border_style.border_width_right = border_width
+		border_style.border_width_bottom = border_width
 		border_style.border_color = border_color
 		_set_radius(border_style)
 		panel_border.add_theme_stylebox_override("panel", border_style)

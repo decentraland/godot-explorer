@@ -43,5 +43,7 @@ void fragment() {
 	vec4 tex_color = texture(TEXTURE, UV);
 	float aa = fwidth(dist);
 	tex_color.a *= 1.0 - smoothstep(-aa, aa, dist);
-	COLOR = tex_color;
+	// Multiply (don't overwrite): the incoming COLOR carries the node/parent modulate, so a dimmed
+	// item (e.g. a read notification at 0.4 alpha) still fades the image instead of staying solid.
+	COLOR *= tex_color;
 }
