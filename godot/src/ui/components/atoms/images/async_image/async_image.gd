@@ -23,9 +23,17 @@ const NO_IMAGE_BACKGROUND: Color = Color(0.20784314, 0.03137255, 0.32941177, 0.5
 		if is_node_ready():
 			_apply_corner_radius()
 			_reapply_current_style()
-@export var border_color: Color = Color("E8B9FF")
+@export var border_color: Color = Color("E8B9FF"):
+	set(value):
+		border_color = value
+		if is_node_ready():
+			_reapply_current_style()
 ## Border thickness in px; 0 hides the outline. Defaults to the historical 1px.
-@export var border_width: int = 1
+@export var border_width: int = 1:
+	set(value):
+		border_width = value
+		if is_node_ready():
+			_reapply_current_style()
 
 var _image_ready: bool = false
 var _is_loading: bool = true

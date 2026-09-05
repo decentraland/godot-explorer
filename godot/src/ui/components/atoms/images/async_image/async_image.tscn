@@ -37,7 +37,6 @@ script = ExtResource("1_async")
 
 [node name="Panel" type="PanelContainer" parent="." unique_id=153289327]
 unique_name_in_owner = true
-clip_children = 2
 material = ExtResource("2_skel")
 layout_mode = 1
 anchors_preset = 15

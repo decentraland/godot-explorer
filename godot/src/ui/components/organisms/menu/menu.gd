@@ -47,6 +47,9 @@ var _close_node_to_free: PlaceholderManager = null
 @onready var static_button_settings: TextureButton = %StaticButton_Settings
 @onready var control_modal: Control = %Control_Modal
 
+# Compiled once, reused by _is_uuid() to validate an event id before it reaches the events API URL.
+static var _uuid_regex: RegEx = null
+
 
 func _ready():
 	# Back on the standalone Discover screen — release the soft sign-out guard so a
@@ -391,9 +394,12 @@ func _reward_is_emote(metadata: Dictionary) -> bool:
 ## True when the string is a canonical UUID (8-4-4-4-12 hex). Keeps an event id from escaping the
 ## events API path (e.g. a "../" segment) once it's concatenated into the URL.
 func _is_uuid(value: String) -> bool:
-	var re: RegEx = RegEx.new()
-	re.compile("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")
-	return re.search(value) != null
+	if _uuid_regex == null:
+		_uuid_regex = RegEx.new()
+		_uuid_regex.compile(
+			"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+		)
+	return _uuid_regex.search(value) != null
 
 
 ## Opens the same travel modal a chat place/world link does, from the event's coords/realm.
