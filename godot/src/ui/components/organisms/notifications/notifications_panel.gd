@@ -159,10 +159,19 @@ func _async_on_mark_all_read_pressed() -> void:
 		printerr("NotificationsPanel: Failed to mark all as read - ", result.get_error())
 
 
-func _on_notification_clicked(_notification: Dictionary) -> void:
+func _on_notification_clicked(notification: Dictionary) -> void:
 	# Close the panel when a notification is clicked
 	hide_panel()
 	panel_closed.emit()
+
+	# Collapse the navbar for notifications that navigate away (events, rewards); friend ones keep it
+	# open since they open the Friends panel inside the navbar.
+	var notif_type: String = notification.get("type", "")
+	if (
+		notif_type
+		not in ["social_service_friendship_request", "social_service_friendship_accepted"]
+	):
+		Global.close_navbar.emit()
 
 
 func show_panel() -> void:

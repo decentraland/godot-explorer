@@ -364,19 +364,51 @@ func _async_request_hide_menu():
 
 
 func _on_notification_clicked(notification_dict: Dictionary) -> void:
-	# Handle notification clicks - open backpack for reward notifications
+	# Rewards open the backpack; events open the travel modal.
 	var notif_type = notification_dict.get("type", "")
 
-	# Check if this is a reward notification
 	if notif_type in ["reward_assignment", "reward_in_progress"]:
-		# Open the backpack to show the reward
-		async_show_backpack()
-		Global.open_navbar_silently.emit()
-	# MARKETPLACE-IAP-TOAST: a "marketplace_iap" toast tap would route here to open the
-	# backpack and apply the arrival view — read `category` from notification_dict.metadata,
-	# await async_show_backpack(category == "emote"), then have the active Backpack call
-	# apply_marketplace_arrival_view(category) (add a small forwarder on BackpackResponsive
-	# to reach it). Removed pending a portrait-aware toast.
+		# Backpack on the Emotes tab when the reward is an emote. Navbar is collapsed by the panel.
+		var metadata: Dictionary = notification_dict.get("metadata", {})
+		async_show_backpack(_reward_is_emote(metadata))
+		# MARKETPLACE-IAP-TOAST: a "marketplace_iap" toast tap would route here to open the
+		# backpack and apply the arrival view — read `category` from notification_dict.metadata,
+		# await async_show_backpack(category == "emote"), then have the active Backpack call
+		# apply_marketplace_arrival_view(category) (add a small forwarder on BackpackResponsive
+		# to reach it). Removed pending a portrait-aware toast.
+	elif notif_type in ["event_created", "events_starts_soon", "events_started"]:
+		_async_open_event_travel_modal(notification_dict)
+
+
+## True when a reward is an emote (emotes carry an emote-specific tokenCategory: "fun", "dance", …).
+func _reward_is_emote(metadata: Dictionary) -> bool:
+	return Emotes.CATEGORIES.has(str(metadata.get("tokenCategory", "")).to_lower())
+
+
+## Opens the same travel modal a chat place/world link does, from the event's coords/realm.
+func _async_open_event_travel_modal(notification_dict: Dictionary) -> void:
+	var metadata: Dictionary = notification_dict.get("metadata", {})
+	var link: String = metadata.get("link", "")
+	if link.is_empty():
+		return
+	var event_id: String = DclParseDeepLink.parse_decentraland_link(link).params.get("id", "")
+	if event_id.is_empty():
+		return
+	var url: String = "https://events.decentraland.org/api/events/" + event_id
+	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_GET, "")
+	if response is PromiseError:
+		printerr("Menu: failed to fetch event data: ", response.get_error())
+		return
+	var json: Dictionary = response.get_string_response_as_json()
+	if not json.has("data"):
+		printerr("Menu: invalid event response format")
+		return
+	var event_data: Dictionary = json["data"]
+	if PlacesHelper.is_world(event_data):
+		var realm: String = PlacesHelper.get_position_and_realm(event_data)[1]
+		Global.modal_manager.async_show_world_modal(realm)
+	else:
+		Global.modal_manager.async_show_teleport_modal(PlacesHelper.parse_position(event_data))
 
 
 func _on_deep_link_received() -> void:

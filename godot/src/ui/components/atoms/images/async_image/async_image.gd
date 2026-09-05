@@ -12,10 +12,14 @@ signal image_loaded
 ## TextureQuality in lib/src/godot_classes/dcl_config.rs.
 enum ForcedQuality { NONE = -1, LOW = 0, MEDIUM = 1, HIGH = 2, SOURCE = 3 }
 
+# Backdrop for the no-image / error state, kept separate so a transparent loaded bg still shows it.
+const NO_IMAGE_BACKGROUND: Color = Color(0.20784314, 0.03137255, 0.32941177, 0.5)
+
 @export var forced_quality: ForcedQuality = ForcedQuality.NONE
 @export var border_radius: int = 12
 @export var border_color: Color = Color("E8B9FF")
-@export var background_color: Color = Color(0.20784314, 0.03137255, 0.32941177, 0.5)
+## Backing behind a loaded texture; opaque white by default. Set transparent to reveal a node behind.
+@export var background_color: Color = Color(1, 1, 1, 1)
 
 var _image_ready: bool = false
 var _is_loading: bool = true
@@ -42,8 +46,6 @@ func set_texture(texture: Texture2D) -> void:
 	texture_no_image.hide()
 	_image_ready = true
 	_is_loading = false
-	# Use the configured background so a texture with transparency shows it (e.g. a rarity fill)
-	# instead of a hard white panel. Opaque images cover it, so existing full-bleed uses are unchanged.
 	_apply_loaded_style(background_color)
 	image_loaded.emit()
 
@@ -67,7 +69,7 @@ func _finish_with_error() -> void:
 	texture_no_image.show()
 	_image_ready = true
 	_is_loading = false
-	_apply_loaded_style(background_color)
+	_apply_loaded_style(NO_IMAGE_BACKGROUND)
 	image_loaded.emit()
 
 

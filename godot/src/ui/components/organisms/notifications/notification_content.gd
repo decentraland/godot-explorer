@@ -15,11 +15,25 @@ extends Control
 # Fallback shown when a notification carries no image URL, so the framed slot is never empty.
 const DEFAULT_IMAGE: Texture2D = preload("res://assets/ui/notifications/DefaultNotification.png")
 
+# Per-rarity gradient backdrops, the same textures the backpack draws behind a wearable/emote.
+const RARITY_BACKGROUNDS: Dictionary = {
+	"common": preload("res://assets/ui/CommonThumbnail.png"),
+	"uncommon": preload("res://assets/ui/UncommonThumbnail.png"),
+	"rare": preload("res://assets/ui/RareThumbnail.png"),
+	"epic": preload("res://assets/ui/EpicThumbnail.png"),
+	"legendary": preload("res://assets/ui/LegendaryThumbnail.png"),
+	"exotic": preload("res://assets/ui/ExoticThumbnail.png"),
+	"mythic": preload("res://assets/ui/MythicThumbnail.png"),
+	"unique": preload("res://assets/ui/UniqueThumbnail.png"),
+}
+const BASE_BACKGROUND: Texture2D = preload("res://assets/ui/BaseThumbnail.png")
+
 var notification_data: Dictionary = {}
 
 @onready var profile_picture_friend: ProfilePicture = %ProfilePictureFriend
 @onready var event_image: AsyncImage = %EventImage
 @onready var item_image: AsyncImage = %ItemImage
+@onready var item_rarity_background: TextureRect = %ItemRarityBackground
 @onready var label_title: RichTextLabel = %LabelTitle
 @onready var label_description: Label = %LabelDescription
 
@@ -57,6 +71,7 @@ func _update_image(notif_type: String, metadata: Dictionary) -> void:
 	profile_picture_friend.hide()
 	event_image.hide()
 	item_image.hide()
+	item_rarity_background.hide()
 
 	match notif_type:
 		"social_service_friendship_request", "social_service_friendship_accepted":
@@ -93,14 +108,14 @@ func _show_event(metadata: Dictionary) -> void:
 		event_image.set_texture(DEFAULT_IMAGE)
 
 
-## Received item/reward: rounded thumbnail with an outline coloured by its rarity.
+## Received item/reward: the thumbnail over its rarity gradient (a node behind the transparent-backed
+## image), the backpack look, framed by a rarity-coloured outline.
 func _show_item(metadata: Dictionary) -> void:
+	var rarity: String = str(metadata.get("tokenRarity", "")).to_lower()
+	item_rarity_background.texture = RARITY_BACKGROUNDS.get(rarity, BASE_BACKGROUND)
+	item_rarity_background.show()
+	item_image.border_color = _rarity_color(metadata.get("tokenRarity", ""))
 	item_image.show()
-	# Rarity gives the frame its bright edge and a darker fill behind the (often transparent)
-	# wearable thumbnail — the backpack look — so an alpha image no longer sits on hard white.
-	var rarity_color = _rarity_color(metadata.get("tokenRarity", ""))
-	item_image.border_color = rarity_color
-	item_image.background_color = rarity_color.darkened(0.5)
 	var url: String = metadata.get("tokenImage", metadata.get("image", ""))
 	if _is_loadable_url(url):
 		item_image.load_from_url(url)
