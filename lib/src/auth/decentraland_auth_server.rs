@@ -1,11 +1,20 @@
 use std::time::Duration;
 
+use ethers_core::utils::{hex, keccak256};
+use http::Uri;
 use serde::{Deserialize, Serialize};
 
 use crate::godot_classes::dcl_tokio_rpc::GodotTokioCall;
 use crate::urls;
 
-use super::wallet::SimpleAuthChain;
+use super::ephemeral_auth_chain::EphemeralAuthChain;
+use super::wallet::{sign_request, SimpleAuthChain};
+
+// Signed-fetch metadata carrying the hash of the exact body bytes; lowercase so the signed payload folds to itself.
+#[derive(Serialize)]
+struct SignedRequestMetadata {
+    bodyhash: String,
+}
 
 const AUTH_SERVER_RETRY_INTERVAL: Duration = Duration::from_secs(1);
 const AUTH_SERVER_TIMEOUT: Duration = Duration::from_secs(600);
@@ -325,6 +334,7 @@ async fn fetch_polling_server(
 
 async fn create_new_request(
     message: CreateRequest,
+    ephemeral: Option<&EphemeralAuthChain>,
 ) -> Result<CreateRequestResponse, anyhow::Error> {
     tracing::debug!(
         "create_new_request: creating request with method={}, params_count={}, has_auth_chain={}",
@@ -342,15 +352,25 @@ async fn create_new_request(
     );
 
     tracing::debug!("[HTTP] POST {}", endpoint_url);
-    let response = reqwest::Client::builder()
+    let mut request_builder = reqwest::Client::builder()
         .timeout(AUTH_SERVER_REQUEST_TIMEOUT)
         .build()
         .expect("reqwest build error")
         .post(&endpoint_url)
-        .header("Content-Type", "application/json")
-        .body(body)
-        .send()
-        .await?;
+        .header("Content-Type", "application/json");
+
+    // The ephemeral key signs the request so the server can tell it apart from a reused delegation.
+    if let Some(ephemeral) = ephemeral {
+        let uri: Uri = endpoint_url.parse()?;
+        let metadata = SignedRequestMetadata {
+            bodyhash: format!("0x{}", hex::encode(keccak256(body.as_bytes()))),
+        };
+        for (key, value) in sign_request("post", &uri, ephemeral, metadata).await {
+            request_builder = request_builder.header(key, value);
+        }
+    }
+
+    let response = request_builder.body(body).send().await?;
 
     let status = response.status();
     tracing::debug!("create_new_request: received response status={}", status);
@@ -425,13 +445,14 @@ pub async fn do_request_mobile(
 pub async fn do_request(
     message: CreateRequest,
     url_reporter: tokio::sync::mpsc::Sender<GodotTokioCall>,
+    ephemeral: Option<&EphemeralAuthChain>,
 ) -> Result<(String, serde_json::Value), anyhow::Error> {
     tracing::debug!(
         "do_request: starting auth request, method={}",
         message.method
     );
 
-    let request = create_new_request(message).await?;
+    let request = create_new_request(message, ephemeral).await?;
     let req_id = request.request_id;
     let code = request.code;
     tracing::debug!(
@@ -557,6 +578,7 @@ mod test {
                 auth_chain: None,
             },
             sx,
+            None,
         )
         .await;
 
