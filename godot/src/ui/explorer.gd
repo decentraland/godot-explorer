@@ -1568,7 +1568,6 @@ func _update_version_label() -> void:
 
 
 func _on_notification_clicked(notification_d: Dictionary) -> void:
-	# Friend notifications open the social panel: a request -> Requests tab, an accept -> Friends tab.
 	var notif_type = notification_d.get("type", "")
 	if ["social_service_friendship_request", "social_service_friendship_accepted"].has(notif_type):
 		if not friends_panel.visible:
