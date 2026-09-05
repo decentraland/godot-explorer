@@ -51,8 +51,8 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-expand_mode = 1
-stretch_mode = 6
+expand_mode = 3
+stretch_mode = 5
 
 [node name="ItemImage" parent="ImageContainerWrapper" unique_id=1700000003 instance=ExtResource("3_async")]
 unique_name_in_owner = true

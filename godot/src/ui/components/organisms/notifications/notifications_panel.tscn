@@ -80,11 +80,6 @@ font_size = 14
 [node name="NotificationsPanel" type="PanelContainer" unique_id=1058566868]
 clip_children = 2
 clip_contents = true
-custom_minimum_size = Vector2(370, 500)
-anchors_preset = 9
-anchor_bottom = 1.0
-offset_right = 1002.0
-grow_vertical = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 theme_override_styles/panel = SubResource("StyleBoxFlat_panel_bg")

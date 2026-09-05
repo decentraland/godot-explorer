@@ -16,7 +16,6 @@ corner_radius_bottom_left = 16
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_cmnm7"]
 
 [node name="NotificationItem" type="PanelContainer" unique_id=1020598395]
-custom_minimum_size = Vector2(280, 83)
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_notif_panel")
 script = ExtResource("1_notification_item")

@@ -364,11 +364,13 @@ func _async_request_hide_menu():
 
 
 func _on_notification_clicked(notification_dict: Dictionary) -> void:
-	# Rewards open the backpack; events open the travel modal.
+	# Rewards open the backpack; events open the travel modal. Both navigate away, so collapse the
+	# navbar here — this handler runs for both entry points (panel item and toast), keeping them in sync.
 	var notif_type = notification_dict.get("type", "")
 
 	if notif_type in ["reward_assignment", "reward_in_progress"]:
-		# Backpack on the Emotes tab when the reward is an emote. Navbar is collapsed by the panel.
+		Global.close_navbar.emit()
+		# Backpack on the Emotes tab when the reward is an emote.
 		var metadata: Dictionary = notification_dict.get("metadata", {})
 		async_show_backpack(_reward_is_emote(metadata))
 		# MARKETPLACE-IAP-TOAST: a "marketplace_iap" toast tap would route here to open the
@@ -377,6 +379,7 @@ func _on_notification_clicked(notification_dict: Dictionary) -> void:
 		# apply_marketplace_arrival_view(category) (add a small forwarder on BackpackResponsive
 		# to reach it). Removed pending a portrait-aware toast.
 	elif notif_type in ["event_created", "events_starts_soon", "events_started"]:
+		Global.close_navbar.emit()
 		_async_open_event_travel_modal(notification_dict)
 
 
