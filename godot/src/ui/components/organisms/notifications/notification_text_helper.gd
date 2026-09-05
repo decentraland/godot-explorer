@@ -8,30 +8,28 @@ extends RefCounted
 
 
 ## Get avatar color from username (uses DclAvatar's color algorithm)
-static func _get_avatar_color_hex(username: String) -> String:
-	var explorer = Global.get_explorer()
-	if explorer == null or explorer.player == null:
-		return "FFFFFF"  # Default white if no player
-
-	var player_avatar = explorer.player.avatar
-	if player_avatar == null:
-		return "FFFFFF"  # Default white if no player avatar
-
-	# Use player's avatar instance to calculate the color
-	var color = DclAvatar.get_nickname_color(username)
-	# Return as hex string without #
-	return color.to_html(false)
-
-
-## Wraps a player's nickname in their avatar colour for use as a notification title. The name is
-## server data (not a translatable string), so only the colour is applied here.
-static func _get_sender_name_colored(metadata: Dictionary) -> String:
+## The sender's plain nickname (server data), or "Unknown". Colour is applied separately by the
+## title label, so the title stays a plain Label — no BBCode, so nothing to escape.
+static func _get_sender_name(metadata: Dictionary) -> String:
 	var sender_name = TranslationServer.translate("COMMON_UNKNOWN_USER")
 	if "sender" in metadata and metadata["sender"] is Dictionary:
 		sender_name = metadata["sender"].get("name", sender_name)
-	var color_hex = _get_avatar_color_hex(sender_name)
-	# Escape BBCode in the (user-controlled) name before it reaches the bbcode_enabled title label.
-	return "[color=#%s]%s[/color]" % [color_hex, sender_name.replace("[", "[lb]")]
+	return sender_name
+
+
+## A nickname's avatar colour; white when no player avatar is available.
+static func _get_avatar_color(username: String) -> Color:
+	var explorer = Global.get_explorer()
+	if explorer == null or explorer.player == null or explorer.player.avatar == null:
+		return Color.WHITE
+	return DclAvatar.get_nickname_color(username)
+
+
+## Colour for the title: a friend's avatar colour, white for every other type.
+static func get_notification_header_color(notif_type: String, metadata: Dictionary) -> Color:
+	if notif_type in ["social_service_friendship_request", "social_service_friendship_accepted"]:
+		return _get_avatar_color(_get_sender_name(metadata))
+	return Color.WHITE
 
 
 ## Get the header/title for a notification based on its type
@@ -40,7 +38,7 @@ static func get_notification_header(notif_type: String, metadata: Dictionary) ->
 		# Friend notifications: the title is the sender's nickname tinted with their avatar colour;
 		# the action ("wants to be your friend!", …) moves to the description below.
 		"social_service_friendship_request", "social_service_friendship_accepted":
-			return _get_sender_name_colored(metadata)
+			return _get_sender_name(metadata)
 		# Community notifications
 		"community_invite_received":
 			return TranslationServer.translate("NOTIF_HEADER_COMMUNITY_INVITE_RECEIVED")

@@ -34,7 +34,7 @@ var notification_data: Dictionary = {}
 @onready var event_image: AsyncImage = %EventImage
 @onready var item_image: AsyncImage = %ItemImage
 @onready var item_rarity_background: TextureRect = %ItemRarityBackground
-@onready var label_title: RichTextLabel = %LabelTitle
+@onready var label_title: Label = %LabelTitle
 @onready var label_description: Label = %LabelDescription
 
 
@@ -45,25 +45,32 @@ func set_notification(notification: Dictionary) -> void:
 
 func _notification(what: int) -> void:
 	# Title/description are assigned from code, so they don't auto-retranslate on a language change.
+	# Only re-run the text — re-running _update_image would refetch every thumbnail (skeleton flash).
 	if what == NOTIFICATION_TRANSLATION_CHANGED:
-		_update_ui()
+		_update_texts()
 
 
 func _update_ui() -> void:
 	if notification_data.is_empty():
 		return
-
+	_update_texts()
 	var notif_type = notification_data.get("type", "")
-	var metadata: Dictionary = (
-		notification_data.get("metadata", {}) if "metadata" in notification_data else {}
-	)
-
-	# Title carries only the subject (coloured player name / event name / item label); the node owns
-	# the font weight, so the helper adds only the [color] tag when needed.
-	label_title.text = NotificationTextHelper.get_notification_header(notif_type, metadata)
-	label_description.text = NotificationTextHelper.get_notification_title(notif_type, metadata)
-
+	var metadata: Dictionary = notification_data.get("metadata", {})
 	_update_image(notif_type, metadata)
+
+
+func _update_texts() -> void:
+	if notification_data.is_empty():
+		return
+	var notif_type = notification_data.get("type", "")
+	var metadata: Dictionary = notification_data.get("metadata", {})
+	# Title is the subject (player name / event name / item label). It's a plain Label: the text and
+	# its colour (a friend's avatar colour, else white) are set separately — no BBCode.
+	label_title.text = NotificationTextHelper.get_notification_header(notif_type, metadata)
+	label_title.add_theme_color_override(
+		"font_color", NotificationTextHelper.get_notification_header_color(notif_type, metadata)
+	)
+	label_description.text = NotificationTextHelper.get_notification_title(notif_type, metadata)
 
 
 ## Shows the one image node that matches the notification type and hides the other two.

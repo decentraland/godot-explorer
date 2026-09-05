@@ -390,9 +390,12 @@ func _async_open_event_travel_modal(notification_dict: Dictionary) -> void:
 	var metadata: Dictionary = notification_dict.get("metadata", {})
 	var link: String = metadata.get("link", "")
 	if link.is_empty():
+		printerr("Menu: event notification missing link in metadata")
 		return
+	# DclParseDeepLink only accepts decentraland.org/.zone/mobile hosts; a foreign link yields no id.
 	var event_id: String = DclParseDeepLink.parse_decentraland_link(link).params.get("id", "")
 	if event_id.is_empty():
+		printerr("Menu: could not extract event id from link: ", link)
 		return
 	var url: String = "https://events.decentraland.org/api/events/" + event_id
 	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_GET, "")

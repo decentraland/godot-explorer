@@ -91,6 +91,9 @@ func async_display_notifications(notifications: Array) -> void:
 	for i in notifications.size():
 		var notif = notifications[i]
 		var id = str(notif.get("id", ""))
+		# Guard id-less notifications: keying them all on "" would collapse them into one row.
+		if id.is_empty():
+			id = "__noid_%d" % i
 		desired[id] = true
 		var item
 		if _items_by_id.has(id):
