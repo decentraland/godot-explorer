@@ -8,15 +8,13 @@
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_dbev7"]
 shader = ExtResource("3_8716v")
-shader_parameter/corner_radius_px = 8.0
+shader_parameter/corner_radius_px = 5.0
 shader_parameter/round_top_left = true
 shader_parameter/round_top_right = true
 shader_parameter/round_bottom_left = true
 shader_parameter/round_bottom_right = true
 
 [node name="NotificationContent" type="HBoxContainer" unique_id=1021925750]
-offset_right = 69.0
-offset_bottom = 56.0
 size_flags_horizontal = 3
 theme_override_constants/separation = 12
 script = ExtResource("1_content")
@@ -37,10 +35,10 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -30.0
-offset_top = -30.0
-offset_right = 50.0
-offset_bottom = 50.0
+offset_left = -40.0
+offset_top = -40.0
+offset_right = 40.0
+offset_bottom = 40.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
@@ -54,6 +52,7 @@ border_radius = 5
 
 [node name="ItemRarityBackground" type="TextureRect" parent="ImageContainerWrapper" unique_id=1700000004]
 unique_name_in_owner = true
+visible = false
 material = SubResource("ShaderMaterial_dbev7")
 layout_mode = 1
 anchors_preset = 15

@@ -12,8 +12,16 @@ signal image_loaded
 ## TextureQuality in lib/src/godot_classes/dcl_config.rs.
 enum ForcedQuality { NONE = -1, LOW = 0, MEDIUM = 1, HIGH = 2, SOURCE = 3 }
 
+# Rounded backdrop kept behind the placeholder glyph in the no-image / failed-load state.
+const NO_IMAGE_BACKGROUND: Color = Color(0.20784314, 0.03137255, 0.32941177, 0.5)
+
 @export var forced_quality: ForcedQuality = ForcedQuality.NONE
-@export var border_radius: int = 12
+## Corner radius (px) for the border and the image's rounded-corner shader.
+@export var border_radius: int = 12:
+	set(value):
+		border_radius = value
+		if is_node_ready():
+			_apply_corner_radius()
 @export var border_color: Color = Color("E8B9FF")
 ## Border thickness in px; 0 hides the outline. Defaults to the historical 1px.
 @export var border_width: int = 1
@@ -77,7 +85,7 @@ func _finish_with_error() -> void:
 	texture_no_image.show()
 	_image_ready = true
 	_is_loading = false
-	_apply_loaded_style()
+	_apply_no_image_style()
 	image_loaded.emit()
 
 
@@ -101,21 +109,40 @@ func _apply_loading_style() -> void:
 func _apply_loaded_style() -> void:
 	if not is_inside_tree():
 		return
-	# The panel is only the loading skeleton — hide it so the image's own alpha shows what's behind
-	# the component instead of a solid backdrop.
+	# A real image loaded — hide the skeleton panel so the image's own alpha shows what's behind the
+	# component instead of a solid backdrop.
 	if is_instance_valid(panel):
 		panel.hide()
-	if is_instance_valid(panel_border):
-		var border_style := StyleBoxFlat.new()
-		border_style.draw_center = false
-		border_style.border_width_left = border_width
-		border_style.border_width_top = border_width
-		border_style.border_width_right = border_width
-		border_style.border_width_bottom = border_width
-		border_style.border_color = border_color
-		_set_radius(border_style)
-		panel_border.add_theme_stylebox_override("panel", border_style)
-		panel_border.show()
+	_apply_border()
+
+
+func _apply_no_image_style() -> void:
+	if not is_inside_tree():
+		return
+	# No image: keep the panel as a plain rounded backdrop behind the placeholder glyph.
+	if is_instance_valid(panel):
+		panel.material = null
+		var style := StyleBoxFlat.new()
+		style.bg_color = NO_IMAGE_BACKGROUND
+		_set_radius(style)
+		panel.add_theme_stylebox_override("panel", style)
+		panel.show()
+	_apply_border()
+
+
+func _apply_border() -> void:
+	if not is_instance_valid(panel_border):
+		return
+	var border_style := StyleBoxFlat.new()
+	border_style.draw_center = false
+	border_style.border_width_left = border_width
+	border_style.border_width_top = border_width
+	border_style.border_width_right = border_width
+	border_style.border_width_bottom = border_width
+	border_style.border_color = border_color
+	_set_radius(border_style)
+	panel_border.add_theme_stylebox_override("panel", border_style)
+	panel_border.show()
 
 
 func _set_radius(style: StyleBoxFlat) -> void:
