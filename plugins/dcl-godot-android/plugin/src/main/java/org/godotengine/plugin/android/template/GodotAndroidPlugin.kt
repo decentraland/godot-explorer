@@ -5,15 +5,18 @@ import android.app.Activity
 import android.app.ActivityManager
 import android.app.AlarmManager
 import android.app.Application
+import android.app.ApplicationExitInfo
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.ActivityNotFoundException
+import android.content.ComponentCallbacks2
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
+import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.net.Uri
 import android.os.BatteryManager
@@ -53,6 +56,11 @@ import com.reown.sign.client.SignClient
 // Play Integrity — server-side platform attestation for /sign-message.
 import com.google.android.play.core.integrity.IntegrityManagerFactory
 import com.google.android.play.core.integrity.IntegrityTokenRequest
+
+// Watermark for getPreviousExitReasons(): exits at or before this timestamp were already reported.
+private const val EXIT_REASONS_PREFS = "dcl_exit_reasons"
+private const val EXIT_REASONS_ACK_KEY = "acked_timestamp_ms"
+private const val EXIT_REASONS_MAX = 16
 
 class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
 
@@ -102,7 +110,11 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
             // POST_NOTIFICATIONS dialog result. requestNotificationPermission() returns
             // before the user answers, so the real outcome ("granted"/"denied") is
             // delivered here once onMainRequestPermissionsResult fires.
-            SignalInfo("notification_permission_result", String::class.java)
+            SignalInfo("notification_permission_result", String::class.java),
+            // ComponentCallbacks2.onTrimMemory level (onLowMemory maps to TRIM_MEMORY_COMPLETE).
+            // Boxed Integer on purpose: GodotPlugin.emitSignal validates args with isInstance,
+            // which is always false for the primitive `int` class, and drops the signal.
+            SignalInfo("memory_trim", Int::class.javaObjectType)
         )
     }
 
@@ -114,6 +126,9 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
         activity?.let {
             notificationDatabase = NotificationDatabase(it.applicationContext)
             Log.d(pluginName, "Notification database initialized")
+            // Application-scoped so it survives activity recreation; emitSignal marshals
+            // the UI-thread callback onto Godot's render thread.
+            it.applicationContext.registerComponentCallbacks(trimMemoryCallbacks)
         }
         // Kick off Firebase Analytics initialization early so getAppInstanceId() can be ready
         // by the time the first Segment batch is sent.
@@ -2220,6 +2235,104 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
             dict["error"] = e.message ?: "Unknown error"
         }
         return dict
+    }
+
+    // --- Process death diagnostics (Sentry exit reasons, memory trim) ---
+
+    private val trimMemoryCallbacks = object : ComponentCallbacks2 {
+        override fun onTrimMemory(level: Int) {
+            emitSignal("memory_trim", level)
+        }
+
+        override fun onLowMemory() {
+            emitSignal("memory_trim", ComponentCallbacks2.TRIM_MEMORY_COMPLETE)
+        }
+
+        override fun onConfigurationChanged(newConfig: Configuration) {}
+    }
+
+    /**
+     * Exits of this app's main process that are newer than the last [ackExitReasons] watermark,
+     * newest first, as recorded by the OS (API 30+; empty below that). GDScript turns each one
+     * into a Sentry event, so low-memory kills, ANRs and native crashes of the *previous* run
+     * become one per-reason breakdown. Nothing is acked here: the caller acks once captured.
+     *
+     * On the very first call (no watermark yet) only the newest exit is returned, so a device
+     * that updates to this build does not replay its whole history as a burst.
+     */
+    @UsedByGodot
+    fun getPreviousExitReasons(): Array<Dictionary> {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return emptyArray()
+        val act = activity ?: return emptyArray()
+        val activityManager =
+            act.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager ?: return emptyArray()
+        val prefs = act.getSharedPreferences(EXIT_REASONS_PREFS, Context.MODE_PRIVATE)
+        val hasWatermark = prefs.contains(EXIT_REASONS_ACK_KEY)
+        val watermark = prefs.getLong(EXIT_REASONS_ACK_KEY, 0L)
+        val out = mutableListOf<Dictionary>()
+        try {
+            val exits = activityManager.getHistoricalProcessExitReasons(act.packageName, 0, EXIT_REASONS_MAX)
+            for (info in exits) {
+                // The UID also lists sandboxed sub-processes (WebView, Play Integrity).
+                if (info.processName != act.packageName) continue
+                if (info.timestamp <= watermark) continue
+                out.add(Dictionary().apply {
+                    this["reason"] = exitReasonName(info.reason)
+                    this["reason_code"] = info.reason
+                    this["description"] = info.description ?: ""
+                    this["timestamp"] = info.timestamp
+                    this["pss_kb"] = info.pss
+                    this["rss_kb"] = info.rss
+                    this["importance"] = info.importance
+                    this["status"] = info.status
+                })
+                if (!hasWatermark) break
+            }
+        } catch (e: Exception) {
+            Log.w(pluginName, "getHistoricalProcessExitReasons failed: ${e.message}")
+        }
+        return out.toTypedArray()
+    }
+
+    /** Marks every exit with timestamp <= [timestampMs] as reported. */
+    @UsedByGodot
+    fun ackExitReasons(timestampMs: Long) {
+        activity?.getSharedPreferences(EXIT_REASONS_PREFS, Context.MODE_PRIVATE)
+            ?.edit()?.putLong(EXIT_REASONS_ACK_KEY, timestampMs)?.apply()
+    }
+
+    /**
+     * Debug only (the GDScript side gates it to non-production builds): blocks the Android UI
+     * thread so a real system ANR fires. Godot's main loop runs on the render thread, so
+     * blocking it from GDScript never trips the ANR watchdog.
+     */
+    @UsedByGodot
+    fun debugBlockUiThread(ms: Int) {
+        runOnUiThread {
+            try {
+                Thread.sleep(ms.toLong())
+            } catch (_: InterruptedException) {
+            }
+        }
+    }
+
+    private fun exitReasonName(reason: Int): String = when (reason) {
+        ApplicationExitInfo.REASON_CRASH -> "crash"
+        ApplicationExitInfo.REASON_CRASH_NATIVE -> "native_crash"
+        ApplicationExitInfo.REASON_ANR -> "anr"
+        ApplicationExitInfo.REASON_LOW_MEMORY -> "low_memory"
+        ApplicationExitInfo.REASON_SIGNALED -> "signaled"
+        ApplicationExitInfo.REASON_EXCESSIVE_RESOURCE_USAGE -> "excessive_resource"
+        ApplicationExitInfo.REASON_EXIT_SELF -> "exit_self"
+        ApplicationExitInfo.REASON_USER_REQUESTED -> "user_requested"
+        ApplicationExitInfo.REASON_USER_STOPPED -> "user_stopped"
+        ApplicationExitInfo.REASON_DEPENDENCY_DIED -> "dependency_died"
+        ApplicationExitInfo.REASON_INITIALIZATION_FAILURE -> "initialization_failure"
+        ApplicationExitInfo.REASON_PERMISSION_CHANGE -> "permission_change"
+        ApplicationExitInfo.REASON_FREEZER -> "freezer"
+        ApplicationExitInfo.REASON_PACKAGE_STATE_CHANGE -> "package_state_change"
+        ApplicationExitInfo.REASON_PACKAGE_UPDATED -> "package_updated"
+        else -> "other"
     }
 
     /**

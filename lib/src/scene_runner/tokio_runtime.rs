@@ -23,7 +23,7 @@ impl INode for TokioRuntime {
                 runtime: Some(Arc::new(rt)),
             },
             Err(e) => {
-                godot_error!("{e}");
+                tracing::error!("{e}");
                 Self { runtime: None }
             }
         }

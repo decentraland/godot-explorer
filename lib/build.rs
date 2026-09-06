@@ -873,4 +873,16 @@ fn set_godot_explorer_version() {
     } else {
         println!("cargo:warning=Version checkpoint written: {}", full_version);
     }
+
+    // Second checkpoint with the exact release string the runtime hands to
+    // Sentry (`{version}+{build}`), so CI can create/finalize the same Sentry
+    // release the app reports under (`cargo run -- explorer-version --sentry-release`).
+    // Kept separate from .build.version: that one is the human-facing string.
+    let sentry_checkpoint_path = Path::new("../.build.sentry_release");
+    if let Err(e) = fs::write(sentry_checkpoint_path, &sentry_release) {
+        println!(
+            "cargo:warning=Failed to write sentry release checkpoint file: {}",
+            e
+        );
+    }
 }
