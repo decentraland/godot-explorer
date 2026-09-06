@@ -278,6 +278,9 @@ pub struct Scene {
     pub kinematic_entities: HashSet<SceneEntityId>,
     // Entities that have had at least one transform applied (second write = movement)
     pub transform_initialized: HashSet<SceneEntityId>,
+    // A scene that sends one non-finite transform normally sends many, every
+    // frame. Latch so the rejection is logged once per scene, not per entity.
+    pub warned_invalid_transform: bool,
     // Texture animations (UV offset/scale) driven by TextureMove/TextureMoveContinuous tweens
     pub texture_animations: HashMap<SceneEntityId, TextureAnimation>,
     // Duplicated value to async-access the animator
@@ -421,6 +424,7 @@ impl Scene {
             tweens: HashMap::new(),
             kinematic_entities: HashSet::new(),
             transform_initialized: HashSet::new(),
+            warned_invalid_transform: false,
             texture_animations: HashMap::new(),
             dup_animator: HashMap::new(),
             trigger_areas: TriggerAreaState::default(),
@@ -503,6 +507,7 @@ impl Scene {
             tweens: HashMap::new(),
             kinematic_entities: HashSet::new(),
             transform_initialized: HashSet::new(),
+            warned_invalid_transform: false,
             texture_animations: HashMap::new(),
             dup_animator: HashMap::new(),
             trigger_areas: TriggerAreaState::default(),

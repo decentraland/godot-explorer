@@ -125,8 +125,13 @@ impl AndroidBuildEnv {
             "linux-x86_64"
         };
 
+        // `--build-id=sha1`: the NDK clang driver adds no GNU build-id on its own,
+        // and without one every libdclgodot.so frame in an Android tombstone has
+        // nothing for sentry-java to turn into a debug-id, so the crash stays
+        // unsymbolicated in Sentry. sha1 is the 20-byte form sentry-cli registers.
         let rustflags = format!(
-            "-L{}/toolchains/llvm/prebuilt/{}/lib/aarch64-unknown-linux-musl",
+            "-L{}/toolchains/llvm/prebuilt/{}/lib/aarch64-unknown-linux-musl \
+             -C link-arg=-Wl,--build-id=sha1",
             self.ndk_path, host_tag
         );
 

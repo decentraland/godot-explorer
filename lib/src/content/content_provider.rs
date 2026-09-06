@@ -2778,8 +2778,7 @@ impl ContentProvider {
             let result = load_resource_pack_on_main(zip_path.to_string()).await;
 
             if !result {
-                tracing::error!("load_resource_pack FAILED on {}", zip_path);
-                godot_error!("load_resource_pack failed on {zip_path}");
+                tracing::warn!("load_resource_pack FAILED on {}", zip_path);
                 pack_load_failures.push(hash_to_load.clone());
             } else {
                 tracing::debug!("load_resource_pack SUCCESS: {}", zip_path);
@@ -2930,7 +2929,7 @@ impl ContentProvider {
                 optimized_wearable_counter.fetch_add(1, Ordering::Relaxed);
                 Ok(Some(GString::from(&scene_path).to_variant()))
             } else {
-                tracing::error!(
+                tracing::warn!(
                     "Failed to load {} resource pack: {}",
                     asset_type,
                     zip_godot_path

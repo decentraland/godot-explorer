@@ -5,6 +5,20 @@ extends RefCounted
 ## against the gdlint max-file-lines cap). Scene access (player, viewport,
 ## loading UI, jump-to) goes through the Explorer node given to the constructor.
 
+# Crash / hang triggers used to rehearse the Sentry pipeline on a device. They
+# answer with a system message on production builds; the Rust side of the
+# crash generator refuses too (dcl_crash_generator.rs).
+const DEBUG_ONLY_COMMANDS := [
+	"/scenecrash",
+	"/godotcrash",
+	"/instantcrash",
+	"/nativecrash",
+	"/delayedcrash",
+	"/anr",
+	"/stall",
+]
+const DEBUG_BLOCK_MS := 8000
+
 var _int_regex := RegEx.create_from_string(r"^-?\d+$")
 var _explorer  # Explorer scene root; untyped to avoid preloading explorer.gd
 
@@ -50,14 +64,22 @@ func submit_message(message: String) -> void:
 			Global.realm.async_clear_realm()
 		elif command_str == "/reload":
 			Global.realm.async_set_realm(Global.realm.get_realm_string())
+		elif command_str in DEBUG_ONLY_COMMANDS and DclGlobal.is_production():
+			_emit_system_message("🔴 Debug commands are disabled in production builds")
 		elif command_str == "/scenecrash":
 			Global.scene_runner.debug_force_crash_current_scene()
 		elif command_str == "/godotcrash":
 			OS.crash("User crashed on purpose")
-		elif command_str == "/instantcrash":
+		elif command_str == "/instantcrash" or command_str == "/nativecrash":
 			DclCrashGenerator.static_crash()
 		elif command_str == "/delayedcrash":
 			_explorer.add_child(DclCrashGenerator.new())
+		elif command_str == "/anr":
+			_debug_block_ui_thread()
+		elif command_str == "/stall":
+			# Trips the Rust main-thread stall detector (memory_monitor.rs).
+			_emit_system_message("Blocking the main loop for %ds" % (DEBUG_BLOCK_MS / 1000))
+			OS.delay_msec(DEBUG_BLOCK_MS)
 		else:
 			Global.on_chat_message.emit(
 				"system", "[color=#ccc]🔴 Unknown command[/color]", Time.get_unix_time_from_system()
@@ -67,6 +89,33 @@ func submit_message(message: String) -> void:
 		Global.on_chat_message.emit(
 			Global.player_identity.get_address_str(), message, Time.get_unix_time_from_system()
 		)
+
+
+func _emit_system_message(text: String) -> void:
+	Global.on_chat_message.emit(
+		"system", "[color=#ccc]%s[/color]" % text, Time.get_unix_time_from_system()
+	)
+
+
+# On Android Godot's main loop runs on the render thread, so blocking it from
+# GDScript never produces a system ANR; the plugin blocks the UI thread instead.
+# The tester has to keep tapping so input dispatch times out.
+func _debug_block_ui_thread() -> void:
+	if Global.is_android() and Engine.has_singleton("dcl-godot-android"):
+		var plugin = Engine.get_singleton("dcl-godot-android")
+		# has_method() never sees JNISingleton methods; the memory_trim signal
+		# marks the plugin revision that also ships debugBlockUiThread.
+		if plugin != null and plugin.has_signal("memory_trim"):
+			_emit_system_message(
+				(
+					"Blocking the Android UI thread for %ds - keep tapping the screen"
+					% (DEBUG_BLOCK_MS / 1000)
+				)
+			)
+			plugin.debugBlockUiThread(DEBUG_BLOCK_MS)
+			return
+	_emit_system_message("Blocking the main loop for %ds" % (DEBUG_BLOCK_MS / 1000))
+	OS.delay_msec(DEBUG_BLOCK_MS)
 
 
 func _is_coordinate_string(text: String) -> bool:
