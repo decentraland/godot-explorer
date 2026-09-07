@@ -5,9 +5,13 @@ signal jump_in(parcel_position: Vector2i, realm_str: String)
 signal jump_in_world(realm_str: String)
 
 ## Font sizes tried, largest first, until the greeting's longest line fits on one line.
-## 48 is the scene's design size, so English with a short name renders exactly as before.
-## FTUE_WELCOME is deliberately two lines ("Welcome @name" / "Let's get you started") and the
-## name is user data of unbounded length, so ES/PT push the first line to wrap (#2825).
+## 48 is the scene's design size, so a name that already fits renders exactly as before.
+##
+## FTUE_WELCOME gives the name a line of its own ("Welcome," / "@name" / "Let's get you
+## started") so the greeting's length cannot push it onto a second line — the ES/PT greetings
+## are three times longer than the English one, which is what broke the layout in #2825. The
+## name is still user data of unbounded length, so this ladder remains as the backstop for a
+## name long enough to wrap on its own.
 const WELCOME_FONT_SIZES: PackedInt32Array = [48, 42, 36]
 
 ## Strips bbcode tags so the measured width is the drawn text, not the markup.

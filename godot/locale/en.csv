@@ -219,9 +219,12 @@ Please try again."
 "FRIENDS_SOMETHING_WENT_WRONG_LOADING";"";"";"Something went wrong while loading your friends.
 Try again later."
 "FRIENDS_TRY_TRAVELING_SOMEWHERE_ELSE_TO_MEET";"";"";"Try traveling somewhere else to meet new people."
-"FTUE_WELCOME";"";"";"Welcome [color=#B18AFF]@{name}[/color]
+"FTUE_WELCOME";"";"";"Welcome,
+[color=#B18AFF]@{name}[/color]
 Let's get you started"
-"FTUE_WELCOME_PLACEHOLDER";"";"";"Welcome [color=#E8B9FF]@UserName[/color] Let's get you started"
+"FTUE_WELCOME_PLACEHOLDER";"";"";"Welcome,
+[color=#E8B9FF]@UserName[/color]
+Let's get you started"
 "GUEST_UPGRADE_CARD_ADD_EMAIL_TO_PLAY_ACROSS_MOBILE";"";"";"Add email to play across mobile and desktop, and claim an exclusive Wearable."
 "GUEST_UPGRADE_DISCOVER";"";"";"DISCOVER"
 "IAP_PURCHASE_OVERLAY_LOADING";"";"";"Loading..."

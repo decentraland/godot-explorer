@@ -219,9 +219,12 @@ Tente novamente."
 "FRIENDS_SOMETHING_WENT_WRONG_LOADING";"";"";"Algo deu errado ao carregar seus amigos.
 Tente novamente mais tarde."
 "FRIENDS_TRY_TRAVELING_SOMEWHERE_ELSE_TO_MEET";"";"";"Viaje para outro lugar e conheça gente nova."
-"FTUE_WELCOME";"";"";"Boas-vindas, [color=#B18AFF]@{name}[/color]
+"FTUE_WELCOME";"";"";"Boas-vindas,
+[color=#B18AFF]@{name}[/color]
 Vamos começar"
-"FTUE_WELCOME_PLACEHOLDER";"";"";"Boas-vindas, [color=#E8B9FF]@UserName[/color] Vamos começar"
+"FTUE_WELCOME_PLACEHOLDER";"";"";"Boas-vindas,
+[color=#E8B9FF]@UserName[/color]
+Vamos começar"
 "GUEST_UPGRADE_CARD_ADD_EMAIL_TO_PLAY_ACROSS_MOBILE";"";"";"Adicione seu e-mail para jogar no celular e no computador e garanta um Wearable exclusivo."
 "GUEST_UPGRADE_DISCOVER";"";"";"DESCOBRIR"
 "IAP_PURCHASE_OVERLAY_LOADING";"";"";"Carregando..."
