@@ -1,31 +1,29 @@
-extends Button
+extends Control
 
 enum LoadState { UNLOADED, LOADING, LOADED, FAILED }
 
 const SOCIAL_TYPE = SocialItemData.SocialType
-const MAX_DISPLAY_NAME_LENGTH: int = 15
 const LOAD_TIMEOUT_SECONDS: float = 5.0
 const MIN_SKELETON_VISIBLE_SECONDS: float = 0.3
 
 @export var item_type: SocialItemData.SocialType
 
 var is_guest = false
-var trim_value = 20
 var social_data: SocialItemData
 var current_friendship_status: int = Global.FriendshipStatus.UNKNOWN
 var load_state: LoadState = LoadState.UNLOADED
 var parcel: Array = []  # Parcel coordinates [x, y] when user is in genesis city
+# ENS name of the world the friend is in (empty when in Genesis City or nowhere). Read from
+# Global.locations.online_locations; drives the world place label and jump-in.
+var world_name: String = ""
 var _avatar_ref: WeakRef = null  # Weak reference to avatar for nearby items
 var _is_loading: bool = false
 var _load_start_time: float = 0.0
-var _nearby_panel_stylebox_default: StyleBox = null
-var _nearby_panel_stylebox_loading: StyleBox = null
 
 @onready var h_box_container_online: HBoxContainer = %HBoxContainer_Online
 @onready var h_box_container_nearby: HBoxContainer = %HBoxContainer_Nearby
 @onready var h_box_container_request: HBoxContainer = %HBoxContainer_Request
 @onready var h_box_container_blocked: HBoxContainer = %HBoxContainer_Blocked
-@onready var panel_nearby_player_item: Panel = %Panel_NearbyPlayerItem
 @onready var nickname: Label = %Nickname
 @onready var label_place: Label = %Label_Place
 @onready var profile_picture: ProfilePicture = %ProfilePicture
@@ -35,6 +33,7 @@ var _nearby_panel_stylebox_loading: StyleBox = null
 @onready var button_accept: Button = %Button_Accept
 @onready var button_reject: Button = %Button_Reject
 @onready var button_jump: Button = %Button_JumpIn
+@onready var button_profile: Button = %Button_Profile
 @onready var data_container: HBoxContainer = %Data
 @onready var skeleton_container: HBoxContainer = %Skeleton
 @onready var panel_container_request: PanelContainer = %PanelContainer_Request
@@ -43,7 +42,6 @@ var _nearby_panel_stylebox_loading: StyleBox = null
 
 func _ready():
 	add_to_group("blacklist_ui_sync")
-	_cache_nearby_panel_styleboxes()
 	_set_loading(true)
 	_update_elements_visibility()
 	# Connect accept/reject buttons for friend requests
@@ -52,22 +50,15 @@ func _ready():
 	button_reject.pressed.connect(_async_on_button_reject_pressed)
 	button_jump.pressed.connect(_on_button_jump_in_pressed)
 	button_unblock.pressed.connect(_on_button_unblock_pressed)
+	# Profile opens from Button_Profile (its own drag-vs-tap detection), not the whole row.
+	button_profile.pressed.connect(_on_pressed)
 	# Connect to locations signal to update jump button visibility
 	if Global.locations:
-		Global.locations.in_genesis_city_changed.connect(_on_in_genesis_city_changed)
+		Global.locations.online_locations_changed.connect(_on_online_locations_changed)
 
-
-func _cache_nearby_panel_styleboxes() -> void:
-	if not is_instance_valid(panel_nearby_player_item):
-		return
-	var sb := panel_nearby_player_item.get_theme_stylebox("panel")
-	if sb == null:
-		return
-	_nearby_panel_stylebox_default = sb.duplicate()
-	var loading_sb := sb.duplicate()
-	if loading_sb is StyleBoxFlat:
-		loading_sb.bg_color.a = 0.0
-	_nearby_panel_stylebox_loading = loading_sb
+	# Place label ellipsizes on width (clip_text lets the overrun trim to the available room)
+	# instead of a fixed character cap that cut long titles short while space was left.
+	label_place.clip_text = true
 
 
 func set_data(data: SocialItemData, should_load: bool = true) -> void:
@@ -99,8 +90,8 @@ func _apply_data_to_ui() -> void:
 	else:
 		texture_rect_claimed_checkmark.show()
 
-	if display_name.length() > MAX_DISPLAY_NAME_LENGTH:
-		display_name = display_name.left(MAX_DISPLAY_NAME_LENGTH) + "..."
+	# The nickname row (EllipsisNameLabel) clips on width now, so keep the full name here instead
+	# of a hard character cap.
 	nickname.text = display_name
 
 	var nickname_color = DclAvatar.get_nickname_color(social_data.name)
@@ -109,6 +100,11 @@ func _apply_data_to_ui() -> void:
 		texture_rect_claimed_checkmark.show()
 	else:
 		texture_rect_claimed_checkmark.hide()
+
+	# Name text and check visibility both changed; re-fit so the check stays glued to the name.
+	var nickname_row := nickname.get_parent()
+	if nickname_row is EllipsisNameLabel:
+		nickname_row.refresh.call_deferred()
 
 
 func load_item() -> void:
@@ -240,20 +236,6 @@ func _load_data_from_avatar(avatar_param: Avatar) -> void:
 	_notify_parent_size_changed()
 
 
-func _on_mouse_entered() -> void:
-	# Don't show hover background while skeleton/loading is visible.
-	if skeleton_container and skeleton_container.visible:
-		return
-	panel_nearby_player_item.self_modulate = "#ffffff"
-
-
-func _on_mouse_exited() -> void:
-	# Don't change background while skeleton/loading is visible.
-	if skeleton_container and skeleton_container.visible:
-		return
-	panel_nearby_player_item.self_modulate = "#ffffff00"
-
-
 func _notify_other_components_of_change() -> void:
 	if social_data.address:
 		Global.get_tree().call_group("blacklist_ui_sync", "_sync_blacklist_ui", social_data.address)
@@ -284,20 +266,23 @@ func _update_elements_visibility() -> void:
 					_check_and_update_friend_status()
 		SOCIAL_TYPE.ONLINE:
 			h_box_container_online.show()
-			profile_picture.set_online()
 			_update_jump_button_visibility()
-		SOCIAL_TYPE.OFFLINE:
-			profile_picture.set_offline()
 		SOCIAL_TYPE.REQUEST:
 			h_box_container_request.show()
 			# Guest users cannot accept/reject friend requests
 			if Global.player_identity.is_guest or is_guest:
 				button_accept.hide()
 				button_reject.hide()
+		SOCIAL_TYPE.REQUEST_SENT:
+			# Sent requests can only be cancelled: show just the reject (X) button as "cancel".
+			h_box_container_request.show()
+			button_accept.hide()
+			if Global.player_identity.is_guest or is_guest:
+				button_reject.hide()
 		SOCIAL_TYPE.BLOCKED:
 			h_box_container_blocked.show()
 		_:
-			profile_picture.hide_status()
+			pass
 
 
 func _hide_all_buttons() -> void:
@@ -305,7 +290,6 @@ func _hide_all_buttons() -> void:
 	h_box_container_nearby.hide()
 	h_box_container_request.hide()
 	h_box_container_blocked.hide()
-	profile_picture.hide_status()
 	label_place.hide()
 	button_add_friend.hide()
 	panel_container_request.hide()
@@ -322,7 +306,11 @@ func set_type(type: SocialItemData.SocialType) -> void:
 	_update_elements_visibility()
 	# Subscribe to blacklist changes for NEARBY and REQUEST items to hide/show themselves
 	if (
-		(item_type == SOCIAL_TYPE.NEARBY or item_type == SOCIAL_TYPE.REQUEST)
+		(
+			item_type == SOCIAL_TYPE.NEARBY
+			or item_type == SOCIAL_TYPE.REQUEST
+			or item_type == SOCIAL_TYPE.REQUEST_SENT
+		)
 		and not Global.social_blacklist.blacklist_changed.is_connected(_on_blacklist_changed)
 	):
 		Global.social_blacklist.blacklist_changed.connect(_on_blacklist_changed)
@@ -351,6 +339,11 @@ func _async_on_button_add_friend_pressed() -> void:
 	current_friendship_status = Global.FriendshipStatus.REQUEST_SENT
 	button_add_friend.hide()
 	panel_container_request.show()
+	# Now pending: re-sort so it moves into the pending bucket of the nearby list.
+	_notify_parent_reorder()
+
+	# Notify the friends panel so the new outgoing request appears in the SENT list live.
+	Global.friendship_request_sent.emit(social_data.address)
 
 
 func _async_on_button_accept_pressed() -> void:
@@ -383,6 +376,10 @@ func _async_on_button_accept_pressed() -> void:
 
 
 func _async_on_button_reject_pressed() -> void:
+	# On a sent request this same button acts as "cancel"; on a received one it's "reject".
+	if item_type == SOCIAL_TYPE.REQUEST_SENT:
+		await _async_cancel_sent_request()
+		return
 	button_accept.disabled = true
 	button_reject.disabled = true
 	var promise = Global.social_service.reject_friend_request(social_data.address)
@@ -416,13 +413,37 @@ func _async_on_button_reject_pressed() -> void:
 	Global.social_service.friendship_request_rejected.emit(social_data.address)
 
 
+## Cancels a request WE sent (REQUEST_SENT items) and removes the row from its SENT list.
+func _async_cancel_sent_request() -> void:
+	button_reject.disabled = true
+	var promise = Global.social_service.cancel_friend_request(social_data.address)
+	await PromiseUtils.async_awaiter(promise)
+
+	if promise.is_rejected():
+		# Recoverable network failure — warn, don't printerr (keeps it out of Sentry).
+		push_warning("Failed to cancel friend request: " + PromiseUtils.get_error_message(promise))
+		button_reject.disabled = false
+		return
+
+	# friend_request_cancel metric
+	Global.metrics.track_click_button("friend_request_cancel", "SOCIAL_PANEL", "")
+
+	# Emit locally (the service doesn't echo our own actions): the friends panel drops it from the
+	# SENT list and nearby items re-enable their Add Friend button.
+	Global.social_service.friendship_request_cancelled.emit(social_data.address)
+
+
 func _on_button_jump_in_pressed() -> void:
-	if parcel.size() >= 2:
+	if not world_name.is_empty():
+		# Join via the realm path so we land at the world's spawn, not parcel (0,0).
+		Global.async_join_world(world_name)
+	elif parcel.size() >= 2:
 		var parcel_position = Vector2i(parcel[0], parcel[1])
-		# Fixed realm to main because we only know our friends positions in Genesis City
 		Global.async_teleport_to(parcel_position, DclUrls.main_realm())
 	else:
-		push_error("Invalid parcel coordinates")
+		# Benign race: the location can be cleared by a fresh online_locations_changed emit
+		# between the button showing and this press. Warn (not push_error → Sentry).
+		push_warning("Jump-in pressed with no resolved location")
 
 
 func _async_fetch_place_data() -> void:
@@ -430,6 +451,9 @@ func _async_fetch_place_data() -> void:
 		return
 
 	var result = await PlacesHelper.async_get_by_position(Vector2i(parcel[0], parcel[1]))
+
+	if not NodeGuard.is_alive(self, "SocialItem._async_fetch_place_data"):
+		return
 
 	if result is PromiseError:
 		printerr("Error fetching place data: ", result.get_error())
@@ -449,15 +473,9 @@ func _async_fetch_place_data() -> void:
 		if title == "interactive-text":
 			title = "Unknown Place"
 
-		var location_entry = {
-			"coord": parcel.duplicate(), "title": shorten_tittle(title, trim_value)
-		}
+		var location_entry = {"coord": parcel.duplicate(), "title": title}
 		# Add to known_locations for future reference
 		Global.locations.known_locations.append(location_entry)
-
-
-func update_location() -> void:
-	pass
 
 
 func _on_button_unblock_pressed() -> void:
@@ -516,7 +534,6 @@ func _async_check_friend_status_with_loading() -> void:
 
 
 func _update_button_visibility_from_status() -> void:
-	profile_picture.unset_friend()
 	if Global.player_identity.is_guest or is_guest:
 		return
 	# Update button and label visibility based on pre-checked friendship status
@@ -532,10 +549,10 @@ func _update_button_visibility_from_status() -> void:
 		# ACCEPTED - Hide both button and label
 		button_add_friend.hide()
 		panel_container_request.hide()
-		profile_picture.set_friend()
 	else:
 		# NONE, CANCELED, REJECTED, DELETED, or UNKNOWN
-		# Show button, hide label (can send new request)
+		# Show button (re-enabled — a prior send left it disabled), hide the pending label.
+		button_add_friend.disabled = false
 		button_add_friend.show()
 		panel_container_request.hide()
 
@@ -582,7 +599,7 @@ func _on_pressed() -> void:
 	Global.open_profile_by_address.emit(social_data.address)
 
 
-func _on_in_genesis_city_changed(_players: Array) -> void:
+func _on_online_locations_changed() -> void:
 	if item_type == SOCIAL_TYPE.ONLINE:
 		_update_jump_button_visibility()
 
@@ -597,44 +614,50 @@ func _update_jump_button_visibility() -> void:
 		return
 
 	label_place.show()
-	# Check if address exists in in_genesis_city array
-	var is_in_genesis_city = false
-	for player in Global.locations.in_genesis_city:
-		if player.has("address") and player["address"] == social_data.address:
-			is_in_genesis_city = true
-			# Store parcel coordinates
-			if player.has("parcel"):
-				parcel = player["parcel"].duplicate()
-			break
+	# Read this friend's location from the shared dict that locations.gd refreshes each cycle
+	# (Genesis parcel or World), instead of each item firing its own world request.
+	var location = Global.locations.online_locations.get(social_data.address.to_lower(), null)
 
-	if is_in_genesis_city:
-		button_jump.show()
-		# Check if parcel exists in known_locations
-		var found_location = false
-		var title = ""
-		if parcel.size() >= 2:
-			for location in Global.locations.known_locations:
-				if location.has("coord") and location["coord"].size() >= 2:
-					if location["coord"][0] == parcel[0] and location["coord"][1] == parcel[1]:
-						if location.has("title"):
-							title = location["title"]
-							label_place.text = shorten_tittle(title, trim_value)
-							found_location = true
-							break
-
-		if not found_location:
-			label_place.text = tr("SOCIAL_ITEM_SOMEWHERE")
-			_async_fetch_place_data()
-	else:
+	if location == null:
+		# Not resolved yet this cycle (or online in an unknown place).
+		world_name = ""
+		parcel.clear()
 		label_place.text = tr("SOCIAL_ITEM_SOMEWHERE")
 		button_jump.hide()
+		return
+
+	if location.has("world_name"):
+		# Friend is in a World.
 		parcel.clear()
+		world_name = location["world_name"]
+		button_jump.show()
+		var cached_title: String = Global.locations.known_worlds.get(world_name, "")
+		if not cached_title.is_empty():
+			label_place.text = cached_title
+		else:
+			# Show the ENS right away, then resolve the real title once (deduped in locations.gd).
+			# Resolution re-emits online_locations_changed, so this row swaps in the title when it
+			# lands — no per-row request storm on every emit.
+			label_place.text = world_name.trim_suffix(".dcl.eth")
+			Global.locations.async_resolve_world_title(world_name)
+		return
 
+	# Friend is in Genesis City.
+	world_name = ""
+	parcel = location["parcel"].duplicate()
+	button_jump.show()
+	var found_location = false
+	for known in Global.locations.known_locations:
+		if known.has("coord") and known["coord"].size() >= 2:
+			if known["coord"][0] == parcel[0] and known["coord"][1] == parcel[1]:
+				if known.has("title"):
+					label_place.text = known["title"]
+					found_location = true
+					break
 
-func shorten_tittle(title: String, max_length: int) -> String:
-	if title.length() > max_length:
-		return title.left(max_length) + "..."
-	return title
+	if not found_location:
+		label_place.text = tr("SOCIAL_ITEM_SOMEWHERE")
+		_async_fetch_place_data()
 
 
 func _on_blacklist_changed() -> void:
@@ -643,8 +666,12 @@ func _on_blacklist_changed() -> void:
 
 
 func _update_blocked_visibility_for_type() -> void:
-	# Only applies to NEARBY and REQUEST items
-	if item_type != SOCIAL_TYPE.NEARBY and item_type != SOCIAL_TYPE.REQUEST:
+	# Only applies to NEARBY and REQUEST (received/sent) items
+	if (
+		item_type != SOCIAL_TYPE.NEARBY
+		and item_type != SOCIAL_TYPE.REQUEST
+		and item_type != SOCIAL_TYPE.REQUEST_SENT
+	):
 		return
 
 	# Need social_data and address to check
@@ -671,22 +698,4 @@ func _set_loading(loading: bool) -> void:
 		return
 	data_container.visible = not loading
 	skeleton_container.visible = loading
-	disabled = loading
-
-	# For NEARBY items, ensure the row is actually visible while loading.
-	# The base panel uses self_modulate alpha 0 by default and becomes visible only on hover.
-	# During loading we want the skeleton to be seen without requiring hover, but without
-	# showing the hover background panel.
-	if item_type == SOCIAL_TYPE.NEARBY and is_instance_valid(panel_nearby_player_item):
-		if loading:
-			if _nearby_panel_stylebox_loading != null:
-				panel_nearby_player_item.add_theme_stylebox_override(
-					"panel", _nearby_panel_stylebox_loading
-				)
-			panel_nearby_player_item.self_modulate = Color(1, 1, 1, 1)
-		else:
-			if _nearby_panel_stylebox_default != null:
-				panel_nearby_player_item.add_theme_stylebox_override(
-					"panel", _nearby_panel_stylebox_default
-				)
-			panel_nearby_player_item.self_modulate = Color(1, 1, 1, 0)
+	button_profile.disabled = loading

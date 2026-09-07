@@ -7,16 +7,8 @@ const CONNECTIVITY_ONLINE: int = 0
 const CONNECTIVITY_OFFLINE: int = 1
 const CONNECTIVITY_AWAY: int = 2
 
-# Translation KEYS, not copy. The three labels auto-translate, so assigning the key lets the
-# engine re-resolve them on a language change; assigning resolved text would freeze the old
-# locale. NO_SERVICE reuses the key the rest of the panel already had.
-# i18n-keys: FRIENDS_NO_FRIENDS_MESSAGE, FRIENDS_NO_BLOCKED_MESSAGE
-const NO_SERVICE_MESSAGE: String = "FRIENDS_SOMETHING_WENT_WRONG_AND_WE_COULDN"
-const NO_FRIENDS_MESSAGE: String = "FRIENDS_NO_FRIENDS_MESSAGE"
-const NO_BLOCKED_MESSAGE: String = "FRIENDS_NO_BLOCKED_MESSAGE"
-
-var down_arrow_icon: Texture2D = load("res://assets/ui/down_arrow.svg")
-var up_arrow_icon: Texture2D = load("res://assets/ui/up_arrow.svg")
+var down_arrow_icon: Texture2D = load("res://src/ui/pages/discover/friends/icons/down-arrow.svg")
+var up_arrow_icon: Texture2D = load("res://src/ui/pages/discover/friends/icons/up-arrow.svg")
 
 # Track which friends are online (address -> true if online)
 var _online_friends: Dictionary = {}
@@ -29,47 +21,69 @@ var _streaming_subscription_failed: bool = true
 var _is_loading: bool = false
 
 @onready var color_rect_friends: ColorRect = %ColorRect_Friends
+@onready var color_rect_requests: ColorRect = %ColorRect_Requests
 @onready var color_rect_nearby: ColorRect = %ColorRect_Nearby
-@onready var color_rect_blocked: ColorRect = %ColorRect_Blocked
-@onready var scroll_container_friends: ScrollContainer = %ScrollContainer_Friends
-@onready var scroll_container_nearby: ScrollContainer = %ScrollContainer_Nearby
-@onready var scroll_container_blocked: ScrollContainer = %ScrollContainer_Blocked
 
-@onready var request_button: Button = %RequestButton
+@onready var scroll_container_friends: ScrollContainer = %ScrollContainer_Friends
+@onready var scroll_container_requests: ScrollContainer = %ScrollContainer_Requests
+@onready var scroll_container_nearby: ScrollContainer = %ScrollContainer_Nearby
+
+# FRIENDS tab: Online / Offline / Blocked collapsible sections.
 @onready var online_button: Button = %OnlineButton
 @onready var offline_button: Button = %OfflineButton
-
-@onready var v_box_container_request: VBoxContainer = %VBoxContainer_Request
-@onready var v_box_container_online: VBoxContainer = %VBoxContainer_Online
-@onready var v_box_container_offline: VBoxContainer = %VBoxContainer_Offline
-@onready var request_list: VBoxContainer = %RequestList
-@onready var online_list: VBoxContainer = %OnlineList
-@onready var offline_list: VBoxContainer = %OfflineList
-@onready var nearby_list: SocialList = %NearbyList
-@onready var blocked_list: SocialList = %BlockedList
-@onready var v_box_container_no_nearby_players: VBoxContainer = %VBoxContainer_NoNearbyPlayers
-
-@onready var v_box_container_no_service: VBoxContainer = %VBoxContainer_NoService
-@onready var v_box_container_no_friends: VBoxContainer = %VBoxContainer_NoFriends
-@onready var request_container: PanelContainer = %RequestContainer
+@onready var blocked_button: Button = %BlockedButton
 @onready var online_container: PanelContainer = %OnlineContainer
 @onready var offline_container: PanelContainer = %OfflineContainer
-@onready var v_box_container_no_blockeds: VBoxContainer = %VBoxContainer_NoBlockeds
-@onready var button_friends: Button = %Button_Friends
-@onready var label_no_blockeds: Label = %Label_NoBlockeds
-@onready var label_no_friends: Label = %Label_NoFriends
-@onready var label_out_of_service: Label = %Label_OutOfService
-@onready var timer: Timer = %Timer
-@onready var friends_list: VBoxContainer = %FriendsList
-@onready var button_nearby: Button = %Button_Nearby
-@onready var v_box_container_friends_tab: VBoxContainer = %VBoxContainer_FriendsTab
+@onready var blocked_container: PanelContainer = %BlockedContainer
+@onready var v_box_container_online: VBoxContainer = %VBoxContainer_Online
+@onready var v_box_container_offline: VBoxContainer = %VBoxContainer_Offline
+@onready var v_box_container_blocked: VBoxContainer = %VBoxContainer_Blocked
+@onready var online_list: SocialList = %OnlineList
+@onready var offline_list: SocialList = %OfflineList
+@onready var blocked_list: SocialList = %BlockedList
+@onready var label_online_count: Label = %Label_OnlineCount
+@onready var label_offline_count: Label = %Label_OfflineCount
+@onready var label_blocked_count: Label = %Label_BlockedCount
+
+# REQUESTS tab: Received / Sent collapsible sections. `request_list` holds the RECEIVED (incoming)
+# requests — the friendship signal handlers all operate on it; `sent_list` holds outgoing ones.
+@onready var received_button: Button = %ReceivedButton
+@onready var sent_button: Button = %SentButton
+@onready var v_box_container_received: VBoxContainer = %VBoxContainer_Received
+@onready var v_box_container_sent: VBoxContainer = %VBoxContainer_Sent
+@onready var request_list: SocialList = %ReceivedList
+@onready var sent_list: SocialList = %SentList
+@onready var label_received_count: Label = %Label_ReceivedCount
+@onready var label_sent_count: Label = %Label_SentCount
+
+@onready var nearby_list: SocialList = %NearbyList
+@onready var margin_container_no_service: MarginContainer = %MarginContainer_NoService
+
 @onready var v_box_container_loading: VBoxContainer = %VBoxContainer_Loading
+@onready var friends_list: VBoxContainer = %FriendsList
+
+@onready var button_friends: Button = %Button_Friends
+@onready var button_requests: Button = %Button_Requests
+@onready var button_nearby: Button = %Button_Nearby
+@onready var requests_badge: Panel = %RequestsBadge
+
+@onready var h_box_container_friends_tab: HBoxContainer = %HBoxContainer_FriendsTab
+@onready var h_box_container_requests_tab: HBoxContainer = %HBoxContainer_RequestsTab
+@onready var h_box_container_nearby_tab: HBoxContainer = %HBoxContainer_NearbyTab
+
+@onready var margin_container_no_nearby: MarginContainer = %MarginContainer_NoNearby
+@onready var margin_container_no_requests: MarginContainer = %MarginContainer_NoRequests
+@onready var margin_container_no_friends: MarginContainer = %MarginContainer_NoFriends
 
 
 func _ready() -> void:
-	label_no_blockeds.text = NO_BLOCKED_MESSAGE
-	label_no_friends.text = NO_FRIENDS_MESSAGE
-	label_out_of_service.text = NO_SERVICE_MESSAGE
+	# The section title + count come from the child labels (Label / Label_*Count), so the
+	# buttons themselves carry no text.
+	online_button.text = ""
+	offline_button.text = ""
+	blocked_button.text = ""
+	received_button.text = ""
+	sent_button.text = ""
 	_hide_all_drowpdown_highlights()
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	set_process_input(true)
@@ -77,11 +91,17 @@ func _ready() -> void:
 
 	_connect_social_service_signals()
 
-	# Connect to list size changes to update counts
-	request_list.size_changed.connect(_update_dropdown_visibility)
-	request_list.size_changed.connect(_update_badge_visibility_on_navbar)
+	# FRIENDS tab dropdown counts (Online / Offline / Blocked).
 	online_list.size_changed.connect(_update_dropdown_visibility)
 	offline_list.size_changed.connect(_update_dropdown_visibility)
+	blocked_list.size_changed.connect(_update_dropdown_visibility)
+	# REQUESTS tab: Received drives the navbar badge; both sections drive the tab layout.
+	request_list.size_changed.connect(_update_requests)
+	request_list.size_changed.connect(_update_badge_visibility_on_navbar)
+	sent_list.size_changed.connect(_update_requests)
+	received_button.pressed.connect(_on_received_button_pressed)
+	sent_button.pressed.connect(_on_sent_button_pressed)
+	# NEARBY tab.
 	nearby_list.size_changed.connect(_on_nearby_list_size_changed)
 
 	# Connect to error signals
@@ -89,14 +109,15 @@ func _ready() -> void:
 	online_list.load_error.connect(_on_load_error)
 
 	# Initial state: hide all containers - will show loading when panel opens
-	v_box_container_request.hide()
 	v_box_container_online.hide()
 	v_box_container_offline.hide()
-	v_box_container_no_friends.hide()
-	v_box_container_no_service.hide()
+	v_box_container_blocked.hide()
+	margin_container_no_friends.hide()
+	margin_container_no_service.hide()
 	v_box_container_loading.hide()
 	friends_list.hide()
 	_on_nearby_list_size_changed()
+	_update_requests()
 
 
 func _connect_social_service_signals() -> void:
@@ -107,6 +128,8 @@ func _connect_social_service_signals() -> void:
 	_safe_connect(social.friendship_deleted, _on_friendship_deleted)
 	_safe_connect(social.friendship_request_cancelled, _on_friendship_request_cancelled)
 	_safe_connect(social.friend_connectivity_updated, _on_friend_connectivity_updated)
+	# Our own sent requests aren't streamed by the service — Global relays them locally.
+	_safe_connect(Global.friendship_request_sent, _on_friendship_request_sent)
 
 
 func _safe_connect(sig: Signal, callback: Callable) -> void:
@@ -143,10 +166,10 @@ func show_panel_on_friends_tab() -> void:
 	_load_unloaded_items()
 	_hide_all_drowpdown_highlights()
 	if not Global.player_identity.is_guest:
-		v_box_container_friends_tab.show()
+		h_box_container_friends_tab.show()
 		button_friends.button_pressed = true
 	else:
-		v_box_container_friends_tab.hide()
+		h_box_container_friends_tab.hide()
 		button_nearby.button_pressed = true
 
 
@@ -221,11 +244,11 @@ func async_refresh_friends() -> void:
 
 func _hide_all() -> void:
 	color_rect_friends.self_modulate = Color.TRANSPARENT
+	color_rect_requests.self_modulate = Color.TRANSPARENT
 	color_rect_nearby.self_modulate = Color.TRANSPARENT
-	color_rect_blocked.self_modulate = Color.TRANSPARENT
-	scroll_container_nearby.hide()
 	scroll_container_friends.hide()
-	scroll_container_blocked.hide()
+	scroll_container_requests.hide()
+	scroll_container_nearby.hide()
 
 
 func _on_button_friends_toggled(toggled_on: bool) -> void:
@@ -234,6 +257,25 @@ func _on_button_friends_toggled(toggled_on: bool) -> void:
 		color_rect_friends.self_modulate = Color.WHITE
 		scroll_container_friends.show()
 		_expand_all_friend_lists()
+
+
+func _on_button_requests_toggled(toggled_on: bool) -> void:
+	if toggled_on:
+		# requests_menu_opened metric
+		Global.metrics.track_click_button("requests_menu_opened", "SOCIAL_PANEL", "")
+		_hide_all()
+		color_rect_requests.self_modulate = Color.WHITE
+		scroll_container_requests.show()
+		_expand_request_lists()
+		_async_refresh_sent_requests()
+
+
+## Received updates live via the friendship_request_received signal; sent requests have no stream
+## (the service doesn't echo our own actions), so re-fetch them on tab open. Awaited so the SENT
+## count reflects the fresh list instead of the stale one.
+func _async_refresh_sent_requests() -> void:
+	await sent_list.async_update_list()
+	_update_requests()
 
 
 func _on_button_nearby_toggled(toggled_on: bool) -> void:
@@ -248,17 +290,6 @@ func toggle_nearby() -> void:
 	color_rect_nearby.self_modulate = Color.WHITE
 	scroll_container_nearby.show()
 	_on_nearby_list_size_changed()
-
-
-func _on_button_blocked_toggled(toggled_on: bool) -> void:
-	if toggled_on:
-		# blocked_menu_opened metric
-		Global.metrics.track_click_button("blocked_menu_opened", "SOCIAL_PANEL", "")
-
-		_hide_all()
-		color_rect_blocked.self_modulate = Color.WHITE
-		scroll_container_blocked.show()
-		_check_blocked_list_size()
 
 
 func _on_offline_button_toggled(toggled_on: bool) -> void:
@@ -276,17 +307,15 @@ func _update_dropdown_visibility() -> void:
 
 	# Show loading state if currently loading
 	if _is_loading:
-		# While loading, show the three sections (Requests/Online/Offline) from the start
-		# so `social_item` skeletons are visible while each avatar finishes loading.
+		# While loading, show the sections from the start so `social_item` skeletons are visible
+		# while each avatar finishes loading.
 		v_box_container_loading.hide()
-		v_box_container_no_service.hide()
-		v_box_container_no_friends.hide()
+		margin_container_no_service.hide()
+		margin_container_no_friends.hide()
 		friends_list.show()
-		# Requests should be shown only if there are elements (even if they are skeletons).
-		# Avoid the "flash" when `list_size` is still 0.
-		v_box_container_request.visible = request_list.list_size > 0
 		v_box_container_online.show()
 		v_box_container_offline.show()
+		v_box_container_blocked.show()
 		return
 
 	# Hide loading container when not loading
@@ -295,45 +324,89 @@ func _update_dropdown_visibility() -> void:
 	# Show service error if streaming subscription failed or lists had errors
 	var has_service_error = (
 		not is_guest
-		and (_streaming_subscription_failed or request_list.has_error or online_list.has_error)
+		and (_streaming_subscription_failed or online_list.has_error or offline_list.has_error)
 	)
 
-	var pending_count = request_list.list_size
 	var online_count = online_list.list_size
 	var offline_count = offline_list.list_size
-	var total_friends = online_count + offline_count
+	var blocked_count = blocked_list.list_size
+	# Blocked counts toward the total: even a single online/offline/blocked entry shows all three
+	# lists; only a truly empty friends set (total == 0) shows the "No friends yet" notice.
+	var total = online_count + offline_count + blocked_count
 
-	if pending_count == 0:
-		v_box_container_request.hide()
-	else:
-		v_box_container_request.show()
-		request_button.text = tr("FRIENDS_REQUESTS_COUNT").format({"count": pending_count})
-
-	if online_count == 0:
-		v_box_container_online.hide()
-	else:
-		v_box_container_online.show()
-		online_button.text = tr("FRIENDS_ONLINE_COUNT").format({"count": online_count})
-
-	if offline_count == 0:
-		v_box_container_offline.hide()
-	else:
-		v_box_container_offline.show()
-		offline_button.text = tr("FRIENDS_OFFLINE_COUNT").format({"count": offline_count})
+	_update_dropdown_section(v_box_container_online, label_online_count, online_count)
+	_update_dropdown_section(v_box_container_offline, label_offline_count, offline_count)
+	_update_dropdown_section(v_box_container_blocked, label_blocked_count, blocked_count)
 
 	# Show error message only if we got explicit errors from the lists
 	if has_service_error:
-		v_box_container_no_service.show()
-		v_box_container_no_friends.hide()
+		margin_container_no_service.show()
+		margin_container_no_friends.hide()
 		friends_list.hide()
-	elif total_friends == 0 and pending_count == 0 and not is_guest:
-		v_box_container_no_service.hide()
-		v_box_container_no_friends.show()
+	elif total == 0 and not is_guest:
+		# No friends at all: show the empty-state notice instead of the (all-zero) sections.
+		margin_container_no_service.hide()
+		margin_container_no_friends.show()
 		friends_list.hide()
 	else:
-		v_box_container_no_service.hide()
-		v_box_container_no_friends.hide()
+		# At least one entry (incl. blocked): show the friends list with all three sections.
+		margin_container_no_service.hide()
+		margin_container_no_friends.hide()
 		friends_list.show()
+
+
+## Refreshes a FRIENDS-tab section's "(n)" count. The section stays visible even at 0 (per design)
+## so the user always sees the Online / Offline / Blocked headers.
+func _update_dropdown_section(section: VBoxContainer, count_label: Label, count: int) -> void:
+	section.show()
+	count_label.text = "(%d)" % count
+
+
+## REQUESTS tab: both the Received and Sent sections stay visible even at 0 (per design), so the
+## user always sees where incoming/outgoing requests will land. Only the "(n)" counts refresh.
+func _update_requests() -> void:
+	var received_count = request_list.list_size
+	var sent_count = sent_list.list_size
+	v_box_container_received.show()
+	v_box_container_sent.show()
+	label_received_count.text = "(%d)" % received_count
+	label_sent_count.text = "(%d)" % sent_count
+	# Sections are always shown now, so the separate "no requests" empty state is redundant.
+	margin_container_no_requests.hide()
+	_update_requests_tab_badge()
+
+
+## Shows a red dot on the REQUESTS tab while there are incoming (received) requests, mirroring the
+## navbar count badge. Null-guarded so it's a no-op until the badge node exists in the scene.
+func _update_requests_tab_badge() -> void:
+	if requests_badge != null:
+		requests_badge.visible = request_list.list_size > 0
+
+
+func _on_received_button_pressed() -> void:
+	if request_list.visible:
+		received_button.icon = down_arrow_icon
+		request_list.hide()
+	else:
+		received_button.icon = up_arrow_icon
+		request_list.show()
+
+
+func _on_sent_button_pressed() -> void:
+	if sent_list.visible:
+		sent_button.icon = down_arrow_icon
+		sent_list.hide()
+	else:
+		sent_button.icon = up_arrow_icon
+		sent_list.show()
+
+
+## Expands both request sections when the REQUESTS tab opens.
+func _expand_request_lists() -> void:
+	request_list.show()
+	received_button.icon = up_arrow_icon
+	sent_list.show()
+	sent_button.icon = up_arrow_icon
 
 
 func _update_badge_visibility_on_navbar() -> void:
@@ -343,6 +416,12 @@ func _update_badge_visibility_on_navbar() -> void:
 func _on_load_error(_error_message: String) -> void:
 	# Update visibility to show error state
 	_update_dropdown_visibility()
+
+
+## A request WE just sent (relayed via Global since the service doesn't stream it): add it to the
+## SENT list live so the user sees it without switching tabs or restarting.
+func _on_friendship_request_sent(address: String) -> void:
+	sent_list.async_add_request_by_address(address)
 
 
 func _on_friendship_request_received(address: String, _message: String) -> void:
@@ -359,8 +438,9 @@ func _async_on_friendship_request_accepted(address: String) -> void:
 	# vs us accepting THEIR request (they were in our request list)
 	var was_incoming_request = request_list.has_item_with_address(address)
 
-	# Remove from request list
+	# Remove from both request lists: received (we/they accepted) or sent (they accepted ours).
 	request_list.remove_item_by_address(address)
+	sent_list.remove_item_by_address(address)
 
 	# Fetch profile and add to online/offline list
 	var item_data = await _async_fetch_friend_profile(address)
@@ -379,8 +459,9 @@ func _async_on_friendship_request_accepted(address: String) -> void:
 
 
 func _on_friendship_request_rejected(address: String) -> void:
-	# Remove from request list (we rejected their request)
+	# We rejected their received request, or they rejected our sent one — drop it from both.
 	request_list.remove_item_by_address(address)
+	sent_list.remove_item_by_address(address)
 
 
 func _on_friendship_deleted(address: String) -> void:
@@ -392,12 +473,15 @@ func _on_friendship_deleted(address: String) -> void:
 	# Remove from online/offline lists
 	var removed_online = online_list.remove_item_by_address(address)
 	var removed_offline = offline_list.remove_item_by_address(address)
+	# Also drop any pending sent request to this address.
+	sent_list.remove_item_by_address(address)
 	print("FriendsPanel: Removed from online: ", removed_online, ", offline: ", removed_offline)
 
 
 func _on_friendship_request_cancelled(address: String) -> void:
-	# Remove from request list (they cancelled their request to us)
+	# They cancelled their received request to us, or a sent one was cancelled — drop from both.
 	request_list.remove_item_by_address(address)
+	sent_list.remove_item_by_address(address)
 
 
 func _async_fetch_friend_profile(address: String) -> SocialItemData:
@@ -490,6 +574,7 @@ func _async_check_friend_connectivity(address: String) -> void:
 
 func update_all_lists():
 	request_list.async_update_list()
+	sent_list.async_update_list()
 	online_list.async_update_list()
 	offline_list.async_update_list()
 	nearby_list.async_update_list()
@@ -500,6 +585,8 @@ func _async_update_all_lists() -> void:
 	# Update lists sequentially.
 	# Skeleton placeholders are handled in `_update_dropdown_visibility()` to keep UX responsive.
 	await request_list.async_update_list()
+	# Await SENT too: otherwise loading ends (and the SENT count settles) before it resolves.
+	await sent_list.async_update_list()
 	await online_list.async_update_list()
 	await offline_list.async_update_list()
 	# Don't wait for nearby and blocked as they're not critical for friends tab loading
@@ -509,19 +596,20 @@ func _async_update_all_lists() -> void:
 
 func _load_unloaded_items() -> void:
 	request_list.load_unloaded_items()
+	sent_list.load_unloaded_items()
 	online_list.load_unloaded_items()
 	offline_list.load_unloaded_items()
 	nearby_list.load_unloaded_items()
 	blocked_list.load_unloaded_items()
 
 
-func _on_request_button_pressed() -> void:
-	if request_list.visible:
-		request_button.icon = down_arrow_icon
-		request_list.hide()
+func _on_blocked_button_pressed() -> void:
+	if blocked_list.visible:
+		blocked_button.icon = down_arrow_icon
+		blocked_list.hide()
 	else:
-		request_button.icon = up_arrow_icon
-		request_list.show()
+		blocked_button.icon = up_arrow_icon
+		blocked_list.show()
 
 
 func _on_online_button_pressed() -> void:
@@ -543,18 +631,19 @@ func _on_offline_button_pressed() -> void:
 
 
 func _hide_all_drowpdown_highlights() -> void:
-	request_container.self_modulate = "ffffff00"
 	online_container.self_modulate = "ffffff00"
 	offline_container.self_modulate = "ffffff00"
+	blocked_container.self_modulate = "ffffff00"
 
 
 func _expand_all_friend_lists() -> void:
-	request_list.show()
-	request_button.icon = up_arrow_icon
 	online_list.show()
 	online_button.icon = up_arrow_icon
 	offline_list.show()
 	offline_button.icon = up_arrow_icon
+	# Blocked always starts minimized (per design); the user expands it manually.
+	blocked_list.hide()
+	blocked_button.icon = down_arrow_icon
 
 
 func _on_offline_button_mouse_entered() -> void:
@@ -573,57 +662,28 @@ func _on_online_button_mouse_exited() -> void:
 	online_container.self_modulate = "#ffffff00"
 
 
-func _on_request_button_mouse_entered() -> void:
-	request_container.self_modulate = "#ffffff"
+func _on_blocked_button_mouse_entered() -> void:
+	blocked_container.self_modulate = "#ffffff"
 
 
-func _on_request_button_mouse_exited() -> void:
-	request_container.self_modulate = "#ffffff00"
+func _on_blocked_button_mouse_exited() -> void:
+	blocked_container.self_modulate = "#ffffff00"
 
 
-func _check_blocked_list_size() -> void:
-	if blocked_list.list_size > 0:
-		v_box_container_no_blockeds.hide()
-	else:
-		v_box_container_no_blockeds.show()
-
-
-func _on_blocked_list_size_changed() -> void:
-	_check_blocked_list_size()
-
-
-## Updates NEARBY users count.
-## If the amount is 0 don't show counter.
-## If amount is > 99 show "99+".
-## Else show the amount from list_size.
+## Refreshes the NEARBY tab. The tab title is static ("NEARBY", set in the scene like FRIENDS /
+## REQUESTS — no count), so this only toggles the list with its empty state.
 func _on_nearby_list_size_changed() -> void:
-	var nearby_text := tr("COMMON_NEARBY")
-	if nearby_list.list_size > 99:
-		nearby_text = "%s (99+)" % nearby_text
-	elif nearby_list.list_size > 0:
-		nearby_text = "%s (%d)" % [nearby_text, nearby_list.list_size]
-	button_nearby.text = nearby_text
-
 	# Empty state vs list (Nearby tab)
 	if nearby_list.list_size == 0:
 		nearby_list.hide()
-		v_box_container_no_nearby_players.show()
+		margin_container_no_nearby.show()
 	else:
-		v_box_container_no_nearby_players.hide()
+		margin_container_no_nearby.hide()
 		nearby_list.show()
 
 
-func _on_timer_timeout() -> void:
-	if visible:
-		Global.locations.fetch_peers()
-	else:
-		timer.stop()
-
-
 func _on_visibility_changed() -> void:
-	Global.locations.fetch_peers()
-	if timer:
-		if visible:
-			timer.start(0)
-		else:
-			timer.stop()
+	# Kick an immediate online-list refresh on open so friend locations aren't stale up to the
+	# 15s reconcile cadence (SocialList's per-list reconcile timer owns the periodic refresh).
+	if visible and online_list != null:
+		online_list.async_update_list()

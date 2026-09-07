@@ -9,9 +9,7 @@ var _tooltip_shown: bool = false
 @onready var hbox: HBoxContainer = $HBoxContainer
 @onready var button_chat: HudButton = %Button_Chat
 @onready var button_flip: HudButton = %Button_Flip
-@onready var button_discover: HudButton = %HudButton_Discover
 @onready var tooltip: HBoxContainer = %HBoxContainer_Tooltip
-@onready var discover_panel: PanelContainer = %DiscoverPanel
 @onready var panel_load_scenes: PanelContainer = %Panel_LoadScenes
 
 
@@ -32,12 +30,6 @@ func _apply_button_sizes() -> void:
 	)
 	button_chat.size_preset = preset
 	button_flip.size_preset = preset
-	button_discover.size_preset = preset
-
-
-func _on_hud_button_discover_pressed() -> void:
-	Global.open_discover.emit()
-	Global.send_haptic_feedback()
 
 
 func _on_hud_button_share_pressed() -> void:
@@ -67,7 +59,6 @@ func _on_chat_closed() -> void:
 
 func _enter_chat_mode() -> void:
 	button_flip.show()
-	discover_panel.hide()
 	if not _tooltip_shown:
 		_tooltip_shown = true
 		_show_tooltip()
@@ -83,7 +74,6 @@ func _on_button_flip_pressed() -> void:
 
 func _exit_chat_mode() -> void:
 	button_flip.hide()
-	discover_panel.show()
 	_kill_tooltip()
 
 

@@ -680,6 +680,9 @@ func _async_send_friend_request(friend_address: String) -> void:
 	# Request Friend metric
 	Global.metrics.track_request_friend(friend_address)
 
+	# Keep the SENT list live (the social service doesn't echo our own actions).
+	Global.friendship_request_sent.emit(friend_address)
+
 	_async_update_buttons_and_lists()
 
 
@@ -760,7 +763,7 @@ func _update_friendship_buttons() -> void:
 			button_cancel_request.show()
 		Global.FriendshipStatus.REQUEST_RECEIVED:
 			button_add_friend.show()
-			button_add_friend.custom_text = "SOCIAL_ITEM_ACCEPT"
+			button_add_friend.custom_text = "PROFILE_ACCEPT"
 		_:  # NONE, UNKNOWN, or other statuses
 			if not is_blocked_user:
 				button_add_friend.show()

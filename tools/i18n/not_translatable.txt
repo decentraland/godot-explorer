@@ -64,16 +64,6 @@ godot/src/ui/components/organisms/social/mutual_friends.tscn	# Mutual
 
 # design placeholder (sic)
 godot/src/ui/pages/discover/carrousel/discover_carrousel.tscn	Section Tittle
-# design placeholder, literally "Message"
-godot/src/ui/pages/friends/friends_panel.tscn	No Blocked Accounts Message
-# design placeholder, literally "Message"
-godot/src/ui/pages/friends/friends_panel.tscn	No Friends Yet Message
-# count composed at friends_panel.gd:313
-godot/src/ui/pages/friends/friends_panel.tscn	OFFLINE (0)
-# count composed at friends_panel.gd:319
-godot/src/ui/pages/friends/friends_panel.tscn	ONLINE (0)
-# count composed at friends_panel.gd:307
-godot/src/ui/pages/friends/friends_panel.tscn	REQUESTS (0)
 # field label supplied by the caller
 godot/src/ui/pages/profile/about_data.tscn	Title
 # field value supplied by the caller
@@ -121,9 +111,15 @@ godot/src/ui/components/organisms/notifications/notification_item.gd	[b]
 godot/src/ui/pages/discover/friends/friends_generator.gd	%d, %d
 godot/src/ui/pages/settings/settings.gd	%s (%d, %d)
 
+# Custom-profile view-distance value label: number + metric unit, not prose.
+godot/src/ui/pages/settings/settings.gd	%dm
+
 # A translated label followed by its count; the label itself is already keyed.
 godot/src/ui/pages/friends/friends_panel.gd	%s (%d)
 godot/src/ui/pages/friends/friends_panel.gd	%s (99+)
+
+# Section count "(n)" composed at runtime; the section label itself is keyed.
+godot/src/ui/pages/friends/friends_panel.gd	(%d)
 
 # ---- Code review follow-up: non-UI strings ----
 

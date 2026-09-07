@@ -7,6 +7,9 @@ signal loading_finished
 signal change_parcel(new_parcel: Vector2i)
 signal open_profile_by_avatar(avatar: DclAvatar)
 signal open_profile_by_address(address: String)
+# Emitted locally when WE send a friend request (the social service doesn't stream our own
+# actions), so the friends panel can add it to the SENT list live.
+signal friendship_request_sent(address: String)
 signal on_chat_message(address: String, message: String, timestamp: float)
 signal change_virtual_keyboard(height: int)
 signal notification_clicked(notification: Dictionary)
@@ -572,6 +575,12 @@ func _ready():
 	# Create GDScript extensions of Rust classes
 	self.config = ConfigData.new()
 	config.load_from_settings_file()
+
+	# Restore profile particle budgets + avatar dust gate: the Rust atomics and
+	# the GDScript toggle default to full-budget, and nothing re-applies them
+	# until the user picks a profile again.
+	GraphicSettings.apply_particle_quality(config.particle_quality)
+	AvatarAnimHelpers.apply_particles_enabled(config.particle_quality > 0)
 
 	# Campaign token (#2670). Deliberately after the config load: the fake/baked deeplink is
 	# parsed further up in _ready, long before ConfigData exists, so capturing there wrote to

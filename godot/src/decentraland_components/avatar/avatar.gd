@@ -106,6 +106,11 @@ var avatar_id: String = ""
 var hidden: bool = false
 var passport_disabled: bool = false
 var nametag_hidden: bool = false
+# Horizontal occlusion radius for nametag raycasts (NameplateLayer): max mesh
+# half-extent, so giant head wearables actually hide the tags behind them.
+# Clamped: floor = normal body width, ceiling keeps a 3m-wide wearable from
+# blacking out half the screen.
+var occlusion_radius := 0.4
 var avatar_ready: bool = false
 var has_connected_web3: bool = false  # Whether the user has connected a web3 wallet (not a guest)
 
@@ -261,6 +266,11 @@ func _ready():
 	)
 	nickname_quad.billboard = billboard_mode
 
+	# Scene NPCs (AvatarShape) live outside Global.avatars (comms-only) and have no
+	# physics colliders, so nameplate occlusion finds them via this group.
+	if is_avatar_shape:
+		add_to_group("avatar_shapes")
+
 	# Personal-space dissolve for any avatar near the world camera (issue #1814).
 	var proximity_fade := AvatarProximityFade.new()
 	proximity_fade.name = "AvatarProximityFade"
@@ -279,6 +289,9 @@ func _ready():
 	avatar_modifier_area_detector.unset_avatar_modifier_area.connect(
 		self._unset_avatar_modifier_area
 	)
+	# Detector._ready() (child, runs first) may have already scanned overlaps before
+	# these signals were connected — re-evaluate now so a spawn-inside-area isn't lost.
+	avatar_modifier_area_detector.check_areas()
 
 	if non_3d_audio:
 		var audio_player_name = audio_player_emote.get_name()
@@ -322,6 +335,7 @@ func _exit_tree() -> void:
 	# our _process) is paused meanwhile, so a last-visible tag would otherwise linger frozen.
 	# The real free happens in _notification(NOTIFICATION_PREDELETE) when the avatar dies.
 	if _use_2d_nameplate and is_instance_valid(nickname_ui):
+		NameplateLayer._untrack_plate(nickname_ui)
 		nickname_ui.modulate.a = 0.0
 		nickname_ui.hide()
 
@@ -395,21 +409,29 @@ func try_show():
 	avatar_modifier_area_detector.check_areas()
 
 
-func _on_set_avatar_modifier_area(area: DclAvatarModifierArea3D):
-	_unset_avatar_modifier_area()  # Reset state
+func _on_set_avatar_modifier_area(areas: Array):
+	# Reset modifier state, then apply the UNION of every overlapping area's
+	# modifiers. The detector used to report only the most-recently-entered area,
+	# so entering a second area (e.g. DisablePassports) wiped an active
+	# HideNameTags from an area the avatar never left (#2665).
+	if not hidden:
+		show()
+		_set_click_area_enabled(true)
+	passport_disabled = false
+	nametag_hidden = false
 
-	if AvatarExcludeIdMatcher.is_excluded(avatar_id, area.exclude_ids):
-		return  # the avatar is not going to be modified
-
-	for modifier in area.avatar_modifiers:
-		if modifier == 0:  # hide avatar
-			hide()
-			_hide_impostor_render()
-			_set_click_area_enabled(false)
-		elif modifier == 1:  # disable passport
-			passport_disabled = true
-		elif modifier == 2:  # hide nametag
-			nametag_hidden = true
+	for area in areas:
+		if AvatarExcludeIdMatcher.is_excluded(avatar_id, area.exclude_ids):
+			continue  # this area does not modify the avatar
+		for modifier in area.avatar_modifiers:
+			if modifier == 0:  # hide avatar
+				hide()
+				_hide_impostor_render()
+				_set_click_area_enabled(false)
+			elif modifier == 1:  # disable passport
+				passport_disabled = true
+			elif modifier == 2:  # hide nametag
+				nametag_hidden = true
 
 	_apply_nickname_visibility()
 
@@ -471,12 +493,8 @@ func _set_click_area_enabled(enabled: bool) -> void:
 
 
 func _unset_avatar_modifier_area():
-	if not hidden:
-		show()
-		_set_click_area_enabled(true)
-	passport_disabled = false
-	nametag_hidden = false
-	_apply_nickname_visibility()
+	# Kept for the detector's legacy unset path: same as receiving an empty list.
+	_on_set_avatar_modifier_area([])
 
 
 func async_update_avatar_from_profile(profile: DclUserProfile):
@@ -692,10 +710,16 @@ func _recompute_nametag_clearance() -> void:
 			rest_top, (skeleton_xform * body_shape_skeleton_3d.get_bone_global_rest(i).origin).y
 		)
 	var mesh_top := -INF
+	var head_rad := -INF
 	for child in body_shape_skeleton_3d.get_children():
 		if child is MeshInstance3D and child.visible:
 			var aabb: AABB = child.transform * child.get_aabb()
 			mesh_top = maxf(mesh_top, aabb.end.y)
+			# Occlusion radius only from head-zone meshes (y > 1.2m): T-pose arms
+			# inflate full-body AABBs to ~0.9m, hiding tags the body doesn't block.
+			if (aabb.get_center().y) > 1.2:
+				head_rad = maxf(head_rad, maxf(aabb.size.x, aabb.size.z) * 0.5)
+	occlusion_radius = clampf(head_rad, 0.4, 1.5) if head_rad != -INF else 0.4
 	if mesh_top == -INF or rest_top == -INF:
 		_nametag_clearance = 0.3
 		return
