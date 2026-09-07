@@ -26,6 +26,10 @@ const NTP_SERVERS: [&str; 4] = [
 const QUERY_TIMEOUT: Duration = Duration::from_secs(3);
 const REFRESH_INTERVAL: Duration = Duration::from_secs(15 * 60);
 const RETRY_INTERVAL: Duration = Duration::from_secs(60);
+/// Past this an offset is garbage rather than a real clock fault: a device further off than this
+/// cannot validate a TLS certificate, so nothing else in the app would work either. Comfortably
+/// clears the largest timezone offset (UTC+14) applied by mistake.
+const MAX_PLAUSIBLE_OFFSET_MS: i64 = 24 * 60 * 60 * 1000;
 /// Seconds between the NTP epoch (1900-01-01) and the Unix epoch.
 const NTP_UNIX_DELTA: i64 = 2_208_988_800;
 
@@ -77,7 +81,10 @@ pub fn spawn_background_sync(handle: &Handle) {
 pub async fn sync_now() -> Result<i64, String> {
     let mut last_error = "no servers configured".to_owned();
     for server in NTP_SERVERS {
-        match query(server).await {
+        let result = timeout(QUERY_TIMEOUT, query(server))
+            .await
+            .unwrap_or_else(|_| Err("timeout".to_owned()));
+        match result {
             Ok(offset) => {
                 OFFSET_MS.store(offset, Ordering::Relaxed);
                 STATE.store(SYNC_OK, Ordering::Relaxed);
@@ -118,9 +125,9 @@ async fn query(server: &str) -> Result<i64, String> {
         .map_err(|e| format!("send: {e}"))?;
 
     let mut response = [0u8; 48];
-    let read = timeout(QUERY_TIMEOUT, socket.recv(&mut response))
+    let read = socket
+        .recv(&mut response)
         .await
-        .map_err(|_| "timeout".to_owned())?
         .map_err(|e| format!("recv: {e}"))?;
     let t4 = device_unix_time_ms();
 
@@ -130,8 +137,18 @@ async fn query(server: &str) -> Result<i64, String> {
     if response[0] & 0b111 != 4 {
         return Err("not a server reply".to_owned());
     }
+    if response[0] >> 6 == 3 {
+        return Err("server clock unsynchronised".to_owned());
+    }
     if response[1] == 0 {
         return Err("kiss-o'-death".to_owned());
+    }
+    // The reply has to echo the transmit timestamp we sent (RFC 4330 §5). Without this any
+    // datagram arriving on the ephemeral port is accepted, so a stale duplicate or an off-path
+    // spoofer only has to guess the port. Compared as raw bytes: the encoder floors and the
+    // decoder rounds, so the server echoes these eight bytes verbatim but not the decoded value.
+    if response[24..32] != request[40..48] {
+        return Err("originate timestamp mismatch".to_owned());
     }
 
     let t2 = read_ntp_timestamp(&response[32..40]);
@@ -139,7 +156,19 @@ async fn query(server: &str) -> Result<i64, String> {
     if t2 == 0 || t3 == 0 {
         return Err("empty timestamp".to_owned());
     }
-    Ok(((t2 - t1) + (t3 - t4)) / 2)
+
+    // One bad reply must not be able to shift every signed request in the app. Rejecting falls
+    // through to the next server.
+    let offset = offset_from(t1, t2, t3, t4);
+    if offset.abs() > MAX_PLAUSIBLE_OFFSET_MS {
+        return Err(format!("implausible offset {offset} ms"));
+    }
+    Ok(offset)
+}
+
+/// Clock offset from the four timestamps of a round trip (RFC 4330 §5).
+fn offset_from(t1: i64, t2: i64, t3: i64, t4: i64) -> i64 {
+    ((t2 - t1) + (t3 - t4)) / 2
 }
 
 fn device_unix_time_ms() -> i64 {
@@ -189,7 +218,7 @@ mod tests {
         write_ntp_timestamp(&mut buf, server_t2);
         assert_eq!(read_ntp_timestamp(&buf), server_t2);
 
-        let offset = ((server_t2 - t1) + (server_t3 - t4)) / 2;
+        let offset = offset_from(t1, server_t2, server_t3, t4);
         assert!(
             (offset + skew).abs() <= 1,
             "offset {offset} should undo the {skew} ms skew"
