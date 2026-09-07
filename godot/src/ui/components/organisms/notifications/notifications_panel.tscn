@@ -107,8 +107,6 @@ theme_override_styles/normal = SubResource("StyleBoxFlat_button")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_oy6x2")
 theme_override_styles/hover = SubResource("StyleBoxFlat_button")
 text = "NOTIFICATIONS_READ_ALL"
-clip_text = true
-text_overrun_behavior = 3
 
 [node name="ScrollContainer" type="ScrollContainer" parent="MarginContainer/VBoxContainer" unique_id=2124518937]
 unique_name_in_owner = true
