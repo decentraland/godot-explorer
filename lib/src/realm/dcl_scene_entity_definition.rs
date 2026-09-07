@@ -69,6 +69,20 @@ impl DclSceneEntityDefinition {
         self.inner.is_global
     }
 
+    /// Raw `runtimeVersion` from the scene metadata ("7" for SDK7), or empty when
+    /// the scene declares none. Bug reports send it verbatim, like the Unity
+    /// client, so "SDK6" and "unknown" stay distinguishable — `is_sdk7()` folds
+    /// both into `false`.
+    #[func]
+    fn get_runtime_version(&self) -> GString {
+        self.inner
+            .scene_meta_scene
+            .runtime_version
+            .as_deref()
+            .unwrap_or("")
+            .into()
+    }
+
     #[func]
     fn is_sdk7(&self) -> bool {
         if let Some(runtime_version) = self.inner.scene_meta_scene.runtime_version.as_ref() {

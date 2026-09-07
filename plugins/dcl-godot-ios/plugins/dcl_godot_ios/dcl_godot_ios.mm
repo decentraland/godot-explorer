@@ -1,6 +1,7 @@
 #include "dcl_godot_ios.h"
 #include "NotificationDatabase.h"
 #include "AVPlayerWrapper.h"
+#include "image_picker_service.h"
 #include "core/version.h"
 #include "core/os/os.h"
 #include "core/string/print_string.h"
@@ -212,6 +213,7 @@ void DclGodotiOS::_bind_methods() {
     ClassDB::bind_method(D_METHOD("add_calendar_event", "title", "description", "start_time", "end_time", "location"), &DclGodotiOS::add_calendar_event);
     ClassDB::bind_method(D_METHOD("share_text", "text"), &DclGodotiOS::share_text);
     ClassDB::bind_method(D_METHOD("share_text_with_image", "text", "image"), &DclGodotiOS::share_text_with_image);
+    ClassDB::bind_method(D_METHOD("pick_image_from_gallery", "max_dimension", "jpeg_quality"), &DclGodotiOS::pick_image_from_gallery);
 
     // Local notifications - Phase 1
     ClassDB::bind_method(D_METHOD("request_notification_permission"), &DclGodotiOS::request_notification_permission);
@@ -278,6 +280,12 @@ void DclGodotiOS::_bind_methods() {
 
     // Signal emitted when the in-app web browser (open_webview_url) is dismissed.
     ADD_SIGNAL(MethodInfo("webview_closed"));
+
+    // Photo gallery pick result. `error` is empty on success, "cancelled"
+    // when the user dismissed the picker, or a failure reason otherwise.
+    ADD_SIGNAL(MethodInfo("image_picked",
+        PropertyInfo(Variant::PACKED_BYTE_ARRAY, "bytes"),
+        PropertyInfo(Variant::STRING, "error")));
 
     // App Attest completion signals — `error` is empty on success.
     ADD_SIGNAL(MethodInfo("attestation_key_generated",
@@ -756,6 +764,19 @@ bool DclGodotiOS::share_text_with_image(String text, Ref<Image> image) {
     return true;
     #else
     return false;
+    #endif
+}
+
+void DclGodotiOS::pick_image_from_gallery(int max_dimension, int jpeg_quality) {
+    #if TARGET_OS_IOS
+    // GDScript speaks 1..100 like Godot's own JPEG encoders; UIKit wants 0..1.
+    int clamped = jpeg_quality < 1 ? 1 : (jpeg_quality > 100 ? 100 : jpeg_quality);
+    float quality = clamped / 100.0f;
+    dcl_present_image_picker(max_dimension, quality);
+    #else
+    // Simulator-less desktop targets have no photo library; report rather than
+    // leave the GDScript awaiter hanging.
+    emit_signal("image_picked", PackedByteArray(), String("unsupported_platform"));
     #endif
 }
 
