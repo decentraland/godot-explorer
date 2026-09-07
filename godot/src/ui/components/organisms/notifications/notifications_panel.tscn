@@ -73,6 +73,7 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_panel_bg")
 script = ExtResource("1_notifications_panel")
 
 [node name="MarginContainer" type="MarginContainer" parent="." unique_id=317080479]
+custom_minimum_size = Vector2(450, 0)
 layout_mode = 2
 theme_override_constants/margin_left = 12
 theme_override_constants/margin_top = 12
@@ -93,13 +94,11 @@ layout_mode = 2
 size_flags_horizontal = 3
 text = "NOTIFICATIONS_NOTIFICATIONS"
 label_settings = SubResource("LabelSettings_6tk6y")
-text_overrun_behavior = 3
 
 [node name="ButtonMarkAllRead" type="Button" parent="MarginContainer/VBoxContainer/Header" unique_id=108721669]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 40)
+custom_minimum_size = Vector2(100, 40)
 layout_mode = 2
-size_flags_horizontal = 0
 theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
 theme_override_fonts/font = ExtResource("3_ap3ic")
 theme_override_font_sizes/font_size = 14
