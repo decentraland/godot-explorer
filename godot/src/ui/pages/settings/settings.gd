@@ -12,6 +12,9 @@ enum SceneLogLevel {
 }
 
 const _SECTION_TITLE_SCRIPT = preload("res://src/ui/pages/settings/section_title.gd")
+const _DROPDOWN_LIST_SCENE = preload(
+	"res://src/ui/components/molecules/dropdown_list/dropdown_list.tscn"
+)
 const CACHE_SIZE_MB: Array[int] = [1024, 2048, 4096]
 
 ## When true, settings operates as a side panel inside the explorer:
@@ -1000,7 +1003,11 @@ func _setup_custom_profile_controls() -> void:
 	_custom_particles_row = _make_custom_profile_row(
 		template_row, "CustomParticles", tr("SETTINGS_PARTICLES")
 	)
-	_custom_particles_dropdown = DropdownList.new()
+	# The SCENE, not DropdownList.new(): the script's @onready vars resolve %-unique
+	# nodes that live in dropdown_list.tscn, so a bare script instance leaves every
+	# one of them null. That logs "Node not found" and then segfaults the renderer
+	# on release builds, which debug tolerates (crash on opening Settings, #2672).
+	_custom_particles_dropdown = _DROPDOWN_LIST_SCENE.instantiate()
 	_populate_custom_particles_items()
 	_custom_particles_dropdown.item_selected.connect(_on_custom_particles_changed)
 	_custom_particles_row.add_child(_custom_particles_dropdown)
