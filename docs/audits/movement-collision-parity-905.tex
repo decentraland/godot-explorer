@@ -1,0 +1,396 @@
+\documentclass[11pt]{article}
+\usepackage[margin=2.4cm]{geometry}
+\usepackage{amssymb}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{microtype}
+\usepackage{hyperref}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+
+\hypersetup{colorlinks=true, linkcolor=blue!60!black, urlcolor=blue!60!black}
+\newcommand{\code}[1]{\texttt{\small #1}}
+\newcommand{\godot}{\textbf{Godot}}
+\newcommand{\unity}{\textbf{Unity}}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small Movement \& Collision Parity Audit --- \#905}
+\fancyhead[R]{\small\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+\title{\textbf{Character Movement \& Collision Parity Audit}\\[4pt]
+\large Godot Explorer vs.\ Unity Explorer}
+\author{Research deliverable for issue \#905 \;\;$\cdot$\;\; docs-only, no behavior change}
+\date{August 25, 2026 --- v2 (adversarially validated)}
+
+\begin{document}
+\sloppy
+\maketitle
+
+\begin{abstract}
+\noindent Players cannot climb or jump onto geometry that is trivially reachable in the
+Unity desktop client --- the same scene plays as a different game. This document is the
+full audit requested by issue \#905: every character-movement and collision parameter of
+godot-explorer was diffed against unity-explorer (the shipping reference), each gap was
+verified against source code on both sides, classified as \emph{parity bug},
+\emph{missing system}, or \emph{unconfirmed deviation}, and turned into a prioritized
+follow-up roadmap. Sources: godot-explorer \code{main} @ \code{7f7302805c};
+unity-explorer \code{dev} @ \code{6d8b5e966}.
+\end{abstract}
+
+\tableofcontents
+\vspace{1em}
+
+\section{Scope and methodology}
+
+\subsection{What was audited}
+
+All character-movement and collision surfaces: avatar capsule dimensions and offset,
+step offset / floor snap / slope limit, coyote time and jump buffering, jump heights and
+the gravity model, speeds / acceleration / air control / air drag, slope, edge and wall
+behavior, glide, GLTF and primitive collider generation, collision layers and masks, and
+the physics engine and tick model.
+
+\subsection{Sources}
+
+\begin{itemize}[leftmargin=1.4em]
+  \item \textbf{Godot side:} \code{godot/src/logic/player/player.gd} + \code{player.tscn}
+        (all locomotion), \code{lib/src/content/gltf/scene.rs} and
+        \code{lib/src/scene\_runner/components/mesh\_collider.rs} (collider generation),
+        \code{godot/project.godot} (layer names), \code{graphic\_settings.gd} (tick rate).
+  \item \textbf{Unity side:} \code{CharacterControllerSettings.asset} (authoritative tuning),
+        \code{CharacterObject.prefab} (the capsule), the \code{CharacterMotion} systems
+        (\code{ApplyJump}, \code{ApplyGravity}, \code{ApplyGliding}, \code{ApplyEdgeSlip},
+        \code{ApplyWallSlide}, \ldots), \code{PhysicsLayers.cs} and
+        \code{DynamicsManager.asset} (layer routing and collision matrix).
+\end{itemize}
+
+\subsection{Verification method}
+
+Every quoted value carries a file:line reference and was checked by reading the source at
+that location, in two independent adversarial review passes whose explicit goal was to
+disprove the document. The second pass re-validated all 43 findings of the first against
+the updated Unity checkout. The result: all quoted \emph{values} on both sides are
+accurate; roughly twenty stale line references and three classification errors were found
+and corrected (see Appendix).
+
+\section{The avatar capsule (cross-reference only)}
+
+Capsule parity is tracked in its own issue; it is summarized here because several other
+gaps are side effects of it.
+
+\begin{center}
+\begin{tabular}{@{}l L{4.6cm} L{4.6cm}@{}}
+\toprule
+ & \godot & \unity \\
+\midrule
+Height / radius & 1.5\,/\,0.25 & 1.6\,/\,0.3 \\
+Center Y & 1.2 & 0.8 \\
+Margin / skin width & 0.05 & 0.08 \\
+Extra shape & \code{SeparationRayShape3D} length 1.0779 at $y{=}1.1$ & none \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The Godot capsule floats 0.45\,m above the feet and a downward separation ray bridges the
+gap. This one difference masquerades as several others: Godot's ``de-facto step
+clearance'' of $\approx$0.45\,m is not step logic, it is the floating capsule rolling over
+low geometry.
+
+\section{Gap analysis by area}
+
+\subsection{Step, ground contact, and tick model}
+
+\begin{center}\footnotesize
+\begin{tabular}{@{}L{2.9cm} L{4.6cm} L{5.6cm}@{}}
+\toprule
+ & \godot & \unity \\
+\midrule
+Step offset & \textbf{none} --- no built-in, no custom logic &
+  0.35, force-written every physics tick (\code{ApplySlopeModifier.cs:24}); prefab serializes 0.3 \\
+Floor snap / downslope stick & \code{floor\_snap\_length = 0.2} (\code{player.gd:218}) &
+  downslope raycast 0.45 jog / 0.55 run (\code{ApplySlopeModifier.cs:40,42}) \\
+Slope limit & unset $\to$ engine default 45\textdegree & 46\textdegree\ (\code{CharacterObject.prefab:103}) \\
+Physics engine / tick & Godot Physics, 60\,Hz (\code{graphic\_settings.gd:235,243}) &
+  PhysX, \textbf{manual variable timestep} --- \code{Physics.Simulate(dt)} per frame (\code{UpdatePhysicsSimulationSystem.cs:33}) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{Why it matters.} The missing step offset is the single largest ``can't climb
+trivial geometry'' contributor once the capsule is fixed: Unity walks up anything up to
+0.35\,m; Godot must jump. The tick finding is newer and easy to miss: Unity no longer
+runs a fixed 50\,Hz simulation --- it steps physics by the frame delta. Any reasoning of
+the form ``coyote time $= 8$ ticks'' is nominal, not guaranteed, and per-tick logic on
+the Godot side (which \emph{is} fixed at 60\,Hz) will drift relative to Unity under load.
+
+\subsection{Jump and gravity}
+
+\begin{center}\footnotesize
+\begin{tabular}{@{}L{2.9cm} L{4.6cm} L{5.6cm}@{}}
+\toprule
+ & \godot & \unity \\
+\midrule
+Coyote time & \textbf{unreachable}: grace (\code{player.gd:391-395}) only drives the land
+  animation; ground-jump branch (\code{:455-470}) sits after \code{elif not on\_floor} (\code{:390}) &
+  0.15\,s $\approx$ 8 nominal ticks (\code{ApplyJump.cs:54}) \\
+Jump buffer & 0.15\,s (\code{player.gd:9}) & 0.15\,s (\code{JumpTrigger.cs:8-9}) \checkmark \\
+Gravity & single 10\,m/s$^2$ & asymmetric: ascent $\times 4 = 40$, descent 10 (\code{ApplyGravity.cs:41-42}) \\
+Long jump (hold) & none & 0.5\,s window, $\times0.5$ gravity (\code{ApplyGravity.cs:37-38}) \\
+Jump height & 1.8 fixed (\code{player.gd:59-60}) & 1.0 jog / 1.5 run, lerped by horizontal speed \\
+Air jump & 1 $\cdot$ 2.0\,m $\cdot$ 0.2\,s delay $\cdot$ fixed impulse 8.0 (\code{player.gd:8,11-13}) &
+  same values, impulse \textbf{max(8, current speed)} (\code{ApplyJump.cs:76-186}); behind \code{FeatureId.DoubleJump} \\
+Jump cooldown & 0.3\,s (\code{player.gd:10}) & 0.3\,s (\code{ApplyJump.cs:80-83}) \checkmark \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{Why it matters.} The unreachable coyote time (\textbf{B1}) is the worst
+feel bug: a jump pressed within 0.15\,s of walking off a ledge --- muscle memory for every
+platformer player --- is silently dropped in Godot, and off higher ledges the same input
+is instead consumed by the glide-open gate, compounding the confusion. The asymmetric
+gravity plus long-jump hold is what makes Unity jumps feel snappy going up and
+forgiving coming down; Godot's symmetric single gravity cannot reproduce that arc no
+matter how the height constant is tuned. Air jump and jump cooldown match exactly ---
+an early draft of this audit claimed otherwise based on a stale Unity checkout; both
+systems exist on \code{dev} with identical parameters.
+
+\subsection{Glide}
+
+Both engines have a glide system; the first version of this audit omitted it entirely.
+
+\begin{center}\footnotesize
+\begin{tabular}{@{}L{3.4cm} L{4.2cm} L{5.4cm}@{}}
+\toprule
+ & \godot & \unity \\
+\midrule
+Max fall speed & 1.0 (\code{player.gd:14}) & 1 (\code{ApplyGliding.cs:55}) \checkmark \\
+Horizontal speed & cap 6.0 (\code{player.gd:15}) & \code{GlideSpeed} 6 (\code{CalculateSpeedLimitSystem.cs:36}) \checkmark \\
+Min ground distance & \textbf{1.0} (\code{player.gd:16}) & \textbf{0.2} (settings :84) \\
+Jump$\to$glide interval & 0.5 (\code{player.gd:17}) & 0.5 (settings :87) \checkmark \\
+Glide cooldown & \textbf{0.6} (\code{player.gd:18}) & \textbf{0.2} (settings :88) \\
+Trigger model & toggle-press; walking off a ledge can open glide (deliberate divergence) &
+  hold-to-glide after air jumps exhausted \\
+Wind response & none & \code{GlideWindResponse} 1.5 (\code{ApplyExternalForce.cs:29}) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{Why it matters.} Two plain parameter mismatches (\textbf{B5}, \textbf{B6}):
+Godot refuses to open the glider below 1\,m of altitude where Unity allows 0.2\,m, and
+enforces a 3$\times$ longer re-open cooldown. Both are two-constant fixes with immediate
+playability impact around rooftops and ledges.
+
+\subsection{Speed, acceleration, and air behavior}
+
+\begin{center}\footnotesize
+\begin{tabular}{@{}L{2.9cm} L{4.6cm} L{5.6cm}@{}}
+\toprule
+ & \godot & \unity \\
+\midrule
+Walk / jog / run & 1.5\,/\,8\,/\,\textbf{11} & 1.5\,/\,8\,/\,\textbf{10} \\
+Acceleration & none --- velocity assigned directly (\code{player.gd:513-514}) &
+  ground 20$\to$25, air 15$\to$20, over a 0.5\,s curve (\code{ApplyCharacterMovement}\allowbreak\code{Velocity.cs:72-78}) \\
+Deceleration & \code{move\_toward(v, 0, walk\_speed)} per tick, \textbf{not dt-scaled}
+  $\Rightarrow$ 90\,m/s$^2$ at 60\,Hz (\code{player.gd:520-521}) &
+  \code{SmoothDamp} with \code{StopTimeSec\,=\,0} (effectively instant) \\
+Air drag & none on locomotion velocity &
+  quadratic, coeff $0.05 \times 4 = 0.2$ (\code{ApplyHorizontalAirDrag.cs}) \\
+Air control & full, identical to grounded & reduced: air accel pair + \code{MoveTowards} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{Why it matters.} Godot's instant velocity assignment and full air control make
+the character feel ``on rails'' compared to Unity's weight. The deceleration line hides a
+latent bug (\textbf{B4}): the per-tick step is not scaled by \code{delta}, so stopping
+distance depends on the physics tick rate --- fine at a stable 60\,Hz, wrong under load.
+
+\subsection{Slope, edge, wall, landing, platforms}
+
+\begin{center}\footnotesize
+\begin{tabular}{@{}L{3.2cm} L{3.6cm} L{6.2cm}@{}}
+\toprule
+System & \godot & \unity \\
+\midrule
+Slope velocity modifier & none & 1.35$\times$ downhill $\to$ 0.65$\times$ uphill (\code{ApplyCharacterMovementVelocity.cs:21}) \\
+Steep-slope slide & none & gravity tilted along slope beyond 46\textdegree\ (\code{ApplyGravity.cs:20-29}) \\
+Edge slip & none & spherecast + gravity-tilt slip (\code{ApplyEdgeSlip.cs:28-31,71}) \\
+Wall slide & none & capsulecast 0.5\,m, multiplier lerped to 0 (\code{ApplyWallSlide.cs:29-42}) \\
+Hard-landing stun & \textbf{present}: scene-driven cooldown (\code{player.gd:304-308}) &
+  fall $>$ 8\,m $\Rightarrow$ 0.75\,s stun (\code{StunCharacterSystem.cs:44-80}) \\
+Moving platforms & \textbf{partial}: colliders go \code{KINEMATIC}, no follow logic &
+  platform delta + rotation applied (\code{CharacterPlatformSystem.cs}, \code{PlatformSaveLocalPosition.cs:28-34}) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{Corrections to the \#905 baseline.} Hard-landing stun is \emph{not} absent in
+Godot --- what is missing is Unity's fall-height trigger. Moving platforms are
+\emph{partial}, not absent. Edge slip in Unity works by tilting the gravity direction,
+\emph{not} by the \code{EdgeSlipSpeed} constant, which is dead configuration.
+
+\subsection{Collider generation and layers}
+
+\begin{center}\footnotesize
+\begin{tabular}{@{}L{3.2cm} L{4.6cm} L{5.2cm}@{}}
+\toprule
+ & \godot & \unity \\
+\midrule
+GLTF colliders & trimesh per mesh (\code{scene.rs:169}) & \code{MeshCollider}, \code{BakeMesh} (\code{ConfigureGltfContainer}\allowbreak\code{Colliders.cs:93-100}) \checkmark \\
+Backfaces & \textbf{only non-planar meshes}; planar $=$ AABB thinner than 0.01 (\code{scene.rs:219,227-229}) &
+  always double-sided \\
+Primitive colliders & box/sphere/cylinder/plane shapes & same mapping \checkmark \\
+Player mask & \code{CL\_PHYSICS} \textbf{only} (\code{player.tscn:20}) &
+  6 layers incl.\ \code{InvisibleColliders}, \code{CharacterOnly}, \code{SDKAvatarTriggerArea} \\
+SDK layer routing & 6 functional + 13 reserved/custom layers &
+  incl.\ avatar-only $\to$ \code{SDKAvatarHit} route (\code{PhysicsLayers.cs:123-127}) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{Why it matters.} Two of the six parity bugs live here. \textbf{B2}: Godot
+marks any mesh thinner than 1\,cm on any axis as one-way, so thin floors and ramps
+collide only from above --- players fall through geometry that is solid in Unity
+(direct cause candidate for \#1529 and \#1203). \textbf{B3}: the Godot player collides
+with a single layer, so scene-placed invisible blockers and several SDK collider
+categories simply do not exist for the character.
+
+\section{Classification}
+
+\subsection{Parity bugs --- Godot behavior is wrong}
+
+\begin{center}\footnotesize
+\begin{tabular}{@{}l L{8.2cm} L{4.6cm}@{}}
+\toprule
+\# & Gap & Evidence \\
+\midrule
+B1 & Coyote time unreachable (elif-chain; input eaten by glide gate) & \code{player.gd:390} vs \code{:455-470} \\
+B2 & One-way thin colliders & \code{scene.rs:219,227-229} \\
+B3 & Player mask 1 layer vs 6 & \code{player.tscn:20} \\
+B4 & Deceleration not dt-scaled & \code{player.gd:520-521} \\
+B5 & Glide min ground distance 1.0 vs 0.2 & \code{player.gd:16} \\
+B6 & Glide cooldown 0.6 vs 0.2 & \code{player.gd:18} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Missing systems --- exist in Unity, must be built}
+
+M1 step offset $\cdot$ M2 slope velocity modifier $\cdot$ M3 steep-slope slide $\cdot$
+M4 edge slip $\cdot$ M5 wall slide $\cdot$ M6 platform follow $\cdot$ M7 acceleration
+curves + air control $\cdot$ M8 air drag $\cdot$ M9 long jump $\cdot$ M10 asymmetric
+gravity $\cdot$ M11 fall-height stun $\cdot$ M12 glide wind response $\cdot$ M13
+avatar-only collider layer.
+
+\subsection{Unconfirmed deviations --- need a product call}
+
+D1 run 11 vs 10 $\cdot$ D2 jump 1.8 fixed vs 1.0/1.5 speed-lerped $\cdot$ D3 snap 0.2 vs
+raycast 0.45/0.55 $\cdot$ D4 slope 45\textdegree\ vs 46\textdegree\ $\cdot$ D5 stun
+trigger model $\cdot$ D6 air-jump impulse fixed 8.0 vs max(8, speed) $\cdot$ D7 glide
+trigger model (partly deliberate --- there is a divergence comment in \code{player.gd}).
+
+\subsection{Warning: Unity dead configuration}
+
+Replicate \emph{behavior}, not asset values. Dead or misleading on the Unity side:
+\code{MinSlopeAngle 50} (real steep threshold is the 46\textdegree\ slope limit),
+\code{EdgeSlipSpeed 2} (slip is gravity-tilt), \code{StopTimeSec\,=\,0} (degenerate
+SmoothDamp $=$ instant stop), \code{GroundDrag}, \code{MinImpulse},
+\code{CharacterControllerRadius 0.4}, and the entire \code{ApplyAirDrag.cs} file (the live
+one is \code{ApplyHorizontalAirDrag.cs}). The prefab serializes \code{StepOffset 0.3} but
+code overwrites it with 0.35 every tick. \code{MaxSlopeAngle 80} \emph{is} consumed (wall
+slide, slide animation, conditional rotation) --- just not for the steep-slope trigger.
+
+\section{Reproduction checklist (test scene \code{-98,103})}
+
+Derived from code, not yet executed live. Side-by-side, Unity vs Godot:
+
+\begin{itemize}[leftmargin=1.4em, itemsep=1pt]
+  \item \textbf{B1} --- walk off a low ledge, jump within 0.15\,s: Unity jumps; Godot drops the input.
+  \item \textbf{B2} --- approach thin elevated floors from below: Unity blocks; Godot passes through.
+  \item \textbf{B3} --- walk into invisible blocker walls: Unity blocks; Godot walks through.
+  \item \textbf{B4} --- release keys at full run under frame drops: Unity stops consistently; Godot varies with tick rate.
+  \item \textbf{B5/B6} --- open glider below 1\,m altitude, then close and re-open quickly: Unity opens at 0.2\,m and re-arms in 0.2\,s; Godot refuses and waits 0.6\,s.
+  \item \textbf{M1} --- walk into 0.35--0.5\,m ledges: Unity steps up; Godot blocks.
+  \item \textbf{M2/M3} --- run up vs down a long ramp; stand on a $>$46\textdegree\ slope: Unity modulates speed and slides; Godot does neither.
+  \item \textbf{M9/M10} --- tap vs hold jump: Unity arc differs; Godot arc is fixed and symmetric.
+  \item \textbf{D1/D2} --- run-jump onto Unity-reachable geometry: different reachable set (1.5\,m @ 10\,m/s vs 1.8\,m @ 11\,m/s).
+\end{itemize}
+
+\section{Salvage decisions (recommendations)}
+
+\paragraph{PR \#943 --- Rust locomotion rewrite + Jolt: drop the code, keep the body.}
+Locomotion lives in \code{player.gd} and is iterated there; a Rust rewrite is the wrong
+shape for incremental parity. The PR body, however, is an ADR-grade locomotion spec ---
+reuse it as the implementation checklist for M1--M13.
+
+\paragraph{PR \#1417 --- capsule + snap + slope + coyote + Jolt cherry-pick: re-scope
+without Jolt and reopen.} The minimal parity slice. Split the engine change out, land the
+GDScript-side fixes (coyote B1, snap/slope values) and the capsule fix via its own issue.
+
+\section{Jolt evaluation}
+
+Both dead PRs bundled the Jolt physics engine. Recommendation: \textbf{do not bundle Jolt
+with parity fixes}. All six parity bugs and most missing systems are solver-independent
+script logic. Jolt would improve contact robustness around thin geometry, but it does not
+fix B2 (the one-way flag is our code, not the engine), and it imposes a cross-platform
+revalidation cost. Bundling an engine swap with behavior changes makes regressions
+unattributable --- the failure mode that killed both prior PRs. Re-evaluate Jolt only if
+thin-geometry tunneling survives the B2 fix.
+
+\section{Follow-up roadmap (not yet filed)}
+
+\begin{center}\footnotesize
+\begin{tabular}{@{}l L{9cm} l l@{}}
+\toprule
+Pri & Candidate & Addresses & Effort \\
+\midrule
+P0 & Fix coyote elif-chain & B1 & XS \\
+P0 & Double-sided thin colliders & B2, \#1529, \#1203 & S \\
+P0 & Widen player collision mask & B3 & XS \\
+P1 & dt-scale deceleration & B4 & XS \\
+P1 & Glide param alignment (0.2 / 0.2) & B5, B6 & XS \\
+P1 & Asymmetric gravity + long jump + lerped jump height & M9, M10, D2 & S \\
+P1 & Step offset (custom) & M1 & M \\
+P2 & Slope modifier + downslope raycast & M2, D3 & S \\
+P2 & Steep slide + edge slip + wall slide & M3--M5 & M \\
+P2 & Acceleration curves + air control + air drag & M7, M8 & M \\
+P3 & Platform follow & M6 & M \\
+P3 & Fall-height stun & M11, D5 & S \\
+P3 & Glide wind + avatar-only collider layer & M12, M13 & S \\
+--- & Jolt spike (only after B2 lands) & \S7 & spike \\
+--- & Product decision on deviations & D1--D7 & --- \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\appendix
+\section{Verification log}
+
+Two independent adversarial validation passes were run against this document
+(2026-08-25), each instructed to disprove every claim:
+
+\begin{itemize}[leftmargin=1.4em]
+  \item \textbf{Round 1} ran against a stale unity-explorer checkout and produced false
+        positives (``Unity has no air jump'', ``no jump cooldown'') --- both systems exist
+        on current \code{dev} with values matching Godot exactly. It did correctly flag:
+        \code{MaxSlopeAngle} is consumed (not dead), \code{EdgeSlipSpeed} is dead (was
+        quoted as live), and $\sim$12 stale Godot line references.
+  \item \textbf{Round 2} (updated \code{dev} @ \code{6d8b5e966}) confirmed the restored
+        parity claims, surfaced the omitted glide system with two real parameter
+        mismatches (B5/B6), found that Unity physics now runs a manual variable timestep,
+        detected the layer-matrix drift (\code{AllAvatars} gone, \code{SDKAvatarTriggerArea}
+        and \code{SDKAvatarHit} in), the dead \code{ApplyAirDrag.cs} file, and corrected
+        $\sim$20 file:line references across both repos.
+  \item Baseline claims from issue \#905: 13/13 Godot values verified exact. Corrections:
+        hard-landing stun exists (scene-driven); moving platforms are partial.
+\end{itemize}
+
+\end{document}

@@ -2,12 +2,10 @@
 
 **Issue:** [#905](https://github.com/decentraland/godot-explorer/issues/905) (research only — no behavior change ships from this audit)
 **Date:** 2026-08-25 (v2 — validated twice by independent reviewer, corrections applied)
-**Sources:** godot-explorer `main` (7f7302805c) · unity-explorer **`dev`** (6d8b5e966)
+**Sources:** godot-explorer `main` (7f7302805c) · unity-explorer `dev` (6d8b5e966)
 **Test scene:** `decentraland://open?position=-98,103&realm=jezter.dcl.eth`
 
 All values verified against source on both repos (file:line per row), including a full adversarial re-validation pass. The 2026-08-24 baseline in #905 holds: 13/13 Godot claims exact.
-
-> ⚠️ **Source branch note:** Unity references are against `dev`, not `main` — `main` lags significantly (pre-Unity-6, missing double-jump/glide). `dev` is the live reference for movement parity.
 
 ---
 
