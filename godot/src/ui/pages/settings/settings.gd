@@ -15,6 +15,9 @@ const _SECTION_TITLE_SCRIPT = preload("res://src/ui/pages/settings/section_title
 const _DROPDOWN_LIST_SCENE = preload(
 	"res://src/ui/components/molecules/dropdown_list/dropdown_list.tscn"
 )
+const _SECTION_ITEM_SCENE = preload(
+	"res://src/ui/components/molecules/settings_section_item/settings_section_item.tscn"
+)
 const CACHE_SIZE_MB: Array[int] = [1024, 2048, 4096]
 
 ## When true, settings operates as a side panel inside the explorer:
@@ -24,6 +27,15 @@ const CACHE_SIZE_MB: Array[int] = [1024, 2048, 4096]
 		panel_mode = value
 		if is_node_ready():
 			_apply_panel_mode()
+
+# Section registry / list-navigation state (see _build_section_list).
+var _sections: Array = []
+var _rows_by_key: Dictionary = {}
+var _section_button_group: ButtonGroup = null
+var _current_section_key: String = ""
+# Portrait sub-mode: false = section list is shown, true = a section's content is shown
+# with a back button. Landscape ignores this (list and content are always side by side).
+var _portrait_detail: bool = false
 
 # Scene LightSource Dev Tools controls, keyed by DclLightSourceComponent.get_light_settings() keys.
 var _light_debug_checks: Dictionary = {}
@@ -39,7 +51,6 @@ var _custom_max_lights_row: HBoxContainer = null
 var _custom_max_lights_spin: SpinBox = null
 
 @onready var label_title: Label = %Label_Title
-@onready var margin_container_nav: MarginContainer = %MarginContainer_Nav
 
 @onready var container_gameplay: VBoxContainer = %VBoxContainer_Gameplay
 @onready var container_graphics: VBoxContainer = %VBoxContainer_Graphics
@@ -100,14 +111,13 @@ var check_button_submit_message_closes_chat: CheckButton = %CheckButton_SubmitMe
 @onready var check_button_multiplayer_debug: CheckButton = %CheckButton_MultiplayerDebug
 @onready var dropdown_list_realm: DropdownList = %DropdownList_Realm
 
-@onready var button_graphics: Button = %Button_Graphics
-@onready var button_audio: Button = %Button_Audio
-@onready var button_gameplay: Button = %Button_Gameplay
-@onready var button_account: Button = %Button_Account
-@onready var button_storage: Button = %Button_Storage
-@onready var button_developer: Button = %Button_Developer
-
-@onready var tabs_scroll_container: ScrollContainer = %TabsScrollContainer
+@onready var button_back: Button = %Button_Back
+@onready var panel_section_list: Control = %Panel_SectionList
+@onready var panel_content: Control = %Panel_Content
+@onready var label_version: Label = %Label_Version
+@onready var section_buttons_container: VBoxContainer = %VBoxContainer_SectionButtons
+@onready var scroll_sections: ScrollContainer = %ScrollContainer_Sections
+@onready var container_help_support: Control = %VBoxContainer_HelpSupport
 @onready var dropdown_list_graphic_profiles: DropdownList = %DropdownList_GraphicProfiles
 @onready var dropdown_list_custom_skybox: DropdownList = %DropdownList_CustomSkybox
 
@@ -117,9 +127,15 @@ var check_button_submit_message_closes_chat: CheckButton = %CheckButton_SubmitMe
 
 func _ready():
 	UiSounds.install_audio_recusirve(self)
-	button_developer.visible = !Global.is_production()
-	button_graphics.set_pressed_no_signal(true)
-	_on_button_graphics_pressed()
+	_build_section_list()
+	button_back.pressed.connect(_on_back_pressed)
+	label_version.text = TranslationKey.new("SETTINGS_VERSION").format(
+		{"version": DclGlobal.get_version()}
+	)
+	# The version row is a Button with a copy icon: tapping it copies the version string.
+	var version_button: Node = label_version.get_parent().get_parent()
+	if version_button is Button:
+		version_button.pressed.connect(_on_version_copy_pressed)
 
 	# Preview URL: release focus when clicking outside, keep visible when keyboard opens, connect button
 	line_edit_custom_preview_url.custom_focus_entered.connect(
@@ -216,12 +232,25 @@ func _ready():
 	if label_title.label_settings:
 		label_title.label_settings = label_title.label_settings.duplicate()
 	resized.connect(_on_resized)
+	if not Global.orientation_changed.is_connected(_on_orientation_changed):
+		Global.orientation_changed.connect(_on_orientation_changed)
 	_on_resized()
 	_apply_panel_mode()
+	_select_section(_default_section_key(), false)
 
 
 func _on_resized() -> void:
 	_apply_layout(Global.is_orientation_portrait())
+
+
+func _on_orientation_changed(_is_portrait: bool) -> void:
+	_apply_layout(Global.is_orientation_portrait())
+	# Rows toggle only in landscape (they flip toggle_mode with orientation). Re-assert the
+	# current selection so the active section stays highlighted after rotating to landscape.
+	if not Global.is_orientation_portrait():
+		var row: SettingsSectionItem = _rows_by_key.get(_current_section_key)
+		if is_instance_valid(row):
+			row.set_pressed_no_signal(true)
 
 
 func _apply_layout(is_orientation_portrait: bool) -> void:
@@ -229,20 +258,19 @@ func _apply_layout(is_orientation_portrait: bool) -> void:
 	var section_title_font_size: int = 24
 	var section_v_separation: int = 56
 	var button_h: int = 74
-	var button_theme_variation: String = "SecondaryOutlinedButtonSmall"
-	var margin_container_nav_v: int = 0
-	var margin_container_content_top: int = 12
+	# Regular outlined variation (16px corner radius) in both orientations — the design no longer
+	# uses the compact small variant.
+	var button_theme_variation: String = "SecondaryOutlinedButton"
+	var margin_container_content_top: int = 0
 	label_title.label_settings.font_size = 44
 
 	if is_orientation_portrait:
-		margin_container_nav_v = 18
-		margin_container_content_top = 32
+		margin_container_content_top = 28
 		label_title.label_settings.font_size = 48
 		dropdown_max = 5
 		section_title_font_size = 26
 		section_v_separation = 72
 		button_h = 96
-		button_theme_variation = "SecondaryOutlinedButton"
 
 	container_gameplay.add_theme_constant_override("separation", section_v_separation)
 	container_graphics.add_theme_constant_override("separation", section_v_separation)
@@ -260,9 +288,44 @@ func _apply_layout(is_orientation_portrait: bool) -> void:
 	for node in find_children("*", "DropdownList", true, false):
 		node.max_visible_items = dropdown_max
 
-	margin_container_nav.add_theme_constant_override("margin_bottom", margin_container_nav_v)
-	margin_container_nav.add_theme_constant_override("margin_top", margin_container_nav_v)
 	margin_container_content.add_theme_constant_override("margin_top", margin_container_content_top)
+	_apply_nav_layout(is_orientation_portrait)
+
+
+## List (left menu) vs content (right pane) visibility. Landscape shows both side by side;
+## portrait shows one at a time (master-detail) driven by _portrait_detail.
+func _apply_nav_layout(is_orientation_portrait: bool) -> void:
+	section_buttons_container.add_theme_constant_override(
+		"separation", 30 if is_orientation_portrait else 8
+	)
+	if is_orientation_portrait:
+		# Portrait: the list is the only visible pane, so let it expand to the full width.
+		panel_section_list.visible = not _portrait_detail
+		panel_content.visible = _portrait_detail
+		panel_section_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	else:
+		# Landscape: list docks left at its own custom_minimum_size; content takes the rest.
+		panel_section_list.visible = true
+		panel_content.visible = true
+		panel_section_list.size_flags_horizontal = Control.SIZE_FILL
+	_update_header()
+
+
+## The single persistent header shows "Settings" on the section list (and in landscape, where the
+## list stays visible), and "< {section}" in the portrait detail view. Its back button returns to
+## the list in portrait detail, and closes the menu otherwise.
+func _update_header() -> void:
+	var portrait: bool = Global.is_orientation_portrait()
+	var in_detail: bool = portrait and _portrait_detail
+	var title_key: String = "SETTINGS_SETTINGS"
+	if in_detail:
+		var section: Dictionary = _find_section(_current_section_key)
+		if not section.is_empty():
+			title_key = section["title_key"]
+	label_title.text = tr(title_key)
+	# Hidden only on the portrait list (top level); shown as back-to-list in portrait detail and
+	# as close-the-menu in landscape.
+	button_back.visible = in_detail or not portrait
 
 
 func refresh_graphic_settings():
@@ -281,34 +344,107 @@ func show_control(control: Control):
 	content_scroll_container.scroll_vertical = 0
 
 
-func _async_scroll_to_tab_button(button: Button) -> void:
-	await get_tree().process_frame
-	var scroll := tabs_scroll_container.scroll_horizontal
-	var view_width := tabs_scroll_container.size.x
-	var btn_left := button.position.x
-	var btn_right := button.position.x + button.size.x
-	var visible_left := float(scroll)
-	var visible_right := float(scroll) + view_width
-	var fully_visible := btn_left >= visible_left and btn_right <= visible_right
-	if fully_visible:
+func _default_section_key() -> String:
+	if _sections.is_empty():
+		return ""
+	return _sections[0]["key"]
+
+
+func _find_section(key: String) -> Dictionary:
+	for section in _sections:
+		if section["key"] == key:
+			return section
+	return {}
+
+
+## Build the section registry and the left-menu rows. Order matches the design; Developer is
+## appended only outside production. Rows share a ButtonGroup so exactly one stays highlighted.
+## Section title keys live in the data table below, invisible to the i18n scanner:
+# i18n-keys: SETTINGS_GRAPHICS, SETTINGS_AUDIO, SETTINGS_GAMEPLAY, SETTINGS_LANGUAGE_SECTION
+# i18n-keys: SETTINGS_ACCOUNT, SETTINGS_HELP_SUPPORT, SETTINGS_STORAGE, SETTINGS_DEV_TOOLS
+# i18n-keys: SETTINGS_SETTINGS
+func _build_section_list() -> void:
+	_section_button_group = ButtonGroup.new()
+	_sections = [
+		{"key": "graphics", "title_key": "SETTINGS_GRAPHICS", "container": container_graphics},
+		{"key": "audio", "title_key": "SETTINGS_AUDIO", "container": container_audio},
+		{"key": "gameplay", "title_key": "SETTINGS_GAMEPLAY", "container": container_gameplay},
+		{
+			"key": "language",
+			"title_key": "SETTINGS_LANGUAGE_SECTION",
+			"container": container_language,
+		},
+		{"key": "account", "title_key": "SETTINGS_ACCOUNT", "container": container_account},
+		{
+			"key": "help_support",
+			"title_key": "SETTINGS_HELP_SUPPORT",
+			"container": container_help_support,
+		},
+		{"key": "storage", "title_key": "SETTINGS_STORAGE", "container": container_storage},
+	]
+	if not Global.is_production():
+		_sections.append(
+			{"key": "developer", "title_key": "SETTINGS_DEV_TOOLS", "container": container_advanced}
+		)
+
+	for child in section_buttons_container.get_children():
+		child.queue_free()
+	_rows_by_key.clear()
+
+	for section in _sections:
+		var row: SettingsSectionItem = _SECTION_ITEM_SCENE.instantiate()
+		section_buttons_container.add_child(row)
+		row.section_key = section["key"]
+		row.title_key = section["title_key"]
+		row.button_group = _section_button_group
+		row.pressed.connect(_on_section_row_pressed.bind(section["key"]))
+		_rows_by_key[section["key"]] = row
+
+
+func _on_section_row_pressed(key: String) -> void:
+	_select_section(key, true)
+
+
+## Show a section's content, update the highlighted row and (in portrait) switch to the detail
+## view. user_initiated=false is used for the default selection when the panel is shown, so it
+## does not force the portrait detail view (portrait should open on the section list).
+func _select_section(key: String, user_initiated: bool) -> void:
+	var section: Dictionary = _find_section(key)
+	if section.is_empty():
 		return
-	var separation := 48.0
-	var target_x := 0.0
-	var h_bar := tabs_scroll_container.get_h_scroll_bar()
-	var max_scroll := float(maxi(0, int(h_bar.max_value)) if h_bar else 0)
-	var cut_left := btn_left < visible_left
-	var cut_right := btn_right > visible_right
-	if cut_left:
-		target_x = btn_left - separation
-	elif cut_right:
-		target_x = btn_right - view_width + separation
-	target_x = clamp(target_x, 0.0, max_scroll)
-	var tween := create_tween()
-	tween.tween_property(tabs_scroll_container, "scroll_horizontal", int(target_x), 0.2)
+	_current_section_key = key
+	show_control(section["container"])
+
+	var row: SettingsSectionItem = _rows_by_key.get(key)
+	if is_instance_valid(row) and row.toggle_mode and not row.button_pressed:
+		row.set_pressed_no_signal(true)
+
+	match key:
+		"gameplay":
+			_refresh_hide_explorer_ui_row()
+			_refresh_camera_mode_row()
+		"developer":
+			var explorer = Global.get_explorer()
+			if is_instance_valid(explorer):
+				check_button_show_interactable_area.set_pressed_no_signal(
+					explorer.show_interactable_area
+				)
+			_sync_light_controls_for_profile()
+
+	if Global.is_orientation_portrait() and user_initiated:
+		_portrait_detail = true
+	_apply_nav_layout(Global.is_orientation_portrait())
 
 
-func _on_button_pressed():
-	self.hide()
+## The persistent header's back button: in the portrait detail view it returns to the section
+## list; otherwise (portrait list top-level, or landscape) it closes the whole menu — Settings is
+## a menu screen — returning to the game.
+func _on_back_pressed() -> void:
+	if Global.is_orientation_portrait() and _portrait_detail:
+		_portrait_detail = false
+		_apply_nav_layout(true)
+	else:
+		Global.close_menu.emit()
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -653,37 +789,8 @@ func _exit_tree() -> void:
 		Global.camera_mode_set.disconnect(_on_camera_mode_set)
 	if Global.camera_mode_block_changed.is_connected(_on_camera_mode_block_changed):
 		Global.camera_mode_block_changed.disconnect(_on_camera_mode_block_changed)
-
-
-func _on_button_developer_pressed() -> void:
-	show_control(container_advanced)
-	var explorer = Global.get_explorer()
-	if is_instance_valid(explorer):
-		check_button_show_interactable_area.set_pressed_no_signal(explorer.show_interactable_area)
-	_sync_light_controls_for_profile()
-	_async_scroll_to_tab_button(button_developer)
-
-
-func _on_button_graphics_pressed() -> void:
-	show_control(container_graphics)
-	_async_scroll_to_tab_button(button_graphics)
-
-
-func _on_button_gameplay_pressed() -> void:
-	show_control(container_gameplay)
-	_refresh_hide_explorer_ui_row()
-	_refresh_camera_mode_row()
-	_async_scroll_to_tab_button(button_gameplay)
-
-
-func _on_button_audio_pressed():
-	show_control(container_audio)
-	_async_scroll_to_tab_button(button_audio)
-
-
-func _on_button_account_pressed() -> void:
-	show_control(container_account)
-	_async_scroll_to_tab_button(button_account)
+	if Global.orientation_changed.is_connected(_on_orientation_changed):
+		Global.orientation_changed.disconnect(_on_orientation_changed)
 
 
 func _on_button_delete_account_pressed() -> void:
@@ -1174,11 +1281,6 @@ func _on_button_discord_pressed() -> void:
 	Global.open_url(DISCORD_URL)
 
 
-func _on_button_storage_pressed() -> void:
-	show_control(container_storage)
-	_async_scroll_to_tab_button(%Button_Storage)
-
-
 func _apply_panel_mode() -> void:
 	set("texture", null if panel_mode else load("res://assets/ui/settings-background.png"))
 
@@ -1194,13 +1296,12 @@ func hide_panel() -> void:
 
 func _on_visibility_changed() -> void:
 	if is_node_ready() and is_inside_tree() and is_visible_in_tree():
-		for btn in button_graphics.button_group.get_buttons():
-			btn.set_pressed_no_signal(false)
-		button_graphics.set_pressed_no_signal(true)
-		_on_button_graphics_pressed()
-		tabs_scroll_container.scroll_horizontal = 0
-		if not panel_mode:
-			Global.set_orientation_portrait()
+		# Reset to the section list (portrait) / first section, but keep the current device
+		# orientation: opened from the navbar in landscape it stays landscape; opened as the
+		# pre-explorer menu in portrait it stays portrait.
+		_portrait_detail = false
+		_select_section(_default_section_key(), false)
+		scroll_sections.scroll_vertical = 0
 		_refresh_hide_explorer_ui_row()
 
 
@@ -1320,6 +1421,24 @@ func _notification(what: int) -> void:
 		_populate_language_dropdown_items()
 		_update_current_cache_size()
 		_retranslate_custom_profile_rows()
+		_retranslate_section_list()
+
+
+## Section rows, the header title and the version label are built with tr()-resolved strings, so
+## they need manual re-translation on locale change (same convention as the dropdowns above).
+func _retranslate_section_list() -> void:
+	for row in _rows_by_key.values():
+		if is_instance_valid(row):
+			row.retranslate()
+	_update_header()
+	label_version.text = TranslationKey.new("SETTINGS_VERSION").format(
+		{"version": DclGlobal.get_version()}
+	)
+
+
+func _on_version_copy_pressed() -> void:
+	DisplayServer.clipboard_set(DclGlobal.get_version())
+	Global.send_haptic_feedback()
 
 
 func _populate_custom_particles_items() -> void:

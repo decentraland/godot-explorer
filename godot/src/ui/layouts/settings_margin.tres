@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="SafeAreaMargins" format=3 uid="uid://bgira6whi6odh"]
+
+[ext_resource type="Script" uid="uid://bir43kgkk1h8j" path="res://src/ui/layouts/safe_area_margins.gd" id="1_kjsxh"]
+
+[resource]
+script = ExtResource("1_kjsxh")
+left = 108
+top = 32
+right = 108
+portrait_left = 48
+portrait_right = 48

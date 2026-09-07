@@ -1,0 +1,47 @@
+[gd_scene format=3 uid="uid://dttpatg0wspf1"]
+
+[ext_resource type="Script" uid="uid://dfiguhy35eso8" path="res://src/ui/components/molecules/settings_section_item/settings_section_item.gd" id="1_item"]
+[ext_resource type="FontFile" uid="uid://d2vlaexk003yw" path="res://assets/themes/fonts/inter/Inter-Medium.ttf" id="2_d0lpa"]
+[ext_resource type="Texture2D" uid="uid://cqpimo23w821v" path="res://assets/ui/next.svg" id="2_g4blm"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_flat"]
+content_margin_left = 12.0
+content_margin_top = 12.0
+content_margin_right = 20.0
+content_margin_bottom = 12.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_pill"]
+content_margin_left = 12.0
+content_margin_top = 12.0
+content_margin_right = 20.0
+content_margin_bottom = 12.0
+bg_color = Color(0.9098039, 0.7254902, 1, 0.3019608)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[node name="SettingsSectionItem" type="Button" unique_id=493290523]
+auto_translate_mode = 2
+custom_minimum_size = Vector2(0, 72)
+offset_right = 360.0
+offset_bottom = 72.0
+size_flags_horizontal = 3
+focus_mode = 0
+mouse_filter = 1
+theme_override_constants/icon_max_width = 16
+theme_override_fonts/font = ExtResource("2_d0lpa")
+theme_override_font_sizes/font_size = 30
+theme_override_styles/normal = SubResource("StyleBoxEmpty_flat")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_pill")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_flat")
+theme_override_styles/hover_pressed = SubResource("StyleBoxFlat_pill")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_flat")
+toggle_mode = true
+text = "Section"
+icon = ExtResource("2_g4blm")
+alignment = 0
+icon_alignment = 2
+script = ExtResource("1_item")
+metadata/_edit_horizontal_guides_ = [24.0]
+metadata/mobile_preview_orientation = "landscape"

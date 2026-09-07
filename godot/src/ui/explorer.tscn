@@ -28,7 +28,6 @@
 [ext_resource type="PackedScene" uid="uid://qbcqm5fskyho" path="res://src/ui/components/organisms/url_popup/url_popup.tscn" id="27_url_popup"]
 [ext_resource type="PackedScene" uid="uid://ks0sxu8dsf66" path="res://src/ui/components/organisms/jump_in_popup/jump_in_popup.tscn" id="28_jump_in_popup"]
 [ext_resource type="PackedScene" uid="uid://bycjwh7mskrsd" path="res://src/helpers_components/chat_handler.tscn" id="32_cq187"]
-[ext_resource type="PackedScene" uid="uid://cfuskyu58uo2v" path="res://src/ui/pages/settings/settings.tscn" id="33_settings"]
 [ext_resource type="Resource" uid="uid://ntu4pnce7xxr" path="res://src/ui/layouts/hud_margins.tres" id="34_hudmg"]
 [ext_resource type="PackedScene" uid="uid://v3ktu5kra0ql" path="res://src/ui/components/organisms/preview_hud_panel/preview_hud_panel.tscn" id="35_prevhud"]
 
@@ -276,24 +275,6 @@ unique_name_in_owner = true
 visible = false
 custom_minimum_size = Vector2(500, 640)
 layout_mode = 2
-
-[node name="SettingsPanel" type="PanelContainer" parent="UI/SafeAreaHud/InteractableHUD/HBoxContainerLeftPanels/VBoxContainer_LeftPanels" unique_id=580837958]
-unique_name_in_owner = true
-visible = false
-custom_minimum_size = Vector2(500, 640)
-layout_mode = 2
-size_flags_vertical = 3
-theme_override_styles/panel = SubResource("StyleBoxFlat_settings_bg")
-
-[node name="MarginContainer" type="MarginContainer" parent="UI/SafeAreaHud/InteractableHUD/HBoxContainerLeftPanels/VBoxContainer_LeftPanels/SettingsPanel" unique_id=1052710726]
-layout_mode = 2
-theme_override_constants/margin_top = 28
-
-[node name="Settings" parent="UI/SafeAreaHud/InteractableHUD/HBoxContainerLeftPanels/VBoxContainer_LeftPanels/SettingsPanel/MarginContainer" unique_id=61276201 instance=ExtResource("33_settings")]
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 3
-panel_mode = true
 
 [node name="EmoteWheel" parent="UI/SafeAreaHud/InteractableHUD" unique_id=228992295 instance=ExtResource("21_pows0")]
 unique_name_in_owner = true
