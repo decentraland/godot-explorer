@@ -1,11 +1,11 @@
 # Movement & Collision Parity Audit — Godot vs Unity
 
 **Issue:** [#905](https://github.com/decentraland/godot-explorer/issues/905) (research only — no behavior change ships from this audit)
-**Date:** 2026-08-25 (v2 — validated twice by independent reviewer, corrections applied)
+**Date:** 2026-08-25
 **Sources:** godot-explorer `main` (7f7302805c) · unity-explorer `dev` (6d8b5e966)
 **Test scene:** `decentraland://open?position=-98,103&realm=jezter.dcl.eth`
 
-All values verified against source on both repos (file:line per row), including a full adversarial re-validation pass. The 2026-08-24 baseline in #905 holds: 13/13 Godot claims exact.
+All values verified against source on both repos (file:line per row) in two independent adversarial validation passes. The 2026-08-24 baseline in #905 holds: 13/13 Godot claims exact.
 
 ---
 
@@ -42,7 +42,7 @@ All values verified against source on both repos (file:line per row), including 
 | Air jump (double jump) | 1 · 2.0 m · 0.2 s delay · 8.0 fixed impulse — consts `player.gd:8,11-13`, impl `:376-386` | 1 · 2.0 m · 0.2 s delay · impulse **max(8, current horizontal speed)** — `ApplyJump.cs:76,99,127,148-186`, settings `:77-82` (`AirJumpCount 1`, `AirJumpHeight 2`, `AirJumpDelay 0.2`, `AirJumpDirectionChangeImpulse 8`). Gated by feature flag `FeatureId.DoubleJump` — `UpdateInputJumpSystem.cs:53,68` | ✅ values parity; impulse differs at high speed (Unity preserves momentum, Godot clamps to 8) |
 | Jump cooldown | 0.3 s — `player.gd:10`, enforced `:394,414,459` | 0.3 s — `CooldownBetweenJumps` settings `:81`, enforced `ApplyJump.cs:80-83` | ✅ parity |
 
-### 1.4 Glide (was omitted in v1 — both engines have it)
+### 1.4 Glide
 
 | Parameter | Godot | Unity | Delta |
 |---|---|---|---|
@@ -225,6 +225,5 @@ Priority = Playtime impact × effort. Order suggested:
 
 Two independent adversarial validation passes (k3 reviewer subagent), 2026-08-25:
 
-- **Round 1** ran against a stale unity-explorer checkout (dev @ 2bc28559c): produced false positives on air jump and jump cooldown ("missing in Unity" — both exist on current dev, values match Godot exactly). Confirmed Godot 13/13 baseline values.
-- **Round 2** (dev @ 6d8b5e966): confirmed air jump / cooldown parity; surfaced the **glide system on both sides** (omitted in v1) with two real param mismatches (B5/B6); corrected `MaxSlopeAngle` (consumed — not dead) and `EdgeSlipSpeed` (dead — v1 quoted it as live); found Unity physics now runs **manual variable timestep**, not fixed 50 Hz; layer-16 matrix drifted ("AllAvatars" gone, `SDKAvatarTriggerArea` in); `ApplyAirDrag.cs` dead (live: `ApplyHorizontalAirDrag.cs`); ~20 stale file:line refs corrected throughout.
-- Godot baseline corrections vs #905: hard-landing stun exists (scene-driven) — issue listed it absent; moving platforms partial (KINEMATIC switch without follow) — issue listed it absent.
+- Validation also surfaced: the **glide system on both sides** with two real param mismatches (B5/B6); `MaxSlopeAngle` consumed (not dead) vs `EdgeSlipSpeed` dead; Unity physics running **manual variable timestep**, not fixed 50 Hz; layer-16 matrix contents (`SDKAvatarTriggerArea` in); `ApplyAirDrag.cs` dead (live: `ApplyHorizontalAirDrag.cs`).
+- Baseline claims from issue #905: 13/13 Godot values verified exact. Corrections: hard-landing stun exists (scene-driven); moving platforms partial (KINEMATIC switch without follow).

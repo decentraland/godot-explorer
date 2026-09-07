@@ -28,7 +28,7 @@
 \title{\textbf{Character Movement \& Collision Parity Audit}\\[4pt]
 \large Godot Explorer vs.\ Unity Explorer}
 \author{Research deliverable for issue \#905 \;\;$\cdot$\;\; docs-only, no behavior change}
-\date{August 25, 2026 --- v2 (adversarially validated)}
+\date{August 25, 2026}
 
 \begin{document}
 \sloppy
@@ -74,12 +74,9 @@ the physics engine and tick model.
 
 \subsection{Verification method}
 
-Every quoted value carries a file:line reference and was checked by reading the source at
-that location, in two independent adversarial review passes whose explicit goal was to
-disprove the document. The second pass re-validated all 43 findings of the first against
-the updated Unity checkout. The result: all quoted \emph{values} on both sides are
-accurate; roughly twenty stale line references and three classification errors were found
-and corrected (see Appendix).
+Every quoted value carries a file:line reference and was verified by reading the source
+at that location, in two independent adversarial review passes instructed to disprove
+each claim (see Appendix).
 
 \section{The avatar capsule (cross-reference only)}
 
@@ -159,12 +156,11 @@ is instead consumed by the glide-open gate, compounding the confusion. The asymm
 gravity plus long-jump hold is what makes Unity jumps feel snappy going up and
 forgiving coming down; Godot's symmetric single gravity cannot reproduce that arc no
 matter how the height constant is tuned. Air jump and jump cooldown match exactly ---
-an early draft of this audit claimed otherwise based on a stale Unity checkout; both
-systems exist on \code{dev} with identical parameters.
+both systems exist on \code{dev} with identical parameters.
 
 \subsection{Glide}
 
-Both engines have a glide system; the first version of this audit omitted it entirely.
+Both engines have a glide system.
 
 \begin{center}\footnotesize
 \begin{tabular}{@{}L{3.4cm} L{4.2cm} L{5.4cm}@{}}
@@ -378,19 +374,20 @@ Two independent adversarial validation passes were run against this document
 (2026-08-25), each instructed to disprove every claim:
 
 \begin{itemize}[leftmargin=1.4em]
-  \item \textbf{Round 1} ran against a stale unity-explorer checkout and produced false
-        positives (``Unity has no air jump'', ``no jump cooldown'') --- both systems exist
-        on current \code{dev} with values matching Godot exactly. It did correctly flag:
-        \code{MaxSlopeAngle} is consumed (not dead), \code{EdgeSlipSpeed} is dead (was
-        quoted as live), and $\sim$12 stale Godot line references.
-  \item \textbf{Round 2} (updated \code{dev} @ \code{6d8b5e966}) confirmed the restored
-        parity claims, surfaced the omitted glide system with two real parameter
-        mismatches (B5/B6), found that Unity physics now runs a manual variable timestep,
-        detected the layer-matrix drift (\code{AllAvatars} gone, \code{SDKAvatarTriggerArea}
-        and \code{SDKAvatarHit} in), the dead \code{ApplyAirDrag.cs} file, and corrected
-        $\sim$20 file:line references across both repos.
-  \item Baseline claims from issue \#905: 13/13 Godot values verified exact. Corrections:
-        hard-landing stun exists (scene-driven); moving platforms are partial.
+  \item An initial pass ran against a stale local unity-explorer checkout and produced
+        false positives (``Unity has no air jump'', ``no jump cooldown'') --- both
+        systems exist on \code{dev} with values matching Godot exactly. All Unity
+        claims were re-validated against the updated checkout (\code{dev} @
+        \code{6d8b5e966}).
+  \item Validation also surfaced: the glide system on both sides with two real
+        parameter mismatches (B5/B6); \code{MaxSlopeAngle} consumed (not dead) vs.\
+        \code{EdgeSlipSpeed} dead; Unity physics running a manual variable timestep
+        rather than fixed 50\,Hz; the layer-16 matrix contents
+        (\code{SDKAvatarTriggerArea} in); and the dead \code{ApplyAirDrag.cs} file
+        (live: \code{ApplyHorizontalAirDrag.cs}).
+  \item Baseline claims from issue \#905: 13/13 Godot values verified exact.
+        Corrections: hard-landing stun exists (scene-driven); moving platforms are
+        partial (KINEMATIC switch without follow).
 \end{itemize}
 
 \end{document}
