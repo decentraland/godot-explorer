@@ -4,7 +4,7 @@ use crate::godot_classes::dcl_tokio_rpc::GodotTokioCall;
 
 use super::{
     decentraland_auth_server::{
-        do_request, do_request_mobile, fetch_identity_by_id, CreateRequest,
+        do_request, do_request_mobile, fetch_identity_by_id, AuthIdentity, CreateRequest,
     },
     ephemeral_auth_chain::EphemeralAuthChain,
     wallet::{AsH160, ChainLink, ObjSafeWalletSigner, SimpleAuthChain, Wallet},
@@ -93,8 +93,18 @@ pub async fn complete_mobile_auth(
     identity_id: String,
 ) -> Result<(EphemeralAuthChain, u64), anyhow::Error> {
     let response = fetch_identity_by_id(identity_id).await?;
-    let identity = response.identity;
+    ephemeral_from_auth_identity(response.identity)
+}
 
+/// Turns a server-minted `AuthIdentity` (ephemeral private key + signed auth
+/// chain) into the `EphemeralAuthChain` the client signs requests with.
+///
+/// Shared by the two flows that receive a ready-made identity instead of
+/// signing one locally: the auth-server mobile deep link
+/// (`complete_mobile_auth`) and the App Review sign-in (`review_login`).
+pub fn ephemeral_from_auth_identity(
+    identity: AuthIdentity,
+) -> Result<(EphemeralAuthChain, u64), anyhow::Error> {
     // Parse the signer address from the first element in the auth chain (SIGNER type)
     let signer = identity
         .auth_chain
