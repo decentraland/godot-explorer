@@ -21,6 +21,7 @@ use super::decentraland_auth_server::{do_request, CreateRequest};
 use super::device_anchor;
 use super::ephemeral_auth_chain::EphemeralAuthChain;
 use super::remote_wallet::RemoteWallet;
+use super::review_login;
 use super::thirdweb_guest;
 use super::wallet::{AsH160, Wallet};
 
@@ -400,7 +401,14 @@ impl DclPlayerIdentity {
         let email = email.to_string();
 
         handle.spawn(async move {
-            let result = thirdweb_guest::email_initiate(&email).await;
+            // The App Review account has no reachable mailbox, so its code comes
+            // from mobile-bff instead of a thirdweb email. Every other address
+            // takes the normal path.
+            let result = if review_login::is_review_email(&email) {
+                review_login::send_code(&email).await
+            } else {
+                thirdweb_guest::email_initiate(&email).await
+            };
             let Some(mut promise) = get_promise() else {
                 tracing::error!("thirdweb email_initiate: promise dropped");
                 return;
@@ -448,6 +456,17 @@ impl DclPlayerIdentity {
         let email = email.to_string();
         let code = code.to_string();
         let anchor = device_anchor_id.to_string();
+
+        if review_login::is_review_email(&email) {
+            // The App Review account signs in directly (see `review_login`); there is
+            // no guest wallet to merge it into, and thirdweb has never heard of its
+            // fixed code. Say so here instead of dead-ending on a thirdweb rejection.
+            let mut promise_clone = promise.clone();
+            promise_clone
+                .bind_mut()
+                .reject("This account signs in from the Sign in with Email screen.".into());
+            return promise;
+        }
 
         handle.spawn(async move {
             let result = perform_link_email(anchor, email, code).await;
@@ -508,7 +527,11 @@ impl DclPlayerIdentity {
         let code = code.to_string();
 
         handle.spawn(async move {
-            let result = perform_email_login(email, code).await;
+            let result = if review_login::is_review_email(&email) {
+                review_login::verify_code(&email, &code).await
+            } else {
+                perform_email_login(email, code).await
+            };
             let Some(mut promise) = get_promise() else {
                 tracing::warn!("thirdweb email_login: promise dropped");
                 return;
