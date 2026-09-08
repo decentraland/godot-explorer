@@ -15,6 +15,12 @@ extends Control
 # Fallback shown when a notification carries no image URL, so the framed slot is never empty.
 const DEFAULT_IMAGE: Texture2D = preload("res://assets/ui/notifications/DefaultNotification.png")
 
+# Title font with a NotoColorEmoji fallback (same Inter 600 weight the item already uses), so event
+# names that contain emojis render them instead of tofu boxes — same setup the discover cards use.
+const TITLE_EMOJI_FONT: FontVariation = preload(
+	"res://assets/themes/fonts/inter_600_emoji_fallback.tres"
+)
+
 # Per-rarity gradient backdrops, the same textures the backpack draws behind a wearable/emote.
 const RARITY_BACKGROUNDS: Dictionary = {
 	"common": preload("res://assets/ui/CommonThumbnail.png"),
@@ -64,9 +70,10 @@ func _update_texts() -> void:
 		return
 	var notif_type = notification_data.get("type", "")
 	var metadata: Dictionary = notification_data.get("metadata", {})
-	# Title is the subject (player name / event name / item label). It's a plain Label: the text and
-	# its colour (a friend's avatar colour, else white) are set separately — no BBCode.
+	# Title is the subject (player name / event name / item label). It's a plain Label: the text, its
+	# per-type colour and the emoji-capable font are set separately — no BBCode.
 	label_title.text = NotificationTextHelper.get_notification_header(notif_type, metadata)
+	label_title.add_theme_font_override("font", TITLE_EMOJI_FONT)
 	label_title.add_theme_color_override(
 		"font_color", NotificationTextHelper.get_notification_header_color(notif_type, metadata)
 	)

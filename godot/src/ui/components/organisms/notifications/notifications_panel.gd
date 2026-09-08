@@ -6,9 +6,14 @@ const NotificationItemScene = preload(
 	"res://src/ui/components/organisms/notifications/notification_item.tscn"
 )
 
+# 24px of breathing room after the last card, so the bottom item isn't flush with the panel edge
+# once the list is scrolled all the way down. Kept as the final child of the list.
+const BOTTOM_SPACER_HEIGHT: int = 24
+
 # Live items keyed by notification id, so a refresh reuses them (keeping their loaded thumbnail)
 # instead of tearing everything down — a full rebuild cancels the newest item's in-flight image load.
 var _items_by_id: Dictionary = {}
+var _bottom_spacer: Control = null
 
 @onready var scroll_container: ScrollContainer = %ScrollContainer
 @onready var notifications_list: VBoxContainer = %NotificationsList
@@ -23,6 +28,12 @@ func _ready() -> void:
 	set_process_input(true)
 
 	button_mark_all_read.pressed.connect(_async_on_mark_all_read_pressed)
+
+	# Trailing spacer for the 24px bottom margin; ignores input so it never eats a tap.
+	_bottom_spacer = Control.new()
+	_bottom_spacer.custom_minimum_size = Vector2(0, BOTTOM_SPACER_HEIGHT)
+	_bottom_spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	notifications_list.add_child(_bottom_spacer)
 
 	# Connect to NotificationsManager signals
 	NotificationsManager.new_notifications.connect(_on_new_notifications)
@@ -114,6 +125,9 @@ func display_notifications(notifications: Array) -> void:
 		if not desired.has(id):
 			_items_by_id[id].queue_free()
 			_items_by_id.erase(id)
+
+	# Keep the spacer pinned below the last card so the bottom margin always trails the list.
+	notifications_list.move_child(_bottom_spacer, notifications_list.get_child_count() - 1)
 
 
 func _clear_items() -> void:
