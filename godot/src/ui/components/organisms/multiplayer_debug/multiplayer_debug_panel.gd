@@ -160,14 +160,18 @@ func _build_pulse_line(info: Dictionary) -> String:
 	var pulse_realm: String = info.get("pulse_realm", "")
 	if pulse_realm.is_empty():
 		pulse_realm = "[color=gray]pending[/color]"
+	# Joined by the authoritative-preview rule (`lsd-pulse` flag), not by a deeplink/CLI
+	# opt-in — the difference between "the QR alone works" and "someone added a param".
+	var auto_label: String = " | auto-lsd" if info.get("pulse_auto_lsd", false) else ""
 	return (
-		"Pulse: %s @ %s | realm %s | fails %d | dual-ch %s"
+		"Pulse: %s @ %s | realm %s | fails %d | dual-ch %s%s"
 		% [
 			_colored_state(pulse_state),
 			pulse_endpoint,
 			pulse_realm,
 			pulse_failures,
-			dual_channel_label
+			dual_channel_label,
+			auto_label
 		]
 	)
 

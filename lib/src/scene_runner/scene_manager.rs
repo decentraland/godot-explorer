@@ -1265,6 +1265,21 @@ impl SceneManager {
         GString::default()
     }
 
+    /// Whether the scene declares `authoritativeMultiplayer` in its `scene.json` — i.e. an
+    /// authoritative server owns its state. `false` for an unknown scene id.
+    #[func]
+    pub fn get_scene_is_authoritative(&self, scene_id: i32) -> bool {
+        self.scenes
+            .get(&SceneId(scene_id))
+            .and_then(|scene| {
+                scene
+                    .scene_entity_definition
+                    .scene_meta_scene
+                    .authoritative_multiplayer
+            })
+            .unwrap_or(false)
+    }
+
     /// Resolve a scene-emote URN (`urn:decentraland:off-chain:scene-emote:{scene_id}-{glb_hash}-{loop}`)
     /// against the currently loaded scenes. The URN payload cannot be dash-split:
     /// preview ids/hashes look like `b64-<base64>` and contain `-` themselves. Matching

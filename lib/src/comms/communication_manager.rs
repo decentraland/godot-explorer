@@ -100,18 +100,26 @@ fn avatar_sync_over_livekit(dual_channel: bool, pulse_established: bool) -> bool
 /// endpoint (`--pulse-server` / PULSE_SERVER) or a realm (`--pulse-realm` / PULSE_REALM).
 /// Otherwise the deployment's `pulse` flag decides, fail-closed — except in `--preview`.
 ///
-/// **A local preview never joins Pulse on the strength of the flag alone.** Its realm key is
-/// `lsd:` + the preview scene's entity id, which is reversible base64 of the developer's
-/// absolute project path and hostname; letting a fleet-wide flag push that to the default
-/// (production) Pulse from every `dcl start` would be a surprise. `sdk-commands` gates its own
-/// `--pulse-realm` off by default for the same reason, so Local Scene Development opts in
-/// explicitly — which is exactly what the orchestrator and `DCL_SERVER_PULSE_REALM=1` do.
+/// **A local preview never joins Pulse on the strength of the `pulse` flag alone.** Its realm
+/// key is `lsd:` + the preview scene's entity id, which is reversible base64 of the
+/// developer's absolute project path and hostname; letting a fleet-wide flag push that to the
+/// default (production) Pulse from every `dcl start` would be a surprise. `sdk-commands` gates
+/// its own `--pulse-realm` off by default for the same reason.
+///
+/// The one preview that does join without an opt-in is `authoritative_preview`: the scene
+/// under the player declares `authoritativeMultiplayer` and the `lsd-pulse` flag is on. That
+/// scene's own server already announces the identical key on the same Pulse and, once it
+/// reads avatar state from Pulse alone, a client that never joins is simply invisible to it.
+/// Neither the deeplink sdk-commands launches nor the QR it prints carries a Pulse opt-in, so
+/// this is the only way a stock `npm start` reaches its server. `lsd-pulse` is a kill switch
+/// for that rule (defaults on), and still needs the `pulse` flag.
 #[cfg(feature = "use_pulse")]
 fn pulse_activation(
     locally_enabled: bool,
     explicit_opt_in: bool,
     preview_mode: bool,
     flag_enabled: Option<bool>,
+    authoritative_preview: bool,
 ) -> bool {
     if !locally_enabled {
         return false;
@@ -119,7 +127,10 @@ fn pulse_activation(
     if explicit_opt_in {
         return true;
     }
-    !preview_mode && flag_enabled == Some(true)
+    if flag_enabled != Some(true) {
+        return false;
+    }
+    !preview_mode || authoritative_preview
 }
 
 /// Effective dual-channel setting. An explicit local choice (CLI `--livekit-movement` /
@@ -343,6 +354,11 @@ pub struct CommunicationManager {
     /// runtime/CLI opt-in overrides it — see `pulse_enabled`.
     #[cfg(feature = "use_pulse")]
     pulse_flag_enabled: Option<bool>,
+    /// Server `lsd-pulse` feature flag: lets a local preview of an `authoritativeMultiplayer`
+    /// scene join Pulse without an explicit opt-in (see `pulse_activation`). A kill switch,
+    /// so it defaults on and a failed flags fetch cannot break Local Scene Development.
+    #[cfg(feature = "use_pulse")]
+    lsd_pulse_flag: bool,
     /// Runtime endpoint override (deeplink `pulse-server=host:port`, shareable so a group can
     /// join the same server). Wins over --pulse-server / PULSE_SERVER / the default endpoint.
     #[cfg(feature = "use_pulse")]
@@ -455,6 +471,8 @@ impl INode for CommunicationManager {
             pulse_runtime_enabled: None,
             #[cfg(feature = "use_pulse")]
             pulse_flag_enabled: None,
+            #[cfg(feature = "use_pulse")]
+            lsd_pulse_flag: true,
             #[cfg(feature = "use_pulse")]
             pulse_endpoint_override: None,
             #[cfg(feature = "use_pulse")]
@@ -880,8 +898,33 @@ impl CommunicationManager {
                 cli.pulse_explicit,
                 cli.preview_mode || self.local_scene_development,
                 self.pulse_flag_enabled,
+                self.authoritative_preview(),
             )
         })
+    }
+
+    /// The `authoritative_preview` input of [`pulse_activation`]: the `lsd-pulse` flag is on
+    /// and the scene under the player declares `authoritativeMultiplayer`. `false` while no
+    /// scene is under the player yet — `on_scene_changed` re-evaluates once one is.
+    #[cfg(feature = "use_pulse")]
+    fn authoritative_preview(&self) -> bool {
+        if !self.lsd_pulse_flag {
+            return false;
+        }
+        let scene_runner = DclGlobal::singleton().bind().get_scene_runner();
+        let scene_runner = scene_runner.bind();
+        let scene_id = scene_runner.get_current_parcel_scene_id();
+        scene_runner.get_scene_is_authoritative(scene_id)
+    }
+
+    /// Whether Pulse is on *because of* the authoritative-preview rule rather than an explicit
+    /// opt-in — surfaced on the debug panel so QA can tell the two apart.
+    #[cfg(feature = "use_pulse")]
+    fn pulse_auto_lsd(&self, cli: &crate::godot_classes::dcl_cli::DclCli) -> bool {
+        self.pulse_runtime_enabled.is_none()
+            && !cli.pulse_explicit
+            && (cli.preview_mode || self.local_scene_development)
+            && self.pulse_enabled(cli)
     }
 
     /// Create the Pulse room if activation is on and it doesn't exist yet.
@@ -1588,6 +1631,32 @@ impl CommunicationManager {
             if effective {
                 self.ensure_pulse_room();
             } else if let Some(mut pulse_room) = self.pulse_room.take() {
+                pulse_room.clean();
+                self.pulse_teleport_pending = false;
+                self.pending_pulse_emote_urn = None;
+            }
+        }
+        #[cfg(not(feature = "use_pulse"))]
+        let _ = enabled;
+    }
+
+    /// Server `lsd-pulse` feature-flag verdict (feature_flags.gd, once the mobile-bff fetch
+    /// settles; `true` on fetch failure or an absent flag — a kill switch, not an opt-in).
+    /// Lets a local preview of an `authoritativeMultiplayer` scene join Pulse without an
+    /// explicit opt-in; see `pulse_activation`. Re-evaluates activation like the `pulse` flag.
+    #[func]
+    pub fn set_lsd_pulse_flag_enabled(&mut self, enabled: bool) {
+        #[cfg(feature = "use_pulse")]
+        {
+            self.lsd_pulse_flag = enabled;
+            tracing::info!("pulse: lsd-pulse flag = {enabled}");
+            let global = DclGlobal::singleton();
+            let cli = global.bind().cli.clone();
+            let effective = self.pulse_enabled(&cli.bind());
+            if effective {
+                self.ensure_pulse_room();
+            } else if let Some(mut pulse_room) = self.pulse_room.take() {
+                tracing::info!("pulse: leaving — lsd-pulse flag off for this preview");
                 pulse_room.clean();
                 self.pulse_teleport_pending = false;
                 self.pending_pulse_emote_urn = None;
@@ -2785,6 +2854,12 @@ impl CommunicationManager {
         self.scene_room_connect_in_flight = None;
         self.current_scene_id = Some(scene_entity_id.clone());
 
+        // A preview realm switches before its scene is loaded, so the authoritative-preview
+        // rule (see `pulse_activation`) can only be answered now that a scene is under the
+        // player. Cheap: returns at once when the room exists or activation is off.
+        #[cfg(feature = "use_pulse")]
+        self.ensure_pulse_room();
+
         // If loading is in progress, defer scene room creation until release
         if self.comms_on_hold {
             tracing::debug!(
@@ -3065,6 +3140,10 @@ impl CommunicationManager {
             };
             dict.set("pulse_available".to_variant(), true.to_variant());
             dict.set("pulse_enabled".to_variant(), pulse_enabled.to_variant());
+            dict.set(
+                "pulse_auto_lsd".to_variant(),
+                self.pulse_auto_lsd(&cli).to_variant(),
+            );
             dict.set("pulse_state".to_variant(), pulse_state.to_variant());
             dict.set("pulse_endpoint".to_variant(), pulse_endpoint.to_variant());
             dict.set(
@@ -3613,9 +3692,9 @@ mod tests {
         /// Outside preview the deployment flag decides, fail-closed on absent/unfetched.
         #[test]
         fn flag_decides_outside_preview() {
-            assert!(pulse_activation(true, false, false, Some(true)));
-            assert!(!pulse_activation(true, false, false, Some(false)));
-            assert!(!pulse_activation(true, false, false, None));
+            assert!(pulse_activation(true, false, false, Some(true), false));
+            assert!(!pulse_activation(true, false, false, Some(false), false));
+            assert!(!pulse_activation(true, false, false, None, false));
         }
 
         /// The point of the preview carve-out: a plain `dcl start` preview must not be pushed
@@ -3623,7 +3702,7 @@ mod tests {
         /// developer's project path and hostname.
         #[test]
         fn preview_ignores_the_flag_without_an_explicit_opt_in() {
-            assert!(!pulse_activation(true, false, true, Some(true)));
+            assert!(!pulse_activation(true, false, true, Some(true), false));
         }
 
         /// ...but an explicit opt-in (--pulse-realm / --pulse-server / --pulse) still works,
@@ -3631,15 +3710,33 @@ mod tests {
         /// Development.
         #[test]
         fn preview_joins_on_an_explicit_opt_in() {
-            assert!(pulse_activation(true, true, true, Some(true)));
-            assert!(pulse_activation(true, true, true, None));
+            assert!(pulse_activation(true, true, true, Some(true), false));
+            assert!(pulse_activation(true, true, true, None, false));
         }
 
-        /// --no-pulse always wins, everywhere.
+        /// A preview of an `authoritativeMultiplayer` scene joins on its own (the stock
+        /// `npm start` deeplink and QR carry no opt-in), but only with the `pulse` flag on:
+        /// `lsd-pulse` is a kill switch for the rule, not a way to force Pulse on.
+        #[test]
+        fn authoritative_preview_joins_without_an_opt_in() {
+            assert!(pulse_activation(true, false, true, Some(true), true));
+            assert!(!pulse_activation(true, false, true, Some(false), true));
+            assert!(!pulse_activation(true, false, true, None, true));
+        }
+
+        /// The authoritative-preview input is irrelevant outside preview.
+        #[test]
+        fn authoritative_input_changes_nothing_outside_preview() {
+            assert!(pulse_activation(true, false, false, Some(true), true));
+            assert!(!pulse_activation(true, false, false, Some(false), true));
+        }
+
+        /// --no-pulse always wins, everywhere — the authoritative rule included.
         #[test]
         fn local_opt_out_always_wins() {
-            assert!(!pulse_activation(false, true, false, Some(true)));
-            assert!(!pulse_activation(false, true, true, Some(true)));
+            assert!(!pulse_activation(false, true, false, Some(true), false));
+            assert!(!pulse_activation(false, true, true, Some(true), false));
+            assert!(!pulse_activation(false, false, true, Some(true), true));
         }
     }
 

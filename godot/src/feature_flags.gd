@@ -23,6 +23,9 @@ const TIMEOUT_SECONDS := 5.0
 const FLAG_ARCHIPELAGO := "archipielago"
 const FLAG_PULSE := "pulse"
 const FLAG_DUAL_CHANNEL := "dual-channel"
+# Kill switch (default true): a local preview of an `authoritativeMultiplayer` scene
+# joins Pulse on its own, without a deeplink/CLI opt-in.
+const FLAG_LSD_PULSE := "lsd-pulse"
 # Sentry error-event sampling, served as a number in [0, 1].
 const FLAG_SENTRY_SAMPLE_RATE := "sentry-sample-rate"
 # Report ERROR-level Sentry events (the engine/Rust error firehose). Fail-closed:
@@ -114,10 +117,17 @@ func _async_load() -> void:
 # only safe once the deployment's authoritative servers ingest Pulse as scene
 # listeners, which is a property of the deployment, not of this client. Local
 # `--livekit-movement` / `--no-livekit-movement` / `dual-channel=` still win.
+# `lsd-pulse` (default true, a kill switch) lets a local preview of an
+# `authoritativeMultiplayer` scene join Pulse without an explicit opt-in: that
+# scene's own server reads avatar state off Pulse, and neither the deeplink
+# sdk-commands launches nor the QR it prints carries `pulse-server=` /
+# `pulse-realm=`. Still needs `pulse`; `--no-pulse` / `pulse=false` still win —
+# see CommunicationManager::pulse_activation on the Rust side.
 func _apply_flags() -> void:
 	Global.comms.set_archipelago_enabled(is_enabled(FLAG_ARCHIPELAGO, true))
 	Global.comms.set_pulse_flag_enabled(is_enabled(FLAG_PULSE, false))
 	Global.comms.set_dual_channel_flag_enabled(is_enabled(FLAG_DUAL_CHANNEL, true))
+	Global.comms.set_lsd_pulse_flag_enabled(is_enabled(FLAG_LSD_PULSE, true))
 
 	# SentrySDK.init runs at process start (before this fetch resolves), so the
 	# remote rate is enforced through the _before_send gate, not the init option.
