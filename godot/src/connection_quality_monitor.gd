@@ -104,6 +104,12 @@ func _connect_signals() -> void:
 	_poll_timer.start()
 
 
+## True while the connection is healthy enough that the app isn't in an error state. Read by
+## ReviewPromptCoordinator, which must never put a rating prompt over a connection problem.
+func is_connection_healthy() -> bool:
+	return _state == State.GOOD
+
+
 func _now() -> float:
 	return Time.get_ticks_msec() / 1000.0
 
