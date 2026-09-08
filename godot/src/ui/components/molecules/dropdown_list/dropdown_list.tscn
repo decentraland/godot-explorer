@@ -91,8 +91,8 @@ mouse_filter = 2
 theme_override_constants/separation = 8
 
 [node name="Label_Selected" type="Label" parent="VBoxContainer/PanelContainer_Button/HBoxContainer" unique_id=1393568308]
-auto_translate_mode = 2
 unique_name_in_owner = true
+auto_translate_mode = 2
 layout_mode = 2
 theme_override_colors/font_color = Color(0.086, 0.082, 0.094, 1)
 theme_override_fonts/font = ExtResource("3_regular")
@@ -134,12 +134,13 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_4fa15")
 [node name="Label_Description" type="Label" parent="VBoxContainer" unique_id=1937002167]
 unique_name_in_owner = true
 visible = false
+custom_minimum_size = Vector2(0, 5)
 layout_mode = 2
 theme_override_colors/font_color = Color(0.7, 0.7, 0.7, 1)
 theme_override_fonts/font = ExtResource("3_regular")
 theme_override_font_sizes/font_size = 12
 label_settings = ExtResource("6_f66t4")
-text_overrun_behavior = 4
+autowrap_mode = 2
 
 [node name="PopupLayer" type="Control" parent="." unique_id=586335895]
 unique_name_in_owner = true

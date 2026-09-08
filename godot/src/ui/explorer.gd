@@ -53,7 +53,8 @@ var _session_hide_main_hud: bool = false
 ## Session-only sub-options for hide UI.
 var _session_hide_view_profile: bool = true
 var _session_hide_world_interactions: bool = true
-var _session_hide_player_names: bool = true
+## Independent of the master "Hide Interface" toggle: hides avatar names on its own.
+var _session_hide_player_names: bool = false
 var _session_hide_scene_ui: bool = true
 var _mobile_controls_hidden_for_hide_ui: bool = false
 # Applies scene-driven (PBTouchScreenControls) joystick/crosshair hiding; see the class doc.
@@ -345,7 +346,7 @@ func _ready():
 		if not Global.avatars.avatar_added.is_connected(_on_avatar_added_apply_hide_ui):
 			Global.avatars.avatar_added.connect(_on_avatar_added_apply_hide_ui)
 	# Apply current state once at startup (in case something toggled early).
-	_apply_hide_ui_to_avatar_nicks(_session_hide_main_hud)
+	_apply_hide_ui_to_avatar_nicks(_session_hide_player_names)
 
 	# Initialize social service for non-guest accounts
 	if not Global.player_identity.is_guest:
@@ -1423,11 +1424,11 @@ func _on_loading_started() -> void:
 	_session_hide_main_hud = false
 	_session_hide_view_profile = true
 	_session_hide_world_interactions = true
-	_session_hide_player_names = true
+	_session_hide_player_names = false
 	_session_hide_scene_ui = true
 	set_visible_ui(true, true)
 	Global.session_hide_ui_toggle_sync.emit(false)
-	Global.session_hide_ui_options_sync.emit(true, true, true, true)
+	Global.session_hide_ui_options_sync.emit(true, true, false, true)
 	_apply_hide_ui_to_avatar_nicks(false)
 	if navbar.is_open():  # avoid a redundant navbar_closed + teardown when nothing is open
 		navbar.collapse()
@@ -1769,30 +1770,30 @@ func _refresh_hud_dismiss() -> void:
 
 
 func _on_button_show_ui_pressed() -> void:
+	# Restores the interface (master toggle). Hide Player Names is independent and preserved.
 	_session_hide_main_hud = false
 	_session_hide_view_profile = true
 	_session_hide_world_interactions = true
-	_session_hide_player_names = true
 	_session_hide_scene_ui = true
 	set_visible_ui(true, true)
 	_set_scene_ui_visible(true)
 	Global.session_hide_ui_toggle_sync.emit(false)
-	Global.session_hide_ui_options_sync.emit(true, true, true, true)
-	_apply_hide_ui_to_avatar_nicks(false)
+	Global.session_hide_ui_options_sync.emit(true, true, _session_hide_player_names, true)
+	_apply_hide_ui_to_avatar_nicks(_session_hide_player_names)
 
 
 func set_hide_main_hud_from_settings(minimized: bool) -> void:
 	_session_hide_main_hud = minimized
 	if not minimized:
-		# Turning off: restore UI immediately and reset sub-options
+		# Turning off: restore UI immediately and re-arm the master-gated sub-options.
+		# Hide Player Names is independent of the master toggle, so it is left untouched.
 		_session_hide_view_profile = true
 		_session_hide_world_interactions = true
-		_session_hide_player_names = true
 		_session_hide_scene_ui = true
 		set_visible_ui(true, true)
 		_set_scene_ui_visible(true)
-		_apply_hide_ui_to_avatar_nicks(false)
-		Global.session_hide_ui_options_sync.emit(true, true, true, true)
+		_apply_hide_ui_to_avatar_nicks(_session_hide_player_names)
+		Global.session_hide_ui_options_sync.emit(true, true, _session_hide_player_names, true)
 
 
 func set_hide_view_profile(value: bool) -> void:
@@ -1804,7 +1805,9 @@ func set_hide_world_interactions(value: bool) -> void:
 
 
 func set_hide_player_names(value: bool) -> void:
+	# Independent of the master Hide Interface toggle: apply immediately either way.
 	_session_hide_player_names = value
+	_apply_hide_ui_to_avatar_nicks(value)
 
 
 func set_hide_scene_ui(value: bool) -> void:
@@ -1834,17 +1837,19 @@ func is_session_hide_scene_ui() -> bool:
 
 
 func apply_deferred_hide_ui() -> void:
+	# Hide Player Names is independent of the master toggle, so apply it unconditionally.
+	_apply_hide_ui_to_avatar_nicks(_session_hide_player_names)
 	if not _session_hide_main_hud:
 		return
 	set_visible_ui(false, true)
-	_apply_hide_ui_to_avatar_nicks(_session_hide_player_names)
 	if _session_hide_scene_ui:
 		_set_scene_ui_visible(false)
 
 
 func _on_avatar_added_apply_hide_ui(avatar = null) -> void:
-	# Called when a new avatar is spawned; ensure its nickname obeys current Hide UI state.
-	if not _session_hide_main_hud or not _session_hide_player_names:
+	# Called when a new avatar is spawned; ensure its nickname obeys the (independent)
+	# Hide Player Names setting, regardless of the master Hide Interface toggle.
+	if not _session_hide_player_names:
 		return
 	if avatar != null and avatar is Avatar:
 		(avatar as Avatar).set_force_hide_name(true)

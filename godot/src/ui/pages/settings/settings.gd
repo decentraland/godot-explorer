@@ -79,7 +79,6 @@ var check_button_submit_message_closes_chat: CheckButton = %CheckButton_SubmitMe
 @onready var check_button_hide_scene_ui: CheckButton = %CheckButton_HideSceneUI
 @onready var hide_view_profile_row: HBoxContainer = %HideViewProfile
 @onready var hide_world_interactions_row: HBoxContainer = %HideWorldInteractions
-@onready var hide_player_names_row: HBoxContainer = %HidePlayerNames
 @onready var hide_scene_ui_row: HBoxContainer = %HideSceneUI
 @onready var container_interface: MarginContainer = %Container_Interface
 @onready var container_camera: Control = %Container_Camera
@@ -743,13 +742,12 @@ func _on_session_hide_ui_options_sync(
 
 
 func _update_hide_ui_sub_toggles(hide_ui_on: bool) -> void:
+	# Hide Player Names is independent of the master toggle: never disabled or dimmed here.
 	check_button_hide_view_profile.disabled = not hide_ui_on
 	check_button_hide_world_interactions.disabled = not hide_ui_on
-	check_button_hide_player_names.disabled = not hide_ui_on
 	check_button_hide_scene_ui.disabled = not hide_ui_on
 	hide_view_profile_row.modulate.a = 1.0 if hide_ui_on else 0.5
 	hide_world_interactions_row.modulate.a = 1.0 if hide_ui_on else 0.5
-	hide_player_names_row.modulate.a = 1.0 if hide_ui_on else 0.5
 	hide_scene_ui_row.modulate.a = 1.0 if hide_ui_on else 0.5
 
 
@@ -775,7 +773,7 @@ func _refresh_hide_explorer_ui_row() -> void:
 		check_button_hide_explorer_ui.set_pressed_no_signal(false)
 		check_button_hide_view_profile.set_pressed_no_signal(true)
 		check_button_hide_world_interactions.set_pressed_no_signal(true)
-		check_button_hide_player_names.set_pressed_no_signal(true)
+		check_button_hide_player_names.set_pressed_no_signal(false)
 		check_button_hide_scene_ui.set_pressed_no_signal(true)
 		_update_hide_ui_sub_toggles(false)
 
