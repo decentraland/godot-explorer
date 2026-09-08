@@ -1,6 +1,6 @@
 ---
 name: pr-description
-description: Use whenever writing, rewriting or reviewing the description of a pull request in this repo — a development PR (base `main`) or a Release Candidate PR (base `release`, head `release-X.Y.Z`). Encodes the team's AG (AI-generated) communication guideline as it applies to PRs — the author owns understanding and communicating the change — plus the exact description shape: a What/Why lead paragraph anyone can understand in a few sentences, an optional collapsed Details block, and a QA-executable Test plan per `REVIEW.md` §4. For RCs, the recipe to build the changelog from each promoted PR. Trigger on "open a PR", "write the PR description/body", "gh pr create", "release candidate", "RC", "promote main to release", "changelog for the release", or when a PR body reads like raw AI output.
+description: Use whenever writing, rewriting or reviewing the description of a pull request in this repo — a development PR (base `main`) or a Release Candidate PR (base `release`, head `release-X.Y.Z`). Encodes the team's AG (AI-generated) communication guideline as it applies to PRs — the author owns understanding and communicating the change — plus the exact description shape: `## What` and `## Why` sections anyone can understand in a few sentences, an optional `## Details` section (collapsed), and a QA-executable `## Test plan` per `REVIEW.md` §4. For RCs, the recipe to build the changelog from each promoted PR. Trigger on "open a PR", "write the PR description/body", "gh pr create", "release candidate", "RC", "promote main to release", "changelog for the release", or when a PR body reads like raw AI output.
 ---
 
 # Decentraland Godot Explorer — PR descriptions
@@ -23,7 +23,7 @@ it if asked. *AI can replace knowledge, but it can't replace our understanding.*
 
 For PRs this means:
 
-- **What and why come first, in plain language.** Whoever reads the first paragraph — a reviewer,
+- **What and why come first, in plain language.** Whoever reads `## What` and `## Why` — a reviewer,
   QA, someone on another team, someone reading the changelog in three months — understands what
   changed and why without reading anything else. If they still have to guess, the work was moved
   from the author to them.
@@ -53,16 +53,23 @@ describe a change you have not read the diff for.
 ### 2.1 Shape
 
 ```markdown
-<Lead paragraph — WHAT changed and WHY, 2–5 sentences. Plain language. No header.>
+## What
+<What is different after this merges — for the player, the creator, the reviewer or the
+ build. 1–3 sentences, plain language. Name at most one or two identifiers.>
+
+## Why
+<The bug, the request, the measurement, the parity gap. 1–3 sentences. Include what the
+ change deliberately does NOT do when a reader might assume otherwise.>
 
 Closes #<issue>
 
+## Details
 <details>
-<summary>Details</summary>
+<summary>Expand</summary>
 
-<Only what a reviewer needs beyond the lead: root cause, approach and trade-offs,
- what was deliberately left out, screenshots/video, per-file notes when non-obvious.
- Short paragraphs or a tight bullet list. Omit the whole block when the lead says it all.>
+<Only what a reviewer needs beyond What/Why: root cause, approach and trade-offs,
+ screenshots/video, per-file notes when non-obvious. Short paragraphs or a tight bullet
+ list. Omit the whole section when What/Why say it all.>
 
 </details>
 
@@ -71,15 +78,15 @@ Closes #<issue>
 <See 2.3. Either "No QA needed — no behavior change" or numbered cases.>
 ```
 
-Optional extras, in this order, only when they add clarity: a **Heads-up** line right after the
-lead naming who was told and where (*"Heads-up posted in #ext-foundation — touches the shared
+Optional extras, in this order, only when they add clarity: a **Heads-up** line right after
+`## Why` naming who was told and where (*"Heads-up posted in #ext-foundation — touches the shared
 `ModalShell`"*); a **Changes** list (file → what it does) inside Details; a **Future plans** or
 **Known gaps** line at the end.
 
-### 2.2 Writing the lead
+### 2.2 Writing What and Why
 
-The lead is the deliverable. Everything else is optional. Write it so that reading *only* the
-lead answers three questions:
+`## What` and `## Why` are the deliverable. Everything else is optional. Write them so that
+reading *only* those two sections answers three questions:
 
 1. **What** is different for the player, the creator, the reviewer or the build after this merges.
 2. **Why** — the bug, the request, the measurement, the parity gap. One clause is usually enough
@@ -89,22 +96,25 @@ lead answers three questions:
 
 Rules of thumb:
 
-- 2–5 sentences. If it needs more, the PR probably needs splitting, or the extra belongs in Details.
+- 1–3 sentences each. If they need more, the PR probably needs splitting, or the extra belongs
+  in Details. Together they must fit on one screen with the Test plan headline visible.
 - Name at most one or two identifiers; describe the rest in words. Code goes in Details.
 - No narration of the work, no adjectives about the work ("comprehensive", "robust", "clean").
 - State behaviour changes that ride along outside the feature's scope — reviewers and QA need
   those most, and they are the easiest thing to lose in a long description.
 - If the change is a port from the Unity Foundation Client, say so and name the reference.
 
-Good lead (from #2779):
+Good What/Why (adapted from #2779):
 
-> Replaces the "Report a Bug" Google Form deep link in Settings with a native in-app bug report
-> flow that files Intercom tickets through the Decentraland `intercom-proxy`. The old flow
-> bounced the player out to an external browser and required a Google sign-in to attach an
-> image — so screenshots were almost never included. The new form is in-app, pre-fills a
-> screenshot of the game, and lands in the same Intercom buckets as the Unity Explorer client.
+> **What** — Replaces the "Report a Bug" Google Form deep link in Settings with a native in-app
+> bug report flow that files Intercom tickets through the Decentraland `intercom-proxy`. The
+> form pre-fills a screenshot of the game and lands in the same Intercom buckets as the Unity
+> Explorer client.
+>
+> **Why** — The old flow bounced the player out to an external browser and required a Google
+> sign-in to attach an image, so screenshots were almost never included.
 
-Not a lead (rewrite it): *"This PR introduces a comprehensive refactor of the bug reporting
+Not a What (rewrite it): *"This PR introduces a comprehensive refactor of the bug reporting
 system. Key changes include: a new `BugReportService` class…"* — the reader learns the shape of
 the diff and nothing about what a player gets or why anyone wanted it.
 
@@ -145,7 +155,7 @@ Follow `REVIEW.md` §4 exactly. In short:
 
 ### 2.5 Self-check before it goes out
 
-- [ ] Reading only the first paragraph, a teammate on another team knows what changed and why.
+- [ ] Reading only `## What` and `## Why`, a teammate on another team knows what changed and why.
 - [ ] Nothing in the description is a restatement of the diff or of the commit list.
 - [ ] Every claim is something you verified in the code or the issue — no guessed behaviour.
 - [ ] Ride-along behaviour changes outside the feature are stated, not buried.
@@ -158,7 +168,7 @@ Follow `REVIEW.md` §4 exactly. In short:
 An RC promotes `main` (or a cherry-picked subset) into `release`. Its description is the
 release's changelog and QA sheet — QA works from it directly, and it is what people read when
 asking "what shipped in 1.13.1?". It is built **from the promoted PRs' own descriptions**, which
-is why §2 matters: a bad dev PR lead makes a bad release line.
+is why §2 matters: a bad dev PR What/Why makes a bad release line.
 
 ### 3.1 Shape
 
@@ -219,7 +229,7 @@ paragraph under it instead of a single line — see #2797. Keep that for one or 
    ```bash
    gh pr view <N> -R decentraland/godot-explorer --json title,body,closingIssuesReferences
    ```
-   From each take: the *what/why* lead (→ one changelog line), the behaviour changes that ride
+   From each take: `## What` and `## Why` (→ one changelog line), the behaviour changes that ride
    along (→ often their own line, or a Known gap), and the one or two test-plan cases that prove
    the change on a phone (→ one Test plan line). Do not copy a PR's full test plan into the RC.
 3. **Classify** each PR: Feature (new capability a player or creator sees), Fix (a symptom went
