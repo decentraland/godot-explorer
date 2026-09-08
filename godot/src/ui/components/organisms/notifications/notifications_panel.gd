@@ -185,6 +185,9 @@ func _on_notification_clicked(_notification: Dictionary) -> void:
 
 func show_panel() -> void:
 	show()
+	# Reopening the panel starts back at the top: a ScrollContainer keeps its scroll offset across
+	# hide/show, so without this the list would reappear wherever it was left when last closed.
+	scroll_container.scroll_vertical = 0
 	_refresh_notifications()
 
 
