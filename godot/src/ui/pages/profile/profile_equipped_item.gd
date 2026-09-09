@@ -28,21 +28,22 @@ func async_set_item(item: DclItemEntityDefinition):
 	marquee_label_name.set_text(item.get_display_name())
 	var rarity = item.get_rarity()
 	if rarity.length() != 0:
-		label_rarity.text = rarity.to_upper()
-		panel_container_rarity.modulate = Wearables.RarityColor[rarity.to_upper()]
+		# to_upper() here is a DATA lookup, not display: Wearables.RarityColor is keyed on
+		# COMMON / UNCOMMON / ... so this must stay the untranslated id.
+		var rarity_id := rarity.to_upper()
+		label_rarity.text = rarity_id
+		panel_container_rarity.modulate = Wearables.RarityColor[rarity_id]
 		var item_id = item.get_id()
 		var urn_parts = item_id.split(":")
 		if urn_parts.size() >= 2:
 			var contract_address = urn_parts[urn_parts.size() - 2]
 			var item_number = urn_parts[urn_parts.size() - 1]
-			marketplace_link = (
-				"https://decentraland.org/marketplace/contracts/"
-				+ contract_address
-				+ "/items/"
-				+ item_number
-			)
+			# Through DclUrls so the link follows the current environment and its
+			# storefront's route table, instead of hardcoding org + the classic
+			# marketplace path (a 404 on any env served by the new shop).
+			marketplace_link = str(DclUrls.marketplace_item(contract_address, item_number))
 	else:
-		label_rarity.text = "BASE"
+		label_rarity.text = tr("PROFILE_BASE")
 		is_buyable = false
 		self.disabled = true
 

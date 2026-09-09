@@ -7,6 +7,9 @@ signal loading_finished
 signal change_parcel(new_parcel: Vector2i)
 signal open_profile_by_avatar(avatar: DclAvatar)
 signal open_profile_by_address(address: String)
+# Emitted locally when WE send a friend request (the social service doesn't stream our own
+# actions), so the friends panel can add it to the SENT list live.
+signal friendship_request_sent(address: String)
 signal on_chat_message(address: String, message: String, timestamp: float)
 signal change_virtual_keyboard(height: int)
 signal notification_clicked(notification: Dictionary)
@@ -178,6 +181,11 @@ var attestation: AttestationService = null
 # `Global.feature_flags.is_enabled("flag-name")`; comms-affecting flags are
 # applied automatically when the response arrives — see feature_flags.gd.
 var feature_flags: FeatureFlags = null
+
+# Ad/referrer campaign map fetched from the mobile-bff at startup. Resolves the `?c=`
+# token captured at boot into a personalized FTUE or a direct boot into the target scene
+# — see campaigns.gd.
+var campaigns: Campaigns = null
 
 var _is_portrait: bool = true
 
@@ -357,6 +365,57 @@ func _apply_optimized_content_base_url(obj: DclParseDeepLink) -> void:
 		cli.optimized_content_base_url = opt_url
 
 
+## QA affordance: `decentraland://open?rotate-guest=true` mints a brand-new guest, the only
+## way back to the FTUE on a device whose native anchor survives reinstall (Android SSAID,
+## iOS Keychain). Also wipes the on-disk guest identity, so the FTUE is reachable from this
+## launch rather than the next one.
+##
+## Non-production means anything not cut from `release*`, so builds from `main` — TestFlight
+## included — honour it. Recoverable: the flag lives in user:// and the native anchor is
+## never touched, so reinstalling restores the original wallet.
+func _capture_debug_guest_rotate(obj: DclParseDeepLink) -> void:
+	if is_production():
+		return
+	if String(obj.params.get("rotate-guest", "")).to_lower() != "true":
+		return
+
+	var config := get_config()
+	config.debug_rotate_guest_anchor = true
+	# Campaign state too, or the scenario would only work once: a stored token is never
+	# replaced and a consumed one falls back to the default FTUE.
+	config.campaign_token = ""
+	config.campaign_token_captured_at = 0
+	config.campaign_consumed = false
+	config.save_to_settings_file()
+	var removed := clear_guest_device_storage()
+	print("[DEEPLINK] rotate-guest=true: cleared %d guest file(s) + campaign state" % removed)
+
+
+## Capture the ad/referrer campaign token carried by a deeplink as `?c=<token>` (#2670).
+## Shared by the desktop fake-deeplink path (_ready) and the mobile/iOS live path (router).
+##
+## First capture wins: an install has exactly one campaign, and a later in-session deeplink
+## must not repaint it. Hence the validation here rather than only at the point of use — a
+## junk token would take the slot the real install-attribution token needs.
+func _capture_campaign_token(obj: DclParseDeepLink) -> void:
+	var token: String = String(obj.params.get("c", "")).strip_edges()
+	if token.is_empty():
+		return
+	if not CampaignResolution.is_valid_token(token):
+		push_warning("[CAMPAIGN] ignoring malformed token from deeplink: " + token)
+		return
+
+	var config := get_config()
+	if not config.campaign_token.is_empty():
+		print("[CAMPAIGN] token already captured (", config.campaign_token, "), ignoring: ", token)
+		return
+
+	config.campaign_token = token
+	config.campaign_token_captured_at = int(Time.get_unix_time_from_system())
+	config.save_to_settings_file()
+	print("[CAMPAIGN] captured token=", token, " at=", config.campaign_token_captured_at)
+
+
 ## Lazy-init the GltfContainer load-timeout coalescer. Replaces the
 ## per-container Timer (~1419 in Genesis Plaza). Called from
 ## gltf_container.gd; created on first use, persists for the app's lifetime.
@@ -420,6 +479,7 @@ func send_haptic_feedback(duration_ms: int = 20, amplitude: float = -1.0) -> voi
 # gdlint: ignore=async-function-name
 func _ready():
 	print("[Startup] global._ready start: %dms" % (Time.get_ticks_msec() - _startup_time))
+	BugReportCapture.listen_for_settings(self)
 	# Bench-only: uncap FPS / disable vsync before any code path can re-pin
 	# Engine.max_fps. Real users keep their saved cap + vsync; mobile bench
 	# uncaps via gp_benchmark_runner at the load->settling transition.
@@ -520,6 +580,25 @@ func _ready():
 	# Create GDScript extensions of Rust classes
 	self.config = ConfigData.new()
 	config.load_from_settings_file()
+
+	# Restore profile particle budgets + avatar dust gate: the Rust atomics and
+	# the GDScript toggle default to full-budget, and nothing re-applies them
+	# until the user picks a profile again.
+	GraphicSettings.apply_particle_quality(config.particle_quality)
+	AvatarAnimHelpers.apply_particles_enabled(config.particle_quality > 0)
+
+	# Campaign token (#2670). Deliberately after the config load: the fake/baked deeplink is
+	# parsed further up in _ready, long before ConfigData exists, so capturing there wrote to
+	# a config that was then replaced by the one read from disk. deep_link_obj is eagerly
+	# constructed, so this is a no-op when no deeplink carried a token. The live mobile path
+	# captures from deep_link_router instead, which already runs well after this point.
+	_capture_debug_guest_rotate(deep_link_obj)
+	_capture_campaign_token(deep_link_obj)
+
+	# Resolve the UI language before any scene renders. Godot picks the OS locale at boot, which
+	# would surface a partially-translated locale the moment its .po has content; LocaleSettings
+	# gates on SUPPORTED_LOCALES so an incomplete language is never selected (see #270, #2062).
+	LocaleSettings.apply_locale()
 	# Bench-only: keep limit_fps at NO_LIMIT after the settings file load (which
 	# would otherwise restore a saved FPS_18/FPS_30 cap) so no later
 	# `apply_fps_limit()` re-pins the engine. Real users keep their saved cap.
@@ -695,6 +774,13 @@ func _ready():
 	self.feature_flags = FeatureFlags.new()
 	self.feature_flags.set_name("feature_flags")
 	add_child(self.feature_flags)
+	# Campaign resolver. Unlike the flags above it does NOT fetch on _ready: the map is only
+	# requested once a token actually needs resolving, so an install with no campaign — the
+	# large majority — never touches the endpoint. What starts here is the watcher that
+	# persists a token coming from install attribution.
+	self.campaigns = Campaigns.new()
+	self.campaigns.set_name("campaigns")
+	add_child(self.campaigns)
 	get_tree().root.add_child.call_deferred(self.network_inspector)
 	get_tree().root.add_child.call_deferred(self.scene_inspector_dispatcher)
 	get_tree().root.add_child.call_deferred(self.social_blacklist)
@@ -1220,7 +1306,7 @@ func open_url(url: String, use_webkit: bool = false):
 
 
 func async_create_popup_warning(
-	warning_type: PopupWarning.WarningType, title: String, description: String
+	warning_type: PopupWarning.WarningType, title: TranslationKey, description: TranslationKey
 ):
 	var explorer = get_explorer()
 	if is_instance_valid(explorer):
@@ -1418,7 +1504,7 @@ func async_teleport_to(parcel_position: Vector2i, new_realm: String) -> void:
 		explorer.hide_menu()
 		Global.on_chat_message.emit(
 			"system",
-			"[color=#ccc]🟢 Teleported to " + str(parcel_position) + "[/color]",
+			tr("CHAT_SYSTEM_TELEPORTED").format({"location": str(parcel_position)}),
 			Time.get_unix_time_from_system()
 		)
 	else:
@@ -1441,7 +1527,7 @@ func async_join_world(world_realm: String) -> void:
 		explorer.loading_ui.enable_loading_screen(world_realm, "on_world")
 		Global.on_chat_message.emit(
 			"system",
-			"[color=#ccc]Trying to change to world " + world_realm + "[/color]",
+			tr("CHAT_SYSTEM_CHANGING_WORLD").format({"world": world_realm}),
 			Time.get_unix_time_from_system()
 		)
 		Global.realm.async_set_realm(world_realm, true)
@@ -1479,7 +1565,13 @@ func _http_method_to_string(method: int) -> String:
 			return "GET"  # Default fallback
 
 
-func async_signed_fetch(url: String, method: int, _body: String = ""):
+func async_signed_fetch(
+	url: String,
+	method: int,
+	_body: String = "",
+	_metadata_override: String = "",
+	_extra_headers: Dictionary = {}
+):
 	# Decentraland signed-fetch (ADR-44) carries the request metadata in the
 	# x-identity-metadata header. The server verifier requires it to be a JSON
 	# object: a bodyless request would otherwise be signed as `null`, which the
@@ -1487,7 +1579,13 @@ func async_signed_fetch(url: String, method: int, _body: String = ""):
 	# "Invalid chain metadata". Sign an empty object `{}` for bodyless requests
 	# (backward-compatible: older verifiers accept both), leaving the actual HTTP
 	# body untouched.
-	var metadata := _body if not _body.is_empty() else "{}"
+	#
+	# Most DCL services verify the body as the signed metadata. Some don't: the
+	# intercom-proxy signs `{}` and leaves the JSON body unsigned, so callers can
+	# override rather than fork this helper.
+	var metadata := _metadata_override
+	if metadata.is_empty():
+		metadata = _body if not _body.is_empty() else "{}"
 	var headers_promise = Global.player_identity.async_get_identity_headers(
 		url, metadata, _http_method_to_string(method)
 	)
@@ -1499,6 +1597,8 @@ func async_signed_fetch(url: String, method: int, _body: String = ""):
 	var headers: Dictionary = headers_result
 	if not _body.is_empty():
 		headers["Content-Type"] = "application/json"
+	for key in _extra_headers:
+		headers[key] = _extra_headers[key]
 
 	var response_promise: Promise = Global.http_requester.request_json(url, method, _body, headers)
 
@@ -1550,6 +1650,24 @@ func _check_dclenv_change() -> bool:
 
 	var current_env := DclGlobal.get_dcl_environment() as String
 	if new_env == current_env:
+		return false
+
+	# A sign-in callback (`decentraland://open?signin=...&dclenv=...`) echoes the env the
+	# web flow authenticated against. That is a byproduct of the round trip, never a
+	# request to switch. Acting on it restarts the session in the middle of the login:
+	# sign_out() rebuilds the lobby, and the `true` returned below makes the router drop
+	# the deeplink before it reaches _handle_signin_deep_link, so the auth goes with it.
+	# The callback also carries the plain env (`zone`), which can never match a composed
+	# one (`catalyst::org,...,profile::zone,zone`), so on those setups it fired every time.
+	if deep_link_obj.is_signin_request():
+		print("[DEEPLINK] dclenv=%s on a signin callback, keeping %s" % [new_env, current_env])
+		return false
+
+	# An env chosen explicitly (--dclenv, or an earlier deeplink) outranks what a later
+	# deeplink carries. Switching from the default env still works; switching again
+	# afterwards needs an app restart.
+	if dcl_env_explicit:
+		print("[DEEPLINK] dclenv=%s ignored, %s was set explicitly" % [new_env, current_env])
 		return false
 
 	print("[DEEPLINK] Environment changed: %s -> %s, restarting..." % [current_env, new_env])
@@ -1648,8 +1766,8 @@ func _on_realm_change_failed_toast(new_realm_string: String, reason: String) -> 
 	# Realm instances created elsewhere (e.g. portable experiences) are not wired
 	# to this handler.
 	NotificationsManager.show_system_toast(
-		"World unavailable",
-		'Could not load "%s": %s' % [new_realm_string, reason],
+		tr("TOAST_WORLD_UNAVAILABLE_TITLE"),
+		tr("TOAST_WORLD_UNAVAILABLE_BODY").format({"world": new_realm_string, "error": reason}),
 		"error",
 		"alert"
 	)
@@ -1758,17 +1876,23 @@ func set_camera_mode_blocked(blocked: bool) -> void:
 # separate). Don't guard the Android call with has_method or it silently no-ops.
 # See: https://github.com/godotengine/godot/issues/106436
 func get_device_anchor_id() -> String:
-	# 1. DEBUG rotate mode: resettable user:// anchor on every platform.
-	#    Gated to non-production so it can never ship even if the flag is left on.
-	if DEBUG_GUEST_ROTATE_ANCHOR_ID and not is_production():
+	# 1. DEBUG rotate mode: resettable user:// anchor on every platform. Either the
+	#    compile-time constant or the persisted `rotate-guest=true` deeplink override.
+	#    Gated to non-production so neither can ever ship even if left on.
+	if (
+		(DEBUG_GUEST_ROTATE_ANCHOR_ID or get_config().debug_rotate_guest_anchor)
+		and not is_production()
+	):
 		return ""
 	# 2. Shipping: device-bound native anchor (persists across reinstall).
+	var native_anchor := ""
 	if self.is_android():
 		var plugin = Engine.get_singleton("dcl-godot-android")
 		if plugin != null:
-			return plugin.getDeviceAnchorId()
+			native_anchor = plugin.getDeviceAnchorId()
 	elif self.is_ios():
 		var plugin = Engine.get_singleton("DclGodotiOS")
 		if plugin != null and plugin.has_method("get_device_anchor_id"):
-			return plugin.get_device_anchor_id()
-	return ""
+			native_anchor = plugin.get_device_anchor_id()
+
+	return native_anchor

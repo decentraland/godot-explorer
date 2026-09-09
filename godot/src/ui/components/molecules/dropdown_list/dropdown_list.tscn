@@ -91,12 +91,13 @@ mouse_filter = 2
 theme_override_constants/separation = 8
 
 [node name="Label_Selected" type="Label" parent="VBoxContainer/PanelContainer_Button/HBoxContainer" unique_id=1393568308]
+auto_translate_mode = 2
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.086, 0.082, 0.094, 1)
 theme_override_fonts/font = ExtResource("3_regular")
 theme_override_font_sizes/font_size = 16
-text = "Selected"
+text = "DROPDOWN_LIST_SELECTED"
 label_settings = ExtResource("6_4fa15")
 
 [node name="TextureRect_Verified" type="TextureRect" parent="VBoxContainer/PanelContainer_Button/HBoxContainer" unique_id=2085570171]

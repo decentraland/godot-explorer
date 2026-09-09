@@ -13,6 +13,11 @@ const ADAPTATION_LAYER_URL: String = "https://renderer-artifacts.decentraland.or
 const FIXED_LOCAL_ADAPTATION_LAYER: String = ""
 const INVALID_PARCEL := Vector2i(-1000, -1000)
 
+## How long a deleted model keeps swallowing change events for its own path.
+## Slightly above the preview server's 800ms debounce, so the trailing event a
+## delete emits lands inside the window while a human re-creating a file does not.
+const REMOVED_MODEL_GRACE_MS := 1500
+
 
 class SceneItem:
 	extends RefCounted
@@ -89,6 +94,15 @@ var _pending_empty_parcel_spawn: Vector2i = INVALID_PARCEL
 # Preview WebSocket for hot reload
 var _preview_ws := PreviewWebSocket.new()
 
+# Models dropped by an UMT_REMOVE, as src -> Time.get_ticks_msec().
+#
+# Deleting a file makes the server emit *both* an immediate UMT_REMOVE and, up to
+# one debounce window later, an UMT_CHANGE for the same (now missing) path. Both
+# arrive as "change event with no mapping entry", which is also what a re-created
+# file looks like — so without this the paired event is mistaken for a recovery
+# and triggers a pointless full reload right after every delete.
+var _recently_removed_models: Dictionary = {}
+
 
 func get_preview_ws() -> PreviewWebSocket:
 	return _preview_ws
@@ -99,6 +113,7 @@ func _ready():
 
 	add_child(_preview_ws)
 	_preview_ws.scene_update.connect(_on_preview_scene_update)
+	_preview_ws.model_update.connect(async_on_preview_model_update)
 
 	# Initialize wall manager and base floor manager only for floating islands mode
 	if is_using_floating_islands():
@@ -1229,6 +1244,105 @@ func set_preview_url(url: String) -> void:
 func _on_preview_scene_update(scene_id: String) -> void:
 	_is_hot_reloading = true
 	reload_scene(scene_id)
+
+
+## A single .glb changed on the preview server. Swaps just that model in place,
+## so the rest of the scene keeps its state.
+##
+## Falls back to a full (loading-screen-free) reload whenever the swap can't be
+## done precisely: unknown scene, non-swappable file, or no container using that
+## src.
+##
+## Only .glb is swapped, even though the server reports .gltf too. A .glb embeds
+## its buffers and textures; a .gltf is JSON pointing at sibling .bin/texture
+## files that the importer resolves through the scene's content mapping. Those
+## siblings are not models, so they get no updateModel of their own, and the
+## server's shared debounce usually drops their events entirely — leaving the
+## mapping without them. Swapping the .gltf alone then either fails outright
+## ("There are some missing dependencies in the gltf") or, when the new model
+## reuses the old filenames, rebuilds it from stale cached buffers. Only the full
+## reload refetches the scene definition, which is what repopulates the mapping.
+##
+## `_hash` is unused on purpose — see the comment below.
+func async_on_preview_model_update(
+	scene_id: String, src: String, _hash: String, removed: bool
+) -> void:
+	var scene = loaded_scenes.get(scene_id)
+	var lower_src := src.to_lower()
+
+	if scene == null or not lower_src.ends_with(".glb"):
+		_on_preview_scene_update(scene_id)
+		return
+
+	var scene_number_id: int = scene.scene_number_id
+	var containers := _find_gltf_containers(scene_number_id, lower_src)
+	if containers.is_empty():
+		# The file isn't in use by any live container — it may be referenced by a
+		# component that hasn't loaded yet, so let the full reload pick it up.
+		_on_preview_scene_update(scene_id)
+		return
+
+	# `_hash` from the message is deliberately NOT written into the content mapping.
+	# Both sides derive hashes from the file path, but from *different* paths: the
+	# file watcher hashes the project-relative path, while the scene definition
+	# hashes the absolute one. They never match, and adopting the message's hash
+	# would point the container at an unrelated cache entry. Since a path-derived
+	# hash cannot change when the contents do, the mapping is already correct for
+	# an edit — only a deletion has to touch it.
+	var mapping := Global.scene_runner.get_scene_content_mapping(scene_number_id)
+	var old_hash := mapping.get_hash(lower_src)
+
+	if not removed and old_hash.is_empty():
+		var removed_at: int = _recently_removed_models.get(lower_src, -1)
+		if removed_at >= 0 and Time.get_ticks_msec() - removed_at < REMOVED_MODEL_GRACE_MS:
+			# The delete's own trailing change event — the file is still gone, so
+			# there is nothing to reload.
+			return
+
+		# The file is back after a delete dropped its mapping entry, and the entry
+		# cannot be rebuilt here: the hash comes from the absolute path plus a
+		# machine id that only the server knows. A full reload refetches the scene
+		# definition, which brings the entry back with the right hash.
+		_recently_removed_models.erase(lower_src)
+		_on_preview_scene_update(scene_id)
+		return
+
+	if removed:
+		if not Global.scene_runner.update_scene_content_entry(scene_number_id, lower_src, ""):
+			_on_preview_scene_update(scene_id)
+			return
+		_recently_removed_models[lower_src] = Time.get_ticks_msec()
+	else:
+		_recently_removed_models.erase(lower_src)
+
+	# Same reason the hash is stable: every cache layer keyed by it now holds
+	# stale bytes and must be dropped unconditionally. Awaited, because the
+	# re-request below would otherwise race the (async) delete and re-import the
+	# file we just evicted.
+	if not old_hash.is_empty():
+		await PromiseUtils.async_awaiter(Global.content_provider.purge_file(old_hash))
+
+	for container in containers:
+		if is_instance_valid(container):
+			container.force_reload_gltf()
+
+
+## Live DclGltfContainer nodes in `scene_number_id` whose source is `lower_src`.
+## Scene roots are children of the scene runner, so the walk starts there.
+func _find_gltf_containers(scene_number_id: int, lower_src: String) -> Array:
+	var found: Array = []
+	var stack: Array = [Global.scene_runner]
+	while not stack.is_empty():
+		var node: Node = stack.pop_back()
+		if (
+			node.is_class("DclGltfContainer")
+			and node.dcl_scene_id == scene_number_id
+			and node.dcl_gltf_src.to_lower() == lower_src
+		):
+			found.append(node)
+		for child in node.get_children():
+			stack.append(child)
+	return found
 
 
 func set_debugging_js_scene_id(id: String) -> void:

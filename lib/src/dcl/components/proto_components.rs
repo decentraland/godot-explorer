@@ -12,6 +12,13 @@ pub mod sdk {
             ));
         }
     }
+
+    /// Preview-server hot-reload messages (`WsSceneMessage`), decoded by
+    /// `DclPreviewMessage` for the preview WebSocket.
+    #[allow(clippy::all)]
+    pub mod development {
+        include!(concat!(env!("OUT_DIR"), "/decentraland.sdk.development.rs"));
+    }
 }
 
 pub mod common {

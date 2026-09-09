@@ -64,7 +64,7 @@ theme_override_constants/separation = 0
 [node name="Label_Title" type="Label" parent="GuestUpgradeCard/MarginContainer/VBoxContainer" unique_id=25987838]
 unique_name_in_owner = true
 layout_mode = 2
-text = "Unlock the full experience"
+text = "COMMON_UNLOCK_THE_FULL_EXPERIENCE"
 label_settings = SubResource("LabelSettings_dheir")
 
 [node name="HSeparator" type="HSeparator" parent="GuestUpgradeCard/MarginContainer/VBoxContainer" unique_id=2055727825]
@@ -77,7 +77,7 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 10)
 layout_mode = 2
 size_flags_vertical = 1
-text = "Add email to play across mobile and desktop, and claim an exclusive Wearable."
+text = "GUEST_UPGRADE_CARD_ADD_EMAIL_TO_PLAY_ACROSS_MOBILE"
 label_settings = SubResource("LabelSettings_vwd20")
 autowrap_mode = 2
 
@@ -95,4 +95,4 @@ theme = ExtResource("3_jl1ld")
 theme_type_variation = &"ButtonLittle"
 theme_override_fonts/font = ExtResource("2_kf0lf")
 theme_override_font_sizes/font_size = 22
-text = "ADD EMAIL"
+text = "COMMON_ADD_EMAIL"

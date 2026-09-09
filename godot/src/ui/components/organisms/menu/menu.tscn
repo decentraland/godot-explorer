@@ -259,7 +259,7 @@ layout_mode = 2
 theme_override_colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 theme_override_fonts/font = ExtResource("17_rdch8")
 theme_override_font_sizes/font_size = 40
-text = "Updating profile..."
+text = "MENU_UPDATING_PROFILE"
 
 [node name="AccountDeletionPopUp" parent="." unique_id=1784076804 instance=ExtResource("31_kkhkt")]
 visible = false

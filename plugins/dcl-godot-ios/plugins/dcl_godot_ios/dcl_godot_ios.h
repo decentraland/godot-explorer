@@ -59,6 +59,11 @@ public:
     bool share_text(String text);
     bool share_text_with_image(String text, Ref<Image> image);
 
+    // Photo gallery picker — presents PHPickerViewController and delivers the
+    // chosen image as JPEG bytes via the image_picked signal. `jpeg_quality`
+    // is 1..100 (GDScript-friendly); it is mapped to 0..1 for UIKit.
+    void pick_image_from_gallery(int max_dimension, int jpeg_quality);
+
     // Local notifications - Phase 1 API
     void request_notification_permission();
     bool has_notification_permission();

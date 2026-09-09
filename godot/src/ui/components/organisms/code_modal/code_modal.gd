@@ -4,10 +4,9 @@ extends ColorRect
 signal confirmed(value: String)
 signal cancelled
 
+# The consts below hold translation KEYS, not copy: a const cannot call tr() at parse
+# time, so callers resolve them (Control.text auto-translates).
 const RESEND_COOLDOWN_SEC: int = 90
-const _RESEND_PREFIX = "Didn't get an email? "
-const _RESEND_LINK_ACTIVE = "[u][color=#A0ABFF]Resend email[/color][/u]"
-const _RESEND_LINK_DIMMED = "[u][color=#A0ABFFB3]Resend email (%d:%02d)[/color][/u]"
 
 var _code_inputs: Array[LineEdit] = []
 var _hidden_input: LineEdit
@@ -32,6 +31,10 @@ var _resend_timer: Timer = null
 @onready var _label_subtitle: RichTextLabel = %Label_Subtitle
 @onready var _label_resend: RichTextLabel = %RichTextLabel_ResendCode
 @onready var _modal_panel: ResponsiveContainer = $Blur/PanelContainer2
+
+static var _resend_prefix := TranslationKey.new("CODE_MODAL_RESEND_PREFIX")
+static var _resend_link_active := TranslationKey.new("CODE_MODAL_RESEND_LINK_ACTIVE")
+static var _resend_link_dimmed := TranslationKey.new("CODE_MODAL_RESEND_LINK_DIMMED")
 
 
 func _ready() -> void:
@@ -217,12 +220,22 @@ func _on_resend_timer_tick() -> void:
 
 
 func _update_resend_label() -> void:
+	# Two catalogue entries joined, plus a countdown formatted into the second. Both
+	# halves must be translated *before* joining: concatenating the keys produced
+	# "CODE_MODAL_RESEND_PREFIXCODE_MODAL_RESEND_LINK_ACTIVE", which matched nothing and
+	# drew the raw keys on screen. Resolving here means the label must not look up again.
+	_label_resend.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 	if _resend_cooldown_remaining <= 0:
-		_label_resend.text = _RESEND_PREFIX + _RESEND_LINK_ACTIVE
+		_label_resend.text = TranslationKey.join([_resend_prefix, _resend_link_active], "")
 		return
 	var minutes: int = _resend_cooldown_remaining / 60
 	var seconds: int = _resend_cooldown_remaining % 60
-	_label_resend.text = _RESEND_PREFIX + _RESEND_LINK_DIMMED % [minutes, seconds]
+	# Zero padding is applied here: String.format substitutes text only, so "%02d" cannot
+	# live in the catalogue entry.
+	_label_resend.text = (
+		_resend_prefix.text()
+		+ _resend_link_dimmed.format({"minutes": minutes, "seconds": "%02d" % seconds})
+	)
 
 
 # gdlint:ignore = async-function-name
@@ -251,8 +264,11 @@ func _async_submit_code() -> void:
 
 func _show_error(message: String = "") -> void:
 	_set_verifying_children_visible(false)
-	if not message.is_empty():
-		_label_error.text = message
+	# Server-supplied text: the node never auto-translates, so the generic fallback
+	# is resolved here instead of relying on the scene default.
+	_label_error.text = (
+		message if not message.is_empty() else tr("CODE_MODAL_THE_CODE_IS_INVALID_OR_EXPIRED")
+	)
 	_label_error.show()
 	for input in _code_inputs:
 		input.add_theme_stylebox_override("read_only", _error_style)
@@ -282,11 +298,11 @@ func open(email: String = "") -> void:
 	_clear_inputs()
 	_hidden_input.editable = true
 	_set_verifying_children_visible(false)
-	if email != "" and _label_subtitle:
-		_label_subtitle.text = (
-			"One time password sent to [b]%s[/b]. Please enter the code below to complete verification."
-			% email
-		)
+	if _label_subtitle:
+		if email != "":
+			_label_subtitle.text = tr("CODE_MODAL_OTP_SENT_TO").format({"email": email})
+		else:
+			_label_subtitle.text = tr("CODE_MODAL_SENT_TO")
 	_start_resend_cooldown()
 	show()
 	_hidden_input.grab_focus()

@@ -1,0 +1,209 @@
+@tool
+class_name OrbSkin
+extends TextureRect
+
+# Texture-based "orb" skin for a circular touch button. Drop this as a child of a Button
+# (e.g. the TouchableButton variation used across the joypad): on ready it blanks the theme
+# styleboxes so the flat circle stops drawing, then renders a pre-baked orb texture *behind*
+# the button's glyph (show_behind_parent) and swaps texture + icon by state.
+#
+# States: Default (normal) / Pressed (button held) / Hold (external latch, e.g. the glider
+# active state, via set_hold()) / Disabled. The textures already bake the fill, outline and
+# glow at a consistent scale, so no per-state geometry is needed here.
+#
+# @tool so the Default look renders live in the editor when the scene is open.
+
+# Theme style slots the TouchableButton variation fills; blanked so only the orb shows.
+const _STYLE_SLOTS: Array[StringName] = [
+	&"normal",
+	&"normal_mirrored",
+	&"hover",
+	&"hover_mirrored",
+	&"pressed",
+	&"pressed_mirrored",
+	&"hover_pressed",
+	&"hover_pressed_mirrored",
+	&"disabled",
+	&"disabled_mirrored",
+	&"focus",
+]
+
+# Glyph stays light in every state (the theme flips it dark for the old white pressed bg).
+const _ICON_LIGHT := Color(0.9098039, 0.8509804, 1.0, 1.0)
+const _ICON_COLOR_SLOTS: Array[StringName] = [
+	&"icon_pressed_color",
+	&"icon_hover_pressed_color",
+	&"font_pressed_color",
+	&"font_hover_pressed_color",
+]
+
+# Every icon color slot a Button honors — driven together by recolor_icon_by_state so the
+# glyph shows one color regardless of which state slot the theme happens to pick.
+const _ALL_ICON_COLOR_SLOTS: Array[StringName] = [
+	&"icon_normal_color",
+	&"icon_hover_color",
+	&"icon_pressed_color",
+	&"icon_hover_pressed_color",
+	&"icon_focus_color",
+	&"icon_disabled_color",
+]
+
+# The orb PNGs are 600x600 but the opaque circle is only 512x512 (44px of transparent
+# padding per side). To make the visible circle fill the button rect, the TextureRect is
+# drawn larger than the button by this factor and centered, so the padding overflows
+# symmetrically outside the button instead of shrinking the circle inside it. All four
+# state textures bake the circle at the same scale, so one factor covers every state.
+const _ORB_TEXTURE_SIZE := 600.0
+const _ORB_CIRCLE_SIZE := 512.0
+const _ORB_OVERSCAN := _ORB_TEXTURE_SIZE / _ORB_CIRCLE_SIZE
+
+# The generic orb backdrop, shared across every orb button. Any host that needs a bespoke
+# baked orb overrides these in its scene (e.g. the joypad atoms).
+@export var default_texture: Texture2D = preload(
+	"res://src/ui/components/atoms/buttons/button_touch_action/orb_default.png"
+):
+	set(value):
+		default_texture = value
+		if is_node_ready():
+			_refresh()
+@export var pressed_texture: Texture2D = preload(
+	"res://src/ui/components/atoms/buttons/button_touch_action/orb_pressed.png"
+)
+@export var hold_texture: Texture2D = preload(
+	"res://src/ui/components/atoms/buttons/button_touch_action/orb-hold.png"
+)
+@export var disabled_texture: Texture2D = preload(
+	"res://src/ui/components/atoms/buttons/button_touch_action/orb_disabled.png"
+)
+
+# Per-state glyphs. When set, the parent button's icon tracks the state alongside the
+# texture. hold_icon is optional (only the glider has one). Buttons that keep a single icon
+# (flip, discover, debug) leave these null and set the icon on the Button itself.
+@export var normal_icon: Texture2D
+@export var pressed_icon: Texture2D
+@export var hold_icon: Texture2D
+
+@export_group("Icon recolor")
+## Opt-in: tint the parent Button's icon by state (Default vs Pressed/Hold). Off by default
+## so existing hosts (joypad) keep their theme-driven glyph color untouched.
+@export var recolor_icon_by_state: bool = false
+@export var default_icon_color: Color = Color("DFD0FF")
+@export var pressed_icon_color: Color = Color("DF9CFF")
+
+var _held: bool = false
+
+
+func _ready() -> void:
+	show_behind_parent = true
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# Clear the editor-time minimum floor so the overscanned size is honored exactly.
+	custom_minimum_size = Vector2.ZERO
+	expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+
+	var btn := get_parent() as Button
+	if btn != null:
+		_apply_style_overrides()
+		# Fill the parent explicitly: anchors don't resolve reliably under a
+		# non-container Button, and the orb must track the button's size.
+		_fit()
+		btn.resized.connect(_fit)
+		if not Engine.is_editor_hint():
+			btn.button_down.connect(_refresh)
+			# button_up fires before the atom lowers button_pressed, so settle next idle.
+			btn.button_up.connect(func() -> void: _refresh.call_deferred())
+			btn.toggled.connect(func(_on: bool) -> void: _refresh())
+	_refresh()
+
+
+# The blanking overrides are applied live (also in-editor via @tool, for preview) but must
+# NOT be serialized into the host scene — that bakes one StyleBoxEmpty per slot per button
+# into the .tscn (110+ on the joypad). Mirror SafeMarginContainer: strip them right before
+# the editor writes the file, then re-apply so the open scene keeps rendering the orb.
+func _notification(what: int) -> void:
+	if not Engine.is_editor_hint():
+		return
+	if what == NOTIFICATION_EDITOR_PRE_SAVE:
+		_clear_style_overrides()
+	elif what == NOTIFICATION_EDITOR_POST_SAVE:
+		_apply_style_overrides()
+		_refresh()
+
+
+func _apply_style_overrides() -> void:
+	var btn := get_parent() as Button
+	if btn == null:
+		return
+	for slot in _STYLE_SLOTS:
+		btn.add_theme_stylebox_override(slot, StyleBoxEmpty.new())
+	if not recolor_icon_by_state:
+		for slot in _ICON_COLOR_SLOTS:
+			btn.add_theme_color_override(slot, _ICON_LIGHT)
+
+
+func _clear_style_overrides() -> void:
+	var btn := get_parent() as Button
+	if btn == null:
+		return
+	for slot in _STYLE_SLOTS:
+		btn.remove_theme_stylebox_override(slot)
+	for slot in _ICON_COLOR_SLOTS:
+		btn.remove_theme_color_override(slot)
+	for slot in _ALL_ICON_COLOR_SLOTS:
+		btn.remove_theme_color_override(slot)
+
+
+func _fit() -> void:
+	var btn := get_parent() as Control
+	if btn != null:
+		# Oversize by the padding factor and center: the circle ends up == btn.size while
+		# the transparent margin (and glow) spills symmetrically beyond the button rect.
+		var orb_size: Vector2 = btn.size * _ORB_OVERSCAN
+		size = orb_size
+		position = (btn.size - orb_size) * 0.5
+
+
+## External latch for the Hold look (kept through press/release until cleared).
+func set_hold(on: bool) -> void:
+	if _held == on:
+		return
+	_held = on
+	_refresh()
+
+
+## Assign the per-state glyphs; the button shows the one matching its current state.
+func set_icons(normal: Texture2D, pressed: Texture2D, hold: Texture2D) -> void:
+	normal_icon = normal
+	pressed_icon = pressed
+	hold_icon = hold
+	if is_node_ready():
+		_refresh()
+
+
+func _refresh(_unused_arg: Variant = null) -> void:
+	var btn := get_parent() as Button
+	var tex: Texture2D = default_texture
+	var ic: Texture2D = normal_icon
+	var pressed_state: bool = false
+	if btn != null and btn.disabled:
+		if disabled_texture != null:
+			tex = disabled_texture
+	elif _held:
+		pressed_state = true
+		if hold_texture != null:
+			tex = hold_texture
+		if hold_icon != null:
+			ic = hold_icon
+	elif btn != null and btn.button_pressed:
+		pressed_state = true
+		if pressed_texture != null:
+			tex = pressed_texture
+		if pressed_icon != null:
+			ic = pressed_icon
+	texture = tex
+	if btn != null and (normal_icon != null or pressed_icon != null or hold_icon != null):
+		btn.icon = ic
+	if btn != null and recolor_icon_by_state:
+		var col: Color = pressed_icon_color if pressed_state else default_icon_color
+		for slot in _ALL_ICON_COLOR_SLOTS:
+			btn.add_theme_color_override(slot, col)

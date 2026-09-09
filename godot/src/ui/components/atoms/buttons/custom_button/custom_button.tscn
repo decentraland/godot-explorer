@@ -18,7 +18,7 @@ expand_icon = true
 script = ExtResource("2_8yorq")
 custom_icon = ExtResource("2_jxwgt")
 custom_icon_pressed = ExtResource("2_jxwgt")
-custom_text = "SIGN OUT"
+custom_text = "CUSTOM_BUTTON_SIGN_OUT"
 
 [node name="MarginContainer" type="MarginContainer" parent="." unique_id=622148755]
 unique_name_in_owner = true
@@ -66,4 +66,4 @@ layout_mode = 2
 theme_override_colors/font_color = Color(0.9254902, 0.92156863, 0.92941177, 1)
 theme_override_fonts/font = ExtResource("3_8yorq")
 theme_override_font_sizes/font_size = 30
-text = "SIGN OUT"
+text = "CUSTOM_BUTTON_SIGN_OUT"

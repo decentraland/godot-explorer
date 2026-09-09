@@ -4,7 +4,6 @@ extends TextureButton
 var _unread_count: int = 0
 var _is_panel_open: bool = false
 
-@onready var label_badge: Label = %Label_Badge
 @onready var badge_container: PanelContainer = %Badge_Container
 
 
@@ -40,15 +39,8 @@ func _on_notifications_updated(_notifications: Array = []) -> void:
 
 func _update_badge() -> void:
 	_unread_count = _get_unread_count()
-
-	if _unread_count > 0:
-		badge_container.visible = true
-		if _unread_count > 99:
-			label_badge.text = "99+"
-		else:
-			label_badge.text = str(_unread_count)
-	else:
-		badge_container.visible = false
+	# The badge is a plain presence dot now (no count): shown whenever there is anything unread.
+	badge_container.visible = _unread_count > 0
 
 
 func get_unread_count() -> int:

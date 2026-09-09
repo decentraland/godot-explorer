@@ -124,7 +124,7 @@ alignment = 2
 [node name="Label" type="Label" parent="PanelContainer/MarginContainer/VBoxContainer" unique_id=1674789910]
 custom_minimum_size = Vector2(50, 0)
 layout_mode = 2
-text = "Unlock the full experience"
+text = "COMMON_UNLOCK_THE_FULL_EXPERIENCE"
 label_settings = SubResource("LabelSettings_0ersv")
 horizontal_alignment = 1
 autowrap_mode = 2
@@ -137,7 +137,7 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_f7bpt")
 [node name="Label2" type="Label" parent="PanelContainer/MarginContainer/VBoxContainer" unique_id=1579565577]
 custom_minimum_size = Vector2(50, 0)
 layout_mode = 2
-text = "Add email to unlock Decentraland across devices and claim an"
+text = "UPGRADE_MODAL_ADD_EMAIL_TO_UNLOCK_DECENTRALAND_ACROSS"
 label_settings = SubResource("LabelSettings_v81pj")
 horizontal_alignment = 1
 autowrap_mode = 2
@@ -145,7 +145,7 @@ autowrap_mode = 2
 [node name="Label3" type="Label" parent="PanelContainer/MarginContainer/VBoxContainer" unique_id=1457413560]
 custom_minimum_size = Vector2(50, 0)
 layout_mode = 2
-text = "exclusive Wearable."
+text = "UPGRADE_MODAL_EXCLUSIVE_WEARABLE"
 label_settings = SubResource("LabelSettings_6ib3n")
 horizontal_alignment = 1
 autowrap_mode = 2
@@ -162,7 +162,7 @@ layout_mode = 2
 size_flags_horizontal = 3
 theme = ExtResource("10_b5pi2")
 theme_override_font_sizes/font_size = 24
-text = "ADD EMAIL"
+text = "COMMON_ADD_EMAIL"
 
 [node name="HSeparator3" type="HSeparator" parent="PanelContainer/MarginContainer/VBoxContainer" unique_id=2118208594]
 layout_mode = 2
@@ -177,6 +177,6 @@ size_flags_horizontal = 3
 theme = ExtResource("10_b5pi2")
 theme_type_variation = &"SecondaryButton"
 theme_override_font_sizes/font_size = 24
-text = "MAYBE LATER"
+text = "UPGRADE_MODAL_MAYBE_LATER"
 
 [connection signal="gui_input" from="." to="." method="_on_gui_input"]

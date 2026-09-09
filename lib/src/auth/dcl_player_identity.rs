@@ -1226,7 +1226,6 @@ impl DclPlayerIdentity {
 
             let method = method.to_string();
             let metadata = metadata.to_string();
-
             handle.spawn(async move {
                 // Parse metadata from string to JSON value
                 let metadata_json = if metadata.is_empty() {

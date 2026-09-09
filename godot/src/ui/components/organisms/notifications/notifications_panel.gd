@@ -6,12 +6,18 @@ const NotificationItemScene = preload(
 	"res://src/ui/components/organisms/notifications/notification_item.tscn"
 )
 
-var _notification_items: Array[Control] = []
+# 24px of breathing room after the last card, so the bottom item isn't flush with the panel edge
+# once the list is scrolled all the way down. Kept as the final child of the list.
+const BOTTOM_SPACER_HEIGHT: int = 24
+
+# Live items keyed by notification id, so a refresh reuses them (keeping their loaded thumbnail)
+# instead of tearing everything down — a full rebuild cancels the newest item's in-flight image load.
+var _items_by_id: Dictionary = {}
+var _bottom_spacer: Control = null
 
 @onready var scroll_container: ScrollContainer = %ScrollContainer
 @onready var notifications_list: VBoxContainer = %NotificationsList
 @onready var button_mark_all_read: Button = %ButtonMarkAllRead
-@onready var fade_overlay: TextureRect = %FadeOverlay
 @onready var v_box_container_no_notifications: VBoxContainer = %VBoxContainer_NoNotifications
 @onready var label_no_notifications: Label = %Label_NoNotifications
 
@@ -22,6 +28,12 @@ func _ready() -> void:
 	set_process_input(true)
 
 	button_mark_all_read.pressed.connect(_async_on_mark_all_read_pressed)
+
+	# Trailing spacer for the 24px bottom margin; ignores input so it never eats a tap.
+	_bottom_spacer = Control.new()
+	_bottom_spacer.custom_minimum_size = Vector2(0, BOTTOM_SPACER_HEIGHT)
+	_bottom_spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	notifications_list.add_child(_bottom_spacer)
 
 	# Connect to NotificationsManager signals
 	NotificationsManager.new_notifications.connect(_on_new_notifications)
@@ -61,57 +73,71 @@ func _refresh_notifications() -> void:
 		return
 
 	var notifications = NotificationsManager.get_notifications()
-	async_display_notifications(notifications)
+	display_notifications(notifications)
 
 
-func async_display_notifications(notifications: Array) -> void:
-	# Clear existing items
-	for item in _notification_items:
-		item.queue_free()
-	_notification_items.clear()
-
-	# Show empty state if no notifications
+func display_notifications(notifications: Array) -> void:
+	# Empty state
 	if notifications.size() == 0:
+		_clear_items()
 		v_box_container_no_notifications.visible = true
 		scroll_container.visible = false
-		button_mark_all_read.visible = false
-		fade_overlay.visible = false
+		button_mark_all_read.disabled = true
 		return
 
 	v_box_container_no_notifications.visible = false
 	scroll_container.visible = true
 
-	# Count unread notifications
+	# Mark-all-read is enabled only while there's something unread.
 	var unread_count = 0
 	for notif in notifications:
 		if not notif.get("read", false):
 			unread_count += 1
+	button_mark_all_read.disabled = unread_count == 0
 
-	# Update header
-	if unread_count > 0:
-		button_mark_all_read.visible = true
-	else:
-		button_mark_all_read.visible = false
+	# Incremental update: reuse the item already showing each notification id (keeping its loaded
+	# thumbnail) and only build items for genuinely new ids, then reorder. A full teardown would
+	# cancel the newest item's in-flight image load — the "blank thumbnail" bug.
+	var desired: Dictionary = {}
+	for i in notifications.size():
+		var notif = notifications[i]
+		var id = str(notif.get("id", ""))
+		# Guard id-less notifications: keying them all on "" would collapse them into one row.
+		if id.is_empty():
+			id = "__noid_%d" % i
+		desired[id] = true
+		var item
+		if _items_by_id.has(id):
+			# Same notification: refresh only read state + timestamp; the thumbnail stays loaded.
+			item = _items_by_id[id]
+			item.call("refresh", notif)
+		else:
+			item = NotificationItemScene.instantiate()
+			notifications_list.add_child(item)
+			item.set_notification(notif)
+			item.mark_as_read_clicked.connect(_async_on_notification_mark_as_read)
+			item.notification_clicked.connect(_on_notification_clicked)
+			_items_by_id[id] = item
+		notifications_list.move_child(item, i)
 
-	# Create notification items
-	for notif in notifications:
-		var item = NotificationItemScene.instantiate()
-		notifications_list.add_child(item)
-		item.set_notification(notif)
+	# Drop items whose notification is no longer present.
+	for id in _items_by_id.keys():
+		if not desired.has(id):
+			_items_by_id[id].queue_free()
+			_items_by_id.erase(id)
 
-		# Connect signals
-		item.mark_as_read_clicked.connect(_async_on_notification_mark_as_read)
-		item.notification_clicked.connect(_on_notification_clicked)
+	# Keep the spacer pinned below the last card so the bottom margin always trails the list.
+	notifications_list.move_child(_bottom_spacer, notifications_list.get_child_count() - 1)
 
-		_notification_items.append(item)
 
-	# Update gradient visibility after items are added (next frame)
-	await get_tree().process_frame
-	_update_gradient_visibility()
+func _clear_items() -> void:
+	for item in _items_by_id.values():
+		item.queue_free()
+	_items_by_id.clear()
 
 
 func _on_new_notifications(notifications: Array) -> void:
-	async_display_notifications(notifications)
+	display_notifications(notifications)
 
 
 func _on_notifications_updated() -> void:
@@ -151,13 +177,17 @@ func _async_on_mark_all_read_pressed() -> void:
 
 
 func _on_notification_clicked(_notification: Dictionary) -> void:
-	# Close the panel when a notification is clicked
+	# Just close the panel. Per-type navigation and navbar handling live in the menu (rewards/events)
+	# and explorer (friends) handlers, which also run for the toast entry point.
 	hide_panel()
 	panel_closed.emit()
 
 
 func show_panel() -> void:
 	show()
+	# Reopening the panel starts back at the top: a ScrollContainer keeps its scroll offset across
+	# hide/show, so without this the list would reappear wherever it was left when last closed.
+	scroll_container.scroll_vertical = 0
 	_refresh_notifications()
 
 
@@ -174,20 +204,11 @@ func _is_user_authenticated() -> bool:
 
 
 func _show_guest_message() -> void:
-	# Hide scroll container and button
+	# Hide the scroll container; keep the button visible but disabled.
+	_clear_items()
 	scroll_container.visible = false
-	button_mark_all_read.visible = false
-	fade_overlay.visible = false
+	button_mark_all_read.disabled = true
 
 	# Show custom message for guests
 	v_box_container_no_notifications.visible = true
-	label_no_notifications.text = "Sign in to get notifications!"
-
-
-func _update_gradient_visibility() -> void:
-	# Check if scrollbar is visible (content exceeds container height)
-	var v_scroll = scroll_container.get_v_scroll_bar()
-	if v_scroll:
-		fade_overlay.visible = v_scroll.visible
-	else:
-		fade_overlay.visible = false
+	label_no_notifications.text = tr("NOTIFICATIONS_SIGN_IN_TO_GET_NOTIFICATIONS")

@@ -36,10 +36,10 @@ var _last_keyboard_height: int = 0
 
 
 func _ready() -> void:
-	_populate_dropdown(dropdown_list_pronouns, ProfileConstants.PRONOUNS)
-	_populate_dropdown(dropdown_list_gender, ProfileConstants.GENDERS)
-	_populate_dropdown(dropdown_list_sexual_orientation, ProfileConstants.SEXUAL_ORIENTATIONS)
-	_populate_dropdown(dropdown_list_relationship, ProfileConstants.RELATIONSHIP_STATUS)
+	_populate_dropdown(dropdown_list_pronouns, ProfileConstants.pronouns)
+	_populate_dropdown(dropdown_list_gender, ProfileConstants.genders)
+	_populate_dropdown(dropdown_list_sexual_orientation, ProfileConstants.sexual_orientations)
+	_populate_dropdown(dropdown_list_relationship, ProfileConstants.relationship_status)
 
 	username_picker.name_changed.connect(_on_field_changed)
 	dcl_text_edit_description.dcl_text_edit_changed.connect(_on_field_changed)
@@ -106,13 +106,13 @@ func populate(profile: DclUserProfile) -> void:
 	var sexual_orientation_val := profile.get_sexual_orientation().strip_edges()
 	var relationship_val := profile.get_relationship_status().strip_edges()
 
-	var pronouns_idx := _find_option_index(ProfileConstants.PRONOUNS, pronouns_val)
-	var gender_idx := _find_option_index(ProfileConstants.GENDERS, gender_val)
+	var pronouns_idx := _find_option_index(ProfileConstants.pronouns, pronouns_val)
+	var gender_idx := _find_option_index(ProfileConstants.genders, gender_val)
 	var sexual_orientation_idx := _find_option_index(
-		ProfileConstants.SEXUAL_ORIENTATIONS, sexual_orientation_val
+		ProfileConstants.sexual_orientations, sexual_orientation_val
 	)
 	var relationship_idx := _find_option_index(
-		ProfileConstants.RELATIONSHIP_STATUS, relationship_val
+		ProfileConstants.relationship_status, relationship_val
 	)
 
 	dropdown_list_pronouns.select(pronouns_idx)
@@ -144,10 +144,12 @@ func _on_close() -> void:
 
 
 func _populate_dropdown(dropdown: DropdownList, options: Array) -> void:
+	# Shows the translated label but keeps options[i]["id"] as the value: _get_dropdown_value()
+	# and _find_option_index() both work on the stable ID, which is what gets published.
 	dropdown.clear()
-	dropdown.add_item("Select", 0)
+	dropdown.add_item(tr("PROFILE_SELECT"), 0)
 	for i in range(options.size()):
-		dropdown.add_item(options[i], i + 1)
+		dropdown.add_item(options[i]["key"].text(), i + 1)
 	dropdown.placeholder_index = 0
 	dropdown.select(0)
 
@@ -157,7 +159,7 @@ func _find_option_index(options: Array, value: String) -> int:
 		return 0
 	var lower_value := value.to_lower()
 	for i in range(options.size()):
-		if options[i].to_lower() == lower_value:
+		if options[i]["id"].to_lower() == lower_value:
 			return i + 1
 	return 0
 
@@ -229,7 +231,8 @@ func _get_dropdown_value(options: Array, index: int) -> String:
 	var array_idx := index - 1
 	if array_idx < 0 or array_idx >= options.size():
 		return ""
-	return options[array_idx]
+	# The stable ID, never the label: this value is published to the user's profile.
+	return options[array_idx]["id"]
 
 
 func _async_save_profile() -> void:
@@ -254,27 +257,27 @@ func _async_save_profile() -> void:
 	var current_pronouns_idx := dropdown_list_pronouns.selected
 	if current_pronouns_idx != _original_values.get("pronouns", 0):
 		mutable_profile.set_pronouns(
-			_get_dropdown_value(ProfileConstants.PRONOUNS, current_pronouns_idx)
+			_get_dropdown_value(ProfileConstants.pronouns, current_pronouns_idx)
 		)
 
 	var current_gender_idx := dropdown_list_gender.selected
 	if current_gender_idx != _original_values.get("gender", 0):
 		mutable_profile.set_gender(
-			_get_dropdown_value(ProfileConstants.GENDERS, current_gender_idx)
+			_get_dropdown_value(ProfileConstants.genders, current_gender_idx)
 		)
 
 	var current_sexual_orientation_idx := dropdown_list_sexual_orientation.selected
 	if current_sexual_orientation_idx != _original_values.get("sexual_orientation", 0):
 		mutable_profile.set_sexual_orientation(
 			_get_dropdown_value(
-				ProfileConstants.SEXUAL_ORIENTATIONS, current_sexual_orientation_idx
+				ProfileConstants.sexual_orientations, current_sexual_orientation_idx
 			)
 		)
 
 	var current_relationship_idx := dropdown_list_relationship.selected
 	if current_relationship_idx != _original_values.get("relationship", 0):
 		mutable_profile.set_relationship_status(
-			_get_dropdown_value(ProfileConstants.RELATIONSHIP_STATUS, current_relationship_idx)
+			_get_dropdown_value(ProfileConstants.relationship_status, current_relationship_idx)
 		)
 
 	var current_employment = dcl_text_edit_employment_status.get_text_value()
@@ -416,3 +419,21 @@ func _async_ensure_field_visible() -> void:
 
 	await get_tree().process_frame
 	scroll_container.scroll_vertical += int(overlap)
+
+
+## Dropdown items are plain strings once added, so they do not re-translate themselves the way a
+## scene `text` property does. Repopulating preserves each current selection.
+func _notification(what: int) -> void:
+	if what != NOTIFICATION_TRANSLATION_CHANGED or not is_node_ready():
+		return
+	for pair in [
+		[dropdown_list_pronouns, ProfileConstants.pronouns],
+		[dropdown_list_gender, ProfileConstants.genders],
+		[dropdown_list_sexual_orientation, ProfileConstants.sexual_orientations],
+		[dropdown_list_relationship, ProfileConstants.relationship_status],
+	]:
+		var dropdown: DropdownList = pair[0]
+		var previous := dropdown.selected
+		_populate_dropdown(dropdown, pair[1])
+		if previous >= 0:
+			dropdown.select(previous)

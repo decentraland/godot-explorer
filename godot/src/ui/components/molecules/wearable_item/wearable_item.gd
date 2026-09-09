@@ -153,9 +153,9 @@ func _update_marketplace_state(is_selected: bool):
 		panel_container_price.hide()
 		button_action.show()
 		if Iap.get_balance() >= marketplace_price:
-			button_action.text = "DETAIL"
+			button_action.text = tr("WEARABLE_ITEM_DETAIL")
 		else:
-			button_action.text = "GET CREDITS"
+			button_action.text = tr("WEARABLE_ITEM_GET_CREDITS")
 	else:
 		panel_container_price.show()
 		button_action.hide()

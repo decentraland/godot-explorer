@@ -62,6 +62,7 @@ texture = ExtResource("1_8amxb")
 stretch_mode = 4
 
 [node name="Nickname" type="Label" parent="MarginContainer/VBoxContainer/NicknameTag" unique_id=1982821028]
+auto_translate_mode = 2
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
@@ -77,6 +78,7 @@ unique_name_in_owner = true
 layout_mode = 2
 
 [node name="HashTag" type="Label" parent="MarginContainer/VBoxContainer/NicknameTag/HBoxContainer/Hash" unique_id=529487923]
+auto_translate_mode = 2
 layout_mode = 2
 theme_override_colors/font_color = Color(0.493545, 0.493546, 0.493546, 1)
 theme_override_fonts/font = ExtResource("4_wgh2x")
@@ -84,6 +86,7 @@ theme_override_font_sizes/font_size = 70
 text = "#"
 
 [node name="Tag" type="Label" parent="MarginContainer/VBoxContainer/NicknameTag/HBoxContainer/Hash" unique_id=189931629]
+auto_translate_mode = 2
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.493545, 0.493546, 0.493546, 1)
@@ -104,6 +107,7 @@ expand_mode = 2
 stretch_mode = 4
 
 [node name="VersionLabel" type="Label" parent="MarginContainer/VBoxContainer" unique_id=1564379537]
+auto_translate_mode = 2
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
@@ -113,6 +117,7 @@ theme_override_font_sizes/font_size = 30
 horizontal_alignment = 1
 
 [node name="RoomDebugLabel" type="Label" parent="MarginContainer/VBoxContainer" unique_id=1287301537]
+auto_translate_mode = 2
 unique_name_in_owner = true
 visible = false
 layout_mode = 2

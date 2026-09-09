@@ -555,6 +555,22 @@ pub struct SegmentEventInstallAttribution {
     pub install_timestamp: i64,
     // Whether the app was launched as a Google Play Instant app
     pub google_play_instant: bool,
+    // Which mechanism reported (#2670): "ga4f_deferred_deeplink" | "play_install_referrer" |
+    // "none". Does NOT say whether a campaign was found — `campaign_token` does, so counting
+    // GA4F-attributed campaigns means this field plus a non-null token.
+    pub attribution_source: String,
+    // Campaign token, from whichever source carried one (GA4F first).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub campaign_token: Option<String>,
+    // Raw GA4F deep link, when that is the source. Kept for debugging a token that did
+    // not parse — the referrer field plays the same role for the other source.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub deferred_deep_link: Option<String>,
+    // Whether the Play referrer actually answered. When false the referrer-derived fields
+    // above (referrer, utm_*, the timestamps, google_play_instant) are placeholders rather
+    // than data — the source never resolved. Without this they are indistinguishable from a
+    // referrer that genuinely reported empty values.
+    pub referrer_settled: bool,
 }
 
 // Emitted once per attestation cycle attempt (FSM in attestation_service.gd).

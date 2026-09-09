@@ -101,6 +101,31 @@ impl ContentMappingAndUrl {
     pub fn files(&self) -> &HashMap<String, String> {
         &self.content
     }
+
+    /// Copy of this mapping with a single entry replaced (`Some(hash)`) or
+    /// dropped (`None`).
+    ///
+    /// Copy-on-write because the mapping is shared as an `Arc` across the scene,
+    /// its entity definition and every in-flight content request: mutating in
+    /// place would need interior mutability everywhere. Only the preview
+    /// hot-reload path uses this, once per changed file, so the clone is cheap
+    /// relative to re-fetching the asset.
+    pub fn with_entry(&self, file: &str, hash: Option<&str>) -> Self {
+        let file = file.to_lowercase();
+        let mut content = self.content.clone();
+        match hash {
+            Some(hash) => {
+                content.insert(file, hash.to_string());
+            }
+            None => {
+                content.remove(&file);
+            }
+        }
+        ContentMappingAndUrl {
+            base_url: self.base_url.clone(),
+            content,
+        }
+    }
 }
 
 pub type ContentMappingAndUrlRef = Arc<ContentMappingAndUrl>;

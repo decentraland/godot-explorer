@@ -11,7 +11,7 @@ use crate::{
         },
     },
     godot_classes::dcl_gltf_container::{DclGltfContainer, GltfContainerLoadingState},
-    scene_runner::scene::Scene,
+    scene_runner::{godot_dcl_scene::add_own_visual_child, scene::Scene},
 };
 use godot::prelude::*;
 
@@ -111,7 +111,7 @@ pub fn update_gltf_container(
                     }
 
                     new_gltf.set_name("GltfContainer");
-                    node_3d.add_child(&new_gltf.clone().upcast::<Node>());
+                    add_own_visual_child(&mut node_3d, &new_gltf.clone().upcast::<Node>());
 
                     if scene.gltf_loading.insert(*entity) {
                         scene.gltf_loading_started_count += 1;

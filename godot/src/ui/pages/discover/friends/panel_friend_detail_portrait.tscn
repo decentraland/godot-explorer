@@ -229,6 +229,7 @@ layout_mode = 2
 theme_override_constants/separation = 14
 
 [node name="Label_FriendName" type="Label" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/HBoxContainer_Friend/HBoxContainer" unique_id=407220748]
+auto_translate_mode = 2
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 0
@@ -262,6 +263,7 @@ theme_override_constants/separation = 45
 theme_override_styles/separator = SubResource("StyleBoxEmpty_sep")
 
 [node name="RichTextLabel_Title" type="RichTextLabel" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer" unique_id=1729052055]
+auto_translate_mode = 2
 unique_name_in_owner = true
 custom_minimum_size = Vector2(200, 28)
 layout_mode = 2
@@ -305,14 +307,15 @@ theme_override_constants/separation = 8
 
 [node name="Label_by" type="Label" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/HBoxContainer_Creator" unique_id=784476181]
 layout_mode = 2
-text = "by"
+text = "COMMON_BY"
 label_settings = SubResource("LabelSettings_creator")
 
 [node name="Label_Creator" type="Label" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/HBoxContainer_Creator" unique_id=1744938639]
+auto_translate_mode = 2
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
-text = "Creator"
+text = "DISCOVER_CREATOR"
 label_settings = SubResource("LabelSettings_creator_name")
 clip_text = true
 text_overrun_behavior = 3
@@ -440,7 +443,7 @@ alignment = 1
 
 [node name="Label" type="Label" parent="PanelContainer_Footer/MarginContainer/Button_JumpIn/HBoxContainer_Content" unique_id=1748594840]
 layout_mode = 2
-text = "JUMP IN"
+text = "COMMON_JUMP_IN"
 label_settings = SubResource("LabelSettings_jumpin")
 
 [connection signal="toggled" from="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/MarginContainer_ShowMore/Button_ShowMore" to="." method="_on_show_more_toggled"]

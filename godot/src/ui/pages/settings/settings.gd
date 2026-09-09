@@ -12,6 +12,9 @@ enum SceneLogLevel {
 }
 
 const _SECTION_TITLE_SCRIPT = preload("res://src/ui/pages/settings/section_title.gd")
+const _DROPDOWN_LIST_SCENE = preload(
+	"res://src/ui/components/molecules/dropdown_list/dropdown_list.tscn"
+)
 const CACHE_SIZE_MB: Array[int] = [1024, 2048, 4096]
 
 ## When true, settings operates as a side panel inside the explorer:
@@ -26,6 +29,15 @@ const CACHE_SIZE_MB: Array[int] = [1024, 2048, 4096]
 var _light_debug_checks: Dictionary = {}
 var _light_max_lights_spin: SpinBox = null
 
+# Custom profile controls (visible only when graphic_profile == PROFILE_CUSTOM).
+var _custom_view_distance_row: HBoxContainer = null
+var _custom_view_distance_slider: HSlider = null
+var _custom_view_distance_value_label: Label = null
+var _custom_particles_row: HBoxContainer = null
+var _custom_particles_dropdown: DropdownList = null
+var _custom_max_lights_row: HBoxContainer = null
+var _custom_max_lights_spin: SpinBox = null
+
 @onready var label_title: Label = %Label_Title
 @onready var margin_container_nav: MarginContainer = %MarginContainer_Nav
 
@@ -39,6 +51,8 @@ var _light_max_lights_spin: SpinBox = null
 
 #Storage items:
 @onready var dropdown_list_max_cache_size: DropdownList = %DropdownList_MaxCacheSize
+@onready var container_language: MarginContainer = %Container_Language
+@onready var dropdown_list_language: DropdownList = %DropdownList_Language
 @onready var label_current_cache_value: Label = %Label_CurrentCacheValue
 @onready var progress_bar_current_cache_size: ProgressBar = %ProgressBar_CurrentCacheSize
 @onready var button_clear_cache: Button = %Button_ClearCache
@@ -117,8 +131,7 @@ func _ready():
 	check_button_submit_message_closes_chat.button_pressed = (
 		Global.get_config().submit_message_closes_chat
 	)
-	dropdown_list_camera_mode.add_item("First person", Global.CameraMode.FIRST_PERSON)
-	dropdown_list_camera_mode.add_item("Third person", Global.CameraMode.THIRD_PERSON)
+	_populate_camera_mode_items()
 	dropdown_list_camera_mode.item_selected.connect(_on_dropdown_list_camera_mode_item_selected)
 	_refresh_camera_mode_row()
 	# Keep the camera dropdown in sync with runtime changes (scene locks the mode / forces
@@ -134,9 +147,9 @@ func _ready():
 		Global.session_hide_ui_options_sync.connect(_on_session_hide_ui_options_sync)
 	_refresh_hide_explorer_ui_row()
 
-	dropdown_list_max_cache_size.add_item("1 GB", 0)
-	dropdown_list_max_cache_size.add_item("2 GB", 1)
-	dropdown_list_max_cache_size.add_item("4 GB", 2)
+	_setup_language_dropdown()
+
+	_populate_cache_size_items()
 	var cache_index := clampi(Global.get_config().max_cache_size, 0, CACHE_SIZE_MB.size() - 1)
 	dropdown_list_max_cache_size.select(cache_index)
 	progress_bar_current_cache_size.max_value = CACHE_SIZE_MB[cache_index]
@@ -145,22 +158,16 @@ func _ready():
 	)
 
 	# graphic
-	var i = 0
-	for profile in GraphicSettings.PROFILE_NAMES:
-		if profile != "Custom":
-			dropdown_list_graphic_profiles.add_item(profile, i)
-			i += 1
+	_populate_graphic_profile_items()
 	_setup_dynamic_graphics()
 	_update_dynamic_graphics_status()
 	_setup_impostor_benchmark_button()
 	_setup_fast_day_cycle_toggle()
 	_setup_light_debug_controls()
+	_setup_custom_profile_controls()
 	refresh_graphic_settings()
 
-	var j = 0
-	for profile in GraphicSettings.SKYBOX_TIME_NAMES:
-		dropdown_list_custom_skybox.add_item(profile.name, j)
-		j += 1
+	_populate_skybox_items()
 
 	if Global.get_config().dynamic_skybox:
 		check_button_dynamic_skybox.button_pressed = true
@@ -261,6 +268,8 @@ func _apply_layout(is_orientation_portrait: bool) -> void:
 func refresh_graphic_settings():
 	var graphic_profile = Global.get_config().graphic_profile
 	dropdown_list_graphic_profiles.select(graphic_profile)
+	_sync_light_controls_for_profile()
+	_sync_custom_profile_controls()
 
 
 func show_control(control: Control):
@@ -407,6 +416,46 @@ func _on_h_slider_music_volume_value_changed(value):
 	Global.get_config().save_to_settings_file()
 
 
+func _setup_language_dropdown() -> void:
+	# Only worth showing once there is something to choose between. SUPPORTED_LOCALES stays at
+	# ["en"] until a locale's catalogue is complete (see unity-explorer#270); debug builds also
+	# offer the QA pseudolocale, so the row appears there even before any translation exists.
+	var supported := LocaleSettings.selectable_locales()
+	if supported.size() < 2:
+		# The whole section, not just the dropdown: hiding the DropdownList alone leaves the
+		# "LANGUAGE" header behind with nothing under it.
+		container_language.hide()
+		return
+
+	if not LocaleSettings.is_language_picker_available():
+		# TEMPORARY: production ships English only, so the row is not offered there.
+		container_language.hide()
+		return
+
+	# item_selected is wired in the scene, like the other scene-declared dropdowns
+	# (GraphicProfiles / CustomSkybox / Realm). Connecting here too raised
+	# "Signal 'item_selected' is already connected" on every Settings open.
+	_populate_language_dropdown()
+
+
+func _populate_language_dropdown() -> void:
+	var supported := LocaleSettings.selectable_locales()
+	# Not resolve_locale(): it deliberately maps the pseudolocale to "en", so reopening Settings
+	# would show "English" selected while pseudolocalization was still active.
+	var configured: String = Global.get_config().locale
+	var current: String = configured if configured in supported else LocaleSettings.resolve_locale()
+	for i in supported.size():
+		dropdown_list_language.add_item(LocaleSettings.get_display_name(supported[i]), i)
+	dropdown_list_language.select(maxi(supported.find(current), 0))
+
+
+func _on_dropdown_list_language_item_selected(index: int) -> void:
+	var supported := LocaleSettings.selectable_locales()
+	if index < 0 or index >= supported.size():
+		return
+	LocaleSettings.set_locale(supported[index])
+
+
 func _on_dropdown_list_max_cache_size_item_selected(index: int) -> void:
 	Global.get_config().max_cache_size = index
 	GeneralSettings.apply_max_cache_size()
@@ -420,11 +469,17 @@ func _update_current_cache_size():
 		float(Global.content_provider.get_cache_folder_total_size()) / 1000.0 / 1000.0
 	)
 	if current_size_mb >= 1024.0:
-		label_current_cache_value.text = "%.1f GB" % (current_size_mb / 1024.0)
+		label_current_cache_value.text = (TranslationKey.new("SETTINGS_CACHE_SIZE_GB").format(
+			{"size": LocaleFormat.number(current_size_mb / 1024.0, 1)}
+		))
 	elif current_size_mb > 0.0:
-		label_current_cache_value.text = "%.1f MB" % current_size_mb
+		label_current_cache_value.text = (TranslationKey.new("SETTINGS_CACHE_SIZE_MB").format(
+			{"size": LocaleFormat.number(current_size_mb, 1)}
+		))
 	else:
-		label_current_cache_value.text = "0 MB"
+		label_current_cache_value.text = (TranslationKey.new("SETTINGS_CACHE_SIZE_MB").format(
+			{"size": LocaleFormat.number(0, 1)}
+		))
 	progress_bar_current_cache_size.value = current_size_mb
 	button_clear_cache.disabled = current_size_mb == 0
 
@@ -605,6 +660,7 @@ func _on_button_developer_pressed() -> void:
 	var explorer = Global.get_explorer()
 	if is_instance_valid(explorer):
 		check_button_show_interactable_area.set_pressed_no_signal(explorer.show_interactable_area)
+	_sync_light_controls_for_profile()
 	_async_scroll_to_tab_button(button_developer)
 
 
@@ -663,59 +719,42 @@ func _on_button_test_notification_pressed() -> void:
 		printerr("Failed to schedule test notification")
 
 
+## Opens the native bug report form (issue #2652). Replaces the old Google Form
+## deep link, which required an external browser and a Google sign-in to attach
+## images — the reason it was removed.
 func _on_button_report_bug_pressed() -> void:
-	var form_id = "1FAIpQLScWjnb3Ya7yV8xFn0R-yf_SMejzBGDiDTZbHaddOFEmJwAM6g"
-	var base_url = "https://docs.google.com/forms/d/e/" + form_id + "/viewform"
+	_async_open_bug_report()
 
-	var params = []
-	var platform = "desktop"
-	var device_brand = ""
-	var device_model = ""
-	var os_version = OS.get_name()
-	var app_version = DclGlobal.get_version()
-	var environment = ""
-	if DclAndroidPlugin.is_available():
-		var android_singleton = Engine.get_singleton("dcl-godot-android")
-		if android_singleton:
-			var device_info = android_singleton.getMobileDeviceInfo()
-			device_brand = device_info.get("device_brand", "")
-			device_model = device_info.get("device_model", "")
-			os_version = device_info.get("os_version", OS.get_name())
-		platform = "mobile"
-	elif DclIosPlugin.is_available():
-		var ios_singleton = Engine.get_singleton("DclGodotiOS")
-		if ios_singleton:
-			var device_info = ios_singleton.get_mobile_device_info()
-			device_brand = device_info.get("device_brand", "")
-			device_model = device_info.get("device_model", "")
-			os_version = device_info.get("os_version", OS.get_name())
-		platform = "mobile"
 
-	params.append("entry.908487542=" + os_version.uri_encode())
-	params.append("entry.1825988508=" + app_version.uri_encode())
-	params.append("entry.902053507=" + platform.uri_encode())
-	params.append("entry.983493489=" + Global.player_identity.get_address_str().uri_encode())
-	params.append("entry.519686692=" + RenderingServer.get_video_adapter_name().uri_encode())
-	params.append("entry.69678037=" + Global.session_id.uri_encode())
+func _async_open_bug_report() -> void:
+	# The screenshot was captured when this panel opened, so it shows the game
+	# rather than Settings — see BugReportCapture.
+	var modal := await Global.modal_manager.async_show_bug_report_modal(
+		BugReportCapture.latest_jpeg()
+	)
+	if not is_instance_valid(modal):
+		return
+	modal.submitted.connect(_async_on_bug_report_submitted)
+	modal.failed.connect(_on_bug_report_failed)
 
-	if "dev" in app_version:
-		environment = "develop"
-	else:
-		environment = "production"
 
-	params.append("entry.1045647501=" + environment.uri_encode())
+func _async_on_bug_report_submitted(_ticket_id: String) -> void:
+	await Global.modal_manager.async_show_bug_report_success_modal()
 
-	if device_brand != "":
-		params.append("entry.942533991=" + device_brand.uri_encode())
 
-	if device_model != "":
-		params.append("entry.264855991=" + device_model.uri_encode())
-
-	var url = base_url
-	if params.size() > 0:
-		url += "?" + "&".join(params)
-
-	Global.open_url(url)
+func _on_bug_report_failed(message: String) -> void:
+	# The message is a proxy/transport error, not something a player can act on,
+	# so it goes to the log while the toast stays generic.
+	push_warning("Bug report failed: %s" % message)
+	# tr() on both: strings passed as function arguments are invisible to
+	# extract_strings.py, so a raw literal here ships English on every locale and
+	# CI cannot catch it (PR #2779 review).
+	NotificationsManager.show_system_toast(
+		tr("TOAST_BUG_REPORT_FAILED_TITLE"),
+		tr("COMMON_SOMETHING_WENT_WRONG_RETRY"),
+		"system",
+		"alert"
+	)
 
 
 func _on_button_open_user_data_pressed() -> void:
@@ -766,7 +805,7 @@ func _setup_impostor_benchmark_button() -> void:
 		return
 	var bench_button := Button.new()
 	bench_button.name = "Button_RunImpostorBenchmark"
-	bench_button.text = "Run Avatar Impostor Benchmark"
+	bench_button.text = tr("SETTINGS_RUN_AVATAR_IMPOSTOR_BENCHMARK")
 	bench_button.pressed.connect(
 		func() -> void:
 			get_tree().change_scene_to_file("res://src/tools/avatar_impostor_benchmark.tscn")
@@ -819,7 +858,7 @@ func _add_max_lights_row(template_row: HBoxContainer, initial_value: int) -> voi
 	var row := template_row.duplicate(0) as HBoxContainer
 	row.name = "Light_MaxActiveLights"
 	var label := row.find_child("Label_Title", false, false) as Label
-	label.text = "Max Active Lights"
+	label.text = tr("SETTINGS_MAX_ACTIVE_LIGHTS")
 	var check := row.find_child("CheckButton*", true, false) as CheckButton
 	check.hide()
 
@@ -836,6 +875,8 @@ func _add_max_lights_row(template_row: HBoxContainer, initial_value: int) -> voi
 
 
 func _apply_light_settings_from_ui() -> void:
+	if Global.get_config().graphic_profile != ConfigData.PROFILE_CUSTOM:
+		return
 	DclLightSourceComponent.apply_light_settings(
 		_light_debug_checks["lights_enabled"].button_pressed,
 		_light_debug_checks["shadows_enabled"].button_pressed,
@@ -861,7 +902,7 @@ func _setup_fast_day_cycle_toggle() -> void:
 	var row := template_row.duplicate(0) as HBoxContainer
 	row.name = "FastDayCycle"
 	var label := row.find_child("Label_Title", false, false) as Label
-	label.text = "Fast Day/Night Cycle (10s)"
+	label.text = tr("SETTINGS_FAST_DAY_NIGHT_CYCLE_10S")
 	var check := row.find_child("CheckButton*", true, false) as CheckButton
 	check.name = "CheckButton_FastDayCycle"
 	check.button_pressed = false
@@ -871,6 +912,164 @@ func _setup_fast_day_cycle_toggle() -> void:
 	var rows_container := template_row.get_parent()
 	rows_container.add_child(row)
 	rows_container.move_child(row, 0)
+
+
+func _sync_light_controls_for_profile() -> void:
+	if _light_debug_checks.is_empty() and _light_max_lights_spin == null:
+		return
+
+	var is_custom: bool = Global.get_config().graphic_profile == ConfigData.PROFILE_CUSTOM
+	if is_custom:
+		for check in _light_debug_checks.values():
+			if is_instance_valid(check):
+				check.disabled = false
+		if is_instance_valid(_light_max_lights_spin):
+			_light_max_lights_spin.editable = true
+		_apply_light_settings_from_ui()
+	else:
+		var light_settings := DclLightSourceComponent.get_light_settings()
+		for key in _light_debug_checks:
+			var check: CheckButton = _light_debug_checks[key]
+			if is_instance_valid(check):
+				check.disabled = true
+				check.set_pressed_no_signal(bool(light_settings.get(key, false)))
+		if is_instance_valid(_light_max_lights_spin):
+			_light_max_lights_spin.editable = false
+			_light_max_lights_spin.set_value_no_signal(int(light_settings.get("max_lights", 0)))
+
+
+func _sync_custom_profile_controls() -> void:
+	if _custom_view_distance_row == null:
+		return
+
+	var is_custom: bool = Global.get_config().graphic_profile == ConfigData.PROFILE_CUSTOM
+	_custom_view_distance_row.visible = is_custom
+	_custom_particles_row.visible = is_custom
+	_custom_max_lights_row.visible = is_custom
+
+	if not is_custom:
+		return
+
+	var view_distance: float = Global.get_config().view_distance
+	_custom_view_distance_slider.set_value_no_signal(view_distance)
+	_sync_custom_view_distance_label(view_distance)
+	_custom_particles_dropdown.select(Global.get_config().particle_quality)
+	_custom_max_lights_spin.set_value_no_signal(
+		int(DclLightSourceComponent.get_light_settings().get("max_lights", 0))
+	)
+
+
+func _sync_custom_view_distance_label(value: float) -> void:
+	if is_instance_valid(_custom_view_distance_value_label):
+		_custom_view_distance_value_label.text = "%dm" % int(value)
+
+
+func _setup_custom_profile_controls() -> void:
+	# Three per-setting rows that only appear for the Custom profile.
+	var template_row := (
+		container_advanced.find_child("SceneLogsEnabled", true, false) as HBoxContainer
+	)
+	if template_row == null:
+		return
+	var rows_container := dropdown_list_graphic_profiles.get_parent()
+	if rows_container == null:
+		return
+
+	var profile_idx := dropdown_list_graphic_profiles.get_index()
+
+	# View Distance
+	_custom_view_distance_row = _make_custom_profile_row(
+		template_row, "CustomViewDistance", tr("SETTINGS_VIEW_DISTANCE")
+	)
+	_custom_view_distance_slider = HSlider.new()
+	_custom_view_distance_slider.min_value = 20
+	_custom_view_distance_slider.max_value = 320
+	_custom_view_distance_slider.step = 10
+	_custom_view_distance_slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_custom_view_distance_slider.value_changed.connect(_on_custom_view_distance_changed)
+
+	_custom_view_distance_value_label = Label.new()
+	_custom_view_distance_value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+
+	var view_controls := HBoxContainer.new()
+	view_controls.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	view_controls.add_child(_custom_view_distance_slider)
+	view_controls.add_child(_custom_view_distance_value_label)
+	_custom_view_distance_row.add_child(view_controls)
+	rows_container.add_child(_custom_view_distance_row)
+	rows_container.move_child(_custom_view_distance_row, profile_idx + 1)
+
+	# Particles
+	_custom_particles_row = _make_custom_profile_row(
+		template_row, "CustomParticles", tr("SETTINGS_PARTICLES")
+	)
+	# The SCENE, not DropdownList.new(): the script's @onready vars resolve %-unique
+	# nodes that live in dropdown_list.tscn, so a bare script instance leaves every
+	# one of them null. That logs "Node not found" and then segfaults the renderer
+	# on release builds, which debug tolerates (crash on opening Settings, #2672).
+	_custom_particles_dropdown = _DROPDOWN_LIST_SCENE.instantiate()
+	_populate_custom_particles_items()
+	_custom_particles_dropdown.item_selected.connect(_on_custom_particles_changed)
+	_custom_particles_row.add_child(_custom_particles_dropdown)
+	rows_container.add_child(_custom_particles_row)
+	rows_container.move_child(_custom_particles_row, profile_idx + 2)
+
+	# Max Active Lights
+	_custom_max_lights_row = _make_custom_profile_row(
+		template_row, "CustomMaxLights", tr("SETTINGS_MAX_ACTIVE_LIGHTS")
+	)
+	_custom_max_lights_spin = SpinBox.new()
+	_custom_max_lights_spin.min_value = 0
+	_custom_max_lights_spin.max_value = 64
+	_custom_max_lights_spin.step = 1
+	_custom_max_lights_spin.value_changed.connect(_on_custom_max_lights_changed)
+	_custom_max_lights_row.add_child(_custom_max_lights_spin)
+	rows_container.add_child(_custom_max_lights_row)
+	rows_container.move_child(_custom_max_lights_row, profile_idx + 3)
+
+	_sync_custom_profile_controls()
+
+
+func _make_custom_profile_row(
+	template_row: HBoxContainer, name: String, title: String
+) -> HBoxContainer:
+	var row := template_row.duplicate(0) as HBoxContainer
+	row.name = name
+	row.visible = false
+	var label := row.find_child("Label_Title", false, false) as Label
+	label.text = title
+	var check := row.find_child("CheckButton*", true, false) as CheckButton
+	if check != null:
+		check.queue_free()
+	return row
+
+
+func _on_custom_view_distance_changed(value: float) -> void:
+	Global.get_config().view_distance = value
+	if is_instance_valid(Global.player_camera_node):
+		Global.player_camera_node.far = value
+	Global.get_config().save_to_settings_file()
+	_sync_custom_view_distance_label(value)
+
+
+func _on_custom_particles_changed(index: int) -> void:
+	Global.get_config().particle_quality = index
+	AvatarAnimHelpers.apply_particles_enabled(index > 0)
+	GraphicSettings.apply_particle_quality(index)
+	Global.get_config().save_to_settings_file()
+
+
+func _on_custom_max_lights_changed(value: float) -> void:
+	var light_settings := DclLightSourceComponent.get_light_settings()
+	DclLightSourceComponent.apply_light_settings(
+		light_settings["lights_enabled"],
+		light_settings["shadows_enabled"],
+		int(value),
+		light_settings["debug_enabled"],
+		light_settings["auto_activation_range"],
+		light_settings["use_global_light_budget"]
+	)
+	Global.get_config().save_to_settings_file()
 
 
 func _setup_dynamic_graphics() -> void:
@@ -975,12 +1174,6 @@ func _on_button_discord_pressed() -> void:
 	Global.open_url(DISCORD_URL)
 
 
-func _on_button_marketplace_pressed() -> void:
-	# SFSafariViewController on iOS (same webview as Apple Sign In) and
-	# Chrome Custom Tabs on Android. Desktop falls back to shell_open.
-	MarketplaceTracker.open_and_track(DclUrls.marketplace())
-
-
 func _on_button_storage_pressed() -> void:
 	show_control(container_storage)
 	_async_scroll_to_tab_button(%Button_Storage)
@@ -1062,3 +1255,107 @@ func _on_button_return_to_discover_pressed() -> void:
 	# Dev Tools: leave the current world and return to the Discover menu while
 	# staying signed in (soft sign-out). See Global.return_to_discover().
 	Global.return_to_discover()
+
+
+## Dropdown items are plain strings once added, so unlike a scene `text` property they do not
+## re-translate themselves on NOTIFICATION_TRANSLATION_CHANGED. Only the dropdowns whose items are
+## translated are rebuilt; realm URLs are data and stay as they are.
+func _populate_camera_mode_items() -> void:
+	var previous := dropdown_list_camera_mode.selected
+	dropdown_list_camera_mode.clear()
+	dropdown_list_camera_mode.add_item(
+		tr("SETTINGS_CAMERA_FIRST_PERSON"), Global.CameraMode.FIRST_PERSON
+	)
+	dropdown_list_camera_mode.add_item(
+		tr("SETTINGS_CAMERA_THIRD_PERSON"), Global.CameraMode.THIRD_PERSON
+	)
+	if previous >= 0:
+		dropdown_list_camera_mode.select(previous)
+
+
+func _populate_graphic_profile_items() -> void:
+	# DropdownList items are finished text, not keys: both display nodes are
+	# auto_translate_mode = 2 (dropdown_list.tscn, dropdown_item.tscn).
+	# Custom included: it's what makes the Custom-only controls below reachable.
+	var previous := dropdown_list_graphic_profiles.selected
+	dropdown_list_graphic_profiles.clear()
+	for index in GraphicSettings.PROFILE_KEYS.size():
+		dropdown_list_graphic_profiles.add_item(tr(GraphicSettings.PROFILE_KEYS[index]))
+	if previous >= 0:
+		dropdown_list_graphic_profiles.select(previous)
+
+
+func _populate_skybox_items() -> void:
+	var previous := dropdown_list_custom_skybox.selected
+	dropdown_list_custom_skybox.clear()
+	for index in GraphicSettings.SKYBOX_TIME_NAMES.size():
+		dropdown_list_custom_skybox.add_item(
+			tr(GraphicSettings.SKYBOX_TIME_NAMES[index].key), index
+		)
+	if previous >= 0:
+		dropdown_list_custom_skybox.select(previous)
+
+
+func _populate_cache_size_items() -> void:
+	var previous := dropdown_list_max_cache_size.selected
+	dropdown_list_max_cache_size.clear()
+	# The id is the index, because that is what _on_dropdown_list_max_cache_size_item_selected()
+	# stores in max_cache_size and what indexes CACHE_SIZE_MB. Sizes are derived from
+	# CACHE_SIZE_MB rather than a second literal list, so the two cannot drift apart.
+	for i in CACHE_SIZE_MB.size():
+		dropdown_list_max_cache_size.add_item(
+			TranslationKey.new("SETTINGS_CACHE_SIZE_GB").format({"size": CACHE_SIZE_MB[i] / 1024}),
+			i
+		)
+	if previous >= 0:
+		dropdown_list_max_cache_size.select(previous)
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_TRANSLATION_CHANGED and is_node_ready():
+		_populate_camera_mode_items()
+		_populate_cache_size_items()
+		_populate_graphic_profile_items()
+		_populate_skybox_items()
+		_populate_language_dropdown_items()
+		_update_current_cache_size()
+		_retranslate_custom_profile_rows()
+
+
+func _populate_custom_particles_items() -> void:
+	if _custom_particles_dropdown == null:
+		return
+	var previous := _custom_particles_dropdown.selected
+	_custom_particles_dropdown.clear()
+	_custom_particles_dropdown.add_item(tr("SETTINGS_PARTICLES_OFF"), 0)
+	_custom_particles_dropdown.add_item(tr("SETTINGS_GRAPHIC_PROFILE_LOW"), 1)
+	_custom_particles_dropdown.add_item(tr("SETTINGS_GRAPHIC_PROFILE_MEDIUM"), 2)
+	_custom_particles_dropdown.add_item(tr("SETTINGS_GRAPHIC_PROFILE_HIGH"), 3)
+	if previous >= 0:
+		_custom_particles_dropdown.select(previous)
+
+
+## The Custom rows are built at runtime with tr()-resolved strings, so they need
+## manual re-translation on locale change (same convention as the dropdowns above).
+func _retranslate_custom_profile_rows() -> void:
+	if _custom_view_distance_row == null:
+		return
+	(_custom_view_distance_row.find_child("Label_Title", false, false) as Label).text = tr(
+		"SETTINGS_VIEW_DISTANCE"
+	)
+	(_custom_particles_row.find_child("Label_Title", false, false) as Label).text = tr(
+		"SETTINGS_PARTICLES"
+	)
+	(_custom_max_lights_row.find_child("Label_Title", false, false) as Label).text = tr(
+		"SETTINGS_MAX_ACTIVE_LIGHTS"
+	)
+	_populate_custom_particles_items()
+
+
+func _populate_language_dropdown_items() -> void:
+	if LocaleSettings.selectable_locales().size() < 2:
+		return
+	# Re-derive the selection from the saved config rather than restoring the previous index:
+	# the two diverge whenever the locale changed by any route other than this dropdown.
+	dropdown_list_language.clear()
+	_populate_language_dropdown()

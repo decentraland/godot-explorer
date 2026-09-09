@@ -33,11 +33,28 @@ const WEARABLE_CATEGORIES: Array = [
 ## Categories that have no marketplace suggestions.
 const HIDDEN_CATEGORIES: Array = ["body_shape", "all", "all_extras"]
 
-## Hide items priced above the largest credits tier (tier3 = 225 credits): they can't
-## be afforded with a single In-App Purchase, so surfacing them is misleading (#2298).
-## The catalog API takes `maxPrice` in whole MANA/credits — the SAME unit as the existing
-## `minPrice=1` below, inclusive. NOT wei (the price is parsed server-side).
-const _MAX_PRICE_CREDITS := "225"
+## Hide items priced above the largest credits pack currently OFFERED (`credits_tier_b3`
+## = 260 credits): they can't be afforded with a single In-App Purchase, so surfacing
+## them is misleading (#2298). Keep this in sync with the top card in
+## `credits_option.tscn` — swapping the storefront to another price point changes it.
+## Sent as `maxPriceCredits`, in the same whole credits the IAP balance is counted in.
+const _MAX_PRICE_CREDITS := "260"
+
+## Cards in one row of suggestions.
+const _CARDS_PER_ROW := 3
+
+## Entries pulled per row. The catalog can't filter by the body shape the player
+## wears (see `_matches_player_gender`) and doesn't always carry enough to build a
+## urn, so ask for spares and drop what doesn't fit instead of showing a short row.
+const _FETCH_COUNT := _CARDS_PER_ROW * 3
+
+## Chain segment of a collections-v2 urn, keyed by the `chainId` the catalog reports.
+## Only the Polygon-family chains are listed on purpose: they are the ones that mint
+## collections-v2 items, whose urn IS `<contract>:<itemId>`. Ethereum's collections-v1
+## urns are named (`collections-v1:<collection>:<item>`) and can't be rebuilt from the
+## ids, so an entry on another chain is skipped rather than given a plausible-looking
+## urn that resolves to nothing.
+const _URN_CHAIN_BY_ID: Dictionary = {137: "matic", 80002: "amoy"}
 
 @export var asset_type: String = "wearables"
 
@@ -96,18 +113,27 @@ func _load_category(category: String):
 
 
 func _build_catalog_url(category: String, skip: int = 0, first: int = 3) -> String:
+	# Prices are bounded in CREDITS (`minPriceCredits`/`maxPriceCredits`). The v2
+	# endpoint's `minPrice`/`maxPrice` are MANA and the unified endpoint ignores
+	# them outright, so sending those would silently drop the ceiling and offer
+	# items no single credits pack can pay for.
+	#
+	# `listingType=primary` is what `onlyMinting=true` used to say: without it the
+	# feed also carries resales, which are listings of ONE token. A card links to
+	# the item page, so a resale would quote the seller's price next to a page that
+	# doesn't sell at it. Zone already returns a few.
 	if asset_type == "emotes":
 		return (
 			DclUrls.marketplace_catalog_api()
 			+ (
-				"?first=%d&skip=%d&category=emote&isOnSale=true&minPrice=1&maxPrice=%s&onlyMinting=true&sortBy=recently_listed"
+				"?first=%d&skip=%d&category=emote&isOnSale=true&listingType=primary&minPriceCredits=1&maxPriceCredits=%s&sortBy=recently_listed"
 				% [first, skip, _MAX_PRICE_CREDITS]
 			)
 		)
 	var url = (
 		DclUrls.marketplace_catalog_api()
 		+ (
-			"?first=%d&skip=%d&category=wearable&isOnSale=true&minPrice=1&maxPrice=%s&onlyMinting=true&sortBy=recently_listed"
+			"?first=%d&skip=%d&category=wearable&isOnSale=true&listingType=primary&minPriceCredits=1&maxPriceCredits=%s&sortBy=recently_listed"
 			% [first, skip, _MAX_PRICE_CREDITS]
 		)
 	)
@@ -116,13 +142,10 @@ func _build_catalog_url(category: String, skip: int = 0, first: int = 3) -> Stri
 		wearable_cat = "hands"
 	if not wearable_cat.is_empty():
 		url += "&wearableCategory=%s" % wearable_cat
-	# Only surface items that have a representation for the player's body shape;
-	# otherwise equipping them renders the avatar naked for that slot. The catalog
-	# API's `wearableGender=male|female` returns items with that representation
-	# (male/female-exclusive + unisex), excluding the opposite-only ones.
-	var gender := MarketplaceUrl.current_player_gender()
-	if not gender.is_empty():
-		url += "&wearableGender=%s" % gender
+	# No `wearableGender`: the unified handler never reads that param (it isn't in the
+	# filter set marketplace-server builds for this feed), so sending it looks like a
+	# body-shape filter and is one more unfiltered page. The check moved onto the
+	# response instead — `_matches_player_gender`.
 	return url
 
 
@@ -137,7 +160,7 @@ func _update_visible_cards():
 
 
 func _add_placeholder_cards():
-	for i in range(3):
+	for i in range(_CARDS_PER_ROW):
 		var card = WEARABLE_ITEM_SCENE.instantiate()
 		_grid.add_child(card)
 
@@ -158,9 +181,9 @@ func _async_fetch_items(category: String):
 		visible = false
 		return
 	visible = true
-	var max_skip = maxi(total - 3, 0)
+	var max_skip = maxi(total - _FETCH_COUNT, 0)
 	var skip = randi_range(0, max_skip)
-	var url = _build_catalog_url(category, skip)
+	var url = _build_catalog_url(category, skip, _FETCH_COUNT)
 	var promise = Global.http_requester.request_json(url, HTTPClient.METHOD_GET, "", {})
 	var result = await PromiseUtils.async_awaiter(promise)
 	if category != _current_category:
@@ -174,13 +197,17 @@ func _async_fetch_items(category: String):
 
 
 func _async_fetch_total(category: String) -> int:
+	# `first=0` asks for the count without the page. The unified endpoint doesn't reject
+	# it and reports the same `total` the paged call does — verified on org and zone, for
+	# both wearables and emotes — it just clamps the page to one row, which is thrown
+	# away here. `total` is what gates the whole section, so this contract is a QA case.
 	var url = _build_catalog_url(category, 0, 0)
 	var promise = Global.http_requester.request_json(url, HTTPClient.METHOD_GET, "", {})
 	var result = await PromiseUtils.async_awaiter(promise)
 	if result is PromiseError:
 		return 0
 	var json = result.get_string_response_as_json()
-	return json.get("total", 0)
+	return _int_field(json, "total")
 
 
 func _populate_cards(items: Array):
@@ -191,19 +218,36 @@ func _populate_cards(items: Array):
 	_card_names.clear()
 	_button_cta.update_selection(-1)
 	for item_data in items:
+		if _grid.get_child_count() >= _CARDS_PER_ROW:
+			break
+		if not _matches_player_gender(item_data):
+			continue
+		var urn := _item_urn(item_data)
+		if urn.is_empty():
+			continue
 		var card = WEARABLE_ITEM_SCENE.instantiate()
 		_grid.add_child(card)
-		_setup_card(card, item_data)
+		_setup_card(card, item_data, urn)
 	_update_visible_cards()
 
 
-func _setup_card(card: WearableItem, item_data: Dictionary):
-	var urn = item_data.get("urn", "")
+func _setup_card(card: WearableItem, item_data: Dictionary, urn: String):
 	_set_rarity_background(card, item_data.get("rarity", "common"))
 
-	var price = _parse_price(item_data.get("minPrice", item_data.get("price", "0")))
-	var item_url = item_data.get("url", "")
-	var full_url = str(DclUrls.marketplace()) + item_url if not item_url.is_empty() else ""
+	# `priceCredits` is the price in the credits an In-App Purchase buys — the same
+	# unit as the balance the card compares it against to choose between DETAIL and
+	# GET CREDITS. The entry also carries `manaWei`, a different currency: 1 MANA is
+	# worth ~0.63 credits, so its figure reads about 1.6x too expensive.
+	var price := _int_field(item_data, "priceCredits")
+	# The link is built from the entry's ids for the same reason the urn above is:
+	# the catalog carries neither. DclUrls picks the route table the current env
+	# serves — the classic marketplace's "/contracts/{c}/items/{i}" is a 404 under
+	# the new shop. Both ids are known to be present, having produced the urn.
+	var full_url := str(
+		DclUrls.marketplace_item(
+			_string_field(item_data, "contractAddress"), _string_field(item_data, "itemId")
+		)
+	)
 	card.setup_marketplace(price, full_url)
 
 	card.wearable_id = urn
@@ -252,14 +296,47 @@ func _set_rarity_background(card: WearableItem, rarity: String):
 	card.texture_rect_background.show()
 
 
-## Converts wei price string to integer credits (1 MANA = 10^18 wei).
-func _parse_price(price_str: String) -> int:
-	if price_str.is_empty() or price_str == "0":
-		return 0
-	if price_str.length() <= 18:
-		return 1
-	var mana_part = price_str.substr(0, price_str.length() - 18)
-	return mana_part.to_int()
+## The item urn (`urn:decentraland:<chain>:collections-v2:<contract>:<itemId>`), which
+## the catalog never spells out — it identifies an entry by contract plus item id.
+## Everything downstream of a card (equipping the preview, the selection signals, the
+## price lookup) keys off the urn, so an entry that can't produce one is skipped.
+func _item_urn(item_data: Dictionary) -> String:
+	var chain := str(_URN_CHAIN_BY_ID.get(_int_field(item_data, "chainId"), ""))
+	var contract_address := _string_field(item_data, "contractAddress")
+	var item_id := _string_field(item_data, "itemId")
+	if chain.is_empty() or contract_address.is_empty() or item_id.is_empty():
+		return ""
+	return "urn:decentraland:%s:collections-v2:%s:%s" % [chain, contract_address, item_id]
+
+
+## Whether the entry has a representation for the body shape the player wears.
+## Equipping a wearable that only ships the other one leaves that slot naked, so a
+## mismatch is dropped here rather than asked of the server: `gender` is a derived
+## column on this feed (unisex when the item declares both base shapes) and the
+## unified query only ever SELECTs it — v2 was the one that could filter on it.
+func _matches_player_gender(item_data: Dictionary) -> bool:
+	var player_gender := MarketplaceUrl.current_player_gender()
+	if player_gender.is_empty():
+		return true
+	var gender := _string_field(item_data, "gender")
+	# Null for emotes, which have no body shape to mismatch — those are kept.
+	return gender.is_empty() or gender == "unisex" or gender == player_gender
+
+
+## Reads a string field, treating a JSON null as absent. `str(null)` is "<null>",
+## a non-empty string that would pass an is_empty() guard and reach a URL.
+func _string_field(item_data: Dictionary, key: String) -> String:
+	var value = item_data.get(key)
+	return str(value) if value != null else ""
+
+
+## Same, for the numeric fields. `Dictionary.get(key, default)` only falls back when the
+## key is MISSING, and this feed sends it present-and-null instead — `manaWei`, `tokenId`,
+## `seller` and `issuedId` all arrive that way. `int(null)` doesn't quietly give 0; it
+## pushes a Godot error (→ Sentry) on the way there.
+func _int_field(item_data: Dictionary, key: String) -> int:
+	var value = item_data.get(key)
+	return int(value) if value != null else 0
 
 
 func _async_load_thumbnail(card: WearableItem, url: String):

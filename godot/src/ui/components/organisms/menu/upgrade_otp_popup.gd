@@ -60,7 +60,7 @@ func _show_processing() -> void:
 
 func _show_code_step() -> void:
 	_hide_all()
-	label_code_subtitle.text = "We sent a code to %s" % _email
+	label_code_subtitle.text = tr("OTP_CODE_SENT_TO").format({"email": _email})
 	code_step.show()
 	line_edit_code.grab_focus()
 
@@ -81,12 +81,12 @@ func _close_flow() -> void:
 func _friendly_error(raw: String) -> String:
 	var lower := raw.to_lower()
 	if lower.contains("429") or lower.contains("rate"):
-		return "Too many attempts. Please wait a moment and try again."
+		return tr("COMMON_TOO_MANY_ATTEMPTS")
 	if lower.contains("already") or lower.contains("linked") or lower.contains("conflict"):
-		return "This email is already linked to another account."
+		return tr("COMMON_EMAIL_ALREADY_LINKED")
 	if lower.contains("invalid") or lower.contains("code") or lower.contains("400"):
-		return "That code didn't work. Check it and try again."
-	return "Something went wrong. Please try again."
+		return tr("OTP_CODE_INCORRECT")
+	return tr("COMMON_SOMETHING_WENT_WRONG_RETRY")
 
 
 # gdlint:ignore = async-function-name
@@ -95,7 +95,7 @@ func _on_button_send_code_pressed() -> void:
 	var regex := RegEx.new()
 	regex.compile(_EMAIL_REGEX)
 	if regex.search(email) == null:
-		label_email_error.text = "Please enter a valid email address."
+		label_email_error.text = tr("MENU_PLEASE_ENTER_A_VALID_EMAIL_ADDRESS")
 		label_email_error.show()
 		return
 
@@ -141,7 +141,7 @@ func _on_button_verify_pressed() -> void:
 	var regex := RegEx.new()
 	regex.compile(_CODE_REGEX)
 	if regex.search(code) == null:
-		label_code_error.text = "Enter the numeric code we sent you."
+		label_code_error.text = tr("MENU_ENTER_THE_NUMERIC_CODE_WE_SENT")
 		label_code_error.show()
 		return
 

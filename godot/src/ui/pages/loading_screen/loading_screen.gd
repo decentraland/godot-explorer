@@ -33,6 +33,9 @@ static var _low_spec_toast_shown: bool = false
 
 
 func _ready() -> void:
+	# The place-name node never auto-translates (it shows a server-supplied place
+	# title), so its pre-place-data copy is resolved here rather than in the scene.
+	rich_text_label_place_name.text = tr("LOADING_ENJOY_EXPERIENCE")
 	last_activity_time = Time.get_ticks_msec()
 	Global.scene_runner.loading_started.connect(_on_scene_runner_loading_started)
 
@@ -109,7 +112,10 @@ func set_progress(new_progress: float):
 		last_activity_time = Time.get_ticks_msec()
 	progress = new_progress
 
-	loading_progress_label.text = "%d%%" % floor(progress)
+	# Percent spacing is locale-dependent (es/pt use "50 %"), so the layout is a key.
+	loading_progress_label.text = TranslationKey.new("LOADING_PERCENT").format(
+		{"value": int(floor(progress))}
+	)
 	texture_progress_bar.value = progress
 
 
@@ -294,7 +300,7 @@ func set_place_creator(creator: String) -> void:
 		rich_text_label_creator.hide()
 		return
 	rich_text_label_creator.show()
-	rich_text_label_creator.text = "[color=#DF9CFF]By[/color] [b]" + creator + "[/b]"
+	rich_text_label_creator.text = tr("LOADING_CREATED_BY").format({"creator": creator})
 
 
 func set_place_image(image_url: String) -> void:

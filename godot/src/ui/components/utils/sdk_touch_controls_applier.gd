@@ -22,10 +22,14 @@ func _init(virtual_joystick: Control, label_crosshair: Control) -> void:
 	_label_crosshair = label_crosshair
 
 
-## Returns the scene-replaced icon `{ "hash", "url" }` a PBTouchScreenControls set for
-## `action` (e.g. "ia_primary"), or an empty Dictionary when the controls are inactive or
-## the action has no custom icon. Single source of truth shared by the joypad buttons and
-## the pointer tooltip so both render the same replaced glyph.
+## Returns the scene-replaced icon `{ "hash", "url", "scene_id" }` a PBTouchScreenControls
+## set for `action` (e.g. "ia_primary"), or an empty Dictionary when the controls are
+## inactive or the action has no custom icon. Single source of truth shared by the joypad
+## buttons and the pointer tooltip so both render the same replaced glyph.
+##
+## `scene_id` is the scene that declared the icon: consumers resolve its content mapping and
+## fetch by hash, sharing the cache entry with the scene's own UI. `url` stays as a fallback
+## for when that scene is already unloaded.
 static func get_custom_icon_for_action(action: String) -> Dictionary:
 	if not Global.touch_controls_active:
 		return {}
@@ -35,7 +39,11 @@ static func get_custom_icon_for_action(action: String) -> Dictionary:
 		var icon_hash := String(entry.get("icon_hash", ""))
 		if icon_hash.is_empty():
 			return {}
-		return {"hash": icon_hash, "url": String(entry.get("icon_url", ""))}
+		return {
+			"hash": icon_hash,
+			"url": String(entry.get("icon_url", "")),
+			"scene_id": int(entry.get("scene_id", -1)),
+		}
 	return {}
 
 

@@ -169,6 +169,18 @@ func _arm() -> void:
 	_async_capture_baseline(_token)
 
 
+## True while a marketplace round-trip is still open: the webview was launched through
+## open_and_track and its return has not been handled yet — either the arrival poll is
+## still armed, or we owe the user back the landscape we took away for the portrait-only
+## IAP view (or both).
+##
+## The deep-link router asks this so it can recognise the return from ANY deep link the web
+## fires on the way back, instead of depending on the optional `urn` param. See the
+## marketplace-return branch in deep_link_router.gd.
+func is_awaiting_return() -> bool:
+	return _state == State.ARMED or _restore_landscape_on_close
+
+
 func stop() -> void:
 	_token += 1
 	_state = State.IDLE
