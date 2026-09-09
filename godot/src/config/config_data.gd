@@ -199,6 +199,9 @@ var review_last_shot_unix: int = 0
 # Play's card is silently suppressed over quota, so without this a tester cannot tell a
 # working prompt from a broken one.
 var review_debug_enabled: bool = false
+# Which screen edge the QA panel sits on. Persisted so a tester who moved it off the navbar
+# does not have to move it again after every restart.
+var review_debug_panel_left: bool = false
 
 # Unix timestamp (seconds) of the last OS notification-permission prompt. Throttles
 # re-prompts (see NotificationsManager.PERMISSION_PROMPT_COOLDOWN_SEC): a denied
@@ -556,6 +559,10 @@ func load_from_settings_file():
 		"user", "review_debug_enabled", data_default.review_debug_enabled
 	)
 
+	self.review_debug_panel_left = settings_file.get_value(
+		"user", "review_debug_panel_left", data_default.review_debug_panel_left
+	)
+
 	self.notif_permission_last_prompt_unix = settings_file.get_value(
 		"user", "notif_permission_last_prompt_unix", data_default.notif_permission_last_prompt_unix
 	)
@@ -707,5 +714,6 @@ func save_to_settings_file():
 	new_settings_file.set_value("user", "review_shots_fired", self.review_shots_fired)
 	new_settings_file.set_value("user", "review_last_shot_unix", self.review_last_shot_unix)
 	new_settings_file.set_value("user", "review_debug_enabled", self.review_debug_enabled)
+	new_settings_file.set_value("user", "review_debug_panel_left", self.review_debug_panel_left)
 	new_settings_file.set_value("analytics", "user_id", self.analytics_user_id)
 	new_settings_file.save(DclConfig.get_settings_file_path())

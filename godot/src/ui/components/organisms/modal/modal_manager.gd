@@ -623,6 +623,33 @@ func async_show_bug_report_success_modal() -> void:
 	current_modal.button_primary.pressed.connect(close_current_modal)
 
 
+## True when ANY modal this manager owns is on screen.
+##
+## Lives here, next to the fields, rather than in the caller: this manager tracks seven separate
+## modal references, and a caller that checks only `current_modal` silently misses the other six.
+## That is a real bug we shipped — the review prompt fired straight over a travel modal opened
+## from a chat world link, because `async_show_world_modal` sets `current_travel_modal`.
+## A modal type added later is picked up here for free.
+##
+## The `visible` half is not optional. `close_travel_modal`, `close_reward_modal` and
+## `close_upgrade_modal` only `hide()` their modal, they never free it — so `is_instance_valid`
+## alone reports "open" forever after the first teleport, which would suppress every caller
+## permanently. That failure is worse and quieter than the one this fixes.
+func is_any_modal_open() -> bool:
+	for modal in [
+		current_modal,
+		current_travel_modal,
+		current_reward_modal,
+		current_upgrade_modal,
+		current_input_modal,
+		current_code_modal,
+		current_bug_report_modal,
+	]:
+		if is_instance_valid(modal) and modal.visible:
+			return true
+	return false
+
+
 ## Stand-in for Google Play's review card, shown by the review-prompt QA harness (#2739).
 ##
 ## The real card cannot be relied on in testing: over Play's quota it renders nothing, returns no

@@ -15,8 +15,11 @@ extends PanelContainer
 ## `review-debug=true` deeplink); every consumer is gated on `not Global.is_production()`.
 
 const DAY_SECONDS := 86400
+# Authored width; clamped to the viewport so it cannot overflow in portrait.
+const PANEL_WIDTH := 560.0
+const EDGE_MARGIN := 8.0
 
-var collapsed := true
+var collapsed := false
 
 var _wired := false
 
@@ -36,8 +39,16 @@ func _ready() -> void:
 	%ButtonBack14d.pressed.connect(_on_back_pressed.bind(14 * DAY_SECONDS, "14 days"))
 	%ButtonBack1y.pressed.connect(_on_back_pressed.bind(365 * DAY_SECONDS, "1 year"))
 
+	%ButtonSide.pressed.connect(_on_side_button_pressed)
+
+	# Re-anchor when the window or orientation changes: this panel lives in its own CanvasLayer,
+	# so there is no parent SafeMarginContainer to keep it clear of a notch.
+	get_window().size_changed.connect(_apply_side)
+	Global.orientation_changed.connect(_on_orientation_changed)
+
 	_ensure_wired()
 	_apply_collapsed()
+	_apply_side()
 	_refresh()
 
 
@@ -56,6 +67,55 @@ func _ensure_wired() -> void:
 	# A claim notification is server-pushed and cannot be produced on demand.
 	%ButtonWearable.pressed.connect(_fire.bind(coordinator.TRIGGER_WEARABLE_CLAIMED))
 	coordinator.debug_event.connect(_on_debug_event)
+
+
+func _on_orientation_changed(_is_portrait: bool) -> void:
+	_apply_side()
+
+
+func _on_side_button_pressed() -> void:
+	var config: ConfigData = Global.get_config()
+	config.review_debug_panel_left = not config.review_debug_panel_left
+	config.save_to_settings_file()
+	_apply_side()
+
+
+# Pin the panel to one edge, inside the device safe area. The inset math mirrors
+# safe_margin_debug_overlay.gd: Global.get_safe_area() is in window pixels, and Control offsets
+# are in viewport space, so it has to be scaled by viewport/window before use.
+func _apply_side() -> void:
+	if not is_inside_tree() or get_viewport() == null:
+		return
+	var window_size: Vector2i = DisplayServer.window_get_size()
+	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
+	if window_size.x <= 0 or window_size.y <= 0:
+		return
+
+	var safe_area: Rect2i = Global.get_safe_area()
+	var x_factor: float = viewport_size.x / float(window_size.x)
+	var y_factor: float = viewport_size.y / float(window_size.y)
+	var left_vp: float = maxi(0, safe_area.position.x) * x_factor
+	var right_vp: float = maxi(0, window_size.x - safe_area.end.x) * x_factor
+	var top_vp: float = maxi(0, safe_area.position.y) * y_factor
+
+	# Never wider than the screen allows once both insets are taken out.
+	var width: float = minf(PANEL_WIDTH, viewport_size.x - left_vp - right_vp - EDGE_MARGIN * 2.0)
+	var on_left: bool = Global.get_config().review_debug_panel_left
+	%ButtonSide.text = "▶" if on_left else "◀"
+
+	# keep_offsets = false: the preset would otherwise preserve the offsets of the old edge.
+	set_anchors_preset(Control.PRESET_TOP_LEFT if on_left else Control.PRESET_TOP_RIGHT, false)
+	offset_top = top_vp + EDGE_MARGIN
+	offset_bottom = offset_top
+	if on_left:
+		grow_horizontal = Control.GROW_DIRECTION_END
+		offset_left = left_vp + EDGE_MARGIN
+		offset_right = offset_left + width
+	else:
+		grow_horizontal = Control.GROW_DIRECTION_BEGIN
+		offset_right = -(right_vp + EDGE_MARGIN)
+		offset_left = offset_right - width
+	_snap_height.call_deferred()
 
 
 func _coordinator() -> Node:

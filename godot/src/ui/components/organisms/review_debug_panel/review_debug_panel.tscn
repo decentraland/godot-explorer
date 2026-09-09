@@ -48,6 +48,17 @@ text = "[b]Review prompt[/b]  [color=#888](test tools)[/color]"
 fit_content = true
 auto_translate_mode = 2
 
+[node name="ButtonSide" type="Button" parent="VBoxContainer/Header"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(88, 60)
+layout_mode = 2
+size_flags_horizontal = 8
+focus_mode = 0
+theme_override_font_sizes/font_size = 24
+text = "◀"
+flat = true
+auto_translate_mode = 2
+
 [node name="CollapseButton" type="Button" parent="VBoxContainer/Header"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(88, 60)

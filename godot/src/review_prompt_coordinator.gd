@@ -325,8 +325,15 @@ func _blocking_rail() -> String:
 	# just those: the Play card is rendered topmost and cannot be repositioned, so it would land
 	# over whatever we were showing. It also keeps us on the right side of the "no app-owned UI
 	# in front of the prompt" rule, which a modal underneath the card would otherwise breach.
-	if Global.modal_manager != null and Global.modal_manager.current_modal != null:
+	#
+	# Ask ModalManager rather than reading a field: it owns seven separate modal references, and
+	# checking only `current_modal` is how the prompt ended up firing over a chat world link.
+	if Global.modal_manager != null and Global.modal_manager.is_any_modal_open():
 		return "modal"
+	# The purchase overlay is a CanvasLayer of its own, not one of ModalManager's, so it needs
+	# its own question — _iap_in_flight above covers the purchase, not what is on screen.
+	if Iap.is_purchase_overlay_visible():
+		return "iap"
 	return ""
 
 
