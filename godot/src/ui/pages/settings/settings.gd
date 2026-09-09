@@ -20,6 +20,17 @@ const _SECTION_ITEM_SCENE = preload(
 )
 const CACHE_SIZE_MB: Array[int] = [1024, 2048, 4096]
 
+# Gap between the left section list and the content pane (landscape). The Account section adds the
+# avatar preview column, so it uses a tighter gap than the other sections.
+const _LAYOUT_SEPARATION_DEFAULT: int = 131
+const _LAYOUT_SEPARATION_ACCOUNT: int = 83
+
+# Top inset (px) for the account avatar so its head clears the header while the preview overlaps it.
+const _ACCOUNT_AVATAR_HEAD_INSET: int = 70
+# Bottom inset (px): the feet lift off the preview's bottom edge, which is aligned to the Version
+# label so the feet share its bottom margin.
+const _ACCOUNT_AVATAR_FEET_INSET: int = 0
+
 ## When true, settings operates as a side panel inside the explorer:
 ## orientation is not changed and the background texture is hidden.
 @export var panel_mode: bool = false:
@@ -51,12 +62,17 @@ var _custom_max_lights_row: HBoxContainer = null
 var _custom_max_lights_spin: SpinBox = null
 
 @onready var label_title: Label = %Label_Title
+@onready var hbox_layout: HBoxContainer = %HBoxContainer_Layout
 
 @onready var container_gameplay: VBoxContainer = %VBoxContainer_Gameplay
 @onready var container_graphics: VBoxContainer = %VBoxContainer_Graphics
 @onready var container_advanced: VBoxContainer = %VBoxContainer_Advanced
 @onready var container_audio: VBoxContainer = %VBoxContainer_Audio
 @onready var container_account: VBoxContainer = %VBoxContainer_Account
+@onready var label_account_nickname: Label = %Label_AccountNickname
+@onready var label_account_tag: Label = %Label_AccountTag
+@onready var label_account_address: Label = %Label_AccountAddress
+@onready var avatar_preview_account: AvatarPreview = %AvatarPreview_Account
 @onready var container_storage: VBoxContainer = %VBoxContainer_Storage
 @onready var v_box_container_sections: VBoxContainer = %VBoxContainer_Sections
 
@@ -122,6 +138,7 @@ var check_button_submit_message_closes_chat: CheckButton = %CheckButton_SubmitMe
 
 @onready var button_sign_out: CustomButton = %CustomButton_SignOut
 @onready var margin_container_content: MarginContainer = %MarginContainer_Content
+@onready var margin_container_list: MarginContainer = %MarginContainer_List
 
 
 func _ready():
@@ -129,12 +146,14 @@ func _ready():
 	_build_section_list()
 	button_back.pressed.connect(_on_back_pressed)
 	label_version.text = TranslationKey.new("SETTINGS_VERSION").format(
-		{"version": DclGlobal.get_version()}
+		{"version": _display_version()}
 	)
 	# The version row is a Button with a copy icon: tapping it copies the version string.
 	var version_button: Node = label_version.get_parent().get_parent()
 	if version_button is Button:
 		version_button.pressed.connect(_on_version_copy_pressed)
+
+	_setup_account_section()
 
 	# Preview URL: release focus when clicking outside, keep visible when keyboard opens, connect button
 	line_edit_custom_preview_url.custom_focus_entered.connect(
@@ -250,6 +269,9 @@ func _on_orientation_changed(_is_portrait: bool) -> void:
 		var row: SettingsSectionItem = _rows_by_key.get(_current_section_key)
 		if is_instance_valid(row):
 			row.set_pressed_no_signal(true)
+		# The account avatar preview is landscape-only; load it now that it's visible.
+		_async_refresh_account_avatar()
+		_position_account_avatar.call_deferred()
 
 
 func _apply_layout(is_orientation_portrait: bool) -> void:
@@ -261,10 +283,12 @@ func _apply_layout(is_orientation_portrait: bool) -> void:
 	# uses the compact small variant.
 	var button_theme_variation: String = "SecondaryOutlinedButton"
 	var margin_container_content_top: int = 0
+	var section_list_h_margin: int = 12
 	label_title.label_settings.font_size = 44
 
 	if is_orientation_portrait:
 		margin_container_content_top = 28
+		section_list_h_margin = 0
 		label_title.label_settings.font_size = 48
 		dropdown_max = 5
 		section_title_font_size = 26
@@ -288,6 +312,8 @@ func _apply_layout(is_orientation_portrait: bool) -> void:
 		node.max_visible_items = dropdown_max
 
 	margin_container_content.add_theme_constant_override("margin_top", margin_container_content_top)
+	margin_container_list.add_theme_constant_override("margin_left", section_list_h_margin)
+	margin_container_list.add_theme_constant_override("margin_right", section_list_h_margin)
 	_apply_nav_layout(is_orientation_portrait)
 
 
@@ -414,11 +440,21 @@ func _select_section(key: String, user_initiated: bool) -> void:
 	_current_section_key = key
 	show_control(section["container"])
 
+	# Tighter list↔content gap for Account (it adds the avatar preview column).
+	var layout_separation: int = (
+		_LAYOUT_SEPARATION_ACCOUNT if key == "account" else _LAYOUT_SEPARATION_DEFAULT
+	)
+	hbox_layout.add_theme_constant_override("separation", layout_separation)
+
 	var row: SettingsSectionItem = _rows_by_key.get(key)
 	if is_instance_valid(row) and row.toggle_mode and not row.button_pressed:
 		row.set_pressed_no_signal(true)
 
 	match key:
+		"account":
+			_refresh_account_header()
+			_async_refresh_account_avatar()
+			_position_account_avatar.call_deferred()
 		"gameplay":
 			_refresh_hide_explorer_ui_row()
 			_refresh_camera_mode_row()
@@ -1350,6 +1386,80 @@ func _on_custom_button_sign_out_pressed() -> void:
 	Global.sign_out()
 
 
+## Account section header (name / tag / address) + the landscape avatar preview. Populated from the
+## live profile and kept in sync on profile changes. The GuestUpgradeCard manages its own guest-only
+## visibility. (Email display for signed-in users is deferred — no stored-email source yet.)
+func _setup_account_section() -> void:
+	if not Global.player_identity.profile_changed.is_connected(_on_account_profile_changed):
+		Global.player_identity.profile_changed.connect(_on_account_profile_changed)
+	# Drive the avatar preview as a top_level node so it breaks out of the content ScrollContainer's
+	# clip and can grow tall (overlapping the header). Its rect is set from _position_account_avatar,
+	# tracking the placeholder column; the scene's own anchors are ignored at runtime.
+	avatar_preview_account.top_level = true
+	avatar_preview_account.snap_top_to_viewport = false
+	avatar_preview_account.preview_margin_top = _ACCOUNT_AVATAR_HEAD_INSET
+	avatar_preview_account.preview_margin_bottom = _ACCOUNT_AVATAR_FEET_INSET
+	var avatar_col: Control = avatar_preview_account.get_parent()
+	if not avatar_col.item_rect_changed.is_connected(_position_account_avatar):
+		avatar_col.item_rect_changed.connect(_position_account_avatar)
+	if not avatar_preview_account.visibility_changed.is_connected(_position_account_avatar):
+		avatar_preview_account.visibility_changed.connect(_position_account_avatar)
+	_refresh_account_header()
+	_async_refresh_account_avatar()
+	_position_account_avatar.call_deferred()
+
+
+## Places the top_level avatar over its placeholder column, stretched from the screen top (so it can
+## overlap the header — preview_margin_top keeps the head below it) down to the column's bottom.
+func _position_account_avatar() -> void:
+	if not is_instance_valid(avatar_preview_account):
+		return
+	var col: Control = avatar_preview_account.get_parent()
+	if col == null or not avatar_preview_account.is_visible_in_tree():
+		return
+	# Bottom of the preview aligns with the Version label's bottom (same margin as the feet); fall
+	# back to the column's own bottom if the label isn't ready.
+	var bottom: float = col.global_position.y + col.size.y
+	if is_instance_valid(label_version):
+		bottom = label_version.global_position.y + label_version.size.y
+	avatar_preview_account.global_position = Vector2(col.global_position.x, 0.0)
+	avatar_preview_account.size = Vector2(col.size.x, maxf(0.0, bottom))
+
+
+func _on_account_profile_changed(_new_profile: DclUserProfile) -> void:
+	_refresh_account_header()
+	_async_refresh_account_avatar()
+
+
+func _refresh_account_header() -> void:
+	var profile: DclUserProfile = Global.player_identity.get_profile_or_null()
+	if profile == null:
+		return
+	var address: String = profile.get_ethereum_address()
+	label_account_address.text = Global.shorten_address(address)
+	# Keep the nickname colour from the scene (no per-player tint).
+	label_account_nickname.text = profile.get_name()
+	# Claimed names carry no #tag (they show a badge on the passport); otherwise the tag is the last
+	# four hex of the address, mirroring the profile passport.
+	if profile.has_claimed_name() or address.length() < 4:
+		label_account_tag.text = ""
+		label_account_tag.hide()
+	else:
+		label_account_tag.show()
+		label_account_tag.text = "#" + address.substr(address.length() - 4, 4)
+
+
+## The 3D preview only renders in landscape (its container hides in portrait), so skip the avatar
+## load in portrait; it's refreshed on the next profile change or when reopening in landscape.
+func _async_refresh_account_avatar() -> void:
+	if Global.is_orientation_portrait():
+		return
+	var profile: DclUserProfile = Global.player_identity.get_profile_or_null()
+	if profile == null:
+		return
+	await avatar_preview_account.avatar.async_update_avatar_from_profile(profile)
+
+
 func _on_button_return_to_discover_pressed() -> void:
 	# Dev Tools: leave the current world and return to the Discover menu while
 	# staying signed in (soft sign-out). See Global.return_to_discover().
@@ -1430,12 +1540,20 @@ func _retranslate_section_list() -> void:
 			row.retranslate()
 	_update_header()
 	label_version.text = TranslationKey.new("SETTINGS_VERSION").format(
-		{"version": DclGlobal.get_version()}
+		{"version": _display_version()}
 	)
 
 
+## Debug builds show the full string (commit hash + environment) for diagnostics; release builds
+## show the clean marketing version (no hash/env).
+func _display_version() -> String:
+	if OS.is_debug_build():
+		return DclGlobal.get_full_version()
+	return DclGlobal.get_short_version()
+
+
 func _on_version_copy_pressed() -> void:
-	DisplayServer.clipboard_set(DclGlobal.get_version())
+	DisplayServer.clipboard_set(_display_version())
 	Global.send_haptic_feedback()
 	NotificationsManager.show_system_toast(tr("TOAST_COPIED"), tr("TOAST_VERSION_COPIED"))
 

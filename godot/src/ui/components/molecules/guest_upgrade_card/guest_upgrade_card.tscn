@@ -19,14 +19,14 @@ corner_radius_bottom_left = 12
 
 [sub_resource type="LabelSettings" id="LabelSettings_dheir"]
 font = ExtResource("2_kf0lf")
-font_size = 36
+font_size = 32
 font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_qvy7f"]
 
 [sub_resource type="LabelSettings" id="LabelSettings_vwd20"]
 font = ExtResource("3_dheir")
-font_size = 26
+font_size = 22
 font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_vwd20"]
