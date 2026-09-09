@@ -3,10 +3,9 @@
 [ext_resource type="Theme" uid="uid://bm1rvmngc833v" path="res://assets/themes/theme.tres" id="1_k3n6g"]
 [ext_resource type="Script" uid="uid://14kv0ufk4mf8" path="res://src/ui/pages/settings/settings.gd" id="2_gps4e"]
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="3_1ym31"]
-[ext_resource type="Resource" uid="uid://bgira6whi6odh" path="res://src/ui/layouts/settings_margin.tres" id="5_5kobr"]
+[ext_resource type="Resource" path="res://src/ui/layouts/settings_margin.tres" id="5_5kobr"]
 [ext_resource type="LabelSettings" uid="uid://casqox4mhcv7s" path="res://assets/themes/menu_title_label_settings.tres" id="6_sa1v7"]
 [ext_resource type="Script" uid="uid://bhwm0bl5qoiph" path="res://src/ui/layouts/safe_margin_container.gd" id="8_wyn32"]
-[ext_resource type="PackedScene" uid="uid://dttpatg0wspf1" path="res://src/ui/components/molecules/settings_section_item/settings_section_item.tscn" id="9_ibsaf"]
 [ext_resource type="Texture2D" uid="uid://c2vhfbpq8ffgy" path="res://assets/ui/copy-icon-2.svg" id="9_wvlp0"]
 [ext_resource type="Script" uid="uid://rsrj8osixsoo" path="res://src/ui/layouts/hide_orientation.gd" id="11_cntei"]
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="12_sa1v7"]
@@ -36,7 +35,7 @@
 
 [sub_resource type="LabelSettings" id="LabelSettings_5kobr"]
 font = ExtResource("23_c03rv")
-font_size = 30
+font_size = 24
 font_color = Color(0.9098039, 0.7254902, 1, 1)
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_5kobr"]
@@ -89,6 +88,14 @@ Label/font_sizes/font_size = 19
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_ewc0a"]
 
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_1byws"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_30x8d"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_nqmh4"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_1mbv2"]
+
 [node name="Control_SettingsPanel" type="TextureRect" unique_id=719866954]
 anchors_preset = 15
 anchor_right = 1.0
@@ -100,8 +107,8 @@ texture = ExtResource("13_xewta")
 expand_mode = 1
 stretch_mode = 6
 script = ExtResource("2_gps4e")
-metadata/mobile_preview_orientation = "landscape"
 metadata/_edit_vertical_guides_ = [108.0, 508.0]
+metadata/mobile_preview_orientation = "both"
 
 [node name="SafeMarginContainer" type="MarginContainer" parent="." unique_id=483361210]
 layout_mode = 1
@@ -181,12 +188,12 @@ layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 8
 
-[node name="Button" type="Button" parent="SafeMarginContainer/VBoxContainer2/VBoxContainer/Panel_SectionList/VBoxContainer" unique_id=1559694459]
+[node name="Button_Version" type="Button" parent="SafeMarginContainer/VBoxContainer2/VBoxContainer/Panel_SectionList/VBoxContainer" unique_id=1559694459]
 custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 flat = true
 
-[node name="HBoxContainer" type="HBoxContainer" parent="SafeMarginContainer/VBoxContainer2/VBoxContainer/Panel_SectionList/VBoxContainer/Button" unique_id=1518359132]
+[node name="HBoxContainer" type="HBoxContainer" parent="SafeMarginContainer/VBoxContainer2/VBoxContainer/Panel_SectionList/VBoxContainer/Button_Version" unique_id=1518359132]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -196,7 +203,7 @@ grow_vertical = 2
 mouse_filter = 2
 theme_override_constants/separation = 16
 
-[node name="Label_Version" type="Label" parent="SafeMarginContainer/VBoxContainer2/VBoxContainer/Panel_SectionList/VBoxContainer/Button/HBoxContainer" unique_id=1900000016]
+[node name="Label_Version" type="Label" parent="SafeMarginContainer/VBoxContainer2/VBoxContainer/Panel_SectionList/VBoxContainer/Button_Version/HBoxContainer" unique_id=1900000016]
 unique_name_in_owner = true
 auto_translate_mode = 2
 custom_minimum_size = Vector2(0, 56)
@@ -206,7 +213,7 @@ text = "Version 0.0.0"
 label_settings = SubResource("LabelSettings_5kobr")
 vertical_alignment = 1
 
-[node name="TextureRect" type="TextureRect" parent="SafeMarginContainer/VBoxContainer2/VBoxContainer/Panel_SectionList/VBoxContainer/Button/HBoxContainer" unique_id=572923040]
+[node name="TextureRect" type="TextureRect" parent="SafeMarginContainer/VBoxContainer2/VBoxContainer/Panel_SectionList/VBoxContainer/Button_Version/HBoxContainer" unique_id=572923040]
 custom_minimum_size = Vector2(32, 32)
 layout_mode = 2
 size_flags_horizontal = 4
@@ -1216,6 +1223,7 @@ text = "SETTINGS_RETURN_TO_DISCOVER"
 
 [node name="VBoxContainer_Account" type="VBoxContainer" parent="SafeMarginContainer/VBoxContainer2/VBoxContainer/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections" unique_id=1178397413]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 size_flags_vertical = 3
 mouse_filter = 2
@@ -1262,7 +1270,6 @@ font = ExtResource("25_jf4mt")
 
 [node name="VBoxContainer_HelpSupport" type="VBoxContainer" parent="SafeMarginContainer/VBoxContainer2/VBoxContainer/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections" unique_id=1900000001]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
 mouse_filter = 2
 theme = SubResource("Theme_5xlkc")
@@ -1301,8 +1308,11 @@ theme_override_constants/h_separation = 16
 theme_override_constants/icon_max_width = 32
 theme_override_fonts/font = ExtResource("23_c03rv")
 theme_override_font_sizes/font_size = 30
+theme_override_styles/normal = SubResource("StyleBoxEmpty_1byws")
+theme_override_styles/pressed = SubResource("StyleBoxEmpty_30x8d")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_nqmh4")
+theme_override_styles/hover_pressed = SubResource("StyleBoxEmpty_1mbv2")
 text = "SETTINGS_REPORT_BUG"
-icon = ExtResource("24_jf4mt")
 flat = true
 alignment = 0
 icon_alignment = 2
@@ -1319,35 +1329,17 @@ theme_override_constants/h_separation = 16
 theme_override_constants/icon_max_width = 32
 theme_override_fonts/font = ExtResource("23_c03rv")
 theme_override_font_sizes/font_size = 30
+theme_override_styles/normal = SubResource("StyleBoxEmpty_1byws")
+theme_override_styles/pressed = SubResource("StyleBoxEmpty_30x8d")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_nqmh4")
+theme_override_styles/hover_pressed = SubResource("StyleBoxEmpty_1mbv2")
 text = "SETTINGS_REPORT_CONTENT"
 icon = ExtResource("24_jf4mt")
 flat = true
 alignment = 0
 icon_alignment = 2
 
-[node name="SectionHelp" type="MarginContainer" parent="SafeMarginContainer/VBoxContainer2/VBoxContainer/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_HelpSupport" unique_id=1729427423]
-layout_mode = 2
-size_flags_vertical = 4
-
-[node name="VBoxContainer" type="VBoxContainer" parent="SafeMarginContainer/VBoxContainer2/VBoxContainer/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_HelpSupport/SectionHelp" unique_id=1763009241]
-layout_mode = 2
-theme_override_constants/separation = 0
-
-[node name="SectionTittle_Help" parent="SafeMarginContainer/VBoxContainer2/VBoxContainer/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_HelpSupport/SectionHelp/VBoxContainer" unique_id=938811847 instance=ExtResource("15_h5vs5")]
-layout_mode = 2
-title = "SETTINGS_HELP_CAPS"
-
-[node name="HSeparator" type="HSeparator" parent="SafeMarginContainer/VBoxContainer2/VBoxContainer/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_HelpSupport/SectionHelp/VBoxContainer" unique_id=1492023059]
-layout_mode = 2
-theme_override_constants/separation = 24
-theme_override_styles/separator = SubResource("StyleBoxEmpty_xewta")
-
-[node name="VBoxContainer2" type="VBoxContainer" parent="SafeMarginContainer/VBoxContainer2/VBoxContainer/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_HelpSupport/SectionHelp/VBoxContainer" unique_id=2887636]
-layout_mode = 2
-theme_override_constants/separation = 44
-
-[node name="Button_Help" type="Button" parent="SafeMarginContainer/VBoxContainer2/VBoxContainer/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_HelpSupport/SectionHelp/VBoxContainer/VBoxContainer2" unique_id=132348790]
-visible = false
+[node name="Button_Help" type="Button" parent="SafeMarginContainer/VBoxContainer2/VBoxContainer/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_HelpSupport/SectionReport/VBoxContainer/VBoxContainer" unique_id=132348790]
 custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 size_flags_horizontal = 0
@@ -1358,67 +1350,38 @@ theme_override_constants/h_separation = 16
 theme_override_constants/icon_max_width = 32
 theme_override_fonts/font = ExtResource("23_c03rv")
 theme_override_font_sizes/font_size = 30
+theme_override_styles/normal = SubResource("StyleBoxEmpty_1byws")
+theme_override_styles/pressed = SubResource("StyleBoxEmpty_30x8d")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_nqmh4")
+theme_override_styles/hover_pressed = SubResource("StyleBoxEmpty_1mbv2")
 text = "SETTINGS_HELP"
 icon = ExtResource("24_jf4mt")
 flat = true
 alignment = 0
 icon_alignment = 2
 
-[node name="Button_PrivacyPolicy" type="Button" parent="SafeMarginContainer/VBoxContainer2/VBoxContainer/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_HelpSupport/SectionHelp/VBoxContainer/VBoxContainer2" unique_id=341575027]
-custom_minimum_size = Vector2(0, 40)
+[node name="SectionCommunity" type="MarginContainer" parent="SafeMarginContainer/VBoxContainer2/VBoxContainer/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_HelpSupport" unique_id=247859888]
 layout_mode = 2
-size_flags_horizontal = 0
-focus_mode = 0
-mouse_filter = 1
-theme_override_colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
-theme_override_colors/icon_normal_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
-theme_override_constants/h_separation = 16
-theme_override_constants/icon_max_width = 32
-theme_override_fonts/font = ExtResource("23_c03rv")
-theme_override_font_sizes/font_size = 30
-text = "SETTINGS_PRIVACY_POLICY"
-icon = ExtResource("24_jf4mt")
-flat = true
-alignment = 0
-icon_alignment = 2
+size_flags_vertical = 4
 
-[node name="Button_ContentPolicy" type="Button" parent="SafeMarginContainer/VBoxContainer2/VBoxContainer/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_HelpSupport/SectionHelp/VBoxContainer/VBoxContainer2" unique_id=1675177509]
-custom_minimum_size = Vector2(0, 40)
+[node name="VBoxContainer" type="VBoxContainer" parent="SafeMarginContainer/VBoxContainer2/VBoxContainer/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_HelpSupport/SectionCommunity" unique_id=630256604]
 layout_mode = 2
-size_flags_horizontal = 0
-focus_mode = 0
-mouse_filter = 1
-theme_override_colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
-theme_override_colors/icon_normal_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
-theme_override_constants/h_separation = 16
-theme_override_constants/icon_max_width = 32
-theme_override_fonts/font = ExtResource("23_c03rv")
-theme_override_font_sizes/font_size = 30
-text = "SETTINGS_CONTENT_POLICY"
-icon = ExtResource("24_jf4mt")
-flat = true
-alignment = 0
-icon_alignment = 2
+theme_override_constants/separation = 0
 
-[node name="Button_TermsOfService" type="Button" parent="SafeMarginContainer/VBoxContainer2/VBoxContainer/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_HelpSupport/SectionHelp/VBoxContainer/VBoxContainer2" unique_id=745387022]
-custom_minimum_size = Vector2(0, 40)
+[node name="SectionTittle_Community" parent="SafeMarginContainer/VBoxContainer2/VBoxContainer/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_HelpSupport/SectionCommunity/VBoxContainer" unique_id=1042636363 instance=ExtResource("15_h5vs5")]
 layout_mode = 2
-size_flags_horizontal = 0
-focus_mode = 0
-mouse_filter = 1
-theme_override_colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
-theme_override_colors/icon_normal_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
-theme_override_constants/h_separation = 16
-theme_override_constants/icon_max_width = 32
-theme_override_fonts/font = ExtResource("23_c03rv")
-theme_override_font_sizes/font_size = 30
-text = "SETTINGS_TERMS_OF_USE"
-icon = ExtResource("24_jf4mt")
-flat = true
-alignment = 0
-icon_alignment = 2
+title = "SETTINGS_COMMUNITY_CAPS"
 
-[node name="Button_Discord" type="Button" parent="SafeMarginContainer/VBoxContainer2/VBoxContainer/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_HelpSupport/SectionHelp/VBoxContainer/VBoxContainer2" unique_id=89993618]
+[node name="HSeparator" type="HSeparator" parent="SafeMarginContainer/VBoxContainer2/VBoxContainer/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_HelpSupport/SectionCommunity/VBoxContainer" unique_id=38874098]
+layout_mode = 2
+theme_override_constants/separation = 24
+theme_override_styles/separator = SubResource("StyleBoxEmpty_xewta")
+
+[node name="VBoxContainer2" type="VBoxContainer" parent="SafeMarginContainer/VBoxContainer2/VBoxContainer/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_HelpSupport/SectionCommunity/VBoxContainer" unique_id=2043510652]
+layout_mode = 2
+theme_override_constants/separation = 44
+
+[node name="Button_Discord" type="Button" parent="SafeMarginContainer/VBoxContainer2/VBoxContainer/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_HelpSupport/SectionCommunity/VBoxContainer/VBoxContainer2" unique_id=1581535756]
 custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 size_flags_horizontal = 0
@@ -1430,16 +1393,112 @@ theme_override_constants/h_separation = 16
 theme_override_constants/icon_max_width = 32
 theme_override_fonts/font = ExtResource("23_c03rv")
 theme_override_font_sizes/font_size = 30
+theme_override_styles/normal = SubResource("StyleBoxEmpty_1byws")
+theme_override_styles/pressed = SubResource("StyleBoxEmpty_30x8d")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_nqmh4")
+theme_override_styles/hover_pressed = SubResource("StyleBoxEmpty_1mbv2")
 text = "SETTINGS_DISCORD"
 icon = ExtResource("24_jf4mt")
 flat = true
 alignment = 0
 icon_alignment = 2
 
+[node name="SectionLegal" type="MarginContainer" parent="SafeMarginContainer/VBoxContainer2/VBoxContainer/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_HelpSupport" unique_id=1729427423]
+layout_mode = 2
+size_flags_vertical = 4
+
+[node name="VBoxContainer" type="VBoxContainer" parent="SafeMarginContainer/VBoxContainer2/VBoxContainer/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_HelpSupport/SectionLegal" unique_id=1763009241]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="SectionTittle_Legal" parent="SafeMarginContainer/VBoxContainer2/VBoxContainer/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_HelpSupport/SectionLegal/VBoxContainer" unique_id=938811847 instance=ExtResource("15_h5vs5")]
+layout_mode = 2
+title = "SETTINGS_LEGAL_CAPS"
+
+[node name="HSeparator" type="HSeparator" parent="SafeMarginContainer/VBoxContainer2/VBoxContainer/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_HelpSupport/SectionLegal/VBoxContainer" unique_id=1492023059]
+layout_mode = 2
+theme_override_constants/separation = 24
+theme_override_styles/separator = SubResource("StyleBoxEmpty_xewta")
+
+[node name="VBoxContainer2" type="VBoxContainer" parent="SafeMarginContainer/VBoxContainer2/VBoxContainer/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_HelpSupport/SectionLegal/VBoxContainer" unique_id=2887636]
+layout_mode = 2
+theme_override_constants/separation = 44
+
+[node name="Button_PrivacyPolicy" type="Button" parent="SafeMarginContainer/VBoxContainer2/VBoxContainer/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_HelpSupport/SectionLegal/VBoxContainer/VBoxContainer2" unique_id=341575027]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+size_flags_horizontal = 0
+focus_mode = 0
+mouse_filter = 1
+theme_override_colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+theme_override_colors/icon_normal_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+theme_override_constants/h_separation = 16
+theme_override_constants/icon_max_width = 32
+theme_override_fonts/font = ExtResource("23_c03rv")
+theme_override_font_sizes/font_size = 30
+theme_override_styles/normal = SubResource("StyleBoxEmpty_1byws")
+theme_override_styles/pressed = SubResource("StyleBoxEmpty_30x8d")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_nqmh4")
+theme_override_styles/hover_pressed = SubResource("StyleBoxEmpty_1mbv2")
+text = "SETTINGS_PRIVACY_POLICY"
+icon = ExtResource("24_jf4mt")
+flat = true
+alignment = 0
+icon_alignment = 2
+
+[node name="Button_ContentPolicy" type="Button" parent="SafeMarginContainer/VBoxContainer2/VBoxContainer/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_HelpSupport/SectionLegal/VBoxContainer/VBoxContainer2" unique_id=1675177509]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+size_flags_horizontal = 0
+focus_mode = 0
+mouse_filter = 1
+theme_override_colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+theme_override_colors/icon_normal_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+theme_override_constants/h_separation = 16
+theme_override_constants/icon_max_width = 32
+theme_override_fonts/font = ExtResource("23_c03rv")
+theme_override_font_sizes/font_size = 30
+theme_override_styles/normal = SubResource("StyleBoxEmpty_1byws")
+theme_override_styles/pressed = SubResource("StyleBoxEmpty_30x8d")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_nqmh4")
+theme_override_styles/hover_pressed = SubResource("StyleBoxEmpty_1mbv2")
+text = "SETTINGS_CONTENT_POLICY"
+icon = ExtResource("24_jf4mt")
+flat = true
+alignment = 0
+icon_alignment = 2
+
+[node name="Button_TermsOfService" type="Button" parent="SafeMarginContainer/VBoxContainer2/VBoxContainer/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_HelpSupport/SectionLegal/VBoxContainer/VBoxContainer2" unique_id=745387022]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+size_flags_horizontal = 0
+focus_mode = 0
+mouse_filter = 1
+theme_override_colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+theme_override_colors/icon_normal_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+theme_override_constants/h_separation = 16
+theme_override_constants/icon_max_width = 32
+theme_override_fonts/font = ExtResource("23_c03rv")
+theme_override_font_sizes/font_size = 30
+theme_override_styles/normal = SubResource("StyleBoxEmpty_1byws")
+theme_override_styles/pressed = SubResource("StyleBoxEmpty_30x8d")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_nqmh4")
+theme_override_styles/hover_pressed = SubResource("StyleBoxEmpty_1mbv2")
+text = "SETTINGS_TERMS_OF_USE"
+icon = ExtResource("24_jf4mt")
+flat = true
+alignment = 0
+icon_alignment = 2
+
+[node name="HSeparator" type="HSeparator" parent="SafeMarginContainer/VBoxContainer2/VBoxContainer/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_HelpSupport" unique_id=1031301118]
+layout_mode = 2
+theme_override_constants/separation = 0
+theme_override_styles/separator = SubResource("StyleBoxEmpty_47ptg")
+
 [connection signal="visibility_changed" from="." to="." method="_on_visibility_changed"]
 [connection signal="toggled" from="SafeMarginContainer/VBoxContainer2/VBoxContainer/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_ChatAndSocial/SectionChatAndSocial/VBoxContainer/CloseChatAfterSending/CheckButton_SubmitMessageClosesChat" to="." method="_on_check_button_submit_message_closes_chat_toggled"]
-[connection signal="toggled" from="SafeMarginContainer/VBoxContainer2/VBoxContainer/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Interface/VBoxContainer/HideExplorerUI/CheckButton_HideExplorerUI" to="." method="_on_check_button_hide_explorer_ui_toggled"]
 [connection signal="toggled" from="SafeMarginContainer/VBoxContainer2/VBoxContainer/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Interface/VBoxContainer/HidePlayerNames/CheckButton_HidePlayerNames" to="." method="_on_check_button_hide_player_names_toggled"]
+[connection signal="toggled" from="SafeMarginContainer/VBoxContainer2/VBoxContainer/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Interface/VBoxContainer/HideExplorerUI/CheckButton_HideExplorerUI" to="." method="_on_check_button_hide_explorer_ui_toggled"]
 [connection signal="toggled" from="SafeMarginContainer/VBoxContainer2/VBoxContainer/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Interface/VBoxContainer/HideViewProfile/CheckButton_HideViewProfile" to="." method="_on_check_button_hide_view_profile_toggled"]
 [connection signal="toggled" from="SafeMarginContainer/VBoxContainer2/VBoxContainer/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Interface/VBoxContainer/HideWorldInteractions/CheckButton_HideWorldInteractions" to="." method="_on_check_button_hide_world_interactions_toggled"]
 [connection signal="toggled" from="SafeMarginContainer/VBoxContainer2/VBoxContainer/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Interface/VBoxContainer/HideSceneUI/CheckButton_HideSceneUI" to="." method="_on_check_button_hide_scene_ui_toggled"]
@@ -1471,7 +1530,7 @@ icon_alignment = 2
 [connection signal="pressed" from="SafeMarginContainer/VBoxContainer2/VBoxContainer/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_Account/MarginContainer/VBoxContainer/UnderlinedButton_DeleteAccount" to="." method="_on_button_delete_account_pressed"]
 [connection signal="pressed" from="SafeMarginContainer/VBoxContainer2/VBoxContainer/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_HelpSupport/SectionReport/VBoxContainer/VBoxContainer/Button_ReportBug" to="." method="_on_button_report_bug_pressed"]
 [connection signal="pressed" from="SafeMarginContainer/VBoxContainer2/VBoxContainer/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_HelpSupport/SectionReport/VBoxContainer/VBoxContainer/Button_ReportContent" to="." method="_on_button_report_content_pressed"]
-[connection signal="pressed" from="SafeMarginContainer/VBoxContainer2/VBoxContainer/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_HelpSupport/SectionHelp/VBoxContainer/VBoxContainer2/Button_PrivacyPolicy" to="." method="_on_button_privacy_policy_pressed"]
-[connection signal="pressed" from="SafeMarginContainer/VBoxContainer2/VBoxContainer/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_HelpSupport/SectionHelp/VBoxContainer/VBoxContainer2/Button_ContentPolicy" to="." method="_on_button_content_policy_pressed"]
-[connection signal="pressed" from="SafeMarginContainer/VBoxContainer2/VBoxContainer/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_HelpSupport/SectionHelp/VBoxContainer/VBoxContainer2/Button_TermsOfService" to="." method="_on_button_terms_of_service_pressed"]
-[connection signal="pressed" from="SafeMarginContainer/VBoxContainer2/VBoxContainer/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_HelpSupport/SectionHelp/VBoxContainer/VBoxContainer2/Button_Discord" to="." method="_on_button_discord_pressed"]
+[connection signal="pressed" from="SafeMarginContainer/VBoxContainer2/VBoxContainer/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_HelpSupport/SectionCommunity/VBoxContainer/VBoxContainer2/Button_Discord" to="." method="_on_button_discord_pressed"]
+[connection signal="pressed" from="SafeMarginContainer/VBoxContainer2/VBoxContainer/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_HelpSupport/SectionLegal/VBoxContainer/VBoxContainer2/Button_PrivacyPolicy" to="." method="_on_button_privacy_policy_pressed"]
+[connection signal="pressed" from="SafeMarginContainer/VBoxContainer2/VBoxContainer/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_HelpSupport/SectionLegal/VBoxContainer/VBoxContainer2/Button_ContentPolicy" to="." method="_on_button_content_policy_pressed"]
+[connection signal="pressed" from="SafeMarginContainer/VBoxContainer2/VBoxContainer/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer/MarginContainer_Upgrade/VBoxContainer_Sections/VBoxContainer_HelpSupport/SectionLegal/VBoxContainer/VBoxContainer2/Button_TermsOfService" to="." method="_on_button_terms_of_service_pressed"]

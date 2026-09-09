@@ -1437,6 +1437,7 @@ func _retranslate_section_list() -> void:
 func _on_version_copy_pressed() -> void:
 	DisplayServer.clipboard_set(DclGlobal.get_version())
 	Global.send_haptic_feedback()
+	NotificationsManager.show_system_toast(tr("TOAST_COPIED"), tr("TOAST_VERSION_COPIED"))
 
 
 func _populate_custom_particles_items() -> void:

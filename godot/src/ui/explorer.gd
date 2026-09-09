@@ -38,7 +38,6 @@ var _last_outlined_avatar: Avatar = null
 var _last_outlined_entity: Node3D = null
 var _is_loading: bool = true  # Start as loading
 var _ban_check_generation: int = 0
-var _pending_notification_toast: Dictionary = {}  # Store notification waiting to be shown
 var _subscription_reconnecting: bool = false  # Debounce for subscription_dropped
 var _resubscribe_timer: Timer = null
 ## True between social-service init and player logout. Gates retry loops so they
@@ -1362,13 +1361,12 @@ func _on_notifications_panel_closed() -> void:
 
 
 func _on_notification_queued(notification_d: Dictionary) -> void:
-	# Only show notifications if not loading
+	# Only show notifications if not loading; while loading the item stays queued and is drained by
+	# NotificationsManager.kick_queue() from _on_loading_finished.
+	# NOTE: system toasts only render while Explorer exists (it owns ui_root). In the lobby/portrait
+	# pre-Explorer flow there's no consumer, so those toasts don't show yet — future work.
 	if not _is_loading:
 		_show_notification_toast(notification_d)
-	else:
-		# Store the notification to show after loading finishes
-		if _pending_notification_toast.is_empty():
-			_pending_notification_toast = notification_d
 
 
 func _show_notification_toast(notification_d: Dictionary) -> void:
@@ -1420,7 +1418,8 @@ func _on_loading_started() -> void:
 	_is_loading = true
 	_ban_check_generation += 1
 	Global.modal_manager.ban_pre_check_active = false
-	_pending_notification_toast = {}  # Clear any pending notification
+	# Drop stale transient system toasts (e.g. copied-to-clipboard) from a previous run.
+	NotificationsManager.clear_system_toasts()
 	_session_hide_main_hud = false
 	_session_hide_view_profile = true
 	_session_hide_world_interactions = true
@@ -1437,10 +1436,8 @@ func _on_loading_started() -> void:
 func _on_loading_finished() -> void:
 	_is_loading = false
 	_update_version_label()
-	# Show pending notification if there was one queued during loading
-	if not _pending_notification_toast.is_empty():
-		_show_notification_toast(_pending_notification_toast)
-		_pending_notification_toast = {}
+	# Drain any toast queued while loading (or orphaned during the lobby before this consumer existed).
+	NotificationsManager.kick_queue()
 	if not Global.modal_manager.ban_pre_check_active:
 		_async_run_ban_check()
 

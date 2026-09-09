@@ -11,6 +11,13 @@ extends Button
 const _PORTRAIT_HEIGHT: float = 72.0
 const _LANDSCAPE_HEIGHT: float = 60.0
 
+## Label font size, larger in portrait where the list is the full-width master screen. The chevron
+## icon scales with it (same 36/30 ratio) so the trailing glyph keeps its proportion to the text.
+const _PORTRAIT_FONT_SIZE: int = 36
+const _LANDSCAPE_FONT_SIZE: int = 30
+const _PORTRAIT_ICON_WIDTH: int = 19
+const _LANDSCAPE_ICON_WIDTH: int = 16
+
 ## Translation key for the row label (e.g. "SETTINGS_GRAPHICS"). Resolved with tr() so it
 ## re-translates from settings.gd on NOTIFICATION_TRANSLATION_CHANGED.
 @export var title_key: String = "":
@@ -40,6 +47,12 @@ func _on_orientation_changed(_is_portrait: bool) -> void:
 
 func _apply_orientation(portrait: bool) -> void:
 	custom_minimum_size.y = _PORTRAIT_HEIGHT if portrait else _LANDSCAPE_HEIGHT
+	add_theme_font_size_override(
+		"font_size", _PORTRAIT_FONT_SIZE if portrait else _LANDSCAPE_FONT_SIZE
+	)
+	add_theme_constant_override(
+		"icon_max_width", _PORTRAIT_ICON_WIDTH if portrait else _LANDSCAPE_ICON_WIDTH
+	)
 	# Portrait rows are momentary — tapping navigates to the section detail, so nothing should
 	# stay pressed. Landscape rows toggle to keep the current section highlighted next to the
 	# content pane. (Turning toggle_mode off also clears any lingering pressed state.)
