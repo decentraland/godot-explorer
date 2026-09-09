@@ -68,7 +68,12 @@ func _enter_tree():
 
 
 func async_load_gltf():
-	self.dcl_gltf_src = dcl_gltf_src.to_lower()
+	# Keep dcl_gltf_src as the scene sent it: change_gltf() compares it
+	# case-sensitively against the src Rust hands back, so lowercasing it here
+	# makes every later GltfContainer mutation (e.g. a collision-mask change
+	# during AvatarAttach) look like a src change and trigger a spurious full
+	# reload. Case-normalization for lookups already happens inside
+	# content_mapping.get_hash / load_scene_gltf (Rust lowercases there).
 	var content_mapping := Global.scene_runner.get_scene_content_mapping(dcl_scene_id)
 	var file_hash := content_mapping.get_hash(dcl_gltf_src)
 	self.dcl_gltf_hash = file_hash
@@ -430,6 +435,12 @@ func change_gltf(
 			dcl_pending_node.queue_free()
 			dcl_pending_node = null
 
+		# Mark LOADING synchronously, not inside the deferred async_load_gltf:
+		# Rust's sync_gltf_loading_state runs later this same frame and would
+		# read a stale FINISHED, evict the entity from scene.gltf_loading, and
+		# the real finish would then never re-apply GltfNodeModifiers (skins
+		# lost on src change / reparent-triggered reloads).
+		dcl_gltf_loading_state = GltfContainerLoadingState.LOADING
 		async_load_gltf.call_deferred()
 
 	elif masks_changed and gltf_node != null:
@@ -462,6 +473,9 @@ func force_reload_gltf() -> void:
 		dcl_pending_node.queue_free()
 		dcl_pending_node = null
 
+	# See change_gltf: LOADING must be set synchronously so the same-frame
+	# sync_gltf_loading_state doesn't evict the entity from scene.gltf_loading.
+	dcl_gltf_loading_state = GltfContainerLoadingState.LOADING
 	async_load_gltf.call_deferred()
 
 
