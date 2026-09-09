@@ -40,8 +40,9 @@ void fragment() {
 		round_bottom_right ? r : 0.0
 	);
 
-	vec4 tex_color = texture(TEXTURE, UV);
 	float aa = fwidth(dist);
-	tex_color.a *= 1.0 - smoothstep(-aa, aa, dist);
-	COLOR = tex_color;
+	// COLOR already holds modulate * texture(TEXTURE, UV); only mask the corners on its alpha — don't
+	// re-sample the texture (that squares it) and don't overwrite (that drops the parent modulate, so
+	// a dimmed read notification would stay solid).
+	COLOR.a *= 1.0 - smoothstep(-aa, aa, dist);
 }
