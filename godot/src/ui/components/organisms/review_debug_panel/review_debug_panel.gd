@@ -11,8 +11,9 @@ extends PanelContainer
 ## It reads and writes the REAL `review_*` config keys rather than a parallel set, so what you
 ## exercise here is the shipping cadence, not a simulation of it.
 ##
-## Dev builds only. Mounted by Global when `review_debug_enabled` is set (see the
-## `review-debug=true` deeplink); every consumer is gated on `not Global.is_production()`.
+## Dev builds only, and session-only: mounted by ReviewPromptCoordinator when the launch carried
+## `?review-debug=true`. Nothing is persisted, so closing the app removes it. Every consumer is
+## gated on `not Global.is_production()`.
 
 const DAY_SECONDS := 86400
 # Authored width; clamped to the viewport so it cannot overflow in portrait.
@@ -74,9 +75,8 @@ func _on_orientation_changed(_is_portrait: bool) -> void:
 
 
 func _on_side_button_pressed() -> void:
-	var config: ConfigData = Global.get_config()
-	config.review_debug_panel_left = not config.review_debug_panel_left
-	config.save_to_settings_file()
+	var coordinator := _coordinator()
+	coordinator._panel_on_left = not coordinator._panel_on_left
 	_apply_side()
 
 
@@ -84,7 +84,7 @@ func _on_side_button_pressed() -> void:
 # safe_margin_debug_overlay.gd: Global.get_safe_area() is in window pixels, and Control offsets
 # are in viewport space, so it has to be scaled by viewport/window before use.
 func _apply_side() -> void:
-	if not is_inside_tree() or get_viewport() == null:
+	if not is_inside_tree() or get_viewport() == null or _coordinator() == null:
 		return
 	var window_size: Vector2i = DisplayServer.window_get_size()
 	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
@@ -100,7 +100,7 @@ func _apply_side() -> void:
 
 	# Never wider than the screen allows once both insets are taken out.
 	var width: float = minf(PANEL_WIDTH, viewport_size.x - left_vp - right_vp - EDGE_MARGIN * 2.0)
-	var on_left: bool = Global.get_config().review_debug_panel_left
+	var on_left: bool = _coordinator()._panel_on_left
 	%ButtonSide.text = "▶" if on_left else "◀"
 
 	# keep_offsets = false: the preset would otherwise preserve the offsets of the old edge.

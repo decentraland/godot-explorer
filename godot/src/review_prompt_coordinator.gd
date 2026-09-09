@@ -95,6 +95,12 @@ var _prewarmed: bool = false
 # CanvasLayer holding the QA panel, parented to this node (which lives under root), so the panel
 # survives explorer scene reloads and is readable in the lobby too. Null unless the harness is on.
 var _debug_layer: CanvasLayer = null
+# QA harness state, deliberately NOT persisted: it lives and dies with the process, so closing
+# the app always returns the client to normal behaviour. Turned on only by `?review-debug=true`
+# on the launch that carries it — there is no stored flag and no settings toggle to leave behind.
+var _debug_enabled: bool = false
+# Which edge the panel sits on, session-only for the same reason.
+var _panel_on_left: bool = false
 
 
 func _ready() -> void:
@@ -130,7 +136,6 @@ func _ready() -> void:
 	# QA harness (#2739). The boot deeplink is read here rather than in global.gd: that file sits
 	# exactly on its 1900-line lint ceiling, and this is the natural owner anyway.
 	capture_deeplink(Global.deep_link_obj)
-	set_debug_panel_enabled(config.review_debug_enabled)
 
 	_maybe_prewarm()
 
@@ -256,18 +261,16 @@ func trigger_label(trigger_id: String) -> String:
 ## Apply `?review-debug=true|false` from a deeplink (issue #2739) and persist it. Called at boot
 ## with the fake/generated deeplink, and again by DeepLinkRouter for a live one.
 ##
-## Accepts `false` as well as `true` so a tester can switch the harness back off without clearing
-## app data — a one-way flag would strand the panel on screen for the life of the install.
+## Session-only: nothing is written to settings.cfg, so the harness is gone the next time the app
+## starts unless the link is used again. That keeps debug state out of a tester's saved config and
+## makes "close the app" the reliable way back to normal behaviour.
 func capture_deeplink(obj) -> void:
 	if obj == null or Global.is_production():
 		return
 	if not obj.params.has("review-debug"):
 		return
 	var enabled := String(obj.params.get("review-debug", "")).to_lower() == "true"
-	var config: ConfigData = Global.get_config()
-	if config.review_debug_enabled != enabled:
-		config.review_debug_enabled = enabled
-		config.save_to_settings_file()
+	_debug_enabled = enabled
 	set_debug_panel_enabled(enabled)
 	print("[ReviewPrompt] review-debug=", enabled)
 
@@ -341,7 +344,7 @@ func _blocking_rail() -> String:
 ## codebase uses, NOT OS.is_debug_build() — CI exports with --export-release, so the debug-build
 ## check would hide this from the very builds QA installs.
 func is_debug_enabled() -> bool:
-	return Global.get_config().review_debug_enabled and not Global.is_production()
+	return _debug_enabled and not Global.is_production()
 
 
 # Android-only for now. The cadence above is deliberately platform-agnostic, so iOS parity is

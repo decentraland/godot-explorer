@@ -16,10 +16,6 @@ godot/src/ui/pages/auth/lobby.tscn	Magic Error
 # Debug-only button, only built when the debug guest-wallet reset is enabled.
 godot/src/ui/pages/auth/lobby.gd	RESET GUEST WALLET (DEBUG)
 
-# Debug-only Developer-tab row for the review-prompt QA harness (#2739); the whole row is
-# only built when not is_production(), so it is never shown to a player.
-godot/src/ui/pages/settings/settings.gd	Review prompt QA panel
-
 # Design-time placeholder; the real string is composed at loading_screen.gd:140.
 godot/src/ui/pages/loading_screen/loading_screen.tscn	0000/0000 resouces at 000.00 mb/s - Opt
 
