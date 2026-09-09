@@ -623,6 +623,45 @@ func async_show_bug_report_success_modal() -> void:
 	current_modal.button_primary.pressed.connect(close_current_modal)
 
 
+## Stand-in for Google Play's review card, shown by the review-prompt QA harness (#2739).
+##
+## The real card cannot be relied on in testing: over Play's quota it renders nothing, returns no
+## error, and still reports completion, so its absence proves nothing. In dry-run the harness
+## never calls Play at all and shows this instead, which makes the moment visible on any platform.
+##
+## Going through ModalManager rather than drawing something ad-hoc is deliberate: it becomes
+## `current_modal`, so it blocks the next ask through the same modal guard rail the real card's
+## topmost placement is protected by.
+##
+## Dev-only: the strings here are intentionally not translation keys.
+func async_show_review_prompt_debug_modal(body_text: String) -> void:
+	if Global.is_production():
+		return
+	if not is_instance_valid(current_modal):
+		if not await _async_create_modal():
+			return
+		if not NodeGuard.is_alive(
+			current_modal, "ModalManager.async_show_review_prompt_debug_modal"
+		):
+			return
+
+	# set_*_text (not set_title/set_body): these take finished text and switch the label to
+	# AUTO_TRANSLATE_MODE_DISABLED. Dev-only strings must not enter the catalogue, and a key is
+	# not available for them. The button reuses the existing generic key rather than adding a
+	# synonym.
+	# i18n-keys: MENU_OK
+	current_modal.set_title_text("Google Play review card")
+	current_modal.set_body_text(body_text)
+	current_modal.set_primary_button_text(TranslationKey.new("MENU_OK"))
+	current_modal.show_icon(Modal.MODAL_SUCCESS_ICON)
+	current_modal.hide_url()
+	current_modal.button_secondary.hide()
+	current_modal.show()
+
+	_disconnect_button_signals()
+	current_modal.button_primary.pressed.connect(close_current_modal)
+
+
 func async_show_purchase_failed_modal() -> void:
 	if not is_instance_valid(current_modal):
 		if not await _async_create_modal():

@@ -193,6 +193,13 @@ var review_session_count: int = 0
 var review_shots_fired: int = 0
 var review_last_shot_unix: int = 0
 
+# QA harness for the review prompt (issue #2739). Turns on the on-screen status panel and
+# dry-run mode, in which a shot advances the cadence but never calls Play. Set by the
+# `review-debug=true` deeplink and hard-gated to non-production builds at every consumer —
+# Play's card is silently suppressed over quota, so without this a tester cannot tell a
+# working prompt from a broken one.
+var review_debug_enabled: bool = false
+
 # Unix timestamp (seconds) of the last OS notification-permission prompt. Throttles
 # re-prompts (see NotificationsManager.PERMISSION_PROMPT_COOLDOWN_SEC): a denied
 # request — which on Android returns immediately without a dialog — isn't re-attempted
@@ -545,6 +552,10 @@ func load_from_settings_file():
 		"user", "review_last_shot_unix", data_default.review_last_shot_unix
 	)
 
+	self.review_debug_enabled = settings_file.get_value(
+		"user", "review_debug_enabled", data_default.review_debug_enabled
+	)
+
 	self.notif_permission_last_prompt_unix = settings_file.get_value(
 		"user", "notif_permission_last_prompt_unix", data_default.notif_permission_last_prompt_unix
 	)
@@ -695,5 +706,6 @@ func save_to_settings_file():
 	new_settings_file.set_value("user", "review_session_count", self.review_session_count)
 	new_settings_file.set_value("user", "review_shots_fired", self.review_shots_fired)
 	new_settings_file.set_value("user", "review_last_shot_unix", self.review_last_shot_unix)
+	new_settings_file.set_value("user", "review_debug_enabled", self.review_debug_enabled)
 	new_settings_file.set_value("analytics", "user_id", self.analytics_user_id)
 	new_settings_file.save(DclConfig.get_settings_file_path())

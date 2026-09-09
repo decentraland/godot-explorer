@@ -163,6 +163,7 @@ func _ready():
 	_update_dynamic_graphics_status()
 	_setup_impostor_benchmark_button()
 	_setup_fast_day_cycle_toggle()
+	_setup_review_debug_toggle()
 	_setup_light_debug_controls()
 	_setup_custom_profile_controls()
 	refresh_graphic_settings()
@@ -912,6 +913,41 @@ func _setup_fast_day_cycle_toggle() -> void:
 	var rows_container := template_row.get_parent()
 	rows_container.add_child(row)
 	rows_container.move_child(row, 0)
+
+
+func _setup_review_debug_toggle() -> void:
+	# Review-prompt QA harness (#2739): on-screen status panel + dry-run mode, in which a shot
+	# advances the cadence without ever calling Play. Normally switched on by the
+	# `review-debug=true` deeplink; this row exists so a tester can switch it back OFF without
+	# needing a second deeplink. Developer tab only, cloned from an existing row for style.
+	if Global.is_production():
+		return
+	var template_row := (
+		container_advanced.find_child("SceneLogsEnabled", true, false) as HBoxContainer
+	)
+	if template_row == null:
+		return
+	# duplicate(0): skip copying the template's signal connections.
+	var row := template_row.duplicate(0) as HBoxContainer
+	row.name = "ReviewDebug"
+	var label := row.find_child("Label_Title", false, false) as Label
+	# Dev-only string: deliberately not a translation key, it must not enter the catalogue.
+	label.text = "Review prompt QA panel"
+	label.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+	var check := row.find_child("CheckButton*", true, false) as CheckButton
+	check.name = "CheckButton_ReviewDebug"
+	check.button_pressed = Global.get_config().review_debug_enabled
+	check.toggled.connect(_on_review_debug_toggled)
+	var rows_container := template_row.get_parent()
+	rows_container.add_child(row)
+	rows_container.move_child(row, 0)
+
+
+func _on_review_debug_toggled(pressed: bool) -> void:
+	var config := Global.get_config()
+	config.review_debug_enabled = pressed
+	config.save_to_settings_file()
+	Global.review_prompt_coordinator.set_debug_panel_enabled(pressed)
 
 
 func _sync_light_controls_for_profile() -> void:
