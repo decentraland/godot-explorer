@@ -12,10 +12,11 @@ extends RefCounted
 # collision_mask set on Mount in player.tscn; the unit test pins the value.
 const CAMERA_COLLISION_MASK := 2
 
-# Over-shoulder framing: x = lateral camera offset, z = third-person back distance.
-# THIRD_PERSON_CAMERA.z doubles as the DEFAULT zoom distance (reset target on a
-# scene change).
-const THIRD_PERSON_CAMERA := Vector3(0.75, 0, 3)
+# Centered third-person framing (issue #2709: avatar centered on screen, no
+# over-shoulder offset). x = lateral camera offset, z = third-person back
+# distance; THIRD_PERSON_CAMERA.z doubles as the DEFAULT zoom distance (reset
+# target on a scene change).
+const THIRD_PERSON_CAMERA := Vector3(0, 0, 3)
 # First person sits just in front of the pivot (inside the head).
 const FIRST_PERSON_SPRING_LENGTH := -0.2
 
@@ -53,6 +54,11 @@ const CLAMP_NEAR_CLEARANCE := 0.08
 # Extension recovery speed (m/s). Shortening is instant (never clip), extending
 # is smoothed so geometry doesn't pop through on the way out.
 const CLAMP_EXTEND_SPEED := 8.0
+
+# Crosshair anchors (issue #2709): first person centers on screen; third person
+# sits above the avatar's head/shoulder line (~upper third).
+const CROSSHAIR_FIRST_PERSON_ANCHOR := Vector2(0.5, 0.5)
+const CROSSHAIR_THIRD_PERSON_ANCHOR := Vector2(0.5, 1.0 / 3.0)
 # Floor guard: some scene ground meshes have no usable collider (single-sided shell
 # or cmask=0), so the sweep casts slip through and — at far zoom, angled down — the
 # camera dips below the visible floor. Independent of scene geometry, the camera is
@@ -81,3 +87,14 @@ static func rig_targets(third_person: bool) -> Dictionary:
 		"spring_length": FIRST_PERSON_SPRING_LENGTH,
 		"camera_offset_x": 0.0,
 	}
+
+
+# Crosshair screen anchor (normalized) for a given spring-arm length. Interpolates
+# in sync with the camera distance across the 1p↔3p crossing so there is no jump
+# at the mode switch; fully third-person (>= MIN distance) pins the upper-third
+# anchor regardless of how far out the zoom goes.
+static func crosshair_anchor(spring_length: float) -> Vector2:
+	var t := clampf(
+		inverse_lerp(FIRST_PERSON_SPRING_LENGTH, THIRD_PERSON_MIN_DISTANCE, spring_length), 0.0, 1.0
+	)
+	return CROSSHAIR_FIRST_PERSON_ANCHOR.lerp(CROSSHAIR_THIRD_PERSON_ANCHOR, t)

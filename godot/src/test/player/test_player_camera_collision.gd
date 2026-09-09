@@ -26,6 +26,11 @@ const CameraRig := preload("res://src/logic/player/camera_rig_helpers.gd")
 const Clamp := preload("res://src/logic/player/camera_collision_clamp.gd")
 
 const SPRING_LENGTH := 3.0
+# Synthetic lateral camera offset for the clamp tests. The game default is now
+# centered (x=0, issue #2709), but the clamp's lateral-offset machinery is
+# exercised with the historical over-shoulder value so the offset-collision
+# cases keep their coverage.
+const TEST_LATERAL_OFFSET := 0.75
 # The arm extends its children BEHIND the pivot (+Z, since forward is -Z), so the
 # camera sits behind the player; the wall must be on that +Z side to be cast onto.
 const WALL_Z := 1.5
@@ -55,6 +60,7 @@ func _initialize() -> void:
 	_test_rig_targets_third_person()
 	_test_rig_targets_first_person()
 	_test_zoom_clamp_constants()
+	_test_crosshair_anchor()
 	_test_scene_pivot_centered_and_masked()
 	_test_scene_has_collision_clamp()
 	_finish()
@@ -164,7 +170,7 @@ func _build_clamp_rig() -> Dictionary:
 
 	var clamp_node: CameraCollisionClamp = Clamp.new()
 	mount.add_child(clamp_node)
-	clamp_node.lateral_offset = CameraRig.THIRD_PERSON_CAMERA.x
+	clamp_node.lateral_offset = TEST_LATERAL_OFFSET
 
 	return {"world": world, "mount": mount, "arm": arm, "cam": cam}
 
@@ -200,7 +206,7 @@ func _test_clamp_full_offset_when_clear() -> void:
 	var rig := _build_clamp_rig()
 	await _settle()
 
-	var expected := Vector3(CameraRig.THIRD_PERSON_CAMERA.x, 0, CameraRig.THIRD_PERSON_CAMERA.z)
+	var expected := Vector3(TEST_LATERAL_OFFSET, 0, CameraRig.THIRD_PERSON_CAMERA.z)
 	var cam: Camera3D = rig["cam"]
 	if cam.global_position.distance_to(expected) > 0.05:
 		_fail(
@@ -434,13 +440,9 @@ func _test_clamp_fully_blocked_stays_out_of_wall() -> void:
 
 func _test_rig_targets_third_person() -> void:
 	var t := CameraRig.rig_targets(true)
-	# Back distance is the pure Z, NOT the diagonal length — the lateral part is
-	# handled by the camera offset, so baking it in would push the camera too far.
 	_expect_eq("3rd person spring_length", CameraRig.THIRD_PERSON_CAMERA.z, t.spring_length)
-	if is_equal_approx(t.spring_length, CameraRig.THIRD_PERSON_CAMERA.length()):
-		_fail("3rd person spring_length must be the back distance (.z), not the diagonal")
-	# Over-shoulder offset is a CAMERA offset (not applied to the pivot).
-	_expect_eq("3rd person camera_offset_x", CameraRig.THIRD_PERSON_CAMERA.x, t.camera_offset_x)
+	# Issue #2709: the avatar is centered on screen — no lateral camera offset.
+	_expect_eq("3rd person camera_offset_x", 0.0, t.camera_offset_x)
 
 
 func _test_rig_targets_first_person() -> void:
@@ -484,6 +486,25 @@ func _test_zoom_clamp_constants() -> void:
 				]
 			)
 		)
+
+
+# Crosshair anchors (issue #2709): first person is screen center, full third
+# person is the upper-third anchor, and the crossing interpolates in between.
+func _test_crosshair_anchor() -> void:
+	var fp := CameraRig.crosshair_anchor(CameraRig.FIRST_PERSON_SPRING_LENGTH)
+	_expect_eq("crosshair 1p x", 0.5, fp.x)
+	_expect_eq("crosshair 1p y", 0.5, fp.y)
+	var tp := CameraRig.crosshair_anchor(CameraRig.THIRD_PERSON_MIN_DISTANCE)
+	_expect_eq("crosshair 3p x", 0.5, tp.x)
+	_expect_eq("crosshair 3p y", 1.0 / 3.0, tp.y)
+	# Beyond the min (any third-person zoom) stays pinned at the 3p anchor.
+	var far := CameraRig.crosshair_anchor(CameraRig.THIRD_PERSON_MAX_DISTANCE)
+	_expect_eq("crosshair far-zoom y", 1.0 / 3.0, far.y)
+	var mid := CameraRig.crosshair_anchor(
+		(CameraRig.FIRST_PERSON_SPRING_LENGTH + CameraRig.THIRD_PERSON_MIN_DISTANCE) * 0.5
+	)
+	if mid.y >= 0.5 or mid.y <= 1.0 / 3.0:
+		_fail("crosshair mid-transition should interpolate between anchors (y=%.3f)" % mid.y)
 
 
 # Guard the actual scene: the Mount pivot stays centered (no lateral X in its

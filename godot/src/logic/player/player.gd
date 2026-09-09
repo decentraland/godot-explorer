@@ -177,10 +177,10 @@ func set_camera_mode(mode: Global.CameraMode, play_sound: bool = true):
 		tween_out.tween_property(mount_camera, "spring_length", _zoom_level, 0.25).set_ease(
 			Tween.EASE_IN_OUT
 		)
-		# Apply X offset for over-shoulder view in third person. The offset lives
-		# on the collision clamp, which positions the camera below the arm so the
-		# spring-arm pivot stays centered on the player capsule and sweeps a
-		# sphere to the real (offset) camera position every physics frame.
+		# Apply X offset for third person (0 = avatar centered, issue #2709). The
+		# offset lives on the collision clamp, which positions the camera below the
+		# arm so the spring-arm pivot stays centered on the player capsule and
+		# sweeps a sphere to the real (offset) camera position every physics frame.
 		(
 			tween_out
 			. tween_property(
@@ -433,9 +433,9 @@ func _apply_zoom_level() -> void:
 		if _camera_mode_tween and _camera_mode_tween.is_running():
 			_camera_mode_tween.kill()
 		mount_camera.spring_length = _zoom_level
-		# The killed tween was also animating the over-shoulder lateral offset; keep
-		# it pinned so a pinch that crosses into third person doesn't leave the avatar
-		# centered (the offset animation would otherwise be cut short).
+		# The killed tween was also animating the lateral offset; keep it pinned so
+		# a pinch that crosses into third person doesn't leave the offset mid-tween
+		# (the offset animation would otherwise be cut short).
 		camera_collision_clamp.lateral_offset = CameraRigHelpers.THIRD_PERSON_CAMERA.x
 
 
