@@ -206,7 +206,12 @@ func _test_clamp_full_offset_when_clear() -> void:
 	var rig := _build_clamp_rig()
 	await _settle()
 
-	var expected := Vector3(TEST_LATERAL_OFFSET, 0, CameraRig.THIRD_PERSON_CAMERA.z)
+	# The clamp's floor guard keeps the camera at least FLOOR_CLEARANCE above the
+	# mount's parent (the synthetic world sits at y=0), so the clear-path camera
+	# rests at y = FLOOR_CLEARANCE rather than 0.
+	var expected := Vector3(
+		TEST_LATERAL_OFFSET, CameraRig.FLOOR_CLEARANCE, CameraRig.THIRD_PERSON_CAMERA.z
+	)
 	var cam: Camera3D = rig["cam"]
 	if cam.global_position.distance_to(expected) > 0.05:
 		_fail(
