@@ -43,6 +43,10 @@ EXTRA_ROOTS = [
     # notification_utils.gd composes the titles and bodies of locally scheduled event
     # reminders — user-facing text that lived outside every scanned root.
     os.path.join(REPO_ROOT, "godot", "src", "notifications"),
+    # bug_report/ declares the issue-type catalogue the form's dropdown shows. The
+    # sibling service strings in here are Intercom ticket fields, not UI, and are
+    # listed in not_translatable.txt.
+    os.path.join(REPO_ROOT, "godot", "src", "bug_report"),
 ]
 BASELINE_PATH = os.path.join(REPO_ROOT, "tools", "i18n", "unkeyed_baseline.txt")
 EXEMPT_PATH = os.path.join(REPO_ROOT, "tools", "i18n", "not_translatable.txt")
@@ -56,7 +60,17 @@ EXCLUDED_DIR_RE = re.compile(
 SCENE_TEXT_PROPS = ("text", "placeholder_text", "tooltip_text", "hint_tooltip")
 
 # Custom exported properties on instanced components that also carry display text.
-SCENE_CUSTOM_PROPS = ("title", "description", "custom_text", "place_holder", "underlined_text", "hint")
+SCENE_CUSTOM_PROPS = (
+    "title",
+    "description",
+    "custom_text",
+    "place_holder",
+    "underlined_text",
+    "hint",
+    # FieldLabel wraps this in BBCode and assigns the result to `text`, so the key
+    # never appears as a plain `text = "..."` for the scanner to find.
+    "text_value",
+)
 
 # A translation key: SCREAMING_SNAKE_CASE with at least one underscore.
 KEY_RE = re.compile(r"^[A-Z][A-Z0-9]*(_[A-Z0-9]+)+$")

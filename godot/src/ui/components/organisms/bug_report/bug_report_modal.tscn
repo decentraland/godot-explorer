@@ -1,0 +1,118 @@
+[gd_scene load_steps=9 format=3]
+
+[ext_resource type="PackedScene" path="res://src/ui/components/organisms/modal_shell/modal_shell.tscn" id="1_shell"]
+[ext_resource type="Script" path="res://src/ui/components/organisms/bug_report/bug_report_modal.gd" id="2_script"]
+[ext_resource type="Texture2D" path="res://assets/ui/bug_report/bug_icon.png" id="3_bugicon"]
+[ext_resource type="PackedScene" path="res://src/ui/components/atoms/labels/field_label/field_label.tscn" id="4_fieldlabel"]
+[ext_resource type="PackedScene" uid="uid://18n0y7iu0obv" path="res://src/ui/components/atoms/inputs/dcl_text_edit.tscn" id="5_textedit"]
+[ext_resource type="PackedScene" path="res://src/ui/components/molecules/dropdown_list/dropdown_list.tscn" id="6_dropdown"]
+[ext_resource type="PackedScene" path="res://src/ui/components/molecules/modal_actions/modal_actions.tscn" id="7_actions"]
+[ext_resource type="LabelSettings" uid="uid://b4jgney45syyy" path="res://assets/themes/modal_tittle.tres" id="8_title"]
+
+[node name="BugReportModal" instance=ExtResource("1_shell")]
+script = ExtResource("2_script")
+dismissable = false
+
+[node name="Panel" parent="Blur/VBoxContainer" index="0"]
+portrait_width = 0.919444
+
+[node name="Control_IconSlot" type="Control" parent="Blur/VBoxContainer/Panel/MarginContainer/ContentContainer" index="0"]
+custom_minimum_size = Vector2(0, 0)
+layout_mode = 2
+mouse_filter = 2
+
+[node name="TextureRect_BugIcon" type="TextureRect" parent="Blur/VBoxContainer/Panel/MarginContainer/ContentContainer/Control_IconSlot"]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -40.0
+offset_top = -104.0
+offset_right = 40.0
+offset_bottom = -24.0
+grow_horizontal = 2
+mouse_filter = 2
+texture = ExtResource("3_bugicon")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Label_Title" type="Label" parent="Blur/VBoxContainer/Panel/MarginContainer/ContentContainer" index="1"]
+layout_mode = 2
+text = "BUG_REPORT_TITLE"
+label_settings = ExtResource("8_title")
+horizontal_alignment = 1
+
+[node name="Spacer_Title" type="Control" parent="Blur/VBoxContainer/Panel/MarginContainer/ContentContainer" index="2"]
+custom_minimum_size = Vector2(0, 39)
+layout_mode = 2
+mouse_filter = 2
+
+[node name="VBox_Fields" type="VBoxContainer" parent="Blur/VBoxContainer/Panel/MarginContainer/ContentContainer" index="3"]
+layout_mode = 2
+theme_override_constants/separation = 44
+
+[node name="VBox_IssueType" type="VBoxContainer" parent="Blur/VBoxContainer/Panel/MarginContainer/ContentContainer/VBox_Fields"]
+layout_mode = 2
+theme_override_constants/separation = 20
+
+[node name="FieldLabel_IssueType" parent="Blur/VBoxContainer/Panel/MarginContainer/ContentContainer/VBox_Fields/VBox_IssueType" instance=ExtResource("4_fieldlabel")]
+layout_mode = 2
+text_value = "BUG_REPORT_ISSUE_TYPE"
+required = true
+
+[node name="DropdownList_IssueType" parent="Blur/VBoxContainer/Panel/MarginContainer/ContentContainer/VBox_Fields/VBox_IssueType" instance=ExtResource("6_dropdown")]
+unique_name_in_owner = true
+layout_mode = 2
+max_visible_items = 8
+title = ""
+
+[node name="HSeparator2" parent="Blur/VBoxContainer/Panel/MarginContainer/ContentContainer/VBox_Fields/VBox_IssueType/DropdownList_IssueType/VBoxContainer" index="2"]
+visible = false
+
+[node name="VBox_Description" type="VBoxContainer" parent="Blur/VBoxContainer/Panel/MarginContainer/ContentContainer/VBox_Fields"]
+layout_mode = 2
+theme_override_constants/separation = 18
+
+[node name="FieldLabel_Description" parent="Blur/VBoxContainer/Panel/MarginContainer/ContentContainer/VBox_Fields/VBox_Description" instance=ExtResource("4_fieldlabel")]
+layout_mode = 2
+text_value = "BUG_REPORT_DESCRIPTION"
+required = true
+
+[node name="DclTextEdit" parent="Blur/VBoxContainer/Panel/MarginContainer/ContentContainer/VBox_Fields/VBox_Description" instance=ExtResource("5_textedit")]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 248)
+layout_mode = 2
+place_holder = "BUG_REPORT_DESCRIPTION_PLACEHOLDER"
+has_max_length = true
+max_length = 300
+font_size = 28
+is_optional = false
+
+[node name="VBox_Screenshot" type="VBoxContainer" parent="Blur/VBoxContainer/Panel/MarginContainer/ContentContainer/VBox_Fields"]
+layout_mode = 2
+theme_override_constants/separation = 18
+
+[node name="FieldLabel_Screenshot" parent="Blur/VBoxContainer/Panel/MarginContainer/ContentContainer/VBox_Fields/VBox_Screenshot" instance=ExtResource("4_fieldlabel")]
+layout_mode = 2
+text_value = "BUG_REPORT_SCREENSHOT"
+
+[node name="HBox_Screenshots" type="HBoxContainer" parent="Blur/VBoxContainer/Panel/MarginContainer/ContentContainer/VBox_Fields/VBox_Screenshot"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 170)
+layout_mode = 2
+theme_override_constants/separation = 32
+
+[node name="Spacer_Actions" type="Control" parent="Blur/VBoxContainer/Panel/MarginContainer/ContentContainer" index="4"]
+custom_minimum_size = Vector2(0, 64)
+layout_mode = 2
+mouse_filter = 2
+
+[node name="ModalActions" parent="Blur/VBoxContainer/Panel/MarginContainer/ContentContainer" index="5" instance=ExtResource("7_actions")]
+unique_name_in_owner = true
+layout_mode = 2
+
+[connection signal="item_selected" from="Blur/VBoxContainer/Panel/MarginContainer/ContentContainer/VBox_Fields/VBox_IssueType/DropdownList_IssueType" to="." method="_on_issue_type_selected"]
+[connection signal="dcl_text_edit_changed" from="Blur/VBoxContainer/Panel/MarginContainer/ContentContainer/VBox_Fields/VBox_Description/DclTextEdit" to="." method="_on_dcl_text_edit_changed"]
+[connection signal="secondary_pressed" from="Blur/VBoxContainer/Panel/MarginContainer/ContentContainer/ModalActions" to="." method="_on_cancel_pressed"]
+[connection signal="primary_pressed" from="Blur/VBoxContainer/Panel/MarginContainer/ContentContainer/ModalActions" to="." method="_on_submit_pressed"]
+[connection signal="dismissed" from="." to="." method="_on_cancel_pressed"]

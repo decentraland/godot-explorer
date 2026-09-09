@@ -12,6 +12,9 @@ enum SceneLogLevel {
 }
 
 const _SECTION_TITLE_SCRIPT = preload("res://src/ui/pages/settings/section_title.gd")
+const _DROPDOWN_LIST_SCENE = preload(
+	"res://src/ui/components/molecules/dropdown_list/dropdown_list.tscn"
+)
 const CACHE_SIZE_MB: Array[int] = [1024, 2048, 4096]
 
 ## When true, settings operates as a side panel inside the explorer:
@@ -711,59 +714,42 @@ func _on_button_test_notification_pressed() -> void:
 		printerr("Failed to schedule test notification")
 
 
+## Opens the native bug report form (issue #2652). Replaces the old Google Form
+## deep link, which required an external browser and a Google sign-in to attach
+## images — the reason it was removed.
 func _on_button_report_bug_pressed() -> void:
-	var form_id = "1FAIpQLScWjnb3Ya7yV8xFn0R-yf_SMejzBGDiDTZbHaddOFEmJwAM6g"
-	var base_url = "https://docs.google.com/forms/d/e/" + form_id + "/viewform"
+	_async_open_bug_report()
 
-	var params = []
-	var platform = "desktop"
-	var device_brand = ""
-	var device_model = ""
-	var os_version = OS.get_name()
-	var app_version = DclGlobal.get_version()
-	var environment = ""
-	if DclAndroidPlugin.is_available():
-		var android_singleton = Engine.get_singleton("dcl-godot-android")
-		if android_singleton:
-			var device_info = android_singleton.getMobileDeviceInfo()
-			device_brand = device_info.get("device_brand", "")
-			device_model = device_info.get("device_model", "")
-			os_version = device_info.get("os_version", OS.get_name())
-		platform = "mobile"
-	elif DclIosPlugin.is_available():
-		var ios_singleton = Engine.get_singleton("DclGodotiOS")
-		if ios_singleton:
-			var device_info = ios_singleton.get_mobile_device_info()
-			device_brand = device_info.get("device_brand", "")
-			device_model = device_info.get("device_model", "")
-			os_version = device_info.get("os_version", OS.get_name())
-		platform = "mobile"
 
-	params.append("entry.908487542=" + os_version.uri_encode())
-	params.append("entry.1825988508=" + app_version.uri_encode())
-	params.append("entry.902053507=" + platform.uri_encode())
-	params.append("entry.983493489=" + Global.player_identity.get_address_str().uri_encode())
-	params.append("entry.519686692=" + RenderingServer.get_video_adapter_name().uri_encode())
-	params.append("entry.69678037=" + Global.session_id.uri_encode())
+func _async_open_bug_report() -> void:
+	# The screenshot was captured when this panel opened, so it shows the game
+	# rather than Settings — see BugReportCapture.
+	var modal := await Global.modal_manager.async_show_bug_report_modal(
+		BugReportCapture.latest_jpeg()
+	)
+	if not is_instance_valid(modal):
+		return
+	modal.submitted.connect(_async_on_bug_report_submitted)
+	modal.failed.connect(_on_bug_report_failed)
 
-	if "dev" in app_version:
-		environment = "develop"
-	else:
-		environment = "production"
 
-	params.append("entry.1045647501=" + environment.uri_encode())
+func _async_on_bug_report_submitted(_ticket_id: String) -> void:
+	await Global.modal_manager.async_show_bug_report_success_modal()
 
-	if device_brand != "":
-		params.append("entry.942533991=" + device_brand.uri_encode())
 
-	if device_model != "":
-		params.append("entry.264855991=" + device_model.uri_encode())
-
-	var url = base_url
-	if params.size() > 0:
-		url += "?" + "&".join(params)
-
-	Global.open_url(url)
+func _on_bug_report_failed(message: String) -> void:
+	# The message is a proxy/transport error, not something a player can act on,
+	# so it goes to the log while the toast stays generic.
+	push_warning("Bug report failed: %s" % message)
+	# tr() on both: strings passed as function arguments are invisible to
+	# extract_strings.py, so a raw literal here ships English on every locale and
+	# CI cannot catch it (PR #2779 review).
+	NotificationsManager.show_system_toast(
+		tr("TOAST_BUG_REPORT_FAILED_TITLE"),
+		tr("COMMON_SOMETHING_WENT_WRONG_RETRY"),
+		"system",
+		"alert"
+	)
 
 
 func _on_button_open_user_data_pressed() -> void:
@@ -1012,7 +998,11 @@ func _setup_custom_profile_controls() -> void:
 	_custom_particles_row = _make_custom_profile_row(
 		template_row, "CustomParticles", tr("SETTINGS_PARTICLES")
 	)
-	_custom_particles_dropdown = DropdownList.new()
+	# The SCENE, not DropdownList.new(): the script's @onready vars resolve %-unique
+	# nodes that live in dropdown_list.tscn, so a bare script instance leaves every
+	# one of them null. That logs "Node not found" and then segfaults the renderer
+	# on release builds, which debug tolerates (crash on opening Settings, #2672).
+	_custom_particles_dropdown = _DROPDOWN_LIST_SCENE.instantiate()
 	_populate_custom_particles_items()
 	_custom_particles_dropdown.item_selected.connect(_on_custom_particles_changed)
 	_custom_particles_row.add_child(_custom_particles_dropdown)
