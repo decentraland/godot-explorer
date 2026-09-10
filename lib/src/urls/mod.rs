@@ -236,9 +236,13 @@ pub fn account_deletion() -> String {
         suffix(ServiceGroup::MobileBff)
     )
 }
+/// Force-update gate. Pinned to the `v2` track: the bare `/app-versions` route serves the
+/// frozen legacy row, whose minimum can never be raised again because clients 1.12.0 to
+/// 1.13.1 render the update overlay below the startup splash and hang on the spinner
+/// instead of showing it. Only builds carrying that fix may read a movable track.
 pub fn app_versions() -> String {
     format!(
-        "https://mobile-bff.decentraland.{}/app-versions",
+        "https://mobile-bff.decentraland.{}/app-versions/v2",
         suffix(ServiceGroup::MobileBff)
     )
 }
