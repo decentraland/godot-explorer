@@ -99,4 +99,7 @@ func _apply_crosshair_anchor() -> void:
 		return
 	var anchor := CameraRigHelpers.crosshair_anchor(_player.mount_camera.spring_length)
 	var viewport_size := _label_crosshair.get_viewport().get_visible_rect().size
-	_label_crosshair.set_global_position(anchor * viewport_size - _label_crosshair.size / 2)
+	var anchor_px := anchor * viewport_size
+	_label_crosshair.set_global_position(anchor_px - _label_crosshair.size / 2)
+	# Keep the interaction raycast aimed where the crosshair is drawn (issue #2709).
+	Global.scene_runner.set_crosshair_screen_point(anchor_px)

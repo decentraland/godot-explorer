@@ -46,6 +46,9 @@ const JUMP_ACTION_NONE := 0
 const JUMP_ACTION_JUMP := 1  # ground jump or air (double) jump
 const JUMP_ACTION_GLIDE_TOGGLE := 2  # open or close the glider
 
+# AvatarRaycast resting target (matches player.tscn): straight ahead, 10m.
+const AVATAR_RAYCAST_DEFAULT_TARGET := Vector3(0, 0, -10)
+
 # #b9: matches the CharacterBody3D.collision_mask in player.tscn (layer 2 =
 # world/terrain). Keeps the ground raycast from pinging avatar wearables,
 # triggers, or other non-ground CollisionObject3Ds.
@@ -752,6 +755,28 @@ func _physics_process(dt: float) -> void:
 	# Restore velocity.y unless a floor/ceiling collision already zeroed it.
 	if not is_on_floor() and not is_on_ceiling():
 		velocity.y -= external_y_for_move
+
+	_update_avatar_raycast_to_crosshair()
+
+
+# Issue #2709: aim the avatar outline/view-profile raycast at the crosshair.
+# Same model as the scene interaction raycast (scene_manager): start at the
+# avatar's own depth so the centered avatar doesn't block the ray, direction
+# camera -> crosshair. Mobile only; desktop/cinematic keep the tscn default.
+func _update_avatar_raycast_to_crosshair() -> void:
+	if not Global.is_mobile() or Global.scene_runner.raycast_use_cursor_position:
+		avatar_raycast.position = Vector3.ZERO
+		avatar_raycast.target_position = AVATAR_RAYCAST_DEFAULT_TARGET
+		return
+	var viewport_size := get_viewport().get_visible_rect().size
+	var anchor := CameraRigHelpers.crosshair_anchor(mount_camera.spring_length)
+	var depth := maxf(-(camera.global_transform.affine_inverse() * global_position).z, 0.0)
+	var origin := camera.project_position(anchor * viewport_size, depth)
+	var dir := (origin - camera.global_position).normalized()
+	avatar_raycast.global_position = origin
+	avatar_raycast.target_position = avatar_raycast.to_local(
+		origin + dir * AVATAR_RAYCAST_DEFAULT_TARGET.length()
+	)
 
 
 # Fold scene-driven force/impulses into external_velocity, then drag and clamp.
