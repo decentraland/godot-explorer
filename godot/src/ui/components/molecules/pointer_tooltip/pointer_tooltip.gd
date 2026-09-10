@@ -1,10 +1,12 @@
 extends Control
 
-## Distance from the crosshair to a tooltip's *center*, negative because the ring is laid out
-## upwards. Both were retuned when the pill grew from 52px to 60px tall (#2710): the single-hint
-## value by half the growth, so the pill's bottom edge keeps the same gap to the crosshair, and the
-## multi-hint value by twice the growth, since neighbours are separated by half the radius.
-const RADIUS_SINGLE: float = -40.0
+## A lone tooltip is placed at 90 degrees, where the ring below degenerates to a single point, so
+## this is really a horizontal gap between the crosshair and the tooltip's left edge -- negative
+## only because it shares the ring's expression, where a negative y means "above the crosshair".
+## The pill's height does not affect it.
+const SINGLE_OFFSET_X: float = -36.0
+## Radius of the ring several tooltips are laid out on. Neighbours are separated by half of it, so
+## it grew by twice the 52px -> 60px pill height change (#2710) to keep the clearance they had.
 const RADIUS_MULTI: float = -106.0
 
 var angles: Array = [0, 60, 90, 120, 180]
@@ -37,7 +39,7 @@ func set_pointer_data(interacts_array: Array):
 		if i >= count:
 			break
 		var tooltip_scene_instance = tooltip_scene.instantiate()
-		var radius = RADIUS_MULTI if interacts_array.size() > 1 else RADIUS_SINGLE
+		var radius = RADIUS_MULTI if interacts_array.size() > 1 else SINGLE_OFFSET_X
 		tooltip_scene_instance.set_position(
 			Vector2(0, radius - (4 * count)).rotated(deg_to_rad(used_angles[i]))
 		)
