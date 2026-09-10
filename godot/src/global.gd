@@ -1097,9 +1097,9 @@ func sign_out() -> void:
 	NotificationsManager.clear_notification_history()
 	# Drop the previous account's event reminders so they can't fire on the
 	# device after sign-out. Only "event_" entries (per-account attended-event
-	# reminders) are cleared; the per-install day1 welcome is preserved. The
-	# sync-on-next-login REMOVE pass only runs for an authenticated account, so
-	# without this a signed-out/guest session keeps the old reminders scheduled.
+	# reminders) are cleared. The sync-on-next-login REMOVE pass only runs for an
+	# authenticated account, so without this a signed-out/guest session keeps the
+	# old reminders scheduled.
 	NotificationsManager.clear_event_local_notifications()
 	# The analytics first-move poll (a Timer under this autoload) reads
 	# scene_runner.player_body_node; left running it would poll the freed Player

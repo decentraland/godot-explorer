@@ -234,8 +234,6 @@ var local_assets_cache_version: int = 0
 
 var local_notifications_version: int = 0
 
-var day1_notification_scheduled: bool = false
-
 var low_spec_warning_shown: bool = false
 
 var last_places: Array[Dictionary] = []:
@@ -572,10 +570,6 @@ func load_from_settings_file():
 		"user", "local_notifications_version", data_default.local_notifications_version
 	)
 
-	self.day1_notification_scheduled = settings_file.get_value(
-		"config", "day1_notification_scheduled", data_default.day1_notification_scheduled
-	)
-
 	self.low_spec_warning_shown = settings_file.get_value(
 		"config", "low_spec_warning_shown", data_default.low_spec_warning_shown
 	)
@@ -659,9 +653,6 @@ func save_to_settings_file():
 	)
 	new_settings_file.set_value(
 		"user", "local_notifications_version", self.local_notifications_version
-	)
-	new_settings_file.set_value(
-		"config", "day1_notification_scheduled", self.day1_notification_scheduled
 	)
 	new_settings_file.set_value("config", "low_spec_warning_shown", self.low_spec_warning_shown)
 	new_settings_file.set_value("user", "upgrade_modal_shown_count", self.upgrade_modal_shown_count)

@@ -30,9 +30,6 @@ const ENABLE_DEBUG_RANDOM_NOTIFICATIONS = false
 ## DEBUG: Set to true to schedule a test notification 2 minutes from now using real event data
 const DEBUG_SCHEDULE_TEST_EVENT_NOTIFICATION = false
 
-## DEBUG: Set to true to schedule the Day 1 notification 30 seconds from now instead of 24h
-const DEBUG_DAY1_SHORT_DELAY = false
-
 ## Supported notification types (whitelist)
 ## Only these types will be shown to the user (systems that are implemented)
 const SUPPORTED_NOTIFICATION_TYPES = [
@@ -128,9 +125,6 @@ func _ready() -> void:
 
 	# Initial queue sync on app launch (relaunch)
 	_sync_notification_queue.call_deferred()
-
-	# Schedule day 1 notification (24h after first launch)
-	async_schedule_day1_notification.call_deferred()
 
 
 ## Start polling for new notifications
@@ -869,11 +863,10 @@ func force_queue_sync() -> void:
 ## Clear account-scoped event reminder notifications (used on sign-out).
 ##
 ## Only removes "event_"-prefixed entries — the per-account attended-event
-## reminders, which are derived from whoever was signed in. The per-install
-## "day1_welcome" notification is intentionally preserved (it belongs to the
-## device/install, not the session). This both cancels the pending OS
-## notification and deletes the database row, so a signed-out account's
-## reminders can no longer fire on the device.
+## reminders, which are derived from whoever was signed in. Anything else in the
+## queue belongs to the device/install rather than the session and is left alone.
+## This both cancels the pending OS notification and deletes the database row, so
+## a signed-out account's reminders can no longer fire on the device.
 func clear_event_local_notifications() -> void:
 	for notif in get_queued_local_notifications():
 		var notif_id: String = notif.get("id", "")
@@ -912,12 +905,6 @@ func _check_and_handle_version_change() -> bool:
 	Global.get_config().local_notifications_version = LOCAL_NOTIFICATIONS_VERSION
 	Global.get_config().save_to_settings_file()
 
-	# Day 1 retention notif is local-only — server sync won't restore it after the wipe.
-	if Global.get_config().day1_notification_scheduled:
-		Global.get_config().day1_notification_scheduled = false
-		Global.get_config().save_to_settings_file()
-		async_schedule_day1_notification.call_deferred()
-
 	_debug_log("All notifications cleared, version updated to v%d" % LOCAL_NOTIFICATIONS_VERSION)
 	return true
 
@@ -941,10 +928,6 @@ func async_sync_attended_events() -> void:
 	# reminders start surfacing once the user grants from the entry flow.
 	if not has_local_notification_permission():
 		_debug_log("Notification permission not granted; scheduling anyway (OS will handle)")
-
-	# iOS plugin doesn't emit permission_changed, so the lobby grant never reaches
-	# _on_permission_changed. Trigger day1 here instead — its own guards handle dedup.
-	async_schedule_day1_notification.call_deferred()
 
 	# Use the canonical events service (events.decentraland.org/api/events): when
 	# signed it reports a correct per-user `attending` flag on each event — the same
@@ -1257,35 +1240,6 @@ func _sync_notification_queue() -> void:
 				plugin.db_mark_scheduled(notif_id, true)
 
 	_debug_log("Queue sync completed")
-
-
-## Schedule a one-time "Day 1" notification 24h after first app launch.
-## Only runs on mobile, only once per install (persisted via config flag).
-func async_schedule_day1_notification() -> void:
-	if not Global.is_android() and not Global.is_ios():
-		return
-
-	var config = Global.get_config()
-	if config.day1_notification_scheduled:
-		return
-
-	if not _os_wrapper or not _os_wrapper.has_permission():
-		return
-
-	var delay_seconds := 30 if DEBUG_DAY1_SHORT_DELAY else 86400
-	var trigger_timestamp := int(Time.get_unix_time_from_system()) + delay_seconds
-	var scheduled := await async_queue_local_notification(
-		"day1_welcome",
-		"Come and say hi 👋",
-		"People are hanging out in Decentraland.",
-		trigger_timestamp,
-		"",
-		"decentraland://open?position=0,0",
-	)
-
-	if scheduled:
-		config.day1_notification_scheduled = true
-		config.save_to_settings_file()
 
 
 ## Get the appropriate plugin for the current platform (used by queue management)
