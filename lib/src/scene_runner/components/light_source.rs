@@ -253,7 +253,7 @@ pub fn update_light_source(
                     let mut light_node = match existing {
                         Some(light_node) => light_node,
                         None => {
-                            let scene = godot::tools::load::<PackedScene>(
+                            let scene = crate::scene_runner::scene_cache::packed_scene(
                                 "res://src/decentraland_components/light_source_component.tscn",
                             );
 

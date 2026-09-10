@@ -68,12 +68,10 @@ pub fn update_audio_stream(
 
                 let mut audio_stream_node = match update_mode {
                     AudioUpdateMode::FirstSpawnAudio => {
-                        let mut node = godot::tools::load::<PackedScene>(
-                            "res://src/decentraland_components/audio_stream.tscn",
-                        )
-                        .instantiate()
-                        .expect("Failed to instantiate audio_stream.tscn")
-                        .cast::<DclAudioStream>();
+                        let mut node =
+                            crate::scene_runner::scene_cache::instantiate::<DclAudioStream>(
+                                "res://src/decentraland_components/audio_stream.tscn",
+                            );
 
                         node.set_name("AudioStream");
                         node.bind_mut().set_dcl_scene_id(scene.scene_id.0);
