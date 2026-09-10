@@ -554,6 +554,8 @@ func _ready():
 	if DclIosPlugin.is_available():
 		var dcl_ios_singleton = Engine.get_singleton("DclGodotiOS")
 		if dcl_ios_singleton:
+			# Warm path only (start_kind defaults accordingly): iOS reads the cold-start
+			# link from get_deeplink_args() in _notification(NOTIFICATION_READY).
 			dcl_ios_singleton.deeplink_received.connect(deep_link_router.process_deep_link)
 
 	_dcl_swift_lib_smoke_test()
@@ -1748,7 +1750,11 @@ func _notification(what: int) -> void:
 					DclGlobal.set_dcl_environment(parsed.dclenv)
 					dcl_env_explicit = true
 
-			deep_link_router.process_deep_link(new_url)
+			# READY = the link came in on the launch intent (the tap started the process);
+			# FOCUS_IN = the app was already running. See _track_push_open_if_any.
+			deep_link_router.process_deep_link(
+				new_url, "cold" if what == NOTIFICATION_READY else "warm"
+			)
 
 
 func _on_player_profile_changed_sync_events(_profile: DclUserProfile) -> void:

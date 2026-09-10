@@ -31,7 +31,10 @@ var _pending_signin_parked_at_ms: int = 0
 
 ## Parse and store a deep link URL, then emit deep_link_received.
 ## Called from _notification(FOCUS_IN) and iOS deeplink_received signal.
-func process_deep_link(url: String) -> void:
+##
+## `start_kind` is "cold" when the link launched the process and "warm" when the app was
+## already running. Only push attribution reads it; callers that cannot tell leave the default.
+func process_deep_link(url: String, start_kind: String = "warm") -> void:
 	if url.is_empty():
 		return
 
@@ -63,6 +66,12 @@ func process_deep_link(url: String) -> void:
 	# Before any routing decision: the token has to survive whichever branch below consumes
 	# the deeplink (#2670).
 	Global._capture_campaign_token(Global.deep_link_obj)
+
+	# Push attribution. Deliberately a separate param from the ads campaign token `c=`: that
+	# one is captured sticky, first-write-wins, and persisted as the install's attribution, so
+	# routing a push through it would burn the user's install attribution slot on a
+	# re-engagement tap.
+	_track_push_open_if_any(start_kind)
 
 	# `skip-gltf` toggle has to be set BEFORE any scene's GLTF_CONTAINER
 	# component dirty-set is processed by `update_gltf_container`. The
@@ -169,6 +178,21 @@ func process_deep_link(url: String) -> void:
 		_clear_deep_link()
 	else:
 		deep_link_received.emit.call_deferred()
+
+
+## Emit `Push Opened` when this deep link carries push attribution params.
+##
+## Lives here because process_deep_link is the one place every deep link passes through on
+## both platforms and in both start kinds — attributing from a routing branch instead would
+## miss whichever branch consumed the link first.
+func _track_push_open_if_any(start_kind: String) -> void:
+	var campaign_id := str(Global.deep_link_obj.params.get("push_campaign_id", "")).strip_edges()
+	if campaign_id.is_empty():
+		return
+	var push_id := str(Global.deep_link_obj.params.get("push_id", "")).strip_edges()
+	print("[PUSH] opened campaign=", campaign_id, " push_id=", push_id, " start=", start_kind)
+	if Global.metrics != null:
+		Global.metrics.track_push_opened(campaign_id, push_id, start_kind)
 
 
 ## Route the current deep link based on its path.

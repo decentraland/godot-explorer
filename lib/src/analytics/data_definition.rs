@@ -20,6 +20,82 @@ pub struct SegmentMetricEventBody {
     properties: serde_json::Value,
 }
 
+/// A Segment `identify` call.
+///
+/// The explorer has only ever sent `track`, so this is the first non-track type in the codebase.
+/// It exists because push needs a *current-state* record per user rather than an append-only
+/// event: `identify` traits land in the warehouse's `users` table, one row per `userId` holding
+/// the latest values, which is what an audience query can join against. The same trait sent as a
+/// track property would sit in an events table where "the token this user has right now" is a
+/// window function over history instead of a column.
+///
+/// `/v1/batch` accepts mixed types in one array, so these ride the existing batching, retry
+/// buffer and EULA gate untouched.
+#[derive(Serialize)]
+pub struct SegmentIdentifyBody {
+    #[serde(rename = "type")]
+    r#type: String,
+    #[serde(rename = "userId")]
+    user_id: String,
+    #[serde(rename = "messageId")]
+    message_id: String,
+    timestamp: String,
+    traits: serde_json::Value,
+    // Segment's spec puts push tokens at `context.device.token`; downstream push destinations
+    // look there rather than in traits. We send both — the trait is what our own audience
+    // queries read out of the warehouse.
+    context: serde_json::Value,
+}
+
+/// Traits describing this install's ability to receive push.
+///
+/// Sent on every launch regardless of whether permission was granted: the denied rows are the
+/// denominator: without them "how many users can we reach" has no answer, only a numerator.
+pub struct PushIdentifyTraits {
+    /// FCM registration token; empty when the device cannot receive push at all.
+    pub fcm_token: String,
+    /// "granted" | "denied" — the app-level POST_NOTIFICATIONS permission.
+    pub push_permission: String,
+    /// Explorer release, so a campaign can be held back from versions that mishandle a deeplink.
+    pub app_version: String,
+    /// OS locale, e.g. "es_AR".
+    pub locale: String,
+    /// IANA-ish timezone name reported by the OS. Stored from day one even though v1 does not
+    /// schedule in local time — it cannot be backfilled later.
+    pub timezone: String,
+}
+
+pub fn build_segment_identify_body(
+    user_id: String,
+    traits: PushIdentifyTraits,
+    created_at: DateTime<Utc>,
+    message_id: String,
+) -> SegmentIdentifyBody {
+    let iso_ts = created_at.to_rfc3339_opts(SecondsFormat::Millis, true);
+
+    SegmentIdentifyBody {
+        r#type: "identify".to_string(),
+        user_id,
+        message_id,
+        timestamp: iso_ts.clone(),
+        traits: serde_json::json!({
+            "fcm_token": traits.fcm_token,
+            "push_platform": "android",
+            "push_permission": traits.push_permission,
+            "app_version": traits.app_version,
+            "locale": traits.locale,
+            "timezone": traits.timezone,
+            "client_timestamp": iso_ts,
+        }),
+        context: serde_json::json!({
+            "device": {
+                "token": traits.fcm_token,
+                "type": "android",
+            }
+        }),
+    }
+}
+
 #[derive(Serialize)]
 // Same for all events sent from the explorer
 pub struct SegmentEventCommonExplorerFields {
@@ -79,6 +155,7 @@ pub enum SegmentEvent {
     // (see SegmentEventLoading). Boxed: it is the largest variant by far.
     Loading(Box<SegmentEventLoading>),
     GuestWalletCreation(SegmentEventGuestWalletCreation),
+    PushOpened(SegmentEventPushOpened),
 }
 
 /// Cross-system correlation anchor. The ONLY Segment event that carries the Firebase Analytics
@@ -654,6 +731,26 @@ pub struct SegmentEventAttestationSessionCacheLoaded {
 // This is the guest-flow analog of SegmentEventAttestationAttempt and, unlike
 // AUTH_SUCCESS (a "Screen Viewed" whose login_type is a nested JSON string),
 // exposes every dimension as a first-class property.
+/// A push notification was tapped.
+///
+/// The only client-side measurement of push in v1. `Push Delivered` deliberately does not
+/// exist: FCM invokes the messaging service with no Godot process alive, so there is nowhere
+/// to emit from at delivery time. Reach is therefore read as `sent` (from the server's own
+/// send log) against `Push Opened` here — the gap between them absorbs genuine non-delivery
+/// (force-stopped or battery-restricted apps) together with plain "seen and ignored", and
+/// cannot separate the two.
+#[derive(Serialize, Clone)]
+pub struct SegmentEventPushOpened {
+    // `campaign_key` of the campaign that sent it — the join key back to push_campaigns.
+    pub push_campaign_id: String,
+    // Per-delivery id, so one campaign's opens can be attributed to individual sends.
+    pub push_id: String,
+    // "cold" when the tap launched the process, "warm" when the app was already running.
+    // Worth splitting: a cold open pays the full startup cost before the deeplink resolves,
+    // and that is where a deeplink that silently drops would show up.
+    pub start_kind: String,
+}
+
 #[derive(Serialize, Clone)]
 pub struct SegmentEventGuestWalletCreation {
     // "success" | "failure".
@@ -779,6 +876,11 @@ pub fn build_segment_event_batch_item(
         ),
         SegmentEvent::GuestWalletCreation(event) => (
             "Guest Wallet Creation".to_string(),
+            serde_json::to_value(event).unwrap(),
+            None,
+        ),
+        SegmentEvent::PushOpened(event) => (
+            "Push Opened".to_string(),
             serde_json::to_value(event).unwrap(),
             None,
         ),

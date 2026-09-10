@@ -22,13 +22,14 @@ use crate::{
 
 use super::{
     data_definition::{
-        build_segment_event_batch_item, SegmentEvent, SegmentEventAcceptFriend,
-        SegmentEventAttestationAttempt, SegmentEventAttestationSessionCacheLoaded,
-        SegmentEventBlockUser, SegmentEventChatMessageSent, SegmentEventClickButton,
-        SegmentEventCommonExplorerFields, SegmentEventExplorerMoveToParcel,
-        SegmentEventFirebaseInit, SegmentEventGuestWalletCreation,
-        SegmentEventIosStoreKitEnvironment, SegmentEventLoading, SegmentEventRequestFriend,
-        SegmentEventScreenViewed, SegmentEventUnfriend,
+        build_segment_event_batch_item, build_segment_identify_body, PushIdentifyTraits,
+        SegmentEvent, SegmentEventAcceptFriend, SegmentEventAttestationAttempt,
+        SegmentEventAttestationSessionCacheLoaded, SegmentEventBlockUser,
+        SegmentEventChatMessageSent, SegmentEventClickButton, SegmentEventCommonExplorerFields,
+        SegmentEventExplorerMoveToParcel, SegmentEventFirebaseInit,
+        SegmentEventGuestWalletCreation, SegmentEventIosStoreKitEnvironment, SegmentEventLoading,
+        SegmentEventPushOpened, SegmentEventRequestFriend, SegmentEventScreenViewed,
+        SegmentEventUnfriend,
     },
     frame::Frame,
     install_attribution::InstallAttribution,
@@ -100,6 +101,18 @@ pub struct Metrics {
     // many events batch nicely).
     flush_timer: Option<Gd<Timer>>,
 
+    // --- Push (Android) ---
+    // Guards against re-sending an identical identify: (token, permission) as last shipped.
+    // The permission belongs in the key because it changes *after* the first identify goes
+    // out — the prompt fires on the Play/Sign-In tap, well past startup — and a guard keyed
+    // on the token alone would leave every freshly-granted user recorded as `denied` until
+    // their next launch, i.e. excluded from the first audience they qualify for.
+    push_identify_sent: Option<(String, String)>,
+    // Remote kill switch (feature flag `push-enabled`), set from GDScript once flags resolve.
+    // Defaults to true: failing open matters more than the flag, because the real emergency
+    // stop is server-side (stop sending) and this only throttles collecting new tokens.
+    push_enabled: bool,
+
     base: Base<Node>,
 }
 
@@ -134,6 +147,8 @@ impl INode for Metrics {
             eula_accepted: false,
             firebase_init_queued: false,
             flush_timer: None,
+            push_identify_sent: None,
+            push_enabled: true,
             base,
         }
     }
@@ -188,6 +203,19 @@ impl INode for Metrics {
                 GString::from("session_id"),
                 GString::from(&self.common.session_id),
             );
+
+            // Push registration. Same race as above — the plugin asks FCM for the token in
+            // `onGodotSetupCompleted`, before this `ready()` — so read the cached value back
+            // after connecting. `push_identify_sent_token` makes the double delivery a no-op.
+            let ready_cb = self.base().callable("_on_fcm_token_ready");
+            DclAndroidPlugin::connect_fcm_token_ready(&ready_cb);
+            let refreshed_cb = self.base().callable("_on_fcm_token_refreshed");
+            DclAndroidPlugin::connect_fcm_token_refreshed(&refreshed_cb);
+
+            let cached_token = DclAndroidPlugin::get_fcm_token();
+            if !cached_token.to_string().is_empty() {
+                self._on_fcm_token_ready(cached_token);
+            }
         }
     }
 
@@ -228,6 +256,115 @@ impl Metrics {
             firebase_user_id: id_str,
         });
         self.queue_event("Firebase Init", event);
+    }
+
+    /// Plugin signal handler — the FCM registration token resolved for this launch.
+    ///
+    /// Fires exactly once per launch, with an empty token when the device cannot receive push
+    /// (no Play Services, no google-services.json). The empty case is still worth an identify:
+    /// it is how a device that *cannot* be reached is told apart from one that simply has not
+    /// reported yet.
+    #[func]
+    fn _on_fcm_token_ready(&mut self, token: GString) {
+        self.emit_push_identify(token.to_string());
+    }
+
+    /// Plugin signal handler — FCM rotated the token mid-session, invalidating whatever is
+    /// mapped server-side. Re-sent immediately rather than at the next launch, which could be
+    /// days away and would push to a dead token in the meantime.
+    #[func]
+    fn _on_fcm_token_refreshed(&mut self, token: GString) {
+        tracing::info!("[Push] FCM token rotated, re-sending identify");
+        self.emit_push_identify(token.to_string());
+    }
+
+    /// Remote kill switch for push registration (feature flag `push-enabled`), called from
+    /// GDScript once flags resolve. Turning it off stops new tokens from being mapped; it does
+    /// NOT stop delivery to tokens already collected — that is a server-side decision.
+    #[func]
+    pub fn set_push_enabled(&mut self, enabled: bool) {
+        if self.push_enabled == enabled {
+            return;
+        }
+        self.push_enabled = enabled;
+        tracing::info!("[Push] registration flag set to {}", enabled);
+    }
+
+    /// Re-send the push identify because the notification permission just changed.
+    ///
+    /// Called from NotificationsManager when the prompt resolves. Without it the trait would
+    /// keep saying whatever was true at startup: the prompt only appears on the explicit
+    /// Play-as-Guest / Sign-In tap, which is always after the token resolved.
+    #[func]
+    pub fn refresh_push_identify(&mut self) {
+        let token = DclAndroidPlugin::get_fcm_token().to_string();
+        if token.is_empty() {
+            return;
+        }
+        self.emit_push_identify(token);
+    }
+
+    /// Build the push `identify` and queue it for the next flush.
+    ///
+    /// Pushed straight onto `serialized_events` rather than through `queue_event`, because that
+    /// path builds a `track` body from a `SegmentEvent`. Both vectors drain through the same
+    /// batch, so the EULA gate, size limits and retry buffer still apply — an identify queued
+    /// before consent waits exactly like an event does.
+    fn emit_push_identify(&mut self, token: String) {
+        if !self.push_enabled {
+            tracing::debug!("[Push] identify skipped: registration disabled by flag");
+            return;
+        }
+        let permission = if DclAndroidPlugin::has_notification_permission() {
+            "granted"
+        } else {
+            "denied"
+        };
+        if self.push_identify_sent.as_ref() == Some(&(token.clone(), permission.to_string())) {
+            return;
+        }
+
+        let time = godot::classes::Time::singleton();
+        let timezone = time
+            .get_time_zone_from_system()
+            .get("name")
+            .map(|v| v.to_string())
+            .unwrap_or_default();
+
+        let traits = PushIdentifyTraits {
+            fcm_token: token.clone(),
+            push_permission: permission.to_string(),
+            app_version: self.common.renderer_version.clone(),
+            locale: godot::classes::Os::singleton().get_locale().to_string(),
+            timezone,
+        };
+
+        let body = build_segment_identify_body(
+            self.user_id.clone(),
+            traits,
+            Utc::now(),
+            Uuid::new_v4().to_string(),
+        );
+        let json_body = match serde_json::to_string(&body) {
+            Ok(j) => j,
+            Err(e) => {
+                tracing::error!("[Push] failed to serialize identify: {}", e);
+                return;
+            }
+        };
+
+        if self.debug_level == 1 {
+            tracing::info!("[Push] identify queued: {}", json_body);
+        } else {
+            tracing::info!(
+                "[Push] identify queued (token_len={}, permission={})",
+                token.len(),
+                permission
+            );
+        }
+
+        self.push_identify_sent = Some((token, permission.to_string()));
+        self.serialized_events.push(json_body);
     }
 
     #[func]
@@ -333,6 +470,8 @@ impl Metrics {
             eula_accepted: false,
             firebase_init_queued: false,
             flush_timer: None,
+            push_identify_sent: None,
+            push_enabled: true,
             base,
         })
     }
@@ -390,6 +529,24 @@ impl Metrics {
             },
         });
         self.queue_event("Chat Message Sent", event);
+    }
+
+    /// A push notification was tapped. Emitted from DeepLinkRouter, which is the single point
+    /// every deep link passes through — cold start and warm start alike — so a push cannot be
+    /// counted twice or missed depending on how the app happened to be running.
+    #[func]
+    pub fn track_push_opened(
+        &mut self,
+        push_campaign_id: String,
+        push_id: String,
+        start_kind: String,
+    ) {
+        let event = SegmentEvent::PushOpened(SegmentEventPushOpened {
+            push_campaign_id,
+            push_id,
+            start_kind,
+        });
+        self.queue_event("Push Opened", event);
     }
 
     #[func]

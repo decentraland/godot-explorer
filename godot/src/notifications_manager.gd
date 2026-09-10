@@ -511,10 +511,11 @@ func _on_poll_timeout() -> void:
 func _on_permission_changed(granted: bool) -> void:
 	if granted:
 		Global.metrics.track_click_button("accept", "NOTIF_PROMPT", "")
-		# Permission just granted — try scheduling Day 1 notification now
-		async_schedule_day1_notification.call_deferred()
 	else:
 		Global.metrics.track_click_button("reject", "NOTIF_PROMPT", "")
+	# The push identify already went out at startup carrying the pre-prompt answer, so the
+	# reachability trait is stale from here on unless it is re-sent.
+	Global.metrics.refresh_push_identify()
 	Global.metrics.flush.call_deferred()
 	local_notification_permission_changed.emit(granted)
 
