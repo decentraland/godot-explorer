@@ -18,6 +18,10 @@ const _LANDSCAPE_FONT_SIZE: int = 30
 const _PORTRAIT_ICON_WIDTH: int = 19
 const _LANDSCAPE_ICON_WIDTH: int = 16
 
+## Label weight follows the pressed/selected state: bold (700) when selected, medium (500) otherwise.
+const _FONT_UNPRESSED: FontFile = preload("res://assets/themes/fonts/inter/Inter-Medium.ttf")
+const _FONT_PRESSED: FontFile = preload("res://assets/themes/fonts/inter/Inter-Bold.ttf")
+
 ## Translation key for the row label (e.g. "SETTINGS_GRAPHICS"). Resolved with tr() so it
 ## re-translates from settings.gd on NOTIFICATION_TRANSLATION_CHANGED.
 @export var title_key: String = "":
@@ -32,8 +36,11 @@ const _LANDSCAPE_ICON_WIDTH: int = 16
 func _ready() -> void:
 	if not Global.orientation_changed.is_connected(_on_orientation_changed):
 		Global.orientation_changed.connect(_on_orientation_changed)
+	if not toggled.is_connected(_on_toggled):
+		toggled.connect(_on_toggled)
 	_apply_orientation(Global.is_orientation_portrait())
 	_refresh_title()
+	refresh_weight()
 
 
 func _exit_tree() -> void:
@@ -43,6 +50,16 @@ func _exit_tree() -> void:
 
 func _on_orientation_changed(_is_portrait: bool) -> void:
 	_apply_orientation(Global.is_orientation_portrait())
+
+
+func _on_toggled(_pressed: bool) -> void:
+	refresh_weight()
+
+
+## Syncs the font weight to the current pressed state. Public so settings.gd can call it after
+## set_pressed_no_signal / ButtonGroup deselects, which don't emit `toggled`.
+func refresh_weight() -> void:
+	add_theme_font_override("font", _FONT_PRESSED if button_pressed else _FONT_UNPRESSED)
 
 
 func _apply_orientation(portrait: bool) -> void:
@@ -57,6 +74,7 @@ func _apply_orientation(portrait: bool) -> void:
 	# stay pressed. Landscape rows toggle to keep the current section highlighted next to the
 	# content pane. (Turning toggle_mode off also clears any lingering pressed state.)
 	toggle_mode = not portrait
+	refresh_weight()
 
 
 func _refresh_title() -> void:

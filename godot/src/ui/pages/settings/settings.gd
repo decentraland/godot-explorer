@@ -130,7 +130,6 @@ var check_button_submit_message_closes_chat: CheckButton = %CheckButton_SubmitMe
 @onready var dropdown_list_realm: DropdownList = %DropdownList_Realm
 
 @onready var button_back: Button = %Button_Back
-@onready var panel_section_list: Control = %Panel_SectionList
 @onready var panel_content: Control = %Panel_Content
 @onready var label_version: Label = %Label_Version
 @onready var section_buttons_container: VBoxContainer = %VBoxContainer_SectionButtons
@@ -270,6 +269,7 @@ func _on_orientation_changed(_is_portrait: bool) -> void:
 		var row: SettingsSectionItem = _rows_by_key.get(_current_section_key)
 		if is_instance_valid(row):
 			row.set_pressed_no_signal(true)
+			row.refresh_weight()
 		# The account avatar preview is landscape-only; load it now that it's visible.
 		_async_refresh_account_avatar()
 		_position_account_avatar.call_deferred()
@@ -326,14 +326,14 @@ func _apply_nav_layout(is_orientation_portrait: bool) -> void:
 	)
 	if is_orientation_portrait:
 		# Portrait: the list is the only visible pane, so let it expand to the full width.
-		panel_section_list.visible = not _portrait_detail
+		margin_container_list.visible = not _portrait_detail
 		panel_content.visible = _portrait_detail
-		panel_section_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		margin_container_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	else:
 		# Landscape: list docks left at its own custom_minimum_size; content takes the rest.
-		panel_section_list.visible = true
+		margin_container_list.visible = true
 		panel_content.visible = true
-		panel_section_list.size_flags_horizontal = Control.SIZE_FILL
+		margin_container_list.size_flags_horizontal = Control.SIZE_FILL
 	_update_header()
 
 
@@ -450,6 +450,12 @@ func _select_section(key: String, user_initiated: bool) -> void:
 	var row: SettingsSectionItem = _rows_by_key.get(key)
 	if is_instance_valid(row) and row.toggle_mode and not row.button_pressed:
 		row.set_pressed_no_signal(true)
+
+	# set_pressed_no_signal and the ButtonGroup's silent deselect don't emit `toggled`, so refresh
+	# every row's font weight (bold when selected, medium otherwise) here.
+	for r in _rows_by_key.values():
+		if is_instance_valid(r):
+			r.refresh_weight()
 
 	match key:
 		"account":

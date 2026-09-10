@@ -31,6 +31,16 @@ extends MarginContainer
 		if Engine.is_editor_hint() and is_inside_tree():
 			_update_margins_editor()
 
+## Ignore the OS bottom safe-area inset in BOTH orientations and use only the hand-set floor
+## (margin_profile.bottom in landscape / .portrait_bottom in portrait, else min_margin_bottom). Use
+## this when the container's bottom edge sits above a sibling bottom bar (e.g. the navbar in
+## menu.tscn), which already reserves the OS inset — so applying it here too would double-count.
+@export var ignore_safe_area_bottom: bool = false:
+	set(value):
+		ignore_safe_area_bottom = value
+		if Engine.is_editor_hint() and is_inside_tree():
+			_update_margins_editor()
+
 
 func _ready() -> void:
 	if Engine.is_editor_hint():
@@ -138,7 +148,12 @@ func _apply_margins(top: int, left: int, bottom: int, right: int) -> void:
 	if use_right:
 		add_theme_constant_override("margin_right", applied_right)
 	if use_bottom:
-		add_theme_constant_override("margin_bottom", maxi(bottom, floor_bottom))
+		var applied_bottom: int = maxi(bottom, floor_bottom)
+		# When the bottom edge sits above a sibling bottom bar, the OS inset is already reserved
+		# there, so use only the hand-set floor in portrait to avoid double-counting.
+		if ignore_safe_area_bottom:
+			applied_bottom = floor_bottom
+		add_theme_constant_override("margin_bottom", applied_bottom)
 
 
 func _on_size_changed():
