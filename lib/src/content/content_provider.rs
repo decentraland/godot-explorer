@@ -3062,7 +3062,7 @@ impl ContentProvider {
                 optimized_wearable_counter.fetch_add(1, Ordering::Relaxed);
                 Ok(Some(GString::from(&scene_path).to_variant()))
             } else {
-                tracing::error!(
+                tracing::warn!(
                     "Failed to load {} resource pack: {}",
                     asset_type,
                     zip_godot_path
