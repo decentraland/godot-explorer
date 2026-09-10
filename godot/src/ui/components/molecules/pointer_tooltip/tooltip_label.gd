@@ -9,8 +9,15 @@ extends PanelContainer
 # i18n-keys: TOOLTIP_VIEW_PROFILE
 const VIEW_PROFILE_KEY: String = "TOOLTIP_VIEW_PROFILE"
 
-const BG_COLOR_NORMAL: String = "#00000080"
-const BG_COLOR_PRESSED: String = "#44444480"
+const BG_COLOR_NORMAL: String = "#161518B3"
+const BG_COLOR_PRESSED: String = "#444348B3"
+## Shared HUD glyph tint (Figma "IconHUD"). Applied to the built-in monochrome-white glyphs and to
+## keyboard letters; scene-replaced creator icons keep their own colors (see _show_keyboard_icon).
+const ICON_COLOR := Color("#DFD0FF")
+## Invisible tap growth per side, matching the design's +10px hit target. Same _has_point trick as
+## the TapArea atom (src/ui/components/atoms/tap_area/tap_area.gd), which this node can't extend
+## because it is a PanelContainer.
+const TAP_GROW: float = 10.0
 const ICON_LEFT_CLICK = preload("uid://cljfaeb8np0ma")
 const ICON_INTERACTIVE_POINTER = preload("uid://72xpjysoxgwo")
 const ICON_JUMP = preload("uid://ck3atqpytstpo")
@@ -26,7 +33,6 @@ var _custom_icon_hash: String = ""
 
 @onready var label_action = %Label_Action
 @onready var texture_rect_action_icon = %TextureRect_ActionIcon
-@onready var panel_container_inputs: PanelContainer = %PanelContainer_Inputs
 @onready var label_text = %Label_Text
 @onready var margin_container_icons: MarginContainer = %MarginContainer_Icons
 
@@ -149,7 +155,7 @@ func _async_apply_custom_icon_override(action: String) -> void:
 
 	var cached: Texture2D = Global.content_provider.get_texture_from_hash(icon_hash)
 	if cached != null:
-		_show_keyboard_icon(cached)
+		_show_keyboard_icon(cached, Color.WHITE)
 		return
 
 	# Fetch by hash through the declaring scene's mapping so this shares the cache slot with
@@ -166,23 +172,30 @@ func _async_apply_custom_icon_override(action: String) -> void:
 	if _custom_icon_hash != icon_hash:
 		return
 	if not (res is PromiseError):
-		_show_keyboard_icon(res.texture)
+		_show_keyboard_icon(res.texture, Color.WHITE)
 
 
 func _show_keyboard(text: String) -> void:
 	show()
-	panel_container_inputs.show()
 	label_action.show()
 	texture_rect_action_icon.hide()
 	label_action.text = text
 
 
-func _show_keyboard_icon(icon: Texture2D) -> void:
+## `tint` is ICON_COLOR for the built-in white glyphs, but Color.WHITE (i.e. untinted) for a
+## scene-replaced creator icon, which arrives with its own colors — same as the on-screen gamepad
+## button renders it (button_touch_action.tscn's CustomIcon has no modulate).
+func _show_keyboard_icon(icon: Texture2D, tint: Color = ICON_COLOR) -> void:
 	show()
-	panel_container_inputs.show()
 	texture_rect_action_icon.show()
 	label_action.hide()
+	texture_rect_action_icon.self_modulate = tint
 	texture_rect_action_icon.texture = icon
+
+
+## Grow the touch target by TAP_GROW on every side without changing the visual size.
+func _has_point(point: Vector2) -> bool:
+	return Rect2(Vector2.ZERO, size).grow(TAP_GROW).has_point(point)
 
 
 func _physics_process(_delta):
