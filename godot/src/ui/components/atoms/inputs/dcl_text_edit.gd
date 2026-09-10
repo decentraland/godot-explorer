@@ -15,6 +15,14 @@ const LONG_PRESS_DURATION := 0.5
 @export var has_max_length: bool = true
 @export var max_length: int = 15
 @export var is_optional: bool = true
+## Overrides the text size. 0 keeps whatever `dcl_theme.tres` supplies for
+## TextEdit, so existing callers are untouched; set it only when a design calls
+## for a specific size (the bug report form uses 28).
+@export var font_size: int = 0:
+	set(value):
+		font_size = value
+		_apply_font_size()
+
 @export var wrap_text: bool = true:
 	set(value):
 		wrap_text = value
@@ -57,6 +65,7 @@ func _ready() -> void:
 	text_edit.gui_input.connect(_on_text_edit_gui_input)
 	clear_button.button_down.connect(_on_clear_button_pressed)
 	text_edit.placeholder_text = place_holder
+	_apply_font_size()
 	if wrap_text:
 		text_edit.wrap_mode = TextEdit.LINE_WRAPPING_BOUNDARY
 	else:
@@ -81,6 +90,12 @@ func _ready() -> void:
 	_long_press_timer.one_shot = true
 	_long_press_timer.timeout.connect(_on_long_press)
 	add_child(_long_press_timer)
+
+
+func _apply_font_size() -> void:
+	if not is_node_ready() or font_size <= 0:
+		return
+	text_edit.add_theme_font_size_override("font_size", font_size)
 
 
 func _update_length() -> void:

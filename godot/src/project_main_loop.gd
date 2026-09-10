@@ -176,6 +176,24 @@ func _before_send(event: SentryEvent) -> SentryEvent:
 		if event.get_exception_count() > 0 and event.level != SentrySDK.LEVEL_FATAL:
 			return null
 
+	# User-initiated bug reports carry a link to this event in their Intercom
+	# ticket, so sampling one away would leave support with a dead URL — and it
+	# would fail silently, because a dropped event still returns a valid-looking
+	# id. They are rare and explicit, unlike the auto-captured error traffic the
+	# throttles below exist to contain.
+	#
+	# The remote kill switch still wins: at 0.0 ops has pulled the plug on Sentry
+	# entirely, and a bug report is not a reason to keep sending.
+	# Literals, not SentryUserFeedback's constants: referencing that class from
+	# here makes Godot fail to resolve ProjectMainLoop as a MainLoop at startup
+	# ("does not inherit from SceneTree or MainLoop"), since the main loop is
+	# built before script classes are available. Kept in sync by the comment on
+	# SentryUserFeedback.CATEGORY_TAG_KEY.
+	if event.get_tag("category") == "FEEDBACK":
+		if sentry_sample_rate <= 0.0:
+			return null
+		return event
+
 	# Remote throttle (`sentry-sample-rate` feature flag): 1.0 keeps every
 	# event, 0.0 drops them all.
 	if randf() >= sentry_sample_rate:
