@@ -14,14 +14,21 @@ const BG_COLOR_PRESSED: String = "#444348B3"
 ## Shared HUD glyph tint (Figma "IconHUD"). Applied to the built-in monochrome-white glyphs and to
 ## keyboard letters; scene-replaced creator icons keep their own colors (see _show_keyboard_icon).
 const ICON_COLOR := Color("#DFD0FF")
-## Invisible tap growth per side, matching the design's +10px hit target. Same _has_point trick as
-## the TapArea atom (src/ui/components/atoms/tap_area/tap_area.gd), which this node can't extend
-## because it is a PanelContainer.
-const TAP_GROW: float = 10.0
+## Invisible tap growth per side. Same _has_point trick as the TapArea atom
+## (src/ui/components/atoms/tap_area/tap_area.gd), which this node can't extend because it is a
+## PanelContainer. The design asks for 10px, but that is 15 device px -- under a millimetre -- once
+## content_scale_factor is applied on a phone, so it is widened here to reach the ~48dp minimum
+## touch target. Vertical growth is dropped when tooltips are stacked (see tap_grow_y).
+const TAP_GROW_X: float = 24.0
+const TAP_GROW_Y: float = 24.0
 const ICON_LEFT_CLICK = preload("uid://cljfaeb8np0ma")
 const ICON_INTERACTIVE_POINTER = preload("uid://72xpjysoxgwo")
 const ICON_JUMP = preload("uid://ck3atqpytstpo")
 
+## Vertical half of the tap growth. Stacked tooltips sit ~57px apart while the pill is 60 tall, so
+## growing them vertically would make neighbouring hit areas overlap and let a tap fire the wrong
+## prompt. pointer_tooltip.gd zeroes this whenever more than one tooltip is on screen.
+var tap_grow_y: float = TAP_GROW_Y
 var action_to_trigger: String = ""
 var text_down := ""
 var text_up := ""
@@ -193,9 +200,10 @@ func _show_keyboard_icon(icon: Texture2D, tint: Color = ICON_COLOR) -> void:
 	texture_rect_action_icon.texture = icon
 
 
-## Grow the touch target by TAP_GROW on every side without changing the visual size.
+## Grow the touch target without changing the visual size.
 func _has_point(point: Vector2) -> bool:
-	return Rect2(Vector2.ZERO, size).grow(TAP_GROW).has_point(point)
+	var rect := Rect2(Vector2.ZERO, size)
+	return rect.grow_individual(TAP_GROW_X, tap_grow_y, TAP_GROW_X, tap_grow_y).has_point(point)
 
 
 func _physics_process(_delta):
