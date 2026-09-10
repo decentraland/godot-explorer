@@ -811,7 +811,7 @@ impl DclGlobal {
     pub fn set_rust_log_filter(filter: GString) {
         match crate::tools::godot_logger::set_log_filter(&filter.to_string()) {
             Ok(()) => godot_print!("Rust log filter updated to: {}", filter),
-            Err(e) => godot_error!("Failed to update Rust log filter: {}", e),
+            Err(e) => tracing::error!("Failed to update Rust log filter: {}", e),
         }
     }
 }

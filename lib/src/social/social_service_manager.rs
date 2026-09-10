@@ -704,7 +704,7 @@ impl SocialServiceManager {
             .subscribe_to_friendship_updates()
             .await
             .map_err(|e| {
-                tracing::error!("Failed to subscribe to friendship updates: {:?}", e);
+                tracing::debug!("Failed to subscribe to friendship updates: {:?}", e);
                 anyhow!("Failed to subscribe to friendship updates: {:?}", e)
             })?;
 
@@ -753,7 +753,7 @@ impl SocialServiceManager {
             .subscribe_to_friend_connectivity_updates()
             .await
             .map_err(|e| {
-                tracing::error!("Failed to subscribe to connectivity updates: {:?}", e);
+                tracing::debug!("Failed to subscribe to connectivity updates: {:?}", e);
                 anyhow!("Failed to subscribe to connectivity updates: {:?}", e)
             })?;
 
@@ -860,7 +860,7 @@ impl SocialServiceManager {
         let service = self.ensure_connection(&mut state).await?;
 
         let mut stream = service.subscribe_to_block_updates().await.map_err(|e| {
-            tracing::error!("Failed to subscribe to block updates: {:?}", e);
+            tracing::debug!("Failed to subscribe to block updates: {:?}", e);
             anyhow!("Failed to subscribe to block updates: {:?}", e)
         })?;
 
@@ -966,7 +966,7 @@ impl SocialServiceManager {
             .subscribe_to_community_member_connectivity_updates()
             .await
             .map_err(|e| {
-                tracing::error!(
+                tracing::debug!(
                     "Failed to subscribe to community member connectivity updates: {:?}",
                     e
                 );
@@ -1102,7 +1102,7 @@ impl SocialServiceManager {
             .subscribe_to_private_voice_chat_updates()
             .await
             .map_err(|e| {
-                tracing::error!("Failed to subscribe to private voice chat updates: {:?}", e);
+                tracing::debug!("Failed to subscribe to private voice chat updates: {:?}", e);
                 anyhow!("Failed to subscribe to private voice chat updates: {:?}", e)
             })?;
 
@@ -1331,7 +1331,7 @@ impl SocialServiceManager {
             .subscribe_to_community_voice_chat_updates()
             .await
             .map_err(|e| {
-                tracing::error!(
+                tracing::debug!(
                     "Failed to subscribe to community voice chat updates: {:?}",
                     e
                 );

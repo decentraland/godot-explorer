@@ -38,19 +38,19 @@ pub fn change_realm(
 
     // Get Global node from scene tree (Global is an autoload, not an Engine singleton)
     let Some(tree) = godot::classes::Engine::singleton().get_main_loop() else {
-        tracing::error!("Cannot get main loop");
+        tracing::debug!("Cannot get main loop");
         response.send(Err("modal_manager not available".to_string()));
         return;
     };
 
     let Some(root) = tree.cast::<godot::classes::SceneTree>().get_root() else {
-        tracing::error!("Cannot get root node");
+        tracing::debug!("Cannot get root node");
         response.send(Err("modal_manager not available".to_string()));
         return;
     };
 
     let Some(global) = root.get_node_or_null("/root/Global") else {
-        tracing::error!("Cannot get Global node from scene tree");
+        tracing::debug!("Cannot get Global node from scene tree");
         response.send(Err("modal_manager not available".to_string()));
         return;
     };
@@ -60,7 +60,7 @@ pub fn change_realm(
         .try_to::<godot::prelude::Gd<godot::classes::Node>>()
         .ok()
     else {
-        tracing::error!("Cannot convert modal_manager variant to Node");
+        tracing::debug!("Cannot convert modal_manager variant to Node");
         response.send(Err("modal_manager not available".to_string()));
         return;
     };
@@ -93,19 +93,19 @@ pub fn open_external_url(
 
     // Get Global node from scene tree (Global is an autoload, not an Engine singleton)
     let Some(tree) = godot::classes::Engine::singleton().get_main_loop() else {
-        tracing::error!("Cannot get main loop");
+        tracing::debug!("Cannot get main loop");
         response.send(Err("modal_manager not available".to_string()));
         return;
     };
 
     let Some(root) = tree.cast::<godot::classes::SceneTree>().get_root() else {
-        tracing::error!("Cannot get root node");
+        tracing::debug!("Cannot get root node");
         response.send(Err("modal_manager not available".to_string()));
         return;
     };
 
     let Some(global) = root.get_node_or_null("/root/Global") else {
-        tracing::error!("Cannot get Global node from scene tree");
+        tracing::debug!("Cannot get Global node from scene tree");
         response.send(Err("modal_manager not available".to_string()));
         return;
     };
@@ -115,7 +115,7 @@ pub fn open_external_url(
         .try_to::<godot::prelude::Gd<godot::classes::Node>>()
         .ok()
     else {
-        tracing::error!("Cannot convert modal_manager variant to Node");
+        tracing::debug!("Cannot convert modal_manager variant to Node");
         response.send(Err("modal_manager not available".to_string()));
         return;
     };
@@ -262,19 +262,19 @@ pub fn teleport_to(
 
     // Get Global node from scene tree (Global is an autoload, not an Engine singleton)
     let Some(tree) = godot::classes::Engine::singleton().get_main_loop() else {
-        tracing::error!("Cannot get main loop");
+        tracing::debug!("Cannot get main loop");
         response.send(Err("modal_manager not available".to_string()));
         return;
     };
 
     let Some(root) = tree.cast::<godot::classes::SceneTree>().get_root() else {
-        tracing::error!("Cannot get root node");
+        tracing::debug!("Cannot get root node");
         response.send(Err("modal_manager not available".to_string()));
         return;
     };
 
     let Some(global) = root.get_node_or_null("/root/Global") else {
-        tracing::error!("Cannot get Global node from scene tree");
+        tracing::debug!("Cannot get Global node from scene tree");
         response.send(Err("modal_manager not available".to_string()));
         return;
     };
@@ -284,7 +284,7 @@ pub fn teleport_to(
         .try_to::<godot::prelude::Gd<godot::classes::Node>>()
         .ok()
     else {
-        tracing::error!("Cannot convert modal_manager variant to Node");
+        tracing::debug!("Cannot convert modal_manager variant to Node");
         response.send(Err("modal_manager not available".to_string()));
         return;
     };

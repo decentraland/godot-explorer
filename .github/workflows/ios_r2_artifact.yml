@@ -323,15 +323,30 @@ jobs:
           if [ -z "${SENTRY_AUTH_TOKEN:-}" ] || [ -z "${SENTRY_ORG:-}" ] || [ -z "${SENTRY_PROJECT:-}" ]; then
             echo "⚠️  Sentry secrets not configured, skipping libdclgodot dSYM upload"; exit 0
           fi
-          command -v sentry-cli >/dev/null 2>&1 || curl -sL https://sentry.io/get-cli/ | SENTRY_CLI_VERSION=3.5.1 bash
+          command -v sentry-cli >/dev/null 2>&1 || curl -sL https://sentry.io/get-cli/ | SENTRY_CLI_VERSION=3.7.0 bash
           LIBDCLGODOT_PATH="lib/target/libdclgodot_ios/libdclgodot.dylib"
           if [ -f "$LIBDCLGODOT_PATH" ]; then
-            sentry-cli upload-dif --org "$SENTRY_ORG" --project "$SENTRY_PROJECT" \
-              --auth-token "$SENTRY_AUTH_TOKEN" --include-sources --wait "$LIBDCLGODOT_PATH"
+            sentry-cli debug-files upload --org "$SENTRY_ORG" --project "$SENTRY_PROJECT" \
+              --include-sources --wait "$LIBDCLGODOT_PATH"
             echo "✅ libdclgodot uploaded to Sentry"
           else
             echo "⚠️  libdclgodot not found at $LIBDCLGODOT_PATH"
           fi
+          # Register the release under the exact string the runtime reports (lib/build.rs), so
+          # iOS issues get "first seen in" / suspect commits like Android. The iOS build number
+          # is allocated separately, so this is its own release.
+          SENTRY_RELEASE="org.decentraland.godotexplorer@$(cargo run -- explorer-version --sentry-release)"
+          case "${PROD_FLAG:-}" in
+            --prod) SENTRY_ENV=production ;;
+            *) SENTRY_ENV=staging ;;
+          esac
+          sentry-cli releases new "$SENTRY_RELEASE" --org "$SENTRY_ORG" --project "$SENTRY_PROJECT"
+          sentry-cli releases set-commits "$SENTRY_RELEASE" --org "$SENTRY_ORG" --auto --ignore-missing \
+            || sentry-cli releases set-commits "$SENTRY_RELEASE" --org "$SENTRY_ORG" --local --ignore-missing \
+            || echo "⚠️  could not associate commits with $SENTRY_RELEASE"
+          sentry-cli releases finalize "$SENTRY_RELEASE" --org "$SENTRY_ORG"
+          sentry-cli releases deploys "$SENTRY_RELEASE" new --org "$SENTRY_ORG" -e "$SENTRY_ENV"
+          echo "✅ Sentry release $SENTRY_RELEASE finalized ($SENTRY_ENV)"
 
       # Notify only — the step above is continue-on-error, so the job stays green.
       - name: Sentry libdclgodot upload failed — notify (non-blocking)
