@@ -18,9 +18,9 @@ const VERTICAL_SENS: float = 0.5
 # independently (you can walk and zoom at once).
 #
 # With no competing gesture in the camera area, a pinch is simply the finger spread
-# changing past this threshold — no "both fingers must move" / axial gate (those were
+# changing past a threshold — no "both fingers must move" / axial gate (those were
 # anti-walk+look heuristics, now moot), so a thumb-anchored or angled pinch is caught.
-const PINCH_COMMIT_SPREAD: float = 16.0
+# The spread/commit math lives in PinchGestureHelpers (unit-tested headless).
 
 var _player: Player = null
 var _chat_panel: Control = null
@@ -190,7 +190,7 @@ func _seed_pinch_candidate(cam: Array) -> void:
 	_pinch_b = cam[1]
 	_pinch_start_a = _touches[_pinch_a]
 	_pinch_start_b = _touches[_pinch_b]
-	_pinch_prev_distance = _pinch_start_a.distance_to(_pinch_start_b)
+	_pinch_prev_distance = PinchGestureHelpers.spread(_pinch_start_a, _pinch_start_b)
 
 
 func _try_recognize_pinch() -> void:
@@ -200,8 +200,8 @@ func _try_recognize_pinch() -> void:
 	var b: Vector2 = _touches[_pinch_b]
 	# The finger spread must change past the threshold from where the pair formed.
 	var start_distance: float = _pinch_start_a.distance_to(_pinch_start_b)
-	var distance: float = a.distance_to(b)
-	if absf(distance - start_distance) >= PINCH_COMMIT_SPREAD:
+	var distance: float = PinchGestureHelpers.spread(a, b)
+	if PinchGestureHelpers.should_commit(start_distance, distance):
 		_commit_pinch(a, b)
 
 
@@ -225,7 +225,7 @@ func _drive_joystick_area_look(event: InputEventScreenDrag) -> void:
 
 func _commit_pinch(a: Vector2, b: Vector2) -> void:
 	_pinch_active = true
-	_pinch_prev_distance = a.distance_to(b)
+	_pinch_prev_distance = PinchGestureHelpers.spread(a, b)
 	# Both fingers are in the camera area (never the joystick's), so the walk keeps
 	# running — only the free single-finger look yields to the zoom.
 	_look_index = -1
@@ -240,13 +240,13 @@ func _reseat_pinch(cam: Array) -> void:
 		return
 	_pinch_a = indices[0]
 	_pinch_b = indices[1]
-	_pinch_prev_distance = (_touches[_pinch_a] as Vector2).distance_to(_touches[_pinch_b])
+	_pinch_prev_distance = PinchGestureHelpers.spread(_touches[_pinch_a], _touches[_pinch_b])
 
 
 func _update_pinch() -> void:
 	if not _touches.has(_pinch_a) or not _touches.has(_pinch_b):
 		return
-	var distance: float = (_touches[_pinch_a] as Vector2).distance_to(_touches[_pinch_b])
+	var distance: float = PinchGestureHelpers.spread(_touches[_pinch_a], _touches[_pinch_b])
 	var delta: float = distance - _pinch_prev_distance
 	_pinch_prev_distance = distance
 	if _player and not is_zero_approx(delta):
