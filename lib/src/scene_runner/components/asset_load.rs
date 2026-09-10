@@ -78,8 +78,8 @@ pub struct PreloadEntry {
     pub is_gltf: bool,
     /// In-flight download promise. `None` once resolved (or never started).
     pub promise: Option<Gd<Promise>>,
-    /// Resource path the GLTF loads from (`res://glbs/<hash>.scn` for optimized,
-    /// or `user://content/<hash>.scn` for runtime — filled from the promise).
+    /// Resource path the GLTF loads from (`user://content/<hash>.opt.scn` for
+    /// optimized, or `user://content/<hash>.scn` for runtime — filled from the promise).
     pub scene_path: Option<String>,
     /// Retained loaded scene — pins meshes/textures in RAM + GPU. `None` until FINISHED.
     pub packed_scene: Option<Gd<PackedScene>>,
@@ -275,7 +275,14 @@ fn start_preload(scene: &Scene, hash: &str, path: &str) -> PreloadEntry {
         let promise = content_provider
             .bind_mut()
             .fetch_optimized_asset_with_dependencies(hash.to_godot());
-        return loading_entry(true, Some(promise), Some(format!("res://glbs/{hash}.scn")));
+        return loading_entry(
+            true,
+            Some(promise),
+            Some(crate::content::content_provider::optimized_godot_path(
+                hash,
+                crate::content::content_provider::OptimizedKind::Scene,
+            )),
+        );
     }
 
     // Runtime path: download + process the GLB into `user://content/<hash>.scn`.

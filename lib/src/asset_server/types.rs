@@ -82,6 +82,11 @@ pub struct Batch {
     pub preloaded_hashes: Option<HashSet<String>>,
     /// Individual ZIP files created for each asset
     pub individual_zips: Vec<IndividualZipInfo>,
+    /// Scene boot files to publish next to the manifest (process-scene batches)
+    pub boot_files: Vec<super::scene_fetcher::BootFile>,
+    /// Lowercased `file path -> hash` of the scene entity, for the
+    /// `main.crdt` scan at pack time (process-scene batches)
+    pub content_mapping: std::sync::Arc<HashMap<String, String>>,
 }
 
 impl Batch {
@@ -97,6 +102,8 @@ impl Batch {
             scene_hash: None,
             preloaded_hashes: None,
             individual_zips: Vec::new(),
+            boot_files: Vec::new(),
+            content_mapping: Default::default(),
         }
     }
 
@@ -106,6 +113,8 @@ impl Batch {
         job_ids: Vec<String>,
         scene_hash: String,
         preloaded_hashes: Option<HashSet<String>>,
+        boot_files: Vec<super::scene_fetcher::BootFile>,
+        content_mapping: std::sync::Arc<HashMap<String, String>>,
     ) -> Self {
         Self {
             id,
@@ -118,6 +127,8 @@ impl Batch {
             scene_hash: Some(scene_hash),
             preloaded_hashes,
             individual_zips: Vec::new(),
+            boot_files,
+            content_mapping,
         }
     }
 }
@@ -349,8 +360,28 @@ pub struct IndividualZipInfo {
     pub zip_path: String,
 }
 
-/// Metadata stored in the ZIP file describing the optimization results.
+/// `{entity}-static.zip`: the models `main.crdt` references (and the textures
+/// their `.scn` files need), as one Stored zip the client extracts into
+/// `user://content/`. `files` are the zip entry names == the client cache names.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StaticBundleInfo {
+    pub file: String,
+    pub files: Vec<String>,
+    pub bytes: u64,
+}
+
+/// `{entity}-boot.zip`: manifest + main.js + main.crdt in one Deflated zip.
+/// Informational — the client probes the boot zip by name before it has the
+/// manifest.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BootBundleInfo {
+    pub file: String,
+}
+
+/// Metadata stored in the ZIP file describing the optimization results.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SceneOptimizationMetadata {
     /// List of all optimized content hashes
@@ -361,4 +392,12 @@ pub struct SceneOptimizationMetadata {
     pub original_sizes: HashMap<String, TextureSize>,
     /// Map of hash -> optimized file size in bytes
     pub hash_size_map: HashMap<String, u64>,
+    /// Scene boot files published in the bucket by hash: `{"main.js": hash,
+    /// "main.crdt": hash}` → `{base}/{hash}.js` / `{base}/{hash}.crdt`.
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+    pub boot_files: HashMap<String, String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub static_bundle: Option<StaticBundleInfo>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub boot_bundle: Option<BootBundleInfo>,
 }

@@ -102,7 +102,7 @@ const TERMS_AND_CONDITIONS_VERSION: int = 1
 # (PortableCompressedTexture2D .res, ExtResource-based .scn). Cached v4 packs
 # share the same {hash}-mobile.zip filenames and would be permanent stale hits,
 # mixing Image-typed .res into scenes that expect PCT2 ExtResources.
-const LOCAL_ASSETS_CACHE_VERSION: int = 6
+const LOCAL_ASSETS_CACHE_VERSION: int = 7
 
 # On-disk guest identity artifacts, owned by Rust (keep in sync with
 # lib/src/auth/device_anchor.rs + thirdweb_guest.rs) plus the mobile-BFF

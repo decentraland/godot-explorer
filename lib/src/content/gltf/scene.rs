@@ -191,6 +191,26 @@ fn create_scene_colliders_inner(
                 mesh_instance_3d.set_cast_shadows_setting(ShadowCastingSetting::OFF);
             }
 
+            // Visible meshes get a LAZY collider: the SDK default for
+            // `visibleMeshesCollisionMask` is 0, and on Genesis Plaza only 44 of
+            // 1355 visible-mesh bodies ever got a non-zero mask — yet every one
+            // of them cost a StaticBody3D + CollisionShape3D per instance and a
+            // ConcavePolygonShape3D BVH build (481k triangles) at load time,
+            // 17% of the main thread during the load. The faces are kept as
+            // metadata on the shared mesh (same bytes the shape stored) and
+            // `gltf_container.gd::_ensure_lazy_collider` builds the shape the
+            // first time an entity actually asks for a visible-mesh collider.
+            if !invisible_mesh {
+                bake_lazy_collider_faces(&mesh_instance_3d);
+                create_scene_colliders_inner(
+                    child,
+                    root_node.clone(),
+                    shadow_proxy,
+                    shadow_proxy_mat,
+                );
+                continue;
+            }
+
             // First check if there's already a StaticBody3D (created by create_trimesh_collision)
             let mut static_body_3d = get_static_body_collider(&mesh_instance_3d);
             if static_body_3d.is_none() {
@@ -242,6 +262,30 @@ fn create_scene_colliders_inner(
         create_scene_colliders_inner(child, root_node.clone(), shadow_proxy, shadow_proxy_mat);
     }
 }
+
+/// Store the trimesh faces of a visible mesh as metadata on the (shared) mesh
+/// resource, so the runtime can build a `ConcavePolygonShape3D` on demand
+/// without a GPU readback. No-op when the mesh already carries them (several
+/// MeshInstance3D nodes can share one mesh).
+fn bake_lazy_collider_faces(mesh_instance_3d: &Gd<MeshInstance3D>) {
+    let Some(mut mesh) = mesh_instance_3d.get_mesh() else {
+        return;
+    };
+    if mesh.has_meta(LAZY_COLLIDER_FACES_META) {
+        return;
+    }
+    let faces = mesh.get_faces();
+    if faces.is_empty() {
+        return;
+    }
+    let backface = !is_mesh_planar(mesh_instance_3d);
+    mesh.set_meta(LAZY_COLLIDER_FACES_META, &faces.to_variant());
+    mesh.set_meta(LAZY_COLLIDER_BACKFACE_META, &backface.to_variant());
+}
+
+/// Mesh metadata keys of a lazy visible-mesh collider (read by gltf_container.gd).
+const LAZY_COLLIDER_FACES_META: &str = "dcl_faces";
+const LAZY_COLLIDER_BACKFACE_META: &str = "dcl_backface";
 
 /// Minimum thickness (in any axis) below which a mesh is considered planar/one-way.
 const PLANAR_THICKNESS_THRESHOLD: f32 = 0.01;
