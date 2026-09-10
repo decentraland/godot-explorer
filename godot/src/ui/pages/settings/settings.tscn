@@ -40,6 +40,11 @@ font = ExtResource("16_blskf")
 font_size = 24
 font_color = Color(0.9098039, 0.7254902, 1, 1)
 
+[sub_resource type="LabelSettings" id="LabelSettings_version"]
+font = ExtResource("16_blskf")
+font_size = 24
+font_color = Color(0.9098039, 0.7254902, 1, 1)
+
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_5kobr"]
 
 [sub_resource type="Theme" id="Theme_5xlkc"]
@@ -237,7 +242,7 @@ custom_minimum_size = Vector2(0, 56)
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 0.7)
 text = "Version 0.0.0"
-label_settings = SubResource("LabelSettings_5kobr")
+label_settings = SubResource("LabelSettings_version")
 vertical_alignment = 1
 
 [node name="TextureRect" type="TextureRect" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_SectionList/VBoxContainer/Button_Version/HBoxContainer" unique_id=572923040]

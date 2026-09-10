@@ -20,6 +20,9 @@ const _SECTION_ITEM_SCENE = preload(
 )
 const CACHE_SIZE_MB: Array[int] = [1024, 2048, 4096]
 
+# Version label font size (production). The longer staging/dev string renders 2pt smaller to fit.
+const _VERSION_FONT_SIZE: int = 24
+
 # Gap between the left section list and the content pane (landscape). The Account section adds the
 # avatar preview column, so it uses a tighter gap than the other sections.
 const _LAYOUT_SEPARATION_DEFAULT: int = 131
@@ -145,9 +148,7 @@ func _ready():
 	UiSounds.install_audio_recusirve(self)
 	_build_section_list()
 	button_back.pressed.connect(_on_back_pressed)
-	label_version.text = TranslationKey.new("SETTINGS_VERSION").format(
-		{"version": _display_version()}
-	)
+	_refresh_version_label()
 	# The version row is a Button with a copy icon: tapping it copies the version string.
 	var version_button: Node = label_version.get_parent().get_parent()
 	if version_button is Button:
@@ -1539,16 +1540,35 @@ func _retranslate_section_list() -> void:
 		if is_instance_valid(row):
 			row.retranslate()
 	_update_header()
-	label_version.text = TranslationKey.new("SETTINGS_VERSION").format(
-		{"version": _display_version()}
-	)
+	_refresh_version_label()
 
 
-## Debug builds show the full string (commit hash + environment) for diagnostics; release builds
-## show the clean marketing version (no hash/env).
+## Production shows the clean marketing version, prefixed with "Version" (e.g. "Version 1.13.0").
+## Staging/dev show the full diagnostic string (build number + commit hash + environment), with no
+## prefix and 2pt smaller so the longer text fits.
+func _refresh_version_label() -> void:
+	if Global.is_production():
+		label_version.label_settings.font_size = _VERSION_FONT_SIZE
+		label_version.text = TranslationKey.new("SETTINGS_VERSION").format(
+			{"version": _display_version()}
+		)
+	else:
+		label_version.label_settings.font_size = _VERSION_FONT_SIZE - 2
+		label_version.text = _display_version()
+
+
 func _display_version() -> String:
-	if OS.is_debug_build():
-		return DclGlobal.get_full_version()
+	if Global.is_production():
+		return _marketing_version()
+	return DclGlobal.get_full_version()
+
+
+## User-facing marketing version: just major.minor.patch, no build number/hash/env. `get_short_version`
+## keeps the build segment (e.g. "1.13.0.1234"), so drop everything after the third dot component.
+func _marketing_version() -> String:
+	var parts: PackedStringArray = DclGlobal.get_short_version().split(".")
+	if parts.size() >= 3:
+		return "%s.%s.%s" % [parts[0], parts[1], parts[2]]
 	return DclGlobal.get_short_version()
 
 
