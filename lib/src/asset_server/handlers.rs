@@ -602,10 +602,13 @@ async fn watch_and_pack_scene_batch(
     // out of the manifest and the client falls back to the content server.
     for boot in job_manager.get_batch_boot_files(&batch_id).await {
         match publish_boot_file(&ctx, &boot).await {
-            Ok(_) => {
+            Ok(out_path) => {
                 metadata
                     .boot_files
                     .insert(boot.name.clone(), boot.hash.clone());
+                job_manager
+                    .add_individual_zip(&batch_id, boot.hash.clone(), out_path)
+                    .await;
             }
             Err(e) => tracing::warn!(
                 "Scene batch {}: boot file {} ({}) not published: {}",
@@ -632,12 +635,20 @@ async fn watch_and_pack_scene_batch(
 
     // v6 layout: the manifest is a plain `{output_hash}-optimized.json` too.
     // Serialized ONCE: the same bytes go to the file and into the boot zip
-    // (serde over HashMaps is not order-stable across calls).
+    // (serde over HashMaps is not order-stable across calls). Registered after
+    // every asset it lists and before the boot zip: `individual_zips` is the
+    // uploader's list AND its upload order, and a client fetching mid-upload
+    // must never see a manifest whose dependencies are not there yet.
     let manifest_json = match serde_json::to_string(&metadata) {
         Ok(json) => {
             let json_path = format!("{}{}-optimized.json", ctx.output_folder, output_hash);
-            if let Err(e) = std::fs::write(&json_path, &json) {
-                tracing::error!("Failed to write {}: {}", json_path, e);
+            match std::fs::write(&json_path, &json) {
+                Ok(()) => {
+                    job_manager
+                        .add_individual_zip(&batch_id, output_hash.clone(), json_path)
+                        .await
+                }
+                Err(e) => tracing::error!("Failed to write {}: {}", json_path, e),
             }
             Some(json)
         }

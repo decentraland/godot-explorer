@@ -353,7 +353,11 @@ pub struct ProcessSceneResponse {
     pub jobs: Vec<JobResponse>,
 }
 
-/// Info about an individual asset ZIP file.
+/// One published file of a batch (historically one `-mobile.zip` per asset;
+/// v6 scene batches list every plain file too: `.scn`/`.res`, `.js`/`.crdt`,
+/// `-static.zip`, `-optimized.json`, `-boot.zip`). The uploader publishes the
+/// basename of `zip_path` as the object key, in list order — the manifest and
+/// the boot zip come last, after everything they reference.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct IndividualZipInfo {
     pub hash: String,

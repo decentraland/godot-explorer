@@ -118,15 +118,16 @@ Returns the status of a batch and all its jobs.
   "zip_path": "/path/to/output-mobile.zip",
   "error": null,
   "individual_zips": [
-    {
-      "hash": "bafkrei...",
-      "zip_path": "/path/to/bafkrei...-mobile.zip"
-    }
+    { "hash": "bafkrei...", "zip_path": "/path/to/bafkrei....scn" },
+    { "hash": "bafkrei...", "zip_path": "/path/to/bafkrei....res" },
+    { "hash": "bafybei...", "zip_path": "/path/to/bafybei....js" },
+    { "hash": "<output_hash>", "zip_path": "/path/to/<output_hash>-optimized.json" },
+    { "hash": "<output_hash>", "zip_path": "/path/to/<output_hash>-boot.zip" }
   ]
 }
 ```
 
-The `individual_zips` field is present for scene batches and lists the per-asset ZIP files created. It is omitted when empty.
+The `individual_zips` field is present for scene batches and lists every file the batch published, in upload order (see *Uploader contract* under *Output Structure*). It is omitted when empty.
 
 ---
 
@@ -314,7 +315,17 @@ Genesis Plaza's `main.js` is 2.26 MB raw, 634 KB as the content server's gzip,
 Mounting a zip per asset cost `refresh_global_class_list()` +
 `ResourceUID::load_from_cache()` on the main thread for every mount (~2 ms ×
 ~900 per Genesis Plaza load), and deflate on top of the inner zstd saved only
-0.3–4% of bytes; `individual_zips` in the batch status now lists these files.
+0.3–4% of bytes.
+
+**Uploader contract.** `individual_zips` in the batch status lists every file
+above, in this order: `.scn`/`.res` assets, `.js`/`.crdt` boot files,
+`-static.zip`, `-optimized.json`, `-boot.zip`. Publish the **basename of
+`zip_path`** as the object key (the `hash` field is the source hash for
+assets and boot files, the output hash for the scene-level files) and upload
+**in list order** — the manifest and the boot zip are last on purpose, so a
+client fetching mid-upload never sees a manifest whose dependencies are not
+there yet. The legacy `zip_path` (`{output_hash}-mobile.zip`, below) is
+uploaded after them as before.
 
 ### Main Metadata ZIP (legacy)
 
