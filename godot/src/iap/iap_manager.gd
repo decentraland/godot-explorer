@@ -372,6 +372,12 @@ func is_available() -> bool:
 	return _store_kit_available
 
 
+## True while the blocking purchase overlay is on screen. Read by ReviewPromptCoordinator, which
+## must never drop a rating prompt on top of a purchase in progress.
+func is_purchase_overlay_visible() -> bool:
+	return is_instance_valid(_overlay) and _overlay.visible
+
+
 func get_products() -> Array:
 	return _products
 

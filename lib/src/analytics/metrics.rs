@@ -28,7 +28,7 @@ use super::{
         SegmentEventCommonExplorerFields, SegmentEventExplorerMoveToParcel,
         SegmentEventFirebaseInit, SegmentEventGuestWalletCreation,
         SegmentEventIosStoreKitEnvironment, SegmentEventLoading, SegmentEventRequestFriend,
-        SegmentEventScreenViewed, SegmentEventUnfriend,
+        SegmentEventReviewPrompted, SegmentEventScreenViewed, SegmentEventUnfriend,
     },
     frame::Frame,
     install_attribution::InstallAttribution,
@@ -443,6 +443,20 @@ impl Metrics {
             can_make_payments,
         });
         self.queue_event("iOS StoreKit Environment", event);
+    }
+
+    /// Fired on `launchReviewFlow` invocation (issue #2739). Deliberately instruments the CALL,
+    /// not the result — Play exposes no signal for whether the card was shown, rated or
+    /// dismissed, so no event here may imply an outcome. `shot_id` is 1..=3 (lifetime cap) and
+    /// `trigger_id` is the trigger that actually fired this shot. Called from
+    /// ReviewPromptCoordinator.
+    #[func]
+    pub fn track_review_prompted(&mut self, shot_id: i32, trigger_id: String) {
+        let event = SegmentEvent::ReviewPrompted(SegmentEventReviewPrompted {
+            shot_id: shot_id.max(0) as u32,
+            trigger_id,
+        });
+        self.queue_event("review_prompted", event);
     }
 
     #[func]

@@ -111,7 +111,11 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
             // Gallery pick result (one shot per pickImageFromGallery() call).
             // `bytes` holds a JPEG-encoded image and `error` is empty on success;
             // on cancel or failure `bytes` is empty and `error` says why.
-            SignalInfo("image_picked", ByteArray::class.java, String::class.java)
+            SignalInfo("image_picked", ByteArray::class.java, String::class.java),
+            // In-app review flow completed. This means the FLOW finished, never that the user
+            // rated: Play reports no outcome, and over quota it renders nothing, returns no
+            // error, and still completes. `error` is "" when the flow ran without an exception.
+            SignalInfo("in_app_review_finished", String::class.java)
         )
     }
 
@@ -2779,6 +2783,41 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
             Log.e(pluginName, "[DeviceAnchor] failed to read SSAID: ${e.message}", e)
             ""
         }
+    }
+
+
+    // --- Play In-App Review (issue #2739) ---
+    //
+    // Delegated to InAppReview so that NO Play Core type appears in any method signature on this
+    // class. GodotPlugin.onRegisterPluginWithGodotNative reflects over getDeclaredMethods() here
+    // at registration, which resolves every parameter type; an unresolvable one throws
+    // NoClassDefFoundError on the Vulkan thread and kills the app at boot. Keep these two
+    // entry points primitive-only.
+
+    private val inAppReview = InAppReview(pluginName)
+
+    /** Warm the review request ahead of the trigger moment. See InAppReview.prewarm. */
+    @UsedByGodot
+    fun prewarmInAppReview() {
+        val act = activity ?: run {
+            Log.w(pluginName, "[InAppReview] activity null - cannot prewarm")
+            return
+        }
+        inAppReview.prewarm(act)
+    }
+
+    /**
+     * Launch the native review card. Always completes with `in_app_review_finished(error)` — ""
+     * when the flow ran. Never reports whether the user actually rated; Play does not say.
+     */
+    @UsedByGodot
+    fun launchInAppReview() {
+        val act = activity ?: run {
+            Log.w(pluginName, "[InAppReview] activity null - cannot launch")
+            emitSignal("in_app_review_finished", "activity not ready")
+            return
+        }
+        inAppReview.launch(act) { error -> emitSignal("in_app_review_finished", error) }
     }
 
 }
