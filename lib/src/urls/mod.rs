@@ -311,14 +311,12 @@ impl Storefront {
     }
 }
 
-/// Storefront serving an environment. Zone moved to the new shop; org stays on the
-/// classic marketplace, which is also the only one that fires the
-/// `decentraland://open?iap_enabled=true&urn=` return deep link the IAP tracker
-/// relies on. `today` points at a local dev server and keeps the classic routes.
+/// Storefront serving an environment. Both public envs are on the shop; `today` is a
+/// local dev server and keeps the classic routes.
 fn storefront(env: DclEnvironment) -> Storefront {
     match env {
-        DclEnvironment::Zone => Storefront::Shop,
-        _ => Storefront::Marketplace,
+        DclEnvironment::Org | DclEnvironment::Zone => Storefront::Shop,
+        DclEnvironment::Today => Storefront::Marketplace,
     }
 }
 
@@ -473,10 +471,9 @@ mod tests {
 
     #[test]
     fn test_storefront_routes_per_env() {
-        // Zone moved the storefront to /shop; org (and the localhost dev build,
-        // which ignores the path) stay on /marketplace.
+        // Only the localhost dev build stays on /marketplace.
         assert_eq!(storefront(DclEnvironment::Zone), Storefront::Shop);
-        assert_eq!(storefront(DclEnvironment::Org), Storefront::Marketplace);
+        assert_eq!(storefront(DclEnvironment::Org), Storefront::Shop);
         assert_eq!(storefront(DclEnvironment::Today), Storefront::Marketplace);
 
         // Every destination the client links to, in both route tables. The shop
