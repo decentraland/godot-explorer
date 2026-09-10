@@ -1,0 +1,7 @@
+# UI strings that are not translation keys yet, one per line as <path>\t<string>.
+# The i18n check fails on any literal NOT listed here, so new hardcoded strings are
+# blocked while the existing ones are converted phase by phase.
+#
+# This file must only ever shrink. Remove entries as they are keyed; never add.
+# Regenerate with: python3 tools/i18n/extract_strings.py --update-baseline
+

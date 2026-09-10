@@ -18,6 +18,7 @@ These are blocking prerequisites. Resolve each one (or explicitly note its statu
    - If no iOS artifact exists, output exactly: *"No iOS build on this PR — a maintainer can add the `build` label to trigger one. I will not approve platform-sensitive iOS changes without a green iOS build."* and hold approval.
    - If the PR is purely backend / GDScript-with-no-platform-branch / docs, an iOS build is **not** required — call that out and proceed.
 3. **Submodule pointer drift.** If `git diff main...HEAD` shows changes under `plugins/dcl-godot-ios/godot` or any submodule and the PR description does not mention it, treat it as accidental and ask the author to confirm.
+4. **The description says what and why.** Read `## What` and `## Why`. If they are missing or do not tell you what changed and why in plain language, or it reads as raw AI output (see Section 4 → "PR description shape"), ask the author to rewrite it in their own words before a substantive review. The description is the author's statement of understanding; reverse-engineering it from the diff moves that work onto the reviewer.
 
 If any of (1) or (2) fail and you proceed anyway, say so explicitly in the review header.
 
@@ -100,12 +101,20 @@ Apply this order. Everything below "Correctness" is negotiable; the top tier is 
    - Mixed-tier placement (e.g. a reusable molecule buried inside `pages/profile/` when it's used by other pages too).
    The skill `godot-ui-components` (in `.claude/skills/godot-ui-components/SKILL.md`) is the source of truth — it has the decision tree, naming conventions, and verification checklist. The audit doc `godot/src/ui/COMPONENT_AUDIT.md` is the lookup table for current placements and known duplicates.
 
-8. **Cross-platform regressions.** Touch targets, gestures, virtual keyboard sync on Android/iOS, safe-area insets, landscape vs portrait. `DisplayServer.virtual_keyboard_show()` buffer sync after programmatic text insertion is a known class of bug (#1822). Godot `MOUSE_FILTER` behavior differs between `STOP` / `PASS` / `IGNORE` in non-obvious ways — siblings don't propagate (#1875).
-9. **Mouse/input filter and focus stealing.** Buttons that steal focus from a `LineEdit`, containers with fixed `custom_minimum_size` that silently block scene UI underneath, `ScrollContainer` needing dynamic `mouse_filter` based on whether content overflows. Any new UI overlay on the left / bottom of the screen must be tested against SDK-rendered UI underneath.
-10. **Async / race conditions.** Re-entrant `await` inside resize / rotation / teleport handlers (#1823 needed an `_is_switching` guard). Signals connected on a node that hasn't readied yet. Awaits that the caller doesn't `await` on (missing `await` on a coroutine is a real bug class here — see #1851).
-11. **Resource leaks.** Godot does not auto-free bones, nodes outside the tree, or duplicated resources. Historical incident: spring-bone merge never recycled slots across outfit changes → unbounded `Skeleton3D` growth and stale bones silently binding to new meshes (#1849). When you see "add to skeleton / duplicate skin / instantiate on event", ask how it gets removed.
-12. **Persistence.** Blocked users, friends state, profile deploys, per-user settings. Check that state written to disk survives a restart and that load happens before UI reads it (#1872 was an instance of this breaking).
-13. **Log level discipline & Sentry quota.** Every log a PR *adds* has a cost, and the cost depends on its level. Error- and warning-level logs are routed to Godot's error stream and captured by the Sentry SDK in prod/staging builds — each one consumes the shared Sentry **event and attachment quota**, and a mis-leveled log on a hot path (scene-runner update loop, pointer events, per-entity/per-frame scans) can burst into *thousands* of events and exhaust the quota. The team already runs `_before_send` sampling and a `NOISE_PATTERNS` denylist (`godot/src/project_main_loop.gd`) precisely because over-reporting is a recurring problem — review new logs so that machinery doesn't have to. For **every** added log in the diff, ask: *is this an actionable fault a maintainer would want to see as a Sentry issue, or is it expected/recoverable noise?*
+8. **User-facing text must be a translation key.** Every player-visible string lives in `godot/locale/en.csv` and is translated in `es.csv` / `pt_BR.csv`; `tools/i18n/` fails CI on new hardcoded UI text. The checks have real blind spots, so read the diff rather than trusting the green tick — a string passed as a **function argument** (`_add_row(tpl, "Scene Lights", …)`), held in a **data table**, or used as an **`@export var` default** is invisible to the scanner, and an `@export` default silently clobbers a correct key set in the `.tscn`. Reject:
+   - A new literal shown to a player, anywhere the scanner does not reach.
+   - A raw key assigned to a node with `auto_translate_mode = 2` — mode 2 never looks anything up, so the key is drawn verbatim on screen (this shipped: `EMOTES_EMOTES` on the emote wheel).
+   - Resolved text (`tr(...)`) assigned to an auto-translating node, or assigned from GDScript without a `_notification(NOTIFICATION_TRANSLATION_CHANGED)` hook — both freeze in the old locale on a language change.
+   - Positional `%s` / `%d` in a catalogue entry, or a key concatenated with a literal (`BODY + " Try again."` matches no entry and draws the key).
+   - Spaces or newlines padded into a label for layout — a translated string re-centres and the padding stops lining up.
+   See the **i18n** skill and `tools/i18n/README.md`.
+
+9. **Cross-platform regressions.** Touch targets, gestures, virtual keyboard sync on Android/iOS, safe-area insets, landscape vs portrait. `DisplayServer.virtual_keyboard_show()` buffer sync after programmatic text insertion is a known class of bug (#1822). Godot `MOUSE_FILTER` behavior differs between `STOP` / `PASS` / `IGNORE` in non-obvious ways — siblings don't propagate (#1875).
+10. **Mouse/input filter and focus stealing.** Buttons that steal focus from a `LineEdit`, containers with fixed `custom_minimum_size` that silently block scene UI underneath, `ScrollContainer` needing dynamic `mouse_filter` based on whether content overflows. Any new UI overlay on the left / bottom of the screen must be tested against SDK-rendered UI underneath.
+11. **Async / race conditions.** Re-entrant `await` inside resize / rotation / teleport handlers (#1823 needed an `_is_switching` guard). Signals connected on a node that hasn't readied yet. Awaits that the caller doesn't `await` on (missing `await` on a coroutine is a real bug class here — see #1851).
+12. **Resource leaks.** Godot does not auto-free bones, nodes outside the tree, or duplicated resources. Historical incident: spring-bone merge never recycled slots across outfit changes → unbounded `Skeleton3D` growth and stale bones silently binding to new meshes (#1849). When you see "add to skeleton / duplicate skin / instantiate on event", ask how it gets removed.
+13. **Persistence.** Blocked users, friends state, profile deploys, per-user settings. Check that state written to disk survives a restart and that load happens before UI reads it (#1872 was an instance of this breaking).
+14. **Log level discipline & Sentry quota.** Every log a PR *adds* has a cost, and the cost depends on its level. Error- and warning-level logs are routed to Godot's error stream and captured by the Sentry SDK in prod/staging builds — each one consumes the shared Sentry **event and attachment quota**, and a mis-leveled log on a hot path (scene-runner update loop, pointer events, per-entity/per-frame scans) can burst into *thousands* of events and exhaust the quota. The team already runs `_before_send` sampling and a `NOISE_PATTERNS` denylist (`godot/src/project_main_loop.gd`) precisely because over-reporting is a recurring problem — review new logs so that machinery doesn't have to. For **every** added log in the diff, ask: *is this an actionable fault a maintainer would want to see as a Sentry issue, or is it expected/recoverable noise?*
     - **Rust:** `tracing::error!` → Godot error → **Sentry issue**. `tracing::warn!` → Godot warning → Sentry (lower severity). `info!`/`debug!`/`trace!` → plain `godot_print!`, **never** Sentry (see `lib/src/tools/godot_logger.rs`). Debugging/diagnostic output belongs in `tracing::debug!`. Reserve `tracing::error!` for genuine faults we'd actually want paged on. A *missing texture / wearable / optional asset that already has a fallback* is **not** an error — it's a `warn!` (or `debug!` if routine) with a defined `else` branch.
     - **GDScript:** `push_error` / `printerr` → Godot error → **Sentry**. `push_warning` → warning. `print` / `prints` → console only, not Sentry. Same rule: don't `push_error` for expected-and-handled conditions; use `push_warning` or `print`, and reserve `push_error`/`printerr` for genuinely actionable failures.
 
@@ -113,29 +122,51 @@ Apply this order. Everything below "Correctness" is negotiable; the top tier is 
 
 ### Tier 3 — Quality
 
-14. **Dev-only flags live in release builds.** Deep-link params like `fake-owned-wearables`, `disable-profile-deploy`, `dclenv=zone` parse unconditionally today. Acceptable but worth flagging for gating behind `#[cfg(debug_assertions)]` / a feature flag / a loud warning (#1849).
-15. **Dead code / orphan uniforms / unused imports.** Rust `clippy -D warnings` catches most of this, but `.tres` / `.tscn` / `.gdshader` don't — reviewers catch those manually. A shader uniform removed in `.gdshader` should also be removed from every `.tres`/`.tscn` that set it, and from every material that references a different-typed replacement (#1878 had a `Texture2D → samplerCube` mismatch that would render black silently).
-16. **Performance on the hot path.** The scene-runner update loop, pointer-event loop, and shaders are hot. Watch for per-pixel `acos`/`normalize`/`pow` that can be replaced by compares, per-frame `find_node` / `get_node` lookups, unbounded `for x in all_entities` scans inside scene systems, and JSON serialization on the scene thread.
-17. **Test plan quality.** PR descriptions in this repo follow `## Summary` + `## Test plan` (bulleted checklist). A missing or vague test plan is a legitimate review comment, especially for UI changes. Mobile-visible changes should say *which* platform was tested on. **The QA team runs these by hand on a real phone** (builds auto-distribute via TestFlight / Firebase App Distribution) — a case a tester couldn't reproduce cold (steps that don't start from opening the app, no observable expected result, or non-obvious required state left unsaid) is worth holding on. See Section 4 → "Writing test steps QA can execute" for the required format and a worked example.
-18. **Comments that explain "why", not "what".** Consistent with the CLAUDE.md guidance — reviewers flag comments that restate the code, and praise ones that cite a matching Unity file/line or explain a non-obvious Godot quirk.
+15. **Dev-only flags live in release builds.** Deep-link params like `fake-owned-wearables`, `disable-profile-deploy`, `dclenv=zone` parse unconditionally today. Acceptable but worth flagging for gating behind `#[cfg(debug_assertions)]` / a feature flag / a loud warning (#1849).
+16. **Dead code / orphan uniforms / unused imports.** Rust `clippy -D warnings` catches most of this, but `.tres` / `.tscn` / `.gdshader` don't — reviewers catch those manually. A shader uniform removed in `.gdshader` should also be removed from every `.tres`/`.tscn` that set it, and from every material that references a different-typed replacement (#1878 had a `Texture2D → samplerCube` mismatch that would render black silently).
+17. **Performance on the hot path.** The scene-runner update loop, pointer-event loop, and shaders are hot. Watch for per-pixel `acos`/`normalize`/`pow` that can be replaced by compares, per-frame `find_node` / `get_node` lookups, unbounded `for x in all_entities` scans inside scene systems, and JSON serialization on the scene thread.
+18. **Description and test plan quality.** PR descriptions in this repo are `## What`, `## Why`, an optional collapsed `## Details`, and a `## Test plan` (see Section 4 → "PR description shape", including the AG rule on AI-generated text). A description with no What/Why, or whose What/Why read as raw AI output, is a rewrite request before code review. A missing or vague test plan is a legitimate review comment, especially for UI changes. Mobile-visible changes should say *which* platform was tested on. **The QA team runs these by hand on a real phone** (builds auto-distribute via TestFlight / Firebase App Distribution) — a case a tester couldn't reproduce cold (steps that don't start from opening the app, no observable expected result, or non-obvious required state left unsaid) is worth holding on. See Section 4 → "Writing test steps QA can execute" for the required format and a worked example.
+19. **Comments that explain "why", not "what".** Consistent with the CLAUDE.md guidance — reviewers flag comments that restate the code, and praise ones that cite a matching Unity file/line or explain a non-obvious Godot quirk.
 
 ---
 
 ## 4. Team conventions to uphold
 
 ### PR description shape
+
+The description is the author's statement of **what changed and why**, written for whoever reads it — reviewer, QA, another team, someone reading the changelog months later. It is not a summary of the diff. The `pr-description` skill (`.claude/skills/pr-description/`) is the authoring guide; this section is what a reviewer holds it to.
+
 ```
-## Summary
-- <bullet>
-- <bullet>
+## What
+<What is different after this merges — player, creator, reviewer or build. 1–3 sentences,
+ plain language. Reading only What + Why, a teammate on another team understands the change.>
+
+## Why
+<The bug, the request, the measurement, the parity gap. 1–3 sentences, including what the
+ change deliberately does NOT do when a reader might assume otherwise.>
 
 Closes #<issue>
 
+## Details
+<details><summary>Expand</summary>
+Root cause, approach and trade-offs, screenshots/video, per-file notes when non-obvious.
+Section omitted entirely when What/Why say it all.
+</details>
+
 ## Test plan
-- [ ] <steps>
-- [ ] <steps>
+- [ ] <cases per "Writing test steps QA can execute" below — or "No QA needed — no behavior change">
 ```
-Larger PRs often add a "Root Cause" section before Summary, a Video/Images section after it, and a "Future plans" section at the end. Commit prefixes follow conventional commits: `feat:`, `fix:`, `chore:`, `refactor:`.
+
+Optional, only when they add clarity: a **Heads-up** line after `## Why` naming which team was told and where; a **Changes** list (file → what it does) inside Details; **Future plans** / **Known gaps** at the end. Commit prefixes follow conventional commits: `feat:`, `fix:`, `chore:`, `refactor:`. Older PRs use `## Summary` bullets in place of What/Why — accept that on existing PRs, ask for the sections on new ones.
+
+**The AG rule — the author owns understanding the change.** The team's guideline for AI-assisted work (messages, PRs, docs, issues) is that anything with your name on it must be at **AG-3 to AG-5**: you read it, you changed what didn't sound right, and you can explain any part of it if asked. AI can help write code faster; it must not make *understanding* the change slower for everyone else. Concretely, a reviewer should hold the PR — before reading the code — when the description:
+
+- **has no `## What` / `## Why`, or they don't actually say it** (opens with a file list, a `## Changes` dump, or "This PR introduces a comprehensive…");
+- **reads as raw AI output** — restates the diff file by file, narrates the work, hedges with filler, or is far longer than the change warrants. Ask for a rewrite in the author's own words; do not reverse-engineer the intent from the diff on their behalf;
+- **hides ride-along behaviour changes** — anything outside the feature's stated scope that changes what a player, creator or build sees must be stated in What/Why, not buried in Details;
+- **touches something another team, service, SDK or workflow depends on with no heads-up** (shared UI components, auth, comms protocol, asset pipeline, mobile-bff contract, CI workflows). The norm is a short message in the relevant shared channel — `#ext-foundation` for cross-org — *before* merging: "I'm planning to merge X, it changes Y and may affect Z. Any concerns?". Ask whether it was posted.
+
+The same rule applies to review comments and replies: keep them short, in your own words, and skip AI-generated explanations that add text without adding clarity.
 
 ### Writing test steps QA can execute
 
@@ -212,7 +243,33 @@ The PR-level workflows a reviewer should expect green before approving:
 - `🍏 iOS` is **opt-in** — gated on the `build` label (alias: `build-ios`), which also posts a Slack "Android build ready" notification with the R2 APK download link. See Section 0 pre-flight: for platform-sensitive changes the iOS build is *required* and the PR should be held until a maintainer adds the label. For pure-backend / docs PRs, an absent iOS build is fine — say so explicitly.
 
 ### Release flow
-`release` branch is used for production cuts. PRs titled `Release: merge release into main` / `Merge main into release` appear periodically and should usually be merge-only (no review nits on code that's already been reviewed upstream).
+`release` branch is used for production cuts. PRs titled `chore: sync release into main (vX.Y.Z)` / `chore: merge release back into main` appear periodically and should usually be merge-only (no review nits on code that's already been reviewed upstream).
+
+### Release Candidate PR shape
+A **Release Candidate** promotes `main` (or a cherry-picked subset) into `release`: base `release`, head `release-X.Y.Z`, title `Release Candidate X.Y.Z`. Its description is the release changelog and the QA sheet — it is built from the promoted PRs' own descriptions (which is why the lead-paragraph rule above matters). Review it as a document, not as code — the code was reviewed in the individual PRs:
+
+```
+## Release Candidate X.Y.Z
+
+<Lead: what is promoted (main sha or cherry-picked set), clean promotion or not,
+ what was deliberately excluded, which PR bumped the version; then the release theme in player terms.>
+
+- **Base:** `release` · **Head:** `release-X.Y.Z`
+
+## What's included
+**Features** — one line per PR in player/creator terms, ending in (#PR)
+**Fixes** — the symptom that went away, with the measurement when the PR had one (#PR)
+**Technical** — no QA needed (CI, tooling, back-merges, dependency bumps)
+
+## Test plan
+**Build:** `vX.Y.Z.<build>-<sha>-prod` · one Android + one iPhone.
+- [ ] **Version** — login screen and Settings → About read `vX.Y.Z.<build>-<sha>-prod`
+- [ ] **<Feature>** — one action that proves it on a phone → what QA should see `#PR`
+- [ ] **Regression** — enter a few scenes, chat, change a wearable, play an emote: no crashes
+**Known gap:** anything shipping without a device run, and why
+```
+
+What to check on an RC: every commit in `origin/release..head` is accounted for by a line or explicitly excluded; every Feature/Fix line has a Test plan line and no Technical line does; the **Version** line is present and matches `lib/Cargo.toml` / `godot/export_presets.cfg`; a patch RC stacked on a previous one says so and lists only the additions. Examples: #2787 (clean promotion), #2797 (cherry-picked, stacked on 1.13.0).
 
 ---
 
@@ -303,6 +360,7 @@ Length:
 
 A reviewer should `grep` / eyeball the diff for these before reading logic:
 
+- The description has no `## What` / `## Why`, or they don't say what changed and why, or read as raw AI output (diff restated file by file, "This PR introduces a comprehensive…", far longer than the change) → ask for a rewrite in the author's words before reviewing code. See Section 4 → "PR description shape".
 - `print(` / `prints(` / `print_verbose(` in non-tool GDScript → likely debug leftover.
 - New `tracing::error!` (Rust) or `push_error(` / `printerr(` (GDScript) in the diff → these ship to Sentry and cost quota. Confirm the condition is a genuine, actionable fault. If it's expected/recoverable or already has a fallback (missing texture/asset, optional absent, 404-then-default), ask to downgrade to `warn!`/`push_warning` or `debug!`/`print`. See Section 5.
 - New `tracing::error!` / `tracing::warn!` (or `push_error`/`printerr`) inside a loop, per-entity/per-frame scan, `_process`, or the scene-runner/pointer-event hot path → potential Sentry quota burst; flag even warnings here.
@@ -321,6 +379,7 @@ A reviewer should `grep` / eyeball the diff for these before reading logic:
 - `DclGlobal.is_ios()` / `is_android()` / `is_mobile()` in new GDScript → request `OS.get_name() == "iOS"` / `"Android"` to match the repo convention.
 - `OS.get_name()` checks that handle some but not all relevant targets (e.g. branches on `"Android"` but silently falls through on `"iOS"`, or covers mobile but ignores `"Web"` / `"macOS"`) → ask which platforms were considered and verify every target the change is supposed to support is covered.
 - `_process` doing physics-coupled work, or `_physics_process` doing UI work → see the pattern note in Section 5.
+- A new user-facing string literal in `.tscn`/`.gd`, or a key on an `auto_translate_mode = 2` node → must be a translation key, and mode 2 draws a key verbatim. The scanner cannot see strings passed as function arguments, held in data tables, or set as `@export` defaults — check those by eye. See Tier 2.
 
 ---
 

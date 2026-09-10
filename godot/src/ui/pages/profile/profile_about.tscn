@@ -49,7 +49,7 @@ theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 2
 theme_override_font_sizes/font_size = 24
-text = "About me"
+text = "PROFILE_ABOUT_ME"
 label_settings = SubResource("LabelSettings_title")
 uppercase = true
 
@@ -65,6 +65,7 @@ layout_mode = 2
 theme_override_constants/margin_top = 0
 
 [node name="Label_InfoDescription" type="Label" parent="MarginContainer_Description" unique_id=1798021201]
+auto_translate_mode = 2
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
@@ -73,7 +74,6 @@ theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 2
 theme_override_font_sizes/font_size = 20
-text = "Use this space to describe yourself in a few words."
 label_settings = SubResource("LabelSettings_p128h")
 autowrap_mode = 2
 
@@ -98,61 +98,61 @@ columns = 3
 [node name="AboutData_Country" parent="MarginContainer_DataAbout/GridContainer_About" unique_id=1957787459 instance=ExtResource("4_about_data")]
 unique_name_in_owner = true
 layout_mode = 2
-title = "Country"
+title = "PROFILE_COUNTRY"
 icon = ExtResource("5_3dgdc")
 
 [node name="AboutData_Language" parent="MarginContainer_DataAbout/GridContainer_About" unique_id=892303063 instance=ExtResource("4_about_data")]
 unique_name_in_owner = true
 layout_mode = 2
-title = "Language"
+title = "PROFILE_LANGUAGE"
 icon = ExtResource("5_8teom")
 
 [node name="AboutData_Pronouns" parent="MarginContainer_DataAbout/GridContainer_About" unique_id=1376139703 instance=ExtResource("4_about_data")]
 unique_name_in_owner = true
 layout_mode = 2
-title = "Pronouns"
+title = "PROFILE_PRONOUNS"
 icon = ExtResource("6_72d1u")
 
 [node name="AboutData_Gender" parent="MarginContainer_DataAbout/GridContainer_About" unique_id=1369717917 instance=ExtResource("4_about_data")]
 unique_name_in_owner = true
 layout_mode = 2
-title = "Gender"
+title = "PROFILE_GENDER"
 icon = ExtResource("8_w128x")
 
 [node name="AboutData_RelationshipStatus" parent="MarginContainer_DataAbout/GridContainer_About" unique_id=265882428 instance=ExtResource("4_about_data")]
 unique_name_in_owner = true
 layout_mode = 2
-title = "Relationship Status"
+title = "PROFILE_RELATIONSHIP_STATUS"
 icon = ExtResource("7_7vv4g")
 
 [node name="AboutData_SexualOrientation" parent="MarginContainer_DataAbout/GridContainer_About" unique_id=208982004 instance=ExtResource("4_about_data")]
 unique_name_in_owner = true
 layout_mode = 2
-title = "Sexual Orientation"
+title = "PROFILE_SEXUAL_ORIENTATION"
 icon = ExtResource("7_72d1u")
 
 [node name="AboutData_EmploymentStatus" parent="MarginContainer_DataAbout/GridContainer_About" unique_id=488842101 instance=ExtResource("4_about_data")]
 unique_name_in_owner = true
 layout_mode = 2
-title = "Employment Status"
+title = "PROFILE_EMPLOYMENT_STATUS"
 icon = ExtResource("11_p128h")
 
 [node name="AboutData_Profession" parent="MarginContainer_DataAbout/GridContainer_About" unique_id=122094646 instance=ExtResource("4_about_data")]
 unique_name_in_owner = true
 layout_mode = 2
-title = "Profession"
+title = "PROFILE_PROFESSION"
 icon = ExtResource("10_1kjum")
 
 [node name="AboutData_RealName" parent="MarginContainer_DataAbout/GridContainer_About" unique_id=666850709 instance=ExtResource("4_about_data")]
 unique_name_in_owner = true
 layout_mode = 2
-title = "Real Name"
+title = "PROFILE_REAL_NAME"
 icon = ExtResource("11_wv437")
 
 [node name="AboutData_Hobby" parent="MarginContainer_DataAbout/GridContainer_About" unique_id=1966669248 instance=ExtResource("4_about_data")]
 unique_name_in_owner = true
 layout_mode = 2
-title = "HOBBY"
+title = "PROFILE_HOBBY_CAPS"
 icon = ExtResource("14_li7if")
 
 [node name="MarginContainer_SeeMore" type="MarginContainer" parent="." unique_id=1619399916]
@@ -193,4 +193,4 @@ size_flags_horizontal = 4
 theme_override_colors/font_color = Color(0.627451, 0.67058825, 1, 1)
 theme_override_fonts/font = ExtResource("6_font_semi")
 theme_override_font_sizes/font_size = 18
-text = "SEE LESS"
+text = "PROFILE_SEE_LESS"

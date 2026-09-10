@@ -1361,18 +1361,23 @@ impl ContentProvider {
     #[func]
     pub fn fetch_file_by_url(&mut self, file_hash: GString, url: GString) -> Gd<Promise> {
         let file_hash = file_hash.to_string();
+        // Namespaced, because this promise resolves with no resource at all —
+        // it only guarantees the file is on disk. Sharing the bare hash with a
+        // typed fetcher hands it a promise that resolves to null, which is how
+        // an `AssetLoad` preload used to break `AudioSource` (#2741).
+        let cache_key = format!("file_{file_hash}");
 
         // Check cache first - prevent duplicate downloads of the same file
         // Note: For raw file downloads, we only cache in-flight promises.
         // Once resolved, we don't cache because the file might be evicted from disk.
         // The async task will check if file exists before downloading.
-        if let Some(promise) = self.get_cached_promise(&file_hash) {
+        if let Some(promise) = self.get_cached_promise(&cache_key) {
             if !promise.bind().is_resolved() {
                 return promise;
             }
             // Promise is resolved - remove it so we create a fresh one that will
             // verify the file exists in the async task
-            self.promises.remove(&file_hash);
+            self.promises.remove(&cache_key);
         }
 
         let url = url.to_string();
@@ -1412,7 +1417,7 @@ impl ContentProvider {
         });
 
         // Insert into cache to prevent duplicate downloads
-        self.cache_promise(file_hash, &promise);
+        self.cache_promise(cache_key, &promise);
 
         promise
     }

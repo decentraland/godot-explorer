@@ -15,7 +15,7 @@ func _on_dialog_stack_child_order_changed():
 
 	if is_instance_valid(counter):
 		if stack_childs > 1:
-			counter.set_text("Tabs: %d" % stack_childs)
+			counter.set_text(tr("DIALOG_STACK_TABS").format({"count": stack_childs}))
 			counter.show()
 		else:
 			counter.hide()

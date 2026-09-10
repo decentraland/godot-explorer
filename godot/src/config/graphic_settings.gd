@@ -1,7 +1,7 @@
 class_name GraphicSettings extends RefCounted
 
 ## Profile definitions as data - easier to tune without code changes
-## Keys: aa, shadow, bloom, skybox, texture, fps, scale, mesh_lod_threshold
+## Keys: aa, shadow, bloom, skybox, texture, fps, scale, mesh_lod_threshold, view_distance, particle_quality
 ##
 ## mesh_lod_threshold (pixels of screen-space error before swapping to a
 ## lower-detail LOD). Default Godot=1.0 — very conservative. Genesis Plaza
@@ -27,6 +27,8 @@ const PROFILE_DEFINITIONS: Array[Dictionary] = [
 		"fps": ConfigData.FpsLimitMode.FPS_18,
 		"scale": 0.5,
 		"mesh_lod_threshold": 8.0,
+		"view_distance": 100.0,
+		"particle_quality": 0,
 		"dcl_lights": false,
 		"dcl_light_shadows": false,
 		"dcl_max_lights": 0,
@@ -42,6 +44,8 @@ const PROFILE_DEFINITIONS: Array[Dictionary] = [
 		"fps": ConfigData.FpsLimitMode.FPS_30,
 		"scale": 0.75,
 		"mesh_lod_threshold": 6.0,
+		"view_distance": 150.0,
+		"particle_quality": 1,
 		"dcl_lights": true,
 		"dcl_light_shadows": false,
 		"dcl_max_lights": 2,
@@ -59,6 +63,8 @@ const PROFILE_DEFINITIONS: Array[Dictionary] = [
 		"fps": ConfigData.FpsLimitMode.FPS_30,
 		"scale": 1.0,
 		"mesh_lod_threshold": 3.0,
+		"view_distance": 200.0,
+		"particle_quality": 2,
 		"dcl_lights": true,
 		"dcl_light_shadows": false,
 		"dcl_max_lights": 4,
@@ -79,6 +85,8 @@ const PROFILE_DEFINITIONS: Array[Dictionary] = [
 		"fps": ConfigData.FpsLimitMode.FPS_60,
 		"scale": 1.0,
 		"mesh_lod_threshold": 2.0,
+		"view_distance": 300.0,
+		"particle_quality": 3,
 		"dcl_lights": true,
 		"dcl_light_shadows": true,
 		"dcl_max_lights": 8,
@@ -86,12 +94,27 @@ const PROFILE_DEFINITIONS: Array[Dictionary] = [
 	},
 ]
 
+## English, and deliberately so: these feed print() logs (global.gd, settings.gd) and the debug
+## FPS overlay (explorer.gd), which stay English. The user-facing dropdown uses PROFILE_KEYS.
+# i18n-keys: SETTINGS_GRAPHIC_PROFILE_*, SETTINGS_SKYBOX_*
 const PROFILE_NAMES: Array[String] = ["Very Low", "Low", "Medium", "High", "Custom"]
+
+## Display keys for PROFILE_NAMES, same order. A parallel table rather than a rename, so the
+## log/overlay call sites keep their English names.
+const PROFILE_KEYS: Array[String] = [
+	"SETTINGS_GRAPHIC_PROFILE_VERY_LOW",
+	"SETTINGS_GRAPHIC_PROFILE_LOW",
+	"SETTINGS_GRAPHIC_PROFILE_MEDIUM",
+	"SETTINGS_GRAPHIC_PROFILE_HIGH",
+	"SETTINGS_GRAPHIC_PROFILE_CUSTOM",
+]
+## `secs` is the value that is stored and matched; `name` is English for logs and `key` is what
+## the Settings dropdown shows.
 const SKYBOX_TIME_NAMES: Array[Dictionary] = [
-	{"name": "Midnight", "secs": 86400},
-	{"name": "Afternoon", "secs": 64800},
-	{"name": "Midday", "secs": 43200},
-	{"name": "Morning", "secs": 21600}
+	{"name": "Midnight", "key": "SETTINGS_SKYBOX_MIDNIGHT", "secs": 86400},
+	{"name": "Afternoon", "key": "SETTINGS_SKYBOX_AFTERNOON", "secs": 64800},
+	{"name": "Midday", "key": "SETTINGS_SKYBOX_MIDDAY", "secs": 43200},
+	{"name": "Morning", "key": "SETTINGS_SKYBOX_MORNING", "secs": 21600}
 ]
 
 
@@ -270,10 +293,16 @@ static func apply_graphic_profile(profile_index: int) -> void:
 	config.texture_quality = profile.texture
 	config.limit_fps = profile.fps
 	config.resolution_3d_scale = profile.scale
+	config.view_distance = profile.view_distance
+	config.particle_quality = profile.particle_quality
 	config.graphic_profile = profile_index
 
 	# Apply FPS limit immediately
 	apply_fps_limit()
+
+	# Apply view distance immediately
+	if is_instance_valid(Global.player_camera_node):
+		Global.player_camera_node.far = profile.view_distance
 
 	# Apply 3D resolution scale to viewport
 	var viewport := Global.get_tree().root.get_viewport()
@@ -286,6 +315,11 @@ static func apply_graphic_profile(profile_index: int) -> void:
 		var lod_thr: float = profile.get("mesh_lod_threshold", 1.0)
 		viewport.mesh_lod_threshold = lod_thr
 
+	# Avatar move/jump/land dust particles follow the profile.
+	AvatarAnimHelpers.apply_particles_enabled(profile.particle_quality > 0)
+	# Scene particle budgets + CPU/GPU emitter selection (Rust side).
+	apply_particle_quality(profile.particle_quality)
+
 	# Scene dynamic lights follow the profile. Dev Tools can override at runtime.
 	DclLightSourceComponent.apply_graphic_profile_settings(
 		profile.get("dcl_lights", false),
@@ -293,3 +327,18 @@ static func apply_graphic_profile(profile_index: int) -> void:
 		profile.get("dcl_max_lights", 0),
 		profile.get("dcl_light_range_cap", 15.0)
 	)
+
+
+## particle_quality 0-3 -> (scene budget, per-emitter cap, use CPU emitters).
+## 0 = scene particles off. Low profiles use CPUParticles3D (cheaper on mobile
+## GPUs); bursts are skipped there (no emit_particle on CPU emitters).
+static func apply_particle_quality(quality: int) -> void:
+	match quality:
+		0:
+			DclGlobal.set_particle_profile_budgets(0, 0, true)
+		1:
+			DclGlobal.set_particle_profile_budgets(2_000, 500, true)
+		2:
+			DclGlobal.set_particle_profile_budgets(15_000, 2_000, false)
+		_:
+			DclGlobal.set_particle_profile_budgets(50_000, 5_000, false)

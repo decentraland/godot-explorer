@@ -28,6 +28,9 @@ const SOURCE_ENGINE := "engine"
 # exit reason. Bounded at the call site, so exempt from the remote rate below.
 const SOURCE_SCENE_CRASH := "scene_crash"
 const SOURCE_EXIT_REASON := "exit_reason"
+# The diagnostics event behind a user-filed bug report (sentry_user_feedback.gd),
+# marked with a `category` tag. One per report, so exempt from the remote rate too.
+const SOURCE_FEEDBACK := "feedback"
 
 # Fraction of each source kept once `sentry-error-events` is on, applied on top
 # of the remote `sentry-sample-rate`. Sources we author and can act on stay at
@@ -39,6 +42,7 @@ const SOURCE_KEEP_RATE := {
 	SOURCE_CAPTURE: 1.0,
 	SOURCE_SCENE_CRASH: 1.0,
 	SOURCE_EXIT_REASON: 1.0,
+	SOURCE_FEEDBACK: 1.0,
 	SOURCE_RUST_APP: 1.0,
 	SOURCE_RUST_DEP: 0.05,
 	SOURCE_SCENE: 0.01,
@@ -53,7 +57,7 @@ const UNKNOWN_SOURCE_KEEP_RATE := 0.01
 # and the two structured sources cap themselves - at most ten scene crashes per
 # session and one event per exit reason per launch - so sampling them would
 # only randomly hide the events these tags exist for.
-const REMOTE_RATE_EXEMPT := [SOURCE_CRASH, SOURCE_SCENE_CRASH, SOURCE_EXIT_REASON]
+const REMOTE_RATE_EXEMPT := [SOURCE_CRASH, SOURCE_SCENE_CRASH, SOURCE_EXIT_REASON, SOURCE_FEEDBACK]
 
 # Sampling rate used until the `sentry-sample-rate` feature flag loads — also
 # the effective rate when the fetch fails or the flag is absent. 1.0 because
@@ -215,6 +219,19 @@ func _before_send(event: SentryEvent) -> SentryEvent:
 		return _keep(event, SOURCE_SCENE_CRASH)
 	if event_kind == "exit_reason":
 		return _keep(event, SOURCE_EXIT_REASON)
+	# User-initiated bug reports carry a link to this event in their Intercom
+	# ticket, so sampling one away would leave support with a dead URL — and it
+	# would fail silently, because a dropped event still returns a valid-looking
+	# id. They are rare and explicit, so they skip the remote rate (the 0.0 kill
+	# switch in _keep still wins). Tested before the shape test below: the event
+	# has no exception and would otherwise roll the rate as SOURCE_CAPTURE.
+	# Literals, not SentryUserFeedback's constants: referencing that class from
+	# here makes Godot fail to resolve ProjectMainLoop as a MainLoop at startup
+	# ("does not inherit from SceneTree or MainLoop"), since the main loop is
+	# built before script classes are available. Kept in sync by the comment on
+	# SentryUserFeedback.CATEGORY_TAG_KEY.
+	if event.get_tag("category") == "FEEDBACK":
+		return _keep(event, SOURCE_FEEDBACK)
 	# An event with no exception came from an explicit SentrySDK.capture_* call:
 	# deliberate instrumentation, today only NodeGuard (node_guard.gd), which caps
 	# itself at one report per site per session. Note this is a shape test, not an

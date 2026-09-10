@@ -228,6 +228,15 @@ func _route_teleport() -> void:
 	var realm = Global.deep_link_obj.preview
 	if realm.is_empty():
 		realm = Global.deep_link_obj.realm
+	else:
+		# A deeplink that arrives while the explorer is already running — scanning the preview
+		# QR without closing the app — reaches this realm switch but never explorer._ready(),
+		# which is the only other place that points the preview WebSocket at the new server
+		# (explorer.gd:334). Without this the realm follows the deeplink while the socket stays
+		# on the previous host, so hot-reload goes silently dead with nothing logged (#2795).
+		# Re-pointing a live socket is supported: set_url() only stores the pending URL and
+		# PreviewWebSocket._process closes and reconnects on the next frames.
+		Global.scene_fetcher.set_preview_url(realm)
 	var location: Vector2i = Global.deep_link_obj.location
 	var has_location := Global.deep_link_obj.is_location_defined()
 

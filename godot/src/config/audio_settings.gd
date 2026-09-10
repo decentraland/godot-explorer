@@ -1,5 +1,23 @@
 class_name AudioSettings extends RefCounted
 
+const MIN_VOLUME_DB := -80.0
+
+
+## Slider position (0-100) to bus gain. Linear in amplitude, like Unity's
+## `AudioUtils.PercentageVolumeToDecibel`: 50% is -6 dB, not -40 dB.
+static func percentage_to_db(percentage: float) -> float:
+	if percentage <= 0.0:
+		return MIN_VOLUME_DB
+	return maxf(MIN_VOLUME_DB, linear_to_db(percentage / 100.0))
+
+
+static func _apply_bus_percentage(bus_name: StringName, percentage: float) -> void:
+	var bus_index := AudioServer.get_bus_index(bus_name)
+	if bus_index < 0:
+		printerr("AudioSettings: unknown audio bus ", bus_name)
+		return
+	AudioServer.set_bus_volume_db(bus_index, percentage_to_db(percentage))
+
 
 static func apply_volume_settings():
 	apply_general_volume_settings()
@@ -12,9 +30,7 @@ static func apply_volume_settings():
 
 
 static func apply_general_volume_settings():
-	var bus_index := AudioServer.get_bus_index("Master")
-	var general_db = -80.0 + (80.0 * (float(Global.get_config().audio_general_volume) / 100.0))
-	AudioServer.set_bus_volume_db(bus_index, general_db)
+	_apply_bus_percentage(&"Master", Global.get_config().audio_general_volume)
 
 
 static func apply_scene_volume_settings(force_value = null):
@@ -22,9 +38,7 @@ static func apply_scene_volume_settings(force_value = null):
 	if force_value is float:
 		scene_volume = force_value
 
-	var bus_index := AudioServer.get_bus_index("Scene")
-	var general_db = -80.0 + (80.0 * (float(scene_volume) / 100.0))
-	AudioServer.set_bus_volume_db(bus_index, general_db)
+	_apply_bus_percentage(&"Scene", scene_volume)
 
 
 static func apply_voice_chat_volume_settings(force_value = null):
@@ -32,29 +46,19 @@ static func apply_voice_chat_volume_settings(force_value = null):
 	if force_value is float:
 		voice_volume = force_value
 
-	var bus_index := AudioServer.get_bus_index("VoiceChat")
-	var general_db = -80.0 + (80.0 * (float(voice_volume) / 100.0))
-	AudioServer.set_bus_volume_db(bus_index, general_db)
+	_apply_bus_percentage(&"VoiceChat", voice_volume)
 
 
 static func apply_ui_volume_settings():
-	var bus_index := AudioServer.get_bus_index("UI")
-	var general_db = -80.0 + (80.0 * (float(Global.get_config().audio_ui_volume) / 100.0))
-	AudioServer.set_bus_volume_db(bus_index, general_db)
+	_apply_bus_percentage(&"UI", Global.get_config().audio_ui_volume)
 
 
 static func apply_music_volume_settings():
-	var bus_index := AudioServer.get_bus_index("Music")
-	var general_db = -80.0 + (80.0 * (float(Global.get_config().audio_music_volume) / 100.0))
-	AudioServer.set_bus_volume_db(bus_index, general_db)
+	_apply_bus_percentage(&"Music", Global.get_config().audio_music_volume)
 
 
 static func apply_avatar_and_emotes_volume_settings():
-	var bus_index := AudioServer.get_bus_index("AvatarAndEmotes")
-	var general_db = (
-		-80.0 + (80.0 * (float(Global.get_config().audio_avatar_and_emotes_volume) / 100.0))
-	)
-	AudioServer.set_bus_volume_db(bus_index, general_db)
+	_apply_bus_percentage(&"AvatarAndEmotes", Global.get_config().audio_avatar_and_emotes_volume)
 
 
 static func apply_mic_amplification_settings():

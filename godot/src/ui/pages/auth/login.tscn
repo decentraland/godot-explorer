@@ -32,29 +32,40 @@ focus_mode = 0
 theme = ExtResource("3_kk1uc")
 theme_type_variation = &"SnowButton"
 theme_override_colors/font_color = Color(0, 0, 0, 1)
-theme_override_constants/icon_max_width = 45
 theme_override_fonts/font = ExtResource("3_f6pdb")
 theme_override_font_sizes/font_size = 30
-text = "GOOGLE"
-icon_alignment = 1
-expand_icon = true
 
-[node name="TextureRect_Google" type="TextureRect" parent="Button_Google" unique_id=676660307]
+[node name="HBoxContainer" type="HBoxContainer" parent="Button_Google" unique_id=1841153230]
+editor_description = "Centres the brand icon and the label as one group. The gap is `separation`, not padding baked into the button text: the label is a translation key, so its width changes per locale and any spaces would re-centre with it. The icon stays a TextureRect rather than the Button's `icon` slot because the theme modulates that slot (SnowButton/colors/icon_disabled_color) and these are brand marks that must not be recoloured. Children are mouse_filter=IGNORE so clicks reach the Button."
 layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -112.0
-offset_top = -22.0
-offset_right = -68.0
-offset_bottom = 22.0
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
+theme_override_constants/separation = 10
+alignment = 1
+
+[node name="TextureRect_Google" type="TextureRect" parent="Button_Google/HBoxContainer" unique_id=1841153231]
+custom_minimum_size = Vector2(44, 44)
+layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 4
+mouse_filter = 2
 texture = ExtResource("5_ys0bb")
 expand_mode = 1
+stretch_mode = 5
+
+[node name="Label" type="Label" parent="Button_Google/HBoxContainer" unique_id=1841153232]
+layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_fonts/font = ExtResource("3_f6pdb")
+theme_override_font_sizes/font_size = 30
+text = "AUTH_LOGIN_GOOGLE"
 
 [node name="Button_WalletConnect" type="Button" parent="." unique_id=650016513]
 unique_name_in_owner = true
@@ -64,28 +75,40 @@ focus_mode = 0
 theme = ExtResource("3_kk1uc")
 theme_type_variation = &"SnowButton"
 theme_override_colors/font_color = Color(0, 0, 0, 1)
-theme_override_constants/icon_max_width = 32
 theme_override_fonts/font = ExtResource("3_f6pdb")
 theme_override_font_sizes/font_size = 30
-text = "      WALLET CONNECT"
-expand_icon = true
 
-[node name="TextureRect_WalletIcon" type="TextureRect" parent="Button_WalletConnect" unique_id=1829273505]
+[node name="HBoxContainer" type="HBoxContainer" parent="Button_WalletConnect" unique_id=1841153233]
+editor_description = "Centres the brand icon and the label as one group. The gap is `separation`, not padding baked into the button text: the label is a translation key, so its width changes per locale and any spaces would re-centre with it. The icon stays a TextureRect rather than the Button's `icon` slot because the theme modulates that slot (SnowButton/colors/icon_disabled_color) and these are brand marks that must not be recoloured. Children are mouse_filter=IGNORE so clicks reach the Button."
 layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -190.0
-offset_top = -31.5
-offset_right = -130.0
-offset_bottom = 28.5
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
+theme_override_constants/separation = 10
+alignment = 1
+
+[node name="TextureRect_WalletIcon" type="TextureRect" parent="Button_WalletConnect/HBoxContainer" unique_id=1841153234]
+custom_minimum_size = Vector2(60, 60)
+layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 4
+mouse_filter = 2
 texture = ExtResource("5_mqpw2")
 expand_mode = 1
+stretch_mode = 5
+
+[node name="Label" type="Label" parent="Button_WalletConnect/HBoxContainer" unique_id=1841153235]
+layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_fonts/font = ExtResource("3_f6pdb")
+theme_override_font_sizes/font_size = 30
+text = "AUTH_LOGIN_WALLET_CONNECT"
 
 [node name="Button_MetaMask" type="Button" parent="." unique_id=1320446962]
 unique_name_in_owner = true
@@ -96,28 +119,40 @@ focus_mode = 0
 theme = ExtResource("3_kk1uc")
 theme_type_variation = &"SnowButton"
 theme_override_colors/font_color = Color(0, 0, 0, 1)
-theme_override_constants/icon_max_width = 32
 theme_override_fonts/font = ExtResource("3_f6pdb")
 theme_override_font_sizes/font_size = 30
-text = "     METAMASK"
-expand_icon = true
 
-[node name="TextureRect_WalletIcon" type="TextureRect" parent="Button_MetaMask" unique_id=1544698520]
+[node name="HBoxContainer" type="HBoxContainer" parent="Button_MetaMask" unique_id=1841153236]
+editor_description = "Centres the brand icon and the label as one group. The gap is `separation`, not padding baked into the button text: the label is a translation key, so its width changes per locale and any spaces would re-centre with it. The icon stays a TextureRect rather than the Button's `icon` slot because the theme modulates that slot (SnowButton/colors/icon_disabled_color) and these are brand marks that must not be recoloured. Children are mouse_filter=IGNORE so clicks reach the Button."
 layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -134.0
-offset_top = -31.5
-offset_right = -74.0
-offset_bottom = 28.5
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
+theme_override_constants/separation = 10
+alignment = 1
+
+[node name="TextureRect_WalletIcon" type="TextureRect" parent="Button_MetaMask/HBoxContainer" unique_id=1841153237]
+custom_minimum_size = Vector2(60, 60)
+layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 4
+mouse_filter = 2
 texture = ExtResource("6_3kqo8")
 expand_mode = 1
+stretch_mode = 5
+
+[node name="Label" type="Label" parent="Button_MetaMask/HBoxContainer" unique_id=1841153238]
+layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_fonts/font = ExtResource("3_f6pdb")
+theme_override_font_sizes/font_size = 30
+text = "AUTH_LOGIN_METAMASK"
 
 [node name="Button_Apple" type="Button" parent="." unique_id=1232574871]
 unique_name_in_owner = true
@@ -128,29 +163,40 @@ focus_mode = 0
 theme = ExtResource("3_kk1uc")
 theme_type_variation = &"SnowButton"
 theme_override_colors/font_color = Color(0, 0, 0, 1)
-theme_override_constants/icon_max_width = 80
 theme_override_fonts/font = ExtResource("3_f6pdb")
 theme_override_font_sizes/font_size = 30
-text = "      APPLE"
-icon_alignment = 1
-expand_icon = true
 
-[node name="TextureRect_Apple" type="TextureRect" parent="Button_Apple" unique_id=1841153228]
+[node name="HBoxContainer" type="HBoxContainer" parent="Button_Apple" unique_id=1841153239]
+editor_description = "Centres the brand icon and the label as one group. The gap is `separation`, not padding baked into the button text: the label is a translation key, so its width changes per locale and any spaces would re-centre with it. The icon stays a TextureRect rather than the Button's `icon` slot because the theme modulates that slot (SnowButton/colors/icon_disabled_color) and these are brand marks that must not be recoloured. Children are mouse_filter=IGNORE so clicks reach the Button."
 layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -80.0
-offset_top = -28.0
-offset_right = -30.0
-offset_bottom = 22.0
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
+theme_override_constants/separation = 10
+alignment = 1
+
+[node name="TextureRect_Apple" type="TextureRect" parent="Button_Apple/HBoxContainer" unique_id=1841153240]
+custom_minimum_size = Vector2(50, 50)
+layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 4
+mouse_filter = 2
 texture = ExtResource("9_tuhne")
 expand_mode = 1
+stretch_mode = 5
+
+[node name="Label" type="Label" parent="Button_Apple/HBoxContainer" unique_id=1841153241]
+layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_fonts/font = ExtResource("3_f6pdb")
+theme_override_font_sizes/font_size = 30
+text = "AUTH_LOGIN_APPLE"
 
 [node name="HBoxContainer_More" type="HBoxContainer" parent="." unique_id=1506319234]
 unique_name_in_owner = true
@@ -203,7 +249,7 @@ theme_override_styles/separator = SubResource("StyleBoxLine_stkud")
 layout_mode = 2
 theme_override_fonts/font = ExtResource("11_jikst")
 theme_override_font_sizes/font_size = 24
-text = "or"
+text = "COMMON_OR"
 
 [node name="Sep2" type="HSeparator" parent="Separator" unique_id=1169285780]
 layout_mode = 2
@@ -218,29 +264,40 @@ size_flags_horizontal = 3
 focus_mode = 0
 theme = ExtResource("3_kk1uc")
 theme_type_variation = &"SecondaryButton"
-theme_override_constants/icon_max_width = 45
 theme_override_fonts/font = ExtResource("3_f6pdb")
 theme_override_font_sizes/font_size = 30
-text = "       CONTINUE WITH EMAIL"
-icon_alignment = 1
-expand_icon = true
 
-[node name="TextureRect_Email" type="TextureRect" parent="Button_Email" unique_id=557034406]
+[node name="HBoxContainer" type="HBoxContainer" parent="Button_Email" unique_id=1841153242]
+editor_description = "Centres the brand icon and the label as one group. The gap is `separation`, not padding baked into the button text: the label is a translation key, so its width changes per locale and any spaces would re-centre with it. The icon stays a TextureRect rather than the Button's `icon` slot because the theme modulates that slot (SnowButton/colors/icon_disabled_color) and these are brand marks that must not be recoloured. Children are mouse_filter=IGNORE so clicks reach the Button."
 layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -205.5
-offset_top = -25.5
-offset_right = -155.5
-offset_bottom = 24.5
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
+theme_override_constants/separation = 10
+alignment = 1
+
+[node name="TextureRect_Email" type="TextureRect" parent="Button_Email/HBoxContainer" unique_id=1841153243]
+custom_minimum_size = Vector2(50, 50)
+layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 4
+mouse_filter = 2
 texture = ExtResource("6_email")
 expand_mode = 1
+stretch_mode = 5
+
+[node name="Label" type="Label" parent="Button_Email/HBoxContainer" unique_id=1841153244]
+layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 4
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
+theme_override_fonts/font = ExtResource("3_f6pdb")
+theme_override_font_sizes/font_size = 30
+text = "AUTH_LOGIN_EMAIL"
 
 [connection signal="pressed" from="Button_Google" to="." method="_on_button_google_pressed"]
 [connection signal="pressed" from="Button_WalletConnect" to="." method="_on_button_wallet_connect_pressed"]

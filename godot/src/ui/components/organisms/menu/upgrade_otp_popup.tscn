@@ -70,7 +70,7 @@ alignment = 1
 [node name="Label" type="Label" parent="MarginContainer/EmailStep/VBoxContainer2" unique_id=1900000005]
 custom_minimum_size = Vector2(300, 0)
 layout_mode = 2
-text = "Add Email Recovery"
+text = "MENU_ADD_EMAIL_RECOVERY"
 label_settings = SubResource("LabelSettings_title")
 horizontal_alignment = 1
 autowrap_mode = 2
@@ -78,7 +78,7 @@ autowrap_mode = 2
 [node name="Label2" type="Label" parent="MarginContainer/EmailStep/VBoxContainer2" unique_id=1900000006]
 custom_minimum_size = Vector2(300, 0)
 layout_mode = 2
-text = "Link an email to recover this account. Your wallet address stays the same."
+text = "MENU_LINK_AN_EMAIL_TO_RECOVER_THIS"
 label_settings = SubResource("LabelSettings_sub")
 horizontal_alignment = 1
 autowrap_mode = 2
@@ -90,7 +90,7 @@ layout_mode = 2
 size_flags_horizontal = 4
 theme = ExtResource("4_otp01")
 theme_override_font_sizes/font_size = 30
-placeholder_text = "you@example.com"
+placeholder_text = "MENU_YOU_EXAMPLE_COM"
 keep_editing_on_text_submit = true
 
 [node name="Label_EmailError" type="Label" parent="MarginContainer/EmailStep/VBoxContainer2" unique_id=1900000008]
@@ -115,7 +115,7 @@ custom_minimum_size = Vector2(0, 80)
 layout_mode = 2
 theme = ExtResource("4_otp01")
 theme_override_font_sizes/font_size = 30
-text = "SEND CODE"
+text = "MENU_SEND_CODE"
 
 [node name="Button_Cancel" type="Button" parent="MarginContainer/EmailStep/VBoxContainer" unique_id=1900000011]
 custom_minimum_size = Vector2(0, 80)
@@ -123,7 +123,7 @@ layout_mode = 2
 theme = ExtResource("4_otp01")
 theme_type_variation = &"SecondaryButton"
 theme_override_font_sizes/font_size = 30
-text = "CANCEL"
+text = "COMMON_CANCEL"
 
 [node name="ProcessingScreen" type="VBoxContainer" parent="MarginContainer" unique_id=1900000012]
 unique_name_in_owner = true
@@ -138,7 +138,7 @@ alignment = 1
 [node name="Label" type="Label" parent="MarginContainer/ProcessingScreen" unique_id=1900000013]
 custom_minimum_size = Vector2(300, 0)
 layout_mode = 2
-text = "Processing"
+text = "MENU_PROCESSING"
 label_settings = SubResource("LabelSettings_title")
 horizontal_alignment = 1
 autowrap_mode = 2
@@ -166,7 +166,7 @@ alignment = 1
 [node name="Label" type="Label" parent="MarginContainer/CodeStep/VBoxContainer2" unique_id=1900000017]
 custom_minimum_size = Vector2(300, 0)
 layout_mode = 2
-text = "Enter Code"
+text = "MENU_ENTER_CODE"
 label_settings = SubResource("LabelSettings_title")
 horizontal_alignment = 1
 autowrap_mode = 2
@@ -175,7 +175,7 @@ autowrap_mode = 2
 unique_name_in_owner = true
 custom_minimum_size = Vector2(300, 0)
 layout_mode = 2
-text = "We sent a code to your email"
+text = "MENU_WE_SENT_A_CODE_TO_YOUR"
 label_settings = SubResource("LabelSettings_sub")
 horizontal_alignment = 1
 autowrap_mode = 2
@@ -214,7 +214,7 @@ custom_minimum_size = Vector2(0, 80)
 layout_mode = 2
 theme = ExtResource("4_otp01")
 theme_override_font_sizes/font_size = 30
-text = "VERIFY"
+text = "MENU_VERIFY"
 
 [node name="Button_Resend" type="Button" parent="MarginContainer/CodeStep/VBoxContainer" unique_id=1900000023]
 unique_name_in_owner = true
@@ -223,7 +223,7 @@ layout_mode = 2
 theme = ExtResource("4_otp01")
 theme_type_variation = &"SecondaryButton"
 theme_override_font_sizes/font_size = 30
-text = "RESEND CODE"
+text = "MENU_RESEND_CODE"
 
 [node name="Button_CancelCode" type="Button" parent="MarginContainer/CodeStep/VBoxContainer" unique_id=1900000024]
 custom_minimum_size = Vector2(0, 80)
@@ -231,7 +231,7 @@ layout_mode = 2
 theme = ExtResource("4_otp01")
 theme_type_variation = &"SecondaryButton"
 theme_override_font_sizes/font_size = 30
-text = "CANCEL"
+text = "COMMON_CANCEL"
 
 [node name="DoneDialog" type="VBoxContainer" parent="MarginContainer" unique_id=1900000025]
 unique_name_in_owner = true
@@ -253,7 +253,7 @@ alignment = 1
 [node name="Label" type="Label" parent="MarginContainer/DoneDialog/VBoxContainer2" unique_id=1900000027]
 custom_minimum_size = Vector2(300, 0)
 layout_mode = 2
-text = "Email Linked"
+text = "MENU_EMAIL_LINKED"
 label_settings = SubResource("LabelSettings_title")
 horizontal_alignment = 1
 autowrap_mode = 2
@@ -261,7 +261,7 @@ autowrap_mode = 2
 [node name="Label2" type="Label" parent="MarginContainer/DoneDialog/VBoxContainer2" unique_id=1900000028]
 custom_minimum_size = Vector2(300, 0)
 layout_mode = 2
-text = "Your email is linked. You can now recover this account."
+text = "MENU_YOUR_EMAIL_IS_LINKED_YOU_CAN"
 label_settings = SubResource("LabelSettings_sub")
 horizontal_alignment = 1
 autowrap_mode = 2
@@ -277,7 +277,7 @@ custom_minimum_size = Vector2(0, 80)
 layout_mode = 2
 theme = ExtResource("4_otp01")
 theme_override_font_sizes/font_size = 30
-text = "OK"
+text = "MENU_OK"
 
 [connection signal="visibility_changed" from="." to="." method="_on_visibility_changed"]
 [connection signal="pressed" from="MarginContainer/EmailStep/VBoxContainer/Button_SendCode" to="." method="_on_button_send_code_pressed"]

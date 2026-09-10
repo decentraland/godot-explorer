@@ -92,6 +92,7 @@ theme_override_constants/margin_right = 3
 theme_override_constants/margin_bottom = 3
 
 [node name="Label_Action" type="Label" parent="MarginContainer/HBoxContainer/MarginContainer_Icons/HBoxContainer_Icons/MarginContainer/PanelContainer_Inputs/MarginContainer" unique_id=256015191]
+auto_translate_mode = 2
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 1
@@ -115,6 +116,7 @@ layout_mode = 2
 theme_override_constants/separation = 16
 
 [node name="Label_Text" type="Label" parent="MarginContainer/HBoxContainer/HBoxContainer2" unique_id=578823531]
+auto_translate_mode = 2
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)

@@ -43,7 +43,7 @@ layout_mode = 2
 
 [node name="Label" type="Label" parent="MarginContainer/VBoxContainer/MarginContainer" unique_id=1652610989]
 layout_mode = 2
-text = "My Credits"
+text = "CREDITS_BALANCE_CARD_MY_CREDITS"
 label_settings = SubResource("LabelSettings_6wsqp")
 
 [node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer/VBoxContainer" unique_id=1980946219]
@@ -59,6 +59,7 @@ expand_mode = 3
 stretch_mode = 4
 
 [node name="Label_Balance" type="Label" parent="MarginContainer/VBoxContainer/HBoxContainer" unique_id=1590138690]
+auto_translate_mode = 2
 unique_name_in_owner = true
 layout_mode = 2
 text = "20"

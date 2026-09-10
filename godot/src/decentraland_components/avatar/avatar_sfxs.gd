@@ -57,6 +57,13 @@ var last_rise: bool = false
 var last_fall: bool = false
 var last_land: bool = false
 
+# Both players keep `max_distance = 50` where `audio_source.gd` sets it to 0.
+# Deliberate, not an oversight: Godot's `max_distance` adds a linear ramp on
+# top of the 1/d rolloff (audio_stream_player_3d.cpp:446), so this is not
+# Unity-exact — about -1.9 dB at 10 m and -6 dB at 25 m against the reference —
+# but it stops the player past 50 m instead of keeping one voice per avatar in
+# the mix forever at a level nobody can hear. SDK sources are single and
+# scene-authored, so they take the exact curve; avatars are many.
 @onready var audio_player_steps: AudioStreamPlayer3D = $AudioPlayer_Steps
 @onready var audio_player_effects: AudioStreamPlayer3D = $AudioPlayer_Effects
 @onready var avatar: Avatar = get_parent()

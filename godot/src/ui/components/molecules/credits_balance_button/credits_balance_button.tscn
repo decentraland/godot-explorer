@@ -16,6 +16,7 @@ corner_radius_bottom_right = 100
 corner_radius_bottom_left = 100
 
 [node name="CreditsBalanceButton" type="Button"]
+auto_translate_mode = 2
 focus_mode = 0
 mouse_filter = 1
 script = ExtResource("1_script")

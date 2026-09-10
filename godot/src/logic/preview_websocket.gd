@@ -29,6 +29,21 @@ var _dirty_closed: bool = false
 # two models within that window reports only the last one. The legacy frame used
 # to paper over that by reloading everything; now the first file stays stale until
 # it is saved again. Worth fixing upstream with a per-path debounce.
+#
+# Measured on device (#2795): a Blender "glTF Separate" export writes .bin, then the
+# textures, then the .gltf, all inside the same millisecond, so the whole export
+# collapses into one message naming only the .gltf — which is harmless, because a
+# .gltf falls through to a full reload_scene() that purges the entire mapping. The
+# damage needs TWO models in one window: with a .glb written last the message names
+# it, scene_fetcher takes the per-model fast path (force_reload_gltf on that one
+# container), no purge runs, and every other model that changed is left stale with
+# nothing logged. Reversing the write order heals it, which is the proof.
+#
+# This cannot be worked around on the client: preview hashes are path-derived, so a
+# single updateModel is indistinguishable from one that stood in for several changed
+# files. The fix belongs in sdk-commands
+# `src/commands/start/server/file-watch-notifier.ts` — accumulate the changed set
+# over the window and emit updateScene unless exactly one model changed.
 var _speaks_protobuf: bool = false
 
 

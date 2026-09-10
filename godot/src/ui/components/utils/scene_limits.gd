@@ -34,6 +34,17 @@ const FIXED: Dictionary = {
 	"textures": {"label": "Textures", "group": "scene", "unit": "count", "soft": 400, "hard": 500},
 	"colliders":
 	{"label": "Colliders", "group": "scene", "unit": "count", "soft": 1200, "hard": 1500},
+	"emitters":
+	# Anchored to the Rust runtime budgets (lib/.../particle_system.rs:
+	# SCENE_PARTICLE_BUDGET 50k, MAX_AMOUNT_PER_EMITTER 5k) and the High graphic
+	# profile's 8 active lights (#2633). Authored counts, not budgeted. Applies
+	# to the 4 rows below.
+	{"label": "VFX emitters", "group": "scene", "unit": "count", "soft": 8, "hard": 10},
+	"live_particles":
+	{"label": "Particles", "group": "scene", "unit": "count", "soft": 25000, "hard": 50000},
+	"lights": {"label": "Light sources", "group": "scene", "unit": "count", "soft": 8, "hard": 16},
+	"shadow_casters":
+	{"label": "Shadow lights", "group": "scene", "unit": "count", "soft": 2, "hard": 4},
 	"content_size":
 	{
 		"label": "Content size",
@@ -81,6 +92,10 @@ const ORDER: Array = [
 	"materials",
 	"textures",
 	"colliders",
+	"emitters",
+	"live_particles",
+	"lights",
+	"shadow_casters",
 	"content_size",
 	"external_size",
 	"static_mem",

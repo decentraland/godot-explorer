@@ -1,6 +1,6 @@
 extends Area3D
 
-signal set_avatar_modifier_area(area: DclAvatarModifierArea3D)
+signal set_avatar_modifier_area(areas: Array)
 # Logic explanation:
 # If the avatar enters/exits an AREA but it is not in the scene
 # we don't check if it's inside or not...
@@ -42,10 +42,6 @@ func _on_area_exited(area):
 		check_areas()
 
 
-func get_last_dcl_avatar_modifier_area_3d(areas: Array[Area3D]) -> DclAvatarModifierArea3D:
-	return areas.back()
-
-
 func check_areas():
 	var avatar_scene_id = avatar.current_parcel_scene_id
 
@@ -53,8 +49,8 @@ func check_areas():
 	var areas = overlapping_areas.filter(func(area): return area.scene_id == avatar_scene_id)
 
 	if !areas.is_empty():
-		var first_area = get_last_dcl_avatar_modifier_area_3d(areas)
-		if first_area != null:
-			set_avatar_modifier_area.emit(first_area)
+		# ALL matching areas, not just the last-entered one: the avatar unions
+		# their modifiers (#2665).
+		set_avatar_modifier_area.emit(areas)
 	else:
 		unset_avatar_modifier_area.emit()

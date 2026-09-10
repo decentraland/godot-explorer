@@ -22,7 +22,10 @@ use crate::{
         },
     },
     godot_classes::dcl_gltf_container::DclGltfContainer,
-    scene_runner::scene::{Scene, TextureAnimation},
+    scene_runner::{
+        components::material::dcl_uv_offset_y,
+        scene::{Scene, TextureAnimation},
+    },
 };
 
 pub struct Tween {
@@ -93,7 +96,7 @@ fn apply_uv_to_mesh(mesh: &mut Gd<MeshInstance3D>, tex_anim: &TextureAnimation) 
             if let Ok(mut base_material) = material.try_cast::<BaseMaterial3D>() {
                 base_material.set_uv1_offset(Vector3::new(
                     tex_anim.uv_offset.x,
-                    tex_anim.uv_offset.y,
+                    dcl_uv_offset_y(tex_anim.uv_scale.y, tex_anim.uv_offset.y),
                     0.0,
                 ));
                 base_material.set_uv1_scale(Vector3::new(

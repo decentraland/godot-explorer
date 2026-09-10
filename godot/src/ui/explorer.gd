@@ -100,7 +100,7 @@ var _debug_panel_from_settings: bool = false
 
 @onready var navbar: Control = %Navbar
 @onready var joypad: Control = %Joypad
-@onready var button_show_ui: Button = %Button_ShowUI
+@onready var button_show_ui: HudButton = %Button_ShowUI
 @onready var hud_dismiss_catcher: Control = %HudDismissCatcher
 @onready var interactable_area_debug: ColorRect = %InteractableAreaDebug
 @onready var interactable_area_debug_label: Label = %InteractableAreaDebugLabel
@@ -167,10 +167,7 @@ func _ready():
 	Global.on_menu_open.connect(_on_menu_open)
 	Global.on_menu_close.connect(_on_menu_close)
 
-	# Connect friends button
 	Global.open_friends_panel.connect(_show_friends_panel)
-
-	# Connect settings panel button
 	Global.open_settings_panel.connect(_show_settings_panel)
 
 	# Connect debug panel signal from landscape settings panel
@@ -183,6 +180,8 @@ func _ready():
 
 	navbar.navbar_closed.connect(_close_all_panels)
 	navbar.navbar_opened.connect(_open_friends_panel)
+	# Navbar owns the reveal/collapse of the side-panel surface (fade + grow on one timeline).
+	navbar.set_reveal_surface(%VBoxContainer_LeftPanels)
 	profile_container.visibility_changed.connect(_on_profile_container_visibility_changed)
 
 	# Connect to NotificationsManager queue signals
@@ -298,6 +297,7 @@ func _ready():
 	player.look_at(16 * Vector3(start_parcel_position.x + 1, 0, -(start_parcel_position.y + 1)))
 
 	Global.player_camera_node = player.camera
+	Global.player_camera_node.far = Global.get_config().view_distance
 	Global.scene_runner.player_avatar_node = player.avatar
 	Global.scene_runner.player_body_node = player
 	Global.scene_runner.console = self._on_scene_console_message
@@ -735,8 +735,11 @@ func change_tooltips():
 		var filtered = []
 		for i in tooltip_data.size():
 			var entry = tooltip_data[i]
+			# Matches the key scene_manager.rs emits, not English prose, so this keeps working
+			# in every locale.
 			var is_view_profile = (
-				entry is Dictionary and entry.get("text_pet_down", "") == "View profile"
+				entry is Dictionary
+				and entry.get("text_pet_down", "") == TooltipLabel.VIEW_PROFILE_KEY
 			)
 			if is_view_profile and _session_hide_view_profile:
 				continue
@@ -1198,13 +1201,10 @@ func _on_notify_pending_loading_scenes(pending: bool) -> void:
 		if _first_time_refresh_warning:
 			if loading_ui.visible:
 				return
-			(
-				warning_messages
-				. async_create_popup_warning(
-					PopupWarning.WarningType.MESSAGE,
-					"Load the scenes arround you",
-					"[center]You have scenes pending to be loaded. To maintain a smooth experience, loading will occur only when you change scenes. If you prefer to load them immediately, please press the [b]Refresh[/b] button at the Top Left of the screen with icon [img]res://assets/ui/Reset.png[/img][/center]"
-				)
+			warning_messages.async_create_popup_warning(
+				PopupWarning.WarningType.MESSAGE,
+				TranslationKey.new("POPUP_WARNING_LOAD_THE_SCENES_ARROUND_YOU"),
+				TranslationKey.new("POPUP_WARNING_PENDING_SCENES")
 			)
 			_first_time_refresh_warning = false
 	else:
@@ -1455,6 +1455,8 @@ func _on_loading_started() -> void:
 	Global.session_hide_ui_toggle_sync.emit(false)
 	Global.session_hide_ui_options_sync.emit(true, true, true, true)
 	_apply_hide_ui_to_avatar_nicks(false)
+	if navbar.is_open():  # avoid a redundant navbar_closed + teardown when nothing is open
+		navbar.collapse()
 
 
 func _on_loading_finished() -> void:
@@ -1566,13 +1568,13 @@ func _update_version_label() -> void:
 
 
 func _on_notification_clicked(notification_d: Dictionary) -> void:
-	# Handle friend request notification clicks - open friends panel on friends tab
 	var notif_type = notification_d.get("type", "")
-
 	if ["social_service_friendship_request", "social_service_friendship_accepted"].has(notif_type):
-		# Open friends panel on friends tab
 		if not friends_panel.visible:
-			friends_panel.show_panel_on_friends_tab()
+			if notif_type == "social_service_friendship_request":
+				friends_panel.show_panel_on_requests_tab()
+			else:
+				friends_panel.show_panel_on_friends_tab()
 			navbar.open_navbar_silently()
 			navbar.set_button_pressed(navbar.BUTTON.FRIENDS)
 			if notifications_panel.visible:
@@ -1675,9 +1677,8 @@ func _close_all_panels():
 	_on_notifications_panel_closed()
 	_on_settings_panel_closed()
 	_refresh_hud_dismiss()
-	# Restore the bottom-left slot (chat, or the preview HUD toolbar in preview) and the
-	# emote HUD hidden while the navbar was open, unless the main HUD is hidden. Keep the
-	# emote HUD and joystick hidden in portrait, where the orientation flow owns them.
+	# Restore the bottom-left slot (chat / preview toolbar) and the emote HUD hidden while the
+	# navbar was open, unless the main HUD is hidden; in portrait the orientation flow owns them.
 	if not _session_hide_main_hud:
 		_restore_bottom_left_hud()
 		if not Global.is_orientation_portrait():
@@ -1752,7 +1753,7 @@ func _share_place():
 
 	if scene_title.length() == 0:
 		scene_title = "Decentraland"
-	msg = "📍 Join Me At " + scene_title + " following this link: " + url
+	msg = tr("SHARE_SCENE_MESSAGE").format({"scene": scene_title, "link": url})
 	#+ "\n\n If you haven't installed the app yet -> https://install-mobile.decentraland.org 📲"
 
 	if Global.is_android():

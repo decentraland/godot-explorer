@@ -64,12 +64,14 @@ theme_override_constants/separation = 40
 layout_mode = 2
 
 [node name="Label_Title" type="Label" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer2/VBoxContainer" unique_id=159672980]
+auto_translate_mode = 2
 unique_name_in_owner = true
 layout_mode = 2
 text = "Scene Title"
 label_settings = ExtResource("2_81dhg")
 
 [node name="Label_Creator" type="Label" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer2/VBoxContainer" unique_id=1846793905]
+auto_translate_mode = 2
 unique_name_in_owner = true
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
@@ -88,14 +90,14 @@ custom_minimum_size = Vector2(150, 38)
 layout_mode = 2
 size_flags_horizontal = 3
 theme_type_variation = &"DarkButton"
-text = "CANCEL"
+text = "COMMON_CANCEL"
 
 [node name="Button_JumpIn" type="Button" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer2/HBoxContainer2" unique_id=1419505444]
 custom_minimum_size = Vector2(150, 38)
 layout_mode = 2
 size_flags_horizontal = 3
 theme = ExtResource("4_m7opt")
-text = "JUMP IN"
+text = "COMMON_JUMP_IN"
 
 [connection signal="gui_input" from="." to="." method="_on_gui_input"]
 [connection signal="pressed" from="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer2/HBoxContainer2/Button_JumpInCancel" to="." method="_on_button_jump_in_cancel_pressed"]

@@ -15,7 +15,7 @@ use crate::{
             SceneCrdtStateProtoComponents,
         },
     },
-    scene_runner::scene::Scene,
+    scene_runner::{godot_dcl_scene::add_own_visual_child, scene::Scene},
 };
 
 use godot::{classes::Node, prelude::*};
@@ -262,7 +262,10 @@ pub fn update_light_source(
                             // Important:
                             // Add the node to the tree first so Godot runs _ready()
                             // before setting texture or debug display data.
-                            node_3d.add_child(&new_light_node.clone().upcast::<Node>());
+                            add_own_visual_child(
+                                &mut node_3d,
+                                &new_light_node.clone().upcast::<Node>(),
+                            );
 
                             new_light_node
                         }

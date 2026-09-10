@@ -6,7 +6,7 @@ use crate::{
             SceneCrdtStateProtoComponents,
         },
     },
-    scene_runner::scene::Scene,
+    scene_runner::{godot_dcl_scene::add_own_visual_child, scene::Scene},
 };
 use godot::{
     classes::{Node, PackedScene},
@@ -54,7 +54,7 @@ pub fn update_text_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                         };
                         let mut node = instance.cast::<Node3D>();
                         node.set_name("TextShape");
-                        node_3d.add_child(&node.clone().upcast::<Node>());
+                        add_own_visual_child(&mut node_3d, &node.clone().upcast::<Node>());
                         node
                     }
                 };

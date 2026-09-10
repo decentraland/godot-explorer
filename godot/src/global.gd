@@ -7,6 +7,9 @@ signal loading_finished
 signal change_parcel(new_parcel: Vector2i)
 signal open_profile_by_avatar(avatar: DclAvatar)
 signal open_profile_by_address(address: String)
+# Emitted locally when WE send a friend request (the social service doesn't stream our own
+# actions), so the friends panel can add it to the SENT list live.
+signal friendship_request_sent(address: String)
 signal on_chat_message(address: String, message: String, timestamp: float)
 signal change_virtual_keyboard(height: int)
 signal notification_clicked(notification: Dictionary)
@@ -473,6 +476,7 @@ func send_haptic_feedback(duration_ms: int = 20, amplitude: float = -1.0) -> voi
 # gdlint: ignore=async-function-name
 func _ready():
 	print("[Startup] global._ready start: %dms" % (Time.get_ticks_msec() - _startup_time))
+	BugReportCapture.listen_for_settings(self)
 	# Bench-only: uncap FPS / disable vsync before any code path can re-pin
 	# Engine.max_fps. Real users keep their saved cap + vsync; mobile bench
 	# uncaps via gp_benchmark_runner at the load->settling transition.
@@ -574,6 +578,12 @@ func _ready():
 	self.config = ConfigData.new()
 	config.load_from_settings_file()
 
+	# Restore profile particle budgets + avatar dust gate: the Rust atomics and
+	# the GDScript toggle default to full-budget, and nothing re-applies them
+	# until the user picks a profile again.
+	GraphicSettings.apply_particle_quality(config.particle_quality)
+	AvatarAnimHelpers.apply_particles_enabled(config.particle_quality > 0)
+
 	# Campaign token (#2670). Deliberately after the config load: the fake/baked deeplink is
 	# parsed further up in _ready, long before ConfigData exists, so capturing there wrote to
 	# a config that was then replaced by the one read from disk. deep_link_obj is eagerly
@@ -581,6 +591,11 @@ func _ready():
 	# captures from deep_link_router instead, which already runs well after this point.
 	_capture_debug_guest_rotate(deep_link_obj)
 	_capture_campaign_token(deep_link_obj)
+
+	# Resolve the UI language before any scene renders. Godot picks the OS locale at boot, which
+	# would surface a partially-translated locale the moment its .po has content; LocaleSettings
+	# gates on SUPPORTED_LOCALES so an incomplete language is never selected (see #270, #2062).
+	LocaleSettings.apply_locale()
 	# Bench-only: keep limit_fps at NO_LIMIT after the settings file load (which
 	# would otherwise restore a saved FPS_18/FPS_30 cap) so no later
 	# `apply_fps_limit()` re-pins the engine. Real users keep their saved cap.
@@ -1288,7 +1303,7 @@ func open_url(url: String, use_webkit: bool = false):
 
 
 func async_create_popup_warning(
-	warning_type: PopupWarning.WarningType, title: String, description: String
+	warning_type: PopupWarning.WarningType, title: TranslationKey, description: TranslationKey
 ):
 	var explorer = get_explorer()
 	if is_instance_valid(explorer):
@@ -1486,7 +1501,7 @@ func async_teleport_to(parcel_position: Vector2i, new_realm: String) -> void:
 		explorer.hide_menu()
 		Global.on_chat_message.emit(
 			"system",
-			"[color=#ccc]🟢 Teleported to " + str(parcel_position) + "[/color]",
+			tr("CHAT_SYSTEM_TELEPORTED").format({"location": str(parcel_position)}),
 			Time.get_unix_time_from_system()
 		)
 	else:
@@ -1509,7 +1524,7 @@ func async_join_world(world_realm: String) -> void:
 		explorer.loading_ui.enable_loading_screen(world_realm, "on_world")
 		Global.on_chat_message.emit(
 			"system",
-			"[color=#ccc]Trying to change to world " + world_realm + "[/color]",
+			tr("CHAT_SYSTEM_CHANGING_WORLD").format({"world": world_realm}),
 			Time.get_unix_time_from_system()
 		)
 		Global.realm.async_set_realm(world_realm, true)
@@ -1548,7 +1563,11 @@ func _http_method_to_string(method: int) -> String:
 
 
 func async_signed_fetch(
-	url: String, method: int, _body: String = "", lowercase_metadata: bool = false
+	url: String,
+	method: int,
+	_body: String = "",
+	_metadata_override: String = "",
+	_extra_headers: Dictionary = {}
 ):
 	# Decentraland signed-fetch (ADR-44) carries the request metadata in the
 	# x-identity-metadata header. The server verifier requires it to be a JSON
@@ -1558,14 +1577,14 @@ func async_signed_fetch(
 	# (backward-compatible: older verifiers accept both), leaving the actual HTTP
 	# body untouched.
 	#
-	# `lowercase_metadata` folds the metadata before it is signed, which is what a
-	# crypto-middleware >=6.0.0 service needs from us: 6.0.0 stopped lowercasing the
-	# metadata when it rebuilds the payload, so a signature over a folded one only
-	# matches if the header carries the same folded bytes. It costs the metadata its
-	# casing, so pass it only for a service that reads the body and never the metadata.
-	var metadata := _body if not _body.is_empty() else "{}"
+	# Most DCL services verify the body as the signed metadata. Some don't: the
+	# intercom-proxy signs `{}` and leaves the JSON body unsigned, so callers can
+	# override rather than fork this helper.
+	var metadata := _metadata_override
+	if metadata.is_empty():
+		metadata = _body if not _body.is_empty() else "{}"
 	var headers_promise = Global.player_identity.async_get_identity_headers(
-		url, metadata, _http_method_to_string(method), lowercase_metadata
+		url, metadata, _http_method_to_string(method)
 	)
 	var headers_result = await PromiseUtils.async_awaiter(headers_promise)
 
@@ -1575,6 +1594,8 @@ func async_signed_fetch(
 	var headers: Dictionary = headers_result
 	if not _body.is_empty():
 		headers["Content-Type"] = "application/json"
+	for key in _extra_headers:
+		headers[key] = _extra_headers[key]
 
 	var response_promise: Promise = Global.http_requester.request_json(url, method, _body, headers)
 
@@ -1653,10 +1674,9 @@ func _check_dclenv_change() -> bool:
 	return true
 
 
-# Applies the comms deeplink params (pulse-server / pulse-realm / pulse / dual-channel /
-# livekit).
-# Shared by deep_link_router.process_deep_link and the desktop --fake-deeplink path,
-# so a new param only has to be added once.
+# Applies the comms deeplink params (pulse-server / pulse-realm / pulse / dual-channel / livekit).
+# Shared by deep_link_router.process_deep_link and the desktop --fake-deeplink path, so a new
+# param only has to be added once.
 func _apply_comms_deeplink_params(deep_link) -> void:
 	# `pulse-server=<host:port>` joins a specific Pulse server (shareable — everyone
 	# opening the link lands on the same instance; implies enabling).
@@ -1664,8 +1684,7 @@ func _apply_comms_deeplink_params(deep_link) -> void:
 	if not pulse_server_value.is_empty():
 		print("[DEEPLINK] pulse-server=", pulse_server_value)
 		comms.set_pulse_server(pulse_server_value)
-	# `pulse-realm=<realm>` announces a specific realm instead of the derived one
-	# (Pulse matches realms by exact string; implies enabling).
+	# `pulse-realm=<realm>` announces this realm instead of the derived one (exact match; implies enabling).
 	var pulse_realm_value = deep_link.params.get("pulse-realm", "")
 	if not pulse_realm_value.is_empty():
 		print("[DEEPLINK] pulse-realm=", pulse_realm_value)
@@ -1675,9 +1694,8 @@ func _apply_comms_deeplink_params(deep_link) -> void:
 	if not pulse_value.is_empty():
 		print("[DEEPLINK] pulse=", pulse_value)
 		comms.set_pulse_enabled(pulse_value.to_lower() in ["true", "1", "yes"])
-	# `dual-channel=true/false`: whether movement and emotes keep going over
-	# LiveKit while Pulse is established. Overrides the deployment's
-	# `dual-channel` feature flag for this run (the flag defaults true).
+	# `dual-channel=true/false`: whether movement and emotes keep going over LiveKit while
+	# Pulse is established. Overrides the deployment's `dual-channel` flag (default true) for this run.
 	var dual_channel_value = deep_link.params.get("dual-channel", "")
 	if not dual_channel_value.is_empty():
 		print("[DEEPLINK] dual-channel=", dual_channel_value)
@@ -1750,8 +1768,8 @@ func _on_realm_change_failed_toast(new_realm_string: String, reason: String) -> 
 	# Realm instances created elsewhere (e.g. portable experiences) are not wired
 	# to this handler.
 	NotificationsManager.show_system_toast(
-		"World unavailable",
-		'Could not load "%s": %s' % [new_realm_string, reason],
+		tr("TOAST_WORLD_UNAVAILABLE_TITLE"),
+		tr("TOAST_WORLD_UNAVAILABLE_BODY").format({"world": new_realm_string, "error": reason}),
 		"error",
 		"alert"
 	)

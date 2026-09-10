@@ -14,7 +14,7 @@ grow_vertical = 2
 mouse_filter = 2
 script = ExtResource("1_8x4dy")
 deadzone_size = 10.0
-_joystick_default_position = Vector2(160, 165)
+_joystick_default_position = Vector2(154, 146)
 joystick_mode = 1
 visibility_mode = 1
 metadata/mobile_preview_orientation = "landscape"
@@ -49,7 +49,6 @@ grow_horizontal = 2
 grow_vertical = 2
 pivot_offset = Vector2(150, 150)
 mouse_filter = 2
-color = Color(1, 1, 1, 0.47843137)
 
 [node name="SprintTimer" type="Timer" parent="." unique_id=427000184]
 unique_name_in_owner = true

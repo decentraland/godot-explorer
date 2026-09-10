@@ -8,6 +8,7 @@ func _ready():
 	set_skybox_and_shadow(Global.get_config().skybox)
 	set_anti_aliasing(Global.get_config().anti_aliasing)
 	set_bloom(Global.get_config().bloom_quality)
+	set_view_distance(Global.get_config().view_distance)
 	Global.get_config().param_changed.connect(self._on_config_changed)
 
 
@@ -20,6 +21,22 @@ func _on_config_changed(param: ConfigData.ConfigParams):
 		set_bloom(Global.get_config().bloom_quality)
 	elif param == ConfigData.ConfigParams.ANTI_ALIASING:
 		set_anti_aliasing(Global.get_config().anti_aliasing)
+	elif param == ConfigData.ConfigParams.VIEW_DISTANCE:
+		set_view_distance(Global.get_config().view_distance)
+
+
+func set_view_distance(far: float):
+	# kill-sky path: `sky` was nulled and replaced with a flat WorldEnvironment.
+	# Fog is irrelevant in floor-measurement mode, just bail.
+	if sky == null:
+		return
+	var environment = sky.world_environment.environment
+	environment.fog_enabled = true
+	environment.fog_mode = Environment.FOG_MODE_DEPTH
+	environment.fog_depth_begin = far * 0.6
+	environment.fog_depth_end = far * 0.9
+	environment.fog_depth_curve = 1.0
+	environment.fog_sky_affect = 0.0
 
 
 func set_skybox_and_shadow(skybox_index: int):
@@ -59,6 +76,8 @@ func set_skybox_and_shadow(skybox_index: int):
 
 	add_child(sky)
 	set_shadow(Global.get_config().shadow_quality)
+	# Sky recreation swaps the WorldEnvironment — re-apply fog/view distance.
+	set_view_distance(Global.get_config().view_distance)
 
 
 func set_shadow(shadow_quality: int):
