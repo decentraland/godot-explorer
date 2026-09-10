@@ -170,13 +170,21 @@ impl DclAndroidPlugin {
         Some(DclMobileMetrics::from_dictionary(dict))
     }
 
-    /// Get thermal and charging state in a single JNI call
+    /// Get thermal and charging state in a single, cheap JNI call
+    /// (`getThermalAndChargingState`: battery sticky intent only — unlike
+    /// `getMobileMetrics` it does NOT walk /proc/self/smaps for PSS, which
+    /// cost ~100 ms on the main thread every 5 s when DynamicGraphics polled it).
     /// Returns (thermal_state, charging_state) with defaults if unavailable
     pub(crate) fn get_thermal_and_charging_state() -> (String, String) {
-        match Self::get_mobile_metrics_internal() {
-            Some(m) => (m.device_thermal_state, m.charging_state),
-            None => (String::new(), "unknown".to_string()),
-        }
+        let Some(mut singleton) = Self::try_get_singleton() else {
+            return (String::new(), "unknown".to_string());
+        };
+        let metrics = Self::timed_jni_call(&mut singleton, "getThermalAndChargingState", &[]);
+        let Ok(dict) = metrics.try_to::<VarDictionary>() else {
+            return (String::new(), "unknown".to_string());
+        };
+        let m = DclMobileMetrics::from_dictionary(dict);
+        (m.device_thermal_state, m.charging_state)
     }
 
     /// Get total device RAM in megabytes

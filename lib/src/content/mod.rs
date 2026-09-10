@@ -1,4 +1,5 @@
 mod audio;
+pub mod bundle;
 pub mod cache_file_name;
 pub mod content_mapping;
 pub mod content_notificator;

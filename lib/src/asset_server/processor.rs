@@ -737,7 +737,26 @@ async fn extract_gltf_texture_dependencies(
 
 /// Create default processor context.
 pub fn create_default_context() -> ProcessorContext {
-    let content_folder = format!("{}/content/", Os::singleton().get_user_data_dir());
+    // `ASSET_SERVER_CONTENT_DIR` overrides the download/bake cache folder (a
+    // bake that changes the .scn layout must not reuse another layout's cache).
+    let content_folder = std::env::var("ASSET_SERVER_CONTENT_DIR")
+        .ok()
+        .filter(|s| !s.is_empty())
+        .map(|s| {
+            if s.ends_with('/') {
+                s
+            } else {
+                format!("{}/", s)
+            }
+        })
+        .unwrap_or_else(|| format!("{}/content/", Os::singleton().get_user_data_dir()));
+    if let Err(e) = std::fs::create_dir_all(&content_folder) {
+        tracing::warn!(
+            "Failed to create content directory '{}': {}",
+            content_folder,
+            e
+        );
+    }
 
     // Output folder for ZIP files - use env var or default to ./output/
     let output_folder =

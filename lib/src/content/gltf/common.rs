@@ -40,7 +40,7 @@ pub struct TextureBakeState {
     pub max_size: i32,
     pub force_compress: bool,
     /// Source `ImageTexture` instance → content hash of the standalone baked
-    /// texture (`res://content/{hash}.res`). Empty unless the asset server is
+    /// texture (`user://content/{hash}.opt.res`). Empty unless the asset server is
     /// baking a scene GLB with `external_texture_refs`.
     pub external: HashMap<InstanceId, String>,
     /// Source `ImageTexture` instance → the texture that replaced it. The glTF
@@ -112,11 +112,14 @@ pub fn post_import_process(node_to_inspect: Gd<Node>, state: &mut TextureBakeSta
                             } else {
                                 // A pathed resource is written by ResourceSaver as an
                                 // ExtResource (no bytes in the .scn); the device
-                                // resolves it from the texture's own -mobile.zip,
-                                // mounted before this .scn by
-                                // `fetch_optimized_asset_with_dependencies`.
+                                // downloads the texture's own baked `.res` into
+                                // `user://content/` before loading this .scn
+                                // (`fetch_optimized_asset_with_dependencies`).
                                 let mut pct2 = PortableCompressedTexture2D::new_gd();
-                                let path = format!("res://content/{}.res", hash);
+                                let path = crate::content::content_provider::optimized_godot_path(
+                                    hash,
+                                    crate::content::content_provider::OptimizedKind::Texture,
+                                );
                                 pct2.take_over_path(&GString::from(&path));
                                 state.externalized.insert(hash.clone());
                                 let placeholder: Gd<Texture2D> = pct2.upcast();
