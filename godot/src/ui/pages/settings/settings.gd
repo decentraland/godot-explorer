@@ -43,6 +43,7 @@ var _current_section_key: String = ""
 # with a back button. Landscape ignores this (list and content are always side by side).
 var _portrait_detail: bool = false
 var _avatar_refresh_in_flight: bool = false
+var _avatar_refresh_pending: bool = false
 
 # Scene LightSource Dev Tools controls, keyed by DclLightSourceComponent.get_light_settings() keys.
 var _light_debug_checks: Dictionary = {}
@@ -61,6 +62,7 @@ var _custom_max_lights_spin: SpinBox = null
 @onready var hbox_layout: HBoxContainer = %HBoxContainer_Layout
 @onready var texture_avatar_background: TextureRect = %TextureRect_AvatarBackground
 @onready var button_version: Button = %Button_Version
+@onready var header_column: VBoxContainer = %HeaderColumn
 
 @onready var container_gameplay: VBoxContainer = %VBoxContainer_Gameplay
 @onready var container_graphics: VBoxContainer = %VBoxContainer_Graphics
@@ -1444,14 +1446,12 @@ func _position_account_avatar() -> void:
 	avatar_preview_account.global_position = Vector2(col.global_position.x, 0.0)
 	avatar_preview_account.size = Vector2(col.size.x, maxf(0.0, bottom))
 	# Head overlaps slightly into the header: the rect starts at screen top (y=0), so the top inset is
-	# the header container's real bottom (its height + top safe-area margin) minus the overlap.
-	if is_instance_valid(label_title):
-		var header: Control = label_title.get_parent().get_parent()
-		if is_instance_valid(header):
-			var header_bottom: float = header.global_position.y + header.size.y
-			avatar_preview_account.preview_margin_top = roundi(
-				header_bottom - _ACCOUNT_AVATAR_HEAD_OVERLAP
-			)
+	# the header column's real bottom (its height + top safe-area margin) minus the overlap.
+	if is_instance_valid(header_column):
+		var header_bottom: float = header_column.global_position.y + header_column.size.y
+		avatar_preview_account.preview_margin_top = roundi(
+			header_bottom - _ACCOUNT_AVATAR_HEAD_OVERLAP
+		)
 
 
 func _on_account_profile_changed(_new_profile: DclUserProfile) -> void:
@@ -1480,17 +1480,23 @@ func _refresh_account_header() -> void:
 ## The 3D preview only renders in landscape (its container hides in portrait), so skip the avatar
 ## load in portrait; it's refreshed on the next profile change or when reopening in landscape.
 func _async_refresh_account_avatar() -> void:
-	if Global.is_orientation_portrait():
+	# The preview is Account-only and landscape-only, so don't load it otherwise (e.g. every rotation).
+	if Global.is_orientation_portrait() or _current_section_key != "account":
 		return
 	var profile: DclUserProfile = Global.player_identity.get_profile_or_null()
 	if profile == null:
 		return
-	# Guard against overlapping loads (rapid rotations / profile_changed) racing the same preview.
+	# One load at a time; if a newer request (profile_changed / re-entry) arrives mid-load, don't
+	# drop it — remember it and run once more when the current load finishes, so the avatar isn't stale.
 	if _avatar_refresh_in_flight:
+		_avatar_refresh_pending = true
 		return
 	_avatar_refresh_in_flight = true
 	await avatar_preview_account.avatar.async_update_avatar_from_profile(profile)
 	_avatar_refresh_in_flight = false
+	if _avatar_refresh_pending:
+		_avatar_refresh_pending = false
+		_async_refresh_account_avatar()
 
 
 func _on_button_return_to_discover_pressed() -> void:

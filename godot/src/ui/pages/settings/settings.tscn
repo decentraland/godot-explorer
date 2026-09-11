@@ -162,16 +162,17 @@ metadata/_custom_type_script = "uid://bhwm0bl5qoiph"
 layout_mode = 2
 theme_override_constants/separation = 0
 
-[node name="VBoxContainer" type="VBoxContainer" parent="SafeMarginContainer/VBoxContainer2" unique_id=770675147]
+[node name="HeaderColumn" type="VBoxContainer" parent="SafeMarginContainer/VBoxContainer2" unique_id=770675147]
+unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 0
 
-[node name="HeaderRow" type="HBoxContainer" parent="SafeMarginContainer/VBoxContainer2/VBoxContainer" unique_id=1900000012]
+[node name="HeaderRow" type="HBoxContainer" parent="SafeMarginContainer/VBoxContainer2/HeaderColumn" unique_id=1900000012]
 custom_minimum_size = Vector2(0, 60)
 layout_mode = 2
 theme_override_constants/separation = 8
 
-[node name="Button_Back" type="Button" parent="SafeMarginContainer/VBoxContainer2/VBoxContainer/HeaderRow" unique_id=1900000013]
+[node name="Button_Back" type="Button" parent="SafeMarginContainer/VBoxContainer2/HeaderColumn/HeaderRow" unique_id=1900000013]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(60, 60)
 layout_mode = 2
@@ -184,7 +185,7 @@ theme_override_styles/focus = SubResource("StyleBoxEmpty_67hd5")
 icon = ExtResource("26_back")
 expand_icon = true
 
-[node name="Label_Title" type="Label" parent="SafeMarginContainer/VBoxContainer2/VBoxContainer/HeaderRow" unique_id=159123644]
+[node name="Label_Title" type="Label" parent="SafeMarginContainer/VBoxContainer2/HeaderColumn/HeaderRow" unique_id=159123644]
 unique_name_in_owner = true
 auto_translate_mode = 2
 visible = false
@@ -196,7 +197,7 @@ text = "Settings"
 label_settings = ExtResource("6_sa1v7")
 vertical_alignment = 1
 
-[node name="Spacer" type="Control" parent="SafeMarginContainer/VBoxContainer2/VBoxContainer" unique_id=1641447903]
+[node name="Spacer" type="Control" parent="SafeMarginContainer/VBoxContainer2/HeaderColumn" unique_id=1641447903]
 layout_mode = 2
 script = ExtResource("24_nqmh4")
 portrait_minimum_size = Vector2(0, 30)

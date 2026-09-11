@@ -150,7 +150,7 @@ func _apply_margins(top: int, left: int, bottom: int, right: int) -> void:
 	if use_bottom:
 		var applied_bottom: int = maxi(bottom, floor_bottom)
 		# When the bottom edge sits above a sibling bottom bar, the OS inset is already reserved
-		# there, so use only the hand-set floor in portrait to avoid double-counting.
+		# there, so use only the hand-set floor (both orientations) to avoid double-counting.
 		if ignore_safe_area_bottom:
 			applied_bottom = floor_bottom
 		add_theme_constant_override("margin_bottom", applied_bottom)
