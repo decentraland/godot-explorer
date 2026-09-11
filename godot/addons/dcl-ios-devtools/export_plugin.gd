@@ -56,10 +56,14 @@ class DclIosDevExportPlugin:
 		return platform is EditorExportPlatformIOS
 
 	func _export_begin(_features, is_debug, _path, flags):
-		# Only debug builds declare local networking / inject launch args. The relay
-		# and log-stream are themselves gated to OS.is_debug_build(), so release
-		# builds neither use nor declare it — which is what keeps App Review happy.
+		# `is_debug` alone is not a dev signal: CI exports the store build with
+		# --export-debug too, which shipped the local-network keys and a
+		# --scene-inspector pointed at the builder's LAN IP to every App Store user.
+		# Require an explicit dev signal on top — the xtask env or an editor deploy
+		# with remote debug. CI sets neither.
 		if not is_debug:
+			return
+		if _cmdline_env().is_empty() and (flags & REMOTE_DEBUG_FLAG) == 0:
 			return
 		var lines: Array = DEV_PLIST_LINES.duplicate()
 		lines.append_array(_godot_cmdline_lines(flags))
@@ -72,26 +76,19 @@ class DclIosDevExportPlugin:
 	## `--scene-inspector=ws://…` / `--log-stream=…` to a device build (an iOS app
 	## has no real CLI).
 	##
-	## Precedence: an explicit `DCL_IOS_GODOT_CMDLINE` env (set by the xtask for full
-	## control) wins. Otherwise the build is auto-pointed at the dev hub on this
-	## machine's LAN, so the app "phones home" however it was launched — including a
-	## plain Godot-editor deploy, which never sets the env. Harmless when no hub is
-	## up: the scene-inspector client just retries with backoff and (being
-	## connection-gated) captures nothing until a consumer subscribes.
+	## `DCL_IOS_GODOT_CMDLINE`: "none"/"-" injects nothing, "auto" (or an editor
+	## deploy, which sets no env) points at the dev hub on this machine's LAN,
+	## anything else is used verbatim.
 	func _godot_cmdline_lines(flags: int) -> Array:
 		var args: Array = []
-		var raw := OS.get_environment("DCL_IOS_GODOT_CMDLINE").strip_edges()
-		# Sentinel: an explicit "none"/"-" injects nothing (the xtask sets this for
-		# `run --target ios --no-hub` → plain `--console` log streaming, no hub).
+		var raw := _cmdline_env()
 		if raw.to_lower() == "none" or raw == "-":
 			return []
-		if raw.is_empty():
-			# Plain editor deploy: auto-point at the dev hub on this machine's LAN.
+		if raw.is_empty() or raw.to_lower() == "auto":
 			var host := _lan_ip()
 			if not host.is_empty():
 				args.append("--scene-inspector=ws://%s:%d" % [host, HUB_DEVICE_PORT])
 		else:
-			# Explicit override from the xtask — full control of the cmdline.
 			args.append_array(raw.split(" ", false))
 		# Remote debugger: an iOS app has no argv, so the ONLY way the editor's
 		# remote debugger can attach is to bake `--remote-debug <uri>` in here. The
@@ -142,6 +139,9 @@ class DclIosDevExportPlugin:
 		if host.is_empty():
 			return ""
 		return "tcp://%s:%d" % [host, port]
+
+	static func _cmdline_env() -> String:
+		return OS.get_environment("DCL_IOS_GODOT_CMDLINE").strip_edges()
 
 	## This machine's private-LAN IPv4 (the address a device on the same network
 	## can reach). Skips loopback, link-local and IPv6. Empty if none found.
