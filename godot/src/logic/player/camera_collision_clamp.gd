@@ -46,6 +46,9 @@ var _warmup_frames := 3
 @onready var _mount: SpringArm3D = get_parent()
 @onready var _camera_arm: Node3D = _mount.get_node("CameraArm")
 @onready var _camera: Camera3D = _camera_arm.get_node("Camera3D")
+# The player CharacterBody3D (Mount's parent). Its origin rests on the ground, so
+# its Y is a scene-collider-free floor reference for the floor guard.
+@onready var _player_body: Node3D = _mount.get_parent()
 
 
 func _ready() -> void:
@@ -194,6 +197,14 @@ func _process(delta: float) -> void:
 		)
 
 	_camera.global_position = base + _contact_offset
+
+	# Floor guard: keep the camera above the player's own ground contact so it can't
+	# dip below scene floors that have no usable collider (the sweep casts slip
+	# through single-sided / cmask=0 meshes). Additive — only ever raises the camera.
+	if is_instance_valid(_player_body):
+		var floor_y: float = _player_body.global_position.y + CameraRig.FLOOR_CLEARANCE
+		if _camera.global_position.y < floor_y:
+			_camera.global_position.y = floor_y
 
 	if _debug_probe:
 		_debug_probe_pass(space, pivot, target, allowed, dist)

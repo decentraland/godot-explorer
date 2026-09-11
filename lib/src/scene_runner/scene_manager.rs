@@ -99,6 +99,11 @@ pub struct SceneManager {
 
     // Cached center position of viewport for raycasting
     viewport_center: Vector2,
+    // Screen point of the HUD crosshair (issue #2709). Set per-frame from GDScript
+    // on mobile — where the crosshair rides above the avatar in third person — so
+    // interaction raycasts aim where the crosshair is drawn. None on desktop/XR,
+    // where the crosshair stays at the viewport center.
+    crosshair_screen_point: Option<Vector2>,
     // Previous frame screen point, used to compute PrimaryPointerInfo screen_delta
     last_cursor_position: Vector2,
     // Cached raycast query for performance
@@ -1695,7 +1700,7 @@ impl SceneManager {
             let screen_point = if self.raycast_use_cursor_position {
                 self.cursor_position
             } else {
-                self.viewport_center
+                self.crosshair_screen_point.unwrap_or(self.viewport_center)
             };
             let dir = camera_node.project_ray_normal(screen_point);
             let screen_delta = screen_point - self.last_cursor_position;
@@ -2362,15 +2367,33 @@ impl SceneManager {
 
         let camera_node = self.base().get_viewport().and_then(|x| x.get_camera_3d())?;
 
-        let screen_point = if self.raycast_use_cursor_position {
-            self.cursor_position
+        // Outside tap-cursor mode, aim where the crosshair is drawn (mobile sets
+        // it per-frame); desktop keeps the viewport center.
+        let (screen_point, start_at_avatar_depth) = if self.raycast_use_cursor_position {
+            (self.cursor_position, false)
         } else {
-            self.viewport_center
+            match self.crosshair_screen_point {
+                Some(point) => (point, true),
+                None => (self.viewport_center, false),
+            }
         };
 
-        // Use cached viewport center for raycasting
-        let raycast_from = camera_node.project_ray_origin(screen_point);
-        let raycast_to = raycast_from + camera_node.project_ray_normal(screen_point) * RAY_LENGTH;
+        // Issue #2709: the avatar is centered on screen in third person, so a ray
+        // from the camera would strike it. Start at the avatar's own depth, in the
+        // camera -> crosshair direction (same line, origin pushed forward).
+        let ray_normal = camera_node.project_ray_normal(screen_point);
+        let raycast_from = if start_at_avatar_depth {
+            let camera_transform = camera_node.get_global_transform();
+            let avatar_depth = self
+                .get_player_avatar_node()
+                .map(|avatar| -(camera_transform.affine_inverse() * avatar.get_global_position()).z)
+                .unwrap_or(0.0)
+                .max(0.0);
+            camera_node.project_position(screen_point, avatar_depth)
+        } else {
+            camera_node.project_ray_origin(screen_point)
+        };
+        let raycast_to = raycast_from + ray_normal * RAY_LENGTH;
         let mut space = camera_node.get_world_3d()?.get_direct_space_state()?;
 
         // Update the cached raycast query parameters
@@ -2501,6 +2524,11 @@ impl SceneManager {
             interactable_area: Some(to_border(self.interactable_area)),
             screen_inset_area: Some(to_border(self.safe_area)),
         }
+    }
+
+    #[func]
+    fn set_crosshair_screen_point(&mut self, screen_point: Vector2) {
+        self.crosshair_screen_point = Some(screen_point);
     }
 
     #[func]
@@ -3008,6 +3036,7 @@ impl INode for SceneManager {
             last_cursor_position: Vector2::new(canvas_size.x * 0.5, canvas_size.y * 0.5),
             cursor_position: Vector2::new(canvas_size.x * 0.5, canvas_size.y * 0.5),
             raycast_use_cursor_position: false,
+            crosshair_screen_point: None,
             cached_raycast_query: PhysicsRayQueryParameters3D::new_gd(),
             last_avatar_under_crosshair: None,
             avatar_pointer_press_time: None,

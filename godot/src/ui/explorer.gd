@@ -268,7 +268,7 @@ func _ready():
 
 	virtual_joystick.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	virtual_joystick_orig_position = virtual_joystick.get_position()
-	_sdk_touch_controls = SdkTouchControlsApplier.new(virtual_joystick, label_crosshair)
+	_sdk_touch_controls = SdkTouchControlsApplier.new(virtual_joystick, label_crosshair, player)
 
 	if Global.is_xr():
 		mobile_ui.hide()
