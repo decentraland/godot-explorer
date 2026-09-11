@@ -11,8 +11,10 @@ const VIEW_PROFILE_KEY: String = "TOOLTIP_VIEW_PROFILE"
 
 const BG_COLOR_NORMAL: String = "#161518B3"
 const BG_COLOR_PRESSED: String = "#444348B3"
-## Shared HUD glyph tint (Figma "IconHUD"). Applied to the built-in monochrome-white glyphs and to
-## keyboard letters; scene-replaced creator icons keep their own colors (see _show_keyboard_icon).
+## Shared HUD glyph tint (Figma "IconHUD"), used to tint the built-in monochrome-white icons;
+## scene-replaced creator icons keep their own colors (see _show_keyboard_icon). The keyboard
+## letter is the same color but is not driven from here -- it comes from LabelSettings_r3qmc in
+## tooltip_label.tscn, so change both together.
 const ICON_COLOR := Color("#DFD0FF")
 ## Invisible tap growth per side. Same _has_point trick as the TapArea atom
 ## (src/ui/components/atoms/tap_area/tap_area.gd), which this node can't extend because it is a
@@ -25,9 +27,9 @@ const ICON_LEFT_CLICK = preload("uid://cljfaeb8np0ma")
 const ICON_INTERACTIVE_POINTER = preload("uid://72xpjysoxgwo")
 const ICON_JUMP = preload("uid://ck3atqpytstpo")
 
-## Vertical half of the tap growth. Stacked tooltips sit ~57px apart while the pill is 60 tall, so
-## growing them vertically would make neighbouring hit areas overlap and let a tap fire the wrong
-## prompt. pointer_tooltip.gd zeroes this whenever more than one tooltip is on screen.
+## Vertical half of the tap growth. Stacked tooltips clear each other by only PILL_GAP (8px),
+## so growing them vertically would make neighbouring hit areas overlap and let a tap fire the
+## wrong prompt. pointer_tooltip.gd zeroes this whenever more than one tooltip is on screen.
 var tap_grow_y: float = TAP_GROW_Y
 var action_to_trigger: String = ""
 var text_down := ""

@@ -37,7 +37,10 @@ func set_pointer_data(interacts_array: Array):
 		if i >= count:
 			break
 		var tooltip_scene_instance = tooltip_scene.instantiate()
-		var pill_height: float = tooltip_scene_instance.size.y
+		# The honoured minimum, not `size.y`: the latter only reads 60 because the scene's
+		# offset_top/bottom happen to agree with custom_minimum_size, and nothing keeps the two
+		# in sync -- changing one alone would silently bring back the overlap this spacing fixes.
+		var pill_height: float = tooltip_scene_instance.get_combined_minimum_size().y
 		var offset := Vector2(MIN_OFFSET_X, 0.0)
 		if count > 1:
 			# Neighbours on the ring are half a radius apart vertically, so the radius has to be
