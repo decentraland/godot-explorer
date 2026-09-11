@@ -11,7 +11,6 @@ enum SceneLogLevel {
 	SYSTEM_ERROR = 3,
 }
 
-const _SECTION_TITLE_SCRIPT = preload("res://src/ui/pages/settings/section_title.gd")
 const _DROPDOWN_LIST_SCENE = preload(
 	"res://src/ui/components/molecules/dropdown_list/dropdown_list.tscn"
 )
@@ -25,14 +24,15 @@ const _VERSION_FONT_SIZE: int = 24
 
 # Gap between the left section list and the content pane (landscape). The Account section adds the
 # avatar preview column, so it uses a tighter gap than the other sections.
-const _LAYOUT_SEPARATION_DEFAULT: int = 131
-const _LAYOUT_SEPARATION_ACCOUNT: int = 83
+const _LAYOUT_SEPARATION_DEFAULT: int = 143
+const _LAYOUT_SEPARATION_ACCOUNT: int = 70
 
-# Top inset (px) for the account avatar so its head clears the header while the preview overlaps it.
-const _ACCOUNT_AVATAR_HEAD_INSET: int = 70
+# How far (px) the avatar's head pokes ABOVE the header's bottom edge — a slight overlap into the
+# header so the head isn't strictly boxed below it.
+const _ACCOUNT_AVATAR_HEAD_OVERLAP: int = 25
 # Bottom inset (px): the feet lift off the preview's bottom edge, which is aligned to the Version
 # label so the feet share its bottom margin.
-const _ACCOUNT_AVATAR_FEET_INSET: int = 0
+const _ACCOUNT_AVATAR_FEET_INSET: int = 40
 
 ## When true, settings operates as a side panel inside the explorer:
 ## orientation is not changed and the background texture is hidden.
@@ -66,6 +66,7 @@ var _custom_max_lights_spin: SpinBox = null
 
 @onready var label_title: Label = %Label_Title
 @onready var hbox_layout: HBoxContainer = %HBoxContainer_Layout
+@onready var texture_avatar_background: TextureRect = $TextureRect_AvatarBackground
 
 @onready var container_gameplay: VBoxContainer = %VBoxContainer_Gameplay
 @onready var container_graphics: VBoxContainer = %VBoxContainer_Graphics
@@ -263,6 +264,7 @@ func _on_resized() -> void:
 
 func _on_orientation_changed(_is_portrait: bool) -> void:
 	_apply_layout(Global.is_orientation_portrait())
+	_update_avatar_background()
 	# Rows toggle only in landscape (they flip toggle_mode with orientation). Re-assert the
 	# current selection so the active section stays highlighted after rotating to landscape.
 	if not Global.is_orientation_portrait():
@@ -277,9 +279,10 @@ func _on_orientation_changed(_is_portrait: bool) -> void:
 
 func _apply_layout(is_orientation_portrait: bool) -> void:
 	var dropdown_max: int = 3
-	var section_title_font_size: int = 24
 	var section_v_separation: int = 56
 	var button_h: int = 74
+	var button_font_size: int = 24
+	var sign_out_icon_size: int = 28
 	# Regular outlined variation (16px corner radius) in both orientations — the design no longer
 	# uses the compact small variant.
 	var button_theme_variation: String = "SecondaryOutlinedButton"
@@ -292,9 +295,10 @@ func _apply_layout(is_orientation_portrait: bool) -> void:
 		section_list_h_margin = 0
 		label_title.label_settings.font_size = 48
 		dropdown_max = 5
-		section_title_font_size = 26
 		section_v_separation = 72
 		button_h = 96
+		button_font_size = 30
+		sign_out_icon_size = 32
 
 	container_gameplay.add_theme_constant_override("separation", section_v_separation)
 	container_graphics.add_theme_constant_override("separation", section_v_separation)
@@ -302,12 +306,11 @@ func _apply_layout(is_orientation_portrait: bool) -> void:
 
 	button_clear_cache.custom_minimum_size.y = button_h
 	button_clear_cache.theme_type_variation = button_theme_variation
+	button_clear_cache.add_theme_font_size_override("font_size", button_font_size)
 	button_sign_out.custom_minimum_size.y = button_h
 	button_sign_out.theme_type_variation = button_theme_variation
-
-	for node in find_children("*", "PanelContainer", true, false):
-		if node.get_script() == _SECTION_TITLE_SCRIPT:
-			node.set_font_size(section_title_font_size)
+	button_sign_out.add_theme_font_size_override("font_size", button_font_size)
+	button_sign_out.icon_size = sign_out_icon_size
 
 	for node in find_children("*", "DropdownList", true, false):
 		node.max_visible_items = dropdown_max
@@ -440,6 +443,7 @@ func _select_section(key: String, user_initiated: bool) -> void:
 		return
 	_current_section_key = key
 	show_control(section["container"])
+	_update_avatar_background()
 
 	# Tighter list↔content gap for Account (it adds the avatar preview column).
 	var layout_separation: int = (
@@ -1404,7 +1408,7 @@ func _setup_account_section() -> void:
 	# tracking the placeholder column; the scene's own anchors are ignored at runtime.
 	avatar_preview_account.top_level = true
 	avatar_preview_account.snap_top_to_viewport = false
-	avatar_preview_account.preview_margin_top = _ACCOUNT_AVATAR_HEAD_INSET
+	# preview_margin_top is set dynamically from the header's real height in _position_account_avatar.
 	avatar_preview_account.preview_margin_bottom = _ACCOUNT_AVATAR_FEET_INSET
 	var avatar_col: Control = avatar_preview_account.get_parent()
 	if not avatar_col.item_rect_changed.is_connected(_position_account_avatar):
@@ -1414,6 +1418,15 @@ func _setup_account_section() -> void:
 	_refresh_account_header()
 	_async_refresh_account_avatar()
 	_position_account_avatar.call_deferred()
+
+
+## The full-screen avatar backdrop only makes sense behind the Account avatar preview, which is
+## landscape-only — so it shows solely in the Account section and in landscape.
+func _update_avatar_background() -> void:
+	if is_instance_valid(texture_avatar_background):
+		texture_avatar_background.visible = (
+			_current_section_key == "account" and not Global.is_orientation_portrait()
+		)
 
 
 ## Places the top_level avatar over its placeholder column, stretched from the screen top (so it can
@@ -1431,6 +1444,15 @@ func _position_account_avatar() -> void:
 		bottom = label_version.global_position.y + label_version.size.y
 	avatar_preview_account.global_position = Vector2(col.global_position.x, 0.0)
 	avatar_preview_account.size = Vector2(col.size.x, maxf(0.0, bottom))
+	# Head overlaps slightly into the header: the rect starts at screen top (y=0), so the top inset is
+	# the header container's real bottom (its height + top safe-area margin) minus the overlap.
+	if is_instance_valid(label_title):
+		var header: Control = label_title.get_parent().get_parent()
+		if is_instance_valid(header):
+			var header_bottom: float = header.global_position.y + header.size.y
+			avatar_preview_account.preview_margin_top = roundi(
+				header_bottom - _ACCOUNT_AVATAR_HEAD_OVERLAP
+			)
 
 
 func _on_account_profile_changed(_new_profile: DclUserProfile) -> void:

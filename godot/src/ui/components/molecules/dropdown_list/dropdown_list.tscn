@@ -1,6 +1,7 @@
 [gd_scene format=3 uid="uid://bhmbr0xh4h188"]
 
 [ext_resource type="Script" uid="uid://c3gb41r3lvg7o" path="res://src/ui/components/molecules/dropdown_list/dropdown_list.gd" id="1_script"]
+[ext_resource type="Script" uid="uid://cuy34sm2crhoe" path="res://src/ui/layouts/orientation_label.gd" id="99_orlbl"]
 [ext_resource type="FontFile" uid="uid://di6yadh02vrla" path="res://assets/themes/fonts/inter/Inter-Regular.ttf" id="3_regular"]
 [ext_resource type="LabelSettings" uid="uid://ct0id5dvd563e" path="res://assets/themes/title_settings.tres" id="3_tiq7w"]
 [ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="4_semibold"]
@@ -70,6 +71,7 @@ theme_override_fonts/font = ExtResource("4_semibold")
 theme_override_font_sizes/font_size = 14
 text = "Title"
 label_settings = ExtResource("3_tiq7w")
+script = ExtResource("99_orlbl")
 
 [node name="HSeparator" type="HSeparator" parent="VBoxContainer/VBoxContainer_Title" unique_id=1688174912]
 layout_mode = 2
