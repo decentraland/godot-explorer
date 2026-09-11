@@ -9,12 +9,28 @@ extends PanelContainer
 # i18n-keys: TOOLTIP_VIEW_PROFILE
 const VIEW_PROFILE_KEY: String = "TOOLTIP_VIEW_PROFILE"
 
-const BG_COLOR_NORMAL: String = "#00000080"
-const BG_COLOR_PRESSED: String = "#44444480"
+const BG_COLOR_NORMAL: String = "#161518B3"
+const BG_COLOR_PRESSED: String = "#444348B3"
+## Shared HUD glyph tint (Figma "IconHUD"), used to tint the built-in monochrome-white icons;
+## scene-replaced creator icons keep their own colors (see _show_keyboard_icon). The keyboard
+## letter is the same color but is not driven from here -- it comes from LabelSettings_r3qmc in
+## tooltip_label.tscn, so change both together.
+const ICON_COLOR := Color("#DFD0FF")
+## Invisible tap growth per side. Same _has_point trick as the TapArea atom
+## (src/ui/components/atoms/tap_area/tap_area.gd), which this node can't extend because it is a
+## PanelContainer. The design asks for 10px, but that is 15 device px -- under a millimetre -- once
+## content_scale_factor is applied on a phone, so it is widened here to reach the ~48dp minimum
+## touch target. Vertical growth is dropped when tooltips are stacked (see tap_grow_y).
+const TAP_GROW_X: float = 24.0
+const TAP_GROW_Y: float = 24.0
 const ICON_LEFT_CLICK = preload("uid://cljfaeb8np0ma")
 const ICON_INTERACTIVE_POINTER = preload("uid://72xpjysoxgwo")
 const ICON_JUMP = preload("uid://ck3atqpytstpo")
 
+## Vertical half of the tap growth. Stacked tooltips clear each other by only PILL_GAP (8px),
+## so growing them vertically would make neighbouring hit areas overlap and let a tap fire the
+## wrong prompt. pointer_tooltip.gd zeroes this whenever more than one tooltip is on screen.
+var tap_grow_y: float = TAP_GROW_Y
 var action_to_trigger: String = ""
 var text_down := ""
 var text_up := ""
@@ -26,7 +42,6 @@ var _custom_icon_hash: String = ""
 
 @onready var label_action = %Label_Action
 @onready var texture_rect_action_icon = %TextureRect_ActionIcon
-@onready var panel_container_inputs: PanelContainer = %PanelContainer_Inputs
 @onready var label_text = %Label_Text
 @onready var margin_container_icons: MarginContainer = %MarginContainer_Icons
 
@@ -149,7 +164,7 @@ func _async_apply_custom_icon_override(action: String) -> void:
 
 	var cached: Texture2D = Global.content_provider.get_texture_from_hash(icon_hash)
 	if cached != null:
-		_show_keyboard_icon(cached)
+		_show_keyboard_icon(cached, Color.WHITE)
 		return
 
 	# Fetch by hash through the declaring scene's mapping so this shares the cache slot with
@@ -166,23 +181,31 @@ func _async_apply_custom_icon_override(action: String) -> void:
 	if _custom_icon_hash != icon_hash:
 		return
 	if not (res is PromiseError):
-		_show_keyboard_icon(res.texture)
+		_show_keyboard_icon(res.texture, Color.WHITE)
 
 
 func _show_keyboard(text: String) -> void:
 	show()
-	panel_container_inputs.show()
 	label_action.show()
 	texture_rect_action_icon.hide()
 	label_action.text = text
 
 
-func _show_keyboard_icon(icon: Texture2D) -> void:
+## `tint` is ICON_COLOR for the built-in white glyphs, but Color.WHITE (i.e. untinted) for a
+## scene-replaced creator icon, which arrives with its own colors — same as the on-screen gamepad
+## button renders it (button_touch_action.tscn's CustomIcon has no modulate).
+func _show_keyboard_icon(icon: Texture2D, tint: Color = ICON_COLOR) -> void:
 	show()
-	panel_container_inputs.show()
 	texture_rect_action_icon.show()
 	label_action.hide()
+	texture_rect_action_icon.self_modulate = tint
 	texture_rect_action_icon.texture = icon
+
+
+## Grow the touch target without changing the visual size.
+func _has_point(point: Vector2) -> bool:
+	var rect := Rect2(Vector2.ZERO, size)
+	return rect.grow_individual(TAP_GROW_X, tap_grow_y, TAP_GROW_X, tap_grow_y).has_point(point)
 
 
 func _physics_process(_delta):

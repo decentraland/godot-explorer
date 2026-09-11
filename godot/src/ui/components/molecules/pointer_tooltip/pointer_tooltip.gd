@@ -1,5 +1,12 @@
 extends Control
 
+## Horizontal gap between the crosshair and a tooltip's left edge. It positions a lone tooltip
+## outright, and is also the floor for the ring below: a tooltip is a wide left-anchored box, not
+## a point, so at 0 and 180 degrees the ring would otherwise sit its left edge on the crosshair.
+const MIN_OFFSET_X: float = 40.0
+## Vertical gap left between two neighbouring tooltips in the ring.
+const PILL_GAP: float = 8.0
+
 var angles: Array = [0, 60, 90, 120, 180]
 var initial_angle: float
 
@@ -30,14 +37,23 @@ func set_pointer_data(interacts_array: Array):
 		if i >= count:
 			break
 		var tooltip_scene_instance = tooltip_scene.instantiate()
-		var radius = -90 if interacts_array.size() > 1 else -36
-		tooltip_scene_instance.set_position(
-			Vector2(0, radius - (4 * count)).rotated(deg_to_rad(used_angles[i]))
-		)
-		var tooltip_position = tooltip_scene_instance.get_position()
-		tooltip_scene_instance.set_position(
-			Vector2(tooltip_position.x, tooltip_position.y - tooltip_scene_instance.size.y / 2)
-		)
+		# The honoured minimum, not `size.y`: the latter only reads 60 because the scene's
+		# offset_top/bottom happen to agree with custom_minimum_size, and nothing keeps the two
+		# in sync -- changing one alone would silently bring back the overlap this spacing fixes.
+		var pill_height: float = tooltip_scene_instance.get_combined_minimum_size().y
+		var offset := Vector2(MIN_OFFSET_X, 0.0)
+		if count > 1:
+			# Neighbours on the ring are half a radius apart vertically, so the radius has to be
+			# twice the pill height (plus the gap) or stacked tooltips overlap each other.
+			var radius := 2.0 * (pill_height + PILL_GAP)
+			offset = Vector2(0.0, -radius).rotated(deg_to_rad(used_angles[i]))
+			offset.x = maxf(offset.x, MIN_OFFSET_X)
+			# Neighbours clear each other by only PILL_GAP, so a vertical tap ring would overlap
+			# one and let a tap fire the wrong prompt. Only a lone tooltip grows vertically.
+			tooltip_scene_instance.tap_grow_y = 0.0
+		# set_position takes the top-left corner; the offsets above are to the tooltip's centre.
+		offset.y -= pill_height / 2.0
+		tooltip_scene_instance.set_position(offset)
 		control_center.add_child(tooltip_scene_instance)
 		tooltip_scene_instance.set_tooltip_data(
 			interact.get("text_pet_down", ""),
