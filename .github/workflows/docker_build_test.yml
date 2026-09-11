@@ -21,7 +21,7 @@ jobs:
   build-images:
     name: Build images and test
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 25
     steps:
       - name: Checkout sources
         uses: actions/checkout@v4
