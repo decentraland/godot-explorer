@@ -121,19 +121,33 @@ fn op_move_player_to(
         });
 }
 
+// `has_coordinates` and an empty `realm` are the sentinels for the two optional fields of
+// TeleportToRequest (protocol#477); #[op2] params can't be Option (same idiom as movePlayerTo).
 #[op2(async)]
 async fn op_teleport_to(
     op_state: Rc<RefCell<OpState>>,
     world_coordinates_x: i32,
     world_coordinates_y: i32,
+    has_coordinates: bool,
+    #[string] realm: String,
 ) -> Result<(), AnyError> {
+    let world_coordinates = has_coordinates.then_some([world_coordinates_x, world_coordinates_y]);
+    let realm = (!realm.is_empty()).then_some(realm);
+
+    if world_coordinates.is_none() && realm.is_none() {
+        return Err(anyhow!(
+            "teleportTo requires worldCoordinates, a realm, or both"
+        ));
+    }
+
     let (sx, rx) = tokio::sync::oneshot::channel::<Result<(), String>>();
 
     op_state
         .borrow_mut()
         .borrow_mut::<Vec<RpcCall>>()
         .push(RpcCall::TeleportTo {
-            world_coordinates: [world_coordinates_x, world_coordinates_y],
+            world_coordinates,
+            realm,
             response: sx.into(),
         });
 

@@ -38,6 +38,11 @@ func _ready() -> void:
 	rich_text_label_place_name.text = tr("LOADING_ENJOY_EXPERIENCE")
 	last_activity_time = Time.get_ticks_msec()
 	Global.scene_runner.loading_started.connect(_on_scene_runner_loading_started)
+	# A realm change that fails (unknown world, unreachable /about) never reaches a loaded
+	# scene, so nothing else would ever take this screen down: it would hang over the place
+	# the user never left (#2471). Every failure path in Realm.async_set_realm emits this.
+	if is_instance_valid(Global.realm):
+		Global.realm.realm_change_failed.connect(_on_realm_change_failed)
 
 
 func enable_loading_screen(intended_realm: String = "", when: String = "") -> void:
@@ -66,6 +71,10 @@ func enable_loading_screen(intended_realm: String = "", when: String = "") -> vo
 			"when": when
 		}
 		Global.metrics.track_screen_viewed("LOADING_START", JSON.stringify(loading_data))
+
+
+func _on_realm_change_failed(_new_realm_string: String, _reason: String) -> void:
+	hide_loading_screen()
 
 
 func _clear_place_ui() -> void:

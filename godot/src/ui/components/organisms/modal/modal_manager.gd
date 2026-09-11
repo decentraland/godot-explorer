@@ -353,6 +353,26 @@ func async_show_change_realm_modal(realm_name: String, _message: String = "") ->
 	await _async_load_change_realm_data(realm_name)
 
 
+## Shows a travel modal for a scene `teleportTo` that names a realm but no parcel
+## (protocol#477): the player lands on the realm's own spawn point rather than on coordinates.
+## @param realm_name: The destination realm — a world name ("foo.dcl.eth") or a realm url
+func async_show_realm_teleport_modal(realm_name: String) -> void:
+	if not await _async_create_travel_modal():
+		return
+	if not NodeGuard.is_alive(current_travel_modal, "ModalManager.async_show_realm_teleport_modal"):
+		return
+
+	current_travel_modal.closed.connect(close_travel_modal)
+	current_travel_modal.jump_in_pressed.connect(_on_realm_teleport_primary.bind(realm_name))
+	current_travel_modal.show()
+
+	await get_tree().process_frame
+	await get_tree().process_frame
+
+	# Try to load realm data from Places API
+	await _async_load_change_realm_data(realm_name)
+
+
 ## Shows a SCENE_CRASH type modal
 ## @param entity_id: The entity ID of the crashed scene
 func async_show_scene_crash_modal(entity_id: String) -> void:
@@ -1110,6 +1130,13 @@ func _on_teleport_primary(location: Vector2i, realm: String) -> void:
 
 func _on_change_realm_primary(realm_name: String) -> void:
 	Global.realm.async_set_realm(realm_name)
+	close_travel_modal()
+
+
+# teleportTo with a realm and no coordinates: async_join_world changes realm and lands the
+# player on its spawn point (Realm.async_set_realm(realm, true)).
+func _on_realm_teleport_primary(realm_name: String) -> void:
+	Global.async_join_world(realm_name)
 	close_travel_modal()
 
 
