@@ -10,6 +10,7 @@
 [ext_resource type="Texture2D" uid="uid://c2vhfbpq8ffgy" path="res://assets/ui/copy-icon-2.svg" id="9_wvlp0"]
 [ext_resource type="Script" uid="uid://rsrj8osixsoo" path="res://src/ui/layouts/hide_orientation.gd" id="11_cntei"]
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="12_sa1v7"]
+[ext_resource type="Script" uid="uid://cpbcnxl0p8wdd" path="res://src/ui/layouts/orientation_vbox.gd" id="13_37kek"]
 [ext_resource type="Texture2D" uid="uid://dftgrrlty2cp5" path="res://assets/ui/settings-background.png" id="13_xewta"]
 [ext_resource type="PackedScene" uid="uid://b07fppc2l5exm" path="res://src/ui/components/molecules/guest_upgrade_card/guest_upgrade_card.tscn" id="14_sbgvv"]
 [ext_resource type="PackedScene" uid="uid://ceomwutplh20c" path="res://src/ui/pages/settings/section_title.tscn" id="15_h5vs5"]
@@ -33,7 +34,7 @@
 [ext_resource type="StyleBox" uid="uid://dn5s5fs7fgxuw" path="res://assets/themes/secondary_outlined_pressed.tres" id="27_nqmh4"]
 [ext_resource type="StyleBox" uid="uid://b710k2wnilt8k" path="res://assets/themes/secondary_outlined_disabled.tres" id="28_1mbv2"]
 [ext_resource type="PackedScene" uid="uid://cy43hvd5bivso" path="res://src/ui/pages/backpack/avatar_preview.tscn" id="29_avatar"]
-[ext_resource type="Script" uid="uid://cuy34sm2crhoe" path="res://src/ui/layouts/orientation_label.gd" id="99_orlbl"]
+[ext_resource type="Script" path="res://src/ui/layouts/orientation_label.gd" id="99_orlbl"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_67hd5"]
 
@@ -168,16 +169,16 @@ metadata/_custom_type_script = "uid://bhwm0bl5qoiph"
 layout_mode = 2
 theme_override_constants/separation = 0
 
-[node name="MarginContainer" type="MarginContainer" parent="SafeMarginContainer/VBoxContainer2" unique_id=1925306535]
+[node name="VBoxContainer" type="VBoxContainer" parent="SafeMarginContainer/VBoxContainer2" unique_id=770675147]
 layout_mode = 2
-theme_override_constants/margin_bottom = 30
+theme_override_constants/separation = 0
 
-[node name="HeaderRow" type="HBoxContainer" parent="SafeMarginContainer/VBoxContainer2/MarginContainer" unique_id=1900000012]
-custom_minimum_size = Vector2(0, 68)
+[node name="HeaderRow" type="HBoxContainer" parent="SafeMarginContainer/VBoxContainer2/VBoxContainer" unique_id=1900000012]
+custom_minimum_size = Vector2(0, 60)
 layout_mode = 2
 theme_override_constants/separation = 8
 
-[node name="Button_Back" type="Button" parent="SafeMarginContainer/VBoxContainer2/MarginContainer/HeaderRow" unique_id=1900000013]
+[node name="Button_Back" type="Button" parent="SafeMarginContainer/VBoxContainer2/VBoxContainer/HeaderRow" unique_id=1900000013]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(60, 60)
 layout_mode = 2
@@ -190,7 +191,7 @@ theme_override_styles/focus = SubResource("StyleBoxEmpty_67hd5")
 icon = ExtResource("26_back")
 expand_icon = true
 
-[node name="Label_Title" type="Label" parent="SafeMarginContainer/VBoxContainer2/MarginContainer/HeaderRow" unique_id=159123644]
+[node name="Label_Title" type="Label" parent="SafeMarginContainer/VBoxContainer2/VBoxContainer/HeaderRow" unique_id=159123644]
 unique_name_in_owner = true
 auto_translate_mode = 2
 visible = false
@@ -202,6 +203,12 @@ text = "Settings"
 label_settings = ExtResource("6_sa1v7")
 vertical_alignment = 1
 script = ExtResource("11_cntei")
+
+[node name="Spacer" type="Control" parent="SafeMarginContainer/VBoxContainer2/VBoxContainer" unique_id=1641447903]
+layout_mode = 2
+script = ExtResource("24_nqmh4")
+portrait_minimum_size = Vector2(0, 30)
+landscape_minimum_size = Vector2(0, 22)
 
 [node name="HBoxContainer_Layout" type="HBoxContainer" parent="SafeMarginContainer/VBoxContainer2" unique_id=2065532333]
 unique_name_in_owner = true
@@ -234,7 +241,9 @@ scroll_deadzone = 100
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_constants/separation = 8
+script = ExtResource("13_37kek")
+portrait_separation = 30
+landscape_separation = 12
 
 [node name="Button_Version" type="Button" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/MarginContainer_List/VBoxContainer" unique_id=1559694459]
 custom_minimum_size = Vector2(0, 40)
@@ -303,11 +312,14 @@ theme_override_constants/separation = 40
 
 [node name="VBoxContainer_Gameplay" type="VBoxContainer" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections" unique_id=911633864]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 mouse_filter = 2
 theme = SubResource("Theme_5xlkc")
 theme_type_variation = &"2"
-theme_override_constants/separation = 72
+script = ExtResource("13_37kek")
+portrait_separation = 72
+landscape_separation = 48
 
 [node name="Container_ChatAndSocial" type="MarginContainer" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay" unique_id=1938018452]
 unique_name_in_owner = true
@@ -692,11 +704,12 @@ layout_mode = 2
 theme_override_constants/separation = 16
 theme_override_styles/separator = SubResource("StyleBoxEmpty_c03rv")
 
-[node name="HSeparator2" type="HSeparator" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Storage" unique_id=675200124]
+[node name="Spacer" type="Control" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Storage" unique_id=2089797052]
 layout_mode = 2
 mouse_filter = 2
-theme_override_constants/separation = 50
-theme_override_styles/separator = SubResource("StyleBoxEmpty_xewta")
+script = ExtResource("24_nqmh4")
+portrait_minimum_size = Vector2(0, 44)
+landscape_minimum_size = Vector2(0, 32)
 
 [node name="DropdownList_MaxCacheSize" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Storage" unique_id=1673477868 instance=ExtResource("20_67hd5")]
 unique_name_in_owner = true
@@ -704,11 +717,12 @@ layout_mode = 2
 title = "SETTINGS_MAX_CACHE_SIZE"
 description = "SETTINGS_SETS_HOW_MUCH_STORAGE_THE_APP"
 
-[node name="HSeparator" type="HSeparator" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Storage" unique_id=221018430]
+[node name="Spacer2" type="Control" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Storage" unique_id=1085521286]
 layout_mode = 2
 mouse_filter = 2
-theme_override_constants/separation = 74
-theme_override_styles/separator = SubResource("StyleBoxEmpty_xewta")
+script = ExtResource("24_nqmh4")
+portrait_minimum_size = Vector2(0, 74)
+landscape_minimum_size = Vector2(0, 56)
 
 [node name="Control" type="Control" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Storage" unique_id=490072681]
 layout_mode = 2
@@ -734,7 +748,7 @@ text = "SETTINGS_CLEAN_CACHE"
 [node name="HSeparator4" type="HSeparator" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Storage" unique_id=604752219]
 layout_mode = 2
 mouse_filter = 2
-theme_override_constants/separation = 20
+theme_override_constants/separation = 24
 theme_override_styles/separator = SubResource("StyleBoxEmpty_xewta")
 
 [node name="Label_CleanCacheDescription" type="Label" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Storage" unique_id=942098622]
@@ -761,7 +775,9 @@ visible = false
 layout_mode = 2
 size_flags_vertical = 3
 mouse_filter = 2
-theme_override_constants/separation = 72
+script = ExtResource("13_37kek")
+portrait_separation = 72
+landscape_separation = 54
 
 [node name="SectionPerformance" type="MarginContainer" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics" unique_id=1498918614]
 layout_mode = 2
@@ -836,11 +852,12 @@ layout_mode = 2
 size_flags_vertical = 0
 theme = ExtResource("12_sa1v7")
 
-[node name="HSeparator2" type="HSeparator" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/SectionPerformance/VBoxContainer" unique_id=564488327]
+[node name="Spacer" type="Control" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/SectionPerformance/VBoxContainer" unique_id=183924005]
 layout_mode = 2
 mouse_filter = 2
-theme_override_constants/separation = 30
-theme_override_styles/separator = SubResource("StyleBoxEmpty_xewta")
+script = ExtResource("24_nqmh4")
+portrait_minimum_size = Vector2(0, 44)
+landscape_minimum_size = Vector2(0, 30)
 
 [node name="DropdownList_GraphicProfiles" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/SectionPerformance/VBoxContainer" unique_id=271477785 instance=ExtResource("20_67hd5")]
 unique_name_in_owner = true
@@ -921,11 +938,12 @@ layout_mode = 2
 size_flags_vertical = 0
 theme = ExtResource("12_sa1v7")
 
-[node name="HSeparator2" type="HSeparator" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/SectionVisual/VBoxContainer" unique_id=844543671]
+[node name="Spacer" type="Control" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/SectionVisual/VBoxContainer" unique_id=1267916614]
 layout_mode = 2
 mouse_filter = 2
-theme_override_constants/separation = 30
-theme_override_styles/separator = SubResource("StyleBoxEmpty_xewta")
+script = ExtResource("24_nqmh4")
+portrait_minimum_size = Vector2(0, 44)
+landscape_minimum_size = Vector2(0, 30)
 
 [node name="DropdownList_CustomSkybox" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/SectionVisual/VBoxContainer" unique_id=1356632552 instance=ExtResource("20_67hd5")]
 unique_name_in_owner = true
@@ -997,7 +1015,6 @@ text = "SETTINGS_GRAPHIC_PROFILE"
 
 [node name="VBoxContainer_Audio" type="VBoxContainer" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections" unique_id=1100264795]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
 theme = SubResource("Theme_5xlkc")
 theme_type_variation = &"2"
@@ -1009,7 +1026,9 @@ title = "SETTINGS_VOLUME"
 
 [node name="VBoxContainer" type="VBoxContainer" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Audio" unique_id=19322585]
 layout_mode = 2
-theme_override_constants/separation = 48
+script = ExtResource("13_37kek")
+portrait_separation = 48
+landscape_separation = 28
 
 [node name="GeneralVolume" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Audio/VBoxContainer" unique_id=280716190 instance=ExtResource("21_xewta")]
 unique_name_in_owner = true
@@ -1066,7 +1085,9 @@ layout_mode = 2
 mouse_filter = 2
 theme = SubResource("Theme_3h20j")
 theme_type_variation = &"2"
-theme_override_constants/separation = 0
+script = ExtResource("13_37kek")
+portrait_separation = 72
+landscape_separation = 48
 
 [node name="Section_Title" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced" unique_id=1752756732 instance=ExtResource("15_h5vs5")]
 layout_mode = 2
@@ -1081,7 +1102,9 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_ewc0a")
 [node name="HBoxContainer5" type="VBoxContainer" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced" unique_id=1392654186]
 layout_mode = 2
 mouse_filter = 2
-theme_override_constants/separation = 48
+script = ExtResource("13_37kek")
+portrait_separation = 44
+landscape_separation = 32
 
 [node name="SceneLogsEnabled" type="HBoxContainer" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5" unique_id=1264101032]
 layout_mode = 2
@@ -1429,7 +1452,9 @@ layout_mode = 2
 mouse_filter = 2
 theme = SubResource("Theme_5xlkc")
 theme_type_variation = &"2"
-theme_override_constants/separation = 72
+script = ExtResource("13_37kek")
+portrait_separation = 72
+landscape_separation = 48
 
 [node name="SectionReport" type="MarginContainer" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_HelpSupport" unique_id=936932899]
 layout_mode = 2
@@ -1450,7 +1475,9 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_xewta")
 
 [node name="VBoxContainer" type="VBoxContainer" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_HelpSupport/SectionReport/VBoxContainer" unique_id=1686033830]
 layout_mode = 2
-theme_override_constants/separation = 44
+script = ExtResource("13_37kek")
+portrait_separation = 44
+landscape_separation = 32
 
 [node name="Button_ReportBug" type="Button" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_HelpSupport/SectionReport/VBoxContainer/VBoxContainer" unique_id=331652276]
 custom_minimum_size = Vector2(0, 40)
@@ -1577,7 +1604,9 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_xewta")
 
 [node name="VBoxContainer2" type="VBoxContainer" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_HelpSupport/SectionLegal/VBoxContainer" unique_id=2887636]
 layout_mode = 2
-theme_override_constants/separation = 44
+script = ExtResource("13_37kek")
+portrait_separation = 44
+landscape_separation = 32
 
 [node name="Button_PrivacyPolicy" type="Button" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_HelpSupport/SectionLegal/VBoxContainer/VBoxContainer2" unique_id=341575027]
 custom_minimum_size = Vector2(0, 40)

@@ -279,7 +279,6 @@ func _on_orientation_changed(_is_portrait: bool) -> void:
 
 func _apply_layout(is_orientation_portrait: bool) -> void:
 	var dropdown_max: int = 3
-	var section_v_separation: int = 56
 	var button_h: int = 74
 	var button_font_size: int = 24
 	var sign_out_icon_size: int = 28
@@ -295,14 +294,9 @@ func _apply_layout(is_orientation_portrait: bool) -> void:
 		section_list_h_margin = 0
 		label_title.label_settings.font_size = 48
 		dropdown_max = 5
-		section_v_separation = 72
 		button_h = 96
 		button_font_size = 30
 		sign_out_icon_size = 32
-
-	container_gameplay.add_theme_constant_override("separation", section_v_separation)
-	container_graphics.add_theme_constant_override("separation", section_v_separation)
-	container_advanced.add_theme_constant_override("separation", section_v_separation)
 
 	button_clear_cache.custom_minimum_size.y = button_h
 	button_clear_cache.theme_type_variation = button_theme_variation
@@ -324,9 +318,6 @@ func _apply_layout(is_orientation_portrait: bool) -> void:
 ## List (left menu) vs content (right pane) visibility. Landscape shows both side by side;
 ## portrait shows one at a time (master-detail) driven by _portrait_detail.
 func _apply_nav_layout(is_orientation_portrait: bool) -> void:
-	section_buttons_container.add_theme_constant_override(
-		"separation", 30 if is_orientation_portrait else 8
-	)
 	if is_orientation_portrait:
 		# Portrait: the list is the only visible pane, so let it expand to the full width.
 		margin_container_list.visible = not _portrait_detail
