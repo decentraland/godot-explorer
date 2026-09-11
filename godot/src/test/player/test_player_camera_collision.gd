@@ -60,7 +60,7 @@ func _initialize() -> void:
 	_test_rig_targets_third_person()
 	_test_rig_targets_first_person()
 	_test_zoom_clamp_constants()
-	_test_crosshair_position()
+	_test_crosshair_anchor()
 	_test_scene_pivot_centered_and_masked()
 	_test_scene_has_collision_clamp()
 	_finish()
@@ -493,34 +493,23 @@ func _test_zoom_clamp_constants() -> void:
 		)
 
 
-# Crosshair placement (issue #2709): center in first person, head-tracking with
-# zoom-proportional offset in third person, blended across the crossing.
-func _test_crosshair_position() -> void:
-	var vp := Vector2(1600, 720)
-	var head := Vector2(800, 300)
-	var feet := Vector2(800, 600)  # avatar 300px tall on screen
-	var center := vp * 0.5
-
-	# First person (t=0): dead center.
-	var fp := CameraRig.crosshair_position(head, feet, vp, 0.0)
-	_expect_eq("crosshair 1p x", center.x, fp.x)
-	_expect_eq("crosshair 1p y", center.y, fp.y)
-
-	# Full third person (t=1): up-right of the head, offset by the avatar's
-	# on-screen height fraction.
-	var tp := CameraRig.crosshair_position(head, feet, vp, 1.0)
-	_expect_eq("crosshair 3p x", head.x + CameraRig.CROSSHAIR_HEAD_OFFSET.x * 300.0, tp.x)
-	_expect_eq("crosshair 3p y", head.y + CameraRig.CROSSHAIR_HEAD_OFFSET.y * 300.0, tp.y)
-
-	# The offset scales with the avatar's on-screen height (zoom-proportional):
-	# half the on-screen height -> half the offset.
-	var far := CameraRig.crosshair_position(head, Vector2(800, 450), vp, 1.0)
-	_expect_eq("crosshair far-zoom x", head.x + CameraRig.CROSSHAIR_HEAD_OFFSET.x * 150.0, far.x)
-
-	# Mid-transition blends between center and the tracked point.
-	var mid := CameraRig.crosshair_position(head, feet, vp, 0.5)
-	if mid.distance_to(center.lerp(tp, 0.5)) > 0.5:
-		_fail("crosshair mid-transition should blend center->tracked (got %s)" % mid)
+# Crosshair anchors (issue #2709): first person is screen center, full third
+# person is the above-right anchor, and the crossing interpolates in between.
+func _test_crosshair_anchor() -> void:
+	var fp := CameraRig.crosshair_anchor(CameraRig.FIRST_PERSON_SPRING_LENGTH)
+	_expect_eq("crosshair 1p x", 0.5, fp.x)
+	_expect_eq("crosshair 1p y", 0.5, fp.y)
+	var tp := CameraRig.crosshair_anchor(CameraRig.THIRD_PERSON_MIN_DISTANCE)
+	_expect_eq("crosshair 3p x", CameraRig.CROSSHAIR_THIRD_PERSON_ANCHOR.x, tp.x)
+	_expect_eq("crosshair 3p y", CameraRig.CROSSHAIR_THIRD_PERSON_ANCHOR.y, tp.y)
+	# Beyond the min (any third-person zoom) stays pinned at the 3p anchor.
+	var far := CameraRig.crosshair_anchor(CameraRig.THIRD_PERSON_MAX_DISTANCE)
+	_expect_eq("crosshair far-zoom y", CameraRig.CROSSHAIR_THIRD_PERSON_ANCHOR.y, far.y)
+	var mid := CameraRig.crosshair_anchor(
+		(CameraRig.FIRST_PERSON_SPRING_LENGTH + CameraRig.THIRD_PERSON_MIN_DISTANCE) * 0.5
+	)
+	if mid.y >= 0.5 or mid.y <= CameraRig.CROSSHAIR_THIRD_PERSON_ANCHOR.y:
+		_fail("crosshair mid-transition should interpolate between anchors (y=%.3f)" % mid.y)
 
 
 # Guard the actual scene: the Mount pivot stays centered (no lateral X in its
