@@ -663,6 +663,27 @@ impl DclGlobal {
         env!("GODOT_EXPLORER_COMMIT_HASH").into()
     }
 
+    /// Marketing version with the build number but no commit hash or environment, e.g.
+    /// `1.14.0.1844` (everything before the first `-` of `GODOT_EXPLORER_VERSION`). Locally,
+    /// with no `DCL_BUILD_NUMBER`, it's just `{major.minor.patch}`. Used in production.
+    #[func]
+    pub fn get_short_version() -> GString {
+        let full = env!("GODOT_EXPLORER_VERSION");
+        GString::from(full.split('-').next().unwrap_or(full))
+    }
+
+    /// Full version with build number, commit hash and environment, e.g.
+    /// `1.14.0.1844-6cefb54-staging`. The `-debug` build-mode marker is dropped so the shape is
+    /// always `{version}.{build}-{hash}-{env}`. Used outside production for diagnostics.
+    #[func]
+    pub fn get_full_version() -> GString {
+        GString::from(
+            env!("GODOT_EXPLORER_VERSION")
+                .replace("-debug", "")
+                .as_str(),
+        )
+    }
+
     #[func]
     pub fn get_commit_message() -> GString {
         env!("GODOT_EXPLORER_COMMIT_MESSAGE").into()

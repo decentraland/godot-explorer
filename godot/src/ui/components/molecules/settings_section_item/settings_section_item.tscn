@@ -1,0 +1,83 @@
+[gd_scene format=3 uid="uid://dttpatg0wspf1"]
+
+[ext_resource type="Script" uid="uid://dfiguhy35eso8" path="res://src/ui/components/molecules/settings_section_item/settings_section_item.gd" id="1_item"]
+[ext_resource type="FontFile" uid="uid://d2vlaexk003yw" path="res://assets/themes/fonts/inter/Inter-Medium.ttf" id="2_d0lpa"]
+[ext_resource type="Texture2D" uid="uid://cqpimo23w821v" path="res://assets/ui/next.svg" id="2_g4blm"]
+[ext_resource type="PackedScene" uid="uid://chpydicpuiujx" path="res://src/ui/components/atoms/controls/upgrade_badge/upgrade_badge.tscn" id="4_xt2eu"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_flat"]
+content_margin_left = 12.0
+content_margin_top = 12.0
+content_margin_right = 20.0
+content_margin_bottom = 12.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_pill"]
+content_margin_left = 12.0
+content_margin_top = 12.0
+content_margin_right = 20.0
+content_margin_bottom = 12.0
+bg_color = Color(0.9098039, 0.7254902, 1, 0.3019608)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="LabelSettings" id="LabelSettings_d0lpa"]
+font = ExtResource("2_d0lpa")
+font_size = 30
+
+[node name="SettingsSectionItem" type="Button" unique_id=493290523]
+auto_translate_mode = 2
+custom_minimum_size = Vector2(0, 72)
+offset_right = 266.0
+offset_bottom = 72.0
+size_flags_horizontal = 3
+focus_mode = 0
+mouse_filter = 1
+theme_override_constants/icon_max_width = 16
+theme_override_fonts/font = ExtResource("2_d0lpa")
+theme_override_font_sizes/font_size = 30
+theme_override_styles/normal = SubResource("StyleBoxEmpty_flat")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_pill")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_flat")
+theme_override_styles/hover_pressed = SubResource("StyleBoxFlat_pill")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_flat")
+toggle_mode = true
+icon = ExtResource("2_g4blm")
+alignment = 0
+icon_alignment = 2
+script = ExtResource("1_item")
+metadata/mobile_preview_orientation = "landscape"
+
+[node name="MarginContainer" type="MarginContainer" parent="." unique_id=746867071]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 12
+
+[node name="Label_Title" type="Label" parent="MarginContainer" unique_id=1747960773]
+layout_mode = 2
+size_flags_horizontal = 0
+text = "SETTINGS_ACCOUNT"
+label_settings = SubResource("LabelSettings_d0lpa")
+
+[node name="UpgradeBadge" parent="MarginContainer/Label_Title" unique_id=996992674 instance=ExtResource("4_xt2eu")]
+custom_minimum_size = Vector2(22, 22)
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -4.0
+offset_top = -38.0
+offset_right = 18.0
+offset_bottom = -16.0
+grow_horizontal = 0
+grow_vertical = 0

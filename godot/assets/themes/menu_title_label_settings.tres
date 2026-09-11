@@ -1,7 +1,8 @@
-[gd_resource type="LabelSettings" load_steps=2 format=3 uid="uid://casqox4mhcv7s"]
+[gd_resource type="LabelSettings" format=3 uid="uid://casqox4mhcv7s"]
 
 [ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="1_jnvnt"]
 
 [resource]
 font = ExtResource("1_jnvnt")
 font_size = 48
+font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)

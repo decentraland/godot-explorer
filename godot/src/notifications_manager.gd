@@ -544,7 +544,6 @@ func dequeue_notification() -> Dictionary:
 		# Return next notification if available and queue is not paused
 		if _notification_queue.size() > 0 and not _queue_paused:
 			var next_notif = _notification_queue[0]
-			# Emit signal for next notification
 			notification_queued.emit(next_notif)
 			return next_notif
 
@@ -554,6 +553,32 @@ func dequeue_notification() -> Dictionary:
 ## Check if there are notifications in the queue
 func has_queued_notifications() -> bool:
 	return _notification_queue.size() > 0
+
+
+## Re-start the toast pump from the consumer side (explorer). The queue only auto-emits when it
+## grows to size 1, which is lost if it happens while no consumer is connected yet (lobby/loading) —
+## the queue then wedges and no later toast ever shows. Explorer calls this once it can render.
+func kick_queue() -> void:
+	if _queue_paused:
+		return
+	if _notification_queue.size() > 0:
+		notification_queued.emit(_notification_queue[0])
+
+
+## Drop transient system toasts (copied-to-clipboard, etc.) still queued from a previous run so they
+## don't parade on world entry. Real notifications (friend requests, rewards) are kept.
+func clear_system_toasts() -> void:
+	# Never touch the head: index 0 may be the toast currently on screen, and the consumer's
+	# on-close dequeue() pops index 0 — filtering it out would orphan the visible toast and make
+	# that dequeue swallow the next real notification. Only drop system toasts still waiting behind it.
+	if _notification_queue.is_empty():
+		return
+	var head: Dictionary = _notification_queue[0]
+	var rest: Array = _notification_queue.slice(1).filter(
+		func(n): return n.get("type", "") != "system"
+	)
+	rest.insert(0, head)
+	_notification_queue = rest
 
 
 ## Get the number of notifications in the queue

@@ -97,7 +97,6 @@ layout_mode = 1
 unique_name_in_owner = true
 visible = false
 layout_mode = 1
-offset_bottom = 19.0
 
 [node name="Control_Backpack" parent="VBoxContainer/ColorRect_Background/Menus" unique_id=1121015743 instance_placeholder="res://src/ui/pages/backpack/backpack.tscn"]
 unique_name_in_owner = true

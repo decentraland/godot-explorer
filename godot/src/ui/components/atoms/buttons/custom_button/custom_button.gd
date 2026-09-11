@@ -28,6 +28,14 @@ enum IconAlign { LEFT, RIGHT, CENTER_LEFT, CENTER_RIGHT }
 		if is_node_ready():
 			_update_icon_align()
 
+## When > 0, forces the icon to this exact square size (px). Otherwise (0) the icon width follows
+## the font size (fs * 1.1) and its height follows the row — the legacy behavior.
+@export var icon_size: int = 0:
+	set(value):
+		icon_size = value
+		if is_node_ready():
+			_update_visual_state()
+
 @onready var _margin: MarginContainer = %MarginContainer
 @onready var _hbox: HBoxContainer = %HBoxContainer_Content
 @onready var _icon: TextureRect = %TextureRect_Icon
@@ -99,9 +107,14 @@ func _update_visual_state():
 	_icon.modulate = icon_color
 	_icon.visible = _icon.texture != null
 
-	# Icon min size based on font size
-	var fs := get_theme_font_size("font_size")
-	_icon.custom_minimum_size.x = int(fs * 1.1)
+	# Icon size: an explicit square when icon_size is set, else width derived from the font.
+	if icon_size > 0:
+		_icon.custom_minimum_size = Vector2(icon_size, icon_size)
+		_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	else:
+		var fs := get_theme_font_size("font_size")
+		_icon.expand_mode = TextureRect.EXPAND_FIT_HEIGHT_PROPORTIONAL
+		_icon.custom_minimum_size = Vector2(int(fs * 1.1), 0)
 
 	# Margins from the active stylebox
 	var style := get_theme_stylebox(stylebox_name)
