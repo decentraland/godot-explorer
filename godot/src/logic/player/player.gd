@@ -48,6 +48,8 @@ const JUMP_ACTION_GLIDE_TOGGLE := 2  # open or close the glider
 
 # AvatarRaycast resting target (matches player.tscn): straight ahead, 10m.
 const AVATAR_RAYCAST_DEFAULT_TARGET := Vector3(0, 0, -10)
+# Eye/head height above the player origin for crosshair tracking (~1.75m avatar).
+const AVATAR_HEAD_HEIGHT := 1.75
 
 # #b9: matches the CharacterBody3D.collision_mask in player.tscn (layer 2 =
 # world/terrain). Keeps the ground raycast from pinging avatar wearables,
@@ -759,6 +761,31 @@ func _physics_process(dt: float) -> void:
 	_update_avatar_raycast_to_crosshair()
 
 
+# Issue #2709: crosshair screen position in pixels. First person / transition
+# start: screen center. Full third person: tracks the avatar's head with an
+# offset proportional to its on-screen height, so the placement keeps its
+# relative scale at any zoom level. Blended across the 1p<->3p crossing.
+func get_crosshair_screen_position(viewport_size: Vector2) -> Vector2:
+	var t := clampf(
+		inverse_lerp(
+			CameraRigHelpers.FIRST_PERSON_SPRING_LENGTH,
+			CameraRigHelpers.THIRD_PERSON_MIN_DISTANCE,
+			mount_camera.spring_length
+		),
+		0.0,
+		1.0
+	)
+	var head := global_position + Vector3(0, AVATAR_HEAD_HEIGHT, 0)
+	if t <= 0.0 or camera.is_position_behind(head):
+		return viewport_size * 0.5
+	return CameraRigHelpers.crosshair_position(
+		camera.unproject_position(head),
+		camera.unproject_position(global_position),
+		viewport_size,
+		t
+	)
+
+
 # Issue #2709: aim the avatar outline/view-profile raycast at the crosshair.
 # Same model as the scene interaction raycast (scene_manager): start at the
 # avatar's own depth so the centered avatar doesn't block the ray, direction
@@ -769,9 +796,9 @@ func _update_avatar_raycast_to_crosshair() -> void:
 		avatar_raycast.target_position = AVATAR_RAYCAST_DEFAULT_TARGET
 		return
 	var viewport_size := get_viewport().get_visible_rect().size
-	var anchor := CameraRigHelpers.crosshair_anchor(mount_camera.spring_length)
+	var screen_pos := get_crosshair_screen_position(viewport_size)
 	var depth := maxf(-(camera.global_transform.affine_inverse() * global_position).z, 0.0)
-	var origin := camera.project_position(anchor * viewport_size, depth)
+	var origin := camera.project_position(screen_pos, depth)
 	var dir := (origin - camera.global_position).normalized()
 	avatar_raycast.global_position = origin
 	avatar_raycast.target_position = avatar_raycast.to_local(

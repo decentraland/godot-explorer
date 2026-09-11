@@ -55,11 +55,10 @@ const CLAMP_NEAR_CLEARANCE := 0.08
 # is smoothed so geometry doesn't pop through on the way out.
 const CLAMP_EXTEND_SPEED := 8.0
 
-# Crosshair anchors (issue #2709): first person centers on screen; third person
-# sits up-right of the centered avatar's head (device-QA tuned; the issue's
-# Figma has it roughly here).
-const CROSSHAIR_FIRST_PERSON_ANCHOR := Vector2(0.5, 0.5)
-const CROSSHAIR_THIRD_PERSON_ANCHOR := Vector2(0.56, 0.33)
+# Crosshair placement (issue #2709): in third person it sits up-right of the
+# avatar's head, offset by this fraction of the avatar's ON-SCREEN height, so
+# the placement scales with the avatar at any zoom level. (+x right, -y up.)
+const CROSSHAIR_HEAD_OFFSET := Vector2(0.15, -0.22)
 # Floor guard: some scene ground meshes have no usable collider (single-sided shell
 # or cmask=0), so the sweep casts slip through and — at far zoom, angled down — the
 # camera dips below the visible floor. Independent of scene geometry, the camera is
@@ -90,12 +89,15 @@ static func rig_targets(third_person: bool) -> Dictionary:
 	}
 
 
-# Crosshair screen anchor (normalized) for a given spring-arm length. Interpolates
-# in sync with the camera distance across the 1p↔3p crossing so there is no jump
-# at the mode switch; fully third-person (>= MIN distance) pins the upper-third
-# anchor regardless of how far out the zoom goes.
-static func crosshair_anchor(spring_length: float) -> Vector2:
-	var t := clampf(
-		inverse_lerp(FIRST_PERSON_SPRING_LENGTH, THIRD_PERSON_MIN_DISTANCE, spring_length), 0.0, 1.0
-	)
-	return CROSSHAIR_FIRST_PERSON_ANCHOR.lerp(CROSSHAIR_THIRD_PERSON_ANCHOR, t)
+# Crosshair screen position (px): screen center blended toward the avatar-head
+# tracking point by `t` (0 = first person, 1 = full third person), so a pinch
+# across the mode boundary moves it smoothly. The head offset is proportional
+# to the avatar's on-screen height (head_px/feet_px are the unprojected head
+# and feet), keeping the relative placement constant at any zoom distance.
+static func crosshair_position(
+	head_px: Vector2, feet_px: Vector2, viewport_size: Vector2, t: float
+) -> Vector2:
+	var center := viewport_size * 0.5
+	var avatar_h := maxf(feet_px.y - head_px.y, 1.0)
+	var tracked := head_px + CROSSHAIR_HEAD_OFFSET * avatar_h
+	return center.lerp(tracked, clampf(t, 0.0, 1.0))
