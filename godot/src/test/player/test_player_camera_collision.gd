@@ -494,21 +494,21 @@ func _test_zoom_clamp_constants() -> void:
 
 
 # Crosshair anchors (issue #2709): first person is screen center, full third
-# person is the upper-third anchor, and the crossing interpolates in between.
+# person is the above-right anchor, and the crossing interpolates in between.
 func _test_crosshair_anchor() -> void:
 	var fp := CameraRig.crosshair_anchor(CameraRig.FIRST_PERSON_SPRING_LENGTH)
 	_expect_eq("crosshair 1p x", 0.5, fp.x)
 	_expect_eq("crosshair 1p y", 0.5, fp.y)
 	var tp := CameraRig.crosshair_anchor(CameraRig.THIRD_PERSON_MIN_DISTANCE)
-	_expect_eq("crosshair 3p x", 0.5, tp.x)
-	_expect_eq("crosshair 3p y", 1.0 / 3.0, tp.y)
+	_expect_eq("crosshair 3p x", CameraRig.CROSSHAIR_THIRD_PERSON_ANCHOR.x, tp.x)
+	_expect_eq("crosshair 3p y", CameraRig.CROSSHAIR_THIRD_PERSON_ANCHOR.y, tp.y)
 	# Beyond the min (any third-person zoom) stays pinned at the 3p anchor.
 	var far := CameraRig.crosshair_anchor(CameraRig.THIRD_PERSON_MAX_DISTANCE)
-	_expect_eq("crosshair far-zoom y", 1.0 / 3.0, far.y)
+	_expect_eq("crosshair far-zoom y", CameraRig.CROSSHAIR_THIRD_PERSON_ANCHOR.y, far.y)
 	var mid := CameraRig.crosshair_anchor(
 		(CameraRig.FIRST_PERSON_SPRING_LENGTH + CameraRig.THIRD_PERSON_MIN_DISTANCE) * 0.5
 	)
-	if mid.y >= 0.5 or mid.y <= 1.0 / 3.0:
+	if mid.y >= 0.5 or mid.y <= CameraRig.CROSSHAIR_THIRD_PERSON_ANCHOR.y:
 		_fail("crosshair mid-transition should interpolate between anchors (y=%.3f)" % mid.y)
 
 

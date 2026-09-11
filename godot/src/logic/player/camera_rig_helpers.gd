@@ -56,9 +56,10 @@ const CLAMP_NEAR_CLEARANCE := 0.08
 const CLAMP_EXTEND_SPEED := 8.0
 
 # Crosshair anchors (issue #2709): first person centers on screen; third person
-# sits above the avatar's head/shoulder line (~upper third).
+# sits just above and to the right of the centered avatar's head (from the
+# issue's Figma reference, ~(850, 320) of a 1600x720 frame).
 const CROSSHAIR_FIRST_PERSON_ANCHOR := Vector2(0.5, 0.5)
-const CROSSHAIR_THIRD_PERSON_ANCHOR := Vector2(0.5, 1.0 / 3.0)
+const CROSSHAIR_THIRD_PERSON_ANCHOR := Vector2(0.53, 0.44)
 # Floor guard: some scene ground meshes have no usable collider (single-sided shell
 # or cmask=0), so the sweep casts slip through and — at far zoom, angled down — the
 # camera dips below the visible floor. Independent of scene geometry, the camera is

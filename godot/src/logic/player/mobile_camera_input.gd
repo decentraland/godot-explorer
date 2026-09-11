@@ -191,6 +191,10 @@ func _seed_pinch_candidate(cam: Array) -> void:
 	_pinch_start_a = _touches[_pinch_a]
 	_pinch_start_b = _touches[_pinch_b]
 	_pinch_prev_distance = PinchGestureHelpers.spread(_pinch_start_a, _pinch_start_b)
+	# A second free finger means a likely pinch: stop the single-finger look NOW,
+	# not at commit — otherwise the camera keeps rotating through the gesture's
+	# opening frames (QA: "sometimes the pinch isn't caught and the camera moves").
+	_look_index = -1
 
 
 func _try_recognize_pinch() -> void:
@@ -288,6 +292,9 @@ func _on_gui_input(event: InputEvent) -> void:
 			_free_touches[event.index] = true
 			if _look_index == -1:
 				_look_index = event.index
+			# A second free finger seeds the pinch pair immediately (kills single-
+			# finger look at touchdown instead of waiting for the first drag).
+			_on_touch_count_changed()
 		else:
 			_free_touches.erase(event.index)
 			if event.index == _look_index:
