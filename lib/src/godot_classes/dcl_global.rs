@@ -366,6 +366,11 @@ impl INode for DclGlobal {
         }
 
         tokio_runtime.set_name("tokio_runtime");
+
+        if let Some(handle) = tokio_runtime.bind().try_get_handle() {
+            crate::utils::clock::spawn_background_sync(handle);
+        }
+
         scene_runner.set_name("scene_runner");
         scene_runner.set_process_mode(ProcessMode::DISABLED);
         comms.set_name("comms");
@@ -832,7 +837,7 @@ impl DclGlobal {
     pub fn set_rust_log_filter(filter: GString) {
         match crate::tools::godot_logger::set_log_filter(&filter.to_string()) {
             Ok(()) => godot_print!("Rust log filter updated to: {}", filter),
-            Err(e) => godot_error!("Failed to update Rust log filter: {}", e),
+            Err(e) => tracing::error!("Failed to update Rust log filter: {}", e),
         }
     }
 

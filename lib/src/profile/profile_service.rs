@@ -270,10 +270,7 @@ impl ProfileService {
         }
 
         // Prepare deployment data
-        let unix_time = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
-            .as_millis();
+        let unix_time = crate::utils::clock::unix_time_ms();
 
         // ADR-290: Empty content array - no snapshot files uploaded
         let deployment = serde_json::to_string(&Deployment {
