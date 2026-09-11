@@ -233,9 +233,12 @@ Tente novamente."
 "FRIENDS_SOMETHING_WENT_WRONG_LOADING";"";"";"Algo deu errado ao carregar seus amigos.
 Tente novamente mais tarde."
 "FRIENDS_TRY_TRAVELING_SOMEWHERE_ELSE_TO_MEET";"";"";"Viaje para outro lugar e conheça gente nova."
-"FTUE_WELCOME";"";"";"Boas-vindas, [color=#B18AFF]@{name}[/color]
+"FTUE_WELCOME";"";"";"Boas-vindas,
+[color=#B18AFF]@{name}[/color]
 Vamos começar"
-"FTUE_WELCOME_PLACEHOLDER";"";"";"Boas-vindas, [color=#E8B9FF]@UserName[/color] Vamos começar"
+"FTUE_WELCOME_PLACEHOLDER";"";"";"Boas-vindas,
+[color=#E8B9FF]@UserName[/color]
+Vamos começar"
 "GUEST_UPGRADE_CARD_ADD_EMAIL_TO_PLAY_ACROSS_MOBILE";"";"";"Adicione seu e-mail para jogar no celular e no computador e garanta um Wearable exclusivo."
 "GUEST_UPGRADE_DISCOVER";"";"";"DESCOBRIR"
 "IAP_PURCHASE_OVERLAY_LOADING";"";"";"Carregando..."
@@ -476,6 +479,7 @@ indisponível"
 "POPUP_WARNING_LOAD_THE_SCENES_ARROUND_YOU";"";"";"Carregar as scenes ao seu redor"
 "POPUP_WARNING_PENDING_SCENES";"";"";"[center]Você tem scenes pendentes de carregamento. Para manter a experiência fluida, o carregamento acontece apenas quando você muda de scene. Se preferir carregá-las agora, toque no botão [b]Atualizar[/b] no canto superior esquerdo da tela, com o ícone [img]res://assets/ui/Reset.png[/img]"
 "PROFILE_ABOUT_ME";"";"";"Sobre mim"
+"PROFILE_ACCEPT";"";"";"ACEITAR"
 "PROFILE_ADD_FRIEND";"";"";"ADICIONAR AMIGO"
 "PROFILE_ADD_LINK";"";"";"Adicionar link"
 "PROFILE_ADD_LINK_CAPS";"";"";"ADICIONAR LINK"

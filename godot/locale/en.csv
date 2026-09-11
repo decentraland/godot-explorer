@@ -233,9 +233,12 @@ Please try again."
 "FRIENDS_SOMETHING_WENT_WRONG_LOADING";"";"";"Something went wrong while loading your friends.
 Try again later."
 "FRIENDS_TRY_TRAVELING_SOMEWHERE_ELSE_TO_MEET";"";"";"Try traveling somewhere else to meet new people."
-"FTUE_WELCOME";"";"";"Welcome [color=#B18AFF]@{name}[/color]
+"FTUE_WELCOME";"";"";"Welcome,
+[color=#B18AFF]@{name}[/color]
 Let's get you started"
-"FTUE_WELCOME_PLACEHOLDER";"";"";"Welcome [color=#E8B9FF]@UserName[/color] Let's get you started"
+"FTUE_WELCOME_PLACEHOLDER";"";"";"Welcome,
+[color=#E8B9FF]@UserName[/color]
+Let's get you started"
 "GUEST_UPGRADE_CARD_ADD_EMAIL_TO_PLAY_ACROSS_MOBILE";"";"";"Add email to play across mobile and desktop, and claim an exclusive Wearable."
 "GUEST_UPGRADE_DISCOVER";"";"";"DISCOVER"
 "IAP_PURCHASE_OVERLAY_LOADING";"";"";"Loading..."
@@ -476,6 +479,7 @@ unavailable"
 "POPUP_WARNING_LOAD_THE_SCENES_ARROUND_YOU";"";"";"Load the scenes arround you"
 "POPUP_WARNING_PENDING_SCENES";"";"";"[center]You have scenes pending to be loaded. To maintain a smooth experience, loading will occur only when you change scenes. If you prefer to load them immediately, please press the [b]Refresh[/b] button at the Top Left of the screen with icon [img]res://assets/ui/Reset.png[/img]"
 "PROFILE_ABOUT_ME";"";"";"About me"
+"PROFILE_ACCEPT";"";"";"ACCEPT"
 "PROFILE_ADD_FRIEND";"";"";"ADD FRIEND"
 "PROFILE_ADD_LINK";"";"";"Add Link"
 "PROFILE_ADD_LINK_CAPS";"";"";"ADD LINK"

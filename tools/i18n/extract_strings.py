@@ -81,7 +81,13 @@ SCENE_PROP_RE = re.compile(r'(?m)^([a-z_]+) = "((?:[^"\\]|\\.)*)"')
 # GDScript display-text assignment, e.g. `label.text = "Hello"`.
 # `.title` is included because DiscoverCarrousel exposes an exported `title` that assigns
 # straight to a Label — three carousel headers shipped in English behind that gap.
-GD_ASSIGN_RE = re.compile(r'\.(text|tooltip_text|placeholder_text|title)\s*=\s*"((?:[^"\\]|\\.)*)"')
+# `.custom_text` is CustomButton's exported label (components/atoms/buttons/custom_button). It
+# assigns straight to an auto-translating Label, so a raw key belongs there — but an English
+# literal assigned from code silently clobbers the correct key set in the .tscn, which is how
+# the profile ADD FRIEND / ACCEPT buttons shipped untranslated (#2825).
+GD_ASSIGN_RE = re.compile(
+    r'\.(text|tooltip_text|placeholder_text|title|custom_text)\s*=\s*"((?:[^"\\]|\\.)*)"'
+)
 
 # A translation key being resolved. tr() covers the common case; TranslationServer.translate()
 # is how a *static* function must do it, since tr() is a non-static Object method.
