@@ -343,7 +343,12 @@ pub async fn handle_process_scene(
     );
 
     let mut jobs = Vec::with_capacity(total_assets);
-    let mut job_ids = Vec::with_capacity(total_assets);
+    // One job per hash: a deployment can list the same bytes under two paths
+    // (same hash), and `process_single_scene_asset` hands back the existing
+    // job for the duplicate. Listing it twice in the batch would publish —
+    // and make the uploader upload — the same file twice.
+    let mut job_ids: Vec<String> = Vec::with_capacity(total_assets);
+    let mut seen_job_ids: HashSet<String> = HashSet::with_capacity(total_assets);
 
     let cache_only = request.cache_only;
 
@@ -360,7 +365,7 @@ pub async fn handle_process_scene(
 
         match process_single_scene_asset(asset_request, job_manager.clone(), ctx.clone()).await {
             Ok(response) => {
-                if !response.job_id.is_empty() {
+                if !response.job_id.is_empty() && seen_job_ids.insert(response.job_id.clone()) {
                     job_ids.push(response.job_id.clone());
                 }
                 jobs.push(response);
@@ -389,7 +394,7 @@ pub async fn handle_process_scene(
 
         match process_single_scene_asset(asset_request, job_manager.clone(), ctx.clone()).await {
             Ok(response) => {
-                if !response.job_id.is_empty() {
+                if !response.job_id.is_empty() && seen_job_ids.insert(response.job_id.clone()) {
                     job_ids.push(response.job_id.clone());
                 }
                 jobs.push(response);
