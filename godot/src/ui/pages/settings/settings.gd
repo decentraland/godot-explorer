@@ -1653,3 +1653,8 @@ func _populate_language_dropdown_items() -> void:
 	# the two diverge whenever the locale changed by any route other than this dropdown.
 	dropdown_list_language.clear()
 	_populate_language_dropdown()
+
+
+func _on_button_help_pressed() -> void:
+	var url = "https://decentraland.org/help"
+	Global.open_url(url)

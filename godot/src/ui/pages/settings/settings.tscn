@@ -1296,6 +1296,7 @@ text = "SETTINGS_RETURN_TO_DISCOVER"
 
 [node name="VBoxContainer_Account" type="VBoxContainer" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections" unique_id=1178397413]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 size_flags_vertical = 3
 mouse_filter = 2
@@ -1441,7 +1442,6 @@ portrait_minimum_size = Vector2(0, 24)
 
 [node name="VBoxContainer_HelpSupport" type="VBoxContainer" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections" unique_id=1900000001]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
 mouse_filter = 2
 theme = SubResource("Theme_5xlkc")
@@ -1708,6 +1708,7 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_47ptg")
 [connection signal="pressed" from="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Account/HBoxContainer_AccountRow/VBoxContainer_AccountContent/Button_DeleteAccount" to="." method="_on_button_delete_account_pressed"]
 [connection signal="pressed" from="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_HelpSupport/SectionReport/VBoxContainer/VBoxContainer/Button_ReportBug" to="." method="_on_button_report_bug_pressed"]
 [connection signal="pressed" from="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_HelpSupport/SectionReport/VBoxContainer/VBoxContainer/Button_ReportContent" to="." method="_on_button_report_content_pressed"]
+[connection signal="pressed" from="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_HelpSupport/SectionReport/VBoxContainer/VBoxContainer/Button_Help" to="." method="_on_button_help_pressed"]
 [connection signal="pressed" from="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_HelpSupport/SectionCommunity/VBoxContainer/VBoxContainer2/Button_Discord" to="." method="_on_button_discord_pressed"]
 [connection signal="pressed" from="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_HelpSupport/SectionLegal/VBoxContainer/VBoxContainer2/Button_PrivacyPolicy" to="." method="_on_button_privacy_policy_pressed"]
 [connection signal="pressed" from="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_HelpSupport/SectionLegal/VBoxContainer/VBoxContainer2/Button_ContentPolicy" to="." method="_on_button_content_policy_pressed"]
