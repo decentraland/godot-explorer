@@ -1681,6 +1681,10 @@ func _on_menu_open():
 
 
 func _on_menu_close():
+	# Apply any pending "Hide Interface" now that the menu screen is actually closing (it's
+	# deferred while the menu is open so the HUD change isn't visible behind it). Previously this
+	# only ran on the next menu open, so the toggle appeared to take one exit cycle to apply.
+	apply_deferred_hide_ui()
 	Global.set_orientation_landscape()
 	if !navbar.visible:
 		navbar.set_manually_hidden(false)
