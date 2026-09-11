@@ -93,7 +93,10 @@ func _get_start_iso() -> String:
 
 func _update_labels() -> void:
 	if not is_node_ready():
-		call_deferred("_update_labels")
+		# Not call_deferred: a deferred self-retry is re-entered by the same flush
+		# and spins until the message queue overflows.
+		if not ready.is_connected(_update_labels):
+			ready.connect(_update_labels, CONNECT_ONE_SHOT)
 		return
 	if not label_day or not label_time or not h_box_container_text:
 		return
