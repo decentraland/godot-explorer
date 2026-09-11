@@ -113,7 +113,8 @@ func _update_visual_state():
 		_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	else:
 		var fs := get_theme_font_size("font_size")
-		_icon.custom_minimum_size.x = int(fs * 1.1)
+		_icon.expand_mode = TextureRect.EXPAND_FIT_HEIGHT_PROPORTIONAL
+		_icon.custom_minimum_size = Vector2(int(fs * 1.1), 0)
 
 	# Margins from the active stylebox
 	var style := get_theme_stylebox(stylebox_name)

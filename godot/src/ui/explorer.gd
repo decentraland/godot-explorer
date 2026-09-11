@@ -1335,7 +1335,7 @@ func _on_settings_open() -> void:
 
 ## Shared cleanup used when leaving/closing panels or entering a fullscreen menu screen. Named
 ## for the former settings side panel; settings is now a menu screen so there is nothing to hide.
-func _on_settings_panel_closed() -> void:
+func _on_menu_closed() -> void:
 	apply_deferred_hide_ui()
 	Global.explorer_grab_focus()
 	capture_mouse()
@@ -1423,12 +1423,13 @@ func _on_loading_started() -> void:
 	_session_hide_main_hud = false
 	_session_hide_view_profile = true
 	_session_hide_world_interactions = true
-	_session_hide_player_names = false
+	# Hide Player Names is independent of the master toggle and a standalone preference, so it is
+	# NOT reset on world load — otherwise it would silently turn off on every teleport/realm change.
 	_session_hide_scene_ui = true
 	set_visible_ui(true, true)
 	Global.session_hide_ui_toggle_sync.emit(false)
-	Global.session_hide_ui_options_sync.emit(true, true, false, true)
-	_apply_hide_ui_to_avatar_nicks(false)
+	Global.session_hide_ui_options_sync.emit(true, true, _session_hide_player_names, true)
+	_apply_hide_ui_to_avatar_nicks(_session_hide_player_names)
 	if navbar.is_open():  # avoid a redundant navbar_closed + teardown when nothing is open
 		navbar.collapse()
 
@@ -1642,7 +1643,7 @@ func _close_all_panels():
 	control_menu.async_close()
 	_on_friends_panel_closed()
 	_on_notifications_panel_closed()
-	_on_settings_panel_closed()
+	_on_menu_closed()
 	_refresh_hud_dismiss()
 	# Restore the bottom-left slot (chat / preview toolbar) and the emote HUD hidden while the
 	# navbar was open, unless the main HUD is hidden; in portrait the orientation flow owns them.
@@ -1665,7 +1666,7 @@ func _enter_menu_screen():
 	_show_joypad()
 	_on_friends_panel_closed()
 	_on_notifications_panel_closed()
-	_on_settings_panel_closed()
+	_on_menu_closed()
 	_refresh_hud_dismiss()
 	navbar.set_manually_hidden(true)
 	release_mouse()
@@ -1674,7 +1675,7 @@ func _enter_menu_screen():
 func _on_menu_open():
 	_on_friends_panel_closed()
 	_on_notifications_panel_closed()
-	_on_settings_panel_closed()
+	_on_menu_closed()
 	_refresh_hud_dismiss()
 	release_mouse()
 

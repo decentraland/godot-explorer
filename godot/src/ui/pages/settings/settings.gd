@@ -34,14 +34,6 @@ const _ACCOUNT_AVATAR_HEAD_OVERLAP: int = 25
 # label so the feet share its bottom margin.
 const _ACCOUNT_AVATAR_FEET_INSET: int = 40
 
-## When true, settings operates as a side panel inside the explorer:
-## orientation is not changed and the background texture is hidden.
-@export var panel_mode: bool = false:
-	set(value):
-		panel_mode = value
-		if is_node_ready():
-			_apply_panel_mode()
-
 # Section registry / list-navigation state (see _build_section_list).
 var _sections: Array = []
 var _rows_by_key: Dictionary = {}
@@ -50,6 +42,7 @@ var _current_section_key: String = ""
 # Portrait sub-mode: false = section list is shown, true = a section's content is shown
 # with a back button. Landscape ignores this (list and content are always side by side).
 var _portrait_detail: bool = false
+var _avatar_refresh_in_flight: bool = false
 
 # Scene LightSource Dev Tools controls, keyed by DclLightSourceComponent.get_light_settings() keys.
 var _light_debug_checks: Dictionary = {}
@@ -66,7 +59,8 @@ var _custom_max_lights_spin: SpinBox = null
 
 @onready var label_title: Label = %Label_Title
 @onready var hbox_layout: HBoxContainer = %HBoxContainer_Layout
-@onready var texture_avatar_background: TextureRect = $TextureRect_AvatarBackground
+@onready var texture_avatar_background: TextureRect = %TextureRect_AvatarBackground
+@onready var button_version: Button = %Button_Version
 
 @onready var container_gameplay: VBoxContainer = %VBoxContainer_Gameplay
 @onready var container_graphics: VBoxContainer = %VBoxContainer_Graphics
@@ -150,9 +144,7 @@ func _ready():
 	button_back.pressed.connect(_on_back_pressed)
 	_refresh_version_label()
 	# The version row is a Button with a copy icon: tapping it copies the version string.
-	var version_button: Node = label_version.get_parent().get_parent()
-	if version_button is Button:
-		version_button.pressed.connect(_on_version_copy_pressed)
+	button_version.pressed.connect(_on_version_copy_pressed)
 
 	_setup_account_section()
 
@@ -254,7 +246,6 @@ func _ready():
 	if not Global.orientation_changed.is_connected(_on_orientation_changed):
 		Global.orientation_changed.connect(_on_orientation_changed)
 	_on_resized()
-	_apply_panel_mode()
 	_select_section(_default_section_key(), false)
 
 
@@ -337,14 +328,17 @@ func _apply_nav_layout(is_orientation_portrait: bool) -> void:
 func _update_header() -> void:
 	var portrait: bool = Global.is_orientation_portrait()
 	var in_detail: bool = portrait and _portrait_detail
-	var title_key: String = "SETTINGS_SETTINGS"
-	if in_detail:
-		var section: Dictionary = _find_section(_current_section_key)
-		if not section.is_empty():
-			title_key = section["title_key"]
-	label_title.text = tr(title_key)
-	# Hidden only on the portrait list (top level); shown as back-to-list in portrait detail and
-	# as close-the-menu in landscape.
+	# The title is portrait-only — landscape uses the always-visible section list for context, so
+	# there's nothing to compute or show there. Driven by Global (not a window-size heuristic).
+	label_title.visible = portrait
+	if portrait:
+		var title_key: String = "SETTINGS_SETTINGS"
+		if in_detail:
+			var section: Dictionary = _find_section(_current_section_key)
+			if not section.is_empty():
+				title_key = section["title_key"]
+		label_title.text = tr(title_key)
+	# Back button: returns to the list in portrait detail, closes the menu in landscape.
 	button_back.visible = in_detail or not portrait
 
 
@@ -389,19 +383,37 @@ func _build_section_list() -> void:
 		{"key": "graphics", "title_key": "SETTINGS_GRAPHICS", "container": container_graphics},
 		{"key": "audio", "title_key": "SETTINGS_AUDIO", "container": container_audio},
 		{"key": "gameplay", "title_key": "SETTINGS_GAMEPLAY", "container": container_gameplay},
-		{
-			"key": "language",
-			"title_key": "SETTINGS_LANGUAGE_SECTION",
-			"container": container_language,
-		},
-		{"key": "account", "title_key": "SETTINGS_ACCOUNT", "container": container_account},
-		{
-			"key": "help_support",
-			"title_key": "SETTINGS_HELP_SUPPORT",
-			"container": container_help_support,
-		},
-		{"key": "storage", "title_key": "SETTINGS_STORAGE", "container": container_storage},
 	]
+	# Language only when the picker is actually usable (>= 2 locales, and offered in this build) —
+	# otherwise _setup_language_dropdown() hides the empty section and the row would open a blank panel.
+	if (
+		LocaleSettings.selectable_locales().size() >= 2
+		and LocaleSettings.is_language_picker_available()
+	):
+		(
+			_sections
+			. append(
+				{
+					"key": "language",
+					"title_key": "SETTINGS_LANGUAGE_SECTION",
+					"container": container_language,
+				}
+			)
+		)
+	(
+		_sections
+		. append_array(
+			[
+				{"key": "account", "title_key": "SETTINGS_ACCOUNT", "container": container_account},
+				{
+					"key": "help_support",
+					"title_key": "SETTINGS_HELP_SUPPORT",
+					"container": container_help_support,
+				},
+				{"key": "storage", "title_key": "SETTINGS_STORAGE", "container": container_storage},
+			]
+		)
+	)
 	if not Global.is_production():
 		_sections.append(
 			{"key": "developer", "title_key": "SETTINGS_DEV_TOOLS", "container": container_advanced}
@@ -1317,10 +1329,6 @@ func _on_button_discord_pressed() -> void:
 	Global.open_url(DISCORD_URL)
 
 
-func _apply_panel_mode() -> void:
-	set("texture", null if panel_mode else load("res://assets/ui/settings-background.png"))
-
-
 func show_panel() -> void:
 	show()
 
@@ -1477,7 +1485,12 @@ func _async_refresh_account_avatar() -> void:
 	var profile: DclUserProfile = Global.player_identity.get_profile_or_null()
 	if profile == null:
 		return
+	# Guard against overlapping loads (rapid rotations / profile_changed) racing the same preview.
+	if _avatar_refresh_in_flight:
+		return
+	_avatar_refresh_in_flight = true
 	await avatar_preview_account.avatar.async_update_avatar_from_profile(profile)
+	_avatar_refresh_in_flight = false
 
 
 func _on_button_return_to_discover_pressed() -> void:

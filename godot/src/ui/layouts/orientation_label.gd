@@ -24,12 +24,18 @@ extends Label
 func _ready() -> void:
 	if Engine.is_editor_hint():
 		return
+	# Duplicate the (possibly shared) LabelSettings once so this instance owns its font size and
+	# rotations just mutate it instead of allocating a new resource each time.
+	if label_settings:
+		label_settings = label_settings.duplicate()
 	if not Global.orientation_changed.is_connected(_on_orientation_changed):
 		Global.orientation_changed.connect(_on_orientation_changed)
 	_apply_font_size()
 
 
 func _exit_tree() -> void:
+	if Engine.is_editor_hint():
+		return
 	if Global.orientation_changed.is_connected(_on_orientation_changed):
 		Global.orientation_changed.disconnect(_on_orientation_changed)
 
@@ -41,7 +47,6 @@ func _on_orientation_changed(_portrait: bool) -> void:
 func _apply_font_size() -> void:
 	var size: int = portrait_font_size if Global.is_orientation_portrait() else landscape_font_size
 	if label_settings:
-		label_settings = label_settings.duplicate()
 		label_settings.font_size = size
 	else:
 		add_theme_font_size_override("font_size", size)

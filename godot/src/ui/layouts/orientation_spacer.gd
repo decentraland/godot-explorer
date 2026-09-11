@@ -60,13 +60,13 @@ func _on_orientation_changed(_portrait: bool) -> void:
 	_set_for_orientation(Global.is_orientation_portrait())
 
 
-## In the editor there's no window rotation, so mirror hide_orientation and read the mobile preview;
-## an inactive preview is treated as portrait.
+## In the editor there's no window rotation, so read the mobile preview; an inactive preview is
+## treated as landscape (matching OrientationVBox so the sibling layout controls agree).
 func _refresh() -> void:
 	if not Engine.is_editor_hint():
 		_set_for_orientation(Global.is_orientation_portrait())
 		return
-	var is_portrait: bool = true
+	var is_portrait: bool = false
 	if ProjectSettings.get_setting("_mobile_preview/active", false):
 		is_portrait = ProjectSettings.get_setting("_mobile_preview/is_portrait", true)
 	_set_for_orientation(is_portrait)

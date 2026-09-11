@@ -32,10 +32,8 @@ font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_vwd20"]
 
 [node name="GuestUpgradeCard" type="MarginContainer" unique_id=863951754]
-offset_left = 1.0
-offset_top = 1.0
-offset_right = 1503.0
-offset_bottom = 1.0
+anchors_preset = 10
+anchor_right = 1.0
 grow_horizontal = 2
 size_flags_vertical = 0
 theme_override_constants/margin_left = 48

@@ -27,14 +27,12 @@
 [ext_resource type="PackedScene" uid="uid://bij0xgcmb6ivs" path="res://src/ui/components/atoms/inputs/line_edit_custom/line_edit_custom.tscn" id="24_47ptg"]
 [ext_resource type="Texture2D" uid="uid://c24qpurggpmfj" path="res://assets/ui/open-external-link.svg" id="24_jf4mt"]
 [ext_resource type="Script" uid="uid://c2g5q0fivu5hs" path="res://src/ui/layouts/orientation_spacer.gd" id="24_nqmh4"]
-[ext_resource type="FontFile" uid="uid://cvtogigxks73f" path="res://assets/themes/fonts/inter/Inter-Light.ttf" id="25_jf4mt"]
-[ext_resource type="PackedScene" uid="uid://d0hixhgq3pfdu" path="res://src/ui/pages/settings/underlined_button.tscn" id="25_mwb5b"]
 [ext_resource type="StyleBox" uid="uid://dkykkgjyku6h1" path="res://assets/themes/secondary_outlined_normal.tres" id="26_30x8d"]
 [ext_resource type="Texture2D" uid="uid://c55bxhde80ljl" path="res://assets/ui/sign-in/back-chevron.svg" id="26_back"]
 [ext_resource type="StyleBox" uid="uid://dn5s5fs7fgxuw" path="res://assets/themes/secondary_outlined_pressed.tres" id="27_nqmh4"]
 [ext_resource type="StyleBox" uid="uid://b710k2wnilt8k" path="res://assets/themes/secondary_outlined_disabled.tres" id="28_1mbv2"]
 [ext_resource type="PackedScene" uid="uid://cy43hvd5bivso" path="res://src/ui/pages/backpack/avatar_preview.tscn" id="29_avatar"]
-[ext_resource type="Script" path="res://src/ui/layouts/orientation_label.gd" id="99_orlbl"]
+[ext_resource type="Script" uid="uid://cuy34sm2crhoe" path="res://src/ui/layouts/orientation_label.gd" id="99_orlbl"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_67hd5"]
 
@@ -111,11 +109,6 @@ font = ExtResource("16_blskf")
 font_size = 24
 font_color = Color(0.9098039, 0.7254902, 1, 1)
 
-[sub_resource type="LabelSettings" id="LabelSettings_1mbv2"]
-font = ExtResource("17_ewc0a")
-font_size = 24
-font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
-
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_1byws"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_30x8d"]
@@ -134,9 +127,7 @@ theme = ExtResource("1_k3n6g")
 texture = ExtResource("13_xewta")
 expand_mode = 1
 script = ExtResource("2_gps4e")
-metadata/_edit_vertical_guides_ = [108.0, 508.0, 636.0, 589.0, 899.0]
-metadata/mobile_preview_orientation = "both"
-metadata/_edit_horizontal_guides_ = [252.0, -131.0, 666.0]
+metadata/mobile_preview_orientation = "landscape"
 
 [node name="TextureRect_AvatarBackground" type="TextureRect" parent="." unique_id=1878114055]
 unique_name_in_owner = true
@@ -151,6 +142,8 @@ offset_bottom = 3.0
 grow_horizontal = 2
 grow_vertical = 2
 texture = ExtResource("4_1mbv2")
+expand_mode = 1
+stretch_mode = 6
 
 [node name="SafeMarginContainer" type="MarginContainer" parent="." unique_id=483361210]
 layout_mode = 1
@@ -202,7 +195,6 @@ theme_override_fonts/font = ExtResource("3_1ym31")
 text = "Settings"
 label_settings = ExtResource("6_sa1v7")
 vertical_alignment = 1
-script = ExtResource("11_cntei")
 
 [node name="Spacer" type="Control" parent="SafeMarginContainer/VBoxContainer2/VBoxContainer" unique_id=1641447903]
 layout_mode = 2
@@ -246,6 +238,7 @@ portrait_separation = 30
 landscape_separation = 12
 
 [node name="Button_Version" type="Button" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/MarginContainer_List/VBoxContainer" unique_id=1559694459]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 flat = true
@@ -1015,6 +1008,7 @@ text = "SETTINGS_GRAPHIC_PROFILE"
 
 [node name="VBoxContainer_Audio" type="VBoxContainer" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections" unique_id=1100264795]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 theme = SubResource("Theme_5xlkc")
 theme_type_variation = &"2"
@@ -1301,7 +1295,6 @@ text = "SETTINGS_RETURN_TO_DISCOVER"
 
 [node name="VBoxContainer_Account" type="VBoxContainer" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections" unique_id=1178397413]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
 size_flags_vertical = 3
 mouse_filter = 2
@@ -1384,6 +1377,7 @@ portrait_minimum_size = Vector2(0, 40)
 landscape_minimum_size = Vector2(0, 32)
 
 [node name="GuestUpgradeCard" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Account/HBoxContainer_AccountRow/VBoxContainer_AccountContent" unique_id=1116982919 instance=ExtResource("14_sbgvv")]
+visible = false
 layout_mode = 2
 mouse_filter = 2
 theme_override_constants/margin_left = 0
@@ -1419,26 +1413,25 @@ script = ExtResource("24_nqmh4")
 portrait_minimum_size = Vector2(0, 64)
 landscape_minimum_size = Vector2(0, 56)
 
-[node name="HBoxContainer" type="HBoxContainer" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Account/HBoxContainer_AccountRow/VBoxContainer_AccountContent" unique_id=2122824282]
+[node name="Button_DeleteAccount" type="Button" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Account/HBoxContainer_AccountRow/VBoxContainer_AccountContent" unique_id=1807707077]
 custom_minimum_size = Vector2(0, 39)
 layout_mode = 2
-theme_override_constants/separation = 0
-alignment = 1
+flat = true
 
-[node name="Label" type="Label" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Account/HBoxContainer_AccountRow/VBoxContainer_AccountContent/HBoxContainer" unique_id=719375511]
-layout_mode = 2
+[node name="RichTextLabel_DoYouWant" type="RichTextLabel" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Account/HBoxContainer_AccountRow/VBoxContainer_AccountContent/Button_DeleteAccount" unique_id=1460165680]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_fonts/normal_font = ExtResource("17_ewc0a")
+theme_override_font_sizes/normal_font_size = 24
+bbcode_enabled = true
 text = "SETTINGS_DO_YOU_WANT_TO"
-label_settings = SubResource("LabelSettings_1mbv2")
-horizontal_alignment = 2
-
-[node name="UnderlinedButton_DeleteAccount" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Account/HBoxContainer_AccountRow/VBoxContainer_AccountContent/HBoxContainer" unique_id=911061775 instance=ExtResource("25_mwb5b")]
-custom_minimum_size = Vector2(247, 30)
-layout_mode = 2
-alignment = 0
-underlined_text = "SETTINGS_DELETE_ACCOUNT"
-color = Color(1, 0.37254903, 0.46666667, 1)
-font = ExtResource("25_jf4mt")
-font_size = 24
+horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="Spacer3" type="Control" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Account/HBoxContainer_AccountRow/VBoxContainer_AccountContent" unique_id=63201076]
 layout_mode = 2
@@ -1711,7 +1704,7 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_47ptg")
 [connection signal="pressed" from="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/Button_OpenUserData" to="." method="_on_button_open_user_data_pressed"]
 [connection signal="pressed" from="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/Button_ReturnToDiscover" to="." method="_on_button_return_to_discover_pressed"]
 [connection signal="pressed" from="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Account/HBoxContainer_AccountRow/VBoxContainer_AccountContent/CustomButton_SignOut" to="." method="_on_custom_button_sign_out_pressed"]
-[connection signal="pressed" from="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Account/HBoxContainer_AccountRow/VBoxContainer_AccountContent/HBoxContainer/UnderlinedButton_DeleteAccount" to="." method="_on_button_delete_account_pressed"]
+[connection signal="pressed" from="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Account/HBoxContainer_AccountRow/VBoxContainer_AccountContent/Button_DeleteAccount" to="." method="_on_button_delete_account_pressed"]
 [connection signal="pressed" from="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_HelpSupport/SectionReport/VBoxContainer/VBoxContainer/Button_ReportBug" to="." method="_on_button_report_bug_pressed"]
 [connection signal="pressed" from="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_HelpSupport/SectionReport/VBoxContainer/VBoxContainer/Button_ReportContent" to="." method="_on_button_report_content_pressed"]
 [connection signal="pressed" from="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_HelpSupport/SectionCommunity/VBoxContainer/VBoxContainer2/Button_Discord" to="." method="_on_button_discord_pressed"]
