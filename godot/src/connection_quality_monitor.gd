@@ -80,16 +80,17 @@ func _ready() -> void:
 	_poll_timer.wait_time = FAST_POLL_SECONDS
 	_poll_timer.timeout.connect(_on_poll_timeout)
 	add_child(_poll_timer)
-	# Timer is started in _connect_signals after Global is fully initialized.
+	# Timer is started in _async_connect_signals after Global is fully initialized.
 
-	_connect_signals.call_deferred()
+	_async_connect_signals()
 
 
-func _connect_signals() -> void:
-	if Global.modal_manager == null:
-		# modal_manager not ready yet; retry next frame
-		_connect_signals.call_deferred()
-		return
+## Global._ready() awaits the startup cache clear before creating modal_manager, so
+## it can still be null here. Must yield on a real frame: a call_deferred self-retry
+## is re-entered by the same MessageQueue flush and spins until the queue overflows.
+func _async_connect_signals() -> void:
+	while Global.modal_manager == null:
+		await get_tree().process_frame
 	Global.modal_manager.connection_lost_retry.connect(_on_retry)
 	Global.modal_manager.connection_lost_exit.connect(_on_exit)
 
