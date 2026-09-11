@@ -73,6 +73,9 @@ var _custom_max_lights_spin: SpinBox = null
 @onready var label_account_tag: Label = %Label_AccountTag
 @onready var label_account_address: Label = %Label_AccountAddress
 @onready var avatar_preview_account: AvatarPreview = %AvatarPreview_Account
+## Empty placeholder column inside the scroll; the avatar preview (a sibling of the settings root,
+## so it draws above the content but below modals/toasts) mirrors this column's rect.
+@onready var avatar_column: Control = %Control_AvatarPreview
 @onready var container_storage: VBoxContainer = %VBoxContainer_Storage
 @onready var v_box_container_sections: VBoxContainer = %VBoxContainer_Sections
 
@@ -1404,16 +1407,17 @@ func _on_custom_button_sign_out_pressed() -> void:
 func _setup_account_section() -> void:
 	if not Global.player_identity.profile_changed.is_connected(_on_account_profile_changed):
 		Global.player_identity.profile_changed.connect(_on_account_profile_changed)
-	# Drive the avatar preview as a top_level node so it breaks out of the content ScrollContainer's
-	# clip and can grow tall (overlapping the header). Its rect is set from _position_account_avatar,
-	# tracking the placeholder column; the scene's own anchors are ignored at runtime.
-	avatar_preview_account.top_level = true
+	# The avatar preview is a sibling of the settings root (not inside the content ScrollContainer),
+	# so it escapes the scroll's clip and can grow tall (overlapping the header) while still drawing
+	# below the delete-confirmation popup and toasts (which live outside this scene). Its rect tracks
+	# the empty placeholder column via _position_account_avatar; the scene's own anchors are ignored.
 	avatar_preview_account.snap_top_to_viewport = false
+	# Hidden until Account is selected in landscape; _update_avatar_background drives it from there.
+	avatar_preview_account.visible = false
 	# preview_margin_top is set dynamically from the header's real height in _position_account_avatar.
 	avatar_preview_account.preview_margin_bottom = _ACCOUNT_AVATAR_FEET_INSET
-	var avatar_col: Control = avatar_preview_account.get_parent()
-	if not avatar_col.item_rect_changed.is_connected(_position_account_avatar):
-		avatar_col.item_rect_changed.connect(_position_account_avatar)
+	if not avatar_column.item_rect_changed.is_connected(_position_account_avatar):
+		avatar_column.item_rect_changed.connect(_position_account_avatar)
 	if not avatar_preview_account.visibility_changed.is_connected(_position_account_avatar):
 		avatar_preview_account.visibility_changed.connect(_position_account_avatar)
 	_refresh_account_header()
@@ -1421,22 +1425,26 @@ func _setup_account_section() -> void:
 	_position_account_avatar.call_deferred()
 
 
-## The full-screen avatar backdrop only makes sense behind the Account avatar preview, which is
-## landscape-only — so it shows solely in the Account section and in landscape.
+## The avatar preview (and the full-screen backdrop behind it) is landscape-only and lives only in
+## the Account section. Since the preview is now a settings-root sibling (not a child of the
+## placeholder column), it no longer inherits the column's portrait-hide — so drive it here too.
 func _update_avatar_background() -> void:
+	var show_avatar: bool = (
+		_current_section_key == "account" and not Global.is_orientation_portrait()
+	)
 	if is_instance_valid(texture_avatar_background):
-		texture_avatar_background.visible = (
-			_current_section_key == "account" and not Global.is_orientation_portrait()
-		)
+		texture_avatar_background.visible = show_avatar
+	if is_instance_valid(avatar_preview_account):
+		avatar_preview_account.visible = show_avatar
 
 
-## Places the top_level avatar over its placeholder column, stretched from the screen top (so it can
-## overlap the header — preview_margin_top keeps the head below it) down to the column's bottom.
+## Places the avatar over its placeholder column, stretched from the screen top (so it can overlap
+## the header — preview_margin_top keeps the head below it) down to the column's bottom.
 func _position_account_avatar() -> void:
-	if not is_instance_valid(avatar_preview_account):
+	if not is_instance_valid(avatar_preview_account) or not is_instance_valid(avatar_column):
 		return
-	var col: Control = avatar_preview_account.get_parent()
-	if col == null or not avatar_preview_account.is_visible_in_tree():
+	var col: Control = avatar_column
+	if not avatar_preview_account.is_visible_in_tree():
 		return
 	# Bottom of the preview aligns with the Version label's bottom (same margin as the feet); fall
 	# back to the column's own bottom if the label isn't ready.
