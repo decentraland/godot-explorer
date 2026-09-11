@@ -31,10 +31,7 @@ pub async fn prepare_deploy_profile(
     ephemeral_auth_chain: EphemeralAuthChain,
     mut profile: UserProfile,
 ) -> Result<(String, Vec<u8>), anyhow::Error> {
-    let unix_time = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap()
-        .as_millis();
+    let unix_time = crate::utils::clock::unix_time_ms();
 
     // ADR-290: Remove snapshots from avatar before deployment
     profile.content.avatar.snapshots = None;
