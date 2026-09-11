@@ -18,7 +18,7 @@ use crate::dcl::{
     serialization::reader::DclReader,
 };
 
-use crate::content::content_provider::{optimized_cache_name, OptimizedKind};
+use crate::content::content_provider::{optimized_cache_name, scene_bake_key, OptimizedKind};
 
 use super::types::SceneOptimizationMetadata;
 
@@ -137,11 +137,13 @@ fn material_textures(material: &PbMaterial) -> Vec<&TextureUnion> {
     }
 }
 
-/// Zip entries for the static bundle: `(entry name, content hash)`, entry
-/// names being the client's cache names (`{hash}.opt.scn` / `{hash}.opt.res`).
-/// Each GLB brings the textures its `.scn` references externally; anything
-/// whose bake did not complete (not in `optimized_content`) is left out so the
-/// bundle never carries a `.scn` with a dangling ExtResource.
+/// Zip entries for the static bundle: `(entry name, naming key)`, entry
+/// names being the client's cache names (`{key}.opt.scn` / `{hash}.opt.res`)
+/// and the key what `optimized_remote_name` takes (`scene_bake_key` for a
+/// GLB, the hash for a texture). Each GLB brings the textures its `.scn`
+/// references externally; anything whose bake did not complete (not in
+/// `optimized_content`) is left out so the bundle never carries a `.scn` with
+/// a dangling ExtResource.
 pub fn static_bundle_entries(
     assets: &StaticAssets,
     metadata: &SceneOptimizationMetadata,
@@ -149,10 +151,10 @@ pub fn static_bundle_entries(
     let optimized: HashSet<&String> = metadata.optimized_content.iter().collect();
     let mut entries = Vec::new();
     let mut seen: HashSet<String> = HashSet::new();
-    let mut push = |hash: &String, kind: OptimizedKind, entries: &mut Vec<(String, String)>| {
-        let name = optimized_cache_name(hash, kind);
+    let mut push = |key: String, kind: OptimizedKind, entries: &mut Vec<(String, String)>| {
+        let name = optimized_cache_name(&key, kind);
         if seen.insert(name.clone()) {
-            entries.push((name, hash.clone()));
+            entries.push((name, key));
         }
     };
 
@@ -160,18 +162,18 @@ pub fn static_bundle_entries(
         if !optimized.contains(glb) {
             continue;
         }
-        push(glb, OptimizedKind::Scene, &mut entries);
-        if let Some(deps) = metadata.external_scene_dependencies.get(glb) {
-            for tex in deps {
-                if optimized.contains(tex) {
-                    push(tex, OptimizedKind::Texture, &mut entries);
-                }
+        let deps = metadata.external_scene_dependencies.get(glb);
+        let key = scene_bake_key(glb, deps.into_iter().flatten().map(String::as_str));
+        push(key, OptimizedKind::Scene, &mut entries);
+        for tex in deps.into_iter().flatten() {
+            if optimized.contains(tex) {
+                push(tex.clone(), OptimizedKind::Texture, &mut entries);
             }
         }
     }
     for tex in &assets.textures {
         if optimized.contains(tex) {
-            push(tex, OptimizedKind::Texture, &mut entries);
+            push(tex.clone(), OptimizedKind::Texture, &mut entries);
         }
     }
     entries
@@ -328,14 +330,20 @@ mod tests {
 
         let entries = static_bundle_entries(&assets, &metadata);
         let names: Vec<&str> = entries.iter().map(|(n, _)| n.as_str()).collect();
+        // The GLB is keyed by its texture set (the same GLB hash with other
+        // textures in another deployment must not share the file).
+        let glb_key = scene_bake_key("glb-ok", ["tex-a", "tex-b", "tex-gone"]);
+        assert!(glb_key.starts_with("glb-ok-") && glb_key.len() == "glb-ok-".len() + 16);
         assert_eq!(
             names,
             vec![
-                "glb-ok.opt.scn",
+                format!("{glb_key}.opt.scn").as_str(),
                 "tex-a.opt.res",
                 "tex-b.opt.res",
                 "tex-mat.opt.res"
             ]
         );
+        assert_eq!(entries[0].1, glb_key);
+        assert_eq!(entries[1].1, "tex-a");
     }
 }

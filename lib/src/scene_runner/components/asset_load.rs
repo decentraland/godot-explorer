@@ -275,14 +275,8 @@ fn start_preload(scene: &Scene, hash: &str, path: &str) -> PreloadEntry {
         let promise = content_provider
             .bind_mut()
             .fetch_optimized_asset_with_dependencies(hash.to_godot());
-        return loading_entry(
-            true,
-            Some(promise),
-            Some(crate::content::content_provider::optimized_godot_path(
-                hash,
-                crate::content::content_provider::OptimizedKind::Scene,
-            )),
-        );
+        let scene_path = content_provider.bind().optimized_scene_path(hash);
+        return loading_entry(true, Some(promise), Some(scene_path));
     }
 
     // Runtime path: download + process the GLB into `user://content/<hash>.scn`.

@@ -271,13 +271,13 @@ Process an entire Decentraland scene by its entity hash. The server automaticall
 
 Each processed scene asset is published as a plain Godot resource next to the
 manifest — no zip, no `load_resource_pack` on the client. The client downloads
-them into `user://content/{hash}.opt.scn` / `.opt.res` and loads them by path;
+them into `user://content/{key}.opt.scn` / `{hash}.opt.res` and loads them by path;
 a scene `.scn` references its textures as `user://content/{hash}.opt.res`
 ExtResources, which is why every `externalSceneDependencies` entry must be on
 disk before the `.scn` is loaded (the client awaits all of them).
 
 ```
-{gltf_hash}.scn               # PackedScene, zstd-compressed (RSCC)
+{gltf_key}.scn                # PackedScene, zstd-compressed (RSCC); see "Scene GLB key" below
 {texture_hash}.res            # PortableCompressedTexture2D, zstd-compressed
 {main_js_hash}.js             # the scene's main script (scene.json `main`), verbatim
 {main_crdt_hash}.crdt         # main.crdt, verbatim (when the scene has one)
@@ -287,7 +287,21 @@ disk before the `.scn` is loaded (the client awaits all of them).
                               # files reference), Stored — one stream instead of N requests
 ```
 
-Zip entry names are the client's cache file names (`{hash}.opt.scn`,
+**Scene GLB key.** A GLB references its textures by file name, so the same
+GLB hash maps to a different texture set in another deployment (a redeploy
+that swaps one image, another scene mapping the model to its own textures),
+and its baked `.scn` embeds that set as ExtResources. Keyed by the GLB hash
+alone, the last bake would overwrite the others in the shared bucket and
+every other scene's manifest would point at textures its `.scn` does not
+reference. So the published name is `scene_bake_key(hash, deps)`
+(`lib/src/content/content_provider.rs`): the GLB hash when the GLB has no
+external textures, otherwise `{hash}-{first 16 hex of sha256(sorted unique
+texture hashes, each followed by "\n")}`. The manifest keeps the plain GLB
+hash in `optimizedContent` and the texture list in
+`externalSceneDependencies`; the client derives the same key from them
+(`{key}.opt.scn` on disk). Textures are content-addressed by their own hash.
+
+Zip entry names are the client's cache file names (`{key}.opt.scn`,
 `{hash}.opt.res`, the bare hash for main.js / main.crdt,
 `{output_hash}-optimized.json`), so the client **extracts** them straight into
 `user://content/` — never mounts them — and then loads by path like the

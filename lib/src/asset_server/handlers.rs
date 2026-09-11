@@ -1,6 +1,6 @@
 //! HTTP request handlers for the asset server.
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -572,11 +572,29 @@ async fn watch_and_pack_scene_batch(
     // ImageTexture embedded in each .scn. No global atlas finalize
     // step.
 
+    // Get preloaded hashes
+    let preloaded_hashes = job_manager.get_batch_preloaded_hashes(&batch_id).await;
+    tracing::debug!(
+        "Scene batch {} preloaded_hashes: {:?}",
+        batch_id,
+        preloaded_hashes.as_ref().map(|h| h.len())
+    );
+
+    // Build metadata from completed jobs (first: the published name of a scene
+    // GLB depends on its texture set, `external_scene_dependencies`).
+    let mut metadata = job_manager.build_scene_metadata(&batch_id).await;
+
     // v6 layout: publish each baked resource as a plain file
-    // (`{hash}.scn` / `{hash}.res`) — the client downloads it straight into
+    // (`{key}.scn` / `{hash}.res`) — the client downloads it straight into
     // `user://content/` and loads it by path, no resource-pack mount.
     for (hash, path, asset_type) in &results {
-        match publish_raw_asset(hash, path, *asset_type, &ctx.output_folder) {
+        match publish_raw_asset(
+            hash,
+            path,
+            *asset_type,
+            &ctx.output_folder,
+            &metadata.external_scene_dependencies,
+        ) {
             Ok(out_path) => {
                 job_manager
                     .add_individual_zip(&batch_id, hash.clone(), out_path)
@@ -587,17 +605,6 @@ async fn watch_and_pack_scene_batch(
             }
         }
     }
-
-    // Get preloaded hashes
-    let preloaded_hashes = job_manager.get_batch_preloaded_hashes(&batch_id).await;
-    tracing::debug!(
-        "Scene batch {} preloaded_hashes: {:?}",
-        batch_id,
-        preloaded_hashes.as_ref().map(|h| h.len())
-    );
-
-    // Build metadata from completed jobs
-    let mut metadata = job_manager.build_scene_metadata(&batch_id).await;
 
     // Scene boot files (`main.js`, `main.crdt`): published by hash next to the
     // manifest so the client pulls the whole scene from the optimized CDN —
@@ -736,16 +743,24 @@ fn publish_raw_asset(
     optimized_path: &str,
     asset_type: AssetType,
     output_folder: &str,
+    external_scene_dependencies: &HashMap<String, Vec<String>>,
 ) -> Result<String, anyhow::Error> {
-    let kind = match asset_type {
-        AssetType::Texture => crate::content::content_provider::OptimizedKind::Texture,
-        _ => crate::content::content_provider::OptimizedKind::Scene,
+    use crate::content::content_provider::{optimized_remote_name, scene_bake_key, OptimizedKind};
+    let (key, kind) = match asset_type {
+        AssetType::Texture => (hash.to_string(), OptimizedKind::Texture),
+        _ => (
+            scene_bake_key(
+                hash,
+                external_scene_dependencies
+                    .get(hash)
+                    .into_iter()
+                    .flatten()
+                    .map(String::as_str),
+            ),
+            OptimizedKind::Scene,
+        ),
     };
-    let out_path = format!(
-        "{}{}",
-        output_folder,
-        crate::content::content_provider::optimized_remote_name(hash, kind)
-    );
+    let out_path = format!("{}{}", output_folder, optimized_remote_name(&key, kind));
     std::fs::copy(optimized_path, &out_path)
         .map_err(|e| anyhow::anyhow!("copy {} -> {}: {}", optimized_path, out_path, e))?;
     Ok(out_path)
@@ -823,13 +838,13 @@ async fn write_static_bundle(
     let zip_path = format!("{}{}", ctx.output_folder, zip_name);
     let zip_entries: Vec<BundleEntry> = entries
         .iter()
-        .map(|(name, hash)| BundleEntry::File {
+        .map(|(name, key)| BundleEntry::File {
             name: name.clone(),
             path: format!(
                 "{}{}",
                 ctx.output_folder,
                 crate::content::content_provider::optimized_remote_name(
-                    hash,
+                    key,
                     if name.ends_with(".scn") {
                         crate::content::content_provider::OptimizedKind::Scene
                     } else {

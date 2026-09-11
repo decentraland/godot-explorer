@@ -63,6 +63,10 @@ pub struct OptimizedData {
     assets: RwLock<HashSet<String>>,
     // HashMap with all optimized hashes and its dependencies...
     dependencies: RwLock<HashMap<String, HashSet<String>>>,
+    /// GLB hash -> `scene_bake_key` (only GLBs with external textures; the
+    /// rest are keyed by their hash). Std lock: read from `#[func]`s on the
+    /// main thread, where a tokio lock cannot be awaited.
+    scene_keys: std::sync::RwLock<HashMap<String, String>>,
     /// Cache file name -> state of the static bundle that will produce it.
     /// `async_fetch_optimized_asset` waits here before downloading per-file.
     bundle_files: RwLock<HashMap<String, watch::Receiver<BundleState>>>,
@@ -245,6 +249,32 @@ pub fn optimized_godot_path(hash: &str, kind: OptimizedKind) -> String {
     format!("user://content/{}", optimized_cache_name(hash, kind))
 }
 
+/// Identity of a baked scene GLB — the `hash` the `Scene` naming functions
+/// take. A GLB references its textures by file name, so the same GLB hash
+/// resolves to a different texture set in another deployment (a redeploy that
+/// swaps one image, another scene mapping the model to its own textures), and
+/// its `.scn` embeds that set as ExtResources. Keying the file by the GLB hash
+/// alone let the last bake overwrite the others in the shared bucket, leaving
+/// every other scene's manifest pointing at textures the `.scn` does not
+/// reference (28 GLBs lost in Genesis Plaza alone). So: the GLB hash when it
+/// has no external textures, else `{glb}-{16 hex of sha256(sorted textures)}`.
+/// Server and client derive it from the manifest's `externalSceneDependencies`.
+pub fn scene_bake_key<'a>(glb_hash: &str, deps: impl IntoIterator<Item = &'a str>) -> String {
+    let mut deps: Vec<&str> = deps.into_iter().collect();
+    if deps.is_empty() {
+        return glb_hash.to_string();
+    }
+    deps.sort_unstable();
+    deps.dedup();
+    use sha2::{Digest, Sha256};
+    let mut hasher = Sha256::new();
+    for dep in deps {
+        hasher.update(dep.as_bytes());
+        hasher.update(b"\n");
+    }
+    format!("{}-{}", glb_hash, hex::encode(&hasher.finalize()[..8]))
+}
+
 /// CLI override for the optimized-content base URL (`--optimized-content-base-url`),
 /// the single source of truth for `resolved_optimized_base_url()`.
 ///
@@ -366,6 +396,7 @@ impl INode for ContentProvider {
             optimized_data: Arc::new(OptimizedData {
                 assets: RwLock::new(HashSet::default()),
                 dependencies: RwLock::new(HashMap::default()),
+                scene_keys: std::sync::RwLock::new(HashMap::default()),
                 bundle_files: RwLock::new(HashMap::default()),
                 bundle_tasks: RwLock::new(HashMap::default()),
             }),
@@ -1377,11 +1408,24 @@ impl ContentProvider {
         self.optimized_assets.contains(&hash_str)
     }
 
-    /// `user://content/{hash}.opt.scn` — where a baked scene GLB is loaded from
-    /// once `fetch_optimized_asset_with_dependencies` resolved.
+    /// `user://content/{key}.opt.scn` — where a baked scene GLB is loaded from
+    /// once `fetch_optimized_asset_with_dependencies` resolved (`key` per
+    /// `scene_bake_key`, from the manifest loaded for the GLB's scene).
     #[func]
     pub fn get_optimized_scene_path(&self, file_hash: GString) -> GString {
-        GString::from(optimized_godot_path(&file_hash.to_string(), OptimizedKind::Scene).as_str())
+        GString::from(self.optimized_scene_path(&file_hash.to_string()).as_str())
+    }
+
+    pub fn optimized_scene_path(&self, file_hash: &str) -> String {
+        let key = self
+            .optimized_data
+            .scene_keys
+            .read()
+            .unwrap()
+            .get(file_hash)
+            .cloned()
+            .unwrap_or_else(|| file_hash.to_string());
+        optimized_godot_path(&key, OptimizedKind::Scene)
     }
 
     /// Download `{entity}-boot.zip` (manifest + main.js + main.crdt) and extract
@@ -1430,6 +1474,17 @@ impl ContentProvider {
             let ctx = self.get_context();
 
             TokioRuntime::spawn(async move {
+                {
+                    let mut scene_keys = optimized_data.scene_keys.write().unwrap();
+                    for (glb, deps) in &content_data.external_scene_dependencies {
+                        if !deps.is_empty() {
+                            scene_keys.insert(
+                                glb.clone(),
+                                scene_bake_key(glb, deps.iter().map(String::as_str)),
+                            );
+                        }
+                    }
+                }
                 optimized_data
                     .dependencies
                     .write()
@@ -2875,16 +2930,23 @@ impl ContentProvider {
             with_dependencies
         );
 
+        // `(name key, kind)`: textures by hash, the scene by `scene_bake_key`.
         let mut wanted: Vec<(String, OptimizedKind)> = Vec::new();
-        if with_dependencies {
+        let mut scene_key = file_hash.clone();
+        {
             let dependencies_guard = optimized_data.dependencies.read().await;
             if let Some(deps) = dependencies_guard.get(&file_hash) {
-                for dep in deps {
-                    wanted.push((dep.clone(), OptimizedKind::Texture));
+                if kind == OptimizedKind::Scene {
+                    scene_key = scene_bake_key(&file_hash, deps.iter().map(String::as_str));
+                }
+                if with_dependencies {
+                    for dep in deps {
+                        wanted.push((dep.clone(), OptimizedKind::Texture));
+                    }
                 }
             }
         }
-        wanted.push((file_hash.clone(), kind));
+        wanted.push((scene_key, kind));
 
         // Files a static bundle is bringing in: wait for it rather than starting
         // a per-file download of the same bytes (the GLB and each texture — a
@@ -3125,5 +3187,26 @@ impl ContentProvider {
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn scene_bake_key_is_the_hash_without_textures_and_stable_with_them() {
+        assert_eq!(scene_bake_key("glb", []), "glb");
+        let a = scene_bake_key("glb", ["t1", "t2"]);
+        assert!(a.starts_with("glb-") && a.len() == "glb-".len() + 16);
+        // order- and duplicate-insensitive: server (Vec) and client (HashSet) agree
+        assert_eq!(a, scene_bake_key("glb", ["t2", "t1", "t2"]));
+        // a different texture set is a different file
+        assert_ne!(a, scene_bake_key("glb", ["t1", "t3"]));
+        assert_ne!(a, scene_bake_key("glb2", ["t1", "t2"]));
+        assert_eq!(
+            optimized_cache_name(&a, OptimizedKind::Scene),
+            format!("{a}.opt.scn")
+        );
     }
 }
