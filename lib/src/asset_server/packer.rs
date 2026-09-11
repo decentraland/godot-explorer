@@ -117,9 +117,11 @@ pub fn pack_assets_to_zip(
     Ok(zip_path)
 }
 
-/// Pack a single asset into its own ZIP file.
+/// Pack a single asset into its own ZIP file (v5 layout; v6 publishes the
+/// resources as plain files, see `handlers::publish_raw_asset`).
 ///
 /// Creates `{output_folder}{hash}-mobile.zip` containing a single `.scn` or `.res` file.
+#[allow(dead_code)]
 pub fn pack_single_asset_to_zip(
     hash: &str,
     optimized_path: &str,

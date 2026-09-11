@@ -375,15 +375,23 @@ Pre-processed assets are available from `optimized-assets.dclexplorer.com` for f
 └─────────────────────────────────────────────────────────────────────────────┘
 
 1. Check: optimized_asset_exists(hash)?
-2. Download: {hash}.zip from CDN
-3. Load: ProjectSettings.load_resource_pack(zip_path)
-4. Access: ResourceLoader.load("res://glbs/{hash}.scn")
+2. Download: {hash}.scn + every texture in externalSceneDependencies
+   ({hash}.res) from the CDN into user://content/{hash}.opt.scn / .opt.res
+   (all awaited; ResourceProvider de-duplicates in-flight downloads per hash)
+3. Access: ResourceLoader.load("user://content/{hash}.opt.scn")
 ```
 
+Scene assets are plain files (v6 layout) — there is no resource-pack mount.
+Wearables and emotes still ship as `{hash}-mobile.zip` and go through
+`ProjectSettings.load_resource_pack`.
+
 **Benefits**:
-- Pre-compressed textures (reduced memory, faster load)
-- Pre-baked collision shapes
+- Pre-compressed textures (reduced memory, faster load), shared between GLBs
 - Faster loading (no runtime GLTF processing)
+- Colliders for visible meshes are baked as faces in the mesh metadata
+  (`dcl_faces`) and built on demand by `gltf_container.gd` only when an entity
+  sets a non-zero `visibleMeshesCollisionMask`; `_collider` meshes keep their
+  eager `StaticBody3D`.
 
 **CLI flags** for testing:
 - `--only-optimized` - Only load optimized assets, skip if unavailable

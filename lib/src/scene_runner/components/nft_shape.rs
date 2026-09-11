@@ -47,7 +47,7 @@ pub fn update_nft_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 let mut nft_shape_3d = if let Some(nft_shape_3d) = existing {
                     nft_shape_3d
                 } else {
-                    let mut nft_shape_3d = godot::tools::load::<PackedScene>(
+                    let mut nft_shape_3d = crate::scene_runner::scene_cache::packed_scene(
                         "res://src/decentraland_components/nft_shape.tscn",
                     )
                     .instantiate()

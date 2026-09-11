@@ -725,6 +725,29 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
         return info
     }
 
+    /**
+     * Thermal + battery state only. Cheap (a sticky-intent read); safe to poll
+     * from the game loop. `getMobileMetrics` adds PSS memory on top, and PSS is a
+     * full /proc/self/smaps walk (~100 ms on a 2 GB process) — polling THAT every
+     * 5 s from DynamicGraphics was a visible periodic frame hitch.
+     */
+    @UsedByGodot
+    fun getThermalAndChargingState(): Dictionary {
+        val metrics = Dictionary()
+        activity?.let { ctx ->
+            try {
+                fillBatteryMetrics(ctx, metrics)
+            } catch (e: Exception) {
+                Log.e(pluginName, "Error collecting thermal state: ${e.message}")
+                metrics["device_temperature_celsius"] = -1.0f
+                metrics["thermal_state"] = "unknown"
+                metrics["battery_percent"] = -1.0f
+                metrics["charging_state"] = "unknown"
+            }
+        }
+        return metrics
+    }
+
     @UsedByGodot
     fun getMobileMetrics(): Dictionary {
         val metrics = Dictionary()
@@ -747,6 +770,27 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
 
                 metrics["memory_usage"] = totalMemoryMB
 
+                fillBatteryMetrics(ctx, metrics)
+
+                Log.d(pluginName, "Mobile metrics collected successfully")
+            } catch (e: Exception) {
+                Log.e(pluginName, "Error collecting mobile metrics: ${e.message}")
+                // Return defaults on error
+                metrics["memory_usage"] = -1
+                metrics["device_temperature_celsius"] = -1.0f
+                metrics["thermal_state"] = "unknown"
+                metrics["battery_percent"] = -1.0f
+                metrics["charging_state"] = "unknown"
+            }
+        } ?: run {
+            Log.e(pluginName, "Activity is null, cannot collect metrics")
+        }
+
+        return metrics
+    }
+
+    /** Battery temperature / thermal bucket / level / charging state from the sticky battery intent. */
+    private fun fillBatteryMetrics(ctx: Context, metrics: Dictionary) {
                 // Get battery information
                 val batteryIntentFilter = IntentFilter(Intent.ACTION_BATTERY_CHANGED)
                 val batteryStatus = ctx.registerReceiver(null, batteryIntentFilter)
@@ -790,22 +834,6 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
                     else -> "unknown"
                 }
                 metrics["charging_state"] = chargingState
-
-                Log.d(pluginName, "Mobile metrics collected successfully")
-            } catch (e: Exception) {
-                Log.e(pluginName, "Error collecting mobile metrics: ${e.message}")
-                // Return defaults on error
-                metrics["memory_usage"] = -1
-                metrics["device_temperature_celsius"] = -1.0f
-                metrics["thermal_state"] = "unknown"
-                metrics["battery_percent"] = -1.0f
-                metrics["charging_state"] = "unknown"
-            }
-        } ?: run {
-            Log.e(pluginName, "Activity is null, cannot collect metrics")
-        }
-
-        return metrics
     }
 
     @UsedByGodot
