@@ -185,7 +185,7 @@ jobs:
 
       - name: Export
         timeout-minutes: 5
-        run: cargo run -- export --target ios
+        run: cargo run -- export --target ios --release
 
       - name: Slack — iOS packaging
         if: env.SLACK_TS != ''
