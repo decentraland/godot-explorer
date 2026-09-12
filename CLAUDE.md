@@ -110,9 +110,11 @@ cargo run -- export --target ios --release  # what CI ships to TestFlight / the 
 
 iOS exports run a **windowed** Godot editor (not `--headless`) because the shader baker only works
 with a RenderingDevice renderer, and they need the **Metal toolchain** (`xcodebuild -downloadComponent
-MetalToolchain` on Xcode 26) to compile the baked shaders to `.metallib`. The export fails when the
-baker produced nothing or ran without the toolchain; `DCL_SKIP_SHADER_BAKE_CHECK=1` bypasses that
-check for local debugging only.
+MetalToolchain` on Xcode 26) to compile the baked shaders to `.metallib`. The export fails unless
+Godot's output shows `Started Baking shaders (N steps)` and packed `.metal.cache` files, and it also
+fails when the SPIR-V-only warning (missing toolchain) appears; `DCL_SKIP_SHADER_BAKE_CHECK=1`
+bypasses that check for local debugging only. The baked files live in
+`godot/.godot/exported/<hash>/shader_baker/iOS/metal/`, not next to the exported IPA.
 
 ## Architecture
 
