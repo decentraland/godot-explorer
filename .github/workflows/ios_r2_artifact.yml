@@ -199,7 +199,7 @@ jobs:
       # session is required. Baking + Metal compilation is what the longer timeout pays for.
       - name: Export
         timeout-minutes: 25
-        run: cargo run -- export --target ios
+        run: cargo run -- export --target ios --release
 
       - name: Slack — iOS packaging
         if: env.SLACK_TS != ''
