@@ -183,9 +183,23 @@ jobs:
       - name: Import Assets
         uses: ./.github/actions/import-assets
 
+      # The iOS export bakes shaders (export_presets.cfg `shader_baker/enabled=true`): Godot compiles them
+      # to .metallib through `xcrun metal`, which Xcode 26 ships as a separately downloaded component.
+      # Without it the baker silently falls back to SPIR-V only and the device compiles every shader on
+      # its main thread at first draw. `cargo run -- export` fails the build if that happens.
+      - name: Ensure Metal toolchain (shader baker)
+        run: |
+          if ! xcrun -sdk iphoneos metal --version >/dev/null 2>&1; then
+            echo "Metal toolchain missing — downloading the Xcode 26 component…"
+            xcodebuild -downloadComponent MetalToolchain
+          fi
+          xcrun -sdk iphoneos metal --version
+
+      # Windowed editor (not --headless) so the shader baker has a RenderingDevice; the runner's GUI
+      # session is required. Baking + Metal compilation is what the longer timeout pays for.
       - name: Export
-        timeout-minutes: 5
-        run: cargo run -- export --target ios
+        timeout-minutes: 25
+        run: cargo run -- export --target ios --release
 
       - name: Slack — iOS packaging
         if: env.SLACK_TS != ''
