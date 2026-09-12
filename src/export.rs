@@ -1,4 +1,15 @@
-use std::{collections::HashMap, fs, io, path::Path, process::ExitStatus};
+use std::{
+    collections::HashMap,
+    fs,
+    io::{self, BufRead, BufReader, Write},
+    path::Path,
+    process::{ExitStatus, Stdio},
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
+    thread,
+};
 use zip::ZipArchive;
 
 use crate::{
@@ -271,6 +282,106 @@ pub fn import_assets() -> ExitStatus {
         .expect("Failed to run Godot")
 }
 
+/// Printed once by Godot's Metal shader container when `xcrun metal` is unavailable on the exporting
+/// machine: the baker then stores SPIR-V only and the device still compiles every shader from source.
+const SHADER_BAKER_SPIRV_ONLY_WARNING: &str = "Metal shader baking limited to SPIR-V";
+
+/// Runs Godot forwarding its stdout/stderr line by line and reports whether `needle` appeared in
+/// either stream. Piping (instead of inheriting) stdio is what lets the iOS export detect a degraded
+/// shader bake without losing the live output.
+fn run_godot_streaming(
+    command: &mut std::process::Command,
+    needle: &'static str,
+) -> io::Result<(ExitStatus, bool)> {
+    fn pump<R, W>(
+        reader: R,
+        mut writer: W,
+        needle: &'static str,
+        found: Arc<AtomicBool>,
+    ) -> thread::JoinHandle<()>
+    where
+        R: io::Read + Send + 'static,
+        W: Write + Send + 'static,
+    {
+        thread::spawn(move || {
+            for line in BufReader::new(reader).lines().map_while(Result::ok) {
+                if line.contains(needle) {
+                    found.store(true, Ordering::Relaxed);
+                }
+                let _ = writeln!(writer, "{line}");
+            }
+        })
+    }
+
+    command.stdout(Stdio::piped()).stderr(Stdio::piped());
+    let mut child = command.spawn()?;
+    let found = Arc::new(AtomicBool::new(false));
+    let stdout_pump = child
+        .stdout
+        .take()
+        .map(|s| pump(s, io::stdout(), needle, Arc::clone(&found)));
+    let stderr_pump = child
+        .stderr
+        .take()
+        .map(|s| pump(s, io::stderr(), needle, Arc::clone(&found)));
+    let status = child.wait()?;
+    for handle in [stdout_pump, stderr_pump].into_iter().flatten() {
+        let _ = handle.join();
+    }
+    Ok((status, found.load(Ordering::Relaxed)))
+}
+
+/// The baker writes next to the export: `<export dir>/shader_baker/<OS name>/<RD driver>/`
+/// (`ShaderBakerExportPlugin::_initialize_cache_directory`). An empty folder means it never ran; the
+/// SPIR-V-only warning means it ran without the Metal toolchain. Either way the device would compile
+/// every shader on its main thread at first draw, which is the App Hang this check exists to prevent.
+/// `DCL_SKIP_SHADER_BAKE_CHECK=1` exports anyway (local debugging only — never for a store build).
+fn verify_shader_bake_output(spirv_only_warning: bool) -> Result<(), anyhow::Error> {
+    let dir = Path::new(EXPORTS_FOLDER)
+        .join("shader_baker")
+        .join("iOS")
+        .join("metal");
+    let baked = fs::read_dir(&dir)
+        .map(|entries| entries.filter_map(Result::ok).count())
+        .unwrap_or(0);
+
+    if std::env::var_os("DCL_SKIP_SHADER_BAKE_CHECK").is_some() {
+        print_message(
+            MessageType::Warning,
+            &format!(
+                "DCL_SKIP_SHADER_BAKE_CHECK set — not verifying the shader bake ({} entries in {}, metal toolchain warning: {}).",
+                baked,
+                dir.display(),
+                spirv_only_warning
+            ),
+        );
+        return Ok(());
+    }
+
+    if baked == 0 {
+        return Err(anyhow::anyhow!(
+            "Shader baker produced nothing in {} — the export ran without a RenderingDevice renderer \
+             (headless / opengl3), so every shader would compile on the device at first draw. Run the \
+             export on a machine with a display, or set DCL_SKIP_SHADER_BAKE_CHECK=1 to ship without \
+             baked shaders.",
+            dir.display()
+        ));
+    }
+    if spirv_only_warning {
+        return Err(anyhow::anyhow!(
+            "Shader baker could not compile Metal libraries (Godot printed \"{}\"): the Metal toolchain is \
+             missing on this machine. Install it with `xcodebuild -downloadComponent MetalToolchain` \
+             (Xcode 26) and re-run, or set DCL_SKIP_SHADER_BAKE_CHECK=1 to ship SPIR-V only.",
+            SHADER_BAKER_SPIRV_ONLY_WARNING
+        ));
+    }
+    print_message(
+        MessageType::Success,
+        &format!("Shader baker: {} entries in {}", baked, dir.display()),
+    );
+    Ok(())
+}
+
 pub fn export(
     target: Option<&str>,
     format: &str,
@@ -368,15 +479,27 @@ pub fn export(
         "--export-debug"
     };
 
-    let args = vec![
-        "-e",
-        "--rendering-driver",
-        "opengl3",
-        "--headless",
+    // Shader baking (`shader_baker/enabled` in export_presets.cfg) only happens when the exporting
+    // editor itself runs a RenderingDevice renderer: `ShaderBakerExportPlugin::_is_active()` returns
+    // false — without printing anything — under `--headless` (dummy renderer) or
+    // `--rendering-driver opengl3`. The iOS preset has had baking enabled while every store build
+    // shipped without baked shaders, so each Metal shader was compiled from source on the device's
+    // main thread at first draw (5–130 s App Hangs on ~80% of iOS users on 1.13.1). Export iOS through
+    // a windowed editor on the host's default RenderingDevice driver (Metal on Apple Silicon), forcing
+    // the mobile renderer so the baked variants match the device. Every other target keeps the
+    // headless export.
+    let bake_shaders = target == "ios";
+    let mut args: Vec<&str> = vec!["-e"];
+    if bake_shaders {
+        args.extend(["--rendering-method", "mobile"]);
+    } else {
+        args.extend(["--rendering-driver", "opengl3", "--headless"]);
+    }
+    args.extend([
         export_mode,
         target.as_str(),
         output_path_godot_param.as_str(),
-    ];
+    ]);
 
     // The headless Godot editor dlopen's the GDExtension (libdclgodot.dylib) to run the
     // export. A freshly rebuilt dylib carries an invalid signature, so macOS SIGKILLs Godot
@@ -428,13 +551,19 @@ pub fn export(
         export_command.env(format!("{}_PASSWORD", env_prefix), keystore_password);
     }
 
-    let export_status = export_command.status().expect("Failed to run Godot");
+    let (export_status, spirv_only_warning) =
+        run_godot_streaming(&mut export_command, SHADER_BAKER_SPIRV_ONLY_WARNING)
+            .expect("Failed to run Godot");
 
     spinner.finish();
 
     // Restore export presets if we backed them up
     if let Some(backup_content) = export_presets_backup {
         restore_export_presets(backup_content)?;
+    }
+
+    if bake_shaders {
+        verify_shader_bake_output(spirv_only_warning)?;
     }
 
     if !std::path::Path::new(output_rel_path.as_str()).exists() && target != "ios" {
