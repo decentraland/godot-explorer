@@ -195,6 +195,13 @@ cargo run -- export --target ios
    and posts a "📦 Android AAB Ready" Slack notification — the AAB is only uploaded for
    `main`/`release` builds.
 
+   Status is mirrored in a Slack root card (`.github/scripts/slack-root.py`, merge-on-read
+   via message metadata) and ONE sticky **📱 Mobile build pipeline** PR comment
+   (`.github/scripts/pr-card.py`, same model — state lives in a hidden HTML comment; each leg
+   merges only its own fields, `SHA` guards against a superseded run). Both scripts are
+   byte-duplicated in `decentraland/godot-asc-deploy`, which writes the iOS outcome to the PR
+   using its `GODOT_EXPLORER_PR_TOKEN` secret — edit both copies together.
+
    It is triggered by:
    - **Every push to `release`** → full distribution.
    - **A weekday (Mon–Fri) 09:00 UTC cron on `main`** → distribution, but only when
