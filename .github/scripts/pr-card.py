@@ -1,14 +1,11 @@
 #!/usr/bin/env python3
-#
-# ⚠️ DUPLICATED FILE — keep in sync with the identical copy in the other repo.
-# The mobile build pipeline spans two repos, so this script lives in BOTH
-# decentraland/godot-explorer and decentraland/godot-asc-deploy. Edit both copies together.
-#
-"""Create or update the ONE "mobile build pipeline" status card comment on a godot-explorer PR.
+"""Create or update the ONE "mobile build pipeline" status card comment on a PR.
 
 The GitHub twin of slack-root.py. A single sticky PR comment (found via a hidden HTML marker)
 mirrors the Slack root card — build number/version, branch, commit, trigger, per-platform state,
-artifact links — plus a collapsed timeline that mirrors the Slack thread replies.
+artifact links — plus a collapsed timeline that mirrors the Slack thread replies. Unlike the Slack
+scripts this one lives ONLY here: godot-asc-deploy holds no token for this repo, so the iOS
+outcome is mirrored by mobile_distribute's ios-wait job rather than written from there.
 
 Merge-on-read, like Slack: the full card state is stored as JSON inside a hidden HTML comment at
 the bottom of the body. On update we READ the current state, merge in ONLY the fields this call
@@ -25,8 +22,7 @@ Env (only NON-EMPTY values are merged; everything else is preserved):
                                    run (re-label on a newer commit) must not overwrite the card.
   RUN_ID                           workflow run this update belongs to ($GITHUB_RUN_ID). Same idea
                                    for a re-label of the SAME commit: a leg of the cancelled run
-                                   must not overwrite the new run's card. godot-asc-deploy has no
-                                   run id of ours and relies on SHA alone.
+                                   must not overwrite the new run's card.
   RESET                            1 → start from a blank state (a new distribution; prepare only)
   STATUS                           building | success | failed | cancelled (only set it when you mean to)
   BUILD_NUMBER, BUILD_VERSION, BRANCH, TRIGGERED_BY, COMMIT, COMMIT_URL

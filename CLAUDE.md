@@ -196,11 +196,13 @@ cargo run -- export --target ios
    `main`/`release` builds.
 
    Status is mirrored in a Slack root card (`.github/scripts/slack-root.py`, merge-on-read
-   via message metadata) and ONE sticky **📱 Mobile build pipeline** PR comment
+   via message metadata; byte-duplicated in `decentraland/godot-asc-deploy` — edit both
+   copies together) and ONE sticky **📱 Mobile build pipeline** PR comment
    (`.github/scripts/pr-card.py`, same model — state lives in a hidden HTML comment; each leg
-   merges only its own fields, `SHA` guards against a superseded run). Both scripts are
-   byte-duplicated in `decentraland/godot-asc-deploy`, which writes the iOS outcome to the PR
-   using its `GODOT_EXPLORER_PR_TOKEN` secret — edit both copies together.
+   merges only its own fields; `SHA` + `RUN_ID` guard against a superseded run). `pr-card.py`
+   lives only here: asc-deploy has no token for this repo, so the `ios-wait` job watches the
+   asc-deploy run (matched by its `run-name` `🍏 <branch> @ <sha>`, via
+   `ASC_DEPLOY_DISPATCH_TOKEN`) and mirrors the TestFlight result onto the card.
 
    It is triggered by:
    - **Every push to `release`** → full distribution.
