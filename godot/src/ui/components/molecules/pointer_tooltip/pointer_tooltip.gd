@@ -1,5 +1,14 @@
 extends Control
 
+## Breathing room between stacked pills.
+##
+## The fan places adjacent pills 30 degrees apart, so their vertical step is exactly half the
+## radius. A hardcoded radius therefore silently encodes an assumption about the pill's height:
+## the old 90 was tuned when the pill was 52 tall and already overlapped by 1px, and the pill
+## growing to 60 in the HUD-Revamp restyle turned that into a visible 9px collision. Deriving the
+## radius from the measured height instead means resizing the pill can never reintroduce this.
+const PILL_GAP := 8.0
+
 var angles: Array = [0, 60, 90, 120, 180]
 var initial_angle: float
 
@@ -31,9 +40,11 @@ func set_pointer_data(interacts_array: Array):
 			break
 		var tooltip_scene_instance = tooltip_scene.instantiate()
 		var radius = -90 if interacts_array.size() > 1 else -36
-		tooltip_scene_instance.set_position(
-			Vector2(0, radius - (4 * count)).rotated(deg_to_rad(used_angles[i]))
-		)
+		var offset: float = radius - (4 * count)
+		if interacts_array.size() > 1:
+			# Negative values, so the larger magnitude is the smaller number.
+			offset = minf(offset, -2.0 * (tooltip_scene_instance.size.y + PILL_GAP))
+		tooltip_scene_instance.set_position(Vector2(0, offset).rotated(deg_to_rad(used_angles[i])))
 		var tooltip_position = tooltip_scene_instance.get_position()
 		tooltip_scene_instance.set_position(
 			Vector2(tooltip_position.x, tooltip_position.y - tooltip_scene_instance.size.y / 2)
