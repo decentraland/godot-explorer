@@ -7,9 +7,9 @@ use super::{
 use godot::{
     builtin::{GString, PackedByteArray, Variant, Vector2i},
     classes::{
-        image::CompressMode, image::Format as GodotFormat, portable_compressed_texture_2d,
-        AnimatedTexture, DirAccess, Image, ImageTexture, PortableCompressedTexture2D, Resource,
-        ResourceLoader, ResourceSaver, Texture2D,
+        image::CompressMode, image::Format as GodotFormat, image::UsedChannels,
+        portable_compressed_texture_2d, AnimatedTexture, DirAccess, Image, ImageTexture,
+        PortableCompressedTexture2D, Resource, ResourceLoader, ResourceSaver, Texture2D,
     },
     global::Error,
     meta::ToGodot,
@@ -434,6 +434,42 @@ fn pad_image_to_multiple_of_4(image: &mut Gd<Image>) -> bool {
     }
 }
 
+/// Resize to the pixel budget, pad to a multiple of 4 and ETC2-compress
+/// `image` in place. Shared by the GLB bake, the standalone texture bake and
+/// the runtime mobile path so all three produce the same bytes for the same
+/// source.
+///
+/// Godot's `detect_used_channels` reports `R`/`RG` for maps whose other
+/// channels are all zero (typical ORM/HRM maps with metallic = 0), and etcpak
+/// then emits `ETC2_R11`/`ETC2_RG11` — 8 bpp, twice the size of `ETC2_RGB8`
+/// for no visual gain in a BaseMaterial3D. Force RGB for those.
+pub fn prepare_etc2_image(image: &mut Gd<Image>, max_size: i32) {
+    resize_image(image, max_size);
+
+    if image.is_compressed() {
+        return;
+    }
+    pad_image_to_multiple_of_4(image);
+
+    let detected = image.detect_used_channels();
+    let channels = if detected == UsedChannels::R || detected == UsedChannels::RG {
+        UsedChannels::RGB
+    } else {
+        detected
+    };
+
+    let result = image.compress_from_channels(CompressMode::ETC2, channels);
+    if result != Error::OK {
+        tracing::warn!(
+            "ETC2 compression failed ({}x{}, channels {:?}, error {:?}), using uncompressed texture",
+            image.get_width(),
+            image.get_height(),
+            channels,
+            result
+        );
+    }
+}
+
 /// Creates a texture from a compressed image, resizing if needed.
 /// Uses ETC2 compression for better memory usage on mobile platforms.
 ///
@@ -456,21 +492,7 @@ fn pad_image_to_multiple_of_4(image: &mut Gd<Image>) -> bool {
 /// Falls back to uncompressed texture if compression fails.
 pub fn create_compressed_texture(image: &mut Gd<Image>, max_size: i32) -> Gd<Texture2D> {
     assert_pct2_serialization_ok();
-    resize_image(image, max_size);
-
-    if !image.is_compressed() {
-        pad_image_to_multiple_of_4(image);
-
-        let result = image.compress(CompressMode::ETC2);
-        if result != Error::OK {
-            tracing::warn!(
-                "ETC2 compression failed ({}x{}, error {:?}), using uncompressed texture",
-                image.get_width(),
-                image.get_height(),
-                result
-            );
-        }
-    }
+    prepare_etc2_image(image, max_size);
 
     let mut pct2 = PortableCompressedTexture2D::new_gd();
     pct2.set_keep_compressed_buffer(true);

@@ -54,12 +54,10 @@ pub fn update_audio_source(
                 let mut audio_source = if let Some(audio_source_node) = existing {
                     audio_source_node.cast::<DclAudioSource>()
                 } else {
-                    let mut new_audio_source = godot::tools::load::<PackedScene>(
-                        "res://src/decentraland_components/audio_source.tscn",
-                    )
-                    .instantiate()
-                    .unwrap()
-                    .cast::<DclAudioSource>();
+                    let mut new_audio_source =
+                        crate::scene_runner::scene_cache::instantiate::<DclAudioSource>(
+                            "res://src/decentraland_components/audio_source.tscn",
+                        );
 
                     new_audio_source.set_name("AudioSource");
                     node_3d.add_child(&new_audio_source.clone().upcast::<Node>());

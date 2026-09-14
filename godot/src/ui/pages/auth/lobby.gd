@@ -534,7 +534,12 @@ func _ready():
 
 	# Run hardware benchmark AFTER loading screen is visible to avoid black screen
 	# on iOS fresh install (Metal shader compilation can take 10-20s)
-	if Global.should_run_first_launch_benchmark():
+	# `skip-hw-benchmark=1` deeplink: dev builds re-run the benchmark every boot
+	# (re-picking the graphic profile mid scene-load), which skews load timings.
+	var skip_hw_benchmark: bool = (
+		Global.deep_link_obj != null and Global.deep_link_obj.params.has("skip-hw-benchmark")
+	)
+	if Global.should_run_first_launch_benchmark() and not skip_hw_benchmark:
 		print("[Startup] lobby: triggering first launch benchmark")
 		Global.run_first_launch_benchmark()
 

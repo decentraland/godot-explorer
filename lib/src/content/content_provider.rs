@@ -13,7 +13,7 @@ use godot::{
     prelude::*,
 };
 use serde::{Deserialize, Serialize};
-use tokio::sync::{oneshot, RwLock, Semaphore};
+use tokio::sync::{oneshot, watch, RwLock, Semaphore};
 
 use crate::{
     auth::wallet::AsH160,
@@ -63,8 +63,27 @@ pub struct OptimizedData {
     assets: RwLock<HashSet<String>>,
     // HashMap with all optimized hashes and its dependencies...
     dependencies: RwLock<HashMap<String, HashSet<String>>>,
-    // List of optimized assets that were loaded (already added to ProjectSettings.load_resource_pack)
-    loaded_assets: RwLock<HashSet<String>>,
+    /// GLB hash -> `scene_bake_key` (only GLBs with external textures; the
+    /// rest are keyed by their hash). Std lock: read from `#[func]`s on the
+    /// main thread, where a tokio lock cannot be awaited.
+    scene_keys: std::sync::RwLock<HashMap<String, String>>,
+    /// Cache file name -> state of the static bundle that will produce it.
+    /// `async_fetch_optimized_asset` waits here before downloading per-file.
+    bundle_files: RwLock<HashMap<String, watch::Receiver<BundleState>>>,
+    /// Zip name -> its state, so a scene re-registering the same bundle reuses
+    /// the in-flight task instead of downloading it twice.
+    bundle_tasks: RwLock<HashMap<String, watch::Receiver<BundleState>>>,
+}
+
+/// Lifecycle of a `{entity}-static.zip`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BundleState {
+    /// downloading / extracting — files it covers are not on disk yet
+    Pending,
+    /// every file it covers is in the cache folder
+    Ready,
+    /// download or extraction failed — covered files download per-file
+    Failed,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -74,6 +93,19 @@ struct ContentData {
     external_scene_dependencies: HashMap<String, HashSet<String>>,
     original_sizes: HashMap<String, ImageSize>,
     hash_size_map: HashMap<String, u64>,
+    /// `{entity}-static.zip`: the models `main.crdt` composes, extracted into
+    /// `user://content/` in one download (`files` = entry names = cache names).
+    #[serde(default)]
+    static_bundle: Option<StaticBundle>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct StaticBundle {
+    file: String,
+    files: Vec<String>,
+    #[serde(default)]
+    bytes: u64,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, Copy)]
@@ -165,23 +197,90 @@ pub struct SceneGltfContext {
     /// pipeline is expensive and is meant to be baked once into the saved
     /// .scn, not re-run on every phone load.
     pub apply_optimizations: bool,
+    /// Reference every glTF image that has a content hash as an external
+    /// `user://content/{hash}.opt.res` (the standalone baked texture) instead of
+    /// embedding a copy in the .scn. Asset-server scene bakes only: the client
+    /// downloads each `externalSceneDependencies` file before loading the .scn
+    /// (`fetch_optimized_asset_with_dependencies`), so the paths resolve.
+    pub external_texture_refs: bool,
 }
 
 unsafe impl Send for SceneGltfContext {}
 
 /// Default optimized-assets bucket. The CLI `--optimized-content-base-url`
 /// override (see `optimized_url_override`) takes precedence when set.
-const ASSET_OPTIMIZED_BASE_URL: &str = "https://optimized-assets.dclregenesislabs.xyz/v4";
+const ASSET_OPTIMIZED_BASE_URL: &str = "https://optimized-assets.dclregenesislabs.xyz/v6";
+
+/// Which baked artifact an optimized hash resolves to. v6 bakes publish the
+/// Godot resources as plain files (`{hash}.scn` / `{hash}.res`) instead of one
+/// zip per asset: the client downloads them straight into `user://content/`
+/// and loads them by path, with no `ProjectSettings.load_resource_pack` mount
+/// (each mount re-parsed the global class list + UID cache on the main thread —
+/// ~2 ms × ~900 mounts per Genesis Plaza load).
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum OptimizedKind {
+    Scene,
+    Texture,
+}
+
+impl OptimizedKind {
+    fn ext(self) -> &'static str {
+        match self {
+            OptimizedKind::Scene => "scn",
+            OptimizedKind::Texture => "res",
+        }
+    }
+}
+
+/// Published file name of a baked asset in the bucket.
+pub fn optimized_remote_name(hash: &str, kind: OptimizedKind) -> String {
+    format!("{}.{}", hash, kind.ext())
+}
+
+/// On-device cache file name. `.opt.` keeps it apart from the runtime-processed
+/// `{hash}.scn` (same GLB, different structure) while `cache_file_base_name`
+/// still folds it back to `{hash}` for the per-scene size accounting.
+pub fn optimized_cache_name(hash: &str, kind: OptimizedKind) -> String {
+    format!("{}.opt.{}", hash, kind.ext())
+}
+
+/// Godot path the client (and the baked `.scn` ExtResources) load the asset from.
+pub fn optimized_godot_path(hash: &str, kind: OptimizedKind) -> String {
+    format!("user://content/{}", optimized_cache_name(hash, kind))
+}
+
+/// Identity of a baked scene GLB — the `hash` the `Scene` naming functions
+/// take. A GLB references its textures by file name, so the same GLB hash
+/// resolves to a different texture set in another deployment (a redeploy that
+/// swaps one image, another scene mapping the model to its own textures), and
+/// its `.scn` embeds that set as ExtResources. Keying the file by the GLB hash
+/// alone let the last bake overwrite the others in the shared bucket, leaving
+/// every other scene's manifest pointing at textures the `.scn` does not
+/// reference (28 GLBs lost in Genesis Plaza alone). So: the GLB hash when it
+/// has no external textures, else `{glb}-{16 hex of sha256(sorted textures)}`.
+/// Server and client derive it from the manifest's `externalSceneDependencies`.
+pub fn scene_bake_key<'a>(glb_hash: &str, deps: impl IntoIterator<Item = &'a str>) -> String {
+    let mut deps: Vec<&str> = deps.into_iter().collect();
+    if deps.is_empty() {
+        return glb_hash.to_string();
+    }
+    deps.sort_unstable();
+    deps.dedup();
+    use sha2::{Digest, Sha256};
+    let mut hasher = Sha256::new();
+    for dep in deps {
+        hasher.update(dep.as_bytes());
+        hasher.update(b"\n");
+    }
+    format!("{}-{}", glb_hash, hex::encode(&hasher.finalize()[..8]))
+}
 
 /// CLI override for the optimized-content base URL (`--optimized-content-base-url`),
-/// mirrored from the main thread for lock-free reads on tokio workers.
+/// the single source of truth for `resolved_optimized_base_url()`.
 ///
-/// `DclGlobal::try_singleton()` only succeeds on the main thread. Most callers
-/// of `resolved_optimized_base_url()` run on tokio workers, where the singleton
-/// lookup returns `None` → the override would be silently dropped and locally
-/// baked content would 404 against the prod bucket. This static is updated from
-/// the main thread (via the `#[var(set)]` setter on `DclCli`) and read lock-free
-/// from worker threads. Thread-safe mirror of `cli.optimized_content_base_url`.
+/// Written from the main thread only — by the CLI parse at boot and by the
+/// `#[var(set)]` setter on `DclCli` (deeplink path) — and read from anywhere,
+/// most callers being tokio workers. Mirror of `cli.optimized_content_base_url`.
 static OPTIMIZED_URL_OVERRIDE: std::sync::RwLock<String> = std::sync::RwLock::new(String::new());
 
 pub fn set_optimized_url_override(value: &str) {
@@ -190,20 +289,17 @@ pub fn set_optimized_url_override(value: &str) {
     }
 }
 
-/// Read the `--optimized-content-base-url` override, preferring the singleton
-/// (main thread) and falling back to the mirrored static (worker threads).
-/// Empty string when unset.
+/// Read the `--optimized-content-base-url` override from the mirrored static.
+/// Both writers (CLI parse at boot and the `DclCli` setter used by the
+/// deeplink path) update the mirror, so the singleton lookup that used to come
+/// first is redundant — and from a tokio worker it tripped Godot's thread guard
+/// (`/root: The caller thread can't call get_node_or_null()`), one error print
+/// per asset URL: 511 of them on a cold Genesis Plaza load. Empty when unset.
 fn optimized_url_override() -> String {
-    DclGlobal::try_singleton()
-        .map(|g| g.bind().cli.bind().optimized_content_base_url.to_string())
-        .filter(|s| !s.is_empty())
-        .or_else(|| {
-            OPTIMIZED_URL_OVERRIDE
-                .read()
-                .ok()
-                .map(|r| r.clone())
-                .filter(|s| !s.is_empty())
-        })
+    OPTIMIZED_URL_OVERRIDE
+        .read()
+        .ok()
+        .map(|r| r.clone())
         .unwrap_or_default()
 }
 
@@ -225,23 +321,29 @@ fn resolved_optimized_base_url() -> String {
 fn load_baked_texture_entry(godot_path: &str, original_size: Option<ImageSize>) -> Option<Variant> {
     let resource = ResourceLoader::singleton().load(&GString::from(godot_path))?;
 
-    // Baked variants are stored as a compressed `Image` (ETC2) and wrapped in an
-    // `ImageTexture` here — that round-trips correctly on real-GPU devices,
-    // unlike a serialized `PortableCompressedTexture2D` (which reloads magenta).
-    // Older bakes stored a `Texture2D` directly; accept both for compatibility.
+    // v5 bakes store a `PortableCompressedTexture2D` (ETC2 buffer, shared with
+    // the .scn ExtResources of every GLB that uses the texture). Older bakes
+    // stored a compressed `Image`; wrap those in an `ImageTexture`. Never read
+    // the image back from a `Texture2D` here — on device that is a GPU readback
+    // and nothing consumes `TextureEntry.image` for baked textures.
     let (image, texture): (Gd<godot::classes::Image>, Gd<godot::classes::Texture2D>) =
         if let Ok(img) = resource.clone().try_cast::<godot::classes::Image>() {
             let tex = godot::classes::ImageTexture::create_from_image(&img)?;
             (img, tex.upcast())
         } else {
             let tex = resource.try_cast::<godot::classes::Texture2D>().ok()?;
-            let img = tex.get_image()?;
+            let img = godot::classes::Image::create_empty(
+                1,
+                1,
+                false,
+                godot::classes::image::Format::RGBA8,
+            )?;
             (img, tex)
         };
     let original_size = if let Some(original_size) = original_size {
         Vector2i::new(original_size.width, original_size.height)
     } else {
-        image.get_size()
+        texture.get_size().cast_int()
     };
     let texture_entry = Gd::from_init_fn(|_base| TextureEntry {
         original_size,
@@ -294,7 +396,9 @@ impl INode for ContentProvider {
             optimized_data: Arc::new(OptimizedData {
                 assets: RwLock::new(HashSet::default()),
                 dependencies: RwLock::new(HashMap::default()),
-                loaded_assets: RwLock::new(HashSet::default()),
+                scene_keys: std::sync::RwLock::new(HashMap::default()),
+                bundle_files: RwLock::new(HashMap::default()),
+                bundle_tasks: RwLock::new(HashMap::default()),
             }),
             optimized_assets: HashSet::default(),
             optimized_original_size: HashMap::default(),
@@ -461,6 +565,7 @@ impl ContentProvider {
             texture_quality: self.texture_quality.clone(),
             force_compress: false,
             apply_optimizations: false,
+            external_texture_refs: false,
         };
 
         let file_hash_clone = file_hash.clone();
@@ -611,6 +716,7 @@ impl ContentProvider {
             texture_quality: self.texture_quality.clone(),
             force_compress: false,
             apply_optimizations: false,
+            external_texture_refs: false,
         };
 
         let file_hash_clone = file_hash.clone();
@@ -758,6 +864,7 @@ impl ContentProvider {
             texture_quality: self.texture_quality.clone(),
             force_compress: false,
             apply_optimizations: false,
+            external_texture_refs: false,
         };
 
         let file_hash_clone = file_hash.clone();
@@ -833,6 +940,7 @@ impl ContentProvider {
             texture_quality: self.texture_quality.clone(),
             force_compress: false,
             apply_optimizations: false,
+            external_texture_refs: false,
         };
 
         let file_hash_clone = file_hash.clone();
@@ -1216,6 +1324,7 @@ impl ContentProvider {
 
             let result = ContentProvider::async_fetch_optimized_asset(
                 file_hash.clone(),
+                OptimizedKind::Scene,
                 ctx,
                 optimized_data,
                 true,
@@ -1267,6 +1376,7 @@ impl ContentProvider {
 
             let result = ContentProvider::async_fetch_optimized_asset(
                 file_hash.clone(),
+                OptimizedKind::Texture,
                 ctx,
                 optimized_data,
                 false,
@@ -1298,6 +1408,49 @@ impl ContentProvider {
         self.optimized_assets.contains(&hash_str)
     }
 
+    /// `user://content/{key}.opt.scn` — where a baked scene GLB is loaded from
+    /// once `fetch_optimized_asset_with_dependencies` resolved (`key` per
+    /// `scene_bake_key`, from the manifest loaded for the GLB's scene).
+    #[func]
+    pub fn get_optimized_scene_path(&self, file_hash: GString) -> GString {
+        GString::from(self.optimized_scene_path(&file_hash.to_string()).as_str())
+    }
+
+    pub fn optimized_scene_path(&self, file_hash: &str) -> String {
+        let key = self
+            .optimized_data
+            .scene_keys
+            .read()
+            .unwrap()
+            .get(file_hash)
+            .cloned()
+            .unwrap_or_else(|| file_hash.to_string());
+        optimized_godot_path(&key, OptimizedKind::Scene)
+    }
+
+    /// Download `{entity}-boot.zip` (manifest + main.js + main.crdt) and extract
+    /// it into `user://content/`. Resolves `true` when the files are on disk,
+    /// `false` when the bucket has no such bundle (404 — the caller falls back
+    /// to fetching the three files), and rejects on any other failure.
+    #[func]
+    pub fn fetch_boot_bundle(&mut self, file_name: GString, url: GString) -> Gd<Promise> {
+        let (promise, get_promise) = Promise::make_to_async();
+        let ctx = self.get_context();
+        let file_name = file_name.to_string();
+        let url = url.to_string();
+        TokioRuntime::spawn(async move {
+            match super::bundle::fetch_and_extract_bundle(&ctx, &file_name, &url, None).await {
+                Ok(Some(report)) => {
+                    tracing::debug!("boot bundle {}: {:?}", file_name, report);
+                    then_promise(get_promise, Ok(Some(true.to_variant())));
+                }
+                Ok(None) => then_promise(get_promise, Ok(Some(false.to_variant()))),
+                Err(e) => then_promise(get_promise, Err(anyhow::anyhow!(e))),
+            }
+        });
+        promise
+    }
+
     #[func]
     pub fn load_optimized_assets_metadata(&mut self, file_content: GString) -> Gd<Promise> {
         let content_data: Result<ContentData, serde_json::Error> =
@@ -1318,8 +1471,20 @@ impl ContentProvider {
                 .extend(content_data.optimized_content.clone());
 
             let optimized_data = self.optimized_data.clone();
+            let ctx = self.get_context();
 
             TokioRuntime::spawn(async move {
+                {
+                    let mut scene_keys = optimized_data.scene_keys.write().unwrap();
+                    for (glb, deps) in &content_data.external_scene_dependencies {
+                        if !deps.is_empty() {
+                            scene_keys.insert(
+                                glb.clone(),
+                                scene_bake_key(glb, deps.iter().map(String::as_str)),
+                            );
+                        }
+                    }
+                }
                 optimized_data
                     .dependencies
                     .write()
@@ -1330,6 +1495,11 @@ impl ContentProvider {
                     .write()
                     .await
                     .extend(content_data.optimized_content);
+                // Before the promise resolves: once GDScript continues it spawns
+                // the scene, whose first GLB requests must already find the gate.
+                if let Some(bundle) = content_data.static_bundle {
+                    ContentProvider::register_static_bundle(ctx, optimized_data, bundle).await;
+                }
                 then_promise(get_promise, Ok(None));
             });
         } else if let Err(error) = content_data {
@@ -1395,23 +1565,28 @@ impl ContentProvider {
 
             let absolute_file_path = cache_file_path(&ctx.content_folder, &hash_id);
 
-            if ctx
+            match ctx
                 .resource_provider
                 .fetch_resource(url, hash_id.clone(), absolute_file_path)
                 .await
-                .is_ok()
             {
-                #[cfg(feature = "use_resource_tracking")]
-                report_resource_loaded(&hash_id.clone());
+                Ok(_) => {
+                    #[cfg(feature = "use_resource_tracking")]
+                    report_resource_loaded(&hash_id.clone());
 
-                then_promise(get_promise, Ok(None));
-            } else {
-                let error = anyhow::anyhow!("Failed to download file");
+                    then_promise(get_promise, Ok(None));
+                }
+                Err(e) => {
+                    // Keep the HTTP status in the message: callers that probe
+                    // an optional location (optimized manifest / boot files)
+                    // treat a 404 as "not there" and anything else as a failure.
+                    let error = anyhow::anyhow!("Failed to download file: {}", e);
 
-                #[cfg(feature = "use_resource_tracking")]
-                report_resource_error(&hash_id.clone(), &error.to_string());
+                    #[cfg(feature = "use_resource_tracking")]
+                    report_resource_error(&hash_id.clone(), &error.to_string());
 
-                then_promise(get_promise, Err(error));
+                    then_promise(get_promise, Err(error));
+                }
             }
             loaded_resources.fetch_add(1, Ordering::Relaxed);
         });
@@ -1558,13 +1733,14 @@ impl ContentProvider {
             TokioRuntime::spawn(async move {
                 let _ = ContentProvider::async_fetch_optimized_asset(
                     hash_id.clone(),
+                    OptimizedKind::Texture,
                     ctx.clone(),
                     optimized_data,
                     false,
                 )
                 .await;
 
-                let godot_path = format!("res://content/{}.res", hash_id);
+                let godot_path = optimized_godot_path(&hash_id, OptimizedKind::Texture);
 
                 if let Some(entry_variant) = load_baked_texture_entry(&godot_path, original_size) {
                     then_promise(get_promise, Ok(Some(entry_variant)));
@@ -2634,175 +2810,189 @@ impl ContentProvider {
         self.promises.insert(key, promise.instance_id());
     }
 
+    /// Announce a scene's `{entity}-static.zip`: from now on every cache file it
+    /// covers waits for the bundle instead of downloading per-file. The scene
+    /// spawns meanwhile — this never blocks the caller. Warm revisit (every
+    /// file already on disk) flips to `Ready` without a download; a bundle
+    /// already in flight for the same zip is reused.
+    async fn register_static_bundle(
+        ctx: ContentProviderContext,
+        optimized_data: Arc<OptimizedData>,
+        bundle: StaticBundle,
+    ) {
+        let (tx, rx) = watch::channel(BundleState::Pending);
+        {
+            let mut tasks = optimized_data.bundle_tasks.write().await;
+            if let Some(existing) = tasks.get(&bundle.file) {
+                if *existing.borrow() == BundleState::Pending {
+                    tracing::debug!("static bundle {} already in flight", bundle.file);
+                    return;
+                }
+            }
+            tasks.insert(bundle.file.clone(), rx.clone());
+        }
+
+        let mut missing: Vec<String> = Vec::new();
+        for name in &bundle.files {
+            let path = cache_file_path(&ctx.content_folder, name);
+            if !std::path::Path::new(&path).exists() {
+                missing.push(name.clone());
+            }
+        }
+        if missing.is_empty() {
+            let _ = tx.send(BundleState::Ready);
+            tracing::info!(
+                "static bundle {}: all {} files cached, skipping download",
+                bundle.file,
+                bundle.files.len()
+            );
+            return;
+        }
+        {
+            let mut files = optimized_data.bundle_files.write().await;
+            for name in &missing {
+                files.insert(name.clone(), rx.clone());
+            }
+        }
+
+        let url = format!("{}/{}", resolved_optimized_base_url(), bundle.file);
+        let expected: HashSet<String> = bundle.files.iter().cloned().collect();
+        let zip_name = bundle.file.clone();
+        TokioRuntime::spawn(async move {
+            let started = std::time::Instant::now();
+            let result =
+                super::bundle::fetch_and_extract_bundle(&ctx, &zip_name, &url, Some(&expected))
+                    .await;
+            let state = match result {
+                Ok(Some(report)) => {
+                    tracing::info!(
+                        "static bundle {}: {} bytes announced, {:?} in {:.1}s",
+                        zip_name,
+                        bundle.bytes,
+                        report,
+                        started.elapsed().as_secs_f32()
+                    );
+                    BundleState::Ready
+                }
+                Ok(None) => {
+                    tracing::warn!(
+                        "static bundle {}: not found (404); loading per-file",
+                        zip_name
+                    );
+                    BundleState::Failed
+                }
+                Err(e) => {
+                    tracing::warn!("static bundle {}: {}; loading per-file", zip_name, e);
+                    BundleState::Failed
+                }
+            };
+            let _ = tx.send(state);
+        });
+    }
+
+    /// Wait for the static bundle that will produce `cache_name`, if one is in
+    /// flight. `Ready` / `Failed` / no bundle all return; the caller then goes
+    /// through `fetch_resource`, which is a disk hit for `Ready` and a normal
+    /// download otherwise.
+    async fn await_bundle_for(optimized_data: &OptimizedData, cache_name: &str) {
+        let rx = {
+            let files = optimized_data.bundle_files.read().await;
+            files.get(cache_name).cloned()
+        };
+        let Some(mut rx) = rx else {
+            return;
+        };
+        // A dropped sender (task panicked) ends the wait: treated as Failed.
+        let _ = rx.wait_for(|state| *state != BundleState::Pending).await;
+    }
+
+    /// Make a baked asset (and, for scene GLBs, every texture its `.scn`
+    /// references) present in `user://content/` so `ResourceLoader.load` on the
+    /// path from `optimized_godot_path` succeeds.
+    ///
+    /// Every dependency is awaited here, always: `ResourceProvider` already
+    /// de-duplicates in-flight downloads per hash, so a texture shared by two
+    /// GLBs is fetched once and BOTH waiters block until it is on disk. (The v5
+    /// zip flow tracked "already claimed" hashes and skipped the wait, so the
+    /// second GLB could load its .scn before the first had mounted the shared
+    /// texture — 28 GLBs of Genesis Plaza failed that way on a cold cache.)
     pub async fn async_fetch_optimized_asset(
         file_hash: String,
+        kind: OptimizedKind,
         ctx: ContentProviderContext,
         optimized_data: Arc<OptimizedData>,
         with_dependencies: bool,
     ) -> Result<(), String> {
         tracing::debug!(
-            "async_fetch_optimized_asset: {} (with_dependencies: {})",
+            "async_fetch_optimized_asset: {} ({:?}, with_dependencies: {})",
             file_hash,
+            kind,
             with_dependencies
         );
 
-        // 1. We search which dependencies we need to download
-        let mut futures_to_wait: Vec<_> = Vec::default();
-        let mut hashes_to_load: Vec<String> = Vec::default();
-
-        let dependencies = {
-            if with_dependencies {
-                let dependencies_guard = optimized_data.dependencies.read().await;
-                let mut deps = dependencies_guard
-                    .get(&file_hash)
-                    .cloned()
-                    .unwrap_or_default();
-
-                deps.insert(file_hash.clone());
-                deps // Return the modified set
-            } else {
-                HashSet::from([file_hash.clone()])
-            }
-        };
-
-        let loaded_dependencies = optimized_data.loaded_assets.read().await;
-
-        for hash_dependency in &dependencies {
-            let asset_url: String = format!(
-                "{}/{}-mobile.zip",
-                resolved_optimized_base_url(),
-                hash_dependency
-            );
-            let hash_dependency_zip = format!("{}-mobile.zip", hash_dependency);
-            let absolute_file_path = format!("{}{}", ctx.content_folder, hash_dependency_zip);
-
-            tracing::debug!(
-                "Optimized asset dependency: {} -> url: {}",
-                hash_dependency,
-                asset_url
-            );
-
-            if !loaded_dependencies.contains(hash_dependency) {
-                if hash_dependency != &file_hash {
-                    // we don't add the own file
-                    hashes_to_load.push(hash_dependency.clone());
+        // `(name key, kind)`: textures by hash, the scene by `scene_bake_key`.
+        let mut wanted: Vec<(String, OptimizedKind)> = Vec::new();
+        let mut scene_key = file_hash.clone();
+        {
+            let dependencies_guard = optimized_data.dependencies.read().await;
+            if let Some(deps) = dependencies_guard.get(&file_hash) {
+                if kind == OptimizedKind::Scene {
+                    scene_key = scene_bake_key(&file_hash, deps.iter().map(String::as_str));
                 }
-            } else if ctx
-                .resource_provider
-                .file_exists(&hash_dependency_zip)
-                .await
-            {
-                tracing::debug!("Skipping {} - already cached", hash_dependency_zip);
-                continue; // Skip fetching if the dependency exists in cache
-            }
-
-            // Fetch the resource if it's either a new dependency or missing in cache
-            tracing::debug!("Fetching optimized asset: {}", asset_url);
-
-            #[cfg(feature = "use_resource_tracking")]
-            report_resource_start(&hash_dependency_zip, "optimized_asset_dep");
-
-            #[cfg(feature = "use_resource_tracking")]
-            let hash_for_tracking = hash_dependency_zip.clone();
-
-            let ctx_clone = ctx.clone();
-            let url_for_log = asset_url.clone();
-            let future = async move {
-                let result = ctx_clone
-                    .resource_provider
-                    .fetch_resource(asset_url, hash_dependency_zip.clone(), absolute_file_path)
-                    .await;
-
-                match &result {
-                    Ok(_) => tracing::debug!("Downloaded optimized asset: {}", url_for_log),
-                    Err(e) => tracing::error!("Failed to download {}: {}", url_for_log, e),
+                if with_dependencies {
+                    for dep in deps {
+                        wanted.push((dep.clone(), OptimizedKind::Texture));
+                    }
                 }
+            }
+        }
+        wanted.push((scene_key, kind));
 
-                #[cfg(feature = "use_resource_tracking")]
-                if let Err(ref e) = result {
-                    report_resource_error(&hash_for_tracking, &e.to_string());
-                } else {
-                    report_resource_loaded(&hash_for_tracking);
+        // Files a static bundle is bringing in: wait for it rather than starting
+        // a per-file download of the same bytes (the GLB and each texture — a
+        // dynamic GLB can share a texture with a static one).
+        for (hash, kind) in &wanted {
+            Self::await_bundle_for(&optimized_data, &optimized_cache_name(hash, *kind)).await;
+        }
+
+        let base_url = resolved_optimized_base_url();
+        let futures_to_wait: Vec<_> = wanted
+            .into_iter()
+            .map(|(hash, kind)| {
+                let ctx = ctx.clone();
+                let url = format!("{}/{}", base_url, optimized_remote_name(&hash, kind));
+                let cache_name = optimized_cache_name(&hash, kind);
+                let absolute_path = format!("{}{}", ctx.content_folder, cache_name);
+                async move {
+                    #[cfg(feature = "use_resource_tracking")]
+                    report_resource_start(&cache_name, "optimized_asset_dep");
+                    let result = ctx
+                        .resource_provider
+                        .fetch_resource(url.clone(), cache_name.clone(), absolute_path)
+                        .await;
+                    match &result {
+                        Ok(_) => tracing::debug!("Optimized asset ready: {}", url),
+                        Err(e) => tracing::error!("Failed to download {}: {}", url, e),
+                    }
+                    #[cfg(feature = "use_resource_tracking")]
+                    if let Err(ref e) = result {
+                        report_resource_error(&cache_name, &e.to_string());
+                    } else {
+                        report_resource_loaded(&cache_name);
+                    }
+                    result
                 }
+            })
+            .collect();
 
-                result
-            };
-            futures_to_wait.push(Box::pin(future));
-        }
-
-        // 1.1 We ensure that the file_hash (the scene who is requesting) is the last dependency to load
-        hashes_to_load.push(file_hash);
-
-        // 2. We add what we are going to load into the loaded_dependencies
-        drop(loaded_dependencies); // drop read, before writing
-        let mut loaded_dependencies = optimized_data.loaded_assets.write().await;
-        for hash_to_load in &hashes_to_load {
-            loaded_dependencies.insert(hash_to_load.clone());
-        }
-        drop(loaded_dependencies); // drop write
-
-        // 3. Wait all downloads. If ANY download fails, abort — proceeding to
-        // load resource packs whose deps are missing causes Godot to read
-        // null ExtResource pointers during PackedScene instantiation and
-        // segfault deep in core. Pulling the failure back to the caller's
-        // promise lets the gdscript fall through to the runtime path or
-        // report a clean error instead.
-        tracing::debug!(
-            "Waiting for {} optimized asset downloads...",
-            futures_to_wait.len()
-        );
-        if let Err(e) = try_join_all(futures_to_wait).await {
-            tracing::error!("Some optimized asset downloads failed: {}", e);
-            // Roll back the loaded_assets bookkeeping so a retry can re-fetch.
-            let mut loaded_dependencies = optimized_data.loaded_assets.write().await;
-            for hash_to_load in &hashes_to_load {
-                loaded_dependencies.remove(hash_to_load);
-            }
-            return Err(format!("optimized asset download failed: {}", e));
-        }
-        tracing::debug!("All optimized asset downloads completed successfully");
-
-        // 4. Load what was listed. Same reasoning: a single
-        // load_resource_pack failure means the .scn we're about to
-        // instantiate has dangling ExtResource refs.
-        tracing::debug!(
-            "Loading {} resource packs into Godot...",
-            hashes_to_load.len()
-        );
-        let mut pack_load_failures: Vec<String> = Vec::new();
-        for hash_to_load in &hashes_to_load {
-            let hash_zip = format!("{}-mobile.zip", hash_to_load);
-            let zip_path = &format!("user://content/{}", hash_zip);
-
-            let absolute_path = format!("{}{}", ctx.content_folder, hash_zip);
-            let exists = std::path::Path::new(&absolute_path).exists();
-            tracing::debug!("Loading resource pack: {} (exists: {})", zip_path, exists);
-
-            // Mount on the MAIN thread — load_resource_pack is main-thread
-            // only and deadlocks the render thread if run on a worker.
-            let result = load_resource_pack_on_main(zip_path.to_string()).await;
-
-            if !result {
-                tracing::warn!("load_resource_pack FAILED on {}", zip_path);
-                pack_load_failures.push(hash_to_load.clone());
-            } else {
-                tracing::debug!("load_resource_pack SUCCESS: {}", zip_path);
-            }
-        }
-
-        if !pack_load_failures.is_empty() {
-            let mut loaded_dependencies = optimized_data.loaded_assets.write().await;
-            for hash in &pack_load_failures {
-                loaded_dependencies.remove(hash);
-            }
-            return Err(format!(
-                "{} resource pack(s) failed to load (e.g. {})",
-                pack_load_failures.len(),
-                pack_load_failures[0]
-            ));
-        }
-
-        Ok(())
+        // If ANY download fails, abort — loading a .scn whose ExtResource is
+        // missing makes Godot hand back a null resource (and on some builds
+        // segfaults during instantiation). The caller falls through to the
+        // runtime path or reports a clean error instead.
+        try_join_all(futures_to_wait)
+            .await
+            .map(|_| ())
+            .map_err(|e| format!("optimized asset download failed: {}", e))
     }
 }
 
@@ -2997,5 +3187,26 @@ impl ContentProvider {
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn scene_bake_key_is_the_hash_without_textures_and_stable_with_them() {
+        assert_eq!(scene_bake_key("glb", []), "glb");
+        let a = scene_bake_key("glb", ["t1", "t2"]);
+        assert!(a.starts_with("glb-") && a.len() == "glb-".len() + 16);
+        // order- and duplicate-insensitive: server (Vec) and client (HashSet) agree
+        assert_eq!(a, scene_bake_key("glb", ["t2", "t1", "t2"]));
+        // a different texture set is a different file
+        assert_ne!(a, scene_bake_key("glb", ["t1", "t3"]));
+        assert_ne!(a, scene_bake_key("glb2", ["t1", "t2"]));
+        assert_eq!(
+            optimized_cache_name(&a, OptimizedKind::Scene),
+            format!("{a}.opt.scn")
+        );
     }
 }
