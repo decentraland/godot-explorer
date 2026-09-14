@@ -20,16 +20,10 @@ const THIRD_PERSON_CAMERA := Vector3(0, 0, 3)
 # First person sits just in front of the pivot (inside the head).
 const FIRST_PERSON_SPRING_LENGTH := -0.2
 
-# Pinch-to-zoom clamps (mobile). The third-person spring length rides
-# continuously between these; pinching in past the min drops into first person,
-# pinching back out past it returns to third person at the min (near clamp).
-# Tunable — values from an in-editor pass, see issue #2636.
+# Spring length at which the crosshair reaches its third-person anchor while the
+# 1p<->3p mode tween plays out (kept below the 3.0 default so the glide finishes
+# before the camera does).
 const THIRD_PERSON_MIN_DISTANCE := 1.5
-const THIRD_PERSON_MAX_DISTANCE := 6.0
-# Where the continuous zoom scalar parks while in first person: below the min by
-# a small band so leaving first person needs a deliberate pinch-out. The band is
-# hysteresis — it stops the mode flickering right at the boundary.
-const FIRST_PERSON_ZOOM_LEVEL := THIRD_PERSON_MIN_DISTANCE - 0.6
 
 # CameraCollisionClamp (secondary volumetric sweep to the ACTUAL offset camera
 # position — the SpringArm alone only ray-casts its own axis).

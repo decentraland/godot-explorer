@@ -24,6 +24,7 @@ extends SceneTree
 
 const CameraRig := preload("res://src/logic/player/camera_rig_helpers.gd")
 const Clamp := preload("res://src/logic/player/camera_collision_clamp.gd")
+const Pinch := preload("res://src/logic/player/pinch_gesture_helpers.gd")
 
 const SPRING_LENGTH := 3.0
 # Synthetic lateral camera offset for the clamp tests. The game default is now
@@ -59,7 +60,7 @@ func _initialize() -> void:
 	await _test_clamp_fully_blocked_stays_out_of_wall()
 	_test_rig_targets_third_person()
 	_test_rig_targets_first_person()
-	_test_zoom_clamp_constants()
+	_test_pinch_toggle_direction()
 	_test_crosshair_anchor()
 	_test_scene_pivot_centered_and_masked()
 	_test_scene_has_collision_clamp()
@@ -456,41 +457,18 @@ func _test_rig_targets_first_person() -> void:
 	_expect_eq("1st person camera_offset_x", 0.0, t.camera_offset_x)
 
 
-# Pinch-to-zoom (issue #2636) relies on these ordering invariants: the first-
-# person park level sits BELOW the near clamp (the hysteresis band that stops
-# the mode flickering at the boundary), the near clamp is below the far clamp,
-# and the default distance falls inside the third-person range so a scene reset
-# lands on a valid zoom.
-func _test_zoom_clamp_constants() -> void:
-	if CameraRig.FIRST_PERSON_ZOOM_LEVEL >= CameraRig.THIRD_PERSON_MIN_DISTANCE:
-		_fail(
-			(
-				"zoom: FIRST_PERSON_ZOOM_LEVEL (%.2f) must be below THIRD_PERSON_MIN_DISTANCE (%.2f)"
-				% [CameraRig.FIRST_PERSON_ZOOM_LEVEL, CameraRig.THIRD_PERSON_MIN_DISTANCE]
-			)
-		)
-	if CameraRig.THIRD_PERSON_MIN_DISTANCE >= CameraRig.THIRD_PERSON_MAX_DISTANCE:
-		_fail(
-			(
-				"zoom: THIRD_PERSON_MIN_DISTANCE (%.2f) must be below THIRD_PERSON_MAX_DISTANCE (%.2f)"
-				% [CameraRig.THIRD_PERSON_MIN_DISTANCE, CameraRig.THIRD_PERSON_MAX_DISTANCE]
-			)
-		)
-	var default_distance: float = CameraRig.THIRD_PERSON_CAMERA.z
-	if (
-		default_distance < CameraRig.THIRD_PERSON_MIN_DISTANCE
-		or default_distance > CameraRig.THIRD_PERSON_MAX_DISTANCE
-	):
-		_fail(
-			(
-				"zoom: default distance (%.2f) must fall within [%.2f, %.2f]"
-				% [
-					default_distance,
-					CameraRig.THIRD_PERSON_MIN_DISTANCE,
-					CameraRig.THIRD_PERSON_MAX_DISTANCE
-				]
-			)
-		)
+# Two fixed camera positions (issue #2709 team decision): the pinch toggles
+# 1p<->3p once the accumulated spread passes MODE_TOGGLE_SPREAD, in either
+# direction; below it there is no toggle.
+func _test_pinch_toggle_direction() -> void:
+	if Pinch.toggle_direction(Pinch.MODE_TOGGLE_SPREAD - 0.5) != 0:
+		_fail("toggle fired below the threshold (out)")
+	if Pinch.toggle_direction(-Pinch.MODE_TOGGLE_SPREAD + 0.5) != 0:
+		_fail("toggle fired below the threshold (in)")
+	if Pinch.toggle_direction(Pinch.MODE_TOGGLE_SPREAD) != 1:
+		_fail("spread at the threshold should toggle out (toward 3p)")
+	if Pinch.toggle_direction(-Pinch.MODE_TOGGLE_SPREAD) != -1:
+		_fail("closing at the threshold should toggle in (toward 1p)")
 
 
 # Crosshair anchors (issue #2709): first person is screen center, full third
@@ -502,9 +480,9 @@ func _test_crosshair_anchor() -> void:
 	var tp := CameraRig.crosshair_anchor(CameraRig.THIRD_PERSON_MIN_DISTANCE)
 	_expect_eq("crosshair 3p x", CameraRig.CROSSHAIR_THIRD_PERSON_ANCHOR.x, tp.x)
 	_expect_eq("crosshair 3p y", CameraRig.CROSSHAIR_THIRD_PERSON_ANCHOR.y, tp.y)
-	# Beyond the min (any third-person zoom) stays pinned at the 3p anchor.
-	var far := CameraRig.crosshair_anchor(CameraRig.THIRD_PERSON_MAX_DISTANCE)
-	_expect_eq("crosshair far-zoom y", CameraRig.CROSSHAIR_THIRD_PERSON_ANCHOR.y, far.y)
+	# At the default third-person distance the anchor is fully applied.
+	var far := CameraRig.crosshair_anchor(CameraRig.THIRD_PERSON_CAMERA.z)
+	_expect_eq("crosshair default-zoom y", CameraRig.CROSSHAIR_THIRD_PERSON_ANCHOR.y, far.y)
 	var mid := CameraRig.crosshair_anchor(
 		(CameraRig.FIRST_PERSON_SPRING_LENGTH + CameraRig.THIRD_PERSON_MIN_DISTANCE) * 0.5
 	)
