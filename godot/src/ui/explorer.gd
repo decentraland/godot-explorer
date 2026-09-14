@@ -1311,6 +1311,8 @@ func _get_viewport_scale_factors() -> Vector2:
 
 func _show_friends_panel() -> void:
 	if friends_panel.visible:
+		# Re-tapping the already-selected category collapses the navbar, like tapping outside.
+		navbar.collapse()
 		return
 	joypad.hide()
 	friends_panel.show_panel_on_friends_tab()
@@ -1343,6 +1345,8 @@ func _on_menu_closed() -> void:
 
 func _show_notifications_panel() -> void:
 	if notifications_panel.visible:
+		# Re-tapping the already-selected category collapses the navbar, like tapping outside.
+		navbar.collapse()
 		return
 	joypad.hide()
 	notifications_panel.show_panel()
