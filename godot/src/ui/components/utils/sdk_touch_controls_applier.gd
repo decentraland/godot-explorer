@@ -91,9 +91,12 @@ func _apply_crosshair() -> void:
 func _apply_crosshair_anchor() -> void:
 	if not Global.is_mobile():
 		return
-	if _label_crosshair == null or not _label_crosshair.visible:
-		return
 	if Global.scene_runner.raycast_use_cursor_position:
+		return
+	if _label_crosshair == null or not _label_crosshair.visible:
+		# No crosshair on screen -> no custom aim point; fall back to viewport center
+		# (also covers scene-driven crosshair hiding and hide-ui).
+		Global.scene_runner.clear_crosshair_screen_point()
 		return
 	if not is_instance_valid(_player) or _player.mount_camera == null:
 		return

@@ -100,6 +100,9 @@ var _time_since_glide_end: float = 1000.0
 var _air_jump_delay_timer: float = 0.0
 var _air_jump_direction: Vector3 = Vector3.ZERO
 var _ground_distance: float = INF
+# True while AvatarRaycast is aimed at the crosshair (mobile, non-cinematic) —
+# gates the restore-to-default so it doesn't write constants every tick.
+var _avatar_raycast_crosshair_active: bool = false
 # #b11: typed Array[RID] avoids per-element dynamic cast when passed to
 # PhysicsRayQueryParameters3D.exclude every physics frame.
 var _raycast_exclude: Array[RID] = []
@@ -288,6 +291,9 @@ func _ready():
 	# avatar subtree colliders, including the TriggerDetector which would
 	# otherwise make the ray report ~0m at all times).
 	_build_raycast_exclude()
+	# The scene pointer raycast excludes the same set: with the third-person avatar
+	# centered on screen (issue #2709), the ray from the camera would hit its back.
+	Global.scene_runner.set_pointer_raycast_exclude(_raycast_exclude)
 
 	# Avatar is top-level: initialize its world transform to match the player
 	avatar.global_position = global_position
@@ -760,22 +766,24 @@ func _physics_process(dt: float) -> void:
 
 
 # Issue #2709: aim the avatar outline/view-profile raycast at the crosshair.
-# Same model as the scene interaction raycast (scene_manager): start at the
-# avatar's own depth so the centered avatar doesn't block the ray, direction
-# camera -> crosshair. Mobile only; desktop/cinematic keep the tscn default.
+# The ray keeps its origin at the camera (own avatar is excluded via its removed
+# ClickArea) and only the direction changes. Mobile only; desktop/cinematic keep
+# the tscn default. Writes happen only on state change, not every physics tick.
 func _update_avatar_raycast_to_crosshair() -> void:
-	if not Global.is_mobile() or Global.scene_runner.raycast_use_cursor_position:
-		avatar_raycast.position = Vector3.ZERO
-		avatar_raycast.target_position = AVATAR_RAYCAST_DEFAULT_TARGET
+	var active := Global.is_mobile() and not Global.scene_runner.raycast_use_cursor_position
+	if not active:
+		if _avatar_raycast_crosshair_active:
+			_avatar_raycast_crosshair_active = false
+			avatar_raycast.position = Vector3.ZERO
+			avatar_raycast.target_position = AVATAR_RAYCAST_DEFAULT_TARGET
 		return
+	_avatar_raycast_crosshair_active = true
 	var viewport_size := get_viewport().get_visible_rect().size
 	var anchor := CameraRigHelpers.crosshair_anchor(mount_camera.spring_length)
-	var depth := maxf(-(camera.global_transform.affine_inverse() * global_position).z, 0.0)
-	var origin := camera.project_position(anchor * viewport_size, depth)
-	var dir := (origin - camera.global_position).normalized()
-	avatar_raycast.global_position = origin
+	var dir := camera.project_ray_normal(anchor * viewport_size)
+	avatar_raycast.position = Vector3.ZERO
 	avatar_raycast.target_position = avatar_raycast.to_local(
-		origin + dir * AVATAR_RAYCAST_DEFAULT_TARGET.length()
+		camera.global_position + dir * AVATAR_RAYCAST_DEFAULT_TARGET.length()
 	)
 
 
