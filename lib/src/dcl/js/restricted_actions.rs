@@ -121,8 +121,28 @@ fn op_move_player_to(
         });
 }
 
-// `has_coordinates` and an empty `realm` are the sentinels for the two optional fields of
-// TeleportToRequest (protocol#477); #[op2] params can't be Option (same idiom as movePlayerTo).
+type TeleportArgs = (Option<[i32; 2]>, Option<String>);
+
+/// Both fields of TeleportToRequest are optional (protocol#477) but #[op2] params can't be
+/// Option, so they cross the boundary as sentinels: `has_coordinates` false means no parcel,
+/// an empty `realm` means the player's current one. A request carrying neither is meaningless
+/// and is rejected here, before any UI is touched.
+fn decode_teleport_args(
+    world_coordinates_x: i32,
+    world_coordinates_y: i32,
+    has_coordinates: bool,
+    realm: String,
+) -> Result<TeleportArgs, &'static str> {
+    let world_coordinates = has_coordinates.then_some([world_coordinates_x, world_coordinates_y]);
+    let realm = (!realm.is_empty()).then_some(realm);
+
+    if world_coordinates.is_none() && realm.is_none() {
+        return Err("teleportTo requires worldCoordinates, a realm, or both");
+    }
+
+    Ok((world_coordinates, realm))
+}
+
 #[op2(async)]
 async fn op_teleport_to(
     op_state: Rc<RefCell<OpState>>,
@@ -131,14 +151,13 @@ async fn op_teleport_to(
     has_coordinates: bool,
     #[string] realm: String,
 ) -> Result<(), AnyError> {
-    let world_coordinates = has_coordinates.then_some([world_coordinates_x, world_coordinates_y]);
-    let realm = (!realm.is_empty()).then_some(realm);
-
-    if world_coordinates.is_none() && realm.is_none() {
-        return Err(anyhow!(
-            "teleportTo requires worldCoordinates, a realm, or both"
-        ));
-    }
+    let (world_coordinates, realm) = decode_teleport_args(
+        world_coordinates_x,
+        world_coordinates_y,
+        has_coordinates,
+        realm,
+    )
+    .map_err(|e| anyhow!(e))?;
 
     let (sx, rx) = tokio::sync::oneshot::channel::<Result<(), String>>();
 
@@ -185,4 +204,38 @@ fn op_trigger_scene_emote(
             looping,
             mask: mask as i64,
         });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::decode_teleport_args;
+
+    #[test]
+    fn coordinates_without_a_realm_stay_in_the_current_realm() {
+        let (coordinates, realm) = decode_teleport_args(5, -7, true, String::new()).unwrap();
+        assert_eq!(coordinates, Some([5, -7]));
+        assert_eq!(realm, None);
+    }
+
+    #[test]
+    fn coordinates_with_a_realm_carry_both() {
+        let (coordinates, realm) =
+            decode_teleport_args(5, 5, true, "spacerunner.dcl.eth".to_owned()).unwrap();
+        assert_eq!(coordinates, Some([5, 5]));
+        assert_eq!(realm.as_deref(), Some("spacerunner.dcl.eth"));
+    }
+
+    // No parcel means the realm's own spawn point: the x/y sentinels are ignored, not used as 0,0.
+    #[test]
+    fn a_realm_without_coordinates_drops_the_coordinate_sentinels() {
+        let (coordinates, realm) =
+            decode_teleport_args(9, 9, false, "spacerunner.dcl.eth".to_owned()).unwrap();
+        assert_eq!(coordinates, None);
+        assert_eq!(realm.as_deref(), Some("spacerunner.dcl.eth"));
+    }
+
+    #[test]
+    fn neither_field_is_rejected() {
+        assert!(decode_teleport_args(0, 0, false, String::new()).is_err());
+    }
 }

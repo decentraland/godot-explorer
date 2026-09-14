@@ -1036,7 +1036,9 @@ func _async_load_travel_modal_data(location: Vector2i, _realm: String) -> void:
 		return
 
 	if result is PromiseError:
-		printerr("Error requesting place data for travel modal", result.get_error())
+		# Expected and handled — the fallback below names the place, so this is not a Sentry
+		# event (REVIEW.md §14). A parcel outside the Genesis index hits it routinely.
+		print("Place data unavailable for travel modal, using coordinates: ", result.get_error())
 		current_travel_modal.set_place_name(fallback_name)
 		return
 
