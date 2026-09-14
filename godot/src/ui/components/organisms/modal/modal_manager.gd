@@ -277,8 +277,17 @@ func async_show_teleport_modal(location: Vector2i, realm: String = "") -> void:
 	await get_tree().process_frame
 	await get_tree().process_frame
 
-	# Load place data asynchronously and update modal
-	await _async_load_travel_modal_data(location, destination_realm)
+	# Load place data asynchronously and update modal. A parcel inside a World is not in the
+	# Genesis places index, so the by-position lookup would find nothing and the modal would
+	# sit in its loading skeleton with JUMP IN disabled — worlds identify themselves by name
+	# (#2816).
+	var world_name := WorldPermissionsHelper.world_name_from_realm(
+		destination_realm, Realm.resolve_realm_url(destination_realm)
+	)
+	if world_name.is_empty():
+		await _async_load_travel_modal_data(location, destination_realm)
+	else:
+		await _async_load_change_realm_data(world_name)
 
 
 ## Shows a WORLD travel modal (for .dcl.eth worlds)
@@ -1016,18 +1025,25 @@ func _async_load_travel_modal_data(location: Vector2i, _realm: String) -> void:
 	if not is_instance_valid(current_travel_modal):
 		return
 
+	# The modal opens in its loading skeleton with JUMP IN disabled, and only set_place_name()
+	# releases it — so every path out of here has to name the place, even when the lookup
+	# failed. An unnamed parcel is still somewhere the player can travel to.
+	var fallback_name := "%d,%d" % [location.x, location.y]
+
 	var result = await PlacesHelper.async_get_by_position(location)
+
+	if not is_instance_valid(current_travel_modal):
+		return
 
 	if result is PromiseError:
 		printerr("Error requesting place data for travel modal", result.get_error())
-		return
-
-	if not is_instance_valid(current_travel_modal):
+		current_travel_modal.set_place_name(fallback_name)
 		return
 
 	var json: Dictionary = result.get_string_response_as_json()
 
 	if not json.has("data") or json.data.is_empty():
+		current_travel_modal.set_place_name(fallback_name)
 		return
 
 	var place_data: Dictionary = json.data[0]
@@ -1035,6 +1051,8 @@ func _async_load_travel_modal_data(location: Vector2i, _realm: String) -> void:
 	var title = str(place_data.get("title", ""))
 	if not title.is_empty() and title != "interactive-text":
 		current_travel_modal.set_place_name(title)
+	else:
+		current_travel_modal.set_place_name(fallback_name)
 
 	var creator = place_data.get("contact_name", "")
 	current_travel_modal.set_creator("" if creator == null else str(creator))
