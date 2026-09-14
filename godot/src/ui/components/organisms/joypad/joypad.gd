@@ -1,11 +1,23 @@
 extends Control
 
-# Per-action glyphs live in ActionIcons (components/utils), shared with the interaction pill so the
-# two can never disagree about what an action looks like. Only the state-driven glyphs are here:
-# jump/double-jump/glide are resolved per frame from the player's jump state, and "+" is the
-# joypad's own overflow toggle with no action id at all.
-const IC_JUMP_NORMAL = ActionIcons.IC_JUMP_NORMAL
-const IC_JUMP_PRESSED = ActionIcons.IC_JUMP_PRESSED
+# Per-action glyphs (normal / pressed; glide also has a hold variant). Swapped by button state
+# via each button's OrbSkin. Icons are 100x100, sized to the button through expand_icon.
+const IC_INTERACT_NORMAL = preload("uid://c55dfgqwdxs8f")
+const IC_INTERACT_PRESSED = preload("uid://ct0wqa804vtni")
+const IC_E_NORMAL = preload("uid://ck3e0eaelc3rq")
+const IC_E_PRESSED = preload("uid://01qlcj0sqqnw")
+const IC_F_NORMAL = preload("uid://72h2xkpj1hgk")
+const IC_F_PRESSED = preload("uid://c5u8stl6jg8cl")
+const IC_1_NORMAL = preload("uid://e0ug4dbj1y10")
+const IC_1_PRESSED = preload("uid://ddrk8qdneg8lw")
+const IC_2_NORMAL = preload("uid://cqxtpai3pix5u")
+const IC_2_PRESSED = preload("uid://bbqcb676u1mrv")
+const IC_3_NORMAL = preload("uid://sw0euo71n3gv")
+const IC_3_PRESSED = preload("uid://dm5mjc6eto6v1")
+const IC_4_NORMAL = preload("uid://dvpirmcnk4c2a")
+const IC_4_PRESSED = preload("uid://dx8f2nledowsj")
+const IC_JUMP_NORMAL = preload("uid://d4neuk8df8m4y")
+const IC_JUMP_PRESSED = preload("uid://dykud4ptnkdei")
 const IC_DJUMP_NORMAL = preload("uid://df6fla5fsgl2s")
 const IC_DJUMP_PRESSED = preload("uid://dmosa0apyje0c")
 const IC_GLIDE_NORMAL = preload("uid://baojgdd2swsg1")
@@ -13,6 +25,17 @@ const IC_GLIDE_PRESSED = preload("uid://c52srwv13315")
 const IC_GLIDE_HOLD = preload("uid://c8jb31i47s7jy")
 const IC_PLUS_NORMAL = preload("uid://b14xrn24tfgpr")
 const IC_PLUS_PRESSED = preload("uid://npyym5xkix66")
+
+# action -> [normal, pressed]. Jump is dynamic (see _apply_jump_icon); pointer maps to interact.
+const ACTION_ICONS := {
+	"ia_pointer": [IC_INTERACT_NORMAL, IC_INTERACT_PRESSED],
+	"ia_primary": [IC_E_NORMAL, IC_E_PRESSED],
+	"ia_secondary": [IC_F_NORMAL, IC_F_PRESSED],
+	"ia_action_3": [IC_1_NORMAL, IC_1_PRESSED],
+	"ia_action_4": [IC_2_NORMAL, IC_2_PRESSED],
+	"ia_action_5": [IC_3_NORMAL, IC_3_PRESSED],
+	"ia_action_6": [IC_4_NORMAL, IC_4_PRESSED],
+}
 
 const ICON_SINGLE_JUMP := 0
 const ICON_DOUBLE_JUMP := 1
@@ -456,8 +479,8 @@ func _render_action_on(node: Button, action: String, icon: Dictionary, is_big: b
 	# Mapped actions (pointer / E / F / 1-4) → their orb-swapped normal+pressed icon pair.
 	# Every action in PRIORITY_ORDER is covered above; an unmapped action just keeps the
 	# cleared (glyph-less) orb from _reset_node_visuals.
-	var pair: Array = ActionIcons.button_icons(action)
-	if not pair.is_empty():
+	if ACTION_ICONS.has(action):
+		var pair: Array = ACTION_ICONS[action]
 		_set_slot_icons(node, pair[0], pair[1], null, is_big)
 
 
