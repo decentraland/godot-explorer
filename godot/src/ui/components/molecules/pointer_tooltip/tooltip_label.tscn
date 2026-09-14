@@ -11,6 +11,8 @@ corner_radius_top_right = 8
 corner_radius_bottom_right = 8
 corner_radius_bottom_left = 8
 
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_inputs"]
+
 [sub_resource type="LabelSettings" id="LabelSettings_i8mwd"]
 font = ExtResource("4_sk4cq")
 font_size = 24
@@ -95,7 +97,9 @@ theme_override_constants/separation = 16
 [node name="Label_Text" type="Label" parent="MarginContainer/HBoxContainer/HBoxContainer2" unique_id=578823531]
 auto_translate_mode = 2
 unique_name_in_owner = true
+custom_minimum_size = Vector2(313, 0)
 layout_mode = 2
 text = "Text"
 label_settings = SubResource("LabelSettings_i8mwd")
 vertical_alignment = 1
+text_overrun_behavior = 3

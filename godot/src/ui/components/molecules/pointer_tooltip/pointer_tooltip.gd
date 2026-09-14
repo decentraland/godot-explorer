@@ -4,7 +4,13 @@ extends Control
 ## outright, and is also the floor for the ring below: a tooltip is a wide left-anchored box, not
 ## a point, so at 0 and 180 degrees the ring would otherwise sit its left edge on the crosshair.
 const MIN_OFFSET_X: float = 40.0
-## Vertical gap left between two neighbouring tooltips in the ring.
+## Breathing room between stacked pills.
+##
+## Adjacent pills on the ring are half a radius apart vertically, so a hardcoded radius silently
+## encodes an assumption about the pill's height: the old 90 was tuned when the pill was 52 tall
+## and already overlapped by 1px, and the pill growing to 60 in the HUD-Revamp restyle turned that
+## into a visible collision. The radius is derived from the measured height instead, so resizing
+## the pill can never reintroduce this.
 const PILL_GAP: float = 8.0
 
 var angles: Array = [0, 60, 90, 120, 180]
