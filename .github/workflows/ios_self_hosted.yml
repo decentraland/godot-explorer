@@ -286,7 +286,7 @@ jobs:
 
       - name: Export
         timeout-minutes: 10
-        run: cargo run -- export --target ios
+        run: cargo run -- export --target ios --release
 
       # Package the export TREE (Xcode project + embedded libdclgodot.dylib + assets) and upload it
       # to R2, keyed by branch + commit (mirrors ios_r2_artifact.yml). A separate deploy repo can

@@ -104,7 +104,8 @@ cargo run -- export --target windows
 cargo run -- export --target macos
 cargo run -- export --target android --format apk
 cargo run -- export --target android --format aab
-cargo run -- export --target ios
+cargo run -- export --target ios            # dev export (debug template)
+cargo run -- export --target ios --release  # what CI ships to TestFlight / the App Store
 ```
 
 ## Architecture
