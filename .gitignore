@@ -58,5 +58,4 @@ scripts/bench/.env.bak
 
 .env*
 !.env.example
-.pi-prompt.md
 
