@@ -89,12 +89,10 @@ pub fn update_gltf_container(
                     }
                 } else {
                     // TODO: preload this resource
-                    let mut new_gltf = godot::tools::load::<PackedScene>(
-                        "res://src/decentraland_components/gltf_container.tscn",
-                    )
-                    .instantiate()
-                    .unwrap()
-                    .cast::<DclGltfContainer>();
+                    let mut new_gltf =
+                        crate::scene_runner::scene_cache::instantiate::<DclGltfContainer>(
+                            "res://src/decentraland_components/gltf_container.tscn",
+                        );
 
                     let mut new_gltf_ref = new_gltf.bind_mut();
                     new_gltf_ref.set_dcl_gltf_src(new_value.src.to_godot());

@@ -284,11 +284,9 @@ fn get_or_create_video_player_node(parent: &mut Gd<Node3D>, scene_id: i32) -> Gd
     }
 
     // Create new video player node from scene
-    let mut video_player_node =
-        godot::tools::load::<PackedScene>("res://src/decentraland_components/video_player.tscn")
-            .instantiate()
-            .expect("Failed to instantiate video_player.tscn")
-            .cast::<DclVideoPlayer>();
+    let mut video_player_node = crate::scene_runner::scene_cache::instantiate::<DclVideoPlayer>(
+        "res://src/decentraland_components/video_player.tscn",
+    );
 
     video_player_node.bind_mut().set_dcl_scene_id(scene_id);
     video_player_node.set_name("VideoPlayer");
