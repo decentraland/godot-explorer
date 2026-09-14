@@ -261,6 +261,18 @@ jobs:
           echo $! > "$RUNNER_TEMP/mem_sampler.pid"
           echo "resource sampler started (pid $(cat "$RUNNER_TEMP/mem_sampler.pid")) → $LOG"
 
+      # Allocate the store build number (idempotent per commit SHA, matches the Android versionCode
+      # for the same commit); export below stamps it into CFBundleVersion. Skipped if the secret is
+      # absent (keeps the committed placeholder — these unsigned per-push builds never ship).
+      # Runs BEFORE the Rust builds: lib/build.rs bakes DCL_BUILD_NUMBER into the Sentry release
+      # string (`{version}+{build}`), so allocating it afterwards ships a release without a build.
+      - name: Compute build number
+        uses: ./.github/actions/compute-build-number
+        with:
+          sha: ${{ github.event.pull_request.head.sha || github.sha }}
+          secret: ${{ secrets.BUILD_NUMBER_SECRET }}
+          allocated-by: ios
+
       - name: Build macOS (host)
         timeout-minutes: 30
         run: cargo run -- build --release ${{ env.PROD_FLAG }}
@@ -268,16 +280,6 @@ jobs:
       - name: Build iOS
         timeout-minutes: 30
         run: cargo run -- build --release --target ios ${{ env.PROD_FLAG }}
-
-      # Allocate the store build number (idempotent per commit SHA, matches the Android versionCode
-      # for the same commit); export below stamps it into CFBundleVersion. Skipped if the secret is
-      # absent (keeps the committed placeholder — these unsigned per-push builds never ship).
-      - name: Compute build number
-        uses: ./.github/actions/compute-build-number
-        with:
-          sha: ${{ github.event.pull_request.head.sha || github.sha }}
-          secret: ${{ secrets.BUILD_NUMBER_SECRET }}
-          allocated-by: ios
 
       - name: Import assets
         uses: ./.github/actions/import-assets

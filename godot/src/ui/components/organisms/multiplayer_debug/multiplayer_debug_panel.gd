@@ -155,9 +155,20 @@ func _build_pulse_line(info: Dictionary) -> String:
 	var pulse_endpoint: String = info.get("pulse_endpoint", "")
 	var pulse_failures: int = info.get("pulse_failures", 0)
 	var dual_channel_label: String = "ON" if info.get("dual_channel", true) else "OFF"
+	# The realm is matched exactly and never exchanged, so a wrong one looks identical to an
+	# empty world — worth reading off the panel before debugging anything else.
+	var pulse_realm: String = info.get("pulse_realm", "")
+	if pulse_realm.is_empty():
+		pulse_realm = "[color=gray]pending[/color]"
 	return (
-		"Pulse: %s @ %s | fails %d | dual-ch %s"
-		% [_colored_state(pulse_state), pulse_endpoint, pulse_failures, dual_channel_label]
+		"Pulse: %s @ %s | realm %s | fails %d | dual-ch %s"
+		% [
+			_colored_state(pulse_state),
+			pulse_endpoint,
+			pulse_realm,
+			pulse_failures,
+			dual_channel_label
+		]
 	)
 
 

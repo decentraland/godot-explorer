@@ -22,7 +22,8 @@ signal open_settings
 signal open_settings_panel
 signal open_backpack(on_emotes: bool)
 signal open_discover
-signal open_credits
+## Carries the entry point, reported by Menu.async_show_credits.
+signal open_credits(source: String)
 signal open_own_profile
 signal open_profile_editor
 signal open_navbar_silently
@@ -1673,9 +1674,9 @@ func _check_dclenv_change() -> bool:
 	return true
 
 
-# Applies the comms deeplink params (pulse-server / pulse / dual-channel / livekit).
-# Shared by deep_link_router.process_deep_link and the desktop --fake-deeplink path,
-# so a new param only has to be added once.
+# Applies the comms deeplink params (pulse-server / pulse-realm / pulse / dual-channel / livekit).
+# Shared by deep_link_router.process_deep_link and the desktop --fake-deeplink path, so a new
+# param only has to be added once.
 func _apply_comms_deeplink_params(deep_link) -> void:
 	# `pulse-server=<host:port>` joins a specific Pulse server (shareable — everyone
 	# opening the link lands on the same instance; implies enabling).
@@ -1683,13 +1684,18 @@ func _apply_comms_deeplink_params(deep_link) -> void:
 	if not pulse_server_value.is_empty():
 		print("[DEEPLINK] pulse-server=", pulse_server_value)
 		comms.set_pulse_server(pulse_server_value)
+	# `pulse-realm=<realm>` announces this realm instead of the derived one (exact match; implies enabling).
+	var pulse_realm_value = deep_link.params.get("pulse-realm", "")
+	if not pulse_realm_value.is_empty():
+		print("[DEEPLINK] pulse-realm=", pulse_realm_value)
+		comms.set_pulse_realm(pulse_realm_value)
 	# `pulse=true/false` toggles the transport with the configured endpoint.
 	var pulse_value = deep_link.params.get("pulse", "")
 	if not pulse_value.is_empty():
 		print("[DEEPLINK] pulse=", pulse_value)
 		comms.set_pulse_enabled(pulse_value.to_lower() in ["true", "1", "yes"])
-	# `dual-channel=true/false` (default true): whether movement keeps going over
-	# LiveKit while Pulse is established. false = Pulse-only movement while up.
+	# `dual-channel=true/false`: whether movement and emotes keep going over LiveKit while
+	# Pulse is established. Overrides the deployment's `dual-channel` flag (default true) for this run.
 	var dual_channel_value = deep_link.params.get("dual-channel", "")
 	if not dual_channel_value.is_empty():
 		print("[DEEPLINK] dual-channel=", dual_channel_value)

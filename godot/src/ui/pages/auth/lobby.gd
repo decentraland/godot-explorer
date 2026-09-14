@@ -525,7 +525,7 @@ func _ready():
 	if Global.is_mobile():
 		var gate_decision := await _async_run_version_gate()
 		if gate_decision == "hard":
-			# Overlay blocks interaction; loading screen stays behind it.
+			# The overlay replaces the startup splash and blocks all interaction.
 			return
 
 	# Track startup metric for analytics
