@@ -49,11 +49,10 @@ const CLAMP_NEAR_CLEARANCE := 0.08
 # is smoothed so geometry doesn't pop through on the way out.
 const CLAMP_EXTEND_SPEED := 8.0
 
-# Crosshair anchors (issue #2709): first person centers on screen; third person
-# sits up-right of the avatar's head — exact position measured from the issue's
-# Figma frame (~(850, 320) of 1600x720).
-const CROSSHAIR_FIRST_PERSON_ANCHOR := Vector2(0.5, 0.5)
-const CROSSHAIR_THIRD_PERSON_ANCHOR := Vector2(0.53, 0.44)
+# Crosshair placement (issue #2709, device-QA spec): in third person it sits
+# CROSSHAIR_TOP_GAP_PX pixels above the avatar's on-screen top edge,
+# horizontally aligned with the avatar's on-screen side edge.
+const CROSSHAIR_TOP_GAP_PX := 20.0
 # Floor guard: some scene ground meshes have no usable collider (single-sided shell
 # or cmask=0), so the sweep casts slip through and — at far zoom, angled down — the
 # camera dips below the visible floor. Independent of scene geometry, the camera is
@@ -84,12 +83,14 @@ static func rig_targets(third_person: bool) -> Dictionary:
 	}
 
 
-# Crosshair screen anchor (normalized) for a given spring-arm length. Interpolates
-# in sync with the camera distance across the 1p↔3p crossing so there is no jump
-# at the mode switch; fully third-person (>= MIN distance) pins the upper-third
-# anchor regardless of how far out the zoom goes.
-static func crosshair_anchor(spring_length: float) -> Vector2:
-	var t := clampf(
-		inverse_lerp(FIRST_PERSON_SPRING_LENGTH, THIRD_PERSON_MIN_DISTANCE, spring_length), 0.0, 1.0
-	)
-	return CROSSHAIR_FIRST_PERSON_ANCHOR.lerp(CROSSHAIR_THIRD_PERSON_ANCHOR, t)
+# Crosshair screen position (px): screen center blended toward the avatar-edge
+# tracking point by `t` (0 = first person, 1 = full third person), so a pinch
+# across the mode boundary moves it smoothly. avatar_top_px / avatar_edge_px
+# are the unprojected top-of-head and side-edge points; the tracked crosshair
+# sits CROSSHAIR_TOP_GAP_PX above the top, at the edge's x.
+static func crosshair_position(
+	avatar_top_px: Vector2, avatar_edge_px: Vector2, viewport_size: Vector2, t: float
+) -> Vector2:
+	var center := viewport_size * 0.5
+	var tracked := Vector2(avatar_edge_px.x, avatar_top_px.y - CROSSHAIR_TOP_GAP_PX)
+	return center.lerp(tracked, clampf(t, 0.0, 1.0))

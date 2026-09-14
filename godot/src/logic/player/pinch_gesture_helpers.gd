@@ -29,8 +29,9 @@ static func should_commit(start_spread: float, current_spread: float) -> bool:
 
 
 # Net spread direction once the accumulated delta passes MODE_TOGGLE_SPREAD:
-# 1 = spreading (zoom out, toward third person), -1 = closing (zoom in, toward
-# first person), 0 = below the toggle threshold.
+# 1 = spreading (fingers opening), -1 = closing (fingers together), 0 = below
+# the toggle threshold. The caller maps direction to camera mode (Roblox-style:
+# opening zooms in toward first person, closing zooms out toward third person).
 static func toggle_direction(accumulated_delta: float) -> int:
 	if accumulated_delta >= MODE_TOGGLE_SPREAD:
 		return 1

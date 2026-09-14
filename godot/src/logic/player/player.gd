@@ -48,6 +48,10 @@ const JUMP_ACTION_GLIDE_TOGGLE := 2  # open or close the glider
 
 # AvatarRaycast resting target (matches player.tscn): straight ahead, 10m.
 const AVATAR_RAYCAST_DEFAULT_TARGET := Vector3(0, 0, -10)
+# Top-of-head height above the player origin and half body width, for projecting
+# the avatar's on-screen top/side edges the crosshair tracks (issue #2709).
+const AVATAR_TOP_HEIGHT := 1.8
+const AVATAR_HALF_WIDTH := 0.35
 
 # #b9: matches the CharacterBody3D.collision_mask in player.tscn (layer 2 =
 # world/terrain). Keeps the ground raycast from pinging avatar wearables,
@@ -357,10 +361,11 @@ func begin_pinch_zoom() -> void:
 	_pinch_start_mode = camera.get_camera_mode() as Global.CameraMode
 
 
-## `pixel_delta` is the change in distance between the two fingers this frame:
-## positive (spreading) zooms out toward third person, negative (closing) zooms
-## in toward first person. After a toggle the accumulator resets, so swapping
-## back needs a fresh threshold's worth of spread in the opposite direction.
+## `pixel_delta` is the change in distance between the two fingers this frame.
+## Roblox-style mapping: fingers opening zoom IN (toward first person), fingers
+## closing zoom OUT (toward third person). After a toggle the accumulator
+## resets, so swapping back needs a fresh threshold's worth of spread in the
+## opposite direction.
 func apply_pinch_zoom(pixel_delta: float) -> void:
 	if camera_mode_change_blocked:
 		return
@@ -368,17 +373,13 @@ func apply_pinch_zoom(pixel_delta: float) -> void:
 	var mode: Global.CameraMode = camera.get_camera_mode() as Global.CameraMode
 	match PinchGestureHelpers.toggle_direction(_pinch_accumulated_delta):
 		1:
-			if mode == Global.CameraMode.FIRST_PERSON:
-				Global.set_camera_mode(Global.CameraMode.THIRD_PERSON)
-				_pinch_accumulated_delta = 0.0
-			else:
-				_pinch_accumulated_delta = 0.0
-		-1:
 			if mode == Global.CameraMode.THIRD_PERSON:
 				Global.set_camera_mode(Global.CameraMode.FIRST_PERSON)
-				_pinch_accumulated_delta = 0.0
-			else:
-				_pinch_accumulated_delta = 0.0
+			_pinch_accumulated_delta = 0.0
+		-1:
+			if mode == Global.CameraMode.FIRST_PERSON:
+				Global.set_camera_mode(Global.CameraMode.THIRD_PERSON)
+			_pinch_accumulated_delta = 0.0
 
 
 func end_pinch_zoom() -> void:
@@ -705,6 +706,32 @@ func _physics_process(dt: float) -> void:
 	_update_avatar_raycast_to_crosshair()
 
 
+# Issue #2709: crosshair screen position in pixels. First person / transition
+# start: screen center. Full third person: 20px above the avatar's on-screen top
+# edge, aligned with its on-screen side edge. Blended across the 1p<->3p
+# crossing so a pinch doesn't jump it.
+func get_crosshair_screen_position(viewport_size: Vector2) -> Vector2:
+	var t := clampf(
+		inverse_lerp(
+			CameraRigHelpers.FIRST_PERSON_SPRING_LENGTH,
+			CameraRigHelpers.THIRD_PERSON_MIN_DISTANCE,
+			mount_camera.spring_length
+		),
+		0.0,
+		1.0
+	)
+	var top_world := global_position + Vector3(0, AVATAR_TOP_HEIGHT, 0)
+	if t <= 0.0 or camera.is_position_behind(top_world):
+		return viewport_size * 0.5
+	var edge_world := top_world + camera.global_transform.basis.x * AVATAR_HALF_WIDTH
+	return CameraRigHelpers.crosshair_position(
+		camera.unproject_position(top_world),
+		camera.unproject_position(edge_world),
+		viewport_size,
+		t
+	)
+
+
 # Issue #2709: aim the avatar outline/view-profile raycast at the crosshair.
 # The ray keeps its origin at the camera (own avatar is excluded via its removed
 # ClickArea) and only the direction changes. Mobile only; desktop/cinematic keep
@@ -719,8 +746,7 @@ func _update_avatar_raycast_to_crosshair() -> void:
 		return
 	_avatar_raycast_crosshair_active = true
 	var viewport_size := get_viewport().get_visible_rect().size
-	var anchor := CameraRigHelpers.crosshair_anchor(mount_camera.spring_length)
-	var dir := camera.project_ray_normal(anchor * viewport_size)
+	var dir := camera.project_ray_normal(get_crosshair_screen_position(viewport_size))
 	avatar_raycast.position = Vector3.ZERO
 	avatar_raycast.target_position = avatar_raycast.to_local(
 		camera.global_position + dir * AVATAR_RAYCAST_DEFAULT_TARGET.length()

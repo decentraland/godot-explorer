@@ -61,7 +61,7 @@ func _initialize() -> void:
 	_test_rig_targets_third_person()
 	_test_rig_targets_first_person()
 	_test_pinch_toggle_direction()
-	_test_crosshair_anchor()
+	_test_crosshair_position()
 	_test_scene_pivot_centered_and_masked()
 	_test_scene_has_collision_clamp()
 	_finish()
@@ -471,23 +471,29 @@ func _test_pinch_toggle_direction() -> void:
 		_fail("closing at the threshold should toggle in (toward 1p)")
 
 
-# Crosshair anchors (issue #2709): first person is screen center, full third
-# person is the above-right anchor, and the crossing interpolates in between.
-func _test_crosshair_anchor() -> void:
-	var fp := CameraRig.crosshair_anchor(CameraRig.FIRST_PERSON_SPRING_LENGTH)
-	_expect_eq("crosshair 1p x", 0.5, fp.x)
-	_expect_eq("crosshair 1p y", 0.5, fp.y)
-	var tp := CameraRig.crosshair_anchor(CameraRig.THIRD_PERSON_MIN_DISTANCE)
-	_expect_eq("crosshair 3p x", CameraRig.CROSSHAIR_THIRD_PERSON_ANCHOR.x, tp.x)
-	_expect_eq("crosshair 3p y", CameraRig.CROSSHAIR_THIRD_PERSON_ANCHOR.y, tp.y)
-	# At the default third-person distance the anchor is fully applied.
-	var far := CameraRig.crosshair_anchor(CameraRig.THIRD_PERSON_CAMERA.z)
-	_expect_eq("crosshair default-zoom y", CameraRig.CROSSHAIR_THIRD_PERSON_ANCHOR.y, far.y)
-	var mid := CameraRig.crosshair_anchor(
-		(CameraRig.FIRST_PERSON_SPRING_LENGTH + CameraRig.THIRD_PERSON_MIN_DISTANCE) * 0.5
-	)
-	if mid.y >= 0.5 or mid.y <= CameraRig.CROSSHAIR_THIRD_PERSON_ANCHOR.y:
-		_fail("crosshair mid-transition should interpolate between anchors (y=%.3f)" % mid.y)
+# Crosshair placement (issue #2709): center in first person; in third person,
+# 20px above the avatar's on-screen top edge at the side edge's x; the crossing
+# blends between both.
+func _test_crosshair_position() -> void:
+	var vp := Vector2(1600, 720)
+	var top := Vector2(800, 300)
+	var edge := Vector2(880, 340)
+	var center := vp * 0.5
+
+	# First person (t=0): dead center.
+	var fp := CameraRig.crosshair_position(top, edge, vp, 0.0)
+	_expect_eq("crosshair 1p x", center.x, fp.x)
+	_expect_eq("crosshair 1p y", center.y, fp.y)
+
+	# Full third person (t=1): edge x, 20px above the top edge.
+	var tp := CameraRig.crosshair_position(top, edge, vp, 1.0)
+	_expect_eq("crosshair 3p x", edge.x, tp.x)
+	_expect_eq("crosshair 3p y", top.y - CameraRig.CROSSHAIR_TOP_GAP_PX, tp.y)
+
+	# Mid-transition blends between center and the tracked point.
+	var mid := CameraRig.crosshair_position(top, edge, vp, 0.5)
+	if mid.distance_to(center.lerp(tp, 0.5)) > 0.5:
+		_fail("crosshair mid-transition should blend center->tracked (got %s)" % mid)
 
 
 # Guard the actual scene: the Mount pivot stays centered (no lateral X in its
