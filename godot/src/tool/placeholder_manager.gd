@@ -1,11 +1,17 @@
 class_name PlaceholderManager
 
-enum STATUS { UNLOADED, LOADING, LOADED, SLEEPING }
+## Lazily instantiates a placeholder's scene and frees it again once it has been out of use
+## for a while.
+##
+## A plain RefCounted with no coroutines, on purpose: `placeholder` and `instance` belong to
+## the owner's tree, and a RefCounted that awaits outlives that tree (its suspended call keeps
+## it alive) and resumes on freed nodes. The owner - a Node - drives the sleep timer instead,
+## so every callback dies with the tree that holds the instance.
+
+enum STATUS { UNLOADED, LOADED, SLEEPING }
 
 var placeholder: Node
 var instance: Node
-
-var sleep_time := 5000.0  # In milliseconds
 var status := STATUS.UNLOADED
 
 
@@ -13,59 +19,35 @@ func _init(_placeholder: Node) -> void:
 	placeholder = _placeholder
 
 
-## If state is LOADING waits for the instance to load.
-## If state is LOADED returns the instance.
-## If state is SLEEPING cancel sleep and returns the instance.
-## If status is UNLOADED creates a new instance.
-func _async_instantiate() -> Node:
-	if status == STATUS.LOADED:
-		return instance
-	if status == STATUS.SLEEPING:
-		status = STATUS.LOADED
-		return instance
-	if status == STATUS.LOADING:
-		while 1:
-			await Engine.get_main_loop().process_frame
-			if status == STATUS.LOADED or instance:
-				return instance
-
-	status = STATUS.LOADING
-	return await _instantiate()
-
-
-## Creates and instance from the placeholder
-func _instantiate() -> Node:
-	if not instance:
+## Returns the instance, creating it from the placeholder when there is none. Cancels a
+## pending sleep.
+func instantiate() -> Node:
+	if instance == null:
 		instance = placeholder.create_instance()
 		instance.set_name(placeholder.get_name() + "_instance")
-		status = STATUS.LOADED
+	status = STATUS.LOADED
 	return instance
 
 
-## Starts a timer to free the instance
-func async_put_to_sleep() -> void:
-	if status != STATUS.LOADED:
-		return
-	status = STATUS.SLEEPING
-	var start_time = Time.get_ticks_msec()
-	while 1:
-		await Engine.get_main_loop().process_frame
-		if status != STATUS.SLEEPING:
-			return
-		if Time.get_ticks_msec() - start_time > sleep_time:
-			break
-	_remove_instance()
+## Marks the instance as out of use. The owner calls free_if_sleeping() later; showing the
+## instance again in between (instantiate / wake) cancels that.
+func put_to_sleep() -> void:
+	if status == STATUS.LOADED:
+		status = STATUS.SLEEPING
 
 
-## Frees the instance
-func _remove_instance() -> void:
-	if status != STATUS.SLEEPING:
-		return
-	queue_free_instance()
+func wake() -> void:
+	if status == STATUS.SLEEPING:
+		status = STATUS.LOADED
+
+
+func free_if_sleeping() -> void:
+	if status == STATUS.SLEEPING:
+		queue_free_instance()
 
 
 func queue_free_instance() -> void:
-	if instance:
+	if instance != null:
 		instance.queue_free()
 		instance = null
 	status = STATUS.UNLOADED

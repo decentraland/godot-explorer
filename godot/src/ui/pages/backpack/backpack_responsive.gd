@@ -10,12 +10,12 @@ var _is_switching: bool = false
 func _ready() -> void:
 	backpack_portrait.placeholder.visible = false
 	backpack_landscape.placeholder.visible = false
-	async_handle_screen_resize()
+	handle_screen_resize()
 
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_RESIZED:
-		async_handle_screen_resize()
+		handle_screen_resize()
 
 
 func _get_active_manager() -> PlaceholderManager:
@@ -25,14 +25,14 @@ func _get_active_manager() -> PlaceholderManager:
 	return backpack_landscape
 
 
-func async_show_emotes() -> void:
+func show_emotes() -> void:
 	var manager := _get_active_manager()
-	await manager._async_instantiate()
+	manager.instantiate()
 	manager.instance.show_emotes()
 	manager.instance.press_button_emotes()
 
 
-func async_handle_screen_resize() -> void:
+func handle_screen_resize() -> void:
 	if not is_node_ready():
 		return
 	if _is_switching:
@@ -45,7 +45,7 @@ func async_handle_screen_resize() -> void:
 			$BackpackLandscape.hide()
 		else:
 			backpack_landscape.queue_free_instance()
-			await backpack_portrait._async_instantiate()
+			backpack_portrait.instantiate()
 			backpack_portrait.instance.show()
 	else:
 		if Engine.is_editor_hint():
@@ -53,6 +53,6 @@ func async_handle_screen_resize() -> void:
 			$BackpackLandscape.show()
 		else:
 			backpack_portrait.queue_free_instance()
-			await backpack_landscape._async_instantiate()
+			backpack_landscape.instantiate()
 			backpack_landscape.instance.show()
 	_is_switching = false
