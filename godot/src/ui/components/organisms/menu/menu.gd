@@ -11,6 +11,9 @@ signal request_debug_panel(enabled: bool)
 signal request_multiplayer_debug(enabled: bool)
 #signals from advanced settings
 
+## Grace period before a faded-out menu screen is freed (see _start_screen_sleep).
+const SCREEN_SLEEP_SECONDS := 5.0
+
 var is_in_game: bool = false  # when it is playing in the 3D Game or not
 var is_open: bool = false
 var buttons_quantity: int = 0
@@ -150,7 +153,7 @@ func async_close():
 
 
 func async_show_discover(open_menu := true):
-	await control_discover._async_instantiate()
+	control_discover.instantiate()
 	select_discover_screen()
 	if is_instance_valid(static_button_discover):
 		static_button_discover.button_pressed = true
@@ -187,15 +190,15 @@ func _on_credits_page_closed() -> void:
 
 
 func async_show_backpack(on_emotes := false):
-	await control_backpack._async_instantiate()
+	control_backpack.instantiate()
 	select_backpack_screen()
 	if on_emotes:
-		await control_backpack.instance.async_show_emotes()
+		control_backpack.instance.show_emotes()
 	_open()
 
 
 func async_show_settings():
-	await control_settings._async_instantiate()
+	control_settings.instantiate()
 
 	if not is_instance_valid(control_settings.instance):
 		return
@@ -217,13 +220,13 @@ func async_show_settings():
 func async_show_own_profile():
 	if not Global.is_orientation_portrait():
 		return
-	await control_profile_portrait._async_instantiate()
+	control_profile_portrait.instantiate()
 	select_profile_screen(true, true)
 	_open()
 
 
 func async_show_profile_editor():
-	await control_profile_portrait._async_instantiate()
+	control_profile_portrait.instantiate()
 	select_profile_screen(true, true)
 	_open()
 	if control_profile_portrait.instance:
@@ -328,9 +331,7 @@ func fade_in(node: PlaceholderManager):
 	if not is_instance_valid(node.instance):
 		return
 	selected_node = node
-	# Cancel any pending sleep for this node (from a previous fade_out)
-	if node.status == PlaceholderManager.STATUS.SLEEPING:
-		node.status = PlaceholderManager.STATUS.LOADED
+	node.wake()
 	node.instance.show()
 	if is_instance_valid(fade_in_tween):
 		if fade_in_tween.is_running():
@@ -351,7 +352,22 @@ func fade_out(node: PlaceholderManager):
 	fade_out_tween = create_tween()
 	fade_out_tween.tween_property(node.instance, "modulate", Color(1, 1, 1, 0), 0.3)
 	fade_out_tween.tween_callback(node.instance.hide)
-	fade_out_tween.tween_callback(node.async_put_to_sleep)
+	fade_out_tween.tween_callback(_start_screen_sleep.bind(node))
+
+
+## A screen that faded out is freed after SCREEN_SLEEP_SECONDS unless something showed it
+## again. Both callables are methods of this Menu: if the menu goes away first the engine
+## drops them, instead of a timer resuming on a freed screen (which is what a coroutine in
+## PlaceholderManager used to do).
+func _start_screen_sleep(node: PlaceholderManager) -> void:
+	node.put_to_sleep()
+	get_tree().create_timer(SCREEN_SLEEP_SECONDS).timeout.connect(
+		_free_if_still_sleeping.bind(node)
+	)
+
+
+func _free_if_still_sleeping(node: PlaceholderManager) -> void:
+	node.free_if_sleeping()
 
 
 func _on_visibility_changed():
