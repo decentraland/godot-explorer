@@ -204,10 +204,7 @@ func _async_submit() -> void:
 	# JPEG encode, log-tail read and Sentry capture BEFORE its first await, so
 	# without this the spinner's frame never renders (PR #2779 review).
 	await get_tree().process_frame
-	var images: Array[PackedByteArray] = []
-	for shot in _shots:
-		images.append(shot["bytes"])
-	var result := await BugReportService.async_submit(uuid, dcl_text_edit.get_text_value(), images)
+	var result := await BugReportService.async_submit(uuid, dcl_text_edit.get_text_value(), _shots)
 	modal_actions.set_busy(false)
 	_rebuild_screenshot_slots()
 	_update_submit_enabled()

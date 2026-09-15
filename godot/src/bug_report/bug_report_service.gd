@@ -38,15 +38,18 @@ const JPEG_QUALITY := 0.85
 const DESCRIPTION_MAX_LENGTH := 300
 
 
-## Files a bug report with up to MAX_EVIDENCE_COUNT JPEG `images` (may be empty).
+## Files a bug report with up to MAX_EVIDENCE_COUNT screenshots (may be empty).
 ##
-## Takes already-encoded bytes rather than an `Image`: the screenshot is encoded
-## when it is captured or picked, so the submit path — which the player waits on
-## behind a spinner — does no image work at all (PR #2779 review).
+## Each shot is `{bytes, image}`, the shape BugReportModal keeps: `bytes` is the
+## JPEG encoded when it was captured or picked, `image` its decoded preview.
+## Screenshots that fit their share of the body are sent as-is, so the usual
+## submit does no image work (PR #2779 review). Only an oversized one is
+## re-encoded from `image`, one frame per image so the spinner keeps animating
+## (PR #2906 review).
 ##
 ## Returns {ok: bool, id: String, error: String}. Never throws.
 static func async_submit(
-	issue_type_uuid: String, description: String, images: Array[PackedByteArray] = []
+	issue_type_uuid: String, description: String, shots: Array[Dictionary] = []
 ) -> Dictionary:
 	if issue_type_uuid.is_empty():
 		return {"ok": false, "id": "", "error": "missing issue type"}
@@ -57,13 +60,16 @@ static func async_submit(
 
 	# Before the POST: the returned link is an input to the description. Returns
 	# "" whenever Sentry is unavailable, and the report is filed regardless.
+	var images: Array[PackedByteArray] = []
+	for shot in shots:
+		images.append(shot.get("bytes", PackedByteArray()))
 	var diagnostics_link := SentryUserFeedback.submit(trimmed, images)
 
 	var payload := {
 		"ticket_attributes": _build_attributes(issue_type_uuid, trimmed, diagnostics_link)
 	}
 
-	var evidence := _build_evidence(images)
+	var evidence := await _async_build_evidence(shots)
 	if not evidence.is_empty():
 		payload["evidence"] = evidence
 
@@ -109,6 +115,8 @@ static func _build_attributes(
 		"Graphic Card": device["gpu"],
 		"RAM": device["ram"],
 		"Client version": String(DclGlobal.get_version()),
+		# A raw int, not an option-id string like Issue Type: the intercom-proxy
+		# contract (issue #2842) defines Platform as 1 Desktop / 2 Mobile.
 		"Platform": PLATFORM_MOBILE,
 	}
 
@@ -194,27 +202,38 @@ static func _collect_device_info() -> Dictionary:
 	}
 
 
-# One evidence entry per image, in order. Each image gets an equal share of the
-# body budget. One that is over its share is re-encoded smaller, and dropped only
-# when even that fails, so an oversized image can't take the whole ticket down
-# with it. The originals still reach Sentry via SentryUserFeedback, so a dropped
-# image is missing from the ticket but not lost.
-static func _build_evidence(images: Array[PackedByteArray]) -> Array:
-	var present: Array[PackedByteArray] = []
-	for bytes in images:
+# One evidence entry per screenshot, in order. The body budget is shared out as
+# we go: each image gets the remaining bytes divided by the images still to come,
+# so one that comes in small or gets dropped leaves more room for the rest. An
+# image over its share is re-encoded smaller, and dropped only when even that
+# fails, so it can't take the whole ticket down with it. The originals still
+# reach Sentry via SentryUserFeedback, so a dropped image is missing from the
+# ticket but not lost.
+static func _async_build_evidence(shots: Array[Dictionary]) -> Array:
+	var present: Array[Dictionary] = []
+	for shot in shots:
+		var bytes: PackedByteArray = shot.get("bytes", PackedByteArray())
 		if not bytes.is_empty():
-			present.append(bytes)
+			present.append(shot)
 	if present.size() > MAX_EVIDENCE_COUNT:
 		present.resize(MAX_EVIDENCE_COUNT)
-	if present.is_empty():
-		return []
 
-	var budget := mini(MAX_EVIDENCE_BYTES, TOTAL_EVIDENCE_BYTES / present.size())
 	var evidence: Array = []
-	for bytes in present:
+	var remaining_bytes := TOTAL_EVIDENCE_BYTES
+	for i in present.size():
+		var budget := mini(MAX_EVIDENCE_BYTES, remaining_bytes / (present.size() - i))
+		var bytes: PackedByteArray = present[i]["bytes"]
 		var fitted := bytes
 		if fitted.size() > budget:
-			fitted = BugReportCapture.encode_within(ImagePickerService.decode(bytes), budget)
+			# Yield first: each re-encode is a few full-size JPEG encodes on the
+			# main thread, and the spinner should paint between them.
+			var tree := Engine.get_main_loop() as SceneTree
+			if tree != null:
+				await tree.process_frame
+			var image: Image = present[i].get("image")
+			if image == null:
+				image = ImagePickerService.decode(bytes)
+			fitted = BugReportCapture.encode_within(image, budget)
 		if fitted.is_empty():
 			push_warning(
 				(
@@ -223,6 +242,7 @@ static func _build_evidence(images: Array[PackedByteArray]) -> Array:
 				)
 			)
 			continue
+		remaining_bytes -= fitted.size()
 		evidence.append({"content_type": "image/jpeg", "data": Marshalls.raw_to_base64(fitted)})
 	return evidence
 

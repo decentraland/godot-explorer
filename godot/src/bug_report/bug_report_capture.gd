@@ -25,10 +25,10 @@ const MAX_DIMENSION := 1920
 const JPEG_QUALITY := 0.85
 
 # Fallbacks for encode_within(), tried in order until an image fits its evidence
-# budget. The first matches a regular capture, so an image already in budget
-# doesn't get worse.
+# budget. Starts below MAX_DIMENSION/JPEG_QUALITY: captures and gallery picks are
+# already encoded that way, and only images over budget get here, so re-encoding
+# at the same settings would always miss (PR #2906 review).
 const SHRINK_STEPS := [
-	{"dimension": MAX_DIMENSION, "quality": JPEG_QUALITY},
 	{"dimension": 1440, "quality": 0.75},
 	{"dimension": 1080, "quality": 0.7},
 	{"dimension": 720, "quality": 0.6},
