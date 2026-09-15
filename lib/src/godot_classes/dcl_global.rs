@@ -205,6 +205,12 @@ pub struct DclGlobal {
 
     pub is_mobile: bool,
 
+    // Refreshed by any on-screen touch-button (joypad) activity, press or
+    // release, to now+250ms. Lets the scene-input poller forward synthetic
+    // actions on desktop even when the mouse isn't captured — including the
+    // release frame itself, so PET_UP edges aren't dropped (power-lock bug).
+    pub joypad_input_active_until: Option<std::time::Instant>,
+
     pub is_android: bool,
 
     pub is_ios: bool,
@@ -436,6 +442,7 @@ impl INode for DclGlobal {
         Self {
             _base: base,
             is_mobile,
+            joypad_input_active_until: None,
             is_android,
             is_ios,
             is_virtual_mobile: false,
@@ -813,6 +820,20 @@ impl DclGlobal {
             Ok(()) => godot_print!("Rust log filter updated to: {}", filter),
             Err(e) => godot_error!("Failed to update Rust log filter: {}", e),
         }
+    }
+
+    #[func]
+    pub fn set_joypad_input_active(_active: bool) {
+        // Any joypad activity (press or release) refreshes the window; the
+        // param is ignored on purpose (GDScript calls with both true/false).
+        DclGlobal::singleton().bind_mut().joypad_input_active_until =
+            Some(std::time::Instant::now() + std::time::Duration::from_millis(250));
+    }
+
+    /// True while the window opened by the last joypad activity is open.
+    pub fn joypad_input_active(&self) -> bool {
+        self.joypad_input_active_until
+            .is_some_and(|t| t > std::time::Instant::now())
     }
 
     /// Per-profile particle budgets, applied on graphic profile change.

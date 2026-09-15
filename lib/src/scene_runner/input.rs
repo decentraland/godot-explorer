@@ -93,7 +93,9 @@ impl InputState {
         // it means that you are interacting with the UI.
         // Mobile: Ignore that rule
         let is_pointer_locked = input.get_mouse_mode() == MouseMode::CAPTURED;
-        if is_pointer_locked || DclGlobal::singleton().bind().is_mobile {
+        let global = DclGlobal::singleton();
+        let global_bind = global.bind();
+        if is_pointer_locked || global_bind.is_mobile || global_bind.joypad_input_active() {
             for (input_action, action_string) in self.dcl_to_action.iter() {
                 let current_state = if Self::is_movement_action(input_action) {
                     // Use strength threshold for movement actions so that tiny
