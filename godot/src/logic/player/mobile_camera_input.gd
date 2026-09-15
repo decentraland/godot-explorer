@@ -33,6 +33,10 @@ var _joystick: VirtualJoystick = null
 # finger over the joystick / a button / scene UI never looks. Independent from the
 # global pinch tracking below.
 var _look_index: int = -1
+# True once the look finger travelled past LOOK_DEADZONE (camera actually
+# rotating). Gates joystick-zone pinch candidacy: an engaged look + joystick
+# touch is walk+look, not a pinch.
+var _look_engaged: bool = false
 # Roblox-style: a SECOND finger INSIDE the joystick's active area drives the camera
 # (the thumbstick keeps only its first finger). The joystick ignores extra touches
 # and its STOP filter eats them from gui_input, so this look is driven from the
@@ -88,6 +92,7 @@ func _notification(what: int) -> void:
 		_touches.clear()
 		_free_touches.clear()
 		_look_index = -1
+		_look_engaged = false
 		_js_look_index = -1
 		if _pinch_active:
 			_end_pinch()
@@ -123,6 +128,7 @@ func _input(event: InputEvent) -> void:
 		_free_touches.erase(event.index)
 		if event.index == _look_index:
 			_look_index = -1
+			_look_engaged = false
 		if event.index == _js_look_index:
 			_js_look_index = -1
 		_on_touch_count_changed()
@@ -181,12 +187,20 @@ func _on_touch_count_changed() -> void:
 
 
 # Free touch indices — those seen by gui_input, so owned by no UI (not the joystick,
-# scene UI, HUD or chat). Only these can form a pinch.
+# scene UI, HUD or chat) — PLUS fingers inside the joystick's active rect while the
+# joystick hasn't engaged movement: a horizontal pinch often anchors a thumb there
+# (QA: "horizontal pinch is hard to trigger"). Excluded while the joystick is
+# walking (is_pressed) or the look is already engaged, so walk + look is untouched.
 func _free_pinch_candidates() -> Array:
 	var out: Array = []
 	for idx in _free_touches:
 		if _touches.has(idx):
 			out.append(idx)
+	if _joystick and not _joystick.is_pressed and not _look_engaged:
+		var js_rect := _joystick.get_active_area_global_rect()
+		for idx in _touches:
+			if not _free_touches.has(idx) and js_rect.has_point(_touches[idx]):
+				out.append(idx)
 	return out
 
 
@@ -200,6 +214,7 @@ func _seed_pinch_candidate(cam: Array) -> void:
 	# not at commit — otherwise the camera keeps rotating through the gesture's
 	# opening frames (QA: "sometimes the pinch isn't caught and the camera moves").
 	_look_index = -1
+	_look_engaged = false
 
 
 func _try_recognize_pinch() -> void:
@@ -236,9 +251,14 @@ func _commit_pinch(a: Vector2, b: Vector2) -> void:
 	_pinch_active = true
 	_pinch_prev_distance = PinchGestureHelpers.spread(a, b)
 	# Both fingers are in the camera area (never the joystick's), so the walk keeps
-	# running — only the free single-finger look yields to the zoom.
+	# running — only the free single-finger look yields to the zoom. A joystick-zone
+	# finger (idle joystick) means the "walk" was really the pinch's anchor thumb:
+	# cancel the joystick so its base doesn't drive the avatar mid-pinch.
 	_look_index = -1
+	_look_engaged = false
 	_js_look_index = -1
+	if _joystick and (not _free_touches.has(_pinch_a) or not _free_touches.has(_pinch_b)):
+		_joystick.cancel()
 	if _player:
 		_player.begin_pinch_zoom()
 
@@ -269,6 +289,7 @@ func _end_pinch() -> void:
 	# A surviving finger doesn't resume look until re-pressed (its press was
 	# consumed while pinching) — cleared so the next fresh touch can look.
 	_look_index = -1
+	_look_engaged = false
 	if _player:
 		_player.end_pinch_zoom()
 
@@ -304,6 +325,7 @@ func _on_gui_input(event: InputEvent) -> void:
 			_free_touches.erase(event.index)
 			if event.index == _look_index:
 				_look_index = -1
+				_look_engaged = false
 		accept_event()
 	elif event is InputEventScreenDrag:
 		if not _pinch_active and event.index == _look_index:
@@ -313,6 +335,7 @@ func _on_gui_input(event: InputEvent) -> void:
 			# through the pinch's opening gap (QA: "pinch rotates the camera").
 			var press_pos: Vector2 = _free_touches.get(event.index, event.position)
 			if event.position.distance_to(press_pos) > LOOK_DEADZONE:
+				_look_engaged = true
 				_player.apply_look_delta(event.relative)
 		accept_event()
 

@@ -195,6 +195,13 @@ func external_end() -> void:
 	emit_signal("stick_position", Vector2.ZERO)
 
 
+## Cancel any active joystick gesture (walk + claimed touch). Called by the
+## pinch recognizer when a gesture over the joystick zone turns out to be a
+## pinch, so the walk base doesn't keep driving the avatar mid-pinch.
+func cancel() -> void:
+	_reset()
+
+
 func get_active_area_global_rect() -> Rect2:
 	return _active_area.get_global_rect()
 

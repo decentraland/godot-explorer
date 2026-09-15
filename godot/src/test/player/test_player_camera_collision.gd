@@ -490,10 +490,11 @@ func _test_crosshair_position() -> void:
 	_expect_eq("crosshair 3p x", edge.x, tp.x)
 	_expect_eq("crosshair 3p y", top.y - CameraRig.CROSSHAIR_TOP_GAP_PX, tp.y)
 
-	# Mid-transition blends between center and the tracked point.
+	# Mid-transition blends with a QUADRATIC weight (t=0.5 -> w=0.25), keeping the
+	# tracking weight near zero while the camera is still near the avatar.
 	var mid := CameraRig.crosshair_position(top, edge, vp, 0.5)
-	if mid.distance_to(center.lerp(tp, 0.5)) > 0.5:
-		_fail("crosshair mid-transition should blend center->tracked (got %s)" % mid)
+	if mid.distance_to(center.lerp(tp, 0.25)) > 0.5:
+		_fail("crosshair mid-transition should blend center->tracked with t^2 (got %s)" % mid)
 
 	# Near-plane projection flights are clamped inside the screen margin (the
 	# device-QA "crosshair jumps outward" case).

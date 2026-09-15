@@ -90,7 +90,10 @@ static func rig_targets(third_person: bool) -> Dictionary:
 # tracking point by `t` (0 = first person, 1 = full third person), so a pinch
 # across the mode boundary moves it smoothly. avatar_top_px / avatar_edge_px
 # are the unprojected top-of-head and side-edge points; the tracked crosshair
-# sits CROSSHAIR_TOP_GAP_PX above the top, at the edge's x.
+# sits CROSSHAIR_TOP_GAP_PX above the top, at the edge's x. The blend is
+# QUADRATIC (t^2): while the camera is still near the avatar the unprojected
+# edge point swings wildly (clamped to the screen margin), so the tracking
+# weight stays near zero and the transition reads as one gentle glide.
 static func crosshair_position(
 	avatar_top_px: Vector2, avatar_edge_px: Vector2, viewport_size: Vector2, t: float
 ) -> Vector2:
@@ -98,4 +101,6 @@ static func crosshair_position(
 	var margin := Vector2(CROSSHAIR_SCREEN_MARGIN, CROSSHAIR_SCREEN_MARGIN)
 	var tracked := Vector2(avatar_edge_px.x, avatar_top_px.y - CROSSHAIR_TOP_GAP_PX)
 	tracked = tracked.clamp(margin, viewport_size - margin)
-	return center.lerp(tracked, clampf(t, 0.0, 1.0))
+	var w := clampf(t, 0.0, 1.0)
+	w *= w
+	return center.lerp(tracked, w)
