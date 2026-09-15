@@ -8,6 +8,9 @@ enum AdoptedMode { NONE, CAMERA, JOYSTICK }
 
 const HORIZONTAL_SENS: float = 0.5
 const VERTICAL_SENS: float = 0.5
+# Pixels a free finger must travel before single-finger look engages (see
+# gui_input's drag handler).
+const LOOK_DEADZONE := 8.0
 
 # --- Pinch-to-zoom recognizer (issue #2636 follow-up) ------------------------
 # Roblox model: pinch belongs to the CAMERA area only — the joystick's active rect
@@ -40,8 +43,10 @@ var _js_look_index: int = -1
 # _free_touches (below) decides which are pinch-eligible.
 var _touches: Dictionary = {}
 # Touches that reached _on_gui_input, i.e. NOT consumed by any UI (scene UI, HUD
-# panels, chat, the joystick). Only these are pinch candidates, so a pinch over
-# interactive UI never steals its drags. Added in gui_input, dropped on release.
+# panels, chat, the joystick), mapped to their PRESS position. Only these are
+# pinch candidates, so a pinch over interactive UI never steals its drags; the
+# press position feeds the look deadzone below. Added in gui_input, dropped on
+# release.
 var _free_touches: Dictionary = {}
 var _pinch_active: bool = false
 var _pinch_a: int = -1
@@ -289,7 +294,7 @@ func _on_gui_input(event: InputEvent) -> void:
 	# gui_input at all marks the touch FREE (no UI consumed it) → pinch-eligible.
 	if event is InputEventScreenTouch:
 		if event.pressed:
-			_free_touches[event.index] = true
+			_free_touches[event.index] = event.position
 			if _look_index == -1:
 				_look_index = event.index
 			# A second free finger seeds the pinch pair immediately (kills single-
@@ -302,7 +307,13 @@ func _on_gui_input(event: InputEvent) -> void:
 		accept_event()
 	elif event is InputEventScreenDrag:
 		if not _pinch_active and event.index == _look_index:
-			_player.apply_look_delta(event.relative)
+			# Look deadzone: the finger must travel LOOK_DEADZONE px from its press
+			# point before the camera moves. An intended pinch lands the second
+			# finger first (which kills the look), so the camera no longer rotates
+			# through the pinch's opening gap (QA: "pinch rotates the camera").
+			var press_pos: Vector2 = _free_touches.get(event.index, event.position)
+			if event.position.distance_to(press_pos) > LOOK_DEADZONE:
+				_player.apply_look_delta(event.relative)
 		accept_event()
 
 

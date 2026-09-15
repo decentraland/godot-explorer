@@ -495,6 +495,12 @@ func _test_crosshair_position() -> void:
 	if mid.distance_to(center.lerp(tp, 0.5)) > 0.5:
 		_fail("crosshair mid-transition should blend center->tracked (got %s)" % mid)
 
+	# Near-plane projection flights are clamped inside the screen margin (the
+	# device-QA "crosshair jumps outward" case).
+	var flown := CameraRig.crosshair_position(Vector2(800, -5000), Vector2(9000, 0), vp, 1.0)
+	_expect_eq("crosshair clamped x", vp.x - CameraRig.CROSSHAIR_SCREEN_MARGIN, flown.x)
+	_expect_eq("crosshair clamped y", CameraRig.CROSSHAIR_SCREEN_MARGIN, flown.y)
+
 
 # Guard the actual scene: the Mount pivot stays centered (no lateral X in its
 # transform) and carries the CL_PHYSICS mask; the offset lives on a CameraArm
