@@ -4,6 +4,9 @@
 ## Teleports between the 4 corners of the area (72,-10) to (80,10) multiple times.
 
 extends Node
+# Dev tool / test: it owns every node it awaits on and never ships in a store build, so the
+# release-template node-across-await rules are off here (see .gdlintrc).
+# gdlint: disable=node-reference-across-await,node-argument-across-await
 
 const GOERLI_REALM = "https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main-latest"
 
