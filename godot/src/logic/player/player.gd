@@ -52,6 +52,9 @@ const AVATAR_RAYCAST_DEFAULT_TARGET := Vector3(0, 0, -10)
 # the avatar's on-screen top/side edges the crosshair tracks (issue #2709).
 const AVATAR_TOP_HEIGHT := 1.8
 const AVATAR_HALF_WIDTH := 0.35
+# Exponential smoothing rate (1/s) for the crosshair screen position — turns
+# near-plane projection flights during the mode tween into a gentle glide.
+const CROSSHAIR_SMOOTH_SPEED := 12.0
 
 # #b9: matches the CharacterBody3D.collision_mask in player.tscn (layer 2 =
 # world/terrain). Keeps the ground raycast from pinging avatar wearables,
@@ -99,6 +102,9 @@ var _ground_distance: float = INF
 # True while AvatarRaycast is aimed at the crosshair (mobile, non-cinematic) —
 # gates the restore-to-default so it doesn't write constants every tick.
 var _avatar_raycast_crosshair_active: bool = false
+# Smoothed crosshair screen position (see _update_crosshair_screen_position).
+var _crosshair_screen_pos := Vector2.ZERO
+var _crosshair_pos_initialized := false
 # #b11: typed Array[RID] avoids per-element dynamic cast when passed to
 # PhysicsRayQueryParameters3D.exclude every physics frame.
 var _raycast_exclude: Array[RID] = []
@@ -703,14 +709,17 @@ func _physics_process(dt: float) -> void:
 	if not is_on_floor() and not is_on_ceiling():
 		velocity.y -= external_y_for_move
 
+	_update_crosshair_screen_position(dt)
 	_update_avatar_raycast_to_crosshair()
 
 
-# Issue #2709: crosshair screen position in pixels. First person / transition
-# start: screen center. Full third person: 20px above the avatar's on-screen top
-# edge, aligned with its on-screen side edge. Blended across the 1p<->3p
-# crossing so a pinch doesn't jump it.
-func get_crosshair_screen_position(viewport_size: Vector2) -> Vector2:
+# Issue #2709: raw crosshair target in screen pixels. First person / transition
+# start: screen center. Full third person: 20px above the avatar's on-screen
+# top edge, aligned with its on-screen side edge. Blended across the 1p<->3p
+# crossing. Callers use the SMOOTHED value (get_crosshair_screen_position) —
+# near the near plane the unprojected target can fly far off-screen, and the
+# smoothing turns that into a gentle glide instead of a jump.
+func _compute_crosshair_target(viewport_size: Vector2) -> Vector2:
 	var t := clampf(
 		inverse_lerp(
 			CameraRigHelpers.FIRST_PERSON_SPRING_LENGTH,
@@ -732,6 +741,31 @@ func get_crosshair_screen_position(viewport_size: Vector2) -> Vector2:
 	)
 
 
+# Smoothed crosshair position (single source for the HUD label, the scene
+# interaction raycast and AvatarRaycast, so the three never desync).
+func get_crosshair_screen_position() -> Vector2:
+	return _crosshair_screen_pos
+
+
+func _update_crosshair_screen_position(dt: float) -> void:
+	var viewport_size := get_viewport().get_visible_rect().size
+	var active := Global.is_mobile() and not Global.scene_runner.raycast_use_cursor_position
+	if not active:
+		# Desktop / cinematic own the crosshair; park the smoothed value at center
+		# so re-entering mobile gameplay glides from center, never from a stale point.
+		_crosshair_screen_pos = viewport_size * 0.5
+		_crosshair_pos_initialized = false
+		return
+	var target := _compute_crosshair_target(viewport_size)
+	if not _crosshair_pos_initialized:
+		_crosshair_pos_initialized = true
+		_crosshair_screen_pos = target
+	else:
+		_crosshair_screen_pos = _crosshair_screen_pos.lerp(
+			target, 1.0 - exp(-CROSSHAIR_SMOOTH_SPEED * dt)
+		)
+
+
 # Issue #2709: aim the avatar outline/view-profile raycast at the crosshair.
 # The ray keeps its origin at the camera (own avatar is excluded via its removed
 # ClickArea) and only the direction changes. Mobile only; desktop/cinematic keep
@@ -745,8 +779,7 @@ func _update_avatar_raycast_to_crosshair() -> void:
 			avatar_raycast.target_position = AVATAR_RAYCAST_DEFAULT_TARGET
 		return
 	_avatar_raycast_crosshair_active = true
-	var viewport_size := get_viewport().get_visible_rect().size
-	var dir := camera.project_ray_normal(get_crosshair_screen_position(viewport_size))
+	var dir := camera.project_ray_normal(_crosshair_screen_pos)
 	avatar_raycast.position = Vector3.ZERO
 	avatar_raycast.target_position = avatar_raycast.to_local(
 		camera.global_position + dir * AVATAR_RAYCAST_DEFAULT_TARGET.length()
