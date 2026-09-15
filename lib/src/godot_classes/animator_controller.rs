@@ -39,6 +39,10 @@ pub struct MultipleAnimationController {
     playing_anims: HashMap<String, AnimationItem>,
 
     finished_animations: HashSet<String>,
+
+    // Clip names already reported to Sentry, so a persistently broken scene
+    // doesn't re-warn on every Animator update (REVIEW.md: no unbounded warn!).
+    warned_missing_clips: HashSet<String>,
 }
 
 #[godot_api]
@@ -108,12 +112,12 @@ impl MultipleAnimationController {
             playing_anims: HashMap::new(),
             existing_anims_duration,
             finished_animations: HashSet::new(),
+            warned_missing_clips: HashSet::new(),
         })
     }
 
     pub fn apply_anims(&mut self, suggested_value: &PbAnimator) {
         let mut value = suggested_value.clone();
-        let requested_clips: Vec<String> = value.states.iter().map(|s| s.clip.clone()).collect();
 
         // Remap clip names that don't match existing animations.
         // Godot's GLTF importer may strip numeric suffixes (e.g., "Action.001" -> "Action")
@@ -135,12 +139,22 @@ impl MultipleAnimationController {
         // If every requested clip is missing, the entity renders its rest pose
         // with zero feedback — the classic silent T-pose/frozen-entity failure
         // (e.g. scene asks "Flow.003", Godot imported "Flow_003").
-        if value.states.is_empty() && !requested_clips.is_empty() {
-            tracing::warn!(
-                "Animator: all clips dropped. requested={:?} available={:?}",
-                requested_clips,
-                self.existing_anims_duration.keys().collect::<Vec<_>>()
-            );
+        // Warn once per clip name: apply_anims runs per CRDT update and these
+        // warnings ship to Sentry.
+        if value.states.is_empty() {
+            let mut missing: Vec<String> = Vec::new();
+            for state in &suggested_value.states {
+                if self.warned_missing_clips.insert(state.clip.clone()) {
+                    missing.push(state.clip.clone());
+                }
+            }
+            if !missing.is_empty() {
+                tracing::warn!(
+                    "Animator: all clips dropped. requested={:?} available={:?}",
+                    missing,
+                    self.existing_anims_duration.keys().collect::<Vec<_>>()
+                );
+            }
         }
 
         let (playing_animations, stopped_animations): (_, Vec<_>) = value
@@ -701,11 +715,21 @@ pub fn apply_anims(gltf_container_node: Gd<Node3D>, value: &PbAnimator) {
             };
 
             if resolved_clip.is_none() {
-                tracing::warn!(
-                    "Animator: clip '{}' not found, available={:?}",
-                    state.clip,
-                    existing_anims.keys().collect::<Vec<_>>()
-                );
+                // Warn once per clip name: ships to Sentry.
+                static WARNED: std::sync::OnceLock<std::sync::Mutex<HashSet<String>>> =
+                    std::sync::OnceLock::new();
+                let warned = WARNED.get_or_init(Default::default);
+                if warned
+                    .lock()
+                    .unwrap()
+                    .insert(format!("{}|{}", state.clip, existing_anims.len()))
+                {
+                    tracing::warn!(
+                        "Animator: clip '{}' not found, available={:?}",
+                        state.clip,
+                        existing_anims.keys().collect::<Vec<_>>()
+                    );
+                }
             }
             if let Some(clip_name) = resolved_clip {
                 let anim_name = StringName::from(&clip_name);

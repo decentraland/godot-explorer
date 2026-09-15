@@ -27,6 +27,10 @@ use crate::tools::memory_debugger::MemoryDebugger;
 #[cfg(feature = "use_memory_debugger")]
 use crate::tools::benchmark_report::BenchmarkReport;
 
+/// How long the scene-input poller keeps forwarding after the last joypad
+/// activity, so the release edge of a tap isn't dropped with the press.
+const JOYPAD_INPUT_WINDOW: std::time::Duration = std::time::Duration::from_millis(250);
+
 use super::{
     dcl_cli::DclCli, dcl_config::DclConfig,
     dcl_dynamic_graphics_manager::DclDynamicGraphicsManager, dcl_realm::DclRealm,
@@ -849,11 +853,9 @@ impl DclGlobal {
     }
 
     #[func]
-    pub fn set_joypad_input_active(_active: bool) {
-        // Any joypad activity (press or release) refreshes the window; the
-        // param is ignored on purpose (GDScript calls with both true/false).
+    pub fn notify_joypad_input() {
         DclGlobal::singleton().bind_mut().joypad_input_active_until =
-            Some(std::time::Instant::now() + std::time::Duration::from_millis(250));
+            Some(std::time::Instant::now() + JOYPAD_INPUT_WINDOW);
     }
 
     /// True while the window opened by the last joypad activity is open.

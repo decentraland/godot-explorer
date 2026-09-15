@@ -51,34 +51,24 @@ func _on_gui_input(event: InputEvent) -> void:
 	if disabled:
 		return
 
-	# Desktop runs "mobile simulation": treat left mouse clicks like screen
-	# touches so the on-screen buttons work the same as on a phone.
-	var is_press_event := false
-	var is_release_event := false
 	if event is InputEventScreenTouch:
-		is_press_event = event.pressed and (event.index == _touch_index or _touch_index == -1)
-		is_release_event = not event.pressed and event.index == _touch_index
-	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
-		is_press_event = event.pressed
-		is_release_event = not event.pressed
-
-	if is_press_event:
-		if event is InputEventScreenTouch:
-			_touch_index = event.index
-		_is_action_active = true
-		set_pressed_no_signal(true)
-		Input.action_press(trigger_action)
-		DclGlobal.set_joypad_input_active(true)
-		button_down.emit()
-		touch_action_changed.emit(true)
-		accept_event()
-	elif is_release_event:
-		if _is_action_active:
-			Input.action_release(trigger_action)
-			_is_action_active = false
-			button_up.emit()
-			touch_action_changed.emit(false)
-		set_pressed_no_signal(false)
-		_touch_index = -1
-		DclGlobal.set_joypad_input_active(false)
-		accept_event()
+		if event.pressed:
+			if _touch_index == -1:
+				_touch_index = event.index
+				_is_action_active = true
+				set_pressed_no_signal(true)
+				Input.action_press(trigger_action)
+				DclGlobal.notify_joypad_input()
+				button_down.emit()
+				touch_action_changed.emit(true)
+			accept_event()
+		elif not event.pressed and event.index == _touch_index:
+			if _is_action_active:
+				Input.action_release(trigger_action)
+				_is_action_active = false
+				button_up.emit()
+				touch_action_changed.emit(false)
+			set_pressed_no_signal(false)
+			_touch_index = -1
+			DclGlobal.notify_joypad_input()
+			accept_event()
