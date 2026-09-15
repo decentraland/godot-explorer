@@ -28,7 +28,8 @@ use super::{
         SegmentEventCommonExplorerFields, SegmentEventExplorerMoveToParcel,
         SegmentEventFirebaseInit, SegmentEventGuestWalletCreation,
         SegmentEventIosStoreKitEnvironment, SegmentEventLoading, SegmentEventRequestFriend,
-        SegmentEventRequestResult, SegmentEventScreenViewed, SegmentEventUnfriend,
+        SegmentEventRequestResult, SegmentEventSceneLocaleRequested, SegmentEventScreenViewed,
+        SegmentEventUnfriend,
     },
     frame::Frame,
     install_attribution::InstallAttribution,
@@ -456,6 +457,16 @@ impl Metrics {
             },
         });
         self.queue_event("Screen Viewed", event);
+    }
+
+    /// A scene subscribed to `localeChanged` (#2707). Emitted from Rust (scene rpc calls),
+    /// once per scene instance. Adoption proxy: SDK platform module subscribes on import.
+    pub fn track_scene_locale_requested(&mut self, scene_id: String, locale: String) {
+        let event = SegmentEvent::SceneLocaleRequested(SegmentEventSceneLocaleRequested {
+            scene_id,
+            locale,
+        });
+        self.queue_event("Scene Locale Requested", event);
     }
 
     // ---------------------------------------------------------------------------

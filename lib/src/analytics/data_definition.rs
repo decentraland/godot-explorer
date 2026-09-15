@@ -80,6 +80,16 @@ pub enum SegmentEvent {
     Loading(Box<SegmentEventLoading>),
     GuestWalletCreation(SegmentEventGuestWalletCreation),
     RequestResult(SegmentEventRequestResult),
+    SceneLocaleRequested(SegmentEventSceneLocaleRequested),
+}
+
+/// SCENE_LOCALE_REQUESTED (#2707): a scene subscribed to the player's language.
+#[derive(Serialize, Clone)]
+pub struct SegmentEventSceneLocaleRequested {
+    // Scene entity id.
+    pub scene_id: String,
+    // BCP-47 app locale reported to the scene (e.g. "pt-BR").
+    pub locale: String,
 }
 
 /// Cross-system correlation anchor. The ONLY Segment event that carries the Firebase Analytics
@@ -750,6 +760,11 @@ pub fn build_segment_event_batch_item(
         ),
         SegmentEvent::ClickButton(event) => (
             "Click Button".to_string(),
+            serde_json::to_value(event).unwrap(),
+            None,
+        ),
+        SegmentEvent::SceneLocaleRequested(event) => (
+            "Scene Locale Requested".to_string(),
             serde_json::to_value(event).unwrap(),
             None,
         ),

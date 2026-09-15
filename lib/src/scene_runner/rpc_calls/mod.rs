@@ -115,6 +115,15 @@ pub fn process_rpcs(scene: &mut Scene, current_parcel_scene_id: &SceneId, rpc_ca
                 let mut communication_manager = comms.bind_mut();
                 communication_manager.send_scene_message(scene_id, body, recipient);
             }
+            RpcCall::SceneLocaleRequested { locale } => {
+                if let Some(global) = DclGlobal::try_singleton() {
+                    let mut metrics = global.bind().metrics.clone();
+                    metrics.bind_mut().track_scene_locale_requested(
+                        scene.scene_entity_definition.id.clone(),
+                        locale,
+                    );
+                }
+            }
             RpcCall::GetTextureSize { src, response } => {
                 let mut rpc_sender = DclRpcSenderGetTextureSize::new_gd();
                 rpc_sender.bind_mut().set_sender(response);

@@ -158,6 +158,9 @@ pub fn create_runtime(inspect: bool) -> (deno_core::JsRuntime, Option<InspectorS
         ..Default::default()
     });
 
+    // ICU data is loaded by the first JsRuntime::new, so its default locale can only be set now.
+    crate::godot_classes::dcl_scene_locale::init_icu_default_locale();
+
     #[cfg(feature = "enable_inspector")]
     if inspect {
         tracing::debug!(
