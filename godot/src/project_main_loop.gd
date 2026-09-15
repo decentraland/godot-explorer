@@ -31,6 +31,13 @@ const SOURCE_EXIT_REASON := "exit_reason"
 # The diagnostics event behind a user-filed bug report (sentry_user_feedback.gd),
 # marked with a `category` tag. One per report, so exempt from the remote rate too.
 const SOURCE_FEEDBACK := "feedback"
+# A GDScript access to a freed object, as printed by the engine. On the release
+# template the same access is a SIGSEGV when it is a method call, cast, `is`,
+# `for` or `await` (the debug template validates those); only property get/set
+# on a freed instance still logs in release. Each hit is a use-after-free bug in
+# our GDScript, so it is kept at crash-level visibility regardless of the error
+# firehose flag. Bounded by the addon's per-line throttle (see _initialize).
+const SOURCE_FREED_INSTANCE := "freed_instance"
 
 # Fraction of each source kept once `sentry-error-events` is on, applied on top
 # of the remote `sentry-sample-rate`. Sources we author and can act on stay at
@@ -43,6 +50,7 @@ const SOURCE_KEEP_RATE := {
 	SOURCE_SCENE_CRASH: 1.0,
 	SOURCE_EXIT_REASON: 1.0,
 	SOURCE_FEEDBACK: 1.0,
+	SOURCE_FREED_INSTANCE: 1.0,
 	SOURCE_RUST_APP: 1.0,
 	SOURCE_RUST_DEP: 0.05,
 	SOURCE_SCENE: 0.01,
@@ -56,8 +64,16 @@ const UNKNOWN_SOURCE_KEEP_RATE := 0.01
 # the kill switch stays total). Crashes are a fraction of a percent of volume,
 # and the two structured sources cap themselves - at most ten scene crashes per
 # session and one event per exit reason per launch - so sampling them would
-# only randomly hide the events these tags exist for.
-const REMOTE_RATE_EXEMPT := [SOURCE_CRASH, SOURCE_SCENE_CRASH, SOURCE_EXIT_REASON, SOURCE_FEEDBACK]
+# only randomly hide the events these tags exist for. Freed-instance errors are
+# a crash on the release template, bounded by the logger throttle, and the
+# whole point of keeping them is to see every site - same treatment.
+const REMOTE_RATE_EXEMPT := [
+	SOURCE_CRASH,
+	SOURCE_SCENE_CRASH,
+	SOURCE_EXIT_REASON,
+	SOURCE_FEEDBACK,
+	SOURCE_FREED_INSTANCE,
+]
 
 # Sampling rate used until the `sentry-sample-rate` feature flag loads — also
 # the effective rate when the fetch fails or the flag is absent. 1.0 because
@@ -239,15 +255,14 @@ func _before_send(event: SentryEvent) -> SentryEvent:
 	if event.get_exception_count() == 0:
 		return _keep(event, SOURCE_CAPTURE)
 
-	# Everything below is the SentryGodotLogger firehose, off by default and
-	# re-enabled remotely by `sentry-error-events`. Errors keep flowing as
-	# breadcrumbs either way, so a later crash still carries the recent-error
-	# trail. Gating here rather than after classification means the text work
-	# never runs at all in the default configuration.
-	if not sentry_error_events_enabled:
+	# Everything below is the SentryGodotLogger firehose: off by default,
+	# re-enabled remotely by `sentry-error-events`, with one always-on
+	# exception (see _firehose_source). Errors keep flowing as breadcrumbs
+	# either way, so a later crash still carries the recent-error trail.
+	var source := _firehose_source(_event_text(event), sentry_error_events_enabled)
+	if source.is_empty():
 		return null
-
-	return _keep(event, _classify(event))
+	return _keep(event, source)
 
 
 ## Rolls the remote rate and then the per-source rate, and tags the survivor.
@@ -271,6 +286,38 @@ func _keep(event: SentryEvent, source: String) -> SentryEvent:
 	return event
 
 
+## Source for a logger event with this text, or "" to drop it. Static and
+## text-only so the decision is unit-tested (src/test/sentry) - SentryEvent
+## cannot be given an exception from GDScript, so the shape test in
+## _before_send is the only part that is not.
+##
+## An engine error about a freed object is exempt from the flag: it is a
+## use-after-free in our GDScript - the class of bug that is a SIGSEGV on the
+## release template - so it is kept whether or not the firehose is on. Tested
+## first because it is the only text test that must run in the default
+## configuration; the classifier below never runs there.
+static func _firehose_source(text: String, error_events_enabled: bool) -> String:
+	if _is_freed_instance_error(text):
+		return SOURCE_FREED_INSTANCE
+	if not error_events_enabled:
+		return ""
+	return _classify(text)
+
+
+## True for every engine message about touching a freed object. The substrings
+## cover the whole family in the fork's `gdscript_vm.cpp`, `variant_setget.cpp`
+## and `object.cpp`: "on a previously freed instance" (call, `is`, assign,
+## return, iterate), "on a base object of type 'previously freed'" (property
+## get/set), "Trying to cast a freed object" / "Trying to await on a freed
+## object", and "was freed or unreferenced while a signal is being emitted".
+static func _is_freed_instance_error(text: String) -> bool:
+	return (
+		text.contains("previously freed")
+		or text.contains("a freed object")
+		or text.contains("was freed or unreferenced while a signal")
+	)
+
+
 ## Buckets a logger event by its text. SentryGodotLogger leaves `message` empty
 ## and puts the error in exception 0, and SentryEvent (sentry-godot 2.x) still
 ## exposes no exception type, culprit or stack frames - so that one string is
@@ -280,8 +327,7 @@ func _keep(event: SentryEvent, source: String) -> SentryEvent:
 ## push_error: it expands to ERR_PRINT -> ERR_HANDLER_ERROR, indistinguishable
 ## from a C++ engine error without serializing the whole event. Splitting those
 ## out needs a marker at the call site, not a richer test here.
-func _classify(event: SentryEvent) -> String:
-	var text := _event_text(event)
+static func _classify(text: String) -> String:
 	if text.begins_with(RUST_SCENE_PREFIX):
 		return SOURCE_SCENE
 	if text.begins_with(RUST_APP_PREFIX):

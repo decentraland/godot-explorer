@@ -59,7 +59,7 @@ static func _report_stale(site: String) -> void:
 
 	# Telemetry is off in asset-server / CI builds, where SentrySDK was never initialized.
 	if not DclGlobal.is_telemetry_disabled():
-		SentrySDK.capture_message(message, SentrySDK.LEVEL_WARNING)
+		SentrySDK.capture_message(message, SentrySDK.LEVEL_ERROR)
 
 	# Segment carries the same hit so the rate can be tracked per release alongside the
 	# store crash rate, which is the number this guard is meant to move.
