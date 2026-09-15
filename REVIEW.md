@@ -18,6 +18,7 @@ These are blocking prerequisites. Resolve each one (or explicitly note its statu
    - If no iOS artifact exists, output exactly: *"No iOS build on this PR — a maintainer can add the `build` label to trigger one. I will not approve platform-sensitive iOS changes without a green iOS build."* and hold approval.
    - If the PR is purely backend / GDScript-with-no-platform-branch / docs, an iOS build is **not** required — call that out and proceed.
 3. **Submodule pointer drift.** If `git diff main...HEAD` shows changes under `plugins/dcl-godot-ios/godot` or any submodule and the PR description does not mention it, treat it as accidental and ask the author to confirm.
+4. **The description says what and why.** Read `## What` and `## Why`. If they are missing or do not tell you what changed and why in plain language, or it reads as raw AI output (see Section 4 → "PR description shape"), ask the author to rewrite it in their own words before a substantive review. The description is the author's statement of understanding; reverse-engineering it from the diff moves that work onto the reviewer.
 
 If any of (1) or (2) fail and you proceed anyway, say so explicitly in the review header.
 
@@ -124,7 +125,7 @@ Apply this order. Everything below "Correctness" is negotiable; the top tier is 
 15. **Dev-only flags live in release builds.** Deep-link params like `fake-owned-wearables`, `disable-profile-deploy`, `dclenv=zone` parse unconditionally today. Acceptable but worth flagging for gating behind `#[cfg(debug_assertions)]` / a feature flag / a loud warning (#1849).
 16. **Dead code / orphan uniforms / unused imports.** Rust `clippy -D warnings` catches most of this, but `.tres` / `.tscn` / `.gdshader` don't — reviewers catch those manually. A shader uniform removed in `.gdshader` should also be removed from every `.tres`/`.tscn` that set it, and from every material that references a different-typed replacement (#1878 had a `Texture2D → samplerCube` mismatch that would render black silently).
 17. **Performance on the hot path.** The scene-runner update loop, pointer-event loop, and shaders are hot. Watch for per-pixel `acos`/`normalize`/`pow` that can be replaced by compares, per-frame `find_node` / `get_node` lookups, unbounded `for x in all_entities` scans inside scene systems, and JSON serialization on the scene thread.
-18. **Test plan quality.** PR descriptions in this repo follow `## Summary` + `## Test plan` (bulleted checklist). A missing or vague test plan is a legitimate review comment, especially for UI changes. Mobile-visible changes should say *which* platform was tested on. **The QA team runs these by hand on a real phone** (builds auto-distribute via TestFlight / Firebase App Distribution) — a case a tester couldn't reproduce cold (steps that don't start from opening the app, no observable expected result, or non-obvious required state left unsaid) is worth holding on. See Section 4 → "Writing test steps QA can execute" for the required format and a worked example.
+18. **Description and test plan quality.** PR descriptions in this repo are `## What`, `## Why`, an optional collapsed `## Details`, and a `## Test plan` (see Section 4 → "PR description shape", including the AG rule on AI-generated text). A description with no What/Why, or whose What/Why read as raw AI output, is a rewrite request before code review. A missing or vague test plan is a legitimate review comment, especially for UI changes. Mobile-visible changes should say *which* platform was tested on. **The QA team runs these by hand on a real phone** (builds auto-distribute via TestFlight / Firebase App Distribution) — a case a tester couldn't reproduce cold (steps that don't start from opening the app, no observable expected result, or non-obvious required state left unsaid) is worth holding on. See Section 4 → "Writing test steps QA can execute" for the required format and a worked example.
 19. **Comments that explain "why", not "what".** Consistent with the CLAUDE.md guidance — reviewers flag comments that restate the code, and praise ones that cite a matching Unity file/line or explain a non-obvious Godot quirk.
 
 ---
@@ -132,18 +133,40 @@ Apply this order. Everything below "Correctness" is negotiable; the top tier is 
 ## 4. Team conventions to uphold
 
 ### PR description shape
+
+The description is the author's statement of **what changed and why**, written for whoever reads it — reviewer, QA, another team, someone reading the changelog months later. It is not a summary of the diff. The `pr-description` skill (`.claude/skills/pr-description/`) is the authoring guide; this section is what a reviewer holds it to.
+
 ```
-## Summary
-- <bullet>
-- <bullet>
+## What
+<What is different after this merges — player, creator, reviewer or build. 1–3 sentences,
+ plain language. Reading only What + Why, a teammate on another team understands the change.>
+
+## Why
+<The bug, the request, the measurement, the parity gap. 1–3 sentences, including what the
+ change deliberately does NOT do when a reader might assume otherwise.>
 
 Closes #<issue>
 
+## Details
+<details><summary>Expand</summary>
+Root cause, approach and trade-offs, screenshots/video, per-file notes when non-obvious.
+Section omitted entirely when What/Why say it all.
+</details>
+
 ## Test plan
-- [ ] <steps>
-- [ ] <steps>
+- [ ] <cases per "Writing test steps QA can execute" below — or "No QA needed — no behavior change">
 ```
-Larger PRs often add a "Root Cause" section before Summary, a Video/Images section after it, and a "Future plans" section at the end. Commit prefixes follow conventional commits: `feat:`, `fix:`, `chore:`, `refactor:`.
+
+Optional, only when they add clarity: a **Heads-up** line after `## Why` naming which team was told and where; a **Changes** list (file → what it does) inside Details; **Future plans** / **Known gaps** at the end. Commit prefixes follow conventional commits: `feat:`, `fix:`, `chore:`, `refactor:`. Older PRs use `## Summary` bullets in place of What/Why — accept that on existing PRs, ask for the sections on new ones.
+
+**The AG rule — the author owns understanding the change.** The team's guideline for AI-assisted work (messages, PRs, docs, issues) is that anything with your name on it must be at **AG-3 to AG-5**: you read it, you changed what didn't sound right, and you can explain any part of it if asked. AI can help write code faster; it must not make *understanding* the change slower for everyone else. Concretely, a reviewer should hold the PR — before reading the code — when the description:
+
+- **has no `## What` / `## Why`, or they don't actually say it** (opens with a file list, a `## Changes` dump, or "This PR introduces a comprehensive…");
+- **reads as raw AI output** — restates the diff file by file, narrates the work, hedges with filler, or is far longer than the change warrants. Ask for a rewrite in the author's own words; do not reverse-engineer the intent from the diff on their behalf;
+- **hides ride-along behaviour changes** — anything outside the feature's stated scope that changes what a player, creator or build sees must be stated in What/Why, not buried in Details;
+- **touches something another team, service, SDK or workflow depends on with no heads-up** (shared UI components, auth, comms protocol, asset pipeline, mobile-bff contract, CI workflows). The norm is a short message in the relevant shared channel — `#ext-foundation` for cross-org — *before* merging: "I'm planning to merge X, it changes Y and may affect Z. Any concerns?". Ask whether it was posted.
+
+The same rule applies to review comments and replies: keep them short, in your own words, and skip AI-generated explanations that add text without adding clarity.
 
 ### Writing test steps QA can execute
 
@@ -220,7 +243,33 @@ The PR-level workflows a reviewer should expect green before approving:
 - `🍏 iOS` is **opt-in** — gated on the `build` label (alias: `build-ios`), which also posts a Slack "Android build ready" notification with the R2 APK download link. See Section 0 pre-flight: for platform-sensitive changes the iOS build is *required* and the PR should be held until a maintainer adds the label. For pure-backend / docs PRs, an absent iOS build is fine — say so explicitly.
 
 ### Release flow
-`release` branch is used for production cuts. PRs titled `Release: merge release into main` / `Merge main into release` appear periodically and should usually be merge-only (no review nits on code that's already been reviewed upstream).
+`release` branch is used for production cuts. PRs titled `chore: sync release into main (vX.Y.Z)` / `chore: merge release back into main` appear periodically and should usually be merge-only (no review nits on code that's already been reviewed upstream).
+
+### Release Candidate PR shape
+A **Release Candidate** promotes `main` (or a cherry-picked subset) into `release`: base `release`, head `release-X.Y.Z`, title `Release Candidate X.Y.Z`. Its description is the release changelog and the QA sheet — it is built from the promoted PRs' own descriptions (which is why the lead-paragraph rule above matters). Review it as a document, not as code — the code was reviewed in the individual PRs:
+
+```
+## Release Candidate X.Y.Z
+
+<Lead: what is promoted (main sha or cherry-picked set), clean promotion or not,
+ what was deliberately excluded, which PR bumped the version; then the release theme in player terms.>
+
+- **Base:** `release` · **Head:** `release-X.Y.Z`
+
+## What's included
+**Features** — one line per PR in player/creator terms, ending in (#PR)
+**Fixes** — the symptom that went away, with the measurement when the PR had one (#PR)
+**Technical** — no QA needed (CI, tooling, back-merges, dependency bumps)
+
+## Test plan
+**Build:** `vX.Y.Z.<build>-<sha>-prod` · one Android + one iPhone.
+- [ ] **Version** — login screen and Settings → About read `vX.Y.Z.<build>-<sha>-prod`
+- [ ] **<Feature>** — one action that proves it on a phone → what QA should see `#PR`
+- [ ] **Regression** — enter a few scenes, chat, change a wearable, play an emote: no crashes
+**Known gap:** anything shipping without a device run, and why
+```
+
+What to check on an RC: every commit in `origin/release..head` is accounted for by a line or explicitly excluded; every Feature/Fix line has a Test plan line and no Technical line does; the **Version** line is present and matches `lib/Cargo.toml` / `godot/export_presets.cfg`; a patch RC stacked on a previous one says so and lists only the additions. Examples: #2787 (clean promotion), #2797 (cherry-picked, stacked on 1.13.0).
 
 ---
 
@@ -311,6 +360,7 @@ Length:
 
 A reviewer should `grep` / eyeball the diff for these before reading logic:
 
+- The description has no `## What` / `## Why`, or they don't say what changed and why, or read as raw AI output (diff restated file by file, "This PR introduces a comprehensive…", far longer than the change) → ask for a rewrite in the author's words before reviewing code. See Section 4 → "PR description shape".
 - `print(` / `prints(` / `print_verbose(` in non-tool GDScript → likely debug leftover.
 - New `tracing::error!` (Rust) or `push_error(` / `printerr(` (GDScript) in the diff → these ship to Sentry and cost quota. Confirm the condition is a genuine, actionable fault. If it's expected/recoverable or already has a fallback (missing texture/asset, optional absent, 404-then-default), ask to downgrade to `warn!`/`push_warning` or `debug!`/`print`. See Section 5.
 - New `tracing::error!` / `tracing::warn!` (or `push_error`/`printerr`) inside a loop, per-entity/per-frame scan, `_process`, or the scene-runner/pointer-event hot path → potential Sentry quota burst; flag even warnings here.

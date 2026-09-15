@@ -14,7 +14,6 @@ var _press_start_pos: Vector2 = Vector2.ZERO
 
 @onready var notification_content: Control = %NotificationContent
 @onready var label_timestamp: RichTextLabel = %LabelTimestamp
-@onready var unread_dot: Panel = %UnreadDot
 
 
 func _ready() -> void:
@@ -38,15 +37,38 @@ func _update_ui() -> void:
 	# Use shared notification content component
 	notification_content.set_notification(notification_data)
 
-	# Set timestamp (specific to list item view, bold)
+	# Set timestamp (font weight owned by the node — no [b] tags)
 	if "timestamp" in notification_data:
 		var timestamp: int = int(notification_data["timestamp"])
-		var time_text = _format_timestamp(timestamp)
-		label_timestamp.text = "[b]" + time_text + "[/b]"
+		label_timestamp.text = _format_timestamp(timestamp)
 
-	# Show/hide unread dot (specific to list item view)
+	# Read notifications are dimmed; unread stay fully opaque (reset in case the item is reused).
 	var is_read: bool = notification_data.get("read", false)
-	unread_dot.visible = not is_read
+	if is_read:
+		modulate = Color(1.0, 1.0, 1.0, 0.4)
+	else:
+		modulate = Color.WHITE
+
+
+## Lightweight update for a reused item (same notification id): refresh the read dimming and the
+## timestamp, keeping the already-loaded thumbnail — no content re-render, no image re-fetch.
+func refresh(notification: Dictionary) -> void:
+	notification_data = notification
+	var is_read: bool = notification.get("read", false)
+	modulate = Color(1.0, 1.0, 1.0, 0.4) if is_read else Color.WHITE
+	refresh_timestamp()
+
+
+## Re-renders the "X ago" label. Called by the panel on a no-change refresh, and on a locale change,
+## so the timestamp stays current without a full item rebuild (which cancels thumbnail loads).
+func refresh_timestamp() -> void:
+	if "timestamp" in notification_data:
+		label_timestamp.text = _format_timestamp(int(notification_data["timestamp"]))
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_TRANSLATION_CHANGED:
+		refresh_timestamp()
 
 
 func _format_timestamp(timestamp_ms: int) -> String:
@@ -61,21 +83,35 @@ func _format_timestamp(timestamp_ms: int) -> String:
 		return tr("NOTIFICATION_JUST_NOW")
 
 	if diff < 3600:
-		var minutes := int(diff / 60)
+		var minutes = int(diff / 60)
 		return TranslationKey.new("NOTIFICATION_MINUTES_AGO").plural(minutes).format(
 			{"minutes": minutes}
 		)
 
 	if diff < 86400:
-		var hours := int(diff / 3600)
+		var hours = int(diff / 3600)
 		return TranslationKey.new("NOTIFICATION_HOURS_AGO").plural(hours).format({"hours": hours})
 
-	if diff < 172800:  # Less than 2 days (86400 * 2)
+	if diff < 172800:  # 24–47 h
 		return tr("NOTIFICATION_YESTERDAY")
 
-	# For all older notifications, show days ago
-	var days := int(diff / 86400)
-	return TranslationKey.new("NOTIFICATION_DAYS_AGO").plural(days).format({"days": days})
+	var days = int(diff / 86400)
+	if days < 7:  # 2–6 days
+		return TranslationKey.new("NOTIFICATION_DAYS_AGO").plural(days).format({"days": days})
+
+	if days < 30:  # 7–29 days -> 1–4 weeks
+		var weeks = int(days / 7)
+		return TranslationKey.new("NOTIFICATION_WEEKS_AGO").plural(weeks).format({"weeks": weeks})
+
+	var months = int(days / 30)
+	if months < 12:  # 1–11 months
+		return TranslationKey.new("NOTIFICATION_MONTHS_AGO").plural(months).format(
+			{"months": months}
+		)
+
+	# 12+ months -> years
+	var years = int(months / 12)
+	return TranslationKey.new("NOTIFICATION_YEARS_AGO").plural(years).format({"years": years})
 
 
 func _input(event: InputEvent) -> void:

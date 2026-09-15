@@ -50,8 +50,8 @@ func process_deep_link(url: String) -> void:
 		print("[DEEPLINK] Found rust-log param: ", rust_log_value)
 		DclGlobal.set_rust_log_filter(rust_log_value)
 
-	# Pulse transport params (pulse-server / pulse / dual-channel / livekit); the
-	# shared helper no-ops on builds without the use_pulse feature.
+	# Pulse transport params (pulse-server / pulse-realm / pulse / dual-channel /
+	# livekit); the shared helper no-ops on builds without the use_pulse feature.
 	Global._apply_comms_deeplink_params(Global.deep_link_obj)
 
 	Global._apply_optimized_content_base_url(Global.deep_link_obj)
@@ -110,6 +110,10 @@ func process_deep_link(url: String) -> void:
 
 	if Global.deep_link_obj.safe_margin_debug:
 		Global.set_safe_margin_debug_enable(true)
+
+	# Review-prompt QA harness (#2739). Untyped param, non-production only.
+	if Global.review_prompt_coordinator != null:
+		Global.review_prompt_coordinator.capture_deeplink(Global.deep_link_obj)
 
 	# Returning from the in-app marketplace webview: the web fires a
 	# decentraland://open?iap_enabled=true[&urn=<urn>] deep link to bring the app back. The

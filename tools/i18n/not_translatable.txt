@@ -166,3 +166,14 @@ godot/src/notifications_manager.gd	trigger_timestamp > %d
 # support team reads these in Intercom, in English.
 godot/src/bug_report/bug_report_service.gd	%d MB
 godot/src/bug_report/bug_report_service.gd	%s (%s)
+
+# Sentry breadcrumb and event titles (sentry_seeder.gd) — diagnostics read in the Sentry
+# UI by engineers, never rendered in the app. `.message`/`add_breadcrumb` look like
+# `.text` assignments to the scanner, which is why they surface here.
+godot/src/logic/sentry_seeder.gd	Low memory warning: available=%dMB footprint=%dMB
+godot/src/logic/sentry_seeder.gd	Previous run ended: %s (%s)
+godot/src/logic/sentry_seeder.gd	Scene crashed: %s (%s)
+godot/src/logic/sentry_seeder.gd	Scene crashed: %s (%s): %s
+godot/src/logic/sentry_seeder.gd	Scene killed: %s
+godot/src/logic/sentry_seeder.gd	Scene spawned: %s
+godot/src/logic/sentry_seeder.gd	onTrimMemory level=%d

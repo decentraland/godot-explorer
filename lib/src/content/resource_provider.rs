@@ -51,6 +51,7 @@ const IDLE_CHUNK_TIMEOUT: Duration = Duration::from_secs(30);
 /// no '.', and the hex of "hashed_{hex}" url-texture names never contains 'q':
 ///   - "{hash}-mobile.zip"         -> "{hash}"        (optimized asset pack)
 ///   - "{hash}.scn" / "{hash}.ext" -> "{hash}"        (runtime-processed forms)
+///   - "{hash}-{16 hex}.opt.scn"   -> "{hash}"        (baked scene GLB, `scene_bake_key`)
 ///   - "hashed_{hex}_q{N}"         -> "hashed_{hex}"  (url-texture quality variant)
 ///   - anything else               -> unchanged
 pub fn cache_file_base_name(file_name: &str) -> &str {
@@ -58,6 +59,12 @@ pub fn cache_file_base_name(file_name: &str) -> &str {
         return base;
     }
     let base = file_name.split('.').next().unwrap_or(file_name);
+    if base.len() > 17 {
+        let (head, tail) = base.split_at(base.len() - 17);
+        if tail.starts_with('-') && tail[1..].bytes().all(|b| b.is_ascii_hexdigit()) {
+            return head;
+        }
+    }
     if let Some(hex_and_variant) = base.strip_prefix("hashed_") {
         if let Some(pos) = hex_and_variant.rfind("_q") {
             let digits = &hex_and_variant[pos + 2..];
@@ -417,6 +424,22 @@ impl ResourceProvider {
             .map(|_| ())
     }
 
+    /// Cache hit for a caller that only needs the file on disk: refresh the LRU
+    /// entry and confirm the file is still there. `handle_existing_file` used to
+    /// serve these callers too, reading the whole file into a `Vec` that was
+    /// dropped on the spot — ~900 files per warm Genesis Plaza load, and every
+    /// bundle-extracted asset takes this path.
+    async fn touch_existing_file(&self, absolute_file_path: &String) -> Result<(), String> {
+        {
+            let mut existing_files = self.existing_files.write().await;
+            self.touch_file(&mut existing_files, absolute_file_path);
+        }
+        tokio::fs::metadata(absolute_file_path)
+            .await
+            .map(|_| ())
+            .map_err(|e| format!("Failed to stat cached file: {:?}", e))
+    }
+
     async fn handle_existing_file(&self, absolute_file_path: &String) -> Result<Vec<u8>, String> {
         let mut existing_files = self.existing_files.write().await;
         self.touch_file(&mut existing_files, absolute_file_path);
@@ -458,6 +481,27 @@ impl ResourceProvider {
         }
 
         Ok(())
+    }
+
+    /// Reserve `key` in `pending_downloads` for a file that is being produced
+    /// locally (extracted from a bundle) rather than downloaded, so a
+    /// concurrent `fetch_resource` for the same key waits for it instead of
+    /// downloading a second copy. Returns `false` when the key is already
+    /// pending — the caller must then leave that file to whoever holds it.
+    /// Pair with `end_local_install`, AFTER `register_local_file` (waiters
+    /// check `existing_files` when woken).
+    pub async fn begin_local_install(&self, key: &str) -> bool {
+        let mut pending_downloads = self.pending_downloads.write().await;
+        if pending_downloads.contains_key(key) {
+            return false;
+        }
+        pending_downloads.insert(key.to_string(), Arc::new(Notify::new()));
+        true
+    }
+
+    /// Release a `begin_local_install` reservation and wake its waiters.
+    pub async fn end_local_install(&self, key: &str) {
+        self.finish_pending_download(key).await;
     }
 
     /// Release the `pending_downloads` slot for `file_hash`: remove the entry and wake any
@@ -584,7 +628,7 @@ impl ResourceProvider {
                     .await;
             } else {
                 tracing::debug!("Cache hit for {}: {}", file_hash, absolute_file_path);
-                self.handle_existing_file(&absolute_file_path).await?;
+                self.touch_existing_file(&absolute_file_path).await?;
             }
             Ok(())
         }
@@ -636,7 +680,7 @@ impl ResourceProvider {
                     .await;
             } else {
                 tracing::debug!("Cache hit for {}: {}", file_hash, absolute_file_path);
-                self.handle_existing_file(&absolute_file_path).await?;
+                self.touch_existing_file(&absolute_file_path).await?;
             }
             Ok(())
         }
@@ -759,6 +803,15 @@ mod tests {
         assert_eq!(cache_file_base_name("bafkreiabc"), "bafkreiabc");
         assert_eq!(cache_file_base_name("bafkreiabc.scn"), "bafkreiabc");
         assert_eq!(cache_file_base_name("bafkreiabc-mobile.zip"), "bafkreiabc");
+        assert_eq!(
+            cache_file_base_name("bafkreiabc-0123456789abcdef.opt.scn"),
+            "bafkreiabc"
+        );
+        assert_eq!(cache_file_base_name("bafkreiabc.opt.scn"), "bafkreiabc");
+        assert_eq!(
+            cache_file_base_name("bafkreiabc-0123456789abcdeg.scn"),
+            "bafkreiabc-0123456789abcdeg"
+        );
         assert_eq!(cache_file_base_name("Qm123.png"), "Qm123");
         // Url-texture quality variants collapse onto the base url-hash.
         assert_eq!(cache_file_base_name("hashed_a1b2c3"), "hashed_a1b2c3");
