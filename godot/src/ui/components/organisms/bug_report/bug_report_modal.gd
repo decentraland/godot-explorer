@@ -2,17 +2,11 @@ class_name BugReportModal
 extends ModalShell
 
 ## Native bug report form (issue #2652). Collects an issue type, a description
-## and a screenshot, then files an Intercom ticket via BugReportService.
+## and up to three screenshots, then files an Intercom ticket via BugReportService.
 ##
 ## The chrome comes from ModalShell and every control is a library component
 ## (DropdownList, DclTextEdit, FieldLabel, ScreenshotSlot, ModalActions), so this
 ## script holds only form logic — no styling.
-##
-## TEMPORARY: the approved design has three screenshot slots, but the
-## intercom-proxy's `evidence` field carries a single image, so slots 2 and 3
-## offered an upload that was silently dropped at submit — worse than not
-## offering it. They are hidden until the proxy accepts multiple images; see
-## MAX_SCREENSHOTS.
 
 signal submitted(ticket_id: String)
 signal cancelled
@@ -22,10 +16,8 @@ const SCREENSHOT_SLOT = preload(
 	"res://src/ui/components/molecules/screenshot_slot/screenshot_slot.tscn"
 )
 
-# TEMPORARY: 3 in the approved design, capped at 1 while the proxy accepts only one
-# image (issue #2652). Restoring the design row is this constant and nothing else —
-# the slot/gap logic below is already written for the three-tile case.
-const MAX_SCREENSHOTS := 1
+# Matches the approved design and the intercom-proxy's evidence cap (issue #2842).
+const MAX_SCREENSHOTS := 3
 
 # Design uses a wider gap when the row isn't full, and tightens it at three so
 # the tiles still fit the content column.
@@ -212,12 +204,10 @@ func _async_submit() -> void:
 	# JPEG encode, log-tail read and Sentry capture BEFORE its first await, so
 	# without this the spinner's frame never renders (PR #2779 review).
 	await get_tree().process_frame
-	var jpeg_bytes: PackedByteArray = (
-		_shots[0]["bytes"] if not _shots.is_empty() else PackedByteArray()
-	)
-	var result := await BugReportService.async_submit(
-		uuid, dcl_text_edit.get_text_value(), jpeg_bytes
-	)
+	var images: Array[PackedByteArray] = []
+	for shot in _shots:
+		images.append(shot["bytes"])
+	var result := await BugReportService.async_submit(uuid, dcl_text_edit.get_text_value(), images)
 	modal_actions.set_busy(false)
 	_rebuild_screenshot_slots()
 	_update_submit_enabled()

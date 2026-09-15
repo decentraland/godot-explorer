@@ -17,9 +17,20 @@ extends RefCounted
 ## or misspelled key gets the entire ticket rejected, so nothing here is
 ## speculative — attributes match Unity's exactly.
 
-# Raw bytes, before base64. The proxy rejects the whole ticket above this, so an
-# oversized image is dropped rather than allowed to sink the report.
+# Raw bytes, before base64. The proxy rejects the whole ticket if one image is over
+# this, so an oversized image is shrunk or dropped rather than sinking the report.
 const MAX_EVIDENCE_BYTES := 3 * 1024 * 1024
+
+const MAX_EVIDENCE_COUNT := 3
+
+# Raw bytes across all images. The proxy caps the whole BODY at 4.5MB, and base64
+# grows data by 4/3: 3MiB raw is ~4.2MB encoded, which leaves room for the
+# attributes.
+const TOTAL_EVIDENCE_BYTES := 3 * 1024 * 1024
+
+# Intercom's "Platform" list attribute: 1 Desktop, 2 Mobile. This client only
+# ships on mobile, so it is always Mobile.
+const PLATFORM_MOBILE := 2
 
 const JPEG_QUALITY := 0.85
 
@@ -27,7 +38,7 @@ const JPEG_QUALITY := 0.85
 const DESCRIPTION_MAX_LENGTH := 300
 
 
-## Files a bug report. `jpeg_bytes` may be empty.
+## Files a bug report with up to MAX_EVIDENCE_COUNT JPEG `images` (may be empty).
 ##
 ## Takes already-encoded bytes rather than an `Image`: the screenshot is encoded
 ## when it is captured or picked, so the submit path — which the player waits on
@@ -35,7 +46,7 @@ const DESCRIPTION_MAX_LENGTH := 300
 ##
 ## Returns {ok: bool, id: String, error: String}. Never throws.
 static func async_submit(
-	issue_type_uuid: String, description: String, jpeg_bytes: PackedByteArray = PackedByteArray()
+	issue_type_uuid: String, description: String, images: Array[PackedByteArray] = []
 ) -> Dictionary:
 	if issue_type_uuid.is_empty():
 		return {"ok": false, "id": "", "error": "missing issue type"}
@@ -46,13 +57,13 @@ static func async_submit(
 
 	# Before the POST: the returned link is an input to the description. Returns
 	# "" whenever Sentry is unavailable, and the report is filed regardless.
-	var diagnostics_link := SentryUserFeedback.submit(trimmed, jpeg_bytes)
+	var diagnostics_link := SentryUserFeedback.submit(trimmed, images)
 
 	var payload := {
 		"ticket_attributes": _build_attributes(issue_type_uuid, trimmed, diagnostics_link)
 	}
 
-	var evidence := _build_evidence(jpeg_bytes)
+	var evidence := _build_evidence(images)
 	if not evidence.is_empty():
 		payload["evidence"] = evidence
 
@@ -85,7 +96,7 @@ static func async_submit(
 	return {"ok": true, "id": ticket_id, "error": ""}
 
 
-# Every value must be a String — the proxy rejects non-string attribute values.
+# Every value is a String except Platform, which the proxy expects as an int.
 static func _build_attributes(
 	issue_type_uuid: String, description: String, diagnostics_link: String
 ) -> Dictionary:
@@ -98,6 +109,7 @@ static func _build_attributes(
 		"Graphic Card": device["gpu"],
 		"RAM": device["ram"],
 		"Client version": String(DclGlobal.get_version()),
+		"Platform": PLATFORM_MOBILE,
 	}
 
 	# Omitted rather than sent empty: Intercom leaves an absent attribute unset,
@@ -182,22 +194,37 @@ static func _collect_device_info() -> Dictionary:
 	}
 
 
-# Returns {} when there is nothing to attach or the encode is too large — an
-# oversized image must not take the whole ticket down with it. It still reaches
-# Sentry via SentryUserFeedback, so it is dropped from the ticket, not lost.
-static func _build_evidence(bytes: PackedByteArray) -> Dictionary:
-	if bytes.is_empty():
-		return {}
-	if bytes.size() > MAX_EVIDENCE_BYTES:
-		push_warning(
-			(
-				"BugReportService: attachment is %d bytes (max %d) — filing without it"
-				% [bytes.size(), MAX_EVIDENCE_BYTES]
-			)
-		)
-		return {}
+# One evidence entry per image, in order. Each image gets an equal share of the
+# body budget. One that is over its share is re-encoded smaller, and dropped only
+# when even that fails, so an oversized image can't take the whole ticket down
+# with it. The originals still reach Sentry via SentryUserFeedback, so a dropped
+# image is missing from the ticket but not lost.
+static func _build_evidence(images: Array[PackedByteArray]) -> Array:
+	var present: Array[PackedByteArray] = []
+	for bytes in images:
+		if not bytes.is_empty():
+			present.append(bytes)
+	if present.size() > MAX_EVIDENCE_COUNT:
+		present.resize(MAX_EVIDENCE_COUNT)
+	if present.is_empty():
+		return []
 
-	return {"content_type": "image/jpeg", "data": Marshalls.raw_to_base64(bytes)}
+	var budget := mini(MAX_EVIDENCE_BYTES, TOTAL_EVIDENCE_BYTES / present.size())
+	var evidence: Array = []
+	for bytes in present:
+		var fitted := bytes
+		if fitted.size() > budget:
+			fitted = BugReportCapture.encode_within(ImagePickerService.decode(bytes), budget)
+		if fitted.is_empty():
+			push_warning(
+				(
+					"BugReportService: attachment is %d bytes (budget %d) — filing without it"
+					% [bytes.size(), budget]
+				)
+			)
+			continue
+		evidence.append({"content_type": "image/jpeg", "data": Marshalls.raw_to_base64(fitted)})
+	return evidence
 
 
 static func _label_for_uuid(uuid: String) -> String:
