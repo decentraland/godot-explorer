@@ -55,6 +55,12 @@ const AVATAR_HALF_WIDTH := 0.35
 # Exponential smoothing rate (1/s) for the crosshair screen position — turns
 # near-plane projection flights during the mode tween into a gentle glide.
 const CROSSHAIR_SMOOTH_SPEED := 12.0
+# Settled third-person crosshair anchor (normalized), measured on device: 20px
+# above the avatar's top edge at its side edge at the default 3m distance. The
+# transition glides toward THIS instead of the live projection — near the near
+# plane the unprojected edge point swings wildly and read as a back-and-forth
+# (device QA).
+const CROSSHAIR_SETTLED_ANCHOR := Vector2(0.53, 0.44)
 
 # #b9: matches the CharacterBody3D.collision_mask in player.tscn (layer 2 =
 # world/terrain). Keeps the ground raycast from pinging avatar wearables,
@@ -730,15 +736,23 @@ func _compute_crosshair_target(viewport_size: Vector2) -> Vector2:
 		1.0
 	)
 	var top_world := global_position + Vector3(0, AVATAR_TOP_HEIGHT, 0)
-	if t <= 0.0 or camera.is_position_behind(top_world):
+	if t <= 0.0:
 		return viewport_size * 0.5
+	var center := viewport_size * 0.5
+	var w := t * t  # quadratic ease-in: tracking weight ~0 while the camera is near
+	if t < 0.99 or camera.is_position_behind(top_world):
+		# Mid-transition: glide toward the settled anchor, never the live
+		# projection (see CROSSHAIR_SETTLED_ANCHOR).
+		return center.lerp(CROSSHAIR_SETTLED_ANCHOR * viewport_size, w)
+	# Full third person at the fixed prod distance: track the live edge point.
 	var edge_world := top_world + camera.global_transform.basis.x * AVATAR_HALF_WIDTH
-	return CameraRigHelpers.crosshair_position(
+	var tracked := CameraRigHelpers.crosshair_position(
 		camera.unproject_position(top_world),
 		camera.unproject_position(edge_world),
 		viewport_size,
-		t
+		1.0
 	)
+	return center.lerp(tracked, w)
 
 
 # Smoothed crosshair position (single source for the HUD label, the scene
