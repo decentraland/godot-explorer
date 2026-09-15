@@ -122,8 +122,9 @@ static func connect_global_signal(root: Window):
 	root.size_changed.connect(GraphicSettings.apply_ui_zoom.bind(root))
 	# Orientation flips swap the base resolution axes, so the scale must be
 	# recomputed. Defer to let the window finish resizing (mobile rotates async).
+	# `root` is the main Window: alive for the whole process.
 	Global.orientation_changed.connect(
-		func(_is_portrait): GraphicSettings.apply_ui_zoom.bind(root).call_deferred()
+		func(_is_portrait): GraphicSettings.apply_ui_zoom.bind(root).call_deferred()  # gdlint: ignore=node-argument-across-await
 	)
 
 

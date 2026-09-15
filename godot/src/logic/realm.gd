@@ -226,7 +226,7 @@ func async_set_realm(new_realm_string: String, search_new_pos: bool = false) -> 
 	realm_url = candidate_realm_url
 	realm_about = json
 
-	var configuration = realm_about.get("configurations", {})
+	var configuration: Dictionary = realm_about.get("configurations", {})
 
 	realm_scene_urns.clear()
 	for urn in configuration.get("scenesUrn", []):
