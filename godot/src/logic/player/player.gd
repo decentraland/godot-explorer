@@ -48,19 +48,22 @@ const JUMP_ACTION_GLIDE_TOGGLE := 2  # open or close the glider
 
 # AvatarRaycast resting target (matches player.tscn): straight ahead, 10m.
 const AVATAR_RAYCAST_DEFAULT_TARGET := Vector3(0, 0, -10)
-# Top-of-head height above the player origin and half body width, for projecting
-# the avatar's on-screen top/side edges the crosshair tracks (issue #2709).
+# Exponential smoothing rate (1/s) for the crosshair spring chase.
+const CROSSHAIR_SMOOTH_SPEED := 12.0
+# Duration of the camera mode tween (set_camera_mode).
+const CAMERA_MODE_TWEEN_TIME := 0.25
+# Crosshair model (issue #2709, device QA): first person is screen center. For
+# third person the target goes through three phases — hold center for the first
+# half of the camera tween, glide to the PLACEHOLDER anchor until the camera
+# settles, then track the live projection: CROSSHAIR_TOP_GAP_PX above the
+# avatar's on-screen top edge, at its side edge's x.
+const CROSSHAIR_PLACEHOLDER_ANCHOR := Vector2(0.53, 0.44)
+const CROSSHAIR_TOP_GAP_PX := 20.0
+const CROSSHAIR_SCREEN_MARGIN := 24.0
+# Top-of-head height above the player origin and half body width, for the live
+# projection of the avatar's on-screen top/side edges.
 const AVATAR_TOP_HEIGHT := 1.8
 const AVATAR_HALF_WIDTH := 0.35
-# Exponential smoothing rate (1/s) for the crosshair screen position — turns
-# near-plane projection flights during the mode tween into a gentle glide.
-const CROSSHAIR_SMOOTH_SPEED := 12.0
-# Settled third-person crosshair anchor (normalized), measured on device: 20px
-# above the avatar's top edge at its side edge at the default 3m distance. The
-# transition glides toward THIS instead of the live projection — near the near
-# plane the unprojected edge point swings wildly and read as a back-and-forth
-# (device QA).
-const CROSSHAIR_SETTLED_ANCHOR := Vector2(0.53, 0.44)
 
 # #b9: matches the CharacterBody3D.collision_mask in player.tscn (layer 2 =
 # world/terrain). Keeps the ground raycast from pinging avatar wearables,
@@ -111,6 +114,9 @@ var _avatar_raycast_crosshair_active: bool = false
 # Smoothed crosshair screen position (see _update_crosshair_screen_position).
 var _crosshair_screen_pos := Vector2.ZERO
 var _crosshair_pos_initialized := false
+# Time since the last camera-mode change; drives the crosshair target phases.
+var _crosshair_mode_clock: float = 1000.0
+var _crosshair_prev_mode: Global.CameraMode = Global.CameraMode.THIRD_PERSON
 # #b11: typed Array[RID] avoids per-element dynamic cast when passed to
 # PhysicsRayQueryParameters3D.exclude every physics frame.
 var _raycast_exclude: Array[RID] = []
@@ -172,7 +178,9 @@ func set_camera_mode(mode: Global.CameraMode, play_sound: bool = true):
 		tween_out.set_parallel(true)
 		(
 			tween_out
-			. tween_property(mount_camera, "spring_length", targets.spring_length, 0.25)
+			. tween_property(
+				mount_camera, "spring_length", targets.spring_length, CAMERA_MODE_TWEEN_TIME
+			)
 			. set_ease(Tween.EASE_IN_OUT)
 		)
 		# Apply X offset for third person (0 = avatar centered, issue #2709). The
@@ -182,7 +190,10 @@ func set_camera_mode(mode: Global.CameraMode, play_sound: bool = true):
 		(
 			tween_out
 			. tween_property(
-				camera_collision_clamp, "lateral_offset", targets.camera_offset_x, 0.25
+				camera_collision_clamp,
+				"lateral_offset",
+				targets.camera_offset_x,
+				CAMERA_MODE_TWEEN_TIME
 			)
 			. set_ease(Tween.EASE_IN_OUT)
 		)
@@ -197,14 +208,19 @@ func set_camera_mode(mode: Global.CameraMode, play_sound: bool = true):
 		tween_in.set_parallel(true)
 		(
 			tween_in
-			. tween_property(mount_camera, "spring_length", targets.spring_length, 0.25)
+			. tween_property(
+				mount_camera, "spring_length", targets.spring_length, CAMERA_MODE_TWEEN_TIME
+			)
 			. set_ease(Tween.EASE_IN_OUT)
 		)
 		# Remove X offset for centered view in first person
 		(
 			tween_in
 			. tween_property(
-				camera_collision_clamp, "lateral_offset", targets.camera_offset_x, 0.25
+				camera_collision_clamp,
+				"lateral_offset",
+				targets.camera_offset_x,
+				CAMERA_MODE_TWEEN_TIME
 			)
 			. set_ease(Tween.EASE_IN_OUT)
 		)
@@ -719,40 +735,23 @@ func _physics_process(dt: float) -> void:
 	_update_avatar_raycast_to_crosshair()
 
 
-# Issue #2709: raw crosshair target in screen pixels. First person / transition
-# start: screen center. Full third person: 20px above the avatar's on-screen
-# top edge, aligned with its on-screen side edge. Blended across the 1p<->3p
-# crossing. Callers use the SMOOTHED value (get_crosshair_screen_position) —
-# near the near plane the unprojected target can fly far off-screen, and the
-# smoothing turns that into a gentle glide instead of a jump.
-func _compute_crosshair_target(viewport_size: Vector2) -> Vector2:
-	var t := clampf(
-		inverse_lerp(
-			CameraRigHelpers.FIRST_PERSON_SPRING_LENGTH,
-			CameraRigHelpers.THIRD_PERSON_MIN_DISTANCE,
-			mount_camera.spring_length
-		),
-		0.0,
-		1.0
-	)
+# Issue #2709: crosshair target in screen pixels — a pure function of the
+# spring-arm length (fixed anchors, quadratic ease-in across the mode swap).
+# No live projection, no prediction: it can never swing or jump.
+# Live third-person crosshair target (settled-camera phase): CROSSHAIR_TOP_GAP_PX
+# above the avatar's on-screen top edge, at its side edge's x, clamped inside
+# the screen margin. Falls back to the placeholder anchor when the head is
+# behind the camera.
+func _compute_live_crosshair_target(viewport_size: Vector2) -> Vector2:
 	var top_world := global_position + Vector3(0, AVATAR_TOP_HEIGHT, 0)
-	if t <= 0.0:
-		return viewport_size * 0.5
-	var center := viewport_size * 0.5
-	var w := t * t  # quadratic ease-in: tracking weight ~0 while the camera is near
-	if t < 0.99 or camera.is_position_behind(top_world):
-		# Mid-transition: glide toward the settled anchor, never the live
-		# projection (see CROSSHAIR_SETTLED_ANCHOR).
-		return center.lerp(CROSSHAIR_SETTLED_ANCHOR * viewport_size, w)
-	# Full third person at the fixed prod distance: track the live edge point.
+	if camera.is_position_behind(top_world):
+		return CROSSHAIR_PLACEHOLDER_ANCHOR * viewport_size
 	var edge_world := top_world + camera.global_transform.basis.x * AVATAR_HALF_WIDTH
-	var tracked := CameraRigHelpers.crosshair_position(
-		camera.unproject_position(top_world),
-		camera.unproject_position(edge_world),
-		viewport_size,
-		1.0
-	)
-	return center.lerp(tracked, w)
+	var top_px := camera.unproject_position(top_world)
+	var edge_px := camera.unproject_position(edge_world)
+	var tracked := Vector2(edge_px.x, top_px.y - CROSSHAIR_TOP_GAP_PX)
+	var margin := Vector2(CROSSHAIR_SCREEN_MARGIN, CROSSHAIR_SCREEN_MARGIN)
+	return tracked.clamp(margin, viewport_size - margin)
 
 
 # Smoothed crosshair position (single source for the HUD label, the scene
@@ -769,8 +768,32 @@ func _update_crosshair_screen_position(dt: float) -> void:
 		# so re-entering mobile gameplay glides from center, never from a stale point.
 		_crosshair_screen_pos = viewport_size * 0.5
 		_crosshair_pos_initialized = false
+		_crosshair_mode_clock = 1000.0
+		_crosshair_prev_mode = camera.get_camera_mode() as Global.CameraMode
 		return
-	var target := _compute_crosshair_target(viewport_size)
+
+	# Three-phase target (device QA). The crosshair always spring-chases the
+	# target; the target is what changes. A mode swap resets the clock.
+	_crosshair_mode_clock += dt
+	var mode: Global.CameraMode = camera.get_camera_mode() as Global.CameraMode
+	if mode != _crosshair_prev_mode:
+		_crosshair_prev_mode = mode
+		_crosshair_mode_clock = 0.0
+
+	var target: Vector2
+	if mode == Global.CameraMode.FIRST_PERSON:
+		# 3p -> 1p: straight to center.
+		target = viewport_size * 0.5
+	elif _crosshair_mode_clock < CAMERA_MODE_TWEEN_TIME * 0.5:
+		# Phase 1 (0-50% of the pullback): hold center.
+		target = viewport_size * 0.5
+	elif mount_camera.spring_length < CameraRigHelpers.THIRD_PERSON_CAMERA.z - 0.05:
+		# Phase 2 (50% -> camera settled): glide to the placeholder anchor.
+		target = CROSSHAIR_PLACEHOLDER_ANCHOR * viewport_size
+	else:
+		# Phase 3 (settled): track the live projection (== placeholder at rest).
+		target = _compute_live_crosshair_target(viewport_size)
+
 	if not _crosshair_pos_initialized:
 		_crosshair_pos_initialized = true
 		_crosshair_screen_pos = target

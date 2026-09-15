@@ -49,13 +49,12 @@ const CLAMP_NEAR_CLEARANCE := 0.08
 # is smoothed so geometry doesn't pop through on the way out.
 const CLAMP_EXTEND_SPEED := 8.0
 
-# Crosshair placement (issue #2709, device-QA spec): in third person it sits
-# CROSSHAIR_TOP_GAP_PX pixels above the avatar's on-screen top edge,
-# horizontally aligned with the avatar's on-screen side edge. Always kept this
-# far inside the screen — near the near plane the unprojected edge point flies
-# far off-screen, and without the clamp the crosshair visibly jumps.
-const CROSSHAIR_TOP_GAP_PX := 20.0
-const CROSSHAIR_SCREEN_MARGIN := 24.0
+# Crosshair anchors (issue #2709, device-QA measured): first person is screen
+# center; third person sits 20px above the avatar's top edge, aligned with its
+# side edge at the fixed 3m camera distance.
+const CROSSHAIR_FIRST_PERSON_ANCHOR := Vector2(0.5, 0.5)
+const CROSSHAIR_THIRD_PERSON_ANCHOR := Vector2(0.53, 0.44)
+
 # Floor guard: some scene ground meshes have no usable collider (single-sided shell
 # or cmask=0), so the sweep casts slip through and — at far zoom, angled down — the
 # camera dips below the visible floor. Independent of scene geometry, the camera is
@@ -84,23 +83,3 @@ static func rig_targets(third_person: bool) -> Dictionary:
 		"spring_length": FIRST_PERSON_SPRING_LENGTH,
 		"camera_offset_x": 0.0,
 	}
-
-
-# Crosshair screen position (px): screen center blended toward the avatar-edge
-# tracking point by `t` (0 = first person, 1 = full third person), so a pinch
-# across the mode boundary moves it smoothly. avatar_top_px / avatar_edge_px
-# are the unprojected top-of-head and side-edge points; the tracked crosshair
-# sits CROSSHAIR_TOP_GAP_PX above the top, at the edge's x. The blend is
-# QUADRATIC (t^2): while the camera is still near the avatar the unprojected
-# edge point swings wildly (clamped to the screen margin), so the tracking
-# weight stays near zero and the transition reads as one gentle glide.
-static func crosshair_position(
-	avatar_top_px: Vector2, avatar_edge_px: Vector2, viewport_size: Vector2, t: float
-) -> Vector2:
-	var center := viewport_size * 0.5
-	var margin := Vector2(CROSSHAIR_SCREEN_MARGIN, CROSSHAIR_SCREEN_MARGIN)
-	var tracked := Vector2(avatar_edge_px.x, avatar_top_px.y - CROSSHAIR_TOP_GAP_PX)
-	tracked = tracked.clamp(margin, viewport_size - margin)
-	var w := clampf(t, 0.0, 1.0)
-	w *= w
-	return center.lerp(tracked, w)
