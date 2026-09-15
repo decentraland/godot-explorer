@@ -21,9 +21,9 @@ metadata/mobile_preview_orientation = "landscape"
 
 [node name="ActiveArea" type="Control" parent="." unique_id=1699828300]
 layout_mode = 1
-anchor_right = 0.352
+anchor_top = 0.333
+anchor_right = 0.4
 anchor_bottom = 1.0
-offset_right = 171.45801
 grow_horizontal = 2
 grow_vertical = 0
 script = ExtResource("2_gh23i")

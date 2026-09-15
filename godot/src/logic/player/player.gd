@@ -46,6 +46,25 @@ const JUMP_ACTION_NONE := 0
 const JUMP_ACTION_JUMP := 1  # ground jump or air (double) jump
 const JUMP_ACTION_GLIDE_TOGGLE := 2  # open or close the glider
 
+# AvatarRaycast resting target (matches player.tscn): straight ahead, 10m.
+const AVATAR_RAYCAST_DEFAULT_TARGET := Vector3(0, 0, -10)
+# Exponential smoothing rate (1/s) for the crosshair spring chase.
+const CROSSHAIR_SMOOTH_SPEED := 12.0
+# Duration of the camera mode tween (set_camera_mode).
+const CAMERA_MODE_TWEEN_TIME := 0.25
+# Crosshair model (issue #2709, device QA): first person is screen center. For
+# third person the target goes through three phases — hold center for the first
+# half of the camera tween, glide to the PLACEHOLDER anchor until the camera
+# settles, then track the live projection: CROSSHAIR_TOP_GAP_PX above the
+# avatar's on-screen top edge, at its side edge's x.
+const CROSSHAIR_PLACEHOLDER_ANCHOR := Vector2(0.53, 0.44)
+const CROSSHAIR_TOP_GAP_PX := 20.0
+const CROSSHAIR_SCREEN_MARGIN := 24.0
+# Top-of-head height above the player origin and half body width, for the live
+# projection of the avatar's on-screen top/side edges.
+const AVATAR_TOP_HEIGHT := 1.8
+const AVATAR_HALF_WIDTH := 0.35
+
 # #b9: matches the CharacterBody3D.collision_mask in player.tscn (layer 2 =
 # world/terrain). Keeps the ground raycast from pinging avatar wearables,
 # triggers, or other non-ground CollisionObject3Ds.
@@ -89,9 +108,28 @@ var _time_since_glide_end: float = 1000.0
 var _air_jump_delay_timer: float = 0.0
 var _air_jump_direction: Vector3 = Vector3.ZERO
 var _ground_distance: float = INF
+# True while AvatarRaycast is aimed at the crosshair (mobile, non-cinematic) —
+# gates the restore-to-default so it doesn't write constants every tick.
+var _avatar_raycast_crosshair_active: bool = false
+# Smoothed crosshair screen position (see _update_crosshair_screen_position).
+var _crosshair_screen_pos := Vector2.ZERO
+var _crosshair_pos_initialized := false
+# Time since the last camera-mode change; drives the crosshair target phases.
+var _crosshair_mode_clock: float = 1000.0
+var _crosshair_prev_mode: Global.CameraMode = Global.CameraMode.THIRD_PERSON
 # #b11: typed Array[RID] avoids per-element dynamic cast when passed to
 # PhysicsRayQueryParameters3D.exclude every physics frame.
 var _raycast_exclude: Array[RID] = []
+
+# --- Pinch-to-zoom (mobile, issue #2709) -------------------------------------
+# Team decision: two fixed camera positions (1p/3p, same as prod) — no continuous
+# zoom curve. The pinch accumulates the finger-spread change and swaps mode once
+# it passes PinchGestureHelpers.MODE_TOGGLE_SPREAD.
+var _pinch_accumulated_delta: float = 0.0
+# Camera mode when the active pinch started (analytics reports the net direction).
+var _pinch_start_mode: Global.CameraMode = Global.CameraMode.THIRD_PERSON
+# The active camera-mode tween, killed before a new one so they never fight.
+var _camera_mode_tween: Tween = null
 
 @onready var mount_camera := $Mount
 @onready var camera: DclCamera3D = $Mount/CameraArm/Camera3D
@@ -130,23 +168,32 @@ func _on_global_camera_mode_set(mode: Global.CameraMode) -> void:
 func set_camera_mode(mode: Global.CameraMode, play_sound: bool = true):
 	camera.set_camera_mode(mode)
 
+	if _camera_mode_tween and _camera_mode_tween.is_running():
+		_camera_mode_tween.kill()
+
 	if mode == Global.CameraMode.THIRD_PERSON:
 		var targets := CameraRigHelpers.rig_targets(true)
 		var tween_out = create_tween()
+		_camera_mode_tween = tween_out
 		tween_out.set_parallel(true)
 		(
 			tween_out
-			. tween_property(mount_camera, "spring_length", targets.spring_length, 0.25)
+			. tween_property(
+				mount_camera, "spring_length", targets.spring_length, CAMERA_MODE_TWEEN_TIME
+			)
 			. set_ease(Tween.EASE_IN_OUT)
 		)
-		# Apply X offset for over-shoulder view in third person. The offset lives
-		# on the collision clamp, which positions the camera below the arm so the
-		# spring-arm pivot stays centered on the player capsule and sweeps a
-		# sphere to the real (offset) camera position every physics frame.
+		# Apply X offset for third person (0 = avatar centered, issue #2709). The
+		# offset lives on the collision clamp, which positions the camera below the
+		# arm so the spring-arm pivot stays centered on the player capsule and
+		# sweeps a sphere to the real (offset) camera position every physics frame.
 		(
 			tween_out
 			. tween_property(
-				camera_collision_clamp, "lateral_offset", targets.camera_offset_x, 0.25
+				camera_collision_clamp,
+				"lateral_offset",
+				targets.camera_offset_x,
+				CAMERA_MODE_TWEEN_TIME
 			)
 			. set_ease(Tween.EASE_IN_OUT)
 		)
@@ -157,17 +204,23 @@ func set_camera_mode(mode: Global.CameraMode, play_sound: bool = true):
 	elif mode == Global.CameraMode.FIRST_PERSON:
 		var targets := CameraRigHelpers.rig_targets(false)
 		var tween_in = create_tween()
+		_camera_mode_tween = tween_in
 		tween_in.set_parallel(true)
 		(
 			tween_in
-			. tween_property(mount_camera, "spring_length", targets.spring_length, 0.25)
+			. tween_property(
+				mount_camera, "spring_length", targets.spring_length, CAMERA_MODE_TWEEN_TIME
+			)
 			. set_ease(Tween.EASE_IN_OUT)
 		)
 		# Remove X offset for centered view in first person
 		(
 			tween_in
 			. tween_property(
-				camera_collision_clamp, "lateral_offset", targets.camera_offset_x, 0.25
+				camera_collision_clamp,
+				"lateral_offset",
+				targets.camera_offset_x,
+				CAMERA_MODE_TWEEN_TIME
 			)
 			. set_ease(Tween.EASE_IN_OUT)
 		)
@@ -236,10 +289,16 @@ func _ready():
 	Global.scene_runner.locomotion_settings_changed.connect(_on_locomotion_settings_changed)
 	_on_scene_changed(Global.scene_runner.get_current_parcel_scene_id())
 
+	# Reset the pinch zoom on a deliberate transition only (see _on_loading_finished).
+	Global.loading_finished.connect(_on_loading_finished)
+
 	# Cache RIDs to exclude from ground-distance raycasts (player body itself +
 	# avatar subtree colliders, including the TriggerDetector which would
 	# otherwise make the ray report ~0m at all times).
 	_build_raycast_exclude()
+	# The scene pointer raycast excludes the same set: with the third-person avatar
+	# centered on screen (issue #2709), the ray from the camera would hit its back.
+	Global.scene_runner.set_pointer_raycast_exclude(_raycast_exclude)
 
 	# Avatar is top-level: initialize its world transform to match the player
 	avatar.global_position = global_position
@@ -257,6 +316,17 @@ func _on_player_profile_changed(new_profile: DclUserProfile):
 func _on_scene_changed(_scene_id: int) -> void:
 	_locomotion_settings = Global.scene_runner.get_current_scene_locomotion_settings()
 	_apply_locomotion_settings()
+
+
+# on_change_scene_id fires every time the current-parcel scene id changes, which
+# on Genesis City includes simply walking across a parcel boundary — not a signal
+# for "the user deliberately went somewhere". loading_finished only fires behind a
+# loading screen (Discover jump, teleport, realm change), so it's the right place
+# to reset the pinch zoom back to the default third-person view. Mobile-only: the
+# pinch input is mobile-only, and desktop users can sit in first person by choice.
+func _on_loading_finished() -> void:
+	if Global.is_mobile():
+		_reset_zoom_to_default()
 
 
 func _on_locomotion_settings_changed(settings: DclLocomotionSettings) -> void:
@@ -308,6 +378,60 @@ static func resolve_is_grounded(
 			and since_last_jump >= JUMP_COOLDOWN
 		)
 	)
+
+
+## Pinch-to-zoom (mobile). MobileCameraInput calls begin → apply(*) → end around a
+## two-finger pinch. Two fixed positions (team decision, issue #2709): the gesture
+## accumulates the finger-spread change and swaps 1p↔3p once it passes the toggle
+## threshold; end() reports the analytics event.
+func begin_pinch_zoom() -> void:
+	_pinch_accumulated_delta = 0.0
+	_pinch_start_mode = camera.get_camera_mode() as Global.CameraMode
+
+
+## `pixel_delta` is the change in distance between the two fingers this frame.
+## Roblox-style mapping: fingers opening zoom IN (toward first person), fingers
+## closing zoom OUT (toward third person). After a toggle the accumulator
+## resets, so swapping back needs a fresh threshold's worth of spread in the
+## opposite direction.
+func apply_pinch_zoom(pixel_delta: float) -> void:
+	if camera_mode_change_blocked:
+		return
+	_pinch_accumulated_delta += pixel_delta
+	var mode: Global.CameraMode = camera.get_camera_mode() as Global.CameraMode
+	match PinchGestureHelpers.toggle_direction(_pinch_accumulated_delta):
+		1:
+			if mode == Global.CameraMode.THIRD_PERSON:
+				Global.set_camera_mode(Global.CameraMode.FIRST_PERSON)
+			_pinch_accumulated_delta = 0.0
+		-1:
+			if mode == Global.CameraMode.FIRST_PERSON:
+				Global.set_camera_mode(Global.CameraMode.THIRD_PERSON)
+			_pinch_accumulated_delta = 0.0
+
+
+func end_pinch_zoom() -> void:
+	if camera_mode_change_blocked:
+		return
+	var mode: Global.CameraMode = camera.get_camera_mode() as Global.CameraMode
+	if mode == _pinch_start_mode:
+		return  # no net change — nothing to report
+	var zoom_direction: String = "zoom_out" if mode == Global.CameraMode.THIRD_PERSON else "zoom_in"
+	if Global.metrics:
+		Global.metrics.track_click_button(
+			"ZOOM", "IN_WORLD", JSON.stringify({"zoom_direction": zoom_direction})
+		)
+
+
+# Reset the camera back to the default third-person view. Called on every
+# deliberate transition on mobile (see _on_loading_finished) — so a pinch into
+# first person returns to third person after the next loading screen. Skipped
+# while a scene forces the camera mode.
+func _reset_zoom_to_default() -> void:
+	if camera_mode_change_blocked:
+		return
+	if camera.get_camera_mode() != Global.CameraMode.THIRD_PERSON:
+		Global.set_camera_mode(Global.CameraMode.THIRD_PERSON)
 
 
 func _physics_process(dt: float) -> void:
@@ -606,6 +730,97 @@ func _physics_process(dt: float) -> void:
 	# Restore velocity.y unless a floor/ceiling collision already zeroed it.
 	if not is_on_floor() and not is_on_ceiling():
 		velocity.y -= external_y_for_move
+
+	_update_crosshair_screen_position(dt)
+	_update_avatar_raycast_to_crosshair()
+
+
+# Issue #2709: crosshair target in screen pixels — a pure function of the
+# spring-arm length (fixed anchors, quadratic ease-in across the mode swap).
+# No live projection, no prediction: it can never swing or jump.
+# Live third-person crosshair target (settled-camera phase): CROSSHAIR_TOP_GAP_PX
+# above the avatar's on-screen top edge, at its side edge's x, clamped inside
+# the screen margin. Falls back to the placeholder anchor when the head is
+# behind the camera.
+func _compute_live_crosshair_target(viewport_size: Vector2) -> Vector2:
+	var top_world := global_position + Vector3(0, AVATAR_TOP_HEIGHT, 0)
+	if camera.is_position_behind(top_world):
+		return CROSSHAIR_PLACEHOLDER_ANCHOR * viewport_size
+	var edge_world := top_world + camera.global_transform.basis.x * AVATAR_HALF_WIDTH
+	var top_px := camera.unproject_position(top_world)
+	var edge_px := camera.unproject_position(edge_world)
+	var tracked := Vector2(edge_px.x, top_px.y - CROSSHAIR_TOP_GAP_PX)
+	var margin := Vector2(CROSSHAIR_SCREEN_MARGIN, CROSSHAIR_SCREEN_MARGIN)
+	return tracked.clamp(margin, viewport_size - margin)
+
+
+# Smoothed crosshair position (single source for the HUD label, the scene
+# interaction raycast and AvatarRaycast, so the three never desync).
+func get_crosshair_screen_position() -> Vector2:
+	return _crosshair_screen_pos
+
+
+func _update_crosshair_screen_position(dt: float) -> void:
+	var viewport_size := get_viewport().get_visible_rect().size
+	var active := Global.is_mobile() and not Global.scene_runner.raycast_use_cursor_position
+	if not active:
+		# Desktop / cinematic own the crosshair; park the smoothed value at center
+		# so re-entering mobile gameplay glides from center, never from a stale point.
+		_crosshair_screen_pos = viewport_size * 0.5
+		_crosshair_pos_initialized = false
+		_crosshair_mode_clock = 1000.0
+		_crosshair_prev_mode = camera.get_camera_mode() as Global.CameraMode
+		return
+
+	# Three-phase target (device QA). The crosshair always spring-chases the
+	# target; the target is what changes. A mode swap resets the clock.
+	_crosshair_mode_clock += dt
+	var mode: Global.CameraMode = camera.get_camera_mode() as Global.CameraMode
+	if mode != _crosshair_prev_mode:
+		_crosshair_prev_mode = mode
+		_crosshair_mode_clock = 0.0
+
+	var target: Vector2
+	if mode == Global.CameraMode.FIRST_PERSON:
+		# 3p -> 1p: straight to center.
+		target = viewport_size * 0.5
+	elif _crosshair_mode_clock < CAMERA_MODE_TWEEN_TIME * 0.5:
+		# Phase 1 (0-50% of the pullback): hold center.
+		target = viewport_size * 0.5
+	elif mount_camera.spring_length < CameraRigHelpers.THIRD_PERSON_CAMERA.z - 0.05:
+		# Phase 2 (50% -> camera settled): glide to the placeholder anchor.
+		target = CROSSHAIR_PLACEHOLDER_ANCHOR * viewport_size
+	else:
+		# Phase 3 (settled): track the live projection (== placeholder at rest).
+		target = _compute_live_crosshair_target(viewport_size)
+
+	if not _crosshair_pos_initialized:
+		_crosshair_pos_initialized = true
+		_crosshair_screen_pos = target
+	else:
+		_crosshair_screen_pos = _crosshair_screen_pos.lerp(
+			target, 1.0 - exp(-CROSSHAIR_SMOOTH_SPEED * dt)
+		)
+
+
+# Issue #2709: aim the avatar outline/view-profile raycast at the crosshair.
+# The ray keeps its origin at the camera (own avatar is excluded via its removed
+# ClickArea) and only the direction changes. Mobile only; desktop/cinematic keep
+# the tscn default. Writes happen only on state change, not every physics tick.
+func _update_avatar_raycast_to_crosshair() -> void:
+	var active := Global.is_mobile() and not Global.scene_runner.raycast_use_cursor_position
+	if not active:
+		if _avatar_raycast_crosshair_active:
+			_avatar_raycast_crosshair_active = false
+			avatar_raycast.position = Vector3.ZERO
+			avatar_raycast.target_position = AVATAR_RAYCAST_DEFAULT_TARGET
+		return
+	_avatar_raycast_crosshair_active = true
+	var dir := camera.project_ray_normal(_crosshair_screen_pos)
+	avatar_raycast.position = Vector3.ZERO
+	avatar_raycast.target_position = avatar_raycast.to_local(
+		camera.global_position + dir * AVATAR_RAYCAST_DEFAULT_TARGET.length()
+	)
 
 
 # Fold scene-driven force/impulses into external_velocity, then drag and clamp.
