@@ -111,6 +111,10 @@ func process_deep_link(url: String) -> void:
 	if Global.deep_link_obj.safe_margin_debug:
 		Global.set_safe_margin_debug_enable(true)
 
+	# Review-prompt QA harness (#2739). Untyped param, non-production only.
+	if Global.review_prompt_coordinator != null:
+		Global.review_prompt_coordinator.capture_deeplink(Global.deep_link_obj)
+
 	# Returning from the in-app marketplace webview: the web fires a
 	# decentraland://open?iap_enabled=true[&urn=<urn>] deep link to bring the app back. The
 	# native side dismisses the SFSafariViewController directly, which never fires the

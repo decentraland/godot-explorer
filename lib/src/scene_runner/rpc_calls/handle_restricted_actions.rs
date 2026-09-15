@@ -247,11 +247,12 @@ pub fn move_player_to(
     }
 }
 
-// Teleport user to world coordinates
+// Teleport user to world coordinates, optionally in another realm (protocol#477).
 pub fn teleport_to(
     scene: &Scene,
     current_parcel_scene_id: &SceneId,
-    world_coordinates: &[i32; 2],
+    world_coordinates: &Option<[i32; 2]>,
+    realm: &Option<String>,
     response: &RpcResultSender<Result<(), String>>,
 ) {
     // Check if player is inside the scene that requested the move
@@ -290,9 +291,33 @@ pub fn teleport_to(
     };
 
     let mut modal_manager = modal_manager;
-    let target_parcel = Vector2i::new(world_coordinates[0], world_coordinates[1]);
 
-    modal_manager.call("async_show_teleport_modal", &[target_parcel.to_variant()]);
+    match (world_coordinates, realm) {
+        // A parcel, in the current realm (empty string) or in the one the scene named. The
+        // modal's primary action awaits the realm change before placing the player.
+        (Some(coordinates), realm) => {
+            let target_parcel = Vector2i::new(coordinates[0], coordinates[1]);
+            let realm = realm.clone().unwrap_or_default().to_godot();
+            modal_manager.call(
+                "async_show_teleport_modal",
+                &[target_parcel.to_variant(), realm.to_variant()],
+            );
+        }
+        // No parcel: land on the realm's own spawn point.
+        (None, Some(realm)) => {
+            modal_manager.call(
+                "async_show_realm_teleport_modal",
+                &[realm.to_godot().to_variant()],
+            );
+        }
+        // Rejected by op_teleport_to already; kept so the promise can never hang.
+        (None, None) => {
+            response.send(Err(
+                "teleportTo requires worldCoordinates, a realm, or both".to_string(),
+            ));
+            return;
+        }
+    }
 
     // Send Ok immediately - the modal will handle the actual teleportation
     // This matches the behavior where the RPC call succeeds once the modal is shown
