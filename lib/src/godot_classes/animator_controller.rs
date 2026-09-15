@@ -113,6 +113,7 @@ impl MultipleAnimationController {
 
     pub fn apply_anims(&mut self, suggested_value: &PbAnimator) {
         let mut value = suggested_value.clone();
+        let requested_clips: Vec<String> = value.states.iter().map(|s| s.clip.clone()).collect();
 
         // Remap clip names that don't match existing animations.
         // Godot's GLTF importer may strip numeric suffixes (e.g., "Action.001" -> "Action")
@@ -130,6 +131,17 @@ impl MultipleAnimationController {
         value
             .states
             .retain(|state| self.existing_anims_duration.contains_key(&state.clip));
+
+        // If every requested clip is missing, the entity renders its rest pose
+        // with zero feedback — the classic silent T-pose/frozen-entity failure
+        // (e.g. scene asks "Flow.003", Godot imported "Flow_003").
+        if value.states.is_empty() && !requested_clips.is_empty() {
+            tracing::warn!(
+                "Animator: all clips dropped. requested={:?} available={:?}",
+                requested_clips,
+                self.existing_anims_duration.keys().collect::<Vec<_>>()
+            );
+        }
 
         let (playing_animations, stopped_animations): (_, Vec<_>) = value
             .states
@@ -440,6 +452,18 @@ impl MultipleAnimationController {
 /// 1. Strip the numeric suffix (e.g., "Action.001" -> "Action")
 /// 2. If only one real animation exists, return it as a fallback
 fn resolve_clip_name(clip: &str, existing_anims: &HashMap<String, f32>) -> Option<String> {
+    // Godot's GLTF importer sanitizes animation names "." -> "_" ("Flow.003"
+    // becomes "Flow_003"), but scenes keep asking for the authored (Unity) name.
+    // Try the sanitized form FIRST: an exact variant match beats the numeric
+    // strip below, which would otherwise misresolve "Flow.003" to the base
+    // clip "Flow" when both exist.
+    if clip.contains('.') {
+        let sanitized = clip.replace('.', "_");
+        if existing_anims.contains_key(&sanitized) {
+            return Some(sanitized);
+        }
+    }
+
     // Try stripping numeric suffix: "Action.001" -> "Action"
     if let Some(dot_pos) = clip.rfind('.') {
         let suffix = &clip[dot_pos + 1..];
@@ -676,6 +700,13 @@ pub fn apply_anims(gltf_container_node: Gd<Node3D>, value: &PbAnimator) {
                 resolve_clip_name(&state.clip, &existing_anims)
             };
 
+            if resolved_clip.is_none() {
+                tracing::warn!(
+                    "Animator: clip '{}' not found, available={:?}",
+                    state.clip,
+                    existing_anims.keys().collect::<Vec<_>>()
+                );
+            }
             if let Some(clip_name) = resolved_clip {
                 let anim_name = StringName::from(&clip_name);
                 anim_player.set_speed_scale(state.speed.unwrap_or(1.0));
@@ -694,5 +725,46 @@ pub fn apply_anims(gltf_container_node: Gd<Node3D>, value: &PbAnimator) {
                 anim_player.play_ex().name(&anim_name).done();
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn anims(names: &[&str]) -> HashMap<String, f32> {
+        names.iter().map(|n| (n.to_string(), 1.0)).collect()
+    }
+
+    #[test]
+    fn resolves_numeric_suffix() {
+        // "Action.001" -> "Action" (Godot strips numeric suffix on single-clip GLBs)
+        assert_eq!(
+            resolve_clip_name("Action.001", &anims(&["Action"])),
+            Some("Action".into())
+        );
+    }
+
+    #[test]
+    fn repro_dot_to_underscore_rename() {
+        // REPRO #2766: Godot's GLTF importer sanitizes animation names "." -> "_".
+        // The scene (authored against Unity) asks for "Flow.003"; the imported
+        // clip is "Flow_003". Today this resolves to None and apply_anims drops
+        // the state silently -> entity frozen. Observed live in pixelpirate.dcl.eth:
+        //   Animator: all clips dropped. requested=["Flow.003"] available=["Flow_003"]
+        assert_eq!(
+            resolve_clip_name("Flow.003", &anims(&["Flow_003", "Flow_002", "Flow_004"])),
+            Some("Flow_003".into())
+        );
+    }
+
+    #[test]
+    fn sanitized_match_beats_numeric_strip() {
+        // "Flow.003" must resolve to its exact variant "Flow_003", not to the
+        // base clip "Flow" (the strip path would misresolve here).
+        assert_eq!(
+            resolve_clip_name("Flow.003", &anims(&["Flow", "Flow_001", "Flow_003"])),
+            Some("Flow_003".into())
+        );
     }
 }
