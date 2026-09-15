@@ -303,8 +303,9 @@ func _apply_storekit_env(environment: String) -> void:
 	if environment != "sandbox":
 		_option_d_skip_reason = "not_sandbox"
 		return
-	# NOT OS.is_debug_build(): the iOS export always uses the debug template, so that
-	# check disabled this switch on every shipped build, review included.
+	# NOT OS.is_debug_build(): store and TestFlight builds are release exports, so that
+	# check is false on every build a reviewer or QA can install. is_dev() is what
+	# separates a local developer build from a shippable one.
 	if Global.is_dev():
 		print("[IAP] StoreKit sandbox on a dev build — not forcing the Option D env")
 		_option_d_skip_reason = "dev_build"
