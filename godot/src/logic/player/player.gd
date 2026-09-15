@@ -40,6 +40,12 @@ const GLIDE_OPENING := 1
 const GLIDE_GLIDING := 2
 const GLIDE_CLOSING := 3
 
+# #1557: Unity parity (ApplyJump.cs / ApplyGravity.cs). Seconds, never ticks.
+const COYOTE_WINDOW := 0.15
+const GRAVITY_ASCENT_FACTOR := 4.0
+const LONG_JUMP_TIME := 0.5
+const LONG_JUMP_GRAVITY_SCALE := 0.5
+
 # What the jump button would do if pressed right now. Used by the UI to pick
 # the matching icon. Mirrors the decision tree in _physics_process.
 const JUMP_ACTION_NONE := 0
@@ -88,10 +94,10 @@ var walk_speed: float = 1.5
 var jog_speed: float = 8.0
 var run_speed: float = 11.0
 var gravity := 10.0
-var jump_height: float = 1.8
-var run_jump_height: float = 1.8
+# #1557: jog/run jump heights lerped by horizontal speed (Unity: 1.0 / 1.5).
+var jump_height: float = 1.0
+var run_jump_height: float = 1.5
 var hard_landing_cooldown: float = 0.0
-var jump_velocity_0 := sqrt(2 * jump_height * gravity)
 
 var jump_count: int = 0
 var glide_state: int = GLIDE_CLOSED
@@ -359,7 +365,6 @@ func _apply_locomotion_settings() -> void:
 	jump_height = _locomotion_settings.jump_height
 	run_jump_height = _locomotion_settings.run_jump_height
 	hard_landing_cooldown = _locomotion_settings.hard_landing_cooldown
-	jump_velocity_0 = sqrt(2 * jump_height * gravity)
 
 
 func clamp_camera_rotation():
@@ -531,6 +536,10 @@ func _physics_process(dt: float) -> void:
 	else:
 		time_falling = 0.0
 
+	# #1557: coyote window in seconds (B1) — the ground jump stays reachable this
+	# long after leaving the floor, and the glide gate must not eat the press.
+	var in_coyote := not on_floor and time_falling <= COYOTE_WINDOW
+
 	# Air-jump hover phase: freeze gravity, then fire impulse + horizontal dash
 	# when the timer expires. Leaves avatar.rise/fall untouched on purpose —
 	# flipping them mid-hover would trip Jump_Fall → Jump_End via nfall and
@@ -539,17 +548,19 @@ func _physics_process(dt: float) -> void:
 		_air_jump_delay_timer -= dt
 		velocity.y = 0.0
 		if _air_jump_delay_timer <= 0.0:
-			velocity.y = sqrt(2.0 * AIR_JUMP_HEIGHT * gravity)
+			velocity.y = sqrt(2.0 * AIR_JUMP_HEIGHT * gravity * GRAVITY_ASCENT_FACTOR)
 			var horiz_dir: Vector3 = Vector3(_air_jump_direction.x, 0.0, _air_jump_direction.z)
 			if horiz_dir.length_squared() > 0.0001:
 				horiz_dir = horiz_dir.normalized()
-				velocity.x = horiz_dir.x * AIR_JUMP_DIRECTION_IMPULSE
-				velocity.z = horiz_dir.z * AIR_JUMP_DIRECTION_IMPULSE
+				# #1557: max(8, current horizontal speed) (ApplyJump.cs).
+				var impulse := maxf(AIR_JUMP_DIRECTION_IMPULSE, Vector2(velocity.x, velocity.z).length())
+				velocity.x = horiz_dir.x * impulse
+				velocity.z = horiz_dir.z * impulse
 			jump_count += 1
 			_time_since_last_jump = 0.0
 			avatar.rise = true
 			avatar.fall = false
-	elif not on_floor:
+	elif not on_floor and not in_coyote:
 		var in_grace_time = (
 			time_falling < .2
 			and !Input.is_action_pressed("ia_jump")
@@ -563,7 +574,7 @@ func _physics_process(dt: float) -> void:
 		avatar.fall = velocity.y < -.3 && !in_grace_time and free_flight
 		# Scene force.y reduces effective gravity, so an upward wind cancels
 		# fall instead of stacking on velocity.y.
-		velocity.y -= (gravity - external_acceleration.y) * dt
+		velocity.y -= (_current_gravity() - external_acceleration.y) * dt
 
 		# Air-jump: 0.2s hover then impulse (matches Unity ApplyJump two-step).
 		if (
@@ -621,17 +632,19 @@ func _physics_process(dt: float) -> void:
 		and _time_since_last_jump >= JUMP_COOLDOWN
 	):
 		# Ground jump — consume the buffer instead of reading the key again.
-		var effective_jump_height := jump_height
-		if Input.is_action_pressed("ia_sprint"):
-			effective_jump_height = run_jump_height
-		velocity.y = sqrt(2 * effective_jump_height * gravity)
+		# #1557: fires on the floor and inside the coyote window (B1). Height is
+		# lerped jog → run by horizontal speed; v0 uses the ascent gravity.
+		var h_speed := Vector2(velocity.x, velocity.z).length()
+		var speed_t := clampf(inverse_lerp(jog_speed, run_speed, h_speed), 0.0, 1.0)
+		var effective_jump_height := lerpf(jump_height, run_jump_height, speed_t)
+		velocity.y = sqrt(2.0 * effective_jump_height * gravity * GRAVITY_ASCENT_FACTOR)
 		jump_count = 1
 		_jump_buffer = 0.0
 		_time_since_last_jump = 0.0
 		avatar.land = false
 		avatar.rise = true
 		avatar.fall = false
-	else:
+	elif on_floor:
 		if not avatar.land:
 			avatar.land = true
 			if was_falling and hard_landing_cooldown > 0 and fall_duration > 1.0:
@@ -645,6 +658,10 @@ func _physics_process(dt: float) -> void:
 		if glide_state == GLIDE_OPENING or glide_state == GLIDE_GLIDING:
 			glide_state = GLIDE_CLOSING
 			_glide_timer = GLIDE_CLOSING_TIME
+	else:
+		# Coyote fall without a buffered jump: gravity applies, no landing state,
+		# glide gate stays closed for the whole window.
+		velocity.y -= (_current_gravity() - external_acceleration.y) * dt
 
 	camera.set_target_fov(DEFAULT_CAMERA_FOV)
 	if current_direction:
@@ -861,6 +878,17 @@ func _update_avatar_raycast_to_crosshair() -> void:
 	avatar_raycast.target_position = avatar_raycast.to_local(
 		camera.global_position + dir * AVATAR_RAYCAST_DEFAULT_TARGET.length()
 	)
+
+
+# #1557: asymmetric gravity (ApplyGravity.cs) — ascent x4, descent x1, with a
+# 0.5s hold window after takeoff that halves it (the long-jump float).
+func _current_gravity() -> float:
+	var g := gravity
+	if velocity.y > 0.0:
+		g *= GRAVITY_ASCENT_FACTOR
+		if Input.is_action_pressed("ia_jump") and _time_since_last_jump < LONG_JUMP_TIME:
+			g *= LONG_JUMP_GRAVITY_SCALE
+	return g
 
 
 # #2753: custom step offset — CharacterBody3D has no built-in (M1). When
