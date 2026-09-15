@@ -209,7 +209,7 @@ pub fn update_avatar_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                         ],
                     );
                 } else {
-                    let mut new_avatar_shape = godot::tools::load::<PackedScene>(
+                    let mut new_avatar_shape = crate::scene_runner::scene_cache::packed_scene(
                         "res://src/decentraland_components/avatar/avatar.tscn",
                     )
                     .instantiate()
