@@ -171,8 +171,10 @@ Smallest set that is true.
 
 - Kind (one): `enhancement` (default for Feature) · `bug`
 - Platform (all that apply): `mobile` (default) · `iOS` · `Android` · `desktop`
-- Domain: `credits` · `controls` · `rendering` · `metrics` · `feature parity`
-- Process: `needs design` · `need definition` · `blocked` · `triage` · `release` · `claw-created`
+- Domain: `credits` · `controls` · `rendering` · `metrics` · `feature parity` · `sentry` · `crash` · `performance`
+- Process: `needs design` · `need definition` · `need tech test` · `blocked` · `triage` · `release` · `claw-created`
+
+`sentry` = observability plumbing (SDK version, releases, symbolication, ANR). `crash` = the issue is about crashes/ANRs themselves. `performance` = frame time, memory, asset weight, thermals. `need tech test` = feasibility unknown until an engineer probes the engine.
 
 `claw-created` only when the request came via Slack/Discord rather than the user authoring it directly; then close the body with `**Requested by <name> via Slack**` (#2091, #2089). Direct authorship → omit both.
 
@@ -184,6 +186,7 @@ After creating, add to project 43 and set:
 
 - Status → planning (always)
 - Priority → 0-Critical / 1-High / 2-Medium / 3-Low — ask if not stated
+- Epic → link when one exists
 - Estimate (Days) → only if given
 - Sprint → only if explicitly targeted
 
