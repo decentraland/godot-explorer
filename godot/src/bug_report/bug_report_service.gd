@@ -144,7 +144,7 @@ static func _current_scene_sdk_version() -> String:
 # log tail and screenshot; it falls back to "unavailable" — the same string Unity
 # emits when its Sentry step fails — whenever SentryUserFeedback returns nothing,
 # which is every dev build, since _before_send discards those events.
-# `Sentry feedback` is Godot-only: the Feedback page filtered to the reporter (see
+# `Sentry feedback search` is Godot-only: the Feedback page filtered to the reporter (see
 # SentryUserFeedback), omitted rather than "unavailable" when there is none.
 static func _compose_description(description: String, sentry_links: Dictionary) -> String:
 	var lines := [description, "", "---"]
@@ -164,7 +164,7 @@ static func _compose_description(description: String, sentry_links: Dictionary) 
 	)
 	var feedback_url := str(sentry_links.get("feedback_url", ""))
 	if not feedback_url.is_empty():
-		lines.append("Sentry feedback: %s" % feedback_url)
+		lines.append("Sentry feedback search: %s" % feedback_url)
 	return "\n".join(lines)
 
 
