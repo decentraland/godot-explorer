@@ -259,13 +259,20 @@ fn log_crdt_message(
     );
 }
 
-const CRDT_PUT_COMPONENT_HEADER_SIZE: usize = CRDT_HEADER_SIZE + 20;
-const CRDT_DELETE_COMPONENT_HEADER_SIZE: usize = CRDT_HEADER_SIZE + 16;
-const CRDT_DELETE_ENTITY_HEADER_SIZE: usize = CRDT_HEADER_SIZE + 4;
+// ADR-117 wire sizes. Every message starts with the 8-byte header
+// (length u32 + type u32) and `length` counts that header too.
+//
+// PutComponent / AppendValue: header + entity(4) + component(4) + timestamp(4)
+// + content_length(4) = 24 bytes, followed by `content_length` payload bytes.
+const CRDT_PUT_COMPONENT_HEADER_SIZE: usize = CRDT_HEADER_SIZE + 16;
+// DeleteComponent: header + entity(4) + component(4) + timestamp(4) = 20 bytes.
+const CRDT_DELETE_COMPONENT_LENGTH: usize = CRDT_HEADER_SIZE + 12;
+// DeleteEntity: header + entity(4) = 12 bytes.
+const CRDT_DELETE_ENTITY_LENGTH: usize = CRDT_HEADER_SIZE + 4;
 
 #[allow(dead_code)]
 pub fn delete_entity(entity_id: &SceneEntityId, writer: &mut DclWriter) {
-    writer.write_u32(CRDT_DELETE_ENTITY_HEADER_SIZE as u32);
+    writer.write_u32(CRDT_DELETE_ENTITY_LENGTH as u32);
     writer.write(&CrdtMessageType::DeleteEntity);
     writer.write(entity_id);
 }
@@ -292,7 +299,7 @@ pub fn put_or_delete_lww_component(
         component_definition.to_binary(*entity_id, &mut component_writer)?;
 
         let content_length = component_buf.len();
-        let length = CRDT_DELETE_COMPONENT_HEADER_SIZE + component_buf.len();
+        let length = CRDT_PUT_COMPONENT_HEADER_SIZE + component_buf.len();
 
         writer.write_u32(length as u32);
         writer.write(&CrdtMessageType::PutComponent);
@@ -303,7 +310,7 @@ pub fn put_or_delete_lww_component(
         writer.write_u32(content_length as u32);
         writer.write_raw(&component_buf)
     } else {
-        writer.write_u32(CRDT_PUT_COMPONENT_HEADER_SIZE as u32);
+        writer.write_u32(CRDT_DELETE_COMPONENT_LENGTH as u32);
         writer.write(&CrdtMessageType::DeleteComponent);
         writer.write(entity_id);
         writer.write(component_id);
@@ -338,7 +345,7 @@ pub fn append_gos_component(
         component_definition.to_binary(*entity_id, i, &mut component_writer)?;
 
         let content_length = component_buf.len();
-        let length = CRDT_DELETE_COMPONENT_HEADER_SIZE + component_buf.len();
+        let length = CRDT_PUT_COMPONENT_HEADER_SIZE + component_buf.len();
 
         writer.write_u32(length as u32);
         writer.write(&CrdtMessageType::AppendValue);
@@ -429,7 +436,9 @@ pub fn filter_known_crdt_messages(raw: &[u8], scene_crdt_state: &SceneCrdtState)
 mod tests {
     use super::*;
     use crate::dcl::components::proto_components::sdk::components::PbAvatarEmoteCommand;
+    use crate::dcl::components::transform_and_parent::DclTransformAndParent;
     use crate::dcl::crdt::grow_only_set::GenericGrowOnlySetComponentOperation;
+    use crate::dcl::crdt::last_write_wins::LastWriteWinsComponentOperation;
     use crate::dcl::crdt::SceneCrdtStateProtoComponents;
 
     /// `GrowOnlySet::to_binary` takes a REVERSE index (0 = newest entry), so walking
@@ -479,5 +488,61 @@ mod tests {
             first < second && second < third,
             "entries must be emitted oldest-first; got offsets {first}, {second}, {third}"
         );
+    }
+
+    /// The renderer used to declare a 28-byte length on DeleteComponent while
+    /// writing 20 bytes (the PUT/DELETE constants were crossed). Any decoder that
+    /// trusts `length` then either mis-aligns the next message or, in `@dcl/ecs`,
+    /// silently drops the delete when it is the last message of the chunk (#2851).
+    ///
+    /// Round-trips a [DeleteComponent, PutComponent] pair through our own reader:
+    /// with the wrong length the PUT that follows the delete is swallowed.
+    #[test]
+    fn delete_component_declares_its_real_wire_length() {
+        let deleted = SceneEntityId::new(512, 0);
+        let kept = SceneEntityId::new(513, 0);
+
+        let mut sender = SceneCrdtState::from_proto();
+        {
+            let transform = sender.get_transform_mut();
+            // put Some then None so the delete carries a non-zero timestamp (1).
+            transform.put(deleted, Some(DclTransformAndParent::default()));
+            transform.put(deleted, None);
+            transform.put(kept, Some(DclTransformAndParent::default()));
+        }
+
+        let mut buf = Vec::new();
+        let mut writer = DclWriter::new(&mut buf);
+        for entity in [&deleted, &kept] {
+            put_or_delete_lww_component(&sender, entity, &SceneComponentId::TRANSFORM, &mut writer)
+                .expect("transform entries should serialize");
+        }
+
+        // Wire check: the delete must declare exactly the bytes it wrote, and the
+        // PUT header must start right after it.
+        let declared_delete_len = u32::from_le_bytes(buf[0..4].try_into().unwrap()) as usize;
+        assert_eq!(
+            declared_delete_len, 20,
+            "DeleteComponent is 20 bytes on the wire"
+        );
+        let next_type = u32::from_le_bytes(buf[24..28].try_into().unwrap());
+        assert_eq!(next_type, CrdtMessageType::PutComponent as u32);
+        let declared_put_len = u32::from_le_bytes(buf[20..24].try_into().unwrap()) as usize;
+        assert_eq!(declared_put_len, buf.len() - 20);
+
+        // Behavioural check: a receiver replaying the stream sees both messages.
+        let mut receiver = SceneCrdtState::from_proto();
+        let mut reader = DclReader::new(&buf);
+        process_many_messages(&mut reader, &mut receiver);
+
+        let transform = receiver.get_transform();
+        let deleted_entry = transform.get(&deleted).expect("delete must be applied");
+        assert_eq!(deleted_entry.timestamp, SceneCrdtTimestamp(1));
+        assert!(deleted_entry.value.is_none());
+        let kept_entry = transform
+            .get(&kept)
+            .expect("put after the delete must not be swallowed");
+        assert_eq!(kept_entry.timestamp, SceneCrdtTimestamp(0));
+        assert!(kept_entry.value.is_some());
     }
 }

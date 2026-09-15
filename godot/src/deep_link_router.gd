@@ -50,8 +50,8 @@ func process_deep_link(url: String) -> void:
 		print("[DEEPLINK] Found rust-log param: ", rust_log_value)
 		DclGlobal.set_rust_log_filter(rust_log_value)
 
-	# Pulse transport params (pulse-server / pulse / dual-channel / livekit); the
-	# shared helper no-ops on builds without the use_pulse feature.
+	# Pulse transport params (pulse-server / pulse-realm / pulse / dual-channel /
+	# livekit); the shared helper no-ops on builds without the use_pulse feature.
 	Global._apply_comms_deeplink_params(Global.deep_link_obj)
 
 	Global._apply_optimized_content_base_url(Global.deep_link_obj)

@@ -22,6 +22,7 @@ const TIMEOUT_SECONDS := 5.0
 # Flag names exactly as served by the mobile-bff payload.
 const FLAG_ARCHIPELAGO := "archipielago"
 const FLAG_PULSE := "pulse"
+const FLAG_DUAL_CHANNEL := "dual-channel"
 # Sentry error-event sampling, served as a number in [0, 1].
 const FLAG_SENTRY_SAMPLE_RATE := "sentry-sample-rate"
 # Report ERROR-level Sentry events (the engine/Rust error firehose). Fail-closed:
@@ -107,9 +108,16 @@ func _async_load() -> void:
 # only decides the default: explicit local opt-ins (deeplink `pulse=true` /
 # `pulse-server=`, CLI `--pulse`) and opt-outs (`--no-pulse`, `pulse=false`)
 # always win — see CommunicationManager::pulse_enabled on the Rust side.
+# `dual-channel` is the rollout control for avatar sync: while it is true (the
+# default, and today's behaviour) movement and emotes keep going over LiveKit
+# even when Pulse is established. Flipping it false hands them to Pulse alone —
+# only safe once the deployment's authoritative servers ingest Pulse as scene
+# listeners, which is a property of the deployment, not of this client. Local
+# `--livekit-movement` / `--no-livekit-movement` / `dual-channel=` still win.
 func _apply_flags() -> void:
 	Global.comms.set_archipelago_enabled(is_enabled(FLAG_ARCHIPELAGO, true))
 	Global.comms.set_pulse_flag_enabled(is_enabled(FLAG_PULSE, false))
+	Global.comms.set_dual_channel_flag_enabled(is_enabled(FLAG_DUAL_CHANNEL, true))
 
 	# SentrySDK.init runs at process start (before this fetch resolves), so the
 	# remote rate is enforced through the _before_send gate, not the init option.
