@@ -295,6 +295,23 @@ A `Button` inside a panel that appears over a `LineEdit` will steal focus → ke
 ### Virtual keyboard buffer sync
 After programmatically inserting text into a `LineEdit` on mobile, call `DisplayServer.virtual_keyboard_show(text, …)` to re-sync the OS buffer, or backspace will behave as if the inserted text isn't there (#1822).
 
+### Freed-node access after `await`
+On the **release** export template (what the stores ship, on both platforms) the GDScript VM does not validate the receiver of a method call, `is`/`as` or `for`: calling anything on a freed node is a SIGSEGV, not the logged error you see in the editor. This was ≈45% of Android crash users (Sentry `GODOT-EXPLORER-21E`, Play frame `CanvasItem::show()`); the team chose to fix it in GDScript rather than keep an engine guard (decentraland/godotengine#21, 2026-09-15).
+
+Two engine facts decide what "fix it" means:
+- Every `await` hands control back to the engine; whatever the function was about to touch may be gone on resume (the user closed the modal, a realm change tore the UI down, sign-out reaped the tree, a list rebuilt its rows).
+- The engine protects **`self`** — a coroutine whose instance was freed is never resumed, and a lambda that captures `self` is skipped once `self` is gone — but **nothing else**: arguments, members, captured locals. RefCounted / autoload / `static` code gets no protection at all, because its `self` never dies.
+
+So the rule is about **ownership**, and it is structural — not a validity check:
+1. **Async work that needs a node is a method of that node.** The engine cancels it with the node, for free. A list that loads data per row puts the load on the row (`card.async_load(...)`), not on the list.
+2. **A longer-lived owner never carries a node reference across an `await`.** It re-resolves the node from its source of truth on resume — the dictionary of current rows, `Global.get_explorer()`, `get_node_or_null(path)` — and applies the result to whatever exists now. The object whose coroutine or signal you awaited is alive on resume; anything else is not assumed.
+3. **Work is cancelled when its owner frees the node** — a generation counter bumped on dispose (`video_player.gd`), a status the owner controls, a Menu-owned timer instead of a coroutine inside a RefCounted (`PlaceholderManager`).
+4. `is_instance_valid()` / `NodeGuard.is_alive()` are for a lifetime the code **does not own**: a remote player that can leave at any moment, a modal the user can close under a request. They are not the convention; a guard on a node you own is a design smell.
+
+Two corollaries: never test a node for truthiness or null when something else can free it (a freed instance is not null); and a RefCounted that awaits outlives the tree it holds nodes from — make it a Node, or move the coroutine to one.
+
+`gdlint` enforces this (`node-reference-across-await`, `node-argument-across-await`; the DCL fork of gdtoolkit, `.gdlintrc` carries the project's non-Node class list under `lifetime-safe-types`). It flags a non-`self` node reference carried across an `await`; it exempts `self`, autoloads, engine singletons, `@onready` members and nodes the class parents itself. Untyped names it cannot classify are reported — **add the type hint** rather than an ignore. `# gdlint: ignore=<rule>  # <why>` is acceptable only for a process-long object (an engine singleton, the root window). `node-null-comparison` is the audit-only rule for the truthiness corollary: `== null` on a lazily created child is legitimate, so it is disabled in CI and run by hand.
+
 ### Logging discipline & Sentry quota
 **This is the highest-leverage thing to scan a diff for that static checks will never catch.** Logs are not free: error- and warning-level logs flow into Godot's error stream, which the Sentry SDK captures and ships in prod/staging builds. Every such log added in a PR consumes the shared Sentry **event/attachment quota** for the lifetime of that code — and one mis-leveled log on a hot path can exhaust it.
 
@@ -369,6 +386,7 @@ A reviewer should `grep` / eyeball the diff for these before reading logic:
 - Non-English comment or identifier anywhere in the diff (incl. `.gdshader` / `.tscn` / `.tres` / `.glsl`, which `gdlint`/`clippy` never read) → codebase is English-only. Accented chars (`á é í ó ú ñ ¿ ¡`) or non-English words in comments/identifiers block approval until translated. Localized user-facing strings are exempt; raw literals and comments are not. See Tier 1.
 - `# TODO` / `# FIXME` added in this PR (vs already existed) → ask for an issue link.
 - `await …` inside `_ready` / `_process` / `_input` without guards → re-entrancy risk.
+- A non-`self` node reference used after an `await` in a RefCounted, autoload or `static` context, or a list that awaits per row from the list itself → SIGSEGV on the release template. The fix is ownership (move the work onto the node, re-resolve on resume, cancel on free), not `is_instance_valid`. A guard on a node the class owns, or a `# gdlint: ignore=node-*` without a reason, blocks approval. See Section 5 → "Freed-node access after `await`".
 - New `custom_minimum_size = Vector2(…)` on an overlay container → probable mouse-filter bug.
 - `shader_parameter/<name>` in a `.tres` that doesn't exist in the referenced `.gdshader` → orphan.
 - `find_node` / `get_node("%Foo")` with a unique path that just changed in the same PR → broken reference.
