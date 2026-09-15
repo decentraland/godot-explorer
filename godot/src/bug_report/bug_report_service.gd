@@ -17,9 +17,20 @@ extends RefCounted
 ## or misspelled key gets the entire ticket rejected, so nothing here is
 ## speculative — attributes match Unity's exactly.
 
-# Raw bytes, before base64. The proxy rejects the whole ticket above this, so an
-# oversized image is dropped rather than allowed to sink the report.
+# Raw bytes, before base64. The proxy rejects the whole ticket if one image is over
+# this, so an oversized image is shrunk or dropped rather than sinking the report.
 const MAX_EVIDENCE_BYTES := 3 * 1024 * 1024
+
+const MAX_EVIDENCE_COUNT := 3
+
+# Raw bytes across all images. The proxy caps the whole BODY at 4.5MB, and base64
+# grows data by 4/3: 3MiB raw is ~4.2MB encoded, which leaves room for the
+# attributes.
+const TOTAL_EVIDENCE_BYTES := 3 * 1024 * 1024
+
+# Intercom's "Platform" list attribute: 1 Desktop, 2 Mobile. This client only
+# ships on mobile, so it is always Mobile.
+const PLATFORM_MOBILE := 2
 
 const JPEG_QUALITY := 0.85
 
@@ -27,15 +38,18 @@ const JPEG_QUALITY := 0.85
 const DESCRIPTION_MAX_LENGTH := 300
 
 
-## Files a bug report. `jpeg_bytes` may be empty.
+## Files a bug report with up to MAX_EVIDENCE_COUNT screenshots (may be empty).
 ##
-## Takes already-encoded bytes rather than an `Image`: the screenshot is encoded
-## when it is captured or picked, so the submit path — which the player waits on
-## behind a spinner — does no image work at all (PR #2779 review).
+## Each shot is `{bytes, image}`, the shape BugReportModal keeps: `bytes` is the
+## JPEG encoded when it was captured or picked, `image` its decoded preview.
+## Screenshots that fit their share of the body are sent as-is, so the usual
+## submit does no image work (PR #2779 review). Only an oversized one is
+## re-encoded from `image`, one frame per image so the spinner keeps animating
+## (PR #2906 review).
 ##
 ## Returns {ok: bool, id: String, error: String}. Never throws.
 static func async_submit(
-	issue_type_uuid: String, description: String, jpeg_bytes: PackedByteArray = PackedByteArray()
+	issue_type_uuid: String, description: String, shots: Array[Dictionary] = []
 ) -> Dictionary:
 	if issue_type_uuid.is_empty():
 		return {"ok": false, "id": "", "error": "missing issue type"}
@@ -46,13 +60,16 @@ static func async_submit(
 
 	# Before the POST: the returned link is an input to the description. Returns
 	# "" whenever Sentry is unavailable, and the report is filed regardless.
-	var diagnostics_link := SentryUserFeedback.submit(trimmed, jpeg_bytes)
+	var images: Array[PackedByteArray] = []
+	for shot in shots:
+		images.append(shot.get("bytes", PackedByteArray()))
+	var diagnostics_link := SentryUserFeedback.submit(trimmed, images)
 
 	var payload := {
 		"ticket_attributes": _build_attributes(issue_type_uuid, trimmed, diagnostics_link)
 	}
 
-	var evidence := _build_evidence(jpeg_bytes)
+	var evidence := await _async_build_evidence(shots)
 	if not evidence.is_empty():
 		payload["evidence"] = evidence
 
@@ -85,7 +102,7 @@ static func async_submit(
 	return {"ok": true, "id": ticket_id, "error": ""}
 
 
-# Every value must be a String — the proxy rejects non-string attribute values.
+# Every value is a String except Platform, which the proxy expects as an int.
 static func _build_attributes(
 	issue_type_uuid: String, description: String, diagnostics_link: String
 ) -> Dictionary:
@@ -98,6 +115,9 @@ static func _build_attributes(
 		"Graphic Card": device["gpu"],
 		"RAM": device["ram"],
 		"Client version": String(DclGlobal.get_version()),
+		# A raw int, not an option-id string like Issue Type: the intercom-proxy
+		# contract (issue #2842) defines Platform as 1 Desktop / 2 Mobile.
+		"Platform": PLATFORM_MOBILE,
 	}
 
 	# Omitted rather than sent empty: Intercom leaves an absent attribute unset,
@@ -182,22 +202,49 @@ static func _collect_device_info() -> Dictionary:
 	}
 
 
-# Returns {} when there is nothing to attach or the encode is too large — an
-# oversized image must not take the whole ticket down with it. It still reaches
-# Sentry via SentryUserFeedback, so it is dropped from the ticket, not lost.
-static func _build_evidence(bytes: PackedByteArray) -> Dictionary:
-	if bytes.is_empty():
-		return {}
-	if bytes.size() > MAX_EVIDENCE_BYTES:
-		push_warning(
-			(
-				"BugReportService: attachment is %d bytes (max %d) — filing without it"
-				% [bytes.size(), MAX_EVIDENCE_BYTES]
-			)
-		)
-		return {}
+# One evidence entry per screenshot, in order. The body budget is shared out as
+# we go: each image gets the remaining bytes divided by the images still to come,
+# so one that comes in small or gets dropped leaves more room for the rest. An
+# image over its share is re-encoded smaller, and dropped only when even that
+# fails, so it can't take the whole ticket down with it. The originals still
+# reach Sentry via SentryUserFeedback, so a dropped image is missing from the
+# ticket but not lost.
+static func _async_build_evidence(shots: Array[Dictionary]) -> Array:
+	var present: Array[Dictionary] = []
+	for shot in shots:
+		var bytes: PackedByteArray = shot.get("bytes", PackedByteArray())
+		if not bytes.is_empty():
+			present.append(shot)
+	if present.size() > MAX_EVIDENCE_COUNT:
+		present.resize(MAX_EVIDENCE_COUNT)
 
-	return {"content_type": "image/jpeg", "data": Marshalls.raw_to_base64(bytes)}
+	var evidence: Array = []
+	var remaining_bytes := TOTAL_EVIDENCE_BYTES
+	for i in present.size():
+		var budget := mini(MAX_EVIDENCE_BYTES, remaining_bytes / (present.size() - i))
+		var bytes: PackedByteArray = present[i]["bytes"]
+		var fitted := bytes
+		if fitted.size() > budget:
+			# Yield first: each re-encode is a few full-size JPEG encodes on the
+			# main thread, and the spinner should paint between them.
+			var tree := Engine.get_main_loop() as SceneTree
+			if tree != null:
+				await tree.process_frame
+			var image: Image = present[i].get("image")
+			if image == null:
+				image = ImagePickerService.decode(bytes)
+			fitted = BugReportCapture.encode_within(image, budget)
+		if fitted.is_empty():
+			push_warning(
+				(
+					"BugReportService: attachment is %d bytes (budget %d) — filing without it"
+					% [bytes.size(), budget]
+				)
+			)
+			continue
+		remaining_bytes -= fitted.size()
+		evidence.append({"content_type": "image/jpeg", "data": Marshalls.raw_to_base64(fitted)})
+	return evidence
 
 
 static func _label_for_uuid(uuid: String) -> String:
