@@ -203,6 +203,15 @@ bypasses that check for local debugging only. The baked files live in
    and posts a "📦 Android AAB Ready" Slack notification — the AAB is only uploaded for
    `main`/`release` builds.
 
+   Status is mirrored in a Slack root card (`.github/scripts/slack-root.py`, merge-on-read
+   via message metadata; byte-duplicated in `decentraland/godot-asc-deploy` — edit both
+   copies together) and ONE sticky **📱 Mobile build pipeline** PR comment
+   (`.github/scripts/pr-card.py`, same model — state lives in a hidden HTML comment; each leg
+   merges only its own fields; `SHA` + `RUN_ID` guard against a superseded run). `pr-card.py`
+   lives only here: asc-deploy has no token for this repo, so the `ios-wait` job watches the
+   asc-deploy run (matched by its `run-name` `🍏 <branch> @ <sha>`, via
+   `ASC_DEPLOY_DISPATCH_TOKEN`) and mirrors the TestFlight result onto the card.
+
    It is triggered by:
    - **Every push to `release`** → full distribution.
    - **A weekday (Mon–Fri) 09:00 UTC cron on `main`** → distribution, but only when
