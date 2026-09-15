@@ -57,11 +57,13 @@ pub fn process_rpcs(scene: &mut Scene, current_parcel_scene_id: &SceneId, rpc_ca
             }
             RpcCall::TeleportTo {
                 world_coordinates,
+                realm,
                 response,
             } => teleport_to(
                 scene,
                 current_parcel_scene_id,
                 &world_coordinates,
+                &realm,
                 &response,
             ),
             RpcCall::TriggerEmote { emote_id, mask } => {

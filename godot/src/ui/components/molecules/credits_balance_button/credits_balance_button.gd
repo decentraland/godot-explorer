@@ -49,5 +49,8 @@ func _on_balance_changed(new_balance: int) -> void:
 
 
 func _on_pressed() -> void:
+	# Kept for continuity with the pre-OPEN_CREDITS series. This press therefore emits
+	# two Click Buttons; count shop opens on OPEN_CREDITS, which covers all three
+	# entry points, not on an unfiltered Click Button.
 	Global.metrics.track_click_button("BUTTON_CREDITS", "CREDITS_BALANCE_BUTTON", "")
-	Global.open_credits.emit()
+	Global.open_credits.emit("BALANCE_BUTTON")

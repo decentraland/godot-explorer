@@ -184,6 +184,15 @@ var upgrade_modal_shown_count: int = 0
 var upgrade_modal_last_shown_unix: int = 0
 var upgrade_modal_first_seen_unix: int = 0
 
+# In-app review prompt cadence (issue #2739). review_session_count counts app foreground
+# sessions (one per launch, the same session definition analytics uses); the prompt only becomes
+# eligible at 5. review_shots_fired is the lifetime hard cap (3, then the module is inert
+# forever) and review_last_shot_unix is the floor the 2nd and 3rd shots wait behind. See
+# ReviewPromptCoordinator.
+var review_session_count: int = 0
+var review_shots_fired: int = 0
+var review_last_shot_unix: int = 0
+
 # Unix timestamp (seconds) of the last OS notification-permission prompt. Throttles
 # re-prompts (see NotificationsManager.PERMISSION_PROMPT_COOLDOWN_SEC): a denied
 # request — which on Android returns immediately without a dialog — isn't re-attempted
@@ -524,6 +533,18 @@ func load_from_settings_file():
 		"user", "upgrade_modal_first_seen_unix", data_default.upgrade_modal_first_seen_unix
 	)
 
+	self.review_session_count = settings_file.get_value(
+		"user", "review_session_count", data_default.review_session_count
+	)
+
+	self.review_shots_fired = settings_file.get_value(
+		"user", "review_shots_fired", data_default.review_shots_fired
+	)
+
+	self.review_last_shot_unix = settings_file.get_value(
+		"user", "review_last_shot_unix", data_default.review_last_shot_unix
+	)
+
 	self.notif_permission_last_prompt_unix = settings_file.get_value(
 		"user", "notif_permission_last_prompt_unix", data_default.notif_permission_last_prompt_unix
 	)
@@ -671,5 +692,8 @@ func save_to_settings_file():
 	new_settings_file.set_value(
 		"user", "upgrade_modal_first_seen_unix", self.upgrade_modal_first_seen_unix
 	)
+	new_settings_file.set_value("user", "review_session_count", self.review_session_count)
+	new_settings_file.set_value("user", "review_shots_fired", self.review_shots_fired)
+	new_settings_file.set_value("user", "review_last_shot_unix", self.review_last_shot_unix)
 	new_settings_file.set_value("analytics", "user_id", self.analytics_user_id)
 	new_settings_file.save(DclConfig.get_settings_file_path())

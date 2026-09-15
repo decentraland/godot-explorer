@@ -6,5 +6,6 @@ pub mod device_anchor;
 pub mod ephemeral_auth_chain;
 pub mod ethereum_provider;
 pub mod remote_wallet;
+pub mod review_login;
 pub mod thirdweb_guest;
 pub mod wallet;

@@ -126,7 +126,10 @@ pub enum RpcCall {
         avatar_target: Option<[f32; 3]>,
     },
     TeleportTo {
-        world_coordinates: [i32; 2],
+        /// Absent = the realm's default spawn (only meaningful together with `realm`).
+        world_coordinates: Option<[i32; 2]>,
+        /// Absent = the parcel is in the player's current realm.
+        realm: Option<String>,
         response: RpcResultSender<Result<(), String>>,
     },
     OpenNftDialog {

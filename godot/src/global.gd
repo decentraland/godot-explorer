@@ -22,7 +22,8 @@ signal open_settings
 signal open_settings_panel
 signal open_backpack(on_emotes: bool)
 signal open_discover
-signal open_credits
+## Carries the entry point, reported by Menu.async_show_credits.
+signal open_credits(source: String)
 signal open_own_profile
 signal open_profile_editor
 signal open_navbar_silently
@@ -96,9 +97,9 @@ const DEBUG_GUEST_ROTATE_ANCHOR_ID: bool = false
 const TERMS_AND_CONDITIONS_VERSION: int = 1
 
 # Increase this value when local assets cache format changes (invalidates cache)
-# v5: runtime-processed emote .tscn saved before the case-insensitive prop lookup
-# (find_prop_node in emote.rs) are missing their prop geometry — re-process them.
-const LOCAL_ASSETS_CACHE_VERSION: int = 5
+# v5: emote .tscn baked before the case-insensitive prop lookup lack prop geometry.
+# v7: optimized assets are raw {hash}.opt.scn/.opt.res files from the /v6 bucket.
+const LOCAL_ASSETS_CACHE_VERSION: int = 7
 
 # On-disk guest identity artifacts, owned by Rust (keep in sync with
 # lib/src/auth/device_anchor.rs + thirdweb_guest.rs) plus the mobile-BFF
@@ -121,16 +122,12 @@ var nft_fetcher: OpenSeaFetcher
 var nft_frame_loader: NftFrameStyleLoader
 
 var snapshot: Snapshot
-
 var music_player: MusicPlayer
-
 var preload_assets: PreloadAssets
-
 var locations: Node
-
 var modal_manager: ModalManager
-
 var upgrade_nudge_coordinator: UpgradeNudgeCoordinator
+var review_prompt_coordinator: ReviewPromptCoordinator
 
 var standalone = false
 
@@ -723,6 +720,9 @@ func _ready():
 	self.upgrade_nudge_coordinator = load("res://src/upgrade_nudge_coordinator.gd").new()
 	self.upgrade_nudge_coordinator.set_name("upgrade_nudge_coordinator")
 
+	self.review_prompt_coordinator = load("res://src/review_prompt_coordinator.gd").new()
+	self.review_prompt_coordinator.set_name("review_prompt_coordinator")
+
 	get_tree().root.add_child.call_deferred(self.cli)
 	get_tree().root.add_child.call_deferred(self.music_player)
 	get_tree().root.add_child.call_deferred(self.scene_fetcher)
@@ -730,6 +730,7 @@ func _ready():
 	get_tree().root.add_child.call_deferred(self.locations)
 	get_tree().root.add_child.call_deferred(self.modal_manager)
 	get_tree().root.add_child.call_deferred(self.upgrade_nudge_coordinator)
+	get_tree().root.add_child.call_deferred(self.review_prompt_coordinator)
 	get_tree().root.add_child.call_deferred(self.content_provider)
 	get_tree().root.add_child.call_deferred(self.scene_runner)
 	get_tree().root.add_child.call_deferred(self.realm)
@@ -1496,13 +1497,13 @@ func async_teleport_to(parcel_position: Vector2i, new_realm: String) -> void:
 	if is_instance_valid(explorer):
 		# Show loading screen before orientation change to avoid flashing the scene
 		explorer.loading_ui.enable_loading_screen(new_realm, "on_teleport")
-		explorer.teleport_to(parcel_position, new_realm)
 		explorer.hide_menu()
-		Global.on_chat_message.emit(
-			"system",
-			tr("CHAT_SYSTEM_TELEPORTED").format({"location": str(parcel_position)}),
-			Time.get_unix_time_from_system()
-		)
+		if await explorer.async_teleport_to(parcel_position, new_realm):
+			Global.on_chat_message.emit(
+				"system",
+				tr("CHAT_SYSTEM_TELEPORTED").format({"location": str(parcel_position)}),
+				Time.get_unix_time_from_system()
+			)
 	else:
 		Global.set_orientation_landscape()
 		Global.get_config().last_realm_joined = new_realm
@@ -1673,9 +1674,9 @@ func _check_dclenv_change() -> bool:
 	return true
 
 
-# Applies the comms deeplink params (pulse-server / pulse / dual-channel / livekit).
-# Shared by deep_link_router.process_deep_link and the desktop --fake-deeplink path,
-# so a new param only has to be added once.
+# Applies the comms deeplink params (pulse-server / pulse-realm / pulse / dual-channel / livekit).
+# Shared by deep_link_router.process_deep_link and the desktop --fake-deeplink path, so a new
+# param only has to be added once.
 func _apply_comms_deeplink_params(deep_link) -> void:
 	# `pulse-server=<host:port>` joins a specific Pulse server (shareable — everyone
 	# opening the link lands on the same instance; implies enabling).
@@ -1683,13 +1684,18 @@ func _apply_comms_deeplink_params(deep_link) -> void:
 	if not pulse_server_value.is_empty():
 		print("[DEEPLINK] pulse-server=", pulse_server_value)
 		comms.set_pulse_server(pulse_server_value)
+	# `pulse-realm=<realm>` announces this realm instead of the derived one (exact match; implies enabling).
+	var pulse_realm_value = deep_link.params.get("pulse-realm", "")
+	if not pulse_realm_value.is_empty():
+		print("[DEEPLINK] pulse-realm=", pulse_realm_value)
+		comms.set_pulse_realm(pulse_realm_value)
 	# `pulse=true/false` toggles the transport with the configured endpoint.
 	var pulse_value = deep_link.params.get("pulse", "")
 	if not pulse_value.is_empty():
 		print("[DEEPLINK] pulse=", pulse_value)
 		comms.set_pulse_enabled(pulse_value.to_lower() in ["true", "1", "yes"])
-	# `dual-channel=true/false` (default true): whether movement keeps going over
-	# LiveKit while Pulse is established. false = Pulse-only movement while up.
+	# `dual-channel=true/false`: whether movement and emotes keep going over LiveKit while
+	# Pulse is established. Overrides the deployment's `dual-channel` flag (default true) for this run.
 	var dual_channel_value = deep_link.params.get("dual-channel", "")
 	if not dual_channel_value.is_empty():
 		print("[DEEPLINK] dual-channel=", dual_channel_value)

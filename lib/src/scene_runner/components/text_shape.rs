@@ -8,10 +8,7 @@ use crate::{
     },
     scene_runner::{godot_dcl_scene::add_own_visual_child, scene::Scene},
 };
-use godot::{
-    classes::{Node, PackedScene},
-    prelude::*,
-};
+use godot::{classes::Node, prelude::*};
 
 const DCL_TEXT_SHAPE_SCENE: &str =
     "res://src/decentraland_components/text_shape/dcl_text_shape.tscn";
@@ -47,7 +44,8 @@ pub fn update_text_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                     Some(node) => node,
                     None => {
                         let Some(instance) =
-                            godot::tools::load::<PackedScene>(DCL_TEXT_SHAPE_SCENE).instantiate()
+                            crate::scene_runner::scene_cache::packed_scene(DCL_TEXT_SHAPE_SCENE)
+                                .instantiate()
                         else {
                             tracing::error!("Failed to instantiate {DCL_TEXT_SHAPE_SCENE}");
                             continue;
