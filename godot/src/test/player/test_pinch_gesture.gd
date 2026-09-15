@@ -51,7 +51,8 @@ func _test_angled_pinch() -> void:
 
 
 # Sign convention fed to Player.apply_pinch_zoom: spreading grows the spread
-# (positive delta = zoom out), closing shrinks it (negative = zoom in).
+# (positive delta = zoom in, toward first person — Roblox-style), closing
+# shrinks it (negative = zoom out).
 func _test_spread_sign() -> void:
 	var a := Vector2.ZERO
 	var b := Vector2(100, 0)

@@ -14,16 +14,10 @@ const CAMERA_COLLISION_MASK := 2
 
 # Centered third-person framing (issue #2709: avatar centered on screen, no
 # over-shoulder offset). x = lateral camera offset, z = third-person back
-# distance; THIRD_PERSON_CAMERA.z doubles as the DEFAULT zoom distance (reset
-# target on a scene change).
+# distance.
 const THIRD_PERSON_CAMERA := Vector3(0, 0, 3)
 # First person sits just in front of the pivot (inside the head).
 const FIRST_PERSON_SPRING_LENGTH := -0.2
-
-# Spring length at which the crosshair reaches its third-person anchor while the
-# 1p<->3p mode tween plays out (kept below the 3.0 default so the glide finishes
-# before the camera does).
-const THIRD_PERSON_MIN_DISTANCE := 1.5
 
 # CameraCollisionClamp (secondary volumetric sweep to the ACTUAL offset camera
 # position — the SpringArm alone only ray-casts its own axis).
@@ -49,15 +43,9 @@ const CLAMP_NEAR_CLEARANCE := 0.08
 # is smoothed so geometry doesn't pop through on the way out.
 const CLAMP_EXTEND_SPEED := 8.0
 
-# Crosshair anchors (issue #2709, device-QA measured): first person is screen
-# center; third person sits 20px above the avatar's top edge, aligned with its
-# side edge at the fixed 3m camera distance.
-const CROSSHAIR_FIRST_PERSON_ANCHOR := Vector2(0.5, 0.5)
-const CROSSHAIR_THIRD_PERSON_ANCHOR := Vector2(0.53, 0.44)
-
 # Floor guard: some scene ground meshes have no usable collider (single-sided shell
-# or cmask=0), so the sweep casts slip through and — at far zoom, angled down — the
-# camera dips below the visible floor. Independent of scene geometry, the camera is
+# or cmask=0), so the sweep casts slip through and — angled down — the camera can
+# dip below the visible floor. Independent of scene geometry, the camera is
 # kept at least this far above the PLAYER's own ground contact (its CharacterBody3D
 # origin, which rests on whatever it's standing on).
 const FLOOR_CLEARANCE := 0.15
