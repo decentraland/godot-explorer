@@ -11,13 +11,14 @@
 length = 1.0779
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_pxti1"]
-margin = 0.05
-radius = 0.25
-height = 1.5
+margin = 0.08
+radius = 0.3
+height = 1.6
 
 [node name="Player" type="CharacterBody3D" unique_id=1845110250]
 collision_layer = 4
 collision_mask = 2
+safe_margin = 0.01
 script = ExtResource("1_5bfm2")
 
 [node name="CollisionShape3D_ContactPoint" type="CollisionShape3D" parent="." unique_id=1589303221]
@@ -26,7 +27,7 @@ shape = SubResource("SeparationRayShape3D_3217e")
 
 [node name="CollisionShape3D_Body" type="CollisionShape3D" parent="." unique_id=546537198]
 unique_name_in_owner = true
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.8, 0)
 shape = SubResource("CapsuleShape3D_pxti1")
 
 [node name="camera_mode_area_detector" parent="." unique_id=115193772 instance=ExtResource("2_rco65")]

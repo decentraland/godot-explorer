@@ -51,6 +51,16 @@ const JUMP_ACTION_GLIDE_TOGGLE := 2  # open or close the glider
 # triggers, or other non-ground CollisionObject3Ds.
 const GROUND_RAYCAST_MASK := 2
 
+# #2753: Unity parity (ApplySlopeModifier.cs / CharacterObject.prefab).
+# CharacterBody3D has no built-in step offset (M1) — custom logic below.
+const STEP_OFFSET := 0.35
+# Downslope stick, expressed as floor_snap_length so is_on_floor() survives
+# downhill moves (a manual raycast snap would report airborne mid-stick).
+const DOWNSLOPE_STICK_JOG := 0.45
+const DOWNSLOPE_STICK_RUN := 0.55
+# Unity serializes 46deg; engine default 45 is wrong.
+const SLOPE_LIMIT_DEG := 46.0
+
 var last_position: Vector3
 var actual_velocity_xz: float
 
@@ -218,7 +228,7 @@ func _ready():
 	set_camera_mode(Global.CameraMode.THIRD_PERSON, false)  # Don't play sound on initial setup
 	avatar.is_local_player = true
 
-	floor_snap_length = 0.2
+	floor_max_angle = deg_to_rad(SLOPE_LIMIT_DEG)
 
 	Global.player_identity.profile_changed.connect(self._on_player_profile_changed)
 
@@ -594,7 +604,10 @@ func _physics_process(dt: float) -> void:
 	velocity.z += external_velocity.z
 
 	last_position = global_position
+	# #2753: downslope stick length follows horizontal speed (jog 0.45 / run 0.55).
+	floor_snap_length = DOWNSLOPE_STICK_RUN if actual_velocity_xz > jog_speed else DOWNSLOPE_STICK_JOG
 	move_and_slide()
+	_try_step_up(Vector3(locomotion_x, 0.0, locomotion_z))
 	position.y = max(position.y, 0)
 	avatar.global_position = global_position
 
@@ -606,6 +619,40 @@ func _physics_process(dt: float) -> void:
 	# Restore velocity.y unless a floor/ceiling collision already zeroed it.
 	if not is_on_floor() and not is_on_ceiling():
 		velocity.y -= external_y_for_move
+
+
+# #2753: custom step offset — CharacterBody3D has no built-in (M1). When
+# horizontal motion is wall-blocked while grounded, retry from STEP_OFFSET up:
+# free space above + floor below inside the step window = walkable ledge.
+# `intent` is the pre-slide locomotion velocity (slide zeroes it on the wall).
+func _try_step_up(intent: Vector3) -> void:
+	if not is_on_floor() or not is_on_wall():
+		return
+	if velocity.y > 0.1:
+		return
+	var horiz := Vector3(intent.x, 0.0, intent.z)
+	if horiz.length_squared() < 0.25:
+		return
+	# Probe must reach past the capsule radius so the down-ray lands ON the
+	# ledge, not on the floor in front of it.
+	var probe := horiz.normalized() * STEP_OFFSET
+	var raised := global_transform.translated(Vector3(0.0, STEP_OFFSET, 0.0))
+	if test_move(raised, probe):
+		return  # still blocked at step height — a wall, not a step
+	var top := raised.origin + probe
+	var space := get_world_3d().direct_space_state
+	if space == null:
+		return
+	var query := PhysicsRayQueryParameters3D.create(top, top + Vector3(0.0, -STEP_OFFSET - 0.05, 0.0))
+	query.collision_mask = GROUND_RAYCAST_MASK
+	query.exclude = _raycast_exclude
+	var hit := space.intersect_ray(query)
+	if hit.is_empty():
+		return  # gap, not a step
+	var floor_y: float = (hit.position as Vector3).y
+	if floor_y < global_position.y + 0.05:
+		return  # flat or lower — nothing to step onto
+	global_position = Vector3(top.x, floor_y, top.z)
 
 
 # Fold scene-driven force/impulses into external_velocity, then drag and clamp.
