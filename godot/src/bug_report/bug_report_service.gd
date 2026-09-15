@@ -58,16 +58,14 @@ static func async_submit(
 	if trimmed.is_empty():
 		return {"ok": false, "id": "", "error": "missing description"}
 
-	# Before the POST: the returned link is an input to the description. Returns
+	# Before the POST: the returned links are inputs to the description. They are
 	# "" whenever Sentry is unavailable, and the report is filed regardless.
 	var images: Array[PackedByteArray] = []
 	for shot in shots:
 		images.append(shot.get("bytes", PackedByteArray()))
-	var diagnostics_link := SentryUserFeedback.submit(trimmed, images)
+	var sentry_links := SentryUserFeedback.submit(trimmed, images)
 
-	var payload := {
-		"ticket_attributes": _build_attributes(issue_type_uuid, trimmed, diagnostics_link)
-	}
+	var payload := {"ticket_attributes": _build_attributes(issue_type_uuid, trimmed, sentry_links)}
 
 	var evidence := await _async_build_evidence(shots)
 	if not evidence.is_empty():
@@ -104,12 +102,12 @@ static func async_submit(
 
 # Every value is a String except Platform, which the proxy expects as an int.
 static func _build_attributes(
-	issue_type_uuid: String, description: String, diagnostics_link: String
+	issue_type_uuid: String, description: String, sentry_links: Dictionary
 ) -> Dictionary:
 	var device := _collect_device_info()
 	var attributes := {
 		"_default_title_": "Bug Report: %s" % _label_for_uuid(issue_type_uuid),
-		"_default_description_": _compose_description(description, diagnostics_link),
+		"_default_description_": _compose_description(description, sentry_links),
 		"Issue Type": issue_type_uuid,
 		"Operating System": device["os"],
 		"Graphic Card": device["gpu"],
@@ -146,7 +144,9 @@ static func _current_scene_sdk_version() -> String:
 # log tail and screenshot; it falls back to "unavailable" — the same string Unity
 # emits when its Sentry step fails — whenever SentryUserFeedback returns nothing,
 # which is every dev build, since _before_send discards those events.
-static func _compose_description(description: String, diagnostics_link: String) -> String:
+# `Sentry feedback search` is Godot-only: the Feedback page filtered to the reporter (see
+# SentryUserFeedback), omitted rather than "unavailable" when there is none.
+static func _compose_description(description: String, sentry_links: Dictionary) -> String:
 	var lines := [description, "", "---"]
 	# Only in-world. `last_parcel_position` is persisted spawn config (config_data.gd),
 	# not a live position — explorer.gd writes it as the player moves and reads it back
@@ -158,8 +158,13 @@ static func _compose_description(description: String, diagnostics_link: String) 
 		var position = Global.get_config().last_parcel_position
 		if position != null:
 			lines.append("Coordinates: %d,%d" % [position.x, position.y])
-	var diagnostics := diagnostics_link if not diagnostics_link.is_empty() else "unavailable"
-	lines.append("Internal diagnostics: %s" % diagnostics)
+	var event_url := str(sentry_links.get("event_url", ""))
+	lines.append(
+		"Internal diagnostics: %s" % (event_url if not event_url.is_empty() else "unavailable")
+	)
+	var feedback_url := str(sentry_links.get("feedback_url", ""))
+	if not feedback_url.is_empty():
+		lines.append("Sentry feedback search: %s" % feedback_url)
 	return "\n".join(lines)
 
 
