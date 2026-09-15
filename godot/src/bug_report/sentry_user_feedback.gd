@@ -1,7 +1,7 @@
 class_name SentryUserFeedback
 extends RefCounted
 
-## Files the reporter's message with Sentry User Feedback and returns a deep link
+## Files the reporter's message with Sentry User Feedback and returns deep links
 ## for the Intercom ticket (issue #2652).
 ##
 ## Mirrors the Unity client (`SentryUserFeedbackService`): capture an event
@@ -10,8 +10,13 @@ extends RefCounted
 ## Unlike Unity we link to that EVENT rather than to the feedback entry. Unity
 ## reaches past its own facade (`HubAdapter`) to recover the feedback id; the
 ## Godot SDK has no equivalent — `capture_feedback()` returns nothing by
-## documented design — so the feedback id is unobtainable here. The feedback
-## hangs off the event, one hop from the link.
+## documented design (still true in sentry-godot 2.2.0) — so the feedback id is
+## unobtainable here. The feedback hangs off the event, one hop from that link.
+##
+## For a direct route to the Feedback page there is a second link: the feedback
+## list filtered to this reporter's `user.id` and a window around the submit. It
+## is not exact — Sentry's feedback search has no field for the associated event —
+## but in practice the report is the only entry, or the top one.
 ##
 ## Everything here is synchronous on purpose: attachments are SDK-global, so the
 ## window between adding and clearing them must stay as short as possible.
@@ -47,23 +52,31 @@ const CATEGORY_TAG_VALUE := "FEEDBACK"
 # Org and project are deployment values, not secrets — the same pair appears in
 # every Sentry URL. Project `godot-explorer` is DSN project id 4510187688361984.
 const ISSUE_URL_TEMPLATE := "https://dcl-regenesis-labs.sentry.io/issues/?query=%s"
+const FEEDBACK_LIST_URL_TEMPLATE := "https://dcl-regenesis-labs.sentry.io/issues/feedback/?project=4510187688361984&query=%s&start=%s&end=%s"
+
+# Window around the submit for the feedback list link. Before covers device clock
+# skew; after covers the time the envelope takes to be ingested.
+const FEEDBACK_WINDOW_BEFORE_SEC := 120
+const FEEDBACK_WINDOW_AFTER_SEC := 900
 
 
-## Returns a deep link to the event carrying the diagnostics, or "" when Sentry is
-## disabled or dropped the event.
+## Returns {event_url, feedback_url}: a deep link to the event carrying the
+## diagnostics, and a link to the filtered feedback list. Both are "" when Sentry
+## is disabled or dropped the event; feedback_url is also "" without a user id.
 ##
-## Total by design: every branch returns a String and nothing raises. A bug report
-## must still reach Intercom when diagnostics fail, which is what the Unity client
+## Total by design: every branch returns and nothing raises. A bug report must
+## still reach Intercom when diagnostics fail, which is what the Unity client
 ## does too — the caller falls back to "unavailable".
-static func submit(message: String, images: Array[PackedByteArray]) -> String:
+static func submit(message: String, images: Array[PackedByteArray]) -> Dictionary:
+	var links := {"event_url": "", "feedback_url": ""}
 	if not SentrySDK.is_enabled():
-		return ""
+		return links
 	if message.strip_edges().is_empty():
-		return ""
+		return links
 
 	var event_id := _capture_event(images)
 	if event_id.is_empty():
-		return ""
+		return links
 
 	var feedback := SentryFeedback.new()
 	feedback.set_message(message)
@@ -76,7 +89,30 @@ static func submit(message: String, images: Array[PackedByteArray]) -> String:
 		feedback.set_name(reporter)
 	SentrySDK.capture_feedback(feedback)
 
-	return ISSUE_URL_TEMPLATE % event_id
+	links["event_url"] = ISSUE_URL_TEMPLATE % event_id
+	links["feedback_url"] = _feedback_list_url()
+	return links
+
+
+# Feedback page filtered to this reporter, around now. `user.id` is the value
+# sentry_seeder.gd pins on everything we send, so it matches the feedback entry.
+static func _feedback_list_url() -> String:
+	var user_id := str(Global.get_config().analytics_user_id)
+	if user_id.is_empty():
+		return ""
+	var now := int(Time.get_unix_time_from_system())
+	return (
+		FEEDBACK_LIST_URL_TEMPLATE
+		% [
+			("user.id:%s" % user_id).uri_encode(),
+			_utc_iso(now - FEEDBACK_WINDOW_BEFORE_SEC).uri_encode(),
+			_utc_iso(now + FEEDBACK_WINDOW_AFTER_SEC).uri_encode(),
+		]
+	)
+
+
+static func _utc_iso(unix_seconds: int) -> String:
+	return Time.get_datetime_string_from_unix_time(unix_seconds) + "Z"
 
 
 # Attachments are SDK-global rather than per-event, so any event captured between
