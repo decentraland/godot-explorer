@@ -92,6 +92,9 @@ dependencies {
     // Standard variant (no Play Services dependency required on-device).
     api("com.google.android.play:integrity:1.4.0")
 
+    // Play In-App Review (issue #2739) — the native rating card, launched in-process.
+    api("com.google.android.play:review:2.0.2")
+
     // Reown Sign SDK (WalletConnect successor) for native wallet connection
     api(platform("com.reown:android-bom:1.5.2"))
     api("com.reown:android-core") {

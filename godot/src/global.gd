@@ -122,16 +122,12 @@ var nft_fetcher: OpenSeaFetcher
 var nft_frame_loader: NftFrameStyleLoader
 
 var snapshot: Snapshot
-
 var music_player: MusicPlayer
-
 var preload_assets: PreloadAssets
-
 var locations: Node
-
 var modal_manager: ModalManager
-
 var upgrade_nudge_coordinator: UpgradeNudgeCoordinator
+var review_prompt_coordinator: ReviewPromptCoordinator
 
 var standalone = false
 
@@ -724,6 +720,9 @@ func _ready():
 	self.upgrade_nudge_coordinator = load("res://src/upgrade_nudge_coordinator.gd").new()
 	self.upgrade_nudge_coordinator.set_name("upgrade_nudge_coordinator")
 
+	self.review_prompt_coordinator = load("res://src/review_prompt_coordinator.gd").new()
+	self.review_prompt_coordinator.set_name("review_prompt_coordinator")
+
 	get_tree().root.add_child.call_deferred(self.cli)
 	get_tree().root.add_child.call_deferred(self.music_player)
 	get_tree().root.add_child.call_deferred(self.scene_fetcher)
@@ -731,6 +730,7 @@ func _ready():
 	get_tree().root.add_child.call_deferred(self.locations)
 	get_tree().root.add_child.call_deferred(self.modal_manager)
 	get_tree().root.add_child.call_deferred(self.upgrade_nudge_coordinator)
+	get_tree().root.add_child.call_deferred(self.review_prompt_coordinator)
 	get_tree().root.add_child.call_deferred(self.content_provider)
 	get_tree().root.add_child.call_deferred(self.scene_runner)
 	get_tree().root.add_child.call_deferred(self.realm)
@@ -1497,13 +1497,13 @@ func async_teleport_to(parcel_position: Vector2i, new_realm: String) -> void:
 	if is_instance_valid(explorer):
 		# Show loading screen before orientation change to avoid flashing the scene
 		explorer.loading_ui.enable_loading_screen(new_realm, "on_teleport")
-		explorer.teleport_to(parcel_position, new_realm)
 		explorer.hide_menu()
-		Global.on_chat_message.emit(
-			"system",
-			tr("CHAT_SYSTEM_TELEPORTED").format({"location": str(parcel_position)}),
-			Time.get_unix_time_from_system()
-		)
+		if await explorer.async_teleport_to(parcel_position, new_realm):
+			Global.on_chat_message.emit(
+				"system",
+				tr("CHAT_SYSTEM_TELEPORTED").format({"location": str(parcel_position)}),
+				Time.get_unix_time_from_system()
+			)
 	else:
 		Global.set_orientation_landscape()
 		Global.get_config().last_realm_joined = new_realm
