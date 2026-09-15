@@ -83,11 +83,11 @@ static func get_root() -> Control:
 	_root.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	layer.add_child(_root)
-	var explorer := Global.get_explorer()
-	if explorer != null:
-		explorer.add_child(layer)
-	else:
-		Global.add_child(layer)
+	# Under Global, never under the explorer: each avatar owns its plate (attach()
+	# reparents it here, detach() frees it on PREDELETE), so the layer has to outlive
+	# every avatar. Parented under the explorer it was freed first on sign-out and left
+	# live avatars holding freed plates.
+	Global.add_child(layer)
 	return _root
 
 
