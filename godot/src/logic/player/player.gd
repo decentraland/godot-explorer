@@ -40,6 +40,16 @@ const GLIDE_OPENING := 1
 const GLIDE_GLIDING := 2
 const GLIDE_CLOSING := 3
 
+# #2850: Unity parity (ApplyCharacterMovementVelocity.cs / ApplyHorizontalAirDrag.cs).
+# Acceleration weight ramps 0→1 over 0.5s while input is held; the accel pair
+# lerps with it. Air drag is quadratic: AirDrag 0.05 × JumpVelocityDrag 4.
+const ACCELERATION_TIME := 0.5
+const GROUND_ACCEL := 20.0
+const GROUND_ACCEL_MAX := 25.0
+const AIR_ACCEL := 15.0
+const AIR_ACCEL_MAX := 20.0
+const AIR_DRAG := 0.2
+
 # #1557: Unity parity (ApplyJump.cs / ApplyGravity.cs). Seconds, never ticks.
 const COYOTE_WINDOW := 0.15
 const GRAVITY_ASCENT_FACTOR := 4.0
@@ -92,7 +102,7 @@ var actual_velocity_xz: float
 # Locomotion settings - these are updated from the current scene's DclLocomotionSettings
 var walk_speed: float = 1.5
 var jog_speed: float = 8.0
-var run_speed: float = 11.0
+var run_speed: float = 10.0
 var gravity := 10.0
 # #1557: jog/run jump heights lerped by horizontal speed (Unity: 1.0 / 1.5).
 var jump_height: float = 1.0
@@ -118,6 +128,7 @@ var external_velocity: Vector3 = Vector3.ZERO
 var _hard_landing_timer: float = 0.0
 var _locomotion_settings: DclLocomotionSettings = null
 var _jump_buffer: float = 0.0
+var _accel_weight: float = 0.0
 var _glide_timer: float = 0.0
 var _time_since_last_jump: float = 1000.0
 var _time_since_glide_end: float = 1000.0
@@ -663,6 +674,10 @@ func _physics_process(dt: float) -> void:
 		# glide gate stays closed for the whole window.
 		velocity.y -= (_current_gravity() - external_acceleration.y) * dt
 
+	# #2850: acceleration weight ramps over 0.5s while input is held (Unity
+	# AccelerationWeight), driving the ground/air accel pair below.
+	_accel_weight = move_toward(_accel_weight, 1.0 if current_direction else 0.0, dt / ACCELERATION_TIME)
+
 	camera.set_target_fov(DEFAULT_CAMERA_FOV)
 	if current_direction:
 		var wants_walk := Input.is_action_pressed("ia_walk")
@@ -689,15 +704,31 @@ func _physics_process(dt: float) -> void:
 			effective_speed = walk_speed
 		# else: effective_speed remains 0, no movement allowed
 
-		velocity.x = current_direction.x * effective_speed
-		velocity.z = current_direction.z * effective_speed
+		# Ground and air accel pairs, lerped by the 0.5s weight (reduced air
+		# control: MoveTowards instead of the old direct assignment).
+		var accel := lerpf(GROUND_ACCEL, GROUND_ACCEL_MAX, _accel_weight) if on_floor else lerpf(AIR_ACCEL, AIR_ACCEL_MAX, _accel_weight)
+		velocity.x = move_toward(velocity.x, current_direction.x * effective_speed, accel * dt)
+		velocity.z = move_toward(velocity.z, current_direction.z * effective_speed, accel * dt)
 
 		avatar.look_at(current_direction.normalized() + position)
 		avatar.rotation.x = 0.0
 		avatar.rotation.z = 0.0
 	else:
-		velocity.x = move_toward(velocity.x, 0, walk_speed)
-		velocity.z = move_toward(velocity.z, 0, walk_speed)
+		# #2850 (B4): dt-scaled deceleration — same rate as the old per-tick
+		# walk_speed step at 60 Hz (90 m/s²), constant stopping distance under
+		# frame drops. Keeps the old coupling to the scene-overridable walk_speed.
+		var decel := walk_speed * 60.0 * dt
+		velocity.x = move_toward(velocity.x, 0.0, decel)
+		velocity.z = move_toward(velocity.z, 0.0, decel)
+
+	# #2850: quadratic horizontal air drag, coefficient 0.2 (live Unity value).
+	if not on_floor:
+		var h_vel := Vector2(velocity.x, velocity.z)
+		var h_mag := h_vel.length()
+		if h_mag > 0.0:
+			h_vel -= h_vel.normalized() * minf(AIR_DRAG * h_mag * h_mag * dt, h_mag)
+			velocity.x = h_vel.x
+			velocity.z = h_vel.y
 
 	# While gliding, cap horizontal speed — overrides walk/jog/run speeds set above.
 	if glide_state == GLIDE_GLIDING:
