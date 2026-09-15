@@ -277,8 +277,17 @@ func async_show_teleport_modal(location: Vector2i, realm: String = "") -> void:
 	await get_tree().process_frame
 	await get_tree().process_frame
 
-	# Load place data asynchronously and update modal
-	await _async_load_travel_modal_data(location, destination_realm)
+	# Load place data asynchronously and update modal. A parcel inside a World is not in the
+	# Genesis places index, so the by-position lookup would find nothing and the modal would
+	# sit in its loading skeleton with JUMP IN disabled — worlds identify themselves by name
+	# (#2816).
+	var world_name := WorldPermissionsHelper.world_name_from_realm(
+		destination_realm, Realm.resolve_realm_url(destination_realm)
+	)
+	if world_name.is_empty():
+		await _async_load_travel_modal_data(location, destination_realm)
+	else:
+		await _async_load_change_realm_data(world_name)
 
 
 ## Shows a WORLD travel modal (for .dcl.eth worlds)
@@ -344,6 +353,26 @@ func async_show_change_realm_modal(realm_name: String, _message: String = "") ->
 
 	current_travel_modal.closed.connect(close_travel_modal)
 	current_travel_modal.jump_in_pressed.connect(_on_change_realm_primary.bind(realm_name))
+	current_travel_modal.show()
+
+	await get_tree().process_frame
+	await get_tree().process_frame
+
+	# Try to load realm data from Places API
+	await _async_load_change_realm_data(realm_name)
+
+
+## Shows a travel modal for a scene `teleportTo` that names a realm but no parcel
+## (protocol#477): the player lands on the realm's own spawn point rather than on coordinates.
+## @param realm_name: The destination realm — a world name ("foo.dcl.eth") or a realm url
+func async_show_realm_teleport_modal(realm_name: String) -> void:
+	if not await _async_create_travel_modal():
+		return
+	if not NodeGuard.is_alive(current_travel_modal, "ModalManager.async_show_realm_teleport_modal"):
+		return
+
+	current_travel_modal.closed.connect(close_travel_modal)
+	current_travel_modal.jump_in_pressed.connect(_on_realm_teleport_primary.bind(realm_name))
 	current_travel_modal.show()
 
 	await get_tree().process_frame
@@ -996,18 +1025,27 @@ func _async_load_travel_modal_data(location: Vector2i, _realm: String) -> void:
 	if not is_instance_valid(current_travel_modal):
 		return
 
+	# The modal opens in its loading skeleton with JUMP IN disabled, and only set_place_name()
+	# releases it — so every path out of here has to name the place, even when the lookup
+	# failed. An unnamed parcel is still somewhere the player can travel to.
+	var fallback_name := "%d,%d" % [location.x, location.y]
+
 	var result = await PlacesHelper.async_get_by_position(location)
 
-	if result is PromiseError:
-		printerr("Error requesting place data for travel modal", result.get_error())
+	if not is_instance_valid(current_travel_modal):
 		return
 
-	if not is_instance_valid(current_travel_modal):
+	if result is PromiseError:
+		# Expected and handled — the fallback below names the place, so this is not a Sentry
+		# event (REVIEW.md §14). A parcel outside the Genesis index hits it routinely.
+		print("Place data unavailable for travel modal, using coordinates: ", result.get_error())
+		current_travel_modal.set_place_name(fallback_name)
 		return
 
 	var json: Dictionary = result.get_string_response_as_json()
 
 	if not json.has("data") or json.data.is_empty():
+		current_travel_modal.set_place_name(fallback_name)
 		return
 
 	var place_data: Dictionary = json.data[0]
@@ -1015,6 +1053,8 @@ func _async_load_travel_modal_data(location: Vector2i, _realm: String) -> void:
 	var title = str(place_data.get("title", ""))
 	if not title.is_empty() and title != "interactive-text":
 		current_travel_modal.set_place_name(title)
+	else:
+		current_travel_modal.set_place_name(fallback_name)
 
 	var creator = place_data.get("contact_name", "")
 	current_travel_modal.set_creator("" if creator == null else str(creator))
@@ -1110,6 +1150,13 @@ func _on_teleport_primary(location: Vector2i, realm: String) -> void:
 
 func _on_change_realm_primary(realm_name: String) -> void:
 	Global.realm.async_set_realm(realm_name)
+	close_travel_modal()
+
+
+# teleportTo with a realm and no coordinates: async_join_world changes realm and lands the
+# player on its spawn point (Realm.async_set_realm(realm, true)).
+func _on_realm_teleport_primary(realm_name: String) -> void:
+	Global.async_join_world(realm_name)
 	close_travel_modal()
 
 

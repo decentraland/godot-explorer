@@ -157,7 +157,7 @@ func _async_try_change_realm(realm_string: String, when: String) -> void:
 	_explorer.loading_ui.enable_loading_screen(realm_string, when)
 	var success = await Global.realm.async_set_realm(realm_string, true)
 	if not success:
-		_explorer.loading_ui.hide_loading_screen()
+		_explorer.loading_ui.hide_loading_screen("Failed")
 
 
 func _emit_pos_command_message() -> void:

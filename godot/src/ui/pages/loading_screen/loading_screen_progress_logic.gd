@@ -47,8 +47,8 @@ func enable_loading_screen():
 
 
 ## Called by loading_screen.gd or popup button to force hide loading
-func hide_loading_screen():
-	_hide_loading_screen()
+func hide_loading_screen(status: String = "Success"):
+	_hide_loading_screen(status)
 
 
 func _on_loading_started(_session_id: int, _expected_count: int):
@@ -93,7 +93,7 @@ func _on_loading_cancelled(_session_id: int):
 	pass
 
 
-func _hide_loading_screen():
+func _hide_loading_screen(status: String = "Success"):
 	Global.content_provider.set_max_concurrent_downloads(12)
 	Global.content_provider.set_max_low_priority_downloads(12)
 
@@ -109,11 +109,12 @@ func _hide_loading_screen():
 
 	loading_screen.async_hide_loading_screen_effect()
 
-	# LOADING_END (Success) metric
+	# LOADING_END metric — "Success" unless the caller is taking the screen down because the
+	# load it was covering failed (e.g. a realm change that never resolved).
 	var pos = Global.scene_fetcher.current_position
 	var end_data = {
 		"scene_id": Global.scene_fetcher.current_scene_entity_id,
 		"position": "%d,%d" % [pos.x, pos.y],
-		"status": "Success"
+		"status": status
 	}
 	Global.metrics.track_screen_viewed("LOADING_END", JSON.stringify(end_data))
