@@ -122,17 +122,11 @@ var nft_fetcher: OpenSeaFetcher
 var nft_frame_loader: NftFrameStyleLoader
 
 var snapshot: Snapshot
-
 var music_player: MusicPlayer
-
 var preload_assets: PreloadAssets
-
 var locations: Node
-
 var modal_manager: ModalManager
-
 var upgrade_nudge_coordinator: UpgradeNudgeCoordinator
-
 var review_prompt_coordinator: ReviewPromptCoordinator
 
 var standalone = false
