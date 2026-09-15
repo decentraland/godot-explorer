@@ -97,7 +97,6 @@ theme_override_constants/separation = 16
 [node name="Label_Text" type="Label" parent="MarginContainer/HBoxContainer/HBoxContainer2" unique_id=578823531]
 auto_translate_mode = 2
 unique_name_in_owner = true
-custom_minimum_size = Vector2(313, 0)
 layout_mode = 2
 text = "Text"
 label_settings = SubResource("LabelSettings_i8mwd")

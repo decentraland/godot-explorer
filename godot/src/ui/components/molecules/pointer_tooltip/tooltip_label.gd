@@ -29,6 +29,10 @@ const TAP_GROW_X: float = 24.0
 const TAP_GROW_Y: float = 24.0
 # Desktop-only: the left-click glyph has no joypad counterpart, so it is not in ActionIcons.
 const ICON_LEFT_CLICK = preload("uid://cljfaeb8np0ma")
+## Widest the label may grow before the text is elided. This must be applied as a clamp in code:
+## with text_overrun_behavior set, a Label's minimum width collapses to ~0, so putting the cap in
+## custom_minimum_size makes it a fixed width and every pill ends up this wide.
+const LABEL_MAX_WIDTH: float = 313.0
 
 ## Vertical half of the tap growth. Stacked tooltips clear each other by only PILL_GAP (8px),
 ## so growing them vertically would make neighbouring hit areas overlap and let a tap fire the
@@ -93,11 +97,11 @@ func set_tooltip_data(text_pet_down: String, text_pet_up, action: String):
 			text_down = mobile_label
 		if text_up.is_empty():
 			text_up = mobile_label
-		label_text.text = text_down
+		_set_label_text(text_down)
 	elif action_lower == "ia_any":
 		_show_keyboard("Any")
 		action_to_trigger = action_lower
-		label_text.text = text_down
+		_set_label_text(text_down)
 	else:
 		var index: int = InputMap.get_actions().find(action_lower, 0)
 		if index == -1:
@@ -130,7 +134,7 @@ func set_tooltip_data(text_pet_down: String, text_pet_up, action: String):
 			else:
 				_show_keyboard_icon(key)
 			action_to_trigger = action_lower
-			label_text.text = text_down
+			_set_label_text(text_down)
 		else:
 			hide()
 			action_to_trigger = ""
@@ -221,8 +225,21 @@ func _physics_process(_delta):
 	if last_state_pressed != new_pressed:
 		set_bg_color(BG_COLOR_PRESSED if new_pressed else BG_COLOR_NORMAL)
 		margin_container_icons.add_theme_constant_override("margin_top", 2 if new_pressed else 0)
-		label_text.text = text_up if new_pressed else text_down
+		_set_label_text(text_up if new_pressed else text_down)
 		last_state_pressed = new_pressed
+
+
+func _set_label_text(value: String) -> void:
+	label_text.text = value
+	var settings: LabelSettings = label_text.label_settings
+	var font: Font = (
+		settings.font if settings and settings.font else label_text.get_theme_font("font")
+	)
+	var font_size: int = (
+		settings.font_size if settings else label_text.get_theme_font_size("font_size")
+	)
+	var text_width: float = font.get_string_size(value, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
+	label_text.custom_minimum_size.x = minf(ceilf(text_width), LABEL_MAX_WIDTH)
 
 
 func mobile_on_panel_container_gui_input(event):
