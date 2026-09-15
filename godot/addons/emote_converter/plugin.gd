@@ -5,7 +5,12 @@ const EMOTES_PATH = "res://assets/no-export/emote_actions/"
 const ANIMATIONS_OUTPUT_PATH = "res://assets/animations/emote_actions/"
 const LIBRARIES_OUTPUT_PATH = "res://assets/animations/"
 
-# Default actions (utility animations triggered by scenes)
+# Default actions (utility animations triggered by scenes).
+# Value: either a plain emote id (single-animation GLBs) or a Dictionary
+# {id, anim} naming the exact animation to export — REQUIRED when the GLB
+# bundles more than one animation, so the choice is always explicit, never
+# guessed (see Swing_OneHand.glb: "Sword_Attack_Armature.001" is a near-empty
+# armature clip; the real swing is "Sword_Slash").
 const DEFAULT_ACTIONS = {
 	"Button_45.glb": "buttonDown",
 	"Button_Front.glb": "buttonFront",
@@ -21,7 +26,7 @@ const DEFAULT_ACTIONS = {
 	"SittingChair_v02.glb": "sittingChair2",
 	"SittingGround_v01.glb": "sittingGround1",
 	"SittingGround_v02.glb": "sittingGround2",
-	"Swing_OneHand.glb": "swingWeaponOneHand",
+	"Swing_OneHand.glb": {"id": "swingWeaponOneHand", "anim": "Sword_Slash"},
 	"Swing_DoubleHanded.glb": "swingWeaponTwoHands",
 	"Throw.glb": "throw",
 }
@@ -105,7 +110,9 @@ func _convert_emote_group(emote_map: Dictionary, group_name: String) -> Array:
 	var failed = 0
 
 	for glb_file in emote_map.keys():
-		var emote_id = emote_map[glb_file]
+		var entry = emote_map[glb_file]
+		var emote_id: String = entry["id"] if entry is Dictionary else entry
+		var forced_anim: String = entry.get("anim", "") if entry is Dictionary else ""
 		var glb_path = EMOTES_PATH + glb_file
 		var output_path = ANIMATIONS_OUTPUT_PATH + emote_id + ".tres"
 
@@ -131,8 +138,33 @@ func _convert_emote_group(emote_map: Dictionary, group_name: String) -> Array:
 			failed += 1
 			continue
 
-		# Get the first animation
-		var anim_name = anim_names[0]
+		# Resolve which animation to export. Explicit always: a multi-animation
+		# GLB with no {"anim": ...} entry is an error, never a guess.
+		var anim_name := ""
+		if not forced_anim.is_empty():
+			if not anim_lib.has_animation(forced_anim):
+				print(
+					(
+						"    ERROR: animation '%s' not in %s (has: %s)"
+						% [forced_anim, glb_path, anim_names]
+					)
+				)
+				failed += 1
+				continue
+			anim_name = forced_anim
+		elif anim_names.size() == 1:
+			anim_name = anim_names[0]
+		else:
+			print(
+				(
+					'    ERROR: %s has %d animations %s; add {"anim": ...} to pick one'
+					% [glb_path, anim_names.size(), anim_names]
+				)
+			)
+			failed += 1
+			continue
+
+		# Get the chosen animation
 		var anim = anim_lib.get_animation(anim_name)
 		if anim == null:
 			print("    ERROR: Could not get animation: %s" % anim_name)
@@ -170,7 +202,8 @@ func _generate_animation_library(lib_name: String, emote_map: Dictionary) -> boo
 	var missing = 0
 
 	for glb_file in emote_map.keys():
-		var emote_id = emote_map[glb_file]
+		var entry = emote_map[glb_file]
+		var emote_id: String = entry["id"] if entry is Dictionary else entry
 		var anim_path = ANIMATIONS_OUTPUT_PATH + emote_id + ".tres"
 
 		if not FileAccess.file_exists(anim_path):
