@@ -27,6 +27,10 @@ use crate::tools::memory_debugger::MemoryDebugger;
 #[cfg(feature = "use_memory_debugger")]
 use crate::tools::benchmark_report::BenchmarkReport;
 
+/// How long the scene-input poller keeps forwarding after the last joypad
+/// activity, so the release edge of a tap isn't dropped with the press.
+const JOYPAD_INPUT_WINDOW: std::time::Duration = std::time::Duration::from_millis(250);
+
 use super::{
     dcl_cli::DclCli, dcl_config::DclConfig,
     dcl_dynamic_graphics_manager::DclDynamicGraphicsManager, dcl_realm::DclRealm,
@@ -204,6 +208,12 @@ pub struct DclGlobal {
     pub renderer_version: GString,
 
     pub is_mobile: bool,
+
+    // Refreshed by any on-screen touch-button (joypad) activity, press or
+    // release, to now+250ms. Lets the scene-input poller forward synthetic
+    // actions on desktop even when the mouse isn't captured — including the
+    // release frame itself, so PET_UP edges aren't dropped (power-lock bug).
+    pub joypad_input_active_until: Option<std::time::Instant>,
 
     pub is_android: bool,
 
@@ -441,6 +451,7 @@ impl INode for DclGlobal {
         Self {
             _base: base,
             is_mobile,
+            joypad_input_active_until: None,
             is_android,
             is_ios,
             is_virtual_mobile: false,
@@ -839,6 +850,18 @@ impl DclGlobal {
             Ok(()) => godot_print!("Rust log filter updated to: {}", filter),
             Err(e) => tracing::error!("Failed to update Rust log filter: {}", e),
         }
+    }
+
+    #[func]
+    pub fn notify_joypad_input() {
+        DclGlobal::singleton().bind_mut().joypad_input_active_until =
+            Some(std::time::Instant::now() + JOYPAD_INPUT_WINDOW);
+    }
+
+    /// True while the window opened by the last joypad activity is open.
+    pub fn joypad_input_active(&self) -> bool {
+        self.joypad_input_active_until
+            .is_some_and(|t| t > std::time::Instant::now())
     }
 
     /// Locale forwarded to SDK7 scenes (`getExplorerInformation`, `localeChanged`).
