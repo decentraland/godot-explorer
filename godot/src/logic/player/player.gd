@@ -48,8 +48,6 @@ const JUMP_ACTION_GLIDE_TOGGLE := 2  # open or close the glider
 
 # AvatarRaycast resting target (matches player.tscn): straight ahead, 10m.
 const AVATAR_RAYCAST_DEFAULT_TARGET := Vector3(0, 0, -10)
-# Exponential smoothing rate (1/s) for the crosshair spring chase.
-const CROSSHAIR_SMOOTH_SPEED := 12.0
 # Duration of the camera mode tween (set_camera_mode).
 const CAMERA_MODE_TWEEN_TIME := 0.25
 # Crosshair model (issue #2709, device QA): first person is screen center. For
@@ -114,8 +112,11 @@ var _avatar_raycast_crosshair_active: bool = false
 # Smoothed crosshair screen position (see _update_crosshair_screen_position).
 var _crosshair_screen_pos := Vector2.ZERO
 var _crosshair_pos_initialized := false
-# Time since the last camera-mode change; drives the crosshair target phases.
-var _crosshair_mode_clock: float = 1000.0
+# Timed-lerp transition state: position captured on the first frame of a mode
+# swap, elapsed time, and whether a transition is playing.
+var _crosshair_transition_from := Vector2.ZERO
+var _crosshair_transition_clock: float = 0.0
+var _crosshair_transition_active := false
 var _crosshair_prev_mode: Global.CameraMode = Global.CameraMode.THIRD_PERSON
 # #b11: typed Array[RID] avoids per-element dynamic cast when passed to
 # PhysicsRayQueryParameters3D.exclude every physics frame.
@@ -764,43 +765,56 @@ func _update_crosshair_screen_position(dt: float) -> void:
 	var viewport_size := get_viewport().get_visible_rect().size
 	var active := Global.is_mobile() and not Global.scene_runner.raycast_use_cursor_position
 	if not active:
-		# Desktop / cinematic own the crosshair; park the smoothed value at center
-		# so re-entering mobile gameplay glides from center, never from a stale point.
+		# Desktop / cinematic own the crosshair; park it at center so re-entering
+		# mobile gameplay starts from center, never from a stale point.
 		_crosshair_screen_pos = viewport_size * 0.5
 		_crosshair_pos_initialized = false
-		_crosshair_mode_clock = 1000.0
+		_crosshair_transition_active = false
 		_crosshair_prev_mode = camera.get_camera_mode() as Global.CameraMode
 		return
 
-	# Three-phase target (device QA). The crosshair always spring-chases the
-	# target; the target is what changes. A mode swap resets the clock.
-	_crosshair_mode_clock += dt
+	# Timed-lerp model (device QA: zero overshoot). A mode swap captures the
+	# current position and plays deterministic smoothstep lerps — no spring
+	# chase, no prediction. Timeline is in units of the camera tween (T=0.25s):
+	#   3p -> 1p: glide to center over [0, T].
+	#   1p -> 3p: hold until 1.25T (the collision clamp extends the real camera
+	#   ~0.15s past the arm tween, so the live point is only stable by then),
+	#   then glide to the LIVE point over [1.25T, 1.75T].
+	_crosshair_transition_clock += dt
 	var mode: Global.CameraMode = camera.get_camera_mode() as Global.CameraMode
 	if mode != _crosshair_prev_mode:
 		_crosshair_prev_mode = mode
-		_crosshair_mode_clock = 0.0
-
-	var target: Vector2
-	if mode == Global.CameraMode.FIRST_PERSON:
-		# 3p -> 1p: straight to center.
-		target = viewport_size * 0.5
-	elif _crosshair_mode_clock < CAMERA_MODE_TWEEN_TIME * 0.5:
-		# Phase 1 (0-50% of the pullback): hold center.
-		target = viewport_size * 0.5
-	elif mount_camera.spring_length < CameraRigHelpers.THIRD_PERSON_CAMERA.z - 0.05:
-		# Phase 2 (50% -> camera settled): glide to the placeholder anchor.
-		target = CROSSHAIR_PLACEHOLDER_ANCHOR * viewport_size
-	else:
-		# Phase 3 (settled): track the live projection (== placeholder at rest).
-		target = _compute_live_crosshair_target(viewport_size)
+		if _crosshair_pos_initialized:
+			_crosshair_transition_from = _crosshair_screen_pos
+			_crosshair_transition_clock = 0.0
+			_crosshair_transition_active = true
 
 	if not _crosshair_pos_initialized:
 		_crosshair_pos_initialized = true
-		_crosshair_screen_pos = target
+		if mode == Global.CameraMode.FIRST_PERSON:
+			_crosshair_screen_pos = viewport_size * 0.5
+		else:
+			_crosshair_screen_pos = _compute_live_crosshair_target(viewport_size)
+		return
+
+	if _crosshair_transition_active:
+		var t := _crosshair_transition_clock / CAMERA_MODE_TWEEN_TIME
+		if mode == Global.CameraMode.FIRST_PERSON:
+			var w := smoothstep(0.0, 1.0, minf(t, 1.0))
+			_crosshair_screen_pos = _crosshair_transition_from.lerp(viewport_size * 0.5, w)
+			if w >= 1.0:
+				_crosshair_transition_active = false
+		elif t >= 1.25:
+			var w := smoothstep(0.0, 1.0, minf((t - 1.25) / 0.5, 1.0))
+			var dest := _compute_live_crosshair_target(viewport_size)
+			_crosshair_screen_pos = _crosshair_transition_from.lerp(dest, w)
+			if w >= 1.0:
+				_crosshair_transition_active = false
+		# else: 1p -> 3p, before 1.25T — hold at the from position.
+	elif mode == Global.CameraMode.FIRST_PERSON:
+		_crosshair_screen_pos = viewport_size * 0.5
 	else:
-		_crosshair_screen_pos = _crosshair_screen_pos.lerp(
-			target, 1.0 - exp(-CROSSHAIR_SMOOTH_SPEED * dt)
-		)
+		_crosshair_screen_pos = _compute_live_crosshair_target(viewport_size)
 
 
 # Issue #2709: aim the avatar outline/view-profile raycast at the crosshair.
