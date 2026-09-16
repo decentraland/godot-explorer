@@ -9,34 +9,33 @@ extends RefCounted
 ## @param event_name: Name of the event to generate text for
 ## @return: Dictionary with "title" and "body" keys containing random text
 static func generate_event_notification_text(event_name: String) -> Dictionary:
-	# Title templates (5 options)
-	var title_templates = [
-		"{EventName} is Live!",
-		"{EventName} Started!",
-		"{EventName} is Starting!",
-		"{EventName} is ON!",
-		"{EventName} Begins!"
+	# These are client-composed, so they are ours to translate. The OS notification is built
+	# once at schedule time and cannot re-translate itself later, so resolve now rather than
+	# storing a key. {event} is a named field so a locale can reorder it.
+	# i18n-keys: NOTIF_LOCAL_*
+	var title_keys: Array[String] = [
+		"NOTIF_LOCAL_EVENT_IS_LIVE",
+		"NOTIF_LOCAL_EVENT_STARTED",
+		"NOTIF_LOCAL_EVENT_IS_STARTING",
+		"NOTIF_LOCAL_EVENT_IS_ON",
+		"NOTIF_LOCAL_EVENT_BEGINS",
+	]
+	var body_keys: Array[String] = [
+		"NOTIF_LOCAL_BODY_DRESS_UP",
+		"NOTIF_LOCAL_BODY_GANG_AWAITS",
+		"NOTIF_LOCAL_BODY_MEET_YOUR_PEOPLE",
+		"NOTIF_LOCAL_BODY_DONT_MISS_ACTION",
+		"NOTIF_LOCAL_BODY_GATHER_YOUR_CREW",
+		"NOTIF_LOCAL_BODY_JOIN_YOUR_FRIENDS",
+		"NOTIF_LOCAL_BODY_HOP_IN",
 	]
 
-	# Description options (7 options)
-	var descriptions = [
-		"Dress up and be the soul of the party",
-		"Your gang awaits, jump in and party on!",
-		"Join and meet your people",
-		"Don't miss out on the action!",
-		"Gather your crew and make your mark!",
-		"Join your friends and meet people!",
-		"Hop in and don't miss a beat!"
-	]
+	var title_key: String = title_keys[randi() % title_keys.size()]
+	var body_key: String = body_keys[randi() % body_keys.size()]
 
-	# Select random title and description
-	var random_title_template = title_templates[randi() % title_templates.size()]
-	var random_description = descriptions[randi() % descriptions.size()]
+	var title := TranslationServer.translate(title_key).format({"event": event_name})
 
-	# Substitute event name in title
-	var title = random_title_template.replace("{EventName}", event_name)
-
-	return {"title": title, "body": random_description}
+	return {"title": title, "body": TranslationServer.translate(body_key)}
 
 
 ## Get hash from URL for content provider

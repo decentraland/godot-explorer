@@ -386,7 +386,9 @@ func _update_livekit_volume():
 		return
 
 	_last_effective_volume = effective_volume
-	var db_volume: float = -80.0 if effective_volume <= 0.0 else 20.0 * log(effective_volume)
+	var db_volume: float = (
+		-80.0 if effective_volume <= 0.0 else maxf(-80.0, linear_to_db(effective_volume))
+	)
 	self.volume_db = db_volume
 
 

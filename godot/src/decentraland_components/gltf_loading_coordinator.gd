@@ -15,13 +15,14 @@ extends Node
 ##     high because the ContentProvider's HttpQueueRequester already caps real
 ##     HTTP parallelism (12); we just want the fetch stage to not be the wall.
 ##
-##  2. LOAD+REALIZE stage — a single main-thread pump, paced ONE source-group
-##     per frame. Per source it does the one main-thread `ResourceLoader.load`
-##     (GPU texture upload — must be on the main thread to avoid the Mali
-##     RenderingServer deadlock), then instantiates every waiter (cheap CPU-only
-##     clone of the shared PackedScene) and add_child's them in that one frame.
-##     Identical meshes compile their render pipeline once; distinct sources are
-##     spread across frames so at most one new-pipeline stall lands per frame.
+##  2. LOAD+REALIZE stage — a single main-thread pump with a per-frame time
+##     budget (LOAD_PUMP_BUDGET_USEC; at least one source per frame). Per
+##     source it does the one main-thread `ResourceLoader.load` (GPU texture
+##     upload — must be on the main thread to avoid the Mali RenderingServer
+##     deadlock), then instantiates every waiter (cheap CPU-only clone of the
+##     shared PackedScene) and add_child's them in that same frame. Identical
+##     meshes compile their render pipeline once; expensive sources still get
+##     a frame each, cheap ones are batched so the queue drains fast.
 ##
 ## Splitting the two stages is the point: downloads run wide while the heavy,
 ## unavoidably-serial main-thread load/upload is paced. A load slot is no longer
@@ -36,6 +37,13 @@ extends Node
 ## ContentProvider's HttpQueueRequester (12). This just bounds how many hashes
 ## sit in the fetch stage (and thus in-flight download memory).
 const MAX_CONCURRENT_DOWNLOADS := 24
+
+## Main-thread budget per frame for the load+realize pump. Sources are pulled
+## from the queue until the budget is spent (at least one per frame), so a
+## queue of cheap sources drains in a few frames instead of one-per-frame at
+## whatever the loading frame rate happens to be (~6-10 fps on Genesis Plaza,
+## i.e. ~4-6 s for a 40-deep queue).
+const LOAD_PUMP_BUDGET_USEC := 12_000
 
 const STATE_PENDING := 0  # created, waiting for a download slot
 const STATE_DOWNLOADING := 1  # holding a download slot, fetching
@@ -67,9 +75,45 @@ var _download_queue: Array = []
 # distinct sources currently occupying a download slot
 var _downloading_count := 0
 # LoadGroups whose bytes are on disk, waiting for the main-thread load+realize
-# pump (one processed per frame)
+# pump (time-budgeted per frame)
 var _load_queue: Array = []
 var _load_pump_running := false
+# Groups whose .scn is being parsed by ResourceLoader's thread (experiment).
+var _threaded_loading: Array = []
+var _threaded_slots_cache := -1
+var _max_groups_cache := -1
+
+# Cumulative pipeline stats (debug / benchmarking; see get_stats()).
+var _stats_groups := 0
+var _stats_download_usec := 0
+var _stats_download_max_usec := 0
+var _stats_loads := 0
+var _stats_load_usec := 0
+var _stats_load_max_usec := 0
+var _stats_instances := 0
+var _stats_instantiate_usec := 0
+var _stats_pump_frames := 0
+var _stats_pump_usec := 0
+var _stats_errors := 0
+
+
+## Cumulative counters of the pipeline since boot (all times in ms).
+func get_stats() -> Dictionary:
+	return {
+		"groups": _stats_groups,
+		"download_ms": _stats_download_usec / 1000.0,
+		"download_max_ms": _stats_download_max_usec / 1000.0,
+		"loads": _stats_loads,
+		"load_ms": _stats_load_usec / 1000.0,
+		"load_max_ms": _stats_load_max_usec / 1000.0,
+		"instances": _stats_instances,
+		"instantiate_ms": _stats_instantiate_usec / 1000.0,
+		"pump_frames": _stats_pump_frames,
+		"pump_ms": _stats_pump_usec / 1000.0,
+		"errors": _stats_errors,
+		"in_flight_groups": _groups.size(),
+	}
+
 
 #region Public API — called by gltf_container.gd
 
@@ -142,8 +186,20 @@ func unregister(container, hash: String) -> void:
 #region Download stage (network, wide)
 
 
+func _max_concurrent_downloads() -> int:
+	if _max_groups_cache >= 0:
+		return _max_groups_cache
+	_max_groups_cache = MAX_CONCURRENT_DOWNLOADS
+	# `max-groups=<n>` deeplink: benchmark knob for the fetch-stage width.
+	if Global.deep_link_obj != null:
+		var v := str(Global.deep_link_obj.params.get("max-groups", ""))
+		if v.is_valid_int() and v.to_int() > 0:
+			_max_groups_cache = v.to_int()
+	return _max_groups_cache
+
+
 func _pump_downloads() -> void:
-	while _downloading_count < MAX_CONCURRENT_DOWNLOADS and not _download_queue.is_empty():
+	while _downloading_count < _max_concurrent_downloads() and not _download_queue.is_empty():
 		var hash := _pop_next_download()
 		if hash.is_empty():
 			break
@@ -185,14 +241,16 @@ func _has_current_scene_waiter(group: LoadGroup) -> bool:
 # gdlint:ignore = async-function-name
 func _async_download_group(group: LoadGroup) -> void:
 	var scene_path := ""
+	var t0 := Time.get_ticks_usec()
+	_stats_groups += 1
 	if group.optimized:
 		var promise = Global.content_provider.fetch_optimized_asset_with_dependencies(group.hash)
 		var result = await PromiseUtils.async_awaiter(promise)
 		if result is PromiseError:
 			_fail_download(group, "failed to download optimized asset dependencies")
 			return
-		scene_path = "res://glbs/" + group.hash + ".scn"
-		if not ResourceLoader.exists(scene_path):
+		scene_path = Global.content_provider.get_optimized_scene_path(group.hash)
+		if not FileAccess.file_exists(scene_path):
 			_fail_download(group, "optimized scene not found: " + scene_path)
 			return
 	else:
@@ -212,6 +270,9 @@ func _async_download_group(group: LoadGroup) -> void:
 			return
 		scene_path = data
 
+	var dl_usec := Time.get_ticks_usec() - t0
+	_stats_download_usec += dl_usec
+	_stats_download_max_usec = maxi(_stats_download_max_usec, dl_usec)
 	group.scene_path = scene_path
 	group.state = STATE_FETCHED
 	_release_download_slot()
@@ -244,22 +305,85 @@ func _ensure_load_pump() -> void:
 
 # gdlint:ignore = async-function-name
 func _run_load_pump() -> void:
-	while not _load_queue.is_empty():
-		var group: LoadGroup = _load_queue.pop_front()
-		await _load_and_realize_group(group)
+	while not _load_queue.is_empty() or not _threaded_loading.is_empty():
+		var frame_t0 := Time.get_ticks_usec()
+		var realized: Array = []  # [group, batch] pairs realized this frame
+
+		# EXPERIMENT (`threaded-load=<n>` deeplink): hand the .scn parse to
+		# Godot's loader thread and only instantiate on the main thread. Poll
+		# statuses first, so a load that finished during the last frame is
+		# realized this frame.
+		if _threaded_load_slots() > 0:
+			var still_loading: Array = []
+			for group in _threaded_loading:
+				var status := ResourceLoader.load_threaded_get_status(group.scene_path)
+				if status == ResourceLoader.THREAD_LOAD_IN_PROGRESS:
+					still_loading.append(group)
+					continue
+				if status == ResourceLoader.THREAD_LOAD_LOADED:
+					var resource := ResourceLoader.load_threaded_get(group.scene_path)
+					if resource is PackedScene:
+						group.packed_scene = resource
+				if group.packed_scene == null:
+					_notify_group_error(group, "threaded load failed (status %d)" % status)
+					continue
+				_stats_loads += 1
+				var batch := _load_and_realize_group(group)
+				if not batch.is_empty():
+					realized.append([group, batch])
+			_threaded_loading = still_loading
+			while not _load_queue.is_empty() and _threaded_loading.size() < _threaded_load_slots():
+				var group: LoadGroup = _load_queue.pop_front()
+				if not is_instance_valid(group) or _threaded_loading.has(group):
+					continue
+				if group.packed_scene != null:
+					var batch := _load_and_realize_group(group)
+					if not batch.is_empty():
+						realized.append([group, batch])
+					continue
+				var err := ResourceLoader.load_threaded_request(group.scene_path, "", false)
+				if err != OK:
+					_notify_group_error(group, "load_threaded_request failed (%d)" % err)
+					continue
+				_threaded_loading.append(group)
+
+		while not _load_queue.is_empty() and _threaded_load_slots() == 0:
+			var group: LoadGroup = _load_queue.pop_front()
+			var batch := _load_and_realize_group(group)
+			if not batch.is_empty():
+				realized.append([group, batch])
+			if Time.get_ticks_usec() - frame_t0 >= LOAD_PUMP_BUDGET_USEC:
+				break
+		_stats_pump_frames += 1
+		_stats_pump_usec += Time.get_ticks_usec() - frame_t0
+
+		await get_tree().process_frame
+
+		for pair in realized:
+			_complete_realized_group(pair[0], pair[1])
 	_load_pump_running = false
 
 
-## For ONE source in ONE frame: do the single main-thread ResourceLoader.load
-## (first pass only), then instantiate + add every not-yet-realized waiter.
-## Mark them FINISHED after the render frame — measuring the source's whole
-## first-frame main-thread + GPU stall once.
-# gdlint:ignore = async-function-name
-func _load_and_realize_group(group: LoadGroup) -> void:
-	if not is_instance_valid(group):
-		return
+## Number of concurrent background .scn loads (0 = synchronous main-thread
+## load, the default). Read from the `threaded-load=<n>` deeplink param.
+func _threaded_load_slots() -> int:
+	if _threaded_slots_cache >= 0:
+		return _threaded_slots_cache
+	_threaded_slots_cache = 0
+	if Global.deep_link_obj != null:
+		var v := str(Global.deep_link_obj.params.get("threaded-load", ""))
+		if v.is_valid_int():
+			_threaded_slots_cache = maxi(0, v.to_int())
+	return _threaded_slots_cache
 
-	var main_t0 := Time.get_ticks_usec()
+
+## For ONE source: do the single main-thread ResourceLoader.load (first pass
+## only), then instantiate + add every not-yet-realized waiter. Returns the
+## batch of waiters realized (empty when nothing was added). The waiters are
+## marked FINISHED by `_complete_realized_group` after the next render frame.
+func _load_and_realize_group(group: LoadGroup) -> Array:
+	if not is_instance_valid(group):
+		return []
 
 	if group.packed_scene == null:
 		# Synchronous main-thread load — ONCE per source. The optimized .scn
@@ -271,10 +395,15 @@ func _load_and_realize_group(group: LoadGroup) -> void:
 			if group.force_fresh
 			else ResourceLoader.CACHE_MODE_REUSE
 		)
+		var t0 := Time.get_ticks_usec()
 		var resource := ResourceLoader.load(group.scene_path, "", cache_mode)
+		var load_usec := Time.get_ticks_usec() - t0
+		_stats_loads += 1
+		_stats_load_usec += load_usec
+		_stats_load_max_usec = maxi(_stats_load_max_usec, load_usec)
 		if resource == null or not resource is PackedScene:
 			_notify_group_error(group, "loaded resource is null")
-			return
+			return []
 		group.packed_scene = resource
 
 	group.state = STATE_REALIZING
@@ -284,19 +413,22 @@ func _load_and_realize_group(group: LoadGroup) -> void:
 			batch.append(waiter)
 	if batch.is_empty():
 		_retire_group(group)
-		return
+		return []
 
+	var t1 := Time.get_ticks_usec()
 	for waiter in batch:
 		waiter._instantiate_and_add(group.packed_scene)
+	_stats_instances += batch.size()
+	_stats_instantiate_usec += Time.get_ticks_usec() - t1
+	return batch
 
-	await get_tree().process_frame
 
-	# Wall time spanning load → all add_childs → next frame: the source's whole
-	# main-thread + first-render pipeline stall, shared across its instances.
-	var gpu_ms := (Time.get_ticks_usec() - main_t0) / 1000.0
+## After the render frame following a realize pass: mark the batch FINISHED and
+## retire (or re-queue) the group.
+func _complete_realized_group(group: LoadGroup, batch: Array) -> void:
 	for waiter in batch:
 		if is_instance_valid(waiter):
-			waiter._complete_shared_load(gpu_ms)
+			waiter._complete_shared_load()
 
 	# A waiter may have attached during the render frame — realize it next pass.
 	if _has_unrealized_waiter(group):
@@ -333,6 +465,7 @@ func _retire_group(group: LoadGroup) -> void:
 
 func _notify_group_error(group: LoadGroup, reason: String) -> void:
 	group.state = STATE_ERROR
+	_stats_errors += 1
 	# Feed the loading funnel (Rust) so the load's `assets_errored` reflects this failure.
 	Global.scene_runner.loading_note_asset_failure(1)
 	for waiter in group.waiters:

@@ -69,14 +69,14 @@ unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_colors/font_color = Color(0.988235, 0.988235, 0.988235, 1)
-text = "Load the scenes arround you"
+text = "POPUP_WARNING_LOAD_THE_SCENES_ARROUND_YOU"
 clip_text = true
 
 [node name="Label_Description" type="RichTextLabel" parent="MarginContainer/HBoxContainer/VBoxContainer" unique_id=1880737375]
 unique_name_in_owner = true
 layout_mode = 2
 bbcode_enabled = true
-text = "[center]You have scenes pending to be loaded. To maintain a smooth experience, loading will occur only when you change scenes. If you prefer to load them immediately, please press the [b]Refresh[/b] button at the Top Left of the screen with icon [img]res://assets/ui/Reset.png[/img]"
+text = "POPUP_WARNING_PENDING_SCENES"
 fit_content = true
 
 [node name="Control" type="Control" parent="." unique_id=2016356211]

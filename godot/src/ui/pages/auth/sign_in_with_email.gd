@@ -76,9 +76,7 @@ func _async_on_button_next_pressed() -> void:
 		var raw: String = result.get_error()
 		push_warning("[OTP SignIn] send_code failed: " + raw)
 		Global.metrics.track_screen_viewed("AUTH_OTP_EMAIL_INVALID", "")
-		email_input.show_external_error(
-			"Couldn't send code. Please check your email and try again."
-		)
+		email_input.show_external_error(tr("AUTH_OTP_SEND_CODE_FAILED"))
 		return
 
 	DisplayServer.virtual_keyboard_hide()

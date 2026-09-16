@@ -394,7 +394,6 @@ func set_shadow_enabled(enabled: bool) -> void:
 
 func set_light_enabled(enabled: bool) -> void:
 	runtime_light_enabled = enabled
-	visible = enabled and dcl_lights_system_enabled
 	request_recompute()
 	if debug_gizmo_root != null:
 		debug_gizmo_root.visible = debug_dcl_lights_gizmo

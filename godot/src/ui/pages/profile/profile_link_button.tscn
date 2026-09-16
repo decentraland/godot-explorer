@@ -8,6 +8,7 @@
 [ext_resource type="Texture2D" uid="uid://ce0tola1380xu" path="res://assets/themes/icons/close.svg" id="6_ykyw5"]
 
 [node name="PofileLinkButton" type="Button" unique_id=2141351039]
+auto_translate_mode = 2
 custom_minimum_size = Vector2(0, 64)
 offset_right = 261.0
 offset_bottom = 64.0

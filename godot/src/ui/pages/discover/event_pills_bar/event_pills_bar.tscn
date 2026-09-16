@@ -83,6 +83,7 @@ mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_qwmgv")
 
 [node name="Label_LivePill" type="Label" parent="HBoxContainer2/LivePill" unique_id=795671707]
+auto_translate_mode = 2
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4
@@ -101,6 +102,7 @@ mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_mwxpt")
 
 [node name="Label_TimePill" type="Label" parent="HBoxContainer2/TimePill" unique_id=804326398]
+auto_translate_mode = 2
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 1
@@ -135,6 +137,7 @@ expand_mode = 1
 stretch_mode = 5
 
 [node name="Label_UsersInEvent" type="Label" parent="HBoxContainer2/UsersPill/HBoxContainer" unique_id=725855529]
+auto_translate_mode = 2
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 4
@@ -172,7 +175,7 @@ theme_override_constants/margin_right = 8
 [node name="Label" type="Label" parent="HBoxContainer3/FeaturedPill/MarginContainer" unique_id=2121768779]
 layout_mode = 2
 size_flags_vertical = 1
-text = "Featured"
+text = "DISCOVER_FEATURED"
 label_settings = SubResource("LabelSettings_kdyy4")
 horizontal_alignment = 1
 vertical_alignment = 1
@@ -198,7 +201,7 @@ theme_override_constants/margin_right = 8
 [node name="Label" type="Label" parent="HBoxContainer3/TrendingPill/MarginContainer" unique_id=340272572]
 layout_mode = 2
 size_flags_vertical = 1
-text = "Trending"
+text = "DISCOVER_TRENDING"
 label_settings = SubResource("LabelSettings_kdyy4")
 horizontal_alignment = 1
 vertical_alignment = 1

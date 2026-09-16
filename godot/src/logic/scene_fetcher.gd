@@ -960,14 +960,66 @@ func async_load_scene(
 		# Await all purge operations to complete before fetching
 		await PromiseUtils.async_all(purge_promises)
 
+	# Optimized-assets manifest (`{entity}-optimized.json`, v6 layout: a plain
+	# file, no zip) and the scene boot files (`{hash}.js`, `{hash}.crdt`) live in
+	# the optimized bucket too; a 404 there just means "not optimized" and the
+	# file comes from the content server instead. Everything starts together.
+	var skip_optimized = (
+		Global.is_xr() or Global.get_testing_scene_mode() or Global.cli.only_no_optimized
+	)
+	var opt_base: String = Global.content_provider.get_optimized_base_url()
+
+	# `{entity}-boot.zip` carries the manifest + main.js + main.crdt in ONE
+	# request, extracted into user://content under the same names the three
+	# fetches below use — so on success those become disk hits. A 404 (or any
+	# failure) just means the older layout: fall through to the three fetches.
+	var boot_bundled := false
+	var boot_files_cached := (
+		FileAccess.file_exists("user://content/%s-optimized.json" % scene_entity_id)
+		and (
+			not scene_entity_definition.is_sdk7()
+			or FileAccess.file_exists(
+				Global.content_provider.get_cache_file_path(
+					scene_entity_definition.get_main_js_hash()
+				)
+			)
+		)
+		and (
+			scene_entity_definition.get_main_crdt_hash().is_empty()
+			or FileAccess.file_exists(
+				Global.content_provider.get_cache_file_path(
+					scene_entity_definition.get_main_crdt_hash()
+				)
+			)
+		)
+	)
+	if not skip_optimized and not boot_files_cached:
+		var boot_zip: String = "%s-boot.zip" % scene_entity_id
+		var boot_promise: Promise = Global.content_provider.fetch_boot_bundle(
+			boot_zip, "%s/%s" % [opt_base, boot_zip]
+		)
+		var boot_res = await PromiseUtils.async_awaiter(boot_promise)
+		if boot_res is PromiseError:
+			printerr("Scene ", scene_entity_id, " boot bundle failed: ", boot_res.get_error())
+		elif boot_res == true:
+			boot_bundled = true
+
 	var local_main_js_path: String = ""
 	var script_promise: Promise = null
+	var script_from_optimized := false
 	if scene_entity_definition.is_sdk7():
 		var script_path := scene_entity_definition.get_main_js_path()
-		script_promise = Global.content_provider.fetch_file(script_path, content_mapping)
-		local_main_js_path = Global.content_provider.get_cache_file_path(
-			scene_entity_definition.get_main_js_hash()
-		)
+		var script_hash := scene_entity_definition.get_main_js_hash()
+		local_main_js_path = Global.content_provider.get_cache_file_path(script_hash)
+		if (boot_bundled or boot_files_cached) and FileAccess.file_exists(local_main_js_path):
+			pass  # extracted from the boot bundle / already cached
+		elif not skip_optimized and not script_hash.is_empty():
+			script_promise = Global.content_provider.fetch_file_by_url(
+				script_hash, "%s/%s.js" % [opt_base, script_hash]
+			)
+			script_from_optimized = true
+		else:
+			script_promise = Global.content_provider.fetch_file(script_path, content_mapping)
 	else:
 		if (
 			not FIXED_LOCAL_ADAPTATION_LAYER.is_empty()
@@ -981,8 +1033,41 @@ func async_load_scene(
 			)
 			local_main_js_path = "user://content/" + script_hash
 
+	var manifest_name: String = "%s-optimized.json" % scene_entity_id
+	var manifest_promise: Promise = null
+	var manifest_bundled := (
+		(boot_bundled or boot_files_cached)
+		and FileAccess.file_exists("user://content/" + manifest_name)
+	)
+	if not skip_optimized and not manifest_bundled:
+		manifest_promise = Global.content_provider.fetch_file_by_url(
+			manifest_name, "%s/%s" % [opt_base, manifest_name]
+		)
+
+	var main_crdt_file_hash := scene_entity_definition.get_main_crdt_hash()
+	var local_main_crdt_path: String = String()
+	var crdt_promise: Promise = null
+	var crdt_from_optimized := false
+	if not main_crdt_file_hash.is_empty():
+		local_main_crdt_path = Global.content_provider.get_cache_file_path(main_crdt_file_hash)
+		if (boot_bundled or boot_files_cached) and FileAccess.file_exists(local_main_crdt_path):
+			pass  # extracted from the boot bundle / already cached
+		elif not skip_optimized:
+			crdt_promise = Global.content_provider.fetch_file_by_url(
+				main_crdt_file_hash, "%s/%s.crdt" % [opt_base, main_crdt_file_hash]
+			)
+			crdt_from_optimized = true
+		else:
+			crdt_promise = Global.content_provider.fetch_file("main.crdt", content_mapping)
+
 	if script_promise != null:
 		var script_res = await PromiseUtils.async_awaiter(script_promise)
+		if script_res is PromiseError and script_from_optimized:
+			# Not in the optimized bucket (or it failed) - the content server has it.
+			script_promise = Global.content_provider.fetch_file(
+				scene_entity_definition.get_main_js_path(), content_mapping
+			)
+			script_res = await PromiseUtils.async_awaiter(script_promise)
 		if script_res is PromiseError:
 			printerr(
 				"Scene ",
@@ -999,13 +1084,11 @@ func async_load_scene(
 
 			return PromiseUtils.resolved(false)
 
-	var main_crdt_file_hash := scene_entity_definition.get_main_crdt_hash()
-	var local_main_crdt_path: String = String()
-	if not main_crdt_file_hash.is_empty():
-		local_main_crdt_path = Global.content_provider.get_cache_file_path(main_crdt_file_hash)
-		var promise: Promise = Global.content_provider.fetch_file("main.crdt", content_mapping)
-
-		var res = await PromiseUtils.async_awaiter(promise)
+	if crdt_promise != null:
+		var res = await PromiseUtils.async_awaiter(crdt_promise)
+		if res is PromiseError and crdt_from_optimized:
+			crdt_promise = Global.content_provider.fetch_file("main.crdt", content_mapping)
+			res = await PromiseUtils.async_awaiter(crdt_promise)
 		if res is PromiseError:
 			printerr(
 				"Scene ",
@@ -1020,97 +1103,48 @@ func async_load_scene(
 
 			return PromiseUtils.resolved(false)
 
-	var scene_hash_zip: String = "%s-mobile.zip" % scene_entity_id
-	var asset_url: String = (
-		"%s/%s-mobile.zip" % [Global.content_provider.get_optimized_base_url(), scene_entity_id]
-	)
-
-	# Skip optimized zip download when:
-	# - XR mode (handled separately)
-	# - Testing scene mode (handled separately)
-	# - --only-no-optimized flag (explicitly loading non-optimized scenes)
-	var skip_optimized = (
-		Global.is_xr() or Global.get_testing_scene_mode() or Global.cli.only_no_optimized
-	)
-
-	var download_success := false
-	var download_error: PromiseError = null
-	var file_not_found_remotely := false
-	if not skip_optimized:
-		# Check if optimized zip already exists to avoid re-download hang
-		var zip_file_path = "user://content/" + scene_hash_zip
-		if FileAccess.file_exists(zip_file_path):
-			download_success = true
-		else:
-			# First check if the file exists remotely (HEAD request)
-			# This avoids treating 404s as errors - scenes without optimized versions are expected
-			var exists_promise = Global.content_provider.check_remote_file_exists(asset_url)
-			var exists_res = await PromiseUtils.async_awaiter(exists_promise)
-
-			if exists_res is PromiseError or exists_res == false:
-				# File doesn't exist remotely or check failed - this is expected for non-optimized scenes
-				file_not_found_remotely = true
-			else:
-				# File exists remotely, proceed with download
-				var download_promise: Promise = Global.content_provider.fetch_file_by_url(
-					scene_hash_zip, asset_url
-				)
-				var download_res = await PromiseUtils.async_awaiter(download_promise)
-				if download_res is PromiseError:
-					download_error = download_res
-				else:
-					download_success = true
-
-	if skip_optimized:
-		pass  # Scene optimization skipped (XR, testing, or --only-no-optimized)
-	elif file_not_found_remotely:
-		# Optimized version not available - expected for non-optimized scenes
-		# --only-optimized: Skip scene if it's not optimized
-		if Global.cli.only_optimized:
-			printerr("Scene ", scene_entity_id, " skipped (--only-optimized flag set)")
-			# Still report as fetched so loading session can progress
-			Global.scene_runner.report_scene_fetched(scene_entity_id)
-			loaded_scenes.erase(scene_entity_id)
-			return PromiseUtils.resolved(false)
-	elif download_error != null or not download_success:
-		printerr(
-			"Scene ", scene_entity_id, " failed to download optimized zip asset_url=", asset_url
-		)
-
-		send_scene_failed_metrics(scene_entity_id, "zip_download_failed")
-
-		# --only-optimized: Skip scene if download failed
-		if Global.cli.only_optimized:
-			printerr("Scene ", scene_entity_id, " skipped (--only-optimized flag set)")
-			# Still report as fetched so loading session can progress
-			Global.scene_runner.report_scene_fetched(scene_entity_id)
-			loaded_scenes.erase(scene_entity_id)
-			return PromiseUtils.resolved(false)
-	else:
-		var ok = ProjectSettings.load_resource_pack("user://content/" + scene_hash_zip, false)
-		if not ok:
-			printerr("Scene ", scene_entity_id, " failed to load optimized scene, error #1")
-
-			send_scene_failed_metrics(scene_entity_id, "optimized_scene_load_failed")
-		else:
-			var optimized_metadata_path = "res://" + scene_entity_id + "-optimized.json"
-			var file = FileAccess.open(optimized_metadata_path, FileAccess.READ)
-			if file:
-				# Read the file's content as a string
-				var json_string = file.get_as_text()
-				var add_promise = Global.content_provider.load_optimized_assets_metadata(
-					json_string
-				)
-				file.close()
-				await PromiseUtils.async_awaiter(add_promise)
-				print("Scene ", scene_entity_id, " optimized assets metadata loaded successfully.")
-			else:
-				printerr("Scene ", scene_entity_id, " failed to load optimized scene, error #2")
-				send_scene_failed_metrics(
+	var manifest_ready := manifest_bundled
+	if manifest_promise != null:
+		var manifest_res = await PromiseUtils.async_awaiter(manifest_promise)
+		if manifest_res is PromiseError:
+			# A 404 is the expected "scene not optimized"; anything else is a real
+			# download failure worth a metric (the scene still loads, runtime-processed).
+			if not String(manifest_res.get_error()).contains("404"):
+				printerr(
+					"Scene ",
 					scene_entity_id,
-					"optimized_scene_json_load_failed",
-					error_string(FileAccess.get_open_error())
+					" failed to download optimized manifest: ",
+					manifest_res.get_error()
 				)
+				send_scene_failed_metrics(
+					scene_entity_id, "manifest_download_failed", manifest_res.get_error()
+				)
+			# --only-optimized: Skip scene if it's not optimized
+			if Global.cli.only_optimized:
+				printerr("Scene ", scene_entity_id, " skipped (--only-optimized flag set)")
+				# Still report as fetched so loading session can progress
+				Global.scene_runner.report_scene_fetched(scene_entity_id)
+				loaded_scenes.erase(scene_entity_id)
+				return PromiseUtils.resolved(false)
+		else:
+			manifest_ready = true
+
+	if manifest_ready:
+		var manifest_path := "user://content/" + manifest_name
+		var file = FileAccess.open(manifest_path, FileAccess.READ)
+		if file:
+			var json_string = file.get_as_text()
+			file.close()
+			var add_promise = Global.content_provider.load_optimized_assets_metadata(json_string)
+			await PromiseUtils.async_awaiter(add_promise)
+			print("Scene ", scene_entity_id, " optimized assets metadata loaded successfully.")
+		else:
+			printerr("Scene ", scene_entity_id, " failed to read optimized manifest")
+			send_scene_failed_metrics(
+				scene_entity_id,
+				"optimized_scene_json_load_failed",
+				error_string(FileAccess.get_open_error())
+			)
 
 	# the scene was removed while it was loading...
 	if not loaded_scenes.has(scene_entity_id):

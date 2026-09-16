@@ -9,23 +9,32 @@ extends RefCounted
 ##
 ## Driven from Explorer._process wherever the on-screen controls are shown (mobile +
 ## desktop dev, never XR). Only acts on state changes and defers to the explorer's
-## hide-ui state when restoring visibility.
+## hide-ui state when restoring visibility. It also positions the crosshair per camera
+## zoom (issue #2709): mobile rides it between screen center (first person) and an
+## upper-third anchor above the avatar's head (third person), interpolated in sync
+## with the camera distance so a pinch across the mode boundary doesn't jump it.
 
 var _virtual_joystick: Control
 var _label_crosshair: Control
+var _player: Player
 var _hide_joystick_applied: bool = false
 var _hide_crosshair_applied: bool = false
 
 
-func _init(virtual_joystick: Control, label_crosshair: Control) -> void:
+func _init(virtual_joystick: Control, label_crosshair: Control, player: Player = null) -> void:
 	_virtual_joystick = virtual_joystick
 	_label_crosshair = label_crosshair
+	_player = player
 
 
-## Returns the scene-replaced icon `{ "hash", "url" }` a PBTouchScreenControls set for
-## `action` (e.g. "ia_primary"), or an empty Dictionary when the controls are inactive or
-## the action has no custom icon. Single source of truth shared by the joypad buttons and
-## the pointer tooltip so both render the same replaced glyph.
+## Returns the scene-replaced icon `{ "hash", "url", "scene_id" }` a PBTouchScreenControls
+## set for `action` (e.g. "ia_primary"), or an empty Dictionary when the controls are
+## inactive or the action has no custom icon. Single source of truth shared by the joypad
+## buttons and the pointer tooltip so both render the same replaced glyph.
+##
+## `scene_id` is the scene that declared the icon: consumers resolve its content mapping and
+## fetch by hash, sharing the cache entry with the scene's own UI. `url` stays as a fallback
+## for when that scene is already unloaded.
 static func get_custom_icon_for_action(action: String) -> Dictionary:
 	if not Global.touch_controls_active:
 		return {}
@@ -35,7 +44,11 @@ static func get_custom_icon_for_action(action: String) -> Dictionary:
 		var icon_hash := String(entry.get("icon_hash", ""))
 		if icon_hash.is_empty():
 			return {}
-		return {"hash": icon_hash, "url": String(entry.get("icon_url", ""))}
+		return {
+			"hash": icon_hash,
+			"url": String(entry.get("icon_url", "")),
+			"scene_id": int(entry.get("scene_id", -1)),
+		}
 	return {}
 
 
@@ -43,6 +56,7 @@ static func get_custom_icon_for_action(action: String) -> Dictionary:
 func apply(hidden_for_hide_ui: bool) -> void:
 	_apply_joystick(hidden_for_hide_ui)
 	_apply_crosshair()
+	_apply_crosshair_anchor()
 
 
 func _apply_joystick(hidden_for_hide_ui: bool) -> void:
@@ -70,3 +84,25 @@ func _apply_crosshair() -> void:
 		if Global.is_mobile() or Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED:
 			_label_crosshair.show()
 	_hide_crosshair_applied = hide_crosshair
+
+
+# Mobile only: cinematic mode owns the crosshair (tap-cursor) and desktop keeps the
+# classic centered crosshair, so both are skipped.
+func _apply_crosshair_anchor() -> void:
+	if not Global.is_mobile():
+		return
+	if Global.scene_runner.raycast_use_cursor_position:
+		return
+	if _label_crosshair == null or not _label_crosshair.visible:
+		# No crosshair on screen -> no custom aim point; fall back to viewport center
+		# (also covers scene-driven crosshair hiding and hide-ui).
+		Global.scene_runner.clear_crosshair_screen_point()
+		return
+	if not is_instance_valid(_player) or _player.mount_camera == null:
+		return
+	var anchor_px := _player.get_crosshair_screen_position()
+	_label_crosshair.set_global_position(anchor_px - _label_crosshair.size / 2)
+	# Fade driven by the mode swap (1p -> 3p fades in over the avatar's head).
+	_label_crosshair.modulate.a = _player.get_crosshair_alpha()
+	# Keep the interaction raycast aimed where the crosshair is drawn (issue #2709).
+	Global.scene_runner.set_crosshair_screen_point(anchor_px)

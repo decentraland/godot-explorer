@@ -197,7 +197,7 @@ theme_override_styles/pressed = SubResource("StyleBoxFlat_4d3kq")
 theme_override_styles/hover = SubResource("StyleBoxFlat_f64lq")
 theme_override_styles/focus = SubResource("StyleBoxFlat_8g21o")
 toggle_mode = true
-text = "EQUIP"
+text = "EMOTES_EQUIP"
 
 [node name="TextureRect_Skeleton" type="TextureRect" parent="Control_Inner" unique_id=1131253374]
 unique_name_in_owner = true
@@ -228,7 +228,7 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_newbadge")
 [node name="Label_New" type="Label" parent="Control_Inner/PanelContainer_NewBadge" unique_id=800100002]
 layout_mode = 2
 mouse_filter = 2
-text = "NEW"
+text = "EMOTES_NEW"
 label_settings = SubResource("LabelSettings_new")
 horizontal_alignment = 1
 vertical_alignment = 1

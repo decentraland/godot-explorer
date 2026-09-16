@@ -12,23 +12,31 @@ const DECENTRALAND_LOGO = preload("res://decentraland_logo.png")
 		if Engine.is_editor_hint():
 			notify_property_list_changed()
 
+## Show the circular border ring. Defaults to true so existing usages are unaffected; set false
+## for a borderless avatar (e.g. notifications).
+@export var show_border: bool = true:
+	set(value):
+		show_border = value
+		_update_border_visibility()
+
 var border_width: int
 var avatar: DclAvatar
-var connection_status_online = load("res://assets/ui/connection_status_online.svg")
-var connection_status_offline = load("res://assets/ui/connection_status_offline.svg")
 
 @onready var texture_rect_profile: TextureRect = %TextureRect_Profile
 @onready var panel_border: PanelContainer = %Panel_Border
-@onready var texture_rect_status: TextureRect = %TextureRect_Status
-@onready var texture_rect_friendship: TextureRect = %TextureRect_Friendship
 @onready var panel_background: PanelContainer = %Panel_Background
 
 
 func _ready() -> void:
-	hide_status()
 	_update_size()
 	if panel_border:
 		_update_border_style()
+	_update_border_visibility()
+
+
+func _update_border_visibility() -> void:
+	if panel_border:
+		panel_border.visible = show_border
 
 
 func _get_configuration_warnings():
@@ -173,26 +181,3 @@ func _on_gui_input(event: InputEvent) -> void:
 					explorer.control_menu.async_show_own_profile()
 				else:
 					Global.open_profile_by_avatar.emit(avatar)
-
-
-func set_online() -> void:
-	texture_rect_status.show()
-	texture_rect_status.texture = connection_status_online
-
-
-func set_offline() -> void:
-	texture_rect_status.show()
-	texture_rect_status.texture = connection_status_offline
-
-
-func set_friend() -> void:
-	texture_rect_friendship.show()
-
-
-func unset_friend() -> void:
-	texture_rect_friendship.hide()
-
-
-func hide_status() -> void:
-	texture_rect_status.hide()
-	texture_rect_friendship.hide()

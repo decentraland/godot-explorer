@@ -38,7 +38,6 @@ var _last_outlined_avatar: Avatar = null
 var _last_outlined_entity: Node3D = null
 var _is_loading: bool = true  # Start as loading
 var _ban_check_generation: int = 0
-var _pending_notification_toast: Dictionary = {}  # Store notification waiting to be shown
 var _subscription_reconnecting: bool = false  # Debounce for subscription_dropped
 var _resubscribe_timer: Timer = null
 ## True between social-service init and player logout. Gates retry loops so they
@@ -53,7 +52,8 @@ var _session_hide_main_hud: bool = false
 ## Session-only sub-options for hide UI.
 var _session_hide_view_profile: bool = true
 var _session_hide_world_interactions: bool = true
-var _session_hide_player_names: bool = true
+## Independent of the master "Hide Interface" toggle: hides avatar names on its own.
+var _session_hide_player_names: bool = false
 var _session_hide_scene_ui: bool = true
 var _mobile_controls_hidden_for_hide_ui: bool = false
 # Applies scene-driven (PBTouchScreenControls) joystick/crosshair hiding; see the class doc.
@@ -75,7 +75,6 @@ var _debug_panel_from_settings: bool = false
 
 @onready var notifications_panel: PanelContainer = %NotificationsPanel
 @onready var friends_panel: PanelContainer = %FriendsPanel
-@onready var settings_panel: Control = %SettingsPanel
 @onready var label_version = %Label_Version
 @onready var label_fps = %Label_FPS
 @onready var control_menu = %Control_Menu
@@ -100,7 +99,7 @@ var _debug_panel_from_settings: bool = false
 
 @onready var navbar: Control = %Navbar
 @onready var joypad: Control = %Joypad
-@onready var button_show_ui: Button = %Button_ShowUI
+@onready var button_show_ui: HudButton = %Button_ShowUI
 @onready var hud_dismiss_catcher: Control = %HudDismissCatcher
 @onready var interactable_area_debug: ColorRect = %InteractableAreaDebug
 @onready var interactable_area_debug_label: Label = %InteractableAreaDebugLabel
@@ -167,22 +166,17 @@ func _ready():
 	Global.on_menu_open.connect(_on_menu_open)
 	Global.on_menu_close.connect(_on_menu_close)
 
-	# Connect friends button
 	Global.open_friends_panel.connect(_show_friends_panel)
-
-	# Connect settings panel button
-	Global.open_settings_panel.connect(_show_settings_panel)
-
-	# Connect debug panel signal from landscape settings panel
-	var settings_node = settings_panel.get_node("MarginContainer/Settings")
-	if settings_node:
-		settings_node.request_debug_panel.connect(_on_control_menu_request_debug_panel)
-		# Without this, the in-game "Scene Paused" toggle does nothing (menu.gd wires
-		# request_pause_scenes for the pre-explorer path only).
-		settings_node.request_pause_scenes.connect(_on_control_menu_request_pause_scenes)
+	# Settings is a fullscreen menu screen (like Backpack): the navbar button emits
+	# open_settings, the menu (Control_Menu, which lives here) shows the screen and re-emits
+	# request_debug_panel / request_pause_scenes / request_multiplayer_debug through its own
+	# signals, already wired to this node in explorer.tscn.
+	Global.open_settings.connect(_on_settings_open)
 
 	navbar.navbar_closed.connect(_close_all_panels)
 	navbar.navbar_opened.connect(_open_friends_panel)
+	# Navbar owns the reveal/collapse of the side-panel surface (fade + grow on one timeline).
+	navbar.set_reveal_surface(%VBoxContainer_LeftPanels)
 	profile_container.visibility_changed.connect(_on_profile_container_visibility_changed)
 
 	# Connect to NotificationsManager queue signals
@@ -209,7 +203,6 @@ func _ready():
 	# Keep the full-screen dismiss catcher in sync with what's open.
 	notifications_panel.visibility_changed.connect(_refresh_hud_dismiss)
 	friends_panel.visibility_changed.connect(_refresh_hud_dismiss)
-	settings_panel.visibility_changed.connect(_refresh_hud_dismiss)
 	chat_panel.chat.visibility_changed.connect(_refresh_hud_dismiss)
 
 	# Chat focus (open) overlays the message view: hide the emote button and joypad
@@ -269,7 +262,7 @@ func _ready():
 
 	virtual_joystick.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	virtual_joystick_orig_position = virtual_joystick.get_position()
-	_sdk_touch_controls = SdkTouchControlsApplier.new(virtual_joystick, label_crosshair)
+	_sdk_touch_controls = SdkTouchControlsApplier.new(virtual_joystick, label_crosshair, player)
 
 	if Global.is_xr():
 		mobile_ui.hide()
@@ -298,6 +291,7 @@ func _ready():
 	player.look_at(16 * Vector3(start_parcel_position.x + 1, 0, -(start_parcel_position.y + 1)))
 
 	Global.player_camera_node = player.camera
+	Global.player_camera_node.far = Global.get_config().view_distance
 	Global.scene_runner.player_avatar_node = player.avatar
 	Global.scene_runner.player_body_node = player
 	Global.scene_runner.console = self._on_scene_console_message
@@ -351,7 +345,7 @@ func _ready():
 		if not Global.avatars.avatar_added.is_connected(_on_avatar_added_apply_hide_ui):
 			Global.avatars.avatar_added.connect(_on_avatar_added_apply_hide_ui)
 	# Apply current state once at startup (in case something toggled early).
-	_apply_hide_ui_to_avatar_nicks(_session_hide_main_hud)
+	_apply_hide_ui_to_avatar_nicks(_session_hide_player_names)
 
 	# Initialize social service for non-guest accounts
 	if not Global.player_identity.is_guest:
@@ -735,8 +729,11 @@ func change_tooltips():
 		var filtered = []
 		for i in tooltip_data.size():
 			var entry = tooltip_data[i]
+			# Matches the key scene_manager.rs emits, not English prose, so this keeps working
+			# in every locale.
 			var is_view_profile = (
-				entry is Dictionary and entry.get("text_pet_down", "") == "View profile"
+				entry is Dictionary
+				and entry.get("text_pet_down", "") == TooltipLabel.VIEW_PROFILE_KEY
 			)
 			if is_view_profile and _session_hide_view_profile:
 				continue
@@ -859,15 +856,20 @@ func move_to(position: Vector3, skip_loading: bool, check_stuck: bool = true):
 				loading_ui.enable_loading_screen("", "on_moveto")
 
 
+## Fire-and-forget teleport for callers that cannot await (menu jump-in, scene-urn spawn).
 func teleport_to(parcel: Vector2i, realm: String = ""):
-	_async_teleport_to(parcel, realm)
+	async_teleport_to(parcel, realm)
 
 
-func _async_teleport_to(parcel: Vector2i, realm: String = "") -> void:
-	if not realm.is_empty() and realm != Global.realm.get_realm_string():
+## Returns false when the realm change failed, so callers can hold back anything that claims
+## the teleport happened (#2816). Compares the resolved urls, not the raw strings: the realm
+## now comes from scene input, and "spacerunner.dcl.eth" must not reconnect a player who is
+## already in "SpaceRunner.dcl.eth".
+func async_teleport_to(parcel: Vector2i, realm: String = "") -> bool:
+	if not realm.is_empty() and Realm.normalize_realm_url(realm) != Global.realm.get_realm_url():
 		var success = await Global.realm.async_set_realm(realm)
 		if not success:
-			return
+			return false
 		if not loading_ui.visible:
 			loading_ui.enable_loading_screen(realm, "on_teleport")
 
@@ -878,6 +880,7 @@ func _async_teleport_to(parcel: Vector2i, realm: String = "") -> void:
 
 	Global.get_config().add_place_to_last_places(parcel, realm)
 	dirty_save_position = true
+	return true
 
 
 func player_look_at(look_at_position: Vector3):
@@ -1063,12 +1066,7 @@ func _update_preview_hud() -> void:
 
 ## True while a navbar side panel (or the dropdown) is open — the bottom-left slot hides then.
 func _bottom_left_slot_blocked() -> bool:
-	return (
-		navbar.is_open()
-		or friends_panel.visible
-		or notifications_panel.visible
-		or settings_panel.visible
-	)
+	return navbar.is_open() or friends_panel.visible or notifications_panel.visible
 
 
 ## Restore the bottom-left slot: while a navbar panel is open it stays hidden; otherwise the
@@ -1198,13 +1196,10 @@ func _on_notify_pending_loading_scenes(pending: bool) -> void:
 		if _first_time_refresh_warning:
 			if loading_ui.visible:
 				return
-			(
-				warning_messages
-				. async_create_popup_warning(
-					PopupWarning.WarningType.MESSAGE,
-					"Load the scenes arround you",
-					"[center]You have scenes pending to be loaded. To maintain a smooth experience, loading will occur only when you change scenes. If you prefer to load them immediately, please press the [b]Refresh[/b] button at the Top Left of the screen with icon [img]res://assets/ui/Reset.png[/img][/center]"
-				)
+			warning_messages.async_create_popup_warning(
+				PopupWarning.WarningType.MESSAGE,
+				TranslationKey.new("POPUP_WARNING_LOAD_THE_SCENES_ARROUND_YOU"),
+				TranslationKey.new("POPUP_WARNING_PENDING_SCENES")
 			)
 			_first_time_refresh_warning = false
 	else:
@@ -1302,8 +1297,6 @@ func _on_global_open_own_profile() -> void:
 		friends_panel.hide_panel()
 	if notifications_panel.visible:
 		notifications_panel.hide_panel()
-	if settings_panel.visible:
-		settings_panel.hide()
 	navbar.collapse()
 	_open_own_profile()
 
@@ -1324,13 +1317,13 @@ func _get_viewport_scale_factors() -> Vector2:
 
 func _show_friends_panel() -> void:
 	if friends_panel.visible:
+		# Re-tapping the already-selected category collapses the navbar, like tapping outside.
+		navbar.collapse()
 		return
 	joypad.hide()
 	friends_panel.show_panel_on_friends_tab()
 	if notifications_panel.visible:
 		notifications_panel.hide_panel()
-	if settings_panel.visible:
-		settings_panel.hide()
 	_refresh_hud_dismiss()
 	Global.explorer_release_focus()
 	if Global.is_mobile():
@@ -1343,23 +1336,14 @@ func _on_friends_panel_closed() -> void:
 	capture_mouse()
 
 
-func _show_settings_panel() -> void:
-	if settings_panel.visible:
-		return
-	joypad.hide()
-	settings_panel.show()
-	if friends_panel.visible:
-		friends_panel.hide_panel()
-	if notifications_panel.visible:
-		notifications_panel.hide_panel()
-	_refresh_hud_dismiss()
-	Global.explorer_release_focus()
-	if Global.is_mobile():
-		release_mouse()
+func _on_settings_open() -> void:
+	# Settings is a fullscreen menu screen: collapse and hide the navbar just like Backpack.
+	_enter_menu_screen()
 
 
-func _on_settings_panel_closed() -> void:
-	settings_panel.hide()
+## Shared cleanup used when leaving/closing panels or entering a fullscreen menu screen. Named
+## for the former settings side panel; settings is now a menu screen so there is nothing to hide.
+func _on_menu_closed() -> void:
 	apply_deferred_hide_ui()
 	Global.explorer_grab_focus()
 	capture_mouse()
@@ -1367,13 +1351,13 @@ func _on_settings_panel_closed() -> void:
 
 func _show_notifications_panel() -> void:
 	if notifications_panel.visible:
+		# Re-tapping the already-selected category collapses the navbar, like tapping outside.
+		navbar.collapse()
 		return
 	joypad.hide()
 	notifications_panel.show_panel()
 	if friends_panel.visible:
 		friends_panel.hide_panel()
-	if settings_panel.visible:
-		settings_panel.hide()
 	_refresh_hud_dismiss()
 	Global.explorer_release_focus()
 	if Global.is_mobile():
@@ -1387,13 +1371,12 @@ func _on_notifications_panel_closed() -> void:
 
 
 func _on_notification_queued(notification_d: Dictionary) -> void:
-	# Only show notifications if not loading
+	# Only show notifications if not loading; while loading the item stays queued and is drained by
+	# NotificationsManager.kick_queue() from _on_loading_finished.
+	# NOTE: system toasts only render while Explorer exists (it owns ui_root). In the lobby/portrait
+	# pre-Explorer flow there's no consumer, so those toasts don't show yet — future work.
 	if not _is_loading:
 		_show_notification_toast(notification_d)
-	else:
-		# Store the notification to show after loading finishes
-		if _pending_notification_toast.is_empty():
-			_pending_notification_toast = notification_d
 
 
 func _show_notification_toast(notification_d: Dictionary) -> void:
@@ -1445,25 +1428,27 @@ func _on_loading_started() -> void:
 	_is_loading = true
 	_ban_check_generation += 1
 	Global.modal_manager.ban_pre_check_active = false
-	_pending_notification_toast = {}  # Clear any pending notification
+	# Drop stale transient system toasts (e.g. copied-to-clipboard) from a previous run.
+	NotificationsManager.clear_system_toasts()
 	_session_hide_main_hud = false
 	_session_hide_view_profile = true
 	_session_hide_world_interactions = true
-	_session_hide_player_names = true
+	# Hide Player Names is independent of the master toggle and a standalone preference, so it is
+	# NOT reset on world load — otherwise it would silently turn off on every teleport/realm change.
 	_session_hide_scene_ui = true
 	set_visible_ui(true, true)
 	Global.session_hide_ui_toggle_sync.emit(false)
-	Global.session_hide_ui_options_sync.emit(true, true, true, true)
-	_apply_hide_ui_to_avatar_nicks(false)
+	Global.session_hide_ui_options_sync.emit(true, true, _session_hide_player_names, true)
+	_apply_hide_ui_to_avatar_nicks(_session_hide_player_names)
+	if navbar.is_open():  # avoid a redundant navbar_closed + teardown when nothing is open
+		navbar.collapse()
 
 
 func _on_loading_finished() -> void:
 	_is_loading = false
 	_update_version_label()
-	# Show pending notification if there was one queued during loading
-	if not _pending_notification_toast.is_empty():
-		_show_notification_toast(_pending_notification_toast)
-		_pending_notification_toast = {}
+	# Drain any toast queued while loading (or orphaned during the lobby before this consumer existed).
+	NotificationsManager.kick_queue()
 	if not Global.modal_manager.ban_pre_check_active:
 		_async_run_ban_check()
 
@@ -1566,19 +1551,17 @@ func _update_version_label() -> void:
 
 
 func _on_notification_clicked(notification_d: Dictionary) -> void:
-	# Handle friend request notification clicks - open friends panel on friends tab
 	var notif_type = notification_d.get("type", "")
-
 	if ["social_service_friendship_request", "social_service_friendship_accepted"].has(notif_type):
-		# Open friends panel on friends tab
 		if not friends_panel.visible:
-			friends_panel.show_panel_on_friends_tab()
+			if notif_type == "social_service_friendship_request":
+				friends_panel.show_panel_on_requests_tab()
+			else:
+				friends_panel.show_panel_on_friends_tab()
 			navbar.open_navbar_silently()
 			navbar.set_button_pressed(navbar.BUTTON.FRIENDS)
 			if notifications_panel.visible:
 				notifications_panel.hide_panel()
-			if settings_panel.visible:
-				settings_panel.hide()
 			_refresh_hud_dismiss()
 			# Release focus to prevent camera rotation while panel is open
 			Global.explorer_release_focus()
@@ -1653,10 +1636,7 @@ func _update_virtual_controls_visibility() -> void:
 		virtual_joystick.modulate.a = 0.0
 		return
 	var panel_open := (
-		friends_panel.visible
-		or notifications_panel.visible
-		or settings_panel.visible
-		or profile_container.visible
+		friends_panel.visible or notifications_panel.visible or profile_container.visible
 	)
 	if not panel_open:
 		_show_joypad()
@@ -1673,11 +1653,10 @@ func _close_all_panels():
 	control_menu.async_close()
 	_on_friends_panel_closed()
 	_on_notifications_panel_closed()
-	_on_settings_panel_closed()
+	_on_menu_closed()
 	_refresh_hud_dismiss()
-	# Restore the bottom-left slot (chat, or the preview HUD toolbar in preview) and the
-	# emote HUD hidden while the navbar was open, unless the main HUD is hidden. Keep the
-	# emote HUD and joystick hidden in portrait, where the orientation flow owns them.
+	# Restore the bottom-left slot (chat / preview toolbar) and the emote HUD hidden while the
+	# navbar was open, unless the main HUD is hidden; in portrait the orientation flow owns them.
 	if not _session_hide_main_hud:
 		_restore_bottom_left_hud()
 		if not Global.is_orientation_portrait():
@@ -1697,7 +1676,7 @@ func _enter_menu_screen():
 	_show_joypad()
 	_on_friends_panel_closed()
 	_on_notifications_panel_closed()
-	_on_settings_panel_closed()
+	_on_menu_closed()
 	_refresh_hud_dismiss()
 	navbar.set_manually_hidden(true)
 	release_mouse()
@@ -1706,12 +1685,16 @@ func _enter_menu_screen():
 func _on_menu_open():
 	_on_friends_panel_closed()
 	_on_notifications_panel_closed()
-	_on_settings_panel_closed()
+	_on_menu_closed()
 	_refresh_hud_dismiss()
 	release_mouse()
 
 
 func _on_menu_close():
+	# Apply any pending "Hide Interface" now that the menu screen is actually closing (it's
+	# deferred while the menu is open so the HUD change isn't visible behind it). Previously this
+	# only ran on the next menu open, so the toggle appeared to take one exit cycle to apply.
+	apply_deferred_hide_ui()
 	Global.set_orientation_landscape()
 	if !navbar.visible:
 		navbar.set_manually_hidden(false)
@@ -1752,7 +1735,7 @@ func _share_place():
 
 	if scene_title.length() == 0:
 		scene_title = "Decentraland"
-	msg = "📍 Join Me At " + scene_title + " following this link: " + url
+	msg = tr("SHARE_SCENE_MESSAGE").format({"scene": scene_title, "link": url})
 	#+ "\n\n If you haven't installed the app yet -> https://install-mobile.decentraland.org 📲"
 
 	if Global.is_android():
@@ -1791,10 +1774,7 @@ func _on_hud_dismiss_catcher_gui_input(event: InputEvent) -> void:
 ## panel is open or the chat is visible; IGNORE otherwise so it never blocks gameplay.
 func _refresh_hud_dismiss() -> void:
 	var open: bool = (
-		notifications_panel.visible
-		or friends_panel.visible
-		or settings_panel.visible
-		or chat_panel.is_chat_visible()
+		notifications_panel.visible or friends_panel.visible or chat_panel.is_chat_visible()
 	)
 	hud_dismiss_catcher.mouse_filter = (
 		Control.MOUSE_FILTER_STOP if open else Control.MOUSE_FILTER_IGNORE
@@ -1802,30 +1782,30 @@ func _refresh_hud_dismiss() -> void:
 
 
 func _on_button_show_ui_pressed() -> void:
+	# Restores the interface (master toggle). Hide Player Names is independent and preserved.
 	_session_hide_main_hud = false
 	_session_hide_view_profile = true
 	_session_hide_world_interactions = true
-	_session_hide_player_names = true
 	_session_hide_scene_ui = true
 	set_visible_ui(true, true)
 	_set_scene_ui_visible(true)
 	Global.session_hide_ui_toggle_sync.emit(false)
-	Global.session_hide_ui_options_sync.emit(true, true, true, true)
-	_apply_hide_ui_to_avatar_nicks(false)
+	Global.session_hide_ui_options_sync.emit(true, true, _session_hide_player_names, true)
+	_apply_hide_ui_to_avatar_nicks(_session_hide_player_names)
 
 
 func set_hide_main_hud_from_settings(minimized: bool) -> void:
 	_session_hide_main_hud = minimized
 	if not minimized:
-		# Turning off: restore UI immediately and reset sub-options
+		# Turning off: restore UI immediately and re-arm the master-gated sub-options.
+		# Hide Player Names is independent of the master toggle, so it is left untouched.
 		_session_hide_view_profile = true
 		_session_hide_world_interactions = true
-		_session_hide_player_names = true
 		_session_hide_scene_ui = true
 		set_visible_ui(true, true)
 		_set_scene_ui_visible(true)
-		_apply_hide_ui_to_avatar_nicks(false)
-		Global.session_hide_ui_options_sync.emit(true, true, true, true)
+		_apply_hide_ui_to_avatar_nicks(_session_hide_player_names)
+		Global.session_hide_ui_options_sync.emit(true, true, _session_hide_player_names, true)
 
 
 func set_hide_view_profile(value: bool) -> void:
@@ -1837,7 +1817,9 @@ func set_hide_world_interactions(value: bool) -> void:
 
 
 func set_hide_player_names(value: bool) -> void:
+	# Independent of the master Hide Interface toggle: apply immediately either way.
 	_session_hide_player_names = value
+	_apply_hide_ui_to_avatar_nicks(value)
 
 
 func set_hide_scene_ui(value: bool) -> void:
@@ -1867,17 +1849,19 @@ func is_session_hide_scene_ui() -> bool:
 
 
 func apply_deferred_hide_ui() -> void:
+	# Hide Player Names is independent of the master toggle, so apply it unconditionally.
+	_apply_hide_ui_to_avatar_nicks(_session_hide_player_names)
 	if not _session_hide_main_hud:
 		return
 	set_visible_ui(false, true)
-	_apply_hide_ui_to_avatar_nicks(_session_hide_player_names)
 	if _session_hide_scene_ui:
 		_set_scene_ui_visible(false)
 
 
 func _on_avatar_added_apply_hide_ui(avatar = null) -> void:
-	# Called when a new avatar is spawned; ensure its nickname obeys current Hide UI state.
-	if not _session_hide_main_hud or not _session_hide_player_names:
+	# Called when a new avatar is spawned; ensure its nickname obeys the (independent)
+	# Hide Player Names setting, regardless of the master Hide Interface toggle.
+	if not _session_hide_player_names:
 		return
 	if avatar != null and avatar is Avatar:
 		(avatar as Avatar).set_force_hide_name(true)

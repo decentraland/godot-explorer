@@ -70,7 +70,7 @@ expand_mode = 3
 [node name="Label" type="Label" parent="HBoxContainer" unique_id=719965217]
 unique_name_in_owner = true
 layout_mode = 2
-text = "remind me"
+text = "EVENTS_REMIND_ME"
 label_settings = SubResource("LabelSettings_1umtk")
 uppercase = true
 
