@@ -514,7 +514,9 @@ pub(crate) fn scene_thread(
         tokio::time::sleep(magic_duration).await;
     });
 
-    let start_time = std::time::SystemTime::now();
+    // Monotonic: the wall clock can step backwards (NTP, sleep) and a SystemTime delta below the
+    // accumulated elapsed time underflowed the subtraction and killed the scene thread.
+    let start_time = std::time::Instant::now();
     let mut elapsed = Duration::default();
     let mut reported_error_filter = 0;
     let mut last_memory_stats_update = std::time::Instant::now();
@@ -522,10 +524,7 @@ pub(crate) fn scene_thread(
     let mut tick_counter: u32 = 0;
 
     loop {
-        let dt = std::time::SystemTime::now()
-            .duration_since(start_time)
-            .unwrap_or(elapsed)
-            - elapsed;
+        let dt = start_time.elapsed().saturating_sub(elapsed);
         elapsed += dt;
 
         state
