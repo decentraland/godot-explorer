@@ -102,5 +102,7 @@ func _apply_crosshair_anchor() -> void:
 		return
 	var anchor_px := _player.get_crosshair_screen_position()
 	_label_crosshair.set_global_position(anchor_px - _label_crosshair.size / 2)
+	# Fade driven by the mode swap (1p -> 3p fades in over the avatar's head).
+	_label_crosshair.modulate.a = _player.get_crosshair_alpha()
 	# Keep the interaction raycast aimed where the crosshair is drawn (issue #2709).
 	Global.scene_runner.set_crosshair_screen_point(anchor_px)

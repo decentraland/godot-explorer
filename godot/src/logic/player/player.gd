@@ -50,6 +50,8 @@ const JUMP_ACTION_GLIDE_TOGGLE := 2  # open or close the glider
 const AVATAR_RAYCAST_DEFAULT_TARGET := Vector3(0, 0, -10)
 # Duration of the camera mode tween (set_camera_mode).
 const CAMERA_MODE_TWEEN_TIME := 0.25
+# Volume of the 1p<->3p transition sound (QA: -3dB from the default).
+const CAMERA_TRANSITION_SOUND_DB := -3.0
 # Crosshair model (issue #2709, device QA): first person is screen center. For
 # third person the target goes through three phases — hold center for the first
 # half of the camera tween, glide to the PLACEHOLDER anchor until the camera
@@ -111,6 +113,8 @@ var _ground_distance: float = INF
 var _avatar_raycast_crosshair_active: bool = false
 # Smoothed crosshair screen position (see _update_crosshair_screen_position).
 var _crosshair_screen_pos := Vector2.ZERO
+# Crosshair opacity (1p -> 3p fades in so it never covers the avatar's head).
+var _crosshair_alpha: float = 1.0
 var _crosshair_pos_initialized := false
 # Timed-lerp transition state: position captured on the first frame of a mode
 # swap, elapsed time, and whether a transition is playing.
@@ -201,7 +205,7 @@ func set_camera_mode(mode: Global.CameraMode, play_sound: bool = true):
 		avatar.set_hidden(false)
 		avatar.set_rotation(Vector3(0, rotation.y, 0))
 		if play_sound:
-			UiSounds.play_sound("ui_fade_out")
+			UiSounds.play_sound("ui_fade_out", false, CAMERA_TRANSITION_SOUND_DB)
 	elif mode == Global.CameraMode.FIRST_PERSON:
 		var targets := CameraRigHelpers.rig_targets(false)
 		var tween_in = create_tween()
@@ -228,7 +232,7 @@ func set_camera_mode(mode: Global.CameraMode, play_sound: bool = true):
 		if camera.current:
 			avatar.set_hidden(true)
 		if play_sound:
-			UiSounds.play_sound("ui_fade_in")
+			UiSounds.play_sound("ui_fade_in", false, CAMERA_TRANSITION_SOUND_DB)
 
 
 func update_avatar_movement_state(vel: float):
@@ -761,6 +765,11 @@ func get_crosshair_screen_position() -> Vector2:
 	return _crosshair_screen_pos
 
 
+# Crosshair opacity for the HUD label (see _update_crosshair_screen_position).
+func get_crosshair_alpha() -> float:
+	return _crosshair_alpha
+
+
 func _update_crosshair_screen_position(dt: float) -> void:
 	var viewport_size := get_viewport().get_visible_rect().size
 	var active := Global.is_mobile() and not Global.scene_runner.raycast_use_cursor_position
@@ -768,6 +777,7 @@ func _update_crosshair_screen_position(dt: float) -> void:
 		# Desktop / cinematic own the crosshair; park it at center so re-entering
 		# mobile gameplay starts from center, never from a stale point.
 		_crosshair_screen_pos = viewport_size * 0.5
+		_crosshair_alpha = 1.0
 		_crosshair_pos_initialized = false
 		_crosshair_transition_active = false
 		_crosshair_prev_mode = camera.get_camera_mode() as Global.CameraMode
@@ -804,17 +814,20 @@ func _update_crosshair_screen_position(dt: float) -> void:
 			_crosshair_screen_pos = _crosshair_transition_from.lerp(viewport_size * 0.5, w)
 			if w >= 1.0:
 				_crosshair_transition_active = false
-		elif t >= 1.25:
-			var w := smoothstep(0.0, 1.0, minf((t - 1.25) / 0.5, 1.0))
-			var dest := _compute_live_crosshair_target(viewport_size)
-			_crosshair_screen_pos = _crosshair_transition_from.lerp(dest, w)
-			if w >= 1.0:
+		else:
+			# 1p -> 3p: no position transition at all (QA) — the crosshair tracks
+			# the live point the whole time but stays invisible until the camera
+			# settles, then simply FADES IN at the final spot over [1.5T, 2.0T].
+			_crosshair_screen_pos = _compute_live_crosshair_target(viewport_size)
+			_crosshair_alpha = smoothstep(0.0, 1.0, minf((t - 1.5) / 0.5, 1.0))
+			if t >= 2.0:
 				_crosshair_transition_active = false
-		# else: 1p -> 3p, before 1.25T — hold at the from position.
 	elif mode == Global.CameraMode.FIRST_PERSON:
 		_crosshair_screen_pos = viewport_size * 0.5
+		_crosshair_alpha = 1.0
 	else:
 		_crosshair_screen_pos = _compute_live_crosshair_target(viewport_size)
+		_crosshair_alpha = 1.0
 
 
 # Issue #2709: aim the avatar outline/view-profile raycast at the crosshair.
