@@ -45,7 +45,7 @@ func _ready():
 		get_tree().quit(1)
 		return
 
-	if input.items.is_empty():
+	if input.items.is_empty() and input.invalid_items.is_empty():
 		printerr("no assets to process")
 		get_tree().quit(2)
 		return
@@ -95,8 +95,13 @@ func _async_start():
 	camera.top_level = true
 	camera.cull_mask = CAMERA_CULL_MASK
 
+	for invalid in input.invalid_items:
+		results.push_back(
+			{"id": invalid.id, "status": "error", "error": invalid.error, "files": []}
+		)
+
 	for item in input.items:
-		var result := await _async_process_item_guarded(item)
+		var result: Dictionary = await _async_process_item_guarded(item)
 		results.push_back(result)
 		var status_icon = "🟢" if result.status == "ok" else "🔴"
 		prints(status_icon, item.id, result.get("error", ""))
@@ -122,7 +127,8 @@ func _async_process_item_guarded(item: AssetRendererInputHelper.AssetItem) -> Di
 		# from committing a result later. Its avatar state, if it ever lands,
 		# is overwritten by the next item's async_update_avatar.
 		return {"id": item.id, "status": "error", "error": "timeout", "files": []}
-	return _pending_result
+	var result: Dictionary = _pending_result
+	return result
 
 
 func _commit_result(generation: int, result: Dictionary) -> void:
@@ -152,7 +158,28 @@ func _neutral_avatar_dictionary(item: AssetRendererInputHelper.AssetItem) -> Dic
 
 func _async_process_item(item: AssetRendererInputHelper.AssetItem, generation: int) -> void:
 	var wire = DclAvatarWireFormat.from_godot_dictionary(_neutral_avatar_dictionary(item))
+
+	# from_godot_dictionary falls back to a DEFAULT avatar when the dictionary
+	# fails to parse (json5 unwrap_or_default), which would silently render a
+	# generic mannequin as if it were the asset — catch that here. Skipped when
+	# the caller supplied its own wearables list, which legitimately may not
+	# list the target urn.
+	var expects_urn: bool = item.kind != "emote" and not item.avatar_overrides.has("wearables")
+	if expects_urn and not item.urn in wire.get_wearables():
+		_commit_result(
+			generation,
+			{
+				"id": item.id,
+				"status": "error",
+				"error": "avatar payload did not parse (check the avatar overrides)",
+				"files": []
+			}
+		)
+		return
+
 	await avatar_preview.avatar.async_update_avatar(wire, "")
+	if generation != _generation:
+		return
 
 	var emote_controller = avatar_preview.avatar.emote_controller
 	if item.kind != "emote":
@@ -172,6 +199,11 @@ func _async_process_item(item: AssetRendererInputHelper.AssetItem, generation: i
 
 	var files: Array[String] = []
 	for shot in item.shots:
+		# A timed-out item keeps running detached; stop before it resizes the
+		# shared viewport underneath the item being captured now.
+		if generation != _generation:
+			return
+
 		if item.kind == "emote":
 			var frozen: bool = await emote_controller.async_freeze_on_emote(item.urn, shot.at_time)
 			if not frozen:
@@ -191,10 +223,12 @@ func _async_process_item(item: AssetRendererInputHelper.AssetItem, generation: i
 
 		var dest_path := _ensure_ends_with(shot.dest_path, ".png")
 		_ensure_base_dir_exists(dest_path)
-		var image = await avatar_preview.async_capture_current_view(
+		# Explicitly typed: awaiting a coroutine yields an untyped value, so `:=`
+		# cannot infer here (gdlint accepts it, the Godot compiler does not).
+		var image: Image = await avatar_preview.async_capture_current_view(
 			Vector2i(shot.width, shot.height), 1
 		)
-		var save_error := image.save_png(dest_path)
+		var save_error: int = image.save_png(dest_path)
 		if save_error != OK:
 			_commit_result(
 				generation,

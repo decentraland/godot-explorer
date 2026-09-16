@@ -71,7 +71,10 @@ class AssetItem:
 	var avatar_overrides := {}
 	var shots: Array[Shot] = []
 
-	static func from_dictionary(value: Dictionary) -> AssetItem:
+	## Returns the parsed item, or a String describing why it is invalid — an
+	## unusable item is reported in the output report rather than failing the
+	## whole batch.
+	static func from_dictionary(value: Dictionary):
 		var ret = AssetItem.new()
 		ret.id = value.get("id", "")
 		ret.kind = value.get("kind", "wearable_standalone")
@@ -81,26 +84,21 @@ class AssetItem:
 		)
 		ret.avatar_overrides = value.get("avatar", {})
 
-		if ret.id.is_empty() or ret.urn.is_empty():
-			printerr("asset item needs both id and urn")
-			return null
+		if ret.urn.is_empty():
+			return "item needs a urn"
 		if not ret.kind in VALID_KINDS:
-			printerr("asset item %s has invalid kind %s" % [ret.id, ret.kind])
-			return null
+			return "invalid kind %s" % ret.kind
 
 		var shots_value = value.get("shots", [])
 		if not shots_value is Array:
-			printerr("asset item %s: shots has to be an array" % ret.id)
-			return null
+			return "shots has to be an array"
 		for maybe_shot in shots_value:
 			var shot: Shot = Shot.from_dictionary(maybe_shot)
 			if shot == null:
-				printerr("asset item %s has a shot without destPath" % ret.id)
-				return null
+				return "a shot is missing destPath"
 			ret.shots.push_back(shot)
 		if ret.shots.is_empty():
-			printerr("asset item %s has no shots" % ret.id)
-			return null
+			return "no shots"
 
 		return ret
 
@@ -112,6 +110,8 @@ class AssetInputFile:
 	## llvmpipe raster cost proportional to the requested resolution.
 	var supersample := 1.0
 	var items: Array[AssetItem] = []
+	## Entries that could not be parsed: [{id, error}], reported as failures.
+	var invalid_items: Array[Dictionary] = []
 
 	static func from_file_path(file_path: String):
 		var file = FileAccess.open(file_path, FileAccess.READ)
@@ -138,10 +138,19 @@ class AssetInputFile:
 		ret.base_url = tmp_base_url
 		ret.output_json_path = tmp_output_json_path
 		ret.supersample = json_value.get("supersample", 1.0)
+		var index := 0
 		for maybe_entry in tmp_payload:
-			var item: AssetItem = AssetItem.from_dictionary(maybe_entry)
-			if item == null:
-				return null
-			ret.items.push_back(item)
+			var parsed = AssetItem.from_dictionary(maybe_entry)
+			if parsed is AssetItem:
+				ret.items.push_back(parsed)
+			else:
+				var id_value = ""
+				if maybe_entry is Dictionary:
+					id_value = maybe_entry.get("id", "")
+				if id_value.is_empty():
+					id_value = "payload[%d]" % index
+				printerr("asset item %s is invalid: %s" % [id_value, parsed])
+				ret.invalid_items.push_back({"id": id_value, "error": str(parsed)})
+			index += 1
 
 		return ret

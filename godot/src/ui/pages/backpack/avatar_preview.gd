@@ -952,7 +952,8 @@ func async_capture_current_view(dest_size: Vector2i, ssaa: int = 1) -> Image:
 ## (show_only_wearables) is measured as displayed. 2m fallback when empty.
 func compute_current_fit_aabb() -> AABB:
 	var aabbs := _compute_avatar_aabbs()
-	return aabbs.get("overall", AABB(Vector3(-1.0, 0.0, -1.0), Vector3(2.0, 2.0, 2.0)))
+	var overall: AABB = aabbs.get("overall", AABB(Vector3(-1.0, 0.0, -1.0), Vector3(2.0, 2.0, 2.0)))
+	return overall
 
 
 func async_get_viewport_image(
