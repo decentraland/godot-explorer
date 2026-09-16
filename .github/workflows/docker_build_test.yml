@@ -77,6 +77,20 @@ jobs:
             --snapshots tests/snapshots/avatar-image-generation/ \
             --result ${{ github.workspace }}/avatars-output/
 
+      # The entrypoint swallows the process exit code (`|| true`), so this
+      # asserts on the report the renderer writes instead. Image snapshots can
+      # be added later from this job's artifacts (same flow as the avatar test).
+      - name: Run asset-renderer test
+        run: |
+          mkdir -p assets-output
+          podman run --rm \
+            -v $(pwd)/tests/asset-renderer-test-input.json:/app/assets.json \
+            --env PRESET_ARGS="--asset-renderer --asset-input-file assets.json" \
+            -v $(pwd)/assets-output:/app/output localhost/godot-explorer:${{ github.sha }}
+          cat assets-output/asset-renderer/report.json
+          jq -e '.results | length > 0 and all(.status == "ok")' \
+            assets-output/asset-renderer/report.json
+
       # COMMENTED DUE TO FLAKY TEST
       # - name: Run scene-rendering test
       #   run: |
@@ -99,4 +113,5 @@ jobs:
           name: docker-snapshots
           path: |
             ${{ github.workspace }}/avatars-output/**/*
+            ${{ github.workspace }}/assets-output/**/*
             ${{ github.workspace }}/scenes-output/**/*

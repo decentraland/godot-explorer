@@ -919,6 +919,42 @@ func _update_aabb_debug_box(aabbs: Dictionary) -> void:
 		_aabb_debug_nodes.append(box)
 
 
+## Off-screen capture with a caller-positioned camera (asset renderer tool).
+## Unlike async_get_viewport_image it does not force the idle pose and leaves
+## camera_3d entirely to the caller (position, rotation, projection, size).
+func async_capture_current_view(dest_size: Vector2i, ssaa: int = 1) -> Image:
+	var original_stretch = stretch
+	var original_size = size
+
+	_lerp_paused = true
+
+	var render_size := dest_size * maxi(1, ssaa)
+	stretch = false
+	set_size(render_size)
+	subviewport.set_size(render_size)
+
+	for _i in 5:
+		await get_tree().process_frame
+
+	var img := subviewport.get_texture().get_image()
+	if ssaa > 1:
+		img.resize(dest_size.x, dest_size.y, Image.INTERPOLATE_LANCZOS)
+
+	stretch = original_stretch
+	set_size(original_size)
+	_lerp_paused = false
+
+	return img
+
+
+## Overall AABB of the currently visible meshes in avatar-local space, skinned
+## against the CURRENT bone poses — so a frozen emote pose or a lone wearable
+## (show_only_wearables) is measured as displayed. 2m fallback when empty.
+func compute_current_fit_aabb() -> AABB:
+	var aabbs := _compute_avatar_aabbs()
+	return aabbs.get("overall", AABB(Vector3(-1.0, 0.0, -1.0), Vector3(2.0, 2.0, 2.0)))
+
+
 func async_get_viewport_image(
 	face: bool, dest_size: Vector2i, ortho_size: float = 2.5, ssaa: int = 1
 ) -> Image:
