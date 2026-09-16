@@ -225,8 +225,6 @@ fn do_raycast(scene: &Scene, node_3d: &Gd<Node3D>, raycast: &PbRaycast) -> PbRay
     }
 }
 
-/// `None` ends the query (nothing hit, or a body outside this scene); `Some((None, rid))` is a
-/// body to exclude and keep scanning past.
 fn get_raycast_hit(
     scene: &Scene,
     mut space: Gd<PhysicsDirectSpaceState3D>,
@@ -234,8 +232,6 @@ fn get_raycast_hit(
 ) -> Option<(Option<RaycastHit>, Rid)> {
     let raycast_result = space.intersect_ray(&raycast_query);
     let rid = raycast_result.get("rid")?.to::<Rid>();
-    // A body freed between the physics query and this call (lazy collider rebuilds) comes back as a
-    // null instance; calling into it panics and leaves the scene stuck at the Raycasts stage forever.
     let Some(mut collider) = raycast_result
         .get("collider")
         .and_then(|collider| collider.try_to::<Gd<Object>>().ok())
