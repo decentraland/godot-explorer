@@ -49,7 +49,7 @@ size_flags_vertical = 0
 theme_override_constants/separation = 32
 
 [node name="Control" type="Control" parent="VBoxContainer/HBoxContainer" unique_id=2144406003]
-custom_minimum_size = Vector2(86, 0)
+custom_minimum_size = Vector2(98, 0)
 layout_mode = 2
 script = ExtResource("2_ai0av")
 hide_on_portrait = true

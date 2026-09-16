@@ -68,12 +68,10 @@ pub fn update_avatar_modifier_area(scene: &mut Scene, crdt_state: &mut SceneCrdt
                     // detectors to re-evaluate.
                     avatar_modifier_area_3d.call("refresh_overlapping_detectors", &[]);
                 } else {
-                    let mut avatar_modifier_area = godot::tools::load::<PackedScene>(
-                        "res://src/decentraland_components/avatar_modifier_area.tscn",
-                    )
-                    .instantiate()
-                    .unwrap()
-                    .cast::<DclAvatarModifierArea3D>();
+                    let mut avatar_modifier_area =
+                        crate::scene_runner::scene_cache::instantiate::<DclAvatarModifierArea3D>(
+                            "res://src/decentraland_components/avatar_modifier_area.tscn",
+                        );
 
                     avatar_modifier_area
                         .bind_mut()

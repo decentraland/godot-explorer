@@ -96,6 +96,19 @@ static func resolve_realm_url(value: String) -> String:
 	return value
 
 
+## The canonical url a realm string resolves to — the form async_set_realm connects with and
+## stores in `realm_url`. Two spellings of the same destination ("SpaceRunner.dcl.eth" and
+## "spacerunner.dcl.eth", with or without a trailing slash or scheme) normalise to one string,
+## so callers can tell "somewhere else" from "where we already are" (#2816: the realm now comes
+## from arbitrary scene input, where `realm_string` equality is not enough).
+static func normalize_realm_url(value: String) -> String:
+	if value.is_empty():
+		return ""
+	return Realm.ensure_starts_with_https(
+		Realm.ensure_ends_with_slash(Realm.resolve_realm_url(value))
+	)
+
+
 static func get_params(url: String) -> Dictionary:
 	var ret: Dictionary = {}
 	var parts = url.split("?")
@@ -144,10 +157,7 @@ func async_clear_realm():
 
 
 func async_set_realm(new_realm_string: String, search_new_pos: bool = false) -> bool:
-	var candidate_realm_url := Realm.ensure_ends_with_slash(
-		Realm.resolve_realm_url(new_realm_string)
-	)
-	candidate_realm_url = Realm.ensure_starts_with_https(candidate_realm_url)
+	var candidate_realm_url := Realm.normalize_realm_url(new_realm_string)
 
 	prints(
 		"[REALM] async_set_realm", new_realm_string, search_new_pos, "resolved", candidate_realm_url
@@ -265,6 +275,13 @@ func async_set_realm(new_realm_string: String, search_new_pos: bool = false) -> 
 
 	realm_name = configuration.get("realmName", "no_realm_name")
 	network_id = int(configuration.get("networkId", 1))  # 1=Ethereum
+
+	# A local preview realm advertises the parcels it serves locally. This is the only signal
+	# available on the QR/deeplink preview path (`decentraland://open?preview=http://…`), which
+	# never sets the `--preview` CLI flag — Pulse uses it to apply the same explicit-opt-in rule
+	# there as on desktop, and to announce the LSD realm key instead of `LocalPreview`.
+	var serves_local_scenes: bool = not configuration.get("localSceneParcels", []).is_empty()
+	Global.comms.set_local_scene_development(serves_local_scenes)
 
 	# get minimap
 	var map_config = configuration.get("map", {})

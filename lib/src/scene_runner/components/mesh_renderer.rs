@@ -105,12 +105,9 @@ pub fn update_mesh_renderer(
                 let (mut mesh_instance_3d, add_to_base) = match existing {
                     Some(mesh_instance_3d) => (mesh_instance_3d, false),
                     None => (
-                        godot::tools::load::<PackedScene>(
+                        crate::scene_runner::scene_cache::instantiate::<MeshInstance3D>(
                             "res://src/decentraland_components/mesh_renderer.tscn",
-                        )
-                        .instantiate()
-                        .unwrap()
-                        .cast::<MeshInstance3D>(),
+                        ),
                         true,
                     ),
                 };

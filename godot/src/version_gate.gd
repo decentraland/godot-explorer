@@ -5,7 +5,8 @@ const SNOOZE_SECONDS := 86400  # 24h
 const OVERLAY_SCENE := preload(
 	"res://src/ui/components/organisms/update_available/update_available.tscn"
 )
-const OVERLAY_CANVAS_LAYER := 99  # modal_manager uses 100, so this sits just below
+# Must sit ABOVE the SplashOverlay autoload and modal_manager, which both use 100.
+const OVERLAY_CANVAS_LAYER := 101
 
 const RESULT_PROCEED := "proceed"
 const RESULT_SOFT := "soft"
@@ -74,6 +75,12 @@ func async_check() -> String:
 
 
 func show_overlay(allow_later: bool) -> void:
+	# The startup splash is an opaque full-screen CanvasLayer (SplashOverlay autoload,
+	# layer 100) and on the hard path nothing else ever dismisses it: lobby._ready()
+	# returns right after this call, so show_panel() -- the only fade_out() caller during
+	# startup -- is never reached. Drop it here, and render above it while it fades.
+	SplashOverlay.fade_out()
+
 	var layer := CanvasLayer.new()
 	layer.layer = OVERLAY_CANVAS_LAYER
 	var overlay := OVERLAY_SCENE.instantiate()
