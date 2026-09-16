@@ -29,7 +29,7 @@ const LOG_TAIL_BYTES := 128 * 1024
 const LOG_ATTACHMENT_NAME := "bug_report_tail.log"
 const LOG_CONTENT_TYPE := "text/plain"
 
-const SCREENSHOT_ATTACHMENT_NAME := "screenshot.jpg"
+const SCREENSHOT_ATTACHMENT_NAME_TEMPLATE := "screenshot_%d.jpg"
 const SCREENSHOT_CONTENT_TYPE := "image/jpeg"
 
 const EVENT_MESSAGE := "Bug report diagnostics"
@@ -55,13 +55,13 @@ const ISSUE_URL_TEMPLATE := "https://dcl-regenesis-labs.sentry.io/issues/?query=
 ## Total by design: every branch returns a String and nothing raises. A bug report
 ## must still reach Intercom when diagnostics fail, which is what the Unity client
 ## does too — the caller falls back to "unavailable".
-static func submit(message: String, jpeg_bytes: PackedByteArray) -> String:
+static func submit(message: String, images: Array[PackedByteArray]) -> String:
 	if not SentrySDK.is_enabled():
 		return ""
 	if message.strip_edges().is_empty():
 		return ""
 
-	var event_id := _capture_event(jpeg_bytes)
+	var event_id := _capture_event(images)
 	if event_id.is_empty():
 		return ""
 
@@ -83,19 +83,25 @@ static func submit(message: String, jpeg_bytes: PackedByteArray) -> String:
 # the first add and the clear inherits them. Hence: no `await` in this call path,
 # and `clear_attachments()` runs unconditionally right after the capture, before
 # any return. If a second caller ever adds attachments this needs save/restore.
-static func _capture_event(jpeg_bytes: PackedByteArray) -> String:
+static func _capture_event(images: Array[PackedByteArray]) -> String:
 	var tail := _read_log_tail()
 	if not tail.is_empty():
 		var log_attachment := SentryAttachment.create_with_bytes(tail, LOG_ATTACHMENT_NAME)
 		log_attachment.set_content_type(LOG_CONTENT_TYPE)
 		SentrySDK.add_attachment(log_attachment)
 
-	# The proxy rejects an image over its 3MB cap and drops the whole ticket with
-	# it, so the screenshot rides to Sentry as well and survives there even when
-	# the ticket has to go without it. Same reasoning as Unity's
+	# The proxy caps evidence size and BugReportService may have to shrink or drop
+	# an image to fit, so the originals ride to Sentry as well and survive there
+	# even when the ticket has to go without them. Same reasoning as Unity's
 	# SelectEvidenceImage.
-	if not jpeg_bytes.is_empty():
-		var shot := SentryAttachment.create_with_bytes(jpeg_bytes, SCREENSHOT_ATTACHMENT_NAME)
+	var index := 0
+	for jpeg_bytes in images:
+		if jpeg_bytes.is_empty():
+			continue
+		index += 1
+		var shot := SentryAttachment.create_with_bytes(
+			jpeg_bytes, SCREENSHOT_ATTACHMENT_NAME_TEMPLATE % index
+		)
 		shot.set_content_type(SCREENSHOT_CONTENT_TYPE)
 		SentrySDK.add_attachment(shot)
 
