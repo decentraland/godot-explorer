@@ -1,17 +1,21 @@
 class_name SentryUserFeedback
 extends RefCounted
 
-## Files the reporter's message with Sentry User Feedback and returns a deep link
+## Files the reporter's message with Sentry User Feedback and returns deep links
 ## for the Intercom ticket (issue #2652).
 ##
 ## Mirrors the Unity client (`SentryUserFeedbackService`): capture an event
 ## carrying the log tail, then a feedback entry associated with it.
 ##
-## Unlike Unity we link to that EVENT rather than to the feedback entry. Unity
-## reaches past its own facade (`HubAdapter`) to recover the feedback id; the
-## Godot SDK has no equivalent — `capture_feedback()` returns nothing by
-## documented design — so the feedback id is unobtainable here. The feedback
-## hangs off the event, one hop from the link.
+## Two links come back. The first opens the EVENT carrying the log tail and
+## screenshots. The second opens the feedback entry itself, searched by its
+## `associated_event_id` tag — Sentry copies the id we set below onto the entry,
+## so the search resolves to exactly this report.
+##
+## Searched rather than addressed directly: Unity reaches past its own facade
+## (`HubAdapter`) to recover the feedback id and builds an `eventId=` link, but
+## `capture_feedback()` returns nothing in the Godot SDK by documented design
+## (still true in sentry-godot 2.2.0), so that id is unobtainable here.
 ##
 ## Everything here is synchronous on purpose: attachments are SDK-global, so the
 ## window between adding and clearing them must stay as short as possible.
@@ -47,23 +51,26 @@ const CATEGORY_TAG_VALUE := "FEEDBACK"
 # Org and project are deployment values, not secrets — the same pair appears in
 # every Sentry URL. Project `godot-explorer` is DSN project id 4510187688361984.
 const ISSUE_URL_TEMPLATE := "https://dcl-regenesis-labs.sentry.io/issues/?query=%s"
+const FEEDBACK_URL_TEMPLATE := "https://dcl-regenesis-labs.sentry.io/issues/feedback/?project=4510187688361984&query=%s"
 
 
-## Returns a deep link to the event carrying the diagnostics, or "" when Sentry is
+## Returns {event_url, feedback_url}: a deep link to the event carrying the
+## diagnostics, and one to the feedback entry. Both are "" when Sentry is
 ## disabled or dropped the event.
 ##
-## Total by design: every branch returns a String and nothing raises. A bug report
-## must still reach Intercom when diagnostics fail, which is what the Unity client
+## Total by design: every branch returns and nothing raises. A bug report must
+## still reach Intercom when diagnostics fail, which is what the Unity client
 ## does too — the caller falls back to "unavailable".
-static func submit(message: String, images: Array[PackedByteArray]) -> String:
+static func submit(message: String, images: Array[PackedByteArray]) -> Dictionary:
+	var links := {"event_url": "", "feedback_url": ""}
 	if not SentrySDK.is_enabled():
-		return ""
+		return links
 	if message.strip_edges().is_empty():
-		return ""
+		return links
 
 	var event_id := _capture_event(images)
 	if event_id.is_empty():
-		return ""
+		return links
 
 	var feedback := SentryFeedback.new()
 	feedback.set_message(message)
@@ -76,7 +83,16 @@ static func submit(message: String, images: Array[PackedByteArray]) -> String:
 		feedback.set_name(reporter)
 	SentrySDK.capture_feedback(feedback)
 
-	return ISSUE_URL_TEMPLATE % event_id
+	links["event_url"] = ISSUE_URL_TEMPLATE % event_id
+	links["feedback_url"] = _feedback_url(event_id)
+	return links
+
+
+# Feedback page searched by the `associated_event_id` tag Sentry copies onto the
+# entry, so it resolves to this one report. No mailbox filter: the search finds
+# the entry wherever it was filed, spam included (verified on a real ticket).
+static func _feedback_url(event_id: String) -> String:
+	return FEEDBACK_URL_TEMPLATE % ("associated_event_id:%s" % event_id).uri_encode()
 
 
 # Attachments are SDK-global rather than per-event, so any event captured between
