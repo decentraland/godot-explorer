@@ -11,9 +11,6 @@ signal request_debug_panel(enabled: bool)
 signal request_multiplayer_debug(enabled: bool)
 #signals from advanced settings
 
-## Grace period before a faded-out menu screen is freed (see _start_screen_sleep).
-const SCREEN_SLEEP_SECONDS := 5.0
-
 var is_in_game: bool = false  # when it is playing in the 3D Game or not
 var is_open: bool = false
 var buttons_quantity: int = 0
@@ -28,7 +25,6 @@ var _credits_layer: CanvasLayer = null
 var _credits_was_portrait: bool = true
 var _close_modulate_tween: Tween = null
 var _close_hide_tween: Tween = null
-var _close_node_to_free: PlaceholderManager = null
 
 @onready var group: ButtonGroup = ButtonGroup.new()
 
@@ -138,18 +134,24 @@ func async_close():
 	_close_modulate_tween.tween_property(self, "modulate", Color(1, 1, 1, 0), 0.3).set_ease(
 		Tween.EASE_IN_OUT
 	)
-	# Capture the node to free NOW, before the tween callback fires.
-	# If we reference `selected_node` directly in the lambda, it may have changed
-	# by the time the callback runs (e.g. user opened Settings while close tween is running).
-	_close_node_to_free = selected_node
 	_close_hide_tween = create_tween()
 	_close_hide_tween.tween_callback(hide).set_delay(0.3)
-	_close_hide_tween.tween_callback(
-		func():
-			if _close_node_to_free:
-				_close_node_to_free.queue_free_instance()
-				_close_node_to_free = null
-	)
+	_close_hide_tween.tween_callback(_free_screens)
+
+
+## A screen lives for one menu session: created the first time it is shown, hidden while
+## another tab is selected, freed here when the menu closes. No timers: the Menu is the owner
+## and this is the one event that ends the session. A reopen during the close tween kills
+## the tween (see _open), so the screens simply stay for the next session.
+func _free_screens() -> void:
+	for screen: PlaceholderManager in [
+		control_discover,
+		control_settings,
+		control_backpack,
+		control_profile_settings,
+		control_profile_portrait,
+	]:
+		screen.queue_free_instance()
 
 
 func async_show_discover(open_menu := true):
@@ -236,16 +238,12 @@ func async_show_profile_editor():
 func _open():
 	if is_open:
 		return
-	# Kill any pending close tweens so the old close() doesn't hide us again.
-	# But still free the node that close() intended to free (avoid memory leak).
+	# Kill any pending close tweens so the old close() doesn't hide us again. The screens
+	# it was about to free stay alive for this session; the next close frees them.
 	if is_instance_valid(_close_modulate_tween) and _close_modulate_tween.is_running():
 		_close_modulate_tween.kill()
 	if is_instance_valid(_close_hide_tween) and _close_hide_tween.is_running():
 		_close_hide_tween.kill()
-		# The tween callback won't fire, so free the node manually
-		if _close_node_to_free:
-			_close_node_to_free.queue_free_instance()
-			_close_node_to_free = null
 	if selected_node and not selected_node.instance:
 		selected_node = null
 	if not selected_node:
@@ -331,7 +329,6 @@ func fade_in(node: PlaceholderManager):
 	if not is_instance_valid(node.instance):
 		return
 	selected_node = node
-	node.wake()
 	node.instance.show()
 	if is_instance_valid(fade_in_tween):
 		if fade_in_tween.is_running():
@@ -352,22 +349,6 @@ func fade_out(node: PlaceholderManager):
 	fade_out_tween = create_tween()
 	fade_out_tween.tween_property(node.instance, "modulate", Color(1, 1, 1, 0), 0.3)
 	fade_out_tween.tween_callback(node.instance.hide)
-	fade_out_tween.tween_callback(_start_screen_sleep.bind(node))
-
-
-## A screen that faded out is freed after SCREEN_SLEEP_SECONDS unless something showed it
-## again. Both callables are methods of this Menu: if the menu goes away first the engine
-## drops them, instead of a timer resuming on a freed screen (which is what a coroutine in
-## PlaceholderManager used to do).
-func _start_screen_sleep(node: PlaceholderManager) -> void:
-	node.put_to_sleep()
-	get_tree().create_timer(SCREEN_SLEEP_SECONDS).timeout.connect(
-		_free_if_still_sleeping.bind(node)
-	)
-
-
-func _free_if_still_sleeping(node: PlaceholderManager) -> void:
-	node.free_if_sleeping()
 
 
 func _on_visibility_changed():
