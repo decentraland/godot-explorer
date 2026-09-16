@@ -23,14 +23,14 @@ use crate::{
 use super::{
     data_definition::{
         build_segment_event_batch_item, build_segment_identify_body, PushIdentifyTraits,
-        SegmentEvent, SegmentEventAcceptFriend, SegmentEventAttestationAttempt,
-        SegmentEventAttestationSessionCacheLoaded, SegmentEventBlockUser,
-        SegmentEventChatMessageSent, SegmentEventClickButton, SegmentEventCommonExplorerFields,
-        SegmentEventExplorerMoveToParcel, SegmentEventFirebaseInit,
-        SegmentEventGuestWalletCreation, SegmentEventIosStoreKitEnvironment, SegmentEventLoading,
-        SegmentEventPushOpened, SegmentEventRequestFriend, SegmentEventRequestResult,
-        SegmentEventReviewPrompted, SegmentEventSceneLocaleRequested, SegmentEventScreenViewed,
-        SegmentEventUnfriend,
+        SegmentEvent, SegmentEventAcceptFriend, SegmentEventAppOpened,
+        SegmentEventAttestationAttempt, SegmentEventAttestationSessionCacheLoaded,
+        SegmentEventBlockUser, SegmentEventChatMessageSent, SegmentEventClickButton,
+        SegmentEventCommonExplorerFields, SegmentEventExplorerMoveToParcel,
+        SegmentEventFirebaseInit, SegmentEventGuestWalletCreation,
+        SegmentEventIosStoreKitEnvironment, SegmentEventLoading, SegmentEventPushOpened,
+        SegmentEventRequestFriend, SegmentEventRequestResult, SegmentEventReviewPrompted,
+        SegmentEventSceneLocaleRequested, SegmentEventScreenViewed, SegmentEventUnfriend,
     },
     frame::Frame,
     install_attribution::InstallAttribution,
@@ -548,6 +548,30 @@ impl Metrics {
             start_kind,
         });
         self.queue_event("Push Opened", event);
+    }
+
+    /// The app came to the foreground. Emitted by SessionTracker for both a cold launch and a
+    /// return from background; see SegmentEventAppOpened for why the session threshold is not
+    /// applied here.
+    ///
+    /// Overlaps Firebase's automatic `session_start` on purpose: that one lives in a different
+    /// pipeline, joinable only through the `Firebase Init` pivot, and carries no notion of what
+    /// brought the user in.
+    #[func]
+    pub fn track_app_opened(
+        &mut self,
+        start_kind: String,
+        trigger: String,
+        prev_session_id: String,
+        seconds_since_last_seen: i64,
+    ) {
+        let event = SegmentEvent::AppOpened(SegmentEventAppOpened {
+            start_kind,
+            trigger,
+            prev_session_id,
+            seconds_since_last_seen,
+        });
+        self.queue_event("App Opened", event);
     }
 
     #[func]

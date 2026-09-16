@@ -73,6 +73,10 @@ func process_deep_link(url: String, start_kind: String = "warm") -> void:
 	# re-engagement tap.
 	_track_push_open_if_any(start_kind)
 
+	# Same funnel, same reason: this is where every deep link lands, so it is the only place
+	# that can tell an `App Opened` whether a link brought the user in.
+	SessionTracker.notify_deep_link(Global.deep_link_obj.params)
+
 	# `skip-gltf` toggle has to be set BEFORE any scene's GLTF_CONTAINER
 	# component dirty-set is processed by `update_gltf_container`. The
 	# bench runner's `_apply_deeplink_overrides` runs too late — by then

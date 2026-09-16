@@ -159,6 +159,7 @@ pub enum SegmentEvent {
     RequestResult(SegmentEventRequestResult),
     SceneLocaleRequested(SegmentEventSceneLocaleRequested),
     PushOpened(SegmentEventPushOpened),
+    AppOpened(SegmentEventAppOpened),
 }
 
 /// SCENE_LOCALE_REQUESTED (#2707): a scene subscribed to the player's language.
@@ -777,6 +778,32 @@ pub struct SegmentEventPushOpened {
     pub start_kind: String,
 }
 
+/// The app entered the foreground: a cold process launch or a return from background,
+/// told apart by `start_kind`.
+///
+/// The OS kills the app without running any of our code, so the end of a session is not
+/// observable — only "the last moment we know it was alive", which session_tracker.gd keeps
+/// writing to disk while it runs. `seconds_since_last_seen` is measured against that mark.
+///
+/// No session threshold is applied here on purpose. Shipping "was it a new session?" as a
+/// boolean would freeze the rule into every installed client and take a full release plus its
+/// upgrade tail to change; the raw gap lets the warehouse pick — and revise — the cutoff.
+#[derive(Serialize, Clone)]
+pub struct SegmentEventAppOpened {
+    // "cold" when this open started the process, "warm" when it came back from background.
+    pub start_kind: String,
+    // "push" | "deeplink" | "icon". A local reminder tap arrives as "deeplink": it launches
+    // with the same `decentraland://` URI a shared link would, and nothing distinguishes them.
+    pub trigger: String,
+    // The session running the last time the app was seen alive. On a cold open that is the
+    // previous process; on a warm one it is this same session. Empty on the first launch ever.
+    pub prev_session_id: String,
+    // Wall-clock seconds since that mark. Wall clock is the only clock that survives process
+    // death, so it inherits the user's ability to move it: -1 means unknown — first launch, or
+    // the clock went backwards between the two observations.
+    pub seconds_since_last_seen: i64,
+}
+
 #[derive(Serialize, Clone)]
 pub struct SegmentEventGuestWalletCreation {
     // "success" | "failure".
@@ -952,6 +979,11 @@ pub fn build_segment_event_batch_item(
         ),
         SegmentEvent::PushOpened(event) => (
             "Push Opened".to_string(),
+            serde_json::to_value(event).unwrap(),
+            None,
+        ),
+        SegmentEvent::AppOpened(event) => (
+            "App Opened".to_string(),
             serde_json::to_value(event).unwrap(),
             None,
         ),
