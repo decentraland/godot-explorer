@@ -305,7 +305,7 @@ Two engine facts decide what "fix it" means:
 So the rule is about **ownership**, and it is structural — not a validity check:
 1. **Async work that needs a node is a method of that node.** The engine cancels it with the node, for free. A list that loads data per row puts the load on the row (`card.async_load(...)`), not on the list.
 2. **A longer-lived owner never carries a node reference across an `await`.** It re-resolves the node from its source of truth on resume — the dictionary of current rows, `Global.get_explorer()`, `get_node_or_null(path)` — and applies the result to whatever exists now. The object whose coroutine or signal you awaited is alive on resume; anything else is not assumed.
-3. **Work is cancelled when its owner frees the node** — a generation counter bumped on dispose (`video_player.gd`), a status the owner controls, a Menu-owned timer instead of a coroutine inside a RefCounted (`PlaceholderManager`).
+3. **Work is cancelled when its owner frees the node** — a generation counter bumped on dispose (`video_player.gd`), a status the owner controls. Never a timer: a lifetime ends at an event the owner sees (`PlaceholderManager` lost its coroutines; the Menu frees its screens when it closes), not after a delay.
 4. `is_instance_valid()` / `NodeGuard.is_alive()` are for a lifetime the code **does not own**: a remote player that can leave at any moment, a modal the user can close under a request. They are not the convention; a guard on a node you own is a design smell.
 
 Two corollaries: never test a node for truthiness or null when something else can free it (a freed instance is not null); and a RefCounted that awaits outlives the tree it holds nodes from — make it a Node, or move the coroutine to one.
