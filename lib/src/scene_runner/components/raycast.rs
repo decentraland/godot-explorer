@@ -230,7 +230,15 @@ fn get_raycast_hit(
     raycast_query: Gd<PhysicsRayQueryParameters3D>,
 ) -> Option<(RaycastHit, Rid)> {
     let raycast_result = space.intersect_ray(&raycast_query);
-    let collider = raycast_result.get("collider")?;
+    // A body freed between the physics query and this call (lazy collider rebuilds) comes back as a
+    // null instance; calling into it panics and leaves the scene stuck at the Raycasts stage forever.
+    let mut collider = raycast_result
+        .get("collider")?
+        .try_to::<godot::obj::Gd<godot::classes::Object>>()
+        .ok()?;
+    if !collider.is_instance_valid() {
+        return None;
+    }
 
     let has_dcl_entity_id = collider
         .call("has_meta", &[Variant::from("dcl_entity_id")])
