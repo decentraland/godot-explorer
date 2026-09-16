@@ -12,9 +12,9 @@ const CAMERA_CULL_MASK = 524287
 
 const NEUTRAL_COLOR = {"color": {"r": 0.35, "g": 0.35, "b": 0.35}}
 
-# Emotes are rendered on a dressed avatar: the missing-category fallbacks only
-# restore body meshes, so an empty wearable list leaves the avatar in its
-# underwear and whatever consumes the render describes that instead of the pose.
+# Anything rendered on a body gets a dressed avatar: the missing-category
+# fallbacks only restore body meshes, so a bare wearable list leaves the avatar
+# in its underwear and consumers describe that instead of the asset.
 const BASE_URN_PREFIX = "urn:decentraland:off-chain:base-avatars:"
 const DEFAULT_FEMALE_OUTFIT = [
 	"f_sweater", "f_jeans", "bun_shoes", "standard_hair", "f_eyes_01", "f_eyebrows_00", "f_mouth_00"
@@ -168,7 +168,9 @@ func _neutral_avatar_dictionary(item: AssetRendererInputHelper.AssetItem) -> Dic
 			# Hides every body part so the only visible pixels are the item's
 			dictionary["showOnlyWearables"] = true
 		"wearable_on_avatar":
-			dictionary["wearables"] = [item.urn]
+			# The target goes first: wearables.gd keeps the FIRST entry per
+			# category, so the default outfit only fills what the item leaves bare.
+			dictionary["wearables"] = [item.urn] + _default_outfit_for(item.body_shape)
 			dictionary.merge(item.avatar_overrides, true)
 		"emote":
 			dictionary["wearables"] = _default_outfit_for(item.body_shape)
