@@ -864,6 +864,13 @@ impl DclGlobal {
             .is_some_and(|t| t > std::time::Instant::now())
     }
 
+    /// Locale forwarded to SDK7 scenes (`getExplorerInformation`, `localeChanged`).
+    /// Callers pass the resolved app locale (`LocaleSettings.resolve_locale()`), never the OS one.
+    #[func]
+    pub fn set_scene_locale(locale: GString) {
+        crate::godot_classes::dcl_scene_locale::set_scene_locale(&locale.to_string());
+    }
+
     /// Per-profile particle budgets, applied on graphic profile change.
     /// scene_budget: max live particles summed over a scene's emitters (0 = off).
     /// emitter_cap: hard cap per emitter. use_cpu: create CPUParticles3D emitters.

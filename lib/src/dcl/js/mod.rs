@@ -158,6 +158,9 @@ pub fn create_runtime(inspect: bool) -> (deno_core::JsRuntime, Option<InspectorS
         ..Default::default()
     });
 
+    // ICU data is loaded by the first JsRuntime::new, so its default locale can only be set now.
+    crate::godot_classes::dcl_scene_locale::init_icu_default_locale();
+
     #[cfg(feature = "enable_inspector")]
     if inspect {
         tracing::debug!(
@@ -514,7 +517,7 @@ pub(crate) fn scene_thread(
         tokio::time::sleep(magic_duration).await;
     });
 
-    let start_time = std::time::SystemTime::now();
+    let start_time = std::time::Instant::now();
     let mut elapsed = Duration::default();
     let mut reported_error_filter = 0;
     let mut last_memory_stats_update = std::time::Instant::now();
@@ -522,10 +525,7 @@ pub(crate) fn scene_thread(
     let mut tick_counter: u32 = 0;
 
     loop {
-        let dt = std::time::SystemTime::now()
-            .duration_since(start_time)
-            .unwrap_or(elapsed)
-            - elapsed;
+        let dt = start_time.elapsed().saturating_sub(elapsed);
         elapsed += dt;
 
         state
