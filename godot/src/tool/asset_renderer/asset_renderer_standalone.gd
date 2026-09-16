@@ -12,6 +12,23 @@ const CAMERA_CULL_MASK = 524287
 
 const NEUTRAL_COLOR = {"color": {"r": 0.35, "g": 0.35, "b": 0.35}}
 
+# Emotes are rendered on a dressed avatar: the missing-category fallbacks only
+# restore body meshes, so an empty wearable list leaves the avatar in its
+# underwear and whatever consumes the render describes that instead of the pose.
+const BASE_URN_PREFIX = "urn:decentraland:off-chain:base-avatars:"
+const DEFAULT_FEMALE_OUTFIT = [
+	"f_sweater", "f_jeans", "bun_shoes", "standard_hair", "f_eyes_01", "f_eyebrows_00", "f_mouth_00"
+]
+const DEFAULT_MALE_OUTFIT = [
+	"red_tshirt",
+	"comfortablepants",
+	"ruby_red_loafer",
+	"tall_front_01",
+	"eyes_00",
+	"eyebrows_06",
+	"mouth_01"
+]
+
 var input: AssetRendererInputHelper.AssetInputFile
 var results: Array[Dictionary] = []
 
@@ -153,7 +170,18 @@ func _neutral_avatar_dictionary(item: AssetRendererInputHelper.AssetItem) -> Dic
 		"wearable_on_avatar":
 			dictionary["wearables"] = [item.urn]
 			dictionary.merge(item.avatar_overrides, true)
+		"emote":
+			dictionary["wearables"] = _default_outfit_for(item.body_shape)
+			dictionary.merge(item.avatar_overrides, true)
 	return dictionary
+
+
+func _default_outfit_for(body_shape: String) -> Array:
+	var names: Array = DEFAULT_MALE_OUTFIT if "BaseMale" in body_shape else DEFAULT_FEMALE_OUTFIT
+	var urns: Array = []
+	for name in names:
+		urns.push_back(BASE_URN_PREFIX + name)
+	return urns
 
 
 func _async_process_item(item: AssetRendererInputHelper.AssetItem, generation: int) -> void:
