@@ -120,7 +120,10 @@ static func detect_device_locale() -> String:
 ## properties update live. Text assigned from GDScript does NOT — those components refresh
 ## themselves via `_notification(NOTIFICATION_TRANSLATION_CHANGED)`.
 static func apply_locale() -> void:
-	TranslationServer.set_locale(resolve_locale())
+	var locale := resolve_locale()
+	TranslationServer.set_locale(locale)
+	# Scenes get the same resolved locale as the UI (#2707), never the raw OS locale.
+	DclGlobal.set_scene_locale(locale)
 	var pseudo: bool = Global.get_config().locale == PSEUDO_LOCALE and is_pseudolocale_available()
 	TranslationServer.set_pseudolocalization_enabled(pseudo)
 
