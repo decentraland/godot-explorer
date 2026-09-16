@@ -28,13 +28,14 @@ func _on_balance_changed(_new_balance: int):
 
 
 func _update_text():
+	# Keys, not text: the Button auto-translates, so the label also follows a language change.
 	var balance = Iap.get_balance()
 	if balance <= 0:
-		text = "GET CREDITS"
+		text = "WEARABLE_ITEM_GET_CREDITS"
 	elif _selected_price >= 0 and balance < _selected_price:
-		text = "GET CREDITS"
+		text = "WEARABLE_ITEM_GET_CREDITS"
 	else:
-		text = "GO TO SHOP"
+		text = "MARKETPLACE_CTA_GO_TO_SHOP"
 
 
 func _on_pressed():
