@@ -93,8 +93,24 @@ pub struct InspectorServer;
 pub static VM_HANDLES: Lazy<std::sync::Mutex<HashMap<SceneId, IsolateHandle>>> =
     Lazy::new(Default::default);
 
+/// Process-wide V8 flags for every scene isolate.
+///
+/// `--no-expose-wasm` keeps the `WebAssembly` global off the scene sandbox:
+/// scenes are untrusted content and no SDK feature needs Wasm.
+const SCENE_V8_FLAGS: &[&str] = &["--no-expose-wasm"];
+
 /// must be called from main thread on linux before any isolates are created
 pub fn init_runtime() {
+    // V8 only reads flags until it is initialized, which the first
+    // `JsRuntime::new` does -- so they have to be set here, not per runtime.
+    let argv: Vec<String> = std::iter::once("dclgodot".to_owned())
+        .chain(SCENE_V8_FLAGS.iter().map(|flag| (*flag).to_owned()))
+        .collect();
+    let rejected = deno_core::v8_set_flags(argv);
+    if rejected.len() > 1 {
+        tracing::error!("V8 did not understand flags: {:?}", &rejected[1..]);
+    }
+
     let _ = deno_core::v8::Platform::new(1, false);
 }
 
@@ -517,7 +533,7 @@ pub(crate) fn scene_thread(
         tokio::time::sleep(magic_duration).await;
     });
 
-    let start_time = std::time::SystemTime::now();
+    let start_time = std::time::Instant::now();
     let mut elapsed = Duration::default();
     let mut reported_error_filter = 0;
     let mut last_memory_stats_update = std::time::Instant::now();
@@ -525,10 +541,7 @@ pub(crate) fn scene_thread(
     let mut tick_counter: u32 = 0;
 
     loop {
-        let dt = std::time::SystemTime::now()
-            .duration_since(start_time)
-            .unwrap_or(elapsed)
-            - elapsed;
+        let dt = start_time.elapsed().saturating_sub(elapsed);
         elapsed += dt;
 
         state
@@ -861,5 +874,40 @@ fn get_env_for_scene(state: &mut OpState) -> String {
         format!("module.exports = {}", scene_env_json)
     } else {
         "module.exports = {}".to_owned()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{create_runtime, init_runtime};
+
+    /// Reads back a JS expression from a freshly booted scene runtime.
+    fn eval(source: &'static str) -> String {
+        init_runtime();
+        let (mut runtime, _) = create_runtime(false);
+        let value = runtime.execute_script("<wasm_test>", source).unwrap();
+        let scope = &mut runtime.handle_scope();
+        v8::Local::new(scope, value).to_rust_string_lossy(scope)
+    }
+
+    /// Scenes are untrusted content: the sandbox must not hand them a Wasm
+    /// compiler. Every entry point (`instantiate`, `compile`, `validate`,
+    /// `Memory`, the streaming pair) hangs off the `WebAssembly` global, so
+    /// asserting the namespace is gone covers all of them at once.
+    ///
+    /// `Deno.core` keeps `setWasmStreamingCallback`/`abortWasmStreaming` (it is
+    /// frozen, so we cannot strip them), but they are unreachable plumbing:
+    /// only `WebAssembly.compileStreaming`/`instantiateStreaming` invoke that
+    /// callback, and neither exists any more.
+    #[test]
+    fn scene_sandbox_exposes_no_wasm_api() {
+        assert_eq!(eval("typeof globalThis.WebAssembly"), "undefined");
+
+        let leftovers = eval(
+            "Object.getOwnPropertyNames(globalThis)
+                .filter(name => /wasm|assembly/i.test(name))
+                .join(',')",
+        );
+        assert_eq!(leftovers, "", "wasm API still reachable from scene code");
     }
 }
