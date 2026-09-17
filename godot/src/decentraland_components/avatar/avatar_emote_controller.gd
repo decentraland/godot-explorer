@@ -1066,12 +1066,6 @@ func async_freeze_on_emote(emote_urn: String, normalized_t: float) -> bool:
 	return true
 
 
-## Undoes a freeze so the avatar can play emotes again. freeze_on_idle and
-## async_freeze_on_emote both disable the tree, and nothing else re-enables it.
-func unfreeze() -> void:
-	animation_tree.process_mode = Node.PROCESS_MODE_INHERIT
-
-
 func freeze_on_idle():
 	_emit_emote_finished(true)
 	# Abort the masked layer before disabling the tree: a OneShot left in its
