@@ -158,6 +158,14 @@ The `build` label (or the legacy alias `build-ios`) triggers `mobile_distribute.
 iOS → TestFlight, plus a Slack "🤖 Android Build Ready" notification once the commit's
 APK is in R2. It does not rebuild Android or push to a store.
 
+Progress is reported in two places that mirror each other: a live Slack root card (+ threaded
+replies) and a single **📱 Mobile build pipeline** comment on the PR, kept current by every
+leg via `.github/scripts/pr-card.py` — build number/version, per-platform state (iOS →
+TestFlight, Android → APK/AAB links) and a collapsed timeline. The TestFlight result comes
+from the `ios-wait` job, which watches the `godot-asc-deploy` run it dispatched (matched by
+that workflow's `run-name`, `🍏 <branch> @ <sha>`) with the existing `ASC_DEPLOY_DISPATCH_TOKEN`
+— the private repo holds no token for this one.
+
 ```bash
 # On a PR: add the build label (iOS TestFlight + Android Slack notification)
 gh pr edit --add-label "build"
