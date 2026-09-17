@@ -113,6 +113,13 @@ pub struct Metrics {
     // Defaults to true: failing open matters more than the flag, because the real emergency
     // stop is server-side (stop sending) and this only throttles collecting new tokens.
     push_enabled: bool,
+    // Whether `push-enabled` has been read yet. The cached FCM token is available in `ready()`
+    // on every launch after install, so without this the startup identify always won the race
+    // and the flag could only ever suppress rotations — i.e. it was not a kill switch at all.
+    push_flag_resolved: bool,
+    // An identify waiting for the flag. FeatureFlags always resolves, within 5s even offline
+    // (it fails open), so this is a short hold and never an indefinite one.
+    push_identify_pending: Option<String>,
 
     base: Base<Node>,
 }
@@ -150,6 +157,8 @@ impl INode for Metrics {
             flush_timer: None,
             push_identify_sent: None,
             push_enabled: true,
+            push_flag_resolved: false,
+            push_identify_pending: None,
             base,
         }
     }
@@ -284,11 +293,20 @@ impl Metrics {
     /// NOT stop delivery to tokens already collected — that is a server-side decision.
     #[func]
     pub fn set_push_enabled(&mut self, enabled: bool) {
-        if self.push_enabled == enabled {
-            return;
+        let first_read = !self.push_flag_resolved;
+        self.push_flag_resolved = true;
+        if self.push_enabled != enabled {
+            self.push_enabled = enabled;
+            tracing::info!("[Push] registration flag set to {}", enabled);
         }
-        self.push_enabled = enabled;
-        tracing::info!("[Push] registration flag set to {}", enabled);
+        // Release whatever was held for this answer. Deliberately not behind the equality check
+        // above: the flag resolving to its default value is the common case, and it still has to
+        // let the waiting identify through.
+        if first_read {
+            if let Some(token) = self.push_identify_pending.take() {
+                self.emit_push_identify(token);
+            }
+        }
     }
 
     /// Re-send the push identify because the notification permission just changed.
@@ -312,6 +330,11 @@ impl Metrics {
     /// batch, so the EULA gate, size limits and retry buffer still apply — an identify queued
     /// before consent waits exactly like an event does.
     fn emit_push_identify(&mut self, token: String) {
+        if !self.push_flag_resolved {
+            tracing::debug!("[Push] identify held until the push-enabled flag resolves");
+            self.push_identify_pending = Some(token);
+            return;
+        }
         if !self.push_enabled {
             tracing::debug!("[Push] identify skipped: registration disabled by flag");
             return;
@@ -473,6 +496,8 @@ impl Metrics {
             flush_timer: None,
             push_identify_sent: None,
             push_enabled: true,
+            push_flag_resolved: false,
+            push_identify_pending: None,
             base,
         })
     }

@@ -134,8 +134,9 @@ func _apply_flags() -> void:
 		)
 		main_loop.set_sentry_error_events_enabled(is_enabled(FLAG_SENTRY_ERROR_EVENTS, false))
 
-	# Push registration. Applied here rather than at the token callback because the flags
-	# usually resolve first; when they do not, the default is on, so at worst one identify
-	# ships before the switch is read.
+	# Push registration. This is the only place the flag is read, and Metrics holds the startup
+	# identify until it arrives: the cached FCM token is already there in Metrics::ready(), so
+	# the identify would otherwise always win the race and the switch could only ever suppress
+	# token rotations. Reached on both paths above, so the hold ends even when the fetch fails.
 	if Global.metrics != null:
 		Global.metrics.set_push_enabled(is_enabled(FLAG_PUSH_ENABLED, true))

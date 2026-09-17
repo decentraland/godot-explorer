@@ -29,6 +29,10 @@ const TRIGGER_DEEP_LINK := "deeplink"
 const TRIGGER_ICON := "icon"
 const TRIGGER_PUSH := "push"
 
+## How long a deep link waits for its open. Long enough to cross the autoload notification
+## order, short enough that a link tapped mid-session can never attribute a later open.
+const DEEP_LINK_STASH_SECONDS := 0.5
+
 var _enabled := false
 
 # Where the app was last seen alive. Advanced by every _write_state, so a warm open measures
@@ -43,6 +47,13 @@ var _heartbeat_left := 0.0
 var _pending_start_kind := ""
 var _pending_prev_session_id := ""
 var _pending_seconds_since := -1
+
+# A deep link that arrived before the open it belongs to. FOCUS_IN reaches autoloads in
+# project.godot order and Global is listed first, so on a warm tap it routes the link — and
+# calls notify_deep_link — one node before this one opens the window. Holding the params
+# briefly lets _begin_open pick them up instead of reporting `icon`.
+var _stashed_params: Dictionary = {}
+var _stash_left := 0.0
 var _pending_settle_left := 0.0
 
 
@@ -67,6 +78,10 @@ func _process(delta: float) -> void:
 		_pending_settle_left -= delta
 		if _pending_settle_left <= 0.0:
 			_emit_open(_trigger_from_launch_deep_link())
+	if _stash_left > 0.0:
+		_stash_left -= delta
+		if _stash_left <= 0.0:
+			_stashed_params = {}
 	_heartbeat_left -= delta
 	if _heartbeat_left <= 0.0:
 		_write_state()
@@ -79,6 +94,11 @@ func _notification(what: int) -> void:
 		# Pins the mark to the moment we actually left rather than up to a heartbeat earlier.
 		# On mobile _process stops here, so this is the last write until we come back.
 		_write_state()
+		# And drop any stashed link. _process is frozen while backgrounded, so its TTL cannot
+		# decay out there; a link that did not resolve an open before we left belongs to the
+		# session that just ended and must never attribute the return.
+		_stashed_params = {}
+		_stash_left = 0.0
 	elif what == NOTIFICATION_APPLICATION_FOCUS_IN:
 		_begin_open(START_WARM)
 
@@ -86,10 +106,23 @@ func _notification(what: int) -> void:
 ## Resolve a pending open's trigger. Called by DeepLinkRouter for every deep link on both
 ## platforms and in both start kinds; a link arriving mid-session finds no open and is ignored.
 func notify_deep_link(params: Dictionary) -> void:
-	if not _enabled or _pending_start_kind == "":
+	if not _enabled:
 		return
-	var is_push: bool = not str(params.get("push_campaign_id", "")).strip_edges().is_empty()
-	_emit_open(TRIGGER_PUSH if is_push else TRIGGER_DEEP_LINK)
+	if _pending_start_kind == "":
+		_stashed_params = params.duplicate()
+		_stash_left = DEEP_LINK_STASH_SECONDS
+		return
+	_emit_open(_trigger_for_params(params))
+
+
+## The trigger a set of deep-link params implies. Shared by the notified path and the
+## read-off-Global one so both answer the same way.
+static func _trigger_for_params(params: Dictionary) -> String:
+	if params.is_empty():
+		return TRIGGER_ICON
+	if not str(params.get("push_campaign_id", "")).strip_edges().is_empty():
+		return TRIGGER_PUSH
+	return TRIGGER_DEEP_LINK
 
 
 ## What launched a cold open, read straight off Global rather than waiting to be told.
@@ -101,12 +134,7 @@ func notify_deep_link(params: Dictionary) -> void:
 func _trigger_from_launch_deep_link() -> String:
 	if _pending_start_kind != START_COLD:
 		return TRIGGER_ICON
-	var params: Dictionary = Global.deep_link_obj.params
-	if params.is_empty():
-		return TRIGGER_ICON
-	if not str(params.get("push_campaign_id", "")).strip_edges().is_empty():
-		return TRIGGER_PUSH
-	return TRIGGER_DEEP_LINK
+	return _trigger_for_params(Global.deep_link_obj.params)
 
 
 ## Start an open, held until a deep link resolves it or the settle window runs out.
@@ -122,6 +150,13 @@ func _begin_open(start_kind: String) -> void:
 	_pending_prev_session_id = _prev_session_id
 	_pending_seconds_since = seconds_since
 	_pending_settle_left = DEEP_LINK_SETTLE_SECONDS
+	# A link that beat us here by a notification slot resolves the open immediately; waiting out
+	# the settle window would only conclude `icon` for something we were already told about.
+	if _stash_left > 0.0 and not _stashed_params.is_empty():
+		var params := _stashed_params
+		_stashed_params = {}
+		_stash_left = 0.0
+		_emit_open(_trigger_for_params(params))
 
 
 func _emit_open(trigger: String) -> void:
