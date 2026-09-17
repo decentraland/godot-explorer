@@ -32,10 +32,13 @@ pub const GODOT_BUILD_SHA: &str = "6289a3b2b";
 ///
 /// Reset to `None` once the branch is merged and `GODOT_BUILD_SHA` is bumped to the merge commit —
 /// leaving a branch pinned here makes every dev/CI pull an unmerged engine build. Currently pinned
-/// to the Android sha1 build-id fix (decentraland/godotengine#20): without it every engine frame of
-/// an Android tombstone crash is unsymbolicated in Sentry. Once #20 merges into `4.6.2`, bump
-/// `GODOT_BUILD_SHA` to the merge commit and set this back to `None`.
-pub const GODOT_USE_BRANCH: Option<&str> = Some("fix/android-sha1-build-id");
+/// to the Mali vertex-lighting NaN fix (decentraland/godotengine#23): without it, Android Mali
+/// devices show black triangles flashing near dynamic lights on Medium/High (vertex-lighting
+/// shadow ratio computed in fp16 → subnormal division NaN → black via the fragment shadow mix).
+/// The pin includes the previous `fix/android-sha1-build-id` change (#20) since the branch is
+/// based on 4.6.2 HEAD. Once #23 merges into `4.6.2`, bump `GODOT_BUILD_SHA` to the merge commit
+/// and set this back to `None`.
+pub const GODOT_USE_BRANCH: Option<&str> = Some("fix/vertex-lighting-nan-mali");
 
 /// Release tag identifying a specific fork build — `<version>.stable.gh.<sha>`, mirroring the
 /// `--version` string. Single source for the release URL path segment, the on-disk template SHA
