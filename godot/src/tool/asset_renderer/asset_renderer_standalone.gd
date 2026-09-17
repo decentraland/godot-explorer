@@ -10,7 +10,13 @@ const ITEM_TIMEOUT_SECONDS = 60.0
 ## Exclude the outline layer (20), same trick as the scene renderer.
 const CAMERA_CULL_MASK = 524287
 
+# Standalone items show no body, so a flat grey keeps stray pixels neutral.
 const NEUTRAL_COLOR = {"color": {"r": 0.35, "g": 0.35, "b": 0.35}}
+# When the body IS visible, use the engine's default tones: a grey-skinned
+# figure is what a consumer would end up describing.
+const NATURAL_SKIN = {"color": {"r": 1.0, "g": 0.867, "b": 0.737}}
+const NATURAL_HAIR = {"color": {"r": 0.596, "g": 0.372, "b": 0.215}}
+const NATURAL_EYES = {"color": {"r": 0.3, "g": 0.22, "b": 0.99}}
 
 # Anything rendered on a body gets a dressed avatar: the missing-category
 # fallbacks only restore body meshes, so a bare wearable list leaves the avatar
@@ -117,11 +123,30 @@ func _async_start():
 			{"id": invalid.id, "status": "error", "error": invalid.error, "files": []}
 		)
 
+	# A timed-out item's coroutine keeps running detached, and the avatar update
+	# it is parked on rebuilds the shared skeleton — which would corrupt a later
+	# item's capture and still report "ok". There is no way to cancel it, so a
+	# timeout ends the batch instead of risking silently wrong renders.
+	var timed_out := false
 	for item in input.items:
+		if timed_out:
+			results.push_back(
+				{"id": item.id, "status": "error", "error": "skipped after a timeout", "files": []}
+			)
+			continue
+
 		var result: Dictionary = await _async_process_item_guarded(item)
 		results.push_back(result)
 		var status_icon = "🟢" if result.status == "ok" else "🔴"
 		prints(status_icon, item.id, result.get("error", ""))
+		if result.get("error", "") == "timeout":
+			printerr("aborting the batch: a detached item can corrupt later renders")
+			timed_out = true
+			continue
+
+		# Nothing reloads the wire format between identical emote payloads, so
+		# emotes/props/animations would accumulate for the whole batch.
+		avatar_preview.avatar.emote_controller.clean_unused_emotes()
 
 	_write_report()
 
@@ -140,9 +165,9 @@ func _async_process_item_guarded(item: AssetRendererInputHelper.AssetItem) -> Di
 		await get_tree().process_frame
 
 	if _pending_result == null:
-		# The coroutine keeps running detached; the generation check stops it
-		# from committing a result later. Its avatar state, if it ever lands,
-		# is overwritten by the next item's async_update_avatar.
+		# The generation check stops the detached coroutine from committing a
+		# result later, but it can still mutate the shared avatar — so the
+		# caller ends the batch here rather than trusting later captures.
 		return {"id": item.id, "status": "error", "error": "timeout", "files": []}
 	var result: Dictionary = _pending_result
 	return result
@@ -171,18 +196,24 @@ func _neutral_avatar_dictionary(item: AssetRendererInputHelper.AssetItem) -> Dic
 			# The target goes first: wearables.gd keeps the FIRST entry per
 			# category, so the default outfit only fills what the item leaves bare.
 			dictionary["wearables"] = [item.urn] + _default_outfit_for(item.body_shape)
+			dictionary["skin"] = NATURAL_SKIN
+			dictionary["hair"] = NATURAL_HAIR
+			dictionary["eyes"] = NATURAL_EYES
 			dictionary.merge(item.avatar_overrides, true)
 		"emote":
 			dictionary["wearables"] = _default_outfit_for(item.body_shape)
+			dictionary["skin"] = NATURAL_SKIN
+			dictionary["hair"] = NATURAL_HAIR
+			dictionary["eyes"] = NATURAL_EYES
 			dictionary.merge(item.avatar_overrides, true)
 	return dictionary
 
 
 func _default_outfit_for(body_shape: String) -> Array:
-	var names: Array = DEFAULT_MALE_OUTFIT if "BaseMale" in body_shape else DEFAULT_FEMALE_OUTFIT
+	var outfit: Array = DEFAULT_MALE_OUTFIT if "BaseMale" in body_shape else DEFAULT_FEMALE_OUTFIT
 	var urns: Array = []
-	for name in names:
-		urns.push_back(BASE_URN_PREFIX + name)
+	for outfit_name in outfit:
+		urns.push_back(BASE_URN_PREFIX + outfit_name)
 	return urns
 
 
@@ -249,7 +280,7 @@ func _async_process_item(item: AssetRendererInputHelper.AssetItem, generation: i
 				return
 			await get_tree().process_frame
 
-		_place_camera(shot.camera)
+		_place_camera(shot.camera, float(shot.width) / float(maxi(shot.height, 1)))
 
 		var dest_path := _ensure_ends_with(shot.dest_path, ".png")
 		_ensure_base_dir_exists(dest_path)
@@ -258,6 +289,19 @@ func _async_process_item(item: AssetRendererInputHelper.AssetItem, generation: i
 		var image: Image = await avatar_preview.async_capture_current_view(
 			Vector2i(shot.width, shot.height), 1
 		)
+		if image == null:
+			# Without this the coroutine would die here and the guard would
+			# report the far less useful "timeout" 60s later.
+			_commit_result(
+				generation,
+				{
+					"id": item.id,
+					"status": "error",
+					"error": "viewport produced no image",
+					"files": files
+				}
+			)
+			return
 		var save_error: int = image.save_png(dest_path)
 		if save_error != OK:
 			_commit_result(
@@ -279,7 +323,9 @@ func _is_fallback_aabb(aabb: AABB) -> bool:
 	return aabb == AABB(Vector3(-1.0, 0.0, -1.0), Vector3(2.0, 2.0, 2.0))
 
 
-func _place_camera(shot_camera: AssetRendererInputHelper.ShotCamera) -> void:
+## `aspect` is width/height. Camera3D keeps the VERTICAL extent, so a portrait
+## shot needs the fit widened or the asset is cropped left and right.
+func _place_camera(shot_camera: AssetRendererInputHelper.ShotCamera, aspect: float) -> void:
 	var camera: Camera3D = avatar_preview.camera_3d
 	var is_ortho: bool = shot_camera.projection == "ortho"
 	camera.projection = (
@@ -307,11 +353,19 @@ func _place_camera(shot_camera: AssetRendererInputHelper.ShotCamera) -> void:
 	# yaw 0 faces the avatar's front (-Z, matching the profile body camera)
 	var direction := Vector3(sin(yaw) * cos(pitch), sin(pitch), -cos(yaw) * cos(pitch))
 
+	var safe_aspect: float = aspect if aspect > 0.0 else 1.0
 	if is_ortho:
-		camera.size = maxf(radius * 2.0, 0.1)
+		var ortho_size: float = radius * 2.0
+		if safe_aspect < 1.0:
+			ortho_size /= safe_aspect
+		camera.size = maxf(ortho_size, 0.1)
 		_look_from(camera, center + direction * maxf(radius * 4.0, 2.0), center)
 	else:
-		var distance: float = maxf(radius / sin(deg_to_rad(camera.fov) * 0.5), radius + 0.5)
+		var half_fov: float = deg_to_rad(camera.fov) * 0.5
+		# Narrower than tall: the horizontal half-angle is the binding one
+		if safe_aspect < 1.0:
+			half_fov = atan(tan(half_fov) * safe_aspect)
+		var distance: float = maxf(radius / sin(half_fov), radius + 0.5)
 		_look_from(camera, center + direction * distance, center)
 
 

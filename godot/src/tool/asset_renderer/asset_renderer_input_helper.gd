@@ -56,7 +56,12 @@ class Shot:
 		ret.height = value.get("height", 1024)
 		ret.at_time = value.get("atTime", 0.5)
 		ret.camera = ShotCamera.from_dictionary(value.get("camera", {}), ShotCamera.new())
-		if ret.dest_path.is_empty():
+		if ret.dest_path.is_empty() or ret.camera == null:
+			return null
+		# An explicit camera pointing at its own position leaves look_at unable
+		# to orient, which would silently reuse the previous shot's framing.
+		if not ret.camera.auto_fit and ret.camera.position.is_equal_approx(ret.camera.target):
+			printerr("shot %s: an explicit camera needs distinct position and target" % ret.name)
 			return null
 		return ret
 
