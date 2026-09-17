@@ -24,8 +24,14 @@ extends SceneTree
 
 const CameraRig := preload("res://src/logic/player/camera_rig_helpers.gd")
 const Clamp := preload("res://src/logic/player/camera_collision_clamp.gd")
+const Pinch := preload("res://src/logic/player/pinch_gesture_helpers.gd")
 
 const SPRING_LENGTH := 3.0
+# Synthetic lateral camera offset for the clamp tests. The game default is now
+# centered (x=0, issue #2709), but the clamp's lateral-offset machinery is
+# exercised with the historical over-shoulder value so the offset-collision
+# cases keep their coverage.
+const TEST_LATERAL_OFFSET := 0.75
 # The arm extends its children BEHIND the pivot (+Z, since forward is -Z), so the
 # camera sits behind the player; the wall must be on that +Z side to be cast onto.
 const WALL_Z := 1.5
@@ -54,6 +60,7 @@ func _initialize() -> void:
 	await _test_clamp_fully_blocked_stays_out_of_wall()
 	_test_rig_targets_third_person()
 	_test_rig_targets_first_person()
+	_test_pinch_toggle_direction()
 	_test_scene_pivot_centered_and_masked()
 	_test_scene_has_collision_clamp()
 	_finish()
@@ -163,7 +170,7 @@ func _build_clamp_rig() -> Dictionary:
 
 	var clamp_node: CameraCollisionClamp = Clamp.new()
 	mount.add_child(clamp_node)
-	clamp_node.lateral_offset = CameraRig.THIRD_PERSON_CAMERA.x
+	clamp_node.lateral_offset = TEST_LATERAL_OFFSET
 
 	return {"world": world, "mount": mount, "arm": arm, "cam": cam}
 
@@ -199,7 +206,12 @@ func _test_clamp_full_offset_when_clear() -> void:
 	var rig := _build_clamp_rig()
 	await _settle()
 
-	var expected := Vector3(CameraRig.THIRD_PERSON_CAMERA.x, 0, CameraRig.THIRD_PERSON_CAMERA.z)
+	# The clamp's floor guard keeps the camera at least FLOOR_CLEARANCE above the
+	# mount's parent (the synthetic world sits at y=0), so the clear-path camera
+	# rests at y = FLOOR_CLEARANCE rather than 0.
+	var expected := Vector3(
+		TEST_LATERAL_OFFSET, CameraRig.FLOOR_CLEARANCE, CameraRig.THIRD_PERSON_CAMERA.z
+	)
 	var cam: Camera3D = rig["cam"]
 	if cam.global_position.distance_to(expected) > 0.05:
 		_fail(
@@ -433,19 +445,29 @@ func _test_clamp_fully_blocked_stays_out_of_wall() -> void:
 
 func _test_rig_targets_third_person() -> void:
 	var t := CameraRig.rig_targets(true)
-	# Back distance is the pure Z, NOT the diagonal length — the lateral part is
-	# handled by the camera offset, so baking it in would push the camera too far.
 	_expect_eq("3rd person spring_length", CameraRig.THIRD_PERSON_CAMERA.z, t.spring_length)
-	if is_equal_approx(t.spring_length, CameraRig.THIRD_PERSON_CAMERA.length()):
-		_fail("3rd person spring_length must be the back distance (.z), not the diagonal")
-	# Over-shoulder offset is a CAMERA offset (not applied to the pivot).
-	_expect_eq("3rd person camera_offset_x", CameraRig.THIRD_PERSON_CAMERA.x, t.camera_offset_x)
+	# Issue #2709: the avatar is centered on screen — no lateral camera offset.
+	_expect_eq("3rd person camera_offset_x", 0.0, t.camera_offset_x)
 
 
 func _test_rig_targets_first_person() -> void:
 	var t := CameraRig.rig_targets(false)
 	_expect_eq("1st person spring_length", CameraRig.FIRST_PERSON_SPRING_LENGTH, t.spring_length)
 	_expect_eq("1st person camera_offset_x", 0.0, t.camera_offset_x)
+
+
+# Two fixed camera positions (issue #2709 team decision): the pinch toggles
+# 1p<->3p once the accumulated spread passes MODE_TOGGLE_SPREAD, in either
+# direction; below it there is no toggle.
+func _test_pinch_toggle_direction() -> void:
+	if Pinch.toggle_direction(Pinch.MODE_TOGGLE_SPREAD - 0.5) != 0:
+		_fail("toggle fired below the threshold (out)")
+	if Pinch.toggle_direction(-Pinch.MODE_TOGGLE_SPREAD + 0.5) != 0:
+		_fail("toggle fired below the threshold (in)")
+	if Pinch.toggle_direction(Pinch.MODE_TOGGLE_SPREAD) != 1:
+		_fail("spread at the threshold should toggle out (toward 3p)")
+	if Pinch.toggle_direction(-Pinch.MODE_TOGGLE_SPREAD) != -1:
+		_fail("closing at the threshold should toggle in (toward 1p)")
 
 
 # Guard the actual scene: the Mount pivot stays centered (no lateral X in its

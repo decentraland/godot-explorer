@@ -35,7 +35,7 @@ Decentraland's cross-platform metaverse client — the "Godot Explorer". Three l
 | Decentraland SDK7 scene code at runtime | **JavaScript / V8 / deno_core** | per-scene threads driven by `lib/src/scene_runner` |
 | `xtask` build system (doctor / install / build / run / export) | Rust | `src/` |
 
-Target platforms: Linux, Windows, macOS, Android (API 29+), iOS, Meta Quest (OpenXR). The same binary ships to desktop and mobile — **any change has to be evaluated across touch *and* keyboard/mouse*, and on small screens as well as desktop.**
+Target platforms: **Android (API 29+) and iOS are the only actively supported and QA'd targets.** The repo still carries desktop (Linux / Windows / macOS) and Meta Quest (OpenXR) code paths and CI builds, but those are **legacy remnants, not current distribution targets**. Evaluate every change for **touch input and small screens**; keyboard/mouse parity is not a review requirement. Desktop-only or XR-only findings are **out of scope** — note them at most as a courtesy, never as a blocker — unless the PR explicitly targets desktop/XR.
 
 The engine is pinned to a custom Godot fork. The exact version lives in `project.godot` and is documented in `CLAUDE.md` — **do not hardcode the version into reviews**, and **do not suggest upgrading the engine** or using APIs that only exist on upstream Godot beyond the pinned version.
 
@@ -178,7 +178,7 @@ Write **each case** as a short block:
 2. **Steps** — numbered, **one user action per line, starting from opening the app**. Use concrete values — "Enter Genesis Plaza", the on-screen button name, the menu path — never "navigate to the relevant screen" or "trigger the flow".
 3. **Expected result** — the observable outcome, specific enough to mark pass/fail *without reading code*. "The jump button shows its pressed state and a click SFX plays" — not "it works" / "looks correct" / "no crash".
 
-Add a **regression** line whenever the change touches shared code — the case that confirms the *old* path still works. Describe user actions, not internals: QA can't see an `_is_switching` guard, but they can "rotate the device rapidly while a teleport is loading". Only call out a **platform** when a case is iOS- or Android-specific (or also needs a desktop check) — otherwise both phones are the default.
+Add a **regression** line whenever the change touches shared code — the case that confirms the *old* path still works. Describe user actions, not internals: QA can't see an `_is_switching` guard, but they can "rotate the device rapidly while a teleport is loading". Only call out a **platform** when a case is iOS- or Android-specific — otherwise both phones are the default. Don't ask QA to run desktop checks; desktop isn't a supported target.
 
 Format each case as a checklist so QA can tick it off. Full example:
 
@@ -238,7 +238,7 @@ Anti-patterns that make a case un-executable — a reviewer should ask the autho
 The PR-level workflows a reviewer should expect green before approving:
 - `📊 Static checks` — rustfmt + `gdformat -d` + `gdlint`
 - `Clippy` — `-D warnings`
-- `🐧 Linux`, `🪟 Windows`, `🍎 macOS` builds
+- `🐧 Linux`, `🪟 Windows`, `🍎 macOS` builds — build-only smoke checks; desktop is not a distribution target (see Section 1). Keep them green, but a desktop-only runtime issue is not grounds to block.
 - `🤖 Android` builds (APK/AAB posted as a sticky comment on the PR)
 - `🍏 iOS` is **opt-in** — gated on the `build` label (alias: `build-ios`), which also posts a Slack "Android build ready" notification with the R2 APK download link. See Section 0 pre-flight: for platform-sensitive changes the iOS build is *required* and the PR should be held until a maintainer adds the label. For pure-backend / docs PRs, an absent iOS build is fine — say so explicitly.
 
@@ -377,7 +377,7 @@ A reviewer should `grep` / eyeball the diff for these before reading logic:
 - Any change to `rust-toolchain.toml`, `Cargo.lock` across the whole dependency tree, or the Godot version → escalate; these need a human-stakeholder call.
 - Modifications under `plugins/dcl-godot-ios/godot` or any submodule pointer → verify intentional and not a submodule-drift side-effect.
 - `DclGlobal.is_ios()` / `is_android()` / `is_mobile()` in new GDScript → request `OS.get_name() == "iOS"` / `"Android"` to match the repo convention.
-- `OS.get_name()` checks that handle some but not all relevant targets (e.g. branches on `"Android"` but silently falls through on `"iOS"`, or covers mobile but ignores `"Web"` / `"macOS"`) → ask which platforms were considered and verify every target the change is supposed to support is covered.
+- `OS.get_name()` checks that handle one mobile target but not the other (e.g. branches on `"Android"` but silently falls through on `"iOS"`) → ask which platforms were considered. Only `"Android"` / `"iOS"` need to be covered; desktop/XR fall-through is fine (see Section 1).
 - `_process` doing physics-coupled work, or `_physics_process` doing UI work → see the pattern note in Section 5.
 - A new user-facing string literal in `.tscn`/`.gd`, or a key on an `auto_translate_mode = 2` node → must be a translation key, and mode 2 draws a key verbatim. The scanner cannot see strings passed as function arguments, held in data tables, or set as `@export` defaults — check those by eye. See Tier 2.
 

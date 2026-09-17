@@ -262,7 +262,7 @@ func _ready():
 
 	virtual_joystick.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	virtual_joystick_orig_position = virtual_joystick.get_position()
-	_sdk_touch_controls = SdkTouchControlsApplier.new(virtual_joystick, label_crosshair)
+	_sdk_touch_controls = SdkTouchControlsApplier.new(virtual_joystick, label_crosshair, player)
 
 	if Global.is_xr():
 		mobile_ui.hide()
@@ -856,15 +856,20 @@ func move_to(position: Vector3, skip_loading: bool, check_stuck: bool = true):
 				loading_ui.enable_loading_screen("", "on_moveto")
 
 
+## Fire-and-forget teleport for callers that cannot await (menu jump-in, scene-urn spawn).
 func teleport_to(parcel: Vector2i, realm: String = ""):
-	_async_teleport_to(parcel, realm)
+	async_teleport_to(parcel, realm)
 
 
-func _async_teleport_to(parcel: Vector2i, realm: String = "") -> void:
-	if not realm.is_empty() and realm != Global.realm.get_realm_string():
+## Returns false when the realm change failed, so callers can hold back anything that claims
+## the teleport happened (#2816). Compares the resolved urls, not the raw strings: the realm
+## now comes from scene input, and "spacerunner.dcl.eth" must not reconnect a player who is
+## already in "SpaceRunner.dcl.eth".
+func async_teleport_to(parcel: Vector2i, realm: String = "") -> bool:
+	if not realm.is_empty() and Realm.normalize_realm_url(realm) != Global.realm.get_realm_url():
 		var success = await Global.realm.async_set_realm(realm)
 		if not success:
-			return
+			return false
 		if not loading_ui.visible:
 			loading_ui.enable_loading_screen(realm, "on_teleport")
 
@@ -875,6 +880,7 @@ func _async_teleport_to(parcel: Vector2i, realm: String = "") -> void:
 
 	Global.get_config().add_place_to_last_places(parcel, realm)
 	dirty_save_position = true
+	return true
 
 
 func player_look_at(look_at_position: Vector3):

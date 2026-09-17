@@ -79,7 +79,18 @@ pub enum SegmentEvent {
     // (see SegmentEventLoading). Boxed: it is the largest variant by far.
     Loading(Box<SegmentEventLoading>),
     GuestWalletCreation(SegmentEventGuestWalletCreation),
+    ReviewPrompted(SegmentEventReviewPrompted),
     RequestResult(SegmentEventRequestResult),
+    SceneLocaleRequested(SegmentEventSceneLocaleRequested),
+}
+
+/// SCENE_LOCALE_REQUESTED (#2707): a scene subscribed to the player's language.
+#[derive(Serialize, Clone)]
+pub struct SegmentEventSceneLocaleRequested {
+    // Scene entity id.
+    pub scene_id: String,
+    // BCP-47 app locale reported to the scene (e.g. "pt-BR").
+    pub locale: String,
 }
 
 /// Cross-system correlation anchor. The ONLY Segment event that carries the Firebase Analytics
@@ -452,6 +463,20 @@ pub struct SegmentEventClickButton {
     pub extra_properties: Option<String>,
 }
 
+/// Emitted the moment `launchReviewFlow` is invoked (issue #2739) — NOT when the Play card is
+/// shown, rated or dismissed. Play reports no outcome at all: over quota it renders nothing,
+/// returns no error, and still calls the completion callback. So this event measures our own
+/// decision to ask, and nothing about the user's answer; impact is read off the Play Console
+/// store rating instead.
+#[derive(Serialize, Clone)]
+pub struct SegmentEventReviewPrompted {
+    // Which of the 3 lifetime shots this was: 1, 2 or 3.
+    pub shot_id: u32,
+    // The trigger that actually fired this shot: friend_added | place_favorited |
+    // wearable_claimed | place_upvoted.
+    pub trigger_id: String,
+}
+
 #[derive(Serialize, Clone)]
 pub struct SegmentEventScreenViewed {
     // Name of the screen viewed.
@@ -753,8 +778,18 @@ pub fn build_segment_event_batch_item(
             serde_json::to_value(event).unwrap(),
             None,
         ),
+        SegmentEvent::SceneLocaleRequested(event) => (
+            "Scene Locale Requested".to_string(),
+            serde_json::to_value(event).unwrap(),
+            None,
+        ),
         SegmentEvent::ScreenViewed(event) => (
             "Screen Viewed".to_string(),
+            serde_json::to_value(event).unwrap(),
+            None,
+        ),
+        SegmentEvent::ReviewPrompted(event) => (
+            "review_prompted".to_string(),
             serde_json::to_value(event).unwrap(),
             None,
         ),
