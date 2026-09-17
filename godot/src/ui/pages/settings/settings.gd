@@ -1120,7 +1120,10 @@ func _sync_custom_view_distance_label(value: float) -> void:
 
 
 func _setup_custom_profile_controls() -> void:
-	# Three per-setting rows that only appear for the Custom profile.
+	# Three per-setting rows that only appear for the Custom profile. Custom is not offered
+	# in production (see _populate_graphic_profile_items), so its rows are not built either.
+	if Global.is_production():
+		return
 	var template_row := (
 		container_advanced.find_child("SceneLogsEnabled", true, false) as HBoxContainer
 	)
@@ -1527,10 +1530,14 @@ func _populate_camera_mode_items() -> void:
 func _populate_graphic_profile_items() -> void:
 	# DropdownList items are finished text, not keys: both display nodes are
 	# auto_translate_mode = 2 (dropdown_list.tscn, dropdown_item.tscn).
-	# Custom included: it's what makes the Custom-only controls below reachable.
+	# Custom is dev-only (no designed UI yet): it is the last entry, so leaving it out in
+	# production keeps the other indices aligned with ConfigData's profile ids. It's what
+	# makes the Custom-only controls below reachable.
 	var previous := dropdown_list_graphic_profiles.selected
 	dropdown_list_graphic_profiles.clear()
 	for index in GraphicSettings.PROFILE_KEYS.size():
+		if index == ConfigData.PROFILE_CUSTOM and Global.is_production():
+			continue
 		dropdown_list_graphic_profiles.add_item(tr(GraphicSettings.PROFILE_KEYS[index]))
 	if previous >= 0:
 		dropdown_list_graphic_profiles.select(previous)
