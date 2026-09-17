@@ -3,9 +3,6 @@ extends Control
 signal share_place
 signal load_scenes_pressed
 
-## Widest the vertical-chat tooltip grows before wrapping onto a second line.
-const TOOLTIP_MAX_WIDTH: float = 240.0
-
 var _tooltip_tween: Tween = null
 var _tooltip_shown: bool = false
 
@@ -13,7 +10,6 @@ var _tooltip_shown: bool = false
 @onready var button_chat: HudButton = %Button_Chat
 @onready var button_flip: HudButton = %Button_Flip
 @onready var tooltip: HBoxContainer = %HBoxContainer_Tooltip
-@onready var label_tooltip: Label = %Label_Tooltip
 @onready var panel_load_scenes: PanelContainer = %Panel_LoadScenes
 
 
@@ -84,23 +80,11 @@ func _exit_chat_mode() -> void:
 func _show_tooltip() -> void:
 	_kill_tooltip()
 	tooltip.modulate = Color.WHITE
-	_fit_tooltip_width()
 	tooltip.show()
 	_tooltip_tween = create_tween()
 	_tooltip_tween.tween_interval(10.0)
 	_tooltip_tween.tween_property(tooltip, "modulate:a", 0.0, 1.0)
 	_tooltip_tween.tween_callback(tooltip.hide)
-
-
-## An autowrapping Label has no natural width, so size it to its one-line text: short copy hugs
-## the panel, longer copy (e.g. Spanish) caps at TOOLTIP_MAX_WIDTH and wraps.
-func _fit_tooltip_width() -> void:
-	var font: Font = label_tooltip.get_theme_font("font")
-	var font_size: int = label_tooltip.get_theme_font_size("font_size")
-	var text_width: float = (
-		font.get_string_size(tr(label_tooltip.text), HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
-	)
-	label_tooltip.custom_minimum_size.x = ceilf(minf(text_width, TOOLTIP_MAX_WIDTH))
 
 
 func _kill_tooltip() -> void:
