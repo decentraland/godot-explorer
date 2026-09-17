@@ -81,7 +81,34 @@ SCENE_PROP_RE = re.compile(r'(?m)^([a-z_]+) = "((?:[^"\\]|\\.)*)"')
 # GDScript display-text assignment, e.g. `label.text = "Hello"`.
 # `.title` is included because DiscoverCarrousel exposes an exported `title` that assigns
 # straight to a Label — three carousel headers shipped in English behind that gap.
-GD_ASSIGN_RE = re.compile(r'\.(text|tooltip_text|placeholder_text|title)\s*=\s*"((?:[^"\\]|\\.)*)"')
+# `.custom_text` is CustomButton's exported label (components/atoms/buttons/custom_button). It
+# assigns straight to an auto-translating Label, so a raw key belongs there — but an English
+# literal assigned from code silently clobbers the correct key set in the .tscn, which is how
+# the profile ADD FRIEND / ACCEPT buttons shipped untranslated (#2825).
+GD_ASSIGN_RE = re.compile(
+    r'\.(text|tooltip_text|placeholder_text|title|custom_text)\s*=\s*"((?:[^"\\]|\\.)*)"'
+)
+
+# The same assignment made on the script's own node: `text = "GET CREDITS"` inside a script that
+# extends Button. GD_ASSIGN_RE needs a receiver, so the marketplace CTA shipped in English. A bare
+# `text` is only display text when the script's node has that property, so this pattern is applied
+# only to scripts whose `extends` chain resolves to one of TEXT_NODE_CLASSES; elsewhere `text`
+# can be any local variable.
+GD_SELF_ASSIGN_RE = re.compile(
+    r'^\s*(?:self\.)?(text|tooltip_text|placeholder_text)\s*=\s*"((?:[^"\\]|\\.)*)"'
+)
+
+# Built-in classes that display a `text` property.
+TEXT_NODE_CLASSES = frozenset(
+    (
+        "Button", "CheckBox", "CheckButton", "LinkButton", "MenuButton", "OptionButton",
+        "ColorPickerButton", "Label", "RichTextLabel", "LineEdit", "TextEdit", "CodeEdit",
+        "Label3D",
+    )
+)
+
+EXTENDS_RE = re.compile(r'(?m)^extends\s+(?:"([^"]+)"|([A-Za-z_]\w*))')
+CLASS_NAME_RE = re.compile(r"(?m)^class_name\s+([A-Za-z_]\w*)")
 
 # A translation key being resolved. tr() covers the common case; TranslationServer.translate()
 # is how a *static* function must do it, since tr() is a non-static Object method.
@@ -223,9 +250,62 @@ def keys_on_untranslated_nodes(known_keys, ui_root=None, repo_root=None):
     return found
 
 
+class ScriptBases:
+    """Resolves a script's `extends` chain to its built-in base class.
+
+    Custom bases are followed through `class_name` declarations and `res://` paths anywhere under
+    godot/src, not only the scanned roots, since a UI script may extend a class defined elsewhere.
+    """
+
+    def __init__(self, repo_root=None):
+        self.godot_root = os.path.join(repo_root or REPO_ROOT, "godot")
+        self._by_class_name = {}
+        src = os.path.join(self.godot_root, "src")
+        for root, _dirs, files in os.walk(src):
+            for name in files:
+                if not name.endswith(".gd"):
+                    continue
+                path = os.path.join(root, name)
+                match = CLASS_NAME_RE.search(self._read(path))
+                if match:
+                    self._by_class_name[match.group(1)] = path
+
+    @staticmethod
+    def _read(path):
+        try:
+            with open(path, encoding="utf-8") as handle:
+                return handle.read()
+        except OSError:
+            return ""
+
+    def builtin_base(self, source):
+        seen = set()
+        while True:
+            match = EXTENDS_RE.search(source)
+            if not match:
+                return None
+            res_path, name = match.group(1), match.group(2)
+            if res_path:
+                if not res_path.startswith("res://"):
+                    return None
+                path = os.path.join(self.godot_root, res_path[len("res://"):])
+            elif name in self._by_class_name:
+                path = self._by_class_name[name]
+            else:
+                return name
+            if path in seen:
+                return None
+            seen.add(path)
+            source = self._read(path)
+
+    def displays_text(self, source):
+        return self.builtin_base(source) in TEXT_NODE_CLASSES
+
+
 def collect(ui_root=None, repo_root=None):
     """Return (keys, unkeyed) where each is a list of (file, string) pairs."""
     keys, unkeyed = [], []
+    bases = ScriptBases(repo_root)
     props = SCENE_TEXT_PROPS + SCENE_CUSTOM_PROPS
 
     for path in walk(".tscn", ui_root):
@@ -273,10 +353,14 @@ def collect(ui_root=None, repo_root=None):
             else:
                 unkeyed.append((rel(path, repo_root), value))
 
+        assign_patterns = [GD_ASSIGN_RE]
+        if bases.displays_text(source):
+            assign_patterns.append(GD_SELF_ASSIGN_RE)
+
         for line in source.splitlines(keepends=True):
             if line.lstrip().startswith("#"):
                 continue
-            for match in GD_ASSIGN_RE.finditer(line):
+            for match in (m for p in assign_patterns for m in p.finditer(line)):
                 value = match.group(2)
                 if KEY_RE.match(value):
                     keys.append((rel(path, repo_root), value))

@@ -80,6 +80,9 @@ jobs:
       # fork PRs (no allocator secret) → downstream guards skip and nothing ships to a store.
       build_number: ${{ steps.buildnum.outputs.build_number }}
       build_version: ${{ steps.buildnum.outputs.build_version }}
+      # When this run started (ISO-8601 UTC) — ios-wait only considers godot-asc-deploy runs created
+      # after it, so a run dispatched by a superseded distribution of the same commit is ignored.
+      started_at: ${{ steps.ctx.outputs.started_at }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
@@ -116,6 +119,7 @@ jobs:
             echo "triggered_by=$TRIGGERED_BY"
             echo "pr_url=$PR_URL"
             echo "commit_short=${SHA:0:7}"
+            echo "started_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           } >> "$GITHUB_OUTPUT"
           echo "Distributing ref=$REF sha=$SHA pr=$PR_NUMBER trigger=$TRIGGERED_BY"
 
@@ -231,32 +235,31 @@ jobs:
             done
           done
 
-      - name: Post distribution started comment
-        if: github.event_name == 'pull_request'
+      # The PR twin of the Slack root card: ONE sticky comment per PR that every leg below (and
+      # godot-asc-deploy for the iOS outcome) keeps current via pr-card.py — same merge-on-read
+      # model as slack-root.py, each leg owns its own fields. RESET starts a fresh card for this
+      # distribution; legs of a superseded run (re-label on a newer commit) are dropped by SHA.
+      - name: PR card → BUILDING
+        if: steps.ctx.outputs.pr_number != ''
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ steps.ctx.outputs.pr_number }}
+          SHA: ${{ steps.ctx.outputs.sha }}
+          RUN_ID: ${{ github.run_id }}
+          RESET: '1'
+          STATUS: building
+          BUILD_NUMBER: ${{ steps.buildnum.outputs.build_number }}
+          BUILD_VERSION: ${{ steps.buildnum.outputs.build_version }}
+          BRANCH: ${{ steps.ctx.outputs.ref }}
+          TRIGGERED_BY: ${{ steps.ctx.outputs.triggered_by }}
+          COMMIT: ${{ steps.ctx.outputs.commit_short }}
+          COMMIT_URL: ${{ github.server_url }}/${{ github.repository }}/commit/${{ steps.ctx.outputs.sha }}
+          IOS_LINE: "⏳ building"
+          ANDROID_LINE: "⏳ building"
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          LOG: "🚀 distribution started"
         run: |
-          WORKFLOW_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          COMMENT_BODY="---
-
-          ### 📱 Mobile Distribution Triggered
-
-          🍏 **iOS** → TestFlight &nbsp;&nbsp;|&nbsp;&nbsp; 🤖 **Android** → APK ready (R2) + Slack notification
-
-          🔗 **Workflow**: [View run](${WORKFLOW_URL})
-
-          📍 **Branch**: \`${{ github.event.pull_request.head.ref }}\`
-
-          🔄 **Triggered**: $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
-
-          COMMENT_ID=$(gh api "repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments" \
-            --jq '.[] | select(.body | contains("Mobile Distribution") or contains("iOS Build Triggered") or contains("build-report-ios")) | .id' | head -1)
-
-          if [ -n "$COMMENT_ID" ]; then
-            gh api "repos/${{ github.repository }}/issues/comments/${COMMENT_ID}" -X PATCH -f body="${COMMENT_BODY}"
-          else
-            gh api "repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments" -f body="${COMMENT_BODY}"
-          fi
+          python3 .github/scripts/pr-card.py
 
   # iOS leg, step 1: build the unsigned Godot export and publish it to R2 (no Apple creds).
   # Before paying for a WarpBuild rebuild, check whether the self-hosted iOS runner already produced
@@ -282,6 +285,8 @@ jobs:
       REF:         ${{ needs.prepare.outputs.ref }}
       SHA:         ${{ needs.prepare.outputs.sha }}
       SAFE_BRANCH: ${{ needs.prepare.outputs.safe_branch }}
+      PR_NUMBER:   ${{ needs.prepare.outputs.pr_number }}
+      RUN_ID:      ${{ github.run_id }}
       GH_TOKEN:    ${{ secrets.GITHUB_TOKEN }}
       # ios_self_hosted.yml is DISABLED (the `dcl-ios` Mac was shut down), so no self-hosted export
       # will ever appear for a commit — don't burn 20 minutes polling for one. Flip back to 'true'
@@ -368,6 +373,16 @@ jobs:
             bash .github/scripts/slack-reply.sh "🔨 iOS — no existing export; building on CI."
           fi
 
+      - name: PR card — iOS reuse decision
+        if: env.PR_NUMBER != ''
+        run: |
+          if [ "${{ steps.combine.outputs.reuse }}" = "true" ]; then
+            export IOS_LINE="♻️ reusing existing export" LOG="♻️ iOS — found an existing export for this commit; skipping the CI rebuild"
+          else
+            export IOS_LINE="🔨 building on CI" LOG="🔨 iOS — no existing export; building on CI"
+          fi
+          python3 .github/scripts/pr-card.py
+
   ios-build:
     name: 🍏 iOS → R2 (unsigned export)
     needs: [prepare, ios-resolve]
@@ -397,6 +412,10 @@ jobs:
       SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
       SLACK_CHANNEL:   ${{ secrets.SLACK_CHANNEL_ID }}
       SLACK_TS:        ${{ needs.prepare.outputs.slack_ts }}
+      GH_TOKEN:        ${{ secrets.GITHUB_TOKEN }}
+      PR_NUMBER:       ${{ needs.prepare.outputs.pr_number }}
+      SHA:             ${{ needs.prepare.outputs.sha }}
+      RUN_ID:          ${{ github.run_id }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
@@ -420,10 +439,110 @@ jobs:
         run: |
           bash .github/scripts/slack-reply.sh "♻️🤝 iOS — reused export, handed off to the signing pipeline (godot-asc-deploy)."
 
+      - name: PR card — handed off (reused export)
+        if: success() && env.PR_NUMBER != ''
+        env:
+          IOS_LINE: "♻️ reused export · signing…"
+          LOG: "♻️🤝 iOS — reused export, handed off to the signing pipeline (godot-asc-deploy)"
+        run: |
+          python3 .github/scripts/pr-card.py
+
       - name: Slack — handoff failed
         if: failure() && env.SLACK_TS != ''
         run: |
           bash .github/scripts/slack-reply.sh "❌ iOS — failed to hand off to the signing pipeline (check ASC_DEPLOY_DISPATCH_TOKEN)."
+
+  # iOS leg, step 3 (PR distributions only): the sign & upload runs in godot-asc-deploy, which by
+  # design holds NO token for this public repo — so it can't write the iOS outcome to the PR card
+  # itself. Instead we WATCH its run from here: ASC_DEPLOY_DISPATCH_TOKEN (Actions: write ⊇ read)
+  # can list that repo's runs, and deploy_testflight.yml names each run "🍏 <branch> @ <sha>" so the
+  # one we dispatched is matchable. Mirrors what asc-deploy writes to the Slack root card. Best
+  # effort: never fails the distribution, and skipped when there's no PR (Slack covers those).
+  ios-wait:
+    name: 🍏 iOS — wait for TestFlight (PR card)
+    needs: [prepare, ios-build, ios-dispatch]
+    if: >-
+      always() && needs.prepare.outputs.should_build == 'true' && needs.prepare.outputs.pr_number != '' &&
+      (needs.ios-build.result == 'success' || needs.ios-dispatch.result == 'success')
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    env:
+      PR_NUMBER:    ${{ needs.prepare.outputs.pr_number }}
+      SHA:          ${{ needs.prepare.outputs.sha }}
+      RUN_ID:       ${{ github.run_id }}
+      SAFE_BRANCH:  ${{ needs.prepare.outputs.safe_branch }}
+      BUILD_NUMBER: ${{ needs.prepare.outputs.build_number }}
+      SINCE:        ${{ needs.prepare.outputs.started_at }}
+      DEPLOY_REPO:  decentraland/godot-asc-deploy
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Watch the godot-asc-deploy run
+        id: watch
+        env:
+          GH_TOKEN: ${{ secrets.ASC_DEPLOY_DISPATCH_TOKEN }}
+          # pr-card.py must write with OUR token, not the deploy-repo one.
+          CARD_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Must match `run-name` in godot-asc-deploy/.github/workflows/deploy_testflight.yml.
+          export TITLE="🍏 ${SAFE_BRANCH} @ ${SHA}"
+          echo "Watching ${DEPLOY_REPO} for a deploy_testflight.yml run titled '${TITLE}' created after ${SINCE}"
+          # asc-deploy's own timeout is 45 min; the run can also sit queued for a macOS runner.
+          DEADLINE=$(( $(date +%s) + 50 * 60 ))
+          SEEN=0; CONCLUSION=""; URL=""
+          while true; do
+            # TITLE/SINCE are read by jq from the environment (env.*) — no shell interpolation
+            # inside the filter. Newest first, so `first` is the latest matching run.
+            RUN=$(gh run list --repo "$DEPLOY_REPO" --workflow deploy_testflight.yml --limit 30 \
+                    --json databaseId,displayTitle,status,conclusion,createdAt,url \
+                    --jq 'first(.[] | select(.displayTitle == env.TITLE and .createdAt >= env.SINCE)) // empty' \
+                  2>gh.err) || { echo "❌ could not list ${DEPLOY_REPO} runs: $(cat gh.err)"; CONCLUSION="unknown"; break; }
+            if [ -n "$RUN" ]; then
+              STATUS=$(echo "$RUN" | jq -r .status); URL=$(echo "$RUN" | jq -r .url)
+              if [ "$SEEN" = "0" ]; then
+                echo "▶️  found run ${URL} (${STATUS})"; SEEN=1
+                GH_TOKEN="$CARD_TOKEN" IOS_LINE="🔏 signing & uploading to TestFlight…" \
+                  LOG="🍏 iOS — pulling export from R2, signing & uploading… (${URL})" python3 .github/scripts/pr-card.py
+              fi
+              if [ "$STATUS" = "completed" ]; then
+                CONCLUSION=$(echo "$RUN" | jq -r '.conclusion // "unknown"'); break
+              fi
+            fi
+            if [ "$(date +%s)" -ge "$DEADLINE" ]; then
+              echo "⚠️  timed out waiting for the ${DEPLOY_REPO} run"; CONCLUSION="timeout"; break
+            fi
+            sleep 30
+          done
+          echo "→ conclusion=${CONCLUSION}"
+          {
+            echo "conclusion=$CONCLUSION"
+            echo "url=$URL"
+          } >> "$GITHUB_OUTPUT"
+
+      # Same lines asc-deploy writes to the Slack root card; STATUS flips the header exactly like Slack.
+      # always(): if `watch` itself errors (bad jq parse, job timeout) the card is already at
+      # "signing…" — skipping this step would strand it there for good.
+      - name: PR card → TestFlight result
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CONCLUSION: ${{ steps.watch.outputs.conclusion }}
+          URL: ${{ steps.watch.outputs.url }}
+        run: |
+          case "$CONCLUSION" in
+            success)
+              export STATUS=success IOS_LINE="✅ TestFlight build ${BUILD_NUMBER:-?}" \
+                     TESTFLIGHT_URL="https://appstoreconnect.apple.com/apps" \
+                     LOG="✅ iOS → TestFlight uploaded — build ${BUILD_NUMBER:-?}" ;;
+            failure|timed_out)
+              export STATUS=failed IOS_LINE="❌ sign/upload failed" LOG="❌ iOS deploy failed — ${URL}" ;;
+            cancelled)
+              export STATUS=cancelled IOS_LINE="⚠️ signing cancelled" LOG="⚠️ iOS — signing run cancelled — ${URL}" ;;
+            *)
+              export IOS_LINE="❓ TestFlight result unknown" \
+                     LOG="❓ iOS — could not confirm the TestFlight result from here (${CONCLUSION}) — check ${DEPLOY_REPO} / Slack" ;;
+          esac
+          python3 .github/scripts/pr-card.py
 
   # iOS hands off the deploy from either ios-build (rebuild path) or ios-dispatch (reuse path). If
   # resolve, build, or dispatch fails/cancels, godot-asc-deploy never runs, so nothing would move
@@ -465,6 +584,26 @@ jobs:
           fi
           python3 .github/scripts/slack-root.py
 
+      - name: PR card → failed/cancelled
+        if: needs.prepare.outputs.pr_number != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ needs.prepare.outputs.pr_number }}
+          SHA: ${{ needs.prepare.outputs.sha }}
+          RUN_ID: ${{ github.run_id }}
+          IOS_RESOLVE_RESULT: ${{ needs.ios-resolve.result }}
+          IOS_BUILD_RESULT: ${{ needs.ios-build.result }}
+          IOS_DISPATCH_RESULT: ${{ needs.ios-dispatch.result }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          # Same rule as the Slack root above; ANDROID_LINE untouched (merge-on-read keeps it).
+          if [ "$IOS_RESOLVE_RESULT" = "cancelled" ] || [ "$IOS_BUILD_RESULT" = "cancelled" ] || [ "$IOS_DISPATCH_RESULT" = "cancelled" ]; then
+            export STATUS="cancelled" IOS_LINE="⚠️ cancelled" LOG="⚠️ iOS — distribution cancelled"
+          else
+            export STATUS="failed" IOS_LINE="❌ build/handoff failed" LOG="❌ iOS — build/handoff failed — ${RUN_URL}"
+          fi
+          python3 .github/scripts/pr-card.py
+
   # Android leg, step 1 (mirrors ios-resolve): the signed APK for this commit is normally produced by
   # the push CI (runner.yml → android_builds.yml) and uploaded to R2. Wait for it, then apply the SAME
   # monotonic guard as iOS. reuse=true → surface the existing APK (android-notify); reuse=false
@@ -488,6 +627,8 @@ jobs:
       REF:         ${{ needs.prepare.outputs.ref }}
       SHA:         ${{ needs.prepare.outputs.sha }}
       SAFE_BRANCH: ${{ needs.prepare.outputs.safe_branch }}
+      PR_NUMBER:   ${{ needs.prepare.outputs.pr_number }}
+      RUN_ID:      ${{ github.run_id }}
       GH_TOKEN:    ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
@@ -496,6 +637,14 @@ jobs:
         if: env.SLACK_TS != ''
         run: |
           bash .github/scripts/slack-reply.sh "🤖 Android — checking for the signed APK from CI… (${REF})"
+
+      - name: PR card — Android resolve started
+        if: env.PR_NUMBER != ''
+        env:
+          ANDROID_LINE: "⏳ waiting for the CI APK…"
+          LOG: "🤖 Android — checking for the signed APK from CI…"
+        run: |
+          python3 .github/scripts/pr-card.py
 
       - name: Validate required secrets
         run: |
@@ -572,6 +721,16 @@ jobs:
             bash .github/scripts/slack-reply.sh "🔨 Android — no current APK; rebuilding on CI."
           fi
 
+      - name: PR card — Android reuse decision
+        if: env.PR_NUMBER != ''
+        run: |
+          if [ "${{ steps.combine.outputs.reuse }}" = "true" ]; then
+            export ANDROID_LINE="♻️ reusing the CI APK · publishing…" LOG="♻️ Android — found a current APK for this commit; skipping the rebuild"
+          else
+            export ANDROID_LINE="🔨 rebuilding on CI" LOG="🔨 Android — no current APK; rebuilding on CI"
+          fi
+          python3 .github/scripts/pr-card.py
+
   # Rebuild path (mirrors ios-build): no current APK (missing, superseded, or the push build failed),
   # so build & sign a fresh one for this exact commit. android_builds.yml bakes prepare's number (via
   # its own idempotent compute-build-number) and re-uploads the APK + sidecar (+ AAB on main/release)
@@ -612,6 +771,7 @@ jobs:
       REF: ${{ needs.prepare.outputs.ref }}
       SHA: ${{ needs.prepare.outputs.sha }}
       PR_NUMBER: ${{ needs.prepare.outputs.pr_number }}
+      RUN_ID: ${{ github.run_id }}
       SAFE_BRANCH: ${{ needs.prepare.outputs.safe_branch }}
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
@@ -656,6 +816,15 @@ jobs:
           APK="${R2_PUBLIC_BASE_URL}/android/${SAFE_BRANCH}/${SHA}/decentraland.godot.client.apk"
           bash .github/scripts/slack-reply.sh "✅ Android — APK ready: ${APK}"
           ANDROID_LINE="✅ APK ready" APK_URL="$APK" python3 .github/scripts/slack-root.py
+
+      - name: PR card — Android APK ready
+        if: success() && env.PR_NUMBER != ''
+        env:
+          ANDROID_LINE: "✅ APK ready"
+          APK_URL: ${{ env.R2_PUBLIC_BASE_URL }}/android/${{ env.SAFE_BRANCH }}/${{ env.SHA }}/decentraland.godot.client.apk
+          LOG: "✅ Android — APK ready"
+        run: |
+          python3 .github/scripts/pr-card.py
 
       # Firebase App Distribution: push the freshly-built signed APK (already in R2) to the
       # testers' real devices — the Android counterpart of the iOS TestFlight leg. Free, no app
@@ -752,11 +921,27 @@ jobs:
         run: |
           bash .github/scripts/slack-reply.sh "📲 Android — sent to Firebase App Distribution (groups: ${FIREBASE_TESTER_GROUPS})"
 
+      - name: PR card — Android sent to Firebase App Distribution
+        if: success() && env.FIREBASE_DIST_OK == 'true' && env.PR_NUMBER != ''
+        env:
+          FIREBASE_TESTER_GROUPS: ${{ vars.FIREBASE_TESTER_GROUPS || 'qa' }}
+        run: |
+          LOG="📲 Android — sent to Firebase App Distribution (groups: ${FIREBASE_TESTER_GROUPS})" python3 .github/scripts/pr-card.py
+
       - name: Slack — Android failed
         if: failure() && env.SLACK_TS != ''
         run: |
           bash .github/scripts/slack-reply.sh "❌ Android — APK not produced for ${SHA} (CI build failed)"
           ANDROID_LINE="❌ CI build failed" python3 .github/scripts/slack-root.py
+
+      - name: PR card — Android failed
+        if: failure() && env.PR_NUMBER != ''
+        env:
+          STATUS: failed
+          ANDROID_LINE: "❌ CI build failed"
+          LOG: "❌ Android — APK not produced (CI build failed) — ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+        run: |
+          python3 .github/scripts/pr-card.py
 
       # The AAB (Play Store artifact) is only published for main/release* builds, so we
       # surface it for any main/release* distribution (manual dispatch, push-to-release,
@@ -791,53 +976,10 @@ jobs:
         run: |
           bash .github/scripts/slack-reply.sh "📦 Android — AAB ready (Play Store): ${R2_PUBLIC_BASE_URL}/android/${SAFE_BRANCH}/${SHA}/decentraland.godot.client.aab"
 
-      - name: Update PR comment - Android success
-        if: success() && needs.prepare.outputs.pr_number != ''
+      - name: PR card — Android AAB ready
+        if: success() && env.AAB_READY == 'true' && env.PR_NUMBER != ''
+        env:
+          AAB_URL: ${{ env.R2_PUBLIC_BASE_URL }}/android/${{ env.SAFE_BRANCH }}/${{ env.SHA }}/decentraland.godot.client.aab
+          LOG: "📦 Android — AAB ready (Play Store)"
         run: |
-          WORKFLOW_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          APK_URL="${R2_PUBLIC_BASE_URL}/android/${SAFE_BRANCH}/${SHA}/decentraland.godot.client.apk"
-          COMMENT_BODY="---
-
-          ### 🤖 Android Build Ready
-
-          ✅ **Status**: APK available for download
-
-          📱 **Download APK**: [direct link](${APK_URL})
-
-          🔗 **Workflow**: [View run](${WORKFLOW_URL})
-
-          📍 **Branch**: \`${REF}\` &nbsp;&nbsp;|&nbsp;&nbsp; **Commit**: \`${SHA}\`
-
-          🔄 **Completed**: $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
-
-          COMMENT_ID=$(gh api "repos/${{ github.repository }}/issues/${PR_NUMBER}/comments" \
-            --jq '.[] | select(.body | contains("🤖 Android Build")) | .id' | head -1)
-          if [ -n "$COMMENT_ID" ]; then
-            gh api "repos/${{ github.repository }}/issues/comments/${COMMENT_ID}" -X PATCH -f body="${COMMENT_BODY}"
-          else
-            gh api "repos/${{ github.repository }}/issues/${PR_NUMBER}/comments" -f body="${COMMENT_BODY}"
-          fi
-
-      - name: Update PR comment - Android failure
-        if: failure() && needs.prepare.outputs.pr_number != ''
-        run: |
-          WORKFLOW_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          COMMENT_BODY="---
-
-          ### 🤖 Android Build Failed
-
-          ❌ **Status**: No APK was produced for this commit
-
-          🔗 **Workflow**: [View logs](${WORKFLOW_URL})
-
-          📍 **Branch**: \`${REF}\` &nbsp;&nbsp;|&nbsp;&nbsp; **Commit**: \`${SHA}\`
-
-          🔄 **Failed**: $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
-
-          COMMENT_ID=$(gh api "repos/${{ github.repository }}/issues/${PR_NUMBER}/comments" \
-            --jq '.[] | select(.body | contains("🤖 Android Build")) | .id' | head -1)
-          if [ -n "$COMMENT_ID" ]; then
-            gh api "repos/${{ github.repository }}/issues/comments/${COMMENT_ID}" -X PATCH -f body="${COMMENT_BODY}"
-          else
-            gh api "repos/${{ github.repository }}/issues/${PR_NUMBER}/comments" -f body="${COMMENT_BODY}"
-          fi
+          python3 .github/scripts/pr-card.py

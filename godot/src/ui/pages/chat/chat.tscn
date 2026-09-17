@@ -9,6 +9,10 @@
 [ext_resource type="Texture2D" uid="uid://bfcbgkyp5ogcg" path="res://assets/ui/down_arrow.svg" id="8_0pohw"]
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="9_5a8fu"]
 
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_send"]
+content_margin_left = 14.0
+content_margin_right = 14.0
+
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_lt7hs"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ttgy1"]
@@ -421,7 +425,6 @@ caret_blink = true
 
 [node name="Button_Send" type="Button" parent="VBoxContainer/MarginContainer_LineEditSafeArea/PanelLineEdit/MarginContainer_ForKeyboard/HBoxContainer_LineEdit" unique_id=1485754093]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(108, 0)
 layout_mode = 2
 size_flags_vertical = 4
 focus_mode = 0
@@ -433,6 +436,12 @@ theme_override_colors/font_hover_pressed_color = Color(0.9098039, 0.7254902, 1, 
 theme_override_colors/font_disabled_color = Color(0.9098039, 0.7254902, 1, 0.4)
 theme_override_constants/icon_max_width = 16
 theme_override_font_sizes/font_size = 20
+theme_override_styles/normal = SubResource("StyleBoxEmpty_send")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_send")
+theme_override_styles/pressed = SubResource("StyleBoxEmpty_send")
+theme_override_styles/hover_pressed = SubResource("StyleBoxEmpty_send")
+theme_override_styles/disabled = SubResource("StyleBoxEmpty_send")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_send")
 text = "CHAT_SEND"
 flat = true
 icon_alignment = 2
