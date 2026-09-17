@@ -24,7 +24,9 @@ Env (only NON-EMPTY values are merged; everything else is preserved):
                                    for a re-label of the SAME commit: a leg of the cancelled run
                                    must not overwrite the new run's card.
   RESET                            1 → start from a blank state (a new distribution; prepare only)
-  STATUS                           building | success | failed | cancelled (only set it when you mean to)
+  STATUS                           building | success | failed | cancelled (only set it when you
+                                   mean to). Shared by both legs, so it never regresses: once a leg
+                                   has written failed/cancelled, a later success is ignored.
   BUILD_NUMBER, BUILD_VERSION, BRANCH, TRIGGERED_BY, COMMIT, COMMIT_URL
   IOS_LINE, ANDROID_LINE, APK_URL, AAB_URL, TESTFLIGHT_URL, RUN_URL
   LOG                              one line to append to the timeline (timestamped here)
@@ -121,7 +123,13 @@ if sha:
     state["sha"] = sha
 if run_id:
     state["run_id"] = run_id
+# `status` is the one field both legs share, so unlike the others it must not regress: iOS
+# finishing green after Android already failed would otherwise repaint the header ✅ over a red row.
+prior_status = (state.get("status") or "").lower()
 state.update({k: env(k.upper()) for k in FIELDS if env(k.upper())})
+if prior_status in ("failed", "cancelled") and (state.get("status") or "").lower() == "success":
+    print(f"pr-card: keeping status={prior_status} (another leg already failed) instead of success")
+    state["status"] = prior_status
 
 now = datetime.now(timezone.utc)
 log = env("LOG")

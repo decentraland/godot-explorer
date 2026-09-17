@@ -520,7 +520,10 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       # Same lines asc-deploy writes to the Slack root card; STATUS flips the header exactly like Slack.
+      # always(): if `watch` itself errors (bad jq parse, job timeout) the card is already at
+      # "signing…" — skipping this step would strand it there for good.
       - name: PR card → TestFlight result
+        if: always()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CONCLUSION: ${{ steps.watch.outputs.conclusion }}
@@ -934,6 +937,7 @@ jobs:
       - name: PR card — Android failed
         if: failure() && env.PR_NUMBER != ''
         env:
+          STATUS: failed
           ANDROID_LINE: "❌ CI build failed"
           LOG: "❌ Android — APK not produced (CI build failed) — ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
         run: |
