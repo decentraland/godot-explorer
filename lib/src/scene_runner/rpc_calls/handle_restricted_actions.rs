@@ -334,7 +334,11 @@ pub fn trigger_emote(scene: &Scene, current_parcel_scene_id: &SceneId, emote_id:
     let mut avatar_node = get_avatar_node(scene);
     avatar_node.call(
         "async_play_emote",
-        &[emote_id.to_variant(), mask.to_variant()],
+        &[
+            emote_id.to_variant(),
+            mask.to_variant(),
+            scene.scene_id.0.to_variant(),
+        ],
     );
 
     // Broadcast emote to other players via comms
@@ -413,7 +417,11 @@ pub fn trigger_scene_emote(
     // Call the SAME function as wearable emotes!
     avatar_node.call(
         "async_play_emote",
-        &[scene_emote_urn.to_variant(), mask.to_variant()],
+        &[
+            scene_emote_urn.to_variant(),
+            mask.to_variant(),
+            scene.scene_id.0.to_variant(),
+        ],
     );
 
     // Broadcast to other players
@@ -423,4 +431,21 @@ pub fn trigger_scene_emote(
         .get_comms()
         .bind_mut()
         .send_emote(scene_emote_urn.to_godot(), mask);
+}
+
+/// `stopEmote` — end whatever the local player is playing, on behalf of the scene.
+///
+/// Permanent by construction: unlike the scene-boundary suspend, this also drops a
+/// masked emote parked for replay, so walking back into the scene can't resurrect it
+/// (Unity does the same via `masked.EmoteUrn = default` in `TryStopEmote`). The stop
+/// broadcast to other players rides the usual `set_emoting(false)` edge in
+/// CommunicationManager, so there is nothing to send here.
+pub fn stop_emote(scene: &Scene, current_parcel_scene_id: &SceneId) {
+    // Same gate as triggerEmote: only the scene the player is standing in may stop it.
+    if !_player_is_inside_scene(scene, current_parcel_scene_id) {
+        tracing::warn!("stopEmote failed: Primary Player is outside the scene");
+        return;
+    }
+
+    get_avatar_node(scene).call("stop_emote_from_scene", &[]);
 }

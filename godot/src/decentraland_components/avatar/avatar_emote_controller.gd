@@ -123,6 +123,16 @@ var playing_masked: bool = false
 var current_emote_urn: String = ""
 # Mask of the current emote: -1 = full body (absent), 0 = AvatarMask.AM_UPPER_BODY.
 var current_emote_mask: int = -1
+# Numeric SceneId of the scene that asked for this emote, -1 when nobody owns it
+# (emote wheel, network replay, backpack/profile previews). Drives the scene-boundary
+# suspend and the on-unload clear: only a scene-owned emote is tied to a scene's
+# lifetime. Set together with `current_emote_urn` so the two can never disagree.
+var current_emote_scene_id: int = -1
+
+# True while a scene-owned masked emote is parked because the player stepped out of
+# the owning scene. The emote is NOT over — `current_emote_urn` stays set and no
+# terminal state is reported — it just isn't driving the skeleton right now.
+var masked_suspended: bool = false
 
 # Reference by parent avatar
 var avatar: Avatar = null
@@ -223,6 +233,10 @@ func stop_emote():
 		animation_tree.set(MASKED_REQUEST_PARAM, AnimationNodeOneShot.ONE_SHOT_REQUEST_FADE_OUT)
 		playing_masked = false
 		_hide_all_props()
+	# A suspended masked emote is still "current" until something ends it for good;
+	# this is that something, so drop the parked state too or re-entering the owning
+	# scene would resurrect an emote the scene explicitly stopped.
+	masked_suspended = false
 	playing_single = false
 	playing_mixed = false
 	playing_loop = false
@@ -240,6 +254,8 @@ func take_unfinished_emote() -> Array:
 	var info := [current_emote_urn, current_emote_mask]
 	current_emote_urn = ""
 	current_emote_mask = -1
+	current_emote_scene_id = -1
+	masked_suspended = false
 	return info
 
 
@@ -256,6 +272,8 @@ func _emit_emote_finished(interrupted: bool):
 	var mask := current_emote_mask
 	current_emote_urn = ""
 	current_emote_mask = -1
+	current_emote_scene_id = -1
+	masked_suspended = false
 	if avatar == null or not is_instance_valid(avatar):
 		return
 	avatar.call_deferred("emit_signal", "emote_finished", urn, interrupted, mask)
@@ -263,7 +281,8 @@ func _emit_emote_finished(interrupted: bool):
 
 ## Play an emote by ID or URN (supports both wearable and scene emotes).
 ## mask: -1 = full body (default), 0 = AvatarMask.AM_UPPER_BODY.
-func play_emote(id: String, mask: int = -1):
+## owner_scene_id: numeric SceneId that requested it, -1 when nobody owns it.
+func play_emote(id: String, mask: int = -1, owner_scene_id: int = -1):
 	# Return if its an empty emote
 	if id == "":
 		return
@@ -286,17 +305,19 @@ func play_emote(id: String, mask: int = -1):
 		elif Emotes.is_emote_default(id):
 			# Base emotes are loaded remotely, play via URN
 			var urn = Emotes.get_base_emote_urn(id)
-			triggered = _play_loaded_emote(urn, mask)
+			triggered = _play_loaded_emote(urn, mask, owner_scene_id)
 		else:
 			printerr("Unknown emote: %s" % id)
 	else:
-		triggered = _play_loaded_emote(id, mask)
+		triggered = _play_loaded_emote(id, mask, owner_scene_id)
 
 	if triggered:
 		# A still-playing emote is being superseded: report its interruption first.
 		_emit_emote_finished(true)
 		current_emote_urn = id
 		current_emote_mask = mask
+		current_emote_scene_id = owner_scene_id
+		masked_suspended = false
 		if avatar != null and avatar.is_local_player:
 			_track_emote(id)
 		avatar.call_deferred("emit_signal", "emote_triggered", id, playing_loop, mask)
@@ -402,6 +423,77 @@ func _is_excluded_from_mask(track_path: NodePath) -> bool:
 	return MASKED_EMOTE_EXCLUDED_BONES.has(path.substr(colon + 1))
 
 
+## React to the local player crossing a scene boundary, mirroring Unity's
+## `SceneMaskedEmoteSystem.UpdateMaskedEmoteVisibility`: a masked emote only drives the
+## skeleton while the player is inside the scene that asked for it. Stepping out parks
+## it, stepping back in resumes it.
+##
+## DELIBERATELY SILENT — no `emote_triggered` / `emote_finished` is emitted here, so
+## scenes observing `AvatarEmoteCommand` see no EmoteState traffic when the player walks
+## across a boundary. Suspending is not the end of the emote: `current_emote_urn` stays
+## set for the whole suspension, so the exactly-once contract from #2655 still holds —
+## the single terminal state is reported later by whatever really ends it (stopEmote, a
+## supersede, or the owning scene unloading).
+##
+## Only LOOPING emotes come back. A non-looping clip has already delivered its one
+## playback, so it is dropped rather than replayed (Unity's `ReplayMaskedEmote` does the
+## same); the terminal state for it is reported when it is eventually cleared.
+func on_current_scene_changed(new_scene_id: int):
+	# Nothing to do for emotes nobody owns (emote wheel, network replay, previews):
+	# they are not tied to any scene's lifetime.
+	if current_emote_urn == "" or current_emote_scene_id == -1:
+		return
+
+	var player_is_in_owning_scene := current_emote_scene_id == new_scene_id
+
+	if playing_masked and not player_is_in_owning_scene:
+		if not playing_loop:
+			# Non-looping: it will never be replayed, so end it for good and report the
+			# terminal state now rather than leaving a zombie urn behind.
+			stop_emote()
+			return
+		_suspend_masked_emote()
+	elif masked_suspended and player_is_in_owning_scene:
+		_resume_masked_emote()
+
+
+## Park the masked layer without touching `current_emote_urn` — see on_current_scene_changed.
+func _suspend_masked_emote():
+	animation_tree.set(MASKED_REQUEST_PARAM, AnimationNodeOneShot.ONE_SHOT_REQUEST_FADE_OUT)
+	playing_masked = false
+	masked_suspended = true
+	_hide_all_props()
+
+
+## Re-fire the parked masked emote. Goes straight to `_play_masked_emote` rather than
+## through `play_emote`, because `play_emote` would emit `emote_triggered` — and a resume
+## is not a new emote start as far as scenes are concerned.
+func _resume_masked_emote():
+	masked_suspended = false
+	if not _has_emote(current_emote_urn):
+		# Content was evicted while we were away; nothing to resume, so close it out.
+		stop_emote()
+		return
+	var emote_item_data: EmoteItemData = loaded_emotes_by_urn[current_emote_urn]
+	var anim_path := "emotes/" + emote_item_data.default_anim_name
+	if not animation_player.has_animation(anim_path):
+		stop_emote()
+		return
+	if not animation_tree.active:
+		animation_tree.active = true
+	if not _play_masked_emote(anim_path):
+		stop_emote()
+
+
+## Permanently drop the emote when the scene that owns it is torn down. Unlike the
+## boundary suspend this DOES report the terminal state, because the emote really is over
+## and the scene can never come back to resume it.
+func clear_emote_owned_by_scene(scene_id: int):
+	if current_emote_urn == "" or current_emote_scene_id != scene_id:
+		return
+	stop_emote()
+
+
 ## Mechanically stop the masked layer (no emote_finished emission — callers
 ## report the interruption themselves when one is due).
 func _abort_masked_emote():
@@ -412,7 +504,7 @@ func _abort_masked_emote():
 	_hide_all_props()
 
 
-func _play_loaded_emote(emote_urn: String, mask: int = -1) -> bool:
+func _play_loaded_emote(emote_urn: String, mask: int = -1, owner_scene_id: int = -1) -> bool:
 	if not _has_emote(emote_urn):
 		printerr("Emote %s not found from player '%s'" % [emote_urn, avatar.get_avatar_name()])
 		return false
@@ -466,7 +558,7 @@ func _play_loaded_emote(emote_urn: String, mask: int = -1) -> bool:
 		pb.start("Idle", true)
 		# Need to wait a frame for state machine to initialize
 		# Use call_deferred to retry the play
-		_deferred_play_emote.call_deferred(emote_urn)
+		_deferred_play_emote.call_deferred(emote_urn, mask, owner_scene_id)
 		return true
 
 	# Set the emote condition BEFORE travel - the transition requires this condition
@@ -485,14 +577,14 @@ func _play_loaded_emote(emote_urn: String, mask: int = -1) -> bool:
 	return true
 
 
-func _deferred_play_emote(emote_urn: String):
+func _deferred_play_emote(emote_urn: String, mask: int = -1, owner_scene_id: int = -1):
 	# Called after state machine is initialized, retry the play
 	_deferred_retry_count += 1
 	if _deferred_retry_count > MAX_DEFERRED_RETRIES:
 		_deferred_retry_count = 0
 		_force_play_emote(emote_urn)
 		return
-	play_emote(emote_urn)
+	play_emote(emote_urn, mask, owner_scene_id)
 
 
 func _force_play_emote(emote_urn: String):
@@ -585,7 +677,8 @@ func _reset_skeleton_to_rest_pose():
 ## Load and play an emote (supports both wearable and scene emotes).
 ## Scene emotes are detected by URN pattern and loaded via unified path.
 ## mask: -1 = full body (default), 0 = AvatarMask.AM_UPPER_BODY.
-func async_play_emote(emote_id_or_urn: String, mask: int = -1) -> void:
+## owner_scene_id: numeric SceneId that requested it, -1 when nobody owns it.
+func async_play_emote(emote_id_or_urn: String, mask: int = -1, owner_scene_id: int = -1) -> void:
 	# Return if empty emote
 	if emote_id_or_urn == "":
 		return
@@ -605,7 +698,7 @@ func async_play_emote(emote_id_or_urn: String, mask: int = -1) -> void:
 	if not emote_id_or_urn.begins_with("urn"):
 		# Utility emotes are local, play directly
 		if Emotes.is_emote_utility(emote_id_or_urn):
-			play_emote(emote_id_or_urn, mask)
+			play_emote(emote_id_or_urn, mask, owner_scene_id)
 			return
 		# Base emotes need to be converted to URN for remote fetch
 		if Emotes.is_emote_default(emote_id_or_urn):
@@ -616,7 +709,7 @@ func async_play_emote(emote_id_or_urn: String, mask: int = -1) -> void:
 
 	# Does it need to be loaded? (works for both wearable and scene emotes)
 	if _has_emote(emote_urn):
-		play_emote(emote_urn, mask)
+		play_emote(emote_urn, mask, owner_scene_id)
 		return
 
 	# Set loading lock
@@ -648,7 +741,7 @@ func async_play_emote(emote_id_or_urn: String, mask: int = -1) -> void:
 		return
 
 	# Use call_deferred to ensure playback happens on main thread after async loading
-	play_emote.call_deferred(emote_urn, mask)
+	play_emote.call_deferred(emote_urn, mask, owner_scene_id)
 
 
 func _async_load_emote(emote_urn: String):
