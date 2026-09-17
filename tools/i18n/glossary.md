@@ -21,7 +21,7 @@ Marketplace, the docs and the wider community, which are English everywhere.
 
 Wearable · Emote · Passport · Backpack · Jump In · MANA · Genesis City · Parcel · Estate · Scene ·
 Realm · Marketplace · Decentraland · Smart Wearable · Snapshot · DAO · World · Skybox ·
-Credits · Wallet · NAME · LAND · Parcels · Estates · DEV TOOLS
+Credits · Shop · Wallet · NAME · LAND · Parcels · Estates · DEV TOOLS
 
 Keep them capitalized as above and do **not** inflect them into Spanish/Portuguese plurals
 beyond a bare `s` (`Wearables`, `Emotes`).
