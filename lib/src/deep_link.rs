@@ -64,7 +64,7 @@ impl DeepLinkResult {
 /// - `decentraland://events?id=X`  (native scheme)
 /// - `https://decentraland.org/events?id=X`  (app link)
 /// - `https://decentraland.zone/events?id=X` (app link, auto-infers dclenv=zone)
-/// - `https://mobile.dclexplorer.com/open?location=X,Y` (legacy mobile)
+/// - `https://mobile.dclregenesislabs.xyz/open?location=X,Y` (legacy mobile)
 ///
 /// Returns `None` only when `url_str` is empty.  Malformed URLs return a
 /// default result (matching the previous Godot-only behaviour that logged
@@ -86,7 +86,7 @@ pub fn parse_deep_link(url_str: &str) -> Option<DeepLinkResult> {
         "https" | "http" => {
             let host = parsed.host_str()?;
             match host {
-                "mobile.dclexplorer.com" | "decentraland.org" | "decentraland.zone" => {
+                "mobile.dclregenesislabs.xyz" | "decentraland.org" | "decentraland.zone" => {
                     // Infer dclenv from domain when not explicitly set
                     if host == "decentraland.zone"
                         && !parsed.query_pairs().any(|(k, _)| k == "dclenv")
@@ -362,11 +362,11 @@ mod tests {
         assert_eq!(r.dclenv, "zone");
     }
 
-    // ---- HTTPS: mobile.dclexplorer.com --------------------------------------
+    // ---- HTTPS: mobile.dclregenesislabs.xyz --------------------------------------
 
     #[test]
-    fn https_mobile_dclexplorer() {
-        let r = parse("https://mobile.dclexplorer.com/open?location=5,5&realm=r1");
+    fn https_mobile_dclregenesislabs() {
+        let r = parse("https://mobile.dclregenesislabs.xyz/open?location=5,5&realm=r1");
         assert_eq!(r.path, "/open");
         assert_eq!(r.location, Some((5, 5)));
         assert_eq!(r.realm, "r1");
@@ -407,7 +407,7 @@ mod tests {
         let native = parse("decentraland://jump?location=10,20&realm=r1");
         let org = parse("https://decentraland.org/jump?location=10,20&realm=r1");
         let zone = parse("https://decentraland.zone/jump?location=10,20&realm=r1");
-        let mobile = parse("https://mobile.dclexplorer.com/jump?location=10,20&realm=r1");
+        let mobile = parse("https://mobile.dclregenesislabs.xyz/jump?location=10,20&realm=r1");
 
         for (label, r) in [("org", &org), ("zone", &zone), ("mobile", &mobile)] {
             assert_eq!(native.path, r.path, "{label}: path mismatch");

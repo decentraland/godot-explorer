@@ -32,10 +32,12 @@ pub const GODOT_BUILD_SHA: &str = "6289a3b2b";
 ///
 /// Reset to `None` once the branch is merged and `GODOT_BUILD_SHA` is bumped to the merge commit —
 /// leaving a branch pinned here makes every dev/CI pull an unmerged engine build. Currently pinned
-/// to the Android sha1 build-id fix (decentraland/godotengine#20): without it every engine frame of
-/// an Android tombstone crash is unsymbolicated in Sentry. Once #20 merges into `4.6.2`, bump
-/// `GODOT_BUILD_SHA` to the merge commit and set this back to `None`.
-pub const GODOT_USE_BRANCH: Option<&str> = Some("fix/android-sha1-build-id");
+/// to the mobile App Links host change (decentraland/godotengine#24, branched from the #20 merge
+/// commit so the Android sha1 build-id fix is still included): without it the Android manifest
+/// keeps claiming `mobile.dclexplorer.com` and `https://mobile.dclregenesislabs.xyz/...` links
+/// open in the browser instead of the app. Once #24 merges into `4.6.2`, bump `GODOT_BUILD_SHA`
+/// to the merge commit and set this back to `None`.
+pub const GODOT_USE_BRANCH: Option<&str> = Some("fix/mobile-deeplink-host-regenesislabs");
 
 /// Release tag identifying a specific fork build — `<version>.stable.gh.<sha>`, mirroring the
 /// `--version` string. Single source for the release URL path segment, the on-disk template SHA

@@ -327,12 +327,12 @@ mod tests {
     fn extracts_the_token_from_both_attribution_shapes() {
         // GA4F: a real deep link, token among other params
         assert_eq!(
-            extract_token("https://mobile.dclexplorer.com/open?c=summer2022&utm_source=ads"),
+            extract_token("https://mobile.dclregenesislabs.xyz/open?c=summer2022&utm_source=ads"),
             Some("summer2022".to_string())
         );
         // GA4F with a fragment after the query
         assert_eq!(
-            extract_token("https://mobile.dclexplorer.com/open?c=launch-26#frag"),
+            extract_token("https://mobile.dclregenesislabs.xyz/open?c=launch-26#frag"),
             Some("launch-26".to_string())
         );
         // Play referrer: a bare query string, no scheme or path
