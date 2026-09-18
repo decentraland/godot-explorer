@@ -845,7 +845,7 @@ func _share_place_or_event() -> void:
 
 		if is_main:
 			url = (
-				"https://mobile.dclexplorer.com/open?position="
+				"https://mobile.dclregenesislabs.xyz/open?position="
 				+ str(share_pos.x)
 				+ ","
 				+ str(share_pos.y)
@@ -856,7 +856,7 @@ func _share_place_or_event() -> void:
 				if share_realm.ends_with(".dcl.eth")
 				else _extract_short_realm_url(share_realm)
 			)
-			url = "https://mobile.dclexplorer.com/open?realm=" + short_realm
+			url = "https://mobile.dclregenesislabs.xyz/open?realm=" + short_realm
 
 		share_title = (
 			_data.get("name", _data.get("title", "Decentraland"))
@@ -867,7 +867,7 @@ func _share_place_or_event() -> void:
 		var is_main = realm == DclUrls.main_realm()
 		if is_main:
 			url = (
-				"https://mobile.dclexplorer.com/open?position="
+				"https://mobile.dclregenesislabs.xyz/open?position="
 				+ str(location.x)
 				+ ","
 				+ str(location.y)
@@ -876,7 +876,7 @@ func _share_place_or_event() -> void:
 			var short_realm = (
 				realm if realm.ends_with(".dcl.eth") else _extract_short_realm_url(realm)
 			)
-			url = "https://mobile.dclexplorer.com/open?realm=" + short_realm
+			url = "https://mobile.dclregenesislabs.xyz/open?realm=" + short_realm
 		share_title = event_name if not event_name.is_empty() else title
 
 	if share_title.is_empty():
