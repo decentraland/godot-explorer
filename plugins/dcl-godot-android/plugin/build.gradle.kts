@@ -95,6 +95,16 @@ dependencies {
     // Play In-App Review (issue #2739) — the native rating card, launched in-process.
     api("com.google.android.play:review:2.0.2")
 
+    // Firebase Cloud Messaging — compile-time only; the app supplies the runtime copy.
+    //
+    // Pinned to 24.0.1 because that is what is *already* on this module's runtime classpath:
+    // com.reown:android-core:1.5.2 drags in firebase-bom:33.3.0, and AGP's consistent
+    // resolution then requires the compile classpath to match exactly. Asking for anything
+    // else fails to resolve rather than upgrading. The app may well end up on a later
+    // version (the engine fork applies firebase-bom:33.10.0 whenever google-services.json
+    // exists) — that is fine, the APIs used here are stable across it.
+    compileOnly("com.google.firebase:firebase-messaging:24.0.1")
+
     // Reown Sign SDK (WalletConnect successor) for native wallet connection
     api(platform("com.reown:android-bom:1.5.2"))
     api("com.reown:android-core") {
