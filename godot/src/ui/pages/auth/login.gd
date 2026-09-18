@@ -9,6 +9,14 @@ const WALLETCONNECT_ICON = preload("res://src/ui/pages/auth/images/wallet-connec
 const WALLETCONNECT_PROJECT_ID = "71f57f4190df9de6326bd07de6c40dcc"
 const WC_POLLING_TIMEOUT_MS: int = 30000  # 30 second timeout
 
+# Shown on the sign-in options that desktop can no longer complete. Auth site 5.0.0
+# retired `dcl_personal_sign`, which is the method `try_connect_account` sends: the
+# browser now lands on "Your app needs an update" and the client polls for 10 minutes
+# before giving up. Lift this once desktop moves to the `/identities` deep-link handoff.
+const DESKTOP_SIGN_IN_UNAVAILABLE_TOOLTIP := "Temporarily unavailable on desktop. Continue with Email, or play as a guest."
+# Matches the theme's SnowButton `icon_disabled_color` / `font_disabled_color` alpha.
+const DISABLED_ICON_ALPHA := 0.5
+
 var lobby: Lobby = null
 
 # WalletConnect native flow state
@@ -24,8 +32,6 @@ var _wc_polling_start_time: int = 0
 @onready var button_wallet_connect: Button = %Button_WalletConnect
 @onready var button_metamask: Button = %Button_MetaMask
 
-@onready var texture_rect_google: TextureRect = $Button_Google/TextureRect_Google
-
 
 func _ready():
 	if Global.is_ios_or_emulating():
@@ -33,6 +39,7 @@ func _ready():
 
 	# Configure wallet button based on platform
 	_configure_wallet_button()
+	_configure_desktop_login_availability()
 
 
 func _configure_wallet_button() -> void:
@@ -44,6 +51,39 @@ func _configure_wallet_button() -> void:
 		# iOS and other platforms: Show WalletConnect button
 		button_wallet_connect.show()
 		button_metamask.hide()
+
+
+## Greys out every sign-in option that routes through `async_login` on desktop, since
+## all of them end up in the retired `dcl_personal_sign` browser flow. Left visible
+## rather than hidden so the screen keeps its shape and the options read as temporarily
+## down. Email OTP and Play as Guest are untouched — both go through thirdweb and never
+## reach the auth server.
+##
+## Real-platform check, not the `_or_emulating` variants, on purpose: a desktop build
+## run with --force-android/--force-ios still takes the desktop auth path, so it has to
+## be disabled too. Same gate as `is_real_mobile` in `async_login`.
+func _configure_desktop_login_availability() -> void:
+	if Global.is_android() or Global.is_ios():
+		return
+
+	var unavailable: Array[Button] = [
+		button_google, button_apple, button_wallet_connect, button_metamask
+	]
+	# Discord and X. Their container is hidden today and nothing shows it, but they are
+	# wired to `async_login` all the same — disable them so they cannot come back broken.
+	for child in h_box_container_more.get_children():
+		if child is Button:
+			unavailable.append(child)
+
+	for button in unavailable:
+		button.disabled = true
+		button.tooltip_text = DESKTOP_SIGN_IN_UNAVAILABLE_TOOLTIP
+		# Google/Apple/WalletConnect/MetaMask draw their logo as a child TextureRect
+		# instead of the Button `icon` property, so the theme's `icon_disabled_color`
+		# never reaches it. Dim it by hand or the logo stays bright on a greyed button.
+		for child in button.get_children():
+			if child is TextureRect:
+				child.modulate.a = DISABLED_ICON_ALPHA
 
 
 func set_lobby(new_lobby: Lobby):
@@ -65,7 +105,7 @@ func async_login(provider: String = ""):
 		Global.player_identity.try_connect_account()
 
 	lobby.waiting_for_new_wallet = true
-	lobby.show_auth_browser_open_screen("Opening browser...", provider)
+	lobby.show_auth_browser_open_screen(lobby.BROWSER_TARGET_KEYS, provider)
 
 
 func switch_google_with_apple():
@@ -343,9 +383,8 @@ func _on_button_wallet_connect_pressed() -> void:
 
 		if native_result == true:
 			lobby.waiting_for_new_wallet = true
-			var wallet_name = "MetaMask" if Global.is_android() else "Wallet"
 			var method_name = "metamask_native" if Global.is_android() else "wallet_connect_native"
-			lobby.show_auth_browser_open_screen("Opening " + wallet_name + "...", method_name)
+			lobby.show_auth_browser_open_screen(lobby.METAMASK_TARGET_KEYS, method_name)
 			var metric_name = "metamask_native" if Global.is_android() else "wallet_connect_native"
 			Global.metrics.track_click_button(metric_name, lobby.current_screen_name, "")
 			return

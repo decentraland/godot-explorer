@@ -17,10 +17,13 @@ struct Component {
 
 const PROTO_FILES_BASE_DIR: &str = "src/dcl/components/proto/";
 const COMPONENT_BASE_DIR: &str = "src/dcl/components/proto/decentraland/sdk/components/";
-const GROW_ONLY_SET_COMPONENTS: [&str; 5] = [
+const GROW_ONLY_SET_COMPONENTS: [&str; 6] = [
     "PointerEventsResult",
     "VideoEvent",
     "AvatarEmoteCommand",
+    // The SDK defines AudioEvent as a GrowOnlyValueSet (js-sdk-toolchain
+    // `generateIndex.ts`); registering it as LWW would not reach the scene.
+    "AudioEvent",
     "TriggerAreaResult",
     // The renderer appends one value per-asset transition; the scene-side
     // SDK reads AssetLoadLoadingState as a GrowOnlyValueSet (protocol PR #339).

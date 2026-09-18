@@ -41,6 +41,8 @@ class AndroidExportPlugin extends EditorExportPlugin:
 	func _get_android_dependencies(platform, debug):
 		return PackedStringArray([
 			"androidx.browser:browser:1.5.0",
+			# EXIF orientation for photos picked from the gallery
+			"androidx.exifinterface:exifinterface:1.3.7",
 			# ExoPlayer dependencies for video playback
 			"androidx.media3:media3-exoplayer:1.4.1",
 			"androidx.media3:media3-exoplayer-dash:1.4.1",
@@ -52,7 +54,9 @@ class AndroidExportPlugin extends EditorExportPlugin:
 			"com.reown:android-core:1.5.2",
 			"com.reown:sign:1.5.2",
 			# Play Integrity — server-side platform attestation
-			"com.google.android.play:integrity:1.4.0"
+			"com.google.android.play:integrity:1.4.0",
+			# Play In-App Review — the native rating card (issue #2739)
+			"com.google.android.play:review:2.0.2"
 		])
 
 	func _get_android_dependencies_maven_repos(platform, debug):

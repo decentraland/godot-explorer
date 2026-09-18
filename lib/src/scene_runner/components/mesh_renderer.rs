@@ -11,7 +11,7 @@ use crate::{
             SceneCrdtStateProtoComponents,
         },
     },
-    scene_runner::scene::Scene,
+    scene_runner::{godot_dcl_scene::add_own_visual_child, scene::Scene},
 };
 use godot::{
     classes::{BoxMesh, Mesh, MeshInstance3D, Node},
@@ -105,12 +105,9 @@ pub fn update_mesh_renderer(
                 let (mut mesh_instance_3d, add_to_base) = match existing {
                     Some(mesh_instance_3d) => (mesh_instance_3d, false),
                     None => (
-                        godot::tools::load::<PackedScene>(
+                        crate::scene_runner::scene_cache::instantiate::<MeshInstance3D>(
                             "res://src/decentraland_components/mesh_renderer.tscn",
-                        )
-                        .instantiate()
-                        .unwrap()
-                        .cast::<MeshInstance3D>(),
+                        ),
                         true,
                     ),
                 };
@@ -119,7 +116,7 @@ pub fn update_mesh_renderer(
 
                 if add_to_base {
                     mesh_instance_3d.set_name("MeshRenderer");
-                    node_3d.add_child(&mesh_instance_3d.upcast::<Node>());
+                    add_own_visual_child(&mut node_3d, &mesh_instance_3d.upcast::<Node>());
                 }
             }
             updated_count += 1;

@@ -6,7 +6,7 @@ use crate::{
             SceneCrdtStateProtoComponents,
         },
     },
-    scene_runner::scene::Scene,
+    scene_runner::{godot_dcl_scene::set_own_visuals_visible, scene::Scene},
 };
 
 pub fn update_visibility(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
@@ -29,10 +29,8 @@ pub fn update_visibility(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
             .unwrap_or(true);
 
         let (_godot_entity_node, mut node_3d) = godot_dcl_scene.ensure_node_3d(entity);
-        if visible {
-            node_3d.show();
-        } else {
-            node_3d.hide();
-        }
+        // VisibilityComponent affects only the entity's own visuals, not child
+        // entities — do not hide the entity node itself (#1888).
+        set_own_visuals_visible(&mut node_3d, visible);
     }
 }

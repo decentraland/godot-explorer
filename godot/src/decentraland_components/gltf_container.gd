@@ -60,15 +60,20 @@ func _enter_tree():
 # once, then hands off to GltfLoadingCoordinator. The coordinator shares one
 # download + one main-thread ResourceLoader.load per hash across all waiters,
 # instantiates every waiter when that shared load finishes (so instances never
-# re-enter the queue), and paces add_child to one source-group per frame.
+# re-enter the queue), and paces add_child with a per-frame time budget.
 #
 # Two loading paths (chosen per hash, shared by the coordinator):
-# 1. Optimized: Pre-baked scenes from res://glbs/ (loaded via ResourceLoader)
+# 1. Optimized: Pre-baked scenes downloaded to user://content/<hash>.opt.scn
 # 2. Runtime: Runtime-processed scenes from user://content/<hash>.scn
 
 
 func async_load_gltf():
-	self.dcl_gltf_src = dcl_gltf_src.to_lower()
+	# Keep dcl_gltf_src as the scene sent it: change_gltf() compares it
+	# case-sensitively against the src Rust hands back, so lowercasing it here
+	# makes every later GltfContainer mutation (e.g. a collision-mask change
+	# during AvatarAttach) look like a src change and trigger a spurious full
+	# reload. Case-normalization for lookups already happens inside
+	# content_mapping.get_hash / load_scene_gltf (Rust lowercases there).
 	var content_mapping := Global.scene_runner.get_scene_content_mapping(dcl_scene_id)
 	var file_hash := content_mapping.get_hash(dcl_gltf_src)
 	self.dcl_gltf_hash = file_hash
@@ -212,7 +217,15 @@ func apply_fixes(gltf_instance: Node3D):
 				fix_material(material, instance.name)
 
 
+## Applied ONCE per material object. Materials are shared by every instance of
+## a PackedScene, so re-running this per instantiate compounded `metallic *= .5`
+## (halving it again for each copy of the same GLB) and touched shared shader
+## flags on every spawn.
 func fix_material(mat: BaseMaterial3D, _mesh_name: String = ""):
+	if mat.has_meta("dcl_fixed"):
+		return
+	mat.set_meta("dcl_fixed", true)
+
 	# Induced rules for metallic specular roughness
 	# - If material has metallic texture then metallic value should be
 	# multiplied by .5
@@ -279,6 +292,39 @@ func get_static_body_3d(mesh_instance: MeshInstance3D):
 	return null
 
 
+## Visible meshes are baked WITHOUT a collider (see scene.rs
+## `bake_lazy_collider_faces`): the faces live in the shared mesh's metadata and
+## the StaticBody3D + ConcavePolygonShape3D are built here the first time an
+## entity asks for a non-zero `visibleMeshesCollisionMask`. The shape is cached
+## on the mesh so every instance of the same GLB shares one BVH.
+func _ensure_lazy_collider(mesh_instance: MeshInstance3D) -> StaticBody3D:
+	var mesh := mesh_instance.mesh
+	if mesh == null:
+		return null
+	# The first instance to need the shape builds it and consumes `dcl_faces`;
+	# every later instance of the same mesh finds it under `dcl_shape`.
+	var shape: ConcavePolygonShape3D = mesh.get_meta("dcl_shape", null)
+	if shape == null:
+		if not mesh.has_meta("dcl_faces"):
+			return null
+		shape = ConcavePolygonShape3D.new()
+		shape.set_faces(mesh.get_meta("dcl_faces"))
+		shape.backface_collision = mesh.get_meta("dcl_backface", true)
+		mesh.set_meta("dcl_shape", shape)
+		# The shape owns its own copy of the faces (plus the BVH) — drop ours.
+		mesh.remove_meta("dcl_faces")
+	var body := StaticBody3D.new()
+	body.name = String(mesh_instance.name) + "_colgen"
+	body.set_meta("invisible_mesh", false)
+	body.collision_layer = 0
+	body.collision_mask = 0
+	var collision_shape := CollisionShape3D.new()
+	collision_shape.shape = shape
+	body.add_child(collision_shape)
+	mesh_instance.add_child(body)
+	return body
+
+
 # Set collision masks and metadata on all colliders after instantiating
 # StaticBody3D is STATIC by default - will switch to KINEMATIC if entity moves
 # Returns true if any colliders have active masks (need kinematic tracking)
@@ -289,6 +335,8 @@ func set_mask_colliders(
 	for node in node_to_inspect.get_children():
 		if node is MeshInstance3D:
 			var body_3d = get_static_body_3d(node)
+			if body_3d == null and visible_cmask != 0:
+				body_3d = _ensure_lazy_collider(node)
 			if body_3d != null:
 				# Check if this is an invisible collider mesh (metadata set during GLTF processing)
 				var invisible_mesh = (
@@ -330,6 +378,8 @@ func update_mask_colliders(node_to_inspect: Node):
 	for node in node_to_inspect.get_children():
 		if node is MeshInstance3D:
 			var body_3d = get_static_body_3d(node)
+			if body_3d == null and dcl_visible_cmask != 0:
+				body_3d = _ensure_lazy_collider(node)
 			if body_3d != null:
 				# Check if this is an invisible collider mesh
 				var invisible_mesh = (
@@ -430,6 +480,12 @@ func change_gltf(
 			dcl_pending_node.queue_free()
 			dcl_pending_node = null
 
+		# Mark LOADING synchronously, not inside the deferred async_load_gltf:
+		# Rust's sync_gltf_loading_state runs later this same frame and would
+		# read a stale FINISHED, evict the entity from scene.gltf_loading, and
+		# the real finish would then never re-apply GltfNodeModifiers (skins
+		# lost on src change / reparent-triggered reloads).
+		dcl_gltf_loading_state = GltfContainerLoadingState.LOADING
 		async_load_gltf.call_deferred()
 
 	elif masks_changed and gltf_node != null:
@@ -462,6 +518,9 @@ func force_reload_gltf() -> void:
 		dcl_pending_node.queue_free()
 		dcl_pending_node = null
 
+	# See change_gltf: LOADING must be set synchronously so the same-frame
+	# sync_gltf_loading_state doesn't evict the entity from scene.gltf_loading.
+	dcl_gltf_loading_state = GltfContainerLoadingState.LOADING
 	async_load_gltf.call_deferred()
 
 

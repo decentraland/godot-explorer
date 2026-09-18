@@ -33,6 +33,13 @@ EXCLUDED_DIRS = {
 LOSSLESS_EXEMPT_FILES = {
     'assets/environment/atm_array.png',
     'assets/environment/horizon_clouds.png',
+    # Large, near-flat UI gradients. Block compression both bands the gradient and
+    # dithers flat areas into a 2px checkerboard, which then moirés when the texture
+    # is minified to the panel. Measured on modal-background: a source row of constant
+    # luminance (stdev 0.0000) came back alternating 65.7/74.0 (stdev 4.17), and the
+    # image lost 905 -> 223 unique colours. Lossless restores both exactly.
+    'assets/ui/modal-background.png',
+    'assets/ui/settings-background.png',
 }
 
 

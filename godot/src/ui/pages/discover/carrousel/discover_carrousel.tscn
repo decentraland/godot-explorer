@@ -47,7 +47,7 @@ custom_minimum_size = Vector2(0, 250)
 layout_mode = 2
 theme_override_colors/font_color = Color(0, 0, 0, 1)
 theme_override_font_sizes/font_size = 24
-text = "There was an error and places couldn't get fetched."
+text = "DISCOVER_THERE_WAS_AN_ERROR_AND_PLACES"
 horizontal_alignment = 1
 vertical_alignment = 1
 
@@ -57,7 +57,7 @@ custom_minimum_size = Vector2(0, 250)
 layout_mode = 2
 theme_override_colors/font_color = Color(0, 0, 0, 1)
 theme_override_font_sizes/font_size = 24
-text = "It seems there is nothing to show here..."
+text = "DISCOVER_IT_SEEMS_THERE_IS_NOTHING_TO"
 horizontal_alignment = 1
 vertical_alignment = 1
 

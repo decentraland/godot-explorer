@@ -12,6 +12,7 @@ mod restricted_actions;
 mod runtime;
 mod scene_inspector_ops;
 mod testing;
+mod text_encoding;
 mod websocket;
 
 use crate::comms::truncate_utf8_safe;
@@ -122,6 +123,7 @@ pub fn create_runtime(inspect: bool) -> (deno_core::JsRuntime, Option<InspectorS
         runtime::ops(),
         fetch::ops(),
         websocket::ops(),
+        text_encoding::ops(),
         restricted_actions::ops(),
         portables::ops(),
         players::ops(),
@@ -171,6 +173,9 @@ pub fn create_runtime(inspect: bool) -> (deno_core::JsRuntime, Option<InspectorS
         inspector: inspect,
         ..Default::default()
     });
+
+    // ICU data is loaded by the first JsRuntime::new, so its default locale can only be set now.
+    crate::godot_classes::dcl_scene_locale::init_icu_default_locale();
 
     #[cfg(feature = "enable_inspector")]
     if inspect {
@@ -528,7 +533,7 @@ pub(crate) fn scene_thread(
         tokio::time::sleep(magic_duration).await;
     });
 
-    let start_time = std::time::SystemTime::now();
+    let start_time = std::time::Instant::now();
     let mut elapsed = Duration::default();
     let mut reported_error_filter = 0;
     let mut last_memory_stats_update = std::time::Instant::now();
@@ -536,10 +541,7 @@ pub(crate) fn scene_thread(
     let mut tick_counter: u32 = 0;
 
     loop {
-        let dt = std::time::SystemTime::now()
-            .duration_since(start_time)
-            .unwrap_or(elapsed)
-            - elapsed;
+        let dt = start_time.elapsed().saturating_sub(elapsed);
         elapsed += dt;
 
         state
@@ -750,6 +752,7 @@ fn op_require(
         }
         "fetch" => Ok(include_str!("js_modules/fetch.js").to_owned()),
         "ws" => Ok(include_str!("js_modules/ws.js").to_owned()),
+        "text_encoding" => Ok(include_str!("js_modules/text_encoding.js").to_owned()),
         "~system/Runtime" => Ok(include_str!("js_modules/Runtime.js").to_owned()),
         "~system/Scene" => Ok(include_str!("js_modules/Scene.js").to_owned()),
         "~system/SignedFetch" => Ok(include_str!("js_modules/SignedFetch.js").to_owned()),

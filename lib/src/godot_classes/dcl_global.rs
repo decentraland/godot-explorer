@@ -27,6 +27,10 @@ use crate::tools::memory_debugger::MemoryDebugger;
 #[cfg(feature = "use_memory_debugger")]
 use crate::tools::benchmark_report::BenchmarkReport;
 
+/// How long the scene-input poller keeps forwarding after the last joypad
+/// activity, so the release edge of a tap isn't dropped with the press.
+const JOYPAD_INPUT_WINDOW: std::time::Duration = std::time::Duration::from_millis(250);
+
 use super::{
     dcl_cli::DclCli, dcl_config::DclConfig,
     dcl_dynamic_graphics_manager::DclDynamicGraphicsManager, dcl_realm::DclRealm,
@@ -205,6 +209,12 @@ pub struct DclGlobal {
 
     pub is_mobile: bool,
 
+    // Refreshed by any on-screen touch-button (joypad) activity, press or
+    // release, to now+250ms. Lets the scene-input poller forward synthetic
+    // actions on desktop even when the mouse isn't captured — including the
+    // release frame itself, so PET_UP edges aren't dropped (power-lock bug).
+    pub joypad_input_active_until: Option<std::time::Instant>,
+
     pub is_android: bool,
 
     pub is_ios: bool,
@@ -366,6 +376,11 @@ impl INode for DclGlobal {
         }
 
         tokio_runtime.set_name("tokio_runtime");
+
+        if let Some(handle) = tokio_runtime.bind().try_get_handle() {
+            crate::utils::clock::spawn_background_sync(handle);
+        }
+
         scene_runner.set_name("scene_runner");
         scene_runner.set_process_mode(ProcessMode::DISABLED);
         comms.set_name("comms");
@@ -436,6 +451,7 @@ impl INode for DclGlobal {
         Self {
             _base: base,
             is_mobile,
+            joypad_input_active_until: None,
             is_android,
             is_ios,
             is_virtual_mobile: false,
@@ -658,6 +674,27 @@ impl DclGlobal {
         env!("GODOT_EXPLORER_COMMIT_HASH").into()
     }
 
+    /// Marketing version with the build number but no commit hash or environment, e.g.
+    /// `1.14.0.1844` (everything before the first `-` of `GODOT_EXPLORER_VERSION`). Locally,
+    /// with no `DCL_BUILD_NUMBER`, it's just `{major.minor.patch}`. Used in production.
+    #[func]
+    pub fn get_short_version() -> GString {
+        let full = env!("GODOT_EXPLORER_VERSION");
+        GString::from(full.split('-').next().unwrap_or(full))
+    }
+
+    /// Full version with build number, commit hash and environment, e.g.
+    /// `1.14.0.1844-6cefb54-staging`. The `-debug` build-mode marker is dropped so the shape is
+    /// always `{version}.{build}-{hash}-{env}`. Used outside production for diagnostics.
+    #[func]
+    pub fn get_full_version() -> GString {
+        GString::from(
+            env!("GODOT_EXPLORER_VERSION")
+                .replace("-debug", "")
+                .as_str(),
+        )
+    }
+
     #[func]
     pub fn get_commit_message() -> GString {
         env!("GODOT_EXPLORER_COMMIT_MESSAGE").into()
@@ -813,5 +850,45 @@ impl DclGlobal {
             Ok(()) => godot_print!("Rust log filter updated to: {}", filter),
             Err(e) => tracing::error!("Failed to update Rust log filter: {}", e),
         }
+    }
+
+    #[func]
+    pub fn notify_joypad_input() {
+        DclGlobal::singleton().bind_mut().joypad_input_active_until =
+            Some(std::time::Instant::now() + JOYPAD_INPUT_WINDOW);
+    }
+
+    /// True while the window opened by the last joypad activity is open.
+    pub fn joypad_input_active(&self) -> bool {
+        self.joypad_input_active_until
+            .is_some_and(|t| t > std::time::Instant::now())
+    }
+
+    /// Locale forwarded to SDK7 scenes (`getExplorerInformation`, `localeChanged`).
+    /// Callers pass the resolved app locale (`LocaleSettings.resolve_locale()`), never the OS one.
+    #[func]
+    pub fn set_scene_locale(locale: GString) {
+        crate::godot_classes::dcl_scene_locale::set_scene_locale(&locale.to_string());
+    }
+
+    /// Per-profile particle budgets, applied on graphic profile change.
+    /// scene_budget: max live particles summed over a scene's emitters (0 = off).
+    /// emitter_cap: hard cap per emitter. use_cpu: create CPUParticles3D emitters.
+    #[func]
+    pub fn set_particle_profile_budgets(scene_budget: i32, emitter_cap: i32, use_cpu: bool) {
+        crate::scene_runner::components::particle_system::set_particle_profile_budgets(
+            scene_budget,
+            emitter_cap,
+            use_cpu,
+        );
+    }
+
+    /// Current particle budgets as [scene_budget, emitter_cap, use_cpu].
+    /// Exists for the graphic-profile tests (asserts the GDScript mapping).
+    #[func]
+    pub fn get_particle_profile_budgets() -> VarArray {
+        let (budget, cap, use_cpu) =
+            crate::scene_runner::components::particle_system::get_particle_profile_budgets();
+        varray![budget, cap, use_cpu]
     }
 }

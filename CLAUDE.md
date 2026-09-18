@@ -44,7 +44,8 @@ cargo run -- build --target android       # Android build (no cargo-ndk, uses di
 cargo run -- build --target ios           # iOS build (macOS only)
 
 # Run the client (automatically builds first)
-cargo run -- run                          # Run client
+cargo run -- run                          # Run client (always a phone layout: --emulate-ios by default)
+cargo run -- run -- --emulate-android     # Run client with the Android layout instead
 cargo run -- run -r                       # Release mode
 cargo run -- run -e                       # Run editor
 cargo run -- run -e --target android      # Run editor and also build for Android
@@ -106,6 +107,14 @@ cargo run -- export --target android --format apk
 cargo run -- export --target android --format aab
 cargo run -- export --target ios
 ```
+
+iOS exports run a **windowed** Godot editor (not `--headless`) because the shader baker only works
+with a RenderingDevice renderer, and they need the **Metal toolchain** (`xcodebuild -downloadComponent
+MetalToolchain` on Xcode 26) to compile the baked shaders to `.metallib`. The export fails unless
+Godot's output shows `Started Baking shaders (N steps)` and packed `.metal.cache` files, and it also
+fails when the SPIR-V-only warning (missing toolchain) appears; `DCL_SKIP_SHADER_BAKE_CHECK=1`
+bypasses that check for local debugging only. The baked files live in
+`godot/.godot/exported/<hash>/shader_baker/iOS/metal/`, not next to the exported IPA.
 
 ## Architecture
 
@@ -194,6 +203,15 @@ cargo run -- export --target ios
    **`main`/`release`** builds it additionally surfaces the **AAB** (Play Store artifact)
    and posts a "📦 Android AAB Ready" Slack notification — the AAB is only uploaded for
    `main`/`release` builds.
+
+   Status is mirrored in a Slack root card (`.github/scripts/slack-root.py`, merge-on-read
+   via message metadata; byte-duplicated in `decentraland/godot-asc-deploy` — edit both
+   copies together) and ONE sticky **📱 Mobile build pipeline** PR comment
+   (`.github/scripts/pr-card.py`, same model — state lives in a hidden HTML comment; each leg
+   merges only its own fields; `SHA` + `RUN_ID` guard against a superseded run). `pr-card.py`
+   lives only here: asc-deploy has no token for this repo, so the `ios-wait` job watches the
+   asc-deploy run (matched by its `run-name` `🍏 <branch> @ <sha>`, via
+   `ASC_DEPLOY_DISPATCH_TOKEN`) and mirrors the TestFlight result onto the card.
 
    It is triggered by:
    - **Every push to `release`** → full distribution.

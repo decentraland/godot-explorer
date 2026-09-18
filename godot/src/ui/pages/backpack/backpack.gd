@@ -603,7 +603,7 @@ func _on_wearable_filter_button_filter_type(type):
 	avatar_preview.focus_camera_on(type)
 	if _ios_marketplace_section:
 		_ios_marketplace_section.update_category(type)
-	var color_name := "%s Color" % type.to_pascal_case()
+	var color_name := tr("BACKPACK_COLOR_LABEL").format({"category": type.to_pascal_case()})
 	color_carrousel.set_title(color_name)
 
 	var mutable_avatar = Global.player_identity.get_mutable_avatar()

@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use http::{Method, Uri};
 
 use crate::{
-    auth::ephemeral_auth_chain::EphemeralAuthChain,
+    auth::{ephemeral_auth_chain::EphemeralAuthChain, wallet::signed_fetch_payload},
     godot_classes::dcl_global::DclGlobal,
     http_request::{
         http_queue_requester::HttpQueueRequester,
@@ -58,13 +58,11 @@ impl SignedLogin {
         let (login_result_sender, login_result_receiver) = tokio::sync::oneshot::channel();
 
         TokioRuntime::spawn(async move {
-            let unix_time = std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_millis();
+            let unix_time = crate::utils::clock::unix_time_ms();
 
             let meta = serde_json::to_string(&meta).unwrap();
-            let payload = format!("post:{}:{}:{}", uri.path(), unix_time, meta).to_lowercase();
+            // Same format as `sign_request`; the method is already the literal "post".
+            let payload = signed_fetch_payload("post", uri.path(), unix_time, &meta);
 
             let signature = ephemeral_auth_chain
                 .ephemeral_wallet()

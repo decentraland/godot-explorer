@@ -68,10 +68,14 @@ pub enum ServiceGroup {
     /// dev server (`http://localhost:5173`) instead of
     /// `decentraland.<env>/marketplace` — used with the in-app dev relay on iOS.
     Marketplace,
+    /// Intercom ticket proxy (bug reports). Its own group because it lives on a
+    /// different host than mobile-bff (`intercom-proxy.decentraland.<env>`), so
+    /// QA can point reports at zone while the rest of the app stays on org.
+    IntercomProxy,
 }
 
 impl ServiceGroup {
-    pub const COUNT: usize = 11;
+    pub const COUNT: usize = 12;
 
     pub fn index(self) -> usize {
         match self {
@@ -86,6 +90,7 @@ impl ServiceGroup {
             Self::CreditsServer => 8,
             Self::Profile => 9,
             Self::Marketplace => 10,
+            Self::IntercomProxy => 11,
         }
     }
 
@@ -102,6 +107,7 @@ impl ServiceGroup {
             Self::CreditsServer => "creditsserver",
             Self::Profile => "profile",
             Self::Marketplace => "marketplace",
+            Self::IntercomProxy => "intercomproxy",
         }
     }
 
@@ -118,6 +124,7 @@ impl ServiceGroup {
             "creditsserver" => Some(Self::CreditsServer),
             "profile" => Some(Self::Profile),
             "marketplace" => Some(Self::Marketplace),
+            "intercomproxy" => Some(Self::IntercomProxy),
             _ => None,
         }
     }
@@ -134,6 +141,7 @@ impl ServiceGroup {
         Self::CreditsServer,
         Self::Profile,
         Self::Marketplace,
+        Self::IntercomProxy,
     ];
 }
 

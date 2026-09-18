@@ -50,5 +50,5 @@ show_background = true
 
 [node name="Label" type="Label" parent="Backdrop/Blur/VBoxContainer" unique_id=2133838275]
 layout_mode = 2
-text = "Loading..."
+text = "IAP_PURCHASE_OVERLAY_LOADING"
 label_settings = SubResource("LabelSettings_nr6oi")
