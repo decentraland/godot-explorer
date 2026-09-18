@@ -4,7 +4,6 @@
 [ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="1_ytipc"]
 [ext_resource type="Texture2D" uid="uid://dpippmiepkyeb" path="res://decentraland_logo.png" id="3_lt7hs"]
 [ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="4_euk1h"]
-[ext_resource type="Texture2D" uid="uid://cqjwja1mdqpus" path="res://assets/ui/menu-icon.svg" id="5_0pohw"]
 [ext_resource type="FontVariation" uid="uid://buop40k3e4u13" path="res://assets/themes/fonts/multilanguage/multilanguage_font-SemiBold.tres" id="6_mb7k1"]
 [ext_resource type="Texture2D" uid="uid://bfcbgkyp5ogcg" path="res://assets/ui/down_arrow.svg" id="8_0pohw"]
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="9_5a8fu"]
@@ -195,15 +194,6 @@ layout_mode = 2
 size_flags_horizontal = 3
 text = "COMMON_NEARBY"
 label_settings = SubResource("LabelSettings_8p6lu")
-
-[node name="TextureButton" type="Button" parent="VBoxContainer/HBoxContainer/PanelContainer/VBoxContainer2/PanelContainer_Header/HBoxContainer" unique_id=1835704905]
-custom_minimum_size = Vector2(48, 0)
-layout_mode = 2
-disabled = true
-icon = ExtResource("5_0pohw")
-flat = true
-icon_alignment = 1
-expand_icon = true
 
 [node name="PanelContainer_Chat" type="PanelContainer" parent="VBoxContainer/HBoxContainer/PanelContainer/VBoxContainer2" unique_id=1903918523]
 unique_name_in_owner = true
