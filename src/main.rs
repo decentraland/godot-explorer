@@ -872,6 +872,21 @@ fn main() -> Result<(), anyhow::Error> {
                 }
             }
 
+            // Mobile is the product: a desktop run always gets a phone layout —
+            // iOS unless Android was asked for. Only the client itself is affected
+            // (not the editor, the test runners or the asset server).
+            let emulates_a_phone = extras
+                .iter()
+                .any(|arg| matches!(arg.as_str(), "--emulate-ios" | "--emulate-android"));
+            let is_client_run = !sm.is_present("editor")
+                && !sm.is_present("itest")
+                && !sm.is_present("stest")
+                && !sm.is_present("ctest")
+                && !sm.is_present("asset-server");
+            if is_client_run && !emulates_a_phone {
+                extras.push("--emulate-ios".to_string());
+            }
+
             run::run(
                 sm.is_present("editor"),
                 sm.is_present("itest"),
