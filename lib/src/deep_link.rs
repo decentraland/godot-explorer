@@ -64,7 +64,8 @@ impl DeepLinkResult {
 /// - `decentraland://events?id=X`  (native scheme)
 /// - `https://decentraland.org/events?id=X`  (app link)
 /// - `https://decentraland.zone/events?id=X` (app link, auto-infers dclenv=zone)
-/// - `https://mobile.dclregenesislabs.xyz/open?location=X,Y` (legacy mobile)
+/// - `https://mobile.dclregenesislabs.xyz/open?location=X,Y` (mobile)
+/// - `https://mobile.dclexplorer.com/open?location=X,Y` (legacy mobile host, still accepted)
 ///
 /// Returns `None` only when `url_str` is empty.  Malformed URLs return a
 /// default result (matching the previous Godot-only behaviour that logged
@@ -86,7 +87,10 @@ pub fn parse_deep_link(url_str: &str) -> Option<DeepLinkResult> {
         "https" | "http" => {
             let host = parsed.host_str()?;
             match host {
-                "mobile.dclregenesislabs.xyz" | "decentraland.org" | "decentraland.zone" => {
+                "mobile.dclregenesislabs.xyz"
+                | "mobile.dclexplorer.com"
+                | "decentraland.org"
+                | "decentraland.zone" => {
                     // Infer dclenv from domain when not explicitly set
                     if host == "decentraland.zone"
                         && !parsed.query_pairs().any(|(k, _)| k == "dclenv")
@@ -362,7 +366,7 @@ mod tests {
         assert_eq!(r.dclenv, "zone");
     }
 
-    // ---- HTTPS: mobile.dclregenesislabs.xyz --------------------------------------
+    // ---- HTTPS: mobile.dclregenesislabs.xyz (+ legacy mobile.dclexplorer.com) ----
 
     #[test]
     fn https_mobile_dclregenesislabs() {
@@ -370,6 +374,20 @@ mod tests {
         assert_eq!(r.path, "/open");
         assert_eq!(r.location, Some((5, 5)));
         assert_eq!(r.realm, "r1");
+    }
+
+    /// Links on the old host are still in the wild (shared messages, scheduled notifications,
+    /// GA4F campaigns); they must keep resolving exactly like the new host.
+    #[test]
+    fn https_legacy_mobile_dclexplorer_still_accepted() {
+        let legacy = parse("https://mobile.dclexplorer.com/open?location=5,5&realm=r1");
+        let current = parse("https://mobile.dclregenesislabs.xyz/open?location=5,5&realm=r1");
+        assert_eq!(legacy.path, "/open");
+        assert_eq!(legacy.location, Some((5, 5)));
+        assert_eq!(legacy.realm, "r1");
+        assert_eq!(legacy.path, current.path);
+        assert_eq!(legacy.location, current.location);
+        assert_eq!(legacy.realm, current.realm);
     }
 
     // ---- Equivalence across formats -----------------------------------------
@@ -408,8 +426,14 @@ mod tests {
         let org = parse("https://decentraland.org/jump?location=10,20&realm=r1");
         let zone = parse("https://decentraland.zone/jump?location=10,20&realm=r1");
         let mobile = parse("https://mobile.dclregenesislabs.xyz/jump?location=10,20&realm=r1");
+        let legacy = parse("https://mobile.dclexplorer.com/jump?location=10,20&realm=r1");
 
-        for (label, r) in [("org", &org), ("zone", &zone), ("mobile", &mobile)] {
+        for (label, r) in [
+            ("org", &org),
+            ("zone", &zone),
+            ("mobile", &mobile),
+            ("legacy", &legacy),
+        ] {
             assert_eq!(native.path, r.path, "{label}: path mismatch");
             assert_eq!(native.location, r.location, "{label}: location mismatch");
             assert_eq!(native.realm, r.realm, "{label}: realm mismatch");
