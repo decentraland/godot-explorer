@@ -1781,16 +1781,28 @@ func stop_emote_from_network():
 ## Permanent: `AvatarEmoteController.stop_emote` also drops a masked emote parked at a
 ## scene boundary, so re-entering the scene cannot resurrect an emote the scene asked to
 ## end (Unity does the same with `masked.EmoteUrn = default`).
-func stop_emote_from_scene():
-	_stop_emote_and_clear_pending()
+##
+## scene_id is the caller's numeric SceneId: a masked emote is only stopped when that
+## scene is the one that started it (see AvatarEmoteController.stop_emote_from_scene).
+func stop_emote_from_scene(scene_id: int):
+	if emote_controller == null:
+		return
+	if not emote_controller.stop_emote_from_scene(scene_id):
+		# Someone else's masked emote — leave the pending stash alone too.
+		return
+	_clear_pending_network_emote()
 
 
 func _stop_emote_and_clear_pending():
+	_clear_pending_network_emote()
+	if emote_controller:
+		emote_controller.stop_emote()
+
+
+func _clear_pending_network_emote():
 	_pending_network_emote = ""
 	_pending_network_emote_mask = -1
 	_pending_network_emote_scene_id = -1
-	if emote_controller:
-		emote_controller.stop_emote()
 
 
 ## Called from Rust immediately before this avatar's node is freed, so a still-running

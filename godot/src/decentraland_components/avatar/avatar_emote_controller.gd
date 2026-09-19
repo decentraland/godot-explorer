@@ -233,9 +233,9 @@ func stop_emote():
 		animation_tree.set(MASKED_REQUEST_PARAM, AnimationNodeOneShot.ONE_SHOT_REQUEST_FADE_OUT)
 		playing_masked = false
 		_hide_all_props()
-	# A suspended masked emote is still "current" until something ends it for good;
-	# this is that something, so drop the parked state too or re-entering the owning
-	# scene would resurrect an emote the scene explicitly stopped.
+	# Belt and braces: `_emit_emote_finished` above already cleared this, since a parked
+	# emote always has a urn. Kept so a future change to that invariant can't leave a
+	# stale parked state behind for re-entry to resurrect.
 	masked_suspended = false
 	playing_single = false
 	playing_mixed = false
@@ -483,6 +483,39 @@ func _resume_masked_emote():
 		animation_tree.active = true
 	if not _play_masked_emote(anim_path):
 		stop_emote()
+		return
+
+	# Re-announce the emote to the other players. The suspend dropped `playing_masked`,
+	# so `is_emoting` went false and CommunicationManager took the stop edge: it sent a
+	# Pulse EmoteStop AND cleared `pending_pulse_emote_urn`. Without this the next
+	# `set_emoting(true)` finds nothing pending and sends no start, so remote viewers see
+	# the arms drop at the boundary and never come back up. Unity does the same thing in
+	# `ReplayMaskedEmote`, which queues a fresh EmotePendingToBroadcast on every replay.
+	#
+	# `send_emote` only touches comms — the scene-facing EmoteState rides the
+	# `emote_triggered` / `emote_finished` signals, which a resume still does not emit, so
+	# scenes remain unaware of boundary crossings.
+	if avatar != null and avatar.is_local_player:
+		Global.comms.send_emote(current_emote_urn, current_emote_mask)
+
+
+## End the current emote on behalf of a scene's `stopEmote`, scoped the way Unity scopes
+## it: `TryStopEmote` stops the full-body emote globally, but only ever touches its OWN
+## scene world's masked component.
+##
+## That split matters because `_player_is_inside_scene` passes unconditionally for
+## `SceneType::Global` — without this guard a portable experience could end a masked emote
+## owned by the parcel scene the player is standing in. A masked emote and a full-body one
+## are mutually exclusive, so one check covers both halves: if what's current is masked and
+## belongs to someone else, leave it alone; anything else stops.
+##
+## Returns true when it actually stopped something, so the caller knows whether to clear
+## its own pending state.
+func stop_emote_from_scene(scene_id: int) -> bool:
+	if (playing_masked or masked_suspended) and current_emote_scene_id != scene_id:
+		return false
+	stop_emote()
+	return true
 
 
 ## Permanently drop the emote when the scene that owns it is torn down. Unlike the
