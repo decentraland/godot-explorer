@@ -1,5 +1,5 @@
 class_name Snapshot
-extends RefCounted
+extends Node
 
 signal snapshot_generated(face_image: Image)
 
@@ -9,6 +9,10 @@ const AVATAR_PREVIEW_SCENE = preload("res://src/ui/pages/backpack/avatar_preview
 # ADR-290: Generate snapshots locally for immediate display in the UI.
 # These are NOT uploaded to the server - they're only stored locally.
 # The profile-images service generates snapshots on-demand for other users.
+#
+# A Node (child of Global), not a RefCounted: the off-screen preview it renders is
+# its own child, so the preview cannot outlive it, and the engine drops this
+# coroutine with the node instead of resuming it on a freed preview.
 # gdlint:ignore = async-function-name
 func async_generate_for_avatar(
 	avatar_wire_format: DclAvatarWireFormat, profile: DclUserProfile
@@ -18,10 +22,9 @@ func async_generate_for_avatar(
 	avatar_preview.hide_name = true
 	avatar_preview.can_move = false
 
-	# Add to scene tree temporarily (off-screen)
-	var root = Global.get_tree().root
-	root.add_child(avatar_preview)
-	avatar_preview.set_position(root.get_visible_rect().size)
+	# Parent it here temporarily, positioned off-screen
+	add_child(avatar_preview)
+	avatar_preview.set_position(get_viewport().get_visible_rect().size)
 
 	# Wait for avatar to be ready and load the profile
 	await avatar_preview.avatar.async_update_avatar_from_profile(profile)

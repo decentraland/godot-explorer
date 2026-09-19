@@ -554,12 +554,12 @@ func _ready():
 			dcl_ios_singleton.deeplink_received.connect(deep_link_router.process_deep_link)
 
 	_dcl_swift_lib_smoke_test()
-
 	# Setup
 	nft_frame_loader = NftFrameStyleLoader.new()
 	nft_fetcher = OpenSeaFetcher.new()
 	music_player = MusicPlayer.new()
 	snapshot = Snapshot.new()
+	add_child(snapshot)
 	preload_assets = PreloadAssets.new()
 
 	var args = cli.get_all_args()
@@ -1310,7 +1310,7 @@ func async_create_popup_warning(
 		await explorer.warning_messages.async_create_popup_warning(warning_type, title, description)
 
 
-func async_get_texture_size(content_mapping, src, sender) -> void:
+func async_get_texture_size(content_mapping, src, sender: DclRpcSenderGetTextureSize) -> void:
 	var texture_hash: String = content_mapping.get_hash(src)
 	if texture_hash.is_empty():
 		texture_hash = src

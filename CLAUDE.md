@@ -89,6 +89,10 @@ gdlint godot/
 # Validate all GDScript files
 cargo run -- check-gdscript
 
+# gdlint also enforces the freed-node rule: a non-self node reference is not carried across an
+# `await` (own the work from the node, re-resolve on resume, or cancel on free). See REVIEW.md §5
+# "Freed-node access after `await`". Prefer a type hint over `# gdlint: ignore=`.
+
 # Generate test coverage
 cargo run -- coverage --dev
 

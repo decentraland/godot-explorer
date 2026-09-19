@@ -30,6 +30,9 @@ const PLAY_PAUSE_DEBOUNCE_MS: float = 100.0
 var current_backend: BackendType = BackendType.NOOP
 var exo_player: Node = null  # ExoPlayer child node when using ExoPlayer backend
 var av_player: Node = null  # AVPlayer child node when using AVPlayer backend
+# Bumped by _backend_dispose(): an init coroutine that resumes with a stale
+# generation belongs to a backend that was disposed meanwhile and stops.
+var _backend_generation: int = 0
 var _source: String = ""
 var _is_playing: bool = false
 var _is_looping: bool = false
@@ -110,20 +113,24 @@ func _async_init_exo_player_backend():
 	add_child(exo_player)
 
 	# Wait for ExoPlayer to be ready
+	var generation := _backend_generation
 	await get_tree().process_frame
+	if generation != _backend_generation:
+		return  # a source change disposed this backend while it was getting ready
+	var player: Node = exo_player
 
 	# Initialize texture with initial size (will be resized when video loads)
-	if not exo_player.init_texture(640, 360):
+	if not player.init_texture(640, 360):
 		push_error("VideoPlayer: Failed to initialize ExoPlayer texture")
 		video_state = VIDEO_STATE_ERROR
-		exo_player.queue_free()
+		player.queue_free()
 		exo_player = null
 		return
 
 	# Set the video source
 	var success: bool
 	if _source.begins_with("http://") or _source.begins_with("https://"):
-		success = exo_player.set_source_url(_source)
+		success = player.set_source_url(_source)
 	else:
 		# For local files, we need to fetch them first
 		await _async_fetch_and_set_local_source()
@@ -132,14 +139,14 @@ func _async_init_exo_player_backend():
 	if not success:
 		push_error("VideoPlayer: Failed to set ExoPlayer source: ", _source)
 		video_state = VIDEO_STATE_ERROR
-		exo_player.queue_free()
+		player.queue_free()
 		exo_player = null
 		return
 
-	exo_player.set_looping(_is_looping)
+	player.set_looping(_is_looping)
 
 	if _is_playing:
-		exo_player.play()
+		player.play()
 
 
 ## Fetch local video file and return the absolute file path
@@ -190,7 +197,7 @@ func _ensure_file_has_extension(absolute_file_path: String) -> String:
 
 ## Apply local source to a native player (ExoPlayer or AVPlayer)
 func _apply_local_source_to_player(player: Node, absolute_file_path: String, player_name: String):
-	if not player:
+	if player == null:
 		return
 
 	var success = player.set_source_local(absolute_file_path)
@@ -207,19 +214,23 @@ func _apply_local_source_to_player(player: Node, absolute_file_path: String, pla
 
 
 func _async_fetch_and_set_local_source():
+	var generation := _backend_generation
 	var absolute_file_path = await _async_fetch_local_video()
-	if absolute_file_path.is_empty():
+	if absolute_file_path.is_empty() or generation != _backend_generation:
 		return
-	_apply_local_source_to_player(exo_player, absolute_file_path, "ExoPlayer")
+	var player: Node = exo_player
+	_apply_local_source_to_player(player, absolute_file_path, "ExoPlayer")
 
 
 func _async_fetch_and_set_local_source_av_player():
+	var generation := _backend_generation
 	var absolute_file_path = await _async_fetch_local_video()
-	if absolute_file_path.is_empty():
+	if absolute_file_path.is_empty() or generation != _backend_generation:
 		return
 	# AVPlayer needs file extension to determine video format
 	absolute_file_path = _ensure_file_has_extension(absolute_file_path)
-	_apply_local_source_to_player(av_player, absolute_file_path, "AVPlayer")
+	var player: Node = av_player
+	_apply_local_source_to_player(player, absolute_file_path, "AVPlayer")
 
 
 func _async_init_av_player_backend():
@@ -240,20 +251,24 @@ func _async_init_av_player_backend():
 	add_child(av_player)
 
 	# Wait for AVPlayer to be ready
+	var generation := _backend_generation
 	await get_tree().process_frame
+	if generation != _backend_generation:
+		return  # a source change disposed this backend while it was getting ready
+	var player: Node = av_player
 
 	# Initialize texture with initial size (will be resized when video loads)
-	if not av_player.init_texture(640, 360):
+	if not player.init_texture(640, 360):
 		push_error("VideoPlayer: Failed to initialize AVPlayer texture")
 		video_state = VIDEO_STATE_ERROR
-		av_player.queue_free()
+		player.queue_free()
 		av_player = null
 		return
 
 	# Set the video source
 	var success: bool
 	if _source.begins_with("http://") or _source.begins_with("https://"):
-		success = av_player.set_source_url(_source)
+		success = player.set_source_url(_source)
 	else:
 		# For local files, we need to fetch them first
 		await _async_fetch_and_set_local_source_av_player()
@@ -262,14 +277,14 @@ func _async_init_av_player_backend():
 	if not success:
 		push_error("VideoPlayer: Failed to set AVPlayer source: ", _source)
 		video_state = VIDEO_STATE_ERROR
-		av_player.queue_free()
+		player.queue_free()
 		av_player = null
 		return
 
-	av_player.set_looping(_is_looping)
+	player.set_looping(_is_looping)
 
 	if _is_playing:
-		av_player.play()
+		player.play()
 
 
 func _init_noop_backend():
@@ -597,6 +612,7 @@ func _backend_set_playback_rate(rate: float):
 
 
 func _backend_dispose():
+	_backend_generation += 1
 	match current_backend:
 		BackendType.EXO_PLAYER:
 			if exo_player:

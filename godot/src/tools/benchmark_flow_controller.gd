@@ -6,6 +6,9 @@
 ## Flow: Terms → Lobby → Menu → Explorer (Goerli x3 / Genesis x3 alternating)
 
 extends Node
+# Dev tool / test: it owns every node it awaits on and never ships in a store build, so the
+# release-template node-across-await rules are off here (see .gdlintrc).
+# gdlint: disable=node-reference-across-await,node-argument-across-await
 
 # Benchmark configuration - alternating between Goerli and Genesis to stress test scene loading/unloading
 const GOERLI_PLAZA = {
