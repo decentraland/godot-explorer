@@ -40,6 +40,22 @@ const GLIDE_OPENING := 1
 const GLIDE_GLIDING := 2
 const GLIDE_CLOSING := 3
 
+# #2850: Unity parity (ApplyCharacterMovementVelocity.cs / ApplyHorizontalAirDrag.cs).
+# Acceleration weight ramps 0→1 over 0.5s while input is held; the accel pair
+# lerps with it. Air drag is quadratic: AirDrag 0.05 × JumpVelocityDrag 4.
+const ACCELERATION_TIME := 0.5
+const GROUND_ACCEL := 20.0
+const GROUND_ACCEL_MAX := 25.0
+const AIR_ACCEL := 15.0
+const AIR_ACCEL_MAX := 20.0
+const AIR_DRAG := 0.2
+
+# #1557: Unity parity (ApplyJump.cs / ApplyGravity.cs). Seconds, never ticks.
+const COYOTE_WINDOW := 0.15
+const GRAVITY_ASCENT_FACTOR := 4.0
+const LONG_JUMP_TIME := 0.5
+const LONG_JUMP_GRAVITY_SCALE := 0.5
+
 # What the jump button would do if pressed right now. Used by the UI to pick
 # the matching icon. Mirrors the decision tree in _physics_process.
 const JUMP_ACTION_NONE := 0
@@ -70,18 +86,28 @@ const AVATAR_HALF_WIDTH := 0.35
 # triggers, or other non-ground CollisionObject3Ds.
 const GROUND_RAYCAST_MASK := 2
 
+# #2753: Unity parity (ApplySlopeModifier.cs / CharacterObject.prefab).
+# CharacterBody3D has no built-in step offset (M1) — custom logic below.
+const STEP_OFFSET := 0.35
+# Downslope stick, expressed as floor_snap_length so is_on_floor() survives
+# downhill moves (a manual raycast snap would report airborne mid-stick).
+const DOWNSLOPE_STICK_JOG := 0.45
+const DOWNSLOPE_STICK_RUN := 0.55
+# Unity serializes 46deg; engine default 45 is wrong.
+const SLOPE_LIMIT_DEG := 46.0
+
 var last_position: Vector3
 var actual_velocity_xz: float
 
 # Locomotion settings - these are updated from the current scene's DclLocomotionSettings
 var walk_speed: float = 1.5
 var jog_speed: float = 8.0
-var run_speed: float = 11.0
+var run_speed: float = 10.0
 var gravity := 10.0
-var jump_height: float = 1.8
-var run_jump_height: float = 1.8
+# #1557: jog/run jump heights lerped by horizontal speed (Unity: 1.0 / 1.5).
+var jump_height: float = 1.0
+var run_jump_height: float = 1.5
 var hard_landing_cooldown: float = 0.0
-var jump_velocity_0 := sqrt(2 * jump_height * gravity)
 
 var jump_count: int = 0
 var glide_state: int = GLIDE_CLOSED
@@ -102,6 +128,7 @@ var external_velocity: Vector3 = Vector3.ZERO
 var _hard_landing_timer: float = 0.0
 var _locomotion_settings: DclLocomotionSettings = null
 var _jump_buffer: float = 0.0
+var _accel_weight: float = 0.0
 var _glide_timer: float = 0.0
 var _time_since_last_jump: float = 1000.0
 var _time_since_glide_end: float = 1000.0
@@ -276,7 +303,7 @@ func _ready():
 	set_camera_mode(Global.CameraMode.THIRD_PERSON, false)  # Don't play sound on initial setup
 	avatar.is_local_player = true
 
-	floor_snap_length = 0.2
+	floor_max_angle = deg_to_rad(SLOPE_LIMIT_DEG)
 
 	Global.player_identity.profile_changed.connect(self._on_player_profile_changed)
 
@@ -349,7 +376,6 @@ func _apply_locomotion_settings() -> void:
 	jump_height = _locomotion_settings.jump_height
 	run_jump_height = _locomotion_settings.run_jump_height
 	hard_landing_cooldown = _locomotion_settings.hard_landing_cooldown
-	jump_velocity_0 = sqrt(2 * jump_height * gravity)
 
 
 func clamp_camera_rotation():
@@ -521,6 +547,10 @@ func _physics_process(dt: float) -> void:
 	else:
 		time_falling = 0.0
 
+	# #1557: coyote window in seconds (B1) — the ground jump stays reachable this
+	# long after leaving the floor, and the glide gate must not eat the press.
+	var in_coyote := not on_floor and time_falling <= COYOTE_WINDOW
+
 	# Air-jump hover phase: freeze gravity, then fire impulse + horizontal dash
 	# when the timer expires. Leaves avatar.rise/fall untouched on purpose —
 	# flipping them mid-hover would trip Jump_Fall → Jump_End via nfall and
@@ -529,17 +559,19 @@ func _physics_process(dt: float) -> void:
 		_air_jump_delay_timer -= dt
 		velocity.y = 0.0
 		if _air_jump_delay_timer <= 0.0:
-			velocity.y = sqrt(2.0 * AIR_JUMP_HEIGHT * gravity)
+			velocity.y = sqrt(2.0 * AIR_JUMP_HEIGHT * gravity * GRAVITY_ASCENT_FACTOR)
 			var horiz_dir: Vector3 = Vector3(_air_jump_direction.x, 0.0, _air_jump_direction.z)
 			if horiz_dir.length_squared() > 0.0001:
 				horiz_dir = horiz_dir.normalized()
-				velocity.x = horiz_dir.x * AIR_JUMP_DIRECTION_IMPULSE
-				velocity.z = horiz_dir.z * AIR_JUMP_DIRECTION_IMPULSE
+				# #1557: max(8, current horizontal speed) (ApplyJump.cs).
+				var impulse := maxf(AIR_JUMP_DIRECTION_IMPULSE, Vector2(velocity.x, velocity.z).length())
+				velocity.x = horiz_dir.x * impulse
+				velocity.z = horiz_dir.z * impulse
 			jump_count += 1
 			_time_since_last_jump = 0.0
 			avatar.rise = true
 			avatar.fall = false
-	elif not on_floor:
+	elif not on_floor and not in_coyote:
 		var in_grace_time = (
 			time_falling < .2
 			and !Input.is_action_pressed("ia_jump")
@@ -553,7 +585,7 @@ func _physics_process(dt: float) -> void:
 		avatar.fall = velocity.y < -.3 && !in_grace_time and free_flight
 		# Scene force.y reduces effective gravity, so an upward wind cancels
 		# fall instead of stacking on velocity.y.
-		velocity.y -= (gravity - external_acceleration.y) * dt
+		velocity.y -= (_current_gravity() - external_acceleration.y) * dt
 
 		# Air-jump: 0.2s hover then impulse (matches Unity ApplyJump two-step).
 		if (
@@ -611,17 +643,19 @@ func _physics_process(dt: float) -> void:
 		and _time_since_last_jump >= JUMP_COOLDOWN
 	):
 		# Ground jump — consume the buffer instead of reading the key again.
-		var effective_jump_height := jump_height
-		if Input.is_action_pressed("ia_sprint"):
-			effective_jump_height = run_jump_height
-		velocity.y = sqrt(2 * effective_jump_height * gravity)
+		# #1557: fires on the floor and inside the coyote window (B1). Height is
+		# lerped jog → run by horizontal speed; v0 uses the ascent gravity.
+		var h_speed := Vector2(velocity.x, velocity.z).length()
+		var speed_t := clampf(inverse_lerp(jog_speed, run_speed, h_speed), 0.0, 1.0)
+		var effective_jump_height := lerpf(jump_height, run_jump_height, speed_t)
+		velocity.y = sqrt(2.0 * effective_jump_height * gravity * GRAVITY_ASCENT_FACTOR)
 		jump_count = 1
 		_jump_buffer = 0.0
 		_time_since_last_jump = 0.0
 		avatar.land = false
 		avatar.rise = true
 		avatar.fall = false
-	else:
+	elif on_floor:
 		if not avatar.land:
 			avatar.land = true
 			if was_falling and hard_landing_cooldown > 0 and fall_duration > 1.0:
@@ -635,6 +669,14 @@ func _physics_process(dt: float) -> void:
 		if glide_state == GLIDE_OPENING or glide_state == GLIDE_GLIDING:
 			glide_state = GLIDE_CLOSING
 			_glide_timer = GLIDE_CLOSING_TIME
+	else:
+		# Coyote fall without a buffered jump: gravity applies, no landing state,
+		# glide gate stays closed for the whole window.
+		velocity.y -= (_current_gravity() - external_acceleration.y) * dt
+
+	# #2850: acceleration weight ramps over 0.5s while input is held (Unity
+	# AccelerationWeight), driving the ground/air accel pair below.
+	_accel_weight = move_toward(_accel_weight, 1.0 if current_direction else 0.0, dt / ACCELERATION_TIME)
 
 	camera.set_target_fov(DEFAULT_CAMERA_FOV)
 	if current_direction:
@@ -662,15 +704,31 @@ func _physics_process(dt: float) -> void:
 			effective_speed = walk_speed
 		# else: effective_speed remains 0, no movement allowed
 
-		velocity.x = current_direction.x * effective_speed
-		velocity.z = current_direction.z * effective_speed
+		# Ground and air accel pairs, lerped by the 0.5s weight (reduced air
+		# control: MoveTowards instead of the old direct assignment).
+		var accel := lerpf(GROUND_ACCEL, GROUND_ACCEL_MAX, _accel_weight) if on_floor else lerpf(AIR_ACCEL, AIR_ACCEL_MAX, _accel_weight)
+		velocity.x = move_toward(velocity.x, current_direction.x * effective_speed, accel * dt)
+		velocity.z = move_toward(velocity.z, current_direction.z * effective_speed, accel * dt)
 
 		avatar.look_at(current_direction.normalized() + position)
 		avatar.rotation.x = 0.0
 		avatar.rotation.z = 0.0
 	else:
-		velocity.x = move_toward(velocity.x, 0, walk_speed)
-		velocity.z = move_toward(velocity.z, 0, walk_speed)
+		# #2850 (B4): dt-scaled deceleration — same rate as the old per-tick
+		# walk_speed step at 60 Hz (90 m/s²), constant stopping distance under
+		# frame drops. Keeps the old coupling to the scene-overridable walk_speed.
+		var decel := walk_speed * 60.0 * dt
+		velocity.x = move_toward(velocity.x, 0.0, decel)
+		velocity.z = move_toward(velocity.z, 0.0, decel)
+
+	# #2850: quadratic horizontal air drag, coefficient 0.2 (live Unity value).
+	if not on_floor:
+		var h_vel := Vector2(velocity.x, velocity.z)
+		var h_mag := h_vel.length()
+		if h_mag > 0.0:
+			h_vel -= h_vel.normalized() * minf(AIR_DRAG * h_mag * h_mag * dt, h_mag)
+			velocity.x = h_vel.x
+			velocity.z = h_vel.y
 
 	# While gliding, cap horizontal speed — overrides walk/jog/run speeds set above.
 	if glide_state == GLIDE_GLIDING:
@@ -723,7 +781,10 @@ func _physics_process(dt: float) -> void:
 	velocity.z += external_velocity.z
 
 	last_position = global_position
+	# #2753: downslope stick length follows horizontal speed (jog 0.45 / run 0.55).
+	floor_snap_length = DOWNSLOPE_STICK_RUN if actual_velocity_xz > jog_speed else DOWNSLOPE_STICK_JOG
 	move_and_slide()
+	_try_step_up(Vector3(locomotion_x, 0.0, locomotion_z))
 	position.y = max(position.y, 0)
 	avatar.global_position = global_position
 
@@ -848,6 +909,51 @@ func _update_avatar_raycast_to_crosshair() -> void:
 	avatar_raycast.target_position = avatar_raycast.to_local(
 		camera.global_position + dir * AVATAR_RAYCAST_DEFAULT_TARGET.length()
 	)
+
+
+# #1557: asymmetric gravity (ApplyGravity.cs) — ascent x4, descent x1, with a
+# 0.5s hold window after takeoff that halves it (the long-jump float).
+func _current_gravity() -> float:
+	var g := gravity
+	if velocity.y > 0.0:
+		g *= GRAVITY_ASCENT_FACTOR
+		if Input.is_action_pressed("ia_jump") and _time_since_last_jump < LONG_JUMP_TIME:
+			g *= LONG_JUMP_GRAVITY_SCALE
+	return g
+
+
+# #2753: custom step offset — CharacterBody3D has no built-in (M1). When
+# horizontal motion is wall-blocked while grounded, retry from STEP_OFFSET up:
+# free space above + floor below inside the step window = walkable ledge.
+# `intent` is the pre-slide locomotion velocity (slide zeroes it on the wall).
+func _try_step_up(intent: Vector3) -> void:
+	if not is_on_floor() or not is_on_wall():
+		return
+	if velocity.y > 0.1:
+		return
+	var horiz := Vector3(intent.x, 0.0, intent.z)
+	if horiz.length_squared() < 0.25:
+		return
+	# Probe must reach past the capsule radius so the down-ray lands ON the
+	# ledge, not on the floor in front of it.
+	var probe := horiz.normalized() * STEP_OFFSET
+	var raised := global_transform.translated(Vector3(0.0, STEP_OFFSET, 0.0))
+	if test_move(raised, probe):
+		return  # still blocked at step height — a wall, not a step
+	var top := raised.origin + probe
+	var space := get_world_3d().direct_space_state
+	if space == null:
+		return
+	var query := PhysicsRayQueryParameters3D.create(top, top + Vector3(0.0, -STEP_OFFSET - 0.05, 0.0))
+	query.collision_mask = GROUND_RAYCAST_MASK
+	query.exclude = _raycast_exclude
+	var hit := space.intersect_ray(query)
+	if hit.is_empty():
+		return  # gap, not a step
+	var floor_y: float = (hit.position as Vector3).y
+	if floor_y < global_position.y + 0.05:
+		return  # flat or lower — nothing to step onto
+	global_position = Vector3(top.x, floor_y, top.z)
 
 
 # Fold scene-driven force/impulses into external_velocity, then drag and clamp.
