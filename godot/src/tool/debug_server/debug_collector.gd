@@ -52,7 +52,11 @@ static func collect_scenes_summary() -> Array:
 ## entity count — the ONE scene-scoped resource walker (also feeds the preview
 ## SceneStatsPanel); extend it here instead of adding another subtree walk.
 ## Returns: { triangles, bodies, colliders, entities, geometries, materials,
-## textures, emitters, live_particles, lights, shadow_casters }. `tri_cache`
+## textures, emitters, live_particles, lights, shadow_casters }.
+## bodies/triangles/geometries/materials/textures skip hidden meshes (they never
+## render); colliders counts only physics-active shapes (parent body
+## collision_layer != 0) — dormant per-mesh trimesh shapes cost nothing.
+## `tri_cache`
 ## (mesh instance_id -> triangles) is caller-owned so repeated refresh ticks
 ## stay cheap; pass {} to skip caching.
 static func collect_scene_resources(scene_id: int, tri_cache: Dictionary) -> Dictionary:
@@ -90,18 +94,28 @@ static func _walk_scene_resources(
 ) -> void:
 	if node is MeshInstance3D:
 		var mi: MeshInstance3D = node
-		acc["bodies"] += 1
-		var mesh: Mesh = mi.mesh
-		if mesh != null:
-			geos[mesh.get_instance_id()] = true
-			acc["triangles"] += _mesh_triangles(mesh, tri_cache)
-			for si in range(mesh.get_surface_count()):
-				var mat: Material = mi.get_active_material(si)
-				if mat != null:
-					mats[mat.get_instance_id()] = true
-					_collect_material_textures(mat, texs)
+		# Skip hidden meshes (e.g. the `_collider` authoring meshes the GLTF
+		# pipeline forces invisible): they never render, so counting them as
+		# bodies/triangles/geometries inflates every budget vs what the creator
+		# sees in Blender.
+		if mi.is_visible_in_tree():
+			acc["bodies"] += 1
+			var mesh: Mesh = mi.mesh
+			if mesh != null:
+				geos[mesh.get_instance_id()] = true
+				acc["triangles"] += _mesh_triangles(mesh, tri_cache)
+				for si in range(mesh.get_surface_count()):
+					var mat: Material = mi.get_active_material(si)
+					if mat != null:
+						mats[mat.get_instance_id()] = true
+						_collect_material_textures(mat, texs)
 	elif node is CollisionShape3D:
-		acc["colliders"] += 1
+		# Count only physics-active colliders: a body with collision_layer == 0 is
+		# process-DISABLED and out of broadphase/queries (zero physics cost) — it's
+		# just the dormant per-mesh trimesh shape every GLTF mesh gets at import.
+		var body := node.get_parent()
+		if body is CollisionObject3D and (body as CollisionObject3D).collision_layer != 0:
+			acc["colliders"] += 1
 	elif node is GPUParticles3D:
 		# Authored, not playback state: every emitter counts (the runtime forces
 		# emitting off for scenes the player isn't standing in, and for paused /
