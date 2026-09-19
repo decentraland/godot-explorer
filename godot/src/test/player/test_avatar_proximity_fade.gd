@@ -1,4 +1,7 @@
 extends SceneTree
+# Dev tool / test: it owns every node it awaits on and never ships in a store build, so the
+# release-template node-across-await rules are off here (see .gdlintrc).
+# gdlint: disable=node-reference-across-await,node-argument-across-await
 
 # Test for the avatar proximity fade (issue #1814). When the camera gets
 # within arm's reach of an avatar's head — the local player pinned against a
