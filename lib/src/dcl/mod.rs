@@ -78,6 +78,11 @@ pub enum RendererResponse {
     Ok {
         dirty_crdt_state: Box<DirtyCrdtState>,
         incoming_comms_message: Vec<(H160, Vec<u8>)>,
+        /// Rendered-frame seconds elapsed since the renderer's previous reply to
+        /// this scene (sum of `_process` deltas). The scene thread passes it to
+        /// `onUpdate(dt)` so scene time advances exactly with drawn frames.
+        /// `0.0` before the first frame delta is known: wall-clock fallback.
+        delta_seconds: f32,
     },
     Kill,
 }
@@ -90,7 +95,10 @@ pub enum SceneResponse {
         scene_id: SceneId,
         dirty_crdt_state: Box<DirtyCrdtState>,
         logs: Vec<SceneLogMessage>,
-        delta: f32,
+        /// Scene-thread time between receiving the previous reply and this send,
+        /// in microseconds: the pure cost of the JS tick (SDK systems + CRDT
+        /// serialization). 0 when unknown (main.crdt bootstrap).
+        js_tick_us: u32,
         rpc_calls: Vec<RpcCall>,
         deno_memory_stats: Option<DenoMemoryStats>,
     },

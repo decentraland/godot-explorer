@@ -110,3 +110,33 @@ impl Promise {
         })
     }
 }
+
+/// Resolve or reject a promise from a thread other than the main thread.
+///
+/// Never `bind_mut()` a promise off the main thread. GDScript polls promises
+/// (`is_resolved()` / `get_data()`) from the main thread, and godot-cell 0.4.5's
+/// `MutGuardBlocking::drop` clears the "mutably bound" state and notifies the
+/// waiting reader WITHOUT holding the tracker lock: a main-thread `bind()` that
+/// checks the state just before that drop misses the wake-up and sleeps forever,
+/// which freezes the whole client (observed in the scene-test harness after a
+/// few thousand HTTP responses). Deferring the call runs the mutation on the
+/// main thread, where no cross-thread borrow can exist.
+pub trait PromiseDeferred {
+    fn resolve_deferred(&mut self);
+    fn resolve_with_data_deferred(&mut self, data: Variant);
+    fn reject_deferred(&mut self, reason: GString);
+}
+
+impl PromiseDeferred for Gd<Promise> {
+    fn resolve_deferred(&mut self) {
+        self.call_deferred("resolve", &[]);
+    }
+
+    fn resolve_with_data_deferred(&mut self, data: Variant) {
+        self.call_deferred("resolve_with_data", &[data]);
+    }
+
+    fn reject_deferred(&mut self, reason: GString) {
+        self.call_deferred("reject", &[reason.to_variant()]);
+    }
+}

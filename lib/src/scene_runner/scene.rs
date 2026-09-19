@@ -322,6 +322,11 @@ pub struct Scene {
     /// Number of consecutive frames where _process_scene returned false while waiting_process is true.
     /// Used to detect stuck scenes and force completion to unblock the scene thread.
     pub stuck_frames: u32,
+
+    /// Frame-locked tick scheduling state (see frame_sync.rs).
+    pub frame_sync: super::frame_sync::FrameSyncState,
+    /// Tick timing for creators, the debug hub and the benchmark.
+    pub tick_stats: super::tick_stats::SceneTickStats,
 }
 
 #[derive(Debug, Clone)]
@@ -443,7 +448,31 @@ impl Scene {
             pending_impulses: Vec::new(),
             deno_memory_stats: None,
             stuck_frames: 0,
+            frame_sync: Default::default(),
+            tick_stats: Default::default(),
         }
+    }
+
+    /// An output from the scene thread is stored and its apply states have not
+    /// all run yet.
+    pub fn has_unapplied_output(&self) -> bool {
+        self.current_dirty.waiting_process
+            && !matches!(
+                self.current_dirty.update_state,
+                SceneUpdateState::ComputeCrdtState
+                    | SceneUpdateState::SendToThread
+                    | SceneUpdateState::Processed
+            )
+    }
+
+    /// The current output is fully applied; only the reply to the scene thread
+    /// remains (`ComputeCrdtState` -> `SendToThread`).
+    pub fn is_ready_to_reply(&self) -> bool {
+        self.current_dirty.waiting_process
+            && matches!(
+                self.current_dirty.update_state,
+                SceneUpdateState::ComputeCrdtState | SceneUpdateState::SendToThread
+            )
     }
 
     pub fn min_distance(&self, parcel_position: &godot::prelude::Vector2i) -> (f32, bool) {
@@ -528,6 +557,8 @@ impl Scene {
             pending_impulses: Vec::new(),
             deno_memory_stats: None,
             stuck_frames: 0,
+            frame_sync: Default::default(),
+            tick_stats: Default::default(),
         }
     }
 
