@@ -5,7 +5,7 @@ use tokio_util::sync::CancellationToken;
 
 use crate::auth::ephemeral_auth_chain::EphemeralAuthChain;
 use crate::dcl::components::proto_components::social_service::v2::*;
-use crate::godot_classes::promise::Promise;
+use crate::godot_classes::promise::{Promise, PromiseDeferred};
 use crate::scene_runner::tokio_runtime::TokioRuntime;
 use crate::social::social_service_manager::SocialServiceManager;
 
@@ -1055,11 +1055,11 @@ impl DclSocialService {
                     dict.set("profile_picture_url", profile_picture_url);
                     array.push(&dict.to_variant());
                 }
-                promise.bind_mut().resolve_with_data(array.to_variant());
+                promise.resolve_with_data_deferred(array.to_variant());
             }
             Err(e) => {
                 tracing::warn!("get_friends failed: {}", e);
-                promise.bind_mut().reject(e.as_str().into())
+                promise.reject_deferred(e.as_str().into())
             }
         }
     }
@@ -1095,11 +1095,11 @@ impl DclSocialService {
                     dict.set("friendship_id", friendship_id);
                     array.push(&dict.to_variant());
                 }
-                promise.bind_mut().resolve_with_data(array.to_variant());
+                promise.resolve_with_data_deferred(array.to_variant());
             }
             Err(e) => {
                 tracing::error!("get_requests failed: {}", e);
-                promise.bind_mut().reject(e.as_str().into());
+                promise.reject_deferred(e.as_str().into());
             }
         }
     }
@@ -1117,10 +1117,10 @@ impl DclSocialService {
                 let mut dict = VarDictionary::new();
                 dict.set("status", status);
                 dict.set("message", message);
-                promise.bind_mut().resolve_with_data(dict.to_variant());
+                promise.resolve_with_data_deferred(dict.to_variant());
             }
             Err(e) => {
-                promise.bind_mut().reject(GString::from(e.as_str()));
+                promise.reject_deferred(GString::from(e.as_str()));
             }
         }
     }
@@ -1135,11 +1135,11 @@ impl DclSocialService {
 
         match result {
             Ok(()) => {
-                promise.bind_mut().resolve();
+                promise.resolve_deferred();
             }
             Err(e) => {
                 tracing::error!("Social service operation failed: {}", e);
-                promise.bind_mut().reject(GString::from(e.as_str()));
+                promise.reject_deferred(GString::from(e.as_str()));
             }
         }
     }
@@ -1370,11 +1370,11 @@ impl DclSocialService {
                     dict.set("blocked_at", blocked_at);
                     array.push(&dict.to_variant());
                 }
-                promise.bind_mut().resolve_with_data(array.to_variant());
+                promise.resolve_with_data_deferred(array.to_variant());
             }
             Err(e) => {
                 tracing::error!("get_blocked_users failed: {}", e);
-                promise.bind_mut().reject(e.as_str().into());
+                promise.reject_deferred(e.as_str().into());
             }
         }
     }
@@ -1403,11 +1403,11 @@ impl DclSocialService {
                 }
                 dict.set("blocked_by_users", blocked_by_array.to_variant());
 
-                promise.bind_mut().resolve_with_data(dict.to_variant());
+                promise.resolve_with_data_deferred(dict.to_variant());
             }
             Err(e) => {
                 tracing::error!("get_blocking_status failed: {}", e);
-                promise.bind_mut().reject(GString::from(e.as_str()));
+                promise.reject_deferred(GString::from(e.as_str()));
             }
         }
     }

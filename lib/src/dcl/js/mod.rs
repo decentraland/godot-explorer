@@ -17,8 +17,9 @@ mod websocket;
 
 use crate::comms::truncate_utf8_safe;
 use crate::dcl::common::{
-    is_scene_log_enabled, CommunicatedWithRenderer, SceneDying, SceneElapsedTime, SceneLogLevel,
-    SceneLogMessage, SceneLogs, SceneMainCrdtFileContent, SceneStartTime,
+    is_scene_log_enabled, CommunicatedWithRenderer, SceneDying, SceneElapsedTime,
+    SceneLastJsTickUs, SceneLogLevel, SceneLogMessage, SceneLogs, SceneMainCrdtFileContent,
+    SceneRendererDelta, SceneStartTime,
 };
 use crate::dcl::scene_apis::{LocalCall, RpcCall};
 
@@ -350,7 +351,7 @@ pub(crate) fn scene_thread(
                     scene_id,
                     dirty_crdt_state: Box::new(dirty),
                     logs: Vec::new(),
-                    delta: 0.0,
+                    js_tick_us: 0,
                     rpc_calls: Vec::new(),
                     deno_memory_stats: None,
                 })
@@ -425,6 +426,8 @@ pub(crate) fn scene_thread(
 
     state.borrow_mut().put(SceneLogs(Vec::new()));
     state.borrow_mut().put(SceneElapsedTime(0.0));
+    state.borrow_mut().put(SceneRendererDelta(0.0));
+    state.borrow_mut().put(SceneLastJsTickUs(0));
     state.borrow_mut().put(SceneDying(false));
     state
         .borrow_mut()
@@ -534,6 +537,9 @@ pub(crate) fn scene_thread(
     });
 
     let start_time = std::time::Instant::now();
+    // Wall-clock cursor, only used before the renderer has shipped a frame delta.
+    let mut wall_elapsed = Duration::default();
+    // Scene time: the sum of every dt handed to onUpdate.
     let mut elapsed = Duration::default();
     let mut reported_error_filter = 0;
     let mut last_memory_stats_update = std::time::Instant::now();
@@ -541,7 +547,18 @@ pub(crate) fn scene_thread(
     let mut tick_counter: u32 = 0;
 
     loop {
-        let dt = start_time.elapsed().saturating_sub(elapsed);
+        // Scene time advances with rendered frames: every reply carries the
+        // frame delta accumulated since the previous one (see
+        // RendererResponse::Ok::delta_seconds). Wall clock only as a fallback.
+        let wall_now = start_time.elapsed();
+        let wall_dt = wall_now.saturating_sub(wall_elapsed);
+        wall_elapsed = wall_now;
+        let dt = match state.borrow_mut().try_take::<SceneRendererDelta>() {
+            Some(SceneRendererDelta(seconds)) if seconds.is_finite() && seconds > 0.0 => {
+                Duration::from_secs_f32(seconds.min(3600.0))
+            }
+            _ => wall_dt,
+        };
         elapsed += dt;
 
         state
@@ -622,12 +639,17 @@ pub(crate) fn scene_thread(
                 break;
             }
         } else if should_debug {
-            crate::tools::scene_inspector::log_lifecycle_event(
+            let duration_us = state
+                .borrow()
+                .try_borrow::<SceneLastJsTickUs>()
+                .map(|v| v.0 as u64);
+            crate::tools::scene_inspector::log_lifecycle_event_timed(
                 scene_id.0,
                 crate::tools::scene_inspector::SceneLifecycleEvent::OnUpdateEnd,
                 Some(tick_counter),
                 Some(dt.as_secs_f64()),
                 None,
+                duration_us,
             );
         }
 

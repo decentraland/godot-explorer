@@ -50,8 +50,14 @@ var _warmup_frames := 3
 # its Y is a scene-collider-free floor reference for the floor guard.
 @onready var _player_body: Node3D = _mount.get_parent()
 
+## Runs before the scene manager's kick (lib/src/scene_runner/frame_sync.rs,
+## SCENE_MANAGER_KICK_PROCESS_PRIORITY = -5) so the camera pose the scenes receive
+## this frame is the final, clamped one. Lower priority runs earlier.
+const PROCESS_PRIORITY := -20
+
 
 func _ready() -> void:
+	process_priority = PROCESS_PRIORITY
 	_sphere.radius = CameraRig.CLAMP_SPHERE_RADIUS
 	_params.shape = _sphere
 	_params.collision_mask = CameraRig.CAMERA_COLLISION_MASK
