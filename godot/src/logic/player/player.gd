@@ -555,7 +555,9 @@ func _physics_process(dt: float) -> void:
 
 	# #1557: coyote window in seconds (B1) — the ground jump stays reachable this
 	# long after leaving the floor, and the glide gate must not eat the press.
-	var in_coyote := not on_floor and time_falling <= COYOTE_WINDOW
+	# velocity.y guard: the window only opens when walking off a ledge, never
+	# on the way up (a jump-pad launch must not become a cancellable "ground").
+	var in_coyote := not on_floor and time_falling <= COYOTE_WINDOW and velocity.y <= 0.0
 
 	# Air-jump hover phase: freeze gravity, then fire impulse + horizontal dash
 	# when the timer expires. Leaves avatar.rise/fall untouched on purpose —
@@ -570,7 +572,9 @@ func _physics_process(dt: float) -> void:
 			if horiz_dir.length_squared() > 0.0001:
 				horiz_dir = horiz_dir.normalized()
 				# #1557: max(8, current horizontal speed) (ApplyJump.cs).
-				var impulse := maxf(AIR_JUMP_DIRECTION_IMPULSE, Vector2(velocity.x, velocity.z).length())
+				var impulse := maxf(
+					AIR_JUMP_DIRECTION_IMPULSE, Vector2(velocity.x, velocity.z).length()
+				)
 				velocity.x = horiz_dir.x * impulse
 				velocity.z = horiz_dir.z * impulse
 			jump_count += 1
@@ -649,11 +653,16 @@ func _physics_process(dt: float) -> void:
 		and _time_since_last_jump >= JUMP_COOLDOWN
 	):
 		# Ground jump — consume the buffer instead of reading the key again.
-		# #1557: fires on the floor and inside the coyote window (B1). Height is
-		# lerped jog → run by horizontal speed; v0 uses the ascent gravity.
+		# #1557: fires on the floor and inside the coyote window (B1). Exact port
+		# of ApplyJump.GetJumpHeight: run height only while sprinting, lerped by
+		# current horizontal speed over run speed; v0 uses the ascent gravity.
 		var h_speed := Vector2(velocity.x, velocity.z).length()
-		var speed_t := clampf(inverse_lerp(jog_speed, run_speed, h_speed), 0.0, 1.0)
-		var effective_jump_height := lerpf(jump_height, run_jump_height, speed_t)
+		var max_jump_height := (
+			run_jump_height if Input.is_action_pressed("ia_sprint") else jump_height
+		)
+		var effective_jump_height := lerpf(
+			jump_height, max_jump_height, clampf(h_speed / run_speed, 0.0, 1.0)
+		)
 		velocity.y = sqrt(2.0 * effective_jump_height * gravity * GRAVITY_ASCENT_FACTOR)
 		jump_count = 1
 		_jump_buffer = 0.0
@@ -920,14 +929,14 @@ func _update_avatar_raycast_to_crosshair() -> void:
 	)
 
 
-# #1557: asymmetric gravity (ApplyGravity.cs) — ascent x4, descent x1, with a
-# 0.5s hold window after takeoff that halves it (the long-jump float).
+# #1557: asymmetric gravity (ApplyGravity.cs) — hold window FIRST (applies on
+# ascent AND early descent: 10×0.5=5), then the ascent factor (hold+rise = 20).
 func _current_gravity() -> float:
 	var g := gravity
+	if Input.is_action_pressed("ia_jump") and _time_since_last_jump < LONG_JUMP_TIME:
+		g *= LONG_JUMP_GRAVITY_SCALE
 	if velocity.y > 0.0:
 		g *= GRAVITY_ASCENT_FACTOR
-		if Input.is_action_pressed("ia_jump") and _time_since_last_jump < LONG_JUMP_TIME:
-			g *= LONG_JUMP_GRAVITY_SCALE
 	return g
 
 
