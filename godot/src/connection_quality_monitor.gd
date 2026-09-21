@@ -105,6 +105,12 @@ func _async_connect_signals() -> void:
 	_poll_timer.start()
 
 
+## True while the connection is healthy enough that the app isn't in an error state. Read by
+## ReviewPromptCoordinator, which must never put a rating prompt over a connection problem.
+func is_connection_healthy() -> bool:
+	return _state == State.GOOD
+
+
 func _now() -> float:
 	return Time.get_ticks_msec() / 1000.0
 
@@ -257,8 +263,8 @@ func _on_poor_connection() -> void:
 	if not Global.get_explorer():
 		return
 	NotificationsManager.show_system_toast(
-		"Poor connection",
-		"Your connection is unstable. Some features may not work properly.",
+		tr("TOAST_POOR_CONNECTION_TITLE"),
+		tr("TOAST_POOR_CONNECTION_BODY"),
 		"poor_connection",
 		"alert"
 	)

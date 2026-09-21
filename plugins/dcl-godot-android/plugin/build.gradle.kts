@@ -73,6 +73,8 @@ android {
 dependencies {
     implementation("org.godotengine:godot:4.3.0.stable")
     implementation("androidx.browser:browser:1.5.0")
+    // EXIF orientation for photos picked from the gallery
+    implementation("androidx.exifinterface:exifinterface:1.3.7")
 
     // ExoPlayer dependencies for video playback
     // Using 'api' instead of 'implementation' to make dependencies transitive
@@ -89,6 +91,9 @@ dependencies {
     // Play Integrity — server-side platform attestation for /sign-message.
     // Standard variant (no Play Services dependency required on-device).
     api("com.google.android.play:integrity:1.4.0")
+
+    // Play In-App Review (issue #2739) — the native rating card, launched in-process.
+    api("com.google.android.play:review:2.0.2")
 
     // Reown Sign SDK (WalletConnect successor) for native wallet connection
     api(platform("com.reown:android-bom:1.5.2"))

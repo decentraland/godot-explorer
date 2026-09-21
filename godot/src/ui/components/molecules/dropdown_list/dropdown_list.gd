@@ -83,6 +83,12 @@ var _button_press_active: bool = false
 func _ready():
 	_update_title()
 	_update_description()
+	# The reserved height depends on the width the label ends up with, and the VBox hands it
+	# that width on a deferred sort — after this node's own NOTIFICATION_RESIZED. Measuring
+	# there reads the label's previous width and reserves the wrong height (a three-line
+	# reservation under a one-line description, until something else re-measured it), so the
+	# label's own resize is the signal to measure on.
+	_description_label.resized.connect(_update_description_height)
 
 	if Engine.is_editor_hint():
 		return
@@ -157,6 +163,13 @@ func _get_minimum_size() -> Vector2:
 	if _vbox:
 		return _vbox.get_combined_minimum_size()
 	return Vector2.ZERO
+
+
+func _notification(what: int) -> void:
+	# The wrapped description's height also depends on the locale, which can change after
+	# _ready without resizing anything.
+	if what == NOTIFICATION_TRANSLATION_CHANGED:
+		_update_description_height()
 
 
 # -- Popup control -----------------------------------------------------------
@@ -295,6 +308,48 @@ func _update_description():
 	if _description_label:
 		_description_label.text = description
 		_description_label.visible = not description.is_empty()
+		_update_description_height()
+		update_minimum_size()
+
+
+# The description wraps (autowrap_mode = WORD_SMART in the scene), and a wrapped Label reports a
+# minimum height of one line — so a VBox parent allocates one line and the rest renders outside
+# the row. Reserving the measured height is what makes _get_minimum_size() honest; without it,
+# enabling autowrap trades the ellipsis for an overlap. See #2825: ES/PT descriptions take two
+# lines where English takes one.
+func _update_description_height() -> void:
+	if not _description_label or not _description_label.visible:
+		return
+
+	# The label auto-translates, so `text` holds the key while the drawn string is its
+	# translation — measure what is actually drawn, in the current locale.
+	var drawn: String = _description_label.atr(_description_label.text)
+	if drawn.is_empty():
+		return
+
+	# label_settings is swapped between the enabled and disabled variants by
+	# _apply_disabled_state(), so read the font live rather than caching it.
+	var settings: LabelSettings = _description_label.label_settings
+	var font: Font = settings.font if settings and settings.font else get_theme_font("font")
+	if font == null:
+		return
+	var font_size: int = settings.font_size if settings else get_theme_font_size("font_size")
+
+	var available_width: float = _description_label.size.x
+	if available_width <= 0.0:
+		return
+
+	var wrapped := font.get_multiline_string_size(
+		drawn, HORIZONTAL_ALIGNMENT_LEFT, available_width, font_size
+	)
+	var line_spacing: float = settings.line_spacing if settings else 0.0
+	var line_count := maxi(1, int(round(wrapped.y / maxf(1.0, font.get_height(font_size)))))
+	var height := wrapped.y + line_spacing * (line_count - 1)
+
+	# Assigning custom_minimum_size triggers a resize, which calls back into here. Only write on
+	# an actual change, or the notification feeds itself and the layout never settles.
+	if not is_equal_approx(_description_label.custom_minimum_size.y, height):
+		_description_label.custom_minimum_size.y = height
 		update_minimum_size()
 
 
@@ -315,7 +370,7 @@ func _update_selected_text():
 			if selected >= 0 and selected < _items.size():
 				_selected_label.text = _items[selected].text
 			else:
-				_selected_label.text = "Select"
+				_selected_label.text = tr("DROPDOWN_LIST_SELECT")
 			if disabled:
 				_selected_label.label_settings = load(
 					"res://assets/themes/unselected_dropdown_settings_disabled.tres"
@@ -355,6 +410,8 @@ func _apply_disabled_state():
 		_title_label.label_settings = load("res://assets/themes/title_settings.tres")
 		_description_label.label_settings = load("res://assets/themes/description_settings.tres")
 		_arrow_icon.modulate = COLOR_ARROW_NORMAL
+	# The two variants can differ in font metrics, so the reserved height is re-measured.
+	_update_description_height()
 	_update_selected_text()
 
 

@@ -24,6 +24,13 @@ func _ready() -> void:
 	button_mask = 0
 
 
+## Latch the orb "Hold" look (e.g. glider active). No-op until an OrbSkin child is present.
+func set_hold(on: bool) -> void:
+	for child in get_children():
+		if child is OrbSkin:
+			child.set_hold(on)
+
+
 ## Show a scene-provided icon on the overlay (leaves the native glyph untouched underneath).
 func set_custom_icon(texture: Texture2D) -> void:
 	if _custom_icon == null:
@@ -51,6 +58,7 @@ func _on_gui_input(event: InputEvent) -> void:
 				_is_action_active = true
 				set_pressed_no_signal(true)
 				Input.action_press(trigger_action)
+				DclGlobal.notify_joypad_input()
 				button_down.emit()
 				touch_action_changed.emit(true)
 			accept_event()
@@ -62,4 +70,5 @@ func _on_gui_input(event: InputEvent) -> void:
 				touch_action_changed.emit(false)
 			set_pressed_no_signal(false)
 			_touch_index = -1
+			DclGlobal.notify_joypad_input()
 			accept_event()

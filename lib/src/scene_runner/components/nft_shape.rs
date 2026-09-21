@@ -6,7 +6,7 @@ use crate::{
             SceneCrdtStateProtoComponents,
         },
     },
-    scene_runner::scene::Scene,
+    scene_runner::{godot_dcl_scene::add_own_visual_child, scene::Scene},
 };
 use godot::{classes::Node, prelude::*};
 
@@ -47,14 +47,14 @@ pub fn update_nft_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 let mut nft_shape_3d = if let Some(nft_shape_3d) = existing {
                     nft_shape_3d
                 } else {
-                    let mut nft_shape_3d = godot::tools::load::<PackedScene>(
+                    let mut nft_shape_3d = crate::scene_runner::scene_cache::packed_scene(
                         "res://src/decentraland_components/nft_shape.tscn",
                     )
                     .instantiate()
                     .unwrap();
 
                     nft_shape_3d.set_name("NFTShape");
-                    node_3d.add_child(&nft_shape_3d.clone().upcast::<Node>());
+                    add_own_visual_child(&mut node_3d, &nft_shape_3d.clone().upcast::<Node>());
                     nft_shape_3d
                 };
 

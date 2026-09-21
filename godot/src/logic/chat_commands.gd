@@ -40,7 +40,7 @@ func submit_message(message: String) -> void:
 				var dest_vector = _parse_coordinates(arg_string)
 				Global.on_chat_message.emit(
 					"system",
-					"[color=#ccc]🟢 Teleported to " + str(dest_vector) + "[/color]",
+					tr("CHAT_SYSTEM_TELEPORTED").format({"location": str(dest_vector)}),
 					Time.get_unix_time_from_system()
 				)
 				_explorer._on_control_menu_jump_to(dest_vector)
@@ -82,7 +82,7 @@ func submit_message(message: String) -> void:
 			OS.delay_msec(DEBUG_BLOCK_MS)
 		else:
 			Global.on_chat_message.emit(
-				"system", "[color=#ccc]🔴 Unknown command[/color]", Time.get_unix_time_from_system()
+				"system", tr("CHAT_SYSTEM_UNKNOWN_COMMAND"), Time.get_unix_time_from_system()
 			)
 	else:
 		Global.comms.send_chat(message)
@@ -150,14 +150,14 @@ func _parse_coordinates(coord_string: String) -> Vector2i:
 func _async_try_change_realm(realm_string: String, when: String) -> void:
 	Global.on_chat_message.emit(
 		"system",
-		"[color=#ccc]Trying to change to realm " + realm_string + "[/color]",
+		tr("CHAT_SYSTEM_CHANGING_REALM").format({"realm": realm_string}),
 		Time.get_unix_time_from_system()
 	)
 	Global.get_config().last_realm_joined = realm_string
 	_explorer.loading_ui.enable_loading_screen(realm_string, when)
 	var success = await Global.realm.async_set_realm(realm_string, true)
 	if not success:
-		_explorer.loading_ui.hide_loading_screen()
+		_explorer.loading_ui.hide_loading_screen("Failed")
 
 
 func _emit_pos_command_message() -> void:
@@ -166,7 +166,7 @@ func _emit_pos_command_message() -> void:
 	var cam = _explorer.get_viewport().get_camera_3d()
 	if not cam:
 		Global.on_chat_message.emit(
-			"system", "[color=#ccc]🔴 No active camera[/color]", Time.get_unix_time_from_system()
+			"system", tr("CHAT_SYSTEM_NO_CAMERA"), Time.get_unix_time_from_system()
 		)
 		return
 

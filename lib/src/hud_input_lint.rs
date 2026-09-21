@@ -112,7 +112,7 @@ fn preview_hud_panel_containers_do_not_block_scene_ui() {
     assert_click_through(find(&nodes, "Body", "VBoxContainer"), "preview_hud_panel");
 }
 
-/// The navbar's top-right corner Control hosts an 80x80 profile bubble but
+/// The navbar's top-right corner Control hosts an 82x82 profile bubble but
 /// measures 120x136; both it and its full-rect toggle Button stole roughly
 /// 2.5x the drawn area from the scene UI underneath.
 #[test]
@@ -123,8 +123,8 @@ fn navbar_profile_hitbox_matches_visible_bubble() {
     let button = find(&nodes, "Button", "Control");
     assert_eq!(
         button.props.get("custom_minimum_size").map(String::as_str),
-        Some("Vector2(80, 80)"),
-        "navbar: the profile toggle Button hitbox must match the visible 80x80 \
+        Some("Vector2(82, 82)"),
+        "navbar: the profile toggle Button hitbox must match the visible 82x82 \
          Panel_Profile bubble, not the whole 120x136 corner Control (issue #2578).",
     );
     assert_ne!(

@@ -59,7 +59,7 @@ func refresh_highlight_area():
 
 func refresh_value(new_x: int):
 	if slider_scale == 0:
-		label_grabber_value.text = "Error"
+		label_grabber_value.text = tr("CUSTOM_SLIDER_ERROR")
 	else:
 		value = floor(new_x / slider_scale / step) * step
 		label_grabber_value.text = str(value)

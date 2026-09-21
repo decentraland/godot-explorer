@@ -31,7 +31,7 @@ var _validation_callable: Callable
 # returns a Dictionary { "status": SUBMIT_*, "message": String }. When unset the
 # modal stays "dumb": confirm just emits `confirmed` and closes.
 var _submit_callable: Callable
-var _confirm_text: String = ""
+var _confirm_text: TranslationKey = null
 var _busy: bool = false
 var _spinner: Control = null
 
@@ -69,21 +69,23 @@ func _on_gui_input(event: InputEvent) -> void:
 		close()
 
 
+## All five text parameters are translation keys: every node they reach auto-translates,
+## so passing the key is what keeps the modal correct across a language change.
 func setup(
-	title: String,
-	subtitle: String,
-	placeholder: String,
-	confirm_text: String,
-	cancel_text: String,
+	title: TranslationKey,
+	subtitle: TranslationKey,
+	placeholder: TranslationKey,
+	confirm_text: TranslationKey,
+	cancel_text: TranslationKey,
 	validation: Callable,
 ) -> void:
 	_validation_callable = validation
 	_confirm_text = confirm_text
-	label_title.text = title
-	label_subtitle.text = subtitle
-	dcl_text_edit.place_holder = placeholder
-	button_confirm.text = confirm_text
-	button_cancel.text = cancel_text
+	label_title.text = title.raw()
+	label_subtitle.text = subtitle.raw()
+	dcl_text_edit.place_holder = placeholder.raw()
+	button_confirm.text = confirm_text.raw()
+	button_cancel.text = cancel_text.raw()
 
 
 ## Injects an async handler run when the user confirms. Without it the modal
@@ -159,7 +161,7 @@ func _set_busy(busy: bool) -> void:
 	_busy = busy
 	if _spinner:
 		_spinner.visible = busy
-	button_confirm.text = "" if busy else _confirm_text
+	button_confirm.text = "" if busy else _confirm_text.raw()
 	button_confirm.disabled = busy
 	button_cancel.disabled = busy
 

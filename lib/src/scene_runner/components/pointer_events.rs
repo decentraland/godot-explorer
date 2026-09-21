@@ -182,12 +182,21 @@ impl PbPointerEvents {
 //   - only max_player_distance: player_distance <= max_player_distance
 //   - both:                     OR of the two
 //   - neither:                  default max_distance = 10 (camera distance only)
+//
+// max_distance is specced against the camera, but scenes author it assuming
+// camera ≈ player (first-person reference client). A third-person camera sits
+// meters behind the avatar, so a strict camera-distance read makes small
+// max_distance interactions (e.g. bloomgarden's 3m "Water") unreachable in
+// third person even with the crosshair on the entity. Use whichever of
+// camera/player is closer: first-person is unchanged (they coincide), third
+// person becomes playable.
 pub fn event_info_in_range(
     max_distance: Option<f32>,
     max_player_distance: Option<f32>,
     camera_distance: f32,
     player_distance: f32,
 ) -> bool {
+    let camera_distance = camera_distance.min(player_distance);
     match (max_distance, max_player_distance) {
         (None, None) => camera_distance <= 10.0,
         (Some(d), None) => camera_distance <= d,
@@ -621,5 +630,28 @@ fn pointer_events_system_without_proximity(
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::event_info_in_range;
+
+    #[test]
+    fn third_person_camera_distance_does_not_block_interaction() {
+        // Crosshair on the entity, camera 5m back (third person), player 1.5m
+        // away, max_distance = 3: in range (the #1888 mobile watering case).
+        assert!(event_info_in_range(Some(3.0), None, 5.0, 1.5));
+        // Both beyond range: still out.
+        assert!(!event_info_in_range(Some(3.0), None, 5.0, 4.0));
+        // First-person (camera ≈ player): unchanged semantics.
+        assert!(event_info_in_range(Some(3.0), None, 2.0, 2.0));
+        assert!(!event_info_in_range(Some(3.0), None, 4.0, 3.5));
+        // max_player_distance alone: untouched.
+        assert!(event_info_in_range(None, Some(2.0), 50.0, 1.0));
+        assert!(!event_info_in_range(None, Some(2.0), 1.0, 3.0));
+        // Default (neither): 10m rule with the closer of the two.
+        assert!(event_info_in_range(None, None, 15.0, 8.0));
+        assert!(!event_info_in_range(None, None, 15.0, 12.0));
     }
 }

@@ -3,6 +3,11 @@ extends RefCounted
 
 const BASE_EMOTES_URN_PREFIX = "urn:decentraland:off-chain:base-emotes:"
 
+# Emote categories (@dcl/schemas EmoteCategory) — distinct from wearable categories.
+const CATEGORIES: PackedStringArray = [
+	"dance", "stunt", "greetings", "fun", "poses", "reactions", "horror", "miscellaneous"
+]
+
 # Base emotes from avatar-assets repository
 const DEFAULT_EMOTE_NAMES = {
 	# Original 10 default slot emotes

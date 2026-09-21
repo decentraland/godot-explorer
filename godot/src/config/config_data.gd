@@ -32,6 +32,9 @@ enum ConfigParams {
 	SKYBOX_TIME,
 	DYNAMIC_GRAPHICS_ENABLED,
 	AVATAR_IMPOSTORS_ENABLED,
+	LOCALE,
+	VIEW_DISTANCE,
+	PARTICLE_QUALITY,
 }
 
 # Graphics profile index for Custom (manual settings)
@@ -47,6 +50,13 @@ var local_content_dir: String = OS.get_user_data_dir() + "/content":
 var max_cache_size: int = 1:
 	set(value):
 		max_cache_size = value
+
+# UI language. Empty string means "follow the device locale" (the first-launch default).
+# Otherwise one of LocaleSettings.SUPPORTED_LOCALES, e.g. "en", "es", "pt_BR".
+var locale: String = "":
+	set(value):
+		locale = value
+		param_changed.emit(ConfigParams.LOCALE)
 
 # 0: Windowed, 1: Borderless, 2: Full Screen
 var window_mode: int = 0:
@@ -144,6 +154,17 @@ var avatar_impostors_enabled: bool = true:
 		avatar_impostors_enabled = value
 		param_changed.emit(ConfigParams.AVATAR_IMPOSTORS_ENABLED)
 
+var view_distance: float = 300.0:
+	set(value):
+		view_distance = value
+		param_changed.emit(ConfigParams.VIEW_DISTANCE)
+
+# 0: Off, 1: Low, 2: Medium, 3: High
+var particle_quality: int = 3:
+	set(value):
+		particle_quality = value
+		param_changed.emit(ConfigParams.PARTICLE_QUALITY)
+
 var last_realm_joined: String = "":
 	set(value):
 		last_realm_joined = value
@@ -162,6 +183,15 @@ var terms_and_conditions_version: int = 0
 var upgrade_modal_shown_count: int = 0
 var upgrade_modal_last_shown_unix: int = 0
 var upgrade_modal_first_seen_unix: int = 0
+
+# In-app review prompt cadence (issue #2739). review_session_count counts app foreground
+# sessions (one per launch, the same session definition analytics uses); the prompt only becomes
+# eligible at 5. review_shots_fired is the lifetime hard cap (3, then the module is inert
+# forever) and review_last_shot_unix is the floor the 2nd and 3rd shots wait behind. See
+# ReviewPromptCoordinator.
+var review_session_count: int = 0
+var review_shots_fired: int = 0
+var review_last_shot_unix: int = 0
 
 # Unix timestamp (seconds) of the last OS notification-permission prompt. Throttles
 # re-prompts (see NotificationsManager.PERMISSION_PROMPT_COOLDOWN_SEC): a denied
@@ -341,6 +371,8 @@ func load_from_default():
 	self.local_content_dir = OS.get_user_data_dir() + "/content"
 	self.max_cache_size = 1
 
+	self.locale = ""
+
 	self.show_fps = true
 
 	self.dynamic_skybox = true
@@ -408,6 +440,7 @@ func load_from_settings_file():
 	self.max_cache_size = settings_file.get_value(
 		"config", "max_cache_size", data_default.max_cache_size
 	)
+	self.locale = settings_file.get_value("config", "locale", data_default.locale)
 	self.show_fps = settings_file.get_value("config", "show_fps", data_default.show_fps)
 
 	self.dynamic_skybox = settings_file.get_value(
@@ -421,6 +454,12 @@ func load_from_settings_file():
 	self.ui_zoom = settings_file.get_value("config", "ui_zoom", data_default.ui_zoom)
 	self.resolution_3d_scale = settings_file.get_value(
 		"config", "resolution_3d_scale", data_default.resolution_3d_scale
+	)
+	self.view_distance = settings_file.get_value(
+		"config", "view_distance", data_default.view_distance
+	)
+	self.particle_quality = settings_file.get_value(
+		"config", "particle_quality", data_default.particle_quality
 	)
 
 	self.audio_general_volume = settings_file.get_value(
@@ -492,6 +531,18 @@ func load_from_settings_file():
 
 	self.upgrade_modal_first_seen_unix = settings_file.get_value(
 		"user", "upgrade_modal_first_seen_unix", data_default.upgrade_modal_first_seen_unix
+	)
+
+	self.review_session_count = settings_file.get_value(
+		"user", "review_session_count", data_default.review_session_count
+	)
+
+	self.review_shots_fired = settings_file.get_value(
+		"user", "review_shots_fired", data_default.review_shots_fired
+	)
+
+	self.review_last_shot_unix = settings_file.get_value(
+		"user", "review_last_shot_unix", data_default.review_last_shot_unix
 	)
 
 	self.notif_permission_last_prompt_unix = settings_file.get_value(
@@ -569,6 +620,7 @@ func save_to_settings_file():
 	new_settings_file.set_value("config", "dynamic_graphics_enabled", self.dynamic_graphics_enabled)
 	new_settings_file.set_value("config", "local_content_dir", self.local_content_dir)
 	new_settings_file.set_value("config", "max_cache_size", self.max_cache_size)
+	new_settings_file.set_value("config", "locale", self.locale)
 	new_settings_file.set_value("config", "show_fps", self.show_fps)
 	new_settings_file.set_value("config", "dynamic_skybox", self.dynamic_skybox)
 	new_settings_file.set_value("config", "skybox_time", self.skybox_time)
@@ -578,6 +630,8 @@ func save_to_settings_file():
 	new_settings_file.set_value("config", "window_mode", self.window_mode)
 	new_settings_file.set_value("config", "ui_zoom", self.ui_zoom)
 	new_settings_file.set_value("config", "resolution_3d_scale", self.resolution_3d_scale)
+	new_settings_file.set_value("config", "view_distance", self.view_distance)
+	new_settings_file.set_value("config", "particle_quality", self.particle_quality)
 	new_settings_file.set_value("config", "audio_general_volume", self.audio_general_volume)
 	new_settings_file.set_value("config", "audio_scene_volume", self.audio_scene_volume)
 	new_settings_file.set_value("config", "audio_ui_volume", self.audio_ui_volume)
@@ -638,5 +692,8 @@ func save_to_settings_file():
 	new_settings_file.set_value(
 		"user", "upgrade_modal_first_seen_unix", self.upgrade_modal_first_seen_unix
 	)
+	new_settings_file.set_value("user", "review_session_count", self.review_session_count)
+	new_settings_file.set_value("user", "review_shots_fired", self.review_shots_fired)
+	new_settings_file.set_value("user", "review_last_shot_unix", self.review_last_shot_unix)
 	new_settings_file.set_value("analytics", "user_id", self.analytics_user_id)
 	new_settings_file.save(DclConfig.get_settings_file_path())

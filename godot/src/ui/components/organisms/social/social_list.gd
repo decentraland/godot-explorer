@@ -44,7 +44,7 @@ func _ready():
 		Global.social_service.friendship_deleted.connect(_on_friendship_request_changed)
 	if player_list_type == SOCIAL_TYPE.BLOCKED:
 		Global.social_blacklist.blacklist_changed.connect(self.async_update_list)
-	if player_list_type == SOCIAL_TYPE.REQUEST:
+	if player_list_type == SOCIAL_TYPE.REQUEST or player_list_type == SOCIAL_TYPE.REQUEST_SENT:
 		# Reload request list when blacklist changes to pick up previously hidden requests
 		Global.social_blacklist.blacklist_changed.connect(self.async_update_list)
 
@@ -156,7 +156,11 @@ func _add_item_for_avatar(avatar: Avatar) -> void:
 
 func _async_on_blacklist_changed() -> void:
 	# Handle blacklist changes for NEARBY and REQUEST lists
-	if player_list_type != SOCIAL_TYPE.NEARBY and player_list_type != SOCIAL_TYPE.REQUEST:
+	if (
+		player_list_type != SOCIAL_TYPE.NEARBY
+		and player_list_type != SOCIAL_TYPE.REQUEST
+		and player_list_type != SOCIAL_TYPE.REQUEST_SENT
+	):
 		return
 
 	# Items will handle their own visibility via blacklist_changed signal
@@ -205,8 +209,8 @@ func _request_reorder() -> void:
 
 
 func _reorder_items() -> void:
-	# Use insertion sort to maintain order: friends first, then non-friends, alphabetically
-	# This is more efficient than rebuilding the entire order for small changes
+	# Use insertion sort to maintain order: non-friends first, then pending, then friends, each
+	# alphabetically. This is more efficient than rebuilding the entire order for small changes.
 	var children = get_children()
 	if children.size() <= 1:
 		return
@@ -231,22 +235,33 @@ func _reorder_items() -> void:
 
 
 func _should_come_before(a, b) -> bool:
-	# Returns true if 'a' should come before 'b' in the sorted order
-	# Order: friends first (alphabetically), then non-friends (alphabetically)
+	# Returns true if 'a' should come before 'b' in the sorted order.
+	# Order: non-friends first, then pending, then friends; alphabetically within each category.
 	if not is_instance_valid(a) or not is_instance_valid(b):
 		return false
 
-	var a_is_friend = a.has_method("is_friend") and a.is_friend()
-	var b_is_friend = b.has_method("is_friend") and b.is_friend()
-
-	# Friends come before non-friends
-	if a_is_friend and not b_is_friend:
-		return true
-	if not a_is_friend and b_is_friend:
-		return false
+	var rank_a = _category_rank(a)
+	var rank_b = _category_rank(b)
+	if rank_a != rank_b:
+		return rank_a < rank_b
 
 	# Same category: sort alphabetically by name
 	return _compare_by_name(a, b)
+
+
+## Sort bucket for the nearby list: 0 = non-friend, 1 = pending request (sent or received),
+## 2 = friend. Lower ranks are listed first.
+func _category_rank(item) -> int:
+	if not is_instance_valid(item) or not ("current_friendship_status" in item):
+		return 0
+
+	match item.current_friendship_status:
+		Global.FriendshipStatus.ACCEPTED:
+			return 2
+		Global.FriendshipStatus.REQUEST_SENT, Global.FriendshipStatus.REQUEST_RECEIVED:
+			return 1
+		_:
+			return 0
 
 
 func _compare_by_name(a, b) -> bool:
@@ -276,7 +291,7 @@ func async_update_list(_remote_avatars: Array = []) -> void:
 			await _async_reload_online_list(current_request_id)
 		SOCIAL_TYPE.OFFLINE:
 			await _async_reload_offline_list(current_request_id)
-		SOCIAL_TYPE.REQUEST:
+		SOCIAL_TYPE.REQUEST, SOCIAL_TYPE.REQUEST_SENT:
 			remove_items()
 			await _async_reload_request_list(current_request_id)
 
@@ -318,7 +333,11 @@ func _async_reload_blocked_list(request_id: int) -> void:
 	remove_items()
 	var should_load = _is_panel_visible()
 	add_items_by_social_item_data(blocked_social_items, should_load)
-	_update_list_size()
+	# Size directly from the data we just rendered — counting tree children here would still include
+	# the old rows pending queue_free, leaving a stale count (an unblock-to-zero stays shown). Blocked
+	# rows are always visible, so this is exact.
+	list_size = blocked_social_items.size()
+	size_changed.emit()
 
 
 func _async_reload_online_list(request_id: int) -> void:
@@ -349,6 +368,10 @@ func _async_reload_online_list(request_id: int) -> void:
 	for friend in all_friends:
 		if friends_panel and friends_panel.is_friend_online(friend.address):
 			desired_online[friend.address.to_lower()] = friend
+
+	# Refresh the shared location dict (Genesis + Worlds) for these online friends so each social
+	# item reads its place/jump-in from one place instead of firing its own per-friend request.
+	Global.locations.async_update_online_locations(desired_online.keys())
 
 	var should_load := _is_panel_visible()
 
@@ -489,7 +512,12 @@ func _get_friends_panel():
 
 
 func _async_reload_request_list(request_id: int) -> void:
-	var promise = Global.social_service.get_pending_requests(100, 0)
+	# REQUEST_SENT fetches the outgoing (sent) requests; REQUEST the incoming (received) ones.
+	var promise: Promise
+	if player_list_type == SOCIAL_TYPE.REQUEST_SENT:
+		promise = Global.social_service.get_sent_requests(100, 0)
+	else:
+		promise = Global.social_service.get_pending_requests(100, 0)
 	await PromiseUtils.async_awaiter(promise)
 
 	# Check if this request is still valid (no newer request started)

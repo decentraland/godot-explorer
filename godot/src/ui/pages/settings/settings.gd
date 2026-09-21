@@ -11,34 +11,78 @@ enum SceneLogLevel {
 	SYSTEM_ERROR = 3,
 }
 
-const _SECTION_TITLE_SCRIPT = preload("res://src/ui/pages/settings/section_title.gd")
+const _DROPDOWN_LIST_SCENE = preload(
+	"res://src/ui/components/molecules/dropdown_list/dropdown_list.tscn"
+)
+const _SECTION_ITEM_SCENE = preload(
+	"res://src/ui/components/molecules/settings_section_item/settings_section_item.tscn"
+)
 const CACHE_SIZE_MB: Array[int] = [1024, 2048, 4096]
 
-## When true, settings operates as a side panel inside the explorer:
-## orientation is not changed and the background texture is hidden.
-@export var panel_mode: bool = false:
-	set(value):
-		panel_mode = value
-		if is_node_ready():
-			_apply_panel_mode()
+# Version label font size (production). The longer staging/dev string renders 2pt smaller to fit.
+const _VERSION_FONT_SIZE: int = 24
+
+# Gap between the left section list and the content pane (landscape). The Account section adds the
+# avatar preview column, so it uses a tighter gap than the other sections.
+const _LAYOUT_SEPARATION_DEFAULT: int = 143
+const _LAYOUT_SEPARATION_ACCOUNT: int = 70
+
+# How far (px) the avatar's head pokes ABOVE the header's bottom edge — a slight overlap into the
+# header so the head isn't strictly boxed below it.
+const _ACCOUNT_AVATAR_HEAD_OVERLAP: int = 25
+# Bottom inset (px): the feet lift off the preview's bottom edge, which is aligned to the Version
+# label so the feet share its bottom margin.
+const _ACCOUNT_AVATAR_FEET_INSET: int = 40
+
+# Section registry / list-navigation state (see _build_section_list).
+var _sections: Array = []
+var _rows_by_key: Dictionary = {}
+var _section_button_group: ButtonGroup = null
+var _current_section_key: String = ""
+# Portrait sub-mode: false = section list is shown, true = a section's content is shown
+# with a back button. Landscape ignores this (list and content are always side by side).
+var _portrait_detail: bool = false
+var _avatar_refresh_in_flight: bool = false
+var _avatar_refresh_pending: bool = false
 
 # Scene LightSource Dev Tools controls, keyed by DclLightSourceComponent.get_light_settings() keys.
 var _light_debug_checks: Dictionary = {}
 var _light_max_lights_spin: SpinBox = null
 
+# Custom profile controls (visible only when graphic_profile == PROFILE_CUSTOM).
+var _custom_view_distance_row: HBoxContainer = null
+var _custom_view_distance_slider: HSlider = null
+var _custom_view_distance_value_label: Label = null
+var _custom_particles_row: HBoxContainer = null
+var _custom_particles_dropdown: DropdownList = null
+var _custom_max_lights_row: HBoxContainer = null
+var _custom_max_lights_spin: SpinBox = null
+
 @onready var label_title: Label = %Label_Title
-@onready var margin_container_nav: MarginContainer = %MarginContainer_Nav
+@onready var hbox_layout: HBoxContainer = %HBoxContainer_Layout
+@onready var texture_avatar_background: TextureRect = %TextureRect_AvatarBackground
+@onready var button_version: Button = %Button_Version
+@onready var header_column: VBoxContainer = %HeaderColumn
 
 @onready var container_gameplay: VBoxContainer = %VBoxContainer_Gameplay
 @onready var container_graphics: VBoxContainer = %VBoxContainer_Graphics
 @onready var container_advanced: VBoxContainer = %VBoxContainer_Advanced
 @onready var container_audio: VBoxContainer = %VBoxContainer_Audio
 @onready var container_account: VBoxContainer = %VBoxContainer_Account
+@onready var label_account_nickname: Label = %Label_AccountNickname
+@onready var label_account_tag: Label = %Label_AccountTag
+@onready var label_account_address: Label = %Label_AccountAddress
+@onready var avatar_preview_account: AvatarPreview = %AvatarPreview_Account
+## Empty placeholder column inside the scroll; the avatar preview (a sibling of the settings root,
+## so it draws above the content but below modals/toasts) mirrors this column's rect.
+@onready var avatar_column: Control = %Control_AvatarPreview
 @onready var container_storage: VBoxContainer = %VBoxContainer_Storage
 @onready var v_box_container_sections: VBoxContainer = %VBoxContainer_Sections
 
 #Storage items:
 @onready var dropdown_list_max_cache_size: DropdownList = %DropdownList_MaxCacheSize
+@onready var container_language: MarginContainer = %Container_Language
+@onready var dropdown_list_language: DropdownList = %DropdownList_Language
 @onready var label_current_cache_value: Label = %Label_CurrentCacheValue
 @onready var progress_bar_current_cache_size: ProgressBar = %ProgressBar_CurrentCacheSize
 @onready var button_clear_cache: Button = %Button_ClearCache
@@ -54,7 +98,6 @@ var check_button_submit_message_closes_chat: CheckButton = %CheckButton_SubmitMe
 @onready var check_button_hide_scene_ui: CheckButton = %CheckButton_HideSceneUI
 @onready var hide_view_profile_row: HBoxContainer = %HideViewProfile
 @onready var hide_world_interactions_row: HBoxContainer = %HideWorldInteractions
-@onready var hide_player_names_row: HBoxContainer = %HidePlayerNames
 @onready var hide_scene_ui_row: HBoxContainer = %HideSceneUI
 @onready var container_interface: MarginContainer = %Container_Interface
 @onready var container_camera: Control = %Container_Camera
@@ -86,26 +129,29 @@ var check_button_submit_message_closes_chat: CheckButton = %CheckButton_SubmitMe
 @onready var check_button_multiplayer_debug: CheckButton = %CheckButton_MultiplayerDebug
 @onready var dropdown_list_realm: DropdownList = %DropdownList_Realm
 
-@onready var button_graphics: Button = %Button_Graphics
-@onready var button_audio: Button = %Button_Audio
-@onready var button_gameplay: Button = %Button_Gameplay
-@onready var button_account: Button = %Button_Account
-@onready var button_storage: Button = %Button_Storage
-@onready var button_developer: Button = %Button_Developer
-
-@onready var tabs_scroll_container: ScrollContainer = %TabsScrollContainer
+@onready var button_back: Button = %Button_Back
+@onready var panel_content: Control = %Panel_Content
+@onready var label_version: Label = %Label_Version
+@onready var section_buttons_container: VBoxContainer = %VBoxContainer_SectionButtons
+@onready var scroll_sections: ScrollContainer = %ScrollContainer_Sections
+@onready var container_help_support: Control = %VBoxContainer_HelpSupport
 @onready var dropdown_list_graphic_profiles: DropdownList = %DropdownList_GraphicProfiles
 @onready var dropdown_list_custom_skybox: DropdownList = %DropdownList_CustomSkybox
 
 @onready var button_sign_out: CustomButton = %CustomButton_SignOut
 @onready var margin_container_content: MarginContainer = %MarginContainer_Content
+@onready var margin_container_list: MarginContainer = %MarginContainer_List
 
 
 func _ready():
 	UiSounds.install_audio_recusirve(self)
-	button_developer.visible = !Global.is_production()
-	button_graphics.set_pressed_no_signal(true)
-	_on_button_graphics_pressed()
+	_build_section_list()
+	button_back.pressed.connect(_on_back_pressed)
+	_refresh_version_label()
+	# The version row is a Button with a copy icon: tapping it copies the version string.
+	button_version.pressed.connect(_on_version_copy_pressed)
+
+	_setup_account_section()
 
 	# Preview URL: release focus when clicking outside, keep visible when keyboard opens, connect button
 	line_edit_custom_preview_url.custom_focus_entered.connect(
@@ -117,8 +163,7 @@ func _ready():
 	check_button_submit_message_closes_chat.button_pressed = (
 		Global.get_config().submit_message_closes_chat
 	)
-	dropdown_list_camera_mode.add_item("First person", Global.CameraMode.FIRST_PERSON)
-	dropdown_list_camera_mode.add_item("Third person", Global.CameraMode.THIRD_PERSON)
+	_populate_camera_mode_items()
 	dropdown_list_camera_mode.item_selected.connect(_on_dropdown_list_camera_mode_item_selected)
 	_refresh_camera_mode_row()
 	# Keep the camera dropdown in sync with runtime changes (scene locks the mode / forces
@@ -134,9 +179,9 @@ func _ready():
 		Global.session_hide_ui_options_sync.connect(_on_session_hide_ui_options_sync)
 	_refresh_hide_explorer_ui_row()
 
-	dropdown_list_max_cache_size.add_item("1 GB", 0)
-	dropdown_list_max_cache_size.add_item("2 GB", 1)
-	dropdown_list_max_cache_size.add_item("4 GB", 2)
+	_setup_language_dropdown()
+
+	_populate_cache_size_items()
 	var cache_index := clampi(Global.get_config().max_cache_size, 0, CACHE_SIZE_MB.size() - 1)
 	dropdown_list_max_cache_size.select(cache_index)
 	progress_bar_current_cache_size.max_value = CACHE_SIZE_MB[cache_index]
@@ -145,22 +190,16 @@ func _ready():
 	)
 
 	# graphic
-	var i = 0
-	for profile in GraphicSettings.PROFILE_NAMES:
-		if profile != "Custom":
-			dropdown_list_graphic_profiles.add_item(profile, i)
-			i += 1
+	_populate_graphic_profile_items()
 	_setup_dynamic_graphics()
 	_update_dynamic_graphics_status()
 	_setup_impostor_benchmark_button()
 	_setup_fast_day_cycle_toggle()
 	_setup_light_debug_controls()
+	_setup_custom_profile_controls()
 	refresh_graphic_settings()
 
-	var j = 0
-	for profile in GraphicSettings.SKYBOX_TIME_NAMES:
-		dropdown_list_custom_skybox.add_item(profile.name, j)
-		j += 1
+	_populate_skybox_items()
 
 	if Global.get_config().dynamic_skybox:
 		check_button_dynamic_skybox.button_pressed = true
@@ -209,58 +248,110 @@ func _ready():
 	if label_title.label_settings:
 		label_title.label_settings = label_title.label_settings.duplicate()
 	resized.connect(_on_resized)
+	if not Global.orientation_changed.is_connected(_on_orientation_changed):
+		Global.orientation_changed.connect(_on_orientation_changed)
 	_on_resized()
-	_apply_panel_mode()
+	_select_section(_default_section_key(), false)
 
 
 func _on_resized() -> void:
 	_apply_layout(Global.is_orientation_portrait())
 
 
+func _on_orientation_changed(_is_portrait: bool) -> void:
+	_apply_layout(Global.is_orientation_portrait())
+	_update_avatar_background()
+	# Rows toggle only in landscape (they flip toggle_mode with orientation). Re-assert the
+	# current selection so the active section stays highlighted after rotating to landscape.
+	if not Global.is_orientation_portrait():
+		var row: SettingsSectionItem = _rows_by_key.get(_current_section_key)
+		if is_instance_valid(row):
+			row.set_pressed_no_signal(true)
+			row.refresh_weight()
+		# The account avatar preview is landscape-only; load it now that it's visible.
+		_async_refresh_account_avatar()
+		_position_account_avatar.call_deferred()
+
+
 func _apply_layout(is_orientation_portrait: bool) -> void:
 	var dropdown_max: int = 3
-	var section_title_font_size: int = 24
-	var section_v_separation: int = 56
 	var button_h: int = 74
-	var button_theme_variation: String = "SecondaryOutlinedButtonSmall"
-	var margin_container_nav_v: int = 0
-	var margin_container_content_top: int = 12
+	var button_font_size: int = 24
+	var sign_out_icon_size: int = 28
+	# Regular outlined variation (16px corner radius) in both orientations — the design no longer
+	# uses the compact small variant.
+	var button_theme_variation: String = "SecondaryOutlinedButton"
+	var margin_container_content_top: int = 0
+	var section_list_h_margin: int = 12
 	label_title.label_settings.font_size = 44
 
 	if is_orientation_portrait:
-		margin_container_nav_v = 18
-		margin_container_content_top = 32
+		margin_container_content_top = 28
+		section_list_h_margin = 0
 		label_title.label_settings.font_size = 48
 		dropdown_max = 5
-		section_title_font_size = 26
-		section_v_separation = 72
 		button_h = 96
-		button_theme_variation = "SecondaryOutlinedButton"
-
-	container_gameplay.add_theme_constant_override("separation", section_v_separation)
-	container_graphics.add_theme_constant_override("separation", section_v_separation)
-	container_advanced.add_theme_constant_override("separation", section_v_separation)
+		button_font_size = 30
+		sign_out_icon_size = 32
 
 	button_clear_cache.custom_minimum_size.y = button_h
 	button_clear_cache.theme_type_variation = button_theme_variation
+	button_clear_cache.add_theme_font_size_override("font_size", button_font_size)
 	button_sign_out.custom_minimum_size.y = button_h
 	button_sign_out.theme_type_variation = button_theme_variation
-
-	for node in find_children("*", "PanelContainer", true, false):
-		if node.get_script() == _SECTION_TITLE_SCRIPT:
-			node.set_font_size(section_title_font_size)
+	button_sign_out.add_theme_font_size_override("font_size", button_font_size)
+	button_sign_out.icon_size = sign_out_icon_size
 
 	for node in find_children("*", "DropdownList", true, false):
 		node.max_visible_items = dropdown_max
 
-	margin_container_nav.add_theme_constant_override("margin_bottom", margin_container_nav_v)
-	margin_container_nav.add_theme_constant_override("margin_top", margin_container_nav_v)
 	margin_container_content.add_theme_constant_override("margin_top", margin_container_content_top)
+	margin_container_list.add_theme_constant_override("margin_left", section_list_h_margin)
+	margin_container_list.add_theme_constant_override("margin_right", section_list_h_margin)
+	_apply_nav_layout(is_orientation_portrait)
+
+
+## List (left menu) vs content (right pane) visibility. Landscape shows both side by side;
+## portrait shows one at a time (master-detail) driven by _portrait_detail.
+func _apply_nav_layout(is_orientation_portrait: bool) -> void:
+	if is_orientation_portrait:
+		# Portrait: the list is the only visible pane, so let it expand to the full width.
+		margin_container_list.visible = not _portrait_detail
+		panel_content.visible = _portrait_detail
+		margin_container_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	else:
+		# Landscape: list docks left at its own custom_minimum_size; content takes the rest.
+		margin_container_list.visible = true
+		panel_content.visible = true
+		margin_container_list.size_flags_horizontal = Control.SIZE_FILL
+	_update_header()
+
+
+## The single persistent header shows "Settings" on the section list (and in landscape, where the
+## list stays visible), and "< {section}" in the portrait detail view. Its back button returns to
+## the list in portrait detail, and closes the menu otherwise.
+func _update_header() -> void:
+	var portrait: bool = Global.is_orientation_portrait()
+	var in_detail: bool = portrait and _portrait_detail
+	# The title is portrait-only — landscape uses the always-visible section list for context, so
+	# there's nothing to compute or show there. Driven by Global (not a window-size heuristic).
+	label_title.visible = portrait
+	if portrait:
+		var title_key: String = "SETTINGS_SETTINGS"
+		if in_detail:
+			var section: Dictionary = _find_section(_current_section_key)
+			if not section.is_empty():
+				title_key = section["title_key"]
+		label_title.text = tr(title_key)
+	# Back button: returns to the list in portrait detail, closes the menu in landscape.
+	button_back.visible = in_detail or not portrait
 
 
 func refresh_graphic_settings():
 	var graphic_profile = Global.get_config().graphic_profile
 	dropdown_list_graphic_profiles.select(graphic_profile)
+	_sync_light_controls_for_profile()
+	_sync_custom_profile_controls()
 
 
 func show_control(control: Control):
@@ -272,34 +363,142 @@ func show_control(control: Control):
 	content_scroll_container.scroll_vertical = 0
 
 
-func _async_scroll_to_tab_button(button: Button) -> void:
-	await get_tree().process_frame
-	var scroll := tabs_scroll_container.scroll_horizontal
-	var view_width := tabs_scroll_container.size.x
-	var btn_left := button.position.x
-	var btn_right := button.position.x + button.size.x
-	var visible_left := float(scroll)
-	var visible_right := float(scroll) + view_width
-	var fully_visible := btn_left >= visible_left and btn_right <= visible_right
-	if fully_visible:
+func _default_section_key() -> String:
+	if _sections.is_empty():
+		return ""
+	return _sections[0]["key"]
+
+
+func _find_section(key: String) -> Dictionary:
+	for section in _sections:
+		if section["key"] == key:
+			return section
+	return {}
+
+
+## Build the section registry and the left-menu rows. Order matches the design; Developer is
+## appended only outside production. Rows share a ButtonGroup so exactly one stays highlighted.
+## Section title keys live in the data table below, invisible to the i18n scanner:
+# i18n-keys: SETTINGS_GRAPHICS, SETTINGS_AUDIO, SETTINGS_GAMEPLAY, SETTINGS_LANGUAGE_SECTION
+# i18n-keys: SETTINGS_ACCOUNT, SETTINGS_HELP_SUPPORT, SETTINGS_STORAGE, SETTINGS_DEV_TOOLS
+# i18n-keys: SETTINGS_SETTINGS
+func _build_section_list() -> void:
+	_section_button_group = ButtonGroup.new()
+	_sections = [
+		{"key": "graphics", "title_key": "SETTINGS_GRAPHICS", "container": container_graphics},
+		{"key": "audio", "title_key": "SETTINGS_AUDIO", "container": container_audio},
+		{"key": "gameplay", "title_key": "SETTINGS_GAMEPLAY", "container": container_gameplay},
+	]
+	# Language only when the picker is actually usable (>= 2 locales, and offered in this build) —
+	# otherwise _setup_language_dropdown() hides the empty section and the row would open a blank panel.
+	if (
+		LocaleSettings.selectable_locales().size() >= 2
+		and LocaleSettings.is_language_picker_available()
+	):
+		(
+			_sections
+			. append(
+				{
+					"key": "language",
+					"title_key": "SETTINGS_LANGUAGE_SECTION",
+					"container": container_language,
+				}
+			)
+		)
+	(
+		_sections
+		. append_array(
+			[
+				{"key": "account", "title_key": "SETTINGS_ACCOUNT", "container": container_account},
+				{
+					"key": "help_support",
+					"title_key": "SETTINGS_HELP_SUPPORT",
+					"container": container_help_support,
+				},
+				{"key": "storage", "title_key": "SETTINGS_STORAGE", "container": container_storage},
+			]
+		)
+	)
+	if not Global.is_production():
+		_sections.append(
+			{"key": "developer", "title_key": "SETTINGS_DEV_TOOLS", "container": container_advanced}
+		)
+
+	for child in section_buttons_container.get_children():
+		child.queue_free()
+	_rows_by_key.clear()
+
+	for section in _sections:
+		var row: SettingsSectionItem = _SECTION_ITEM_SCENE.instantiate()
+		section_buttons_container.add_child(row)
+		row.section_key = section["key"]
+		row.title_key = section["title_key"]
+		row.button_group = _section_button_group
+		row.pressed.connect(_on_section_row_pressed.bind(section["key"]))
+		_rows_by_key[section["key"]] = row
+
+
+func _on_section_row_pressed(key: String) -> void:
+	_select_section(key, true)
+
+
+## Show a section's content, update the highlighted row and (in portrait) switch to the detail
+## view. user_initiated=false is used for the default selection when the panel is shown, so it
+## does not force the portrait detail view (portrait should open on the section list).
+func _select_section(key: String, user_initiated: bool) -> void:
+	var section: Dictionary = _find_section(key)
+	if section.is_empty():
 		return
-	var separation := 48.0
-	var target_x := 0.0
-	var h_bar := tabs_scroll_container.get_h_scroll_bar()
-	var max_scroll := float(maxi(0, int(h_bar.max_value)) if h_bar else 0)
-	var cut_left := btn_left < visible_left
-	var cut_right := btn_right > visible_right
-	if cut_left:
-		target_x = btn_left - separation
-	elif cut_right:
-		target_x = btn_right - view_width + separation
-	target_x = clamp(target_x, 0.0, max_scroll)
-	var tween := create_tween()
-	tween.tween_property(tabs_scroll_container, "scroll_horizontal", int(target_x), 0.2)
+	_current_section_key = key
+	show_control(section["container"])
+	_update_avatar_background()
+
+	# Tighter list↔content gap for Account (it adds the avatar preview column).
+	var layout_separation: int = (
+		_LAYOUT_SEPARATION_ACCOUNT if key == "account" else _LAYOUT_SEPARATION_DEFAULT
+	)
+	hbox_layout.add_theme_constant_override("separation", layout_separation)
+
+	var row: SettingsSectionItem = _rows_by_key.get(key)
+	if is_instance_valid(row) and row.toggle_mode and not row.button_pressed:
+		row.set_pressed_no_signal(true)
+
+	# set_pressed_no_signal and the ButtonGroup's silent deselect don't emit `toggled`, so refresh
+	# every row's font weight (bold when selected, medium otherwise) here.
+	for r in _rows_by_key.values():
+		if is_instance_valid(r):
+			r.refresh_weight()
+
+	match key:
+		"account":
+			_refresh_account_header()
+			_async_refresh_account_avatar()
+			_position_account_avatar.call_deferred()
+		"gameplay":
+			_refresh_hide_explorer_ui_row()
+			_refresh_camera_mode_row()
+		"developer":
+			var explorer = Global.get_explorer()
+			if is_instance_valid(explorer):
+				check_button_show_interactable_area.set_pressed_no_signal(
+					explorer.show_interactable_area
+				)
+			_sync_light_controls_for_profile()
+
+	if Global.is_orientation_portrait() and user_initiated:
+		_portrait_detail = true
+	_apply_nav_layout(Global.is_orientation_portrait())
 
 
-func _on_button_pressed():
-	self.hide()
+## The persistent header's back button: in the portrait detail view it returns to the section
+## list; otherwise (portrait list top-level, or landscape) it closes the whole menu — Settings is
+## a menu screen — returning to the game.
+func _on_back_pressed() -> void:
+	if Global.is_orientation_portrait() and _portrait_detail:
+		_portrait_detail = false
+		_apply_nav_layout(true)
+	else:
+		Global.close_menu.emit()
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -407,6 +606,41 @@ func _on_h_slider_music_volume_value_changed(value):
 	Global.get_config().save_to_settings_file()
 
 
+func _setup_language_dropdown() -> void:
+	# Only worth showing once there is something to choose between: a locale joins
+	# SUPPORTED_LOCALES only when its catalogue is complete (see unity-explorer#270). Non-production
+	# builds also offer the QA pseudolocale.
+	var supported := LocaleSettings.selectable_locales()
+	if supported.size() < 2 or not LocaleSettings.is_language_picker_available():
+		# The whole section, not just the dropdown: hiding the DropdownList alone leaves the
+		# "LANGUAGE" header behind with nothing under it.
+		container_language.hide()
+		return
+
+	# item_selected is wired in the scene, like the other scene-declared dropdowns
+	# (GraphicProfiles / CustomSkybox / Realm). Connecting here too raised
+	# "Signal 'item_selected' is already connected" on every Settings open.
+	_populate_language_dropdown()
+
+
+func _populate_language_dropdown() -> void:
+	var supported := LocaleSettings.selectable_locales()
+	# Not resolve_locale(): it deliberately maps the pseudolocale to "en", so reopening Settings
+	# would show "English" selected while pseudolocalization was still active.
+	var configured: String = Global.get_config().locale
+	var current: String = configured if configured in supported else LocaleSettings.resolve_locale()
+	for i in supported.size():
+		dropdown_list_language.add_item(LocaleSettings.get_display_name(supported[i]), i)
+	dropdown_list_language.select(maxi(supported.find(current), 0))
+
+
+func _on_dropdown_list_language_item_selected(index: int) -> void:
+	var supported := LocaleSettings.selectable_locales()
+	if index < 0 or index >= supported.size():
+		return
+	LocaleSettings.set_locale(supported[index])
+
+
 func _on_dropdown_list_max_cache_size_item_selected(index: int) -> void:
 	Global.get_config().max_cache_size = index
 	GeneralSettings.apply_max_cache_size()
@@ -420,11 +654,17 @@ func _update_current_cache_size():
 		float(Global.content_provider.get_cache_folder_total_size()) / 1000.0 / 1000.0
 	)
 	if current_size_mb >= 1024.0:
-		label_current_cache_value.text = "%.1f GB" % (current_size_mb / 1024.0)
+		label_current_cache_value.text = (TranslationKey.new("SETTINGS_CACHE_SIZE_GB").format(
+			{"size": LocaleFormat.number(current_size_mb / 1024.0, 1)}
+		))
 	elif current_size_mb > 0.0:
-		label_current_cache_value.text = "%.1f MB" % current_size_mb
+		label_current_cache_value.text = (TranslationKey.new("SETTINGS_CACHE_SIZE_MB").format(
+			{"size": LocaleFormat.number(current_size_mb, 1)}
+		))
 	else:
-		label_current_cache_value.text = "0 MB"
+		label_current_cache_value.text = (TranslationKey.new("SETTINGS_CACHE_SIZE_MB").format(
+			{"size": LocaleFormat.number(0, 1)}
+		))
 	progress_bar_current_cache_size.value = current_size_mb
 	button_clear_cache.disabled = current_size_mb == 0
 
@@ -552,13 +792,12 @@ func _on_session_hide_ui_options_sync(
 
 
 func _update_hide_ui_sub_toggles(hide_ui_on: bool) -> void:
+	# Hide Player Names is independent of the master toggle: never disabled or dimmed here.
 	check_button_hide_view_profile.disabled = not hide_ui_on
 	check_button_hide_world_interactions.disabled = not hide_ui_on
-	check_button_hide_player_names.disabled = not hide_ui_on
 	check_button_hide_scene_ui.disabled = not hide_ui_on
 	hide_view_profile_row.modulate.a = 1.0 if hide_ui_on else 0.5
 	hide_world_interactions_row.modulate.a = 1.0 if hide_ui_on else 0.5
-	hide_player_names_row.modulate.a = 1.0 if hide_ui_on else 0.5
 	hide_scene_ui_row.modulate.a = 1.0 if hide_ui_on else 0.5
 
 
@@ -584,7 +823,7 @@ func _refresh_hide_explorer_ui_row() -> void:
 		check_button_hide_explorer_ui.set_pressed_no_signal(false)
 		check_button_hide_view_profile.set_pressed_no_signal(true)
 		check_button_hide_world_interactions.set_pressed_no_signal(true)
-		check_button_hide_player_names.set_pressed_no_signal(true)
+		check_button_hide_player_names.set_pressed_no_signal(false)
 		check_button_hide_scene_ui.set_pressed_no_signal(true)
 		_update_hide_ui_sub_toggles(false)
 
@@ -598,36 +837,8 @@ func _exit_tree() -> void:
 		Global.camera_mode_set.disconnect(_on_camera_mode_set)
 	if Global.camera_mode_block_changed.is_connected(_on_camera_mode_block_changed):
 		Global.camera_mode_block_changed.disconnect(_on_camera_mode_block_changed)
-
-
-func _on_button_developer_pressed() -> void:
-	show_control(container_advanced)
-	var explorer = Global.get_explorer()
-	if is_instance_valid(explorer):
-		check_button_show_interactable_area.set_pressed_no_signal(explorer.show_interactable_area)
-	_async_scroll_to_tab_button(button_developer)
-
-
-func _on_button_graphics_pressed() -> void:
-	show_control(container_graphics)
-	_async_scroll_to_tab_button(button_graphics)
-
-
-func _on_button_gameplay_pressed() -> void:
-	show_control(container_gameplay)
-	_refresh_hide_explorer_ui_row()
-	_refresh_camera_mode_row()
-	_async_scroll_to_tab_button(button_gameplay)
-
-
-func _on_button_audio_pressed():
-	show_control(container_audio)
-	_async_scroll_to_tab_button(button_audio)
-
-
-func _on_button_account_pressed() -> void:
-	show_control(container_account)
-	_async_scroll_to_tab_button(button_account)
+	if Global.orientation_changed.is_connected(_on_orientation_changed):
+		Global.orientation_changed.disconnect(_on_orientation_changed)
 
 
 func _on_button_delete_account_pressed() -> void:
@@ -663,59 +874,42 @@ func _on_button_test_notification_pressed() -> void:
 		printerr("Failed to schedule test notification")
 
 
+## Opens the native bug report form (issue #2652). Replaces the old Google Form
+## deep link, which required an external browser and a Google sign-in to attach
+## images — the reason it was removed.
 func _on_button_report_bug_pressed() -> void:
-	var form_id = "1FAIpQLScWjnb3Ya7yV8xFn0R-yf_SMejzBGDiDTZbHaddOFEmJwAM6g"
-	var base_url = "https://docs.google.com/forms/d/e/" + form_id + "/viewform"
+	_async_open_bug_report()
 
-	var params = []
-	var platform = "desktop"
-	var device_brand = ""
-	var device_model = ""
-	var os_version = OS.get_name()
-	var app_version = DclGlobal.get_version()
-	var environment = ""
-	if DclAndroidPlugin.is_available():
-		var android_singleton = Engine.get_singleton("dcl-godot-android")
-		if android_singleton:
-			var device_info = android_singleton.getMobileDeviceInfo()
-			device_brand = device_info.get("device_brand", "")
-			device_model = device_info.get("device_model", "")
-			os_version = device_info.get("os_version", OS.get_name())
-		platform = "mobile"
-	elif DclIosPlugin.is_available():
-		var ios_singleton = Engine.get_singleton("DclGodotiOS")
-		if ios_singleton:
-			var device_info = ios_singleton.get_mobile_device_info()
-			device_brand = device_info.get("device_brand", "")
-			device_model = device_info.get("device_model", "")
-			os_version = device_info.get("os_version", OS.get_name())
-		platform = "mobile"
 
-	params.append("entry.908487542=" + os_version.uri_encode())
-	params.append("entry.1825988508=" + app_version.uri_encode())
-	params.append("entry.902053507=" + platform.uri_encode())
-	params.append("entry.983493489=" + Global.player_identity.get_address_str().uri_encode())
-	params.append("entry.519686692=" + RenderingServer.get_video_adapter_name().uri_encode())
-	params.append("entry.69678037=" + Global.session_id.uri_encode())
+func _async_open_bug_report() -> void:
+	# The screenshot was captured when this panel opened, so it shows the game
+	# rather than Settings — see BugReportCapture.
+	var modal := await Global.modal_manager.async_show_bug_report_modal(
+		BugReportCapture.latest_jpeg()
+	)
+	if not is_instance_valid(modal):
+		return
+	modal.submitted.connect(_async_on_bug_report_submitted)
+	modal.failed.connect(_on_bug_report_failed)
 
-	if "dev" in app_version:
-		environment = "develop"
-	else:
-		environment = "production"
 
-	params.append("entry.1045647501=" + environment.uri_encode())
+func _async_on_bug_report_submitted(_ticket_id: String) -> void:
+	await Global.modal_manager.async_show_bug_report_success_modal()
 
-	if device_brand != "":
-		params.append("entry.942533991=" + device_brand.uri_encode())
 
-	if device_model != "":
-		params.append("entry.264855991=" + device_model.uri_encode())
-
-	var url = base_url
-	if params.size() > 0:
-		url += "?" + "&".join(params)
-
-	Global.open_url(url)
+func _on_bug_report_failed(message: String) -> void:
+	# The message is a proxy/transport error, not something a player can act on,
+	# so it goes to the log while the toast stays generic.
+	push_warning("Bug report failed: %s" % message)
+	# tr() on both: strings passed as function arguments are invisible to
+	# extract_strings.py, so a raw literal here ships English on every locale and
+	# CI cannot catch it (PR #2779 review).
+	NotificationsManager.show_system_toast(
+		tr("TOAST_BUG_REPORT_FAILED_TITLE"),
+		tr("COMMON_SOMETHING_WENT_WRONG_RETRY"),
+		"system",
+		"alert"
+	)
 
 
 func _on_button_open_user_data_pressed() -> void:
@@ -766,7 +960,7 @@ func _setup_impostor_benchmark_button() -> void:
 		return
 	var bench_button := Button.new()
 	bench_button.name = "Button_RunImpostorBenchmark"
-	bench_button.text = "Run Avatar Impostor Benchmark"
+	bench_button.text = tr("SETTINGS_RUN_AVATAR_IMPOSTOR_BENCHMARK")
 	bench_button.pressed.connect(
 		func() -> void:
 			get_tree().change_scene_to_file("res://src/tools/avatar_impostor_benchmark.tscn")
@@ -819,7 +1013,7 @@ func _add_max_lights_row(template_row: HBoxContainer, initial_value: int) -> voi
 	var row := template_row.duplicate(0) as HBoxContainer
 	row.name = "Light_MaxActiveLights"
 	var label := row.find_child("Label_Title", false, false) as Label
-	label.text = "Max Active Lights"
+	label.text = tr("SETTINGS_MAX_ACTIVE_LIGHTS")
 	var check := row.find_child("CheckButton*", true, false) as CheckButton
 	check.hide()
 
@@ -836,6 +1030,8 @@ func _add_max_lights_row(template_row: HBoxContainer, initial_value: int) -> voi
 
 
 func _apply_light_settings_from_ui() -> void:
+	if Global.get_config().graphic_profile != ConfigData.PROFILE_CUSTOM:
+		return
 	DclLightSourceComponent.apply_light_settings(
 		_light_debug_checks["lights_enabled"].button_pressed,
 		_light_debug_checks["shadows_enabled"].button_pressed,
@@ -861,7 +1057,7 @@ func _setup_fast_day_cycle_toggle() -> void:
 	var row := template_row.duplicate(0) as HBoxContainer
 	row.name = "FastDayCycle"
 	var label := row.find_child("Label_Title", false, false) as Label
-	label.text = "Fast Day/Night Cycle (10s)"
+	label.text = tr("SETTINGS_FAST_DAY_NIGHT_CYCLE_10S")
 	var check := row.find_child("CheckButton*", true, false) as CheckButton
 	check.name = "CheckButton_FastDayCycle"
 	check.button_pressed = false
@@ -871,6 +1067,167 @@ func _setup_fast_day_cycle_toggle() -> void:
 	var rows_container := template_row.get_parent()
 	rows_container.add_child(row)
 	rows_container.move_child(row, 0)
+
+
+func _sync_light_controls_for_profile() -> void:
+	if _light_debug_checks.is_empty() and _light_max_lights_spin == null:
+		return
+
+	var is_custom: bool = Global.get_config().graphic_profile == ConfigData.PROFILE_CUSTOM
+	if is_custom:
+		for check in _light_debug_checks.values():
+			if is_instance_valid(check):
+				check.disabled = false
+		if is_instance_valid(_light_max_lights_spin):
+			_light_max_lights_spin.editable = true
+		_apply_light_settings_from_ui()
+	else:
+		var light_settings := DclLightSourceComponent.get_light_settings()
+		for key in _light_debug_checks:
+			var check: CheckButton = _light_debug_checks[key]
+			if is_instance_valid(check):
+				check.disabled = true
+				check.set_pressed_no_signal(bool(light_settings.get(key, false)))
+		if is_instance_valid(_light_max_lights_spin):
+			_light_max_lights_spin.editable = false
+			_light_max_lights_spin.set_value_no_signal(int(light_settings.get("max_lights", 0)))
+
+
+func _sync_custom_profile_controls() -> void:
+	if _custom_view_distance_row == null:
+		return
+
+	var is_custom: bool = Global.get_config().graphic_profile == ConfigData.PROFILE_CUSTOM
+	_custom_view_distance_row.visible = is_custom
+	_custom_particles_row.visible = is_custom
+	_custom_max_lights_row.visible = is_custom
+
+	if not is_custom:
+		return
+
+	var view_distance: float = Global.get_config().view_distance
+	_custom_view_distance_slider.set_value_no_signal(view_distance)
+	_sync_custom_view_distance_label(view_distance)
+	_custom_particles_dropdown.select(Global.get_config().particle_quality)
+	_custom_max_lights_spin.set_value_no_signal(
+		int(DclLightSourceComponent.get_light_settings().get("max_lights", 0))
+	)
+
+
+func _sync_custom_view_distance_label(value: float) -> void:
+	if is_instance_valid(_custom_view_distance_value_label):
+		_custom_view_distance_value_label.text = "%dm" % int(value)
+
+
+func _setup_custom_profile_controls() -> void:
+	# Three per-setting rows that only appear for the Custom profile. Custom is not offered
+	# in production (see _populate_graphic_profile_items), so its rows are not built either.
+	if Global.is_production():
+		return
+	var template_row := (
+		container_advanced.find_child("SceneLogsEnabled", true, false) as HBoxContainer
+	)
+	if template_row == null:
+		return
+	var rows_container := dropdown_list_graphic_profiles.get_parent()
+	if rows_container == null:
+		return
+
+	var profile_idx := dropdown_list_graphic_profiles.get_index()
+
+	# View Distance
+	_custom_view_distance_row = _make_custom_profile_row(
+		template_row, "CustomViewDistance", tr("SETTINGS_VIEW_DISTANCE")
+	)
+	_custom_view_distance_slider = HSlider.new()
+	_custom_view_distance_slider.min_value = 20
+	_custom_view_distance_slider.max_value = 320
+	_custom_view_distance_slider.step = 10
+	_custom_view_distance_slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_custom_view_distance_slider.value_changed.connect(_on_custom_view_distance_changed)
+
+	_custom_view_distance_value_label = Label.new()
+	_custom_view_distance_value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+
+	var view_controls := HBoxContainer.new()
+	view_controls.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	view_controls.add_child(_custom_view_distance_slider)
+	view_controls.add_child(_custom_view_distance_value_label)
+	_custom_view_distance_row.add_child(view_controls)
+	rows_container.add_child(_custom_view_distance_row)
+	rows_container.move_child(_custom_view_distance_row, profile_idx + 1)
+
+	# Particles
+	_custom_particles_row = _make_custom_profile_row(
+		template_row, "CustomParticles", tr("SETTINGS_PARTICLES")
+	)
+	# The SCENE, not DropdownList.new(): the script's @onready vars resolve %-unique
+	# nodes that live in dropdown_list.tscn, so a bare script instance leaves every
+	# one of them null. That logs "Node not found" and then segfaults the renderer
+	# on release builds, which debug tolerates (crash on opening Settings, #2672).
+	_custom_particles_dropdown = _DROPDOWN_LIST_SCENE.instantiate()
+	_populate_custom_particles_items()
+	_custom_particles_dropdown.item_selected.connect(_on_custom_particles_changed)
+	_custom_particles_row.add_child(_custom_particles_dropdown)
+	rows_container.add_child(_custom_particles_row)
+	rows_container.move_child(_custom_particles_row, profile_idx + 2)
+
+	# Max Active Lights
+	_custom_max_lights_row = _make_custom_profile_row(
+		template_row, "CustomMaxLights", tr("SETTINGS_MAX_ACTIVE_LIGHTS")
+	)
+	_custom_max_lights_spin = SpinBox.new()
+	_custom_max_lights_spin.min_value = 0
+	_custom_max_lights_spin.max_value = 64
+	_custom_max_lights_spin.step = 1
+	_custom_max_lights_spin.value_changed.connect(_on_custom_max_lights_changed)
+	_custom_max_lights_row.add_child(_custom_max_lights_spin)
+	rows_container.add_child(_custom_max_lights_row)
+	rows_container.move_child(_custom_max_lights_row, profile_idx + 3)
+
+	_sync_custom_profile_controls()
+
+
+func _make_custom_profile_row(
+	template_row: HBoxContainer, name: String, title: String
+) -> HBoxContainer:
+	var row := template_row.duplicate(0) as HBoxContainer
+	row.name = name
+	row.visible = false
+	var label := row.find_child("Label_Title", false, false) as Label
+	label.text = title
+	var check := row.find_child("CheckButton*", true, false) as CheckButton
+	if check != null:
+		check.queue_free()
+	return row
+
+
+func _on_custom_view_distance_changed(value: float) -> void:
+	Global.get_config().view_distance = value
+	if is_instance_valid(Global.player_camera_node):
+		Global.player_camera_node.far = value
+	Global.get_config().save_to_settings_file()
+	_sync_custom_view_distance_label(value)
+
+
+func _on_custom_particles_changed(index: int) -> void:
+	Global.get_config().particle_quality = index
+	AvatarAnimHelpers.apply_particles_enabled(index > 0)
+	GraphicSettings.apply_particle_quality(index)
+	Global.get_config().save_to_settings_file()
+
+
+func _on_custom_max_lights_changed(value: float) -> void:
+	var light_settings := DclLightSourceComponent.get_light_settings()
+	DclLightSourceComponent.apply_light_settings(
+		light_settings["lights_enabled"],
+		light_settings["shadows_enabled"],
+		int(value),
+		light_settings["debug_enabled"],
+		light_settings["auto_activation_range"],
+		light_settings["use_global_light_budget"]
+	)
+	Global.get_config().save_to_settings_file()
 
 
 func _setup_dynamic_graphics() -> void:
@@ -975,15 +1332,6 @@ func _on_button_discord_pressed() -> void:
 	Global.open_url(DISCORD_URL)
 
 
-func _on_button_storage_pressed() -> void:
-	show_control(container_storage)
-	_async_scroll_to_tab_button(%Button_Storage)
-
-
-func _apply_panel_mode() -> void:
-	set("texture", null if panel_mode else load("res://assets/ui/settings-background.png"))
-
-
 func show_panel() -> void:
 	show()
 
@@ -995,13 +1343,12 @@ func hide_panel() -> void:
 
 func _on_visibility_changed() -> void:
 	if is_node_ready() and is_inside_tree() and is_visible_in_tree():
-		for btn in button_graphics.button_group.get_buttons():
-			btn.set_pressed_no_signal(false)
-		button_graphics.set_pressed_no_signal(true)
-		_on_button_graphics_pressed()
-		tabs_scroll_container.scroll_horizontal = 0
-		if not panel_mode:
-			Global.set_orientation_portrait()
+		# Reset to the section list (portrait) / first section, but keep the current device
+		# orientation: opened from the navbar in landscape it stays landscape; opened as the
+		# pre-explorer menu in portrait it stays portrait.
+		_portrait_detail = false
+		_select_section(_default_section_key(), false)
+		scroll_sections.scroll_vertical = 0
 		_refresh_hide_explorer_ui_row()
 
 
@@ -1052,7 +1399,272 @@ func _on_custom_button_sign_out_pressed() -> void:
 	Global.sign_out()
 
 
+## Account section header (name / tag / address) + the landscape avatar preview. Populated from the
+## live profile and kept in sync on profile changes. The GuestUpgradeCard manages its own guest-only
+## visibility. (Email display for signed-in users is deferred — no stored-email source yet.)
+func _setup_account_section() -> void:
+	if not Global.player_identity.profile_changed.is_connected(_on_account_profile_changed):
+		Global.player_identity.profile_changed.connect(_on_account_profile_changed)
+	# The avatar preview is a sibling of the settings root (not inside the content ScrollContainer),
+	# so it escapes the scroll's clip and can grow tall (overlapping the header) while still drawing
+	# below the delete-confirmation popup and toasts (which live outside this scene). Its rect tracks
+	# the empty placeholder column via _position_account_avatar; the scene's own anchors are ignored.
+	avatar_preview_account.snap_top_to_viewport = false
+	# Hidden until Account is selected in landscape; _update_avatar_background drives it from there.
+	avatar_preview_account.visible = false
+	# preview_margin_top is set dynamically from the header's real height in _position_account_avatar.
+	avatar_preview_account.preview_margin_bottom = _ACCOUNT_AVATAR_FEET_INSET
+	if not avatar_column.item_rect_changed.is_connected(_position_account_avatar):
+		avatar_column.item_rect_changed.connect(_position_account_avatar)
+	if not avatar_preview_account.visibility_changed.is_connected(_position_account_avatar):
+		avatar_preview_account.visibility_changed.connect(_position_account_avatar)
+	_refresh_account_header()
+	_async_refresh_account_avatar()
+	_position_account_avatar.call_deferred()
+
+
+## The avatar preview (and the full-screen backdrop behind it) is landscape-only and lives only in
+## the Account section. Since the preview is now a settings-root sibling (not a child of the
+## placeholder column), it no longer inherits the column's portrait-hide — so drive it here too.
+func _update_avatar_background() -> void:
+	var show_avatar: bool = (
+		_current_section_key == "account" and not Global.is_orientation_portrait()
+	)
+	if is_instance_valid(texture_avatar_background):
+		texture_avatar_background.visible = show_avatar
+	if is_instance_valid(avatar_preview_account):
+		avatar_preview_account.visible = show_avatar
+
+
+## Places the avatar over its placeholder column, stretched from the screen top (so it can overlap
+## the header — preview_margin_top keeps the head below it) down to the column's bottom.
+func _position_account_avatar() -> void:
+	if not is_instance_valid(avatar_preview_account) or not is_instance_valid(avatar_column):
+		return
+	var col: Control = avatar_column
+	if not avatar_preview_account.is_visible_in_tree():
+		return
+	# Bottom of the preview aligns with the Version label's bottom (same margin as the feet); fall
+	# back to the column's own bottom if the label isn't ready.
+	var bottom: float = col.global_position.y + col.size.y
+	if is_instance_valid(label_version):
+		bottom = label_version.global_position.y + label_version.size.y
+	avatar_preview_account.global_position = Vector2(col.global_position.x, 0.0)
+	avatar_preview_account.size = Vector2(col.size.x, maxf(0.0, bottom))
+	# Head overlaps slightly into the header: the rect starts at screen top (y=0), so the top inset is
+	# the header column's real bottom (its height + top safe-area margin) minus the overlap.
+	if is_instance_valid(header_column):
+		var header_bottom: float = header_column.global_position.y + header_column.size.y
+		avatar_preview_account.preview_margin_top = roundi(
+			header_bottom - _ACCOUNT_AVATAR_HEAD_OVERLAP
+		)
+
+
+func _on_account_profile_changed(_new_profile: DclUserProfile) -> void:
+	_refresh_account_header()
+	_async_refresh_account_avatar()
+
+
+func _refresh_account_header() -> void:
+	var profile: DclUserProfile = Global.player_identity.get_profile_or_null()
+	if profile == null:
+		return
+	var address: String = profile.get_ethereum_address()
+	label_account_address.text = Global.shorten_address(address)
+	# Keep the nickname colour from the scene (no per-player tint).
+	label_account_nickname.text = profile.get_name()
+	# Claimed names carry no #tag (they show a badge on the passport); otherwise the tag is the last
+	# four hex of the address, mirroring the profile passport.
+	if profile.has_claimed_name() or address.length() < 4:
+		label_account_tag.text = ""
+		label_account_tag.hide()
+	else:
+		label_account_tag.show()
+		label_account_tag.text = "#" + address.substr(address.length() - 4, 4)
+
+
+## The 3D preview only renders in landscape (its container hides in portrait), so skip the avatar
+## load in portrait; it's refreshed on the next profile change or when reopening in landscape.
+func _async_refresh_account_avatar() -> void:
+	# The preview is Account-only and landscape-only, so don't load it otherwise (e.g. every rotation).
+	if Global.is_orientation_portrait() or _current_section_key != "account":
+		return
+	var profile: DclUserProfile = Global.player_identity.get_profile_or_null()
+	if profile == null:
+		return
+	# One load at a time; if a newer request (profile_changed / re-entry) arrives mid-load, don't
+	# drop it — remember it and run once more when the current load finishes, so the avatar isn't stale.
+	if _avatar_refresh_in_flight:
+		_avatar_refresh_pending = true
+		return
+	_avatar_refresh_in_flight = true
+	await avatar_preview_account.avatar.async_update_avatar_from_profile(profile)
+	_avatar_refresh_in_flight = false
+	if _avatar_refresh_pending:
+		_avatar_refresh_pending = false
+		_async_refresh_account_avatar()
+
+
 func _on_button_return_to_discover_pressed() -> void:
 	# Dev Tools: leave the current world and return to the Discover menu while
 	# staying signed in (soft sign-out). See Global.return_to_discover().
 	Global.return_to_discover()
+
+
+## Dropdown items are plain strings once added, so unlike a scene `text` property they do not
+## re-translate themselves on NOTIFICATION_TRANSLATION_CHANGED. Only the dropdowns whose items are
+## translated are rebuilt; realm URLs are data and stay as they are.
+func _populate_camera_mode_items() -> void:
+	var previous := dropdown_list_camera_mode.selected
+	dropdown_list_camera_mode.clear()
+	dropdown_list_camera_mode.add_item(
+		tr("SETTINGS_CAMERA_FIRST_PERSON"), Global.CameraMode.FIRST_PERSON
+	)
+	dropdown_list_camera_mode.add_item(
+		tr("SETTINGS_CAMERA_THIRD_PERSON"), Global.CameraMode.THIRD_PERSON
+	)
+	if previous >= 0:
+		dropdown_list_camera_mode.select(previous)
+
+
+func _populate_graphic_profile_items() -> void:
+	# DropdownList items are finished text, not keys: both display nodes are
+	# auto_translate_mode = 2 (dropdown_list.tscn, dropdown_item.tscn).
+	# Custom is dev-only (no designed UI yet): it is the last entry, so leaving it out in
+	# production keeps the other indices aligned with ConfigData's profile ids. It's what
+	# makes the Custom-only controls below reachable.
+	var previous := dropdown_list_graphic_profiles.selected
+	dropdown_list_graphic_profiles.clear()
+	for index in GraphicSettings.PROFILE_KEYS.size():
+		if index == ConfigData.PROFILE_CUSTOM and Global.is_production():
+			continue
+		dropdown_list_graphic_profiles.add_item(tr(GraphicSettings.PROFILE_KEYS[index]))
+	if previous >= 0:
+		dropdown_list_graphic_profiles.select(previous)
+
+
+func _populate_skybox_items() -> void:
+	var previous := dropdown_list_custom_skybox.selected
+	dropdown_list_custom_skybox.clear()
+	for index in GraphicSettings.SKYBOX_TIME_NAMES.size():
+		dropdown_list_custom_skybox.add_item(
+			tr(GraphicSettings.SKYBOX_TIME_NAMES[index].key), index
+		)
+	if previous >= 0:
+		dropdown_list_custom_skybox.select(previous)
+
+
+func _populate_cache_size_items() -> void:
+	var previous := dropdown_list_max_cache_size.selected
+	dropdown_list_max_cache_size.clear()
+	# The id is the index, because that is what _on_dropdown_list_max_cache_size_item_selected()
+	# stores in max_cache_size and what indexes CACHE_SIZE_MB. Sizes are derived from
+	# CACHE_SIZE_MB rather than a second literal list, so the two cannot drift apart.
+	for i in CACHE_SIZE_MB.size():
+		dropdown_list_max_cache_size.add_item(
+			TranslationKey.new("SETTINGS_CACHE_SIZE_GB").format({"size": CACHE_SIZE_MB[i] / 1024}),
+			i
+		)
+	if previous >= 0:
+		dropdown_list_max_cache_size.select(previous)
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_TRANSLATION_CHANGED and is_node_ready():
+		_populate_camera_mode_items()
+		_populate_cache_size_items()
+		_populate_graphic_profile_items()
+		_populate_skybox_items()
+		_populate_language_dropdown_items()
+		_update_current_cache_size()
+		_retranslate_custom_profile_rows()
+		_retranslate_section_list()
+
+
+## Section rows, the header title and the version label are built with tr()-resolved strings, so
+## they need manual re-translation on locale change (same convention as the dropdowns above).
+func _retranslate_section_list() -> void:
+	for row in _rows_by_key.values():
+		if is_instance_valid(row):
+			row.retranslate()
+	_update_header()
+	_refresh_version_label()
+
+
+## Production shows the clean marketing version, prefixed with "Version" (e.g. "Version 1.13.0").
+## Staging/dev show the full diagnostic string (build number + commit hash + environment), with no
+## prefix and 2pt smaller so the longer text fits.
+func _refresh_version_label() -> void:
+	if Global.is_production():
+		label_version.label_settings.font_size = _VERSION_FONT_SIZE
+		label_version.text = TranslationKey.new("SETTINGS_VERSION").format(
+			{"version": _display_version()}
+		)
+	else:
+		label_version.label_settings.font_size = _VERSION_FONT_SIZE - 2
+		label_version.text = _display_version()
+
+
+func _display_version() -> String:
+	if Global.is_production():
+		return _marketing_version()
+	return DclGlobal.get_full_version()
+
+
+## User-facing marketing version: just major.minor.patch, no build number/hash/env. `get_short_version`
+## keeps the build segment (e.g. "1.13.0.1234"), so drop everything after the third dot component.
+func _marketing_version() -> String:
+	var parts: PackedStringArray = DclGlobal.get_short_version().split(".")
+	if parts.size() >= 3:
+		return "%s.%s.%s" % [parts[0], parts[1], parts[2]]
+	return DclGlobal.get_short_version()
+
+
+func _on_version_copy_pressed() -> void:
+	DisplayServer.clipboard_set(_display_version())
+	Global.send_haptic_feedback()
+	NotificationsManager.show_system_toast(tr("TOAST_COPIED"), tr("TOAST_VERSION_COPIED"))
+
+
+func _populate_custom_particles_items() -> void:
+	if _custom_particles_dropdown == null:
+		return
+	var previous := _custom_particles_dropdown.selected
+	_custom_particles_dropdown.clear()
+	_custom_particles_dropdown.add_item(tr("SETTINGS_PARTICLES_OFF"), 0)
+	_custom_particles_dropdown.add_item(tr("SETTINGS_GRAPHIC_PROFILE_LOW"), 1)
+	_custom_particles_dropdown.add_item(tr("SETTINGS_GRAPHIC_PROFILE_MEDIUM"), 2)
+	_custom_particles_dropdown.add_item(tr("SETTINGS_GRAPHIC_PROFILE_HIGH"), 3)
+	if previous >= 0:
+		_custom_particles_dropdown.select(previous)
+
+
+## The Custom rows are built at runtime with tr()-resolved strings, so they need
+## manual re-translation on locale change (same convention as the dropdowns above).
+func _retranslate_custom_profile_rows() -> void:
+	if _custom_view_distance_row == null:
+		return
+	(_custom_view_distance_row.find_child("Label_Title", false, false) as Label).text = tr(
+		"SETTINGS_VIEW_DISTANCE"
+	)
+	(_custom_particles_row.find_child("Label_Title", false, false) as Label).text = tr(
+		"SETTINGS_PARTICLES"
+	)
+	(_custom_max_lights_row.find_child("Label_Title", false, false) as Label).text = tr(
+		"SETTINGS_MAX_ACTIVE_LIGHTS"
+	)
+	_populate_custom_particles_items()
+
+
+func _populate_language_dropdown_items() -> void:
+	if LocaleSettings.selectable_locales().size() < 2:
+		return
+	# Re-derive the selection from the saved config rather than restoring the previous index:
+	# the two diverge whenever the locale changed by any route other than this dropdown.
+	dropdown_list_language.clear()
+	_populate_language_dropdown()
+
+
+func _on_button_help_pressed() -> void:
+	var url = "https://decentraland.org/help"
+	Global.open_url(url)

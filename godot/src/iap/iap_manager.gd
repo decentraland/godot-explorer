@@ -482,6 +482,12 @@ func is_available() -> bool:
 	return _store_kit_available
 
 
+## True while the blocking purchase overlay is on screen. Read by ReviewPromptCoordinator, which
+## must never drop a rating prompt on top of a purchase in progress.
+func is_purchase_overlay_visible() -> bool:
+	return is_instance_valid(_overlay) and _overlay.visible
+
+
 func get_products() -> Array:
 	return _products
 
@@ -948,7 +954,7 @@ func _async_signed_iap(path: String, method: int, body: String, context: String 
 	var endpoint := _normalize_endpoint(path)
 	var method_name := _METHOD_NAMES.get(method, "OTHER") as String
 	var started := Time.get_ticks_msec()
-	var response = await Global.async_signed_fetch(url, method, body, true)
+	var response = await Global.async_signed_fetch(url, method, body)
 	if response is PromiseError:
 		# `print`, not `printerr`: `_async_poll_balance_after_purchase` calls this
 		# _POST_PURCHASE_POLL_ATTEMPTS times, so a phone that drops connectivity right

@@ -152,6 +152,7 @@ theme_override_constants/separation = 24
 theme_override_styles/separator = SubResource("StyleBoxEmpty_xmi2h")
 
 [node name="RichTextLabel_PlaceName" type="RichTextLabel" parent="SafeMarginContainer/MarginContainer_Content/VBoxContainer/VBoxContainer_Data" unique_id=251786867]
+auto_translate_mode = 2
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/default_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
@@ -166,7 +167,6 @@ theme_override_font_sizes/bold_font_size = 42
 theme_override_font_sizes/bold_italics_font_size = 42
 theme_override_font_sizes/italics_font_size = 42
 theme_override_font_sizes/mono_font_size = 42
-text = "Enjoy your Experience"
 fit_content = true
 scroll_active = false
 autowrap_mode = 2
@@ -221,6 +221,7 @@ text = "0000/0000 resouces at 000.00 mb/s - Opt"
 label_settings = SubResource("LabelSettings_ky3me")
 
 [node name="Label_LoadingProgress" type="Label" parent="SafeMarginContainer/MarginContainer_Content/VBoxContainer_Progress/HBoxContainer" unique_id=1665532642]
+auto_translate_mode = 2
 unique_name_in_owner = true
 layout_mode = 2
 text = "00%"

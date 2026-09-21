@@ -58,7 +58,7 @@ theme_override_constants/separation = 25
 
 [node name="Label" type="Label" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer" unique_id=894440798]
 layout_mode = 2
-text = "Edit Username"
+text = "CHANGE_NICK_POPUP_EDIT_USERNAME"
 label_settings = ExtResource("1_v1ppy")
 
 [node name="VBoxContainer" type="VBoxContainer" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer" unique_id=1096072612]
@@ -68,7 +68,7 @@ layout_mode = 2
 [node name="DclLineEdit" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/VBoxContainer" unique_id=1197188055 instance=ExtResource("3_v0a8f")]
 unique_name_in_owner = true
 layout_mode = 2
-hint = "Username"
+hint = "CHANGE_NICK_POPUP_USERNAME"
 
 [node name="HBoxContainer2" type="HBoxContainer" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer" unique_id=557739403]
 custom_minimum_size = Vector2(0, 38)
@@ -84,7 +84,7 @@ layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 0
 theme_type_variation = &"DarkButton"
-text = "CANCEL"
+text = "COMMON_CANCEL"
 
 [node name="Button_Save" type="Button" parent="PanelContainer/VBoxContainer/MarginContainer/VBoxContainer/HBoxContainer2" unique_id=1915655998]
 unique_name_in_owner = true
@@ -94,7 +94,7 @@ size_flags_horizontal = 3
 size_flags_vertical = 0
 focus_mode = 0
 theme = ExtResource("5_r18gj")
-text = "SAVE"
+text = "CHANGE_NICK_POPUP_SAVE"
 
 [node name="ClaimNameContainer" type="MarginContainer" parent="PanelContainer/VBoxContainer" unique_id=1815782767]
 unique_name_in_owner = true
@@ -112,14 +112,14 @@ theme_override_constants/separation = 12
 [node name="Label_ClaimName1" type="Label" parent="PanelContainer/VBoxContainer/ClaimNameContainer/VBoxContainer" unique_id=1937198235]
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
-text = "Claim a unique NAME for the full Decentraland experience!"
+text = "CHANGE_NICK_POPUP_CLAIM_A_UNIQUE_NAME_FOR_THE"
 label_settings = ExtResource("1_v1ppy")
 autowrap_mode = 2
 
 [node name="Label_ClaimName2" type="Label" parent="PanelContainer/VBoxContainer/ClaimNameContainer/VBoxContainer" unique_id=763008974]
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
-text = "A NAME comes with a World you can build and host events in and grants DAO Voting Power too!"
+text = "CHANGE_NICK_POPUP_A_NAME_COMES_WITH_A_WORLD"
 label_settings = ExtResource("4_xy6kt")
 autowrap_mode = 2
 
@@ -131,7 +131,7 @@ layout_mode = 2
 size_flags_vertical = 4
 theme = ExtResource("5_r18gj")
 theme_override_constants/icon_max_width = 12
-text = "CLAIM NAME"
+text = "CHANGE_NICK_POPUP_CLAIM_NAME"
 
 [connection signal="gui_input" from="." to="." method="_on_gui_input"]
 [connection signal="visibility_changed" from="." to="." method="_on_visibility_changed"]

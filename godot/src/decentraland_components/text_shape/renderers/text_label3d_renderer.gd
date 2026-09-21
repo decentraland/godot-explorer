@@ -39,6 +39,9 @@ func setup(font: Font, bold_font: Font = null) -> void:
 		return
 	_label = Label3D.new()
 	_label.name = "Label3D"
+	# Scene-authored content, not UI copy. Label3D translates its text (label_3d.cpp:771),
+	# so without this every TextShape a creator writes goes through a translation lookup.
+	_label.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 	# Matches the validated BetterLabel3D test scene: DISCARD + outline_render_priority=1 +
 	# outline_size_float. The fork orders the shadow/outline/fill layers under DISCARD via a
 	# small per-priority Z-shift (label_3d.cpp), so outline_render_priority=1 lifts the outline

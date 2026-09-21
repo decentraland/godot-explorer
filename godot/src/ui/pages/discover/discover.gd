@@ -44,8 +44,6 @@ func _ready():
 
 	places_featured.card_tapped.connect(_on_featured_card_tapped)
 
-	Global.notification_clicked.connect(_on_notification_clicked)
-
 	search_container.hide()
 	search_container.keyword_selected.connect(_async_on_keyword_selected)
 	search_container.should_show_container.connect(_on_should_show_suggestions_container)
@@ -208,7 +206,7 @@ func set_search_filter_text(new_text: String) -> void:
 		places_featured.show()
 		places_favorites.visible = places_favorites.has_items()
 		places_my_places.visible = places_my_places.has_items()
-		places_most_active.title = "Most Actives"
+		places_most_active.title = "DISCOVER_MOST_ACTIVES"
 		if guest_upgrade_card:
 			# Don't force it visible — let the card re-evaluate its own upgrade state
 			# so already-upgraded users never see it flash (#2483).
@@ -219,7 +217,7 @@ func set_search_filter_text(new_text: String) -> void:
 		places_featured.hide()
 		places_favorites.hide()
 		places_my_places.hide()
-		places_most_active.title = "Scenes"
+		places_most_active.title = "DISCOVER_SCENES"
 		if guest_upgrade_card:
 			guest_upgrade_card.hide()
 	places_most_active.set_search_param(new_text)
@@ -282,45 +280,6 @@ func _on_event_details_jump_in(parcel_position: Vector2i, realm: String) -> void
 func _on_event_details_jump_in_world(realm: String) -> void:
 	event_details.hide()
 	Global.async_join_world(realm)
-
-
-func _on_notification_clicked(notification_d: Dictionary) -> void:
-	var notif_type = notification_d.get("type", "")
-
-	if notif_type not in ["event_created", "events_starts_soon", "events_started"]:
-		return
-
-	var metadata = notification_d.get("metadata", {})
-
-	var link = metadata.get("link", "")
-	if link.is_empty():
-		printerr("[Discover] Event notification missing link in metadata")
-		_on_error_loading_notification()
-		return
-
-	var event_id = _extract_event_id_from_url(link)
-	if event_id.is_empty():
-		printerr("[Discover] Could not extract event ID from link: ", link)
-		_on_error_loading_notification()
-		return
-
-	_async_handle_event_notification(event_id)
-
-
-func _extract_event_id_from_url(url: String) -> String:
-	var query_start = url.find("?")
-	if query_start == -1:
-		return ""
-
-	var query_string = url.substr(query_start + 1)
-	var params = query_string.split("&")
-
-	for param in params:
-		var key_value = param.split("=")
-		if key_value.size() == 2 and key_value[0] == "id":
-			return key_value[1]
-
-	return ""
 
 
 func _async_handle_event_notification(event_id: String) -> void:

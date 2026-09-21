@@ -108,7 +108,7 @@ theme_override_constants/separation = 0
 [node name="Label_Title" type="Label" parent="Blur/VBoxContainer/PanelContainer2/MarginContainer/VBoxContainer" unique_id=1851632747]
 unique_name_in_owner = true
 layout_mode = 2
-text = "Add Email"
+text = "INPUT_MODAL_ADD_EMAIL"
 label_settings = SubResource("LabelSettings_5r5ws")
 horizontal_alignment = 1
 
@@ -120,7 +120,7 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_vtc1u")
 [node name="Label_Subtitle" type="Label" parent="Blur/VBoxContainer/PanelContainer2/MarginContainer/VBoxContainer" unique_id=1587798915]
 unique_name_in_owner = true
 layout_mode = 2
-text = "My Email"
+text = "INPUT_MODAL_MY_EMAIL"
 label_settings = SubResource("LabelSettings_fasoj")
 
 [node name="HSeparator_Content" type="HSeparator" parent="Blur/VBoxContainer/PanelContainer2/MarginContainer/VBoxContainer" unique_id=1607643053]
@@ -140,7 +140,7 @@ anchor_right = 1.0
 offset_right = 0.0
 offset_bottom = 76.0
 grow_horizontal = 2
-place_holder = "name@email.com"
+place_holder = "INPUT_MODAL_NAME_EMAIL_COM"
 has_max_length = false
 is_optional = false
 validate_email = true
@@ -159,7 +159,7 @@ size_flags_horizontal = 3
 theme = ExtResource("5_82xj1")
 theme_type_variation = &"SecondaryButton"
 theme_override_font_sizes/font_size = 24
-text = "CANCEL"
+text = "COMMON_CANCEL"
 
 [node name="Button_Confirm" type="Button" parent="Blur/VBoxContainer/PanelContainer2/MarginContainer/VBoxContainer/HBoxContainer_Buttons" unique_id=2019121179]
 unique_name_in_owner = true
@@ -169,7 +169,7 @@ size_flags_horizontal = 3
 theme = ExtResource("5_82xj1")
 theme_override_font_sizes/font_size = 24
 disabled = true
-text = "ADD"
+text = "INPUT_MODAL_ADD"
 
 [node name="HSeparator_Keyboard" type="HSeparator" parent="Blur/VBoxContainer" unique_id=852531597]
 unique_name_in_owner = true
