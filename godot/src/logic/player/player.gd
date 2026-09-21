@@ -689,12 +689,23 @@ func _physics_process(dt: float) -> void:
 		# glide gate stays closed for the whole window.
 		velocity.y -= (_current_gravity() - external_acceleration.y) * dt
 
-	# #2850: acceleration weight ramps over 0.5s while input is held (Unity
-	# AccelerationWeight), driving the ground/air accel pair below.
-	_accel_weight = move_toward(_accel_weight, 1.0 if current_direction else 0.0, dt / ACCELERATION_TIME)
+	# #2850: Unity port (ApplyCharacterMovementVelocity.cs). Weight ramps over
+	# 0.5s while input is held; the accel pair follows the settings curve
+	# (keys 0/0.1→0, 0.9/1→1: plateau at min, then ramp). Velocity target uses
+	# the RAW input direction — the smoothed current_direction is only for facing.
+	var has_move_input := direction != Vector3.ZERO
+	_accel_weight = move_toward(
+		_accel_weight, 1.0 if has_move_input else 0.0, dt / ACCELERATION_TIME
+	)
+	var curve_t := clampf(inverse_lerp(0.1, 0.9, _accel_weight), 0.0, 1.0)
+	var accel := (
+		lerpf(GROUND_ACCEL, GROUND_ACCEL_MAX, curve_t)
+		if on_floor
+		else lerpf(AIR_ACCEL, AIR_ACCEL_MAX, curve_t)
+	)
 
 	camera.set_target_fov(DEFAULT_CAMERA_FOV)
-	if current_direction:
+	if has_move_input:
 		var wants_walk := Input.is_action_pressed("ia_walk")
 		var wants_sprint := Input.is_action_pressed("ia_sprint")
 
@@ -719,22 +730,31 @@ func _physics_process(dt: float) -> void:
 			effective_speed = walk_speed
 		# else: effective_speed remains 0, no movement allowed
 
-		# Ground and air accel pairs, lerped by the 0.5s weight (reduced air
-		# control: MoveTowards instead of the old direct assignment).
-		var accel := lerpf(GROUND_ACCEL, GROUND_ACCEL_MAX, _accel_weight) if on_floor else lerpf(AIR_ACCEL, AIR_ACCEL_MAX, _accel_weight)
-		velocity.x = move_toward(velocity.x, current_direction.x * effective_speed, accel * dt)
-		velocity.z = move_toward(velocity.z, current_direction.z * effective_speed, accel * dt)
+		# ADAD sign correction: reversing an axis flips sign, keeping momentum.
+		var target_x := direction.x * effective_speed
+		var target_z := direction.z * effective_speed
+		if signf(target_x) != 0.0 and signf(target_x) != signf(velocity.x):
+			velocity.x = -velocity.x
+		if signf(target_z) != 0.0 and signf(target_z) != signf(velocity.z):
+			velocity.z = -velocity.z
+		# Ground and air accel pairs; air is MoveTowards instead of the old
+		# direct assignment (reduced air control).
+		velocity.x = move_toward(velocity.x, target_x, accel * dt)
+		velocity.z = move_toward(velocity.z, target_z, accel * dt)
 
 		avatar.look_at(current_direction.normalized() + position)
 		avatar.rotation.x = 0.0
 		avatar.rotation.z = 0.0
 	else:
-		# #2850 (B4): dt-scaled deceleration — same rate as the old per-tick
-		# walk_speed step at 60 Hz (90 m/s²), constant stopping distance under
-		# frame drops. Keeps the old coupling to the scene-overridable walk_speed.
-		var decel := walk_speed * 60.0 * dt
-		velocity.x = move_toward(velocity.x, 0.0, decel)
-		velocity.z = move_toward(velocity.z, 0.0, decel)
+		if on_floor:
+			# StopTimeSec=0: grounded stop is INSTANT in Unity (degenerate
+			# SmoothDamp). B4 dies with it — instant is tick-rate independent.
+			velocity.x = 0.0
+			velocity.z = 0.0
+		else:
+			# Air with no input drifts toward 0 at the air accel rate.
+			velocity.x = move_toward(velocity.x, 0.0, accel * dt)
+			velocity.z = move_toward(velocity.z, 0.0, accel * dt)
 
 	# #2850: quadratic horizontal air drag, coefficient 0.2 (live Unity value).
 	if not on_floor:
