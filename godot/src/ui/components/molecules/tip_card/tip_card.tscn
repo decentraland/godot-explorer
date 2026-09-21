@@ -18,7 +18,7 @@ corner_radius_bottom_right = 8
 corner_radius_bottom_left = 8
 
 [node name="TipCard" type="PanelContainer" unique_id=1902901349]
-custom_minimum_size = Vector2(600, 84)
+custom_minimum_size = Vector2(600, 0)
 size_flags_horizontal = 3
 size_flags_vertical = 0
 theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
@@ -56,6 +56,7 @@ theme_override_font_sizes/normal_font_size = 20
 theme_override_font_sizes/bold_font_size = 20
 bbcode_enabled = true
 text = "TIP_CARD_PLACEHOLDER"
+fit_content = true
 scroll_active = false
 vertical_alignment = 1
 

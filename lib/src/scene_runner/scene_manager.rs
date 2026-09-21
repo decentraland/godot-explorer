@@ -99,6 +99,16 @@ pub struct SceneManager {
 
     // Cached center position of viewport for raycasting
     viewport_center: Vector2,
+    // Screen point of the HUD crosshair (issue #2709). Set per-frame from GDScript
+    // on mobile — where the crosshair rides above the avatar in third person — so
+    // interaction raycasts aim where the crosshair is drawn. None on desktop/XR,
+    // where the crosshair stays at the viewport center.
+    crosshair_screen_point: Option<Vector2>,
+    // RIDs the pointer raycast must never hit: the local player's own colliders
+    // (body + avatar subtree), pushed once by player.gd on ready. Needed because
+    // the third-person avatar is centered on screen (issue #2709) — the ray from
+    // the camera would strike it otherwise.
+    pointer_raycast_exclude: Array<Rid>,
     // Previous frame screen point, used to compute PrimaryPointerInfo screen_delta
     last_cursor_position: Vector2,
     // Cached raycast query for performance
@@ -1695,7 +1705,7 @@ impl SceneManager {
             let screen_point = if self.raycast_use_cursor_position {
                 self.cursor_position
             } else {
-                self.viewport_center
+                self.crosshair_screen_point.unwrap_or(self.viewport_center)
             };
             let dir = camera_node.project_ray_normal(screen_point);
             let screen_delta = screen_point - self.last_cursor_position;
@@ -2362,13 +2372,17 @@ impl SceneManager {
 
         let camera_node = self.base().get_viewport().and_then(|x| x.get_camera_3d())?;
 
+        // Outside tap-cursor mode, aim where the crosshair is drawn (mobile sets
+        // it per-frame); desktop keeps the viewport center. The ray ALWAYS starts
+        // at the camera (issue #2709 review): RaycastHit fields are camera-relative
+        // per raycast_hit.proto, so the centered avatar is dodged by excluding its
+        // collider RIDs instead of pushing the origin forward.
         let screen_point = if self.raycast_use_cursor_position {
             self.cursor_position
         } else {
-            self.viewport_center
+            self.crosshair_screen_point.unwrap_or(self.viewport_center)
         };
 
-        // Use cached viewport center for raycasting
         let raycast_from = camera_node.project_ray_origin(screen_point);
         let raycast_to = raycast_from + camera_node.project_ray_normal(screen_point) * RAY_LENGTH;
         let mut space = camera_node.get_world_3d()?.get_direct_space_state()?;
@@ -2380,6 +2394,11 @@ impl SceneManager {
             .set_collision_mask(CL_POINTER | CL_AVATAR);
         // Need to collide with areas for avatars (they use Area3D)
         self.cached_raycast_query.set_collide_with_areas(true);
+        // Never hit the local player's own body/wearables: the third-person avatar
+        // is centered on screen (issue #2709), so the ray from the camera would
+        // otherwise strike its back.
+        let exclude = self.pointer_raycast_exclude.clone();
+        self.cached_raycast_query.set_exclude(&exclude);
 
         let raycast_result = space.intersect_ray(&self.cached_raycast_query.clone());
 
@@ -2504,8 +2523,27 @@ impl SceneManager {
     }
 
     #[func]
+    fn set_crosshair_screen_point(&mut self, screen_point: Vector2) {
+        self.crosshair_screen_point = Some(screen_point);
+    }
+
+    #[func]
+    fn clear_crosshair_screen_point(&mut self) {
+        self.crosshair_screen_point = None;
+    }
+
+    #[func]
+    fn set_pointer_raycast_exclude(&mut self, rids: Array<Rid>) {
+        self.pointer_raycast_exclude = rids;
+    }
+
+    #[func]
     fn _on_ui_resize(&mut self) {
         self.ui_canvas_information = self.create_ui_canvas_information();
+
+        // A resize invalidates the crosshair's screen point (it was computed for
+        // the old size); drop it until GDScript pushes a fresh one.
+        self.crosshair_screen_point = None;
 
         // Update cached viewport center when viewport resizes
         let viewport = self.base().get_viewport();
@@ -3008,6 +3046,8 @@ impl INode for SceneManager {
             last_cursor_position: Vector2::new(canvas_size.x * 0.5, canvas_size.y * 0.5),
             cursor_position: Vector2::new(canvas_size.x * 0.5, canvas_size.y * 0.5),
             raycast_use_cursor_position: false,
+            crosshair_screen_point: None,
+            pointer_raycast_exclude: Array::new(),
             cached_raycast_query: PhysicsRayQueryParameters3D::new_gd(),
             last_avatar_under_crosshair: None,
             avatar_pointer_press_time: None,

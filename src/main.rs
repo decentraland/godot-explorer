@@ -118,6 +118,10 @@ fn main() -> Result<(), anyhow::Error> {
         .subcommand(Command::new("check-gdscript").about("Validate all GDScript files for syntax errors"))
         .subcommand(Command::new("test-avatar").about("Run headless avatar animation regression tests"))
         .subcommand(Command::new("test-i18n").about("Run headless localization unit tests"))
+        .subcommand(
+            Command::new("test-asset-renderer")
+                .about("Run headless asset renderer input parsing tests"),
+        )
         .subcommand(Command::new("version-check").about("Check version consistency across files"))
         .subcommand(
             Command::new("fi-benchmark")
@@ -695,6 +699,12 @@ fn main() -> Result<(), anyhow::Error> {
                         HUB_CONSUMER_PORT,
                         log_server::HubOutput::Quiet,
                     );
+                    if platform == "ios" {
+                        // Opt the export plugin in to baking the connect-out arg.
+                        // Without it nothing is injected, so CI store builds (which
+                        // never set this) ship no dev endpoint.
+                        std::env::set_var("DCL_IOS_GODOT_CMDLINE", "auto");
+                    }
                     // Default (no --hub-viewer): on iOS attach a background log
                     // viewer so this terminal shows the GDScript/Rust logs os_log
                     // hides from `--console`; Android's logcat already shows
@@ -999,6 +1009,7 @@ fn main() -> Result<(), anyhow::Error> {
         ("check-gdscript", _) => check_gdscript::check_gdscript(),
         ("test-avatar", _) => check_gdscript::test_avatar(),
         ("test-i18n", _) => check_gdscript::test_i18n(),
+        ("test-asset-renderer", _) => check_gdscript::test_asset_renderer(),
         ("update-ios-xcode", sm) => ios_xcode::update_ios_xcode(
             sm.is_present("godot"),
             sm.is_present("plugin"),

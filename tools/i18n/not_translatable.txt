@@ -167,6 +167,10 @@ godot/src/notifications_manager.gd	trigger_timestamp > %d
 godot/src/bug_report/bug_report_service.gd	%d MB
 godot/src/bug_report/bug_report_service.gd	%s (%s)
 
+# Intercom ticket description line, never shown in the app: labels the Sentry diagnostics
+# link for the support team, who read tickets in English. Same wording as the Unity client.
+godot/src/bug_report/bug_report_service.gd	Internal diagnostics: %s
+
 # Sentry breadcrumb and event titles (sentry_seeder.gd) — diagnostics read in the Sentry
 # UI by engineers, never rendered in the app. `.message`/`add_breadcrumb` look like
 # `.text` assignments to the scanner, which is why they surface here.
