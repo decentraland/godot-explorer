@@ -32,10 +32,11 @@ pub const GODOT_BUILD_SHA: &str = "6289a3b2b";
 ///
 /// Reset to `None` once the branch is merged and `GODOT_BUILD_SHA` is bumped to the merge commit —
 /// leaving a branch pinned here makes every dev/CI pull an unmerged engine build. Currently pinned
-/// to the Android sha1 build-id fix (decentraland/godotengine#20): without it every engine frame of
-/// an Android tombstone crash is unsymbolicated in Sentry. Once #20 merges into `4.6.2`, bump
-/// `GODOT_BUILD_SHA` to the merge commit and set this back to `None`.
-pub const GODOT_USE_BRANCH: Option<&str> = Some("fix/android-sha1-build-id");
+/// to the failed-`Main::setup2` Android fix (decentraland/godotengine#21), which branches off
+/// `4.6.2` and therefore already carries the merged sha1 build-id fix (#20) previously pinned here.
+/// Once #21 merges into `4.6.2`, bump `GODOT_BUILD_SHA` to the merge commit and set this to `None`.
+pub const GODOT_USE_BRANCH: Option<&str> =
+    Some("fix/release-gdscript-object-validation-and-android-setup-failure");
 
 /// Release tag identifying a specific fork build — `<version>.stable.gh.<sha>`, mirroring the
 /// `--version` string. Single source for the release URL path segment, the on-disk template SHA
