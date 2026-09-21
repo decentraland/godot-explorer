@@ -7,9 +7,6 @@
 [ext_resource type="PackedScene" uid="uid://biigqf0xvnrcj" path="res://src/logic/player/stuck_detector.tscn" id="4_stuck"]
 [ext_resource type="Script" uid="uid://8dutfncs4yky" path="res://src/logic/player/camera_collision_clamp.gd" id="5_clamp"]
 
-[sub_resource type="SeparationRayShape3D" id="SeparationRayShape3D_3217e"]
-length = 1.0779
-
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_pxti1"]
 margin = 0.08
 radius = 0.3
@@ -20,10 +17,6 @@ collision_layer = 4
 collision_mask = 2
 safe_margin = 0.01
 script = ExtResource("1_5bfm2")
-
-[node name="CollisionShape3D_ContactPoint" type="CollisionShape3D" parent="." unique_id=1589303221]
-transform = Transform3D(1, 0, 0, 0, -4.37114e-08, -1, 0, 1, -4.37114e-08, 0, 1.1, 0)
-shape = SubResource("SeparationRayShape3D_3217e")
 
 [node name="CollisionShape3D_Body" type="CollisionShape3D" parent="." unique_id=546537198]
 unique_name_in_owner = true

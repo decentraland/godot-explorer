@@ -95,6 +95,9 @@ const DOWNSLOPE_STICK_JOG := 0.45
 const DOWNSLOPE_STICK_RUN := 0.55
 # Unity serializes 46deg; engine default 45 is wrong.
 const SLOPE_LIMIT_DEG := 46.0
+# Capsule dims from player.tscn (CollisionShape3D_Body).
+const CAPSULE_CENTER_Y := 0.8
+const CAPSULE_RADIUS := 0.3
 
 var last_position: Vector3
 var actual_velocity_xz: float
@@ -171,6 +174,9 @@ var _camera_mode_tween: Tween = null
 @onready var direction: Vector3 = Vector3(0, 0, 0)
 @onready var avatar := $Avatar
 @onready var stuck_detector := $StuckDetector
+@onready var _body_capsule: CollisionShape3D = %CollisionShape3D_Body
+# Margin-less clone for step-up motion tests (skin width would eat the step band).
+@onready var _step_test_shape: CapsuleShape3D = _make_step_test_shape()
 
 
 func to_xz(pos: Vector3) -> Vector2:
@@ -781,8 +787,11 @@ func _physics_process(dt: float) -> void:
 	velocity.z += external_velocity.z
 
 	last_position = global_position
-	# #2753: downslope stick length follows horizontal speed (jog 0.45 / run 0.55).
-	floor_snap_length = DOWNSLOPE_STICK_RUN if actual_velocity_xz > jog_speed else DOWNSLOPE_STICK_JOG
+	# #2753: downslope stick — ApplySlopeModifier picks by input kind (run when
+	# sprinting), not by measured speed.
+	floor_snap_length = (
+		DOWNSLOPE_STICK_RUN if Input.is_action_pressed("ia_sprint") else DOWNSLOPE_STICK_JOG
+	)
 	move_and_slide()
 	_try_step_up(Vector3(locomotion_x, 0.0, locomotion_z))
 	position.y = max(position.y, 0)
@@ -926,25 +935,58 @@ func _current_gravity() -> float:
 # horizontal motion is wall-blocked while grounded, retry from STEP_OFFSET up:
 # free space above + floor below inside the step window = walkable ledge.
 # `intent` is the pre-slide locomotion velocity (slide zeroes it on the wall).
+func _make_step_test_shape() -> CapsuleShape3D:
+	var s2: CapsuleShape3D = %CollisionShape3D_Body.shape.duplicate()
+	s2.margin = 0.0
+	return s2
+
+
 func _try_step_up(intent: Vector3) -> void:
-	if not is_on_floor() or not is_on_wall():
-		return
-	if velocity.y > 0.1:
+	# Gate on wall contact, not is_on_floor(): pressed into a step edge, the
+	# corner contact normal reads diagonal and the floor flag drops (trimesh,
+	# both engines) — exactly when stepping is needed. Slow-fall band covers
+	# the resolved-collision sink (vy oscillates small-negative there).
+	var wall := is_on_wall()
+	var grounded_or_resting := is_on_floor() or (velocity.y <= 0.1 and velocity.y >= -1.0)
+	if not wall or not grounded_or_resting:
 		return
 	var horiz := Vector3(intent.x, 0.0, intent.z)
 	if horiz.length_squared() < 0.25:
 		return
-	# Probe must reach past the capsule radius so the down-ray lands ON the
-	# ledge, not on the floor in front of it.
-	var probe := horiz.normalized() * STEP_OFFSET
-	var raised := global_transform.translated(Vector3(0.0, STEP_OFFSET, 0.0))
-	if test_move(raised, probe):
-		return  # still blocked at step height — a wall, not a step
-	var top := raised.origin + probe
 	var space := get_world_3d().direct_space_state
 	if space == null:
 		return
-	var query := PhysicsRayQueryParameters3D.create(top, top + Vector3(0.0, -STEP_OFFSET - 0.05, 0.0))
+	# Unity CharacterController.Move step sequence: up, forward, down. All
+	# shape tests use a margin-less clone of the capsule — the 0.08 skin width
+	# otherwise eats the clearance band and blocks valid steps.
+	var origin := global_position + Vector3(0.0, CAPSULE_CENTER_Y, 0.0)
+	var shape_query := PhysicsShapeQueryParameters3D.new()
+	shape_query.shape = _step_test_shape
+	shape_query.collision_mask = collision_mask
+	shape_query.exclude = _raycast_exclude
+	# a) lift up to STEP_OFFSET (doubles as the headroom check)
+	shape_query.transform = Transform3D(Basis.IDENTITY, origin)
+	shape_query.motion = Vector3(0.0, STEP_OFFSET, 0.0)
+	var up: PackedFloat32Array = space.cast_motion(shape_query)
+	var lift := up[0] * STEP_OFFSET
+	if lift < 0.05:
+		return
+	# b) forward past the wall face at raised height — fixed capsule radius +
+	# skin; anything blocking here rises above the lifted capsule = a wall.
+	# (A per-frame probe climbs staircase treads one at a time instead.)
+	var fwd := horiz.normalized() * (CAPSULE_RADIUS + 0.02)
+	shape_query.transform = Transform3D(Basis.IDENTITY, origin + Vector3(0.0, lift, 0.0))
+	shape_query.motion = fwd
+	var fw: PackedFloat32Array = space.cast_motion(shape_query)
+	if fw[0] < 1.0:
+		return
+	# c) landing height from a RAY, which reads the exact surface — a shape
+	# cast stops on the top-edge corner below the true top and enables
+	# two-step corner climbs over walls taller than STEP_OFFSET.
+	var ray_from := global_position + Vector3(0.0, lift, 0.0) + fwd
+	var query := PhysicsRayQueryParameters3D.create(
+		ray_from, ray_from + Vector3(0.0, -lift - 0.05, 0.0)
+	)
 	query.collision_mask = GROUND_RAYCAST_MASK
 	query.exclude = _raycast_exclude
 	var hit := space.intersect_ray(query)
@@ -953,7 +995,9 @@ func _try_step_up(intent: Vector3) -> void:
 	var floor_y: float = (hit.position as Vector3).y
 	if floor_y < global_position.y + 0.05:
 		return  # flat or lower — nothing to step onto
-	global_position = Vector3(top.x, floor_y, top.z)
+	if floor_y > global_position.y + STEP_OFFSET + 0.005:
+		return  # taller than the step offset — a wall
+	global_position = Vector3(ray_from.x, floor_y + 0.001, ray_from.z)
 
 
 # Fold scene-driven force/impulses into external_velocity, then drag and clamp.
