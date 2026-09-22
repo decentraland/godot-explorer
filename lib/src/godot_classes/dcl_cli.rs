@@ -47,6 +47,8 @@ pub struct DclCli {
     #[var(get)]
     pub avatar_renderer_mode: bool,
     #[var(get)]
+    pub asset_renderer_mode: bool,
+    #[var(get)]
     pub client_test_mode: bool,
     #[var(get)]
     pub test_runner: bool,
@@ -162,6 +164,8 @@ pub struct DclCli {
     pub scene_input_file: GString,
     #[var(get)]
     pub avatars_file: GString,
+    #[var(get)]
+    pub asset_input_file: GString,
     #[var(get)]
     pub snapshot_folder: GString,
     #[var(get)]
@@ -335,6 +339,18 @@ impl DclCli {
             ArgDefinition {
                 name: "--avatars".to_string(),
                 description: "Path to avatars input file for renderer".to_string(),
+                arg_type: ArgType::Value("<file>".to_string()),
+                category: "Testing".to_string(),
+            },
+            ArgDefinition {
+                name: "--asset-renderer".to_string(),
+                description: "Run in asset renderer mode (wearable/emote stills)".to_string(),
+                arg_type: ArgType::Flag,
+                category: "Testing".to_string(),
+            },
+            ArgDefinition {
+                name: "--asset-input-file".to_string(),
+                description: "Path to asset input file for the asset renderer".to_string(),
                 arg_type: ArgType::Value("<file>".to_string()),
                 category: "Testing".to_string(),
             },
@@ -745,6 +761,7 @@ impl INode for DclCli {
         let scene_test_mode = args_map.contains_key("--scene-test");
         let scene_renderer_mode = args_map.contains_key("--scene-renderer");
         let avatar_renderer_mode = args_map.contains_key("--avatar-renderer");
+        let asset_renderer_mode = args_map.contains_key("--asset-renderer");
         let client_test_mode = args_map.contains_key("--client-test");
         let test_runner = args_map.contains_key("--test-runner");
         let clear_cache_startup = args_map.contains_key("--clear-cache-startup");
@@ -836,6 +853,11 @@ impl INode for DclCli {
             .unwrap_or_default();
         let avatars_file = args_map
             .get("--avatars")
+            .and_then(|v| v.as_ref())
+            .map(GString::from)
+            .unwrap_or_default();
+        let asset_input_file = args_map
+            .get("--asset-input-file")
             .and_then(|v| v.as_ref())
             .map(GString::from)
             .unwrap_or_default();
@@ -932,6 +954,7 @@ impl INode for DclCli {
             scene_test_mode,
             scene_renderer_mode,
             avatar_renderer_mode,
+            asset_renderer_mode,
             client_test_mode,
             test_runner,
             clear_cache_startup,
@@ -974,6 +997,7 @@ impl INode for DclCli {
             location,
             scene_input_file,
             avatars_file,
+            asset_input_file,
             snapshot_folder,
             fake_deeplink,
             dcl_env,

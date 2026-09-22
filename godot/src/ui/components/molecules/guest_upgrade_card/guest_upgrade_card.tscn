@@ -64,8 +64,10 @@ theme_override_constants/separation = 0
 [node name="Label_Title" type="Label" parent="GuestUpgradeCard/MarginContainer/VBoxContainer" unique_id=25987838]
 unique_name_in_owner = true
 layout_mode = 2
+size_flags_horizontal = 3
 text = "COMMON_UNLOCK_THE_FULL_EXPERIENCE"
 label_settings = SubResource("LabelSettings_dheir")
+autowrap_mode = 2
 
 [node name="HSeparator" type="HSeparator" parent="GuestUpgradeCard/MarginContainer/VBoxContainer" unique_id=2055727825]
 layout_mode = 2

@@ -1019,6 +1019,53 @@ func play_emote_audio(file_hash: String):
 		avatar.audio_player_emote.play(0)
 
 
+## Freezes the avatar mid-emote for still capture (asset renderer tool): loads
+## the emote if needed, then poses the skeleton at `normalized_t` (0..1) of the
+## animation with the tree disabled — the same freeze technique as
+## freeze_on_idle, at an arbitrary point of an arbitrary emote. Shows the
+## emote's prop when it has one. Returns false when the emote cannot be loaded
+## or carries no animation.
+func async_freeze_on_emote(emote_urn: String, normalized_t: float) -> bool:
+	if not _has_emote(emote_urn):
+		await _async_load_emote(emote_urn)
+		if not is_instance_valid(avatar) or not avatar.is_inside_tree():
+			return false
+		# Let the deferred load_emote_from_dcl_emote_gltf calls complete
+		await avatar.get_tree().process_frame
+		if not _has_emote(emote_urn):
+			printerr("Emote %s could not be loaded" % emote_urn)
+			return false
+
+	var emote_item_data: EmoteItemData = loaded_emotes_by_urn[emote_urn]
+	if emote_item_data.default_anim_name.is_empty():
+		printerr("Emote %s has no animation" % emote_urn)
+		return false
+
+	var anim_path = "emotes/" + emote_item_data.default_anim_name
+	if not animation_player.has_animation(anim_path):
+		printerr("Animation not found in player: %s" % anim_path)
+		return false
+
+	_emit_emote_finished(true)
+	if playing_masked:
+		animation_tree.set(MASKED_REQUEST_PARAM, AnimationNodeOneShot.ONE_SHOT_REQUEST_ABORT)
+		playing_masked = false
+	animation_tree.process_mode = Node.PROCESS_MODE_DISABLED
+
+	_hide_all_props()
+	_reset_skeleton_to_rest_pose()
+
+	var anim: Animation = animation_player.get_animation(anim_path)
+	animation_player.stop()
+	animation_player.play(anim_path, -1, 0.0)
+	animation_player.seek(clampf(normalized_t, 0.0, 1.0) * anim.length, true)
+
+	if emote_item_data.armature_prop != null and is_instance_valid(emote_item_data.armature_prop):
+		emote_item_data.armature_prop.show()
+
+	return true
+
+
 func freeze_on_idle():
 	_emit_emote_finished(true)
 	# Abort the masked layer before disabling the tree: a OneShot left in its
