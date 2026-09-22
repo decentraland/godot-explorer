@@ -19,6 +19,12 @@ extends RefCounted
 ## 1. A freed instance is not null: `if node:` passes and the next line crashes. Only
 ##    `is_instance_valid()` resolves the object id instead of the pointer.
 ## 2. A check before an `await` says nothing about the state on resume.
+## 3. Valid is not the same as in the tree, and in the tree is not the same as ready.
+##    `change_scene_to_file()` detaches a page at once but frees it later, so
+##    `is_instance_valid()` stays true for a container that has already left the tree - and a
+##    node added under a detached parent never runs `_ready`, so its `@onready` members stay
+##    null and crash on first use. When what you need is a node you are about to build into or
+##    read children from, ask `is_inside_tree()`; this class does not answer that.
 
 ## Hits reported per site per session. The counter in `_hits` keeps rising past this;
 ## only the outbound event is capped.

@@ -92,6 +92,12 @@ cargo run -- check-gdscript
 # gdlint also enforces the freed-node rule: a non-self node reference is not carried across an
 # `await` (own the work from the node, re-resolve on resume, or cancel on free). See REVIEW.md §5
 # "Freed-node access after `await`". Prefer a type hint over `# gdlint: ignore=`.
+#
+# gdlint does NOT cover the other half of that crash family: `@onready` is assigned by `_ready`,
+# which only fires when a node ENTERS THE TREE, so `add_child()` onto a detached parent leaves
+# every `@onready` in the child null forever - a release SIGSEGV on first use. After an `await`,
+# `is_instance_valid()` is not enough (a page detached by `change_scene_to_file()` is still
+# valid until its later `queue_free()`); ask `x.is_inside_tree()` too.
 
 # Generate test coverage
 cargo run -- coverage --dev

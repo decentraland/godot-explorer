@@ -20,7 +20,11 @@ comparison-with-itself: null
 constant-name: _?[A-Z][A-Z0-9]*(_[A-Z0-9]+)*
 # --- Object-lifetime rules (dcl fork of gdtoolkit, gdtoolkit/linter/lifetime_checks.py) ---
 # On the release template a GDScript method call on a freed node is a SIGSEGV, and
-# an `await` is where references go stale. `lifetime-safe-types` lists the declared
+# an `await` is where references go stale. These rules catch only the carried-reference
+# half of that family: they track LOCAL variables and exempt `@onready` members, so they
+# cannot see a null `@onready` left behind by `add_child()` onto a detached parent - the
+# other half, and the one that actually shipped (REVIEW.md section 5). That half is a
+# review question, not a CI one. `lifetime-safe-types` lists the declared
 # types that can never hold a node, on top of the built-ins and engine classes the
 # rule already knows: every GDExtension class (Rust `Dcl*`, sentry) and the project's
 # own RefCounted / Resource classes. Regenerate the extension part with
