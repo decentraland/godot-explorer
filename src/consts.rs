@@ -21,7 +21,7 @@ pub const GODOT_CURRENT_VERSION: &str = "4.6.2";
 /// (e.g. `4.6.2.stable.gh.6ddcadb64 - Protocol Squad`) and the SHA-tagged release path published
 /// by the godot-engine-releases pipeline. Bump it in lockstep with a new fork publish: it busts the
 /// local download cache (keys embed it) and pins the immutable per-SHA release URLs below.
-pub const GODOT_BUILD_SHA: &str = "6289a3b2b";
+pub const GODOT_BUILD_SHA: &str = "2afb8592d";
 
 /// TEMPORARY per-checkout override to pull the Godot editor + export templates from a specific
 /// fork *branch* build (published by CI under `/branches/<slug>/`) instead of the pinned stable
@@ -31,12 +31,10 @@ pub const GODOT_BUILD_SHA: &str = "6289a3b2b";
 /// branch's CI build. An explicit `--branch` on the CLI still takes precedence over this.
 ///
 /// Reset to `None` once the branch is merged and `GODOT_BUILD_SHA` is bumped to the merge commit —
-/// leaving a branch pinned here makes every dev/CI pull an unmerged engine build. Currently pinned
-/// to the failed-`Main::setup2` Android fix (decentraland/godotengine#21), which branches off
-/// `4.6.2` and therefore already carries the merged sha1 build-id fix (#20) previously pinned here.
-/// Once #21 merges into `4.6.2`, bump `GODOT_BUILD_SHA` to the merge commit and set this to `None`.
-pub const GODOT_USE_BRANCH: Option<&str> =
-    Some("fix/release-gdscript-object-validation-and-android-setup-failure");
+/// leaving a branch pinned here makes every dev/CI pull an unmerged engine build. Currently unset:
+/// the failed-`Main::setup2` Android fix (decentraland/godotengine#21) is merged into `4.6.2` and
+/// `GODOT_BUILD_SHA` points at that merge commit, which also carries the sha1 build-id fix (#20).
+pub const GODOT_USE_BRANCH: Option<&str> = None;
 
 /// Release tag identifying a specific fork build — `<version>.stable.gh.<sha>`, mirroring the
 /// `--version` string. Single source for the release URL path segment, the on-disk template SHA
