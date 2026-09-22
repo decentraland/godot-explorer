@@ -180,6 +180,10 @@ pub enum RpcCall {
         src: String,
         response: RpcResultSender<Result<Vector2, String>>,
     },
+    // Analytics: the scene subscribed to `localeChanged` (once per scene)
+    SceneLocaleRequested {
+        locale: String,
+    },
 }
 
 #[derive(Debug)]

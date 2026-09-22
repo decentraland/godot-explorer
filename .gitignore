@@ -58,3 +58,4 @@ scripts/bench/.env.bak
 
 .env*
 !.env.example
+
