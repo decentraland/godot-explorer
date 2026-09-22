@@ -184,6 +184,14 @@ pub fn test_i18n() -> Result<()> {
     )
 }
 
+pub fn test_asset_renderer() -> Result<()> {
+    run_script_tests(
+        "Asset Renderer Tests",
+        "asset renderer",
+        &["src/test/asset_renderer/test_asset_renderer_input.gd"],
+    )
+}
+
 #[cfg(all(test, unix))]
 mod tests {
     use super::*;

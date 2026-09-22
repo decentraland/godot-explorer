@@ -70,8 +70,6 @@ var _debug_panel_from_settings: bool = false
 @onready var control_pointer_tooltip = %Control_PointerTooltip
 
 @onready var chat_panel = %ChatPanel
-#@onready var url_popup = %UrlPopup
-#@onready var jump_in_popup = %JumpInPopup
 
 @onready var notifications_panel: PanelContainer = %NotificationsPanel
 @onready var friends_panel: PanelContainer = %FriendsPanel
@@ -262,7 +260,9 @@ func _ready():
 
 	virtual_joystick.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	virtual_joystick_orig_position = virtual_joystick.get_position()
-	_sdk_touch_controls = SdkTouchControlsApplier.new(virtual_joystick, label_crosshair)
+	_sdk_touch_controls = SdkTouchControlsApplier.new(
+		virtual_joystick, label_crosshair, player, control_pointer_tooltip
+	)
 
 	if Global.is_xr():
 		mobile_ui.hide()
