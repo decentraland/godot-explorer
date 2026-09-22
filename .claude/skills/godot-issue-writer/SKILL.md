@@ -69,15 +69,19 @@ Maximum density. Direct speech. Cut anything removable without losing meaning.
 | Work | Type |
 |---|---|
 | End-user feature implementation | `Feature` |
+| Instrumentation implementation — events emitted in the client | `Feature` |
 | Refactor, CI, tooling | `Feature` |
-| Research, design, metrics definition | `Task` |
-| Observability, metrics | `Task` |
+| Research, design | `Task` |
+| Metrics/event definition, dashboards, observability audit | `Task` |
 | Bugs, crashes, incidents | `Bug` |
 
 `Feature` = code ships. Player-facing or not — refactors, CI, build + dev tooling count.
 
-`Task` = output is a decision or a document. Research, audit, docs, design spec, store/legal. Also
-observability and metrics work — `sentry` plumbing, event definition, dashboards.
+`Task` = output is a decision or a document. Research, audit, docs, design spec, store/legal.
+Metrics and observability land here only while the output is a definition — event spec, dashboard,
+`sentry` coverage audit.
+
+Emitting the events is `Feature` — code ships (#2763).
 
 `Bug` = defect in shipped behavior. Crashes, ANRs, incidents.
 
@@ -141,7 +145,10 @@ can't be set via MCP → tell the user to link it by hand.
 Bugs use the repo's bug form shape, matching how other bug issues render in the repo (reference:
 #2885). Engineers scan these fields — keep them exact.
 
-**Title:** `[Bug]: <symptom> (<platform>)`
+**Title:** `[Bug] <symptom> (<platform>)`
+
+No colon. `bug_report.yml` prefills `[Bug]: ` — drop the colon to match the repo (#2952, #2951,
+#2941, #2919, #2867).
 
 **Body** — rendered headings, exactly:
 
@@ -240,9 +247,15 @@ Smallest set that is true.
 
 **Platform** (all that apply): `mobile` (default) · `iOS` · `Android` · `desktop`
 
-**Domain**: `credits` · `controls` · `rendering` · `metrics` · `feature parity`
+**Domain**: `credits` · `controls` · `rendering` · `performance` · `metrics` · `feature parity` ·
+`sentry` · `crash`
 
-**Process**: `needs design` · `need definition` · `blocked` · `triage` · `release` · `claw-created`
+**Process**: `needs design` · `need definition` · `need tech test` · `blocked` · `triage` · `release` ·
+`claw-created`
+
+`sentry` = observability plumbing (SDK version, releases, symbolication, ANR). `crash` = the issue
+is about crashes/ANRs themselves. `performance` = frame time, memory, asset weight, thermals.
+`need tech test` = feasibility unknown until an engineer probes the engine.
 
 `claw-created` only when the request came via Slack/Discord rather than the user authoring it
 directly; then close the body with `**Requested by <name> via Slack**` (#2091, #2089). Direct
@@ -257,6 +270,7 @@ After creating, add to project 43 and set:
 
 - **Status** → `planning` (always)
 - **Priority** → `0-Critical` / `1-High` / `2-Medium` / `3-Low` — ask if not stated
+- **Epic** → link when one exists
 - **Estimate (Days)** → only if given
 - **Sprint** → only if explicitly targeted
 
