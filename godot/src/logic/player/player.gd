@@ -165,6 +165,11 @@ var _pinch_accumulated_delta: float = 0.0
 var _pinch_start_mode: Global.CameraMode = Global.CameraMode.THIRD_PERSON
 # The active camera-mode tween, killed before a new one so they never fight.
 var _camera_mode_tween: Tween = null
+# Step-up arming: after a TALL rise (> 0.2) the step-up may fire again only
+# after the capsule rests grounded and wall-free. A continuous steep ramp
+# (rise per band ~0.31) never rests, a staircase tread (0.15) never disarms,
+# and terrain bumps below 0.2 rise without arming side-effects at all.
+var _step_armed := true
 
 @onready var mount_camera := $Mount
 @onready var camera: DclCamera3D = $Mount/CameraArm/Camera3D
@@ -817,15 +822,25 @@ func _physics_process(dt: float) -> void:
 	velocity.z += external_velocity.z
 
 	last_position = global_position
-	_try_step_up_predictive(Vector3(locomotion_x, 0.0, locomotion_z), dt)
 	# #2753: downslope stick — ApplySlopeModifier picks by input kind (run when
-	# sprinting), not by measured speed.
+	# sprinting), not by measured speed. Assigned BEFORE the predictive step-up:
+	# a rise zeroes the snap for that frame's move so the lower floor within
+	# snap reach cannot re-glue the capsule mid-step. Keeping the snap on every
+	# other frame is also what makes is_on_floor() reliable for the re-arm.
 	floor_snap_length = (
 		DOWNSLOPE_STICK_RUN if Input.is_action_pressed("ia_sprint") else DOWNSLOPE_STICK_JOG
 	)
+	_try_step_up_predictive(Vector3(locomotion_x, 0.0, locomotion_z), dt)
 	move_and_slide()
 	var moved_xz := (to_xz(global_position) - to_xz(last_position)).length()
 	_try_step_up(Vector3(locomotion_x, 0.0, locomotion_z), moved_xz)
+	# Step-up re-arming: one grounded, wall-free frame confirms the capsule
+	# rested on a tread; a continuous steep ramp stays in wall contact (or
+	# airborne) forever. "Grounded" follows the house idiom (lines 553, 1294):
+	# is_on_floor() OR at the y=0 realm floor — the clamp eats the penetration
+	# there, so is_on_floor() alone is false during normal walking.
+	if (is_on_floor() or global_position.y <= 0.001) and not is_on_wall():
+		_step_armed = true
 	position.y = max(position.y, 0)
 	avatar.global_position = global_position
 
@@ -1020,6 +1035,8 @@ func _try_step_up(intent: Vector3, moved_xz: float) -> void:
 
 
 func _step_up(intent: Vector3) -> void:
+	if not _step_armed:
+		return
 	var horiz := Vector3(intent.x, 0.0, intent.z)
 	if horiz.length_squared() < 0.25:
 		return
@@ -1079,6 +1096,14 @@ func _step_up(intent: Vector3) -> void:
 		return  # taller than the step offset — a wall
 	# Rise in place — the horizontal motion flows via move_and_slide itself,
 	# so there is no blocked frame and no forward teleport pop.
+	# Rise in place — the horizontal motion flows via move_and_slide itself,
+	# so there is no blocked frame and no forward teleport pop. Tall rises
+	# disarm until the capsule rests: re-triggering on the same ramp face is
+	# what stair-climbs steep inclines. Snap off for this frame's move: the
+	# lower floor is within snap reach and would re-glue the capsule mid-step.
+	if floor_y - global_position.y > 0.2:
+		_step_armed = false
+	floor_snap_length = 0.0
 	global_position.y = floor_y + 0.001
 
 
