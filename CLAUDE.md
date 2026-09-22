@@ -194,7 +194,7 @@ bypasses that check for local debugging only. The baked files live in
 
 5. **Android APK hosting & mobile distribution**:
    Every Android CI build (`android_builds.yml`, on every push/PR) uploads the signed
-   APK to the R2 mobile-artifacts bucket and links it from the PR build-report comment.
+   APK to the R2 mobile-artifacts bucket.
    Required repo secrets: `MOBILE_ARTIFACTS_R2_{ACCESS_KEY_ID,SECRET_ACCESS_KEY,ENDPOINT,BUCKET}`.
    APKs are served at `https://mobile-artifacts.dclregenesislabs.xyz/android/<branch>/<sha>/decentraland.godot.client.apk`.
 
