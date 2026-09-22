@@ -44,7 +44,8 @@ cargo run -- build --target android       # Android build (no cargo-ndk, uses di
 cargo run -- build --target ios           # iOS build (macOS only)
 
 # Run the client (automatically builds first)
-cargo run -- run                          # Run client
+cargo run -- run                          # Run client (always a phone layout: --emulate-ios by default)
+cargo run -- run -- --emulate-android     # Run client with the Android layout instead
 cargo run -- run -r                       # Release mode
 cargo run -- run -e                       # Run editor
 cargo run -- run -e --target android      # Run editor and also build for Android

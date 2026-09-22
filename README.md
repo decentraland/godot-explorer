@@ -73,7 +73,7 @@ brew install pkg-config
 | `cargo run -- install --targets ios` | Install iOS templates (auto-strips debug symbols) |
 | `cargo run -- install --targets ios --no-strip` | Install iOS templates with debug symbols |
 | `cargo run -- build` | Build for host platform |
-| `cargo run -- run` | Build and run the client |
+| `cargo run -- run` | Build and run the client (iOS phone layout; `-- --emulate-android` for Android) |
 | `cargo run -- run -e` | Build and run the editor |
 | `cargo run -- export --target android` | Export Android APK |
 | `cargo run -- strip-ios-templates` | Strip debug symbols from iOS templates |
@@ -87,8 +87,11 @@ brew install pkg-config
 # Build for host platform
 cargo run -- build
 
-# Run the client (builds automatically)
+# Run the client (builds automatically). Mobile is the product, so a desktop run always
+# emulates a phone: --emulate-ios by default (phone window, safe areas, portrait/landscape),
+# or Android with `-- --emulate-android`.
 cargo run -- run
+cargo run -- run -- --emulate-android
 
 # Run the editor
 cargo run -- run -e

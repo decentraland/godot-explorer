@@ -33,7 +33,8 @@ pub const GODOT_BUILD_SHA: &str = "2afb8592d";
 /// Reset to `None` once the branch is merged and `GODOT_BUILD_SHA` is bumped to the merge commit —
 /// leaving a branch pinned here makes every dev/CI pull an unmerged engine build. Currently unset:
 /// the failed-`Main::setup2` Android fix (decentraland/godotengine#21) is merged into `4.6.2` and
-/// `GODOT_BUILD_SHA` points at that merge commit, which also carries the sha1 build-id fix (#20).
+/// `GODOT_BUILD_SHA` points at that merge commit, which also carries the Mali vertex-lighting NaN
+/// fix (#23, pinned as a branch on `release`) and the sha1 build-id fix (#20).
 pub const GODOT_USE_BRANCH: Option<&str> = None;
 
 /// Release tag identifying a specific fork build — `<version>.stable.gh.<sha>`, mirroring the
