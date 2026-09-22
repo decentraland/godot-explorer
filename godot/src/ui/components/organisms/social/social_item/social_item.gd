@@ -16,6 +16,15 @@ var parcel: Array = []  # Parcel coordinates [x, y] when user is in genesis city
 # ENS name of the world the friend is in (empty when in Genesis City or nowhere). Read from
 # Global.locations.online_locations; drives the world place label and jump-in.
 var world_name: String = ""
+## False until `_ready()` runs, i.e. until this node actually entered the tree and the
+## @onready nodes below were assigned. `add_child()` onto a parent that is itself detached
+## does NOT put the child in the tree, so a list detached mid-await produces items whose
+## @onready vars stay null forever - and a statically typed call on one of those compiles to
+## OPCODE_CALL_METHOD_BIND, whose null check is `#ifdef DEBUG_ENABLED`, so release builds
+## segfault instead of erroring. set_data()/set_type() defer their UI work until this is true.
+var _ui_ready: bool = false
+var _pending_should_load: bool = true
+var _pending_type_set: bool = false
 var _avatar_ref: WeakRef = null  # Weak reference to avatar for nearby items
 var _is_loading: bool = false
 var _load_start_time: float = 0.0
@@ -41,6 +50,7 @@ var _load_start_time: float = 0.0
 
 
 func _ready():
+	_ui_ready = true
 	add_to_group("blacklist_ui_sync")
 	_set_loading(true)
 	_update_elements_visibility()
@@ -60,9 +70,27 @@ func _ready():
 	# instead of a fixed character cap that cut long titles short while space was left.
 	label_place.clip_text = true
 
+	# set_type()/set_data() may have been called before this node entered the tree, when every
+	# @onready below was still null and they returned early. The nodes exist now, so replay just
+	# the calls that were actually deferred - replaying unconditionally would subscribe/apply for
+	# items whose type was never set by a caller.
+	if _pending_type_set:
+		_pending_type_set = false
+		set_type(item_type)
+	if social_data != null:
+		set_data(social_data, _pending_should_load)
+
 
 func set_data(data: SocialItemData, should_load: bool = true) -> void:
 	social_data = data
+	if not _ui_ready:
+		# Not in the tree, so _ready() has not assigned the @onready nodes that everything below
+		# dereferences. A list detached mid-await still accepts add_child(), but the child never
+		# enters the tree - and a call on a null typed Control segfaults release builds
+		# (CanvasItem::show/hide). _ready() replays this once the nodes exist.
+		_pending_should_load = should_load
+		return
+
 	_apply_data_to_ui()
 
 	if should_load:
@@ -303,6 +331,12 @@ func _notify_parent_size_changed() -> void:
 
 func set_type(type: SocialItemData.SocialType) -> void:
 	item_type = type
+	if not _ui_ready:
+		# @onready nodes are still null. _ready() calls _update_elements_visibility() itself and
+		# replays this call so the blacklist subscription below is not lost.
+		_pending_type_set = true
+		return
+
 	_update_elements_visibility()
 	# Subscribe to blacklist changes for NEARBY and REQUEST items to hide/show themselves
 	if (
