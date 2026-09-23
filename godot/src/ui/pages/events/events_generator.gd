@@ -106,7 +106,10 @@ func _async_fetch_events(url: String, limit: int = 100):
 		item_container.add_child(item)
 
 		item.set_data(event_data)
-		item.event_pressed.connect(discover.on_event_pressed)
+		# `discover` is unset when the carousel is reused outside the full Discover screen
+		# (e.g. the landscape DiscoverPanel), where tapping a card does nothing.
+		if is_instance_valid(discover):
+			item.event_pressed.connect(discover.on_event_pressed)
 
 	report_loading_status.emit(CarrouselGenerator.LoadingStatus.OK_WITH_RESULTS)
 

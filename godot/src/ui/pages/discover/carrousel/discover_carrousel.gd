@@ -12,6 +12,11 @@ extends Control
 
 @export var item_separation: int = -1
 
+## When false, the carousel does not request items on _ready; the host calls start_loading()
+## once it is visible and sized. Lets a hidden host (e.g. the landscape DiscoverPanel) avoid
+## building cards at zero width, which permanently trims titles and skips thumbnails.
+@export var auto_start: bool = true
+
 @onready var scroll_container = %ScrollContainer
 @onready var item_container = %HBoxContainer_Items
 @onready var label_error = $VBoxContainer/Label_Error
@@ -56,6 +61,14 @@ func _ready():
 
 		scroll_container.item_container = item_container
 		scroll_container.request.connect(generator.on_request)
+		if auto_start:
+			scroll_container.start()
+
+
+## Kick off the first request. Used by hosts that instance the carousel with auto_start = false
+## and start it once they become visible (safe to call once; pagination stays wired).
+func start_loading() -> void:
+	if is_instance_valid(generator):
 		scroll_container.start()
 
 

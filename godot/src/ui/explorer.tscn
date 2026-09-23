@@ -19,6 +19,7 @@
 [ext_resource type="PackedScene" uid="uid://e18p6cp0duuu" path="res://src/ui/components/organisms/recording_notification/recording_notification.tscn" id="20_uf6rv"]
 [ext_resource type="PackedScene" uid="uid://btl8ag3s7oanm" path="res://src/ui/components/organisms/navbar/navbar.tscn" id="21_admxk"]
 [ext_resource type="PackedScene" uid="uid://dd2w2ysk3akdj" path="res://src/ui/pages/friends/friends_panel.tscn" id="21_cwgs4"]
+[ext_resource type="PackedScene" uid="uid://b1d2s3c4v5p6n" path="res://src/ui/pages/discover/discover_panel/discover_panel.tscn" id="31_disc_panel"]
 [ext_resource type="PackedScene" uid="uid://ec0egfeyv5fm" path="res://src/ui/components/organisms/emotes/emote_wheel.tscn" id="21_pows0"]
 [ext_resource type="PackedScene" uid="uid://dx873niilktrw" path="res://src/ui/components/organisms/warning_messages/warning_messages.tscn" id="23_bi432"]
 [ext_resource type="PackedScene" uid="uid://bectasdgy1btu" path="res://src/ui/pages/profile/profile_container.tscn" id="25_c5h7v"]
@@ -275,6 +276,13 @@ unique_name_in_owner = true
 visible = false
 custom_minimum_size = Vector2(500, 640)
 layout_mode = 2
+
+[node name="DiscoverPanel" parent="UI/SafeAreaHud/InteractableHUD/HBoxContainerLeftPanels/VBoxContainer_LeftPanels" instance=ExtResource("31_disc_panel")]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(500, 640)
+layout_mode = 2
+size_flags_vertical = 3
 
 [node name="EmoteWheel" parent="UI/SafeAreaHud/InteractableHUD" unique_id=228992295 instance=ExtResource("21_pows0")]
 unique_name_in_owner = true

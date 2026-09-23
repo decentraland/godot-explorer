@@ -442,6 +442,12 @@ func _on_section_row_pressed(key: String) -> void:
 	_select_section(key, true)
 
 
+## External entry point for callers outside Settings (e.g. Discover's Report Bug) that need to
+## land directly on a section, same as tapping its row.
+func open_section(key: String) -> void:
+	_select_section(key, true)
+
+
 ## Show a section's content, update the highlighted row and (in portrait) switch to the detail
 ## view. user_initiated=false is used for the default selection when the panel is shown, so it
 ## does not force the portrait detail view (portrait should open on the section list).
@@ -926,30 +932,7 @@ func _on_button_open_user_data_pressed() -> void:
 
 
 func _on_button_report_content_pressed() -> void:
-	var form_id = "1FAIpQLSdD31D0GKROyxmrvM-KVStqdhyqF430crjaTtpemEiAqCHQbg"
-	var base_url = "https://docs.google.com/forms/d/e/" + form_id + "/viewform"
-
-	var params = []
-
-	var scene_name = ""
-	if Global.scene_runner != null:
-		var current_scene_id = Global.scene_runner.get_current_parcel_scene_id()
-		if current_scene_id >= 0:
-			scene_name = Global.scene_runner.get_scene_title(current_scene_id)
-
-	var current_position = Global.get_config().last_parcel_position
-	var scene_info = "%s (%d, %d)" % [scene_name, current_position.x, current_position.y]
-
-	var wallet_id = Global.player_identity.get_address_str()
-
-	params.append("entry.60289947=" + scene_info.uri_encode())
-	params.append("entry.927432836=" + wallet_id.uri_encode())
-
-	var url = base_url
-	if params.size() > 0:
-		url += "?" + "&".join(params)
-
-	Global.open_url(url)
+	ReportContentHelper.open_form()
 
 
 func _setup_impostor_benchmark_button() -> void:

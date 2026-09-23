@@ -19,9 +19,12 @@ signal close_chat
 signal open_friends_panel
 signal open_notifications_panel
 signal open_settings
+## Opens Settings landed directly on one section (see settings.gd's section keys, e.g. "help_support").
+signal open_settings_section(section_key: String)
 signal open_settings_panel
 signal open_backpack(on_emotes: bool)
 signal open_discover
+signal open_discover_panel  # Landscape-only: Discover side panel docked by the navbar
 ## Carries the entry point, reported by Menu.async_show_credits.
 signal open_credits(source: String)
 signal open_own_profile
@@ -51,11 +54,7 @@ signal favorite_destination_set
 signal orientation_changed(is_portrait: bool)
 signal chat_write_mode_changed(is_writing: bool)
 
-enum CameraMode {
-	FIRST_PERSON = 0,
-	THIRD_PERSON = 1,
-	CINEMATIC = 2,
-}
+enum CameraMode { FIRST_PERSON = 0, THIRD_PERSON = 1, CINEMATIC = 2 }
 
 enum FriendshipStatus {
 	UNKNOWN = -1,
