@@ -162,6 +162,7 @@ var _glide_forward_blend: float = 0.0
 # be wiped by the rebuild anyway, so it's latched and replayed on avatar_ready.
 var _pending_network_emote: String = ""
 var _pending_network_emote_mask: int = -1
+var _pending_network_emote_scene_id: int = -1
 
 # Registry for scene emote content URLs: scene_id -> {base_url, emotes: {glb_hash -> audio_hash}}
 var _scene_emote_registry: Dictionary = {}
@@ -1134,9 +1135,11 @@ func async_load_wearables():
 	if not _pending_network_emote.is_empty():
 		var pending_network_urn := _pending_network_emote
 		var pending_network_mask := _pending_network_emote_mask
+		var pending_network_scene_id := _pending_network_emote_scene_id
 		_pending_network_emote = ""
 		_pending_network_emote_mask = -1
-		async_play_emote(pending_network_urn, pending_network_mask)
+		_pending_network_emote_scene_id = -1
+		async_play_emote(pending_network_urn, pending_network_mask, pending_network_scene_id)
 
 
 func apply_color_and_facial():
@@ -1739,21 +1742,67 @@ func _play_emote_audio(file_hash: String):
 
 
 ## mask: -1 = full body (default), 0 = AvatarMask.AM_UPPER_BODY.
-func async_play_emote(emote_urn: String, mask: int = -1):
+## owner_scene_id: numeric SceneId of the scene that asked for it, -1 when unowned.
+## Called from Rust (trigger_emote / trigger_scene_emote) with the requesting scene.
+func async_play_emote(emote_urn: String, mask: int = -1, owner_scene_id: int = -1):
 	if not avatar_ready:
 		_pending_network_emote = emote_urn
 		_pending_network_emote_mask = mask
+		_pending_network_emote_scene_id = owner_scene_id
 		return
-	await emote_controller.async_play_emote(emote_urn, mask)
+	await emote_controller.async_play_emote(emote_urn, mask, owner_scene_id)
+
+
+## The local player entered or left a scene (SceneManager.on_change_scene_id, wired in
+## player.gd). Forwards to the emote controller, which parks or resumes a scene-owned
+## masked emote. Edge-triggered: the signal only fires on the transition, so there is
+## nothing to re-check per frame.
+func on_current_scene_changed(scene_id: int):
+	if emote_controller:
+		emote_controller.on_current_scene_changed(scene_id)
+
+
+## The scene that owns the current emote is being torn down. Called from Rust
+## (SceneManager::finalize_scene_removal) just before the scene's nodes are freed.
+func clear_emote_owned_by_scene(scene_id: int):
+	if emote_controller:
+		emote_controller.clear_emote_owned_by_scene(scene_id)
 
 
 ## Stop a looping emote on network request (rfc4 PlayerEmote.is_stopping /
 ## Pulse EmoteStopped). Called from Rust (AvatarScene::stop_emote).
 func stop_emote_from_network():
-	_pending_network_emote = ""
-	_pending_network_emote_mask = -1
+	_stop_emote_and_clear_pending()
+
+
+## Stop the current emote on a scene's `stopEmote` restricted action. Called from Rust
+## (handle_restricted_actions::stop_emote), which applies the current-scene gate first.
+##
+## Permanent: `AvatarEmoteController.stop_emote` also drops a masked emote parked at a
+## scene boundary, so re-entering the scene cannot resurrect an emote the scene asked to
+## end (Unity does the same with `masked.EmoteUrn = default`).
+##
+## scene_id is the caller's numeric SceneId: a masked emote is only stopped when that
+## scene is the one that started it (see AvatarEmoteController.stop_emote_from_scene).
+func stop_emote_from_scene(scene_id: int):
+	if emote_controller == null:
+		return
+	if not emote_controller.stop_emote_from_scene(scene_id):
+		# Someone else's masked emote — leave the pending stash alone too.
+		return
+	_clear_pending_network_emote()
+
+
+func _stop_emote_and_clear_pending():
+	_clear_pending_network_emote()
 	if emote_controller:
 		emote_controller.stop_emote()
+
+
+func _clear_pending_network_emote():
+	_pending_network_emote = ""
+	_pending_network_emote_mask = -1
+	_pending_network_emote_scene_id = -1
 
 
 ## Called from Rust immediately before this avatar's node is freed, so a still-running
@@ -1762,6 +1811,7 @@ func stop_emote_from_network():
 func take_unfinished_emote() -> Array:
 	_pending_network_emote = ""
 	_pending_network_emote_mask = -1
+	_pending_network_emote_scene_id = -1
 	if emote_controller == null:
 		return []
 	return emote_controller.take_unfinished_emote()

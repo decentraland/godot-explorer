@@ -150,6 +150,10 @@ pub enum RpcCall {
         looping: bool,
         mask: i64,
     },
+    /// `stopEmote` — ends whatever the local player is playing right now. Carries no
+    /// payload (`StopEmoteRequest` is empty upstream) and is *permanent*: it also drops
+    /// a masked emote suspended at a scene boundary, so re-entering can't resurrect it.
+    StopEmote,
     // Portable Experiences
     SpawnPortable {
         location: PortableLocation,
