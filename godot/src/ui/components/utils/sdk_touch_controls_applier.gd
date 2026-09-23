@@ -17,14 +17,21 @@ extends RefCounted
 var _virtual_joystick: Control
 var _label_crosshair: Control
 var _player: Player
+var _pointer_tooltip: Control
 var _hide_joystick_applied: bool = false
 var _hide_crosshair_applied: bool = false
 
 
-func _init(virtual_joystick: Control, label_crosshair: Control, player: Player = null) -> void:
+func _init(
+	virtual_joystick: Control,
+	label_crosshair: Control,
+	player: Player = null,
+	pointer_tooltip: Control = null
+) -> void:
 	_virtual_joystick = virtual_joystick
 	_label_crosshair = label_crosshair
 	_player = player
+	_pointer_tooltip = pointer_tooltip
 
 
 ## Returns the scene-replaced icon `{ "hash", "url", "scene_id" }` a PBTouchScreenControls
@@ -104,5 +111,9 @@ func _apply_crosshair_anchor() -> void:
 	_label_crosshair.set_global_position(anchor_px - _label_crosshair.size / 2)
 	# Fade driven by the mode swap (1p -> 3p fades in over the avatar's head).
 	_label_crosshair.modulate.a = _player.get_crosshair_alpha()
+	# The pointer tooltip follows the crosshair, or it would sit at the screen
+	# center while the crosshair rides above the avatar (issue #2709 follow-up).
+	if _pointer_tooltip:
+		_pointer_tooltip.set_global_cursor_position(anchor_px)
 	# Keep the interaction raycast aimed where the crosshair is drawn (issue #2709).
 	Global.scene_runner.set_crosshair_screen_point(anchor_px)
