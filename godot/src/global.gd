@@ -19,8 +19,6 @@ signal close_chat
 signal open_friends_panel
 signal open_notifications_panel
 signal open_settings
-## Opens Settings landed directly on one section (see settings.gd's section keys, e.g. "help_support").
-signal open_settings_section(section_key: String)
 signal open_settings_panel
 signal open_backpack(on_emotes: bool)
 signal open_discover

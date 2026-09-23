@@ -442,12 +442,6 @@ func _on_section_row_pressed(key: String) -> void:
 	_select_section(key, true)
 
 
-## External entry point for callers outside Settings (e.g. Discover's Report Bug) that need to
-## land directly on a section, same as tapping its row.
-func open_section(key: String) -> void:
-	_select_section(key, true)
-
-
 ## Show a section's content, update the highlighted row and (in portrait) switch to the detail
 ## view. user_initiated=false is used for the default selection when the panel is shown, so it
 ## does not force the portrait detail view (portrait should open on the section list).

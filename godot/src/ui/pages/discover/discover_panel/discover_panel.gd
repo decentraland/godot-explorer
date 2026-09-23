@@ -213,11 +213,10 @@ func _on_report_content_pressed() -> void:
 
 func _on_report_bug_pressed() -> void:
 	_close_menu()
-	# Land on Settings > Help & Support (not its default section) behind the bug-report modal.
-	# Don't force portrait here: the modal's own _force_portrait()/_restore_orientation() already
-	# does that and restores the ORIGINAL orientation on close — forcing it here too would make the
-	# modal think portrait was the starting state and skip the restore.
-	Global.open_settings_section.emit("help_support")
+	# Same entry point as tapping Discover / EXPLORE MORE: opens the full-screen (portrait) Discover
+	# behind the modal — existing wiring already collapses the navbar/this panel and forces portrait,
+	# so there's nothing extra to do here before showing the modal on top.
+	Global.open_discover.emit()
 	_async_open_bug_report()
 
 

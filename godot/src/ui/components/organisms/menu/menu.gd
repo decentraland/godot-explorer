@@ -93,7 +93,6 @@ func _ready():
 	Global.deep_link_router.deep_link_open_event.connect(_async_on_deep_link_open_event)
 	Global.deep_link_router.deep_link_open_place.connect(_async_on_deep_link_open_place)
 	Global.open_settings.connect(async_show_settings)
-	Global.open_settings_section.connect(_async_show_settings_section)
 	Global.open_backpack.connect(async_show_backpack)
 	Global.open_discover.connect(async_show_discover)
 	Global.open_credits.connect(async_show_credits)
@@ -218,12 +217,6 @@ func async_show_settings():
 
 	select_settings_screen()
 	_open()
-
-
-func _async_show_settings_section(section_key: String) -> void:
-	async_show_settings()
-	if is_instance_valid(control_settings.instance):
-		control_settings.instance.open_section(section_key)
 
 
 func async_show_own_profile():
