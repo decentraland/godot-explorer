@@ -44,7 +44,8 @@ cargo run -- build --target android       # Android build (no cargo-ndk, uses di
 cargo run -- build --target ios           # iOS build (macOS only)
 
 # Run the client (automatically builds first)
-cargo run -- run                          # Run client
+cargo run -- run                          # Run client (always a phone layout: --emulate-ios by default)
+cargo run -- run -- --emulate-android     # Run client with the Android layout instead
 cargo run -- run -r                       # Release mode
 cargo run -- run -e                       # Run editor
 cargo run -- run -e --target android      # Run editor and also build for Android
@@ -104,7 +105,8 @@ cargo run -- export --target windows
 cargo run -- export --target macos
 cargo run -- export --target android --format apk
 cargo run -- export --target android --format aab
-cargo run -- export --target ios
+cargo run -- export --target ios            # dev export (debug template)
+cargo run -- export --target ios --release  # what CI ships to TestFlight / the App Store
 ```
 
 iOS exports run a **windowed** Godot editor (not `--headless`) because the shader baker only works

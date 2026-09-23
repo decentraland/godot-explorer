@@ -25,7 +25,6 @@ var _credits_layer: CanvasLayer = null
 var _credits_was_portrait: bool = true
 var _close_modulate_tween: Tween = null
 var _close_hide_tween: Tween = null
-var _close_node_to_free: PlaceholderManager = null
 
 @onready var group: ButtonGroup = ButtonGroup.new()
 
@@ -135,22 +134,28 @@ func async_close():
 	_close_modulate_tween.tween_property(self, "modulate", Color(1, 1, 1, 0), 0.3).set_ease(
 		Tween.EASE_IN_OUT
 	)
-	# Capture the node to free NOW, before the tween callback fires.
-	# If we reference `selected_node` directly in the lambda, it may have changed
-	# by the time the callback runs (e.g. user opened Settings while close tween is running).
-	_close_node_to_free = selected_node
 	_close_hide_tween = create_tween()
 	_close_hide_tween.tween_callback(hide).set_delay(0.3)
-	_close_hide_tween.tween_callback(
-		func():
-			if _close_node_to_free:
-				_close_node_to_free.queue_free_instance()
-				_close_node_to_free = null
-	)
+	_close_hide_tween.tween_callback(_free_screens)
+
+
+## A screen lives for one menu session: created the first time it is shown, hidden while
+## another tab is selected, freed here when the menu closes. No timers: the Menu is the owner
+## and this is the one event that ends the session. A reopen during the close tween kills
+## the tween (see _open), so the screens simply stay for the next session.
+func _free_screens() -> void:
+	for screen: PlaceholderManager in [
+		control_discover,
+		control_settings,
+		control_backpack,
+		control_profile_settings,
+		control_profile_portrait,
+	]:
+		screen.queue_free_instance()
 
 
 func async_show_discover(open_menu := true):
-	await control_discover._async_instantiate()
+	control_discover.instantiate()
 	select_discover_screen()
 	if is_instance_valid(static_button_discover):
 		static_button_discover.button_pressed = true
@@ -187,15 +192,15 @@ func _on_credits_page_closed() -> void:
 
 
 func async_show_backpack(on_emotes := false):
-	await control_backpack._async_instantiate()
+	control_backpack.instantiate()
 	select_backpack_screen()
 	if on_emotes:
-		await control_backpack.instance.async_show_emotes()
+		control_backpack.instance.show_emotes()
 	_open()
 
 
 func async_show_settings():
-	await control_settings._async_instantiate()
+	control_settings.instantiate()
 
 	if not is_instance_valid(control_settings.instance):
 		return
@@ -217,13 +222,13 @@ func async_show_settings():
 func async_show_own_profile():
 	if not Global.is_orientation_portrait():
 		return
-	await control_profile_portrait._async_instantiate()
+	control_profile_portrait.instantiate()
 	select_profile_screen(true, true)
 	_open()
 
 
 func async_show_profile_editor():
-	await control_profile_portrait._async_instantiate()
+	control_profile_portrait.instantiate()
 	select_profile_screen(true, true)
 	_open()
 	if control_profile_portrait.instance:
@@ -233,16 +238,12 @@ func async_show_profile_editor():
 func _open():
 	if is_open:
 		return
-	# Kill any pending close tweens so the old close() doesn't hide us again.
-	# But still free the node that close() intended to free (avoid memory leak).
+	# Kill any pending close tweens so the old close() doesn't hide us again. The screens
+	# it was about to free stay alive for this session; the next close frees them.
 	if is_instance_valid(_close_modulate_tween) and _close_modulate_tween.is_running():
 		_close_modulate_tween.kill()
 	if is_instance_valid(_close_hide_tween) and _close_hide_tween.is_running():
 		_close_hide_tween.kill()
-		# The tween callback won't fire, so free the node manually
-		if _close_node_to_free:
-			_close_node_to_free.queue_free_instance()
-			_close_node_to_free = null
 	if selected_node and not selected_node.instance:
 		selected_node = null
 	if not selected_node:
@@ -328,9 +329,6 @@ func fade_in(node: PlaceholderManager):
 	if not is_instance_valid(node.instance):
 		return
 	selected_node = node
-	# Cancel any pending sleep for this node (from a previous fade_out)
-	if node.status == PlaceholderManager.STATUS.SLEEPING:
-		node.status = PlaceholderManager.STATUS.LOADED
 	node.instance.show()
 	if is_instance_valid(fade_in_tween):
 		if fade_in_tween.is_running():
@@ -351,7 +349,6 @@ func fade_out(node: PlaceholderManager):
 	fade_out_tween = create_tween()
 	fade_out_tween.tween_property(node.instance, "modulate", Color(1, 1, 1, 0), 0.3)
 	fade_out_tween.tween_callback(node.instance.hide)
-	fade_out_tween.tween_callback(node.async_put_to_sleep)
 
 
 func _on_visibility_changed():

@@ -83,6 +83,12 @@ var _button_press_active: bool = false
 func _ready():
 	_update_title()
 	_update_description()
+	# The reserved height depends on the width the label ends up with, and the VBox hands it
+	# that width on a deferred sort — after this node's own NOTIFICATION_RESIZED. Measuring
+	# there reads the label's previous width and reserves the wrong height (a three-line
+	# reservation under a one-line description, until something else re-measured it), so the
+	# label's own resize is the signal to measure on.
+	_description_label.resized.connect(_update_description_height)
 
 	if Engine.is_editor_hint():
 		return
@@ -160,9 +166,9 @@ func _get_minimum_size() -> Vector2:
 
 
 func _notification(what: int) -> void:
-	# The wrapped description's height depends on the width it is given, and on the locale.
-	# Both can change after _ready.
-	if what == NOTIFICATION_RESIZED or what == NOTIFICATION_TRANSLATION_CHANGED:
+	# The wrapped description's height also depends on the locale, which can change after
+	# _ready without resizing anything.
+	if what == NOTIFICATION_TRANSLATION_CHANGED:
 		_update_description_height()
 
 
