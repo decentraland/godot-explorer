@@ -89,6 +89,38 @@ const GROUND_RAYCAST_MASK := 2
 # #2753: Unity parity (ApplySlopeModifier.cs / CharacterObject.prefab).
 # CharacterBody3D has no built-in step offset (M1) — custom logic below.
 const STEP_OFFSET := 0.35
+# Max climbable top above the feet: stepOffset + PhysX skin. Live QA at
+# kuruk.dcl.eth: Unity climbs 0.42, blocks 0.43.
+const STEP_MAX_HEIGHT := STEP_OFFSET + 0.07
+# Below this the rise machinery isn't worth engaging — protects against
+# teleporting DOWN onto lower surfaces read past the face.
+const STEP_MIN_RISE := 0.02
+# Rises below this are silent ride-assists: they don't count toward the
+# two-unrest-rises disarm chain (terrain ripple / collider lips).
+const STEP_PENDING_RISE := 0.05
+# A rise this small is still worth taking when wall-blocked (collider seam
+# lips); below it is measurement noise.
+const STEP_LIP_RISE := 0.005
+# A rise above this disarms the step-up until the capsule rests (anti
+# ramp-climbing — a 50deg ramp rises ~0.31 per band); legit single steps
+# (kuruk's first tread measures 0.20-0.21 real) must stay below it.
+const STEP_TALL_RISE := 0.25
+# Landing probe: sphere radius, how far past the riser face it drops (must
+# stay well below the radius or edge contacts read the top lower than it is),
+# start height (above STEP_MAX_HEIGHT + radius so it never begins overlapped
+# — cast_motion sees no initial overlaps), total drop, and the deeper retry
+# used when the first probe finds void (thin/offset/hollow colliders).
+const STEP_PROBE_RADIUS := 0.05
+const STEP_PROBE_PAST_FACE := 0.015
+const STEP_PROBE_TOP := STEP_OFFSET + 0.185
+const STEP_PROBE_DROP := STEP_PROBE_TOP + 0.05
+const STEP_PROBE_RETRY := 0.25
+# Predictive pass skips while walking a climbable slope (floor normal off
+# vertical by more than ~8deg) — stepping there turns inclines into stutter.
+const SLOPE_WALK_NORMAL_Y := 0.99
+# cos(46deg): a slide collision flatter than this is walkable ground; steeper
+# is a ramp/wall face — sliding on one must not count as support.
+const WALKABLE_NORMAL_Y := 0.695
 # Downslope stick, expressed as floor_snap_length so is_on_floor() survives
 # downhill moves (a manual raycast snap would report airborne mid-stick).
 const DOWNSLOPE_STICK_JOG := 0.45
@@ -165,11 +197,13 @@ var _pinch_accumulated_delta: float = 0.0
 var _pinch_start_mode: Global.CameraMode = Global.CameraMode.THIRD_PERSON
 # The active camera-mode tween, killed before a new one so they never fight.
 var _camera_mode_tween: Tween = null
-# Step-up arming: after a TALL rise (> 0.2) the step-up may fire again only
-# after the capsule rests grounded and wall-free. A continuous steep ramp
-# (rise per band ~0.31) never rests, a staircase tread (0.15) never disarms,
-# and terrain bumps below 0.2 rise without arming side-effects at all.
+# Step-up arming: after a TALL rise (> STEP_TALL_RISE) or two consecutive
+# rises with no rest between (steep ramps chain small rises) the step-up
+# disarms until the capsule rests. A ramp face never rests, a staircase
+# tread always does, and single terrain bumps rise without arming
+# side-effects at all.
 var _step_armed := true
+var _step_pending := false
 
 @onready var mount_camera := $Mount
 @onready var camera: DclCamera3D = $Mount/CameraArm/Camera3D
@@ -834,13 +868,16 @@ func _physics_process(dt: float) -> void:
 	move_and_slide()
 	var moved_xz := (to_xz(global_position) - to_xz(last_position)).length()
 	_try_step_up(Vector3(locomotion_x, 0.0, locomotion_z), moved_xz)
-	# Step-up re-arming: one grounded, wall-free frame confirms the capsule
-	# rested on a tread; a continuous steep ramp stays in wall contact (or
-	# airborne) forever. "Grounded" follows the house idiom (lines 553, 1294):
-	# is_on_floor() OR at the y=0 realm floor — the clamp eats the penetration
-	# there, so is_on_floor() alone is false during normal walking.
-	if (is_on_floor() or global_position.y <= 0.001) and not is_on_wall():
+	# Step-up re-arming: the capsule re-arms when it stands on WALKABLE
+	# support — a staircase tread, a step top, flat ground (even resting on
+	# Jolt's speculative margin cloud, where is_on_floor() never fires, or
+	# pressed against the next riser, which is fine: the tread holds you).
+	# On a steep ramp the support under the feet IS the ramp (un-walkable
+	# normal), and mid-air there is no support at all, so ramp faces never
+	# re-arm: no band-chaining while pressing, sliding, or hopping.
+	if (not _step_armed or _step_pending) and _has_walkable_support():
 		_step_armed = true
+		_step_pending = false
 	position.y = max(position.y, 0)
 	avatar.global_position = global_position
 
@@ -992,9 +1029,28 @@ func _make_step_test_sphere() -> SphereShape3D:
 	# Small margin-less probe for landing height — small enough to read the
 	# exact tread top, too thick to slip through trimesh tri edges.
 	var s := SphereShape3D.new()
-	s.radius = 0.05
+	s.radius = STEP_PROBE_RADIUS
 	s.margin = 0.0
 	return s
+
+
+func _has_walkable_support() -> bool:
+	# Direct support check for step-up re-arming. is_on_floor() misses rests
+	# on Jolt's speculative margin cloud (contacts cancel motion without ever
+	# registering floor), so when it reports nothing, confirm with a short
+	# ray — rays return normals, cast_motion in this build does not.
+	if is_on_floor():
+		return true  # floor contacts are within floor_max_angle by definition
+	var space := get_world_3d().direct_space_state
+	if space == null:
+		return false
+	var rq := PhysicsRayQueryParameters3D.new()
+	rq.from = global_position + Vector3(0.0, 0.05, 0.0)
+	rq.to = global_position + Vector3(0.0, -0.1, 0.0)
+	rq.collision_mask = collision_mask
+	rq.exclude = _raycast_exclude
+	var hit := space.intersect_ray(rq)
+	return not hit.is_empty() and hit.normal.y >= WALKABLE_NORMAL_Y
 
 
 # Predictive step (PhysX CCT parity: the step happens inside the move, not
@@ -1003,6 +1059,11 @@ func _make_step_test_sphere() -> SphereShape3D:
 func _try_step_up_predictive(intent: Vector3, dt: float) -> void:
 	var horiz := Vector3(intent.x, 0.0, intent.z)
 	if horiz.length_squared() < 0.25:
+		return
+	# Already walking a climbable slope: the contact ahead is the slope
+	# itself, not a riser — stepping here turns a smooth incline into a
+	# stuttered staircase. The post-move fallback still covers blocked cases.
+	if is_on_floor() and get_floor_normal().y < SLOPE_WALK_NORMAL_Y:
 		return
 	var space := get_world_3d().direct_space_state
 	if space == null:
@@ -1051,58 +1112,82 @@ func _step_up(intent: Vector3) -> void:
 	shape_query.shape = _step_test_shape
 	shape_query.collision_mask = collision_mask
 	shape_query.exclude = _raycast_exclude
-	# a) real distance to the wall face — the resting gap varies (speculative
-	# contacts + skin), so a fixed probe lands in front of the face half the
-	# time. Unsafe fraction ~0 when already touching: the face is always at
-	# least one radius away, clamp to it.
+	# a) real distance to the wall face: the margin-less clone travels until
+	# its surface touches — clone travel + capsule radius = center-to-face.
+	# (A maxf(..., radius) clamp would hide the resting gap: Jolt rests the
+	# capsule on its speculative margin cloud ~0.08 off the face, and every
+	# downstream probe then lands short of it.)
 	shape_query.transform = Transform3D(Basis.IDENTITY, origin)
 	shape_query.motion = dir * 0.5
 	var low: PackedFloat32Array = space.cast_motion(shape_query)
-	var d_face := maxf(low[1] * 0.5, CAPSULE_RADIUS)
+	var d_face := low[1] * 0.5 + CAPSULE_RADIUS
 	# b) lift up to STEP_OFFSET (doubles as the headroom check)
 	shape_query.motion = Vector3(0.0, STEP_OFFSET, 0.0)
 	var up: PackedFloat32Array = space.cast_motion(shape_query)
 	var lift := up[0] * STEP_OFFSET
-	if lift < 0.05:
+	if lift < STEP_MIN_RISE:
 		return
 	# c) forward past the face at raised height; blocked = taller than the step
 	shape_query.transform = Transform3D(Basis.IDENTITY, origin + Vector3(0.0, lift, 0.0))
 	var fwd := dir * (d_face + CAPSULE_RADIUS + 0.02)
 	shape_query.motion = fwd
 	var fw: PackedFloat32Array = space.cast_motion(shape_query)
-	var ray_ahead := d_face + 0.05
+	var ray_ahead := d_face + STEP_PROBE_PAST_FACE
 	if fw[0] < 1.0:
 		# Beveled/rounded edge: measure the surface right past the raised
 		# contact — top within the step band means step, not wall (PhysX
 		# reasons from the contact point, not from a free-space sweep).
-		ray_ahead = fw[1] * fwd.length() + 0.05
-	# d) landing height from a small SPHERE cast past the face, from a fixed
-	# height — a ray can slip through trimesh tri edges, and starting it at
-	# feet+lift makes near-max steps begin exactly ON the surface and miss.
+		ray_ahead = fw[1] * fwd.length() + STEP_PROBE_PAST_FACE
+	# d) landing height: small margin-less sphere cast straight down from a
+	# fixed height (rays slip through trimesh tri edges, and a cast starting
+	# overlapped with the riser top reports no hit, so the probe starts above
+	# the max climbable top). Attempts, in order: just past the face, then
+	# deeper (thin/offset/hollow colliders), then ON the face plane when
+	# wall-blocked (seam lips, thin facades, corner approaches). PhysX never
+	# probes ahead — it reasons from the contact; these approximate that with
+	# the info casts can see.
 	var dq := PhysicsShapeQueryParameters3D.new()
 	dq.shape = _step_test_sphere
 	dq.collision_mask = collision_mask
 	dq.exclude = _raycast_exclude
-	var cast_from := global_position + Vector3(0.0, STEP_OFFSET + 0.1, 0.0) + dir * ray_ahead
-	dq.transform = Transform3D(Basis.IDENTITY, cast_from)
-	dq.motion = Vector3(0.0, -(STEP_OFFSET + 0.15), 0.0)
-	var dn: PackedFloat32Array = space.cast_motion(dq)
-	if dn[0] >= 1.0:
+	dq.motion = Vector3(0.0, -STEP_PROBE_DROP, 0.0)
+	var attempts: Array[float] = [ray_ahead, ray_ahead + STEP_PROBE_RETRY]
+	if is_on_wall():
+		attempts.append(d_face)
+	var found := false
+	var on_face := false
+	var floor_y := 0.0
+	for dist in attempts:
+		var cast_from := global_position + Vector3(0.0, STEP_PROBE_TOP, 0.0) + dir * dist
+		dq.transform = Transform3D(Basis.IDENTITY, cast_from)
+		var dn: PackedFloat32Array = space.cast_motion(dq)
+		if dn[0] < 1.0:
+			floor_y = cast_from.y - dn[0] * STEP_PROBE_DROP - STEP_PROBE_RADIUS
+			found = true
+			on_face = is_on_wall() and dist == d_face
+			break
+	if not found:
 		return  # gap, not a step
-	var floor_y: float = cast_from.y - dn[0] * (STEP_OFFSET + 0.15) - 0.05
-	if floor_y < global_position.y + 0.05:
+	# The face-plane probe exists for wall-blocking lips: accept rises down
+	# to the lip threshold there; the forward probes keep the noise floor.
+	var min_rise := STEP_LIP_RISE if on_face else STEP_MIN_RISE
+	if floor_y < global_position.y + min_rise:
 		return  # flat or lower — nothing to step onto
-	if floor_y > global_position.y + STEP_OFFSET + 0.005:
-		return  # taller than the step offset — a wall
-	# Rise in place — the horizontal motion flows via move_and_slide itself,
-	# so there is no blocked frame and no forward teleport pop.
+	if floor_y > global_position.y + STEP_MAX_HEIGHT:
+		return  # taller than the climbable band (kuruk: 0.42 climbs, 0.43 blocks)
 	# Rise in place — the horizontal motion flows via move_and_slide itself,
 	# so there is no blocked frame and no forward teleport pop. Tall rises
 	# disarm until the capsule rests: re-triggering on the same ramp face is
-	# what stair-climbs steep inclines. Snap off for this frame's move: the
-	# lower floor is within snap reach and would re-glue the capsule mid-step.
-	if floor_y - global_position.y > 0.2:
+	# what stair-climbs steep inclines. Small rises (bumps, treads) don't
+	# disarm, but two in a row without a rest in between do — that chain is
+	# how a 60-65° ramp climbs in sub-0.2 bands. Snap off for this frame's
+	# move: the lower floor is within snap reach and would re-glue the
+	# capsule mid-step.
+	var rise := floor_y - global_position.y
+	if rise > STEP_TALL_RISE or (rise >= STEP_PENDING_RISE and _step_pending):
 		_step_armed = false
+	elif rise >= STEP_PENDING_RISE:
+		_step_pending = true
 	floor_snap_length = 0.0
 	global_position.y = floor_y + 0.001
 
