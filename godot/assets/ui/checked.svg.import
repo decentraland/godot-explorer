@@ -12,7 +12,7 @@ dest_files=["res://.godot/imported/checked.svg-43de85376b55c6663511ad1d84793dfa.
 
 [params]
 
-base_scale=1.0
+base_scale=2.0
 saturation=1.0
 color_map={}
 compress=true
