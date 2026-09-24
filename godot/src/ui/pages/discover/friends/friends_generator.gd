@@ -243,7 +243,7 @@ func _async_build_place_data(friend: Dictionary) -> Dictionary:
 
 func _async_create_friend_card(friend: Dictionary) -> void:
 	var place_data := await _async_build_place_data(friend)
-	if place_data.is_empty() or not is_instance_valid(item_container):
+	if place_data.is_empty() or not can_populate():
 		return
 
 	var address := str(friend["address"]).to_lower()
