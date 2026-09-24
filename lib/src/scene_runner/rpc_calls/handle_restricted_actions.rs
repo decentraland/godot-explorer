@@ -334,7 +334,11 @@ pub fn trigger_emote(scene: &Scene, current_parcel_scene_id: &SceneId, emote_id:
     let mut avatar_node = get_avatar_node(scene);
     avatar_node.call(
         "async_play_emote",
-        &[emote_id.to_variant(), mask.to_variant()],
+        &[
+            emote_id.to_variant(),
+            mask.to_variant(),
+            scene.scene_id.0.to_variant(),
+        ],
     );
 
     // Broadcast emote to other players via comms
@@ -413,7 +417,11 @@ pub fn trigger_scene_emote(
     // Call the SAME function as wearable emotes!
     avatar_node.call(
         "async_play_emote",
-        &[scene_emote_urn.to_variant(), mask.to_variant()],
+        &[
+            scene_emote_urn.to_variant(),
+            mask.to_variant(),
+            scene.scene_id.0.to_variant(),
+        ],
     );
 
     // Broadcast to other players
@@ -423,4 +431,32 @@ pub fn trigger_scene_emote(
         .get_comms()
         .bind_mut()
         .send_emote(scene_emote_urn.to_godot(), mask);
+}
+
+/// `stopEmote` — end whatever the local player is playing, on behalf of the scene.
+///
+/// Permanent by construction: unlike the scene-boundary suspend, this also drops a
+/// masked emote parked for replay, so walking back into the scene can't resurrect it
+/// (Unity does the same via `masked.EmoteUrn = default` in `TryStopEmote`).
+///
+/// Telling the other players is **Pulse-only**: the stop rides the `set_emoting(false)`
+/// edge in `CommunicationManager`, and that whole body sits inside
+/// `#[cfg(feature = "use_pulse")]`. On the rfc4/LiveKit path this client only ever sends
+/// `PlayerEmote { is_stopping: None }` at trigger time and has no stop message at all, so
+/// on a LiveKit-only realm a scene's `stopEmote` ends the emote locally while remote
+/// viewers keep looping it. Pre-existing gap, not addressed here.
+///
+/// The scene id is forwarded so the avatar can scope the stop: a masked emote is only
+/// ended by the scene that started it, matching Unity's `TryStopEmote`, which stops the
+/// full-body emote globally but touches only its own scene world's masked component.
+pub fn stop_emote(scene: &Scene, current_parcel_scene_id: &SceneId) {
+    // Same gate as triggerEmote: only the scene the player is standing in may stop it.
+    // Note this passes unconditionally for SceneType::Global, which is exactly why the
+    // masked case needs the owner check on the GDScript side.
+    if !_player_is_inside_scene(scene, current_parcel_scene_id) {
+        tracing::warn!("stopEmote failed: Primary Player is outside the scene");
+        return;
+    }
+
+    get_avatar_node(scene).call("stop_emote_from_scene", &[scene.scene_id.0.to_variant()]);
 }
