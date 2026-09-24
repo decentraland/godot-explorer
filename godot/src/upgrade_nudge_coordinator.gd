@@ -112,6 +112,9 @@ func _async_is_upgradeable_guest() -> bool:
 		is_upgraded = Global.player_identity.is_thirdweb_guest_upgraded()
 	else:
 		is_upgraded = bool(result)
+		# This can correct a stale cached flag on a recovered session; keep every badge/nudge
+		# gated on it (Settings navbar badge, guest upgrade card, ...) in sync with the correction.
+		Global.guest_upgrade_state_refreshed.emit(is_upgraded)
 	return not is_upgraded
 
 
