@@ -17,6 +17,9 @@ const MENU_COLOR_ACTIVE := Color(0.9098039, 0.7254902, 1, 1)
 @export var featured: VBoxContainer
 
 var _header_request_id: int = 0
+# Identifies the scene/world the header last refreshed for (see _current_header_key), so
+# change_parcel moving within the same scene doesn't re-hit the places API every step.
+var _last_header_key: String = ""
 # Carousels are populated on first show (not at _ready): while the panel is hidden it has no width,
 # and cards built then trim their titles to nothing and skip thumbnails permanently.
 var _content_loaded: bool = false
@@ -25,6 +28,7 @@ var _content_loaded: bool = false
 @onready var events: VBoxContainer = %Events
 @onready var label_title: Label = %Label_Title
 @onready var label_creator: Label = %Label_Creator
+@onready var by_row: HBoxContainer = label_creator.get_parent()
 @onready var button_menu: TextureButton = %Button_Menu
 @onready var menu_overlay: MarginContainer = %MenuOverlay
 @onready var menu_dropdown: PanelContainer = %MenuDropdown
@@ -49,6 +53,10 @@ func _ready() -> void:
 	_apply_explore_more_label()
 	featured.generator.item_pressed.connect(_on_card_jump_in)
 	events.generator.item_pressed.connect(_on_card_jump_in)
+	# A failed first load must not latch _content_loaded — otherwise a dropped connection on the
+	# very first open leaves the carousels empty for the rest of the session (see _async_load_content_once).
+	featured.generator.report_loading_status.connect(_on_carrousel_loading_status)
+	events.generator.report_loading_status.connect(_on_carrousel_loading_status)
 
 	_close_menu()
 
@@ -98,12 +106,21 @@ func _async_load_content_once() -> void:
 	events.start_loading()
 
 
+## A carousel's first request failed (offline, API down, ...): let the next show_panel() retry
+## instead of leaving it permanently empty for the rest of the session.
+func _on_carrousel_loading_status(status: CarrouselGenerator.LoadingStatus) -> void:
+	if status == CarrouselGenerator.LoadingStatus.ERROR:
+		_content_loaded = false
+
+
 # --- Carousel cards ---
 
 
 ## A Featured/Events card was tapped: collapse the navbar (this panel closes with it) and show
 ## the same jump-in confirmation modal used elsewhere in the app (deep links, chat links, ...).
 func _on_card_jump_in(data) -> void:
+	if not data is Dictionary:
+		return
 	var explorer = Global.get_explorer()
 	if is_instance_valid(explorer):
 		explorer.navbar.collapse()
@@ -128,11 +145,25 @@ func _notification(what: int) -> void:
 func hide_panel() -> void:
 	_close_menu()
 	hide()
+	panel_closed.emit()
 
 
 func _on_change_parcel(_new_parcel: Vector2i) -> void:
-	if is_visible_in_tree():
-		_async_refresh_header()
+	if not is_visible_in_tree():
+		return
+	# Walking within the same scene/world fires change_parcel repeatedly; only worth a re-fetch
+	# once we've actually left it.
+	if _current_header_key() == _last_header_key:
+		return
+	_async_refresh_header()
+
+
+## Identifies "the place the header is showing" without hitting the network: a Genesis City scene
+## by its parcel scene id, a world by its realm name. Used to skip redundant header refreshes.
+func _current_header_key() -> String:
+	if Realm.is_genesis_city(Global.realm.realm_url):
+		return "genesis:%d" % Global.scene_runner.get_current_parcel_scene_id()
+	return "world:%s" % Global.realm.realm_name
 
 
 # --- Header (current scene) ---
@@ -142,10 +173,12 @@ func _async_refresh_header() -> void:
 	# A place lookup can outlive a fast scene change; only the newest request may write the labels.
 	_header_request_id += 1
 	var request_id := _header_request_id
+	_last_header_key = _current_header_key()
 
 	var scene_title := _current_scene_title()
 	label_title.text = scene_title
 	label_creator.text = ""
+	by_row.hide()
 
 	var result
 	if Realm.is_genesis_city(Global.realm.realm_url):
@@ -178,6 +211,7 @@ func _async_refresh_header() -> void:
 		label_title.text = title
 	var creator = place.get("contact_name", "")
 	label_creator.text = creator if creator != null else ""
+	by_row.visible = not label_creator.text.is_empty()
 
 
 func _current_scene_title() -> String:

@@ -96,7 +96,6 @@ size_flags_vertical = 3
 theme_override_styles/panel = SubResource("StyleBoxFlat_panel_bg")
 script = ExtResource("1_panel")
 featured = NodePath("VBoxContainer/ScrollContainer/Content/Featured")
-metadata/mobile_preview_orientation = "landscape"
 
 [node name="TextureRect" type="TextureRect" parent="." unique_id=1222959817]
 material = SubResource("ShaderMaterial_bg_round")
