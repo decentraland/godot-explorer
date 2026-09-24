@@ -31,11 +31,11 @@ pub const GODOT_BUILD_SHA: &str = "2afb8592d";
 /// branch's CI build. An explicit `--branch` on the CLI still takes precedence over this.
 ///
 /// Reset to `None` once the branch is merged and `GODOT_BUILD_SHA` is bumped to the merge commit —
-/// leaving a branch pinned here makes every dev/CI pull an unmerged engine build. Currently unset:
-/// the failed-`Main::setup2` Android fix (decentraland/godotengine#21) is merged into `4.6.2` and
-/// `GODOT_BUILD_SHA` points at that merge commit, which also carries the Mali vertex-lighting NaN
-/// fix (#23, pinned as a branch on `release`) and the sha1 build-id fix (#20).
-pub const GODOT_USE_BRANCH: Option<&str> = None;
+/// leaving a branch pinned here makes every dev/CI pull an unmerged engine build. Currently set
+/// for the 1.14.1 hotfix: decentraland/godotengine#25 keeps GDScript's freed-instance checks in
+/// release templates, so a call on a freed node is logged (and reported to Sentry as
+/// `source: freed_instance`) instead of a SIGSEGV. It is one commit on top of `GODOT_BUILD_SHA`.
+pub const GODOT_USE_BRANCH: Option<&str> = Some("feat/release-freed-instance-errors");
 
 /// Release tag identifying a specific fork build — `<version>.stable.gh.<sha>`, mirroring the
 /// `--version` string. Single source for the release URL path segment, the on-disk template SHA

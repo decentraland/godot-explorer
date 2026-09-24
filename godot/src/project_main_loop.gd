@@ -31,12 +31,13 @@ const SOURCE_EXIT_REASON := "exit_reason"
 # The diagnostics event behind a user-filed bug report (sentry_user_feedback.gd),
 # marked with a `category` tag. One per report, so exempt from the remote rate too.
 const SOURCE_FEEDBACK := "feedback"
-# A GDScript access to a freed object, as printed by the engine. On the release
-# template the same access is a SIGSEGV when it is a method call, cast, `is`,
-# `for` or `await` (the debug template validates those); only property get/set
-# on a freed instance still logs in release. Each hit is a use-after-free bug in
-# our GDScript, so it is kept at crash-level visibility regardless of the error
-# firehose flag. Bounded by the addon's per-line throttle (see _initialize).
+# A GDScript access to a freed object, as printed by the engine. Upstream's
+# release template does not validate method calls, casts, typed returns or `for`
+# on a freed object and dies with SIGSEGV; our fork keeps those checks in release
+# (decentraland/godotengine#25) so the access is logged instead and the script
+# frame reaches Sentry. Each hit is a use-after-free bug in our GDScript, so it
+# is kept at crash-level visibility regardless of the error firehose flag.
+# Bounded by the addon's per-line throttle (see _initialize).
 const SOURCE_FREED_INSTANCE := "freed_instance"
 
 # Fraction of each source kept once `sentry-error-events` is on, applied on top
@@ -65,7 +66,7 @@ const UNKNOWN_SOURCE_KEEP_RATE := 0.01
 # and the two structured sources cap themselves - at most ten scene crashes per
 # session and one event per exit reason per launch - so sampling them would
 # only randomly hide the events these tags exist for. Freed-instance errors are
-# a crash on the release template, bounded by the logger throttle, and the
+# a crash on upstream's release template, bounded by the logger throttle, and the
 # whole point of keeping them is to see every site - same treatment.
 const REMOTE_RATE_EXEMPT := [
 	SOURCE_CRASH,
