@@ -259,7 +259,9 @@ func _before_send(event: SentryEvent) -> SentryEvent:
 	# Everything below is the SentryGodotLogger firehose: off by default,
 	# re-enabled remotely by `sentry-error-events`, with one always-on
 	# exception (see _firehose_source). Errors keep flowing as breadcrumbs
-	# either way, so a later crash still carries the recent-error trail.
+	# either way, so a later crash still carries the recent-error trail. That
+	# exception means the event text is now read even with the flag off - a few
+	# substring tests per event, capped by the logger's events_per_frame.
 	var source := _firehose_source(_event_text(event), sentry_error_events_enabled)
 	if source.is_empty():
 		return null
@@ -293,10 +295,10 @@ func _keep(event: SentryEvent, source: String) -> SentryEvent:
 ## _before_send is the only part that is not.
 ##
 ## An engine error about a freed object is exempt from the flag: it is a
-## use-after-free in our GDScript - the class of bug that is a SIGSEGV on the
-## release template - so it is kept whether or not the firehose is on. Tested
-## first because it is the only text test that must run in the default
-## configuration; the classifier below never runs there.
+## use-after-free in our GDScript - the class of bug that is a SIGSEGV on
+## upstream's release template - so it is kept whether or not the firehose is
+## on. Tested first because it is the only text test that must run in the
+## default configuration; the classifier below never runs there.
 static func _firehose_source(text: String, error_events_enabled: bool) -> String:
 	if _is_freed_instance_error(text):
 		return SOURCE_FREED_INSTANCE
@@ -305,18 +307,21 @@ static func _firehose_source(text: String, error_events_enabled: bool) -> String
 	return _classify(text)
 
 
-## True for every engine message about touching a freed object. The substrings
-## cover the whole family in the fork's `gdscript_vm.cpp`, `variant_setget.cpp`
-## and `object.cpp`: "on a previously freed instance" (call, `is`, assign,
-## return, iterate), "on a base object of type 'previously freed'" (property
-## get/set), "Trying to cast a freed object" / "Trying to await on a freed
-## object", and "was freed or unreferenced while a signal is being emitted".
+## True for every GDScript VM message about touching a freed object, as the
+## fork prints it on release templates too (decentraland/godotengine#25): "on a
+## previously freed instance" (call, `is`, assign, return, iterate), "Trying to
+## cast a freed object" / "Trying to await on a freed object", and "on a base
+## object of type 'previously freed'" (property get/set - debug templates only).
+##
+## Rust and scene text is excluded: a scene's console.error arrives with the
+## Rust prefix and is not ours, so it must never pick the flag- and rate-exempt
+## source. "was freed or unreferenced while a signal is being emitted" is left
+## out on purpose: object.cpp already printed it before #25, not always from our
+## GDScript, so it stays behind the flag as an engine error.
 static func _is_freed_instance_error(text: String) -> bool:
-	return (
-		text.contains("previously freed")
-		or text.contains("a freed object")
-		or text.contains("was freed or unreferenced while a signal")
-	)
+	if text.begins_with(RUST_PREFIX):
+		return false
+	return text.contains("previously freed") or text.contains("a freed object")
 
 
 ## Buckets a logger event by its text. SentryGodotLogger leaves `message` empty

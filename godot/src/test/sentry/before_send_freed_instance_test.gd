@@ -1,15 +1,15 @@
 extends RefCounted
 
 # Freed-instance errors must reach Sentry whether or not the `sentry-error-events`
-# firehose flag is on: on the release template the same access is a SIGSEGV, so
-# every logged hit is a use-after-free in our GDScript that we want to see.
+# firehose flag is on: on upstream's release template the same access is a SIGSEGV,
+# so every logged hit is a use-after-free in our GDScript that we want to see.
 # Exercises the text-only decision in ProjectMainLoop._firehose_source; the event
 # shape test in _before_send cannot be driven from GDScript (SentryEvent has no
 # way to add an exception), so this covers everything below it.
 
 # One message per engine site that reports a freed object (fork's gdscript_vm.cpp,
-# variant_setget.cpp, object.cpp). A new engine string that is not caught here is a
-# silent regression, so keep this list in step with _is_freed_instance_error.
+# variant_setget.cpp). A new engine string that is not caught here is a silent
+# regression, so keep this list in step with _is_freed_instance_error.
 const FREED_MESSAGES := [
 	"Cannot call method 'show' on a previously freed instance.",
 	"Left operand of 'is' is a previously freed instance.",
@@ -20,15 +20,20 @@ const FREED_MESSAGES := [
 	"Trying to await on a freed object.",
 	"Invalid assignment of property or key 'name_claimed' with value of type 'bool' on a base object of type 'previously freed'.",
 	"Invalid access to property or key 'visible' on a base object of type 'previously freed'.",
-	"Object 'Control' was freed or unreferenced while a signal is being emitted from it. Try connecting to the signal using 'CONNECT_DEFERRED' flag, or use queue_free() to free the object (if this object is a Node) to avoid this error and potential crashes.",
 ]
 
+# OTHER_MESSAGES[0..3] are indexed by the flag-on classification checks below.
 const OTHER_MESSAGES := [
 	'Parameter "p_node" is null.',
 	'Node not found: "%PanelContainer_NewBadge" (relative to "/root/explorer").',
 	"[Rust:dclgodot::comms] connection closed (src/comms/mod.rs:10)",
 	"[Rust:dclgodot::dcl::js] [scene SceneId(2)] script error onUpdate: Error: channel closed",
 	'Condition "!is_inside_tree()" is true. Returning: false',
+	# Scene text is not ours: freed-object wording in it must not pick the exempt source.
+	"[Rust:dclgodot::dcl::js] [scene SceneId(2)] script error onUpdate: Error: previously freed",
+	"[Rust:dclgodot::dcl::js] [scene SceneId(2)] script error: Trying to cast a freed object.",
+	# Printed by object.cpp before the fork's release check existed; stays flag-gated.
+	"Object 'Control' was freed or unreferenced while a signal is being emitted from it. Try connecting to the signal using 'CONNECT_DEFERRED' flag, or use queue_free() to free the object (if this object is a Node) to avoid this error and potential crashes.",
 ]
 
 var suite_name := "sentry_before_send"
@@ -78,6 +83,14 @@ func run() -> bool:
 		)
 
 	# Flag on: the classifier is untouched by the new branch.
+	ok = (
+		_expect_source(
+			ProjectMainLoop._firehose_source(OTHER_MESSAGES[5], true),
+			ProjectMainLoop.SOURCE_SCENE,
+			"scene freed wording stays scene"
+		)
+		and ok
+	)
 	ok = (
 		_expect_source(
 			ProjectMainLoop._firehose_source(OTHER_MESSAGES[2], true),
