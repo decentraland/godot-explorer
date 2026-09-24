@@ -41,6 +41,9 @@ var _events_needs_reload: bool = false
 @onready var button_report_bug: Button = %Button_ReportBug
 @onready var button_explore_more: Button = %Button_ExploreMore
 
+# Compiled once, reused by _is_uuid() to validate an event id before it reaches the events API URL.
+static var _uuid_regex: RegEx = null
+
 
 func _ready() -> void:
 	# Block touch/mouse from reaching the 3D camera while the panel is up.
@@ -73,10 +76,11 @@ func _input(event: InputEvent) -> void:
 		return
 	if not event is InputEventScreenTouch:
 		return
+	var touch := event as InputEventScreenTouch
 	# Release camera focus on a touch press inside the panel so its controls (including
 	# drag-to-scroll) receive input instead of the camera (same as NotificationsPanel / FriendsPanel).
-	if event is InputEventScreenTouch and event.pressed:
-		if get_global_rect().has_point(event.position) and Global.explorer_has_focus():
+	if touch.pressed:
+		if get_global_rect().has_point(touch.position) and Global.explorer_has_focus():
 			Global.explorer_release_focus()
 
 
@@ -140,6 +144,11 @@ func _retry_failed_carrousels() -> void:
 ## is resolved to the full event first, same as menu.gd's deep-link handler.
 func _async_on_card_jump_in(data) -> void:
 	if data is String:
+		# Validate the id shape before putting it in a URL — a stray "../" would walk the events
+		# API path (same guard menu.gd uses on this same endpoint).
+		if not _is_uuid(data):
+			push_warning("DiscoverPanel: event card has no valid event id: " + data)
+			return
 		data = await _async_fetch_event_by_id(data)
 		if data == null:
 			return
@@ -159,13 +168,24 @@ func _async_fetch_event_by_id(event_id: String) -> Variant:
 	var url := "https://events.decentraland.org/api/events/" + event_id
 	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_GET, "")
 	if response is PromiseError:
-		printerr("[DiscoverPanel] Failed to fetch event data: ", response.get_error())
+		# An unreachable/offline events API is an expected, recoverable condition here, not an
+		# error worth spending Sentry's quota on.
+		push_warning("DiscoverPanel: failed to fetch event data: " + str(response.get_error()))
 		return null
 	var json: Dictionary = response.get_string_response_as_json()
 	if not json.has("data"):
-		printerr("[DiscoverPanel] Invalid event response format")
+		push_warning("DiscoverPanel: invalid event response format")
 		return null
 	return json["data"]
+
+
+func _is_uuid(value: String) -> bool:
+	if _uuid_regex == null:
+		_uuid_regex = RegEx.new()
+		_uuid_regex.compile(
+			"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+		)
+	return _uuid_regex.search(value) != null
 
 
 # The EXPLORE MORE label is shouted per the design; DISCOVER_EXPLORE_MORE is shared with the FTUE
@@ -241,15 +261,18 @@ func _async_refresh_header() -> void:
 		return
 
 	var place: Dictionary = data[0]
-	# The places API can return `title`/`contact_name` as JSON null; Dictionary.get returns that
-	# null (not the default) when the key exists, and Label.text = null crashes — so guard both.
+	# The places API can return `title`/`contact_name` as JSON null or some other unexpected type;
+	# Dictionary.get returns that value (not the default) when the key exists, and Label.text
+	# expects a String — so guard both before use.
 	var title = place.get("title", scene_title)
-	if title == null:
+	if title == null or not title is String:
 		title = scene_title
 	if not title.is_empty():
 		label_title.text = title
 	var creator = place.get("contact_name", "")
-	label_creator.text = creator if creator != null else ""
+	if not creator is String:
+		creator = ""
+	label_creator.text = creator
 	by_row.visible = not label_creator.text.is_empty()
 	# Only remember "refreshed for this scene" once we actually have real data — a failed fetch
 	# must not block a retry the next time this same scene/world comes up.

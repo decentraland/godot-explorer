@@ -148,14 +148,15 @@ func _input(event: InputEvent) -> void:
 	if not event is InputEventScreenTouch:
 		return
 
+	var touch := event as InputEventScreenTouch
 	# Check if input is within the panel's rectangle
-	var pos = event.position
+	var pos = touch.position
 	var rect = get_global_rect()
 	var is_inside_panel = rect.has_point(pos)
 
 	# Only release focus on touch press (not during drag) to prevent camera rotation
 	# This allows ScrollContainer to handle drag events normally
-	if is_inside_panel and event is InputEventScreenTouch and event.pressed:
+	if is_inside_panel and touch.pressed:
 		if Global.explorer_has_focus():
 			Global.explorer_release_focus()
 
