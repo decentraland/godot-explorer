@@ -72,6 +72,16 @@ func start_loading() -> void:
 		scroll_container.start()
 
 
+## Re-requests from scratch after a failed load. Goes through search_param's setter (even with its
+## own current value) to force the generator's _new_search latch, so old items get cleared instead
+## of the new page appending onto them, then restart() — never start() again, whose scroll_ended
+## connection must only ever be made once.
+func reload() -> void:
+	if is_instance_valid(generator):
+		generator.search_param = generator.search_param
+		scroll_container.restart()
+
+
 func _on_report_loading_status(status: CarrouselGenerator.LoadingStatus) -> void:
 	if status == CarrouselGenerator.LoadingStatus.LOADING:
 		self.show()

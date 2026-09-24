@@ -227,7 +227,6 @@ layout_mode = 2
 mouse_filter = 2
 theme_override_constants/margin_top = 108
 theme_override_constants/margin_right = 32
-metadata/_edit_lock_ = true
 
 [node name="MenuDropdown" type="PanelContainer" parent="MenuOverlay" unique_id=745634542]
 unique_name_in_owner = true

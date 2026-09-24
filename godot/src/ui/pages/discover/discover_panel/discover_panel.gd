@@ -23,6 +23,10 @@ var _last_header_key: String = ""
 # Carousels are populated on first show (not at _ready): while the panel is hidden it has no width,
 # and cards built then trim their titles to nothing and skip thumbnails permanently.
 var _content_loaded: bool = false
+# Set when that specific carousel's first (or last retried) load errored, so the next show_panel()
+# retries only that one — the other may have already loaded and must not be re-requested too.
+var _featured_needs_reload: bool = false
+var _events_needs_reload: bool = false
 
 @onready var scroll_container: ScrollContainer = %ScrollContainer
 @onready var events: VBoxContainer = %Events
@@ -51,12 +55,12 @@ func _ready() -> void:
 	button_explore_more.pressed.connect(_on_explore_more_pressed)
 	# i18n-keys: DISCOVER_EXPLORE_MORE
 	_apply_explore_more_label()
-	featured.generator.item_pressed.connect(_on_card_jump_in)
-	events.generator.item_pressed.connect(_on_card_jump_in)
-	# A failed first load must not latch _content_loaded — otherwise a dropped connection on the
-	# very first open leaves the carousels empty for the rest of the session (see _async_load_content_once).
-	featured.generator.report_loading_status.connect(_on_carrousel_loading_status)
-	events.generator.report_loading_status.connect(_on_carrousel_loading_status)
+	featured.generator.item_pressed.connect(_async_on_card_jump_in)
+	events.generator.item_pressed.connect(_async_on_card_jump_in)
+	# A failed load must not leave the carousel empty for the rest of the session — flag it for
+	# _retry_failed_carrousels to retry (only that one) on the next show_panel().
+	featured.generator.report_loading_status.connect(_on_carrousel_loading_status.bind(featured))
+	events.generator.report_loading_status.connect(_on_carrousel_loading_status.bind(events))
 
 	_close_menu()
 
@@ -81,7 +85,8 @@ func show_panel() -> void:
 	_close_menu()
 	_reset_scroll()
 	_async_load_content_once()
-	_async_refresh_header()
+	_retry_failed_carrousels()
+	_maybe_refresh_header()
 
 
 func _reset_scroll() -> void:
@@ -106,11 +111,24 @@ func _async_load_content_once() -> void:
 	events.start_loading()
 
 
-## A carousel's first request failed (offline, API down, ...): let the next show_panel() retry
-## instead of leaving it permanently empty for the rest of the session.
-func _on_carrousel_loading_status(status: CarrouselGenerator.LoadingStatus) -> void:
-	if status == CarrouselGenerator.LoadingStatus.ERROR:
-		_content_loaded = false
+## A carousel's request failed (offline, API down, ...): flag that specific carousel — not the
+## other one, which may have already loaded fine — to retry on the next show_panel().
+func _on_carrousel_loading_status(status: CarrouselGenerator.LoadingStatus, carrousel) -> void:
+	if status != CarrouselGenerator.LoadingStatus.ERROR:
+		return
+	if carrousel == featured:
+		_featured_needs_reload = true
+	else:
+		_events_needs_reload = true
+
+
+func _retry_failed_carrousels() -> void:
+	if _featured_needs_reload:
+		_featured_needs_reload = false
+		featured.reload()
+	if _events_needs_reload:
+		_events_needs_reload = false
+		events.reload()
 
 
 # --- Carousel cards ---
@@ -118,7 +136,13 @@ func _on_carrousel_loading_status(status: CarrouselGenerator.LoadingStatus) -> v
 
 ## A Featured/Events card was tapped: collapse the navbar (this panel closes with it) and show
 ## the same jump-in confirmation modal used elsewhere in the app (deep links, chat links, ...).
-func _on_card_jump_in(data) -> void:
+## A bare event id String (place_item.gd falls back to it when it wasn't given full event data)
+## is resolved to the full event first, same as menu.gd's deep-link handler.
+func _async_on_card_jump_in(data) -> void:
+	if data is String:
+		data = await _async_fetch_event_by_id(data)
+		if data == null:
+			return
 	if not data is Dictionary:
 		return
 	var explorer = Global.get_explorer()
@@ -129,6 +153,19 @@ func _on_card_jump_in(data) -> void:
 		Global.modal_manager.async_show_world_modal(realm)
 	else:
 		Global.modal_manager.async_show_teleport_modal(PlacesHelper.parse_position(data))
+
+
+func _async_fetch_event_by_id(event_id: String) -> Variant:
+	var url := "https://events.decentraland.org/api/events/" + event_id
+	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_GET, "")
+	if response is PromiseError:
+		printerr("[DiscoverPanel] Failed to fetch event data: ", response.get_error())
+		return null
+	var json: Dictionary = response.get_string_response_as_json()
+	if not json.has("data"):
+		printerr("[DiscoverPanel] Invalid event response format")
+		return null
+	return json["data"]
 
 
 # The EXPLORE MORE label is shouted per the design; DISCOVER_EXPLORE_MORE is shared with the FTUE
@@ -149,10 +186,13 @@ func hide_panel() -> void:
 
 
 func _on_change_parcel(_new_parcel: Vector2i) -> void:
-	if not is_visible_in_tree():
-		return
-	# Walking within the same scene/world fires change_parcel repeatedly; only worth a re-fetch
-	# once we've actually left it.
+	if is_visible_in_tree():
+		_maybe_refresh_header()
+
+
+## Skips the places-API round trip when nothing has actually changed since the last successful
+## refresh — used both on open (show_panel) and while open (change_parcel walking a scene).
+func _maybe_refresh_header() -> void:
 	if _current_header_key() == _last_header_key:
 		return
 	_async_refresh_header()
@@ -173,7 +213,6 @@ func _async_refresh_header() -> void:
 	# A place lookup can outlive a fast scene change; only the newest request may write the labels.
 	_header_request_id += 1
 	var request_id := _header_request_id
-	_last_header_key = _current_header_key()
 
 	var scene_title := _current_scene_title()
 	label_title.text = scene_title
@@ -212,6 +251,9 @@ func _async_refresh_header() -> void:
 	var creator = place.get("contact_name", "")
 	label_creator.text = creator if creator != null else ""
 	by_row.visible = not label_creator.text.is_empty()
+	# Only remember "refreshed for this scene" once we actually have real data — a failed fetch
+	# must not block a retry the next time this same scene/world comes up.
+	_last_header_key = _current_header_key()
 
 
 func _current_scene_title() -> String:
