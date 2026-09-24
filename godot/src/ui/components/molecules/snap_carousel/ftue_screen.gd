@@ -119,7 +119,15 @@ func _on_button_jump_in_pressed() -> void:
 	var payload := {"place_id": place.get("id", ""), "position": index}
 	payload.merge(CampaignResolution.metrics_context(_campaign_resolution))
 	Global.metrics.track_click_button("JUMP_IN", "DISCOVER_FTUE", JSON.stringify(payload))
-	ftue_completed.emit()
+	# Deliberately NOT emitting `ftue_completed` here. It is wired to the lobby's
+	# `async_close_sign_in()`, which calls `change_scene_to_file(menu.tscn)` - and the
+	# jump below ends in `Global.async_teleport_to()`, which (with no explorer yet, i.e.
+	# every cold start) calls `change_scene_to_file(explorer.tscn)`. For a Genesis place
+	# `_async_precheck_realm_access()` returns without ever suspending, so both ran in the
+	# SAME frame: the engine then instantiated the whole of menu.tscn only to `queue_delete`
+	# it as the superseded pending scene (SceneTree::change_scene_to_node), at the single
+	# heaviest moment of a cold start. The teleport owns the navigation; only the skip path
+	# needs the lobby to close the sign-in flow itself.
 	_do_jump_in(place)
 
 

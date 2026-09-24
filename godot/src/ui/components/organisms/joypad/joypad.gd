@@ -501,12 +501,16 @@ func _async_set_button_icon(
 		promise = Global.content_provider.fetch_texture_by_url(icon_hash, icon_url)
 	else:
 		promise = Global.content_provider.fetch_texture_by_hash(icon_hash, mapping)
+	# `btn` is one of this joypad's own children, but a node reference is not carried
+	# across an await: resolve it again by path on resume.
+	var btn_path := btn.get_path()
 	var res = await PromiseUtils.async_awaiter(promise)
-	# Bail if the button's desired icon changed while we were awaiting.
-	if String(btn.get_meta("tc_icon_hash", "")) != icon_hash:
+	var button := get_node_or_null(btn_path) as Button
+	# Bail if the button is gone or its desired icon changed while we were awaiting.
+	if button == null or String(button.get_meta("tc_icon_hash", "")) != icon_hash:
 		return
 	if not (res is PromiseError):
-		_apply_custom_icon(btn, res.texture)
+		_apply_custom_icon(button, res.texture)
 
 
 ## Show the custom icon on the button's dedicated overlay node and blank the native glyph so
