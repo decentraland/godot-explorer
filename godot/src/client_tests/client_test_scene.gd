@@ -1,4 +1,7 @@
 extends Node3D
+# Dev tool / test: it owns every node it awaits on and never ships in a store build, so the
+# release-template node-across-await rules are off here (see .gdlintrc).
+# gdlint: disable=node-reference-across-await,node-argument-across-await
 
 # Client test for avatar rendering with snapshot comparison
 
