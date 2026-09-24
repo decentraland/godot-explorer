@@ -72,19 +72,19 @@ func show_panel() -> void:
 	show()
 	_close_menu()
 	_reset_scroll()
-	_load_content_once()
+	_async_load_content_once()
 	_async_refresh_header()
 
 
 func _reset_scroll() -> void:
 	scroll_container.scroll_vertical = 0
 	# No-op if a carousel hasn't built any cards yet (e.g. the very first show, before
-	# _load_content_once's start_loading() runs) — reset_position() checks for a valid child.
+	# _async_load_content_once's start_loading() runs) — reset_position() checks for a valid child.
 	featured.scroll_to_start()
 	events.scroll_to_start()
 
 
-func _load_content_once() -> void:
+func _async_load_content_once() -> void:
 	# Build the carousels now that the panel is visible and has a real width (see _content_loaded).
 	if _content_loaded:
 		return
