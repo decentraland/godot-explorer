@@ -51,7 +51,7 @@ func _input(event: InputEvent) -> void:
 
 	# Only process touch events (includes emulated touch from mouse)
 	# Ignore mouse events to avoid duplicate processing with emulation enabled
-	if not (event is InputEventScreenTouch or event is InputEventScreenDrag):
+	if not event is InputEventScreenTouch:
 		return
 
 	# Check if input is within the panel's rectangle

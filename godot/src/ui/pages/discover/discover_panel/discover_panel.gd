@@ -67,10 +67,10 @@ func _ready() -> void:
 func _input(event: InputEvent) -> void:
 	if not is_visible_in_tree():
 		return
-	if not (event is InputEventScreenTouch or event is InputEventScreenDrag):
+	if not event is InputEventScreenTouch:
 		return
-	# Release camera focus on a touch press inside the panel so drags scroll the list instead of
-	# rotating the camera (same behaviour as NotificationsPanel / FriendsPanel).
+	# Release camera focus on a touch press inside the panel so its controls (including
+	# drag-to-scroll) receive input instead of the camera (same as NotificationsPanel / FriendsPanel).
 	if event is InputEventScreenTouch and event.pressed:
 		if get_global_rect().has_point(event.position) and Global.explorer_has_focus():
 			Global.explorer_release_focus()
