@@ -106,8 +106,10 @@ func _async_fetch_events(url: String, limit: int = 100):
 		item_container.add_child(item)
 
 		item.set_data(event_data)
-		# `discover` is unset when the carousel is reused outside the full Discover screen
-		# (e.g. the landscape DiscoverPanel), where tapping a card does nothing.
+		# Relay through the generator's own signal so a host without a `discover` reference (e.g.
+		# the landscape DiscoverPanel) can still react to a tap; `discover`, when set, keeps
+		# routing straight to the full Discover screen's own SidePanelWrapper flow.
+		item.event_pressed.connect(item_pressed.emit)
 		if is_instance_valid(discover):
 			item.event_pressed.connect(discover.on_event_pressed)
 

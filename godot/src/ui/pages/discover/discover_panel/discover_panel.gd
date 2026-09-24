@@ -47,6 +47,8 @@ func _ready() -> void:
 	button_explore_more.pressed.connect(_on_explore_more_pressed)
 	# i18n-keys: DISCOVER_EXPLORE_MORE
 	_apply_explore_more_label()
+	featured.generator.item_pressed.connect(_on_card_jump_in)
+	events.generator.item_pressed.connect(_on_card_jump_in)
 
 	_close_menu()
 
@@ -94,6 +96,22 @@ func _load_content_once() -> void:
 		return
 	featured.start_loading()
 	events.start_loading()
+
+
+# --- Carousel cards ---
+
+
+## A Featured/Events card was tapped: collapse the navbar (this panel closes with it) and show
+## the same jump-in confirmation modal used elsewhere in the app (deep links, chat links, ...).
+func _on_card_jump_in(data) -> void:
+	var explorer = Global.get_explorer()
+	if is_instance_valid(explorer):
+		explorer.navbar.collapse()
+	if PlacesHelper.is_world(data):
+		var realm: String = PlacesHelper.get_position_and_realm(data)[1]
+		Global.modal_manager.async_show_world_modal(realm)
+	else:
+		Global.modal_manager.async_show_teleport_modal(PlacesHelper.parse_position(data))
 
 
 # The EXPLORE MORE label is shouted per the design; DISCOVER_EXPLORE_MORE is shared with the FTUE
