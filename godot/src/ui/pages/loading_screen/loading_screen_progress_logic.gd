@@ -36,9 +36,10 @@ func enable_loading_screen():
 	# Defer scene room connection until loading finishes
 	Global.comms.hold_comms()
 
-	# Mute voice chat and scene volume during loading
+	# Mute voice chat, scene and avatar SFX (footsteps, jump/land) during loading
 	AudioSettings.apply_scene_volume_settings(0.0)
 	AudioSettings.apply_voice_chat_volume_settings(0.0)
+	AudioSettings.apply_avatar_and_emotes_volume_settings(0.0)
 
 	loading_screen.show()
 	Global.set_orientation_landscape()
@@ -58,9 +59,10 @@ func _on_loading_started(_session_id: int, _expected_count: int):
 	# Defer scene room connection until loading finishes
 	Global.comms.hold_comms()
 
-	# Mute voice chat and scene volume during loading
+	# Mute voice chat, scene and avatar SFX (footsteps, jump/land) during loading
 	AudioSettings.apply_scene_volume_settings(0.0)
 	AudioSettings.apply_voice_chat_volume_settings(0.0)
+	AudioSettings.apply_avatar_and_emotes_volume_settings(0.0)
 
 	loading_screen.show()
 	loading_screen.set_progress(0)
@@ -103,9 +105,10 @@ func _hide_loading_screen(status: String = "Success"):
 	if not Global.is_gp_benchmark():
 		Global.comms.release_comms()
 
-	# Restore voice chat and scene volume
+	# Restore voice chat, scene and avatar SFX volume
 	AudioSettings.apply_scene_volume_settings()
 	AudioSettings.apply_voice_chat_volume_settings()
+	AudioSettings.apply_avatar_and_emotes_volume_settings()
 
 	loading_screen.async_hide_loading_screen_effect()
 
