@@ -1513,11 +1513,11 @@ func async_teleport_to(parcel_position: Vector2i, new_realm: String) -> void:
 
 
 func async_join_world(world_realm: String) -> void:
-	# Block a private world before any navigation. Covers both cases below: with an active
-	# explorer the modal replaces the loading flash; without one (cold start from the lobby)
-	# it stops us from booting the explorer scene straight into the world we can't enter.
+	# Block a private world before any navigation: with an active explorer the modal replaces
+	# the loading flash; on a cold start (lobby) it stops us booting into a world we can't enter.
 	if not await _async_precheck_realm_access(world_realm):
 		return
+	Global.get_config().add_place_to_last_places(Vector2i.ZERO, world_realm)  # "Last visited"
 	var explorer = Global.get_explorer()
 	if is_instance_valid(explorer):
 		# Show loading screen before orientation change to avoid flashing the scene
