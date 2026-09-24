@@ -53,10 +53,10 @@ use super::{
         trigger_area::collect_trigger_area_events,
     },
     frame_sync::{
-        SceneFrameSyncCollector, FOREGROUND_APPLY_BUDGET_US, FOREGROUND_STUCK_FRAMES_THRESHOLD,
-        FRAME_SYNC_MAX_CONSECUTIVE_MISSES, FRAME_SYNC_WAIT_US, PERF_WARNING_CHECK_FRAMES,
+        SceneFrameSyncCollector, COLLECT_SAFETY_MARGIN_US, FOREGROUND_APPLY_BUDGET_US,
+        FOREGROUND_STUCK_FRAMES_THRESHOLD, FRAME_SYNC_WAIT_US, PERF_WARNING_CHECK_FRAMES,
         PERF_WARNING_MIN_INTERVAL_SECS, PERF_WARNING_MISSED_PCT,
-        SCENE_MANAGER_KICK_PROCESS_PRIORITY,
+        SCENE_MANAGER_KICK_PROCESS_PRIORITY, SCENE_NOT_RESPONDING_TIMEOUT_SECS,
     },
     input::InputState,
     loading_funnel::{LoadingBeginContext, LoadingFunnel},
@@ -196,9 +196,10 @@ pub struct SceneManager {
     #[var(get, set)]
     bench_disable_transforms: bool,
 
-    // Frame-locked scene ticks (frame_sync.rs). Milliseconds the collect phase may
-    // block for the foreground scenes' output, measured from the kick: -1 = auto
-    // (one frame at the effective fps), 0 = never wait (scene tests, benchmarks).
+    // Frame-locked scene ticks (frame_sync.rs). Frame slot in milliseconds: the
+    // collect phase waits for the foreground scenes' output only within what is
+    // left of it (collect_deadline). -1 = auto (one frame at the effective fps),
+    // 0 = never wait (scene tests, benchmarks).
     #[var(get, set = set_frame_sync_tick_budget_ms)]
     frame_sync_tick_budget_ms: f32,
     // Scene tests hard-block the scene thread (snapshot op); the wait stays off.
@@ -436,7 +437,7 @@ impl SceneManager {
             should_debug,
         });
 
-        let new_scene = Scene::new(
+        let mut new_scene = Scene::new(
             new_scene_id,
             scene_entity_definition,
             dcl_scene,
@@ -444,6 +445,7 @@ impl SceneManager {
             scene_type.clone(),
             self.base_ui.clone(),
         );
+        new_scene.frame_sync.watchdog_exempt = inspect;
 
         self.base_mut().add_child(
             &new_scene
@@ -1946,15 +1948,10 @@ impl SceneManager {
             scene.frame_sync.kick_blocked += 1;
             return;
         }
-        scene.frame_sync.replies_sent += 1;
         // The first reply answers the SDK's crdtGetState during onStart; the
         // runtime may take hundreds of ms before its first onUpdate, so it is
-        // never awaited.
-        scene.frame_sync.kick_time = if scene.frame_sync.replies_sent > 1 {
-            Some(now)
-        } else {
-            None
-        };
+        // never awaited (FrameSyncState::on_reply_sent).
+        scene.frame_sync.kick_time = scene.frame_sync.awaiting_output.then_some(now);
         scene.last_tick_us = now_us;
         scene.stuck_frames = 0;
     }
@@ -2088,7 +2085,6 @@ impl SceneManager {
         scene.state == SceneState::Alive
             && !scene.paused
             && scene.frame_sync.kick_time.is_some()
-            && !scene.frame_sync.wait_suppressed
             && !scene.dcl_scene.thread_join_handle.is_finished()
     }
 
@@ -2113,10 +2109,32 @@ impl SceneManager {
         (1_000_000.0 / hz) as u64
     }
 
+    /// Latest instant the collect phase may block until without delaying the
+    /// frame: the frame slot (one tick budget) counted from the frame's start,
+    /// minus what still has to run after the collect. The kick runs after the
+    /// physics step, so the physics time is taken off the slot too; the render
+    /// cost of the previous frame stands in for this frame's. Godot reports the
+    /// physics time as the max over the last second, which keeps the estimate on
+    /// the safe side. A deadline already in the past means no wait at all: the
+    /// frame is drawn and the scene's output is applied at the next kick (the
+    /// Bevy explorer spends the same leftover slack and nothing more).
+    fn collect_deadline(&self, kick_start: Instant, budget_us: u64) -> Instant {
+        let physics_us = (godot::classes::Performance::singleton()
+            .get_monitor(godot::classes::performance::Monitor::TIME_PHYSICS_PROCESS)
+            * 1_000_000.0)
+            .max(0.0) as u64;
+        let render_us = (godot::classes::RenderingServer::singleton().get_frame_setup_time_cpu()
+            * 1_000.0)
+            .max(0.0) as u64;
+        let reserve_us = physics_us + render_us + COLLECT_SAFETY_MARGIN_US;
+        kick_start + Duration::from_micros(budget_us.saturating_sub(reserve_us))
+    }
+
     /// COLLECT: last `_process` callback of the frame (SceneFrameSyncCollector).
-    /// Waits, bounded by the tick budget measured from this frame's kick, for the
+    /// Waits, within the frame's leftover slack (`collect_deadline`), for the
     /// outputs of the kicked foreground scenes, applies them, and syncs the
-    /// PLAYER/CAMERA reflector nodes against the final camera pose.
+    /// PLAYER/CAMERA reflector nodes against the final camera pose. A scene that
+    /// misses the deadline does not delay the frame.
     pub(crate) fn frame_sync_collect_phase(&mut self) {
         let collect_start = Instant::now();
         self.receive_from_thread();
@@ -2132,7 +2150,7 @@ impl SceneManager {
         if let Some((kick_start, ctx)) = kicked_frame {
             let budget_us = self.effective_tick_budget_us();
             if budget_us > 0 {
-                let deadline = kick_start + Duration::from_micros(budget_us);
+                let deadline = self.collect_deadline(kick_start, budget_us);
                 loop {
                     let pending: Vec<SceneId> = foreground
                         .iter()
@@ -2173,19 +2191,8 @@ impl SceneManager {
         }
 
         for scene_id in missed.iter() {
-            let Some(scene) = self.scenes.get_mut(scene_id) else {
-                continue;
-            };
-            scene.frame_sync.consecutive_misses += 1;
-            if scene.frame_sync.consecutive_misses >= FRAME_SYNC_MAX_CONSECUTIVE_MISSES
-                && !scene.frame_sync.wait_suppressed
-            {
-                scene.frame_sync.wait_suppressed = true;
-                tracing::warn!(
-                    "Scene {:?} missed {} consecutive frames: no longer waiting for its ticks until it responds",
-                    scene.scene_entity_definition.get_title(),
-                    scene.frame_sync.consecutive_misses
-                );
+            if let Some(scene) = self.scenes.get_mut(scene_id) {
+                scene.frame_sync.consecutive_misses += 1;
             }
         }
 
@@ -2460,6 +2467,64 @@ impl SceneManager {
                     ],
                 );
             }
+        }
+    }
+
+    /// Kills every scene whose `onUpdate` has not returned for
+    /// SCENE_NOT_RESPONDING_TIMEOUT_SECS of rendered time and reports it as a
+    /// crash, so the current parcel shows the scene-crash modal. Same policy as
+    /// the Bevy explorer (scene marked broken, isolate terminated) and the Unity
+    /// explorer (V8 interrupted, scene marked as errored). Runs after this
+    /// frame's outputs were received, and only while the runner is not paused:
+    /// outputs are not drained while paused, so a paused runner would otherwise
+    /// time out healthy scenes.
+    fn kill_unresponsive_scenes(&mut self, delta_seconds: f32) {
+        // Scene tests block the scene thread on purpose (snapshot op).
+        if self.frame_sync_wait_forced_off {
+            return;
+        }
+        let unresponsive: Vec<SceneId> = self
+            .scenes
+            .iter_mut()
+            .filter(|(_, scene)| scene.state == SceneState::Alive)
+            .filter_map(|(scene_id, scene)| {
+                scene
+                    .frame_sync
+                    .advance_unresponsive(delta_seconds)
+                    .then_some(*scene_id)
+            })
+            .collect();
+        if unresponsive.is_empty() {
+            return;
+        }
+
+        let now_us = (Instant::now() - self.begin_time).as_micros() as i64;
+        for scene_id in unresponsive {
+            let Some(scene) = self.scenes.get_mut(&scene_id) else {
+                continue;
+            };
+            tracing::warn!(
+                "scene not responding: {} \"{}\" @ {:?} did not answer for {:.0}s, killing it",
+                scene.scene_entity_definition.id,
+                scene.scene_entity_definition.get_title(),
+                scene.scene_entity_definition.get_base_parcel(),
+                scene.frame_sync.unresponsive_secs
+            );
+            if matches!(scene.scene_type, SceneType::Parcel) {
+                self.crashed_scene_ids.push(scene_id);
+            }
+            self.abnormal_exits.insert(
+                scene_id,
+                format!(
+                    "scene not responding: onUpdate did not return for {SCENE_NOT_RESPONDING_TIMEOUT_SECS:.0}s"
+                ),
+            );
+            // The scene thread is stuck inside onUpdate and would never read a
+            // graceful kill; terminate V8 and let reap_dying_scenes() finalize
+            // the scene once its thread exits (or force it after its timeout).
+            Self::force_terminate_scene_v8(&scene_id);
+            scene.state = SceneState::KillSignal(now_us);
+            self.dying_scene_ids.push(scene_id);
         }
     }
 
@@ -2760,11 +2825,7 @@ impl SceneManager {
                                 .min(u32::MAX as u128) as u32
                         })
                         .unwrap_or(0);
-                    if scene.frame_sync.consecutive_misses > 0 {
-                        scene.frame_sync.late_outputs += 1;
-                    }
-                    scene.frame_sync.consecutive_misses = 0;
-                    scene.frame_sync.wait_suppressed = false;
+                    scene.frame_sync.on_output_received();
                     scene
                         .tick_stats
                         .on_output_received(js_tick_us, round_trip_us);
@@ -4128,6 +4189,7 @@ impl INode for SceneManager {
         self.total_time_seconds_time += delta as f32;
 
         self.receive_from_thread();
+        self.kill_unresponsive_scenes(delta as f32);
 
         let ctx = self.build_frame_context(&player_avatar);
 

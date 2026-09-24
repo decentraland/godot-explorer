@@ -130,8 +130,8 @@ mod tests {
         assert_eq!(stats.ticks_total, 200);
         let p50 = stats.percentile(|s| s.js_tick_us, 0.5);
         let p95 = stats.percentile(|s| s.js_tick_us, 0.95);
-        assert!(p50 >= 13_000 && p50 <= 14_500, "p50={p50}");
-        assert!(p95 >= 19_000 && p95 <= 19_900, "p95={p95}");
+        assert!((13_000..=14_500).contains(&p50), "p50={p50}");
+        assert!((19_000..=19_900).contains(&p95), "p95={p95}");
         assert_eq!(stats.percentile(|s| s.apply_us, 1.0), 199);
 
         // 150 frames, every 5th one missed: the window holds the last 120.

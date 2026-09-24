@@ -236,13 +236,15 @@ pub fn _process_scene(
                 let cap = scene.dcl_scene.main_sender_to_thread.capacity();
                 if cap > 0 {
                     let response = scene.current_dirty.renderer_response.take().unwrap();
-                    if let Err(_err) = scene
+                    if scene
                         .dcl_scene
                         .main_sender_to_thread
                         .blocking_send(response)
+                        .is_ok()
                     {
-                        // TODO: handle fail sending to thread
+                        scene.frame_sync.on_reply_sent();
                     }
+                    // TODO: handle fail sending to thread
 
                     // Outputs are applied in the order the scene sent them (FIFO).
                     scene.current_dirty = if scene.enqueued_dirty.is_empty() {
