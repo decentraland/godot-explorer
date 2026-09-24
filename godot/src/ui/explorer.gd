@@ -1714,10 +1714,9 @@ func _on_menu_close():
 	# deferred while the menu is open so the HUD change isn't visible behind it). Previously this
 	# only ran on the next menu open, so the toggle appeared to take one exit cycle to apply.
 	apply_deferred_hide_ui()
+	# Also restores the navbar's visibility (via the orientation_changed -> navbar._on_size_changed
+	# chain); _on_menu_open already released the mouse on the way in.
 	Global.set_orientation_landscape()
-	if !navbar.visible:
-		navbar._on_size_changed()
-		release_mouse()
 
 
 func _extract_short_realm_url(full_url: String) -> String:
