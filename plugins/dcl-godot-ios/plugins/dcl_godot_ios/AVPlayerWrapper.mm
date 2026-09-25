@@ -261,26 +261,13 @@
         switch (status) {
             case AVPlayerItemStatusReadyToPlay: {
                 NSLog(@"[AVPlayerWrapper] Player ready to play");
-
-                // Get video dimensions from the video track
-                NSArray *videoTracks = [_playerItem.asset tracksWithMediaType:AVMediaTypeVideo];
-                if (videoTracks.count > 0) {
-                    AVAssetTrack *videoTrack = videoTracks[0];
-                    CGSize naturalSize = videoTrack.naturalSize;
-                    CGAffineTransform transform = videoTrack.preferredTransform;
-
-                    // Apply transform to get actual dimensions (handles rotation)
-                    CGSize transformedSize = CGSizeApplyAffineTransform(naturalSize, transform);
-                    int newWidth = (int)fabs(transformedSize.width);
-                    int newHeight = (int)fabs(transformedSize.height);
-
-                    if (newWidth != _videoWidth || newHeight != _videoHeight) {
-                        _videoWidth = newWidth;
-                        _videoHeight = newHeight;
-                        _videoSizeChanged = YES;
-                        NSLog(@"[AVPlayerWrapper] Video size: %dx%d", _videoWidth, _videoHeight);
-                    }
-                }
+                // Video dimensions are derived from CVPixelBuffer geometry in
+                // acquireIOSurfacePtr on each frame — no track lookup needed here.
+                // Previously, [asset tracksWithMediaType:AVMediaTypeVideo] was called
+                // synchronously at this point, triggering a blocking XPC round-trip
+                // (mach_msg) on the main thread and causing ~247-second App Hangs.
+                // That call has been removed; track-based size is also unavailable for
+                // HLS streams (AVURLAsset exposes no tracks for .m3u8 playlists).
                 break;
             }
             case AVPlayerItemStatusFailed:
