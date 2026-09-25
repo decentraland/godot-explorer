@@ -153,6 +153,14 @@ pub fn process_many_messages_with_logging(
         let length = stream.read_u32().unwrap() as usize;
         let crdt_type_raw = stream.read_u32().unwrap();
         let message_size = length.saturating_sub(8);
+        if message_size > stream.len() {
+            tracing::warn!(
+                "CRDT message size {} exceeds remaining buffer {}, stopping parse",
+                message_size,
+                stream.len()
+            );
+            break;
+        }
         let mut message_stream = stream.take_reader(message_size);
 
         match FromPrimitive::from_u32(crdt_type_raw) {
