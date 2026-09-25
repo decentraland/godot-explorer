@@ -252,45 +252,6 @@ func is_gp_benchmark() -> bool:
 	return cli.gp_benchmark or (deep_link_obj != null and deep_link_obj.gp_benchmark)
 
 
-## Activate the Scene Inspector bridge from app startup when a target is set via
-## `--scene-inspector=ws://…` (baked into the iOS build / passed on desktop) or
-## `?scene-inspector=` deeplink. Idempotent: the bridge is created at most once;
-## later target changes are handled by the bridge's own deeplink-reconnect.
-##
-## Dialing from boot (instead of in-world) means the channel is up from second 0.
-## In DEBUG builds it also arms the bounded boot-log ring + installs the capture
-## sinks, so startup logs are buffered and flushed on the first `subscribe`. This
-## is gated off production: there, nothing is captured or buffered without a
-## connection (the no-buffering-without-a-peer contract).
-func _activate_scene_inspector_from_config() -> void:
-	if _scene_inspector_bridge != null:
-		return
-	var target := ""
-	if not deep_link_obj.scene_inspector.is_empty():
-		target = deep_link_obj.scene_inspector
-	elif not cli.scene_inspector.is_empty():
-		target = cli.scene_inspector
-	if target.is_empty():
-		# Debug builds with no explicit target default to a local hub over loopback,
-		# so a plain Godot-editor deploy / F5 auto-dials with no --scene-inspector
-		# arg (parity with the iOS export plugin, which bakes the LAN IP). Android
-		# reaches it via `adb reverse tcp:9231 tcp:9231`; desktop hits it directly.
-		# The client retries quietly if no hub is up, and capture stays gated. Never
-		# in production.
-		if OS.is_debug_build() and not is_production():
-			target = "ws://127.0.0.1:9231"
-		else:
-			return
-	scene_inspector_active = true
-	if OS.is_debug_build():
-		scene_inspector_dispatcher.set_early_log_capture(true)
-	_scene_inspector_bridge = SceneInspectorBridge.new()
-	_scene_inspector_bridge.set_name("scene_inspector_bridge")
-	get_tree().root.add_child.call_deferred(_scene_inspector_bridge)
-	_scene_inspector_bridge.setup.call_deferred(target)
-	print("SceneInspectorBridge: activating from boot -> ", target)
-
-
 ## Logging self-test, triggered by `--test-logging` / `?test-logging=true`.
 ## Exercises every logging form in every stack (GDScript / Rust / Swift / ObjC /
 ## Kotlin) so we can confirm each pipes into the unified channel. Grep `[LOGTEST]`
@@ -348,12 +309,13 @@ func _run_logging_selftest() -> void:
 	print("[LOGTEST] ===== logging self-test end =====")
 
 
-## Forward the optimized-content-base-url deeplink param into DclCli so the
-## scene fetcher / content provider use it for optimized loading. Shared by the
-## desktop fake-deeplink path (_ready) and the mobile/iOS live path (router).
+## Forward the optimized-content-base-url deeplink param into DclCli so the scene fetcher /
+## content provider use it for optimized loading (non-production; Decentraland https or LAN
+## hosts only). Shared by the desktop fake-deeplink path (_ready) and the mobile live path.
 func _apply_optimized_content_base_url(obj: DclParseDeepLink) -> void:
 	var opt_url: String = obj.params.get("optimized-content-base-url", "")
-	if not opt_url.is_empty():
+	var allowed := UrlHost.is_decentraland_https(opt_url) or UrlHost.is_local_network(opt_url)
+	if allowed and not is_production():
 		print("[DEEPLINK] optimized-content-base-url=", opt_url)
 		cli.optimized_content_base_url = opt_url
 
@@ -785,9 +747,11 @@ func _ready():
 
 	# Scene Inspector: dial the configured hub from app startup (second 0) rather
 	# than in-world, so the channel — and, in debug, boot-log capture — is live
-	# from boot. Also re-checked when a deeplink arrives (idempotent).
-	_activate_scene_inspector_from_config()
-	deep_link_router.deep_link_received.connect(_activate_scene_inspector_from_config)
+	# from boot. The bridge also handles `?scene-inspector=` deeplinks.
+	_scene_inspector_bridge = SceneInspectorBridge.new()
+	_scene_inspector_bridge.set_name("scene_inspector_bridge")
+	_scene_inspector_bridge.activate_from_config()
+	get_tree().root.add_child.call_deferred(_scene_inspector_bridge)
 
 	if "memory_debugger" in self:
 		get_tree().root.add_child.call_deferred(self.memory_debugger)

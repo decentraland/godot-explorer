@@ -9,8 +9,71 @@ extends Node
 
 const Collector := preload("res://src/tool/debug_server/debug_collector.gd")
 
+## Debug builds with no explicit target dial a local hub over loopback, so a plain
+## Godot-editor deploy / F5 auto-dials with no --scene-inspector arg (parity with the
+## iOS export plugin, which bakes the LAN IP). Android reaches it via
+## `adb reverse tcp:9231 tcp:9231`; desktop hits it directly.
+const DEFAULT_DEBUG_TARGET := "ws://127.0.0.1:9231"
+
+## Commands served on production builds: inspection and stream settings only.
+## Anything that changes client state or runs code is refused there.
+const PRODUCTION_COMMANDS: Array[String] = [
+	"get_status",
+	"set_perf_interval",
+	"set_lifecycle_verbose",
+	"set_include_bin_payload",
+	"node_query",
+	"subscribe",
+	"unsubscribe",
+	"ping",
+	"focus",
+	"scenes",
+	"scene",
+	"entity",
+	"ui_scene",
+	"ui_entity",
+	"avatars",
+	"avatar",
+	"app_ui",
+]
+
 var _dedicated_ws: SceneInspectorWebSocket
 var _session_id: String = ""
+var _target: String = ""
+
+
+## Called once by Global at boot, before the bridge enters the tree.
+##
+## `--scene-inspector=ws://…` (baked into iOS dev builds / passed on desktop) dials
+## straight away, and debug builds fall back to DEFAULT_DEBUG_TARGET. In DEBUG builds
+## this also arms the bounded boot-log ring + installs the capture sinks, so startup
+## logs are buffered and flushed on the first `subscribe`.
+##
+## A `?scene-inspector=` deeplink target is dialed only when it is on the local
+## network (`_on_deep_link_received`), on every build.
+func activate_from_config() -> void:
+	var target := Global.cli.scene_inspector
+	if target.is_empty() and OS.is_debug_build() and not Global.is_production():
+		target = DEFAULT_DEBUG_TARGET
+	if not target.is_empty():
+		_start(target)
+	Global.deep_link_router.deep_link_received.connect(_on_deep_link_received)
+	_on_deep_link_received.call_deferred()
+
+
+func _start(target: String) -> void:
+	if target == _target:
+		return
+	var first := _target.is_empty()
+	_target = target
+	if not first:
+		_connect_to_target(target)
+		return
+	Global.scene_inspector_active = true
+	if OS.is_debug_build():
+		Global.scene_inspector_dispatcher.set_early_log_capture(true)
+	setup.call_deferred(target)
+	print("SceneInspectorBridge: activating -> ", target)
 
 
 func setup(scene_inspector_target: String) -> void:
@@ -19,9 +82,6 @@ func setup(scene_inspector_target: String) -> void:
 	_connect_to_target(scene_inspector_target)
 
 	Global.scene_inspector_dispatcher.scene_inspector_batch.connect(_on_batch)
-
-	# Listen for deeplink changes to reconnect to new targets
-	Global.deep_link_router.deep_link_received.connect(_on_deep_link_received)
 
 
 func _connect_to_target(target: String) -> void:
@@ -60,13 +120,13 @@ func _on_ws_disconnected() -> void:
 
 
 func _on_deep_link_received() -> void:
-	var new_target := Global.deep_link_obj.scene_inspector
-	if new_target.is_empty():
+	var link_target := Global.deep_link_obj.scene_inspector
+	if link_target.is_empty() or link_target == _target:
 		return
-	# Reconnect dedicated WS to the new target
-	if new_target.begins_with("ws://") or new_target.begins_with("wss://"):
-		print("SceneInspectorBridge: Reconnecting to new target -> ", new_target)
-		_connect_to_target(new_target)
+	if not UrlHost.is_local_network(link_target):
+		print("SceneInspectorBridge: ignoring deeplink target ", link_target)
+		return
+	_start(link_target)
 
 
 func _on_batch(entries_json: String) -> void:
@@ -86,6 +146,9 @@ func _on_batch(entries_json: String) -> void:
 
 
 func _on_command(cmd: String, args: Dictionary, request_id: String) -> void:
+	if Global.is_production() and not PRODUCTION_COMMANDS.has(cmd):
+		_send_ack(request_id, false, {"error": "%s is not available on production builds" % cmd})
+		return
 	var dispatcher = Global.scene_inspector_dispatcher
 	var ok := true
 	# Untyped: shared-backend query results may be an Array (scenes / avatars).
@@ -140,11 +203,12 @@ func _on_command(cmd: String, args: Dictionary, request_id: String) -> void:
 
 		"node_query":
 			# Generic live node probe for debugging: find nodes by name substring,
-			# dump arbitrary props and call no/any-arg methods.
+			# dump arbitrary props and call no/any-arg methods (props only on production).
 			# args: {name: String, props: [String], calls: [[method, arg1, ...]], max: int}
 			var results := []
 			var qname: String = args.get("name", "")
 			var qprops: Array = args.get("props", [])
+			var qcalls: Array = [] if Global.is_production() else args.get("calls", [])
 			var qmax: int = args.get("max", 5)
 			var found := get_tree().root.find_children("*", "", true, false).filter(
 				func(n): return qname.to_lower() in n.name.to_lower()
@@ -155,7 +219,7 @@ func _on_command(cmd: String, args: Dictionary, request_id: String) -> void:
 				}
 				for p in qprops:
 					entry[p] = var_to_str(n.get(p))
-				for c in args.get("calls", []):
+				for c in qcalls:
 					if c is Array and not c.is_empty() and n.has_method(c[0]):
 						entry["call:" + c[0]] = var_to_str(n.callv(c[0], c.slice(1)))
 				results.append(entry)
