@@ -157,64 +157,6 @@
 
 #pragma mark - Source Management
 
-/**
- * Pre-load video tracks asynchronously so that the dimensions are available
- * without blocking the main thread during the KVO ReadyToPlay callback.
- *
- * Uses loadTracksWithMediaType:completionHandler: (iOS 15+) to avoid the
- * synchronous XPC round-trip that [asset tracksWithMediaType:] would trigger
- * on the main thread, which caused ~247-second App Hangs.
- */
-- (void)preloadTracksForAsset:(AVURLAsset *)asset {
-    __weak AVPlayerWrapper *weakSelf = self;
-    if (@available(iOS 15, *)) {
-        [asset loadTracksWithMediaType:AVMediaTypeVideo completionHandler:^(NSArray<AVAssetTrack *> *tracks, NSError *error) {
-            if (error) {
-                NSLog(@"[AVPlayerWrapper] Failed to load video tracks asynchronously: %@", error.localizedDescription);
-                return;
-            }
-            if (tracks.count == 0) return;
-
-            AVAssetTrack *videoTrack = tracks[0];
-            CGSize naturalSize = videoTrack.naturalSize;
-            CGAffineTransform transform = videoTrack.preferredTransform;
-
-            // Apply transform to get actual dimensions (handles rotation)
-            CGSize transformedSize = CGSizeApplyAffineTransform(naturalSize, transform);
-            int newWidth = (int)fabs(transformedSize.width);
-            int newHeight = (int)fabs(transformedSize.height);
-
-            // Update dimensions on the main thread to match KVO observation context
-            dispatch_async(dispatch_get_main_queue(), ^{
-                AVPlayerWrapper *strongSelf = weakSelf;
-                if (!strongSelf) return;
-                if (newWidth != strongSelf->_videoWidth || newHeight != strongSelf->_videoHeight) {
-                    strongSelf->_videoWidth = newWidth;
-                    strongSelf->_videoHeight = newHeight;
-                    strongSelf->_videoSizeChanged = YES;
-                    NSLog(@"[AVPlayerWrapper] Video size (async): %dx%d", newWidth, newHeight);
-                }
-            });
-        }];
-    } else {
-        // Fallback for iOS < 15: call synchronously before the item is played.
-        // This path is called from setSourceURL:/setSourceLocal: (not from the KVO
-        // callback), so it is acceptable on a background or setup context. However,
-        // if this code path is reached on the main thread it may still block briefly.
-        NSArray<AVAssetTrack *> *tracks = [asset tracksWithMediaType:AVMediaTypeVideo];
-        if (tracks.count > 0) {
-            AVAssetTrack *videoTrack = tracks[0];
-            CGSize naturalSize = videoTrack.naturalSize;
-            CGAffineTransform transform = videoTrack.preferredTransform;
-            CGSize transformedSize = CGSizeApplyAffineTransform(naturalSize, transform);
-            _videoWidth = (int)fabs(transformedSize.width);
-            _videoHeight = (int)fabs(transformedSize.height);
-            _videoSizeChanged = YES;
-            NSLog(@"[AVPlayerWrapper] Video size (sync fallback): %dx%d", _videoWidth, _videoHeight);
-        }
-    }
-}
-
 - (BOOL)setSourceURL:(NSString *)urlString {
     [self cleanup];
 
@@ -226,13 +168,8 @@
 
     NSLog(@"[AVPlayerWrapper] Loading URL: %@", urlString);
 
-    // Create an explicit AVURLAsset so we can pre-load tracks asynchronously
-    // before the KVO ReadyToPlay callback fires on the main thread.
-    AVURLAsset *asset = [AVURLAsset URLAssetWithURL:url options:nil];
-    [self preloadTracksForAsset:asset];
-
     // Create player item and player
-    _playerItem = [AVPlayerItem playerItemWithAsset:asset];
+    _playerItem = [AVPlayerItem playerItemWithURL:url];
     _player = [AVPlayer playerWithPlayerItem:_playerItem];
     _player.volume = _volumeLevel;
 
@@ -278,13 +215,8 @@
 
     NSLog(@"[AVPlayerWrapper] Loading local file: %@", filePath);
 
-    // Create an explicit AVURLAsset so we can pre-load tracks asynchronously
-    // before the KVO ReadyToPlay callback fires on the main thread.
-    AVURLAsset *asset = [AVURLAsset URLAssetWithURL:url options:nil];
-    [self preloadTracksForAsset:asset];
-
     // Create player item and player
-    _playerItem = [AVPlayerItem playerItemWithAsset:asset];
+    _playerItem = [AVPlayerItem playerItemWithURL:url];
     _player = [AVPlayer playerWithPlayerItem:_playerItem];
     _player.volume = _volumeLevel;
 
@@ -329,10 +261,13 @@
         switch (status) {
             case AVPlayerItemStatusReadyToPlay: {
                 NSLog(@"[AVPlayerWrapper] Player ready to play");
-                // Video dimensions are loaded asynchronously in preloadTracksForAsset:
-                // to avoid blocking the main thread with a synchronous XPC call.
-                // _videoWidth, _videoHeight, and _videoSizeChanged are set by that
-                // async completion handler, which dispatches back to the main thread.
+                // Video dimensions are derived from CVPixelBuffer geometry in
+                // acquireIOSurfacePtr on each frame — no track lookup needed here.
+                // Previously, [asset tracksWithMediaType:AVMediaTypeVideo] was called
+                // synchronously at this point, triggering a blocking XPC round-trip
+                // (mach_msg) on the main thread and causing ~247-second App Hangs.
+                // That call has been removed; track-based size is also unavailable for
+                // HLS streams (AVURLAsset exposes no tracks for .m3u8 playlists).
                 break;
             }
             case AVPlayerItemStatusFailed:
