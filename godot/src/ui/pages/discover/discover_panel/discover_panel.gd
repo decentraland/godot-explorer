@@ -28,7 +28,7 @@ var _content_loaded: bool = false
 var _featured_needs_reload: bool = false
 var _events_needs_reload: bool = false
 
-@onready var scroll_container: ScrollContainer = %ScrollContainer
+@onready var scroll_container: ScrollRubberContainer = %ScrollContainer
 @onready var events: VBoxContainer = %Events
 @onready var label_title: Label = %Label_Title
 @onready var label_creator: Label = %Label_Creator
@@ -94,7 +94,7 @@ func show_panel() -> void:
 
 
 func _reset_scroll() -> void:
-	scroll_container.scroll_vertical = 0
+	scroll_container.reset_position()
 	# No-op if a carousel hasn't built any cards yet (e.g. the very first show, before
 	# _async_load_content_once's start_loading() runs) — reset_position() checks for a valid child.
 	featured.scroll_to_start()

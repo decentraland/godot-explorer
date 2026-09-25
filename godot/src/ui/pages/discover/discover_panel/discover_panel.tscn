@@ -14,6 +14,7 @@
 [ext_resource type="Texture2D" uid="uid://xhm32wosqgt4" path="res://assets/ui/flag-icon.svg" id="12_dsn1l"]
 [ext_resource type="Texture2D" uid="uid://c0nnl5x8p7ykk" path="res://assets/ui/bug-icon.svg" id="13_iiydg"]
 [ext_resource type="Shader" uid="uid://hm1f1bm7ql4g" path="res://src/ui/components/molecules/button_profile/texture_rect_rounded_px.gdshader" id="13_round"]
+[ext_resource type="Script" uid="uid://c3wphp306q0w" path="res://src/ui/components/atoms/controls/custom_scroll_rubber_container/custom_scroll_rubber_container.gd" id="14_rubber"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel_bg"]
 bg_color = Color(0.20784314, 0.03137255, 0.32941177, 1)
@@ -165,12 +166,16 @@ texture_normal = ExtResource("4_xaitk")
 ignore_texture_size = true
 stretch_mode = 5
 
-[node name="ScrollContainer" type="ScrollContainer" parent="VBoxContainer" unique_id=1564994713]
+[node name="ScrollContainer" type="Container" parent="VBoxContainer" unique_id=1564994713]
 unique_name_in_owner = true
+clip_contents = true
 layout_mode = 2
 size_flags_vertical = 3
+script = ExtResource("14_rubber")
 horizontal_scroll_mode = 0
 vertical_scroll_mode = 3
+scroll_deadzone = 100
+drag = 6.0
 
 [node name="Content" type="VBoxContainer" parent="VBoxContainer/ScrollContainer" unique_id=1141795177]
 layout_mode = 2
