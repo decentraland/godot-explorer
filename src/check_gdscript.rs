@@ -63,21 +63,26 @@ fn run_headless(program: String, args: Vec<String>) -> Result<(String, ExitStatu
 /// signal, since a genuinely failing test prints `[<name>] FAIL: n case(s)` and
 /// quits with code 1 without ever printing the marker.
 fn headless_result(label: &str, log: &str, status: ExitStatus, success_marker: &str) -> Result<()> {
-    if status.success() {
-        return Ok(());
-    }
+    // The marker, not the exit status, is what says the test ran: Godot exits 0 after a
+    // script fails to parse, so trusting the status alone reports a test that never ran
+    // as a pass.
+    if log.contains(success_marker) {
+        if status.success() {
+            return Ok(());
+        }
 
-    // `code()` is `None` only when a signal killed the process, which cannot
-    // happen on Windows, so this stays false there.
-    if status.code().is_none() && log.contains(success_marker) {
-        print_message(
-            MessageType::Warning,
-            &format!(
-                "{label} passed but Godot crashed on the way out ({status}) — \
-                 treating as success (engine teardown crash, not a test failure)"
-            ),
-        );
-        return Ok(());
+        // `code()` is `None` only when a signal killed the process, which cannot
+        // happen on Windows, so this stays false there.
+        if status.code().is_none() {
+            print_message(
+                MessageType::Warning,
+                &format!(
+                    "{label} passed but Godot crashed on the way out ({status}) — \
+                     treating as success (engine teardown crash, not a test failure)"
+                ),
+            );
+            return Ok(());
+        }
     }
 
     Err(anyhow::anyhow!("{label} failed ({status})"))
@@ -127,11 +132,15 @@ pub fn check_gdscript() -> Result<()> {
     }
 }
 
-/// Runs a set of headless GDScript unit tests, each a `SceneTree` script that
-/// exits non-zero on failure. `scripts` are paths under `godot/`, given in full so
-/// tests are not confined to one directory.
+/// Runs a set of headless GDScript unit tests. `scripts` are paths under `godot/`,
+/// given in full so tests are not confined to one directory.
 ///
-/// Each script announces itself as `[<file stem>] PASS`; see [`headless_result`]
+/// A `.gd` entry is a `SceneTree` script run with `--script`. A `.tscn` entry is run
+/// as a scene instead, which is what a test needs when the code under test reaches an
+/// autoload: `--script` compiles before the autoloads exist, so those scripts fail to
+/// compile and every call against them silently becomes a no-op.
+///
+/// Each test announces itself as `[<file stem>] PASS`; see [`headless_result`]
 /// for why that marker, rather than the exit status, decides the outcome.
 fn run_script_tests(section: &str, kind: &str, scripts: &[&str]) -> Result<()> {
     print_section(section);
@@ -139,19 +148,26 @@ fn run_script_tests(section: &str, kind: &str, scripts: &[&str]) -> Result<()> {
     let godot_bin = get_godot_path();
     for script in scripts {
         let name = script.rsplit('/').next().unwrap_or(script);
-        let stem = name.strip_suffix(".gd").unwrap_or(name);
+        let stem = name
+            .strip_suffix(".gd")
+            .or_else(|| name.strip_suffix(".tscn"))
+            .unwrap_or(name);
         print_message(MessageType::Info, &format!("Running {name}..."));
 
-        let (log, status) = run_headless(
-            godot_bin.clone(),
-            vec![
-                "--headless".to_owned(),
-                "--path".to_owned(),
-                GODOT_PROJECT_FOLDER.to_owned(),
-                "--script".to_owned(),
-                format!("res://{script}"),
-            ],
-        )?;
+        let mut args = vec![
+            "--headless".to_owned(),
+            "--path".to_owned(),
+            GODOT_PROJECT_FOLDER.to_owned(),
+        ];
+        if script.ends_with(".tscn") {
+            args.push(format!("res://{script}"));
+            args.push("--quit".to_owned());
+        } else {
+            args.push("--script".to_owned());
+            args.push(format!("res://{script}"));
+        }
+
+        let (log, status) = run_headless(godot_bin.clone(), args)?;
 
         if let Err(err) = headless_result(name, &log, status, &format!("[{stem}] PASS")) {
             print_message(MessageType::Error, &format!("{name} FAILED"));
@@ -184,6 +200,14 @@ pub fn test_i18n() -> Result<()> {
     )
 }
 
+pub fn test_navigation() -> Result<()> {
+    run_script_tests(
+        "Navigation Tests",
+        "navigation",
+        &["src/test/logic/test_destination.tscn"],
+    )
+}
+
 pub fn test_asset_renderer() -> Result<()> {
     run_script_tests(
         "Asset Renderer Tests",
@@ -205,6 +229,11 @@ mod tests {
         // (child shell, expected to pass, what it stands for)
         let cases = [
             (r#"echo "[t] PASS""#, true, "clean pass"),
+            (
+                r#"echo "SCRIPT ERROR: Parse Error""#,
+                false,
+                "exited 0 but never announced the marker — the script did not run",
+            ),
             (
                 r#"echo "[t] PASS"; kill -SEGV $$"#,
                 true,
