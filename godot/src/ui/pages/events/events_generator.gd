@@ -109,7 +109,12 @@ func _async_fetch_events(url: String, limit: int = 100):
 		item_container.add_child(item)
 
 		item.set_data(event_data)
-		item.event_pressed.connect(discover.on_event_pressed)
+		# Relay through the generator's own signal so a host without a `discover` reference (e.g.
+		# the landscape DiscoverPanel) can still react to a tap; `discover`, when set, keeps
+		# routing straight to the full Discover screen's own SidePanelWrapper flow.
+		item.event_pressed.connect(item_pressed.emit)
+		if is_instance_valid(discover):
+			item.event_pressed.connect(discover.on_event_pressed)
 
 	report_loading_status.emit(CarrouselGenerator.LoadingStatus.OK_WITH_RESULTS)
 

@@ -1,5 +1,7 @@
 [gd_scene format=3 uid="uid://cqnj0gb2vybsi"]
 
+[ext_resource type="Script" uid="uid://rsrj8osixsoo" path="res://src/ui/layouts/hide_orientation.gd" id="1_yt1ih"]
+
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_badge"]
 bg_color = Color(1, 0.1764706, 0.33333334, 1)
 border_width_left = 2
@@ -17,9 +19,19 @@ custom_minimum_size = Vector2(60, 60)
 focus_mode = 0
 toggle_mode = true
 
-[node name="Badge_Container" type="PanelContainer" parent="." unique_id=829810557]
+[node name="Badge_Container" type="Control" parent="." unique_id=1237153869]
 unique_name_in_owner = true
 visible = false
+custom_minimum_size = Vector2(21, 21)
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Badge_Landscape" type="PanelContainer" parent="Badge_Container" unique_id=1113715353]
 custom_minimum_size = Vector2(21, 21)
 layout_mode = 1
 anchors_preset = 1
@@ -32,3 +44,20 @@ offset_bottom = 26.0
 grow_horizontal = 0
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_badge")
+script = ExtResource("1_yt1ih")
+hide_on_portrait = true
+
+[node name="Badge_Portrait" type="PanelContainer" parent="Badge_Container" unique_id=1555941818]
+custom_minimum_size = Vector2(21, 21)
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -34.0
+offset_top = 9.0
+offset_right = -13.0
+offset_bottom = 30.0
+grow_horizontal = 0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_badge")
+script = ExtResource("1_yt1ih")

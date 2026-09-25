@@ -73,6 +73,7 @@ var _debug_panel_from_settings: bool = false
 
 @onready var notifications_panel: PanelContainer = %NotificationsPanel
 @onready var friends_panel: PanelContainer = %FriendsPanel
+@onready var discover_panel: DiscoverPanel = %DiscoverPanel
 @onready var label_version = %Label_Version
 @onready var label_fps = %Label_FPS
 @onready var control_menu = %Control_Menu
@@ -165,6 +166,8 @@ func _ready():
 	Global.on_menu_close.connect(_on_menu_close)
 
 	Global.open_friends_panel.connect(_show_friends_panel)
+	Global.open_discover_panel.connect(_show_discover_panel)
+	discover_panel.share_requested.connect(_share_place)
 	# Settings is a fullscreen menu screen (like Backpack): the navbar button emits
 	# open_settings, the menu (Control_Menu, which lives here) shows the screen and re-emits
 	# request_debug_panel / request_pause_scenes / request_multiplayer_debug through its own
@@ -172,7 +175,7 @@ func _ready():
 	Global.open_settings.connect(_on_settings_open)
 
 	navbar.navbar_closed.connect(_close_all_panels)
-	navbar.navbar_opened.connect(_open_friends_panel)
+	navbar.navbar_opened.connect(_on_navbar_opened)
 	# Navbar owns the reveal/collapse of the side-panel surface (fade + grow on one timeline).
 	navbar.set_reveal_surface(%VBoxContainer_LeftPanels)
 	profile_container.visibility_changed.connect(_on_profile_container_visibility_changed)
@@ -201,6 +204,7 @@ func _ready():
 	# Keep the full-screen dismiss catcher in sync with what's open.
 	notifications_panel.visibility_changed.connect(_refresh_hud_dismiss)
 	friends_panel.visibility_changed.connect(_refresh_hud_dismiss)
+	discover_panel.visibility_changed.connect(_refresh_hud_dismiss)
 	chat_panel.chat.visibility_changed.connect(_refresh_hud_dismiss)
 
 	# Chat focus (open) overlays the message view: hide the emote button and joypad
@@ -1065,8 +1069,12 @@ func _update_preview_hud() -> void:
 
 
 ## True while a navbar side panel (or the dropdown) is open — the bottom-left slot hides then.
+func _any_left_panel_open() -> bool:
+	return friends_panel.visible or notifications_panel.visible or discover_panel.visible
+
+
 func _bottom_left_slot_blocked() -> bool:
-	return navbar.is_open() or friends_panel.visible or notifications_panel.visible
+	return navbar.is_open() or _any_left_panel_open()
 
 
 ## Restore the bottom-left slot: while a navbar panel is open it stays hidden; otherwise the
@@ -1224,7 +1232,8 @@ func _on_profile_container_visibility_changed() -> void:
 		capture_mouse()
 
 
-func _open_friends_panel() -> void:
+## Navbar's default panel on open (not a specific category tap) — currently Discover.
+func _on_navbar_opened() -> void:
 	# Opening the navbar overlays the HUD. Fully close the chat (not just hide it) so it
 	# reappears un-focused — notifications only, chatbar button un-toggled — when the navbar
 	# collapses. close_chat also resets the chatbar toggle (which exit_chat alone doesn't).
@@ -1234,7 +1243,7 @@ func _open_friends_panel() -> void:
 		Global.close_chat.emit()
 	emote_wheel.close()
 	Global.close_menu.emit()
-	Global.open_friends_panel.emit()
+	Global.open_discover_panel.emit()
 	emote_wheel.hide()
 	_hide_movement_controls()
 	_hide_bottom_left_hud()
@@ -1293,10 +1302,9 @@ func _on_control_menu_open_profile() -> void:
 func _on_global_open_own_profile() -> void:
 	if Global.is_orientation_portrait():
 		return
-	if friends_panel.visible:
-		friends_panel.hide_panel()
-	if notifications_panel.visible:
-		notifications_panel.hide_panel()
+	friends_panel.hide_panel()
+	notifications_panel.hide_panel()
+	discover_panel.hide_panel()
 	navbar.collapse()
 	_open_own_profile()
 
@@ -1322,16 +1330,16 @@ func _show_friends_panel() -> void:
 		return
 	joypad.hide()
 	friends_panel.show_panel_on_friends_tab()
-	if notifications_panel.visible:
-		notifications_panel.hide_panel()
+	notifications_panel.hide_panel()
+	discover_panel.hide_panel()
 	_refresh_hud_dismiss()
 	Global.explorer_release_focus()
 	if Global.is_mobile():
 		release_mouse()
 
 
-func _on_friends_panel_closed() -> void:
-	friends_panel.hide_panel()
+func _close_left_panel(panel: PanelContainer) -> void:
+	panel.hide_panel()
 	Global.explorer_grab_focus()
 	capture_mouse()
 
@@ -1351,23 +1359,30 @@ func _on_menu_closed() -> void:
 
 func _show_notifications_panel() -> void:
 	if notifications_panel.visible:
-		# Re-tapping the already-selected category collapses the navbar, like tapping outside.
 		navbar.collapse()
 		return
 	joypad.hide()
 	notifications_panel.show_panel()
-	if friends_panel.visible:
-		friends_panel.hide_panel()
+	friends_panel.hide_panel()
+	discover_panel.hide_panel()
 	_refresh_hud_dismiss()
 	Global.explorer_release_focus()
 	if Global.is_mobile():
 		release_mouse()
 
 
-func _on_notifications_panel_closed() -> void:
+func _show_discover_panel() -> void:
+	if discover_panel.visible:
+		navbar.collapse()
+		return
+	joypad.hide()
+	friends_panel.hide_panel()
 	notifications_panel.hide_panel()
-	Global.explorer_grab_focus()
-	capture_mouse()
+	discover_panel.show_panel()
+	_refresh_hud_dismiss()
+	Global.explorer_release_focus()
+	if Global.is_mobile():
+		release_mouse()
 
 
 func _on_notification_queued(notification_d: Dictionary) -> void:
@@ -1635,9 +1650,7 @@ func _update_virtual_controls_visibility() -> void:
 		virtual_joystick.show()
 		virtual_joystick.modulate.a = 0.0
 		return
-	var panel_open := (
-		friends_panel.visible or notifications_panel.visible or profile_container.visible
-	)
+	var panel_open: bool = _any_left_panel_open() or profile_container.visible
 	if not panel_open:
 		_show_joypad()
 	virtual_joystick.show()
@@ -1651,8 +1664,9 @@ func _on_backpack_open(_on_emotes := false) -> void:
 
 func _close_all_panels():
 	control_menu.async_close()
-	_on_friends_panel_closed()
-	_on_notifications_panel_closed()
+	_close_left_panel(friends_panel)
+	_close_left_panel(notifications_panel)
+	_close_left_panel(discover_panel)
 	_on_menu_closed()
 	_refresh_hud_dismiss()
 	# Restore the bottom-left slot (chat / preview toolbar) and the emote HUD hidden while the
@@ -1669,22 +1683,27 @@ func _on_discover_open():
 	_enter_menu_screen()
 
 
-# Shared cleanup when entering a fullscreen menu screen (Discover / Backpack):
-# collapse the navbar dropdown, close the side panels and hide the navbar.
+# Shared cleanup entering a fullscreen menu screen: collapse the navbar, close the side panels.
+# Doesn't hide the navbar node too — the screen already draws above it by tree order, so the
+# collapsed toggle just stays covered, with no hide/show round trip to flash it for a frame.
 func _enter_menu_screen():
 	navbar.collapse()
 	_show_joypad()
-	_on_friends_panel_closed()
-	_on_notifications_panel_closed()
+	_close_left_panel(friends_panel)
+	_close_left_panel(notifications_panel)
+	_close_left_panel(discover_panel)
 	_on_menu_closed()
 	_refresh_hud_dismiss()
-	navbar.set_manually_hidden(true)
 	release_mouse()
 
 
 func _on_menu_open():
-	_on_friends_panel_closed()
-	_on_notifications_panel_closed()
+	# Fires for ANY menu screen becoming visible, so a screen never shows with the navbar left
+	# open behind it, regardless of how it was entered (e.g. Discover's Report Bug).
+	navbar.collapse()
+	_close_left_panel(friends_panel)
+	_close_left_panel(notifications_panel)
+	_close_left_panel(discover_panel)
 	_on_menu_closed()
 	_refresh_hud_dismiss()
 	release_mouse()
@@ -1695,10 +1714,9 @@ func _on_menu_close():
 	# deferred while the menu is open so the HUD change isn't visible behind it). Previously this
 	# only ran on the next menu open, so the toggle appeared to take one exit cycle to apply.
 	apply_deferred_hide_ui()
+	# Also restores the navbar's visibility (via the orientation_changed -> navbar._on_size_changed
+	# chain); _on_menu_open already released the mouse on the way in.
 	Global.set_orientation_landscape()
-	if !navbar.visible:
-		navbar.set_manually_hidden(false)
-		release_mouse()
 
 
 func _extract_short_realm_url(full_url: String) -> String:
@@ -1773,9 +1791,7 @@ func _on_hud_dismiss_catcher_gui_input(event: InputEvent) -> void:
 ## The full-screen dismiss catcher is STOP (catches empty-area taps) only while a left
 ## panel is open or the chat is visible; IGNORE otherwise so it never blocks gameplay.
 func _refresh_hud_dismiss() -> void:
-	var open: bool = (
-		notifications_panel.visible or friends_panel.visible or chat_panel.is_chat_visible()
-	)
+	var open: bool = _any_left_panel_open() or chat_panel.is_chat_visible()
 	hud_dismiss_catcher.mouse_filter = (
 		Control.MOUSE_FILTER_STOP if open else Control.MOUSE_FILTER_IGNORE
 	)

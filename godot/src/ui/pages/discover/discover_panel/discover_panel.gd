@@ -1,0 +1,367 @@
+class_name DiscoverPanel
+extends PanelContainer
+
+## Landscape side panel opened from the navbar Discover button. Shows the current scene header
+## (title + creator + actions menu), the featured places carousel and the events carousel, plus an
+## EXPLORE MORE button that opens the full-screen Discover. Mirrors the show/hide contract of
+## NotificationsPanel / FriendsPanel so explorer.gd can dock it in %VBoxContainer_LeftPanels.
+
+signal panel_closed
+## Emitted when the user picks "Share" in the actions menu. explorer.gd shares the current scene.
+signal share_requested
+
+# Tint of the actions (⋮) button: light when idle, purple while its menu is open.
+const MENU_COLOR_IDLE := Color(0.9882353, 0.9882353, 0.9882353, 1)
+const MENU_COLOR_ACTIVE := Color(0.9098039, 0.7254902, 1, 1)
+
+@export var featured: VBoxContainer
+
+var _header_request_id: int = 0
+# Identifies the scene/world the header last refreshed for (see _current_header_key), so
+# change_parcel moving within the same scene doesn't re-hit the places API every step.
+var _last_header_key: String = ""
+# Carousels are populated on first show (not at _ready): while the panel is hidden it has no width,
+# and cards built then trim their titles to nothing and skip thumbnails permanently.
+var _content_loaded: bool = false
+# Set when that specific carousel's first (or last retried) load errored, so the next show_panel()
+# retries only that one — the other may have already loaded and must not be re-requested too.
+var _featured_needs_reload: bool = false
+var _events_needs_reload: bool = false
+
+@onready var scroll_container: ScrollRubberContainer = %ScrollContainer
+@onready var events: VBoxContainer = %Events
+@onready var label_title: Label = %Label_Title
+@onready var label_creator: Label = %Label_Creator
+@onready var by_row: HBoxContainer = label_creator.get_parent()
+@onready var button_menu: TextureButton = %Button_Menu
+@onready var menu_overlay: MarginContainer = %MenuOverlay
+@onready var menu_dropdown: PanelContainer = %MenuDropdown
+@onready var button_share: Button = %Button_Share
+@onready var button_report_content: Button = %Button_ReportContent
+@onready var button_report_bug: Button = %Button_ReportBug
+@onready var button_explore_more: Button = %Button_ExploreMore
+
+# Compiled once, reused by _is_uuid() to validate an event id before it reaches the events API URL.
+static var _uuid_regex: RegEx = null
+
+
+func _ready() -> void:
+	# Block touch/mouse from reaching the 3D camera while the panel is up.
+	mouse_filter = Control.MOUSE_FILTER_STOP
+	set_process_input(true)
+
+	button_menu.pressed.connect(_toggle_menu)
+	menu_overlay.gui_input.connect(_on_menu_overlay_gui_input)
+	button_share.pressed.connect(_on_share_pressed)
+	button_report_content.pressed.connect(_on_report_content_pressed)
+	button_report_bug.pressed.connect(_on_report_bug_pressed)
+	button_explore_more.pressed.connect(_on_explore_more_pressed)
+	# i18n-keys: DISCOVER_EXPLORE_MORE
+	_apply_explore_more_label()
+	featured.generator.item_pressed.connect(_async_on_card_jump_in)
+	events.generator.item_pressed.connect(_async_on_card_jump_in)
+	# A failed load must not leave the carousel empty for the rest of the session — flag it for
+	# _retry_failed_carrousels to retry (only that one) on the next show_panel().
+	featured.generator.report_loading_status.connect(_on_carrousel_loading_status.bind(featured))
+	events.generator.report_loading_status.connect(_on_carrousel_loading_status.bind(events))
+
+	_close_menu()
+
+	# Keep the header in sync while the panel stays open and the avatar walks into a new scene.
+	Global.change_parcel.connect(_on_change_parcel)
+
+
+func _input(event: InputEvent) -> void:
+	if not is_visible_in_tree():
+		return
+	if not event is InputEventScreenTouch:
+		return
+	var touch := event as InputEventScreenTouch
+	# Release camera focus on a touch press inside the panel so its controls (including
+	# drag-to-scroll) receive input instead of the camera (same as NotificationsPanel / FriendsPanel).
+	if touch.pressed:
+		if get_global_rect().has_point(touch.position) and Global.explorer_has_focus():
+			Global.explorer_release_focus()
+
+
+func show_panel() -> void:
+	show()
+	_close_menu()
+	_reset_scroll()
+	_async_load_content_once()
+	_retry_failed_carrousels()
+	_maybe_refresh_header()
+
+
+func _reset_scroll() -> void:
+	scroll_container.reset_position()
+	# No-op if a carousel hasn't built any cards yet (e.g. the very first show, before
+	# _async_load_content_once's start_loading() runs) — reset_position() checks for a valid child.
+	featured.scroll_to_start()
+	events.scroll_to_start()
+
+
+func _async_load_content_once() -> void:
+	# Build the carousels now that the panel is visible and has a real width (see _content_loaded).
+	if _content_loaded:
+		return
+	_content_loaded = true
+	# One frame so the panel is laid out at its real width before cards are built; otherwise
+	# thumbnails/titles can bake a zero-size layout from when the panel was still hidden.
+	await get_tree().process_frame
+	if not is_inside_tree():
+		return
+	featured.start_loading()
+	events.start_loading()
+
+
+## A carousel's request failed (offline, API down, ...): flag that specific carousel — not the
+## other one, which may have already loaded fine — to retry on the next show_panel().
+func _on_carrousel_loading_status(status: CarrouselGenerator.LoadingStatus, carrousel) -> void:
+	if status != CarrouselGenerator.LoadingStatus.ERROR:
+		return
+	if carrousel == featured:
+		_featured_needs_reload = true
+	else:
+		_events_needs_reload = true
+
+
+func _retry_failed_carrousels() -> void:
+	if _featured_needs_reload:
+		_featured_needs_reload = false
+		featured.reload()
+	if _events_needs_reload:
+		_events_needs_reload = false
+		events.reload()
+
+
+# --- Carousel cards ---
+
+
+## A Featured/Events card was tapped: collapse the navbar (this panel closes with it) and show
+## the same jump-in confirmation modal used elsewhere in the app (deep links, chat links, ...).
+## A bare event id String (place_item.gd falls back to it when it wasn't given full event data)
+## is resolved to the full event first, same as menu.gd's deep-link handler.
+func _async_on_card_jump_in(data) -> void:
+	if data is String:
+		# Validate the id shape before putting it in a URL — a stray "../" would walk the events
+		# API path (same guard menu.gd uses on this same endpoint).
+		if not _is_uuid(data):
+			push_warning("DiscoverPanel: event card has no valid event id: " + data)
+			return
+		data = await _async_fetch_event_by_id(data)
+		if data == null:
+			return
+	if not data is Dictionary:
+		return
+	var explorer = Global.get_explorer()
+	if is_instance_valid(explorer):
+		explorer.navbar.collapse()
+	if PlacesHelper.is_world(data):
+		var realm: String = PlacesHelper.get_position_and_realm(data)[1]
+		Global.modal_manager.async_show_world_modal(realm)
+	else:
+		Global.modal_manager.async_show_teleport_modal(PlacesHelper.parse_position(data))
+
+
+func _async_fetch_event_by_id(event_id: String) -> Variant:
+	var url := "https://events.decentraland.org/api/events/" + event_id
+	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_GET, "")
+	if response is PromiseError:
+		# An unreachable/offline events API is an expected, recoverable condition here, not an
+		# error worth spending Sentry's quota on.
+		push_warning("DiscoverPanel: failed to fetch event data: " + str(response.get_error()))
+		return null
+	var json: Dictionary = response.get_string_response_as_json()
+	if not json.has("data"):
+		push_warning("DiscoverPanel: invalid event response format")
+		return null
+	return json["data"]
+
+
+func _is_uuid(value: String) -> bool:
+	if _uuid_regex == null:
+		_uuid_regex = RegEx.new()
+		_uuid_regex.compile(
+			"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+		)
+	return _uuid_regex.search(value) != null
+
+
+# The EXPLORE MORE label is shouted per the design; DISCOVER_EXPLORE_MORE is shared with the FTUE
+# (lower-case there), so we upper-case only this instance from code instead of in the catalogue.
+func _apply_explore_more_label() -> void:
+	button_explore_more.text = tr("DISCOVER_EXPLORE_MORE").to_upper()
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_TRANSLATION_CHANGED and is_instance_valid(button_explore_more):
+		_apply_explore_more_label()
+
+
+func hide_panel() -> void:
+	_close_menu()
+	hide()
+	panel_closed.emit()
+
+
+func _on_change_parcel(_new_parcel: Vector2i) -> void:
+	if is_visible_in_tree():
+		_maybe_refresh_header()
+
+
+## Skips the places-API round trip when nothing has actually changed since the last successful
+## refresh — used both on open (show_panel) and while open (change_parcel walking a scene).
+func _maybe_refresh_header() -> void:
+	if _current_header_key() == _last_header_key:
+		return
+	_async_refresh_header()
+
+
+## Identifies "the place the header is showing" without hitting the network: a Genesis City scene
+## by its parcel scene id, a world by its realm name. Used to skip redundant header refreshes.
+func _current_header_key() -> String:
+	if Realm.is_genesis_city(Global.realm.realm_url):
+		return "genesis:%d" % Global.scene_runner.get_current_parcel_scene_id()
+	return "world:%s" % Global.realm.realm_name
+
+
+# --- Header (current scene) ---
+
+
+func _async_refresh_header() -> void:
+	# A place lookup can outlive a fast scene change; only the newest request may write the labels.
+	_header_request_id += 1
+	var request_id := _header_request_id
+
+	var scene_title := _current_scene_title()
+	label_title.text = scene_title
+	label_creator.text = ""
+	by_row.hide()
+
+	var result
+	if Realm.is_genesis_city(Global.realm.realm_url):
+		var pos: Vector2i = Global.scene_fetcher.current_position
+		if pos == SceneFetcher.INVALID_PARCEL:
+			return
+		result = await PlacesHelper.async_get_by_position(pos)
+	else:
+		# Worlds don't share Genesis City's coordinate grid — (0,0) there is not Genesis Plaza.
+		# Look the place up by realm name instead, same as places_generator.gd's last-places list.
+		result = await PlacesHelper.async_get_by_names(Global.realm.realm_name)
+
+	if request_id != _header_request_id or not is_visible_in_tree():
+		return
+	if result is PromiseError:
+		return
+
+	var json: Dictionary = result.get_string_response_as_json()
+	var data: Array = json.get("data", [])
+	if data.is_empty():
+		return
+
+	var place: Dictionary = data[0]
+	# The places API can return `title`/`contact_name` as JSON null or some other unexpected type;
+	# Dictionary.get returns that value (not the default) when the key exists, and Label.text
+	# expects a String — so guard both before use.
+	var title = place.get("title", scene_title)
+	if title == null or not title is String:
+		title = scene_title
+	if not title.is_empty():
+		label_title.text = title
+	var creator = place.get("contact_name", "")
+	if not creator is String:
+		creator = ""
+	label_creator.text = creator
+	by_row.visible = not label_creator.text.is_empty()
+	# Only remember "refreshed for this scene" once we actually have real data — a failed fetch
+	# must not block a retry the next time this same scene/world comes up.
+	_last_header_key = _current_header_key()
+
+
+func _current_scene_title() -> String:
+	var scene = Global.scene_fetcher.get_current_scene_data()
+	if scene != null and scene.scene_entity_definition != null:
+		return scene.scene_entity_definition.get_title()
+	return ""
+
+
+# --- Actions menu (⋮) ---
+
+
+func _toggle_menu() -> void:
+	if menu_dropdown.visible:
+		_close_menu()
+	else:
+		_open_menu()
+
+
+func _open_menu() -> void:
+	menu_dropdown.show()
+	# While open the overlay swallows taps so a tap outside the dropdown closes it.
+	menu_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	button_menu.modulate = MENU_COLOR_ACTIVE
+
+
+func _close_menu() -> void:
+	menu_dropdown.hide()
+	menu_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	button_menu.modulate = MENU_COLOR_IDLE
+
+
+func _on_menu_overlay_gui_input(event: InputEvent) -> void:
+	# The overlay only receives events in the area NOT covered by the dropdown, so any press here
+	# is a tap outside the menu → dismiss it.
+	if event is InputEventScreenTouch and event.pressed:
+		_close_menu()
+	elif event is InputEventMouseButton and event.pressed:
+		_close_menu()
+
+
+func _on_share_pressed() -> void:
+	_close_menu()
+	share_requested.emit()
+
+
+func _on_report_content_pressed() -> void:
+	_close_menu()
+	ReportContentHelper.open_form()
+
+
+func _on_report_bug_pressed() -> void:
+	_close_menu()
+	# Same entry point as tapping Discover / EXPLORE MORE: opens the full-screen (portrait) Discover
+	# behind the modal — existing wiring already collapses the navbar/this panel and forces portrait,
+	# so there's nothing extra to do here before showing the modal on top.
+	Global.open_discover.emit()
+	_async_open_bug_report()
+
+
+func _async_open_bug_report() -> void:
+	# Same flow as Settings' Report Bug: the screenshot was captured when the panel opened.
+	var modal = await Global.modal_manager.async_show_bug_report_modal(
+		BugReportCapture.latest_jpeg()
+	)
+	if not is_instance_valid(modal):
+		return
+	modal.submitted.connect(_async_on_bug_report_submitted)
+	modal.failed.connect(_on_bug_report_failed)
+
+
+func _async_on_bug_report_submitted(_ticket_id: String) -> void:
+	await Global.modal_manager.async_show_bug_report_success_modal()
+
+
+func _on_bug_report_failed(message: String) -> void:
+	push_warning("Bug report failed: %s" % message)
+	NotificationsManager.show_system_toast(
+		tr("TOAST_BUG_REPORT_FAILED_TITLE"),
+		tr("COMMON_SOMETHING_WENT_WRONG_RETRY"),
+		"system",
+		"alert"
+	)
+
+
+func _on_explore_more_pressed() -> void:
+	_close_menu()
+	Global.open_discover.emit()

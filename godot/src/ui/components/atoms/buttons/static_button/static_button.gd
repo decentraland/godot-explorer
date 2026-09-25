@@ -4,7 +4,7 @@ extends TextureButton
 var _unread_count: int = 0
 var _is_panel_open: bool = false
 
-@onready var badge_container: PanelContainer = %Badge_Container
+@onready var badge_container: Control = %Badge_Container
 
 
 func _ready() -> void:
