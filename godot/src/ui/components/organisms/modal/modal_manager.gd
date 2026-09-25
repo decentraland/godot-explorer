@@ -82,6 +82,13 @@ static var private_world_title := TranslationKey.new("MODAL_PRIVATE_WORLD_TITLE"
 static var private_world_body := TranslationKey.new("MODAL_PRIVATE_WORLD_BODY")
 static var private_world_primary := TranslationKey.new("MODAL_PRIVATE_WORLD_PRIMARY")
 
+static var invalid_destination_title := TranslationKey.new("MODAL_INVALID_DESTINATION_TITLE")
+static var invalid_destination_body := TranslationKey.new("MODAL_INVALID_DESTINATION_BODY")
+static var invalid_destination_primary := TranslationKey.new("MODAL_INVALID_DESTINATION_PRIMARY")
+
+static var preview_unreachable_title := TranslationKey.new("MODAL_PREVIEW_UNREACHABLE_TITLE")
+static var preview_unreachable_body := TranslationKey.new("MODAL_PREVIEW_UNREACHABLE_BODY")
+
 static var ban_kicked_title := TranslationKey.new("MODAL_BAN_KICKED_TITLE")
 static var ban_kicked_body := TranslationKey.new("MODAL_BAN_KICKED_BODY")
 static var ban_kicked_primary := TranslationKey.new("MODAL_BAN_KICKED_PRIMARY")
@@ -455,27 +462,51 @@ func async_show_low_memory_warning_modal(
 		Global.metrics.flush.call_deferred()
 
 
-## Shows a ban pre-check modal (when trying to enter a scene the user is banned from)
-func async_show_ban_pre_check_modal() -> void:
-	_force_hide_loading_screen()
-
+## The shape most modals in this file already are: blocker, icon, title, body, one button
+## that does something and closes. `title_values` formats the title instead of handing the
+## node the key -- the placeholder lives in the catalogue value, so formatting the key
+## itself produces a broken title.
+func _async_show_simple_modal(
+	title: TranslationKey,
+	body: TranslationKey,
+	primary: TranslationKey,
+	icon: Texture2D,
+	on_primary: Callable,
+	title_values: Dictionary = {}
+) -> bool:
 	if not is_instance_valid(current_modal):
 		if not await _async_create_modal():
-			return
-		if not NodeGuard.is_alive(current_modal, "ModalManager.async_show_ban_pre_check_modal"):
-			return
+			return false
+		if not NodeGuard.is_alive(current_modal, "ModalManager._async_show_simple_modal"):
+			return false
 
 	current_modal.blocker = true
-	current_modal.set_title(ban_pre_check_title)
-	current_modal.set_body(ban_pre_check_body)
-	current_modal.set_primary_button_text(ban_pre_check_primary)
-	current_modal.show_icon(Modal.MODAL_BAN_ICON)
+	if title_values.is_empty():
+		current_modal.set_title(title)
+	else:
+		current_modal.set_title_text(title.format(title_values))
+	current_modal.set_body(body)
+	current_modal.set_primary_button_text(primary)
+	current_modal.show_icon(icon)
 	current_modal.hide_url()
 	current_modal.button_secondary.hide()
 	current_modal.show()
 
 	_disconnect_button_signals()
-	current_modal.button_primary.pressed.connect(_on_ban_pre_check_go_to_discover)
+	current_modal.button_primary.pressed.connect(on_primary)
+	return true
+
+
+## Shows a ban pre-check modal (when trying to enter a scene the user is banned from)
+func async_show_ban_pre_check_modal() -> void:
+	_force_hide_loading_screen()
+	await _async_show_simple_modal(
+		ban_pre_check_title,
+		ban_pre_check_body,
+		ban_pre_check_primary,
+		Modal.MODAL_BAN_ICON,
+		_on_ban_pre_check_go_to_discover
+	)
 
 
 ## Shows the private-world modal (#1725): the target world restricts access to an
@@ -483,28 +514,36 @@ func async_show_ban_pre_check_modal() -> void:
 ## @param world_name: The world being refused, e.g. "myworld.dcl.eth"
 func async_show_private_world_modal(world_name: String) -> void:
 	_force_hide_loading_screen()
-
-	if not is_instance_valid(current_modal):
-		if not await _async_create_modal():
-			return
-		if not NodeGuard.is_alive(current_modal, "ModalManager.async_show_private_world_modal"):
-			return
-
-	current_modal.blocker = true
-	# tr() first: private_world_title is the KEY, which has no %s — the placeholder lives in
-	# the catalogue value ("%s is private"). Formatting the key produced a broken title.
-	current_modal.set_title_text(
-		private_world_title.format({"world": world_name.trim_suffix(".dcl.eth")})
+	await _async_show_simple_modal(
+		private_world_title,
+		private_world_body,
+		private_world_primary,
+		Modal.MODAL_BLOCK_ICON,
+		close_current_modal,
+		{"world": world_name.trim_suffix(".dcl.eth")}
 	)
-	current_modal.set_body(private_world_body)
-	current_modal.set_primary_button_text(private_world_primary)
-	current_modal.show_icon(Modal.MODAL_BLOCK_ICON)
-	current_modal.hide_url()
-	current_modal.button_secondary.hide()
-	current_modal.show()
 
-	_disconnect_button_signals()
-	current_modal.button_primary.pressed.connect(close_current_modal)
+
+## The single "Place not found" modal every resolve failure lands on (#2937): coordinates
+## out of bounds, an empty parcel, a world that does not exist, a fetch that failed. The
+## reason travels in analytics, not in the copy -- except an unreachable preview server,
+## which needs its own instructions to be of any use (#2684).
+func async_show_invalid_destination_modal(failure: Destination.Failure) -> void:
+	_force_hide_loading_screen()
+	var is_preview := failure == Destination.Failure.PREVIEW_UNREACHABLE
+	await _async_show_simple_modal(
+		preview_unreachable_title if is_preview else invalid_destination_title,
+		preview_unreachable_body if is_preview else invalid_destination_body,
+		invalid_destination_primary,
+		Modal.MODAL_ALERT_ICON,
+		close_current_modal
+	)
+
+	if Global.metrics != null:
+		Global.metrics.track_screen_viewed(
+			"INVALID_DESTINATION_MODAL_SHOW",
+			JSON.stringify({"failure_reason": Destination.failure_name(failure)})
+		)
 
 
 ## Shows a ban kicked modal (when kicked from a scene in real-time)
@@ -513,23 +552,13 @@ func async_show_ban_kicked_modal() -> void:
 	if _suppress_ban_kicked:
 		_suppress_ban_kicked = false
 		return
-	if not is_instance_valid(current_modal):
-		if not await _async_create_modal():
-			return
-		if not NodeGuard.is_alive(current_modal, "ModalManager.async_show_ban_kicked_modal"):
-			return
-
-	current_modal.blocker = true
-	current_modal.set_title(ban_kicked_title)
-	current_modal.set_body(ban_kicked_body)
-	current_modal.set_primary_button_text(ban_kicked_primary)
-	current_modal.show_icon(Modal.MODAL_BAN_ICON)
-	current_modal.hide_url()
-	current_modal.button_secondary.hide()
-	current_modal.show()
-
-	_disconnect_button_signals()
-	current_modal.button_primary.pressed.connect(_on_ban_go_to_discover)
+	await _async_show_simple_modal(
+		ban_kicked_title,
+		ban_kicked_body,
+		ban_kicked_primary,
+		Modal.MODAL_BAN_ICON,
+		_on_ban_go_to_discover
+	)
 
 
 ## Shows the modal for a DuplicateIdentity disconnect (another session signed in with same account).
@@ -1186,7 +1215,7 @@ func _on_external_link_primary(url: String) -> void:
 
 func _on_scene_timeout_primary() -> void:
 	Global.metrics.track_click_button("reload", "LOADING", "")
-	Global.realm.async_set_realm(Global.realm.get_realm_string())
+	Navigator.async_go(Destination.reload_current(), "on_reload")
 	close_current_modal()
 
 
@@ -1215,19 +1244,19 @@ func _on_teleport_primary(location: Vector2i, realm: String) -> void:
 
 
 func _on_change_realm_primary(realm_name: String) -> void:
-	Global.realm.async_set_realm(realm_name)
+	Navigator.async_go(Destination.from_input(realm_name), "on_changerealm")
 	close_travel_modal()
 
 
-# teleportTo with a realm and no coordinates: async_join_world changes realm and lands the
-# player on its spawn point (Realm.async_set_realm(realm, true)).
+# teleportTo with a realm and no coordinates: async_join_world resolves the world and
+# lands the player on its spawn point, since the destination names no parcel.
 func _on_realm_teleport_primary(realm_name: String) -> void:
 	Global.async_join_world(realm_name)
 	close_travel_modal()
 
 
 func _on_scene_crash_reload(_entity_id: String) -> void:
-	Global.realm.async_set_realm(Global.realm.get_realm_string())
+	Navigator.async_go(Destination.reload_current(), "on_reload")
 	close_current_modal()
 
 
