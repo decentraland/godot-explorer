@@ -37,13 +37,7 @@ func submit_message(message: String) -> void:
 		if (command_str == "/go" or command_str == "/goto") and params.size() > 1:
 			var arg_string = " ".join(params.slice(1)).strip_edges()
 			if _is_coordinate_string(arg_string):
-				var dest_vector = _parse_coordinates(arg_string)
-				Global.on_chat_message.emit(
-					"system",
-					tr("CHAT_SYSTEM_TELEPORTED").format({"location": str(dest_vector)}),
-					Time.get_unix_time_from_system()
-				)
-				_explorer._on_control_menu_jump_to(dest_vector)
+				_async_goto_parcel(_parse_coordinates(arg_string))
 			elif Realm.is_dcl_ens(arg_string) or not arg_string.contains("."):
 				var world_realm = (
 					arg_string if arg_string.ends_with(".dcl.eth") else arg_string + ".dcl.eth"
@@ -63,7 +57,7 @@ func submit_message(message: String) -> void:
 		elif command_str == "/clear":
 			Global.realm.async_clear_realm()
 		elif command_str == "/reload":
-			Global.realm.async_set_realm(Global.realm.get_realm_string())
+			Navigator.async_go(Destination.reload_current(), "on_reload")
 		elif command_str in DEBUG_ONLY_COMMANDS and DclGlobal.is_production():
 			_emit_system_message("🔴 Debug commands are disabled in production builds")
 		elif command_str == "/scenecrash":
@@ -88,6 +82,18 @@ func submit_message(message: String) -> void:
 		Global.comms.send_chat(message)
 		Global.on_chat_message.emit(
 			Global.player_identity.get_address_str(), message, Time.get_unix_time_from_system()
+		)
+
+
+## Announces the teleport once it happened, not before. The destination is proved first
+## now, so claiming success up front put "Teleported to (123,123)" in the chat directly
+## above the Place not found modal that refused it.
+func _async_goto_parcel(parcel: Vector2i) -> void:
+	if await Navigator.async_go(Destination.from_input("", parcel), "on_teleport"):
+		Global.on_chat_message.emit(
+			"system",
+			tr("CHAT_SYSTEM_TELEPORTED").format({"location": str(parcel)}),
+			Time.get_unix_time_from_system()
 		)
 
 
@@ -153,14 +159,9 @@ func _async_try_change_realm(realm_string: String, when: String) -> void:
 		tr("CHAT_SYSTEM_CHANGING_REALM").format({"realm": realm_string}),
 		Time.get_unix_time_from_system()
 	)
-	Global.get_config().last_realm_joined = realm_string
-	_explorer.loading_ui.enable_loading_screen(realm_string, when)
-	var success = await Global.realm.async_set_realm(realm_string, true)
-	if not success:
-		# The realm change may have replaced the explorer this object was built with.
-		var explorer = Global.get_explorer()
-		if explorer != null:
-			explorer.loading_ui.hide_loading_screen("Failed")
+	# last_realm_joined is no longer written up front: it is set on success, so a realm
+	# that failed to resolve is not what the next cold start boots into.
+	await Navigator.async_go(Destination.from_input(realm_string), when)
 
 
 func _emit_pos_command_message() -> void:
