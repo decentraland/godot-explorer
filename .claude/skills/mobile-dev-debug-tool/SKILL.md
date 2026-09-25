@@ -72,8 +72,8 @@ hint it prints (usually: relaunch/redeploy the app).
 ## Wiring
 
 - Command backend: `DebugWs` autoload → `godot/src/tool/debug_server/debug_ws_server.gd`
-  (`run_command`) + `debug_collector.gd` (data assembly). No longer a server —
-  purely the shared inspection/eval backend + keyboard-focus tracker.
+  (`run_command`) + `debug_collector.gd` (data assembly). Not a server — the
+  shared inspection/eval backend + keyboard-focus tracker.
 - Transport: `godot/src/tool/scene_inspector_bridge.gd` (drives CMD ↔ ACK and the
   streams) + `godot/src/logic/scene_inspector_websocket.gd`; Rust side in
   `lib/src/tools/scene_inspector/`. The hub is the `debug-hub` xtask
@@ -279,10 +279,8 @@ $H/unified.sh avatars                                          # avatars present
 $H/unified.sh avatar '{"by":"local"}'                          # your avatar (position, animations)
 $H/unified.sh app_ui '{"filters":{"depth":2}}'                 # the explorer's own UI tree
 ```
-Component histogram across the scene (via eval):
-`$H/unified.sh eval` with a snippet that loops `debug_list_entities` ×
-`debug_get_entity_component_names` and tallies — see "Tower of Madness" example
-in the session notes (Transform/TextShape/GltfContainer counts).
+Component histogram across the scene (via eval): loop `debug_list_entities` ×
+`debug_get_entity_component_names` in a `$H/unified.sh eval` snippet and tally.
 
 ### 2. See logs
 ```bash
@@ -308,7 +306,7 @@ on_update(_end), scene_shutdown. Silence the per-tick on_update firehose with th
 ### 4. Instrument a feature you're building (add logs + verify)
 The dev loop while working ON this branch:
 1. Add a log at debug level for your feature:
-   - Rust: `tracing::debug!("[myfeat] x={:?}", x);`  — use `debug!`, NOT `info!` (info ships to mobile/Sentry-adjacent paths).
+   - Rust: `tracing::debug!("[myfeat] x={:?}", x);` — use `debug!`, not `info!`: mobile's default filter is `info`, so `info!` prints in every mobile session.
    - GDScript: `print("[myfeat] ...")`  — captured as source `"godot"`.
 2. Run with debug logging on for your module:
    ```bash

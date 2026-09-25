@@ -4,7 +4,7 @@
 >
 > **Companion files.** Read `CLAUDE.md` (architecture, commands, tooling) before this. This file focuses on *what matters during review*, not how to build.
 >
-> **You are Claude Opus 4.7.** Be decisive. Front-load blockers. Cite file paths and PR numbers. Skip hedging when the codebase has a clear precedent — those are listed below.
+> Be decisive. Front-load blockers. Cite file paths and PR numbers. Skip hedging when the codebase has a clear precedent — those are listed below.
 
 ---
 
@@ -211,7 +211,7 @@ The simplest cases are just the three lines the team already thinks in — no se
 - [ ] **Expected:** the emote plays on the avatar and its SFX fires; no stutter or freeze.
 ```
 
-Anti-patterns that make a case un-executable — a reviewer should ask the author to fix these (see Tier 3 item 17):
+Anti-patterns that make a case un-executable — a reviewer should ask the author to fix these (see Tier 3 item 18):
 - **"Tested locally, works."** — no steps, no expected result, not reproducible.
 - **Steps that don't start from the app** — begin at "Open the app", then the in-app actions, so QA never has to guess the entry point.
 - **Restating the obvious** — "download the APK / install the TestFlight build / use a phone running vX". Distribution and device are a given; don't spend steps on them.
@@ -278,7 +278,7 @@ What to check on an RC: every commit in `origin/release..head` is accounted for 
 These come up in almost every review in the history. Knowing them saves you from re-deriving them.
 
 ### `call_deferred` for autoload signal wiring
-Autoloads ready in a fixed order (`Global` first). A new autoload that connects to `Global.modal_manager.something` in `_ready()` will crash if it readies before `modal_manager` is built. Fix is `call_deferred("_connect_signals")` — see #1874.
+Autoloads ready in a fixed order (`Global` first). A new autoload that connects to `Global.modal_manager.something` in `_ready()` will crash if it readies before `modal_manager` is built. Fix is `_connect_signals.call_deferred()` — see #1874.
 
 ### `mouse_filter` is per-node; `PASS` does not fan out to siblings
 If an overlay (chat, notifications, modal) blocks underlying scene UI, the culprit is usually a `Control` with `MOUSE_FILTER_STOP` that's in the hit-test tree even when empty. Fixes: collapse its size to 0 when empty, set `MOUSE_FILTER_IGNORE`, or flip it dynamically based on actual content size (#1875). **Pure layout containers (`HBoxContainer`, `VBoxContainer` with no own visuals) should be `MOUSE_FILTER_IGNORE`.**
@@ -350,7 +350,7 @@ Tone **not** to match:
 - Don't ask for documentation beyond what the PR body / existing docs already provide. Code comments are kept sparse in this repo on purpose.
 
 Length:
-- Small fix PR (1 file, <30 lines): 3–6 sentences is plenty.
+- Small fix PR (1 file, <30 lines): a short paragraph, or a one-line approval when nothing is wrong.
 - Feature PR (200+ lines, multiple dirs): full structured review with findings sections is expected.
 - Refactors / cross-cutting changes: open with the architectural read before individual findings.
 
@@ -388,7 +388,7 @@ A reviewer should `grep` / eyeball the diff for these before reading logic:
 Match the size of the review to the size of the change. Bug-fix PRs like #1874 (9 lines added) are merged with a one-line `APPROVED` — a 500-word review on a 9-line diff is *noise*, not signal. Conversely, 300+-line feature PRs (#1830, #1841, #1849, #1878) get structured reviews because the surface area earns them.
 
 If you're unsure whether the PR is "small fix" or "feature":
-- `additions + deletions < 50` and one file → small fix; keep review under 6 sentences unless you find a blocker.
+- `additions + deletions < 50` and one file → small fix; keep the review short unless you find a blocker.
 - Multiple dirs or >200 lines → feature; give the full treatment.
 
 ---
