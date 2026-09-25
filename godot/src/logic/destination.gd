@@ -61,12 +61,13 @@ var world_scenes: Dictionary = {}
 var credential: String = ""
 
 ## What the loading screen can show before the load even starts (#2698), taken from the
-## scene metadata the existence check already paid for. Empty when the destination has no
-## single scene of its own to describe -- a world, a custom realm. The Places lookup still
-## runs and upgrades the card when it lands; this is what removes the blank screen in the
-## meantime.
+## scene metadata the existence check already paid for. Filled whenever the destination
+## names the parcel it lands on, and for a world from its spawn scene. Empty is a normal
+## READY -- an unlisted scene describes nothing. The Places lookup still runs and upgrades
+## the card when it lands; this is what removes the blank screen in the meantime.
 var scene_id: String = ""
 var scene_title: String = ""
+var scene_creator: String = ""
 var scene_image_url: String = ""
 var asset_count: int = 0
 
@@ -170,6 +171,7 @@ func resolved_ready(
 	dest.world_scenes = scenes
 	dest.scene_id = str(scene.get("id", ""))
 	dest.scene_title = str(scene.get("title", ""))
+	dest.scene_creator = str(scene.get("creator", ""))
 	dest.scene_image_url = str(scene.get("image_url", ""))
 	dest.asset_count = int(scene.get("asset_count", 0))
 	dest.realm_url = Realm.normalize_realm_url(realm_string)

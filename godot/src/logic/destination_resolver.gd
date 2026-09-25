@@ -168,12 +168,18 @@ static func access_state(permissions_json: Dictionary, address: String) -> Desti
 			return Destination.State.READY
 
 
-## Whether the target parcel must be confirmed to hold a scene. Realm-level checks
-## (/about, /permissions) always run; this governs the parcel only. A restoration is
-## never checked (see Destination.is_intent), and with no parcel asked for there is
-## nothing to confirm.
+## Whether a parcel that holds no scene must be REFUSED. Locating is a separate job
+## (see has_target): every destination that names a parcel is looked up, so the loading
+## screen can describe it, but only an intent is gated on the answer. A restoration is
+## never refused (see Destination.is_intent) -- an empty parcel lands on grass.
 static func should_check_parcel(dest: Destination) -> bool:
-	return dest.is_intent and dest.target_parcel != Destination.UNSPECIFIED
+	return dest.is_intent and has_target(dest)
+
+
+## Whether there is a parcel to look up at all. A READY with no scene metadata is a
+## normal state, not a failure, so this only decides whether the lookup happens.
+static func has_target(dest: Destination) -> bool:
+	return dest.target_parcel != Destination.UNSPECIFIED
 
 
 ## The world's comms handshake endpoint, taken from the /about already in hand. The
@@ -227,7 +233,15 @@ static func is_rate_limited(error_message: String) -> bool:
 ## response the existence check already read, so the loading screen costs no request of
 ## its own (#2698). Returns zeros when the payload describes nothing showable.
 static func scene_info(entity: Dictionary, content_base_url: String) -> Dictionary:
-	var display = entity.get("metadata", {}).get("display", {})
+	return _scene_info(entity, content_base_url + "contents/")
+
+
+## Same, for a base that already addresses content files -- a scene urn's baseUrl.
+static func _scene_info(entity: Dictionary, contents_base_url: String) -> Dictionary:
+	var metadata = entity.get("metadata", {})
+	if not metadata is Dictionary:
+		metadata = {}
+	var display = metadata.get("display", {})
 	if not display is Dictionary:
 		display = {}
 	var content = entity.get("content", [])
@@ -239,18 +253,32 @@ static func scene_info(entity: Dictionary, content_base_url: String) -> Dictiona
 	if not thumbnail.is_empty():
 		for file in content:
 			if file is Dictionary and str(file.get("file", "")) == thumbnail:
-				image_url = content_base_url + "contents/" + str(file.get("hash", ""))
+				image_url = contents_base_url + str(file.get("hash", ""))
 				break
 
 	return {
 		"id": str(entity.get("id", "")),
 		"title": str(display.get("title", "")),
+		"creator": _creator_of(metadata),
 		"image_url": image_url,
 		"asset_count": content.size(),
 	}
 
 
-## Same, from the typed definition the coordinator hands back on a cache hit.
+## Who the scene credits, from scene.json. `contact.name` is what the Places catalogue
+## reports as contact_name; `owner` is the fallback when a deploy left contact empty.
+static func _creator_of(metadata: Dictionary) -> String:
+	var contact = metadata.get("contact", {})
+	if contact is Dictionary:
+		var name := str(contact.get("name", ""))
+		if not name.is_empty():
+			return name
+	return str(metadata.get("owner", ""))
+
+
+## Same, from the typed definition the coordinator hands back on a cache hit. The
+## definition does not parse scene.json's `contact`, so the creator still comes from
+## Places on this path.
 static func scene_info_from_definition(definition: DclSceneEntityDefinition) -> Dictionary:
 	if definition == null:
 		return {}
@@ -296,35 +324,38 @@ static func parse_bounds(about: Dictionary) -> Array:
 # ---- Resolution ------------------------------------------------------------------
 
 
+## Two lookup strategies, not four kinds: a catalyst is asked for the scene at a pointer,
+## a world and a preview name their scenes themselves.
 static func _async_resolve_kind(dest: Destination) -> Destination:
 	match dest.kind:
-		Destination.Kind.GENESIS:
-			return await _async_resolve_genesis(dest)
 		Destination.Kind.WORLD:
 			return await _async_resolve_world(dest)
 		Destination.Kind.PREVIEW:
 			return await _async_resolve_preview(dest)
 		_:
-			return await _async_resolve_custom(dest)
+			return await _async_resolve_catalyst(dest)
 
 
-static func _async_resolve_genesis(dest: Destination) -> Destination:
+## GENESIS and CUSTOM_REALM are one lookup: both are catalysts that answer
+## /entities/active for a pointer. They differ only in the verdict -- Genesis City's
+## bounds are known and gated, a custom catalyst's are whatever it advertises.
+static func _async_resolve_catalyst(dest: Destination) -> Destination:
 	var about = await _async_about(dest)
 	if about == null or not about_is_usable(about):
 		return dest.resolved_failed(Destination.Failure.FETCH_FAILED)
-
-	if not should_check_parcel(dest):
+	if not has_target(dest):
 		return dest.resolved_ready(about)
 
 	var content_url := Realm.ensure_ends_with_slash(about.get("content").get("publicUrl"))
 	var found := await _async_scene_at(content_url, dest.target_parcel)
-	var bounds := parse_bounds(about)
-	var reason := genesis_failure(
-		dest.target_parcel, bounds[0], bounds[1], str(found.get("id", ""))
-	)
-	if reason != Destination.Failure.NONE:
-		return dest.resolved_failed(reason)
-	return dest.resolved_ready(about, scene_info(found, content_url))
+	if dest.kind == Destination.Kind.GENESIS and should_check_parcel(dest):
+		var bounds := parse_bounds(about)
+		var reason := genesis_failure(
+			dest.target_parcel, bounds[0], bounds[1], str(found.get("id", ""))
+		)
+		if reason != Destination.Failure.NONE:
+			return dest.resolved_failed(reason)
+	return dest.resolved_ready(about, found)
 
 
 static func _async_resolve_world(dest: Destination) -> Destination:
@@ -344,7 +375,11 @@ static func _async_resolve_world(dest: Destination) -> Destination:
 		Destination.State.NEEDS_PASSWORD:
 			if dest.credential.is_empty():
 				return dest.resolved_needs_password()
-			return await _async_verify_credential(dest, about)
+			# A proven secret is not the end of the resolve: the world still has to be
+			# described, or entering one costs the loading screen its scene (#2698).
+			var refused = await _async_verify_credential(dest, about)
+			if refused != null:
+				return refused
 		Destination.State.NOT_ALLOWED:
 			return dest.resolved_not_allowed()
 
@@ -356,35 +391,29 @@ static func _async_resolve_world(dest: Destination) -> Destination:
 	# Genesis peer, which is not where a world's thumbnail lives.
 	var worlds_base := DclUrls.worlds_content_server().replace("/world/", "/")
 
-	if not should_check_parcel(dest):
-		# A join lands on the spawn point, which Realm takes from the last scene listed.
-		return dest.resolved_ready(about, scene_info(_last_entity(listing), worlds_base), listing)
-
-	# A teleport that names a parcel has to land on one the world actually has, or the
-	# player walks into empty space inside a world that loaded fine. An unreadable listing
-	# lets it through: a world that will not say where its scenes are should not block
-	# entry to itself.
-	var index := world_parcel_index(listing)
-	if index.is_empty():
-		return dest.resolved_ready(about, {}, listing)
-	var key := "%d,%d" % [dest.target_parcel.x, dest.target_parcel.y]
-	if not index.has(key):
-		return dest.resolved_failed(Destination.Failure.PARCEL_EMPTY)
-	return dest.resolved_ready(about, scene_info(index[key], worlds_base), listing)
+	# Where the player will land: the scene at the parcel asked for, or -- with no parcel,
+	# or one the listing does not place -- the spawn point, which Realm takes from the
+	# last scene listed.
+	var entity := _last_entity(listing)
+	if has_target(dest):
+		var index := world_parcel_index(listing)
+		var key := "%d,%d" % [dest.target_parcel.x, dest.target_parcel.y]
+		if index.has(key):
+			entity = index[key]
+		elif should_check_parcel(dest) and not index.is_empty():
+			# A teleport that names a parcel has to land on one the world actually has, or
+			# the player walks into empty space inside a world that loaded fine. An
+			# unreadable listing lets it through: a world that will not say where its
+			# scenes are should not block entry to itself.
+			return dest.resolved_failed(Destination.Failure.PARCEL_EMPTY)
+	return dest.resolved_ready(about, scene_info(entity, worlds_base), listing)
 
 
 static func _async_resolve_preview(dest: Destination) -> Destination:
 	var about = await _async_about(dest)
 	if about == null:
 		return dest.resolved_failed(Destination.Failure.PREVIEW_UNREACHABLE)
-	return dest.resolved_ready(about)
-
-
-static func _async_resolve_custom(dest: Destination) -> Destination:
-	var about = await _async_about(dest)
-	if about == null or not about_is_usable(about):
-		return dest.resolved_failed(Destination.Failure.FETCH_FAILED)
-	return dest.resolved_ready(about)
+	return dest.resolved_ready(about, await _async_urn_scene(about))
 
 
 # ---- I/O -------------------------------------------------------------------------
@@ -394,20 +423,23 @@ static func _async_resolve_custom(dest: Destination) -> Destination:
 ## TYPE -- the public handler strips the secret (removeSecrets) and it is bcrypt-hashed
 ## anyway -- so the comms handshake is the only place a password can be confirmed.
 ##
+## Returns the verdict that ends the resolve, or null when the secret checked out and the
+## world path should carry on to describe itself.
+##
 ## OPEN QUESTION for the Worlds team: if this pre-flight consumes shared-secret rate
 ## limiter budget, the real connect spends a second one and a legitimate user can be
 ## 429'd by their own successful attempt.
-static func _async_verify_credential(dest: Destination, about: Dictionary) -> Destination:
+static func _async_verify_credential(dest: Destination, about: Dictionary):
 	var url := comms_handshake_url(about)
 	if url.is_empty():
-		return dest.resolved_ready(about)
+		return null
 
 	var metadata := handshake_metadata(
 		Realm.normalize_realm_url(dest.realm_string), dest.credential
 	)
 	var res = await Global.async_signed_fetch(url, HTTPClient.METHOD_POST, "", metadata)
 	if res is RequestResponse:
-		return dest.resolved_ready(about)
+		return null
 
 	var message: String = ""
 	if res is PromiseError:
@@ -439,10 +471,9 @@ static func _async_about(dest: Destination):
 	return json
 
 
-## The scene the content server reports for `parcel`, as the full /entities/active
-## payload, or {} when the parcel is empty. The payload is kept rather than reduced to an
-## id: it carries the title, thumbnail and file count the loading screen would otherwise
-## fetch for itself once the load had already started (#2698).
+## The scene the content server reports for `parcel`, reduced to what the loading screen
+## needs, or {} when the parcel is empty. `id` doubles as the existence answer, so the
+## title, thumbnail and file count cost no request of their own (#2698).
 ##
 ## The coordinator cache answers "" for both "no scene there" and "never asked", so a
 ## miss always falls through to the network -- treating a cached miss as an answer is
@@ -466,12 +497,36 @@ static func _async_scene_at(content_base_url: String, parcel: Vector2i) -> Dicti
 		return {}
 	var json = res.get_string_response_as_json()
 	if json is Array and not json.is_empty() and json[0] is Dictionary:
-		return json[0]
+		return scene_info(json[0], content_base_url)
 	return {}
 
 
-## The world's full scene listing. Fetched only when a parcel has to be checked, so a
-## plain Jump In to a world costs exactly what it did before.
+## The first scene a preview server advertises in /about. Previews carry their scenes as
+## urns rather than a listing, so the entity has to be read to say anything about it. A
+## preview that will not describe its scene still loads: READY without metadata is normal.
+static func _async_urn_scene(about: Dictionary) -> Dictionary:
+	var urns = about.get("configurations", {}).get("scenesUrn", [])
+	if not urns is Array or urns.is_empty():
+		return {}
+	var parsed = Realm.parse_urn(str(urns[0]))
+	if parsed == null or str(parsed.baseUrl).is_empty():
+		return {}
+
+	var promise: Promise = Global.http_requester.request_json(
+		str(parsed.baseUrl) + str(parsed.entityId), HTTPClient.METHOD_GET, "", {}
+	)
+	var res = await PromiseUtils.async_awaiter(promise)
+	if not res is RequestResponse:
+		return {}
+	var json = res.get_string_response_as_json()
+	if not json is Dictionary:
+		return {}
+	# A urn baseUrl already addresses content files.
+	return _scene_info(json, str(parsed.baseUrl))
+
+
+## The world's full scene listing: its layout, and the per-scene metadata the loading
+## screen shows. Handed to Realm afterwards, so it is read once per navigation.
 static func _async_world_scenes(world_name: String) -> Dictionary:
 	if world_name.is_empty():
 		return {}

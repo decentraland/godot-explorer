@@ -4,6 +4,9 @@ extends Control
 ## the "RUN ANYWAY" modal is shown regardless of download activity.
 const MAX_LOADING_TIME_SECONDS := 90.0
 
+## How long the card waits for its thumbnail before showing the text without it.
+const CARD_IMAGE_GRACE_S := 0.35
+
 var progress: float = 0.0
 var last_activity_time := Time.get_ticks_msec()
 var loading_start_time := 0
@@ -23,7 +26,11 @@ var _expected_asset_count: int = 0
 ## rather than replacing these: swapping a title and an image the player is already
 ## reading is what makes a populated screen look like it is still loading.
 var _prefetched_title: bool = false
+var _prefetched_creator: bool = false
 var _prefetched_image: bool = false
+## The card still shows the place being left, kept to avoid a blank frame mid-navigation.
+var _card_is_stale: bool = false
+var _card_revealed: bool = false
 
 @onready var loading_progress_label: Label = %Label_LoadingProgress
 @onready var label_loading_state: Label = %Label_LoadingState
@@ -92,21 +99,33 @@ func enable_loading_screen(
 
 
 ## Fills the screen from what the pre-fetch already proved (#2698): the scene's own
-## title, thumbnail and file count, so the first frame is a described place instead of a
-## blank card over 0000/0000 resources.
+## title, creator, thumbnail and file count, so the first frame is a described place
+## instead of a blank card over 0000/0000 resources.
 ##
 ## Deliberately does not mark the place data as set -- the Places lookup still runs and
-## upgrades the card with the catalogue's title, creator and image when it lands.
-func set_prefetched_scene(title: String, image_url: String, asset_count: int) -> void:
+## fills whatever the scene did not name.
+func set_prefetched_scene(
+	title: String, creator: String, image_url: String, asset_count: int
+) -> void:
 	_expected_asset_count = asset_count
 	if title.is_empty() and image_url.is_empty():
+		# Nothing to say about where we are going: a card describing the place being left
+		# is worse than none, so it goes rather than lingering through the load.
+		if _card_is_stale:
+			_drop_stale_card()
 		return
 	_prefetched_title = not title.is_empty()
+	_prefetched_creator = not creator.is_empty()
 	_prefetched_image = not image_url.is_empty()
+	_card_is_stale = false
 	set_place_name(title)
-	if not image_url.is_empty():
+	if not creator.is_empty():
+		set_place_creator(creator)
+	if image_url.is_empty():
+		_drop_background()
+	else:
 		set_place_image(image_url)
-	create_tween().tween_property(vbox_data, "modulate", Color.WHITE, 0.125)
+	_async_reveal_card(_prefetched_image)
 
 
 func _on_realm_change_failed(_new_realm_string: String, _reason: String) -> void:
@@ -124,7 +143,16 @@ func _clear_place_ui() -> void:
 	_place_data_set = false
 	_expected_asset_count = 0
 	_prefetched_title = false
+	_prefetched_creator = false
 	_prefetched_image = false
+	# Already up: keep the card until the new destination describes itself, and remember
+	# it belongs to the place being left. Blanking here is the flicker -- the boot path
+	# enables the screen twice for one navigation, once before the resolve and once after.
+	if visible:
+		_card_is_stale = true
+		return
+	_card_is_stale = false
+	_card_revealed = false
 	_current_bg_url = ""
 	texture_rect_background.texture = null
 	texture_rect_background.modulate = Color.TRANSPARENT
@@ -333,8 +361,9 @@ func _set_place_data_from_scene_definition(pos: Vector2i) -> void:
 
 func set_place_data(data: Dictionary) -> void:
 	_place_data_set = true
-	var creator = data.get("contact_name", "")
-	set_place_creator(creator if creator is String else "")
+	if not _prefetched_creator:
+		var creator = data.get("contact_name", "")
+		set_place_creator(creator if creator is String else "")
 	if not _prefetched_title:
 		var title = data.get("title", "")
 		set_place_name(title if title is String else "")
@@ -342,8 +371,41 @@ func set_place_data(data: Dictionary) -> void:
 		var image_url = data.get("image", "")
 		if image_url is String and not image_url.is_empty():
 			set_place_image(image_url)
-	var tween = create_tween()
-	tween.tween_property(vbox_data, "modulate", Color.WHITE, 0.125)
+	_card_is_stale = false
+	_async_reveal_card(false)
+
+
+## Puts the card up. While a thumbnail is still downloading it waits a moment so the text
+## and the photo arrive together; past that the text goes up on its own rather than hold
+## the card hostage to a slow image.
+func _async_reveal_card(wait_for_image: bool) -> void:
+	if wait_for_image and texture_rect_background.texture == null:
+		await get_tree().create_timer(CARD_IMAGE_GRACE_S).timeout
+		if not is_instance_valid(self) or not is_inside_tree():
+			return
+	_fade_card_in()
+
+
+func _fade_card_in() -> void:
+	if _card_revealed:
+		return
+	_card_revealed = true
+	create_tween().tween_property(vbox_data, "modulate", Color.WHITE, 0.125)
+
+
+func _drop_background() -> void:
+	_current_bg_url = ""
+	texture_rect_background.texture = null
+	texture_rect_background.modulate = Color.TRANSPARENT
+
+
+func _drop_stale_card() -> void:
+	_card_is_stale = false
+	_card_revealed = false
+	_drop_background()
+	vbox_data.modulate = Color.TRANSPARENT
+	rich_text_label_place_name.text = ""
+	rich_text_label_creator.hide()
 
 
 func set_place_name(place_name: String) -> void:
@@ -371,6 +433,7 @@ func _apply_background_texture(texture: Texture2D) -> void:
 	texture_rect_background.texture = texture
 	var tween = create_tween()
 	tween.tween_property(texture_rect_background, "modulate", Color.WHITE, 0.125)
+	_fade_card_in()
 
 
 func _async_set_background(url: String) -> void:

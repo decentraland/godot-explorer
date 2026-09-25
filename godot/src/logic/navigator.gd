@@ -56,7 +56,7 @@ static func _async_enter(dest: Destination, when: String) -> bool:
 	explorer.loading_ui.enable_loading_screen(dest.realm_string, when, false)
 	# What the resolve already paid for, handed over before the load starts (#2698).
 	explorer.loading_ui.set_prefetched_scene(
-		dest.scene_title, dest.scene_image_url, dest.asset_count
+		dest.scene_title, dest.scene_creator, dest.scene_image_url, dest.asset_count
 	)
 	_warm_caches(dest)
 	# Behind the screen, never before it: closing the menu first would flash the world
@@ -67,7 +67,9 @@ static func _async_enter(dest: Destination, when: String) -> bool:
 		explorer.loading_ui.hide_loading_screen("Failed")
 		return false
 
-	if dest.target_parcel != Destination.UNSPECIFIED:
+	# Only an intent moves anyone. A restoration carries its parcel so the resolve can
+	# describe where the player is booting into; _ready already put them there.
+	if dest.is_intent and dest.target_parcel != Destination.UNSPECIFIED:
 		explorer.teleport_to(dest.target_parcel)
 	return true
 
