@@ -51,8 +51,8 @@ func async_set_item(item: DclItemEntityDefinition):
 func _update_view() -> void:
 	if is_pressed:
 		marquee_label_name.check_and_start_marquee()
-		# iOS Marketplace Links Removal - https://github.com/decentraland/godot-explorer/issues/1124
-		if !Global.is_ios() and is_buyable:
+		# Store payment policies forbid linking out to the marketplace: iOS #1124, Android #2814.
+		if is_buyable and not Global.is_ios() and StorePolicy.can_show_external_purchase_links():
 			margin_container_button_view.show()
 	else:
 		margin_container_button_view.hide()
