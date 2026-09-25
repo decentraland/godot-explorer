@@ -29,7 +29,7 @@ extends Node
 
 ## Assertions that actually evaluated. A script that fails to compile makes every call
 ## a no-op, which leaves _failures empty and reports a green suite that never ran.
-const EXPECTED_CHECKS := 53
+const EXPECTED_CHECKS := 56
 
 var _failures: Array[String] = []
 var _checks: int = 0
@@ -120,6 +120,18 @@ func _test_parcel_check_rule() -> void:
 	_expect(
 		not DestinationResolver.should_check_parcel(Destination.world("myworld.dcl.eth")),
 		"with no parcel asked for there is nothing to confirm"
+	)
+
+	# Locating and gating are separate jobs: a cold start is still described, just not
+	# refused. Collapsing the two is what left the boot loading screen blank.
+	_expect(
+		DestinationResolver.has_target(restoration),
+		"a restoration still names the parcel it lands on, so it can be described"
+	)
+	_expect(DestinationResolver.has_target(intent), "an intent names its parcel too")
+	_expect(
+		not DestinationResolver.has_target(Destination.world("myworld.dcl.eth")),
+		"with no parcel there is nothing to look up"
 	)
 
 
