@@ -274,7 +274,6 @@ text = "COMMON_SHARE"
 icon = ExtResource("10_share")
 flat = true
 alignment = 0
-expand_icon = true
 
 [node name="Button_ReportContent" type="Button" parent="MenuOverlay/MenuDropdown/MarginContainer/VBoxContainer" unique_id=970075287]
 unique_name_in_owner = true
@@ -298,7 +297,6 @@ text = "SETTINGS_REPORT_CONTENT"
 icon = ExtResource("12_dsn1l")
 flat = true
 alignment = 0
-expand_icon = true
 
 [node name="Button_ReportBug" type="Button" parent="MenuOverlay/MenuDropdown/MarginContainer/VBoxContainer" unique_id=548335037]
 unique_name_in_owner = true
@@ -322,4 +320,3 @@ text = "SETTINGS_REPORT_BUG"
 icon = ExtResource("13_iiydg")
 flat = true
 alignment = 0
-expand_icon = true
