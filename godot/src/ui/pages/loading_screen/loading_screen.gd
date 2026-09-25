@@ -15,6 +15,15 @@ var _loading_cancelled: bool = false
 var _intended_realm: String = ""
 var _current_bg_url: String = ""
 var _fetch_generation: int = 0
+## Files the destination ships, known before the load starts (#2698). The content
+## provider has queued nothing yet at that point, so this is the only denominator there
+## is for the first few seconds.
+var _expected_asset_count: int = 0
+## What the pre-fetch already put on screen. The Places lookup fills what is missing
+## rather than replacing these: swapping a title and an image the player is already
+## reading is what makes a populated screen look like it is still loading.
+var _prefetched_title: bool = false
+var _prefetched_image: bool = false
 
 @onready var loading_progress_label: Label = %Label_LoadingProgress
 @onready var label_loading_state: Label = %Label_LoadingState
@@ -45,7 +54,14 @@ func _ready() -> void:
 		Global.realm.realm_change_failed.connect(_on_realm_change_failed)
 
 
-func enable_loading_screen(intended_realm: String = "", when: String = "") -> void:
+## `begin_episode` is false when the caller already opened the funnel episode on the
+## navigation intent, well before this screen -- opening a second one would supersede the
+## first and lose the pre-fetch it was measuring. It stays true for the callers that are
+## not navigations and so have no earlier intent to attribute the load to: walking into
+## an unloaded parcel, and reloading a scene in place.
+func enable_loading_screen(
+	intended_realm: String = "", when: String = "", begin_episode: bool = true
+) -> void:
 	close_button.show()
 	_loading_cancelled = false
 	_intended_realm = intended_realm if Realm.is_dcl_ens(intended_realm) else ""
@@ -53,9 +69,11 @@ func enable_loading_screen(intended_realm: String = "", when: String = "") -> vo
 	# ENS for the places API below, so forwarding it would drop every non-world destination and
 	# fall back to the realm being *left* — bucketing a teleport to Genesis as wherever we came
 	# from. The funnel classifies both the bare and resolved-URL shapes.
-	Global.scene_runner.loading_begin_episode(
-		when, intended_realm if not intended_realm.is_empty() else Global.realm.get_realm_string()
-	)
+	if begin_episode:
+		Global.scene_runner.loading_begin_episode(
+			when,
+			intended_realm if not intended_realm.is_empty() else Global.realm.get_realm_string()
+		)
 	if !debug_chronometer:
 		debug_chronometer = Chronometer.new()
 	debug_chronometer.restart("Starting to load scene")
@@ -73,6 +91,24 @@ func enable_loading_screen(intended_realm: String = "", when: String = "") -> vo
 		Global.metrics.track_screen_viewed("LOADING_START", JSON.stringify(loading_data))
 
 
+## Fills the screen from what the pre-fetch already proved (#2698): the scene's own
+## title, thumbnail and file count, so the first frame is a described place instead of a
+## blank card over 0000/0000 resources.
+##
+## Deliberately does not mark the place data as set -- the Places lookup still runs and
+## upgrades the card with the catalogue's title, creator and image when it lands.
+func set_prefetched_scene(title: String, image_url: String, asset_count: int) -> void:
+	_expected_asset_count = asset_count
+	if title.is_empty() and image_url.is_empty():
+		return
+	_prefetched_title = not title.is_empty()
+	_prefetched_image = not image_url.is_empty()
+	set_place_name(title)
+	if not image_url.is_empty():
+		set_place_image(image_url)
+	create_tween().tween_property(vbox_data, "modulate", Color.WHITE, 0.125)
+
+
 func _on_realm_change_failed(_new_realm_string: String, _reason: String) -> void:
 	# Only the callers that put this screen up (async_join_world / async_teleport_to) need taking
 	# down. Hiding when it was never shown runs the whole post-load teardown anyway: it emits
@@ -86,6 +122,9 @@ func _on_realm_change_failed(_new_realm_string: String, _reason: String) -> void
 func _clear_place_ui() -> void:
 	_fetch_generation += 1
 	_place_data_set = false
+	_expected_asset_count = 0
+	_prefetched_title = false
+	_prefetched_image = false
 	_current_bg_url = ""
 	texture_rect_background.texture = null
 	texture_rect_background.modulate = Color.TRANSPARENT
@@ -157,9 +196,10 @@ func _on_timer_check_progress_timeout_timeout():
 	var opt_suffix = ""
 	if not DclGlobal.is_production() and Global.content_provider.get_optimized_scene_count() > 0:
 		opt_suffix = " - Opt"
+	var total_resources := maxi(loading_resources, _expected_asset_count)
 	label_loading_state.text = (
 		"%d/%d resources at %.2fmb/s%s"
-		% [loaded_resources, loading_resources, download_speed_mbs, opt_suffix]
+		% [loaded_resources, total_resources, download_speed_mbs, opt_suffix]
 	)
 
 	# Absolute maximum loading time — never wait longer than this
@@ -293,13 +333,15 @@ func _set_place_data_from_scene_definition(pos: Vector2i) -> void:
 
 func set_place_data(data: Dictionary) -> void:
 	_place_data_set = true
-	var title = data.get("title", "")
 	var creator = data.get("contact_name", "")
-	set_place_name(title if title is String else "")
 	set_place_creator(creator if creator is String else "")
-	var image_url = data.get("image", "")
-	if image_url is String and not image_url.is_empty():
-		set_place_image(image_url)
+	if not _prefetched_title:
+		var title = data.get("title", "")
+		set_place_name(title if title is String else "")
+	if not _prefetched_image:
+		var image_url = data.get("image", "")
+		if image_url is String and not image_url.is_empty():
+			set_place_image(image_url)
 	var tween = create_tween()
 	tween.tween_property(vbox_data, "modulate", Color.WHITE, 0.125)
 
