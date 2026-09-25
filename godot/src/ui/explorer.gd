@@ -3,6 +3,10 @@ extends Node
 
 # Friendship/connectivity subscribe retry policy: bounded exponential backoff
 # 5s, 10s, 20s, 40s, 60s, 60s — caps at ~3min total before giving up.
+## Where a profile with no realm history boots. A dev realm, not genesis: this only
+## happens on a fresh install that has never joined anywhere.
+const FALLBACK_BOOT_REALM := "https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main-latest"
+
 const _SUBSCRIBE_RETRY_MAX_ATTEMPTS: int = 6
 const _SUBSCRIBE_RETRY_BASE_DELAY: float = 5.0
 const _SUBSCRIBE_RETRY_MAX_DELAY: float = 60.0
@@ -219,7 +223,11 @@ func _ready():
 
 	emote_wheel.avatar_node = player.avatar
 
-	loading_ui.enable_loading_screen(Global.get_config().last_realm_joined, "on_explorer_ready")
+	# The episode is opened by the navigation below, which knows the realm this boot is
+	# actually heading for -- last_realm_joined is the wrong one for a deeplink.
+	loading_ui.enable_loading_screen(
+		Global.get_config().last_realm_joined, "on_explorer_ready", false
+	)
 	var cmd_params = get_params_from_cmd()
 	var cmd_realm = Global.FORCE_TEST_REALM if Global.FORCE_TEST else cmd_params[0]
 	var cmd_location = cmd_params[1]
@@ -323,16 +331,14 @@ func _ready():
 		if Realm.is_dcl_ens(cmd_realm) and Global.deep_link_obj.preview.is_empty():
 			Global.async_join_world(cmd_realm)
 		else:
-			Global.realm.async_set_realm(cmd_realm)
+			Navigator.async_go(Destination.restore(cmd_realm), "on_explorer_ready")
 			if not Global.deep_link_obj.preview.is_empty():
 				Global.scene_fetcher.set_preview_url(cmd_realm)
 	else:
-		if Global.get_config().last_realm_joined.is_empty():
-			Global.realm.async_set_realm(
-				"https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main-latest"
-			)
-		else:
-			Global.realm.async_set_realm(Global.get_config().last_realm_joined)
+		var boot_realm: String = Global.get_config().last_realm_joined
+		if boot_realm.is_empty():
+			boot_realm = FALLBACK_BOOT_REALM
+		Navigator.async_go(Destination.restore(boot_realm), "on_explorer_ready")
 	Global.scene_runner.process_mode = Node.PROCESS_MODE_INHERIT
 
 	Global.player_identity.logout.connect(self._on_player_logout)
@@ -773,7 +779,7 @@ func _on_control_minimap_request_open_map():
 
 
 func _on_control_menu_jump_to(parcel: Vector2i):
-	teleport_to(parcel)
+	Navigator.async_go(Destination.from_input("", parcel), "on_teleport")
 	control_menu.async_close()
 
 
@@ -856,31 +862,14 @@ func move_to(position: Vector3, skip_loading: bool, check_stuck: bool = true):
 				loading_ui.enable_loading_screen("", "on_moveto")
 
 
-## Fire-and-forget teleport for callers that cannot await (menu jump-in, scene-urn spawn).
-func teleport_to(parcel: Vector2i, realm: String = ""):
-	async_teleport_to(parcel, realm)
-
-
-## Returns false when the realm change failed, so callers can hold back anything that claims
-## the teleport happened (#2816). Compares the resolved urls, not the raw strings: the realm
-## now comes from scene input, and "spacerunner.dcl.eth" must not reconnect a player who is
-## already in "SpaceRunner.dcl.eth".
-func async_teleport_to(parcel: Vector2i, realm: String = "") -> bool:
-	if not realm.is_empty() and Realm.normalize_realm_url(realm) != Global.realm.get_realm_url():
-		var success = await Global.realm.async_set_realm(realm)
-		if not success:
-			return false
-		if not loading_ui.visible:
-			loading_ui.enable_loading_screen(realm, "on_teleport")
-
-	var move_to_position = Vector3i(parcel.x * 16 + 8, 3, -parcel.y * 16 - 8)
-	move_to(move_to_position, false)
-
+## Places the player on a parcel of the realm already loaded, and records it as where
+## they are. Changing realm on the way is a navigation: Navigator resolves that first and
+## then calls this, so the move never happens toward a place that turned out not to exist.
+func teleport_to(parcel: Vector2i) -> void:
+	move_to(Vector3i(parcel.x * 16 + 8, 3, -parcel.y * 16 - 8), false)
 	Global.scene_fetcher.update_position(parcel, true)
-
-	Global.get_config().add_place_to_last_places(parcel, realm)
+	Global.get_config().add_place_to_last_places(parcel, Global.realm.get_realm_string())
 	dirty_save_position = true
-	return true
 
 
 func player_look_at(look_at_position: Vector3):

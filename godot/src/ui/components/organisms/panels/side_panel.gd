@@ -89,10 +89,12 @@ func set_data(data):
 func open_panel() -> void:
 	_close()
 	self.show()
-	# Warm the private-world access cache so a later JUMP IN decides from cache (no card-close
-	# gap for allowed worlds, instant modal for private ones). No-op for non-world places.
-	if not item_data.is_empty() and PlacesHelper.is_world(item_data):
-		Global.warm_realm_access(PlacesHelper.get_position_and_realm(item_data)[1])
+	# Warm what a JUMP IN from here is about to need: the private-world access cache, so the
+	# decision comes from cache (no card-close gap for allowed worlds, instant modal for
+	# private ones), and the scene's own code. No-op for the parts that do not apply.
+	if not item_data.is_empty():
+		var target := PlacesHelper.get_position_and_realm(item_data)
+		Navigator.warm(target[0], target[1])
 	if Global.is_orientation_portrait():
 		instantiate_portrait_panel()
 		orientation = "portrait"
