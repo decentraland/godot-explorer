@@ -30,6 +30,7 @@ static func collect_scenes_summary() -> Array:
 		if child is DclSceneNode:
 			var scene_id: int = child.get_scene_id()
 			var entity_count: int = Global.scene_runner.debug_list_entities(scene_id).size()
+			var tick: Dictionary = Global.scene_runner.get_scene_tick_stats(scene_id)
 			(
 				out
 				. append(
@@ -42,6 +43,12 @@ static func collect_scenes_summary() -> Array:
 						_vec2i_to_array(Global.scene_runner.get_scene_base_parcel(scene_id)),
 						"entity_count": entity_count,
 						"paused": Global.scene_runner.get_scene_is_paused(scene_id),
+						"ticks": int(tick.get("ticks", 0)),
+						"js_tick_p95_ms": float(tick.get("js_tick_p95_ms", 0.0)),
+						"round_trip_p95_ms": float(tick.get("round_trip_p95_ms", 0.0)),
+						"apply_p95_ms": float(tick.get("apply_p95_ms", 0.0)),
+						"missed_pct": float(tick.get("missed_pct", 0.0)),
+						"skipped_ticks": int(tick.get("skipped_ticks", 0)),
 					}
 				)
 			)

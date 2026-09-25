@@ -348,6 +348,7 @@ func _process(_delta: float) -> void:
 				# sampling-window numbers aren't polluted by load-time spikes.
 				Global.scene_runner.reset_state_timing()
 				Global.scene_runner.reset_crdt_metrics()
+				Global.scene_runner.reset_frame_sync_metrics()
 				if Global.cli.get_skip_gltf_load():
 					_purge_existing_gltfs()
 				if Global.cli.get_kill_sky():
@@ -411,6 +412,12 @@ func _collect_sample() -> Dictionary:
 		RenderingServer.VIEWPORT_RENDER_INFO_TYPE_CANVAS,
 		RenderingServer.VIEWPORT_RENDER_INFO_DRAW_CALLS_IN_FRAME
 	)
+	# Frame-locked scene ticks (lib/src/scene_runner/frame_sync.rs): the current
+	# parcel's onUpdate cost and how often the frame waited for / missed it.
+	var tick: Dictionary = Global.scene_runner.get_scene_tick_stats(
+		Global.scene_runner.get_current_parcel_scene_id()
+	)
+	var fsync: Dictionary = Global.scene_runner.get_frame_sync_stats()
 	return {
 		"t_ms": _phase_elapsed_ms(),
 		"fps": Performance.get_monitor(Performance.TIME_FPS),
@@ -449,6 +456,11 @@ func _collect_sample() -> Dictionary:
 		Global.scene_fetcher.loaded_scenes.size() if Global.scene_fetcher != null else 0,
 		"engine_max_fps": Engine.max_fps,
 		"engine_physics_ticks": Engine.physics_ticks_per_second,
+		"scene_js_p95_ms": float(tick.get("js_tick_p95_ms", 0.0)),
+		"scene_round_trip_p95_ms": float(tick.get("round_trip_p95_ms", 0.0)),
+		"scene_apply_p95_ms": float(tick.get("apply_p95_ms", 0.0)),
+		"scene_wait_ms": float(fsync.get("last_frame_wait_ms", 0.0)),
+		"scene_missed": int(fsync.get("last_frame_missed", 0)),
 		"vsync_mode": DisplayServer.window_get_vsync_mode(),
 	}
 
@@ -580,6 +592,9 @@ func _finish() -> void:
 	# Per-component-id breakdown of dirty entries on the Rust→V8 path.
 	# Identifies which SDK7 components dominate the round-trip pressure.
 	var crdt_component_breakdown: String = Global.scene_runner.drain_crdt_component_breakdown()
+	# Frame-sync wait/miss totals during sampling, separate from state_timing so
+	# the blocking wait is never attributed to an apply state.
+	var frame_sync_metrics: String = Global.scene_runner.drain_frame_sync_metrics()
 
 	var result := {
 		"tag": config.get("tag", ""),
@@ -589,6 +604,7 @@ func _finish() -> void:
 		"state_timing_us": state_timing,
 		"crdt_metrics": crdt_metrics,
 		"crdt_component_breakdown": crdt_component_breakdown,
+		"frame_sync_metrics": frame_sync_metrics,
 		"warmup_seconds": int(config.get("warmup_seconds", 0)),
 		"sample_seconds": int(config.get("sample_seconds", 0)),
 		"samples_collected": samples.size(),
@@ -747,6 +763,11 @@ func _summarize(s: Array) -> Dictionary:
 		"node_count",
 		"draw_calls",
 		"primitives",
+		"scene_js_p95_ms",
+		"scene_round_trip_p95_ms",
+		"scene_apply_p95_ms",
+		"scene_wait_ms",
+		"scene_missed",
 	]
 	var out := {}
 	for k in keys:
@@ -854,6 +875,11 @@ func _apply_toggles() -> void:
 		return
 	Global.scene_runner.bench_disable_tweens = _toggle("disable_tweens")
 	Global.scene_runner.bench_disable_transforms = _toggle("disable_transforms")
+	# Optional: ms the frame may wait for the current scene's tick (0 = never
+	# wait, -1/absent = one frame at the fps cap). Lets A/B runs compare both.
+	var toggles: Dictionary = config.get("toggles", {})
+	if toggles.has("scene_tick_budget_ms"):
+		Global.scene_runner.frame_sync_tick_budget_ms = float(toggles["scene_tick_budget_ms"])
 
 
 func _toggle(key: String) -> bool:

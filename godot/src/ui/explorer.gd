@@ -1061,6 +1061,9 @@ func _update_preview_hud() -> void:
 	if active:
 		preview_hud_panel.set_scene(_preview_scene_id())
 	Global.set_scene_log_enabled(active)
+	# Frame-sync warnings (slow onUpdate / missed frames) follow the scene-stats
+	# overlay: preview realm or scene-stats deep link only, never the settings toggle.
+	Global.set_scene_perf_warnings_enabled(_scene_stats_available())
 	_restore_bottom_left_hud()
 
 

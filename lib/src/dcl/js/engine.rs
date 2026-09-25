@@ -13,7 +13,8 @@ use tokio::sync::mpsc::Receiver;
 
 use crate::dcl::{
     common::{
-        CommunicatedWithRenderer, SceneDying, SceneElapsedTime, SceneLogs, SceneMainCrdtFileContent,
+        CommunicatedWithRenderer, SceneDying, SceneLastJsTickUs, SceneLogs,
+        SceneMainCrdtFileContent, SceneRendererDelta, SceneTickStart,
     },
     crdt::{
         message::{
@@ -169,7 +170,14 @@ fn op_crdt_send_to_renderer(op_state: Rc<RefCell<OpState>>, #[arraybuffer] messa
     CRDT_SEND_BYTES.fetch_add(messages.len() as u64, Ordering::Relaxed);
     CRDT_SEND_OPS.fetch_add(1, Ordering::Relaxed);
     let mut op_state = op_state.borrow_mut();
-    let elapsed_time = op_state.borrow::<SceneElapsedTime>().0;
+    // Pure JS tick time: from the moment the previous reply was handed to JS
+    // (end of op_crdt_recv_wait) until this send. Excludes the wait for the
+    // renderer, which is what the scene thread does the rest of the time.
+    let js_tick_us = op_state
+        .try_borrow::<SceneTickStart>()
+        .map(|t| t.0.elapsed().as_micros().min(u32::MAX as u128) as u32)
+        .unwrap_or(0);
+    op_state.put(SceneLastJsTickUs(js_tick_us));
     let scene_id = op_state.take::<SceneId>();
 
     let logs = op_state.take::<SceneLogs>();
@@ -212,7 +220,7 @@ fn op_crdt_send_to_renderer(op_state: Rc<RefCell<OpState>>, #[arraybuffer] messa
             scene_id,
             dirty_crdt_state: Box::new(dirty),
             logs: logs.0,
-            delta: elapsed_time,
+            js_tick_us,
             rpc_calls,
             deno_memory_stats,
         })
@@ -243,11 +251,14 @@ async fn op_crdt_recv_wait(op_state: Rc<RefCell<OpState>>) -> Result<u32, anyhow
     let cloned_scene_crdt = mutex_scene_crdt_state.clone();
     let scene_crdt_state = cloned_scene_crdt.lock().unwrap();
 
+    let mut renderer_delta_seconds = 0.0f32;
     let data = match response {
         Some(RendererResponse::Ok {
             dirty_crdt_state,
             incoming_comms_message,
+            delta_seconds,
         }) => {
+            renderer_delta_seconds = delta_seconds;
             CRDT_RECV_OPS.fetch_add(1, Ordering::Relaxed);
             CRDT_DIRTY_LWW_ENTRIES.fetch_add(
                 dirty_crdt_state.lww.values().map(|v| v.len() as u64).sum(),
@@ -424,6 +435,10 @@ async fn op_crdt_recv_wait(op_state: Rc<RefCell<OpState>>) -> Result<u32, anyhow
     };
 
     op_state.put(CommunicatedWithRenderer);
+    // The renderer's frame delta becomes the next onUpdate(dt); the tick timer
+    // starts now, when JS resumes with the reply.
+    op_state.put(SceneRendererDelta(renderer_delta_seconds));
+    op_state.put(SceneTickStart(std::time::Instant::now()));
 
     op_state.put(Vec::<LocalCall>::new());
     op_state.put(mutex_scene_crdt_state);
