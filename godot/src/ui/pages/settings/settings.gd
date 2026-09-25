@@ -1378,10 +1378,9 @@ func _on_dropdown_list_realm_item_selected(index: int) -> void:
 	var realm_text := dropdown_list_realm.get_item_text(index)
 	var explorer = Global.get_explorer()
 	if is_instance_valid(explorer):
-		Global.realm.async_set_realm(realm_text)
-		explorer.hide_menu()
 		Global.close_menu.emit()
 		Global.set_orientation_landscape()
+		Navigator.async_go(Destination.from_input(realm_text), "on_changerealm")
 	else:
 		Global.close_menu.emit()
 		Global.get_config().last_realm_joined = realm_text

@@ -2366,11 +2366,10 @@ impl CommunicationManager {
                     return;
                 };
 
-                let realm_url = DclGlobal::singleton()
-                    .bind()
-                    .get_realm()
-                    .get("realm_url")
-                    .to_string();
+                let realm = DclGlobal::singleton().bind().get_realm();
+                let realm_url = realm.get("realm_url").to_string();
+                let secret = realm.get("realm_credential").to_string();
+                let secret = (!secret.is_empty()).then_some(secret);
                 let Ok(origin) = Uri::try_from(&realm_url) else {
                     tracing::warn!("failed to parse origin comms_address as a uri: {realm_url}");
                     return;
@@ -2379,7 +2378,7 @@ impl CommunicationManager {
                 self.current_connection = CommsConnection::SignedLogin(SignedLogin::new(
                     uri,
                     current_ephemeral_auth_chain,
-                    SignedLoginMeta::new(true, origin),
+                    SignedLoginMeta::new(true, origin, secret),
                 ));
             }
 

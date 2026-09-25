@@ -65,7 +65,7 @@ func _ready():
 
 	Global.realm.realm_changed.connect(self.on_realm_changed)
 
-	Global.realm.async_set_realm(scenes_to_process.realm_url)
+	Global.realm._async_set_realm(scenes_to_process.realm_url)
 	prints(
 		"scene-renderer: realm",
 		scenes_to_process.realm_url,

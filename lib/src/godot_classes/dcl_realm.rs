@@ -38,6 +38,11 @@ pub struct DclRealm {
     #[var]
     realm_max_bounds: Vector2i,
 
+    /// Shared secret already validated against this world's comms endpoint (#2651).
+    /// Empty for every other realm, which is what keeps `secret` off the wire.
+    #[var]
+    realm_credential: GString,
+
     _base: Base<Node>,
 }
 
