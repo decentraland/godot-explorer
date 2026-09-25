@@ -174,8 +174,11 @@ func _async_load_emotes():
 func inject_owned_emote(urn: String) -> void:
 	if urn.is_empty():
 		return
+	# Lambda-listed items hold the token-instance urn (…:<itemId>:<tokenId>) while the marketplace
+	# API yields the item urn: compare on the item form or every owned emote is re-added as NEW (#2460).
+	var item_urn := Backpack.to_item_urn(urn)
 	for item in all_emote_items:
-		if item.emote_urn == urn:
+		if Backpack.to_item_urn(item.emote_urn) == item_urn:
 			return
 	var emote_item: EmoteItemUi = EMOTE_SQUARE_ITEM.instantiate()
 	emote_item.button_group = button_group_all_emotes

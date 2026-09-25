@@ -11,7 +11,9 @@ instance uniform float own_fade : hint_range(0.0, 1.0) = 0.0;
 uniform vec4 material_color;
 uniform vec4 mask_color;
 uniform sampler2D base_texture : hint_default_white;
-uniform sampler2D mask_texture : hint_default_white;
+// No mask (base eyes ship without one) must read black = tint the whole texture, like Unity's
+// DCL_Avatar_Facial_Features; a white default left the eye color unapplied (#2439).
+uniform sampler2D mask_texture : hint_default_black;
 
 void fragment() {
 	if (own_fade > 0.0) {

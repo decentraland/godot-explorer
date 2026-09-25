@@ -57,8 +57,12 @@ static func apply_music_volume_settings():
 	_apply_bus_percentage(&"Music", Global.get_config().audio_music_volume)
 
 
-static func apply_avatar_and_emotes_volume_settings():
-	_apply_bus_percentage(&"AvatarAndEmotes", Global.get_config().audio_avatar_and_emotes_volume)
+static func apply_avatar_and_emotes_volume_settings(force_value = null):
+	var avatar_volume: float = Global.get_config().audio_avatar_and_emotes_volume
+	if force_value is float:
+		avatar_volume = force_value
+
+	_apply_bus_percentage(&"AvatarAndEmotes", avatar_volume)
 
 
 static func apply_mic_amplification_settings():
