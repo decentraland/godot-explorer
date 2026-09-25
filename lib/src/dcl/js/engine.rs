@@ -265,13 +265,17 @@ async fn op_crdt_recv_wait(op_state: Rc<RefCell<OpState>>) -> Result<u32, anyhow
             // and a shared lock here serializes the whole CRDT pipeline.
             if CRDT_BREAKDOWN_ENABLED.load(Ordering::Relaxed) {
                 {
-                    let mut map = crdt_dirty_lww_by_component().lock().unwrap_or_else(|e| e.into_inner());
+                    let mut map = crdt_dirty_lww_by_component()
+                        .lock()
+                        .unwrap_or_else(|e| e.into_inner());
                     for (component_id, entities) in dirty_crdt_state.lww.iter() {
                         *map.entry(component_id.0).or_insert(0) += entities.len() as u64;
                     }
                 }
                 {
-                    let mut map = crdt_dirty_gos_by_component().lock().unwrap_or_else(|e| e.into_inner());
+                    let mut map = crdt_dirty_gos_by_component()
+                        .lock()
+                        .unwrap_or_else(|e| e.into_inner());
                     for (component_id, entities) in dirty_crdt_state.gos.iter() {
                         *map.entry(component_id.0).or_insert(0) += entities.len() as u64;
                     }
