@@ -177,7 +177,7 @@ fn op_crdt_send_to_renderer(op_state: Rc<RefCell<OpState>>, #[arraybuffer] messa
 
     let mutex_scene_crdt_state = op_state.take::<SharedSceneCrdtState>();
     let cloned_scene_crdt = mutex_scene_crdt_state.clone();
-    let mut scene_crdt_state = cloned_scene_crdt.lock().unwrap();
+    let mut scene_crdt_state = cloned_scene_crdt.lock().unwrap_or_else(|e| e.into_inner());
 
     let mut stream = DclReader::new(messages);
 
@@ -241,7 +241,9 @@ async fn op_crdt_recv_wait(op_state: Rc<RefCell<OpState>>) -> Result<u32, anyhow
     let local_api_calls = op_state.take::<Vec<LocalCall>>();
     let mutex_scene_crdt_state = op_state.take::<Arc<Mutex<SceneCrdtState>>>();
     let cloned_scene_crdt = mutex_scene_crdt_state.clone();
-    let scene_crdt_state = cloned_scene_crdt.lock().unwrap();
+    let scene_crdt_state = cloned_scene_crdt
+        .lock()
+        .map_err(|e| anyhow::anyhow!("Scene CRDT mutex poisoned: {}", e))?;
 
     let data = match response {
         Some(RendererResponse::Ok {
@@ -263,13 +265,17 @@ async fn op_crdt_recv_wait(op_state: Rc<RefCell<OpState>>) -> Result<u32, anyhow
             // and a shared lock here serializes the whole CRDT pipeline.
             if CRDT_BREAKDOWN_ENABLED.load(Ordering::Relaxed) {
                 {
-                    let mut map = crdt_dirty_lww_by_component().lock().unwrap();
+                    let mut map = crdt_dirty_lww_by_component()
+                        .lock()
+                        .unwrap_or_else(|e| e.into_inner());
                     for (component_id, entities) in dirty_crdt_state.lww.iter() {
                         *map.entry(component_id.0).or_insert(0) += entities.len() as u64;
                     }
                 }
                 {
-                    let mut map = crdt_dirty_gos_by_component().lock().unwrap();
+                    let mut map = crdt_dirty_gos_by_component()
+                        .lock()
+                        .unwrap_or_else(|e| e.into_inner());
                     for (component_id, entities) in dirty_crdt_state.gos.iter() {
                         *map.entry(component_id.0).or_insert(0) += entities.len() as u64;
                     }
