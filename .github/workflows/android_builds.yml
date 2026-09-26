@@ -58,7 +58,6 @@ on:
         required: false
 
 permissions:
-  pull-requests: write
   contents: read
 
 concurrency:
@@ -474,63 +473,3 @@ jobs:
         shell: bash
         run: |
           echo "::warning title=Sentry symbol upload failed::Android native symbols for ${{ github.ref_name }} were not uploaded — crashes may be unsymbolicated. The APK/AAB themselves are unaffected."
-
-      # Build Report Comment
-      - name: Prepare Build Report
-        if: github.event_name == 'pull_request' && always()
-        run: |
-          ARTIFACTS_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-
-          # Determine build status
-          if [ "${{ job.status }}" = "success" ]; then
-            ANDROID_STATUS="✅ Success"
-            # Prefer the direct R2 download link when the APK was uploaded.
-            if [ -n "${APK_PUBLIC_URL:-}" ]; then
-              APK_LINK="[📱 Download APK](${APK_PUBLIC_URL})"
-            else
-              APK_LINK="[📱 Download APK](${ARTIFACTS_URL}/artifacts)"
-            fi
-          else
-            ANDROID_STATUS="❌ Failed"
-            APK_LINK="Build failed"
-          fi
-          # AAB and debug symbols are only built on main/release, never on PRs (this
-          # report only runs on PRs), so don't link to artifacts that won't exist.
-          AAB_LINK="_main/release builds only_"
-          SYMBOLS_LINK="_main/release builds only_"
-
-          {
-            echo "## 📦 Build Report"
-            echo ""
-            echo "### 🤖 Android"
-            echo ""
-            echo "| Artifact | Status |"
-            echo "|----------|--------|"
-            echo "| APK | ${APK_LINK} |"
-            echo "| AAB | ${AAB_LINK} |"
-            echo "| Debug Symbols | ${SYMBOLS_LINK} |"
-            echo ""
-            echo "**Build Status**: ${ANDROID_STATUS}"
-            echo ""
-            echo "### 🍏 iOS"
-            echo ""
-            echo "> The signed APK is uploaded to R2 on every build (link above). Add the \`build\` label (alias: \`build-ios\`) to build & ship iOS to TestFlight and post a Slack \"Android build ready\" notification."
-            echo ""
-            echo "---"
-            echo ""
-            echo "🔗 **Workflow Run**: [View logs](${ARTIFACTS_URL})"
-            echo ""
-            echo "🔄 **Updated**: $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
-          } > build-report.md
-
-      # On fork PRs the GITHUB_TOKEN is read-only regardless of the declared
-      # `pull-requests: write` permission, so posting the comment fails with "Resource not
-      # accessible by integration". Let it fail soft: the comment just won't appear on fork
-      # PRs, but the Android build itself must not be marked failed because of it.
-      - name: Comment PR with Build Report
-        if: github.event_name == 'pull_request' && always()
-        continue-on-error: true
-        uses: marocchino/sticky-pull-request-comment@v2
-        with:
-          header: build-report
-          path: build-report.md
