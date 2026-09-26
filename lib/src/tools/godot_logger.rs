@@ -38,7 +38,7 @@ impl tracing::field::Visit for MessageVisitor {
 /// stream whose consumer was already dropped, which is ~19% of all Sentry
 /// volume and not actionable from here. The root cause (subscription streams
 /// orphaned by the 30s resubscribe) is tracked separately in #2591.
-const DEMOTED_TARGETS: [&str; 1] = ["dcl_rpc"];
+const DEMOTED_TARGETS: [&str; 2] = ["dcl_rpc", "dclgodot::tools::memory_monitor"];
 
 fn is_demoted_target(target: &str) -> bool {
     DEMOTED_TARGETS
