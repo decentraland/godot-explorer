@@ -51,6 +51,12 @@ pub struct DclParseDeepLink {
     #[var]
     path: GString,
 
+    /// The destination `path` names, collapsed to one name ("jump", "events",
+    /// "places", "open", "mobile"). Route on this, not on `path`: the website
+    /// nests its landing pages under /jump/<section>. See deep_link::section_for.
+    #[var]
+    section: GString,
+
     /// Dev/testing: short-circuit profile deploys (deep link param: disable-profile-deploy=true)
     #[var]
     disable_profile_deploy: bool,
@@ -111,6 +117,7 @@ impl DclParseDeepLink {
             saved_profile: GString::new(),
             multiplayer_debug: false,
             path: GString::new(),
+            section: GString::new(),
             disable_profile_deploy: false,
             fake_owned_wearables: PackedStringArray::new(),
             scene_inspector: GString::new(),
@@ -143,6 +150,7 @@ impl DclParseDeepLink {
             saved_profile: GString::from(&r.saved_profile),
             multiplayer_debug: r.multiplayer_debug,
             path: GString::from(&r.path),
+            section: GString::from(&r.section),
             disable_profile_deploy: r.disable_profile_deploy,
             fake_owned_wearables: PackedStringArray::from_iter(
                 r.fake_owned_wearables.iter().map(GString::from),
