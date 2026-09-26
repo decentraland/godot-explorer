@@ -1,28 +1,30 @@
 class_name NodeGuard
 extends RefCounted
 
-## Validity guard for node references that outlive an `await` (issue #2714).
+## Validity check plus telemetry for a node reference whose lifetime this code does not own.
 ##
-## Every `await` hands control back to the engine, so between suspending and resuming a
-## function another code path is free to destroy the node that function is about to touch:
-## the user closes the modal, a realm change tears the UI down, sign-out reaps the tree.
-## Reading a member of a freed instance afterwards is a use-after-free. Under the debug
-## export template GDScript validates each object access and turns it into an "Attempted to
-## access a freed object" error; the release template we ship to the stores compiles that
-## validation out and reads the freed memory instead, which is a SIGSEGV on the phone.
+## Read REVIEW.md §5 "Freed-node access after `await`" first. On the release template a
+## method call on a freed node is a SIGSEGV, and `await` is where references go stale. The
+## engine protects `self` - a coroutine whose instance was freed is never resumed - and
+## nothing else, so the rule is structural, not a check: async work that needs a node is a
+## method of that node; a longer-lived owner re-resolves the node after the await instead
+## of carrying it across; work is cancelled when its owner frees the node. None of that
+## needs this class.
 ##
-## Two rules follow, and this class exists to make both cheap:
+## `is_alive()` is for the one case left: an object whose lifetime is genuinely not ours -
+## a remote player that can leave at any moment, a modal the user can close under a
+## request. It is `is_instance_valid()` plus one report per site per session to Sentry and
+## Segment, so the races we knowingly tolerate stay measured. Two facts it relies on:
 ##
-## 1. Never test a node reference for truthiness (`if node:`). A freed instance is not
-##    null, so the test passes and the *next* line is the one that crashes. Ask
-##    `is_instance_valid()` instead — it resolves the object id rather than the pointer.
-## 2. Re-validate after every `await`, not only before it. A check that ran before
-##    suspending says nothing about the state on resume.
-##
-## `is_alive()` is rule 2 plus telemetry. Swallowing the stale reference silently would fix
-## the crash and hide how often the race actually fires, so every guarded site reports the
-## first hit of the session to Sentry and Segment — enough to size the problem per build and
-## per device, capped so a device that reopens a modal in a loop cannot flood either.
+## 1. A freed instance is not null: `if node:` passes and the next line crashes. Only
+##    `is_instance_valid()` resolves the object id instead of the pointer.
+## 2. A check before an `await` says nothing about the state on resume.
+## 3. Valid is not the same as in the tree, and in the tree is not the same as ready.
+##    `change_scene_to_file()` detaches a page at once but frees it later, so
+##    `is_instance_valid()` stays true for a container that has already left the tree - and a
+##    node added under a detached parent never runs `_ready`, so its `@onready` members stay
+##    null and crash on first use. When what you need is a node you are about to build into or
+##    read children from, ask `is_inside_tree()`; this class does not answer that.
 
 ## Hits reported per site per session. The counter in `_hits` keeps rising past this;
 ## only the outbound event is capped.
