@@ -40,6 +40,22 @@ const GLIDE_OPENING := 1
 const GLIDE_GLIDING := 2
 const GLIDE_CLOSING := 3
 
+# #2850: Unity parity (ApplyCharacterMovementVelocity.cs / ApplyHorizontalAirDrag.cs).
+# Acceleration weight ramps 0→1 over 0.5s while input is held; the accel pair
+# lerps with it. Air drag is quadratic: AirDrag 0.05 × JumpVelocityDrag 4.
+const ACCELERATION_TIME := 0.5
+const GROUND_ACCEL := 20.0
+const GROUND_ACCEL_MAX := 25.0
+const AIR_ACCEL := 15.0
+const AIR_ACCEL_MAX := 20.0
+const AIR_DRAG := 0.2
+
+# #1557: Unity parity (ApplyJump.cs / ApplyGravity.cs). Seconds, never ticks.
+const COYOTE_WINDOW := 0.15
+const GRAVITY_ASCENT_FACTOR := 4.0
+const LONG_JUMP_TIME := 0.5
+const LONG_JUMP_GRAVITY_SCALE := 0.5
+
 # What the jump button would do if pressed right now. Used by the UI to pick
 # the matching icon. Mirrors the decision tree in _physics_process.
 const JUMP_ACTION_NONE := 0
@@ -70,18 +86,63 @@ const AVATAR_HALF_WIDTH := 0.35
 # triggers, or other non-ground CollisionObject3Ds.
 const GROUND_RAYCAST_MASK := 2
 
+# #2753: Unity parity (ApplySlopeModifier.cs / CharacterObject.prefab).
+# CharacterBody3D has no built-in step offset (M1) — custom logic below.
+const STEP_OFFSET := 0.35
+# Max climbable top above the feet: stepOffset + PhysX skin. Live QA at
+# kuruk.dcl.eth: Unity climbs 0.42, blocks 0.43.
+const STEP_MAX_HEIGHT := STEP_OFFSET + 0.07
+# Below this the rise machinery isn't worth engaging — protects against
+# teleporting DOWN onto lower surfaces read past the face.
+const STEP_MIN_RISE := 0.02
+# Rises below this are silent ride-assists: they don't count toward the
+# two-unrest-rises disarm chain (terrain ripple / collider lips).
+const STEP_PENDING_RISE := 0.05
+# A rise this small is still worth taking when wall-blocked (collider seam
+# lips); below it is measurement noise.
+const STEP_LIP_RISE := 0.005
+# A rise above this disarms the step-up until the capsule rests (anti
+# ramp-climbing — a 50deg ramp rises ~0.31 per band); legit single steps
+# (kuruk's first tread measures 0.20-0.21 real) must stay below it.
+const STEP_TALL_RISE := 0.25
+# Landing probe: sphere radius, how far past the riser face it drops (must
+# stay well below the radius or edge contacts read the top lower than it is),
+# start height (above STEP_MAX_HEIGHT + radius so it never begins overlapped
+# — cast_motion sees no initial overlaps), total drop, and the deeper retry
+# used when the first probe finds void (thin/offset/hollow colliders).
+const STEP_PROBE_RADIUS := 0.05
+const STEP_PROBE_PAST_FACE := 0.015
+const STEP_PROBE_TOP := STEP_OFFSET + 0.185
+const STEP_PROBE_DROP := STEP_PROBE_TOP + 0.05
+const STEP_PROBE_RETRY := 0.25
+# Predictive pass skips while walking a climbable slope (floor normal off
+# vertical by more than ~8deg) — stepping there turns inclines into stutter.
+const SLOPE_WALK_NORMAL_Y := 0.99
+# cos(46deg): a slide collision flatter than this is walkable ground; steeper
+# is a ramp/wall face — sliding on one must not count as support.
+const WALKABLE_NORMAL_Y := 0.695
+# Downslope stick, expressed as floor_snap_length so is_on_floor() survives
+# downhill moves (a manual raycast snap would report airborne mid-stick).
+const DOWNSLOPE_STICK_JOG := 0.45
+const DOWNSLOPE_STICK_RUN := 0.55
+# Unity serializes 46deg; engine default 45 is wrong.
+const SLOPE_LIMIT_DEG := 46.0
+# Capsule dims from player.tscn (CollisionShape3D_Body).
+const CAPSULE_CENTER_Y := 0.8
+const CAPSULE_RADIUS := 0.3
+
 var last_position: Vector3
 var actual_velocity_xz: float
 
 # Locomotion settings - these are updated from the current scene's DclLocomotionSettings
 var walk_speed: float = 1.5
 var jog_speed: float = 8.0
-var run_speed: float = 11.0
+var run_speed: float = 10.0
 var gravity := 10.0
-var jump_height: float = 1.8
-var run_jump_height: float = 1.8
+# #1557: jog/run jump heights lerped by horizontal speed (Unity: 1.0 / 1.5).
+var jump_height: float = 1.0
+var run_jump_height: float = 1.5
 var hard_landing_cooldown: float = 0.0
-var jump_velocity_0 := sqrt(2 * jump_height * gravity)
 
 var jump_count: int = 0
 var glide_state: int = GLIDE_CLOSED
@@ -102,6 +163,7 @@ var external_velocity: Vector3 = Vector3.ZERO
 var _hard_landing_timer: float = 0.0
 var _locomotion_settings: DclLocomotionSettings = null
 var _jump_buffer: float = 0.0
+var _accel_weight: float = 0.0
 var _glide_timer: float = 0.0
 var _time_since_last_jump: float = 1000.0
 var _time_since_glide_end: float = 1000.0
@@ -135,6 +197,13 @@ var _pinch_accumulated_delta: float = 0.0
 var _pinch_start_mode: Global.CameraMode = Global.CameraMode.THIRD_PERSON
 # The active camera-mode tween, killed before a new one so they never fight.
 var _camera_mode_tween: Tween = null
+# Step-up arming: after a TALL rise (> STEP_TALL_RISE) or two consecutive
+# rises with no rest between (steep ramps chain small rises) the step-up
+# disarms until the capsule rests. A ramp face never rests, a staircase
+# tread always does, and single terrain bumps rise without arming
+# side-effects at all.
+var _step_armed := true
+var _step_pending := false
 
 @onready var mount_camera := $Mount
 @onready var camera: DclCamera3D = $Mount/CameraArm/Camera3D
@@ -144,6 +213,10 @@ var _camera_mode_tween: Tween = null
 @onready var direction: Vector3 = Vector3(0, 0, 0)
 @onready var avatar := $Avatar
 @onready var stuck_detector := $StuckDetector
+@onready var _body_capsule: CollisionShape3D = %CollisionShape3D_Body
+# Margin-less clone for step-up motion tests (skin width would eat the step band).
+@onready var _step_test_shape: CapsuleShape3D = _make_step_test_shape()
+@onready var _step_test_sphere: SphereShape3D = _make_step_test_sphere()
 
 
 func to_xz(pos: Vector3) -> Vector2:
@@ -276,7 +349,7 @@ func _ready():
 	set_camera_mode(Global.CameraMode.THIRD_PERSON, false)  # Don't play sound on initial setup
 	avatar.is_local_player = true
 
-	floor_snap_length = 0.2
+	floor_max_angle = deg_to_rad(SLOPE_LIMIT_DEG)
 
 	Global.player_identity.profile_changed.connect(self._on_player_profile_changed)
 
@@ -353,7 +426,6 @@ func _apply_locomotion_settings() -> void:
 	jump_height = _locomotion_settings.jump_height
 	run_jump_height = _locomotion_settings.run_jump_height
 	hard_landing_cooldown = _locomotion_settings.hard_landing_cooldown
-	jump_velocity_0 = sqrt(2 * jump_height * gravity)
 
 
 func clamp_camera_rotation():
@@ -525,6 +597,12 @@ func _physics_process(dt: float) -> void:
 	else:
 		time_falling = 0.0
 
+	# #1557: coyote window in seconds (B1) — the ground jump stays reachable this
+	# long after leaving the floor, and the glide gate must not eat the press.
+	# velocity.y guard: the window only opens when walking off a ledge, never
+	# on the way up (a jump-pad launch must not become a cancellable "ground").
+	var in_coyote := not on_floor and time_falling <= COYOTE_WINDOW and velocity.y <= 0.0
+
 	# Air-jump hover phase: freeze gravity, then fire impulse + horizontal dash
 	# when the timer expires. Leaves avatar.rise/fall untouched on purpose —
 	# flipping them mid-hover would trip Jump_Fall → Jump_End via nfall and
@@ -533,17 +611,21 @@ func _physics_process(dt: float) -> void:
 		_air_jump_delay_timer -= dt
 		velocity.y = 0.0
 		if _air_jump_delay_timer <= 0.0:
-			velocity.y = sqrt(2.0 * AIR_JUMP_HEIGHT * gravity)
+			velocity.y = sqrt(2.0 * AIR_JUMP_HEIGHT * gravity * GRAVITY_ASCENT_FACTOR)
 			var horiz_dir: Vector3 = Vector3(_air_jump_direction.x, 0.0, _air_jump_direction.z)
 			if horiz_dir.length_squared() > 0.0001:
 				horiz_dir = horiz_dir.normalized()
-				velocity.x = horiz_dir.x * AIR_JUMP_DIRECTION_IMPULSE
-				velocity.z = horiz_dir.z * AIR_JUMP_DIRECTION_IMPULSE
+				# #1557: max(8, current horizontal speed) (ApplyJump.cs).
+				var impulse := maxf(
+					AIR_JUMP_DIRECTION_IMPULSE, Vector2(velocity.x, velocity.z).length()
+				)
+				velocity.x = horiz_dir.x * impulse
+				velocity.z = horiz_dir.z * impulse
 			jump_count += 1
 			_time_since_last_jump = 0.0
 			avatar.rise = true
 			avatar.fall = false
-	elif not on_floor:
+	elif not on_floor and not in_coyote:
 		var in_grace_time = (
 			time_falling < .2
 			and !Input.is_action_pressed("ia_jump")
@@ -557,7 +639,7 @@ func _physics_process(dt: float) -> void:
 		avatar.fall = velocity.y < -.3 && !in_grace_time and free_flight
 		# Scene force.y reduces effective gravity, so an upward wind cancels
 		# fall instead of stacking on velocity.y.
-		velocity.y -= (gravity - external_acceleration.y) * dt
+		velocity.y -= (_current_gravity() - external_acceleration.y) * dt
 
 		# Air-jump: 0.2s hover then impulse (matches Unity ApplyJump two-step).
 		if (
@@ -615,17 +697,24 @@ func _physics_process(dt: float) -> void:
 		and _time_since_last_jump >= JUMP_COOLDOWN
 	):
 		# Ground jump — consume the buffer instead of reading the key again.
-		var effective_jump_height := jump_height
-		if Input.is_action_pressed("ia_sprint"):
-			effective_jump_height = run_jump_height
-		velocity.y = sqrt(2 * effective_jump_height * gravity)
+		# #1557: fires on the floor and inside the coyote window (B1). Exact port
+		# of ApplyJump.GetJumpHeight: run height only while sprinting, lerped by
+		# current horizontal speed over run speed; v0 uses the ascent gravity.
+		var h_speed := Vector2(velocity.x, velocity.z).length()
+		var max_jump_height := (
+			run_jump_height if Input.is_action_pressed("ia_sprint") else jump_height
+		)
+		var effective_jump_height := lerpf(
+			jump_height, max_jump_height, clampf(h_speed / run_speed, 0.0, 1.0)
+		)
+		velocity.y = sqrt(2.0 * effective_jump_height * gravity * GRAVITY_ASCENT_FACTOR)
 		jump_count = 1
 		_jump_buffer = 0.0
 		_time_since_last_jump = 0.0
 		avatar.land = false
 		avatar.rise = true
 		avatar.fall = false
-	else:
+	elif on_floor:
 		if not avatar.land:
 			avatar.land = true
 			if was_falling and hard_landing_cooldown > 0 and fall_duration > 1.0:
@@ -639,9 +728,28 @@ func _physics_process(dt: float) -> void:
 		if glide_state == GLIDE_OPENING or glide_state == GLIDE_GLIDING:
 			glide_state = GLIDE_CLOSING
 			_glide_timer = GLIDE_CLOSING_TIME
+	else:
+		# Coyote fall without a buffered jump: gravity applies, no landing state,
+		# glide gate stays closed for the whole window.
+		velocity.y -= (_current_gravity() - external_acceleration.y) * dt
+
+	# #2850: Unity port (ApplyCharacterMovementVelocity.cs). Weight ramps over
+	# 0.5s while input is held; the accel pair follows the settings curve
+	# (keys 0/0.1→0, 0.9/1→1: plateau at min, then ramp). Velocity target uses
+	# the RAW input direction — the smoothed current_direction is only for facing.
+	var has_move_input := direction != Vector3.ZERO
+	_accel_weight = move_toward(
+		_accel_weight, 1.0 if has_move_input else 0.0, dt / ACCELERATION_TIME
+	)
+	var curve_t := clampf(inverse_lerp(0.1, 0.9, _accel_weight), 0.0, 1.0)
+	var accel := (
+		lerpf(GROUND_ACCEL, GROUND_ACCEL_MAX, curve_t)
+		if on_floor
+		else lerpf(AIR_ACCEL, AIR_ACCEL_MAX, curve_t)
+	)
 
 	camera.set_target_fov(DEFAULT_CAMERA_FOV)
-	if current_direction:
+	if has_move_input:
 		var wants_walk := Input.is_action_pressed("ia_walk")
 		var wants_sprint := Input.is_action_pressed("ia_sprint")
 
@@ -666,15 +774,40 @@ func _physics_process(dt: float) -> void:
 			effective_speed = walk_speed
 		# else: effective_speed remains 0, no movement allowed
 
-		velocity.x = current_direction.x * effective_speed
-		velocity.z = current_direction.z * effective_speed
+		# ADAD sign correction: reversing an axis flips sign, keeping momentum.
+		var target_x := direction.x * effective_speed
+		var target_z := direction.z * effective_speed
+		if signf(target_x) != 0.0 and signf(target_x) != signf(velocity.x):
+			velocity.x = -velocity.x
+		if signf(target_z) != 0.0 and signf(target_z) != signf(velocity.z):
+			velocity.z = -velocity.z
+		# Ground and air accel pairs; air is MoveTowards instead of the old
+		# direct assignment (reduced air control).
+		velocity.x = move_toward(velocity.x, target_x, accel * dt)
+		velocity.z = move_toward(velocity.z, target_z, accel * dt)
 
 		avatar.look_at(current_direction.normalized() + position)
 		avatar.rotation.x = 0.0
 		avatar.rotation.z = 0.0
 	else:
-		velocity.x = move_toward(velocity.x, 0, walk_speed)
-		velocity.z = move_toward(velocity.z, 0, walk_speed)
+		if on_floor:
+			# StopTimeSec=0: grounded stop is INSTANT in Unity (degenerate
+			# SmoothDamp). B4 dies with it — instant is tick-rate independent.
+			velocity.x = 0.0
+			velocity.z = 0.0
+		else:
+			# Air with no input drifts toward 0 at the air accel rate.
+			velocity.x = move_toward(velocity.x, 0.0, accel * dt)
+			velocity.z = move_toward(velocity.z, 0.0, accel * dt)
+
+	# #2850: quadratic horizontal air drag, coefficient 0.2 (live Unity value).
+	if not on_floor:
+		var h_vel := Vector2(velocity.x, velocity.z)
+		var h_mag := h_vel.length()
+		if h_mag > 0.0:
+			h_vel -= h_vel.normalized() * minf(AIR_DRAG * h_mag * h_mag * dt, h_mag)
+			velocity.x = h_vel.x
+			velocity.z = h_vel.y
 
 	# While gliding, cap horizontal speed — overrides walk/jog/run speeds set above.
 	if glide_state == GLIDE_GLIDING:
@@ -727,7 +860,28 @@ func _physics_process(dt: float) -> void:
 	velocity.z += external_velocity.z
 
 	last_position = global_position
+	# #2753: downslope stick — ApplySlopeModifier picks by input kind (run when
+	# sprinting), not by measured speed. Assigned BEFORE the predictive step-up:
+	# a rise zeroes the snap for that frame's move so the lower floor within
+	# snap reach cannot re-glue the capsule mid-step. Keeping the snap on every
+	# other frame is also what makes is_on_floor() reliable for the re-arm.
+	floor_snap_length = (
+		DOWNSLOPE_STICK_RUN if Input.is_action_pressed("ia_sprint") else DOWNSLOPE_STICK_JOG
+	)
+	_try_step_up_predictive(Vector3(locomotion_x, 0.0, locomotion_z), dt)
 	move_and_slide()
+	var moved_xz := (to_xz(global_position) - to_xz(last_position)).length()
+	_try_step_up(Vector3(locomotion_x, 0.0, locomotion_z), moved_xz)
+	# Step-up re-arming: the capsule re-arms when it stands on WALKABLE
+	# support — a staircase tread, a step top, flat ground (even resting on
+	# Jolt's speculative margin cloud, where is_on_floor() never fires, or
+	# pressed against the next riser, which is fine: the tread holds you).
+	# On a steep ramp the support under the feet IS the ramp (un-walkable
+	# normal), and mid-air there is no support at all, so ramp faces never
+	# re-arm: no band-chaining while pressing, sliding, or hopping.
+	if (not _step_armed or _step_pending) and _has_walkable_support():
+		_step_armed = true
+		_step_pending = false
 	position.y = max(position.y, 0)
 	avatar.global_position = global_position
 
@@ -852,6 +1006,194 @@ func _update_avatar_raycast_to_crosshair() -> void:
 	avatar_raycast.target_position = avatar_raycast.to_local(
 		camera.global_position + dir * AVATAR_RAYCAST_DEFAULT_TARGET.length()
 	)
+
+
+# #1557: asymmetric gravity (ApplyGravity.cs) — hold window FIRST (applies on
+# ascent AND early descent: 10×0.5=5), then the ascent factor (hold+rise = 20).
+func _current_gravity() -> float:
+	var g := gravity
+	if Input.is_action_pressed("ia_jump") and _time_since_last_jump < LONG_JUMP_TIME:
+		g *= LONG_JUMP_GRAVITY_SCALE
+	if velocity.y > 0.0:
+		g *= GRAVITY_ASCENT_FACTOR
+	return g
+
+
+# #2753: custom step offset — CharacterBody3D has no built-in (M1). When
+# horizontal motion is wall-blocked while grounded, retry from STEP_OFFSET up:
+# free space above + floor below inside the step window = walkable ledge.
+# `intent` is the pre-slide locomotion velocity (slide zeroes it on the wall).
+func _make_step_test_shape() -> CapsuleShape3D:
+	var s2: CapsuleShape3D = %CollisionShape3D_Body.shape.duplicate()
+	s2.margin = 0.0
+	return s2
+
+
+func _make_step_test_sphere() -> SphereShape3D:
+	# Small margin-less probe for landing height — small enough to read the
+	# exact tread top, too thick to slip through trimesh tri edges.
+	var s := SphereShape3D.new()
+	s.radius = STEP_PROBE_RADIUS
+	s.margin = 0.0
+	return s
+
+
+func _has_walkable_support() -> bool:
+	# Direct support check for step-up re-arming. is_on_floor() misses rests
+	# on Jolt's speculative margin cloud (contacts cancel motion without ever
+	# registering floor), so when it reports nothing, confirm with a short
+	# ray — rays return normals, cast_motion in this build does not.
+	if is_on_floor():
+		return true  # floor contacts are within floor_max_angle by definition
+	var space := get_world_3d().direct_space_state
+	if space == null:
+		return false
+	var rq := PhysicsRayQueryParameters3D.new()
+	rq.from = global_position + Vector3(0.0, 0.05, 0.0)
+	rq.to = global_position + Vector3(0.0, -0.1, 0.0)
+	rq.collision_mask = collision_mask
+	rq.exclude = _raycast_exclude
+	var hit := space.intersect_ray(rq)
+	return not hit.is_empty() and hit.normal.y >= WALKABLE_NORMAL_Y
+
+
+# Predictive step (PhysX CCT parity: the step happens inside the move, not
+# after a blocked frame). Probe the intended motion before move_and_slide; on
+# a step, rise first and let the horizontal motion flow unobstructed.
+func _try_step_up_predictive(intent: Vector3, dt: float) -> void:
+	var horiz := Vector3(intent.x, 0.0, intent.z)
+	if horiz.length_squared() < 0.25:
+		return
+	# Already walking a climbable slope: the contact ahead is the slope
+	# itself, not a riser — stepping here turns a smooth incline into a
+	# stuttered staircase. The post-move fallback still covers blocked cases.
+	if is_on_floor() and get_floor_normal().y < SLOPE_WALK_NORMAL_Y:
+		return
+	var space := get_world_3d().direct_space_state
+	if space == null:
+		return
+	var shape_query := PhysicsShapeQueryParameters3D.new()
+	shape_query.shape = _step_test_shape
+	shape_query.collision_mask = collision_mask
+	shape_query.exclude = _raycast_exclude
+	shape_query.transform = Transform3D(
+		Basis.IDENTITY, global_position + Vector3(0.0, CAPSULE_CENTER_Y, 0.0)
+	)
+	shape_query.motion = horiz.normalized() * (horiz.length() * dt + 0.05)
+	var contact: PackedFloat32Array = space.cast_motion(shape_query)
+	if contact[0] >= 1.0:
+		return  # nothing in the way this frame
+	_step_up(intent)
+
+
+func _try_step_up(intent: Vector3, moved_xz: float) -> void:
+	# Post-move fallback: the predictive pass (before move_and_slide) covers the
+	# approach; this catches direction changes mid-contact. Trigger: wall
+	# contact OR blocked horizontal motion. The rounded capsule bottom meets a
+	# riser with a diagonal normal that classifies as FLOOR for the first
+	# frames (< 46°); waiting for is_on_wall() alone adds a visible hitch.
+	var expected := Vector3(intent.x, 0, intent.z).length() * get_physics_process_delta_time()
+	var blocked := expected > 0.008 and moved_xz < expected * 0.3
+	if not is_on_wall() and not blocked:
+		return
+	_step_up(intent)
+
+
+func _step_up(intent: Vector3) -> void:
+	if not _step_armed:
+		return
+	var horiz := Vector3(intent.x, 0.0, intent.z)
+	if horiz.length_squared() < 0.25:
+		return
+	var space := get_world_3d().direct_space_state
+	if space == null:
+		return
+	# Shape tests use a margin-less clone of the capsule: the 0.08 skin width
+	# otherwise eats the clearance band and blocks valid steps.
+	var dir := horiz.normalized()
+	var origin := global_position + Vector3(0.0, CAPSULE_CENTER_Y, 0.0)
+	var shape_query := PhysicsShapeQueryParameters3D.new()
+	shape_query.shape = _step_test_shape
+	shape_query.collision_mask = collision_mask
+	shape_query.exclude = _raycast_exclude
+	# a) real distance to the wall face: the margin-less clone travels until
+	# its surface touches — clone travel + capsule radius = center-to-face.
+	# (A maxf(..., radius) clamp would hide the resting gap: Jolt rests the
+	# capsule on its speculative margin cloud ~0.08 off the face, and every
+	# downstream probe then lands short of it.)
+	shape_query.transform = Transform3D(Basis.IDENTITY, origin)
+	shape_query.motion = dir * 0.5
+	var low: PackedFloat32Array = space.cast_motion(shape_query)
+	var d_face := low[1] * 0.5 + CAPSULE_RADIUS
+	# b) lift up to STEP_OFFSET (doubles as the headroom check)
+	shape_query.motion = Vector3(0.0, STEP_OFFSET, 0.0)
+	var up: PackedFloat32Array = space.cast_motion(shape_query)
+	var lift := up[0] * STEP_OFFSET
+	if lift < STEP_MIN_RISE:
+		return
+	# c) forward past the face at raised height; blocked = taller than the step
+	shape_query.transform = Transform3D(Basis.IDENTITY, origin + Vector3(0.0, lift, 0.0))
+	var fwd := dir * (d_face + CAPSULE_RADIUS + 0.02)
+	shape_query.motion = fwd
+	var fw: PackedFloat32Array = space.cast_motion(shape_query)
+	var ray_ahead := d_face + STEP_PROBE_PAST_FACE
+	if fw[0] < 1.0:
+		# Beveled/rounded edge: measure the surface right past the raised
+		# contact — top within the step band means step, not wall (PhysX
+		# reasons from the contact point, not from a free-space sweep).
+		ray_ahead = fw[1] * fwd.length() + STEP_PROBE_PAST_FACE
+	# d) landing height: small margin-less sphere cast straight down from a
+	# fixed height (rays slip through trimesh tri edges, and a cast starting
+	# overlapped with the riser top reports no hit, so the probe starts above
+	# the max climbable top). Attempts, in order: just past the face, then
+	# deeper (thin/offset/hollow colliders), then ON the face plane when
+	# wall-blocked (seam lips, thin facades, corner approaches). PhysX never
+	# probes ahead — it reasons from the contact; these approximate that with
+	# the info casts can see.
+	var dq := PhysicsShapeQueryParameters3D.new()
+	dq.shape = _step_test_sphere
+	dq.collision_mask = collision_mask
+	dq.exclude = _raycast_exclude
+	dq.motion = Vector3(0.0, -STEP_PROBE_DROP, 0.0)
+	var attempts: Array[float] = [ray_ahead, ray_ahead + STEP_PROBE_RETRY]
+	if is_on_wall():
+		attempts.append(d_face)
+	var found := false
+	var on_face := false
+	var floor_y := 0.0
+	for dist in attempts:
+		var cast_from := global_position + Vector3(0.0, STEP_PROBE_TOP, 0.0) + dir * dist
+		dq.transform = Transform3D(Basis.IDENTITY, cast_from)
+		var dn: PackedFloat32Array = space.cast_motion(dq)
+		if dn[0] < 1.0:
+			floor_y = cast_from.y - dn[0] * STEP_PROBE_DROP - STEP_PROBE_RADIUS
+			found = true
+			on_face = is_on_wall() and dist == d_face
+			break
+	if not found:
+		return  # gap, not a step
+	# The face-plane probe exists for wall-blocking lips: accept rises down
+	# to the lip threshold there; the forward probes keep the noise floor.
+	var min_rise := STEP_LIP_RISE if on_face else STEP_MIN_RISE
+	if floor_y < global_position.y + min_rise:
+		return  # flat or lower — nothing to step onto
+	if floor_y > global_position.y + STEP_MAX_HEIGHT:
+		return  # taller than the climbable band (kuruk: 0.42 climbs, 0.43 blocks)
+	# Rise in place — the horizontal motion flows via move_and_slide itself,
+	# so there is no blocked frame and no forward teleport pop. Tall rises
+	# disarm until the capsule rests: re-triggering on the same ramp face is
+	# what stair-climbs steep inclines. Small rises (bumps, treads) don't
+	# disarm, but two in a row without a rest in between do — that chain is
+	# how a 60-65° ramp climbs in sub-0.2 bands. Snap off for this frame's
+	# move: the lower floor is within snap reach and would re-glue the
+	# capsule mid-step.
+	var rise := floor_y - global_position.y
+	if rise > STEP_TALL_RISE or (rise >= STEP_PENDING_RISE and _step_pending):
+		_step_armed = false
+	elif rise >= STEP_PENDING_RISE:
+		_step_pending = true
+	floor_snap_length = 0.0
+	global_position.y = floor_y + 0.001
 
 
 # Fold scene-driven force/impulses into external_velocity, then drag and clamp.
