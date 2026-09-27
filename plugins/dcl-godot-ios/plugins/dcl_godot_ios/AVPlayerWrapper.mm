@@ -261,13 +261,10 @@
         switch (status) {
             case AVPlayerItemStatusReadyToPlay: {
                 NSLog(@"[AVPlayerWrapper] Player ready to play");
-                // Video dimensions are derived from CVPixelBuffer geometry in
-                // acquireIOSurfacePtr on each frame — no track lookup needed here.
-                // Previously, [asset tracksWithMediaType:AVMediaTypeVideo] was called
-                // synchronously at this point, triggering a blocking XPC round-trip
-                // (mach_msg) on the main thread and causing ~247-second App Hangs.
-                // That call has been removed; track-based size is also unavailable for
-                // HLS streams (AVURLAsset exposes no tracks for .m3u8 playlists).
+                // Don't read the asset's tracks here: -[AVAsset tracksWithMediaType:] is a
+                // synchronous XPC call to the media server and this KVO callback runs on
+                // the main thread (App Hang GODOT-EXPLORER-2ZX). The video size comes from
+                // each frame's pixel buffer in acquireIOSurfacePtr instead.
                 break;
             }
             case AVPlayerItemStatusFailed:
