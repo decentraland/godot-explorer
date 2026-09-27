@@ -807,19 +807,18 @@ void DclGodotiOS::request_notification_permission() {
 bool DclGodotiOS::has_notification_permission() {
     #if TARGET_OS_IOS
     __block bool hasPermission = false;
-    __block bool completed = false;
+    dispatch_semaphore_t sema = dispatch_semaphore_create(0);
 
     UNUserNotificationCenter *center = [UNUserNotificationCenter currentNotificationCenter];
     [center getNotificationSettingsWithCompletionHandler:^(UNNotificationSettings * _Nonnull settings) {
         hasPermission = (settings.authorizationStatus == UNAuthorizationStatusAuthorized);
-        completed = true;
+        dispatch_semaphore_signal(sema);
     }];
 
-    // Wait for completion (with timeout)
-    NSDate *timeout = [NSDate dateWithTimeIntervalSinceNow:1.0];
-    while (!completed && [[NSDate date] compare:timeout] == NSOrderedAscending) {
-        [[NSRunLoop currentRunLoop] runMode:NSDefaultRunLoopMode beforeDate:[NSDate dateWithTimeIntervalSinceNow:0.01]];
-    }
+    // Block the thread (not the runloop) until the callback fires, with a 1 s timeout.
+    // Using dispatch_semaphore_wait instead of spinning NSRunLoop prevents re-entrant
+    // Godot frame processing (via CADisplayLink) that caused EXC_BAD_ACCESS crashes.
+    dispatch_semaphore_wait(sema, dispatch_time(DISPATCH_TIME_NOW, 1 * NSEC_PER_SEC));
 
     return hasPermission;
     #else
