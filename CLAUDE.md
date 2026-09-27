@@ -121,10 +121,11 @@ bypasses that check for local debugging only. The baked files live in
 
 ### Directory Structure
 - **`lib/`**: Core Rust library with all systems
-  - `src/dcl/`: Decentraland-specific components (scene runner, SDK bindings)
+  - `src/dcl/`: Decentraland protocol types, SDK bindings, JS runtime glue
+  - `src/scene_runner/`: Scene threads, CRDT handling, per-component systems (`components/`)
   - `src/av/`: Audio/video processing (video player)
   - `src/comms/`: WebRTC, voice chat (livekit)
-  - `src/wallet/`: Ethereum integration
+  - `src/auth/`: Ethereum wallet and sign-in
   - `src/content/`: Asset loading and caching
 - **`godot/`**: Godot project
   - `src/decentraland_components/`: Custom Godot nodes for DCL features
@@ -240,28 +241,12 @@ bypasses that check for local debugging only. The baked files live in
 - The Rust toolchain is pinned in `rust-toolchain.toml` (1.90)
 - For coverage testing, install: `rustup component add llvm-tools-preview && cargo install grcov`
 - Integration with Decentraland SDK7 requires the JavaScript runtime to be properly initialized
-- **Android builds**: No longer use cargo-ndk due to NDK 27 issues. Direct cargo build with `GN_ARGS=use_custom_libcxx=false`
+- **Android builds**: don't use cargo-ndk (it breaks with NDK 27); build with plain cargo and `GN_ARGS=use_custom_libcxx=false`
 - **Dependencies**: Run `cargo run -- doctor` to check system health and missing dependencies
-- **Build order**: Commands now check dependencies and suggest next steps automatically
 
-## New Features (Recent Updates)
+## Command Dependencies
 
-### Enhanced Developer Experience
-- **Colored output**: All xtask commands now use colored output for better readability
-- **Progress indicators**: Long-running operations show progress bars
-- **Dependency checking**: Commands validate prerequisites and provide helpful error messages
-- **Platform detection**: Automatically detects OS and suggests platform-specific commands
-
-### Improved Android Workflow
-```bash
-# Complete Android build workflow
-cargo run -- install --targets android           # Install Android dependencies
-cargo run -- build --target android                # Build Rust library
-cargo run -- export --target android --format apk  # Export APK
-```
-
-### Command Dependencies
-The build system now enforces proper command order:
+Each xtask command checks its prerequisites and says what to run first:
 - `build` requires: protoc installed
 - `run` requires: Godot installed (builds automatically)
 - `export` requires: Godot installed, host built, target platform built
@@ -270,7 +255,7 @@ The build system now enforces proper command order:
 ## Common Tasks
 
 ### Adding a new Decentraland component:
-1. Create the Rust implementation in `lib/src/dcl/components/`
+1. Create the Rust implementation in `lib/src/scene_runner/components/`
 2. Add GDExtension bindings in the component file
 3. Create corresponding GDScript class in `godot/src/decentraland_components/`
 4. Register in the scene runner
@@ -310,10 +295,10 @@ In the Godot editor, go to **DCL Tools → Rust Log Filter...** to open a visual
 
 ### Debugging scene loading:
 1. Enable verbose logging: `RUST_LOG=debug cargo run -- run`
-2. Check the scene runner logs in `lib/src/dcl/scene_runner.rs`
+2. Check the scene runner logs in `lib/src/scene_runner/`
 3. Verify content server responses in `lib/src/content/`
 
 ### Working with the avatar system:
-- Avatar definitions are in `lib/src/avatar/`
-- Wearables are loaded via GLTF in `lib/src/dcl/components/mesh_renderer/`
+- Avatar definitions are in `lib/src/avatars/`
+- Wearables are loaded via GLTF in `lib/src/content/gltf/` (`lib/src/content/wearable_entities.rs`)
 - Animation system uses Godot's AnimationPlayer nodes
