@@ -241,9 +241,16 @@ async fn op_crdt_recv_wait(op_state: Rc<RefCell<OpState>>) -> Result<u32, anyhow
     let local_api_calls = op_state.take::<Vec<LocalCall>>();
     let mutex_scene_crdt_state = op_state.take::<Arc<Mutex<SceneCrdtState>>>();
     let cloned_scene_crdt = mutex_scene_crdt_state.clone();
-    let scene_crdt_state = cloned_scene_crdt
-        .lock()
-        .map_err(|e| anyhow::anyhow!("Scene CRDT mutex poisoned: {}", e))?;
+    // A poisoned lock means the renderer panicked mid-update on this scene's
+    // state; SceneManager kills the scene when it sees that. Put back what was
+    // taken so the next op doesn't hit a missing-type panic (which would abort,
+    // ops can't unwind), and wind the scene down.
+    let Ok(scene_crdt_state) = cloned_scene_crdt.lock() else {
+        op_state.put(local_api_calls);
+        op_state.put(mutex_scene_crdt_state);
+        op_state.put(SceneDying(true));
+        return Err(anyhow::anyhow!("scene CRDT state poisoned, shutting down"));
+    };
 
     let data = match response {
         Some(RendererResponse::Ok {

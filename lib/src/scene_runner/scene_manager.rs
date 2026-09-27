@@ -201,6 +201,7 @@ const MIN_TIME_TO_PROCESS_SCENE_US: i64 = 2083; // 25% of max_time_per_scene_tic
 const MEMORY_SETTLE_FRAMES: i32 = 90;
 
 const EXIT_WITHOUT_KILL_SIGNAL: &str = "scene thread exited without kill signal";
+const CRDT_STATE_POISONED: &str = "scene CRDT state poisoned by a renderer panic";
 const MAX_CRASH_REASON_CHARS: usize = 512;
 
 /// Single-line, bounded head of a crash reason. Scene runtimes throw whatever
@@ -1385,6 +1386,32 @@ impl SceneManager {
         out
     }
 
+    /// Debug: poison a scene's CRDT mutex, the state a renderer panic inside
+    /// update_scene leaves behind (GODOT-EXPLORER-15F). Lets the kill-on-poison
+    /// path be exercised end to end via debug-hub `eval`. No-op in production.
+    #[func]
+    fn debug_poison_scene_crdt(&self, scene_id: i32) -> bool {
+        if DclGlobal::is_production() {
+            return false;
+        }
+        let Some(scene) = self.scenes.get(&SceneId(scene_id)) else {
+            return false;
+        };
+        let crdt = scene.dcl_scene.scene_crdt.clone();
+        let _ = std::thread::spawn(move || {
+            let _guard = crdt.lock();
+            panic!("E2E test: poisoning scene CRDT mutex");
+        })
+        .join();
+        scene.dcl_scene.scene_crdt.is_poisoned()
+    }
+
+    /// Debug: scene id of the parcel the player is standing on.
+    #[func]
+    fn debug_current_parcel_scene_id(&self) -> i32 {
+        self.current_parcel_scene_id.0
+    }
+
     /// Debug: list every alive entity id in a scene's CRDT state.
     /// Returns an empty array if the scene is not loaded.
     #[func]
@@ -1809,6 +1836,25 @@ impl SceneManager {
             }
 
             if let SceneState::Alive = scene.state {
+                // A renderer panic while holding this scene's CRDT lock leaves it
+                // poisoned: update_scene can never lock it again, so the scene would
+                // sit frozen. Treat it as a crash and send the kill signal.
+                if scene.dcl_scene.scene_crdt.is_poisoned() {
+                    tracing::error!(
+                        "scene CRDT state poisoned, killing scene: {} \"{}\" @ {:?}",
+                        scene.scene_entity_definition.id,
+                        scene.scene_entity_definition.get_title(),
+                        scene.scene_entity_definition.get_base_parcel()
+                    );
+                    if matches!(scene.scene_type, SceneType::Parcel) {
+                        self.crashed_scene_ids.push(*scene_id);
+                    }
+                    self.abnormal_exits
+                        .insert(*scene_id, CRDT_STATE_POISONED.to_string());
+                    scene.state = SceneState::ToKill(current_time_us);
+                    self.dying_scene_ids.push(*scene_id);
+                    continue;
+                }
                 if scene.paused {
                     continue;
                 }
