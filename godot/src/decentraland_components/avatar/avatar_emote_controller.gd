@@ -286,6 +286,7 @@ func play_emote(id: String, mask: int = -1, owner_scene_id: int = -1):
 	# Return if its an empty emote
 	if id == "":
 		return
+	id = Emotes.normalize_emote_id(id)
 	# If animation system is being modified, queue this request
 	if _is_modifying_animations:
 		_queued_emote_urn = id
@@ -715,6 +716,11 @@ func async_play_emote(emote_id_or_urn: String, mask: int = -1, owner_scene_id: i
 	# Return if empty emote
 	if emote_id_or_urn == "":
 		return
+	# Other clients spell built-in emotes differently (#2986): Bevy sends
+	# `…:base-scene-emotes:throw` where Unity and this client send `throw`.
+	emote_id_or_urn = Emotes.normalize_emote_id(emote_id_or_urn)
+	if _is_loop_reannounce(emote_id_or_urn, mask):
+		return
 	# Cooldown check to prevent rapid emote spam
 	var current_time = Time.get_ticks_msec() / 1000.0
 	if current_time - _last_emote_time < EMOTE_COOLDOWN_SECONDS:
@@ -777,9 +783,26 @@ func async_play_emote(emote_id_or_urn: String, mask: int = -1, owner_scene_id: i
 	play_emote.call_deferred(emote_urn, mask, owner_scene_id)
 
 
+## Unity re-sends a looping emote's PlayerEmote every cycle over LiveKit (ADR-204) so
+## late joiners pick it up. For a remote avatar already looping that emote, the
+## re-send is a no-op — restarting it would visibly reset the clip each cycle.
+func _is_loop_reannounce(emote_id: String, mask: int) -> bool:
+	# Remote players only: previews have no entity id, and the local player and NPCs
+	# re-trigger on purpose.
+	if avatar == null or avatar.is_local_player or avatar.is_avatar_shape:
+		return false
+	if avatar.dcl_entity_id < 0:
+		return false
+	if not playing_loop or not is_playing() or mask != current_emote_mask:
+		return false
+	if Emotes.is_emote_default(emote_id):
+		emote_id = Emotes.get_base_emote_urn(emote_id)
+	return emote_id == current_emote_urn
+
+
 func _async_load_emote(emote_urn: String):
 	# Check if this is a scene emote - use unified loading path
-	if emote_urn.contains("scene-emote"):
+	if Emotes.is_scene_emote_urn(emote_urn):
 		await _async_load_scene_emote_as_wearable(emote_urn)
 		return
 
@@ -1301,7 +1324,7 @@ func process(idle: bool):
 
 func _track_emote(id: String) -> void:
 	var is_base := Emotes.is_emote_default(id) or Emotes.is_base_emote_urn(id)
-	var source := "scene" if id.contains("scene-emote") else "user"
+	var source := "scene" if Emotes.is_scene_emote_urn(id) else "user"
 	var screen_name := "SCENE" if source == "scene" else "EMOTE_WHEEL"
 	var payload = JSON.stringify({"emote_urn": id, "is_base": is_base, "source": source})
 	Global.metrics.track_click_button("USED EMOTE", screen_name, payload)
