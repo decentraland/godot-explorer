@@ -234,6 +234,49 @@ bypasses that check for local debugging only. The baked files live in
    ```
    The label is automatically removed after the build is triggered on PRs.
 
+## Code hygiene
+
+The habits AI-assisted changes most often get wrong in this repo. Reviewers hold PRs to them
+(`REVIEW.md` §3 Tier 3 items 19–20, §7).
+
+### Comments
+
+- **Two or three lines, only where the code cannot say it.** A comment gives the next reader
+  what they need to not break the line in front of them ("not `call_deferred`: the same flush
+  re-enters this and spins"). The investigation, the root cause and the options you rejected go
+  in the commit message and the PR body, where they are read once.
+- **Never narrate history.** A comment about code that is no longer there ("a prior attempt
+  added…, it was removed because…", "previously set by the AnimationPlayer", "replaces the old
+  `dcl_splash.tscn` that used to live in…") is a tombstone: the reader cannot act on it and git
+  already holds the story. When you remove code, remove its comment too, and do not leave a
+  comment in its place saying what used to be there.
+- **Do not restate the code or the diff.** No `# Added to support X`, no "what this change
+  does" block at the top of a function or file, no docstring that repeats the signature in
+  prose. `##` docstrings are for public API a caller needs — one or two lines.
+- **Comment-only leftovers are dead code.** A function whose body is `pass` plus a comment, or
+  a `TODO` without an issue link, does not ship.
+
+### File size
+
+- **Files at the gdlint cap are closed for new features.** `.gdlintrc` caps GDScript at 1900
+  lines / 45 public methods, and `global.gd`, `explorer.gd`, `modal_manager.gd` and `avatar.gd`
+  are within 30 lines of it. New behaviour goes in its own file — a component, a `RefCounted`
+  helper, an autoload — and the big file gets one call into it, not a new block. Same in Rust,
+  where nothing enforces it: `communication_manager.rs`, `scene_manager.rs` and
+  `content_provider.rs` are past 3000 lines.
+- **Never raise `max-file-lines` / `max-public-methods` inside a feature PR.** The line cap has
+  been raised four times since December 2025 (1000 → 1900), every time inside a feature or fix
+  PR. If a change cannot land without it, split the file first, in its own PR.
+- **Rule of thumb:** over ~1500 lines, ask where else the code could live before adding to it.
+
+### Diff discipline
+
+- Touch only what the change needs: no reformatting, renaming or reordering of neighbouring
+  code, no defensive checks for states the code cannot reach.
+- No helper, base class or abstraction for a single call site — the repo is consciously
+  non-abstracted (`REVIEW.md` §9).
+- English only in comments and identifiers; no `print(` left behind (`REVIEW.md` §7).
+
 ## Important Notes
 
 - The project uses a forked Godot 4.6.2 - don't update the engine version
