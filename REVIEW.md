@@ -126,7 +126,8 @@ Apply this order. Everything below "Correctness" is negotiable; the top tier is 
 16. **Dead code / orphan uniforms / unused imports.** Rust `clippy -D warnings` catches most of this, but `.tres` / `.tscn` / `.gdshader` don't — reviewers catch those manually. A shader uniform removed in `.gdshader` should also be removed from every `.tres`/`.tscn` that set it, and from every material that references a different-typed replacement (#1878 had a `Texture2D → samplerCube` mismatch that would render black silently).
 17. **Performance on the hot path.** The scene-runner update loop, pointer-event loop, and shaders are hot. Watch for per-pixel `acos`/`normalize`/`pow` that can be replaced by compares, per-frame `find_node` / `get_node` lookups, unbounded `for x in all_entities` scans inside scene systems, and JSON serialization on the scene thread.
 18. **Description and test plan quality.** PR descriptions in this repo are `## What`, `## Why`, an optional collapsed `## Details`, and a `## Test plan` (see Section 4 → "PR description shape", including the AG rule on AI-generated text). A description with no What/Why, or whose What/Why read as raw AI output, is a rewrite request before code review. A missing or vague test plan is a legitimate review comment, especially for UI changes. Mobile-visible changes should say *which* platform was tested on. **The QA team runs these by hand on a real phone** (builds auto-distribute via TestFlight / Firebase App Distribution) — a case a tester couldn't reproduce cold (steps that don't start from opening the app, no observable expected result, or non-obvious required state left unsaid) is worth holding on. See Section 4 → "Writing test steps QA can execute" for the required format and a worked example.
-19. **Comments that explain "why", not "what".** Consistent with the CLAUDE.md guidance — reviewers flag comments that restate the code, and praise ones that cite a matching Unity file/line or explain a non-obvious Godot quirk.
+19. **Comments follow `CLAUDE.md` → "Code hygiene".** Flag comments that restate the code, run past three lines, or describe code that is no longer there ("a prior attempt…", "previously…", "used to live in…") — tombstones; the history lives in git, not the source. Praise the ones that explain a non-obvious Godot quirk or cite a matching Unity file/line.
+20. **File growth.** `global.gd`, `explorer.gd`, `modal_manager.gd` and `avatar.gd` sit at the gdlint cap (1900 lines / 45 public methods). Net additions to them are a question, not a nit: could this live in its own file? A bump to `max-file-lines` / `max-public-methods` in `.gdlintrc` inside a feature PR is a hold — split the file first, in its own PR.
 
 ---
 
@@ -223,7 +224,7 @@ Anti-patterns that make a case un-executable — a reviewer should ask the autho
 - Classes / scenes / scripts: `PascalCase` (`ConnectionQualityMonitor`, `MentionItem`).
 - Functions, variables, signals: `snake_case`. Signal handlers auto-named `_on_SomeNode_some_signal` (or `_on_` + `snake_case`).
 - Constants: `SCREAMING_SNAKE_CASE`. Enums: `PascalCase` enum name with `SCREAMING_SNAKE_CASE` elements.
-- Max file length: **1600 lines**, max public methods: **40**, max function args: **10**. `global.gd` / `notifications_manager.gd` are already large — new sprawl there gets pushback.
+- Max file length: **1900 lines**, max public methods: **45**, max function args: **10**. `global.gd`, `explorer.gd`, `modal_manager.gd` and `avatar.gd` are at the cap — new code there gets pushback (Tier 3 #20).
 
 ### Formatting / linting (must pass CI)
 - Rust: `cd lib && cargo fmt --all && cargo clippy -- -D warnings`.
@@ -347,7 +348,7 @@ Tone **not** to match:
 - No style nits that `gdformat` / `rustfmt` would have caught — assume static checks are authoritative on style.
 - No requests to add tests for code that has no test harness in its directory (much of `godot/` has none). If tests would require building infra, frame it as a follow-up.
 - No speculative "what if the user does X" without a plausible path to X.
-- Don't ask for documentation beyond what the PR body / existing docs already provide. Code comments are kept sparse in this repo on purpose.
+- Don't ask for documentation beyond what the PR body / existing docs already provide. Code comments are kept sparse in this repo on purpose (`CLAUDE.md` → "Code hygiene").
 
 Length:
 - Small fix PR (1 file, <30 lines): a short paragraph, or a one-line approval when nothing is wrong.
@@ -368,6 +369,9 @@ A reviewer should `grep` / eyeball the diff for these before reading logic:
 - `.claude/` under the diff path → memory files.
 - Non-English comment or identifier anywhere in the diff (incl. `.gdshader` / `.tscn` / `.tres` / `.glsl`, which `gdlint`/`clippy` never read) → codebase is English-only. Accented chars (`á é í ó ú ñ ¿ ¡`) or non-English words in comments/identifiers block approval until translated. Localized user-facing strings are exempt; raw literals and comments are not. See Tier 1.
 - `# TODO` / `# FIXME` added in this PR (vs already existed) → ask for an issue link.
+- A comment describing code that is not in the file any more ("previously…", "was removed because…", "used to live in…") → tombstone; ask to delete it, git holds the history (Tier 3 #19).
+- `.gdlintrc` `max-file-lines` / `max-public-methods` raised in the same PR as feature code → hold; split the file first (Tier 3 #20).
+- Net additions to `global.gd` / `explorer.gd` / `modal_manager.gd` / `avatar.gd` → ask whether the code could live in its own file (Tier 3 #20).
 - `await …` inside `_ready` / `_process` / `_input` without guards → re-entrancy risk.
 - New `custom_minimum_size = Vector2(…)` on an overlay container → probable mouse-filter bug.
 - `shader_parameter/<name>` in a `.tres` that doesn't exist in the referenced `.gdshader` → orphan.
