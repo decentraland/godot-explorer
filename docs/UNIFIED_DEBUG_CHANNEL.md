@@ -102,7 +102,9 @@ cargo run -- run --target ios -- --scene-inspector=ws://<this-mac-ip>:9231 # dev
 #    phones home to the hub with no extra args. Override via DCL_IOS_GODOT_CMDLINE.)
 
 #   A `decentraland://open?scene-inspector=ws://<this-mac-ip>:9231` deeplink also
-#   works, as long as the target is on the local network.
+#   works on non-production builds, as long as the target is on the local network.
+#   Production builds ignore the deeplink: a tappable URL is not device access, so
+#   there the target only comes from the CLI flag or the baked iOS key.
 
 # 3. Drive it (helpers in .claude/skills/mobile-dev-debug-tool/scripts/):
 unified.sh ping

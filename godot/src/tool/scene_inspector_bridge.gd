@@ -49,8 +49,14 @@ var _target: String = ""
 ## this also arms the bounded boot-log ring + installs the capture sinks, so startup
 ## logs are buffered and flushed on the first `subscribe`.
 ##
-## A `?scene-inspector=` deeplink target is dialed only when it is on the local
-## network (`_on_deep_link_received`), on every build.
+## A `?scene-inspector=` deeplink target is dialed only on non-production builds and
+## only when it is on the local network (`_on_deep_link_received`). A deeplink is a
+## tappable URL, not device access, so production builds take a target from the CLI
+## flag or the baked iOS key only.
+##
+## `setup()` is deferred before Global defers `add_child` for this bridge, so the
+## dedicated socket is added while the bridge is still outside the tree; both join
+## the tree in the same deferred flush and the socket starts polling right after.
 func activate_from_config() -> void:
 	var target := Global.cli.scene_inspector
 	if target.is_empty() and OS.is_debug_build() and not Global.is_production():
@@ -122,6 +128,9 @@ func _on_ws_disconnected() -> void:
 func _on_deep_link_received() -> void:
 	var link_target := Global.deep_link_obj.scene_inspector
 	if link_target.is_empty() or link_target == _target:
+		return
+	if Global.is_production():
+		print("SceneInspectorBridge: ignoring deeplink target on production builds")
 		return
 	if not UrlHost.is_local_network(link_target):
 		print("SceneInspectorBridge: ignoring deeplink target ", link_target)

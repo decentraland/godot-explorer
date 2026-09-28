@@ -29,8 +29,8 @@ builds), so even a Godot-editor deploy phones home — just accept the
 local-network prompt on first launch. The bridge activates at **boot**
 (`scene_inspector_bridge.gd::activate_from_config`, called from `Global._ready`),
 so the channel is live from the lobby, **before login** — no need to enter a world
-first. A `?scene-inspector=ws://<lan-ip>:9231` deeplink is honoured only when it
-points at the local network.
+first. A `?scene-inspector=ws://<lan-ip>:9231` deeplink is honoured only on
+non-production builds and only when it points at the local network.
 
 ## Answering "what state is the app in?" — ONE step
 

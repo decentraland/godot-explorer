@@ -315,7 +315,13 @@ func _run_logging_selftest() -> void:
 func _apply_optimized_content_base_url(obj: DclParseDeepLink) -> void:
 	var opt_url: String = obj.params.get("optimized-content-base-url", "")
 	var allowed := UrlHost.is_decentraland_https(opt_url) or UrlHost.is_local_network(opt_url)
-	if allowed and not is_production():
+	if opt_url.is_empty():
+		return
+	if is_production():
+		print("[DEEPLINK] optimized-content-base-url ignored on production builds")
+	elif not allowed:
+		print("[DEEPLINK] optimized-content-base-url rejected (not https Decentraland or LAN)")
+	else:
 		print("[DEEPLINK] optimized-content-base-url=", opt_url)
 		cli.optimized_content_base_url = opt_url
 
