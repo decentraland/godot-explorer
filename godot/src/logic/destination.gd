@@ -1,15 +1,11 @@
 class_name Destination
 extends RefCounted
 
-## Where the player asked to go, and whether that place is real.
+## Where the player asked to go, and whether that place is real. Only a READY one may
+## start a load.
 ##
-## Navigator builds one from a UI intent, DestinationResolver answers it, and only a
-## READY one may start a load. Values are copied, never mutated in place: the resolver
-## returns a new Destination per transition, so `intent_id` (preserved across copies)
-## keys a single analytics episode while a password retry produces several Destinations.
-##
-## "Not in the Places catalog" is not "does not exist". Existence is answered by the
-## content server; `card` only decorates. A READY with an empty `card` is normal.
+## Copied, never mutated: the resolver returns a new Destination per transition, so a
+## password retry produces several while `intent_id` keys one analytics episode.
 
 enum Kind { GENESIS, WORLD, PREVIEW, CUSTOM_REALM }
 
@@ -27,52 +23,43 @@ enum Failure {
 	RATE_LIMITED,
 }
 
-## No parcel requested: the destination picks the landing spot (world spawn point,
-## genesis default). Same sentinel `deep_link_obj.location` uses for "no location in
-## the link", so a deeplink needs no translation.
+## No parcel requested: the destination picks the landing spot. Same sentinel
+## `deep_link_obj.location` uses, so a deeplink needs no translation.
 const UNSPECIFIED := Vector2i.MAX
 
 var kind: Kind = Kind.GENESIS
 var realm_string: String = ""
 var target_parcel: Vector2i = UNSPECIFIED
 
-## A user navigation intent is gated: an unreal destination is refused with a modal
-## before the current scene is offloaded. A restoration (session resume, reloading the
-## realm we are standing in) is not gated -- there is no scene to protect and no intent
-## to cancel, so an empty parcel lands on grass instead of raising "Place not found".
+## An intent is gated: an unreal destination is refused before the current scene is
+## offloaded. A restoration is not -- there is no scene to protect and nothing to
+## cancel back to, so an empty parcel lands on grass.
 var is_intent: bool = true
 
-## Set for a coordinate given with no realm. When the realm the player is in has no such
-## parcel, the intent is retried against Genesis City before it is refused.
+## A coordinate given with no realm: retried against Genesis City before being refused.
 var fallback_to_genesis: bool = false
 
 var state: State = State.RESOLVING
 var failure: Failure = Failure.NONE
-## Credential attempts spent on this destination. Survives copies, like intent_id.
+## Credential attempts spent. Survives copies, like intent_id.
 var attempt: int = 0
 
-## Written by the resolver. `about` is handed to Realm so a navigation costs one /about
-## and not two.
+## Written by the resolver and handed to Realm, so a navigation costs one /about.
 var realm_url: String = ""
 var about: Dictionary = {}
-## A world's /scenes listing, when the resolve needed it. Handed to Realm so applying the
-## destination does not fetch it a second time.
+## Handed to Realm, so applying the destination does not fetch the listing again.
 var world_scenes: Dictionary = {}
 var credential: String = ""
 
-## What the loading screen can show before the load even starts (#2698), taken from the
-## scene metadata the existence check already paid for. Filled whenever the destination
-## names the parcel it lands on, and for a world from its spawn scene. Empty is a normal
-## READY -- an unlisted scene describes nothing. The Places lookup still runs and upgrades
-## the card when it lands; this is what removes the blank screen in the meantime.
+## What the loading screen shows before the load starts (#2698), from metadata the
+## existence check already paid for. Empty is a normal READY, and Places fills the gaps.
 var scene_id: String = ""
 var scene_title: String = ""
 var scene_creator: String = ""
 var scene_image_url: String = ""
 var asset_count: int = 0
 
-## Stable across every copy of this intent, including credential retries. One intent_id
-## is one loading-funnel episode.
+## One intent_id is one loading-funnel episode, credential retries included.
 var intent_id: int = 0
 
 static var _next_intent_id: int = 0
@@ -94,13 +81,11 @@ static func custom_realm(url: String, parcel: Vector2i = UNSPECIFIED) -> Destina
 	return _make(Kind.CUSTOM_REALM, url, parcel)
 
 
-## The one adapter for untrusted realm strings: deeplinks, chat commands, and the SDK's
-## teleportTo / changeRealm.
+## The one adapter for untrusted realm strings: deeplinks, chat commands, teleportTo.
 ##
-## A bare coordinate is read against the realm the player is in first, and against
-## Genesis City if that realm has no such parcel. A creator can legitimately say "go to
-## 5,5" inside their world, but coordinates are Genesis City's addressing scheme, so a
-## world that has no such parcel should hand the question on rather than refuse it.
+## A creator can legitimately say "go to 5,5" inside their world, but coordinates are
+## Genesis City's addressing scheme, so a world without that parcel hands the question
+## on rather than refusing it.
 static func from_input(realm: String, parcel: Vector2i = UNSPECIFIED) -> Destination:
 	if realm.is_empty():
 		if parcel == UNSPECIFIED:
@@ -120,7 +105,7 @@ static func from_input(realm: String, parcel: Vector2i = UNSPECIFIED) -> Destina
 	return custom_realm(realm, parcel)
 
 
-## The realm the player is in, at `parcel`. Falls back to genesis before a realm is set.
+## Falls back to genesis before a realm is set.
 static func current(parcel: Vector2i = UNSPECIFIED) -> Destination:
 	var realm := ""
 	if is_instance_valid(Global.realm):
@@ -130,19 +115,16 @@ static func current(parcel: Vector2i = UNSPECIFIED) -> Destination:
 	return from_input(realm, parcel)
 
 
-## Resuming a session: the realm the player left off in, or the one a cold-start deeplink
-## named. Not an intent -- they did not ask to go anywhere from anywhere, so the parcel
-## gate is off. A modal at boot has nothing to cancel back to, and the realm-level checks
-## (/about, access) still run, so an unreachable world is still refused.
+## Resuming a session, or a cold-start deeplink. Not an intent, so the parcel gate is
+## off -- but /about and access still run, so an unreachable world is still refused.
 static func restore(realm: String, parcel: Vector2i = UNSPECIFIED) -> Destination:
 	var dest := from_input(realm, parcel)
 	dest.is_intent = false
 	return dest
 
 
-## Reloading the realm the player is standing in: /reload, scene-crash retry, loading
-## timeout retry. A restoration, not an intent -- re-checking the existence of a place
-## we are already inside would refuse to reload an empty parcel the player walked to.
+## /reload, scene-crash retry, loading-timeout retry. Not an intent: re-checking a place
+## we are already inside would refuse to reload a parcel the player walked to.
 static func reload_current() -> Destination:
 	var dest := current()
 	dest.is_intent = false
@@ -159,8 +141,7 @@ static func _make(new_kind: Kind, realm: String, parcel: Vector2i) -> Destinatio
 	return dest
 
 
-## `scene` is what DestinationResolver.scene_info() produced, or {} when the destination
-## has no scene metadata to offer.
+## `scene` is what DestinationResolver.scene_info() produced, or {}.
 func resolved_ready(
 	new_about: Dictionary = {}, scene: Dictionary = {}, scenes: Dictionary = {}
 ) -> Destination:
@@ -178,8 +159,7 @@ func resolved_ready(
 	return dest
 
 
-## The same intent read against Genesis City instead, for a bare coordinate the current
-## realm could not satisfy. Keeps intent_id: one navigation, one funnel episode.
+## The same intent against Genesis City. Keeps intent_id: one navigation, one episode.
 func as_genesis() -> Destination:
 	var dest := _copy()
 	dest.kind = Kind.GENESIS
@@ -210,7 +190,7 @@ func resolved_not_allowed() -> Destination:
 	return dest
 
 
-## A fresh attempt carrying the secret the user just typed. Same intent, new resolve.
+## Same intent, new resolve, carrying the secret the user just typed.
 func with_credential(secret: String) -> Destination:
 	var dest := _copy()
 	dest.state = State.RESOLVING
@@ -228,8 +208,8 @@ func is_terminal() -> bool:
 	return state != State.RESOLVING
 
 
-## snake_case name of the failure: the vocabulary the loading funnel stores as `reason`
-## and the invalid-destination modal reports as `failure_reason` (#2937).
+## The vocabulary the funnel stores as `reason` and the modal reports as
+## `failure_reason` (#2937).
 func failure_reason() -> String:
 	return Destination.failure_name(failure)
 

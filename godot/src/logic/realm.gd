@@ -156,11 +156,9 @@ func async_clear_realm():
 	Global.scene_runner.kill_all_scenes()
 
 
-## Connects to a realm from a bare string, with no destination behind it. Private on
-## purpose (#2948): every navigation a player can trigger states a Destination and is
-## proved before anything is offloaded, and a public string entry point is exactly the
-## door that let #2666 reopen. What is left are the callers that are not navigations at
-## all -- a portable experience's own transient realm, and the offline scene renderer.
+## Private on purpose (#2948): a public string entry point is the door that let #2666
+## reopen. What is left are the callers that are not navigations -- a portable
+## experience's transient realm, and the offline scene renderer.
 func _async_set_realm(new_realm_string: String) -> bool:
 	var candidate_realm_url := Realm.normalize_realm_url(new_realm_string)
 
@@ -227,28 +225,27 @@ func _async_set_realm(new_realm_string: String) -> bool:
 	return await _async_commit_realm(new_realm_string, candidate_realm_url, json, false)
 
 
-## Applies a destination the resolver already proved (#2948). No access gate and no
-## /about fetch: the destination carries the one it was resolved with, so a navigation
-## costs the round trip it always did rather than two.
+## No access gate and no /about fetch: the destination carries the one it was resolved
+## with (#2948).
 func async_apply_destination(dest: Destination) -> bool:
 	if not dest.is_ready():
 		push_error("Realm.async_apply_destination called with a %s destination" % dest)
 		return false
 
 	realm_changing.emit()
-	# Presented by the comms handshake for a password-protected world; empty otherwise,
-	# which is what keeps `secret` off the wire for every other realm (#2651).
+	# Empty unless the world is password-protected, which is what keeps `secret` off
+	# the wire for every other realm (#2651).
 	realm_credential = dest.credential
-	# Only a join -- an intent that named no parcel -- asks for the spawn point. One that
-	# named a parcel lands there, and a reload leaves the player where they are standing.
+	# Only a join asks for the spawn point: a named parcel lands there, and a reload
+	# leaves the player standing where they are.
 	var wants_spawn := dest.is_intent and dest.target_parcel == Destination.UNSPECIFIED
 	return await _async_commit_realm(
 		dest.realm_string, dest.realm_url, dest.about, wants_spawn, dest.world_scenes
 	)
 
 
-## Commits validated realm state and announces it. Shared by the string entry point above
-## and by async_apply_destination, which reach it having proved `json` in different ways.
+## Commits validated realm state. Shared by the string entry point and by
+## async_apply_destination, which prove `json` in different ways.
 func _async_commit_realm(
 	new_realm_string: String,
 	candidate_realm_url: String,
@@ -277,8 +274,7 @@ func _async_commit_realm(
 		# worlds_content_server() returns ".../world/", we need ".../contents/"
 		var worlds_base = DclUrls.worlds_content_server().replace("/world/", "/")
 		var world_content_url = worlds_base + "contents/"
-		# The resolve already read this listing to prove the destination; reuse it rather
-		# than asking the same server the same question a second time per navigation.
+		# The resolve already read this listing; asking again is a second round trip.
 		var all_urns := DestinationResolver.world_scene_urns(known_scenes, world_content_url)
 		if all_urns.is_empty():
 			all_urns = await _async_fetch_world_scenes(resolved_realm_name, world_content_url)

@@ -2,22 +2,16 @@ class_name Navigator
 
 ## Executes a navigation intent (#2948).
 ##
-## Resolve first, act second: nothing is offloaded and no loading screen goes up until the
-## destination is known to be real. That ordering is the whole point -- it turns a black
-## screen over a scene that was already discarded into a modal over the scene the player
-## is still standing in.
-##
-## Every state the resolver can answer with leaves through here. A FAILED intent that
-## showed nothing would be worse than the bug this replaces.
+## Resolve first, act second: nothing is offloaded until the destination is known to be
+## real, which turns a black screen over a discarded scene into a modal over the one the
+## player is still standing in. Every resolver state leaves through here.
 
 
-## Runs an intent end to end. `when` is the loading-funnel bucket ("on_teleport",
-## "on_world", "on_reload"...) and keeps the existing vocabulary, which the dashboards
-## index on. Returns true only when the player actually went somewhere.
+## `when` is the loading-funnel bucket the dashboards index on. Returns true only when
+## the player actually went somewhere.
 static func async_go(dest: Destination, when: String) -> bool:
-	# The funnel episode opens on the INTENT, not on the loading screen. A navigation
-	# refused before the screen goes up still has to produce a row; today it produces
-	# none at all, which is why a failed pre-fetch is invisible in the funnel.
+	# On the INTENT, not the loading screen: a navigation refused before the screen goes
+	# up still has to produce a funnel row.
 	Global.scene_runner.loading_begin_episode(when, dest.realm_string)
 	var started := Time.get_ticks_msec()
 	prints("[NAV] intent", dest, when)
@@ -51,50 +45,38 @@ static func _async_enter(dest: Destination, when: String) -> bool:
 	if not is_instance_valid(explorer):
 		return _abandon("no_explorer")
 
-	# The episode is already open, so the screen must not start a second one -- that
-	# would report this intent as superseded by its own loading screen.
+	# The episode is already open; a second one would report this intent as superseded
+	# by its own loading screen.
 	explorer.loading_ui.enable_loading_screen(dest.realm_string, when, false)
-	# What the resolve already paid for, handed over before the load starts (#2698).
 	explorer.loading_ui.set_prefetched_scene(
 		dest.scene_title, dest.scene_creator, dest.scene_image_url, dest.asset_count
 	)
 	_warm_caches(dest)
-	# Behind the screen, never before it: closing the menu first would flash the world
-	# the player is leaving.
+	# Behind the screen: closing the menu first flashes the world being left.
 	explorer.hide_menu()
 
 	if _needs_realm_change(dest) and not await Global.realm.async_apply_destination(dest):
 		explorer.loading_ui.hide_loading_screen("Failed")
 		return false
 
-	# Only an intent moves anyone. A restoration carries its parcel so the resolve can
-	# describe where the player is booting into; _ready already put them there.
+	# A restoration carries its parcel only so the resolve can describe it; _ready
+	# already put the player there.
 	if dest.is_intent and dest.target_parcel != Destination.UNSPECIFIED:
 		explorer.teleport_to(dest.target_parcel)
 	return true
 
 
-## Starts the downloads the load is about to ask for anyway.
-##
-## Deliberately after the verdict and never awaited: a destination that gets refused
-## spends no bytes, and the window between here and the first asset request -- the realm
-## commit, the world /scenes call, the coordinator's own radius fetch -- is where these
-## land for free.
+## Starts the downloads the load will ask for anyway. After the verdict and never
+## awaited, so a refused destination spends no bytes.
 static func _warm_caches(dest: Destination) -> void:
-	# The thumbnail is not warmed here: the loading screen asks for the same hash one frame
-	# later, so there was no head start to gain. It is warmed from the jump-in panel, where
-	# there are seconds to gain -- and the card itself has usually downloaded it already.
+	# Not the thumbnail: the screen asks for the same hash one frame later, so there is
+	# no head start here. The jump-in panel warms it, where there are seconds to gain.
 	_warm_boot_bundle(dest.scene_id if dest.kind == Destination.Kind.GENESIS else "")
 
 
-## The scene's main.js and main.crdt arrive together in one {entity}-boot.zip, and
-## async_load_scene checks for those files on disk before asking for it -- so starting it
-## here turns that check into a hit a second later. A 404 is the ordinary "not optimized"
-## answer and costs nothing.
-##
-## Only genesis: a world's scenes are not known until /about has been applied. Skipped
-## wherever the loader would not use the bundle either, and in preview, where the first
-## load purges the scene's files anyway.
+## main.js and main.crdt arrive together in one {entity}-boot.zip, and async_load_scene
+## checks disk first -- so fetching here turns that check into a hit a second later. A
+## 404 is the ordinary "not optimized" answer. Genesis only, and never in preview.
 static func _warm_boot_bundle(scene_id: String) -> void:
 	if scene_id.is_empty():
 		return
@@ -108,11 +90,9 @@ static func _warm_boot_bundle(scene_id: String) -> void:
 	Global.content_provider.fetch_boot_bundle(boot_zip, "%s/%s" % [base, boot_zip])
 
 
-## Warms a place while the player is still deciding, from the jump-in panel. By the time
-## JUMP IN is pressed the scene's code is already on its way down.
-##
-## Genesis only: a world's scene ids come from its /scenes listing, which the resolve
-## reads a moment later anyway. The access warm below is the one #1725 put here.
+## From the jump-in panel, while the player is still deciding: by the time JUMP IN is
+## pressed the scene's code is on its way down. Genesis only -- a world's scene ids come
+## from the listing the resolve reads a moment later anyway.
 static func warm(parcel: Vector2i, realm: String) -> void:
 	Global.warm_realm_access(realm)
 	if parcel == Destination.UNSPECIFIED:
@@ -126,8 +106,7 @@ static func _async_warm_scene(parcel: Vector2i) -> void:
 	_warm_boot_bundle(await Global.async_resolve_scene_entity_id(parcel))
 
 
-## Only somewhere else needs a realm change -- or a reload, which is the same realm on
-## purpose. Compares resolved urls rather than raw strings: "SpaceRunner.dcl.eth" and
+## Compares resolved urls, not raw strings: "SpaceRunner.dcl.eth" and
 ## "spacerunner.dcl.eth" are one destination (#2816).
 static func _needs_realm_change(dest: Destination) -> bool:
 	if not dest.is_intent:
@@ -141,9 +120,7 @@ static func _world_name(dest: Destination) -> String:
 	)
 
 
-## One line per navigation, so a device log says which intent ran and how it ended. The
-## string entry point used to print this; the destination path lost it, and a navigation
-## that leaves no trace is one nobody can verify on device.
+## One line per navigation, so a device log can say which intent ran and how it ended.
 static func _log_verdict(dest: Destination, elapsed_ms: int) -> void:
 	var detail := ""
 	match dest.state:
@@ -155,7 +132,6 @@ static func _log_verdict(dest: Destination, elapsed_ms: int) -> void:
 	prints("[NAV] %s #%d in %dms" % [state_name, dest.intent_id, elapsed_ms], detail)
 
 
-## Closes the funnel episode for an intent that never became a load.
 static func _abandon(reason: String) -> bool:
 	Global.scene_runner.loading_end_episode(reason)
 	return false

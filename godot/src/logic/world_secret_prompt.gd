@@ -1,12 +1,11 @@
 class_name WorldSecretPrompt
 extends RefCounted
 
-## Collects the password of a shared-secret world and keeps asking until it is accepted,
-## the player backs out, or the world stops answering (#2651).
+## Collects the password of a shared-secret world, asking until it is accepted, the
+## player backs out, or the world stops answering (#2651).
 ##
-## The retry lives inside one modal rather than reopening a new one per attempt: the
-## input modal already keeps itself open on a recoverable error, and a fresh modal each
-## time would lose the typed value and flash the screen between tries.
+## One modal across attempts: reopening it per try would lose the typed value and flash
+## the screen between tries.
 
 var _result: Destination
 var _closed := Promise.new()
@@ -23,9 +22,8 @@ func _init(dest: Destination) -> void:
 	_result = dest
 
 
-## Runs the prompt to its end. Returns the destination as it finished: READY once a
-## password was accepted, RATE_LIMITED when the world cut us off, or the NEEDS_PASSWORD
-## one it started from when the player cancelled.
+## The destination as it finished: READY, RATE_LIMITED, or the NEEDS_PASSWORD it
+## started from when the player cancelled.
 func async_run() -> Destination:
 	var modal: InputModal = await Global.modal_manager.async_show_input_modal(
 		title, subtitle, placeholder, confirm, cancel, _is_plausible
@@ -43,8 +41,8 @@ func async_run() -> Destination:
 	return _result
 
 
-## Local gate on the confirm button only: the world is the authority on what its secret
-## is, so anything non-empty is worth one attempt.
+## Confirm-button gate only: the world is the authority, so anything non-empty is worth
+## an attempt.
 func _is_plausible(value: String) -> bool:
 	return not value.strip_edges().is_empty()
 
@@ -57,9 +55,8 @@ func _async_submit(secret: String) -> Dictionary:
 		Destination.State.NEEDS_PASSWORD:
 			return {"status": InputModal.SUBMIT_INVALID, "message": wrong_password.text()}
 		_:
-			# Rate limited, or the world stopped answering. Retrying here would only
-			# spend more of the same budget, so the navigation ends and Navigator
-			# surfaces the failure.
+			# Rate limited, or the world stopped answering: retrying spends more of the
+			# same budget, so Navigator surfaces the failure instead.
 			return {"status": InputModal.SUBMIT_ERROR, "message": _result.failure_reason()}
 
 

@@ -18,13 +18,11 @@ var _loading_cancelled: bool = false
 var _intended_realm: String = ""
 var _current_bg_url: String = ""
 var _fetch_generation: int = 0
-## Files the destination ships, known before the load starts (#2698). The content
-## provider has queued nothing yet at that point, so this is the only denominator there
-## is for the first few seconds.
+## Files the destination ships, known before the load starts (#2698) -- the only
+## denominator there is until the content provider has queued anything.
 var _expected_asset_count: int = 0
-## What the pre-fetch already put on screen. The Places lookup fills what is missing
-## rather than replacing these: swapping a title and an image the player is already
-## reading is what makes a populated screen look like it is still loading.
+## What the pre-fetch already put on screen. Places fills what is missing rather than
+## replacing these: swapping what the player is reading looks like a reload.
 var _prefetched_title: bool = false
 var _prefetched_creator: bool = false
 var _prefetched_image: bool = false
@@ -61,11 +59,9 @@ func _ready() -> void:
 		Global.realm.realm_change_failed.connect(_on_realm_change_failed)
 
 
-## `begin_episode` is false when the caller already opened the funnel episode on the
-## navigation intent, well before this screen -- opening a second one would supersede the
-## first and lose the pre-fetch it was measuring. It stays true for the callers that are
-## not navigations and so have no earlier intent to attribute the load to: walking into
-## an unloaded parcel, and reloading a scene in place.
+## `begin_episode` is false when the caller already opened the episode on the navigation
+## intent; a second one would supersede it and lose the pre-fetch it was measuring. True
+## for the callers that are not navigations: walking into an unloaded parcel, reloading.
 func enable_loading_screen(
 	intended_realm: String = "", when: String = "", begin_episode: bool = true
 ) -> void:
@@ -98,19 +94,15 @@ func enable_loading_screen(
 		Global.metrics.track_screen_viewed("LOADING_START", JSON.stringify(loading_data))
 
 
-## Fills the screen from what the pre-fetch already proved (#2698): the scene's own
-## title, creator, thumbnail and file count, so the first frame is a described place
-## instead of a blank card over 0000/0000 resources.
-##
-## Deliberately does not mark the place data as set -- the Places lookup still runs and
-## fills whatever the scene did not name.
+## The scene's own title, creator, thumbnail and file count (#2698), so the first frame
+## is a described place instead of a blank card over 0000/0000 resources. Does not mark
+## the place data as set: the Places lookup still fills whatever the scene did not name.
 func set_prefetched_scene(
 	title: String, creator: String, image_url: String, asset_count: int
 ) -> void:
 	_expected_asset_count = asset_count
 	if title.is_empty() and image_url.is_empty():
-		# Nothing to say about where we are going: a card describing the place being left
-		# is worse than none, so it goes rather than lingering through the load.
+		# A card describing the place being left is worse than none.
 		if _card_is_stale:
 			_drop_stale_card()
 		return
@@ -145,9 +137,8 @@ func _clear_place_ui() -> void:
 	_prefetched_title = false
 	_prefetched_creator = false
 	_prefetched_image = false
-	# Already up: keep the card until the new destination describes itself, and remember
-	# it belongs to the place being left. Blanking here is the flicker -- the boot path
-	# enables the screen twice for one navigation, once before the resolve and once after.
+	# Already up: keep the card until the new destination describes itself. Blanking here
+	# is the flicker -- the boot path enables the screen twice for one navigation.
 	if visible:
 		_card_is_stale = true
 		return
@@ -375,9 +366,8 @@ func set_place_data(data: Dictionary) -> void:
 	_async_reveal_card(false)
 
 
-## Puts the card up. While a thumbnail is still downloading it waits a moment so the text
-## and the photo arrive together; past that the text goes up on its own rather than hold
-## the card hostage to a slow image.
+## Waits briefly so text and thumbnail arrive together, then shows the text anyway
+## rather than hold the card hostage to a slow image.
 func _async_reveal_card(wait_for_image: bool) -> void:
 	if wait_for_image and texture_rect_background.texture == null:
 		await get_tree().create_timer(CARD_IMAGE_GRACE_S).timeout
