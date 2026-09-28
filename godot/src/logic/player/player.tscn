@@ -8,7 +8,7 @@
 [ext_resource type="Script" uid="uid://8dutfncs4yky" path="res://src/logic/player/camera_collision_clamp.gd" id="5_clamp"]
 
 [sub_resource type="SeparationRayShape3D" id="SeparationRayShape3D_3217e"]
-length = 1.0779
+length = 1.18
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_pxti1"]
 margin = 0.05
