@@ -1746,9 +1746,18 @@ impl ContentProvider {
 
                 let godot_path = optimized_godot_path(&hash_id, OptimizedKind::Texture);
 
-                if let Some(entry_variant) = load_baked_texture_entry(&godot_path, original_size) {
-                    then_promise(get_promise, Ok(Some(entry_variant)));
-                    return;
+                // Hold the Godot permit like every other worker-side Godot call:
+                // without it this load raced the main thread mounting resource
+                // packs (ContentProvider::process) and read a pack mid-mount
+                // (SIGTRAP in ResourceLoaderBinary::_get_string, GODOT-EXPLORER-302).
+                if let Some(_thread_safe_check) = GodotSingleThreadSafety::acquire_owned(&ctx).await
+                {
+                    if let Some(entry_variant) =
+                        load_baked_texture_entry(&godot_path, original_size)
+                    {
+                        then_promise(get_promise, Ok(Some(entry_variant)));
+                        return;
+                    }
                 }
 
                 // Baked artifact missing or unreadable (e.g. a stale ZIP in the
