@@ -56,7 +56,14 @@ class AndroidExportPlugin extends EditorExportPlugin:
 			# Play Integrity — server-side platform attestation
 			"com.google.android.play:integrity:1.4.0",
 			# Play In-App Review — the native rating card (issue #2739)
-			"com.google.android.play:review:2.0.2"
+			"com.google.android.play:review:2.0.2",
+			# Firebase Cloud Messaging for remote push. Already arrives transitively via
+			# com.reown:android-core (firebase-bom:33.3.0), so this is a floor, not a new
+			# artifact: it keeps push working if Reown ever drops it, and states the
+			# dependency where someone reading this file would look for it. The engine
+			# fork applies firebase-bom:33.10.0 when google-services.json exists, which
+			# resolves higher; the plugin AAR declares this compileOnly either way.
+			"com.google.firebase:firebase-messaging:24.0.1"
 		])
 
 	func _get_android_dependencies_maven_repos(platform, debug):

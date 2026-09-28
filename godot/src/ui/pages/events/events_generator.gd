@@ -58,6 +58,9 @@ func _async_fetch_events(url: String, limit: int = 100):
 	prints(url)
 	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_GET, "")
 
+	if not can_populate():
+		return
+
 	if is_instance_valid(discover_carrousel_item_loading):
 		discover_carrousel_item_loading.hide()
 

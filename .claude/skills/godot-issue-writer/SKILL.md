@@ -282,8 +282,8 @@ After creating, add to project 43 and set:
 Don't guess option names. Read field definitions first (GraphQL `projectV2 { fields }`, or
 `gh project field-list 43 --owner decentraland`) and match exact option IDs.
 
-**`gh` and the GraphQL API are often unavailable** — the sandbox has no `gh`, and the GitHub MCP
-exposes no project-field mutation. When that happens: create the issue anyway, then tell the user
+**When `gh` or the GraphQL API is unavailable** (some environments lack `gh`, and the GitHub MCP
+exposes no project-field mutation): create the issue anyway, then tell the user
 plainly which fields need manual setting (Type, Project, Status, Priority) and link both the issue
 and the board. Do not silently skip this.
 
@@ -309,7 +309,7 @@ Short, specific, no ticket-speak.
 
 - Feature: `Controls Customization: Adaptive Controls Implementation`, `Show Community Restriction Modal`
 - Workstream prefix: `IAP - Update Pricing and Quantities`, `[Data] Guest User Data Model - Implementation`
-- Bugs: `[Bug]: <symptom> (<platform>)`
+- Bugs: `[Bug] <symptom> (<platform>)` — no colon, see **Bug reports**
 - Design and implementation split into two issues when both needed (#2265 → #2348).
 
 ## Gold standards

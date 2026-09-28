@@ -551,6 +551,7 @@ func _ready():
 	if DclIosPlugin.is_available():
 		var dcl_ios_singleton = Engine.get_singleton("DclGodotiOS")
 		if dcl_ios_singleton:
+			# Warm path only; iOS reads the cold-start link in _notification(READY).
 			dcl_ios_singleton.deeplink_received.connect(deep_link_router.process_deep_link)
 
 	_dcl_swift_lib_smoke_test()
@@ -1094,11 +1095,9 @@ func sign_out() -> void:
 	# Wipe the previous account's in-memory notification history so it can't leak
 	# into the next session's panel/bell badge (issue #2104).
 	NotificationsManager.clear_notification_history()
-	# Drop the previous account's event reminders so they can't fire on the
-	# device after sign-out. Only "event_" entries (per-account attended-event
-	# reminders) are cleared; the per-install day1 welcome is preserved. The
-	# sync-on-next-login REMOVE pass only runs for an authenticated account, so
-	# without this a signed-out/guest session keeps the old reminders scheduled.
+	# Drop the previous account's event reminders ("event_" entries) so they can't fire
+	# after sign-out; the per-install day1 welcome is left alone. The sync-on-next-login
+	# REMOVE pass only runs when authenticated, so a guest session would keep them armed.
 	NotificationsManager.clear_event_local_notifications()
 	# The analytics first-move poll (a Timer under this autoload) reads
 	# scene_runner.player_body_node; left running it would poll the freed Player
@@ -1725,8 +1724,7 @@ func _notification(what: int) -> void:
 		# session. Tell the comms manager we're back so it forgives transient reconnect
 		# failures and treats Duplicate* evictions as our own stale session being reclaimed.
 		# Real mobile only: on desktop every alt-tab fires FOCUS_IN, and a 30s grace window
-		# armed that often would retry genuine another-device evictions instead of
-		# surfacing the "session ended" modal.
+		# armed that often would retry genuine evictions instead of surfacing the modal.
 		if Global.is_mobile() and !Global.is_virtual_mobile():
 			comms.notify_app_resumed()
 
@@ -1738,23 +1736,24 @@ func _notification(what: int) -> void:
 			elif DclIosPlugin.is_available():
 				new_url = DclIosPlugin.get_deeplink_args().get("data", "")
 
-			# Only process if a new deep link URL was received.
-			# Don't overwrite deep_link_url with empty to avoid clobbering
-			# data set by the iOS signal path (process_deep_link).
+			# Only process a new URL: overwriting deep_link_url with empty would clobber
+			# what the iOS signal path (process_deep_link) already set.
 			if new_url.is_empty():
 				return
 
-			# On cold start (NOTIFICATION_READY), pre-set the environment from the deeplink
-			# BEFORE processing it. This prevents _check_dclenv_change() from seeing a
-			# difference (default "org" vs deeplink env) and calling sign_out() prematurely,
-			# which would skip the orientation/UI zoom setup in main.gd.
+			# On cold start, set the environment from the deeplink BEFORE processing it, or
+			# _check_dclenv_change() sees default "org" vs deeplink env and calls sign_out()
+			# prematurely, skipping the orientation/UI zoom setup in main.gd.
 			if what == NOTIFICATION_READY:
 				var parsed = DclParseDeepLink.parse_decentraland_link(new_url)
 				if not parsed.dclenv.is_empty():
 					DclGlobal.set_dcl_environment(parsed.dclenv)
 					dcl_env_explicit = true
 
-			deep_link_router.process_deep_link(new_url)
+			# READY = launch intent (the tap started it); FOCUS_IN = already running.
+			deep_link_router.process_deep_link(
+				new_url, "cold" if what == NOTIFICATION_READY else "warm"
+			)
 
 
 func _on_player_profile_changed_sync_events(_profile: DclUserProfile) -> void:
