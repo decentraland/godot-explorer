@@ -89,9 +89,10 @@ const GROUND_RAYCAST_MASK := 2
 # #2753: Unity parity (ApplySlopeModifier.cs / CharacterObject.prefab).
 # CharacterBody3D has no built-in step offset (M1) — custom logic below.
 const STEP_OFFSET := 0.35
-# Max climbable top above the feet: stepOffset + PhysX skin. Live QA at
-# kuruk.dcl.eth: Unity climbs 0.42, blocks 0.43.
-const STEP_MAX_HEIGHT := STEP_OFFSET + 0.07
+# Max climbable top above the feet: stepOffset + PhysX contact skin. Live QA
+# at kuruk.dcl.eth: real collider tops sit ~5mm above their labels (seam
+# lips) — 0.42-label measures ~0.425, 0.43-label ~0.435.
+const STEP_MAX_HEIGHT := STEP_OFFSET + 0.08
 # Below this the rise machinery isn't worth engaging — protects against
 # teleporting DOWN onto lower surfaces read past the face.
 const STEP_MIN_RISE := 0.02
@@ -588,7 +589,11 @@ func _physics_process(dt: float) -> void:
 	# branch can still read it for the hard-landing check.
 	var fall_duration := time_falling
 
-	if !on_floor:
+	# #1557: is_on_floor() drops before the capsule visually leaves an edge
+	# (rounded bottom + speculative margin), which would burn the coyote
+	# window early — Unity's CCT IsGrounded holds through the skin width.
+	# Start the fall timer only when walkable support is truly gone.
+	if !on_floor and not _has_walkable_support():
 		time_falling += dt
 	else:
 		time_falling = 0.0
@@ -1157,6 +1162,7 @@ func _step_up(intent: Vector3) -> void:
 	var found := false
 	var on_face := false
 	var floor_y := 0.0
+	var win_dist := 0.0
 	for dist in attempts:
 		var cast_from := global_position + Vector3(0.0, STEP_PROBE_TOP, 0.0) + dir * dist
 		dq.transform = Transform3D(Basis.IDENTITY, cast_from)
@@ -1165,6 +1171,7 @@ func _step_up(intent: Vector3) -> void:
 			floor_y = cast_from.y - dn[0] * STEP_PROBE_DROP - STEP_PROBE_RADIUS
 			found = true
 			on_face = is_on_wall() and dist == d_face
+			win_dist = dist
 			break
 	if not found:
 		return  # gap, not a step
@@ -1175,6 +1182,24 @@ func _step_up(intent: Vector3) -> void:
 		return  # flat or lower — nothing to step onto
 	if floor_y > global_position.y + STEP_MAX_HEIGHT:
 		return  # taller than the climbable band (kuruk: 0.42 climbs, 0.43 blocks)
+	# The landing must be a walkable top, not a slope face: on a steep ramp
+	# every probe point reads an in-band rise further up the slope — that was
+	# the 65deg climb/slide loop. Check the normal where the capsule will
+	# rest (a bit past the landing point); a ray can miss on trimesh tri
+	# edges, and a miss means the sphere already confirmed surface — accept.
+	var lrq := PhysicsRayQueryParameters3D.new()
+	lrq.collision_mask = collision_mask
+	lrq.exclude = _raycast_exclude
+	var normal_at := (
+		global_position
+		+ dir * (win_dist + CAPSULE_RADIUS * 0.5)
+		+ Vector3(0.0, STEP_PROBE_TOP, 0.0)
+	)
+	lrq.from = normal_at
+	lrq.to = normal_at + Vector3(0.0, -STEP_PROBE_DROP, 0.0)
+	var lhit := space.intersect_ray(lrq)
+	if not lhit.is_empty() and lhit.normal.y < WALKABLE_NORMAL_Y:
+		return  # lands on an un-walkable slope face — a ramp, not a step
 	# Rise in place — the horizontal motion flows via move_and_slide itself,
 	# so there is no blocked frame and no forward teleport pop. Tall rises
 	# disarm until the capsule rests: re-triggering on the same ramp face is
