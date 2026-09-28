@@ -177,6 +177,10 @@ fn op_crdt_send_to_renderer(op_state: Rc<RefCell<OpState>>, #[arraybuffer] messa
 
     let mutex_scene_crdt_state = op_state.take::<SharedSceneCrdtState>();
     let cloned_scene_crdt = mutex_scene_crdt_state.clone();
+    // Poison is recovered here on purpose, unlike op_crdt_recv_wait, which winds
+    // the scene down. A scene's send is always followed by a recv, so writing into
+    // the half-updated state lasts at most one tick before the scene is killed
+    // (SceneManager also kills it on poison). Keep the two paths as they are.
     let mut scene_crdt_state = cloned_scene_crdt.lock().unwrap_or_else(|e| e.into_inner());
 
     let mut stream = DclReader::new(messages);

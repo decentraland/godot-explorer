@@ -1389,6 +1389,8 @@ impl SceneManager {
     /// Debug: poison a scene's CRDT mutex, the state a renderer panic inside
     /// update_scene leaves behind (GODOT-EXPLORER-15F). Lets the kill-on-poison
     /// path be exercised end to end via debug-hub `eval`. No-op in production.
+    /// The panic it raises goes through the global panic hook, so each use on a
+    /// staging/dev build also reports a crash event there.
     #[func]
     fn debug_poison_scene_crdt(&self, scene_id: i32) -> bool {
         if DclGlobal::is_production() {

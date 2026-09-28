@@ -1758,6 +1758,8 @@ impl ContentProvider {
                         then_promise(get_promise, Ok(Some(entry_variant)));
                         return;
                     }
+                } else {
+                    tracing::warn!("Godot permit closed, skipping baked texture {}", godot_path);
                 }
 
                 // Baked artifact missing or unreadable (e.g. a stale ZIP in the

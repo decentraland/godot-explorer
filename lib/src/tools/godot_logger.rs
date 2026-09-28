@@ -105,7 +105,9 @@ fn emit_to_godot(msg: &str, metadata: &tracing::Metadata<'_>) {
 /// 2P6, 2PW: livekit, tokio, memory-monitor threads). Events from other Rust
 /// threads wait here and are printed on the main thread by
 /// [`flush_background_logs`], which `ContentProvider::process` calls every
-/// frame (it is in the tree from launch).
+/// frame (it is in the tree from launch). They land up to a frame late, after
+/// main-thread lines printed in between, so a logcat capture is not a strict
+/// timeline across threads.
 #[cfg(target_os = "android")]
 mod android_background {
     use std::collections::VecDeque;
