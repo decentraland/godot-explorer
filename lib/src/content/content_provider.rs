@@ -414,6 +414,10 @@ impl INode for ContentProvider {
     }
 
     fn process(&mut self, dt: f64) {
+        // Print the log lines Rust worker threads queued (Android: printing
+        // off the main thread crashes sentry-godot, see godot_logger).
+        crate::tools::godot_logger::flush_background_logs();
+
         // Mount any resource packs queued by worker threads. Done here,
         // on the main thread, because load_resource_pack mutates Godot's
         // virtual filesystem and deadlocks against the render thread when

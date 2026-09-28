@@ -60,7 +60,6 @@ where
         _ctx: tracing_subscriber::layer::Context<'_, S>,
     ) {
         let metadata = event.metadata();
-        let level = *metadata.level();
         let target = metadata.target();
 
         let mut visitor = MessageVisitor::default();
@@ -70,24 +69,85 @@ where
         let line = metadata.line().unwrap_or(0);
         let msg = format!("[Rust:{}] {} ({}:{})", target, visitor.message, file, line);
 
-        match level {
-            // Demoted targets never reach Godot's error stream, which is what
-            // the Sentry SDK captures. They stay in the logs and stay out of
-            // the quota; `--rust-log` still shows them.
-            Level::ERROR | Level::WARN if is_demoted_target(target) => {
-                godot_print!("{}", msg);
-            }
-            Level::ERROR => {
-                print_error_with_source(&msg, metadata);
-            }
-            Level::WARN => {
-                print_warning_with_source(&msg, metadata);
-            }
-            Level::INFO => godot_print!("{}", msg),
-            Level::DEBUG => godot_print!("[DEBUG] {}", msg),
-            Level::TRACE => godot_print!("[TRACE] {}", msg),
+        #[cfg(target_os = "android")]
+        if !godot::sys::is_main_thread() {
+            android_background::queue(msg, metadata);
+            return;
+        }
+
+        emit_to_godot(&msg, metadata);
+    }
+}
+
+fn emit_to_godot(msg: &str, metadata: &tracing::Metadata<'_>) {
+    match *metadata.level() {
+        // Demoted targets never reach Godot's error stream, which is what
+        // the Sentry SDK captures. They stay in the logs and stay out of
+        // the quota; `--rust-log` still shows them.
+        Level::ERROR | Level::WARN if is_demoted_target(metadata.target()) => {
+            godot_print!("{}", msg);
+        }
+        Level::ERROR => {
+            print_error_with_source(msg, metadata);
+        }
+        Level::WARN => {
+            print_warning_with_source(msg, metadata);
+        }
+        Level::INFO => godot_print!("{}", msg),
+        Level::DEBUG => godot_print!("[DEBUG] {}", msg),
+        Level::TRACE => godot_print!("[TRACE] {}", msg),
+    }
+}
+
+/// Android: sentry-godot turns every Godot print into a breadcrumb through its
+/// JNI plugin, and off the main thread that lookup can come back null and
+/// crash in `SentryBreadcrumb::create` (GODOT-EXPLORER-2W5, 2CX, 2RP, 2WX,
+/// 2P6, 2PW: livekit, tokio, memory-monitor threads). Events from other Rust
+/// threads wait here and are printed on the main thread by
+/// [`flush_background_logs`], which `ContentProvider::process` calls every
+/// frame (it is in the tree from launch).
+#[cfg(target_os = "android")]
+mod android_background {
+    use std::collections::VecDeque;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::Mutex;
+
+    /// Bounds memory if the main thread stalls; the oldest lines go first.
+    const MAX_PENDING: usize = 2048;
+
+    static PENDING: Mutex<VecDeque<(String, &'static tracing::Metadata<'static>)>> =
+        Mutex::new(VecDeque::new());
+    static DROPPED: AtomicUsize = AtomicUsize::new(0);
+
+    pub fn queue(msg: String, metadata: &'static tracing::Metadata<'static>) {
+        let mut pending = PENDING.lock().unwrap_or_else(|e| e.into_inner());
+        if pending.len() >= MAX_PENDING {
+            pending.pop_front();
+            DROPPED.fetch_add(1, Ordering::Relaxed);
+        }
+        pending.push_back((msg, metadata));
+    }
+
+    pub fn flush() {
+        let pending = std::mem::take(&mut *PENDING.lock().unwrap_or_else(|e| e.into_inner()));
+        let dropped = DROPPED.swap(0, Ordering::Relaxed);
+        if dropped > 0 {
+            godot::global::godot_print!(
+                "[RustLogger] {} background-thread log lines dropped while the main thread was busy",
+                dropped
+            );
+        }
+        for (msg, metadata) in pending {
+            super::emit_to_godot(&msg, metadata);
         }
     }
+}
+
+/// Prints the log lines other Rust threads queued (Android only; a no-op
+/// elsewhere). Must be called on the main thread.
+pub fn flush_background_logs() {
+    #[cfg(target_os = "android")]
+    android_background::flush();
 }
 
 /// Like `godot_error!` but with the real source location from tracing metadata,
