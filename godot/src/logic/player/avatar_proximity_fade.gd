@@ -50,12 +50,20 @@ func _recollect_deferred() -> void:
 
 
 func _collect_meshes() -> void:
+	if not is_instance_valid(_avatar):
+		return
 	_meshes.clear()
 	_walk(_avatar)
+	# Force the current fade to be re-applied to the freshly collected meshes.
+	_last_fade = -1.0
 
 
 func _walk(node: Node) -> void:
 	for child in node.get_children():
+		# Skip nodes pending deletion (e.g. old body/wearable meshes being
+		# replaced during an avatar reload) so we never cache soon-freed refs.
+		if child.is_queued_for_deletion():
+			continue
 		if child is MeshInstance3D and _supports_own_fade(child):
 			_meshes.push_back(child)
 		_walk(child)
@@ -99,5 +107,15 @@ func _process(_delta: float) -> void:
 	if is_equal_approx(fade, _last_fade):
 		return
 	_last_fade = fade
+	# Meshes can be freed mid-reload (avatar.gd queue_frees old body/wearable
+	# meshes nested under the skeleton, which doesn't trigger a recollect until
+	# avatar_loaded). Skip and prune stale entries, then recollect.
+	var found_stale := false
 	for mesh in _meshes:
+		if not is_instance_valid(mesh) or not mesh.is_inside_tree():
+			found_stale = true
+			continue
 		mesh.set_instance_shader_parameter(&"own_fade", fade)
+	if found_stale:
+		_meshes.assign(_meshes.filter(func(m): return is_instance_valid(m) and m.is_inside_tree()))
+		_recollect_deferred()
