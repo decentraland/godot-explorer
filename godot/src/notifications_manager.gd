@@ -784,6 +784,9 @@ func async_queue_local_notification(
 	var image_base64 = ""
 	if not image_url.is_empty():
 		image_base64 = await _async_download_image_as_base64(image_url)
+		plugin = _get_plugin()
+		if not plugin:
+			return false
 
 	# Insert into database (is_scheduled = 0 initially)
 	var success = (

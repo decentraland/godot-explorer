@@ -1310,7 +1310,7 @@ func async_create_popup_warning(
 		await explorer.warning_messages.async_create_popup_warning(warning_type, title, description)
 
 
-func async_get_texture_size(content_mapping, src, sender) -> void:
+func async_get_texture_size(content_mapping, src, sender: DclRpcSenderGetTextureSize) -> void:
 	var texture_hash: String = content_mapping.get_hash(src)
 	if texture_hash.is_empty():
 		texture_hash = src
