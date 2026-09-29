@@ -4,6 +4,10 @@ extends CharacterBody3D
 const DEFAULT_CAMERA_FOV = 60.0
 const SPRINTING_CAMERA_FOV = 75.0
 
+# The origin rests this far above every surface (SeparationRay tip), like Unity's skin
+# width; the collider-less y=0 ground is clamped to the same height.
+const GROUND_REST_HEIGHT := 0.08
+
 # Double-jump + glide tuning (values mirror Unity CharacterControllerSettings.asset).
 const MAX_AIR_JUMPS := 1
 const JUMP_BUFFER_WINDOW := 0.15
@@ -514,7 +518,7 @@ func _physics_process(dt: float) -> void:
 
 	current_direction = current_direction.move_toward(direction, 8 * dt)
 
-	var on_floor = is_on_floor() or position.y <= 0.0
+	var on_floor = is_on_floor() or position.y <= GROUND_REST_HEIGHT
 	var was_falling = avatar.fall
 	# Fall time up to this tick, captured before the reset below so the landing
 	# branch can still read it for the hard-landing check.
@@ -728,7 +732,7 @@ func _physics_process(dt: float) -> void:
 
 	last_position = global_position
 	move_and_slide()
-	position.y = max(position.y, 0)
+	position.y = max(position.y, GROUND_REST_HEIGHT)
 	avatar.global_position = global_position
 
 	# Restore locomotion-only XZ; external_velocity carries its own state and is
@@ -998,7 +1002,7 @@ func get_jump_action() -> int:
 		return JUMP_ACTION_NONE
 	if _hard_landing_timer > 0.0:
 		return JUMP_ACTION_NONE
-	if is_on_floor() or position.y <= 0.0:
+	if is_on_floor() or position.y <= GROUND_REST_HEIGHT:
 		return JUMP_ACTION_JUMP
 	# Airborne. Report GLIDE_TOGGLE while the glider is open even if the
 	# current scene disables gliding — the force-close in _physics_process
@@ -1033,7 +1037,7 @@ func can_toggle_glide() -> bool:
 	if glide_state != GLIDE_CLOSED:
 		return false
 	# jump_count in [1..MAX_AIR_JUMPS] => next press fires air-jump, not glide-open.
-	var grounded := is_on_floor() or position.y <= 0.0 or time_falling <= 0.0
+	var grounded := is_on_floor() or position.y <= GROUND_REST_HEIGHT or time_falling <= 0.0
 	var input_blocked := (
 		Global.is_jump_disabled() or Global.is_all_input_disabled() or Global.is_glide_disabled()
 	)
@@ -1089,7 +1093,7 @@ func _measure_ground_distance() -> float:
 	var hit := space.intersect_ray(query)
 	if hit.is_empty():
 		return INF
-	return from.y - (hit.position as Vector3).y
+	return from.y - (hit.position as Vector3).y - GROUND_REST_HEIGHT
 
 
 func _build_raycast_exclude() -> void:
