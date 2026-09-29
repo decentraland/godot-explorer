@@ -143,7 +143,6 @@ grow_horizontal = 2
 place_holder = "INPUT_MODAL_NAME_EMAIL_COM"
 has_max_length = false
 is_optional = false
-validate_email = true
 validate_on_blur = false
 
 [node name="HBoxContainer_Buttons" type="HBoxContainer" parent="Blur/VBoxContainer/PanelContainer2/MarginContainer/VBoxContainer" unique_id=32111112]

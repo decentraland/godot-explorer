@@ -1752,8 +1752,7 @@ func async_start_add_email_flow() -> void:
 		# Add Email modal shown — the OTP upgrade funnel has started (issue #2377).
 		Global.metrics.track_screen_viewed("UPGRADE_OTP_START", "")
 		modal.dismissable = false
-		modal.dcl_text_edit.wrap_text = false
-		modal.dcl_text_edit.validate_on_blur = true
+		modal.use_email_field()
 		modal.set_submit_handler(_async_add_email_submit)
 		modal.confirmed.connect(_async_add_email_code_sent)
 		modal.failed.connect(_async_add_email_send_failed)
