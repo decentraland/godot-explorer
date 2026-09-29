@@ -37,7 +37,7 @@ pub async fn try_create_remote_ephemeral(
     let ephemeral_message = get_ephemeral_message(ephemeral_address.as_str(), expiration);
 
     let request = CreateRequest::from_new_ephemeral(ephemeral_message.as_str());
-    let (owner_address, result) = do_request(request, url_reporter_sender).await?;
+    let (owner_address, result) = do_request(request, url_reporter_sender, None).await?;
 
     let result = result
         .as_str()
