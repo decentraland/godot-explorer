@@ -807,19 +807,18 @@ void DclGodotiOS::request_notification_permission() {
 bool DclGodotiOS::has_notification_permission() {
     #if TARGET_OS_IOS
     __block bool hasPermission = false;
-    __block bool completed = false;
+    dispatch_semaphore_t sema = dispatch_semaphore_create(0);
 
     UNUserNotificationCenter *center = [UNUserNotificationCenter currentNotificationCenter];
     [center getNotificationSettingsWithCompletionHandler:^(UNNotificationSettings * _Nonnull settings) {
         hasPermission = (settings.authorizationStatus == UNAuthorizationStatusAuthorized);
-        completed = true;
+        dispatch_semaphore_signal(sema);
     }];
 
-    // Wait for completion (with timeout)
-    NSDate *timeout = [NSDate dateWithTimeIntervalSinceNow:1.0];
-    while (!completed && [[NSDate date] compare:timeout] == NSOrderedAscending) {
-        [[NSRunLoop currentRunLoop] runMode:NSDefaultRunLoopMode beforeDate:[NSDate dateWithTimeIntervalSinceNow:0.01]];
-    }
+    // Block the thread (not the runloop) until the callback fires, with a 1 s timeout.
+    // Using dispatch_semaphore_wait instead of spinning NSRunLoop prevents re-entrant
+    // Godot frame processing (via CADisplayLink) that caused EXC_BAD_ACCESS crashes.
+    dispatch_semaphore_wait(sema, dispatch_time(DISPATCH_TIME_NOW, 1 * NSEC_PER_SEC));
 
     return hasPermission;
     #else
@@ -1250,24 +1249,24 @@ PackedStringArray DclGodotiOS::os_get_scheduled_ids() {
 
     #if TARGET_OS_IOS
     // Query the UNUserNotificationCenter for pending notification requests
-    __block PackedStringArray pending_ids;
-    __block bool completed = false;
+    __block NSArray<UNNotificationRequest *> *pending = nil;
+    dispatch_semaphore_t sema = dispatch_semaphore_create(0);
 
     UNUserNotificationCenter *center = [UNUserNotificationCenter currentNotificationCenter];
     [center getPendingNotificationRequestsWithCompletionHandler:^(NSArray<UNNotificationRequest *> * _Nonnull requests) {
-        for (UNNotificationRequest *request in requests) {
-            pending_ids.append(String([request.identifier UTF8String]));
-        }
-        completed = true;
+        pending = requests;
+        dispatch_semaphore_signal(sema);
     }];
 
-    // Wait for completion (with timeout)
-    NSDate *timeout = [NSDate dateWithTimeIntervalSinceNow:1.0];
-    while (!completed && [[NSDate date] compare:timeout] == NSOrderedAscending) {
-        [[NSRunLoop currentRunLoop] runMode:NSDefaultRunLoopMode beforeDate:[NSDate dateWithTimeIntervalSinceNow:0.01]];
+    // Block the thread (not the runloop) until the callback fires, with a 1 s timeout.
+    // Spinning NSRunLoop here let CADisplayLink run a nested Godot frame (same
+    // re-entrancy as has_notification_permission, GODOT-EXPLORER-2QH).
+    // On timeout, `pending` is not read: a late callback may still be writing it.
+    if (dispatch_semaphore_wait(sema, dispatch_time(DISPATCH_TIME_NOW, 1 * NSEC_PER_SEC)) == 0) {
+        for (UNNotificationRequest *request in pending) {
+            result.append(String([request.identifier UTF8String]));
+        }
     }
-
-    result = pending_ids;
     #endif
 
     return result;

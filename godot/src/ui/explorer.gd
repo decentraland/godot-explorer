@@ -249,8 +249,10 @@ func _ready():
 	# Scene Inspector: the bridge is now dialed from app startup (Global._ready),
 	# not here — so the channel is live from second 0, before login / world entry.
 	# Scene Inspector file output: --scene-inspector-file or ?scene-inspector-file=true
+	# The deeplink form is non-production only; the cli flag is taken as given.
 	var scene_inspector_file: bool = (
-		Global.deep_link_obj.scene_inspector_file or Global.cli.scene_inspector_file
+		(Global.deep_link_obj.scene_inspector_file and not Global.is_production())
+		or Global.cli.scene_inspector_file
 	)
 	if scene_inspector_file:
 		Global.scene_inspector_dispatcher.set_file_logging(true)

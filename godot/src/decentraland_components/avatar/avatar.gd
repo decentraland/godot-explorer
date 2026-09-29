@@ -922,7 +922,9 @@ func async_load_wearables():
 		return
 
 	wearables_by_category = curated_wearables.wearables_by_category
-	var body_shape_wearable = wearables_by_category.get(Wearables.Categories.BODY_SHAPE)
+	var body_shape_wearable: DclItemEntityDefinition = wearables_by_category.get(
+		Wearables.Categories.BODY_SHAPE
+	)
 	if body_shape_wearable == null:
 		printerr("body shape not found")
 		return

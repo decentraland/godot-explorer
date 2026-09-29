@@ -57,8 +57,22 @@ func _collect_meshes() -> void:
 func _walk(node: Node) -> void:
 	for child in node.get_children():
 		if child is MeshInstance3D and _supports_own_fade(child):
-			_meshes.push_back(child)
+			_track(child)
 		_walk(child)
+
+
+# A wearable swap frees meshes before the next recollect runs; each tracked
+# mesh drops itself from _meshes when it leaves the tree, so _process never
+# touches a freed one (GODOT-EXPLORER-303).
+func _track(mesh: MeshInstance3D) -> void:
+	_meshes.push_back(mesh)
+	var forget := _forget_mesh.bind(mesh)
+	if not mesh.tree_exiting.is_connected(forget):
+		mesh.tree_exiting.connect(forget)
+
+
+func _forget_mesh(mesh: MeshInstance3D) -> void:
+	_meshes.erase(mesh)
 
 
 # Only meshes whose shaders declare the own_fade uniform (the dcl_toon / mask

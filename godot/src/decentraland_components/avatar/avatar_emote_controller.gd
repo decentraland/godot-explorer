@@ -947,7 +947,7 @@ func _merge_animations(avatar_anim: Animation, prop_anim: Animation) -> Animatio
 
 
 func clean_unused_emotes():
-	var emotes = avatar.avatar_data.get_emotes()
+	var emotes: PackedStringArray = avatar.avatar_data.get_emotes()
 	var to_delete_emote_urns = loaded_emotes_by_urn.keys().filter(
 		func(urn): return not emotes.has(urn)
 	)

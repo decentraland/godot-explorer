@@ -27,9 +27,10 @@ cargo run -- run --target ios -- --scene-inspector=ws://<this-mac>:9231   # devi
 On iOS the `dcl-ios-devtools` export plugin auto-bakes the hub address (debug
 builds), so even a Godot-editor deploy phones home — just accept the
 local-network prompt on first launch. The bridge activates at **boot**
-(`global.gd::_activate_scene_inspector_from_config`, from `_ready` + on every
-deeplink), so the channel is live from the lobby, **before login** — no need to
-enter a world first.
+(`scene_inspector_bridge.gd::activate_from_config`, called from `Global._ready`),
+so the channel is live from the lobby, **before login** — no need to enter a world
+first. A `?scene-inspector=ws://<lan-ip>:9231` deeplink is honoured only on
+non-production builds and only when it points at the local network.
 
 ## Answering "what state is the app in?" — ONE step
 
