@@ -148,6 +148,9 @@ pub fn check_gdscript() -> Result<()> {
     }
 }
 
+/// Floor for [`discover_tests`]: the suite count that must still be found.
+const MIN_TESTS: usize = 15;
+
 /// Every headless GDScript test in the project, discovered rather than listed.
 ///
 /// A test is a `.gd` under `godot/src/test/` that announces itself as `[<stem>] PASS`;
@@ -183,6 +186,15 @@ fn discover_tests() -> Result<Vec<(String, PathBuf)>> {
     }
 
     found.sort();
+    // Discovery is by marker, so renaming a test without updating its own print drops it
+    // from CI silently. The floor turns that into a red build; raise it when a suite lands.
+    if found.len() < MIN_TESTS {
+        bail!(
+            "discovered only {} GDScript tests, expected at least {MIN_TESTS} — \
+             did a test lose its `[<stem>] PASS` marker?",
+            found.len()
+        );
+    }
     Ok(found)
 }
 
