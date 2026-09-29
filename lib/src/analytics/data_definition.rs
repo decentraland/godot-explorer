@@ -1,5 +1,8 @@
 use chrono::{DateTime, SecondsFormat, Utc};
-use godot::{classes::Os, obj::Singleton};
+use godot::{
+    classes::{Os, Time},
+    obj::Singleton,
+};
 use serde::Serialize;
 
 #[derive(Serialize)]
@@ -20,6 +23,82 @@ pub struct SegmentMetricEventBody {
     properties: serde_json::Value,
 }
 
+/// A Segment `identify` call.
+///
+/// The explorer has only ever sent `track`, so this is the first non-track type in the codebase.
+/// It exists because push needs a *current-state* record per user rather than an append-only
+/// event: `identify` traits land in the warehouse's `users` table, one row per `userId` holding
+/// the latest values, which is what an audience query can join against. The same trait sent as a
+/// track property would sit in an events table where "the token this user has right now" is a
+/// window function over history instead of a column.
+///
+/// `/v1/batch` accepts mixed types in one array, so these ride the existing batching, retry
+/// buffer and EULA gate untouched.
+#[derive(Serialize)]
+pub struct SegmentIdentifyBody {
+    #[serde(rename = "type")]
+    r#type: String,
+    #[serde(rename = "userId")]
+    user_id: String,
+    #[serde(rename = "messageId")]
+    message_id: String,
+    timestamp: String,
+    traits: serde_json::Value,
+    // Segment's spec puts push tokens at `context.device.token`; downstream push destinations
+    // look there rather than in traits. We send both — the trait is what our own audience
+    // queries read out of the warehouse.
+    context: serde_json::Value,
+}
+
+/// Traits describing this install's ability to receive push.
+///
+/// Sent on every launch regardless of whether permission was granted: the denied rows are the
+/// denominator: without them "how many users can we reach" has no answer, only a numerator.
+pub struct PushIdentifyTraits {
+    /// FCM registration token; empty when the device cannot receive push at all.
+    pub fcm_token: String,
+    /// "granted" | "denied" — the app-level POST_NOTIFICATIONS permission.
+    pub push_permission: String,
+    /// Explorer release, so a campaign can be held back from versions that mishandle a deeplink.
+    pub app_version: String,
+    /// OS locale, e.g. "es_AR".
+    pub locale: String,
+    /// IANA-ish timezone name reported by the OS. Stored from day one even though v1 does not
+    /// schedule in local time — it cannot be backfilled later.
+    pub timezone: String,
+}
+
+pub fn build_segment_identify_body(
+    user_id: String,
+    traits: PushIdentifyTraits,
+    created_at: DateTime<Utc>,
+    message_id: String,
+) -> SegmentIdentifyBody {
+    let iso_ts = created_at.to_rfc3339_opts(SecondsFormat::Millis, true);
+
+    SegmentIdentifyBody {
+        r#type: "identify".to_string(),
+        user_id,
+        message_id,
+        timestamp: iso_ts.clone(),
+        traits: serde_json::json!({
+            "fcm_token": traits.fcm_token,
+            "push_platform": "android",
+            "push_permission": traits.push_permission,
+            "app_version": traits.app_version,
+            "locale": traits.locale,
+            "timezone": traits.timezone,
+            "client_timestamp": iso_ts,
+        }),
+        context: serde_json::json!({
+            "device": {
+                "token": traits.fcm_token,
+                "type": "android",
+            }
+        }),
+    }
+}
+
 #[derive(Serialize)]
 // Same for all events sent from the explorer
 pub struct SegmentEventCommonExplorerFields {
@@ -37,6 +116,21 @@ pub struct SegmentEventCommonExplorerFields {
     pub session_id: String,
     // Explorer’s release used.
     pub renderer_version: String,
+    // Device UTC offset in minutes, where `local = utc + offset` (-180 in Buenos Aires,
+    // 330 in India). Minutes, not hours, so half-hour zones land exactly.
+    pub utc_offset_minutes: i32,
+}
+
+/// Device UTC offset in minutes (`local = utc + offset`), read from the OS wall clock.
+///
+/// Not `Time.get_time_zone_from_system()["bias"]`: its minute arithmetic truncates toward zero,
+/// so it reports -90 for Newfoundland (-150) and -510 for the Marquesas (-570).
+fn device_utc_offset_minutes() -> i32 {
+    let time = Time::singleton();
+    // Read the local wall clock as if it were UTC — the gap to real UTC is the offset.
+    let local_as_utc =
+        time.get_unix_time_from_datetime_dict(&time.get_datetime_dict_from_system()) as f64;
+    ((local_as_utc - time.get_unix_time_from_system()) / 60.0).round() as i32
 }
 
 impl SegmentEventCommonExplorerFields {
@@ -51,6 +145,9 @@ impl SegmentEventCommonExplorerFields {
             dcl_renderer_type,
             session_id,
             renderer_version: env!("GODOT_EXPLORER_VERSION").into(),
+            // Resolved once at startup, like `renderer_version`. A mid-session DST flip is a
+            // rounding error next to the UTC-day cut this field exists to correct.
+            utc_offset_minutes: device_utc_offset_minutes(),
         }
     }
 }
@@ -82,6 +179,8 @@ pub enum SegmentEvent {
     ReviewPrompted(SegmentEventReviewPrompted),
     RequestResult(SegmentEventRequestResult),
     SceneLocaleRequested(SegmentEventSceneLocaleRequested),
+    PushOpened(SegmentEventPushOpened),
+    AppOpened(SegmentEventAppOpened),
 }
 
 /// SCENE_LOCALE_REQUESTED (#2707): a scene subscribed to the player's language.
@@ -680,6 +779,52 @@ pub struct SegmentEventAttestationSessionCacheLoaded {
 // This is the guest-flow analog of SegmentEventAttestationAttempt and, unlike
 // AUTH_SUCCESS (a "Screen Viewed" whose login_type is a nested JSON string),
 // exposes every dimension as a first-class property.
+/// A push notification was tapped.
+///
+/// The only client-side measurement of push in v1. `Push Delivered` deliberately does not
+/// exist: FCM invokes the messaging service with no Godot process alive, so there is nowhere
+/// to emit from at delivery time. Reach is therefore read as `sent` (from the server's own
+/// send log) against `Push Opened` here — the gap between them absorbs genuine non-delivery
+/// (force-stopped or battery-restricted apps) together with plain "seen and ignored", and
+/// cannot separate the two.
+#[derive(Serialize, Clone)]
+pub struct SegmentEventPushOpened {
+    // `campaign_key` of the campaign that sent it — the join key back to push_campaigns.
+    pub push_campaign_id: String,
+    // Per-delivery id, so one campaign's opens can be attributed to individual sends.
+    pub push_id: String,
+    // "cold" when the tap launched the process, "warm" when the app was already running.
+    // Worth splitting: a cold open pays the full startup cost before the deeplink resolves,
+    // and that is where a deeplink that silently drops would show up.
+    pub start_kind: String,
+}
+
+/// The app entered the foreground: a cold process launch or a return from background,
+/// told apart by `start_kind`.
+///
+/// The OS kills the app without running any of our code, so the end of a session is not
+/// observable — only "the last moment we know it was alive", which session_tracker.gd keeps
+/// writing to disk while it runs. `seconds_since_last_seen` is measured against that mark.
+///
+/// No session threshold is applied here on purpose. Shipping "was it a new session?" as a
+/// boolean would freeze the rule into every installed client and take a full release plus its
+/// upgrade tail to change; the raw gap lets the warehouse pick — and revise — the cutoff.
+#[derive(Serialize, Clone)]
+pub struct SegmentEventAppOpened {
+    // "cold" when this open started the process, "warm" when it came back from background.
+    pub start_kind: String,
+    // "push" | "deeplink" | "icon". A local reminder tap arrives as "deeplink": it launches
+    // with the same `decentraland://` URI a shared link would, and nothing distinguishes them.
+    pub trigger: String,
+    // The session running the last time the app was seen alive. On a cold open that is the
+    // previous process; on a warm one it is this same session. Empty on the first launch ever.
+    pub prev_session_id: String,
+    // Wall-clock seconds since that mark. Wall clock is the only clock that survives process
+    // death, so it inherits the user's ability to move it: -1 means unknown — first launch, or
+    // the clock went backwards between the two observations.
+    pub seconds_since_last_seen: i64,
+}
+
 #[derive(Serialize, Clone)]
 pub struct SegmentEventGuestWalletCreation {
     // "success" | "failure".
@@ -850,6 +995,16 @@ pub fn build_segment_event_batch_item(
         ),
         SegmentEvent::RequestResult(event) => (
             "Request Result".to_string(),
+            serde_json::to_value(event).unwrap(),
+            None,
+        ),
+        SegmentEvent::PushOpened(event) => (
+            "Push Opened".to_string(),
+            serde_json::to_value(event).unwrap(),
+            None,
+        ),
+        SegmentEvent::AppOpened(event) => (
+            "App Opened".to_string(),
             serde_json::to_value(event).unwrap(),
             None,
         ),

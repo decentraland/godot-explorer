@@ -17,7 +17,6 @@
 [ext_resource type="Texture2D" uid="uid://caohycu0j5jch" path="res://src/ui/components/organisms/navbar/icons/notifications.svg" id="10_wgbce"]
 [ext_resource type="Texture2D" uid="uid://bm40aujklhtji" path="res://src/ui/components/organisms/navbar/icons/backpack-outlined.svg" id="12_uqptt"]
 [ext_resource type="Texture2D" uid="uid://7x04i7nu8w6x" path="res://src/ui/components/organisms/navbar/icons/backpack.svg" id="13_ljng8"]
-[ext_resource type="PackedScene" uid="uid://chpydicpuiujx" path="res://src/ui/components/atoms/controls/upgrade_badge/upgrade_badge.tscn" id="15_iai4k"]
 [ext_resource type="Texture2D" uid="uid://bgmhal8gfw384" path="res://src/ui/components/organisms/navbar/icons/settings-outlined.svg" id="15_uqptt"]
 [ext_resource type="Texture2D" uid="uid://cfyke7crn2bp8" path="res://src/ui/components/organisms/navbar/icons/settings.svg" id="16_ljng8"]
 [ext_resource type="Material" uid="uid://xnp5mcvsl5dk" path="res://src/ui/components/atoms/images/blur_background/soft_ellipse.tres" id="20_ljng8"]
@@ -59,18 +58,6 @@ shader_parameter/radius_bottom_right = 0.0
 bg_color = Color(0.101960786, 0.03529412, 0.14509805, 0.8980392)
 corner_radius_top_left = 10
 corner_radius_bottom_left = 10
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_3m1fh"]
-bg_color = Color(1, 0.1764706, 0.33333334, 1)
-border_width_left = 2
-border_width_top = 2
-border_width_right = 2
-border_width_bottom = 2
-border_color = Color(0.08627451, 0.08235294, 0.09411765, 1)
-corner_radius_top_left = 100
-corner_radius_top_right = 100
-corner_radius_bottom_right = 100
-corner_radius_bottom_left = 100
 
 [sub_resource type="Gradient" id="Gradient_uqptt"]
 offsets = PackedFloat32Array(0, 0.5, 1)
@@ -177,19 +164,6 @@ texture_pressed = ExtResource("16_ljng8")
 ignore_texture_size = true
 stretch_mode = 5
 script = ExtResource("8_fmmda")
-
-[node name="UpgradeBadge" parent="Control_Menu/PanelContainer/VBoxContainer_Buttons/StaticButton_Settings" unique_id=996992674 instance=ExtResource("15_iai4k")]
-custom_minimum_size = Vector2(15, 15)
-layout_mode = 1
-anchors_preset = 1
-anchor_left = 1.0
-anchor_right = 1.0
-offset_left = -36.0
-offset_top = 9.0
-offset_right = -20.0
-offset_bottom = 25.0
-grow_horizontal = 0
-theme_override_styles/panel = SubResource("StyleBoxFlat_3m1fh")
 
 [node name="Control" type="Control" parent="Control_Menu/PanelContainer/VBoxContainer_Buttons" unique_id=1770223894]
 custom_minimum_size = Vector2(60, 60)

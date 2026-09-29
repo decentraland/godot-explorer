@@ -291,6 +291,10 @@ func _ready():
 
 	# Locomotion settings - subscribe to scene changes and settings updates
 	Global.scene_runner.on_change_scene_id.connect(_on_scene_changed)
+	# A masked (upper-body) emote only plays while its owning scene is the one the
+	# player is standing in: crossing out parks it, crossing back in resumes it.
+	# Local player only — a remote avatar's emote lifetime is driven by its own client.
+	Global.scene_runner.on_change_scene_id.connect(avatar.on_current_scene_changed)
 	Global.scene_runner.locomotion_settings_changed.connect(_on_locomotion_settings_changed)
 	_on_scene_changed(Global.scene_runner.get_current_parcel_scene_id())
 
