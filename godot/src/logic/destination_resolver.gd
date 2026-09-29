@@ -22,7 +22,7 @@ const DEFAULT_MAX_BOUNDS := Vector2i(163, 158)
 
 ## Retries a bare coordinate against Genesis City when the realm the player is in has no
 ## such parcel. Sequential rather than raced: the common case pays nothing, and the
-## fallback only costs a round trip on a path that used to end in empty space.
+## fallback costs one round trip on a path that would otherwise be refused.
 static func async_resolve(dest: Destination) -> Destination:
 	var resolved := await _async_resolve_once(dest)
 	if (

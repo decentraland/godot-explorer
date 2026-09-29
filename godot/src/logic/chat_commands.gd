@@ -159,8 +159,6 @@ func _async_try_change_realm(realm_string: String, when: String) -> void:
 		tr("CHAT_SYSTEM_CHANGING_REALM").format({"realm": realm_string}),
 		Time.get_unix_time_from_system()
 	)
-	# last_realm_joined is no longer written up front: it is set on success, so a realm
-	# that failed to resolve is not what the next cold start boots into.
 	await Navigator.async_go(Destination.from_input(realm_string), when)
 
 

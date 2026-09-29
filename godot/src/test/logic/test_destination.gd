@@ -337,8 +337,8 @@ func _test_world_layout() -> void:
 		"an empty listing yields an empty index, which the resolver reads as unknown"
 	)
 
-	# Realm stores the listing in this shape; reshaping it here is what saves the second
-	# /scenes call every world navigation used to make.
+	# Realm stores the listing in this shape; reshaping it here is what lets one /scenes
+	# call serve the whole navigation.
 	var rows := DestinationResolver.world_scene_urns(
 		{"scenes": [{"entityId": "bafk1"}, {"entityId": ""}]},
 		"https://worlds.example.com/contents/"
