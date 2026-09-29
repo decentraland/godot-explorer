@@ -163,13 +163,17 @@ static func has_target(dest: Destination) -> bool:
 	return dest.target_parcel != Destination.UNSPECIFIED
 
 
-## The adapter is advertised as "signed-login:<url>"; any other shape means there is
-## nowhere to prove a secret against.
+## Worlds advertise `adapter: "fixed-adapter:signed-login:<url>"`; `fixedAdapter` is the
+## older key and wins when both are present, matching parse_comms_adapter_value in Rust.
+## Any other shape means there is nowhere to prove a secret against.
 static func comms_handshake_url(about: Dictionary) -> String:
 	var comms = about.get("comms")
 	if not comms is Dictionary:
 		return ""
 	var adapter := str(comms.get("fixedAdapter", ""))
+	if adapter.is_empty():
+		adapter = str(comms.get("adapter", ""))
+	adapter = adapter.trim_prefix("fixed-adapter:")
 	if not adapter.begins_with("signed-login:"):
 		return ""
 	return adapter.trim_prefix("signed-login:")
@@ -393,14 +397,14 @@ static func _async_resolve_preview(dest: Destination) -> Destination:
 
 
 ## The comms handshake is the only place a secret can be checked: /permissions strips it
-## and it is bcrypt-hashed anyway. Returns null when it checked out.
-##
-## OPEN QUESTION for the Worlds team: if this pre-flight spends shared-secret rate
-## limiter budget, a legitimate user can be 429'd by their own successful attempt.
+## and it is bcrypt-hashed anyway. Returns null when it checked out. Costs no rate-limiter
+## budget: the server clears the counter on success and only records a rejected secret.
 static func _async_verify_credential(dest: Destination, about: Dictionary):
 	var url := comms_handshake_url(about)
+	# Nowhere to prove the secret is not the same answer as proven -- letting it through
+	# would enter READY on any password and fail later, at the real connect.
 	if url.is_empty():
-		return null
+		return dest.resolved_failed(Destination.Failure.FETCH_FAILED)
 
 	var metadata := handshake_metadata(
 		Realm.normalize_realm_url(dest.realm_string), dest.credential

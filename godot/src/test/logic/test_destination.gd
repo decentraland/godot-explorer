@@ -29,7 +29,7 @@ extends Node
 
 ## Assertions that actually evaluated. A script that fails to compile makes every call
 ## a no-op, which leaves _failures empty and reports a green suite that never ran.
-const EXPECTED_CHECKS := 56
+const EXPECTED_CHECKS := 59
 
 var _failures: Array[String] = []
 var _checks: int = 0
@@ -194,13 +194,52 @@ func _test_world_access() -> void:
 
 
 func _test_shared_secret() -> void:
-	var adapter := "signed-login:https://worlds.example.com/get-comms-adapter/world-x"
+	var handshake := "https://worlds-content-server.decentraland.org/worlds/world-x/comms"
+	# The shape a real worlds-content-server /about carries, verified against ctg.dcl.eth,
+	# empresstrash.dcl.eth, basewar.dcl.eth and mannakia.dcl.eth.
 	_expect(
 		(
-			DestinationResolver.comms_handshake_url({"comms": {"fixedAdapter": adapter}})
-			== "https://worlds.example.com/get-comms-adapter/world-x"
+			DestinationResolver.comms_handshake_url(
+				{"comms": {"adapter": "fixed-adapter:signed-login:" + handshake}}
+			)
+			== handshake
 		),
-		"the handshake url comes off the fixedAdapter that /about already carries"
+		"the handshake url comes off the adapter a live world advertises"
+	)
+	_expect(
+		(
+			DestinationResolver.comms_handshake_url(
+				{"comms": {"fixedAdapter": "signed-login:" + handshake}}
+			)
+			== handshake
+		),
+		"the older fixedAdapter spelling still resolves"
+	)
+	_expect(
+		(
+			(
+				DestinationResolver
+				. comms_handshake_url(
+					{
+						"comms":
+						{
+							"fixedAdapter": "signed-login:" + handshake,
+							"adapter": "fixed-adapter:signed-login:https://wrong.example.com/comms",
+						}
+					}
+				)
+			)
+			== handshake
+		),
+		"fixedAdapter wins over adapter, as it does in the Rust parser"
+	)
+	_expect(
+		(
+			DestinationResolver
+			. comms_handshake_url({"comms": {"adapter": "archipelago:https://arch.example.com"}})
+			. is_empty()
+		),
+		"an archipelago realm has nowhere to prove a secret"
 	)
 	_expect(
 		(
