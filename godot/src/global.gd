@@ -1739,20 +1739,12 @@ func _on_realm_change_failed_toast(new_realm_string: String, reason: String) -> 
 	)
 
 
-func _on_realm_access_denied(_new_realm_string: String, world_name: String) -> void:
+func _on_realm_access_denied(new_realm_string: String, world_name: String) -> void:
 	# The world restricts access and this user is not on its allow-list (#1725). Only
 	# Global.realm is wired here — transient Realm instances (portable experiences) just
 	# fail to load, same as they do for the generic failure toast.
-	_clear_boot_realm_if_denied(world_name)
 	Global.modal_manager.async_show_private_world_modal(world_name)
-	# A cold start straight into a denied world booted the explorer with no realm ever set, so
-	# dismissing the modal would strand the user in an empty scene. Fall back to the main realm
-	# in that case only; an in-session denial (has_realm() true) leaves the user where they were.
-	# Deferred to avoid re-entering the realm change from its own denial signal.
-	if is_instance_valid(Global.get_explorer()) and not Global.realm.has_realm():
-		Navigator.async_go.call_deferred(
-			Destination.restore(DclUrls.main_realm()), "on_explorer_ready"
-		)
+	Navigator.recover_from_refusal(new_realm_string)
 
 
 ## Checks a realm's private-world access BEFORE any navigation UI is shown, so a world the
@@ -1796,23 +1788,6 @@ func warm_realm_access(realm_string: String) -> void:
 	if world_name.is_empty():
 		return
 	WorldPermissionsHelper.async_is_allowed(world_name)
-
-
-## async_join_world / async_teleport_to persist the destination *before* the explorer scene
-## gets to run the private-world gate, so a refused world would otherwise stay as the boot
-## realm and re-open this modal on every cold start. Point it back at the main realm.
-func _clear_boot_realm_if_denied(world_name: String) -> void:
-	var config = Global.get_config()
-	var stored: String = config.last_realm_joined
-	if stored.is_empty():
-		return
-	var stored_world := WorldPermissionsHelper.world_name_from_realm(
-		stored, Realm.resolve_realm_url(stored)
-	)
-	if stored_world != world_name:
-		return
-	config.last_realm_joined = DclUrls.main_realm()
-	config.save_to_settings_file()
 
 
 func set_camera_mode(camera_mode: Global.CameraMode) -> void:

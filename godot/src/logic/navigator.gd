@@ -28,6 +28,7 @@ static func async_go(dest: Destination, when: String) -> bool:
 			return await _async_enter(resolved, when)
 		Destination.State.NOT_ALLOWED:
 			Global.modal_manager.async_show_private_world_modal(_world_name(resolved))
+			recover_from_refusal(resolved.realm_string)
 			return _abandon("private_world_access_denied")
 		Destination.State.NEEDS_PASSWORD:
 			# Backed out of the password prompt: they stay exactly where they were.
@@ -37,7 +38,39 @@ static func async_go(dest: Destination, when: String) -> bool:
 			Global.scene_runner.loading_realm_change_failed(
 				resolved.realm_string, resolved.failure_reason()
 			)
+			recover_from_refusal(resolved.realm_string)
 			return _abandon("resolve_failed")
+
+
+## Undo what a refusal would otherwise leave behind (#1725). Two separate leaks: a refused
+## realm kept as the boot realm reopens the same modal on every launch, and a boot that never
+## committed a realm leaves nothing behind the modal to dismiss back to.
+static func recover_from_refusal(realm_string: String) -> void:
+	# Still standing somewhere: the refusal cost nothing and the saved realm is still good.
+	# Only a refusal that left us with no realm at all is the one that repeats on every boot.
+	if is_instance_valid(Global.realm) and Global.realm.has_realm():
+		return
+	_clear_boot_realm_if(realm_string)
+	# Deferred: the modal is going up on this frame, and this re-enters async_go.
+	if is_instance_valid(Global.get_explorer()):
+		Navigator.async_go.call_deferred(
+			Destination.restore(DclUrls.main_realm()), "on_explorer_ready"
+		)
+
+
+## Compares canonical urls, not world names: a dead preview server is just as capable of
+## being the saved boot realm as a world that revoked access.
+static func _clear_boot_realm_if(realm_string: String) -> void:
+	if realm_string.is_empty():
+		return
+	var config = Global.get_config()
+	var stored: String = config.last_realm_joined
+	if stored.is_empty():
+		return
+	if Realm.normalize_realm_url(stored) != Realm.normalize_realm_url(realm_string):
+		return
+	config.last_realm_joined = DclUrls.main_realm()
+	config.save_to_settings_file()
 
 
 static func _async_enter(dest: Destination, when: String) -> bool:
