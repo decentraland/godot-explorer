@@ -377,6 +377,15 @@ static func _async_resolve_preview(dest: Destination) -> Destination:
 	var about = await _async_about(dest)
 	if about == null:
 		return dest.resolved_failed(Destination.Failure.PREVIEW_UNREACHABLE)
+
+	# A local preview serves its own content, so the pointer lookup works on it like any
+	# catalyst. Its /about lists `localSceneParcels` and leaves `scenesUrn` empty, which
+	# is why the urn read below is the fallback and not the other way round.
+	if has_target(dest) and about_is_usable(about):
+		var content_url := Realm.ensure_ends_with_slash(about.get("content").get("publicUrl"))
+		var found := await _async_scene_at(content_url, dest.target_parcel)
+		if not found.is_empty():
+			return dest.resolved_ready(about, found)
 	return dest.resolved_ready(about, await _async_urn_scene(about))
 
 
@@ -456,8 +465,8 @@ static func _async_scene_at(content_base_url: String, parcel: Vector2i) -> Dicti
 	return {}
 
 
-## Previews carry their scenes as urns rather than a listing, so the entity has to be
-## read. One that will not describe itself still loads: READY without metadata is normal.
+## For a realm that advertises scene urns instead of serving pointers. One that will not
+## describe itself still loads: READY without metadata is normal.
 static func _async_urn_scene(about: Dictionary) -> Dictionary:
 	var urns = about.get("configurations", {}).get("scenesUrn", [])
 	if not urns is Array or urns.is_empty():
