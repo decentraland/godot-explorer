@@ -174,7 +174,7 @@ func _update_jump_icon() -> void:
 	# the force-close transition doesn't flash the pressed state.
 	var glide_active := (
 		player.glide_state != Player.GLIDE_CLOSED
-		and not (player.is_on_floor() or player.position.y <= 0.0)
+		and not (player.is_on_floor() or player.position.y <= Player.GROUND_REST_HEIGHT)
 		and not glide_disabled_in_scene
 	)
 	if glide_active != _gliding:
