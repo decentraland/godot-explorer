@@ -53,12 +53,13 @@ static func collect_scenes_summary() -> Array:
 ## SceneStatsPanel); extend it here instead of adding another subtree walk.
 ## Returns: { triangles, bodies, colliders, entities, geometries, materials,
 ## textures, emitters, live_particles, lights, shadow_casters }.
-## bodies/triangles/geometries/materials/textures skip hidden meshes (they never
-## render); colliders counts only physics-active shapes (parent body
-## collision_layer != 0) — dormant per-mesh trimesh shapes cost nothing.
-## `tri_cache`
-## (mesh instance_id -> triangles) is caller-owned so repeated refresh ticks
-## stay cheap; pass {} to skip caching.
+## `tri_cache` (mesh instance_id -> triangles) is caller-owned so repeated
+## refresh ticks stay cheap; pass {} to skip caching.
+## bodies/triangles/geometries/materials/textures skip `_collider` authoring
+## meshes (same import-time name rule scene.rs uses to hide them — NOT live
+## visibility, which SDK7 VisibilityComponent toggles at runtime);
+## colliders counts only physics-active shapes (parent body collision_layer
+## != 0) — dormant per-mesh trimesh shapes cost nothing.
 static func collect_scene_resources(scene_id: int, tri_cache: Dictionary) -> Dictionary:
 	var acc: Dictionary = {
 		"triangles": 0,
@@ -94,11 +95,12 @@ static func _walk_scene_resources(
 ) -> void:
 	if node is MeshInstance3D:
 		var mi: MeshInstance3D = node
-		# Skip hidden meshes (e.g. the `_collider` authoring meshes the GLTF
-		# pipeline forces invisible): they never render, so counting them as
-		# bodies/triangles/geometries inflates every budget vs what the creator
-		# sees in Blender.
-		if mi.is_visible_in_tree():
+		# Skip `_collider` authoring meshes using the same import-time name rule
+		# scene.rs::create_scene_colliders_inner applies to hide them — NOT live
+		# visibility: SDK7 VisibilityComponent hides ordinary content through the
+		# same flag, and those assets still cost download/GPU memory, so the
+		# budget rows must stay stable while a scene toggles props at runtime.
+		if not String(mi.name).to_lower().contains("collider"):
 			acc["bodies"] += 1
 			var mesh: Mesh = mi.mesh
 			if mesh != null:
