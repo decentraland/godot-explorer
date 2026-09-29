@@ -1,5 +1,8 @@
 class_name TestingTools
 extends DclTestingTools
+# Dev tool / test: it owns every node it awaits on and never ships in a store build, so the
+# release-template node-across-await rules are off here (see .gdlintrc).
+# gdlint: disable=node-reference-across-await,node-argument-across-await
 
 const DEFAULT_TIMEOUT_REALM_SECONDS = 15.0
 const DEFAULT_TIMEOUT_TEST_SECONDS = 15.0

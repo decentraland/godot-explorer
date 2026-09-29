@@ -517,6 +517,9 @@ func _on_permission_changed(granted: bool) -> void:
 		async_schedule_day1_notification.call_deferred()
 	else:
 		Global.metrics.track_click_button("reject", "NOTIF_PROMPT", "")
+	# The push identify already went out at startup carrying the pre-prompt answer, so the
+	# reachability trait is stale from here on unless it is re-sent.
+	Global.metrics.refresh_push_identify()
 	Global.metrics.flush.call_deferred()
 	local_notification_permission_changed.emit(granted)
 
@@ -784,6 +787,9 @@ func async_queue_local_notification(
 	var image_base64 = ""
 	if not image_url.is_empty():
 		image_base64 = await _async_download_image_as_base64(image_url)
+		plugin = _get_plugin()
+		if not plugin:
+			return false
 
 	# Insert into database (is_scheduled = 0 initially)
 	var success = (

@@ -69,9 +69,11 @@ func run_benchmark() -> void:
 		)
 	)
 
-	# Enable render time measurement
-	if _benchmark_viewport:
-		var rid: RID = _benchmark_viewport.get_viewport_rid()
+	# Enable render time measurement. Read the viewport again: _cleanup_benchmark_viewport()
+	# nulls it when the benchmark is cancelled while the scene was being built.
+	var viewport: SubViewport = _benchmark_viewport
+	if viewport != null:
+		var rid: RID = viewport.get_viewport_rid()
 		RenderingServer.viewport_set_measure_render_time(rid, true)
 
 	# Start processing frames
@@ -319,7 +321,12 @@ func _async_create_benchmark_scene() -> void:
 				mesh_instance.position = Vector3(x * 1.5, y * 1.5, z * 1.5)
 				mesh_instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 				mesh_instance.material_override = materials[mesh_count % materials.size()]
-				_benchmark_viewport.add_child(mesh_instance)
+				# The loop yields every batch; a cancel meanwhile nulls the viewport.
+				var viewport: SubViewport = _benchmark_viewport
+				if viewport == null:
+					mesh_instance.free()
+					return
+				viewport.add_child(mesh_instance)
 				mesh_count += 1
 
 				# Yield every MESHES_PER_BATCH to allow UI updates

@@ -43,6 +43,7 @@ general/ios/session_category=3
 
 UiSounds="*res://src/helpers_components/ui_sounds.gd"
 Global="*res://src/global.gd"
+SessionTracker="*res://src/session_tracker.gd"
 SplashOverlay="*res://src/ui/splash_overlay/splash_overlay.gd"
 NotificationsManager="*res://src/notifications_manager.gd"
 ConnectionQualityMonitor="*res://src/connection_quality_monitor.gd"

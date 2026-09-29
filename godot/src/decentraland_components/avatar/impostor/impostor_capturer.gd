@@ -48,11 +48,16 @@ func _async_process_next() -> void:
 
 
 # gdlint:ignore = async-function-name
-func _async_get_image_for(avatar) -> Image:
+func _async_get_image_for(avatar: Avatar) -> Image:
 	if avatar.avatar_id != "" and avatar.avatar_id.begins_with("0x"):
 		var image := await _async_fetch_catalyst_body(avatar.avatar_id)
 		if image != null:
 			return image
+	# The avatar is a remote player: it can leave (and be freed) during the
+	# catalyst fetch above - a lifetime this queue does not own. The caller
+	# drops a null image.
+	if not is_instance_valid(avatar):
+		return null
 	# Fallback for AvatarShapes / profiles we can't fetch: a stock default body
 	# snapshot. We deliberately never run the old main-thread local bake here —
 	# it blocks the frame. Re-enabling real generation behind an async queue is
@@ -81,7 +86,7 @@ func _async_fetch_catalyst_body(user_id: String) -> Image:
 
 
 # gdlint:ignore = async-function-name
-func _async_fetch_default_body(avatar) -> Image:
+func _async_fetch_default_body(avatar: Avatar) -> Image:
 	if Global.content_provider == null:
 		return null
 	var promise: Promise = Global.content_provider.fetch_default_avatar_body_texture(
@@ -100,7 +105,7 @@ func _async_fetch_default_body(avatar) -> Image:
 # Pick a stock-default slot (1..DEFAULT_BODY_COUNT) stable per visual identity so
 # the same avatar keeps the same default across recaptures instead of flickering
 # between bodies. Falls back to the instance id when there's no cache key.
-func _default_body_slot_for(avatar) -> int:
+func _default_body_slot_for(avatar: Avatar) -> int:
 	var key: String = (
 		avatar._get_impostor_cache_key() if avatar.has_method("_get_impostor_cache_key") else ""
 	)

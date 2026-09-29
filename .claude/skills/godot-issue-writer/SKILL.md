@@ -60,7 +60,7 @@ Maximum density. Direct speech. Cut anything removable without losing meaning.
 | **Issue Type** | Per **Issue Type** below. |
 | **Project** | Always **DAO Explorers** (org `decentraland`, project 43). |
 | **Status** | Always `planning`. |
-| **Labels** | ≥1 platform label + ≥1 domain label. |
+| **Labels** | ≥1 platform label + ≥1 domain label. Bugs also carry `bug` + `triage`, always. |
 | **Body** | Feature/Task → house template; Problem and Deliverables never empty. Bug → bug form. |
 | **Solution space** | Outcomes only. No implementation direction — see the hard rule above. |
 
@@ -83,7 +83,8 @@ Metrics and observability land here only while the output is a definition — ev
 
 Emitting the events is `Feature` — code ships (#2763).
 
-`Bug` = defect in shipped behavior. Crashes, ANRs, incidents.
+`Bug` = defect in shipped behavior. Crashes, ANRs, incidents. Every bug is filed Type `Bug` +
+label `triage`.
 
 Design + implementation both needed → two issues, `Task` then `Feature` (#2265 → #2348).
 
@@ -189,8 +190,11 @@ No colon. `bug_report.yml` prefills `[Bug]: ` — drop the colon to match the re
 - Related links each get a why-line.
 - Search for duplicates and closed lookalikes first (godot-explorer + unity-explorer `[QA]` issues). Same defect elsewhere → link both.
 - House voice still applies inside the fields.
-- Labels: `bug` + platform + domain.
-- Issue Type → `Bug` (settable via MCP update). Project 43 + Status `planning` still need manual setting when tools can't.
+- Labels: `bug` + `triage` + platform + domain. Both `bug` and `triage` on every bug, no
+  exceptions — `triage` comes off when an engineer confirms severity, never at filing.
+- Issue Type → `Bug`, always (settable via MCP update). Project 43 + Status `planning` still need manual setting when tools can't.
+- Tools can't set Type or apply a label → say so in the report. Never file a bug and leave it
+  silently untyped or untriaged.
 
 ## References — mine the other repos first
 
@@ -255,7 +259,8 @@ Smallest set that is true.
 
 `sentry` = observability plumbing (SDK version, releases, symbolication, ANR). `crash` = the issue
 is about crashes/ANRs themselves. `performance` = frame time, memory, asset weight, thermals.
-`need tech test` = feasibility unknown until an engineer probes the engine.
+`need tech test` = feasibility unknown until an engineer probes the engine. `triage` = filed, not
+yet severity-assessed — mandatory on every bug at filing.
 
 `claw-created` only when the request came via Slack/Discord rather than the user authoring it
 directly; then close the body with `**Requested by <name> via Slack**` (#2091, #2089). Direct
@@ -277,8 +282,8 @@ After creating, add to project 43 and set:
 Don't guess option names. Read field definitions first (GraphQL `projectV2 { fields }`, or
 `gh project field-list 43 --owner decentraland`) and match exact option IDs.
 
-**`gh` and the GraphQL API are often unavailable** — the sandbox has no `gh`, and the GitHub MCP
-exposes no project-field mutation. When that happens: create the issue anyway, then tell the user
+**When `gh` or the GraphQL API is unavailable** (some environments lack `gh`, and the GitHub MCP
+exposes no project-field mutation): create the issue anyway, then tell the user
 plainly which fields need manual setting (Type, Project, Status, Priority) and link both the issue
 and the board. Do not silently skip this.
 
@@ -304,7 +309,7 @@ Short, specific, no ticket-speak.
 
 - Feature: `Controls Customization: Adaptive Controls Implementation`, `Show Community Restriction Modal`
 - Workstream prefix: `IAP - Update Pricing and Quantities`, `[Data] Guest User Data Model - Implementation`
-- Bugs: `[Bug]: <symptom> (<platform>)`
+- Bugs: `[Bug] <symptom> (<platform>)` — no colon, see **Bug reports**
 - Design and implementation split into two issues when both needed (#2265 → #2348).
 
 ## Gold standards
@@ -339,3 +344,4 @@ Short, specific, no ticket-speak.
 - Citing an issue you did not open.
 - Skipping cross-repo search because the feature "obviously" has no precedent.
 - Status unset, or not added to DAO Explorers.
+- A bug filed without Type `Bug`, or without the `triage` label.
