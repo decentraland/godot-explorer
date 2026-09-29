@@ -50,6 +50,10 @@ static func recover_from_refusal(realm_string: String) -> void:
 	# Only a refusal that left us with no realm at all is the one that repeats on every boot.
 	if is_instance_valid(Global.realm) and Global.realm.has_realm():
 		return
+	# The main realm IS the fallback, so when it is the thing that failed there is nowhere
+	# left to fall back to. An offline boot has to end on the modal, not loop through it.
+	if Realm.normalize_realm_url(realm_string) == Realm.normalize_realm_url(DclUrls.main_realm()):
+		return
 	_clear_boot_realm_if(realm_string)
 	# Deferred: the modal is going up on this frame, and this re-enters async_go.
 	if is_instance_valid(Global.get_explorer()):
