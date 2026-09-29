@@ -16,6 +16,8 @@ static var placeholder := TranslationKey.new("MODAL_WORLD_PASSWORD_PLACEHOLDER")
 static var confirm := TranslationKey.new("MODAL_WORLD_PASSWORD_CONFIRM")
 static var cancel := TranslationKey.new("COMMON_CANCEL")
 static var wrong_password := TranslationKey.new("MODAL_WORLD_PASSWORD_WRONG")
+static var too_many := TranslationKey.new("MODAL_WORLD_PASSWORD_TOO_MANY")
+static var busy := TranslationKey.new("MODAL_WORLD_PASSWORD_BUSY")
 
 
 func _init(dest: Destination) -> void:
@@ -56,8 +58,11 @@ func _async_submit(secret: String) -> Dictionary:
 			return {"status": InputModal.SUBMIT_INVALID, "message": wrong_password.text()}
 		_:
 			# Rate limited, or the world stopped answering: retrying spends more of the
-			# same budget, so Navigator surfaces the failure instead.
-			return {"status": InputModal.SUBMIT_ERROR, "message": _result.failure_reason()}
+			# same budget, so Navigator surfaces the failure instead. The reason still
+			# reaches analytics through the destination; the player gets copy.
+			var rated := _result.failure == Destination.Failure.RATE_LIMITED
+			var message := too_many.text() if rated else busy.text()
+			return {"status": InputModal.SUBMIT_ERROR, "message": message}
 
 
 func _on_closed() -> void:
