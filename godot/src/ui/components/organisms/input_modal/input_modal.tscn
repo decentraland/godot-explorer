@@ -111,6 +111,7 @@ layout_mode = 2
 text = "INPUT_MODAL_ADD_EMAIL"
 label_settings = SubResource("LabelSettings_5r5ws")
 horizontal_alignment = 1
+autowrap_mode = 3
 
 [node name="HSeparator_Title" type="HSeparator" parent="Blur/VBoxContainer/PanelContainer2/MarginContainer/VBoxContainer" unique_id=88206464]
 layout_mode = 2
@@ -122,6 +123,7 @@ unique_name_in_owner = true
 layout_mode = 2
 text = "INPUT_MODAL_MY_EMAIL"
 label_settings = SubResource("LabelSettings_fasoj")
+autowrap_mode = 3
 
 [node name="HSeparator_Content" type="HSeparator" parent="Blur/VBoxContainer/PanelContainer2/MarginContainer/VBoxContainer" unique_id=1607643053]
 layout_mode = 2
