@@ -234,6 +234,7 @@ func _copy() -> Destination:
 	dest.credential = credential
 	dest.scene_id = scene_id
 	dest.scene_title = scene_title
+	dest.scene_creator = scene_creator
 	dest.scene_image_url = scene_image_url
 	dest.asset_count = asset_count
 	dest.intent_id = intent_id
