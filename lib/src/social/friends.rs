@@ -4,9 +4,7 @@ use std::collections::HashMap;
 /// Builds the auth chain message for Social Service RPC connection
 /// Following the same format as C# BuildAuthChain method
 pub async fn build_auth_chain(wallet: &EphemeralAuthChain) -> anyhow::Result<String> {
-    let unix_time = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)?
-        .as_millis();
+    let unix_time = crate::utils::clock::unix_time_ms();
 
     let metadata = "{}";
     let payload = format!("get:/:{}:{}", unix_time, metadata);

@@ -693,23 +693,47 @@ pub fn install(
         );
     }
 
-    if !PathBuf::from(GODOT_SENTRY_ADDON_FOLDER).exists() {
+    // The addon folder is gitignored, so the pinned version is tracked by a
+    // `.version` marker next to `bin/`. A missing or different marker (every
+    // checkout that predates the marker, or a bump of SENTRY_ADDON_VERSION)
+    // replaces the whole folder; a folder-exists check alone would keep an
+    // old SDK forever.
+    let sentry_addon_folder = PathBuf::from(GODOT_SENTRY_ADDON_FOLDER);
+    let sentry_version_marker = sentry_addon_folder.join(".version");
+    let installed_sentry_version = fs::read_to_string(&sentry_version_marker)
+        .map(|v| v.trim().to_string())
+        .unwrap_or_default();
+    if !sentry_addon_folder.exists() || installed_sentry_version != SENTRY_ADDON_VERSION {
         print_section("Installing Sentry Addon");
 
-        let sentry_addon_folder = PathBuf::from(GODOT_SENTRY_ADDON_FOLDER);
-        let uncompressed_folder = PathBuf::from(GODOT_SENTRY_ADDON_FOLDER).join("zip");
+        if sentry_addon_folder.exists() {
+            print_message(
+                MessageType::Info,
+                &format!(
+                    "Replacing sentry-godot '{}' with {}",
+                    installed_sentry_version, SENTRY_ADDON_VERSION
+                ),
+            );
+            fs::remove_dir_all(&sentry_addon_folder)?;
+        }
+
+        let uncompressed_folder = sentry_addon_folder.join("zip");
         download_and_extract_zip(
             SENTRY_ADDON_URL,
             uncompressed_folder.to_str().unwrap(),
-            cache_key("sentry-1.6.0.zip".into()),
+            cache_key(format!("sentry-{SENTRY_ADDON_VERSION}.zip")),
         )?;
 
+        // Only `bin/` is needed: the repo tracks its own `godot/sentry.gdextension`
+        // (same library paths as the addon's) and does not use the bundled
+        // user-feedback UI, web bundle or .NET assemblies.
         fs::rename(
             uncompressed_folder.join("addons/sentry/bin"),
             sentry_addon_folder.join("bin"),
         )?;
 
         fs::remove_dir_all(uncompressed_folder)?;
+        fs::write(&sentry_version_marker, SENTRY_ADDON_VERSION)?;
     }
 
     // Set executable permissions for protoc if on Unix-like systems

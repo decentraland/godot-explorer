@@ -130,13 +130,13 @@ func _play_sound_toggle(name_on: StringName, name_off: StringName, toggled_on: b
 	play_sound(name_on if toggled_on else name_off)
 
 
-func play_sound(sound_name: StringName, attenuated: bool = false):
+func play_sound(sound_name: StringName, attenuated: bool = false, volume_db: float = 0.0):
 	var audio_stream: AudioStreamPlayer = _sounds.get(sound_name)
 
 	if is_instance_valid(audio_stream):
-		audio_stream.volume_db = 0
+		audio_stream.volume_db = volume_db
 		if attenuated:
-			audio_stream.volume_db = -20
+			audio_stream.volume_db = volume_db - 20
 		audio_stream.play()
 	else:
 		printerr("Audio %s doesn't exists.", sound_name)

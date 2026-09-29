@@ -1,4 +1,4 @@
-use crate::consts::GODOT_SENTRY_ADDON_FOLDER;
+use crate::consts::{GODOT_SENTRY_ADDON_FOLDER, SENTRY_ADDON_VERSION};
 use crate::dependencies::BuildStatus;
 use crate::platform::{
     check_android_sdk, check_development_dependencies, check_ios_development, check_required_tools,
@@ -196,9 +196,25 @@ fn check_sentry_addon_installation() -> bool {
     let sentry_folder = PathBuf::from(GODOT_SENTRY_ADDON_FOLDER);
     if sentry_folder.exists() {
         let android_lib = sentry_folder.join("bin/android/sentry_android_godot_plugin.debug.aar");
-        if android_lib.exists() {
-            print_message(MessageType::Success, "Sentry addon found");
+        let installed_version = std::fs::read_to_string(sentry_folder.join(".version"))
+            .map(|v| v.trim().to_string())
+            .unwrap_or_default();
+        if android_lib.exists() && installed_version == SENTRY_ADDON_VERSION {
+            print_message(
+                MessageType::Success,
+                &format!("Sentry addon found ({})", SENTRY_ADDON_VERSION),
+            );
             true
+        } else if android_lib.exists() {
+            print_message(
+                MessageType::Error,
+                &format!(
+                    "Sentry addon version mismatch: installed '{}', expected '{}'.",
+                    installed_version, SENTRY_ADDON_VERSION
+                ),
+            );
+            println!("  Run: cargo run -- install (it replaces the addon automatically)");
+            false
         } else {
             print_message(
                 MessageType::Error,

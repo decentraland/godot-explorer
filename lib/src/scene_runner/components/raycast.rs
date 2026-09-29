@@ -171,10 +171,9 @@ fn do_raycast(scene: &Scene, node_3d: &Gd<Node3D>, raycast: &PbRaycast) -> PbRay
 
     let hits = match query_type {
         RaycastQueryType::RqtHitFirst => {
-            if let Some(hit) = get_raycast_hit(scene, space.clone(), raycast_query.clone()) {
-                vec![hit.0]
-            } else {
-                vec![]
+            match get_raycast_hit(scene, space.clone(), raycast_query.clone()) {
+                Some((Some(hit), _)) => vec![hit],
+                _ => vec![],
             }
         }
         RaycastQueryType::RqtQueryAll => {
@@ -183,7 +182,9 @@ fn do_raycast(scene: &Scene, node_3d: &Gd<Node3D>, raycast: &PbRaycast) -> PbRay
             while let Some((hit, rid)) =
                 get_raycast_hit(scene, space.clone(), raycast_query.clone())
             {
-                hits.push(hit);
+                if let Some(hit) = hit {
+                    hits.push(hit);
+                }
 
                 let mut arr = raycast_query.get_exclude();
                 arr.push(rid);
@@ -228,9 +229,16 @@ fn get_raycast_hit(
     scene: &Scene,
     mut space: Gd<PhysicsDirectSpaceState3D>,
     raycast_query: Gd<PhysicsRayQueryParameters3D>,
-) -> Option<(RaycastHit, Rid)> {
+) -> Option<(Option<RaycastHit>, Rid)> {
     let raycast_result = space.intersect_ray(&raycast_query);
-    let collider = raycast_result.get("collider")?;
+    let rid = raycast_result.get("rid")?.to::<Rid>();
+    let Some(mut collider) = raycast_result
+        .get("collider")
+        .and_then(|collider| collider.try_to::<Gd<Object>>().ok())
+        .filter(|collider| collider.is_instance_valid())
+    else {
+        return Some((None, rid));
+    };
 
     let has_dcl_entity_id = collider
         .call("has_meta", &[Variant::from("dcl_entity_id")])
@@ -260,9 +268,7 @@ fn get_raycast_hit(
         Some(dcl_entity_id as u32),
     )?;
 
-    let rid = raycast_result.get("rid").unwrap().to::<Rid>();
-
-    Some((raycast_data, rid))
+    Some((Some(raycast_data), rid))
 }
 
 // TODO: move to a impl for godot::Quaternion

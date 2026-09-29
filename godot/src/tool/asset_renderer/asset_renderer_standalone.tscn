@@ -1,0 +1,13 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://src/tool/asset_renderer/asset_renderer_standalone.gd" id="1_script"]
+[ext_resource type="PackedScene" path="res://src/ui/pages/backpack/avatar_preview.tscn" id="2_preview"]
+
+[node name="AssetRendererScene" type="Node"]
+script = ExtResource("1_script")
+
+[node name="AvatarPreview" parent="." instance=ExtResource("2_preview")]
+unique_name_in_owner = true
+hide_name = true
+can_move = false
+with_light = false

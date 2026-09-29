@@ -158,6 +158,37 @@ class TestDetection(ExtractorTestCase):
         self.fx.script("a.gd", 'func f():\n\tlabel.text = "Hello there"\n')
         self.assertEqual(self.fx.unkeyed(), {("godot/src/ui/a.gd", "Hello there")})
 
+    def test_own_text_is_scanned_on_a_text_node(self):
+        # The marketplace CTA extends Button and set `text = "GET CREDITS"` on itself; the
+        # receiver-based pattern could not see it.
+        self.fx.script("a.gd", 'extends Button\nfunc f():\n\ttext = "GET CREDITS"\n')
+        self.assertEqual(self.fx.unkeyed(), {("godot/src/ui/a.gd", "GET CREDITS")})
+
+    def test_own_text_is_scanned_through_a_custom_base(self):
+        self.fx.script("base.gd", "class_name FancyButton\nextends Button\n")
+        self.fx.script("path_base.gd", 'extends "res://src/ui/base.gd"\n')
+        self.fx.script("a.gd", 'extends FancyButton\nfunc f():\n\tself.text = "Buy now"\n')
+        self.fx.script("b.gd", 'extends "res://src/ui/path_base.gd"\nfunc f():\n\ttext = "Go"\n')
+        self.assertEqual(
+            self.fx.unkeyed(),
+            {("godot/src/ui/a.gd", "Buy now"), ("godot/src/ui/b.gd", "Go")},
+        )
+
+    def test_bare_text_is_ignored_when_the_node_has_no_text(self):
+        self.fx.script("a.gd", 'extends Control\nfunc f():\n\tvar text = ""\n\ttext = "Hello there"\n')
+        self.assertEqual(self.fx.unkeyed(), set())
+
+    def test_custom_text_assignment_is_scanned(self):
+        # CustomButton's exported label. An English literal assigned here silently clobbers the
+        # key set in the .tscn, which is how the profile ADD FRIEND button shipped in English
+        # to every locale (#2825).
+        self.fx.script("a.gd", 'func f():\n\tbutton.custom_text = "ADD FRIEND"\n')
+        self.assertEqual(self.fx.unkeyed(), {("godot/src/ui/a.gd", "ADD FRIEND")})
+
+    def test_custom_text_assigned_a_key_is_not_flagged(self):
+        self.fx.script("a.gd", 'func f():\n\tbutton.custom_text = "PROFILE_ADD_FRIEND"\n')
+        self.assertEqual(self.fx.unkeyed(), set())
+
     def test_gdscript_comments_are_ignored(self):
         self.fx.script("a.gd", 'func f():\n\t# label.text = "Commented out"\n')
         self.assertEqual(self.fx.unkeyed(), set())

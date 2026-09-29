@@ -58,6 +58,7 @@ func _on_gui_input(event: InputEvent) -> void:
 				_is_action_active = true
 				set_pressed_no_signal(true)
 				Input.action_press(trigger_action)
+				DclGlobal.notify_joypad_input()
 				button_down.emit()
 				touch_action_changed.emit(true)
 			accept_event()
@@ -69,4 +70,5 @@ func _on_gui_input(event: InputEvent) -> void:
 				touch_action_changed.emit(false)
 			set_pressed_no_signal(false)
 			_touch_index = -1
+			DclGlobal.notify_joypad_input()
 			accept_event()

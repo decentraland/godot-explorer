@@ -93,19 +93,28 @@ impl InputState {
         // it means that you are interacting with the UI.
         // Mobile: Ignore that rule
         let is_pointer_locked = input.get_mouse_mode() == MouseMode::CAPTURED;
-        if is_pointer_locked || DclGlobal::singleton().bind().is_mobile {
-            for (input_action, action_string) in self.dcl_to_action.iter() {
-                let current_state = if Self::is_movement_action(input_action) {
-                    // Use strength threshold for movement actions so that tiny
-                    // analog stick displacements don't send SDK events.
-                    input.get_action_strength(action_string) > ANALOG_ACTION_THRESHOLD
-                } else {
-                    input.is_action_pressed(action_string)
-                };
-                if self.state[input_action] != current_state {
-                    self.state.insert(*input_action, current_state);
-                    result.insert((*input_action, current_state));
-                }
+        let joypad_window_open = DclGlobal::singleton().bind().joypad_input_active();
+        let is_mobile = DclGlobal::singleton().bind().is_mobile;
+        let forward_all = is_pointer_locked || is_mobile;
+        // The joypad window only opens on on-screen button activity; while it's
+        // open, forward action buttons but never WASD/analog movement — typing
+        // with an unlocked mouse must not steer the avatar into scenes.
+        for (input_action, action_string) in self.dcl_to_action.iter() {
+            let forward =
+                forward_all || (joypad_window_open && !Self::is_movement_action(input_action));
+            if !forward {
+                continue;
+            }
+            let current_state = if Self::is_movement_action(input_action) {
+                // Use strength threshold for movement actions so that tiny
+                // analog stick displacements don't send SDK events.
+                input.get_action_strength(action_string) > ANALOG_ACTION_THRESHOLD
+            } else {
+                input.is_action_pressed(action_string)
+            };
+            if self.state[input_action] != current_state {
+                self.state.insert(*input_action, current_state);
+                result.insert((*input_action, current_state));
             }
         }
         result

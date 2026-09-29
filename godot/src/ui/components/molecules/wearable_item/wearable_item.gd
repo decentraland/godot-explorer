@@ -4,6 +4,10 @@ extends CustomTouchButton
 signal equip
 signal unequip
 
+# Button_Action font sizes; 24 matches the .tscn default.
+const ACTION_FONT_SIZE: int = 24
+const GET_CREDITS_FONT_SIZE: int = 16
+
 var base_thumbnail = preload("res://assets/ui/BaseThumbnail.png")
 var common_thumbnail = preload("res://assets/ui/CommonThumbnail.png")
 var uncommon_thumbnail = preload("res://assets/ui/UncommonThumbnail.png")
@@ -152,10 +156,13 @@ func _update_marketplace_state(is_selected: bool):
 	if is_selected:
 		panel_container_price.hide()
 		button_action.show()
+		# Same button for both states; the longer GET CREDITS copy uses a smaller size to fit.
 		if Iap.get_balance() >= marketplace_price:
 			button_action.text = tr("WEARABLE_ITEM_DETAIL")
+			button_action.add_theme_font_size_override("font_size", ACTION_FONT_SIZE)
 		else:
 			button_action.text = tr("WEARABLE_ITEM_GET_CREDITS")
+			button_action.add_theme_font_size_override("font_size", GET_CREDITS_FONT_SIZE)
 	else:
 		panel_container_price.show()
 		button_action.hide()
@@ -164,10 +171,17 @@ func _update_marketplace_state(is_selected: bool):
 func _on_action_pressed():
 	if not is_marketplace_item:
 		return
-	if Iap.get_balance() >= marketplace_price and not marketplace_url.is_empty():
+	# Gated at the consumer, not at the producer that builds the URL (#2814): one criterion
+	# for every card, whoever populated it.
+	var can_open_detail := (
+		StorePolicy.can_show_external_purchase_links()
+		and Iap.get_balance() >= marketplace_price
+		and not marketplace_url.is_empty()
+	)
+	if can_open_detail:
 		MarketplaceTracker.open_and_track(marketplace_url)
 	else:
-		Global.open_credits.emit()
+		Global.open_credits.emit("WEARABLE_ITEM")
 
 
 func _update_category_icon(wearable: DclItemEntityDefinition):

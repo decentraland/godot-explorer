@@ -18,8 +18,8 @@ var _bottom_spacer: Control = null
 @onready var scroll_container: ScrollContainer = %ScrollContainer
 @onready var notifications_list: VBoxContainer = %NotificationsList
 @onready var button_mark_all_read: Button = %ButtonMarkAllRead
-@onready var v_box_container_no_notifications: VBoxContainer = %VBoxContainer_NoNotifications
 @onready var label_no_notifications: Label = %Label_NoNotifications
+@onready var center_container_no_notifications: CenterContainer = %CenterContainer_NoNotifications
 
 
 func _ready() -> void:
@@ -80,12 +80,12 @@ func display_notifications(notifications: Array) -> void:
 	# Empty state
 	if notifications.size() == 0:
 		_clear_items()
-		v_box_container_no_notifications.visible = true
+		center_container_no_notifications.visible = true
 		scroll_container.visible = false
 		button_mark_all_read.disabled = true
 		return
 
-	v_box_container_no_notifications.visible = false
+	center_container_no_notifications.visible = false
 	scroll_container.visible = true
 
 	# Mark-all-read is enabled only while there's something unread.
@@ -210,5 +210,5 @@ func _show_guest_message() -> void:
 	button_mark_all_read.disabled = true
 
 	# Show custom message for guests
-	v_box_container_no_notifications.visible = true
+	center_container_no_notifications.visible = true
 	label_no_notifications.text = tr("NOTIFICATIONS_SIGN_IN_TO_GET_NOTIFICATIONS")

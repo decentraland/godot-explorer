@@ -15,7 +15,7 @@ use godot::classes::rendering_server::{
 use godot::classes::{
     Camera3D, INode, Material, Mesh, Node, PhysicsServer3D, RenderingServer, ResourceLoader,
 };
-use godot::global::{godot_error, godot_warn};
+use godot::global::godot_warn;
 use godot::obj::{Base, Gd};
 use godot::prelude::*;
 
@@ -161,7 +161,7 @@ impl DclFloatingIslandsManager {
     ) {
         let expected_len = parcels.len() * 8;
         if corner_configs.len() != expected_len {
-            godot_error!(
+            tracing::error!(
                 "[DclFloatingIslandsManager] set_candidate_parcels: corner_configs length {} \
                  does not match parcels count {} * 8 = {}",
                 corner_configs.len(),

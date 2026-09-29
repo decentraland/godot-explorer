@@ -96,8 +96,9 @@ static func async_pick_image_bytes() -> PackedByteArray:
 	while received.is_empty() and Time.get_ticks_msec() - started_ms < TIMEOUT_MS:
 		await tree.process_frame
 
-	# CONNECT_ONE_SHOT only disconnects if the signal actually fired.
-	if plugin.is_connected(SIGNAL_NAME, on_picked):
+	# CONNECT_ONE_SHOT only disconnects if the signal actually fired. The plugin is an
+	# engine singleton, alive for the whole process.
+	if plugin.is_connected(SIGNAL_NAME, on_picked):  # gdlint: ignore=node-reference-across-await
 		plugin.disconnect(SIGNAL_NAME, on_picked)
 	_picking = false
 

@@ -22,6 +22,7 @@ const TIMEOUT_SECONDS := 5.0
 # Flag names exactly as served by the mobile-bff payload.
 const FLAG_ARCHIPELAGO := "archipielago"
 const FLAG_PULSE := "pulse"
+const FLAG_DUAL_CHANNEL := "dual-channel"
 # Sentry error-event sampling, served as a number in [0, 1].
 const FLAG_SENTRY_SAMPLE_RATE := "sentry-sample-rate"
 # Report ERROR-level Sentry events (the engine/Rust error firehose). Fail-closed:
@@ -30,6 +31,10 @@ const FLAG_SENTRY_ERROR_EVENTS := "sentry-error-events"
 # The bff also serves `sentry-traces-sample-rate`, but sentry-godot exposes no
 # performance-tracing API yet — there is nothing to apply it to until the SDK
 # grows one.
+# Collect FCM push tokens and map them in Segment. Fail-open, and note what it does
+# NOT do: turning it off stops new tokens from being registered, it does not stop
+# delivery to tokens already collected — that is a server-side decision.
+const FLAG_PUSH_ENABLED := "push-enabled"
 
 var _flags: Dictionary = {}
 var _loaded := false
@@ -107,9 +112,16 @@ func _async_load() -> void:
 # only decides the default: explicit local opt-ins (deeplink `pulse=true` /
 # `pulse-server=`, CLI `--pulse`) and opt-outs (`--no-pulse`, `pulse=false`)
 # always win — see CommunicationManager::pulse_enabled on the Rust side.
+# `dual-channel` is the rollout control for avatar sync: while it is true (the
+# default, and today's behaviour) movement and emotes keep going over LiveKit
+# even when Pulse is established. Flipping it false hands them to Pulse alone —
+# only safe once the deployment's authoritative servers ingest Pulse as scene
+# listeners, which is a property of the deployment, not of this client. Local
+# `--livekit-movement` / `--no-livekit-movement` / `dual-channel=` still win.
 func _apply_flags() -> void:
 	Global.comms.set_archipelago_enabled(is_enabled(FLAG_ARCHIPELAGO, true))
 	Global.comms.set_pulse_flag_enabled(is_enabled(FLAG_PULSE, false))
+	Global.comms.set_dual_channel_flag_enabled(is_enabled(FLAG_DUAL_CHANNEL, true))
 
 	# SentrySDK.init runs at process start (before this fetch resolves), so the
 	# remote rate is enforced through the _before_send gate, not the init option.
@@ -121,3 +133,10 @@ func _apply_flags() -> void:
 			get_number(FLAG_SENTRY_SAMPLE_RATE, ProjectMainLoop.DEFAULT_SENTRY_SAMPLE_RATE)
 		)
 		main_loop.set_sentry_error_events_enabled(is_enabled(FLAG_SENTRY_ERROR_EVENTS, false))
+
+	# Push registration. This is the only place the flag is read, and Metrics holds the startup
+	# identify until it arrives: the cached FCM token is already there in Metrics::ready(), so
+	# the identify would otherwise always win the race and the switch could only ever suppress
+	# token rotations. Reached on both paths above, so the hold ends even when the fetch fails.
+	if Global.metrics != null:
+		Global.metrics.set_push_enabled(is_enabled(FLAG_PUSH_ENABLED, true))

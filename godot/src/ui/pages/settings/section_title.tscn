@@ -1,6 +1,7 @@
 [gd_scene format=3 uid="uid://ceomwutplh20c"]
 
 [ext_resource type="Script" uid="uid://bpcd4hvsu27lr" path="res://src/ui/pages/settings/section_title.gd" id="1_8kx02"]
+[ext_resource type="Script" uid="uid://cuy34sm2crhoe" path="res://src/ui/layouts/orientation_label.gd" id="99_orlbl"]
 [ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="2_8kx02"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_8kx02"]
@@ -30,3 +31,6 @@ unique_name_in_owner = true
 layout_mode = 2
 text = "Section asdAsd"
 label_settings = SubResource("LabelSettings_ij1c4")
+script = ExtResource("99_orlbl")
+portrait_font_size = 26
+landscape_font_size = 22

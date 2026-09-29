@@ -126,7 +126,10 @@ pub enum RpcCall {
         avatar_target: Option<[f32; 3]>,
     },
     TeleportTo {
-        world_coordinates: [i32; 2],
+        /// Absent = the realm's default spawn (only meaningful together with `realm`).
+        world_coordinates: Option<[i32; 2]>,
+        /// Absent = the parcel is in the player's current realm.
+        realm: Option<String>,
         response: RpcResultSender<Result<(), String>>,
     },
     OpenNftDialog {
@@ -147,6 +150,10 @@ pub enum RpcCall {
         looping: bool,
         mask: i64,
     },
+    /// `stopEmote` — ends whatever the local player is playing right now. Carries no
+    /// payload (`StopEmoteRequest` is empty upstream) and is *permanent*: it also drops
+    /// a masked emote suspended at a scene boundary, so re-entering can't resurrect it.
+    StopEmote,
     // Portable Experiences
     SpawnPortable {
         location: PortableLocation,
@@ -176,6 +183,10 @@ pub enum RpcCall {
     GetTextureSize {
         src: String,
         response: RpcResultSender<Result<Vector2, String>>,
+    },
+    // Analytics: the scene subscribed to `localeChanged` (once per scene)
+    SceneLocaleRequested {
+        locale: String,
     },
 }
 

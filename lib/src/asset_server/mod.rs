@@ -5,6 +5,7 @@
 //!
 //! Run via: `cargo run -- run --asset-server`
 
+mod bundle_writer;
 mod godot_wrapper;
 mod handlers;
 mod job_manager;
@@ -12,6 +13,7 @@ mod packer;
 mod processor;
 mod scene_fetcher;
 mod server;
+mod static_models;
 mod types;
 
 pub use godot_wrapper::DclAssetServer;

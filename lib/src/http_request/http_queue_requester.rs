@@ -177,7 +177,7 @@ impl HttpQueueRequester {
                             network_inspect_response,
                         );
                         if let Err(err) = network_inspector_sender.try_send(inspect_event) {
-                            tracing::error!("Error sending inspect event: {}", err);
+                            tracing::debug!("Error sending inspect event: {}", err);
                         }
                     }
                 }

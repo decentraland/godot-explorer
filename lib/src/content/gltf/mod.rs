@@ -14,5 +14,5 @@ pub use emote::{
     build_dcl_emote_gltf, get_last_16_alphanumeric, load_and_save_emote_gltf,
     process_emote_animations, DclEmoteGltf,
 };
-pub use scene::load_and_save_scene_gltf;
+pub use scene::{load_and_save_scene_gltf, load_and_save_scene_gltf_ex};
 pub use wearable::load_and_save_wearable_gltf;

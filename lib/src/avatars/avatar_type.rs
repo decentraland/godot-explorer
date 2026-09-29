@@ -172,7 +172,7 @@ impl DclAvatarWireFormat {
             if let Some(wearable) = wearables.get(i).as_ref() {
                 wearables_vec.push(wearable.to_string());
             } else {
-                tracing::error!("Invalid wearable at index {}", i);
+                tracing::warn!("Invalid wearable at index {}", i);
             }
         }
         self.inner.wearables = wearables_vec;
@@ -181,7 +181,7 @@ impl DclAvatarWireFormat {
     #[func]
     fn set_emotes(&mut self, emotes: PackedStringArray) {
         if emotes.len() != AVATAR_EMOTE_SLOTS_COUNT {
-            tracing::error!("Invalid emotes array length");
+            tracing::warn!("Invalid emotes array length");
             return;
         }
 
@@ -190,7 +190,7 @@ impl DclAvatarWireFormat {
             let urn = if let Some(emote) = emotes.get(i).as_ref() {
                 emote.to_string()
             } else {
-                tracing::error!("Missing emote at slot {}", i);
+                tracing::warn!("Missing emote at slot {}", i);
                 String::new()
             };
 

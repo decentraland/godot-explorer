@@ -17,7 +17,7 @@ use crate::{
 
 use self::{
     handle_restricted_actions::{
-        change_realm, move_player_to, open_external_url, open_nft_dialog, teleport_to,
+        change_realm, move_player_to, open_external_url, open_nft_dialog, stop_emote, teleport_to,
         trigger_emote, trigger_scene_emote,
     },
     portables::{kill_portable, list_portables, spawn_portable},
@@ -57,11 +57,13 @@ pub fn process_rpcs(scene: &mut Scene, current_parcel_scene_id: &SceneId, rpc_ca
             }
             RpcCall::TeleportTo {
                 world_coordinates,
+                realm,
                 response,
             } => teleport_to(
                 scene,
                 current_parcel_scene_id,
                 &world_coordinates,
+                &realm,
                 &response,
             ),
             RpcCall::TriggerEmote { emote_id, mask } => {
@@ -72,6 +74,7 @@ pub fn process_rpcs(scene: &mut Scene, current_parcel_scene_id: &SceneId, rpc_ca
                 looping,
                 mask,
             } => trigger_scene_emote(scene, current_parcel_scene_id, &emote_src, &looping, mask),
+            RpcCall::StopEmote => stop_emote(scene, current_parcel_scene_id),
             // Portable Experiences
             RpcCall::SpawnPortable { location, response } => {
                 spawn_portable(scene, location, response)
@@ -114,6 +117,15 @@ pub fn process_rpcs(scene: &mut Scene, current_parcel_scene_id: &SceneId, rpc_ca
                 let mut comms = DclGlobal::singleton().bind().get_comms();
                 let mut communication_manager = comms.bind_mut();
                 communication_manager.send_scene_message(scene_id, body, recipient);
+            }
+            RpcCall::SceneLocaleRequested { locale } => {
+                if let Some(global) = DclGlobal::try_singleton() {
+                    let mut metrics = global.bind().metrics.clone();
+                    metrics.bind_mut().track_scene_locale_requested(
+                        scene.scene_entity_definition.id.clone(),
+                        locale,
+                    );
+                }
             }
             RpcCall::GetTextureSize { src, response } => {
                 let mut rpc_sender = DclRpcSenderGetTextureSize::new_gd();

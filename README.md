@@ -73,7 +73,7 @@ brew install pkg-config
 | `cargo run -- install --targets ios` | Install iOS templates (auto-strips debug symbols) |
 | `cargo run -- install --targets ios --no-strip` | Install iOS templates with debug symbols |
 | `cargo run -- build` | Build for host platform |
-| `cargo run -- run` | Build and run the client |
+| `cargo run -- run` | Build and run the client (iOS phone layout; `-- --emulate-android` for Android) |
 | `cargo run -- run -e` | Build and run the editor |
 | `cargo run -- export --target android` | Export Android APK |
 | `cargo run -- strip-ios-templates` | Strip debug symbols from iOS templates |
@@ -87,8 +87,11 @@ brew install pkg-config
 # Build for host platform
 cargo run -- build
 
-# Run the client (builds automatically)
+# Run the client (builds automatically). Mobile is the product, so a desktop run always
+# emulates a phone: --emulate-ios by default (phone window, safe areas, portrait/landscape),
+# or Android with `-- --emulate-android`.
 cargo run -- run
+cargo run -- run -- --emulate-android
 
 # Run the editor
 cargo run -- run -e
@@ -157,6 +160,14 @@ links it from the PR build-report comment (served at
 The `build` label (or the legacy alias `build-ios`) triggers `mobile_distribute.yml`:
 iOS → TestFlight, plus a Slack "🤖 Android Build Ready" notification once the commit's
 APK is in R2. It does not rebuild Android or push to a store.
+
+Progress is reported in two places that mirror each other: a live Slack root card (+ threaded
+replies) and a single **📱 Mobile build pipeline** comment on the PR, kept current by every
+leg via `.github/scripts/pr-card.py` — build number/version, per-platform state (iOS →
+TestFlight, Android → APK/AAB links) and a collapsed timeline. The TestFlight result comes
+from the `ios-wait` job, which watches the `godot-asc-deploy` run it dispatched (matched by
+that workflow's `run-name`, `🍏 <branch> @ <sha>`) with the existing `ASC_DEPLOY_DISPATCH_TOKEN`
+— the private repo holds no token for this one.
 
 ```bash
 # On a PR: add the build label (iOS TestFlight + Android Slack notification)

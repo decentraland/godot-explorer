@@ -65,7 +65,7 @@ script = ExtResource("10_jarc")
 single_node_t = 0.0
 
 [node name="Button_Interact" parent="Button_Press/Control" unique_id=1651527188 instance=ExtResource("1_81cx4")]
-editor_description = "Satellite: pointer (ia_pointer). Figma SecondaryButton, icon = pointer_small.svg (node 3:869, heavier relative stroke tuned for the small button). When this action is promoted to the central button, joypad.gd swaps in pointer_large.svg (node 3:1008) so the outline weight stays constant across sizes."
+editor_description = "Satellite: pointer (ia_pointer). Icon comes from ActionIcons (components/utils), shared with the interaction pill so the hint always matches this button. Promotion to the central button changes icon_max_width only (100 vs 56) — the texture is the same.\nFigma: Interaction prompt — https://www.figma.com/design/nxP78pUCEHj3BY0meiXipe/HUD-Revamp?node-id=1182-18614"
 layout_mode = 1
 anchors_preset = 3
 anchor_left = 1.0

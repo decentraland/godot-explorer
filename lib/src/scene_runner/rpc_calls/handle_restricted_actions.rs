@@ -38,19 +38,19 @@ pub fn change_realm(
 
     // Get Global node from scene tree (Global is an autoload, not an Engine singleton)
     let Some(tree) = godot::classes::Engine::singleton().get_main_loop() else {
-        tracing::error!("Cannot get main loop");
+        tracing::debug!("Cannot get main loop");
         response.send(Err("modal_manager not available".to_string()));
         return;
     };
 
     let Some(root) = tree.cast::<godot::classes::SceneTree>().get_root() else {
-        tracing::error!("Cannot get root node");
+        tracing::debug!("Cannot get root node");
         response.send(Err("modal_manager not available".to_string()));
         return;
     };
 
     let Some(global) = root.get_node_or_null("/root/Global") else {
-        tracing::error!("Cannot get Global node from scene tree");
+        tracing::debug!("Cannot get Global node from scene tree");
         response.send(Err("modal_manager not available".to_string()));
         return;
     };
@@ -60,7 +60,7 @@ pub fn change_realm(
         .try_to::<godot::prelude::Gd<godot::classes::Node>>()
         .ok()
     else {
-        tracing::error!("Cannot convert modal_manager variant to Node");
+        tracing::debug!("Cannot convert modal_manager variant to Node");
         response.send(Err("modal_manager not available".to_string()));
         return;
     };
@@ -93,19 +93,19 @@ pub fn open_external_url(
 
     // Get Global node from scene tree (Global is an autoload, not an Engine singleton)
     let Some(tree) = godot::classes::Engine::singleton().get_main_loop() else {
-        tracing::error!("Cannot get main loop");
+        tracing::debug!("Cannot get main loop");
         response.send(Err("modal_manager not available".to_string()));
         return;
     };
 
     let Some(root) = tree.cast::<godot::classes::SceneTree>().get_root() else {
-        tracing::error!("Cannot get root node");
+        tracing::debug!("Cannot get root node");
         response.send(Err("modal_manager not available".to_string()));
         return;
     };
 
     let Some(global) = root.get_node_or_null("/root/Global") else {
-        tracing::error!("Cannot get Global node from scene tree");
+        tracing::debug!("Cannot get Global node from scene tree");
         response.send(Err("modal_manager not available".to_string()));
         return;
     };
@@ -115,7 +115,7 @@ pub fn open_external_url(
         .try_to::<godot::prelude::Gd<godot::classes::Node>>()
         .ok()
     else {
-        tracing::error!("Cannot convert modal_manager variant to Node");
+        tracing::debug!("Cannot convert modal_manager variant to Node");
         response.send(Err("modal_manager not available".to_string()));
         return;
     };
@@ -247,11 +247,12 @@ pub fn move_player_to(
     }
 }
 
-// Teleport user to world coordinates
+// Teleport user to world coordinates, optionally in another realm (protocol#477).
 pub fn teleport_to(
     scene: &Scene,
     current_parcel_scene_id: &SceneId,
-    world_coordinates: &[i32; 2],
+    world_coordinates: &Option<[i32; 2]>,
+    realm: &Option<String>,
     response: &RpcResultSender<Result<(), String>>,
 ) {
     // Check if player is inside the scene that requested the move
@@ -262,19 +263,19 @@ pub fn teleport_to(
 
     // Get Global node from scene tree (Global is an autoload, not an Engine singleton)
     let Some(tree) = godot::classes::Engine::singleton().get_main_loop() else {
-        tracing::error!("Cannot get main loop");
+        tracing::debug!("Cannot get main loop");
         response.send(Err("modal_manager not available".to_string()));
         return;
     };
 
     let Some(root) = tree.cast::<godot::classes::SceneTree>().get_root() else {
-        tracing::error!("Cannot get root node");
+        tracing::debug!("Cannot get root node");
         response.send(Err("modal_manager not available".to_string()));
         return;
     };
 
     let Some(global) = root.get_node_or_null("/root/Global") else {
-        tracing::error!("Cannot get Global node from scene tree");
+        tracing::debug!("Cannot get Global node from scene tree");
         response.send(Err("modal_manager not available".to_string()));
         return;
     };
@@ -284,15 +285,39 @@ pub fn teleport_to(
         .try_to::<godot::prelude::Gd<godot::classes::Node>>()
         .ok()
     else {
-        tracing::error!("Cannot convert modal_manager variant to Node");
+        tracing::debug!("Cannot convert modal_manager variant to Node");
         response.send(Err("modal_manager not available".to_string()));
         return;
     };
 
     let mut modal_manager = modal_manager;
-    let target_parcel = Vector2i::new(world_coordinates[0], world_coordinates[1]);
 
-    modal_manager.call("async_show_teleport_modal", &[target_parcel.to_variant()]);
+    match (world_coordinates, realm) {
+        // A parcel, in the current realm (empty string) or in the one the scene named. The
+        // modal's primary action awaits the realm change before placing the player.
+        (Some(coordinates), realm) => {
+            let target_parcel = Vector2i::new(coordinates[0], coordinates[1]);
+            let realm = realm.clone().unwrap_or_default().to_godot();
+            modal_manager.call(
+                "async_show_teleport_modal",
+                &[target_parcel.to_variant(), realm.to_variant()],
+            );
+        }
+        // No parcel: land on the realm's own spawn point.
+        (None, Some(realm)) => {
+            modal_manager.call(
+                "async_show_realm_teleport_modal",
+                &[realm.to_godot().to_variant()],
+            );
+        }
+        // Rejected by op_teleport_to already; kept so the promise can never hang.
+        (None, None) => {
+            response.send(Err(
+                "teleportTo requires worldCoordinates, a realm, or both".to_string(),
+            ));
+            return;
+        }
+    }
 
     // Send Ok immediately - the modal will handle the actual teleportation
     // This matches the behavior where the RPC call succeeds once the modal is shown
@@ -309,7 +334,11 @@ pub fn trigger_emote(scene: &Scene, current_parcel_scene_id: &SceneId, emote_id:
     let mut avatar_node = get_avatar_node(scene);
     avatar_node.call(
         "async_play_emote",
-        &[emote_id.to_variant(), mask.to_variant()],
+        &[
+            emote_id.to_variant(),
+            mask.to_variant(),
+            scene.scene_id.0.to_variant(),
+        ],
     );
 
     // Broadcast emote to other players via comms
@@ -388,7 +417,11 @@ pub fn trigger_scene_emote(
     // Call the SAME function as wearable emotes!
     avatar_node.call(
         "async_play_emote",
-        &[scene_emote_urn.to_variant(), mask.to_variant()],
+        &[
+            scene_emote_urn.to_variant(),
+            mask.to_variant(),
+            scene.scene_id.0.to_variant(),
+        ],
     );
 
     // Broadcast to other players
@@ -398,4 +431,32 @@ pub fn trigger_scene_emote(
         .get_comms()
         .bind_mut()
         .send_emote(scene_emote_urn.to_godot(), mask);
+}
+
+/// `stopEmote` — end whatever the local player is playing, on behalf of the scene.
+///
+/// Permanent by construction: unlike the scene-boundary suspend, this also drops a
+/// masked emote parked for replay, so walking back into the scene can't resurrect it
+/// (Unity does the same via `masked.EmoteUrn = default` in `TryStopEmote`).
+///
+/// Telling the other players is **Pulse-only**: the stop rides the `set_emoting(false)`
+/// edge in `CommunicationManager`, and that whole body sits inside
+/// `#[cfg(feature = "use_pulse")]`. On the rfc4/LiveKit path this client only ever sends
+/// `PlayerEmote { is_stopping: None }` at trigger time and has no stop message at all, so
+/// on a LiveKit-only realm a scene's `stopEmote` ends the emote locally while remote
+/// viewers keep looping it. Pre-existing gap, not addressed here.
+///
+/// The scene id is forwarded so the avatar can scope the stop: a masked emote is only
+/// ended by the scene that started it, matching Unity's `TryStopEmote`, which stops the
+/// full-body emote globally but touches only its own scene world's masked component.
+pub fn stop_emote(scene: &Scene, current_parcel_scene_id: &SceneId) {
+    // Same gate as triggerEmote: only the scene the player is standing in may stop it.
+    // Note this passes unconditionally for SceneType::Global, which is exactly why the
+    // masked case needs the owner check on the GDScript side.
+    if !_player_is_inside_scene(scene, current_parcel_scene_id) {
+        tracing::warn!("stopEmote failed: Primary Player is outside the scene");
+        return;
+    }
+
+    get_avatar_node(scene).call("stop_emote_from_scene", &[scene.scene_id.0.to_variant()]);
 }

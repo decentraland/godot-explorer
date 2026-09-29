@@ -243,7 +243,7 @@ func _async_build_place_data(friend: Dictionary) -> Dictionary:
 
 func _async_create_friend_card(friend: Dictionary) -> void:
 	var place_data := await _async_build_place_data(friend)
-	if place_data.is_empty() or not is_instance_valid(item_container):
+	if place_data.is_empty() or not can_populate():
 		return
 
 	var address := str(friend["address"]).to_lower()
@@ -263,14 +263,19 @@ func _async_create_friend_card(friend: Dictionary) -> void:
 
 
 func _async_update_card(address: String, friend: Dictionary) -> void:
-	var card = _current_addresses.get(address)
-	if not card or not is_instance_valid(card):
+	if not _current_addresses.has(address):
 		return
 
 	var place_data := await _async_build_place_data(friend)
-	if place_data.is_empty() or not is_instance_valid(item_container):
+	if place_data.is_empty():
 		return
 
+	# The list may have been rebuilt while the place loaded. _current_addresses is the
+	# source of truth (removal erases the entry), so apply the data to whichever card
+	# holds this address now instead of the one we started with.
+	var card = _current_addresses.get(address)
+	if card == null:
+		return
 	card.set_data(place_data)
 
 

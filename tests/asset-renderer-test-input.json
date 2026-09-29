@@ -1,0 +1,69 @@
+{
+    "baseUrl": "https://peer.decentraland.org/content",
+    "outputJsonPath": "output/asset-renderer/report.json",
+    "supersample": 1.0,
+    "payload": [
+        {
+            "id": "red-tshirt-standalone",
+            "kind": "wearable_standalone",
+            "urn": "urn:decentraland:off-chain:base-avatars:red_tshirt",
+            "bodyShape": "urn:decentraland:off-chain:base-avatars:BaseMale",
+            "shots": [
+                {
+                    "name": "front",
+                    "destPath": "output/asset-renderer/red_tshirt_front.png",
+                    "camera": { "autoFit": true, "orbitYawDegrees": 0, "orbitPitchDegrees": 10 }
+                },
+                {
+                    "name": "threequarter",
+                    "destPath": "output/asset-renderer/red_tshirt_34.png",
+                    "camera": { "autoFit": true, "orbitYawDegrees": 45, "orbitPitchDegrees": 10 }
+                },
+                {
+                    "name": "back",
+                    "destPath": "output/asset-renderer/red_tshirt_back.png",
+                    "camera": { "autoFit": true, "orbitYawDegrees": 180, "orbitPitchDegrees": 10 }
+                }
+            ]
+        },
+        {
+            "id": "sunglasses-on-avatar",
+            "kind": "wearable_on_avatar",
+            "urn": "urn:decentraland:off-chain:base-avatars:rounded_sun_glasses",
+            "bodyShape": "urn:decentraland:off-chain:base-avatars:BaseFemale",
+            "shots": [
+                {
+                    "name": "front",
+                    "destPath": "output/asset-renderer/sunglasses_worn.png",
+                    "camera": { "autoFit": true, "orbitYawDegrees": 0, "orbitPitchDegrees": 5 }
+                }
+            ]
+        },
+        {
+            "id": "wave-emote",
+            "kind": "emote",
+            "urn": "urn:decentraland:off-chain:base-emotes:wave",
+            "bodyShape": "urn:decentraland:off-chain:base-avatars:BaseFemale",
+            "shots": [
+                {
+                    "name": "k25",
+                    "atTime": 0.25,
+                    "destPath": "output/asset-renderer/wave_k25.png",
+                    "camera": { "autoFit": true, "fitMargin": 1.3 }
+                },
+                {
+                    "name": "k50",
+                    "atTime": 0.5,
+                    "destPath": "output/asset-renderer/wave_k50.png",
+                    "camera": { "autoFit": true, "fitMargin": 1.3 }
+                },
+                {
+                    "name": "k75",
+                    "atTime": 0.75,
+                    "destPath": "output/asset-renderer/wave_k75.png",
+                    "camera": { "autoFit": true, "fitMargin": 1.3 }
+                }
+            ]
+        }
+    ]
+}

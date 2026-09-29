@@ -4,6 +4,7 @@
 [ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="2_oy6x2"]
 [ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="3_ap3ic"]
 [ext_resource type="Texture2D" uid="uid://bpq2p8ej3umfx" path="res://assets/ui/unsubscribe.svg" id="4_ap3ic"]
+[ext_resource type="FontFile" uid="uid://0qlati8b2q8n" path="res://assets/themes/fonts/inter/inter_400.ttf" id="5_wsj0r"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel_bg"]
 bg_color = Color(0.20784314, 0.03137255, 0.32941177, 1)
@@ -61,21 +62,27 @@ corner_radius_top_right = 8
 corner_radius_bottom_right = 8
 corner_radius_bottom_left = 8
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_6tk6y"]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_wsj0r"]
 bg_color = Color(0.6, 0.6, 0.6, 0)
-border_width_left = 2
-border_width_top = 2
-border_width_right = 2
-border_width_bottom = 2
-border_color = Color(1, 1, 1, 1)
-corner_radius_top_left = 12
-corner_radius_top_right = 12
-corner_radius_bottom_right = 12
-corner_radius_bottom_left = 12
+border_width_left = 4
+border_width_top = 4
+border_width_right = 4
+border_width_bottom = 4
+border_color = Color(0.8627451, 0.79607844, 0.9254902, 1)
+corner_radius_top_left = 24
+corner_radius_top_right = 24
+corner_radius_bottom_right = 24
+corner_radius_bottom_left = 24
 
-[sub_resource type="LabelSettings" id="LabelSettings_wd782"]
+[sub_resource type="LabelSettings" id="LabelSettings_kdpn8"]
 font = ExtResource("3_ap3ic")
-font_size = 14
+font_size = 32
+font_color = Color(0.8627451, 0.79607844, 0.9254902, 1)
+
+[sub_resource type="LabelSettings" id="LabelSettings_ktdet"]
+font = ExtResource("5_wsj0r")
+font_size = 24
+font_color = Color(0.8627451, 0.79607844, 0.9254902, 1)
 
 [node name="NotificationsPanel" type="PanelContainer" unique_id=1058566868]
 clip_children = 2
@@ -125,6 +132,7 @@ text = "NOTIFICATIONS_READ_ALL"
 
 [node name="ScrollContainer" type="ScrollContainer" parent="MarginContainer2/VBoxContainer" unique_id=2124518937]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 size_flags_vertical = 3
 horizontal_scroll_mode = 0
@@ -137,48 +145,51 @@ size_flags_horizontal = 3
 size_flags_vertical = 3
 theme_override_constants/separation = 16
 
-[node name="VBoxContainer_NoNotifications" type="VBoxContainer" parent="MarginContainer2/VBoxContainer" unique_id=1976070660]
+[node name="CenterContainer_NoNotifications" type="CenterContainer" parent="MarginContainer2/VBoxContainer" unique_id=1956211818]
 unique_name_in_owner = true
-visible = false
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="VBoxContainer_NoNotifications" type="VBoxContainer" parent="MarginContainer2/VBoxContainer/CenterContainer_NoNotifications" unique_id=23662447]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
-theme_override_constants/separation = 8
-alignment = 1
+theme_override_constants/separation = 16
 
-[node name="PanelContainer" type="PanelContainer" parent="MarginContainer2/VBoxContainer/VBoxContainer_NoNotifications" unique_id=1541895669]
-custom_minimum_size = Vector2(60, 60)
+[node name="PanelContainer" type="PanelContainer" parent="MarginContainer2/VBoxContainer/CenterContainer_NoNotifications/VBoxContainer_NoNotifications" unique_id=1308353720]
+custom_minimum_size = Vector2(120, 120)
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
-theme_override_styles/panel = SubResource("StyleBoxFlat_6tk6y")
+theme_override_styles/panel = SubResource("StyleBoxFlat_wsj0r")
 
-[node name="MarginContainer" type="MarginContainer" parent="MarginContainer2/VBoxContainer/VBoxContainer_NoNotifications/PanelContainer" unique_id=688168075]
+[node name="TextureRect" type="TextureRect" parent="MarginContainer2/VBoxContainer/CenterContainer_NoNotifications/VBoxContainer_NoNotifications/PanelContainer" unique_id=1647987622]
+modulate = Color(0.8627451, 0.79607844, 0.9254902, 1)
+custom_minimum_size = Vector2(65, 65)
 layout_mode = 2
-theme_override_constants/margin_left = 12
-theme_override_constants/margin_top = 12
-theme_override_constants/margin_right = 12
-theme_override_constants/margin_bottom = 12
-
-[node name="TextureRect" type="TextureRect" parent="MarginContainer2/VBoxContainer/VBoxContainer_NoNotifications/PanelContainer/MarginContainer" unique_id=129135517]
-layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
 texture = ExtResource("4_ap3ic")
 expand_mode = 4
 
-[node name="Label" type="Label" parent="MarginContainer2/VBoxContainer/VBoxContainer_NoNotifications" unique_id=1543563618]
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer2/VBoxContainer/CenterContainer_NoNotifications/VBoxContainer_NoNotifications" unique_id=401127642]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Label" type="Label" parent="MarginContainer2/VBoxContainer/CenterContainer_NoNotifications/VBoxContainer_NoNotifications/VBoxContainer" unique_id=1949649860]
 layout_mode = 2
 text = "NOTIFICATIONS_NO_NOTIFICATIONS_YET"
-label_settings = SubResource("LabelSettings_wd782")
+label_settings = SubResource("LabelSettings_kdpn8")
 horizontal_alignment = 1
 
-[node name="Label_NoNotifications" type="Label" parent="MarginContainer2/VBoxContainer/VBoxContainer_NoNotifications" unique_id=31473936]
+[node name="Label_NoNotifications" type="Label" parent="MarginContainer2/VBoxContainer/CenterContainer_NoNotifications/VBoxContainer_NoNotifications/VBoxContainer" unique_id=856094485]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(200, 0)
+custom_minimum_size = Vector2(50, 0)
 layout_mode = 2
-size_flags_horizontal = 4
 theme_override_colors/font_color = Color(0.6, 0.6, 0.6, 1)
 theme_override_font_sizes/font_size = 14
 text = "NOTIFICATIONS_CHECK_BACK_LATER_FOR_UPDATES"
+label_settings = SubResource("LabelSettings_ktdet")
 horizontal_alignment = 1
 vertical_alignment = 1
 autowrap_mode = 3

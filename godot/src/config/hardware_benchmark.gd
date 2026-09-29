@@ -69,9 +69,11 @@ func run_benchmark() -> void:
 		)
 	)
 
-	# Enable render time measurement
-	if _benchmark_viewport:
-		var rid: RID = _benchmark_viewport.get_viewport_rid()
+	# Enable render time measurement. Read the viewport again: _cleanup_benchmark_viewport()
+	# nulls it when the benchmark is cancelled while the scene was being built.
+	var viewport: SubViewport = _benchmark_viewport
+	if viewport != null:
+		var rid: RID = viewport.get_viewport_rid()
 		RenderingServer.viewport_set_measure_render_time(rid, true)
 
 	# Start processing frames
@@ -119,7 +121,7 @@ func _finish_benchmark() -> void:
 	var ram_gb: float = _get_system_ram_gb()
 
 	# Determine optimal profile
-	var optimal_profile: int = _determine_profile(gpu_score, ram_gb)
+	var optimal_profile: int = determine_profile(gpu_score, ram_gb)
 
 	print(
 		(
@@ -170,7 +172,10 @@ func _get_system_ram_gb() -> float:
 	return 4.0
 
 
-func _determine_profile(gpu_score: float, ram_gb: float) -> int:
+## Maps a benchmark result to a profile index (0..3). Static so the Sentry
+## seeder can re-derive the device tier from the persisted scores without
+## re-running the benchmark.
+static func determine_profile(gpu_score: float, ram_gb: float) -> int:
 	# Find the HIGHEST profile where ALL metrics meet requirements
 	# Start from highest (3=High) and go down
 	for i in range(PROFILE_THRESHOLDS.size() - 1, -1, -1):
@@ -316,7 +321,12 @@ func _async_create_benchmark_scene() -> void:
 				mesh_instance.position = Vector3(x * 1.5, y * 1.5, z * 1.5)
 				mesh_instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 				mesh_instance.material_override = materials[mesh_count % materials.size()]
-				_benchmark_viewport.add_child(mesh_instance)
+				# The loop yields every batch; a cancel meanwhile nulls the viewport.
+				var viewport: SubViewport = _benchmark_viewport
+				if viewport == null:
+					mesh_instance.free()
+					return
+				viewport.add_child(mesh_instance)
 				mesh_count += 1
 
 				# Yield every MESHES_PER_BATCH to allow UI updates

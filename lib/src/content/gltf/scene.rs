@@ -30,7 +30,7 @@ use super::super::{
     content_provider::SceneGltfContext,
     scene_saver::{get_scene_path_for_hash, save_node_as_scene},
 };
-use super::common::{count_nodes, load_gltf_pipeline};
+use super::common::{count_nodes, load_gltf_pipeline, optimize_scene_animations};
 
 /// Load and save a scene GLTF to disk.
 ///
@@ -48,9 +48,25 @@ pub async fn load_and_save_scene_gltf(
     content_mapping: ContentMappingAndUrlRef,
     ctx: SceneGltfContext,
 ) -> Result<String, anyhow::Error> {
+    load_and_save_scene_gltf_ex(file_path, file_hash, content_mapping, ctx)
+        .await
+        .map(|(scene_path, _)| scene_path)
+}
+
+/// Same as `load_and_save_scene_gltf`, additionally returning the content
+/// hashes of the textures the saved .scn references externally
+/// (`res://content/{hash}.res`) — empty unless `ctx.external_texture_refs`.
+/// The asset server publishes exactly this list as the GLB's
+/// `externalSceneDependencies`, which the client mounts before loading.
+pub async fn load_and_save_scene_gltf_ex(
+    file_path: String,
+    file_hash: String,
+    content_mapping: ContentMappingAndUrlRef,
+    ctx: SceneGltfContext,
+) -> Result<(String, Vec<String>), anyhow::Error> {
     let ctx_clone = ctx.clone();
 
-    let (scene_path, file_size) = load_gltf_pipeline(
+    let (scene_path, file_size, externalized) = load_gltf_pipeline(
         file_path,
         file_hash.clone(),
         content_mapping,
@@ -60,6 +76,16 @@ pub async fn load_and_save_scene_gltf(
             let root_node = node.clone();
 
             create_scene_colliders(node.clone().upcast(), root_node.clone());
+
+            // The glTF importer bakes every animation track at a fixed fps, so
+            // a sparse-keyframe animation balloons in the saved .scn. Drop the
+            // redundant keys again (editor-importer default optimizer).
+            if ctx.apply_optimizations {
+                let optimized = optimize_scene_animations(node.clone().upcast());
+                if optimized > 0 {
+                    tracing::debug!("Optimized {} animations for {}", optimized, hash);
+                }
+            }
 
             // Save the processed scene to disk (in the same cache folder as other content)
             let scene_path = get_scene_path_for_hash(&ctx.content_folder, hash);
@@ -95,7 +121,9 @@ pub async fn load_and_save_scene_gltf(
         .register_local_file(&scene_path, file_size)
         .await;
 
-    Ok(scene_path)
+    let mut externalized: Vec<String> = externalized.into_iter().collect();
+    externalized.sort();
+    Ok((scene_path, externalized))
 }
 
 /// Get the StaticBody3D collider from a MeshInstance3D (created by create_trimesh_collision)
@@ -163,6 +191,26 @@ fn create_scene_colliders_inner(
                 mesh_instance_3d.set_cast_shadows_setting(ShadowCastingSetting::OFF);
             }
 
+            // Visible meshes get a LAZY collider: the SDK default for
+            // `visibleMeshesCollisionMask` is 0, and on Genesis Plaza only 44 of
+            // 1355 visible-mesh bodies ever got a non-zero mask — yet every one
+            // of them cost a StaticBody3D + CollisionShape3D per instance and a
+            // ConcavePolygonShape3D BVH build (481k triangles) at load time,
+            // 17% of the main thread during the load. The faces are kept as
+            // metadata on the shared mesh (same bytes the shape stored) and
+            // `gltf_container.gd::_ensure_lazy_collider` builds the shape the
+            // first time an entity actually asks for a visible-mesh collider.
+            if !invisible_mesh {
+                bake_lazy_collider_faces(&mesh_instance_3d);
+                create_scene_colliders_inner(
+                    child,
+                    root_node.clone(),
+                    shadow_proxy,
+                    shadow_proxy_mat,
+                );
+                continue;
+            }
+
             // First check if there's already a StaticBody3D (created by create_trimesh_collision)
             let mut static_body_3d = get_static_body_collider(&mesh_instance_3d);
             if static_body_3d.is_none() {
@@ -214,6 +262,30 @@ fn create_scene_colliders_inner(
         create_scene_colliders_inner(child, root_node.clone(), shadow_proxy, shadow_proxy_mat);
     }
 }
+
+/// Store the trimesh faces of a visible mesh as metadata on the (shared) mesh
+/// resource, so the runtime can build a `ConcavePolygonShape3D` on demand
+/// without a GPU readback. No-op when the mesh already carries them (several
+/// MeshInstance3D nodes can share one mesh).
+fn bake_lazy_collider_faces(mesh_instance_3d: &Gd<MeshInstance3D>) {
+    let Some(mut mesh) = mesh_instance_3d.get_mesh() else {
+        return;
+    };
+    if mesh.has_meta(LAZY_COLLIDER_FACES_META) {
+        return;
+    }
+    let faces = mesh.get_faces();
+    if faces.is_empty() {
+        return;
+    }
+    let backface = !is_mesh_planar(mesh_instance_3d);
+    mesh.set_meta(LAZY_COLLIDER_FACES_META, &faces.to_variant());
+    mesh.set_meta(LAZY_COLLIDER_BACKFACE_META, &backface.to_variant());
+}
+
+/// Mesh metadata keys of a lazy visible-mesh collider (read by gltf_container.gd).
+const LAZY_COLLIDER_FACES_META: &str = "dcl_faces";
+const LAZY_COLLIDER_BACKFACE_META: &str = "dcl_backface";
 
 /// Minimum thickness (in any axis) below which a mesh is considered planar/one-way.
 const PLANAR_THICKNESS_THRESHOLD: f32 = 0.01;

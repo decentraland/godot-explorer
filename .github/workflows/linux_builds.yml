@@ -58,6 +58,9 @@ jobs:
       - name: Localization tests
         run: cargo run -- test-i18n
 
+      - name: Asset renderer tests
+        run: cargo run -- test-asset-renderer
+
       - name: Export
         run: cargo run -- export
 

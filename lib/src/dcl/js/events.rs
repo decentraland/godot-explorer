@@ -12,6 +12,10 @@ use crate::dcl::{
         SceneCrdtStateProtoComponents,
     },
 };
+use crate::{
+    dcl::scene_apis::RpcCall,
+    godot_classes::dcl_scene_locale::{get_scene_locale, get_scene_locale_version},
+};
 use deno_core::{op2, OpDecl, OpState};
 use ethers_core::types::H160;
 use serde::Serialize;
@@ -55,6 +59,17 @@ struct EventBodyRealmChanged {
     server_name: String,
     display_name: String,
 }
+
+#[derive(Serialize)]
+struct EventBodyLocaleChanged {
+    locale: String,
+}
+
+// Scene locale version this scene has already been told about.
+struct LastLocaleVersion(u64);
+
+// Marker: SCENE_LOCALE_REQUESTED was already reported for this scene.
+struct SceneLocaleRequestedReported;
 
 #[derive(Serialize)]
 struct EventComms {
@@ -143,6 +158,7 @@ impl_event!(ProfileChanged, "profileChanged");
 impl_event!(RealmChanged, "onRealmChanged");
 impl_event!(PlayerClicked, "playerClicked");
 impl_event!(MessageBus, "comms");
+impl_event!(LocaleChanged, "localeChanged");
 
 struct EventReceiver<T: EventType> {
     inner: tokio::sync::mpsc::UnboundedReceiver<String>,
@@ -179,6 +195,19 @@ fn op_subscribe(state: &mut OpState, #[string] id: &str) {
         }};
     }
 
+    if id == <LocaleChanged as EventType>::label() && !state.has::<EventReceiver<LocaleChanged>>() {
+        // Baseline so subscribing doesn't emit the current locale as a change.
+        state.put(LastLocaleVersion(get_scene_locale_version()));
+        if !state.has::<SceneLocaleRequestedReported>() {
+            state.put(SceneLocaleRequestedReported);
+            state
+                .borrow_mut::<Vec<RpcCall>>()
+                .push(RpcCall::SceneLocaleRequested {
+                    locale: get_scene_locale(),
+                });
+        }
+    }
+
     register!(id, state, PlayerConnected);
     register!(id, state, PlayerDisconnected);
     register!(id, state, PlayerEnteredScene);
@@ -189,6 +218,7 @@ fn op_subscribe(state: &mut OpState, #[string] id: &str) {
     register!(id, state, RealmChanged);
     register!(id, state, PlayerClicked);
     register!(id, state, MessageBus);
+    register!(id, state, LocaleChanged);
 
     tracing::warn!("subscribe to unrecognised event {id}");
 }
@@ -216,6 +246,7 @@ fn op_unsubscribe(state: &mut OpState, #[string] id: &str) {
     unregister!(id, state, RealmChanged);
     unregister!(id, state, PlayerClicked);
     unregister!(id, state, MessageBus);
+    unregister!(id, state, LocaleChanged);
 
     tracing::warn!("unsubscribe for unrecognised event {id}");
 }
@@ -263,6 +294,7 @@ fn op_send_batch(state: &mut OpState) -> Vec<Event> {
 
     poll!(state, RealmChanged, "onRealmChanged");
     poll!(state, MessageBus, "comms");
+    poll!(state, LocaleChanged, "localeChanged");
     poll!(state, SceneReady, "sceneStart");
 
     results
@@ -476,6 +508,23 @@ pub fn process_events_players_stateless(
     // TODO: implement this when version is in the avatar components
     if let Some(profile_changed_sender) = op_state.try_take::<EventSender<ProfileChanged>>() {
         op_state.put(profile_changed_sender);
+    }
+
+    // Player switched language in Settings since this scene last heard.
+    if let Some(locale_changed_sender) = op_state.try_take::<EventSender<LocaleChanged>>() {
+        let version = get_scene_locale_version();
+        let last_version = op_state.try_borrow::<LastLocaleVersion>().map(|v| v.0);
+        if last_version != Some(version) {
+            let body = EventBodyLocaleChanged {
+                locale: get_scene_locale(),
+            };
+            locale_changed_sender
+                .inner
+                .send(serde_json::to_string(&body).unwrap())
+                .unwrap();
+            op_state.put(LastLocaleVersion(version));
+        }
+        op_state.put(locale_changed_sender);
     }
 }
 

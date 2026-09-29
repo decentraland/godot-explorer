@@ -28,16 +28,21 @@ func _on_balance_changed(_new_balance: int):
 
 
 func _update_text():
+	# Keys, not text: the Button auto-translates, so the label also follows a language change.
 	var balance = Iap.get_balance()
 	if balance <= 0:
-		text = "GET CREDITS"
+		text = "WEARABLE_ITEM_GET_CREDITS"
 	elif _selected_price >= 0 and balance < _selected_price:
-		text = "GET CREDITS"
+		text = "WEARABLE_ITEM_GET_CREDITS"
 	else:
-		text = "GO TO SHOP"
+		text = "MARKETPLACE_CTA_GO_TO_SHOP"
 
 
 func _on_pressed():
+	# The shop is a web purchase flow: never reachable where store policy forbids it (#2814).
+	if not StorePolicy.can_show_external_purchase_links():
+		Global.open_credits.emit("MARKETPLACE_CTA")
+		return
 	var balance = Iap.get_balance()
 	var can_afford = balance > 0
 	if _selected_price >= 0:
@@ -45,4 +50,4 @@ func _on_pressed():
 	if can_afford:
 		MarketplaceTracker.open_and_track(DclUrls.marketplace_browse(marketplace_section))
 	else:
-		Global.open_credits.emit()
+		Global.open_credits.emit("MARKETPLACE_CTA")

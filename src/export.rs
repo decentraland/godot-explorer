@@ -1,4 +1,15 @@
-use std::{collections::HashMap, fs, io, path::Path, process::ExitStatus};
+use std::{
+    collections::HashMap,
+    fs,
+    io::{self, BufRead, BufReader, Write},
+    path::Path,
+    process::{ExitStatus, Stdio},
+    sync::{
+        atomic::{AtomicBool, AtomicU32, AtomicUsize, Ordering},
+        Arc,
+    },
+    thread,
+};
 use zip::ZipArchive;
 
 use crate::{
@@ -271,6 +282,166 @@ pub fn import_assets() -> ExitStatus {
         .expect("Failed to run Godot")
 }
 
+/// Printed once by Godot's Metal shader container when `xcrun metal` is unavailable on the exporting
+/// machine: the baker then stores SPIR-V only and the device still compiles every shader from source.
+const SHADER_BAKER_SPIRV_ONLY_WARNING: &str = "Metal shader baking limited to SPIR-V";
+/// Progress line the shader baker prints when it starts compiling
+/// (`ShaderBakerExportPlugin::_end_customize_resources`):
+/// `[ 0% ] baking_shaders | Started Baking shaders (597 steps)`. It only appears when the baker is
+/// active, which `_is_active()` refuses without a RenderingDevice renderer (headless / opengl3).
+const SHADER_BAKER_STARTED: &str = "Started Baking shaders (";
+/// Every shader the baker compiles is added to the pack as
+/// `res://.godot/shader_cache/<ShaderRD>/<hash>/<hash>.metal.cache` (a `Storing File:` progress line);
+/// the on-disk copy lives in `godot/.godot/exported/<hash>/shader_baker/iOS/metal/`, not next to the IPA.
+const SHADER_BAKER_METAL_CACHE_SUFFIX: &str = ".metal.cache";
+
+/// What Godot's export output said about the shader bake.
+#[derive(Debug, Default)]
+struct GodotExportOutput {
+    /// Shader variants the baker queued (`Started Baking shaders (N steps)`); `None` when it never ran.
+    bake_steps: Option<u32>,
+    /// `.metal.cache` files stored into the .pck.
+    metal_caches_packed: usize,
+    /// The baker ran without the Metal toolchain and stored SPIR-V only.
+    spirv_only_warning: bool,
+}
+
+/// Runs Godot forwarding its stdout/stderr line by line while scanning both streams for the shader
+/// baker's progress and warnings. Piping (instead of inheriting) stdio is what lets the iOS export
+/// detect a missing or degraded shader bake without losing the live output.
+/// Thread-shared accumulator for [`scan_line`].
+#[derive(Default)]
+struct ExportOutputScan {
+    bake_started: AtomicBool,
+    bake_steps: AtomicU32,
+    metal_caches_packed: AtomicUsize,
+    spirv_only_warning: AtomicBool,
+}
+
+impl ExportOutputScan {
+    fn finish(&self) -> GodotExportOutput {
+        GodotExportOutput {
+            bake_steps: self
+                .bake_started
+                .load(Ordering::Relaxed)
+                .then(|| self.bake_steps.load(Ordering::Relaxed)),
+            metal_caches_packed: self.metal_caches_packed.load(Ordering::Relaxed),
+            spirv_only_warning: self.spirv_only_warning.load(Ordering::Relaxed),
+        }
+    }
+}
+
+/// Inspects one line of Godot's export output (ANSI colour codes included) for the shader baker's
+/// progress and warnings.
+fn scan_line(line: &str, scan: &ExportOutputScan) {
+    if line.contains(SHADER_BAKER_SPIRV_ONLY_WARNING) {
+        scan.spirv_only_warning.store(true, Ordering::Relaxed);
+    }
+    if let Some(rest) = line.split(SHADER_BAKER_STARTED).nth(1) {
+        let steps = rest
+            .split(|c: char| !c.is_ascii_digit())
+            .next()
+            .and_then(|digits| digits.parse::<u32>().ok())
+            .unwrap_or(0);
+        scan.bake_steps.store(steps, Ordering::Relaxed);
+        scan.bake_started.store(true, Ordering::Relaxed);
+    }
+    if line.contains("Storing File:") && line.contains(SHADER_BAKER_METAL_CACHE_SUFFIX) {
+        scan.metal_caches_packed.fetch_add(1, Ordering::Relaxed);
+    }
+}
+
+fn run_godot_streaming(
+    command: &mut std::process::Command,
+) -> io::Result<(ExitStatus, GodotExportOutput)> {
+    fn pump<R, W>(reader: R, mut writer: W, scan: Arc<ExportOutputScan>) -> thread::JoinHandle<()>
+    where
+        R: io::Read + Send + 'static,
+        W: Write + Send + 'static,
+    {
+        thread::spawn(move || {
+            for line in BufReader::new(reader).lines().map_while(Result::ok) {
+                scan_line(&line, &scan);
+                let _ = writeln!(writer, "{line}");
+            }
+        })
+    }
+
+    command.stdout(Stdio::piped()).stderr(Stdio::piped());
+    let mut child = command.spawn()?;
+    let scan = Arc::new(ExportOutputScan::default());
+    let stdout_pump = child
+        .stdout
+        .take()
+        .map(|s| pump(s, io::stdout(), Arc::clone(&scan)));
+    let stderr_pump = child
+        .stderr
+        .take()
+        .map(|s| pump(s, io::stderr(), Arc::clone(&scan)));
+    let status = child.wait()?;
+    for handle in [stdout_pump, stderr_pump].into_iter().flatten() {
+        let _ = handle.join();
+    }
+    Ok((status, scan.finish()))
+}
+
+/// Fails the iOS export unless Godot's own output proves the shader bake happened: the baker
+/// announced `Started Baking shaders (N steps)`, `.metal.cache` files were packed, and the SPIR-V-only
+/// warning (no Metal toolchain) never appeared. In every failing case the device would compile each
+/// shader on its main thread at first draw, which is the App Hang this check exists to prevent.
+/// `DCL_SKIP_SHADER_BAKE_CHECK=1` exports anyway (local debugging only — never for a store build).
+fn verify_shader_bake_output(output: &GodotExportOutput) -> Result<(), anyhow::Error> {
+    if std::env::var_os("DCL_SKIP_SHADER_BAKE_CHECK").is_some() {
+        print_message(
+            MessageType::Warning,
+            &format!(
+                "DCL_SKIP_SHADER_BAKE_CHECK set — not verifying the shader bake (baker steps: {:?}, {} files packed: {}, metal toolchain warning: {}).",
+                output.bake_steps,
+                SHADER_BAKER_METAL_CACHE_SUFFIX,
+                output.metal_caches_packed,
+                output.spirv_only_warning
+            ),
+        );
+        return Ok(());
+    }
+
+    let steps = output.bake_steps.unwrap_or(0);
+    if steps == 0 {
+        return Err(anyhow::anyhow!(
+            "Shader baker never ran (Godot printed no \"{}N steps)\" progress) — the export ran without a \
+             RenderingDevice renderer (headless / opengl3) or the preset has shader_baker/enabled=false, \
+             so every shader would compile on the device at first draw. Run the export on a machine with \
+             a display, or set DCL_SKIP_SHADER_BAKE_CHECK=1 to ship without baked shaders.",
+            SHADER_BAKER_STARTED
+        ));
+    }
+    if output.spirv_only_warning {
+        return Err(anyhow::anyhow!(
+            "Shader baker could not compile Metal libraries (Godot printed \"{}\"): the Metal toolchain is \
+             missing on this machine. Install it with `xcodebuild -downloadComponent MetalToolchain` \
+             (Xcode 26) and re-run, or set DCL_SKIP_SHADER_BAKE_CHECK=1 to ship SPIR-V only.",
+            SHADER_BAKER_SPIRV_ONLY_WARNING
+        ));
+    }
+    if output.metal_caches_packed == 0 {
+        return Err(anyhow::anyhow!(
+            "Shader baker queued {} variants but the export packed no {} file — look for \"Failed to \
+             compile code to native\" in the Godot output above, or set DCL_SKIP_SHADER_BAKE_CHECK=1 to \
+             ship without baked shaders.",
+            steps,
+            SHADER_BAKER_METAL_CACHE_SUFFIX
+        ));
+    }
+    print_message(
+        MessageType::Success,
+        &format!(
+            "Shader baker: {} variants compiled, {} {} files packed into the .pck",
+            steps, output.metal_caches_packed, SHADER_BAKER_METAL_CACHE_SUFFIX
+        ),
+    );
+    Ok(())
+}
+
 pub fn export(
     target: Option<&str>,
     format: &str,
@@ -368,15 +539,27 @@ pub fn export(
         "--export-debug"
     };
 
-    let args = vec![
-        "-e",
-        "--rendering-driver",
-        "opengl3",
-        "--headless",
+    // Shader baking (`shader_baker/enabled` in export_presets.cfg) only happens when the exporting
+    // editor itself runs a RenderingDevice renderer: `ShaderBakerExportPlugin::_is_active()` returns
+    // false — without printing anything — under `--headless` (dummy renderer) or
+    // `--rendering-driver opengl3`. The iOS preset has had baking enabled while every store build
+    // shipped without baked shaders, so each Metal shader was compiled from source on the device's
+    // main thread at first draw (5–130 s App Hangs on ~80% of iOS users on 1.13.1). Export iOS through
+    // a windowed editor on the host's default RenderingDevice driver (Metal on Apple Silicon), forcing
+    // the mobile renderer so the baked variants match the device. Every other target keeps the
+    // headless export.
+    let bake_shaders = target == "ios";
+    let mut args: Vec<&str> = vec!["-e"];
+    if bake_shaders {
+        args.extend(["--rendering-method", "mobile"]);
+    } else {
+        args.extend(["--rendering-driver", "opengl3", "--headless"]);
+    }
+    args.extend([
         export_mode,
         target.as_str(),
         output_path_godot_param.as_str(),
-    ];
+    ]);
 
     // The headless Godot editor dlopen's the GDExtension (libdclgodot.dylib) to run the
     // export. A freshly rebuilt dylib carries an invalid signature, so macOS SIGKILLs Godot
@@ -428,13 +611,18 @@ pub fn export(
         export_command.env(format!("{}_PASSWORD", env_prefix), keystore_password);
     }
 
-    let export_status = export_command.status().expect("Failed to run Godot");
+    let (export_status, godot_output) =
+        run_godot_streaming(&mut export_command).expect("Failed to run Godot");
 
     spinner.finish();
 
     // Restore export presets if we backed them up
     if let Some(backup_content) = export_presets_backup {
         restore_export_presets(backup_content)?;
+    }
+
+    if bake_shaders {
+        verify_shader_bake_output(&godot_output)?;
     }
 
     if !std::path::Path::new(output_rel_path.as_str()).exists() && target != "ios" {
@@ -761,4 +949,60 @@ fn extract_android_template() -> Result<(), anyhow::Error> {
     );
 
     Ok(())
+}
+
+#[cfg(test)]
+mod shader_bake_scan_tests {
+    use super::*;
+
+    fn scan(lines: &[&str]) -> GodotExportOutput {
+        let scan = ExportOutputScan::default();
+        for line in lines {
+            scan_line(line, &scan);
+        }
+        scan.finish()
+    }
+
+    /// Lines copied from the iOS export log of CI job 103621828160 (PR #2886).
+    #[test]
+    fn detects_a_successful_bake_from_godot_progress_lines() {
+        let out = scan(&[
+            "Metal 4.0 - Forward Mobile - Using Device #0: Apple - Apple Paravirtual device (Apple5)",
+            "[   0% ] \u{1b}[90m\u{1b}[1mbaking_shaders\u{1b}[22m | Started Baking shaders (597 steps)\u{1b}[39m\u{1b}[0m",
+            "[  71% ] \u{1b}[90m\u{1b}[1mbaking_shaders\u{1b}[22m | Baking...\u{1b}[39m\u{1b}[0m",
+            "\u{1b}[92m[ DONE ]\u{1b}[39m \u{1b}[1mbaking_shaders\u{1b}[22m",
+            "[   1% ] \u{1b}[90m\u{1b}[1msavepack\u{1b}[22m | Storing File: res://.godot/shader_cache/CanvasSdfShaderRD/03d3d9d3cd52add64ff8ff8bb13fe3925448aa012f2c0c0de1703ddde02b1df7/087916079fba7c625e62b0c2cca570e0fb87c99a.metal.cache\u{1b}[39m\u{1b}[0m",
+            "[   1% ] \u{1b}[90m\u{1b}[1msavepack\u{1b}[22m | Storing File: res://.godot/shader_cache/SkyShaderRD/b5fd09bdcc7d7b66ec490ecb2fdd248bc1bef95db12d57eb2a28589fa601c308/de678811d1bad3cad4892a8db7b6ea0be197d51d.metal.cache\u{1b}[39m\u{1b}[0m",
+            "[   4% ] \u{1b}[90m\u{1b}[1msavepack\u{1b}[22m | Storing File: res://assets/avatar/dcl_toon.gdshader\u{1b}[39m\u{1b}[0m",
+        ]);
+        assert_eq!(out.bake_steps, Some(597));
+        assert_eq!(out.metal_caches_packed, 2);
+        assert!(!out.spirv_only_warning);
+        assert!(verify_shader_bake_output(&out).is_ok());
+    }
+
+    /// The 1.13.1 export (headless, opengl3): the baker never started, the .pck only got .gdshader sources.
+    #[test]
+    fn rejects_an_export_where_the_baker_never_ran() {
+        let out = scan(&[
+            "[   0% ] \u{1b}[90m\u{1b}[1mexport\u{1b}[22m | Started Exporting for iOS (Project Files Only) (2 steps)\u{1b}[39m\u{1b}[0m",
+            "[   4% ] \u{1b}[90m\u{1b}[1msavepack\u{1b}[22m | Storing File: res://assets/avatar/dcl_toon.gdshader\u{1b}[39m\u{1b}[0m",
+        ]);
+        assert_eq!(out.bake_steps, None);
+        assert_eq!(out.metal_caches_packed, 0);
+        let err = verify_shader_bake_output(&out).unwrap_err().to_string();
+        assert!(err.contains("never ran"), "{err}");
+    }
+
+    #[test]
+    fn rejects_a_bake_without_the_metal_toolchain() {
+        let out = scan(&[
+            "[   0% ] \u{1b}[90m\u{1b}[1mbaking_shaders\u{1b}[22m | Started Baking shaders (597 steps)\u{1b}[39m\u{1b}[0m",
+            "WARNING: Metal shader baking limited to SPIR-V: Unable to determine toolchain properties to compile .metallib",
+            "[   1% ] \u{1b}[90m\u{1b}[1msavepack\u{1b}[22m | Storing File: res://.godot/shader_cache/SkyShaderRD/b5fd/de67.metal.cache\u{1b}[39m\u{1b}[0m",
+        ]);
+        assert!(out.spirv_only_warning);
+        let err = verify_shader_bake_output(&out).unwrap_err().to_string();
+        assert!(err.contains("Metal toolchain"), "{err}");
+    }
 }

@@ -11,12 +11,9 @@ func _connect_update_signals() -> void:
 
 
 func _on_button_clicked() -> void:
-	if Global.get_explorer():
-		Global.close_menu.emit()
-		Global.open_settings_panel.emit()
-	else:
-		Global.close_navbar.emit()
-		Global.open_settings.emit()
+	# Settings is a fullscreen menu screen, handled like Backpack: the menu shows the screen and
+	# (in the explorer) collapses the navbar. Works the same pre-explorer and in-game.
+	Global.open_settings.emit()
 	Global.send_haptic_feedback()
 
 

@@ -67,7 +67,17 @@ pub fn update_transform_and_parent(
 
             let old_parent = godot_entity_node.desired_parent_3d;
             let mut transform = value.unwrap_or_default();
-            apply_dcl_transform_to_node_3d(&mut transform, &mut node_3d);
+            if !apply_dcl_transform_to_node_3d(&mut transform, &mut node_3d)
+                && !scene.warned_invalid_transform
+            {
+                scene.warned_invalid_transform = true;
+                tracing::debug!(
+                    "scene {:?}: entity {:?} sent a non-finite or out-of-range transform; \
+                     skipping the update (further occurrences in this scene are silent)",
+                    scene.scene_id,
+                    entity
+                );
+            }
 
             godot_entity_node.desired_parent_3d = transform.parent;
             if godot_entity_node.desired_parent_3d != old_parent {
@@ -187,15 +197,41 @@ pub fn update_transform_and_parent(
     true
 }
 
+/// Largest translation/scale magnitude handed to Godot. Genesis City spans
+/// roughly +/-2.4km, so anything past this is a broken scene -- and float
+/// precision in the physics and render transform math degenerates well before
+/// it.
+const MAX_TRANSFORM_MAGNITUDE: f32 = 1.0e6;
+
 /// Applies an SDK Transform to a Godot Node3D, normalizing rotation (replacing
 /// zero/non-finite quaternions with identity) and clamping near-zero scale
 /// components to 0.00001 so Godot doesn't degenerate the basis. The
 /// `transform` argument is mutated in place with the normalized values; the
 /// `parent` field is untouched so callers can still read it afterward.
+///
+/// Returns `false` without touching the node when the scene sent a non-finite
+/// or out-of-range translation or scale. Godot has no guard of its own here: a
+/// NaN origin propagates into every per-frame consumer that reads the node's
+/// global transform (billboards, trigger areas, skinning), and the engine then
+/// prints `det == 0` / `Basis must be normalized` at frame rate. Callers should
+/// report a rejection once per scene, never once per entity.
+#[must_use]
 pub fn apply_dcl_transform_to_node_3d(
     transform: &mut DclTransformAndParent,
     node_3d: &mut Gd<Node3D>,
-) {
+) -> bool {
+    if !transform.translation.is_finite()
+        || transform.translation.length() > MAX_TRANSFORM_MAGNITUDE
+    {
+        return false;
+    }
+    // Note the near-zero clamp below does NOT cover this: `is_zero_approx` is
+    // `abs() < CMP_EPSILON`, which is false for both NaN and inf, so a
+    // non-finite scale would otherwise reach `set_scale` untouched.
+    if !transform.scale.is_finite() || transform.scale.length() > MAX_TRANSFORM_MAGNITUDE {
+        return false;
+    }
+
     if !transform.rotation.is_normalized() {
         if transform.rotation.length_squared() == 0.0 {
             transform.rotation = Quaternion::default();
@@ -217,6 +253,7 @@ pub fn apply_dcl_transform_to_node_3d(
         transform.scale.z = 0.00001;
     }
     node_3d.set_scale(transform.scale);
+    true
 }
 
 fn detect_entity_id_in_parent_chain(

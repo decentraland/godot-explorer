@@ -49,7 +49,14 @@ static func async_patch_like(place_id: String, like: LIKE, is_world_place: bool 
 		LIKE.NO:
 			body = JSON.stringify({like = false})
 
-	return await Global.async_signed_fetch(url, HTTPClient.METHOD_PATCH, body)
+	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_PATCH, body)
+
+	# In-app review trigger (issue #2739): an upvote only. A downvote or a cleared vote is not a
+	# positive moment, and the request has to have actually landed.
+	if like == LIKE.YES and not (response is PromiseError):
+		_notify_review_prompt(ReviewPromptCoordinator.TRIGGER_PLACE_UPVOTED)
+
+	return response
 
 
 static func async_patch_favorite(
@@ -68,7 +75,20 @@ static func async_patch_favorite(
 
 	Global.favorite_destination_set.emit()
 
+	# In-app review trigger (issue #2739): favoriting only, never unfavoriting. Hooked here
+	# rather than on favorite_destination_set, which carries no arguments and also fires on
+	# unfavorite.
+	if toggled_on and not (respnse is PromiseError):
+		_notify_review_prompt(ReviewPromptCoordinator.TRIGGER_PLACE_FAVORITED)
+
 	return respnse
+
+
+## Fire-and-forget hand-off to the review prompt coordinator. Null-safe because these helpers
+## also run in contexts where Global isn't fully built (tests, asset-server mode).
+static func _notify_review_prompt(trigger_id: String) -> void:
+	if Global.review_prompt_coordinator != null:
+		Global.review_prompt_coordinator.on_trigger(trigger_id)
 
 
 ## Returns true when the place dictionary describes a world (not genesis city).

@@ -9,6 +9,7 @@ pub mod object_pool;
 pub mod pool_manager;
 mod rpc_calls;
 pub mod scene;
+pub mod scene_cache;
 pub mod scene_manager;
 pub mod tokio_runtime;
 mod update_scene;

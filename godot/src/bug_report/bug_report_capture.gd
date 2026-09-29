@@ -24,6 +24,16 @@ const MAX_DIMENSION := 1920
 # the 3MB evidence cap was encoded the same way.
 const JPEG_QUALITY := 0.85
 
+# Fallbacks for encode_within(), tried in order until an image fits its evidence
+# budget. Starts below MAX_DIMENSION/JPEG_QUALITY: captures and gallery picks are
+# already encoded that way, and only images over budget get here, so re-encoding
+# at the same settings would always miss (PR #2906 review).
+const SHRINK_STEPS := [
+	{"dimension": 1440, "quality": 0.75},
+	{"dimension": 1080, "quality": 0.7},
+	{"dimension": 720, "quality": 0.6},
+]
+
 static var _latest_jpeg: PackedByteArray = PackedByteArray()
 
 
@@ -57,20 +67,39 @@ static func capture(viewport: Viewport) -> void:
 	if image == null or image.is_empty():
 		return
 
-	var longest: int = maxi(image.get_width(), image.get_height())
-	if longest > MAX_DIMENSION:
-		var scale := float(MAX_DIMENSION) / float(longest)
-		image.resize(
-			maxi(1, int(image.get_width() * scale)),
-			maxi(1, int(image.get_height() * scale)),
-			Image.INTERPOLATE_BILINEAR
-		)
-
+	_fit_dimension(image, MAX_DIMENSION)
 	var bytes := image.save_jpg_to_buffer(JPEG_QUALITY)
 	if bytes.is_empty():
 		push_warning("BugReportCapture: could not encode the captured frame")
 		return
 	_latest_jpeg = bytes
+
+
+## Re-encodes `image` as JPEG, stepping down size and quality until it is at most
+## `max_bytes`. Empty when even the smallest step doesn't fit. `image` is left
+## untouched — each step works on a copy.
+static func encode_within(image: Image, max_bytes: int) -> PackedByteArray:
+	if image == null or image.is_empty():
+		return PackedByteArray()
+	for step in SHRINK_STEPS:
+		var candidate: Image = image.duplicate()
+		_fit_dimension(candidate, step["dimension"])
+		var bytes := candidate.save_jpg_to_buffer(step["quality"])
+		if not bytes.is_empty() and bytes.size() <= max_bytes:
+			return bytes
+	return PackedByteArray()
+
+
+static func _fit_dimension(image: Image, max_dimension: int) -> void:
+	var longest: int = maxi(image.get_width(), image.get_height())
+	if longest <= max_dimension:
+		return
+	var scale := float(max_dimension) / float(longest)
+	image.resize(
+		maxi(1, int(image.get_width() * scale)),
+		maxi(1, int(image.get_height() * scale)),
+		Image.INTERPOLATE_BILINEAR
+	)
 
 
 ## Capture from the Settings-opened path.

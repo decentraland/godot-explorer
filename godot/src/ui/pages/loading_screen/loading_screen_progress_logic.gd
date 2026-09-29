@@ -17,10 +17,20 @@ func _ready():
 	Global.scene_runner.loading_cancelled.connect(_on_loading_cancelled)
 
 
+## Concurrent asset downloads while a scene is loading. `max-downloads=<n>`
+## (deeplink) overrides the default 12 for benchmarking the download stage.
+func _loading_max_downloads() -> int:
+	if Global.deep_link_obj != null:
+		var v := str(Global.deep_link_obj.params.get("max-downloads", ""))
+		if v.is_valid_int() and v.to_int() > 0:
+			return v.to_int()
+	return 12
+
+
 ## Called by loading_screen.gd when it wants to enable loading
 func enable_loading_screen():
 	# Show loading screen immediately - the LoadingSession will update progress later
-	Global.content_provider.set_max_concurrent_downloads(12)
+	Global.content_provider.set_max_concurrent_downloads(_loading_max_downloads())
 	Global.content_provider.set_max_low_priority_downloads(2)
 
 	# Defer scene room connection until loading finishes
@@ -37,12 +47,12 @@ func enable_loading_screen():
 
 
 ## Called by loading_screen.gd or popup button to force hide loading
-func hide_loading_screen():
-	_hide_loading_screen()
+func hide_loading_screen(status: String = "Success"):
+	_hide_loading_screen(status)
 
 
 func _on_loading_started(_session_id: int, _expected_count: int):
-	Global.content_provider.set_max_concurrent_downloads(12)
+	Global.content_provider.set_max_concurrent_downloads(_loading_max_downloads())
 	Global.content_provider.set_max_low_priority_downloads(2)
 
 	# Defer scene room connection until loading finishes
@@ -83,7 +93,7 @@ func _on_loading_cancelled(_session_id: int):
 	pass
 
 
-func _hide_loading_screen():
+func _hide_loading_screen(status: String = "Success"):
 	Global.content_provider.set_max_concurrent_downloads(12)
 	Global.content_provider.set_max_low_priority_downloads(12)
 
@@ -99,11 +109,12 @@ func _hide_loading_screen():
 
 	loading_screen.async_hide_loading_screen_effect()
 
-	# LOADING_END (Success) metric
+	# LOADING_END metric — "Success" unless the caller is taking the screen down because the
+	# load it was covering failed (e.g. a realm change that never resolved).
 	var pos = Global.scene_fetcher.current_position
 	var end_data = {
 		"scene_id": Global.scene_fetcher.current_scene_entity_id,
 		"position": "%d,%d" % [pos.x, pos.y],
-		"status": "Success"
+		"status": status
 	}
 	Global.metrics.track_screen_viewed("LOADING_END", JSON.stringify(end_data))

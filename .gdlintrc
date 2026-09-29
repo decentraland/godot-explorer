@@ -18,7 +18,21 @@ class-name: ([A-Z][a-z0-9]*)+
 class-variable-name: _?[a-z][a-z0-9]*(_[a-z0-9]+)*
 comparison-with-itself: null
 constant-name: _?[A-Z][A-Z0-9]*(_[A-Z0-9]+)*
-disable: []
+# --- Object-lifetime rules (dcl fork of gdtoolkit, gdtoolkit/linter/lifetime_checks.py) ---
+# On the release template a GDScript method call on a freed node is a SIGSEGV, and
+# an `await` is where references go stale. `lifetime-safe-types` lists the declared
+# types that can never hold a node, on top of the built-ins and engine classes the
+# rule already knows: every GDExtension class (Rust `Dcl*`, sentry) and the project's
+# own RefCounted / Resource classes. Regenerate the extension part with
+#   .bin/godot/godot4_bin --headless --path godot --script <fork>/gdtoolkit/linter/tools/generate_safe_types.gd
+# and the project part from `class_name X extends <non-Node>` declarations.
+lifetime-safe-types: '^(CocoaBreadcrumb|CocoaEvent|CocoaLog|CocoaMetric|DclAndroidPlugin|DclAvatarWireFormat|DclConfig|DclContentMappingAndUrl|DclEmoteGltf|DclEther|DclGlobalTime|DclHashing|DclIosPlugin|DclItemEntityDefinition|DclLocomotionSettings|DclLogHubLogger|DclParseDeepLink|DclPreviewMessage|DclRpcSenderGetTextureSize|DclRpcSenderTakeAndCompareSnapshotResponse|DclSceneEmoteData|DclSceneEntityDefinition|DclStoreKitPlugin|DclSwiftLibPlugin|DclUrls|DclUserProfile|DclVirtualCamera|DisabledEvent|DotnetBeforeSendProcessor|DotnetScopeObserver|NetworkInspectedRequest|ProfileService|Promise|PromiseError|RequestResponse|RequestResponseError|RuntimeConfig|RustHttpQueueRequester|ScreenshotProcessor|SentryAndroidOptions|SentryAttachment|SentryBadCode|SentryBreadcrumb|SentryEvent|SentryEventProcessor|SentryExperimental|SentryFeedback|SentryGodotLogger|SentryGodotLoggerOptions|SentryLog|SentryLogger|SentryLoggerLimits|SentryMetric|SentryMetrics|SentryOptions|SentrySDK|SentryScopeObserver|SentryTimestamp|SentryUnit|SentryUser|TextureEntry|ViewHierarchyProcessor|WearableManyResolved|ActionIcons|AnalyticsController|AudioSettings|AvatarAnimHelpers|AvatarBuildProfiler|AvatarEmoteController|AvatarExcludeIdMatcher|AvatarImpostorConfig|AvatarMeshAssembler|AvatarPoolPolicy|AvatarRendererHelper|BugReportCapture|BugReportCategories|BugReportService|CameraRigHelpers|CampaignResolution|ChatCommands|Chronometer|ConfigData|CornerConfiguration|DclUrn|DebugCollector|DeepLinkRouter|EmoteLoader|Emotes|Erc20|FeaturedDataProvider|GeneralSettings|GlyphMap|GraphicSettings|ImagePickerService|LocaleFormat|LocaleSettings|MarketplaceUrl|NameplateLayer|NamesRequest|NftFrameStyleLoader|NodeGuard|NotificationOSWrapper|NotificationTextHelper|NotificationUtils|OpenSeaFetcher|PlaceholderManager|PlacesHelper|PreloadAssets|ProjectMainLoop|PromiseUtils|RewardCampaigns|SafeAreaMargins|SceneHelper|SceneLimits|SceneRendererInputHelper|SceneStatsCollector|SdkTouchControlsApplier|SentrySeeder|SentryUserFeedback|Snapshot|SocialHelper|SocialItemData|TextLayout|TextMarkup|TranslationKey|UnZip|WearableLoader|WearableRequest|WorldPermissionsHelper)$'
+disable:
+  # Enabled once the current hits are fixed (audit after decentraland/godotengine#21).
+  - node-reference-across-await
+  - node-argument-across-await
+  # Audit-only: `== null` on a lazily created child is legitimate, so this stays off in CI.
+  - node-null-comparison
 duplicated-load: null
 enum-element-name: '[A-Z][A-Z0-9]*(_[A-Z0-9]+)*'
 enum-name: ([A-Z][a-z0-9]*)+

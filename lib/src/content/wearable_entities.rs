@@ -74,7 +74,7 @@ pub async fn request_wearables(
                 wearable_map.insert(id_lower, Arc::new(wearable_data));
             }
             Err(e) => {
-                tracing::error!("Error parsing wearable data: {:?}", e);
+                tracing::warn!("Error parsing wearable data: {:?}", e);
             }
         }
     }

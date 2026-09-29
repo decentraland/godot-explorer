@@ -121,7 +121,7 @@ func _async_resolve_auto_delete() -> bool:
 	var upgraded: bool
 	if result is PromiseError:
 		printerr("Delete flow: upgrade check failed, using cached flag: ", result.get_error())
-		upgraded = identity.is_thirdweb_guest_upgraded()
+		upgraded = Global.player_identity.is_thirdweb_guest_upgraded()
 	else:
 		upgraded = bool(result)
 

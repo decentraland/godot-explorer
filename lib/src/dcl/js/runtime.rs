@@ -9,7 +9,7 @@ use crate::{
         scene_apis::{ContentMapping, GetSceneInformationResponse},
         DclSceneRealmData,
     },
-    godot_classes::dcl_global_time::DclGlobalTime,
+    godot_classes::{dcl_global_time::DclGlobalTime, dcl_scene_locale::get_scene_locale},
     realm::scene_definition::SceneEntityDefinition,
 };
 
@@ -21,6 +21,7 @@ pub fn ops() -> Vec<OpDecl> {
         op_get_realm(),
         op_get_scene_information(),
         op_get_world_time(),
+        op_get_explorer_locale(),
     ]
 }
 
@@ -68,6 +69,13 @@ fn op_get_world_time(op_state: &mut OpState) -> f64 {
     } else {
         DclGlobalTime::get_world_time()
     }
+}
+
+// Resolved app locale as a BCP-47 tag, for getExplorerInformation.
+#[op2]
+#[string]
+fn op_get_explorer_locale() -> String {
+    get_scene_locale()
 }
 
 #[op2]

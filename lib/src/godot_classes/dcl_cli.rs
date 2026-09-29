@@ -47,6 +47,8 @@ pub struct DclCli {
     #[var(get)]
     pub avatar_renderer_mode: bool,
     #[var(get)]
+    pub asset_renderer_mode: bool,
+    #[var(get)]
     pub client_test_mode: bool,
     #[var(get)]
     pub test_runner: bool,
@@ -130,7 +132,7 @@ pub struct DclCli {
     // Override the default optimized-content base URL. When set, runtime
     // fetches `<base_url>/<hash>-mobile.zip` instead of the hardcoded
     // production endpoint. Empty = use default
-    // (https://optimized-assets.dclregenesislabs.xyz/v4).
+    // (https://optimized-assets.dclregenesislabs.xyz/v6).
     //
     // Custom setter mirrors the value into a thread-safe static
     // (`OPTIMIZED_URL_OVERRIDE` in content_provider.rs) because tokio
@@ -163,6 +165,8 @@ pub struct DclCli {
     #[var(get)]
     pub avatars_file: GString,
     #[var(get)]
+    pub asset_input_file: GString,
+    #[var(get)]
     pub snapshot_folder: GString,
     #[var(get)]
     pub fake_deeplink: GString,
@@ -176,18 +180,26 @@ pub struct DclCli {
     pub saved_profile: GString,
 
     // Pulse transport (see comms/pulse/). `pulse` = not locally disabled (--no-pulse).
-    // `pulse_explicit` = --pulse or an explicit endpoint (--pulse-server / PULSE_SERVER)
-    // was passed: force activation even when the server `pulse` feature flag is absent
-    // or unreachable (without it activation is fail-closed on the flag — see
-    // CommunicationManager::pulse_enabled). `pulse_server` empty = default endpoint.
+    // `pulse_explicit` = --pulse, an explicit endpoint (--pulse-server / PULSE_SERVER) or an
+    // explicit realm (--pulse-realm / PULSE_REALM) was passed: force activation even when the
+    // server `pulse` feature flag is absent or unreachable (without it activation is
+    // fail-closed on the flag — see CommunicationManager::pulse_enabled). `pulse_server` empty
+    // = default endpoint.
     #[var(get)]
     pub pulse: bool,
     #[var(get)]
     pub pulse_explicit: bool,
     #[var(get)]
     pub pulse_server: GString,
-    // Dual-channel movement kill switch: when set, movement stops going over LiveKit while
-    // Pulse is established (it always resumes if Pulse drops, so it can't cause invisibility).
+    // Realm announced on the Pulse handshake, overriding the derived one. Empty = derive it
+    // (see CommunicationManager::pulse_realm_name).
+    #[var(get)]
+    pub pulse_realm: GString,
+    // Explicit local dual-channel choice; either one outranks the deployment's `dual-channel`
+    // flag for this run (see CommunicationManager::dual_channel_effective). Neither can cause
+    // invisibility: LiveKit resumes on its own whenever Pulse is not established.
+    #[var(get)]
+    pub livekit_movement: bool,
     #[var(get)]
     pub no_livekit_movement: bool,
     // Pulse-only mode: no LiveKit-backed rooms at all (no chat/voice/scene messages).
@@ -327,6 +339,18 @@ impl DclCli {
             ArgDefinition {
                 name: "--avatars".to_string(),
                 description: "Path to avatars input file for renderer".to_string(),
+                arg_type: ArgType::Value("<file>".to_string()),
+                category: "Testing".to_string(),
+            },
+            ArgDefinition {
+                name: "--asset-renderer".to_string(),
+                description: "Run in asset renderer mode (wearable/emote stills)".to_string(),
+                arg_type: ArgType::Flag,
+                category: "Testing".to_string(),
+            },
+            ArgDefinition {
+                name: "--asset-input-file".to_string(),
+                description: "Path to asset input file for the asset renderer".to_string(),
                 arg_type: ArgType::Value("<file>".to_string()),
                 category: "Testing".to_string(),
             },
@@ -502,7 +526,7 @@ impl DclCli {
             },
             ArgDefinition {
                 name: "--optimized-content-base-url".to_string(),
-                description: "Override the default optimized-content base URL (default: https://optimized-assets.dclregenesislabs.xyz/v4). Also accepted as deeplink param.".to_string(),
+                description: "Override the default optimized-content base URL (default: https://optimized-assets.dclregenesislabs.xyz/v6). Also accepted as deeplink param.".to_string(),
                 arg_type: ArgType::Value("<url>".to_string()),
                 category: "Performance".to_string(),
             },
@@ -596,8 +620,20 @@ impl DclCli {
                 category: "Comms".to_string(),
             },
             ArgDefinition {
+                name: "--pulse-realm".to_string(),
+                description: "Realm announced on the Pulse handshake, overriding the derived one; sdk-commands passes the Local Scene Development key as --pulse-realm=lsd:<preview scene id>. PULSE_REALM env var works too".to_string(),
+                arg_type: ArgType::Value("<realm>".to_string()),
+                category: "Comms".to_string(),
+            },
+            ArgDefinition {
+                name: "--livekit-movement".to_string(),
+                description: "Force dual-channel ON for this run: keep sending movement and emotes over LiveKit while Pulse is established, whatever the deployment's dual-channel flag says".to_string(),
+                arg_type: ArgType::Flag,
+                category: "Comms".to_string(),
+            },
+            ArgDefinition {
                 name: "--no-livekit-movement".to_string(),
-                description: "Stop sending movement over LiveKit while Pulse is established (dual-channel movement off; auto-resumes if Pulse drops)".to_string(),
+                description: "Force dual-channel OFF for this run: Pulse becomes the only carrier for movement and emotes while it is established (auto-resumes if Pulse drops)".to_string(),
                 arg_type: ArgType::Flag,
                 category: "Comms".to_string(),
             },
@@ -725,6 +761,7 @@ impl INode for DclCli {
         let scene_test_mode = args_map.contains_key("--scene-test");
         let scene_renderer_mode = args_map.contains_key("--scene-renderer");
         let avatar_renderer_mode = args_map.contains_key("--avatar-renderer");
+        let asset_renderer_mode = args_map.contains_key("--asset-renderer");
         let client_test_mode = args_map.contains_key("--client-test");
         let test_runner = args_map.contains_key("--test-runner");
         let clear_cache_startup = args_map.contains_key("--clear-cache-startup");
@@ -819,6 +856,11 @@ impl INode for DclCli {
             .and_then(|v| v.as_ref())
             .map(GString::from)
             .unwrap_or_default();
+        let asset_input_file = args_map
+            .get("--asset-input-file")
+            .and_then(|v| v.as_ref())
+            .map(GString::from)
+            .unwrap_or_default();
         let snapshot_folder = args_map
             .get("--snapshot-folder")
             .and_then(|v| v.as_ref())
@@ -878,8 +920,21 @@ impl INode for DclCli {
                     .map(|s| GString::from(s.as_str()))
                     .unwrap_or_default()
             });
+        // Naming a realm is explicit intent too: sdk-commands passes --pulse-realm=<lsd key>
+        // to a preview engine, where there is no feature-flag verdict to wait on.
+        let pulse_realm = args_map
+            .get("--pulse-realm")
+            .and_then(|v| v.as_ref())
+            .map(GString::from)
+            .unwrap_or_else(|| {
+                std::env::var("PULSE_REALM")
+                    .map(|s| GString::from(s.as_str()))
+                    .unwrap_or_default()
+            });
         let pulse = !args_map.contains_key("--no-pulse");
-        let pulse_explicit = args_map.contains_key("--pulse") || !pulse_server.is_empty();
+        let pulse_explicit =
+            args_map.contains_key("--pulse") || !pulse_server.is_empty() || !pulse_realm.is_empty();
+        let livekit_movement = args_map.contains_key("--livekit-movement");
         let no_livekit_movement = args_map.contains_key("--no-livekit-movement");
         let no_livekit = args_map.contains_key("--no-livekit");
 
@@ -899,6 +954,7 @@ impl INode for DclCli {
             scene_test_mode,
             scene_renderer_mode,
             avatar_renderer_mode,
+            asset_renderer_mode,
             client_test_mode,
             test_runner,
             clear_cache_startup,
@@ -941,6 +997,7 @@ impl INode for DclCli {
             location,
             scene_input_file,
             avatars_file,
+            asset_input_file,
             snapshot_folder,
             fake_deeplink,
             dcl_env,
@@ -950,6 +1007,8 @@ impl INode for DclCli {
             pulse,
             pulse_explicit,
             pulse_server,
+            pulse_realm,
+            livekit_movement,
             no_livekit_movement,
             no_livekit,
         }

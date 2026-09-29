@@ -170,13 +170,21 @@ impl DclAndroidPlugin {
         Some(DclMobileMetrics::from_dictionary(dict))
     }
 
-    /// Get thermal and charging state in a single JNI call
+    /// Get thermal and charging state in a single, cheap JNI call
+    /// (`getThermalAndChargingState`: battery sticky intent only — unlike
+    /// `getMobileMetrics` it does NOT walk /proc/self/smaps for PSS, which
+    /// cost ~100 ms on the main thread every 5 s when DynamicGraphics polled it).
     /// Returns (thermal_state, charging_state) with defaults if unavailable
     pub(crate) fn get_thermal_and_charging_state() -> (String, String) {
-        match Self::get_mobile_metrics_internal() {
-            Some(m) => (m.device_thermal_state, m.charging_state),
-            None => (String::new(), "unknown".to_string()),
-        }
+        let Some(mut singleton) = Self::try_get_singleton() else {
+            return (String::new(), "unknown".to_string());
+        };
+        let metrics = Self::timed_jni_call(&mut singleton, "getThermalAndChargingState", &[]);
+        let Ok(dict) = metrics.try_to::<VarDictionary>() else {
+            return (String::new(), "unknown".to_string());
+        };
+        let m = DclMobileMetrics::from_dictionary(dict);
+        (m.device_thermal_state, m.charging_state)
     }
 
     /// Get total device RAM in megabytes
@@ -247,6 +255,60 @@ impl DclAndroidPlugin {
         };
         singleton.connect("firebase_app_instance_id_ready", callable);
         true
+    }
+
+    /// Returns the cached FCM registration token, or an empty string when there is none.
+    ///
+    /// Reads the value the plugin persisted, so it is already populated on launches after the
+    /// first: FCM can mint a token while no Godot process exists. An empty string means either
+    /// "not resolved yet this launch" or "this device cannot receive push" (no Play Services);
+    /// `fcm_token_ready` is what distinguishes the two, since it always fires exactly once.
+    #[func]
+    pub fn get_fcm_token() -> GString {
+        let Some(mut singleton) = Self::try_get_singleton() else {
+            return GString::new();
+        };
+        let result = Self::timed_jni_call(&mut singleton, "getFcmToken", &[]);
+        result.try_to::<GString>().unwrap_or_default()
+    }
+
+    /// Connect a callable to the plugin's `fcm_token_ready` signal, emitted once per launch with
+    /// the resolved token (empty string on failure). Returns false if the plugin is unavailable.
+    pub fn connect_fcm_token_ready(callable: &Callable) -> bool {
+        let Some(mut singleton) = Self::try_get_singleton() else {
+            return false;
+        };
+        singleton.connect("fcm_token_ready", callable);
+        true
+    }
+
+    /// Connect a callable to `fcm_token_refreshed`, emitted when FCM rotates the token while the
+    /// app is running. Rare, but it invalidates the token already mapped server-side, so the new
+    /// one has to be re-sent rather than waiting for the next launch.
+    pub fn connect_fcm_token_refreshed(callable: &Callable) -> bool {
+        let Some(mut singleton) = Self::try_get_singleton() else {
+            return false;
+        };
+        singleton.connect("fcm_token_refreshed", callable);
+        true
+    }
+
+    /// Whether POST_NOTIFICATIONS is granted. Always true below Android 13, where the permission
+    /// does not exist. Note this is the *app-level* permission: a user who left it granted but
+    /// muted an individual channel in Android's settings still reads as granted here.
+    #[func]
+    pub fn has_notification_permission() -> bool {
+        let Some(mut singleton) = Self::try_get_singleton() else {
+            return false;
+        };
+        let result = Self::timed_jni_call(&mut singleton, "hasNotificationPermission", &[]);
+        // `booleanize()`, not `try_to::<bool>()`: Godot's JNI bridge hands a Kotlin `Boolean`
+        // back as an INT Variant (verified on device — the Variant prints as `1`), and
+        // `try_to` is a strict conversion that fails on a type mismatch. With
+        // `.unwrap_or(false)` behind it that failure is indistinguishable from a genuine
+        // "not granted", which is exactly how this read silently reported every user as
+        // having denied notifications.
+        result.booleanize()
     }
 
     /// Set the canonical Firebase Analytics user id. Auto-attached to every Firebase event.

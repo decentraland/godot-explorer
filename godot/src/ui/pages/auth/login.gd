@@ -217,7 +217,8 @@ func _async_poll_wc_pairing_uri() -> void:
 	# Open wallet app with the URI
 	# On Android: opens MetaMask directly
 	# On iOS: opens system wallet chooser
-	if not plugin.walletConnectOpenWallet():
+	# The plugin is an engine singleton (Android) or the _wc_plugin member (iOS): alive.
+	if not plugin.walletConnectOpenWallet():  # gdlint: ignore=node-reference-across-await
 		var error_msg = plugin.walletConnectGetError()
 		if error_msg.is_empty():
 			if Global.is_android():

@@ -24,6 +24,18 @@ pub struct DiscoveredAsset {
     pub url: String,
 }
 
+/// A scene boot file (`main.js` / `main.crdt`) published alongside the
+/// optimized assets so the client fetches the whole scene from one CDN.
+#[derive(Debug, Clone)]
+pub struct BootFile {
+    /// Logical name: "main.js" or "main.crdt"
+    pub name: String,
+    /// Content hash (also the published file stem)
+    pub hash: String,
+    /// URL to fetch it from the content server
+    pub url: String,
+}
+
 /// Result of fetching and parsing a scene entity.
 #[derive(Debug)]
 pub struct SceneEntityAssets {
@@ -37,6 +49,8 @@ pub struct SceneEntityAssets {
     pub textures: Vec<DiscoveredAsset>,
     /// Full content mapping (file_path -> hash)
     pub content_mapping: HashMap<String, String>,
+    /// Scene boot files: the main script (from `metadata.main`) and `main.crdt`
+    pub boot_files: Vec<BootFile>,
 }
 
 impl SceneEntityAssets {
@@ -146,10 +160,38 @@ pub async fn fetch_scene_entity(
         // Skip other file types (audio, JS, etc.)
     }
 
+    // Boot files: the scene's main script (scene.json `main`, e.g. "bin/index.js")
+    // and the static entity snapshot `main.crdt`, when present.
+    let mut boot_files = Vec::new();
+    let main_script = entity
+        .metadata
+        .as_ref()
+        .and_then(|m| m.get("main"))
+        .and_then(|v| v.as_str())
+        .map(|m| m.to_lowercase());
+    if let Some(hash) = main_script
+        .as_deref()
+        .and_then(|path| content_mapping.get(path))
+    {
+        boot_files.push(BootFile {
+            name: "main.js".to_string(),
+            hash: hash.clone(),
+            url: format!("{}{}", base_url, hash),
+        });
+    }
+    if let Some(hash) = content_mapping.get("main.crdt") {
+        boot_files.push(BootFile {
+            name: "main.crdt".to_string(),
+            hash: hash.clone(),
+            url: format!("{}{}", base_url, hash),
+        });
+    }
+
     tracing::info!(
-        "Discovered {} GLTFs and {} textures in scene {}",
+        "Discovered {} GLTFs, {} textures and {} boot files in scene {}",
         gltfs.len(),
         textures.len(),
+        boot_files.len(),
         scene_hash
     );
 
@@ -159,6 +201,7 @@ pub async fn fetch_scene_entity(
         gltfs,
         textures,
         content_mapping,
+        boot_files,
     })
 }
 

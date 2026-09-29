@@ -52,6 +52,9 @@ var _drag_start_y: float = 0.0
 var _drag_start_scroll: float = 0.0
 var _long_press_timer: Timer
 var _long_press_position: Vector2
+## Catalogue key of the validation error currently shown, or "" when the label
+## is hidden or shows an external message. Kept so a language change can re-translate it.
+var _error_key: String = ""
 
 @onready var label_length: Label = %Label_Length
 @onready var label_error: Label = %Label_Error
@@ -138,45 +141,54 @@ func _is_valid_email(value: String) -> bool:
 	return regex.search(value) != null
 
 
+# i18n-keys: INPUTS_FIELD_REQUIRED, INPUTS_CHARACTER_LIMIT_EXCEEDED, INPUTS_ENTER_VALID_URL
+# i18n-keys: INPUTS_USE_DATE_FORMAT, INPUTS_LETTERS_AND_NUMBERS_ONLY, INPUTS_NO_EDGE_SPACES
+# i18n-keys: INPUTS_ENTER_VALID_EMAIL, INPUTS_INVALID_FORMAT
 func _check_error() -> void:
 	var errors: Array[String] = []
 	var text := text_edit.text
 
 	if !is_optional and text.length() <= 0:
-		errors.append("This field is required")
+		errors.append("INPUTS_FIELD_REQUIRED")
 
 	if length_error:
-		errors.append("Character limit exceeded")
+		errors.append("INPUTS_CHARACTER_LIMIT_EXCEEDED")
 
 	if validate_url and text.length() > 0 and !_is_valid_url(text):
-		errors.append("Enter a valid URL")
+		errors.append("INPUTS_ENTER_VALID_URL")
 
 	if validate_date and text.length() > 0 and !_is_valid_date(text):
-		errors.append("Use MM/DD/YYYY format")
+		errors.append("INPUTS_USE_DATE_FORMAT")
 
 	if validate_no_symbols and text.length() > 0 and _has_symbols(text):
-		errors.append("Use letters and numbers only")
+		errors.append("INPUTS_LETTERS_AND_NUMBERS_ONLY")
 
 	if validate_no_edge_spaces and text.length() > 0 and _has_edge_spaces(text):
-		errors.append("No leading or trailing spaces")
+		errors.append("INPUTS_NO_EDGE_SPACES")
 
 	if validate_email and text.length() > 0 and !_is_valid_email(text):
-		errors.append("Enter a valid email")
+		errors.append("INPUTS_ENTER_VALID_EMAIL")
 
 	error = errors.size() > 0
 
 	if error and _touched and (not validate_on_blur or not _focus_active):
 		text_edit.add_theme_stylebox_override("normal", LINE_EDIT_ERROR)
 		text_edit.add_theme_stylebox_override("focus", LINE_EDIT_ERROR)
-		if errors.size() > 1:
-			label_error.text = tr("INPUTS_INVALID_FORMAT")
-		else:
-			label_error.text = errors[0]
+		_error_key = "INPUTS_INVALID_FORMAT" if errors.size() > 1 else errors[0]
+		label_error.text = tr(_error_key)
 		label_error.show()
 	else:
 		text_edit.add_theme_stylebox_override("normal", LINE_EDIT)
 		text_edit.add_theme_stylebox_override("focus", LINE_EDIT_FOCUSED)
+		_error_key = ""
 		label_error.hide()
+
+
+# Label_Error is a mode-2 node (it also shows backend messages via show_external_error),
+# so text assigned from code must be re-translated by hand on a language change.
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_TRANSLATION_CHANGED and is_node_ready() and not _error_key.is_empty():
+		label_error.text = tr(_error_key)
 
 
 ## Shows an externally-supplied error (e.g. a backend validation result) in the
@@ -186,6 +198,7 @@ func _check_error() -> void:
 func show_external_error(message: String) -> void:
 	_touched = true
 	error = true
+	_error_key = ""
 	text_edit.add_theme_stylebox_override("normal", LINE_EDIT_ERROR)
 	text_edit.add_theme_stylebox_override("focus", LINE_EDIT_ERROR)
 	label_error.text = message

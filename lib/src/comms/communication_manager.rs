@@ -73,6 +73,68 @@ const SCENE_ROOM_RECONNECT_BASE_SECS: u64 = 5;
 #[cfg(feature = "use_livekit")]
 const SCENE_ROOM_RECONNECT_MAX_SECS: u64 = 60;
 
+/// Entity-id prefix the SDK preview server stamps on the scenes it serves
+/// (`b64-<base64(absoluteProjectRoot + "-" + machineId)>`). Marks a scene as a local-preview
+/// one on every path into a preview — CLI `--preview` and the QR/deeplink `preview=` alike.
+#[cfg(feature = "use_pulse")]
+const PREVIEW_SCENE_ID_PREFIX: &str = "b64-";
+
+/// Whether avatar sync — movement and emotes — still goes over LiveKit.
+///
+/// Pulse is the carrier: while it is established, LiveKit gets none of it (main room,
+/// archipelago island, scene room, and the legacy `␐` chat emote alike). The authoritative
+/// server reads avatar state off Pulse as a scene listener, so the LiveKit copy is duplication.
+///
+/// The gate is deliberately scoped to `pulse_established` rather than to activation, so a Pulse
+/// drop resumes every LiveKit send on the next frame — the cutover can never leave a player
+/// invisible. `dual_channel` (`--livekit-movement`, `dual-channel=true`) restores the old
+/// both-at-once behaviour for debugging.
+#[cfg(feature = "use_pulse")]
+fn avatar_sync_over_livekit(dual_channel: bool, pulse_established: bool) -> bool {
+    dual_channel || !pulse_established
+}
+
+/// Whether the Pulse transport activates. Pure so the precedence is unit-testable.
+///
+/// `locally_enabled` is `!--no-pulse`, which always wins. `explicit_opt_in` is `--pulse`, an
+/// endpoint (`--pulse-server` / PULSE_SERVER) or a realm (`--pulse-realm` / PULSE_REALM).
+/// Otherwise the deployment's `pulse` flag decides, fail-closed — except in `--preview`.
+///
+/// **A local preview never joins Pulse on the strength of the flag alone.** Its realm key is
+/// `lsd:` + the preview scene's entity id, which is reversible base64 of the developer's
+/// absolute project path and hostname; letting a fleet-wide flag push that to the default
+/// (production) Pulse from every `dcl start` would be a surprise. `sdk-commands` gates its own
+/// `--pulse-realm` off by default for the same reason, so Local Scene Development opts in
+/// explicitly — which is exactly what the orchestrator and `DCL_SERVER_PULSE_REALM=1` do.
+#[cfg(feature = "use_pulse")]
+fn pulse_activation(
+    locally_enabled: bool,
+    explicit_opt_in: bool,
+    preview_mode: bool,
+    flag_enabled: Option<bool>,
+) -> bool {
+    if !locally_enabled {
+        return false;
+    }
+    if explicit_opt_in {
+        return true;
+    }
+    !preview_mode && flag_enabled == Some(true)
+}
+
+/// Effective dual-channel setting. An explicit local choice (CLI `--livekit-movement` /
+/// `--no-livekit-movement`, deeplink `dual-channel=`) always wins; otherwise the deployment's
+/// `dual-channel` feature flag decides, defaulting to ON until the flags fetch settles.
+///
+/// The flag is the rollout control for this cutover, and it defaults ON deliberately: an
+/// authoritative server only stops needing the LiveKit copy of avatar state once it ingests
+/// Pulse as a scene listener, and that is a property of the *deployment*, not of this client.
+/// Flipping the flag off is what hands avatar sync to Pulse fleet-wide, reversibly.
+#[cfg(feature = "use_pulse")]
+fn dual_channel_effective(local_override: Option<bool>, flag_enabled: bool) -> bool {
+    local_override.unwrap_or(flag_enabled)
+}
+
 /// Decides whether the scene-room reconnect loop should spawn a new attempt now.
 /// Pure (no Godot/Tokio deps) so the in-flight guard is unit-testable. The guard:
 /// don't start a reconnect while one is already in flight, unless it has been
@@ -162,6 +224,7 @@ impl MainRoom {
 use crate::comms::adapter::{archipelago::ArchipelagoManager, livekit::LivekitRoom};
 #[cfg(feature = "use_pulse")]
 use crate::comms::pulse::{
+    lsd_realm,
     pulse_room::{PulseRoom, PulseRoomEvent},
     transport::{PulseDisconnect, PulseTransportConfig},
 };
@@ -260,12 +323,17 @@ pub struct CommunicationManager {
     /// the Pulse TeleportRequest.
     #[cfg(feature = "use_pulse")]
     last_dcl_position: Option<Vector3>,
-    /// Dual-channel movement: while true (default), movement keeps going over LiveKit exactly
-    /// as today even when Pulse is established. Turned off via --no-livekit-movement or the
-    /// setter, movement is Pulse-only *while established* — LiveKit sending auto-resumes the
-    /// moment Pulse drops, so this can never make the player invisible.
+    /// Explicit local dual-channel choice (CLI `--livekit-movement` / `--no-livekit-movement`,
+    /// deeplink `dual-channel=`): `None` follows the server flag. See `dual_channel_effective`.
     #[cfg(feature = "use_pulse")]
-    livekit_movement_dual_channel: bool,
+    dual_channel_override: Option<bool>,
+    /// Deployment `dual-channel` flag: whether movement and emotes keep going over LiveKit while
+    /// Pulse is established. Defaults ON (today's behaviour) and is reported by feature_flags.gd
+    /// once the fetch settles — flipping it off is what makes Pulse the sole avatar-sync carrier.
+    /// Either way the gate is `established`-scoped: LiveKit sending auto-resumes the moment Pulse
+    /// drops, so neither setting can make the player invisible.
+    #[cfg(feature = "use_pulse")]
+    dual_channel_flag: bool,
     /// Runtime activation override (deeplink `pulse=true/false`): `None` follows the CLI/env.
     #[cfg(feature = "use_pulse")]
     pulse_runtime_enabled: Option<bool>,
@@ -279,6 +347,15 @@ pub struct CommunicationManager {
     /// join the same server). Wins over --pulse-server / PULSE_SERVER / the default endpoint.
     #[cfg(feature = "use_pulse")]
     pulse_endpoint_override: Option<String>,
+    /// Runtime realm override (deeplink `pulse-realm=`): `None` follows --pulse-realm /
+    /// PULSE_REALM, then the derivation in `pulse_realm_name`.
+    #[cfg(feature = "use_pulse")]
+    pulse_realm_override: Option<String>,
+    /// Whether the connected realm is a local preview, reported by realm.gd from the realm's own
+    /// `about` (which advertises `localSceneParcels`). Equivalent to `--preview` for activation,
+    /// and the only signal on the QR/deeplink preview path, which never sets the CLI flag.
+    #[cfg(feature = "use_pulse")]
+    local_scene_development: bool,
     /// Pulse EmoteStart deferred from `send_emote` (press time) to `set_emoting` (playback
     /// start). Pressing the wheel precedes the async emote load and the idle gate — an
     /// EmoteStart at press time gets chased by the per-frame animation poll's EmoteStop,
@@ -371,13 +448,19 @@ impl INode for CommunicationManager {
             #[cfg(feature = "use_pulse")]
             last_dcl_position: None,
             #[cfg(feature = "use_pulse")]
-            livekit_movement_dual_channel: true,
+            dual_channel_override: None,
+            #[cfg(feature = "use_pulse")]
+            dual_channel_flag: true,
             #[cfg(feature = "use_pulse")]
             pulse_runtime_enabled: None,
             #[cfg(feature = "use_pulse")]
             pulse_flag_enabled: None,
             #[cfg(feature = "use_pulse")]
             pulse_endpoint_override: None,
+            #[cfg(feature = "use_pulse")]
+            pulse_realm_override: None,
+            #[cfg(feature = "use_pulse")]
+            local_scene_development: false,
             #[cfg(feature = "use_pulse")]
             pending_pulse_emote_urn: None,
             #[cfg(feature = "use_livekit")]
@@ -787,10 +870,17 @@ impl CommunicationManager {
     /// server `pulse` feature flag, fail-closed — Pulse stays off until feature_flags.gd
     /// confirms the flag is on (fetch failure or an absent flag keeps it off). A server
     /// flag can never force-enable Pulse over a local opt-out.
+    ///
+    /// In `--preview` the flag alone is not enough — see [`pulse_activation`].
     #[cfg(feature = "use_pulse")]
     fn pulse_enabled(&self, cli: &crate::godot_classes::dcl_cli::DclCli) -> bool {
         self.pulse_runtime_enabled.unwrap_or_else(|| {
-            cli.pulse && (cli.pulse_explicit || self.pulse_flag_enabled == Some(true))
+            pulse_activation(
+                cli.pulse,
+                cli.pulse_explicit,
+                cli.preview_mode || self.local_scene_development,
+                self.pulse_flag_enabled,
+            )
         })
     }
 
@@ -826,8 +916,10 @@ impl CommunicationManager {
         if !self.pulse_enabled(&cli) {
             return;
         }
-        if cli.no_livekit_movement {
-            self.livekit_movement_dual_channel = false;
+        if cli.livekit_movement {
+            self.dual_channel_override = Some(true);
+        } else if cli.no_livekit_movement {
+            self.dual_channel_override = Some(false);
         }
 
         let (host, port) = self.resolve_pulse_endpoint(&cli);
@@ -947,19 +1039,78 @@ impl CommunicationManager {
         }
     }
 
-    /// Send the initial/announce TeleportRequest once a valid realm name and a cached position
-    /// are both available. Sending the `realm.gd` fallback name would silo the player into a
-    /// phantom realm — invisible to everyone, with zero errors — so wait instead.
+    /// The realm to announce on the Pulse handshake — the string Pulse partitions visibility
+    /// by, matched exactly and never exchanged. `None` means "not knowable yet"; the caller
+    /// waits rather than announcing a wrong one, because a mismatch is silent (the player joins
+    /// a phantom realm, invisible to everyone, with zero errors).
+    ///
+    /// Precedence:
+    /// 1. the runtime/CLI override (`pulse-realm=` deeplink, `--pulse-realm` / PULSE_REALM) —
+    ///    what the orchestrator states to an engine it spawned;
+    /// 2. in a local preview, the Local Scene Development key derived from the preview scene's
+    ///    entity id (see [`lsd_realm::lsd_realm_key`]) — the same string sdk-commands mints and
+    ///    the other explorers derive. Detected from the entity id itself (`b64-` = served by a
+    ///    preview server, the same test `get_scene_adapter` already uses), not from `--preview`,
+    ///    so a QR/deeplink preview (`decentraland://open?preview=http://…`, which never sets the
+    ///    CLI flag) announces the same realm as a desktop `--preview` run;
+    /// 3. otherwise the realm's own `about.configurations.realmName` — `main` for Genesis City,
+    ///    the world name for a world, which is exactly what the orchestrator states on
+    ///    add-scene. `realm.gd`'s `no_realm_name` fallback is not a realm.
+    #[cfg(feature = "use_pulse")]
+    fn pulse_realm_name(&self) -> Option<String> {
+        let global = DclGlobal::singleton();
+
+        let cli = global.bind().cli.clone();
+        let cli_realm = cli.bind().pulse_realm.to_string();
+        let override_realm = self
+            .pulse_realm_override
+            .clone()
+            .unwrap_or(cli_realm)
+            .trim()
+            .to_owned();
+        if !override_realm.is_empty() {
+            return Some(override_realm);
+        }
+
+        // The preview server already serves the id this key is built from, so it is read back
+        // rather than re-derived from the project path — one less place to drift. Its `b64-`
+        // prefix is also what marks the scene as a preview one at all.
+        let scene_runner = global.bind().get_scene_runner();
+        let scene_id = scene_runner.bind().get_current_parcel_scene_id();
+        let entity_id = scene_runner
+            .bind()
+            .get_scene_entity_id(scene_id)
+            .to_string();
+        if entity_id.starts_with(PREVIEW_SCENE_ID_PREFIX) {
+            return Some(lsd_realm::lsd_realm_key(&entity_id));
+        }
+        if (cli.bind().preview_mode || self.local_scene_development) && entity_id.is_empty() {
+            return None; // preview realm, not standing in its scene yet — retried next poll
+        }
+
+        let realm_name = global
+            .bind()
+            .get_realm()
+            .bind()
+            .get_realm_name()
+            .to_string();
+        if realm_name.is_empty() || realm_name == "no_realm_name" {
+            return None;
+        }
+        Some(realm_name)
+    }
+
+    /// Send the initial/announce TeleportRequest once the realm and a cached position are both
+    /// known. `pulse_teleport_pending` stays set until it goes out, so this is retried on every
+    /// poll while either half is still missing.
     #[cfg(feature = "use_pulse")]
     fn try_send_pulse_teleport(&mut self) {
         let Some(position) = self.last_dcl_position else {
             return;
         };
-        let realm = DclGlobal::singleton().bind().get_realm();
-        let realm_name = realm.bind().get_realm_name().to_string();
-        if realm_name.is_empty() || realm_name == "no_realm_name" {
+        let Some(realm_name) = self.pulse_realm_name() else {
             return;
-        }
+        };
         if let Some(pulse_room) = self.pulse_room.as_mut() {
             if pulse_room.is_established() {
                 pulse_room.send_teleport(position, &realm_name);
@@ -1271,14 +1422,14 @@ impl CommunicationManager {
         self.voice_chat_enabled
     }
 
-    /// Dual-channel movement toggle (default ON): whether movement keeps going over LiveKit
-    /// while Pulse is established. Turning it off makes movement Pulse-only *while established*;
+    /// Dual-channel avatar-sync toggle (default OFF): whether movement and emotes keep going
+    /// over LiveKit while Pulse is established. Off, they are Pulse-only *while established*;
     /// LiveKit sending auto-resumes if Pulse drops. No-op without the use_pulse feature.
     #[func]
     fn set_livekit_movement_dual_channel(&mut self, enabled: bool) {
         #[cfg(feature = "use_pulse")]
         {
-            self.livekit_movement_dual_channel = enabled;
+            self.dual_channel_override = Some(enabled);
         }
         #[cfg(not(feature = "use_pulse"))]
         let _ = enabled;
@@ -1288,8 +1439,9 @@ impl CommunicationManager {
     fn is_livekit_movement_dual_channel(&self) -> bool {
         #[cfg(feature = "use_pulse")]
         {
-            self.livekit_movement_dual_channel
+            dual_channel_effective(self.dual_channel_override, self.dual_channel_flag)
         }
+        // Without Pulse there is nothing to hand avatar sync over to: LiveKit carries it.
         #[cfg(not(feature = "use_pulse"))]
         true
     }
@@ -1320,6 +1472,81 @@ impl CommunicationManager {
         }
         #[cfg(not(feature = "use_pulse"))]
         let _ = host_port;
+    }
+
+    /// Reported by realm.gd on every realm change: whether this realm is a local preview (its
+    /// `about` advertises `localSceneParcels`). Equivalent to `--preview` for Pulse activation,
+    /// so the QR/deeplink preview path — which never sets the CLI flag — gets the same
+    /// explicit-opt-in rule. Tears an already-built room down if we only learn this after it was
+    /// created; an opted-in run rebuilds it through the realm change's `ensure_pulse_room`.
+    #[func]
+    pub fn set_local_scene_development(&mut self, is_preview: bool) {
+        #[cfg(feature = "use_pulse")]
+        {
+            if self.local_scene_development == is_preview {
+                return;
+            }
+            self.local_scene_development = is_preview;
+            tracing::info!("pulse: local scene development realm = {is_preview}");
+
+            let global = DclGlobal::singleton();
+            let cli = global.bind().cli.clone();
+            let enabled = self.pulse_enabled(&cli.bind());
+            if !enabled {
+                if let Some(mut pulse_room) = self.pulse_room.take() {
+                    tracing::info!(
+                        "pulse: leaving — a local preview joins only on an explicit opt-in"
+                    );
+                    pulse_room.clean();
+                    self.pulse_teleport_pending = false;
+                    self.pending_pulse_emote_urn = None;
+                }
+            }
+        }
+        #[cfg(not(feature = "use_pulse"))]
+        let _ = is_preview;
+    }
+
+    /// Deployment `dual-channel` flag, reported by feature_flags.gd once the fetch settles.
+    /// Only the default: an explicit local choice (`--livekit-movement` /
+    /// `--no-livekit-movement`, deeplink `dual-channel=`) always wins. No-op without use_pulse.
+    #[func]
+    pub fn set_dual_channel_flag_enabled(&mut self, enabled: bool) {
+        #[cfg(feature = "use_pulse")]
+        {
+            self.dual_channel_flag = enabled;
+            tracing::info!("pulse: dual-channel flag = {enabled}");
+        }
+        #[cfg(not(feature = "use_pulse"))]
+        let _ = enabled;
+    }
+
+    /// Runtime (deeplink `pulse-realm=<realm>`): announce a specific realm instead of the
+    /// derived one. Rebuilds the room rather than re-announcing on the live one — this client
+    /// tears the Pulse room down on every realm change, and the decoder's subject state is
+    /// per-realm.
+    #[func]
+    pub fn set_pulse_realm(&mut self, realm: GString) {
+        #[cfg(feature = "use_pulse")]
+        {
+            let realm = realm.to_string().trim().to_owned();
+            if realm.is_empty() {
+                return;
+            }
+            tracing::info!("pulse: runtime realm set to {realm}");
+            self.pulse_realm_override = Some(realm);
+            self.pulse_runtime_enabled = Some(true);
+            self.pulse_disabled_for_session = false;
+            self.pulse_session_failures = 0;
+            if let Some(mut pulse_room) = self.pulse_room.take() {
+                pulse_room.clean();
+                self.pulse_teleport_pending = false;
+                self.pending_pulse_emote_urn = None;
+            }
+            self.ensure_pulse_room();
+        }
+        #[cfg(not(feature = "use_pulse"))]
+        let _ = realm;
     }
 
     /// Runtime (deeplink `pulse=true/false`): toggle the Pulse transport with the configured
@@ -1662,11 +1889,7 @@ impl CommunicationManager {
             }
         };
 
-        // Dual-channel movement: while the flag is on (default), movement
-        // rides LiveKit exactly as today even when Pulse is established (Unity prod contract —
-        // LiveKit-only peers must still see us). With the flag off, the island movement sends
-        // (main room + archipelago) are skipped ONLY while Pulse is established, so a Pulse drop
-        // auto-resumes LiveKit movement — the flag can never make the player invisible.
+        // See `avatar_sync_over_livekit`: while Pulse is established it is the only carrier.
         #[cfg(feature = "use_pulse")]
         let pulse_established = self
             .pulse_room
@@ -1675,13 +1898,14 @@ impl CommunicationManager {
         #[cfg(not(feature = "use_pulse"))]
         let pulse_established = false;
         #[cfg(feature = "use_pulse")]
-        let island_movement_over_livekit = self.livekit_movement_dual_channel || !pulse_established;
+        let movement_over_livekit =
+            avatar_sync_over_livekit(self.is_livekit_movement_dual_channel(), pulse_established);
         #[cfg(not(feature = "use_pulse"))]
-        let island_movement_over_livekit = true;
+        let movement_over_livekit = true;
 
         // Send to main room if available
         let mut message_sent = match &mut self.main_room {
-            Some(main_room) if island_movement_over_livekit => {
+            Some(main_room) if movement_over_livekit => {
                 let sent = main_room.send_rfc4(get_packet(), true);
                 if sent {
                     tracing::debug!("📡 Movement sent to main room");
@@ -1691,20 +1915,23 @@ impl CommunicationManager {
             _ => false,
         };
 
-        // Also send to scene room if available (dual broadcasting). Never gated by the
-        // dual-channel flag: scene auth-servers don't speak Pulse.
+        // Also send to scene room if available (dual broadcasting) — but not while Pulse is
+        // established: the authoritative server behind a scene room now reads avatar state off
+        // Pulse as a scene listener, so this copy would be pure duplication.
         #[cfg(feature = "use_livekit")]
-        if let Some(scene_room) = &mut self.scene_room {
-            let scene_sent = scene_room.send_rfc4(get_packet(), true);
-            message_sent = message_sent || scene_sent; // Consider successful if either main or scene room succeeded
-            if scene_sent {
-                tracing::debug!("📡 Movement also sent to scene room");
+        if movement_over_livekit {
+            if let Some(scene_room) = &mut self.scene_room {
+                let scene_sent = scene_room.send_rfc4(get_packet(), true);
+                message_sent = message_sent || scene_sent; // Consider successful if either main or scene room succeeded
+                if scene_sent {
+                    tracing::debug!("📡 Movement also sent to scene room");
+                }
             }
         }
 
         // Also send through archipelago's adapter if available
         #[cfg(feature = "use_livekit")]
-        if island_movement_over_livekit {
+        if movement_over_livekit {
             if let CommsConnection::Archipelago(archipelago) = &mut self.current_connection {
                 if let Some(adapter) = archipelago.adapter_as_mut() {
                     let sent = adapter.send_rfc4(get_packet(), true);
@@ -1838,11 +2065,29 @@ impl CommunicationManager {
     /// full body, 1 = upper body), matching Unity.
     #[func]
     pub fn send_emote(&mut self, emote_urn: GString, mask: i64) -> bool {
-        let timestamp = godot::classes::Time::singleton().get_unix_time_from_system() * 1000.0;
-        self.send_chat(GString::from(
-            format!("␐{} {}", emote_urn, timestamp).as_str(),
-        ));
+        // Same gate as movement (see `avatar_sync_over_livekit`); it covers both LiveKit forms
+        // of an emote — the rfc4 PlayerEmote and the legacy `␐<urn> <timestamp>` chat encoding
+        // older clients read.
+        #[cfg(feature = "use_pulse")]
+        let emote_over_livekit = avatar_sync_over_livekit(
+            self.is_livekit_movement_dual_channel(),
+            self.pulse_room
+                .as_ref()
+                .is_some_and(|pulse| pulse.is_established()),
+        );
+        #[cfg(not(feature = "use_pulse"))]
+        let emote_over_livekit = true;
 
+        if emote_over_livekit {
+            let timestamp = godot::classes::Time::singleton().get_unix_time_from_system() * 1000.0;
+            self.send_chat(GString::from(
+                format!("␐{} {}", emote_urn, timestamp).as_str(),
+            ));
+        }
+
+        // Incremented unconditionally: the counter is this peer's emote sequence, and skipping
+        // values while Pulse carries the emote would break receiver-side dedup if LiveKit
+        // sending resumes mid-session.
         self.last_emote_incremental_id += 1;
 
         let packet = rfc4::Packet {
@@ -1859,15 +2104,17 @@ impl CommunicationManager {
 
         let mut sent = false;
 
-        // Send to main room if available
-        if let Some(main_room) = &mut self.main_room {
-            sent = main_room.send_rfc4(packet.clone(), false) || sent;
-        }
+        if emote_over_livekit {
+            // Send to main room if available
+            if let Some(main_room) = &mut self.main_room {
+                sent = main_room.send_rfc4(packet.clone(), false) || sent;
+            }
 
-        // Also send to scene room if available
-        #[cfg(feature = "use_livekit")]
-        if let Some(scene_room) = &mut self.scene_room {
-            sent = scene_room.send_rfc4(packet, false) || sent;
+            // Also send to scene room if available
+            #[cfg(feature = "use_livekit")]
+            if let Some(scene_room) = &mut self.scene_room {
+                sent = scene_room.send_rfc4(packet, false) || sent;
+            }
         }
 
         // Pulse EmoteStart is deferred to set_emoting (actual playback start), NOT sent here:
@@ -1880,6 +2127,9 @@ impl CommunicationManager {
         #[cfg(feature = "use_pulse")]
         {
             self.pending_pulse_emote_urn = Some((emote_urn.to_string(), mask));
+            // Queued for Pulse counts as sent — otherwise this reports failure on exactly the
+            // path that is now the normal one.
+            sent = sent || !emote_over_livekit;
         }
 
         sent
@@ -2827,7 +3077,13 @@ impl CommunicationManager {
             );
             dict.set(
                 "dual_channel".to_variant(),
-                self.livekit_movement_dual_channel.to_variant(),
+                self.is_livekit_movement_dual_channel().to_variant(),
+            );
+            // The announced realm is the whole visibility contract and is matched exactly, so
+            // surfacing it is the difference between "I see nobody" and "I am in lsd:b64-…"
+            dict.set(
+                "pulse_realm".to_variant(),
+                self.pulse_realm_name().unwrap_or_default().to_variant(),
             );
         }
         #[cfg(not(feature = "use_pulse"))]
@@ -3293,6 +3549,91 @@ mod tests {
                 now,
                 TIMEOUT
             ));
+        }
+    }
+
+    // ==========================================
+    // Tests for avatar_sync_over_livekit (Pulse is the avatar-sync carrier)
+    // ==========================================
+
+    #[cfg(feature = "use_pulse")]
+    mod avatar_sync_gate {
+        use super::*;
+
+        /// The point of the change: once Pulse is up, LiveKit carries no movement or emotes.
+        #[test]
+        fn established_pulse_takes_livekit_out_of_the_path() {
+            assert!(!avatar_sync_over_livekit(false, true));
+        }
+
+        /// The safety net: any state where Pulse is not established keeps LiveKit sending, so
+        /// a drop, a failed handshake or a disabled transport can never hide the player.
+        #[test]
+        fn livekit_carries_avatar_sync_whenever_pulse_is_not_established() {
+            assert!(avatar_sync_over_livekit(false, false));
+        }
+
+        /// The escape hatch still forces both channels at once.
+        #[test]
+        fn dual_channel_forces_livekit_regardless() {
+            assert!(avatar_sync_over_livekit(true, true));
+            assert!(avatar_sync_over_livekit(true, false));
+        }
+
+        /// Until the deployment flips `dual-channel` off, LiveKit keeps carrying avatar sync —
+        /// an authoritative server that does not yet ingest Pulse must not be starved of it.
+        #[test]
+        fn flag_defaults_on_so_the_cutover_is_opt_in_per_deployment() {
+            assert!(dual_channel_effective(None, true));
+            assert!(!dual_channel_effective(None, false));
+        }
+
+        /// A local choice outranks the flag in both directions, so a dev can force either mode.
+        #[test]
+        fn local_override_beats_the_flag() {
+            assert!(dual_channel_effective(Some(true), false));
+            assert!(!dual_channel_effective(Some(false), true));
+        }
+    }
+
+    // ==========================================
+    // Tests for pulse_activation (who gets to turn the transport on)
+    // ==========================================
+
+    #[cfg(feature = "use_pulse")]
+    mod pulse_activation_rules {
+        use super::*;
+
+        /// Outside preview the deployment flag decides, fail-closed on absent/unfetched.
+        #[test]
+        fn flag_decides_outside_preview() {
+            assert!(pulse_activation(true, false, false, Some(true)));
+            assert!(!pulse_activation(true, false, false, Some(false)));
+            assert!(!pulse_activation(true, false, false, None));
+        }
+
+        /// The point of the preview carve-out: a plain `dcl start` preview must not be pushed
+        /// onto production Pulse by a fleet-wide flag, because its realm key carries the
+        /// developer's project path and hostname.
+        #[test]
+        fn preview_ignores_the_flag_without_an_explicit_opt_in() {
+            assert!(!pulse_activation(true, false, true, Some(true)));
+        }
+
+        /// ...but an explicit opt-in (--pulse-realm / --pulse-server / --pulse) still works,
+        /// which is how the orchestrator and DCL_SERVER_PULSE_REALM=1 drive Local Scene
+        /// Development.
+        #[test]
+        fn preview_joins_on_an_explicit_opt_in() {
+            assert!(pulse_activation(true, true, true, Some(true)));
+            assert!(pulse_activation(true, true, true, None));
+        }
+
+        /// --no-pulse always wins, everywhere.
+        #[test]
+        fn local_opt_out_always_wins() {
+            assert!(!pulse_activation(false, true, false, Some(true)));
+            assert!(!pulse_activation(false, true, true, Some(true)));
         }
     }
 

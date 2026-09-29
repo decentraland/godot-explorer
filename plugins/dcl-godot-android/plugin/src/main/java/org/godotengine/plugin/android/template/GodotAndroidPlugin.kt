@@ -5,15 +5,18 @@ import android.app.Activity
 import android.app.ActivityManager
 import android.app.AlarmManager
 import android.app.Application
+import android.app.ApplicationExitInfo
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.ActivityNotFoundException
+import android.content.ComponentCallbacks2
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
+import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.net.Uri
 import android.os.BatteryManager
@@ -58,6 +61,11 @@ import com.reown.sign.client.SignClient
 // Play Integrity — server-side platform attestation for /sign-message.
 import com.google.android.play.core.integrity.IntegrityManagerFactory
 import com.google.android.play.core.integrity.IntegrityTokenRequest
+
+// Watermark for getPreviousExitReasons(): exits at or before this timestamp were already reported.
+private const val EXIT_REASONS_PREFS = "dcl_exit_reasons"
+private const val EXIT_REASONS_ACK_KEY = "acked_timestamp_ms"
+private const val EXIT_REASONS_MAX = 16
 
 class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
 
@@ -108,10 +116,26 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
             // before the user answers, so the real outcome ("granted"/"denied") is
             // delivered here once onMainRequestPermissionsResult fires.
             SignalInfo("notification_permission_result", String::class.java),
+            // ComponentCallbacks2.onTrimMemory level (onLowMemory maps to TRIM_MEMORY_COMPLETE).
+            // Boxed Integer on purpose: GodotPlugin.emitSignal validates args with isInstance,
+            // which is always false for the primitive `int` class, and drops the signal.
+            SignalInfo("memory_trim", Int::class.javaObjectType),
             // Gallery pick result (one shot per pickImageFromGallery() call).
             // `bytes` holds a JPEG-encoded image and `error` is empty on success;
             // on cancel or failure `bytes` is empty and `error` says why.
-            SignalInfo("image_picked", ByteArray::class.java, String::class.java)
+            SignalInfo("image_picked", ByteArray::class.java, String::class.java),
+            // In-app review flow completed. This means the FLOW finished, never that the user
+            // rated: Play reports no outcome, and over quota it renders nothing, returns no
+            // error, and still completes. `error` is "" when the flow ran without an exception.
+            SignalInfo("in_app_review_finished", String::class.java),
+            // FCM registration token resolved for this launch. Emitted once per run, with an
+            // empty string when FCM is unavailable (no Play Services, no google-services.json)
+            // so a listener is never left waiting on a device that can't receive push.
+            SignalInfo("fcm_token_ready", String::class.java),
+            // FCM rotated the token while the app was running. Rare, but it invalidates the
+            // one already mapped in Segment, so it has to be re-sent rather than waiting for
+            // the next launch — until then the server would be pushing to a dead token.
+            SignalInfo("fcm_token_refreshed", String::class.java)
         )
     }
 
@@ -123,10 +147,16 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
         activity?.let {
             notificationDatabase = NotificationDatabase(it.applicationContext)
             Log.d(pluginName, "Notification database initialized")
+            // Application-scoped so it survives activity recreation; emitSignal marshals
+            // the UI-thread callback onto Godot's render thread.
+            it.applicationContext.registerComponentCallbacks(trimMemoryCallbacks)
         }
         // Kick off Firebase Analytics initialization early so getAppInstanceId() can be ready
         // by the time the first Segment batch is sent.
         ensureFirebaseInitialized()
+        // Let DclFirebaseMessagingService reach this instance while it is alive.
+        liveInstance = java.lang.ref.WeakReference(this)
+        requestFcmToken()
     }
 
     // --- Firebase Analytics (accessed via reflection so this plugin doesn't depend on the SDK) ---
@@ -211,6 +241,80 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
     fun getFirebaseAppInstanceId(): String {
         ensureFirebaseInitialized()
         return firebaseAppInstanceId
+    }
+
+    // --- Firebase Cloud Messaging (remote push) ---
+    //
+    // firebase-messaging is a `compileOnly` dependency: the types below are resolved at compile
+    // time but supplied at runtime by the app (export_plugin.gd adds the same coordinate). On a
+    // build where Firebase never initializes — a Quest or AOSP device with no Play Services, or
+    // an export missing google-services.json — touching these classes throws, hence the broad
+    // `Throwable` catches. Failing to get a token must degrade to "this device can't receive
+    // push", never to a crash.
+
+    @Volatile private var fcmTokenRequested: Boolean = false
+
+    /**
+     * Last known FCM registration token, or "" if none.
+     *
+     * Reads through [PushTokenStore] rather than memory so it survives the app being killed:
+     * FCM can mint a token while no Godot process exists, and asking the SDK again would be
+     * an async round trip on the caller's critical path.
+     */
+    @UsedByGodot
+    fun getFcmToken(): String {
+        val ctx = activity?.applicationContext ?: return ""
+        return PushTokenStore.getToken(ctx)
+    }
+
+    /**
+     * Ask FCM for this install's token and emit `fcm_token_ready` once it resolves.
+     *
+     * Needed on top of [DclFirebaseMessagingService.onNewToken], which only fires when a token
+     * is created or rotated — on an ordinary launch it never fires, so without this the token
+     * would only ever reach Segment on the run right after install.
+     */
+    private fun requestFcmToken() {
+        if (fcmTokenRequested) return
+        val ctx = activity?.applicationContext ?: run {
+            Log.w(pluginName, "[FCM] applicationContext null, will retry on next call")
+            return
+        }
+        fcmTokenRequested = true
+        try {
+            com.google.firebase.messaging.FirebaseMessaging.getInstance().token
+                .addOnCompleteListener { task ->
+                    val token = if (task.isSuccessful) (task.result ?: "") else ""
+                    if (!task.isSuccessful) {
+                        Log.w(pluginName, "[FCM] token fetch failed: ${task.exception?.message}")
+                    } else {
+                        Log.i(pluginName, "[FCM] token ready (len=${token.length})")
+                        PushTokenStore.saveToken(ctx, token)
+                    }
+                    // Emitted even on failure, with "". A listener that waits for a token it
+                    // will never get would stall the identify that carries every other trait.
+                    try {
+                        emitSignal("fcm_token_ready", token)
+                    } catch (e: Throwable) {
+                        Log.w(pluginName, "[FCM] emitSignal failed: ${e.message}")
+                    }
+                }
+        } catch (e: Throwable) {
+            Log.w(pluginName, "[FCM] unavailable: ${e.javaClass.simpleName}: ${e.message}")
+            try {
+                emitSignal("fcm_token_ready", "")
+            } catch (ignored: Throwable) {
+            }
+        }
+    }
+
+    /** Emits `fcm_token_refreshed`. Called from the messaging service via the companion hook. */
+    private fun emitFcmTokenRefreshed(token: String) {
+        try {
+            emitSignal("fcm_token_refreshed", token)
+        } catch (e: Throwable) {
+            Log.w(pluginName, "[FCM] emitSignal(refreshed) failed: ${e.message}")
+        }
     }
 
     /**
@@ -710,6 +814,29 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
         return info
     }
 
+    /**
+     * Thermal + battery state only. Cheap (a sticky-intent read); safe to poll
+     * from the game loop. `getMobileMetrics` adds PSS memory on top, and PSS is a
+     * full /proc/self/smaps walk (~100 ms on a 2 GB process) — polling THAT every
+     * 5 s from DynamicGraphics was a visible periodic frame hitch.
+     */
+    @UsedByGodot
+    fun getThermalAndChargingState(): Dictionary {
+        val metrics = Dictionary()
+        activity?.let { ctx ->
+            try {
+                fillBatteryMetrics(ctx, metrics)
+            } catch (e: Exception) {
+                Log.e(pluginName, "Error collecting thermal state: ${e.message}")
+                metrics["device_temperature_celsius"] = -1.0f
+                metrics["thermal_state"] = "unknown"
+                metrics["battery_percent"] = -1.0f
+                metrics["charging_state"] = "unknown"
+            }
+        }
+        return metrics
+    }
+
     @UsedByGodot
     fun getMobileMetrics(): Dictionary {
         val metrics = Dictionary()
@@ -732,6 +859,27 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
 
                 metrics["memory_usage"] = totalMemoryMB
 
+                fillBatteryMetrics(ctx, metrics)
+
+                Log.d(pluginName, "Mobile metrics collected successfully")
+            } catch (e: Exception) {
+                Log.e(pluginName, "Error collecting mobile metrics: ${e.message}")
+                // Return defaults on error
+                metrics["memory_usage"] = -1
+                metrics["device_temperature_celsius"] = -1.0f
+                metrics["thermal_state"] = "unknown"
+                metrics["battery_percent"] = -1.0f
+                metrics["charging_state"] = "unknown"
+            }
+        } ?: run {
+            Log.e(pluginName, "Activity is null, cannot collect metrics")
+        }
+
+        return metrics
+    }
+
+    /** Battery temperature / thermal bucket / level / charging state from the sticky battery intent. */
+    private fun fillBatteryMetrics(ctx: Context, metrics: Dictionary) {
                 // Get battery information
                 val batteryIntentFilter = IntentFilter(Intent.ACTION_BATTERY_CHANGED)
                 val batteryStatus = ctx.registerReceiver(null, batteryIntentFilter)
@@ -775,22 +923,6 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
                     else -> "unknown"
                 }
                 metrics["charging_state"] = chargingState
-
-                Log.d(pluginName, "Mobile metrics collected successfully")
-            } catch (e: Exception) {
-                Log.e(pluginName, "Error collecting mobile metrics: ${e.message}")
-                // Return defaults on error
-                metrics["memory_usage"] = -1
-                metrics["device_temperature_celsius"] = -1.0f
-                metrics["thermal_state"] = "unknown"
-                metrics["battery_percent"] = -1.0f
-                metrics["charging_state"] = "unknown"
-            }
-        } ?: run {
-            Log.e(pluginName, "Activity is null, cannot collect metrics")
-        }
-
-        return metrics
     }
 
     @UsedByGodot
@@ -2186,6 +2318,22 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
         private const val PICK_IMAGE_REQUEST_CODE = 1003
         // Debounce delay before resuming video playback after app returns to foreground
         private const val RESUME_DEBOUNCE_MS = 500L
+
+        /**
+         * The plugin instance, when one is running.
+         *
+         * DclFirebaseMessagingService is started by FCM and routinely runs with no Godot
+         * process at all, so it cannot hold a plain reference. Weak so a dead instance can
+         * still be collected; the token itself is persisted by PushTokenStore either way,
+         * and a run that missed the signal picks it up from there on the next launch.
+         */
+        @Volatile
+        private var liveInstance: java.lang.ref.WeakReference<GodotAndroidPlugin>? = null
+
+        /** No-op when Godot isn't running. */
+        fun notifyFcmTokenRefreshed(token: String) {
+            liveInstance?.get()?.emitFcmTokenRefreshed(token)
+        }
     }
 
 
@@ -2435,6 +2583,104 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
             dict["error"] = e.message ?: "Unknown error"
         }
         return dict
+    }
+
+    // --- Process death diagnostics (Sentry exit reasons, memory trim) ---
+
+    private val trimMemoryCallbacks = object : ComponentCallbacks2 {
+        override fun onTrimMemory(level: Int) {
+            emitSignal("memory_trim", level)
+        }
+
+        override fun onLowMemory() {
+            emitSignal("memory_trim", ComponentCallbacks2.TRIM_MEMORY_COMPLETE)
+        }
+
+        override fun onConfigurationChanged(newConfig: Configuration) {}
+    }
+
+    /**
+     * Exits of this app's main process that are newer than the last [ackExitReasons] watermark,
+     * newest first, as recorded by the OS (API 30+; empty below that). GDScript turns each one
+     * into a Sentry event, so low-memory kills, ANRs and native crashes of the *previous* run
+     * become one per-reason breakdown. Nothing is acked here: the caller acks once captured.
+     *
+     * On the very first call (no watermark yet) only the newest exit is returned, so a device
+     * that updates to this build does not replay its whole history as a burst.
+     */
+    @UsedByGodot
+    fun getPreviousExitReasons(): Array<Dictionary> {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return emptyArray()
+        val act = activity ?: return emptyArray()
+        val activityManager =
+            act.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager ?: return emptyArray()
+        val prefs = act.getSharedPreferences(EXIT_REASONS_PREFS, Context.MODE_PRIVATE)
+        val hasWatermark = prefs.contains(EXIT_REASONS_ACK_KEY)
+        val watermark = prefs.getLong(EXIT_REASONS_ACK_KEY, 0L)
+        val out = mutableListOf<Dictionary>()
+        try {
+            val exits = activityManager.getHistoricalProcessExitReasons(act.packageName, 0, EXIT_REASONS_MAX)
+            for (info in exits) {
+                // The UID also lists sandboxed sub-processes (WebView, Play Integrity).
+                if (info.processName != act.packageName) continue
+                if (info.timestamp <= watermark) continue
+                out.add(Dictionary().apply {
+                    this["reason"] = exitReasonName(info.reason)
+                    this["reason_code"] = info.reason
+                    this["description"] = info.description ?: ""
+                    this["timestamp"] = info.timestamp
+                    this["pss_kb"] = info.pss
+                    this["rss_kb"] = info.rss
+                    this["importance"] = info.importance
+                    this["status"] = info.status
+                })
+                if (!hasWatermark) break
+            }
+        } catch (e: Exception) {
+            Log.w(pluginName, "getHistoricalProcessExitReasons failed: ${e.message}")
+        }
+        return out.toTypedArray()
+    }
+
+    /** Marks every exit with timestamp <= [timestampMs] as reported. */
+    @UsedByGodot
+    fun ackExitReasons(timestampMs: Long) {
+        activity?.getSharedPreferences(EXIT_REASONS_PREFS, Context.MODE_PRIVATE)
+            ?.edit()?.putLong(EXIT_REASONS_ACK_KEY, timestampMs)?.apply()
+    }
+
+    /**
+     * Debug only (the GDScript side gates it to non-production builds): blocks the Android UI
+     * thread so a real system ANR fires. Godot's main loop runs on the render thread, so
+     * blocking it from GDScript never trips the ANR watchdog.
+     */
+    @UsedByGodot
+    fun debugBlockUiThread(ms: Int) {
+        runOnUiThread {
+            try {
+                Thread.sleep(ms.toLong())
+            } catch (_: InterruptedException) {
+            }
+        }
+    }
+
+    private fun exitReasonName(reason: Int): String = when (reason) {
+        ApplicationExitInfo.REASON_CRASH -> "crash"
+        ApplicationExitInfo.REASON_CRASH_NATIVE -> "native_crash"
+        ApplicationExitInfo.REASON_ANR -> "anr"
+        ApplicationExitInfo.REASON_LOW_MEMORY -> "low_memory"
+        ApplicationExitInfo.REASON_SIGNALED -> "signaled"
+        ApplicationExitInfo.REASON_EXCESSIVE_RESOURCE_USAGE -> "excessive_resource"
+        ApplicationExitInfo.REASON_EXIT_SELF -> "exit_self"
+        ApplicationExitInfo.REASON_USER_REQUESTED -> "user_requested"
+        ApplicationExitInfo.REASON_USER_STOPPED -> "user_stopped"
+        ApplicationExitInfo.REASON_DEPENDENCY_DIED -> "dependency_died"
+        ApplicationExitInfo.REASON_INITIALIZATION_FAILURE -> "initialization_failure"
+        ApplicationExitInfo.REASON_PERMISSION_CHANGE -> "permission_change"
+        ApplicationExitInfo.REASON_FREEZER -> "freezer"
+        ApplicationExitInfo.REASON_PACKAGE_STATE_CHANGE -> "package_state_change"
+        ApplicationExitInfo.REASON_PACKAGE_UPDATED -> "package_updated"
+        else -> "other"
     }
 
     /**
@@ -2779,6 +3025,41 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
             Log.e(pluginName, "[DeviceAnchor] failed to read SSAID: ${e.message}", e)
             ""
         }
+    }
+
+
+    // --- Play In-App Review (issue #2739) ---
+    //
+    // Delegated to InAppReview so that NO Play Core type appears in any method signature on this
+    // class. GodotPlugin.onRegisterPluginWithGodotNative reflects over getDeclaredMethods() here
+    // at registration, which resolves every parameter type; an unresolvable one throws
+    // NoClassDefFoundError on the Vulkan thread and kills the app at boot. Keep these two
+    // entry points primitive-only.
+
+    private val inAppReview = InAppReview(pluginName)
+
+    /** Warm the review request ahead of the trigger moment. See InAppReview.prewarm. */
+    @UsedByGodot
+    fun prewarmInAppReview() {
+        val act = activity ?: run {
+            Log.w(pluginName, "[InAppReview] activity null - cannot prewarm")
+            return
+        }
+        inAppReview.prewarm(act)
+    }
+
+    /**
+     * Launch the native review card. Always completes with `in_app_review_finished(error)` — ""
+     * when the flow ran. Never reports whether the user actually rated; Play does not say.
+     */
+    @UsedByGodot
+    fun launchInAppReview() {
+        val act = activity ?: run {
+            Log.w(pluginName, "[InAppReview] activity null - cannot launch")
+            emitSignal("in_app_review_finished", "activity not ready")
+            return
+        }
+        inAppReview.launch(act) { error -> emitSignal("in_app_review_finished", error) }
     }
 
 }

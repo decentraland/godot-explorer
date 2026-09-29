@@ -12,8 +12,10 @@ extends RefCounted
 # collision_mask set on Mount in player.tscn; the unit test pins the value.
 const CAMERA_COLLISION_MASK := 2
 
-# Over-shoulder framing: x = lateral camera offset, z = third-person back distance.
-const THIRD_PERSON_CAMERA := Vector3(0.75, 0, 3)
+# Centered third-person framing (issue #2709: avatar centered on screen, no
+# over-shoulder offset). x = lateral camera offset, z = third-person back
+# distance.
+const THIRD_PERSON_CAMERA := Vector3(0, 0, 3)
 # First person sits just in front of the pivot (inside the head).
 const FIRST_PERSON_SPRING_LENGTH := -0.2
 
@@ -40,6 +42,13 @@ const CLAMP_NEAR_CLEARANCE := 0.08
 # Extension recovery speed (m/s). Shortening is instant (never clip), extending
 # is smoothed so geometry doesn't pop through on the way out.
 const CLAMP_EXTEND_SPEED := 8.0
+
+# Floor guard: some scene ground meshes have no usable collider (single-sided shell
+# or cmask=0), so the sweep casts slip through and — angled down — the camera can
+# dip below the visible floor. Independent of scene geometry, the camera is
+# kept at least this far above the PLAYER's own ground contact (its CharacterBody3D
+# origin, which rests on whatever it's standing on).
+const FLOOR_CLEARANCE := 0.15
 
 
 # Spring-arm length + camera-local X offset per camera mode.

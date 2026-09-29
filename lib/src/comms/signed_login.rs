@@ -58,10 +58,7 @@ impl SignedLogin {
         let (login_result_sender, login_result_receiver) = tokio::sync::oneshot::channel();
 
         TokioRuntime::spawn(async move {
-            let unix_time = std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_millis();
+            let unix_time = crate::utils::clock::unix_time_ms();
 
             let meta = serde_json::to_string(&meta).unwrap();
             // Same format as `sign_request`; the method is already the literal "post".

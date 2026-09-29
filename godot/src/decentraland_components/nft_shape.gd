@@ -26,8 +26,8 @@ func async_load_nft(
 		return
 
 	loading = true
-	var picture_frame = _load_frame_style(style, background_color)
-	await _async_load_nft(picture_frame, urn, style)
+	_load_frame_style(style, background_color)
+	await _async_load_nft(urn, style)
 	loading = false
 
 	if scheduled_load_nft is Callable:
@@ -111,7 +111,7 @@ func _set_loading_material(
 		background_material.albedo_color = background_color
 
 
-func _async_load_nft(picture_frame: Node3D, urn: String, style: NftFrameStyleLoader.NFTFrameStyles):
+func _async_load_nft(urn: String, style: NftFrameStyleLoader.NFTFrameStyles):
 	var dcl_urn: DclUrn = DclUrn.new(urn)
 	if not dcl_urn.valid:
 		printerr("NftShape::load_nft Error, invalid urn: ", urn)
@@ -122,7 +122,9 @@ func _async_load_nft(picture_frame: Node3D, urn: String, style: NftFrameStyleLoa
 	if result is PromiseError:
 		printerr("NftShape::load_nft Error on fetching nft: ", result.get_error())
 		return
-	await _async_set_opensea_nft(picture_frame, style, result)
+	# current_frame is whatever frame this shape holds now: _load_frame_style swaps and
+	# frees frames, so the one that existed before the fetch is not carried across it.
+	await _async_set_opensea_nft(current_frame, style, result)
 
 
 func _get_surf_idx_by_resource_name(mesh: Mesh, resource_name: String) -> int:

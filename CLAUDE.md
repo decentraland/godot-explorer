@@ -44,7 +44,8 @@ cargo run -- build --target android       # Android build (no cargo-ndk, uses di
 cargo run -- build --target ios           # iOS build (macOS only)
 
 # Run the client (automatically builds first)
-cargo run -- run                          # Run client
+cargo run -- run                          # Run client (always a phone layout: --emulate-ios by default)
+cargo run -- run -- --emulate-android     # Run client with the Android layout instead
 cargo run -- run -r                       # Release mode
 cargo run -- run -e                       # Run editor
 cargo run -- run -e --target android      # Run editor and also build for Android
@@ -104,17 +105,27 @@ cargo run -- export --target windows
 cargo run -- export --target macos
 cargo run -- export --target android --format apk
 cargo run -- export --target android --format aab
-cargo run -- export --target ios
+cargo run -- export --target ios            # dev export (debug template)
+cargo run -- export --target ios --release  # what CI ships to TestFlight / the App Store
 ```
+
+iOS exports run a **windowed** Godot editor (not `--headless`) because the shader baker only works
+with a RenderingDevice renderer, and they need the **Metal toolchain** (`xcodebuild -downloadComponent
+MetalToolchain` on Xcode 26) to compile the baked shaders to `.metallib`. The export fails unless
+Godot's output shows `Started Baking shaders (N steps)` and packed `.metal.cache` files, and it also
+fails when the SPIR-V-only warning (missing toolchain) appears; `DCL_SKIP_SHADER_BAKE_CHECK=1`
+bypasses that check for local debugging only. The baked files live in
+`godot/.godot/exported/<hash>/shader_baker/iOS/metal/`, not next to the exported IPA.
 
 ## Architecture
 
 ### Directory Structure
 - **`lib/`**: Core Rust library with all systems
-  - `src/dcl/`: Decentraland-specific components (scene runner, SDK bindings)
+  - `src/dcl/`: Decentraland protocol types, SDK bindings, JS runtime glue
+  - `src/scene_runner/`: Scene threads, CRDT handling, per-component systems (`components/`)
   - `src/av/`: Audio/video processing (video player)
   - `src/comms/`: WebRTC, voice chat (livekit)
-  - `src/wallet/`: Ethereum integration
+  - `src/auth/`: Ethereum wallet and sign-in
   - `src/content/`: Asset loading and caching
 - **`godot/`**: Godot project
   - `src/decentraland_components/`: Custom Godot nodes for DCL features
@@ -195,6 +206,15 @@ cargo run -- export --target ios
    and posts a "📦 Android AAB Ready" Slack notification — the AAB is only uploaded for
    `main`/`release` builds.
 
+   Status is mirrored in a Slack root card (`.github/scripts/slack-root.py`, merge-on-read
+   via message metadata; byte-duplicated in `decentraland/godot-asc-deploy` — edit both
+   copies together) and ONE sticky **📱 Mobile build pipeline** PR comment
+   (`.github/scripts/pr-card.py`, same model — state lives in a hidden HTML comment; each leg
+   merges only its own fields; `SHA` + `RUN_ID` guard against a superseded run). `pr-card.py`
+   lives only here: asc-deploy has no token for this repo, so the `ios-wait` job watches the
+   asc-deploy run (matched by its `run-name` `🍏 <branch> @ <sha>`, via
+   `ASC_DEPLOY_DISPATCH_TOKEN`) and mirrors the TestFlight result onto the card.
+
    It is triggered by:
    - **Every push to `release`** → full distribution.
    - **A weekday (Mon–Fri) 09:00 UTC cron on `main`** → distribution, but only when
@@ -214,6 +234,49 @@ cargo run -- export --target ios
    ```
    The label is automatically removed after the build is triggered on PRs.
 
+## Code hygiene
+
+The habits AI-assisted changes most often get wrong in this repo. Reviewers hold PRs to them
+(`REVIEW.md` §3 Tier 3 items 19–20, §7).
+
+### Comments
+
+- **Two or three lines, only where the code cannot say it.** A comment gives the next reader
+  what they need to not break the line in front of them ("not `call_deferred`: the same flush
+  re-enters this and spins"). The investigation, the root cause and the options you rejected go
+  in the commit message and the PR body, where they are read once.
+- **Never narrate history.** A comment about code that is no longer there ("a prior attempt
+  added…, it was removed because…", "previously set by the AnimationPlayer", "replaces the old
+  `dcl_splash.tscn` that used to live in…") is a tombstone: the reader cannot act on it and git
+  already holds the story. When you remove code, remove its comment too, and do not leave a
+  comment in its place saying what used to be there.
+- **Do not restate the code or the diff.** No `# Added to support X`, no "what this change
+  does" block at the top of a function or file, no docstring that repeats the signature in
+  prose. `##` docstrings are for public API a caller needs — one or two lines.
+- **Comment-only leftovers are dead code.** A function whose body is `pass` plus a comment, or
+  a `TODO` without an issue link, does not ship.
+
+### File size
+
+- **Files at the gdlint cap are closed for new features.** `.gdlintrc` caps GDScript at 1900
+  lines / 45 public methods, and `global.gd`, `explorer.gd`, `modal_manager.gd` and `avatar.gd`
+  are within 30 lines of it. New behaviour goes in its own file — a component, a `RefCounted`
+  helper, an autoload — and the big file gets one call into it, not a new block. Same in Rust,
+  where nothing enforces it: `communication_manager.rs`, `scene_manager.rs` and
+  `content_provider.rs` are past 3000 lines.
+- **Never raise `max-file-lines` / `max-public-methods` inside a feature PR.** The line cap has
+  been raised four times since December 2025 (1000 → 1900), every time inside a feature or fix
+  PR. If a change cannot land without it, split the file first, in its own PR.
+- **Rule of thumb:** over ~1500 lines, ask where else the code could live before adding to it.
+
+### Diff discipline
+
+- Touch only what the change needs: no reformatting, renaming or reordering of neighbouring
+  code, no defensive checks for states the code cannot reach.
+- No helper, base class or abstraction for a single call site — the repo is consciously
+  non-abstracted (`REVIEW.md` §9).
+- English only in comments and identifiers; no `print(` left behind (`REVIEW.md` §7).
+
 ## Important Notes
 
 - The project uses a forked Godot 4.6.2 - don't update the engine version
@@ -221,28 +284,12 @@ cargo run -- export --target ios
 - The Rust toolchain is pinned in `rust-toolchain.toml` (1.90)
 - For coverage testing, install: `rustup component add llvm-tools-preview && cargo install grcov`
 - Integration with Decentraland SDK7 requires the JavaScript runtime to be properly initialized
-- **Android builds**: No longer use cargo-ndk due to NDK 27 issues. Direct cargo build with `GN_ARGS=use_custom_libcxx=false`
+- **Android builds**: don't use cargo-ndk (it breaks with NDK 27); build with plain cargo and `GN_ARGS=use_custom_libcxx=false`
 - **Dependencies**: Run `cargo run -- doctor` to check system health and missing dependencies
-- **Build order**: Commands now check dependencies and suggest next steps automatically
 
-## New Features (Recent Updates)
+## Command Dependencies
 
-### Enhanced Developer Experience
-- **Colored output**: All xtask commands now use colored output for better readability
-- **Progress indicators**: Long-running operations show progress bars
-- **Dependency checking**: Commands validate prerequisites and provide helpful error messages
-- **Platform detection**: Automatically detects OS and suggests platform-specific commands
-
-### Improved Android Workflow
-```bash
-# Complete Android build workflow
-cargo run -- install --targets android           # Install Android dependencies
-cargo run -- build --target android                # Build Rust library
-cargo run -- export --target android --format apk  # Export APK
-```
-
-### Command Dependencies
-The build system now enforces proper command order:
+Each xtask command checks its prerequisites and says what to run first:
 - `build` requires: protoc installed
 - `run` requires: Godot installed (builds automatically)
 - `export` requires: Godot installed, host built, target platform built
@@ -251,7 +298,7 @@ The build system now enforces proper command order:
 ## Common Tasks
 
 ### Adding a new Decentraland component:
-1. Create the Rust implementation in `lib/src/dcl/components/`
+1. Create the Rust implementation in `lib/src/scene_runner/components/`
 2. Add GDExtension bindings in the component file
 3. Create corresponding GDScript class in `godot/src/decentraland_components/`
 4. Register in the scene runner
@@ -291,10 +338,10 @@ In the Godot editor, go to **DCL Tools → Rust Log Filter...** to open a visual
 
 ### Debugging scene loading:
 1. Enable verbose logging: `RUST_LOG=debug cargo run -- run`
-2. Check the scene runner logs in `lib/src/dcl/scene_runner.rs`
+2. Check the scene runner logs in `lib/src/scene_runner/`
 3. Verify content server responses in `lib/src/content/`
 
 ### Working with the avatar system:
-- Avatar definitions are in `lib/src/avatar/`
-- Wearables are loaded via GLTF in `lib/src/dcl/components/mesh_renderer/`
+- Avatar definitions are in `lib/src/avatars/`
+- Wearables are loaded via GLTF in `lib/src/content/gltf/` (`lib/src/content/wearable_entities.rs`)
 - Animation system uses Godot's AnimationPlayer nodes

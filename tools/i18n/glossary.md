@@ -19,8 +19,9 @@ for buttons (`Guardar`, `Salvar`) over the infinitive-as-noun.
 These are product nouns and brand surfaces. Translating them breaks recognition against the
 Marketplace, the docs and the wider community, which are English everywhere.
 
-Wearable · Emote · Passport · Backpack · Jump In · MANA · Genesis City · Parcel · Scene ·
-Realm · Marketplace · Decentraland · Smart Wearable · Snapshot · DAO · World · Skybox
+Wearable · Emote · Passport · Backpack · Jump In · MANA · Genesis City · Parcel · Estate · Scene ·
+Realm · Marketplace · Decentraland · Smart Wearable · Snapshot · DAO · World · Skybox ·
+Credits · Shop · Wallet · NAME · LAND · Parcels · Estates · DEV TOOLS
 
 Keep them capitalized as above and do **not** inflect them into Spanish/Portuguese plurals
 beyond a bare `s` (`Wearables`, `Emotes`).
@@ -41,8 +42,6 @@ beyond a bare `s` (`Wearables`, `Emotes`).
 | Chat | Chat | Chat |
 | Voice chat | Chat de voz | Chat de voz |
 | Sign in / Sign out | Iniciar sesión / Cerrar sesión | Entrar / Sair |
-| Wallet | Billetera | Carteira |
-| Credits | Créditos | Créditos |
 | Loading… | Cargando… | Carregando… |
 | Retry | Reintentar | Tentar novamente |
 | Skip | Omitir | Pular |

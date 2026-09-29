@@ -483,7 +483,7 @@ pub async fn load_and_save_emote_gltf(
 ) -> Result<String, anyhow::Error> {
     let ctx_clone = ctx.clone();
 
-    let (scene_path, file_size) = load_gltf_pipeline(
+    let (scene_path, file_size, _externalized) = load_gltf_pipeline(
         file_path,
         file_hash.clone(),
         content_mapping,
