@@ -711,6 +711,13 @@ func sync_items(new_items: Array) -> void:
 
 
 func add_items_by_social_item_data(item_list, should_load: bool = true) -> void:
+	# Every caller reaches here after awaiting (_async_fetch_all_friends -> _async_reload_*_list).
+	# If this list left the tree meanwhile, add_child() does NOT fire _ready on the new items, so
+	# their @onready nodes stay null and the set_type()/set_data() calls below dereference null -
+	# an error in debug, a SIGSEGV in release (CanvasItem::show/hide on a null Control).
+	if not is_inside_tree():
+		return
+
 	for item in item_list:
 		var social_item = Global.preload_assets.SOCIAL_ITEM.instantiate()
 		self.add_child(social_item)

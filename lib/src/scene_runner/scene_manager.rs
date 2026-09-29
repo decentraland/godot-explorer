@@ -2193,6 +2193,16 @@ impl SceneManager {
             }
         }
 
+        // A masked emote this scene started would otherwise outlive it: the scene can no
+        // longer call stopEmote, and re-entry can't resume it either, so clear it for good.
+        // Read the node out before base_mut() below borrows self.
+        if let Some(mut avatar_node) = self.get_player_avatar_node() {
+            avatar_node.call(
+                "clear_emote_owned_by_scene",
+                &[signal_data.0 .0.to_variant()],
+            );
+        }
+
         self.base_mut().emit_signal(
             "scene_killed",
             &[signal_data.0 .0.to_variant(), signal_data.1.to_variant()],

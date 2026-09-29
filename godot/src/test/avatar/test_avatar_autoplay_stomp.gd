@@ -1,4 +1,7 @@
 extends SceneTree
+# Dev tool / test: it owns every node it awaits on and never ships in a store build, so the
+# release-template node-across-await rules are off here (see .gdlintrc).
+# gdlint: disable=node-reference-across-await,node-argument-across-await
 
 # Midrange gliding statue repro, take 2: avatar.tscn wires the AnimationTree
 # to an AnimationPlayer that has autoplay="Idle". With the tree in IDLE
