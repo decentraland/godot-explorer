@@ -1112,7 +1112,7 @@ func _async_create_travel_modal() -> TravelModal:
 
 
 func _on_world_jump_in(world_name: String) -> void:
-	Global.async_teleport_to(Vector2i.ZERO, world_name)
+	Global.async_join_world(world_name)
 	close_travel_modal()
 
 
