@@ -109,6 +109,9 @@ const SLOPE_WALK_NORMAL_Y := 0.99
 # cos(46deg): a slide collision flatter than this is walkable ground; steeper
 # is a ramp/wall face — sliding on one must not count as support.
 const WALKABLE_NORMAL_Y := 0.695
+# Realm floor idiom (same as `on_floor` in _physics_process): the y=0 clamp
+# holds the capsule with no collider contact at all — floor jitter is ~1mm.
+const REALM_FLOOR_EPS := 0.005
 # Downslope stick, expressed as floor_snap_length so is_on_floor() survives
 # downhill moves (a manual raycast snap would report airborne mid-stick).
 const DOWNSLOPE_STICK_JOG := 0.45
@@ -1032,6 +1035,7 @@ func _step_record(msg: String) -> void:
 	_stall_frames += 1
 	if _stall_frames == 120:
 		_dump_step_log("STALL")
+		_dump_nearby_colliders()
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -1109,6 +1113,8 @@ func _has_walkable_support() -> bool:
 	# ray — rays return normals, cast_motion in this build does not.
 	if is_on_floor():
 		return true  # floor contacts are within floor_max_angle by definition
+	if global_position.y <= REALM_FLOOR_EPS:
+		return true  # clamp-held realm floor, see REALM_FLOOR_EPS
 	var space := get_world_3d().direct_space_state
 	if space == null:
 		return false
@@ -1258,19 +1264,35 @@ func _step_up(intent: Vector3) -> void:
 	# The rise is measured from the SUPPORT under the feet, not the pole:
 	# resting on an edge with the bottom hemisphere lifts the pole ~1cm,
 	# which would smuggle a 0.437 obstacle under the 0.43 band (kuruk ladder).
-	var support_y := global_position.y
 	var srq := PhysicsRayQueryParameters3D.new()
 	srq.collision_mask = collision_mask
 	srq.exclude = _raycast_exclude
 	srq.from = global_position + Vector3(0.0, 0.05, 0.0)
 	srq.to = global_position + Vector3(0.0, -0.15, 0.0)
 	var shit := space.intersect_ray(srq)
-	if not shit.is_empty():
+	var support_y := 0.0
+	var supported := true
+	if global_position.y <= REALM_FLOOR_EPS:
+		support_y = 0.0  # clamp-held realm floor is the support
+	elif not shit.is_empty():
 		support_y = shit.position.y
-	if floor_y > support_y + STEP_MAX_HEIGHT or floor_y < global_position.y + STEP_MIN_RISE:
-		# above the band (a wall corner/top) or below the feet (the cast
-		# contact was a graze and the pole hangs over void/lower ground)
-		_step_record("band floor_y=%s support=%s y=%s" % [floor_y, support_y, global_position.y])
+	else:
+		supported = false
+	if (
+		not supported
+		or floor_y > support_y + STEP_MAX_HEIGHT
+		or floor_y < global_position.y + STEP_MIN_RISE
+	):
+		# no measurable footing (don't measure from the pole — resting on an
+		# edge lifts it ~1cm and the band passes a 0.437 obstacle), above the
+		# band (wall corner/top), or below the feet (the cast contact was a
+		# graze and the pole hangs over void/lower ground)
+		_step_record(
+			(
+				"band floor_y=%s support=%s y=%s ok=%s"
+				% [floor_y, support_y, global_position.y, supported]
+			)
+		)
 		return
 	# The capsule's center rests ~a radius past the face: that surface must be
 	# walkable. A beveled curb is past its slope there (flat), a staircase
