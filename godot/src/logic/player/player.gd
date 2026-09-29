@@ -89,10 +89,10 @@ const GROUND_RAYCAST_MASK := 2
 # #2753: Unity parity (ApplySlopeModifier.cs / CharacterObject.prefab).
 # CharacterBody3D has no built-in step offset (M1) — custom logic below.
 const STEP_OFFSET := 0.35
-# Max climbable top above the feet: stepOffset + PhysX contact skin. Live QA
-# at kuruk.dcl.eth: real collider tops sit ~5mm above their labels (seam
-# lips) — 0.42-label measures ~0.425, 0.43-label ~0.435.
-const STEP_MAX_HEIGHT := STEP_OFFSET + 0.08
+# Max climbable top above the support contact: Unity's effective stepOffset
+# (0.35 + PhysX contact skin) lands here — live QA at kuruk.dcl.eth: 0.43
+# climbs, 0.44 blocks.
+const STEP_MAX_HEIGHT := 0.4375
 # Below this the rise machinery isn't worth engaging — protects against
 # teleporting DOWN onto lower surfaces read past the face.
 const STEP_MIN_RISE := 0.02
@@ -195,12 +195,6 @@ var _camera_mode_tween: Tween = null
 # side-effects at all.
 var _step_armed := true
 var _step_pending := false
-# Ring buffer of recent step-up decisions — F9 dumps it (QA diagnosis).
-var _step_log: Array[String] = []
-# Rise (time, height) pairs for the over-band watchdog's auto-dump.
-var _rise_log: Array = []
-var _stall_frames := 0
-var _stall_touched := 0
 
 @onready var mount_camera := $Mount
 @onready var camera: DclCamera3D = $Mount/CameraArm/Camera3D
@@ -345,7 +339,9 @@ func _ready():
 	set_camera_mode(Global.CameraMode.THIRD_PERSON, false)  # Don't play sound on initial setup
 	avatar.is_local_player = true
 
-	floor_max_angle = deg_to_rad(SLOPE_LIMIT_DEG)
+	# Unity's slopeLimit is exclusive (a 46° ramp does not climb); Godot's
+	# floor_max_angle is inclusive, so apply a hair under.
+	floor_max_angle = deg_to_rad(SLOPE_LIMIT_DEG - 0.01)
 
 	Global.player_identity.profile_changed.connect(self._on_player_profile_changed)
 
@@ -869,7 +865,23 @@ func _physics_process(dt: float) -> void:
 		DOWNSLOPE_STICK_RUN if Input.is_action_pressed("ia_sprint") else DOWNSLOPE_STICK_JOG
 	)
 	_try_step_up_predictive(Vector3(locomotion_x, 0.0, locomotion_z), dt)
+	var vy_before_move := velocity.y
 	move_and_slide()
+	# PhysX slope limiter, positional: if the move itself gained height with
+	# no upward velocity (gravity only), the slope slide carried the capsule —
+	# the recovery ratchet climbs steep ramps positionally. Allowed only when
+	# a walkable contact exists; jumps/pads set vy > 0 before the move and
+	# never match. Without this, a 46deg ramp is climbable (Unity blocks it).
+	if global_position.y > last_position.y + 0.0005 and vy_before_move <= 0.0:
+		var walkable_contact := false
+		var any_contact := false
+		for i in get_slide_collision_count():
+			any_contact = true
+			if get_slide_collision(i).get_normal().y >= WALKABLE_NORMAL_Y:
+				walkable_contact = true
+		if any_contact and not walkable_contact:
+			global_position.y = last_position.y
+			velocity.y = minf(velocity.y, 0.0)
 	var moved_xz := (to_xz(global_position) - to_xz(last_position)).length()
 	_try_step_up(Vector3(locomotion_x, 0.0, locomotion_z), moved_xz)
 	# Step-up re-arming: the capsule re-arms when it stands on WALKABLE
@@ -882,9 +894,6 @@ func _physics_process(dt: float) -> void:
 	if (not _step_armed or _step_pending) and _has_walkable_support():
 		_step_armed = true
 		_step_pending = false
-	# No step-up activity for a few frames: the stall chain resets.
-	if Engine.get_physics_frames() - _stall_touched > 5:
-		_stall_frames = 0
 	position.y = max(position.y, 0)
 	avatar.global_position = global_position
 
@@ -1026,84 +1035,6 @@ func _current_gravity() -> float:
 # horizontal motion is wall-blocked while grounded, retry from STEP_OFFSET up:
 # free space above + floor below inside the step window = walkable ledge.
 # `intent` is the pre-slide locomotion velocity (slide zeroes it on the wall).
-func _step_record(msg: String) -> void:
-	_step_log.append(msg)
-	if _step_log.size() > 30:
-		_step_log.pop_front()
-	_stall_touched = Engine.get_physics_frames()
-	if msg.begins_with("ROSE"):
-		_stall_frames = 0
-		return
-	# Stall watchdog: 2s of step-up bails with no rise (blocked + pressing)
-	# dumps the ring buffer on its own — F9 never reaches the player.
-	_stall_frames += 1
-	if _stall_frames == 120:
-		_dump_step_log("STALL")
-		_dump_nearby_colliders()
-
-
-func _unhandled_input(event: InputEvent) -> void:
-	if event is InputEventKey and event.pressed and event.keycode == KEY_F9:
-		print(
-			"STEPDBG DUMP y=",
-			global_position.y,
-			" armed=",
-			_step_armed,
-			" pending=",
-			_step_pending,
-			" floor=",
-			is_on_floor(),
-			" wall=",
-			is_on_wall()
-		)
-		for entry in _step_log:
-			print("STEPDBG ", entry)
-	if event is InputEventKey and event.pressed and event.keycode == KEY_F10:
-		_dump_nearby_colliders()
-
-
-func _dump_step_log(reason: String) -> void:
-	print(
-		"STEPDBG DUMP[",
-		reason,
-		"] y=",
-		global_position.y,
-		" armed=",
-		_step_armed,
-		" pending=",
-		_step_pending,
-		" floor=",
-		is_on_floor(),
-		" wall=",
-		is_on_wall()
-	)
-	for entry in _step_log:
-		print("STEPDBG ", entry)
-
-
-func _dump_nearby_colliders() -> void:
-	print("COLDBG --- colliders within 3m of ", global_position)
-	var stack: Array[Node] = [get_tree().current_scene]
-	while not stack.is_empty():
-		var node: Node = stack.pop_back()
-		if node is CollisionShape3D and node.shape != null:
-			var gp: Vector3 = node.global_position
-			if gp.distance_to(global_position) < 3.0:
-				print(
-					"COLDBG ",
-					node.shape.get_class(),
-					" size=",
-					node.shape.get("size"),
-					" h=",
-					node.shape.get("height"),
-					" pos=",
-					gp.snappedf(0.001),
-					" body=",
-					node.get_parent().name
-				)
-		stack.append_array(node.get_children())
-
-
 func _make_step_test_shape() -> CapsuleShape3D:
 	var s2: CapsuleShape3D = %CollisionShape3D_Body.shape.duplicate()
 	s2.margin = 0.0
@@ -1175,7 +1106,6 @@ func _try_step_up(intent: Vector3, moved_xz: float) -> void:
 
 func _step_up(intent: Vector3) -> void:
 	if not _step_armed:
-		_step_record("armed y=%s" % global_position.y)
 		return
 	var horiz := Vector3(intent.x, 0.0, intent.z)
 	var space := get_world_3d().direct_space_state
@@ -1204,7 +1134,6 @@ func _step_up(intent: Vector3) -> void:
 	var up: PackedFloat32Array = space.cast_motion(q)
 	var lift := up[0] * STEP_MAX_HEIGHT
 	if lift < STEP_MIN_RISE:
-		_step_record("headroom lift=%s" % lift)
 		return  # ceiling
 	# c) forward at lifted height until the pole sits just past the face: a
 	#    riser taller than the lift blocks this — a wall, not a step.
@@ -1213,7 +1142,6 @@ func _step_up(intent: Vector3) -> void:
 	q.motion = dir * over_face
 	var fw: PackedFloat32Array = space.cast_motion(q)
 	if fw[0] < 1.0:
-		_step_record("wall lift=%s" % lift)
 		return
 	# d) down with the pole directly over the edge. Void past the band => a
 	#    gap, not a step (the capsule steps UP only).
@@ -1226,11 +1154,10 @@ func _step_up(intent: Vector3) -> void:
 		# only). ~0: the down phase starts already touching — squeezed against
 		# the face/edge at lifted height, a wall (reading that contact as a
 		# landing reports floor_y = lifted height and teleports up).
-		_step_record("gap/squeeze dn=%s lift=%s" % [dn[0], lift])
 		return
+
 	var floor_y: float = landing.y - dn[0] * (lift + 0.02) - _step_test_shape.height * 0.5
 	if floor_y < global_position.y + STEP_MIN_RISE:
-		_step_record("flat floor_y=%s y=%s" % [floor_y, global_position.y])
 		return  # flat or lower — nothing to step onto
 	# Never commit an overlapping relocation (CCT invariant): diagonal corner
 	# approaches can thread the lifted forward cast past the block's edge and
@@ -1240,7 +1167,6 @@ func _step_up(intent: Vector3) -> void:
 		Basis.IDENTITY, Vector3(landing.x, floor_y + CAPSULE_CENTER_Y, landing.z)
 	)
 	if not space.intersect_shape(q, 1).is_empty():
-		_step_record("overlap floor_y=%s y=%s" % [floor_y, global_position.y])
 		return
 	# The highest surface under the landing footprint decides the rise (the
 	# body cast can graze an edge with its hemisphere and misread it). Probe
@@ -1262,41 +1188,32 @@ func _step_up(intent: Vector3) -> void:
 		if not phit.is_empty() and phit.position.y > best_y:
 			best_y = phit.position.y
 	if best_y == -INF:
-		_step_record("miss d_face=%s lift=%s" % [d_face, lift])
 		return
 	floor_y = best_y
-	# The rise is measured from the SUPPORT under the feet, not the pole:
-	# resting on an edge with the bottom hemisphere lifts the pole ~1cm,
-	# which would smuggle a 0.437 obstacle under the 0.43 band (kuruk ladder).
-	var srq := PhysicsRayQueryParameters3D.new()
-	srq.collision_mask = collision_mask
-	srq.exclude = _raycast_exclude
-	srq.from = global_position + Vector3(0.0, 0.05, 0.0)
-	srq.to = global_position + Vector3(0.0, -0.15, 0.0)
-	var shit := space.intersect_ray(srq)
-	var support_y := 0.0
-	var supported := true
-	if global_position.y <= REALM_FLOOR_EPS:
-		support_y = 0.0  # clamp-held realm floor is the support
-	elif not shit.is_empty():
-		support_y = shit.position.y
-	else:
-		supported = false
+	# The band is measured from the real contact the capsule rests on (slide
+	# contacts — the CCT measures stepOffset from the contact point). A ray
+	# under the axis misses edge rests (the center hangs past the edge) and
+	# measuring from the pole smuggles +1cm when the hemisphere rides an edge.
+	var support_y := -INF
+	var has_contact := false
+	for i in get_slide_collision_count():
+		var contact := get_slide_collision(i)
+		has_contact = true
+		if contact.get_normal().y >= WALKABLE_NORMAL_Y:
+			support_y = maxf(support_y, contact.get_position().y)
+	if support_y == -INF:
+		if global_position.y <= REALM_FLOOR_EPS:
+			support_y = 0.0  # clamp-held realm floor
+		elif has_contact:
+			support_y = global_position.y  # wedged/hanging: from the pole
 	if (
-		not supported
+		support_y == -INF  # airborne, no footing at all
 		or floor_y > support_y + STEP_MAX_HEIGHT
 		or floor_y < global_position.y + STEP_MIN_RISE
 	):
-		# no measurable footing (don't measure from the pole — resting on an
-		# edge lifts it ~1cm and the band passes a 0.437 obstacle), above the
-		# band (wall corner/top), or below the feet (the cast contact was a
-		# graze and the pole hangs over void/lower ground)
-		_step_record(
-			(
-				"band floor_y=%s support=%s y=%s ok=%s"
-				% [floor_y, support_y, global_position.y, supported]
-			)
-		)
+		# above the band measured from the resting contact (wall corner/top),
+		# or below the feet (the cast contact was a graze and the pole hangs
+		# over void/lower ground)
 		return
 	# The capsule's center rests ~a radius past the face: that surface must be
 	# walkable. A beveled curb is past its slope there (flat), a staircase
@@ -1311,7 +1228,6 @@ func _step_up(intent: Vector3) -> void:
 	nrq.to = Vector3(nx, global_position.y - 0.05, nz)
 	var nhit := space.intersect_ray(nrq)
 	if not nhit.is_empty() and nhit.normal.y < WALKABLE_NORMAL_Y:
-		_step_record("ramp n=%s floor_y=%s" % [nhit.normal.y, floor_y])
 		return  # the capsule would rest on an un-walkable slope — a ramp
 	# Rise in place — the horizontal motion flows via move_and_slide itself,
 	# so there is no blocked frame and no forward teleport pop. Tall rises
@@ -1321,21 +1237,11 @@ func _step_up(intent: Vector3) -> void:
 	# how a 60-65° ramp climbs in sub-0.2 bands. Snap off for this frame's
 	# move: the lower floor is within snap reach and would re-glue the
 	# capsule mid-step.
-	_step_record("ROSE +%s y=%s" % [floor_y - global_position.y, global_position.y])
 	var rise := floor_y - global_position.y
 	if rise > STEP_TALL_RISE or (rise >= STEP_PENDING_RISE and _step_pending):
 		_step_armed = false
 	elif rise >= STEP_PENDING_RISE:
 		_step_pending = true
-	# Watchdog: climbing more than the band within 0.5s is the diagonal-corner
-	# bug class — auto-dump the ring buffer when it trips (no keypress).
-	var now := Time.get_ticks_msec()
-	_rise_log.append([now, global_position.y])
-	while not _rise_log.is_empty() and now - _rise_log[0][0] > 500:
-		_rise_log.pop_front()
-	if global_position.y - _rise_log[0][1] > STEP_MAX_HEIGHT + 0.02:
-		_dump_step_log("OVER-BAND")
-		_rise_log.clear()
 	floor_snap_length = 0.0
 	global_position.y = floor_y + 0.001
 
