@@ -45,7 +45,7 @@ func async_spawn_portable_experience(pid: String) -> void:
 		var world_ens = pid
 		if not world_to_urn.has(world_ens):
 			var world_realm = Realm.new()
-			world_realm.async_set_realm(pid)
+			world_realm._async_set_realm(pid)
 
 			add_child(world_realm)
 			await world_realm.realm_changed

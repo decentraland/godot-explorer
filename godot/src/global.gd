@@ -1455,53 +1455,53 @@ func async_check_scene_access(scene_id: String, realm_name: String) -> bool:
 
 
 func async_teleport_to(parcel_position: Vector2i, new_realm: String) -> void:
-	# Block a private world before any navigation (no-op for genesis/parcel teleports); covers
-	# both the active-explorer teleport and the cold-start-from-lobby branch below.
-	if not await _async_precheck_realm_access(new_realm):
-		return
 	var explorer = Global.get_explorer()
-	if is_instance_valid(explorer):
-		# Show loading screen before orientation change to avoid flashing the scene
-		explorer.loading_ui.enable_loading_screen(new_realm, "on_teleport")
-		explorer.hide_menu()
-		if await explorer.async_teleport_to(parcel_position, new_realm):
-			Global.on_chat_message.emit(
-				"system",
-				tr("CHAT_SYSTEM_TELEPORTED").format({"location": str(parcel_position)}),
-				Time.get_unix_time_from_system()
-			)
-	else:
+	if not is_instance_valid(explorer):
+		# Cold start from the lobby: there is no scene to protect and no explorer to route
+		# through, so the private-world gate stays here — booting straight into a world the
+		# user can't enter is the bug #1725 fixed.
+		if not await _async_precheck_realm_access(new_realm):
+			return
 		Global.set_orientation_landscape()
 		Global.get_config().last_realm_joined = new_realm
 		Global.get_config().last_parcel_position = parcel_position
 		Global.get_config().add_place_to_last_places(parcel_position, new_realm)
 		get_tree().change_scene_to_file("res://src/ui/explorer.tscn")
+		return
+
+	var dest := Destination.from_input(new_realm, parcel_position)
+	if await Navigator.async_go(dest, "on_teleport"):
+		Global.on_chat_message.emit(
+			"system",
+			tr("CHAT_SYSTEM_TELEPORTED").format({"location": str(parcel_position)}),
+			Time.get_unix_time_from_system()
+		)
 
 
 func async_join_world(world_realm: String) -> void:
-	# Block a private world before any navigation: with an active explorer the modal replaces
-	# the loading flash; on a cold start (lobby) it stops us booting into a world we can't enter.
-	if not await _async_precheck_realm_access(world_realm):
-		return
-	Global.get_config().add_place_to_last_places(Vector2i.ZERO, world_realm)  # "Last visited"
 	var explorer = Global.get_explorer()
-	if is_instance_valid(explorer):
-		# Show loading screen before orientation change to avoid flashing the scene
-		explorer.loading_ui.enable_loading_screen(world_realm, "on_world")
-		Global.on_chat_message.emit(
-			"system",
-			tr("CHAT_SYSTEM_CHANGING_WORLD").format({"world": world_realm}),
-			Time.get_unix_time_from_system()
-		)
-		Global.realm.async_set_realm(world_realm, true)
-		explorer.hide_menu()
-		Global.close_menu.emit()
-	else:
+	if not is_instance_valid(explorer):
+		# Cold start from the lobby: no explorer to route through, so the private-world gate
+		# stays here rather than booting straight into a world we can't enter (#1725).
+		if not await _async_precheck_realm_access(world_realm):
+			return
+		Global.get_config().add_place_to_last_places(Vector2i.ZERO, world_realm)  # "Last visited"
 		Global.set_orientation_landscape()
 		Global.close_menu.emit()
 		Global.get_config().last_realm_joined = world_realm
 		Global.get_config().last_parcel_position = Vector2i.ZERO
 		get_tree().change_scene_to_file("res://src/ui/explorer.tscn")
+		return
+
+	Global.on_chat_message.emit(
+		"system",
+		tr("CHAT_SYSTEM_CHANGING_WORLD").format({"world": world_realm}),
+		Time.get_unix_time_from_system()
+	)
+	Global.close_menu.emit()
+	# No parcel: the world names its own spawn point, so teleport_to never records it.
+	if await Navigator.async_go(Destination.from_input(world_realm), "on_world"):
+		Global.get_config().add_place_to_last_places(Vector2i.ZERO, world_realm)  # "Last visited"
 
 
 func _http_method_to_string(method: int) -> String:
@@ -1741,18 +1741,12 @@ func _on_realm_change_failed_toast(new_realm_string: String, reason: String) -> 
 	)
 
 
-func _on_realm_access_denied(_new_realm_string: String, world_name: String) -> void:
+func _on_realm_access_denied(new_realm_string: String, world_name: String) -> void:
 	# The world restricts access and this user is not on its allow-list (#1725). Only
 	# Global.realm is wired here — transient Realm instances (portable experiences) just
 	# fail to load, same as they do for the generic failure toast.
-	_clear_boot_realm_if_denied(world_name)
 	Global.modal_manager.async_show_private_world_modal(world_name)
-	# A cold start straight into a denied world booted the explorer with no realm ever set, so
-	# dismissing the modal would strand the user in an empty scene. Fall back to the main realm
-	# in that case only; an in-session denial (has_realm() true) leaves the user where they were.
-	# Deferred to avoid re-entering async_set_realm from its own denial signal.
-	if is_instance_valid(Global.get_explorer()) and not Global.realm.has_realm():
-		Global.realm.async_set_realm.call_deferred(DclUrls.main_realm())
+	Navigator.recover_from_refusal(new_realm_string)
 
 
 ## Checks a realm's private-world access BEFORE any navigation UI is shown, so a world the
@@ -1796,23 +1790,6 @@ func warm_realm_access(realm_string: String) -> void:
 	if world_name.is_empty():
 		return
 	WorldPermissionsHelper.async_is_allowed(world_name)
-
-
-## async_join_world / async_teleport_to persist the destination *before* the explorer scene
-## gets to run the private-world gate, so a refused world would otherwise stay as the boot
-## realm and re-open this modal on every cold start. Point it back at the main realm.
-func _clear_boot_realm_if_denied(world_name: String) -> void:
-	var config = Global.get_config()
-	var stored: String = config.last_realm_joined
-	if stored.is_empty():
-		return
-	var stored_world := WorldPermissionsHelper.world_name_from_realm(
-		stored, Realm.resolve_realm_url(stored)
-	)
-	if stored_world != world_name:
-		return
-	config.last_realm_joined = DclUrls.main_realm()
-	config.save_to_settings_file()
 
 
 func set_camera_mode(camera_mode: Global.CameraMode) -> void:
