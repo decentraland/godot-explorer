@@ -46,6 +46,8 @@ class DclGodotiOS : public Object {
 
 public:
 	static String receivedUrl;
+    // APNs device token as lowercase hex; "" until it resolves or when registration failed.
+    static String apnsToken;
 
     void print_version();
     String test_logging();
@@ -67,6 +69,10 @@ public:
     // Local notifications - Phase 1 API
     void request_notification_permission();
     bool has_notification_permission();
+
+    // Remote push (APNs). push_service.mm requests the token on every launch; it lands
+    // asynchronously, so connect to apns_token_ready and then read the cached value.
+    String get_apns_token();
     bool schedule_local_notification(String notification_id, String title, String body, int delay_seconds);
     bool cancel_local_notification(String notification_id);
     bool cancel_all_local_notifications();
@@ -131,6 +137,11 @@ public:
 
     // Called from Objective-C when a deeplink is received
     static void emit_deeplink_received(String url);
+
+    // Called from the injected APNs delegate callbacks (main thread). Empty on failure.
+    static void emit_apns_token_ready(String token);
+    // Called from the requestAuthorization completion, marshalled to the main thread.
+    static void emit_notification_permission_result(bool granted);
 
     // Called from DCAppAttestService completion handlers (always marshalled
     // to the main thread first). `key_id` is Apple's base64-encoded keyId.
