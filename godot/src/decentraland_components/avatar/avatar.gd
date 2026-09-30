@@ -30,46 +30,6 @@ const SCREEN_NOTIFIER_AABB: AABB = AABB(Vector3(-1.0, -0.3, -1.0), Vector3(2.0, 
 # Fallback nametag height when no meshes are loaded yet (meters above avatar origin).
 const DEFAULT_NAMETAG_HEIGHT := 1.9
 
-# Base eyes ship without an iris mask, so no client can tint them and the eye color did nothing
-# (#2439). Masks for the base eyes that draw an iris, keyed by the eye texture's content hash;
-# regenerate with tools/eye_masks/generate.py.
-const BASE_EYE_MASKS: Dictionary[String, String] = {
-	"bafkreidbeafduyssl7y2gdjoxq3ouagn6beivty4v6eovpl5iz2z72jeqm":
-	"res://assets/avatar/eye_masks/eyes_02_mask.png",
-	"bafkreiddfvmi3kvxgjqcwjev6ot4rkeswbwv7nt5pmpr5du3dywpbiiegq":
-	"res://assets/avatar/eye_masks/eyes_04_mask.png",
-	"bafkreigmp6kksur4nln6fsnt4bx3nwmjtztw22ti47zpqxlhihw7x3s5bm":
-	"res://assets/avatar/eye_masks/eyes_06_mask.png",
-	"bafkreiekdf7ryiigiairg2zz3vc6xcddlcrzotygtupyafjzv4ahvunjaq":
-	"res://assets/avatar/eye_masks/eyes_08_mask.png",
-	"bafkreifwflrbyaq4rlisyrzgmjunm4ah55fznzt4mvcadgt5tp3iriv6nu":
-	"res://assets/avatar/eye_masks/eyes_11_mask.png",
-	"bafkreifzn5vsmpmu46zow4agsccsaimdywxr5a5cc4lrq3ldepkypfse54":
-	"res://assets/avatar/eye_masks/eyes_12_mask.png",
-	"bafkreic5ileafhebzefbcojhoc63yt5m7chpq7jsvng54pvxxtcyl6dg6e":
-	"res://assets/avatar/eye_masks/eyes_14_mask.png",
-	"bafkreictmrdsxaxzifrldbu2cdgtpxjtwwcx2hxpksgrhqi2tavdopcjua":
-	"res://assets/avatar/eye_masks/eyes_17_mask.png",
-	"bafkreihyo4jsqjsgfwdwucdfyvbkkww7mgkc4dsypbarxpwuhgpygxjmaq":
-	"res://assets/avatar/eye_masks/f_eyes_01_mask.png",
-	"bafkreidm6bs6vixgdi5obils34ujmhittgf43dwie6gjzlrc644gzkhjsu":
-	"res://assets/avatar/eye_masks/f_eyes_02_mask.png",
-	"bafkreigmm5zfnzu4egbiajlx4iivfy36stx243zytg5fvk2jfgmlka7zci":
-	"res://assets/avatar/eye_masks/f_eyes_04_mask.png",
-	"bafkreiho5cykajxijt3bss7h6s7pobrspzfave2wu6gfj2ndzreynz5bum":
-	"res://assets/avatar/eye_masks/f_eyes_06_mask.png",
-	"bafkreihsngpwvcdmgrcj5tmmfzwpppwmrsc6r3b2d5zvy4ud4zcaxdvjw4":
-	"res://assets/avatar/eye_masks/f_eyes_07_mask.png",
-	"bafkreicqdnzkngyjm25eyd2mgfzk4rmoaeakd3bjcyh6i277q2rstktxza":
-	"res://assets/avatar/eye_masks/f_eyes_08_mask.png",
-	"bafkreif7kkkztcw2ts6ijo7pqc7k2sgc5kvab46t566hjtd7slxjicxste":
-	"res://assets/avatar/eye_masks/f_eyes_09_mask.png",
-	"bafkreifin5nam6vkl25mugq7rtjaslxmkc2bxjksr56teirlpl3vv2ahhy":
-	"res://assets/avatar/eye_masks/f_eyes_10_mask.png",
-	"bafkreicdjq7mi4cs2lcnzbiwnkxg3pbhzlie4yethzvcekbekqvto32ewu":
-	"res://assets/avatar/eye_masks/f_eyes_11_mask.png",
-}
-
 # Maps AvatarAnchorPointType (SDK proto, see avatar_attach.proto) to skeleton
 # bone names. Ids 0 (POSITION) and 1 (NAME_TAG) are non-skeletal and resolved
 # directly in get_anchor_point_global_transform.
@@ -1260,8 +1220,6 @@ func apply_texture_and_mask(mesh: MeshInstance3D, textures: Array, color: Color,
 		current_material.set_shader_parameter(
 			"mask_texture", Global.content_provider.get_texture_from_hash(textures[1])
 		)
-	elif BASE_EYE_MASKS.has(textures[0]):
-		current_material.set_shader_parameter("mask_texture", load(BASE_EYE_MASKS[textures[0]]))
 	else:
 		current_material.set_shader_parameter("mask_texture", null)
 
