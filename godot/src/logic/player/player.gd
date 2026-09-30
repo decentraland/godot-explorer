@@ -121,6 +121,8 @@ const WALL_SLIDE_MIN_MULT := 0.0
 # stun duration (Unity LongFallStunTime).
 const HARD_LANDING_FALL_HEIGHT := 8.0
 const HARD_LANDING_STUN_TIME := 0.75
+# #2854 M12: external-force multiplier while gliding (Unity GlideWindResponse).
+const GLIDE_WIND_RESPONSE := 1.5
 # cos(46deg): a slide collision flatter than this is walkable ground; steeper
 # is a ramp/wall face — sliding on one must not count as support.
 const WALKABLE_NORMAL_Y := 0.695
@@ -1426,8 +1428,11 @@ func _apply_scene_physics(
 	dt: float, external_acceleration: Vector3, impulses: PackedVector3Array, on_floor: bool
 ) -> void:
 	# Force XZ accumulates; force Y was already folded into effective_gravity.
-	external_velocity.x += external_acceleration.x * dt
-	external_velocity.z += external_acceleration.z * dt
+	# #2854 M12: an open glider catches airflow — external forces act stronger
+	# (Unity ApplyExternalForce.cs: ExternalAcceleration *= GlideWindResponse).
+	var wind := GLIDE_WIND_RESPONSE if glide_state == GLIDE_GLIDING else 1.0
+	external_velocity.x += external_acceleration.x * wind * dt
+	external_velocity.z += external_acceleration.z * wind * dt
 
 	var got_upward_impulse: bool = false
 	for impulse in impulses:
