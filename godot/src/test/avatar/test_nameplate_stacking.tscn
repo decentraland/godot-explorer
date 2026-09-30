@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://cqx4hn2mtb8wj"]
+
+[ext_resource type="Script" uid="uid://boln5pnbhk4fx" path="res://src/test/avatar/test_nameplate_stacking.gd" id="1_nameplate"]
+
+[node name="TestNameplateStacking" type="Node"]
+script = ExtResource("1_nameplate")
