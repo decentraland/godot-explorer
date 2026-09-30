@@ -22,6 +22,7 @@ signal open_settings
 signal open_settings_panel
 signal open_backpack(on_emotes: bool)
 signal open_discover
+signal open_discover_panel  # Landscape-only: Discover side panel docked by the navbar
 ## Carries the entry point, reported by Menu.async_show_credits.
 signal open_credits(source: String)
 signal open_own_profile
@@ -51,11 +52,7 @@ signal favorite_destination_set
 signal orientation_changed(is_portrait: bool)
 signal chat_write_mode_changed(is_writing: bool)
 
-enum CameraMode {
-	FIRST_PERSON = 0,
-	THIRD_PERSON = 1,
-	CINEMATIC = 2,
-}
+enum CameraMode { FIRST_PERSON = 0, THIRD_PERSON = 1, CINEMATIC = 2 }
 
 enum FriendshipStatus {
 	UNKNOWN = -1,
@@ -252,45 +249,6 @@ func is_gp_benchmark() -> bool:
 	return cli.gp_benchmark or (deep_link_obj != null and deep_link_obj.gp_benchmark)
 
 
-## Activate the Scene Inspector bridge from app startup when a target is set via
-## `--scene-inspector=ws://…` (baked into the iOS build / passed on desktop) or
-## `?scene-inspector=` deeplink. Idempotent: the bridge is created at most once;
-## later target changes are handled by the bridge's own deeplink-reconnect.
-##
-## Dialing from boot (instead of in-world) means the channel is up from second 0.
-## In DEBUG builds it also arms the bounded boot-log ring + installs the capture
-## sinks, so startup logs are buffered and flushed on the first `subscribe`. This
-## is gated off production: there, nothing is captured or buffered without a
-## connection (the no-buffering-without-a-peer contract).
-func _activate_scene_inspector_from_config() -> void:
-	if _scene_inspector_bridge != null:
-		return
-	var target := ""
-	if not deep_link_obj.scene_inspector.is_empty():
-		target = deep_link_obj.scene_inspector
-	elif not cli.scene_inspector.is_empty():
-		target = cli.scene_inspector
-	if target.is_empty():
-		# Debug builds with no explicit target default to a local hub over loopback,
-		# so a plain Godot-editor deploy / F5 auto-dials with no --scene-inspector
-		# arg (parity with the iOS export plugin, which bakes the LAN IP). Android
-		# reaches it via `adb reverse tcp:9231 tcp:9231`; desktop hits it directly.
-		# The client retries quietly if no hub is up, and capture stays gated. Never
-		# in production.
-		if OS.is_debug_build() and not is_production():
-			target = "ws://127.0.0.1:9231"
-		else:
-			return
-	scene_inspector_active = true
-	if OS.is_debug_build():
-		scene_inspector_dispatcher.set_early_log_capture(true)
-	_scene_inspector_bridge = SceneInspectorBridge.new()
-	_scene_inspector_bridge.set_name("scene_inspector_bridge")
-	get_tree().root.add_child.call_deferred(_scene_inspector_bridge)
-	_scene_inspector_bridge.setup.call_deferred(target)
-	print("SceneInspectorBridge: activating from boot -> ", target)
-
-
 ## Logging self-test, triggered by `--test-logging` / `?test-logging=true`.
 ## Exercises every logging form in every stack (GDScript / Rust / Swift / ObjC /
 ## Kotlin) so we can confirm each pipes into the unified channel. Grep `[LOGTEST]`
@@ -348,12 +306,19 @@ func _run_logging_selftest() -> void:
 	print("[LOGTEST] ===== logging self-test end =====")
 
 
-## Forward the optimized-content-base-url deeplink param into DclCli so the
-## scene fetcher / content provider use it for optimized loading. Shared by the
-## desktop fake-deeplink path (_ready) and the mobile/iOS live path (router).
+## Forward the optimized-content-base-url deeplink param into DclCli so the scene fetcher /
+## content provider use it for optimized loading (non-production; Decentraland https or LAN
+## hosts only). Shared by the desktop fake-deeplink path (_ready) and the mobile live path.
 func _apply_optimized_content_base_url(obj: DclParseDeepLink) -> void:
 	var opt_url: String = obj.params.get("optimized-content-base-url", "")
-	if not opt_url.is_empty():
+	var allowed := UrlHost.is_decentraland_https(opt_url) or UrlHost.is_local_network(opt_url)
+	if opt_url.is_empty():
+		return
+	if is_production():
+		print("[DEEPLINK] optimized-content-base-url ignored on production builds")
+	elif not allowed:
+		print("[DEEPLINK] optimized-content-base-url rejected (not https Decentraland or LAN)")
+	else:
 		print("[DEEPLINK] optimized-content-base-url=", opt_url)
 		cli.optimized_content_base_url = opt_url
 
@@ -551,6 +516,7 @@ func _ready():
 	if DclIosPlugin.is_available():
 		var dcl_ios_singleton = Engine.get_singleton("DclGodotiOS")
 		if dcl_ios_singleton:
+			# Warm path only; iOS reads the cold-start link in _notification(READY).
 			dcl_ios_singleton.deeplink_received.connect(deep_link_router.process_deep_link)
 
 	_dcl_swift_lib_smoke_test()
@@ -785,9 +751,11 @@ func _ready():
 
 	# Scene Inspector: dial the configured hub from app startup (second 0) rather
 	# than in-world, so the channel — and, in debug, boot-log capture — is live
-	# from boot. Also re-checked when a deeplink arrives (idempotent).
-	_activate_scene_inspector_from_config()
-	deep_link_router.deep_link_received.connect(_activate_scene_inspector_from_config)
+	# from boot. The bridge also handles `?scene-inspector=` deeplinks.
+	_scene_inspector_bridge = SceneInspectorBridge.new()
+	_scene_inspector_bridge.set_name("scene_inspector_bridge")
+	_scene_inspector_bridge.activate_from_config()
+	get_tree().root.add_child.call_deferred(_scene_inspector_bridge)
 
 	if "memory_debugger" in self:
 		get_tree().root.add_child.call_deferred(self.memory_debugger)
@@ -1094,11 +1062,9 @@ func sign_out() -> void:
 	# Wipe the previous account's in-memory notification history so it can't leak
 	# into the next session's panel/bell badge (issue #2104).
 	NotificationsManager.clear_notification_history()
-	# Drop the previous account's event reminders so they can't fire on the
-	# device after sign-out. Only "event_" entries (per-account attended-event
-	# reminders) are cleared; the per-install day1 welcome is preserved. The
-	# sync-on-next-login REMOVE pass only runs for an authenticated account, so
-	# without this a signed-out/guest session keeps the old reminders scheduled.
+	# Drop the previous account's event reminders ("event_" entries) so they can't fire
+	# after sign-out; the per-install day1 welcome is left alone. The sync-on-next-login
+	# REMOVE pass only runs when authenticated, so a guest session would keep them armed.
 	NotificationsManager.clear_event_local_notifications()
 	# The analytics first-move poll (a Timer under this autoload) reads
 	# scene_runner.player_body_node; left running it would poll the freed Player
@@ -1725,8 +1691,7 @@ func _notification(what: int) -> void:
 		# session. Tell the comms manager we're back so it forgives transient reconnect
 		# failures and treats Duplicate* evictions as our own stale session being reclaimed.
 		# Real mobile only: on desktop every alt-tab fires FOCUS_IN, and a 30s grace window
-		# armed that often would retry genuine another-device evictions instead of
-		# surfacing the "session ended" modal.
+		# armed that often would retry genuine evictions instead of surfacing the modal.
 		if Global.is_mobile() and !Global.is_virtual_mobile():
 			comms.notify_app_resumed()
 
@@ -1738,23 +1703,24 @@ func _notification(what: int) -> void:
 			elif DclIosPlugin.is_available():
 				new_url = DclIosPlugin.get_deeplink_args().get("data", "")
 
-			# Only process if a new deep link URL was received.
-			# Don't overwrite deep_link_url with empty to avoid clobbering
-			# data set by the iOS signal path (process_deep_link).
+			# Only process a new URL: overwriting deep_link_url with empty would clobber
+			# what the iOS signal path (process_deep_link) already set.
 			if new_url.is_empty():
 				return
 
-			# On cold start (NOTIFICATION_READY), pre-set the environment from the deeplink
-			# BEFORE processing it. This prevents _check_dclenv_change() from seeing a
-			# difference (default "org" vs deeplink env) and calling sign_out() prematurely,
-			# which would skip the orientation/UI zoom setup in main.gd.
+			# On cold start, set the environment from the deeplink BEFORE processing it, or
+			# _check_dclenv_change() sees default "org" vs deeplink env and calls sign_out()
+			# prematurely, skipping the orientation/UI zoom setup in main.gd.
 			if what == NOTIFICATION_READY:
 				var parsed = DclParseDeepLink.parse_decentraland_link(new_url)
 				if not parsed.dclenv.is_empty():
 					DclGlobal.set_dcl_environment(parsed.dclenv)
 					dcl_env_explicit = true
 
-			deep_link_router.process_deep_link(new_url)
+			# READY = launch intent (the tap started it); FOCUS_IN = already running.
+			deep_link_router.process_deep_link(
+				new_url, "cold" if what == NOTIFICATION_READY else "warm"
+			)
 
 
 func _on_player_profile_changed_sync_events(_profile: DclUserProfile) -> void:

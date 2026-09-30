@@ -74,7 +74,9 @@ Verbs: `pause`, `resume`, `reload_scene`, `get_status`, `set_file_logging`,
 `set_perf_interval`, `set_lifecycle_verbose`, `set_include_bin_payload`,
 `subscribe`/`unsubscribe {streams:[...]}`, and (delegated to the shared backend)
 `ping`, `scenes`, `scene`, `entity`, `ui_scene`, `ui_entity`, `avatars`,
-`avatar`, `app_ui`, `focus`, `eval`. `eval` is hard-gated out of production builds.
+`avatar`, `app_ui`, `focus`, `eval`. Production builds serve only the inspection
+verbs (`PRODUCTION_COMMANDS` in `scene_inspector_bridge.gd`): no `eval`, `pause`/`resume`,
+`reload_scene` or `set_file_logging`, and `node_query` returns props but skips `calls`.
 
 ## Production safety (connection-gated, opt-in)
 
@@ -98,6 +100,11 @@ cargo run -- run --target ios -- --scene-inspector=ws://<this-mac-ip>:9231 # dev
 #   (on iOS the dcl-ios-devtools export plugin AUTO-bakes this address in debug
 #    builds via the godot_cmdline Info.plist key — so even a Godot-editor deploy
 #    phones home to the hub with no extra args. Override via DCL_IOS_GODOT_CMDLINE.)
+
+#   A `decentraland://open?scene-inspector=ws://<this-mac-ip>:9231` deeplink also
+#   works on non-production builds, as long as the target is on the local network.
+#   Production builds ignore the deeplink: a tappable URL is not device access, so
+#   there the target only comes from the CLI flag or the baked iOS key.
 
 # 3. Drive it (helpers in .claude/skills/mobile-dev-debug-tool/scripts/):
 unified.sh ping

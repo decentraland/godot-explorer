@@ -22,6 +22,10 @@ const DECENTRALAND_LOGO = preload("res://decentraland_logo.png")
 var border_width: int
 var avatar: DclAvatar
 
+## Colour handed to `apply_style()` before `_ready()` ran, so before the @onready panels below
+## were assigned. Applied on ready rather than dropped.
+var _pending_style_color: Variant = null
+
 @onready var texture_rect_profile: TextureRect = %TextureRect_Profile
 @onready var panel_border: PanelContainer = %Panel_Border
 @onready var panel_background: PanelContainer = %Panel_Background
@@ -32,6 +36,10 @@ func _ready() -> void:
 	if panel_border:
 		_update_border_style()
 	_update_border_visibility()
+	if _pending_style_color != null:
+		var pending: Color = _pending_style_color
+		_pending_style_color = null
+		apply_style(pending)
 
 
 func _update_border_visibility() -> void:
@@ -140,15 +148,27 @@ func async_update_profile_picture(data: SocialItemData):
 	if result is PromiseError:
 		printerr("profile_picture::_async_download_image promise error: ", result.get_error())
 		return
+	if texture_rect_profile == null:
+		return  # never entered the tree while the texture loaded; nothing to draw into
 	texture_rect_profile.texture = result.texture
 
 
 func set_dcl_logo() -> void:
-	texture_rect_profile.texture = DECENTRALAND_LOGO
+	if texture_rect_profile != null:
+		texture_rect_profile.texture = DECENTRALAND_LOGO
 	apply_style(Color.GREEN)
 
 
 func apply_style(color: Color) -> void:
+	# Reachable before this node is in the tree: an async builder can add a card to a container
+	# that has already been detached (leaving a page detaches it long before queue_free runs), and
+	# add_child() onto a detached parent never fires _ready - so these @onready panels are null.
+	# Calling a method on one compiles to OPCODE_CALL_METHOD_BIND, whose null check is
+	# `#ifdef DEBUG_ENABLED`: release builds segfault instead of erroring. Defer to _ready().
+	if panel_background == null or panel_border == null:
+		_pending_style_color = color
+		return
+
 	# Apply background color to the main panel container
 	var stylebox_background := panel_background.get_theme_stylebox("panel")
 	stylebox_background = stylebox_background.duplicate()

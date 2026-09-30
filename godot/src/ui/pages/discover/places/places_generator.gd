@@ -105,10 +105,19 @@ func async_request_last_places(_offset: int, _limit: int) -> void:
 		if not dedup_key.is_empty():
 			seen[dedup_key] = true
 
+		# Re-checked every iteration: this loop awaits, so the page can go away mid-loop.
+		if not can_populate():
+			return
+
 		var item = DISCOVER_CARROUSEL_ITEM.instantiate()
 		item_container.add_child(item)
 		item.set_data(data)
-		item.item_pressed.connect(discover.on_item_pressed)
+		# Relay through the generator's own signal so a host without a `discover` reference (e.g.
+		# the landscape DiscoverPanel) can still react to a tap; `discover`, when set, keeps
+		# routing straight to the full Discover screen's own SidePanelWrapper flow.
+		item.item_pressed.connect(item_pressed.emit)
+		if is_instance_valid(discover):
+			item.item_pressed.connect(discover.on_item_pressed)
 
 	if last_places.size() > 0:
 		report_loading_status.emit(CarrouselGenerator.LoadingStatus.OK_WITH_RESULTS)
@@ -184,6 +193,9 @@ func async_request_from_api(offset: int, limit: int) -> void:
 func _async_fetch_places(url: String, limit: int = 100) -> void:
 	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_GET, "")
 
+	if not can_populate():
+		return
+
 	if is_instance_valid(_discover_carrousel_item_loading):
 		_discover_carrousel_item_loading.hide()
 
@@ -209,6 +221,11 @@ func _async_fetch_places(url: String, limit: int = 100) -> void:
 		item_container.add_child(item)
 
 		item.set_data(item_data)
-		item.item_pressed.connect(discover.on_item_pressed)
+		# Relay through the generator's own signal so a host without a `discover` reference (e.g.
+		# the landscape DiscoverPanel) can still react to a tap; `discover`, when set, keeps
+		# routing straight to the full Discover screen's own SidePanelWrapper flow.
+		item.item_pressed.connect(item_pressed.emit)
+		if is_instance_valid(discover):
+			item.item_pressed.connect(discover.on_item_pressed)
 
 	report_loading_status.emit(CarrouselGenerator.LoadingStatus.OK_WITH_RESULTS)

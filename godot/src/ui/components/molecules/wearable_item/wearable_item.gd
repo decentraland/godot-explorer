@@ -171,7 +171,14 @@ func _update_marketplace_state(is_selected: bool):
 func _on_action_pressed():
 	if not is_marketplace_item:
 		return
-	if Iap.get_balance() >= marketplace_price and not marketplace_url.is_empty():
+	# Gated at the consumer, not at the producer that builds the URL (#2814): one criterion
+	# for every card, whoever populated it.
+	var can_open_detail := (
+		StorePolicy.can_show_external_purchase_links()
+		and Iap.get_balance() >= marketplace_price
+		and not marketplace_url.is_empty()
+	)
+	if can_open_detail:
 		MarketplaceTracker.open_and_track(marketplace_url)
 	else:
 		Global.open_credits.emit("WEARABLE_ITEM")

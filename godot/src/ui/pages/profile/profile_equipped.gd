@@ -31,6 +31,11 @@ func async_refresh(profile: DclUserProfile) -> void:
 		)
 		await PromiseUtils.async_all(equipped_wearables_promises)
 
+		# The profile page may have been closed while the wearables loaded; adding to a detached
+		# container skips _ready on the new items, leaving their @onready nodes null.
+		if not is_inside_tree():
+			return
+
 		for wearable_urn in wearables_urns:
 			var wearable_definition: DclItemEntityDefinition = Global.content_provider.get_wearable(
 				wearable_urn

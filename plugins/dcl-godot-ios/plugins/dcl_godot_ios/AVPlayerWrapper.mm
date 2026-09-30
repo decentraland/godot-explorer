@@ -261,26 +261,10 @@
         switch (status) {
             case AVPlayerItemStatusReadyToPlay: {
                 NSLog(@"[AVPlayerWrapper] Player ready to play");
-
-                // Get video dimensions from the video track
-                NSArray *videoTracks = [_playerItem.asset tracksWithMediaType:AVMediaTypeVideo];
-                if (videoTracks.count > 0) {
-                    AVAssetTrack *videoTrack = videoTracks[0];
-                    CGSize naturalSize = videoTrack.naturalSize;
-                    CGAffineTransform transform = videoTrack.preferredTransform;
-
-                    // Apply transform to get actual dimensions (handles rotation)
-                    CGSize transformedSize = CGSizeApplyAffineTransform(naturalSize, transform);
-                    int newWidth = (int)fabs(transformedSize.width);
-                    int newHeight = (int)fabs(transformedSize.height);
-
-                    if (newWidth != _videoWidth || newHeight != _videoHeight) {
-                        _videoWidth = newWidth;
-                        _videoHeight = newHeight;
-                        _videoSizeChanged = YES;
-                        NSLog(@"[AVPlayerWrapper] Video size: %dx%d", _videoWidth, _videoHeight);
-                    }
-                }
+                // Don't read the asset's tracks here: -[AVAsset tracksWithMediaType:] is a
+                // synchronous XPC call to the media server and this KVO callback runs on
+                // the main thread (App Hang GODOT-EXPLORER-2ZX). The video size comes from
+                // each frame's pixel buffer in acquireIOSurfacePtr instead.
                 break;
             }
             case AVPlayerItemStatusFailed:
