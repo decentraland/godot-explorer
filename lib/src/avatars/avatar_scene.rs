@@ -1507,27 +1507,34 @@ impl AvatarScene {
         };
         match self.pending_avatar_mut(alias) {
             // Same alias, different peer: nothing stored for the old one applies.
-            Some(existing) if existing.address != pending.address => *existing = pending,
+            Some(existing)
+                if existing.address.to_string().as_h160()
+                    != pending.address.to_string().as_h160() =>
+            {
+                *existing = pending
+            }
             Some(_) => {}
             None => self.pending_avatars.push_back(pending),
         }
     }
 
     fn promote_pending_avatar(&mut self) {
-        self.slots_full_warned = false;
         let Some(pending) = self.pending_avatars.pop_front() else {
+            self.slots_full_warned = false;
             return;
         };
+        if self.pending_avatars.is_empty() {
+            self.slots_full_warned = false;
+        }
 
         let alias = pending.alias;
         self.add_avatar(alias, pending.address);
         if let Some(profile) = pending.profile {
             self.update_avatar_by_alias(alias, &profile);
         }
-        if let (Some(transform), Some(entity_id)) =
-            (pending.transform, self.avatar_entity.get(&alias).copied())
-        {
-            self._update_avatar_transform(&entity_id, transform, true);
+        if let Some(transform) = pending.transform {
+            let entity_id = self.avatar_entity.get(&alias).copied();
+            self.apply_avatar_transform(alias, entity_id, transform, true);
         }
         if pending.blocked {
             self.set_avatar_blocked(alias, true);
@@ -1567,6 +1574,15 @@ impl AvatarScene {
         }
         self.pending_avatars.clear();
         self.slots_full_warned = false;
+        // Same per-avatar state remove_avatar drops; aliases restart at 1 on
+        // every reconnect, so stale entries would be applied to new peers.
+        self.avatar_address.clear();
+        self.last_movement_timestamp.clear();
+        self.last_position_index.clear();
+        self.last_emote_incremental_id.clear();
+        // PLAYER is the local player's profile and outlives the connection.
+        self.last_updated_profile
+            .retain(|entity_id, _| *entity_id == SceneEntityId::PLAYER);
 
         let impostor_ids: Vec<i64> = self.impostor_slots.keys().copied().collect();
         for id in impostor_ids {
@@ -1621,6 +1637,7 @@ impl AvatarScene {
             self.pending_avatars.remove(index);
             self.last_movement_timestamp.remove(&alias);
             self.last_position_index.remove(&alias);
+            self.last_emote_incremental_id.remove(&alias);
             return;
         }
 
