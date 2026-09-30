@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 
 use ethers_core::types::H160;
 use godot::classes::image::Format;
@@ -95,6 +95,16 @@ struct ImpostorSlot {
     cache_key: String,
 }
 
+/// A peer that arrived while every scene entity slot was taken. Kept up to date
+/// until a slot frees, so promotion shows the peer as it is now.
+struct PendingAvatar {
+    alias: AvatarAlias,
+    address: GString,
+    profile: Option<UserProfile>,
+    transform: Option<DclTransformAndParent>,
+    blocked: bool,
+}
+
 #[derive(GodotClass)]
 #[class(base=Node)]
 pub struct AvatarScene {
@@ -104,6 +114,8 @@ pub struct AvatarScene {
     avatar_entity: HashMap<AvatarAlias, SceneEntityId>,
     avatar_godot_scene: HashMap<SceneEntityId, Gd<DclAvatar>>,
     avatar_address: HashMap<H160, AvatarAlias>,
+    pending_avatars: VecDeque<PendingAvatar>,
+    slots_full_warned: bool,
 
     crdt_state: SceneCrdtState,
 
@@ -137,6 +149,8 @@ impl INode for AvatarScene {
             crdt_state: SceneCrdtState::from_proto(),
             avatar_godot_scene: HashMap::new(),
             avatar_address: HashMap::new(),
+            pending_avatars: VecDeque::new(),
+            slots_full_warned: false,
             last_updated_profile: HashMap::new(),
             last_movement_timestamp: HashMap::new(),
             last_position_index: HashMap::new(),
@@ -777,15 +791,13 @@ impl AvatarScene {
         alias: u32,
         transform: Transform3D,
     ) {
-        let entity_id = if let Some(entity_id) = self.avatar_entity.get(&alias) {
-            *entity_id
-        } else {
-            // TODO: handle this condition
+        let entity_id = self.avatar_entity.get(&alias).copied();
+        if entity_id.is_none() && !self.is_pending(alias) {
             return;
-        };
+        }
 
         let dcl_transform = DclTransformAndParent::from_godot(&transform, Vector3::ZERO);
-        self._update_avatar_transform(&entity_id, dcl_transform, false);
+        self.apply_avatar_transform(alias, entity_id, dcl_transform, false);
     }
 
     #[func]
@@ -796,10 +808,17 @@ impl AvatarScene {
             return;
         }
 
-        // TODO: the entity Self::MAX_ENTITY_ID + 1 would be a buggy avatar
-        let entity_id = self
-            .get_next_entity_id()
-            .unwrap_or(SceneEntityId::new(Self::MAX_ENTITY_ID + 1, 0));
+        if self.is_pending(alias) {
+            self.queue_pending_avatar(alias, address);
+            return;
+        }
+
+        // No free slot: an out-of-range id would be shared by every extra peer
+        // (ADR-245), so the peer waits for a slot instead.
+        let Ok(entity_id) = self.get_next_entity_id() else {
+            self.queue_pending_avatar(alias, address);
+            return;
+        };
         self.crdt_state.entities.try_init(entity_id);
 
         self.avatar_entity.insert(alias, entity_id);
@@ -1212,6 +1231,11 @@ impl AvatarScene {
             SceneCrdtStateProtoComponents::get_avatar_equipped_data(&self.crdt_state)
                 .get(&avatar_entity_id)
                 .and_then(|v| v.value.clone());
+        let world_transform = self
+            .crdt_state
+            .get_transform()
+            .get(&avatar_entity_id)
+            .and_then(|v| v.value.clone());
 
         let mut scene_runner = DclGlobal::singleton().bind().scene_runner.clone();
         let mut scene_runner = scene_runner.bind_mut();
@@ -1231,12 +1255,14 @@ impl AvatarScene {
         // Entering the new scene: (re)populate the avatar's components so onEnterScene
         // fires and the player appears in getEntitiesWith(PlayerIdentityData, AvatarBase).
         if let Some(scene) = scene_runner.get_scene_mut(&scene_id) {
-            let dcl_transform = DclTransformAndParent::default(); // TODO: get real transform with scene_offset
-
-            scene
-                .avatar_scene_updates
-                .transform
-                .insert(avatar_entity_id, Some(dcl_transform));
+            // Without a known position yet, the next transform push delivers it.
+            if let Some(world_transform) = world_transform {
+                let scene_origin = scene.godot_dcl_scene.root_node_3d.get_position();
+                scene.avatar_scene_updates.transform.insert(
+                    avatar_entity_id,
+                    Some(world_transform.to_scene_local(scene_origin)),
+                );
+            }
             scene
                 .avatar_scene_updates
                 .internal_player_data
@@ -1455,8 +1481,92 @@ impl AvatarScene {
         Err("No more entity ids available")
     }
 
+    fn is_pending(&self, alias: AvatarAlias) -> bool {
+        self.pending_avatars.iter().any(|p| p.alias == alias)
+    }
+
+    fn pending_avatar_mut(&mut self, alias: AvatarAlias) -> Option<&mut PendingAvatar> {
+        self.pending_avatars.iter_mut().find(|p| p.alias == alias)
+    }
+
+    fn queue_pending_avatar(&mut self, alias: AvatarAlias, address: GString) {
+        if !self.slots_full_warned {
+            tracing::warn!(
+                "All {} avatar entity slots are taken, new peers wait until one frees",
+                Self::MAX_ENTITY_ID - Self::FROM_ENTITY_ID
+            );
+            self.slots_full_warned = true;
+        }
+
+        let pending = PendingAvatar {
+            alias,
+            address,
+            profile: None,
+            transform: None,
+            blocked: false,
+        };
+        match self.pending_avatar_mut(alias) {
+            // Same alias, different peer: nothing stored for the old one applies.
+            Some(existing) if existing.address != pending.address => *existing = pending,
+            Some(_) => {}
+            None => self.pending_avatars.push_back(pending),
+        }
+    }
+
+    fn promote_pending_avatar(&mut self) {
+        self.slots_full_warned = false;
+        let Some(pending) = self.pending_avatars.pop_front() else {
+            return;
+        };
+
+        let alias = pending.alias;
+        self.add_avatar(alias, pending.address);
+        if let Some(profile) = pending.profile {
+            self.update_avatar_by_alias(alias, &profile);
+        }
+        if let (Some(transform), Some(entity_id)) =
+            (pending.transform, self.avatar_entity.get(&alias).copied())
+        {
+            self._update_avatar_transform(&entity_id, transform, true);
+        }
+        if pending.blocked {
+            self.set_avatar_blocked(alias, true);
+        }
+    }
+
+    fn apply_avatar_transform(
+        &mut self,
+        alias: AvatarAlias,
+        entity_id: Option<SceneEntityId>,
+        dcl_transform: DclTransformAndParent,
+        instant: bool,
+    ) {
+        match entity_id {
+            Some(entity_id) => self._update_avatar_transform(&entity_id, dcl_transform, instant),
+            None => {
+                if let Some(pending) = self.pending_avatar_mut(alias) {
+                    pending.transform = Some(dcl_transform);
+                }
+            }
+        }
+    }
+
     pub fn clean(&mut self) {
-        self.avatar_entity.clear();
+        // Free the slots and drop the players from every scene, as remove_avatar
+        // does one by one; otherwise each comms reconnect leaks all of them.
+        let entity_ids: Vec<SceneEntityId> = self.avatar_entity.drain().map(|(_, e)| e).collect();
+        for entity_id in &entity_ids {
+            self.crdt_state.kill_entity(entity_id);
+        }
+        let mut scene_runner = DclGlobal::singleton().bind().scene_runner.clone();
+        for (_, scene) in scene_runner.bind_mut().get_all_scenes_mut().iter_mut() {
+            scene
+                .avatar_scene_updates
+                .deleted_entities
+                .extend(entity_ids.iter().copied());
+        }
+        self.pending_avatars.clear();
+        self.slots_full_warned = false;
 
         let impostor_ids: Vec<i64> = self.impostor_slots.keys().copied().collect();
         for id in impostor_ids {
@@ -1507,6 +1617,13 @@ impl AvatarScene {
     }
 
     pub fn remove_avatar(&mut self, alias: u32) {
+        if let Some(index) = self.pending_avatars.iter().position(|p| p.alias == alias) {
+            self.pending_avatars.remove(index);
+            self.last_movement_timestamp.remove(&alias);
+            self.last_position_index.remove(&alias);
+            return;
+        }
+
         if let Some(entity_id) = self.avatar_entity.remove(&alias) {
             // Before anything is unregistered — append_avatar_emote_command still
             // needs the node to resolve which scenes the avatar is in.
@@ -1557,6 +1674,10 @@ impl AvatarScene {
             let avatars = self.get_avatars();
             self.base_mut()
                 .emit_signal("avatar_scene_changed", &[avatars.to_variant()]);
+
+            // Promotion pushes transforms to scenes, which binds the scene runner again.
+            drop(scene_runner);
+            self.promote_pending_avatar();
         }
     }
 
@@ -1653,13 +1774,14 @@ impl AvatarScene {
             scene_ids
         };
 
-        // Push dirty state only in active scenes
+        // Push dirty state only in active scenes, relative to each scene's origin
         for scene_id in avatar_active_scene_ids {
             if let Some(scene) = scene_runner.get_scene_mut(&scene_id) {
-                scene
-                    .avatar_scene_updates
-                    .transform
-                    .insert(*avatar_entity_id, Some(dcl_transform.clone()));
+                let scene_origin = scene.godot_dcl_scene.root_node_3d.get_position();
+                scene.avatar_scene_updates.transform.insert(
+                    *avatar_entity_id,
+                    Some(dcl_transform.to_scene_local(scene_origin)),
+                );
             }
         }
 
@@ -1673,12 +1795,10 @@ impl AvatarScene {
         alias: u32,
         transform: &rfc4::Position,
     ) -> bool {
-        let entity_id = if let Some(entity_id) = self.avatar_entity.get(&alias) {
-            *entity_id
-        } else {
-            // TODO: handle this condition
+        let entity_id = self.avatar_entity.get(&alias).copied();
+        if entity_id.is_none() && !self.is_pending(alias) {
             return false;
-        };
+        }
 
         // Skip position messages if we have movement messages (Movement has priority)
         if self.last_movement_timestamp.contains_key(&alias) {
@@ -1708,7 +1828,7 @@ impl AvatarScene {
             parent: SceneEntityId::ROOT,
         };
 
-        self._update_avatar_transform(&entity_id, dcl_transform, false);
+        self.apply_avatar_transform(alias, entity_id, dcl_transform, false);
         self.last_position_index.insert(alias, transform.index);
         true
     }
@@ -1718,13 +1838,11 @@ impl AvatarScene {
         alias: u32,
         movement: &rfc4::Movement,
     ) -> bool {
-        let entity_id = if let Some(entity_id) = self.avatar_entity.get(&alias) {
-            *entity_id
-        } else {
-            // TODO: handle this condition
+        let entity_id = self.avatar_entity.get(&alias).copied();
+        if entity_id.is_none() && !self.is_pending(alias) {
             tracing::warn!("Avatar with alias {} not found", alias);
             return false;
-        };
+        }
 
         // Discard if movement.timestamp is older than the last one (with tolerance)
         const TIMESTAMP_TOLERANCE: f32 = 0.001;
@@ -1762,10 +1880,10 @@ impl AvatarScene {
             parent: SceneEntityId::ROOT,
         };
 
-        self._update_avatar_transform(&entity_id, dcl_transform, movement.is_instant);
+        self.apply_avatar_transform(alias, entity_id, dcl_transform, movement.is_instant);
         // Wire-authoritative animation state for remote double-jump / glide /
         // air state.
-        if let Some(avatar) = self.avatar_godot_scene.get_mut(&entity_id) {
+        if let Some(avatar) = entity_id.and_then(|id| self.avatar_godot_scene.get_mut(&id)) {
             avatar.bind_mut().apply_wire_movement_state(
                 movement.jump_count,
                 movement.glide_state,
@@ -1792,13 +1910,11 @@ impl AvatarScene {
         velocity: godot::prelude::Vector3,
         is_grounded: bool,
     ) -> bool {
-        let entity_id = if let Some(entity_id) = self.avatar_entity.get(&alias) {
-            *entity_id
-        } else {
-            // TODO: handle this condition
+        let entity_id = self.avatar_entity.get(&alias).copied();
+        if entity_id.is_none() && !self.is_pending(alias) {
             tracing::warn!("Avatar with alias {} not found", alias);
             return false;
-        };
+        }
 
         // Discard if timestamp is older than the last one (with tolerance)
         const TIMESTAMP_TOLERANCE: f32 = 0.001;
@@ -1828,11 +1944,11 @@ impl AvatarScene {
             parent: SceneEntityId::ROOT,
         };
 
-        self._update_avatar_transform(&entity_id, dcl_transform, false);
+        self.apply_avatar_transform(alias, entity_id, dcl_transform, false);
         // The temporal bitfield DOES carry grounded (and jump/falling) — treat
         // this path like the uncompressed one. jump_count/glide are zero by
         // construction: the sender forces uncompressed when either carries info.
-        if let Some(avatar) = self.avatar_godot_scene.get_mut(&entity_id) {
+        if let Some(avatar) = entity_id.and_then(|id| self.avatar_godot_scene.get_mut(&id)) {
             avatar
                 .bind_mut()
                 .apply_wire_movement_state(0, 0, is_grounded, velocity);
@@ -1846,7 +1962,9 @@ impl AvatarScene {
         let entity_id = if let Some(entity_id) = self.avatar_entity.get(&alias) {
             *entity_id
         } else {
-            // TODO: handle this condition
+            if let Some(pending) = self.pending_avatar_mut(alias) {
+                pending.profile = Some(profile.clone());
+            }
             return;
         };
 
@@ -1858,6 +1976,8 @@ impl AvatarScene {
             if let Some(avatar) = self.avatar_godot_scene.get_mut(entity_id) {
                 avatar.call("set_blocked_and_hidden", &[blocked.to_variant()]);
             }
+        } else if let Some(pending) = self.pending_avatar_mut(alias) {
+            pending.blocked = blocked;
         }
     }
 
@@ -1877,6 +1997,12 @@ impl AvatarScene {
     pub fn set_avatar_blocked_by_address(&mut self, address: &H160, blocked: bool) {
         if let Some(alias) = self.avatar_address.get(address) {
             self.set_avatar_blocked(*alias, blocked);
+        } else if let Some(pending) = self
+            .pending_avatars
+            .iter_mut()
+            .find(|p| p.address.to_string().as_h160().as_ref() == Some(address))
+        {
+            pending.blocked = blocked;
         }
     }
 
@@ -2063,6 +2189,7 @@ impl AvatarScene {
         target_crdt_state: &mut SceneCrdtState,
         filter_by_scene_id: Option<SceneId>,
         primary_player_inside: bool,
+        scene_origin: Vector3,
     ) {
         for entity_number in Self::FROM_ENTITY_ID..Self::MAX_ENTITY_ID {
             let (local_version, local_live) =
@@ -2106,13 +2233,21 @@ impl AvatarScene {
                         target_transform_component.put(*entity_id, None);
                     }
                 }
-            } else {
-                // todo: transform to local coordinates
-                sync_crdt_lww_component(
-                    entity_id,
-                    target_transform_component,
-                    local_transform_component,
-                );
+            } else if let Some(local_entry) = local_transform_component.get(entity_id) {
+                let changed = target_transform_component
+                    .get(entity_id)
+                    .map(|v| v.timestamp)
+                    != Some(local_entry.timestamp);
+                if changed {
+                    target_transform_component.set(
+                        *entity_id,
+                        local_entry.timestamp,
+                        local_entry
+                            .value
+                            .as_ref()
+                            .map(|t| t.to_scene_local(scene_origin)),
+                    );
+                }
             }
 
             let target_internal_player_data = target_crdt_state.get_internal_player_data_mut();

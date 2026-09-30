@@ -39,6 +39,19 @@ impl DclTransformAndParent {
             parent: SceneEntityId::ROOT,
         }
     }
+
+    /// World-space transform → relative to a scene whose root node sits at the
+    /// Godot position `scene_origin` (same offset `from_godot` takes).
+    pub fn to_scene_local(&self, scene_origin: Vector3) -> Self {
+        Self {
+            translation: Vector3 {
+                x: self.translation.x - scene_origin.x,
+                y: self.translation.y - scene_origin.y,
+                z: self.translation.z + scene_origin.z,
+            },
+            ..self.clone()
+        }
+    }
 }
 
 pub fn update_transform_and_parent(
