@@ -1,21 +1,24 @@
-extends SceneTree
+extends Node
 
 # Tests for NameplateLayer._stack_position (de-overlap solver, #2637).
 # Pins: unconstrained plates stay on their anchor, an overlapping plate with the
 # higher instance id moves clear of the lower one, and untracked plates reserve
 # no space (no phantom no-go rects after despawn — review P1 on #2717).
 #
-# Run headless:
-#   .bin/godot/godot4_bin --headless --path godot \
-#     --script res://src/test/avatar/test_nameplate_stacking.gd
+# Runs as a scene, not --script: NameplateLayer reaches Global, and --script
+# compiles before the autoloads exist.
+
+## Guards against a silent early return: every check below must have run.
+const EXPECTED_CHECKS := 3
 
 const SIZE := Vector2(200, 40)
 const VIEW := Vector2(1600, 720)
 
 var _failures: Array[String] = []
+var _checks: int = 0
 
 
-func _initialize() -> void:
+func _ready() -> void:
 	_test_no_overlap_stays_on_anchor()
 	_test_overlap_separates()
 	_test_untracked_plate_does_not_block()
@@ -61,16 +64,19 @@ func _test_untracked_plate_does_not_block() -> void:
 
 
 func _expect(ctx: String, expected: Variant, actual: Variant) -> void:
+	_checks += 1
 	if expected != actual:
 		_failures.append("%s: expected %s, got %s" % [ctx, expected, actual])
 
 
 func _finish() -> void:
+	if _checks != EXPECTED_CHECKS:
+		_failures.append("ran %d checks, expected %d" % [_checks, EXPECTED_CHECKS])
 	if _failures.is_empty():
 		print("[test_nameplate_stacking] PASS")
-		quit(0)
+		get_tree().quit(0)
 		return
 	for f in _failures:
 		printerr(f)
 	printerr("[test_nameplate_stacking] FAIL: %d case(s)" % _failures.size())
-	quit(1)
+	get_tree().quit(1)
