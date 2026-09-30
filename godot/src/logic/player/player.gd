@@ -16,9 +16,10 @@ const AIR_JUMP_DELAY := 0.2
 const AIR_JUMP_DIRECTION_IMPULSE := 8.0
 const GLIDE_MAX_FALL_SPEED := 1.0
 const GLIDE_HORIZONTAL_SPEED := 6.0
-const GLIDE_MIN_GROUND_DISTANCE := 1.0
+# #2854: Unity settings values — 0.2 min ground distance, 0.2 re-open cooldown.
+const GLIDE_MIN_GROUND_DISTANCE := 0.2
 const JUMP_TO_GLIDE_INTERVAL := 0.5
-const GLIDE_COOLDOWN := 0.6
+const GLIDE_COOLDOWN := 0.2
 const GLIDE_OPENING_TIME := 0.5
 const GLIDE_CLOSING_TIME := 0.15
 
