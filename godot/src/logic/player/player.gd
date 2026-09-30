@@ -1135,9 +1135,10 @@ func _step_up(intent: Vector3) -> void:
 	q.transform = Transform3D(Basis.IDENTITY, origin)
 	q.motion = dir * 0.5
 	var low: PackedFloat32Array = space.cast_motion(q)
-	if low[1] >= 1.0:
-		return  # no face within cast range — nothing to step onto
-	var d_face := low[1] * 0.5 + CAPSULE_RADIUS
+	# A miss means the cast starts overlapped (pole wedged in a ground-level
+	# seam) or the blocker sits below the pole — proceed as if flush; the rest
+	# of the pipeline validates.
+	var d_face := low[1] * 0.5 + CAPSULE_RADIUS if low[1] < 1.0 else CAPSULE_RADIUS
 	# b) up: how far the capsule can be lifted (doubles as the headroom check).
 	q.motion = Vector3(0.0, STEP_MAX_HEIGHT, 0.0)
 	var up: PackedFloat32Array = space.cast_motion(q)
@@ -1177,68 +1178,73 @@ func _step_up(intent: Vector3) -> void:
 	)
 	if not space.intersect_shape(q, 1).is_empty():
 		return
-	# The highest surface under the landing footprint decides the rise (the
-	# body cast can graze an edge with its hemisphere and misread it). Probe
-	# the edge, mid-tread, and a capsule-radius past (diagonal approaches park
-	# the pole beside the block); rays read exact tops. A triple miss (a gap
-	# between blocks, or the landing slid off the obstacle) bails: keeping the
-	# body-cast height there is how walls get climbed — its graze contact
-	# always reads just under the band.
+	# The band is measured from the LOWEST walkable contact — the real ground
+	# under the feet; the higher edge/corner contacts would inflate the band
+	# and let a 0.44 top pass. A ray under the axis misses edge rests (the
+	# center hangs past the edge) and the pole smuggles +1cm when the
+	# hemisphere rides an edge.
+	var support_y := INF
+	var has_contact := false
+	for i in get_slide_collision_count():
+		var contact := get_slide_collision(i)
+		has_contact = true
+		if contact.get_normal().y >= WALKABLE_NORMAL_Y:
+			support_y = minf(support_y, contact.get_position().y)
+	if support_y == INF:
+		if global_position.y <= REALM_FLOOR_EPS:
+			support_y = 0.0  # clamp-held realm floor
+		elif has_contact:
+			support_y = global_position.y  # wedged/hanging: from the pole
+	# The ground under the feet is a candidate too: a pole hovering on an edge
+	# registers no ground contact, and the edge contact would inflate the band.
+	var srq := PhysicsRayQueryParameters3D.new()
+	srq.collision_mask = collision_mask
+	srq.exclude = _raycast_exclude
+	srq.from = global_position + Vector3(0.0, 0.05, 0.0)
+	srq.to = global_position + Vector3(0.0, -0.15, 0.0)
+	var shit := space.intersect_ray(srq)
+	if not shit.is_empty():
+		support_y = minf(support_y, shit.position.y)
+	# Probe the landing footprint near-to-far; the FIRST in-band read is the
+	# landing — a low lip in front of a walkable incline is what you step on,
+	# not the higher surface behind it. Nothing in-band: an over-band read
+	# blocks (wall tops), void/below reads miss (gaps).
 	var prq := PhysicsRayQueryParameters3D.new()
 	prq.collision_mask = collision_mask
 	prq.exclude = _raycast_exclude
-	var best_y := -INF
+	var found := false
+	var won_ny := 1.0
 	for dist in [d_face + 0.005, d_face + 0.15, d_face + 0.3]:
 		var px: float = global_position.x + dir.x * dist
 		var pz: float = global_position.z + dir.z * dist
 		prq.from = Vector3(px, global_position.y + lift + 0.1, pz)
 		prq.to = Vector3(px, global_position.y - 0.05, pz)
 		var phit := space.intersect_ray(prq)
-		if not phit.is_empty() and phit.position.y > best_y:
-			best_y = phit.position.y
-	var measured := best_y > -INF
-	if measured:
-		floor_y = best_y
-	# The band is measured from the real contact the capsule rests on (slide
-	# contacts — the CCT measures stepOffset from the contact point). A ray
-	# under the axis misses edge rests (the center hangs past the edge) and
-	# measuring from the pole smuggles +1cm when the hemisphere rides an edge.
-	var support_y := -INF
-	var has_contact := false
-	for i in get_slide_collision_count():
-		var contact := get_slide_collision(i)
-		has_contact = true
-		if contact.get_normal().y >= WALKABLE_NORMAL_Y:
-			support_y = maxf(support_y, contact.get_position().y)
-	if support_y == -INF:
-		if global_position.y <= REALM_FLOOR_EPS:
-			support_y = 0.0  # clamp-held realm floor
-		elif has_contact:
-			support_y = global_position.y  # wedged/hanging: from the pole
-	if (
-		not measured  # all probe rays missed — never keep the graze read
-		or support_y == -INF  # airborne, no footing at all
-		or floor_y > support_y + STEP_MAX_HEIGHT
-		or floor_y < global_position.y + STEP_MIN_RISE
-	):
-		# above the band measured from the resting contact (wall corner/top),
-		# or below the feet (the cast contact was a graze and the pole hangs
-		# over void/lower ground)
+		if phit.is_empty():
+			continue
+		var hy: float = phit.position.y
+		if hy > support_y + STEP_MAX_HEIGHT or hy < global_position.y + STEP_MIN_RISE:
+			continue
+		floor_y = hy
+		found = true
+		won_ny = phit.normal.y
+		break
+	if not found or support_y == INF:
 		return
-	# The capsule's center rests ~a radius past the face: that surface must be
-	# walkable. A beveled curb is past its slope there (flat), a staircase
-	# tread is flat, a continuous ramp still reads its slope — that's what
-	# stops the climb/slide loop. A ray miss accepts (trimesh tri edges).
+	# A continuous ramp never lets go: the landing AND the surface a radius
+	# past it both read un-walkable slope. Rounded curbs, bevels and staircase
+	# noses all read slope at the landing but have flat ground (or a drop)
+	# behind — those climb. A ray miss accepts (trimesh tri edges).
 	var nrq := PhysicsRayQueryParameters3D.new()
 	nrq.collision_mask = collision_mask
 	nrq.exclude = _raycast_exclude
-	var nx: float = global_position.x + dir.x * (d_face + 0.25)
-	var nz: float = global_position.z + dir.z * (d_face + 0.25)
-	nrq.from = Vector3(nx, global_position.y + lift + 0.1, nz)
+	var nx: float = global_position.x + dir.x * (d_face + 0.3)
+	var nz: float = global_position.z + dir.z * (d_face + 0.3)
+	nrq.from = Vector3(nx, global_position.y + lift + 0.5, nz)
 	nrq.to = Vector3(nx, global_position.y - 0.05, nz)
 	var nhit := space.intersect_ray(nrq)
-	if not nhit.is_empty() and nhit.normal.y < WALKABLE_NORMAL_Y:
-		return  # the capsule would rest on an un-walkable slope — a ramp
+	if won_ny < WALKABLE_NORMAL_Y and not nhit.is_empty() and nhit.normal.y < WALKABLE_NORMAL_Y:
+		return  # the slope continues past the landing — a ramp, not a step
 	# Rise in place — the horizontal motion flows via move_and_slide itself,
 	# so there is no blocked frame and no forward teleport pop. Tall rises
 	# disarm until the capsule rests: re-triggering on the same ramp face is

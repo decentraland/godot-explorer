@@ -94,6 +94,17 @@ func _initialize() -> void:
 	_make_ramp(-86, 60.0, 3.0)
 	_make_ramp(-94, 65.0, 3.0)
 	_make_ramp(-107, 46.0, 3.0)
+	# PLAZA: narrow curb like the plaza walkway — face at -112, shelf 0.1965
+	# deep 0.2, then a 67deg descending bevel right after (the +0.25
+	# rest-normal read it and false-bailed as a ramp)
+	_make_box(Vector3(0, 0.098, -112.1), Vector3(2, 0.1965, 0.2))
+	var plaza_bev := _make_box(Vector3(0, 0.06, -112.32), Vector3(2, 0.12, 0.14))
+	plaza_bev.rotation_degrees.x = 67.0
+	# GUTTER: 0.077 lip (74deg face) with a 31deg ramp right behind — the
+	# landing is the lip, then the ramp is walked (max-height footprint reads
+	# the ramp top and used to over-band this)
+	_make_box(Vector3(0, 0.0385, -116.9), Vector3(2, 0.077, 0.1))
+	_make_ramp(-118, 31.0, 3.0)
 	# GAPSTEP: stand on a 0.42 platform, a block whose top is +0.437 across a
 	# 0.2 gap (kuruk's ladder blocks are separated — rays can land in the gap)
 	_make_box(Vector3(0, 0.21, -100), Vector3(2, 0.42, 1))
@@ -234,61 +245,67 @@ func _step_up(intent: Vector3) -> void:
 	if not space.intersect_shape(q, 1).is_empty():
 		_bail("overlap")
 		return
-	# The highest walkable surface under the landing footprint decides: probe
-	# at the edge, mid-tread, and a capsule-radius past (diagonal corner
-	# approaches park the pole beside the block). The body cast can graze an
-	# edge and misread it; the rays read exact tops. On a triple miss
-	# (trimesh tri edges) keep the body-cast height.
+	# The band is measured from the real contact the capsule rests on (slide
+	# contacts — the CCT measures stepOffset from the contact point).
+	var support_y := INF
+	var has_contact := false
+	for i in _body.get_slide_collision_count():
+		var contact := _body.get_slide_collision(i)
+		has_contact = true
+		if contact.get_normal().y >= WALKABLE_NORMAL_Y:
+			support_y = minf(support_y, contact.get_position().y)
+	if support_y == INF:
+		if _body.global_position.y <= 0.005:
+			support_y = 0.0
+		elif has_contact:
+			support_y = _body.global_position.y
+	var srq := PhysicsRayQueryParameters3D.new()
+	srq.collision_mask = 2
+	srq.from = _body.global_position + Vector3(0.0, 0.05, 0.0)
+	srq.to = _body.global_position + Vector3(0.0, -0.15, 0.0)
+	var shit := space.intersect_ray(srq)
+	if not shit.is_empty():
+		support_y = minf(support_y, shit.position.y)
+	# Probe the landing footprint near-to-far; the FIRST in-band read is the
+	# landing — a low lip in front of a walkable incline is what you step on,
+	# not the higher surface behind it. Nothing in-band: an over-band read
+	# blocks (wall tops), void/below reads miss (gaps).
 	var prq := PhysicsRayQueryParameters3D.new()
 	prq.collision_mask = 2
-	var best_y := -INF
+	var found := false
+	var won_ny := 1.0
 	for dist in [d_face + 0.005, d_face + 0.15, d_face + 0.3]:
 		var px: float = _body.global_position.x + dir.x * dist
 		var pz: float = _body.global_position.z + dir.z * dist
 		prq.from = Vector3(px, _body.global_position.y + lift + 0.1, pz)
 		prq.to = Vector3(px, _body.global_position.y - 0.05, pz)
 		var phit := space.intersect_ray(prq)
-		if not phit.is_empty() and phit.position.y > best_y:
-			best_y = phit.position.y
-	if best_y == -INF:
-		# All probe points missed (a gap between blocks, or the landing slid
-		# off the obstacle). Keeping the body-cast height here is how walls get
-		# climbed: its graze contact always reads just under the band.
-		_bail("miss")
+		if phit.is_empty():
+			continue
+		var hy: float = phit.position.y
+		if hy > support_y + STEP_MAX_HEIGHT or hy < _body.global_position.y + STEP_MIN_RISE:
+			continue
+		floor_y = hy
+		found = true
+		won_ny = phit.normal.y
+		break
+	if not found or support_y == INF:
+		_bail("band")
 		return
-	if best_y > -INF:
-		floor_y = best_y
-		# The rise is measured from the SUPPORT under the feet, not the pole:
-		# resting on an edge with the bottom hemisphere lifts the pole ~1cm,
-		# which would smuggle a 0.437 obstacle under the 0.43 band.
-		var support_y := _body.global_position.y
-		var srq := PhysicsRayQueryParameters3D.new()
-		srq.collision_mask = 2
-		srq.from = _body.global_position + Vector3(0.0, 0.05, 0.0)
-		srq.to = _body.global_position + Vector3(0.0, -0.15, 0.0)
-		var shit := space.intersect_ray(srq)
-		if not shit.is_empty():
-			support_y = shit.position.y
-		if floor_y > support_y + STEP_MAX_HEIGHT:
-			_bail("tall")
-			return  # the corner/top is above the band after all
-		if floor_y < _body.global_position.y + STEP_MIN_RISE:
-			_bail("flat-ray")
-			return  # pole over void/lower ground — the cast contact was a graze
 	# The capsule's center rests ~a radius past the face: that surface must be
 	# walkable. A beveled curb is past its slope there (flat), a staircase
 	# tread is flat, a continuous ramp still reads its slope — that's what
 	# stops the climb/slide loop. A ray miss accepts (trimesh tri edges).
 	var nrq := PhysicsRayQueryParameters3D.new()
 	nrq.collision_mask = 2
-	var nx: float = _body.global_position.x + dir.x * (d_face + 0.25)
-	var nz: float = _body.global_position.z + dir.z * (d_face + 0.25)
-	nrq.from = Vector3(nx, _body.global_position.y + lift + 0.1, nz)
+	var nx: float = _body.global_position.x + dir.x * (d_face + 0.3)
+	var nz: float = _body.global_position.z + dir.z * (d_face + 0.3)
+	nrq.from = Vector3(nx, _body.global_position.y + lift + 0.5, nz)
 	nrq.to = Vector3(nx, _body.global_position.y - 0.05, nz)
 	var nhit := space.intersect_ray(nrq)
-	if not nhit.is_empty() and nhit.normal.y < WALKABLE_NORMAL_Y:
+	if won_ny < WALKABLE_NORMAL_Y and not nhit.is_empty() and nhit.normal.y < WALKABLE_NORMAL_Y:
 		_bail("ramp")
-		return  # the capsule would rest on an un-walkable slope — a ramp
+		return  # the slope continues past the landing — a ramp, not a step
 	var rise := floor_y - _body.global_position.y
 	if rise > STEP_TALL_RISE or (rise >= STEP_PENDING_RISE and _pending):
 		_armed = false
@@ -350,8 +367,10 @@ var _cases := [
 	[1501, -12.8, "DIAG42"],
 	[1601, -99.7, "GAPSTEP"],
 	[1701, -104.5, "R46"],
+	[1801, -110.5, "PLAZA"],
+	[1901, -114.8, "GUTTER"],
 ]
-var _case_end := 1801
+var _case_end := 2001
 
 
 func _physics_process(_delta: float) -> bool:
