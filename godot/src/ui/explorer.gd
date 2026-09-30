@@ -883,10 +883,7 @@ func async_teleport_to(parcel: Vector2i, realm: String = "") -> bool:
 
 	Global.scene_fetcher.update_position(parcel, true)
 
-	# A teleport without a realm (/goto, scene-driven) stays in the current one: record that
-	# instead of "", which add_place_to_last_places drops (#2631).
-	var visited_realm := realm if not realm.is_empty() else Global.realm.get_realm_string()
-	Global.get_config().add_place_to_last_places(parcel, visited_realm)
+	Global.get_config().add_place_to_last_places(parcel, realm)
 	dirty_save_position = true
 	return true
 
