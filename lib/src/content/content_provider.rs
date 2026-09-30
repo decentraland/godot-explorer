@@ -414,6 +414,10 @@ impl INode for ContentProvider {
     }
 
     fn process(&mut self, dt: f64) {
+        // Print the log lines Rust worker threads queued (Android: printing
+        // off the main thread crashes sentry-godot, see godot_logger).
+        crate::tools::godot_logger::flush_background_logs();
+
         // Mount any resource packs queued by worker threads. Done here,
         // on the main thread, because load_resource_pack mutates Godot's
         // virtual filesystem and deadlocks against the render thread when
@@ -1742,9 +1746,20 @@ impl ContentProvider {
 
                 let godot_path = optimized_godot_path(&hash_id, OptimizedKind::Texture);
 
-                if let Some(entry_variant) = load_baked_texture_entry(&godot_path, original_size) {
-                    then_promise(get_promise, Ok(Some(entry_variant)));
-                    return;
+                // Hold the Godot permit like every other worker-side Godot call:
+                // without it this load raced the main thread mounting resource
+                // packs (ContentProvider::process) and read a pack mid-mount
+                // (SIGTRAP in ResourceLoaderBinary::_get_string, GODOT-EXPLORER-302).
+                if let Some(_thread_safe_check) = GodotSingleThreadSafety::acquire_owned(&ctx).await
+                {
+                    if let Some(entry_variant) =
+                        load_baked_texture_entry(&godot_path, original_size)
+                    {
+                        then_promise(get_promise, Ok(Some(entry_variant)));
+                        return;
+                    }
+                } else {
+                    tracing::warn!("Godot permit closed, skipping baked texture {}", godot_path);
                 }
 
                 // Baked artifact missing or unreadable (e.g. a stale ZIP in the
