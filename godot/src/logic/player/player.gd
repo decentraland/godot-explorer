@@ -88,7 +88,6 @@ const GROUND_RAYCAST_MASK := 2
 
 # #2753: Unity parity (ApplySlopeModifier.cs / CharacterObject.prefab).
 # CharacterBody3D has no built-in step offset (M1) — custom logic below.
-const STEP_OFFSET := 0.35
 # Max climbable top above the support contact: Unity's effective stepOffset
 # (0.35 + PhysX contact skin) lands here — live QA at kuruk.dcl.eth: 0.43
 # climbs, 0.44 blocks.
@@ -204,7 +203,6 @@ var _step_pending := false
 @onready var direction: Vector3 = Vector3(0, 0, 0)
 @onready var avatar := $Avatar
 @onready var stuck_detector := $StuckDetector
-@onready var _body_capsule: CollisionShape3D = %CollisionShape3D_Body
 # Margin-less clone for step-up motion tests (skin width would eat the step band).
 @onready var _step_test_shape: CapsuleShape3D = _make_step_test_shape()
 
@@ -579,6 +577,11 @@ func _physics_process(dt: float) -> void:
 	current_direction = current_direction.move_toward(direction, 8 * dt)
 
 	var on_floor = is_on_floor() or position.y <= 0.0
+	# Single grounded signal for the whole jump/gravity chain: on_floor OR
+	# walkable support (the margin-cloud rest has no floor contact). Mixing
+	# the two signals across branches left landing unreachable mid-cloud
+	# (velocity.y accumulated, jump_count never reset, glider never closed).
+	var supported := on_floor or _has_walkable_support()
 	var was_falling = avatar.fall
 	# Fall time up to this tick, captured before the reset below so the landing
 	# branch can still read it for the hard-landing check.
@@ -588,7 +591,7 @@ func _physics_process(dt: float) -> void:
 	# (rounded bottom + speculative margin), which would burn the coyote
 	# window early — Unity's CCT IsGrounded holds through the skin width.
 	# Start the fall timer only when walkable support is truly gone.
-	if !on_floor and not _has_walkable_support():
+	if !supported:
 		time_falling += dt
 	else:
 		time_falling = 0.0
@@ -597,7 +600,7 @@ func _physics_process(dt: float) -> void:
 	# long after leaving the floor, and the glide gate must not eat the press.
 	# velocity.y guard: the window only opens when walking off a ledge, never
 	# on the way up (a jump-pad launch must not become a cancellable "ground").
-	var in_coyote := not on_floor and time_falling <= COYOTE_WINDOW and velocity.y <= 0.0
+	var in_coyote := not supported and time_falling <= COYOTE_WINDOW and velocity.y <= 0.0
 
 	# Air-jump hover phase: freeze gravity, then fire impulse + horizontal dash
 	# when the timer expires. Leaves avatar.rise/fall untouched on purpose —
@@ -621,7 +624,7 @@ func _physics_process(dt: float) -> void:
 			_time_since_last_jump = 0.0
 			avatar.rise = true
 			avatar.fall = false
-	elif not on_floor and not in_coyote:
+	elif not supported and not in_coyote:
 		var in_grace_time = (
 			time_falling < .2
 			and !Input.is_action_pressed("ia_jump")
@@ -710,7 +713,7 @@ func _physics_process(dt: float) -> void:
 		avatar.land = false
 		avatar.rise = true
 		avatar.fall = false
-	elif on_floor:
+	elif supported:
 		if not avatar.land:
 			avatar.land = true
 			if was_falling and hard_landing_cooldown > 0 and fall_duration > 1.0:
@@ -866,13 +869,16 @@ func _physics_process(dt: float) -> void:
 	)
 	_try_step_up_predictive(Vector3(locomotion_x, 0.0, locomotion_z), dt)
 	var vy_before_move := velocity.y
+	# Captured after the predictive pass: a committed rise changes y, and
+	# comparing against the pre-rise position would undo legitimate steps.
+	var y_before_move := global_position.y
 	move_and_slide()
 	# PhysX slope limiter, positional: if the move itself gained height with
 	# no upward velocity (gravity only), the slope slide carried the capsule —
 	# the recovery ratchet climbs steep ramps positionally. Allowed only when
 	# a walkable contact exists; jumps/pads set vy > 0 before the move and
 	# never match. Without this, a 46deg ramp is climbable (Unity blocks it).
-	if global_position.y > last_position.y + 0.0005 and vy_before_move <= 0.0:
+	if global_position.y > y_before_move + 0.0005 and vy_before_move <= 0.0:
 		var walkable_contact := false
 		var any_contact := false
 		for i in get_slide_collision_count():
@@ -880,7 +886,7 @@ func _physics_process(dt: float) -> void:
 			if get_slide_collision(i).get_normal().y >= WALKABLE_NORMAL_Y:
 				walkable_contact = true
 		if any_contact and not walkable_contact:
-			global_position.y = last_position.y
+			global_position.y = y_before_move
 			velocity.y = minf(velocity.y, 0.0)
 	var moved_xz := (to_xz(global_position) - to_xz(last_position)).length()
 	_try_step_up(Vector3(locomotion_x, 0.0, locomotion_z), moved_xz)
@@ -1031,9 +1037,10 @@ func _current_gravity() -> float:
 	return g
 
 
-# #2753: custom step offset — CharacterBody3D has no built-in (M1). When
-# horizontal motion is wall-blocked while grounded, retry from STEP_OFFSET up:
-# free space above + floor below inside the step window = walkable ledge.
+# #2753: custom step offset — CharacterBody3D has no built-in (M1). The
+# step-up is a PhysX CCT relocation test: move the margin-less capsule clone
+# up (the lift cap is the climbable band), forward past the face, and down;
+# point rays then read the landing, measured from the resting contact.
 # `intent` is the pre-slide locomotion velocity (slide zeroes it on the wall).
 func _make_step_test_shape() -> CapsuleShape3D:
 	var s2: CapsuleShape3D = %CollisionShape3D_Body.shape.duplicate()
@@ -1128,6 +1135,8 @@ func _step_up(intent: Vector3) -> void:
 	q.transform = Transform3D(Basis.IDENTITY, origin)
 	q.motion = dir * 0.5
 	var low: PackedFloat32Array = space.cast_motion(q)
+	if low[1] >= 1.0:
+		return  # no face within cast range — nothing to step onto
 	var d_face := low[1] * 0.5 + CAPSULE_RADIUS
 	# b) up: how far the capsule can be lifted (doubles as the headroom check).
 	q.motion = Vector3(0.0, STEP_MAX_HEIGHT, 0.0)
@@ -1187,9 +1196,9 @@ func _step_up(intent: Vector3) -> void:
 		var phit := space.intersect_ray(prq)
 		if not phit.is_empty() and phit.position.y > best_y:
 			best_y = phit.position.y
-	if best_y == -INF:
-		return
-	floor_y = best_y
+	var measured := best_y > -INF
+	if measured:
+		floor_y = best_y
 	# The band is measured from the real contact the capsule rests on (slide
 	# contacts — the CCT measures stepOffset from the contact point). A ray
 	# under the axis misses edge rests (the center hangs past the edge) and
@@ -1207,7 +1216,8 @@ func _step_up(intent: Vector3) -> void:
 		elif has_contact:
 			support_y = global_position.y  # wedged/hanging: from the pole
 	if (
-		support_y == -INF  # airborne, no footing at all
+		not measured  # all probe rays missed — never keep the graze read
+		or support_y == -INF  # airborne, no footing at all
 		or floor_y > support_y + STEP_MAX_HEIGHT
 		or floor_y < global_position.y + STEP_MIN_RISE
 	):
