@@ -162,7 +162,7 @@ python3 -m unittest discover -s tools/i18n -p 'test_*.py'
 python3 tools/i18n/format_csv.py --record-sources # after editing translations
 gdformat godot/ && gdlint godot/
 cargo run -- check-gdscript                      # TranslationKey misuse is a parse error
-cargo run -- test-i18n                           # headless TranslationKey suite
+cargo run -- test-gdscript                      # headless suites, TranslationKey among them
 ```
 
 - [ ] Key exists in **all three** catalogues; `es`/`pt_BR` actually translated.
