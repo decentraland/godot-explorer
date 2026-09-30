@@ -57,7 +57,10 @@ impl<'a> DclReader<'a> {
         ])
     }
 
+    /// Returns at most `len` bytes: a short slice on truncated input, so the
+    /// `read_*` helpers fail with `Eof` instead of panicking on scene bytes.
     pub fn take_slice(&mut self, len: usize) -> &[u8] {
+        let len = len.min(self.buffer.len());
         let result = &self.buffer[0..len];
         self.buffer = &self.buffer[len..];
         self.pos += len;

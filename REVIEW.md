@@ -4,7 +4,7 @@
 >
 > **Companion files.** Read `CLAUDE.md` (architecture, commands, tooling) before this. This file focuses on *what matters during review*, not how to build.
 >
-> **You are Claude Opus 4.7.** Be decisive. Front-load blockers. Cite file paths and PR numbers. Skip hedging when the codebase has a clear precedent — those are listed below.
+> Be decisive. Front-load blockers. Cite file paths and PR numbers. Skip hedging when the codebase has a clear precedent — those are listed below.
 
 ---
 
@@ -125,8 +125,9 @@ Apply this order. Everything below "Correctness" is negotiable; the top tier is 
 15. **Dev-only flags live in release builds.** Deep-link params like `fake-owned-wearables`, `disable-profile-deploy`, `dclenv=zone` parse unconditionally today. Acceptable but worth flagging for gating behind `#[cfg(debug_assertions)]` / a feature flag / a loud warning (#1849).
 16. **Dead code / orphan uniforms / unused imports.** Rust `clippy -D warnings` catches most of this, but `.tres` / `.tscn` / `.gdshader` don't — reviewers catch those manually. A shader uniform removed in `.gdshader` should also be removed from every `.tres`/`.tscn` that set it, and from every material that references a different-typed replacement (#1878 had a `Texture2D → samplerCube` mismatch that would render black silently).
 17. **Performance on the hot path.** The scene-runner update loop, pointer-event loop, and shaders are hot. Watch for per-pixel `acos`/`normalize`/`pow` that can be replaced by compares, per-frame `find_node` / `get_node` lookups, unbounded `for x in all_entities` scans inside scene systems, and JSON serialization on the scene thread.
-18. **Description and test plan quality.** PR descriptions in this repo are `## What`, `## Why`, an optional collapsed `## Details`, and a `## Test plan` (see Section 4 → "PR description shape", including the AG rule on AI-generated text). A description with no What/Why, or whose What/Why read as raw AI output, is a rewrite request before code review. A missing or vague test plan is a legitimate review comment, especially for UI changes. Mobile-visible changes should say *which* platform was tested on. **The QA team runs these by hand on a real phone** (builds auto-distribute via TestFlight / Firebase App Distribution) — a case a tester couldn't reproduce cold (steps that don't start from opening the app, no observable expected result, or non-obvious required state left unsaid) is worth holding on. See Section 4 → "Writing test steps QA can execute" for the required format and a worked example.
-19. **Comments that explain "why", not "what".** Consistent with the CLAUDE.md guidance — reviewers flag comments that restate the code, and praise ones that cite a matching Unity file/line or explain a non-obvious Godot quirk.
+18. **Description and test plan quality.** PR descriptions in this repo are `## What`, `## Why`, an optional collapsed `## Details`, and a `## Test plan` (see Section 4 → "PR description shape", including the AG rule on AI-generated text). A description with no What/Why, or whose What/Why read as raw AI output, is a rewrite request before code review. A missing or vague test plan is a legitimate review comment, especially for UI changes. Mobile-visible changes should say *which* platform was tested on. **The QA team runs these by hand on a real phone** (builds auto-distribute via TestFlight / Firebase App Distribution) — a case a tester couldn't reproduce cold (steps that don't start from opening the app, no observable expected result, no `- [ ]` to tick, or non-obvious required state left unsaid) is worth holding on. See Section 4 → "Writing test steps QA can execute" for the required format and a worked example.
+19. **Comments follow `CLAUDE.md` → "Code hygiene".** Flag comments that restate the code, run past three lines, or describe code that is no longer there ("a prior attempt…", "previously…", "used to live in…") — tombstones; the history lives in git, not the source. Praise the ones that explain a non-obvious Godot quirk or cite a matching Unity file/line.
+20. **File growth.** `global.gd`, `explorer.gd`, `modal_manager.gd` and `avatar.gd` sit at the gdlint cap (1900 lines / 45 public methods). Net additions to them are a question, not a nit: could this live in its own file? A bump to `max-file-lines` / `max-public-methods` in `.gdlintrc` inside a feature PR is a hold — split the file first, in its own PR.
 
 ---
 
@@ -180,7 +181,7 @@ Write **each case** as a short block:
 
 Add a **regression** line whenever the change touches shared code — the case that confirms the *old* path still works. Describe user actions, not internals: QA can't see an `_is_switching` guard, but they can "rotate the device rapidly while a teleport is loading". Only call out a **platform** when a case is iOS- or Android-specific — otherwise both phones are the default. Don't ask QA to run desktop checks; desktop isn't a supported target.
 
-Format each case as a checklist so QA can tick it off. Full example:
+Every case and subcase ends in a `- [ ]` line QA can tick. A block with no box is not a case, and a table row is not one either — GitHub does not render checkboxes inside table cells. Full example:
 
 ```markdown
 ## Test plan
@@ -211,19 +212,20 @@ The simplest cases are just the three lines the team already thinks in — no se
 - [ ] **Expected:** the emote plays on the avatar and its SFX fires; no stutter or freeze.
 ```
 
-Anti-patterns that make a case un-executable — a reviewer should ask the author to fix these (see Tier 3 item 17):
+Anti-patterns that make a case un-executable — a reviewer should ask the author to fix these (see Tier 3 item 18):
 - **"Tested locally, works."** — no steps, no expected result, not reproducible.
 - **Steps that don't start from the app** — begin at "Open the app", then the in-app actions, so QA never has to guess the entry point.
 - **Restating the obvious** — "download the APK / install the TestFlight build / use a phone running vX". Distribution and device are a given; don't spend steps on them.
 - **Non-obvious state left unsaid** — a case that only repros with specific wearables equipped, as a guest, or with a second user present must say so up front.
 - **Vague expected result** — "the UI looks right", "no crash". State *what* correct looks like.
+- **No box to tick** — a case written as prose or as a "Do this / Expect" table gives QA nowhere to record pass/fail. Every case and subcase ends in a `- [ ]` line.
 - **Steps that assume code knowledge** — referencing a private method, signal, or guard by name. Translate it into the user-visible action that exercises it.
 
 ### Naming (from `.gdlintrc`)
 - Classes / scenes / scripts: `PascalCase` (`ConnectionQualityMonitor`, `MentionItem`).
 - Functions, variables, signals: `snake_case`. Signal handlers auto-named `_on_SomeNode_some_signal` (or `_on_` + `snake_case`).
 - Constants: `SCREAMING_SNAKE_CASE`. Enums: `PascalCase` enum name with `SCREAMING_SNAKE_CASE` elements.
-- Max file length: **1600 lines**, max public methods: **40**, max function args: **10**. `global.gd` / `notifications_manager.gd` are already large — new sprawl there gets pushback.
+- Max file length: **1900 lines**, max public methods: **45**, max function args: **10**. `global.gd`, `explorer.gd`, `modal_manager.gd` and `avatar.gd` are at the cap — new code there gets pushback (Tier 3 #20).
 
 ### Formatting / linting (must pass CI)
 - Rust: `cd lib && cargo fmt --all && cargo clippy -- -D warnings`.
@@ -278,7 +280,7 @@ What to check on an RC: every commit in `origin/release..head` is accounted for 
 These come up in almost every review in the history. Knowing them saves you from re-deriving them.
 
 ### `call_deferred` for autoload signal wiring
-Autoloads ready in a fixed order (`Global` first). A new autoload that connects to `Global.modal_manager.something` in `_ready()` will crash if it readies before `modal_manager` is built. Fix is `call_deferred("_connect_signals")` — see #1874.
+Autoloads ready in a fixed order (`Global` first). A new autoload that connects to `Global.modal_manager.something` in `_ready()` will crash if it readies before `modal_manager` is built. Fix is `_connect_signals.call_deferred()` — see #1874.
 
 ### `mouse_filter` is per-node; `PASS` does not fan out to siblings
 If an overlay (chat, notifications, modal) blocks underlying scene UI, the culprit is usually a `Control` with `MOUSE_FILTER_STOP` that's in the hit-test tree even when empty. Fixes: collapse its size to 0 when empty, set `MOUSE_FILTER_IGNORE`, or flip it dynamically based on actual content size (#1875). **Pure layout containers (`HBoxContainer`, `VBoxContainer` with no own visuals) should be `MOUSE_FILTER_IGNORE`.**
@@ -347,10 +349,10 @@ Tone **not** to match:
 - No style nits that `gdformat` / `rustfmt` would have caught — assume static checks are authoritative on style.
 - No requests to add tests for code that has no test harness in its directory (much of `godot/` has none). If tests would require building infra, frame it as a follow-up.
 - No speculative "what if the user does X" without a plausible path to X.
-- Don't ask for documentation beyond what the PR body / existing docs already provide. Code comments are kept sparse in this repo on purpose.
+- Don't ask for documentation beyond what the PR body / existing docs already provide. Code comments are kept sparse in this repo on purpose (`CLAUDE.md` → "Code hygiene").
 
 Length:
-- Small fix PR (1 file, <30 lines): 3–6 sentences is plenty.
+- Small fix PR (1 file, <30 lines): a short paragraph, or a one-line approval when nothing is wrong.
 - Feature PR (200+ lines, multiple dirs): full structured review with findings sections is expected.
 - Refactors / cross-cutting changes: open with the architectural read before individual findings.
 
@@ -368,6 +370,9 @@ A reviewer should `grep` / eyeball the diff for these before reading logic:
 - `.claude/` under the diff path → memory files.
 - Non-English comment or identifier anywhere in the diff (incl. `.gdshader` / `.tscn` / `.tres` / `.glsl`, which `gdlint`/`clippy` never read) → codebase is English-only. Accented chars (`á é í ó ú ñ ¿ ¡`) or non-English words in comments/identifiers block approval until translated. Localized user-facing strings are exempt; raw literals and comments are not. See Tier 1.
 - `# TODO` / `# FIXME` added in this PR (vs already existed) → ask for an issue link.
+- A comment describing code that is not in the file any more ("previously…", "was removed because…", "used to live in…") → tombstone; ask to delete it, git holds the history (Tier 3 #19).
+- `.gdlintrc` `max-file-lines` / `max-public-methods` raised in the same PR as feature code → hold; split the file first (Tier 3 #20).
+- Net additions to `global.gd` / `explorer.gd` / `modal_manager.gd` / `avatar.gd` → ask whether the code could live in its own file (Tier 3 #20).
 - `await …` inside `_ready` / `_process` / `_input` without guards → re-entrancy risk.
 - New `custom_minimum_size = Vector2(…)` on an overlay container → probable mouse-filter bug.
 - `shader_parameter/<name>` in a `.tres` that doesn't exist in the referenced `.gdshader` → orphan.
@@ -388,7 +393,7 @@ A reviewer should `grep` / eyeball the diff for these before reading logic:
 Match the size of the review to the size of the change. Bug-fix PRs like #1874 (9 lines added) are merged with a one-line `APPROVED` — a 500-word review on a 9-line diff is *noise*, not signal. Conversely, 300+-line feature PRs (#1830, #1841, #1849, #1878) get structured reviews because the surface area earns them.
 
 If you're unsure whether the PR is "small fix" or "feature":
-- `additions + deletions < 50` and one file → small fix; keep review under 6 sentences unless you find a blocker.
+- `additions + deletions < 50` and one file → small fix; keep the review short unless you find a blocker.
 - Multiple dirs or >200 lines → feature; give the full treatment.
 
 ---

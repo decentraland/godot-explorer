@@ -39,6 +39,10 @@ func _update_text():
 
 
 func _on_pressed():
+	# The shop is a web purchase flow: never reachable where store policy forbids it (#2814).
+	if not StorePolicy.can_show_external_purchase_links():
+		Global.open_credits.emit("MARKETPLACE_CTA")
+		return
 	var balance = Iap.get_balance()
 	var can_afford = balance > 0
 	if _selected_price >= 0:
