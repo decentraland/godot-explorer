@@ -16,9 +16,10 @@ const AIR_JUMP_DELAY := 0.2
 const AIR_JUMP_DIRECTION_IMPULSE := 8.0
 const GLIDE_MAX_FALL_SPEED := 1.0
 const GLIDE_HORIZONTAL_SPEED := 6.0
-const GLIDE_MIN_GROUND_DISTANCE := 1.0
+# #2854: Unity settings values — 0.2 min ground distance, 0.2 re-open cooldown.
+const GLIDE_MIN_GROUND_DISTANCE := 0.2
 const JUMP_TO_GLIDE_INTERVAL := 0.5
-const GLIDE_COOLDOWN := 0.6
+const GLIDE_COOLDOWN := 0.2
 const GLIDE_OPENING_TIME := 0.5
 const GLIDE_CLOSING_TIME := 0.15
 
@@ -105,6 +106,23 @@ const STEP_TALL_RISE := 0.25
 # Predictive pass skips while walking a climbable slope (floor normal off
 # vertical by more than ~8deg) — stepping there turns inclines into stutter.
 const SLOPE_WALK_NORMAL_Y := 0.99
+# #2852 M2: Unity SlopeVelocityModifier curve — linear keys (-55deg, 1.35)
+# -> (0, 1) -> (55deg, 0.65), clamped beyond. Positive angle = uphill.
+const SLOPE_MOD_MAX_DEG := 55.0
+const SLOPE_MOD_DOWNHILL := 1.35
+const SLOPE_MOD_UPHILL := 0.65
+# #2852 M4: ground contact further than this from the capsule axis tilts
+# gravity toward it (Unity NoSlipDistance).
+const EDGE_NO_SLIP_DIST := 0.1
+# #2852 M5: head-on wall contact multiplies speed toward this (Unity
+# WallSlideMaxMoveSpeedMultiplier = 0), lerped by |facing · wall normal|.
+const WALL_SLIDE_MIN_MULT := 0.0
+# #2852 M6: hard landing = fall height above this (Unity JumpHeightStun),
+# stun duration (Unity LongFallStunTime).
+const HARD_LANDING_FALL_HEIGHT := 8.0
+const HARD_LANDING_STUN_TIME := 0.75
+# #2854 M12: external-force multiplier while gliding (Unity GlideWindResponse).
+const GLIDE_WIND_RESPONSE := 1.5
 # cos(46deg): a slide collision flatter than this is walkable ground; steeper
 # is a ramp/wall face — sliding on one must not count as support.
 const WALKABLE_NORMAL_Y := 0.695
@@ -151,6 +169,13 @@ var external_velocity: Vector3 = Vector3.ZERO
 
 # Private variables (prefixed with _)
 var _hard_landing_timer: float = 0.0
+# #2852 M6: apex of the current airborne stretch; landing stun triggers on
+# fall HEIGHT (apex - landing), not on scene-driven cooldowns.
+var _fall_apex_y: float = 0.0
+# #2852 M11: rotating-platform follow state (translation comes free from the
+# engine's platform velocity on kinematic colliders).
+var _platform: CollisionObject3D = null
+var _platform_last_quat := Quaternion.IDENTITY
 var _locomotion_settings: DclLocomotionSettings = null
 var _jump_buffer: float = 0.0
 var _accel_weight: float = 0.0
@@ -582,10 +607,6 @@ func _physics_process(dt: float) -> void:
 	# the two signals across branches left landing unreachable mid-cloud
 	# (velocity.y accumulated, jump_count never reset, glider never closed).
 	var supported := on_floor or _has_walkable_support()
-	var was_falling = avatar.fall
-	# Fall time up to this tick, captured before the reset below so the landing
-	# branch can still read it for the hard-landing check.
-	var fall_duration := time_falling
 
 	# #1557: is_on_floor() drops before the capsule visually leaves an edge
 	# (rounded bottom + speculative margin), which would burn the coyote
@@ -716,8 +737,11 @@ func _physics_process(dt: float) -> void:
 	elif supported:
 		if not avatar.land:
 			avatar.land = true
-			if was_falling and hard_landing_cooldown > 0 and fall_duration > 1.0:
-				_hard_landing_timer = hard_landing_cooldown
+			# #2852 M6: fall-height trigger replaces the scene-driven cooldown
+			# (Unity StunCharacterSystem: JumpHeightStun 8m, LongFallStunTime 0.75).
+			if _fall_apex_y - global_position.y > HARD_LANDING_FALL_HEIGHT:
+				_hard_landing_timer = HARD_LANDING_STUN_TIME
+		_fall_apex_y = global_position.y
 
 		velocity.y = 0
 		avatar.rise = false
@@ -730,7 +754,26 @@ func _physics_process(dt: float) -> void:
 	else:
 		# Coyote fall without a buffered jump: gravity applies, no landing state,
 		# glide gate stays closed for the whole window.
-		velocity.y -= (_current_gravity() - external_acceleration.y) * dt
+		# #2852 M3 — ApplyGravity.cs: on a steep slope (>46deg) gravity tilts
+		# along the slope instead of pulling straight down.
+		var steep := _steep_slide_dir()
+		if steep != Vector3.ZERO:
+			velocity += steep * (_current_gravity() - external_acceleration.y) * dt
+		else:
+			velocity.y -= (_current_gravity() - external_acceleration.y) * dt
+	# #2852 M6: track the airborne apex (reset while gliding — a gentle glide
+	# down from height is not a hard landing).
+	if not supported:
+		if glide_state == GLIDE_OPENING or glide_state == GLIDE_GLIDING:
+			_fall_apex_y = global_position.y
+		else:
+			_fall_apex_y = maxf(_fall_apex_y, global_position.y)
+	# #2852 M4 — edge slip: off-axis ground contact with no ground straight
+	# below tilts gravity toward the edge (capsule slips off).
+	if supported:
+		var edge_dir := _edge_slip_gravity_dir()
+		if edge_dir != Vector3.ZERO:
+			velocity += edge_dir * _current_gravity() * dt
 
 	# #2850: Unity port (ApplyCharacterMovementVelocity.cs). Weight ramps over
 	# 0.5s while input is held; the accel pair follows the settings curve
@@ -772,6 +815,12 @@ func _physics_process(dt: float) -> void:
 		elif not walk_disabled:
 			effective_speed = walk_speed
 		# else: effective_speed remains 0, no movement allowed
+
+		# #2852 M2: slope speed modifier — the curve multiplies the target
+		# speed by the signed uphill/downhill angle (Unity multiplies its
+		# speedLimit the same way).
+		if is_on_floor():
+			effective_speed *= _slope_speed_modifier(direction)
 
 		# ADAD sign correction: reversing an axis flips sign, keeping momentum.
 		var target_x := direction.x * effective_speed
@@ -858,6 +907,18 @@ func _physics_process(dt: float) -> void:
 	velocity.y += external_y_for_move
 	velocity.z += external_velocity.z
 
+	# #2852 M5 — wall slide (ApplyWallSlide.cs): facing into a wall brakes
+	# movement toward zero; parallel is free. Unity capsulecasts ahead to find
+	# the wall; we already have the contact.
+	if is_on_wall() and supported:
+		var wall_n := get_wall_normal()
+		wall_n.y = 0.0
+		var look := Vector3(current_direction.x, 0.0, current_direction.z)
+		if wall_n.length_squared() > 0.01 and look.length_squared() > 0.01:
+			var wall_dot := absf(look.normalized().dot(wall_n.normalized()))
+			var wall_mult := lerpf(1.0, WALL_SLIDE_MIN_MULT, wall_dot)
+			velocity.x *= wall_mult
+			velocity.z *= wall_mult
 	last_position = global_position
 	# #2753: downslope stick — ApplySlopeModifier picks by input kind (run when
 	# sprinting), not by measured speed. Assigned BEFORE the predictive step-up:
@@ -900,6 +961,7 @@ func _physics_process(dt: float) -> void:
 	if (not _step_armed or _step_pending) and _has_walkable_support():
 		_step_armed = true
 		_step_pending = false
+	_update_platform_follow(supported)
 	position.y = max(position.y, 0)
 	avatar.global_position = global_position
 
@@ -1046,6 +1108,110 @@ func _make_step_test_shape() -> CapsuleShape3D:
 	var s2: CapsuleShape3D = %CollisionShape3D_Body.shape.duplicate()
 	s2.margin = 0.0
 	return s2
+
+
+func _steep_slide_dir() -> Vector3:
+	# #2852 M3: downhill tangent of a steeper-than-walkable slide contact
+	# (ZERO when none). n.y > 0.05 excludes vertical walls.
+	for i in get_slide_collision_count():
+		var n := get_slide_collision(i).get_normal()
+		if n.y < WALKABLE_NORMAL_Y and n.y > 0.05:
+			var g_vec := Vector3(0.0, -1.0, 0.0)
+			return (g_vec - n * g_vec.dot(n)).normalized()
+	return Vector3.ZERO
+
+
+func _edge_slip_gravity_dir() -> Vector3:
+	# #2852 M4 — ApplyEdgeSlip.cs: probe down from the capsule axis; a ground
+	# contact offset past NoSlipDistance (edge!) tilts gravity toward the
+	# contact normal's downhill tangent. Skipped when ground sits directly
+	# below within EdgeSlipSafeDistance (0.4) — no slipping on gentle ground.
+	if not is_on_floor():
+		return Vector3.ZERO
+	var space := get_world_3d().direct_space_state
+	if space == null:
+		return Vector3.ZERO
+	var rq := PhysicsRayQueryParameters3D.new()
+	var center := global_position + Vector3(0.0, CAPSULE_CENTER_Y, 0.0)
+	rq.from = center
+	rq.to = center + Vector3(0.0, -CAPSULE_CENTER_Y * 1.2, 0.0)
+	rq.collision_mask = collision_mask
+	rq.exclude = _raycast_exclude
+	var hit := space.intersect_ray(rq)
+	if hit.is_empty():
+		return Vector3.ZERO
+	var rel: Vector3 = hit.position - center
+	rel.y = 0.0
+	if rel.length() <= EDGE_NO_SLIP_DIST:
+		return Vector3.ZERO
+	var straight := PhysicsRayQueryParameters3D.new()
+	straight.from = global_position
+	straight.to = global_position + Vector3(0.0, -0.4, 0.0)
+	straight.collision_mask = collision_mask
+	straight.exclude = _raycast_exclude
+	if not space.intersect_ray(straight).is_empty():
+		return Vector3.ZERO
+	var n: Vector3 = hit.normal
+	var g_vec := Vector3(0.0, -1.0, 0.0)
+	return (g_vec - n * g_vec.dot(n)).normalized()
+
+
+func _update_platform_follow(supported: bool) -> void:
+	# #2852 M11 — CharacterPlatformSystem.cs: stay attached to the platform
+	# underfoot; rotation follow (translation is engine platform velocity).
+	# The support ray finds the collider even on the margin-cloud rest (slide
+	# contacts never register there).
+	var current: CollisionObject3D = null
+	if supported:
+		var space := get_world_3d().direct_space_state
+		if space != null:
+			var rq := PhysicsRayQueryParameters3D.new()
+			rq.from = global_position + Vector3(0.0, 0.05, 0.0)
+			rq.to = global_position + Vector3(0.0, -0.2, 0.0)
+			rq.collision_mask = collision_mask
+			rq.exclude = _raycast_exclude
+			var hit := space.intersect_ray(rq)
+			if not hit.is_empty() and hit.normal.y >= WALKABLE_NORMAL_Y:
+				current = hit.collider as CollisionObject3D
+	if current != _platform:
+		_platform = current
+		_platform_last_quat = (
+			current.global_transform.basis.get_rotation_quaternion()
+			if current
+			else Quaternion.IDENTITY
+		)
+		return
+	if _platform == null:
+		return
+	var quat_now: Quaternion = _platform.global_transform.basis.get_rotation_quaternion()
+	var delta := quat_now * _platform_last_quat.inverse()
+	_platform_last_quat = quat_now
+	if delta.is_equal_approx(Quaternion.IDENTITY):
+		return
+	# Rotate the player around the platform origin, and the facing with it.
+	var origin: Vector3 = _platform.global_transform.origin
+	global_position = origin + delta * (global_position - origin)
+	rotation.y += delta.get_euler().y
+
+
+func _slope_speed_modifier(input_dir: Vector3) -> float:
+	# #2852 M2 — ApplyCharacterMovementVelocity.cs:18-21. slopeForward is the
+	# input direction projected onto the slope plane; the signed angle from
+	# the input direction to it (around input × up) is positive uphill.
+	var look := Vector3(input_dir.x, 0.0, input_dir.z)
+	if look.length_squared() < 0.01:
+		return 1.0
+	look = look.normalized()
+	var n := get_floor_normal()
+	var slope_forward := n.cross(look.cross(n))
+	if slope_forward.length_squared() < 0.01:
+		return 1.0  # flat ground — no slope direction
+	slope_forward = slope_forward.normalized()
+	var angle := rad_to_deg(look.signed_angle_to(slope_forward, look.cross(Vector3.UP)))
+	var a := clampf(angle, -SLOPE_MOD_MAX_DEG, SLOPE_MOD_MAX_DEG)
+	if a < 0.0:
+		return lerpf(1.0, SLOPE_MOD_DOWNHILL, -a / SLOPE_MOD_MAX_DEG)
+	return lerpf(1.0, SLOPE_MOD_UPHILL, a / SLOPE_MOD_MAX_DEG)
 
 
 func _has_walkable_support() -> bool:
@@ -1262,8 +1428,11 @@ func _apply_scene_physics(
 	dt: float, external_acceleration: Vector3, impulses: PackedVector3Array, on_floor: bool
 ) -> void:
 	# Force XZ accumulates; force Y was already folded into effective_gravity.
-	external_velocity.x += external_acceleration.x * dt
-	external_velocity.z += external_acceleration.z * dt
+	# #2854 M12: an open glider catches airflow — external forces act stronger
+	# (Unity ApplyExternalForce.cs: ExternalAcceleration *= GlideWindResponse).
+	var wind := GLIDE_WIND_RESPONSE if glide_state == GLIDE_GLIDING else 1.0
+	external_velocity.x += external_acceleration.x * wind * dt
+	external_velocity.z += external_acceleration.z * wind * dt
 
 	var got_upward_impulse: bool = false
 	for impulse in impulses:
