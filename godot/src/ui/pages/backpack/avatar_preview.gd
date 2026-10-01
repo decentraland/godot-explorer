@@ -381,7 +381,16 @@ func _apply_snap_top_to_viewport() -> void:
 func _on_resized() -> void:
 	if size.x <= 0.0 or size.y <= 0.0:
 		return
-	if _pending_fit_overall and "overall" in _cached_aabbs:
+	if (
+		"overall" in _cached_aabbs
+		and (
+			_pending_fit_overall
+			or (fit_avatar and _camera_focus == "overall" and not _user_has_panned)
+		)
+	):
+		# Keep the initial fit live while the user hasn't panned/zoomed: the fit can
+		# commit at a transient size during layout settling (safe-area insets, sheet
+		# animation), and without a refit on the final size the avatar reads tiny.
 		_fit_to_overall()
 		return
 	if _pending_camera_fit:
