@@ -1,0 +1,7 @@
+[application]
+
+config/name="t"
+
+[physics]
+
+3d/physics_engine="Jolt Physics"
