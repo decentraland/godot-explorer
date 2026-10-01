@@ -158,6 +158,7 @@ var _masked_filter_paths: Array[NodePath] = []
 # Guard to prevent concurrent modifications to animation system
 var _is_modifying_animations: bool = false
 var _queued_emote_urn: String = ""
+var _queued_emote_scene_id: int = -1
 
 var _last_emote_time: float = 0.0
 # Time until which emote cancellation is blocked (for teleport grace period)
@@ -290,6 +291,7 @@ func play_emote(id: String, mask: int = -1, owner_scene_id: int = -1):
 	# If animation system is being modified, queue this request
 	if _is_modifying_animations:
 		_queued_emote_urn = id
+		_queued_emote_scene_id = owner_scene_id
 		return
 
 	# Ensure animation tree is active before playing
@@ -320,7 +322,7 @@ func play_emote(id: String, mask: int = -1, owner_scene_id: int = -1):
 		current_emote_scene_id = owner_scene_id
 		masked_suspended = false
 		if avatar != null and avatar.is_local_player:
-			_track_emote(id)
+			_track_emote(id, owner_scene_id)
 		avatar.call_deferred("emit_signal", "emote_triggered", id, playing_loop, mask)
 
 
@@ -1061,7 +1063,7 @@ func _reactivate_animation_system(_was_active: bool):
 		var queued = _queued_emote_urn
 		_queued_emote_urn = ""
 		# Use another deferred call to ensure tree is fully ready
-		play_emote.call_deferred(queued)
+		play_emote.call_deferred(queued, -1, _queued_emote_scene_id)
 
 
 func _merge_animations(avatar_anim: Animation, prop_anim: Animation) -> Animation:
@@ -1322,9 +1324,11 @@ func process(idle: bool):
 						_hide_all_props()
 
 
-func _track_emote(id: String) -> void:
+func _track_emote(id: String, owner_scene_id: int) -> void:
 	var is_base := Emotes.is_emote_default(id) or Emotes.is_base_emote_urn(id)
-	var source := "scene" if Emotes.is_scene_emote_urn(id) else "user"
+	# Source is who triggered it (#1410). Scenes also play base, collection and utility
+	# emotes, so the owner scene id decides, not the URN.
+	var source := "scene" if owner_scene_id >= 0 or Emotes.is_scene_emote_urn(id) else "user"
 	var screen_name := "SCENE" if source == "scene" else "EMOTE_WHEEL"
 	var payload = JSON.stringify({"emote_urn": id, "is_base": is_base, "source": source})
 	Global.metrics.track_click_button("USED EMOTE", screen_name, payload)
