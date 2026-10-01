@@ -13,6 +13,10 @@ const CONNECT_TIMEOUT: Duration = Duration::from_secs(60);
 /// Total timeout for the small blocking requests (npm manifest, protocol tarball).
 /// Large file downloads go through `download_file`, which has no total timeout.
 const BLOCKING_REQUEST_TIMEOUT: Duration = Duration::from_secs(300);
+/// Longest wait for the response headers or the next body chunk. A CDN that stops
+/// sending mid-body without closing the connection used to hang the download until
+/// the CI job timeout; now the attempt fails and `retry_http` starts a new one.
+const STALL_TIMEOUT: Duration = Duration::from_secs(60);
 
 enum DownloadEvent {
     TotalSize(u64),
@@ -122,12 +126,18 @@ async fn download_file_thread(
     url: Url,
     path: PathBuf,
     sender: std::sync::mpsc::Sender<DownloadEvent>,
+    stall: Duration,
 ) {
     let url_str = url.to_string();
-    let mut response = match client.get(url).send().await {
-        Ok(response) => response,
-        Err(err) => {
+    let mut response = match tokio::time::timeout(stall, client.get(url).send()).await {
+        Ok(Ok(response)) => response,
+        Ok(Err(err)) => {
             let _ = sender.send(DownloadEvent::Result(Err(err.into())));
+            return;
+        }
+        Err(_) => {
+            let msg = format!("no response from {url_str} for {}s", stall.as_secs());
+            let _ = sender.send(DownloadEvent::Result(Err(anyhow::anyhow!(msg))));
             return;
         }
     };
@@ -155,11 +165,16 @@ async fn download_file_thread(
     loop {
         // A connection dropped mid-body is reported here: surface it as an
         // error so the caller can retry (it used to panic on `unwrap`).
-        let chunk = match response.chunk().await {
-            Ok(Some(chunk)) => chunk,
-            Ok(None) => break,
-            Err(err) => {
+        let chunk = match tokio::time::timeout(stall, response.chunk()).await {
+            Ok(Ok(Some(chunk))) => chunk,
+            Ok(Ok(None)) => break,
+            Ok(Err(err)) => {
                 let _ = sender.send(DownloadEvent::Result(Err(err.into())));
+                return;
+            }
+            Err(_) => {
+                let msg = format!("download of {url_str} stalled for {}s", stall.as_secs());
+                let _ = sender.send(DownloadEvent::Result(Err(anyhow::anyhow!(msg))));
                 return;
             }
         };
@@ -186,6 +201,7 @@ fn download_file_attempt(
     client: &reqwest::Client,
     url: &str,
     path: &str,
+    stall: Duration,
 ) -> Result<(), anyhow::Error> {
     let (sender, receiver) = std::sync::mpsc::channel::<DownloadEvent>();
     // Append a cache-busting query param so any intermediate CDN/proxy
@@ -205,7 +221,7 @@ fn download_file_attempt(
     let client = client.clone();
 
     tokio::spawn(async move {
-        download_file_thread(client, url, path, sender).await;
+        download_file_thread(client, url, path, sender, stall).await;
     });
 
     let mut progress_bar = None;
@@ -250,7 +266,8 @@ pub fn download_file(url: &str, path: &str) -> Result<(), anyhow::Error> {
     let client = runtime.block_on(async { async_client() })?;
 
     retry_http(&format!("Download of {url}"), || {
-        let result = runtime.block_on(async { download_file_attempt(&client, url, path) });
+        let result =
+            runtime.block_on(async { download_file_attempt(&client, url, path, STALL_TIMEOUT) });
         if result.is_err() {
             // Don't leave a truncated file behind: callers (android_deps.zip,
             // the download cache) treat an existing file as a finished download.
@@ -258,4 +275,44 @@ pub fn download_file(url: &str, path: &str) -> Result<(), anyhow::Error> {
         }
         result
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Read;
+    use std::net::TcpListener;
+
+    /// A server that sends headers and part of the body, then goes silent without
+    /// closing, must fail the attempt instead of hanging it (CI Android job, 1.14.1).
+    #[test]
+    fn stalled_body_fails_the_attempt() {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let port = listener.local_addr().unwrap().port();
+        std::thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            let mut buf = [0u8; 1024];
+            let _ = stream.read(&mut buf);
+            let _ = stream.write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 1000\r\n\r\npartial");
+            std::thread::sleep(Duration::from_secs(10));
+        });
+
+        let dir = std::env::temp_dir().join(format!("xtask-stall-{port}"));
+        let path = dir.to_string_lossy().to_string();
+        let runtime = tokio::runtime::Builder::new_multi_thread()
+            .enable_all()
+            .build()
+            .unwrap();
+        let client = async_client().unwrap();
+        let started = std::time::Instant::now();
+        let url = format!("http://127.0.0.1:{port}/file.zip");
+        let result = runtime.block_on(async {
+            download_file_attempt(&client, &url, &path, Duration::from_secs(1))
+        });
+        let _ = std::fs::remove_file(&path);
+
+        let err = result.expect_err("a stalled body must fail the attempt");
+        assert!(err.to_string().contains("stalled"), "{err}");
+        assert!(started.elapsed() < Duration::from_secs(5));
+    }
 }
