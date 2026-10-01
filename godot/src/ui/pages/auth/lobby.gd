@@ -1345,13 +1345,16 @@ func _on_deep_link_received():
 func _deeplink_has_explorer_destination() -> bool:
 	if _should_go_to_explorer_from_deeplink():
 		return true
-	var path: String = String(Global.deep_link_obj.path).rstrip("/")
-	if path == "/events" or path == "/places":
+	# Matches on the section for the same reason DeepLinkRouter.route() does: the website
+	# serves /jump/events and /jump/places, which never equalled the bare paths this used
+	# to compare against, so a shared event link never got the lobby out of the way.
+	var section: String = Global.deep_link_obj.section
+	if section == "events" or section == "places":
 		return true
-	if path == "/jump" or path == "/open":
+	if section == "jump" or section == "open":
 		return Global.deep_link_obj.params.is_empty()
-	# Not matching an empty path on purpose: the parser returns that for every link it rejects
-	# (bad URL, unknown host, unknown scheme), so accepting it would redirect on garbage.
+	# Not matching an empty section on purpose: the parser returns that for every link it
+	# rejects (bad URL, unknown host, unknown scheme), so accepting it would redirect on garbage.
 	return false
 
 

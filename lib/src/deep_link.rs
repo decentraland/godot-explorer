@@ -27,6 +27,8 @@ pub struct DeepLinkResult {
     pub multiplayer_debug: bool,
     /// Routable path (e.g. "/jump", "/events", "/places", "/mobile")
     pub path: String,
+    /// Destination named by `path`, collapsed to one name. See [`section_for`].
+    pub section: String,
     /// Dev/testing: short-circuit profile deploys so local changes never publish.
     pub disable_profile_deploy: bool,
     /// Dev/testing: URNs to inject into the backpack as fake-owned wearables.
@@ -56,6 +58,33 @@ impl DeepLinkResult {
     pub fn is_signin_request(&self) -> bool {
         !self.signin_identity_id.is_empty()
     }
+}
+
+/// The destination a `path` names, collapsed to a single section name.
+///
+/// The website serves its deep-link landing pages one level deeper than the app's
+/// own scheme does: `https://decentraland.org/jump/events?id=X` and
+/// `decentraland://events?id=X` are the same destination, and the singular
+/// `/jump/event?id=X` is still live in production. Routing on `path` alone means
+/// enumerating every URL shape the web can emit, and anything missed falls through
+/// to the router's teleport default, which does nothing at all when the link
+/// carries no position or realm. Collapsing to a section lets the router match once.
+///
+/// `/jump` is itself a destination, so it only collapses when a section follows it.
+fn section_for(path: &str) -> String {
+    let mut segments = path.split('/').filter(|segment| !segment.is_empty());
+    let first = segments.next().unwrap_or_default();
+    let section = if first == "jump" {
+        segments.next().unwrap_or("jump")
+    } else {
+        first
+    };
+    match section {
+        // Legacy singular still emitted by production: /jump/event?id=X
+        "event" => "events",
+        other => other,
+    }
+    .to_string()
 }
 
 /// Parse a Decentraland deep link URL into a [`DeepLinkResult`].
@@ -130,6 +159,8 @@ pub fn parse_deep_link(url_str: &str) -> Option<DeepLinkResult> {
             result.path = format!("/{}", host);
         }
     }
+
+    result.section = section_for(&result.path);
 
     // --- Query parameters -------------------------------------------------------
     for (key, value) in url.query_pairs() {
@@ -640,6 +671,105 @@ mod tests {
         assert_eq!(r.realm, "r1");
         assert!(r.multiplayer_debug);
         assert_eq!(get_param(&r, "rust-log"), Some("debug"));
+    }
+
+    // ---- Section: the website's /jump/<section> landing pages ---------------
+
+    #[test]
+    fn jump_events_with_id_is_the_events_section() {
+        // The shape the app's own notifications and the website's share links use.
+        let r =
+            parse("https://decentraland.org/jump/events?id=b6b57b29-b416-48b5-aa2f-1fcd6f6eab1d");
+        assert_eq!(r.path, "/jump/events");
+        assert_eq!(r.section, "events");
+        assert_eq!(
+            get_param(&r, "id"),
+            Some("b6b57b29-b416-48b5-aa2f-1fcd6f6eab1d")
+        );
+    }
+
+    #[test]
+    fn legacy_singular_jump_event_is_the_events_section() {
+        let r = parse("https://decentraland.org/jump/event?id=abc");
+        assert_eq!(r.section, "events");
+    }
+
+    #[test]
+    fn jump_places_is_the_places_section() {
+        let r = parse("https://decentraland.org/jump/places?position=10,20&realm=r1");
+        assert_eq!(r.section, "places");
+        assert_eq!(r.location, Some((10, 20)));
+        assert_eq!(r.realm, "r1");
+    }
+
+    #[test]
+    fn bare_jump_stays_its_own_section() {
+        assert_eq!(parse("https://decentraland.org/jump").section, "jump");
+        assert_eq!(parse("https://decentraland.org/jump/").section, "jump");
+        assert_eq!(parse("decentraland://jump?location=1,2").section, "jump");
+    }
+
+    #[test]
+    fn invalid_landing_pages_keep_their_section() {
+        assert_eq!(
+            parse("https://decentraland.org/jump/places/invalid").section,
+            "places"
+        );
+        assert_eq!(
+            parse("https://decentraland.org/jump/events/invalid").section,
+            "events"
+        );
+    }
+
+    #[test]
+    fn standalone_site_shapes_keep_their_section() {
+        assert_eq!(
+            parse("https://decentraland.org/events/event?id=e1").section,
+            "events"
+        );
+        assert_eq!(
+            parse("https://decentraland.org/places/place/-9,-9").section,
+            "places"
+        );
+        assert_eq!(
+            parse("https://decentraland.org/places/world/foo.dcl.eth").section,
+            "places"
+        );
+    }
+
+    #[test]
+    fn native_scheme_and_web_paths_agree_on_the_section() {
+        for (native, web) in [
+            (
+                "decentraland://events?id=x",
+                "https://decentraland.org/jump/events?id=x",
+            ),
+            (
+                "decentraland://places?id=x",
+                "https://decentraland.org/jump/places?id=x",
+            ),
+        ] {
+            assert_eq!(parse(native).section, parse(web).section);
+        }
+    }
+
+    #[test]
+    fn open_and_mobile_keep_their_own_sections() {
+        assert_eq!(parse("decentraland://open?location=1,2").section, "open");
+        assert_eq!(
+            parse("decentraland://mobile?location=1,2").section,
+            "mobile"
+        );
+    }
+
+    #[test]
+    fn rejected_link_has_no_section() {
+        // The parser returns an empty path for anything it rejects, and the router
+        // must not treat that as a destination.
+        assert!(parse("https://evil.com/jump/events?id=x")
+            .section
+            .is_empty());
+        assert!(parse("not a url at all").section.is_empty());
     }
 
     // ---- Scene Inspector parameters -----------------------------------------
