@@ -90,6 +90,17 @@ static var low_spec_iphone_title := TranslationKey.new("MODAL_LOW_SPEC_IPHONE_TI
 static var low_spec_iphone_body := TranslationKey.new("MODAL_LOW_SPEC_IPHONE_BODY")
 static var low_spec_iphone_primary := TranslationKey.new("MODAL_LOW_SPEC_IPHONE_PRIMARY")
 
+# Android's below-minspec modal (#2935) shares the iOS title/OK text above verbatim, but NOT the
+# body: the iOS copy names specific iPhone models, which makes no sense on Android, so this one
+# gets its own key.
+static var below_minspec_body := TranslationKey.new("MODAL_BELOW_MINSPEC_BODY")
+
+static var end_of_device_support_title := TranslationKey.new("MODAL_END_OF_DEVICE_SUPPORT_TITLE")
+static var end_of_device_support_body := TranslationKey.new("MODAL_END_OF_DEVICE_SUPPORT_BODY")
+static var end_of_device_support_primary := TranslationKey.new(
+	"MODAL_END_OF_DEVICE_SUPPORT_PRIMARY"
+)
+
 static var bug_report_success_title := TranslationKey.new("MODAL_BUG_REPORT_SUCCESS_TITLE")
 static var bug_report_success_body := TranslationKey.new("MODAL_BUG_REPORT_SUCCESS_BODY")
 static var bug_report_success_primary := TranslationKey.new("MODAL_BUG_REPORT_SUCCESS_PRIMARY")
@@ -177,12 +188,8 @@ func _ready() -> void:
 ## Shows an EXTERNAL_LINK type modal
 ## @param external_url: The external URL to open
 func async_show_external_link_modal(external_url: String) -> void:
-	if not is_instance_valid(current_modal):
-		if not await _async_create_modal():
-			print("NOT CREATED MODAL")
-			return
-		if not NodeGuard.is_alive(current_modal, "ModalManager.async_show_external_link_modal"):
-			return
+	if not await _async_ensure_modal("ModalManager.async_show_external_link_modal"):
+		return
 
 	current_modal.set_title(external_link_title)
 	current_modal.set_body(external_link_body)
@@ -200,12 +207,8 @@ func async_show_external_link_modal(external_url: String) -> void:
 
 ## Shows a SCENE_TIMEOUT type modal
 func async_show_scene_timeout_modal() -> void:
-	if not is_instance_valid(current_modal):
-		if not await _async_create_modal():
-			print("NOT CREATED MODAL")
-			return
-		if not NodeGuard.is_alive(current_modal, "ModalManager.async_show_scene_timeout_modal"):
-			return
+	if not await _async_ensure_modal("ModalManager.async_show_scene_timeout_modal"):
+		return
 
 	current_modal.set_title(scene_timeout_title)
 	current_modal.set_body(scene_timeout_body)
@@ -223,12 +226,8 @@ func async_show_scene_timeout_modal() -> void:
 ## Shows a CONNECTION_LOST type modal
 ## @param hide_buttons: If true, hides all buttons (used on iOS after retry fails)
 func async_show_connection_lost_modal(hide_buttons: bool = false) -> void:
-	if not is_instance_valid(current_modal):
-		if not await _async_create_modal():
-			print("NOT CREATED MODAL")
-			return
-		if not NodeGuard.is_alive(current_modal, "ModalManager.async_show_connection_lost_modal"):
-			return
+	if not await _async_ensure_modal("ModalManager.async_show_connection_lost_modal"):
+		return
 
 	current_modal.blocker = true
 	current_modal.set_title(connection_lost_title)
@@ -385,11 +384,8 @@ func async_show_realm_teleport_modal(realm_name: String) -> void:
 ## Shows a SCENE_CRASH type modal
 ## @param entity_id: The entity ID of the crashed scene
 func async_show_scene_crash_modal(entity_id: String) -> void:
-	if not is_instance_valid(current_modal):
-		if not await _async_create_modal():
-			return
-		if not NodeGuard.is_alive(current_modal, "ModalManager.async_show_scene_crash_modal"):
-			return
+	if not await _async_ensure_modal("ModalManager.async_show_scene_crash_modal"):
+		return
 
 	current_modal.blocker = true
 	current_modal.set_title(scene_crash_title)
@@ -416,13 +412,8 @@ func async_show_scene_crash_modal(entity_id: String) -> void:
 func async_show_low_memory_warning_modal(
 	entity_id: String, footprint_mb: int = -1, available_mb: int = -1
 ) -> void:
-	if not is_instance_valid(current_modal):
-		if not await _async_create_modal():
-			return
-		if not NodeGuard.is_alive(
-			current_modal, "ModalManager.async_show_low_memory_warning_modal"
-		):
-			return
+	if not await _async_ensure_modal("ModalManager.async_show_low_memory_warning_modal"):
+		return
 
 	current_modal.blocker = true
 	current_modal.set_title(low_memory_title)
@@ -459,11 +450,8 @@ func async_show_low_memory_warning_modal(
 func async_show_ban_pre_check_modal() -> void:
 	_force_hide_loading_screen()
 
-	if not is_instance_valid(current_modal):
-		if not await _async_create_modal():
-			return
-		if not NodeGuard.is_alive(current_modal, "ModalManager.async_show_ban_pre_check_modal"):
-			return
+	if not await _async_ensure_modal("ModalManager.async_show_ban_pre_check_modal"):
+		return
 
 	current_modal.blocker = true
 	current_modal.set_title(ban_pre_check_title)
@@ -484,11 +472,8 @@ func async_show_ban_pre_check_modal() -> void:
 func async_show_private_world_modal(world_name: String) -> void:
 	_force_hide_loading_screen()
 
-	if not is_instance_valid(current_modal):
-		if not await _async_create_modal():
-			return
-		if not NodeGuard.is_alive(current_modal, "ModalManager.async_show_private_world_modal"):
-			return
+	if not await _async_ensure_modal("ModalManager.async_show_private_world_modal"):
+		return
 
 	current_modal.blocker = true
 	# tr() first: private_world_title is the KEY, which has no %s — the placeholder lives in
@@ -513,11 +498,8 @@ func async_show_ban_kicked_modal() -> void:
 	if _suppress_ban_kicked:
 		_suppress_ban_kicked = false
 		return
-	if not is_instance_valid(current_modal):
-		if not await _async_create_modal():
-			return
-		if not NodeGuard.is_alive(current_modal, "ModalManager.async_show_ban_kicked_modal"):
-			return
+	if not await _async_ensure_modal("ModalManager.async_show_ban_kicked_modal"):
+		return
 
 	current_modal.blocker = true
 	current_modal.set_title(ban_kicked_title)
@@ -570,11 +552,8 @@ func _async_show_disconnect_modal(
 	primary_label: TranslationKey,
 	primary_handler: Callable
 ) -> void:
-	if not is_instance_valid(current_modal):
-		if not await _async_create_modal():
-			return
-		if not NodeGuard.is_alive(current_modal, "ModalManager._async_show_disconnect_modal"):
-			return
+	if not await _async_ensure_modal("ModalManager._async_show_disconnect_modal"):
+		return
 
 	current_modal.blocker = true
 	current_modal.set_title(title)
@@ -605,13 +584,68 @@ func _on_session_ended_secondary() -> void:
 	close_current_modal()
 
 
+## Shows the "device no longer supported" modal (Android, chipset/RAM excluded — issue #2936).
+func async_show_end_of_device_support_modal() -> void:
+	if not await _async_ensure_modal("ModalManager.async_show_end_of_device_support_modal"):
+		return
+
+	current_modal.set_title(end_of_device_support_title)
+	current_modal.set_body(end_of_device_support_body)
+	current_modal.set_primary_button_text(end_of_device_support_primary)
+	current_modal.set_primary_button_font_size(24)
+	current_modal.show_icon(Modal.MODAL_ALERT_ICON)
+	current_modal.hide_url()
+	current_modal.button_secondary.hide()
+	current_modal.blocker = true
+	current_modal.show()
+
+	_disconnect_button_signals()
+	current_modal.button_primary.pressed.connect(_on_end_of_device_support_dismissed)
+
+	if Global.metrics != null:
+		Global.metrics.track_screen_viewed("END_OF_DEVICE_SUPPORT_MODAL_SHOW", "")
+
+
+func _on_end_of_device_support_dismissed() -> void:
+	if Global.metrics != null:
+		Global.metrics.track_click_button("OK", "END_OF_DEVICE_SUPPORT_MODAL", "")
+	close_current_modal()
+
+
+## Shows the "limited performance" (below minimum spec) modal on Android (issue #2935). Reuses
+## the iOS low-spec copy verbatim (same title/body/OK design, no iPhone-specific wording) rather
+## than duplicating it in the catalogue — see MODAL_LOW_SPEC_IPHONE_* in the locale CSVs.
+func async_show_below_minspec_modal() -> void:
+	if not await _async_ensure_modal("ModalManager.async_show_below_minspec_modal"):
+		return
+
+	current_modal.set_title(low_spec_iphone_title)
+	current_modal.set_body(below_minspec_body)
+	current_modal.set_primary_button_text(low_spec_iphone_primary)
+	current_modal.set_primary_button_font_size(24)
+	current_modal.show_icon(Modal.MODAL_ALERT_ICON)
+	current_modal.hide_url()
+	current_modal.button_secondary.hide()
+	current_modal.blocker = true
+	current_modal.show()
+
+	_disconnect_button_signals()
+	current_modal.button_primary.pressed.connect(_on_below_minspec_dismissed)
+
+	if Global.metrics != null:
+		Global.metrics.track_screen_viewed("BELOW_MINSPEC_MODAL_SHOW", "")
+
+
+func _on_below_minspec_dismissed() -> void:
+	if Global.metrics != null:
+		Global.metrics.track_click_button("OK", "BELOW_MINSPEC_MODAL", "")
+	close_current_modal()
+
+
 ## Shows a low-spec iPhone warning modal (lobby popup)
 func async_show_low_spec_iphone_modal() -> void:
-	if not is_instance_valid(current_modal):
-		if not await _async_create_modal():
-			return
-		if not NodeGuard.is_alive(current_modal, "ModalManager.async_show_low_spec_iphone_modal"):
-			return
+	if not await _async_ensure_modal("ModalManager.async_show_low_spec_iphone_modal"):
+		return
 
 	current_modal.set_title(low_spec_iphone_title)
 	current_modal.set_body(low_spec_iphone_body)
@@ -632,13 +666,8 @@ func async_show_low_spec_iphone_modal() -> void:
 ## generic Modal, which already floats its icon over the panel's top edge the
 ## way the design calls for.
 func async_show_bug_report_success_modal() -> void:
-	if not is_instance_valid(current_modal):
-		if not await _async_create_modal():
-			return
-		if not NodeGuard.is_alive(
-			current_modal, "ModalManager.async_show_bug_report_success_modal"
-		):
-			return
+	if not await _async_ensure_modal("ModalManager.async_show_bug_report_success_modal"):
+		return
 
 	current_modal.set_title(bug_report_success_title)
 	current_modal.set_body(bug_report_success_body)
@@ -693,13 +722,8 @@ func is_any_modal_open() -> bool:
 func async_show_review_prompt_debug_modal(body_text: String) -> void:
 	if Global.is_production():
 		return
-	if not is_instance_valid(current_modal):
-		if not await _async_create_modal():
-			return
-		if not NodeGuard.is_alive(
-			current_modal, "ModalManager.async_show_review_prompt_debug_modal"
-		):
-			return
+	if not await _async_ensure_modal("ModalManager.async_show_review_prompt_debug_modal"):
+		return
 
 	# set_*_text (not set_title/set_body): these take finished text and switch the label to
 	# AUTO_TRANSLATE_MODE_DISABLED. Dev-only strings must not enter the catalogue, and a key is
@@ -719,11 +743,8 @@ func async_show_review_prompt_debug_modal(body_text: String) -> void:
 
 
 func async_show_purchase_failed_modal() -> void:
-	if not is_instance_valid(current_modal):
-		if not await _async_create_modal():
-			return
-		if not NodeGuard.is_alive(current_modal, "ModalManager.async_show_purchase_failed_modal"):
-			return
+	if not await _async_ensure_modal("ModalManager.async_show_purchase_failed_modal"):
+		return
 
 	current_modal.set_title(purchase_failed_title)
 	current_modal.set_body(purchase_failed_body)
@@ -739,13 +760,8 @@ func async_show_purchase_failed_modal() -> void:
 
 ## Shows a total credit limit reached modal
 func async_show_credit_limit_total_modal() -> void:
-	if not is_instance_valid(current_modal):
-		if not await _async_create_modal():
-			return
-		if not NodeGuard.is_alive(
-			current_modal, "ModalManager.async_show_credit_limit_total_modal"
-		):
-			return
+	if not await _async_ensure_modal("ModalManager.async_show_credit_limit_total_modal"):
+		return
 
 	current_modal.set_title(credit_limit_title)
 	current_modal.set_body(credit_limit_total_body)
@@ -761,13 +777,8 @@ func async_show_credit_limit_total_modal() -> void:
 
 ## Shows a daily credit limit reached modal
 func async_show_credit_limit_daily_modal() -> void:
-	if not is_instance_valid(current_modal):
-		if not await _async_create_modal():
-			return
-		if not NodeGuard.is_alive(
-			current_modal, "ModalManager.async_show_credit_limit_daily_modal"
-		):
-			return
+	if not await _async_ensure_modal("ModalManager.async_show_credit_limit_daily_modal"):
+		return
 
 	current_modal.set_title(credit_limit_title)
 	current_modal.set_body(credit_limit_daily_body)
@@ -783,13 +794,8 @@ func async_show_credit_limit_daily_modal() -> void:
 
 ## Shows a purchase-in-flight modal when the user tries to buy while another purchase is pending
 func async_show_purchase_in_flight_modal() -> void:
-	if not is_instance_valid(current_modal):
-		if not await _async_create_modal():
-			return
-		if not NodeGuard.is_alive(
-			current_modal, "ModalManager.async_show_purchase_in_flight_modal"
-		):
-			return
+	if not await _async_ensure_modal("ModalManager.async_show_purchase_in_flight_modal"):
+		return
 
 	current_modal.set_title(purchase_in_flight_title)
 	current_modal.set_body(purchase_in_flight_body)
@@ -805,13 +811,8 @@ func async_show_purchase_in_flight_modal() -> void:
 
 ## Shows a modal when credit purchases are temporarily unavailable (server daily cap)
 func async_show_purchase_unavailable_modal() -> void:
-	if not is_instance_valid(current_modal):
-		if not await _async_create_modal():
-			return
-		if not NodeGuard.is_alive(
-			current_modal, "ModalManager.async_show_purchase_unavailable_modal"
-		):
-			return
+	if not await _async_ensure_modal("ModalManager.async_show_purchase_unavailable_modal"):
+		return
 
 	current_modal.set_title(purchase_unavailable_title)
 	current_modal.set_body(purchase_unavailable_body)
@@ -827,13 +828,8 @@ func async_show_purchase_unavailable_modal() -> void:
 
 ## Shows a modal when a purchase succeeded but its credits are still being applied
 func async_show_purchase_processing_modal() -> void:
-	if not is_instance_valid(current_modal):
-		if not await _async_create_modal():
-			return
-		if not NodeGuard.is_alive(
-			current_modal, "ModalManager.async_show_purchase_processing_modal"
-		):
-			return
+	if not await _async_ensure_modal("ModalManager.async_show_purchase_processing_modal"):
+		return
 
 	current_modal.set_title(purchase_processing_title)
 	current_modal.set_body(purchase_processing_body)
@@ -849,11 +845,8 @@ func async_show_purchase_processing_modal() -> void:
 
 ## Shows IAP terms of use modal with a checkbox that must be accepted before confirming
 func async_show_iap_terms_modal() -> void:
-	if not is_instance_valid(current_modal):
-		if not await _async_create_modal():
-			return
-		if not NodeGuard.is_alive(current_modal, "ModalManager.async_show_iap_terms_modal"):
-			return
+	if not await _async_ensure_modal("ModalManager.async_show_iap_terms_modal"):
+		return
 
 	current_modal.set_title(iap_terms_title)
 	current_modal.set_body_text("")
@@ -987,6 +980,18 @@ func _dismiss_chat_input_for_modal() -> void:
 	var chat_panel = explorer.chat_panel
 	if is_instance_valid(chat_panel) and is_instance_valid(chat_panel.chat):
 		chat_panel.chat.close_write_mode_if_active()
+
+
+## Shared guard at the top of every async_show_*_modal(): reuses current_modal if it's already
+## alive, otherwise creates it. Returns false (caller should return immediately) when creation
+## failed or the modal died before NodeGuard could confirm it — `site` names the caller, for the
+## stale-node telemetry NodeGuard reports.
+func _async_ensure_modal(site: String) -> bool:
+	if is_instance_valid(current_modal):
+		return true
+	if not await _async_create_modal():
+		return false
+	return NodeGuard.is_alive(current_modal, site)
 
 
 func _async_create_modal() -> Modal:

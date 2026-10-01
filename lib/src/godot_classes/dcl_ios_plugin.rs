@@ -9,6 +9,11 @@ pub struct DclMobileDeviceInfo {
     pub device_model: String,
     pub os_version: String,
     pub total_ram_mb: i32,
+    /// Android-only chipset identification (see #2936 / #2935); always empty on iOS.
+    pub soc_model: String,
+    pub soc_manufacturer: String,
+    pub board_platform: String,
+    pub hardware: String,
 }
 
 /// Mobile device dynamic metrics (changes during runtime) - internal Rust struct
@@ -43,6 +48,26 @@ impl DclMobileDeviceInfo {
                 .get("total_ram_mb")
                 .and_then(|v| v.try_to::<i32>().ok())
                 .unwrap_or(-1),
+            soc_model: dict
+                .get("soc_model")
+                .and_then(|v| v.try_to::<GString>().ok())
+                .map(|s| s.to_string())
+                .unwrap_or_default(),
+            soc_manufacturer: dict
+                .get("soc_manufacturer")
+                .and_then(|v| v.try_to::<GString>().ok())
+                .map(|s| s.to_string())
+                .unwrap_or_default(),
+            board_platform: dict
+                .get("board_platform")
+                .and_then(|v| v.try_to::<GString>().ok())
+                .map(|s| s.to_string())
+                .unwrap_or_default(),
+            hardware: dict
+                .get("hardware")
+                .and_then(|v| v.try_to::<GString>().ok())
+                .map(|s| s.to_string())
+                .unwrap_or_default(),
         }
     }
 }

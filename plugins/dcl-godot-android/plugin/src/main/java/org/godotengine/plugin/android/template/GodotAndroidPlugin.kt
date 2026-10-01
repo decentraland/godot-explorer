@@ -780,6 +780,17 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
         }
     }
 
+    // Reflection fallback for chipset id on API < 31, where Build.SOC_MODEL doesn't exist yet.
+    private fun getSystemProperty(key: String): String {
+        return try {
+            val clazz = Class.forName("android.os.SystemProperties")
+            val method = clazz.getMethod("get", String::class.java)
+            method.invoke(null, key) as String
+        } catch (e: Exception) {
+            ""
+        }
+    }
+
     @UsedByGodot
     fun getMobileDeviceInfo(): Dictionary {
         val info = Dictionary()
@@ -798,6 +809,20 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
                 info["device_model"] = Build.MODEL
                 info["os_version"] = "Android ${Build.VERSION.RELEASE}"
 
+                // SoC (System on Chip) identification — used to match a device against the
+                // Play Store exclusion / below-minspec chipset tables (#2936 / #2935).
+                // Build.SOC_MODEL/SOC_MANUFACTURER are API 31+; ro.board.platform (reflection)
+                // and Build.HARDWARE are the fallbacks that also cover older devices.
+                if (Build.VERSION.SDK_INT >= 31) {
+                    info["soc_model"] = Build.SOC_MODEL ?: ""
+                    info["soc_manufacturer"] = Build.SOC_MANUFACTURER ?: ""
+                } else {
+                    info["soc_model"] = ""
+                    info["soc_manufacturer"] = ""
+                }
+                info["board_platform"] = getSystemProperty("ro.board.platform")
+                info["hardware"] = Build.HARDWARE ?: ""
+
                 Log.d(pluginName, "Mobile device info collected successfully")
             } catch (e: Exception) {
                 Log.e(pluginName, "Error collecting mobile device info: ${e.message}")
@@ -806,6 +831,10 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
                 info["device_model"] = ""
                 info["os_version"] = ""
                 info["total_ram_mb"] = -1
+                info["soc_model"] = ""
+                info["soc_manufacturer"] = ""
+                info["board_platform"] = ""
+                info["hardware"] = ""
             }
         } ?: run {
             Log.e(pluginName, "Activity is null, cannot collect device info")

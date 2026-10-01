@@ -140,6 +140,10 @@ func _on_visibility_changed():
 	if is_node_ready() and is_inside_tree() and is_visible_in_tree():
 		last_visited.generator.async_request_last_places(0, 10)
 		friends_online.generator.on_request(0, 10)
+		# Must run before set_orientation_portrait() below: if a device-support modal is due, it
+		# suppresses UpgradeNudgeCoordinator synchronously so the orientation-change signal that
+		# call fires can't open the guest-upgrade modal first (#2936 / #2935 outrank it).
+		_show_device_support_modal_if_needed()
 		Global.set_orientation_portrait()
 		Global.metrics.track_screen_viewed(
 			"DISCOVER", JSON.stringify({"location": _get_ui_location()})
@@ -148,6 +152,69 @@ func _on_visibility_changed():
 		if Global.get_explorer():
 			if button_back_to_explorer:
 				button_back_to_explorer.show()
+
+
+## Android-only counterpart of the low-spec-iPhone warning below: shows the "device no longer
+## supported" (#2936, re-shows on a day-based schedule) or "limited performance" (#2935, shows
+## once ever) modal, matching the approved Figma (both show over this same Discover screen). The
+## SoC/RAM decision was already fetched in lobby.gd before boot reached here —
+## DeviceSupportCoordinator.check() is a synchronous read of that cached result. Takes priority
+## over the guest-upgrade nudge (#2372) — see _async_show_then_resume_nudge() below.
+func _show_device_support_modal_if_needed() -> void:
+	if not DclAndroidPlugin.is_available():
+		return
+
+	var deep_link: DclParseDeepLink = Global.deep_link_obj
+	var force_end_of_support: bool = (
+		(deep_link != null and deep_link.end_of_device_support_warning)
+		or Global.cli.end_of_device_support_warning
+	)
+	var force_below_minspec: bool = (
+		(deep_link != null and deep_link.below_minspec_warning) or Global.cli.below_minspec_warning
+	)
+
+	var status: DeviceSupportCoordinator.Status = DeviceSupportCoordinator.check()
+	var config: ConfigData = Global.get_config()
+
+	# End-of-support always wins over below-minspec on a device that matches both rules.
+	if force_end_of_support or status == DeviceSupportCoordinator.Status.END_OF_SUPPORT:
+		if (
+			not force_end_of_support
+			and not DeviceSupportCoordinator.is_end_of_support_modal_due(
+				config.end_of_device_support_modal_shown_count,
+				config.end_of_device_support_first_detected_unix
+			)
+		):
+			return
+		if not force_end_of_support:
+			config.end_of_device_support_modal_shown_count += 1
+			config.save_to_settings_file()
+		_async_show_then_resume_nudge(true)
+		return
+
+	if force_below_minspec or status == DeviceSupportCoordinator.Status.BELOW_MINSPEC:
+		if not force_below_minspec and config.below_minspec_modal_shown:
+			return
+		if not force_below_minspec:
+			config.below_minspec_modal_shown = true
+			config.save_to_settings_file()
+		_async_show_then_resume_nudge(false)
+
+
+## Suppresses UpgradeNudgeCoordinator (synchronously, before this function's first await — see the
+## call site in _on_visibility_changed()), shows the given device-support modal, waits for it to
+## be fully dismissed (current_modal is queue_free()'d on close, so tree_exited fires), then lets
+## the nudge evaluate normally.
+func _async_show_then_resume_nudge(is_end_of_support: bool) -> void:
+	Global.upgrade_nudge_coordinator.suppress_until_cleared()
+	if is_end_of_support:
+		await Global.modal_manager.async_show_end_of_device_support_modal()
+	else:
+		await Global.modal_manager.async_show_below_minspec_modal()
+	var modal: Modal = Global.modal_manager.current_modal
+	if is_instance_valid(modal):
+		await modal.tree_exited
+	Global.upgrade_nudge_coordinator.resume_after_device_support()
 
 
 func _show_low_spec_warning_if_needed():
