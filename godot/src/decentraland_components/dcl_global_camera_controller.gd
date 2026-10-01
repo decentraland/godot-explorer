@@ -3,6 +3,10 @@ extends Node
 const DEFAULT_TRANSITION_TIME = 0.35  # in seconds
 const DEFAULT_VIRTUAL_CAMERA_FOV = 60.0
 const PERSISTANT_CAMERA := preload("res://src/helpers_components/persistant_camera.tscn")
+## Runs after the camera clamp (-20) and before the scene manager's kick
+## (lib/src/scene_runner/frame_sync.rs, SCENE_MANAGER_KICK_PROCESS_PRIORITY = -5)
+## so a virtual-camera blend is final when the scenes receive the camera pose.
+const PROCESS_PRIORITY := -10
 
 var global_virtual_camera_transform: Transform3D
 var last_virtual_camera_entity_node = null
@@ -14,6 +18,7 @@ var transition_time_counter: float = 0.0
 
 
 func _ready():
+	process_priority = PROCESS_PRIORITY
 	add_child(global_virtual_camera)
 	global_virtual_camera.clear_current()
 	global_virtual_camera.cull_mask = 0x7fff

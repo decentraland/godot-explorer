@@ -68,6 +68,15 @@ func external_bytes(scene_id: int) -> int:
 	return total + Global.content_provider.get_cache_size_for_base_names(files)
 
 
+## Scheduler timing for the scene (SceneManager.get_scene_tick_stats): onUpdate
+## p50/p95, round trip, apply time, missed-frame %. Empty dict when unknown.
+## Rust side: lib/src/scene_runner/frame_sync.rs + tick_stats.rs.
+func tick_stats(scene_id: int) -> Dictionary:
+	if scene_id == -1 or not is_instance_valid(Global.scene_runner):
+		return {}
+	return Global.scene_runner.get_scene_tick_stats(scene_id)
+
+
 ## Whole-app render/memory stats. These are engine-global (single shared
 ## viewport) and CANNOT be attributed to one scene.
 static func global_stats() -> Dictionary:

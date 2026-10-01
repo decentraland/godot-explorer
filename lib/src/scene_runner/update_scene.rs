@@ -181,6 +181,12 @@ use crate::{
 };
 
 // @returns true if the scene was full processed, or false if it remains something to process
+//
+// With `apply_only` the state machine stops once every apply state has run
+// (`update_state == ComputeCrdtState`) and returns true without building or
+// sending the reply; a later call with `apply_only == false` resumes from there
+// (ComputeCrdtState -> SendToThread). The frame-locked scheduler uses the split
+// to apply scene output at the end of a frame and reply at the start of the next.
 #[allow(clippy::too_many_arguments)]
 pub fn _process_scene(
     scene: &mut Scene,
@@ -196,6 +202,7 @@ pub fn _process_scene(
     ui_canvas_information: &PbUiCanvasInformation,
     pool_manager: &RefCell<PoolManager>,
     force_complete: bool,
+    apply_only: bool,
     bench_disable_tweens: bool,
     bench_disable_transforms: bool,
 ) -> bool {
@@ -229,30 +236,41 @@ pub fn _process_scene(
                 let cap = scene.dcl_scene.main_sender_to_thread.capacity();
                 if cap > 0 {
                     let response = scene.current_dirty.renderer_response.take().unwrap();
-                    if let Err(_err) = scene
+                    if scene
                         .dcl_scene
                         .main_sender_to_thread
                         .blocking_send(response)
+                        .is_ok()
                     {
-                        // TODO: handle fail sending to thread
+                        scene.frame_sync.on_reply_sent();
                     }
+                    // TODO: handle fail sending to thread
 
-                    scene.current_dirty = scene.enqueued_dirty.pop().unwrap_or(Dirty {
-                        waiting_process: false,
-                        entities: Default::default(),
-                        lww_components: Default::default(),
-                        gos_components: Default::default(),
-                        logs: Vec::new(),
-                        renderer_response: None,
-                        update_state: SceneUpdateState::Processed,
-                        rpc_calls: Vec::new(),
-                    });
+                    // Outputs are applied in the order the scene sent them (FIFO).
+                    scene.current_dirty = if scene.enqueued_dirty.is_empty() {
+                        Dirty {
+                            waiting_process: false,
+                            entities: Default::default(),
+                            lww_components: Default::default(),
+                            gos_components: Default::default(),
+                            logs: Vec::new(),
+                            renderer_response: None,
+                            update_state: SceneUpdateState::Processed,
+                            rpc_calls: Vec::new(),
+                        }
+                    } else {
+                        scene.enqueued_dirty.remove(0)
+                    };
 
                     return true;
                 }
                 return false;
             }
             SceneUpdateState::Processed => {
+                return true;
+            }
+            // Apply pass complete: the reply is built by a later non-apply_only call.
+            SceneUpdateState::ComputeCrdtState if apply_only => {
                 return true;
             }
             _ => {} // Fall through to Phase 2
@@ -542,11 +560,14 @@ pub fn _process_scene(
                     false
                 }
                 SceneUpdateState::TriggerArea => {
+                    // Foreground scenes (apply_only) emit trigger events at kick time
+                    // so this frame's physics triggers ship in this frame's reply.
                     update_trigger_area(
                         scene,
                         crdt_state,
                         &mut pool_manager.borrow_mut(),
                         current_parcel_scene_id,
+                        !apply_only,
                     );
                     false
                 }
@@ -690,11 +711,15 @@ pub fn _process_scene(
                         .bind_mut()
                         .get_pending_messages(&scene.scene_entity_definition.id);
 
-                    // Set renderer response to the scene
+                    // Set renderer response to the scene. The rendered-frame time
+                    // accumulated since the previous reply becomes the scene's next
+                    // onUpdate(dt).
                     let dirty_crdt_state = crdt_state.take_dirty();
+                    let delta_seconds = std::mem::take(&mut scene.frame_sync.pending_dt_seconds);
                     scene.current_dirty.renderer_response = Some(RendererResponse::Ok {
                         dirty_crdt_state: Box::new(dirty_crdt_state),
                         incoming_comms_message,
+                        delta_seconds,
                     });
                     false
                 }
@@ -726,6 +751,17 @@ pub fn _process_scene(
             }
 
             scene.current_dirty.update_state = scene.current_dirty.update_state.next();
+
+            // Checked before the budget so an apply that finishes right at the edge
+            // counts as complete this frame instead of next.
+            if apply_only
+                && matches!(
+                    scene.current_dirty.update_state,
+                    SceneUpdateState::ComputeCrdtState
+                )
+            {
+                return true;
+            }
 
             current_time_us = (std::time::Instant::now() - *ref_time).as_micros() as i64;
             if current_time_us > effective_end_time_us {

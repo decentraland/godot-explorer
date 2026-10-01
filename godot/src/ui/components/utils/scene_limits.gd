@@ -53,6 +53,22 @@ const FIXED: Dictionary = {
 		"soft": 120 * MB,
 		"hard": 150 * MB
 	},
+	"tick_p95":
+	# p95 of the scene's own onUpdate time over its last 120 ticks, in µs. The
+	# bar's full scale and thresholds follow the frame budget at the current FPS
+	# cap (one frame; see `dynamic_budget` in scene_stats_panel.gd).
+	{
+		"label": "Update time (p95)",
+		"group": "scene",
+		"unit": "us",
+		"soft": 12500,
+		"hard": 16667,
+		"dynamic_budget": true
+	},
+	"missed_frames":
+	# Percent of the last 120 rendered frames drawn without a fresh update from
+	# this scene (its onUpdate took longer than the frame budget).
+	{"label": "Missed frames", "group": "scene", "unit": "pct", "soft": 5, "hard": 20},
 	"external_size":
 	# Runtime downloads from external links (url textures on disk + JS fetch()
 	# bytes). No canonical Decentraland budget exists — 50 MB max as the
@@ -98,6 +114,8 @@ const ORDER: Array = [
 	"shadow_casters",
 	"content_size",
 	"external_size",
+	"tick_p95",
+	"missed_frames",
 	"static_mem",
 	"draw_calls",
 	"fps",

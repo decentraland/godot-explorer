@@ -1,5 +1,6 @@
 pub mod components;
 mod deleted_entities;
+pub mod frame_sync;
 pub mod global_get_node_helper;
 mod godot_dcl_scene;
 pub(crate) mod input;
@@ -11,5 +12,6 @@ mod rpc_calls;
 pub mod scene;
 pub mod scene_cache;
 pub mod scene_manager;
+pub mod tick_stats;
 pub mod tokio_runtime;
 mod update_scene;
