@@ -112,7 +112,12 @@ func async_request_last_places(_offset: int, _limit: int) -> void:
 		var item = DISCOVER_CARROUSEL_ITEM.instantiate()
 		item_container.add_child(item)
 		item.set_data(data)
-		item.item_pressed.connect(discover.on_item_pressed)
+		# Relay through the generator's own signal so a host without a `discover` reference (e.g.
+		# the landscape DiscoverPanel) can still react to a tap; `discover`, when set, keeps
+		# routing straight to the full Discover screen's own SidePanelWrapper flow.
+		item.item_pressed.connect(item_pressed.emit)
+		if is_instance_valid(discover):
+			item.item_pressed.connect(discover.on_item_pressed)
 
 	if last_places.size() > 0:
 		report_loading_status.emit(CarrouselGenerator.LoadingStatus.OK_WITH_RESULTS)
@@ -216,6 +221,11 @@ func _async_fetch_places(url: String, limit: int = 100) -> void:
 		item_container.add_child(item)
 
 		item.set_data(item_data)
-		item.item_pressed.connect(discover.on_item_pressed)
+		# Relay through the generator's own signal so a host without a `discover` reference (e.g.
+		# the landscape DiscoverPanel) can still react to a tap; `discover`, when set, keeps
+		# routing straight to the full Discover screen's own SidePanelWrapper flow.
+		item.item_pressed.connect(item_pressed.emit)
+		if is_instance_valid(discover):
+			item.item_pressed.connect(discover.on_item_pressed)
 
 	report_loading_status.emit(CarrouselGenerator.LoadingStatus.OK_WITH_RESULTS)

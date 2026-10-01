@@ -3,6 +3,10 @@ extends Node
 
 # Friendship/connectivity subscribe retry policy: bounded exponential backoff
 # 5s, 10s, 20s, 40s, 60s, 60s — caps at ~3min total before giving up.
+## Where a profile with no realm history boots. A dev realm, not genesis: this only
+## happens on a fresh install that has never joined anywhere.
+const FALLBACK_BOOT_REALM := "https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main-latest"
+
 const _SUBSCRIBE_RETRY_MAX_ATTEMPTS: int = 6
 const _SUBSCRIBE_RETRY_BASE_DELAY: float = 5.0
 const _SUBSCRIBE_RETRY_MAX_DELAY: float = 60.0
@@ -73,6 +77,7 @@ var _debug_panel_from_settings: bool = false
 
 @onready var notifications_panel: PanelContainer = %NotificationsPanel
 @onready var friends_panel: PanelContainer = %FriendsPanel
+@onready var discover_panel: DiscoverPanel = %DiscoverPanel
 @onready var label_version = %Label_Version
 @onready var label_fps = %Label_FPS
 @onready var control_menu = %Control_Menu
@@ -165,6 +170,8 @@ func _ready():
 	Global.on_menu_close.connect(_on_menu_close)
 
 	Global.open_friends_panel.connect(_show_friends_panel)
+	Global.open_discover_panel.connect(_show_discover_panel)
+	discover_panel.share_requested.connect(_share_place)
 	# Settings is a fullscreen menu screen (like Backpack): the navbar button emits
 	# open_settings, the menu (Control_Menu, which lives here) shows the screen and re-emits
 	# request_debug_panel / request_pause_scenes / request_multiplayer_debug through its own
@@ -172,7 +179,7 @@ func _ready():
 	Global.open_settings.connect(_on_settings_open)
 
 	navbar.navbar_closed.connect(_close_all_panels)
-	navbar.navbar_opened.connect(_open_friends_panel)
+	navbar.navbar_opened.connect(_on_navbar_opened)
 	# Navbar owns the reveal/collapse of the side-panel surface (fade + grow on one timeline).
 	navbar.set_reveal_surface(%VBoxContainer_LeftPanels)
 	profile_container.visibility_changed.connect(_on_profile_container_visibility_changed)
@@ -201,6 +208,7 @@ func _ready():
 	# Keep the full-screen dismiss catcher in sync with what's open.
 	notifications_panel.visibility_changed.connect(_refresh_hud_dismiss)
 	friends_panel.visibility_changed.connect(_refresh_hud_dismiss)
+	discover_panel.visibility_changed.connect(_refresh_hud_dismiss)
 	chat_panel.chat.visibility_changed.connect(_refresh_hud_dismiss)
 
 	# Chat focus (open) overlays the message view: hide the emote button and joypad
@@ -219,7 +227,11 @@ func _ready():
 
 	emote_wheel.avatar_node = player.avatar
 
-	loading_ui.enable_loading_screen(Global.get_config().last_realm_joined, "on_explorer_ready")
+	# The episode is opened by the navigation below, which knows the realm this boot is
+	# actually heading for -- last_realm_joined is the wrong one for a deeplink.
+	loading_ui.enable_loading_screen(
+		Global.get_config().last_realm_joined, "on_explorer_ready", false
+	)
 	var cmd_params = get_params_from_cmd()
 	var cmd_realm = Global.FORCE_TEST_REALM if Global.FORCE_TEST else cmd_params[0]
 	var cmd_location = cmd_params[1]
@@ -248,9 +260,10 @@ func _ready():
 
 	# Scene Inspector: the bridge is now dialed from app startup (Global._ready),
 	# not here — so the channel is live from second 0, before login / world entry.
-	# Scene Inspector file output: --scene-inspector-file or ?scene-inspector-file=true
+	# Scene Inspector file output: --scene-inspector-file, or ?scene-inspector-file=true off prod
 	var scene_inspector_file: bool = (
-		Global.deep_link_obj.scene_inspector_file or Global.cli.scene_inspector_file
+		(Global.deep_link_obj.scene_inspector_file and not Global.is_production())
+		or Global.cli.scene_inspector_file
 	)
 	if scene_inspector_file:
 		Global.scene_inspector_dispatcher.set_file_logging(true)
@@ -323,16 +336,18 @@ func _ready():
 		if Realm.is_dcl_ens(cmd_realm) and Global.deep_link_obj.preview.is_empty():
 			Global.async_join_world(cmd_realm)
 		else:
-			Global.realm.async_set_realm(cmd_realm)
+			Navigator.async_go(
+				Destination.restore(cmd_realm, start_parcel_position), "on_explorer_ready"
+			)
 			if not Global.deep_link_obj.preview.is_empty():
 				Global.scene_fetcher.set_preview_url(cmd_realm)
 	else:
-		if Global.get_config().last_realm_joined.is_empty():
-			Global.realm.async_set_realm(
-				"https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main-latest"
-			)
-		else:
-			Global.realm.async_set_realm(Global.get_config().last_realm_joined)
+		var boot_realm: String = Global.get_config().last_realm_joined
+		if boot_realm.is_empty():
+			boot_realm = FALLBACK_BOOT_REALM
+		Navigator.async_go(
+			Destination.restore(boot_realm, start_parcel_position), "on_explorer_ready"
+		)
 	Global.scene_runner.process_mode = Node.PROCESS_MODE_INHERIT
 
 	Global.player_identity.logout.connect(self._on_player_logout)
@@ -773,7 +788,7 @@ func _on_control_minimap_request_open_map():
 
 
 func _on_control_menu_jump_to(parcel: Vector2i):
-	teleport_to(parcel)
+	Navigator.async_go(Destination.from_input("", parcel), "on_teleport")
 	control_menu.async_close()
 
 
@@ -856,31 +871,14 @@ func move_to(position: Vector3, skip_loading: bool, check_stuck: bool = true):
 				loading_ui.enable_loading_screen("", "on_moveto")
 
 
-## Fire-and-forget teleport for callers that cannot await (menu jump-in, scene-urn spawn).
-func teleport_to(parcel: Vector2i, realm: String = ""):
-	async_teleport_to(parcel, realm)
-
-
-## Returns false when the realm change failed, so callers can hold back anything that claims
-## the teleport happened (#2816). Compares the resolved urls, not the raw strings: the realm
-## now comes from scene input, and "spacerunner.dcl.eth" must not reconnect a player who is
-## already in "SpaceRunner.dcl.eth".
-func async_teleport_to(parcel: Vector2i, realm: String = "") -> bool:
-	if not realm.is_empty() and Realm.normalize_realm_url(realm) != Global.realm.get_realm_url():
-		var success = await Global.realm.async_set_realm(realm)
-		if not success:
-			return false
-		if not loading_ui.visible:
-			loading_ui.enable_loading_screen(realm, "on_teleport")
-
-	var move_to_position = Vector3i(parcel.x * 16 + 8, 3, -parcel.y * 16 - 8)
-	move_to(move_to_position, false)
-
+## Places the player on a parcel of the realm already loaded, and records it as where
+## they are. Changing realm on the way is a navigation: Navigator resolves that first and
+## then calls this, so the move never happens toward a place that turned out not to exist.
+func teleport_to(parcel: Vector2i) -> void:
+	move_to(Vector3i(parcel.x * 16 + 8, 3, -parcel.y * 16 - 8), false)
 	Global.scene_fetcher.update_position(parcel, true)
-
-	Global.get_config().add_place_to_last_places(parcel, realm)
+	Global.get_config().add_place_to_last_places(parcel, Global.realm.get_realm_string())
 	dirty_save_position = true
-	return true
 
 
 func player_look_at(look_at_position: Vector3):
@@ -1068,8 +1066,12 @@ func _update_preview_hud() -> void:
 
 
 ## True while a navbar side panel (or the dropdown) is open — the bottom-left slot hides then.
+func _any_left_panel_open() -> bool:
+	return friends_panel.visible or notifications_panel.visible or discover_panel.visible
+
+
 func _bottom_left_slot_blocked() -> bool:
-	return navbar.is_open() or friends_panel.visible or notifications_panel.visible
+	return navbar.is_open() or _any_left_panel_open()
 
 
 ## Restore the bottom-left slot: while a navbar panel is open it stays hidden; otherwise the
@@ -1227,7 +1229,8 @@ func _on_profile_container_visibility_changed() -> void:
 		capture_mouse()
 
 
-func _open_friends_panel() -> void:
+## Navbar's default panel on open (not a specific category tap) — currently Discover.
+func _on_navbar_opened() -> void:
 	# Opening the navbar overlays the HUD. Fully close the chat (not just hide it) so it
 	# reappears un-focused — notifications only, chatbar button un-toggled — when the navbar
 	# collapses. close_chat also resets the chatbar toggle (which exit_chat alone doesn't).
@@ -1237,7 +1240,7 @@ func _open_friends_panel() -> void:
 		Global.close_chat.emit()
 	emote_wheel.close()
 	Global.close_menu.emit()
-	Global.open_friends_panel.emit()
+	Global.open_discover_panel.emit()
 	emote_wheel.hide()
 	_hide_movement_controls()
 	_hide_bottom_left_hud()
@@ -1296,10 +1299,9 @@ func _on_control_menu_open_profile() -> void:
 func _on_global_open_own_profile() -> void:
 	if Global.is_orientation_portrait():
 		return
-	if friends_panel.visible:
-		friends_panel.hide_panel()
-	if notifications_panel.visible:
-		notifications_panel.hide_panel()
+	friends_panel.hide_panel()
+	notifications_panel.hide_panel()
+	discover_panel.hide_panel()
 	navbar.collapse()
 	_open_own_profile()
 
@@ -1325,16 +1327,16 @@ func _show_friends_panel() -> void:
 		return
 	joypad.hide()
 	friends_panel.show_panel_on_friends_tab()
-	if notifications_panel.visible:
-		notifications_panel.hide_panel()
+	notifications_panel.hide_panel()
+	discover_panel.hide_panel()
 	_refresh_hud_dismiss()
 	Global.explorer_release_focus()
 	if Global.is_mobile():
 		release_mouse()
 
 
-func _on_friends_panel_closed() -> void:
-	friends_panel.hide_panel()
+func _close_left_panel(panel: PanelContainer) -> void:
+	panel.hide_panel()
 	Global.explorer_grab_focus()
 	capture_mouse()
 
@@ -1354,23 +1356,30 @@ func _on_menu_closed() -> void:
 
 func _show_notifications_panel() -> void:
 	if notifications_panel.visible:
-		# Re-tapping the already-selected category collapses the navbar, like tapping outside.
 		navbar.collapse()
 		return
 	joypad.hide()
 	notifications_panel.show_panel()
-	if friends_panel.visible:
-		friends_panel.hide_panel()
+	friends_panel.hide_panel()
+	discover_panel.hide_panel()
 	_refresh_hud_dismiss()
 	Global.explorer_release_focus()
 	if Global.is_mobile():
 		release_mouse()
 
 
-func _on_notifications_panel_closed() -> void:
+func _show_discover_panel() -> void:
+	if discover_panel.visible:
+		navbar.collapse()
+		return
+	joypad.hide()
+	friends_panel.hide_panel()
 	notifications_panel.hide_panel()
-	Global.explorer_grab_focus()
-	capture_mouse()
+	discover_panel.show_panel()
+	_refresh_hud_dismiss()
+	Global.explorer_release_focus()
+	if Global.is_mobile():
+		release_mouse()
 
 
 func _on_notification_queued(notification_d: Dictionary) -> void:
@@ -1638,9 +1647,7 @@ func _update_virtual_controls_visibility() -> void:
 		virtual_joystick.show()
 		virtual_joystick.modulate.a = 0.0
 		return
-	var panel_open := (
-		friends_panel.visible or notifications_panel.visible or profile_container.visible
-	)
+	var panel_open: bool = _any_left_panel_open() or profile_container.visible
 	if not panel_open:
 		_show_joypad()
 	virtual_joystick.show()
@@ -1654,8 +1661,9 @@ func _on_backpack_open(_on_emotes := false) -> void:
 
 func _close_all_panels():
 	control_menu.async_close()
-	_on_friends_panel_closed()
-	_on_notifications_panel_closed()
+	_close_left_panel(friends_panel)
+	_close_left_panel(notifications_panel)
+	_close_left_panel(discover_panel)
 	_on_menu_closed()
 	_refresh_hud_dismiss()
 	# Restore the bottom-left slot (chat / preview toolbar) and the emote HUD hidden while the
@@ -1672,22 +1680,27 @@ func _on_discover_open():
 	_enter_menu_screen()
 
 
-# Shared cleanup when entering a fullscreen menu screen (Discover / Backpack):
-# collapse the navbar dropdown, close the side panels and hide the navbar.
+# Shared cleanup entering a fullscreen menu screen: collapse the navbar, close the side panels.
+# Doesn't hide the navbar node too — the screen already draws above it by tree order, so the
+# collapsed toggle just stays covered, with no hide/show round trip to flash it for a frame.
 func _enter_menu_screen():
 	navbar.collapse()
 	_show_joypad()
-	_on_friends_panel_closed()
-	_on_notifications_panel_closed()
+	_close_left_panel(friends_panel)
+	_close_left_panel(notifications_panel)
+	_close_left_panel(discover_panel)
 	_on_menu_closed()
 	_refresh_hud_dismiss()
-	navbar.set_manually_hidden(true)
 	release_mouse()
 
 
 func _on_menu_open():
-	_on_friends_panel_closed()
-	_on_notifications_panel_closed()
+	# Fires for ANY menu screen becoming visible, so a screen never shows with the navbar left
+	# open behind it, regardless of how it was entered (e.g. Discover's Report Bug).
+	navbar.collapse()
+	_close_left_panel(friends_panel)
+	_close_left_panel(notifications_panel)
+	_close_left_panel(discover_panel)
 	_on_menu_closed()
 	_refresh_hud_dismiss()
 	release_mouse()
@@ -1698,10 +1711,9 @@ func _on_menu_close():
 	# deferred while the menu is open so the HUD change isn't visible behind it). Previously this
 	# only ran on the next menu open, so the toggle appeared to take one exit cycle to apply.
 	apply_deferred_hide_ui()
+	# Also restores the navbar's visibility (via the orientation_changed -> navbar._on_size_changed
+	# chain); _on_menu_open already released the mouse on the way in.
 	Global.set_orientation_landscape()
-	if !navbar.visible:
-		navbar.set_manually_hidden(false)
-		release_mouse()
 
 
 func _extract_short_realm_url(full_url: String) -> String:
@@ -1776,9 +1788,7 @@ func _on_hud_dismiss_catcher_gui_input(event: InputEvent) -> void:
 ## The full-screen dismiss catcher is STOP (catches empty-area taps) only while a left
 ## panel is open or the chat is visible; IGNORE otherwise so it never blocks gameplay.
 func _refresh_hud_dismiss() -> void:
-	var open: bool = (
-		notifications_panel.visible or friends_panel.visible or chat_panel.is_chat_visible()
-	)
+	var open: bool = _any_left_panel_open() or chat_panel.is_chat_visible()
 	hud_dismiss_catcher.mouse_filter = (
 		Control.MOUSE_FILTER_STOP if open else Control.MOUSE_FILTER_IGNORE
 	)

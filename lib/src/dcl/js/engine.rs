@@ -185,7 +185,11 @@ fn op_crdt_send_to_renderer(op_state: Rc<RefCell<OpState>>, #[arraybuffer] messa
 
     let mutex_scene_crdt_state = op_state.take::<SharedSceneCrdtState>();
     let cloned_scene_crdt = mutex_scene_crdt_state.clone();
-    let mut scene_crdt_state = cloned_scene_crdt.lock().unwrap();
+    // Poison is recovered here on purpose, unlike op_crdt_recv_wait, which winds
+    // the scene down. A scene's send is always followed by a recv, so writing into
+    // the half-updated state lasts at most one tick before the scene is killed
+    // (SceneManager also kills it on poison). Keep the two paths as they are.
+    let mut scene_crdt_state = cloned_scene_crdt.lock().unwrap_or_else(|e| e.into_inner());
 
     let mut stream = DclReader::new(messages);
 
@@ -249,7 +253,16 @@ async fn op_crdt_recv_wait(op_state: Rc<RefCell<OpState>>) -> Result<u32, anyhow
     let local_api_calls = op_state.take::<Vec<LocalCall>>();
     let mutex_scene_crdt_state = op_state.take::<Arc<Mutex<SceneCrdtState>>>();
     let cloned_scene_crdt = mutex_scene_crdt_state.clone();
-    let scene_crdt_state = cloned_scene_crdt.lock().unwrap();
+    // A poisoned lock means the renderer panicked mid-update on this scene's
+    // state; SceneManager kills the scene when it sees that. Put back what was
+    // taken so the next op doesn't hit a missing-type panic (which would abort,
+    // ops can't unwind), and wind the scene down.
+    let Ok(scene_crdt_state) = cloned_scene_crdt.lock() else {
+        op_state.put(local_api_calls);
+        op_state.put(mutex_scene_crdt_state);
+        op_state.put(SceneDying(true));
+        return Err(anyhow::anyhow!("scene CRDT state poisoned, shutting down"));
+    };
 
     let mut renderer_delta_seconds = 0.0f32;
     let data = match response {
@@ -274,13 +287,17 @@ async fn op_crdt_recv_wait(op_state: Rc<RefCell<OpState>>) -> Result<u32, anyhow
             // and a shared lock here serializes the whole CRDT pipeline.
             if CRDT_BREAKDOWN_ENABLED.load(Ordering::Relaxed) {
                 {
-                    let mut map = crdt_dirty_lww_by_component().lock().unwrap();
+                    let mut map = crdt_dirty_lww_by_component()
+                        .lock()
+                        .unwrap_or_else(|e| e.into_inner());
                     for (component_id, entities) in dirty_crdt_state.lww.iter() {
                         *map.entry(component_id.0).or_insert(0) += entities.len() as u64;
                     }
                 }
                 {
-                    let mut map = crdt_dirty_gos_by_component().lock().unwrap();
+                    let mut map = crdt_dirty_gos_by_component()
+                        .lock()
+                        .unwrap_or_else(|e| e.into_inner());
                     for (component_id, entities) in dirty_crdt_state.gos.iter() {
                         *map.entry(component_id.0).or_insert(0) += entities.len() as u64;
                     }

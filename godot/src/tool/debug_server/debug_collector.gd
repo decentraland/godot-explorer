@@ -59,9 +59,14 @@ static func collect_scenes_summary() -> Array:
 ## entity count — the ONE scene-scoped resource walker (also feeds the preview
 ## SceneStatsPanel); extend it here instead of adding another subtree walk.
 ## Returns: { triangles, bodies, colliders, entities, geometries, materials,
-## textures, emitters, live_particles, lights, shadow_casters }. `tri_cache`
-## (mesh instance_id -> triangles) is caller-owned so repeated refresh ticks
-## stay cheap; pass {} to skip caching.
+## textures, emitters, live_particles, lights, shadow_casters }.
+## `tri_cache` (mesh instance_id -> triangles) is caller-owned so repeated
+## refresh ticks stay cheap; pass {} to skip caching.
+## bodies/triangles/geometries/materials/textures skip `_collider` authoring
+## meshes (same import-time name rule scene.rs uses to hide them — NOT live
+## visibility, which SDK7 VisibilityComponent toggles at runtime);
+## colliders counts only physics-active shapes (parent body collision_layer
+## != 0) — dormant per-mesh trimesh shapes cost nothing.
 static func collect_scene_resources(scene_id: int, tri_cache: Dictionary) -> Dictionary:
 	var acc: Dictionary = {
 		"triangles": 0,
@@ -97,18 +102,29 @@ static func _walk_scene_resources(
 ) -> void:
 	if node is MeshInstance3D:
 		var mi: MeshInstance3D = node
-		acc["bodies"] += 1
-		var mesh: Mesh = mi.mesh
-		if mesh != null:
-			geos[mesh.get_instance_id()] = true
-			acc["triangles"] += _mesh_triangles(mesh, tri_cache)
-			for si in range(mesh.get_surface_count()):
-				var mat: Material = mi.get_active_material(si)
-				if mat != null:
-					mats[mat.get_instance_id()] = true
-					_collect_material_textures(mat, texs)
+		# Skip `_collider` authoring meshes using the same import-time name rule
+		# scene.rs::create_scene_colliders_inner applies to hide them — NOT live
+		# visibility: SDK7 VisibilityComponent hides ordinary content through the
+		# same flag, and those assets still cost download/GPU memory, so the
+		# budget rows must stay stable while a scene toggles props at runtime.
+		if not String(mi.name).to_lower().contains("collider"):
+			acc["bodies"] += 1
+			var mesh: Mesh = mi.mesh
+			if mesh != null:
+				geos[mesh.get_instance_id()] = true
+				acc["triangles"] += _mesh_triangles(mesh, tri_cache)
+				for si in range(mesh.get_surface_count()):
+					var mat: Material = mi.get_active_material(si)
+					if mat != null:
+						mats[mat.get_instance_id()] = true
+						_collect_material_textures(mat, texs)
 	elif node is CollisionShape3D:
-		acc["colliders"] += 1
+		# Count only physics-active colliders: a body with collision_layer == 0 is
+		# process-DISABLED and out of broadphase/queries (zero physics cost) — it's
+		# just the dormant per-mesh trimesh shape every GLTF mesh gets at import.
+		var body := node.get_parent()
+		if body is CollisionObject3D and (body as CollisionObject3D).collision_layer != 0:
+			acc["colliders"] += 1
 	elif node is GPUParticles3D:
 		# Authored, not playback state: every emitter counts (the runtime forces
 		# emitting off for scenes the player isn't standing in, and for paused /
