@@ -139,6 +139,8 @@ static var _newtag_forced_new: Dictionary = {}
 # "" -> first-wallet transition deliberately does NOT reset, so a fresh-install live arrival's
 # forced-NEW flag (marked just before that wallet's first evaluate) survives.
 static var _newtag_session_wallet: String = ""
+# Lowercased base-avatar urn -> the spelling wearable_data keys it by (see _canonical_base_urn).
+static var _base_urn_by_lower: Dictionary = {}
 
 
 # gdlint:ignore = async-function-name
@@ -974,8 +976,20 @@ static func newtag_item_urn(urn: String, token_id: String) -> String:
 static func to_item_urn(urn: String) -> String:
 	var parts := urn.split(":")
 	if parts.size() <= 6:
-		return urn
+		return _canonical_base_urn(urn)
 	return ":".join(parts.slice(0, 6))
+
+
+# Base urns are case-insensitive, but the catalyst's default profiles (the "Choose your look"
+# presets) store them lowercased (…:schoolshoes) while wearable_data keys them as
+# BASE_WEARABLES spells them (…:SchoolShoes). Map to the grid's spelling so equipped-state /
+# unequip / same-category-replace match and the preset item can be swapped out (#2793).
+static func _canonical_base_urn(urn: String) -> String:
+	if _base_urn_by_lower.is_empty():
+		for wearable_id in Wearables.BASE_WEARABLES:
+			var key: String = Wearables.get_base_avatar_urn(wearable_id)
+			_base_urn_by_lower[key.to_lower()] = key
+	return _base_urn_by_lower.get(urn.to_lower(), urn)
 
 
 # Evaluates the NEW tags for a category from the current owned counts and persists the
