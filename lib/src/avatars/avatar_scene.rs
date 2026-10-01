@@ -1888,22 +1888,26 @@ impl AvatarScene {
             return;
         };
 
-        // Discard if the emote is less than or equal to the last played emote
-        if let Some(last_incremental_id) = self.last_emote_incremental_id.get(&alias) {
-            if incremental_id <= *last_incremental_id {
-                tracing::debug!(
-                    "Discarding emote {} for alias {}: incremental_id {} <= last_emote_incremental_id {}",
-                    emote_urn,
-                    alias,
-                    incremental_id,
-                    last_incremental_id
-                );
-                return;
+        // Discard if the emote is less than or equal to the last played emote. Id 0 means
+        // the sender doesn't number its emotes (Unity): MessageProcessor already deduped
+        // those by timestamp, and ordering them here would drop all but the first.
+        if incremental_id != 0 {
+            if let Some(last_incremental_id) = self.last_emote_incremental_id.get(&alias) {
+                if incremental_id <= *last_incremental_id {
+                    tracing::debug!(
+                        "Discarding emote {} for alias {}: incremental_id {} <= last_emote_incremental_id {}",
+                        emote_urn,
+                        alias,
+                        incremental_id,
+                        last_incremental_id
+                    );
+                    return;
+                }
             }
-        }
 
-        // Store the last emote incremental ID for this alias
-        self.last_emote_incremental_id.insert(alias, incremental_id);
+            // Store the last emote incremental ID for this alias
+            self.last_emote_incremental_id.insert(alias, incremental_id);
+        }
 
         if let Some(avatar_scene) = self.avatar_godot_scene.get_mut(&entity_id) {
             avatar_scene.call(

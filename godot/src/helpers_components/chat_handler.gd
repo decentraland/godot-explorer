@@ -15,18 +15,13 @@ func _on_chats_arrived(chats: Array):
 		var address: String = chat[0]
 		var timestamp: float = chat[1]
 
-		var avatar: DclAvatar
-		if address == Global.player_identity.get_address_str():
-			avatar = Global.scene_runner.player_avatar_node
-		elif address != "system":
-			avatar = Global.avatars.get_avatar_by_address(address)
-
 		var message: String = chat[2]
 		if message.begins_with(EMOTE):
-			message = message.substr(1)  # Remove prefix
-			var expression_id = message.split(" ")[0]  # Get expression id ([1] is timestamp)
-			if avatar != null and is_instance_valid(avatar):
-				avatar.emote_controller.async_play_emote(expression_id)
+			# Legacy `␐<urn> <timestamp>` emote. Hidden, not played: every sender also
+			# broadcasts the rfc4 PlayerEmote, which carries the mask and is deduped
+			# across rooms — this copy has neither, so replaying it could win the
+			# cooldown race and play an upper-body emote as full body.
+			pass
 		elif message.begins_with(REQUEST_PING):
 			pass  # TODO: Send ACK
 		elif message.begins_with(ACK):

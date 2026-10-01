@@ -439,12 +439,9 @@ pub fn trigger_scene_emote(
 /// masked emote parked for replay, so walking back into the scene can't resurrect it
 /// (Unity does the same via `masked.EmoteUrn = default` in `TryStopEmote`).
 ///
-/// Telling the other players is **Pulse-only**: the stop rides the `set_emoting(false)`
-/// edge in `CommunicationManager`, and that whole body sits inside
-/// `#[cfg(feature = "use_pulse")]`. On the rfc4/LiveKit path this client only ever sends
-/// `PlayerEmote { is_stopping: None }` at trigger time and has no stop message at all, so
-/// on a LiveKit-only realm a scene's `stopEmote` ends the emote locally while remote
-/// viewers keep looping it. Pre-existing gap, not addressed here.
+/// Other players are told on the `set_emoting(false)` edge in `CommunicationManager`: a
+/// Pulse `EmoteStop`, plus an rfc4 `PlayerEmote { is_stopping: true }` over LiveKit when
+/// the stopped emote was looping (one-shots end on their own on the receiver).
 ///
 /// The scene id is forwarded so the avatar can scope the stop: a masked emote is only
 /// ended by the scene that started it, matching Unity's `TryStopEmote`, which stops the
