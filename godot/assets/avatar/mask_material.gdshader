@@ -11,6 +11,9 @@ instance uniform float own_fade : hint_range(0.0, 1.0) = 0.0;
 uniform vec4 material_color;
 uniform vec4 mask_color;
 uniform sampler2D base_texture : hint_default_white;
+// No mask = no tint. Keep white: Unity's DefaultEyesMask and wearable-preview don't tint maskless
+// eyes either, and a black default recolors the whole eye, sclera included (#2439). Base eyes get
+// a bundled iris mask instead (avatar.gd BASE_EYE_MASKS); eyebrows/mouth tint via mask_color = BLACK.
 uniform sampler2D mask_texture : hint_default_white;
 
 void fragment() {
