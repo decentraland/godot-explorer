@@ -181,7 +181,7 @@ Write **each case** as a short block:
 
 Add a **regression** line whenever the change touches shared code — the case that confirms the *old* path still works. Describe user actions, not internals: QA can't see an `_is_switching` guard, but they can "rotate the device rapidly while a teleport is loading". Only call out a **platform** when a case is iOS- or Android-specific — otherwise both phones are the default. Don't ask QA to run desktop checks; desktop isn't a supported target.
 
-Every case and subcase ends in a `- [ ]` line QA can tick. A block with no box is not a case, and a table row is not one either — GitHub does not render checkboxes inside table cells. Full example:
+Every case and subcase ends in its Expected or Regression line written as a `- [ ] **Expected:** …` box QA can tick — the text sits on the box, never a bare `- [ ]` under it (GitHub renders an empty task item as a plain `[ ]` bullet, not a checkbox). A block with no box is not a case, and a table row is not one either — GitHub does not render checkboxes inside table cells. Full example:
 
 ```markdown
 ## Test plan
@@ -218,7 +218,7 @@ Anti-patterns that make a case un-executable — a reviewer should ask the autho
 - **Restating the obvious** — "download the APK / install the TestFlight build / use a phone running vX". Distribution and device are a given; don't spend steps on them.
 - **Non-obvious state left unsaid** — a case that only repros with specific wearables equipped, as a guest, or with a second user present must say so up front.
 - **Vague expected result** — "the UI looks right", "no crash". State *what* correct looks like.
-- **No box to tick** — a case written as prose or as a "Do this / Expect" table gives QA nowhere to record pass/fail. Every case and subcase ends in a `- [ ]` line.
+- **No box to tick** — a case written as prose, as a "Do this / Expect" table, or with a bare `- [ ]` under a prose Expected gives QA nowhere to record pass/fail. Put the Expected text on the box: `- [ ] **Expected:** …`.
 - **Steps that assume code knowledge** — referencing a private method, signal, or guard by name. Translate it into the user-visible action that exercises it.
 
 ### Naming (from `.gdlintrc`)

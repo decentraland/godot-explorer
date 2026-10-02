@@ -39,6 +39,20 @@ impl DclTransformAndParent {
             parent: SceneEntityId::ROOT,
         }
     }
+
+    /// World-space transform → relative to a scene whose root node sits at the
+    /// Godot position `scene_origin` (same offset `from_godot` takes). Rotation,
+    /// scale and parent are kept: scene roots are never rotated.
+    pub fn to_scene_local(&self, scene_origin: Vector3) -> Self {
+        Self {
+            translation: Vector3 {
+                x: self.translation.x - scene_origin.x,
+                y: self.translation.y - scene_origin.y,
+                z: self.translation.z + scene_origin.z,
+            },
+            ..self.clone()
+        }
+    }
 }
 
 pub fn update_transform_and_parent(
@@ -279,4 +293,18 @@ fn detect_entity_id_in_parent_chain(
     }
 
     false
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn to_scene_local_matches_from_godot_offset() {
+        let t = Transform3D::IDENTITY.translated(Vector3::new(10.0, 2.0, -30.0));
+        let origin = Vector3::new(16.0, 0.0, -32.0);
+        let direct = DclTransformAndParent::from_godot(&t, origin);
+        let via_world = DclTransformAndParent::from_godot(&t, Vector3::ZERO).to_scene_local(origin);
+        assert_eq!(direct.translation, via_world.translation);
+    }
 }
