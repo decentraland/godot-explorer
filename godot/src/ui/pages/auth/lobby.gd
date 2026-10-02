@@ -599,7 +599,7 @@ func _ready():
 		if random_profile != null:
 			Global.get_config().guest_profile = random_profile.to_godot_dictionary()
 
-	# A sandbox StoreKit build switches to the Option D hybrid env (credits/profile/
+	# An App Review install switches to the Option D hybrid env (credits/profile/
 	# catalog → .zone). That switch must land BEFORE try_recover_account fetches the
 	# profile + credits, or they would load from the wrong backend. Block on the
 	# authoritative env resolution here (no-op on non-iOS / once resolved, which is
@@ -1058,7 +1058,7 @@ func _async_resume_signin_from_deep_link() -> bool:
 	# Distinct auth_method: AUTH_BROWSER_OPEN is the same screen, but this one is a resumed
 	# cold start, and the funnel needs to tell the two apart to measure the fix.
 	show_auth_browser_open_screen(deeplink_target_keys, "deeplink_cold_start")
-	# Same reason the session-recovery path below awaits it: on a sandbox StoreKit build the
+	# Same reason the session-recovery path below awaits it: on an App Review install the
 	# hybrid env has to be settled before the profile fetch this kicks off, or the profile
 	# loads from the wrong backend. No-op off iOS, and capped at 5s.
 	await Iap.async_await_env_resolved()

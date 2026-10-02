@@ -200,6 +200,7 @@ static WebviewDelegate *g_webviewDelegate = nil;
 
 DclGodotiOS *DclGodotiOS::instance = NULL;
 String DclGodotiOS::receivedUrl = "";
+String DclGodotiOS::apnsToken = "";
 
 void DclGodotiOS::_bind_methods() {
     ClassDB::bind_method(D_METHOD("print_version"), &DclGodotiOS::print_version);
@@ -275,11 +276,21 @@ void DclGodotiOS::_bind_methods() {
     // Device anchor — Keychain-stored UUID that survives uninstall.
     ClassDB::bind_method(D_METHOD("get_device_anchor_id"), &DclGodotiOS::get_device_anchor_id);
 
+    // Remote push (APNs)
+    ClassDB::bind_method(D_METHOD("get_apns_token"), &DclGodotiOS::get_apns_token);
+
     // Signal emitted when a deeplink URL is received
     ADD_SIGNAL(MethodInfo("deeplink_received", PropertyInfo(Variant::STRING, "url")));
 
     // Signal emitted when the in-app web browser (open_webview_url) is dismissed.
     ADD_SIGNAL(MethodInfo("webview_closed"));
+
+    // Outcome of request_notification_permission: "granted" | "denied". Same name and
+    // values as the Android plugin's signal so NotificationOSWrapper handles both alike.
+    ADD_SIGNAL(MethodInfo("notification_permission_result", PropertyInfo(Variant::STRING, "result")));
+
+    // Fires once per launch with the APNs device token (hex), or "" when registration failed.
+    ADD_SIGNAL(MethodInfo("apns_token_ready", PropertyInfo(Variant::STRING, "token")));
 
     // Photo gallery pick result. `error` is empty on success, "cancelled"
     // when the user dismissed the picker, or a failure reason otherwise.
@@ -800,6 +811,10 @@ void DclGodotiOS::request_notification_permission() {
         if (error) {
             printf("Error requesting notification permission: %s\n", error.localizedDescription.UTF8String);
         }
+        // The completion runs on a UserNotifications queue; Godot signals belong on main.
+        dispatch_async(dispatch_get_main_queue(), ^{
+            DclGodotiOS::emit_notification_permission_result(granted);
+        });
     }];
     #endif
 }
@@ -824,6 +839,26 @@ bool DclGodotiOS::has_notification_permission() {
     #else
     return false;
     #endif
+}
+
+String DclGodotiOS::get_apns_token() {
+    return apnsToken;
+}
+
+void DclGodotiOS::emit_apns_token_ready(String token) {
+    // Cached first: the token usually lands before Metrics connects to the signal.
+    apnsToken = token;
+    DclGodotiOS *singleton = DclGodotiOS::get_singleton();
+    if (singleton) {
+        singleton->emit_signal("apns_token_ready", token);
+    }
+}
+
+void DclGodotiOS::emit_notification_permission_result(bool granted) {
+    DclGodotiOS *singleton = DclGodotiOS::get_singleton();
+    if (singleton) {
+        singleton->emit_signal("notification_permission_result", granted ? String("granted") : String("denied"));
+    }
 }
 
 bool DclGodotiOS::schedule_local_notification(String notification_id, String title, String body, int delay_seconds) {

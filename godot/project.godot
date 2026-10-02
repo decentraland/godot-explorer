@@ -43,6 +43,7 @@ general/ios/session_category=3
 
 UiSounds="*res://src/helpers_components/ui_sounds.gd"
 Global="*res://src/global.gd"
+SessionTracker="*res://src/session_tracker.gd"
 SplashOverlay="*res://src/ui/splash_overlay/splash_overlay.gd"
 NotificationsManager="*res://src/notifications_manager.gd"
 ConnectionQualityMonitor="*res://src/connection_quality_monitor.gd"
@@ -241,6 +242,11 @@ pseudolocalization/suffix="»"
 3d_physics/layer_30="CL_CLICKABLE_AVATAR"
 3d_physics/layer_31="CL_AVATAR_MODIFIER_AREA"
 3d_physics/layer_32="CL_CAMERA_MODE_AREA"
+
+[physics]
+
+; #2844: Jolt replaces Godot Physics as the 3D server on all targets.
+3d/physics_engine="Jolt Physics"
 
 [network]
 
