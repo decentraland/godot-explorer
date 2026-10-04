@@ -4,8 +4,8 @@ use std::thread;
 
 use godot::builtin::{
     Array, Color, PackedByteArray, PackedColorArray, PackedFloat32Array, PackedInt32Array,
-    PackedVector2Array, PackedVector3Array, Rid, Transform3D, VarArray, VarDictionary, Vector2,
-    Vector2i, Vector3,
+    PackedVector2Array, PackedVector3Array, Plane, Rid, Transform3D, VarArray, VarDictionary,
+    Vector2, Vector2i, Vector3,
 };
 use godot::classes::mesh::ArrayType;
 use godot::classes::physics_server_3d::{BodyMode, BodyState};
@@ -345,6 +345,10 @@ impl DclFloatingIslandsManager {
         let submitted_this_frame = self.drain_worker_responses(budget);
         self.generated_so_far += submitted_this_frame;
 
+        // Compute the camera frustum once per tick so that the inner-loop frustum
+        // checks (parcel_in_frustum) do not repeatedly reallocate the plane array.
+        let frustum_planes = camera.get_frustum();
+
         let mut in_view_candidates = 0;
         let mut in_view_missing: Vec<(i32, i32)> = Vec::new();
 
@@ -355,7 +359,7 @@ impl DclFloatingIslandsManager {
                     continue;
                 }
                 let dist = dx.abs().max(dz.abs());
-                let wanted = dist <= 1 || Self::parcel_in_camera_view(&camera, coord);
+                let wanted = dist <= 1 || Self::parcel_in_frustum(&frustum_planes, coord);
                 if !wanted {
                     continue;
                 }
@@ -399,7 +403,7 @@ impl DclFloatingIslandsManager {
                 continue;
             }
 
-            let in_frustum = Self::parcel_in_camera_view(&camera, coord);
+            let in_frustum = Self::parcel_in_frustum(&frustum_planes, coord);
             if in_frustum {
                 if stale {
                     to_show.push(coord);
@@ -581,13 +585,14 @@ impl DclFloatingIslandsManager {
     }
 
     fn in_view_all_materialized(&self, player: Vector2i, view: i32, camera: &Gd<Camera3D>) -> bool {
+        let frustum_planes = camera.get_frustum();
         for dx in -view..=view {
             for dz in -view..=view {
                 let coord = (player.x + dx, player.y + dz);
                 if !self.candidates.contains_key(&coord) {
                     continue;
                 }
-                if !Self::parcel_in_camera_view(camera, coord) {
+                if !Self::parcel_in_frustum(&frustum_planes, coord) {
                     continue;
                 }
                 if !self.active.contains_key(&coord) {
@@ -598,7 +603,13 @@ impl DclFloatingIslandsManager {
         true
     }
 
-    fn parcel_in_camera_view(camera: &Gd<Camera3D>, coord: (i32, i32)) -> bool {
+    /// Returns true if any of the parcel's probe points lies inside the given frustum.
+    ///
+    /// Accepts a pre-computed `Array<Plane>` (from `Camera3D::get_frustum()`) so that the
+    /// caller can compute the frustum once and reuse it across many parcels, avoiding the
+    /// O(N) `CowData` reallocation that `Camera3D::is_position_in_frustum` triggers on every
+    /// call (it internally calls `get_frustum()` each time).
+    fn parcel_in_frustum(planes: &Array<Plane>, coord: (i32, i32)) -> bool {
         let (cx, cz) = coord;
         let world_x = cx as f32 * PARCEL_SIZE + PARCEL_HALF_SIZE;
         let world_z = -(cz as f32 * PARCEL_SIZE + PARCEL_HALF_SIZE);
@@ -618,7 +629,11 @@ impl DclFloatingIslandsManager {
             Vector3::new(world_x, -PARCEL_HEIGHT_BOUND, world_z),
         ];
 
-        probes.iter().any(|p| camera.is_position_in_frustum(*p))
+        // A point is inside the frustum when it is on the positive (normal) side of
+        // every frustum plane.  `Plane::is_point_over` returns true for that condition.
+        probes
+            .iter()
+            .any(|&p| planes.iter_shared().all(|plane| plane.is_point_over(p)))
     }
 
     fn enqueue_parcel_build(&mut self, coord: (i32, i32)) {
