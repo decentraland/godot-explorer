@@ -1342,7 +1342,7 @@ mouse_filter = 2
 
 [node name="CustomButton_SignOut" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Account/HBoxContainer_AccountRow/VBoxContainer_AccountContent" unique_id=1982531289 instance=ExtResource("22_mwb5b")]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(275, 96)
+custom_minimum_size = Vector2(198, 96)
 layout_mode = 2
 theme_override_font_sizes/font_size = 24
 theme_override_styles/normal_mirrored = ExtResource("26_30x8d")
