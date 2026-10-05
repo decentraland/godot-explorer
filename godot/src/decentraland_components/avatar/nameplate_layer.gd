@@ -9,14 +9,26 @@ extends RefCounted
 ## throttled raycast, and depth-sorted.
 ## `layer = -1` draws above the 3D world but below the default-layer HUD.
 
-# On-screen size and distance fade (full < FADE_START, fade to FADE_END), per
-# nickname_quad.gd. SCALE is 15% larger than the prior 0.25.
+## Content tiers per #2938.
+enum Tier { FULL, BADGE, NAME }
+
+# On-screen size and distance tiers (#2938): full content < TIER_FULL_END, badge
+# dropped past TIER_BADGE_END, name-only (smaller, dimmer) past TIER_NAME_END,
+# fade to FADE_END, hidden beyond. SCALE is 15% larger than the prior 0.25.
 const SCALE := 0.2875
 # Fraction of the tag height kept ABOVE the head anchor (1.0 = bottom edge sits on the
 # anchor). Below 1.0 nudges the whole tag down toward the head.
 const ANCHOR_HEIGHT_FACTOR := 0.85
-const FADE_START := 10.0
-const FADE_END := 15.0
+const TIER_FULL_END := 8.0
+const TIER_BADGE_END := 12.0
+const TIER_NAME_END := 20.0
+const FADE_END := 25.0
+# Name-only tier: reduced size and max opacity.
+const TIER_NAME_SCALE := 0.8
+const TIER_NAME_ALPHA := 0.7
+# Crowd cap: at most this many plates show FULL content; the rest degrade to the
+# badge tier. Focused (crosshair) and nearest win.
+const CROWD_MAX_FULL := 7
 # Alpha units/sec for smooth occlusion fade in/out.
 const FADE_SPEED := 6.0
 # Occlusion needs to see (a) solid world geometry + avatar bodies, and (b) other
@@ -69,6 +81,10 @@ static var _plate_alphas: Dictionary = {}
 # visible iff the camera can see the spot where it is actually drawn — otherwise a
 # cluster behind one occluder would lose every tag, even the stacked ones.
 static var _plate_ray_targets: Dictionary = {}
+# ui instance_id -> {dist, focused} for visible plates (crowd ranking) and -> last
+# applied content tier (apply only on change).
+static var _plate_dists: Dictionary = {}
+static var _plate_tiers: Dictionary = {}
 
 
 ## The Control to parent nameplates under (screen-space). Created on first use.
@@ -120,9 +136,10 @@ static func detach(avatar) -> void:
 		avatar.nickname_ui.queue_free()
 
 
-## Per-frame: project the head anchor to screen, place/scale/sort the Control, and
-## drive its alpha toward a target (smooth fade in/out). The target is 0 unless the
-## tag is gated-visible, in front of the camera, within FADE_END, inside the viewport
+## Per-frame: project the head anchor to screen, place/scale/sort the Control, pick
+## the content tier (#2938: distance + crowd cap + focused override) and drive its
+## alpha toward a target (smooth fade in/out). The target is 0 unless the tag is
+## gated-visible, in front of the camera, within FADE_END, inside the viewport
 ## (frustum) and not depth-occluded — so anything off-screen/behind/occluded fades
 ## out and fades back in when it re-enters, instead of popping.
 static func update(avatar) -> void:
@@ -136,9 +153,12 @@ static func update(avatar) -> void:
 		# Fade by the camera distance — what the camera actually sees.
 		var dist: float = cam.global_position.distance_to(anchor)
 		if dist <= FADE_END and not cam.is_position_behind(anchor):
+			var focused := _is_focused(avatar)
+			var tier := _content_tier(ui, dist, focused)
+			var scale_f: float = SCALE * (TIER_NAME_SCALE if tier == Tier.NAME else 1.0)
 			ui.size = ui.get_combined_minimum_size()
-			ui.scale = Vector2(SCALE, SCALE)
-			var screen_size: Vector2 = ui.size * SCALE
+			ui.scale = Vector2(scale_f, scale_f)
+			var screen_size: Vector2 = ui.size * scale_f
 			var pos: Vector2 = (
 				cam.unproject_position(anchor)
 				- Vector2(screen_size.x * 0.5, screen_size.y * ANCHOR_HEIGHT_FACTOR)
@@ -150,7 +170,9 @@ static func update(avatar) -> void:
 				# so close-together avatars' tags (and their chat bubbles, which live
 				# inside the same Control) stay readable.
 				pos = _stack_position(ui, pos, screen_size, view_rect.size)
-				target_a = clampf((FADE_END - dist) / (FADE_END - FADE_START), 0.0, 1.0)
+				_apply_tier(ui, tier)
+				_plate_dists[ui.get_instance_id()] = {"dist": dist, "focused": focused}
+				target_a = _tier_alpha(tier, dist, focused)
 			else:
 				_untrack_plate(ui)
 			ui.position = pos
@@ -170,6 +192,76 @@ static func update(avatar) -> void:
 		ui.modulate.a, target_a, avatar.get_process_delta_time() * FADE_SPEED
 	)
 	ui.visible = ui.modulate.a > 0.01
+
+
+## Crosshair-hovered avatar always gets the full tag (#2938).
+static func _is_focused(avatar) -> bool:
+	return Global.get_selected_avatar() == avatar
+
+
+## Content tier for a plate at `dist`: distance bands, with the crowd cap
+## degrading excess close plates one tier and focused always FULL.
+static func _content_tier(ui: Control, dist: float, focused: bool) -> int:
+	if focused:
+		return Tier.FULL
+	if dist > TIER_BADGE_END:
+		return Tier.NAME
+	if dist > TIER_FULL_END:
+		return Tier.BADGE
+	if _crowd_allows_full(ui.get_instance_id(), dist):
+		return Tier.FULL
+	return Tier.BADGE
+
+
+## Alpha target per tier: full until TIER_NAME_END, fade to FADE_END; name-only
+## tier is additionally dimmed. Focused ignores the fade.
+static func _tier_alpha(tier: int, dist: float, focused: bool) -> float:
+	if focused:
+		return 1.0
+	var fade := clampf((FADE_END - dist) / (FADE_END - TIER_NAME_END), 0.0, 1.0)
+	if tier == Tier.NAME:
+		return minf(TIER_NAME_ALPHA, fade)
+	return fade
+
+
+## True if this plate is within the CROWD_MAX_FULL closest (focused plates take
+## priority). ponytail: ranks against last-frame distances — a 1-frame lag in a
+## crowd swap is invisible.
+static func _crowd_allows_full(ui_id: int, dist: float) -> bool:
+	var better := 0
+	for other_id in _plate_dists:
+		if other_id == ui_id:
+			continue
+		var other: Dictionary = _plate_dists[other_id]
+		if other.focused or other.dist < minf(dist, TIER_FULL_END):
+			better += 1
+	return better < CROWD_MAX_FULL
+
+
+## Show/hide the NicknameUI rows for the tier: hash `#xxxx` and chat bubble only
+## in FULL, badge (claimed checkmark + mic) dropped in NAME. Cached per plate —
+## the setters in nickname_ui.gd (mic/name_claimed) re-apply on their own writes.
+static func _apply_tier(ui: Control, tier: int) -> void:
+	var id := ui.get_instance_id()
+	if _plate_tiers.get(id, -1) == tier:
+		return
+	_plate_tiers[id] = tier
+	_set_tier_nodes(ui, tier)
+
+
+## Re-apply the cached tier after a nickname_ui setter (mic, name_claimed) wrote
+## row visibility directly. No-op for plates without an applied tier.
+static func reassert_tier(ui: Control) -> void:
+	var tier: int = _plate_tiers.get(ui.get_instance_id(), -1)
+	if tier != -1:
+		_set_tier_nodes(ui, tier)
+
+
+static func _set_tier_nodes(ui: Control, tier: int) -> void:
+	ui.hash_container.visible = tier == Tier.FULL and not ui.name_claimed
+	ui.message_clip.visible = tier == Tier.FULL
+	ui.checkmark_container.visible = tier != Tier.NAME and ui.name_claimed
+	ui.mic_enabled_icon.visible = tier != Tier.NAME and ui.mic_enabled
 
 
 ## Throttled occlusion raycast. MUST run from _physics_process — direct_space_state
@@ -264,6 +356,8 @@ static func _untrack_plate(ui: Control) -> void:
 	_plate_offsets.erase(id)
 	_plate_alphas.erase(id)
 	_plate_ray_targets.erase(id)
+	_plate_dists.erase(id)
+	_plate_tiers.erase(id)
 
 
 ## 3D point the nameplate floats at: head anchor horizontally (follows the

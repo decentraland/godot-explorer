@@ -358,6 +358,26 @@ layout_mode = 2
 size_flags_vertical = 0
 theme = ExtResource("12_sa1v7")
 
+[node name="ShowOwnNametag" type="HBoxContainer" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_ChatAndSocial/SectionChatAndSocial/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 32
+
+[node name="Label_Title" type="Label" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_ChatAndSocial/SectionChatAndSocial/VBoxContainer/ShowOwnNametag"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_fonts/font = ExtResource("16_blskf")
+theme_override_font_sizes/font_size = 14
+text = "SETTINGS_SHOW_OWN_NAMETAG"
+label_settings = ExtResource("17_67hd5")
+script = ExtResource("99_orlbl")
+
+[node name="CheckButton_ShowOwnNametag" type="CheckButton" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_ChatAndSocial/SectionChatAndSocial/VBoxContainer/ShowOwnNametag"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 0
+theme = ExtResource("12_sa1v7")
+
 [node name="Container_Camera" type="MarginContainer" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay" unique_id=1854347]
 unique_name_in_owner = true
 layout_mode = 2
@@ -1676,6 +1696,7 @@ preview_margin_right = 20
 
 [connection signal="visibility_changed" from="." to="." method="_on_visibility_changed"]
 [connection signal="toggled" from="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_ChatAndSocial/SectionChatAndSocial/VBoxContainer/CloseChatAfterSending/CheckButton_SubmitMessageClosesChat" to="." method="_on_check_button_submit_message_closes_chat_toggled"]
+[connection signal="toggled" from="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_ChatAndSocial/SectionChatAndSocial/VBoxContainer/ShowOwnNametag/CheckButton_ShowOwnNametag" to="." method="_on_check_button_show_own_nametag_toggled"]
 [connection signal="toggled" from="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Interface/VBoxContainer/HidePlayerNames/CheckButton_HidePlayerNames" to="." method="_on_check_button_hide_player_names_toggled"]
 [connection signal="toggled" from="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Interface/VBoxContainer/HideExplorerUI/CheckButton_HideExplorerUI" to="." method="_on_check_button_hide_explorer_ui_toggled"]
 [connection signal="toggled" from="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Interface/VBoxContainer/HideViewProfile/CheckButton_HideViewProfile" to="." method="_on_check_button_hide_view_profile_toggled"]

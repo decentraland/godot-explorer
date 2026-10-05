@@ -764,6 +764,8 @@ func _apply_nickname_visibility() -> void:
 		is_avatar_shape and (current_name.is_empty() or current_name == "NPC")
 	)
 	var far_lod: bool = _lod_state == LODState.FAR
+	# Own nametag defaults off; the Settings toggle re-enables it (#2938).
+	var own_nametag_off: bool = is_local_player and not Global.get_config().show_own_nametag
 	var should_hide := (
 		avatar_shape_has_no_name
 		or hide_name
@@ -771,6 +773,7 @@ func _apply_nickname_visibility() -> void:
 		or far_lod
 		or nametag_hidden
 		or hidden
+		or own_nametag_off
 		or (profile_pending and Global.is_production())
 	)
 	if _use_2d_nameplate:

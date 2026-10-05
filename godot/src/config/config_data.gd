@@ -98,6 +98,11 @@ var submit_message_closes_chat: bool = false:
 	set(value):
 		submit_message_closes_chat = value
 
+# Own nametag is hidden by default (#2938); the Settings toggle flips this.
+var show_own_nametag: bool = false:
+	set(value):
+		show_own_nametag = value
+
 # See FpsLimitMode enum for available options (0=VSYNC, 1=NO_LIMIT, 2=18fps, 3=30fps, 4=60fps, 5=120fps)
 var limit_fps: int = FpsLimitMode.FPS_30:
 	set(value):
@@ -402,6 +407,7 @@ func load_from_default():
 	self.dynamic_skybox = true
 	self.skybox_time = 43200
 	self.submit_message_closes_chat = false
+	self.show_own_nametag = false
 
 	self.window_mode = 0
 
@@ -473,6 +479,9 @@ func load_from_settings_file():
 	self.skybox_time = settings_file.get_value("config", "skybox_time", data_default.skybox_time)
 	self.submit_message_closes_chat = settings_file.get_value(
 		"config", "submit_message_closes_chat", data_default.submit_message_closes_chat
+	)
+	self.show_own_nametag = settings_file.get_value(
+		"config", "show_own_nametag", data_default.show_own_nametag
 	)
 	self.window_mode = settings_file.get_value("config", "window_mode", data_default.window_mode)
 	self.ui_zoom = settings_file.get_value("config", "ui_zoom", data_default.ui_zoom)
@@ -654,6 +663,7 @@ func save_to_settings_file():
 	new_settings_file.set_value(
 		"config", "submit_message_closes_chat", self.submit_message_closes_chat
 	)
+	new_settings_file.set_value("config", "show_own_nametag", self.show_own_nametag)
 	new_settings_file.set_value("config", "window_mode", self.window_mode)
 	new_settings_file.set_value("config", "ui_zoom", self.ui_zoom)
 	new_settings_file.set_value("config", "resolution_3d_scale", self.resolution_3d_scale)
