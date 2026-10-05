@@ -278,11 +278,10 @@ func _on_environment_resolved(environment: String, source: String, resolve_ms: f
 	_env_resolved = true
 
 
-# Switches the app to the Option D hybrid environment when StoreKit reports a
-# `sandbox` environment (TestFlight, Apple App Review, or Xcode), so credits,
-# profile and the marketplace catalog transact against .zone while scenes/comms
-# stay on .org. A `production` environment (real App Store install) needs no
-# change — it stays on the .org default.
+# Switches an Apple App Review install to the Option D hybrid environment, so
+# credits, profile and the marketplace catalog transact against .zone while
+# scenes/comms stay on .org. Every other install (App Store, TestFlight, Xcode)
+# stays on the .org default.
 #
 # Keys off the AUTHORITATIVE environment only (never the synchronous receipt
 # read): Apple's reviewer device reports authoritative=sandbox but receipt=
@@ -302,6 +301,12 @@ func _on_environment_resolved(environment: String, source: String, resolve_ms: f
 func _apply_storekit_env(environment: String) -> void:
 	if environment != "sandbox":
 		_option_d_skip_reason = "not_sandbox"
+		return
+	# Only App Review pairs a sandbox AppTransaction with a production receipt.
+	# TestFlight and Xcode read sandbox on both, and they stay on .org like everyone else.
+	if _env_sync_value != "production":
+		print("[IAP] StoreKit sandbox with a ", _env_sync_value, " receipt — staying on .org")
+		_option_d_skip_reason = "not_app_review"
 		return
 	# NOT OS.is_debug_build(): store and TestFlight builds are release exports, so that
 	# check is false on every build a reviewer or QA can install. is_dev() is what

@@ -50,14 +50,40 @@ pub struct SegmentIdentifyBody {
     context: serde_json::Value,
 }
 
+/// Which push transport this install is addressable on. Each keeps its own token trait
+/// (`fcm_token` / `apns_token`) so an audience query never has to guess a token's provider.
+#[derive(Clone, Copy)]
+pub enum PushPlatform {
+    Android,
+    Ios,
+}
+
+impl PushPlatform {
+    fn name(self) -> &'static str {
+        match self {
+            PushPlatform::Android => "android",
+            PushPlatform::Ios => "ios",
+        }
+    }
+
+    fn token_trait(self) -> &'static str {
+        match self {
+            PushPlatform::Android => "fcm_token",
+            PushPlatform::Ios => "apns_token",
+        }
+    }
+}
+
 /// Traits describing this install's ability to receive push.
 ///
 /// Sent on every launch regardless of whether permission was granted: the denied rows are the
 /// denominator: without them "how many users can we reach" has no answer, only a numerator.
 pub struct PushIdentifyTraits {
-    /// FCM registration token; empty when the device cannot receive push at all.
-    pub fcm_token: String,
-    /// "granted" | "denied" — the app-level POST_NOTIFICATIONS permission.
+    pub platform: PushPlatform,
+    /// FCM registration token, or the APNs device token as hex; empty when the device cannot
+    /// receive push at all.
+    pub token: String,
+    /// "granted" | "denied" — the app-level POST_NOTIFICATIONS / UNAuthorizationStatus answer.
     pub push_permission: String,
     /// Explorer release, so a campaign can be held back from versions that mishandle a deeplink.
     pub app_version: String,
@@ -82,8 +108,8 @@ pub fn build_segment_identify_body(
         message_id,
         timestamp: iso_ts.clone(),
         traits: serde_json::json!({
-            "fcm_token": traits.fcm_token,
-            "push_platform": "android",
+            traits.platform.token_trait(): traits.token,
+            "push_platform": traits.platform.name(),
             "push_permission": traits.push_permission,
             "app_version": traits.app_version,
             "locale": traits.locale,
@@ -92,8 +118,8 @@ pub fn build_segment_identify_body(
         }),
         context: serde_json::json!({
             "device": {
-                "token": traits.fcm_token,
-                "type": "android",
+                "token": traits.token,
+                "type": traits.platform.name(),
             }
         }),
     }

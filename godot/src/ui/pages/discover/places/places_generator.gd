@@ -64,7 +64,7 @@ func async_request_last_places(_offset: int, _limit: int) -> void:
 
 	_loading = true
 
-	var last_places: Array[Dictionary] = Global.get_config().last_places.duplicate()
+	var last_places: Array[Dictionary] = Global.get_config().get_last_places()
 	var seen: Dictionary = {}
 	var index = 0
 	for place in last_places:
