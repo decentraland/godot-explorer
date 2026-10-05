@@ -204,14 +204,6 @@ impl DclAndroidPlugin {
             .unwrap_or_default()
     }
 
-    /// Chipset manufacturer, e.g. "Qualcomm" (API 31+ only). Empty string if unavailable.
-    #[func]
-    pub fn get_soc_manufacturer() -> GString {
-        Self::get_mobile_device_info_internal()
-            .map(|info| GString::from(&info.soc_manufacturer))
-            .unwrap_or_default()
-    }
-
     /// `ro.board.platform` system property — a chipset-id fallback for API < 31 devices that
     /// have no Build.SOC_MODEL. Empty string if unavailable.
     #[func]

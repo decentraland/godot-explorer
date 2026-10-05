@@ -57,11 +57,13 @@ static func async_check() -> Status:
 ## True if the end-of-support modal is due again, per the day-based schedule above.
 ## `first_detected_unix` is the once-ever anchor stamped in lobby.gd the first time this device
 ## was found excluded; <= 0 means it hasn't been stamped yet, which shouldn't happen by the time
-## this is checked (lobby.gd runs before discover.gd can) but fails open to "show" rather than
-## silently never showing.
+## this is checked (lobby.gd runs before discover.gd can). Fails closed to "not due" rather than
+## "show" — same direction as every other fail-open in this feature (the SoC fetch itself fails
+## to OK, not to a flagged status): with no real anchor to measure days_elapsed against, the safe
+## default is to stay quiet, not to re-show on every single call.
 static func is_end_of_support_modal_due(shown_count: int, first_detected_unix: int) -> bool:
 	if first_detected_unix <= 0:
-		return true
+		return false
 	var days_elapsed := (int(Time.get_unix_time_from_system()) - first_detected_unix) / _DAY_SECONDS
 	return days_elapsed >= _end_of_support_next_due_day(shown_count)
 

@@ -507,6 +507,7 @@ func async_show_ban_pre_check_modal() -> void:
 ## allow-list the user is not on, so the realm change was refused before loading.
 ## @param world_name: The world being refused, e.g. "myworld.dcl.eth"
 func async_show_private_world_modal(world_name: String) -> void:
+	_force_hide_loading_screen()
 	await _async_show_simple_modal(
 		private_world_title,
 		private_world_body,

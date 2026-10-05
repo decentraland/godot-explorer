@@ -4,12 +4,14 @@ extends MarginContainer
 ## Reusable "heads up" panel for Settings, replicating the skybox/camera-mode warning panels.
 ## Root is a MarginContainer so each place that instances this can set its own outer spacing
 ## via the margin theme overrides, independent of the panel's own internal padding.
-# i18n-keys: SETTINGS_DEVICE_NO_LONGER_SUPPORTED, SETTINGS_LIMITED_PERFORMANCE_ON_THIS_DEVICE
+# i18n-keys: SETTINGS_LIMITED_PERFORMANCE_ON_THIS_DEVICE
 
 enum Type { SKYBOX, UNSUPPORTED, BELOW_MINSPEC }
 
 const _SKYBOX_TEXT := "SETTINGS_THE_SKYBOX_IS_SET_BY_THE"
-const _UNSUPPORTED_TEXT := "SETTINGS_DEVICE_NO_LONGER_SUPPORTED"
+# Same key as the Discover modal's title (modal_manager.gd) — identical copy, no need for a
+# Settings-only synonym.
+const _UNSUPPORTED_TEXT := "MODAL_END_OF_DEVICE_SUPPORT_TITLE"
 const _BELOW_MINSPEC_TEXT := "SETTINGS_LIMITED_PERFORMANCE_ON_THIS_DEVICE"
 
 @export var type: Type = Type.SKYBOX

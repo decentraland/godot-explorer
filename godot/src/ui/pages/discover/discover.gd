@@ -25,6 +25,12 @@ var _generator_statuses: Dictionary = {}
 @onready var button_credits: CreditsBalanceButton = %Button_Credits
 
 static var _low_spec_warning_shown: bool = false
+# Caps _show_device_support_modal_if_needed() to one real evaluation per process lifetime — the
+# persisted schedule (shown_count / first_detected_unix) is what governs re-showing across
+# separate app launches; without this latch, every Discover visibility change within the SAME
+# session re-runs the due-check against the same wall clock, which can cascade through several
+# re-show tiers back-to-back if the device returns after a long gap (#2936 review).
+static var _device_support_modal_resolved_this_session: bool = false
 
 
 func _ready():
@@ -163,6 +169,9 @@ func _on_visibility_changed():
 func _show_device_support_modal_if_needed() -> void:
 	if not DclAndroidPlugin.is_available():
 		return
+	# One real evaluation per process lifetime — see the var's own comment for why.
+	if _device_support_modal_resolved_this_session:
+		return
 
 	var deep_link: DclParseDeepLink = Global.deep_link_obj
 	var force_end_of_support: bool = (
@@ -186,33 +195,38 @@ func _show_device_support_modal_if_needed() -> void:
 			)
 		):
 			return
-		if not force_end_of_support:
-			config.end_of_device_support_modal_shown_count += 1
-			config.save_to_settings_file()
-		_async_show_then_resume_nudge(true)
+		_device_support_modal_resolved_this_session = true
+		_async_show_then_resume_nudge(true, force_end_of_support)
 		return
 
 	if force_below_minspec or status == DeviceSupportCoordinator.Status.BELOW_MINSPEC:
 		if not force_below_minspec and config.below_minspec_modal_shown:
 			return
-		if not force_below_minspec:
-			config.below_minspec_modal_shown = true
-			config.save_to_settings_file()
-		_async_show_then_resume_nudge(false)
+		_device_support_modal_resolved_this_session = true
+		_async_show_then_resume_nudge(false, force_below_minspec)
 
 
 ## Suppresses UpgradeNudgeCoordinator (synchronously, before this function's first await — see the
 ## call site in _on_visibility_changed()), shows the given device-support modal, waits for it to
 ## be fully dismissed (current_modal is queue_free()'d on close, so tree_exited fires), then lets
-## the nudge evaluate normally.
-func _async_show_then_resume_nudge(is_end_of_support: bool) -> void:
+## the nudge evaluate normally. The cadence-persisting writes (shown_count / below_minspec_shown)
+## happen here, after the modal is confirmed on screen — not in the caller before this even runs —
+## so a creation failure can't silently burn below-minspec's only-ever chance to show.
+func _async_show_then_resume_nudge(is_end_of_support: bool, forced: bool) -> void:
 	Global.upgrade_nudge_coordinator.suppress_until_cleared()
 	if is_end_of_support:
 		await Global.modal_manager.async_show_end_of_device_support_modal()
 	else:
 		await Global.modal_manager.async_show_below_minspec_modal()
 	var modal: Modal = Global.modal_manager.current_modal
-	if is_instance_valid(modal):
+	if NodeGuard.is_alive(modal, "Discover._async_show_then_resume_nudge"):
+		if not forced:
+			var config: ConfigData = Global.get_config()
+			if is_end_of_support:
+				config.end_of_device_support_modal_shown_count += 1
+			else:
+				config.below_minspec_modal_shown = true
+			config.save_to_settings_file()
 		await modal.tree_exited
 	Global.upgrade_nudge_coordinator.resume_after_device_support()
 
