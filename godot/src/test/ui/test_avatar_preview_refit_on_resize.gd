@@ -18,6 +18,9 @@ const AvatarPreviewScene := preload("res://src/ui/pages/backpack/avatar_preview.
 
 # Full-body AABB of an idle avatar in local space (~1.8m tall).
 const FIT_AABB := AABB(Vector3(-0.4, 0.0, -0.4), Vector3(0.8, 1.8, 0.8))
+# A giant wearable inflates the "overall" AABB; the fit must ignore it and
+# keep the avatar height constant (fits the "body_base" AABB instead).
+const WEARABLE_AABB := AABB(Vector3(-3.0, 0.0, -3.0), Vector3(6.0, 4.0, 6.0))
 # Same margins the profile screens configure.
 const MARGIN_TOP := 64
 const MARGIN_BOTTOM := 46
@@ -28,6 +31,7 @@ var _failures: Array[String] = []
 func _ready() -> void:
 	_test_refit_when_viewport_grows_after_initial_fit()
 	_test_no_refit_after_user_pan()
+	_test_fit_ignores_large_wearables()
 	_finish()
 
 
@@ -39,8 +43,8 @@ func _make_preview() -> AvatarPreview:
 	preview.preview_margin_bottom = MARGIN_BOTTOM
 	add_child(preview)
 	# Fake a loaded avatar: async_on_avatar_loaded would fill these from the
-	# real meshes; the fit math only reads the "overall" entry.
-	preview._cached_aabbs = {"overall": FIT_AABB}
+	# real meshes; the fit math reads "overall" and "body_base".
+	preview._cached_aabbs = {"overall": WEARABLE_AABB, "body_base": FIT_AABB}
 	return preview
 
 
@@ -93,6 +97,24 @@ func _test_no_refit_after_user_pan() -> void:
 	_assert(
 		is_equal_approx(preview._target_camera_size, transient_cam),
 		"resize does not refit once the user has panned"
+	)
+	preview.queue_free()
+
+
+func _test_fit_ignores_large_wearables() -> void:
+	var preview := _make_preview()
+	if preview == null:
+		return
+	preview.size = Vector2(390, 844)
+	preview._fit_to_overall()
+	# A 4m-tall wearable is equipped (the "overall" AABB), yet the camera must
+	# frame the 1.8m body exactly as if no wearable were equipped.
+	_assert(
+		is_equal_approx(preview._target_camera_size, _expected_cam_size(Vector2(390, 844))),
+		(
+			"large wearable does not shrink the avatar (got %f, body fit is %f)"
+			% [preview._target_camera_size, _expected_cam_size(Vector2(390, 844))]
+		)
 	)
 	preview.queue_free()
 
