@@ -60,6 +60,61 @@ pub fn convert_unity_to_godot(input_text: &str) -> ConversionResult {
     }
 }
 
+/// A run of text painted with a single font style.
+#[derive(Debug, Clone, PartialEq)]
+pub struct RichSpan {
+    pub text: String,
+    pub bold: bool,
+    pub italic: bool,
+}
+
+/// Splits Unity rich text into runs by font style, recognising the same tags as
+/// `convert_unity_to_godot`. Used to measure rich text with the fonts it is painted
+/// with: color tags are dropped (they don't change the width), unknown tags stay in
+/// the text because they are painted literally.
+pub fn rich_text_spans(input_text: &str) -> Vec<RichSpan> {
+    let bytes = input_text.as_bytes();
+    let mut spans: Vec<RichSpan> = Vec::new();
+    let mut current = Vec::with_capacity(input_text.len());
+    let mut bold_depth = 0u32;
+    let mut italic_depth = 0u32;
+    let mut i = 0;
+
+    fn flush(spans: &mut Vec<RichSpan>, current: &mut Vec<u8>, bold: bool, italic: bool) {
+        if current.is_empty() {
+            return;
+        }
+        let text = String::from_utf8_lossy(current).into_owned();
+        current.clear();
+        match spans.last_mut() {
+            Some(last) if last.bold == bold && last.italic == italic => last.text.push_str(&text),
+            _ => spans.push(RichSpan { text, bold, italic }),
+        }
+    }
+
+    while i < bytes.len() {
+        if bytes[i] == b'<' {
+            if let Some((tag_type, tag_len)) = parse_tag(&bytes[i..]) {
+                flush(&mut spans, &mut current, bold_depth > 0, italic_depth > 0);
+                match tag_type {
+                    Tag::BoldOpen => bold_depth += 1,
+                    Tag::BoldClose => bold_depth = bold_depth.saturating_sub(1),
+                    Tag::ItalicOpen => italic_depth += 1,
+                    Tag::ItalicClose => italic_depth = italic_depth.saturating_sub(1),
+                    Tag::ColorOpen(_) | Tag::ColorClose => {}
+                }
+                i += tag_len;
+                continue;
+            }
+        }
+        current.push(bytes[i]);
+        i += 1;
+    }
+    flush(&mut spans, &mut current, bold_depth > 0, italic_depth > 0);
+
+    spans
+}
+
 /// Strips all Unity tags from text and extracts the first color found.
 /// Used for TextShape (3D labels) which cannot render rich text.
 ///
@@ -276,6 +331,70 @@ fn convert_color_value(color: &str) -> &str {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn span(text: &str, bold: bool, italic: bool) -> RichSpan {
+        RichSpan {
+            text: text.to_string(),
+            bold,
+            italic,
+        }
+    }
+
+    #[test]
+    fn test_spans_plain() {
+        assert_eq!(
+            rich_text_spans("LIGHT TORCH"),
+            vec![span("LIGHT TORCH", false, false)]
+        );
+    }
+
+    #[test]
+    fn test_spans_bold() {
+        assert_eq!(
+            rich_text_spans("We are <b>not</b> amused."),
+            vec![
+                span("We are ", false, false),
+                span("not", true, false),
+                span(" amused.", false, false)
+            ]
+        );
+    }
+
+    #[test]
+    fn test_spans_nested_bold_italic() {
+        assert_eq!(
+            rich_text_spans("<b>a<i>b</i></b>c"),
+            vec![
+                span("a", true, false),
+                span("b", true, true),
+                span("c", false, false)
+            ]
+        );
+    }
+
+    #[test]
+    fn test_spans_color_only_is_one_plain_span() {
+        assert_eq!(
+            rich_text_spans("<color=#b00000>LIGHT</color> TORCH"),
+            vec![span("LIGHT TORCH", false, false)]
+        );
+    }
+
+    #[test]
+    fn test_spans_unclosed_and_stray_close() {
+        assert_eq!(
+            rich_text_spans("</b>a<b>b"),
+            vec![span("a", false, false), span("b", true, false)]
+        );
+    }
+
+    #[test]
+    fn test_spans_unknown_tag_kept() {
+        assert_eq!(
+            rich_text_spans("<size=20>a</size>"),
+            vec![span("<size=20>a</size>", false, false)]
+        );
+    }
 
     #[test]
     fn test_no_modification() {

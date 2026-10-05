@@ -553,4 +553,64 @@ mod tests {
         assert_eq!(kept_entry.timestamp, SceneCrdtTimestamp(0));
         assert!(kept_entry.value.is_some());
     }
+
+    /// GODOT-EXPLORER-2ZD: a header declaring more bytes than the batch holds
+    /// panicked with "range end index out of range for slice".
+    #[test]
+    fn declared_length_past_the_buffer_does_not_panic() {
+        let mut buf = Vec::new();
+        buf.extend_from_slice(&1000u32.to_le_bytes());
+        buf.extend_from_slice(&(CrdtMessageType::PutComponent as u32).to_le_bytes());
+        buf.extend_from_slice(&[0u8; 16]);
+
+        let mut state = SceneCrdtState::from_proto();
+        process_many_messages(&mut DclReader::new(&buf), &mut state);
+    }
+
+    fn header(length: u32, crdt_type: CrdtMessageType) -> Vec<u8> {
+        [length.to_le_bytes(), (crdt_type as u32).to_le_bytes()].concat()
+    }
+
+    fn transform_put(entity: SceneEntityId, transform: &DclTransformAndParent) -> Vec<u8> {
+        let mut state = SceneCrdtState::from_proto();
+        state
+            .get_transform_mut()
+            .put(entity, Some(transform.clone()));
+        let mut buf = Vec::new();
+        let mut writer = DclWriter::new(&mut buf);
+        put_or_delete_lww_component(&state, &entity, &SceneComponentId::TRANSFORM, &mut writer)
+            .expect("transform entry should serialize");
+        buf
+    }
+
+    /// A message whose length is too short for its fixed fields (reachable from
+    /// any scene through `op_crdt_send_to_renderer`, where a panic aborts the
+    /// app) is skipped, and the messages after it still apply.
+    #[test]
+    fn message_shorter_than_its_fields_is_skipped() {
+        let kept = SceneEntityId::new(513, 0);
+        let mut buf = header(12, CrdtMessageType::PutComponent);
+        buf.extend_from_slice(&[0, 2, 0, 0]);
+        buf.extend(transform_put(kept, &DclTransformAndParent::default()));
+
+        let mut state = SceneCrdtState::from_proto();
+        process_many_messages(&mut DclReader::new(&buf), &mut state);
+        assert!(state.get_transform().get(&kept).is_some());
+    }
+
+    /// A Transform PUT whose payload is shorter than the 44 bytes it needs.
+    #[test]
+    fn short_transform_payload_is_skipped() {
+        let entity = SceneEntityId::new(512, 0);
+        let mut buf = transform_put(entity, &DclTransformAndParent::default());
+        let payload_len = 44;
+        let cut = 20;
+        buf.truncate(buf.len() - payload_len + cut);
+        let declared = (buf.len() as u32).to_le_bytes();
+        buf[0..4].copy_from_slice(&declared);
+
+        let mut state = SceneCrdtState::from_proto();
+        process_many_messages(&mut DclReader::new(&buf), &mut state);
+        assert!(state.get_transform().get(&entity).is_none());
+    }
 }

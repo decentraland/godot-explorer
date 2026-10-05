@@ -22,6 +22,7 @@ signal open_settings
 signal open_settings_panel
 signal open_backpack(on_emotes: bool)
 signal open_discover
+signal open_discover_panel  # Landscape-only: Discover side panel docked by the navbar
 ## Carries the entry point, reported by Menu.async_show_credits.
 signal open_credits(source: String)
 signal open_own_profile
@@ -52,11 +53,7 @@ signal orientation_changed(is_portrait: bool)
 signal chat_write_mode_changed(is_writing: bool)
 signal device_support_status_resolved
 
-enum CameraMode {
-	FIRST_PERSON = 0,
-	THIRD_PERSON = 1,
-	CINEMATIC = 2,
-}
+enum CameraMode { FIRST_PERSON = 0, THIRD_PERSON = 1, CINEMATIC = 2 }
 
 enum FriendshipStatus {
 	UNKNOWN = -1,
@@ -253,45 +250,6 @@ func is_gp_benchmark() -> bool:
 	return cli.gp_benchmark or (deep_link_obj != null and deep_link_obj.gp_benchmark)
 
 
-## Activate the Scene Inspector bridge from app startup when a target is set via
-## `--scene-inspector=ws://…` (baked into the iOS build / passed on desktop) or
-## `?scene-inspector=` deeplink. Idempotent: the bridge is created at most once;
-## later target changes are handled by the bridge's own deeplink-reconnect.
-##
-## Dialing from boot (instead of in-world) means the channel is up from second 0.
-## In DEBUG builds it also arms the bounded boot-log ring + installs the capture
-## sinks, so startup logs are buffered and flushed on the first `subscribe`. This
-## is gated off production: there, nothing is captured or buffered without a
-## connection (the no-buffering-without-a-peer contract).
-func _activate_scene_inspector_from_config() -> void:
-	if _scene_inspector_bridge != null:
-		return
-	var target := ""
-	if not deep_link_obj.scene_inspector.is_empty():
-		target = deep_link_obj.scene_inspector
-	elif not cli.scene_inspector.is_empty():
-		target = cli.scene_inspector
-	if target.is_empty():
-		# Debug builds with no explicit target default to a local hub over loopback,
-		# so a plain Godot-editor deploy / F5 auto-dials with no --scene-inspector
-		# arg (parity with the iOS export plugin, which bakes the LAN IP). Android
-		# reaches it via `adb reverse tcp:9231 tcp:9231`; desktop hits it directly.
-		# The client retries quietly if no hub is up, and capture stays gated. Never
-		# in production.
-		if OS.is_debug_build() and not is_production():
-			target = "ws://127.0.0.1:9231"
-		else:
-			return
-	scene_inspector_active = true
-	if OS.is_debug_build():
-		scene_inspector_dispatcher.set_early_log_capture(true)
-	_scene_inspector_bridge = SceneInspectorBridge.new()
-	_scene_inspector_bridge.set_name("scene_inspector_bridge")
-	get_tree().root.add_child.call_deferred(_scene_inspector_bridge)
-	_scene_inspector_bridge.setup.call_deferred(target)
-	print("SceneInspectorBridge: activating from boot -> ", target)
-
-
 ## Logging self-test, triggered by `--test-logging` / `?test-logging=true`.
 ## Exercises every logging form in every stack (GDScript / Rust / Swift / ObjC /
 ## Kotlin) so we can confirm each pipes into the unified channel. Grep `[LOGTEST]`
@@ -349,12 +307,19 @@ func _run_logging_selftest() -> void:
 	print("[LOGTEST] ===== logging self-test end =====")
 
 
-## Forward the optimized-content-base-url deeplink param into DclCli so the
-## scene fetcher / content provider use it for optimized loading. Shared by the
-## desktop fake-deeplink path (_ready) and the mobile/iOS live path (router).
+## Forward the optimized-content-base-url deeplink param into DclCli so the scene fetcher /
+## content provider use it for optimized loading (non-production; Decentraland https or LAN
+## hosts only). Shared by the desktop fake-deeplink path (_ready) and the mobile live path.
 func _apply_optimized_content_base_url(obj: DclParseDeepLink) -> void:
 	var opt_url: String = obj.params.get("optimized-content-base-url", "")
-	if not opt_url.is_empty():
+	var allowed := UrlHost.is_decentraland_https(opt_url) or UrlHost.is_local_network(opt_url)
+	if opt_url.is_empty():
+		return
+	if is_production():
+		print("[DEEPLINK] optimized-content-base-url ignored on production builds")
+	elif not allowed:
+		print("[DEEPLINK] optimized-content-base-url rejected (not https Decentraland or LAN)")
+	else:
 		print("[DEEPLINK] optimized-content-base-url=", opt_url)
 		cli.optimized_content_base_url = opt_url
 
@@ -787,9 +752,11 @@ func _ready():
 
 	# Scene Inspector: dial the configured hub from app startup (second 0) rather
 	# than in-world, so the channel — and, in debug, boot-log capture — is live
-	# from boot. Also re-checked when a deeplink arrives (idempotent).
-	_activate_scene_inspector_from_config()
-	deep_link_router.deep_link_received.connect(_activate_scene_inspector_from_config)
+	# from boot. The bridge also handles `?scene-inspector=` deeplinks.
+	_scene_inspector_bridge = SceneInspectorBridge.new()
+	_scene_inspector_bridge.set_name("scene_inspector_bridge")
+	_scene_inspector_bridge.activate_from_config()
+	get_tree().root.add_child.call_deferred(_scene_inspector_bridge)
 
 	if "memory_debugger" in self:
 		get_tree().root.add_child.call_deferred(self.memory_debugger)
@@ -1489,53 +1456,53 @@ func async_check_scene_access(scene_id: String, realm_name: String) -> bool:
 
 
 func async_teleport_to(parcel_position: Vector2i, new_realm: String) -> void:
-	# Block a private world before any navigation (no-op for genesis/parcel teleports); covers
-	# both the active-explorer teleport and the cold-start-from-lobby branch below.
-	if not await _async_precheck_realm_access(new_realm):
-		return
 	var explorer = Global.get_explorer()
-	if is_instance_valid(explorer):
-		# Show loading screen before orientation change to avoid flashing the scene
-		explorer.loading_ui.enable_loading_screen(new_realm, "on_teleport")
-		explorer.hide_menu()
-		if await explorer.async_teleport_to(parcel_position, new_realm):
-			Global.on_chat_message.emit(
-				"system",
-				tr("CHAT_SYSTEM_TELEPORTED").format({"location": str(parcel_position)}),
-				Time.get_unix_time_from_system()
-			)
-	else:
+	if not is_instance_valid(explorer):
+		# Cold start from the lobby: there is no scene to protect and no explorer to route
+		# through, so the private-world gate stays here — booting straight into a world the
+		# user can't enter is the bug #1725 fixed.
+		if not await _async_precheck_realm_access(new_realm):
+			return
 		Global.set_orientation_landscape()
 		Global.get_config().last_realm_joined = new_realm
 		Global.get_config().last_parcel_position = parcel_position
 		Global.get_config().add_place_to_last_places(parcel_position, new_realm)
 		get_tree().change_scene_to_file("res://src/ui/explorer.tscn")
+		return
+
+	var dest := Destination.from_input(new_realm, parcel_position)
+	if await Navigator.async_go(dest, "on_teleport"):
+		Global.on_chat_message.emit(
+			"system",
+			tr("CHAT_SYSTEM_TELEPORTED").format({"location": str(parcel_position)}),
+			Time.get_unix_time_from_system()
+		)
 
 
 func async_join_world(world_realm: String) -> void:
-	# Block a private world before any navigation. Covers both cases below: with an active
-	# explorer the modal replaces the loading flash; without one (cold start from the lobby)
-	# it stops us from booting the explorer scene straight into the world we can't enter.
-	if not await _async_precheck_realm_access(world_realm):
-		return
 	var explorer = Global.get_explorer()
-	if is_instance_valid(explorer):
-		# Show loading screen before orientation change to avoid flashing the scene
-		explorer.loading_ui.enable_loading_screen(world_realm, "on_world")
-		Global.on_chat_message.emit(
-			"system",
-			tr("CHAT_SYSTEM_CHANGING_WORLD").format({"world": world_realm}),
-			Time.get_unix_time_from_system()
-		)
-		Global.realm.async_set_realm(world_realm, true)
-		explorer.hide_menu()
-		Global.close_menu.emit()
-	else:
+	if not is_instance_valid(explorer):
+		# Cold start from the lobby: no explorer to route through, so the private-world gate
+		# stays here rather than booting straight into a world we can't enter (#1725).
+		if not await _async_precheck_realm_access(world_realm):
+			return
+		Global.get_config().add_place_to_last_places(Vector2i.ZERO, world_realm)  # "Last visited"
 		Global.set_orientation_landscape()
 		Global.close_menu.emit()
 		Global.get_config().last_realm_joined = world_realm
 		Global.get_config().last_parcel_position = Vector2i.ZERO
 		get_tree().change_scene_to_file("res://src/ui/explorer.tscn")
+		return
+
+	Global.on_chat_message.emit(
+		"system",
+		tr("CHAT_SYSTEM_CHANGING_WORLD").format({"world": world_realm}),
+		Time.get_unix_time_from_system()
+	)
+	Global.close_menu.emit()
+	# No parcel: the world names its own spawn point, so teleport_to never records it.
+	if await Navigator.async_go(Destination.from_input(world_realm), "on_world"):
+		Global.get_config().add_place_to_last_places(Vector2i.ZERO, world_realm)  # "Last visited"
 
 
 func _http_method_to_string(method: int) -> String:
@@ -1775,18 +1742,12 @@ func _on_realm_change_failed_toast(new_realm_string: String, reason: String) -> 
 	)
 
 
-func _on_realm_access_denied(_new_realm_string: String, world_name: String) -> void:
+func _on_realm_access_denied(new_realm_string: String, world_name: String) -> void:
 	# The world restricts access and this user is not on its allow-list (#1725). Only
 	# Global.realm is wired here — transient Realm instances (portable experiences) just
 	# fail to load, same as they do for the generic failure toast.
-	_clear_boot_realm_if_denied(world_name)
 	Global.modal_manager.async_show_private_world_modal(world_name)
-	# A cold start straight into a denied world booted the explorer with no realm ever set, so
-	# dismissing the modal would strand the user in an empty scene. Fall back to the main realm
-	# in that case only; an in-session denial (has_realm() true) leaves the user where they were.
-	# Deferred to avoid re-entering async_set_realm from its own denial signal.
-	if is_instance_valid(Global.get_explorer()) and not Global.realm.has_realm():
-		Global.realm.async_set_realm.call_deferred(DclUrls.main_realm())
+	Navigator.recover_from_refusal(new_realm_string)
 
 
 ## Checks a realm's private-world access BEFORE any navigation UI is shown, so a world the
@@ -1830,23 +1791,6 @@ func warm_realm_access(realm_string: String) -> void:
 	if world_name.is_empty():
 		return
 	WorldPermissionsHelper.async_is_allowed(world_name)
-
-
-## async_join_world / async_teleport_to persist the destination *before* the explorer scene
-## gets to run the private-world gate, so a refused world would otherwise stay as the boot
-## realm and re-open this modal on every cold start. Point it back at the main realm.
-func _clear_boot_realm_if_denied(world_name: String) -> void:
-	var config = Global.get_config()
-	var stored: String = config.last_realm_joined
-	if stored.is_empty():
-		return
-	var stored_world := WorldPermissionsHelper.world_name_from_realm(
-		stored, Realm.resolve_realm_url(stored)
-	)
-	if stored_world != world_name:
-		return
-	config.last_realm_joined = DclUrls.main_realm()
-	config.save_to_settings_file()
 
 
 func set_camera_mode(camera_mode: Global.CameraMode) -> void:

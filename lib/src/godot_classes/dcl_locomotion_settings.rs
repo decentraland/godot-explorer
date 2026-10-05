@@ -5,9 +5,9 @@ use crate::dcl::components::proto_components::sdk::components::PbAvatarLocomotio
 /// Default locomotion values (matching current player.gd defaults)
 pub const DEFAULT_WALK_SPEED: f32 = 1.5;
 pub const DEFAULT_JOG_SPEED: f32 = 8.0;
-pub const DEFAULT_RUN_SPEED: f32 = 11.0;
-pub const DEFAULT_JUMP_HEIGHT: f32 = 1.8;
-pub const DEFAULT_RUN_JUMP_HEIGHT: f32 = 1.8;
+pub const DEFAULT_RUN_SPEED: f32 = 10.0;
+pub const DEFAULT_JUMP_HEIGHT: f32 = 1.0;
+pub const DEFAULT_RUN_JUMP_HEIGHT: f32 = 1.5;
 pub const DEFAULT_HARD_LANDING_COOLDOWN: f32 = 0.0;
 
 #[derive(GodotClass)]

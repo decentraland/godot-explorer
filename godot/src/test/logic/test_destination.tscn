@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://b8qxnvd2tnavg"]
+
+[ext_resource type="Script" uid="uid://8jud0tjhd7kh" path="res://src/test/logic/test_destination.gd" id="1_dest"]
+
+[node name="TestDestination" type="Node"]
+script = ExtResource("1_dest")

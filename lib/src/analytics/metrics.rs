@@ -23,7 +23,7 @@ use crate::{
 use super::{
     data_definition::{
         build_segment_event_batch_item, build_segment_identify_body, PushIdentifyTraits,
-        SegmentEvent, SegmentEventAcceptFriend, SegmentEventAppOpened,
+        PushPlatform, SegmentEvent, SegmentEventAcceptFriend, SegmentEventAppOpened,
         SegmentEventAttestationAttempt, SegmentEventAttestationSessionCacheLoaded,
         SegmentEventBlockUser, SegmentEventChatMessageSent, SegmentEventClickButton,
         SegmentEventCommonExplorerFields, SegmentEventExplorerMoveToParcel,
@@ -102,7 +102,7 @@ pub struct Metrics {
     // many events batch nicely).
     flush_timer: Option<Gd<Timer>>,
 
-    // --- Push (Android) ---
+    // --- Push ---
     // Guards against re-sending an identical identify: (token, permission) as last shipped.
     // The permission belongs in the key because it changes *after* the first identify goes
     // out — the prompt fires on the Play/Sign-In tap, well past startup — and a guard keyed
@@ -113,7 +113,7 @@ pub struct Metrics {
     // Defaults to true: failing open matters more than the flag, because the real emergency
     // stop is server-side (stop sending) and this only throttles collecting new tokens.
     push_enabled: bool,
-    // Whether `push-enabled` has been read yet. The cached FCM token is available in `ready()`
+    // Whether `push-enabled` has been read yet. The cached push token is available in `ready()`
     // on every launch after install, so without this the startup identify always won the race
     // and the flag could only ever suppress rotations — i.e. it was not a kill switch at all.
     push_flag_resolved: bool,
@@ -227,6 +227,18 @@ impl INode for Metrics {
                 self._on_fcm_token_ready(cached_token);
             }
         }
+
+        // Same race on iOS: push_service.mm asks UIKit for the token from the plugin's module
+        // init, well before this `ready()`, so read the cached value back after connecting.
+        if matches!(self.mobile_platform, Some(MobilePlatform::Ios)) {
+            let ready_cb = self.base().callable("_on_apns_token_ready");
+            DclIosPlugin::connect_apns_token_ready(&ready_cb);
+
+            let cached_token = DclIosPlugin::get_apns_token();
+            if !cached_token.to_string().is_empty() {
+                self._on_apns_token_ready(cached_token);
+            }
+        }
     }
 
     fn process(&mut self, delta: f64) {
@@ -288,6 +300,14 @@ impl Metrics {
         self.emit_push_identify(token.to_string());
     }
 
+    /// Plugin signal handler — the APNs device token resolved for this launch. Once per
+    /// launch, "" when registration failed (simulator, offline). APNs re-issues the token on
+    /// every launch, so there is no separate rotation path to listen to.
+    #[func]
+    fn _on_apns_token_ready(&mut self, token: GString) {
+        self.emit_push_identify(token.to_string());
+    }
+
     /// Remote kill switch for push registration (feature flag `push-enabled`), called from
     /// GDScript once flags resolve. Turning it off stops new tokens from being mapped; it does
     /// NOT stop delivery to tokens already collected — that is a server-side decision.
@@ -316,11 +336,35 @@ impl Metrics {
     /// Play-as-Guest / Sign-In tap, which is always after the token resolved.
     #[func]
     pub fn refresh_push_identify(&mut self) {
-        let token = DclAndroidPlugin::get_fcm_token().to_string();
+        let token = self.push_token();
         if token.is_empty() {
             return;
         }
         self.emit_push_identify(token);
+    }
+
+    fn push_platform(&self) -> Option<PushPlatform> {
+        match self.mobile_platform {
+            Some(MobilePlatform::Android) => Some(PushPlatform::Android),
+            Some(MobilePlatform::Ios) => Some(PushPlatform::Ios),
+            None => None,
+        }
+    }
+
+    fn push_token(&self) -> String {
+        match self.mobile_platform {
+            Some(MobilePlatform::Android) => DclAndroidPlugin::get_fcm_token().to_string(),
+            Some(MobilePlatform::Ios) => DclIosPlugin::get_apns_token().to_string(),
+            None => String::new(),
+        }
+    }
+
+    fn push_permission_granted(&self) -> bool {
+        match self.mobile_platform {
+            Some(MobilePlatform::Android) => DclAndroidPlugin::has_notification_permission(),
+            Some(MobilePlatform::Ios) => DclIosPlugin::has_notification_permission(),
+            None => false,
+        }
     }
 
     /// Build the push `identify` and queue it for the next flush.
@@ -339,7 +383,10 @@ impl Metrics {
             tracing::debug!("[Push] identify skipped: registration disabled by flag");
             return;
         }
-        let permission = if DclAndroidPlugin::has_notification_permission() {
+        let Some(platform) = self.push_platform() else {
+            return;
+        };
+        let permission = if self.push_permission_granted() {
             "granted"
         } else {
             "denied"
@@ -356,7 +403,8 @@ impl Metrics {
             .unwrap_or_default();
 
         let traits = PushIdentifyTraits {
-            fcm_token: token.clone(),
+            platform,
+            token: token.clone(),
             push_permission: permission.to_string(),
             app_version: self.common.renderer_version.clone(),
             locale: godot::classes::Os::singleton().get_locale().to_string(),

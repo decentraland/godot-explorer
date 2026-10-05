@@ -184,6 +184,39 @@ impl DclIosPlugin {
         dict
     }
 
+    /// The APNs device token as lowercase hex, or "" when it has not resolved yet this launch
+    /// or registration failed (simulator, no network). `apns_token_ready` tells the two apart:
+    /// it fires exactly once per launch, with the token or with "".
+    #[func]
+    pub fn get_apns_token() -> GString {
+        let Some(mut singleton) = Self::try_get_singleton() else {
+            return GString::new();
+        };
+        let result = singleton.call("get_apns_token", &[]);
+        result.try_to::<GString>().unwrap_or_default()
+    }
+
+    /// Connect a callable to the plugin's `apns_token_ready` signal. Returns false if the
+    /// plugin is unavailable.
+    pub fn connect_apns_token_ready(callable: &Callable) -> bool {
+        let Some(mut singleton) = Self::try_get_singleton() else {
+            return false;
+        };
+        singleton.connect("apns_token_ready", callable);
+        true
+    }
+
+    /// Whether alerts are authorized (UNAuthorizationStatusAuthorized). Provisional and
+    /// not-yet-asked both read false, same as a refusal.
+    #[func]
+    pub fn has_notification_permission() -> bool {
+        let Some(mut singleton) = Self::try_get_singleton() else {
+            return false;
+        };
+        let result = singleton.call("has_notification_permission", &[]);
+        result.booleanize()
+    }
+
     /// Check if the iOS plugin is available
     #[func]
     pub fn is_available() -> bool {
