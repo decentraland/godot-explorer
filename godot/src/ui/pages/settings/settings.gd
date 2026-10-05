@@ -118,7 +118,6 @@ var check_button_submit_message_closes_chat: CheckButton = %CheckButton_SubmitMe
 # Dynamic skybox toggle
 @onready var dynamic_skybox: HBoxContainer = %DynamicSkybox
 @onready var check_button_dynamic_skybox: CheckButton = %CheckButton_DynamicSkybox
-@onready var skybox_warning: VBoxContainer = %HBoxContainer_SkyboxWarning
 
 #Advanced items:
 @onready var content_scroll_container: ScrollContainer = %ContentScrollContainer
@@ -676,7 +675,6 @@ func _on_container_storage_visibility_changed():
 
 
 func _on_sdk_skybox_time_active_changed(is_active: bool) -> void:
-	skybox_warning.visible = is_active
 	check_button_dynamic_skybox.disabled = is_active
 	dropdown_list_custom_skybox.disabled = is_active or check_button_dynamic_skybox.button_pressed
 

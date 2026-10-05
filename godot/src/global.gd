@@ -50,6 +50,7 @@ signal camera_mode_block_changed(blocked: bool)
 signal favorite_destination_set
 signal orientation_changed(is_portrait: bool)
 signal chat_write_mode_changed(is_writing: bool)
+signal device_support_status_resolved
 
 enum CameraMode {
 	FIRST_PERSON = 0,

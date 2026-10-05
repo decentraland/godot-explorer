@@ -25,6 +25,7 @@
 [ext_resource type="PackedScene" uid="uid://o5vt3nrlfw3j" path="res://src/ui/components/atoms/buttons/custom_button/custom_button.tscn" id="22_mwb5b"]
 [ext_resource type="FontFile" uid="uid://d2vlaexk003yw" path="res://assets/themes/fonts/inter/Inter-Medium.ttf" id="23_c03rv"]
 [ext_resource type="PackedScene" uid="uid://bij0xgcmb6ivs" path="res://src/ui/components/atoms/inputs/line_edit_custom/line_edit_custom.tscn" id="24_47ptg"]
+[ext_resource type="PackedScene" path="res://src/ui/components/molecules/settings_warning/settings_warning.tscn" id="24_hsnd0"]
 [ext_resource type="Texture2D" uid="uid://c24qpurggpmfj" path="res://assets/ui/open-external-link.svg" id="24_jf4mt"]
 [ext_resource type="Script" uid="uid://c2g5q0fivu5hs" path="res://src/ui/layouts/orientation_spacer.gd" id="24_nqmh4"]
 [ext_resource type="StyleBox" uid="uid://dkykkgjyku6h1" path="res://assets/themes/secondary_outlined_normal.tres" id="26_30x8d"]
@@ -89,11 +90,6 @@ Label/font_sizes/font_size = 19
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_ewc0a"]
 
-[sub_resource type="Environment" id="Environment_nqmh4"]
-background_mode = 3
-ambient_light_source = 3
-ambient_light_color = Color(0.42557132, 0.42557135, 0.42557132, 1)
-
 [sub_resource type="LabelSettings" id="LabelSettings_30x8d"]
 font = ExtResource("16_blskf")
 font_size = 36
@@ -116,6 +112,11 @@ font_color = Color(0.9098039, 0.7254902, 1, 1)
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_nqmh4"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_1mbv2"]
+
+[sub_resource type="Environment" id="Environment_nqmh4"]
+background_mode = 3
+ambient_light_source = 3
+ambient_light_color = Color(0.42557132, 0.42557135, 0.42557132, 1)
 
 [node name="Control_SettingsPanel" type="TextureRect" unique_id=719866954]
 anchors_preset = 15
@@ -944,53 +945,9 @@ unique_name_in_owner = true
 layout_mode = 2
 title = "SETTINGS_CUSTOM_SKYBOX"
 
-[node name="HBoxContainer_SkyboxWarning" type="VBoxContainer" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/SectionVisual/VBoxContainer" unique_id=1001903030]
-unique_name_in_owner = true
+[node name="SettingsWarning" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/SectionVisual/VBoxContainer" unique_id=847201953 instance=ExtResource("24_hsnd0")]
 layout_mode = 2
-
-[node name="HSeparator5" type="HSeparator" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/SectionVisual/VBoxContainer/HBoxContainer_SkyboxWarning" unique_id=1128685686]
-custom_minimum_size = Vector2(0, 28)
-layout_mode = 2
-mouse_filter = 2
-theme_override_constants/separation = 28
-theme_override_styles/separator = SubResource("StyleBoxEmpty_xewta")
-
-[node name="Panel_Skybox" type="PanelContainer" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/SectionVisual/VBoxContainer/HBoxContainer_SkyboxWarning" unique_id=1402097322]
-custom_minimum_size = Vector2(0, 30)
-layout_mode = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_47ptg")
-
-[node name="MarginContainer" type="MarginContainer" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/SectionVisual/VBoxContainer/HBoxContainer_SkyboxWarning/Panel_Skybox" unique_id=60619410]
-layout_mode = 2
-theme_override_constants/margin_left = 24
-theme_override_constants/margin_top = 16
-theme_override_constants/margin_right = 24
-theme_override_constants/margin_bottom = 16
-
-[node name="HBoxContainer" type="HBoxContainer" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/SectionVisual/VBoxContainer/HBoxContainer_SkyboxWarning/Panel_Skybox/MarginContainer" unique_id=2036944925]
-layout_mode = 2
-theme_override_constants/separation = 24
-
-[node name="TextureRect" type="TextureRect" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/SectionVisual/VBoxContainer/HBoxContainer_SkyboxWarning/Panel_Skybox/MarginContainer/HBoxContainer" unique_id=812947984]
-custom_minimum_size = Vector2(54, 54)
-layout_mode = 2
-size_flags_horizontal = 4
-size_flags_vertical = 4
-texture = ExtResource("22_ewc0a")
-expand_mode = 1
-
-[node name="Label_Description" type="Label" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/SectionVisual/VBoxContainer/HBoxContainer_SkyboxWarning/Panel_Skybox/MarginContainer/HBoxContainer" unique_id=545519243]
-custom_minimum_size = Vector2(0, 64)
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_colors/font_color = Color(0.7, 0.7, 0.7, 1)
-theme_override_fonts/font = ExtResource("18_xewta")
-theme_override_font_sizes/font_size = 12
-text = "SETTINGS_THE_SKYBOX_IS_SET_BY_THE"
-label_settings = SubResource("LabelSettings_ep3jl")
-vertical_alignment = 1
-autowrap_mode = 2
-text_overrun_behavior = 4
+theme_override_constants/margin_top = 32
 
 [node name="HSeparator4" type="HSeparator" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/SectionVisual/VBoxContainer" unique_id=1479196808]
 layout_mode = 2
@@ -1385,7 +1342,7 @@ mouse_filter = 2
 
 [node name="CustomButton_SignOut" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Account/HBoxContainer_AccountRow/VBoxContainer_AccountContent" unique_id=1982531289 instance=ExtResource("22_mwb5b")]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(198, 96)
+custom_minimum_size = Vector2(275, 96)
 layout_mode = 2
 theme_override_font_sizes/font_size = 24
 theme_override_styles/normal_mirrored = ExtResource("26_30x8d")
@@ -1437,6 +1394,14 @@ theme_type_variation = &"2"
 script = ExtResource("13_37kek")
 portrait_separation = 72
 landscape_separation = 48
+
+[node name="SettingsWarning_BelowMinSpec" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_HelpSupport" unique_id=879618443 instance=ExtResource("24_hsnd0")]
+layout_mode = 2
+type = 2
+
+[node name="SettingsWarning_EndOfSupport" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_HelpSupport" unique_id=1536550152 instance=ExtResource("24_hsnd0")]
+layout_mode = 2
+type = 1
 
 [node name="SectionReport" type="MarginContainer" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_HelpSupport" unique_id=936932899]
 layout_mode = 2

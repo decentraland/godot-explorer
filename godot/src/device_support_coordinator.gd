@@ -39,6 +39,10 @@ static func check() -> Status:
 
 ## Authoritative answer: the instant RAM rule short-circuits without a network call; otherwise
 ## awaits the per-SoC server lookup (once per run — later calls return the cached result).
+## Emits Global.device_support_status_resolved the first time the SoC lookup settles, so a UI
+## element that read check() before this resolved (e.g. settings_warning.gd, instantiated lazily
+## whenever Settings happens to be opened) can re-check instead of staying frozen on the
+## fail-open default.
 static func async_check() -> Status:
 	if not DclAndroidPlugin.is_available():
 		return Status.OK
@@ -46,6 +50,7 @@ static func async_check() -> Status:
 		return Status.END_OF_SUPPORT
 	if _soc_status == -1:
 		_soc_status = await _async_fetch_soc_status()
+		Global.device_support_status_resolved.emit()
 	return _soc_status as Status
 
 
