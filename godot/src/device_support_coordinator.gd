@@ -64,8 +64,25 @@ static func async_check() -> Status:
 static func is_end_of_support_modal_due(shown_count: int, first_detected_unix: int) -> bool:
 	if first_detected_unix <= 0:
 		return false
-	var days_elapsed := (int(Time.get_unix_time_from_system()) - first_detected_unix) / _DAY_SECONDS
-	return days_elapsed >= _end_of_support_next_due_day(shown_count)
+	return _days_elapsed(first_detected_unix) >= _end_of_support_next_due_day(shown_count)
+
+
+## The shown_count to persist right after showing the modal today: jumps past every schedule
+## tier the real calendar gap since first_detected_unix already satisfies, rather than advancing
+## one tier at a time. Without this, a device that returns after a long absence (say 100 days)
+## would need one relaunch per skipped tier (day 5, then 10, then 30, then 60...) before the
+## schedule catches up to the present — this makes it catch up in the single show that happens
+## today.
+static func end_of_support_catch_up_shown_count(first_detected_unix: int) -> int:
+	var days_elapsed := _days_elapsed(first_detected_unix)
+	var count := 0
+	while _end_of_support_next_due_day(count) <= days_elapsed:
+		count += 1
+	return count
+
+
+static func _days_elapsed(first_detected_unix: int) -> int:
+	return (int(Time.get_unix_time_from_system()) - first_detected_unix) / _DAY_SECONDS
 
 
 static func _end_of_support_next_due_day(shown_count: int) -> int:

@@ -811,14 +811,12 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
 
                 // SoC (System on Chip) identification — used to match a device against the
                 // Play Store exclusion / below-minspec chipset tables (#2936 / #2935).
-                // Build.SOC_MODEL/SOC_MANUFACTURER are API 31+; ro.board.platform (reflection)
-                // and Build.HARDWARE are the fallbacks that also cover older devices.
+                // Build.SOC_MODEL is API 31+; ro.board.platform (reflection) and Build.HARDWARE
+                // are the fallbacks that also cover older devices.
                 if (Build.VERSION.SDK_INT >= 31) {
                     info["soc_model"] = Build.SOC_MODEL ?: ""
-                    info["soc_manufacturer"] = Build.SOC_MANUFACTURER ?: ""
                 } else {
                     info["soc_model"] = ""
-                    info["soc_manufacturer"] = ""
                 }
                 info["board_platform"] = getSystemProperty("ro.board.platform")
                 info["hardware"] = Build.HARDWARE ?: ""
@@ -832,7 +830,6 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
                 info["os_version"] = ""
                 info["total_ram_mb"] = -1
                 info["soc_model"] = ""
-                info["soc_manufacturer"] = ""
                 info["board_platform"] = ""
                 info["hardware"] = ""
             }

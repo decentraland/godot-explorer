@@ -11,7 +11,6 @@ pub struct DclMobileDeviceInfo {
     pub total_ram_mb: i32,
     /// Android-only chipset identification (see #2936 / #2935); always empty on iOS.
     pub soc_model: String,
-    pub soc_manufacturer: String,
     pub board_platform: String,
     pub hardware: String,
 }
@@ -50,11 +49,6 @@ impl DclMobileDeviceInfo {
                 .unwrap_or(-1),
             soc_model: dict
                 .get("soc_model")
-                .and_then(|v| v.try_to::<GString>().ok())
-                .map(|s| s.to_string())
-                .unwrap_or_default(),
-            soc_manufacturer: dict
-                .get("soc_manufacturer")
                 .and_then(|v| v.try_to::<GString>().ok())
                 .map(|s| s.to_string())
                 .unwrap_or_default(),

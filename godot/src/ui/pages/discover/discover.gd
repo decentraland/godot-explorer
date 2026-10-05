@@ -218,12 +218,20 @@ func _async_show_then_resume_nudge(is_end_of_support: bool, forced: bool) -> voi
 		await Global.modal_manager.async_show_end_of_device_support_modal()
 	else:
 		await Global.modal_manager.async_show_below_minspec_modal()
+	# Plain is_instance_valid(), not NodeGuard.is_alive(): a modal that never got created (a load
+	# failure, not a freed-node race) is an expected outcome here, not the kind of stale-node
+	# event NodeGuard's Sentry metric exists to catch.
 	var modal: Modal = Global.modal_manager.current_modal
-	if NodeGuard.is_alive(modal, "Discover._async_show_then_resume_nudge"):
+	if is_instance_valid(modal):
 		if not forced:
 			var config: ConfigData = Global.get_config()
 			if is_end_of_support:
-				config.end_of_device_support_modal_shown_count += 1
+				config.end_of_device_support_modal_shown_count = (
+					DeviceSupportCoordinator
+					. end_of_support_catch_up_shown_count(
+						config.end_of_device_support_first_detected_unix
+					)
+				)
 			else:
 				config.below_minspec_modal_shown = true
 			config.save_to_settings_file()
