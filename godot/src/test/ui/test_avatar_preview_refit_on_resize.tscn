@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/test/ui/test_avatar_preview_refit_on_resize.gd" id="1_test"]
+
+[node name="TestAvatarPreviewRefitOnResize" type="Node"]
+script = ExtResource("1_test")
