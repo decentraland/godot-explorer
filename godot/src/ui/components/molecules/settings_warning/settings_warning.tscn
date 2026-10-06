@@ -1,4 +1,4 @@
-[gd_scene format=3]
+[gd_scene format=3 uid="uid://42hlc2a47tn2"]
 
 [ext_resource type="Script" uid="uid://b0yu57ug3gvq7" path="res://src/ui/components/molecules/settings_warning/settings_warning.gd" id="1_script"]
 [ext_resource type="Texture2D" uid="uid://bldchilj3kjhx" path="res://assets/ui/warning-triangle.svg" id="2_icon"]
