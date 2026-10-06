@@ -12,7 +12,7 @@ import urllib.error
 import urllib.request
 from datetime import datetime, timezone
 
-DEV_REVIEWERS = {"EibrielInv", "manuelmaceira", "leanmendoza", "kuruk-mm"}
+DEV_REVIEWERS = {"EibrielInv", "manuelmaceira", "leanmendoza", "kuruk-mm", "sdilauro"}
 MAX_CHARS = 3500
 TITLE_MAX = 70
 GROUPS = [
