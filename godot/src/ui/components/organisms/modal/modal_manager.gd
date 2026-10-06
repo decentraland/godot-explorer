@@ -231,7 +231,7 @@ func async_show_scene_timeout_modal() -> void:
 ## @param hide_buttons: If true, hides all buttons (used on iOS after retry fails)
 func async_show_connection_lost_modal(hide_buttons: bool = false) -> void:
 	if not is_instance_valid(current_modal):
-		if not await _async_create_modal():
+		if not await _async_create_modal(true):
 			print("NOT CREATED MODAL")
 			return
 		if not NodeGuard.is_alive(current_modal, "ModalManager.async_show_connection_lost_modal"):
@@ -393,7 +393,7 @@ func async_show_realm_teleport_modal(realm_name: String) -> void:
 ## @param entity_id: The entity ID of the crashed scene
 func async_show_scene_crash_modal(entity_id: String) -> void:
 	if not is_instance_valid(current_modal):
-		if not await _async_create_modal():
+		if not await _async_create_modal(true):
 			return
 		if not NodeGuard.is_alive(current_modal, "ModalManager.async_show_scene_crash_modal"):
 			return
@@ -475,7 +475,7 @@ func _async_show_simple_modal(
 	title_values: Dictionary = {}
 ) -> bool:
 	if not is_instance_valid(current_modal):
-		if not await _async_create_modal():
+		if not await _async_create_modal(icon == Modal.MODAL_BAN_ICON):
 			return false
 		if not NodeGuard.is_alive(current_modal, "ModalManager._async_show_simple_modal"):
 			return false
@@ -600,7 +600,7 @@ func _async_show_disconnect_modal(
 	primary_handler: Callable
 ) -> void:
 	if not is_instance_valid(current_modal):
-		if not await _async_create_modal():
+		if not await _async_create_modal(true):
 			return
 		if not NodeGuard.is_alive(current_modal, "ModalManager._async_show_disconnect_modal"):
 			return
@@ -1018,7 +1018,8 @@ func _dismiss_chat_input_for_modal() -> void:
 		chat_panel.chat.close_write_mode_if_active()
 
 
-func _async_create_modal() -> Modal:
+func _async_create_modal(urgent := false) -> Modal:
+	await Global.controls_ftue_coordinator.async_wait_until_clear(urgent)
 	_dismiss_chat_input_for_modal()
 	# If there's already a modal open, close it first
 	if is_instance_valid(current_modal):

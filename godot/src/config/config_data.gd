@@ -247,6 +247,9 @@ var day1_notification_scheduled: bool = false
 
 var low_spec_warning_shown: bool = false
 
+# Which controls the first-entry overlay has already labelled (ControlsFtueOverlay ids).
+var controls_ftue_shown: PackedStringArray = []
+
 # Discover's "Last visited", per wallet so accounts sharing a device don't see each other's
 # places (#2631). Shape: { wallet_lower: [ { position, realm } ] }, newest first.
 var last_places_by_wallet: Dictionary = {}
@@ -628,6 +631,10 @@ func load_from_settings_file():
 		"config", "low_spec_warning_shown", data_default.low_spec_warning_shown
 	)
 
+	self.controls_ftue_shown = settings_file.get_value(
+		"config", "controls_ftue_shown", data_default.controls_ftue_shown
+	)
+
 
 func save_to_settings_file():
 	if Global.testing_scene_mode:
@@ -714,6 +721,7 @@ func save_to_settings_file():
 		"config", "day1_notification_scheduled", self.day1_notification_scheduled
 	)
 	new_settings_file.set_value("config", "low_spec_warning_shown", self.low_spec_warning_shown)
+	new_settings_file.set_value("config", "controls_ftue_shown", self.controls_ftue_shown)
 	new_settings_file.set_value("user", "upgrade_modal_shown_count", self.upgrade_modal_shown_count)
 	new_settings_file.set_value(
 		"user", "upgrade_modal_last_shown_unix", self.upgrade_modal_last_shown_unix
