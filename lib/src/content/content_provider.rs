@@ -39,6 +39,7 @@ use crate::godot_classes::dcl_resource_tracker::{
 use super::{
     audio::load_audio,
     cache_file_name::{cache_file_name, cache_file_path},
+    crash_context,
     gltf::{
         build_dcl_emote_gltf, get_last_16_alphanumeric, load_and_save_emote_gltf,
         load_and_save_scene_gltf, load_and_save_wearable_gltf, process_emote_animations,
@@ -319,7 +320,12 @@ fn resolved_optimized_base_url() -> String {
 /// Synchronous on purpose: the non-Send Godot objects must not live across an
 /// await in the calling async block.
 fn load_baked_texture_entry(godot_path: &str, original_size: Option<ImageSize>) -> Option<Variant> {
-    let resource = ResourceLoader::singleton().load(&GString::from(godot_path))?;
+    // A bad file traps inside Godot's loader (GODOT-EXPLORER-302), so the path has
+    // to be on the Sentry scope before the call, not after it.
+    crash_context::set_loading_resource(godot_path);
+    let loaded = ResourceLoader::singleton().load(&GString::from(godot_path));
+    crash_context::clear_loading_resource();
+    let resource = loaded?;
 
     // v5 bakes store a `PortableCompressedTexture2D` (ETC2 buffer, shared with
     // the .scn ExtResources of every GLB that uses the texture). Older bakes
