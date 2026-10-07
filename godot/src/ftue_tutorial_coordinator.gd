@@ -15,6 +15,7 @@ const FLAG_SCENES := "ftue-tutorial-scenes"
 const FLAG_MOVE_METERS := "ftue-tutorial-move-meters"
 const FLAG_CAMERA_DEGREES := "ftue-tutorial-camera-degrees"
 const FLAG_SOCIAL_SECONDS := "ftue-tutorial-social-seconds"
+const FLAG_REWARD := "ftue-tutorial-reward"
 
 # Base parcels of the Genesis City scenes that run the tutorial, as "x,y;x,y". Genesis Plaza.
 const DEFAULT_SCENES := "-3,-2"
@@ -25,24 +26,36 @@ const DEEPLINK_PARAM := "ftue-tutorial"
 const SCREEN_WELCOME := "FTUE_TUTORIAL_WELCOME"
 const SCREEN_STEP := "FTUE_TUTORIAL_STEP"
 const SCREEN_COMPLETE := "FTUE_TUTORIAL_COMPLETE"
+const SCREEN_REWARD := "FTUE_TUTORIAL_REWARD"
+# Entry of RewardCampaigns.CAMPAIGNS the tutorial grants. Until it exists the reward is skipped.
+const REWARD_CAMPAIGN := "FtueTutorial"
+# QA: the campaign `?ftue-tutorial=reward` previews the reward card with.
+const REWARD_PREVIEW_CAMPAIGN := "MobilePet"
 const OVERLAY_SCENE := "res://src/ui/components/organisms/ftue_tutorial/ftue_tutorial_overlay.tscn"
 const WELCOME_SCENE := "res://src/ui/components/organisms/ftue_tutorial/ftue_welcome_modal.tscn"
+# i18n-keys: FTUE_TUTORIAL_REWARD_BODY
+const REWARD_SCENE := "res://src/ui/components/organisms/ftue_tutorial/ftue_reward_modal.tscn"
 
 var _overlay: FtueTutorialOverlay = null
 var _runner: FtueTutorialRunner = null
 var _welcome: FtueWelcomeModal = null
+var _reward_layer: CanvasLayer = null
 var _is_replay := false
 # Bumped on every load so a stale _async_on_scene_entered bails after its await.
 var _generation := 0
 # QA: `?ftue-tutorial=start` offers the tutorial on the next scene entry, wherever that is and
-# even if it was offered before. Session-only, never persisted.
+# even if it was offered before. `?ftue-tutorial=reward` shows the reward card instead.
+# Session-only, never persisted.
 var _forced := false
+var _forced_reward := false
 
 
 func _ready() -> void:
 	var deep_link := Global.deep_link_obj
 	if deep_link != null and not Global.is_production():
-		_forced = String(deep_link.params.get(DEEPLINK_PARAM, "")) == "start"
+		var value := String(deep_link.params.get(DEEPLINK_PARAM, ""))
+		_forced = value == "start"
+		_forced_reward = value == "reward"
 	Global.loading_started.connect(_on_loading_started)
 	Global.loading_finished.connect(_on_loading_finished)
 
@@ -74,7 +87,7 @@ func is_running() -> bool:
 ## True when this scene entry belongs to the tutorial: it is on screen, about to be offered,
 ## or this is one of its scenes. The controls overlay (#3014) never shows then.
 func owns_scene_entry() -> bool:
-	if is_running() or is_instance_valid(_welcome) or _forced:
+	if is_running() or is_instance_valid(_welcome) or _forced or _forced_reward:
 		return true
 	return Global.feature_flags.is_enabled(FLAG_ENABLED, false) and _is_tutorial_scene()
 
@@ -103,6 +116,10 @@ func _async_on_scene_entered() -> void:
 		if generation != _generation:
 			return
 	if not is_instance_valid(explorer) or is_running():
+		return
+	if _forced_reward:
+		_forced_reward = false
+		_async_show_reward(RewardCampaigns.CAMPAIGNS[REWARD_PREVIEW_CAMPAIGN])
 		return
 
 	var offer := should_offer(
@@ -185,11 +202,38 @@ func _on_completed() -> void:
 	# The tutorial covered every control the overlay (#3014) labels.
 	config.controls_ftue_shown = PackedStringArray(ControlsFtueOverlay.ALL_ELEMENTS)
 	config.save_to_settings_file()
+	var campaign: Dictionary = RewardCampaigns.CAMPAIGNS.get(REWARD_CAMPAIGN, {})
+	if (
+		not _is_replay
+		and not campaign.is_empty()
+		and Global.feature_flags.is_enabled(FLAG_REWARD, false)
+	):
+		_async_show_reward(campaign)
 
 
 func _on_skipped(step: FtueTutorialRunner.Step) -> void:
 	_end()
 	_track_click("skip", SCREEN_STEP, _step_properties(step))
+
+
+# On its own CanvasLayer above the HUD, like the modals ModalManager shows.
+func _async_show_reward(campaign: Dictionary) -> void:
+	_close_reward()
+	_reward_layer = CanvasLayer.new()
+	_reward_layer.layer = 100
+	get_tree().root.add_child(_reward_layer)
+	var modal: RewardModal = load(REWARD_SCENE).instantiate()
+	_reward_layer.add_child(modal)
+	modal.dismissed.connect(_close_reward)
+	modal.button_claim.pressed.connect(_track_click.bind("claim", SCREEN_REWARD, {}))
+	await modal.async_setup(campaign)
+	_track_screen(SCREEN_REWARD, {})
+
+
+func _close_reward() -> void:
+	if is_instance_valid(_reward_layer):
+		_reward_layer.queue_free()
+	_reward_layer = null
 
 
 func _end() -> void:

@@ -1,0 +1,145 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://src/ui/components/organisms/reward_modal/reward_modal.gd" id="1_modal"]
+[ext_resource type="Texture2D" path="res://src/ui/components/organisms/ftue_tutorial/assets/reward_art.png" id="2_art"]
+[ext_resource type="PackedScene" uid="uid://buu3ox7iefpgx" path="res://src/ui/components/atoms/controls/loading_spinner/loading_spinner.tscn" id="3_spinner"]
+[ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="4_bold"]
+[ext_resource type="FontFile" uid="uid://d2vlaexk003yw" path="res://assets/themes/fonts/inter/Inter-Medium.ttf" id="5_medium"]
+[ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="6_theme"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_card"]
+bg_color = Color(0.298, 0.078, 0.486, 1)
+corner_radius_top_left = 24
+corner_radius_top_right = 24
+corner_radius_bottom_right = 24
+corner_radius_bottom_left = 24
+
+[sub_resource type="Animation" id="Animation_claim"]
+resource_name = "claim"
+length = 0.4
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("TextureRect_Reward:modulate")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.4),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Color(1, 1, 1, 0), Color(1, 1, 1, 1)]
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_reward"]
+_data = {
+&"claim": SubResource("Animation_claim")
+}
+
+[node name="FtueRewardModal" type="ColorRect"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.6)
+script = ExtResource("1_modal")
+body_key = "FTUE_TUTORIAL_REWARD_BODY"
+managed_by_modal_manager = false
+
+[node name="VBoxContainer" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+alignment = 1
+
+[node name="PanelContainer" type="PanelContainer" parent="VBoxContainer"]
+clip_children = 2
+custom_minimum_size = Vector2(977, 460)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_styles/panel = SubResource("StyleBoxFlat_card")
+
+[node name="MarginContainer_Reward" type="MarginContainer" parent="VBoxContainer/PanelContainer"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/margin_right = 520
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="VBoxContainer/PanelContainer/MarginContainer_Reward"]
+libraries/ = SubResource("AnimationLibrary_reward")
+
+[node name="TextureRect_Reward" type="TextureRect" parent="VBoxContainer/PanelContainer/MarginContainer_Reward"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+texture = ExtResource("2_art")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="CenterContainer" type="CenterContainer" parent="VBoxContainer/PanelContainer/MarginContainer_Reward"]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="LoadingSpinner" parent="VBoxContainer/PanelContainer/MarginContainer_Reward/CenterContainer" instance=ExtResource("3_spinner")]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+
+[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/PanelContainer"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 497
+theme_override_constants/margin_top = 64
+theme_override_constants/margin_right = 40
+theme_override_constants/margin_bottom = 60
+
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/PanelContainer/MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="Label_Title" type="Label" parent="VBoxContainer/PanelContainer/MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_fonts/font = ExtResource("4_bold")
+theme_override_font_sizes/font_size = 34
+text = "FTUE_TUTORIAL_REWARD_TITLE"
+autowrap_mode = 3
+
+[node name="Label_Text" type="Label" parent="VBoxContainer/PanelContainer/MarginContainer/VBoxContainer"]
+unique_name_in_owner = true
+auto_translate_mode = 2
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_fonts/font = ExtResource("5_medium")
+theme_override_font_sizes/font_size = 22
+autowrap_mode = 3
+
+[node name="Spacer" type="Control" parent="VBoxContainer/PanelContainer/MarginContainer/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+
+[node name="Button_Claim" type="Button" parent="VBoxContainer/PanelContainer/MarginContainer/VBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 74)
+layout_mode = 2
+focus_mode = 0
+theme = ExtResource("6_theme")
+theme_override_font_sizes/font_size = 24
+text = "REWARD_MODAL_CLAIM_REWARD"
+
+[node name="Label_TapToContinue" type="Label" parent="VBoxContainer"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_fonts/font = ExtResource("5_medium")
+theme_override_font_sizes/font_size = 20
+text = "COMMON_TAP_TO_CONTINUE"
+horizontal_alignment = 1
+
+[connection signal="gui_input" from="." to="." method="_on_gui_input"]
+[connection signal="pressed" from="VBoxContainer/PanelContainer/MarginContainer/VBoxContainer/Button_Claim" to="." method="_on_button_claim_pressed"]

@@ -33,11 +33,16 @@ const HOLE_MARGIN := 8.0
 const MAX_STEP_METERS := 2.0
 # Lets the navbar finish its open animation before the next highlight is measured.
 const NAVBAR_OPEN_SECONDS := 0.25
+# Time for a menu, the profile, the chat or the navbar to finish closing or opening.
+const SETTLE_SECONDS := 0.4
 # Where the camera and pinch steps put their tooltip and gesture icon, as fractions of the screen.
 const GESTURE_TOOLTIP_AT := Vector2(0.5, 0.24)
 const GESTURE_AT := Vector2(0.66, 0.62)
 
 var step := Step.MOVE
+# Last step reported through step_entered; a step re-entered while it settles is not reported
+# twice.
+var _announced_step := -1
 
 var _explorer: Explorer
 var _overlay: FtueTutorialOverlay
@@ -63,6 +68,8 @@ var _seen_first_person := false
 var _seen_third_person := false
 # Second half of a step: the thing was opened (chat, social, backpack) or equipped.
 var _engaged := false
+# A re-entry of the current step is scheduled, to let something finish closing or opening.
+var _settling := false
 var _backpack: Backpack
 # What the avatar wore when the equip step began.
 var _outfit_before := PackedStringArray()
@@ -119,6 +126,8 @@ func _process(_delta: float) -> void:
 	_apply_hud()
 	match step:
 		Step.MOVE:
+			# Released, the joystick stops being drawn; the step points at it, so it must show.
+			_joystick.show_resting()
 			var position := _player.global_position
 			var travelled := Vector2(position.x - _last_position.x, position.z - _last_position.z)
 			_last_position = position
@@ -134,9 +143,15 @@ func _process(_delta: float) -> void:
 			_last_pitch = pitch
 			if rad_to_deg(_rotated) >= _camera_degrees:
 				_enter_step(Step.PINCH)
+		Step.CHAT, Step.MENU:
+			_keep_settled(false)
+		Step.SOCIAL:
+			_keep_settled(true)
 		Step.BACKPACK:
 			if _engaged:
 				_poll_backpack_ready()
+			else:
+				_keep_settled(true)
 		Step.EQUIP:
 			if not _engaged and is_instance_valid(_backpack):
 				var hole := _backpack.scroll_container_items.get_global_rect()
@@ -149,13 +164,15 @@ func _process(_delta: float) -> void:
 func _enter_step(next: Step) -> void:
 	step = next
 	_engaged = false
+	_settling = false
 	_overlay.ring.stop()
 	_overlay.hide_dim()
 	_overlay.hide_tooltip()
 	_overlay.hide_gesture()
 	_overlay.free_input()
 	_place_skip_button()
-	if next != Step.DONE:
+	if next != Step.DONE and next != _announced_step:
+		_announced_step = next
 		step_entered.emit(next)
 
 	var view := _overlay.size
@@ -169,6 +186,9 @@ func _enter_step(next: Step) -> void:
 			_moved = 0.0
 			var center := _joystick.get_base_global_center()
 			var radius := JOYSTICK_RING_DIAMETER * 0.5
+			# Only the joystick's area takes touches, so a drag elsewhere cannot turn the
+			# camera while this step is about moving.
+			_overlay.block_input_except(_joystick.get_active_area_global_rect())
 			_overlay.ring.play(center, JOYSTICK_RING_DIAMETER)
 			_overlay.show_tooltip(
 				"FTUE_TUTORIAL_MOVE",
@@ -202,11 +222,15 @@ func _enter_step(next: Step) -> void:
 			)
 			_overlay.show_gesture(FtueTutorialOverlay.Gesture.PINCH, view * GESTURE_AT)
 		Step.CHAT:
-			_restore_hud()
-			_highlight_button(_chat_button(), "FTUE_TUTORIAL_CHAT", FtueTutorialOverlay.Place.BELOW)
+			if _settle(false):
+				_highlight_button(
+					_chat_button(), "FTUE_TUTORIAL_CHAT", FtueTutorialOverlay.Place.BELOW
+				)
 		Step.MENU:
-			_restore_hud()
-			_highlight_button(_menu_button(), "FTUE_TUTORIAL_MENU", FtueTutorialOverlay.Place.BELOW)
+			if _settle(false):
+				_highlight_button(
+					_menu_button(), "FTUE_TUTORIAL_MENU", FtueTutorialOverlay.Place.BELOW
+				)
 		Step.SOCIAL:
 			_highlight_in_navbar("%StaticButton_Friends", "FTUE_TUTORIAL_SOCIAL")
 		Step.BACKPACK:
@@ -238,11 +262,7 @@ func _highlight_button(
 # Steps 6 and 7 point at an entry of the open navbar: the whole menu bar stays lit, only the
 # entry takes touches.
 func _highlight_in_navbar(button_path: String, tooltip_key: String) -> void:
-	_restore_hud()
-	if not _navbar.is_open():
-		# Routed through the toggle so explorer runs its usual navbar-opened handling.
-		_menu_button().button_pressed = true
-		_enter_step_after(step, NAVBAR_OPEN_SECONDS)
+	if not _settle(true):
 		return
 	var button: Control = _navbar.get_node(button_path)
 	var rect := button.get_global_rect()
@@ -251,6 +271,44 @@ func _highlight_in_navbar(button_path: String, tooltip_key: String) -> void:
 	_overlay.block_input_except(rect)
 	_overlay.ring.play(rect.get_center(), maxf(rect.size.x, rect.size.y) + BUTTON_RING_MARGIN)
 	_overlay.show_tooltip(tooltip_key, rect, FtueTutorialOverlay.Place.RIGHT)
+
+
+# Brings the HUD to the state a step starts from. While a step lets the player use what it
+# opened (chat, social) they can leave anything open: a menu, the profile, the navbar. One
+# thing is put right per pass and the step is re-entered once it has had time to close; nothing
+# is touchable meanwhile. Returns true when there is nothing left to fix.
+func _settle(navbar_open: bool) -> bool:
+	_restore_hud()
+	if _explorer.control_menu.visible:
+		Global.close_menu.emit()
+	elif _explorer.profile_container.visible:
+		_explorer.profile_container.call("close")
+	elif _explorer.chat_panel.is_chat_visible():
+		Global.close_chat.emit()
+	elif _navbar.is_open() != navbar_open:
+		# Routed through the toggle so explorer runs its usual navbar handling.
+		_menu_button().button_pressed = navbar_open
+	else:
+		return true
+	_settling = true
+	_overlay.block_input_except(Rect2())
+	_enter_step_after(step, SETTLE_SECONDS)
+	return false
+
+
+# A screen can still open after a step settled (the profile loads before it shows), which
+# would leave the highlight pointing at something covered. Checked every frame while the
+# step waits for its tap.
+func _keep_settled(navbar_open: bool) -> void:
+	if _engaged or _settling:
+		return
+	if (
+		_explorer.control_menu.visible
+		or _explorer.profile_container.visible
+		or _explorer.chat_panel.is_chat_visible()
+		or _navbar.is_open() != navbar_open
+	):
+		_enter_step(step)
 
 
 func _enter_step_after(next: Step, seconds: float) -> void:
@@ -339,7 +397,8 @@ func _on_chat_closed() -> void:
 
 
 func _on_navbar_opened() -> void:
-	if step == Step.MENU:
+	if step == Step.MENU and not _settling:
+		_engaged = true
 		_enter_step_after(Step.SOCIAL, NAVBAR_OPEN_SECONDS)
 
 
