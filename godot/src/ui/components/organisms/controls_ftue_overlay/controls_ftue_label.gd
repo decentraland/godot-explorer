@@ -29,39 +29,75 @@ func _draw() -> void:
 	draw_colored_polygon(_outline(), FILL)
 
 
-## How far the pointer can slide before it runs into a rounded corner.
+## How far the pointer can slide: until its base is flush with the end of its side.
 func max_pointer_offset() -> float:
 	var side_length := size.y if pointer_side == PointerSide.LEFT else size.x
-	return maxf(0.0, side_length * 0.5 - CORNER_RADIUS - POINTER_HALF_WIDTH)
+	return maxf(0.0, side_length * 0.5 - POINTER_HALF_WIDTH)
 
 
 func _outline() -> PackedVector2Array:
 	var w := size.x
 	var h := size.y
+	var r := CORNER_RADIUS
 	var along_x := w * 0.5 + pointer_offset
 	var along_y := h * 0.5 + pointer_offset
-	var r := CORNER_RADIUS
+	var left := pointer_side == PointerSide.LEFT
+	var top := pointer_side == PointerSide.TOP
+	var bottom := pointer_side == PointerSide.BOTTOM
+	# A corner the pointer's base reaches into is drawn square, so the two merge cleanly.
+	var near_start := false
+	var near_end := false
+	if left:
+		near_start = along_y - POINTER_HALF_WIDTH < r
+		near_end = along_y + POINTER_HALF_WIDTH > h - r
+	elif top or bottom:
+		near_start = along_x - POINTER_HALF_WIDTH < r
+		near_end = along_x + POINTER_HALF_WIDTH > w - r
+
 	var points := PackedVector2Array()
-	_append_corner(points, Vector2(r, r), PI)
-	if pointer_side == PointerSide.TOP:
-		points.append(Vector2(along_x - POINTER_HALF_WIDTH, 0.0))
+	_append_corner(points, Vector2(0.0, 0.0), Vector2(1, 1), PI, near_start and (left or top))
+	if top:
+		_append_distinct(points, Vector2(along_x - POINTER_HALF_WIDTH, 0.0))
 		points.append(Vector2(along_x, -POINTER_LENGTH))
 		points.append(Vector2(along_x + POINTER_HALF_WIDTH, 0.0))
-	_append_corner(points, Vector2(w - r, r), PI * 1.5)
-	_append_corner(points, Vector2(w - r, h - r), 0.0)
-	if pointer_side == PointerSide.BOTTOM:
-		points.append(Vector2(along_x + POINTER_HALF_WIDTH, h))
+	_append_corner(points, Vector2(w, 0.0), Vector2(-1, 1), PI * 1.5, near_end and top)
+	_append_corner(points, Vector2(w, h), Vector2(-1, -1), 0.0, near_end and bottom)
+	if bottom:
+		_append_distinct(points, Vector2(along_x + POINTER_HALF_WIDTH, h))
 		points.append(Vector2(along_x, h + POINTER_LENGTH))
 		points.append(Vector2(along_x - POINTER_HALF_WIDTH, h))
-	_append_corner(points, Vector2(r, h - r), PI * 0.5)
-	if pointer_side == PointerSide.LEFT:
-		points.append(Vector2(0.0, along_y + POINTER_HALF_WIDTH))
+	_append_corner(
+		points,
+		Vector2(0.0, h),
+		Vector2(1, -1),
+		PI * 0.5,
+		(near_start and bottom) or (near_end and left)
+	)
+	if left:
+		_append_distinct(points, Vector2(0.0, along_y + POINTER_HALF_WIDTH))
 		points.append(Vector2(-POINTER_LENGTH, along_y))
 		points.append(Vector2(0.0, along_y - POINTER_HALF_WIDTH))
+	if points[points.size() - 1].is_equal_approx(points[0]):
+		points.remove_at(points.size() - 1)
 	return points
 
 
-func _append_corner(points: PackedVector2Array, center: Vector2, from_angle: float) -> void:
+# `corner` is the body's outer corner and `inward` points from it into the body; the arc
+# starts at `from_angle` around the centre that sits one radius inside.
+func _append_corner(
+	points: PackedVector2Array, corner: Vector2, inward: Vector2, from_angle: float, square: bool
+) -> void:
+	if square:
+		_append_distinct(points, corner)
+		return
+	var center := corner + inward * CORNER_RADIUS
 	for i in range(CORNER_STEPS + 1):
 		var angle := from_angle + PI * 0.5 * float(i) / float(CORNER_STEPS)
 		points.append(center + Vector2(cos(angle), sin(angle)) * CORNER_RADIUS)
+
+
+# A pointer slid to the very end of its side shares a vertex with the squared corner, and a
+# repeated vertex breaks the polygon's triangulation.
+func _append_distinct(points: PackedVector2Array, point: Vector2) -> void:
+	if points.is_empty() or not points[points.size() - 1].is_equal_approx(point):
+		points.append(point)
