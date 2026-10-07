@@ -63,6 +63,15 @@ func get_number(flag_name: String, default_value: float) -> float:
 	return default_value
 
 
+# Text flags. `default_value` is returned while the flags aren't loaded yet, when the flag is
+# absent, or when it isn't a string.
+func get_text(flag_name: String, default_value: String) -> String:
+	var value = _flags.get(flag_name)
+	if value is String:
+		return value
+	return default_value
+
+
 # Extracts the flags dictionary from the mobile-bff response:
 # `{"ok": true, "data": {"flags": {"archipielago": true, ...}}}`.
 # Returns an empty dictionary on any shape mismatch (fail-open).

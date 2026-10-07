@@ -358,6 +358,53 @@ layout_mode = 2
 size_flags_vertical = 0
 theme = ExtResource("12_sa1v7")
 
+[node name="Container_Tutorial" type="MarginContainer" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/margin_left = 0
+theme_override_constants/margin_right = 0
+
+[node name="SectionTutorial" type="MarginContainer" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Tutorial"]
+layout_mode = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Tutorial/SectionTutorial"]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="SectionTittle_Tutorial" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Tutorial/SectionTutorial/VBoxContainer" instance=ExtResource("15_h5vs5")]
+layout_mode = 2
+title = "SETTINGS_TUTORIAL"
+
+[node name="HSeparator" type="HSeparator" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Tutorial/SectionTutorial/VBoxContainer"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 24
+theme_override_styles/separator = SubResource("StyleBoxEmpty_xewta")
+
+[node name="ReplayTutorial" type="HBoxContainer" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Tutorial/SectionTutorial/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 32
+
+[node name="Label_Title" type="Label" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Tutorial/SectionTutorial/VBoxContainer/ReplayTutorial"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_fonts/font = ExtResource("16_blskf")
+theme_override_font_sizes/font_size = 14
+text = "SETTINGS_REPLAY_TUTORIAL"
+label_settings = ExtResource("17_67hd5")
+script = ExtResource("99_orlbl")
+
+[node name="Button_ReplayTutorial" type="Button" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Tutorial/SectionTutorial/VBoxContainer/ReplayTutorial"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(200, 56)
+layout_mode = 2
+size_flags_vertical = 4
+focus_mode = 0
+theme = ExtResource("12_sa1v7")
+theme_type_variation = &"SecondaryOutlinedButton"
+text = "SETTINGS_REPLAY"
+
 [node name="Container_Camera" type="MarginContainer" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay" unique_id=1854347]
 unique_name_in_owner = true
 layout_mode = 2
@@ -1683,6 +1730,7 @@ preview_margin_right = 20
 [connection signal="toggled" from="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Interface/VBoxContainer/HideSceneUI/CheckButton_HideSceneUI" to="." method="_on_check_button_hide_scene_ui_toggled"]
 [connection signal="item_selected" from="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/Container_Language/VBoxContainer/DropdownList_Language" to="." method="_on_dropdown_list_language_item_selected"]
 [connection signal="visibility_changed" from="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Storage" to="." method="_on_container_storage_visibility_changed"]
+[connection signal="pressed" from="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Tutorial/SectionTutorial/VBoxContainer/ReplayTutorial/Button_ReplayTutorial" to="." method="_on_button_replay_tutorial_pressed"]
 [connection signal="pressed" from="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Storage/Control/Button_ClearCache" to="." method="_on_button_clear_cache_pressed"]
 [connection signal="toggled" from="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/SectionPerformance/VBoxContainer/DynamicGraphics/CheckButton_DynamicGraphics" to="." method="_on_check_button_dynamic_graphics_toggled"]
 [connection signal="item_selected" from="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Graphics/SectionPerformance/VBoxContainer/DropdownList_GraphicProfiles" to="." method="_on_dropdown_list_graphic_profiles_item_selected"]

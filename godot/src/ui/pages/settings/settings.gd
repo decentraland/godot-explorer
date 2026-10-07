@@ -101,6 +101,7 @@ var check_button_submit_message_closes_chat: CheckButton = %CheckButton_SubmitMe
 @onready var hide_scene_ui_row: HBoxContainer = %HideSceneUI
 @onready var container_interface: MarginContainer = %Container_Interface
 @onready var container_camera: Control = %Container_Camera
+@onready var container_tutorial: Control = %Container_Tutorial
 
 #Audio items
 @onready var general_volume: SettingsSlider = %GeneralVolume
@@ -805,6 +806,7 @@ func _refresh_hide_explorer_ui_row() -> void:
 	var explorer = Global.get_explorer()
 	var in_explorer := is_instance_valid(explorer)
 	container_interface.visible = in_explorer
+	container_tutorial.visible = in_explorer
 	if in_explorer:
 		var hide_on = explorer.is_session_hide_main_hud()
 		check_button_hide_explorer_ui.set_pressed_no_signal(hide_on)
@@ -843,6 +845,14 @@ func _exit_tree() -> void:
 
 func _on_button_delete_account_pressed() -> void:
 	Global.delete_account.emit()
+
+
+func _on_button_replay_tutorial_pressed() -> void:
+	if Global.metrics != null:
+		Global.metrics.track_click_button("replay_tutorial", "SETTINGS", "")
+	Global.close_menu.emit()
+	Global.set_orientation_landscape()
+	Global.ftue_tutorial_coordinator.start_replay()
 
 
 func _on_button_show_reward_modal_pressed() -> void:

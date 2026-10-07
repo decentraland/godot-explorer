@@ -1,0 +1,99 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://src/ui/components/organisms/ftue_tutorial/ftue_tutorial_overlay.gd" id="1_overlay"]
+[ext_resource type="Shader" path="res://src/ui/components/organisms/ftue_tutorial/ftue_dim_cutout.gdshader" id="2_shader"]
+[ext_resource type="Script" path="res://src/ui/components/organisms/ftue_tutorial/ftue_highlight_ring.gd" id="3_ring"]
+[ext_resource type="Script" path="res://src/ui/components/organisms/controls_ftue_overlay/controls_ftue_label.gd" id="4_label"]
+[ext_resource type="FontFile" uid="uid://d2vlaexk003yw" path="res://assets/themes/fonts/inter/Inter-Medium.ttf" id="5_font"]
+[ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="6_bold"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_dim"]
+shader = ExtResource("2_shader")
+shader_parameter/rect_size = Vector2(1600, 720)
+shader_parameter/hole = Vector4(0, 0, 0, 0)
+shader_parameter/radius = 16.0
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_skip"]
+content_margin_left = 16.0
+content_margin_top = 10.0
+content_margin_right = 16.0
+content_margin_bottom = 10.0
+bg_color = Color(0.2, 0.2, 0.2, 0.75)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[node name="FtueTutorialOverlay" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1_overlay")
+
+[node name="Dim" type="ColorRect" parent="."]
+unique_name_in_owner = true
+material = SubResource("ShaderMaterial_dim")
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0, 0, 0, 0.6)
+
+[node name="Ring" type="Control" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+mouse_filter = 2
+script = ExtResource("3_ring")
+
+[node name="Icon_A" type="TextureRect" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+mouse_filter = 2
+
+[node name="Icon_B" type="TextureRect" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+mouse_filter = 2
+
+[node name="Tooltip" type="MarginContainer" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+mouse_filter = 2
+theme_override_constants/margin_left = 17
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 17
+theme_override_constants/margin_bottom = 8
+script = ExtResource("4_label")
+pointer_side = 3
+
+[node name="Label_Tooltip" type="Label" parent="Tooltip"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+theme_override_fonts/font = ExtResource("5_font")
+theme_override_font_sizes/font_size = 26
+horizontal_alignment = 1
+
+[node name="Button_Skip" type="Button" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+focus_mode = 0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_pressed_color = Color(1, 1, 1, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 1, 1)
+theme_override_fonts/font = ExtResource("6_bold")
+theme_override_font_sizes/font_size = 16
+theme_override_styles/normal = SubResource("StyleBoxFlat_skip")
+theme_override_styles/hover = SubResource("StyleBoxFlat_skip")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_skip")
+theme_override_styles/focus = SubResource("StyleBoxFlat_skip")
+text = "FTUE_TUTORIAL_SKIP"
+
+[connection signal="pressed" from="Button_Skip" to="." method="_on_button_skip_pressed"]

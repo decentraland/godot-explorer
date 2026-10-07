@@ -18,6 +18,8 @@ var failures := 0
 func _ready() -> void:
 	_check("fresh install, controls visible", {}, SHOW)
 	_check("test mode", {"test_mode": true}, DEFER)
+	_check("tutorial owns this entry", {"tutorial_busy": true}, DEFER)
+	_check("forced never beats the tutorial", {"forced": true, "tutorial_busy": true}, DEFER)
 	_check("flag off", {"enabled": false}, DEFER)
 	_check("nothing new to label", {"new_elements": 0}, DEFER)
 	_check("existing player, allowed", {"existing_player": true}, SHOW)
@@ -50,6 +52,7 @@ func _check(
 ) -> void:
 	var state := {
 		"test_mode": false,
+		"tutorial_busy": false,
 		"forced": false,
 		"enabled": true,
 		"existing_player": false,
