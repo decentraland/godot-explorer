@@ -107,6 +107,10 @@ pub struct DclCli {
     #[var(get)]
     pub low_spec_warning: bool,
     #[var(get)]
+    pub end_of_device_support_warning: bool,
+    #[var(get)]
+    pub below_minspec_warning: bool,
+    #[var(get)]
     pub fi_benchmark_size: i32,
     #[var(get)]
     pub avatar_impostor_benchmark: bool,
@@ -800,6 +804,9 @@ impl INode for DclCli {
         let scene_inspector_file = args_map.contains_key("--scene-inspector-file");
         let test_logging = args_map.contains_key("--test-logging");
         let low_spec_warning = args_map.contains_key("--low-spec-warning");
+        let end_of_device_support_warning =
+            args_map.contains_key("--end-of-device-support-warning");
+        let below_minspec_warning = args_map.contains_key("--below-minspec-warning");
         let fi_benchmark_size = args_map
             .get("--fi-benchmark-size")
             .and_then(|v| v.as_ref().map(|s| s.parse::<i32>().unwrap_or(-1)))
@@ -984,6 +991,8 @@ impl INode for DclCli {
             scene_inspector_file,
             test_logging,
             low_spec_warning,
+            end_of_device_support_warning,
+            below_minspec_warning,
             fi_benchmark_size,
             avatar_impostor_benchmark,
             gp_benchmark,
