@@ -10,7 +10,7 @@ extends Node
 ## The labelled set is device-local (config_data.gd) and written only when the player closes the
 ## overlay, so an app kill or a teleport while it is up shows the same labels again.
 
-enum Decision { SHOW, DEFER, NEVER }
+enum Decision { SHOW, DEFER }
 
 # Flag names exactly as served by the mobile-bff payload. An absent flag keeps its default.
 const FLAG_ENABLED := "ftue-overlay"
@@ -19,6 +19,9 @@ const FLAG_TAP_THROUGH := "ftue-overlay-tap-through"
 const FLAG_EXISTING_PLAYERS := "ftue-overlay-existing-players"
 
 const DEFAULT_LOCK_SECONDS := 3.0
+# All touch input is swallowed during the lock, so a bad remote value must not be able to
+# hold the screen.
+const MAX_LOCK_SECONDS := 10.0
 const SCREEN_NAME := "CONTROLS_FTUE"
 const DEEPLINK_PARAM := "controls-ftue"
 const OVERLAY_SCENE := "res://src/ui/components/organisms/controls_ftue_overlay/controls_ftue_overlay.tscn"
@@ -38,12 +41,15 @@ var _forced := false
 
 
 func _ready() -> void:
-	_existing_player = Global.get_config().first_move_in_world_sent
+	# review_session_count is bumped once per launch on every platform, by a coordinator that
+	# enters the tree before this one, so the current launch is already counted.
+	_existing_player = Global.get_config().review_session_count > 1
 	var deep_link := Global.deep_link_obj
 	if deep_link != null and not Global.is_production():
 		_forced = String(deep_link.params.get(DEEPLINK_PARAM, "")) == "show"
 	Global.loading_started.connect(_on_loading_started)
 	Global.loading_finished.connect(_on_loading_finished)
+	Global.orientation_changed.connect(_on_orientation_changed)
 
 
 ## `state` keys: test_mode, forced, enabled, existing_player, show_existing_players, scene_loaded,
@@ -55,7 +61,7 @@ static func decide(state: Dictionary) -> Decision:
 		if not state.enabled:
 			return Decision.DEFER
 		if state.existing_player and not state.show_existing_players:
-			return Decision.NEVER
+			return Decision.DEFER
 	if not state.scene_loaded or state.modal_open or not state.hud_usable:
 		return Decision.DEFER
 	if state.new_elements == 0:
@@ -83,6 +89,12 @@ func _cancel() -> void:
 	if is_instance_valid(_overlay):
 		_overlay.queue_free()
 	_overlay = null
+
+
+# The HUD it labels is landscape-only; dropped unsaved, it comes back on a later scene entry.
+func _on_orientation_changed(is_portrait: bool) -> void:
+	if is_portrait:
+		_cancel()
 
 
 func _on_loading_finished() -> void:
@@ -140,8 +152,6 @@ func _async_try_show() -> void:
 			"new_elements": elements.size(),
 		}
 	)
-	if decision == Decision.NEVER:
-		_mark_shown(ControlsFtueOverlay.ALL_ELEMENTS)
 	if decision != Decision.SHOW:
 		return
 
@@ -153,7 +163,7 @@ func _async_try_show() -> void:
 		explorer.virtual_joystick,
 		_emotes_button(explorer),
 		elements,
-		flags.get_number(FLAG_LOCK_SECONDS, DEFAULT_LOCK_SECONDS),
+		clampf(flags.get_number(FLAG_LOCK_SECONDS, DEFAULT_LOCK_SECONDS), 0.0, MAX_LOCK_SECONDS),
 		flags.is_enabled(FLAG_TAP_THROUGH, false)
 	)
 	_overlay.dismissed.connect(_on_overlay_dismissed)
@@ -165,8 +175,9 @@ func _async_try_show() -> void:
 		Global.metrics.track_screen_viewed(SCREEN_NAME, JSON.stringify({"elements": elements}))
 
 
+# `_overlay` is left to go invalid when the node frees itself after its fade-out, so
+# async_wait_until_clear() holds until the labels are really off screen.
 func _on_overlay_dismissed() -> void:
-	_overlay = null
 	_forced = false
 	_mark_shown(_overlay_elements)
 	if Global.metrics != null:
@@ -180,10 +191,13 @@ func _on_overlay_dismissed() -> void:
 
 func _mark_shown(elements: Array[String]) -> void:
 	var config: ConfigData = Global.get_config()
+	var changed := false
 	for element in elements:
 		if not config.controls_ftue_shown.has(element):
 			config.controls_ftue_shown.append(element)
-	config.save_to_settings_file()
+			changed = true
+	if changed:
+		config.save_to_settings_file()
 
 
 # Scene tests, client tests, renderers and benchmarks start from a fresh config and must
@@ -213,8 +227,8 @@ func _is_hud_usable(explorer: Explorer) -> bool:
 func _visible_elements(explorer: Explorer) -> Array[String]:
 	var joystick := explorer.virtual_joystick
 	var on_screen := {
-		ControlsFtueOverlay.MENU: _menu_button(explorer).is_visible_in_tree(),
-		ControlsFtueOverlay.CHAT: _chat_button(explorer).is_visible_in_tree(),
+		ControlsFtueOverlay.MENU: _is_on_screen(_menu_button(explorer)),
+		ControlsFtueOverlay.CHAT: _is_on_screen(_chat_button(explorer)),
 		# A scene can hide the joystick's graphic (PBTouchScreenControls) without hiding the node.
 		ControlsFtueOverlay.MOVEMENT:
 		(
@@ -222,7 +236,7 @@ func _visible_elements(explorer: Explorer) -> Array[String]:
 			and joystick.modulate.a > 0.0
 			and not Global.touch_controls_hide_joystick
 		),
-		ControlsFtueOverlay.EMOTES: _emotes_button(explorer).is_visible_in_tree(),
+		ControlsFtueOverlay.EMOTES: _is_on_screen(_emotes_button(explorer)),
 	}
 	var elements: Array[String] = []
 	for element in ControlsFtueOverlay.ALL_ELEMENTS:
@@ -231,13 +245,20 @@ func _visible_elements(explorer: Explorer) -> Array[String]:
 	return elements
 
 
+# The three lookups below reach into other scenes by node name, which no check resolves ahead
+# of time: a rename there must cost a missing label, not a crash on first scene entry.
+func _is_on_screen(control: Control) -> bool:
+	return control != null and control.is_visible_in_tree()
+
+
 func _menu_button(explorer: Explorer) -> Control:
-	return explorer.navbar.get_node("%Button")
+	return explorer.navbar.get_node_or_null("%Button")
 
 
 func _chat_button(explorer: Explorer) -> Control:
-	return explorer.chat_panel.get_node("%Chatbar").get_node("%Button_Chat")
+	var chatbar: Node = explorer.chat_panel.get_node_or_null("%Chatbar")
+	return chatbar.get_node_or_null("%Button_Chat") if chatbar != null else null
 
 
 func _emotes_button(explorer: Explorer) -> Control:
-	return explorer.emote_wheel.get_node("Button_Emotes")
+	return explorer.emote_wheel.get_node_or_null("Button_Emotes")

@@ -96,7 +96,7 @@ layout_mode = 2
 theme_override_colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 theme_override_fonts/font = ExtResource("3_font")
 theme_override_font_sizes/font_size = 26
-text = "EMOTES_EMOTES"
+text = "CONTROLS_FTUE_EMOTES"
 horizontal_alignment = 1
 
 [node name="Label_TapToStart" type="Label" parent="."]
