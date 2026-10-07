@@ -165,10 +165,10 @@ func _place_labels() -> void:
 		)
 	if label_emotes.visible:
 		var emotes := _emotes_button.get_global_rect()
-		# The joystick's circle hangs just above this label, so its body sits as low as the
-		# pointer allows: the pointer slides up to the top of the label and still aims at
-		# the button.
-		var drop := label_emotes.max_pointer_offset()
+		# The joystick's circle hangs just above this label. While it is on screen the body
+		# sits as low as the pointer allows: the pointer slides up to the top of the label
+		# and still aims at the button.
+		var drop := label_emotes.max_pointer_offset() if _is_joystick_on_screen() else 0.0
 		label_emotes.pointer_offset = -drop
 		_place(
 			label_emotes,
@@ -177,6 +177,16 @@ func _place_labels() -> void:
 				emotes.get_center().y - label_emotes.size.y * 0.5 + drop
 			)
 		)
+
+
+# A scene can hide the joystick's graphic (PBTouchScreenControls) without hiding the node.
+func _is_joystick_on_screen() -> bool:
+	return (
+		is_instance_valid(_joystick)
+		and _joystick.is_visible_in_tree()
+		and _joystick.modulate.a > 0.0
+		and not Global.touch_controls_hide_joystick
+	)
 
 
 # Kept inside the screen: a longer translation must not run a label off the edge.
