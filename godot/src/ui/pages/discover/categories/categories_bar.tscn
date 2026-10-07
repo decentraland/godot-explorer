@@ -8,3 +8,4 @@ size_flags_vertical = 3
 theme_override_constants/h_separation = 10
 theme_override_constants/v_separation = 10
 script = ExtResource("1_vj73w")
+metadata/mobile_preview_orientation = "portrait"
