@@ -82,6 +82,10 @@ func _ready():
 
 func async_show_welcome_message() -> void:
 	await Global.loading_finished
+	# The controls overlay labels the HUD right where this message would land. One frame first,
+	# so its own loading_finished listener has run whatever order they connected in.
+	await get_tree().process_frame
+	await Global.controls_ftue_coordinator.async_wait_until_clear()
 	Global.on_chat_message.emit(
 		"system", tr("CHAT_SYSTEM_WELCOME"), Time.get_unix_time_from_system()
 	)
