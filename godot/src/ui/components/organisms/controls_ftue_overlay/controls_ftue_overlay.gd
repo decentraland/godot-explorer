@@ -165,15 +165,18 @@ func _place_labels() -> void:
 		)
 	if label_emotes.visible:
 		var emotes := _emotes_button.get_global_rect()
-		var top := emotes.get_center().y - label_emotes.size.y * 0.5
-		# The joystick's circle hangs just above this label. The body slides down out of it
-		# and the pointer slides up by as much, so it still aims at the button.
-		var drop := 0.0
-		if is_instance_valid(_joystick):
-			var circle_bottom := _joystick.get_base_global_center().y + JOYSTICK_BASE_RADIUS
-			drop = clampf(circle_bottom + LABEL_GAP - top, 0.0, label_emotes.max_pointer_offset())
+		# The joystick's circle hangs just above this label, so its body sits as low as the
+		# pointer allows: the pointer slides up to the top of the label and still aims at
+		# the button.
+		var drop := label_emotes.max_pointer_offset()
 		label_emotes.pointer_offset = -drop
-		_place(label_emotes, Vector2(emotes.end.x + LABEL_GAP + pointer, top + drop))
+		_place(
+			label_emotes,
+			Vector2(
+				emotes.end.x + LABEL_GAP + pointer,
+				emotes.get_center().y - label_emotes.size.y * 0.5 + drop
+			)
+		)
 
 
 # Kept inside the screen: a longer translation must not run a label off the edge.
