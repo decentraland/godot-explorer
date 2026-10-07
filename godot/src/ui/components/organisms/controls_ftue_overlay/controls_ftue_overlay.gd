@@ -139,23 +139,42 @@ func _begin_close() -> void:
 
 
 func _place_labels() -> void:
-	if not is_instance_valid(_joystick):
-		return
 	var pointer := ControlsFtueLabel.POINTER_LENGTH
-	var menu := _menu_button.get_global_rect()
-	label_menu.global_position = Vector2(
-		menu.get_center().x - label_menu.size.x * 0.5, menu.end.y + LABEL_GAP + pointer
-	)
-	var chat := _chat_button.get_global_rect()
-	label_chat.global_position = Vector2(
-		chat.end.x + LABEL_GAP + pointer, chat.get_center().y - label_chat.size.y * 0.5
-	)
-	var base := _joystick.get_base_global_center()
-	label_movement.global_position = Vector2(
-		base.x - label_movement.size.x * 0.5,
-		base.y - JOYSTICK_BASE_RADIUS - LABEL_GAP - pointer - label_movement.size.y
-	)
-	var emotes := _emotes_button.get_global_rect()
-	label_emotes.global_position = Vector2(
-		emotes.end.x + LABEL_GAP + pointer, emotes.get_center().y - label_emotes.size.y * 0.5
-	)
+	if label_menu.visible:
+		var menu := _menu_button.get_global_rect()
+		_place(
+			label_menu,
+			Vector2(menu.get_center().x - label_menu.size.x * 0.5, menu.end.y + LABEL_GAP + pointer)
+		)
+	if label_chat.visible:
+		var chat := _chat_button.get_global_rect()
+		_place(
+			label_chat,
+			Vector2(chat.end.x + LABEL_GAP + pointer, chat.get_center().y - label_chat.size.y * 0.5)
+		)
+	if label_movement.visible and not is_instance_valid(_joystick):
+		label_movement.hide()
+	if label_movement.visible:
+		var base := _joystick.get_base_global_center()
+		_place(
+			label_movement,
+			Vector2(
+				base.x - label_movement.size.x * 0.5,
+				base.y - JOYSTICK_BASE_RADIUS - LABEL_GAP - pointer - label_movement.size.y
+			)
+		)
+	if label_emotes.visible:
+		var emotes := _emotes_button.get_global_rect()
+		_place(
+			label_emotes,
+			Vector2(
+				emotes.end.x + LABEL_GAP + pointer,
+				emotes.get_center().y - label_emotes.size.y * 0.5
+			)
+		)
+
+
+# Kept inside the screen: a longer translation must not run a label off the edge.
+func _place(label: Control, where: Vector2) -> void:
+	var limit := (get_viewport_rect().size - label.size).max(Vector2.ZERO)
+	label.global_position = where.clamp(Vector2.ZERO, limit)

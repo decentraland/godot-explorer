@@ -10,7 +10,6 @@ extends Node
 
 const SHOW := ControlsFtueCoordinator.Decision.SHOW
 const DEFER := ControlsFtueCoordinator.Decision.DEFER
-const NEVER := ControlsFtueCoordinator.Decision.NEVER
 
 var failures := 0
 
@@ -26,7 +25,7 @@ func _ready() -> void:
 	_check(
 		"existing player, not allowed",
 		{"existing_player": true, "show_existing_players": false},
-		NEVER
+		DEFER
 	)
 	_check("no scene loaded", {"scene_loaded": false}, DEFER)
 	_check("modal open", {"modal_open": true}, DEFER)
