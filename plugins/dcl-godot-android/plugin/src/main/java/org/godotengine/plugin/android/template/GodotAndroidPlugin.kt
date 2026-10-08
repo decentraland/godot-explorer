@@ -127,7 +127,15 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
             // In-app review flow completed. This means the FLOW finished, never that the user
             // rated: Play reports no outcome, and over quota it renders nothing, returns no
             // error, and still completes. `error` is "" when the flow ran without an exception.
-            SignalInfo("in_app_review_finished", String::class.java)
+            SignalInfo("in_app_review_finished", String::class.java),
+            // FCM registration token resolved for this launch. Emitted once per run, with an
+            // empty string when FCM is unavailable (no Play Services, no google-services.json)
+            // so a listener is never left waiting on a device that can't receive push.
+            SignalInfo("fcm_token_ready", String::class.java),
+            // FCM rotated the token while the app was running. Rare, but it invalidates the
+            // one already mapped in Segment, so it has to be re-sent rather than waiting for
+            // the next launch — until then the server would be pushing to a dead token.
+            SignalInfo("fcm_token_refreshed", String::class.java)
         )
     }
 
@@ -146,6 +154,9 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
         // Kick off Firebase Analytics initialization early so getAppInstanceId() can be ready
         // by the time the first Segment batch is sent.
         ensureFirebaseInitialized()
+        // Let DclFirebaseMessagingService reach this instance while it is alive.
+        liveInstance = java.lang.ref.WeakReference(this)
+        requestFcmToken()
     }
 
     // --- Firebase Analytics (accessed via reflection so this plugin doesn't depend on the SDK) ---
@@ -230,6 +241,80 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
     fun getFirebaseAppInstanceId(): String {
         ensureFirebaseInitialized()
         return firebaseAppInstanceId
+    }
+
+    // --- Firebase Cloud Messaging (remote push) ---
+    //
+    // firebase-messaging is a `compileOnly` dependency: the types below are resolved at compile
+    // time but supplied at runtime by the app (export_plugin.gd adds the same coordinate). On a
+    // build where Firebase never initializes — a Quest or AOSP device with no Play Services, or
+    // an export missing google-services.json — touching these classes throws, hence the broad
+    // `Throwable` catches. Failing to get a token must degrade to "this device can't receive
+    // push", never to a crash.
+
+    @Volatile private var fcmTokenRequested: Boolean = false
+
+    /**
+     * Last known FCM registration token, or "" if none.
+     *
+     * Reads through [PushTokenStore] rather than memory so it survives the app being killed:
+     * FCM can mint a token while no Godot process exists, and asking the SDK again would be
+     * an async round trip on the caller's critical path.
+     */
+    @UsedByGodot
+    fun getFcmToken(): String {
+        val ctx = activity?.applicationContext ?: return ""
+        return PushTokenStore.getToken(ctx)
+    }
+
+    /**
+     * Ask FCM for this install's token and emit `fcm_token_ready` once it resolves.
+     *
+     * Needed on top of [DclFirebaseMessagingService.onNewToken], which only fires when a token
+     * is created or rotated — on an ordinary launch it never fires, so without this the token
+     * would only ever reach Segment on the run right after install.
+     */
+    private fun requestFcmToken() {
+        if (fcmTokenRequested) return
+        val ctx = activity?.applicationContext ?: run {
+            Log.w(pluginName, "[FCM] applicationContext null, will retry on next call")
+            return
+        }
+        fcmTokenRequested = true
+        try {
+            com.google.firebase.messaging.FirebaseMessaging.getInstance().token
+                .addOnCompleteListener { task ->
+                    val token = if (task.isSuccessful) (task.result ?: "") else ""
+                    if (!task.isSuccessful) {
+                        Log.w(pluginName, "[FCM] token fetch failed: ${task.exception?.message}")
+                    } else {
+                        Log.i(pluginName, "[FCM] token ready (len=${token.length})")
+                        PushTokenStore.saveToken(ctx, token)
+                    }
+                    // Emitted even on failure, with "". A listener that waits for a token it
+                    // will never get would stall the identify that carries every other trait.
+                    try {
+                        emitSignal("fcm_token_ready", token)
+                    } catch (e: Throwable) {
+                        Log.w(pluginName, "[FCM] emitSignal failed: ${e.message}")
+                    }
+                }
+        } catch (e: Throwable) {
+            Log.w(pluginName, "[FCM] unavailable: ${e.javaClass.simpleName}: ${e.message}")
+            try {
+                emitSignal("fcm_token_ready", "")
+            } catch (ignored: Throwable) {
+            }
+        }
+    }
+
+    /** Emits `fcm_token_refreshed`. Called from the messaging service via the companion hook. */
+    private fun emitFcmTokenRefreshed(token: String) {
+        try {
+            emitSignal("fcm_token_refreshed", token)
+        } catch (e: Throwable) {
+            Log.w(pluginName, "[FCM] emitSignal(refreshed) failed: ${e.message}")
+        }
     }
 
     /**
@@ -695,6 +780,33 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
         }
     }
 
+    // Fastest core's max clock in MHz, or -1 when no cpufreq node is readable (some vendor
+    // kernels hide them from apps).
+    private fun getMaxCpuFreqMhz(): Int {
+        var maxKhz = -1L
+        val cores = File("/sys/devices/system/cpu").listFiles { f -> f.name.matches(Regex("cpu\\d+")) }
+        cores?.forEach { core ->
+            try {
+                val khz = File(core, "cpufreq/cpuinfo_max_freq").readText().trim().toLong()
+                if (khz > maxKhz) maxKhz = khz
+            } catch (e: Exception) {
+                // Unreadable core: skip it, the others may still report.
+            }
+        }
+        return if (maxKhz > 0) (maxKhz / 1000).toInt() else -1
+    }
+
+    // Reflection fallback for chipset id on API < 31, where Build.SOC_MODEL doesn't exist yet.
+    private fun getSystemProperty(key: String): String {
+        return try {
+            val clazz = Class.forName("android.os.SystemProperties")
+            val method = clazz.getMethod("get", String::class.java)
+            method.invoke(null, key) as String
+        } catch (e: Exception) {
+            ""
+        }
+    }
+
     @UsedByGodot
     fun getMobileDeviceInfo(): Dictionary {
         val info = Dictionary()
@@ -713,6 +825,25 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
                 info["device_model"] = Build.MODEL
                 info["os_version"] = "Android ${Build.VERSION.RELEASE}"
 
+                // SoC (System on Chip) identification — used to match a device against the
+                // Play Store exclusion / below-minspec chipset tables (#2936 / #2935).
+                // Build.SOC_MODEL is API 31+; ro.board.platform (reflection) and Build.HARDWARE
+                // are the fallbacks that also cover older devices.
+                if (Build.VERSION.SDK_INT >= 31) {
+                    info["soc_model"] = Build.SOC_MODEL ?: ""
+                    info["soc_manufacturer"] = Build.SOC_MANUFACTURER ?: ""
+                } else {
+                    info["soc_model"] = ""
+                    info["soc_manufacturer"] = ""
+                }
+                info["board_platform"] = getSystemProperty("ro.board.platform")
+                info["hardware"] = Build.HARDWARE ?: ""
+
+                // Android has no CPU-name API; the primary ABI ("arm64-v8a") is the closest
+                // OS-reported description of the CPU.
+                info["processor_type"] = Build.SUPPORTED_ABIS?.firstOrNull() ?: ""
+                info["processor_max_freq_mhz"] = getMaxCpuFreqMhz()
+
                 Log.d(pluginName, "Mobile device info collected successfully")
             } catch (e: Exception) {
                 Log.e(pluginName, "Error collecting mobile device info: ${e.message}")
@@ -721,6 +852,12 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
                 info["device_model"] = ""
                 info["os_version"] = ""
                 info["total_ram_mb"] = -1
+                info["soc_model"] = ""
+                info["soc_manufacturer"] = ""
+                info["board_platform"] = ""
+                info["hardware"] = ""
+                info["processor_type"] = ""
+                info["processor_max_freq_mhz"] = -1
             }
         } ?: run {
             Log.e(pluginName, "Activity is null, cannot collect device info")
@@ -2233,6 +2370,22 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
         private const val PICK_IMAGE_REQUEST_CODE = 1003
         // Debounce delay before resuming video playback after app returns to foreground
         private const val RESUME_DEBOUNCE_MS = 500L
+
+        /**
+         * The plugin instance, when one is running.
+         *
+         * DclFirebaseMessagingService is started by FCM and routinely runs with no Godot
+         * process at all, so it cannot hold a plain reference. Weak so a dead instance can
+         * still be collected; the token itself is persisted by PushTokenStore either way,
+         * and a run that missed the signal picks it up from there on the next launch.
+         */
+        @Volatile
+        private var liveInstance: java.lang.ref.WeakReference<GodotAndroidPlugin>? = null
+
+        /** No-op when Godot isn't running. */
+        fun notifyFcmTokenRefreshed(token: String) {
+            liveInstance?.get()?.emitFcmTokenRefreshed(token)
+        }
     }
 
 

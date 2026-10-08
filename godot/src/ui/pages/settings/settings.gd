@@ -118,7 +118,6 @@ var check_button_submit_message_closes_chat: CheckButton = %CheckButton_SubmitMe
 # Dynamic skybox toggle
 @onready var dynamic_skybox: HBoxContainer = %DynamicSkybox
 @onready var check_button_dynamic_skybox: CheckButton = %CheckButton_DynamicSkybox
-@onready var skybox_warning: VBoxContainer = %HBoxContainer_SkyboxWarning
 
 #Advanced items:
 @onready var content_scroll_container: ScrollContainer = %ContentScrollContainer
@@ -676,7 +675,6 @@ func _on_container_storage_visibility_changed():
 
 
 func _on_sdk_skybox_time_active_changed(is_active: bool) -> void:
-	skybox_warning.visible = is_active
 	check_button_dynamic_skybox.disabled = is_active
 	dropdown_list_custom_skybox.disabled = is_active or check_button_dynamic_skybox.button_pressed
 
@@ -926,30 +924,7 @@ func _on_button_open_user_data_pressed() -> void:
 
 
 func _on_button_report_content_pressed() -> void:
-	var form_id = "1FAIpQLSdD31D0GKROyxmrvM-KVStqdhyqF430crjaTtpemEiAqCHQbg"
-	var base_url = "https://docs.google.com/forms/d/e/" + form_id + "/viewform"
-
-	var params = []
-
-	var scene_name = ""
-	if Global.scene_runner != null:
-		var current_scene_id = Global.scene_runner.get_current_parcel_scene_id()
-		if current_scene_id >= 0:
-			scene_name = Global.scene_runner.get_scene_title(current_scene_id)
-
-	var current_position = Global.get_config().last_parcel_position
-	var scene_info = "%s (%d, %d)" % [scene_name, current_position.x, current_position.y]
-
-	var wallet_id = Global.player_identity.get_address_str()
-
-	params.append("entry.60289947=" + scene_info.uri_encode())
-	params.append("entry.927432836=" + wallet_id.uri_encode())
-
-	var url = base_url
-	if params.size() > 0:
-		url += "?" + "&".join(params)
-
-	Global.open_url(url)
+	ReportContentHelper.open_form()
 
 
 func _setup_impostor_benchmark_button() -> void:
@@ -1378,10 +1353,9 @@ func _on_dropdown_list_realm_item_selected(index: int) -> void:
 	var realm_text := dropdown_list_realm.get_item_text(index)
 	var explorer = Global.get_explorer()
 	if is_instance_valid(explorer):
-		Global.realm.async_set_realm(realm_text)
-		explorer.hide_menu()
 		Global.close_menu.emit()
 		Global.set_orientation_landscape()
+		Navigator.async_go(Destination.from_input(realm_text), "on_changerealm")
 	else:
 		Global.close_menu.emit()
 		Global.get_config().last_realm_joined = realm_text

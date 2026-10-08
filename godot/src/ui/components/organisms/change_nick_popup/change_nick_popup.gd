@@ -13,7 +13,11 @@ var new_nickname: String
 
 
 func _ready():
-	claim_name_container.visible = !Global.is_ios()
+	# "Claim name" opens the web marketplace: hidden by store payment policy on iOS (#1124)
+	# and Android (#2814).
+	claim_name_container.visible = (
+		not Global.is_ios() and StorePolicy.can_show_external_purchase_links()
+	)
 
 
 func _on_gui_input(event: InputEvent) -> void:

@@ -4,7 +4,10 @@ use std::{
 };
 
 use chrono::{DateTime, SecondsFormat, Utc};
-use godot::{classes::Timer, prelude::*};
+use godot::{
+    classes::{Os, RenderingServer, Timer},
+    prelude::*,
+};
 use uuid::Uuid;
 
 use crate::{
@@ -22,14 +25,16 @@ use crate::{
 
 use super::{
     data_definition::{
-        build_segment_event_batch_item, SegmentEvent, SegmentEventAcceptFriend,
+        build_segment_event_batch_item, build_segment_identify_body, PushIdentifyTraits,
+        PushPlatform, SegmentEvent, SegmentEventAcceptFriend, SegmentEventAppOpened,
         SegmentEventAttestationAttempt, SegmentEventAttestationSessionCacheLoaded,
         SegmentEventBlockUser, SegmentEventChatMessageSent, SegmentEventClickButton,
         SegmentEventCommonExplorerFields, SegmentEventExplorerMoveToParcel,
         SegmentEventFirebaseInit, SegmentEventGuestWalletCreation,
-        SegmentEventIosStoreKitEnvironment, SegmentEventLoading, SegmentEventRequestFriend,
-        SegmentEventRequestResult, SegmentEventReviewPrompted, SegmentEventSceneLocaleRequested,
-        SegmentEventScreenViewed, SegmentEventUnfriend,
+        SegmentEventIosStoreKitEnvironment, SegmentEventLoading, SegmentEventPushOpened,
+        SegmentEventRequestFriend, SegmentEventRequestResult, SegmentEventReviewPrompted,
+        SegmentEventSceneLocaleRequested, SegmentEventScreenViewed, SegmentEventSystemInfoReport,
+        SegmentEventUnfriend,
     },
     frame::Frame,
     install_attribution::InstallAttribution,
@@ -101,6 +106,25 @@ pub struct Metrics {
     // many events batch nicely).
     flush_timer: Option<Gd<Timer>>,
 
+    // --- Push ---
+    // Guards against re-sending an identical identify: (token, permission) as last shipped.
+    // The permission belongs in the key because it changes *after* the first identify goes
+    // out — the prompt fires on the Play/Sign-In tap, well past startup — and a guard keyed
+    // on the token alone would leave every freshly-granted user recorded as `denied` until
+    // their next launch, i.e. excluded from the first audience they qualify for.
+    push_identify_sent: Option<(String, String)>,
+    // Remote kill switch (feature flag `push-enabled`), set from GDScript once flags resolve.
+    // Defaults to true: failing open matters more than the flag, because the real emergency
+    // stop is server-side (stop sending) and this only throttles collecting new tokens.
+    push_enabled: bool,
+    // Whether `push-enabled` has been read yet. The cached push token is available in `ready()`
+    // on every launch after install, so without this the startup identify always won the race
+    // and the flag could only ever suppress rotations — i.e. it was not a kill switch at all.
+    push_flag_resolved: bool,
+    // An identify waiting for the flag. FeatureFlags always resolves, within 5s even offline
+    // (it fails open), so this is a short hold and never an indefinite one.
+    push_identify_pending: Option<String>,
+
     base: Base<Node>,
 }
 
@@ -135,6 +159,10 @@ impl INode for Metrics {
             eula_accepted: false,
             firebase_init_queued: false,
             flush_timer: None,
+            push_identify_sent: None,
+            push_enabled: true,
+            push_flag_resolved: false,
+            push_identify_pending: None,
             base,
         }
     }
@@ -189,6 +217,31 @@ impl INode for Metrics {
                 GString::from("session_id"),
                 GString::from(&self.common.session_id),
             );
+
+            // Push registration. Same race as above — the plugin asks FCM for the token in
+            // `onGodotSetupCompleted`, before this `ready()` — so read the cached value back
+            // after connecting. `push_identify_sent_token` makes the double delivery a no-op.
+            let ready_cb = self.base().callable("_on_fcm_token_ready");
+            DclAndroidPlugin::connect_fcm_token_ready(&ready_cb);
+            let refreshed_cb = self.base().callable("_on_fcm_token_refreshed");
+            DclAndroidPlugin::connect_fcm_token_refreshed(&refreshed_cb);
+
+            let cached_token = DclAndroidPlugin::get_fcm_token();
+            if !cached_token.to_string().is_empty() {
+                self._on_fcm_token_ready(cached_token);
+            }
+        }
+
+        // Same race on iOS: push_service.mm asks UIKit for the token from the plugin's module
+        // init, well before this `ready()`, so read the cached value back after connecting.
+        if matches!(self.mobile_platform, Some(MobilePlatform::Ios)) {
+            let ready_cb = self.base().callable("_on_apns_token_ready");
+            DclIosPlugin::connect_apns_token_ready(&ready_cb);
+
+            let cached_token = DclIosPlugin::get_apns_token();
+            if !cached_token.to_string().is_empty() {
+                self._on_apns_token_ready(cached_token);
+            }
         }
     }
 
@@ -229,6 +282,165 @@ impl Metrics {
             firebase_user_id: id_str,
         });
         self.queue_event("Firebase Init", event);
+    }
+
+    /// Plugin signal handler — the FCM registration token resolved for this launch.
+    ///
+    /// Fires exactly once per launch, with an empty token when the device cannot receive push
+    /// (no Play Services, no google-services.json). The empty case is still worth an identify:
+    /// it is how a device that *cannot* be reached is told apart from one that simply has not
+    /// reported yet.
+    #[func]
+    fn _on_fcm_token_ready(&mut self, token: GString) {
+        self.emit_push_identify(token.to_string());
+    }
+
+    /// Plugin signal handler — FCM rotated the token mid-session, invalidating whatever is
+    /// mapped server-side. Re-sent immediately rather than at the next launch, which could be
+    /// days away and would push to a dead token in the meantime.
+    #[func]
+    fn _on_fcm_token_refreshed(&mut self, token: GString) {
+        tracing::info!("[Push] FCM token rotated, re-sending identify");
+        self.emit_push_identify(token.to_string());
+    }
+
+    /// Plugin signal handler — the APNs device token resolved for this launch. Once per
+    /// launch, "" when registration failed (simulator, offline). APNs re-issues the token on
+    /// every launch, so there is no separate rotation path to listen to.
+    #[func]
+    fn _on_apns_token_ready(&mut self, token: GString) {
+        self.emit_push_identify(token.to_string());
+    }
+
+    /// Remote kill switch for push registration (feature flag `push-enabled`), called from
+    /// GDScript once flags resolve. Turning it off stops new tokens from being mapped; it does
+    /// NOT stop delivery to tokens already collected — that is a server-side decision.
+    #[func]
+    pub fn set_push_enabled(&mut self, enabled: bool) {
+        let first_read = !self.push_flag_resolved;
+        self.push_flag_resolved = true;
+        if self.push_enabled != enabled {
+            self.push_enabled = enabled;
+            tracing::info!("[Push] registration flag set to {}", enabled);
+        }
+        // Release whatever was held for this answer. Deliberately not behind the equality check
+        // above: the flag resolving to its default value is the common case, and it still has to
+        // let the waiting identify through.
+        if first_read {
+            if let Some(token) = self.push_identify_pending.take() {
+                self.emit_push_identify(token);
+            }
+        }
+    }
+
+    /// Re-send the push identify because the notification permission just changed.
+    ///
+    /// Called from NotificationsManager when the prompt resolves. Without it the trait would
+    /// keep saying whatever was true at startup: the prompt only appears on the explicit
+    /// Play-as-Guest / Sign-In tap, which is always after the token resolved.
+    #[func]
+    pub fn refresh_push_identify(&mut self) {
+        let token = self.push_token();
+        if token.is_empty() {
+            return;
+        }
+        self.emit_push_identify(token);
+    }
+
+    fn push_platform(&self) -> Option<PushPlatform> {
+        match self.mobile_platform {
+            Some(MobilePlatform::Android) => Some(PushPlatform::Android),
+            Some(MobilePlatform::Ios) => Some(PushPlatform::Ios),
+            None => None,
+        }
+    }
+
+    fn push_token(&self) -> String {
+        match self.mobile_platform {
+            Some(MobilePlatform::Android) => DclAndroidPlugin::get_fcm_token().to_string(),
+            Some(MobilePlatform::Ios) => DclIosPlugin::get_apns_token().to_string(),
+            None => String::new(),
+        }
+    }
+
+    fn push_permission_granted(&self) -> bool {
+        match self.mobile_platform {
+            Some(MobilePlatform::Android) => DclAndroidPlugin::has_notification_permission(),
+            Some(MobilePlatform::Ios) => DclIosPlugin::has_notification_permission(),
+            None => false,
+        }
+    }
+
+    /// Build the push `identify` and queue it for the next flush.
+    ///
+    /// Pushed straight onto `serialized_events` rather than through `queue_event`, because that
+    /// path builds a `track` body from a `SegmentEvent`. Both vectors drain through the same
+    /// batch, so the EULA gate, size limits and retry buffer still apply — an identify queued
+    /// before consent waits exactly like an event does.
+    fn emit_push_identify(&mut self, token: String) {
+        if !self.push_flag_resolved {
+            tracing::debug!("[Push] identify held until the push-enabled flag resolves");
+            self.push_identify_pending = Some(token);
+            return;
+        }
+        if !self.push_enabled {
+            tracing::debug!("[Push] identify skipped: registration disabled by flag");
+            return;
+        }
+        let Some(platform) = self.push_platform() else {
+            return;
+        };
+        let permission = if self.push_permission_granted() {
+            "granted"
+        } else {
+            "denied"
+        };
+        if self.push_identify_sent.as_ref() == Some(&(token.clone(), permission.to_string())) {
+            return;
+        }
+
+        let time = godot::classes::Time::singleton();
+        let timezone = time
+            .get_time_zone_from_system()
+            .get("name")
+            .map(|v| v.to_string())
+            .unwrap_or_default();
+
+        let traits = PushIdentifyTraits {
+            platform,
+            token: token.clone(),
+            push_permission: permission.to_string(),
+            app_version: self.common.renderer_version.clone(),
+            locale: godot::classes::Os::singleton().get_locale().to_string(),
+            timezone,
+        };
+
+        let body = build_segment_identify_body(
+            self.user_id.clone(),
+            traits,
+            Utc::now(),
+            Uuid::new_v4().to_string(),
+        );
+        let json_body = match serde_json::to_string(&body) {
+            Ok(j) => j,
+            Err(e) => {
+                tracing::error!("[Push] failed to serialize identify: {}", e);
+                return;
+            }
+        };
+
+        if self.debug_level == 1 {
+            tracing::info!("[Push] identify queued: {}", json_body);
+        } else {
+            tracing::info!(
+                "[Push] identify queued (token_len={}, permission={})",
+                token.len(),
+                permission
+            );
+        }
+
+        self.push_identify_sent = Some((token, permission.to_string()));
+        self.serialized_events.push(json_body);
     }
 
     #[func]
@@ -334,6 +546,10 @@ impl Metrics {
             eula_accepted: false,
             firebase_init_queued: false,
             flush_timer: None,
+            push_identify_sent: None,
+            push_enabled: true,
+            push_flag_resolved: false,
+            push_identify_pending: None,
             base,
         })
     }
@@ -391,6 +607,48 @@ impl Metrics {
             },
         });
         self.queue_event("Chat Message Sent", event);
+    }
+
+    /// A push notification was tapped. Emitted from DeepLinkRouter, which is the single point
+    /// every deep link passes through — cold start and warm start alike — so a push cannot be
+    /// counted twice or missed depending on how the app happened to be running.
+    #[func]
+    pub fn track_push_opened(
+        &mut self,
+        push_campaign_id: String,
+        push_id: String,
+        start_kind: String,
+    ) {
+        let event = SegmentEvent::PushOpened(SegmentEventPushOpened {
+            push_campaign_id,
+            push_id,
+            start_kind,
+        });
+        self.queue_event("Push Opened", event);
+    }
+
+    /// The app came to the foreground. Emitted by SessionTracker for both a cold launch and a
+    /// return from background; see SegmentEventAppOpened for why the session threshold is not
+    /// applied here.
+    ///
+    /// Overlaps Firebase's automatic `session_start` on purpose: that one lives in a different
+    /// pipeline, joinable only through the `Firebase Init` pivot, and carries no notion of what
+    /// brought the user in.
+    #[func]
+    pub fn track_app_opened(
+        &mut self,
+        start_kind: String,
+        trigger: String,
+        prev_session_id: String,
+        seconds_since_last_seen: i64,
+    ) {
+        let event = SegmentEvent::AppOpened(SegmentEventAppOpened {
+            start_kind,
+            trigger,
+            prev_session_id,
+            seconds_since_last_seen,
+        });
+        self.queue_event("App Opened", event);
     }
 
     #[func]
@@ -471,6 +729,52 @@ impl Metrics {
             },
         });
         self.queue_event("Screen Viewed", event);
+    }
+
+    /// One hardware row per launch (#3033): SoC, GPU, CPU, RAM, brand and the verdict of the
+    /// launch-time device-support checks. lobby.gd queues it as soon as that verdict is known,
+    /// before any gate can end the launch, so a crash or forced update later still leaves a
+    /// hardware trace joinable to this session's crash and perf rows via `session_id`.
+    /// `soc_model` is the normalized chipset id the lookup used (empty off Android).
+    #[func]
+    pub fn track_system_info_report(&mut self, device_support: String, soc_model: String) {
+        let os = Os::singleton();
+        let rendering = RenderingServer::singleton();
+
+        let mut event = SegmentEventSystemInfoReport {
+            device_brand: None,
+            device_model: None,
+            os_version: Some(format!("{} {}", os.get_name(), os.get_version())),
+            soc_manufacturer: None,
+            soc_model: non_empty(soc_model),
+            processor_type: non_empty(os.get_processor_name().to_string()),
+            processor_count: positive(os.get_processor_count()),
+            processor_max_freq_mhz: None,
+            graphics_device_name: non_empty(rendering.get_video_adapter_name().to_string()),
+            graphics_device_vendor: non_empty(rendering.get_video_adapter_vendor().to_string()),
+            graphics_api_version: graphics_api_version(&rendering),
+            system_memory_size_mb: physical_memory_mb(&os),
+            device_support,
+        };
+
+        // The mobile plugins read brand/model/RAM straight from the OS; Godot's own getters
+        // return "GenericDevice" / "" / -1 there.
+        if let Some(info) = &self.device_info {
+            event.device_brand = non_empty(info.device_brand.clone());
+            event.device_model = non_empty(info.device_model.clone());
+            event.os_version = non_empty(info.os_version.clone()).or(event.os_version);
+            event.soc_manufacturer = match self.mobile_platform {
+                Some(MobilePlatform::Ios) => Some("Apple".to_string()),
+                _ => non_empty(info.soc_manufacturer.clone()),
+            };
+            event.processor_type = non_empty(info.processor_type.clone()).or(event.processor_type);
+            event.processor_max_freq_mhz = positive(info.processor_max_freq_mhz);
+            if info.total_ram_mb >= 0 {
+                event.system_memory_size_mb = Some(info.total_ram_mb as u32);
+            }
+        }
+
+        self.queue_event("System Info Report", SegmentEvent::SystemInfoReport(event));
     }
 
     /// A scene subscribed to `localeChanged` (#2707). Emitted from Rust (scene rpc calls),
@@ -1172,4 +1476,43 @@ impl Metrics {
             tracing::debug!("Segment batch sent successfully");
         }
     }
+}
+
+fn non_empty(value: String) -> Option<String> {
+    if value.is_empty() {
+        None
+    } else {
+        Some(value)
+    }
+}
+
+fn positive(value: i32) -> Option<u32> {
+    (value > 0).then_some(value as u32)
+}
+
+/// `OS.get_memory_info()["physical"]` is bytes, or -1 when the platform can't tell.
+fn physical_memory_mb(os: &Gd<Os>) -> Option<u32> {
+    let bytes = os
+        .get_memory_info()
+        .get("physical")
+        .and_then(|v| v.try_to::<i64>().ok())
+        .unwrap_or(-1);
+    (bytes > 0).then_some((bytes / (1024 * 1024)) as u32)
+}
+
+/// Godot reports only the version number for Vulkan ("1.1.128"), Metal ("3.1") and D3D12, so
+/// the API name is prefixed; OpenGL's string already names it ("OpenGL ES 3.2 V@0502.0 ...").
+fn graphics_api_version(rendering: &Gd<RenderingServer>) -> Option<String> {
+    let version = non_empty(rendering.get_video_adapter_api_version().to_string())?;
+    let api = match rendering
+        .get_current_rendering_driver_name()
+        .to_string()
+        .as_str()
+    {
+        "vulkan" => "Vulkan",
+        "metal" => "Metal",
+        "d3d12" => "Direct3D 12",
+        _ => return Some(version),
+    };
+    Some(format!("{api} {version}"))
 }

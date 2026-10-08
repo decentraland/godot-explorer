@@ -55,6 +55,28 @@
                 <action android:name="${godotPluginPackageName}.NOTIFICATION_ACTION"/>
             </intent-filter>
         </receiver>
+
+        <!--
+        Remote push (FCM). We send data-only messages so this service is invoked in every
+        app state — killed, background and foreground — and we render the notification
+        ourselves. A message carrying a `notification` block instead (which is what the
+        Firebase console composer sends) is drawn by the system while the app is not in
+        the foreground, and never reaches onMessageReceived; the two meta-data entries
+        below only exist to keep that case looking right.
+        -->
+        <service
+            android:name="${godotPluginPackageName}.DclFirebaseMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT"/>
+            </intent-filter>
+        </service>
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_notification"/>
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="dcl_liveops"/>
     </application>
 
 </manifest>
