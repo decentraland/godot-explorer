@@ -35,6 +35,9 @@ const DEFAULT_NAMETAG_HEIGHT := 1.9
 const GAIT_BLEND_MAX_SPEEDS := [0.0, 1.5, 8.0, 10.0]
 const GAIT_BLEND_SPEED := 5.0
 const STILL_BLEND_THRESHOLD := 0.25
+# #2855: Unity LongFallStunTime — the hard-landing stun animation covers the
+# input lock (loco2 M6). Remote avatars derive it from the wire long_fall.
+const LONG_FALL_STUN_TIME := 0.75
 
 # Maps AvatarAnchorPointType (SDK proto, see avatar_attach.proto) to skeleton
 # bone names. Ids 0 (POSITION) and 1 (NAME_TAG) are non-skeletal and resolved
@@ -154,6 +157,10 @@ var _force_hide_name: bool = false
 # Previous-frame jump_count for rising-edge detection of double-jump SFX.
 var _last_jump_count: int = 0
 var _sm_double_jump_rise: AnimationNodeAnimation
+# #2855: remote hard-landing derivation state.
+var _was_long_falling: bool = false
+var _remote_stun_timer: float = 0.0
+var _stunned_now: bool = false
 # #b2: first _process tick should not treat wire-provided jump_count>=2 as a
 # rising edge — otherwise a remote avatar first seen mid-double-jump plays the
 # SFX from nothing. Cleared after the first frame where we seed _last_jump_count.
@@ -1530,6 +1537,11 @@ func _process(delta):
 	# gait part of the old Idle/Walk/Jog/Run state split lives here now).
 	animation_tree.set("parameters/Locomotion/conditions/rise_walk", self.rise and kind < 3)
 	animation_tree.set("parameters/Locomotion/conditions/rise_run", self.rise and kind == 3)
+	# #2855: bounce pads launch without a jump (jump_count stays 0) — they skip
+	# the Jump_Start anticipation and go straight to the rise loop.
+	animation_tree.set(
+		"parameters/Locomotion/conditions/rise_bounce", self.rise and self.jump_count == 0
+	)
 
 	animation_tree.set("parameters/Locomotion/conditions/rise", self.rise)
 	animation_tree.set("parameters/Locomotion/conditions/fall", self.fall)
@@ -1539,6 +1551,32 @@ func _process(delta):
 	# remotes, causing asymmetric behavior. is_grounded is the same shape on
 	# both sides, and fall's 1-2 frame deadband at apex is still avoided.
 	animation_tree.set("parameters/Locomotion/conditions/nfall", self.is_grounded)
+
+	# #2855: long fall + hard-landing stun. Local avatar: stunned comes from the
+	# M6 fall-height timer (player.gd). Remote: derive — landed while the wire
+	# said long_fall this airtime.
+	if is_local_player:
+		_stunned_now = self.stunned
+	else:
+		if self.long_fall and not self.is_grounded:
+			_was_long_falling = true
+		if self.is_grounded:
+			if _was_long_falling:
+				_remote_stun_timer = LONG_FALL_STUN_TIME
+			_was_long_falling = false
+		_remote_stun_timer = maxf(_remote_stun_timer - delta, 0.0)
+		_stunned_now = _remote_stun_timer > 0.0
+	animation_tree.set("parameters/Locomotion/conditions/long_fall", self.long_fall)
+	animation_tree.set(
+		"parameters/Locomotion/conditions/fall_short", self.fall and not self.long_fall
+	)
+	animation_tree.set("parameters/Locomotion/conditions/stunned", _stunned_now)
+	animation_tree.set("parameters/Locomotion/conditions/nstunned", not _stunned_now)
+	# Long_Fall exits: hard landing (stunned) must beat the normal landing —
+	# land_soft only fires when grounded WITHOUT an active stun.
+	animation_tree.set(
+		"parameters/Locomotion/conditions/land_soft", self.is_grounded and not _stunned_now
+	)
 
 	# Rising-edge detection for one-frame AnimationTree condition pulses.
 	var jump_rising_edge: bool = self.jump_count > _last_jump_count and self.jump_count >= 2
