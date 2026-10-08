@@ -1,0 +1,71 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://src/ui/components/organisms/ftue_tutorial/ftue_welcome_modal.gd" id="1_modal"]
+[ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="2_bold"]
+[ext_resource type="FontFile" uid="uid://d2vlaexk003yw" path="res://assets/themes/fonts/inter/Inter-Medium.ttf" id="3_medium"]
+[ext_resource type="PackedScene" path="res://src/ui/components/molecules/modal_actions/modal_actions.tscn" id="4_actions"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_card"]
+content_margin_left = 56.0
+content_margin_top = 48.0
+content_margin_right = 56.0
+content_margin_bottom = 48.0
+bg_color = Color(0.29, 0.075, 0.5, 1)
+corner_radius_top_left = 16
+corner_radius_top_right = 16
+corner_radius_bottom_right = 16
+corner_radius_bottom_left = 16
+
+[node name="FtueWelcomeModal" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_modal")
+
+[node name="CenterContainer" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="PanelContainer" type="PanelContainer" parent="CenterContainer"]
+custom_minimum_size = Vector2(650, 0)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_card")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="CenterContainer/PanelContainer"]
+layout_mode = 2
+theme_override_constants/separation = 20
+
+[node name="Label_Title" type="Label" parent="CenterContainer/PanelContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_fonts/font = ExtResource("2_bold")
+theme_override_font_sizes/font_size = 34
+text = "FTUE_TUTORIAL_WELCOME_TITLE"
+horizontal_alignment = 1
+
+[node name="Label_Body" type="Label" parent="CenterContainer/PanelContainer/VBoxContainer"]
+custom_minimum_size = Vector2(520, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_fonts/font = ExtResource("3_medium")
+theme_override_font_sizes/font_size = 22
+text = "FTUE_TUTORIAL_WELCOME_BODY"
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="ModalActions" parent="CenterContainer/PanelContainer/VBoxContainer" instance=ExtResource("4_actions")]
+unique_name_in_owner = true
+layout_mode = 2
+secondary_text = "FTUE_TUTORIAL_WELCOME_SKIP"
+primary_text = "FTUE_TUTORIAL_WELCOME_START"
+
+[connection signal="primary_pressed" from="CenterContainer/PanelContainer/VBoxContainer/ModalActions" to="." method="_on_modal_actions_primary_pressed"]
+[connection signal="secondary_pressed" from="CenterContainer/PanelContainer/VBoxContainer/ModalActions" to="." method="_on_modal_actions_secondary_pressed"]

@@ -1,9 +1,18 @@
 class_name RewardModal
 extends ColorRect
 
+## Emitted on a backdrop tap when `managed_by_modal_manager` is off.
+signal dismissed
+
 ## Two-minute window (in seconds) used to tell a fresh claim apart from an item the
 ## wallet already owned, mirroring Genesis' claim.ts `assigned_at` check.
 const ALREADY_CLAIMED_WINDOW_SEC := 120.0
+
+## Translation KEY of the body copy shown until the claim resolves.
+@export var body_key := "REWARD_MODAL_YOUR_EMAIL_HAS_BEEN_VERIFIED_ENJOY"
+## Off for a scene shown by something other than ModalManager, which then closes it on
+## `dismissed`.
+@export var managed_by_modal_manager := true
 
 var _campaign_id: String = ""
 var _campaign_key: String = ""
@@ -36,7 +45,7 @@ func async_setup(campaign: Dictionary) -> void:
 func _ready() -> void:
 	# Label_Text never auto-translates (its error state carries server text), and
 	# _show_success() deliberately leaves this copy in place, so seed it here.
-	label_text.text = tr("REWARD_MODAL_YOUR_EMAIL_HAS_BEEN_VERIFIED_ENJOY")
+	label_text.text = tr(body_key)
 
 
 func _on_gui_input(event: InputEvent) -> void:
@@ -45,7 +54,10 @@ func _on_gui_input(event: InputEvent) -> void:
 		return
 	if event is InputEventScreenTouch:
 		if event.pressed:
-			Global.modal_manager.close_reward_modal()
+			if managed_by_modal_manager:
+				Global.modal_manager.close_reward_modal()
+			else:
+				dismissed.emit()
 
 
 func _on_button_claim_pressed() -> void:

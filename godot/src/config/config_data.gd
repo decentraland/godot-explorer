@@ -250,6 +250,12 @@ var low_spec_warning_shown: bool = false
 # Which controls the first-entry overlay has already labelled (ControlsFtueOverlay ids).
 var controls_ftue_shown: PackedStringArray = []
 
+# Guided tutorial (#2767): offered once per install; completed when the last step was reached.
+var ftue_tutorial_offered: bool = false
+var ftue_tutorial_completed: bool = false
+# Lower-cased wallet of the account created on this install, the tutorial's "new player".
+var ftue_new_player_wallet: String = ""
+
 # Discover's "Last visited", per wallet so accounts sharing a device don't see each other's
 # places (#2631). Shape: { wallet_lower: [ { position, realm } ] }, newest first.
 var last_places_by_wallet: Dictionary = {}
@@ -635,6 +641,18 @@ func load_from_settings_file():
 		"config", "controls_ftue_shown", data_default.controls_ftue_shown
 	)
 
+	self.ftue_tutorial_offered = settings_file.get_value(
+		"config", "ftue_tutorial_offered", data_default.ftue_tutorial_offered
+	)
+
+	self.ftue_tutorial_completed = settings_file.get_value(
+		"config", "ftue_tutorial_completed", data_default.ftue_tutorial_completed
+	)
+
+	self.ftue_new_player_wallet = settings_file.get_value(
+		"config", "ftue_new_player_wallet", data_default.ftue_new_player_wallet
+	)
+
 
 func save_to_settings_file():
 	if Global.testing_scene_mode:
@@ -722,6 +740,9 @@ func save_to_settings_file():
 	)
 	new_settings_file.set_value("config", "low_spec_warning_shown", self.low_spec_warning_shown)
 	new_settings_file.set_value("config", "controls_ftue_shown", self.controls_ftue_shown)
+	new_settings_file.set_value("config", "ftue_tutorial_offered", self.ftue_tutorial_offered)
+	new_settings_file.set_value("config", "ftue_tutorial_completed", self.ftue_tutorial_completed)
+	new_settings_file.set_value("config", "ftue_new_player_wallet", self.ftue_new_player_wallet)
 	new_settings_file.set_value("user", "upgrade_modal_shown_count", self.upgrade_modal_shown_count)
 	new_settings_file.set_value(
 		"user", "upgrade_modal_last_shown_unix", self.upgrade_modal_last_shown_unix

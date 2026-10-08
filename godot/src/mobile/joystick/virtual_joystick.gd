@@ -206,6 +206,13 @@ func get_active_area_global_rect() -> Rect2:
 	return _active_area.get_global_rect()
 
 
+## Draws the resting base again. After a drag the joystick is left undrawn until the next
+## touch or the next scene load; this is for when it has to be seen while idle.
+func show_resting() -> void:
+	if touch_index == -1:
+		_dynamic_material.set_shader_parameter("state", 0)
+
+
 func get_base_global_center() -> Vector2:
 	return get_global_transform() * _joystick_position
 
