@@ -222,6 +222,13 @@ pub struct DclAvatar {
     // player.gd from the M6 timer. Remote: derived in avatar.gd instead.
     #[export]
     stunned: bool,
+    // #1553: anim-level fall gate (vy < -3, Unity AnimationFallSpeed).
+    #[export]
+    fall_fast: bool,
+    // #2855: stun decision pending (0.1s arm delay) — the SM holds Long_Fall
+    // until it resolves. player.gd writes it; always false for remotes.
+    #[export]
+    stun_pending: bool,
 
     // Multi-jump + gliding state, driven by player.gd (local) or the remote-
     // movement decoder. Consumed by avatar.gd edge detection. glide_state
@@ -262,6 +269,8 @@ impl INode3D for DclAvatar {
             movement_speed: 0.0,
             long_fall: false,
             stunned: false,
+            fall_fast: false,
+            stun_pending: false,
             lerp_state: Default::default(),
             base,
             walk: false,
@@ -347,6 +356,7 @@ impl DclAvatar {
             self.rise = false;
             self.fall = false;
             self.long_fall = false;
+            self.fall_fast = false;
             self.land = true;
             self.is_grounded = self.glide_state == 0;
             self.lerp_state.smoothed_speed = 0.0;
@@ -403,6 +413,7 @@ impl DclAvatar {
         self.rise = false;
         self.fall = false;
         self.long_fall = false;
+        self.fall_fast = false;
         self.land = true;
         self.is_grounded = self.glide_state == 0;
 
@@ -506,6 +517,8 @@ impl DclAvatar {
         self.land = !self.rise && !self.fall;
         // #2855: Unity AnimationLongFallSpeed = -8.
         self.long_fall = !grounded_gate && velocity_y < -8.0;
+        // #1553: Unity AnimationFallSpeed = -3.
+        self.fall_fast = !grounded_gate && velocity_y < -3.0;
     }
 
     // Applies wire-authoritative movement state (remote avatars). Locomotion

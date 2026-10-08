@@ -13309,6 +13309,7 @@ tracks/104/keys = PackedFloat32Array(0, 1, 0.030688874, -6.5514477e-10, 3.996383
 [sub_resource type="Animation" id="Animation_hnybs"]
 resource_name = "Jump_Mid"
 length = 0.43333334
+loop_mode = 1
 tracks/0/type = "position_3d"
 tracks/0/imported = true
 tracks/0/enabled = true
@@ -18486,6 +18487,7 @@ tracks/104/keys = PackedFloat32Array(0, 1, -0.16122156, -0.0048848954, 0.0172471
 [sub_resource type="Animation" id="Animation_klqa7"]
 resource_name = "Run_Jump_Mid"
 length = 0.4
+loop_mode = 1
 tracks/0/type = "position_3d"
 tracks/0/imported = true
 tracks/0/enabled = true

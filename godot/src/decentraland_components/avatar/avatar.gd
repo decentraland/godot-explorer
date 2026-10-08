@@ -1546,6 +1546,13 @@ func _process(delta):
 	animation_tree.set("parameters/Locomotion/conditions/rise", self.rise)
 	animation_tree.set("parameters/Locomotion/conditions/fall", self.fall)
 	animation_tree.set("parameters/Locomotion/conditions/land", self.land)
+	# #1553: Unity anim thresholds — fall pose past vy<-3 (AnimationFallSpeed);
+	# apex = airborne between rise end and fall start (the Mid state floats it).
+	animation_tree.set("parameters/Locomotion/conditions/fall_fast", self.fall_fast)
+	animation_tree.set(
+		"parameters/Locomotion/conditions/apex",
+		not self.is_grounded and not self.rise and not self.fall_fast
+	)
 	# #b3: nfall reads is_grounded directly (not `land`). `land` is a short pulse
 	# locally (in_grace_time) and was previously overridden to is_grounded for
 	# remotes, causing asymmetric behavior. is_grounded is the same shape on
@@ -1568,14 +1575,15 @@ func _process(delta):
 		_stunned_now = _remote_stun_timer > 0.0
 	animation_tree.set("parameters/Locomotion/conditions/long_fall", self.long_fall)
 	animation_tree.set(
-		"parameters/Locomotion/conditions/fall_short", self.fall and not self.long_fall
+		"parameters/Locomotion/conditions/fall_short", self.fall_fast and not self.long_fall
 	)
 	animation_tree.set("parameters/Locomotion/conditions/stunned", _stunned_now)
 	animation_tree.set("parameters/Locomotion/conditions/nstunned", not _stunned_now)
 	# Long_Fall exits: hard landing (stunned) must beat the normal landing —
-	# land_soft only fires when grounded WITHOUT an active stun.
+	# land_soft only fires when grounded WITHOUT an active or pending stun.
 	animation_tree.set(
-		"parameters/Locomotion/conditions/land_soft", self.is_grounded and not _stunned_now
+		"parameters/Locomotion/conditions/land_soft",
+		self.is_grounded and not _stunned_now and not self.stun_pending
 	)
 
 	# Rising-edge detection for one-frame AnimationTree condition pulses.
