@@ -11,7 +11,7 @@ jobs:
     name: Build macOS
     strategy:
       fail-fast: false
-    runs-on: warp-macos-14-arm64-6x
+    runs-on: warp-macos-26-arm64-6x
     steps:
       - uses: actions/checkout@v4
         with:

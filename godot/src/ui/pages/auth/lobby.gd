@@ -522,8 +522,18 @@ func _ready():
 	var startup_time_ms: int = Time.get_ticks_msec() - Global._startup_time
 	print("[Startup] lobby.show_dcl_splash_screen: %dms" % startup_time_ms)
 
+	# Hardware row for this launch (#3033). Queued before the gates below so a forced update or
+	# a crash later still leaves a trace. The gate re-reads the cached device-support verdict.
+	var device_support: DeviceSupportCoordinator.Status = await (
+		DeviceSupportCoordinator.async_check()
+	)
+	Global.metrics.track_system_info_report(
+		DeviceSupportCoordinator.report_verdict(device_support),
+		DeviceSupportCoordinator.normalized_soc()
+	)
+
 	if Global.is_mobile():
-		var gate_decision := await _async_run_version_gate()
+		var gate_decision: String = await _async_run_device_support_and_version_gate()
 		if gate_decision == "hard":
 			# The overlay replaces the startup splash and blocks all interaction.
 			return
@@ -1381,6 +1391,27 @@ func _on_ftue_jump_in(parcel_position: Vector2i, realm_str: String) -> void:
 
 func _on_ftue_jump_in_world(realm_str: String) -> void:
 	Global.async_join_world(realm_str)
+
+
+## Runs the Android device-support check (#2936 / #2935) before the update-version gate — not to
+## show either modal here (both only ever show from discover.gd, once Discover is open), but
+## because an end-of-support (excluded) device must never even check for an update, let alone see
+## the modal for one it can't install anyway. The resolved status is cached by
+## DeviceSupportCoordinator (static) for the rest of the app to read synchronously afterward —
+## review_prompt_coordinator.gd's blocking rail, and discover.gd's own modal trigger. Returns the
+## version-gate decision ("hard"/"soft"/"proceed") so the caller can still bail out on "hard"
+## exactly as before.
+func _async_run_device_support_and_version_gate() -> String:
+	var status: DeviceSupportCoordinator.Status = await DeviceSupportCoordinator.async_check()
+	if status == DeviceSupportCoordinator.Status.END_OF_SUPPORT:
+		# Stamped once, the first time this device is ever found excluded — anchors discover.gd's
+		# day-based re-show schedule. Never changes afterwards.
+		var config: ConfigData = Global.get_config()
+		if config.end_of_device_support_first_detected_unix == 0:
+			config.end_of_device_support_first_detected_unix = int(Time.get_unix_time_from_system())
+			config.save_to_settings_file()
+		return "proceed"
+	return await _async_run_version_gate()
 
 
 func _async_run_version_gate() -> String:

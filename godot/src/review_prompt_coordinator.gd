@@ -60,6 +60,7 @@ const RAIL_REASONS := {
 	"iap": "a purchase is in progress",
 	"connection": "the connection is poor",
 	"modal": "a dialog is open",
+	"device-support": "the device is below spec / no longer supported",
 }
 
 const ANDROID_PLUGIN_NAME := "dcl-godot-android"
@@ -320,6 +321,12 @@ func _blocking_rail() -> String:
 		return "loading"
 	if _iap_in_flight:
 		return "iap"
+	# A below-minspec / end-of-support device (#2936, #2935) never gets asked to rate — a poorly
+	# performing experience is exactly the wrong moment to ask, and it's already had its own
+	# warning modal. Not gated on Android here: DeviceSupportCoordinator.check() itself no-ops
+	# to OK when DclAndroidPlugin isn't available (iOS, desktop).
+	if DeviceSupportCoordinator.check() != DeviceSupportCoordinator.Status.OK:
+		return "device-support"
 	# A degraded connection is the app's error state as far as the player is concerned.
 	if not ConnectionQualityMonitor.is_connection_healthy():
 		return "connection"

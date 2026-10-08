@@ -33,6 +33,10 @@ const HOUR_SECONDS := 3600
 const MAX_SHOWS := 3
 
 var _evaluated_this_session: bool = false
+# Set by discover.gd while a device-support modal (#2936 / #2935) is showing — those outrank
+# this nudge. _try_evaluate() checks this without consuming _evaluated_this_session, so the
+# real evaluation still runs once discover.gd calls resume_after_device_support().
+var _suppressed_by_device_support: bool = false
 
 
 func _ready() -> void:
@@ -57,6 +61,21 @@ func _on_loading_finished() -> void:
 	_try_evaluate()
 
 
+## Called synchronously by discover.gd right before it shows a device-support modal, so the
+## suppression is in place before that same call stack's Global.set_orientation_portrait() can
+## fire this coordinator's own orientation-triggered evaluation.
+func suppress_until_cleared() -> void:
+	_suppressed_by_device_support = true
+
+
+## Called once the device-support modal that outranked this nudge has been dismissed —
+## re-attempts the evaluation now that it's safe to show. A no-op if nothing was actually
+## suppressed (e.g. this session's evaluation already happened some other way).
+func resume_after_device_support() -> void:
+	_suppressed_by_device_support = false
+	_try_evaluate()
+
+
 func _try_evaluate() -> void:
 	# Evaluate at most once per launch, and only in a portrait context (the modal design).
 	# In-world is landscape, so if we're not portrait yet we wait for the next portrait
@@ -64,6 +83,10 @@ func _try_evaluate() -> void:
 	if _evaluated_this_session:
 		return
 	if not Global.is_orientation_portrait():
+		return
+	# A device-support modal (#2936 / #2935) takes priority — don't consume this session's
+	# evaluation slot; discover.gd calls resume_after_device_support() once it's dismissed.
+	if _suppressed_by_device_support:
 		return
 	_evaluated_this_session = true
 	_async_evaluate()
