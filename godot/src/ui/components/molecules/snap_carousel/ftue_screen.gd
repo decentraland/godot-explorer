@@ -28,7 +28,7 @@ var _bbcode_regex: RegEx = null
 # this screen, so this just names which failure sent the launch here.
 var _campaign_resolution: Dictionary = {}
 
-@onready var carousel: Control = %SnapCarousel
+@onready var carousel: SnapCarousel = %SnapCarousel
 @onready var label_welcome: RichTextLabel = %Label_Welcome
 @onready var button_jump_in: Button = %Button_JumpIn_FTUE
 @onready var button_skip: Button = %Button_Skip
@@ -98,8 +98,16 @@ func set_campaign_context(resolution: Dictionary) -> void:
 	_campaign_resolution = resolution
 
 
-func load_places() -> void:
-	carousel.fetch()
+## Fetched apart from showing, so the lobby can skip this screen when there is one place.
+func async_fetch_places() -> Array[Dictionary]:
+	return await FeaturedDataProvider.async_fetch_places(carousel.fetch_tag)
+
+
+func show_places(places: Array[Dictionary]) -> void:
+	# Same as the carousel's own fetch: an empty result leaves it untouched and emits nothing.
+	if places.is_empty():
+		return
+	carousel.set_items(places)
 
 
 func _on_items_loaded(places: Array[Dictionary]) -> void:
