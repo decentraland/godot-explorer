@@ -522,8 +522,18 @@ func _ready():
 	var startup_time_ms: int = Time.get_ticks_msec() - Global._startup_time
 	print("[Startup] lobby.show_dcl_splash_screen: %dms" % startup_time_ms)
 
+	# Hardware row for this launch (#3033). Queued before the gates below so a forced update or
+	# a crash later still leaves a trace. The gate re-reads the cached device-support verdict.
+	var device_support: DeviceSupportCoordinator.Status = await (
+		DeviceSupportCoordinator.async_check()
+	)
+	Global.metrics.track_system_info_report(
+		DeviceSupportCoordinator.report_verdict(device_support),
+		DeviceSupportCoordinator.normalized_soc()
+	)
+
 	if Global.is_mobile():
-		var gate_decision := await _async_run_version_gate()
+		var gate_decision: String = await _async_run_device_support_and_version_gate()
 		if gate_decision == "hard":
 			# The overlay replaces the startup splash and blocks all interaction.
 			return
@@ -599,7 +609,7 @@ func _ready():
 		if random_profile != null:
 			Global.get_config().guest_profile = random_profile.to_godot_dictionary()
 
-	# A sandbox StoreKit build switches to the Option D hybrid env (credits/profile/
+	# An App Review install switches to the Option D hybrid env (credits/profile/
 	# catalog → .zone). That switch must land BEFORE try_recover_account fetches the
 	# profile + credits, or they would load from the wrong backend. Block on the
 	# authoritative env resolution here (no-op on non-iOS / once resolved, which is
@@ -1058,7 +1068,7 @@ func _async_resume_signin_from_deep_link() -> bool:
 	# Distinct auth_method: AUTH_BROWSER_OPEN is the same screen, but this one is a resumed
 	# cold start, and the funnel needs to tell the two apart to measure the fix.
 	show_auth_browser_open_screen(deeplink_target_keys, "deeplink_cold_start")
-	# Same reason the session-recovery path below awaits it: on a sandbox StoreKit build the
+	# Same reason the session-recovery path below awaits it: on an App Review install the
 	# hybrid env has to be settled before the profile fetch this kicks off, or the profile
 	# loads from the wrong backend. No-op off iOS, and capped at 5s.
 	await Iap.async_await_env_resolved()
@@ -1384,6 +1394,27 @@ func _on_ftue_jump_in(parcel_position: Vector2i, realm_str: String) -> void:
 
 func _on_ftue_jump_in_world(realm_str: String) -> void:
 	Global.async_join_world(realm_str)
+
+
+## Runs the Android device-support check (#2936 / #2935) before the update-version gate — not to
+## show either modal here (both only ever show from discover.gd, once Discover is open), but
+## because an end-of-support (excluded) device must never even check for an update, let alone see
+## the modal for one it can't install anyway. The resolved status is cached by
+## DeviceSupportCoordinator (static) for the rest of the app to read synchronously afterward —
+## review_prompt_coordinator.gd's blocking rail, and discover.gd's own modal trigger. Returns the
+## version-gate decision ("hard"/"soft"/"proceed") so the caller can still bail out on "hard"
+## exactly as before.
+func _async_run_device_support_and_version_gate() -> String:
+	var status: DeviceSupportCoordinator.Status = await DeviceSupportCoordinator.async_check()
+	if status == DeviceSupportCoordinator.Status.END_OF_SUPPORT:
+		# Stamped once, the first time this device is ever found excluded — anchors discover.gd's
+		# day-based re-show schedule. Never changes afterwards.
+		var config: ConfigData = Global.get_config()
+		if config.end_of_device_support_first_detected_unix == 0:
+			config.end_of_device_support_first_detected_unix = int(Time.get_unix_time_from_system())
+			config.save_to_settings_file()
+		return "proceed"
+	return await _async_run_version_gate()
 
 
 func _async_run_version_gate() -> String:

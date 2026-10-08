@@ -52,14 +52,8 @@ jobs:
       - name: Validate GDScript
         run: cargo run -- check-gdscript
 
-      - name: Avatar regression tests
-        run: cargo run -- test-avatar
-
-      - name: Localization tests
-        run: cargo run -- test-i18n
-
-      - name: Asset renderer tests
-        run: cargo run -- test-asset-renderer
+      - name: GDScript tests
+        run: cargo run -- test-gdscript
 
       - name: Export
         run: cargo run -- export

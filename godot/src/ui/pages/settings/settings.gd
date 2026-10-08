@@ -118,7 +118,6 @@ var check_button_submit_message_closes_chat: CheckButton = %CheckButton_SubmitMe
 # Dynamic skybox toggle
 @onready var dynamic_skybox: HBoxContainer = %DynamicSkybox
 @onready var check_button_dynamic_skybox: CheckButton = %CheckButton_DynamicSkybox
-@onready var skybox_warning: VBoxContainer = %HBoxContainer_SkyboxWarning
 
 #Advanced items:
 @onready var content_scroll_container: ScrollContainer = %ContentScrollContainer
@@ -676,7 +675,6 @@ func _on_container_storage_visibility_changed():
 
 
 func _on_sdk_skybox_time_active_changed(is_active: bool) -> void:
-	skybox_warning.visible = is_active
 	check_button_dynamic_skybox.disabled = is_active
 	dropdown_list_custom_skybox.disabled = is_active or check_button_dynamic_skybox.button_pressed
 
@@ -1355,10 +1353,9 @@ func _on_dropdown_list_realm_item_selected(index: int) -> void:
 	var realm_text := dropdown_list_realm.get_item_text(index)
 	var explorer = Global.get_explorer()
 	if is_instance_valid(explorer):
-		Global.realm.async_set_realm(realm_text)
-		explorer.hide_menu()
 		Global.close_menu.emit()
 		Global.set_orientation_landscape()
+		Navigator.async_go(Destination.from_input(realm_text), "on_changerealm")
 	else:
 		Global.close_menu.emit()
 		Global.get_config().last_realm_joined = realm_text

@@ -47,6 +47,9 @@ const IMPORTANCE_FOREGROUND := 100
 # onTrimMemory levels >= TRIM_MEMORY_RUNNING_CRITICAL (15): the OS is about
 # to start killing processes.
 const TRIM_LEVEL_CRITICAL := 15
+# Android reports a previous-run death on the next launch, when the live
+# scope is gone, so the "warning was shown" fact has to survive on disk.
+const LOW_MEMORY_MARKER_PATH := "user://low_memory_warning_ms"
 
 # scene_id -> title, filled on spawn: the scene is already gone from the
 # runner when the kill/crash signals fire.
@@ -56,6 +59,7 @@ var _memory_timer: Timer
 var _last_rss_mb := -1
 var _last_pressure := -1
 var _total_ram_mb := -1
+var _low_memory_warning_shown := false
 
 
 ## Called by Global from _ready() after realm / scene_fetcher /
@@ -343,6 +347,16 @@ func _on_low_memory_warning(
 	)
 	SentrySDK.set_tag("memory_pressure", "critical")
 	_last_pressure = 2
+	# memory_pressure is overwritten by the next poll once RSS drops; this one
+	# stays for every crash event of the session.
+	if _low_memory_warning_shown:
+		return
+	_low_memory_warning_shown = true
+	SentrySDK.set_tag("low_memory_warning_shown", "true")
+	if Global.is_android():
+		var marker := FileAccess.open(LOW_MEMORY_MARKER_PATH, FileAccess.WRITE)
+		if marker != null:
+			marker.store_string(str(int(Time.get_unix_time_from_system() * 1000.0)))
 
 
 # Same three-way lookup as HardwareBenchmark._get_system_ram_gb.
@@ -383,17 +397,33 @@ func _setup_android_exit_diagnostics() -> void:
 	if not plugin.has_signal("memory_trim"):
 		return
 	plugin.connect("memory_trim", _on_memory_trim)
+	var exit_infos: Array = plugin.getPreviousExitReasons()
 	var newest_timestamp := 0
-	for exit_info in plugin.getPreviousExitReasons():
+	for exit_info in exit_infos:
 		newest_timestamp = maxi(newest_timestamp, int(exit_info.get("timestamp", 0)))
-		_report_exit_reason(exit_info)
+	# The marker belongs to the run that died last, so only the newest exit
+	# record can carry it. Consumed here: this run writes its own if needed.
+	var warned_ms := _consume_low_memory_marker()
+	for exit_info in exit_infos:
+		var is_newest := int(exit_info.get("timestamp", 0)) == newest_timestamp
+		_report_exit_reason(exit_info, warned_ms if is_newest else 0)
 	# Acked only after capture, so an exit is never lost; if the process dies
 	# before the envelope leaves the outbox it is reported again next launch.
 	if newest_timestamp > 0:
 		plugin.ackExitReasons(newest_timestamp)
 
 
-func _report_exit_reason(exit_info: Dictionary) -> void:
+func _consume_low_memory_marker() -> int:
+	if not FileAccess.file_exists(LOW_MEMORY_MARKER_PATH):
+		return 0
+	var warned_ms := int(FileAccess.get_file_as_string(LOW_MEMORY_MARKER_PATH))
+	DirAccess.remove_absolute(LOW_MEMORY_MARKER_PATH)
+	return warned_ms
+
+
+# `warned_ms` is the epoch-ms of the low-memory modal in the run that died, 0
+# when it was never shown.
+func _report_exit_reason(exit_info: Dictionary, warned_ms: int) -> void:
 	var reason: String = str(exit_info.get("reason", "other"))
 	if reason in BENIGN_EXIT_REASONS:
 		return
@@ -413,6 +443,11 @@ func _report_exit_reason(exit_info: Dictionary) -> void:
 	event.set_tag("event_kind", "exit_reason")
 	event.set_tag("exit_reason", reason)
 	event.set_tag("exit_foreground", "true" if importance <= IMPORTANCE_FOREGROUND else "false")
+	event.set_tag("low_memory_warning_shown", "true" if warned_ms > 0 else "false")
+	if warned_ms > 0:
+		exit_info["low_memory_warning_to_exit_s"] = (
+			(int(exit_info.get("timestamp", 0)) - warned_ms) / 1000
+		)
 	event.set_context("exit_info", exit_info)
 	SentrySDK.capture_event(event)
 

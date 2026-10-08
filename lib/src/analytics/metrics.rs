@@ -4,7 +4,10 @@ use std::{
 };
 
 use chrono::{DateTime, SecondsFormat, Utc};
-use godot::{classes::Timer, prelude::*};
+use godot::{
+    classes::{Os, RenderingServer, Timer},
+    prelude::*,
+};
 use uuid::Uuid;
 
 use crate::{
@@ -23,14 +26,15 @@ use crate::{
 use super::{
     data_definition::{
         build_segment_event_batch_item, build_segment_identify_body, PushIdentifyTraits,
-        SegmentEvent, SegmentEventAcceptFriend, SegmentEventAppOpened,
+        PushPlatform, SegmentEvent, SegmentEventAcceptFriend, SegmentEventAppOpened,
         SegmentEventAttestationAttempt, SegmentEventAttestationSessionCacheLoaded,
         SegmentEventBlockUser, SegmentEventChatMessageSent, SegmentEventClickButton,
         SegmentEventCommonExplorerFields, SegmentEventExplorerMoveToParcel,
         SegmentEventFirebaseInit, SegmentEventGuestWalletCreation,
         SegmentEventIosStoreKitEnvironment, SegmentEventLoading, SegmentEventPushOpened,
         SegmentEventRequestFriend, SegmentEventRequestResult, SegmentEventReviewPrompted,
-        SegmentEventSceneLocaleRequested, SegmentEventScreenViewed, SegmentEventUnfriend,
+        SegmentEventSceneLocaleRequested, SegmentEventScreenViewed, SegmentEventSystemInfoReport,
+        SegmentEventUnfriend,
     },
     frame::Frame,
     install_attribution::InstallAttribution,
@@ -102,7 +106,7 @@ pub struct Metrics {
     // many events batch nicely).
     flush_timer: Option<Gd<Timer>>,
 
-    // --- Push (Android) ---
+    // --- Push ---
     // Guards against re-sending an identical identify: (token, permission) as last shipped.
     // The permission belongs in the key because it changes *after* the first identify goes
     // out — the prompt fires on the Play/Sign-In tap, well past startup — and a guard keyed
@@ -113,7 +117,7 @@ pub struct Metrics {
     // Defaults to true: failing open matters more than the flag, because the real emergency
     // stop is server-side (stop sending) and this only throttles collecting new tokens.
     push_enabled: bool,
-    // Whether `push-enabled` has been read yet. The cached FCM token is available in `ready()`
+    // Whether `push-enabled` has been read yet. The cached push token is available in `ready()`
     // on every launch after install, so without this the startup identify always won the race
     // and the flag could only ever suppress rotations — i.e. it was not a kill switch at all.
     push_flag_resolved: bool,
@@ -227,6 +231,18 @@ impl INode for Metrics {
                 self._on_fcm_token_ready(cached_token);
             }
         }
+
+        // Same race on iOS: push_service.mm asks UIKit for the token from the plugin's module
+        // init, well before this `ready()`, so read the cached value back after connecting.
+        if matches!(self.mobile_platform, Some(MobilePlatform::Ios)) {
+            let ready_cb = self.base().callable("_on_apns_token_ready");
+            DclIosPlugin::connect_apns_token_ready(&ready_cb);
+
+            let cached_token = DclIosPlugin::get_apns_token();
+            if !cached_token.to_string().is_empty() {
+                self._on_apns_token_ready(cached_token);
+            }
+        }
     }
 
     fn process(&mut self, delta: f64) {
@@ -288,6 +304,14 @@ impl Metrics {
         self.emit_push_identify(token.to_string());
     }
 
+    /// Plugin signal handler — the APNs device token resolved for this launch. Once per
+    /// launch, "" when registration failed (simulator, offline). APNs re-issues the token on
+    /// every launch, so there is no separate rotation path to listen to.
+    #[func]
+    fn _on_apns_token_ready(&mut self, token: GString) {
+        self.emit_push_identify(token.to_string());
+    }
+
     /// Remote kill switch for push registration (feature flag `push-enabled`), called from
     /// GDScript once flags resolve. Turning it off stops new tokens from being mapped; it does
     /// NOT stop delivery to tokens already collected — that is a server-side decision.
@@ -316,11 +340,35 @@ impl Metrics {
     /// Play-as-Guest / Sign-In tap, which is always after the token resolved.
     #[func]
     pub fn refresh_push_identify(&mut self) {
-        let token = DclAndroidPlugin::get_fcm_token().to_string();
+        let token = self.push_token();
         if token.is_empty() {
             return;
         }
         self.emit_push_identify(token);
+    }
+
+    fn push_platform(&self) -> Option<PushPlatform> {
+        match self.mobile_platform {
+            Some(MobilePlatform::Android) => Some(PushPlatform::Android),
+            Some(MobilePlatform::Ios) => Some(PushPlatform::Ios),
+            None => None,
+        }
+    }
+
+    fn push_token(&self) -> String {
+        match self.mobile_platform {
+            Some(MobilePlatform::Android) => DclAndroidPlugin::get_fcm_token().to_string(),
+            Some(MobilePlatform::Ios) => DclIosPlugin::get_apns_token().to_string(),
+            None => String::new(),
+        }
+    }
+
+    fn push_permission_granted(&self) -> bool {
+        match self.mobile_platform {
+            Some(MobilePlatform::Android) => DclAndroidPlugin::has_notification_permission(),
+            Some(MobilePlatform::Ios) => DclIosPlugin::has_notification_permission(),
+            None => false,
+        }
     }
 
     /// Build the push `identify` and queue it for the next flush.
@@ -339,7 +387,10 @@ impl Metrics {
             tracing::debug!("[Push] identify skipped: registration disabled by flag");
             return;
         }
-        let permission = if DclAndroidPlugin::has_notification_permission() {
+        let Some(platform) = self.push_platform() else {
+            return;
+        };
+        let permission = if self.push_permission_granted() {
             "granted"
         } else {
             "denied"
@@ -356,7 +407,8 @@ impl Metrics {
             .unwrap_or_default();
 
         let traits = PushIdentifyTraits {
-            fcm_token: token.clone(),
+            platform,
+            token: token.clone(),
             push_permission: permission.to_string(),
             app_version: self.common.renderer_version.clone(),
             locale: godot::classes::Os::singleton().get_locale().to_string(),
@@ -677,6 +729,52 @@ impl Metrics {
             },
         });
         self.queue_event("Screen Viewed", event);
+    }
+
+    /// One hardware row per launch (#3033): SoC, GPU, CPU, RAM, brand and the verdict of the
+    /// launch-time device-support checks. lobby.gd queues it as soon as that verdict is known,
+    /// before any gate can end the launch, so a crash or forced update later still leaves a
+    /// hardware trace joinable to this session's crash and perf rows via `session_id`.
+    /// `soc_model` is the normalized chipset id the lookup used (empty off Android).
+    #[func]
+    pub fn track_system_info_report(&mut self, device_support: String, soc_model: String) {
+        let os = Os::singleton();
+        let rendering = RenderingServer::singleton();
+
+        let mut event = SegmentEventSystemInfoReport {
+            device_brand: None,
+            device_model: None,
+            os_version: Some(format!("{} {}", os.get_name(), os.get_version())),
+            soc_manufacturer: None,
+            soc_model: non_empty(soc_model),
+            processor_type: non_empty(os.get_processor_name().to_string()),
+            processor_count: positive(os.get_processor_count()),
+            processor_max_freq_mhz: None,
+            graphics_device_name: non_empty(rendering.get_video_adapter_name().to_string()),
+            graphics_device_vendor: non_empty(rendering.get_video_adapter_vendor().to_string()),
+            graphics_api_version: graphics_api_version(&rendering),
+            system_memory_size_mb: physical_memory_mb(&os),
+            device_support,
+        };
+
+        // The mobile plugins read brand/model/RAM straight from the OS; Godot's own getters
+        // return "GenericDevice" / "" / -1 there.
+        if let Some(info) = &self.device_info {
+            event.device_brand = non_empty(info.device_brand.clone());
+            event.device_model = non_empty(info.device_model.clone());
+            event.os_version = non_empty(info.os_version.clone()).or(event.os_version);
+            event.soc_manufacturer = match self.mobile_platform {
+                Some(MobilePlatform::Ios) => Some("Apple".to_string()),
+                _ => non_empty(info.soc_manufacturer.clone()),
+            };
+            event.processor_type = non_empty(info.processor_type.clone()).or(event.processor_type);
+            event.processor_max_freq_mhz = positive(info.processor_max_freq_mhz);
+            if info.total_ram_mb >= 0 {
+                event.system_memory_size_mb = Some(info.total_ram_mb as u32);
+            }
+        }
+
+        self.queue_event("System Info Report", SegmentEvent::SystemInfoReport(event));
     }
 
     /// A scene subscribed to `localeChanged` (#2707). Emitted from Rust (scene rpc calls),
@@ -1378,4 +1476,43 @@ impl Metrics {
             tracing::debug!("Segment batch sent successfully");
         }
     }
+}
+
+fn non_empty(value: String) -> Option<String> {
+    if value.is_empty() {
+        None
+    } else {
+        Some(value)
+    }
+}
+
+fn positive(value: i32) -> Option<u32> {
+    (value > 0).then_some(value as u32)
+}
+
+/// `OS.get_memory_info()["physical"]` is bytes, or -1 when the platform can't tell.
+fn physical_memory_mb(os: &Gd<Os>) -> Option<u32> {
+    let bytes = os
+        .get_memory_info()
+        .get("physical")
+        .and_then(|v| v.try_to::<i64>().ok())
+        .unwrap_or(-1);
+    (bytes > 0).then_some((bytes / (1024 * 1024)) as u32)
+}
+
+/// Godot reports only the version number for Vulkan ("1.1.128"), Metal ("3.1") and D3D12, so
+/// the API name is prefixed; OpenGL's string already names it ("OpenGL ES 3.2 V@0502.0 ...").
+fn graphics_api_version(rendering: &Gd<RenderingServer>) -> Option<String> {
+    let version = non_empty(rendering.get_video_adapter_api_version().to_string())?;
+    let api = match rendering
+        .get_current_rendering_driver_name()
+        .to_string()
+        .as_str()
+    {
+        "vulkan" => "Vulkan",
+        "metal" => "Metal",
+        "d3d12" => "Direct3D 12",
+        _ => return Some(version),
+    };
+    Some(format!("{api} {version}"))
 }

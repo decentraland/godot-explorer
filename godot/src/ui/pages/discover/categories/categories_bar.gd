@@ -1,5 +1,5 @@
 class_name CategoriesBar
-extends HBoxContainer
+extends HFlowContainer
 
 const CATEGORY_TAG_SCENE = preload("res://src/ui/pages/discover/categories/category_tag.tscn")
 

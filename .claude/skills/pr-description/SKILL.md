@@ -1,6 +1,6 @@
 ---
 name: pr-description
-description: Use whenever writing, rewriting or reviewing the description of a pull request in this repo — a development PR (base `main`) or a Release Candidate PR (base `release`, head `release-X.Y.Z`). Encodes the team's AG (AI-generated) communication guideline as it applies to PRs — the author owns understanding and communicating the change — plus the exact description shape: `## What` and `## Why` sections anyone can understand in a few sentences, an optional `## Details` section (collapsed), and a QA-executable `## Test plan` per `REVIEW.md` §4 with a `- [ ]` box on every case and subcase. For RCs, the recipe to build the changelog from each promoted PR. Trigger on "open a PR", "write the PR description/body", "gh pr create", "release candidate", "RC", "promote main to release", "changelog for the release", or when a PR body reads like raw AI output.
+description: Use whenever writing, rewriting or reviewing the description of a pull request in this repo — a development PR (base `main`) or a Release Candidate PR (base `release`, head `release-X.Y.Z`). Encodes the team's AG (AI-generated) communication guideline as it applies to PRs — the author owns understanding and communicating the change — plus the exact description shape: `## What` and `## Why` sections anyone can understand in a few sentences, an optional `## Details` section (collapsed), and a QA-executable `## Test plan` per `REVIEW.md` §4 whose Expected/Regression lines are `- [ ] **Expected:** …` boxes. For RCs, the recipe to build the changelog from each promoted PR. Trigger on "open a PR", "write the PR description/body", "gh pr create", "release candidate", "RC", "promote main to release", "changelog for the release", or when a PR body reads like raw AI output.
 ---
 
 # Decentraland Godot Explorer — PR descriptions
@@ -76,7 +76,7 @@ Closes #<issue>
 ## Test plan
 
 <See 2.3. Either "No QA needed — no behavior change" or numbered cases, each ending
- in `- [ ]` lines.>
+ in `- [ ] **Expected:** …` lines.>
 ```
 
 Optional extras, in this order, only when they add clarity: a **Heads-up** line right after
@@ -128,14 +128,19 @@ Follow `REVIEW.md` §4 exactly. In short:
   (*"CI: Static checks + Clippy green"*). Do not invent cases.
 - **Behaviour change**: one block per case. **Setup** line only when the required state is
   non-obvious (specific wearables, second account, guest vs signed-in, a deeplink or flag).
+  **Deeplinks** go in the Test plan as `https://mobile.dclexplorer.com/open?...` links
+  (`realm=`, `position=` / `location=`, other params as needed), never `decentraland://`, so QA
+  taps one link and lands in the right place; the case's first step is "Open the link above".
   **Steps** numbered, one user action per line, **starting from opening the app**, with concrete
   on-screen names and values. **Expected** result observable enough to mark pass/fail without
   reading code. A **Regression** line whenever shared code was touched. Platform only when the
   case is iOS- or Android-specific. Device, build download and TestFlight/Firebase install are
   assumed — never spend steps on them.
-- **Every case and every subcase ends in a `- [ ]` line. No exceptions.** A subcase is anything
-  with its own pass/fail inside a case: a second Expected, a Regression, a per-platform variant,
-  a check after an extra step. Each gets its own box, so QA ticks exactly what passed. A block
+- **The Expected and Regression lines are the checkboxes: `- [ ] **Expected:** …`. No
+  exceptions.** A subcase is anything with its own pass/fail inside a case: a second Expected,
+  a Regression, a per-platform variant, a check after an extra step. Each gets its own box, so
+  QA ticks exactly what passed. Never a bare `- [ ]` on its own line under a prose Expected:
+  GitHub renders an empty task item as a literal `[ ]` bullet, not a checkbox. A block
   with no box is not a case — QA has nowhere to record the result. A table is not a case either:
   GitHub does not render `- [ ]` inside a table cell, so a "Do this / Expect" table gives QA
   nothing to tick. When the plan has many short cases, keep the blocks and shorten the Steps;
@@ -168,7 +173,7 @@ Follow `REVIEW.md` §4 exactly. In short:
 - [ ] Every claim is something you verified in the code or the issue — no guessed behaviour.
 - [ ] Ride-along behaviour changes outside the feature are stated, not buried.
 - [ ] Test plan cases start from opening the app and end in an observable result.
-- [ ] Every case and subcase in the Test plan ends in a `- [ ]` line — no tables, no prose-only cases.
+- [ ] Every Expected/Regression line in the Test plan is a `- [ ] **Expected:** …` box — no bare `- [ ]`, no tables, no prose-only cases.
 - [ ] Affected teams are named and were (or will be) told before merge.
 - [ ] Visible text outside `<details>` fits on one screen.
 

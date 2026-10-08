@@ -247,9 +247,21 @@ var day1_notification_scheduled: bool = false
 
 var low_spec_warning_shown: bool = false
 
-var last_places: Array[Dictionary] = []:
-	set(value):
-		last_places = value
+# End-of-support modal cadence (#2936): re-shows on a day-based schedule relative to the first
+# session it was ever detected on — first session, then day 5, day 10, day 30, then every 30
+# days after that while the device remains excluded (see
+# DeviceSupportCoordinator.is_end_of_support_modal_due). The anchor is stamped once in lobby.gd
+# the first time the server reports this device excluded, and never changes afterwards.
+# shown_count indexes which schedule tier is next; 0 means never shown.
+var end_of_device_support_first_detected_unix: int = 0
+var end_of_device_support_modal_shown_count: int = 0
+
+# Below-minspec modal (#2935) shows at most once, ever — unlike end-of-support, it never repeats.
+var below_minspec_modal_shown: bool = false
+
+# Discover's "Last visited", per wallet so accounts sharing a device don't see each other's
+# places (#2631). Shape: { wallet_lower: [ { position, realm } ] }, newest first.
+var last_places_by_wallet: Dictionary = {}
 
 var search_history: Array[String] = []:
 	set(value):
@@ -302,6 +314,9 @@ var analytics_user_id: String = "":
 	set(value):
 		analytics_user_id = value
 
+# Pre-#2631 device-wide list: handed to the first wallet that uses Last visited, then dropped.
+var _legacy_last_places: Array = []
+
 
 func fix_last_places_duplicates(place_dict: Dictionary, _last_places: Array):
 	var realm = place_dict.get("realm")
@@ -321,7 +336,27 @@ func fix_last_places_duplicates(place_dict: Dictionary, _last_places: Array):
 		_last_places.erase(place)
 
 
+## The current wallet's "Last visited" places, newest first.
+func get_last_places() -> Array[Dictionary]:
+	var places: Array[Dictionary] = []
+	places.assign(_last_places_for_current_wallet())
+	return places
+
+
+func _last_places_for_current_wallet() -> Array:
+	var wallet := ""
+	if Global.player_identity != null:
+		wallet = Global.player_identity.get_address_str().to_lower()
+	if not last_places_by_wallet.has(wallet):
+		last_places_by_wallet[wallet] = _legacy_last_places
+		_legacy_last_places = []
+	return last_places_by_wallet[wallet]
+
+
 func add_place_to_last_places(position: Vector2i, realm: String) -> void:
+	# No realm (a /goto or scene-driven teleport) means the current one; "" used to be dropped (#2631).
+	if realm == "" and Global.realm != null:
+		realm = Global.realm.get_realm_string()
 	if realm == "":
 		return
 	if Realm.is_local_preview(realm):
@@ -330,6 +365,7 @@ func add_place_to_last_places(position: Vector2i, realm: String) -> void:
 		"position": position,
 		"realm": realm,
 	}
+	var last_places := _last_places_for_current_wallet()
 	fix_last_places_duplicates(place_dict, last_places)
 
 	last_places.push_front(place_dict)
@@ -511,7 +547,10 @@ func load_from_settings_file():
 		"analytics", "user_id", DclConfig.generate_uuid_v4()
 	)
 
-	self.last_places = settings_file.get_value("user", "last_places", data_default.last_places)
+	self.last_places_by_wallet = settings_file.get_value(
+		"user", "last_places_by_wallet", data_default.last_places_by_wallet
+	)
+	self._legacy_last_places = settings_file.get_value("user", "last_places", [])
 
 	self.search_history = settings_file.get_value(
 		"user", "search_history", data_default.search_history
@@ -601,6 +640,20 @@ func load_from_settings_file():
 		"config", "low_spec_warning_shown", data_default.low_spec_warning_shown
 	)
 
+	self.end_of_device_support_first_detected_unix = settings_file.get_value(
+		"config",
+		"end_of_device_support_first_detected_unix",
+		data_default.end_of_device_support_first_detected_unix
+	)
+	self.end_of_device_support_modal_shown_count = settings_file.get_value(
+		"config",
+		"end_of_device_support_modal_shown_count",
+		data_default.end_of_device_support_modal_shown_count
+	)
+	self.below_minspec_modal_shown = settings_file.get_value(
+		"config", "below_minspec_modal_shown", data_default.below_minspec_modal_shown
+	)
+
 
 func save_to_settings_file():
 	if Global.testing_scene_mode:
@@ -656,7 +709,9 @@ func save_to_settings_file():
 		new_settings_file.set_value("session", "guest_profile" + profile_suffix, self.guest_profile)
 	new_settings_file.set_value("user", "last_parcel_position", self.last_parcel_position)
 	new_settings_file.set_value("user", "last_realm_joined", self.last_realm_joined)
-	new_settings_file.set_value("user", "last_places", self.last_places)
+	new_settings_file.set_value("user", "last_places_by_wallet", self.last_places_by_wallet)
+	if not self._legacy_last_places.is_empty():
+		new_settings_file.set_value("user", "last_places", self._legacy_last_places)
 	new_settings_file.set_value("user", "search_history", self.search_history)
 	new_settings_file.set_value(
 		"user", "terms_and_conditions_version", self.terms_and_conditions_version
@@ -685,6 +740,19 @@ func save_to_settings_file():
 		"config", "day1_notification_scheduled", self.day1_notification_scheduled
 	)
 	new_settings_file.set_value("config", "low_spec_warning_shown", self.low_spec_warning_shown)
+	new_settings_file.set_value(
+		"config",
+		"end_of_device_support_first_detected_unix",
+		self.end_of_device_support_first_detected_unix
+	)
+	new_settings_file.set_value(
+		"config",
+		"end_of_device_support_modal_shown_count",
+		self.end_of_device_support_modal_shown_count
+	)
+	new_settings_file.set_value(
+		"config", "below_minspec_modal_shown", self.below_minspec_modal_shown
+	)
 	new_settings_file.set_value("user", "upgrade_modal_shown_count", self.upgrade_modal_shown_count)
 	new_settings_file.set_value(
 		"user", "upgrade_modal_last_shown_unix", self.upgrade_modal_last_shown_unix

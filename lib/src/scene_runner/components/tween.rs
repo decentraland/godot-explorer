@@ -43,6 +43,16 @@ pub struct Tween {
     /// removes ~50 % of all `dirty_lww_entries/frame` in GP (measured
     /// 2026-05-06: TweenState=135/frame, ≈51 % of recv pressure).
     pub last_emitted_state: Option<i32>,
+    /// `MoveRotateScale` endpoints with omitted fields filled from the entity's
+    /// transform when the tween (re)starts; cleared on reset so they are re-resolved.
+    resolved_move_rotate_scale: Option<ResolvedMoveRotateScale>,
+}
+
+#[derive(Clone, Copy)]
+struct ResolvedMoveRotateScale {
+    position: (Vector3, Vector3),
+    rotation: (Quaternion, Quaternion),
+    scale: (Vector3, Vector3),
 }
 
 impl Tween {
@@ -84,6 +94,16 @@ fn get_ease_fn(ease_type: EasingFunction) -> fn(f32) -> f32 {
         EasingFunction::EfEaseinback => simple_easing::back_in,
         EasingFunction::EfEaseoutback => simple_easing::back_out,
         EasingFunction::EfEaseback => simple_easing::back_in_out,
+    }
+}
+
+/// Normalizes a quaternion, guarding against a degenerate (zero-length) one:
+/// `normalized()` on a zero quaternion yields NaN, which would corrupt the transform.
+fn normalize_or_identity(q: godot::builtin::Quaternion) -> godot::builtin::Quaternion {
+    if q.length_squared() > 1e-9 {
+        q.normalized()
+    } else {
+        godot::builtin::Quaternion::new(0.0, 0.0, 0.0, 1.0)
     }
 }
 
@@ -212,6 +232,7 @@ pub fn update_tween(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                         // completes again, breaking SDK consumers that
                         // re-arm the same entity.
                         existing_tween.last_emitted_state = None;
+                        existing_tween.resolved_move_rotate_scale = None;
                     }
 
                     // copy new tween values
@@ -240,6 +261,7 @@ pub fn update_tween(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                             playing: None,
                             last_update: now,
                             last_emitted_state: None,
+                            resolved_move_rotate_scale: None,
                         },
                     );
                 };
@@ -366,16 +388,6 @@ pub fn update_tween(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 transform
             }
             Some(Mode::Rotate(data)) => {
-                // Normalize each endpoint, guarding against a degenerate (zero-length)
-                // quaternion: `normalized()` on a zero quaternion yields NaN, which
-                // would corrupt the transform. Fall back to identity for such input.
-                let normalize_or_identity = |q: godot::builtin::Quaternion| {
-                    if q.length_squared() > 1e-9 {
-                        q.normalized()
-                    } else {
-                        godot::builtin::Quaternion::new(0.0, 0.0, 0.0, 1.0)
-                    }
-                };
                 let start = normalize_or_identity(data.start.clone().unwrap().to_godot());
                 let end = normalize_or_identity(data.end.clone().unwrap().to_godot());
                 // Use slerp instead of component-wise lerp so the rotation follows the
@@ -390,6 +402,44 @@ pub fn update_tween(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 let start = data.start.clone().unwrap().to_godot();
                 let end = data.end.clone().unwrap().to_godot();
                 transform.scale = start + ((end - start) * ease_value);
+                transform
+            }
+            Some(Mode::MoveRotateScale(data)) => {
+                // Omitted endpoints fall back to the transform at tween start, like Unity.
+                let current = (transform.translation, transform.rotation, transform.scale);
+                let r = *tween.resolved_move_rotate_scale.get_or_insert_with(|| {
+                    ResolvedMoveRotateScale {
+                        position: (
+                            data.position_start
+                                .clone()
+                                .map_or(current.0, |v| v.to_godot()),
+                            data.position_end
+                                .clone()
+                                .map_or(current.0, |v| v.to_godot()),
+                        ),
+                        rotation: (
+                            data.rotation_start
+                                .clone()
+                                .map_or(current.1, |q| q.to_godot()),
+                            data.rotation_end
+                                .clone()
+                                .map_or(current.1, |q| q.to_godot()),
+                        ),
+                        scale: (
+                            data.scale_start.clone().map_or(current.2, |v| v.to_godot()),
+                            data.scale_end.clone().map_or(current.2, |v| v.to_godot()),
+                        ),
+                    }
+                });
+                let (position_start, position_end) = r.position;
+                let (rotation_start, rotation_end) = r.rotation;
+                let (scale_start, scale_end) = r.scale;
+
+                transform.translation =
+                    position_start + ((position_end - position_start) * ease_value);
+                transform.rotation = normalize_or_identity(rotation_start)
+                    .slerp(normalize_or_identity(rotation_end), ease_value);
+                transform.scale = scale_start + ((scale_end - scale_start) * ease_value);
                 transform
             }
             Some(Mode::MoveContinuous(data)) => {

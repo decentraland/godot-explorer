@@ -780,6 +780,33 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
         }
     }
 
+    // Fastest core's max clock in MHz, or -1 when no cpufreq node is readable (some vendor
+    // kernels hide them from apps).
+    private fun getMaxCpuFreqMhz(): Int {
+        var maxKhz = -1L
+        val cores = File("/sys/devices/system/cpu").listFiles { f -> f.name.matches(Regex("cpu\\d+")) }
+        cores?.forEach { core ->
+            try {
+                val khz = File(core, "cpufreq/cpuinfo_max_freq").readText().trim().toLong()
+                if (khz > maxKhz) maxKhz = khz
+            } catch (e: Exception) {
+                // Unreadable core: skip it, the others may still report.
+            }
+        }
+        return if (maxKhz > 0) (maxKhz / 1000).toInt() else -1
+    }
+
+    // Reflection fallback for chipset id on API < 31, where Build.SOC_MODEL doesn't exist yet.
+    private fun getSystemProperty(key: String): String {
+        return try {
+            val clazz = Class.forName("android.os.SystemProperties")
+            val method = clazz.getMethod("get", String::class.java)
+            method.invoke(null, key) as String
+        } catch (e: Exception) {
+            ""
+        }
+    }
+
     @UsedByGodot
     fun getMobileDeviceInfo(): Dictionary {
         val info = Dictionary()
@@ -798,6 +825,25 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
                 info["device_model"] = Build.MODEL
                 info["os_version"] = "Android ${Build.VERSION.RELEASE}"
 
+                // SoC (System on Chip) identification — used to match a device against the
+                // Play Store exclusion / below-minspec chipset tables (#2936 / #2935).
+                // Build.SOC_MODEL is API 31+; ro.board.platform (reflection) and Build.HARDWARE
+                // are the fallbacks that also cover older devices.
+                if (Build.VERSION.SDK_INT >= 31) {
+                    info["soc_model"] = Build.SOC_MODEL ?: ""
+                    info["soc_manufacturer"] = Build.SOC_MANUFACTURER ?: ""
+                } else {
+                    info["soc_model"] = ""
+                    info["soc_manufacturer"] = ""
+                }
+                info["board_platform"] = getSystemProperty("ro.board.platform")
+                info["hardware"] = Build.HARDWARE ?: ""
+
+                // Android has no CPU-name API; the primary ABI ("arm64-v8a") is the closest
+                // OS-reported description of the CPU.
+                info["processor_type"] = Build.SUPPORTED_ABIS?.firstOrNull() ?: ""
+                info["processor_max_freq_mhz"] = getMaxCpuFreqMhz()
+
                 Log.d(pluginName, "Mobile device info collected successfully")
             } catch (e: Exception) {
                 Log.e(pluginName, "Error collecting mobile device info: ${e.message}")
@@ -806,6 +852,12 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
                 info["device_model"] = ""
                 info["os_version"] = ""
                 info["total_ram_mb"] = -1
+                info["soc_model"] = ""
+                info["soc_manufacturer"] = ""
+                info["board_platform"] = ""
+                info["hardware"] = ""
+                info["processor_type"] = ""
+                info["processor_max_freq_mhz"] = -1
             }
         } ?: run {
             Log.e(pluginName, "Activity is null, cannot collect device info")

@@ -28,6 +28,12 @@ func refresh_overlapping_detectors() -> void:
 		for a in avatars_root.get_avatars():
 			if a.has_method("try_show"):
 				a.try_show()
-	var player_avatar = Global.scene_runner.player_avatar_node
+	# Not Global.scene_runner.player_avatar_node: Rust calls this while SceneManager
+	# is running its update, and that getter re-borrows the SceneManager (panics
+	# with "already bound", so the player was never re-evaluated).
+	var explorer := Global.get_explorer()
+	var player_avatar = (
+		explorer.player.avatar if explorer != null and explorer.player != null else null
+	)
 	if player_avatar != null and player_avatar.has_method("try_show"):
 		player_avatar.try_show()

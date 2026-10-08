@@ -39,6 +39,10 @@ pub struct DeepLinkResult {
     pub scene_inspector_file: bool,
     /// Simulate low-spec iPhone warnings (for testing)
     pub low_spec_warning: bool,
+    /// Force the "device no longer supported" modal (#2936, for testing)
+    pub end_of_device_support_warning: bool,
+    /// Force the "below minimum spec" modal (#2935, for testing)
+    pub below_minspec_warning: bool,
     /// Genesis Plaza profiling benchmark trigger (issue #1862). Mirrors `--gp-benchmark`
     /// for mobile, where deep links are the only practical way to pass launch flags.
     pub gp_benchmark: bool,
@@ -217,6 +221,13 @@ pub fn parse_deep_link(url_str: &str) -> Option<DeepLinkResult> {
             }
             "low_spec_warning" => {
                 result.low_spec_warning = value.eq_ignore_ascii_case("true") || value == "1";
+            }
+            "end_of_device_support_warning" => {
+                result.end_of_device_support_warning =
+                    value.eq_ignore_ascii_case("true") || value == "1";
+            }
+            "below_minspec_warning" => {
+                result.below_minspec_warning = value.eq_ignore_ascii_case("true") || value == "1";
             }
             "gp-benchmark" => {
                 result.gp_benchmark = value.eq_ignore_ascii_case("true") || value == "1";
@@ -579,6 +590,18 @@ mod tests {
     fn low_spec_warning_one() {
         let r = parse("decentraland://open?low_spec_warning=1");
         assert!(r.low_spec_warning);
+    }
+
+    #[test]
+    fn end_of_device_support_warning_param() {
+        let r = parse("decentraland://open?end_of_device_support_warning=true");
+        assert!(r.end_of_device_support_warning);
+    }
+
+    #[test]
+    fn below_minspec_warning_param() {
+        let r = parse("decentraland://open?below_minspec_warning=true");
+        assert!(r.below_minspec_warning);
     }
 
     #[test]

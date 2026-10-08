@@ -1,7 +1,10 @@
+use std::fs;
 use std::io::{self, BufRead, BufReader, Write};
+use std::path::{Path, PathBuf};
 use std::process::ExitStatus;
 
-use anyhow::{Context, Result};
+use anyhow::{bail, Context, Result};
+use walkdir::WalkDir;
 use xtaskops::ops::cmd;
 
 use crate::{
@@ -63,21 +66,39 @@ fn run_headless(program: String, args: Vec<String>) -> Result<(String, ExitStatu
 /// signal, since a genuinely failing test prints `[<name>] FAIL: n case(s)` and
 /// quits with code 1 without ever printing the marker.
 fn headless_result(label: &str, log: &str, status: ExitStatus, success_marker: &str) -> Result<()> {
-    if status.success() {
-        return Ok(());
+    // A script that did not compile still reaches its final print, and a counter nothing
+    // incremented still reads zero, so the marker alone can report a test whose every
+    // assertion errored as a pass.
+    for fatal in ["Compile Error:", "Failed to load script"] {
+        if log.contains(fatal) {
+            print_message(
+                MessageType::Error,
+                &format!("{label}: script did not compile — any PASS it printed is meaningless"),
+            );
+            return Err(anyhow::anyhow!("{label} failed to compile"));
+        }
     }
 
-    // `code()` is `None` only when a signal killed the process, which cannot
-    // happen on Windows, so this stays false there.
-    if status.code().is_none() && log.contains(success_marker) {
-        print_message(
-            MessageType::Warning,
-            &format!(
-                "{label} passed but Godot crashed on the way out ({status}) — \
-                 treating as success (engine teardown crash, not a test failure)"
-            ),
-        );
-        return Ok(());
+    // The marker, not the exit status, is what says the test ran: Godot exits 0 after a
+    // script fails to parse, so trusting the status alone reports a test that never ran
+    // as a pass.
+    if log.contains(success_marker) {
+        if status.success() {
+            return Ok(());
+        }
+
+        // `code()` is `None` only when a signal killed the process, which cannot
+        // happen on Windows, so this stays false there.
+        if status.code().is_none() {
+            print_message(
+                MessageType::Warning,
+                &format!(
+                    "{label} passed but Godot crashed on the way out ({status}) — \
+                     treating as success (engine teardown crash, not a test failure)"
+                ),
+            );
+            return Ok(());
+        }
     }
 
     Err(anyhow::anyhow!("{label} failed ({status})"))
@@ -127,69 +148,107 @@ pub fn check_gdscript() -> Result<()> {
     }
 }
 
-/// Runs a set of headless GDScript unit tests, each a `SceneTree` script that
-/// exits non-zero on failure. `scripts` are paths under `godot/`, given in full so
-/// tests are not confined to one directory.
+/// Floor for [`discover_tests`]: the suite count that must still be found.
+const MIN_TESTS: usize = 15;
+
+/// Every headless GDScript test in the project, discovered rather than listed.
 ///
-/// Each script announces itself as `[<file stem>] PASS`; see [`headless_result`]
-/// for why that marker, rather than the exit status, decides the outcome.
-fn run_script_tests(section: &str, kind: &str, scripts: &[&str]) -> Result<()> {
-    print_section(section);
+/// A test is a `.gd` under `godot/src/test/` that announces itself as `[<stem>] PASS`;
+/// that marker is already the contract [`headless_result`] checks, so declaring the
+/// suite anywhere else only creates a second place to forget. A sibling `.tscn` wins:
+/// `--script` compiles before autoloads exist, so a test reaching one must run as a
+/// scene or every call against it silently becomes a no-op.
+fn discover_tests() -> Result<Vec<(String, PathBuf)>> {
+    let root = Path::new(GODOT_PROJECT_FOLDER).join("src/test");
+    let mut found = Vec::new();
+
+    for entry in WalkDir::new(&root).into_iter().filter_map(|e| e.ok()) {
+        let path = entry.path();
+        if path.extension().and_then(|e| e.to_str()) != Some("gd") {
+            continue;
+        }
+        let Some(stem) = path.file_stem().and_then(|s| s.to_str()) else {
+            continue;
+        };
+        if !fs::read_to_string(path)?.contains(&format!("[{stem}] PASS")) {
+            continue;
+        }
+
+        let scene = path.with_extension("tscn");
+        found.push((
+            stem.to_owned(),
+            if scene.exists() {
+                scene
+            } else {
+                path.to_owned()
+            },
+        ));
+    }
+
+    found.sort();
+    // Discovery is by marker, so renaming a test without updating its own print drops it
+    // from CI silently. The floor turns that into a red build; raise it when a suite lands.
+    if found.len() < MIN_TESTS {
+        bail!(
+            "discovered only {} GDScript tests, expected at least {MIN_TESTS} — \
+             did a test lose its `[<stem>] PASS` marker?",
+            found.len()
+        );
+    }
+    Ok(found)
+}
+
+/// Runs them all, reporting every failure rather than stopping at the first: one red
+/// run should say everything that is broken.
+pub fn test_gdscript() -> Result<()> {
+    print_section("GDScript Tests");
+
+    let tests = discover_tests()?;
+    if tests.is_empty() {
+        bail!("no GDScript tests found under {GODOT_PROJECT_FOLDER}/src/test");
+    }
 
     let godot_bin = get_godot_path();
-    for script in scripts {
-        let name = script.rsplit('/').next().unwrap_or(script);
-        let stem = name.strip_suffix(".gd").unwrap_or(name);
-        print_message(MessageType::Info, &format!("Running {name}..."));
+    let mut failed = Vec::new();
 
-        let (log, status) = run_headless(
-            godot_bin.clone(),
-            vec![
-                "--headless".to_owned(),
-                "--path".to_owned(),
-                GODOT_PROJECT_FOLDER.to_owned(),
-                "--script".to_owned(),
-                format!("res://{script}"),
-            ],
-        )?;
+    for (stem, path) in &tests {
+        let res = path.strip_prefix(GODOT_PROJECT_FOLDER).unwrap_or(path);
+        let res = format!("res://{}", res.to_string_lossy());
+        print_message(MessageType::Info, &format!("Running {stem}..."));
 
-        if let Err(err) = headless_result(name, &log, status, &format!("[{stem}] PASS")) {
-            print_message(MessageType::Error, &format!("{name} FAILED"));
-            return Err(err.context(format!("{kind} test failed: {name}")));
+        let mut args = vec![
+            "--headless".to_owned(),
+            "--path".to_owned(),
+            GODOT_PROJECT_FOLDER.to_owned(),
+        ];
+        if res.ends_with(".tscn") {
+            args.push(res);
+            args.push("--quit".to_owned());
+        } else {
+            args.push("--script".to_owned());
+            args.push(res);
+        }
+
+        let (log, status) = run_headless(godot_bin.clone(), args)?;
+        if headless_result(stem, &log, status, &format!("[{stem}] PASS")).is_err() {
+            print_message(MessageType::Error, &format!("{stem} FAILED"));
+            failed.push(stem.clone());
         }
     }
 
-    print_message(MessageType::Success, &format!("All {kind} tests passed!"));
+    if !failed.is_empty() {
+        bail!(
+            "{} of {} GDScript tests failed: {}",
+            failed.len(),
+            tests.len(),
+            failed.join(", ")
+        );
+    }
+    print_message(
+        MessageType::Success,
+        &format!("All {} GDScript tests passed!", tests.len()),
+    );
     Ok(())
-}
-
-pub fn test_avatar() -> Result<()> {
-    run_script_tests(
-        "Avatar Regression Tests",
-        "avatar regression",
-        &[
-            "src/test/avatar/test_avatar_locomotion_grounded.gd",
-            "src/test/avatar/test_avatar_state_machine_graph.gd",
-            "src/test/avatar/test_avatar_autoplay_stomp.gd",
-            "src/test/avatar/test_avatar_anim_throttle.gd",
-        ],
-    )
-}
-
-pub fn test_i18n() -> Result<()> {
-    run_script_tests(
-        "Localization Tests",
-        "localization",
-        &["src/test/i18n/test_translation_key.gd"],
-    )
-}
-
-pub fn test_asset_renderer() -> Result<()> {
-    run_script_tests(
-        "Asset Renderer Tests",
-        "asset renderer",
-        &["src/test/asset_renderer/test_asset_renderer_input.gd"],
-    )
 }
 
 #[cfg(all(test, unix))]
@@ -205,6 +264,11 @@ mod tests {
         // (child shell, expected to pass, what it stands for)
         let cases = [
             (r#"echo "[t] PASS""#, true, "clean pass"),
+            (
+                r#"echo "SCRIPT ERROR: Parse Error""#,
+                false,
+                "exited 0 but never announced the marker — the script did not run",
+            ),
             (
                 r#"echo "[t] PASS"; kill -SEGV $$"#,
                 true,
