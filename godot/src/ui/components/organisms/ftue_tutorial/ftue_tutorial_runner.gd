@@ -35,6 +35,7 @@ const MAX_STEP_METERS := 2.0
 const NAVBAR_OPEN_SECONDS := 0.25
 # Time for a menu, the profile, the chat or the navbar to finish closing or opening.
 const SETTLE_SECONDS := 0.4
+const EQUIP_TOOLTIP_DROP := 15.0
 # Where the camera and pinch steps put their tooltip and gesture icon, as fractions of the screen.
 const GESTURE_TOOLTIP_AT := Vector2(0.5, 0.24)
 const GESTURE_AT := Vector2(0.66, 0.62)
@@ -70,7 +71,11 @@ var _seen_third_person := false
 var _engaged := false
 # A re-entry of the current step is scheduled, to let something finish closing or opening.
 var _settling := false
+# The control the current step points at, and where it was when the highlight was drawn.
+var _target: Control
+var _target_rect := Rect2()
 var _backpack: Backpack
+var _extras_selected := false
 # What the avatar wore when the equip step began.
 var _outfit_before := PackedStringArray()
 var _body_shape_before := ""
@@ -124,6 +129,15 @@ func _process(_delta: float) -> void:
 	if _suspended:
 		return
 	_apply_hud()
+	# A rotation or a layout pass moves the control after the highlight was drawn around it.
+	if (
+		is_instance_valid(_target)
+		and not _engaged
+		and not _settling
+		and _target.get_global_rect() != _target_rect
+	):
+		_enter_step(step)
+		return
 	match step:
 		Step.MOVE:
 			# Released, the joystick stops being drawn; the step points at it, so it must show.
@@ -165,6 +179,7 @@ func _enter_step(next: Step) -> void:
 	step = next
 	_engaged = false
 	_settling = false
+	_target = null
 	_overlay.ring.stop()
 	_overlay.hide_dim()
 	_overlay.hide_tooltip()
@@ -236,11 +251,10 @@ func _enter_step(next: Step) -> void:
 		Step.BACKPACK:
 			_highlight_in_navbar("%StaticButton_Backpack", "FTUE_TUTORIAL_BACKPACK")
 		Step.EQUIP:
-			_overlay.show_tooltip(
-				"FTUE_TUTORIAL_EQUIP",
-				_backpack.scroll_container_items.get_global_rect(),
-				FtueTutorialOverlay.Place.LEFT
-			)
+			var items := _backpack.scroll_container_items.get_global_rect()
+			# Clear of the Wearables / Emotes buttons, which end level with the grid's top.
+			items.position.y += EQUIP_TOOLTIP_DROP
+			_overlay.show_tooltip("FTUE_TUTORIAL_EQUIP", items, FtueTutorialOverlay.Place.LEFT)
 			var avatar = Global.player_identity.get_mutable_avatar()
 			_outfit_before = avatar.get_wearables().duplicate()
 			_body_shape_before = avatar.get_body_shape()
@@ -253,6 +267,8 @@ func _highlight_button(
 	button: Control, tooltip_key: String, place: FtueTutorialOverlay.Place
 ) -> void:
 	var rect := button.get_global_rect()
+	_target = button
+	_target_rect = rect
 	_overlay.show_dim(rect.grow(HOLE_MARGIN), rect.size.x)
 	_overlay.block_input_except(rect)
 	_overlay.ring.play(rect.get_center(), maxf(rect.size.x, rect.size.y) + BUTTON_RING_MARGIN)
@@ -266,6 +282,8 @@ func _highlight_in_navbar(button_path: String, tooltip_key: String) -> void:
 		return
 	var button: Control = _navbar.get_node(button_path)
 	var rect := button.get_global_rect()
+	_target = button
+	_target_rect = rect
 	var bar: Control = _navbar.get_node("Control_Menu/PanelContainer")
 	_overlay.show_dim(bar.get_global_rect(), 24.0)
 	_overlay.block_input_except(rect)
@@ -393,11 +411,14 @@ func _on_chat_opened() -> void:
 
 func _on_chat_closed() -> void:
 	if step == Step.CHAT and _engaged:
-		_enter_step(Step.MENU)
+		# The menu button also closes the chat: the player already did the menu step.
+		_enter_step(Step.SOCIAL if _navbar.is_open() else Step.MENU)
 
 
 func _on_navbar_opened() -> void:
-	if step == Step.MENU and not _settling:
+	if step == Step.CHAT and _engaged:
+		_enter_step_after(Step.SOCIAL, NAVBAR_OPEN_SECONDS)
+	elif step == Step.MENU and not _settling:
 		_engaged = true
 		_enter_step_after(Step.SOCIAL, NAVBAR_OPEN_SECONDS)
 
@@ -425,6 +446,7 @@ func _on_backpack_requested(_on_emotes: bool) -> void:
 	if step != Step.BACKPACK or _engaged:
 		return
 	_engage()
+	_extras_selected = false
 	# Nothing may be touched until the backpack exists and has listed its items.
 	_overlay.block_input_except(Rect2())
 
@@ -439,8 +461,20 @@ func _poll_backpack_ready() -> void:
 	_backpack = backpack as Backpack
 	# The "no items" placeholder is also what the backpack shows while it is still fetching, so
 	# it cannot tell an empty backpack from a loading one; an empty one is left to SKIP.
-	if _backpack.grid_container_wearables_list.get_child_count() > 0:
+	if _backpack.grid_container_wearables_list.get_child_count() == 0:
+		return
+	if _extras_selected:
 		_enter_step(Step.EQUIP)
+		return
+	# The step opens on Extras (hats, eyewear...), once the backpack's own first listing is in.
+	_extras_selected = true
+	for button in _backpack.container_main_categories.get_children():
+		var is_extras: bool = (
+			button is WearableFilterButton
+			and button.get_category_name() == Wearables.Categories.EXTRAS
+		)
+		if is_extras:
+			button.button_pressed = true
 
 
 # Compared against the avatar, not the items' `equip` signal: the grid emits that one itself

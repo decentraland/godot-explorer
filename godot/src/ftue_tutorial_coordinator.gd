@@ -131,6 +131,11 @@ func _async_on_scene_entered() -> void:
 		await get_tree().process_frame
 		if generation != _generation:
 			return
+	# A modal over the first frame (low memory, say) delays the offer; it does not cancel it.
+	while is_instance_valid(explorer) and Global.modal_manager.is_any_modal_open():
+		await get_tree().process_frame
+		if generation != _generation:
+			return
 	if not is_instance_valid(explorer) or is_running():
 		return
 	if _forced_reward:
@@ -165,9 +170,9 @@ func _on_welcome_answered(start: bool) -> void:
 	_close_welcome()
 	# The pressed button took keyboard focus with it; movement is gated on the explorer having it.
 	Global.explorer_grab_focus()
-	var config: ConfigData = Global.get_config()
-	config.ftue_tutorial_offered = true
-	config.save_to_settings_file()
+	# START alone does not settle it: a tutorial cut short by closing the app is offered again.
+	if not start:
+		_mark_offered()
 	_track_click("start" if start else "skip", SCREEN_WELCOME, {"step": 0})
 	var explorer := Global.get_explorer()
 	if start and is_instance_valid(explorer):
@@ -215,6 +220,7 @@ func _on_completed() -> void:
 	_end()
 	_track_screen(SCREEN_COMPLETE, {"is_replay": _is_replay})
 	var config: ConfigData = Global.get_config()
+	config.ftue_tutorial_offered = true
 	config.ftue_tutorial_completed = true
 	# The tutorial covered every control the overlay (#3014) labels.
 	config.controls_ftue_shown = PackedStringArray(ControlsFtueOverlay.ALL_ELEMENTS)
@@ -230,7 +236,14 @@ func _on_completed() -> void:
 
 func _on_skipped(step: FtueTutorialRunner.Step) -> void:
 	_end()
+	_mark_offered()
 	_track_click("skip", SCREEN_STEP, _step_properties(step))
+
+
+func _mark_offered() -> void:
+	var config: ConfigData = Global.get_config()
+	config.ftue_tutorial_offered = true
+	config.save_to_settings_file()
 
 
 # On its own CanvasLayer above the HUD, like the modals ModalManager shows.
