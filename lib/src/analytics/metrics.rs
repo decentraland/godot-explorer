@@ -4,7 +4,10 @@ use std::{
 };
 
 use chrono::{DateTime, SecondsFormat, Utc};
-use godot::{classes::Timer, prelude::*};
+use godot::{
+    classes::{Os, RenderingServer, Timer},
+    prelude::*,
+};
 use uuid::Uuid;
 
 use crate::{
@@ -30,7 +33,8 @@ use super::{
         SegmentEventFirebaseInit, SegmentEventGuestWalletCreation,
         SegmentEventIosStoreKitEnvironment, SegmentEventLoading, SegmentEventPushOpened,
         SegmentEventRequestFriend, SegmentEventRequestResult, SegmentEventReviewPrompted,
-        SegmentEventSceneLocaleRequested, SegmentEventScreenViewed, SegmentEventUnfriend,
+        SegmentEventSceneLocaleRequested, SegmentEventScreenViewed, SegmentEventSystemInfoReport,
+        SegmentEventUnfriend,
     },
     frame::Frame,
     install_attribution::InstallAttribution,
@@ -725,6 +729,52 @@ impl Metrics {
             },
         });
         self.queue_event("Screen Viewed", event);
+    }
+
+    /// One hardware row per launch (#3033): SoC, GPU, CPU, RAM, brand and the verdict of the
+    /// launch-time device-support checks. lobby.gd queues it as soon as that verdict is known,
+    /// before any gate can end the launch, so a crash or forced update later still leaves a
+    /// hardware trace joinable to this session's crash and perf rows via `session_id`.
+    /// `soc_model` is the normalized chipset id the lookup used (empty off Android).
+    #[func]
+    pub fn track_system_info_report(&mut self, device_support: String, soc_model: String) {
+        let os = Os::singleton();
+        let rendering = RenderingServer::singleton();
+
+        let mut event = SegmentEventSystemInfoReport {
+            device_brand: None,
+            device_model: None,
+            os_version: Some(format!("{} {}", os.get_name(), os.get_version())),
+            soc_manufacturer: None,
+            soc_model: non_empty(soc_model),
+            processor_type: non_empty(os.get_processor_name().to_string()),
+            processor_count: positive(os.get_processor_count()),
+            processor_max_freq_mhz: None,
+            graphics_device_name: non_empty(rendering.get_video_adapter_name().to_string()),
+            graphics_device_vendor: non_empty(rendering.get_video_adapter_vendor().to_string()),
+            graphics_api_version: graphics_api_version(&rendering),
+            system_memory_size_mb: physical_memory_mb(&os),
+            device_support,
+        };
+
+        // The mobile plugins read brand/model/RAM straight from the OS; Godot's own getters
+        // return "GenericDevice" / "" / -1 there.
+        if let Some(info) = &self.device_info {
+            event.device_brand = non_empty(info.device_brand.clone());
+            event.device_model = non_empty(info.device_model.clone());
+            event.os_version = non_empty(info.os_version.clone()).or(event.os_version);
+            event.soc_manufacturer = match self.mobile_platform {
+                Some(MobilePlatform::Ios) => Some("Apple".to_string()),
+                _ => non_empty(info.soc_manufacturer.clone()),
+            };
+            event.processor_type = non_empty(info.processor_type.clone()).or(event.processor_type);
+            event.processor_max_freq_mhz = positive(info.processor_max_freq_mhz);
+            if info.total_ram_mb >= 0 {
+                event.system_memory_size_mb = Some(info.total_ram_mb as u32);
+            }
+        }
+
+        self.queue_event("System Info Report", SegmentEvent::SystemInfoReport(event));
     }
 
     /// A scene subscribed to `localeChanged` (#2707). Emitted from Rust (scene rpc calls),
@@ -1426,4 +1476,43 @@ impl Metrics {
             tracing::debug!("Segment batch sent successfully");
         }
     }
+}
+
+fn non_empty(value: String) -> Option<String> {
+    if value.is_empty() {
+        None
+    } else {
+        Some(value)
+    }
+}
+
+fn positive(value: i32) -> Option<u32> {
+    (value > 0).then_some(value as u32)
+}
+
+/// `OS.get_memory_info()["physical"]` is bytes, or -1 when the platform can't tell.
+fn physical_memory_mb(os: &Gd<Os>) -> Option<u32> {
+    let bytes = os
+        .get_memory_info()
+        .get("physical")
+        .and_then(|v| v.try_to::<i64>().ok())
+        .unwrap_or(-1);
+    (bytes > 0).then_some((bytes / (1024 * 1024)) as u32)
+}
+
+/// Godot reports only the version number for Vulkan ("1.1.128"), Metal ("3.1") and D3D12, so
+/// the API name is prefixed; OpenGL's string already names it ("OpenGL ES 3.2 V@0502.0 ...").
+fn graphics_api_version(rendering: &Gd<RenderingServer>) -> Option<String> {
+    let version = non_empty(rendering.get_video_adapter_api_version().to_string())?;
+    let api = match rendering
+        .get_current_rendering_driver_name()
+        .to_string()
+        .as_str()
+    {
+        "vulkan" => "Vulkan",
+        "metal" => "Metal",
+        "d3d12" => "Direct3D 12",
+        _ => return Some(version),
+    };
+    Some(format!("{api} {version}"))
 }
