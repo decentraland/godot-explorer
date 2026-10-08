@@ -121,6 +121,11 @@ const WALL_SLIDE_MIN_MULT := 0.0
 # stun duration (Unity LongFallStunTime).
 const HARD_LANDING_FALL_HEIGHT := 8.0
 const HARD_LANDING_STUN_TIME := 0.75
+# Grace before the stun arms: a bounce pad relaunches you within a frame or
+# two, and a bounce is not a hard landing (no stun in Unity there either).
+const HARD_LANDING_ARM_DELAY := 0.1
+# #2855: long-fall animation threshold (Unity AnimationLongFallSpeed = -8).
+const LONG_FALL_ANIM_SPEED := 8.0
 # #2854 M12: external-force multiplier while gliding (Unity GlideWindResponse).
 const GLIDE_WIND_RESPONSE := 1.5
 # cos(46deg): a slide collision flatter than this is walkable ground; steeper
@@ -173,6 +178,9 @@ var external_velocity: Vector3 = Vector3.ZERO
 
 # Private variables (prefixed with _)
 var _hard_landing_timer: float = 0.0
+# #2855: pending stun arm while the landing proves it stuck (bounce pads
+# relaunch instantly and must not stun — Unity pads are triggers, no landing).
+var _stun_arm_pending: float = 0.0
 # #2852 M6: apex of the current airborne stretch; landing stun triggers on
 # fall HEIGHT (apex - landing), not on scene-driven cooldowns.
 var _fall_apex_y: float = 0.0
@@ -533,6 +541,9 @@ func _physics_process(dt: float) -> void:
 		# During cooldown, prevent horizontal movement
 		velocity.x = move_toward(velocity.x, 0, 20 * dt)
 		velocity.z = move_toward(velocity.z, 0, 20 * dt)
+	# #2855: stun state for the hard-landing animation (remote avatars derive
+	# theirs in avatar.gd from the wire long_fall).
+	avatar.stunned = _hard_landing_timer > 0.0
 
 	_jump_buffer = max(_jump_buffer - dt, 0.0)
 	if Global.explorer_has_focus() and Input.is_action_just_pressed("ia_jump"):
@@ -594,6 +605,15 @@ func _physics_process(dt: float) -> void:
 	# the two signals across branches left landing unreachable mid-cloud
 	# (velocity.y accumulated, jump_count never reset, glider never closed).
 	var supported := on_floor or _has_walkable_support()
+	# Deferred stun arming: only fires if the landing stuck (still grounded
+	# when the delay expires — bounce pads relaunch and cancel it).
+	if _stun_arm_pending > 0.0:
+		_stun_arm_pending -= dt
+		if _stun_arm_pending <= 0.0 and supported and velocity.y <= 0.5:
+			_hard_landing_timer = HARD_LANDING_STUN_TIME
+			# Mirror immediately: the per-frame mirror above lags one physics
+			# tick and the SM would exit Long_Fall via land_soft first (#2855).
+			avatar.stunned = true
 
 	# #1557: is_on_floor() drops before the capsule visually leaves an edge
 	# (rounded bottom + speculative margin), which would burn the coyote
@@ -644,6 +664,8 @@ func _physics_process(dt: float) -> void:
 		var free_flight: bool = glide_state == GLIDE_CLOSED or glide_state == GLIDE_CLOSING
 		avatar.rise = velocity.y > .3 and free_flight
 		avatar.fall = velocity.y < -.3 && !in_grace_time and free_flight
+		# #2855: long-fall anim kicks in past Unity's AnimationLongFallSpeed.
+		avatar.long_fall = avatar.fall and velocity.y < -LONG_FALL_ANIM_SPEED
 		# Scene force.y reduces effective gravity, so an upward wind cancels
 		# fall instead of stacking on velocity.y.
 		velocity.y -= (_current_gravity() - external_acceleration.y) * dt
@@ -678,6 +700,7 @@ func _physics_process(dt: float) -> void:
 				_jump_buffer = 0.0
 				avatar.rise = false
 				avatar.fall = false
+				avatar.long_fall = false
 
 		# Glide close: re-press (toggle), altitude too low, or input disabled.
 		# glide_disabled covers scene→scene transitions where the destination
@@ -726,13 +749,15 @@ func _physics_process(dt: float) -> void:
 			avatar.land = true
 			# #2852 M6: fall-height trigger replaces the scene-driven cooldown
 			# (Unity StunCharacterSystem: JumpHeightStun 8m, LongFallStunTime 0.75).
+			# Arms after HARD_LANDING_ARM_DELAY so bounce pads don't stun.
 			if _fall_apex_y - global_position.y > HARD_LANDING_FALL_HEIGHT:
-				_hard_landing_timer = HARD_LANDING_STUN_TIME
+				_stun_arm_pending = HARD_LANDING_ARM_DELAY
 		_fall_apex_y = global_position.y
 
 		velocity.y = 0
 		avatar.rise = false
 		avatar.fall = false
+		avatar.long_fall = false
 		# Landing resets the air-jump budget and force-closes the glider.
 		jump_count = 0
 		if glide_state == GLIDE_OPENING or glide_state == GLIDE_GLIDING:
@@ -895,6 +920,7 @@ func _physics_process(dt: float) -> void:
 			elif combined_vy < -0.3:
 				avatar.fall = true
 				avatar.rise = false
+				avatar.long_fall = combined_vy < -LONG_FALL_ANIM_SPEED
 
 	# Snapshot locomotion XZ so we can restore them after the move. Otherwise
 	# `move_toward` on the next no-input tick would decel from velocity-with-
