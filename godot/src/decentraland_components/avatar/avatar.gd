@@ -30,6 +30,12 @@ const SCREEN_NOTIFIER_AABB: AABB = AABB(Vector3(-1.0, -0.3, -1.0), Vector3(2.0, 
 # Fallback nametag height when no meshes are loaded yet (meters above avatar origin).
 const DEFAULT_NAMETAG_HEIGHT := 1.9
 
+# #2856 gait blend (Unity CharacterControllerSettings): blend normalization
+# caps per gait kind (0 idle / 1 walk / 2 jog / 3 run) and approach speed.
+const GAIT_BLEND_MAX_SPEEDS := [0.0, 1.5, 8.0, 10.0]
+const GAIT_BLEND_SPEED := 5.0
+const STILL_BLEND_THRESHOLD := 0.25
+
 # Maps AvatarAnchorPointType (SDK proto, see avatar_attach.proto) to skeleton
 # bone names. Ids 0 (POSITION) and 1 (NAME_TAG) are non-skeletal and resolved
 # directly in get_anchor_point_global_transform.
@@ -129,6 +135,11 @@ var voice_chat_audio_player_gen: AudioStreamGenerator = null
 
 var mask_material = preload("res://assets/avatar/mask_material.tres")
 
+# #2856: continuous gait blend value 0..3 (Idle/Walk/Jog/Run) and the per-jump
+# clip variation (0 or 1), both driven from _process.
+var movement_blend: float = 0.0
+var jump_variation: float = 0.0
+
 # Signal-based wearable loader for threaded loading
 var wearable_loader: WearableLoader = null
 
@@ -142,6 +153,7 @@ var _force_hide_name: bool = false
 
 # Previous-frame jump_count for rising-edge detection of double-jump SFX.
 var _last_jump_count: int = 0
+var _sm_double_jump_rise: AnimationNodeAnimation
 # #b2: first _process tick should not treat wire-provided jump_count>=2 as a
 # rising edge — otherwise a remote avatar first seen mid-double-jump plays the
 # SFX from nothing. Cleared after the first frame where we seed _last_jump_count.
@@ -279,6 +291,10 @@ func _ready():
 
 	wearable_loader = WearableLoader.new()
 	emote_controller = AvatarEmoteController.new(self, animation_player, animation_tree)
+	# #2856: the emote controller duplicated tree_root above, so these state
+	# nodes are per-avatar copies (they are resource_local_to_scene anyway).
+	var sm: AnimationNodeStateMachine = animation_tree.tree_root.get_node("Locomotion")
+	_sm_double_jump_rise = sm.get_node("Double_Jump_Rise")
 	body_shape_skeleton_3d.skeleton_updated.connect(self._attach_point_skeleton_updated)
 	body_shape_skeleton_3d.skeleton_updated.connect(self._recompute_nametag_posed_top)
 	_recompute_nametag_clearance()
@@ -1470,20 +1486,50 @@ func _process(delta):
 	if is_local_player:
 		Global.comms.set_emoting(is_emoting)
 
-	animation_tree.set("parameters/Locomotion/conditions/idle", self_idle)
-	animation_tree.set("parameters/Locomotion/conditions/emote", emote_controller.playing_single)
+	# Full-body emotes only from a standstill (old Idle->Emote gate); masked
+	# (upper-body) mixes stay available while moving.
+	animation_tree.set(
+		"parameters/Locomotion/conditions/emote",
+		emote_controller.playing_single and movement_blend < STILL_BLEND_THRESHOLD
+	)
 	animation_tree.set(
 		"parameters/Locomotion/conditions/nemote", not emote_controller.playing_single
 	)
-	animation_tree.set("parameters/Locomotion/conditions/emix", emote_controller.playing_mixed)
+	animation_tree.set(
+		"parameters/Locomotion/conditions/emix",
+		emote_controller.playing_mixed and movement_blend < STILL_BLEND_THRESHOLD
+	)
 	animation_tree.set("parameters/Locomotion/conditions/nemix", not emote_controller.playing_mixed)
 
-	var loco := AvatarAnimHelpers.locomotion_conditions(
-		self.walk, self.jog, self.run, self.is_grounded
+	# #2856: continuous gait blend (Unity MovementBlend). kind comes from the
+	# walk/jog/run classification (local input mode / remote wire), speed is
+	# the measured horizontal speed; blend = clamp01(speed/blendMax)*kind,
+	# approached at MoveAnimBlendSpeed (5/s, scaled by distance).
+	var kind := 0
+	if self.run:
+		kind = 3
+	elif self.jog:
+		kind = 2
+	elif self.walk:
+		kind = 1
+	animation_tree.set("parameters/Locomotion/conditions/run", kind == 3)
+	animation_tree.set("parameters/Locomotion/conditions/jog", kind == 2)
+	animation_tree.set("parameters/Locomotion/conditions/walk", kind == 1)
+	var target_blend := 0.0
+	if kind > 0:
+		target_blend = clampf(self.movement_speed / GAIT_BLEND_MAX_SPEEDS[kind], 0.0, 1.0) * kind
+	var blend_rate: float = maxf(
+		GAIT_BLEND_SPEED, GAIT_BLEND_SPEED * absf(target_blend - movement_blend)
 	)
-	animation_tree.set("parameters/Locomotion/conditions/run", loco.run)
-	animation_tree.set("parameters/Locomotion/conditions/jog", loco.jog)
-	animation_tree.set("parameters/Locomotion/conditions/walk", loco.walk)
+	movement_blend = move_toward(movement_blend, target_blend, blend_rate * delta)
+	animation_tree.set("parameters/Locomotion/Grounded/blend_position", movement_blend)
+	animation_tree.set(
+		"parameters/Locomotion/conditions/still", movement_blend < STILL_BLEND_THRESHOLD
+	)
+	# #2856: jump-chain selection by gait (single-condition transitions; the
+	# gait part of the old Idle/Walk/Jog/Run state split lives here now).
+	animation_tree.set("parameters/Locomotion/conditions/rise_walk", self.rise and kind < 3)
+	animation_tree.set("parameters/Locomotion/conditions/rise_run", self.rise and kind == 3)
 
 	animation_tree.set("parameters/Locomotion/conditions/rise", self.rise)
 	animation_tree.set("parameters/Locomotion/conditions/fall", self.fall)
@@ -1496,6 +1542,18 @@ func _process(delta):
 
 	# Rising-edge detection for one-frame AnimationTree condition pulses.
 	var jump_rising_edge: bool = self.jump_count > _last_jump_count and self.jump_count >= 2
+	# #2856: jump variation — every air jump re-rolls 0|1 and the double-jump
+	# rise swaps between the two clip variants for the current gait (Unity's
+	# Jump state blends Double_Jump_<gait> x JumpVariation).
+	if self.jump_count != _last_jump_count:
+		jump_variation = 0.0 if randf() < 0.5 else 1.0
+		var gait := "Base"
+		if self.run:
+			gait = "Run"
+		elif self.jog:
+			gait = "Jog"
+		var dj_clip := "Double_Jump_" + gait + ("_Right" if jump_variation > 0.5 else "")
+		_sm_double_jump_rise.animation = StringName("double_jump_and_glide/" + dj_clip)
 	# #b2: on first observation of this avatar (local or remote) suppress the
 	# rising edge so we don't retroactively play SFX for state that happened
 	# before we started watching.

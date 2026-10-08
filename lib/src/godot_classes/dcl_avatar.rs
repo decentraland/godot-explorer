@@ -225,6 +225,12 @@ pub struct DclAvatar {
     #[export]
     is_grounded: bool,
 
+    // #2856: horizontal speed (m/s, EMA-smoothed for remotes) feeding the
+    // continuous gait blend in avatar.gd. Local player writes it from
+    // player.gd instead.
+    #[export]
+    movement_speed: f32,
+
     lerp_state: LerpState,
     base: Base<Node3D>,
 }
@@ -245,6 +251,7 @@ impl INode3D for DclAvatar {
             current_parcel_scene_id: SceneId::INVALID.0,
             current_parcel_position: Vector2i::new(i32::MAX, i32::MAX),
             wire_classification: false,
+            movement_speed: 0.0,
             lerp_state: Default::default(),
             base,
             walk: false,
@@ -332,6 +339,7 @@ impl DclAvatar {
             self.land = true;
             self.is_grounded = self.glide_state == 0;
             self.lerp_state.smoothed_speed = 0.0;
+            self.movement_speed = 0.0;
         } else if self.wire_classification {
             // Wire-driven peer: locomotion/air/grounded come from the wire
             // (apply_wire_*). Blending the dy estimate in would still carry
@@ -392,6 +400,7 @@ impl DclAvatar {
         self.lerp_state
             .push_packet(new_target.origin, target_rotation_y, anim);
         self.lerp_state.smoothed_speed = 0.0;
+        self.movement_speed = 0.0;
         self.lerp_state.since_last_packet = 0.0;
 
         self.base_mut()
@@ -469,6 +478,7 @@ impl DclAvatar {
     /// below it the anim plays with no visible displacement.
     fn classify_locomotion(&mut self, speed: f32) {
         const IDLE_SPEED_FLOOR: f32 = 0.5;
+        self.movement_speed = speed;
         self.walk = speed < 4.0 && speed > IDLE_SPEED_FLOOR;
         self.run = speed >= 6.5;
         self.jog = !(self.walk || self.run) && speed > IDLE_SPEED_FLOOR;
@@ -612,6 +622,7 @@ impl DclAvatar {
                     self.land = true;
                     // Drain the speed EMA too or the next keepalive re-latches walk.
                     self.lerp_state.smoothed_speed = 0.0;
+                    self.movement_speed = 0.0;
                 }
             }
         }
