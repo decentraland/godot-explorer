@@ -14,6 +14,7 @@ var failures := 0
 func _ready() -> void:
 	_check("new player on a tutorial scene", {}, true)
 	_check("flag off", {"enabled": false}, false)
+	_check("existing player", {"new_player": false}, false)
 	_check("another scene", {"tutorial_scene": false}, false)
 	_check("already offered", {"offered": true}, false)
 	_check("test mode", {"test_mode": true}, false)
@@ -22,7 +23,13 @@ func _ready() -> void:
 	_check("HUD not ready", {"hud_ready": false}, false)
 	_check(
 		"forced anywhere, even if offered",
-		{"forced": true, "enabled": false, "tutorial_scene": false, "offered": true},
+		{
+			"forced": true,
+			"enabled": false,
+			"new_player": false,
+			"tutorial_scene": false,
+			"offered": true
+		},
 		true
 	)
 	_check("forced still needs the HUD", {"forced": true, "hud_ready": false}, false)
@@ -45,6 +52,7 @@ func _check(label: String, overrides: Dictionary, expected: bool) -> void:
 		"test_mode": false,
 		"forced": false,
 		"enabled": true,
+		"new_player": true,
 		"offered": false,
 		"tutorial_scene": true,
 		"scene_loaded": true,

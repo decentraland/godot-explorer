@@ -931,6 +931,7 @@ func _on_button_lets_go_pressed():
 		current_profile.set_avatar(avatar)
 		Global.player_identity.set_profile(current_profile)
 
+	Global.ftue_tutorial_coordinator.mark_new_player()
 	await _async_start_ftue()
 
 

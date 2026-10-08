@@ -4,7 +4,8 @@ extends Node
 ## Offers, runs and ends the guided tutorial (issue #2767).
 ##
 ## Checked once per scene entry, when the loading screen is gone: on a tutorial scene (Genesis
-## Plaza by default) a player who was never offered it gets the welcome card. START runs the
+## Plaza by default) a new player who was never offered it gets the welcome card. "New" means
+## the account was created on this install, so one recovered after a reinstall is not. START runs the
 ## seven steps; SKIP, there or at any step, ends it. Settings > Gameplay can replay it anywhere.
 ##
 ## "Offered" and "completed" are device-local (config_data.gd).
@@ -27,10 +28,9 @@ const SCREEN_WELCOME := "FTUE_TUTORIAL_WELCOME"
 const SCREEN_STEP := "FTUE_TUTORIAL_STEP"
 const SCREEN_COMPLETE := "FTUE_TUTORIAL_COMPLETE"
 const SCREEN_REWARD := "FTUE_TUTORIAL_REWARD"
-# Entry of RewardCampaigns.CAMPAIGNS the tutorial grants. Until it exists the reward is skipped.
-const REWARD_CAMPAIGN := "FtueTutorial"
-# QA: the campaign `?ftue-tutorial=reward` previews the reward card with.
-const REWARD_PREVIEW_CAMPAIGN := "MobilePet"
+# Entry of RewardCampaigns.CAMPAIGNS the tutorial grants. The existing campaign stands in for
+# testing until the tutorial has its own (#2767).
+const REWARD_CAMPAIGN := "MobilePet"
 const OVERLAY_SCENE := "res://src/ui/components/organisms/ftue_tutorial/ftue_tutorial_overlay.tscn"
 const WELCOME_SCENE := "res://src/ui/components/organisms/ftue_tutorial/ftue_welcome_modal.tscn"
 # i18n-keys: FTUE_TUTORIAL_REWARD_BODY
@@ -60,14 +60,14 @@ func _ready() -> void:
 	Global.loading_finished.connect(_on_loading_finished)
 
 
-## `state` keys: test_mode, forced, enabled, offered, tutorial_scene, scene_loaded, modal_open,
-## hud_ready.
+## `state` keys: test_mode, forced, enabled, new_player, offered, tutorial_scene, scene_loaded,
+## modal_open, hud_ready.
 static func should_offer(state: Dictionary) -> bool:
 	if state.test_mode or not state.scene_loaded or state.modal_open or not state.hud_ready:
 		return false
 	if state.forced:
 		return true
-	return state.enabled and state.tutorial_scene and not state.offered
+	return state.enabled and state.new_player and state.tutorial_scene and not state.offered
 
 
 ## Parses the scene list flag, "x,y;x,y", skipping anything malformed.
@@ -84,12 +84,28 @@ func is_running() -> bool:
 	return is_instance_valid(_overlay)
 
 
-## True when this scene entry belongs to the tutorial: it is on screen, about to be offered,
-## or this is one of its scenes. The controls overlay (#3014) never shows then.
+## True when this scene entry belongs to the tutorial: it is on screen or about to be offered.
+## The controls overlay (#3014) stays out of the way then, and shows wherever the tutorial
+## does not.
 func owns_scene_entry() -> bool:
 	if is_running() or is_instance_valid(_welcome) or _forced or _forced_reward:
 		return true
-	return Global.feature_flags.is_enabled(FLAG_ENABLED, false) and _is_tutorial_scene()
+	return (
+		Global.feature_flags.is_enabled(FLAG_ENABLED, true)
+		and _is_new_player()
+		and not Global.get_config().ftue_tutorial_offered
+		and _is_tutorial_scene()
+	)
+
+
+## Called when a brand-new account finishes its avatar and name: this player is new, and is
+## owed the tutorial even if an earlier account on this install was already offered it.
+func mark_new_player() -> void:
+	var config: ConfigData = Global.get_config()
+	config.ftue_new_player_wallet = Global.player_identity.get_address_str().to_lower()
+	config.ftue_tutorial_offered = false
+	config.ftue_tutorial_completed = false
+	config.save_to_settings_file()
 
 
 ## Settings > Gameplay > Replay: step 1 again, no welcome card, once the menu has closed.
@@ -119,14 +135,15 @@ func _async_on_scene_entered() -> void:
 		return
 	if _forced_reward:
 		_forced_reward = false
-		_async_show_reward(RewardCampaigns.CAMPAIGNS[REWARD_PREVIEW_CAMPAIGN])
+		_async_show_reward(RewardCampaigns.CAMPAIGNS[REWARD_CAMPAIGN])
 		return
 
 	var offer := should_offer(
 		{
 			"test_mode": ControlsFtueCoordinator.is_automated_run() or Global.is_xr(),
 			"forced": _forced,
-			"enabled": Global.feature_flags.is_enabled(FLAG_ENABLED, false),
+			"enabled": Global.feature_flags.is_enabled(FLAG_ENABLED, true),
+			"new_player": _is_new_player(),
 			"offered": Global.get_config().ftue_tutorial_offered,
 			"tutorial_scene": _is_tutorial_scene(),
 			"scene_loaded": Global.scene_runner.get_current_parcel_scene_id() >= 0,
@@ -206,7 +223,7 @@ func _on_completed() -> void:
 	if (
 		not _is_replay
 		and not campaign.is_empty()
-		and Global.feature_flags.is_enabled(FLAG_REWARD, false)
+		and Global.feature_flags.is_enabled(FLAG_REWARD, true)
 	):
 		_async_show_reward(campaign)
 
@@ -250,6 +267,14 @@ func _step_properties(step: FtueTutorialRunner.Step) -> Dictionary:
 		"step_name": FtueTutorialRunner.STEP_NAMES[step],
 		"is_replay": _is_replay,
 	}
+
+
+func _is_new_player() -> bool:
+	var created_here: String = Global.get_config().ftue_new_player_wallet
+	return (
+		not created_here.is_empty()
+		and created_here == Global.player_identity.get_address_str().to_lower()
+	)
 
 
 func _is_tutorial_scene() -> bool:
