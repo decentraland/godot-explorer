@@ -54,6 +54,22 @@ static func async_check() -> Status:
 	return _soc_status as Status
 
 
+## The verdict as the launch-time "System Info Report" carries it (#3033): the Android
+## #2935/#2936 result, the iOS low-spec-iPhone check, or "not_checked" where neither runs.
+static func report_verdict(status: Status) -> String:
+	if DclIosPlugin.is_available():
+		return "below_minspec" if DclIosPlugin.is_low_spec_iphone() else "supported"
+	if not DclAndroidPlugin.is_available():
+		return "not_checked"
+	match status:
+		Status.END_OF_SUPPORT:
+			return "end_of_support"
+		Status.BELOW_MINSPEC:
+			return "below_minspec"
+		_:
+			return "supported"
+
+
 ## True if the end-of-support modal is due again, per the day-based schedule above.
 ## `first_detected_unix` is the once-ever anchor stamped in lobby.gd the first time this device
 ## was found excluded; <= 0 means it hasn't been stamped yet, which shouldn't happen by the time
@@ -98,7 +114,7 @@ static func _is_ram_excluded() -> bool:
 
 
 static func _async_fetch_soc_status() -> int:
-	var soc := _normalized_soc()
+	var soc := normalized_soc()
 	if soc.is_empty():
 		return Status.OK
 
@@ -143,9 +159,10 @@ static func _parse_decision(json) -> int:
 			return Status.OK
 
 
-## Build.SOC_MODEL (API 31+) is the most reliable id when present; ro.board.platform and
-## Build.HARDWARE are fallbacks for older devices where it's always empty.
-static func _normalized_soc() -> String:
+## The chipset id this device is looked up by, as sent to mobile-bff. Build.SOC_MODEL (API 31+)
+## is the most reliable id when present; ro.board.platform and Build.HARDWARE are fallbacks for
+## older devices where it's always empty. Empty off Android.
+static func normalized_soc() -> String:
 	var candidates := [
 		DclAndroidPlugin.get_soc_model(),
 		DclAndroidPlugin.get_board_platform(),

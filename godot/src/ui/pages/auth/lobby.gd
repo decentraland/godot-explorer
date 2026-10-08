@@ -522,6 +522,16 @@ func _ready():
 	var startup_time_ms: int = Time.get_ticks_msec() - Global._startup_time
 	print("[Startup] lobby.show_dcl_splash_screen: %dms" % startup_time_ms)
 
+	# Hardware row for this launch (#3033). Queued before the gates below so a forced update or
+	# a crash later still leaves a trace. The gate re-reads the cached device-support verdict.
+	var device_support: DeviceSupportCoordinator.Status = await (
+		DeviceSupportCoordinator.async_check()
+	)
+	Global.metrics.track_system_info_report(
+		DeviceSupportCoordinator.report_verdict(device_support),
+		DeviceSupportCoordinator.normalized_soc()
+	)
+
 	if Global.is_mobile():
 		var gate_decision: String = await _async_run_device_support_and_version_gate()
 		if gate_decision == "hard":
