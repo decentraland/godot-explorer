@@ -7,6 +7,9 @@ extends SceneTree
 
 const SRC := "res://assets/no-export/locomotion/Avatar_Locomotion_Fix.glb"
 const OUT := "res://assets/animations/locomotion_full.tres"
+# The GLB import loses loop flags; gait clips must loop (they don't here, and
+# a frozen last frame is the "patinando" bug). Slide loops too.
+const FORCE_LOOP := ["Idle", "Walk", "Jog", "Run", "Slide"]
 
 
 func _initialize() -> void:
@@ -15,6 +18,9 @@ func _initialize() -> void:
 		printerr("GLB did not load as AnimationLibrary — reimport first")
 		quit(1)
 		return
+	for clip_name in FORCE_LOOP:
+		if lib.has_animation(clip_name):
+			lib.get_animation(clip_name).loop_mode = Animation.LOOP_LINEAR
 	var err := ResourceSaver.save(lib, OUT)
 	prints("clips:", lib.get_animation_list().size(), "saved:", OUT, "err:", err)
 	quit(0 if err == OK else 1)

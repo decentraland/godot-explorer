@@ -141,6 +141,10 @@ const CAPSULE_RADIUS := 0.3
 
 var last_position: Vector3
 var actual_velocity_xz: float
+# #2856: gait kind from input mode (0 idle / 1 walk / 2 jog / 3 run) — drives
+# the avatar's walk/jog/run classification for the continuous gait blend.
+var movement_kind: int = 2
+var has_move_input: bool = false
 
 # Locomotion settings - these are updated from the current scene's DclLocomotionSettings
 var walk_speed: float = 1.5
@@ -322,29 +326,12 @@ func set_camera_mode(mode: Global.CameraMode, play_sound: bool = true):
 
 
 func update_avatar_movement_state(vel: float):
-	avatar.walk = false
-	avatar.jog = false
-	avatar.run = false
-
-	var speed_diffs = {
-		"idle": abs(vel),
-		"walk": abs(vel - walk_speed),
-		"jog": abs(vel - jog_speed),
-		"run": abs(vel - run_speed)
-	}
-
-	var nearest = speed_diffs.keys()[0]
-	for key in speed_diffs.keys():
-		if speed_diffs[key] < speed_diffs[nearest]:
-			nearest = key
-
-	match nearest:
-		"walk":
-			avatar.walk = true
-		"jog":
-			avatar.jog = true
-		"run":
-			avatar.run = true
+	# #2856: gait bools mirror the input-mode kind (idle when no move input);
+	# movement_speed feeds the continuous blend in avatar.gd.
+	avatar.walk = movement_kind == 1 and has_move_input
+	avatar.jog = movement_kind == 2 and has_move_input
+	avatar.run = movement_kind == 3 and has_move_input
+	avatar.movement_speed = vel
 
 
 func _ready():
@@ -779,7 +766,7 @@ func _physics_process(dt: float) -> void:
 	# 0.5s while input is held; the accel pair follows the settings curve
 	# (keys 0/0.1→0, 0.9/1→1: plateau at min, then ramp). Velocity target uses
 	# the RAW input direction — the smoothed current_direction is only for facing.
-	var has_move_input := direction != Vector3.ZERO
+	has_move_input = direction != Vector3.ZERO
 	_accel_weight = move_toward(
 		_accel_weight, 1.0 if has_move_input else 0.0, dt / ACCELERATION_TIME
 	)
@@ -794,6 +781,17 @@ func _physics_process(dt: float) -> void:
 	if has_move_input:
 		var wants_walk := Input.is_action_pressed("ia_walk")
 		var wants_sprint := Input.is_action_pressed("ia_sprint")
+
+		# #2856: gait kind from the input MODE (walk jog run), not measured
+		# speed — the anim blend normalizes by the kind's speed cap (Unity).
+		if wants_sprint and not run_disabled:
+			movement_kind = 3
+		elif wants_walk and not walk_disabled:
+			movement_kind = 1
+		elif Global.is_mobile() and jog_disabled and not walk_disabled:
+			movement_kind = 1
+		else:
+			movement_kind = 2
 
 		# Determine the effective speed based on input modifiers
 		var effective_speed := 0.0
@@ -814,6 +812,7 @@ func _physics_process(dt: float) -> void:
 			effective_speed = jog_speed
 		elif not walk_disabled:
 			effective_speed = walk_speed
+			movement_kind = 1
 		# else: effective_speed remains 0, no movement allowed
 
 		# #2852 M2: slope speed modifier — the curve multiplies the target

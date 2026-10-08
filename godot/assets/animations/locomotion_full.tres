@@ -3696,6 +3696,7 @@ tracks/104/keys = PackedFloat32Array(0, 1, 0.030688848, -3.0573422e-10, 4.578734
 [sub_resource type="Animation" id="Animation_heoqt"]
 resource_name = "Idle"
 length = 2.0
+loop_mode = 1
 tracks/0/type = "position_3d"
 tracks/0/imported = true
 tracks/0/enabled = true
@@ -6653,6 +6654,7 @@ tracks/104/keys = PackedFloat32Array(0, 1, -0.1401534, 1.3594705e-10, 8.450762e-
 [sub_resource type="Animation" id="Animation_ks0k3"]
 resource_name = "Jog"
 length = 0.6666667
+loop_mode = 1
 tracks/0/type = "position_3d"
 tracks/0/imported = true
 tracks/0/enabled = true
@@ -16265,6 +16267,7 @@ tracks/104/keys = PackedFloat32Array(0, 1, 0.030688848, -3.0573422e-10, 4.578734
 [sub_resource type="Animation" id="Animation_p8vw2"]
 resource_name = "Run"
 length = 0.53333336
+loop_mode = 1
 tracks/0/type = "position_3d"
 tracks/0/imported = true
 tracks/0/enabled = true
@@ -20701,6 +20704,7 @@ tracks/104/keys = PackedFloat32Array(0, 1, -0.059845198, -0.009762066, 0.0085664
 [sub_resource type="Animation" id="Animation_s2yux"]
 resource_name = "Slide"
 length = 0.6666667
+loop_mode = 1
 tracks/0/type = "position_3d"
 tracks/0/imported = true
 tracks/0/enabled = true
@@ -21439,6 +21443,7 @@ tracks/104/keys = PackedFloat32Array(0, 1, 0.028962309, 0.24654983, -0.017060928
 
 [sub_resource type="Animation" id="Animation_vooi6"]
 resource_name = "Walk"
+loop_mode = 1
 tracks/0/type = "position_3d"
 tracks/0/imported = true
 tracks/0/enabled = true
