@@ -96,6 +96,7 @@ func _on_loading_cancelled(_session_id: int):
 
 
 func _hide_loading_screen(status: String = "Success"):
+	DclProfiler.mark("LoadingScreen::hidden", status)
 	Global.content_provider.set_max_concurrent_downloads(12)
 	Global.content_provider.set_max_low_priority_downloads(12)
 

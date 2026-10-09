@@ -33,7 +33,7 @@ pub const GODOT_BUILD_SHA: &str = "5ce8f80f4";
 /// Reset to `None` once the branch is merged and `GODOT_BUILD_SHA` is bumped to the merge commit —
 /// leaving a branch pinned here makes every dev/CI pull an unmerged engine build. Currently set to
 /// the non-blocking pipeline/shader compile work (decentraland/godotengine#27) until it merges.
-pub const GODOT_USE_BRANCH: Option<&str> = Some("perf/hiccupless-loading");
+pub const GODOT_USE_BRANCH: Option<&str> = Some("perf/hiccupless-loading-profiling");
 
 /// Release tag identifying a specific fork build — `<version>.stable.gh.<sha>`, mirroring the
 /// `--version` string. Single source for the release URL path segment, the on-disk template SHA

@@ -37,6 +37,7 @@ func _async_run(
 	avatar: Node3D, skeleton: Skeleton3D, fade: AvatarProximityFade, generation: int
 ) -> void:
 	var tree := avatar.get_tree()
+	var started_usec := Time.get_ticks_usec()
 	var waited := 0.0
 	while true:
 		await tree.process_frame
@@ -50,6 +51,16 @@ func _async_run(
 			waited += avatar.get_process_delta_time()
 			if waited < TIMEOUT_SEC:
 				continue
+		var info := (
+			"avatar=%s ms=%d meshes=%d pending=%d"
+			% [
+				avatar.get("avatar_id"),
+				(Time.get_ticks_usec() - started_usec) / 1000,
+				meshes.size(),
+				pending
+			]
+		)
+		DclProfiler.mark("Avatar::gpu_ready" if pending == 0 else "Avatar::ready_timeout", info)
 		break
 
 	var elapsed := 0.0

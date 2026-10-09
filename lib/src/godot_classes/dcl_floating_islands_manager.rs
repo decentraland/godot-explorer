@@ -126,6 +126,7 @@ impl INode for DclFloatingIslandsManager {
     }
 
     fn process(&mut self, _delta: f64) {
+        let _zone = crate::tools::profiler::Zone::new("FloatingIslandsManager::process", "");
         self.tick_culling();
     }
 
@@ -344,7 +345,11 @@ impl DclFloatingIslandsManager {
         let budget = self.frame_budget.max(1) as usize;
 
         // Drain before the visibility pass so freshly-submitted coords aren't re-enqueued.
-        let submitted_this_frame = self.drain_worker_responses(budget);
+        let submitted_this_frame = {
+            let _zone =
+                crate::tools::profiler::Zone::new("FloatingIslands::drain_worker_responses", "");
+            self.drain_worker_responses(budget)
+        };
         self.generated_so_far += submitted_this_frame;
 
         let mut in_view_candidates = 0;

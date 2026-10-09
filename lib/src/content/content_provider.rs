@@ -323,6 +323,8 @@ fn resolved_optimized_base_url() -> String {
 /// Synchronous on purpose: the non-Send Godot objects must not live across an
 /// await in the calling async block.
 fn load_baked_texture_entry(godot_path: &str, original_size: Option<ImageSize>) -> Option<Variant> {
+    let _zone =
+        crate::tools::profiler::Zone::new("ContentProvider::load_baked_texture", godot_path);
     // A bad file traps inside Godot's loader (GODOT-EXPLORER-302), so the path has
     // to be on the Sentry scope before the call, not after it.
     crash_context::set_loading_resource(godot_path);
@@ -423,6 +425,7 @@ impl INode for ContentProvider {
     }
 
     fn process(&mut self, dt: f64) {
+        let _zone = crate::tools::profiler::Zone::new("ContentProvider::process", "");
         // Print the log lines Rust worker threads queued (Android: printing
         // off the main thread crashes sentry-godot, see godot_logger).
         crate::tools::godot_logger::flush_background_logs();
@@ -452,6 +455,10 @@ impl INode for ContentProvider {
             let budget_start = std::time::Instant::now();
             while !queued.is_empty() {
                 let (zip_path, reply) = queued.remove(0);
+                let _zone = crate::tools::profiler::Zone::new(
+                    "ContentProvider::load_resource_pack",
+                    &zip_path,
+                );
                 let ok = godot::classes::ProjectSettings::singleton()
                     .load_resource_pack_ex(&zip_path)
                     .replace_files(false)
@@ -1071,6 +1078,10 @@ impl ContentProvider {
     ) -> Option<Gd<DclEmoteGltf>> {
         use godot::classes::AnimationPlayer;
 
+        let _zone = crate::tools::profiler::Zone::new(
+            "ContentProvider::extract_emote",
+            &file_hash.to_string(),
+        );
         tracing::debug!("[extract_emote] Starting for hash={}", file_hash);
 
         let Some(instance) = packed_scene.instantiate() else {

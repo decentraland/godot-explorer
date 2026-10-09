@@ -900,6 +900,13 @@ func async_load_wearables():
 
 	var build := _mesh_assembler.begin_build(self)
 	AvatarBuildProfiler.begin()
+	DclProfiler.mark(
+		"Avatar::load_wearables",
+		(
+			"%s avatar=%s name=%s wearables=%d"
+			% [avatar_name, avatar_id, avatar_name, avatar_data.get_wearables().size()]
+		)
+	)
 
 	# Hide skeleton immediately if show_only_wearables to prevent flash of default body
 	var show_only_wearables = avatar_data.get_show_only_wearables()

@@ -45,8 +45,23 @@ pub mod utils;
 
 struct DecentralandGodotLibrary;
 
-#[gdextension]
+#[gdextension(entry_symbol = gdext_rust_init_inner)]
 unsafe impl ExtensionLibrary for DecentralandGodotLibrary {}
+
+/// Entry symbol named in `dclgodot.gdextension`. Captures the GDExtension loader for the profiler
+/// bridge, then hands over to the entry point godot-rust generates.
+///
+/// # Safety
+/// Called by Godot with its loader, library handle and initialization struct.
+#[no_mangle]
+pub unsafe extern "C" fn gdext_rust_init(
+    get_proc_address: godot::sys::GDExtensionInterfaceGetProcAddress,
+    library: godot::sys::GDExtensionClassLibraryPtr,
+    init: *mut godot::sys::GDExtensionInitialization,
+) -> godot::sys::GDExtensionBool {
+    tools::profiler::init(get_proc_address);
+    gdext_rust_init_inner(get_proc_address, library, init)
+}
 
 pub mod framework {
     use godot::prelude::*;

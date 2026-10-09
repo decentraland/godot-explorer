@@ -136,7 +136,13 @@ pub fn post_import_process(node_to_inspect: Gd<Node>, state: &mut TextureBakeSta
                             .source_images
                             .remove(&id)
                             // Last resort (an image the decoder could not read): a blocking GPU readback.
-                            .or_else(|| texture_image.get_image())
+                            .or_else(|| {
+                                let _zone = crate::tools::profiler::Zone::new(
+                                    "ContentProvider::gltf_texture_readback",
+                                    &texture_image.get_name().to_string(),
+                                );
+                                texture_image.get_image()
+                            })
                         {
                             if should_compress {
                                 create_compressed_texture(&mut image, state.max_size)
@@ -1316,6 +1322,8 @@ where
 
     // Process GLTF using Godot (all Godot objects are scoped here to drop before await)
     let (result, file_size, externalized) = {
+        let _zone =
+            crate::tools::profiler::Zone::new("ContentProvider::gltf_import", &absolute_file_path);
         // Load the GLTF using Godot
         let mut new_gltf = GltfDocument::new_gd();
         let mut new_gltf_state = GltfState::new_gd();

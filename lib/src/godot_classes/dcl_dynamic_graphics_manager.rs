@@ -534,6 +534,7 @@ impl INode for DclDynamicGraphicsManager {
     }
 
     fn process(&mut self, delta: f64) {
+        let _zone = crate::tools::profiler::Zone::new("DynamicGraphicsManager::process", "");
         let render_time_ms = self.get_total_render_time_ms();
 
         // Throttle platform calls (JNI on Android) to avoid per-frame overhead

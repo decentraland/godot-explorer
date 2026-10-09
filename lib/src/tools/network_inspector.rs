@@ -225,6 +225,7 @@ impl INode for NetworkInspector {
     }
 
     fn process(&mut self, _dt: f64) {
+        let _zone = crate::tools::profiler::Zone::new("NetworkInspector::process", "");
         let mut request_changed = HashSet::new();
         while let Ok(event) = self.receiver.try_recv() {
             request_changed.insert(event.id.0);

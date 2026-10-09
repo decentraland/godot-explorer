@@ -477,6 +477,7 @@ impl INode for SceneInspectorDispatcher {
     }
 
     fn process(&mut self, dt: f64) {
+        let _zone = crate::tools::profiler::Zone::new("SceneInspector::process", "");
         let mut batch = Vec::new();
         let mut count = 0;
         // Without a socket or file there is no reader: skip JSON, keep only the snapshot.

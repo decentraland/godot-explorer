@@ -568,6 +568,12 @@ pub(crate) fn scene_thread(
         }
 
         // run the onUpdate function
+        let _update_zone = crate::tools::profiler::Zone::lazy(|| {
+            (
+                "SceneThread::onUpdate".into(),
+                format!("scene={}", scene_id.0),
+            )
+        });
         let result = rt.block_on(async {
             run_script(&mut runtime, &script, "onUpdate", |scope| {
                 vec![v8::Number::new(scope, dt.as_secs_f64()).into()]

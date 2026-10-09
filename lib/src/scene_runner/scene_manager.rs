@@ -1679,6 +1679,7 @@ impl SceneManager {
     }
 
     fn scene_runner_update(&mut self, delta: f64) {
+        let _zone = crate::tools::profiler::Zone::new("SceneManager::update", "");
         // Scene teardown must always make progress, even when the runner is paused
         // (the lobby pauses it) or the player avatar is gone (post sign-out). The
         // early-returns below would otherwise skip the kill state machine, leaving
@@ -1904,6 +1905,16 @@ impl SceneManager {
                     );
                 }
 
+                let _scene_zone = crate::tools::profiler::Zone::lazy(|| {
+                    (
+                        "Scene::process".into(),
+                        format!(
+                            "scene={} {}",
+                            scene.scene_id.0,
+                            scene.scene_entity_definition.get_title()
+                        ),
+                    )
+                });
                 if _process_scene(
                     scene,
                     end_time_us,
@@ -2294,6 +2305,7 @@ impl SceneManager {
     }
 
     fn receive_from_thread(&mut self) {
+        let _zone = crate::tools::profiler::Zone::new("SceneManager::receive_from_thread", "");
         // TODO: check infinity loop (loop_end_time)
         loop {
             match self.main_receiver_from_thread.try_recv() {
@@ -3165,6 +3177,7 @@ impl INode for SceneManager {
     }
 
     fn physics_process(&mut self, delta: f64) {
+        let _zone = crate::tools::profiler::Zone::new("SceneManager::physics_process", "");
         // Main-thread liveness heartbeat (issue #2002). Incremented unconditionally
         // at the very top, before any early-return, so the background memory
         // monitor can tell a real main-thread freeze (heartbeat stops) from a mere
@@ -3493,6 +3506,7 @@ impl INode for SceneManager {
     // nodes, so they would visibly trail the camera by up to one physics
     // tick if this only ran in physics_process.
     fn process(&mut self, delta: f64) {
+        let _zone = crate::tools::profiler::Zone::new("SceneManager::process", "");
         let camera = self.base().get_viewport().and_then(|x| x.get_camera_3d());
         crate::godot_classes::scene_animation_throttle::tick(camera.as_ref(), delta);
         let Some(current_camera_node) = camera else {

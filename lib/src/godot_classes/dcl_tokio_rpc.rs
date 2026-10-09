@@ -30,6 +30,7 @@ impl INode for DclTokioRpc {
     }
 
     fn process(&mut self, _dt: f64) {
+        let _zone = crate::tools::profiler::Zone::new("DclTokioRpc::process", "");
         while let Ok(state) = self.receiver.try_recv() {
             match state {
                 GodotTokioCall::OpenUrl {

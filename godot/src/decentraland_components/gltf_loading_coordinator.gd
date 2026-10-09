@@ -315,6 +315,7 @@ func _run_load_pump() -> void:
 			# Priority: scene models must not queue behind remote avatar builds.
 			await FrameWorkBudget.async_acquire("GltfCoordinator::pump", null, true)
 		var frame_t0 := Time.get_ticks_usec()
+		DclProfiler.zone_begin("GltfCoordinator::pump", "")
 		var realized: Array = []  # [group, batch] pairs realized this frame
 
 		# EXPERIMENT (`threaded-load=<n>` deeplink): hand the .scn parse to
@@ -366,6 +367,7 @@ func _run_load_pump() -> void:
 				break
 		_stats_pump_frames += 1
 		_stats_pump_usec += Time.get_ticks_usec() - frame_t0
+		DclProfiler.zone_end()
 
 		await get_tree().process_frame
 
@@ -406,7 +408,11 @@ func _load_and_realize_group(group: LoadGroup) -> Array:
 			else ResourceLoader.CACHE_MODE_REUSE
 		)
 		var t0 := Time.get_ticks_usec()
+		DclProfiler.zone_begin(
+			"GltfCoordinator::load", "%s src=%s hash=%s" % [group.scene_path, group.src, group.hash]
+		)
 		var resource := ResourceLoader.load(group.scene_path, "", cache_mode)
+		DclProfiler.zone_end()
 		var load_usec := Time.get_ticks_usec() - t0
 		_stats_loads += 1
 		_stats_load_usec += load_usec
@@ -426,8 +432,13 @@ func _load_and_realize_group(group: LoadGroup) -> Array:
 		return []
 
 	var t1 := Time.get_ticks_usec()
+	DclProfiler.zone_begin(
+		"GltfCoordinator::realize",
+		"%s src=%s hash=%s x%d" % [group.scene_path, group.src, group.hash, batch.size()]
+	)
 	for waiter in batch:
 		waiter._instantiate_and_add(group.packed_scene)
+	DclProfiler.zone_end()
 	_stats_instances += batch.size()
 	_stats_instantiate_usec += Time.get_ticks_usec() - t1
 	return batch

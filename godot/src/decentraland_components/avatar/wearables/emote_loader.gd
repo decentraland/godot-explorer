@@ -176,6 +176,7 @@ static func _is_optimized_bake(path: String) -> bool:
 
 ## Threaded-load a PackedScene from scene_path and extract the emote data from it.
 func _async_extract_from_path(scene_path: String, file_hash: String) -> DclEmoteGltf:
+	DclProfiler.mark("Emote::extract", "%s hash=%s" % [scene_path, file_hash])
 	# Check if scene exists - use appropriate method for path type
 	if scene_path.begins_with("res://"):
 		# Optimized asset loaded via resource pack - use ResourceLoader.exists()

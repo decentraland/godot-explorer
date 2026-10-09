@@ -74,6 +74,7 @@ func is_current(build_id: int) -> bool:
 
 func end_build() -> void:
 	FrameWorkBudget.end_build(_avatar)
+	DclProfiler.mark("Avatar::assembled", "avatar=%s" % _avatar.get("avatar_id"))
 	_gpu_gate.start(_avatar, _skeleton)
 
 

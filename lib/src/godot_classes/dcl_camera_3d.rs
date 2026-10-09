@@ -20,6 +20,7 @@ pub struct DclCamera3D {
 #[godot_api]
 impl ICamera3D for DclCamera3D {
     fn process(&mut self, delta: f64) {
+        let _zone = crate::tools::profiler::Zone::new("DclCamera3D::process", "");
         let speed = self.get_smoothing_speed();
         let current_fov = self.base().get_fov();
         let new_fov = current_fov + (self.get_target_fov() - current_fov) * speed * (delta as f32);
