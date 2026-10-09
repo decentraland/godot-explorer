@@ -306,20 +306,18 @@ func show_auth_email_screen():
 
 ## Shows the FTUE, or skips it when there is a single place to discover: a one-card carousel
 ## would only ask the user to confirm the obvious, so the launch boots straight into it (#3022).
-## Anything that fails on the way falls through to the screen.
+## Decided on the list prefetched since Avatar Create and never awaited: a list still in
+## flight, or anything failing on the way, falls through to the screen.
 func _async_show_discover_ftue_screen(campaign_resolution: Dictionary) -> void:
-	var places: Array[Dictionary] = await ftue_screen.async_fetch_places()
-	if not is_inside_tree():
-		return
-
+	var places: Array[Dictionary] = ftue_screen.get_prefetched_places()
 	if places.size() == 1:
 		var place: Dictionary = places[0]
-		var payload := {"place_id": place.get("id", "")}
-		payload.merge(CampaignResolution.metrics_context(campaign_resolution))
-		Global.metrics.track_screen_viewed("DISCOVER_FTUE_BYPASS", JSON.stringify(payload))
 		var booted := await _async_boot_explorer_at(
 			PlacesHelper.get_position_and_realm(place), PlacesHelper.is_world(place)
 		)
+		var payload := {"place_id": place.get("id", ""), "booted": booted}
+		payload.merge(CampaignResolution.metrics_context(campaign_resolution))
+		Global.metrics.track_screen_viewed("DISCOVER_FTUE_BYPASS", JSON.stringify(payload))
 		# A declined boot may have changed scene on its way out (the pre-boot gate routes a
 		# private world to Discover), freeing this lobby before the await returns.
 		if booted or not is_inside_tree():
@@ -332,7 +330,7 @@ func _async_show_discover_ftue_screen(campaign_resolution: Dictionary) -> void:
 	if current_profile:
 		ftue_screen.set_username(current_profile.get_name())
 	show_panel(control_discover_ftue)
-	ftue_screen.show_places(places)
+	ftue_screen.show_places()
 
 
 ## Entry point to the first-time experience, after the profile deploy. An install attributed
@@ -412,6 +410,8 @@ func _async_boot_explorer_at(position_and_realm: Array, is_world: bool) -> bool:
 
 func async_show_avatar_create_screen():
 	track_lobby_screen("AVATAR_CREATE")
+	# Ahead of the FTUE gate, so deciding the single-place bypass never waits on the network.
+	ftue_screen.prefetch_places()
 	button_back.show()
 	show_panel(control_avatar_create)
 	avatar_preview.reparent(avatar_preview_container_avatar_create)

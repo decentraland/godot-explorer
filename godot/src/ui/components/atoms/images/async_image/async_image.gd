@@ -183,16 +183,21 @@ static func _get_hash_from_url(url: String) -> String:
 	return "temp-file"
 
 
-func _async_download(url: String) -> void:
+## Warms the texture cache for a URL, so a later load_from_url at the same quality is instant.
+static func prefetch(url: String, quality: ForcedQuality) -> void:
+	if not url.is_empty():
+		_fetch_texture(url, quality)
+
+
+static func _fetch_texture(url: String, quality: ForcedQuality) -> Promise:
 	var url_hash := _get_hash_from_url(url)
-	var content_mapping
-	if forced_quality == ForcedQuality.NONE:
-		content_mapping = Global.content_provider.fetch_texture_by_url(url_hash, url)
-	else:
-		content_mapping = Global.content_provider.fetch_texture_by_url_with_quality(
-			url_hash, url, forced_quality
-		)
-	var result = await PromiseUtils.async_awaiter(content_mapping)
+	if quality == ForcedQuality.NONE:
+		return Global.content_provider.fetch_texture_by_url(url_hash, url)
+	return Global.content_provider.fetch_texture_by_url_with_quality(url_hash, url, quality)
+
+
+func _async_download(url: String) -> void:
+	var result = await PromiseUtils.async_awaiter(_fetch_texture(url, forced_quality))
 	if result is PromiseError:
 		printerr("AsyncImage: download error: ", result.get_error())
 		_finish_with_error()

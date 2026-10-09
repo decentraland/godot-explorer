@@ -18,6 +18,7 @@ const WELCOME_FONT_SIZES: PackedInt32Array = [48, 42, 36]
 const BBCODE_TAG_RE := "\\[[^\\]]*\\]"
 
 var _places: Array[Dictionary] = []
+var _places_promise: Promise = null
 
 ## Kept so the greeting can be recomposed on a language change — text assigned from GDScript
 ## does not re-translate itself.
@@ -98,12 +99,43 @@ func set_campaign_context(resolution: Dictionary) -> void:
 	_campaign_resolution = resolution
 
 
-## Fetched apart from showing, so the lobby can skip this screen when there is one place.
-func async_fetch_places() -> Array[Dictionary]:
-	return await FeaturedDataProvider.async_fetch_places(carousel.fetch_tag)
+## Starts the places fetch once, ahead of this screen, so the lobby can decide the bypass
+## without waiting on the network and the cards have their images by the time they show.
+func prefetch_places() -> void:
+	if _places_promise != null:
+		return
+	_places_promise = Promise.new()
+	_async_prefetch_places(_places_promise)
 
 
-func show_places(places: Array[Dictionary]) -> void:
+func _async_prefetch_places(promise: Promise) -> void:
+	var places: Array[Dictionary] = await FeaturedDataProvider.async_fetch_places(
+		carousel.fetch_tag
+	)
+	for place in places:
+		# Same quality as the card's AsyncImage in snap_carousel_card.tscn, or it misses the cache.
+		AsyncImage.prefetch(
+			place.get("image", place.get("imageUrl", "")), AsyncImage.ForcedQuality.HIGH
+		)
+	promise.resolve_with_data(places)
+
+
+## The prefetched places, or an empty list while the fetch is still in flight.
+func get_prefetched_places() -> Array[Dictionary]:
+	if _places_promise == null or not _places_promise.is_resolved():
+		return []
+	return _places_promise.get_data()
+
+
+## Fills the carousel with the prefetched places, or as soon as they land: the screen never
+## waits for the list, a late one just fills in.
+func show_places() -> void:
+	prefetch_places()
+	_async_fill_carousel()
+
+
+func _async_fill_carousel() -> void:
+	var places: Array[Dictionary] = await PromiseUtils.async_awaiter(_places_promise)
 	# Same as the carousel's own fetch: an empty result leaves it untouched and emits nothing.
 	if places.is_empty():
 		return
