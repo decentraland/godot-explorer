@@ -89,6 +89,7 @@ static func async_acquire(label: String, owner: Object = null, priority := false
 	ticket.order = _build_order.get(ticket.owner_id, _seq)
 	ticket.priority = priority
 	_queue.append(ticket)
+	DclProfiler.mark("FrameWorkBudget::deferred", "%s queue=%d" % [label, _queue.size()])
 	await ticket.granted
 
 

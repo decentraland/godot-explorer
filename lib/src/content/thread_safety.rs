@@ -10,7 +10,15 @@ pub struct GodotSingleThreadSafety {
 
 impl GodotSingleThreadSafety {
     pub async fn acquire_owned(ctx: &ContentProviderContext) -> Option<Self> {
+        let waiting_since = std::time::Instant::now();
         let guard = ctx.godot_single_thread.clone().acquire_owned().await.ok()?;
+        let waited = waiting_since.elapsed();
+        if waited.as_millis() >= 1 {
+            crate::tools::profiler::mark(
+                "godot_permit::waited",
+                &format!("{}us", waited.as_micros()),
+            );
+        }
         set_thread_safety_checks_enabled(false);
         Some(Self { _guard: guard })
     }

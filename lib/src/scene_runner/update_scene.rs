@@ -267,6 +267,12 @@ pub fn _process_scene(
 
         loop {
             let before_compute_update = std::time::Instant::now();
+            let _state_zone = crate::tools::profiler::Zone::lazy(|| {
+                (
+                    format!("{:?}", scene.current_dirty.update_state),
+                    format!("scene={}", scene.scene_id.0),
+                )
+            });
 
             let should_break = match scene.current_dirty.update_state {
                 SceneUpdateState::None => {

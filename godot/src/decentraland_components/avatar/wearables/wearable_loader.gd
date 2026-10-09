@@ -49,6 +49,7 @@ func async_load_wearables(wearable_keys: Array, body_shape_id: String) -> Dictio
 		if file_hash.is_empty():
 			printerr("WearableLoader: empty file_hash for ", wearable_key)
 			continue
+		DclProfiler.mark("Wearable::load", "%s hash=%s" % [wearable_key, file_hash])
 
 		# Start loading - ContentProvider handles caching and deduplication
 		var content_mapping = wearable.get_content_mapping()
@@ -86,6 +87,7 @@ func async_load_wearables(wearable_keys: Array, body_shape_id: String) -> Dictio
 ## (extracted optimized `.mobile.scn` or runtime-processed `wearable_*.scn`).
 ## The instantiate waits for a FrameWorkBudget turn of `avatar`.
 func async_get_wearable_node(file_hash: String, avatar: Node) -> Node3D:
+	DclProfiler.mark("Wearable::get_node", file_hash)
 	var scene_path = _completed_loads.get(file_hash, "")
 	if scene_path.is_empty():
 		scene_path = Global.content_provider.get_wearable_cache_path(file_hash)
@@ -140,5 +142,7 @@ func async_get_wearable_node(file_hash: String, avatar: Node) -> Node3D:
 		return null
 
 	await FrameWorkBudget.async_acquire_for_avatar("WearableLoader::instantiate", avatar)
+	DclProfiler.zone_begin("WearableLoader::instantiate", scene_path)
 	var instance = packed_scene.instantiate()
+	DclProfiler.zone_end()
 	return instance

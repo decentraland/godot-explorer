@@ -265,6 +265,7 @@ pub async fn load_image_texture(
     let _thread_safe_check = GodotSingleThreadSafety::acquire_owned(&ctx)
         .await
         .ok_or(anyhow::Error::msg("Failed trying to get thread-safe check"))?;
+    let _zone = crate::tools::profiler::Zone::new("ContentProvider::texture_decode", &file_hash);
 
     // Check for formats that need special handling
     // AVIF: Not supported - use fallback texture (no pure Rust decoder available yet)

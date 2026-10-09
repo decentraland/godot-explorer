@@ -609,6 +609,9 @@ impl DclAvatar {
 
     #[func]
     fn process(&mut self, dt: f64) {
+        let _zone = crate::tools::profiler::Zone::lazy(|| {
+            ("DclAvatar::process".into(), self.avatar_name.to_string())
+        });
         match self.movement_type {
             AvatarMovementType::ExternalController => {
                 self.lerp_state.factor += dt as f32;

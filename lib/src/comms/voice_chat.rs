@@ -18,6 +18,7 @@ struct VoiceChatRecorder {
 #[godot_api]
 impl IAudioStreamPlayer for VoiceChatRecorder {
     fn process(&mut self, _dt: f64) {
+        let _zone = crate::tools::profiler::Zone::new("VoiceChat::process", "");
         if self.recording_enabled {
             let Some(effect_capture) = &mut self.effect_capture else {
                 return;

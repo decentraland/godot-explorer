@@ -153,6 +153,7 @@ func _ready():
 
 	Global.scene_runner.on_change_scene_id.connect(_on_change_scene_id)
 	Global.change_parcel.connect(_on_change_parcel)
+	BenchCrowd.attach_if_requested(self)
 
 	label_version.set_text(DclGlobal.get_version_with_env())
 

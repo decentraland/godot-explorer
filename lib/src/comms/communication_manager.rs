@@ -490,6 +490,7 @@ impl INode for CommunicationManager {
     }
 
     fn process(&mut self, _dt: f64) {
+        let _zone = crate::tools::profiler::Zone::new("CommunicationManager::process", "");
         // Handle scene access check results
         while let Ok((scene_id, allowed, error_message)) = self.scene_access_receiver.try_recv() {
             self.base_mut().emit_signal(

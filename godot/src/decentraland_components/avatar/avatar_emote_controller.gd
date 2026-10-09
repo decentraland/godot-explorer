@@ -728,6 +728,10 @@ func async_play_emote(emote_id_or_urn: String, mask: int = -1, owner_scene_id: i
 	if current_time - _last_emote_time < EMOTE_COOLDOWN_SECONDS:
 		return
 	_last_emote_time = current_time
+	DclProfiler.mark(
+		"Emote::play",
+		"%s avatar=%s name=%s" % [emote_id_or_urn, avatar.avatar_id, avatar.avatar_name]
+	)
 
 	var emote_urn: String = emote_id_or_urn
 
@@ -945,6 +949,10 @@ func _load_emote_from_gltf_internal(
 	if _has_emote(urn):
 		return
 
+	DclProfiler.mark(
+		"Emote::load_gltf",
+		"%s hash=%s avatar=%s name=%s" % [urn, file_hash, avatar.avatar_id, avatar.avatar_name]
+	)
 	# Adding a clip only extends the mixer's caches, so unlike removals
 	# (clean_unused_emotes) this does not stop the tree or reset the emote nodes.
 	var armature_prop: Node3D = null

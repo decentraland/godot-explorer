@@ -69,6 +69,7 @@ pub fn register(mut mixer: Gd<AnimationMixer>, gltf_root: &Gd<Node3D>) {
 
 /// Advances the registered animators that are due this frame. Engine thread, once per frame.
 pub fn tick(camera: Option<&Gd<Camera3D>>, delta: f64) {
+    let _zone = crate::tools::profiler::Zone::new("SceneAnimationThrottle::tick", "");
     let view = camera.map(|camera| {
         let planes: Vec<Plane> = camera.get_frustum().iter_shared().collect();
         (planes, camera.get_global_position())

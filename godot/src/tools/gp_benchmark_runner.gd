@@ -1081,6 +1081,7 @@ func _set_phase(p: String) -> void:
 	phase = p
 	phase_started_at_ms = Time.get_ticks_msec()
 	_log("phase -> %s" % p)
+	DclProfiler.mark("GPBench::phase", p)
 	# Markers consumed by scripts/bench/profile_android.sh / profile_ios.sh to
 	# trigger simpleperf / xctrace recording exactly during the sampling window.
 	if p == "sampling":

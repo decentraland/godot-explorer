@@ -178,9 +178,19 @@ impl INode for AvatarScene {
     }
 
     fn process(&mut self, _delta: f64) {
-        self.update_impostor_transforms();
-        self.push_interpolated_transforms_to_scenes();
+        let _zone = crate::tools::profiler::Zone::new("AvatarScene::process", "");
+        {
+            let _z =
+                crate::tools::profiler::Zone::new("AvatarScene::update_impostor_transforms", "");
+            self.update_impostor_transforms();
+        }
+        {
+            let _z =
+                crate::tools::profiler::Zone::new("AvatarScene::push_interpolated_transforms", "");
+            self.push_interpolated_transforms_to_scenes();
+        }
         if !self.pending_avatars.is_empty() {
+            let _z = crate::tools::profiler::Zone::new("AvatarScene::spawn_pending_avatar", "");
             self.promote_pending_avatar();
         }
         self.maybe_run_cache_cleanup();

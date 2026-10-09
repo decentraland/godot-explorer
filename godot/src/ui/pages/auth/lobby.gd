@@ -230,6 +230,9 @@ func show_account_home_loading_screen():
 func _request_notification_permission_if_needed():
 	if not Global.is_mobile() or Global.is_virtual_mobile():
 		return
+	# The OS prompt covers the screen mid-run in scripted device benchmarks.
+	if Global.cli.guest_profile or _deep_link_flag("guest-profile"):
+		return
 	# Triggered only from the explicit Play-as-Guest / Sign-In taps (the user's
 	# commit point), so the EULA-timing gate that previously guarded this is no
 	# longer needed. NotificationsManager enforces the has-permission + cooldown
@@ -569,7 +572,7 @@ func _ready():
 	# loading it synchronously in go_to_explorer froze the main thread for seconds on iOS.
 	ResourceLoader.load_threaded_request(EXPLORER_SCENE)
 
-	if Global.cli.skip_lobby:
+	if Global.cli.skip_lobby or _deep_link_flag("skip-lobby"):
 		_skip_lobby = true
 	if Global.cli.skip_lobby_to_menu:
 		_skip_lobby_to_menu = true
@@ -593,6 +596,7 @@ func _ready():
 
 	if (
 		Global.cli.guest_profile
+		or _deep_link_flag("guest-profile")
 		or Global.is_gp_benchmark()
 		or not Global.deep_link_obj.preview.is_empty()
 	):
@@ -1155,6 +1159,14 @@ func _on_auth_error(error_message: String):
 			return
 
 	_show_auth_error(error_message)
+
+
+## Deep-link twins of `--skip-lobby` / `--guest-profile` for scripted device runs
+## (scripts/bench/profile_android_hiccups.sh). Production builds ignore them.
+func _deep_link_flag(name: String) -> bool:
+	if Global.is_production() or Global.deep_link_obj == null:
+		return false
+	return Global.deep_link_obj.params.has(name)
 
 
 func create_guest_account_if_needed():

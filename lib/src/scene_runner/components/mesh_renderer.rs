@@ -89,6 +89,12 @@ pub fn update_mesh_renderer(
             if new_value.is_none() {
                 continue;
             }
+            let _zone = crate::tools::profiler::Zone::lazy(|| {
+                (
+                    "MeshRenderer::entity".into(),
+                    format!("scene={} entity={:?}", scene.scene_id.0, entity),
+                )
+            });
 
             let new_value = new_value.unwrap();
             let (_godot_entity_node, mut node_3d) = godot_dcl_scene.ensure_node_3d(entity);

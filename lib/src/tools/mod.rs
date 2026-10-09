@@ -2,6 +2,7 @@ pub mod godot_logger;
 pub mod log_stream;
 pub mod memory_monitor;
 pub mod network_inspector;
+pub mod profiler;
 
 #[cfg(feature = "use_memory_debugger")]
 pub mod memory_debugger;

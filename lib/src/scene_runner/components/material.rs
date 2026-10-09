@@ -55,6 +55,12 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
             if new_value.is_none() {
                 continue;
             }
+            let _zone = crate::tools::profiler::Zone::lazy(|| {
+                (
+                    "Material::entity".into(),
+                    format!("scene={} entity={:?}", scene.scene_id.0, entity),
+                )
+            });
 
             let new_value = new_value.unwrap();
             let dcl_material = if let Some(material) = new_value.value.as_ref() {

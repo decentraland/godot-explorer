@@ -255,6 +255,7 @@ impl INode for Metrics {
     }
 
     fn process(&mut self, delta: f64) {
+        let _zone = crate::tools::profiler::Zone::new("Metrics::process", "");
         // frame.process() returns Some only when 1000 frames have been collected
         if let Some(mut frame_data) = self.frame.process(1000.0 * delta as f32) {
             // Enrich the event with mobile/device/network data
