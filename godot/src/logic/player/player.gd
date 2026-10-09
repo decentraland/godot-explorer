@@ -178,6 +178,8 @@ var external_velocity: Vector3 = Vector3.ZERO
 
 # Private variables (prefixed with _)
 var _hard_landing_timer: float = 0.0
+# #1554: deferred spawn reveal (loading_finished) — fires when grounded.
+var _spawn_reveal_pending: bool = false
 # #2852 M6: apex of the current airborne stretch; landing stun triggers on
 # fall HEIGHT (apex - landing), not on scene-driven cooldowns.
 var _fall_apex_y: float = 0.0
@@ -414,6 +416,7 @@ func _on_scene_changed(_scene_id: int) -> void:
 # to reset the pinch zoom back to the default third-person view. Mobile-only: the
 # pinch input is mobile-only, and desktop users can sit in first person by choice.
 func _on_loading_finished() -> void:
+	print("SPAWNDBG loading_finished")
 	if Global.is_mobile():
 		_reset_zoom_to_default()
 

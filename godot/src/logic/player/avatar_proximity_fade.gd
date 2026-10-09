@@ -100,4 +100,5 @@ func _process(_delta: float) -> void:
 		return
 	_last_fade = fade
 	for mesh in _meshes:
-		mesh.set_instance_shader_parameter(&"own_fade", fade)
+		if is_instance_valid(mesh):
+			mesh.set_instance_shader_parameter(&"own_fade", fade)
