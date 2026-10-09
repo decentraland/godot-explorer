@@ -294,7 +294,7 @@ impl WebSocketRoom {
 
                                 self.avatars.bind_mut().clean();
                                 for (alias, peer) in self.peer_identities.iter() {
-                                    self.avatars.bind_mut().add_avatar(
+                                    self.avatars.bind_mut().queue_avatar(
                                         *alias,
                                         GString::from(&format!("{:#x}", peer.address)),
                                     );
@@ -364,7 +364,7 @@ impl WebSocketRoom {
                         self.peer_identities.insert(peer.alias, Peer::new(h160));
                         self.avatars
                             .bind_mut()
-                            .add_avatar(peer.alias, GString::from(&format!("{:#x}", h160)));
+                            .queue_avatar(peer.alias, GString::from(&format!("{:#x}", h160)));
 
                         // Send PeerJoined event to MessageProcessor
                         if let Some(sender) = &self.message_processor_sender {

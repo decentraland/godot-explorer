@@ -256,6 +256,14 @@ limits/debugger/max_chars_per_second=3276800
 
 occlusion_culling/bvh_build_quality=1
 rendering_device/vulkan/max_descriptors_per_pool=256
+rendering_device/pipeline_compilation/async_executor.android=true
+rendering_device/pipeline_compilation/async_shader_variants.android=true
+rendering_device/pipeline_compilation/max_new_shader_versions_per_frame.android=1
+rendering_device/pipeline_compilation/shader_compile_threads.android=3
+rendering_device/pipeline_compilation/async_executor.ios=true
+rendering_device/pipeline_compilation/async_shader_variants.ios=true
+rendering_device/pipeline_compilation/max_new_shader_versions_per_frame.ios=1
+rendering_device/pipeline_compilation/shader_compile_threads.ios=2
 renderer/rendering_method="mobile"
 textures/vram_compression/import_etc2_astc=true
 lights_and_shadows/directional_shadow/size=512

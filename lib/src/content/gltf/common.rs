@@ -8,8 +8,8 @@ use godot::{
     classes::{
         base_material_3d::{ShadingMode, TextureParam},
         mesh::{ArrayType, PrimitiveType},
-        AnimationPlayer, BaseMaterial3D, GltfDocument, GltfState, ImageTexture, MeshInstance3D,
-        Node, Node3D, PortableCompressedTexture2D, Texture2D,
+        AnimationPlayer, BaseMaterial3D, GltfDocument, GltfState, Image, ImageTexture,
+        MeshInstance3D, Node, Node3D, PortableCompressedTexture2D, Texture2D,
     },
     global::Error,
     meta::ToGodot,
@@ -57,6 +57,9 @@ pub struct TextureBakeState {
     /// `take_over_path` on a second object steals the path from the first,
     /// which is then serialized as an empty embedded sub-resource.
     pub external_placeholders: HashMap<String, Gd<Texture2D>>,
+    /// Source `ImageTexture` instance → its image decoded on the CPU, so the
+    /// bake never calls `ImageTexture::get_image` (a blocking GPU readback).
+    pub source_images: HashMap<InstanceId, Gd<Image>>,
 }
 
 impl TextureBakeState {
@@ -68,6 +71,7 @@ impl TextureBakeState {
             cache: HashMap::new(),
             externalized: HashSet::new(),
             external_placeholders: HashMap::new(),
+            source_images: HashMap::new(),
         }
     }
 }
@@ -128,7 +132,12 @@ pub fn post_import_process(node_to_inspect: Gd<Node>, state: &mut TextureBakeSta
                                     .insert(hash.clone(), placeholder.clone());
                                 placeholder
                             }
-                        } else if let Some(mut image) = texture_image.get_image() {
+                        } else if let Some(mut image) = state
+                            .source_images
+                            .remove(&id)
+                            // Last resort (an image the decoder could not read): a blocking GPU readback.
+                            .or_else(|| texture_image.get_image())
+                        {
                             if should_compress {
                                 create_compressed_texture(&mut image, state.max_size)
                             } else {
@@ -149,6 +158,121 @@ pub fn post_import_process(node_to_inspect: Gd<Node>, state: &mut TextureBakeSta
 
         post_import_process(child, state);
     }
+}
+
+/// Decode every glTF image on the CPU from the importer's byte sources (data URI,
+/// file, bufferView), keyed by the `ImageTexture` at the same `get_images()` index.
+/// Images it cannot decode are left out and get read back instead.
+fn decode_gltf_source_images(
+    state: &mut Gd<GltfState>,
+    base_path: &str,
+    skip: &HashMap<InstanceId, String>,
+) -> HashMap<InstanceId, Gd<Image>> {
+    let json = state.get_json();
+    let Some(images_json) = json.get("images").and_then(|v| v.try_to::<VarArray>().ok()) else {
+        return HashMap::new();
+    };
+    // Typed-array access panics on null entries, so read them as Variants.
+    let images = state.get_images().to_variant();
+    let image_count = images.call("size", &[]).try_to::<i64>().unwrap_or(0);
+    if image_count != images_json.len() as i64 {
+        return HashMap::new();
+    }
+    let buffer_views = state.get_buffer_views();
+
+    let mut out = HashMap::new();
+    for (index, entry) in images_json.iter_shared().enumerate() {
+        let Ok(texture) = images
+            .call("get", &[(index as i64).to_variant()])
+            .try_to::<Gd<ImageTexture>>()
+        else {
+            continue;
+        };
+        if skip.contains_key(&texture.instance_id()) {
+            continue;
+        }
+        let Ok(dict) = entry.try_to::<VarDictionary>() else {
+            continue;
+        };
+        let bytes: Option<Vec<u8>> =
+            if let Some(uri) = dict.get("uri").and_then(|v| v.try_to::<GString>().ok()) {
+                let uri = uri.to_string();
+                if let Some(data) = uri.strip_prefix("data:") {
+                    data.split_once(',').and_then(|(_, b64)| {
+                        use base64::Engine as _;
+                        base64::engine::general_purpose::STANDARD.decode(b64).ok()
+                    })
+                } else {
+                    std::fs::read(format!("{}{}", base_path, uri)).ok()
+                }
+            } else if let Some(view) = dict.get("bufferView").and_then(|v| v.try_to::<i64>().ok()) {
+                buffer_views
+                    .get(view as usize)
+                    .map(|bv| bv.load_buffer_view_data(&*state).to_vec())
+            } else {
+                None
+            };
+        if let Some(image) = bytes.and_then(|b| decode_image_bytes(&b)) {
+            out.insert(texture.instance_id(), image);
+        }
+    }
+    out
+}
+
+/// Decode by content like `GLTFDocument::_parse_image_bytes_into_image` (plus
+/// the WebP/KTX extensions), with PNG colorspace chunks ignored per the spec.
+fn decode_image_bytes(bytes: &[u8]) -> Option<Gd<Image>> {
+    let is_png = bytes.starts_with(PNG_SIGNATURE);
+    let is_jpg = bytes.starts_with(&[0xFF, 0xD8, 0xFF]);
+    let is_webp = bytes.len() > 12 && &bytes[0..4] == b"RIFF" && &bytes[8..12] == b"WEBP";
+    let is_ktx = bytes.starts_with(b"\xABKTX 20");
+
+    let mut image = Image::new_gd();
+    let err = if is_png {
+        let stripped = strip_png_colorspace_chunks(bytes);
+        image.load_png_from_buffer(&PackedByteArray::from(stripped.as_deref().unwrap_or(bytes)))
+    } else if is_jpg {
+        image.load_jpg_from_buffer(&PackedByteArray::from(bytes))
+    } else if is_webp {
+        image.load_webp_from_buffer(&PackedByteArray::from(bytes))
+    } else if is_ktx {
+        image.load_ktx_from_buffer(&PackedByteArray::from(bytes))
+    } else {
+        return None;
+    };
+    (err == Error::OK && !image.is_empty()).then_some(image)
+}
+
+const PNG_SIGNATURE: &[u8] = b"\x89PNG\r\n\x1a\n";
+
+/// The importer decodes PNGs ignoring gamma (glTF 2.0); `Image::load_png_from_buffer`
+/// honors it. Dropping the colorspace chunks makes the two decode alike.
+/// `None` when there is nothing to strip or the chunk layout is malformed.
+fn strip_png_colorspace_chunks(bytes: &[u8]) -> Option<Vec<u8>> {
+    let mut out = Vec::with_capacity(bytes.len());
+    out.extend_from_slice(PNG_SIGNATURE);
+    let mut pos = PNG_SIGNATURE.len();
+    let mut stripped = false;
+    let mut complete = false;
+    while pos + 12 <= bytes.len() {
+        let len = u32::from_be_bytes(bytes[pos..pos + 4].try_into().ok()?) as usize;
+        let end = pos.checked_add(12)?.checked_add(len)?;
+        if end > bytes.len() {
+            return None;
+        }
+        let kind = &bytes[pos + 4..pos + 8];
+        if matches!(kind, b"gAMA" | b"cHRM" | b"sRGB" | b"iCCP") {
+            stripped = true;
+        } else {
+            out.extend_from_slice(&bytes[pos..end]);
+        }
+        pos = end;
+        if kind == b"IEND" {
+            complete = true;
+            break;
+        }
+    }
+    (stripped && complete).then_some(out)
 }
 
 /// Image extensions the asset server bakes into standalone `.res` textures
@@ -1231,6 +1355,8 @@ where
         if ctx.external_texture_refs {
             bake.external = map_gltf_images_to_hashes(&mut new_gltf_state, &dependencies_hash);
         }
+        bake.source_images =
+            decode_gltf_source_images(&mut new_gltf_state, &ctx.content_folder, &bake.external);
 
         let node = new_gltf
             .generate_scene(&new_gltf_state)
@@ -1307,4 +1433,39 @@ where
     report_resource_loaded(&file_hash);
 
     Ok((result, file_size, externalized))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn chunk(kind: &[u8; 4], data: &[u8]) -> Vec<u8> {
+        let mut out = (data.len() as u32).to_be_bytes().to_vec();
+        out.extend_from_slice(kind);
+        out.extend_from_slice(data);
+        out.extend_from_slice(&[0; 4]);
+        out
+    }
+
+    #[test]
+    fn png_colorspace_chunks_are_dropped_and_the_rest_kept_in_order() {
+        let ihdr = chunk(b"IHDR", &[1; 13]);
+        let idat = chunk(b"IDAT", &[2; 5]);
+        let iend = chunk(b"IEND", &[]);
+        let mut png = PNG_SIGNATURE.to_vec();
+        for c in [
+            &ihdr,
+            &chunk(b"gAMA", &[0; 4]),
+            &chunk(b"iCCP", &[3; 9]),
+            &idat,
+            &iend,
+        ] {
+            png.extend_from_slice(c);
+        }
+        let expected = [PNG_SIGNATURE, &ihdr, &idat, &iend].concat();
+        assert_eq!(strip_png_colorspace_chunks(&png), Some(expected.clone()));
+        // nothing to strip, or a truncated chunk: keep the original bytes
+        assert_eq!(strip_png_colorspace_chunks(&expected), None);
+        assert_eq!(strip_png_colorspace_chunks(&png[..png.len() - 3]), None);
+    }
 }

@@ -163,9 +163,18 @@ impl DclAndroidPlugin {
     }
 
     /// Get dynamic mobile metrics (changes during runtime) - internal use only
+    #[cfg(feature = "use_memory_debugger")]
     pub(crate) fn get_mobile_metrics_internal() -> Option<DclMobileMetrics> {
         let mut singleton = Self::try_get_singleton()?;
         let metrics = Self::timed_jni_call(&mut singleton, "getMobileMetrics", &[]);
+        let dict = metrics.try_to::<VarDictionary>().ok()?;
+        Some(DclMobileMetrics::from_dictionary(dict))
+    }
+
+    /// Battery/thermal fields of `getMobileMetrics` without the PSS walk (`memory_usage` = -1).
+    pub(crate) fn get_battery_metrics_internal() -> Option<DclMobileMetrics> {
+        let mut singleton = Self::try_get_singleton()?;
+        let metrics = Self::timed_jni_call(&mut singleton, "getThermalAndChargingState", &[]);
         let dict = metrics.try_to::<VarDictionary>().ok()?;
         Some(DclMobileMetrics::from_dictionary(dict))
     }

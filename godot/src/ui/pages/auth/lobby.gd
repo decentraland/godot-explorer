@@ -23,6 +23,8 @@ extends Control
 
 signal change_scene(new_scene_path: String)
 
+const EXPLORER_SCENE := "res://src/ui/explorer.tscn"
+
 const FTUE_PLACE_ID: String = "780f04dd-eba1-41a8-b109-74896c87e98b"
 const LOGO_TAP_TIMEOUT: float = 0.5  # seconds to reset tap count
 # Guest-login (thirdweb) can hang on a flaky network and leave the user stuck on
@@ -563,6 +565,9 @@ func _ready():
 	Global.deep_link_router.deep_link_signin_parked.connect(_on_deep_link_signin_parked)
 
 	Global.scene_runner.set_pause(true)
+	# Parse and compile the explorer's script tree on a worker while the lobby/splash is up;
+	# loading it synchronously in go_to_explorer froze the main thread for seconds on iOS.
+	ResourceLoader.load_threaded_request(EXPLORER_SCENE)
 
 	if Global.cli.skip_lobby:
 		_skip_lobby = true
@@ -733,7 +738,16 @@ func go_to_explorer():
 	if is_inside_tree():
 		# #2386: dismiss the startup splash overlay so the explorer's own loading screen shows.
 		SplashOverlay.fade_out()
-		get_tree().change_scene_to_file("res://src/ui/explorer.tscn")
+		var scene: PackedScene = null
+		if (
+			ResourceLoader.load_threaded_get_status(EXPLORER_SCENE)
+			!= ResourceLoader.THREAD_LOAD_INVALID_RESOURCE
+		):
+			scene = ResourceLoader.load_threaded_get(EXPLORER_SCENE) as PackedScene
+		if scene != null:
+			get_tree().change_scene_to_packed(scene)
+		else:
+			get_tree().change_scene_to_file(EXPLORER_SCENE)
 
 
 ## Cold-start deeplink redirect. Booting the explorer straight into a private world the user

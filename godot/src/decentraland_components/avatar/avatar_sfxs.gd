@@ -43,6 +43,10 @@ const LAND_SOUNDS = [
 const WALK_INTERVAL = 500
 const JOG_INTERVAL = 350
 const RUN_INTERVAL = 300
+# Past max_distance (+ margin for movement during one recheck) nothing is audible, so polling
+# sleeps and only rechecks the camera (the listener) distance.
+const AUDIBLE_MARGIN := 10.0
+const RANGE_RECHECK_MS := 500
 
 var next_tick = 0
 
@@ -56,6 +60,7 @@ var last_jog: bool = false
 var last_rise: bool = false
 var last_fall: bool = false
 var last_land: bool = false
+var _next_range_check: int = 0
 
 # Both players keep `max_distance = 50` where `audio_source.gd` sets it to 0.
 # Deliberate, not an oversight: Godot's `max_distance` adds a linear ramp on
@@ -77,7 +82,14 @@ func _process(_delta):
 	if avatar == null or not is_instance_valid(avatar) or avatar.blocked:
 		return
 	var current_time = Time.get_ticks_msec()
-	if !audio_player_steps.is_playing() and avatar.land and current_time > next_tick:
+	if current_time >= _next_range_check:
+		_next_range_check = current_time + RANGE_RECHECK_MS
+		if not _in_audible_range():
+			set_process(false)
+			_schedule_range_recheck()
+			return
+	var land: bool = avatar.land
+	if !audio_player_steps.is_playing() and land and current_time > next_tick:
 		if avatar.run:
 			audio_player_steps.stream = RUN_SOUNDS[run_index]
 			audio_player_steps.play()
@@ -94,12 +106,40 @@ func _process(_delta):
 			walk_index = walk_index + 1 if walk_index < WALK_SOUNDS.size() - 1 else 0
 			next_tick = current_time + WALK_INTERVAL
 
-	if last_land != avatar.land:
+	if last_land != land:
 		# Start/stop land
-		last_land = avatar.land
+		last_land = land
 		if last_rise == false:  # This sould be trigger on jumps
 			audio_player_effects.stream = JUMP_SOUNDS.pick_random()
 			audio_player_effects.play()
 		else:  # This sould be trigger when it landed...
 			audio_player_effects.stream = LAND_SOUNDS.pick_random()
 			audio_player_effects.play()
+
+
+func _in_audible_range() -> bool:
+	var camera := get_viewport().get_camera_3d()
+	if camera == null:
+		return true
+	var max_dist: float = audio_player_steps.max_distance + AUDIBLE_MARGIN
+	return (
+		camera.global_position.distance_squared_to(audio_player_steps.global_position)
+		< max_dist * max_dist
+	)
+
+
+func _schedule_range_recheck() -> void:
+	get_tree().create_timer(RANGE_RECHECK_MS / 1000.0).timeout.connect(_on_range_recheck)
+
+
+func _on_range_recheck() -> void:
+	if not is_inside_tree():
+		set_process(true)
+		return
+	if not _in_audible_range():
+		_schedule_range_recheck()
+		return
+	# Landing changes while asleep were inaudible; don't replay them on wake.
+	if is_instance_valid(avatar):
+		last_land = avatar.land
+	set_process(true)

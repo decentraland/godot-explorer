@@ -225,6 +225,10 @@ pub struct DclAvatar {
     #[export]
     is_grounded: bool,
 
+    // Last transform written by this class; unchanged frames skip the write and
+    // its subtree propagation. Remote avatars are only moved from here.
+    rendered_transform: Option<Transform3D>,
+
     lerp_state: LerpState,
     base: Base<Node3D>,
 }
@@ -245,6 +249,7 @@ impl INode3D for DclAvatar {
             current_parcel_scene_id: SceneId::INVALID.0,
             current_parcel_position: Vector2i::new(i32::MAX, i32::MAX),
             wire_classification: false,
+            rendered_transform: None,
             lerp_state: Default::default(),
             base,
             walk: false,
@@ -366,9 +371,7 @@ impl DclAvatar {
         if first {
             // First packet: no segment yet — snap, interpolating from a zeroed
             // state would drag the avatar across the world.
-            self.base_mut().set_global_position(new_target.origin);
-            self.base_mut()
-                .set_global_rotation(new_target.basis.get_euler());
+            self.write_rendered_transform(new_target.origin, new_target.basis.get_euler());
         }
 
         self.update_parcel_position(self.lerp_state.target_position());
@@ -394,9 +397,7 @@ impl DclAvatar {
         self.lerp_state.smoothed_speed = 0.0;
         self.lerp_state.since_last_packet = 0.0;
 
-        self.base_mut()
-            .set_global_rotation(new_target.basis.get_euler());
-        self.base_mut().set_global_position(new_target.origin);
+        self.write_rendered_transform(new_target.origin, new_target.basis.get_euler());
 
         self.update_parcel_position(new_target.origin);
     }
@@ -428,6 +429,42 @@ impl DclAvatar {
                 ],
             );
         }
+    }
+
+    /// One global-transform write (one subtree propagation), skipped when unchanged.
+    fn write_rendered_transform(&mut self, origin: Vector3, euler: Vector3) {
+        let transform = Transform3D::new(Basis::from_euler(EulerOrder::YXZ, euler), origin);
+        if self.rendered_transform == Some(transform) {
+            return;
+        }
+        self.rendered_transform = Some(transform);
+        self.base_mut().set_global_transform(transform);
+    }
+
+    pub fn rendered_transform(&self) -> Option<Transform3D> {
+        self.rendered_transform
+    }
+
+    /// Locomotion flags packed for one GDScript read per frame: bits 0-6
+    /// walk/jog/run/rise/fall/land/is_grounded, 8-15 jump_count, 16-17 glide_state.
+    #[func]
+    fn get_anim_bits(&self) -> i64 {
+        let flags = [
+            self.walk,
+            self.jog,
+            self.run,
+            self.rise,
+            self.fall,
+            self.land,
+            self.is_grounded,
+        ];
+        let mut bits = flags
+            .iter()
+            .enumerate()
+            .fold(0i64, |acc, (i, f)| acc | ((*f as i64) << i));
+        bits |= (self.jump_count.clamp(0, 255) as i64) << 8;
+        bits |= ((self.glide_state & 3) as i64) << 16;
+        bits
     }
 
     /// Snapshot of the anim flags as they are RIGHT NOW (post classification
@@ -588,9 +625,7 @@ impl DclAvatar {
                 if !self.lerp_state.buffer.is_empty() {
                     // Position, rotation and anim state all render off one clock.
                     let (new_position, new_yaw, anim, on_timeline) = self.lerp_state.render();
-                    self.base_mut().set_global_position(new_position);
-                    self.base_mut()
-                        .set_global_rotation(Vector3::new(0.0, new_yaw, 0.0));
+                    self.write_rendered_transform(new_position, Vector3::new(0.0, new_yaw, 0.0));
                     if on_timeline {
                         self.apply_anim(&anim);
                     }

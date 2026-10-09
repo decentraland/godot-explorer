@@ -31,11 +31,9 @@ pub const GODOT_BUILD_SHA: &str = "5ce8f80f4";
 /// branch's CI build. An explicit `--branch` on the CLI still takes precedence over this.
 ///
 /// Reset to `None` once the branch is merged and `GODOT_BUILD_SHA` is bumped to the merge commit —
-/// leaving a branch pinned here makes every dev/CI pull an unmerged engine build. Currently unset:
-/// the release freed-instance check (decentraland/godotengine#25) is merged into `4.6.2` and
-/// `GODOT_BUILD_SHA` points at that merge commit, which also carries the failed-`Main::setup2`
-/// Android fix (#21), the Mali vertex-lighting NaN fix (#23) and the sha1 build-id fix (#20).
-pub const GODOT_USE_BRANCH: Option<&str> = None;
+/// leaving a branch pinned here makes every dev/CI pull an unmerged engine build. Currently set to
+/// the non-blocking pipeline/shader compile work (decentraland/godotengine#27) until it merges.
+pub const GODOT_USE_BRANCH: Option<&str> = Some("perf/hiccupless-loading");
 
 /// Release tag identifying a specific fork build — `<version>.stable.gh.<sha>`, mirroring the
 /// `--version` string. Single source for the release URL path segment, the on-disk template SHA

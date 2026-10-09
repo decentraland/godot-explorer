@@ -116,6 +116,9 @@ struct ImageSize {
     width: i32,
 }
 
+/// Per-frame budget for mounting queued packs (see `process`).
+const MAIN_THREAD_PACK_BUDGET: std::time::Duration = std::time::Duration::from_millis(6);
+
 /// Main-thread queue for `ProjectSettings.load_resource_pack`. That call
 /// mutates Godot's virtual filesystem and is main-thread-only; running it
 /// on a tokio worker raced with the render thread over Godot's internal
@@ -439,16 +442,30 @@ impl INode for ContentProvider {
         // blocking acquire would deadlock the engine while workers wait
         // for it.
         if let Ok(_permit) = self.godot_single_thread.clone().try_acquire_owned() {
-            let queued: Vec<(String, oneshot::Sender<bool>)> = match MAIN_THREAD_PACK_QUEUE.lock() {
-                Ok(mut q) => std::mem::take(&mut *q),
-                Err(_) => Vec::new(),
-            };
-            for (zip_path, reply) in queued {
+            let mut queued: Vec<(String, oneshot::Sender<bool>)> =
+                match MAIN_THREAD_PACK_QUEUE.lock() {
+                    Ok(mut q) => std::mem::take(&mut *q),
+                    Err(_) => Vec::new(),
+                };
+            // Each mount costs ~10 ms on a mid-range phone and a scene can queue
+            // 200+ at once: spread them over frames instead of one 2 s stall.
+            let budget_start = std::time::Instant::now();
+            while !queued.is_empty() {
+                let (zip_path, reply) = queued.remove(0);
                 let ok = godot::classes::ProjectSettings::singleton()
                     .load_resource_pack_ex(&zip_path)
                     .replace_files(false)
                     .done();
                 let _ = reply.send(ok);
+                if budget_start.elapsed() >= MAIN_THREAD_PACK_BUDGET {
+                    break;
+                }
+            }
+            if !queued.is_empty() {
+                if let Ok(mut q) = MAIN_THREAD_PACK_QUEUE.lock() {
+                    queued.append(&mut q);
+                    *q = queued;
+                }
             }
         }
 
@@ -659,7 +676,8 @@ impl ContentProvider {
     ///
     /// If an optimized wearable base URL is configured, this will first check for
     /// a pre-optimized ZIP bundle at `{base_url}/{hash}-mobile.zip`. If found,
-    /// it loads the resource pack and returns `res://glbs/{hash}.scn`.
+    /// it extracts its `.scn` into the cache folder and returns that path
+    /// (multi-asset packs are mounted and resolve to `res://glbs/{hash}.scn`).
     ///
     /// Otherwise, falls back to runtime GLTF processing (downloading the GLTF,
     /// processing it, and saving to `user://content/wearables/{hash}.tscn`).
@@ -810,7 +828,8 @@ impl ContentProvider {
     ///
     /// If an optimized wearable base URL is configured, this will first check for
     /// a pre-optimized ZIP bundle at `{base_url}/{hash}-mobile.zip`. If found,
-    /// it loads the resource pack and returns `res://glbs/{hash}.scn`.
+    /// it extracts its `.scn` into the cache folder and returns that path
+    /// (multi-asset packs are mounted and resolve to `res://glbs/{hash}.scn`).
     ///
     /// Otherwise, falls back to runtime GLTF processing (downloading the GLTF,
     /// processing it, and saving to `user://content/emotes/{hash}.tscn`).
@@ -3017,6 +3036,72 @@ impl ContentProvider {
     }
 }
 
+/// Cache file a wearable/emote `-mobile.zip` is extracted to; loaded by path
+/// like the scene `.opt.scn` files, with no resource-pack mount.
+fn mobile_scn_name(hash: &str) -> String {
+    format!("{}.mobile.scn", cache_file_name(hash))
+}
+
+/// Extract `glbs/{hash}.scn` from a single-entry `-mobile.zip` into the cache
+/// folder and delete the zip. `false` (zip kept) when it holds anything else:
+/// multi-asset packs reference `res://` siblings and still need the mount.
+async fn extract_mobile_scn(
+    ctx: &SceneGltfContext,
+    file_hash: &str,
+    zip_name: &str,
+    scn_name: &str,
+) -> bool {
+    let zip_path = format!("{}{}", ctx.content_folder, zip_name);
+    let scn_path = format!("{}{}", ctx.content_folder, scn_name);
+    let entry = format!("glbs/{}.scn", file_hash);
+
+    let listing = {
+        let zip_path = zip_path.clone();
+        tokio::task::spawn_blocking(move || -> Option<Vec<String>> {
+            let file = std::fs::File::open(&zip_path).ok()?;
+            let mut archive = zip::ZipArchive::new(file).ok()?;
+            Some(
+                (0..archive.len())
+                    .filter_map(|i| archive.by_index(i).ok().map(|f| f.name().to_string()))
+                    .collect(),
+            )
+        })
+        .await
+        .ok()
+        .flatten()
+    };
+    if listing.as_deref() != Some(std::slice::from_ref(&entry)) {
+        return false;
+    }
+
+    let provider = &ctx.resource_provider;
+    if !provider.begin_local_install(scn_name).await {
+        // Another load of the same hash is extracting it.
+        for _ in 0..100 {
+            if std::path::Path::new(&scn_path).exists() {
+                return true;
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        }
+        return false;
+    }
+    let extracted = super::bundle::extract_one(&zip_path, &entry, &scn_path).await;
+    if let Ok(size) = &extracted {
+        provider.register_local_file(&scn_path, *size as i64).await;
+    }
+    provider.end_local_install(scn_name).await;
+    match extracted {
+        Ok(_) => {
+            super::bundle::delete_zip(provider, zip_name, &zip_path).await;
+            true
+        }
+        Err(e) => {
+            tracing::warn!("extract {} from {} failed: {}", entry, zip_name, e);
+            false
+        }
+    }
+}
+
 impl ContentProvider {
     /// Get the resource provider for sharing with other systems (like ContentProvider2)
     pub fn get_resource_provider(&self) -> Arc<ResourceProvider> {
@@ -3041,6 +3126,14 @@ impl ContentProvider {
         // 1. Check if optimized ZIP is already downloaded locally (only if optimized URL is provided)
         let zip_name = format!("{}-mobile.zip", file_hash);
         let local_zip_path = format!("{}{}", ctx.content_folder, zip_name);
+        let scn_name = mobile_scn_name(&file_hash);
+        let scn_path = format!("{}{}", ctx.content_folder, scn_name);
+
+        if optimized_base_url.is_some() && std::path::Path::new(&scn_path).exists() {
+            ctx.resource_provider.touch_file_async(&scn_path).await;
+            optimized_wearable_counter.fetch_add(1, Ordering::Relaxed);
+            return Ok(Some(GString::from(&scn_path).to_variant()));
+        }
 
         // 2. Determine if we should use optimized version
         // IMPORTANT: Only check for local ZIP if optimized_base_url is Some
@@ -3127,6 +3220,17 @@ impl ContentProvider {
 
         // 3. Load optimized or fall back to runtime processing
         if use_optimized {
+            if extract_mobile_scn(&ctx, &file_hash, &zip_name, &scn_name).await {
+                tracing::debug!(
+                    "[OPTIMIZED] {} EXTRACTED: hash={} -> {}",
+                    asset_type.to_uppercase(),
+                    file_hash,
+                    scn_path
+                );
+                optimized_wearable_counter.fetch_add(1, Ordering::Relaxed);
+                return Ok(Some(GString::from(&scn_path).to_variant()));
+            }
+
             // Load the resource pack
             let zip_godot_path = format!("user://content/{}", zip_name);
 

@@ -157,7 +157,8 @@ var _masked_filter_paths: Array[NodePath] = []
 
 # Guard to prevent concurrent modifications to animation system
 var _is_modifying_animations: bool = false
-var _queued_emote_urn: String = ""
+# [id, mask, owner_scene_id] of a play that arrived while the library was being modified.
+var _queued_play: Array = []
 
 var _last_emote_time: float = 0.0
 # Time until which emote cancellation is blocked (for teleport grace period)
@@ -165,10 +166,15 @@ var _grace_period_until: float = 0.0
 
 # Lock to prevent concurrent async emote loading
 var _is_loading_emote: bool = false
-# Bumped by stop_emote(); async_play_emote captures it before the async load and
+# Bumped by stop_emote(); _async_load_and_play captures it before the async load and
 # skips the deferred playback when it changed — otherwise a stop arriving while the
 # emote GLB downloads is lost and a looping emote starts anyway (and never ends).
 var _stop_generation: int = 0
+# Bumped by every async_play_emote: a load that finishes after a newer play request
+# does not play (latest wins). _next_load is [urn, mask, owner_scene_id, seq] of the
+# newest request that needs loading while another load is in flight.
+var _play_seq: int = 0
+var _next_load: Array = []
 
 # Track prop visibility nodes that need to be hidden on idle
 # This avoids modifying idle_anim at runtime which can crash the mixer
@@ -185,6 +191,7 @@ func _init(_avatar: Avatar, _animation_player: AnimationPlayer, _animation_tree:
 
 	# Initialize emote loader for signal-based loading
 	emote_loader = EmoteLoader.new()
+	emote_loader.avatar = avatar
 
 	# TODO: this is a workaround because "Local to scene" is not working when
 	#	is selected in the independent nodes.
@@ -241,6 +248,7 @@ func stop_emote():
 	playing_mixed = false
 	playing_loop = false
 	_stop_generation += 1
+	_next_load = []
 
 
 ## Hand back the emote still mid-playback (if any) and clear it, so nothing reports
@@ -288,7 +296,7 @@ func play_emote(id: String, mask: int = -1, owner_scene_id: int = -1):
 		return
 	# If animation system is being modified, queue this request
 	if _is_modifying_animations:
-		_queued_emote_urn = id
+		_queued_play = [id, mask, owner_scene_id]
 		return
 
 	# Ensure animation tree is active before playing
@@ -721,16 +729,14 @@ func async_play_emote(emote_id_or_urn: String, mask: int = -1, owner_scene_id: i
 		return
 	_last_emote_time = current_time
 
-	# Prevent concurrent async loading operations
-	if _is_loading_emote:
-		return
-
 	var emote_urn: String = emote_id_or_urn
 
 	# Handle non-URN emote IDs
 	if not emote_id_or_urn.begins_with("urn"):
 		# Utility emotes are local, play directly
 		if Emotes.is_emote_utility(emote_id_or_urn):
+			_play_seq += 1
+			_next_load = []
 			play_emote(emote_id_or_urn, mask, owner_scene_id)
 			return
 		# Base emotes need to be converted to URN for remote fetch
@@ -740,41 +746,49 @@ func async_play_emote(emote_id_or_urn: String, mask: int = -1, owner_scene_id: i
 			printerr("Unknown emote: %s" % emote_id_or_urn)
 			return
 
+	_play_seq += 1
 	# Does it need to be loaded? (works for both wearable and scene emotes)
 	if _has_emote(emote_urn):
+		_next_load = []
 		play_emote(emote_urn, mask, owner_scene_id)
 		return
 
-	# Set loading lock
+	var request: Array = [emote_urn, mask, owner_scene_id, _play_seq]
+	if _is_loading_emote:
+		_next_load = request
+		return
+
 	_is_loading_emote = true
-	var stop_generation := _stop_generation
-
-	# _async_load_emote handles both wearable and scene emotes via unified path
-	await _async_load_emote(emote_urn)
-
-	# Avatar may have been removed from tree during async load
-	if not is_instance_valid(avatar) or not avatar.is_inside_tree():
-		_is_loading_emote = false
-		return
-
-	# Wait a frame for any deferred calls (load_emote_from_dcl_emote_gltf) to complete
-	await avatar.get_tree().process_frame
-
-	# Check again after waiting
-	if not is_instance_valid(avatar) or not avatar.is_inside_tree():
-		_is_loading_emote = false
-		return
-
-	# Clear loading lock
+	while not request.is_empty():
+		_next_load = []
+		if not await _async_load_and_play(request[0], request[1], request[2], request[3]):
+			break
+		request = _next_load
 	_is_loading_emote = false
+	_next_load = []
 
-	# A stop arrived while the emote was downloading — it was cancelled before it
-	# ever played; starting it now would resurrect it (loops: forever).
-	if stop_generation != _stop_generation:
-		return
 
-	# Use call_deferred to ensure playback happens on main thread after async loading
+## Loads the emote, then plays it unless a newer play or a stop arrived meanwhile.
+## Returns false when the avatar left the tree during the load.
+func _async_load_and_play(emote_urn: String, mask: int, owner_scene_id: int, seq: int) -> bool:
+	var stop_generation := _stop_generation
+	if not _has_emote(emote_urn):
+		# _async_load_emote handles both wearable and scene emotes via unified path
+		await _async_load_emote(emote_urn)
+
+	if not is_instance_valid(avatar) or not avatar.is_inside_tree():
+		return false
+	await avatar.get_tree().process_frame
+	if not is_instance_valid(avatar) or not avatar.is_inside_tree():
+		return false
+
+	# Superseded by a newer play, or stopped while downloading: starting it now
+	# would resurrect a cancelled emote (loops: forever).
+	if seq != _play_seq or stop_generation != _stop_generation:
+		return true
+
 	play_emote.call_deferred(emote_urn, mask, owner_scene_id)
+	return true
 
 
 func _async_load_emote(emote_urn: String):
@@ -931,24 +945,8 @@ func _load_emote_from_gltf_internal(
 	if _has_emote(urn):
 		return
 
-	# Set guard to prevent concurrent operations
-	_is_modifying_animations = true
-
-	# IMPORTANT: Stop all animation processing while modifying animations
-	# This prevents crashes when the AnimationMixer tries to access animations being modified
-	var was_tree_active = animation_tree.active
-	animation_tree.active = false
-
-	# Also stop AnimationPlayer to ensure no iteration over animations
-	animation_player.stop()
-
-	# Reset all animation nodes to safe defaults before modifying the library
-	# This prevents "!has_animation" errors when reactivating the tree
-	animation_single_emote_node.animation = "idle/Anim"
-	animation_mix_emote_node.get_node("A").animation = "idle/Anim"
-	animation_mix_emote_node.get_node("B").animation = "idle/Anim"
-	animation_masked_emote_node.animation = "idle/Anim"
-
+	# Adding a clip only extends the mixer's caches, so unlike removals
+	# (clean_unused_emotes) this does not stop the tree or reset the emote nodes.
 	var armature_prop: Node3D = null
 
 	if obj.armature_prop != null:
@@ -1012,17 +1010,12 @@ func _load_emote_from_gltf_internal(
 	# Store in unified dictionary - scene emotes and wearable emotes use the same storage!
 	loaded_emotes_by_urn[urn] = emote_item_data
 
-	# Reactivate animation system after modifications are complete
-	# Do this via call_deferred to ensure all modifications are fully applied
-	# before the animation system starts processing again
-	_reactivate_animation_system.call_deferred(was_tree_active)
-
 
 func _reactivate_animation_system(_was_active: bool):
 	# Safety check: avatar may have been freed during deferred call
 	if not is_instance_valid(animation_tree):
 		_is_modifying_animations = false
-		_queued_emote_urn = ""
+		_queued_play = []
 		return
 
 	# Reactivate animation system after modifications
@@ -1034,11 +1027,11 @@ func _reactivate_animation_system(_was_active: bool):
 	_is_modifying_animations = false
 
 	# Process any queued emote request (both wearable and scene emotes use same path now)
-	if not _queued_emote_urn.is_empty():
-		var queued = _queued_emote_urn
-		_queued_emote_urn = ""
+	if not _queued_play.is_empty():
+		var queued := _queued_play
+		_queued_play = []
 		# Use another deferred call to ensure tree is fully ready
-		play_emote.call_deferred(queued)
+		play_emote.call_deferred(queued[0], queued[1], queued[2])
 
 
 func _merge_animations(avatar_anim: Animation, prop_anim: Animation) -> Animation:
@@ -1209,6 +1202,48 @@ func freeze_on_idle():
 	for child in avatar.get_children():
 		if child.name.begins_with("Armature_Prop"):
 			child.hide()
+
+
+## Remote network avatars load emotes on first play (async_play_emote); the local
+## player, UI previews and scene NPCs load every equipped emote up front.
+func _loads_emotes_lazily() -> bool:
+	return Global.avatars != null and avatar.get_parent() == Global.avatars
+
+
+## Starts the equipped emote downloads, appending each audio promise and its urn.
+func fetch_equipped_emotes(body_shape_id: String, promises: Array, promises_info: Array) -> void:
+	if _loads_emotes_lazily():
+		return
+	for emote_urn in avatar.avatar_data.get_emotes():
+		if emote_urn.begins_with("urn"):
+			for emote_promise in async_fetch_emote(emote_urn, body_shape_id):
+				promises.push_back(emote_promise)
+				promises_info.push_back(emote_urn)
+
+
+## Adds the equipped emotes to the library (unless lazy), then drops unequipped ones.
+func async_load_equipped_emotes() -> void:
+	if not _loads_emotes_lazily():
+		for emote_urn in avatar.avatar_data.get_emotes():
+			if not emote_urn.begins_with("urn"):
+				continue
+			var emote = Global.content_provider.get_wearable(emote_urn)
+			if emote == null:
+				continue
+			var body_shape_id: String = avatar.avatar_data.get_body_shape()
+			var file_hash = Wearables.get_item_main_file_hash(emote, body_shape_id)
+			if file_hash.is_empty():
+				continue
+			var obj = await emote_loader.async_get_emote_gltf(
+				file_hash,
+				emote.get_representation_main_file(body_shape_id),
+				emote.get_content_mapping()
+			)
+			if not NodeGuard.is_alive(avatar, "AvatarEmoteController.async_load_equipped_emotes"):
+				return
+			if obj != null:
+				load_emote_from_dcl_emote_gltf(emote_urn, obj, file_hash)
+	clean_unused_emotes()
 
 
 ## Fetch an emote using signal-based loading.
