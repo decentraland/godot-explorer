@@ -304,7 +304,25 @@ func show_auth_email_screen():
 	show_panel(sign_in_with_email)
 
 
-func show_discover_ftue_screen(campaign_resolution: Dictionary = {}):
+## Shows the FTUE, or skips it when there is a single place to discover: a one-card carousel
+## would only ask the user to confirm the obvious, so the launch boots straight into it (#3022).
+## Decided on the list prefetched since Avatar Create and never awaited: a list still in
+## flight, or anything failing on the way, falls through to the screen.
+func _async_show_discover_ftue_screen(campaign_resolution: Dictionary) -> void:
+	var places: Array[Dictionary] = ftue_screen.get_prefetched_places()
+	if places.size() == 1:
+		var place: Dictionary = places[0]
+		var booted := await _async_boot_explorer_at(
+			PlacesHelper.get_position_and_realm(place), PlacesHelper.is_world(place)
+		)
+		var payload := {"place_id": place.get("id", ""), "booted": booted}
+		payload.merge(CampaignResolution.metrics_context(campaign_resolution))
+		Global.metrics.track_screen_viewed("DISCOVER_FTUE_BYPASS", JSON.stringify(payload))
+		# A declined boot may have changed scene on its way out (the pre-boot gate routes a
+		# private world to Discover), freeing this lobby before the await returns.
+		if booted or not is_inside_tree():
+			return
+
 	current_screen_name = "DISCOVER_FTUE"
 	button_back.hide()
 	# Carries only the metrics context — the screen itself is the unchanged default FTUE.
@@ -312,7 +330,7 @@ func show_discover_ftue_screen(campaign_resolution: Dictionary = {}):
 	if current_profile:
 		ftue_screen.set_username(current_profile.get_name())
 	show_panel(control_discover_ftue)
-	ftue_screen.load_places()
+	ftue_screen.show_places()
 
 
 ## Entry point to the first-time experience, after the profile deploy. An install attributed
@@ -341,15 +359,11 @@ func _async_start_ftue() -> void:
 		resolution["fallback_reason"] = boot_failure
 		resolution["campaign"] = {}
 
-	show_discover_ftue_screen(resolution)
+	await _async_show_discover_ftue_screen(resolution)
 
 
 ## Boots the explorer into the campaign target. Returns "" when committed, otherwise the
 ## fallback reason to report.
-##
-## Routes through the shared cold-start deeplink path on purpose: it applies the pre-boot
-## private-world gate (#2569) and explorer.gd already reads realm/location off deep_link_obj.
-## Reproducing either here would fork two behaviours that must stay identical.
 func _async_try_boot_into_campaign_target(campaign: Dictionary, resolution: Dictionary) -> String:
 	var position_and_realm := CampaignResolution.target_position_and_realm(campaign)
 	if position_and_realm.is_empty():
@@ -360,30 +374,44 @@ func _async_try_boot_into_campaign_target(campaign: Dictionary, resolution: Dict
 		"CAMPAIGN_BYPASS", JSON.stringify(CampaignResolution.metrics_context(resolution))
 	)
 
+	# Awaited because its answer decides the return: firing and assuming success would spend
+	# the token on a launch that never reached the target, leaving no FTUE and no campaign.
+	var is_world := CampaignResolution.is_world_target(campaign)
+	if await _async_boot_explorer_at(position_and_realm, is_world):
+		return ""
+	return CampaignResolution.FALLBACK_BOOT_DECLINED
+
+
+## Boots the explorer at a [position, realm] pair. Returns whether the boot committed.
+##
+## Routes through the shared cold-start deeplink path on purpose: it applies the pre-boot
+## private-world gate (#2569) and explorer.gd already reads realm/location off deep_link_obj.
+## Reproducing either here would fork two behaviours that must stay identical.
+func _async_boot_explorer_at(position_and_realm: Array, is_world: bool) -> bool:
 	# Snapshotted: the write below is on the shared deep_link_obj, so a redirect already in
-	# flight would read the campaign's destination instead of its own if this one declines.
+	# flight would read this destination instead of its own if this one declines.
 	var previous_realm: String = Global.deep_link_obj.realm
 	var previous_location: Vector2i = Global.deep_link_obj.location
 
-	if CampaignResolution.is_world_target(campaign):
+	if is_world:
 		Global.deep_link_obj.realm = position_and_realm[1]
 		Global.deep_link_obj.location = Vector2i.MAX
 	else:
 		Global.deep_link_obj.realm = ""
 		Global.deep_link_obj.location = position_and_realm[0]
 
-	# Awaited because its answer decides the return: firing and assuming success would spend
-	# the token on a launch that never reached the target, leaving no FTUE and no campaign.
 	if await _async_redirect_by_deep_link():
-		return ""
+		return true
 
 	Global.deep_link_obj.realm = previous_realm
 	Global.deep_link_obj.location = previous_location
-	return CampaignResolution.FALLBACK_BOOT_DECLINED
+	return false
 
 
 func async_show_avatar_create_screen():
 	track_lobby_screen("AVATAR_CREATE")
+	# Ahead of the FTUE gate, so deciding the single-place bypass never waits on the network.
+	ftue_screen.prefetch_places()
 	button_back.show()
 	show_panel(control_avatar_create)
 	avatar_preview.reparent(avatar_preview_container_avatar_create)
