@@ -95,14 +95,17 @@ struct ImpostorSlot {
     cache_key: String,
 }
 
-/// A peer that arrived while every scene entity slot was taken. Kept up to date
-/// until a slot frees, so promotion shows the peer as it is now.
+/// A comms peer waiting to be spawned: spawns are drained one per frame, and wait
+/// longer while every scene entity slot is taken. Kept up to date until then, so
+/// the spawn shows the peer as it is now.
 struct PendingAvatar {
     alias: AvatarAlias,
     address: GString,
     profile: Option<UserProfile>,
     transform: Option<DclTransformAndParent>,
     blocked: bool,
+    voice: Option<(u32, u32, u32)>,
+    emote: Option<(u32, String, i64)>,
 }
 
 #[derive(GodotClass)]
@@ -177,6 +180,9 @@ impl INode for AvatarScene {
     fn process(&mut self, _delta: f64) {
         self.update_impostor_transforms();
         self.push_interpolated_transforms_to_scenes();
+        if !self.pending_avatars.is_empty() {
+            self.promote_pending_avatar();
+        }
         self.maybe_run_cache_cleanup();
     }
 }
@@ -819,6 +825,20 @@ impl AvatarScene {
             self.queue_pending_avatar(alias, address);
             return;
         };
+        self.spawn_avatar(alias, address, entity_id);
+    }
+
+    /// Comms entry point: the avatar is instantiated by `process`, one per frame,
+    /// so a burst of joining peers doesn't land in a single frame.
+    pub fn queue_avatar(&mut self, alias: u32, address: GString) {
+        if self.avatar_entity.contains_key(&alias) {
+            tracing::debug!("Avatar with alias {} already exists, discarding", alias);
+            return;
+        }
+        self.queue_pending_avatar(alias, address);
+    }
+
+    fn spawn_avatar(&mut self, alias: AvatarAlias, address: GString, entity_id: SceneEntityId) {
         self.crdt_state.entities.try_init(entity_id);
 
         self.avatar_entity.insert(alias, entity_id);
@@ -1490,20 +1510,14 @@ impl AvatarScene {
     }
 
     fn queue_pending_avatar(&mut self, alias: AvatarAlias, address: GString) {
-        if !self.slots_full_warned {
-            tracing::warn!(
-                "All {} avatar entity slots are taken, new peers wait until one frees",
-                Self::MAX_ENTITY_ID - Self::FROM_ENTITY_ID
-            );
-            self.slots_full_warned = true;
-        }
-
         let pending = PendingAvatar {
             alias,
             address,
             profile: None,
             transform: None,
             blocked: false,
+            voice: None,
+            emote: None,
         };
         match self.pending_avatar_mut(alias) {
             // Same alias, different peer: nothing stored for the old one applies.
@@ -1519,8 +1533,17 @@ impl AvatarScene {
     }
 
     fn promote_pending_avatar(&mut self) {
+        let Ok(entity_id) = self.get_next_entity_id() else {
+            if !self.slots_full_warned {
+                tracing::warn!(
+                    "All {} avatar entity slots are taken, new peers wait until one frees",
+                    Self::MAX_ENTITY_ID - Self::FROM_ENTITY_ID
+                );
+                self.slots_full_warned = true;
+            }
+            return;
+        };
         let Some(pending) = self.pending_avatars.pop_front() else {
-            self.slots_full_warned = false;
             return;
         };
         if self.pending_avatars.is_empty() {
@@ -1528,7 +1551,13 @@ impl AvatarScene {
         }
 
         let alias = pending.alias;
-        self.add_avatar(alias, pending.address);
+        self.spawn_avatar(alias, pending.address, entity_id);
+        if let Some((sample_rate, num_channels, samples_per_channel)) = pending.voice {
+            self.spawn_voice_channel(alias, sample_rate, num_channels, samples_per_channel);
+        }
+        if let Some((incremental_id, urn, mask)) = pending.emote {
+            self.play_emote(alias, incremental_id, &urn, mask);
+        }
         if let Some(profile) = pending.profile {
             self.update_avatar_by_alias(alias, &profile);
         }
@@ -1691,10 +1720,6 @@ impl AvatarScene {
             let avatars = self.get_avatars();
             self.base_mut()
                 .emit_signal("avatar_scene_changed", &[avatars.to_variant()]);
-
-            // Promotion pushes transforms to scenes, which binds the scene runner again.
-            drop(scene_runner);
-            self.promote_pending_avatar();
         }
     }
 
@@ -1730,10 +1755,17 @@ impl AvatarScene {
         for (entity_id, avatar) in self.avatar_godot_scene.iter() {
             // Only remote avatars interpolate; the local player
             // (ExternalController) already feeds scenes its exact transform.
-            if avatar.bind().get_movement_type() != AvatarMovementType::LerpTwoPoints as i32 {
+            let rendered = {
+                let avatar = avatar.bind();
+                if avatar.get_movement_type() != AvatarMovementType::LerpTwoPoints as i32 {
+                    continue;
+                }
+                avatar.rendered_transform()
+            };
+            // Same value as get_global_transform() without the engine round-trip.
+            let Some(transform) = rendered else {
                 continue;
-            }
-            let transform = avatar.get_global_transform();
+            };
             let dcl_transform = DclTransformAndParent::from_godot(&transform, Vector3::ZERO);
             // Skip scene spam while the avatar is effectively stationary.
             let unchanged = self
@@ -2028,6 +2060,15 @@ impl AvatarScene {
         let entity_id = if let Some(entity_id) = self.avatar_entity.get(&alias) {
             *entity_id
         } else {
+            if let Some(pending) = self.pending_avatar_mut(alias) {
+                if pending
+                    .emote
+                    .as_ref()
+                    .is_none_or(|(last_id, _, _)| incremental_id > *last_id)
+                {
+                    pending.emote = Some((incremental_id, emote_urn.clone(), mask));
+                }
+            }
             return;
         };
 
@@ -2061,6 +2102,9 @@ impl AvatarScene {
     /// touch the incremental-id dedup: a stop must neither depend on nor affect id ordering.
     pub fn stop_emote(&mut self, alias: u32) {
         let Some(entity_id) = self.avatar_entity.get(&alias) else {
+            if let Some(pending) = self.pending_avatar_mut(alias) {
+                pending.emote = None;
+            }
             return;
         };
         if let Some(avatar_scene) = self.avatar_godot_scene.get_mut(entity_id) {
@@ -2170,7 +2214,9 @@ impl AvatarScene {
         let entity_id = if let Some(entity_id) = self.avatar_entity.get(&alias) {
             *entity_id
         } else {
-            // TODO: handle this condition
+            if let Some(pending) = self.pending_avatar_mut(alias) {
+                pending.voice = Some((sample_rate, num_channels, samples_per_channel));
+            }
             return;
         };
 

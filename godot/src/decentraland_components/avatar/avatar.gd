@@ -140,12 +140,7 @@ var _anchors: Dictionary[int, AnchorState] = {}
 # Session-level override (e.g. "Hide UI" setting). This should not persist into avatar state.
 var _force_hide_name: bool = false
 
-# Previous-frame jump_count for rising-edge detection of double-jump SFX.
-var _last_jump_count: int = 0
-# #b2: first _process tick should not treat wire-provided jump_count>=2 as a
-# rising edge — otherwise a remote avatar first seen mid-double-jump plays the
-# SFX from nothing. Cleared after the first frame where we seed _last_jump_count.
-var _jump_count_sync_pending: bool = true
+var _locomotion := AvatarLocomotionDriver.new()
 # Latched so we don't spam Close audio / Glider_End restart / hide-timer scheduling.
 var _glider_close_initiated: bool = false
 # Previous glide_state for _update_glider_prop's edge detection.
@@ -154,7 +149,6 @@ var _prop_last_glide_state: int = 0
 # came in on the wire (OPENING/GLIDING/CLOSING) without spamming audio, instead
 # of staying invisible because prev_state==0 doesn't match any branch.
 var _prop_sync_pending: bool = true
-var _glide_forward_blend: float = 0.0
 
 # Network emote that arrived while the avatar was still loading — Pulse replays
 # the peer's last emote announcement at join, and LiveKit emotes can race the
@@ -279,7 +273,6 @@ func _ready():
 
 	wearable_loader = WearableLoader.new()
 	emote_controller = AvatarEmoteController.new(self, animation_player, animation_tree)
-	body_shape_skeleton_3d.skeleton_updated.connect(self._attach_point_skeleton_updated)
 	body_shape_skeleton_3d.skeleton_updated.connect(self._recompute_nametag_posed_top)
 	_recompute_nametag_clearance()
 	_recompute_nametag_posed_top()
@@ -691,6 +684,8 @@ func get_bounds_top_y() -> float:
 ## avatar only yaws/moves, so the per-frame cost in get_bounds_top_y is just
 ## adding the skeleton's world origin.
 func _recompute_nametag_posed_top() -> void:
+	if not _nametag_gate_visible:
+		return
 	var basis := body_shape_skeleton_3d.global_transform.basis
 	var y_row := Vector3(basis[0].y, basis[1].y, basis[2].y)
 	var top := -INF
@@ -843,12 +838,7 @@ func async_fetch_wearables_dependencies():
 
 	var async_calls_info: Array = []
 	var async_calls: Array = []
-	for emote_urn in avatar_data.get_emotes():
-		if emote_urn.begins_with("urn"):
-			var emote_promises = emote_controller.async_fetch_emote(emote_urn, body_shape_id)
-			for emote_promise in emote_promises:
-				async_calls.push_back(emote_promise)
-				async_calls_info.push_back(emote_urn)
+	emote_controller.fetch_equipped_emotes(body_shape_id, async_calls, async_calls_info)
 
 	# Use signal-based wearable loading with threaded ResourceLoader
 	# Safety check: avatar may have been freed during async operations
@@ -864,13 +854,16 @@ func async_fetch_wearables_dependencies():
 	await async_load_wearables()
 
 
-func async_try_to_set_body_shape(body_shape_hash):
+func async_try_to_set_body_shape(body_shape_hash, build: int):
 	# Safety check: avatar may have been freed during async operations
 	if not is_instance_valid(wearable_loader) or not is_inside_tree():
 		return
-	var body_shape: Node3D = await wearable_loader.async_get_wearable_node(body_shape_hash)
+	var body_shape: Node3D = await wearable_loader.async_get_wearable_node(body_shape_hash, self)
 	if body_shape == null:
 		printerr("Avatar: Failed to load body shape ", body_shape_hash)
+		return
+	if not _mesh_assembler.is_current(build):
+		body_shape.queue_free()
 		return
 
 	var new_skeleton = body_shape.find_child("Skeleton3D")
@@ -905,6 +898,7 @@ func async_load_wearables():
 	if not is_instance_valid(wearable_loader) or not is_inside_tree():
 		return
 
+	var build := _mesh_assembler.begin_build(self)
 	AvatarBuildProfiler.begin()
 
 	# Hide skeleton immediately if show_only_wearables to prevent flash of default body
@@ -939,6 +933,8 @@ func async_load_wearables():
 		# Safety check: avatar may have been freed during async operations
 		if not is_instance_valid(wearable_loader) or not is_inside_tree():
 			return
+		if not _mesh_assembler.is_current(build):
+			return
 		# Use signal-based wearable loading with threaded ResourceLoader
 		await wearable_loader.async_load_wearables(
 			curated_wearables.need_to_fetch, body_shape_wearable.get_id()
@@ -949,8 +945,10 @@ func async_load_wearables():
 			if wearable != null:
 				wearables_by_category[wearable.get_category()] = wearable
 
+	# Hidden until fully assembled: the build spans several frames (FrameWorkBudget).
+	body_shape_skeleton_3d.visible = false
 	await async_try_to_set_body_shape(
-		Wearables.get_item_main_file_hash(body_shape_wearable, avatar_data.get_body_shape())
+		Wearables.get_item_main_file_hash(body_shape_wearable, avatar_data.get_body_shape()), build
 	)
 	wearables_by_category.erase(Wearables.Categories.BODY_SHAPE)
 
@@ -964,6 +962,7 @@ func async_load_wearables():
 	for category in wearables_by_category:
 		# Safety check: avatar may have been freed during async operations
 		if not is_instance_valid(wearable_loader) or not is_inside_tree():
+			body_shape_skeleton_3d.visible = true
 			return
 
 		var wearable = wearables_by_category[category]
@@ -973,31 +972,16 @@ func async_load_wearables():
 			continue
 
 		var file_hash = Wearables.get_item_main_file_hash(wearable, avatar_data.get_body_shape())
-		var obj = await wearable_loader.async_get_wearable_node(file_hash)
+		var obj = await wearable_loader.async_get_wearable_node(file_hash, self)
 		if obj == null:
 			printerr("Avatar: Failed to load wearable ", category, " hash: ", file_hash)
 			continue
 
-		# Reparent wearable meshes directly (no need to duplicate since wearable_loader
-		# returns a fresh instantiated scene that we'll discard anyway)
-		var wearable_skeletons = obj.find_children("Skeleton3D")
-		for skeleton_3d in wearable_skeletons:
-			# Spring bones (ADR-316) and other extra bones not in the base armature
-			# must be copied into body_shape_skeleton_3d before meshes are reparented,
-			# otherwise mesh skins reference bone indices that don't exist here.
-			_mesh_assembler.merge_extra_bones(skeleton_3d)
-
-			for child in skeleton_3d.get_children():
-				if child is MeshInstance3D:
-					_mesh_assembler.rebind_skin_by_name(child, skeleton_3d)
-				skeleton_3d.remove_child(child)
-				child.set_owner(null)  # Clear owner since we're reparenting
-				# WEARABLE_NAME_PREFIX is used to identify non-bodyshape parts
-				child.name = child.name.to_lower() + WEARABLE_NAME_PREFIX + category
-				body_shape_skeleton_3d.add_child(child)
-
-		# Free the now-empty wearable container
-		obj.queue_free()
+		# WEARABLE_NAME_PREFIX is used to identify non-bodyshape parts
+		if not await _mesh_assembler.async_attach_wearable(
+			obj, WEARABLE_NAME_PREFIX + category, build
+		):
+			return
 
 		match category:
 			Wearables.Categories.UPPER_BODY:
@@ -1014,6 +998,8 @@ func async_load_wearables():
 				has_own_skin = true
 
 	AvatarBuildProfiler.mark("load_reparent")
+	if not await _mesh_assembler.async_step("Avatar::finalize", build):
+		return
 
 	# Here hidings is an alias
 	var hidings = curated_wearables.hidden_categories
@@ -1090,30 +1076,12 @@ func async_load_wearables():
 			body_shape_skeleton_3d.reset_bone_pose(i)
 
 	body_shape_skeleton_3d.visible = true
+	_mesh_assembler.end_build()
 	_recompute_nametag_clearance()
 	finish_loading = true
-	# Emotes - get from cached emote scenes
-	for emote_urn in avatar_data.get_emotes():
-		if not emote_urn.begins_with("urn"):
-			# Default (utility emotes)
-			continue
-
-		var emote = Global.content_provider.get_wearable(emote_urn)
-		if emote == null:
-			continue
-		var file_hash = Wearables.get_item_main_file_hash(emote, avatar_data.get_body_shape())
-		if file_hash.is_empty():
-			continue
-		# Use emote_loader from emote_controller to get the cached emote (threaded loading)
-		var obj = await emote_controller.emote_loader.async_get_emote_gltf(
-			file_hash,
-			emote.get_representation_main_file(avatar_data.get_body_shape()),
-			emote.get_content_mapping()
-		)
-		if obj != null:
-			emote_controller.load_emote_from_dcl_emote_gltf(emote_urn, obj, file_hash)
-
-	emote_controller.clean_unused_emotes()
+	await emote_controller.async_load_equipped_emotes()
+	if not _mesh_assembler.is_current(build):
+		return
 
 	# Refresh LOD-related state since meshes were re-created.
 	_mesh_lod_visibility_captured = false
@@ -1423,13 +1391,6 @@ func _tick_animation_throttle(delta: float) -> void:
 		_anim_throttle_counter = 0
 
 
-func _physics_process(_delta):
-	# Occlusion raycast must run here, not in _process — direct_space_state crashes
-	# when queried from an idle frame.
-	if _use_2d_nameplate:
-		NameplateLayer.update_occlusion(self)
-
-
 func _process(delta):
 	# TODO: maybe a gdext crate bug? when process implement the INode3D, super(delta) doesn't work :/
 	self.process(delta)
@@ -1455,85 +1416,31 @@ func _process(delta):
 	# off-screen freeze (that re-activation is what left frozen avatars stuck).
 	AvatarAnimHelpers.ensure_anim_active(self)
 
-	# #b18: `is_grounded` guard suppresses the all-false condition window at the
-	# jump apex (rise/fall ±0.3 deadband) so Idle doesn't leak in mid-air.
-	var self_idle = (
-		self.is_grounded && !self.jog && !self.walk && !self.run && !self.rise && !self.fall
-	)
-	emote_controller.process(self_idle)
-
-	# Masked (upper-body) emotes keep playing while moving, so idle can't gate
-	# them — otherwise Pulse would broadcast EmoteStop for a walking emote.
-	var is_emoting = (
-		emote_controller.is_playing() and (self_idle or emote_controller.playing_masked)
-	)
-	if is_local_player:
-		Global.comms.set_emoting(is_emoting)
-
-	animation_tree.set("parameters/Locomotion/conditions/idle", self_idle)
-	animation_tree.set("parameters/Locomotion/conditions/emote", emote_controller.playing_single)
-	animation_tree.set(
-		"parameters/Locomotion/conditions/nemote", not emote_controller.playing_single
-	)
-	animation_tree.set("parameters/Locomotion/conditions/emix", emote_controller.playing_mixed)
-	animation_tree.set("parameters/Locomotion/conditions/nemix", not emote_controller.playing_mixed)
-
-	var loco := AvatarAnimHelpers.locomotion_conditions(
-		self.walk, self.jog, self.run, self.is_grounded
-	)
-	animation_tree.set("parameters/Locomotion/conditions/run", loco.run)
-	animation_tree.set("parameters/Locomotion/conditions/jog", loco.jog)
-	animation_tree.set("parameters/Locomotion/conditions/walk", loco.walk)
-
-	animation_tree.set("parameters/Locomotion/conditions/rise", self.rise)
-	animation_tree.set("parameters/Locomotion/conditions/fall", self.fall)
-	animation_tree.set("parameters/Locomotion/conditions/land", self.land)
-	# #b3: nfall reads is_grounded directly (not `land`). `land` is a short pulse
-	# locally (in_grace_time) and was previously overridden to is_grounded for
-	# remotes, causing asymmetric behavior. is_grounded is the same shape on
-	# both sides, and fall's 1-2 frame deadband at apex is still avoided.
-	animation_tree.set("parameters/Locomotion/conditions/nfall", self.is_grounded)
-
-	# Rising-edge detection for one-frame AnimationTree condition pulses.
-	var jump_rising_edge: bool = self.jump_count > _last_jump_count and self.jump_count >= 2
-	# #b2: on first observation of this avatar (local or remote) suppress the
-	# rising edge so we don't retroactively play SFX for state that happened
-	# before we started watching.
-	if _jump_count_sync_pending:
-		jump_rising_edge = false
-		_jump_count_sync_pending = false
-	_last_jump_count = self.jump_count
-	var gliding_now: bool = self.glide_state == 1 or self.glide_state == 2
-
-	animation_tree.set("parameters/Locomotion/conditions/double_jump", jump_rising_edge)
-	animation_tree.set("parameters/Locomotion/conditions/gliding", gliding_now)
-	animation_tree.set("parameters/Locomotion/conditions/ngliding", not gliding_now)
-
-	var glide_moving: bool = self.walk or self.jog or self.run
-	var glide_forward_target: float = 1.0 if glide_moving else 0.0
-	_glide_forward_blend = move_toward(_glide_forward_blend, glide_forward_target, delta * 4.0)
-	animation_tree.set(
-		"parameters/Locomotion/Gliding_Idle/Blend2/blend_amount", _glide_forward_blend
-	)
-
-	if jump_rising_edge:
-		audio_player_double_jump.play()
-
-	_update_glider_prop()
+	var anim_bits: int = get_anim_bits()
+	_locomotion.tick(self, anim_bits, delta)
+	_update_glider_prop(anim_bits)
 
 
 # Toggles GliderProp visibility based on glide_state transitions. The prop is
 # a persistent child (rotated 180° Y to compensate the Unity→Godot axis flip)
 # so audio and AnimationPlayer stay warm across glide cycles.
-func _update_glider_prop() -> void:
+func _update_glider_prop(anim_bits: int) -> void:
+	var curr_state: int = AvatarLocomotionDriver.glide_state_of(anim_bits)
 	if is_avatar_shape:
 		if glider_prop.visible:
 			glider_prop.visible = false
-		_prop_last_glide_state = self.glide_state
+		_prop_last_glide_state = curr_state
 		_prop_sync_pending = false
 		return
 
-	var curr_state: int = self.glide_state
+	# No branch below acts on an unchanged state other than GLIDING or a visible CLOSED.
+	if (
+		not _prop_sync_pending
+		and curr_state == _prop_last_glide_state
+		and curr_state != 2
+		and (curr_state != 0 or not glider_prop.visible)
+	):
+		return
 
 	# #b1/#b12: first tick — adopt whatever state came in without firing open/close
 	# SFX, so a remote seen mid-glide actually shows wings and the idle loop.
@@ -1583,7 +1490,7 @@ func _update_glider_prop() -> void:
 		_schedule_glider_hide()
 
 	if curr_state == 2 and glider_prop.visible:
-		var glider_moving: bool = self.walk or self.jog or self.run
+		var glider_moving: bool = (anim_bits & AvatarLocomotionDriver.MOVING) != 0
 		var glider_clip: String = "Glider_Forward" if glider_moving else "Glider_Idle"
 		_play_glider_clip_if_different(glider_clip, 0.25)
 
@@ -1668,6 +1575,10 @@ func register_anchor_use(anchor_id: int, attachment: Node) -> void:
 		_anchors[anchor_id] = state
 		if body_shape_skeleton_3d != null:
 			state.resolve(body_shape_skeleton_3d)
+			if not body_shape_skeleton_3d.skeleton_updated.is_connected(
+				_attach_point_skeleton_updated
+			):
+				body_shape_skeleton_3d.skeleton_updated.connect(_attach_point_skeleton_updated)
 	if not state.users.has(attachment):
 		state.users.append(attachment)
 
@@ -1682,6 +1593,12 @@ func unregister_anchor_use(anchor_id: int, attachment: Node) -> void:
 	state.users.erase(attachment)
 	if state.users.is_empty():
 		_anchors.erase(anchor_id)
+	if (
+		_anchors.is_empty()
+		and body_shape_skeleton_3d != null
+		and body_shape_skeleton_3d.skeleton_updated.is_connected(_attach_point_skeleton_updated)
+	):
+		body_shape_skeleton_3d.skeleton_updated.disconnect(_attach_point_skeleton_updated)
 
 
 # Refreshes bone poses for currently-active anchors only. Wired to the

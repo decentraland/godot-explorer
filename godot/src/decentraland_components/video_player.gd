@@ -107,16 +107,24 @@ func _async_init_exo_player_backend():
 	# Set initial state to loading
 	video_state = VIDEO_STATE_LOADING
 
+	# Player creation and surface init are heavy native calls: one FrameWorkBudget step each.
+	var generation := _backend_generation
+	await FrameWorkBudget.async_acquire("ExoPlayer::create", self)
+	if generation != _backend_generation:
+		return
+
 	# Create ExoPlayer child node
 	var exo_player_scene = load("res://src/decentraland_components/exo_player.tscn")
 	exo_player = exo_player_scene.instantiate()
 	add_child(exo_player)
 
 	# Wait for ExoPlayer to be ready
-	var generation := _backend_generation
 	await get_tree().process_frame
 	if generation != _backend_generation:
 		return  # a source change disposed this backend while it was getting ready
+	await FrameWorkBudget.async_acquire("ExoPlayer::init_texture", self)
+	if generation != _backend_generation:
+		return
 	var player: Node = exo_player
 
 	# Initialize texture with initial size (will be resized when video loads)
