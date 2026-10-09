@@ -130,18 +130,22 @@ advance_mode = 2
 advance_condition = &"rise"
 
 [sub_resource type="AnimationNodeStateMachineTransition" id="AnimationNodeStateMachineTransition_p1koq"]
+xfade_time = 0.1
 switch_mode = 2
 advance_mode = 2
 
 [sub_resource type="AnimationNodeStateMachineTransition" id="AnimationNodeStateMachineTransition_4il2s"]
+xfade_time = 0.1
 advance_mode = 2
 advance_condition = &"fall_fast"
 
 [sub_resource type="AnimationNodeStateMachineTransition" id="AnimationNodeStateMachineTransition_tggp5"]
+xfade_time = 0.1
 advance_mode = 2
 advance_condition = &"apex"
 
 [sub_resource type="AnimationNodeStateMachineTransition" id="AnimationNodeStateMachineTransition_vdlve"]
+xfade_time = 0.1
 advance_mode = 2
 advance_condition = &"nfall"
 
@@ -444,6 +448,7 @@ advance_mode = 2
 advance_condition = &"nfall"
 
 [sub_resource type="AnimationNodeStateMachineTransition" id="AnimationNodeStateMachineTransition_rje2g"]
+xfade_time = 0.1
 advance_mode = 2
 advance_condition = &"nfall"
 
