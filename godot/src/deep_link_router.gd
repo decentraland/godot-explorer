@@ -219,41 +219,55 @@ func route() -> void:
 		_clear_deep_link()
 		return
 
-	var path: String = Global.deep_link_obj.path
-	# Normalize: strip trailing slashes, treat root as empty
-	path = path.rstrip("/")
-
-	match path:
-		"/jump", "/open":
+	# Route on the section, not the raw path: the website serves its landing pages
+	# one level deeper than the app's own scheme (/jump/events == /events), so
+	# matching paths literally left every web shape falling through to the teleport
+	# default below, which does nothing at all without a position or realm.
+	match Global.deep_link_obj.section:
+		"jump", "open":
 			# If location or realm is provided, teleport; otherwise open jump panel
-			if (
-				Global.deep_link_obj.is_location_defined()
-				or not Global.deep_link_obj.realm.is_empty()
-				or not Global.deep_link_obj.preview.is_empty()
-			):
+			if _has_navigation_target():
 				_route_teleport()
 			elif Global.deep_link_obj.params.is_empty():
 				deep_link_jump.emit()
 			# else: config-only params (multiplayer_debug, pulse, rust-log, scene-stats,
 			# …) were already applied in process_deep_link — a link with no navigation
 			# target must not pop an empty jump-in panel over Discover.
-		"/events":
+		"events":
 			var event_id: String = Global.deep_link_obj.params.get("id", "")
 			if not event_id.is_empty():
 				deep_link_open_event.emit(event_id)
+			elif _has_navigation_target():
+				# /jump/events?position=&realm= — the calendar invites the app itself
+				# writes (calendar_button.gd) name coordinates, not an event id.
+				_route_teleport()
 			else:
 				Global.open_discover.emit()
-		"/places":
+		"places":
 			var place_id: String = Global.deep_link_obj.params.get("id", "")
 			if not place_id.is_empty():
 				deep_link_open_place.emit(place_id)
+			elif _has_navigation_target():
+				_route_teleport()
 			else:
+				# Includes /places/place/<x>,<y>, whose coordinates live in the path
+				# rather than the query. Discover is the honest landing spot for it.
 				Global.open_discover.emit()
 		_:
-			# "/mobile", "", or any other path -> existing teleport behavior
+			# "mobile", "", or any other section -> existing teleport behavior
 			_route_teleport()
 
 	_clear_deep_link()
+
+
+## Whether the link names somewhere for the explorer to go. Kept in one place because
+## lobby.gd mirrors this decision to know when to step aside on a cold start.
+func _has_navigation_target() -> bool:
+	return (
+		Global.deep_link_obj.is_location_defined()
+		or not Global.deep_link_obj.realm.is_empty()
+		or not Global.deep_link_obj.preview.is_empty()
+	)
 
 
 func _route_teleport() -> void:
