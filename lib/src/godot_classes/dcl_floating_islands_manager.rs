@@ -335,6 +335,8 @@ impl DclFloatingIslandsManager {
         if self.ensure_world_resources().is_none() {
             return;
         }
+        // One frustum per frame: Camera3D::is_position_in_frustum rebuilds the projection per call.
+        let frustum: Vec<Plane> = camera.get_frustum().iter_shared().collect();
 
         let player = self.player_parcel;
         let view = self.view_distance;
@@ -355,7 +357,7 @@ impl DclFloatingIslandsManager {
                     continue;
                 }
                 let dist = dx.abs().max(dz.abs());
-                let wanted = dist <= 1 || Self::parcel_in_camera_view(&camera, coord);
+                let wanted = dist <= 1 || Self::parcel_in_camera_view(&frustum, coord);
                 if !wanted {
                     continue;
                 }
@@ -399,7 +401,7 @@ impl DclFloatingIslandsManager {
                 continue;
             }
 
-            let in_frustum = Self::parcel_in_camera_view(&camera, coord);
+            let in_frustum = Self::parcel_in_camera_view(&frustum, coord);
             if in_frustum {
                 if stale {
                     to_show.push(coord);
@@ -542,7 +544,7 @@ impl DclFloatingIslandsManager {
         if self.generating {
             if in_view_candidates > 0 {
                 self.empty_view_since_msec = 0;
-                if self.in_view_all_materialized(player, view, &camera) {
+                if self.in_view_all_materialized(player, view, &frustum) {
                     self.generating = false;
                     self.base_mut().emit_signal("generation_complete", &[]);
                 }
@@ -580,14 +582,14 @@ impl DclFloatingIslandsManager {
         }
     }
 
-    fn in_view_all_materialized(&self, player: Vector2i, view: i32, camera: &Gd<Camera3D>) -> bool {
+    fn in_view_all_materialized(&self, player: Vector2i, view: i32, frustum: &[Plane]) -> bool {
         for dx in -view..=view {
             for dz in -view..=view {
                 let coord = (player.x + dx, player.y + dz);
                 if !self.candidates.contains_key(&coord) {
                     continue;
                 }
-                if !Self::parcel_in_camera_view(camera, coord) {
+                if !Self::parcel_in_camera_view(frustum, coord) {
                     continue;
                 }
                 if !self.active.contains_key(&coord) {
@@ -598,7 +600,7 @@ impl DclFloatingIslandsManager {
         true
     }
 
-    fn parcel_in_camera_view(camera: &Gd<Camera3D>, coord: (i32, i32)) -> bool {
+    fn parcel_in_camera_view(frustum: &[Plane], coord: (i32, i32)) -> bool {
         let (cx, cz) = coord;
         let world_x = cx as f32 * PARCEL_SIZE + PARCEL_HALF_SIZE;
         let world_z = -(cz as f32 * PARCEL_SIZE + PARCEL_HALF_SIZE);
@@ -618,7 +620,10 @@ impl DclFloatingIslandsManager {
             Vector3::new(world_x, -PARCEL_HEIGHT_BOUND, world_z),
         ];
 
-        probes.iter().any(|p| camera.is_position_in_frustum(*p))
+        // Same test as Camera3D::is_position_in_frustum.
+        probes
+            .iter()
+            .any(|p| !frustum.iter().any(|plane| plane.is_point_over(*p)))
     }
 
     fn enqueue_parcel_build(&mut self, coord: (i32, i32)) {
