@@ -88,6 +88,13 @@ func _ready():
 	# Connect to notification clicked signal for reward notifications
 	Global.notification_clicked.connect(_on_notification_clicked)
 
+	# Pre-game there's no Explorer to render the toast queue, so system toasts (copied to
+	# clipboard, …) never showed and replayed on world entry instead (#2967). In-game the
+	# Explorer owns it.
+	if not is_in_game:
+		NotificationsManager.notification_queued.connect(_on_notification_queued)
+		NotificationsManager.kick_queue()
+
 	Global.deep_link_router.deep_link_received.connect(_on_deep_link_received)
 	Global.deep_link_router.deep_link_jump.connect(_async_on_deep_link_jump)
 	Global.deep_link_router.deep_link_open_event.connect(_async_on_deep_link_open_event)
@@ -365,6 +372,18 @@ func _on_visibility_changed():
 func _async_request_hide_menu():
 	await Global.player_identity.async_save_profile()
 	hide_menu.emit()
+
+
+## Pre-game toast consumer (see _ready). Only system toasts: social/reward notifications stay
+## queued for the Explorer, as before.
+func _on_notification_queued(notification_d: Dictionary) -> void:
+	if notification_d.get("type", "") != "system":
+		return
+	var toast = load("res://src/ui/components/organisms/notifications/notification_toast.tscn")
+	toast = toast.instantiate()
+	add_child(toast)
+	toast.toast_closed.connect(NotificationsManager.dequeue_notification)
+	toast.async_show_notification(notification_d)
 
 
 func _on_notification_clicked(notification_dict: Dictionary) -> void:
