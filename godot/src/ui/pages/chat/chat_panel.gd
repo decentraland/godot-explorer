@@ -14,12 +14,16 @@ const PORTRAIT_BOTTOM := 64
 const WIDTH_OPEN := 420
 
 var _current_state: ChatState = ChatState.CLOSED
+# Preview mode opens the chat from the toolbar's pill instead of the chatbar: the bar is
+# hidden and a spacer keeps its footprint so the messages stay aligned under the toolbar.
+var _chatbar_hidden: bool = false
 
 @onready var chat: Control = %Chat
 @onready var notifications: Control = %Notifications
 @onready var virtual_keyboard_margin: Control = %VirtualKeyboardMargin
 @onready var safe_bottom_area: PanelContainer = %Control_SafeBottomArea
 @onready var chatbar: Control = %Chatbar
+@onready var chatbar_spacer: Control = %ChatbarSpacer
 
 
 func _ready() -> void:
@@ -39,7 +43,7 @@ func _ready() -> void:
 func _apply_closed_state() -> void:
 	_current_state = ChatState.CLOSED
 	chat.hide()
-	chatbar.show()
+	_show_chatbar()
 	notifications.show()
 	_apply_default_margins()
 	if Global.is_orientation_portrait():
@@ -53,7 +57,7 @@ func _apply_closed_state() -> void:
 func _apply_open_state() -> void:
 	_current_state = ChatState.OPEN
 	chat.show()
-	chatbar.show()
+	_show_chatbar()
 	notifications.hide()
 	_apply_default_margins()
 	if Global.is_orientation_portrait():
@@ -73,8 +77,18 @@ func _apply_writing_state() -> void:
 	if Global.is_orientation_portrait():
 		add_theme_constant_override("margin_bottom", 5)
 	else:
-		chatbar.hide()
+		_hide_chatbar()
 	_update_chat_layout()
+
+
+func _show_chatbar() -> void:
+	chatbar.visible = not _chatbar_hidden
+	chatbar_spacer.visible = _chatbar_hidden
+
+
+func _hide_chatbar() -> void:
+	chatbar.hide()
+	chatbar_spacer.hide()
 
 
 func _apply_default_margins() -> void:
@@ -172,6 +186,16 @@ func hide_load_scenes_button() -> void:
 
 func is_chat_visible() -> bool:
 	return chat.visible
+
+
+## Preview mode: the toolbar's pill replaces the chatbar, so hide the bar wherever a state
+## would show it and keep its footprint with the spacer (the toolbar header is the same
+## height). Hidden states (writing) still hide both.
+func set_chatbar_hidden(hidden: bool) -> void:
+	_chatbar_hidden = hidden
+	chatbar_spacer.custom_minimum_size.y = chatbar.get_combined_minimum_size().y
+	if chatbar.visible or chatbar_spacer.visible:
+		_show_chatbar()
 
 
 ## Hide the message reading view and notification bubbles while keeping the chatbar

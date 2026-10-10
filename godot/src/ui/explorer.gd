@@ -215,6 +215,7 @@ func _ready():
 	# while focused, restore them when the chat closes.
 	chat_panel.chat.on_open_chat.connect(_on_chat_focus_entered)
 	chat_panel.chat.on_exit_chat.connect(_on_chat_focus_exited)
+	preview_hud_panel.bind_chat_panel(chat_panel)
 
 	player = load("res://src/logic/player/player.tscn").instantiate()
 
@@ -247,8 +248,8 @@ func _ready():
 	if Global.cli.debug_panel:
 		_debug_panel_from_settings = true
 
-	# Preview HUD toolbar (console/reload, plus scene-stats in preview/deep-link).
-	# Replaces the chat panel while active; never created in a normal production run.
+	# Preview HUD toolbar (chat/console/reload, plus scene-stats in preview/deep-link).
+	# Replaces the chatbar while active; never shown in a normal production run.
 	_update_preview_hud()
 
 	# multiplayer_debug deep link parameter auto-enables the multiplayer debug panel.
@@ -1049,8 +1050,8 @@ func _scene_stats_available() -> bool:
 
 
 ## Keep the (static) preview HUD toolbar in sync: create/free the scene-stats overlay, point
-## it at the previewed scene, gate scene logs, and show/hide the toolbar. The console/debug
-## panel is always present (static) so it keeps capturing logs; only scene-stats is on demand.
+## it at the previewed scene, swap the chatbar for its pill, gate scene logs, show/hide it.
+## The console/debug panel is always present (static); only scene-stats is on demand.
 func _update_preview_hud() -> void:
 	if not is_instance_valid(preview_hud_panel):
 		return
@@ -1058,6 +1059,7 @@ func _update_preview_hud() -> void:
 	preview_hud_panel.set_scene_status_available(_scene_stats_available())
 	if active:
 		preview_hud_panel.set_scene(_preview_scene_id())
+	preview_hud_panel.set_active(active)
 	Global.set_scene_log_enabled(active)
 	_restore_bottom_left_hud()
 
@@ -1072,8 +1074,8 @@ func _bottom_left_slot_blocked() -> bool:
 
 
 ## Restore the bottom-left slot: while a navbar panel is open it stays hidden; otherwise the
-## active toolbar is shown (reset to header-only) and the chat hidden, else the chat owns the
-## slot. Hide-UI still wins (nothing force-shown while the HUD is hidden).
+## active toolbar is shown (reset to header-only, closing an open chat) and the chat hidden,
+## else the chat owns the slot. Hide-UI still wins (nothing force-shown while the HUD is hidden).
 func _restore_bottom_left_hud() -> void:
 	if _bottom_left_slot_blocked():
 		_hide_bottom_left_hud()
@@ -1509,9 +1511,8 @@ func _on_chat_write_mode_changed(is_writing: bool) -> void:
 	# (owned by _on_chat_focus_entered/_exited). Write mode additionally hides the navbar
 	# bar (focus only collapses its dropdown) and the extra HUD elements the keyboard
 	# needs gone; exiting write restores them while the chat stays focused.
-	# The preview HUD toolbar and the chat share the bottom-left slot and never
-	# coexist (the toolbar hides the chat), so chat write mode can't overlap it —
-	# no toolbar handling is needed here.
+	# In preview the chat opens under the toolbar's pill; the toolbar hides itself while
+	# writing (preview_hud_panel).
 	if is_writing:
 		navbar.hide()
 		_set_scene_ui_visible(false)
