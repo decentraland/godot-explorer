@@ -701,8 +701,8 @@ func save_to_settings_file():
 		for key in settings_file.get_section_keys("session"):
 			new_settings_file.set_value("session", key, settings_file.get_value("session", key))
 
-	# When session is ephemeral (guest/preview), preserve existing session data on disk
-	# and don't overwrite with the in-memory guest session values.
+	# When session is ephemeral (--guest-profile / benchmark), preserve existing session data
+	# on disk and don't overwrite with the in-memory guest session values.
 	if not session_is_ephemeral:
 		var profile_suffix := _get_profile_suffix()
 		new_settings_file.set_value("session", "account" + profile_suffix, self.session_account)
