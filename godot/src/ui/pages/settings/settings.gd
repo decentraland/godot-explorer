@@ -89,6 +89,7 @@ var _custom_max_lights_spin: SpinBox = null
 
 @onready
 var check_button_submit_message_closes_chat: CheckButton = %CheckButton_SubmitMessageClosesChat
+@onready var check_button_show_own_nametag: CheckButton = %CheckButton_ShowOwnNametag
 @onready var dropdown_list_camera_mode: DropdownList = %DropdownList_CameraMode
 @onready var camera_mode_warning: Control = %CameraModeWarning
 @onready var check_button_hide_explorer_ui: CheckButton = %CheckButton_HideExplorerUI
@@ -162,6 +163,7 @@ func _ready():
 	check_button_submit_message_closes_chat.button_pressed = (
 		Global.get_config().submit_message_closes_chat
 	)
+	check_button_show_own_nametag.button_pressed = Global.get_config().show_own_nametag
 	_populate_camera_mode_items()
 	dropdown_list_camera_mode.item_selected.connect(_on_dropdown_list_camera_mode_item_selected)
 	_refresh_camera_mode_row()
@@ -698,6 +700,16 @@ func _on_check_button_submit_message_closes_chat_toggled(toggled_on: bool) -> vo
 	if Global.get_config().submit_message_closes_chat != toggled_on:
 		Global.get_config().submit_message_closes_chat = toggled_on
 		Global.get_config().save_to_settings_file()
+
+
+func _on_check_button_show_own_nametag_toggled(toggled_on: bool) -> void:
+	if Global.get_config().show_own_nametag == toggled_on:
+		return
+	Global.get_config().show_own_nametag = toggled_on
+	Global.get_config().save_to_settings_file()
+	var player = Global.scene_runner.player_avatar_node if Global.scene_runner else null
+	if is_instance_valid(player):
+		player._apply_nickname_visibility()
 
 
 # Camera mode (first/third person) is runtime-only state, not persisted config: the
