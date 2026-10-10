@@ -31,6 +31,12 @@ unique_name_in_owner = true
 layout_mode = 2
 mouse_filter = 2
 
+[node name="ChatbarSpacer" type="Control" parent="VBoxContainer_LeftSide" unique_id=507219215]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+mouse_filter = 2
+
 [node name="Chat" parent="VBoxContainer_LeftSide" unique_id=602589676 instance=ExtResource("5_chat")]
 unique_name_in_owner = true
 layout_mode = 2
