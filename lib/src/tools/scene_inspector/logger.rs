@@ -177,6 +177,9 @@ pub struct SceneLifecycleEntry {
     pub title: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub base_parcel: Option<String>,
+    /// `OnUpdateEnd` only: pure JS time of the tick, µs.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub duration_us: Option<u64>,
 }
 
 /// A performance snapshot with rendering, memory, and asset metrics.

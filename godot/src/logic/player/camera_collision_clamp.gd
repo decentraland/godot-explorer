@@ -18,6 +18,10 @@ extends Node3D
 ## already holds this frame's spring-resolved length.
 
 const CameraRig := preload("res://src/logic/player/camera_rig_helpers.gd")
+## Runs before the scene manager's kick (lib/src/scene_runner/frame_sync.rs,
+## SCENE_MANAGER_KICK_PROCESS_PRIORITY = -5) so the camera pose the scenes receive
+## this frame is the final, clamped one. Lower priority runs earlier.
+const PROCESS_PRIORITY := -20
 
 ## Tweened by player.gd on camera-mode changes (0.75 third person, 0.0 first).
 var lateral_offset := 0.0
@@ -52,6 +56,7 @@ var _warmup_frames := 3
 
 
 func _ready() -> void:
+	process_priority = PROCESS_PRIORITY
 	_sphere.radius = CameraRig.CLAMP_SPHERE_RADIUS
 	_params.shape = _sphere
 	_params.collision_mask = CameraRig.CAMERA_COLLISION_MASK

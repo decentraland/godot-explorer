@@ -19,6 +19,16 @@ pub struct SceneDying(pub bool);
 pub struct CommunicatedWithRenderer;
 
 pub struct SceneElapsedTime(pub f32);
+/// Frame delta the renderer attached to the last `RendererResponse::Ok`,
+/// consumed by the scene loop as the next `onUpdate(dt)`. `0.0` = none yet.
+pub struct SceneRendererDelta(pub f32);
+/// Instant at which `op_crdt_recv_wait` handed the renderer reply to JS, i.e.
+/// the start of the next tick's system work. `op_crdt_send_to_renderer`
+/// measures the pure JS tick time from it.
+pub struct SceneTickStart(pub std::time::Instant);
+/// Last measured JS tick duration in µs, for the scene inspector's
+/// `OnUpdateEnd` entry.
+pub struct SceneLastJsTickUs(pub u32);
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum SceneLogLevel {
     Log = 1,
@@ -33,6 +43,10 @@ pub struct SceneLogMessage {
     pub message: String,
 }
 static SCENE_LOG_ENABLED: AtomicBool = AtomicBool::new(false);
+// Creator-facing scene performance warnings (frame-sync misses / slow onUpdate)
+// on the in-app console. Armed only for preview / scene-stats sessions so
+// production users never see them.
+static SCENE_PERF_WARNINGS_ENABLED: AtomicBool = AtomicBool::new(false);
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct GreyPixelDiffRequest {}
@@ -85,4 +99,12 @@ pub fn set_scene_log_enabled(enabled: bool) {
 
 pub fn is_scene_log_enabled() -> bool {
     SCENE_LOG_ENABLED.load(std::sync::atomic::Ordering::Relaxed)
+}
+
+pub fn set_scene_perf_warnings_enabled(enabled: bool) {
+    SCENE_PERF_WARNINGS_ENABLED.store(enabled, std::sync::atomic::Ordering::Relaxed);
+}
+
+pub fn is_scene_perf_warnings_enabled() -> bool {
+    SCENE_PERF_WARNINGS_ENABLED.load(std::sync::atomic::Ordering::Relaxed)
 }
