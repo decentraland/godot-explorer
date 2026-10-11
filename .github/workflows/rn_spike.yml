@@ -1,0 +1,103 @@
+name: 🧪 RN spike (VIBE-CODED)
+
+# VIBE-CODED SPIKE: checks for the React Native host app in rn/. The JS job is cheap and runs on
+# every PR touching rn/. The iOS job is manual, best-effort and has never been run by its author.
+on:
+  pull_request:
+    paths:
+      - 'rn/**'
+      - 'godot/src/rn_bridge/**'
+      - '.github/workflows/rn_spike.yml'
+  workflow_dispatch:
+    inputs:
+      godot_host_lib_url:
+        description: 'URL of libgodot.ios.template_release.arm64.a built with embedded_host=yes (ios-template-release-host artifact of decentraland/godotengine spike/ios-host-embedding)'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rn-spike-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  rn-js:
+    name: RN typecheck, lint, unit tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: rn
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: rn/package-lock.json
+
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - run: npx eslint App.tsx src __tests__
+      - run: npx jest
+
+  ios-compile:
+    name: iOS host compile check (manual, best effort)
+    if: github.event_name == 'workflow_dispatch' && inputs.godot_host_lib_url != ''
+    runs-on: macos-26
+    continue-on-error: true
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # @stable
+        with:
+          toolchain: "1.90"
+          targets: aarch64-apple-ios
+
+      - name: Install dependencies
+        uses: ./.github/actions/install-deps
+
+      - name: Cargo install
+        run: cargo run -- install --targets ios
+
+      - name: Build macOS + iOS Rust libs
+        run: |
+          cargo run -- build
+          cargo run -- build --target ios
+
+      - name: Import assets
+        uses: ./.github/actions/import-assets
+
+      - name: Ensure Metal toolchain (shader baker)
+        run: |
+          if ! xcrun -sdk iphoneos metal --version >/dev/null 2>&1; then
+            xcodebuild -downloadComponent MetalToolchain
+          fi
+
+      - name: Export iOS project pack
+        run: cargo run -- export --target ios
+
+      - name: Download embedded_host libgodot
+        run: curl -fL "${{ inputs.godot_host_lib_url }}" -o "$RUNNER_TEMP/libgodot.a"
+
+      - name: Sync Godot artifacts into rn/ios
+        run: GODOT_HOST_LIB="$RUNNER_TEMP/libgodot.a" rn/scripts/sync-godot-ios.sh
+
+      - name: Install RN deps and configure the Xcode project
+        working-directory: rn
+        run: |
+          npm ci
+          cd ios
+          gem install xcodeproj
+          ruby configure_godot.rb
+          pod install
+
+      - name: Build for device (no signing)
+        working-directory: rn/ios
+        run: |
+          xcodebuild build -workspace DclRn.xcworkspace -scheme DclRn \
+            -sdk iphoneos -configuration Release \
+            CODE_SIGNING_ALLOWED=NO

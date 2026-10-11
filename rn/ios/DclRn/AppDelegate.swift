@@ -29,6 +29,11 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
       launchOptions: launchOptions
     )
 
+    // VIBE-CODED SPIKE: Godot's view goes under React Native's root view.
+    if let window {
+      DclGodotHost.attach(to: window)
+    }
+
     return true
   }
 }
