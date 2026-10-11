@@ -19,6 +19,8 @@ mkdir -p "$APP/libs" "$APP/src/main/jniLibs/arm64-v8a"
 
 cp "$GODOT_LIBS/godot-lib.template_$BUILD.aar" "$APP/libs/"
 cp "$GODOT_LIBS/arm64-v8a/deps/libwebrtc.jar" "$APP/libs/"
+# The Sentry GDExtension needs its Android plugin (singleton SentryAndroidGodotPlugin) or it crashes.
+cp "$ROOT/godot/addons/sentry/bin/android/sentry_android_godot_plugin.$BUILD.aar" "$APP/libs/"
 
 # Stripped native libs and the project data both come from the exported APK.
 # libgodot_android.so is inside the AAR, so it is not copied here.
@@ -27,6 +29,7 @@ trap 'rm -rf "$TMP"' EXIT
 unzip -q "$APK" 'lib/arm64-v8a/libdclgodot.so' 'lib/arm64-v8a/libsentry*.so' \
   'lib/arm64-v8a/libc++_shared.so' -d "$TMP"
 cp "$TMP"/lib/arm64-v8a/*.so "$APP/src/main/jniLibs/arm64-v8a/"
-unzip -q "$APK" 'assets/*' -x 'assets/ios/*' -d "$APP/src/main"
+# dexopt/ is the exported app's own baseline profile; AGP adds the RN app's, so skip it.
+unzip -q "$APK" 'assets/*' -x 'assets/ios/*' 'assets/dexopt/*' -d "$APP/src/main"
 
 echo "synced: $(du -sh "$APP/src/main/jniLibs" | cut -f1) jniLibs, $(du -sh "$APP/src/main/assets" | cut -f1) assets"

@@ -33,7 +33,7 @@ Needs the engine fork branch `spike/ios-host-embedding` (`decentraland/godotengi
 `scons platform=ios target=template_release arch=arm64 embedded_host=yes`, plus a macOS machine:
 
 ```bash
-cargo run -- build --target ios && cargo run -- export --target ios
+cargo run -- build -r --target ios && cargo run -- export --target ios --release
 GODOT_HOST_LIB=<engine>/bin/libgodot.ios.template_release.arm64.a rn/scripts/sync-godot-ios.sh
 cd rn/ios && ruby configure_godot.rb && pod install
 ```

@@ -65,8 +65,8 @@ jobs:
 
       - name: Build macOS + iOS Rust libs
         run: |
-          cargo run -- build
-          cargo run -- build --target ios
+          cargo run -- build -r
+          cargo run -- build -r --target ios
 
       - name: Import assets
         uses: ./.github/actions/import-assets
@@ -78,7 +78,7 @@ jobs:
           fi
 
       - name: Export iOS project pack
-        run: cargo run -- export --target ios
+        run: cargo run -- export --target ios --release
 
       - name: Download embedded_host libgodot
         run: curl -fL "${{ inputs.godot_host_lib_url }}" -o "$RUNNER_TEMP/libgodot.a"
