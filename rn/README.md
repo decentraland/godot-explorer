@@ -19,8 +19,8 @@ Events (Godot → RN): `ready`, `loading{state}`, `state{parcel,realm,fps,positi
 ## Android (verified on a device)
 
 ```bash
-cargo run -- build --target android
-cargo run -- export --target android --format apk   # project data + stripped libs
+cargo run -- build -r --target android
+cargo run -- export --target android --format apk --release   # project data + stripped libs
 rn/scripts/sync-godot-android.sh                    # engine AAR, libdclgodot.so, assets -> rn/android/app
 cd rn && npm install
 cd android && ./gradlew :app:assembleRelease        # JS bundled in; no Metro needed
@@ -40,7 +40,7 @@ cd rn/ios && ruby configure_godot.rb && pod install
 
 ## Known limitations
 
-- Debug-sized builds are huge and slow (about 11–15 fps on the test phone).
+- The first debug-template build ran at about 11–15 fps on the test phone; use the release template (`GODOT_BUILD=debug` selects the debug one).
 - Android plugin features are not carried over: push, IAP, Firebase, Reown, ExoPlayer video.
 - Sentry, deeplinks and the Android back button are not forwarded to Godot.
 - iOS: engine init order, GDExtension dylib loading from the host bundle and touch pass-through are unverified.

@@ -88,10 +88,13 @@ function App() {
 
 function StatusChip({ hud }: { hud: HudState }) {
   const parcel = hud.parcel ? `${hud.parcel[0]},${hud.parcel[1]}` : '-';
+  const position = hud.position
+    ? `${hud.position[0].toFixed(1)}, ${hud.position[2].toFixed(1)}`
+    : '-';
   return (
     <View style={styles.chip} pointerEvents="none">
       <Text style={styles.chipText}>
-        Parcel {parcel} · {Math.round(hud.fps)} fps
+        Parcel {parcel} · {position}
       </Text>
     </View>
   );

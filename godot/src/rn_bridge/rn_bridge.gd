@@ -35,7 +35,7 @@ func _process(dt: float) -> void:
 	_hide_elapsed += dt
 	if _hide_elapsed >= HIDE_INTERVAL:
 		_hide_elapsed = 0.0
-		_hide_godot_ui()
+		RnUiFilter.hide_non_native(_explorer.ui_root)
 	_state_elapsed += dt
 	if _state_elapsed >= STATE_INTERVAL:
 		_state_elapsed = 0.0
@@ -57,23 +57,6 @@ func handle_command(json: String) -> void:
 
 func _player() -> Player:
 	return _explorer.player as Player
-
-
-# Hide, never free: explorer.gd keeps @onready refs to these nodes. Scene UI, the joystick,
-# the on-screen gamepad and the camera-look catcher stay native. UI root keeps focus or the
-# player ignores movement input.
-func _hide_godot_ui() -> void:
-	var native_controls: Array[Node] = [
-		_explorer.ui_safe_area,
-		_explorer.safe_area_controls,
-		_explorer.virtual_joystick,
-		_explorer.mobile_camera_input,
-	]
-	for child in _explorer.ui_root.get_children():
-		if child is CanvasItem and child.visible and not native_controls.has(child):
-			child.hide()
-	if not _explorer.ui_root.has_focus():
-		_explorer.ui_root.grab_focus()
 
 
 func _emit_state() -> void:
