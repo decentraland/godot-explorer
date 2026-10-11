@@ -37,6 +37,8 @@ pub struct DclCli {
     #[var(get)]
     pub skip_lobby_to_menu: bool,
     #[var(get)]
+    pub rn_host: bool,
+    #[var(get)]
     pub guest_profile: bool,
     #[var(get)]
     pub preview_mode: bool,
@@ -238,6 +240,13 @@ impl DclCli {
             ArgDefinition {
                 name: "--skip-lobby".to_string(),
                 description: "Skip the lobby screen and go directly to the explorer".to_string(),
+                arg_type: ArgType::Flag,
+                category: "UI/Display".to_string(),
+            },
+            ArgDefinition {
+                name: "--rn-host".to_string(),
+                description: "Run embedded in a React Native host: hide all Godot UI and expose the RnBridge command/event channel"
+                    .to_string(),
                 arg_type: ArgType::Flag,
                 category: "UI/Display".to_string(),
             },
@@ -760,6 +769,7 @@ impl INode for DclCli {
         let force_mobile = args_map.contains_key("--force-mobile");
         let skip_lobby = args_map.contains_key("--skip-lobby");
         let skip_lobby_to_menu = args_map.contains_key("--skip-lobby-to-menu");
+        let rn_host = args_map.contains_key("--rn-host");
         let guest_profile = args_map.contains_key("--guest-profile");
         let preview_mode = args_map.contains_key("--preview");
         let scene_test_mode = args_map.contains_key("--scene-test");
@@ -956,6 +966,7 @@ impl INode for DclCli {
             force_mobile,
             skip_lobby,
             skip_lobby_to_menu,
+            rn_host,
             guest_profile,
             preview_mode,
             scene_test_mode,
