@@ -1,10 +1,12 @@
 buildscript {
     ext {
-        buildToolsVersion = "37.0.0"
+        // compileSdk and NDK match the Godot Android template and the CI builder image
+        // (quay.io/decentraland/dcl-godot-android-builder); build-tools 36 is AGP 9's minimum.
+        buildToolsVersion = "36.0.0"
         minSdkVersion = 24
-        compileSdkVersion = 37
+        compileSdkVersion = 35
         targetSdkVersion = 36
-        ndkVersion = "27.1.12297006"
+        ndkVersion = "28.1.13356709"
         kotlinVersion = "2.2.0"
     }
     repositories {
