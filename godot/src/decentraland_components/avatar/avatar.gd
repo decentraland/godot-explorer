@@ -187,6 +187,8 @@ var _ghost_instance: Node3D = null
 var _ghost_skeleton: Skeleton3D = null
 var _spawn_min_hold: float = 0.0
 var _born_ms: int = 0
+var _feet_ik: AvatarFeetIK = null
+var _hands_ik: AvatarHandsIK = null
 var _world_is_loading: bool = false
 # #b2: first _process tick should not treat wire-provided jump_count>=2 as a
 # rising edge — otherwise a remote avatar first seen mid-double-jump plays the
@@ -305,6 +307,8 @@ func _ready():
 	# the spawn hologram swaps the real avatar in.
 	body_shape_skeleton_3d.visible = false
 	_born_ms = Time.get_ticks_msec()
+	_feet_ik = AvatarFeetIK.new(self, body_shape_skeleton_3d)
+	_hands_ik = AvatarHandsIK.new(self, body_shape_skeleton_3d)
 	_mesh_assembler.apply_toon_material_recursive(glider_prop)
 	# #1554: Godot compiles the hologram pipeline on first draw and renders a
 	# solid-color placeholder until done — warm it once, tiny and briefly.
@@ -1697,6 +1701,20 @@ func _process(delta):
 			_double_jump_latch = false
 
 	_update_glider_prop()
+
+	# Feet and hands IK: visual only — bone modifiers, never a physics query.
+	# Unity gates both on the same rig state.
+	var ik_enabled := (
+		is_local_player
+		and is_grounded
+		and not _stunned_now
+		and not emote_controller.is_playing()
+		and _lod_state == LODState.FULL
+		and _spawn_reveal_phase == SpawnRevealPhase.IDLE
+		and not _world_is_loading
+	)
+	_feet_ik.update_ik(delta, ik_enabled)
+	_hands_ik.update_ik(delta, ik_enabled)
 
 	# #1554: avatars ghost in on first appearance — covers local spawn AND
 	# teleports (the player node is re-instanced per teleport, so a pending
