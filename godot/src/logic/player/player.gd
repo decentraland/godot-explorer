@@ -139,9 +139,6 @@ const SLOPE_LIMIT_DEG := 46.0
 const CAPSULE_CENTER_Y := 0.8
 const CAPSULE_RADIUS := 0.3
 
-var last_position: Vector3
-var actual_velocity_xz: float
-
 # Locomotion settings - these are updated from the current scene's DclLocomotionSettings
 var walk_speed: float = 1.5
 var jog_speed: float = 8.0
@@ -167,15 +164,23 @@ var current_profile_version: int = -1
 # (XZ only — force.y feeds gravity). Decays via drag each tick.
 var external_velocity: Vector3 = Vector3.ZERO
 
+var last_position: Vector3
+var actual_velocity_xz: float
+
 # Private variables (prefixed with _)
 var _hard_landing_timer: float = 0.0
+# XZ displacement the support platform caused last frame (translation +
+# rotation follow) — subtracted from measured displacement so the anim state
+# reads avatar-relative motion, not platform carry.
+var _platform_carry_xz := Vector2.ZERO
 # #2852 M6: apex of the current airborne stretch; landing stun triggers on
 # fall HEIGHT (apex - landing), not on scene-driven cooldowns.
 var _fall_apex_y: float = 0.0
-# #2852 M11: rotating-platform follow state (translation comes free from the
-# engine's platform velocity on kinematic colliders).
+# #2852 M11: platform follow state — the full delta is applied manually
+# (kinematic colliders moved by CRDT transform sync report no velocity to
+# the engine, so platform velocity never carries the capsule).
 var _platform: CollisionObject3D = null
-var _platform_last_quat := Quaternion.IDENTITY
+var _platform_last_transform := Transform3D.IDENTITY
 var _locomotion_settings: DclLocomotionSettings = null
 var _jump_buffer: float = 0.0
 var _accel_weight: float = 0.0
@@ -865,7 +870,11 @@ func _physics_process(dt: float) -> void:
 			velocity.x = horizontal.x
 			velocity.z = horizontal.y
 
-	actual_velocity_xz = (to_xz(global_position) - to_xz(last_position)).length() / dt
+	# Anim state follows avatar-relative motion: measured displacement minus
+	# platform carry (standing on a moving platform is idle, not walking).
+	actual_velocity_xz = (
+		(to_xz(global_position) - to_xz(last_position) - _platform_carry_xz).length() / dt
+	)
 
 	update_avatar_movement_state(actual_velocity_xz)
 
@@ -961,7 +970,7 @@ func _physics_process(dt: float) -> void:
 	if (not _step_armed or _step_pending) and _has_walkable_support():
 		_step_armed = true
 		_step_pending = false
-	_update_platform_follow(supported)
+	_update_platform_follow(supported, dt)
 	position.y = max(position.y, 0)
 	avatar.global_position = global_position
 
@@ -1156,11 +1165,12 @@ func _edge_slip_gravity_dir() -> Vector3:
 	return (g_vec - n * g_vec.dot(n)).normalized()
 
 
-func _update_platform_follow(supported: bool) -> void:
+func _update_platform_follow(supported: bool, dt: float) -> void:
 	# #2852 M11 — CharacterPlatformSystem.cs: stay attached to the platform
-	# underfoot; rotation follow (translation is engine platform velocity).
-	# The support ray finds the collider even on the margin-cloud rest (slide
-	# contacts never register there).
+	# underfoot through translation AND rotation. Manual because kinematic
+	# colliders moved by CRDT transform sync report no velocity — except when
+	# a real floor contact forms, where Jolt does apply platform velocity.
+	# Whichever the engine already carried this frame is subtracted back out.
 	var current: CollisionObject3D = null
 	if supported:
 		var space := get_world_3d().direct_space_state
@@ -1175,23 +1185,37 @@ func _update_platform_follow(supported: bool) -> void:
 				current = hit.collider as CollisionObject3D
 	if current != _platform:
 		_platform = current
-		_platform_last_quat = (
-			current.global_transform.basis.get_rotation_quaternion()
-			if current
-			else Quaternion.IDENTITY
-		)
+		_platform_last_transform = (current.global_transform if current else Transform3D.IDENTITY)
+		_platform_carry_xz = Vector2.ZERO
 		return
 	if _platform == null:
+		_platform_carry_xz = Vector2.ZERO
 		return
-	var quat_now: Quaternion = _platform.global_transform.basis.get_rotation_quaternion()
-	var delta := quat_now * _platform_last_quat.inverse()
-	_platform_last_quat = quat_now
-	if delta.is_equal_approx(Quaternion.IDENTITY):
+	var xf_now: Transform3D = _platform.global_transform
+	# World-space carry: prev^-1 * now for the yaw, now * prev^-1 for points.
+	var rel := _platform_last_transform.affine_inverse() * xf_now
+	var carry := xf_now * _platform_last_transform.affine_inverse()
+	_platform_last_transform = xf_now
+	if rel.is_equal_approx(Transform3D.IDENTITY):
+		_platform_carry_xz = Vector2.ZERO
 		return
-	# Rotate the player around the platform origin, and the facing with it.
-	var origin: Vector3 = _platform.global_transform.origin
-	global_position = origin + delta * (global_position - origin)
-	rotation.y += delta.get_euler().y
+	# Carry the player through the full platform delta (translation +
+	# rotation), and the facing with it — the avatar is TOP-LEVEL
+	# (avatar.gd), so it does not inherit the body yaw: rotate it explicitly,
+	# plus the smoothed facing vector, or it counter-rotates on a spinner.
+	var before := global_position
+	var yaw := rel.basis.get_euler().y
+	# Full platform delta (for the anim carry bookkeeping) — before the engine
+	# compensation below.
+	_platform_carry_xz = to_xz(carry * before - before)
+	global_position = carry * global_position
+	# Jolt does apply platform velocity when a real floor contact forms (that
+	# late "stick") — subtract what move_and_slide already carried or the
+	# translation lands twice.
+	global_position -= get_platform_velocity() * dt
+	rotation.y += yaw
+	avatar.rotation.y += yaw
+	current_direction = rel.basis * current_direction
 
 
 func _slope_speed_modifier(input_dir: Vector3) -> float:
