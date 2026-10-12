@@ -42,10 +42,15 @@ cd rn && npm ci
 npm start                      # Metro, fast refresh
 npm run ios                    # simulator (cd ios && pod install first)
 npm run android:no-godot       # emulator, even when app/godot is synced
+npm run expo                   # Expo Go on a phone or simulator: no native build at all
 # or, from the repo root, a bundled (Metro-less) build:
 cargo run -- run --target ios --no-godot
 cargo run -- run --target android --no-godot
 ```
+
+React Native is pinned to the version Expo Go ships (SDK 57 → RN 0.86.3) so the JS runs there; `expo`
+is excluded from native autolinking (`react-native.config.js`), so the native apps do not depend on
+Expo modules. Upgrading RN means moving to the Expo SDK that ships it.
 
 ## The full app (with Godot)
 

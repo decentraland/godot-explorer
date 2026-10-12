@@ -85,7 +85,7 @@ without it:
 cargo run -- run --target ios --no-godot       # simulator, mock bridge + placeholders
 cargo run -- run --target android --no-godot   # emulator
 cd rn && npm start                              # Metro + fast refresh; then, in another shell:
-cd rn && npm run android:no-godot               # or: npm run ios (simulator)
+cd rn && npm run android:no-godot               # or: npm run ios (simulator), npm run expo (Expo Go)
 ```
 iOS needs the engine built with `embedded_host=yes`: the `ios_host_release.a` template (`install --targets ios`)
 or `GODOT_HOST_LIB=<path to libgodot.ios.template_release.arm64.a>`.

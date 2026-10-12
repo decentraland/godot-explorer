@@ -160,10 +160,10 @@ jobs:
           cache: npm
           cache-dependency-path: rn/package-lock.json
 
-      # AGP 9 (React Native 0.87) needs build-tools 36; the builder image ships 33/34. compileSdk 35
+      # AGP 8.12 (React Native 0.86) needs build-tools 35; the builder image ships 33/34. compileSdk 35
       # and NDK 28.1 are already in the image.
-      - name: Install Android build-tools 36
-        run: echo y | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "build-tools;36.0.0"
+      - name: Install Android build-tools 35
+        run: echo y | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "build-tools;35.0.0"
 
       - name: Export Android APK
         run: |
