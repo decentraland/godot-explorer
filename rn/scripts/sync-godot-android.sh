@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# VIBE-CODED SPIKE: copy the Godot engine AAR, the Rust GDExtension and the exported project
-# data into the RN Android app. Needs, from the repo root:
+# Copy the Godot engine AAR, the Rust GDExtension and the exported project data into
+# rn/android/app/godot. Without that folder the app builds with the JS mock bridge. Needs, from the repo root:
 #   cargo run -- build -r --target android
 #   cargo run -- export --target android --format apk --release
 # GODOT_BUILD=debug syncs the debug template instead (after the matching debug build and export).
@@ -10,17 +10,19 @@ ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 APK="${GODOT_APK:-$ROOT/exports/decentraland.godot.client.apk}"
 BUILD="${GODOT_BUILD:-release}"
 GODOT_LIBS="$ROOT/godot/android/build/libs/$BUILD"
-APP="$ROOT/rn/android/app"
+DEST="$ROOT/rn/android/app/godot"
 
 [ -f "$APK" ] || { echo "missing $APK (run: cargo run -- export --target android --format apk)"; exit 1; }
 
-rm -rf "$APP/libs" "$APP/src/main/jniLibs" "$APP/src/main/assets"
-mkdir -p "$APP/libs" "$APP/src/main/jniLibs/arm64-v8a"
+rm -rf "$DEST"
+mkdir -p "$DEST/libs" "$DEST/jniLibs/arm64-v8a"
 
-cp "$GODOT_LIBS/godot-lib.template_$BUILD.aar" "$APP/libs/"
-cp "$GODOT_LIBS/arm64-v8a/deps/libwebrtc.jar" "$APP/libs/"
+cp "$GODOT_LIBS/godot-lib.template_$BUILD.aar" "$DEST/libs/"
+cp "$GODOT_LIBS/arm64-v8a/deps/libwebrtc.jar" "$DEST/libs/"
 # The Sentry GDExtension needs its Android plugin (singleton SentryAndroidGodotPlugin) or it crashes.
-cp "$ROOT/godot/addons/sentry/bin/android/sentry_android_godot_plugin.$BUILD.aar" "$APP/libs/"
+cp "$ROOT/godot/addons/sentry/bin/android/sentry_android_godot_plugin.$BUILD.aar" "$DEST/libs/"
+# DclAndroidPlugin (push, deeplinks, ExoPlayer, Reown, ...); its Maven deps are in app/godot.gradle.
+cp "$ROOT/godot/addons/dcl-godot-android/bin/$BUILD/dcl-godot-android-$BUILD.aar" "$DEST/libs/"
 
 # Stripped native libs and the project data both come from the exported APK.
 # libgodot_android.so is inside the AAR, so it is not copied here.
@@ -28,15 +30,15 @@ TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 unzip -q "$APK" 'lib/arm64-v8a/libdclgodot.so' 'lib/arm64-v8a/libsentry*.so' \
   'lib/arm64-v8a/libc++_shared.so' -d "$TMP"
-cp "$TMP"/lib/arm64-v8a/*.so "$APP/src/main/jniLibs/arm64-v8a/"
+cp "$TMP"/lib/arm64-v8a/*.so "$DEST/jniLibs/arm64-v8a/"
 # dexopt/ is the exported app's own baseline profile; AGP adds the RN app's, so skip it.
-unzip -q "$APK" 'assets/*' -x 'assets/ios/*' 'assets/dexopt/*' -d "$APP/src/main"
+unzip -q "$APK" 'assets/*' -x 'assets/ios/*' 'assets/dexopt/*' -d "$DEST"
 
 # Host-only: a translucent Godot surface lets the avatar preview draw above the RN UI.
-printf '[display]\n\nwindow/per_pixel_transparency/allowed=true\n' > "$APP/src/main/assets/override.cfg"
+printf '[display]\n\nwindow/per_pixel_transparency/allowed=true\n' > "$DEST/assets/override.cfg"
 
 # unzip keeps the archive's 1981 timestamps and assets.sparsepck keeps its size across exports, so
 # Gradle would reuse a stale index (truncated or garbage scripts at runtime). Fresh mtimes force it.
-find "$APP/src/main/assets" -type f -exec touch {} +
+find "$DEST/assets" -type f -exec touch {} +
 
-echo "synced: $(du -sh "$APP/src/main/jniLibs" | cut -f1) jniLibs, $(du -sh "$APP/src/main/assets" | cut -f1) assets"
+echo "synced: $(du -sh "$DEST/jniLibs" | cut -f1) jniLibs, $(du -sh "$DEST/assets" | cut -f1) assets"

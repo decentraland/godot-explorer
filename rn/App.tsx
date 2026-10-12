@@ -15,7 +15,8 @@ import {
   View,
 } from 'react-native';
 import { Backpack } from './src/Backpack';
-import { sendCommand, subscribe } from './src/GodotBridge';
+import { godotAvailable, sendCommand, subscribe } from './src/GodotBridge';
+import { GodotPlaceholder } from './src/godot/GodotPlaceholder';
 import { GodotEvent, HudState, initialHud, reduceHud } from './src/events';
 
 const LOADING_TIMEOUT_MS = 25_000;
@@ -51,6 +52,7 @@ function App() {
   return (
     <View style={styles.root} pointerEvents="box-none">
       <StatusBar hidden />
+      {!godotAvailable && <GodotPlaceholder label="3D world" style={StyleSheet.absoluteFill} />}
       {!backpackOpen && <StatusChip hud={hud} />}
       <View style={[styles.actions, backpackOpen && styles.hidden]} pointerEvents="box-none">
         <ActionButton label="Wave" onPress={() => sendCommand({ type: 'emote', urn: 'wave' })} />

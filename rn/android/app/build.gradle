@@ -72,6 +72,19 @@ def enableProguardInReleaseBuilds = false
  */
 def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
 
+/**
+ * The Godot engine is optional: scripts/sync-godot-android.sh fills app/godot (engine AAR, plugin
+ * AARs, native libs, project assets). Without it the app builds with the JS mock bridge.
+ */
+def withGodot = file("godot").exists()
+
+// Store identity is shared with the Godot-exported app this replaces: same package, the marketing
+// version from lib/Cargo.toml and the build number from the CI allocator (DCL_BUILD_NUMBER).
+def cargoVersion = (file("../../../lib/Cargo.toml").text =~ /(?m)^version = "(.+)"/)[0][1]
+def buildNumber = (System.getenv("DCL_BUILD_NUMBER") ?: "1").toInteger()
+// Release signing key from the environment (xtask passes .bin/release.keystore); CI re-signs.
+def releaseKeystore = System.getenv("DCL_ANDROID_KEYSTORE")
+
 android {
     ndkVersion rootProject.ext.ndkVersion
     buildToolsVersion rootProject.ext.buildToolsVersion
@@ -79,22 +92,15 @@ android {
 
     namespace "com.dclrn"
     defaultConfig {
-        applicationId "com.dclrn"
+        applicationId "org.decentraland.godotexplorer"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode buildNumber
+        versionName cargoVersion
         ndk { abiFilters "arm64-v8a" }
     }
-    // Godot project data lives in assets/ and includes dot-directories (.godot/).
-    aaptOptions {
-        ignoreAssetsPattern "!.svn:!.git:!.gitignore:!.ds_store:!*.scc:!CVS:!thumbs.db:!picasa.ini:!*~"
-    }
-    packaging {
-        jniLibs {
-            useLegacyPackaging = true
-            pickFirsts += ["**/libc++_shared.so"]
-        }
+    sourceSets {
+        main.java.srcDirs += withGodot ? "src/godot/java" : "src/nogodot/java"
     }
     signingConfigs {
         debug {
@@ -103,15 +109,21 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
+        if (releaseKeystore) {
+            release {
+                storeFile file(releaseKeystore)
+                storePassword System.getenv("DCL_ANDROID_KEYSTORE_PASSWORD")
+                keyAlias System.getenv("DCL_ANDROID_KEY_ALIAS")
+                keyPassword System.getenv("DCL_ANDROID_KEYSTORE_PASSWORD")
+            }
+        }
     }
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
         }
         release {
-            // Caution! In production, you need to generate your own keystore file.
-            // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig signingConfigs.debug
+            signingConfig releaseKeystore ? signingConfigs.release : signingConfigs.debug
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
         }
@@ -122,17 +134,13 @@ dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
 
-    // Godot engine (AAR + webrtc jar copied by scripts/sync-godot-android.sh).
-    implementation fileTree(dir: "libs", include: ["*.aar", "*.jar"])
-    implementation "androidx.fragment:fragment:1.8.6"
-    implementation "androidx.core:core-splashscreen:1.0.1"
-    implementation "androidx.documentfile:documentfile:1.0.1"
-    // Java side of the sentry-godot plugin AAR copied by the sync script.
-    implementation "io.sentry:sentry-android:8.51.0"
-
     if (hermesEnabled.toBoolean()) {
         implementation("com.facebook.react:hermes-android")
     } else {
         implementation jscFlavor
     }
+}
+
+if (withGodot) {
+    apply from: "godot.gradle"
 }

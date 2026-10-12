@@ -1,5 +1,6 @@
 package com.dclrn
 
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.view.MotionEvent
@@ -8,7 +9,6 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate
-import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint.fabricEnabled
 import com.facebook.react.defaults.DefaultReactActivityDelegate
 import com.facebook.react.uimanager.TouchTargetHelper
 import org.godotengine.godot.Godot
@@ -17,8 +17,8 @@ import org.godotengine.godot.GodotHost
 import org.godotengine.godot.plugin.GodotPlugin
 
 /**
- * VIBE-CODED SPIKE: React Native activity that hosts the Godot client as a fragment *under*
- * the React root view, so the RN UI draws over the 3D world.
+ * React Native activity that hosts the Godot client as a fragment *under* the React root view,
+ * so the RN UI draws over the 3D world.
  */
 class MainActivity : ReactActivity(), GodotHost {
 
@@ -28,7 +28,7 @@ class MainActivity : ReactActivity(), GodotHost {
   override fun getMainComponentName(): String = "DclRn"
 
   override fun createReactActivityDelegate(): ReactActivityDelegate =
-      DefaultReactActivityDelegate(this, mainComponentName, fabricEnabled)
+      DefaultReactActivityDelegate(this, mainComponentName)
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(null)
@@ -45,6 +45,12 @@ class MainActivity : ReactActivity(), GodotHost {
         .beginTransaction()
         .replace(GODOT_CONTAINER_ID, fragment)
         .commitNowAllowingStateLoss()
+  }
+
+  // Warm deep links: the dcl-godot-android plugin re-reads activity.intent on focus.
+  override fun onNewIntent(intent: Intent) {
+    super.onNewIntent(intent)
+    setIntent(intent)
   }
 
   // RN's root view consumes every touch, even over transparent areas, so Godot underneath
@@ -84,7 +90,6 @@ class MainActivity : ReactActivity(), GodotHost {
             "--rn-host",
             "--skip-lobby",
             "--guest-profile",
-            "--force-mobile",
             "--realm",
             MAIN_REALM,
             "--location",

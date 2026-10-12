@@ -2,6 +2,10 @@
 
 #import "GodotBridge.h"
 
+#import <objc/message.h>
+#import <objc/runtime.h>
+
+#if DCL_WITH_GODOT
 // C API from the engine's drivers/apple_embedded/godot_host.h (built with embedded_host=yes).
 extern "C" {
 int godot_host_init(int argc, const char *const *argv);
@@ -13,6 +17,7 @@ void godot_host_memory_warning(void);
 }
 
 static NSString *const kMainRealm = @"https://realm-provider-ea.decentraland.org/main";
+#endif
 
 // RN's own container views: a touch that only hits these landed on a transparent area.
 static BOOL isReactBackground(UIView *view, UIView *reactRoot) {
@@ -38,7 +43,7 @@ static BOOL isReactBackground(UIView *view, UIView *reactRoot) {
 
 - (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event {
 	UIView *reactHit = [self.reactView hitTest:[self convertPoint:point toView:self.reactView] withEvent:event];
-	if (reactHit && !isReactBackground(reactHit, self.reactView)) {
+	if (!self.godotView || (reactHit && !isReactBackground(reactHit, self.reactView))) {
 		return reactHit;
 	}
 	return [self.godotView hitTest:[self convertPoint:point toView:self.godotView] withEvent:event];
@@ -61,6 +66,7 @@ static BOOL isReactBackground(UIView *view, UIView *reactRoot) {
 	[super viewDidLoad];
 	DclHostView *host = (DclHostView *)self.view;
 
+#if DCL_WITH_GODOT
 	Class godotViewControllerClass = NSClassFromString(@"GDTViewController");
 	if (godotViewControllerClass) {
 		UIViewController *godot = [[godotViewControllerClass alloc] init];
@@ -71,6 +77,7 @@ static BOOL isReactBackground(UIView *view, UIView *reactRoot) {
 	} else {
 		NSLog(@"[DclGodotHost] GDTViewController missing (libgodot not linked with -ObjC?)");
 	}
+#endif
 
 	self.reactView.backgroundColor = UIColor.clearColor;
 	[host addSubview:self.reactView];
@@ -91,23 +98,40 @@ static BOOL isReactBackground(UIView *view, UIView *reactRoot) {
 
 @end
 
-@implementation DclGodotHost
+#if DCL_WITH_GODOT
+// Engine arguments: the host's defaults, then the exporter's debug command line (scene inspector,
+// remote debug) shipped as godot_cmdline.txt, then the arguments the process was launched with.
+static NSArray<NSString *> *engineArguments(void) {
+	NSArray<NSString *> *launch = NSProcessInfo.processInfo.arguments;
+	NSMutableArray<NSString *> *args = [NSMutableArray arrayWithArray:@[
+		launch.firstObject,
+		@"--rn-host", @"--skip-lobby", @"--guest-profile",
+		@"--realm", kMainRealm,
+		@"--location", @"0,0",
+	]];
+	NSString *cmdlinePath = [NSBundle.mainBundle pathForResource:@"godot_cmdline" ofType:@"txt"];
+	NSString *cmdline = cmdlinePath ? [NSString stringWithContentsOfFile:cmdlinePath encoding:NSUTF8StringEncoding error:nil] : nil;
+	for (NSString *line in [cmdline componentsSeparatedByCharactersInSet:NSCharacterSet.newlineCharacterSet]) {
+		if (line.length > 0) {
+			[args addObject:line];
+		}
+	}
+	[args addObjectsFromArray:[launch subarrayWithRange:NSMakeRange(1, launch.count - 1)]];
+	return args;
+}
 
-+ (UIViewController *)rootViewControllerWithReactView:(UIView *)reactView {
-	DclHostViewController *controller = [DclHostViewController new];
-	controller.reactView = reactView;
-
-	NSString *executable = NSProcessInfo.processInfo.arguments.firstObject;
-	const char *argv[] = {
-		executable.UTF8String,
-		"--rn-host", "--skip-lobby", "--guest-profile",
-		"--realm", kMainRealm.UTF8String,
-		"--location", "0,0",
-	};
+static void startEngine(void) {
+	NSArray<NSString *> *args = engineArguments();
+	const char **argv = (const char **)calloc(args.count, sizeof(char *));
+	for (NSUInteger i = 0; i < args.count; i++) {
+		argv[i] = args[i].UTF8String;
+	}
 	// The engine finds <executable>.pck in the app bundle root (--main-pack is compiled out).
-	if (godot_host_init((int)(sizeof(argv) / sizeof(argv[0])), argv) != 0) {
-		NSLog(@"[DclGodotHost] godot_host_init failed");
-		return controller;
+	int err = godot_host_init((int)args.count, argv);
+	free(argv);
+	if (err != 0) {
+		NSLog(@"[DclGodotHost] godot_host_init failed: %d", err);
+		return;
 	}
 	[GodotBridge bindEngineEvents];
 
@@ -117,7 +141,85 @@ static BOOL isReactBackground(UIView *view, UIView *reactRoot) {
 	[center addObserverForName:UIApplicationDidEnterBackgroundNotification object:nil queue:nil usingBlock:^(NSNotification *) { godot_host_enter_background(); }];
 	[center addObserverForName:UIApplicationWillEnterForegroundNotification object:nil queue:nil usingBlock:^(NSNotification *) { godot_host_exit_background(); }];
 	[center addObserverForName:UIApplicationDidReceiveMemoryWarningNotification object:nil queue:nil usingBlock:^(NSNotification *) { godot_host_memory_warning(); }];
+}
+#endif
+
+#if DCL_WITH_GODOT
+// Plugin services registered with GDTApplicationDelegate (deeplinks), minus the engine's own
+// GDTAppDelegateService, which would start a second engine.
+static NSArray *pluginServices(void) {
+	Class delegate = NSClassFromString(@"GDTApplicationDelegate");
+	SEL servicesSelector = NSSelectorFromString(@"services");
+	if (![delegate respondsToSelector:servicesSelector]) {
+		return @[];
+	}
+	NSArray *services = ((NSArray * (*)(id, SEL))objc_msgSend)(delegate, servicesSelector);
+	Class engineService = NSClassFromString(@"GDTAppDelegateService");
+	return [services filteredArrayUsingPredicate:[NSPredicate predicateWithBlock:^BOOL(id service, NSDictionary *) {
+		return ![service isKindOfClass:engineService];
+	}]];
+}
+#endif
+
+@implementation DclGodotHost
+
++ (UIViewController *)rootViewControllerWithReactView:(UIView *)reactView {
+	DclHostViewController *controller = [DclHostViewController new];
+	controller.reactView = reactView;
+#if DCL_WITH_GODOT
+	startEngine();
+#endif
 	return controller;
+}
+
++ (void)forwardLaunchOptions:(NSDictionary<UIApplicationLaunchOptionsKey, id> *)launchOptions {
+#if DCL_WITH_GODOT
+	for (id service in pluginServices()) {
+		if ([service respondsToSelector:@selector(application:didFinishLaunchingWithOptions:)]) {
+			[service application:UIApplication.sharedApplication didFinishLaunchingWithOptions:launchOptions];
+		}
+	}
+#endif
+}
+
++ (void)forwardOpenURL:(NSURL *)url options:(NSDictionary<UIApplicationOpenURLOptionsKey, id> *)options {
+#if DCL_WITH_GODOT
+	for (id service in pluginServices()) {
+		if ([service respondsToSelector:@selector(application:openURL:options:)]) {
+			[service application:UIApplication.sharedApplication openURL:url options:options];
+		}
+	}
+#endif
+}
+
++ (void)forwardUserActivity:(NSUserActivity *)userActivity {
+#if DCL_WITH_GODOT
+	for (id service in pluginServices()) {
+		if ([service respondsToSelector:@selector(application:continueUserActivity:restorationHandler:)]) {
+			[service application:UIApplication.sharedApplication continueUserActivity:userActivity restorationHandler:^(NSArray *) {}];
+		}
+	}
+#endif
+}
+
++ (void)forwardDeviceToken:(NSData *)deviceToken error:(NSError *)error {
+#if DCL_WITH_GODOT
+	// The plugin adds these methods to GDTApplicationDelegate itself; its implementations do not
+	// use self, so they are called without an instance.
+	Class delegate = NSClassFromString(@"GDTApplicationDelegate");
+	UIApplication *app = UIApplication.sharedApplication;
+	if (deviceToken) {
+		SEL selector = @selector(application:didRegisterForRemoteNotificationsWithDeviceToken:);
+		if (class_respondsToSelector(delegate, selector)) {
+			((void (*)(id, SEL, UIApplication *, NSData *))class_getMethodImplementation(delegate, selector))(nil, selector, app, deviceToken);
+		}
+	} else {
+		SEL selector = @selector(application:didFailToRegisterForRemoteNotificationsWithError:);
+		if (class_respondsToSelector(delegate, selector)) {
+			((void (*)(id, SEL, UIApplication *, NSError *))class_getMethodImplementation(delegate, selector))(nil, selector, app, error);
+		}
+	}
+#endif
 }
 
 @end

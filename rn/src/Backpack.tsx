@@ -12,7 +12,8 @@ import {
   Text,
   View,
 } from 'react-native';
-import { sendCommand } from './GodotBridge';
+import { godotAvailable, sendCommand } from './GodotBridge';
+import { GodotPlaceholder } from './godot/GodotPlaceholder';
 import { CATEGORIES, WearableItem } from './wearables';
 
 const ACCENT = '#ff2d55';
@@ -139,7 +140,9 @@ export function Backpack({
         style={styles.hole}
         pointerEvents="none"
         onLayout={reportHole}
-      />
+      >
+        {!godotAvailable && <GodotPlaceholder label="Avatar preview" style={styles.holePlaceholder} />}
+      </View>
     </View>
   );
 }
@@ -199,6 +202,7 @@ const styles = StyleSheet.create({
     borderRightColor: 'rgba(255,255,255,0.06)',
   },
   hole: { flex: 1, backgroundColor: 'transparent' },
+  holePlaceholder: { flex: 1, margin: 24, borderRadius: 16, opacity: 0.85 },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
