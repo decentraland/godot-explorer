@@ -18,6 +18,7 @@ func async_open(rect: Rect2) -> void:
 		_preview.stretch = true
 		_layer.add_child(_preview)
 		get_viewport().disable_3d = true
+		_set_overlay(true)
 		Global.get_explorer().ui_root.hide()
 		place(rect)
 		await _async_refresh_avatar()
@@ -38,10 +39,18 @@ func close() -> void:
 	if _layer == null:
 		return
 	get_viewport().disable_3d = false
+	_set_overlay(false)
 	Global.get_explorer().ui_root.show()
 	_layer.queue_free()
 	_layer = null
 	_preview = null
+
+
+# Transparent root + the host's Godot surface above the RN view: the avatar draws over RN content.
+func _set_overlay(on: bool) -> void:
+	get_viewport().transparent_bg = on
+	if Engine.has_singleton("RnHostPlugin"):
+		Engine.get_singleton("RnHostPlugin").call("set_surface_on_top", on)
 
 
 func async_equip(urn: String) -> void:

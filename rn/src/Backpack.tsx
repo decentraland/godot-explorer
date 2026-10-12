@@ -84,6 +84,9 @@ export function Backpack({
           ))}
         </ScrollView>
       </View>
+      <View style={styles.banner} pointerEvents="none">
+        <Text style={styles.bannerText}>RN banner under the avatar</Text>
+      </View>
       <View
         ref={hole}
         style={styles.hole}
@@ -97,6 +100,17 @@ export function Backpack({
 const styles = StyleSheet.create({
   root: { ...StyleSheet.absoluteFill, flexDirection: 'row' },
   panel: { flex: 1, backgroundColor: '#16101f', padding: 16 },
+  banner: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: '72%',
+    height: 90,
+    backgroundColor: 'rgba(255,45,85,0.85)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  bannerText: { color: '#fff', fontSize: 28, fontWeight: '800' },
   hole: { flex: 1, backgroundColor: 'transparent' },
   header: {
     flexDirection: 'row',

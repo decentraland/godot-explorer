@@ -23,6 +23,10 @@ right. RN reports the hole's rectangle in device pixels; `godot/src/rn_bridge/rn
 the real `avatar_preview.tscn` there (converted to Godot's scaled viewport units), pauses the plaza's
 3D render and hides the Godot UI. Touches inside the hole fall through to Godot, so the preview's own
 drag-to-rotate works. Tapping a wearable sends `equip{urn}` and the avatar updates live.
+The Godot surface is translucent (`override.cfg` in the host's assets sets
+`display/window/per_pixel_transparency/allowed`) and `RnHostPlugin.set_surface_on_top` flips it above
+the RN view while the backpack is open, so the avatar draws in front of RN content (the demo banner);
+closing flips it back below. Touches still route by RN hit-test, so a drag over the avatar reaches Godot.
 Spike scope: guest profile and a short list of base-avatar wearables, no ownership or saving.
 
 ## Android (verified on a device)

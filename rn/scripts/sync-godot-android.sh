@@ -32,6 +32,9 @@ cp "$TMP"/lib/arm64-v8a/*.so "$APP/src/main/jniLibs/arm64-v8a/"
 # dexopt/ is the exported app's own baseline profile; AGP adds the RN app's, so skip it.
 unzip -q "$APK" 'assets/*' -x 'assets/ios/*' 'assets/dexopt/*' -d "$APP/src/main"
 
+# Host-only: a translucent Godot surface lets the avatar preview draw above the RN UI.
+printf '[display]\n\nwindow/per_pixel_transparency/allowed=true\n' > "$APP/src/main/assets/override.cfg"
+
 # unzip keeps the archive's 1981 timestamps and assets.sparsepck keeps its size across exports, so
 # Gradle would reuse a stale index (truncated or garbage scripts at runtime). Fresh mtimes force it.
 find "$APP/src/main/assets" -type f -exec touch {} +

@@ -22,6 +22,11 @@ class RnHostPlugin(godot: Godot) : GodotPlugin(godot) {
     GodotBridgeModule.dispatch(json)
   }
 
+  @UsedByGodot
+  fun set_surface_on_top(onTop: Boolean) {
+    runOnUiThread { godot.renderView?.view?.setZOrderOnTop(onTop) }
+  }
+
   fun sendCommand(json: String) {
     emitSignal("rn_command", json)
   }
