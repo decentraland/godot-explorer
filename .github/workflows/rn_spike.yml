@@ -1,7 +1,9 @@
-name: 🧪 RN spike (VIBE-CODED)
+name: 📱 React Native app checks
 
-# VIBE-CODED SPIKE: checks for the React Native host app in rn/. The JS job is cheap and runs on
-# every PR touching rn/. The iOS job is manual, best-effort and has never been run by its author.
+# Checks for the React Native app in rn/ (the shipping mobile app; Godot is embedded in it). The JS
+# job and the engine-less native builds are cheap and run on every PR touching rn/: they catch a
+# broken native project before the full mobile pipeline (android_builds.yml, ios_r2_artifact.yml)
+# does. The full iOS build with the engine is manual.
 on:
   pull_request:
     paths:
@@ -11,7 +13,7 @@ on:
   workflow_dispatch:
     inputs:
       godot_host_lib_url:
-        description: 'URL of libgodot.ios.template_release.arm64.a built with embedded_host=yes (ios-template-release-host artifact of decentraland/godotengine spike/ios-host-embedding)'
+        description: 'URL of libgodot.ios.template_release.arm64.a built with embedded_host=yes, for the full iOS build (empty: use the ios_host template from cargo run -- install)'
         required: false
         type: string
 
@@ -19,7 +21,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: rn-spike-${{ github.ref }}
+  group: rn-app-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -43,11 +45,56 @@ jobs:
       - run: npx eslint App.tsx src __tests__
       - run: npx jest
 
-  ios-compile:
-    name: iOS host compile check (manual, best effort)
-    if: github.event_name == 'workflow_dispatch' && inputs.godot_host_lib_url != ''
+  android-no-godot:
+    name: Android app without Godot (mock bridge)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: rn/package-lock.json
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Build the release APK
+        working-directory: rn
+        run: |
+          npm ci
+          cd android && ./gradlew :app:assembleRelease -PdclNoGodot=true
+
+  ios-no-godot:
+    name: iOS app without Godot (simulator)
+    if: github.event_name == 'pull_request'
     runs-on: macos-26
-    continue-on-error: true
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: rn/package-lock.json
+
+      - name: Build for the simulator
+        working-directory: rn
+        run: |
+          npm ci
+          cd ios && pod install
+          xcodebuild build -workspace DclRn.xcworkspace -scheme DclRn -configuration Release \
+            -sdk iphonesimulator -destination 'generic/platform=iOS Simulator'
+
+  ios-with-godot:
+    name: iOS app with Godot (manual, no signing)
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: macos-26
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
@@ -56,6 +103,12 @@ jobs:
         with:
           toolchain: "1.90"
           targets: aarch64-apple-ios
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: rn/package-lock.json
 
       - name: Install dependencies
         uses: ./.github/actions/install-deps
@@ -77,27 +130,20 @@ jobs:
             xcodebuild -downloadComponent MetalToolchain
           fi
 
-      - name: Export iOS project pack
+      - name: Download embedded_host libgodot
+        if: inputs.godot_host_lib_url != ''
+        run: |
+          curl -fL "${{ inputs.godot_host_lib_url }}" -o "$RUNNER_TEMP/libgodot.a"
+          echo "GODOT_HOST_LIB=$RUNNER_TEMP/libgodot.a" >> "$GITHUB_ENV"
+
+      # Godot export, then rn/scripts/sync-godot-ios.sh into rn/ios/Godot.
+      - name: Export
         run: cargo run -- export --target ios --release
 
-      - name: Download embedded_host libgodot
-        run: curl -fL "${{ inputs.godot_host_lib_url }}" -o "$RUNNER_TEMP/libgodot.a"
-
-      - name: Sync Godot artifacts into rn/ios
-        run: GODOT_HOST_LIB="$RUNNER_TEMP/libgodot.a" rn/scripts/sync-godot-ios.sh
-
-      - name: Install RN deps and configure the Xcode project
+      - name: Build for device (no signing)
         working-directory: rn
         run: |
           npm ci
-          cd ios
-          gem install xcodeproj
-          ruby configure_godot.rb
-          pod install
-
-      - name: Build for device (no signing)
-        working-directory: rn/ios
-        run: |
-          xcodebuild build -workspace DclRn.xcworkspace -scheme DclRn \
-            -sdk iphoneos -configuration Release \
-            CODE_SIGNING_ALLOWED=NO
+          cd ios && pod install
+          xcodebuild build -workspace DclRn.xcworkspace -scheme DclRn -configuration Release \
+            -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO
