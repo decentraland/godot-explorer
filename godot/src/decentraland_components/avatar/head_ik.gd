@@ -27,19 +27,26 @@ const MAX_SPEED := 0.7071068
 class HeadTurnModifier3D:
 	extends SkeletonModifier3D
 
+	const YAW_DEAD_ZONE := 0.05
+
 	var bone := -1
 	var yaw := 0.0  # radians, + = character turns to its own right
 	var pitch := 0.0  # radians, + = up
 	var weight := 0.0
+	# The avatar's own frame: Unity builds this rotation on a rig node that
+	# inherits the avatar, so its axes are the body's, not the world's. Using the
+	# world right pitches the head sideways as soon as the body faces east/west.
+	var frame := Basis.IDENTITY
 
 	func _process_modification() -> void:
 		var skel := get_skeleton()
-		if skel == null or bone < 0 or weight <= 0.0:
+		if skel == null or bone < 0 or weight <= 0.0 or not skel.is_inside_tree():
 			return
 		var skel_basis := skel.global_transform.basis.orthonormalized()
-		# Yaw about the world up, then pitch about the world right, exactly the
-		# order Unity composes (horizontalTargetRotation * AxisAngle(right, ..)).
-		var delta := Basis(Vector3.UP, -yaw) * Basis(Vector3.RIGHT, pitch)
+		# Yaw about the body's up, then pitch about the body's right, the order
+		# Unity composes (horizontalTargetRotation * AxisAngle(right, ..)).
+		var delta_local := Basis(Vector3.UP, -yaw) * Basis(Vector3.RIGHT, pitch)
+		var delta := frame * delta_local * frame.inverse()
 		var cur_world := (skel_basis * skel.get_bone_global_pose(bone).basis).orthonormalized()
 		var mixed := cur_world.slerp((delta * cur_world).orthonormalized(), weight)
 		var parent_skel := Basis.IDENTITY
@@ -76,11 +83,15 @@ func update_ik(delta: float, enabled: bool, look_dir: Vector3) -> void:
 		# Weight is on its way out: keep looking where we were, the blend fades.
 		return
 	var basis := _avatar.global_transform.basis.orthonormalized()
+	_modifier.frame = basis
 	var dir := (basis.inverse() * look_dir).normalized()
 	var horizontal := sqrt(dir.x * dir.x + dir.z * dir.z)
 	var yaw := rad_to_deg(atan2(dir.x, -dir.z))
 	var pitch := rad_to_deg(atan2(dir.y, horizontal))
 	var speed := ROTATION_SPEED
+	if horizontal < HeadTurnModifier3D.YAW_DEAD_ZONE:
+		# Camera pitched near vertical: keep the heading, track the pitch only.
+		yaw = rad_to_deg(_modifier.yaw)
 	if absf(yaw) > HORIZONTAL_RESET:
 		# Behind the shoulders: drop both axes and ease frontal, slower.
 		yaw = 0.0
