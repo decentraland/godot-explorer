@@ -189,6 +189,7 @@ var _spawn_min_hold: float = 0.0
 var _born_ms: int = 0
 var _feet_ik: AvatarFeetIK = null
 var _hands_ik: AvatarHandsIK = null
+var _head_ik: AvatarHeadIK = null
 var _world_is_loading: bool = false
 # #b2: first _process tick should not treat wire-provided jump_count>=2 as a
 # rising edge — otherwise a remote avatar first seen mid-double-jump plays the
@@ -309,6 +310,7 @@ func _ready():
 	_born_ms = Time.get_ticks_msec()
 	_feet_ik = AvatarFeetIK.new(self, body_shape_skeleton_3d)
 	_hands_ik = AvatarHandsIK.new(self, body_shape_skeleton_3d)
+	_head_ik = AvatarHeadIK.new(self, body_shape_skeleton_3d)
 	_mesh_assembler.apply_toon_material_recursive(glider_prop)
 	# #1554: Godot compiles the hologram pipeline on first draw and renders a
 	# solid-color placeholder until done — warm it once, tiny and briefly.
@@ -1715,6 +1717,15 @@ func _process(delta):
 	)
 	_feet_ik.update_ik(delta, ik_enabled)
 	_hands_ik.update_ik(delta, ik_enabled)
+
+	# Head IK: looks where the view camera looks, and only while nearly
+	# standing still (Unity disables it above ~0.7 m/s of movement).
+	var camera := get_viewport().get_camera_3d()
+	_head_ik.update_ik(
+		delta,
+		ik_enabled and movement_speed < AvatarHeadIK.MAX_SPEED and camera != null,
+		Vector3.ZERO if camera == null else -camera.global_transform.basis.z
+	)
 
 	# #1554: avatars ghost in on first appearance — covers local spawn AND
 	# teleports (the player node is re-instanced per teleport, so a pending
