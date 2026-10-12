@@ -1911,6 +1911,16 @@ impl AvatarScene {
                     movement.velocity_z,
                 ),
             );
+            // #2853 head sync: the head turn rides the uncompressed movement (and
+            // always the Pulse state, which is quantized from it). The compressed
+            // rfc4 bitfield has no head fields, so a peer reads no head turn from
+            // that path — same as before this change.
+            avatar.bind_mut().apply_wire_head_ik(
+                movement.head_yaw,
+                movement.head_pitch,
+                movement.head_ik_yaw_enabled,
+                movement.head_ik_pitch_enabled,
+            );
             avatar.bind_mut().sync_newest_packet_anim();
         }
         self.last_movement_timestamp

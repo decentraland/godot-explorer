@@ -57,6 +57,11 @@ class HeadTurnModifier3D:
 		skel.set_bone_pose_rotation(bone, local.get_rotation_quaternion())
 
 
+# The angles the local player last AIMED at, in degrees, before the limits and
+# the easing — what Unity broadcasts (HeadIKComponent.GetHeadYawAndPitch).
+var head_yaw_deg := 0.0
+var head_pitch_deg := 0.0
+
 var _avatar: Node3D
 var _skeleton: Skeleton3D
 var _modifier: HeadTurnModifier3D
@@ -88,10 +93,36 @@ func update_ik(delta: float, enabled: bool, look_dir: Vector3) -> void:
 	var horizontal := sqrt(dir.x * dir.x + dir.z * dir.z)
 	var yaw := rad_to_deg(atan2(dir.x, -dir.z))
 	var pitch := rad_to_deg(atan2(dir.y, horizontal))
-	var speed := ROTATION_SPEED
 	if horizontal < HeadTurnModifier3D.YAW_DEAD_ZONE:
 		# Camera pitched near vertical: keep the heading, track the pitch only.
 		yaw = rad_to_deg(_modifier.yaw)
+	head_yaw_deg = yaw
+	head_pitch_deg = pitch
+	_aim(delta, yaw, pitch)
+
+
+## Per-frame entry for a remote avatar: the turn arrives over the wire as the
+## sender's own head angles (#2853 head sync / Unity UpdateRemoteIK). They are
+## already in the avatar's frame, so there is no direction to project. Same
+## limits and easing as the local path, so a remote head reads like a local one.
+func update_remote(delta: float, enabled: bool, yaw_deg: float, pitch_deg: float) -> void:
+	if not _built:
+		if not enabled:
+			return
+		_build()
+	_modifier.weight = move_toward(_modifier.weight, 1.0 if enabled else 0.0, WEIGHT_SPEED * delta)
+	if _modifier.weight <= 0.0 or not enabled:
+		return
+	_modifier.frame = _avatar.global_transform.basis.orthonormalized()
+	_aim(delta, yaw_deg, pitch_deg)
+
+
+## Shared tail: clamp the aim, then ease the applied turn toward it. The weight
+## is already eased in by the caller.
+func _aim(delta: float, yaw_deg: float, pitch_deg: float) -> void:
+	var yaw := yaw_deg
+	var pitch := pitch_deg
+	var speed := ROTATION_SPEED
 	if absf(yaw) > HORIZONTAL_RESET:
 		# Behind the shoulders: drop both axes and ease frontal, slower.
 		yaw = 0.0

@@ -41,6 +41,9 @@ const DEFAULT_NAMETAG_HEIGHT := 1.9
 const GAIT_BLEND_MAX_SPEEDS := [0.0, 1.5, 8.0, 10.0]
 const GAIT_BLEND_SPEED := 5.0
 const STILL_BLEND_THRESHOLD := 0.25
+# #2853 head sync: Unity HeadIKRemotePlayersDistance — a remote head turn is
+# dropped past this, so a crowd costs nothing at distance.
+const REMOTE_HEAD_IK_DISTANCE := 10.0
 # #2855: Unity LongFallStunTime — the hard-landing stun animation covers the
 # input lock (loco2 M6). Remote avatars derive it from the wire long_fall.
 const LONG_FALL_STUN_TIME := 0.75
@@ -185,6 +188,11 @@ var _hologram_material: ShaderMaterial = null
 var _spawn_ghost_meshes: Array[MeshInstance3D] = []
 var _ghost_instance: Node3D = null
 var _ghost_skeleton: Skeleton3D = null
+# Ghost ⇄ our skeleton bone indices, paired once per reveal (see
+# _resolve_ghost_bones): index i is our bone in _ghost_src_bones and the
+# matching ghost bone in _ghost_dst_bones.
+var _ghost_src_bones := PackedInt32Array()
+var _ghost_dst_bones := PackedInt32Array()
 var _spawn_min_hold: float = 0.0
 var _born_ms: int = 0
 var _feet_ik: AvatarFeetIK = null
@@ -221,6 +229,7 @@ var _scene_emote_registry: Dictionary = {}
 var _mesh_assembler: AvatarMeshAssembler = null
 
 var _lod_state: int = LODState.FULL
+var _lod_distance := 0.0  # to the view camera, refreshed with the LOD state
 # 2D screen-space nameplate (non-XR) vs legacy viewport quad (XR). Runtime lives in
 # NameplateLayer; these cache the hide-flag/FAR gate and the depth-occlusion result.
 var _use_2d_nameplate: bool = false
@@ -1344,6 +1353,7 @@ func _update_lod() -> void:
 		return
 
 	var dist: float = camera.global_position.distance_to(global_position)
+	_lod_distance = dist
 
 	var new_state: int = _lod_state
 	var dither_alpha: float = 1.0
@@ -1715,17 +1725,36 @@ func _process(delta):
 		and _spawn_reveal_phase == SpawnRevealPhase.IDLE
 		and not _world_is_loading
 	)
-	_feet_ik.update_ik(delta, ik_enabled)
-	_hands_ik.update_ik(delta, ik_enabled)
+	if is_local_player:
+		_feet_ik.update_ik(delta, ik_enabled)
+		_hands_ik.update_ik(delta, ik_enabled)
 
-	# Head IK: looks where the view camera looks, and only while nearly
-	# standing still (Unity disables it above ~0.7 m/s of movement).
-	var camera := get_viewport().get_camera_3d()
-	_head_ik.update_ik(
-		delta,
-		ik_enabled and movement_speed < AvatarHeadIK.MAX_SPEED and camera != null,
-		Vector3.ZERO if camera == null else -camera.global_transform.basis.z
-	)
+		# Head IK: looks where the view camera looks, and only while nearly
+		# standing still (Unity disables it above ~0.7 m/s of movement).
+		var camera := get_viewport().get_camera_3d()
+		var head_on: bool = (
+			ik_enabled and movement_speed < AvatarHeadIK.MAX_SPEED and camera != null
+		)
+		_head_ik.update_ik(
+			delta, head_on, Vector3.ZERO if camera == null else -camera.global_transform.basis.z
+		)
+		# #2853 head sync: broadcast the head turn so other clients aim our head
+		# at us (Unity HeadSync sends yaw+pitch, not a look-at vector).
+		Global.comms.set_head_ik(head_on, _head_ik.head_yaw_deg, _head_ik.head_pitch_deg)
+	else:
+		# A remote avatar's head comes over the wire, never from our camera. Head
+		# only: Unity's hands/feet IK need the sender's rigid transform, which a
+		# remote entity does not carry, so those stay local-only.
+		var head_on: bool = (
+			(self.head_ik_yaw_enabled or self.head_ik_pitch_enabled)
+			and _lod_distance <= REMOTE_HEAD_IK_DISTANCE
+			and _lod_state == LODState.FULL
+			and _spawn_reveal_phase == SpawnRevealPhase.IDLE
+			and not _world_is_loading
+			and not _stunned_now
+			and not emote_controller.is_playing()
+		)
+		_head_ik.update_remote(delta, head_on, self.head_ik_yaw, self.head_ik_pitch)
 
 	# #1554: avatars ghost in on first appearance — covers local spawn AND
 	# teleports (the player node is re-instanced per teleport, so a pending
@@ -1788,6 +1817,7 @@ func start_spawn_reveal() -> void:
 				_spawn_ghost_meshes.append(child)
 			# Drive off OUR skeleton's rest proportions (same rig).
 			_ghost_skeleton.scale = Vector3.ONE
+		_resolve_ghost_bones()
 	body_shape_skeleton_3d.visible = false
 	_spawn_reveal_phase = SpawnRevealPhase.GHOST_IN
 	_spawn_reveal_elapsed = 0.0
@@ -1836,6 +1866,8 @@ func _end_spawn_reveal() -> void:
 		_ghost_instance = null
 		_ghost_skeleton = null
 	_spawn_ghost_meshes.clear()
+	_ghost_src_bones = PackedInt32Array()
+	_ghost_dst_bones = PackedInt32Array()
 	body_shape_skeleton_3d.visible = true
 	_spawn_reveal_phase = SpawnRevealPhase.IDLE
 	# The impostor texture may have been baked mid-reveal — recapture clean.
@@ -1845,20 +1877,34 @@ func _end_spawn_reveal() -> void:
 
 
 # Copies our skeleton's pose onto the ghost body's skeleton (same rig, bone
-# names match) so the spawn hologram animates with the avatar.
+# names match) so the spawn hologram animates with the avatar. The bone pairing
+# is resolved once, in _resolve_ghost_bones.
 func _mirror_pose_to_ghost() -> void:
 	if _ghost_skeleton == null or not is_instance_valid(_ghost_skeleton):
 		return
-	for i in range(_ghost_skeleton.get_bone_count()):
+	for i in _ghost_src_bones.size():
+		var ghost_bone: int = _ghost_dst_bones[i]
+		var ours: int = _ghost_src_bones[i]
+		_ghost_skeleton.set_bone_pose_position(
+			ghost_bone, body_shape_skeleton_3d.get_bone_pose_position(ours)
+		)
+		_ghost_skeleton.set_bone_pose_rotation(
+			ghost_bone, body_shape_skeleton_3d.get_bone_pose_rotation(ours)
+		)
+
+
+# Ghost bone -> our bone, resolved ONCE per reveal. Doing it per frame meant a
+# String allocation (get_bone_name) plus a name hash (find_bone) for every bone,
+# which cost more than the pose copy it was guarding.
+func _resolve_ghost_bones() -> void:
+	_ghost_src_bones = PackedInt32Array()
+	_ghost_dst_bones = PackedInt32Array()
+	for i in _ghost_skeleton.get_bone_count():
 		var ours := body_shape_skeleton_3d.find_bone(_ghost_skeleton.get_bone_name(i))
 		if ours < 0:
 			continue
-		_ghost_skeleton.set_bone_pose_position(
-			i, body_shape_skeleton_3d.get_bone_pose_position(ours)
-		)
-		_ghost_skeleton.set_bone_pose_rotation(
-			i, body_shape_skeleton_3d.get_bone_pose_rotation(ours)
-		)
+		_ghost_dst_bones.append(i)
+		_ghost_src_bones.append(ours)
 
 
 func _process_spawn_reveal(delta: float) -> void:
