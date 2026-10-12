@@ -3,10 +3,11 @@ import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BackpackScreen } from './backpack/BackpackScreen';
 import { AppText, BottomNav, colors, NavKey } from './ds';
+import { DiscoverScreen } from './discover/DiscoverScreen';
 
 /** Signed-in shell: bottom navigation with the Backpack as the one finished destination. */
 export function Home() {
-  const [tab, setTab] = useState<NavKey>('backpack');
+  const [tab, setTab] = useState<NavKey>('explore');
   const insets = useSafeAreaInsets();
   const nav = (
     <BottomNav active={tab} bottomInset={insets.bottom} onChange={setTab} />
@@ -14,6 +15,9 @@ export function Home() {
 
   if (tab === 'backpack') {
     return <BackpackScreen footer={nav} onBack={() => setTab('explore')} />;
+  }
+  if (tab === 'explore') {
+    return <DiscoverScreen footer={nav} />;
   }
   return (
     <View style={styles.root}>
@@ -29,7 +33,7 @@ export function Home() {
 }
 
 const TITLES: Record<NavKey, string> = {
-  explore: 'Explore',
+  explore: 'Discover',
   backpack: 'Backpack',
   settings: 'Settings',
   profile: 'Profile',

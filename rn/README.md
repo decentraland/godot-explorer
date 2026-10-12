@@ -35,6 +35,9 @@ switches it (the host's `override.cfg` makes the engine start portrait too).
   load shows the "Connection lost" state.
 - `src/flow/`: portrait-only entry flow (splash, terms, account, sign-in, avatar create/customize/naming,
   tour) mirroring `lobby.gd`. Sign-in is a stand-in (`flow/auth.ts`): the real auth is in the Rust client.
+- `src/discover/`: basic Discover (Featured, Events, Last Played, Most Active) and the Detail Place sheet, from the
+  public places/events APIs. Search filters the loaded lists; Jump In only records the place in Last Played
+  (entering the world isn't part of the avatar-only engine yet).
 - `src/engine.ts`: lazy engine start, command queue until `ready`, latest avatar state.
 - `src/WorldHud.tsx`: the old Genesis Plaza HUD; not mounted while the engine is avatar-only.
 
