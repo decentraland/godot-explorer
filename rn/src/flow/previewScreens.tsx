@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AvatarHole, StageBackground } from '../backpack/AvatarStage';
 import { AppText, PrimaryButton } from '../ds';
 import { ensureEngine, send, useEngine } from '../engine';
+import { u } from '../ds/scale';
 
 /** Stage + the single Godot avatar window, with a spinner behind it until the avatar arrives. */
 export function PreviewArea() {
@@ -41,7 +42,7 @@ export function AvatarCreateScreen({
   return (
     <View style={styles.fill}>
       <PreviewArea />
-      <View style={[styles.top, { paddingTop: insets.top + 16 }]}>
+      <View style={[styles.top, { paddingTop: insets.top + u(16) }]}>
         <AppText variant="heading" style={styles.centered}>
           Create your avatar
         </AppText>
@@ -91,7 +92,7 @@ export function WelcomeBackScreen({
   return (
     <View style={styles.fill}>
       <PreviewArea />
-      <View style={[styles.top, { paddingTop: insets.top + 16 }]}>
+      <View style={[styles.top, { paddingTop: insets.top + u(16) }]}>
         <AppText variant="heading" style={styles.centered}>
           Welcome back,
         </AppText>
@@ -114,28 +115,28 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   flex: { flex: 1 },
   area: { ...StyleSheet.absoluteFill },
-  hole: { flex: 1, marginTop: 130, marginBottom: 250 },
+  hole: { flex: 1, marginTop: u(130), marginBottom: u(250) },
   loading: {
     ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  loadingText: { marginTop: 8 },
+  loadingText: { marginTop: u(8) },
   top: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
-    paddingHorizontal: 24,
+    paddingHorizontal: u(24),
   },
   bottom: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    paddingHorizontal: 24,
-    gap: 12,
+    paddingHorizontal: u(24),
+    gap: u(12),
   },
-  row: { flexDirection: 'row', gap: 12 },
+  row: { flexDirection: 'row', gap: u(12) },
   centered: { textAlign: 'center' },
 });

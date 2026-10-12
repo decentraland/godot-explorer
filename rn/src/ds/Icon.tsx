@@ -1,14 +1,25 @@
 import { parse, SvgAst, SvgXml } from 'react-native-svg';
 import {
+  backpackOutlineSvg,
   backpackSvg,
+  compassActiveSvg,
+  compassOutlineSvg,
+  profileFillSvg,
+  profileRingSvg,
   filterSvg,
   profileSvg,
   settingsSvg,
   wearablesSvg,
 } from './iconSvgs';
+import { u } from './scale';
 
 const sources = {
   backpack: backpackSvg,
+  backpackOutline: backpackOutlineSvg,
+  compassActive: compassActiveSvg,
+  compassOutline: compassOutlineSvg,
+  profileFill: profileFillSvg,
+  profileRing: profileRingSvg,
   filter: filterSvg,
   profile: profileSvg,
   settings: settingsSvg,
@@ -47,7 +58,7 @@ export type IconName = keyof typeof sources | keyof typeof strokes;
 
 export function Icon({
   name,
-  size = 24,
+  size: designSize = 24,
   color = '#FCFCFC',
   strokeWidth = 2.4,
 }: {
@@ -56,10 +67,11 @@ export function Icon({
   color?: string;
   strokeWidth?: number;
 }) {
+  const size = u(designSize);
   if (name in strokes) {
     const path = strokes[name as keyof typeof strokes];
     const xml = `<svg viewBox="0 0 24 24" fill="none"><path d="${path}" stroke="${color}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
     return <SvgXml xml={xml} width={size} height={size} />;
   }
-  return <SvgAst ast={asts[name]} width={size} height={size} />;
+  return <SvgAst ast={asts[name]} override={{ width: size, height: size }} />;
 }

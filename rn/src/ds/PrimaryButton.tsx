@@ -1,6 +1,7 @@
 import { ActivityIndicator, Pressable, StyleSheet } from 'react-native';
 import { AppText } from './AppText';
 import { colors, radii } from './tokens';
+import { u } from './scale';
 
 export type ButtonTone = 'primary' | 'secondary' | 'ghost';
 
@@ -48,8 +49,8 @@ export function PrimaryButton({
 
 const styles = StyleSheet.create({
   button: {
-    minHeight: 48,
-    paddingHorizontal: 24,
+    minHeight: u(48),
+    paddingHorizontal: u(24),
     borderRadius: radii.pill,
     alignItems: 'center',
     justifyContent: 'center',

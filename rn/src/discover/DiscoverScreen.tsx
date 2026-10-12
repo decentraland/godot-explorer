@@ -13,8 +13,9 @@ import { DiscoverEvent, Place } from './api';
 import { EventCard, PlaceCard } from './Cards';
 import { DetailSheet } from './DetailSheet';
 import { matchesQuery } from './format';
-import { recordPlayed, usePlayed } from './history';
+import { usePlayed } from './history';
 import { useDiscover } from './useDiscover';
+import { u } from '../ds/scale';
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -34,13 +35,18 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 }
 
 /** Basic Discover: featured, events, last played and most active places, with the place detail sheet. */
-export function DiscoverScreen({ footer }: { footer: ReactNode }) {
+export function DiscoverScreen({
+  footer,
+  onJumpIn,
+}: {
+  footer: ReactNode;
+  onJumpIn: (place: Place) => void;
+}) {
   const insets = useSafeAreaInsets();
   const { state, retry } = useDiscover();
   const played = usePlayed();
   const [query, setQuery] = useState<string | null>(null);
   const [selected, setSelected] = useState<Place | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
   const now = useMemo(() => Date.now(), []);
 
   const searching = query !== null;
@@ -48,12 +54,8 @@ export function DiscoverScreen({ footer }: { footer: ReactNode }) {
     !searching || query.trim() === '' || matchesQuery(title, query);
 
   const jumpIn = (place: Place) => {
-    recordPlayed(place);
     setSelected(null);
-    setNotice(
-      `Entering ${place.title} needs the world, which isn't part of this spike yet.`,
-    );
-    setTimeout(() => setNotice(null), 3500);
+    onJumpIn(place);
   };
 
   const content = () => {
@@ -129,7 +131,7 @@ export function DiscoverScreen({ footer }: { footer: ReactNode }) {
           { offset: 1, color: '#7A1AA0' },
         ]}
       />
-      <View style={[styles.header, { paddingTop: insets.top + 24 }]}>
+      <View style={[styles.header, { paddingTop: insets.top + u(24) }]}>
         {searching ? (
           <TextInput
             autoFocus
@@ -166,16 +168,6 @@ export function DiscoverScreen({ footer }: { footer: ReactNode }) {
           onJumpIn={jumpIn}
         />
       )}
-      {notice && (
-        <View
-          style={[styles.notice, { bottom: 110 + insets.bottom }]}
-          pointerEvents="none"
-        >
-          <AppText variant="body" style={styles.noticeText}>
-            {notice}
-          </AppText>
-        </View>
-      )}
     </View>
   );
 }
@@ -186,34 +178,29 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 24,
-    paddingBottom: 12,
+    paddingHorizontal: u(24),
+    paddingBottom: u(12),
   },
-  heading: { fontSize: 24 },
+  heading: { fontSize: u(24) },
   search: {
     flex: 1,
-    height: 40,
-    marginRight: 16,
-    paddingHorizontal: 14,
-    borderRadius: 20,
+    height: u(40),
+    marginRight: u(16),
+    paddingHorizontal: u(14),
+    borderRadius: u(20),
     color: colors.snow,
     fontFamily: 'Inter-Medium',
-    fontSize: 15,
+    fontSize: u(15),
     backgroundColor: colors.white10,
   },
   body: { flex: 1 },
-  scroll: { paddingBottom: 24 },
-  section: { marginTop: 18 },
-  sectionTitle: { fontSize: 18, paddingHorizontal: 24, marginBottom: 12 },
-  rail: { paddingHorizontal: 24, gap: 12 },
-  loading: { alignItems: 'center', paddingTop: 48 },
-  notice: {
-    position: 'absolute',
-    left: 24,
-    right: 24,
-    padding: 14,
-    borderRadius: 8,
-    backgroundColor: colors.shadow,
+  scroll: { paddingBottom: u(24) },
+  section: { marginTop: u(21) },
+  sectionTitle: {
+    fontSize: u(18),
+    paddingHorizontal: u(24),
+    marginBottom: u(10),
   },
-  noticeText: { fontSize: 13, textAlign: 'center' },
+  rail: { paddingHorizontal: u(24), gap: u(16) },
+  loading: { alignItems: 'center', paddingTop: u(48) },
 });

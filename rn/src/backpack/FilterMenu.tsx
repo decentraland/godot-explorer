@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 import { AppText, colors, Icon } from '../ds';
 import { ItemFilter } from './selection';
+import { u } from '../ds/scale';
 
 const OPTIONS: { key: ItemFilter; label: string }[] = [
   { key: 'all', label: 'All' },
@@ -42,21 +43,21 @@ export function FilterMenu({
 
 const styles = StyleSheet.create({
   menu: {
-    width: 165,
-    padding: 8,
-    borderRadius: 8,
+    width: u(165),
+    padding: u(8),
+    borderRadius: u(8),
     borderWidth: 1,
     borderColor: 'rgba(232,185,255,0.45)',
     backgroundColor: colors.purple550,
   },
   row: {
-    height: 42,
-    paddingHorizontal: 8,
-    borderRadius: 6,
+    height: u(42),
+    paddingHorizontal: u(8),
+    borderRadius: u(6),
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
   rowOn: { backgroundColor: 'rgba(0,0,0,0.35)' },
-  label: { fontSize: 16, color: colors.lavender },
+  label: { fontSize: u(16), color: colors.lavender },
 });

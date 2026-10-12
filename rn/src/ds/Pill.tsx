@@ -2,6 +2,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { AppText } from './AppText';
 import { Icon, IconName } from './Icon';
 import { colors, radii } from './tokens';
+import { u } from './scale';
 
 /** Selectable chip. `tone="solid"` is the ruby main-mode switch, `"soft"` the lavender sub-filter. */
 export function Pill({
@@ -57,15 +58,15 @@ export function Pill({
 
 const styles = StyleSheet.create({
   pill: {
-    height: 30,
+    height: u(30),
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 14,
+    paddingHorizontal: u(14),
     borderRadius: radii.pill,
   },
-  icon: { marginRight: 6 },
-  solidText: { fontSize: 14 },
-  softText: { fontSize: 13 },
+  icon: { marginRight: u(6) },
+  solidText: { fontSize: u(14) },
+  softText: { fontSize: u(13) },
   pressed: { opacity: 0.8 },
 });

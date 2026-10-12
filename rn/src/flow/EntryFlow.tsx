@@ -19,6 +19,7 @@ import {
   TermsScreen,
   WaitScreen,
 } from './screens';
+import { u } from '../ds/scale';
 
 /** Portrait-only entry flow: splash → terms → account → (auth) → avatar → name → tour → app. */
 export function EntryFlow({ onDone }: { onDone: () => void }) {
@@ -136,6 +137,7 @@ export function EntryFlow({ onDone }: { onDone: () => void }) {
       return (
         <BackpackScreen
           allowLandscape={false}
+          backInPortrait
           onBack={back}
           footer={
             <View style={styles.footer}>
@@ -172,6 +174,6 @@ function PreviewFill() {
 }
 
 const styles = StyleSheet.create({
-  footer: { padding: 24, paddingBottom: 32, backgroundColor: '#161518' },
-  previewFill: { flex: 1, marginVertical: 8 },
+  footer: { padding: u(24), paddingBottom: u(32), backgroundColor: '#161518' },
+  previewFill: { flex: 1, marginVertical: u(8) },
 });

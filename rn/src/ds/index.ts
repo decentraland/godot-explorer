@@ -11,5 +11,6 @@ export { Pill } from './Pill';
 export { PrimaryButton } from './PrimaryButton';
 export { SlotTile } from './SlotTile';
 export { Tabs } from './Tabs';
+export { SCALE, u } from './scale';
 export { colors, fonts, layout, radii, rarityColors } from './tokens';
 export type { Rarity } from './tokens';

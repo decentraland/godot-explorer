@@ -16,7 +16,8 @@ export type GodotEvent =
       type: 'chat';
       data: { address: string; message: string; timestamp: number };
     }
-  | { type: 'avatar'; data: AvatarState };
+  | { type: 'avatar'; data: AvatarState }
+  | { type: 'world'; data: { state: 'entered' | 'exited' } };
 
 /** Equipped avatar as the Godot side sees it; colors are `#rrggbb`, empty emote slots are ''. */
 export type AvatarState = {

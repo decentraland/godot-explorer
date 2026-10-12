@@ -13,6 +13,7 @@ import {
 import { AppText, colors, PrimaryButton, radii } from '../ds';
 import { FlowFrame } from './FlowFrame';
 import { isValidName, Provider } from './flowMachine';
+import { u } from '../ds/scale';
 
 const logo = require('../assets/logo.png');
 
@@ -215,30 +216,30 @@ export function NamingScreen({
 const styles = StyleSheet.create({
   fill: { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  logo: { width: 160, height: 160 },
-  logoSmall: { width: 96, height: 96, marginBottom: 12 },
-  spinner: { marginTop: 24 },
-  title: { marginTop: 16, textAlign: 'center' },
-  titleLeft: { marginTop: 4, marginBottom: 8 },
+  logo: { width: u(160), height: u(160) },
+  logoSmall: { width: u(96), height: u(96), marginBottom: u(12) },
+  spinner: { marginTop: u(24) },
+  title: { marginTop: u(16), textAlign: 'center' },
+  titleLeft: { marginTop: u(4), marginBottom: u(8) },
   copy: {
-    marginTop: 8,
+    marginTop: u(8),
     textAlign: 'center',
     opacity: 0.85,
-    paddingHorizontal: 16,
+    paddingHorizontal: u(16),
   },
-  link: { marginTop: 14, color: colors.lavender },
-  error: { marginTop: 12, color: colors.ruby },
-  actions: { gap: 12 },
+  link: { marginTop: u(14), color: colors.lavender },
+  error: { marginTop: u(12), color: colors.ruby },
+  actions: { gap: u(12) },
   input: {
-    height: 52,
+    height: u(52),
     borderRadius: radii.pill,
-    paddingHorizontal: 20,
+    paddingHorizontal: u(20),
     color: colors.snow,
     fontFamily: 'Inter-Medium',
-    fontSize: 16,
+    fontSize: u(16),
     backgroundColor: colors.white10,
     borderWidth: 1,
     borderColor: colors.white30,
   },
-  hint: { marginTop: 8, marginBottom: 16, textAlign: 'center' },
+  hint: { marginTop: u(8), marginBottom: u(16), textAlign: 'center' },
 });

@@ -11,6 +11,7 @@ import {
   ItemFilter,
 } from './selection';
 import { isRemovable, SLOTS, Slot, TABS, TabKey } from './taxonomy';
+import { u } from '../ds/scale';
 
 export type WearablesPanelProps = {
   catalog: Wearable[] | null;
@@ -123,16 +124,24 @@ export function WearablesPanel(props: WearablesPanelProps) {
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
-  tabs: { paddingHorizontal: layout.gutter, paddingTop: 8, paddingBottom: 12 },
+  tabs: {
+    paddingHorizontal: layout.gutter,
+    paddingTop: u(8),
+    paddingBottom: u(12),
+  },
   slotsScroll: { flexGrow: 0 },
-  slots: { paddingHorizontal: layout.gutter - 3, gap: 8, paddingBottom: 14 },
+  slots: {
+    paddingHorizontal: layout.gutter - 3,
+    gap: u(8),
+    paddingBottom: u(14),
+  },
   colorRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-end',
-    gap: 10,
+    gap: u(10),
     paddingHorizontal: layout.gutter,
-    paddingBottom: 12,
+    paddingBottom: u(12),
   },
   skeleton: {
     flexDirection: 'row',
@@ -141,5 +150,5 @@ const styles = StyleSheet.create({
     gap: layout.gap,
   },
   skeletonCell: { width: '31%' },
-  empty: { alignItems: 'center', paddingTop: 32 },
+  empty: { alignItems: 'center', paddingTop: u(32) },
 });

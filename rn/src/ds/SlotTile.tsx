@@ -3,13 +3,14 @@ import { AppText } from './AppText';
 import { GradientView } from './Gradient';
 import { Icon } from './Icon';
 import { colors, radii } from './tokens';
+import { u } from './scale';
 
 /** Category slot: small thumbnail of what is worn (or "+" when empty) with a label below. */
 export function SlotTile({
   label,
   thumbnail,
   selected,
-  size = 62,
+  size: designSize = 62,
   onPress,
 }: {
   label: string;
@@ -18,6 +19,7 @@ export function SlotTile({
   size?: number;
   onPress: () => void;
 }) {
+  const size = u(designSize);
   return (
     <Pressable
       accessibilityRole="button"
@@ -25,14 +27,14 @@ export function SlotTile({
       onPress={onPress}
       style={({ pressed }) => [
         styles.slot,
-        { width: size + 6 },
+        { width: size + u(6) },
         pressed && styles.pressed,
       ]}
     >
       <View
         style={[
           styles.frame,
-          { width: size + 6, height: size + 6 },
+          { width: size + u(6), height: size + u(6) },
           selected && styles.frameSelected,
         ]}
       >
@@ -72,7 +74,7 @@ export function SlotTile({
 const styles = StyleSheet.create({
   slot: { alignItems: 'center' },
   frame: {
-    padding: 3,
+    padding: u(3),
     borderRadius: radii.card + 2,
     borderWidth: 2,
     borderColor: 'transparent',
@@ -85,6 +87,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  label: { marginTop: 6, textAlign: 'center', fontSize: 14 },
+  label: { marginTop: u(6), textAlign: 'center', fontSize: u(14) },
   pressed: { opacity: 0.85 },
 });

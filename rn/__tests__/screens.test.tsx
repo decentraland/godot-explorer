@@ -39,7 +39,7 @@ describe('screens render', () => {
   });
 
   it('shows the connection lost state when the catalog cannot load', async () => {
-    const tree = mount(<Home />);
+    const tree = mount(<Home onJumpIn={() => {}} />);
     await act(async () => {});
     expect(JSON.stringify(tree.toJSON())).toContain('Connection lost');
   });

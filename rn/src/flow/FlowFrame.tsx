@@ -2,6 +2,7 @@ import { ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, Icon, LinearFill } from '../ds';
+import { u } from '../ds/scale';
 
 /** Purple full-screen backdrop with safe-area padding and an optional back button. */
 export function FlowFrame({
@@ -24,7 +25,10 @@ export function FlowFrame({
       <View
         style={[
           styles.content,
-          { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 24 },
+          {
+            paddingTop: insets.top + u(16),
+            paddingBottom: insets.bottom + u(24),
+          },
         ]}
       >
         {onBack ? (
@@ -46,6 +50,6 @@ export function FlowFrame({
 
 const styles = StyleSheet.create({
   root: { ...StyleSheet.absoluteFill, backgroundColor: colors.purple500 },
-  content: { flex: 1, paddingHorizontal: 24 },
-  back: { width: 40, height: 40, justifyContent: 'center' },
+  content: { flex: 1, paddingHorizontal: u(24) },
+  back: { width: u(40), height: u(40), justifyContent: 'center' },
 });

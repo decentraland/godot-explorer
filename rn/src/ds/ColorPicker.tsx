@@ -10,6 +10,7 @@ import { AppText } from './AppText';
 import { hexToHsv, Hsv, hsvToHex } from './colorMath';
 import { LinearFill } from './Gradient';
 import { colors } from './tokens';
+import { u } from './scale';
 
 const HUE_STOPS = [0, 60, 120, 180, 240, 300, 360].map((hue, index) => ({
   offset: index / 6,
@@ -119,7 +120,7 @@ function Slider({
 }
 
 type ReactTrack = ReactElement;
-const THUMB = 32;
+const THUMB = u(32);
 
 /** Hue / saturation / brightness sliders (Figma "Hair color" panel). */
 export function HsvSliders({
@@ -180,11 +181,11 @@ export function HsvSliders({
 }
 
 const styles = StyleSheet.create({
-  row: { gap: 10, paddingVertical: 4 },
+  row: { gap: u(10), paddingVertical: u(4) },
   swatchRing: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: u(44),
+    height: u(44),
+    borderRadius: u(22),
     borderWidth: 2,
     borderColor: 'transparent',
     alignItems: 'center',
@@ -192,25 +193,25 @@ const styles = StyleSheet.create({
   },
   swatchRingOn: { borderColor: colors.ruby },
   swatch: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: u(38),
+    height: u(38),
+    borderRadius: u(19),
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.45)',
   },
-  sliderBlock: { marginTop: 14 },
+  sliderBlock: { marginTop: u(14) },
   track: {
-    height: 24,
-    marginTop: 8,
-    borderRadius: 3,
+    height: u(24),
+    marginTop: u(8),
+    borderRadius: u(3),
     justifyContent: 'center',
   },
   thumb: {
     position: 'absolute',
-    top: -4,
+    top: u(-4),
     width: THUMB,
-    height: 32,
-    borderRadius: 3,
+    height: u(32),
+    borderRadius: u(3),
     borderWidth: 2,
     borderColor: colors.snow,
   },

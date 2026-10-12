@@ -2,8 +2,9 @@ import { Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { GradientView, Icon, ItemCard, colors, layout, radii } from '../ds';
 import { Emote, emoteIdOf } from './emotes';
 import { ItemGrid } from './ItemGrid';
+import { u } from '../ds/scale';
 
-const SLOT_SIZE = 56;
+const SLOT_SIZE = u(56);
 
 function EmoteThumb({ emote }: { emote?: Emote }) {
   return emote?.thumbnail ? (
@@ -123,7 +124,11 @@ export function EmotesGrid({
 
 const styles = StyleSheet.create({
   slotsScroll: { flexGrow: 0 },
-  slotsRow: { paddingHorizontal: layout.gutter, gap: 8, paddingVertical: 6 },
+  slotsRow: {
+    paddingHorizontal: layout.gutter,
+    gap: u(8),
+    paddingVertical: u(6),
+  },
   slot: {
     width: SLOT_SIZE,
     height: SLOT_SIZE,
@@ -139,5 +144,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   silhouette: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  gridTop: { height: 12 },
+  gridTop: { height: u(12) },
 });

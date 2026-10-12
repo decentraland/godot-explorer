@@ -9,6 +9,11 @@ func _ready() -> void:
 
 
 func _async_boot() -> void:
+	if not Global.player_identity.get_address_str().is_empty():
+		# Back from a world: keep the account and the customized profile.
+		SplashOverlay.fade_out()
+		RnBridge.on_avatar_host_ready()
+		return
 	Global.player_identity.create_disposable_account()
 	# The guest wallet's own default-profile pass is deferred; the random profile must land after it.
 	await get_tree().process_frame

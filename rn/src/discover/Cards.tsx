@@ -2,9 +2,10 @@ import { Image, Pressable, StyleSheet, View } from 'react-native';
 import { AppText, colors, Icon } from '../ds';
 import { DiscoverEvent, Place } from './api';
 import { formatRate, formatUsers, startsIn } from './format';
+import { u } from '../ds/scale';
 
-const PLACE_W = 146;
-const EVENT_W = 203;
+const PLACE_W = u(146);
+const EVENT_W = u(203);
 
 function Thumb({
   uri,
@@ -53,7 +54,7 @@ export function PlaceCard({
       onPress={onPress}
       style={({ pressed }) => [{ width: PLACE_W }, pressed && styles.pressed]}
     >
-      <Thumb uri={place.image} width={PLACE_W} height={78} />
+      <Thumb uri={place.image} width={PLACE_W} height={u(78)} />
       <AppText variant="button" numberOfLines={1} style={styles.title}>
         {place.title}
       </AppText>
@@ -78,7 +79,7 @@ export function EventCard({
       onPress={onPress}
       style={({ pressed }) => [{ width: EVENT_W }, pressed && styles.pressed]}
     >
-      <Thumb uri={event.image} width={EVENT_W} height={120} />
+      <Thumb uri={event.image} width={EVENT_W} height={u(120)} />
       <View style={styles.badges} pointerEvents="none">
         {event.live ? (
           <View style={styles.row}>
@@ -125,45 +126,60 @@ export function EventCard({
 
 const styles = StyleSheet.create({
   thumb: {
-    borderRadius: 4,
+    borderRadius: u(4),
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.35)',
+    borderWidth: 0.6,
+    borderColor: colors.lavender,
     backgroundColor: colors.purple450,
   },
   fill: { width: '100%', height: '100%' },
-  title: { marginTop: 8, fontSize: 13 },
-  eventTitle: { marginTop: 8, fontSize: 15 },
-  by: { marginTop: 4, fontSize: 13, color: colors.gray },
-  stats: { flexDirection: 'row', alignItems: 'center', marginTop: 4, gap: 4 },
-  stat: { fontSize: 12, marginRight: 8, color: colors.pearl },
+  title: { marginTop: u(7), fontSize: u(13) },
+  eventTitle: { marginTop: u(10), fontSize: u(14) },
+  by: { marginTop: u(6), fontSize: u(13), color: colors.gray },
+  stats: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: u(4),
+    gap: u(4),
+  },
+  stat: {
+    fontSize: u(13),
+    marginRight: u(8),
+    marginLeft: u(2),
+    color: colors.pearl,
+  },
   badges: {
     position: 'absolute',
-    top: 8,
-    left: 8,
-    right: 8,
+    top: u(8),
+    left: u(8),
+    right: u(8),
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
-  row: { flexDirection: 'row', gap: 4 },
+  row: { flexDirection: 'row', gap: u(4) },
   badge: {
-    height: 20,
-    paddingHorizontal: 6,
-    borderRadius: 3,
+    height: u(20),
+    paddingHorizontal: u(6),
+    borderRadius: u(3),
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 3,
+    gap: u(3),
   },
   badgeText: {
     fontFamily: 'Inter-SemiBold',
     color: colors.snow,
-    fontSize: 11,
+    fontSize: u(11),
     textTransform: 'none',
   },
   live: { backgroundColor: colors.ruby },
   users: { backgroundColor: 'rgba(0,0,0,0.65)' },
-  usersText: { color: colors.snow, fontSize: 11 },
-  dot: { width: 5, height: 5, borderRadius: 3, backgroundColor: '#2ECC71' },
+  usersText: { color: colors.snow, fontSize: u(11) },
+  dot: {
+    width: u(5),
+    height: u(5),
+    borderRadius: u(3),
+    backgroundColor: '#2ECC71',
+  },
   trending: { backgroundColor: '#2ECC8A' },
   soon: { backgroundColor: colors.snow },
   soonText: { color: colors.ruby },

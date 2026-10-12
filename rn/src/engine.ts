@@ -1,5 +1,11 @@
 import { useSyncExternalStore } from 'react';
-import { AvatarState, GodotEvent } from './events';
+import {
+  AvatarState,
+  GodotEvent,
+  HudState,
+  initialHud,
+  reduceHud,
+} from './events';
 import {
   GodotCommand,
   sendCommand,
@@ -12,9 +18,20 @@ export type EngineSnapshot = {
   started: boolean;
   ready: boolean;
   avatar: AvatarState | null;
+  /** True from `world entered` until `world exited`; `hud` mirrors the explorer meanwhile. */
+  inWorld: boolean;
+  hud: HudState;
 };
 
-let snapshot: EngineSnapshot = { started: false, ready: false, avatar: null };
+const fresh: EngineSnapshot = {
+  started: false,
+  ready: false,
+  avatar: null,
+  inWorld: false,
+  hud: initialHud,
+};
+
+let snapshot: EngineSnapshot = fresh;
 let queue: GodotCommand[] = [];
 let unsubscribe: (() => void) | null = null;
 const listeners = new Set<() => void>();
@@ -45,6 +62,11 @@ function handleEvent(event: GodotEvent) {
     pending.forEach(sendCommand);
   } else if (event.type === 'avatar') {
     publish({ ...snapshot, avatar: event.data });
+  } else if (event.type === 'world') {
+    const inWorld = event.data.state === 'entered';
+    publish({ ...snapshot, inWorld, hud: inWorld ? snapshot.hud : initialHud });
+  } else {
+    publish({ ...snapshot, hud: reduceHud(snapshot.hud, event) });
   }
 }
 
@@ -83,6 +105,6 @@ export function resetEngineForTests() {
   unsubscribe?.();
   unsubscribe = null;
   queue = [];
-  snapshot = { started: false, ready: false, avatar: null };
+  snapshot = fresh;
   listeners.clear();
 }

@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 import { colors } from '../ds';
+import { u } from '../ds/scale';
 
 /** Round swatch showing the current color; opens the color panel. */
 export function ColorSwatchButton({
@@ -23,18 +24,18 @@ export function ColorSwatchButton({
 
 const styles = StyleSheet.create({
   ring: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: u(34),
+    height: u(34),
+    borderRadius: u(17),
     borderWidth: 2,
     borderColor: colors.ruby,
     alignItems: 'center',
     justifyContent: 'center',
   },
   dot: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: u(24),
+    height: u(24),
+    borderRadius: u(12),
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.5)',
   },

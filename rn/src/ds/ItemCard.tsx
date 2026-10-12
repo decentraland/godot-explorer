@@ -2,6 +2,7 @@ import { Image, Pressable, StyleSheet, View } from 'react-native';
 import { AppText } from './AppText';
 import { GradientView } from './Gradient';
 import { colors, Rarity, rarityColors, radii } from './tokens';
+import { u } from './scale';
 
 export type ItemCardProps = {
   thumbnail?: string;
@@ -83,14 +84,14 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    height: 22,
+    height: u(22),
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.shadow,
   },
   captionText: {
     fontFamily: 'Inter-Bold',
-    fontSize: 14,
+    fontSize: u(14),
     textTransform: 'uppercase',
   },
   skeleton: {

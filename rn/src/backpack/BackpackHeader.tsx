@@ -1,6 +1,7 @@
 import { StyleSheet, View } from 'react-native';
 import { IconButton, Pill } from '../ds';
 import { Mode } from './backpackState';
+import { u } from '../ds/scale';
 
 /** Wearables / Emotes switch and the filter button; the filter menu is rendered by the screen. */
 export function BackpackHeader({
@@ -39,5 +40,5 @@ export function BackpackHeader({
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: u(12) },
 });

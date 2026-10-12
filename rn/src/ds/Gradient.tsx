@@ -1,4 +1,4 @@
-import { ReactNode, useId } from 'react';
+import { ReactNode, useId, useState } from 'react';
 import { StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 import Svg, {
   Defs,
@@ -7,6 +7,26 @@ import Svg, {
   Rect,
   Stop,
 } from 'react-native-svg';
+
+/** Hands children the box's own size: percentage-sized SVGs kept a stale height after rotation. */
+function Measured({
+  children,
+}: {
+  children: (width: number, height: number) => ReactNode;
+}) {
+  const [size, setSize] = useState({ width: 0, height: 0 });
+  return (
+    <View
+      style={StyleSheet.absoluteFill}
+      pointerEvents="none"
+      onLayout={event => setSize(event.nativeEvent.layout)}
+    >
+      {size.width > 0 && size.height > 0
+        ? children(size.width, size.height)
+        : null}
+    </View>
+  );
+}
 
 export type GradientStop = { offset: number; color: string; opacity?: number };
 
@@ -23,32 +43,31 @@ export function LinearFill({
   const dx = Math.sin(rad) / 2;
   const dy = Math.cos(rad) / 2;
   return (
-    <Svg
-      style={StyleSheet.absoluteFill}
-      width="100%"
-      height="100%"
-      pointerEvents="none"
-    >
-      <Defs>
-        <LinearGradient
-          id={id}
-          x1={0.5 - dx}
-          y1={0.5 - dy}
-          x2={0.5 + dx}
-          y2={0.5 + dy}
-        >
-          {stops.map(stop => (
-            <Stop
-              key={stop.offset}
-              offset={stop.offset}
-              stopColor={stop.color}
-              stopOpacity={stop.opacity ?? 1}
-            />
-          ))}
-        </LinearGradient>
-      </Defs>
-      <Rect width="100%" height="100%" fill={`url(#${id})`} />
-    </Svg>
+    <Measured>
+      {(width, height) => (
+        <Svg width={width} height={height}>
+          <Defs>
+            <LinearGradient
+              id={id}
+              x1={0.5 - dx}
+              y1={0.5 - dy}
+              x2={0.5 + dx}
+              y2={0.5 + dy}
+            >
+              {stops.map(stop => (
+                <Stop
+                  key={stop.offset}
+                  offset={stop.offset}
+                  stopColor={stop.color}
+                  stopOpacity={stop.opacity ?? 1}
+                />
+              ))}
+            </LinearGradient>
+          </Defs>
+          <Rect width={width} height={height} fill={`url(#${id})`} />
+        </Svg>
+      )}
+    </Measured>
   );
 }
 
@@ -68,26 +87,33 @@ export function RadialFill({
 }) {
   const id = useId();
   return (
-    <Svg
-      style={StyleSheet.absoluteFill}
-      width="100%"
-      height="100%"
-      pointerEvents="none"
-    >
-      <Defs>
-        <RadialGradient id={id} cx={cx} cy={cy} rx={rx} ry={ry} fx={cx} fy={cy}>
-          {stops.map(stop => (
-            <Stop
-              key={stop.offset}
-              offset={stop.offset}
-              stopColor={stop.color}
-              stopOpacity={stop.opacity ?? 1}
-            />
-          ))}
-        </RadialGradient>
-      </Defs>
-      <Rect width="100%" height="100%" fill={`url(#${id})`} />
-    </Svg>
+    <Measured>
+      {(width, height) => (
+        <Svg width={width} height={height}>
+          <Defs>
+            <RadialGradient
+              id={id}
+              cx={cx}
+              cy={cy}
+              rx={rx}
+              ry={ry}
+              fx={cx}
+              fy={cy}
+            >
+              {stops.map(stop => (
+                <Stop
+                  key={stop.offset}
+                  offset={stop.offset}
+                  stopColor={stop.color}
+                  stopOpacity={stop.opacity ?? 1}
+                />
+              ))}
+            </RadialGradient>
+          </Defs>
+          <Rect width={width} height={height} fill={`url(#${id})`} />
+        </Svg>
+      )}
+    </Measured>
   );
 }
 

@@ -1,19 +1,51 @@
 import { Pressable, StyleSheet, View } from 'react-native';
+import { colors } from './tokens';
 import { Icon } from './Icon';
-import { colors, layout } from './tokens';
+import { u } from './scale';
 
 export type NavKey = 'explore' | 'backpack' | 'settings' | 'profile';
 
-const entries: {
-  key: NavKey;
-  icon: 'compass' | 'backpack' | 'settings' | 'profile';
-}[] = [
-  { key: 'explore', icon: 'compass' },
-  { key: 'backpack', icon: 'backpack' },
-  { key: 'settings', icon: 'settings' },
-  { key: 'profile', icon: 'profile' },
-];
+const BOX = 41;
+const COMPASS = 35;
 
+function NavIcon({ kind, active }: { kind: NavKey; active: boolean }) {
+  switch (kind) {
+    case 'explore':
+      return (
+        <View style={styles.rotated}>
+          <Icon
+            name={active ? 'compassActive' : 'compassOutline'}
+            size={COMPASS}
+          />
+        </View>
+      );
+    case 'backpack':
+      return <Icon name={active ? 'backpack' : 'backpackOutline'} size={24} />;
+    case 'settings':
+      return <Icon name="settings" size={25} />;
+    case 'profile':
+      return (
+        <View style={styles.profile}>
+          <View style={StyleSheet.absoluteFill}>
+            <Icon name="profileFill" size={36} />
+          </View>
+          <View style={StyleSheet.absoluteFill}>
+            <Icon name="profileRing" size={36} />
+          </View>
+          <Icon
+            name="user"
+            size={18}
+            color={colors.purple450}
+            strokeWidth={2.2}
+          />
+        </View>
+      );
+  }
+}
+
+const ORDER: NavKey[] = ['explore', 'backpack', 'settings', 'profile'];
+
+/** Four-icon bottom bar (Figma "NavBar"): the active destination is filled with the purple gradient. */
 export function BottomNav({
   active,
   bottomInset = 0,
@@ -24,23 +56,18 @@ export function BottomNav({
   onChange: (key: NavKey) => void;
 }) {
   return (
-    <View
-      style={[
-        styles.bar,
-        { height: layout.navHeight + bottomInset, paddingBottom: bottomInset },
-      ]}
-    >
-      {entries.map(entry => (
+    <View style={[styles.bar, { paddingBottom: u(20) + bottomInset }]}>
+      {ORDER.map(key => (
         <Pressable
-          key={entry.key}
+          key={key}
           accessibilityRole="tab"
-          accessibilityLabel={entry.key}
-          accessibilityState={{ selected: entry.key === active }}
-          onPress={() => onChange(entry.key)}
+          accessibilityLabel={key}
+          accessibilityState={{ selected: key === active }}
+          hitSlop={u(8)}
+          onPress={() => onChange(key)}
           style={({ pressed }) => [styles.item, pressed && styles.pressed]}
         >
-          <Icon name={entry.icon} size={entry.key === 'backpack' ? 24 : 26} />
-          <View style={[styles.dot, entry.key === active && styles.dotOn]} />
+          <NavIcon kind={key} active={key === active} />
         </Pressable>
       ))}
     </View>
@@ -51,23 +78,24 @@ const styles = StyleSheet.create({
   bar: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-around',
+    justifyContent: 'center',
+    gap: u(28),
+    paddingTop: u(16),
+    paddingHorizontal: u(32),
     backgroundColor: colors.shadow,
-    paddingHorizontal: 24,
   },
   item: {
-    width: 56,
-    height: 56,
+    width: u(BOX),
+    height: u(BOX),
     alignItems: 'center',
     justifyContent: 'center',
   },
-  dot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    marginTop: 4,
-    backgroundColor: 'transparent',
+  rotated: { transform: [{ rotate: '-45deg' }] },
+  profile: {
+    width: u(36),
+    height: u(36),
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  dotOn: { backgroundColor: colors.ruby },
   pressed: { opacity: 0.7 },
 });

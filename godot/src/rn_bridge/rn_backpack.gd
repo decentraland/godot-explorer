@@ -14,7 +14,6 @@ const OVERLAY_CANVAS_LAYER := 1 << 19
 var _layer: CanvasLayer = null
 var _canvas_cull_mask := 0
 var _preview: AvatarPreview = null
-var _avatar_only := Global.cli.has_arg("--rn-avatar-only")
 
 
 func async_open(rect: Rect2) -> void:
@@ -27,9 +26,6 @@ func async_open(rect: Rect2) -> void:
 		_preview.stretch = true
 		_layer.add_child(_preview)
 		_preview.visibility_layer = OVERLAY_CANVAS_LAYER
-		if not _avatar_only:
-			_canvas_cull_mask = get_viewport().canvas_cull_mask
-			get_viewport().canvas_cull_mask = OVERLAY_CANVAS_LAYER
 	_show_preview(true)
 	place(rect)
 	await _async_refresh_avatar()
@@ -156,23 +152,24 @@ func _show_preview(on: bool) -> void:
 	_preview.subviewport.render_target_update_mode = (
 		SubViewport.UPDATE_WHEN_VISIBLE if on else SubViewport.UPDATE_DISABLED
 	)
-	_set_overlay(on)
-	if _avatar_only:
-		return
 	var explorer := Global.get_explorer()
+	_set_overlay(on, explorer == null)
+	if explorer == null:
+		return
 	get_viewport().disable_3d = on
-	if not on:
-		get_viewport().canvas_cull_mask = _canvas_cull_mask
-	else:
+	var culling := get_viewport().canvas_cull_mask == OVERLAY_CANVAS_LAYER
+	if on and not culling:
+		_canvas_cull_mask = get_viewport().canvas_cull_mask
 		get_viewport().canvas_cull_mask = OVERLAY_CANVAS_LAYER
-	if explorer != null:
-		explorer.ui_root.visible = not on
+	elif not on and culling:
+		get_viewport().canvas_cull_mask = _canvas_cull_mask
+	explorer.ui_root.visible = not on
 
 
 # The host's Godot surface goes above the RN view while the preview shows, so the avatar draws
 # over RN content; in explorer mode the root is also made transparent for that.
-func _set_overlay(on: bool) -> void:
-	if not _avatar_only:
+func _set_overlay(on: bool, avatar_only: bool) -> void:
+	if not avatar_only:
 		get_viewport().transparent_bg = on
 	if Engine.has_singleton("RnHostPlugin"):
 		Engine.get_singleton("RnHostPlugin").call("set_surface_on_top", on)

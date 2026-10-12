@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { FlatList, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { AppText, colors, PrimaryButton } from '../ds';
 import { FlowFrame } from './FlowFrame';
+import { u } from '../ds/scale';
 
 const SLIDES = [
   {
@@ -83,22 +84,22 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 12,
+    paddingHorizontal: u(12),
   },
   title: { textAlign: 'center' },
-  body: { marginTop: 12, textAlign: 'center', opacity: 0.85 },
+  body: { marginTop: u(12), textAlign: 'center', opacity: 0.85 },
   dots: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 8,
-    marginVertical: 20,
+    gap: u(8),
+    marginVertical: u(20),
   },
   dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: u(8),
+    height: u(8),
+    borderRadius: u(4),
     backgroundColor: colors.white30,
   },
-  dotOn: { backgroundColor: colors.ruby, width: 20 },
-  actions: { gap: 12, minHeight: 108 },
+  dotOn: { backgroundColor: colors.ruby, width: u(20) },
+  actions: { gap: u(12), minHeight: u(108) },
 });

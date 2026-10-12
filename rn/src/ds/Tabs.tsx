@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 import { AppText } from './AppText';
 import { colors } from './tokens';
+import { u } from './scale';
 
 export type TabItem<K extends string> = { key: K; label: string };
 
@@ -39,12 +40,12 @@ export function Tabs<K extends string>({
 
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', justifyContent: 'space-between' },
-  tab: { paddingVertical: 4, alignItems: 'center' },
+  tab: { paddingVertical: u(4), alignItems: 'center' },
   selectedText: { color: colors.snow },
   underline: {
-    height: 2,
+    height: u(2),
     alignSelf: 'stretch',
-    marginTop: 4,
+    marginTop: u(4),
     backgroundColor: 'transparent',
   },
   underlineOn: { backgroundColor: colors.ruby },

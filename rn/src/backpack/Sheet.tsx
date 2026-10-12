@@ -9,8 +9,9 @@ import {
 } from 'react-native';
 import { colors, LinearFill, radii } from '../ds';
 import { SheetState } from './backpackState';
+import { u } from '../ds/scale';
 
-const HANDLE_AREA = 28;
+const HANDLE_AREA = u(28);
 const DRAG_THRESHOLD = 24;
 
 /** Bottom sheet that snaps between a full height and just its handle (Figma "Full avatar"). */
@@ -91,9 +92,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   handle: {
-    width: 100,
-    height: 4,
-    borderRadius: 2,
+    width: u(100),
+    height: u(4),
+    borderRadius: u(2),
     backgroundColor: 'rgba(252,252,252,0.3)',
   },
   body: { flex: 1 },

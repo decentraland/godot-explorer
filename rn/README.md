@@ -17,10 +17,11 @@ GodotBridge          <- JSON commands/events <-> RnHostPlugin singleton <-> godo
 Commands (RN -> Godot), see `src/GodotBridge.ts`: `backpack_open|backpack_place{x,y,w,h}` (device px),
 `backpack_close`, `equip{urn}`, `unequip{urn}`, `set_body_shape{urn}`, `set_color{target,color}`,
 `play_emote{urn}`, `set_emote_slot{slot,urn}`, `randomize_avatar`, `set_name{name}`.
+`enter_world{x,y,realm}` (realm is a full realm URL: `https://realm-provider-ea.decentraland.org/main` for Genesis City, `https://worlds-content-server.decentraland.org/world/<name>` for a World; x,y is the spawn parcel) and `exit_world`.
 Events (Godot -> RN), see `src/events.ts`: `ready` (host scene is up) and `avatar{body_shape,wearables,
 emotes,skin,hair,eyes}` after `backpack_open` and after every command that changes the avatar.
-The world commands (`teleport`, `send_chat`, `emote`) and `loading`/`state`/`chat` events only work
-when the engine is started without `--rn-avatar-only` (old Genesis Plaza host mode).
+`enter_world` switches the same engine session from the avatar host to the explorer (same account and avatar) and emits `world{state:'entered'}`; `loading`/`state`/`chat` events and `teleport`, `send_chat`, `emote` work while in the world (`loading finished` = playable). `exit_world` tears the world down, returns to the avatar host and emits `world{state:'exited'}` then `ready`; a later `enter_world` works again.
+In the world Godot never changes the device orientation (RN owns it); the layout follows the window shape.
 Orientation is owned by RN: the manifest is portrait and `GodotBridge.setOrientation('portrait'|'sensor')`
 switches it (the host's `override.cfg` makes the engine start portrait too).
 
@@ -36,8 +37,7 @@ switches it (the host's `override.cfg` makes the engine start portrait too).
 - `src/flow/`: portrait-only entry flow (splash, terms, account, sign-in, avatar create/customize/naming,
   tour) mirroring `lobby.gd`. Sign-in is a stand-in (`flow/auth.ts`): the real auth is in the Rust client.
 - `src/discover/`: basic Discover (Featured, Events, Last Played, Most Active) and the Detail Place sheet, from the
-  public places/events APIs. Search filters the loaded lists; Jump In only records the place in Last Played
-  (entering the world isn't part of the avatar-only engine yet).
+  public places/events APIs. Search filters the loaded lists; Jump In records the place in Last Played.
 - `src/engine.ts`: lazy engine start, command queue until `ready`, latest avatar state.
 - `src/WorldHud.tsx`: the old Genesis Plaza HUD; not mounted while the engine is avatar-only.
 

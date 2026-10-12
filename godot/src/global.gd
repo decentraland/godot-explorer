@@ -1343,6 +1343,9 @@ func set_orientation_landscape():
 	# swap, stranding the lobby/login in landscape (issue #2508).
 	if _signing_out or _returning_to_discover:
 		return
+	if cli.rn_host:
+		_follow_host_orientation()
+		return
 	# Set orientation BEFORE changing window size so listeners get correct value
 	_is_portrait = false
 	if Global.is_mobile() and !Global.is_virtual_mobile():
@@ -1361,11 +1364,25 @@ func set_orientation_landscape():
 	orientation_changed.emit(false)
 
 
+# The RN host owns the device orientation: only mirror the window shape into the layout state.
+func _follow_host_orientation() -> void:
+	var window := get_window()
+	if not window.size_changed.is_connected(_follow_host_orientation):
+		window.size_changed.connect(_follow_host_orientation)
+	var portrait := window.size.y >= window.size.x
+	if portrait != _is_portrait:
+		_is_portrait = portrait
+		orientation_changed.emit(portrait)
+
+
 func is_orientation_portrait() -> bool:
 	return _is_portrait
 
 
 func set_orientation_portrait():
+	if cli.rn_host:
+		_follow_host_orientation()
+		return
 	# Set orientation BEFORE changing window size so listeners get correct value
 	_is_portrait = true
 	if Global.is_mobile() and !Global.is_virtual_mobile():

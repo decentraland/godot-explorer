@@ -10,6 +10,7 @@ import { FilterMenu } from './FilterMenu';
 import { Sheet } from './Sheet';
 import { SheetContent } from './SheetContent';
 import { BackpackController, useBackpack } from './useBackpack';
+import { u } from '../ds/scale';
 
 const SHEET_RATIO = 0.455;
 const LEFT_RATIO = 0.54;
@@ -20,12 +21,15 @@ export type BackpackScreenProps = {
   /** Whether the screen may rotate to landscape; the entry flow stays portrait. */
   allowLandscape?: boolean;
   onBack?: () => void;
+  /** Figma's portrait backpack has no back button; the entry flow needs one. */
+  backInPortrait?: boolean;
 };
 
 export function BackpackScreen({
   footer,
   allowLandscape = true,
   onBack,
+  backInPortrait = false,
 }: BackpackScreenProps) {
   const { width, height } = useWindowDimensions();
   const controller = useBackpack();
@@ -38,7 +42,11 @@ export function BackpackScreen({
   return width > height ? (
     <Landscape controller={controller} onBack={onBack} />
   ) : (
-    <Portrait controller={controller} footer={footer} onBack={onBack} />
+    <Portrait
+      controller={controller}
+      footer={footer}
+      onBack={backInPortrait ? onBack : undefined}
+    />
   );
 }
 
@@ -109,7 +117,7 @@ function Portrait({
   return (
     <View style={styles.root}>
       <StageBackground />
-      <View style={{ paddingTop: insets.top + 12 }}>
+      <View style={{ paddingTop: insets.top + u(12) }}>
         <Header controller={controller} onBack={onBack} />
       </View>
       <AvatarHole style={styles.hole} />
@@ -131,7 +139,7 @@ function Portrait({
       {footer}
       <FilterOverlay
         controller={controller}
-        position={{ top: insets.top + 12 + 36, right: 24 }}
+        position={{ top: insets.top + u(12) + u(36), right: u(24) }}
       />
     </View>
   );
@@ -154,7 +162,10 @@ function Landscape({
         <View
           style={[
             styles.left,
-            { paddingLeft: insets.left + 12, paddingTop: insets.top + 10 },
+            {
+              paddingLeft: insets.left + u(12),
+              paddingTop: insets.top + u(10),
+            },
           ]}
         >
           <Header controller={controller} onBack={onBack} />
@@ -171,7 +182,7 @@ function Landscape({
         <View
           style={[
             styles.right,
-            { paddingRight: insets.right, paddingTop: insets.top + 6 },
+            { paddingRight: insets.right, paddingTop: insets.top + u(6) },
           ]}
         >
           <LinearFill
@@ -186,8 +197,8 @@ function Landscape({
       <FilterOverlay
         controller={controller}
         position={{
-          top: insets.top + 10 + 36,
-          left: Math.round(width * LEFT_RATIO) - 165 - 16,
+          top: insets.top + u(10) + u(36),
+          left: Math.round(width * LEFT_RATIO) - u(165) - u(16),
         }}
       />
     </View>
@@ -203,9 +214,9 @@ const styles = StyleSheet.create({
   },
   back: {
     position: 'absolute',
-    left: 18,
-    width: 32,
-    height: 32,
+    left: u(18),
+    width: u(32),
+    height: u(32),
     alignItems: 'center',
     justifyContent: 'center',
   },

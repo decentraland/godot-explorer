@@ -14,6 +14,7 @@ var _state_elapsed := 0.0
 var _hide_elapsed := 0.0
 var _backpack := RnBackpack.new()
 var _avatar_host_up := false
+var _in_world := false
 
 
 func _ready() -> void:
@@ -33,6 +34,9 @@ func _ready() -> void:
 ## Called by the avatar-only host scene once the identity and profile exist.
 func on_avatar_host_ready() -> void:
 	_avatar_host_up = true
+	if _in_world:
+		_in_world = false
+		_emit("world", {"state": "exited"})
 	_emit("ready", {})
 
 
@@ -43,7 +47,9 @@ func _process(dt: float) -> void:
 		_explorer = Global.get_explorer()
 		if _explorer == null:
 			return
-		_emit("ready", {})
+		_emit("world", {"state": "entered"})
+		if not Global.cli.has_arg("--rn-avatar-only"):
+			_emit("ready", {})
 	_hide_elapsed += dt
 	if _hide_elapsed >= HIDE_INTERVAL:
 		_hide_elapsed = 0.0
@@ -88,6 +94,14 @@ func _handle_avatar_command(cmd: Dictionary) -> void:
 			_backpack.async_randomize()
 		"set_name":
 			_backpack.async_set_profile_name(str(cmd.get("name", "")))
+		"enter_world":
+			_backpack.close()
+			_avatar_host_up = false
+			_in_world = true
+			_explorer = null
+			RnWorld.enter(
+				Vector2i(int(cmd.get("x", 0)), int(cmd.get("y", 0))), str(cmd.get("realm", ""))
+			)
 
 
 func _handle_explorer_command(cmd: Dictionary) -> void:
@@ -108,6 +122,11 @@ func _handle_explorer_command(cmd: Dictionary) -> void:
 			_backpack.close()
 		"equip":
 			_backpack.async_equip(str(cmd.get("urn", "")))
+		"exit_world":
+			_backpack.close()
+			_explorer = null
+			_avatar_host_up = true
+			RnWorld.exit()
 
 
 func _rect(cmd: Dictionary) -> Rect2:

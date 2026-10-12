@@ -1,3 +1,5 @@
+export const MAIN_REALM = 'https://realm-provider-ea.decentraland.org/main';
+const WORLDS = 'https://worlds-content-server.decentraland.org/world';
 const PLACES = 'https://places.decentraland.org/api/places';
 const EVENTS = 'https://events.decentraland.org/api/events';
 
@@ -16,6 +18,10 @@ export type Place = {
   likeRate: number | null;
   /** `x,y` for a parcel, or the world name. */
   location: string;
+  /** Where Jump In goes: the realm URL and the parcel to spawn at. */
+  realm: string;
+  x: number;
+  y: number;
 };
 
 export type DiscoverEvent = {
@@ -28,6 +34,14 @@ export type DiscoverEvent = {
   attendees: number;
   startsAt: number;
   place: Place;
+};
+
+export const worldRealm = (name: string): string =>
+  `${WORLDS}/${name.toLowerCase()}`;
+
+const parseParcel = (position: string): [number, number] => {
+  const [x, y] = position.split(',').map(Number);
+  return [isFinite(x) ? x : 0, isFinite(y) ? y : 0];
 };
 
 const str = (value: unknown, fallback = ''): string =>
@@ -50,6 +64,10 @@ export function parsePlaces(payload: unknown): Place[] {
     if (!id || !title) {
       return [];
     }
+    const isWorld = raw.world === true;
+    const worldName = str(raw.world_name);
+    const position = str(raw.base_position);
+    const [x, y] = isWorld ? [0, 0] : parseParcel(position);
     return [
       {
         id,
@@ -58,8 +76,10 @@ export function parsePlaces(payload: unknown): Place[] {
         image: str(raw.image),
         users: num(raw.user_count),
         likeRate: typeof raw.like_rate === 'number' ? raw.like_rate : null,
-        location:
-          raw.world === true ? str(raw.world_name) : str(raw.base_position),
+        location: isWorld ? worldName : position,
+        realm: isWorld && worldName ? worldRealm(worldName) : MAIN_REALM,
+        x,
+        y,
       },
     ];
   });
@@ -92,6 +112,10 @@ export function parseEvents(payload: unknown): DiscoverEvent[] {
           users: attendees,
           likeRate: null,
           location: world ? str(raw.server) : `${num(raw.x)},${num(raw.y)}`,
+          realm:
+            world && str(raw.server) ? worldRealm(str(raw.server)) : MAIN_REALM,
+          x: world ? 0 : num(raw.x),
+          y: world ? 0 : num(raw.y),
         },
       },
     ];

@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet } from 'react-native';
 import { Icon, IconName } from './Icon';
 import { colors, radii } from './tokens';
+import { u } from './scale';
 
 export function IconButton({
   icon,
@@ -23,7 +24,7 @@ export function IconButton({
       hitSlop={8}
       style={({ pressed }) => [
         styles.button,
-        { width: size, height: size },
+        { width: u(size), height: u(size) },
         active && styles.active,
         pressed && styles.pressed,
       ]}

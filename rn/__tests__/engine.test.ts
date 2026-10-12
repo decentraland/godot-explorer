@@ -61,4 +61,18 @@ describe('engine', () => {
     emit({ type: 'avatar', data: avatar });
     expect(getEngine().avatar).toEqual(avatar);
   });
+
+  it('tracks the world and resets the hud when leaving it', () => {
+    ensureEngine();
+    emit({ type: 'world', data: { state: 'entered' } });
+    emit({
+      type: 'state',
+      data: { parcel: [1, 2], realm: 'main', fps: 60, position: [0, 0, 0] },
+    });
+    expect(getEngine().inWorld).toBe(true);
+    expect(getEngine().hud.parcel).toEqual([1, 2]);
+    emit({ type: 'world', data: { state: 'exited' } });
+    expect(getEngine().inWorld).toBe(false);
+    expect(getEngine().hud.parcel).toBeNull();
+  });
 });

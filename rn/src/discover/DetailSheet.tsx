@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText, colors, Icon, LinearFill } from '../ds';
 import { Place } from './api';
 import { formatRate, formatUsers } from './format';
+import { u } from '../ds/scale';
 
 const CLOSE_DRAG = 60;
 const SLIDE_MS = 220;
@@ -119,7 +120,7 @@ export function DetailSheet({
       <Animated.View
         style={[
           styles.sheet,
-          { paddingBottom: 28 + insets.bottom, transform: [{ translateY }] },
+          { paddingBottom: u(28) + insets.bottom, transform: [{ translateY }] },
         ]}
       >
         <LinearFill
@@ -229,32 +230,37 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: u(24),
+    borderTopRightRadius: u(24),
     overflow: 'hidden',
+    backgroundColor: colors.purple550,
   },
-  handleArea: { height: 28, alignItems: 'center', justifyContent: 'center' },
+  handleArea: { height: u(28), alignItems: 'center', justifyContent: 'center' },
   handle: {
-    width: 100,
-    height: 4,
-    borderRadius: 2,
+    width: u(100),
+    height: u(4),
+    borderRadius: u(2),
     backgroundColor: 'rgba(252,252,252,0.3)',
   },
   head: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    paddingHorizontal: 24,
-    marginTop: 6,
+    paddingHorizontal: u(24),
+    marginTop: u(6),
   },
-  headText: { flex: 1, paddingRight: 16 },
-  title: { fontSize: 24, lineHeight: 30, fontFamily: 'Inter-SemiBold' },
-  by: { marginTop: 8, fontSize: 14, color: colors.gray },
-  creator: { fontSize: 14, color: colors.lavender, fontFamily: 'Inter-Medium' },
+  headText: { flex: 1, paddingRight: u(16) },
+  title: { fontSize: u(24), lineHeight: u(30), fontFamily: 'Inter-SemiBold' },
+  by: { marginTop: u(8), fontSize: u(14), color: colors.gray },
+  creator: {
+    fontSize: u(14),
+    color: colors.lavender,
+    fontFamily: 'Inter-Medium',
+  },
   image: {
-    height: 184,
-    marginHorizontal: 24,
-    marginTop: 18,
-    borderRadius: 6,
+    height: u(184),
+    marginHorizontal: u(24),
+    marginTop: u(18),
+    borderRadius: u(6),
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.35)',
@@ -265,28 +271,28 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginHorizontal: 24,
-    marginTop: 18,
+    marginHorizontal: u(24),
+    marginTop: u(18),
   },
   stat: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
+    gap: u(6),
   },
-  statText: { fontSize: 15, color: colors.pearl },
-  divider: { width: 1, height: 24, backgroundColor: colors.white30 },
+  statText: { fontSize: u(15), color: colors.pearl },
+  divider: { width: u(1), height: u(24), backgroundColor: colors.white30 },
   actions: {
     flexDirection: 'row',
-    gap: 8,
-    marginHorizontal: 24,
-    marginTop: 22,
+    gap: u(8),
+    marginHorizontal: u(24),
+    marginTop: u(22),
   },
   square: {
-    width: 47,
-    height: 47,
-    borderRadius: 6,
+    width: u(47),
+    height: u(47),
+    borderRadius: u(6),
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.purple450,
@@ -294,14 +300,14 @@ const styles = StyleSheet.create({
   squareOn: { borderWidth: 2, borderColor: colors.ruby },
   jump: {
     flex: 1,
-    height: 47,
-    borderRadius: 6,
+    height: u(47),
+    borderRadius: u(6),
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    gap: u(8),
     backgroundColor: colors.ruby,
   },
-  jumpText: { fontFamily: 'Inter-Bold', fontSize: 16 },
+  jumpText: { fontFamily: 'Inter-Bold', fontSize: u(16) },
   pressed: { opacity: 0.85 },
 });

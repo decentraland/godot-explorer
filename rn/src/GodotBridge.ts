@@ -33,7 +33,9 @@ export type GodotCommand =
   | { type: 'play_emote'; urn: string }
   | { type: 'set_emote_slot'; slot: number; urn: string }
   | { type: 'randomize_avatar' }
-  | { type: 'set_name'; name: string };
+  | { type: 'set_name'; name: string }
+  | { type: 'enter_world'; x: number; y: number; realm: string }
+  | { type: 'exit_world' };
 
 export function sendCommand(command: GodotCommand): void {
   native?.sendCommand(JSON.stringify(command));

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { AppText, HsvSliders, Icon, SwatchRow } from '../ds';
 import { COLOR_TITLES, ColorTarget, PALETTES } from './taxonomy';
+import { u } from '../ds/scale';
 
 const SEND_INTERVAL_MS = 120;
 
@@ -78,8 +79,8 @@ export function ColorPanel({
 }
 
 const styles = StyleSheet.create({
-  content: { paddingHorizontal: 24, paddingBottom: 24 },
-  header: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8 },
-  title: { marginLeft: 12 },
-  swatches: { marginTop: 14 },
+  content: { paddingHorizontal: u(24), paddingBottom: u(24) },
+  header: { flexDirection: 'row', alignItems: 'center', paddingVertical: u(8) },
+  title: { marginLeft: u(12) },
+  swatches: { marginTop: u(14) },
 });

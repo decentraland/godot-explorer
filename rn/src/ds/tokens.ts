@@ -1,3 +1,4 @@
+import { u } from './scale';
 /** Design tokens from the "Design System Mobile" Figma file. Sizes are Figma px / 2 (dp). */
 export const colors = {
   ruby: '#FF2D55',
@@ -34,7 +35,12 @@ export const rarityColors = {
 
 export type Rarity = keyof typeof rarityColors;
 
-export const radii = { card: 6, pill: 100, sheet: 12, button: 8 } as const;
+export const radii = {
+  card: u(6),
+  pill: 100,
+  sheet: u(12),
+  button: u(8),
+} as const;
 
 export const fonts = {
   regular: 'Inter-Regular',
@@ -45,8 +51,8 @@ export const fonts = {
 
 /** Item grids are always three columns, 12dp apart, 24dp from the screen edge. */
 export const layout = {
-  gutter: 24,
-  gap: 12,
+  gutter: u(24),
+  gap: u(12),
   columns: 3,
-  navHeight: 91,
+  navHeight: u(77),
 } as const;
