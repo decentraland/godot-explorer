@@ -32,7 +32,10 @@ function App() {
 
   return (
     <SafeAreaProvider>
-      <View style={world ? styles.transparent : styles.root}>
+      <View
+        style={world ? styles.transparent : styles.root}
+        pointerEvents={world ? 'box-none' : 'auto'}
+      >
         <StatusBar hidden />
         {world ? (
           <WorldScreen place={world} onLeave={leave} />

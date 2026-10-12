@@ -76,7 +76,10 @@ class MainActivity : ReactActivity(), GodotHost {
     }
     if (ev.actionMasked == MotionEvent.ACTION_DOWN) {
       val target = TouchTargetHelper.findTargetTagForTouch(ev.x, ev.y, rnRoot)
-      gestureGoesToGodot = target == rnRoot.id || target <= 0
+      // The safe-area provider ignores pointerEvents, so it is a full-screen target; look through it.
+      val targetView = if (target > 0) rnRoot.findViewById<View>(target) else null
+      gestureGoesToGodot =
+          target == rnRoot.id || target <= 0 || targetView?.javaClass?.simpleName == "SafeAreaProvider"
       Log.d(TAG, "touch down target=$target rootId=${rnRoot.id} -> godot=$gestureGoesToGodot")
     }
     return if (gestureGoesToGodot) godotContainer.dispatchTouchEvent(ev)
