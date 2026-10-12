@@ -1,0 +1,59 @@
+// Godot engine wiring, applied by build.gradle only when scripts/sync-godot-android.sh has filled app/godot.
+apply plugin: "com.google.gms.google-services"
+
+repositories {
+    // Reown/WalletConnect transitive dependencies (dcl-godot-android).
+    maven { url "https://jitpack.io" }
+}
+
+android {
+    // Native symbols of the (unstripped) synced libs go into the AAB, as in the engine's template.
+    defaultConfig {
+        ndk { debugSymbolLevel "FULL" }
+    }
+    // Godot project data lives in assets/ and includes dot-directories (.godot/).
+    aaptOptions {
+        ignoreAssetsPattern "!.svn:!.git:!.gitignore:!.ds_store:!*.scc:!CVS:!thumbs.db:!picasa.ini:!*~"
+    }
+    sourceSets {
+        main.jniLibs.srcDirs += "godot/jniLibs"
+        main.assets.srcDirs += "godot/assets"
+    }
+    packaging {
+        jniLibs {
+            useLegacyPackaging = true
+            pickFirsts += ["**/libc++_shared.so"]
+        }
+        // jspecify and bcprov-jdk18on (Reown) both ship this file.
+        resources.pickFirsts += ["META-INF/versions/9/OSGI-INF/MANIFEST.MF"]
+    }
+}
+
+dependencies {
+    // Engine AAR, webrtc jar and Godot plugin AARs copied by the sync script.
+    implementation fileTree(dir: "godot/libs", include: ["*.aar", "*.jar"])
+    implementation "androidx.fragment:fragment:1.8.6"
+    implementation "androidx.core:core-splashscreen:1.0.1"
+    implementation "androidx.documentfile:documentfile:1.0.1"
+    // Java side of the sentry-godot plugin AAR.
+    implementation "io.sentry:sentry-android:8.51.0"
+
+    // Maven dependencies of the dcl-godot-android plugin AAR: keep in sync with
+    // _get_android_dependencies in godot/addons/dcl-godot-android/export_plugin.gd.
+    implementation "androidx.browser:browser:1.5.0"
+    implementation "androidx.exifinterface:exifinterface:1.3.7"
+    implementation "androidx.media3:media3-exoplayer:1.4.1"
+    implementation "androidx.media3:media3-exoplayer-dash:1.4.1"
+    implementation "androidx.media3:media3-exoplayer-hls:1.4.1"
+    implementation "androidx.media3:media3-ui:1.4.1"
+    implementation "com.android.installreferrer:installreferrer:2.2"
+    implementation "com.reown:android-core:1.5.2"
+    implementation "com.reown:sign:1.5.2"
+    implementation "com.google.android.play:integrity:1.4.0"
+    implementation "com.google.android.play:review:2.0.2"
+    implementation "com.google.firebase:firebase-messaging:24.0.1"
+
+    // Firebase Analytics, as the engine's Gradle template adds it.
+    implementation platform("com.google.firebase:firebase-bom:33.10.0")
+    implementation "com.google.firebase:firebase-analytics"
+}

@@ -1,5 +1,6 @@
 import { NativeEventEmitter, NativeModules } from 'react-native';
 import { GodotEvent, parseEvent } from './events';
+import { createMockBridge } from './godot/mockBridge';
 
 /** Menus are portrait-locked; a scene is landscape-locked. */
 export type Orientation = 'portrait' | 'landscape';
@@ -11,7 +12,13 @@ type NativeBridge = {
   setOrientation(mode: Orientation): void;
 };
 
-const native: NativeBridge | undefined = NativeModules.GodotBridge;
+// Bridgeless RN reports a module that is not linked as null, the legacy bridge as undefined.
+const native: NativeBridge | null = NativeModules.GodotBridge ?? null;
+
+/** False when the app runs without the Godot engine (simulator, Expo Go): events are mocked. */
+export const godotAvailable = native !== null;
+
+const mock = godotAvailable ? null : createMockBridge();
 
 export type AvatarColorTarget = 'skin' | 'hair' | 'eyes';
 
@@ -39,6 +46,10 @@ export type GodotCommand =
   | { type: 'exit_world' };
 
 export function sendCommand(command: GodotCommand): void {
+  if (mock) {
+    mock.sendCommand(command);
+    return;
+  }
   native?.sendCommand(JSON.stringify(command));
 }
 
@@ -51,8 +62,8 @@ export function setOrientation(mode: Orientation): void {
 }
 
 export function subscribe(listener: (event: GodotEvent) => void): () => void {
-  if (!native) {
-    return () => {};
+  if (mock) {
+    return mock.subscribe(listener);
   }
   const subscription = new NativeEventEmitter(
     NativeModules.GodotBridge,

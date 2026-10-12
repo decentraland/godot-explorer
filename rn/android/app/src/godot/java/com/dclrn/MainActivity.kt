@@ -1,5 +1,6 @@
 package com.dclrn
 
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.view.MotionEvent
@@ -17,8 +18,8 @@ import org.godotengine.godot.GodotHost
 import org.godotengine.godot.plugin.GodotPlugin
 
 /**
- * VIBE-CODED SPIKE: React Native activity that hosts the Godot client as a fragment *under*
- * the React root view, so the RN UI draws over the 3D world.
+ * React Native activity that hosts the Godot client as a fragment *under* the React root view,
+ * so the RN UI draws over the 3D world.
  */
 class MainActivity : ReactActivity(), GodotHost {
 
@@ -56,6 +57,12 @@ class MainActivity : ReactActivity(), GodotHost {
         .beginTransaction()
         .replace(GODOT_CONTAINER_ID, fragment)
         .commitNowAllowingStateLoss()
+  }
+
+  // Warm deep links: the dcl-godot-android plugin re-reads activity.intent on focus.
+  override fun onNewIntent(intent: Intent) {
+    super.onNewIntent(intent)
+    setIntent(intent)
   }
 
   // RN's root view consumes every touch, even over transparent areas, so Godot underneath

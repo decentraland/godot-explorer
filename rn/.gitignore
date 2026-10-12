@@ -76,3 +76,9 @@ yarn-error.log
 
 # Godot engine/project artifacts copied by scripts/sync-godot-ios.sh
 ios/Godot/
+
+# Generated version settings (MARKETING_VERSION / CURRENT_PROJECT_VERSION), written by the xtask
+ios/Version.generated.xcconfig
+
+# Expo CLI state (expo start / Expo Go)
+.expo/

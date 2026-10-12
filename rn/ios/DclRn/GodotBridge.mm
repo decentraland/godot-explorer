@@ -1,5 +1,8 @@
 #import "GodotBridge.h"
 
+// Without the engine the module is not exported at all, so JS falls back to its mock bridge.
+#if DCL_WITH_GODOT
+
 extern "C" {
 typedef void (*godot_host_event_callback)(const char *json);
 void godot_host_set_event_callback(godot_host_event_callback callback);
@@ -47,3 +50,5 @@ RCT_EXPORT_METHOD(sendCommand : (NSString *)json) {
 }
 
 @end
+
+#endif
