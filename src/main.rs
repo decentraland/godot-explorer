@@ -29,6 +29,7 @@ mod keystore;
 mod log_server;
 mod path;
 mod platform;
+mod rn_app;
 mod run;
 mod tests;
 mod ui;
@@ -280,6 +281,12 @@ fn main() -> Result<(), anyhow::Error> {
                         .help("Override the store build number (versionCode / CFBundleVersion). Defaults to the DCL_BUILD_NUMBER env var; if unset, the committed placeholder is kept.")
                         .takes_value(true)
                         .required(false),
+                )
+                .arg(
+                    Arg::new("godot-only")
+                        .long("godot-only")
+                        .help("android/ios: stop after the Godot export instead of building the React Native app (rn/) from it")
+                        .takes_value(false),
                 ),
         )
         .subcommand(Command::new("import-assets"))
@@ -357,6 +364,12 @@ fn main() -> Result<(), anyhow::Error> {
                         .help("Skip build and export steps, deploy existing APK/IPA directly to device")
                         .takes_value(false),
                 ).arg(
+                    Arg::new("no-godot")
+                        .long("no-godot")
+                        .help("android/ios: run the React Native app without the Godot engine (mock bridge, placeholders) on an emulator / the iOS simulator; skips the Rust and Godot builds")
+                        .takes_value(false),
+                )
+                .arg(
                     Arg::new("launch-only")
                         .long("launch-only")
                         .help("Just relaunch the app already installed on the device — no build, export, or install (android/ios). Still starts the hub + wires the scene-inspector")
@@ -668,6 +681,16 @@ fn main() -> Result<(), anyhow::Error> {
                 && (target == Some("android") || target == Some("ios"))
                 && !sm.is_present("editor");
 
+            if should_deploy && sm.is_present("no-godot") {
+                return match target {
+                    Some("android") => {
+                        rn_app::build_android("apk", true, false)?;
+                        run::deploy_and_run_on_device("android", true, vec![], true, true)
+                    }
+                    _ => rn_app::run_ios_simulator(),
+                };
+            }
+
             // Both --prod and --staging require release profile
             let production_or_staging = sm.is_present("prod") || sm.is_present("staging");
 
@@ -823,8 +846,13 @@ fn main() -> Result<(), anyhow::Error> {
 
                     // 3. Export APK/IPA
                     let format = if platform == "android" { "apk" } else { "ipa" };
-                    let result =
-                        export::export(Some(platform), format, sm.is_present("release"), None);
+                    let result = export::export(
+                        Some(platform),
+                        format,
+                        sm.is_present("release"),
+                        None,
+                        false,
+                    );
 
                     if result.is_ok() {
                         // 4. Install and run on device
@@ -975,8 +1003,17 @@ fn main() -> Result<(), anyhow::Error> {
 
             // Check dependencies first
             dependencies::check_command_dependencies("export", target)?;
+            if !sm.is_present("godot-only") {
+                rn_app::check_tools(target)?;
+            }
 
-            let result = export::export(target, format, release, build_number);
+            let result = export::export(
+                target,
+                format,
+                release,
+                build_number,
+                sm.is_present("godot-only"),
+            );
 
             if result.is_ok() {
                 dependencies::suggest_next_steps("export", target);

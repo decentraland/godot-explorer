@@ -3,7 +3,8 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "android": "react-native run-android",
+    "android": "react-native run-android --main-activity com.godot.game.GodotAppLauncher",
+    "android:no-godot": "react-native run-android --main-activity com.godot.game.GodotAppLauncher --extra-params -PdclNoGodot=true",
     "ios": "react-native run-ios",
     "lint": "eslint .",
     "start": "react-native start",

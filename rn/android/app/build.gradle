@@ -74,16 +74,19 @@ def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
 
 /**
  * The Godot engine is optional: scripts/sync-godot-android.sh fills app/godot (engine AAR, plugin
- * AARs, native libs, project assets). Without it the app builds with the JS mock bridge.
+ * AARs, native libs, project assets). Without it, or with -PdclNoGodot, the app builds with the JS
+ * mock bridge.
  */
-def withGodot = file("godot").exists()
+def withGodot = file("godot").exists() && !project.hasProperty("dclNoGodot")
 
 // Store identity is shared with the Godot-exported app this replaces: same package, the marketing
 // version from lib/Cargo.toml and the build number from the CI allocator (DCL_BUILD_NUMBER).
 def cargoVersion = (file("../../../lib/Cargo.toml").text =~ /(?m)^version = "(.+)"/)[0][1]
 def buildNumber = (System.getenv("DCL_BUILD_NUMBER") ?: "1").toInteger()
-// Release signing key from the environment (xtask passes .bin/release.keystore); CI re-signs.
+// Release signing key from the environment (xtask passes .bin/release.keystore); CI re-signs the
+// APK and signs the AAB, which xtask builds unsigned (DCL_ANDROID_UNSIGNED).
 def releaseKeystore = System.getenv("DCL_ANDROID_KEYSTORE")
+def releaseUnsigned = System.getenv("DCL_ANDROID_UNSIGNED") != null
 
 android {
     ndkVersion rootProject.ext.ndkVersion
@@ -123,7 +126,7 @@ android {
             signingConfig signingConfigs.debug
         }
         release {
-            signingConfig releaseKeystore ? signingConfigs.release : signingConfigs.debug
+            signingConfig releaseUnsigned ? null : (releaseKeystore ? signingConfigs.release : signingConfigs.debug)
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
         }

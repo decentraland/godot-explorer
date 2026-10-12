@@ -76,6 +76,20 @@ cargo run -- export --target quest --format apk --release   # Meta Quest build
 # - .bin/release.keystore for release builds
 ```
 
+### Mobile app (`rn/`)
+The shipping iOS/Android app is the React Native app in `rn/`, which embeds the Godot client (see
+`rn/README.md`). `export`/`run --target android|ios` run Godot's export and then build the RN app from it
+(`--godot-only` stops after Godot's export). The engine is optional at build time, so the UI can be iterated on
+without it:
+```bash
+cargo run -- run --target ios --no-godot       # simulator, mock bridge + placeholders
+cargo run -- run --target android --no-godot   # emulator
+cd rn && npm start                              # Metro + fast refresh; then, in another shell:
+cd rn && npm run android:no-godot               # or: npm run ios (simulator)
+```
+iOS needs the engine built with `embedded_host=yes`: the `ios_host_release.a` template (`install --targets ios`)
+or `GODOT_HOST_LIB=<path to libgodot.ios.template_release.arm64.a>`.
+
 ### Code Quality
 ```bash
 # Rust formatting and linting

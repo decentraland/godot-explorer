@@ -31,6 +31,20 @@ trap 'rm -rf "$TMP"' EXIT
 unzip -q "$APK" 'lib/arm64-v8a/libdclgodot.so' 'lib/arm64-v8a/libsentry*.so' \
   'lib/arm64-v8a/libc++_shared.so' -d "$TMP"
 cp "$TMP"/lib/arm64-v8a/*.so "$DEST/jniLibs/arm64-v8a/"
+# Prefer the unstripped copies Godot's Gradle build keeps: AGP strips them for the APK and puts
+# their symbols in the AAB (Play Console symbolication), as the engine's own template does.
+case "$BUILD" in
+  release) VARIANT=StandardRelease ;;
+  *) VARIANT=StandardDebug ;;
+esac
+UNSTRIPPED="$ROOT/godot/android/build/build/intermediates/merged_native_libs/standard${VARIANT#Standard}/merge${VARIANT}NativeLibs/out/lib/arm64-v8a"
+if [ -d "$UNSTRIPPED" ]; then
+  for lib in "$DEST"/jniLibs/arm64-v8a/*.so; do
+    if [ -f "$UNSTRIPPED/$(basename "$lib")" ]; then
+      cp "$UNSTRIPPED/$(basename "$lib")" "$lib"
+    fi
+  done
+fi
 # dexopt/ is the exported app's own baseline profile; AGP adds the RN app's, so skip it.
 unzip -q "$APK" 'assets/*' -x 'assets/ios/*' 'assets/dexopt/*' -d "$DEST"
 

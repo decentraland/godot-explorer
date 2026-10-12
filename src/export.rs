@@ -442,11 +442,14 @@ fn verify_shader_bake_output(output: &GodotExportOutput) -> Result<(), anyhow::E
     Ok(())
 }
 
+/// Exports the Godot project. For `android` and `ios` the export then feeds the React Native app
+/// (`rn/`), which is what ships; `godot_only` stops after the Godot export, at its usual paths.
 pub fn export(
     target: Option<&str>,
     format: &str,
     release: bool,
     build_number: Option<u64>,
+    godot_only: bool,
 ) -> Result<(), anyhow::Error> {
     print_section("Exporting Project");
 
@@ -498,20 +501,32 @@ pub fn export(
         _ => return Err(anyhow::anyhow!("Unexpected final target: {}", target)),
     };
 
-    let output_rel_path = format!("{EXPORTS_FOLDER}{output_file_name}");
+    // The RN Android app is built from Godot's APK (project data and native libs), whatever the
+    // final format; Godot's export goes to its own folder so the RN output can take its paths.
+    let rn_android = target == "android" && !godot_only;
+    let (output_file_name, export_dir) = if rn_android {
+        (
+            crate::rn_app::ANDROID_APK_NAME.to_string(),
+            crate::rn_app::GODOT_ANDROID_EXPORT_DIR,
+        )
+    } else {
+        (output_file_name, EXPORTS_FOLDER)
+    };
+    fs::create_dir_all(export_dir)?;
+    let output_rel_path = format!("{export_dir}{output_file_name}");
     if std::path::Path::new(output_rel_path.as_str()).exists() {
         fs::remove_file(output_rel_path.as_str())?;
     }
 
     // Adjust the output path parameter for Godot command line
     // This should reflect the correct relative path from the Godot project directory
-    let output_path_godot_param = format!("./../exports/{output_file_name}");
+    let output_path_godot_param = format!("./../{}", output_rel_path.trim_start_matches("./"));
 
     // Store targets get the build number (Android versionCode / iOS CFBundleVersion) stamped
     // into export_presets.cfg at export time, then restored afterward so the working tree keeps
     // its committed placeholder values. AAB additionally needs format/architecture/signing tweaks.
     let is_store_target = matches!(target.as_str(), "android" | "quest" | "ios");
-    let aab_tweaks = (target == "android" || target == "quest") && format == "aab";
+    let aab_tweaks = (target == "android" || target == "quest") && format == "aab" && !rn_android;
     // Resolve the build number: `--build-number` wins, otherwise the `DCL_BUILD_NUMBER` env var
     // (set in CI by the Cloudflare allocator, idempotent per commit SHA). When neither is present
     // (local / fork builds) the committed placeholder in export_presets.cfg is kept as-is — those
@@ -656,6 +671,12 @@ pub fn export(
         &format!("Export completed: {}", output_rel_path),
     );
 
+    if rn_android {
+        crate::rn_app::build_android(format, release, true)?;
+    } else if target == "ios" && !godot_only {
+        crate::rn_app::prepare_ios()?;
+    }
+
     Ok(())
 }
 
@@ -752,6 +773,27 @@ pub fn prepare_templates(
             }
         } else {
             println!("No files mapped for template: {}", template);
+        }
+    }
+
+    // The React Native iOS app links an engine built with embedded_host=yes, published next to
+    // ios.zip. Optional while engine releases without it exist (rn_app::resolve_godot_host_lib
+    // explains the alternatives).
+    let host_template = Path::new(&dest_path).join(crate::rn_app::IOS_HOST_TEMPLATE);
+    if templates.iter().any(|t| t == "ios")
+        && (!host_template.exists() || effective_branch.is_some())
+    {
+        let file = crate::rn_app::IOS_HOST_TEMPLATE;
+        let url = format!("{templates_base_url}{file}.zip");
+        let cache_id =
+            format!("{GODOT_CURRENT_VERSION}-{GODOT_BUILD_SHA}.{file}.export-templates.zip");
+        if let Err(err) =
+            download_and_extract_zip(url.as_str(), dest_path.as_str(), cache_key(cache_id))
+        {
+            print_message(
+                MessageType::Warning,
+                &format!("No {file} template for this engine build ({err}); the React Native iOS app needs GODOT_HOST_LIB"),
+            );
         }
     }
 

@@ -7,6 +7,10 @@ repositories {
 }
 
 android {
+    // Native symbols of the (unstripped) synced libs go into the AAB, as in the engine's template.
+    defaultConfig {
+        ndk { debugSymbolLevel "FULL" }
+    }
     // Godot project data lives in assets/ and includes dot-directories (.godot/).
     aaptOptions {
         ignoreAssetsPattern "!.svn:!.git:!.gitignore:!.ds_store:!*.scc:!CVS:!thumbs.db:!picasa.ini:!*~"
