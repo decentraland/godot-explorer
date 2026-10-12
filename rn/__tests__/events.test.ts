@@ -1,8 +1,18 @@
-import { initialHud, MAX_CHAT_LINES, parseEvent, reduceHud } from '../src/events';
+import {
+  initialHud,
+  MAX_CHAT_LINES,
+  parseEvent,
+  reduceHud,
+} from '../src/events';
 
 const stateEvent = {
   type: 'state' as const,
-  data: { parcel: [0, -2] as [number, number], realm: 'main', fps: 60, position: [1, 2, 3] as [number, number, number] },
+  data: {
+    parcel: [0, -2] as [number, number],
+    realm: 'main',
+    fps: 60,
+    position: [1, 2, 3] as [number, number, number],
+  },
 };
 
 describe('parseEvent', () => {
@@ -26,19 +36,30 @@ describe('reduceHud', () => {
   });
 
   it('only reaches playing after a state event and loading finished', () => {
-    const early = reduceHud(initialHud, { type: 'loading', data: { state: 'finished' } });
+    const early = reduceHud(initialHud, {
+      type: 'loading',
+      data: { state: 'finished' },
+    });
     expect(early.phase).toBe('booting');
     const loading = reduceHud(initialHud, stateEvent);
-    expect(reduceHud(loading, { type: 'loading', data: { state: 'finished' } }).phase).toBe('playing');
+    expect(
+      reduceHud(loading, { type: 'loading', data: { state: 'finished' } })
+        .phase,
+    ).toBe('playing');
   });
 
   it('does not mutate the previous state and caps chat history', () => {
     let state = initialHud;
     for (let i = 0; i < MAX_CHAT_LINES + 5; i++) {
-      state = reduceHud(state, { type: 'chat', data: { address: 'a', message: `m${i}`, timestamp: i } });
+      state = reduceHud(state, {
+        type: 'chat',
+        data: { address: 'a', message: `m${i}`, timestamp: i },
+      });
     }
     expect(state.chat).toHaveLength(MAX_CHAT_LINES);
-    expect(state.chat[MAX_CHAT_LINES - 1].message).toBe(`m${MAX_CHAT_LINES + 4}`);
+    expect(state.chat[MAX_CHAT_LINES - 1].message).toBe(
+      `m${MAX_CHAT_LINES + 4}`,
+    );
     expect(initialHud.chat).toHaveLength(0);
   });
 });

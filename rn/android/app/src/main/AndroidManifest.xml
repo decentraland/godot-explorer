@@ -18,7 +18,7 @@
         android:name=".MainActivity"
         android:label="@string/app_name"
         android:configChanges="layoutDirection|locale|orientation|keyboardHidden|screenSize|smallestScreenSize|density|keyboard|navigation|screenLayout|uiMode"
-        android:screenOrientation="landscape"
+        android:screenOrientation="portrait"
         android:launchMode="singleTask"
         android:windowSoftInputMode="adjustResize"
         android:exported="true">

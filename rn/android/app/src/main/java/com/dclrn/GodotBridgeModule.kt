@@ -1,5 +1,6 @@
 package com.dclrn
 
+import android.content.pm.ActivityInfo
 import com.facebook.react.ReactPackage
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReactContextBaseJavaModule
@@ -19,6 +20,22 @@ class GodotBridgeModule(context: ReactApplicationContext) : ReactContextBaseJava
   @ReactMethod
   fun sendCommand(json: String) {
     RnHostPlugin.instance?.sendCommand(json)
+  }
+
+  @ReactMethod
+  fun startEngine() {
+    MainActivity.instance?.let { it.runOnUiThread { it.startEngine() } }
+  }
+
+  @ReactMethod
+  fun setOrientation(mode: String) {
+    val orientation =
+        when (mode) {
+          "portrait" -> ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+          "sensor" -> ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR
+          else -> return
+        }
+    MainActivity.instance?.let { it.runOnUiThread { it.requestedOrientation = orientation } }
   }
 
   // Required by NativeEventEmitter.

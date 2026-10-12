@@ -5,9 +5,28 @@ export type GodotEvent =
   | { type: 'loading'; data: { state: 'started' | 'finished' } }
   | {
       type: 'state';
-      data: { parcel: [number, number]; realm: string; fps: number; position: [number, number, number] };
+      data: {
+        parcel: [number, number];
+        realm: string;
+        fps: number;
+        position: [number, number, number];
+      };
     }
-  | { type: 'chat'; data: { address: string; message: string; timestamp: number } };
+  | {
+      type: 'chat';
+      data: { address: string; message: string; timestamp: number };
+    }
+  | { type: 'avatar'; data: AvatarState };
+
+/** Equipped avatar as the Godot side sees it; colors are `#rrggbb`, empty emote slots are ''. */
+export type AvatarState = {
+  body_shape: string;
+  wearables: string[];
+  emotes: string[];
+  skin: string;
+  hair: string;
+  eyes: string;
+};
 
 export type ChatLine = { address: string; message: string; timestamp: number };
 
@@ -36,7 +55,12 @@ export const initialHud: HudState = {
 export function parseEvent(json: string): GodotEvent | null {
   try {
     const parsed: unknown = JSON.parse(json);
-    if (typeof parsed !== 'object' || parsed === null || !('type' in parsed) || !('data' in parsed)) {
+    if (
+      typeof parsed !== 'object' ||
+      parsed === null ||
+      !('type' in parsed) ||
+      !('data' in parsed)
+    ) {
       return null;
     }
     return parsed as GodotEvent;
@@ -62,7 +86,10 @@ export function reduceHud(state: HudState, event: GodotEvent): HudState {
       }
       return state;
     case 'chat':
-      return { ...state, chat: [...state.chat, event.data].slice(-MAX_CHAT_LINES) };
+      return {
+        ...state,
+        chat: [...state.chat, event.data].slice(-MAX_CHAT_LINES),
+      };
     default:
       return state;
   }

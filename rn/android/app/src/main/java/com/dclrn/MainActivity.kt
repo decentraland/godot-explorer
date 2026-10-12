@@ -32,6 +32,17 @@ class MainActivity : ReactActivity(), GodotHost {
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(null)
+    instance = this
+  }
+
+  override fun onDestroy() {
+    if (instance === this) instance = null
+    super.onDestroy()
+  }
+
+  /** Starts the Godot engine once, under the RN root. The engine cannot be restarted in-process. */
+  fun startEngine() {
+    if (godotFragment != null) return
     val content = findViewById<ViewGroup>(android.R.id.content)
     val container = FrameLayout(this).apply { id = GODOT_CONTAINER_ID }
     content.addView(
@@ -76,19 +87,11 @@ class MainActivity : ReactActivity(), GodotHost {
   companion object {
     private const val TAG = "DclRn"
     private const val GODOT_CONTAINER_ID = 0x00D0D0
-    private const val MAIN_REALM = "https://realm-provider-ea.decentraland.org/main"
 
-    // Ephemeral guest, straight into Genesis Plaza, Godot UI hidden (see rn_bridge.gd).
-    private val BOOT_ARGS =
-        listOf(
-            "--rn-host",
-            "--skip-lobby",
-            "--guest-profile",
-            "--force-mobile",
-            "--realm",
-            MAIN_REALM,
-            "--location",
-            "0,0")
+    // No world: the engine only renders the avatar preview (see rn_avatar_host.gd).
+    private val BOOT_ARGS = listOf("--rn-host", "--rn-avatar-only", "--force-mobile", "--no-pulse")
+
+    @Volatile var instance: MainActivity? = null
 
     init {
       // JNI_OnLoad in libdclgodot is needed by livekit/webrtc before the engine starts.

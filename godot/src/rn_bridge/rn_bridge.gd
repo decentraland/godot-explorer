@@ -13,6 +13,7 @@ var _explorer: Explorer = null
 var _state_elapsed := 0.0
 var _hide_elapsed := 0.0
 var _backpack := RnBackpack.new()
+var _avatar_host_up := false
 
 
 func _ready() -> void:
@@ -25,10 +26,19 @@ func _ready() -> void:
 	Global.loading_started.connect(_emit.bind("loading", {"state": "started"}))
 	Global.loading_finished.connect(_emit.bind("loading", {"state": "finished"}))
 	Global.on_chat_message.connect(_on_chat_message)
+	_backpack.avatar_changed.connect(func(state: Dictionary) -> void: _emit("avatar", state))
 	add_child(_backpack)
 
 
+## Called by the avatar-only host scene once the identity and profile exist.
+func on_avatar_host_ready() -> void:
+	_avatar_host_up = true
+	_emit("ready", {})
+
+
 func _process(dt: float) -> void:
+	if _avatar_host_up:
+		return
 	if _explorer == null:
 		_explorer = Global.get_explorer()
 		if _explorer == null:
@@ -46,8 +56,41 @@ func _process(dt: float) -> void:
 
 func handle_command(json: String) -> void:
 	var cmd: Variant = JSON.parse_string(json)
-	if not cmd is Dictionary or _explorer == null:
+	if not cmd is Dictionary:
 		return
+	if _avatar_host_up:
+		_handle_avatar_command(cmd)
+	elif _explorer != null:
+		_handle_explorer_command(cmd)
+
+
+func _handle_avatar_command(cmd: Dictionary) -> void:
+	match cmd.get("type", ""):
+		"backpack_open":
+			_backpack.async_open(_rect(cmd))
+		"backpack_place":
+			_backpack.place(_rect(cmd))
+		"backpack_close":
+			_backpack.close()
+		"equip":
+			_backpack.async_equip(str(cmd.get("urn", "")))
+		"unequip":
+			_backpack.async_unequip(str(cmd.get("urn", "")))
+		"set_body_shape":
+			_backpack.async_set_body_shape(str(cmd.get("urn", "")))
+		"set_color":
+			_backpack.async_set_color(str(cmd.get("target", "")), str(cmd.get("color", "")))
+		"play_emote":
+			_backpack.play_emote(str(cmd.get("urn", "")))
+		"set_emote_slot":
+			_backpack.set_emote_slot(int(cmd.get("slot", -1)), str(cmd.get("urn", "")))
+		"randomize_avatar":
+			_backpack.async_randomize()
+		"set_name":
+			_backpack.async_set_profile_name(str(cmd.get("name", "")))
+
+
+func _handle_explorer_command(cmd: Dictionary) -> void:
 	match cmd.get("type", ""):
 		"teleport":
 			_explorer.teleport_to(Vector2i(int(cmd.get("x", 0)), int(cmd.get("y", 0))))
@@ -65,6 +108,10 @@ func handle_command(json: String) -> void:
 			_backpack.close()
 		"equip":
 			_backpack.async_equip(str(cmd.get("urn", "")))
+
+
+func _rect(cmd: Dictionary) -> Rect2:
+	return Rect2(cmd.get("x", 0), cmd.get("y", 0), cmd.get("w", 0), cmd.get("h", 0))
 
 
 func _player() -> Player:
