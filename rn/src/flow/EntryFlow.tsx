@@ -136,8 +136,6 @@ export function EntryFlow({ onDone }: { onDone: () => void }) {
     case 'avatar_customize':
       return (
         <BackpackScreen
-          allowLandscape={false}
-          backInPortrait
           onBack={back}
           footer={
             <View style={styles.footer}>

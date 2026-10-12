@@ -22,8 +22,10 @@ Events (Godot -> RN), see `src/events.ts`: `ready` (host scene is up) and `avata
 emotes,skin,hair,eyes}` after `backpack_open` and after every command that changes the avatar.
 `enter_world` switches the same engine session from the avatar host to the explorer (same account and avatar) and emits `world{state:'entered'}`; `loading`/`state`/`chat` events and `teleport`, `send_chat`, `emote` work while in the world (`loading finished` = playable). `exit_world` tears the world down, returns to the avatar host and emits `world{state:'exited'}` then `ready`; a later `enter_world` works again.
 In the world Godot never changes the device orientation (RN owns it); the layout follows the window shape.
-Orientation is owned by RN: the manifest is portrait and `GodotBridge.setOrientation('portrait'|'sensor')`
-switches it (the host's `override.cfg` makes the engine start portrait too).
+Orientation is owned by RN: everything before a scene (entry flow, Discover, Backpack) is portrait-locked
+(the manifest is portrait and the host's `override.cfg` starts the engine portrait), and the world screen
+calls `GodotBridge.setOrientation('landscape')` (forced, either direction) until Leave brings it back to
+`'portrait'`. Portrait scenes are not part of the spike.
 
 ## UI structure (built from Figma)
 

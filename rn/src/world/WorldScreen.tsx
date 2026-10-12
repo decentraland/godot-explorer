@@ -10,10 +10,12 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Place } from '../discover/api';
 import { AppText, colors, LinearFill, u } from '../ds';
 import { send, useEngine } from '../engine';
+import { setOrientation } from '../GodotBridge';
 
 const LOADING_TIMEOUT_MS = 25_000;
 
@@ -55,6 +57,7 @@ export function WorldScreen({
   onLeave: () => void;
 }) {
   const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
   const { hud } = useEngine();
   const [chatOpen, setChatOpen] = useState(false);
   const [draft, setDraft] = useState('');
@@ -62,10 +65,16 @@ export function WorldScreen({
   const chatScroll = useRef<ComponentRef<typeof ScrollView>>(null);
 
   useEffect(() => {
+    setOrientation('landscape');
+    return () => setOrientation('portrait');
+  }, []);
+
+  useEffect(() => {
     const timer = setTimeout(() => setTimedOut(true), LOADING_TIMEOUT_MS);
     return () => clearTimeout(timer);
   }, []);
 
+  const coverWidth = Math.min(width * 0.8, height * 0.4 * 1.9);
   const covered = hud.phase !== 'playing' && !timedOut;
   const parcel = hud.parcel
     ? `${hud.parcel[0]},${hud.parcel[1]}`
@@ -82,7 +91,14 @@ export function WorldScreen({
   return (
     <View style={styles.root} pointerEvents="box-none">
       <View
-        style={[styles.top, { paddingTop: insets.top + u(12) }]}
+        style={[
+          styles.top,
+          {
+            paddingTop: insets.top + u(12),
+            paddingLeft: insets.left + u(16),
+            paddingRight: insets.right + u(16),
+          },
+        ]}
         pointerEvents="box-none"
       >
         <View style={styles.chip} pointerEvents="none">
@@ -104,10 +120,14 @@ export function WorldScreen({
       </View>
       {chatOpen && (
         <KeyboardAvoidingView
-          style={[styles.chat, { top: insets.top + u(64) }]}
+          style={[
+            styles.chat,
+            { top: insets.top + u(64), left: insets.left + u(16) },
+          ]}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
           <ScrollView
+            removeClippedSubviews={false}
             ref={chatScroll}
             style={styles.chatLog}
             onContentSizeChange={() =>
@@ -149,7 +169,7 @@ export function WorldScreen({
           {place.image ? (
             <Image
               source={{ uri: place.image }}
-              style={styles.coverImage}
+              style={[styles.coverImage, { width: coverWidth }]}
               resizeMode="cover"
             />
           ) : null}
@@ -221,7 +241,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   coverImage: {
-    width: '80%',
     aspectRatio: 1.9,
     borderRadius: u(6),
     marginBottom: u(24),

@@ -15,6 +15,9 @@ var _hide_elapsed := 0.0
 var _backpack := RnBackpack.new()
 var _avatar_host_up := false
 var _in_world := false
+var _exiting := false
+var _entering := false
+var _pending_enter: Dictionary = {}
 
 
 func _ready() -> void:
@@ -34,10 +37,15 @@ func _ready() -> void:
 ## Called by the avatar-only host scene once the identity and profile exist.
 func on_avatar_host_ready() -> void:
 	_avatar_host_up = true
+	_exiting = false
 	if _in_world:
 		_in_world = false
 		_emit("world", {"state": "exited"})
 	_emit("ready", {})
+	if not _pending_enter.is_empty():
+		var pending := _pending_enter
+		_pending_enter = {}
+		_handle_avatar_command(pending)
 
 
 func _process(dt: float) -> void:
@@ -66,6 +74,8 @@ func handle_command(json: String) -> void:
 		return
 	if _avatar_host_up:
 		_handle_avatar_command(cmd)
+	elif _entering and cmd.get("type", "") == "exit_world":
+		_entering = false
 	elif _explorer != null:
 		_handle_explorer_command(cmd)
 
@@ -95,13 +105,26 @@ func _handle_avatar_command(cmd: Dictionary) -> void:
 		"set_name":
 			_backpack.async_set_profile_name(str(cmd.get("name", "")))
 		"enter_world":
-			_backpack.close()
-			_avatar_host_up = false
-			_in_world = true
-			_explorer = null
-			RnWorld.enter(
-				Vector2i(int(cmd.get("x", 0)), int(cmd.get("y", 0))), str(cmd.get("realm", ""))
-			)
+			if _exiting:
+				_pending_enter = cmd
+				return
+			_async_enter_world(cmd)
+
+
+func _async_enter_world(cmd: Dictionary) -> void:
+	_backpack.close()
+	_avatar_host_up = false
+	_in_world = true
+	_entering = true
+	_explorer = null
+	var parcel := Vector2i(int(cmd.get("x", 0)), int(cmd.get("y", 0)))
+	var started := await RnWorld.async_enter(
+		parcel, str(cmd.get("realm", "")), func() -> bool: return not _entering
+	)
+	if started:
+		_entering = false
+	else:
+		on_avatar_host_ready()
 
 
 func _handle_explorer_command(cmd: Dictionary) -> void:
@@ -126,7 +149,8 @@ func _handle_explorer_command(cmd: Dictionary) -> void:
 			_backpack.close()
 			_explorer = null
 			_avatar_host_up = true
-			RnWorld.exit()
+			_exiting = true
+			RnWorld.async_exit()
 
 
 func _rect(cmd: Dictionary) -> Rect2:

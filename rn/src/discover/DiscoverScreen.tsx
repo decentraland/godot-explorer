@@ -24,6 +24,7 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
         {title}
       </AppText>
       <ScrollView
+        removeClippedSubviews={false}
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.rail}
@@ -87,6 +88,7 @@ export function DiscoverScreen({
       ));
     return (
       <ScrollView
+        removeClippedSubviews={false}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scroll}
       >

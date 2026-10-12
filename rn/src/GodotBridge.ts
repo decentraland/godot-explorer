@@ -1,7 +1,8 @@
 import { NativeEventEmitter, NativeModules } from 'react-native';
 import { GodotEvent, parseEvent } from './events';
 
-export type Orientation = 'portrait' | 'sensor';
+/** Menus are portrait-locked; a scene is landscape-locked. */
+export type Orientation = 'portrait' | 'landscape';
 
 type NativeBridge = {
   sendCommand(json: string): void;

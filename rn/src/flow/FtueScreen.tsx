@@ -38,6 +38,7 @@ export function FtueScreen({ onDone }: { onDone: () => void }) {
   return (
     <FlowFrame>
       <FlatList
+        removeClippedSubviews={false}
         ref={list}
         data={SLIDES}
         horizontal

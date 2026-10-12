@@ -14,6 +14,7 @@ const OVERLAY_CANVAS_LAYER := 1 << 19
 var _layer: CanvasLayer = null
 var _canvas_cull_mask := 0
 var _preview: AvatarPreview = null
+var _surface_on_top := false
 
 
 func async_open(rect: Rect2) -> void:
@@ -171,7 +172,9 @@ func _show_preview(on: bool) -> void:
 func _set_overlay(on: bool, avatar_only: bool) -> void:
 	if not avatar_only:
 		get_viewport().transparent_bg = on
-	if Engine.has_singleton("RnHostPlugin"):
+	# Each flip recreates the Android surface, so only flip on a real change.
+	if Engine.has_singleton("RnHostPlugin") and on != _surface_on_top:
+		_surface_on_top = on
 		Engine.get_singleton("RnHostPlugin").call("set_surface_on_top", on)
 
 

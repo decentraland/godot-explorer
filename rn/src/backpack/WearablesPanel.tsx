@@ -49,6 +49,7 @@ export function WearablesPanel(props: WearablesPanelProps) {
       </View>
       {tab !== 'all' && (
         <ScrollView
+          removeClippedSubviews={false}
           horizontal
           showsHorizontalScrollIndicator={false}
           style={styles.slotsScroll}

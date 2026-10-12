@@ -34,6 +34,7 @@ export function EmoteSlotsRow({
 }) {
   return (
     <ScrollView
+      removeClippedSubviews={false}
       horizontal
       showsHorizontalScrollIndicator={false}
       style={styles.slotsScroll}

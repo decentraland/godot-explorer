@@ -50,6 +50,7 @@ export function SwatchRow({
 }) {
   return (
     <ScrollView
+      removeClippedSubviews={false}
       horizontal
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={styles.row}

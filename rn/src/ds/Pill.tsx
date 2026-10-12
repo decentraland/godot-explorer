@@ -40,7 +40,7 @@ export function Pill({
     >
       {icon && (
         <View style={styles.icon}>
-          <Icon name={icon} size={16} color={textColor} />
+          <Icon name={icon} size={18} color={textColor} />
         </View>
       )}
       <AppText
@@ -62,10 +62,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: u(14),
+    paddingHorizontal: u(8),
     borderRadius: radii.pill,
   },
-  icon: { marginRight: u(6) },
+  icon: { marginRight: u(4) },
   solidText: { fontSize: u(14) },
   softText: { fontSize: u(13) },
   pressed: { opacity: 0.8 },

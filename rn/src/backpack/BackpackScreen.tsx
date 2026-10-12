@@ -1,8 +1,7 @@
-import { ReactNode, useEffect } from 'react';
+import { ReactNode } from 'react';
 import { Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, Icon, LinearFill } from '../ds';
-import { setOrientation } from '../GodotBridge';
+import { colors, Icon } from '../ds';
 import { AvatarHole, StageBackground } from './AvatarStage';
 import { BackpackHeader } from './BackpackHeader';
 import { EmoteSlotsRow } from './EmotesPanel';
@@ -13,41 +12,18 @@ import { BackpackController, useBackpack } from './useBackpack';
 import { u } from '../ds/scale';
 
 const SHEET_RATIO = 0.455;
-const LEFT_RATIO = 0.54;
 
 export type BackpackScreenProps = {
-  /** Portrait bar under the sheet: the app's bottom navigation, or a Continue button. */
+  /** Bar under the sheet: the app's bottom navigation, or a Continue button. */
   footer: ReactNode;
-  /** Whether the screen may rotate to landscape; the entry flow stays portrait. */
-  allowLandscape?: boolean;
+  /** Figma's backpack has no back button; the entry flow needs one. */
   onBack?: () => void;
-  /** Figma's portrait backpack has no back button; the entry flow needs one. */
-  backInPortrait?: boolean;
 };
 
-export function BackpackScreen({
-  footer,
-  allowLandscape = true,
-  onBack,
-  backInPortrait = false,
-}: BackpackScreenProps) {
-  const { width, height } = useWindowDimensions();
+/** Portrait only: everything before a scene is portrait-locked, so there is no landscape layout. */
+export function BackpackScreen({ footer, onBack }: BackpackScreenProps) {
   const controller = useBackpack();
-
-  useEffect(() => {
-    setOrientation(allowLandscape ? 'sensor' : 'portrait');
-    return () => setOrientation('portrait');
-  }, [allowLandscape]);
-
-  return width > height ? (
-    <Landscape controller={controller} onBack={onBack} />
-  ) : (
-    <Portrait
-      controller={controller}
-      footer={footer}
-      onBack={backInPortrait ? onBack : undefined}
-    />
-  );
+  return <Portrait controller={controller} footer={footer} onBack={onBack} />;
 }
 
 function Header({
@@ -145,72 +121,13 @@ function Portrait({
   );
 }
 
-function Landscape({
-  controller,
-  onBack,
-}: {
-  controller: BackpackController;
-  onBack?: () => void;
-}) {
-  const { width } = useWindowDimensions();
-  const insets = useSafeAreaInsets();
-  const { state, dispatch, catalog } = controller;
-  return (
-    <View style={styles.root}>
-      <StageBackground />
-      <View style={styles.landscape}>
-        <View
-          style={[
-            styles.left,
-            {
-              paddingLeft: insets.left + u(12),
-              paddingTop: insets.top + u(10),
-            },
-          ]}
-        >
-          <Header controller={controller} onBack={onBack} />
-          <AvatarHole style={styles.hole} />
-          {state.mode === 'emotes' && catalog.status === 'ready' && (
-            <EmoteSlotsRow
-              slots={controller.emoteSlots}
-              emotes={catalog.emotes}
-              selected={state.emoteSlot}
-              onSelect={slot => dispatch({ type: 'emoteSlot', slot })}
-            />
-          )}
-        </View>
-        <View
-          style={[
-            styles.right,
-            { paddingRight: insets.right, paddingTop: insets.top + u(6) },
-          ]}
-        >
-          <LinearFill
-            stops={[
-              { offset: 0, color: colors.purple450 },
-              { offset: 1, color: colors.purple550 },
-            ]}
-          />
-          <SheetContent controller={controller} bottomInset={insets.bottom} />
-        </View>
-      </View>
-      <FilterOverlay
-        controller={controller}
-        position={{
-          top: insets.top + u(10) + u(36),
-          left: Math.round(width * LEFT_RATIO) - u(165) - u(16),
-        }}
-      />
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   root: { ...StyleSheet.absoluteFill, backgroundColor: colors.purple500 },
   headerWrap: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-end',
+    paddingHorizontal: u(24),
   },
   back: {
     position: 'absolute',
@@ -222,11 +139,4 @@ const styles = StyleSheet.create({
   },
   hole: { flex: 1 },
   menu: { position: 'absolute', zIndex: 5 },
-  landscape: { flex: 1, flexDirection: 'row' },
-  left: { flex: LEFT_RATIO },
-  right: {
-    flex: 1 - LEFT_RATIO,
-    overflow: 'hidden',
-    backgroundColor: colors.purple500,
-  },
 });

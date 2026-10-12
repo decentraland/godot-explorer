@@ -16,7 +16,7 @@ export function Home({ onJumpIn }: { onJumpIn: (place: Place) => void }) {
   );
 
   if (tab === 'backpack') {
-    return <BackpackScreen footer={nav} onBack={() => setTab('explore')} />;
+    return <BackpackScreen footer={nav} />;
   }
   if (tab === 'explore') {
     return <DiscoverScreen footer={nav} onJumpIn={onJumpIn} />;

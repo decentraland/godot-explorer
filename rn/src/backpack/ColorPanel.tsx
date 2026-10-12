@@ -52,6 +52,7 @@ export function ColorPanel({
 
   return (
     <ScrollView
+      removeClippedSubviews={false}
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
     >

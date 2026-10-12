@@ -31,6 +31,7 @@ export function ItemGrid<T>({
   const cells = padToColumns(items, layout.columns);
   return (
     <FlatList
+      removeClippedSubviews={false}
       data={cells}
       numColumns={layout.columns}
       keyExtractor={(cell, index) =>

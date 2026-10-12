@@ -32,7 +32,7 @@ class GodotBridgeModule(context: ReactApplicationContext) : ReactContextBaseJava
     val orientation =
         when (mode) {
           "portrait" -> ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
-          "sensor" -> ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR
+          "landscape" -> ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
           else -> return
         }
     MainActivity.instance?.let { it.runOnUiThread { it.requestedOrientation = orientation } }
