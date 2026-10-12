@@ -21,18 +21,15 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     reactNativeDelegate = delegate
     reactNativeFactory = factory
 
-    window = UIWindow(frame: UIScreen.main.bounds)
-
-    factory.startReactNative(
+    // VIBE-CODED SPIKE: the root view controller stacks the React Native view over Godot's.
+    let reactView = factory.rootViewFactory.view(
       withModuleName: "DclRn",
-      in: window,
+      initialProperties: nil,
       launchOptions: launchOptions
     )
-
-    // VIBE-CODED SPIKE: Godot's view goes under React Native's root view.
-    if let window {
-      DclGodotHost.attach(to: window)
-    }
+    window = UIWindow(frame: UIScreen.main.bounds)
+    window?.rootViewController = DclGodotHost.rootViewController(withReactView: reactView)
+    window?.makeKeyAndVisible()
 
     return true
   }

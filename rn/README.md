@@ -8,7 +8,7 @@ hidden (`--rn-host`). Scene (SDK) UI, the joystick, the on-screen gamepad and ca
 in Godot; everything else is React.
 
 ```
-Godot view (bottom)  <- Android: GodotFragment, iOS: GDTViewController as child VC
+Godot view (bottom)  <- Android: GodotFragment, iOS: GDTViewController as child VC of DclHostViewController
 RN root view (top)   <- HUD: status chip, Wave / Plaza / Chat buttons, loading cover
 GodotBridge          <- JSON commands/events <-> RnHostPlugin singleton <-> godot/src/rn_bridge/rn_bridge.gd
 ```
@@ -41,20 +41,30 @@ cd android && ./gradlew :app:assembleRelease        # JS bundled in; no Metro ne
 adb install -r app/build/outputs/apk/release/app-release.apk
 ```
 
-## iOS (code only — never compiled by the author)
+## iOS (verified on an iPhone 14 Pro, iOS 26)
 
-Needs the engine fork branch `spike/ios-host-embedding` (`decentraland/godotengine`), built with
-`scons platform=ios target=template_release arch=arm64 embedded_host=yes`, plus a macOS machine:
+Needs the engine fork branch `spike/ios-host-embedding` (`decentraland/godotengine`) built locally — engine CI
+builds it but deletes the raw `.a` after packaging:
 
 ```bash
+# in the engine checkout (the editor/ folder must be gone for template builds, as in CI)
+BUILD_NAME=gh scons platform=ios target=template_release arch=arm64 production=yes embedded_host=yes
+# in this repo
 cargo run -- build -r --target ios && cargo run -- export --target ios --release
 GODOT_HOST_LIB=<engine>/bin/libgodot.ios.template_release.arm64.a rn/scripts/sync-godot-ios.sh
-cd rn/ios && ruby configure_godot.rb && pod install
+cd rn && npm ci && cd ios && ruby configure_godot.rb && pod install   # ruby needs the xcodeproj gem
+xcodebuild build -workspace DclRn.xcworkspace -scheme DclRn -configuration Release \
+  -destination 'generic/platform=iOS' DEVELOPMENT_TEAM=<team> PRODUCT_BUNDLE_IDENTIFIER=<id> -allowProvisioningUpdates
+xcrun devicectl device install app --device <udid> <DerivedData>/Build/Products/Release-iphoneos/DclRn.app
 ```
+
+`DclHostViewController` stacks the RN view over Godot's and routes each touch: to RN when a real RN view is under
+it, to Godot otherwise. The host does not pass `--force-mobile` on iOS: it marks the client as a *virtual* mobile,
+and the landscape switch then resizes the window to 1280×720 like the desktop preview.
 
 ## Known limitations
 
 - The first debug-template build ran at about 11–15 fps on the test phone; use the release template (`GODOT_BUILD=debug` selects the debug one).
 - Android plugin features are not carried over: push, IAP, Firebase, Reown, ExoPlayer video.
 - Sentry, deeplinks and the Android back button are not forwarded to Godot.
-- iOS: engine init order, GDExtension dylib loading from the host bundle and touch pass-through are unverified.
+- iOS: the backpack overlay is not wired yet (no `set_surface_on_top` in the iOS bridge, opaque Metal layer).
