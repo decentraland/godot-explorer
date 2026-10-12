@@ -12,6 +12,7 @@ var _plugin: Object = null
 var _explorer: Explorer = null
 var _state_elapsed := 0.0
 var _hide_elapsed := 0.0
+var _backpack := RnBackpack.new()
 
 
 func _ready() -> void:
@@ -24,6 +25,7 @@ func _ready() -> void:
 	Global.loading_started.connect(_emit.bind("loading", {"state": "started"}))
 	Global.loading_finished.connect(_emit.bind("loading", {"state": "finished"}))
 	Global.on_chat_message.connect(_on_chat_message)
+	add_child(_backpack)
 
 
 func _process(dt: float) -> void:
@@ -53,6 +55,16 @@ func handle_command(json: String) -> void:
 			_explorer._on_panel_chat_submit_message(str(cmd.get("text", "")))
 		"emote":
 			_player().avatar.async_play_emote(str(cmd.get("urn", "")))
+		"backpack_open", "backpack_place":
+			var rect := Rect2(cmd.get("x", 0), cmd.get("y", 0), cmd.get("w", 0), cmd.get("h", 0))
+			if cmd["type"] == "backpack_open":
+				_backpack.async_open(rect)
+			else:
+				_backpack.place(rect)
+		"backpack_close":
+			_backpack.close()
+		"equip":
+			_backpack.async_equip(str(cmd.get("urn", "")))
 
 
 func _player() -> Player:

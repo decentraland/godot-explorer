@@ -13,8 +13,17 @@ RN root view (top)   <- HUD: status chip, Wave / Plaza / Chat buttons, loading c
 GodotBridge          <- JSON commands/events <-> RnHostPlugin singleton <-> godot/src/rn_bridge/rn_bridge.gd
 ```
 
-Commands (RN → Godot): `teleport{x,y}`, `send_chat{text}`, `emote{urn}`.
+Commands (RN → Godot): `teleport{x,y}`, `send_chat{text}`, `emote{urn}`, `backpack_open|backpack_place{x,y,w,h}`, `backpack_close`, `equip{urn}`.
 Events (Godot → RN): `ready`, `loading{state}`, `state{parcel,realm,fps,position}` (~4 Hz), `chat{address,message,timestamp}`.
+
+## Backpack: a Godot 3D view inside an RN screen
+
+The Backpack button opens a full-screen RN screen (`src/Backpack.tsx`) with a transparent hole on the
+right. RN reports the hole's rectangle in device pixels; `godot/src/rn_bridge/rn_backpack.gd` places
+the real `avatar_preview.tscn` there (converted to Godot's scaled viewport units), pauses the plaza's
+3D render and hides the Godot UI. Touches inside the hole fall through to Godot, so the preview's own
+drag-to-rotate works. Tapping a wearable sends `equip{urn}` and the avatar updates live.
+Spike scope: guest profile and a short list of base-avatar wearables, no ownership or saving.
 
 ## Android (verified on a device)
 
@@ -22,6 +31,7 @@ Events (Godot → RN): `ready`, `loading{state}`, `state{parcel,realm,fps,positi
 cargo run -- build -r --target android
 cargo run -- export --target android --format apk --release   # project data + stripped libs
 rn/scripts/sync-godot-android.sh                    # engine AAR, libdclgodot.so, assets -> rn/android/app
+#   (it refreshes asset mtimes: Gradle otherwise keeps a stale assets.sparsepck -> truncated scripts)
 cd rn && npm install
 cd android && ./gradlew :app:assembleRelease        # JS bundled in; no Metro needed
 adb install -r app/build/outputs/apk/release/app-release.apk

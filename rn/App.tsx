@@ -14,6 +14,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { Backpack } from './src/Backpack';
 import { sendCommand, subscribe } from './src/GodotBridge';
 import { GodotEvent, HudState, initialHud, reduceHud } from './src/events';
 
@@ -22,6 +23,7 @@ const LOADING_TIMEOUT_MS = 25_000;
 function App() {
   const [hud, dispatch] = useReducer(reduceHud, initialHud);
   const [chatOpen, setChatOpen] = useState(false);
+  const [backpackOpen, setBackpackOpen] = useState(false);
   const [draft, setDraft] = useState('');
   const [timedOut, setTimedOut] = useState(false);
   const chatScroll = useRef<ComponentRef<typeof ScrollView>>(null);
@@ -49,10 +51,11 @@ function App() {
   return (
     <View style={styles.root} pointerEvents="box-none">
       <StatusBar hidden />
-      <StatusChip hud={hud} />
-      <View style={styles.actions} pointerEvents="box-none">
+      {!backpackOpen && <StatusChip hud={hud} />}
+      <View style={[styles.actions, backpackOpen && styles.hidden]} pointerEvents="box-none">
         <ActionButton label="Wave" onPress={() => sendCommand({ type: 'emote', urn: 'wave' })} />
         <ActionButton label="Plaza" onPress={() => sendCommand({ type: 'teleport', x: 0, y: 0 })} />
+        <ActionButton label="Backpack" onPress={() => setBackpackOpen(true)} />
         <ActionButton label={chatOpen ? 'Close' : 'Chat'} onPress={() => setChatOpen(open => !open)} />
       </View>
       {chatOpen && (
@@ -81,6 +84,7 @@ function App() {
           />
         </KeyboardAvoidingView>
       )}
+      {backpackOpen && <Backpack fps={hud.fps} onClose={() => setBackpackOpen(false)} />}
       {covered && <LoadingCover phase={hud.phase} />}
     </View>
   );
@@ -121,6 +125,7 @@ function LoadingCover({ phase }: { phase: HudState['phase'] }) {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: 'transparent' },
+  hidden: { display: 'none' },
   chip: {
     position: 'absolute',
     top: 16,
