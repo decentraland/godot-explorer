@@ -4,7 +4,12 @@ extends Node
 
 const PREVIEW_SCENE := preload("res://src/ui/pages/backpack/avatar_preview.tscn")
 
+# Only the preview is drawn by the main viewport while the backpack is open (nameplates and other
+# 2D layers are culled); disable_3d stops the world render.
+const OVERLAY_CANVAS_LAYER := 1 << 19
+
 var _layer: CanvasLayer = null
+var _canvas_cull_mask := 0
 var _preview: AvatarPreview = null
 
 
@@ -17,6 +22,9 @@ func async_open(rect: Rect2) -> void:
 		_preview.fit_avatar = true
 		_preview.stretch = true
 		_layer.add_child(_preview)
+		_preview.visibility_layer = OVERLAY_CANVAS_LAYER
+		_canvas_cull_mask = get_viewport().canvas_cull_mask
+		get_viewport().canvas_cull_mask = OVERLAY_CANVAS_LAYER
 		get_viewport().disable_3d = true
 		_set_overlay(true)
 		Global.get_explorer().ui_root.hide()
@@ -39,6 +47,7 @@ func close() -> void:
 	if _layer == null:
 		return
 	get_viewport().disable_3d = false
+	get_viewport().canvas_cull_mask = _canvas_cull_mask
 	_set_overlay(false)
 	Global.get_explorer().ui_root.show()
 	_layer.queue_free()

@@ -20,8 +20,8 @@ Events (Godot → RN): `ready`, `loading{state}`, `state{parcel,realm,fps,positi
 
 The Backpack button opens a full-screen RN screen (`src/Backpack.tsx`) with a transparent hole on the
 right. RN reports the hole's rectangle in device pixels; `godot/src/rn_bridge/rn_backpack.gd` places
-the real `avatar_preview.tscn` there (converted to Godot's scaled viewport units), pauses the plaza's
-3D render and hides the Godot UI. Touches inside the hole fall through to Godot, so the preview's own
+the real `avatar_preview.tscn` there (converted to Godot's scaled viewport units), stops the main
+viewport's 3D render, culls its 2D layers (nameplates included, via `canvas_cull_mask`) and hides the Godot UI. Touches inside the hole fall through to Godot, so the preview's own
 drag-to-rotate works. Tapping a wearable sends `equip{urn}` and the avatar updates live.
 The Godot surface is translucent (`override.cfg` in the host's assets sets
 `display/window/per_pixel_transparency/allowed`) and `RnHostPlugin.set_surface_on_top` flips it above
