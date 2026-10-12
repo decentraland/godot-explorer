@@ -4,6 +4,7 @@
     python3 .github/scripts/test_pr_review_report.py           # run the tests
     python3 .github/scripts/test_pr_review_report.py --print   # print every combination + a sample message
 """
+import itertools
 import os
 import sys
 import unittest
@@ -13,7 +14,10 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import pr_review_report as r  # noqa: E402
 
 NOW = datetime(2026, 10, 12, 12, 0, tzinfo=timezone.utc)
-FAKE_MAP = {"kuruk-mm": "U1", "eibrielinv": "U2", "leanmendoza": "U3", "joanadn": "U4", "sdilauro": "U5"}
+FAKE_MAP = {"kuruk-mm": "U1", "eibrielinv": "U2", "leanmendoza": "U3", "joanadn": "U4", "rodrigo685": "U5",
+            "elzathrusso": "U6", "sdilauro": "U7"}
+QA, PM, DESIGN = "JoanaDN", "rodrigo685", "ElzathRusso"
+ROLE_LOGIN = {"QA": QA, "PM": PM, "DESIGN": DESIGN}
 
 
 def mention(login):
@@ -33,120 +37,155 @@ def pr(number=1, author="kuruk-mm", requested=(), teams=()):
     }
 
 
-# Every shape the code-review side can take: name -> (PR kwargs, reviews, expected code state).
+# Every shape the code-review side can take: name -> (requested, teams, reviews, expected code state).
 CODE_CASES = {
-    "nobody assigned": (dict(), [], r.NONE),
-    "dev requested": (dict(requested=["EibrielInv"]), [], r.PENDING),
-    "only non-dev requested": (dict(requested=["JoanaDN"]), [], r.PENDING),
-    "only a team requested": (dict(teams=["rgl-mobile-team"]), [], r.PENDING),
-    "dev approved": (dict(), [review("EibrielInv", "APPROVED")], r.APPROVED),
-    "dev approved, another dev pending": (
-        dict(requested=["leanmendoza"]), [review("EibrielInv", "APPROVED")], r.APPROVED),
-    "only a non-dev approved": (dict(), [review("JoanaDN", "APPROVED")], r.NONE),
-    "only the bot approved": (dict(), [review("regenesis-claw", "APPROVED")], r.NONE),
-    "bot approved, dev pending": (
-        dict(requested=["EibrielInv"]), [review("regenesis-claw", "APPROVED")], r.PENDING),
-    "dev requested changes": (dict(), [review("EibrielInv", "CHANGES_REQUESTED")], r.CHANGES),
+    "nobody assigned": ([], [], [], r.NONE),
+    "dev requested": (["EibrielInv"], [], [], r.PENDING),
+    "only a team requested": ([], ["rgl-mobile-team"], [], r.PENDING),
+    "dev approved": ([], [], [review("EibrielInv", "APPROVED")], r.APPROVED),
+    "dev approved, another dev pending": (["leanmendoza"], [], [review("EibrielInv", "APPROVED")], r.APPROVED),
+    "only the bot approved": ([], [], [review("regenesis-claw", "APPROVED")], r.NONE),
+    "bot approved, dev pending": (["EibrielInv"], [], [review("regenesis-claw", "APPROVED")], r.PENDING),
+    "dev requested changes": ([], [], [review("EibrielInv", "CHANGES_REQUESTED")], r.CHANGES),
     "changes + re-review requested": (
-        dict(requested=["EibrielInv"]), [review("EibrielInv", "CHANGES_REQUESTED")], r.CHANGES),
-    "bot requested changes": (dict(), [review("regenesis-claw", "CHANGES_REQUESTED")], r.CHANGES),
+        ["EibrielInv"], [], [review("EibrielInv", "CHANGES_REQUESTED")], r.CHANGES),
+    "bot requested changes": ([], [], [review("regenesis-claw", "CHANGES_REQUESTED")], r.CHANGES),
     "changes, then same dev approved": (
-        dict(), [review("EibrielInv", "CHANGES_REQUESTED", 1), review("EibrielInv", "APPROVED", 2)], r.APPROVED),
+        [], [], [review("EibrielInv", "CHANGES_REQUESTED", 1), review("EibrielInv", "APPROVED", 2)], r.APPROVED),
     "changes by one dev, approved by another": (
-        dict(), [review("EibrielInv", "CHANGES_REQUESTED"), review("leanmendoza", "APPROVED")], r.CHANGES),
+        [], [], [review("EibrielInv", "CHANGES_REQUESTED"), review("leanmendoza", "APPROVED")], r.CHANGES),
     "approval dismissed": (
-        dict(), [review("EibrielInv", "APPROVED", 1), review("EibrielInv", "DISMISSED", 2)], r.NONE),
-    "only comments": (dict(), [review("EibrielInv", "COMMENTED")], r.NONE),
-    "author approving own PR": (dict(), [review("kuruk-mm", "APPROVED")], r.NONE),
+        [], [], [review("EibrielInv", "APPROVED", 1), review("EibrielInv", "DISMISSED", 2)], r.NONE),
+    "only comments": ([], [], [review("EibrielInv", "COMMENTED")], r.NONE),
+    "author approving own PR": ([], [], [review("kuruk-mm", "APPROVED")], r.NONE),
 }
-QA_VALUES = [r.QA_NONE, "Waiting for QA", "Changes Needed", "QA Approved", r.QA_UNAVAILABLE]
+ROLE_STATES = [None, r.R_APPROVED, r.R_PENDING, r.R_CHANGES]  # None = role not involved
 
 
-def summarize(case, qa):
-    kwargs, reviews, _ = CODE_CASES[case]
-    return r.review_summary(pr(**kwargs), reviews, qa)
+def build(code_case, roles=None, number=1):
+    """Build (pr, reviews) for a code situation plus {role: state}."""
+    requested, teams, reviews = CODE_CASES[code_case][:3]
+    requested, reviews = list(requested), list(reviews)
+    for role, state in (roles or {}).items():
+        login = ROLE_LOGIN[role]
+        if state == r.R_APPROVED:
+            reviews.append(review(login, "APPROVED"))
+        elif state == r.R_CHANGES:
+            reviews.append(review(login, "CHANGES_REQUESTED"))
+        elif state == r.R_PENDING:
+            requested.append(login)
+    return pr(number, requested=requested, teams=teams), reviews
+
+
+def summarize(code_case, roles=None):
+    return r.review_summary(*build(code_case, roles))
+
+
+def all_role_combos():
+    for states in itertools.product(ROLE_STATES, repeat=3):
+        yield {role: st for role, st in zip(r.ROLE_ORDER, states) if st}
 
 
 class Tests(unittest.TestCase):
     def test_code_states(self):
-        for name, (_, _, expected) in CODE_CASES.items():
-            self.assertEqual(summarize(name, None)["code"], expected, name)
+        for name, case in CODE_CASES.items():
+            self.assertEqual(summarize(name)["code"], case[3], name)
 
-    def test_requested_examples(self):
-        self.assertEqual(r.status_text(r.APPROVED, "QA Approved"), "CODE AND QA APPROVED")
-        self.assertEqual(r.status_text(r.APPROVED, "Waiting for QA"), "CODE APPROVED, WAITING FOR QA")
-        self.assertEqual(r.status_text(r.APPROVED, "Changes Needed"), "CODE APPROVED, QA REQUESTED CHANGES")
-        self.assertEqual(r.status_text(r.APPROVED, None), "CODE APPROVED, NO QA STATUS")
+    def test_role_states(self):
+        s = summarize("nobody assigned", {"QA": r.R_APPROVED, "PM": r.R_PENDING, "DESIGN": r.R_CHANGES})
+        self.assertEqual(s["roles"], {"QA": r.R_APPROVED, "PM": r.R_PENDING, "DESIGN": r.R_CHANGES})
 
-    def test_every_combination_has_a_group_and_status(self):
-        for case in CODE_CASES:
-            for qa in QA_VALUES:
-                s = summarize(case, qa)
-                self.assertIn(s["group"], r.GROUPS)
-                self.assertTrue(r.status_text(s["code"], s["qa"]))
+    def test_role_not_shown_unless_involved(self):
+        self.assertEqual(summarize("dev approved")["roles"], {})
+        self.assertEqual(r.status_text(r.APPROVED, {}), "CODE APPROVED")
+
+    def test_role_people_never_count_as_code_review(self):
+        for role in r.ROLE_ORDER:
+            self.assertEqual(summarize("nobody assigned", {role: r.R_APPROVED})["code"], r.NONE)
+            self.assertEqual(summarize("nobody assigned", {role: r.R_PENDING})["code"], r.NONE)
+            self.assertEqual(summarize("dev approved", {role: r.R_CHANGES})["code"], r.APPROVED)
+
+    def test_status_text(self):
+        t = r.status_text
+        self.assertEqual(t(r.APPROVED, {"QA": r.R_APPROVED}), "CODE APPROVED, QA APPROVED")
+        self.assertEqual(t(r.APPROVED, {"QA": r.R_PENDING}), "CODE APPROVED, PENDING FOR QA REVIEW")
+        self.assertEqual(t(r.APPROVED, {"QA": r.R_CHANGES}), "CODE APPROVED, QA REQUESTED CHANGES")
+        self.assertEqual(
+            t(r.PENDING, {"QA": r.R_APPROVED, "PM": r.R_APPROVED, "DESIGN": r.R_PENDING}),
+            "PENDING FOR CODE REVIEW, QA APPROVED, PM APPROVED, PENDING FOR DESIGN REVIEW")
 
     def test_groups(self):
-        g = lambda case, qa: summarize(case, qa)["group"]
-        self.assertEqual(g("dev approved", "QA Approved"), r.G_READY)
-        self.assertEqual(g("dev approved", "Waiting for QA"), r.G_QA)
-        self.assertEqual(g("dev approved", None), r.G_QA)
-        self.assertEqual(g("dev approved", "Changes Needed"), r.G_CHANGES)
-        self.assertEqual(g("dev requested", "QA Approved"), r.G_DEV)
-        self.assertEqual(g("dev requested", "Changes Needed"), r.G_CHANGES)
-        self.assertEqual(g("only a team requested", None), r.G_OTHER)
-        self.assertEqual(g("nobody assigned", None), r.G_NONE)
-        self.assertEqual(g("only the bot approved", "QA Approved"), r.G_NONE)
-        self.assertEqual(g("dev requested changes", "QA Approved"), r.G_CHANGES)
+        g = lambda case, roles=None: summarize(case, roles)["group"]
+        self.assertEqual(g("dev approved"), r.G_READY)
+        self.assertEqual(g("dev approved", {"QA": r.R_APPROVED, "PM": r.R_APPROVED}), r.G_READY)
+        self.assertEqual(g("dev approved", {"QA": r.R_PENDING}), r.G_ROLES)
+        self.assertEqual(g("dev approved", {"DESIGN": r.R_CHANGES}), r.G_CHANGES)
+        self.assertEqual(g("dev requested", {"QA": r.R_APPROVED}), r.G_DEV)
+        self.assertEqual(g("only a team requested"), r.G_OTHER)
+        self.assertEqual(g("nobody assigned"), r.G_NONE)
+        self.assertEqual(g("nobody assigned", {"QA": r.R_PENDING}), r.G_NONE)
+        self.assertEqual(g("dev requested changes", {"QA": r.R_APPROVED}), r.G_CHANGES)
+
+    def test_every_combination_resolves(self):
+        for case in CODE_CASES:
+            for roles in all_role_combos():
+                s = summarize(case, roles)
+                self.assertIn(s["group"], r.GROUPS)
+                self.assertTrue(r.status_text(s["code"], s["roles"]).startswith(("CODE", "PENDING", "NO DEV")))
+                # a role is shown only when that person approved, requested changes or was requested
+                self.assertEqual(set(s["roles"]), set(roles))
+
+    def test_rerequested_role_is_pending_and_not_listed_as_approved(self):
+        pull = pr(requested=[QA])
+        s = r.review_summary(pull, [review("EibrielInv", "APPROVED"), review(QA, "APPROVED")])
+        self.assertEqual(s["roles"], {"QA": r.R_PENDING})
+        self.assertNotIn(QA, s["approved"])
 
     def test_roster(self):
-        s = summarize("changes + re-review requested", None)
+        s = summarize("changes + re-review requested")
         self.assertEqual((s["changes"], s["rereview"], s["pending"]), (["EibrielInv"], ["EibrielInv"], []))
-        s = summarize("dev approved, another dev pending", None)
+        s = summarize("dev approved, another dev pending")
         self.assertEqual((s["approved"], s["pending"]), (["EibrielInv"], ["leanmendoza"]))
 
     def test_message_tags_everyone_and_names_each_role(self):
-        sums = [
-            r.review_summary(
-                pr(7, author="EibrielInv", requested=["leanmendoza"]),
-                [review("JoanaDN", "APPROVED"), review("sdilauro", "CHANGES_REQUESTED")], "Waiting for QA"),
-        ]
+        pull = pr(7, author="EibrielInv", requested=["leanmendoza", DESIGN])
+        sums = [r.review_summary(pull, [review(QA, "APPROVED"), review(PM, "CHANGES_REQUESTED")])]
         text = r.build_message(sums, NOW, mention)
-        for tagged in ("<@U2>", "<@U3>", "<@U4>", "<@U5>"):
+        for tagged in ("<@U2>", "<@U3>", "<@U4>", "<@U5>", "<@U6>"):
             self.assertIn(tagged, text)
-        self.assertIn("APPROVED: <@U4> (non-dev)", text)
-        self.assertIn("REQUESTED CHANGES: <@U5>", text)
-        self.assertIn("PENDING REVIEW: <@U3>", text)
+        self.assertIn("APPROVED: <@U4> (QA)", text)
+        self.assertIn("REQUESTED CHANGES: <@U5> (PM)", text)
+        self.assertIn("PENDING REVIEW: <@U3>, <@U6> (DESIGN)", text)
+        self.assertIn("*PENDING FOR CODE REVIEW, QA APPROVED, PM REQUESTED CHANGES, PENDING FOR DESIGN REVIEW*", text)
 
     def test_unmapped_login_is_plain_and_case_insensitive(self):
         self.assertEqual(mention("EIBRIELINV"), "<@U2>")
         self.assertEqual(mention("dependabot[bot]"), "dependabot[bot]")
 
     def test_trim_drops_least_actionable_first(self):
-        sums = [r.review_summary(pr(i, requested=["EibrielInv"]), [], None) for i in range(1, 40)]
-        sums += [r.review_summary(pr(100 + i), [review("EibrielInv", "APPROVED")], "QA Approved") for i in range(30)]
+        sums = [r.review_summary(pr(i, requested=["EibrielInv"]), []) for i in range(1, 40)]
+        sums += [r.review_summary(pr(100 + i), [review("EibrielInv", "APPROVED")]) for i in range(30)]
         text = r.build_message(sums, NOW, mention)
         self.assertLessEqual(len(text), r.MAX_CHARS)
         self.assertIn("more", text)
         self.assertIn("WAITING FOR DEV REVIEW (39)", text)
 
-    def test_qa_note_is_appended(self):
-        text = r.build_message([summarize("dev approved", r.QA_UNAVAILABLE)], NOW, mention, "QA missing")
-        self.assertIn("QA STATUS UNAVAILABLE", text)
-        self.assertTrue(text.rstrip().endswith("_QA missing_"))
-
 
 def print_simulation():
-    print(f"{'CODE REVIEW SITUATION':44} {'QAStatus':15} {'GROUP':40} VERDICT")
+    shown = [{}, {"QA": r.R_APPROVED}, {"QA": r.R_PENDING}, {"QA": r.R_CHANGES},
+             {"QA": r.R_APPROVED, "PM": r.R_APPROVED, "DESIGN": r.R_APPROVED},
+             {"QA": r.R_APPROVED, "PM": r.R_PENDING}, {"PM": r.R_CHANGES, "DESIGN": r.R_PENDING}]
+    print(f"{'CODE REVIEW SITUATION':42} {'GROUP':46} VERDICT")
     for case in CODE_CASES:
-        for qa in QA_VALUES:
-            s = summarize(case, qa)
-            print(f"{case:44} {str(qa):15} {s['group']:40} {r.status_text(s['code'], s['qa'])}")
+        for roles in shown:
+            s = summarize(case, roles)
+            print(f"{case:42} {s['group']:46} {r.status_text(s['code'], s['roles'])}")
         print()
-    print("=" * 100, "\nSAMPLE MESSAGE (one PR per code situation, QA cycling)\n")
+    print("=" * 100, "\nSAMPLE MESSAGE (one PR per code situation, roles cycling)\n")
     sums = []
     for i, case in enumerate(CODE_CASES):
-        kwargs, reviews, _ = CODE_CASES[case]
-        sums.append(r.review_summary(pr(1000 + i, **kwargs) | {"title": case}, reviews, QA_VALUES[i % 4]))
+        p, reviews = build(case, shown[i % len(shown)], 1000 + i)
+        sums.append(r.review_summary(p | {"title": case}, reviews))
     print(r.build_message(sums, NOW, lambda u: "@" + u if u.lower() in FAKE_MAP else u))
 
 

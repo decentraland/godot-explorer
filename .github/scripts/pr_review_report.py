@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 """Post a daily PR review report to Slack. Stdlib only.
 
-Each PR is judged on two axes: CODE review (dev reviewers) and QA (the `QAStatus` field of the
-MobileTeam project). See `status_text()` for how they combine.
+Each PR is judged on its reviewers only: CODE review by the dev reviewers, plus the QA / PM / DESIGN
+reviewers (see ROLE_REVIEWERS) when they approved, requested changes, or are requested. See `status_text()`.
 
-Env: GITHUB_TOKEN, GITHUB_REPOSITORY, SLACK_WEBHOOK_URL, SLACK_USER_MAP, DRY_RUN ("true" = print only),
-     PROJECTS_TOKEN (optional, can read org Projects; without it the report says QA is unavailable).
+Env: GITHUB_TOKEN, GITHUB_REPOSITORY, SLACK_WEBHOOK_URL, SLACK_USER_MAP, DRY_RUN ("true" = print only).
 Offline simulation of every combination: `python3 .github/scripts/test_pr_review_report.py --print`.
 """
 import json
@@ -20,37 +19,27 @@ from datetime import datetime, timezone
 # Keep in sync with the dev team in .github/CODEOWNERS.
 DEV_REVIEWERS = {"EibrielInv", "manuelmaceira", "leanmendoza", "kuruk-mm", "sdilauro"}
 BOT_REVIEWERS = {"regenesis-claw"}
-PROJECT_NUMBER = 43  # MobileTeam
-QA_FIELD = "QAStatus"
+# Non-dev reviewers: their review counts for their role, not as code review.
+ROLE_REVIEWERS = {"JoanaDN": "QA", "rodrigo685": "PM", "ElzathRusso": "DESIGN"}
+ROLE_ORDER = ["QA", "PM", "DESIGN"]
 MAX_CHARS = 6000
 TITLE_MAX = 70
 
 # Code review states.
-APPROVED, CHANGES, PENDING, NONE = "APPROVED", "CHANGES REQUESTED", "PENDING REVIEW", "NO REVIEWER"
-# QA states: the QAStatus option names, plus "no status" and "could not be read".
-QA_NONE, QA_UNAVAILABLE = None, "unavailable"
-QA_PHRASES = {
-    "QA Approved": "QA APPROVED",
-    "Waiting for QA": "WAITING FOR QA",
-    "Changes Needed": "QA REQUESTED CHANGES",
-    QA_NONE: "NO QA STATUS",
-    QA_UNAVAILABLE: "QA STATUS UNAVAILABLE",
-}
+APPROVED, CHANGES, PENDING, NONE = "APPROVED", "CHANGES REQUESTED", "PENDING REVIEW", "NO DEV REVIEWER"
+# Role review states.
+R_APPROVED, R_CHANGES, R_PENDING = "approved", "changes", "pending"
 
 G_CHANGES = "CHANGES REQUESTED"
 G_DEV = "WAITING FOR DEV REVIEW"
 G_OTHER = "WAITING FOR OTHER REVIEW"
-G_NONE = "NO REVIEWER"
-G_QA = "CODE APPROVED - WAITING FOR QA"
-G_READY = "READY TO MERGE - CODE AND QA APPROVED"
-GROUPS = [G_CHANGES, G_DEV, G_OTHER, G_NONE, G_QA, G_READY]
-TRIM_ORDER = [G_READY, G_QA, G_NONE, G_OTHER]
+G_NONE = "NO DEV REVIEWER"
+G_ROLES = "CODE APPROVED - WAITING FOR QA / PM / DESIGN"
+G_READY = "READY TO MERGE - CODE APPROVED"
+GROUPS = [G_CHANGES, G_DEV, G_OTHER, G_NONE, G_ROLES, G_READY]
+TRIM_ORDER = [G_READY, G_ROLES, G_NONE, G_OTHER]
 
 API = "https://api.github.com"
-
-
-class QAUnavailable(Exception):
-    pass
 
 
 def request_json(req, what, retries=3):
@@ -94,56 +83,6 @@ def gh_get(path):
     return items
 
 
-QA_QUERY = """
-query($owner: String!, $name: String!, $cursor: String) {
-  repository(owner: $owner, name: $name) {
-    pullRequests(states: OPEN, first: 100, after: $cursor) {
-      pageInfo { hasNextPage endCursor }
-      nodes {
-        number
-        projectItems(first: 20) {
-          nodes {
-            project { number }
-            qa: fieldValueByName(name: "%s") { ... on ProjectV2ItemFieldSingleSelectValue { name } }
-          }
-        }
-      }
-    }
-  }
-}
-""" % QA_FIELD
-
-
-def fetch_qa(repo, token):
-    """PR number -> QAStatus option name (None when unset). Raises QAUnavailable if unreadable."""
-    if not token:
-        raise QAUnavailable("PROJECTS_TOKEN is not set")
-    owner, name = repo.split("/")
-    result, cursor = {}, None
-    for _ in range(10):
-        body = json.dumps({"query": QA_QUERY, "variables": {"owner": owner, "name": name, "cursor": cursor}})
-        req = urllib.request.Request(
-            f"{API}/graphql", data=body.encode(), headers=gh_headers(token), method="POST"
-        )
-        try:
-            data, _ = request_json(req, "POST /graphql")
-        except SystemExit as e:
-            raise QAUnavailable(str(e))
-        if data.get("errors"):
-            raise QAUnavailable(f"GraphQL error: {data['errors'][0].get('type', 'unknown')}")
-        prs = data["data"]["repository"]["pullRequests"]
-        for pr in prs["nodes"]:
-            qa = None
-            for item in pr["projectItems"]["nodes"]:
-                if item["project"]["number"] == PROJECT_NUMBER and item.get("qa"):
-                    qa = item["qa"]["name"]
-            result[pr["number"]] = qa
-        if not prs["pageInfo"]["hasNextPage"]:
-            return result
-        cursor = prs["pageInfo"]["endCursor"]
-    raise QAUnavailable("too many pages")
-
-
 def esc(s):
     return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
@@ -154,6 +93,14 @@ def days_since(iso, now):
 
 def is_bot(login):
     return login.endswith("[bot]") or login in BOT_REVIEWERS
+
+
+def is_dev(login):
+    return login.lower() in {d.lower() for d in DEV_REVIEWERS}
+
+
+def role_of(login):
+    return {k.lower(): v for k, v in ROLE_REVIEWERS.items()}.get(login.lower())
 
 
 def latest_reviews(reviews, author):
@@ -171,7 +118,7 @@ def latest_reviews(reviews, author):
     return latest
 
 
-def review_summary(pr, reviews, qa):
+def review_summary(pr, reviews):
     """Everything the message needs to know about one PR (logins only, no Slack formatting)."""
     author = pr["user"]["login"]
     requested = [u["login"] for u in pr.get("requested_reviewers", [])]
@@ -180,51 +127,66 @@ def review_summary(pr, reviews, qa):
     approved = sorted(u for u, s in latest.items() if s == "APPROVED")
     changes = sorted(u for u, s in latest.items() if s == "CHANGES_REQUESTED")
     rereview = [u for u in changes if u in requested]
-    pending = [u for u in requested if u not in rereview] + teams
-    dev_approved = [u for u in approved if u in DEV_REVIEWERS]
 
-    if changes:
+    # Role reviewers: changes > pending (requested, even again after approving) > approved.
+    roles = {}
+    for u in set(approved) | set(changes) | set(requested):
+        role = role_of(u)
+        if not role:
+            continue
+        state = R_CHANGES if u in changes else R_PENDING if u in requested else R_APPROVED
+        order = [R_CHANGES, R_PENDING, R_APPROVED]
+        if role not in roles or order.index(state) < order.index(roles[role]):
+            roles[role] = state
+    role_pending = [u for u in requested if role_of(u) and u not in rereview]
+    approved = [u for u in approved if u not in role_pending]
+    pending = [u for u in requested if u not in rereview] + teams
+    dev_approved = [u for u in approved if is_dev(u)]
+    dev_requested = any(is_dev(u) for u in requested)
+
+    if any(not role_of(u) for u in changes):
         code = CHANGES
     elif dev_approved:
         code = APPROVED
-    elif pending:
+    elif any(not role_of(u) for u in pending):
         code = PENDING
     else:
         code = NONE
 
-    if code == CHANGES or qa == "Changes Needed":
+    if code == CHANGES or R_CHANGES in roles.values():
         group = G_CHANGES
     elif code == PENDING:
-        group = G_DEV if any(u in DEV_REVIEWERS for u in requested) else G_OTHER
+        group = G_DEV if dev_requested else G_OTHER
     elif code == NONE:
         group = G_NONE
     else:
-        group = G_READY if qa == "QA Approved" else G_QA
+        group = G_ROLES if R_PENDING in roles.values() else G_READY
 
     return {
         "number": pr["number"], "title": pr["title"], "url": pr["html_url"], "author": author,
         "created_at": pr["created_at"], "updated_at": pr["updated_at"],
         "approved": approved, "changes": changes, "rereview": rereview, "pending": pending,
-        "code": code, "qa": qa, "group": group,
+        "code": code, "roles": roles, "group": group,
     }
 
 
-def status_text(code, qa):
-    """The one-line verdict combining code review and QA."""
-    qa_phrase = QA_PHRASES.get(qa, f"QA {str(qa).upper()}")
-    if code == APPROVED:
-        return "CODE AND QA APPROVED" if qa == "QA Approved" else f"CODE APPROVED, {qa_phrase}"
-    return f"CODE {'NO DEV REVIEWER' if code == NONE else code}, {qa_phrase}"
+def status_text(code, roles):
+    """The one-line verdict: code review, then each involved role (QA, PM, DESIGN)."""
+    parts = [{APPROVED: "CODE APPROVED", CHANGES: "CODE CHANGES REQUESTED",
+              PENDING: "PENDING FOR CODE REVIEW", NONE: "NO DEV REVIEWER"}[code]]
+    for role in ROLE_ORDER:
+        if role in roles:
+            parts.append({R_APPROVED: f"{role} APPROVED", R_CHANGES: f"{role} REQUESTED CHANGES",
+                          R_PENDING: f"PENDING FOR {role} REVIEW"}[roles[role]])
+    return ", ".join(parts)
 
 
-def build_message(summaries, now, mention, qa_note=""):
+def build_message(summaries, now, mention):
     def names(logins, suffix=lambda u: ""):
         return ", ".join(mention(u) + suffix(u) for u in logins)
 
     def tag(u):
-        if is_bot(u):
-            return " (bot)"
-        return "" if u in DEV_REVIEWERS else " (non-dev)"
+        return " (bot)" if is_bot(u) else f" ({role_of(u)})" if role_of(u) else ""
 
     def line(s):
         title = s["title"] if len(s["title"]) <= TITLE_MAX else s["title"][: TITLE_MAX - 1].rstrip() + "…"
@@ -236,12 +198,12 @@ def build_message(summaries, now, mention, qa_note=""):
         if s["approved"]:
             roster.append(f"APPROVED: {names(s['approved'], tag)}")
         if s["changes"]:
-            again = lambda u: " (re-review requested)" if u in s["rereview"] else ""
+            again = lambda u: tag(u) + (" (re-review requested)" if u in s["rereview"] else "")
             roster.append(f"REQUESTED CHANGES: {names(s['changes'], again)}")
         if s["pending"]:
-            roster.append(f"PENDING REVIEW: {names(s['pending'])}")
+            roster.append(f"PENDING REVIEW: {names(s['pending'], tag)}")
         who = " | ".join(roster) or "no reviewers"
-        return f"{head}\n    ↳ *{status_text(s['code'], s['qa'])}* - {who}"
+        return f"{head}\n    ↳ *{status_text(s['code'], s['roles'])}* - {who}"
 
     grouped = {g: [] for g in GROUPS}
     for s in summaries:
@@ -256,8 +218,6 @@ def build_message(summaries, now, mention, qa_note=""):
                 out += ["", f"*{g} ({len(grouped[g])})*"] + lines[g]
                 if trimmed[g]:
                     out.append(f"+{trimmed[g]} more")
-        if qa_note:
-            out += ["", f"_{qa_note}_"]
         return "\n".join(out)
 
     text = render()
@@ -294,22 +254,10 @@ def main():
     if not prs:
         text = "*PR review report* - No PRs waiting for review"
     else:
-        qa_note = ""
-        try:
-            qa_by_pr = fetch_qa(repo, os.environ.get("PROJECTS_TOKEN", ""))
-        except QAUnavailable as e:
-            print(f"::warning::QAStatus unavailable: {e}", file=sys.stderr)
-            qa_by_pr = {}
-            qa_note = "QAStatus could not be read (check the PROJECTS_READ_TOKEN secret), so QA is not reflected."
         summaries = [
-            review_summary(
-                p,
-                gh_get(f"/repos/{repo}/pulls/{p['number']}/reviews"),
-                qa_by_pr.get(p["number"], QA_UNAVAILABLE if qa_note else QA_NONE),
-            )
-            for p in prs
+            review_summary(p, gh_get(f"/repos/{repo}/pulls/{p['number']}/reviews")) for p in prs
         ]
-        text = build_message(summaries, now, mention, qa_note)
+        text = build_message(summaries, now, mention)
 
     if unmapped:
         print(f"::warning::No Slack mapping in SLACK_USER_MAP for: {', '.join(sorted(unmapped))}", file=sys.stderr)

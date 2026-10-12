@@ -3,9 +3,6 @@
 # Repository secrets:
 #   SLACK_WEBHOOK_URL - Slack incoming webhook the report is posted to.
 #   SLACK_USER_MAP    - JSON object mapping GitHub login -> Slack user ID, used for <@ID> mentions.
-#   PROJECTS_READ_TOKEN - token that can read the org's MobileTeam Project (#43), for the QAStatus field
-#                         (classic PAT with read:project, or a fine-grained token with Projects: read).
-#                         Without it the report still posts, but says QA could not be read.
 #
 # Manual run: Actions -> "PR review report" -> Run workflow (tick "dry_run" to only print the
 # message in the job log), or: gh workflow run pr-review-report.yml -f dry_run=true
@@ -40,6 +37,5 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
           SLACK_USER_MAP: ${{ secrets.SLACK_USER_MAP }}
-          PROJECTS_TOKEN: ${{ secrets.PROJECTS_READ_TOKEN }}
           DRY_RUN: ${{ inputs.dry_run }}
         run: python3 .github/scripts/pr_review_report.py
