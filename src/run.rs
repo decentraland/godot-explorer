@@ -1159,7 +1159,10 @@ fn get_connected_ios_device() -> anyhow::Result<String> {
     // Lines contain: Name  Hostname  Identifier  State  ...
     // State can be "connected", "available", "available (paired)", etc.
     for line in stdout.lines() {
-        if line.contains("connected") || line.contains("available") {
+        // "unavailable" (e.g. a paired Apple Watch) also contains "available".
+        if !line.contains("unavailable")
+            && (line.contains("connected") || line.contains("available"))
+        {
             // Extract the UUID (format: XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX)
             for word in line.split_whitespace() {
                 if word.len() == 36 && word.chars().filter(|c| *c == '-').count() == 4 {
