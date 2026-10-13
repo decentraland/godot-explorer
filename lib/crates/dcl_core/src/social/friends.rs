@@ -48,6 +48,7 @@ mod tests {
 
     /// Helper function to test the social service client with a given wallet
     /// This function can be called from tests or integration code
+    #[allow(dead_code)]
     pub async fn test_social_service_with_wallet(
         wallet: &EphemeralAuthChain,
     ) -> anyhow::Result<()> {
