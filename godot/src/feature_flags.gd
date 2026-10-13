@@ -35,6 +35,10 @@ const FLAG_SENTRY_ERROR_EVENTS := "sentry-error-events"
 # NOT do: turning it off stops new tokens from being registered, it does not stop
 # delivery to tokens already collected — that is a server-side decision.
 const FLAG_PUSH_ENABLED := "push-enabled"
+# Local (on-device) notifications: the Day 1 welcome and the event reminders. Fail-open
+# kill switch: off cancels what is armed and stops queueing. The lobby's OS permission
+# prompt is NOT gated by it — server push needs that same permission.
+const FLAG_LOCAL_NOTIFICATIONS := "local-notifications"
 
 var _flags: Dictionary = {}
 var _loaded := false
@@ -140,3 +144,5 @@ func _apply_flags() -> void:
 	# token rotations. Reached on both paths above, so the hold ends even when the fetch fails.
 	if Global.metrics != null:
 		Global.metrics.set_push_enabled(is_enabled(FLAG_PUSH_ENABLED, true))
+
+	NotificationsManager.set_local_notifications_enabled(is_enabled(FLAG_LOCAL_NOTIFICATIONS, true))

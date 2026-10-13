@@ -76,6 +76,10 @@ var _queue_paused: bool = false  # Whether the notification queue is paused
 # Local notifications wrapper
 var _os_wrapper: NotificationOSWrapper = null
 
+# `local-notifications` remote flag. Off makes queueing a no-op and the queue sync cancel
+# everything the OS still has armed; the local DB keeps the rows, so on re-arms them.
+var _local_notifications_enabled := true
+
 # DEPRECATED: Keep these for backward compatibility with tests
 var _ios_plugin = null:
 	set(value):
@@ -682,6 +686,18 @@ func show_system_toast(
 # =============================================================================
 
 
+## Remote kill switch, applied by FeatureFlags once the `local-notifications` flag lands.
+func set_local_notifications_enabled(enabled: bool) -> void:
+	if _local_notifications_enabled == enabled:
+		return
+	_local_notifications_enabled = enabled
+	_sync_notification_queue()
+
+
+func is_local_notifications_enabled() -> bool:
+	return _local_notifications_enabled
+
+
 ## Request permission to show local notifications
 func request_local_notification_permission(from_screen: String = "") -> void:
 	if not _os_wrapper:
@@ -766,6 +782,11 @@ func async_queue_local_notification(
 	deep_link_data: String = ""
 ) -> bool:
 	if !Global.is_android() and !Global.is_ios():
+		return false
+	if not _local_notifications_enabled:
+		_debug_log(
+			"Queue notification skipped (local notifications disabled): id=%s" % notification_id
+		)
 		return false
 	if notification_id.is_empty():
 		push_error("Queue notification: notification_id cannot be empty")
@@ -962,6 +983,8 @@ func async_sync_attended_events() -> void:
 
 	# Skip on desktop - no local notification plugin available
 	if OS.get_name() != "Android" and OS.get_name() != "iOS":
+		return
+	if not _local_notifications_enabled:
 		return
 
 	# Check version and clear all notifications if version changed
@@ -1238,6 +1261,9 @@ func _sync_notification_queue() -> void:
 			MAX_OS_SCHEDULED_NOTIFICATIONS
 		)
 	)
+	# Flag off: an empty target makes step 6a cancel everything still armed in the OS.
+	if not _local_notifications_enabled:
+		should_be_scheduled = []
 
 	# Step 6a: Cancel OS notifications that aren't in the top 24
 	for os_id in os_scheduled_ids:
