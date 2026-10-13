@@ -13,6 +13,7 @@ pub mod notifications;
 mod open_url;
 pub mod proto;
 pub mod realm;
+pub mod scene_requests;
 pub mod session;
 pub mod social;
 pub mod urls;

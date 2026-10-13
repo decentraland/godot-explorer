@@ -1,3 +1,5 @@
+use dcl_core::scene_requests::SceneRequest;
+
 use crate::{
     dcl::{scene_apis::RpcResultSender, SceneId},
     engine::DclEngine,
@@ -7,8 +9,7 @@ use crate::{
 
 use godot::{
     meta::ToGodot,
-    obj::Singleton,
-    prelude::{PackedScene, Vector2i, Vector3},
+    prelude::{Vector2i, Vector3},
 };
 use http::Uri;
 
@@ -28,53 +29,18 @@ pub fn change_realm(
     message: &Option<String>,
     response: &RpcResultSender<Result<(), String>>,
 ) {
-    // Check if player is inside the scene that requested the move
     if !_player_is_inside_scene(scene, current_parcel_scene_id) {
         response.send(Err("Primary Player is outside the scene".to_string()));
         return;
     }
 
-    // Get Global node from scene tree (Global is an autoload, not an Engine singleton)
-    let Some(tree) = godot::classes::Engine::singleton().get_main_loop() else {
-        tracing::debug!("Cannot get main loop");
-        response.send(Err("modal_manager not available".to_string()));
-        return;
-    };
-
-    let Some(root) = tree.cast::<godot::classes::SceneTree>().get_root() else {
-        tracing::debug!("Cannot get root node");
-        response.send(Err("modal_manager not available".to_string()));
-        return;
-    };
-
-    let Some(global) = root.get_node_or_null("/root/Global") else {
-        tracing::debug!("Cannot get Global node from scene tree");
-        response.send(Err("modal_manager not available".to_string()));
-        return;
-    };
-
-    let modal_manager_variant = global.get("modal_manager");
-    let Some(modal_manager) = modal_manager_variant
-        .try_to::<godot::prelude::Gd<godot::classes::Node>>()
-        .ok()
-    else {
-        tracing::debug!("Cannot convert modal_manager variant to Node");
-        response.send(Err("modal_manager not available".to_string()));
-        return;
-    };
-
-    let mut modal_manager = modal_manager;
-    let realm_name = to.to_godot();
-    let scene_message = message.clone().unwrap_or_default().to_godot();
-
-    modal_manager.call(
-        "async_show_change_realm_modal",
-        &[realm_name.to_variant(), scene_message.to_variant()],
+    DclEngine::scene_request(
+        SceneRequest::ChangeRealm {
+            realm: to.to_string(),
+            message: message.clone(),
+        },
+        response.clone(),
     );
-
-    // Send Ok immediately - the modal will handle the actual realm change
-    // This matches the behavior where the RPC call succeeds once the modal is shown
-    response.send(Ok(()));
 }
 
 pub fn open_external_url(
@@ -83,49 +49,17 @@ pub fn open_external_url(
     url: &Uri,
     response: &RpcResultSender<Result<(), String>>,
 ) {
-    // Check if player is inside the scene that requested the move
     if !_player_is_inside_scene(scene, current_parcel_scene_id) {
         response.send(Err("Primary Player is outside the scene".to_string()));
         return;
     }
 
-    // Get Global node from scene tree (Global is an autoload, not an Engine singleton)
-    let Some(tree) = godot::classes::Engine::singleton().get_main_loop() else {
-        tracing::debug!("Cannot get main loop");
-        response.send(Err("modal_manager not available".to_string()));
-        return;
-    };
-
-    let Some(root) = tree.cast::<godot::classes::SceneTree>().get_root() else {
-        tracing::debug!("Cannot get root node");
-        response.send(Err("modal_manager not available".to_string()));
-        return;
-    };
-
-    let Some(global) = root.get_node_or_null("/root/Global") else {
-        tracing::debug!("Cannot get Global node from scene tree");
-        response.send(Err("modal_manager not available".to_string()));
-        return;
-    };
-
-    let modal_manager_variant = global.get("modal_manager");
-    let Some(modal_manager) = modal_manager_variant
-        .try_to::<godot::prelude::Gd<godot::classes::Node>>()
-        .ok()
-    else {
-        tracing::debug!("Cannot convert modal_manager variant to Node");
-        response.send(Err("modal_manager not available".to_string()));
-        return;
-    };
-
-    let mut modal_manager = modal_manager;
-    let godot_url = url.to_string().to_godot();
-
-    modal_manager.call("async_show_external_link_modal", &[godot_url.to_variant()]);
-
-    // Send Ok immediately - the modal will handle the actual URL opening
-    // This matches the behavior where the RPC call succeeds once the modal is shown
-    response.send(Ok(()));
+    DclEngine::scene_request(
+        SceneRequest::OpenExternalUrl {
+            url: url.to_string(),
+        },
+        response.clone(),
+    );
 }
 
 pub fn open_nft_dialog(
@@ -134,30 +68,17 @@ pub fn open_nft_dialog(
     urn: &str,
     response: &RpcResultSender<Result<(), String>>,
 ) {
-    // Check if player is inside the scene that requested the move
     if !_player_is_inside_scene(scene, current_parcel_scene_id) {
         response.send(Err("Primary Player is outside the scene".to_string()));
         return;
     }
 
-    let Some(mut dialog_stack) = DclEngine::get().and_then(|engine| engine.bind().dialog_stack())
-    else {
-        response.send(Err("DialogStack not available".to_string()));
-        return;
-    };
-
-    let mut confirm_dialog = godot::tools::load::<PackedScene>(
-        "res://src/ui/components/organisms/dialogs/nft_dialog.tscn",
-    )
-    .instantiate()
-    .expect("NftDialog instantiate error");
-
-    // Setup confirm dialog
-    dialog_stack.add_child(&confirm_dialog.clone());
-
-    confirm_dialog.call("async_load_nft", &[urn.to_variant()]);
-
-    response.send(Ok(()));
+    DclEngine::scene_request(
+        SceneRequest::OpenNft {
+            urn: urn.to_string(),
+        },
+        response.clone(),
+    );
 }
 
 // Allows to move a player inside the scene
@@ -256,73 +177,26 @@ pub fn teleport_to(
     realm: &Option<String>,
     response: &RpcResultSender<Result<(), String>>,
 ) {
-    // Check if player is inside the scene that requested the move
     if !_player_is_inside_scene(scene, current_parcel_scene_id) {
         response.send(Err("Primary Player is outside the scene".to_string()));
         return;
     }
 
-    // Get Global node from scene tree (Global is an autoload, not an Engine singleton)
-    let Some(tree) = godot::classes::Engine::singleton().get_main_loop() else {
-        tracing::debug!("Cannot get main loop");
-        response.send(Err("modal_manager not available".to_string()));
+    // Rejected by op_teleport_to already; kept so the promise can never hang.
+    if world_coordinates.is_none() && realm.is_none() {
+        response.send(Err(
+            "teleportTo requires worldCoordinates, a realm, or both".to_string(),
+        ));
         return;
-    };
-
-    let Some(root) = tree.cast::<godot::classes::SceneTree>().get_root() else {
-        tracing::debug!("Cannot get root node");
-        response.send(Err("modal_manager not available".to_string()));
-        return;
-    };
-
-    let Some(global) = root.get_node_or_null("/root/Global") else {
-        tracing::debug!("Cannot get Global node from scene tree");
-        response.send(Err("modal_manager not available".to_string()));
-        return;
-    };
-
-    let modal_manager_variant = global.get("modal_manager");
-    let Some(modal_manager) = modal_manager_variant
-        .try_to::<godot::prelude::Gd<godot::classes::Node>>()
-        .ok()
-    else {
-        tracing::debug!("Cannot convert modal_manager variant to Node");
-        response.send(Err("modal_manager not available".to_string()));
-        return;
-    };
-
-    let mut modal_manager = modal_manager;
-
-    match (world_coordinates, realm) {
-        // A parcel, in the current realm (empty string) or in the one the scene named. The
-        // modal's primary action awaits the realm change before placing the player.
-        (Some(coordinates), realm) => {
-            let target_parcel = Vector2i::new(coordinates[0], coordinates[1]);
-            let realm = realm.clone().unwrap_or_default().to_godot();
-            modal_manager.call(
-                "async_show_teleport_modal",
-                &[target_parcel.to_variant(), realm.to_variant()],
-            );
-        }
-        // No parcel: land on the realm's own spawn point.
-        (None, Some(realm)) => {
-            modal_manager.call(
-                "async_show_realm_teleport_modal",
-                &[realm.to_godot().to_variant()],
-            );
-        }
-        // Rejected by op_teleport_to already; kept so the promise can never hang.
-        (None, None) => {
-            response.send(Err(
-                "teleportTo requires worldCoordinates, a realm, or both".to_string(),
-            ));
-            return;
-        }
     }
 
-    // Send Ok immediately - the modal will handle the actual teleportation
-    // This matches the behavior where the RPC call succeeds once the modal is shown
-    response.send(Ok(()));
+    DclEngine::scene_request(
+        SceneRequest::Teleport {
+            parcel: world_coordinates.map(|coordinates| (coordinates[0], coordinates[1])),
+            realm: realm.clone(),
+        },
+        response.clone(),
+    );
 }
 
 pub fn trigger_emote(scene: &Scene, current_parcel_scene_id: &SceneId, emote_id: &str, mask: i64) {

@@ -2,5 +2,6 @@
 //! persistent node that lives under `/root`.
 
 mod dcl_engine;
+pub mod scene_requests;
 
 pub use dcl_engine::DclEngine;

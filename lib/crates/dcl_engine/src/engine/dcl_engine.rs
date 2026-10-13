@@ -1,4 +1,8 @@
+use std::rc::Rc;
+
 use godot::prelude::*;
+
+use super::scene_requests::{EmulatorSink, GodotUiSink, PendingResponses, SharedSink};
 
 use crate::godot_classes::dcl_global::DclGlobal;
 
@@ -15,10 +19,24 @@ struct WorldHandles {
 
 /// Owner of the engine-side handles. `Global.engine` exposes it; `explorer.gd` attaches the world.
 #[derive(GodotClass)]
-#[class(init, base=Node)]
+#[class(base=Node)]
 pub struct DclEngine {
     world: Option<WorldHandles>,
+    pub(super) pending: PendingResponses,
+    pub(super) sink: SharedSink,
     base: Base<Node>,
+}
+
+#[godot_api]
+impl INode for DclEngine {
+    fn init(base: Base<Node>) -> Self {
+        Self {
+            world: None,
+            pending: PendingResponses::default(),
+            sink: Rc::new(GodotUiSink),
+            base,
+        }
+    }
 }
 
 fn resolve(id: InstanceId) -> Option<Gd<Node>> {
@@ -70,6 +88,28 @@ impl DclEngine {
     #[func]
     pub fn detach_world(&mut self) {
         self.world = None;
+    }
+
+    /// Answers a scene request a sink left pending.
+    #[func]
+    pub fn answer_scene_request(&mut self, id: u32, accepted: bool) {
+        if let Some(responder) = self.pending.take(id) {
+            responder.send(if accepted {
+                Ok(())
+            } else {
+                Err("the user declined".to_string())
+            });
+        }
+    }
+
+    /// The emulator accepts what a scene asks instead of showing a modal.
+    #[func]
+    pub fn set_emulator_mode(&mut self, enabled: bool) {
+        self.sink = if enabled {
+            Rc::new(EmulatorSink)
+        } else {
+            Rc::new(GodotUiSink)
+        };
     }
 
     #[func]
