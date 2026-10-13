@@ -12,8 +12,8 @@ use tokio_util::sync::CancellationToken;
 #[allow(unused_imports)]
 use futures_util::StreamExt;
 
-use crate::auth::ephemeral_auth_chain::EphemeralAuthChain;
-use crate::dcl::components::proto_components::social_service::v2::*;
+use crate::proto::social_service::v2::*;
+use crate::session::ephemeral_auth_chain::EphemeralAuthChain;
 use crate::social::friends::build_auth_chain;
 use crate::urls;
 const CONNECTION_TIMEOUT_SECS: u64 = 10;

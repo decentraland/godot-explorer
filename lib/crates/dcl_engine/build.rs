@@ -431,14 +431,6 @@ fn main() -> io::Result<()> {
             .into(),
     );
 
-    // Social service protos (with RPC services)
-    proto_files
-        .push(format!("{PROTO_FILES_BASE_DIR}decentraland/social_service/errors.proto").into());
-    proto_files.push(
-        format!("{PROTO_FILES_BASE_DIR}decentraland/social_service/v2/social_service_v2.proto")
-            .into(),
-    );
-
     generate_enum(&proto_components);
     generate_impl_crdt(&proto_components);
     generate_dcl_component_impl(&proto_components);

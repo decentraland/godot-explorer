@@ -33,7 +33,7 @@ pub mod notifications;
 pub mod profile;
 pub mod realm;
 pub mod scene_runner;
-pub mod social;
+pub use dcl_core::social;
 pub mod test_runner;
 pub mod tools;
 pub use dcl_core::urls;
