@@ -274,7 +274,7 @@ impl DclBootstrap {
         };
 
         if test_runner {
-            println!("Running godot-tests...");
+            godot_print!("Running godot-tests...");
             // The #[itest]s only need a Godot context, not the whole explorer.
             if let Ok(instance) = instantiate_script("src/test/test_runner.gd") {
                 if let Ok(mut runner) = instance.try_to::<Gd<Node>>() {
@@ -286,7 +286,7 @@ impl DclBootstrap {
         }
 
         if fi_benchmark {
-            println!("Running Floating Islands Benchmark...");
+            godot_print!("Running Floating Islands Benchmark...");
             // Only the components the benchmark needs.
             create(&mut global, &APP_SERVICES[..1]);
             for property in ["scene_fetcher", "scene_runner", "content_provider"] {
@@ -432,7 +432,7 @@ impl DclBootstrap {
             .unwrap_or_default();
 
         if benchmark_report && global.get("benchmark_report").get_type() != VariantType::NIL {
-            println!("✓ BenchmarkReport initialized for full flow benchmarking");
+            godot_print!("✓ BenchmarkReport initialized for full flow benchmarking");
             add_to_root_deferred(&global, "benchmark_report");
             // Orchestrates the full benchmark flow.
             spawn_on_root(
@@ -447,7 +447,7 @@ impl DclBootstrap {
         }
 
         if stress_test {
-            println!("✓ StressTest initialized for scene loading/unloading stress test");
+            godot_print!("✓ StressTest initialized for scene loading/unloading stress test");
             spawn_on_root(
                 &global,
                 "src/tools/stress_test_controller.gd",

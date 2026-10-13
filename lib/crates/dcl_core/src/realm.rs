@@ -36,7 +36,8 @@ pub fn is_genesis_city(realm: &str) -> bool {
     DAO_SERVERS.contains(&url.as_str())
 }
 
-/// A realm served from an IP address, i.e. a local preview.
+/// A realm served from this machine or its network, i.e. a local preview: an IP address
+/// (`http://192.168.1.20:8000`) or `localhost`.
 pub fn is_local_preview(realm: &str) -> bool {
     realm.lines().any(|line| {
         let lower = line.to_ascii_lowercase();
@@ -46,17 +47,28 @@ pub fn is_local_preview(realm: &str) -> bool {
         else {
             return false;
         };
-        let mut groups = rest.splitn(4, '.');
-        let number = |group: Option<&str>, last: bool| {
-            let Some(group) = group else { return false };
-            let digits = group.chars().take_while(char::is_ascii_digit).count();
-            digits > 0 && (last || digits == group.len())
-        };
-        number(groups.next(), false)
-            && number(groups.next(), false)
-            && number(groups.next(), false)
-            && number(groups.next(), true)
+        is_localhost(rest) || is_ip_address(rest)
     })
+}
+
+fn is_localhost(authority_and_path: &str) -> bool {
+    authority_and_path
+        .strip_prefix("localhost")
+        .is_some_and(|rest| matches!(rest.chars().next(), None | Some(':' | '/' | '?' | '#')))
+}
+
+/// Four dot-separated numbers; the last may be followed by a port or path.
+fn is_ip_address(authority_and_path: &str) -> bool {
+    let mut groups = authority_and_path.splitn(4, '.');
+    let number = |group: Option<&str>, last: bool| {
+        let Some(group) = group else { return false };
+        let digits = group.chars().take_while(char::is_ascii_digit).count();
+        digits > 0 && (last || digits == group.len())
+    };
+    number(groups.next(), false)
+        && number(groups.next(), false)
+        && number(groups.next(), false)
+        && number(groups.next(), true)
 }
 
 /// Percent-encodes everything but the RFC 3986 unreserved characters, like Godot's `uri_encode`.
@@ -344,7 +356,10 @@ mod tests {
     fn local_preview_is_an_ip_address() {
         assert!(is_local_preview("http://192.168.1.20:8000"));
         assert!(is_local_preview("HTTPS://10.0.0.1"));
-        assert!(!is_local_preview("http://localhost:8000"));
+        assert!(is_local_preview("http://localhost:8000"));
+        assert!(is_local_preview("https://LOCALHOST/path"));
+        assert!(is_local_preview("http://localhost"));
+        assert!(!is_local_preview("http://localhost.example.com"));
         assert!(!is_local_preview("https://peer.decentraland.org"));
         assert!(!is_local_preview("http://1.2.3"));
     }

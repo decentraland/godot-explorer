@@ -1,7 +1,9 @@
 use std::{cell::RefCell, rc::Rc};
 
 use godot::{
-    classes::{ILineEdit, LineEdit, StyleBoxEmpty},
+    classes::{
+        DisplayServer, ILineEdit, InputEvent, InputEventScreenTouch, LineEdit, StyleBoxEmpty,
+    },
     global::{HorizontalAlignment, VerticalAlignment},
     prelude::*,
 };
@@ -17,6 +19,7 @@ use crate::{
         },
         SceneEntityId,
     },
+    engine::DclEngine,
     scene_runner::components::ui::scene_ui::UiResults,
 };
 
@@ -62,6 +65,30 @@ impl ILineEdit for DclUiInput {
             .connect("text_changed", &callable_on_text_changed);
         self.base_mut()
             .connect("text_submitted", &callable_on_text_submitted);
+
+        let callable_on_focus_entered = self.base().callable("on_focus_entered");
+        let callable_on_focus_exited = self.base().callable("on_focus_exited");
+        self.base_mut()
+            .connect("focus_entered", &callable_on_focus_entered);
+        self.base_mut()
+            .connect("focus_exited", &callable_on_focus_exited);
+    }
+
+    /// On mobile the scene UI reads raw touch events (see `DclUiControl`), which `LineEdit` does
+    /// not turn into focus, and the explorer takes focus back on the next touch. A press on the
+    /// field focuses it, raises the soft keyboard and consumes the touch so nothing else reacts.
+    fn gui_input(&mut self, event: Gd<InputEvent>) {
+        let Ok(touch) = event.try_cast::<InputEventScreenTouch>() else {
+            return;
+        };
+        if !touch.is_pressed() || !self.base().is_editable() {
+            return;
+        }
+        self.base_mut().accept_event();
+        if !self.base().has_focus() {
+            self.base_mut().grab_focus();
+        }
+        self.show_soft_keyboard();
     }
 }
 
@@ -95,6 +122,30 @@ impl DclUiInput {
             .or_insert(PbUiInputResult::default());
         value.value = new_text.to_string();
         value.is_submit = Some(true);
+    }
+
+    #[func]
+    pub fn on_focus_entered(&mut self) {
+        if let Some(mut engine) = DclEngine::get() {
+            engine.bind_mut().set_text_input_focus(true);
+        }
+    }
+
+    #[func]
+    pub fn on_focus_exited(&mut self) {
+        DisplayServer::singleton().virtual_keyboard_hide();
+        if let Some(mut engine) = DclEngine::get() {
+            engine.bind_mut().set_text_input_focus(false);
+        }
+    }
+
+    fn show_soft_keyboard(&self) {
+        let text = self.base().get_text();
+        let rect = self.base().get_global_rect();
+        DisplayServer::singleton()
+            .virtual_keyboard_show_ex(&text)
+            .position(rect)
+            .done();
     }
 
     pub fn change_value(&mut self, new_value: &PbUiInput) {

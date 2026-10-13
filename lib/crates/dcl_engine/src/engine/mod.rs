@@ -3,6 +3,7 @@
 
 pub mod bootstrap;
 mod dcl_engine;
+mod itests;
 pub mod root;
 pub mod scene_requests;
 

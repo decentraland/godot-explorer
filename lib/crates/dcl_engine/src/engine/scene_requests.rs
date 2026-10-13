@@ -115,7 +115,8 @@ fn open_nft_dialog(urn: &str) -> Result<(), String> {
 }
 
 /// The headless emulator has no user to ask: teleports and realm changes are taken, links and
-/// NFTs are printed.
+/// NFTs are printed. The sink runs inside the scene manager's frame, which holds a mutable
+/// borrow of it; navigation calls back into the scene manager, so the actions are deferred.
 pub struct EmulatorSink;
 
 impl SceneRequestSink for EmulatorSink {
@@ -132,7 +133,7 @@ impl SceneRequestSink for EmulatorSink {
                 parcel: Some((x, y)),
                 realm,
             } => {
-                global.call(
+                global.call_deferred(
                     "async_teleport_to",
                     &[
                         Vector2i::new(*x, *y).to_variant(),
@@ -145,7 +146,7 @@ impl SceneRequestSink for EmulatorSink {
                 realm: Some(realm),
             }
             | SceneRequest::ChangeRealm { realm, .. } => {
-                global.call("async_join_world", &[realm.to_variant()]);
+                global.call_deferred("async_join_world", &[realm.to_variant()]);
             }
             SceneRequest::Teleport { .. } => {}
         }

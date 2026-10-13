@@ -6,6 +6,7 @@
     "build": "sdk-commands build"
   },
   "devDependencies": {
-    "@dcl/sdk": "latest"
+    "@dcl/sdk": "latest",
+    "@dcl/js-runtime": "7.30.1"
   }
 }

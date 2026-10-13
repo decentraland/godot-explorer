@@ -28,6 +28,9 @@ pub struct DclEngine {
     pub(super) sink: SharedSink,
     /// Seconds until the next `[Perf]` line; `None` when `--perf-log` is off.
     perf_countdown: Option<f64>,
+    /// A scene text input holds focus, and the keyboard height last reported for it.
+    text_input_focused: bool,
+    keyboard_height: i32,
     base: Base<Node>,
 }
 
@@ -42,6 +45,8 @@ impl INode for DclEngine {
             pending: PendingResponses::default(),
             sink: Rc::new(GodotUiSink),
             perf_countdown: None,
+            text_input_focused: false,
+            keyboard_height: 0,
             base,
         }
     }
@@ -53,6 +58,7 @@ impl INode for DclEngine {
     }
 
     fn process(&mut self, delta: f64) {
+        self.track_keyboard_height();
         let Some(countdown) = self.perf_countdown.as_mut() else {
             return;
         };
@@ -77,9 +83,53 @@ fn resolve(id: InstanceId) -> Option<Gd<Node>> {
 
 #[godot_api]
 impl DclEngine {
+    /// A scene text input took or lost focus. `keyboard_height` is in device pixels and 0 while the
+    /// keyboard is hidden or not yet up; it is sent again whenever it changes while focus holds.
+    #[signal]
+    pub fn text_input_focus(focused: bool, keyboard_height: i32);
+
     /// The engine owned by the `Global` autoload, `None` before it exists.
     pub fn get() -> Option<Gd<DclEngine>> {
         Some(DclGlobal::try_singleton()?.bind().get_engine())
+    }
+
+    /// Replaces who answers scene requests (the Godot UI, the emulator, or a test double).
+    pub(crate) fn set_sink(&mut self, sink: SharedSink) {
+        self.sink = sink;
+    }
+
+    /// Called by a scene text input on focus gained or lost.
+    pub fn set_text_input_focus(&mut self, focused: bool) {
+        self.text_input_focused = focused;
+        self.keyboard_height = if focused {
+            Self::keyboard_height_now()
+        } else {
+            0
+        };
+        let height = self.keyboard_height;
+        self.base_mut().emit_signal(
+            "text_input_focus",
+            &[focused.to_variant(), height.to_variant()],
+        );
+    }
+
+    fn keyboard_height_now() -> i32 {
+        DisplayServer::singleton().virtual_keyboard_get_height()
+    }
+
+    /// The keyboard takes a moment to slide up: report its height as it settles.
+    fn track_keyboard_height(&mut self) {
+        if !self.text_input_focused {
+            return;
+        }
+        let height = Self::keyboard_height_now();
+        if height != self.keyboard_height {
+            self.keyboard_height = height;
+            self.base_mut().emit_signal(
+                "text_input_focus",
+                &[true.to_variant(), height.to_variant()],
+            );
+        }
     }
 
     /// Registers the world once the explorer has built its player; the handles are dropped when

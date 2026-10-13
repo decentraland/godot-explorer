@@ -106,7 +106,7 @@ impl INode for DclRoot {
     }
 
     fn ready(&mut self) {
-        println!(
+        godot_print!(
             "[Startup] root._ready: {}ms",
             self.started.elapsed().as_millis()
         );
@@ -131,7 +131,7 @@ impl INode for DclRoot {
 impl DclRoot {
     #[func]
     fn start(&mut self) {
-        println!(
+        godot_print!(
             "[Startup] root.start: {}ms",
             self.started.elapsed().as_millis()
         );
@@ -152,12 +152,12 @@ impl DclRoot {
         }
 
         if Os::singleton().has_feature("Server") {
-            println!(
+            godot_print!(
                 "Running from Server - version {}",
                 global.bind().renderer_version
             );
         } else {
-            println!(
+            godot_print!(
                 "Running from platform - version {}",
                 global.bind().renderer_version
             );
@@ -212,7 +212,7 @@ impl DclRoot {
 
     #[func]
     fn start_mode(&mut self) {
-        println!(
+        godot_print!(
             "[Startup] root.start_mode: {}ms",
             self.started.elapsed().as_millis()
         );
@@ -240,29 +240,29 @@ impl DclRoot {
 
         match boot_mode(&flags) {
             BootMode::AssetServer => {
-                println!("Running in Asset Server mode");
+                godot_print!("Running in Asset Server mode");
                 self.start_asset_server(&global);
             }
             // The benchmark runner already built its own scene.
             BootMode::FiBenchmark => {}
             BootMode::AvatarImpostorBenchmark => {
-                println!("Running in Avatar Impostor Benchmark mode");
+                godot_print!("Running in Avatar Impostor Benchmark mode");
                 Self::start_throwaway_guest(&global, true);
                 self.change_scene("res://src/tools/avatar_impostor_benchmark.tscn");
             }
             BootMode::Scene(path) => {
-                println!("Running {path}");
+                godot_print!("Running {path}");
                 self.change_scene(path);
             }
             BootMode::SceneTest => {
-                println!("Running in Scene Test mode");
+                godot_print!("Running in Scene Test mode");
                 Self::start_throwaway_guest(&global, true);
                 Self::remember_throwaway_account(&global);
                 self.change_scene(EXPLORER);
             }
             BootMode::Emulator => {
-                println!("Running in Emulator mode");
-                Self::use_preview_url_as_realm(&global);
+                godot_print!("Running in Emulator mode");
+                Self::complete_emulator_arguments(&global);
                 global
                     .bind()
                     .get_engine()
@@ -273,7 +273,7 @@ impl DclRoot {
                 self.change_scene(EXPLORER);
             }
             BootMode::Lobby => {
-                println!("Running in regular mode");
+                godot_print!("Running in regular mode");
                 // The EULA check lives in the lobby.
                 self.change_scene(LOBBY);
             }
@@ -286,12 +286,17 @@ impl DclRoot {
         }
     }
 
-    /// `--preview <url>` names the realm when `--realm` is not given.
-    fn use_preview_url_as_realm(global: &Gd<DclGlobal>) {
-        let cli = global.bind().get_cli();
+    /// `--preview <url>` names the realm when `--realm` is not given, and a fresh guest starts at
+    /// 0,0 unless `--location` says otherwise (otherwise it would stand where the last session
+    /// ended, possibly parcels away from a preview scene).
+    fn complete_emulator_arguments(global: &Gd<DclGlobal>) {
+        let mut cli = global.bind().get_cli();
         let url = cli.bind().get_arg("--preview".into());
         if cli.bind().realm.is_empty() && !url.is_empty() {
-            cli.clone().bind_mut().realm = url;
+            cli.bind_mut().realm = url;
+        }
+        if cli.bind().location.is_empty() {
+            cli.bind_mut().location = "0,0".into();
         }
     }
 
@@ -357,7 +362,7 @@ impl DclRoot {
             root.add_child(&server);
         }
         server.call("start", &[]);
-        println!("Asset server is running. Press Ctrl+C to stop.");
+        godot_print!("Asset server is running. Press Ctrl+C to stop.");
     }
 }
 
