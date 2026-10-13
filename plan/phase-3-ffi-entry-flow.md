@@ -18,14 +18,25 @@ email OTP, browser hand-off, wallet. The JSON bridge and `godot/src/rn_bridge/` 
       (an `installed()` counter asserts it in debug builds).
 - [ ] `rn/src` has no hardcoded `decentraland.org|zone` or `dclexplorer.com` outside `*mock*` and
       `simulator.ts`; the eslint rule is on.
-- [ ] Sentry decision (D-open-1) applied: one native crash handler in the app.
+- [ ] Sentry (D-16) applied: one native crash handler in the app.
 
 ## Work items
 
 - [ ] **3.1 Binding trial** (S, time-boxed to two days). uniffi proc-macros on a slice of the core
-  (`state()`, `sign_in_guest()`, the event callback). Try `uniffi-bindgen-react-native` for a
-  generated TurboModule on RN 0.86 with the new architecture; fallback is uniffi's Kotlin and Swift
-  bindings plus a hand-written `DclCore` TurboModule. Record the choice in `decisions.md` D-open-2.
+  (`state()`, `sign_in_guest()`, one async call, the event callback interface), built into
+  `libdclgodot` with the `ffi` feature. Try `uniffi-bindgen-react-native` for a generated C++/JSI
+  TurboModule and TS types; the fallback is uniffi's Kotlin and Swift bindings plus a hand-written
+  `DclCore` TurboModule. The Rust side is the same for both, so the trial only decides the glue.
+  Pass/fail for the generated route, in order:
+  1. Builds and runs on RN 0.86 with the new architecture and Hermes, on an Android phone (NDK 27,
+     our own cargo build, no cargo-ndk) and on an iPhone (static link in the embedded host).
+  2. Binds to the already-loaded `libdclgodot` (bindgen in library mode against it), not to a
+     second library (D-6).
+  3. An async Rust call returns a JS promise; a JS-implemented callback interface receives events
+     fired from a tokio thread, on the JS thread, with no crash at 1k events/s.
+  4. The generated TS types serve as the interface `rn/src/core/mock.ts` implements.
+  5. Bindings regenerate in CI from the host build; a changed Rust signature fails `tsc`.
+  Record the choice in `decisions.md` D-open-2.
 - [ ] **3.2 Core state machine** (L). The states of `04-core-api.md` as `dcl_core::app::State`;
   `Booting` recovers the persisted session; `enter_world` resolves the destination, raises
   `engine_required` if no engine is attached, then drives Idle → Loading → InWorld from engine
@@ -57,7 +68,7 @@ email OTP, browser hand-off, wallet. The JSON bridge and `godot/src/rn_bridge/` 
   `RnBridge` autoload, `--rn-host` / `--rn-avatar-only` in `dcl_cli.rs`, the RN JSON layer. Add the
   eslint `no-restricted-syntax` rule for hardcoded hosts; move the eight files in `01-today.md` to
   `core.urls()`.
-- [ ] **3.9 Sentry** (M, after D-open-1). `@sentry/react-native` in the app with the native SDKs
+- [ ] **3.9 Sentry** (M, D-16). `@sentry/react-native` in the app with the native SDKs
   under it; the sentry-godot addon and `SentryObjC.framework` leave the RN build; the policy in
   `project_main_loop.gd` (per-source keep rates, remote rate from flags) → `dcl_core::report` with
   tests; Rust panics (`log_panics`) and engine errors reach the shell as `report` events and are
