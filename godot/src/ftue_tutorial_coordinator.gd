@@ -19,6 +19,8 @@ const FLAG_SCENES := "ftue-tutorial-scenes"
 const FLAG_MOVE_METERS := "ftue-tutorial-move-meters"
 const FLAG_CAMERA_DEGREES := "ftue-tutorial-camera-degrees"
 const FLAG_SOCIAL_SECONDS := "ftue-tutorial-social-seconds"
+const FLAG_STEP_DELAY_SECONDS := "ftue-tutorial-step-delay-seconds"
+const FLAG_CHAT_SECONDS := "ftue-tutorial-chat-seconds"
 const FLAG_REWARD := "ftue-tutorial-reward"
 
 # Base parcels of the Genesis City scenes that run the tutorial, as "x,y;x,y". Genesis Plaza.
@@ -26,6 +28,8 @@ const DEFAULT_SCENES := "-3,-2"
 const DEFAULT_MOVE_METERS := 1.0
 const DEFAULT_CAMERA_DEGREES := 30.0
 const DEFAULT_SOCIAL_SECONDS := 3.0
+const DEFAULT_STEP_DELAY_SECONDS := 2.0
+const DEFAULT_CHAT_SECONDS := 3.0
 const DEEPLINK_PARAM := "ftue-tutorial"
 const SCREEN_WELCOME := "FTUE_TUTORIAL_WELCOME"
 const SCREEN_STEP := "FTUE_TUTORIAL_STEP"
@@ -225,7 +229,9 @@ func _start(explorer: Explorer, is_replay: bool) -> void:
 		_overlay,
 		flags.get_number(FLAG_MOVE_METERS, DEFAULT_MOVE_METERS),
 		flags.get_number(FLAG_CAMERA_DEGREES, DEFAULT_CAMERA_DEGREES),
-		flags.get_number(FLAG_SOCIAL_SECONDS, DEFAULT_SOCIAL_SECONDS)
+		flags.get_number(FLAG_SOCIAL_SECONDS, DEFAULT_SOCIAL_SECONDS),
+		clampf(flags.get_number(FLAG_STEP_DELAY_SECONDS, DEFAULT_STEP_DELAY_SECONDS), 0.0, 10.0),
+		clampf(flags.get_number(FLAG_CHAT_SECONDS, DEFAULT_CHAT_SECONDS), 0.0, 10.0)
 	)
 
 

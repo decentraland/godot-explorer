@@ -56,6 +56,8 @@ var _friends_panel
 var _move_meters := 1.0
 var _camera_degrees := 30.0
 var _social_seconds := 3.0
+var _step_delay_seconds := 2.0
+var _chat_seconds := 3.0
 
 var _hud := Hud.FULL
 var _suspended := false
@@ -71,6 +73,11 @@ var _seen_third_person := false
 var _engaged := false
 # A re-entry of the current step is scheduled, to let something finish closing or opening.
 var _settling := false
+# The step was completed and the next one is on its way.
+var _advancing := false
+# When the chat step's chat was opened, and whether taps outside it are still being swallowed.
+var _chat_opened_msec := 0
+var _chat_guarded := false
 # The control the current step points at, and where it was when the highlight was drawn.
 var _target: Control
 var _target_rect := Rect2()
@@ -86,7 +93,9 @@ func start(
 	overlay: FtueTutorialOverlay,
 	move_meters: float,
 	camera_degrees: float,
-	social_seconds: float
+	social_seconds: float,
+	step_delay_seconds: float,
+	chat_seconds: float
 ) -> void:
 	_explorer = explorer
 	_overlay = overlay
@@ -98,6 +107,8 @@ func start(
 	_move_meters = move_meters
 	_camera_degrees = camera_degrees
 	_social_seconds = social_seconds
+	_step_delay_seconds = step_delay_seconds
+	_chat_seconds = chat_seconds
 
 	_overlay.skip_pressed.connect(skip)
 	_overlay.resized.connect(_place_skip_button)
@@ -148,7 +159,7 @@ func _process(_delta: float) -> void:
 			if travelled.length() < MAX_STEP_METERS:
 				_moved += travelled.length()
 			if _moved >= _move_meters:
-				_enter_step(Step.CAMERA)
+				_advance(Step.CAMERA)
 		Step.CAMERA:
 			var yaw := _player.rotation.y
 			var pitch := _mount.rotation.x
@@ -156,8 +167,11 @@ func _process(_delta: float) -> void:
 			_last_yaw = yaw
 			_last_pitch = pitch
 			if rad_to_deg(_rotated) >= _camera_degrees:
-				_enter_step(Step.PINCH)
-		Step.CHAT, Step.MENU:
+				_advance(Step.PINCH)
+		Step.CHAT:
+			_keep_settled(false)
+			_guard_open_chat()
+		Step.MENU:
 			_keep_settled(false)
 		Step.SOCIAL:
 			_keep_settled(true)
@@ -170,7 +184,9 @@ func _process(_delta: float) -> void:
 			if not _engaged and is_instance_valid(_backpack):
 				var hole := _backpack.scroll_container_items.get_global_rect()
 				_overlay.show_dim(hole, 12.0)
-				_overlay.block_input_except(hole)
+				_overlay.block_input_except(
+					hole, _backpack.button_back_to_explorer.get_global_rect()
+				)
 				if _has_equipped_something():
 					_engage()
 
@@ -179,12 +195,15 @@ func _enter_step(next: Step) -> void:
 	step = next
 	_engaged = false
 	_settling = false
+	_advancing = false
+	_chat_guarded = false
 	_target = null
 	_overlay.ring.stop()
 	_overlay.hide_dim()
 	_overlay.hide_tooltip()
 	_overlay.hide_gesture()
 	_overlay.free_input()
+	_overlay.button_skip.visible = next != Step.EQUIP
 	_place_skip_button()
 	if next != Step.DONE and next != _announced_step:
 		_announced_step = next
@@ -329,6 +348,15 @@ func _keep_settled(navbar_open: bool) -> void:
 		_enter_step(step)
 
 
+# Steps 1-3: the player did what the step asked. It stays on screen for a moment, so the
+# next instruction does not replace this one the instant it is done.
+func _advance(next: Step) -> void:
+	if _advancing:
+		return
+	_advancing = true
+	_enter_step_after(next, _step_delay_seconds)
+
+
 func _enter_step_after(next: Step, seconds: float) -> void:
 	var from := step
 	get_tree().create_timer(seconds).timeout.connect(
@@ -369,7 +397,7 @@ func _leave_world_ui() -> void:
 
 # The backpack's category tabs sit in the top-right corner.
 func _place_skip_button() -> void:
-	_overlay.place_skip_button(_menu_button().get_global_rect(), step == Step.EQUIP)
+	_overlay.place_skip_button(_menu_button().get_global_rect())
 
 
 func _menu_button() -> Button:
@@ -400,19 +428,42 @@ func _on_camera_mode_set(camera_mode: Global.CameraMode) -> void:
 	_seen_first_person = _seen_first_person or camera_mode == Global.CameraMode.FIRST_PERSON
 	_seen_third_person = _seen_third_person or camera_mode == Global.CameraMode.THIRD_PERSON
 	if _seen_first_person and _seen_third_person:
-		_enter_step(Step.CHAT)
+		_advance(Step.CHAT)
 
 
 func _on_chat_opened() -> void:
 	if step != Step.CHAT or _engaged:
 		return
 	_engage()
+	_chat_opened_msec = Time.get_ticks_msec()
+	_chat_guarded = true
+
+
+func _is_chat_guard_active() -> bool:
+	return Time.get_ticks_msec() - _chat_opened_msec < _chat_seconds * 1000.0
+
+
+# A tap on any empty area closes the chat, and the player may still be dragging the camera
+# from the previous step: for the first seconds no touch gets through.
+func _guard_open_chat() -> void:
+	if not _chat_guarded:
+		return
+	if _is_chat_guard_active():
+		_overlay.block_input_except(Rect2())
+	else:
+		_chat_guarded = false
+		_overlay.free_input()
 
 
 func _on_chat_closed() -> void:
-	if step == Step.CHAT and _engaged:
-		# The menu button also closes the chat: the player already did the menu step.
-		_enter_step(Step.SOCIAL if _navbar.is_open() else Step.MENU)
+	if step != Step.CHAT or not _engaged:
+		return
+	if _chat_guarded and _is_chat_guard_active():
+		# Closed too soon to count as having seen it (sent a command, system back): ask again.
+		_enter_step(Step.CHAT)
+		return
+	# The menu button also closes the chat: the player already did the menu step.
+	_enter_step(Step.SOCIAL if _navbar.is_open() else Step.MENU)
 
 
 func _on_navbar_opened() -> void:
@@ -447,6 +498,7 @@ func _on_backpack_requested(_on_emotes: bool) -> void:
 		return
 	_engage()
 	_extras_selected = false
+	_overlay.button_skip.hide()
 	# Nothing may be touched until the backpack exists and has listed its items.
 	_overlay.block_input_except(Rect2())
 
@@ -462,6 +514,7 @@ func _poll_backpack_ready() -> void:
 	# The "no items" placeholder is also what the backpack shows while it is still fetching, so
 	# it cannot tell an empty backpack from a loading one; an empty one is left to SKIP.
 	if _backpack.grid_container_wearables_list.get_child_count() == 0:
+		_overlay.block_input_except(_backpack.button_back_to_explorer.get_global_rect())
 		return
 	if _extras_selected:
 		_enter_step(Step.EQUIP)
@@ -492,6 +545,9 @@ func _has_equipped_something() -> bool:
 func _on_menu_closed() -> void:
 	if step == Step.EQUIP and _engaged:
 		_enter_step(Step.DONE)
+	elif step == Step.EQUIP or (step == Step.BACKPACK and _engaged):
+		# The Backpack has no skip button: leaving it without equipping is the way out.
+		skip()
 
 
 # The player did what the step pointed at: drop the hints and let them use it freely.

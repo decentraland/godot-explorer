@@ -22,6 +22,7 @@ const MOUSE_INDEX := -1
 
 # Touches outside this rect are swallowed while `_blocking` is on.
 var _allowed_rect := Rect2()
+var _also_allowed_rect := Rect2()
 var _blocking := false
 # Presses swallowed here, so their drags and releases are swallowed too.
 var _owned_touches: Dictionary = {}
@@ -68,9 +69,10 @@ func hide_dim() -> void:
 
 
 ## While blocking, only touches inside `allowed` (and on the skip button) reach the app.
-func block_input_except(allowed: Rect2) -> void:
+func block_input_except(allowed: Rect2, also_allowed := Rect2()) -> void:
 	_blocking = true
 	_allowed_rect = allowed
+	_also_allowed_rect = also_allowed
 
 
 func free_input() -> void:
@@ -131,18 +133,13 @@ func hide_gesture() -> void:
 
 
 ## Top-right, mirroring the menu button's inset from the top-left corner (which already clears
-## the notch). `at_bottom_left` is for screens whose top-right corner is taken.
-func place_skip_button(menu_button_rect: Rect2, at_bottom_left := false) -> void:
+## the notch).
+func place_skip_button(menu_button_rect: Rect2) -> void:
 	_edge_inset = menu_button_rect.position
 	button_skip.reset_size()
-	if at_bottom_left:
-		button_skip.global_position = Vector2(
-			_edge_inset.x, size.y - _edge_inset.y - button_skip.size.y
-		)
-	else:
-		button_skip.global_position = Vector2(
-			size.x - _edge_inset.x - SKIP_EXTRA_INSET - button_skip.size.x, _edge_inset.y
-		)
+	button_skip.global_position = Vector2(
+		size.x - _edge_inset.x - SKIP_EXTRA_INSET - button_skip.size.x, _edge_inset.y
+	)
 
 
 # _input, not _gui_input: MobileCameraInput recognizes gestures in _input, before any Control
@@ -171,7 +168,9 @@ func _input(event: InputEvent) -> void:
 		return
 	if not _blocking or not visible:
 		return
-	if _allowed_rect.has_point(position) or button_skip.get_global_rect().has_point(position):
+	if _allowed_rect.has_point(position) or _also_allowed_rect.has_point(position):
+		return
+	if button_skip.visible and button_skip.get_global_rect().has_point(position):
 		return
 	_owned_touches[index] = true
 	get_viewport().set_input_as_handled()
