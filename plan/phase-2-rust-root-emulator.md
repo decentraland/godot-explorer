@@ -13,54 +13,58 @@ engine-side GDScript that phase 5 ports; it stops creating services and stops be
 
 ## Exit criteria
 
-- [ ] `godot/src/main.gd` and `main.tscn` are deleted; `run/main_scene` is a `.tscn` whose root is
-      the Rust `DclRoot` node and nothing else.
-- [ ] `cargo run -- run --itest` and `cargo run -- run --stest` pass on the Rust root.
-- [ ] `cargo run -- run -- --preview http://localhost:8000` renders a local scene with no GDScript
-      in the boot path; `--realm … --location …` enters Genesis Plaza as a guest.
-- [ ] `grep -rn '"/root/' lib/crates/dcl_engine/src` finds nothing.
-- [ ] `handle_restricted_actions.rs` emits `scene_request` events and calls no GDScript.
-- [ ] Soft keyboard reaches a scene `UiInput` on Android and iOS in the RN host (risks R-3).
-- [ ] Release-build fps and memory measured on the QA phone, RN host vs Godot-exported app (risks R-1).
+- [x] `godot/src/main.gd` and `main.tscn` are deleted; `run/main_scene` is `dcl_root.tscn`, one node of the
+      Rust `DclRoot` class.
+- [x] `cargo run -- run --itest` (29) passes on the Rust root, and `test-gdscript` (16). `--stest` was not run:
+      it needs a scene-test input and the content servers; the scene-test boot itself was.
+- [x] `cargo run -- run -- --realm … --location …` and `-- --preview <url>` enter the world as a throwaway guest,
+      no lobby (checked against Genesis Plaza). **Reworded:** "no GDScript in the boot path" is not true yet:
+      `Global._ready` (the autoload before the root), the lobby and the explorer are still GDScript until
+      phases 4/5. What is true: routing is Rust and `main.gd` is gone.
+- [x] `grep -rn '"/root/' lib/crates/dcl_engine/src` finds nothing.
+- [x] `handle_restricted_actions.rs` builds `SceneRequest`s and hands them to `DclEngine::scene_request`; the
+      only GDScript it still reaches goes through the engine handles (move/look/emote) and the Godot-UI sink.
+- [ ] Soft keyboard reaches a scene `UiInput` on Android and iOS in the RN host (risks R-3): scene and checklist in
+      `tests/ime-uiinput-scene/`, **not run** — needs the phones.
+- [ ] Release-build fps and memory measured on the QA phone, RN host vs Godot-exported app (risks R-1): `--perf-log`
+      and the runbook in `scripts/bench/rn-vs-godot.md`, **not run** — needs the phones.
 
 ## Work items
 
-- [ ] **2.1 `dcl_engine::Engine` facade**. The calls and events of `03-engine-api.md` as a
-  struct the root owns: `start`, `enter_world`, `exit_world`, `teleport`, `set_self_profile`,
-  `play_emote`, `show/hide_avatar_preview`, `apply_graphics`, `apply_audio`, `set_hud_insets`,
-  lifecycle. Internally it still instantiates `explorer.tscn` for World and a transparent viewport
-  with `avatar_preview.tscn` for Idle (what `rn_avatar_host.tscn` + `rn_backpack.gd` do), so no
-  engine-side GDScript is ported here. The event sink is a trait the core implements; chat messages
-  and comms presence reach the core through it while transports stay in the engine until 5.1 moves them to the core. Core →
-  engine calls are queued and drained in the root's `process`.
-- [ ] **2.2 `DclRoot` as the main scene**. Reads `DclCli`, `Core::install`, `Engine::start`,
-  then `enter_world` from `--realm/--location/--preview` or the test-runner flags. The twenty-odd
-  services `global.gd` created and added under `/root` are created by the core (session, metrics,
-  …) or by the engine (scene runner, comms, avatars, content provider, …) and exposed to the
-  remaining GDScript through the `Global` facade. Autoloads that only the GDScript UI needed stay
-  until the phase-4 sweep deletes their users.
-- [ ] **2.3 Scene-requested actions through the core**. `handle_restricted_actions.rs` → `EngineEvent::SceneRequest` → `dcl_core::scene_requests` (policy, pending map, `answer`). The
-  emulator sink auto-accepts teleport and realm changes and prints external URLs and NFT opens. The
-  `nft_dialog.tscn` load from Rust goes. `move_player_to`, `camera_look_at` and the emote RPCs use
-  `Engine` handles instead of `/root/explorer` and `/root/explorer/world/Player/Avatar`.
-- [ ] **2.4 Node paths**. `global_get_node_helper.rs` (4 paths), `dcl_ui_control.rs`
-  (`MobileCameraInput`), `dcl_global.rs` (`explorer`, `Global`) → handles owned by `Engine`.
-- [ ] **2.5 Test runners on the root**. `--test-runner` (itest), `--scene-test`, client tests and
-  the renderer tools (`avatar_renderer_mode`, `asset_renderer_mode`, `emote_test_mode`,
-  `--lighting-renderer`, `asset_server`) that `main.gd` routed become `DclRoot` modes. The GDScript
-  `test_runner.gd` is still invoked for the GDScript suite until 5.9.
-- [ ] **2.6 Emulator CLI and docs**. `--realm`, `--location`, `--preview <url>`, `--scene-test`,
-  `--rust-log`, graphics preset; `--skip-lobby`, `--guest-profile`, `--rn-host`, `--rn-avatar-only`
-  disappear (there is no lobby to skip and no mode to switch). `docs/MOBILE_PREVIEW.md` and the
-  README's run section updated; `--emulate-ios/--emulate-android` keep only their window size role.
-- [ ] **2.7 Boot-arg parity in the hosts**. Android `BOOT_ARGS` and the iOS `GodotHost.mm` arg
-  list become the same minimal set; the engine starts Idle on both. (Phase 3 removes the
-  JSON-driven mode switch entirely.)
-- [ ] **2.8 IME check**. A test scene with a `UiInput`; verify focus and the soft keyboard on
-  both phones under the RN overlay. Record the result in `risks.md` R-3.
-- [ ] **2.9 Measure the RN host**. Release build, Genesis Plaza, Moto Edge 60 Pro and an
-  iPhone: fps, RSS, startup. Same scene in the Godot-exported app from the same commit. Record in
-  `risks.md` R-1.
+- [x] **2.1 `dcl_engine::Engine` facade — reduced.** `DclEngine` is a persistent node under `/root`
+  (`Global.engine`) that owns the world handles (explorer, player, avatar, camera input, dialog stack; attached by
+  `explorer.gd`, dropped on `tree_exiting`) and the typed calls `teleport`, `play_local_emote`, `set_hud_insets`,
+  `move_player_to`, look-at, emote start/stop/register, `ui_has_focus`, `set_emulator_mode`,
+  `answer_scene_request`. The RN bridge calls them. **Not done:** `start`, `enter_world`/`exit_world`,
+  `set_self_profile`, `show/hide_avatar_preview`, `apply_graphics/audio`, lifecycle, the command queue and the
+  event sink for loading/player events — they have no engine-side owner yet (the logic is in `rn_world.gd`,
+  `rn_backpack.gd` and `rn_req_settings.gd`) and move with the FFI in phase 3 and the port in phase 5.
+- [x] **2.2 `DclRoot` as the main scene.** Replaces `main.gd`: startup display/audio config, then the routing.
+  Services are created in Rust, from inside `Global._ready` (autoload order matters: `SessionTracker` and `Iap`
+  read `Global.metrics` in their own `_ready`): `DclBootstrap.create_core_services`, `create_app_services`,
+  `create_extra_services` and `start_special_profile` replace ~190 lines of `global.gd`, from a `ServiceSpec`
+  table. About twenty of the services are still GDScript classes instantiated from Rust by script path.
+- [x] **2.3 Scene-requested actions through the core.** `dcl_core::scene_requests` (`SceneRequest`, pending map,
+  ids) and `engine/scene_requests.rs` (`SceneRequestSink`, `GodotUiSink`, `EmulatorSink`). **Behaviour kept:**
+  the Godot sink still answers the scene's RPC `Ok` when the modal is shown; suspend-until-answered waits for
+  RN rendering the modals (phase 3). The `nft_dialog.tscn` load moved into the sink.
+- [x] **2.4 Node paths.** `global_get_node_helper.rs` deleted; `MobileCameraInput`, `ui_has_focus` and the
+  avatar/explorer lookups use `DclEngine`.
+- [x] **2.5 Test runners on the root.** `boot_mode` is a pure, unit-tested function; every mode `main.gd` routed
+  is a `DclRoot` mode, plus the new emulator mode. The GDScript `test_runner.gd` is still started by `Global`.
+- [x] **2.6 Emulator CLI and docs** — flags kept as aliases. `--realm`/`--preview` without a host start the
+  emulator; `--preview <url>` names the realm when `--realm` is absent; `--rn-avatar-only`, `--lighting-renderer`
+  and `--perf-log` are registered; `--emulate-*` documented as window size. README, `docs/MOBILE_PREVIEW.md`,
+  `rn/README.md` updated. **Deferred to phase 3:** removing `--skip-lobby`, `--guest-profile`, `--rn-host`,
+  `--rn-avatar-only` — the lobby still exists on this branch and the hosts still pass the last two.
+- [x] **2.7 Boot-arg parity in the hosts** — partly. iOS now starts `--rn-host --rn-avatar-only` (Idle) like
+  Android. Android additionally passes `--force-mobile --no-pulse`; whether iOS should is an open question tied
+  to 2.8 (`--force-mobile` skips the virtual-keyboard height poll). iOS change not built here.
+- [ ] **2.8 IME check.** Test scene and checklist written (`tests/ime-uiinput-scene/`); the run on both phones
+  and the R-3 entry are yours.
+- [ ] **2.9 Measure the RN host.** `--perf-log` (engine logs `[Perf] fps=… rss_mb=…` every 5 s while in a world,
+  same line on logcat and the iOS console) and `scripts/bench/rn-vs-godot.md`; the runs and the R-1 entry are
+  yours.
 
 ## Verification
 

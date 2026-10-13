@@ -61,7 +61,7 @@ and no item carries an estimate.
 | Phase | Gate to start | Who | Status |
 |---|---|---|---|
 | 1. Core carve-out | none | Mateo + AI | code done; phone regression open |
-| 2. Rust root + emulator | 1.1 landed | Mateo + AI | not started |
+| 2. Rust root + emulator | 1.1 landed | Mateo + AI | code done; device checks (2.8, 2.9) open |
 | 3. FFI + entry flow | 2.1 landed | Mateo + AI | not started |
 | 4. UI sweep + every domain on the core | phase 3 | Mateo + AI | not started |
 | 5. Modern gdext, engine-side port, VR removed | 2.1 landed; mostly after 4.0 | Mateo + AI | not started |

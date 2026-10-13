@@ -61,6 +61,15 @@ instead of `/root/explorer` paths.
 - The engine reads core state through `Arc<Core>` (identity for signed fetches, blacklist for hiding
   avatars, settings for graphics). It never writes core state; it emits events.
 
+## What exists (phase 2)
+
+`DclEngine` (`lib/crates/dcl_engine/src/engine/`) is a persistent node under `/root`, reachable as
+`Global.engine` and `DclEngine::get()`. Implemented: the world handles and typed player/avatar calls,
+`teleport`, `play_local_emote`, `set_hud_insets`, `ui_has_focus`, and scene requests with a pluggable
+`SceneRequestSink` (`GodotUiSink`, `EmulatorSink`) plus `answer_scene_request`. Not yet: `start`,
+`enter_world`/`exit_world`, `set_self_profile`, avatar preview, graphics/audio, lifecycle, the command queue
+and the event sink for loading and player events (phase 3 and 5).
+
 ## From by-name calls to the API
 
 | Today | Target |
