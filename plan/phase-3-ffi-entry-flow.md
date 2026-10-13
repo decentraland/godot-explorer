@@ -24,10 +24,10 @@ email OTP, browser hand-off, wallet. The JSON bridge and `godot/src/rn_bridge/` 
 
 - [ ] **3.1 Binding trial** (S, time-boxed to two days). uniffi proc-macros on a slice of the core
   (`state()`, `sign_in_guest()`, one async call, the event callback interface), built into
-  `libdclgodot` with the `ffi` feature. Try `uniffi-bindgen-react-native` for a generated C++/JSI
-  TurboModule and TS types; the fallback is uniffi's Kotlin and Swift bindings plus a hand-written
-  `DclCore` TurboModule. The Rust side is the same for both, so the trial only decides the glue.
-  Pass/fail for the generated route, in order:
+  `libdclgodot` with the `ffi` feature. Set up `uniffi-bindgen-react-native` (D-17) for the
+  generated C++/JSI TurboModule and TS types. The checks below are its acceptance; a failed one
+  is fixed inside the time box, and only if it cannot be fixed does the hand-written Kotlin/Swift
+  TurboModule come back as a reopened decision. Pass/fail, in order:
   1. Builds and runs on RN 0.86 with the new architecture and Hermes, on an Android phone (NDK 27,
      our own cargo build, no cargo-ndk) and on an iPhone (static link in the embedded host).
   2. Binds to the already-loaded `libdclgodot` (bindgen in library mode against it), not to a
@@ -36,7 +36,7 @@ email OTP, browser hand-off, wallet. The JSON bridge and `godot/src/rn_bridge/` 
      fired from a tokio thread, on the JS thread, with no crash at 1k events/s.
   4. The generated TS types serve as the interface `rn/src/core/mock.ts` implements.
   5. Bindings regenerate in CI from the host build; a changed Rust signature fails `tsc`.
-  Record the choice in `decisions.md` D-open-2.
+  Record the result against D-17 in `decisions.md`.
 - [ ] **3.2 Core state machine** (L). The states of `04-core-api.md` as `dcl_core::app::State`;
   `Booting` recovers the persisted session; `enter_world` resolves the destination, raises
   `engine_required` if no engine is attached, then drives Idle → Loading → InWorld from engine

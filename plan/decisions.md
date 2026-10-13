@@ -24,12 +24,12 @@ proceed without the decision.
 | D-14 | The `.gdlintrc` caps are never raised on this branch. | The files at the cap are being deleted. |
 | D-15 | The work lives on `feat/react-native`, draft PR #3059. PRs for work items target that branch; #3059's body points at this folder from 1.0 on and is retitled when it is ready for review. It is the React Native app, or the side project. | Decided 13 Oct 2026. |
 | D-16 | **One crash reporter: `@sentry/react-native` owns native** (sentry-cocoa and sentry-android under it). Rust panics and engine errors are forwarded through the core as `report` events and captured in the shell with today's tags (`crash_context.rs`). The `project_main_loop.gd` policy (per-source keep rates, remote rate from flags) moves to `dcl_core::report` with tests. sentry-godot is dropped from the app; the emulator has no Sentry. Symbol upload for `libdclgodot` and the engine keeps its CI path, verified with a deliberate crash before the addon goes (risks R-7). Applied in 3.9. | Two native Sentry SDKs in one process fight over crash handlers. Decided 13 Oct 2026. |
+| D-17 | **FFI glue: `uniffi-bindgen-react-native`.** The Rust side is uniffi either way (D-5); the generated C++/JSI TurboModule and TS types come straight from the uniffi metadata in `libdclgodot`. The five checks in phase 3 item 3.1 are its acceptance; a failed check is a blocker to fix inside the time box, and only if it cannot be fixed does the hand-written Kotlin/Swift TurboModule come back as a reopened decision. Host-only calls (attest, push token, store, surface order, engine view) stay in a small hand-written module. | Wins every criterion that scales with the size of the API (~70 calls, ~15 events, growing through phase 4) and lets RN devs consume new core calls without a native dev, which is what keeps December parallel. Loses on maturity, debuggability and version coupling, which the acceptance checks and the fallback cover. See the comparison below. Decided 13 Oct 2026. |
 
 ## Open
 
 | # | Question | Recommendation | Owner, decide by |
 |---|---|---|---|
-| D-open-2 | **FFI binding generator.** The Rust side is uniffi either way (D-5); the question is the glue between Hermes and the uniffi C ABI. (a) `uniffi-bindgen-react-native`: generates a C++/JSI TurboModule and the TS types straight from the uniffi metadata; one boundary, no Kotlin or Swift per call, async calls and callback interfaces generated; a smaller community project, version-coupled to uniffi and to RN. (b) uniffi's Kotlin and Swift bindings plus a hand-written `DclCore` TurboModule: proven pieces, debuggable in Kotlin/Swift, but every call is written three times (TS spec, Kotlin, Swift) and events and async are hand-plumbed, a standing tax on the ~70 calls in `04-core-api.md` and on every phase-4 domain. | (a) if it passes the five checks in 3.1, else (b). Either way the host-only calls (attest, push token, store, surface order, engine view) stay in a small hand-written module. Low regret: switching later changes the glue, not the core. | Core owner. **End of 3.1**, mid-Nov. |
 | D-open-3 | **Session and settings files.** `settings.cfg` (Godot `ConfigFile`, INI-like) holds `session_account`, `guest_profile` and every setting; existing users have it on disk. | The core writes its own files (`session.json`, `settings.json`) under the data dir and imports `settings.cfg` once at first boot with a small INI reader (keep the key names from `rn/src/settings/keys.ts`); the old file is left in place until the following release. Covered by a test with a real `settings.cfg` fixture. | Core owner. With 1.4. |
 | D-open-4 | **Core data dir on the RN host.** Must equal the Godot-exported app's `user://` so the store update keeps sessions and caches (risks R-6). | Pass `OS.get_user_data_dir()`'s equivalent from the host: on Android the path Godot's `OS_Android` resolves (verify whether it is `getFilesDir()` or external), on iOS the same `Documents`/`Library` dir. Verify on a device by upgrading from a store build. | Host owner. With 3.4. |
 | D-open-5 | **Editor addons in GDScript** (4,565 lines, editor-only, never shipped). | Out of the zero-`.gd` rule for the January release: the lint says "no `.gd` under `godot/src`". After the release: port `dcl_build_plugin` and `dcl_mobile_preview` to a Rust `EditorPlugin` if still used, drop the rest. | EM. By the scope gate. |
@@ -38,3 +38,26 @@ proceed without the decision.
 | D-open-9 | **Math type in the core** (comms, movement, pulse decoder). | `glam` (already in the dependency tree through gdext); `From` impls at the engine edge. | Core owner. With 1.3. |
 | D-open-10 | **Engine host template.** The iOS `embedded_host=yes` library is built locally today; CI's process-templates job deletes the raw `.a`. | Publish `ios_host_release.a` from the engine release (merge the engine branch `spike/ios-host-embedding` into `decentraland/godotengine` main) and bump `GODOT_BUILD_SHA`; until then `GODOT_HOST_LIB`. | Engine owner. Before the December team ramp-up. |
 | D-open-11 | **Emote wheel: RN or engine?** `rn_ui_filter.gd` leaves `EmoteWheel` visible in Godot today. | RN (it is HUD); the engine plays the emote through `play_emote`. | Shell owner. With 4.10. |
+
+## D-17: the comparison behind it
+
+(a) `uniffi-bindgen-react-native` against (b) uniffi Kotlin/Swift bindings plus a hand-written
+TurboModule. Both sit on the same Rust API.
+
+| Criterion | (a) generated | (b) hand-written glue | Edge |
+|---|---|---|---|
+| Hops per call | JS → generated C++/JSI → Rust | JS → Kotlin/Swift TurboModule → uniffi binding → Rust (JNI on Android) | a |
+| Code per core call | None beyond the Rust signature | TS spec + Kotlin + Swift + marshalling | a |
+| Type safety | TS generated from Rust; a signature change fails `tsc` | TS spec by hand; nothing checks native against Rust | a |
+| Async and events | Generated promises and JS-implemented callback interfaces | Hand-bridged promises; `NativeEventEmitter` with hand-typed payloads | a |
+| Complex types | Records and enums become TS objects through JSI | Codegen types are limited; nested data tends to degrade into JSON strings | a |
+| Adding a call in phase 4 | Rust, rebuild, regenerate | Four files, two platforms, test on both; about an hour each across ~70 calls | a |
+| Who can add a call | Any Rust or RN dev | Needs a native dev per call, serializing December | a |
+| Runtime cost | Fewer copies, no JNI | Extra conversions | a, irrelevant by design: the hot path never crosses the FFI |
+| First call working | Slower: C++ toolchain, RN 0.86 compat | Faster: known pieces | b |
+| Maturity, community | 0.x, small maintainer base | Firefox-mobile-grade uniffi output; TurboModules are RN's own | b |
+| Version coupling | Pinned uniffi; must track RN releases | Independent upgrades | b |
+| Debugging a glue bug | Generated C++ and JSI | Kotlin/Swift breakpoints | b |
+| Single library (D-6), events from tokio threads | Must be verified (checks 2 and 3) | Straightforward | b |
+| Host-only calls | Small hand-written module | Same | tie |
+| Exit cost | Fall back to (b), Rust unchanged | None | tie |

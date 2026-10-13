@@ -1,7 +1,7 @@
 # The core API (shell ↔ core)
 
 The shell talks to the core through a typed FFI generated from the Rust definitions (uniffi; see
-decisions D-open-2 for the binding generator). Calls are synchronous or return futures the
+decisions D-17 for the binding generator). Calls are synchronous or return futures the
 TurboModule turns into promises; events arrive through one callback interface the host registers at
 startup and forwards to JS as a single event emitter. Keys never cross into JS: the shell never sees
 the ephemeral key, the wallet, the attestation token or a signed header.
