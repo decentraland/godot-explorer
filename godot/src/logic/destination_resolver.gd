@@ -15,10 +15,6 @@ const PREVIEW_DEADLINE_MS := 3000
 
 const ACCESS_SHARED_SECRET := "shared-secret"
 
-## Genesis City bounds when /about carries no map sizes. Same fallback realm.gd uses.
-const DEFAULT_MIN_BOUNDS := Vector2i(-150, -150)
-const DEFAULT_MAX_BOUNDS := Vector2i(163, 158)
-
 
 ## Retries a bare coordinate against Genesis City when the realm the player is in has no
 ## such parcel. Sequential rather than raced: the common case pays nothing, and the
@@ -76,25 +72,7 @@ static func genesis_failure(
 ## A world's /about names only its last deployed scene, so its /scenes listing is the
 ## only place the full parcel layout shows up.
 static func world_parcel_index(scenes_json: Dictionary) -> Dictionary:
-	var index := {}
-	var scenes = scenes_json.get("scenes", [])
-	if not scenes is Array:
-		return index
-
-	for scene in scenes:
-		if not scene is Dictionary:
-			continue
-		var entity = scene.get("entity", {})
-		if not entity is Dictionary:
-			entity = {}
-		var parcels = scene.get("parcels", [])
-		if not parcels is Array or parcels.is_empty():
-			parcels = entity.get("pointers", [])
-		if not parcels is Array:
-			continue
-		for parcel in parcels:
-			index[str(parcel)] = entity
-	return index
+	return DclDestinationRules.world_parcel_index(scenes_json)
 
 
 ## Where a world join lands: Realm spawns from the last entry of the listing.
@@ -108,27 +86,7 @@ static func _last_entity(scenes_json: Dictionary) -> Dictionary:
 
 ## Reshaped into the rows Realm stores, so applying a destination re-fetches nothing.
 static func world_scene_urns(scenes_json: Dictionary, base_content_url: String) -> Array:
-	var rows: Array = []
-	var scenes = scenes_json.get("scenes", [])
-	if not scenes is Array:
-		return rows
-	for scene in scenes:
-		if not scene is Dictionary:
-			continue
-		var entity_id := str(scene.get("entityId", ""))
-		if entity_id.is_empty():
-			continue
-		(
-			rows
-			. push_back(
-				{
-					"urn": "urn:decentraland:entity:" + entity_id,
-					"entityId": entity_id,
-					"baseUrl": base_content_url,
-				}
-			)
-		)
-	return rows
+	return DclDestinationRules.world_scene_urns(scenes_json, base_content_url)
 
 
 ## Both `allow-list` and `nft-ownership` deliberately fail open: #1725 decided the
@@ -167,93 +125,35 @@ static func has_target(dest: Destination) -> bool:
 ## older key and wins when both are present, matching parse_comms_adapter_value in Rust.
 ## Any other shape means there is nowhere to prove a secret against.
 static func comms_handshake_url(about: Dictionary) -> String:
-	var comms = about.get("comms")
-	if not comms is Dictionary:
-		return ""
-	var adapter := str(comms.get("fixedAdapter", ""))
-	if adapter.is_empty():
-		adapter = str(comms.get("adapter", ""))
-	adapter = adapter.trim_prefix("fixed-adapter:")
-	if not adapter.begins_with("signed-login:"):
-		return ""
-	return adapter.trim_prefix("signed-login:")
+	return DclDestinationRules.comms_handshake_url(about)
 
 
 ## Mirrors Rust's SignedLoginMeta, `isGuest` included: proving the secret against a
 ## different shape than the real connect sends would prove nothing.
 static func handshake_metadata(realm_url: String, secret: String) -> String:
-	return (
-		JSON
-		. stringify(
-			{
-				"intent": "dcl:explorer:comms-handshake",
-				"signer": "dcl:explorer",
-				"isGuest": true,
-				"origin": origin_of(realm_url),
-				"secret": secret,
-			}
-		)
-	)
+	return DclDestinationRules.handshake_metadata(realm_url, secret)
 
 
 ## The `origin` the comms handler expects: scheme + authority.
 static func origin_of(url: String) -> String:
-	var scheme := "http://" if url.begins_with("http://") else "https://"
-	var rest := Realm.remove_scheme(url)
-	var slash := rest.find("/")
-	return scheme + (rest if slash < 0 else rest.substr(0, slash))
+	return DclDestinationRules.origin_of(url)
 
 
 ## Rate limiter or wrong secret? The status code is lost in the rejection, so the
 ## message is all there is to tell them apart.
 static func is_rate_limited(error_message: String) -> bool:
-	var lower := error_message.to_lower()
-	return lower.contains("too many") or lower.contains("rate limit")
+	return DclDestinationRules.is_rate_limited(error_message)
 
 
 ## What the loading screen shows, from the payload the existence check already read, so
 ## it costs no request of its own (#2698).
 static func scene_info(entity: Dictionary, content_base_url: String) -> Dictionary:
-	return _scene_info(entity, content_base_url + "contents/")
+	return DclDestinationRules.scene_info(entity, content_base_url, false)
 
 
 ## Same, for a base that already addresses content files (a scene urn's baseUrl).
 static func _scene_info(entity: Dictionary, contents_base_url: String) -> Dictionary:
-	var metadata = entity.get("metadata", {})
-	if not metadata is Dictionary:
-		metadata = {}
-	var display = metadata.get("display", {})
-	if not display is Dictionary:
-		display = {}
-	var content = entity.get("content", [])
-	if not content is Array:
-		content = []
-
-	var thumbnail := str(display.get("navmapThumbnail", ""))
-	var image_url := ""
-	if not thumbnail.is_empty():
-		for file in content:
-			if file is Dictionary and str(file.get("file", "")) == thumbnail:
-				image_url = contents_base_url + str(file.get("hash", ""))
-				break
-
-	return {
-		"id": str(entity.get("id", "")),
-		"title": str(display.get("title", "")),
-		"creator": _creator_of(metadata),
-		"image_url": image_url,
-		"asset_count": content.size(),
-	}
-
-
-## `contact.name` is what Places reports as contact_name; `owner` is the fallback.
-static func _creator_of(metadata: Dictionary) -> String:
-	var contact = metadata.get("contact", {})
-	if contact is Dictionary:
-		var name := str(contact.get("name", ""))
-		if not name.is_empty():
-			return name
-	return str(metadata.get("owner", ""))
+	return DclDestinationRules.scene_info(entity, contents_base_url, true)
 
 
 ## Same, from the coordinator's typed definition. It does not parse `contact`, so the
@@ -278,25 +178,12 @@ static func scene_info_from_definition(definition: DclSceneEntityDefinition) -> 
 ## Used to run inside async_set_realm, after realm state was partly committed and with
 ## no failure emitted. As a verdict it runs before anything is touched.
 static func about_is_usable(about: Dictionary) -> bool:
-	var content = about.get("content")
-	return content is Dictionary and content.get("publicUrl") is String
+	return DclRealmRules.about_problem(about).is_empty()
 
 
 ## [min, max] parcel bounds advertised by /about, with the genesis fallback.
 static func parse_bounds(about: Dictionary) -> Array:
-	var sizes = about.get("configurations", {}).get("map", {}).get("sizes", [])
-	if not sizes is Array or sizes.is_empty():
-		return [DEFAULT_MIN_BOUNDS, DEFAULT_MAX_BOUNDS]
-
-	var first = sizes[0]
-	var min_bounds := Vector2i(first.get("left", 0), first.get("bottom", 0))
-	var max_bounds := Vector2i(first.get("right", 0), first.get("top", 0))
-	for size_dict in sizes:
-		min_bounds.x = mini(min_bounds.x, size_dict.get("left", 0))
-		min_bounds.y = mini(min_bounds.y, size_dict.get("bottom", 0))
-		max_bounds.x = maxi(max_bounds.x, size_dict.get("right", 0))
-		max_bounds.y = maxi(max_bounds.y, size_dict.get("top", 0))
-	return [min_bounds, max_bounds]
+	return DclDestinationRules.parse_bounds(about)
 
 
 # ---- Resolution ------------------------------------------------------------------

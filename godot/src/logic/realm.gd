@@ -268,18 +268,7 @@ func _async_fetch_world_scenes(world_name: String, base_content_url: String) -> 
 			printerr("[REALM] Invalid response from /scenes endpoint")
 			return []
 
-		var scenes = json.get("scenes", [])
-		if scenes.is_empty():
-			return []
-
-		var result: Array = []
-		for scene in scenes:
-			var entity_id = scene.get("entityId", "")
-			if entity_id.is_empty():
-				continue
-			var urn = "urn:decentraland:entity:" + entity_id
-			result.push_back({"urn": urn, "entityId": entity_id, "baseUrl": base_content_url})
-
+		var result: Array = DclDestinationRules.world_scene_urns(json, base_content_url)
 		if result.size() > 1:
 			prints("[REALM] Loaded", result.size(), "scenes for world", world_name)
 

@@ -1,7 +1,8 @@
 class_name FeatureFlags
 extends Node
 
-## Remote feature flags fetched from the mobile-bff at app startup.
+## Remote feature flags fetched from the mobile-bff at app startup. The rules and the fetch live
+## in the core (DclFeatureFlags); this node applies them to the rest of the app.
 ##
 ## The fetch is fire-and-forget: it starts when the node enters the tree
 ## (global.gd) and flags with runtime effects (comms, Sentry sampling) are
@@ -16,8 +17,6 @@ extends Node
 ## explicitly enables them (see _apply_flags).
 
 signal flags_loaded
-
-const TIMEOUT_SECONDS := 5.0
 
 # Flag names exactly as served by the mobile-bff payload.
 const FLAG_ARCHIPELAGO := "archipielago"
@@ -36,69 +35,43 @@ const FLAG_SENTRY_ERROR_EVENTS := "sentry-error-events"
 # delivery to tokens already collected — that is a server-side decision.
 const FLAG_PUSH_ENABLED := "push-enabled"
 
-var _flags: Dictionary = {}
-var _loaded := false
-
 
 func _ready() -> void:
 	_async_load.call_deferred()
 
 
 func is_loaded() -> bool:
-	return _loaded
+	return DclFeatureFlags.is_loaded()
 
 
 # `default_value` is returned while the flags aren't loaded yet or when the
 # flag is absent from the payload.
 func is_enabled(flag_name: String, default_value: bool = true) -> bool:
-	return bool(_flags.get(flag_name, default_value))
+	return DclFeatureFlags.is_enabled(flag_name, default_value)
 
 
 # Numeric flags (e.g. sample rates). `default_value` is returned while the
 # flags aren't loaded yet, when the flag is absent, or when it isn't a number.
 func get_number(flag_name: String, default_value: float) -> float:
-	var value = _flags.get(flag_name)
-	if value is float or value is int:
-		return float(value)
-	return default_value
+	return DclFeatureFlags.get_number(flag_name, default_value)
 
 
 # Extracts the flags dictionary from the mobile-bff response:
 # `{"ok": true, "data": {"flags": {"archipielago": true, ...}}}`.
 # Returns an empty dictionary on any shape mismatch (fail-open).
 static func parse_response(json) -> Dictionary:
-	if typeof(json) != TYPE_DICTIONARY or not json.get("ok", false):
-		return {}
-	var data = json.get("data", {})
-	if typeof(data) != TYPE_DICTIONARY:
-		return {}
-	var flags = data.get("flags", {})
-	if typeof(flags) != TYPE_DICTIONARY:
-		return {}
-	return flags
+	return DclFeatureFlags.parse_response(json)
 
 
 func _async_load() -> void:
-	var url := String(DclUrls.feature_flags())
-	var http_fn := func() -> Promise:
-		return Global.http_requester.request_json(url, HTTPClient.METHOD_GET, "", {})
-	var timeout_fn := func() -> Promise:
-		var p := Promise.new()
-		get_tree().create_timer(TIMEOUT_SECONDS).timeout.connect(
-			func(): p.reject("feature_flags: timeout")
-		)
-		return p
-
-	var result = await PromiseUtils.async_race([http_fn, timeout_fn])
+	var result = await PromiseUtils.async_awaiter(DclFeatureFlags.async_load())
 	if result is PromiseError:
 		# Expected on offline/slow cold starts — fail-open is the design, so this must
 		# not be error-level (Sentry quota).
 		push_warning("[FeatureFlags] fetch failed (fail-open defaults): " + str(result.get_error()))
 	else:
-		_flags = FeatureFlags.parse_response(result.get_string_response_as_json())
-		print("[FeatureFlags] loaded: ", _flags)
+		print("[FeatureFlags] loaded: ", DclFeatureFlags.flags())
 
-	_loaded = true
 	_apply_flags()
 	flags_loaded.emit()
 
