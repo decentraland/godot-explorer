@@ -1,0 +1,22 @@
+# Risks and guardrails
+
+Each risk names the measurement or check that retires it and the phase item that does it. Fill in
+the "Measured" column as results come in.
+
+| # | Risk | What we know | Guardrail | Measured |
+|---|---|---|---|---|
+| R-1 | Memory and fps on low-end Android | Hermes, V8, LiveKit and Godot in one process. Measured so far: 11–15 fps on the debug template, 14–18 on release, not yet compared with the Godot-exported app from the same commit. | Measure a release build on the Moto Edge 60 Pro and an iPhone before committing the backpack to live 3D (2.9). Budget: no worse than the Godot-exported app on fps, +100 MB RSS at most. | |
+| R-2 | Two render surfaces | The transparent backpack surface needed a Mali workaround and is unwired on iOS (`set_surface_on_top` has no iOS equivalent). | Keep the backpack as the single transparent case (D-11); write the iOS surface-order flip in 3.4; the host, not JS, flips it on `avatar_preview_mode`. | |
+| R-3 | Soft keyboard for scene text inputs | The engine surface must receive IME focus while RN sits on top; no scene `UiInput` has been tried in the RN host yet. | 2.8 verifies with a test scene on both platforms; the virtual-keyboard height reaches the core (4.14). | |
+| R-4 | Two crash handlers | sentry-godot and the Sentry RN SDK both install native handlers. | D-open-1 by 31 Oct; 3.9 applies it. | |
+| R-5 | Two cores in one process | A separate FFI library would statically link `dcl_core` twice: two runtimes, two sessions, silent. | D-6; a debug assertion counts `Core::install` calls (3.4 exit criterion). On Android confirm `System.loadLibrary("dclgodot")` returns the handle Godot opened. | |
+| R-6 | Store update loses the user's session or cache | The January release updates `org.decentraland.godotexplorer`; today's users have `settings.cfg`, `thirdweb_session.json`, `device_anchor.txt`, `attest_session.json` and `content/` under Godot's `user://`. | The core's data dir is that same path on both platforms (D-open-4) and 1.4 / 3.5 / 4.5 import the old files once. Test by upgrading a device from the store build to a branch build and checking the session survives. | |
+| R-7 | Unsymbolicated crashes after dropping sentry-godot | Android symbolication only works since the `--build-id=sha1` fix in the engine fork and in xtask's Android RUSTFLAGS; the CI symbol upload targets sentry-godot's project today. | 3.9 keeps the upload for `libdclgodot.so` / dSYM and the engine library against the same Sentry project; a deliberate test crash from Rust and from a scene on both platforms must show symbolicated frames before sentry-godot is removed. | |
+| R-8 | December is tight | Phases 4 and 5 in one month depend on how far phases 1–3 get. | Scope gate the week of 23 Nov: phases 1–3 must be done on the branch; what engine-side porting does not fit ships after January (D-13). The phase files' sizes are re-estimated with real data at the gate. | |
+| R-9 | Three months of divergence from `main` | LMT3 lands GDScript fixes on `main` in Oct–Nov; the branch deletes GDScript. | `main` merged into the branch weekly; deleted-file conflicts resolve as deleted and the fix is redone in RN or Rust in the merge PR (README rules). Phase 1 and 2 PRs are small and reviewable. | |
+| R-10 | LMT3 at risk from the side-project | The team is fully on LMT3. | The branch is Rust-only until December and ships nothing (D-13). | |
+| R-11 | Engine iteration speed | Rust engine code compiles in minutes and has no live reload. | Accepted. UI iteration moves to RN fast refresh; the emulator shortens the scene loop; `--preview` keeps scene hot reload for creators (5.5). | |
+| R-12 | Engine cannot restart in-process | Start once, live until the app dies. | Design driver (D-12): the core holds everything that must survive leaving a world; `exit_world` is tested in 3.2 with enter → exit → enter. | |
+| R-13 | The Expo Go workflow ends | A custom TurboModule cannot load in Expo Go. | Accepted (D-open-8); the no-engine native builds with the mock core replace it; documented in `rn/README.md` with 3.8. | |
+| R-14 | Signed-account paths never exercised in the RN app | Friends actions, notifications with data, account deletion, votes and reminders were only recollected, not verified. | Each phase-4 domain QA runs with a signed-in account on both phones before its GDScript is deleted. | |
+| R-15 | Feature freeze in December | One month with patch fixes only on the shipping client. | Frozen features are built directly in RN after the January release (D-13). | |
