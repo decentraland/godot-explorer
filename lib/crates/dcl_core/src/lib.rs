@@ -9,6 +9,7 @@ pub mod env;
 pub mod flags;
 pub mod http;
 pub mod network_inspector;
+pub mod notifications;
 mod open_url;
 pub mod proto;
 pub mod realm;

@@ -680,8 +680,12 @@ mod local_notification_queue_tests {
         notif3.set("type", "test");
         notifications.push(&notif3.to_variant());
 
-        // Set the internal _notifications array directly
-        manager.set("_notifications", &notifications.to_variant());
+        // Seed the feed directly: ingest takes already filtered notifications
+        let mut feed = manager.get("_feed").to::<Gd<Object>>();
+        feed.call(
+            "ingest",
+            &[notifications.to_variant(), 1_000_000_i64.to_variant()],
+        );
 
         // Call get_notifications()
         let result = manager.call("get_notifications", &[]);
