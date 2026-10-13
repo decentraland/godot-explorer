@@ -31,17 +31,9 @@ const SCREEN_NOTIFIER_AABB: AABB = AABB(Vector3(-1.0, -0.3, -1.0), Vector3(2.0, 
 # Fallback nametag height when no meshes are loaded yet (meters above avatar origin).
 const DEFAULT_NAMETAG_HEIGHT := 1.9
 
-# #2856 gait blend (Unity CharacterControllerSettings): blend normalization
-# caps per gait kind (0 idle / 1 walk / 2 jog / 3 run) and approach speed.
-const GAIT_BLEND_MAX_SPEEDS := [0.0, 1.5, 8.0, 10.0]
-const GAIT_BLEND_SPEED := 5.0
-const STILL_BLEND_THRESHOLD := 0.25
-# head sync: Unity HeadIKRemotePlayersDistance — a remote head turn is
-# dropped past this, so a crowd costs nothing at distance.
+# head sync: Unity HeadIKRemotePlayersDistance — a remote head turn is dropped
+# past this, so a crowd costs nothing at distance.
 const REMOTE_HEAD_IK_DISTANCE := 10.0
-# #2855: Unity LongFallStunTime — the hard-landing stun animation covers the
-# input lock (loco2 M6). Remote avatars derive it from the wire long_fall.
-const LONG_FALL_STUN_TIME := 0.75
 
 # Maps AvatarAnchorPointType (SDK proto, see avatar_attach.proto) to skeleton
 # bone names. Ids 0 (POSITION) and 1 (NAME_TAG) are non-skeletal and resolved
@@ -142,11 +134,6 @@ var voice_chat_audio_player_gen: AudioStreamGenerator = null
 
 var mask_material = preload("res://assets/avatar/mask_material.tres")
 
-# #2856: continuous gait blend value 0..3 (Idle/Walk/Jog/Run) and the per-jump
-# clip variation (0 or 1), both driven from _process.
-var movement_blend: float = 0.0
-var jump_variation: float = 0.0
-
 # Signal-based wearable loader for threaded loading
 var wearable_loader: WearableLoader = null
 
@@ -158,14 +145,11 @@ var _anchors: Dictionary[int, AnchorState] = {}
 # Session-level override (e.g. "Hide UI" setting). This should not persist into avatar state.
 var _force_hide_name: bool = false
 
-# Previous-frame jump_count for rising-edge detection of double-jump SFX.
-var _last_jump_count: int = 0
-var _sm_double_jump_rise: AnimationNodeAnimation
-var _double_jump_latch: bool = false
-# #2855: remote hard-landing derivation state.
-var _was_long_falling: bool = false
-var _remote_stun_timer: float = 0.0
-var _stunned_now: bool = false
+# The locomotion animation state (AvatarLocomotion): the gait blend, the jump
+# chain, the glide and the stun. Its per-frame input is refilled and reused here,
+# so the movement reads happen once a frame and no dictionary is allocated.
+var _locomotion: AvatarLocomotion = null
+var _loco_state := {}
 # The spawn/teleport hologram (see AvatarSpawnReveal). _spawn_reveal_started and
 # _born_ms belong to the trigger gate, not the reveal: they decide whether one
 # should ever start for this avatar, and the helper owns the rest of the state.
@@ -175,10 +159,6 @@ var _born_ms: int = 0
 var _feet_ik: AvatarFeetIK = null
 var _hands_ik: AvatarHandsIK = null
 var _head_ik: AvatarHeadIK = null
-# #b2: first _process tick should not treat wire-provided jump_count>=2 as a
-# rising edge — otherwise a remote avatar first seen mid-double-jump plays the
-# SFX from nothing. Cleared after the first frame where we seed _last_jump_count.
-var _jump_count_sync_pending: bool = true
 # Latched so we don't spam Close audio / Glider_End restart / hide-timer scheduling.
 var _glider_close_initiated: bool = false
 # Previous glide_state for _update_glider_prop's edge detection.
@@ -187,7 +167,6 @@ var _prop_last_glide_state: int = 0
 # came in on the wire (OPENING/GLIDING/CLOSING) without spamming audio, instead
 # of staying invisible because prev_state==0 doesn't match any branch.
 var _prop_sync_pending: bool = true
-var _glide_forward_blend: float = 0.0
 
 # Network emote that arrived while the avatar was still loading — Pulse replays
 # the peer's last emote announcement at join, and LiveKit emotes can race the
@@ -344,10 +323,10 @@ func _ready():
 
 	wearable_loader = WearableLoader.new()
 	emote_controller = AvatarEmoteController.new(self, animation_player, animation_tree)
-	# #2856: the emote controller duplicated tree_root above, so these state
-	# nodes are per-avatar copies (they are resource_local_to_scene anyway).
-	var sm: AnimationNodeStateMachine = animation_tree.tree_root.get_node("Locomotion")
-	_sm_double_jump_rise = sm.get_node("Double_Jump_Rise")
+	# #2856: the emote controller duplicated tree_root above, so the state nodes
+	# are per-avatar copies (they are resource_local_to_scene anyway);
+	# AvatarLocomotion resolves the ones it drives from the tree.
+	_locomotion = AvatarLocomotion.new(animation_tree)
 	body_shape_skeleton_3d.skeleton_updated.connect(self._attach_point_skeleton_updated)
 	body_shape_skeleton_3d.skeleton_updated.connect(self._recompute_nametag_posed_top)
 	_recompute_nametag_clearance()
@@ -1563,161 +1542,32 @@ func _process(delta):
 	if is_local_player:
 		Global.comms.set_emoting(is_emoting)
 
-	# Full-body emotes only from a standstill (old Idle->Emote gate); masked
-	# (upper-body) mixes stay available while moving.
-	animation_tree.set(
-		"parameters/Locomotion/conditions/emote",
-		emote_controller.playing_single and movement_blend < STILL_BLEND_THRESHOLD
-	)
-	animation_tree.set(
-		"parameters/Locomotion/conditions/nemote", not emote_controller.playing_single
-	)
-	animation_tree.set(
-		"parameters/Locomotion/conditions/emix",
-		emote_controller.playing_mixed and movement_blend < STILL_BLEND_THRESHOLD
-	)
-	animation_tree.set("parameters/Locomotion/conditions/nemix", not emote_controller.playing_mixed)
-
-	# #2856: continuous gait blend (Unity MovementBlend). kind comes from the
-	# walk/jog/run classification (local input mode / remote wire), speed is
-	# the measured horizontal speed; blend = clamp01(speed/blendMax)*kind,
-	# approached at MoveAnimBlendSpeed (5/s, scaled by distance).
-	# These live in Rust (Avatar extends DclAvatar): a read crosses the extension
-	# boundary and costs ~0.9 us, and the block wants most of them several times
-	# per frame, so each is read once here and reused — including in the IK gate
-	# below. Sides are the same on both ends (remotes get them off the wire).
-	var run_now := self.run
-	var jog_now := self.jog
-	var walk_now := self.walk
-	var rise_now := self.rise
-	var fall_now := self.fall
-	var land_now := self.land
-	var grounded_now := self.is_grounded
-	var fall_fast_now := self.fall_fast
-	var long_fall_now := self.long_fall
-	var jump_count_now := self.jump_count
-	var stunned_now := self.stunned
-	var glide_state_now := self.glide_state
-	var movement_speed_now := self.movement_speed
-
-	var kind := 0
-	if run_now:
-		kind = 3
-	elif jog_now:
-		kind = 2
-	elif walk_now:
-		kind = 1
-	animation_tree.set("parameters/Locomotion/conditions/run", kind == 3)
-	animation_tree.set("parameters/Locomotion/conditions/jog", kind == 2)
-	animation_tree.set("parameters/Locomotion/conditions/walk", kind == 1)
-	var target_blend := 0.0
-	if kind > 0:
-		target_blend = clampf(movement_speed_now / GAIT_BLEND_MAX_SPEEDS[kind], 0.0, 1.0) * kind
-	var blend_rate: float = maxf(
-		GAIT_BLEND_SPEED, GAIT_BLEND_SPEED * absf(target_blend - movement_blend)
-	)
-	movement_blend = move_toward(movement_blend, target_blend, blend_rate * delta)
-	animation_tree.set("parameters/Locomotion/Grounded/blend_position", movement_blend)
-	animation_tree.set(
-		"parameters/Locomotion/conditions/still", movement_blend < STILL_BLEND_THRESHOLD
-	)
-	# #2856: jump-chain selection by gait (single-condition transitions; the
-	# gait part of the old Idle/Walk/Jog/Run state split lives here now).
-	animation_tree.set("parameters/Locomotion/conditions/rise_walk", rise_now and kind < 3)
-	animation_tree.set("parameters/Locomotion/conditions/rise_run", rise_now and kind == 3)
-	# #2855: bounce pads launch without a jump (jump_count stays 0) — they skip
-	# the Jump_Start anticipation and go straight to the rise loop.
-	animation_tree.set(
-		"parameters/Locomotion/conditions/rise_bounce", rise_now and jump_count_now == 0
-	)
-
-	animation_tree.set("parameters/Locomotion/conditions/rise", rise_now)
-	animation_tree.set("parameters/Locomotion/conditions/fall", fall_now)
-	animation_tree.set("parameters/Locomotion/conditions/land", land_now)
-	# #1553: Unity anim thresholds — fall pose past vy<-3 (AnimationFallSpeed);
-	# apex = airborne between rise end and fall start (the Mid state floats it).
-	animation_tree.set("parameters/Locomotion/conditions/fall_fast", fall_fast_now)
-	animation_tree.set(
-		"parameters/Locomotion/conditions/apex",
-		not grounded_now and not rise_now and not fall_fast_now
-	)
-	# #b3: nfall reads is_grounded directly (not `land`). `land` is a short pulse
-	# locally (in_grace_time) and was previously overridden to is_grounded for
-	# remotes, causing asymmetric behavior. is_grounded is the same shape on
-	# both sides, and fall's 1-2 frame deadband at apex is still avoided.
-	animation_tree.set("parameters/Locomotion/conditions/nfall", grounded_now)
-
-	# #2855: long fall + hard-landing stun. Local avatar: stunned comes from the
-	# M6 fall-height timer (player.gd). Remote: derive — landed while the wire
-	# said long_fall this airtime.
-	if is_local_player:
-		_stunned_now = stunned_now
-	else:
-		if long_fall_now and not grounded_now:
-			_was_long_falling = true
-		if grounded_now:
-			if _was_long_falling:
-				_remote_stun_timer = LONG_FALL_STUN_TIME
-			_was_long_falling = false
-		_remote_stun_timer = maxf(_remote_stun_timer - delta, 0.0)
-		_stunned_now = _remote_stun_timer > 0.0
-	animation_tree.set("parameters/Locomotion/conditions/long_fall", long_fall_now)
-	animation_tree.set(
-		"parameters/Locomotion/conditions/fall_short", fall_fast_now and not long_fall_now
-	)
-	animation_tree.set("parameters/Locomotion/conditions/stunned", _stunned_now)
-	animation_tree.set("parameters/Locomotion/conditions/nstunned", not _stunned_now)
-	# Long_Fall exits: hard landing (stunned) must beat the normal landing —
-	# land_soft only fires when grounded without an active stun.
-	animation_tree.set(
-		"parameters/Locomotion/conditions/land_soft", grounded_now and not _stunned_now
-	)
-
-	# Rising-edge detection for one-frame AnimationTree condition pulses.
-	var jump_rising_edge: bool = jump_count_now > _last_jump_count and jump_count_now >= 2
-	# Latch it: a 1-frame pulse races the tree's advance order and can be
-	# swallowed; hold until the SM actually enters Double_Jump_Rise (or lands).
-	_double_jump_latch = _double_jump_latch or jump_rising_edge
-	# #2856: jump variation — every air jump re-rolls 0|1 and the double-jump
-	# rise swaps between the two clip variants for the current gait (Unity's
-	# Jump state blends Double_Jump_<gait> x JumpVariation).
-	if jump_count_now != _last_jump_count:
-		jump_variation = 0.0 if randf() < 0.5 else 1.0
-		var gait := "Base"
-		if run_now:
-			gait = "Run"
-		elif jog_now:
-			gait = "Jog"
-		var dj_clip := "Double_Jump_" + gait + ("_Right" if jump_variation > 0.5 else "")
-		_sm_double_jump_rise.animation = StringName("double_jump_and_glide/" + dj_clip)
-	# #b2: on first observation of this avatar (local or remote) suppress the
-	# rising edge so we don't retroactively play SFX for state that happened
-	# before we started watching.
-	if _jump_count_sync_pending:
-		jump_rising_edge = false
-		_jump_count_sync_pending = false
-	_last_jump_count = jump_count_now
-	var gliding_now: bool = glide_state_now == 1 or glide_state_now == 2
-
-	animation_tree.set("parameters/Locomotion/conditions/double_jump", _double_jump_latch)
-	animation_tree.set("parameters/Locomotion/conditions/gliding", gliding_now)
-	animation_tree.set("parameters/Locomotion/conditions/ngliding", not gliding_now)
-
-	var glide_moving: bool = walk_now or jog_now or run_now
-	var glide_forward_target: float = 1.0 if glide_moving else 0.0
-	_glide_forward_blend = move_toward(_glide_forward_blend, glide_forward_target, delta * 4.0)
-	animation_tree.set(
-		"parameters/Locomotion/Gliding_Idle/Blend2/blend_amount", _glide_forward_blend
-	)
-
-	if jump_rising_edge:
+	# #2856: one read per movement flag per frame: these live in Rust (Avatar
+	# extends DclAvatar) and a read crosses the extension boundary at ~0.9 us.
+	# AvatarLocomotion turns them into the AnimationTree conditions the state
+	# machine in avatar.tscn reads, and reports back what the IK gates need.
+	_loco_state["run"] = self.run
+	_loco_state["jog"] = self.jog
+	_loco_state["walk"] = self.walk
+	_loco_state["rise"] = self.rise
+	_loco_state["fall"] = self.fall
+	_loco_state["land"] = self.land
+	_loco_state["grounded"] = self.is_grounded
+	_loco_state["fall_fast"] = self.fall_fast
+	_loco_state["long_fall"] = self.long_fall
+	_loco_state["jump_count"] = self.jump_count
+	_loco_state["stunned"] = self.stunned
+	_loco_state["glide_state"] = self.glide_state
+	_loco_state["movement_speed"] = self.movement_speed
+	_loco_state["local"] = is_local_player
+	_loco_state["emote_single"] = emote_controller.playing_single
+	_loco_state["emote_mixed"] = emote_controller.playing_mixed
+	var loco := _locomotion.apply(delta, _loco_state)
+	var grounded_now: bool = loco["grounded"]
+	var stunned_now: bool = loco["stunned"]
+	var movement_speed_now: float = loco["movement_speed"]
+	if bool(loco["jump_rising_edge"]):
 		audio_player_double_jump.play()
-
-	# Clear the latch once consumed (entered the state) or moot (landed).
-	if _double_jump_latch:
-		var pb = animation_tree.get("parameters/Locomotion/playback")
-		if pb.get_current_node() == "Double_Jump_Rise" or self.is_grounded:
-			_double_jump_latch = false
 
 	_update_glider_prop()
 
@@ -1726,7 +1576,7 @@ func _process(delta):
 	var ik_enabled := (
 		is_local_player
 		and grounded_now
-		and not _stunned_now
+		and not stunned_now
 		and not emote_controller.is_playing()
 		and _lod_state == LODState.FULL
 		and _spawn_reveal.is_idle()
@@ -1758,7 +1608,7 @@ func _process(delta):
 			and _lod_state == LODState.FULL
 			and _spawn_reveal.is_idle()
 			and not _world_is_loading
-			and not _stunned_now
+			and not stunned_now
 			and not emote_controller.is_playing()
 		)
 		_head_ik.update_remote(delta, head_on, self.head_ik_yaw, self.head_ik_pitch)
