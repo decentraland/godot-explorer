@@ -225,10 +225,6 @@ pub struct DclAvatar {
     // #1553: anim-level fall gate (vy < -3, Unity AnimationFallSpeed).
     #[export]
     fall_fast: bool,
-    // #2855: stun decision pending (0.1s arm delay) — the SM holds Long_Fall
-    // until it resolves. player.gd writes it; always false for remotes.
-    #[export]
-    stun_pending: bool,
 
     // Multi-jump + gliding state, driven by player.gd (local) or the remote-
     // movement decoder. Consumed by avatar.gd edge detection. glide_state
@@ -246,8 +242,8 @@ pub struct DclAvatar {
     #[export]
     movement_speed: f32,
 
-    // #2853 head sync (Unity HeadSync): the sender's head turn in degrees, in
-    // its own frame, plus whether it is aiming at all. The wire writes these for
+    // Head sync (Unity HeadSync): the sender's head turn in degrees, in its own
+    // frame, plus whether it is aiming at all. The wire writes these for
     // remotes; the local player never reads them (it aims from its own camera).
     #[export]
     head_ik_yaw: f32,
@@ -286,7 +282,6 @@ impl INode3D for DclAvatar {
             long_fall: false,
             stunned: false,
             fall_fast: false,
-            stun_pending: false,
             lerp_state: Default::default(),
             base,
             walk: false,
@@ -541,7 +536,7 @@ impl DclAvatar {
         self.fall_fast = !grounded_gate && velocity_y < -3.0;
     }
 
-    /// Head turn from the wire (#2853 head sync). Unity's HeadSync sends the
+    /// Head turn from the wire. Unity's HeadSync sends the
     /// sender's yaw/pitch plus the enable flags; the decoder already undoes the
     /// unsigned [0, 360] wraparound, so these are signed degrees in the sender's
     /// own frame. A disabled pair drops the turn — the flags follow the sender's
