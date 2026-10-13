@@ -1,6 +1,6 @@
 # Phase 2: Rust root node and the emulator
 
-26 Oct – 6 Nov 2026, Mateo. The engine API becomes real.
+The engine API becomes real.
 
 ## Goal
 
@@ -25,7 +25,7 @@ engine-side GDScript that phase 7 ports; it stops creating services and stops be
 
 ## Work items
 
-- [ ] **2.1 `dcl_engine::Engine` facade** (L). The calls and events of `03-engine-api.md` as a
+- [ ] **2.1 `dcl_engine::Engine` facade**. The calls and events of `03-engine-api.md` as a
   struct the root owns: `start`, `enter_world`, `exit_world`, `teleport`, `set_self_profile`,
   `play_emote`, `show/hide_avatar_preview`, `apply_graphics`, `apply_audio`, `set_hud_insets`,
   lifecycle. Internally it still instantiates `explorer.tscn` for World and a transparent viewport
@@ -33,32 +33,32 @@ engine-side GDScript that phase 7 ports; it stops creating services and stops be
   engine-side GDScript is ported here. The event sink is a trait the core implements; chat messages
   and comms presence reach the core through it while transports stay in the engine (D-32). Core →
   engine calls are queued and drained in the root's `process`.
-- [ ] **2.2 `DclRoot` as the main scene** (M). Reads `DclCli`, `Core::install`, `Engine::start`,
+- [ ] **2.2 `DclRoot` as the main scene**. Reads `DclCli`, `Core::install`, `Engine::start`,
   then `enter_world` from `--realm/--location/--preview` or the test-runner flags. The twenty-odd
   services `global.gd` created and added under `/root` are created by the core (session, metrics,
   …) or by the engine (scene runner, comms, avatars, content provider, …) and exposed to the
   remaining GDScript through the `Global` facade. Autoloads that only the GDScript UI needed stay
   until the phase-4 sweep deletes their users.
-- [ ] **2.3 Scene-requested actions through the core** (M). `handle_restricted_actions.rs` → `EngineEvent::SceneRequest` → `dcl_core::scene_requests` (policy, pending map, `answer`). The
+- [ ] **2.3 Scene-requested actions through the core**. `handle_restricted_actions.rs` → `EngineEvent::SceneRequest` → `dcl_core::scene_requests` (policy, pending map, `answer`). The
   emulator sink auto-accepts teleport and realm changes and prints external URLs and NFT opens. The
   `nft_dialog.tscn` load from Rust goes. `move_player_to`, `camera_look_at` and the emote RPCs use
   `Engine` handles instead of `/root/explorer` and `/root/explorer/world/Player/Avatar`.
-- [ ] **2.4 Node paths** (S). `global_get_node_helper.rs` (4 paths), `dcl_ui_control.rs`
+- [ ] **2.4 Node paths**. `global_get_node_helper.rs` (4 paths), `dcl_ui_control.rs`
   (`MobileCameraInput`), `dcl_global.rs` (`explorer`, `Global`) → handles owned by `Engine`.
-- [ ] **2.5 Test runners on the root** (M). `--test-runner` (itest), `--scene-test`, client tests and
+- [ ] **2.5 Test runners on the root**. `--test-runner` (itest), `--scene-test`, client tests and
   the renderer tools (`avatar_renderer_mode`, `asset_renderer_mode`, `emote_test_mode`,
   `--lighting-renderer`, `asset_server`) that `main.gd` routed become `DclRoot` modes. The GDScript
   `test_runner.gd` is still invoked for the GDScript suite until phase 7.8.
-- [ ] **2.6 Emulator CLI and docs** (S). `--realm`, `--location`, `--preview <url>`, `--scene-test`,
+- [ ] **2.6 Emulator CLI and docs**. `--realm`, `--location`, `--preview <url>`, `--scene-test`,
   `--rust-log`, graphics preset; `--skip-lobby`, `--guest-profile`, `--rn-host`, `--rn-avatar-only`
   disappear (there is no lobby to skip and no mode to switch). `docs/MOBILE_PREVIEW.md` and the
   README's run section updated; `--emulate-ios/--emulate-android` keep only their window size role.
-- [ ] **2.7 Boot-arg parity in the hosts** (S). Android `BOOT_ARGS` and the iOS `GodotHost.mm` arg
+- [ ] **2.7 Boot-arg parity in the hosts**. Android `BOOT_ARGS` and the iOS `GodotHost.mm` arg
   list become the same minimal set; the engine starts Idle on both. (Phase 3 removes the
   JSON-driven mode switch entirely.)
-- [ ] **2.8 IME check** (S). A test scene with a `UiInput`; verify focus and the soft keyboard on
+- [ ] **2.8 IME check**. A test scene with a `UiInput`; verify focus and the soft keyboard on
   both phones under the RN overlay. Record the result in `risks.md` R-3.
-- [ ] **2.9 Measure the RN host** (S). Release build, Genesis Plaza, Moto Edge 60 Pro and an
+- [ ] **2.9 Measure the RN host**. Release build, Genesis Plaza, Moto Edge 60 Pro and an
   iPhone: fps, RSS, startup. Same scene in the Godot-exported app from the same commit. Record in
   `risks.md` R-1.
 

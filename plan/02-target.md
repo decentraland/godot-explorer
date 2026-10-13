@@ -100,5 +100,5 @@ The scene runner, V8 runtime, CRDT, SDK UI, content pipeline and comms transport
 Godot fork, its version and its export pipeline stay; mobile exports are embedded in the RN app as
 today (`rn/scripts/sync-godot-*.sh`, `cargo run -- export --target android|ios`). The protocol with
 scenes and servers does not change; no SDK change is involved. The store identity
-(`org.decentraland.godotexplorer`) stays, so the January release is an update of the existing app
+(`org.decentraland.godotexplorer`) stays, so the 2.0.0 release is an update of the existing app
 and must find the sessions and caches the Godot-exported app wrote (see risks R-6).
