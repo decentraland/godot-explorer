@@ -12,7 +12,7 @@ pub mod session;
 pub mod social;
 pub mod urls;
 
-pub use crate::core::{Core, CoreConfig, Platform};
+pub use crate::core::{data_file, Core, CoreConfig, Platform};
 pub use crate::open_url::OpenUrlRequest;
 
 /// User-Agent for all outgoing reqwest HTTP clients. reqwest sends none by

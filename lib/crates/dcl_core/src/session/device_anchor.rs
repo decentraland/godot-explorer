@@ -6,30 +6,27 @@
 //! - a non-empty value passed from GDScript wins. That value is the
 //!   platform-native device anchor (Android SSAID / iOS Keychain UUID, which
 //!   persists across reinstall).
-//! - otherwise it falls back to a per-install UUID in `user://device_anchor.txt`
+//! - otherwise it falls back to a per-install UUID in `device_anchor.txt` in the data dir
 //!   (the desktop source, and what mobile uses when GDScript's
 //!   `DEBUG_GUEST_ROTATE_ANCHOR_ID` flag makes `get_device_anchor_id` return "").
-//!   Deleting `user://` then resets the guest identity to a brand-new wallet.
+//!   Deleting the data dir then resets the guest identity to a brand-new wallet.
 
 use ethers_core::utils::{hex, keccak256};
-use godot::classes::file_access::ModeFlags;
-use godot::classes::FileAccess;
-use godot::prelude::GString;
 use uuid::Uuid;
 
-const ANCHOR_PATH: &str = "user://device_anchor.txt";
+use crate::data_file;
+
+const ANCHOR_FILE: &str = "device_anchor.txt";
 const SESSION_ID_PREFIX: &str = "dcl-godot";
 
-/// Reads the per-install UUID anchor from `user://device_anchor.txt`, creating
+/// Reads the per-install UUID anchor from `device_anchor.txt` in the data dir, creating
 /// it on first use. This is the fallback used whenever `resolve_anchor` gets an
 /// empty value (always on desktop; on mobile only when the rotate flag is on).
 pub fn get_or_create_user_anchor() -> String {
-    let path = GString::from(ANCHOR_PATH);
+    let path = data_file(ANCHOR_FILE);
 
-    if FileAccess::file_exists(&path) {
-        if let Some(mut file) = FileAccess::open(&path, ModeFlags::READ) {
-            let content = file.get_as_text().to_string();
-            file.close();
+    if let Some(path) = path.as_ref().filter(|p| p.exists()) {
+        if let Ok(content) = std::fs::read_to_string(path) {
             let trimmed = content.trim();
             if !trimmed.is_empty() {
                 return trimmed.to_string();
@@ -37,23 +34,17 @@ pub fn get_or_create_user_anchor() -> String {
         }
         tracing::warn!(
             "device_anchor: existing file at {} is empty or unreadable, regenerating",
-            ANCHOR_PATH
+            path.display()
         );
     }
 
     let uuid = Uuid::new_v4().to_string();
-    match FileAccess::open(&path, ModeFlags::WRITE) {
-        Some(mut file) => {
-            file.store_string(&GString::from(&uuid));
-            file.close();
-            tracing::info!("device_anchor: wrote new user anchor to {}", ANCHOR_PATH);
+    match path.as_ref().map(|p| std::fs::write(p, &uuid)) {
+        Some(Ok(())) => tracing::info!("device_anchor: wrote new user anchor"),
+        Some(Err(e)) => {
+            tracing::error!("device_anchor: failed to write the anchor ({e}), it will not persist")
         }
-        None => {
-            tracing::error!(
-                "device_anchor: failed to open {} for writing — anchor will not persist",
-                ANCHOR_PATH
-            );
-        }
+        None => tracing::error!("device_anchor: core not installed, anchor will not persist"),
     }
     uuid
 }

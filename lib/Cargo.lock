@@ -952,6 +952,7 @@ dependencies = [
  "tracing",
  "tracing-test",
  "url",
+ "uuid 1.11.0",
 ]
 
 [[package]]

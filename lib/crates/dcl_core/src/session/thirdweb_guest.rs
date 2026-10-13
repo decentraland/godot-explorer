@@ -7,12 +7,10 @@
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use ethers_core::types::H160;
-use godot::classes::file_access::ModeFlags;
-use godot::classes::FileAccess;
-use godot::prelude::GString;
 use serde::{Deserialize, Serialize};
 
 use super::wallet::AsH160;
+use crate::data_file;
 
 const THIRDWEB_CLIENT_ID: &str = "e1adce863fe287bb6cf0e3fd90bdb77f";
 const THIRDWEB_API_BASE: &str = "https://api.thirdweb.com";
@@ -144,7 +142,7 @@ fn classify_reqwest_error(e: &reqwest::Error) -> &'static str {
     }
 }
 
-const SESSION_PATH: &str = "user://thirdweb_session.json";
+const SESSION_FILE: &str = "thirdweb_session.json";
 
 #[derive(Debug, Serialize, Deserialize)]
 struct PersistedSession {
@@ -158,7 +156,7 @@ struct PersistedSession {
 /// launches can renew the local ephemeral delegation by calling
 /// `sign_message` again, without paying the round trip to `/v1/auth/complete`.
 /// The JWT lives in the user data dir as plaintext JSON — fine for V1 (same
-/// trust level as the rest of `user://settings.ini`); a follow-up should
+/// trust level as the rest of `settings.cfg`); a follow-up should
 /// move this into Keychain (iOS) / Keystore (Android) for parity with the
 /// platform-secure stores we already use for the device anchor.
 pub fn save_session_to_disk(session: &ThirdwebGuestSession) -> Result<(), anyhow::Error> {
@@ -173,11 +171,10 @@ pub fn save_session_to_disk(session: &ThirdwebGuestSession) -> Result<(), anyhow
     };
     let json = serde_json::to_string(&payload)?;
 
-    let path = GString::from(SESSION_PATH);
-    let mut file = FileAccess::open(&path, ModeFlags::WRITE)
-        .ok_or_else(|| anyhow::anyhow!("failed to open {} for write", SESSION_PATH))?;
-    file.store_string(&GString::from(&json));
-    file.close();
+    let path = data_file(SESSION_FILE)
+        .ok_or_else(|| anyhow::anyhow!("core not installed, cannot persist {SESSION_FILE}"))?;
+    std::fs::write(&path, json)
+        .map_err(|e| anyhow::anyhow!("failed to write {}: {e}", path.display()))?;
     Ok(())
 }
 
@@ -186,13 +183,7 @@ pub fn save_session_to_disk(session: &ThirdwebGuestSession) -> Result<(), anyhow
 /// is not validated against thirdweb here; expiration is enforced by the
 /// API when it's used.
 pub fn load_session_from_disk() -> Option<ThirdwebGuestSession> {
-    let path = GString::from(SESSION_PATH);
-    if !FileAccess::file_exists(&path) {
-        return None;
-    }
-    let mut file = FileAccess::open(&path, ModeFlags::READ)?;
-    let content = file.get_as_text().to_string();
-    file.close();
+    let content = std::fs::read_to_string(data_file(SESSION_FILE)?).ok()?;
     let payload: PersistedSession = serde_json::from_str(&content).ok()?;
     let wallet_address = payload.wallet_address.as_str().as_h160()?;
     Some(ThirdwebGuestSession {

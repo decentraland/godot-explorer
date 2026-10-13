@@ -100,6 +100,11 @@ impl Core {
     }
 }
 
+/// A file under the core data dir, `None` before `Core::install`.
+pub fn data_file(name: &str) -> Option<PathBuf> {
+    Core::try_get().map(|core| core.data_dir().join(name))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
