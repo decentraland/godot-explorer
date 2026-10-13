@@ -1,19 +1,22 @@
 # Phase 3: FFI and the real entry flow
 
-Side-project target, Nov 2026. First user-visible change on the branch.
+2 – 15 Nov 2026, Mateo. First user-visible change on the branch.
 
 ## Goal
 
-A typed FFI from `dcl_core` to the RN app, the core app state machine, and real sign-in in RN: guest,
-email OTP, browser hand-off, wallet. The JSON bridge and `godot/src/rn_bridge/` are deleted.
+A typed FFI from `dcl_core` to the RN app, the core app state machine, and real sign-in in RN with
+every method 1.15 has: guest, email OTP, Google and Apple through the browser hand-off, MetaMask on
+Android, WalletConnect on iOS. The JSON bridge, `godot/src/rn_bridge/` and the GDScript lobby are
+deleted.
 
 ## Exit criteria
 
 - [ ] On an Android phone and an iPhone, the RN app from `cargo run -- run --target android|ios`
-      signs in as guest and by email, recovers the session after a restart, enters Genesis Plaza
+      signs in with each method, recovers the session after a restart, enters Genesis Plaza
       through `core.enter_world`, leaves, and enters again.
-- [ ] `godot/src/rn_bridge/` is gone; `rn/src/GodotBridge.ts`, `rn/src/bridge/`, `rn/src/engine.ts`
-      and `rn/src/events.ts` are gone; `rn/src/core/` is the only way RN reaches native.
+- [ ] `godot/src/rn_bridge/` and `godot/src/ui/pages/auth/` are gone; `rn/src/GodotBridge.ts`,
+      `rn/src/bridge/`, `rn/src/engine.ts` and `rn/src/events.ts` are gone; `rn/src/core/` is the
+      only way RN reaches native.
 - [ ] One `Core` per process, verified: the TurboModule and the GDExtension share the library handle
       (an `installed()` counter asserts it in debug builds).
 - [ ] `rn/src` has no hardcoded `decentraland.org|zone` or `dclexplorer.com` outside `*mock*` and
@@ -22,7 +25,7 @@ email OTP, browser hand-off, wallet. The JSON bridge and `godot/src/rn_bridge/` 
 
 ## Work items
 
-- [ ] **3.1 Binding trial** (S, time-boxed to two days). uniffi proc-macros on a slice of the core
+- [ ] **3.1 Binding setup** (S, time-boxed to two days). uniffi proc-macros on a slice of the core
   (`state()`, `sign_in_guest()`, one async call, the event callback interface), built into
   `libdclgodot` with the `ffi` feature. Set up `uniffi-bindgen-react-native` (D-17) for the
   generated C++/JSI TurboModule and TS types. The checks below are its acceptance; a failed one
@@ -40,34 +43,39 @@ email OTP, browser hand-off, wallet. The JSON bridge and `godot/src/rn_bridge/` 
 - [ ] **3.2 Core state machine** (L). The states of `04-core-api.md` as `dcl_core::app::State`;
   `Booting` recovers the persisted session; `enter_world` resolves the destination, raises
   `engine_required` if no engine is attached, then drives Idle → Loading → InWorld from engine
-  events; `exit_world` keeps transports and session. Unit tests cover every transition with a fake
-  engine sink.
+  events; `exit_world` keeps the session. Unit tests cover every transition with a fake engine sink.
 - [ ] **3.3 FFI surface v1** (L). Session, boot gates, destination, URLs, state, avatar preview rect,
   analytics, lifecycle, deep links; the callback interface with every event in `04-core-api.md`.
   `rn/src/core/index.ts` is the typed surface; `rn/src/core/mock.ts` implements it for no-engine
   builds and replaces `mockBridge.ts` / `mockHandlers.ts`.
 - [ ] **3.4 Native hosts** (M). Android: `DclCoreModule` loads `dclgodot`, installs the core with
-  the app's files dir (risks R-6), registers the event callback; `MainActivity` creates
-  `GodotFragment` on `engine_required` and flips surface order on `avatar_preview_mode`.
-  `GodotBridgeModule.kt` and `RnHostPlugin.kt` are deleted. iOS: same in `GodotHost.mm` /
-  `AppDelegate.swift`; the missing `set_surface_on_top` equivalent is written (CAMetalLayer order).
+  the data dir the Godot-exported app used (D-19, risks R-6), registers the event callback;
+  `MainActivity` creates `GodotFragment` on `engine_required` and flips surface order on
+  `avatar_preview_mode`. `GodotBridgeModule.kt` and `RnHostPlugin.kt` are deleted. iOS: same in
+  `GodotHost.mm` / `AppDelegate.swift`; the missing `set_surface_on_top` equivalent is written
+  (CAMetalLayer order). `GODOT_USE_BRANCH` set so `install --targets ios` fetches
+  `ios_host_release.a` from the engine branch build (D-23).
 - [ ] **3.5 Attestation** (L). `attestation_service.gd` (869) → `dcl_core::attestation`: session
   token exchange with the mobile-bff (URL from `urls`, not hardcoded), JWT cache under the data dir
   (importing `user://attest_session.json` once), retry policy. The host provides the OS call as a
   callback: Play Integrity on Android, `DCAppAttestService` on iOS, ported from the Godot plugins.
-- [ ] **3.6 Entry flow on the core** (M). `flow/auth.ts` stub → core calls. Guest and email OTP
-  (the form and code modal are missing in RN today); every other provider button (Google, Apple,
-  MetaMask, WalletConnect) shows a "not available in this version" message (D-25); welcome-back
-  from the real profile; T&C version; version gate and device-support gate as core calls with RN
-  modals; the FTUE "Jump in" through `resolve_destination`. The browser hand-off and the wallet
-  flows are not wired; they return in phase 6, in RN.
+- [ ] **3.6 Entry flow on the core, every method** (L). `flow/auth.ts` stub → core calls. Guest;
+  email OTP (the form and code modal are missing in RN today); Google and Apple through the
+  browser hand-off (`open_url` event, app-return completes through `handle_deep_link`, all already
+  Rust in `decentraland_auth_server.rs` / `remote_wallet.rs`); MetaMask on Android and
+  WalletConnect on iOS by calling today's native code (the Reown classes in `dcl-godot-android`,
+  the Swift lib on iOS) from the host module, replaced by an RN library after the release (D-25);
+  welcome-back from the real profile; T&C version; version gate and device-support gate as core
+  calls with RN modals; the FTUE "Jump in" through `resolve_destination`.
 - [ ] **3.7 Deep links** (M). RN `Linking` and the iOS `AppDelegate` → `core.handle_deep_link`;
   `deep_link_router.gd` routing (jump, open, events, places, sign-in resume with the 5-minute cap,
   config params, push attribution) → `dcl_core::deep_link::route` on the state machine.
-- [ ] **3.8 Delete the bridge, add the lint** (S). Remove `godot/src/rn_bridge/` (15 files), the
-  `RnBridge` autoload, `--rn-host` / `--rn-avatar-only` in `dcl_cli.rs`, the RN JSON layer. Add the
-  eslint `no-restricted-syntax` rule for hardcoded hosts; move the eight files in `01-today.md` to
-  `core.urls()`.
+- [ ] **3.8 Delete the bridge and the lobby, add the lint** (S). Remove `godot/src/rn_bridge/`
+  (15 files; `rn_ui_filter.gd` last, or after the phase-4 sweep), the `RnBridge` autoload,
+  `--rn-host` / `--rn-avatar-only` in `dcl_cli.rs`, the RN JSON layer, and `ui/pages/auth/`
+  (`lobby.gd` 1,428, `login.gd`, `sign_in_with_email.gd`, the lobby avatar editor), dead from this
+  commit. Add the eslint `no-restricted-syntax` rule for hardcoded hosts; move the eight files in
+  `01-today.md` to `core.urls()`.
 - [ ] **3.9 Sentry** (M, D-16). `@sentry/react-native` in the app with the native SDKs
   under it; the sentry-godot addon and `SentryObjC.framework` leave the RN build; the policy in
   `project_main_loop.gd` (per-source keep rates, remote rate from flags) → `dcl_core::report` with
@@ -75,8 +83,7 @@ email OTP, browser hand-off, wallet. The JSON bridge and `godot/src/rn_bridge/` 
   captured there with the same tags `crash_context.rs` sets today. CI symbol upload for
   `libdclgodot` and the engine keeps working (risks R-7).
 - [ ] **3.10 CI** (S). `rn_app.yml` keeps typecheck, lint, jest, the no-engine Android build and
-  the iOS simulator build; the with-engine iOS job stays manual until the host template is published
-  (`ios_host_release.a`, decisions D-23).
+  the iOS simulator build; the with-engine iOS job runs on the branch engine build (D-23).
 
 ## Verification
 
@@ -88,4 +95,4 @@ email OTP, browser hand-off, wallet. The JSON bridge and `godot/src/rn_bridge/` 
 ## Depends on / unblocks
 
 Depends on phase 1 (core) and 2.1–2.3 (engine facade, scene requests). Unblocks phase 4 (every
-screen rewires from the JSON `req` methods to the FFI) and the scope gate.
+screen rewires from the JSON `req` methods to the FFI).

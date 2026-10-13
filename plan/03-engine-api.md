@@ -3,7 +3,7 @@
 Today the contract between app and engine is implicit: a composition root in GDScript, six hardcoded
 `/root/…` paths and about 40 methods Rust calls by string name (list in `01-today.md`). Writing it down is
 the first engine task because the emulator, the core and the shell all depend on it. It becomes a
-Rust type in phase 2 (`dcl_engine::Engine`) and is finished when phase 5 removes the last by-name call.
+Rust type in phase 2 (`dcl_engine::Engine`) and is finished when phase 7 removes the last by-name call.
 
 Threading: the engine is driven on Godot's main thread. Core → engine calls are enqueued and drained
 in the root node's `process` (the pattern `dcl_tokio_rpc.rs` uses today). Engine → core calls are
@@ -67,13 +67,13 @@ instead of `/root/explorer` paths.
 |---|---|
 | `global_get_node_helper.rs` paths | handles owned by `Engine` (world root, player, avatar, dialog stack gone) |
 | `handle_restricted_actions.rs` → `modal_manager.gd` | `scene_request` event |
-| `handle_restricted_actions.rs` → `/root/explorer` `move_to`, `camera_look_at`, … | `Engine::player()` typed calls (phase 5.2) |
-| `avatar_scene.rs` → `avatar.gd` methods | `DclAvatar` Rust class with the same functions (phase 5.1) |
-| `scene_runner/components/*` → component `.gd` | Rust component classes, typed `bind_mut()` (phase 5.4) |
+| `handle_restricted_actions.rs` → `/root/explorer` `move_to`, `camera_look_at`, … | `Engine::player()` typed calls (phase 7.2) |
+| `avatar_scene.rs` → `avatar.gd` methods | `DclAvatar` Rust class with the same functions (phase 7.1) |
+| `scene_runner/components/*` → component `.gd` | Rust component classes, typed `bind_mut()` (phase 7.4) |
 | `communication_manager.rs` → `global.gd` realm/profile callbacks | core `realm`/`session` watchers (phase 1.7) |
 | `message_processor.rs` → `Gd<AvatarScene>` | `AvatarSink` trait implemented by the engine (phase 1.7) |
 | `dcl_player_identity.rs` → `lobby.gd` callbacks | core `session` events (phase 1.4) |
 | `notifications.rs` → `notifications_manager.gd` | core `notifications` (phase 1.9, 4.6) |
 | `profile_service.rs` → `save_to_settings_file` | core `settings` (phase 4.5) |
-| `dcl_video_player.rs`, `dcl_audio_stream.rs` → `_backend_*` | Rust video/audio components (phase 5.4) |
+| `dcl_video_player.rs`, `dcl_audio_stream.rs` → `_backend_*` | Rust video/audio components (phase 7.4) |
 | `dcl_ios_plugin.rs`, `dcl_swift_lib.rs`, `DclAndroidPlugin` | OS intake in the shell's native host; engine keeps only what scenes need (phase 3–4) |
