@@ -24,8 +24,11 @@ extends SceneTree
 #   W_g(b,t)     = mirror(delta_u) * W_g_rest(b)        (apply on our rest)
 #   pose         = rest_g(b)^-1 * local_of(W_g)         (rest-relative track)
 # Same for positions (vector mirror, no quaternion).
+# The clips pair up 1:1 with assets/no-export/locomotion_legacy.res (same tracks
+# and key counts) and differ only in how a rotation is split across the chain —
+# the idle's neck carries +8.6 deg of yaw, the head -9.0, so the head ends level.
+#
 # Worlds are composed in each rig's own armature/skeleton space (cm both).
-# Oracle: compare_final.gd (final-space dot vs assets/no-export/locomotion_legacy.res must be ~1).
 
 const INPUT_DIR := "res://assets/no-export/unity_locomotion/"
 const UNITY_REST_JSON := "res://assets/no-export/unity_locomotion/unity_rig_rest.json"
