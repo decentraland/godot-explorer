@@ -1,5 +1,6 @@
 use std::{path::PathBuf, sync::Arc};
 
+use crate::engine::DclEngine;
 use dcl_core::{Core, CoreConfig, Platform};
 use godot::{
     classes::{node::ProcessMode, Engine, Os},
@@ -250,6 +251,9 @@ pub struct DclGlobal {
     pub cli: Gd<DclCli>,
 
     #[var(get)]
+    pub engine: Gd<DclEngine>,
+
+    #[var(get)]
     pub dynamic_graphics_manager: Gd<DclDynamicGraphicsManager>,
 
     // Stored as InstanceId, not Gd<DclAvatar>: the underlying Node3D may be freed
@@ -349,6 +353,8 @@ impl INode for DclGlobal {
 
         let mut metrics: Gd<Metrics> = Metrics::new_alloc();
         let mut cli: Gd<DclCli> = DclCli::new_alloc();
+        let mut engine: Gd<DclEngine> = DclEngine::new_alloc();
+        engine.set_name("dcl_engine");
         let mut dynamic_graphics_manager: Gd<DclDynamicGraphicsManager> =
             DclDynamicGraphicsManager::new_alloc();
 
@@ -488,6 +494,7 @@ impl INode for DclGlobal {
             #[cfg(not(feature = "enable_inspector"))]
             has_javascript_debugger: false,
             cli,
+            engine,
             dynamic_graphics_manager,
             selected_avatar: None,
 
@@ -601,25 +608,7 @@ impl DclGlobal {
 
     #[func]
     pub fn ui_has_focus(&self) -> bool {
-        // Check if the explorer UI has focus by calling the GDScript function
-        let tree = Engine::singleton().get_main_loop();
-        if let Some(tree) = tree {
-            if let Ok(tree) = tree.try_cast::<SceneTree>() {
-                let root = tree.get_root();
-                if let Some(root) = root {
-                    // Try to find the explorer node
-                    let explorer = root.get_node_or_null("explorer");
-                    if let Some(mut explorer) = explorer {
-                        // Call ui_has_focus if it exists
-                        if explorer.has_method("ui_has_focus") {
-                            return explorer.call("ui_has_focus", &[]).to::<bool>();
-                        }
-                    }
-                }
-            }
-        }
-        // Default to true if we can't determine focus state
-        true
+        self.engine.bind().ui_has_focus()
     }
 
     #[func]

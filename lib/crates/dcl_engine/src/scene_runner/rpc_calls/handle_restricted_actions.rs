@@ -1,16 +1,14 @@
 use crate::{
     dcl::{scene_apis::RpcResultSender, SceneId},
+    engine::DclEngine,
     godot_classes::dcl_global::DclGlobal,
-    scene_runner::{
-        global_get_node_helper::{get_avatar_node, get_dialog_stack_node, get_explorer_node},
-        scene::{Scene, SceneType},
-    },
+    scene_runner::scene::{Scene, SceneType},
 };
 
 use godot::{
     meta::ToGodot,
     obj::Singleton,
-    prelude::{PackedScene, Variant, Vector2i, Vector3},
+    prelude::{PackedScene, Vector2i, Vector3},
 };
 use http::Uri;
 
@@ -142,8 +140,11 @@ pub fn open_nft_dialog(
         return;
     }
 
-    // Get nodes
-    let mut dialog_stack = get_dialog_stack_node(scene);
+    let Some(mut dialog_stack) = DclEngine::get().and_then(|engine| engine.bind().dialog_stack())
+    else {
+        response.send(Err("DialogStack not available".to_string()));
+        return;
+    };
 
     let mut confirm_dialog = godot::tools::load::<PackedScene>(
         "res://src/ui/components/organisms/dialogs/nft_dialog.tscn",
@@ -173,7 +174,10 @@ pub fn move_player_to(
         return;
     }
 
-    let mut explorer_node = get_explorer_node(scene);
+    let Some(engine) = DclEngine::get() else {
+        return;
+    };
+    let engine = engine.bind();
 
     let base_parcel = scene.scene_entity_definition.scene_meta_scene.scene.base;
     let scene_position = Vector3::new(
@@ -207,10 +211,7 @@ pub fn move_player_to(
 
     // Set player position
     let position_target = Vector3::new(position_target.x, position_target.y, -position_target.z);
-    explorer_node.call(
-        "move_to",
-        &[Variant::from(position_target), true.to_variant()],
-    );
+    engine.move_player_to(position_target, true);
 
     // Handle avatar and camera targeting according to ADR-257:
     // - avatarTarget: where the avatar body looks
@@ -223,23 +224,23 @@ pub fn move_player_to(
             // Then avatar_look_at_independent (sets avatar to face avatar target relative to player)
             let camera_pos = Vector3::new(camera[0], camera[1], camera[2]) + scene_position;
             let camera_pos = Vector3::new(camera_pos.x, camera_pos.y, -camera_pos.z);
-            explorer_node.call("camera_look_at", &[Variant::from(camera_pos)]);
+            engine.camera_look_at(camera_pos);
 
             let avatar_pos = Vector3::new(avatar[0], avatar[1], avatar[2]) + scene_position;
             let avatar_pos = Vector3::new(avatar_pos.x, avatar_pos.y, -avatar_pos.z);
-            explorer_node.call("avatar_look_at_independent", &[Variant::from(avatar_pos)]);
+            engine.avatar_look_at_independent(avatar_pos);
         }
         (Some(avatar), None) => {
             // Only avatar target: avatar looks at it
             let target_pos = Vector3::new(avatar[0], avatar[1], avatar[2]) + scene_position;
             let target_pos = Vector3::new(target_pos.x, target_pos.y, -target_pos.z);
-            explorer_node.call("player_look_at", &[Variant::from(target_pos)]);
+            engine.player_look_at(target_pos);
         }
         (None, Some(camera)) => {
             // Only camera target: backward compatibility (both avatar and camera look at it)
             let target_pos = Vector3::new(camera[0], camera[1], camera[2]) + scene_position;
             let target_pos = Vector3::new(target_pos.x, target_pos.y, -target_pos.z);
-            explorer_node.call("player_look_at", &[Variant::from(target_pos)]);
+            engine.player_look_at(target_pos);
         }
         (None, None) => {
             // No targets: do nothing
@@ -331,15 +332,9 @@ pub fn trigger_emote(scene: &Scene, current_parcel_scene_id: &SceneId, emote_id:
         return;
     }
 
-    let mut avatar_node = get_avatar_node(scene);
-    avatar_node.call(
-        "async_play_emote",
-        &[
-            emote_id.to_variant(),
-            mask.to_variant(),
-            scene.scene_id.0.to_variant(),
-        ],
-    );
+    if let Some(engine) = DclEngine::get() {
+        engine.bind().play_emote(emote_id, mask, scene.scene_id.0);
+    }
 
     // Broadcast emote to other players via comms
     DclGlobal::singleton()
@@ -396,33 +391,19 @@ pub fn trigger_scene_emote(
         scene.scene_entity_definition.id, emote_hash.glb_hash, looping
     );
 
-    let mut avatar_node = get_avatar_node(scene);
+    if let Some(engine) = DclEngine::get() {
+        let engine = engine.bind();
+        // Register content URL for this scene (so GDScript can look it up)
+        engine.register_scene_emote_content(
+            &scene.scene_entity_definition.id,
+            &scene.content_mapping.base_url,
+            &emote_hash.glb_hash,
+            emote_hash.audio_hash.as_deref().unwrap_or_default(),
+        );
 
-    // Register content URL for this scene (so GDScript can look it up)
-    avatar_node.call(
-        "register_scene_emote_content",
-        &[
-            scene.scene_entity_definition.id.to_godot().to_variant(),
-            scene.content_mapping.base_url.to_godot().to_variant(),
-            emote_hash.glb_hash.to_godot().to_variant(),
-            emote_hash
-                .audio_hash
-                .as_deref()
-                .unwrap_or_default()
-                .to_godot()
-                .to_variant(),
-        ],
-    );
-
-    // Call the SAME function as wearable emotes!
-    avatar_node.call(
-        "async_play_emote",
-        &[
-            scene_emote_urn.to_variant(),
-            mask.to_variant(),
-            scene.scene_id.0.to_variant(),
-        ],
-    );
+        // Call the SAME function as wearable emotes!
+        engine.play_emote(&scene_emote_urn, mask, scene.scene_id.0);
+    }
 
     // Broadcast to other players
     tracing::info!("triggerSceneEmote: broadcasting URN={}", scene_emote_urn);
@@ -458,5 +439,7 @@ pub fn stop_emote(scene: &Scene, current_parcel_scene_id: &SceneId) {
         return;
     }
 
-    get_avatar_node(scene).call("stop_emote_from_scene", &[scene.scene_id.0.to_variant()]);
+    if let Some(engine) = DclEngine::get() {
+        engine.bind().stop_emote_from_scene(scene.scene_id.0);
+    }
 }

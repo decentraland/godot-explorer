@@ -25,6 +25,7 @@ pub mod content;
 pub mod dcl;
 pub use dcl_core::deep_link;
 pub use dcl_core::env;
+pub mod engine;
 pub mod godot_classes;
 pub mod http_request;
 #[cfg(test)]

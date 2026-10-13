@@ -226,6 +226,7 @@ func _ready():
 		player.vr_screen.set_instantiate_scene(ui_root)
 
 	emote_wheel.avatar_node = player.avatar
+	Global.engine.attach_world(self)
 
 	# The episode is opened by the navigation below, which knows the realm this boot is
 	# actually heading for -- last_realm_joined is the wrong one for a deeplink.

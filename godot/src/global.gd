@@ -691,6 +691,7 @@ func _ready():
 	self.review_prompt_coordinator.set_name("review_prompt_coordinator")
 
 	get_tree().root.add_child.call_deferred(self.cli)
+	get_tree().root.add_child.call_deferred(self.engine)
 	get_tree().root.add_child.call_deferred(self.music_player)
 	get_tree().root.add_child.call_deferred(self.scene_fetcher)
 	get_tree().root.add_child.call_deferred(self.skybox_time)

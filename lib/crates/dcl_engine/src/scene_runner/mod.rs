@@ -1,6 +1,5 @@
 pub mod components;
 mod deleted_entities;
-pub mod global_get_node_helper;
 mod godot_dcl_scene;
 pub(crate) mod input;
 pub mod loading_funnel;

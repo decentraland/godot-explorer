@@ -19,6 +19,7 @@ use crate::{
         },
         SceneEntityId,
     },
+    engine::DclEngine,
     godot_classes::dcl_global::DclGlobal,
     scene_runner::{
         components::ui::scene_ui::UiResults,
@@ -55,7 +56,6 @@ pub struct DclUiControl {
     pressed_touch_index: i32,
     press_position: Vector2,
     broke_out: bool,
-    mobile_camera_input: Option<Gd<Node>>,
 }
 
 #[godot_api]
@@ -74,7 +74,6 @@ impl IControl for DclUiControl {
             pressed_touch_index: -1,
             press_position: Vector2::ZERO,
             broke_out: false,
-            mobile_camera_input: None,
         }
     }
 
@@ -226,16 +225,7 @@ impl DclUiControl {
     }
 
     fn get_mobile_camera_input(&mut self) -> Option<Gd<Node>> {
-        if let Some(node) = self.mobile_camera_input.as_ref() {
-            if node.is_instance_valid() {
-                return Some(node.clone());
-            }
-        }
-        let node = self
-            .base()
-            .get_node_or_null("/root/explorer/UI/MobileCameraInput")?;
-        self.mobile_camera_input = Some(node.clone());
-        Some(node)
+        DclEngine::get()?.bind().touch_camera_input()
     }
 
     fn push_pointer_result(&mut self, state: PointerEventType) {
