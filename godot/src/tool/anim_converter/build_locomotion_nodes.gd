@@ -43,7 +43,7 @@ func _make_grounded() -> void:
 
 # clip name -> start_offset aligning its left-foot contact to Walk's.
 func _foot_contact_offsets() -> Dictionary:
-	var lib: AnimationLibrary = load("res://assets/animations/locomotion_full.tres")
+	var lib: AnimationLibrary = load("res://assets/animations/locomotion_full.res")
 	var contact_phase := {}
 	for clip in ["Walk", "Jog", "Run"]:
 		contact_phase[clip] = _contact_phase(lib.get_animation(clip))

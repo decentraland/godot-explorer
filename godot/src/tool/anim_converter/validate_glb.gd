@@ -7,7 +7,7 @@ extends SceneTree
 #   .bin/godot/Godot.app/Contents/MacOS/Godot --headless --path godot \
 #       --script src/tool/anim_converter/validate_glb.gd
 
-const LIB := "res://assets/animations/locomotion_full.tres"
+const LIB := "res://assets/animations/locomotion_full.res"
 const BONES := ["Avatar_Hips", "Avatar_Head", "Avatar_LeftHand", "Avatar_LeftFoot"]
 # converted clip -> existing clip in locomotion.res
 const PAIRS := [["Jump_Fall", "Jump_Fall"], ["Idle", "Idle"], ["Walk", "Walk"]]

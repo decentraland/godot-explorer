@@ -6,7 +6,7 @@ extends SceneTree
 #       --script src/tool/anim_converter/dump_locomotion_library.gd
 
 const SRC := "res://assets/no-export/locomotion/Avatar_Locomotion_Fix.glb"
-const OUT := "res://assets/animations/locomotion_full.tres"
+const OUT := "res://assets/animations/locomotion_full.res"
 # The GLB import loses loop flags; gait clips must loop (they don't here, and
 # a frozen last frame is the "patinando" bug). Slide loops too.
 # Jump_Mid/Run_Jump_Mid loop so their auto-advance never fires — the apex
