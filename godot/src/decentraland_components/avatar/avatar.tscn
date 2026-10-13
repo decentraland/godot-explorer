@@ -431,11 +431,14 @@ advance_mode = 2
 advance_condition = &"rise_run"
 
 [sub_resource type="AnimationNodeStateMachineTransition" id="AnimationNodeStateMachineTransition_je2g"]
+xfade_time = 0.1
+switch_mode = 2
 advance_mode = 2
 advance_condition = &"nfall"
 
 [sub_resource type="AnimationNodeStateMachineTransition" id="AnimationNodeStateMachineTransition_rje2g"]
 xfade_time = 0.1
+switch_mode = 2
 advance_mode = 2
 advance_condition = &"nfall"
 
