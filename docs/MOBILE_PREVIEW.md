@@ -1,5 +1,9 @@
 # Mobile Preview Plugin
 
+> Running the client (not the editor plugin) on desktop: `cargo run -- run` always emulates a phone;
+> `--emulate-ios` / `--emulate-android` only pick the window size and safe areas. Add `--realm <url>
+> --location x,y` or `--preview <url>` to skip the lobby and enter a world as a throwaway guest.
+
 Preview how your UI looks on mobile devices directly in the Godot editor.
 
 ## Toolbar Controls

@@ -16,7 +16,6 @@ void godot_host_exit_background(void);
 void godot_host_memory_warning(void);
 }
 
-static NSString *const kMainRealm = @"https://realm-provider-ea.decentraland.org/main";
 #endif
 
 // RN's own container views: a touch that only hits these landed on a transparent area.
@@ -105,9 +104,7 @@ static NSArray<NSString *> *engineArguments(void) {
 	NSArray<NSString *> *launch = NSProcessInfo.processInfo.arguments;
 	NSMutableArray<NSString *> *args = [NSMutableArray arrayWithArray:@[
 		launch.firstObject,
-		@"--rn-host", @"--skip-lobby", @"--guest-profile",
-		@"--realm", kMainRealm,
-		@"--location", @"0,0",
+		@"--rn-host", @"--rn-avatar-only",
 	]];
 	NSString *cmdlinePath = [NSBundle.mainBundle pathForResource:@"godot_cmdline" ofType:@"txt"];
 	NSString *cmdline = cmdlinePath ? [NSString stringWithContentsOfFile:cmdlinePath encoding:NSUTF8StringEncoding error:nil] : nil;

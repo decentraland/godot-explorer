@@ -276,14 +276,14 @@ impl DclCli {
             },
             ArgDefinition {
                 name: "--emulate-ios".to_string(),
-                description: "Emulate iOS safe area margins (iPhone 14 Pro style notch)"
+                description: "Phone window and iOS safe areas (iPhone 14 Pro style notch). Window size only: it does not change what runs"
                     .to_string(),
                 arg_type: ArgType::Flag,
                 category: "UI/Display".to_string(),
             },
             ArgDefinition {
                 name: "--emulate-android".to_string(),
-                description: "Emulate Android safe area margins (status bar + gesture nav)"
+                description: "Phone window and Android safe areas (status bar + gesture nav). Window size only: it does not change what runs"
                     .to_string(),
                 arg_type: ArgType::Flag,
                 category: "UI/Display".to_string(),
@@ -306,7 +306,7 @@ impl DclCli {
             // World/Scene
             ArgDefinition {
                 name: "--realm".to_string(),
-                description: "Specify the realm URL to connect to".to_string(),
+                description: "Realm URL to enter. Without --rn-host, a realm or --preview starts the emulator: a throwaway guest straight into the world, no lobby".to_string(),
                 arg_type: ArgType::Value("<URL>".to_string()),
                 category: "World/Scene".to_string(),
             },
@@ -318,7 +318,7 @@ impl DclCli {
             },
             ArgDefinition {
                 name: "--preview".to_string(),
-                description: "Enable preview mode for scene development".to_string(),
+                description: "Preview mode for scene development. With a URL (--preview http://localhost:8000) and no --realm, that URL is the realm".to_string(),
                 arg_type: ArgType::Flag,
                 category: "World/Scene".to_string(),
             },

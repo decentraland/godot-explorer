@@ -101,8 +101,11 @@ Expo modules. Upgrading RN means moving to the Expo SDK that ships it.
 - `--godot-only` stops `export` after Godot's own export, at its usual paths.
 
 `DclHostViewController` stacks the RN view over Godot's and routes each touch: to RN when a real RN view is under
-it, to Godot otherwise. Neither host passes `--force-mobile`: it marks the client as a *virtual* mobile, and the
-landscape switch then resizes the window to 1280×720 like the desktop preview. The iOS `AppDelegate` forwards deep
+it, to Godot otherwise. Both hosts start the engine with `--rn-host --rn-avatar-only` (Idle: no lobby, no
+world); the world is entered with the `enter_world` command. Android also passes `--force-mobile --no-pulse`
+(`MainActivity.BOOT_ARGS`); iOS does not. `--force-mobile` marks the client as a *virtual* mobile, so on a desktop it
+resizes the window to 1280×720 on the landscape switch and the virtual-keyboard height poll in `global.gd` is
+skipped — check both on a device before aligning the two lists (plan 2.8). The iOS `AppDelegate` forwards deep
 links, universal links and APNs callbacks to the DclGodotiOS services (they listen on `GDTApplicationDelegate`,
 which is not the app delegate here); on Android the `com.godot.game.GodotAppLauncher` alias keeps the deep-link
 filters, home-screen shortcuts and the xtask launch command of the Godot-exported app.

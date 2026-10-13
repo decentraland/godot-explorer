@@ -93,6 +93,11 @@ cargo run -- build
 cargo run -- run
 cargo run -- run -- --emulate-android
 
+# The emulator: a realm or a preview server on the command line skips the lobby and enters the
+# world as a throwaway guest. `--emulate-ios/android` only choose the phone window size.
+cargo run -- run -- --realm https://peer.decentraland.org --location 52,-52
+cargo run -- run -- --preview http://localhost:8000
+
 # Run the editor
 cargo run -- run -e
 

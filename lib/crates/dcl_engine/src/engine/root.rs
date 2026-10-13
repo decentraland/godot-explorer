@@ -262,6 +262,7 @@ impl DclRoot {
             }
             BootMode::Emulator => {
                 println!("Running in Emulator mode");
+                Self::use_preview_url_as_realm(&global);
                 global
                     .bind()
                     .get_engine()
@@ -282,6 +283,15 @@ impl DclRoot {
     fn change_scene(&mut self, path: &str) {
         if let Some(mut tree) = self.base().get_tree() {
             tree.change_scene_to_file(path);
+        }
+    }
+
+    /// `--preview <url>` names the realm when `--realm` is not given.
+    fn use_preview_url_as_realm(global: &Gd<DclGlobal>) {
+        let cli = global.bind().get_cli();
+        let url = cli.bind().get_arg("--preview".into());
+        if cli.bind().realm.is_empty() && !url.is_empty() {
+            cli.clone().bind_mut().realm = url;
         }
     }
 
