@@ -960,7 +960,7 @@ impl DclPlayerIdentity {
     }
 
     #[func]
-    fn get_recover_account_to(&self, mut dict: VarDictionary) -> bool {
+    pub fn get_recover_account_to(&self, mut dict: VarDictionary) -> bool {
         let Some(account) = self.session.recoverable_account() else {
             return false;
         };

@@ -39,6 +39,10 @@ pub struct DclCli {
     #[var(get)]
     pub rn_host: bool,
     #[var(get)]
+    pub rn_avatar_only: bool,
+    #[var(get)]
+    pub lighting_renderer: bool,
+    #[var(get)]
     pub guest_profile: bool,
     #[var(get)]
     pub preview_mode: bool,
@@ -249,6 +253,19 @@ impl DclCli {
                     .to_string(),
                 arg_type: ArgType::Flag,
                 category: "UI/Display".to_string(),
+            },
+            ArgDefinition {
+                name: "--rn-avatar-only".to_string(),
+                description: "With --rn-host, boot into the transparent avatar scene (Idle) instead of the explorer"
+                    .to_string(),
+                arg_type: ArgType::Flag,
+                category: "UI/Display".to_string(),
+            },
+            ArgDefinition {
+                name: "--lighting-renderer".to_string(),
+                description: "Run the lighting renderer tool scene".to_string(),
+                arg_type: ArgType::Flag,
+                category: "Testing".to_string(),
             },
             ArgDefinition {
                 name: "--skip-lobby-to-menu".to_string(),
@@ -770,6 +787,8 @@ impl INode for DclCli {
         let skip_lobby = args_map.contains_key("--skip-lobby");
         let skip_lobby_to_menu = args_map.contains_key("--skip-lobby-to-menu");
         let rn_host = args_map.contains_key("--rn-host");
+        let rn_avatar_only = args_map.contains_key("--rn-avatar-only");
+        let lighting_renderer = args_map.contains_key("--lighting-renderer");
         let guest_profile = args_map.contains_key("--guest-profile");
         let preview_mode = args_map.contains_key("--preview");
         let scene_test_mode = args_map.contains_key("--scene-test");
@@ -967,6 +986,8 @@ impl INode for DclCli {
             skip_lobby,
             skip_lobby_to_menu,
             rn_host,
+            rn_avatar_only,
+            lighting_renderer,
             guest_profile,
             preview_mode,
             scene_test_mode,

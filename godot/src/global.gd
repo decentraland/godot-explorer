@@ -526,7 +526,7 @@ func _ready():
 
 	var args = cli.get_all_args()
 	if args.size() == 1 and args[0].begins_with("res://"):
-		if args[0] != "res://src/main.tscn":
+		if args[0] != "res://src/dcl_root.tscn":
 			self.standalone = true
 
 	if FORCE_TEST:
@@ -1581,7 +1581,7 @@ func _notification(what: int) -> void:
 
 			# On cold start, set the environment from the deeplink BEFORE processing it, or
 			# _check_dclenv_change() sees default "org" vs deeplink env and calls sign_out()
-			# prematurely, skipping the orientation/UI zoom setup in main.gd.
+			# prematurely, skipping the orientation/UI zoom setup in DclRoot.
 			if what == NOTIFICATION_READY:
 				var parsed = DclParseDeepLink.parse_decentraland_link(new_url)
 				if not parsed.dclenv.is_empty():

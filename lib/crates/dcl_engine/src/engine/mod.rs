@@ -3,6 +3,7 @@
 
 pub mod bootstrap;
 mod dcl_engine;
+pub mod root;
 pub mod scene_requests;
 
 pub use dcl_engine::DclEngine;
