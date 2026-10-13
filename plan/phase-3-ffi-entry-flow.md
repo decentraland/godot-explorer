@@ -55,12 +55,12 @@ email OTP, browser hand-off, wallet. The JSON bridge and `godot/src/rn_bridge/` 
   token exchange with the mobile-bff (URL from `urls`, not hardcoded), JWT cache under the data dir
   (importing `user://attest_session.json` once), retry policy. The host provides the OS call as a
   callback: Play Integrity on Android, `DCAppAttestService` on iOS, ported from the Godot plugins.
-- [ ] **3.6 Entry flow on the core** (M). `flow/auth.ts` stub → core calls. Guest; email OTP (the
-  form and code modal are missing in RN today); browser hand-off (`open_url` event, app-return
-  completes through `handle_deep_link`); welcome-back from the real profile; T&C version; version
-  gate and device-support gate as core calls with RN modals; the FTUE "Jump in" through
-  `resolve_destination`. Wallet sign-in (WalletConnect / MetaMask) through an RN library
-  (decisions D-open-8); if it is not ready by the scope gate it moves to phase 4.
+- [ ] **3.6 Entry flow on the core** (M). `flow/auth.ts` stub → core calls. Guest and email OTP
+  (the form and code modal are missing in RN today); every other provider button (Google, Apple,
+  MetaMask, WalletConnect) shows a "not available in this version" message (D-25); welcome-back
+  from the real profile; T&C version; version gate and device-support gate as core calls with RN
+  modals; the FTUE "Jump in" through `resolve_destination`. The browser hand-off and the wallet
+  flows are not wired; they return in phase 6, in RN.
 - [ ] **3.7 Deep links** (M). RN `Linking` and the iOS `AppDelegate` → `core.handle_deep_link`;
   `deep_link_router.gd` routing (jump, open, events, places, sign-in resume with the 5-minute cap,
   config params, push attribution) → `dcl_core::deep_link::route` on the state machine.
@@ -76,7 +76,7 @@ email OTP, browser hand-off, wallet. The JSON bridge and `godot/src/rn_bridge/` 
   `libdclgodot` and the engine keeps working (risks R-7).
 - [ ] **3.10 CI** (S). `rn_app.yml` keeps typecheck, lint, jest, the no-engine Android build and
   the iOS simulator build; the with-engine iOS job stays manual until the host template is published
-  (`ios_host_release.a`, decisions D-open-10).
+  (`ios_host_release.a`, decisions D-23).
 
 ## Verification
 

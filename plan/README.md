@@ -24,6 +24,7 @@ to `main`**. Nothing outside `plan/` may link into it. Everything in it was chec
 | [phase-3-ffi-entry-flow.md](phase-3-ffi-entry-flow.md) | Typed FFI, the core state machine, real sign-in in RN, JSON bridge deleted |
 | [phase-4-screens.md](phase-4-screens.md) | Screens domain by domain; each deletes its GDScript when it lands |
 | [phase-5-engine-port.md](phase-5-engine-port.md) | Avatar, player, SDK components, fetcher into `dcl_engine`; zero `.gd` |
+| [phase-6-refinement.md](phase-6-refinement.md) | After the release: the features removed for 2.0.0 come back, in RN and the core |
 | [decisions.md](decisions.md) | Decided and open decisions, each with a recommendation and a date |
 | [risks.md](risks.md) | Risks, guardrails, and the measurement each one needs |
 
@@ -37,7 +38,8 @@ to `main`**. Nothing outside `plan/` may link into it. Everything in it was chec
 | Scope gate | week of 23 Nov 2026 | EM + team | |
 | 4. Screens, domain by domain | Dec 2026 | full team | not started |
 | 5. Engine-side port | Dec 2026, rest after release | full team | not started |
-| Release | Jan 2027 | | |
+| Release 2.0.0 | Jan 2027 | | |
+| 6. Refinement: removed features back | Q1 2027, after the release | full team | not started |
 
 Update the status column and the checkboxes inside each phase file as work lands. Sizes in the phase
 files are S (≤1 day), M (2–3 days), L (about a week), XL (more than a week). They are guesses; the
@@ -62,8 +64,10 @@ scope gate corrects them with what phases 1–3 actually cost.
 
 - PRs target this branch, one module or one domain per PR, reviewed like any other PR (`REVIEW.md`).
   Each phase file's work items are the PR list.
-- `main` is merged into the branch at least weekly. A conflict in a `.gd` file the branch deleted
-  resolves as deleted; if the fix on `main` matters, it is redone in RN or Rust in the same merge PR.
+- `main` is merged into the branch every day by a scheduled automated job (an AI session) that
+  updates PR #3059 with what landed on `main`, skips UI-only changes, and resolves a conflict in a
+  `.gd` file the branch deleted as deleted. A fix on `main` that matters outside the UI is redone
+  in RN or Rust by the job or flagged for a person (D-31).
 - Nothing from the branch ships before December. LMT3 ships exactly what it would have shipped.
 - Phase 1 PRs are reviewable Rust-only moves. Keep them that way: no behaviour change, no renames
   beyond the move, `cargo test -p dcl_core` green.

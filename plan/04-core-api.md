@@ -32,17 +32,17 @@ state is the only thing the shell renders from; the HUD's `booting|loading|playi
 | Domain | Calls | Replaces |
 |---|---|---|
 | State | `state()`, `on_state_changed` (event) | `engine.ts` snapshot, `world`/`ready` events |
-| Session | `sign_in_guest()`, `sign_in_email_start(email)`, `sign_in_email_verify(code)`, `sign_in_browser(provider)` (opens via `open_url` event, completes on `handle_deep_link`), `sign_in_wallet(provider)`, `sign_out()`, `delete_account()`, `profile()`, `accept_terms(version)` | `lobby.gd`, `flow/auth.ts` stub, `account.*` |
+| Session | `sign_in_guest()`, `sign_in_email_start(email)`, `sign_in_email_verify(code)`, `sign_out()`, `delete_account()`, `profile()`, `accept_terms(version)`; `sign_in_browser(provider)` and `sign_in_wallet(provider)` exist but return `NotAvailable` until phase 6 (D-25) | `lobby.gd`, `flow/auth.ts` stub, `account.*` |
 | Boot gates | `version_gate()`, `device_support()`, `pending_campaign()` | `version_gate.gd`, `device_support_coordinator.gd`, `campaigns.gd` |
 | Destination | `resolve_destination(input) -> Destination` (place, world, parcel, access verdict), `enter_world(Destination)`, `exit_world()`, `teleport(parcel)` | `destination_resolver.gd`, `navigator.gd`, `enter_world`/`exit_world`/`teleport` commands |
 | URLs | `urls() -> Urls` (places, events, catalyst, lambdas, marketplace, help, terms, …), `environment()` | hardcoded hosts in `rn/src`, `DclUrls` |
 | Avatar | `show_avatar_preview(rect_px)`, `hide_avatar_preview()`, `set_preview_focus(target)`, `equip(urn) -> AvatarChange`, `unequip(urn)`, `set_body_shape(urn)`, `set_color(target, rgba)`, `set_emote_slot(slot, urn)`, `randomize_avatar()`, `play_emote(urn)`, `catalog(query)`, `base_emotes()`, `deploy_profile(Profile)` | `backpack_*`, `equip`, `rn_backpack.gd`, `wearables.gd` rules, `backpack/*.ts` copies, `profile.deploy` |
 | Chat | `send_chat(text)`, `on_chat_message` (event), `unread_count()`, `mark_chat_read()` | `send_chat`, `chat`, `unread_chat` |
 | Friends | `friends()`, `friend_requests()`, `nearby()`, `send_request`, `accept`, `reject`, `cancel`, `block`, `unblock`, `on_friends_changed` | `friends.*` |
-| Notifications | `notifications(page)`, `mark_read(ids)`, `set_push_token(token)`, `on_notification` (event) | `notifications.*`, `notifications_manager.gd` |
+| Notifications | `notifications(page)`, `mark_read(ids)`, `on_notification` (event); `set_push_token(token)` in phase 6 (D-21) | `notifications.*`, `notifications_manager.gd` |
 | Places, events (signed part) | `favorite(place_id, bool)`, `vote(place_id, up)`, `set_event_reminder(id, bool)` | `places.*`, `fetch.signed` |
 | Settings | `settings()`, `set_setting(key, value)`, `cache_size()`, `clear_cache()`, `version()`, `on_settings_changed` | `settings.*`, `config_data.gd` |
-| Credits, IAP | `credits_balance()`, `quote(product)`, `verify_purchase(receipt)`, `marketplace_url()` | `iap_manager.gd` signed calls |
+| Credits, IAP | Phase 6 (D-21): `credits_balance()`, `quote(product)`, `verify_purchase(receipt)`, `marketplace_url()` | `iap_manager.gd` signed calls |
 | Deep links | `handle_deep_link(url) -> Routed` | `deep_link_router.gd`, iOS `AppDelegate` forwarding |
 | Analytics | `track(event, props)`, `track_screen(name, props)` | `Global.metrics.track_*` (~106 call sites), no Segment RN SDK |
 | Reporting | `report_js_error(…)` is **not** offered; see Sentry in decisions | |
@@ -68,8 +68,8 @@ event (the core sends to Segment itself).
 - Register the event callback and forward to JS.
 - On `engine_required`: create the Godot view, call `Engine::start(core)`. On `avatar_preview_mode`:
   flip the surface order (`set_surface_on_top`; iOS equivalent still to be written).
-- Provide the OS calls the core needs as callbacks: attestation (Play Integrity / App Attest), push
-  token, store purchase result, clipboard, share sheet, calendar.
+- Provide the OS calls the core needs as callbacks: attestation (Play Integrity / App Attest) and
+  clipboard now; push token, store purchase, share sheet and calendar return in phase 6 (D-21).
 - Touch routing stays as the hosts do it today: RN when a real RN view is under the finger, Godot
   otherwise.
 
@@ -78,4 +78,4 @@ event (the core sends to Segment itself).
 `cargo run -- run --target ios|android --no-godot` and `npm run android:no-godot` keep working: the
 TurboModule binds to a mock core (`rn/src/core/mock.ts`) that implements the same TS interface,
 replacing `mockBridge.ts` and `mockHandlers.ts`. The Expo Go workflow ends with the FFI: a custom
-native module cannot load in Expo Go (decisions D-open-8).
+native module cannot load in Expo Go (decisions D-21).

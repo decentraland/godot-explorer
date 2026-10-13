@@ -53,8 +53,9 @@ instead of `/root/explorer` paths.
 
 ## Who holds what
 
-- The engine owns: scene tree, scenes, avatars (remote and local), player, camera, scene UI, joystick
-  and gamepad, loading orchestration, resource loading and the content cache *consumers*.
+- The engine owns: scene tree, scenes, avatars (remote and local), player, camera, scene UI, joystick,
+  gamepad and the emote wheel (D-24), loading orchestration, resource loading and the content cache
+  *consumers*.
 - The core owns: identity, profile, realm and destination, comms transports, friends, blacklist,
   settings and graphics presets, feature flags, analytics, the content cache *policy* and data dir.
 - The engine reads core state through `Arc<Core>` (identity for signed fetches, blacklist for hiding

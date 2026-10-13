@@ -53,14 +53,14 @@ Each is one PR into the branch unless noted. Order matters: 1.0 and 1.1 unblock 
   (`social_service`, `rfc4`, kernel comms); `dcl_engine/build.rs` keeps the component codegen
   (`components_enum`, `crdt_impl`, `deserialize_component`). `to_godot()` impls and the
   `GodotConvert` for `SceneEntityId` move to the engine as extension traits. Core math type: `glam`
-  (decisions D-open-9); replace `Vector2/2i/3/Color` in `comms/pulse/*`, `movement_compressed.rs`,
+  (decisions D-22); replace `Vector2/2i/3/Color` in `comms/pulse/*`, `movement_compressed.rs`,
   `comms/profile.rs`, `dcl/mod.rs`, `scene_apis.rs`, `common/scene.rs`.
 - [ ] **1.4 Auth and session** (L). Move `wallet`, `ephemeral_auth_chain`, `ethereum_provider`,
   `remote_wallet`, `decentraland_auth_server`, `review_login`, `deploy_profile`, `thirdweb_guest`,
   `device_anchor` into `dcl_core::session`; `FileAccess` → `std::fs` under `core.data_dir()`.
   Session persistence enters Rust: `session_account`, `guest_profile`, `session_is_ephemeral`,
   `analytics_user_id` leave `config_data.gd` for a core session store, with a one-time import from
-  `user://settings.cfg` (decisions D-open-3). `DclPlayerIdentity` (1,597) becomes an adapter whose
+  `user://settings.cfg` (decisions D-18). `DclPlayerIdentity` (1,597) becomes an adapter whose
   `#[func]`s call the core; `lobby.gd` keeps working unchanged. The `_mobile_auth_*` and
   `_set_thirdweb_*` callbacks into `lobby.gd` become core session events the adapter re-emits as
   signals.

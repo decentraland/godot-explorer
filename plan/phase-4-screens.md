@@ -40,33 +40,32 @@ the core part is large.
   (1,267) → `dcl_core::avatar`: categories and slots, body-shape rules, forced defaults for eyes,
   mouth and eyebrows, base emotes, emote slots, "can I equip X" returning the resulting avatar, base
   catalog and owned items, profile deploy. The engine renders through `set_self_profile`. RN
-  `backpack/` drops its copies. Delete `ui/pages/backpack`, the lobby avatar editor,
-  `lambda_wearable_request`, `organisms/emotes`.
+  `backpack/` drops its copies. Delete `ui/pages/backpack`, the lobby avatar editor and
+  `lambda_wearable_request`; `organisms/emotes` (the emote wheel) ports to the engine in 5.3.
 - [ ] **4.4 Chat** (M). Chat through core events (comms in the core since 1.7); nearby, mentions,
   commands (`ChatCommands`), speech bubbles stay engine-side. RN `hud/` chat exists. Delete
   `ui/pages/chat` and the chat organisms.
 - [ ] **4.5 Settings** (M). `config_data.gd` (767) schema → `dcl_core::settings` with the one-time
-  import of `user://settings.cfg` (decisions D-open-3); the keys in `rn/src/settings/keys.ts` are the
+  import of `user://settings.cfg` (decisions D-18); the keys in `rn/src/settings/keys.ts` are the
   contract; the engine reads graphics, audio and gameplay values from the core; benchmark results and
   the dynamic graphics preset are written by the engine through core events. RN `settings/` exists.
   Delete `ui/pages/settings` (1,644), `config/`, `dcl_config.rs`'s `ConfigFile`.
-- [ ] **4.6 Notifications** (M). Core poll and read state from 1.9; RN renders the list and toasts
-  and schedules local OS notifications with an RN library (D-open-8); push token from RN native →
-  `core.set_push_token`. Delete `notifications_manager.gd` (1,539), `organisms/notifications`,
-  `lib/src/notifications.rs`.
+- [ ] **4.6 Notifications** (M). Core poll and read state from 1.9; RN renders the list and toasts.
+  OS push and local notifications are out of 2.0.0 and return in phase 6 (D-21). Delete
+  `notifications_manager.gd` (1,539), `organisms/notifications`, `lib/src/notifications.rs`.
 - [ ] **4.7 Profile** (M). RN `profile/` exists; names, deploy, snapshots through the core. Delete
   `ui/pages/profile` (2,580), `logic/player/player_identity.gd`.
-- [ ] **4.8 IAP and credits** (L). Store purchase through an RN IAP library (D-open-8); quote,
-  verify, balance and the marketplace round-trip in `dcl_core::credits` (from `iap_manager.gd`
-  1,078 and `marketplace_tracker.gd` 363). Delete `iap/`, `DclStoreKitPlugin`, `dcl_swift_lib`'s
-  StoreKit part, the `Iap` and `MarketplaceTracker` autoloads.
+- [ ] **4.8 IAP and credits** (S). Out of 2.0.0 (D-21): delete `iap/` (`iap_manager.gd` 1,078,
+  `marketplace_tracker.gd` 363), `DclStoreKitPlugin`, `dcl_swift_lib`'s StoreKit part, the `Iap`
+  and `MarketplaceTracker` autoloads and the credits UI. Store purchase in the shell and the
+  credits logic in the core return in phase 6.
 - [ ] **4.9 Modals and scene requests** (M). The 30 kinds in `modal_manager.gd` (1,900) become RN
   modals; the ones with policy (scene requests from 2.3, guest upgrade nudge, version gate, device
   support, scene timeout, discard-edit confirm) take their verdicts from the core. Delete
   `modal_manager.gd`, `organisms/modal`, `organisms/dialogs`, `upgrade_modal`,
   `update_available`.
 - [ ] **4.10 Loading, HUD, menu** (M). RN `hud/`, `world/`, `menu/` exist; loading progress, place
-  card and tips from core events; emote wheel in RN (the engine plays the emote); coach marks; the
+  card and tips from core events; the emote wheel stays in the engine (D-24, item 5.3); coach marks; the
   version/FPS line moves to RN from core/engine state. Delete `ui/pages/loading_screen`,
   `organisms/menu`, `explorer.gd`'s UI half, `layouts/`, `SplashOverlay`, `TouchFeedback`,
   `UiSounds`.
