@@ -435,6 +435,40 @@ static func _get_profile_suffix() -> String:
 	return "_" + saved_profile
 
 
+static func _parse_session_dict(text: String, default_value: Dictionary) -> Dictionary:
+	if text.is_empty():
+		return default_value
+	var parsed: Variant = str_to_var(text)
+	if parsed is Dictionary:
+		return parsed
+	return default_value
+
+
+# One-time move of the saved session from settings.cfg into the core's session.json.
+func _import_legacy_session(legacy: ConfigFile) -> void:
+	if DclSessionStore.exists():
+		return
+	var accounts := {}
+	var guest_profiles := {}
+	if legacy.has_section("session"):
+		for key: String in legacy.get_section_keys("session"):
+			if key.begins_with("account"):
+				accounts[key.trim_prefix("account")] = legacy.get_value("session", key)
+			elif key.begins_with("guest_profile"):
+				guest_profiles[key.trim_prefix("guest_profile")] = legacy.get_value("session", key)
+	var suffixes := accounts.keys()
+	for suffix: String in guest_profiles.keys():
+		if not suffixes.has(suffix):
+			suffixes.append(suffix)
+	for suffix: String in suffixes:
+		DclSessionStore.save_slot(
+			suffix, var_to_str(accounts.get(suffix, {})), var_to_str(guest_profiles.get(suffix, {}))
+		)
+	var legacy_analytics_id: String = legacy.get_value("analytics", "user_id", "")
+	if not legacy_analytics_id.is_empty():
+		DclSessionStore.save_analytics_user_id(legacy_analytics_id)
+
+
 func load_from_settings_file():
 	var data_default := ConfigData.new()
 	data_default.load_from_default()
@@ -526,13 +560,14 @@ func load_from_settings_file():
 		"config", "audio_mic_amplification", data_default.audio_mic_amplification
 	)
 
+	_import_legacy_session(settings_file)
 	var profile_suffix := _get_profile_suffix()
-	self.session_account = settings_file.get_value(
-		"session", "account" + profile_suffix, data_default.session_account
+	self.session_account = _parse_session_dict(
+		DclSessionStore.load_account(profile_suffix), data_default.session_account
 	)
 
-	self.guest_profile = settings_file.get_value(
-		"session", "guest_profile" + profile_suffix, data_default.guest_profile
+	self.guest_profile = _parse_session_dict(
+		DclSessionStore.load_guest_profile(profile_suffix), data_default.guest_profile
 	)
 
 	self.last_parcel_position = settings_file.get_value(
@@ -543,9 +578,10 @@ func load_from_settings_file():
 		"user", "last_realm_joined", data_default.last_realm_joined
 	)
 
-	self.analytics_user_id = settings_file.get_value(
-		"analytics", "user_id", DclConfig.generate_uuid_v4()
-	)
+	var stored_analytics_id := DclSessionStore.load_analytics_user_id()
+	if stored_analytics_id.is_empty():
+		stored_analytics_id = DclConfig.generate_uuid_v4()
+	self.analytics_user_id = stored_analytics_id
 
 	self.last_places_by_wallet = settings_file.get_value(
 		"user", "last_places_by_wallet", data_default.last_places_by_wallet
@@ -696,17 +732,16 @@ func save_to_settings_file():
 	new_settings_file.set_value("config", "audio_mic_amplification", self.audio_mic_amplification)
 	new_settings_file.set_value("config", "texture_quality", self.get_texture_quality())
 
-	# Preserve all existing session keys (other profile slots)
-	if settings_file.has_section("session"):
+	# Until the core has written session.json the old keys are the only copy of the session.
+	if not DclSessionStore.exists() and settings_file.has_section("session"):
 		for key in settings_file.get_section_keys("session"):
 			new_settings_file.set_value("session", key, settings_file.get_value("session", key))
 
-	# When session is ephemeral (guest/preview), preserve existing session data on disk
-	# and don't overwrite with the in-memory guest session values.
+	# When session is ephemeral (guest/preview), the saved session stays untouched on disk.
 	if not session_is_ephemeral:
-		var profile_suffix := _get_profile_suffix()
-		new_settings_file.set_value("session", "account" + profile_suffix, self.session_account)
-		new_settings_file.set_value("session", "guest_profile" + profile_suffix, self.guest_profile)
+		DclSessionStore.save_slot(
+			_get_profile_suffix(), var_to_str(self.session_account), var_to_str(self.guest_profile)
+		)
 	new_settings_file.set_value("user", "last_parcel_position", self.last_parcel_position)
 	new_settings_file.set_value("user", "last_realm_joined", self.last_realm_joined)
 	new_settings_file.set_value("user", "last_places_by_wallet", self.last_places_by_wallet)
@@ -763,5 +798,5 @@ func save_to_settings_file():
 	new_settings_file.set_value("user", "review_session_count", self.review_session_count)
 	new_settings_file.set_value("user", "review_shots_fired", self.review_shots_fired)
 	new_settings_file.set_value("user", "review_last_shot_unix", self.review_last_shot_unix)
-	new_settings_file.set_value("analytics", "user_id", self.analytics_user_id)
+	DclSessionStore.save_analytics_user_id(self.analytics_user_id)
 	new_settings_file.save(DclConfig.get_settings_file_path())
