@@ -6,9 +6,11 @@ extends RefCounted
 ## One RayCast3D per hand probes `HandsIKWallHitDistance` forward from a fixed
 ## point in avatar space (Unity's Left/RightHandWallRaycast, identity rotation at
 ## chest height), because an arm hanging at rest points at the floor, not at the
-## wall the player walks into. The engine updates RayCast3D inside the physics
-## step — the avatar never issues a direct_space_state query itself (those
-## disturbed is_on_floor() and the player's step-up).
+## wall the player walks into. The ray is swept on demand right before it is
+## read, because this runs in idle and the engine's last sweep is a physics step
+## behind. The avatar still never issues a direct_space_state query itself
+## (those disturbed is_on_floor() and the player's step-up): this is the
+## RayCast3D node's own API.
 
 const UPPER_ARM := {"left": "Avatar_LeftArm", "right": "Avatar_RightArm"}
 const FOREARM := {"left": "Avatar_LeftForeArm", "right": "Avatar_RightForeArm"}
@@ -240,6 +242,7 @@ func _update_hand(side: String, delta: float, enabled: bool) -> void:
 	ray.global_transform = Transform3D(Basis.looking_at(fwd, up), origin)
 	var ray_scale := ray.global_transform.basis.get_scale().x
 	ray.target_position = Vector3(0.0, 0.0, -WALL_DISTANCE / maxf(ray_scale, 0.0001))
+	ray.force_raycast_update()
 	var w := 0.0
 	if enabled and ray.is_colliding():
 		var hit := ray.get_collision_point()

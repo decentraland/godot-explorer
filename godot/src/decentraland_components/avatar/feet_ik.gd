@@ -8,11 +8,13 @@ extends RefCounted
 ## The probe is a ShapeCast3D (sphere, radius SPHERE_RADIUS) per foot: Unity
 ## sweeps a sphere of FeetIKSphereSize, and a fat probe rolls over a curb edge
 ## instead of flipping between the kerb's face and the street a step below,
-## which stepped the hips by the whole drop in one frame. The engine updates the
-## probe inside the physics step; the avatar never calls direct_space_state
-## itself — queries issued from the avatar node disturbed is_on_floor() and the
-## player's predictive step-up (the capsule stuck on steps and replayed the
-## landing "bounce").
+## which stepped the hips by the whole drop in one frame. The probe is swept on
+## demand right before it is read, because this runs in idle: the engine's last
+## sweep is a physics step behind, which is the frame the foot lands on. The
+## avatar still never calls direct_space_state itself — queries issued from the
+## avatar node disturbed is_on_floor() and the player's predictive step-up (the
+## capsule stuck on steps and replayed the landing "bounce"), and this stays the
+## ShapeCast3D node's own API.
 
 const THIGH := {"left": "Avatar_LeftUpLeg", "right": "Avatar_RightUpLeg"}
 const SHIN := {"left": "Avatar_LeftLeg", "right": "Avatar_RightLeg"}
@@ -250,6 +252,7 @@ func _update_foot(side: String, delta: float) -> void:
 	var probe_scale := maxf(probe.global_transform.basis.get_scale().y, 0.0001)
 	probe.target_position = Vector3(0.0, -CAST_LENGTH / probe_scale, 0.0)
 	(probe.shape as SphereShape3D).radius = SPHERE_RADIUS / probe_scale
+	probe.force_shapecast_update()
 	var hit := Vector3.ZERO
 	var up := Vector3.UP
 	var travel := 0.0  # how far the sphere's centre moved before it touched
