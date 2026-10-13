@@ -446,7 +446,7 @@ fn main() -> io::Result<()> {
 
     let mut protoc_path = std::env::current_dir()
         .unwrap()
-        .join("../.bin/protoc/bin/protoc");
+        .join("../../../.bin/protoc/bin/protoc");
     if std::env::consts::OS == "windows" {
         protoc_path.set_extension("exe");
     }
@@ -644,10 +644,11 @@ fn generate_file<P: AsRef<Path>>(path: P, text: &[u8]) {
 }
 
 fn check_safe_repo() -> Result<(), String> {
-    // Get the current working directory and navigate up two levels
+    // Get the current working directory and navigate up three levels
     let mut repo_path = env::current_dir().map_err(|e| e.to_string())?;
     repo_path.pop(); // Go up one level
     repo_path.pop(); // Go up another level
+    repo_path.pop(); // Go up a third level
     let repo_path_str = repo_path
         .to_str()
         .ok_or("Failed to convert repo path to string")?;
@@ -695,9 +696,9 @@ fn check_safe_repo() -> Result<(), String> {
 fn set_godot_explorer_version() {
     // Re-run when the git HEAD/branch ref/index changes so the embedded commit
     // hash stays in sync with the current checkout.
-    println!("cargo:rerun-if-changed=../.git/HEAD");
-    println!("cargo:rerun-if-changed=../.git/refs/heads");
-    println!("cargo:rerun-if-changed=../.git/index");
+    println!("cargo:rerun-if-changed=../../../.git/HEAD");
+    println!("cargo:rerun-if-changed=../../../.git/refs/heads");
+    println!("cargo:rerun-if-changed=../../../.git/index");
     println!("cargo:rerun-if-env-changed=BRANCH_NAME");
     println!("cargo:rerun-if-env-changed=DECENTRALAND_PROD_BUILD");
     println!("cargo:rerun-if-env-changed=DECENTRALAND_STAGING_BUILD");
@@ -867,7 +868,7 @@ fn set_godot_explorer_version() {
     println!("cargo:rustc-env=GODOT_EXPLORER_BRANCH_NAME={}", branch_name);
 
     // Write checkpoint file for version verification
-    let checkpoint_path = Path::new("../.build.version");
+    let checkpoint_path = Path::new("../../../.build.version");
     if let Err(e) = fs::write(checkpoint_path, &full_version) {
         println!(
             "cargo:warning=Failed to write version checkpoint file: {}",
@@ -881,7 +882,7 @@ fn set_godot_explorer_version() {
     // Sentry (`{version}+{build}`), so CI can create/finalize the same Sentry
     // release the app reports under (`cargo run -- explorer-version --sentry-release`).
     // Kept separate from .build.version: that one is the human-facing string.
-    let sentry_checkpoint_path = Path::new("../.build.sentry_release");
+    let sentry_checkpoint_path = Path::new("../../../.build.sentry_release");
     if let Err(e) = fs::write(sentry_checkpoint_path, &sentry_release) {
         println!(
             "cargo:warning=Failed to write sentry release checkpoint file: {}",

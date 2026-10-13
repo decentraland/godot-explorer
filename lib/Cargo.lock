@@ -927,6 +927,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "dcl_core"
+version = "1.15.0"
+
+[[package]]
 name = "dclgodot"
 version = "1.15.0"
 dependencies = [

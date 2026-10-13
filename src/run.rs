@@ -207,11 +207,11 @@ fn get_v8_version_using_metadata() -> anyhow::Result<String> {
     cmd.manifest_path("lib/Cargo.toml");
     let metadata = cmd.exec()?;
 
-    // Find the package corresponding to "lib/Cargo.toml"
+    // Find the package corresponding to "dclgodot"
     let lib_package = metadata
         .packages
         .iter()
-        .find(|pkg| pkg.manifest_path.ends_with("lib/Cargo.toml"))
+        .find(|pkg| pkg.name == "dclgodot")
         .ok_or_else(|| anyhow::anyhow!("lib package not found in cargo metadata"))?;
 
     // Iterate through its dependencies to locate "v8"

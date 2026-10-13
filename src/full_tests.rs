@@ -341,10 +341,10 @@ pub fn run_full_tests(
         run_external_command(&gdlint_bin, &["godot/"], None)
     });
     step!(runner, "Cargo check", || {
-        run_external_command("cargo", &["check"], lib_dir)
+        run_external_command("cargo", &["check", "--workspace"], lib_dir)
     });
     step!(runner, "Cargo clippy", || {
-        run_external_command("cargo", &["clippy", "--", "-D", "warnings"], lib_dir)
+        run_external_command("cargo", &["clippy", "--workspace", "--", "-D", "warnings"], lib_dir)
     });
     step!(runner, "Asset import check", || {
         run_external_command("python3", &["tests/check_asset_imports.py"], None)
@@ -356,7 +356,7 @@ pub fn run_full_tests(
     ui::print_message(MessageType::Step, "Phase 2: Rust Unit Tests");
 
     step!(runner, "Rust unit tests", || {
-        run_external_command("cargo", &["test", "--", "--skip", "auth"], lib_dir)
+        run_external_command("cargo", &["test", "--workspace", "--", "--skip", "auth"], lib_dir)
     });
 
     // ── Phase 3: Build & Godot Tests ──

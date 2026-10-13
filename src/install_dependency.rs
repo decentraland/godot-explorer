@@ -76,7 +76,7 @@ pub fn install_dcl_protocol() -> Result<(), anyhow::Error> {
     print_section("Installing DCL Protocol");
 
     let protocol_url = get_protocol_url()?;
-    let destination_path = format!("{RUST_LIB_PROJECT_FOLDER}src/dcl/components");
+    let destination_path = format!("{RUST_LIB_PROJECT_FOLDER}crates/dcl_engine/src/dcl/components");
 
     let spinner = create_spinner("Downloading protocol files...");
 

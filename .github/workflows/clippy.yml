@@ -33,11 +33,15 @@ jobs:
 
       - name: cargo check
         working-directory: lib
-        run: cargo check
+        run: cargo check --workspace
 
       - name: cargo clippy
         working-directory: lib
-        run: cargo clippy -- -D warnings
+        run: cargo clippy --workspace -- -D warnings
+
+      - name: dcl_core tests (no Godot)
+        working-directory: lib
+        run: cargo test -p dcl_core
 
       - name: Version check
         run: cargo run -- version-check

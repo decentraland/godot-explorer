@@ -84,7 +84,8 @@ fn assert_click_through(node: &TscnNode, scene: &str) {
 /// header moved to the preview HUD toolbar in issue #2679, so there's no top-buttons row here.)
 #[test]
 fn debug_panel_body_does_not_block_scene_ui() {
-    let nodes = parse_tscn("../godot/src/ui/components/organisms/debug_panel/debug_panel.tscn");
+    let nodes =
+        parse_tscn("../../../godot/src/ui/components/organisms/debug_panel/debug_panel.tscn");
     assert_click_through(find(&nodes, "VBoxContainer", "."), "debug_panel");
 }
 
@@ -94,8 +95,9 @@ fn debug_panel_body_does_not_block_scene_ui() {
 /// full-width strips don't eat taps meant for the scene UI underneath (same class as #2578).
 #[test]
 fn preview_hud_panel_containers_do_not_block_scene_ui() {
-    let nodes =
-        parse_tscn("../godot/src/ui/components/organisms/preview_hud_panel/preview_hud_panel.tscn");
+    let nodes = parse_tscn(
+        "../../../godot/src/ui/components/organisms/preview_hud_panel/preview_hud_panel.tscn",
+    );
     assert_click_through(find(&nodes, "VBoxContainer", "."), "preview_hud_panel");
     assert_click_through(
         find(&nodes, "MarginContainer", "VBoxContainer"),
@@ -117,7 +119,7 @@ fn preview_hud_panel_containers_do_not_block_scene_ui() {
 /// 2.5x the drawn area from the scene UI underneath.
 #[test]
 fn navbar_profile_hitbox_matches_visible_bubble() {
-    let nodes = parse_tscn("../godot/src/ui/components/organisms/navbar/navbar.tscn");
+    let nodes = parse_tscn("../../../godot/src/ui/components/organisms/navbar/navbar.tscn");
     assert_click_through(find(&nodes, "Control", "."), "navbar");
 
     let button = find(&nodes, "Button", "Control");
@@ -139,6 +141,6 @@ fn navbar_profile_hitbox_matches_visible_bubble() {
 /// Labels ignore input but the HBox itself defaulted to PASS.
 #[test]
 fn version_fps_strip_does_not_block_scene_ui() {
-    let nodes = parse_tscn("../godot/src/ui/explorer.tscn");
+    let nodes = parse_tscn("../../../godot/src/ui/explorer.tscn");
     assert_click_through(find(&nodes, "HBoxContainer_VersionFPS", "UI"), "explorer");
 }

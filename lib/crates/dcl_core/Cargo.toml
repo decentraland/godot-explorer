@@ -1,0 +1,10 @@
+[package]
+name = "dcl_core"
+version.workspace = true
+edition.workspace = true
+publish = false
+
+[lib]
+crate-type = ["rlib"]
+
+[dependencies]
