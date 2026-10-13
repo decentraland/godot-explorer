@@ -25,6 +25,7 @@ pub mod dcl_node_entity_3d;
 pub mod dcl_parse_deep_link;
 pub mod dcl_preview_message;
 pub mod dcl_realm;
+pub mod dcl_realm_rules;
 #[cfg(feature = "use_resource_tracking")]
 pub mod dcl_resource_tracker;
 pub mod dcl_rich_ui_text;

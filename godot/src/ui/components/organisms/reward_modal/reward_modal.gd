@@ -105,7 +105,7 @@ func _async_claim() -> void:
 	#     origin — the load balancer only responds under a /main path we can't include here.
 	var catalyst := _catalyst_origin(str(Global.realm.content_base_url))
 	if catalyst.is_empty():
-		catalyst = _catalyst_origin(Realm.DAO_SERVERS[0])
+		catalyst = _catalyst_origin(DclRealmRules.dao_servers()[0])
 	var url := RewardCampaigns.get_rewards_server() + "/api/rewards?campaign_id=" + _campaign_id
 	var body_dict := {
 		"campaign_key": _campaign_key,

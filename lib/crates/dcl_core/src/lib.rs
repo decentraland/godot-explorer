@@ -8,6 +8,7 @@ pub mod http;
 pub mod network_inspector;
 mod open_url;
 pub mod proto;
+pub mod realm;
 pub mod session;
 pub mod social;
 pub mod urls;
