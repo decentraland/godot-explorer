@@ -41,7 +41,7 @@ const DEFAULT_NAMETAG_HEIGHT := 1.9
 const GAIT_BLEND_MAX_SPEEDS := [0.0, 1.5, 8.0, 10.0]
 const GAIT_BLEND_SPEED := 5.0
 const STILL_BLEND_THRESHOLD := 0.25
-# #2853 head sync: Unity HeadIKRemotePlayersDistance — a remote head turn is
+# head sync: Unity HeadIKRemotePlayersDistance — a remote head turn is
 # dropped past this, so a crowd costs nothing at distance.
 const REMOTE_HEAD_IK_DISTANCE := 10.0
 # #2855: Unity LongFallStunTime — the hard-landing stun animation covers the
@@ -1757,7 +1757,7 @@ func _process(delta):
 		_head_ik.update_ik(
 			delta, head_on, Vector3.ZERO if camera == null else -camera.global_transform.basis.z
 		)
-		# #2853 head sync: broadcast the head turn so other clients aim our head
+		# head sync: broadcast the head turn so other clients aim our head
 		# at us (Unity HeadSync sends yaw+pitch, not a look-at vector).
 		Global.comms.set_head_ik(head_on, _head_ik.head_yaw_deg, _head_ik.head_pitch_deg)
 	else:

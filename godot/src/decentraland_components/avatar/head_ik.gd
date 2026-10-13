@@ -102,7 +102,7 @@ func update_ik(delta: float, enabled: bool, look_dir: Vector3) -> void:
 
 
 ## Per-frame entry for a remote avatar: the turn arrives over the wire as the
-## sender's own head angles (#2853 head sync / Unity UpdateRemoteIK). They are
+## sender's own head angles (Unity UpdateRemoteIK). They are
 ## already in the avatar's frame, so there is no direction to project. Same
 ## limits and easing as the local path, so a remote head reads like a local one.
 func update_remote(delta: float, enabled: bool, yaw_deg: float, pitch_deg: float) -> void:
