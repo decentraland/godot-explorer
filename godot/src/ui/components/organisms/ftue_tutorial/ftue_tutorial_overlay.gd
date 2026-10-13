@@ -10,6 +10,9 @@ enum Place { ABOVE, BELOW, RIGHT, LEFT, CENTER }
 enum Gesture { NONE, DRAG, PINCH }
 
 const TOOLTIP_GAP := 18.0
+# The skip button's right edge lines up with the action buttons, which sit further in than
+# the Menu button does on the left.
+const SKIP_EXTRA_INSET := 21.0
 const DRAG_HOLD_SECONDS := 1.5
 const PINCH_HOLD_SECONDS := 0.8
 const DISSOLVE_SECONDS := 0.3
@@ -138,7 +141,7 @@ func place_skip_button(menu_button_rect: Rect2, at_bottom_left := false) -> void
 		)
 	else:
 		button_skip.global_position = Vector2(
-			size.x - _edge_inset.x - button_skip.size.x, _edge_inset.y
+			size.x - _edge_inset.x - SKIP_EXTRA_INSET - button_skip.size.x, _edge_inset.y
 		)
 
 

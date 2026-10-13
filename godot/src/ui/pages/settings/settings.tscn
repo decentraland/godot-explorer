@@ -117,6 +117,20 @@ font_color = Color(0.9098039, 0.7254902, 1, 1)
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_1mbv2"]
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_replay"]
+content_margin_left = 24.0
+content_margin_right = 24.0
+bg_color = Color(0, 0, 0, 0.4)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
 [node name="Control_SettingsPanel" type="TextureRect" unique_id=719866954]
 anchors_preset = 15
 anchor_right = 1.0
@@ -397,12 +411,16 @@ script = ExtResource("99_orlbl")
 
 [node name="Button_ReplayTutorial" type="Button" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay/Container_Tutorial/SectionTutorial/VBoxContainer/ReplayTutorial"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(200, 56)
+custom_minimum_size = Vector2(288, 54)
 layout_mode = 2
 size_flags_vertical = 4
 focus_mode = 0
 theme = ExtResource("12_sa1v7")
 theme_type_variation = &"SecondaryOutlinedButton"
+theme_override_font_sizes/font_size = 22
+theme_override_styles/normal = SubResource("StyleBoxFlat_replay")
+theme_override_styles/hover = SubResource("StyleBoxFlat_replay")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_replay")
 text = "SETTINGS_REPLAY"
 
 [node name="Container_Camera" type="MarginContainer" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Gameplay" unique_id=1854347]

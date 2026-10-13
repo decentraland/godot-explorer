@@ -5,6 +5,7 @@
 [ext_resource type="PackedScene" uid="uid://buu3ox7iefpgx" path="res://src/ui/components/atoms/controls/loading_spinner/loading_spinner.tscn" id="3_spinner"]
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="4_bold"]
 [ext_resource type="FontFile" uid="uid://d2vlaexk003yw" path="res://assets/themes/fonts/inter/Inter-Medium.ttf" id="5_medium"]
+[ext_resource type="FontFile" path="res://assets/themes/fonts/inter/Inter-Regular.ttf" id="7_regular"]
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="6_theme"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_card"]
@@ -103,9 +104,9 @@ theme_override_constants/separation = 16
 
 [node name="Label_Title" type="Label" parent="VBoxContainer/PanelContainer/MarginContainer/VBoxContainer"]
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 theme_override_fonts/font = ExtResource("4_bold")
-theme_override_font_sizes/font_size = 34
+theme_override_font_sizes/font_size = 38
 text = "FTUE_TUTORIAL_REWARD_TITLE"
 autowrap_mode = 3
 
@@ -113,9 +114,9 @@ autowrap_mode = 3
 unique_name_in_owner = true
 auto_translate_mode = 2
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_fonts/font = ExtResource("5_medium")
-theme_override_font_sizes/font_size = 22
+theme_override_colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+theme_override_fonts/font = ExtResource("7_regular")
+theme_override_font_sizes/font_size = 26
 autowrap_mode = 3
 
 [node name="Spacer" type="Control" parent="VBoxContainer/PanelContainer/MarginContainer/VBoxContainer"]
