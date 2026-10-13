@@ -182,11 +182,6 @@ var _hard_landing_timer: float = 0.0
 # rotation follow) — subtracted from measured displacement so the anim state
 # reads avatar-relative motion, not platform carry.
 var _platform_carry_xz := Vector2.ZERO
-# #2855: pending stun arm while the landing proves it stuck (bounce pads
-# relaunch instantly and must not stun — Unity pads are triggers, no landing).
-var _stun_arm_pending: float = 0.0
-# #1554: deferred spawn reveal (loading_finished) — fires when grounded.
-var _spawn_reveal_pending: bool = false
 # #2852 M6: apex of the current airborne stretch; landing stun triggers on
 # fall HEIGHT (apex - landing), not on scene-driven cooldowns.
 var _fall_apex_y: float = 0.0
@@ -424,7 +419,6 @@ func _on_scene_changed(_scene_id: int) -> void:
 # to reset the pinch zoom back to the default third-person view. Mobile-only: the
 # pinch input is mobile-only, and desktop users can sit in first person by choice.
 func _on_loading_finished() -> void:
-	print("SPAWNDBG loading_finished")
 	if Global.is_mobile():
 		_reset_zoom_to_default()
 
@@ -552,7 +546,6 @@ func _physics_process(dt: float) -> void:
 	# #2855: stun state for the hard-landing animation (remote avatars derive
 	# theirs in avatar.gd from the wire long_fall).
 	avatar.stunned = _hard_landing_timer > 0.0
-	avatar.stun_pending = false
 
 	_jump_buffer = max(_jump_buffer - dt, 0.0)
 	if Global.explorer_has_focus() and Input.is_action_just_pressed("ia_jump"):
