@@ -1,12 +1,9 @@
 class_name AvatarSpawnReveal
 extends RefCounted
 
-# #1554: the spawn/teleport hologram. Unity runs a ghost copy with the hologram
-# shader while wearables load, then sweeps the real ones; we sweep the avatar's
-# own meshes (same visual beat, no dual-mesh system). The avatar starts the
-# reveal and ticks it: the ghost mirrors our pose until the real meshes are
-# ready, then swaps in one step. Re-triggering mid-reveal restarts the sweep
-# (skipped, not queued).
+# #1554: the spawn/teleport hologram — a ghost body under the hologram shader
+# while wearables load, then one step into the real meshes. The avatar starts it
+# and ticks it; re-triggering mid-reveal restarts the sweep instead of queueing.
 
 enum Phase { IDLE, GHOST_IN, HOLD }
 
@@ -92,8 +89,7 @@ func start() -> void:
 
 # One-time warm-up so the first real spawn hologram never renders as Godot's
 # solid placeholder while the shader pipeline compiles.
-# gdlint:ignore = async-function-name
-func warm_shader_async() -> void:
+func async_warm_shader() -> void:
 	if _pipeline_warmed:
 		return
 	_pipeline_warmed = true

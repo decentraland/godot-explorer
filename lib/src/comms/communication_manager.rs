@@ -1781,7 +1781,7 @@ impl CommunicationManager {
         // The Temporal bitfield doesn't carry jump_count / glide_state yet, so
         // force uncompressed when either carries info beyond what rise/fall/land
         // already encode.
-        // #b8: jump_count == 1 is a plain ground jump that rise/fall covers, so
+        // jump_count == 1 is a plain ground jump that rise/fall covers, so
         // no need to force uncompressed. A player that steps off a ledge keeps
         // jump_count=1 until landing, so forcing on `> 0` would burn bandwidth
         // during every long fall.
@@ -1829,6 +1829,8 @@ impl CommunicationManager {
                 glide_state,
                 is_instant: false,
                 is_emoting: self.is_emoting,
+                // The wire carries a yaw and a pitch enable bit; the client exposes
+                // one switch, so both mirror it.
                 head_ik_yaw_enabled: self.head_ik_enabled,
                 head_ik_pitch_enabled: self.head_ik_enabled,
                 head_yaw: self.head_ik_yaw,

@@ -1,15 +1,9 @@
 class_name AvatarLocomotion
 extends RefCounted
 
-# Locomotion animation state for one avatar: the walk/jog/run blend, the jump
-# chain, the glide and the stun, published to the AnimationTree as the
-# conditions avatar.tscn's state machine reads. The avatar hands over the
-# movement state it read from itself this frame — a GDExtension property read
-# costs ~1 us, so they are read once, in one place — and plays the audio the
-# helper reports.
-#
-# What lives here is pose bookkeeping: the blend, the jump latch, the remote
-# stun timer. The state machine itself, and the poses, are avatar.tscn's.
+# Locomotion animation state for one avatar: the gait blend, the jump chain, the
+# glide and the stun, published as the AnimationTree conditions avatar.tscn reads.
+# The avatar reads its movement once a frame (~1 us per read) and hands it over.
 
 # #2856 gait blend (Unity CharacterControllerSettings): blend normalization
 # caps per gait kind (0 idle / 1 walk / 2 jog / 3 run) and approach speed.
@@ -30,7 +24,7 @@ var _jump_variation: float = 0.0
 # pulse races the tree's advance order and can be swallowed.
 var _double_jump_latch := false
 var _last_jump_count := 0
-# #b2: the first frame must not read a wire-provided jump_count >= 2 as a rising
+# the first frame must not read a wire-provided jump_count >= 2 as a rising
 # edge, or a remote avatar first seen mid-double-jump plays SFX from nothing.
 var _jump_count_sync_pending := true
 var _was_long_falling := false
@@ -67,8 +61,8 @@ func apply(delta: float, state: Dictionary) -> Dictionary:
 	var movement_speed_now: float = state["movement_speed"]
 	var is_local_player: bool = state["local"]
 
-	# Full-body emotes only from a standstill (old Idle->Emote gate); masked
-	# (upper-body) mixes stay available while moving.
+	# Full-body emotes only from a standstill; masked (upper-body) mixes stay
+	# available while moving.
 	_tree.set(
 		"parameters/Locomotion/conditions/emote",
 		state["emote_single"] and _movement_blend < STILL_BLEND_THRESHOLD
@@ -104,8 +98,7 @@ func apply(delta: float, state: Dictionary) -> Dictionary:
 	_movement_blend = move_toward(_movement_blend, target_blend, blend_rate * delta)
 	_tree.set("parameters/Locomotion/Grounded/blend_position", _movement_blend)
 	_tree.set("parameters/Locomotion/conditions/still", _movement_blend < STILL_BLEND_THRESHOLD)
-	# #2856: jump-chain selection by gait (single-condition transitions; the gait
-	# part of the old Idle/Walk/Jog/Run state split lives here now).
+	# #2856: jump-chain selection by gait, as single-condition transitions.
 	_tree.set("parameters/Locomotion/conditions/rise_walk", rise_now and kind < 3)
 	_tree.set("parameters/Locomotion/conditions/rise_run", rise_now and kind == 3)
 	# #2855: bounce pads launch without a jump (jump_count stays 0) — they skip
@@ -122,10 +115,9 @@ func apply(delta: float, state: Dictionary) -> Dictionary:
 		"parameters/Locomotion/conditions/apex",
 		not grounded_now and not rise_now and not fall_fast_now
 	)
-	# #b3: nfall reads is_grounded directly (not `land`). `land` is a short pulse
-	# locally (in_grace_time) and was previously overridden to is_grounded for
-	# remotes, causing asymmetric behavior. is_grounded is the same shape on both
-	# sides, and fall's 1-2 frame deadband at apex is still avoided.
+	# nfall reads is_grounded, not `land`: `land` is a short local pulse
+	# (in_grace_time), so remotes would diverge. is_grounded has the same shape
+	# on both sides and still avoids fall's 1-2 frame deadband at apex.
 	_tree.set("parameters/Locomotion/conditions/nfall", grounded_now)
 
 	# #2855: long fall + hard-landing stun. Local avatar: stunned comes from the

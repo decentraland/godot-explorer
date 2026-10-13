@@ -1,16 +1,9 @@
 class_name AvatarHandsIK
 extends RefCounted
 ## audit #905 / Unity HandsIKSystem: a hand reaching a wall plants on it (the
-## player can lean on geometry), with the elbow hinted so it bends outward.
-##
-## One RayCast3D per hand probes `HandsIKWallHitDistance` forward from a fixed
-## point in avatar space (Unity's Left/RightHandWallRaycast, identity rotation at
-## chest height), because an arm hanging at rest points at the floor, not at the
-## wall the player walks into. The ray is swept on demand right before it is
-## read, because this runs in idle and the engine's last sweep is a physics step
-## behind. The avatar still never issues a direct_space_state query itself
-## (those disturbed is_on_floor() and the player's step-up): this is the
-## RayCast3D node's own API.
+## player can lean on geometry), elbow hinted so it bends outward. One RayCast3D
+## per hand, swept on demand because this runs in idle; never a direct_space_state
+## query from the avatar node (those break is_on_floor).
 
 const UPPER_ARM := {"left": "Avatar_LeftArm", "right": "Avatar_RightArm"}
 const FOREARM := {"left": "Avatar_LeftForeArm", "right": "Avatar_RightForeArm"}
@@ -21,7 +14,7 @@ const KNUCKLE := {"left": "Avatar_LeftHandIndex1", "right": "Avatar_RightHandInd
 const THUMB := {"left": "Avatar_LeftHandThumb1", "right": "Avatar_RightHandThumb1"}
 const SIDES := ["left", "right"]
 
-const RAY_MASK := 2  # CL_PHYSICS — world geometry (the player is CL_PLAYER)
+const RAY_MASK := AvatarCollisionLayers.CL_PHYSICS
 const WALL_DISTANCE := 0.5  # HandsIKWallHitDistance
 const WEIGHT_SPEED := 5.0  # HandsIKWeightSpeed
 const POS_SPEED := 10.0  # IKPositionSpeed (m/s)

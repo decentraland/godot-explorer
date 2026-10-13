@@ -1,11 +1,9 @@
 class_name AvatarHeadIK
 extends RefCounted
 ## audit #905 / Unity HeadIKSystem + ApplyHeadLookAt: while the avatar stands
-## still it turns its head toward the camera's forward, clamped on both axes,
-## and eases back frontal when the direction falls behind the shoulders.
-##
-## Bone-only and applied as a delta on top of the animated pose — the clip keeps
-## owning the head, this only adds the turn.
+## still it turns its head toward the camera, clamped per axis, and eases back
+## frontal when the direction falls behind the shoulders. Bone-only, as a delta
+## on top of the animated pose.
 
 const HEAD := "Avatar_Head"
 

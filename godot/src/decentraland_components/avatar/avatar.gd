@@ -13,12 +13,6 @@ enum LODState { FULL, MID, CROSSFADE, FAR }
 
 const DEBUG_SAVE_AVATAR_DATA = false
 
-# Collision layers (mirrors decentraland.sdk.components.ColliderLayer)
-# CL_PLAYER (4) is set on every avatar; CL_MAIN_PLAYER (8) is added on top for the
-# local player so scenes can distinguish the main player from remote avatars.
-const CL_PLAYER = 4
-const CL_MAIN_PLAYER = 8
-
 # Useful to filter wearable categories (and distinguish between top_head and head)
 const WEARABLE_NAME_PREFIX = "__"
 
@@ -163,7 +157,7 @@ var _head_ik: AvatarHeadIK = null
 var _glider_close_initiated: bool = false
 # Previous glide_state for _update_glider_prop's edge detection.
 var _prop_last_glide_state: int = 0
-# #b1/#b12: first call to _update_glider_prop should adopt whatever curr_state
+# first call to _update_glider_prop should adopt whatever curr_state
 # came in on the wire (OPENING/GLIDING/CLOSING) without spamming audio, instead
 # of staying invisible because prev_state==0 doesn't match any branch.
 var _prop_sync_pending: bool = true
@@ -294,7 +288,7 @@ func _ready():
 	# #1554: warm the hologram pipeline once per process — Godot renders a solid
 	# placeholder until the shader compiles, and warming it per avatar would spawn
 	# ghost bodies per avatar in a spawn burst.
-	_spawn_reveal.warm_shader_async()
+	_spawn_reveal.async_warm_shader()
 	# #1554: gate spawn reveals to visible gameplay (not behind loading screens).
 	if not _loading_signals_connected:
 		_loading_signals_connected = true
@@ -417,7 +411,9 @@ func setup_trigger_detection(p_entity_id: int) -> void:
 	# The local (main) player also lives on the CL_MAIN_PLAYER layer so scenes can
 	# tell it apart from remote avatars. Remote avatars stay on CL_PLAYER only.
 	if is_local_player:
-		trigger_detector.collision_layer = CL_PLAYER | CL_MAIN_PLAYER
+		trigger_detector.collision_layer = (
+			AvatarCollisionLayers.CL_PLAYER | AvatarCollisionLayers.CL_MAIN_PLAYER
+		)
 
 	# Enable the collision shape
 	trigger_detector.get_node("CollisionShape3D").disabled = false
@@ -1527,7 +1523,7 @@ func _process(delta):
 	# off-screen freeze (that re-activation is what left frozen avatars stuck).
 	AvatarAnimHelpers.ensure_anim_active(self)
 
-	# #b18: `is_grounded` guard suppresses the all-false condition window at the
+	# `is_grounded` guard suppresses the all-false condition window at the
 	# jump apex (rise/fall ±0.3 deadband) so Idle doesn't leak in mid-air.
 	var self_idle = (
 		self.is_grounded && !self.jog && !self.walk && !self.run && !self.rise && !self.fall
@@ -1638,8 +1634,9 @@ func _process(delta):
 		body_shape_skeleton_3d.visible = true
 
 
-# Toggles GliderProp visibility based on glide_state transitions. The prop is# a persistent child (rotated 180° Y to compensate the Unity→Godot axis flip)
-# so audio and AnimationPlayer stay warm across glide cycles.
+# Toggles GliderProp visibility based on glide_state transitions. The prop is a
+# persistent child (rotated 180° Y to compensate the Unity→Godot axis flip), so
+# audio and AnimationPlayer stay warm across glide cycles.
 func _update_glider_prop() -> void:
 	if is_avatar_shape:
 		if glider_prop.visible:
@@ -1650,7 +1647,7 @@ func _update_glider_prop() -> void:
 
 	var curr_state: int = self.glide_state
 
-	# #b1/#b12: first tick — adopt whatever state came in without firing open/close
+	# first tick — adopt whatever state came in without firing open/close
 	# SFX, so a remote seen mid-glide actually shows wings and the idle loop.
 	if _prop_sync_pending:
 		_prop_sync_pending = false

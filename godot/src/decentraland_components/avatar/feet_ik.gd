@@ -1,27 +1,16 @@
 class_name AvatarFeetIK
 extends RefCounted
-## audit #905 / Unity FeetIKSystem: plants each animated foot on the ground
-## under THAT foot, so the feet follow slopes, steps and curbs instead of the
-## flat plane the clip assumes. The IK weight is driven by the clip itself: a
-## foot the animation lifted loses weight, so only the planted foot is solved.
-##
-## The probe is a ShapeCast3D (sphere, radius SPHERE_RADIUS) per foot: Unity
-## sweeps a sphere of FeetIKSphereSize, and a fat probe rolls over a curb edge
-## instead of flipping between the kerb's face and the street a step below,
-## which stepped the hips by the whole drop in one frame. The probe is swept on
-## demand right before it is read, because this runs in idle: the engine's last
-## sweep is a physics step behind, which is the frame the foot lands on. The
-## avatar still never calls direct_space_state itself — queries issued from the
-## avatar node disturbed is_on_floor() and the player's predictive step-up (the
-## capsule stuck on steps and replayed the landing "bounce"), and this stays the
-## ShapeCast3D node's own API.
+## audit #905 / Unity FeetIKSystem: plants each animated foot on the ground under
+## THAT foot, so feet follow slopes, steps and curbs. The weight comes from the
+## clip, so only the planted foot is solved. The probe is a ShapeCast3D per foot,
+## never a direct_space_state query from the avatar node (it breaks is_on_floor).
 
 const THIGH := {"left": "Avatar_LeftUpLeg", "right": "Avatar_RightUpLeg"}
 const SHIN := {"left": "Avatar_LeftLeg", "right": "Avatar_RightLeg"}
 const FOOT := {"left": "Avatar_LeftFoot", "right": "Avatar_RightFoot"}
 const SIDES := ["left", "right"]
 
-const RAY_MASK := 2  # CL_PHYSICS — world geometry (the player is CL_PLAYER)
+const RAY_MASK := AvatarCollisionLayers.CL_PHYSICS
 const PULL_MAX := 0.6  # FeetIKHipsPullMaxDistance: ray origin above the foot
 const CAST_LENGTH := 1.2  # cast reach, Unity parity
 const WEIGHT_SPEED := 10.0  # IKWeightSpeed (rise only; release is instant)
@@ -268,12 +257,9 @@ func _update_foot(side: String, delta: float) -> void:
 		grounded = up.y >= WALKABLE_NORMAL_Y
 	if not grounded:
 		# Unity kills the IK outright when the probe found no ground: the target
-		# stays where it is and the leg goes back to the clip. The old fallback
-		# plane sat ABOVE the foot, which the IsInsideMesh rule below read as
-		# ground through the mesh and turned the IK fully on — so every time the
-		# probe lost the ground the foot snapped to a plane that was not there,
-		# and the leg shook. Distance also goes to 0, so a foot with no ground
-		# under it stops dragging the hips down.
+		# stays put and the leg returns to the clip. No fallback plane above the
+		# foot — IsInsideMesh below reads one as ground through the mesh and snaps
+		# the foot to a surface that is not there.
 		_influence[side] = 0.0
 		chain.influence = 0.0
 		_align.weights[side] = 0.0

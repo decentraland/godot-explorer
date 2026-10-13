@@ -1913,8 +1913,7 @@ impl AvatarScene {
             );
             // Head sync: the head turn rides the uncompressed movement (and
             // always the Pulse state, which is quantized from it). The compressed
-            // rfc4 bitfield has no head fields, so a peer reads no head turn from
-            // that path — same as before this change.
+            // rfc4 bitfield has no head fields, so a peer reads no head turn.
             avatar.bind_mut().apply_wire_head_ik(
                 movement.head_yaw,
                 movement.head_pitch,
