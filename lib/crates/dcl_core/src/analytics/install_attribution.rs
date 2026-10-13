@@ -1,9 +1,7 @@
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
-use godot::prelude::*;
-
-use crate::godot_classes::dcl_android_plugin::DclAndroidPlugin;
+use serde_json::{Map, Value};
 
 use super::data_definition::{SegmentEvent, SegmentEventInstallAttribution};
 
@@ -16,6 +14,9 @@ use super::data_definition::{SegmentEvent, SegmentEventInstallAttribution};
 /// GA4F wins only when its link carries a token — most do not, and letting those beat a
 /// referrer that has one would lose the campaign for good. The loser still contributes its
 /// own fields. Fire-once-per-install is persisted by GDScript via a config flag.
+/// What one platform source reports: a `status` ("pending", "ok", "error", …) and its fields.
+pub type Reading = Map<String, Value>;
+
 pub struct InstallAttribution {
     done: bool,
     /// GA4F cannot say "there will never be a link" — an organic install simply never gets
@@ -47,10 +48,8 @@ const SOURCE_NONE: &str = "none";
 const TOKEN_PARAM: &str = "c";
 
 impl InstallAttribution {
-    /// Create and start both fetches.
+    /// Start the clocks. The host kicks off the two platform fetches itself.
     pub fn start() -> Self {
-        let _ = DclAndroidPlugin::get_install_referrer_internal();
-        let _ = DclAndroidPlugin::get_deferred_deep_link_internal();
         let now = Instant::now();
         Self {
             done: false,
@@ -67,15 +66,20 @@ impl InstallAttribution {
         self.done
     }
 
-    /// Poll both sources. Returns a `SegmentEvent` once the attribution is settled, or
-    /// `None` while still pending or after already completing.
-    pub fn poll(&mut self) -> Option<SegmentEvent> {
+    /// Poll both sources with what the platform currently reports (`None` when a source is not
+    /// available at all). Returns a `SegmentEvent` once the attribution is settled, or `None`
+    /// while still pending or after already completing.
+    pub fn poll(
+        &mut self,
+        ga4f: Option<Reading>,
+        referrer: Option<Reading>,
+    ) -> Option<SegmentEvent> {
         if self.done {
             return None;
         }
 
-        let ga4f = read_status(DclAndroidPlugin::get_deferred_deep_link_internal());
-        let referrer = read_status(DclAndroidPlugin::get_install_referrer_internal());
+        let ga4f = read_status(ga4f);
+        let referrer = read_status(referrer);
 
         // The referrer's fields are only meaningful once it says "ok" — a pending dict carries
         // just a status, and reading through it would ship zeros as data. GA4F is kept whenever
@@ -159,8 +163,8 @@ impl InstallAttribution {
     /// answered contributes nothing rather than zeros.
     fn build(
         &self,
-        ga4f: Option<&VarDictionary>,
-        referrer: Option<&VarDictionary>,
+        ga4f: Option<&Reading>,
+        referrer: Option<&Reading>,
         token: Option<String>,
         source: &str,
     ) -> SegmentEvent {
@@ -212,29 +216,26 @@ impl InstallAttribution {
     }
 }
 
-fn read_status(dict: Option<VarDictionary>) -> Option<(VarDictionary, String)> {
-    let dict = dict?;
-    let status = get_string(&dict, "status");
-    Some((dict, status))
+fn read_status(reading: Option<Reading>) -> Option<(Reading, String)> {
+    let reading = reading?;
+    let status = get_string(&reading, "status");
+    Some((reading, status))
 }
 
-fn get_string(dict: &VarDictionary, key: &str) -> String {
-    dict.get(key)
-        .and_then(|v| v.try_to::<GString>().ok())
+fn get_string(reading: &Reading, key: &str) -> String {
+    reading
+        .get(key)
+        .and_then(Value::as_str)
         .unwrap_or_default()
         .to_string()
 }
 
-fn get_i64(dict: &VarDictionary, key: &str) -> i64 {
-    dict.get(key)
-        .and_then(|v| v.try_to::<i64>().ok())
-        .unwrap_or(0)
+fn get_i64(reading: &Reading, key: &str) -> i64 {
+    reading.get(key).and_then(Value::as_i64).unwrap_or(0)
 }
 
-fn get_bool(dict: &VarDictionary, key: &str) -> bool {
-    dict.get(key)
-        .and_then(|v| v.try_to::<bool>().ok())
-        .unwrap_or(false)
+fn get_bool(reading: &Reading, key: &str) -> bool {
+    reading.get(key).and_then(Value::as_bool).unwrap_or(false)
 }
 
 /// Pulls the campaign token out of a deep link or a referrer query string.

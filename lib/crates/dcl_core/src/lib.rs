@@ -1,5 +1,6 @@
 //! Engine-free core of the Decentraland explorer: sessions, networking and rules.
 
+pub mod analytics;
 pub mod clock;
 mod core;
 pub mod deep_link;

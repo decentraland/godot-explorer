@@ -1,4 +1,2 @@
-pub mod data_definition;
-pub mod frame;
-pub mod install_attribution;
+pub use dcl_core::analytics::{data_definition, frame, install_attribution};
 pub mod metrics;

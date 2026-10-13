@@ -1,40 +1,28 @@
-use std::{
-    collections::HashMap,
-    sync::{Arc, Mutex},
-};
-
-use chrono::{DateTime, SecondsFormat, Utc};
-use dcl_core::Core;
+use chrono::{DateTime, Utc};
+use dcl_core::analytics::{install_attribution::Reading, queue::EventQueue};
 use godot::{
-    classes::{Os, RenderingServer, Timer},
+    classes::{Json, Os, RenderingServer, Time, Timer},
     prelude::*,
 };
 use uuid::Uuid;
 
-use crate::{
-    godot_classes::{
-        dcl_android_plugin::DclAndroidPlugin,
-        dcl_global::DclGlobal,
-        dcl_ios_plugin::{DclIosPlugin, DclMobileDeviceInfo},
-    },
-    http_request::{
-        http_queue_requester::HttpQueueRequester,
-        request_response::{RequestOption, ResponseType},
-    },
+use crate::godot_classes::{
+    dcl_android_plugin::DclAndroidPlugin,
+    dcl_global::DclGlobal,
+    dcl_ios_plugin::{DclIosPlugin, DclMobileDeviceInfo},
 };
 
 use super::{
     data_definition::{
-        build_segment_event_batch_item, build_segment_identify_body, PushIdentifyTraits,
-        PushPlatform, SegmentEvent, SegmentEventAcceptFriend, SegmentEventAppOpened,
-        SegmentEventAttestationAttempt, SegmentEventAttestationSessionCacheLoaded,
-        SegmentEventBlockUser, SegmentEventChatMessageSent, SegmentEventClickButton,
-        SegmentEventCommonExplorerFields, SegmentEventExplorerMoveToParcel,
-        SegmentEventFirebaseInit, SegmentEventGuestWalletCreation,
-        SegmentEventIosStoreKitEnvironment, SegmentEventLoading, SegmentEventPushOpened,
-        SegmentEventRequestFriend, SegmentEventRequestResult, SegmentEventReviewPrompted,
-        SegmentEventSceneLocaleRequested, SegmentEventScreenViewed, SegmentEventSystemInfoReport,
-        SegmentEventUnfriend,
+        build_segment_identify_body, PushIdentifyTraits, PushPlatform, SegmentEvent,
+        SegmentEventAcceptFriend, SegmentEventAppOpened, SegmentEventAttestationAttempt,
+        SegmentEventAttestationSessionCacheLoaded, SegmentEventBlockUser,
+        SegmentEventChatMessageSent, SegmentEventClickButton, SegmentEventCommonExplorerFields,
+        SegmentEventExplorerMoveToParcel, SegmentEventFirebaseInit,
+        SegmentEventGuestWalletCreation, SegmentEventIosStoreKitEnvironment, SegmentEventLoading,
+        SegmentEventPushOpened, SegmentEventRequestFriend, SegmentEventRequestResult,
+        SegmentEventReviewPrompted, SegmentEventSceneLocaleRequested, SegmentEventScreenViewed,
+        SegmentEventSystemInfoReport, SegmentEventUnfriend,
     },
     frame::Frame,
     install_attribution::InstallAttribution,
@@ -46,39 +34,14 @@ enum MobilePlatform {
     Android,
 }
 
-/// A Segment event together with the metadata captured the moment it was queued. Holding the
-/// creation time (and a stable message id) here — rather than stamping it at flush — is what
-/// keeps per-event chronology: a batch no longer collapses to a single flush instant.
-struct QueuedSegmentEvent {
-    event: SegmentEvent,
-    // Wall-clock time when the event was queued on the device.
-    created_at: DateTime<Utc>,
-    // Stable per-event id (UUID v4). Kept identical across retries so Segment can deduplicate.
-    message_id: String,
-}
-
 #[derive(GodotClass)]
 #[class(base=Node)]
 pub struct Metrics {
     // Frame metrics
     frame: Frame,
 
-    // Config
-    user_id: String,
-    write_key: String,
-
-    // Common data to serialize
-    common: SegmentEventCommonExplorerFields,
-
-    // Collect events to send
-    events: Vec<QueuedSegmentEvent>,
-    serialized_events: Vec<String>,
-
-    // Events from a batch whose HTTP send failed. Drained back into `serialized_events` on the
-    // next flush so transient network failures (common on mobile) don't silently drop data. The
-    // JSON here already carries the original `timestamp`/`messageId`, so re-sends keep the true
-    // event time and Segment deduplicates them. Shared with the detached send task via Arc/Mutex.
-    retry_buffer: Arc<Mutex<Vec<String>>>,
+    // Events waiting to ship, the user/session fields they carry and the batching
+    queue: EventQueue,
 
     // Which mobile platform is available (checked once at ready)
     mobile_platform: Option<MobilePlatform>,
@@ -128,13 +91,6 @@ pub struct Metrics {
     base: Base<Node>,
 }
 
-const SEGMENT_EVENT_SIZE_LIMIT_BYTES: usize = 32000;
-const SEGMENT_BATCH_SIZE_LIMIT_BYTES: usize = 500000;
-
-// Upper bound on how many failed-send events we hold for retry. Bounds memory during a long
-// outage; once exceeded we drop the oldest (they're the most likely to be stale) and log it.
-const MAX_RETRY_BUFFER_EVENTS: usize = 1000;
-
 // Default flush cadence used outside the lobby. The lobby overrides this to a snappier 2s via
 // set_flush_interval so onboarding/auth events ship fast; the rest of the app batches at 10s.
 const DEFAULT_FLUSH_INTERVAL_SECONDS: f64 = 10.0;
@@ -144,13 +100,8 @@ const MIN_FLUSH_INTERVAL_SECONDS: f64 = 0.5;
 impl INode for Metrics {
     fn init(base: Base<Node>) -> Self {
         Self {
-            user_id: "".into(),
-            common: SegmentEventCommonExplorerFields::new("".into()),
-            write_key: "".into(),
+            queue: EventQueue::new("".into(), "".into(), common_fields("".into())),
             frame: Frame::new(),
-            events: Vec::new(),
-            serialized_events: Vec::new(),
-            retry_buffer: Arc::new(Mutex::new(Vec::new())),
             mobile_platform: None,
             device_info: None,
             debug_level: 0,
@@ -212,10 +163,10 @@ impl INode for Metrics {
                 self._on_firebase_app_instance_id_ready(cached);
             }
 
-            DclAndroidPlugin::set_firebase_user_id(GString::from(&self.user_id));
+            DclAndroidPlugin::set_firebase_user_id(GString::from(&self.queue.user_id));
             DclAndroidPlugin::set_firebase_user_property(
                 GString::from("session_id"),
-                GString::from(&self.common.session_id),
+                GString::from(&self.queue.common.session_id),
             );
 
             // Push registration. Same race as above — the plugin asks FCM for the token in
@@ -410,13 +361,13 @@ impl Metrics {
             platform,
             token: token.clone(),
             push_permission: permission.to_string(),
-            app_version: self.common.renderer_version.clone(),
+            app_version: self.queue.common.renderer_version.clone(),
             locale: godot::classes::Os::singleton().get_locale().to_string(),
             timezone,
         };
 
         let body = build_segment_identify_body(
-            self.user_id.clone(),
+            self.queue.user_id.clone(),
             traits,
             Utc::now(),
             Uuid::new_v4().to_string(),
@@ -440,7 +391,7 @@ impl Metrics {
         }
 
         self.push_identify_sent = Some((token, permission.to_string()));
-        self.serialized_events.push(json_body);
+        self.queue.push_serialized(json_body);
     }
 
     #[func]
@@ -456,7 +407,7 @@ impl Metrics {
             return;
         }
 
-        self.process_and_send_events(false);
+        self.send_events(false);
     }
 
     /// Polls both attribution mechanisms (Android only, auto-completes once settled) and
@@ -466,7 +417,9 @@ impl Metrics {
         let Some(ref mut attribution) = self.install_attribution else {
             return;
         };
-        let event = attribution.poll();
+        let ga4f = DclAndroidPlugin::get_deferred_deep_link_internal().and_then(reading_of);
+        let referrer = DclAndroidPlugin::get_install_referrer_internal().and_then(reading_of);
+        let event = attribution.poll(ga4f, referrer);
         // Dropped on `is_done`, not on there being an event: two settle paths legitimately
         // have nothing to report, and leaving the tracker in place there would report
         // attribution as forever-pending to everything waiting on it.
@@ -508,6 +461,8 @@ impl Metrics {
             return;
         }
         if self.install_attribution.is_none() {
+            let _ = DclAndroidPlugin::get_install_referrer_internal();
+            let _ = DclAndroidPlugin::get_deferred_deep_link_internal();
             self.install_attribution = Some(InstallAttribution::start());
         }
     }
@@ -531,13 +486,12 @@ impl Metrics {
     #[func]
     pub fn create_metrics(user_id: String, session_id: String) -> Gd<Metrics> {
         Gd::from_init_fn(|base| Self {
-            user_id,
-            common: SegmentEventCommonExplorerFields::new(session_id),
-            write_key: "EAdAcIyGP6lIQAfpFF2BXpNzpj7XNWMm".into(),
+            queue: EventQueue::new(
+                user_id,
+                "EAdAcIyGP6lIQAfpFF2BXpNzpj7XNWMm".into(),
+                common_fields(session_id),
+            ),
             frame: Frame::new(),
-            events: Vec::new(),
-            serialized_events: Vec::new(),
-            retry_buffer: Arc::new(Mutex::new(Vec::new())),
             mobile_platform: None,
             device_info: None,
             debug_level: 0,
@@ -556,13 +510,13 @@ impl Metrics {
 
     #[func]
     pub fn update_realm(&mut self, realm: String) {
-        self.common.realm = realm;
+        self.queue.common.realm = realm;
     }
 
     #[func]
     pub fn update_identity(&mut self, dcl_eth_address: String, dcl_is_guest: bool) {
-        self.common.dcl_eth_address = dcl_eth_address;
-        self.common.dcl_is_guest = dcl_is_guest;
+        self.queue.common.dcl_eth_address = dcl_eth_address;
+        self.queue.common.dcl_is_guest = dcl_is_guest;
     }
 
     #[func]
@@ -570,11 +524,11 @@ impl Metrics {
         let event = SegmentEvent::ExplorerMoveToParcel(
             position.clone(),
             SegmentEventExplorerMoveToParcel {
-                old_parcel: self.common.position.clone(),
+                old_parcel: self.queue.common.position.clone(),
             },
         );
         self.queue_event("Explorer Move To Parcel", event);
-        self.common.position = position;
+        self.queue.common.position = position;
     }
 
     #[func]
@@ -1006,7 +960,7 @@ impl Metrics {
         tracing::debug!("Flushing metrics - forcing immediate send of all pending events");
 
         // Process all events with ignore_batch_limit = true
-        self.process_and_send_events(true);
+        self.send_events(true);
     }
 
     /// Open the consent gate. Flipping it on auto-flushes any pre-consent events that were queued
@@ -1084,9 +1038,9 @@ impl Metrics {
             return false;
         }
         let params = serde_json::json!({
-            "position": self.common.position,
-            "realm": self.common.realm,
-            "is_guest": self.common.dcl_is_guest,
+            "position": self.queue.common.position,
+            "realm": self.queue.common.realm,
+            "is_guest": self.queue.common.dcl_is_guest,
         });
         let params_str = params.to_string();
         if self.debug_level > 0 {
@@ -1117,108 +1071,14 @@ impl Metrics {
         self.debug_level
     }
 
-    fn process_and_send_events(&mut self, ignore_batch_limit: bool) {
-        // Re-enqueue anything a previous send failed to deliver, BEFORE the empty-check below, so
-        // a retry still fires even when no new events were produced this tick. The buffered JSON
-        // keeps its original timestamp/messageId, so re-sends preserve event time and dedup.
-        {
-            let mut retry = self.retry_buffer.lock().unwrap();
-            if !retry.is_empty() {
-                tracing::debug!("Re-queuing {} events from retry buffer", retry.len());
-                self.serialized_events.append(&mut retry);
-            }
-        }
-
-        tracing::debug!(
-            "process_and_send_events: events={}, serialized={}, ignore_limit={}",
-            self.events.len(),
-            self.serialized_events.len(),
-            ignore_batch_limit
-        );
-
-        if self.events.is_empty() && self.serialized_events.is_empty() {
-            tracing::debug!("No events to process, returning early");
-            return;
-        }
-
+    fn send_events(&mut self, ignore_batch_limit: bool) {
         let http_requester = DclGlobal::singleton()
             .bind_mut()
             .get_http_requester()
             .bind_mut()
             .get_http_queue_requester();
-
-        let mut accumulated_length: usize = self.serialized_events.iter().map(|s| s.len()).sum();
-
-        tracing::debug!("Starting event processing loop");
-        while let Some(queued) = self.events.pop() {
-            let raw_event = build_segment_event_batch_item(
-                self.user_id.clone(),
-                &self.common,
-                queued.event,
-                queued.created_at,
-                queued.message_id,
-            );
-
-            let json_body =
-                serde_json::to_string(&raw_event).expect("Failed to serialize event body");
-
-            if json_body.len() > SEGMENT_EVENT_SIZE_LIMIT_BYTES {
-                tracing::error!("Event too large: {}", json_body.len());
-                continue;
-            }
-
-            if !ignore_batch_limit
-                && accumulated_length + json_body.len() > SEGMENT_BATCH_SIZE_LIMIT_BYTES
-            {
-                let http_requester = http_requester.clone();
-                let write_key = self.write_key.clone();
-                let serialized_events = std::mem::take(&mut self.serialized_events);
-                let retry_buffer = self.retry_buffer.clone();
-                Core::spawn(async move {
-                    Self::send_segment_batch(
-                        http_requester,
-                        &write_key,
-                        serialized_events,
-                        retry_buffer,
-                    )
-                    .await;
-                });
-
-                // This event is queued until the next time is available to send events
-                self.serialized_events.push(json_body);
-                return;
-            }
-
-            accumulated_length += json_body.len();
-            self.serialized_events.push(json_body);
-        }
-
-        tracing::debug!(
-            "Event processing loop complete. Serialized events: {}",
-            self.serialized_events.len()
-        );
-
-        if !self.serialized_events.is_empty() {
-            let http_requester = http_requester.clone();
-            let write_key = self.write_key.clone();
-            let serialized_events = std::mem::take(&mut self.serialized_events);
-            let retry_buffer = self.retry_buffer.clone();
-            tracing::debug!(
-                "Spawning async task to send {} events",
-                serialized_events.len()
-            );
-            Core::spawn(async move {
-                Self::send_segment_batch(
-                    http_requester,
-                    &write_key,
-                    serialized_events,
-                    retry_buffer,
-                )
-                .await;
-            });
-        } else {
-            tracing::debug!("No serialized events to send");
-        }
+        self.queue
+            .process_and_send_events(http_requester, ignore_batch_limit);
     }
 }
 
@@ -1228,18 +1088,14 @@ impl Metrics {
     /// `timestamp`/`messageId` are captured at creation — NOT at flush, which is what preserves
     /// chronology and makes retries deduplicable.
     fn queue_event(&mut self, event_name: &str, event: SegmentEvent) {
-        let created_at = Utc::now();
-        let message_id = Uuid::new_v4().to_string();
-        self.debug_print_event(event_name, &event, created_at, &message_id);
-        self.events.push(QueuedSegmentEvent {
-            event,
-            created_at,
-            message_id,
-        });
+        let debug_copy = (self.debug_level > 0).then(|| event.clone());
+        let (created_at, message_id) = self.queue.queue_event(event);
+        if let Some(event) = debug_copy {
+            self.debug_print_event(event_name, &event, created_at, &message_id);
+        }
     }
 
-    /// Print debug information for a queued event (full JSON when enabled), using the same
-    /// creation metadata that will actually be sent so the log mirrors the real payload.
+    /// Print the full event as it will be sent, using the creation metadata it was stamped with.
     fn debug_print_event(
         &self,
         event_name: &str,
@@ -1247,22 +1103,7 @@ impl Metrics {
         created_at: DateTime<Utc>,
         message_id: &str,
     ) {
-        if self.debug_level == 0 {
-            return; // Disabled
-        }
-
-        // Build the complete event as it would be sent to Segment
-        let event_body = build_segment_event_batch_item(
-            self.user_id.clone(),
-            &self.common,
-            event.clone(),
-            created_at,
-            message_id.to_string(),
-        );
-
-        let json = serde_json::to_string_pretty(&event_body)
-            .unwrap_or_else(|e| format!("<serialization error: {}>", e));
-
+        let json = self.queue.batch_item_json(event, created_at, message_id);
         tracing::debug!("[Metrics] Event queued: {}\n{}", event_name, json);
     }
 
@@ -1408,74 +1249,32 @@ impl Metrics {
             }
         }
     }
+}
 
-    async fn send_segment_batch(
-        http_requester: Arc<HttpQueueRequester>,
-        write_key: &str,
-        events: Vec<String>,
-        retry_buffer: Arc<Mutex<Vec<String>>>,
-    ) {
-        // Log the events being sent
-        tracing::debug!("Sending segment batch with {} events", events.len());
+/// Godot's own reading of the device UTC offset, in minutes (`local = utc + offset`).
+///
+/// Not `Time.get_time_zone_from_system()["bias"]`: its minute arithmetic truncates toward zero,
+/// so it reports -90 for Newfoundland (-150) and -510 for the Marquesas (-570).
+fn device_utc_offset_minutes() -> i32 {
+    let time = Time::singleton();
+    // Read the local wall clock as if it were UTC — the gap to real UTC is the offset.
+    let local_as_utc =
+        time.get_unix_time_from_datetime_dict(&time.get_datetime_dict_from_system()) as f64;
+    ((local_as_utc - time.get_unix_time_from_system()) / 60.0).round() as i32
+}
 
-        // Parse and log each event name
-        for (idx, event) in events.iter().enumerate() {
-            if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(event) {
-                if let Some(event_name) = parsed.get("event").and_then(|v| v.as_str()) {
-                    tracing::debug!("  Event {}: {}", idx + 1, event_name);
-                }
-            }
-        }
+fn common_fields(session_id: String) -> SegmentEventCommonExplorerFields {
+    SegmentEventCommonExplorerFields::new(
+        session_id,
+        &Os::singleton().get_name().to_string(),
+        env!("GODOT_EXPLORER_VERSION"),
+        device_utc_offset_minutes(),
+    )
+}
 
-        // Batch-level `sentAt`, stamped at the actual moment of sending. Segment pairs this with
-        // each event's `timestamp` (stored as `originalTimestamp`) to correct device clock skew:
-        // canonical `timestamp` = receivedAt - (sentAt - originalTimestamp).
-        let sent_at = Utc::now().to_rfc3339_opts(SecondsFormat::Millis, true);
-        let json_body = format!(
-            "{{\"writeKey\":\"{}\",\"sentAt\":\"{}\",\"batch\":[{}]}}",
-            write_key,
-            sent_at,
-            events.join(",")
-        );
-
-        let request = RequestOption::new(
-            0,
-            "https://api.segment.io/v1/batch".into(),
-            http::Method::POST,
-            ResponseType::AsString,
-            Some(json_body.as_bytes().to_vec()),
-            Some(HashMap::from([(
-                "Content-Type".to_string(),
-                "application/json".to_string(),
-            )])),
-            None,
-        );
-        if let Err(err) = http_requester.request(request, 0).await {
-            // Transport failure (offline, timeout, DNS…). Buffer the events so the next flush
-            // retries them instead of dropping data. HTTP 4xx/5xx responses arrive as Ok here and
-            // are NOT retried, which avoids spinning forever on a permanently-rejected payload.
-            let count = events.len();
-            let mut retry = retry_buffer.lock().unwrap();
-            retry.extend(events);
-            if retry.len() > MAX_RETRY_BUFFER_EVENTS {
-                let overflow = retry.len() - MAX_RETRY_BUFFER_EVENTS;
-                retry.drain(0..overflow);
-                tracing::warn!(
-                    "Segment retry buffer exceeded {} events; dropped {} oldest",
-                    MAX_RETRY_BUFFER_EVENTS,
-                    overflow
-                );
-            }
-            tracing::warn!(
-                "Failed to send segment batch ({} events); buffered for retry (buffer now {}): {:?}",
-                count,
-                retry.len(),
-                err
-            );
-        } else {
-            tracing::debug!("Segment batch sent successfully");
-        }
-    }
+/// A plugin status dictionary as the core's attribution tracker reads it.
+fn reading_of(dict: VarDictionary) -> Option<Reading> {
+    serde_json::from_str(&Json::stringify(&dict.to_variant()).to_string()).ok()
 }
 
 fn non_empty(value: String) -> Option<String> {

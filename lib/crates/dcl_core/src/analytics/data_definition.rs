@@ -1,8 +1,4 @@
 use chrono::{DateTime, SecondsFormat, Utc};
-use godot::{
-    classes::{Os, Time},
-    obj::Singleton,
-};
 use serde::Serialize;
 
 #[derive(Serialize)]
@@ -147,21 +143,16 @@ pub struct SegmentEventCommonExplorerFields {
     pub utc_offset_minutes: i32,
 }
 
-/// Device UTC offset in minutes (`local = utc + offset`), read from the OS wall clock.
-///
-/// Not `Time.get_time_zone_from_system()["bias"]`: its minute arithmetic truncates toward zero,
-/// so it reports -90 for Newfoundland (-150) and -510 for the Marquesas (-570).
-fn device_utc_offset_minutes() -> i32 {
-    let time = Time::singleton();
-    // Read the local wall clock as if it were UTC — the gap to real UTC is the offset.
-    let local_as_utc =
-        time.get_unix_time_from_datetime_dict(&time.get_datetime_dict_from_system()) as f64;
-    ((local_as_utc - time.get_unix_time_from_system()) / 60.0).round() as i32
-}
-
 impl SegmentEventCommonExplorerFields {
-    pub fn new(session_id: String) -> Self {
-        let dcl_renderer_type = format!("dao-godot-{}", Os::singleton().get_name());
+    /// `os_name` is the platform name Godot reports ("Android", "iOS", "Linux", …);
+    /// `utc_offset_minutes` is `local = utc + offset`, resolved once by the host.
+    pub fn new(
+        session_id: String,
+        os_name: &str,
+        renderer_version: &str,
+        utc_offset_minutes: i32,
+    ) -> Self {
+        let dcl_renderer_type = format!("dao-godot-{os_name}");
 
         Self {
             dcl_eth_address: "unauthenticated".into(),
@@ -170,10 +161,10 @@ impl SegmentEventCommonExplorerFields {
             position: "no-position".into(),
             dcl_renderer_type,
             session_id,
-            renderer_version: env!("GODOT_EXPLORER_VERSION").into(),
+            renderer_version: renderer_version.into(),
             // Resolved once at startup, like `renderer_version`. A mid-session DST flip is a
             // rounding error next to the UTC-day cut this field exists to correct.
-            utc_offset_minutes: device_utc_offset_minutes(),
+            utc_offset_minutes,
         }
     }
 }
