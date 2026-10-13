@@ -1,0 +1,39 @@
+# Daily PR review report to Slack (weekdays 09:00 America/Sao_Paulo).
+#
+# Repository secrets:
+#   SLACK_WEBHOOK_URL - Slack incoming webhook the report is posted to.
+#   SLACK_USER_MAP    - JSON object mapping GitHub login -> Slack user ID, used for <@ID> mentions.
+#
+# Manual run: Actions -> "PR review report" -> Run workflow (tick "dry_run" to only print the
+# message in the job log), or: gh workflow run pr-review-report.yml -f dry_run=true
+name: PR review report
+
+on:
+  schedule:
+    - cron: "0 12 * * 1-5"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Print the message to the job log instead of posting to Slack
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build and post report
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_USER_MAP: ${{ secrets.SLACK_USER_MAP }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: python3 .github/scripts/pr_review_report.py
