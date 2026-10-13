@@ -7,7 +7,7 @@ use godot::classes::Node;
 use godot::prelude::*;
 
 use super::server::start_server;
-use crate::scene_runner::tokio_runtime::TokioRuntime;
+use dcl_core::Core;
 
 /// Godot wrapper for the asset optimization server.
 #[derive(GodotClass)]
@@ -70,7 +70,7 @@ impl DclAssetServer {
         tracing::info!("Starting asset optimization server on port {}", port);
 
         // Spawn the server on the tokio runtime
-        TokioRuntime::spawn(async move {
+        Core::spawn(async move {
             if let Err(e) = start_server(port).await {
                 tracing::error!("Asset server error: {}", e);
             }

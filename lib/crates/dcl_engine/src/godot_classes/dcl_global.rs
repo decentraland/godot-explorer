@@ -1,5 +1,6 @@
-use std::sync::Arc;
+use std::{path::PathBuf, sync::Arc};
 
+use dcl_core::{Core, CoreConfig, Platform};
 use godot::{
     classes::{node::ProcessMode, Engine, Os},
     obj::Singleton,
@@ -16,7 +17,7 @@ use crate::{
     godot_classes::dcl_avatar::DclAvatar,
     http_request::rust_http_queue_requester::RustHttpQueueRequester,
     profile::profile_service::ProfileService,
-    scene_runner::{scene_manager::SceneManager, tokio_runtime::TokioRuntime},
+    scene_runner::scene_manager::SceneManager,
     test_runner::testing_tools::DclTestingTools,
     tools::network_inspector::{NetworkInspector, NetworkInspectorSender},
 };
@@ -177,8 +178,6 @@ pub struct DclGlobal {
     #[var]
     pub avatars: Gd<AvatarScene>,
     #[var]
-    pub tokio_runtime: Gd<TokioRuntime>,
-    #[var]
     pub realm: Gd<DclRealm>,
     #[var]
     pub portable_experience_controller: Gd<DclPortableExperienceController>,
@@ -334,7 +333,6 @@ impl INode for DclGlobal {
         let mut avatars: Gd<AvatarScene> = AvatarScene::new_alloc();
         let mut comms: Gd<CommunicationManager> = CommunicationManager::new_alloc();
         let mut scene_runner: Gd<SceneManager> = SceneManager::new_alloc();
-        let mut tokio_runtime: Gd<TokioRuntime> = TokioRuntime::new_alloc();
         let mut content_provider: Gd<ContentProvider> = ContentProvider::new_alloc();
         let mut network_inspector: Gd<NetworkInspector> = NetworkInspector::new_alloc();
         let mut scene_inspector_dispatcher: Gd<
@@ -375,11 +373,12 @@ impl INode for DclGlobal {
             crate::tools::scene_inspector::set_early_log_capture(true);
         }
 
-        tokio_runtime.set_name("tokio_runtime");
-
-        if let Some(handle) = tokio_runtime.bind().try_get_handle() {
-            crate::utils::clock::spawn_background_sync(handle);
-        }
+        let core = Core::install(CoreConfig {
+            data_dir: PathBuf::from(Os::singleton().get_user_data_dir().to_string()),
+            env: crate::env::get_config().to_string_repr(),
+            platform: Platform::current(),
+        });
+        crate::utils::clock::spawn_background_sync(core.handle());
 
         scene_runner.set_name("scene_runner");
         scene_runner.set_process_mode(ProcessMode::DISABLED);
@@ -458,7 +457,6 @@ impl INode for DclGlobal {
             scene_runner,
             comms,
             avatars,
-            tokio_runtime,
             testing_tools,
             realm,
             portable_experience_controller,

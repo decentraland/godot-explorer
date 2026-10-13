@@ -3,6 +3,7 @@ use std::{
     time::{Duration, Instant},
 };
 
+use dcl_core::Core;
 use ethers_core::types::H160;
 use godot::prelude::{GString, Gd, ToGodot};
 use std::cmp::Ordering;
@@ -25,7 +26,6 @@ use crate::{
     },
     dcl::components::proto_components::kernel::comms::rfc4,
     godot_classes::{dcl_global::DclGlobal, dcl_social_blacklist::DclSocialBlacklist},
-    scene_runner::tokio_runtime::TokioRuntime,
 };
 
 use super::movement_compressed::MovementCompressed;
@@ -1593,7 +1593,7 @@ impl MessageProcessor {
                         .get(&address)
                         .and_then(|p| p.lambdas_endpoint.clone());
 
-                    TokioRuntime::spawn(async move {
+                    Core::spawn(async move {
                         // Unity CatalystRetryPolicy: 6 retries, base 2s, multiplier 2x, capped at 60s
                         // Retry if profile is None OR fetched version < announced version (version mismatch)
                         const MAX_RETRIES: u32 = 6;

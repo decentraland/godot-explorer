@@ -39,7 +39,7 @@ use crate::auth::wallet::sign_pulse_connect;
 use crate::comms::adapter::message_processor::{IncomingMessage, MessageType, Rfc4Message};
 use crate::comms::consts::DEFAULT_PROTOCOL_VERSION;
 use crate::dcl::components::proto_components::{kernel::comms::rfc4, pulse};
-use crate::scene_runner::tokio_runtime::TokioRuntime;
+use dcl_core::Core;
 
 /// Cooldown before re-attempting after any retryable failure (no identity yet, sign error,
 /// response timeout, server rejection, or a retryable disconnect).
@@ -473,12 +473,12 @@ impl PulseRoom {
                     let _ = tx.send(result).await;
                 };
                 // Prefer an ambient tokio runtime (unit tests); the Godot main thread has none,
-                // so production goes through the shared TokioRuntime (whose Godot-singleton
+                // so production goes through the shared core runtime (whose Godot-singleton
                 // lookup would panic in a non-engine process).
                 if let Ok(handle) = tokio::runtime::Handle::try_current() {
                     handle.spawn(sign_task);
                 } else {
-                    TokioRuntime::spawn(sign_task);
+                    Core::spawn(sign_task);
                 }
                 self.state = Connection::Signing;
             }

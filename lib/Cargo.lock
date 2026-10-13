@@ -929,6 +929,10 @@ dependencies = [
 [[package]]
 name = "dcl_core"
 version = "1.15.0"
+dependencies = [
+ "tokio",
+ "tracing",
+]
 
 [[package]]
 name = "dclgodot"
@@ -942,6 +946,7 @@ dependencies = [
  "cid",
  "cpal",
  "dcl-rpc",
+ "dcl_core",
  "deno_core",
  "ethers-core",
  "ethers-providers",

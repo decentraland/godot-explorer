@@ -4,6 +4,7 @@ use std::{
 };
 
 use chrono::{DateTime, SecondsFormat, Utc};
+use dcl_core::Core;
 use godot::{
     classes::{Os, RenderingServer, Timer},
     prelude::*,
@@ -20,7 +21,6 @@ use crate::{
         http_queue_requester::HttpQueueRequester,
         request_response::{RequestOption, ResponseType},
     },
-    scene_runner::tokio_runtime::TokioRuntime,
 };
 
 use super::{
@@ -1174,7 +1174,7 @@ impl Metrics {
                 let write_key = self.write_key.clone();
                 let serialized_events = std::mem::take(&mut self.serialized_events);
                 let retry_buffer = self.retry_buffer.clone();
-                TokioRuntime::spawn(async move {
+                Core::spawn(async move {
                     Self::send_segment_batch(
                         http_requester,
                         &write_key,
@@ -1207,7 +1207,7 @@ impl Metrics {
                 "Spawning async task to send {} events",
                 serialized_events.len()
             );
-            TokioRuntime::spawn(async move {
+            Core::spawn(async move {
                 Self::send_segment_batch(
                     http_requester,
                     &write_key,

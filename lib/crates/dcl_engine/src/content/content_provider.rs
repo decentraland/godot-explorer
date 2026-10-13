@@ -6,6 +6,7 @@ use std::{
     },
 };
 
+use dcl_core::Core;
 use futures_util::future::try_join_all;
 use godot::{
     classes::{AudioStream, Material, Mesh, Os, ResourceLoader, Texture2D},
@@ -26,7 +27,6 @@ use crate::{
         promise::Promise,
     },
     http_request::http_queue_requester::HttpQueueRequester,
-    scene_runner::tokio_runtime::TokioRuntime,
 };
 
 #[cfg(feature = "use_resource_tracking")]
@@ -582,7 +582,7 @@ impl ContentProvider {
         let runtime_scene_counter = self.runtime_scene_count.clone();
 
         // Spawn async task - cache check and loading all happens here
-        TokioRuntime::spawn(async move {
+        Core::spawn(async move {
             // Check if scene is already cached on disk
             let scene_path = get_scene_path_for_hash(&ctx.content_folder, &file_hash_clone);
 
@@ -735,7 +735,7 @@ impl ContentProvider {
         let rt_wearable_counter = self.runtime_wearable_count.clone();
 
         // Spawn async task - cache check and loading all happens here
-        TokioRuntime::spawn(async move {
+        Core::spawn(async move {
             let result = Self::async_load_wearable_or_emote(
                 file_hash_clone,
                 file_path_str,
@@ -883,7 +883,7 @@ impl ContentProvider {
         let rt_wearable_counter = self.runtime_wearable_count.clone();
 
         // Spawn async task - cache check and loading all happens here
-        TokioRuntime::spawn(async move {
+        Core::spawn(async move {
             let result = Self::async_load_wearable_or_emote(
                 file_hash_clone,
                 file_path_str,
@@ -957,7 +957,7 @@ impl ContentProvider {
         let rt_wearable_counter = self.runtime_wearable_count.clone();
 
         // Spawn async task - NO optimized URL = runtime processing only
-        TokioRuntime::spawn(async move {
+        Core::spawn(async move {
             let result = Self::async_load_wearable_or_emote(
                 file_hash_clone,
                 file_path_str,
@@ -1326,7 +1326,7 @@ impl ContentProvider {
         let loaded_resources = self.loaded_resources.clone();
         let optimized_scene_counter = self.optimized_scene_count.clone();
 
-        TokioRuntime::spawn(async move {
+        Core::spawn(async move {
             #[cfg(feature = "use_resource_tracking")]
             report_resource_start(&file_hash, "optimized_asset");
 
@@ -1378,7 +1378,7 @@ impl ContentProvider {
         let loading_resources = self.loading_resources.clone();
         let loaded_resources = self.loaded_resources.clone();
         let optimized_scene_counter = self.optimized_scene_count.clone();
-        TokioRuntime::spawn(async move {
+        Core::spawn(async move {
             #[cfg(feature = "use_resource_tracking")]
             report_resource_start(&file_hash, "optimized_asset");
 
@@ -1448,7 +1448,7 @@ impl ContentProvider {
         let ctx = self.get_context();
         let file_name = file_name.to_string();
         let url = url.to_string();
-        TokioRuntime::spawn(async move {
+        Core::spawn(async move {
             match super::bundle::fetch_and_extract_bundle(&ctx, &file_name, &url, None).await {
                 Ok(Some(report)) => {
                     tracing::debug!("boot bundle {}: {:?}", file_name, report);
@@ -1483,7 +1483,7 @@ impl ContentProvider {
             let optimized_data = self.optimized_data.clone();
             let ctx = self.get_context();
 
-            TokioRuntime::spawn(async move {
+            Core::spawn(async move {
                 {
                     let mut scene_keys = optimized_data.scene_keys.write().unwrap();
                     for (glb, deps) in &content_data.external_scene_dependencies {
@@ -1567,7 +1567,7 @@ impl ContentProvider {
         let loading_resources = self.loading_resources.clone();
         let loaded_resources = self.loaded_resources.clone();
         let hash_id = file_hash.clone();
-        TokioRuntime::spawn(async move {
+        Core::spawn(async move {
             #[cfg(feature = "use_resource_tracking")]
             report_resource_start(&hash_id, "file");
 
@@ -1616,7 +1616,7 @@ impl ContentProvider {
 
         let bytes = bytes.to_vec();
 
-        TokioRuntime::spawn(async move {
+        Core::spawn(async move {
             if ctx
                 .resource_provider
                 .store_file(file_hash.as_str(), bytes.as_slice())
@@ -1656,7 +1656,7 @@ impl ContentProvider {
         let loaded_resources = self.loaded_resources.clone();
         #[cfg(feature = "use_resource_tracking")]
         let hash_id = file_hash.clone();
-        TokioRuntime::spawn(async move {
+        Core::spawn(async move {
             #[cfg(feature = "use_resource_tracking")]
             report_resource_start(&hash_id, "audio");
 
@@ -1740,7 +1740,7 @@ impl ContentProvider {
                 file_hash.clone()
             );
 
-            TokioRuntime::spawn(async move {
+            Core::spawn(async move {
                 let _ = ContentProvider::async_fetch_optimized_asset(
                     hash_id.clone(),
                     OptimizedKind::Texture,
@@ -1787,7 +1787,7 @@ impl ContentProvider {
             let loading_resources = self.loading_resources.clone();
             let loaded_resources = self.loaded_resources.clone();
             let hash_id = file_hash.clone();
-            TokioRuntime::spawn(async move {
+            Core::spawn(async move {
                 #[cfg(feature = "use_resource_tracking")]
                 report_resource_start(&hash_id, "texture");
 
@@ -1866,7 +1866,7 @@ impl ContentProvider {
         let loaded_resources = self.loaded_resources.clone();
         let hash_id = file_hash.clone();
 
-        TokioRuntime::spawn(async move {
+        Core::spawn(async move {
             #[cfg(feature = "use_resource_tracking")]
             report_resource_start(&hash_id, "texture_with_quality");
 
@@ -1924,7 +1924,7 @@ impl ContentProvider {
         let hash_id = file_hash.clone();
         #[cfg(feature = "use_resource_tracking")]
         let url_for_error = url.clone();
-        TokioRuntime::spawn(async move {
+        Core::spawn(async move {
             #[cfg(feature = "use_resource_tracking")]
             report_resource_start(&hash_id, "texture_url_with_quality");
 
@@ -2003,7 +2003,7 @@ impl ContentProvider {
         let loaded_resources = self.loaded_resources.clone();
         #[cfg(feature = "use_resource_tracking")]
         let hash_id = file_hash.clone();
-        TokioRuntime::spawn(async move {
+        Core::spawn(async move {
             #[cfg(feature = "use_resource_tracking")]
             report_resource_start(&hash_id, "video");
 
@@ -2045,7 +2045,7 @@ impl ContentProvider {
             .collect::<Vec<_>>();
 
         let (promise, get_promise) = Promise::make_to_async();
-        TokioRuntime::spawn(async move {
+        Core::spawn(async move {
             set_thread_safety_checks_enabled(false);
 
             for (mesh_instance_id, n) in data {
@@ -2112,7 +2112,7 @@ impl ContentProvider {
             };
             let content_base_url = format!("{}{extra_slash}", content_base_url);
             let ipfs_content_base_url = format!("{content_base_url}contents/");
-            TokioRuntime::spawn(async move {
+            Core::spawn(async move {
                 let result = request_wearables(
                     content_base_url,
                     ipfs_content_base_url,
@@ -2186,7 +2186,7 @@ impl ContentProvider {
         let (promise, get_promise) = Promise::make_to_async();
         let resource_provider = self.resource_provider.clone();
 
-        TokioRuntime::spawn(async move {
+        Core::spawn(async move {
             resource_provider.clear().await;
             tracing::info!("clear_cache_folder: Disk cache cleared");
             then_promise(get_promise, Ok(None));
@@ -2333,7 +2333,7 @@ impl ContentProvider {
         let resource_provider = self.resource_provider.clone();
         let (promise, get_promise) = Promise::make_to_async();
 
-        TokioRuntime::spawn(async move {
+        Core::spawn(async move {
             match resource_provider.check_remote_file_exists(&url).await {
                 Ok(exists) => {
                     then_promise(get_promise, Ok(Some(exists.to_variant())));
@@ -2363,7 +2363,7 @@ impl ContentProvider {
         let (promise, get_promise) = Promise::make_to_async();
         let content_provider_context = self.get_context();
 
-        TokioRuntime::spawn(async move {
+        Core::spawn(async move {
             let result = request_lambda_profile(
                 user_id,
                 lamda_server_base_url.as_str(),
@@ -2449,7 +2449,7 @@ impl ContentProvider {
         let loading_resources = self.loading_resources.clone();
         let loaded_resources = self.loaded_resources.clone();
 
-        TokioRuntime::spawn(async move {
+        Core::spawn(async move {
             loading_resources.fetch_add(1, Ordering::Relaxed);
 
             // Step 1: Fetch the profile
@@ -2566,7 +2566,7 @@ impl ContentProvider {
         let loading_resources = self.loading_resources.clone();
         let loaded_resources = self.loaded_resources.clone();
 
-        TokioRuntime::spawn(async move {
+        Core::spawn(async move {
             loading_resources.fetch_add(1, Ordering::Relaxed);
 
             let profile_result = request_lambda_profile(
@@ -2653,7 +2653,7 @@ impl ContentProvider {
         let loading_resources = self.loading_resources.clone();
         let loaded_resources = self.loaded_resources.clone();
 
-        TokioRuntime::spawn(async move {
+        Core::spawn(async move {
             loading_resources.fetch_add(1, Ordering::Relaxed);
 
             let url = format!(
@@ -2792,7 +2792,7 @@ impl ContentProvider {
         // server does on every edit, since it hashes file paths, not contents.
         self.promises.remove(&format!("scene_{file_hash_str}"));
 
-        TokioRuntime::spawn(async move {
+        Core::spawn(async move {
             resource_provider.delete_file(&absolute_file_path).await;
             // Both calls are needed for the .scn. `delete_file` drops the
             // `existing_files` entry, which is what `load_scene_gltf`'s cache check
@@ -2879,7 +2879,7 @@ impl ContentProvider {
         let url = format!("{}/{}", resolved_optimized_base_url(), bundle.file);
         let expected: HashSet<String> = bundle.files.iter().cloned().collect();
         let zip_name = bundle.file.clone();
-        TokioRuntime::spawn(async move {
+        Core::spawn(async move {
             let started = std::time::Instant::now();
             let result =
                 super::bundle::fetch_and_extract_bundle(&ctx, &zip_name, &url, Some(&expected))

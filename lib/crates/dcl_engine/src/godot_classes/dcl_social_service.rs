@@ -6,8 +6,8 @@ use tokio_util::sync::CancellationToken;
 use crate::auth::ephemeral_auth_chain::EphemeralAuthChain;
 use crate::dcl::components::proto_components::social_service::v2::*;
 use crate::godot_classes::promise::Promise;
-use crate::scene_runner::tokio_runtime::TokioRuntime;
 use crate::social::social_service_manager::SocialServiceManager;
+use dcl_core::Core;
 
 /// Friendship request data: (address, name, has_claimed_name, profile_picture_url, message, created_at, friendship_id)
 type FriendshipRequestData = (String, String, bool, String, String, i64, String);
@@ -147,7 +147,7 @@ impl DclSocialService {
         let (promise, get_promise) = Promise::make_to_async();
         let manager = self.manager.clone();
 
-        TokioRuntime::spawn(async move {
+        Core::spawn(async move {
             let result = Self::async_get_friends(manager, limit, offset, status).await;
             Self::resolve_friends_promise(get_promise, result);
         });
@@ -167,7 +167,7 @@ impl DclSocialService {
         let manager = self.manager.clone();
         let user_address = user_address.to_string();
 
-        TokioRuntime::spawn(async move {
+        Core::spawn(async move {
             let result = Self::async_get_mutual_friends(manager, user_address, limit, offset).await;
             Self::resolve_friends_promise(get_promise, result);
         });
@@ -181,7 +181,7 @@ impl DclSocialService {
         let (promise, get_promise) = Promise::make_to_async();
         let manager = self.manager.clone();
 
-        TokioRuntime::spawn(async move {
+        Core::spawn(async move {
             let result = Self::async_get_pending_requests(manager, limit, offset).await;
             Self::resolve_requests_promise(get_promise, result);
         });
@@ -195,7 +195,7 @@ impl DclSocialService {
         let (promise, get_promise) = Promise::make_to_async();
         let manager = self.manager.clone();
 
-        TokioRuntime::spawn(async move {
+        Core::spawn(async move {
             let result = Self::async_get_sent_requests(manager, limit, offset).await;
             Self::resolve_requests_promise(get_promise, result);
         });
@@ -215,7 +215,7 @@ impl DclSocialService {
             Some(message.to_string())
         };
 
-        TokioRuntime::spawn(async move {
+        Core::spawn(async move {
             let result = Self::async_send_friend_request(manager, address, message).await;
             Self::resolve_simple_promise(get_promise, result);
         });
@@ -230,7 +230,7 @@ impl DclSocialService {
         let manager = self.manager.clone();
         let address = address.to_string();
 
-        TokioRuntime::spawn(async move {
+        Core::spawn(async move {
             let result = Self::async_accept_friend_request(manager, address).await;
             Self::resolve_simple_promise(get_promise, result);
         });
@@ -245,7 +245,7 @@ impl DclSocialService {
         let manager = self.manager.clone();
         let address = address.to_string();
 
-        TokioRuntime::spawn(async move {
+        Core::spawn(async move {
             let result = Self::async_reject_friend_request(manager, address).await;
             Self::resolve_simple_promise(get_promise, result);
         });
@@ -260,7 +260,7 @@ impl DclSocialService {
         let manager = self.manager.clone();
         let address = address.to_string();
 
-        TokioRuntime::spawn(async move {
+        Core::spawn(async move {
             let result = Self::async_cancel_friend_request(manager, address).await;
             Self::resolve_simple_promise(get_promise, result);
         });
@@ -275,7 +275,7 @@ impl DclSocialService {
         let manager = self.manager.clone();
         let address = address.to_string();
 
-        TokioRuntime::spawn(async move {
+        Core::spawn(async move {
             let result = Self::async_delete_friendship(manager, address).await;
             Self::resolve_simple_promise(get_promise, result);
         });
@@ -290,7 +290,7 @@ impl DclSocialService {
         let manager = self.manager.clone();
         let address = address.to_string();
 
-        TokioRuntime::spawn(async move {
+        Core::spawn(async move {
             let result = Self::async_get_friendship_status(manager, address).await;
             Self::resolve_status_promise(get_promise, result);
         });
@@ -310,7 +310,7 @@ impl DclSocialService {
         let cancel_token_clone = cancel_token.clone();
         let cancel_handle = self.friendship_updates_cancel.clone();
 
-        TokioRuntime::spawn(async move {
+        Core::spawn(async move {
             // Cancel any existing subscription first
             {
                 let mut guard = cancel_handle.write().await;
@@ -385,7 +385,7 @@ impl DclSocialService {
         let cancel_token_clone = cancel_token.clone();
         let cancel_handle = self.connectivity_updates_cancel.clone();
 
-        TokioRuntime::spawn(async move {
+        Core::spawn(async move {
             // Cancel any existing subscription first
             {
                 let mut guard = cancel_handle.write().await;
@@ -411,7 +411,7 @@ impl DclSocialService {
     #[func]
     pub fn unsubscribe_from_updates(&mut self) {
         let cancel_handle = self.friendship_updates_cancel.clone();
-        TokioRuntime::spawn(async move {
+        Core::spawn(async move {
             let mut guard = cancel_handle.write().await;
             if let Some(token) = guard.take() {
                 tracing::debug!("Cancelling friendship updates subscription");
@@ -424,7 +424,7 @@ impl DclSocialService {
     #[func]
     pub fn unsubscribe_from_connectivity_updates(&mut self) {
         let cancel_handle = self.connectivity_updates_cancel.clone();
-        TokioRuntime::spawn(async move {
+        Core::spawn(async move {
             let mut guard = cancel_handle.write().await;
             if let Some(token) = guard.take() {
                 tracing::debug!("Cancelling connectivity updates subscription");
@@ -444,7 +444,7 @@ impl DclSocialService {
         let manager = self.manager.clone();
         let address = address.to_string();
 
-        TokioRuntime::spawn(async move {
+        Core::spawn(async move {
             let result = Self::async_block_user(manager, address).await;
             Self::resolve_simple_promise(get_promise, result);
         });
@@ -459,7 +459,7 @@ impl DclSocialService {
         let manager = self.manager.clone();
         let address = address.to_string();
 
-        TokioRuntime::spawn(async move {
+        Core::spawn(async move {
             let result = Self::async_unblock_user(manager, address).await;
             Self::resolve_simple_promise(get_promise, result);
         });
@@ -473,7 +473,7 @@ impl DclSocialService {
         let (promise, get_promise) = Promise::make_to_async();
         let manager = self.manager.clone();
 
-        TokioRuntime::spawn(async move {
+        Core::spawn(async move {
             let result = Self::async_get_blocked_users(manager, limit, offset).await;
             Self::resolve_blocked_users_promise(get_promise, result);
         });
@@ -487,7 +487,7 @@ impl DclSocialService {
         let (promise, get_promise) = Promise::make_to_async();
         let manager = self.manager.clone();
 
-        TokioRuntime::spawn(async move {
+        Core::spawn(async move {
             let result = Self::async_get_blocking_status(manager).await;
             Self::resolve_blocking_status_promise(get_promise, result);
         });
@@ -507,7 +507,7 @@ impl DclSocialService {
         let cancel_token_clone = cancel_token.clone();
         let cancel_handle = self.block_updates_cancel.clone();
 
-        TokioRuntime::spawn(async move {
+        Core::spawn(async move {
             // Cancel any existing subscription first
             {
                 let mut guard = cancel_handle.write().await;
@@ -545,7 +545,7 @@ impl DclSocialService {
     #[func]
     pub fn unsubscribe_from_block_updates(&mut self) {
         let cancel_handle = self.block_updates_cancel.clone();
-        TokioRuntime::spawn(async move {
+        Core::spawn(async move {
             let mut guard = cancel_handle.write().await;
             if let Some(token) = guard.take() {
                 tracing::debug!("Cancelling block updates subscription");

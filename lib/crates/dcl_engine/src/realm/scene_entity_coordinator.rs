@@ -25,6 +25,7 @@
 //! 5. Scene Resolution: `update_loadable_and_keep_alive_scenes()` determines which scenes should be loaded
 //! 6. Consumption: GDScript reads `get_desired_scenes()` and loads/unloads accordingly
 
+use dcl_core::Core;
 use std::{
     collections::{HashMap, HashSet},
     sync::Arc,
@@ -40,7 +41,6 @@ use crate::{
             RequestOption, RequestResponse, RequestResponseError, ResponseEnum, ResponseType,
         },
     },
-    scene_runner::tokio_runtime::TokioRuntime,
 };
 
 use super::{
@@ -825,7 +825,7 @@ impl SceneEntityCoordinator {
 #[godot_api]
 impl INode for SceneEntityCoordinator {
     fn init(_base: Base<Node>) -> Self {
-        let runtime = TokioRuntime::static_clone_handle();
+        let runtime = Core::try_handle();
         if let Some(global) = DclGlobal::try_singleton() {
             let http_requester_gd = global.bind().get_http_requester();
             let http_requester = http_requester_gd.bind().get_http_queue_requester();

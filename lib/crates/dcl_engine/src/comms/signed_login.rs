@@ -1,5 +1,6 @@
 // https://github.com/decentraland/hammurabi/pull/33/files#diff-18afcd5f94e3688aad1ba36fa1db3e09b472b271d1e0cf5aeb59ebd32f43a328
 
+use dcl_core::Core;
 use std::collections::HashMap;
 
 use http::{Method, Uri};
@@ -11,7 +12,6 @@ use crate::{
         http_queue_requester::HttpQueueRequester,
         request_response::{RequestOption, ResponseEnum, ResponseType},
     },
-    scene_runner::tokio_runtime::TokioRuntime,
 };
 
 #[derive(Debug, serde::Deserialize)]
@@ -63,7 +63,7 @@ impl SignedLogin {
     pub fn new(uri: Uri, ephemeral_auth_chain: EphemeralAuthChain, meta: SignedLoginMeta) -> Self {
         let (login_result_sender, login_result_receiver) = tokio::sync::oneshot::channel();
 
-        TokioRuntime::spawn(async move {
+        Core::spawn(async move {
             let unix_time = crate::utils::clock::unix_time_ms();
 
             let meta = serde_json::to_string(&meta).unwrap();

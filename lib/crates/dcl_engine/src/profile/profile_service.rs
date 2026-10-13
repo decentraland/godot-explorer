@@ -2,9 +2,9 @@ use crate::{
     avatars::dcl_user_profile::DclUserProfile,
     comms::profile::UserProfile,
     godot_classes::{dcl_global::DclGlobal, promise::Promise},
-    scene_runner::tokio_runtime::TokioRuntime,
 };
 use anyhow::anyhow;
+use dcl_core::Core;
 use godot::prelude::*;
 use multihash_codetable::MultihashDigest;
 use serde::Serialize;
@@ -149,7 +149,7 @@ impl ProfileService {
             .get_profile_deployment_url()
             .to_string();
 
-        TokioRuntime::spawn(async move {
+        Core::spawn(async move {
             // ADR-290: Snapshots are no longer uploaded with profile deployments
             let result = Self::prepare_and_deploy_profile_internal(
                 http_requester_arc,

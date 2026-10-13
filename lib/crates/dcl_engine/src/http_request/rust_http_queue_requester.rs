@@ -1,11 +1,9 @@
 use std::{collections::HashMap, sync::Arc};
 
+use dcl_core::Core;
 use godot::prelude::*;
 
-use crate::{
-    godot_classes::{dcl_global::DclGlobal, promise::Promise},
-    scene_runner::tokio_runtime::TokioRuntime,
-};
+use crate::godot_classes::{dcl_global::DclGlobal, promise::Promise};
 
 use super::request_response::send_result_to_promise;
 
@@ -54,7 +52,7 @@ impl RustHttpQueueRequester {
         );
         let http_requester = self.http_queue_requester.clone();
         let (ret_promise, get_promise) = Promise::make_to_async();
-        TokioRuntime::spawn(async move {
+        Core::spawn(async move {
             let result = http_requester.request(request_option, 0).await;
             let Some(promise) = get_promise() else {
                 return;
@@ -165,7 +163,7 @@ impl RustHttpQueueRequester {
         );
         let http_requester = self.http_queue_requester.clone();
         let (ret_promise, get_promise) = Promise::make_to_async();
-        TokioRuntime::spawn(async move {
+        Core::spawn(async move {
             let result = http_requester.request(request_option, 0).await;
             let Some(promise) = get_promise() else {
                 return;

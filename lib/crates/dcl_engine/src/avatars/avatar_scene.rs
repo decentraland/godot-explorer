@@ -1,5 +1,6 @@
 use std::collections::{HashMap, VecDeque};
 
+use dcl_core::Core;
 use ethers_core::types::H160;
 use godot::classes::image::Format;
 use godot::classes::multi_mesh::TransformFormat;
@@ -32,7 +33,6 @@ use crate::{
         dcl_avatar::{AvatarMovementType, DclAvatar},
         dcl_global::DclGlobal,
     },
-    scene_runner::tokio_runtime::TokioRuntime,
 };
 
 type AvatarAlias = u32;
@@ -1403,7 +1403,7 @@ impl AvatarScene {
         self.impostor_cache_last_used
             .insert(cache_key.to_string(), Self::now_ms());
         let key_for_log = cache_key.to_string();
-        TokioRuntime::spawn(async move {
+        Core::spawn(async move {
             let result = tokio::task::spawn_blocking(move || {
                 encode_and_write_impostor_png(&abs_path, &rgba)
             })

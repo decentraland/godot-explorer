@@ -8,6 +8,7 @@ publish = false
 crate-type = ["cdylib"]
 
 [dependencies]
+dcl_core = { path = "../dcl_core" }
 godot = { version = "0.4.5", features = ["experimental-threads", "serde"] }
 meshopt = "0.6"
 rand = "0.8"

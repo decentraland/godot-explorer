@@ -4,9 +4,9 @@ use http::Uri;
 use std::sync::Arc;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
+use crate::auth::wallet;
 #[cfg(feature = "use_livekit")]
 use crate::comms::consts::DISABLE_ARCHIPELAGO;
-use crate::{auth::wallet, scene_runner::tokio_runtime::TokioRuntime};
 use crate::{
     comms::{
         adapter::{
@@ -19,6 +19,7 @@ use crate::{
     dcl::{components::proto_components::kernel::comms::rfc4, scene_apis::NetworkMessageRecipient},
     godot_classes::dcl_global::DclGlobal,
 };
+use dcl_core::Core;
 use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc;
 
@@ -1141,7 +1142,7 @@ impl CommunicationManager {
             .get_http_queue_requester();
         let connection_sender = self.scene_room_connection_sender.clone();
 
-        TokioRuntime::spawn(async move {
+        Core::spawn(async move {
             tracing::debug!("🔄 Reconnecting scene room for scene: {}", scene_entity_id);
             match get_scene_adapter(
                 http_requester,
@@ -2824,7 +2825,7 @@ impl CommunicationManager {
             realm.bind().get_realm_max_bounds(),
         );
 
-        TokioRuntime::spawn(async move {
+        Core::spawn(async move {
             tracing::debug!("Requesting scene adapter for scene: {}", scene_entity_id);
             match get_scene_adapter(
                 http_requester,
@@ -3123,7 +3124,7 @@ impl CommunicationManager {
             tracing::warn!("No ephemeral auth chain for scene access check");
             let sender = self.scene_access_sender.clone();
             let sid = scene_id_str.clone();
-            TokioRuntime::spawn(async move {
+            Core::spawn(async move {
                 let _ = sender
                     .send((sid, true, "No auth chain available".to_string()))
                     .await;
@@ -3138,7 +3139,7 @@ impl CommunicationManager {
             .get_http_queue_requester();
         let sender = self.scene_access_sender.clone();
 
-        TokioRuntime::spawn(async move {
+        Core::spawn(async move {
             let result = check_gatekeeper_access(
                 http_requester,
                 &scene_id_str,

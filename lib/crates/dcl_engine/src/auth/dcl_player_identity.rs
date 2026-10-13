@@ -11,7 +11,7 @@ use crate::dcl::scene_apis::RpcResultSender;
 use crate::godot_classes::dcl_global::DclGlobal;
 use crate::godot_classes::promise::Promise;
 use crate::http_request::request_response::RequestResponse;
-use crate::scene_runner::tokio_runtime::TokioRuntime;
+use dcl_core::Core;
 
 use super::auth_identity::{
     complete_mobile_auth, create_ephemeral_from_external_signature, create_local_ephemeral,
@@ -294,7 +294,7 @@ impl DclPlayerIdentity {
         let (promise, get_promise) = Promise::make_to_async();
         let instance_id = self.base().instance_id();
 
-        let Some(handle) = TokioRuntime::static_clone_handle() else {
+        let Some(handle) = Core::try_handle() else {
             let mut promise_clone = promise.clone();
             promise_clone
                 .bind_mut()
@@ -390,7 +390,7 @@ impl DclPlayerIdentity {
     fn async_link_email_start(&mut self, email: GString) -> Gd<Promise> {
         let (promise, get_promise) = Promise::make_to_async();
 
-        let Some(handle) = TokioRuntime::static_clone_handle() else {
+        let Some(handle) = Core::try_handle() else {
             let mut promise_clone = promise.clone();
             promise_clone
                 .bind_mut()
@@ -445,7 +445,7 @@ impl DclPlayerIdentity {
         let (promise, get_promise) = Promise::make_to_async();
         let instance_id = self.base().instance_id();
 
-        let Some(handle) = TokioRuntime::static_clone_handle() else {
+        let Some(handle) = Core::try_handle() else {
             let mut promise_clone = promise.clone();
             promise_clone
                 .bind_mut()
@@ -515,7 +515,7 @@ impl DclPlayerIdentity {
         let (promise, get_promise) = Promise::make_to_async();
         let instance_id = self.base().instance_id();
 
-        let Some(handle) = TokioRuntime::static_clone_handle() else {
+        let Some(handle) = Core::try_handle() else {
             let mut promise_clone = promise.clone();
             promise_clone
                 .bind_mut()
@@ -584,7 +584,7 @@ impl DclPlayerIdentity {
         let (promise, get_promise) = Promise::make_to_async();
         let instance_id = self.base().instance_id();
 
-        let Some(handle) = TokioRuntime::static_clone_handle() else {
+        let Some(handle) = Core::try_handle() else {
             let mut promise_clone = promise.clone();
             promise_clone
                 .bind_mut()
@@ -648,7 +648,7 @@ impl DclPlayerIdentity {
     fn async_delete_guest_account(&mut self, device_anchor_id: GString) -> Gd<Promise> {
         let (promise, get_promise) = Promise::make_to_async();
 
-        let Some(handle) = TokioRuntime::static_clone_handle() else {
+        let Some(handle) = Core::try_handle() else {
             let mut promise_clone = promise.clone();
             promise_clone
                 .bind_mut()
@@ -696,7 +696,7 @@ impl DclPlayerIdentity {
     fn async_delete_upgraded_account(&mut self, device_anchor_id: GString) -> Gd<Promise> {
         let (promise, get_promise) = Promise::make_to_async();
 
-        let Some(handle) = TokioRuntime::static_clone_handle() else {
+        let Some(handle) = Core::try_handle() else {
             let mut promise_clone = promise.clone();
             promise_clone
                 .bind_mut()
@@ -731,7 +731,7 @@ impl DclPlayerIdentity {
 
     #[func]
     fn try_connect_account(&mut self) {
-        let Some(handle) = TokioRuntime::static_clone_handle() else {
+        let Some(handle) = Core::try_handle() else {
             panic!("tokio runtime not initialized")
         };
 
@@ -801,7 +801,7 @@ impl DclPlayerIdentity {
         self.mobile_auth_cancelled = false;
         self.mobile_auth_attempt = self.mobile_auth_attempt.wrapping_add(1);
 
-        let Some(handle) = TokioRuntime::static_clone_handle() else {
+        let Some(handle) = Core::try_handle() else {
             panic!("tokio runtime not initialized")
         };
 
@@ -864,7 +864,7 @@ impl DclPlayerIdentity {
         // Consume the flag when this process did start the flow; its absence is not an error.
         self.pending_mobile_auth.take();
 
-        let Some(handle) = TokioRuntime::static_clone_handle() else {
+        let Some(handle) = Core::try_handle() else {
             panic!("tokio runtime not initialized")
         };
 
@@ -1234,7 +1234,7 @@ impl DclPlayerIdentity {
             return promise;
         };
 
-        if let Some(handle) = TokioRuntime::static_clone_handle() {
+        if let Some(handle) = Core::try_handle() {
             let uri = match http::Uri::try_from(uri.to_string().as_str()) {
                 Ok(uri) => uri,
                 Err(e) => {
@@ -1408,7 +1408,7 @@ impl DclPlayerIdentity {
         };
         body.auth_chain = Some(auth_chain.auth_chain().clone());
 
-        if let Some(handle) = TokioRuntime::static_clone_handle() {
+        if let Some(handle) = Core::try_handle() {
             handle.spawn(async move {
                 let result = do_request(body, url_sender).await.map(|(_, result)| result);
                 response.send(result.map_err(|err| err.to_string()));
