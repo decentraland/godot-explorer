@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use crate::godot_classes::dcl_tokio_rpc::GodotTokioCall;
+use dcl_core::OpenUrlRequest;
 
 use super::{
     decentraland_auth_server::{
@@ -26,7 +26,7 @@ pub fn get_ephemeral_message(ephemeral_address: &str, expiration: std::time::Sys
 }
 
 pub async fn try_create_remote_ephemeral(
-    url_reporter_sender: tokio::sync::mpsc::Sender<GodotTokioCall>,
+    url_reporter_sender: tokio::sync::mpsc::Sender<OpenUrlRequest>,
 ) -> Result<(EphemeralAuthChain, u64), anyhow::Error> {
     let local_wallet = LocalWallet::new(&mut thread_rng());
     let signing_key_bytes = local_wallet.signer().to_bytes().to_vec();
@@ -75,7 +75,7 @@ pub async fn try_create_remote_ephemeral(
 /// Returns the pending auth state that should be saved to complete auth when deep link arrives.
 /// Note: For mobile, the server generates the ephemeral identity, so we don't create it locally.
 pub async fn start_mobile_auth(
-    url_reporter_sender: tokio::sync::mpsc::Sender<GodotTokioCall>,
+    url_reporter_sender: tokio::sync::mpsc::Sender<OpenUrlRequest>,
     provider: Option<String>,
     user_id: Option<String>,
     session_id: Option<String>,

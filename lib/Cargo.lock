@@ -931,6 +931,9 @@ name = "dcl_core"
 version = "1.15.0"
 dependencies = [
  "anyhow",
+ "http 0.2.12",
+ "once_cell",
+ "reqwest",
  "serde",
  "serde_json",
  "tokio",

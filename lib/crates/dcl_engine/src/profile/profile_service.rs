@@ -326,6 +326,7 @@ impl ProfileService {
             .request(request_option, 1)
             .await
             .map_err(|e| anyhow!("Failed to deploy profile: {:?}", e))?;
+        let response = crate::http_request::request_response::RequestResponse::new(response);
 
         // Check HTTP status code
         let status_code = response.status_code();

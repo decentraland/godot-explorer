@@ -2,8 +2,8 @@ use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 
-use crate::godot_classes::dcl_tokio_rpc::GodotTokioCall;
 use crate::urls;
+use dcl_core::OpenUrlRequest;
 
 use super::wallet::SimpleAuthChain;
 
@@ -381,7 +381,7 @@ async fn create_new_request(
 /// Instead of polling, the app should wait for a deep link with the identity ID.
 pub async fn do_request_mobile(
     _message: CreateRequest,
-    url_reporter: tokio::sync::mpsc::Sender<GodotTokioCall>,
+    url_reporter: tokio::sync::mpsc::Sender<OpenUrlRequest>,
     provider: Option<String>,
     user_id: Option<String>,
     session_id: Option<String>,
@@ -410,7 +410,7 @@ pub async fn do_request_mobile(
     tracing::debug!("do_request_mobile: opening auth URL={}", url);
 
     url_reporter
-        .send(GodotTokioCall::OpenUrl {
+        .send(OpenUrlRequest {
             url,
             description: "".into(),
             use_webview: true,
@@ -424,7 +424,7 @@ pub async fn do_request_mobile(
 
 pub async fn do_request(
     message: CreateRequest,
-    url_reporter: tokio::sync::mpsc::Sender<GodotTokioCall>,
+    url_reporter: tokio::sync::mpsc::Sender<OpenUrlRequest>,
 ) -> Result<(String, serde_json::Value), anyhow::Error> {
     tracing::debug!(
         "do_request: starting auth request, method={}",
@@ -447,7 +447,7 @@ pub async fn do_request(
     tracing::debug!("do_request: opening auth URL={}", url);
 
     url_reporter
-        .send(GodotTokioCall::OpenUrl {
+        .send(OpenUrlRequest {
             url: url.clone(),
             description: "".into(),
             use_webview: true,
@@ -524,7 +524,7 @@ mod test {
         tokio::spawn(async move {
             loop {
                 match rx.recv().await {
-                    Some(GodotTokioCall::OpenUrl {
+                    Some(OpenUrlRequest {
                         url,
                         description,
                         use_webview,

@@ -4,9 +4,13 @@ pub mod clock;
 mod core;
 pub mod deep_link;
 pub mod env;
+pub mod http;
+pub mod network_inspector;
+mod open_url;
 pub mod urls;
 
 pub use crate::core::{Core, CoreConfig, Platform};
+pub use crate::open_url::OpenUrlRequest;
 
 /// User-Agent for all outgoing reqwest HTTP clients. reqwest sends none by
 /// default, and CDN bot protection (e.g. arweave.net's CDN77) rate-limits

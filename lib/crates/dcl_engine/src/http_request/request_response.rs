@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use godot::{
     obj::Gd,
     prelude::{GString, Variant},
@@ -7,68 +5,28 @@ use godot::{
 
 use crate::godot_classes::promise::Promise;
 
-#[derive(Debug)]
-pub enum ResponseEnum {
-    String(String),
-    Bytes(Vec<u8>),
-    ToFile(Result<String, std::io::Error>),
-    Json(Result<serde_json::Value, serde_json::Error>),
-}
-
-#[derive(Debug, Clone)]
-pub enum ResponseType {
-    AsString,
-    #[allow(dead_code)]
-    AsBytes,
-    AsJson,
-    ToFile(String),
-}
-
-static REQUEST_ID_COUNTER: once_cell::sync::Lazy<std::sync::atomic::AtomicU32> =
-    once_cell::sync::Lazy::new(Default::default);
-
-#[derive(Debug)]
-pub struct RequestOption {
-    pub id: u32,
-    pub reference_id: u32,
-    pub url: String,
-    pub method: http::Method,
-    pub body: Option<Vec<u8>>,
-    pub headers: Option<HashMap<String, String>>,
-    pub response_type: ResponseType,
-    pub timeout: Option<std::time::Duration>,
-}
-
-impl RequestOption {
-    pub fn new(
-        reference_id: u32,
-        url: String,
-        method: http::Method,
-        response_type: ResponseType,
-        body: Option<Vec<u8>>,
-        headers: Option<HashMap<String, String>>,
-        timeout: Option<std::time::Duration>,
-    ) -> Self {
-        Self {
-            id: REQUEST_ID_COUNTER.fetch_add(1, std::sync::atomic::Ordering::SeqCst),
-            reference_id,
-            url,
-            method,
-            body,
-            headers,
-            response_type,
-            timeout,
-        }
-    }
-}
+pub use dcl_core::http::request_response::{
+    HttpError, HttpResponse, RequestOption, ResponseEnum, ResponseType,
+};
 
 #[derive(Debug, godot::prelude::GodotClass)]
 #[class(no_init)]
 pub struct RequestResponse {
-    pub request_option: RequestOption,
-    pub status_code: http::StatusCode,
-    pub headers: Option<HashMap<String, String>>,
-    pub response_data: Result<ResponseEnum, String>,
+    inner: HttpResponse,
+}
+
+impl RequestResponse {
+    pub fn new(inner: HttpResponse) -> Self {
+        Self { inner }
+    }
+}
+
+impl std::ops::Deref for RequestResponse {
+    type Target = HttpResponse;
+
+    fn deref(&self) -> &HttpResponse {
+        &self.inner
+    }
 }
 
 #[godot::prelude::godot_api]
@@ -142,30 +100,33 @@ impl RequestResponse {
 #[derive(Debug, Default, godot::prelude::GodotClass)]
 #[class(init)]
 pub struct RequestResponseError {
-    pub id: u32,
-    pub error_message: String,
+    inner: HttpError,
+}
+
+impl RequestResponseError {
+    pub fn new(inner: HttpError) -> Self {
+        Self { inner }
+    }
 }
 
 #[godot::prelude::godot_api]
 impl RequestResponseError {
     #[func]
     pub fn id(&self) -> u32 {
-        self.id
+        self.inner.id
     }
 
     #[func]
     pub fn get_error_message(&self) -> GString {
-        self.error_message.clone().as_str().into()
+        self.inner.error_message.as_str().into()
     }
 }
 
-pub fn send_result_to_promise(
-    result: Result<RequestResponse, RequestResponseError>,
-    mut promise: Gd<Promise>,
-) {
+pub fn send_result_to_promise(result: Result<HttpResponse, HttpError>, mut promise: Gd<Promise>) {
     let mut promise = promise.bind_mut();
     match result {
         Ok(response) => {
+            let response = RequestResponse::new(response);
             let status_code = response.status_code();
             if response.is_error() {
                 promise.reject(response.get_error());
@@ -190,7 +151,7 @@ pub fn send_result_to_promise(
             }
         }
         Err(error) => {
-            promise.reject(error.get_error_message());
+            promise.reject(RequestResponseError::new(error).get_error_message());
         }
     }
 }

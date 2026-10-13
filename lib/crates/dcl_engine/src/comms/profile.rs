@@ -6,7 +6,7 @@ use crate::{
         common::Color3,
         sdk::components::{PbAvatarBase, PbAvatarEquippedData, PbPlayerIdentityData},
     },
-    http_request::request_response::{RequestResponse, ResponseEnum},
+    http_request::request_response::{HttpResponse, ResponseEnum},
 };
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -297,7 +297,7 @@ impl Default for UserProfile {
 impl UserProfile {
     // Not sure if it's the best place to add this here
     pub fn from_lambda_response(
-        response: &RequestResponse,
+        response: &HttpResponse,
         base_url: &str,
     ) -> Result<Self, anyhow::Error> {
         match &response.response_data {

@@ -1,18 +1,11 @@
+use dcl_core::OpenUrlRequest;
 use godot::prelude::*;
-
-pub enum GodotTokioCall {
-    OpenUrl {
-        url: String,
-        description: String,
-        use_webview: bool, // use webview
-    },
-}
 
 #[derive(GodotClass)]
 #[class(base=Node)]
 pub struct DclTokioRpc {
-    sender: tokio::sync::mpsc::Sender<GodotTokioCall>,
-    receiver: tokio::sync::mpsc::Receiver<GodotTokioCall>,
+    sender: tokio::sync::mpsc::Sender<OpenUrlRequest>,
+    receiver: tokio::sync::mpsc::Receiver<OpenUrlRequest>,
 
     base: Base<Node>,
 }
@@ -30,24 +23,21 @@ impl INode for DclTokioRpc {
     }
 
     fn process(&mut self, _dt: f64) {
-        while let Ok(state) = self.receiver.try_recv() {
-            match state {
-                GodotTokioCall::OpenUrl {
-                    url,
-                    description,
-                    use_webview,
-                } => {
-                    self.base_mut().call_deferred(
-                        "emit_signal",
-                        &[
-                            "need_open_url".to_variant(),
-                            url.to_variant(),
-                            description.to_variant(),
-                            use_webview.to_variant(),
-                        ],
-                    );
-                }
-            }
+        while let Ok(OpenUrlRequest {
+            url,
+            description,
+            use_webview,
+        }) = self.receiver.try_recv()
+        {
+            self.base_mut().call_deferred(
+                "emit_signal",
+                &[
+                    "need_open_url".to_variant(),
+                    url.to_variant(),
+                    description.to_variant(),
+                    use_webview.to_variant(),
+                ],
+            );
         }
     }
 }
@@ -57,7 +47,7 @@ impl DclTokioRpc {
     #[signal]
     fn need_open_url(url: GString, description: GString, use_webview: bool);
 
-    pub fn get_sender(&self) -> tokio::sync::mpsc::Sender<GodotTokioCall> {
+    pub fn get_sender(&self) -> tokio::sync::mpsc::Sender<OpenUrlRequest> {
         self.sender.clone()
     }
 }

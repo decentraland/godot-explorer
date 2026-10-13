@@ -37,9 +37,7 @@ use crate::{
     godot_classes::dcl_global::DclGlobal,
     http_request::{
         http_queue_requester::HttpQueueRequester,
-        request_response::{
-            RequestOption, RequestResponse, RequestResponseError, ResponseEnum, ResponseType,
-        },
+        request_response::{HttpError, HttpResponse, RequestOption, ResponseEnum, ResponseType},
     },
 };
 
@@ -87,8 +85,8 @@ struct SceneEntityCoordinator {
     empty_parcels: HashSet<String>,
 
     // Async communication
-    receiver: tokio::sync::mpsc::Receiver<Result<RequestResponse, RequestResponseError>>,
-    sender: tokio::sync::mpsc::Sender<Result<RequestResponse, RequestResponseError>>,
+    receiver: tokio::sync::mpsc::Receiver<Result<HttpResponse, HttpError>>,
+    sender: tokio::sync::mpsc::Sender<Result<HttpResponse, HttpError>>,
 
     http_requester: Option<Arc<HttpQueueRequester>>,
     runtime: Option<tokio::runtime::Handle>,
@@ -351,7 +349,7 @@ impl SceneEntityCoordinator {
         }
     }
 
-    fn handle_response(&mut self, response: RequestResponse) {
+    fn handle_response(&mut self, response: HttpResponse) {
         match response.response_data {
             Ok(response_data) => match response_data {
                 ResponseEnum::Json(json) => {
