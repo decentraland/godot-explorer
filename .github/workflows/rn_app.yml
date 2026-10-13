@@ -9,7 +9,7 @@ on:
     paths:
       - 'rn/**'
       - 'godot/src/rn_bridge/**'
-      - '.github/workflows/rn_spike.yml'
+      - '.github/workflows/rn_app.yml'
   workflow_dispatch:
     inputs:
       godot_host_lib_url:

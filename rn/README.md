@@ -1,6 +1,6 @@
 # DclRn — the mobile app
 
-> ⚠️ Started as a vibe-coded spike; being migrated into the shipping iOS/Android app.
+> ⚠️ Side project: being migrated into the shipping iOS/Android app.
 
 A React Native app that draws all UI in React Native. It ships under the existing store identity
 (`org.decentraland.godotexplorer`) as an update of the Godot-exported app it replaces. The Godot engine is
@@ -27,7 +27,7 @@ In the world Godot never changes the device orientation (RN owns it); the layout
 Orientation is owned by RN: everything before a scene (entry flow, Discover, Backpack) is portrait-locked
 (the manifest is portrait and the host's `override.cfg` starts the engine portrait), and the world screen
 calls `GodotBridge.setOrientation('landscape')` (forced, either direction) until Leave brings it back to
-`'portrait'`. Portrait scenes are not part of the spike.
+`'portrait'`. Portrait scenes are not supported yet.
 
 ## UI structure (built from Figma)
 

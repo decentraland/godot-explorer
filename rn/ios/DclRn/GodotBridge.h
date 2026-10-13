@@ -1,4 +1,4 @@
-// VIBE-CODED SPIKE: JS-facing end of the bridge. Commands and events are JSON strings.
+// JS-facing end of the bridge. Commands and events are JSON strings.
 #import <React/RCTBridgeModule.h>
 #import <React/RCTEventEmitter.h>
 

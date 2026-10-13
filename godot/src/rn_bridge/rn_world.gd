@@ -1,6 +1,6 @@
 class_name RnWorld
 extends RefCounted
-## VIBE-CODED SPIKE: moves the RN host between the avatar-only scene and the explorer.
+## Moves the RN host between the avatar-only scene and the explorer.
 
 const EXPLORER_SCENE := "res://src/ui/explorer.tscn"
 const AVATAR_HOST_SCENE := "res://src/rn_bridge/rn_avatar_host.tscn"

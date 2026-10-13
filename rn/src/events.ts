@@ -1,4 +1,4 @@
-// VIBE-CODED SPIKE: bridge event types and the pure reducer that turns them into HUD state.
+// Bridge event types and the pure reducer that turns them into HUD state.
 
 export type GodotEvent =
   | { type: 'ready'; data: Record<string, never> }

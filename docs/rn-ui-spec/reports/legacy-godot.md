@@ -205,7 +205,7 @@ Global conventions
 - Entry: `Global.open_own_profile`, `Global.open_profile_by_address(addr)`, `open_profile_by_avatar(DclAvatar)` handled in `explorer.gd` (:383-385, :1175-1269); menu Profile tab (portrait); tap on avatar in world; chat/friends lists.
 - Mobile vs desktop: `profile_portrait.*` (portrait mobile full-screen) vs `profile.tscn` landscape/desktop floating panel (`rounded`, `closable` exports); own+landscape variant shows menu controls.
 - Persisted: profile on catalyst (deploy through `ProfileService.async_deploy_profile`); blocked/muted lists in profile / `social_blacklist`.
-- Figma: covered by Figma: profile (Social friend actions: menu Figma Social). In rn/src? NO (Home shows "Not part of this spike yet." for profile tab).
+- Figma: covered by Figma: profile (Social friend actions: menu Figma Social). In rn/src? NO (Home shows placeholder for profile tab).
 
 ### 5.2 Profile editor
 - `pages/profile/profile_editor.gd` (439) + `.tscn`, fields `profile_field_text.*` (`dcl_text_edit_*`: description, country, employment_status, profession, real_name, hobby), `profile_field_option.*` / `DropdownList` (pronouns, gender, sexual orientation, relationship, from `ProfileConstants`), links CRUD (add via `profile_new_link_popup`, `_on_link_deleted`), `username_picker`, profile picture (`async_update_profile_picture`). Dirty tracking (`_original_values`) enables Save; validation errors via `DclLineEdit`; virtual-keyboard aware scrolling (`Global.change_virtual_keyboard`).
@@ -236,7 +236,7 @@ Persistence: everything via `Global.get_config()` (ConfigData, `config/config_da
 Mobile-vs-desktop in Settings is almost nil: the screen is a portrait/landscape master-detail (`Global.is_orientation_portrait()`), not a platform split. Only the Dynamic Graphics toggle is `Global.is_mobile()`-gated. Dev tab hidden when `Global.is_production()`.
 
 ## rn/src state (checked)
-`rn/src` has only: `Home.tsx` (Settings/Discover/Backpack/Profile tabs; **Settings tab is a placeholder "Not part of this spike yet."**), `ds/BottomNav.tsx` (4 icons explore/backpack/settings/profile), `discover/`, `backpack/`, `flow/` (entry/FTUE/auth), `world/WorldScreen.tsx` (minimal HUD: Chat toggle + log + input, via bridge `send_chat`; `events.ts` `chat` event {address,message,timestamp}, `hud` state, MAX_CHAT_LINES=50). Bridge commands: teleport, send_chat, emote, backpack_*, equip/unequip, set_color, set_name, enter_world... **Nothing for settings, friends, notifications, voice, report, credits, IAP, navbar panels, debug.** `rn_bridge/rn_ui_filter.gd` hides every Godot UI node except SceneUIContainer, SafeAreaControls, VirtualJoystick_Left, MobileCameraInput, HBoxContainer_VersionFPS - so all screens below disappear in the RN host unless re-implemented in RN.
+`rn/src` has only: `Home.tsx` (Settings/Discover/Backpack/Profile tabs; **Settings tab is a placeholder**), `ds/BottomNav.tsx` (4 icons explore/backpack/settings/profile), `discover/`, `backpack/`, `flow/` (entry/FTUE/auth), `world/WorldScreen.tsx` (minimal HUD: Chat toggle + log + input, via bridge `send_chat`; `events.ts` `chat` event {address,message,timestamp}, `hud` state, MAX_CHAT_LINES=50). Bridge commands: teleport, send_chat, emote, backpack_*, equip/unequip, set_color, set_name, enter_world... **Nothing for settings, friends, notifications, voice, report, credits, IAP, navbar panels, debug.** `rn_bridge/rn_ui_filter.gd` hides every Godot UI node except SceneUIContainer, SafeAreaControls, VirtualJoystick_Left, MobileCameraInput, HBoxContainer_VersionFPS - so all screens below disappear in the RN host unless re-implemented in RN.
 
 ---
 
@@ -403,7 +403,7 @@ Where Figma coverage is my inference (the area list does not name the item) it i
 
 ## 0. rn/src state (baseline for every "in rn/src?" verdict)
 - `Home.tsx`, `flow/*` (EntryFlow, screens, Ftue, flowMachine), `discover/*` (DiscoverScreen, Cards, DetailSheet, api), `backpack/*` (full screen: Wearables/Emotes/Color panels, AvatarStage draws through a native "hole"), `ds/*` (AppText, BottomNav, IconButton, Pill, PrimaryButton, ColorPicker, Tabs, tokens, scale), `godot/*` (mockBridge, placeholder), `GodotBridge.ts`, `events.ts`, `engine.ts`.
-- `world/WorldScreen.tsx` (256 lines) is a SPIKE HUD only: three `HudButton`s (Emote "wave", Chat toggle, Leave) + a plain chat log/input sending `send_chat`. HUD state comes from bridge events (`state` parcel/realm/fps/position every 0.25 s, `chat`, `loading`, `world`, `avatar`, `ready`). Nothing else of the HUD below exists in RN.
+- `world/WorldScreen.tsx` (256 lines) is a minimal HUD only: three `HudButton`s (Emote "wave", Chat toggle, Leave) + a plain chat log/input sending `send_chat`. HUD state comes from bridge events (`state` parcel/realm/fps/position every 0.25 s, `chat`, `loading`, `world`, `avatar`, `ready`). Nothing else of the HUD below exists in RN.
 - Bridge commands accepted while in the explorer: `teleport{x,y}`, `send_chat{text}`, `emote{urn}`, `backpack_open/place/close`, `equip`, `exit_world`. While avatar-host: `backpack_*`, `equip/unequip`, `set_body_shape`, `set_color`, `play_emote`, `set_emote_slot`, `randomize_avatar`, `set_name`, `enter_world{x,y,realm}`.
 
 ## 1. rn_bridge: how RN already takes over UI (godot/src/rn_bridge)
@@ -455,12 +455,12 @@ Where Figma coverage is my inference (the area list does not name the item) it i
 ### 2d. Verdicts
 - Joypad + virtual joystick + camera look: **covered by Figma: hud** (joystick movement, side buttons/secondaries). in rn/src? **No** (native Godot, kept visible by RnUiFilter; RN has nothing).
 - Show-UI / Hide Interface: **covered by Figma: hud (HideUI)**. rn/src? **No**.
-- Emote button (side button) : **covered by Figma: hud (side buttons)** (inferred); emote wheel disc itself: **NO FIGMA - needs decision**. rn/src? Partial (spike `Emote` button sends fixed "wave"; no wheel).
-- Chat panel / chatbar / mention autocomplete: **NO FIGMA - needs decision** (HUD Figma list does not name chat; if it is in the hud frames, confirm). rn/src? Spike only (WorldScreen chat log/input).
+- Emote button (side button) : **covered by Figma: hud (side buttons)** (inferred); emote wheel disc itself: **NO FIGMA - needs decision**. rn/src? Partial (`Emote` button sends fixed "wave"; no wheel).
+- Chat panel / chatbar / mention autocomplete: **NO FIGMA - needs decision** (HUD Figma list does not name chat; if it is in the hud frames, confirm). rn/src? Minimal only (WorldScreen chat log/input).
 - Pointer tooltip pills + crosshair: **NO FIGMA - needs decision** (core interaction affordance; RnUiFilter hides it today so scene interaction prompts are currently invisible in RN mode). rn/src? No.
 - Navbar / side panels: **covered by Figma: menu** (BottomNav exists in `ds/BottomNav.tsx` for non-world screens; no in-world navbar). rn/src? Partial (ds/BottomNav only).
 - Preview HUD / scene stats / debug panel / version-FPS: dev tooling, **NO FIGMA - needs decision** (likely out of scope for RN). rn/src? No.
-- Coordinates / scene title / map / minimap: not present in the current Godot HUD (stale handlers), **NO FIGMA - needs decision** (decide if the new HUD shows coords/place name; discover has its own place cards). rn/src? Spike prints parcel/realm only.
+- Coordinates / scene title / map / minimap: not present in the current Godot HUD (stale handlers), **NO FIGMA - needs decision** (decide if the new HUD shows coords/place name; discover has its own place cards). rn/src? Prints parcel/realm only.
 - Share place: **NO FIGMA - needs decision**. rn/src? No.
 
 ## 3. Modals, toasts, popups

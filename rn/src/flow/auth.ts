@@ -5,7 +5,7 @@ export type AuthResult = { hasProfile: boolean; name: string };
 const WAIT_MS = 1800;
 
 /**
- * Spike stand-in for the real sign-in (thirdweb / browser hand-off / wallet), which lives in the
+ * Stand-in for the real sign-in (thirdweb / browser hand-off / wallet), which lives in the
  * Rust client and is not reachable while Godot only renders the avatar. Wallet resolves to a
  * returning account so both lobby branches can be walked through.
  */

@@ -1,6 +1,6 @@
 class_name RnUiFilter
 extends RefCounted
-## VIBE-CODED SPIKE: hides every Godot UI node except the ones that stay native.
+## Hides every Godot UI node except the ones that stay native.
 
 const EMOTE_WHEEL := "EmoteWheel"
 

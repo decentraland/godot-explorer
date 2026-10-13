@@ -1,5 +1,5 @@
 extends Node
-## VIBE-CODED SPIKE: scene of the React Native host's avatar-only mode. No world is loaded; the
+## Scene of the React Native host's avatar-only mode. No world is loaded; the
 ## engine only renders the preview that RnBackpack places over the RN screens.
 
 

@@ -147,7 +147,7 @@ Legacy behaviour not in Figma:
 
 ## 6. RN status and gap list
 
-rn/src has: no profile screen. `Home.tsx` has a `profile: 'Profile'` tab label that renders the "Not part of this spike yet." placeholder; `BottomNav` has the avatar-ring icon; `backpack/` has `Sheet`, `AvatarStage`, `ItemCard` usage, and bridge commands (`GodotBridge.ts`: send_chat, set_color, randomize_avatar, ...). `flow/` has Naming (guest pick name) that will share the username field. No profile read/deploy bridge commands or events.
+rn/src has: no profile screen. `Home.tsx` has a `profile: 'Profile'` tab label that renders a placeholder; `BottomNav` has the avatar-ring icon; `backpack/` has `Sheet`, `AvatarStage`, `ItemCard` usage, and bridge commands (`GodotBridge.ts`: send_chat, set_color, randomize_avatar, ...). `flow/` has Naming (guest pick name) that will share the username field. No profile read/deploy bridge commands or events.
 Gap list:
 1. Bridge: `get_profile`, `deploy_profile(patch)`, `get_names`, profile-changed event, avatar preview for a given profile/address (reuse AvatarStage).
 2. DS: TextField, Dropdown, Dialog, LinkChip, Toast, FieldRow, icons (~16 new), claimed badge.

@@ -1,4 +1,4 @@
-// VIBE-CODED SPIKE: boots the Godot engine inside the RN app and builds the window's root view
+// Boots the Godot engine inside the RN app and builds the window's root view
 // controller: Godot's view controller at the bottom, the React Native view on top.
 #import <UIKit/UIKit.h>
 

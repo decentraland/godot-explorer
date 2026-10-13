@@ -74,7 +74,7 @@ New DS components needed (none exist in `rn/src/ds`): `Toggle`, `Slider`, `Dropd
 
 ## 6. RN status and gap list
 
-`Home.tsx` Settings tab is a placeholder ("Not part of this spike yet."); no settings store, no bridge commands (`get_setting`/`set_setting`/`apply`), no sheet host in `world/WorldScreen.tsx`. Gaps: (1) settings state module + persistence (RN store pushing values to Godot, or bridge get/set) ; (2) bridge events: `sdk_skybox_time_active`, `camera_mode_blocked`, cache size; commands: set_graphic_profile, set_dynamic_graphics, set_skybox, set_volume(bus), set_camera_mode, hide_ui/hide_names, clear_cache, sign_out; (3) DS components listed above; (4) the settings sheet and tab pills; (5) dropdown popover; (6) external links + copy-to-clipboard + toast; (7) skybox preview thumbnails (4 images: midnight/afternoon/midday/morning); (8) landscape lock handling.
+`Home.tsx` Settings tab is a placeholder; no settings store, no bridge commands (`get_setting`/`set_setting`/`apply`), no sheet host in `world/WorldScreen.tsx`. Gaps: (1) settings state module + persistence (RN store pushing values to Godot, or bridge get/set) ; (2) bridge events: `sdk_skybox_time_active`, `camera_mode_blocked`, cache size; commands: set_graphic_profile, set_dynamic_graphics, set_skybox, set_volume(bus), set_camera_mode, hide_ui/hide_names, clear_cache, sign_out; (3) DS components listed above; (4) the settings sheet and tab pills; (5) dropdown popover; (6) external links + copy-to-clipboard + toast; (7) skybox preview thumbnails (4 images: midnight/afternoon/midday/morning); (8) landscape lock handling.
 
 ## 7. Open questions / inconsistencies
 

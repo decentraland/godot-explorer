@@ -1,6 +1,6 @@
 class_name RnBackpack
 extends Node
-## VIBE-CODED SPIKE: owns the single avatar preview the React Native screens draw through a hole.
+## Owns the single avatar preview the React Native screens draw through a hole.
 
 signal avatar_changed(state: Dictionary)
 

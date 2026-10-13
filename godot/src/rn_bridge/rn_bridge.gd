@@ -1,5 +1,5 @@
 extends Node
-## VIBE-CODED SPIKE: JSON command/event channel for a React Native host (--rn-host only).
+## JSON command/event channel for a React Native host (--rn-host only).
 ## Commands arrive as `{"type": ..., ...}` strings; events leave as `{"type": ..., "data": {...}}`.
 
 const PLUGIN_SINGLETON := "RnHostPlugin"
