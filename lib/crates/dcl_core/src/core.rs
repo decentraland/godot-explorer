@@ -28,7 +28,6 @@ impl Platform {
 #[derive(Clone, Debug)]
 pub struct CoreConfig {
     pub data_dir: PathBuf,
-    pub env: String,
     pub platform: Platform,
 }
 
@@ -116,7 +115,6 @@ mod tests {
 
         let core = Core::install(CoreConfig {
             data_dir: PathBuf::from("/tmp/dcl"),
-            env: "org".into(),
             platform: Platform::Desktop,
         });
         assert_eq!(core.data_dir(), Path::new("/tmp/dcl"));
@@ -126,7 +124,6 @@ mod tests {
 
         let again = Core::install(CoreConfig {
             data_dir: PathBuf::from("/other"),
-            env: "zone".into(),
             platform: Platform::Android,
         });
         assert!(std::ptr::eq(core, again));

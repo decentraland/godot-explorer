@@ -117,7 +117,7 @@ default = ["use_livekit", "use_deno", "use_pulse"]
 use_livekit = ["dep:livekit", "dep:webrtc-sys-build"]
 # Compiled in by default (pure-Rust dep, keeps CI/mobile builds from bitrotting);
 # runtime activation is opt-in via --pulse / --pulse-server / PULSE_SERVER.
-use_pulse = ["dep:rusty_enet"]
+use_pulse = ["dep:rusty_enet", "dcl_core/use_pulse"]
 use_deno = ["dep:deno_core", "dep:v8"]
 use_resource_tracking = []
 use_voice_chat = []

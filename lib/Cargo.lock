@@ -930,8 +930,12 @@ dependencies = [
 name = "dcl_core"
 version = "1.15.0"
 dependencies = [
+ "anyhow",
+ "serde",
+ "serde_json",
  "tokio",
  "tracing",
+ "url",
 ]
 
 [[package]]

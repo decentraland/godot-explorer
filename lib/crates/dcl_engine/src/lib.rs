@@ -6,11 +6,7 @@
 
 use godot::prelude::*;
 
-/// User-Agent for all outgoing reqwest HTTP clients. reqwest sends none by
-/// default, and CDN bot protection (e.g. arweave.net's CDN77) rate-limits
-/// UA-less clients into 403s (#1766). We reuse Unity Explorer's UA: if a CDN
-/// ever blocks it, both clients break together and the issue gets flagged fast.
-pub const USER_AGENT: &str = "DecentralandGodotExplorer UnityWebRequest/1.0 (UnityWebRequest)";
+pub use dcl_core::USER_AGENT;
 
 // Use the tracking allocator to monitor Rust heap usage in real-time when memory debugging is enabled
 #[cfg(feature = "use_memory_debugger")]
@@ -27,8 +23,8 @@ pub mod avatars;
 pub mod comms;
 pub mod content;
 pub mod dcl;
-pub mod deep_link;
-pub mod env;
+pub use dcl_core::deep_link;
+pub use dcl_core::env;
 pub mod godot_classes;
 pub mod http_request;
 #[cfg(test)]
@@ -40,7 +36,7 @@ pub mod scene_runner;
 pub mod social;
 pub mod test_runner;
 pub mod tools;
-pub mod urls;
+pub use dcl_core::urls;
 pub mod utils;
 
 struct DecentralandGodotLibrary;

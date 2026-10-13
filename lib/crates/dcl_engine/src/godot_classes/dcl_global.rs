@@ -375,7 +375,6 @@ impl INode for DclGlobal {
 
         let core = Core::install(CoreConfig {
             data_dir: PathBuf::from(Os::singleton().get_user_data_dir().to_string()),
-            env: crate::env::get_config().to_string_repr(),
             platform: Platform::current(),
         });
         crate::utils::clock::spawn_background_sync(core.handle());
