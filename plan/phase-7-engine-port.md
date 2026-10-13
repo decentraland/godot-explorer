@@ -66,9 +66,11 @@ calling anything by string name.
   ported; delete with the subject otherwise (D-20). `test_runner.gd`, `validate_all_scripts.gd`,
   xtask `check-gdscript` and `test-gdscript`, the `linux_builds.yml` steps go. `cargo run -- run
   --itest` is the only engine test entry point.
-- [ ] **7.9 Addons** (per D-open-5). Keep as export tooling, exempt from the `.gd` rule:
-  `dcl_build_plugin` (141, XR mode and Android deps at export) and `dcl-godot-android` (76,
-  registers the Android plugin). Drop: `dcl_mobile_preview` (779, previews GDScript UI scenes in
+- [ ] **7.9 Addons** (per D-open-5). `dcl_build_plugin` (141) and `dcl-godot-android` (76) only
+  serve Godot's own Android Gradle build; replace that build with `--export-pack` plus xtask
+  copies (engine AAR from the template, `libwebrtc.jar` from `android_dependencies.zip`,
+  `libdclgodot.so` from cargo, the pack from the export), then delete both addons and
+  `godot/android`. Until then they are exempt from the `.gd` rule. Quest per D-open-19. Drop: `dcl_mobile_preview` (779, previews GDScript UI scenes in
   the 2D editor; the runtime phone emulation is `--emulate-*` in the root, not this addon),
   `resource_tracker` (1,217), `dcl-ios-devtools` (161, Info.plist keys for Godot-exported debug
   iOS builds), `sentry` (D-16), and `dcl_dev_tools` (1,924) once `resource_counter.gd` is ported
