@@ -15,6 +15,7 @@ const ICON_SIZE := 16
 const SETTINGS_DEFAULT_LEVEL := "rust_log_filter/default_level"
 const SETTINGS_MODULE_OVERRIDES := "rust_log_filter/module_overrides"
 const CRATE_NAME := "dclgodot"
+const CORE_CRATE_NAME := "dcl_core"
 
 var dialog: AcceptDialog
 var tree: Tree
@@ -189,11 +190,11 @@ func _scan_and_populate() -> void:
 	tree.clear()
 	var root := tree.create_item()
 
-	var lib_src := ProjectSettings.globalize_path("res://../lib/src/")
-	var dir := DirAccess.open(lib_src)
+	var engine_src := ProjectSettings.globalize_path("res://../lib/crates/dcl_engine/src/")
+	var dir := DirAccess.open(engine_src)
 	if dir == null:
 		var fallback := tree.create_item(root)
-		fallback.set_text(0, "(Could not open lib/src/ — path: %s)" % lib_src)
+		fallback.set_text(0, "(Could not open dcl_engine/src/ — path: %s)" % engine_src)
 		return
 
 	var entries: Array[String] = []
@@ -207,13 +208,18 @@ func _scan_and_populate() -> void:
 	entries.sort()
 
 	for e in entries:
-		var full_path := lib_src.path_join(e)
+		var full_path := engine_src.path_join(e)
 		if DirAccess.dir_exists_absolute(full_path):
 			_add_module_branch(root, CRATE_NAME + "::" + e, e, full_path)
 		elif e.ends_with(".rs") and e != "lib.rs":
 			var mod_name := e.get_basename()
 			var mod_path := CRATE_NAME + "::" + mod_name
 			_add_module_leaf(root, mod_path, mod_name)
+
+	# The engine-free core logs under its own crate target.
+	var core_src := ProjectSettings.globalize_path("res://../lib/crates/dcl_core/src/")
+	if DirAccess.dir_exists_absolute(core_src):
+		_add_module_branch(root, CORE_CRATE_NAME, CORE_CRATE_NAME, core_src)
 
 
 func _add_module_branch(

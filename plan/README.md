@@ -53,7 +53,7 @@ nothing about size and no item carries an estimate.
 
 | Phase | Gate to start | Who | Status |
 |---|---|---|---|
-| 1. Core carve-out (reduced scope) | none | Mateo + AI | in progress (1.0, 1.1 done) |
+| 1. Core carve-out (reduced scope) | none | Mateo + AI | code done; phone regression open |
 | 2. Rust root + emulator | 1.1 landed | Mateo + AI | not started |
 | 3. FFI + entry flow | 2.1 landed | Mateo + AI | not started |
 | 4. UI sweep + every domain on the core | phase 3 | Mateo + AI | not started |

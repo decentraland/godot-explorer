@@ -134,13 +134,15 @@ bypasses that check for local debugging only. The baked files live in
 ## Architecture
 
 ### Directory Structure
-- **`lib/`**: Core Rust library with all systems
-  - `src/dcl/`: Decentraland protocol types, SDK bindings, JS runtime glue
-  - `src/scene_runner/`: Scene threads, CRDT handling, per-component systems (`components/`)
-  - `src/av/`: Audio/video processing (video player)
-  - `src/comms/`: WebRTC, voice chat (livekit)
-  - `src/auth/`: Ethereum wallet and sign-in
-  - `src/content/`: Asset loading and caching
+- **`lib/`**: Cargo workspace (target dir, lockfile and version live here)
+  - `crates/dcl_core/`: engine-free core (no `godot` dependency, `cargo test -p dcl_core` runs without Godot): `Core` runtime, `env`/`urls`/`deep_link`, `session` (wallet, auth chain, thirdweb, `session.json`), `http` queue, `social`, `realm`, `flags`, `destination`, `analytics`, `notifications`
+  - `crates/dcl_engine/`: the Godot GDExtension (package `dclgodot`); the `Dcl*` classes are adapters over the core
+    - `src/dcl/`: Decentraland protocol types, SDK bindings, JS runtime glue
+    - `src/scene_runner/`: Scene threads, CRDT handling, per-component systems (`components/`)
+    - `src/av/`: Audio/video processing (video player)
+    - `src/comms/`: WebRTC, voice chat (livekit)
+    - `src/auth/`: `DclPlayerIdentity` adapter (the auth logic is in `dcl_core::session`)
+    - `src/content/`: Asset loading and caching
 - **`godot/`**: Godot project
   - `src/decentraland_components/`: Custom Godot nodes for DCL features
     - `avatar/impostor/`: Distance-based avatar LOD (billboard sprites for far avatars). Render handled by `MultiMeshInstance3D` + `Texture2DArray` in Rust `AvatarScene`; capture path uses scene-tree off-screen `AvatarPreview`.
@@ -312,7 +314,7 @@ Each xtask command checks its prerequisites and says what to run first:
 ## Common Tasks
 
 ### Adding a new Decentraland component:
-1. Create the Rust implementation in `lib/src/scene_runner/components/`
+1. Create the Rust implementation in `lib/crates/dcl_engine/src/scene_runner/components/`
 2. Add GDExtension bindings in the component file
 3. Create corresponding GDScript class in `godot/src/decentraland_components/`
 4. Register in the scene runner
@@ -343,7 +345,7 @@ The filter can also be changed at runtime from GDScript: `DclGlobal.set_rust_log
 **Rust Log Filter editor tool:**
 
 In the Godot editor, go to **DCL Tools → Rust Log Filter...** to open a visual tool that:
-- Shows the full module tree scanned from `lib/src/`
+- Shows the full module tree scanned from `lib/crates/dcl_engine/src/`
 - Lets you toggle per-module log levels (ERROR/WARN/INFO/DEBUG/TRACE)
 - Previews the generated filter string
 - "Apply to Run Args" injects `--rust-log=...` into the editor's run arguments
@@ -352,10 +354,10 @@ In the Godot editor, go to **DCL Tools → Rust Log Filter...** to open a visual
 
 ### Debugging scene loading:
 1. Enable verbose logging: `RUST_LOG=debug cargo run -- run`
-2. Check the scene runner logs in `lib/src/scene_runner/`
-3. Verify content server responses in `lib/src/content/`
+2. Check the scene runner logs in `lib/crates/dcl_engine/src/scene_runner/`
+3. Verify content server responses in `lib/crates/dcl_engine/src/content/`
 
 ### Working with the avatar system:
-- Avatar definitions are in `lib/src/avatars/`
-- Wearables are loaded via GLTF in `lib/src/content/gltf/` (`lib/src/content/wearable_entities.rs`)
+- Avatar definitions are in `lib/crates/dcl_engine/src/avatars/`
+- Wearables are loaded via GLTF in `lib/crates/dcl_engine/src/content/gltf/` (`lib/crates/dcl_engine/src/content/wearable_entities.rs`)
 - Animation system uses Godot's AnimationPlayer nodes
