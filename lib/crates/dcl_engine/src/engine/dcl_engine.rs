@@ -1,5 +1,6 @@
 use std::rc::Rc;
 
+use godot::classes::{Control, DisplayServer};
 use godot::prelude::*;
 
 use super::scene_requests::{EmulatorSink, GodotUiSink, PendingResponses, SharedSink};
@@ -146,6 +147,58 @@ impl DclEngine {
                 explorer.call("ui_has_focus", &[]).to::<bool>()
             }
             _ => true,
+        }
+    }
+
+    // ---- facade for the host (the JSON bridge today, the shell later)
+
+    /// Moves the local player to the centre of `parcel` in the current realm.
+    #[func]
+    pub fn teleport(&self, parcel: Vector2i) {
+        if let Some(mut explorer) = self.explorer() {
+            explorer.call("teleport_to", &[parcel.to_variant()]);
+        }
+    }
+
+    /// Plays an emote on the local avatar.
+    #[func]
+    pub fn play_local_emote(&self, urn: GString) {
+        if let Some(mut avatar) = self.avatar() {
+            avatar.call("async_play_emote", &[urn.to_variant()]);
+        }
+    }
+
+    /// Where the host's native controls sit, in device pixels: the HUD and scene UI keep clear
+    /// of these margins.
+    #[func]
+    pub fn set_hud_insets(&self, top: f32, right: f32, bottom: f32, left: f32) {
+        let Some(mut explorer) = self.explorer() else {
+            return;
+        };
+        let Ok(mut hud) = explorer.get("safe_area_hud").try_to::<Gd<Control>>() else {
+            return;
+        };
+        for (side, pixels) in [
+            ("top", top),
+            ("right", right),
+            ("bottom", bottom),
+            ("left", left),
+        ] {
+            let units = Self::device_pixels_to_viewport_units(&explorer, pixels);
+            hud.add_theme_constant_override(&format!("margin_{side}"), units as i32);
+        }
+        explorer.call("_push_scene_interactable_area", &[]);
+    }
+
+    /// The host reports device pixels; Godot lays out in its scaled viewport units.
+    fn device_pixels_to_viewport_units(explorer: &Gd<Node>, pixels: f32) -> f32 {
+        let window_width = DisplayServer::singleton().window_get_size().x;
+        let viewport_width = explorer
+            .get_viewport()
+            .map(|viewport| viewport.get_visible_rect().size.x);
+        match viewport_width {
+            Some(width) if window_width > 0 => pixels * width / window_width as f32,
+            _ => pixels,
         }
     }
 

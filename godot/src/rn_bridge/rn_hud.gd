@@ -49,13 +49,13 @@ func reset() -> void:
 	_unread = 0
 
 
-# RN reports device pixels; Godot lays out in its scaled viewport units.
-func _set_insets(explorer: Explorer, cmd: Dictionary) -> void:
-	for side: String in ["top", "right", "bottom", "left"]:
-		explorer.safe_area_hud.add_theme_constant_override(
-			"margin_" + side, int(_to_viewport_units(float(cmd.get(side, 0))))
-		)
-	explorer._push_scene_interactable_area()
+func _set_insets(_explorer: Explorer, cmd: Dictionary) -> void:
+	Global.engine.set_hud_insets(
+		float(cmd.get("top", 0)),
+		float(cmd.get("right", 0)),
+		float(cmd.get("bottom", 0)),
+		float(cmd.get("left", 0))
+	)
 
 
 func _set_chat_open(explorer: Explorer, open: bool) -> void:

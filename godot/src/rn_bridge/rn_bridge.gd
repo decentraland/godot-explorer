@@ -140,11 +140,11 @@ func _async_enter_world(cmd: Dictionary) -> void:
 func _handle_explorer_command(cmd: Dictionary) -> void:
 	match cmd.get("type", ""):
 		"teleport":
-			_explorer.teleport_to(Vector2i(int(cmd.get("x", 0)), int(cmd.get("y", 0))))
+			Global.engine.teleport(Vector2i(int(cmd.get("x", 0)), int(cmd.get("y", 0))))
 		"send_chat":
 			_explorer._on_panel_chat_submit_message(str(cmd.get("text", "")))
 		"emote":
-			_player().avatar.async_play_emote(str(cmd.get("urn", "")))
+			Global.engine.play_local_emote(str(cmd.get("urn", "")))
 		"backpack_open", "backpack_place":
 			var rect := Rect2(cmd.get("x", 0), cmd.get("y", 0), cmd.get("w", 0), cmd.get("h", 0))
 			if cmd["type"] == "backpack_open":
