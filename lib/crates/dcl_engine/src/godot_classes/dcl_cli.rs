@@ -43,6 +43,8 @@ pub struct DclCli {
     #[var(get)]
     pub lighting_renderer: bool,
     #[var(get)]
+    pub perf_log: bool,
+    #[var(get)]
     pub guest_profile: bool,
     #[var(get)]
     pub preview_mode: bool,
@@ -260,6 +262,13 @@ impl DclCli {
                     .to_string(),
                 arg_type: ArgType::Flag,
                 category: "UI/Display".to_string(),
+            },
+            ArgDefinition {
+                name: "--perf-log".to_string(),
+                description: "Log one `[Perf] fps=… rss_mb=…` line every 5 s while a world is loaded (logcat / device console), for comparing hosts"
+                    .to_string(),
+                arg_type: ArgType::Flag,
+                category: "Testing".to_string(),
             },
             ArgDefinition {
                 name: "--lighting-renderer".to_string(),
@@ -789,6 +798,7 @@ impl INode for DclCli {
         let rn_host = args_map.contains_key("--rn-host");
         let rn_avatar_only = args_map.contains_key("--rn-avatar-only");
         let lighting_renderer = args_map.contains_key("--lighting-renderer");
+        let perf_log = args_map.contains_key("--perf-log");
         let guest_profile = args_map.contains_key("--guest-profile");
         let preview_mode = args_map.contains_key("--preview");
         let scene_test_mode = args_map.contains_key("--scene-test");
@@ -988,6 +998,7 @@ impl INode for DclCli {
             rn_host,
             rn_avatar_only,
             lighting_renderer,
+            perf_log,
             guest_profile,
             preview_mode,
             scene_test_mode,

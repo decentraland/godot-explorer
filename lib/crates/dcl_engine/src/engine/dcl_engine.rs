@@ -1,6 +1,7 @@
 use std::rc::Rc;
 
-use godot::classes::{Control, DisplayServer};
+use godot::classes::{Control, DisplayServer, Engine};
+use godot::obj::Singleton;
 use godot::prelude::*;
 
 use super::scene_requests::{EmulatorSink, GodotUiSink, PendingResponses, SharedSink};
@@ -25,8 +26,13 @@ pub struct DclEngine {
     world: Option<WorldHandles>,
     pub(super) pending: PendingResponses,
     pub(super) sink: SharedSink,
+    /// Seconds until the next `[Perf]` line; `None` when `--perf-log` is off.
+    perf_countdown: Option<f64>,
     base: Base<Node>,
 }
+
+/// Seconds between `[Perf]` lines.
+const PERF_LOG_INTERVAL_SECS: f64 = 5.0;
 
 #[godot_api]
 impl INode for DclEngine {
@@ -35,7 +41,32 @@ impl INode for DclEngine {
             world: None,
             pending: PendingResponses::default(),
             sink: Rc::new(GodotUiSink),
+            perf_countdown: None,
             base,
+        }
+    }
+
+    fn ready(&mut self) {
+        let perf_log = DclGlobal::try_singleton()
+            .is_some_and(|global| global.bind().get_cli().bind().perf_log);
+        self.perf_countdown = perf_log.then_some(PERF_LOG_INTERVAL_SECS);
+    }
+
+    fn process(&mut self, delta: f64) {
+        let Some(countdown) = self.perf_countdown.as_mut() else {
+            return;
+        };
+        *countdown -= delta;
+        if *countdown > 0.0 {
+            return;
+        }
+        *countdown = PERF_LOG_INTERVAL_SECS;
+        if self.has_world() {
+            crate::tools::memory_monitor::emit_log(&format!(
+                "[Perf] fps={} rss_mb={}",
+                Engine::singleton().get_frames_per_second(),
+                crate::tools::memory_monitor::used_memory_mb()
+            ));
         }
     }
 }
