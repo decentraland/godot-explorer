@@ -1,7 +1,7 @@
 extends Node
 
 # Unit tests for the pure logic behind the guided tutorial (issue #2767):
-# FtueTutorialCoordinator.should_offer() and parse_scenes(). Runs as a scene so the project's
+# FtueTutorialCoordinator.should_offer(), should_show_pending_reward() and parse_scenes(). Runs as a scene so the project's
 # global classes resolve.
 #
 # Run headless:
@@ -35,6 +35,15 @@ func _ready() -> void:
 	_check("forced still needs the HUD", {"forced": true, "hud_ready": false}, false)
 	_check("forced never beats test mode", {"forced": true, "test_mode": true}, false)
 
+	_check_pending("owed and upgraded, back in the world", {}, true)
+	_check_pending("nothing owed", {"pending_wallet": ""}, false)
+	_check_pending("owed to another account", {"wallet": "0xb"}, false)
+	_check_pending("still a guest", {"can_claim": false}, false)
+	_check_pending("reward off", {"reward_enabled": false}, false)
+	_check_pending("not in the world", {"in_world": false}, false)
+	_check_pending("portrait", {"portrait": true}, false)
+	_check_pending("tutorial or card already up", {"busy": true}, false)
+
 	_check_scenes("default", "-3,-2", [Vector2i(-3, -2)])
 	_check_scenes("several, with spaces", " -3,-2 ; 10,20;", [Vector2i(-3, -2), Vector2i(10, 20)])
 	_check_scenes("malformed entries dropped", "a,b;1;2,3,4;5,6", [Vector2i(5, 6)])
@@ -61,6 +70,22 @@ func _check(label: String, overrides: Dictionary, expected: bool) -> void:
 	}
 	state.merge(overrides, true)
 	if FtueTutorialCoordinator.should_offer(state) != expected:
+		failures += 1
+		printerr("FAIL: %s — expected %s" % [label, expected])
+
+
+func _check_pending(label: String, overrides: Dictionary, expected: bool) -> void:
+	var state := {
+		"pending_wallet": "0xa",
+		"wallet": "0xa",
+		"can_claim": true,
+		"reward_enabled": true,
+		"in_world": true,
+		"portrait": false,
+		"busy": false,
+	}
+	state.merge(overrides, true)
+	if FtueTutorialCoordinator.should_show_pending_reward(state) != expected:
 		failures += 1
 		printerr("FAIL: %s — expected %s" % [label, expected])
 

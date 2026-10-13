@@ -8,7 +8,10 @@ extends Node
 ## the account was created on this install, so one recovered after a reinstall is not. START runs the
 ## seven steps; SKIP, there or at any step, ends it. Settings > Gameplay can replay it anywhere.
 ##
-## "Offered" and "completed" are device-local (config_data.gd).
+## A guest cannot claim the reward: CLAIM sends them to Add Email, and the reward card comes
+## back once that account has an email and the player is in the world again.
+##
+## "Offered", "completed" and the owed reward are device-local (config_data.gd).
 
 # Flag names exactly as served by the mobile-bff payload. An absent flag keeps its default.
 const FLAG_ENABLED := "ftue-tutorial"
@@ -48,6 +51,8 @@ var _generation := 0
 # Session-only, never persisted.
 var _forced := false
 var _forced_reward := false
+# The cached "guest upgraded" flag was confirmed against thirdweb this session.
+var _upgrade_state_refreshed := false
 
 
 func _ready() -> void:
@@ -58,6 +63,8 @@ func _ready() -> void:
 		_forced_reward = value == "reward"
 	Global.loading_started.connect(_on_loading_started)
 	Global.loading_finished.connect(_on_loading_finished)
+	Global.on_menu_close.connect(_async_try_pending_reward)
+	Global.guest_upgrade_state_refreshed.connect(_on_guest_upgrade_state_refreshed)
 
 
 ## `state` keys: test_mode, forced, enabled, new_player, offered, tutorial_scene, scene_loaded,
@@ -68,6 +75,15 @@ static func should_offer(state: Dictionary) -> bool:
 	if state.forced:
 		return true
 	return state.enabled and state.new_player and state.tutorial_scene and not state.offered
+
+
+## `state` keys: pending_wallet, wallet, can_claim, reward_enabled, in_world, portrait, busy.
+static func should_show_pending_reward(state: Dictionary) -> bool:
+	if state.pending_wallet.is_empty() or state.pending_wallet != state.wallet:
+		return false
+	if not state.can_claim or not state.reward_enabled:
+		return false
+	return state.in_world and not state.portrait and not state.busy
 
 
 ## Parses the scene list flag, "x,y;x,y", skipping anything malformed.
@@ -157,6 +173,7 @@ func _async_on_scene_entered() -> void:
 		}
 	)
 	if not offer:
+		_async_try_pending_reward()
 		return
 	_forced = false
 	_welcome = load(WELCOME_SCENE).instantiate()
@@ -247,7 +264,7 @@ func _mark_offered() -> void:
 
 
 # On its own CanvasLayer above the HUD, like the modals ModalManager shows.
-func _async_show_reward(campaign: Dictionary) -> void:
+func _async_show_reward(campaign: Dictionary, after_upgrade := false) -> void:
 	_close_reward()
 	_reward_layer = CanvasLayer.new()
 	_reward_layer.layer = 100
@@ -255,9 +272,88 @@ func _async_show_reward(campaign: Dictionary) -> void:
 	var modal: RewardModal = load(REWARD_SCENE).instantiate()
 	_reward_layer.add_child(modal)
 	modal.dismissed.connect(_close_reward)
-	modal.button_claim.pressed.connect(_track_click.bind("claim", SCREEN_REWARD, {}))
+	modal.button_claim.pressed.connect(_on_claim_pressed)
+	modal.upgrade_required.connect(_async_on_upgrade_required)
 	await modal.async_setup(campaign)
-	_track_screen(SCREEN_REWARD, {})
+	_track_screen(SCREEN_REWARD, {"after_upgrade": after_upgrade})
+
+
+func _on_claim_pressed() -> void:
+	_track_click("claim", SCREEN_REWARD, {"needs_upgrade": not _can_claim()})
+
+
+func _can_claim() -> bool:
+	var identity := Global.player_identity
+	return not identity.is_thirdweb_guest() or identity.is_thirdweb_guest_upgraded()
+
+
+# The reward is owed from here on; the card returns through _async_try_pending_reward.
+func _async_on_upgrade_required() -> void:
+	var config: ConfigData = Global.get_config()
+	config.ftue_tutorial_reward_pending_wallet = _wallet()
+	config.save_to_settings_file()
+	_close_reward()
+	# Add Email is portrait-only: Discover turns the app to portrait, as the Settings card does.
+	Global.open_discover.emit()
+	var frames := 0
+	while not Global.is_orientation_portrait() and frames < 30:
+		await get_tree().process_frame
+		frames += 1
+	Global.modal_manager.async_start_add_email_flow()
+
+
+func _on_guest_upgrade_state_refreshed(is_upgraded: bool) -> void:
+	_upgrade_state_refreshed = true
+	if is_upgraded:
+		_async_try_pending_reward()
+
+
+func _async_try_pending_reward() -> void:
+	var generation := _generation
+	var config: ConfigData = Global.get_config()
+	if config.ftue_tutorial_reward_pending_wallet != _wallet() or _wallet().is_empty():
+		return
+	if not _can_claim() and not _upgrade_state_refreshed:
+		# On a recovered session the cached flag reads "guest" until thirdweb is asked.
+		_upgrade_state_refreshed = true
+		var promise: Promise = Global.player_identity.async_refresh_thirdweb_upgrade_state(
+			Global.get_device_anchor_id()
+		)
+		await PromiseUtils.async_awaiter(promise)
+	# The email reward card that ends Add Email is a modal too: this one follows it. Leaving
+	# the menu, the app also takes a few frames to turn back to landscape.
+	var frames := 0
+	while (
+		Global.modal_manager.is_any_modal_open()
+		or (Global.is_orientation_portrait() and frames < 60)
+	):
+		await get_tree().process_frame
+		frames += 1
+		if generation != _generation:
+			return
+	var campaign: Dictionary = RewardCampaigns.CAMPAIGNS.get(REWARD_CAMPAIGN, {})
+	var explorer := Global.get_explorer()
+	var show := should_show_pending_reward(
+		{
+			"pending_wallet": config.ftue_tutorial_reward_pending_wallet,
+			"wallet": _wallet(),
+			"can_claim": _can_claim(),
+			"reward_enabled":
+			not campaign.is_empty() and Global.feature_flags.is_enabled(FLAG_REWARD, true),
+			"in_world": is_instance_valid(explorer) and not explorer.control_menu.visible,
+			"portrait": Global.is_orientation_portrait(),
+			"busy": generation != _generation or is_running() or is_instance_valid(_reward_layer),
+		}
+	)
+	if not show:
+		return
+	config.ftue_tutorial_reward_pending_wallet = ""
+	config.save_to_settings_file()
+	_async_show_reward(campaign, true)
+
+
+func _wallet() -> String:
+	return Global.player_identity.get_address_str().to_lower()
 
 
 func _close_reward() -> void:

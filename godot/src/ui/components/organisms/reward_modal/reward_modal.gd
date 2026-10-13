@@ -3,6 +3,9 @@ extends ColorRect
 
 ## Emitted on a backdrop tap when `managed_by_modal_manager` is off.
 signal dismissed
+## Emitted instead of claiming when `guests_must_upgrade` is on and the player is a guest who
+## has not added an email.
+signal upgrade_required
 
 ## Two-minute window (in seconds) used to tell a fresh claim apart from an item the
 ## wallet already owned, mirroring Genesis' claim.ts `assigned_at` check.
@@ -13,6 +16,7 @@ const ALREADY_CLAIMED_WINDOW_SEC := 120.0
 ## Off for a scene shown by something other than ModalManager, which then closes it on
 ## `dismissed`.
 @export var managed_by_modal_manager := true
+@export var guests_must_upgrade := false
 
 var _campaign_id: String = ""
 var _campaign_key: String = ""
@@ -61,6 +65,14 @@ func _on_gui_input(event: InputEvent) -> void:
 
 
 func _on_button_claim_pressed() -> void:
+	var identity := Global.player_identity
+	if (
+		guests_must_upgrade
+		and identity.is_thirdweb_guest()
+		and not identity.is_thirdweb_guest_upgraded()
+	):
+		upgrade_required.emit()
+		return
 	_async_claim()
 
 

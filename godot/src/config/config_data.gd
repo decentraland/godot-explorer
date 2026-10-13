@@ -255,6 +255,8 @@ var ftue_tutorial_offered: bool = false
 var ftue_tutorial_completed: bool = false
 # Lower-cased wallet of the account created on this install, the tutorial's "new player".
 var ftue_new_player_wallet: String = ""
+# Lower-cased wallet of a guest owed the tutorial reward card once they add an email.
+var ftue_tutorial_reward_pending_wallet: String = ""
 
 # Discover's "Last visited", per wallet so accounts sharing a device don't see each other's
 # places (#2631). Shape: { wallet_lower: [ { position, realm } ] }, newest first.
@@ -653,6 +655,12 @@ func load_from_settings_file():
 		"config", "ftue_new_player_wallet", data_default.ftue_new_player_wallet
 	)
 
+	self.ftue_tutorial_reward_pending_wallet = settings_file.get_value(
+		"config",
+		"ftue_tutorial_reward_pending_wallet",
+		data_default.ftue_tutorial_reward_pending_wallet
+	)
+
 
 func save_to_settings_file():
 	if Global.testing_scene_mode:
@@ -743,6 +751,9 @@ func save_to_settings_file():
 	new_settings_file.set_value("config", "ftue_tutorial_offered", self.ftue_tutorial_offered)
 	new_settings_file.set_value("config", "ftue_tutorial_completed", self.ftue_tutorial_completed)
 	new_settings_file.set_value("config", "ftue_new_player_wallet", self.ftue_new_player_wallet)
+	new_settings_file.set_value(
+		"config", "ftue_tutorial_reward_pending_wallet", self.ftue_tutorial_reward_pending_wallet
+	)
 	new_settings_file.set_value("user", "upgrade_modal_shown_count", self.upgrade_modal_shown_count)
 	new_settings_file.set_value(
 		"user", "upgrade_modal_last_shown_unix", self.upgrade_modal_last_shown_unix
