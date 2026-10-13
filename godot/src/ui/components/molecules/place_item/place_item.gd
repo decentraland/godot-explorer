@@ -567,6 +567,8 @@ func _async_download_image(url: String):
 	var url_hash = get_hash_from_url(url)
 	var promise = Global.content_provider.fetch_texture_by_url(url_hash, url)
 	var result = await PromiseUtils.async_awaiter(promise)
+	if not NodeGuard.is_alive(self, "PlaceItem._async_download_image"):
+		return
 	if result is PromiseError:
 		show_image_container(false)
 		printerr("places_generator::_async_download_image promise error: ", result.get_error())

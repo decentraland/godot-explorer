@@ -1,5 +1,8 @@
 use godot::{
-    classes::{control::LayoutPreset, IRichTextLabel, RichTextLabel},
+    classes::{
+        control::{LayoutPreset, MouseFilter},
+        IRichTextLabel, RichTextLabel,
+    },
     global::{HorizontalAlignment, VerticalAlignment},
     prelude::*,
 };
@@ -46,6 +49,11 @@ impl IRichTextLabel for DclRichUiText {
 
         // - Disable text selection (Label doesn't support selection)
         self.base_mut().set_selection_enabled(false);
+
+        // - Let taps through to the parent like Label does. RichTextLabel defaults to
+        //   MouseFilter::STOP, which made the label a dead zone over its tap-target
+        //   parent whenever the text had markup (#2804).
+        self.base_mut().set_mouse_filter(MouseFilter::IGNORE);
 
         // - Enable fit_content for auto-sizing similar to Label
         //   This makes RichTextLabel auto-size to its content like Label does

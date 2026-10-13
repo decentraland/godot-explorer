@@ -31,6 +31,10 @@ const FLAG_SENTRY_ERROR_EVENTS := "sentry-error-events"
 # The bff also serves `sentry-traces-sample-rate`, but sentry-godot exposes no
 # performance-tracing API yet — there is nothing to apply it to until the SDK
 # grows one.
+# Collect FCM push tokens and map them in Segment. Fail-open, and note what it does
+# NOT do: turning it off stops new tokens from being registered, it does not stop
+# delivery to tokens already collected — that is a server-side decision.
+const FLAG_PUSH_ENABLED := "push-enabled"
 
 var _flags: Dictionary = {}
 var _loaded := false
@@ -129,3 +133,10 @@ func _apply_flags() -> void:
 			get_number(FLAG_SENTRY_SAMPLE_RATE, ProjectMainLoop.DEFAULT_SENTRY_SAMPLE_RATE)
 		)
 		main_loop.set_sentry_error_events_enabled(is_enabled(FLAG_SENTRY_ERROR_EVENTS, false))
+
+	# Push registration. This is the only place the flag is read, and Metrics holds the startup
+	# identify until it arrives: the cached FCM token is already there in Metrics::ready(), so
+	# the identify would otherwise always win the race and the switch could only ever suppress
+	# token rotations. Reached on both paths above, so the hold ends even when the fetch fails.
+	if Global.metrics != null:
+		Global.metrics.set_push_enabled(is_enabled(FLAG_PUSH_ENABLED, true))

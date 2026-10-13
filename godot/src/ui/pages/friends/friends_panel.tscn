@@ -141,7 +141,7 @@ size_flags_horizontal = 3
 
 [node name="Button_Friends" type="Button" parent="MarginContainer/VBoxContainer2/MarginContainer_Header/Header/HBoxContainer_FriendsTab" unique_id=965233518]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 46)
+custom_minimum_size = Vector2(0, 56)
 layout_mode = 2
 size_flags_horizontal = 0
 focus_mode = 0
@@ -187,7 +187,7 @@ alignment = 1
 
 [node name="Button_Requests" type="Button" parent="MarginContainer/VBoxContainer2/MarginContainer_Header/Header/HBoxContainer_RequestsTab" unique_id=1364209019]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 46)
+custom_minimum_size = Vector2(150, 56)
 layout_mode = 2
 size_flags_horizontal = 0
 focus_mode = 0
@@ -227,16 +227,20 @@ color = Color(1, 0.1764706, 0.33333334, 1)
 
 [node name="RequestsBadge" type="Panel" parent="MarginContainer/VBoxContainer2/MarginContainer_Header/Header/HBoxContainer_RequestsTab/Button_Requests" unique_id=1791342905]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(22, 22)
+custom_minimum_size = Vector2(16, 16)
 layout_mode = 1
-anchors_preset = 1
+anchors_preset = 3
 anchor_left = 1.0
+anchor_top = 1.0
 anchor_right = 1.0
-offset_left = -12.0
-offset_top = -1.0
+anchor_bottom = 1.0
+offset_left = -6.0
+offset_top = -51.0
 offset_right = 10.0
-offset_bottom = 21.0
+offset_bottom = -35.0
 grow_horizontal = 0
+grow_vertical = 0
+pivot_offset_ratio = Vector2(0, 1)
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_reqbadge")
 
@@ -248,7 +252,7 @@ alignment = 2
 
 [node name="Button_Nearby" type="Button" parent="MarginContainer/VBoxContainer2/MarginContainer_Header/Header/HBoxContainer_NearbyTab" unique_id=925943708]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 46)
+custom_minimum_size = Vector2(0, 56)
 layout_mode = 2
 size_flags_horizontal = 0
 focus_mode = 0

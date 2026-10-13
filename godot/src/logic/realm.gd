@@ -156,12 +156,13 @@ func async_clear_realm():
 	Global.scene_runner.kill_all_scenes()
 
 
-func async_set_realm(new_realm_string: String, search_new_pos: bool = false) -> bool:
+## Private on purpose (#2948): a public string entry point is the door that let #2666
+## reopen. What is left are the callers that are not navigations -- a portable
+## experience's transient realm, and the offline scene renderer.
+func _async_set_realm(new_realm_string: String) -> bool:
 	var candidate_realm_url := Realm.normalize_realm_url(new_realm_string)
 
-	prints(
-		"[REALM] async_set_realm", new_realm_string, search_new_pos, "resolved", candidate_realm_url
-	)
+	prints("[REALM] _async_set_realm", new_realm_string, "resolved", candidate_realm_url)
 
 	# Private worlds (#1725): refuse before emitting, fetching or mutating anything, so a
 	# world the user can't enter never starts loading.
@@ -221,7 +222,37 @@ func async_set_realm(new_realm_string: String, search_new_pos: bool = false) -> 
 		_emit_realm_change_failed(new_realm_string, reason)
 		return false
 
-	# /about was validated — now it's safe to commit the new realm state.
+	return await _async_commit_realm(new_realm_string, candidate_realm_url, json, false)
+
+
+## No access gate and no /about fetch: the destination carries the one it was resolved
+## with (#2948).
+func async_apply_destination(dest: Destination) -> bool:
+	if not dest.is_ready():
+		push_error("Realm.async_apply_destination called with a %s destination" % dest)
+		return false
+
+	realm_changing.emit()
+	# Empty unless the world is password-protected, which is what keeps `secret` off
+	# the wire for every other realm (#2651).
+	realm_credential = dest.credential
+	# Only a join asks for the spawn point: a named parcel lands there, and a reload
+	# leaves the player standing where they are.
+	var wants_spawn := dest.is_intent and dest.target_parcel == Destination.UNSPECIFIED
+	return await _async_commit_realm(
+		dest.realm_string, dest.realm_url, dest.about, wants_spawn, dest.world_scenes
+	)
+
+
+## Commits validated realm state. Shared by the string entry point and by
+## async_apply_destination, which prove `json` in different ways.
+func _async_commit_realm(
+	new_realm_string: String,
+	candidate_realm_url: String,
+	json: Dictionary,
+	search_new_pos: bool,
+	known_scenes: Dictionary = {}
+) -> bool:
 	realm_string = new_realm_string
 	realm_url = candidate_realm_url
 	realm_about = json
@@ -243,7 +274,10 @@ func async_set_realm(new_realm_string: String, search_new_pos: bool = false) -> 
 		# worlds_content_server() returns ".../world/", we need ".../contents/"
 		var worlds_base = DclUrls.worlds_content_server().replace("/world/", "/")
 		var world_content_url = worlds_base + "contents/"
-		var all_urns = await _async_fetch_world_scenes(resolved_realm_name, world_content_url)
+		# The resolve already read this listing; asking again is a second round trip.
+		var all_urns := DestinationResolver.world_scene_urns(known_scenes, world_content_url)
+		if all_urns.is_empty():
+			all_urns = await _async_fetch_world_scenes(resolved_realm_name, world_content_url)
 		if not all_urns.is_empty():
 			realm_scene_urns.clear()
 			var urns_array: Array = []

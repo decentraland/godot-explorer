@@ -109,7 +109,7 @@ godot/src/ui/components/organisms/notifications/notification_item.gd	[b]
 
 # Parcel coordinates.
 godot/src/ui/pages/discover/friends/friends_generator.gd	%d, %d
-godot/src/ui/pages/settings/settings.gd	%s (%d, %d)
+godot/src/ui/components/utils/report_content_helper.gd	%s (%d, %d)
 
 # Custom-profile view-distance value label: number + metric unit, not prose.
 godot/src/ui/pages/settings/settings.gd	%dm

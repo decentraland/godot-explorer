@@ -88,6 +88,14 @@ func setup(
 	button_cancel.text = cancel_text.raw()
 
 
+## The add-email flow's field shape. It lives here rather than in the scene because the
+## scene is shared: a default tuned for one flow silently followed every other caller.
+func use_email_field() -> void:
+	dcl_text_edit.wrap_text = false
+	dcl_text_edit.validate_on_blur = true
+	dcl_text_edit.validate_email = true
+
+
 ## Injects an async handler run when the user confirms. Without it the modal
 ## emits `confirmed` and closes immediately (legacy behavior). With it, the modal
 ## shows a spinner while awaiting the handler and acts on its returned status.

@@ -8,9 +8,9 @@ use godot::{
     builtin::math::FloatExt,
     classes::{
         text_server::{JustificationFlag, LineBreakFlag},
-        Node, RenderingServer,
+        Node, RenderingServer, RichTextLabel, TextParagraph,
     },
-    obj::Gd,
+    obj::{Gd, NewGd},
 };
 
 use crate::{
@@ -26,6 +26,7 @@ use crate::{
             last_write_wins::LastWriteWinsComponentOperation, InsertIfNotExists, SceneCrdtState,
             SceneCrdtStateProtoComponents,
         },
+        ui_text_tags::rich_text_spans,
         SceneId,
     },
     scene_runner::{
@@ -124,7 +125,39 @@ const UI_COMPONENT_IDS: [SceneComponentId; 6] = [
 
 enum ContextNode {
     UiText(bool, Gd<godot::classes::Label>),
-    UiRichText(bool, Gd<godot::classes::RichTextLabel>),
+    // The text shaped span by span with the fonts the RichTextLabel paints it with.
+    UiRichText(bool, Gd<TextParagraph>),
+}
+
+// Shapes rich text for layout measurement. Measuring the RichTextLabel's own text
+// would measure the BBCode source (tags included) in the normal font only, which
+// inflated the width of markup labels (#2804).
+fn build_rich_text_paragraph(
+    rich_text_node: &Gd<RichTextLabel>,
+    source_text: &str,
+    wrapping: bool,
+) -> Gd<TextParagraph> {
+    let mut paragraph = TextParagraph::new_gd();
+    for span in rich_text_spans(source_text) {
+        let (font_name, font_size_name) = match (span.bold, span.italic) {
+            (false, false) => ("normal_font", "normal_font_size"),
+            (true, false) => ("bold_font", "bold_font_size"),
+            (false, true) => ("italics_font", "italics_font_size"),
+            (true, true) => ("bold_italics_font", "bold_italics_font_size"),
+        };
+        let Some(font) = rich_text_node.get_theme_font(font_name) else {
+            continue;
+        };
+        let font_size = rich_text_node.get_theme_font_size(font_size_name);
+        paragraph.add_string(&span.text, &font, font_size);
+    }
+    paragraph.set_justification_flags(JustificationFlag::NONE);
+    paragraph.set_break_flags(if wrapping {
+        LineBreakFlag::WORD_BOUND | LineBreakFlag::MANDATORY
+    } else {
+        LineBreakFlag::MANDATORY
+    });
+    paragraph
 }
 
 fn update_layout(
@@ -216,20 +249,24 @@ fn update_layout(
 
             if let Some(ui_text_control) = ui_node
                 .base_control
-                .try_get_node_as::<godot::classes::RichTextLabel>("text")
+                .try_get_node_as::<RichTextLabel>("text")
             {
-                let text_wrapping = if let Some(ui_text) = ui_text_components
+                let ui_text = ui_text_components
                     .get(entity)
-                    .and_then(|v| v.value.as_ref())
-                {
-                    ui_text.text_wrap_compat() == TextWrap::TwWrap
-                } else {
-                    false
-                };
+                    .and_then(|v| v.value.as_ref());
+                let text_wrapping = ui_text
+                    .map(|ui_text| ui_text.text_wrap_compat() == TextWrap::TwWrap)
+                    .unwrap_or(false);
+                // Measure the scene's source text (Unity tags), not the node's BBCode.
+                let source_text = ui_text
+                    .map(|ui_text| ui_text.value.clone())
+                    .unwrap_or_else(|| ui_text_control.get_parsed_text().to_string());
+                let paragraph =
+                    build_rich_text_paragraph(&ui_text_control, &source_text, text_wrapping);
 
                 let _ = taffy.set_node_context(
                     child,
-                    Some(ContextNode::UiRichText(text_wrapping, ui_text_control)),
+                    Some(ContextNode::UiRichText(text_wrapping, paragraph)),
                 );
             }
 
@@ -312,10 +349,7 @@ fn update_layout(
 
                     taffy::Size { width, height }
                 }
-                Some(ContextNode::UiRichText(wrapping, rich_text_node)) => {
-                    let Some(font) = rich_text_node.get_theme_font("normal_font") else {
-                        return taffy::Size::ZERO;
-                    };
+                Some(ContextNode::UiRichText(wrapping, paragraph)) => {
                     let line_width = match size.width {
                         Some(value) => value,
                         None => match available.width {
@@ -325,23 +359,9 @@ fn update_layout(
                         },
                     };
 
-                    let font_size = rich_text_node.get_theme_font_size("normal_font_size");
-                    let rich_text = rich_text_node.get_text();
-                    let font_rect = if *wrapping {
-                        font.get_multiline_string_size_ex(&rich_text)
-                            .max_lines(-1)
-                            .width(line_width)
-                            .font_size(font_size)
-                            .justification_flags(JustificationFlag::NONE)
-                            .brk_flags(LineBreakFlag::WORD_BOUND | LineBreakFlag::MANDATORY)
-                            .done()
-                    } else {
-                        font.get_string_size_ex(&rich_text)
-                            .width(line_width)
-                            .justification_flags(JustificationFlag::NONE)
-                            .font_size(font_size)
-                            .done()
-                    };
+                    // Only wrapping text is constrained by the available width.
+                    paragraph.set_width(if *wrapping { line_width } else { -1.0 });
+                    let font_rect = paragraph.get_size();
 
                     let width = match size.width {
                         Some(value) => value,

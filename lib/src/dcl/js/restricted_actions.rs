@@ -14,6 +14,7 @@ pub fn ops() -> Vec<OpDecl> {
         op_teleport_to(),
         op_trigger_emote(),
         op_trigger_scene_emote(),
+        op_stop_emote(),
     ]
 }
 
@@ -204,6 +205,14 @@ fn op_trigger_scene_emote(
             looping,
             mask: mask as i64,
         });
+}
+
+#[op2(fast)]
+fn op_stop_emote(op_state: Rc<RefCell<OpState>>) {
+    op_state
+        .borrow_mut()
+        .borrow_mut::<Vec<RpcCall>>()
+        .push(RpcCall::StopEmote);
 }
 
 #[cfg(test)]

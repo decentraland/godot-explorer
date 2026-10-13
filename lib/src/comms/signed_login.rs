@@ -28,10 +28,15 @@ pub struct SignedLoginMeta {
     #[serde(rename = "isGuest")]
     is_guest: bool,
     origin: String,
+    /// The shared secret of a password-protected world (#2651). `world-comms-handler`
+    /// reads it from this metadata; it is skipped when absent, so the signed payload for
+    /// every other realm stays exactly what it was.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    secret: Option<String>,
 }
 
 impl SignedLoginMeta {
-    pub fn new(is_guest: bool, origin: Uri) -> Self {
+    pub fn new(is_guest: bool, origin: Uri, secret: Option<String>) -> Self {
         let origin = origin.into_parts();
 
         Self {
@@ -39,6 +44,7 @@ impl SignedLoginMeta {
             signer: "dcl:explorer".to_owned(),
             is_guest,
             origin: format!("{}://{}", origin.scheme.unwrap(), origin.authority.unwrap()),
+            secret,
         }
     }
 }

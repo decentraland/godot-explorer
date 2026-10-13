@@ -17,7 +17,7 @@ use crate::{
 
 use self::{
     handle_restricted_actions::{
-        change_realm, move_player_to, open_external_url, open_nft_dialog, teleport_to,
+        change_realm, move_player_to, open_external_url, open_nft_dialog, stop_emote, teleport_to,
         trigger_emote, trigger_scene_emote,
     },
     portables::{kill_portable, list_portables, spawn_portable},
@@ -74,6 +74,7 @@ pub fn process_rpcs(scene: &mut Scene, current_parcel_scene_id: &SceneId, rpc_ca
                 looping,
                 mask,
             } => trigger_scene_emote(scene, current_parcel_scene_id, &emote_src, &looping, mask),
+            RpcCall::StopEmote => stop_emote(scene, current_parcel_scene_id),
             // Portable Experiences
             RpcCall::SpawnPortable { location, response } => {
                 spawn_portable(scene, location, response)

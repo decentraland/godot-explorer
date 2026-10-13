@@ -10,6 +10,8 @@ func _ready():
 	%Label_Title.text = tr("DIALOGS_LOADING_NFT")
 	%VBoxContainer_InfoPanel.hide()
 	%Button_ViewOnOpenSea.disabled = true
+	# OpenSea is an external NFT marketplace — same policy class as the DCL storefront (#2814).
+	%Button_ViewOnOpenSea.visible = StorePolicy.can_show_external_purchase_links()
 
 
 func _on_visibility_changed():
@@ -36,7 +38,11 @@ func async_load_nft(urn: String):
 		%ColorRect_Background.color = Color(asset.background_color)
 
 		var owner_name = asset.get_owner_name()
-		if DclEther.is_valid_ethereum_address(asset.address):
+		var link_owner := (
+			DclEther.is_valid_ethereum_address(asset.address)
+			and StorePolicy.can_show_external_purchase_links()
+		)
+		if link_owner:
 			var owner_url = "https://opensea.io/" + asset.address
 			%RichTextBox_Owner.parse_bbcode("[url=%s]%s[/url]" % [owner_url, owner_name])
 		else:

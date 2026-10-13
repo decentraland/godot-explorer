@@ -5,6 +5,7 @@
 [ext_resource type="LabelSettings" uid="uid://dk8eqdewqhsor" path="res://assets/themes/discover_section_title.tres" id="3_lwvhe"]
 [ext_resource type="PackedScene" uid="uid://c8cfkfwtnjk5b" path="res://src/ui/pages/discover/carrousel/place_discover_skeleton.tscn" id="4_lwvhe"]
 [ext_resource type="Script" uid="uid://bufowrcf714pf" path="res://src/ui/pages/discover/scrollbar_requester.gd" id="5_lwvhe"]
+[ext_resource type="Script" uid="uid://cuy34sm2crhoe" path="res://src/ui/layouts/orientation_label.gd" id="6_orlbl"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_amqeq"]
 
@@ -37,6 +38,9 @@ theme_override_fonts/font = ExtResource("1_qm5fw")
 theme_override_font_sizes/font_size = 18
 text = "Section Tittle"
 label_settings = ExtResource("3_lwvhe")
+script = ExtResource("6_orlbl")
+portrait_font_size = 32
+landscape_font_size = 30
 
 [node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=1092148624]
 layout_mode = 2
@@ -72,6 +76,7 @@ offset_bottom = 40.0
 
 [node name="VSeparator" type="VSeparator" parent="VBoxContainer/SkeletonControl/HBoxContainer" unique_id=1225257260]
 layout_mode = 2
+mouse_filter = 2
 theme_override_constants/separation = 48
 theme_override_styles/separator = SubResource("StyleBoxFlat_amqeq")
 
@@ -96,6 +101,7 @@ layout_mode = 2
 
 [node name="ScrollContainer" type="Container" parent="VBoxContainer" unique_id=1955507864]
 unique_name_in_owner = true
+visible = false
 clip_contents = true
 layout_mode = 2
 size_flags_vertical = 3
@@ -110,6 +116,7 @@ layout_mode = 2
 
 [node name="VSeparator" type="VSeparator" parent="VBoxContainer/ScrollContainer/HBoxContainer" unique_id=1207968838]
 layout_mode = 2
+mouse_filter = 2
 theme_override_constants/separation = 48
 theme_override_styles/separator = SubResource("StyleBoxFlat_amqeq")
 
@@ -120,3 +127,9 @@ layout_mode = 2
 size_flags_horizontal = 0
 size_flags_vertical = 0
 theme_override_constants/separation = 32
+
+[node name="VSeparator2" type="VSeparator" parent="VBoxContainer/ScrollContainer/HBoxContainer" unique_id=1149020615]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 48
+theme_override_styles/separator = SubResource("StyleBoxFlat_amqeq")

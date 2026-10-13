@@ -196,6 +196,32 @@ impl DclAndroidPlugin {
             .unwrap_or(-1)
     }
 
+    /// Chipset (SoC) model, e.g. "SM6125" (API 31+ only). Empty string if unavailable.
+    #[func]
+    pub fn get_soc_model() -> GString {
+        Self::get_mobile_device_info_internal()
+            .map(|info| GString::from(&info.soc_model))
+            .unwrap_or_default()
+    }
+
+    /// `ro.board.platform` system property — a chipset-id fallback for API < 31 devices that
+    /// have no Build.SOC_MODEL. Empty string if unavailable.
+    #[func]
+    pub fn get_board_platform() -> GString {
+        Self::get_mobile_device_info_internal()
+            .map(|info| GString::from(&info.board_platform))
+            .unwrap_or_default()
+    }
+
+    /// Build.HARDWARE — a second chipset-id fallback, sometimes populated when both SOC_MODEL
+    /// and board_platform are not. Empty string if unavailable.
+    #[func]
+    pub fn get_hardware() -> GString {
+        Self::get_mobile_device_info_internal()
+            .map(|info| GString::from(&info.hardware))
+            .unwrap_or_default()
+    }
+
     /// Add a calendar event with title, description, start time, end time, and location
     /// Times are in milliseconds since Unix epoch (Jan 1, 1970)
     /// Returns true if the calendar UI was shown successfully, false otherwise
@@ -255,6 +281,60 @@ impl DclAndroidPlugin {
         };
         singleton.connect("firebase_app_instance_id_ready", callable);
         true
+    }
+
+    /// Returns the cached FCM registration token, or an empty string when there is none.
+    ///
+    /// Reads the value the plugin persisted, so it is already populated on launches after the
+    /// first: FCM can mint a token while no Godot process exists. An empty string means either
+    /// "not resolved yet this launch" or "this device cannot receive push" (no Play Services);
+    /// `fcm_token_ready` is what distinguishes the two, since it always fires exactly once.
+    #[func]
+    pub fn get_fcm_token() -> GString {
+        let Some(mut singleton) = Self::try_get_singleton() else {
+            return GString::new();
+        };
+        let result = Self::timed_jni_call(&mut singleton, "getFcmToken", &[]);
+        result.try_to::<GString>().unwrap_or_default()
+    }
+
+    /// Connect a callable to the plugin's `fcm_token_ready` signal, emitted once per launch with
+    /// the resolved token (empty string on failure). Returns false if the plugin is unavailable.
+    pub fn connect_fcm_token_ready(callable: &Callable) -> bool {
+        let Some(mut singleton) = Self::try_get_singleton() else {
+            return false;
+        };
+        singleton.connect("fcm_token_ready", callable);
+        true
+    }
+
+    /// Connect a callable to `fcm_token_refreshed`, emitted when FCM rotates the token while the
+    /// app is running. Rare, but it invalidates the token already mapped server-side, so the new
+    /// one has to be re-sent rather than waiting for the next launch.
+    pub fn connect_fcm_token_refreshed(callable: &Callable) -> bool {
+        let Some(mut singleton) = Self::try_get_singleton() else {
+            return false;
+        };
+        singleton.connect("fcm_token_refreshed", callable);
+        true
+    }
+
+    /// Whether POST_NOTIFICATIONS is granted. Always true below Android 13, where the permission
+    /// does not exist. Note this is the *app-level* permission: a user who left it granted but
+    /// muted an individual channel in Android's settings still reads as granted here.
+    #[func]
+    pub fn has_notification_permission() -> bool {
+        let Some(mut singleton) = Self::try_get_singleton() else {
+            return false;
+        };
+        let result = Self::timed_jni_call(&mut singleton, "hasNotificationPermission", &[]);
+        // `booleanize()`, not `try_to::<bool>()`: Godot's JNI bridge hands a Kotlin `Boolean`
+        // back as an INT Variant (verified on device — the Variant prints as `1`), and
+        // `try_to` is a strict conversion that fails on a type mismatch. With
+        // `.unwrap_or(false)` behind it that failure is indistinguishable from a genuine
+        // "not granted", which is exactly how this read silently reported every user as
+        // having denied notifications.
+        result.booleanize()
     }
 
     /// Set the canonical Firebase Analytics user id. Auto-attached to every Firebase event.

@@ -4,7 +4,7 @@ signal close_only_panels
 signal navbar_opened
 signal navbar_closed
 
-enum BUTTON { FRIENDS, NOTIFICATIONS, BACKPACK, SETTINGS }
+enum BUTTON { DISCOVER, FRIENDS, NOTIFICATIONS, BACKPACK, SETTINGS }
 
 # Open/close timeline tuning. The navbar dropdown fades its alpha in; the side-panel surface
 # grows from the navbar edge to its full width (scale.x 0 -> 1), leading with the fade.
@@ -13,7 +13,6 @@ const GROW_TIME: float = 0.16
 const GROW_DELAY: float = 0.04
 const CLOSE_TIME: float = 0.1
 
-var _manually_hidden: bool = false
 # Navbar buttons ordered to match Control_Selection1..6 (top to bottom); filled in _ready.
 var _selection_buttons: Array[BaseButton] = []
 # The side-panel surface (VBoxContainer_LeftPanels) injected by explorer via set_reveal_surface.
@@ -86,10 +85,6 @@ func _ready() -> void:
 
 
 func _on_size_changed():
-	if _manually_hidden:
-		return
-	# If navbar was manually hidden, don't change its visibility
-
 	var explorer = Global.get_explorer()
 	if explorer != null:
 		# Check if discover or chat are open - if so, keep hidden
@@ -189,7 +184,7 @@ func _on_button_toggled(toggled_on: bool) -> void:
 		# moment the world is unobstructed, and it is what the bug report form
 		# pre-fills its screenshot slot with (issue #2652).
 		BugReportCapture.capture(get_viewport())
-		set_button_pressed(BUTTON.FRIENDS)
+		set_button_pressed(BUTTON.DISCOVER)
 		navbar_opened.emit()
 		_animate_open()
 	else:
@@ -200,6 +195,8 @@ func _on_button_toggled(toggled_on: bool) -> void:
 ## Set a button as pressed
 func set_button_pressed(button_to_press: BUTTON) -> void:
 	match button_to_press:
+		BUTTON.DISCOVER:
+			static_button_discover.button_pressed = true
 		BUTTON.FRIENDS:
 			static_button_friends.button_pressed = true
 		BUTTON.NOTIFICATIONS:
@@ -238,24 +235,3 @@ func open_navbar_silently() -> void:
 		button.set_pressed_no_signal(true)
 		panel_profile.set_glow(true)
 		_animate_open()
-
-
-func set_manually_hidden(is_hidden: bool) -> void:
-	_manually_hidden = is_hidden
-	if is_hidden:
-		hide()
-	else:
-		var explorer = Global.get_explorer()
-		if explorer != null:
-			# Check if discover or chat are open before restoring visibility
-			if (
-				explorer.control_menu != null
-				and explorer.control_menu.visible
-				and explorer.control_menu.control_discover.instance != null
-				and explorer.control_menu.control_discover.instance.visible
-			):
-				# If discover is open, keep hidden
-				return
-		# Restore visibility based on window size
-		var window_size: Vector2i = DisplayServer.window_get_size()
-		visible = window_size.x > window_size.y

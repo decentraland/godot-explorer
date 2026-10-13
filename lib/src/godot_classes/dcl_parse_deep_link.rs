@@ -73,6 +73,14 @@ pub struct DclParseDeepLink {
     #[var]
     low_spec_warning: bool,
 
+    /// Force the "device no longer supported" modal (end_of_device_support_warning=true, #2936)
+    #[var]
+    end_of_device_support_warning: bool,
+
+    /// Force the "below minimum spec" modal (below_minspec_warning=true, #2935)
+    #[var]
+    below_minspec_warning: bool,
+
     /// Genesis Plaza profiling benchmark trigger (gp-benchmark=true).
     /// Mobile alternative to the desktop `--gp-benchmark` CLI flag.
     #[var]
@@ -116,6 +124,8 @@ impl DclParseDeepLink {
             scene_inspector: GString::new(),
             scene_inspector_file: false,
             low_spec_warning: false,
+            end_of_device_support_warning: false,
+            below_minspec_warning: false,
             gp_benchmark: false,
             safe_margin_debug: false,
             scene_stats: false,
@@ -150,6 +160,8 @@ impl DclParseDeepLink {
             scene_inspector: GString::from(&r.scene_inspector),
             scene_inspector_file: r.scene_inspector_file,
             low_spec_warning: r.low_spec_warning,
+            end_of_device_support_warning: r.end_of_device_support_warning,
+            below_minspec_warning: r.below_minspec_warning,
             gp_benchmark: r.gp_benchmark,
             safe_margin_debug: r.safe_margin_debug,
             scene_stats: r.scene_stats,
