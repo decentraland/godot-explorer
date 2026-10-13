@@ -7,6 +7,7 @@ pub mod env;
 pub mod http;
 pub mod network_inspector;
 mod open_url;
+pub mod session;
 pub mod urls;
 
 pub use crate::core::{Core, CoreConfig, Platform};

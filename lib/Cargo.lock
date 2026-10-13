@@ -931,13 +931,21 @@ name = "dcl_core"
 version = "1.15.0"
 dependencies = [
  "anyhow",
+ "async-trait",
+ "chrono",
+ "ethers-core",
+ "ethers-providers",
+ "ethers-signers",
+ "futures-lite",
  "http 0.2.12",
  "once_cell",
+ "rand",
  "reqwest",
  "serde",
  "serde_json",
  "tokio",
  "tracing",
+ "tracing-test",
  "url",
 ]
 

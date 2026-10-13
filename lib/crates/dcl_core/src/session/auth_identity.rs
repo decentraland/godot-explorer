@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use dcl_core::OpenUrlRequest;
+use crate::OpenUrlRequest;
 
 use super::{
     decentraland_auth_server::{

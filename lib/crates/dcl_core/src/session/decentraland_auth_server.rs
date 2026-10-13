@@ -3,7 +3,7 @@ use std::time::Duration;
 use serde::{Deserialize, Serialize};
 
 use crate::urls;
-use dcl_core::OpenUrlRequest;
+use crate::OpenUrlRequest;
 
 use super::wallet::SimpleAuthChain;
 
@@ -508,7 +508,7 @@ impl CreateRequest {
 
 #[cfg(test)]
 mod test {
-    use crate::auth::wallet::Wallet;
+    use crate::session::wallet::Wallet;
 
     use super::super::auth_identity::{get_ephemeral_message, AUTH_CHAIN_EXPIRATION_SECS};
     use super::*;

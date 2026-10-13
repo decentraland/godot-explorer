@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use ethers_core::types::H160;
 use ethers_signers::WalletError;
 
-use dcl_core::OpenUrlRequest;
+use crate::OpenUrlRequest;
 
 use super::{
     auth_identity::try_create_remote_ephemeral, ephemeral_auth_chain::EphemeralAuthChain,

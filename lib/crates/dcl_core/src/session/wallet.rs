@@ -241,7 +241,7 @@ impl AsH160 for String {
 /// couple to that.) Re-sign per attempt: the server enforces a ±60s replay window on the
 /// timestamp.
 pub async fn sign_pulse_connect(wallet: &EphemeralAuthChain) -> Result<Vec<u8>, String> {
-    let unix_time = crate::utils::clock::unix_time_ms();
+    let unix_time = crate::clock::unix_time_ms();
 
     let payload = format!("connect:/:{unix_time}:{{}}");
     let signature = wallet
@@ -293,7 +293,7 @@ pub async fn sign_request<META: Serialize>(
     wallet: &EphemeralAuthChain,
     meta: META,
 ) -> Vec<(String, String)> {
-    let unix_time = crate::utils::clock::unix_time_ms();
+    let unix_time = crate::clock::unix_time_ms();
 
     // Whatever goes into the signature must also go into `x-identity-metadata`: the server
     // rebuilds the expected payload from that header and compares. Signing `{"productid":...}`
