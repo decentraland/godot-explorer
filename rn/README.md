@@ -107,6 +107,27 @@ links, universal links and APNs callbacks to the DclGodotiOS services (they list
 which is not the app delegate here); on Android the `com.godot.game.GodotAppLauncher` alias keeps the deep-link
 filters, home-screen shortcuts and the xtask launch command of the Godot-exported app.
 
+## Request/response bridge
+
+Besides fire-and-forget commands, `rn/src/bridge/request.ts` gives a promise API over the same channel:
+`request('settings.set', {key, value, commit}, {timeoutMs})` sends `{type:'req', id, method, params}`;
+Godot (`godot/src/rn_bridge/rn_requests.gd`, routed before the avatar/explorer split so it works in both modes)
+answers with a `res` event `{id, ok, result | error}`. Errors, rejected promises and timeouts (default 15 s)
+reject with `BridgeError`. Method names and payloads are typed in `rn/src/bridge/methods.ts`:
+`settings.{get_all,set,cache_size,clear_cache,version}`, `account.{sign_out,delete}`,
+`friends.{list,requests,nearby,accept,reject,cancel,send,unblock,block}`, `notifications.{list,read}`,
+`profile.{get,names,deploy}`, `fetch.signed` (https, DCL service hosts only), `places.{favorite,vote}`,
+`clipboard.copy`, `screenshot.capture`. `settings.set` only accepts whitelisted keys, applies them live and
+persists with `commit: true`.
+
+Without the engine, `registerMockHandler(method, fn)` (`rn/src/bridge/mockHandlers.ts`) fakes a method;
+unregistered methods reject with "no mock handler".
+
+New commands (in-world only unless noted): `set_hud_insets {top,right,bottom,left}` and `set_chat_width {width}`
+(device px), `chat_open {open}`, `hide_ui {hidden}`, `focus_camera {target}` (avatar preview; also in the
+avatar host). New events: `res`, `loading_progress {loaded,total,mbps,percent}`, `hud_state {hidden,chat_open}`,
+`unread_chat {count}`, `settings_changed {key,value}`, and `chat` now carries an optional resolved `profile`.
+
 ## Known limitations
 
 - The debug Godot template runs at about 11–15 fps on phones; `cargo run -- run -r` uses the release one.

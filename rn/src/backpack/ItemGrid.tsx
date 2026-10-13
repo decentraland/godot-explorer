@@ -19,6 +19,7 @@ export function ItemGrid<T>({
   renderItem,
   header,
   empty,
+  columns = layout.columns,
   bottomInset = 0,
 }: {
   items: T[];
@@ -26,14 +27,16 @@ export function ItemGrid<T>({
   renderItem: (item: T) => ReactElement;
   header?: ReactElement;
   empty?: ReactElement;
+  columns?: number;
   bottomInset?: number;
 }) {
-  const cells = padToColumns(items, layout.columns);
+  const cells = padToColumns(items, columns);
   return (
     <FlatList
       removeClippedSubviews={false}
       data={cells}
-      numColumns={layout.columns}
+      numColumns={columns}
+      key={columns}
       keyExtractor={(cell, index) =>
         cell === SPACER ? `spacer-${index}` : keyOf(cell as T)
       }

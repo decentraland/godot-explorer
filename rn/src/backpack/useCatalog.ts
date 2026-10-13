@@ -1,35 +1,27 @@
 import { useCallback, useEffect, useState } from 'react';
-import { fetchWearables, Wearable } from './catalog';
-import { DEFAULT_EMOTES, Emote, fetchEmoteThumbnails } from './emotes';
+import type { BackpackApi, Catalog } from './api';
 
 export type CatalogState =
   | { status: 'loading' }
   | { status: 'error' }
-  | { status: 'ready'; wearables: Wearable[]; emotes: Emote[] };
+  | ({ status: 'ready' } & Catalog);
 
-let cached: { wearables: Wearable[]; emotes: Emote[] } | null = null;
-
-/** Loads the wearable and emote catalogs once per process; `retry` re-runs a failed load. */
-export function useCatalog(): { catalog: CatalogState; retry: () => void } {
+/** Loads the catalog through the api; `retry` re-runs a failed load. */
+export function useCatalog(api: BackpackApi): {
+  catalog: CatalogState;
+  retry: () => void;
+} {
   const [attempt, setAttempt] = useState(0);
-  const [catalog, setCatalog] = useState<CatalogState>(
-    cached ? { status: 'ready', ...cached } : { status: 'loading' },
-  );
+  const [catalog, setCatalog] = useState<CatalogState>({ status: 'loading' });
 
   useEffect(() => {
-    if (cached) {
-      return undefined;
-    }
     let cancelled = false;
     setCatalog({ status: 'loading' });
-    Promise.all([
-      fetchWearables(),
-      fetchEmoteThumbnails().catch(() => DEFAULT_EMOTES),
-    ])
-      .then(([wearables, emotes]) => {
-        cached = { wearables, emotes };
+    api
+      .loadCatalog()
+      .then(loaded => {
         if (!cancelled) {
-          setCatalog({ status: 'ready', wearables, emotes });
+          setCatalog({ status: 'ready', ...loaded });
         }
       })
       .catch(() => {
@@ -40,7 +32,7 @@ export function useCatalog(): { catalog: CatalogState; retry: () => void } {
     return () => {
       cancelled = true;
     };
-  }, [attempt]);
+  }, [api, attempt]);
 
   const retry = useCallback(() => setAttempt(count => count + 1), []);
   return { catalog, retry };

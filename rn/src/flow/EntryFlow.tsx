@@ -3,8 +3,9 @@ import { BackHandler, StyleSheet, View } from 'react-native';
 import { BackpackScreen } from '../backpack/BackpackScreen';
 import { PrimaryButton } from '../ds';
 import { send } from '../engine';
+import type { Place } from '../discover/api';
+import { FtueScreen } from '../discover/FtueScreen';
 import { signIn, startGuestSession } from './auth';
-import { FtueScreen } from './FtueScreen';
 import { initialFlow, reduceFlow } from './flowMachine';
 import {
   AvatarCreateScreen,
@@ -19,10 +20,17 @@ import {
   TermsScreen,
   WaitScreen,
 } from './screens';
+import { t } from '../i18n';
 import { u } from '../ds/scale';
 
-/** Portrait-only entry flow: splash → terms → account → (auth) → avatar → name → tour → app. */
-export function EntryFlow({ onDone }: { onDone: () => void }) {
+/** Portrait-only entry flow: splash → terms → account → (auth) → avatar → name → welcome → app. */
+export function EntryFlow({
+  onDone,
+  onJumpIn,
+}: {
+  onDone: () => void;
+  onJumpIn?: (place: Place) => void;
+}) {
   const [flow, dispatch] = useReducer(reduceFlow, initialFlow);
   const { step, provider } = flow;
 
@@ -59,7 +67,7 @@ export function EntryFlow({ onDone }: { onDone: () => void }) {
             !cancelled &&
             dispatch({
               type: 'authFailed',
-              message: 'Could not sign in. Try again.',
+              message: t('FLOW_SIGN_IN_FAILED'),
             }),
         );
     } else if (step === 'guest_wait') {
@@ -105,16 +113,16 @@ export function EntryFlow({ onDone }: { onDone: () => void }) {
     case 'auth_wait':
       return (
         <WaitScreen
-          title="Signing you in"
-          body="Hang tight while we finish up."
+          title={t('FLOW_AUTH_WAIT_TITLE')}
+          body={t('FLOW_AUTH_WAIT_BODY')}
           onCancel={back}
         />
       );
     case 'guest_wait':
       return (
         <WaitScreen
-          title="Getting you ready"
-          body="Setting up your guest session."
+          title={t('FLOW_GUEST_WAIT_TITLE')}
+          body={t('FLOW_GUEST_WAIT_BODY')}
           onCancel={back}
         />
       );
@@ -139,7 +147,10 @@ export function EntryFlow({ onDone }: { onDone: () => void }) {
           onBack={back}
           footer={
             <View style={styles.footer}>
-              <PrimaryButton label="Continue" onPress={confirmAvatar} />
+              <PrimaryButton
+                label={t('FLOW_CONTINUE')}
+                onPress={confirmAvatar}
+              />
             </View>
           }
         />
@@ -157,7 +168,16 @@ export function EntryFlow({ onDone }: { onDone: () => void }) {
         />
       );
     case 'ftue':
-      return <FtueScreen onDone={() => dispatch({ type: 'finish' })} />;
+      return (
+        <FtueScreen
+          username={flow.name || t('FLOW_GUEST_NAME')}
+          skipLabel="FTUE_SKIP_AND_EXPLORE"
+          onJump={place =>
+            onJumpIn ? onJumpIn(place) : dispatch({ type: 'finish' })
+          }
+          onSkip={() => dispatch({ type: 'finish' })}
+        />
+      );
     default:
       return null;
   }

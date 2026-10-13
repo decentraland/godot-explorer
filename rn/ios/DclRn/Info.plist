@@ -32,6 +32,7 @@
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>decentraland</string>
+				<string>dclrn</string>
 			</array>
 		</dict>
 	</array>

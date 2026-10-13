@@ -1,38 +1,43 @@
 import { useCallback } from 'react';
-import { View } from 'react-native';
-import { ColorPanel } from './ColorPanel';
-import { ConnectionLost } from './ConnectionLost';
-import { EmotesGrid } from './EmotesPanel';
+import type { SubRow } from './BackpackChrome';
+import { ColorEditor } from './ColorEditor';
+import { EmotesGrid } from './EmotesGrid';
+import { SkeletonGrid } from './GridStates';
+import type { EmptyCopy } from './platformPolicy';
+import { visibleEmotes } from './selection';
 import { BackpackController } from './useBackpack';
 import { WearablesPanel } from './WearablesPanel';
+import { bridgeTarget } from './taxonomy';
 
 /** What lives inside the sheet (portrait) or right panel (landscape) for the current mode. */
 export function SheetContent({
   controller,
+  copy,
+  subRow,
+  columns,
   bottomInset = 0,
 }: {
   controller: BackpackController;
+  copy: EmptyCopy;
+  subRow?: SubRow;
+  columns?: number;
   bottomInset?: number;
 }) {
   const { state, dispatch, catalog, avatar, slot } = controller;
   const target = state.colorTarget;
-  const setColor = controller.setColor(target ?? 'skin');
   const closeColor = useCallback(
     () => dispatch({ type: 'closeColor' }),
     [dispatch],
   );
 
-  if (catalog.status === 'error') {
-    return <ConnectionLost onRetry={controller.retry} />;
-  }
-
   if (target && avatar && state.mode === 'wearables') {
     return (
-      <ColorPanel
+      <ColorEditor
         target={target}
-        value={avatar[target]}
-        onChange={setColor}
+        value={avatar[bridgeTarget(target)]}
+        onChange={controller.setColor(target)}
         onBack={closeColor}
+        bottomInset={bottomInset}
       />
     );
   }
@@ -40,13 +45,18 @@ export function SheetContent({
   if (state.mode === 'emotes') {
     return catalog.status === 'ready' ? (
       <EmotesGrid
-        emotes={catalog.emotes}
+        emotes={visibleEmotes(catalog.emotes, state.filter)}
         slots={controller.emoteSlots}
+        selected={state.emoteSlot}
+        pending={state.pendingEmote}
+        columns={columns}
         bottomInset={bottomInset}
+        copy={copy}
         onPress={controller.pressEmote}
+        onMarketplace={controller.openMarketplace}
       />
     ) : (
-      <View />
+      <SkeletonGrid columns={columns} />
     );
   }
 
@@ -57,13 +67,17 @@ export function SheetContent({
       tab={state.tab}
       slot={slot}
       filter={state.filter}
+      columns={columns}
       bottomInset={bottomInset}
+      busy={controller.busy}
+      copy={copy}
+      subRow={subRow}
       onTab={tab => dispatch({ type: 'tab', tab })}
       onSlot={next => dispatch({ type: 'slot', slot: next })}
       onToggle={controller.toggleWearable}
-      onOpenColor={entry =>
-        entry.color && dispatch({ type: 'openColor', target: entry.color })
-      }
+      onColor={(color, next) => controller.setColor(color)(next)}
+      onOpenColor={next => dispatch({ type: 'openColor', target: next })}
+      onMarketplace={controller.openMarketplace}
     />
   );
 }

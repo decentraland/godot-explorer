@@ -9,7 +9,8 @@
     "expo": "expo start",
     "lint": "eslint .",
     "start": "react-native start",
-    "test": "jest"
+    "test": "jest",
+    "gallery:ids": "GALLERY_WRITE_IDS=1 jest gallery-coverage"
   },
   "dependencies": {
     "@react-native/new-app-screen": "0.86.3",

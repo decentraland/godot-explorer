@@ -111,6 +111,24 @@ func async_set_color(target: String, html: String) -> void:
 	await _async_commit()
 
 
+func focus_camera(target: String) -> void:
+	if _preview == null:
+		return
+	var category := ""
+	match target:
+		"head":
+			category = Wearables.Categories.HAIR
+		"torso":
+			category = Wearables.Categories.UPPER_BODY
+		"legs":
+			category = Wearables.Categories.LOWER_BODY
+		"feet":
+			category = Wearables.Categories.FEET
+		"hands":
+			category = Wearables.Categories.HANDS
+	_preview.focus_camera_on(category)
+
+
 func play_emote(urn: String) -> void:
 	if _preview == null:
 		return

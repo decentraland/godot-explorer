@@ -1,12 +1,12 @@
 export const MAIN_REALM = 'https://realm-provider-ea.decentraland.org/main';
 const WORLDS = 'https://worlds-content-server.decentraland.org/world';
-const PLACES = 'https://places.decentraland.org/api/places';
-const EVENTS = 'https://events.decentraland.org/api/events';
+export const PLACES_API = 'https://places.decentraland.org/api/places';
+export const EVENTS_API = 'https://events.decentraland.org/api/events';
 
-export const FEATURED_URL = `${PLACES}?only_highlighted=true&limit=12&order_by=like_score`;
-export const MOST_ACTIVE_URL = `${PLACES}?limit=12&order_by=most_active&order=desc`;
-export const LIVE_EVENTS_URL = `${EVENTS}?list=live&limit=10`;
-export const UPCOMING_EVENTS_URL = `${EVENTS}?list=upcoming&limit=10`;
+export const FEATURED_URL = `${PLACES_API}?only_highlighted=true&limit=12&order_by=like_score`;
+export const MOST_ACTIVE_URL = `${PLACES_API}?limit=12&order_by=most_active&order=desc`;
+export const LIVE_EVENTS_URL = `${EVENTS_API}?list=live&limit=10`;
+export const UPCOMING_EVENTS_URL = `${EVENTS_API}?list=upcoming&limit=10`;
 
 /** What the Discover cards and the detail sheet show, whether it came from a place or an event. */
 export type Place = {
@@ -22,6 +22,9 @@ export type Place = {
   realm: string;
   x: number;
   y: number;
+  world?: boolean;
+  description?: string;
+  categories?: string[];
 };
 
 export type DiscoverEvent = {
@@ -34,6 +37,12 @@ export type DiscoverEvent = {
   attendees: number;
   startsAt: number;
   place: Place;
+  endsAt?: number;
+  recurrence?: 'once' | 'daily' | 'weekly' | 'monthly';
+  description?: string;
+  /** Upcoming occurrences for the schedule rows of the expanded sheet. */
+  schedule?: { start: number; end: number }[];
+  featured?: boolean;
 };
 
 export const worldRealm = (name: string): string =>
@@ -80,10 +89,25 @@ export function parsePlaces(payload: unknown): Place[] {
         realm: isWorld && worldName ? worldRealm(worldName) : MAIN_REALM,
         x,
         y,
+        world: isWorld,
+        description: str(raw.description) || undefined,
+        categories: Array.isArray(raw.categories)
+          ? raw.categories.filter((c): c is string => typeof c === 'string')
+          : undefined,
       },
     ];
   });
 }
+
+const recurrenceOf = (raw: Raw): NonNullable<DiscoverEvent['recurrence']> => {
+  const frequency = str(raw.recurrent_frequency).toLowerCase();
+  return raw.recurrent === true &&
+    (frequency === 'daily' || frequency === 'monthly')
+    ? frequency
+    : raw.recurrent === true
+    ? 'weekly'
+    : 'once';
+};
 
 export function parseEvents(payload: unknown): DiscoverEvent[] {
   return rows(payload).flatMap(raw => {
@@ -104,6 +128,9 @@ export function parseEvents(payload: unknown): DiscoverEvent[] {
         trending: raw.trending === true,
         attendees,
         startsAt: Date.parse(str(raw.start_at)) || 0,
+        endsAt: Date.parse(str(raw.finish_at)) || undefined,
+        recurrence: recurrenceOf(raw),
+        description: str(raw.description) || undefined,
         place: {
           id,
           title,
@@ -116,13 +143,17 @@ export function parseEvents(payload: unknown): DiscoverEvent[] {
             world && str(raw.server) ? worldRealm(str(raw.server)) : MAIN_REALM,
           x: world ? 0 : num(raw.x),
           y: world ? 0 : num(raw.y),
+          world,
         },
       },
     ];
   });
 }
 
-async function getJson(url: string, fetchImpl: typeof fetch): Promise<unknown> {
+export async function getJson(
+  url: string,
+  fetchImpl: typeof fetch,
+): Promise<unknown> {
   const response = await fetchImpl(url);
   if (!response.ok) {
     throw new Error(`${url} responded ${response.status}`);

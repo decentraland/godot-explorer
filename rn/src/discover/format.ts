@@ -1,23 +1,42 @@
+import { plural, t } from '../i18n';
+
+const MONTHS = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+];
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
 
-/** "IN 5 MINS", "IN 2 HOURS", or a short date for anything further than a day out. */
+/** "IN 5 MINS", "IN 2 HRS", "IN 2 DAYS", or a short date a week or more out. */
 export function startsIn(startsAt: number, now: number): string {
   const delta = startsAt - now;
   if (delta < MINUTE) {
-    return 'STARTING';
+    return t('EVENT_PILL_STARTING');
   }
   if (delta < HOUR) {
-    const mins = Math.round(delta / MINUTE);
-    return `IN ${mins} ${mins === 1 ? 'MIN' : 'MINS'}`;
+    const minutes = Math.round(delta / MINUTE);
+    return plural('EVENT_PILL_IN_MIN', minutes, { minutes });
   }
   if (delta < 24 * HOUR) {
     const hours = Math.round(delta / HOUR);
-    return `IN ${hours} ${hours === 1 ? 'HOUR' : 'HOURS'}`;
+    return plural('EVENT_PILL_IN_HR', hours, { hours });
   }
-  return new Date(startsAt)
-    .toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-    .toUpperCase();
+  if (delta < 7 * 24 * HOUR) {
+    const days = Math.round(delta / (24 * HOUR));
+    return plural('EVENT_PILL_IN_DAY', days, { days });
+  }
+  const date = new Date(startsAt);
+  return `${MONTHS[date.getMonth()]} ${date.getDate()}`.toUpperCase();
 }
 
 export const formatRate = (rate: number | null): string =>

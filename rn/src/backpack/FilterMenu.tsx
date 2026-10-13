@@ -1,11 +1,15 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 import { AppText, colors, Icon } from '../ds';
+import { t } from '../i18n';
 import { ItemFilter } from './selection';
 import { u } from '../ds/scale';
 
-const OPTIONS: { key: ItemFilter; label: string }[] = [
-  { key: 'all', label: 'All' },
-  { key: 'collectibles', label: 'Collectibles' },
+const OPTIONS: {
+  key: ItemFilter;
+  label: 'BACKPACK_ALL' | 'BACKPACK_COLLECTIBLES';
+}[] = [
+  { key: 'all', label: 'BACKPACK_ALL' },
+  { key: 'collectibles', label: 'BACKPACK_COLLECTIBLES' },
 ];
 
 /** Dropdown under the filter button (Figma "Menu"). */
@@ -29,7 +33,7 @@ export function FilterMenu({
             style={[styles.row, selected && styles.rowOn]}
           >
             <AppText variant="body" style={styles.label}>
-              {option.label}
+              {t(option.label)}
             </AppText>
             {selected && (
               <Icon name="check" size={18} color={colors.lavender} />
@@ -43,15 +47,15 @@ export function FilterMenu({
 
 const styles = StyleSheet.create({
   menu: {
-    width: u(165),
-    padding: u(8),
+    width: u(164),
+    padding: u(6),
     borderRadius: u(8),
     borderWidth: 1,
     borderColor: 'rgba(232,185,255,0.45)',
     backgroundColor: colors.purple550,
   },
   row: {
-    height: u(42),
+    height: u(38),
     paddingHorizontal: u(8),
     borderRadius: u(6),
     flexDirection: 'row',

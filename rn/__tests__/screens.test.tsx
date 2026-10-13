@@ -1,7 +1,8 @@
 import { ReactElement } from 'react';
 import { act, create, ReactTestRenderer } from 'react-test-renderer';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { Home } from '../src/Home';
+import { HomeTabs } from '../src/app/HomeTabs';
+import { NavProvider } from '../src/app/NavProvider';
 import { EntryFlow } from '../src/flow/EntryFlow';
 
 jest.mock('../src/GodotBridge', () => ({
@@ -39,7 +40,11 @@ describe('screens render', () => {
   });
 
   it('shows the connection lost state when the catalog cannot load', async () => {
-    const tree = mount(<Home onJumpIn={() => {}} />);
+    const tree = mount(
+      <NavProvider>
+        <HomeTabs onJumpIn={() => {}} />
+      </NavProvider>,
+    );
     await act(async () => {});
     expect(JSON.stringify(tree.toJSON())).toContain('Connection lost');
   });

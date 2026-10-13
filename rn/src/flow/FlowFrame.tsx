@@ -3,25 +3,29 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, Icon, LinearFill } from '../ds';
 import { u } from '../ds/scale';
+import { t } from '../i18n';
 
-/** Purple full-screen backdrop with safe-area padding and an optional back button. */
+/** Magenta-to-purple full-screen backdrop (flat purple when `flat`) with safe-area padding and an optional back button. */
 export function FlowFrame({
   children,
   onBack,
+  flat = false,
 }: {
   children: ReactNode;
   onBack?: () => void;
+  flat?: boolean;
 }) {
   const insets = useSafeAreaInsets();
   return (
     <View style={styles.root}>
-      <LinearFill
-        stops={[
-          { offset: 0, color: colors.purple350 },
-          { offset: 0.55, color: colors.purple450 },
-          { offset: 1, color: colors.purple550 },
-        ]}
-      />
+      {flat ? null : (
+        <LinearFill
+          stops={[
+            { offset: 0, color: colors.magenta },
+            { offset: 1, color: colors.purple350 },
+          ]}
+        />
+      )}
       <View
         style={[
           styles.content,
@@ -34,7 +38,7 @@ export function FlowFrame({
         {onBack ? (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Back"
+            accessibilityLabel={t('APP_BACK')}
             onPress={onBack}
             hitSlop={12}
             style={styles.back}
@@ -49,7 +53,7 @@ export function FlowFrame({
 }
 
 const styles = StyleSheet.create({
-  root: { ...StyleSheet.absoluteFill, backgroundColor: colors.purple500 },
+  root: { ...StyleSheet.absoluteFill, backgroundColor: colors.purple350 },
   content: { flex: 1, paddingHorizontal: u(24) },
   back: { width: u(40), height: u(40), justifyContent: 'center' },
 });

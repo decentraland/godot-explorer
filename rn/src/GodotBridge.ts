@@ -43,7 +43,16 @@ export type GodotCommand =
   | { type: 'randomize_avatar' }
   | { type: 'set_name'; name: string }
   | { type: 'enter_world'; x: number; y: number; realm: string }
-  | { type: 'exit_world' };
+  | { type: 'exit_world' }
+  | { type: 'req'; id: string; method: string; params?: unknown }
+  | { type: 'set_hud_insets'; top: number; right: number; bottom: number; left: number }
+  | { type: 'set_chat_width'; width: number }
+  | { type: 'chat_open'; open: boolean }
+  | { type: 'hide_ui'; hidden: boolean }
+  | { type: 'focus_camera'; target: CameraTarget };
+
+/** Avatar preview framing: a wearable category, or the whole body. */
+export type CameraTarget = 'overall' | 'head' | 'torso' | 'legs' | 'feet' | 'hands';
 
 export function sendCommand(command: GodotCommand): void {
   if (mock) {

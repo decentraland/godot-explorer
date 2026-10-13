@@ -9,6 +9,7 @@ export const colors = {
   gray: '#CFCDD4',
   silver: '#A09BA8',
   lavender: '#E8B9FF',
+  magenta: '#C640CD',
   purple350: '#691FA9',
   purple450: '#460F6F',
   purple500: '#350854',
@@ -19,6 +20,23 @@ export const colors = {
   white70: 'rgba(255,255,255,0.7)',
   white30: 'rgba(252,252,252,0.3)',
   white10: 'rgba(255,255,255,0.1)',
+  mythic: '#FF4BED',
+  iconHud: '#DFD0FF',
+  teal: '#2FCF9A',
+  periwinkle: '#9D8CFF',
+  fieldDark: '#2B0847',
+  panelDark: '#1F0033',
+  rowSelected: '#7B3AA0',
+  violetSquare: '#45146E',
+  black40: 'rgba(0,0,0,0.4)',
+  lavender70: 'rgba(232,185,255,0.7)',
+} as const;
+
+/** Notification card title colours by category. */
+export const notificationTitle = {
+  social: '#A0ABFF',
+  reward: '#73FFAF',
+  event: '#DF9CFF',
 } as const;
 
 export const rarityColors = {

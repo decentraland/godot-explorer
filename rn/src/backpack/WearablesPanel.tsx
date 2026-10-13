@@ -1,53 +1,97 @@
 import { ScrollView, StyleSheet, View } from 'react-native';
-import { AppText, ItemCard, SkeletonCard, SlotTile, Tabs, layout } from '../ds';
+import { ItemCard, Pill, SlotTile, Tabs, layout } from '../ds';
 import { AvatarState } from '../events';
-import { ColorSwatchButton } from './ColorSwatchButton';
+import { t } from '../i18n';
+import type { I18nKey } from '../i18n';
 import { Wearable } from './catalog';
+import type { SubRow } from './BackpackChrome';
+import { EmptyBlock, SkeletonGrid } from './GridStates';
+import { ItemArt } from './ItemArt';
 import { ItemGrid } from './ItemGrid';
+import type { EmptyCopy } from './platformPolicy';
 import {
-  equippedThumbnail,
+  equippedItem,
   gridItems,
+  isCustomColor,
   isEquipped,
   ItemFilter,
+  showsUnequipStrip,
 } from './selection';
-import { isRemovable, SLOTS, Slot, TABS, TabKey } from './taxonomy';
+import { SwatchStrip } from './SwatchStrip';
+import {
+  bridgeTarget,
+  ColorTarget,
+  PALETTES,
+  SLOTS,
+  Slot,
+  TABS,
+  TabKey,
+} from './taxonomy';
 import { u } from '../ds/scale';
 
+/** The pill generation spells two slot labels differently. */
+const PILL_LABELS: Record<string, I18nKey> = {
+  facial_hair: 'BACKPACK_PILL_FACIAL_HAIR',
+  hands_wear: 'BACKPACK_PILL_HANDS',
+};
+
 export type WearablesPanelProps = {
+  /** null while the catalog loads: the grid shows the skeleton. */
   catalog: Wearable[] | null;
   avatar: AvatarState | null;
   tab: TabKey;
   slot: Slot | null;
   filter: ItemFilter;
+  columns?: number;
   bottomInset?: number;
+  /** Item whose equip is in flight; its tile is dimmed. */
+  busy?: string | null;
+  copy: EmptyCopy;
+  subRow?: SubRow;
   onTab: (tab: TabKey) => void;
   onSlot: (slot: Slot) => void;
   onToggle: (item: Wearable, equipped: boolean) => void;
-  onOpenColor: (slot: Slot) => void;
+  onColor: (target: ColorTarget, color: string) => void;
+  onOpenColor: (target: ColorTarget) => void;
+  onMarketplace: () => void;
 };
 
-/** Tabs, category slots and the item grid of the Wearables mode. */
+/** Tabs, then the slot row, inline swatches and item grid of the Wearables mode. */
 export function WearablesPanel(props: WearablesPanelProps) {
-  const {
-    catalog,
-    avatar,
-    tab,
-    slot,
-    filter,
-    bottomInset,
-    onTab,
-    onSlot,
-    onToggle,
-    onOpenColor,
-  } = props;
+  const { catalog, avatar, tab, slot, filter, columns, bottomInset, busy } =
+    props;
   const items = catalog ? gridItems(tab, slot, catalog, avatar, filter) : [];
+  const pills = props.subRow === 'pills';
+  // The pill generation also colours the body shape, and drops the row when the list is empty.
+  const color =
+    slot?.color ??
+    (pills && slot?.key === 'shape' ? ('skin' as ColorTarget) : undefined);
+  const showSwatches = !pills || !catalog || items.length > 0;
+  const palette = color ? PALETTES[bridgeTarget(color)] : [];
+  const value = color && avatar ? avatar[bridgeTarget(color)] : '';
 
   const header = (
     <View>
-      <View style={styles.tabs}>
-        <Tabs items={TABS} active={tab} onChange={onTab} />
-      </View>
-      {tab !== 'all' && (
+      {tab !== 'all' && pills && (
+        <ScrollView
+          removeClippedSubviews={false}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.slotsScroll}
+          contentContainerStyle={styles.pills}
+        >
+          {SLOTS[tab].map(entry => (
+            <Pill
+              key={entry.key}
+              tone="soft"
+              label={t(PILL_LABELS[entry.key] ?? entry.label)}
+              selected={slot?.key === entry.key}
+              onPress={() => props.onSlot(entry)}
+            />
+          ))}
+        </ScrollView>
+      )}
+      {tab !== 'all' && !pills && (
         <ScrollView
           removeClippedSubviews={false}
           horizontal
@@ -55,71 +99,91 @@ export function WearablesPanel(props: WearablesPanelProps) {
           style={styles.slotsScroll}
           contentContainerStyle={styles.slots}
         >
-          {SLOTS[tab].map(entry => (
-            <SlotTile
-              key={entry.key}
-              label={entry.label}
-              thumbnail={
-                catalog ? equippedThumbnail(entry, catalog, avatar) : undefined
-              }
-              selected={slot?.key === entry.key}
-              onPress={() => onSlot(entry)}
-            />
-          ))}
+          {SLOTS[tab].map(entry => {
+            const worn = catalog
+              ? equippedItem(entry, catalog, avatar)
+              : undefined;
+            return (
+              <SlotTile
+                key={entry.key}
+                label={t(entry.label)}
+                size={56}
+                thumbnail={worn?.thumbnail}
+                art={
+                  worn ? (
+                    <ItemArt category={worn.category} name={worn.name} />
+                  ) : undefined
+                }
+                selected={slot?.key === entry.key}
+                onPress={() => props.onSlot(entry)}
+              />
+            );
+          })}
         </ScrollView>
       )}
-      {slot?.color && slot.category && avatar && (
-        <View style={styles.colorRow}>
-          <AppText variant="caption">Color</AppText>
-          <ColorSwatchButton
-            color={avatar[slot.color]}
-            onPress={() => onOpenColor(slot)}
+      {color && avatar && showSwatches ? (
+        <View style={styles.swatches}>
+          <SwatchStrip
+            palette={palette}
+            value={value}
+            custom={isCustomColor(palette, value)}
+            disabled={catalog === null}
+            onSelect={next => props.onColor(color, next)}
+            onWheel={() => props.onOpenColor(color)}
           />
         </View>
-      )}
+      ) : null}
     </View>
   );
 
-  if (!catalog) {
-    return (
-      <View style={styles.fill}>
-        {header}
-        <View style={styles.skeleton}>
-          {Array.from({ length: 6 }, (_, index) => (
-            <View key={index} style={styles.skeletonCell}>
-              <SkeletonCard />
-            </View>
-          ))}
-        </View>
-      </View>
-    );
-  }
-
   return (
-    <ItemGrid
-      items={items}
-      keyOf={item => item.id}
-      bottomInset={bottomInset}
-      header={header}
-      empty={
-        <View style={styles.empty}>
-          <AppText variant="caption">Nothing here yet</AppText>
-        </View>
-      }
-      renderItem={item => {
-        const equipped = isEquipped(avatar, item.id);
-        return (
-          <ItemCard
-            label={item.name}
-            thumbnail={item.thumbnail}
-            rarity={item.rarity}
-            equipped={equipped}
-            caption={isRemovable(item.category) ? 'Unequip' : undefined}
-            onPress={() => onToggle(item, equipped)}
-          />
-        );
-      }}
-    />
+    <View style={styles.fill}>
+      <View style={styles.tabs}>
+        <Tabs
+          items={TABS.map(entry => ({ key: entry.key, label: t(entry.label) }))}
+          active={tab}
+          onChange={props.onTab}
+        />
+      </View>
+      <ItemGrid
+        items={items}
+        keyOf={item => item.id}
+        columns={columns}
+        bottomInset={bottomInset}
+        header={header}
+        empty={
+          catalog ? (
+            <EmptyBlock
+              icon="wearables"
+              copy={props.copy}
+              onMarketplace={props.onMarketplace}
+            />
+          ) : (
+            <SkeletonGrid columns={columns} />
+          )
+        }
+        renderItem={item => {
+          const equipped = isEquipped(avatar, item.id);
+          return (
+            <View style={busy === item.id && styles.busy}>
+              <ItemCard
+                label={item.name}
+                thumbnail={item.thumbnail}
+                art={<ItemArt category={item.category} name={item.name} />}
+                rarity={item.rarity}
+                equipped={equipped}
+                caption={
+                  showsUnequipStrip(item.category)
+                    ? t('BACKPACK_UNEQUIP')
+                    : undefined
+                }
+                onPress={() => props.onToggle(item, equipped)}
+              />
+            </View>
+          );
+        }}
+      />
+    </View>
   );
 }
 
@@ -127,29 +191,20 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   tabs: {
     paddingHorizontal: layout.gutter,
-    paddingTop: u(8),
     paddingBottom: u(12),
   },
   slotsScroll: { flexGrow: 0 },
   slots: {
     paddingHorizontal: layout.gutter - 3,
-    gap: u(8),
-    paddingBottom: u(14),
-  },
-  colorRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    gap: u(10),
-    paddingHorizontal: layout.gutter,
+    gap: u(16),
     paddingBottom: u(12),
   },
-  skeleton: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+  swatches: { paddingBottom: u(12) },
+  busy: { opacity: 0.55 },
+  pills: {
     paddingHorizontal: layout.gutter,
-    gap: layout.gap,
+    gap: u(8),
+    paddingBottom: u(14),
+    alignItems: 'center',
   },
-  skeletonCell: { width: '31%' },
-  empty: { alignItems: 'center', paddingTop: u(32) },
 });

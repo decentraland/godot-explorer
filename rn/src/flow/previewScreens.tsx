@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AvatarHole, StageBackground } from '../backpack/AvatarStage';
 import { AppText, PrimaryButton } from '../ds';
 import { ensureEngine, send, useEngine } from '../engine';
+import { t } from '../i18n';
 import { u } from '../ds/scale';
 
 /** Stage + the single Godot avatar window, with a spinner behind it until the avatar arrives. */
@@ -19,7 +20,7 @@ export function PreviewArea() {
         <View style={styles.loading}>
           <ActivityIndicator color="#FCFCFC" />
           <AppText variant="caption" style={styles.loadingText}>
-            Getting your avatar ready…
+            {t('FLOW_AVATAR_LOADING')}
           </AppText>
         </View>
       )}
@@ -44,17 +45,17 @@ export function AvatarCreateScreen({
       <PreviewArea />
       <View style={[styles.top, { paddingTop: insets.top + u(16) }]}>
         <AppText variant="heading" style={styles.centered}>
-          Create your avatar
+          {t('FLOW_AVATAR_TITLE')}
         </AppText>
         <AppText variant="body" style={styles.centered}>
-          Shuffle until you like it, then make it yours.
+          {t('FLOW_AVATAR_BODY')}
         </AppText>
       </View>
       <View style={[styles.bottom, { paddingBottom: insets.bottom + 24 }]}>
         <View style={styles.row}>
           <View style={styles.flex}>
             <PrimaryButton
-              label="Randomize"
+              label={t('FLOW_AVATAR_RANDOMIZE')}
               tone="secondary"
               disabled={!avatar}
               onPress={() => send({ type: 'randomize_avatar' })}
@@ -62,7 +63,7 @@ export function AvatarCreateScreen({
           </View>
           <View style={styles.flex}>
             <PrimaryButton
-              label="Customize"
+              label={t('FLOW_AVATAR_CUSTOMIZE')}
               tone="secondary"
               disabled={!avatar}
               onPress={onCustomize}
@@ -70,11 +71,11 @@ export function AvatarCreateScreen({
           </View>
         </View>
         <PrimaryButton
-          label="Continue"
+          label={t('FLOW_CONTINUE')}
           disabled={!avatar}
           onPress={onContinue}
         />
-        <PrimaryButton label="Back" tone="ghost" onPress={onBack} />
+        <PrimaryButton label={t('APP_BACK')} tone="ghost" onPress={onBack} />
       </View>
     </View>
   );
@@ -94,7 +95,7 @@ export function WelcomeBackScreen({
       <PreviewArea />
       <View style={[styles.top, { paddingTop: insets.top + u(16) }]}>
         <AppText variant="heading" style={styles.centered}>
-          Welcome back,
+          {t('FLOW_WELCOME_BACK')}
         </AppText>
         <AppText variant="heading" style={styles.centered}>
           {name}
@@ -102,7 +103,7 @@ export function WelcomeBackScreen({
       </View>
       <View style={[styles.bottom, { paddingBottom: insets.bottom + 24 }]}>
         <PrimaryButton
-          label="Let's go"
+          label={t('FLOW_LETS_GO')}
           disabled={!avatar}
           onPress={onContinue}
         />

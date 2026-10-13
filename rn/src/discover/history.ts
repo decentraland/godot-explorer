@@ -23,3 +23,10 @@ export function usePlayed(): Place[] {
     () => played,
   );
 }
+
+let searches: string[] = [];
+
+export const loadSearchHistory = (): string[] => searches;
+export const saveSearchHistory = (next: string[]) => {
+  searches = next;
+};

@@ -1,3 +1,4 @@
+import { Rarity } from '../ds';
 import { CONTENTS_URL, ENTITIES_URL } from './catalog';
 
 export const BASE_EMOTE_PREFIX = 'urn:decentraland:off-chain:base-emotes:';
@@ -8,6 +9,9 @@ export type Emote = {
   urn: string;
   name: string;
   thumbnail?: string;
+  /** Owned emotes carry a rarity; base emotes are not collectible. */
+  rarity?: Rarity;
+  collectible?: boolean;
 };
 
 /** Base emotes the client ships (godot/src/ui/components/organisms/emotes/emotes.gd). */

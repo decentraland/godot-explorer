@@ -3,6 +3,7 @@
 // without the 3D client.
 import type { GodotCommand } from '../GodotBridge';
 import type { GodotEvent } from '../events';
+import { getMockHandler } from '../bridge/mockHandlers';
 
 const STATE_INTERVAL_MS = 250;
 const LOADING_STARTED_MS = 300;
@@ -40,6 +41,22 @@ export function createMockBridge(): MockBridge {
     });
   };
 
+  const answer = (id: string, method: string, params: unknown) => {
+    const handler = getMockHandler(method);
+    const respond = (data: { ok: boolean; result?: unknown; error?: string }) =>
+      emit({ type: 'res', data: { id, ...data } });
+    if (!handler) {
+      respond({ ok: false, error: `no mock handler for ${method}` });
+      return;
+    }
+    Promise.resolve()
+      .then(() => handler(params as never))
+      .then(
+        result => respond({ ok: true, result }),
+        error => respond({ ok: false, error: error instanceof Error ? error.message : String(error) }),
+      );
+  };
+
   const start = () => {
     timers.push(setTimeout(() => emit({ type: 'ready', data: {} }), 0));
     timers.push(setTimeout(() => emit({ type: 'loading', data: { state: 'started' } }), LOADING_STARTED_MS));
@@ -67,6 +84,9 @@ export function createMockBridge(): MockBridge {
             type: 'chat',
             data: { address: MOCK_ADDRESS, message: command.text, timestamp: Date.now() },
           });
+          break;
+        case 'req':
+          answer(command.id, command.method, command.params);
           break;
         case 'enter_world':
           emit({ type: 'world', data: { state: 'entered' } });

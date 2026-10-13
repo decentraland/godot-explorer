@@ -11,6 +11,7 @@ import { hexToHsv, Hsv, hsvToHex } from './colorMath';
 import { LinearFill } from './Gradient';
 import { colors } from './tokens';
 import { u } from './scale';
+import { t } from '../i18n';
 
 const HUE_STOPS = [0, 60, 120, 180, 240, 300, 360].map((hue, index) => ({
   offset: index / 6,
@@ -141,14 +142,14 @@ export function HsvSliders({
   return (
     <View>
       <Slider
-        label="Color"
+        label={t('APP_COLOR_HUE')}
         value={hsv.h / 360}
         thumbColor={hueOnly}
         onChange={next => update({ h: next * 360 })}
         track={<LinearFill angle={90} stops={HUE_STOPS} />}
       />
       <Slider
-        label="Saturation"
+        label={t('APP_COLOR_SATURATION')}
         value={hsv.s}
         thumbColor={hsvToHex({ h: hsv.h, s: hsv.s, v: 1 })}
         onChange={next => update({ s: next })}
@@ -163,7 +164,7 @@ export function HsvSliders({
         }
       />
       <Slider
-        label="Brightness"
+        label={t('APP_COLOR_BRIGHTNESS')}
         value={hsv.v}
         thumbColor={hsvToHex({ h: 0, s: 0, v: hsv.v })}
         onChange={next => update({ v: next })}
@@ -200,11 +201,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.45)',
   },
-  sliderBlock: { marginTop: u(14) },
+  sliderBlock: { marginTop: u(25) },
   track: {
     height: u(24),
     marginTop: u(8),
-    borderRadius: u(3),
+    borderRadius: u(4),
     justifyContent: 'center',
   },
   thumb: {
@@ -212,8 +213,8 @@ const styles = StyleSheet.create({
     top: u(-4),
     width: THUMB,
     height: u(32),
-    borderRadius: u(3),
-    borderWidth: 2,
-    borderColor: colors.snow,
+    borderRadius: u(4),
+    borderWidth: u(4),
+    borderColor: '#EAEAEA',
   },
 });

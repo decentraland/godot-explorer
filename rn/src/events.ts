@@ -14,7 +14,16 @@ export type GodotEvent =
     }
   | {
       type: 'chat';
-      data: { address: string; message: string; timestamp: number };
+      data: ChatLine;
+    }
+  | { type: 'res'; data: ResponseData }
+  | { type: 'loading_progress'; data: LoadingProgress }
+  | { type: 'hud_state'; data: { hidden: boolean; chat_open: boolean } }
+  | { type: 'unread_chat'; data: { count: number } }
+  | { type: 'open_backpack'; data: { emotes: boolean } }
+  | {
+      type: 'settings_changed';
+      data: { key: string; value: string | number | boolean };
     }
   | { type: 'avatar'; data: AvatarState }
   | { type: 'world'; data: { state: 'entered' | 'exited' } };
@@ -29,7 +38,29 @@ export type AvatarState = {
   eyes: string;
 };
 
-export type ChatLine = { address: string; message: string; timestamp: number };
+/** Sender profile Godot resolved for a chat line; absent for system lines and unknown senders. */
+export type ChatProfile = {
+  name: string;
+  has_claimed_name: boolean;
+  profile_picture_url: string;
+};
+
+export type ChatLine = {
+  address: string;
+  message: string;
+  timestamp: number;
+  profile?: ChatProfile;
+};
+
+/** Answer to a `req` command; `result` on success, `error` otherwise. */
+export type ResponseData = { id: string; ok: boolean; result?: unknown; error?: string };
+
+export type LoadingProgress = {
+  loaded: number;
+  total: number;
+  mbps: number;
+  percent: number;
+};
 
 export type Phase = 'booting' | 'loading' | 'playing';
 
@@ -53,6 +84,14 @@ export const initialHud: HudState = {
   chat: [],
 };
 
+function isResponse(data: unknown): boolean {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    typeof (data as { id?: unknown }).id === 'string'
+  );
+}
+
 export function parseEvent(json: string): GodotEvent | null {
   try {
     const parsed: unknown = JSON.parse(json);
@@ -62,6 +101,10 @@ export function parseEvent(json: string): GodotEvent | null {
       !('type' in parsed) ||
       !('data' in parsed)
     ) {
+      return null;
+    }
+    const event = parsed as { type: unknown; data: unknown };
+    if (event.type === 'res' && !isResponse(event.data)) {
       return null;
     }
     return parsed as GodotEvent;

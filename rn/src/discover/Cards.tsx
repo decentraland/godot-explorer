@@ -1,29 +1,15 @@
-import { Image, Pressable, StyleSheet, View } from 'react-native';
-import { AppText, colors, Icon } from '../ds';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { AppText, colors, Icon, LinearFill } from '../ds';
+import { u } from '../ds/scale';
+import { t } from '../i18n';
 import { DiscoverEvent, Place } from './api';
 import { formatRate, formatUsers, startsIn } from './format';
-import { u } from '../ds/scale';
+import { Thumb } from './Thumb';
 
-const PLACE_W = u(146);
-const EVENT_W = u(203);
-
-function Thumb({
-  uri,
-  width,
-  height,
-}: {
-  uri: string;
-  width: number;
-  height: number;
-}) {
-  return (
-    <View style={[styles.thumb, { width, height }]}>
-      {uri ? (
-        <Image source={{ uri }} style={styles.fill} resizeMode="cover" />
-      ) : null}
-    </View>
-  );
-}
+export const PLACE_W = 147;
+export const EVENT_W = 203;
+const PLACE_H = 78;
+const EVENT_H = 120;
 
 export function Stats({ users, rate }: { users: number; rate: number | null }) {
   return (
@@ -43,23 +29,86 @@ export function Stats({ users, rate }: { users: number; rate: number | null }) {
 export function PlaceCard({
   place,
   onPress,
+  width = PLACE_W,
 }: {
   place: Place;
   onPress: () => void;
+  width?: number;
 }) {
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={place.title}
       onPress={onPress}
-      style={({ pressed }) => [{ width: PLACE_W }, pressed && styles.pressed]}
+      style={({ pressed }) => [{ width: u(width) }, pressed && styles.pressed]}
     >
-      <Thumb uri={place.image} width={PLACE_W} height={u(78)} />
+      <Thumb uri={place.image} width={u(width)} height={u(PLACE_H)} />
       <AppText variant="button" numberOfLines={1} style={styles.title}>
         {place.title}
       </AppText>
       <Stats users={place.users} rate={place.likeRate} />
     </Pressable>
+  );
+}
+
+/** LIVE + attendees, or the time pill, plus Trending (and Featured on the sheet hero). */
+export function EventBadges({
+  event,
+  now,
+  showFeatured = false,
+}: {
+  event: DiscoverEvent;
+  now: number;
+  showFeatured?: boolean;
+}) {
+  return (
+    <View style={styles.badges} pointerEvents="none">
+      {event.live ? (
+        <View style={styles.row}>
+          <View style={[styles.badge, styles.live]}>
+            <AppText variant="caption" style={styles.badgeText}>
+              {t('DISCOVER_LIVE')}
+            </AppText>
+          </View>
+          <View style={[styles.badge, styles.users]}>
+            <View style={styles.dot} />
+            <Icon name="user" size={10} color={colors.snow} strokeWidth={2} />
+            <AppText variant="caption" style={styles.usersText}>
+              {formatUsers(event.attendees)}
+            </AppText>
+          </View>
+        </View>
+      ) : (
+        <View style={[styles.badge, styles.soon]}>
+          <AppText
+            variant="caption"
+            style={[styles.badgeText, styles.soonText]}
+          >
+            {startsIn(event.startsAt, now)}
+          </AppText>
+        </View>
+      )}
+      {event.trending ? (
+        <View style={[styles.badge, styles.trending]}>
+          <AppText variant="caption" style={styles.badgeText}>
+            {t('DISCOVER_TRENDING')}
+          </AppText>
+        </View>
+      ) : showFeatured && event.featured ? (
+        <View style={[styles.badge, styles.featured]}>
+          <LinearFill
+            angle={90}
+            stops={[
+              { offset: 0, color: colors.ruby },
+              { offset: 1, color: colors.mythic },
+            ]}
+          />
+          <AppText variant="caption" style={styles.badgeText}>
+            {t('EVENT_FEATURED')}
+          </AppText>
+        </View>
+      ) : null}
+    </View>
   );
 }
 
@@ -77,69 +126,31 @@ export function EventCard({
       accessibilityRole="button"
       accessibilityLabel={event.title}
       onPress={onPress}
-      style={({ pressed }) => [{ width: EVENT_W }, pressed && styles.pressed]}
+      style={({ pressed }) => [
+        { width: u(EVENT_W) },
+        pressed && styles.pressed,
+      ]}
     >
-      <Thumb uri={event.image} width={EVENT_W} height={u(120)} />
-      <View style={styles.badges} pointerEvents="none">
-        {event.live ? (
-          <View style={styles.row}>
-            <View style={[styles.badge, styles.live]}>
-              <AppText variant="caption" style={styles.badgeText}>
-                LIVE
-              </AppText>
-            </View>
-            <View style={[styles.badge, styles.users]}>
-              <View style={styles.dot} />
-              <Icon name="user" size={11} color={colors.snow} strokeWidth={2} />
-              <AppText variant="caption" style={styles.usersText}>
-                {formatUsers(event.attendees)}
-              </AppText>
-            </View>
-          </View>
-        ) : (
-          <View style={[styles.badge, styles.soon]}>
-            <AppText
-              variant="caption"
-              style={[styles.badgeText, styles.soonText]}
-            >
-              {startsIn(event.startsAt, now)}
-            </AppText>
-          </View>
-        )}
-        {event.trending ? (
-          <View style={[styles.badge, styles.trending]}>
-            <AppText variant="caption" style={styles.badgeText}>
-              Trending
-            </AppText>
-          </View>
-        ) : null}
-      </View>
+      <Thumb uri={event.image} width={u(EVENT_W)} height={u(EVENT_H)} />
+      <EventBadges event={event} now={now} />
       <AppText variant="button" numberOfLines={1} style={styles.eventTitle}>
         {event.title}
       </AppText>
       <AppText variant="body" numberOfLines={1} style={styles.by}>
-        by {event.creator}
+        {t('COMMON_BY')} {event.creator}
       </AppText>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  thumb: {
-    borderRadius: u(4),
-    overflow: 'hidden',
-    borderWidth: 0.6,
-    borderColor: colors.lavender,
-    backgroundColor: colors.purple450,
-  },
-  fill: { width: '100%', height: '100%' },
-  title: { marginTop: u(7), fontSize: u(13) },
-  eventTitle: { marginTop: u(10), fontSize: u(14) },
-  by: { marginTop: u(6), fontSize: u(13), color: colors.gray },
+  title: { marginTop: u(5), fontSize: u(13) },
+  eventTitle: { marginTop: u(8), fontSize: u(14) },
+  by: { marginTop: u(2), fontSize: u(13), color: colors.gray },
   stats: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: u(4),
+    marginTop: u(2.5),
     gap: u(4),
   },
   stat: {
@@ -158,30 +169,32 @@ const styles = StyleSheet.create({
   },
   row: { flexDirection: 'row', gap: u(4) },
   badge: {
-    height: u(20),
-    paddingHorizontal: u(6),
-    borderRadius: u(3),
+    height: u(16),
+    paddingHorizontal: u(5),
+    borderRadius: u(2),
     flexDirection: 'row',
     alignItems: 'center',
     gap: u(3),
+    overflow: 'hidden',
   },
   badgeText: {
     fontFamily: 'Inter-SemiBold',
     color: colors.snow,
-    fontSize: u(11),
+    fontSize: u(9.5),
     textTransform: 'none',
   },
   live: { backgroundColor: colors.ruby },
   users: { backgroundColor: 'rgba(0,0,0,0.65)' },
-  usersText: { color: colors.snow, fontSize: u(11) },
+  usersText: { color: colors.snow, fontSize: u(9.5) },
   dot: {
     width: u(5),
     height: u(5),
     borderRadius: u(3),
     backgroundColor: '#2ECC71',
   },
-  trending: { backgroundColor: '#2ECC8A' },
+  trending: { backgroundColor: colors.teal },
+  featured: { backgroundColor: colors.mythic },
   soon: { backgroundColor: colors.snow },
-  soonText: { color: colors.ruby },
+  soonText: { color: '#161518' },
   pressed: { opacity: 0.85 },
 });

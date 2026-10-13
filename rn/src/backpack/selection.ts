@@ -1,6 +1,7 @@
 import { AvatarState } from '../events';
 import { Wearable } from './catalog';
-import { Slot, TabKey } from './taxonomy';
+import type { BackpackCommand } from './api';
+import { isRemovable, Slot, TabKey } from './taxonomy';
 
 export type ItemFilter = 'all' | 'collectibles';
 
@@ -52,19 +53,25 @@ export function gridItems(
   return visible.filter(item => item.category === slot.category);
 }
 
-/** The thumbnail of whatever the avatar wears in a slot, for the slot tile. */
-export function equippedThumbnail(
+/** Whatever the avatar wears in a slot. */
+export function equippedItem(
   slot: Slot,
   catalog: Wearable[],
   avatar: AvatarState | null,
-): string | undefined {
-  if (!slot.category) {
-    return undefined;
-  }
-  return catalog.find(
-    item => item.category === slot.category && isEquipped(avatar, item.id),
-  )?.thumbnail;
+): Wearable | undefined {
+  return slot.category
+    ? catalog.find(
+        item => item.category === slot.category && isEquipped(avatar, item.id),
+      )
+    : undefined;
 }
+
+/** The thumbnail of whatever the avatar wears in a slot, for the slot tile. */
+export const equippedThumbnail = (
+  slot: Slot,
+  catalog: Wearable[],
+  avatar: AvatarState | null,
+): string | undefined => equippedItem(slot, catalog, avatar)?.thumbnail;
 
 /** Index of the emote slot to fill: the selected one, else the first empty one, else the selected. */
 export function targetEmoteSlot(emotes: string[], selected: number): number {
@@ -73,4 +80,38 @@ export function targetEmoteSlot(emotes: string[], selected: number): number {
   }
   const empty = emotes.indexOf('');
   return empty === -1 ? selected : empty;
+}
+
+/** What tapping a wearable sends; null when nothing should (the required parts can't be removed). */
+export function wearableCommand(
+  item: Wearable,
+  equipped: boolean,
+): BackpackCommand | null {
+  if (item.category === 'body_shape') {
+    return equipped ? null : { type: 'set_body_shape', urn: item.id };
+  }
+  if (equipped) {
+    return isRemovable(item.category)
+      ? { type: 'unequip', urn: item.id }
+      : null;
+  }
+  return { type: 'equip', urn: item.id };
+}
+
+/** The UNEQUIP strip is drawn on the body shape too (Figma), though tapping it does nothing. */
+export const showsUnequipStrip = (category: string): boolean =>
+  category === 'body_shape' || isRemovable(category);
+
+/** True when the colour is none of the palette's presets, i.e. the rainbow wheel is the selected swatch. */
+export const isCustomColor = (palette: string[], value: string): boolean =>
+  !palette.some(color => same(color, value));
+
+/** Emotes the Collectibles filter keeps: the ones with a rarity. */
+export function visibleEmotes<T extends { collectible?: boolean }>(
+  emotes: T[],
+  filter: ItemFilter,
+): T[] {
+  return filter === 'collectibles'
+    ? emotes.filter(emote => emote.collectible)
+    : emotes;
 }

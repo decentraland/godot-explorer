@@ -1,5 +1,6 @@
 import { StyleSheet, View } from 'react-native';
 import { IconButton, Pill } from '../ds';
+import { t } from '../i18n';
 import { Mode } from './backpackState';
 import { u } from '../ds/scale';
 
@@ -7,34 +8,43 @@ import { u } from '../ds/scale';
 export function BackpackHeader({
   mode,
   filterActive,
+  menuOpen,
   onMode,
   onFilter,
+  filterGap = 22,
 }: {
   mode: Mode;
+  /** A non-default filter is applied: the button gets the red dot. */
   filterActive: boolean;
+  menuOpen: boolean;
   onMode: (mode: Mode) => void;
   onFilter: () => void;
+  /** Space before the filter button (dp): wider in portrait than in landscape. */
+  filterGap?: number;
 }) {
   return (
     <View style={styles.row}>
       <Pill
-        label="Wearables"
+        label={t('BACKPACK_WEARABLES')}
         icon="wearables"
         selected={mode === 'wearables'}
         onPress={() => onMode('wearables')}
       />
       <Pill
-        label="Emotes"
+        label={t('BACKPACK_EMOTES')}
         icon="emotes"
         selected={mode === 'emotes'}
         onPress={() => onMode('emotes')}
       />
-      <IconButton
-        icon="filter"
-        label="Filter"
-        active={filterActive}
-        onPress={onFilter}
-      />
+      <View style={{ marginLeft: u(filterGap - 12) }}>
+        <IconButton
+          icon="filter"
+          label={t('BACKPACK_FILTER')}
+          active={menuOpen}
+          badge={filterActive}
+          onPress={onFilter}
+        />
+      </View>
     </View>
   );
 }

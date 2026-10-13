@@ -16,6 +16,7 @@ import {
   withThumbnails,
 } from '../src/backpack/emotes';
 import {
+  equippedItem,
   equippedThumbnail,
   gridItems,
   isEquipped,
@@ -129,6 +130,13 @@ describe('selection', () => {
     ).toBeUndefined();
   });
 
+  it('finds the item worn in a slot', () => {
+    expect(equippedItem(SLOTS.clothing[0], catalog, avatar())?.name).toBe(
+      catalog.find(item => item.category === 'upper_body')?.name,
+    );
+    expect(equippedItem(SLOTS.extras[0], catalog, avatar())).toBeUndefined();
+  });
+
   it('picks the emote slot to fill', () => {
     const emotes = ['wave', 'clap', '', 'x'];
     expect(targetEmoteSlot(emotes, 2)).toBe(2);
@@ -143,10 +151,12 @@ describe('selection', () => {
 });
 
 describe('reduceBackpack', () => {
-  it('remembers the slot per tab and opens the color panel for color-only slots', () => {
+  it('remembers the slot per tab and drops the color editor on navigation', () => {
     let state = reduceBackpack(initialBackpack, { type: 'tab', tab: 'body' });
     expect(activeSlot(state)?.key).toBe('shape');
     state = reduceBackpack(state, { type: 'slot', slot: SLOTS.body[1] });
+    expect(state.colorTarget).toBeNull();
+    state = reduceBackpack(state, { type: 'openColor', target: 'skin' });
     expect(state.colorTarget).toBe('skin');
     state = reduceBackpack(state, { type: 'tab', tab: 'face' });
     expect(state.colorTarget).toBeNull();

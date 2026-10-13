@@ -13,6 +13,8 @@ var _explorer: Explorer = null
 var _state_elapsed := 0.0
 var _hide_elapsed := 0.0
 var _backpack := RnBackpack.new()
+var _requests: RnRequests
+var _hud: RnHud
 var _avatar_host_up := false
 var _in_world := false
 var _exiting := false
@@ -29,7 +31,10 @@ func _ready() -> void:
 		_plugin.connect("rn_command", handle_command)
 	Global.loading_started.connect(_emit.bind("loading", {"state": "started"}))
 	Global.loading_finished.connect(_emit.bind("loading", {"state": "finished"}))
-	Global.on_chat_message.connect(_on_chat_message)
+	_requests = RnRequests.new(_emit)
+	_hud = RnHud.new(_emit)
+	_requests.connect_signals()
+	_hud.connect_signals()
 	_backpack.avatar_changed.connect(func(state: Dictionary) -> void: _emit("avatar", state))
 	add_child(_backpack)
 
@@ -71,6 +76,11 @@ func _process(dt: float) -> void:
 func handle_command(json: String) -> void:
 	var cmd: Variant = JSON.parse_string(json)
 	if not cmd is Dictionary:
+		return
+	if _requests.handle(cmd):
+		return
+	if cmd.get("type", "") == "focus_camera":
+		_backpack.focus_camera(str(cmd.get("target", "overall")))
 		return
 	if _avatar_host_up:
 		_handle_avatar_command(cmd)
@@ -147,10 +157,13 @@ func _handle_explorer_command(cmd: Dictionary) -> void:
 			_backpack.async_equip(str(cmd.get("urn", "")))
 		"exit_world":
 			_backpack.close()
+			_hud.reset()
 			_explorer = null
 			_avatar_host_up = true
 			_exiting = true
 			RnWorld.async_exit()
+		_:
+			_hud.handle(_explorer, cmd)
 
 
 func _rect(cmd: Dictionary) -> Rect2:
@@ -172,10 +185,6 @@ func _emit_state() -> void:
 			"position": [pos.x, pos.y, pos.z],
 		}
 	)
-
-
-func _on_chat_message(address: String, message: String, timestamp: float) -> void:
-	_emit("chat", {"address": address, "message": message, "timestamp": timestamp})
 
 
 func _emit(type: String, data: Dictionary) -> void:

@@ -22,7 +22,7 @@ function NavIcon({ kind, active }: { kind: NavKey; active: boolean }) {
     case 'backpack':
       return <Icon name={active ? 'backpack' : 'backpackOutline'} size={24} />;
     case 'settings':
-      return <Icon name="settings" size={25} />;
+      return <Icon name={active ? 'settingsActive' : 'settings'} size={25} />;
     case 'profile':
       return (
         <View style={styles.profile}>

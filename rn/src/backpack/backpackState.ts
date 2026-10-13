@@ -1,9 +1,8 @@
-import { SLOTS, Slot, TabKey } from './taxonomy';
+import type { Snap } from '../ds';
+import { SLOTS, Slot, TabKey, ColorTarget } from './taxonomy';
 import { ItemFilter } from './selection';
-import { ColorTarget } from './taxonomy';
 
 export type Mode = 'wearables' | 'emotes';
-export type SheetState = 'expanded' | 'collapsed';
 
 export type BackpackState = {
   mode: Mode;
@@ -12,8 +11,14 @@ export type BackpackState = {
   filter: ItemFilter;
   filterMenuOpen: boolean;
   colorTarget: ColorTarget | null;
-  sheet: SheetState;
-  emoteSlot: number;
+  /** Sheet snap: peek = collapsed to its handle, half = default, full = covers the avatar. */
+  sheet: Snap;
+  /** Selected emote slot, or null before the first tap. */
+  emoteSlot: number | null;
+  /** Emote tapped once and waiting for the EQUIP tap. */
+  pendingEmote: string | null;
+  /** True while "Equipped" replaces the name chip. */
+  equippedToast: boolean;
 };
 
 export type BackpackAction =
@@ -22,10 +27,14 @@ export type BackpackAction =
   | { type: 'slot'; slot: Slot }
   | { type: 'filter'; filter: ItemFilter }
   | { type: 'toggleFilterMenu' }
+  | { type: 'closeFilterMenu' }
   | { type: 'openColor'; target: ColorTarget }
   | { type: 'closeColor' }
-  | { type: 'sheet'; sheet: SheetState }
-  | { type: 'emoteSlot'; slot: number };
+  | { type: 'sheet'; sheet: Snap }
+  | { type: 'emoteSlot'; slot: number }
+  | { type: 'emotePending'; id: string | null }
+  | { type: 'emoteEquipped'; slot: number }
+  | { type: 'toastDone' };
 
 export const initialBackpack: BackpackState = {
   mode: 'wearables',
@@ -34,8 +43,10 @@ export const initialBackpack: BackpackState = {
   filter: 'all',
   filterMenuOpen: false,
   colorTarget: null,
-  sheet: 'expanded',
-  emoteSlot: 0,
+  sheet: 'half',
+  emoteSlot: null,
+  pendingEmote: null,
+  equippedToast: false,
 };
 
 export function reduceBackpack(
@@ -49,6 +60,8 @@ export function reduceBackpack(
         mode: action.mode,
         filterMenuOpen: false,
         colorTarget: null,
+        pendingEmote: null,
+        equippedToast: false,
       };
     case 'tab':
       return {
@@ -61,12 +74,14 @@ export function reduceBackpack(
       return {
         ...state,
         slotByTab: { ...state.slotByTab, [state.tab]: action.slot.key },
-        colorTarget: action.slot.category ? null : action.slot.color ?? null,
+        colorTarget: null,
       };
     case 'filter':
       return { ...state, filter: action.filter, filterMenuOpen: false };
     case 'toggleFilterMenu':
       return { ...state, filterMenuOpen: !state.filterMenuOpen };
+    case 'closeFilterMenu':
+      return { ...state, filterMenuOpen: false };
     case 'openColor':
       return { ...state, colorTarget: action.target };
     case 'closeColor':
@@ -74,7 +89,18 @@ export function reduceBackpack(
     case 'sheet':
       return { ...state, sheet: action.sheet };
     case 'emoteSlot':
-      return { ...state, emoteSlot: action.slot };
+      return { ...state, emoteSlot: action.slot, pendingEmote: null };
+    case 'emotePending':
+      return { ...state, pendingEmote: action.id, equippedToast: false };
+    case 'emoteEquipped':
+      return {
+        ...state,
+        emoteSlot: action.slot,
+        pendingEmote: null,
+        equippedToast: true,
+      };
+    case 'toastDone':
+      return { ...state, equippedToast: false };
   }
 }
 

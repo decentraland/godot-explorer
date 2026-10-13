@@ -1,6 +1,8 @@
+import { ReactNode } from 'react';
 import { Image, Pressable, StyleSheet, View } from 'react-native';
 import { AppText } from './AppText';
 import { GradientView } from './Gradient';
+import { Icon, IconName } from './Icon';
 import { colors, Rarity, rarityColors, radii } from './tokens';
 import { u } from './scale';
 
@@ -11,8 +13,20 @@ export type ItemCardProps = {
   /** Caption strip along the bottom edge (Figma: UNEQUIP on equipped items). */
   caption?: string;
   label?: string;
+  /** Strip along the bottom edge drawn whatever `equipped` says (emote EQUIP / check states). */
+  strip?: { label?: string; icon?: IconName; tone?: 'dark' | 'ruby' | 'muted' };
+  /** Border colour override, for tiles that are selected without being equipped. */
+  outline?: 'orange' | 'lavender';
+  /** Drawn in place of a missing thumbnail, under the strip. */
+  art?: ReactNode;
   onPress?: () => void;
 };
+
+const STRIP_BG = {
+  dark: colors.shadow,
+  ruby: colors.ruby,
+  muted: '#3B393E',
+} as const;
 
 /** Square item tile; the grid sizes it with `style` (width via flexBasis, aspectRatio 1). */
 export function ItemCard({
@@ -21,6 +35,9 @@ export function ItemCard({
   equipped = false,
   caption,
   label,
+  strip,
+  outline,
+  art,
   onPress,
 }: ItemCardProps) {
   const tone = rarityColors[rarity];
@@ -33,6 +50,8 @@ export function ItemCard({
       style={({ pressed }) => [
         styles.outer,
         equipped && styles.equipped,
+        outline === 'orange' && styles.equipped,
+        outline === 'lavender' && styles.lavender,
         pressed && styles.pressed,
       ]}
     >
@@ -50,8 +69,26 @@ export function ItemCard({
             style={styles.image}
             resizeMode="cover"
           />
-        ) : null}
-        {equipped && caption ? (
+        ) : (
+          art ?? null
+        )}
+        {strip ? (
+          <View
+            style={[
+              styles.caption,
+              { backgroundColor: STRIP_BG[strip.tone ?? 'dark'] },
+            ]}
+          >
+            {strip.icon ? (
+              <Icon name={strip.icon} size={16} color={colors.snow} />
+            ) : null}
+            {strip.label ? (
+              <AppText variant="button" style={styles.captionText}>
+                {strip.label}
+              </AppText>
+            ) : null}
+          </View>
+        ) : equipped && caption ? (
           <View style={styles.caption}>
             <AppText variant="button" style={styles.captionText}>
               {caption}
@@ -77,6 +114,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   equipped: { borderWidth: 2, borderColor: colors.orange },
+  lavender: { borderWidth: 2, borderColor: colors.lavender },
   fill: { flex: 1 },
   image: { ...StyleSheet.absoluteFill, width: '100%', height: '100%' },
   caption: {

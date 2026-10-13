@@ -63,3 +63,23 @@ describe('reduceHud', () => {
     expect(initialHud.chat).toHaveLength(0);
   });
 });
+
+describe('bridge wave 2 events', () => {
+  it('parses res events with ok and error payloads', () => {
+    expect(parseEvent('{"type":"res","data":{"id":"a","ok":true,"result":1}}')).not.toBeNull();
+    expect(parseEvent('{"type":"res","data":{"id":"a","ok":false,"error":"x"}}')).not.toBeNull();
+  });
+  it('rejects res events without an id', () => {
+    expect(parseEvent('{"type":"res","data":{"ok":true}}')).toBeNull();
+  });
+  it('parses loading_progress, hud_state, unread_chat and settings_changed', () => {
+    for (const json of [
+      '{"type":"loading_progress","data":{"loaded":1,"total":4,"mbps":2.5,"percent":25}}',
+      '{"type":"hud_state","data":{"hidden":false}}',
+      '{"type":"unread_chat","data":{"count":3}}',
+      '{"type":"settings_changed","data":{"key":"volume","value":50}}',
+    ]) {
+      expect(parseEvent(json)).not.toBeNull();
+    }
+  });
+});

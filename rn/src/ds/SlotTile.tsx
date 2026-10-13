@@ -1,3 +1,4 @@
+import { ReactNode } from 'react';
 import { Image, Pressable, StyleSheet, View } from 'react-native';
 import { AppText } from './AppText';
 import { GradientView } from './Gradient';
@@ -11,12 +12,15 @@ export function SlotTile({
   thumbnail,
   selected,
   size: designSize = 62,
+  art,
   onPress,
 }: {
   label: string;
   thumbnail?: string;
   selected: boolean;
   size?: number;
+  /** Drawn in the tile when there is no thumbnail but the slot is worn. */
+  art?: ReactNode;
   onPress: () => void;
 }) {
   const size = u(designSize);
@@ -38,7 +42,7 @@ export function SlotTile({
           selected && styles.frameSelected,
         ]}
       >
-        {thumbnail ? (
+        {thumbnail || art ? (
           <GradientView
             angle={225}
             stops={[
@@ -47,11 +51,15 @@ export function SlotTile({
             ]}
             style={styles.tile}
           >
-            <Image
-              source={{ uri: thumbnail }}
-              style={styles.image}
-              resizeMode="cover"
-            />
+            {thumbnail ? (
+              <Image
+                source={{ uri: thumbnail }}
+                style={styles.image}
+                resizeMode="cover"
+              />
+            ) : (
+              art
+            )}
           </GradientView>
         ) : (
           <View style={[styles.tile, styles.empty]}>
@@ -64,7 +72,7 @@ export function SlotTile({
           </View>
         )}
       </View>
-      <AppText variant="body" style={styles.label}>
+      <AppText variant="body" numberOfLines={1} style={styles.label}>
         {label}
       </AppText>
     </Pressable>
@@ -87,6 +95,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  label: { marginTop: u(6), textAlign: 'center', fontSize: u(14) },
+  label: {
+    marginTop: u(6),
+    textAlign: 'center',
+    fontSize: u(14),
+    width: u(88),
+  },
   pressed: { opacity: 0.85 },
 });

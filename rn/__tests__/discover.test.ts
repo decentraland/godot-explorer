@@ -89,9 +89,10 @@ describe('format', () => {
   it('describes when an event starts', () => {
     expect(startsIn(now + 5 * 60_000, now)).toBe('IN 5 MINS');
     expect(startsIn(now + 60_000, now)).toBe('IN 1 MIN');
-    expect(startsIn(now + 2 * 3_600_000, now)).toBe('IN 2 HOURS');
+    expect(startsIn(now + 2 * 3_600_000, now)).toBe('IN 2 HRS');
     expect(startsIn(now + 10_000, now)).toBe('STARTING');
-    expect(startsIn(now + 3 * 86_400_000, now)).toMatch(/^[A-Z]{3} \d+$/);
+    expect(startsIn(now + 3 * 86_400_000, now)).toBe('IN 3 DAYS');
+    expect(startsIn(now + 9 * 86_400_000, now)).toMatch(/^[A-Z]{3} \d+$/);
   });
 
   it('formats rates, users and search', () => {
