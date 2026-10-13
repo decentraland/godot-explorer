@@ -70,7 +70,7 @@ calling anything by string name.
   serve Godot's own Android Gradle build; replace that build with `--export-pack` plus xtask
   copies (engine AAR from the template, `libwebrtc.jar` from `android_dependencies.zip`,
   `libdclgodot.so` from cargo, the pack from the export), then delete both addons and
-  `godot/android`. Until then they are exempt from the `.gd` rule. Quest per D-open-19. Drop: `dcl_mobile_preview` (779, previews GDScript UI scenes in
+  `godot/android`. Until then they are exempt from the `.gd` rule. Drop: `dcl_mobile_preview` (779, previews GDScript UI scenes in
   the 2D editor; the runtime phone emulation is `--emulate-*` in the root, not this addon),
   `resource_tracker` (1,217), `dcl-ios-devtools` (161, Info.plist keys for Godot-exported debug
   iOS builds), `sentry` (D-16), and `dcl_dev_tools` (1,924) once `resource_counter.gd` is ported
@@ -84,6 +84,13 @@ calling anything by string name.
   patterns) and the gdtoolkit fork install from `static_checks.yml`; prune `dcl-godot-android` and
   `DclGodotiOS` to what the engine still needs; replace the plugin code the host calls (wallets,
   push, StoreKit, share, calendar) with RN libraries (D-21, D-25).
+- [ ] **7.12 Remove VR** (S, D-36). The `quest` target in `src/export.rs` and `src/dependencies.rs`
+  (`meta-quest.apk|aab`), the Quest export preset and the `xr_features/*` keys in
+  `godot/export_presets.cfg`, the `[xr]` section of `project.godot`, the OpenXR toggling and the
+  `godot-xr-tools` / `godotopenxrvendors` exclusions in `dcl_build_plugin` (gone with 7.9 anyway),
+  any `xr` code path in `explorer.gd` / `global.gd` or `lib/`, the Quest mentions in CI workflows,
+  `README.md` and `CLAUDE.md` ("VR: OpenXR compatible devices"). Find the rest with
+  `grep -rn -i -E '\bxr\b|openxr|meta-quest|"quest"'`.
 
 ## Verification
 
