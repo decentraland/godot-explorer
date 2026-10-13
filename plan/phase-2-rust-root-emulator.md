@@ -9,7 +9,7 @@ the command line, creates the core and calls `enter_world`. Scene-requested acti
 core. This is the desktop emulator from day one and it forces `03-engine-api.md` to exist as a type.
 
 `global.gd` survives as a shrinking facade (`Global.scene_runner`, `Global.config`, …) for the
-engine-side GDScript that phase 7 ports; it stops creating services and stops being the root.
+engine-side GDScript that phase 5 ports; it stops creating services and stops being the root.
 
 ## Exit criteria
 
@@ -31,7 +31,7 @@ engine-side GDScript that phase 7 ports; it stops creating services and stops be
   lifecycle. Internally it still instantiates `explorer.tscn` for World and a transparent viewport
   with `avatar_preview.tscn` for Idle (what `rn_avatar_host.tscn` + `rn_backpack.gd` do), so no
   engine-side GDScript is ported here. The event sink is a trait the core implements; chat messages
-  and comms presence reach the core through it while transports stay in the engine (D-32). Core →
+  and comms presence reach the core through it while transports stay in the engine until 5.1 moves them to the core. Core →
   engine calls are queued and drained in the root's `process`.
 - [ ] **2.2 `DclRoot` as the main scene**. Reads `DclCli`, `Core::install`, `Engine::start`,
   then `enter_world` from `--realm/--location/--preview` or the test-runner flags. The twenty-odd
@@ -48,7 +48,7 @@ engine-side GDScript that phase 7 ports; it stops creating services and stops be
 - [ ] **2.5 Test runners on the root**. `--test-runner` (itest), `--scene-test`, client tests and
   the renderer tools (`avatar_renderer_mode`, `asset_renderer_mode`, `emote_test_mode`,
   `--lighting-renderer`, `asset_server`) that `main.gd` routed become `DclRoot` modes. The GDScript
-  `test_runner.gd` is still invoked for the GDScript suite until phase 7.8.
+  `test_runner.gd` is still invoked for the GDScript suite until 5.9.
 - [ ] **2.6 Emulator CLI and docs**. `--realm`, `--location`, `--preview <url>`, `--scene-test`,
   `--rust-log`, graphics preset; `--skip-lobby`, `--guest-profile`, `--rn-host`, `--rn-avatar-only`
   disappear (there is no lobby to skip and no mode to switch). `docs/MOBILE_PREVIEW.md` and the
@@ -72,5 +72,5 @@ engine-side GDScript that phase 7 ports; it stops creating services and stops be
 
 ## Depends on / unblocks
 
-Depends on 1.1 (`Core`). Unblocks phase 3 (the host attaches `Engine` to the core) and phase 7
+Depends on 1.1 (`Core`). Unblocks phase 3 (the host attaches `Engine` to the core) and phase 5
 (every port lands behind `Engine`).

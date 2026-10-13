@@ -12,23 +12,29 @@ to `main`**. Nothing outside `plan/` may link into it. Everything in it was chec
 
 ## The shape of it
 
-No calendar. The work is a stack of tasks done in order; each phase ends at a gate, and the next
-phase starts when the gate is green, not on a date. The work is AI-assisted, so elapsed time says
-nothing about size and no item carries an estimate.
+A calendar target sits on top of the gates: the full migration ends on **30 November 2026**, December
+is the full team, and 2.0.0 ships in **January 2027**. Inside each stack the work is an ordered list of
+tasks and each phase ends at a gate. The work is AI-assisted, so elapsed time says nothing about size
+and no item carries an estimate.
 
-- **Stack 1, phases 1–4: the migration itself**, one developer plus AI sessions. Ends at the
-  **feature-complete gate**: the parity checklist (4.16) is green against 1.15 — every screen, every
-  sign-in method, push, IAP, share, calendar, three languages. The gate is binary.
-- **Stack 2, phases 5–6, full team.** Phase 5, the five new features (Challenges, Gallery, Discover
-  v2, Android IAP + Web Shop, Badges + Scrapbook) built in RN on the finished core, which is also how
-  the team learns the architecture. Phase 6, full testing and polish of everything, then the release
-  candidate; the branch merges to `main` at the RC cut and this folder is deleted.
-- **2.0.0 ships** as an update of the existing store app, with nothing a 1.15 user had missing.
-- **After the release, phase 7:** the engine-side GDScript (avatar, player, SDK components, fetcher)
-  moves into `dcl_engine`. 2.0.0 ships with that GDScript still inside the engine, behind the
-  Rust `Engine` facade; it is internal debt, not a user-facing gap.
-- `main` keeps shipping 1.16, 1.17… for LMT3, which is a marketing campaign on the current client
-  and is not touched by any of this.
+- **Stack 1, phases 1–5: the full migration**, one developer plus AI sessions, until 30 Nov.
+  Ends at the **full-migration gate**: the parity checklist (4.16) is green against 1.15 — every
+  screen, every sign-in method, push, IAP, share, calendar, three languages — **and**
+  `find godot/src -name '*.gd'` returns nothing (addons per D-open-5). Everything is in Rust and the
+  new architecture. The end of phase 4 is the *feature-complete* milestone inside this stack; phase 5
+  ports the engine-side GDScript to Rust. The gate is binary.
+- **Stack 2, December, full team.** The branch merges to `main` at the start of December. First phase 6:
+  fix everything the AI got wrong, validate that every part of the app is polished, check every
+  screen. Then phase 7: the five new features (Challenges, Gallery, Discover v2, Android IAP + Web
+  Shop, Badges + Scrapbook), of which Android IAP is the largest, and the release candidate. December is also how the team learns the architecture.
+- **2.0.0 ships in January** as an update of the existing store app, with nothing a 1.15 user had
+  missing and no GDScript in the client.
+- **Phase 8, after the release:** publishing the emulator under its own name (8.1) and replacing the
+  host's plugin code with RN libraries (8.2). Neither is needed for the gate. VR is removed before
+  the gate (5.12): 2.0.0 has no VR at all.
+- `main` keeps shipping 1.16, possibly 1.17, for LMT3 until the December merge. LMT3 is a marketing
+  campaign on the current client; the crash, performance, SDK and fonts/skybox work for it happens on
+  `main` and is picked up by the branch every day (D-31).
 
 ## Files
 
@@ -39,13 +45,14 @@ nothing about size and no item carries an estimate.
 | [03-engine-api.md](03-engine-api.md) | Core ↔ engine contract, and the by-name calls and node paths it replaces |
 | [04-core-api.md](04-core-api.md) | Shell ↔ core contract (FFI), the app state machine, and the JSON bridge it replaces |
 | [05-system-placement.md](05-system-placement.md) | Every shared system: where it is, where it goes, which phase moves it |
-| [phase-1-core-carve-out.md](phase-1-core-carve-out.md) | `dcl_core` exists and runs under `cargo test`; the reduced scope of the carve-out |
+| [phase-1-core-carve-out.md](phase-1-core-carve-out.md) | `dcl_core` exists and runs under `cargo test`; comms, cache policy and math types land in 5.1 |
 | [phase-2-rust-root-emulator.md](phase-2-rust-root-emulator.md) | A Rust root boots the engine; the engine API is real; desktop is the emulator |
 | [phase-3-ffi-entry-flow.md](phase-3-ffi-entry-flow.md) | Typed FFI, the core state machine, every sign-in method in RN, JSON bridge deleted |
 | [phase-4-screens.md](phase-4-screens.md) | The GDScript UI sweep, every domain wired to the core, feature parity with 1.15 |
-| [phase-5-new-features.md](phase-5-new-features.md) | team: the five new features in RN on the finished core |
-| [phase-6-testing-polish.md](phase-6-testing-polish.md) | team: full testing, polish, release candidate, store readiness |
-| [phase-7-engine-port.md](phase-7-engine-port.md) | After the release: avatar, player, SDK components, fetcher into `dcl_engine`; zero `.gd` |
+| [phase-6-testing-polish.md](phase-6-testing-polish.md) | team, December, first: fix what the AI got wrong, validate and polish everything |
+| [phase-7-new-features.md](phase-7-new-features.md) | team, December, then: the five new features in RN on the polished core, release candidate, store readiness |
+| [phase-5-engine-port.md](phase-5-engine-port.md) | gdext upgraded to its modern API first, then avatar, player, SDK components, fetcher into `dcl_engine`; VR removed; zero `.gd` |
+| [phase-8-after-release.md](phase-8-after-release.md) | After the release: the emulator under its own name, RN libraries for the host's plugin code |
 | [decisions.md](decisions.md) | Decided and open decisions, each with a recommendation |
 | [risks.md](risks.md) | Risks, guardrails, and the measurement each one needs |
 
@@ -53,20 +60,21 @@ nothing about size and no item carries an estimate.
 
 | Phase | Gate to start | Who | Status |
 |---|---|---|---|
-| 1. Core carve-out (reduced scope) | none | Mateo + AI | code done; phone regression open |
+| 1. Core carve-out | none | Mateo + AI | code done; phone regression open |
 | 2. Rust root + emulator | 1.1 landed | Mateo + AI | not started |
 | 3. FFI + entry flow | 2.1 landed | Mateo + AI | not started |
 | 4. UI sweep + every domain on the core | phase 3 | Mateo + AI | not started |
-| **Gate: feature-complete** (parity checklist green) | | | |
-| 5. New features | feature-complete gate; specs in hand | full team | not started |
-| 6. Full testing + polish, RC cut, merge to `main` | feature-complete gate | full team | not started |
-| **Release 2.0.0** | RC green | | |
-| 7. Engine-side port | after the release | team | not started |
+| 5. Modern gdext, engine-side port, VR removed | 2.1 landed; mostly after 4.0 | Mateo + AI | not started |
+| **Gate: full migration** (parity checklist green and zero `.gd`), target 30 Nov | | | |
+| 6. Fix, validate, polish (December, first) | full-migration gate | full team | not started |
+| 7. New features, RC cut (December, then) | phase 6; specs in hand | full team | not started |
+| **Release 2.0.0** (January) | RC green | | |
+| 8. After the release | release | team | not started |
 
-Phases overlap by dependency: 2 starts when 1.1 lands, 3 starts when 2.1 lands. Update the status
+Phases overlap by dependency: 2 starts when 1.1 lands, 3 starts when 2.1 lands, 5 starts when 2.1 lands and mostly runs after the 4.0 sweep; in December 6 comes first and 7 follows. Update the status
 column and the checkboxes inside each phase file as work lands. Items are an ordered stack, taken
 top to bottom unless a dependency says otherwise. There are no size tags and no durations; the thing
-to watch is how many items are open at the gate (risks R-8).
+to watch is how many items are open at the gate and how many `.gd` files remain (risks R-8, R-17).
 
 ## Rules on this branch, from day one
 
@@ -85,13 +93,13 @@ to watch is how many items are open at the gate (risks R-8).
 
 ## How work lands
 
-- Until the feature-complete gate the work items are Mateo's PR list into the branch, one module or
+- Until the full-migration gate the work items are Mateo's PR list into the branch, one module or
   one domain per PR, so that the team can read the history. After it the team's PRs follow the same rule.
-- `main` is merged into the branch every day by a scheduled automated job (an AI session) that
+- Until the December merge, `main` is merged into the branch every day by a scheduled automated job (an AI session) that
   updates PR #3059 with what landed on `main`, skips UI-only changes, and resolves a conflict in a
   `.gd` file the branch deleted as deleted. A fix on `main` that matters outside the UI is redone
   in RN or Rust by the job or flagged for a person (D-31).
-- The branch merges to `main` at the release-candidate cut; this folder is deleted
-  in that merge.
+- The branch merges to `main` at the start of December, once the full-migration gate is green; this
+  folder is deleted in that merge.
 - Phase 1 PRs are reviewable Rust-only moves: no behaviour change, no renames beyond the move,
   `cargo test -p dcl_core` green.

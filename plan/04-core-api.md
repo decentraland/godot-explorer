@@ -42,7 +42,7 @@ state is the only thing the shell renders from; the HUD's `booting|loading|playi
 | Notifications | `notifications(page)`, `mark_read(ids)`, `set_push_token(token)`, `on_notification` (event) | `notifications.*`, `notifications_manager.gd` |
 | Places, events (signed part) | `favorite(place_id, bool)`, `vote(place_id, up)`, `set_event_reminder(id, bool)` | `places.*`, `fetch.signed` |
 | Settings | `settings()`, `set_setting(key, value)`, `cache_size()`, `clear_cache()`, `version()`, `on_settings_changed` | `settings.*`, `config_data.gd` |
-| Credits, IAP | `credits_balance()`, `quote(product)`, `verify_purchase(receipt)`, `marketplace_url()`; the store call itself runs in the host (StoreKit today, Play Billing with 5.4) | `iap_manager.gd` signed calls |
+| Credits, IAP | `credits_balance()`, `quote(product)`, `verify_purchase(receipt)`, `marketplace_url()`; the store call itself runs in the host (StoreKit today, Play Billing with 7.4) | `iap_manager.gd` signed calls |
 | Deep links | `handle_deep_link(url) -> Routed` | `deep_link_router.gd`, iOS `AppDelegate` forwarding |
 | Analytics | `track(event, props)`, `track_screen(name, props)` | `Global.metrics.track_*` (~106 call sites), no Segment RN SDK |
 | Reporting | `report_js_error(…)` is **not** offered; see Sentry in decisions | |
@@ -70,7 +70,7 @@ event (the core sends to Segment itself).
   flip the surface order (`set_surface_on_top`; iOS equivalent still to be written).
 - Provide the OS calls the core needs as callbacks: attestation (Play Integrity / App Attest), push
   token, store purchase result, wallet signature, clipboard, share sheet, calendar. For 2.0.0 these
-  call today's Kotlin/Swift plugin code (D-21); RN libraries replace it in phase 7.
+  call today's Kotlin/Swift plugin code (D-21); RN libraries replace it after the release (8.2).
 - Touch routing stays as the hosts do it today: RN when a real RN view is under the finger, Godot
   otherwise.
 

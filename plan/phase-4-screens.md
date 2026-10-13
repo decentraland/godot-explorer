@@ -19,7 +19,7 @@ files about to be deleted. One bounded job, then pure wiring.
 - [ ] No `.gd` under `godot/src/ui` except the engine-owned controls listed in 4.0, none under
       `godot/src/iap`, `godot/src/auth`, `godot/src/config`, `godot/src/notifications`,
       `godot/src/bug_report`; `godot/src/logic` keeps only `scene_fetcher.gd`, `player/` and what
-      the engine-side GDScript needs, for phase 7.
+      the engine-side GDScript needs, for phase 5.
 - [ ] `global.gd` creates no UI and no manager; `modal_manager.gd`, `explorer.gd`'s UI half and the
       `SplashOverlay`, `NotificationsManager`, `Iap`, `MarketplaceTracker`, `SessionTracker`,
       `TouchFeedback`, `UiSounds` autoloads are gone.
@@ -48,10 +48,10 @@ files about to be deleted. One bounded job, then pure wiring.
   (1,267) → `dcl_core::avatar`: categories and slots, body-shape rules, forced defaults for eyes,
   mouth and eyebrows, base emotes, emote slots, "can I equip X" returning the resulting avatar, base
   catalog and owned items, profile deploy. The engine renders through `set_self_profile`; the Idle
-  preview is the GDScript `avatar_preview.tscn` behind `Engine::show_avatar_preview` until 7.1. RN
+  preview is the GDScript `avatar_preview.tscn` behind `Engine::show_avatar_preview` until 5.2. RN
   `backpack/` drops its copies.
 - [ ] **4.4 Chat**. Chat through core events fed by the engine sink (transports stay in the
-  engine, D-32); nearby, mentions, commands (`ChatCommands`), speech bubbles stay engine-side. RN
+  engine until 5.1); nearby, mentions, commands (`ChatCommands`), speech bubbles stay engine-side. RN
   `hud/` chat exists.
 - [ ] **4.5 Settings**. `config_data.gd` (767) schema → `dcl_core::settings` (own JSON, one-time
   import of `user://settings.cfg`, D-18); the keys in `rn/src/settings/keys.ts` are the contract;
@@ -69,12 +69,12 @@ files about to be deleted. One bounded job, then pure wiring.
 - [ ] **4.8 IAP and credits on iOS**. Quote, verify, balance and the marketplace round-trip in
   `dcl_core::credits` (from `iap_manager.gd` 1,078 and `marketplace_tracker.gd` 363); StoreKit
   through the host, calling today's Swift lib (D-21); the credits UI in RN. Android IAP is new
-  and lands in phase 5 (5.4). Delete `DclStoreKitPlugin` as a Godot class.
+  and lands in phase 7 (7.4). Delete `DclStoreKitPlugin` as a Godot class.
 - [ ] **4.9 Modals and scene requests**. The 30 kinds in `modal_manager.gd` (1,900) become RN
   modals; the ones with policy (scene requests from 2.3, guest upgrade nudge, version gate, device
   support, scene timeout, discard-edit confirm) take their verdicts from the core.
 - [ ] **4.10 Loading, HUD, menu**. RN `hud/`, `world/`, `menu/` exist; loading progress, place
-  card and tips from core events; the emote wheel stays in the engine (D-24, item 7.3); coach
+  card and tips from core events; the emote wheel stays in the engine (D-24, item 5.4); coach
   marks; the version/FPS line moves to RN from core/engine state.
 - [ ] **4.11 Small coordinators, share, calendar**. `session_tracker.gd` (App Opened
   chaining, `session_state.cfg`), `campaigns.gd`, `review_prompt_coordinator.gd`,
@@ -94,7 +94,7 @@ files about to be deleted. One bounded job, then pure wiring.
   (keys already match `en.csv`); a CI check for missing keys; language switch in Settings (D-26).
 - [ ] **4.16 Parity checklist**. One table from
   `docs/rn-ui-spec/reports/legacy-godot.md`: every screen, modal, behaviour, persisted key and
-  metric name, with its RN location and a pass/fail per platform. It is the feature-complete gate and
+  metric name, with its RN location and a pass/fail per platform. It is the feature-complete milestone, half of the full-migration gate, and
   the backbone of phase 6's test plan.
 
 ## Verification
@@ -107,5 +107,5 @@ files about to be deleted. One bounded job, then pure wiring.
 
 ## Depends on / unblocks
 
-Depends on phase 3 (FFI). Unblocks phases 5 and 6: the team starts from a feature-complete
+Depends on phase 3 (FFI). Unblocks phases 7 and 6: the team starts from a feature-complete
 app. Overflow from this phase is the first thing the team absorbs (risks R-8).

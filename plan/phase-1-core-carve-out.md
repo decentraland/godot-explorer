@@ -1,4 +1,4 @@
-# Phase 1: carve out `dcl_core` (reduced scope)
+# Phase 1: carve out `dcl_core`
 
 Rust only, no user-visible change.
 
@@ -9,9 +9,9 @@ engine, and holds what the pre-world screens need with no engine running: the ru
 session, HTTP queue, URLs, deep-link parsing, friends, analytics, the notifications feed, and three
 things that enter Rust for the first time: session persistence, the realm rules and feature flags. The Godot `Dcl*` classes become adapters. The client built from the branch behaves identically.
 
-**Reduced scope (D-32):** comms transports, the content cache policy and the Godot math types stay
-in `dcl_engine` for 2.0.0. They only matter in-world, where the engine exists, and the shell reaches
-them through the engine's event sink. They move in phase 7.
+**Scope:** comms transports (1.7), the content cache policy (1.8) and the Godot math types (1.3) are
+done inside phase 5 (5.1), still before the full-migration gate (D-37). Until then they stay in
+`dcl_engine`, and the shell reaches them through the engine's event sink.
 
 ## Exit criteria
 
@@ -100,16 +100,16 @@ Anything over ~150 lines names the item that shrinks it.
 | `DclUrls` | 212 | one `#[func]` per URL | 4.13 (RN reads `core.urls()`) |
 | `DclRealmRules` | 201 | static `#[func]`s over `dcl_core::realm` | with `realm.gd` in 7.x |
 | `DclParseDeepLink` | 201 | result copied into Godot fields | 3.7 |
-| `RustHttpQueueRequester` | 179 | Promise wrappers | phase 7 with the last GDScript HTTP caller |
+| `RustHttpQueueRequester` | 179 | Promise wrappers | phase 5 with the last GDScript HTTP caller |
 | `DclNotificationFeed` | 159 | Variant ↔ JSON over `Feed` | 4.6 |
 | `RequestResponse` (+ error) | 157 | Godot wrappers over `HttpResponse` | with `RustHttpQueueRequester` |
 | `DclDestinationRules` | 105 | static `#[func]`s | 4.2 |
 | `DclRealm` | 98 | `#[var]` mirror of the realm | 7.x |
 | `DclSessionStore` | 77, `DclFeatureFlags` 77, `DclTokioRpc` 53 | under the cap | stay until phase 3 |
 
-### Deferred to phase 7 (D-32)
+### Moved to phase 5 (D-37)
 
-Kept here so the numbering in the other files stays stable; none of these ship in 2.0.0.
+Kept here so the numbering in the other files stays stable; they land with 5.1, before the gate.
 
 - **1.3 Protos and math types.** `to_godot()` impls and the `GodotConvert` for `SceneEntityId`
   as engine extension traits; `glam` (D-22) replacing `Vector2/2i/3/Color` in `comms/pulse/*`,
