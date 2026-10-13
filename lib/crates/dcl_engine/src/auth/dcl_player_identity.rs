@@ -18,72 +18,28 @@ use super::auth_identity::{
     generate_ephemeral_for_signing, start_mobile_auth,
 };
 use super::decentraland_auth_server::{do_request, CreateRequest};
-use super::device_anchor;
 use super::ephemeral_auth_chain::EphemeralAuthChain;
+use super::identity::{RecoverableAccount, Session, SessionEvent};
 use super::remote_wallet::RemoteWallet;
 use super::review_login;
+use super::thirdweb_flows::{
+    perform_delete_guest_account, perform_delete_upgraded_account, perform_email_login,
+    perform_link_email, perform_thirdweb_guest_login,
+};
 use super::thirdweb_guest;
-use super::wallet::{AsH160, Wallet};
-
-enum CurrentWallet {
-    Remote(RemoteWallet),
-    Local { wallet: Wallet, keys: Vec<u8> },
-}
+use super::wallet::AsH160;
 
 #[derive(GodotClass)]
 #[class(base=Node)]
 pub struct DclPlayerIdentity {
-    wallet: Option<CurrentWallet>,
-    ephemeral_auth_chain: Option<EphemeralAuthChain>,
+    session: Session,
 
     profile: Option<Gd<DclUserProfile>>,
 
     try_connect_account_handle: Option<JoinHandle<()>>,
 
-    /// Pending mobile auth state, stored between start_mobile_connect_account
-    /// and complete_mobile_connect_account (when deep link arrives).
-    ///
-    /// Process-local and best-effort: a cold start (OS kill during the browser hop) legitimately
-    /// loses it, which is why `complete_mobile_connect_account` does not require it. Read via
-    /// `has_pending_mobile_auth` only to tell "this process started the flow" — i.e. the lobby
-    /// is already showing the spinner — from "the deep link arrived out of the blue".
-    pending_mobile_auth: Option<()>,
-
-    /// Set when the user cancels a browser sign-in this process started. A cold start cannot
-    /// have it set, which is how the router tells a cancel apart from the #2644 OS kill now
-    /// that completing no longer requires `pending_mobile_auth`.
-    mobile_auth_cancelled: bool,
-
-    /// True once `start_mobile_connect_account` ran here. Gates the flag above:
-    /// `abort_try_connect_account` is shared with the native WalletConnect path, which shows
-    /// the same Cancel without ever opening our browser hop.
-    mobile_auth_started: bool,
-
-    /// Monotonic attempt token, like lobby.gd's `_guest_login_attempt`. `abort()` only unwinds
-    /// a task at a yield point and everything after the completion's single `.await` is
-    /// synchronous, so the result is re-checked against this on the main thread instead.
-    mobile_auth_attempt: u32,
-
     #[var]
     is_guest: bool,
-
-    /// `true` only when the active wallet is a silent persistent thirdweb guest
-    /// (created via `async_create_guest_account`). Distinct from `is_guest`,
-    /// which stays reserved for disposable LocalWallet sessions — a thirdweb
-    /// guest is `is_guest = false` but `is_thirdweb_guest = true`. Gates the
-    /// "Upgrade to OTP" affordance, which only makes sense for this account
-    /// type. Cleared on every other account path so it never leaks across an
-    /// account switch.
-    is_thirdweb_guest: bool,
-
-    /// `true` when the active thirdweb guest has at least one linked auth method
-    /// beyond the silent `guest` login (email/social/passkey) — i.e. it has
-    /// already been upgraded. Best-effort cache refreshed from thirdweb via
-    /// `async_refresh_thirdweb_upgrade_state` (and set on a successful link).
-    /// Only meaningful while `is_thirdweb_guest` is `true`; cleared on every
-    /// account switch so it never leaks. Lets the UI hide the Upgrade affordance
-    /// for guests that are already linked.
-    is_thirdweb_guest_upgraded: bool,
 
     base: Base<Node>,
 }
@@ -92,18 +48,11 @@ pub struct DclPlayerIdentity {
 impl INode for DclPlayerIdentity {
     fn init(base: Base<Node>) -> Self {
         Self {
-            wallet: None,
-            ephemeral_auth_chain: None,
+            session: Session::default(),
             profile: None,
             base,
             is_guest: false,
-            is_thirdweb_guest: false,
-            is_thirdweb_guest_upgraded: false,
             try_connect_account_handle: None,
-            pending_mobile_auth: None,
-            mobile_auth_cancelled: false,
-            mobile_auth_started: false,
-            mobile_auth_attempt: 0,
         }
     }
 }
@@ -166,37 +115,11 @@ impl DclPlayerIdentity {
             }
         };
 
-        self._update_remote_wallet(address, chain_id, ephemeral_auth_chain);
+        let event = self
+            .session
+            .install_remote(address, chain_id, ephemeral_auth_chain);
+        self.apply_event(event);
         true
-    }
-
-    fn _update_remote_wallet(
-        &mut self,
-        account_address: H160,
-        chain_id: u64,
-        ephemeral_auth_chain: EphemeralAuthChain,
-    ) {
-        self.wallet = Some(CurrentWallet::Remote(RemoteWallet::new(
-            account_address,
-            chain_id,
-        )));
-        self.ephemeral_auth_chain = Some(ephemeral_auth_chain);
-
-        let address = self.get_address();
-        self.base_mut().call_deferred(
-            "emit_signal",
-            &[
-                "wallet_connected".to_variant(),
-                format!("{:#x}", address).to_variant(),
-                chain_id.to_variant(),
-                false.to_variant(),
-            ],
-        );
-        self.is_guest = false;
-        // Default for any remote connect (WalletConnect / social). The thirdweb
-        // guest path re-sets this to `true` via a deferred setter right after.
-        self.is_thirdweb_guest = false;
-        self.is_thirdweb_guest_upgraded = false;
     }
 
     /// Deferred setter for the thirdweb-guest marker. Run on the main thread
@@ -205,14 +128,14 @@ impl DclPlayerIdentity {
     /// wallet and reset the marker to `false`.
     #[func]
     fn _set_thirdweb_guest_flag(&mut self, value: bool) {
-        self.is_thirdweb_guest = value;
+        self.session.is_thirdweb_guest = value;
     }
 
     /// Whether the active account is a silent persistent thirdweb guest. Gates
     /// the Settings "Upgrade to OTP" affordance from GDScript.
     #[func]
     fn is_thirdweb_guest(&self) -> bool {
-        self.is_thirdweb_guest
+        self.session.is_thirdweb_guest
     }
 
     /// Deferred setter for the upgraded marker. Called from the thirdweb thread
@@ -220,7 +143,7 @@ impl DclPlayerIdentity {
     /// successful email link, so the write lands on the main thread.
     #[func]
     fn _set_thirdweb_guest_upgraded_flag(&mut self, value: bool) {
-        self.is_thirdweb_guest_upgraded = value;
+        self.session.is_thirdweb_guest_upgraded = value;
     }
 
     /// Whether the active thirdweb guest has already linked a non-`guest` auth
@@ -229,40 +152,7 @@ impl DclPlayerIdentity {
     /// the UI hide the Upgrade affordance for already-upgraded guests.
     #[func]
     fn is_thirdweb_guest_upgraded(&self) -> bool {
-        self.is_thirdweb_guest_upgraded
-    }
-
-    fn _update_local_wallet(
-        &mut self,
-        local_wallet_bytes: &[u8],
-        ephemeral_auth_chain: EphemeralAuthChain,
-    ) {
-        let local_wallet = Wallet::new_from_inner(Box::new(
-            LocalWallet::from_bytes(local_wallet_bytes).unwrap(),
-        ));
-
-        self.wallet = Some(CurrentWallet::Local {
-            wallet: local_wallet,
-            keys: Vec::from_iter(local_wallet_bytes.iter().cloned()),
-        });
-
-        self.ephemeral_auth_chain = Some(ephemeral_auth_chain);
-
-        let address = format!("{:#x}", self.get_address());
-
-        self.base_mut().call_deferred(
-            "emit_signal",
-            &[
-                "wallet_connected".to_variant(),
-                address.to_variant(),
-                1_u64.to_variant(),
-                true.to_variant(),
-            ],
-        );
-        self.is_guest = true;
-        self.is_thirdweb_guest = false;
-        self.is_thirdweb_guest_upgraded = false;
-        self.profile = None;
+        self.session.is_thirdweb_guest_upgraded
     }
 
     #[func]
@@ -281,7 +171,7 @@ impl DclPlayerIdentity {
         let local_wallet = LocalWallet::new(&mut thread_rng());
         let local_wallet_bytes = local_wallet.signer().to_bytes().to_vec();
         let ephemeral_auth_chain = create_local_ephemeral(&local_wallet);
-        self._update_local_wallet(local_wallet_bytes.as_slice(), ephemeral_auth_chain);
+        self.install_local_wallet(local_wallet_bytes.as_slice(), ephemeral_auth_chain);
     }
 
     /// Silent guest login backed by thirdweb. Returns a Promise that resolves
@@ -778,13 +668,7 @@ impl DclPlayerIdentity {
         if let Some(handle) = self.try_connect_account_handle.take() {
             handle.abort();
         }
-        // Also clear any pending mobile auth
-        self.pending_mobile_auth = None;
-        // Clearing the flag is not enough to make the cancel stick: the returning deep link
-        // would then look exactly like a cold start and complete the sign-in anyway.
-        self.mobile_auth_cancelled = self.mobile_auth_started;
-        // Retire any in-flight attempt; a completion past its await cannot be aborted.
-        self.mobile_auth_attempt = self.mobile_auth_attempt.wrapping_add(1);
+        self.session.abort_connect();
     }
 
     /// Starts mobile auth flow. Opens browser and returns immediately.
@@ -797,9 +681,7 @@ impl DclPlayerIdentity {
         user_id: GString,
         session_id: GString,
     ) {
-        self.mobile_auth_started = true;
-        self.mobile_auth_cancelled = false;
-        self.mobile_auth_attempt = self.mobile_auth_attempt.wrapping_add(1);
+        self.session.begin_mobile_auth();
 
         let Some(handle) = Core::try_handle() else {
             panic!("tokio runtime not initialized")
@@ -837,7 +719,8 @@ impl DclPlayerIdentity {
             match result {
                 Ok(pending) => {
                     tracing::info!("Mobile auth started, waiting for deep link");
-                    this.bind_mut().pending_mobile_auth = Some(pending);
+                    let () = pending;
+                    this.bind_mut().session.set_pending_mobile_auth();
                 }
                 Err(err) => {
                     tracing::error!("Error starting mobile auth: {:?}", err);
@@ -861,8 +744,7 @@ impl DclPlayerIdentity {
     /// expired id already fails there with a real error.
     #[func]
     fn complete_mobile_connect_account(&mut self, identity_id: GString) {
-        // Consume the flag when this process did start the flow; its absence is not an error.
-        self.pending_mobile_auth.take();
+        self.session.take_pending_mobile_auth();
 
         let Some(handle) = Core::try_handle() else {
             panic!("tokio runtime not initialized")
@@ -870,7 +752,7 @@ impl DclPlayerIdentity {
 
         let instance_id = self.base().instance_id();
         let identity_id = identity_id.to_string();
-        let attempt = self.mobile_auth_attempt;
+        let attempt = self.session.mobile_auth_attempt();
 
         let complete_handle = handle.spawn(async move {
             let result = complete_mobile_auth(identity_id).await;
@@ -924,7 +806,7 @@ impl DclPlayerIdentity {
         chain_id: u64,
         ephemeral_auth_chain: GString,
     ) {
-        if attempt != self.mobile_auth_attempt {
+        if !self.session.is_current_mobile_attempt(attempt) {
             tracing::info!("Discarding a completed mobile sign-in: attempt was retired");
             return;
         }
@@ -935,7 +817,7 @@ impl DclPlayerIdentity {
     /// whatever screen the user moved on to.
     #[func]
     fn _mobile_auth_failed(&mut self, attempt: u32, error_message: GString) {
-        if attempt != self.mobile_auth_attempt {
+        if !self.session.is_current_mobile_attempt(attempt) {
             tracing::info!("Discarding a failed mobile sign-in: attempt was retired");
             return;
         }
@@ -946,13 +828,13 @@ impl DclPlayerIdentity {
     /// Returns true if there's a pending mobile auth waiting for deep link
     #[func]
     fn has_pending_mobile_auth(&self) -> bool {
-        self.pending_mobile_auth.is_some()
+        self.session.has_pending_mobile_auth()
     }
 
     /// True if the user cancelled a browser sign-in in this process.
     #[func]
     fn was_mobile_auth_cancelled(&self) -> bool {
-        self.mobile_auth_cancelled
+        self.session.was_mobile_auth_cancelled()
     }
 
     /// Generates ephemeral identity data for external signing (e.g., WalletConnect).
@@ -1012,20 +894,10 @@ impl DclPlayerIdentity {
         ) {
             Ok(ephemeral_auth_chain) => {
                 let address = ephemeral_auth_chain.signer();
-                self.wallet = Some(CurrentWallet::Remote(RemoteWallet::new(address, 1)));
-                self.ephemeral_auth_chain = Some(ephemeral_auth_chain);
-
-                let address_str = format!("{:#x}", address);
-                self.base_mut().call_deferred(
-                    "emit_signal",
-                    &[
-                        "wallet_connected".to_variant(),
-                        address_str.to_variant(),
-                        1_u64.to_variant(),
-                        false.to_variant(),
-                    ],
-                );
-                self.is_guest = false;
+                let event = self
+                    .session
+                    .install_walletconnect(address, ephemeral_auth_chain);
+                self.apply_event(event);
 
                 tracing::info!("WalletConnect auth successful for address: {:#x}", address);
                 true
@@ -1071,53 +943,40 @@ impl DclPlayerIdentity {
             return false;
         };
 
-        if ephemeral_auth_chain.expired() {
+        let is_local = !local_wallet_bytes.is_empty();
+        let Some(event) = self.session.recover(RecoverableAccount {
+            account_address,
+            chain_id,
+            ephemeral_auth_chain,
+            local_wallet: local_wallet_bytes.as_slice().to_vec(),
+        }) else {
             return false;
+        };
+        self.apply_event(event);
+        if is_local {
+            self.profile = None;
         }
-
-        if !local_wallet_bytes.is_empty() {
-            self._update_local_wallet(local_wallet_bytes.as_slice(), ephemeral_auth_chain);
-            true
-        } else {
-            self._update_remote_wallet(account_address, chain_id, ephemeral_auth_chain);
-            // Rehydrate the thirdweb-guest marker across cold starts: the
-            // recovered remote wallet doesn't record how it was minted, so we
-            // match the recovered address against the persisted guest session.
-            // Matching addresses ⇒ this remote wallet IS the thirdweb guest.
-            // A mismatch (e.g. the user upgraded to a real WalletConnect wallet
-            // since) leaves the marker `false`, avoiding a false positive.
-            if let Some(session) = thirdweb_guest::load_session_from_disk() {
-                if session.wallet_address == account_address {
-                    self.is_thirdweb_guest = true;
-                }
-            }
-            true
-        }
+        true
     }
 
     #[func]
     fn get_recover_account_to(&self, mut dict: VarDictionary) -> bool {
-        if self.wallet.is_none() || self.ephemeral_auth_chain.is_none() {
+        let Some(account) = self.session.recoverable_account() else {
             return false;
-        }
-
-        let chain_id = match &self.wallet {
-            Some(CurrentWallet::Remote(wallet)) => wallet.chain_id(),
-            _ => 1,
         };
 
-        if let Some(CurrentWallet::Local { wallet: _, keys }) = &self.wallet {
+        if !account.local_wallet.is_empty() {
             let _ = dict.insert(
                 "local_wallet",
-                PackedByteArray::from_iter(keys.iter().cloned()).to_variant(),
+                PackedByteArray::from(account.local_wallet.as_slice()).to_variant(),
             );
         }
 
         let _ = dict.insert("account_address", self.get_address_str().to_variant());
-        let _ = dict.insert("chain_id", chain_id.to_variant());
+        let _ = dict.insert("chain_id", account.chain_id.to_variant());
         let _ = dict.insert(
             "ephemeral_auth_chain",
-            serde_json::to_string(&self.ephemeral_auth_chain.as_ref().unwrap())
+            serde_json::to_string(&account.ephemeral_auth_chain)
                 .expect("serialize ephemeral auth chain")
                 .to_variant(),
         );
@@ -1183,17 +1042,14 @@ impl DclPlayerIdentity {
 
     #[func]
     pub fn get_address_str(&self) -> GString {
-        match self.try_get_address() {
-            Some(address) => GString::from(&format!("{:#x}", address)),
-            None => "".into(),
-        }
+        GString::from(&self.session.address_string())
     }
 
     #[func]
     pub fn async_get_ephemeral_auth_chain(&self) -> Gd<Promise> {
         let promise = Promise::new_alloc();
 
-        if let Some(ephemeral_auth_chain) = &self.ephemeral_auth_chain {
+        if let Some(ephemeral_auth_chain) = self.session.ephemeral_auth_chain() {
             let auth_chain_str =
                 serde_json::to_string(ephemeral_auth_chain).unwrap_or_else(|_| "{}".to_string());
             let mut promise_clone = promise.clone();
@@ -1211,7 +1067,7 @@ impl DclPlayerIdentity {
     }
 
     pub fn get_ephemeral_auth_chain(&self) -> Option<&EphemeralAuthChain> {
-        self.ephemeral_auth_chain.as_ref()
+        self.session.ephemeral_auth_chain()
     }
 
     #[func]
@@ -1225,7 +1081,7 @@ impl DclPlayerIdentity {
         let promise_instance_id = promise.instance_id();
 
         // Check ephemeral auth chain before spawning
-        let Some(ephemeral_auth_chain) = self.ephemeral_auth_chain.clone() else {
+        let Some(ephemeral_auth_chain) = self.session.ephemeral_auth_chain().cloned() else {
             tracing::error!("ephemeral auth chain not initialized");
             let mut promise_clone = promise.clone();
             promise_clone
@@ -1354,8 +1210,44 @@ impl DclPlayerIdentity {
 }
 
 impl DclPlayerIdentity {
+    /// Emits the signal for a session event on the main thread and mirrors `is_guest`.
+    fn apply_event(&mut self, event: SessionEvent) {
+        match event {
+            SessionEvent::WalletConnected {
+                address,
+                chain_id,
+                is_guest,
+            } => {
+                self.base_mut().call_deferred(
+                    "emit_signal",
+                    &[
+                        "wallet_connected".to_variant(),
+                        address.to_variant(),
+                        chain_id.to_variant(),
+                        is_guest.to_variant(),
+                    ],
+                );
+                self.is_guest = is_guest;
+            }
+            SessionEvent::Logout => {
+                self.base_mut()
+                    .call_deferred("emit_signal", &["logout".to_variant()]);
+            }
+        }
+    }
+
+    fn install_local_wallet(&mut self, bytes: &[u8], ephemeral_auth_chain: EphemeralAuthChain) {
+        match self.session.install_local(bytes, ephemeral_auth_chain) {
+            Ok(event) => {
+                self.apply_event(event);
+                self.profile = None;
+            }
+            Err(e) => tracing::error!("invalid local wallet key: {e}"),
+        }
+    }
+
     pub fn try_get_ephemeral_auth_chain(&self) -> Option<EphemeralAuthChain> {
-        self.ephemeral_auth_chain.clone()
+        self.session.ephemeral_auth_chain().cloned()
     }
 
     pub fn clone_profile(&self) -> Option<UserProfile> {
@@ -1363,11 +1255,7 @@ impl DclPlayerIdentity {
     }
 
     pub fn try_get_address(&self) -> Option<H160> {
-        match &self.wallet {
-            Some(CurrentWallet::Remote(wallet)) => Some(wallet.address()),
-            Some(CurrentWallet::Local { wallet, keys: _ }) => Some(wallet.address()),
-            None => None,
-        }
+        self.session.try_address()
     }
 
     pub fn get_address(&self) -> H160 {
@@ -1376,21 +1264,11 @@ impl DclPlayerIdentity {
 
     // is not exposed to godot, because it should only be called by comms
     pub fn logout(&mut self) {
-        if self.try_get_address().is_none() {
+        let Some(event) = self.session.logout() else {
             return;
-        }
-
-        self.wallet = None;
-        self.ephemeral_auth_chain = None;
+        };
         self.profile = None;
-        self.is_thirdweb_guest = false;
-        self.is_thirdweb_guest_upgraded = false;
-        // The next account starts from a clean sign-in slate.
-        self.pending_mobile_auth = None;
-        self.mobile_auth_cancelled = false;
-        self.mobile_auth_started = false;
-        self.base_mut()
-            .call_deferred("emit_signal", &["logout".to_variant()]);
+        self.apply_event(event);
     }
 
     pub fn send_async(
@@ -1403,7 +1281,7 @@ impl DclPlayerIdentity {
             .get_dcl_tokio_rpc()
             .bind()
             .get_sender();
-        let Some(auth_chain) = self.ephemeral_auth_chain.clone() else {
+        let Some(auth_chain) = self.session.ephemeral_auth_chain().cloned() else {
             return;
         };
         body.auth_chain = Some(auth_chain.auth_chain().clone());
@@ -1415,183 +1293,4 @@ impl DclPlayerIdentity {
             });
         }
     }
-}
-
-/// Runs the silent guest-login flow end-to-end:
-///   1. resolve the device anchor (native value or desktop fallback)
-///   2. hash anchor → opaque thirdweb `sessionId`
-///   3. POST /v1/auth/complete (guest) → wallet address + bearer token
-///   4. mint a local ephemeral keypair + Decentraland delegation message
-///   5. POST /v1/wallets/sign-message → external signature
-///   6. assemble the EphemeralAuthChain
-///
-/// On success, the returned `EphemeralAuthChain` is signed by the thirdweb
-/// wallet and delegates request signing to the local ephemeral key for the
-/// usual ~30 day window. The thirdweb JWT itself is dropped after step 5 —
-/// every cold start re-runs steps 1–6 (idempotent because the anchor is
-/// stable, so thirdweb returns the same wallet address).
-/// Successful outcome of the guest-login flow. Carries `is_new_user` so
-/// analytics can tell a freshly minted wallet apart from a returning anchor
-/// re-logging into its existing wallet ("wallets created" = new mints only).
-struct GuestLoginOutcome {
-    address: H160,
-    chain: EphemeralAuthChain,
-    is_new_user: bool,
-}
-
-async fn perform_thirdweb_guest_login(
-    device_anchor_id: String,
-) -> Result<GuestLoginOutcome, thirdweb_guest::GuestLoginError> {
-    let anchor = device_anchor::resolve_anchor(&device_anchor_id);
-    let session_id = device_anchor::compute_session_id(&anchor);
-
-    let session = thirdweb_guest::guest_login(&session_id).await?;
-
-    let (ephemeral_message, ephemeral_keys, expiration) = generate_ephemeral_for_signing();
-
-    // The wallet already exists server-side at this point; a signing failure
-    // still fails the login, but under its own reason so the dashboard doesn't
-    // misattribute it to wallet creation.
-    let signature_hex = thirdweb_guest::sign_message(
-        &session.token,
-        session.wallet_address,
-        1,
-        &ephemeral_message,
-    )
-    .await
-    .map_err(|e| thirdweb_guest::GuestLoginError {
-        reason: "sign_message",
-        http_status: None,
-        message: e.to_string(),
-    })?;
-
-    let signer_address_str = format!("{:#x}", session.wallet_address);
-    let chain = create_ephemeral_from_external_signature(
-        &signer_address_str,
-        &signature_hex,
-        &ephemeral_keys,
-        expiration,
-        &ephemeral_message,
-    )
-    .map_err(|e| thirdweb_guest::GuestLoginError {
-        reason: "ephemeral",
-        http_status: None,
-        message: e.to_string(),
-    })?;
-
-    // Persist the JWT so future cold starts can renew the ephemeral
-    // delegation without re-running `guest_login`. Failure is non-fatal:
-    // we already have a valid in-memory ephemeral chain for this session.
-    if let Err(e) = thirdweb_guest::save_session_to_disk(&session) {
-        tracing::warn!(
-            "thirdweb: failed to persist session to disk (non-fatal): {}",
-            e
-        );
-    }
-
-    Ok(GuestLoginOutcome {
-        address: session.wallet_address,
-        chain,
-        is_new_user: session.is_new_user,
-    })
-}
-
-/// Runs the "Upgrade to OTP" link end-to-end:
-///   1. verify the OTP → EMAIL identity JWT (`email_complete`)
-///   2. obtain a FRESH guest JWT — re-run `guest_login` from the anchor so the
-///      `/link` bearer is guaranteed non-expired (the persisted one may have
-///      aged out); fall back to the persisted token if the refresh fails
-///   3. `link_email` merges the email into the guest user, preserving address
-///   4. persist the refreshed session so the disk copy stays current
-///
-/// Returns the guest wallet address, which is unchanged by linking.
-async fn perform_link_email(
-    device_anchor_id: String,
-    email: String,
-    code: String,
-) -> Result<H160, anyhow::Error> {
-    let (email_jwt, _email_address) = thirdweb_guest::email_complete(&email, &code).await?;
-
-    // Prefer a freshly minted guest session (idempotent: same anchor → same
-    // wallet → fresh token). Fall back to the persisted token only if the
-    // refresh round-trip fails (e.g. transient network), since the disk token
-    // may be expired.
-    let session = match thirdweb_guest::refresh_guest_session(&device_anchor_id).await {
-        Ok(session) => session,
-        Err(refresh_err) => {
-            tracing::warn!(
-                "thirdweb: guest session refresh failed ({}); falling back to persisted token",
-                refresh_err
-            );
-            thirdweb_guest::load_session_from_disk().ok_or_else(|| {
-                anyhow::anyhow!(
-                    "no guest session available to authorize link (refresh failed: {})",
-                    refresh_err
-                )
-            })?
-        }
-    };
-
-    thirdweb_guest::link_email(&session.token, &email_jwt).await?;
-
-    // Keep the disk copy current with the (possibly refreshed) token. The
-    // address is unchanged by linking, so the rehydration match still holds.
-    if let Err(e) = thirdweb_guest::save_session_to_disk(&session) {
-        tracing::warn!(
-            "thirdweb: failed to persist refreshed session after link (non-fatal): {}",
-            e
-        );
-    }
-
-    Ok(session.wallet_address)
-}
-
-/// Native email login — verifies the OTP and mints a DCL ephemeral auth chain
-/// signed by the email identity's own wallet:
-///   1. `email_complete` → email JWT + email wallet address
-///   2. mint a local ephemeral keypair + Decentraland delegation message
-///   3. `sign_message` with the email JWT to sign the delegation
-///   4. assemble the EphemeralAuthChain
-async fn perform_email_login(
-    email: String,
-    code: String,
-) -> Result<(H160, EphemeralAuthChain), anyhow::Error> {
-    let (email_jwt, email_address) = thirdweb_guest::email_complete(&email, &code).await?;
-
-    let (ephemeral_message, ephemeral_keys, expiration) = generate_ephemeral_for_signing();
-
-    let signature_hex =
-        thirdweb_guest::sign_message(&email_jwt, email_address, 1, &ephemeral_message).await?;
-
-    let signer_address_str = format!("{:#x}", email_address);
-    let chain = create_ephemeral_from_external_signature(
-        &signer_address_str,
-        &signature_hex,
-        &ephemeral_keys,
-        expiration,
-        &ephemeral_message,
-    )?;
-
-    Ok((email_address, chain))
-}
-
-/// Deletes the guest account server-side (issue #2335):
-///   1. re-derive a FRESH guest JWT from the anchor (the persisted one may be
-///      expired) — idempotent: same anchor → same wallet → fresh token
-///   2. `unlink_guest_profile` removes the sole `guest` identity, deleting the
-///      thirdweb user so the sessionId is freed for a brand-new wallet
-async fn perform_delete_guest_account(device_anchor_id: String) -> Result<(), anyhow::Error> {
-    let session = thirdweb_guest::refresh_guest_session(&device_anchor_id).await?;
-    thirdweb_guest::unlink_guest_profile(&session.token).await
-}
-
-/// Fully deletes an UPGRADED guest account server-side (enable-upgraded-deletion):
-///   1. re-derive a FRESH guest JWT from the anchor (a guest login on an
-///      upgraded account returns that same user's token)
-///   2. `unlink_upgraded_account` unlinks BOTH the `guest` and the `email` (plus
-///      any other) profile, deleting the whole thirdweb user so the account is
-///      gone and the sessionId is freed for a brand-new wallet.
-async fn perform_delete_upgraded_account(device_anchor_id: String) -> Result<(), anyhow::Error> {
-    let session = thirdweb_guest::refresh_guest_session(&device_anchor_id).await?;
-    thirdweb_guest::unlink_upgraded_account(&session.token).await
 }
