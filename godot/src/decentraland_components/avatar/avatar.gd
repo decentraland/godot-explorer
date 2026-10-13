@@ -10,11 +10,6 @@ signal avatar_loaded
 enum LODState { FULL, MID, CROSSFADE, FAR }
 
 # Debug to store each avatar loaded in user://avatars
-enum SpawnRevealPhase { IDLE, GHOST_IN, HOLD }
-
-const GHOST_BODY_FEMALE := preload("res://assets/avatar/ghost_body_female.glb")
-const GHOST_BODY_MALE := preload("res://assets/avatar/ghost_body_male.glb")
-const HOLOGRAM_SHADER := preload("res://assets/shaders/ghost_hologram.gdshader")
 
 const DEBUG_SAVE_AVATAR_DATA = false
 
@@ -47,15 +42,6 @@ const REMOTE_HEAD_IK_DISTANCE := 10.0
 # #2855: Unity LongFallStunTime — the hard-landing stun animation covers the
 # input lock (loco2 M6). Remote avatars derive it from the wire long_fall.
 const LONG_FALL_STUN_TIME := 0.75
-# #1554: spawn/teleport reveal, Unity's AvatarGhostSystem flow: the avatar's
-# base body (naked, first thing loaded) renders with the hologram shader while
-# wearables load, then a clean instant swap — hologram off, real avatar on.
-const SPAWN_GHOST_IN_DURATION := 0.8
-const SPAWN_REVEAL_HEIGHT := 2.1
-const SPAWN_REVEAL_GIVE_UP_MS := 10000
-const SPAWN_MIN_HOLD_MIN := 0.25
-const SPAWN_MIN_HOLD_MAX := 0.5
-const SPAWN_READY_TIMEOUT := 5.0
 
 # Maps AvatarAnchorPointType (SDK proto, see avatar_attach.proto) to skeleton
 # bone names. Ids 0 (POSITION) and 1 (NAME_TAG) are non-skeletal and resolved
@@ -180,25 +166,15 @@ var _double_jump_latch: bool = false
 var _was_long_falling: bool = false
 var _remote_stun_timer: float = 0.0
 var _stunned_now: bool = false
-# #1554: spawn reveal state. _spawn_ghost_meshes: mesh -> previous override.
-var _spawn_reveal_phase: SpawnRevealPhase = SpawnRevealPhase.IDLE
-var _spawn_reveal_elapsed: float = 0.0
+# The spawn/teleport hologram (see AvatarSpawnReveal). _spawn_reveal_started and
+# _born_ms belong to the trigger gate, not the reveal: they decide whether one
+# should ever start for this avatar, and the helper owns the rest of the state.
+var _spawn_reveal: AvatarSpawnReveal = null
 var _spawn_reveal_started: bool = false
-var _hologram_material: ShaderMaterial = null
-var _spawn_ghost_meshes: Array[MeshInstance3D] = []
-var _ghost_instance: Node3D = null
-var _ghost_skeleton: Skeleton3D = null
-# Ghost ⇄ our skeleton bone indices, paired once per reveal (see
-# _resolve_ghost_bones): index i is our bone in _ghost_src_bones and the
-# matching ghost bone in _ghost_dst_bones.
-var _ghost_src_bones := PackedInt32Array()
-var _ghost_dst_bones := PackedInt32Array()
-var _spawn_min_hold: float = 0.0
 var _born_ms: int = 0
 var _feet_ik: AvatarFeetIK = null
 var _hands_ik: AvatarHandsIK = null
 var _head_ik: AvatarHeadIK = null
-var _world_is_loading: bool = false
 # #b2: first _process tick should not treat wire-provided jump_count>=2 as a
 # rising edge — otherwise a remote avatar first seen mid-double-jump plays the
 # SFX from nothing. Cleared after the first frame where we seed _last_jump_count.
@@ -310,6 +286,20 @@ var _anim_throttle_active: bool = false
 @onready var glider_prop: Node3D = %GliderProp
 @onready var audio_player_double_jump: AudioStreamPlayer3D = %AudioPlayer_DoubleJump
 
+# A load in progress hides spawn reveals — they belong to visible gameplay.
+# Static so an avatar spawning mid-load (the burst after a teleport) starts from
+# the truth instead of "not loading", and one connection covers every avatar.
+static var _world_is_loading: bool = false
+static var _loading_signals_connected: bool = false
+
+
+static func _on_loading_started() -> void:
+	_world_is_loading = true
+
+
+static func _on_loading_finished() -> void:
+	_world_is_loading = false
+
 
 func _ready():
 	_mesh_assembler = AvatarMeshAssembler.new(body_shape_skeleton_3d)
@@ -320,14 +310,17 @@ func _ready():
 	_feet_ik = AvatarFeetIK.new(self, body_shape_skeleton_3d)
 	_hands_ik = AvatarHandsIK.new(self, body_shape_skeleton_3d)
 	_head_ik = AvatarHeadIK.new(self, body_shape_skeleton_3d)
+	_spawn_reveal = AvatarSpawnReveal.new(self)
 	_mesh_assembler.apply_toon_material_recursive(glider_prop)
-	# #1554: Godot compiles the hologram pipeline on first draw and renders a
-	# solid-color placeholder until done — warm it once, tiny and briefly.
-	warm_hologram_shader_async()
+	# #1554: warm the hologram pipeline once per process — Godot renders a solid
+	# placeholder until the shader compiles, and warming it per avatar would spawn
+	# ghost bodies per avatar in a spawn burst.
+	_spawn_reveal.warm_shader_async()
 	# #1554: gate spawn reveals to visible gameplay (not behind loading screens).
-	_world_is_loading = false
-	Global.loading_started.connect(func(): _world_is_loading = true)
-	Global.loading_finished.connect(func(): _world_is_loading = false)
+	if not _loading_signals_connected:
+		_loading_signals_connected = true
+		Global.loading_started.connect(_on_loading_started)
+		Global.loading_finished.connect(_on_loading_finished)
 	# Seed one tree evaluation so an avatar that spawns off-screen/FAR (tree
 	# immediately frozen) still gets a pose instead of staying in bind pose.
 	animation_tree.active = true
@@ -909,7 +902,7 @@ func update_colors(eyes_color: Color, skin_color: Color, hair_color: Color) -> v
 			_impostor_layer >= 0
 			and not _impostor_layer_is_overflow
 			and Global.avatars != null
-			and _spawn_reveal_phase == SpawnRevealPhase.IDLE
+			and _spawn_reveal.is_idle()
 		):
 			Global.avatars.invalidate_impostor_texture(get_instance_id(), _get_impostor_cache_key())
 			ImpostorCapturer.request_capture(self)
@@ -1174,7 +1167,7 @@ func async_load_wearables():
 
 	# #1554: during a spawn reveal the reveal owns the skeleton switch — the
 	# real avatar stays hidden until the hologram's swap releases it.
-	body_shape_skeleton_3d.visible = _spawn_reveal_phase == SpawnRevealPhase.IDLE
+	body_shape_skeleton_3d.visible = _spawn_reveal.is_idle()
 	_recompute_nametag_clearance()
 	finish_loading = true
 	# Emotes - get from cached emote scenes
@@ -1206,7 +1199,7 @@ func async_load_wearables():
 		_impostor_layer >= 0
 		and not _impostor_layer_is_overflow
 		and Global.avatars != null
-		and _spawn_reveal_phase == SpawnRevealPhase.IDLE
+		and _spawn_reveal.is_idle()
 	):
 		Global.avatars.invalidate_impostor_texture(get_instance_id(), _get_impostor_cache_key())
 		ImpostorCapturer.request_capture(self)
@@ -1449,10 +1442,7 @@ func _ensure_impostor_layer(distance: float) -> void:
 	# Capture only when the slot owns a real layer that hasn't been filled yet.
 	# Never mid spawn-reveal (#1554): the bake would catch the ghost or a
 	# half-hidden avatar and stick as the billboard texture.
-	if (
-		_spawn_reveal_phase == SpawnRevealPhase.IDLE
-		and Global.avatars.impostor_needs_capture(get_instance_id())
-	):
+	if _spawn_reveal.is_idle() and Global.avatars.impostor_needs_capture(get_instance_id()):
 		ImpostorCapturer.request_capture(self)
 
 
@@ -1467,8 +1457,8 @@ func _release_impostor() -> void:
 func _on_lod_state_changed(new_state: int, _prev_state: int) -> void:
 	# A spawn reveal owns mesh visibility while it runs; leaving FULL LOD hands
 	# rendering to the impostor — abort the reveal cleanly.
-	if _spawn_reveal_phase != SpawnRevealPhase.IDLE and new_state != LODState.FULL:
-		_end_spawn_reveal()
+	if not _spawn_reveal.is_idle() and new_state != LODState.FULL:
+		_spawn_reveal.end()
 	# At FAR the avatar is an impostor and its AnimationTree stops advancing, so a
 	# running emote would never reach its natural end and the scene would wait
 	# forever for a terminal EmoteState. Report it as interrupted now.
@@ -1533,7 +1523,7 @@ func _physics_process(_delta):
 func _process(delta):
 	# #1554: the spawn reveal driver must run even when the LOD/animation
 	# paths below bail early (a frozen reveal = permanently hidden avatar).
-	_process_spawn_reveal(delta)
+	_spawn_reveal.tick(delta)
 	# TODO: maybe a gdext crate bug? when process implement the INode3D, super(delta) doesn't work :/
 	self.process(delta)
 
@@ -1607,7 +1597,6 @@ func _process(delta):
 	var long_fall_now := self.long_fall
 	var jump_count_now := self.jump_count
 	var stunned_now := self.stunned
-	var stun_pending_now := self.stun_pending
 	var glide_state_now := self.glide_state
 	var movement_speed_now := self.movement_speed
 
@@ -1679,10 +1668,9 @@ func _process(delta):
 	animation_tree.set("parameters/Locomotion/conditions/stunned", _stunned_now)
 	animation_tree.set("parameters/Locomotion/conditions/nstunned", not _stunned_now)
 	# Long_Fall exits: hard landing (stunned) must beat the normal landing —
-	# land_soft only fires when grounded WITHOUT an active or pending stun.
+	# land_soft only fires when grounded without an active stun.
 	animation_tree.set(
-		"parameters/Locomotion/conditions/land_soft",
-		grounded_now and not _stunned_now and not stun_pending_now
+		"parameters/Locomotion/conditions/land_soft", grounded_now and not _stunned_now
 	)
 
 	# Rising-edge detection for one-frame AnimationTree condition pulses.
@@ -1741,7 +1729,7 @@ func _process(delta):
 		and not _stunned_now
 		and not emote_controller.is_playing()
 		and _lod_state == LODState.FULL
-		and _spawn_reveal_phase == SpawnRevealPhase.IDLE
+		and _spawn_reveal.is_idle()
 		and not _world_is_loading
 	)
 	if is_local_player:
@@ -1768,7 +1756,7 @@ func _process(delta):
 			(self.head_ik_yaw_enabled or self.head_ik_pitch_enabled)
 			and _lod_distance <= REMOTE_HEAD_IK_DISTANCE
 			and _lod_state == LODState.FULL
-			and _spawn_reveal_phase == SpawnRevealPhase.IDLE
+			and _spawn_reveal.is_idle()
 			and not _world_is_loading
 			and not _stunned_now
 			and not emote_controller.is_playing()
@@ -1776,8 +1764,7 @@ func _process(delta):
 		_head_ik.update_remote(delta, head_on, self.head_ik_yaw, self.head_ik_pitch)
 
 	# #1554: avatars ghost in on first appearance — covers local spawn AND
-	# teleports (the player node is re-instanced per teleport, so a pending
-	# flag there dies with it) as well as remotes appearing. The ghost body is
+	# teleports as well as remotes appearing. The ghost body is
 	# self-sufficient (bundled GLB, no wearable wait). FULL LOD only: a FAR
 	# avatar is an impostor billboard, the effect is invisible. Not during the
 	# loading screen — the reveal must play when someone can see it.
@@ -1791,8 +1778,11 @@ func _process(delta):
 		and not _world_is_loading
 	):
 		_spawn_reveal_started = true
-		start_spawn_reveal()
-	elif not _spawn_reveal_started and Time.get_ticks_msec() - _born_ms > SPAWN_REVEAL_GIVE_UP_MS:
+		_spawn_reveal.start()
+	elif (
+		not _spawn_reveal_started
+		and Time.get_ticks_msec() - _born_ms > AvatarSpawnReveal.GIVE_UP_MS
+	):
 		# Profile never resolved (scene NPCs, fetch failures) — never stay hidden.
 		_spawn_reveal_started = true
 		body_shape_skeleton_3d.visible = true
@@ -1800,163 +1790,6 @@ func _process(delta):
 
 # Toggles GliderProp visibility based on glide_state transitions. The prop is# a persistent child (rotated 180° Y to compensate the Unity→Godot axis flip)
 # so audio and AnimationPlayer stay warm across glide cycles.
-# #1554: spawn/teleport hologram reveal. Unity runs a ghost copy with the
-# hologram shader while wearables load, then sweeps the real ones; we sweep
-# the avatar's own meshes (same visual beat, no dual-mesh system).
-# Re-triggering mid-reveal restarts the sweep (skipped, not queued).
-func start_spawn_reveal() -> void:
-	if body_shape_skeleton_3d == null:
-		return
-	if _hologram_material == null:
-		_hologram_material = ShaderMaterial.new()
-		_hologram_material.shader = HOLOGRAM_SHADER
-	# Name resolved (trigger gate) — tint by the profile name color, once.
-	var nc := DclAvatar.get_nickname_color(avatar_name)
-	_hologram_material.set_shader_parameter("fresnel_color", Vector4(nc.r, nc.g, nc.b, 0.97))
-	_end_spawn_reveal()  # clean any in-progress reveal
-	_spawn_ghost_meshes.clear()
-	# The ghost is the NAKED BASE BODY of the avatar's body type: the bundled
-	# GLB instanced WHOLE (its own armature — mesh reparenting never engages
-	# skinning, tried it). Bone poses copy from our skeleton per frame.
-	var body_type := avatar_data.get_body_shape().to_lower() if avatar_data != null else ""
-	_ghost_instance = (
-		GHOST_BODY_MALE.instantiate()
-		if "female" not in body_type
-		else GHOST_BODY_FEMALE.instantiate()
-	)
-	_ghost_instance.name = "__ghost"
-	# The ghost GLB faces +Z; our avatar rig faces -Z — flip it.
-	_ghost_instance.rotation.y = PI
-	add_child(_ghost_instance)
-	_ghost_skeleton = _find_skeleton_in(_ghost_instance)
-	if _ghost_skeleton != null:
-		for child in _ghost_skeleton.get_children():
-			if child is MeshInstance3D:
-				child.material_override = _hologram_material
-				_spawn_ghost_meshes.append(child)
-			# Drive off OUR skeleton's rest proportions (same rig).
-			_ghost_skeleton.scale = Vector3.ONE
-		_resolve_ghost_bones()
-	body_shape_skeleton_3d.visible = false
-	_spawn_reveal_phase = SpawnRevealPhase.GHOST_IN
-	_spawn_reveal_elapsed = 0.0
-	_spawn_min_hold = randf_range(SPAWN_MIN_HOLD_MIN, SPAWN_MIN_HOLD_MAX)
-
-
-# #1554: one-time warm-up so the first real spawn hologram never renders as
-# Godot's solid placeholder while the shader pipeline compiles.
-# gdlint:ignore = async-function-name
-func warm_hologram_shader_async() -> void:
-	var mat := ShaderMaterial.new()
-	mat.shader = HOLOGRAM_SHADER
-	var warmers: Array[Node3D] = []
-	for scene in [GHOST_BODY_FEMALE, GHOST_BODY_MALE]:
-		var inst: Node3D = scene.instantiate()
-		inst.scale = Vector3(0.001, 0.001, 0.001)
-		add_child(inst)
-		warmers.append(inst)
-		var skel := _find_skeleton_in(inst)
-		if skel != null:
-			for c in skel.get_children():
-				if c is MeshInstance3D:
-					c.material_override = mat
-	await get_tree().create_timer(0.5).timeout
-	for inst in warmers:
-		if is_instance_valid(inst):
-			inst.queue_free()
-
-
-# #1554: first Skeleton3D in the ghost body GLB instance.
-func _find_skeleton_in(node: Node) -> Skeleton3D:
-	if node is Skeleton3D:
-		return node
-	for child in node.get_children():
-		var found := _find_skeleton_in(child)
-		if found != null:
-			return found
-	return null
-
-
-func _end_spawn_reveal() -> void:
-	# Clean instant swap: ghost out, real avatar meshes on (one switch).
-	if _ghost_instance != null:
-		if is_instance_valid(_ghost_instance):
-			_ghost_instance.queue_free()
-		_ghost_instance = null
-		_ghost_skeleton = null
-	_spawn_ghost_meshes.clear()
-	_ghost_src_bones = PackedInt32Array()
-	_ghost_dst_bones = PackedInt32Array()
-	body_shape_skeleton_3d.visible = true
-	_spawn_reveal_phase = SpawnRevealPhase.IDLE
-	# The impostor texture may have been baked mid-reveal — recapture clean.
-	if Global.avatars != null:
-		Global.avatars.invalidate_impostor_texture(get_instance_id(), _get_impostor_cache_key())
-		ImpostorCapturer.request_capture(self)
-
-
-# Copies our skeleton's pose onto the ghost body's skeleton (same rig, bone
-# names match) so the spawn hologram animates with the avatar. The bone pairing
-# is resolved once, in _resolve_ghost_bones.
-func _mirror_pose_to_ghost() -> void:
-	if _ghost_skeleton == null or not is_instance_valid(_ghost_skeleton):
-		return
-	for i in _ghost_src_bones.size():
-		var ghost_bone: int = _ghost_dst_bones[i]
-		var ours: int = _ghost_src_bones[i]
-		_ghost_skeleton.set_bone_pose_position(
-			ghost_bone, body_shape_skeleton_3d.get_bone_pose_position(ours)
-		)
-		_ghost_skeleton.set_bone_pose_rotation(
-			ghost_bone, body_shape_skeleton_3d.get_bone_pose_rotation(ours)
-		)
-
-
-# Ghost bone -> our bone, resolved ONCE per reveal. Doing it per frame meant a
-# String allocation (get_bone_name) plus a name hash (find_bone) for every bone,
-# which cost more than the pose copy it was guarding.
-func _resolve_ghost_bones() -> void:
-	_ghost_src_bones = PackedInt32Array()
-	_ghost_dst_bones = PackedInt32Array()
-	for i in _ghost_skeleton.get_bone_count():
-		var ours := body_shape_skeleton_3d.find_bone(_ghost_skeleton.get_bone_name(i))
-		if ours < 0:
-			continue
-		_ghost_dst_bones.append(i)
-		_ghost_src_bones.append(ours)
-
-
-func _process_spawn_reveal(delta: float) -> void:
-	if _spawn_reveal_phase == SpawnRevealPhase.IDLE:
-		return
-	_spawn_reveal_elapsed += delta
-	# Per-frame: keep the hologram override (the assembler stomps overrides),
-	# and mirror our skeleton's pose onto the ghost so it animates with us.
-	for mesh in _spawn_ghost_meshes:
-		if is_instance_valid(mesh):
-			mesh.material_override = _hologram_material
-	_mirror_pose_to_ghost()
-	match _spawn_reveal_phase:
-		SpawnRevealPhase.GHOST_IN:
-			var progress := clampf(_spawn_reveal_elapsed / SPAWN_GHOST_IN_DURATION, 0.0, 1.0)
-			_hologram_material.set_shader_parameter(
-				"reveal_y", global_position.y - 0.05 + progress * SPAWN_REVEAL_HEIGHT
-			)
-			if progress >= 1.0:
-				_spawn_reveal_phase = SpawnRevealPhase.HOLD
-		SpawnRevealPhase.HOLD:
-			_hologram_material.set_shader_parameter(
-				"reveal_y", global_position.y + SPAWN_REVEAL_HEIGHT
-			)
-			var ready := (
-				avatar_ready
-				or _spawn_reveal_elapsed >= SPAWN_GHOST_IN_DURATION + SPAWN_READY_TIMEOUT
-			)
-			var held := _spawn_reveal_elapsed >= SPAWN_GHOST_IN_DURATION + _spawn_min_hold
-			if ready and held:
-				_end_spawn_reveal()
-
-
 func _update_glider_prop() -> void:
 	if is_avatar_shape:
 		if glider_prop.visible:
