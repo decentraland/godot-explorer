@@ -2,14 +2,14 @@
 extends SceneTree
 
 # Validate the locomotion library: play clips on the avatar skeleton and
-# compare bone global positions against the known-good locomotion.res clips.
+# compare bone global positions against the known-good assets/no-export/locomotion_legacy.res clips.
 # Run:
 #   .bin/godot/Godot.app/Contents/MacOS/Godot --headless --path godot \
 #       --script src/tool/anim_converter/validate_glb.gd
 
 const LIB := "res://assets/animations/locomotion_full.res"
 const BONES := ["Avatar_Hips", "Avatar_Head", "Avatar_LeftHand", "Avatar_LeftFoot"]
-# converted clip -> existing clip in locomotion.res
+# converted clip -> existing clip in assets/no-export/locomotion_legacy.res
 const PAIRS := [["Jump_Fall", "Jump_Fall"], ["Idle", "Idle"], ["Walk", "Walk"]]
 
 

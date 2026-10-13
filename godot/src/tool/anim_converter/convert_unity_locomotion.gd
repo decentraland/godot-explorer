@@ -25,7 +25,7 @@ extends SceneTree
 #   pose         = rest_g(b)^-1 * local_of(W_g)         (rest-relative track)
 # Same for positions (vector mirror, no quaternion).
 # Worlds are composed in each rig's own armature/skeleton space (cm both).
-# Oracle: compare_final.gd (final-space dot vs locomotion.res must be ~1).
+# Oracle: compare_final.gd (final-space dot vs assets/no-export/locomotion_legacy.res must be ~1).
 
 const INPUT_DIR := "res://assets/no-export/unity_locomotion/"
 const UNITY_REST_JSON := "res://assets/no-export/unity_locomotion/unity_rig_rest.json"
@@ -362,7 +362,7 @@ func _bake_clip(clip_name: String, bones: Dictionary) -> Animation:
 				local_rot = wg_p_rot.inverse() * wg_rot
 				local_pos = wg_p_rot.inverse() * (wg_pos - wg_p_pos)
 			# Bone track values are ABSOLUTE parent-relative transforms (verified
-			# against locomotion.res: its tracks store the rest transform itself
+			# against assets/no-export/locomotion_legacy.res: its tracks store the rest transform itself
 			# for unanimated bones), not rest-relative poses.
 			anim.rotation_track_insert_key(rot_idx, t, local_rot.normalized())
 			anim.position_track_insert_key(pos_idx, t, local_pos)

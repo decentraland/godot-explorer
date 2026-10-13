@@ -1203,7 +1203,7 @@ func freeze_on_idle():
 	animation_tree.process_mode = Node.PROCESS_MODE_DISABLED
 
 	animation_player.stop()
-	animation_player.play("Idle", -1, 0.0)
+	animation_player.play("loco/Idle", -1, 0.0)
 
 	# Idle animation hides all the extra emotes
 	for child in avatar.get_children():
