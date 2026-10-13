@@ -1592,19 +1592,38 @@ func _process(delta):
 	# walk/jog/run classification (local input mode / remote wire), speed is
 	# the measured horizontal speed; blend = clamp01(speed/blendMax)*kind,
 	# approached at MoveAnimBlendSpeed (5/s, scaled by distance).
+	# These live in Rust (Avatar extends DclAvatar): a read crosses the extension
+	# boundary and costs ~0.9 us, and the block wants most of them several times
+	# per frame, so each is read once here and reused — including in the IK gate
+	# below. Sides are the same on both ends (remotes get them off the wire).
+	var run_now := self.run
+	var jog_now := self.jog
+	var walk_now := self.walk
+	var rise_now := self.rise
+	var fall_now := self.fall
+	var land_now := self.land
+	var grounded_now := self.is_grounded
+	var fall_fast_now := self.fall_fast
+	var long_fall_now := self.long_fall
+	var jump_count_now := self.jump_count
+	var stunned_now := self.stunned
+	var stun_pending_now := self.stun_pending
+	var glide_state_now := self.glide_state
+	var movement_speed_now := self.movement_speed
+
 	var kind := 0
-	if self.run:
+	if run_now:
 		kind = 3
-	elif self.jog:
+	elif jog_now:
 		kind = 2
-	elif self.walk:
+	elif walk_now:
 		kind = 1
 	animation_tree.set("parameters/Locomotion/conditions/run", kind == 3)
 	animation_tree.set("parameters/Locomotion/conditions/jog", kind == 2)
 	animation_tree.set("parameters/Locomotion/conditions/walk", kind == 1)
 	var target_blend := 0.0
 	if kind > 0:
-		target_blend = clampf(self.movement_speed / GAIT_BLEND_MAX_SPEEDS[kind], 0.0, 1.0) * kind
+		target_blend = clampf(movement_speed_now / GAIT_BLEND_MAX_SPEEDS[kind], 0.0, 1.0) * kind
 	var blend_rate: float = maxf(
 		GAIT_BLEND_SPEED, GAIT_BLEND_SPEED * absf(target_blend - movement_blend)
 	)
@@ -1615,47 +1634,47 @@ func _process(delta):
 	)
 	# #2856: jump-chain selection by gait (single-condition transitions; the
 	# gait part of the old Idle/Walk/Jog/Run state split lives here now).
-	animation_tree.set("parameters/Locomotion/conditions/rise_walk", self.rise and kind < 3)
-	animation_tree.set("parameters/Locomotion/conditions/rise_run", self.rise and kind == 3)
+	animation_tree.set("parameters/Locomotion/conditions/rise_walk", rise_now and kind < 3)
+	animation_tree.set("parameters/Locomotion/conditions/rise_run", rise_now and kind == 3)
 	# #2855: bounce pads launch without a jump (jump_count stays 0) — they skip
 	# the Jump_Start anticipation and go straight to the rise loop.
 	animation_tree.set(
-		"parameters/Locomotion/conditions/rise_bounce", self.rise and self.jump_count == 0
+		"parameters/Locomotion/conditions/rise_bounce", rise_now and jump_count_now == 0
 	)
 
-	animation_tree.set("parameters/Locomotion/conditions/rise", self.rise)
-	animation_tree.set("parameters/Locomotion/conditions/fall", self.fall)
-	animation_tree.set("parameters/Locomotion/conditions/land", self.land)
+	animation_tree.set("parameters/Locomotion/conditions/rise", rise_now)
+	animation_tree.set("parameters/Locomotion/conditions/fall", fall_now)
+	animation_tree.set("parameters/Locomotion/conditions/land", land_now)
 	# #1553: Unity anim thresholds — fall pose past vy<-3 (AnimationFallSpeed);
 	# apex = airborne between rise end and fall start (the Mid state floats it).
-	animation_tree.set("parameters/Locomotion/conditions/fall_fast", self.fall_fast)
+	animation_tree.set("parameters/Locomotion/conditions/fall_fast", fall_fast_now)
 	animation_tree.set(
 		"parameters/Locomotion/conditions/apex",
-		not self.is_grounded and not self.rise and not self.fall_fast
+		not grounded_now and not rise_now and not fall_fast_now
 	)
 	# #b3: nfall reads is_grounded directly (not `land`). `land` is a short pulse
 	# locally (in_grace_time) and was previously overridden to is_grounded for
 	# remotes, causing asymmetric behavior. is_grounded is the same shape on
 	# both sides, and fall's 1-2 frame deadband at apex is still avoided.
-	animation_tree.set("parameters/Locomotion/conditions/nfall", self.is_grounded)
+	animation_tree.set("parameters/Locomotion/conditions/nfall", grounded_now)
 
 	# #2855: long fall + hard-landing stun. Local avatar: stunned comes from the
 	# M6 fall-height timer (player.gd). Remote: derive — landed while the wire
 	# said long_fall this airtime.
 	if is_local_player:
-		_stunned_now = self.stunned
+		_stunned_now = stunned_now
 	else:
-		if self.long_fall and not self.is_grounded:
+		if long_fall_now and not grounded_now:
 			_was_long_falling = true
-		if self.is_grounded:
+		if grounded_now:
 			if _was_long_falling:
 				_remote_stun_timer = LONG_FALL_STUN_TIME
 			_was_long_falling = false
 		_remote_stun_timer = maxf(_remote_stun_timer - delta, 0.0)
 		_stunned_now = _remote_stun_timer > 0.0
-	animation_tree.set("parameters/Locomotion/conditions/long_fall", self.long_fall)
+	animation_tree.set("parameters/Locomotion/conditions/long_fall", long_fall_now)
 	animation_tree.set(
-		"parameters/Locomotion/conditions/fall_short", self.fall_fast and not self.long_fall
+		"parameters/Locomotion/conditions/fall_short", fall_fast_now and not long_fall_now
 	)
 	animation_tree.set("parameters/Locomotion/conditions/stunned", _stunned_now)
 	animation_tree.set("parameters/Locomotion/conditions/nstunned", not _stunned_now)
@@ -1663,23 +1682,23 @@ func _process(delta):
 	# land_soft only fires when grounded WITHOUT an active or pending stun.
 	animation_tree.set(
 		"parameters/Locomotion/conditions/land_soft",
-		self.is_grounded and not _stunned_now and not self.stun_pending
+		grounded_now and not _stunned_now and not stun_pending_now
 	)
 
 	# Rising-edge detection for one-frame AnimationTree condition pulses.
-	var jump_rising_edge: bool = self.jump_count > _last_jump_count and self.jump_count >= 2
+	var jump_rising_edge: bool = jump_count_now > _last_jump_count and jump_count_now >= 2
 	# Latch it: a 1-frame pulse races the tree's advance order and can be
 	# swallowed; hold until the SM actually enters Double_Jump_Rise (or lands).
 	_double_jump_latch = _double_jump_latch or jump_rising_edge
 	# #2856: jump variation — every air jump re-rolls 0|1 and the double-jump
 	# rise swaps between the two clip variants for the current gait (Unity's
 	# Jump state blends Double_Jump_<gait> x JumpVariation).
-	if self.jump_count != _last_jump_count:
+	if jump_count_now != _last_jump_count:
 		jump_variation = 0.0 if randf() < 0.5 else 1.0
 		var gait := "Base"
-		if self.run:
+		if run_now:
 			gait = "Run"
-		elif self.jog:
+		elif jog_now:
 			gait = "Jog"
 		var dj_clip := "Double_Jump_" + gait + ("_Right" if jump_variation > 0.5 else "")
 		_sm_double_jump_rise.animation = StringName("double_jump_and_glide/" + dj_clip)
@@ -1689,14 +1708,14 @@ func _process(delta):
 	if _jump_count_sync_pending:
 		jump_rising_edge = false
 		_jump_count_sync_pending = false
-	_last_jump_count = self.jump_count
-	var gliding_now: bool = self.glide_state == 1 or self.glide_state == 2
+	_last_jump_count = jump_count_now
+	var gliding_now: bool = glide_state_now == 1 or glide_state_now == 2
 
 	animation_tree.set("parameters/Locomotion/conditions/double_jump", _double_jump_latch)
 	animation_tree.set("parameters/Locomotion/conditions/gliding", gliding_now)
 	animation_tree.set("parameters/Locomotion/conditions/ngliding", not gliding_now)
 
-	var glide_moving: bool = self.walk or self.jog or self.run
+	var glide_moving: bool = walk_now or jog_now or run_now
 	var glide_forward_target: float = 1.0 if glide_moving else 0.0
 	_glide_forward_blend = move_toward(_glide_forward_blend, glide_forward_target, delta * 4.0)
 	animation_tree.set(
@@ -1718,7 +1737,7 @@ func _process(delta):
 	# Unity gates both on the same rig state.
 	var ik_enabled := (
 		is_local_player
-		and is_grounded
+		and grounded_now
 		and not _stunned_now
 		and not emote_controller.is_playing()
 		and _lod_state == LODState.FULL
@@ -1733,7 +1752,7 @@ func _process(delta):
 		# standing still (Unity disables it above ~0.7 m/s of movement).
 		var camera := get_viewport().get_camera_3d()
 		var head_on: bool = (
-			ik_enabled and movement_speed < AvatarHeadIK.MAX_SPEED and camera != null
+			ik_enabled and movement_speed_now < AvatarHeadIK.MAX_SPEED and camera != null
 		)
 		_head_ik.update_ik(
 			delta, head_on, Vector3.ZERO if camera == null else -camera.global_transform.basis.z
