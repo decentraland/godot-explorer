@@ -521,13 +521,8 @@ func _ready():
 			dcl_ios_singleton.deeplink_received.connect(deep_link_router.process_deep_link)
 
 	_dcl_swift_lib_smoke_test()
-	# Setup
-	nft_frame_loader = NftFrameStyleLoader.new()
-	nft_fetcher = OpenSeaFetcher.new()
-	music_player = MusicPlayer.new()
-	snapshot = Snapshot.new()
-	add_child(snapshot)
-	preload_assets = PreloadAssets.new()
+	# The services every boot needs (config, realm, identity, ...) are created in Rust.
+	DclBootstrap.create_core_services(self)
 
 	var args = cli.get_all_args()
 	if args.size() == 1 and args[0].begins_with("res://"):
@@ -537,8 +532,6 @@ func _ready():
 	if FORCE_TEST:
 		Global.testing_scene_mode = true
 
-	# Create GDScript extensions of Rust classes
-	self.config = ConfigData.new()
 	config.load_from_settings_file()
 
 	# Restore profile particle budgets + avatar dust gate: the Rust atomics and
@@ -586,23 +579,9 @@ func _ready():
 		ProfileService.set_deploy_disabled(true)
 		print("[GLOBAL] Profile deploy DISABLED (local-only profile updates)")
 
-	self.realm = Realm.new()
-	self.realm.set_name("realm")
 	self.realm.realm_change_failed.connect(_on_realm_change_failed_toast)
 	self.realm.realm_access_denied.connect(_on_realm_access_denied)
-
-	self.dcl_tokio_rpc = DclTokioRpc.new()
-	self.dcl_tokio_rpc.set_name("dcl_tokio_rpc")
-
-	self.player_identity = PlayerIdentity.new()
-	self.player_identity.set_name("player_identity")
 	self.player_identity.profile_changed.connect(_on_player_profile_changed_sync_events)
-
-	self.testing_tools = TestingTools.new()
-	self.testing_tools.set_name("testing_tool")
-
-	self.portable_experience_controller = PortableExperienceController.new()
-	self.portable_experience_controller.set_name("portable_experience_controller")
 
 	# Ensure the content cache folder exists before clearing — clear runs against
 	# this directory and would log an error if it doesn't exist yet (fresh install).
