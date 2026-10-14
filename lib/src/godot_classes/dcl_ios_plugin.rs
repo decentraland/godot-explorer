@@ -13,6 +13,10 @@ pub struct DclMobileDeviceInfo {
     pub soc_model: String,
     pub board_platform: String,
     pub hardware: String,
+    /// Android-only, for the launch-time hardware report (#3033); empty / -1 on iOS.
+    pub soc_manufacturer: String,
+    pub processor_type: String,
+    pub processor_max_freq_mhz: i32,
 }
 
 /// Mobile device dynamic metrics (changes during runtime) - internal Rust struct
@@ -62,6 +66,20 @@ impl DclMobileDeviceInfo {
                 .and_then(|v| v.try_to::<GString>().ok())
                 .map(|s| s.to_string())
                 .unwrap_or_default(),
+            soc_manufacturer: dict
+                .get("soc_manufacturer")
+                .and_then(|v| v.try_to::<GString>().ok())
+                .map(|s| s.to_string())
+                .unwrap_or_default(),
+            processor_type: dict
+                .get("processor_type")
+                .and_then(|v| v.try_to::<GString>().ok())
+                .map(|s| s.to_string())
+                .unwrap_or_default(),
+            processor_max_freq_mhz: dict
+                .get("processor_max_freq_mhz")
+                .and_then(|v| v.try_to::<i32>().ok())
+                .unwrap_or(-1),
         }
     }
 }
