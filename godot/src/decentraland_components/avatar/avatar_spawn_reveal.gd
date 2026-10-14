@@ -58,8 +58,8 @@ func start() -> void:
 	end()  # clean any in-progress reveal
 	_ghost_meshes.clear()
 	# The ghost is the NAKED BASE BODY of the avatar's body type: the bundled
-	# GLB instanced WHOLE (its own armature — mesh reparenting never engages
-	# skinning, tried it). Bone poses copy from our skeleton per frame.
+	# GLB instanced whole, with its own armature (reparenting a mesh onto our
+	# skeleton does not engage skinning). Bone poses copy from our skeleton.
 	var body_type: String = (
 		_avatar.avatar_data.get_body_shape().to_lower() if _avatar.avatar_data != null else ""
 	)

@@ -8,6 +8,10 @@ extends SceneTree
 #   .bin/godot/Godot.app/Contents/MacOS/Godot --headless --path godot \
 #       --script src/tool/anim_converter/convert_unity_locomotion.gd
 #
+# The inputs are not committed — the repo ships the converted library instead:
+# copy the .anim files from a unity-explorer checkout and extract
+# unity_rig_rest.json from its AvatarBase.prefab before running this.
+#
 # Reads:  res://assets/no-export/unity_locomotion/*.anim
 #         res://assets/no-export/unity_locomotion/unity_rig_rest.json
 #           (Unity prefab rest pose, extracted from AvatarBase.prefab)

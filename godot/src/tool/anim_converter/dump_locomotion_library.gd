@@ -7,8 +7,8 @@ extends SceneTree
 
 const SRC := "res://assets/no-export/locomotion/Avatar_Locomotion_Fix.glb"
 const OUT := "res://assets/animations/locomotion_full.res"
-# The GLB import loses loop flags; gait clips must loop (they don't here, and
-# a frozen last frame is the "patinando" bug). Slide loops too.
+# The GLB import loses loop flags; gait clips must loop (they don't here, and a
+# frozen last frame reads as skating). Slide loops too.
 # Jump_Mid/Run_Jump_Mid loop so their auto-advance never fires — the apex
 # holds until fall_fast (vy<-3, Unity AnimationFallSpeed) triggers (#1553).
 const FORCE_LOOP := ["Idle", "Walk", "Jog", "Run", "Slide", "Jump_Mid", "Run_Jump_Mid"]

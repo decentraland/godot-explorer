@@ -28,7 +28,7 @@ func _make_grounded() -> void:
 	var bs := AnimationNodeBlendSpace1D.new()
 	# sync: blend by normalized phase — without it the different-length gait
 	# clips (Idle 2s / Walk 1s / Jog 0.67s / Run 0.53s) drift against each
-	# other and the legs churn ("patinando").
+	# other and the legs skate.
 	bs.sync = true
 	for entry in [["Idle", 0.0], ["Walk", 1.0], ["Jog", 2.0], ["Run", 3.0]]:
 		var anim := AnimationNodeAnimation.new()

@@ -120,8 +120,8 @@ class HipsPullModifier3D:
 		if not (is_finite(delta.x) and is_finite(delta.y) and is_finite(delta.z)):
 			return
 		# Position only: rewriting the whole pose replaces the animated rotation
-		# and scale with whatever a failed read returned, which drops the entire
-		# body onto the skeleton origin (it collapsed to a point in QA).
+		# and scale with whatever a failed read returned, collapsing the body onto
+		# the skeleton origin.
 		var pos := skel.get_bone_pose_position(bone)
 		pos += delta
 		skel.set_bone_pose_position(bone, pos)
