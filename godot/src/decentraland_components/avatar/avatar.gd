@@ -1593,7 +1593,12 @@ func _process(delta):
 			delta, head_on, Vector3.ZERO if camera == null else -camera.global_transform.basis.z
 		)
 		# head sync: broadcast the head turn so other clients aim our head
-		# at us (Unity HeadSync sends yaw+pitch, not a look-at vector).
+		# at us (Unity HeadSync sends yaw+pitch, not a look-at vector). Mirrored
+		# here so the sender's dirty check can see the turn while it stands still.
+		self.head_ik_yaw = _head_ik.head_yaw_deg
+		self.head_ik_pitch = _head_ik.head_pitch_deg
+		self.head_ik_yaw_enabled = head_on
+		self.head_ik_pitch_enabled = head_on
 		Global.comms.set_head_ik(head_on, _head_ik.head_yaw_deg, _head_ik.head_pitch_deg)
 	else:
 		# A remote avatar's head comes over the wire, never from our camera. Head
