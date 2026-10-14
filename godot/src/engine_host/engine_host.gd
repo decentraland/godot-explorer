@@ -132,6 +132,11 @@ func _run_world_control(kind: String, args: Dictionary) -> void:
 
 
 func _enter_world(args: Dictionary) -> void:
+	if _explorer != null:
+		# The core replaced the destination while a world is up: leave it, enter on the host's return.
+		_pending_enter = args
+		_exit_world()
+		return
 	if not _avatar_host_up:
 		return
 	if _exiting:
