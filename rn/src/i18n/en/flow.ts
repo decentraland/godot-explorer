@@ -23,7 +23,8 @@ export const flow = {
   FLOW_EMAIL_BODY: "We'll send you a one-time code.",
   FLOW_EMAIL_PLACEHOLDER: 'you@example.com',
   FLOW_EMAIL_SEND: 'Send code',
-  FLOW_EMAIL_SEND_FAILED: 'Could not send the code. Check the address and try again.',
+  FLOW_EMAIL_SEND_FAILED:
+    'Could not send the code. Check the address and try again.',
   FLOW_CODE_TITLE: 'Enter your code',
   FLOW_CODE_BODY: 'We sent a code to {email}.',
   FLOW_CODE_PLACEHOLDER: '6-digit code',
