@@ -117,6 +117,7 @@ pub enum EngineCommand {
     ShowAvatarPreview(Rect),
     HideAvatarPreview,
     SetRendering(bool),
+    Control(super::Control),
 }
 
 /// Engine → core.
@@ -125,6 +126,13 @@ pub enum EngineEvent {
     LoadingProgress(f32),
     LoadingFinished { realm: String, parcel: Parcel },
     SceneCrashed,
+    Hud(super::HudSnapshot),
+    Chat(super::ChatLine),
+    UnreadChat(u32),
+    UiState(super::UiState),
+    OpenBackpack { emotes: bool },
+    LoadingDetail(super::LoadingDetail),
+    Avatar(super::AvatarState),
 }
 
 /// What the attached engine implements.
@@ -147,6 +155,13 @@ pub trait AppEvents: Send + Sync {
     /// Friends, requests or blocks changed; the shell refetches what it shows.
     fn friends_changed(&self) {}
     fn settings_changed(&self, _entry: &crate::settings::SettingEntry) {}
+    fn hud(&self, _snapshot: &super::HudSnapshot) {}
+    fn chat(&self, _line: &super::ChatLine) {}
+    fn unread_chat(&self, _count: u32) {}
+    fn ui_state(&self, _state: &super::UiState) {}
+    fn open_backpack(&self, _emotes: bool) {}
+    fn loading_detail(&self, _detail: &super::LoadingDetail) {}
+    fn avatar_changed(&self, _avatar: &super::AvatarState) {}
 }
 
 #[derive(Debug, PartialEq)]

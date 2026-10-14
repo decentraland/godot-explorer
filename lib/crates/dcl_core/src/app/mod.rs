@@ -2,6 +2,7 @@
 //! previewing an avatar, loading or inside a world. The shell renders `State`; the engine executes
 //! the `EngineCommand`s this module emits. No I/O here, so every transition is unit-testable.
 
+mod control;
 mod policy;
 mod shared;
 mod types;
@@ -11,6 +12,10 @@ mod tests;
 
 use std::sync::Arc;
 
+pub use control::{
+    AvatarState, CameraFocus, ChatLine, ChatProfile, ColorTarget, Control, HudInsets, HudSnapshot,
+    LoadingDetail, UiState, Vec3,
+};
 pub use policy::EngineStartPolicy;
 pub use shared::{CommandQueue, HostEvents};
 pub use types::{
@@ -27,6 +32,8 @@ pub struct App {
     engine_requested: bool,
     policy: EngineStartPolicy,
     rendering_sent: Option<bool>,
+    avatar: Option<AvatarState>,
+    last_hud: Option<HudSnapshot>,
 }
 
 impl App {
@@ -39,11 +46,23 @@ impl App {
             engine_requested: false,
             policy: EngineStartPolicy::default(),
             rendering_sent: None,
+            avatar: None,
+            last_hud: None,
         }
     }
 
     pub fn state(&self) -> &State {
         &self.state
+    }
+
+    /// The equipped avatar as the engine last reported it.
+    pub fn avatar(&self) -> Option<&AvatarState> {
+        self.avatar.as_ref()
+    }
+
+    /// Forwards a shell command to the engine, starting it if it is not up yet.
+    pub fn control(&mut self, control: Control) {
+        self.send(EngineCommand::Control(control));
     }
 
     pub fn engine_attached(&self) -> bool {
@@ -189,6 +208,21 @@ impl App {
                 self.set_state(State::InWorld { realm, parcel });
             }
             (EngineEvent::SceneCrashed, State::InWorld { .. }) => self.events.scene_crashed(),
+            (EngineEvent::Hud(snapshot), State::InWorld { .. }) => {
+                self.events.hud(&snapshot);
+                self.last_hud = Some(snapshot);
+            }
+            (EngineEvent::Chat(line), _) => self.events.chat(&line),
+            (EngineEvent::UnreadChat(count), _) => self.events.unread_chat(count),
+            (EngineEvent::UiState(ui), _) => self.events.ui_state(&ui),
+            (EngineEvent::OpenBackpack { emotes }, _) => self.events.open_backpack(emotes),
+            (EngineEvent::LoadingDetail(detail), State::Loading { .. }) => {
+                self.events.loading_detail(&detail)
+            }
+            (EngineEvent::Avatar(avatar), _) => {
+                self.events.avatar_changed(&avatar);
+                self.avatar = Some(avatar);
+            }
             _ => {}
         }
     }

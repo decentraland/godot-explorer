@@ -30,6 +30,8 @@ pub struct GatesState {
     pub campaign_token_captured_at: i64,
     /// One campaign per install: set once a launch booted into its target.
     pub campaign_consumed: bool,
+    /// The terms version the player accepted; 0 until they do.
+    pub terms_accepted_version: u32,
 }
 
 pub struct StateStore {
@@ -48,7 +50,10 @@ impl StateStore {
                 );
                 GatesState::default()
             }),
-            Err(e) if e.kind() == io::ErrorKind::NotFound => GatesState::default(),
+            Err(e) if e.kind() == io::ErrorKind::NotFound => GatesState {
+                terms_accepted_version: legacy_terms_version(&path),
+                ..GatesState::default()
+            },
             Err(e) => {
                 tracing::warn!(
                     "[Gates] cannot read {} ({e}), starting fresh",
@@ -92,6 +97,30 @@ impl StateStore {
     }
 }
 
+/// The terms version the Godot client saved in `settings.cfg` (`[user] terms_and_conditions_version`),
+/// so an upgrade does not ask for the terms again.
+fn legacy_terms_version(gates_path: &Path) -> u32 {
+    let Some(cfg) = gates_path.parent().map(|dir| dir.join("settings.cfg")) else {
+        return 0;
+    };
+    let Ok(text) = std::fs::read_to_string(cfg) else {
+        return 0;
+    };
+    let mut in_user = false;
+    for line in text.lines().map(str::trim) {
+        if let Some(section) = line.strip_prefix('[').and_then(|l| l.strip_suffix(']')) {
+            in_user = section == "user";
+        } else if in_user {
+            if let Some(("terms_and_conditions_version", value)) =
+                line.split_once('=').map(|(k, v)| (k.trim(), v.trim()))
+            {
+                return value.parse().unwrap_or(0);
+            }
+        }
+    }
+    0
+}
+
 /// Through a temp file and a rename, so a kill mid-write never leaves half a file.
 fn write(path: &Path, state: &GatesState) -> io::Result<()> {
     let text = serde_json::to_string_pretty(state)?;
@@ -123,6 +152,30 @@ mod tests {
         assert!(reopened.below_minspec_modal_shown);
         assert_eq!(reopened.campaign_token, "summer-26");
         assert_eq!(reopened.end_of_device_support_modal_shown_count, 0);
+    }
+
+    #[test]
+    fn the_terms_version_1x_saved_carries_over_once() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(
+            dir.path().join("settings.cfg"),
+            "[config]\nlocale=\"en\"\n\n[user]\nterms_and_conditions_version=1\n",
+        )
+        .unwrap();
+        let path = dir.path().join(FILE);
+        assert_eq!(
+            StateStore::open(path.clone()).get().terms_accepted_version,
+            1
+        );
+
+        let store = StateStore::open(path.clone());
+        store
+            .update(|s| GatesState {
+                terms_accepted_version: 2,
+                ..s.clone()
+            })
+            .unwrap();
+        assert_eq!(StateStore::open(path).get().terms_accepted_version, 2);
     }
 
     #[test]

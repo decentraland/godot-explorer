@@ -186,3 +186,20 @@ async fn resolve(input: String, secret: Option<String>) -> Result<ResolvedDestin
     })
     .await
 }
+
+/// The terms version this build asks players to accept.
+#[uniffi::export]
+pub fn terms_version() -> u32 {
+    crate::gates::TERMS_VERSION
+}
+
+/// The terms version the player accepted; 0 until they do.
+#[uniffi::export]
+pub fn terms_accepted_version() -> Result<u32, CoreError> {
+    Ok(gates()?.terms_accepted_version())
+}
+
+#[uniffi::export]
+pub fn accept_terms(version: u32) -> Result<(), CoreError> {
+    gates()?.accept_terms(version).map_err(io_error)
+}

@@ -39,7 +39,9 @@ describe('mock core', () => {
     expect(core().state().tag).toBe('SigningIn');
 
     const wrong = core().signInEmailVerify('a@b.c', '000000');
-    const rejected = expect(wrong).rejects.toMatchObject({ inner: { code: 'invalid_code' } });
+    const rejected = expect(wrong).rejects.toMatchObject({
+      inner: { code: 'invalid_code' },
+    });
     jest.runAllTimers();
     await rejected;
     expect(errors).toEqual(['invalid_code']);
@@ -67,6 +69,15 @@ describe('mock core', () => {
       sceneCrashed: () => {},
       authError: () => {},
       openUrl: () => {},
+      friendsChanged: () => {},
+      settingsChanged: () => {},
+      hud: () => {},
+      chat: () => {},
+      unreadChat: () => {},
+      uiState: () => {},
+      openBackpack: () => {},
+      loadingDetail: () => {},
+      avatarChanged: () => {},
     });
     core().removeListener(id);
     core().signOut();

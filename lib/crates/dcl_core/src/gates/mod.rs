@@ -11,6 +11,9 @@ pub mod state;
 pub mod urls;
 pub mod version;
 
+/// Bump when the terms change: everyone is asked again.
+pub const TERMS_VERSION: u32 = 1;
+
 #[cfg(test)]
 mod test_support;
 
@@ -104,6 +107,18 @@ impl Gates {
             (self.now)(),
         )
         .await
+    }
+
+    /// The terms version the player accepted; 0 when they have not.
+    pub fn terms_accepted_version(&self) -> u32 {
+        self.store.get().terms_accepted_version
+    }
+
+    pub fn accept_terms(&self, version: u32) -> io::Result<()> {
+        self.store.update(|s| state::GatesState {
+            terms_accepted_version: version,
+            ..s.clone()
+        })
     }
 
     /// "Later" on the optional update: silent for a day.

@@ -14,8 +14,7 @@ export function authCode(error: unknown): string | undefined {
 
 export const startGuest = () => core().signInGuest();
 
-export const sendEmailCode = (email: string) =>
-  core().signInEmailStart(email);
+export const sendEmailCode = (email: string) => core().signInEmailStart(email);
 
 export const verifyEmailCode = (email: string, code: string) =>
   core().signInEmailVerify(email, code);
@@ -41,4 +40,11 @@ export function whenSignedIn(): Promise<void> {
       done(resolve);
     }
   });
+}
+
+/** Who just signed in: a profile with a name means a returning account (welcome back). */
+export async function welcome(): Promise<AuthResult> {
+  const profile = await core().profile(undefined);
+  const name = profile.name.trim();
+  return { hasProfile: name.length > 0, name };
 }

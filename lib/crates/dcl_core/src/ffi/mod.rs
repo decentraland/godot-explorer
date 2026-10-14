@@ -9,6 +9,7 @@ use crate::{
     Core,
 };
 
+mod control;
 mod gates;
 mod notifications;
 mod places;
@@ -79,6 +80,14 @@ pub trait AppListener: Send + Sync {
     fn open_url(&self, request: OpenUrl);
     fn friends_changed(&self);
     fn settings_changed(&self, entry: crate::settings::SettingEntry);
+    /// The player's whereabouts, a few times a second while in a world.
+    fn hud(&self, snapshot: crate::app::HudSnapshot);
+    fn chat(&self, line: crate::app::ChatLine);
+    fn unread_chat(&self, count: u32);
+    fn ui_state(&self, state: crate::app::UiState);
+    fn open_backpack(&self, emotes: bool);
+    fn loading_detail(&self, detail: crate::app::LoadingDetail);
+    fn avatar_changed(&self, avatar: crate::app::AvatarState);
 }
 
 struct ListenerAdapter(Arc<dyn AppListener>);
@@ -103,6 +112,27 @@ impl AppEvents for ListenerAdapter {
     }
     fn settings_changed(&self, entry: &crate::settings::SettingEntry) {
         self.0.settings_changed(entry.clone());
+    }
+    fn hud(&self, snapshot: &crate::app::HudSnapshot) {
+        self.0.hud(snapshot.clone());
+    }
+    fn chat(&self, line: &crate::app::ChatLine) {
+        self.0.chat(line.clone());
+    }
+    fn unread_chat(&self, count: u32) {
+        self.0.unread_chat(count);
+    }
+    fn ui_state(&self, state: &crate::app::UiState) {
+        self.0.ui_state(*state);
+    }
+    fn open_backpack(&self, emotes: bool) {
+        self.0.open_backpack(emotes);
+    }
+    fn loading_detail(&self, detail: &crate::app::LoadingDetail) {
+        self.0.loading_detail(*detail);
+    }
+    fn avatar_changed(&self, avatar: &crate::app::AvatarState) {
+        self.0.avatar_changed(avatar.clone());
     }
     fn scene_crashed(&self) {
         self.0.scene_crashed();

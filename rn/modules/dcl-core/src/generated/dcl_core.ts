@@ -92,6 +92,21 @@ export async function acceptFriendRequest(
   }
 }
 
+export function acceptTerms(version: number): void /*throws*/ {
+  uniffiCaller.rustCallWithError(
+    /*liftError:*/ FfiConverterTypeCoreError.lift.bind(
+      FfiConverterTypeCoreError,
+    ),
+    /*caller:*/ callStatus => {
+      nativeModule().ubrn_uniffi_dcl_core_fn_func_accept_terms(
+        FfiConverterUInt32.lower(version, nativeModule().rustbuffer_alloc),
+        callStatus,
+      );
+    },
+    /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+  );
+}
+
 /**
  * Registers the shell's receiver of the app's events. The id removes it again.
  */
@@ -130,6 +145,28 @@ export function address(): string | undefined /*throws*/ {
   );
   try {
     return FfiConverterOptionalString.lift(__rb);
+  } finally {
+    nativeModule().rustbuffer_free(__rb);
+  }
+}
+
+/**
+ * The equipped avatar as the engine last reported it.
+ */
+export function avatarState(): AvatarState | undefined /*throws*/ {
+  const __rb: Uint8Array = uniffiCaller.rustCallWithError(
+    /*liftError:*/ FfiConverterTypeCoreError.lift.bind(
+      FfiConverterTypeCoreError,
+    ),
+    /*caller:*/ callStatus => {
+      return nativeModule().ubrn_uniffi_dcl_core_fn_func_avatar_state(
+        callStatus,
+      );
+    },
+    /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+  );
+  try {
+    return FfiConverterOptionalTypeAvatarState.lift(__rb);
   } finally {
     nativeModule().rustbuffer_free(__rb);
   }
@@ -185,6 +222,56 @@ export function cacheSize(): CacheSize /*throws*/ {
   }
 }
 
+/**
+ * `pending_campaign` plus the token and the reason it fell back, for the first-run metrics.
+ */
+export async function campaignResolution(asyncOpts_?: {
+  signal: AbortSignal;
+}): Promise<CampaignResolution> /*throws*/ {
+  const __stack = uniffiIsDebug ? new Error().stack : undefined;
+  try {
+    return await uniffiRustCallAsync(
+      /*rustCaller:*/ uniffiCaller,
+      /*rustFutureFunc:*/ () => {
+        return nativeModule().ubrn_uniffi_dcl_core_fn_func_campaign_resolution();
+      },
+      /*pollFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_poll_rust_buffer,
+      /*cancelFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_cancel_rust_buffer,
+      /*completeFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_complete_rust_buffer,
+      /*freeFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_free_rust_buffer,
+      // Async returns always go through the JS-side converter: the
+      // FFI symbol returns the future handle (u64), and the user-level
+      // RustBuffer comes back via the shared `rust_future_complete_*`
+      // export. The bytes the runtime hands back must be deserialized
+      // here using the per-callable return-type converter.
+      // Borrowed view over foreign memory: the call site owns the free,
+      // as on the sync paths. Unconditional — a no-op where buffers are
+      // already JS-owned.
+      /*liftFunc:*/ __rb => {
+        try {
+          return FfiConverterTypeCampaignResolution.lift(__rb);
+        } finally {
+          nativeModule().rustbuffer_free(__rb);
+        }
+      },
+      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+      /*asyncOpts:*/ asyncOpts_,
+      /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(
+        FfiConverterTypeCoreError,
+      ),
+    );
+  } catch (__error: any) {
+    if (uniffiIsDebug && __error instanceof Error) {
+      __error.stack = __stack;
+    }
+    throw __error;
+  }
+}
+
 export async function cancelFriendRequest(
   address: string,
   asyncOpts_?: { signal: AbortSignal },
@@ -231,6 +318,77 @@ export function cancelSignIn(): void /*throws*/ {
     },
     /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
   );
+}
+
+/**
+ * Remembers the token of a link or of the install attribution; the first one wins. `true` when
+ * it was stored.
+ */
+export function captureCampaignToken(token: string): boolean /*throws*/ {
+  return FfiConverterBool.lift(
+    uniffiCaller.rustCallWithError(
+      /*liftError:*/ FfiConverterTypeCoreError.lift.bind(
+        FfiConverterTypeCoreError,
+      ),
+      /*caller:*/ callStatus => {
+        return nativeModule().ubrn_uniffi_dcl_core_fn_func_capture_campaign_token(
+          FfiConverterString.lower(token, nativeModule().rustbuffer_alloc),
+          callStatus,
+        );
+      },
+      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+    ),
+  );
+}
+
+/**
+ * Captures the viewport and returns the absolute path of the PNG.
+ */
+export async function captureScreenshot(asyncOpts_?: {
+  signal: AbortSignal;
+}): Promise<string> /*throws*/ {
+  const __stack = uniffiIsDebug ? new Error().stack : undefined;
+  try {
+    return await uniffiRustCallAsync(
+      /*rustCaller:*/ uniffiCaller,
+      /*rustFutureFunc:*/ () => {
+        return nativeModule().ubrn_uniffi_dcl_core_fn_func_capture_screenshot();
+      },
+      /*pollFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_poll_rust_buffer,
+      /*cancelFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_cancel_rust_buffer,
+      /*completeFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_complete_rust_buffer,
+      /*freeFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_free_rust_buffer,
+      // Async returns always go through the JS-side converter: the
+      // FFI symbol returns the future handle (u64), and the user-level
+      // RustBuffer comes back via the shared `rust_future_complete_*`
+      // export. The bytes the runtime hands back must be deserialized
+      // here using the per-callable return-type converter.
+      // Borrowed view over foreign memory: the call site owns the free,
+      // as on the sync paths. Unconditional — a no-op where buffers are
+      // already JS-owned.
+      /*liftFunc:*/ __rb => {
+        try {
+          return FfiConverterString.lift(__rb);
+        } finally {
+          nativeModule().rustbuffer_free(__rb);
+        }
+      },
+      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+      /*asyncOpts:*/ asyncOpts_,
+      /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(
+        FfiConverterTypeCoreError,
+      ),
+    );
+  } catch (__error: any) {
+    if (uniffiIsDebug && __error instanceof Error) {
+      __error.stack = __stack;
+    }
+    throw __error;
+  }
 }
 
 /**
@@ -293,6 +451,140 @@ export async function completeBrowser(
         .ubrn_ffi_dcl_core_rust_future_complete_void,
       /*freeFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_free_void,
       /*liftFunc:*/ _v => {},
+      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+      /*asyncOpts:*/ asyncOpts_,
+      /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(
+        FfiConverterTypeCoreError,
+      ),
+    );
+  } catch (__error: any) {
+    if (uniffiIsDebug && __error instanceof Error) {
+      __error.stack = __stack;
+    }
+    throw __error;
+  }
+}
+
+/**
+ * The launch booted into the campaign's target: one campaign per install.
+ */
+export function consumeCampaign(): void /*throws*/ {
+  uniffiCaller.rustCallWithError(
+    /*liftError:*/ FfiConverterTypeCoreError.lift.bind(
+      FfiConverterTypeCoreError,
+    ),
+    /*caller:*/ callStatus => {
+      nativeModule().ubrn_uniffi_dcl_core_fn_func_consume_campaign(callStatus);
+    },
+    /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+  );
+}
+
+/**
+ * A command for the running engine; ignored when there is nothing to apply it to.
+ */
+export function control(command: Control): void /*throws*/ {
+  uniffiCaller.rustCallWithError(
+    /*liftError:*/ FfiConverterTypeCoreError.lift.bind(
+      FfiConverterTypeCoreError,
+    ),
+    /*caller:*/ callStatus => {
+      nativeModule().ubrn_uniffi_dcl_core_fn_func_control(
+        FfiConverterTypeControl.lower(command, nativeModule().rustbuffer_alloc),
+        callStatus,
+      );
+    },
+    /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+  );
+}
+
+/**
+ * Spendable credits of the signed-in wallet.
+ */
+export async function creditsBalance(asyncOpts_?: {
+  signal: AbortSignal;
+}): Promise<CreditsBalance> /*throws*/ {
+  const __stack = uniffiIsDebug ? new Error().stack : undefined;
+  try {
+    return await uniffiRustCallAsync(
+      /*rustCaller:*/ uniffiCaller,
+      /*rustFutureFunc:*/ () => {
+        return nativeModule().ubrn_uniffi_dcl_core_fn_func_credits_balance();
+      },
+      /*pollFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_poll_rust_buffer,
+      /*cancelFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_cancel_rust_buffer,
+      /*completeFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_complete_rust_buffer,
+      /*freeFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_free_rust_buffer,
+      // Async returns always go through the JS-side converter: the
+      // FFI symbol returns the future handle (u64), and the user-level
+      // RustBuffer comes back via the shared `rust_future_complete_*`
+      // export. The bytes the runtime hands back must be deserialized
+      // here using the per-callable return-type converter.
+      // Borrowed view over foreign memory: the call site owns the free,
+      // as on the sync paths. Unconditional — a no-op where buffers are
+      // already JS-owned.
+      /*liftFunc:*/ __rb => {
+        try {
+          return FfiConverterTypeCreditsBalance.lift(__rb);
+        } finally {
+          nativeModule().rustbuffer_free(__rb);
+        }
+      },
+      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+      /*asyncOpts:*/ asyncOpts_,
+      /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(
+        FfiConverterTypeCoreError,
+      ),
+    );
+  } catch (__error: any) {
+    if (uniffiIsDebug && __error instanceof Error) {
+      __error.stack = __stack;
+    }
+    throw __error;
+  }
+}
+
+/**
+ * Title, creator, parcel and realm of the scene the player is in. The creator comes from the
+ * destinations API and stays empty when the lookup fails.
+ */
+export async function currentScene(asyncOpts_?: {
+  signal: AbortSignal;
+}): Promise<CurrentScene> /*throws*/ {
+  const __stack = uniffiIsDebug ? new Error().stack : undefined;
+  try {
+    return await uniffiRustCallAsync(
+      /*rustCaller:*/ uniffiCaller,
+      /*rustFutureFunc:*/ () => {
+        return nativeModule().ubrn_uniffi_dcl_core_fn_func_current_scene();
+      },
+      /*pollFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_poll_rust_buffer,
+      /*cancelFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_cancel_rust_buffer,
+      /*completeFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_complete_rust_buffer,
+      /*freeFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_free_rust_buffer,
+      // Async returns always go through the JS-side converter: the
+      // FFI symbol returns the future handle (u64), and the user-level
+      // RustBuffer comes back via the shared `rust_future_complete_*`
+      // export. The bytes the runtime hands back must be deserialized
+      // here using the per-callable return-type converter.
+      // Borrowed view over foreign memory: the call site owns the free,
+      // as on the sync paths. Unconditional — a no-op where buffers are
+      // already JS-owned.
+      /*liftFunc:*/ __rb => {
+        try {
+          return FfiConverterTypeCurrentScene.lift(__rb);
+        } finally {
+          nativeModule().rustbuffer_free(__rb);
+        }
+      },
       /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
       /*asyncOpts:*/ asyncOpts_,
       /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(
@@ -379,6 +671,351 @@ export async function debugFireEvents(
       // export. The bytes the runtime hands back must be deserialized
       // here using the per-callable return-type converter.
       /*liftFunc:*/ FfiConverterUInt32.lift.bind(FfiConverterUInt32),
+      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+      /*asyncOpts:*/ asyncOpts_,
+      /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(
+        FfiConverterTypeCoreError,
+      ),
+    );
+  } catch (__error: any) {
+    if (uniffiIsDebug && __error instanceof Error) {
+      __error.stack = __stack;
+    }
+    throw __error;
+  }
+}
+
+/**
+ * Asks the server to delete the account; the request is processed on its side.
+ */
+export async function deleteAccount(asyncOpts_?: {
+  signal: AbortSignal;
+}): Promise<void> /*throws*/ {
+  const __stack = uniffiIsDebug ? new Error().stack : undefined;
+  try {
+    return await uniffiRustCallAsync(
+      /*rustCaller:*/ uniffiCaller,
+      /*rustFutureFunc:*/ () => {
+        return nativeModule().ubrn_uniffi_dcl_core_fn_func_delete_account();
+      },
+      /*pollFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_poll_void,
+      /*cancelFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_cancel_void,
+      /*completeFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_complete_void,
+      /*freeFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_free_void,
+      /*liftFunc:*/ _v => {},
+      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+      /*asyncOpts:*/ asyncOpts_,
+      /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(
+        FfiConverterTypeCoreError,
+      ),
+    );
+  } catch (__error: any) {
+    if (uniffiIsDebug && __error instanceof Error) {
+      __error.stack = __stack;
+    }
+    throw __error;
+  }
+}
+
+/**
+ * Applies the edits to the own profile and publishes it; returns the profile as published.
+ */
+export async function deployProfile(
+  update: ProfileUpdate,
+  asyncOpts_?: { signal: AbortSignal },
+): Promise<Profile> /*throws*/ {
+  const __stack = uniffiIsDebug ? new Error().stack : undefined;
+  try {
+    return await uniffiRustCallAsync(
+      /*rustCaller:*/ uniffiCaller,
+      /*rustFutureFunc:*/ () => {
+        return nativeModule().ubrn_uniffi_dcl_core_fn_func_deploy_profile(
+          FfiConverterTypeProfileUpdate.lower(
+            update,
+            nativeModule().rustbuffer_alloc,
+          ),
+        );
+      },
+      /*pollFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_poll_rust_buffer,
+      /*cancelFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_cancel_rust_buffer,
+      /*completeFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_complete_rust_buffer,
+      /*freeFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_free_rust_buffer,
+      // Async returns always go through the JS-side converter: the
+      // FFI symbol returns the future handle (u64), and the user-level
+      // RustBuffer comes back via the shared `rust_future_complete_*`
+      // export. The bytes the runtime hands back must be deserialized
+      // here using the per-callable return-type converter.
+      // Borrowed view over foreign memory: the call site owns the free,
+      // as on the sync paths. Unconditional — a no-op where buffers are
+      // already JS-owned.
+      /*liftFunc:*/ __rb => {
+        try {
+          return FfiConverterTypeProfile.lift(__rb);
+        } finally {
+          nativeModule().rustbuffer_free(__rb);
+        }
+      },
+      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+      /*asyncOpts:*/ asyncOpts_,
+      /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(
+        FfiConverterTypeCoreError,
+      ),
+    );
+  } catch (__error: any) {
+    if (uniffiIsDebug && __error instanceof Error) {
+      __error.stack = __stack;
+    }
+    throw __error;
+  }
+}
+
+/**
+ * Whether the device is end-of-support or below the minimum spec, and which modal is due.
+ */
+export async function deviceSupport(
+  facts: DeviceFacts,
+  asyncOpts_?: { signal: AbortSignal },
+): Promise<DeviceSupport> /*throws*/ {
+  const __stack = uniffiIsDebug ? new Error().stack : undefined;
+  try {
+    return await uniffiRustCallAsync(
+      /*rustCaller:*/ uniffiCaller,
+      /*rustFutureFunc:*/ () => {
+        return nativeModule().ubrn_uniffi_dcl_core_fn_func_device_support(
+          FfiConverterTypeDeviceFacts.lower(
+            facts,
+            nativeModule().rustbuffer_alloc,
+          ),
+        );
+      },
+      /*pollFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_poll_rust_buffer,
+      /*cancelFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_cancel_rust_buffer,
+      /*completeFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_complete_rust_buffer,
+      /*freeFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_free_rust_buffer,
+      // Async returns always go through the JS-side converter: the
+      // FFI symbol returns the future handle (u64), and the user-level
+      // RustBuffer comes back via the shared `rust_future_complete_*`
+      // export. The bytes the runtime hands back must be deserialized
+      // here using the per-callable return-type converter.
+      // Borrowed view over foreign memory: the call site owns the free,
+      // as on the sync paths. Unconditional — a no-op where buffers are
+      // already JS-owned.
+      /*liftFunc:*/ __rb => {
+        try {
+          return FfiConverterTypeDeviceSupport.lift(__rb);
+        } finally {
+          nativeModule().rustbuffer_free(__rb);
+        }
+      },
+      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+      /*asyncOpts:*/ asyncOpts_,
+      /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(
+        FfiConverterTypeCoreError,
+      ),
+    );
+  } catch (__error: any) {
+    if (uniffiIsDebug && __error instanceof Error) {
+      __error.stack = __stack;
+    }
+    throw __error;
+  }
+}
+
+/**
+ * The host showed `modal`; the cadence moves on.
+ */
+export function deviceSupportModalShown(modal: SupportModal): void /*throws*/ {
+  uniffiCaller.rustCallWithError(
+    /*liftError:*/ FfiConverterTypeCoreError.lift.bind(
+      FfiConverterTypeCoreError,
+    ),
+    /*caller:*/ callStatus => {
+      nativeModule().ubrn_uniffi_dcl_core_fn_func_device_support_modal_shown(
+        FfiConverterTypeSupportModal.lower(
+          modal,
+          nativeModule().rustbuffer_alloc,
+        ),
+        callStatus,
+      );
+    },
+    /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+  );
+}
+
+/**
+ * Enters a world; also valid while loading or in one, where it replaces the destination.
+ */
+export function enterWorld(destination: Destination): void /*throws*/ {
+  uniffiCaller.rustCallWithError(
+    /*liftError:*/ FfiConverterTypeCoreError.lift.bind(
+      FfiConverterTypeCoreError,
+    ),
+    /*caller:*/ callStatus => {
+      nativeModule().ubrn_uniffi_dcl_core_fn_func_enter_world(
+        FfiConverterTypeDestination.lower(
+          destination,
+          nativeModule().rustbuffer_alloc,
+        ),
+        callStatus,
+      );
+    },
+    /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+  );
+}
+
+export function environment(): Environment {
+  const __rb: Uint8Array = uniffiCaller.rustCall(
+    /*caller:*/ callStatus => {
+      return nativeModule().ubrn_uniffi_dcl_core_fn_func_environment(
+        callStatus,
+      );
+    },
+    /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+  );
+  try {
+    return FfiConverterTypeEnvironment.lift(__rb);
+  } finally {
+    nativeModule().rustbuffer_free(__rb);
+  }
+}
+
+export function eventUrl(eventId: string): string {
+  const __rb: Uint8Array = uniffiCaller.rustCall(
+    /*caller:*/ callStatus => {
+      return nativeModule().ubrn_uniffi_dcl_core_fn_func_event_url(
+        FfiConverterString.lower(eventId, nativeModule().rustbuffer_alloc),
+        callStatus,
+      );
+    },
+    /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+  );
+  try {
+    return FfiConverterString.lift(__rb);
+  } finally {
+    nativeModule().rustbuffer_free(__rb);
+  }
+}
+
+/**
+ * Leaves the world and keeps the session.
+ */
+export function exitWorld(): void /*throws*/ {
+  uniffiCaller.rustCallWithError(
+    /*liftError:*/ FfiConverterTypeCoreError.lift.bind(
+      FfiConverterTypeCoreError,
+    ),
+    /*caller:*/ callStatus => {
+      nativeModule().ubrn_uniffi_dcl_core_fn_func_exit_world(callStatus);
+    },
+    /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+  );
+}
+
+/**
+ * One page of the user's favorite places; `search` narrows it by text (and ignores `offset`).
+ */
+export async function favoritePlaces(
+  offset: number,
+  limit: number,
+  search: string | undefined,
+  asyncOpts_?: { signal: AbortSignal },
+): Promise<Array<Place>> /*throws*/ {
+  const __stack = uniffiIsDebug ? new Error().stack : undefined;
+  try {
+    return await uniffiRustCallAsync(
+      /*rustCaller:*/ uniffiCaller,
+      /*rustFutureFunc:*/ () => {
+        return nativeModule().ubrn_uniffi_dcl_core_fn_func_favorite_places(
+          FfiConverterUInt32.lower(offset, nativeModule().rustbuffer_alloc),
+          FfiConverterUInt32.lower(limit, nativeModule().rustbuffer_alloc),
+          FfiConverterOptionalString.lower(
+            search,
+            nativeModule().rustbuffer_alloc,
+          ),
+        );
+      },
+      /*pollFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_poll_rust_buffer,
+      /*cancelFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_cancel_rust_buffer,
+      /*completeFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_complete_rust_buffer,
+      /*freeFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_free_rust_buffer,
+      // Async returns always go through the JS-side converter: the
+      // FFI symbol returns the future handle (u64), and the user-level
+      // RustBuffer comes back via the shared `rust_future_complete_*`
+      // export. The bytes the runtime hands back must be deserialized
+      // here using the per-callable return-type converter.
+      // Borrowed view over foreign memory: the call site owns the free,
+      // as on the sync paths. Unconditional — a no-op where buffers are
+      // already JS-owned.
+      /*liftFunc:*/ __rb => {
+        try {
+          return FfiConverterSequenceTypePlace.lift(__rb);
+        } finally {
+          nativeModule().rustbuffer_free(__rb);
+        }
+      },
+      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+      /*asyncOpts:*/ asyncOpts_,
+      /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(
+        FfiConverterTypeCoreError,
+      ),
+    );
+  } catch (__error: any) {
+    if (uniffiIsDebug && __error instanceof Error) {
+      __error.stack = __stack;
+    }
+    throw __error;
+  }
+}
+
+/**
+ * The host or the shell drew the first screen: the point at which the engine may start early.
+ */
+export function firstScreenDrawn(): void /*throws*/ {
+  uniffiCaller.rustCallWithError(
+    /*liftError:*/ FfiConverterTypeCoreError.lift.bind(
+      FfiConverterTypeCoreError,
+    ),
+    /*caller:*/ callStatus => {
+      nativeModule().ubrn_uniffi_dcl_core_fn_func_first_screen_drawn(
+        callStatus,
+      );
+    },
+    /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+  );
+}
+
+/**
+ * Ships everything pending now; the shell calls it when the app goes to the background.
+ */
+export async function flushAnalytics(asyncOpts_?: {
+  signal: AbortSignal;
+}): Promise<void> /*throws*/ {
+  const __stack = uniffiIsDebug ? new Error().stack : undefined;
+  try {
+    return await uniffiRustCallAsync(
+      /*rustCaller:*/ uniffiCaller,
+      /*rustFutureFunc:*/ () => {
+        return nativeModule().ubrn_uniffi_dcl_core_fn_func_flush_analytics();
+      },
+      /*pollFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_poll_void,
+      /*cancelFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_cancel_void,
+      /*completeFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_complete_void,
+      /*freeFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_free_void,
+      /*liftFunc:*/ _v => {},
       /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
       /*asyncOpts:*/ asyncOpts_,
       /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(
@@ -526,6 +1163,20 @@ export function handleDeepLink(
   }
 }
 
+export function hideAvatarPreview(): void /*throws*/ {
+  uniffiCaller.rustCallWithError(
+    /*liftError:*/ FfiConverterTypeCoreError.lift.bind(
+      FfiConverterTypeCoreError,
+    ),
+    /*caller:*/ callStatus => {
+      nativeModule().ubrn_uniffi_dcl_core_fn_func_hide_avatar_preview(
+        callStatus,
+      );
+    },
+    /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+  );
+}
+
 /**
  * How many times the process asked to install a core; the engine asserts it is not a second one.
  */
@@ -538,6 +1189,137 @@ export function installs(): number {
       /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
     ),
   );
+}
+
+/**
+ * Web link that opens the explorer at a Genesis City position, `"x,y"`.
+ */
+export function jumpPositionUrl(position: string): string {
+  const __rb: Uint8Array = uniffiCaller.rustCall(
+    /*caller:*/ callStatus => {
+      return nativeModule().ubrn_uniffi_dcl_core_fn_func_jump_position_url(
+        FfiConverterString.lower(position, nativeModule().rustbuffer_alloc),
+        callStatus,
+      );
+    },
+    /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+  );
+  try {
+    return FfiConverterString.lift(__rb);
+  } finally {
+    nativeModule().rustbuffer_free(__rb);
+  }
+}
+
+/**
+ * Web link that opens the explorer in a world.
+ */
+export function jumpRealmUrl(realm: string): string {
+  const __rb: Uint8Array = uniffiCaller.rustCall(
+    /*caller:*/ callStatus => {
+      return nativeModule().ubrn_uniffi_dcl_core_fn_func_jump_realm_url(
+        FfiConverterString.lower(realm, nativeModule().rustbuffer_alloc),
+        callStatus,
+      );
+    },
+    /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+  );
+  try {
+    return FfiConverterString.lift(__rb);
+  } finally {
+    nativeModule().rustbuffer_free(__rb);
+  }
+}
+
+/**
+ * Marks the notifications read and returns how many the service updated.
+ */
+export async function markNotificationsRead(
+  ids: Array<string>,
+  asyncOpts_?: { signal: AbortSignal },
+): Promise<number> /*throws*/ {
+  const __stack = uniffiIsDebug ? new Error().stack : undefined;
+  try {
+    return await uniffiRustCallAsync(
+      /*rustCaller:*/ uniffiCaller,
+      /*rustFutureFunc:*/ () => {
+        return nativeModule().ubrn_uniffi_dcl_core_fn_func_mark_notifications_read(
+          FfiConverterSequenceString.lower(
+            ids,
+            nativeModule().rustbuffer_alloc,
+          ),
+        );
+      },
+      /*pollFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_poll_u32,
+      /*cancelFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_cancel_u32,
+      /*completeFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_complete_u32,
+      /*freeFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_free_u32,
+      // Async returns always go through the JS-side converter: the
+      // FFI symbol returns the future handle (u64), and the user-level
+      // RustBuffer comes back via the shared `rust_future_complete_*`
+      // export. The bytes the runtime hands back must be deserialized
+      // here using the per-callable return-type converter.
+      /*liftFunc:*/ FfiConverterUInt32.lift.bind(FfiConverterUInt32),
+      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+      /*asyncOpts:*/ asyncOpts_,
+      /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(
+        FfiConverterTypeCoreError,
+      ),
+    );
+  } catch (__error: any) {
+    if (uniffiIsDebug && __error instanceof Error) {
+      __error.stack = __stack;
+    }
+    throw __error;
+  }
+}
+
+/**
+ * The catalog page of a backpack section (`"wearables"` or `"emotes"`).
+ */
+export function marketplaceBrowseUrl(section: string): string {
+  const __rb: Uint8Array = uniffiCaller.rustCall(
+    /*caller:*/ callStatus => {
+      return nativeModule().ubrn_uniffi_dcl_core_fn_func_marketplace_browse_url(
+        FfiConverterString.lower(section, nativeModule().rustbuffer_alloc),
+        callStatus,
+      );
+    },
+    /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+  );
+  try {
+    return FfiConverterString.lift(__rb);
+  } finally {
+    nativeModule().rustbuffer_free(__rb);
+  }
+}
+
+/**
+ * The detail page of a catalog item.
+ */
+export function marketplaceItemUrl(
+  contractAddress: string,
+  itemId: string,
+): string {
+  const __rb: Uint8Array = uniffiCaller.rustCall(
+    /*caller:*/ callStatus => {
+      return nativeModule().ubrn_uniffi_dcl_core_fn_func_marketplace_item_url(
+        FfiConverterString.lower(
+          contractAddress,
+          nativeModule().rustbuffer_alloc,
+        ),
+        FfiConverterString.lower(itemId, nativeModule().rustbuffer_alloc),
+        callStatus,
+      );
+    },
+    /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+  );
+  try {
+    return FfiConverterString.lift(__rb);
+  } finally {
+    nativeModule().rustbuffer_free(__rb);
+  }
 }
 
 /**
@@ -572,6 +1354,279 @@ export async function nearby(asyncOpts_?: {
       /*liftFunc:*/ __rb => {
         try {
           return FfiConverterSequenceTypeNearbyUser.lift(__rb);
+        } finally {
+          nativeModule().rustbuffer_free(__rb);
+        }
+      },
+      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+      /*asyncOpts:*/ asyncOpts_,
+      /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(
+        FfiConverterTypeCoreError,
+      ),
+    );
+  } catch (__error: any) {
+    if (uniffiIsDebug && __error instanceof Error) {
+      __error.stack = __stack;
+    }
+    throw __error;
+  }
+}
+
+/**
+ * The user's notifications, newest first. `limit` is clamped to 50. Friend requests from blocked
+ * senders are not dropped yet: the blocklist is not in the core.
+ */
+export async function notifications(
+  from: bigint | undefined,
+  limit: number | undefined,
+  onlyUnread: boolean,
+  asyncOpts_?: { signal: AbortSignal },
+): Promise<Array<Notification>> /*throws*/ {
+  const __stack = uniffiIsDebug ? new Error().stack : undefined;
+  try {
+    return await uniffiRustCallAsync(
+      /*rustCaller:*/ uniffiCaller,
+      /*rustFutureFunc:*/ () => {
+        return nativeModule().ubrn_uniffi_dcl_core_fn_func_notifications(
+          FfiConverterOptionalInt64.lower(
+            from,
+            nativeModule().rustbuffer_alloc,
+          ),
+          FfiConverterOptionalUInt32.lower(
+            limit,
+            nativeModule().rustbuffer_alloc,
+          ),
+          FfiConverterBool.lower(onlyUnread, nativeModule().rustbuffer_alloc),
+        );
+      },
+      /*pollFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_poll_rust_buffer,
+      /*cancelFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_cancel_rust_buffer,
+      /*completeFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_complete_rust_buffer,
+      /*freeFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_free_rust_buffer,
+      // Async returns always go through the JS-side converter: the
+      // FFI symbol returns the future handle (u64), and the user-level
+      // RustBuffer comes back via the shared `rust_future_complete_*`
+      // export. The bytes the runtime hands back must be deserialized
+      // here using the per-callable return-type converter.
+      // Borrowed view over foreign memory: the call site owns the free,
+      // as on the sync paths. Unconditional — a no-op where buffers are
+      // already JS-owned.
+      /*liftFunc:*/ __rb => {
+        try {
+          return FfiConverterSequenceTypeNotification.lift(__rb);
+        } finally {
+          nativeModule().rustbuffer_free(__rb);
+        }
+      },
+      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+      /*asyncOpts:*/ asyncOpts_,
+      /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(
+        FfiConverterTypeCoreError,
+      ),
+    );
+  } catch (__error: any) {
+    if (uniffiIsDebug && __error instanceof Error) {
+      __error.stack = __stack;
+    }
+    throw __error;
+  }
+}
+
+/**
+ * The claimed names the account owns.
+ */
+export async function ownedNames(asyncOpts_?: {
+  signal: AbortSignal;
+}): Promise<Array<string>> /*throws*/ {
+  const __stack = uniffiIsDebug ? new Error().stack : undefined;
+  try {
+    return await uniffiRustCallAsync(
+      /*rustCaller:*/ uniffiCaller,
+      /*rustFutureFunc:*/ () => {
+        return nativeModule().ubrn_uniffi_dcl_core_fn_func_owned_names();
+      },
+      /*pollFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_poll_rust_buffer,
+      /*cancelFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_cancel_rust_buffer,
+      /*completeFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_complete_rust_buffer,
+      /*freeFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_free_rust_buffer,
+      // Async returns always go through the JS-side converter: the
+      // FFI symbol returns the future handle (u64), and the user-level
+      // RustBuffer comes back via the shared `rust_future_complete_*`
+      // export. The bytes the runtime hands back must be deserialized
+      // here using the per-callable return-type converter.
+      // Borrowed view over foreign memory: the call site owns the free,
+      // as on the sync paths. Unconditional — a no-op where buffers are
+      // already JS-owned.
+      /*liftFunc:*/ __rb => {
+        try {
+          return FfiConverterSequenceString.lift(__rb);
+        } finally {
+          nativeModule().rustbuffer_free(__rb);
+        }
+      },
+      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+      /*asyncOpts:*/ asyncOpts_,
+      /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(
+        FfiConverterTypeCoreError,
+      ),
+    );
+  } catch (__error: any) {
+    if (uniffiIsDebug && __error instanceof Error) {
+      __error.stack = __stack;
+    }
+    throw __error;
+  }
+}
+
+/**
+ * The campaign that should drive this launch, `None` for the default first-run flow.
+ */
+export async function pendingCampaign(asyncOpts_?: {
+  signal: AbortSignal;
+}): Promise<Campaign | undefined> /*throws*/ {
+  const __stack = uniffiIsDebug ? new Error().stack : undefined;
+  try {
+    return await uniffiRustCallAsync(
+      /*rustCaller:*/ uniffiCaller,
+      /*rustFutureFunc:*/ () => {
+        return nativeModule().ubrn_uniffi_dcl_core_fn_func_pending_campaign();
+      },
+      /*pollFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_poll_rust_buffer,
+      /*cancelFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_cancel_rust_buffer,
+      /*completeFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_complete_rust_buffer,
+      /*freeFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_free_rust_buffer,
+      // Async returns always go through the JS-side converter: the
+      // FFI symbol returns the future handle (u64), and the user-level
+      // RustBuffer comes back via the shared `rust_future_complete_*`
+      // export. The bytes the runtime hands back must be deserialized
+      // here using the per-callable return-type converter.
+      // Borrowed view over foreign memory: the call site owns the free,
+      // as on the sync paths. Unconditional — a no-op where buffers are
+      // already JS-owned.
+      /*liftFunc:*/ __rb => {
+        try {
+          return FfiConverterOptionalTypeCampaign.lift(__rb);
+        } finally {
+          nativeModule().rustbuffer_free(__rb);
+        }
+      },
+      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+      /*asyncOpts:*/ asyncOpts_,
+      /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(
+        FfiConverterTypeCoreError,
+      ),
+    );
+  } catch (__error: any) {
+    if (uniffiIsDebug && __error instanceof Error) {
+      __error.stack = __stack;
+    }
+    throw __error;
+  }
+}
+
+/**
+ * The user's favorite flag and vote on a place; `None` when the service does not know it.
+ */
+export async function placeUserState(
+  placeId: string,
+  asyncOpts_?: { signal: AbortSignal },
+): Promise<PlaceUserState | undefined> /*throws*/ {
+  const __stack = uniffiIsDebug ? new Error().stack : undefined;
+  try {
+    return await uniffiRustCallAsync(
+      /*rustCaller:*/ uniffiCaller,
+      /*rustFutureFunc:*/ () => {
+        return nativeModule().ubrn_uniffi_dcl_core_fn_func_place_user_state(
+          FfiConverterString.lower(placeId, nativeModule().rustbuffer_alloc),
+        );
+      },
+      /*pollFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_poll_rust_buffer,
+      /*cancelFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_cancel_rust_buffer,
+      /*completeFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_complete_rust_buffer,
+      /*freeFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_free_rust_buffer,
+      // Async returns always go through the JS-side converter: the
+      // FFI symbol returns the future handle (u64), and the user-level
+      // RustBuffer comes back via the shared `rust_future_complete_*`
+      // export. The bytes the runtime hands back must be deserialized
+      // here using the per-callable return-type converter.
+      // Borrowed view over foreign memory: the call site owns the free,
+      // as on the sync paths. Unconditional — a no-op where buffers are
+      // already JS-owned.
+      /*liftFunc:*/ __rb => {
+        try {
+          return FfiConverterOptionalTypePlaceUserState.lift(__rb);
+        } finally {
+          nativeModule().rustbuffer_free(__rb);
+        }
+      },
+      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+      /*asyncOpts:*/ asyncOpts_,
+      /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(
+        FfiConverterTypeCoreError,
+      ),
+    );
+  } catch (__error: any) {
+    if (uniffiIsDebug && __error instanceof Error) {
+      __error.stack = __stack;
+    }
+    throw __error;
+  }
+}
+
+/**
+ * The own profile (`address` empty or `None`, or the signed-in address) or a public one.
+ */
+export async function profile(
+  address: string | undefined,
+  asyncOpts_?: { signal: AbortSignal },
+): Promise<Profile> /*throws*/ {
+  const __stack = uniffiIsDebug ? new Error().stack : undefined;
+  try {
+    return await uniffiRustCallAsync(
+      /*rustCaller:*/ uniffiCaller,
+      /*rustFutureFunc:*/ () => {
+        return nativeModule().ubrn_uniffi_dcl_core_fn_func_profile(
+          FfiConverterOptionalString.lower(
+            address,
+            nativeModule().rustbuffer_alloc,
+          ),
+        );
+      },
+      /*pollFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_poll_rust_buffer,
+      /*cancelFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_cancel_rust_buffer,
+      /*completeFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_complete_rust_buffer,
+      /*freeFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_free_rust_buffer,
+      // Async returns always go through the JS-side converter: the
+      // FFI symbol returns the future handle (u64), and the user-level
+      // RustBuffer comes back via the shared `rust_future_complete_*`
+      // export. The bytes the runtime hands back must be deserialized
+      // here using the per-callable return-type converter.
+      // Borrowed view over foreign memory: the call site owns the free,
+      // as on the sync paths. Unconditional — a no-op where buffers are
+      // already JS-owned.
+      /*liftFunc:*/ __rb => {
+        try {
+          return FfiConverterTypeProfile.lift(__rb);
         } finally {
           nativeModule().rustbuffer_free(__rb);
         }
@@ -638,6 +1693,137 @@ export function removeListener(id: bigint): void /*throws*/ {
   );
 }
 
+/**
+ * Answers "is this place real, and may I enter it" for a coordinate (`"x,y"`), a `.dcl.eth`
+ * name, a realm URL, optionally followed by `x,y`, or a jump link naming one.
+ */
+export async function resolveDestination(
+  input: string,
+  asyncOpts_?: { signal: AbortSignal },
+): Promise<ResolvedDestination> /*throws*/ {
+  const __stack = uniffiIsDebug ? new Error().stack : undefined;
+  try {
+    return await uniffiRustCallAsync(
+      /*rustCaller:*/ uniffiCaller,
+      /*rustFutureFunc:*/ () => {
+        return nativeModule().ubrn_uniffi_dcl_core_fn_func_resolve_destination(
+          FfiConverterString.lower(input, nativeModule().rustbuffer_alloc),
+        );
+      },
+      /*pollFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_poll_rust_buffer,
+      /*cancelFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_cancel_rust_buffer,
+      /*completeFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_complete_rust_buffer,
+      /*freeFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_free_rust_buffer,
+      // Async returns always go through the JS-side converter: the
+      // FFI symbol returns the future handle (u64), and the user-level
+      // RustBuffer comes back via the shared `rust_future_complete_*`
+      // export. The bytes the runtime hands back must be deserialized
+      // here using the per-callable return-type converter.
+      // Borrowed view over foreign memory: the call site owns the free,
+      // as on the sync paths. Unconditional — a no-op where buffers are
+      // already JS-owned.
+      /*liftFunc:*/ __rb => {
+        try {
+          return FfiConverterTypeResolvedDestination.lift(__rb);
+        } finally {
+          nativeModule().rustbuffer_free(__rb);
+        }
+      },
+      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+      /*asyncOpts:*/ asyncOpts_,
+      /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(
+        FfiConverterTypeCoreError,
+      ),
+    );
+  } catch (__error: any) {
+    if (uniffiIsDebug && __error instanceof Error) {
+      __error.stack = __stack;
+    }
+    throw __error;
+  }
+}
+
+/**
+ * The same, for a world that asked for a password.
+ */
+export async function resolveDestinationWithSecret(
+  input: string,
+  secret: string,
+  asyncOpts_?: { signal: AbortSignal },
+): Promise<ResolvedDestination> /*throws*/ {
+  const __stack = uniffiIsDebug ? new Error().stack : undefined;
+  try {
+    return await uniffiRustCallAsync(
+      /*rustCaller:*/ uniffiCaller,
+      /*rustFutureFunc:*/ () => {
+        return nativeModule().ubrn_uniffi_dcl_core_fn_func_resolve_destination_with_secret(
+          FfiConverterString.lower(input, nativeModule().rustbuffer_alloc),
+          FfiConverterString.lower(secret, nativeModule().rustbuffer_alloc),
+        );
+      },
+      /*pollFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_poll_rust_buffer,
+      /*cancelFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_cancel_rust_buffer,
+      /*completeFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_complete_rust_buffer,
+      /*freeFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_free_rust_buffer,
+      // Async returns always go through the JS-side converter: the
+      // FFI symbol returns the future handle (u64), and the user-level
+      // RustBuffer comes back via the shared `rust_future_complete_*`
+      // export. The bytes the runtime hands back must be deserialized
+      // here using the per-callable return-type converter.
+      // Borrowed view over foreign memory: the call site owns the free,
+      // as on the sync paths. Unconditional — a no-op where buffers are
+      // already JS-owned.
+      /*liftFunc:*/ __rb => {
+        try {
+          return FfiConverterTypeResolvedDestination.lift(__rb);
+        } finally {
+          nativeModule().rustbuffer_free(__rb);
+        }
+      },
+      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+      /*asyncOpts:*/ asyncOpts_,
+      /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(
+        FfiConverterTypeCoreError,
+      ),
+    );
+  } catch (__error: any) {
+    if (uniffiIsDebug && __error instanceof Error) {
+      __error.stack = __stack;
+    }
+    throw __error;
+  }
+}
+
+/**
+ * Shareable link to a scene: a position in Genesis City, the world's name elsewhere.
+ */
+export function sceneLinkUrl(realm: string, x: number, y: number): string {
+  const __rb: Uint8Array = uniffiCaller.rustCall(
+    /*caller:*/ callStatus => {
+      return nativeModule().ubrn_uniffi_dcl_core_fn_func_scene_link_url(
+        FfiConverterString.lower(realm, nativeModule().rustbuffer_alloc),
+        FfiConverterInt32.lower(x, nativeModule().rustbuffer_alloc),
+        FfiConverterInt32.lower(y, nativeModule().rustbuffer_alloc),
+        callStatus,
+      );
+    },
+    /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+  );
+  try {
+    return FfiConverterString.lift(__rb);
+  } finally {
+    nativeModule().rustbuffer_free(__rb);
+  }
+}
+
 export async function sendFriendRequest(
   address: string,
   message: string,
@@ -651,6 +1837,135 @@ export async function sendFriendRequest(
         return nativeModule().ubrn_uniffi_dcl_core_fn_func_send_friend_request(
           FfiConverterString.lower(address, nativeModule().rustbuffer_alloc),
           FfiConverterString.lower(message, nativeModule().rustbuffer_alloc),
+        );
+      },
+      /*pollFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_poll_void,
+      /*cancelFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_cancel_void,
+      /*completeFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_complete_void,
+      /*freeFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_free_void,
+      /*liftFunc:*/ _v => {},
+      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+      /*asyncOpts:*/ asyncOpts_,
+      /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(
+        FfiConverterTypeCoreError,
+      ),
+    );
+  } catch (__error: any) {
+    if (uniffiIsDebug && __error instanceof Error) {
+      __error.stack = __stack;
+    }
+    throw __error;
+  }
+}
+
+/**
+ * Opens (or closes) the consent gate; opening ships what waited.
+ */
+export async function setAnalyticsConsent(
+  accepted: boolean,
+  asyncOpts_?: { signal: AbortSignal },
+): Promise<void> /*throws*/ {
+  const __stack = uniffiIsDebug ? new Error().stack : undefined;
+  try {
+    return await uniffiRustCallAsync(
+      /*rustCaller:*/ uniffiCaller,
+      /*rustFutureFunc:*/ () => {
+        return nativeModule().ubrn_uniffi_dcl_core_fn_func_set_analytics_consent(
+          FfiConverterBool.lower(accepted, nativeModule().rustbuffer_alloc),
+        );
+      },
+      /*pollFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_poll_void,
+      /*cancelFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_cancel_void,
+      /*completeFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_complete_void,
+      /*freeFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_free_void,
+      /*liftFunc:*/ _v => {},
+      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+      /*asyncOpts:*/ asyncOpts_,
+      /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(
+        FfiConverterTypeCoreError,
+      ),
+    );
+  } catch (__error: any) {
+    if (uniffiIsDebug && __error instanceof Error) {
+      __error.stack = __stack;
+    }
+    throw __error;
+  }
+}
+
+/**
+ * Seconds between periodic flushes: short while onboarding, longer in the world.
+ */
+export function setAnalyticsFlushInterval(seconds: number): void /*throws*/ {
+  uniffiCaller.rustCallWithError(
+    /*liftError:*/ FfiConverterTypeCoreError.lift.bind(
+      FfiConverterTypeCoreError,
+    ),
+    /*caller:*/ callStatus => {
+      nativeModule().ubrn_uniffi_dcl_core_fn_func_set_analytics_flush_interval(
+        FfiConverterFloat64.lower(seconds, nativeModule().rustbuffer_alloc),
+        callStatus,
+      );
+    },
+    /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+  );
+}
+
+/**
+ * Sets or clears the user's reminder on an event.
+ */
+export async function setEventReminder(
+  eventId: string,
+  on: boolean,
+  asyncOpts_?: { signal: AbortSignal },
+): Promise<void> /*throws*/ {
+  const __stack = uniffiIsDebug ? new Error().stack : undefined;
+  try {
+    return await uniffiRustCallAsync(
+      /*rustCaller:*/ uniffiCaller,
+      /*rustFutureFunc:*/ () => {
+        return nativeModule().ubrn_uniffi_dcl_core_fn_func_set_event_reminder(
+          FfiConverterString.lower(eventId, nativeModule().rustbuffer_alloc),
+          FfiConverterBool.lower(on, nativeModule().rustbuffer_alloc),
+        );
+      },
+      /*pollFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_poll_void,
+      /*cancelFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_cancel_void,
+      /*completeFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_complete_void,
+      /*freeFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_free_void,
+      /*liftFunc:*/ _v => {},
+      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+      /*asyncOpts:*/ asyncOpts_,
+      /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(
+        FfiConverterTypeCoreError,
+      ),
+    );
+  } catch (__error: any) {
+    if (uniffiIsDebug && __error instanceof Error) {
+      __error.stack = __stack;
+    }
+    throw __error;
+  }
+}
+
+export async function setFavorite(
+  placeId: string,
+  value: boolean,
+  isWorld: boolean,
+  asyncOpts_?: { signal: AbortSignal },
+): Promise<void> /*throws*/ {
+  const __stack = uniffiIsDebug ? new Error().stack : undefined;
+  try {
+    return await uniffiRustCallAsync(
+      /*rustCaller:*/ uniffiCaller,
+      /*rustFutureFunc:*/ () => {
+        return nativeModule().ubrn_uniffi_dcl_core_fn_func_set_favorite(
+          FfiConverterString.lower(placeId, nativeModule().rustbuffer_alloc),
+          FfiConverterBool.lower(value, nativeModule().rustbuffer_alloc),
+          FfiConverterBool.lower(isWorld, nativeModule().rustbuffer_alloc),
         );
       },
       /*pollFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_poll_void,
@@ -762,6 +2077,24 @@ export function settings(): Array<SettingEntry> /*throws*/ {
   } finally {
     nativeModule().rustbuffer_free(__rb);
   }
+}
+
+/**
+ * Shows (or moves) the avatar preview over `rect`, in physical pixels.
+ */
+export function showAvatarPreview(rect: Rect): void /*throws*/ {
+  uniffiCaller.rustCallWithError(
+    /*liftError:*/ FfiConverterTypeCoreError.lift.bind(
+      FfiConverterTypeCoreError,
+    ),
+    /*caller:*/ callStatus => {
+      nativeModule().ubrn_uniffi_dcl_core_fn_func_show_avatar_preview(
+        FfiConverterTypeRect.lower(rect, nativeModule().rustbuffer_alloc),
+        callStatus,
+      );
+    },
+    /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+  );
 }
 
 /**
@@ -956,6 +2289,23 @@ export function signOut(): void /*throws*/ {
   );
 }
 
+/**
+ * "Later" on an optional update: silent for a day.
+ */
+export function snoozeVersionGate(): void /*throws*/ {
+  uniffiCaller.rustCallWithError(
+    /*liftError:*/ FfiConverterTypeCoreError.lift.bind(
+      FfiConverterTypeCoreError,
+    ),
+    /*caller:*/ callStatus => {
+      nativeModule().ubrn_uniffi_dcl_core_fn_func_snooze_version_gate(
+        callStatus,
+      );
+    },
+    /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+  );
+}
+
 export function state(): State /*throws*/ {
   const __rb: Uint8Array = uniffiCaller.rustCallWithError(
     /*liftError:*/ FfiConverterTypeCoreError.lift.bind(
@@ -971,6 +2321,88 @@ export function state(): State /*throws*/ {
   } finally {
     nativeModule().rustbuffer_free(__rb);
   }
+}
+
+/**
+ * The terms version the player accepted; 0 until they do.
+ */
+export function termsAcceptedVersion(): number /*throws*/ {
+  return FfiConverterUInt32.lift(
+    uniffiCaller.rustCallWithError(
+      /*liftError:*/ FfiConverterTypeCoreError.lift.bind(
+        FfiConverterTypeCoreError,
+      ),
+      /*caller:*/ callStatus => {
+        return nativeModule().ubrn_uniffi_dcl_core_fn_func_terms_accepted_version(
+          callStatus,
+        );
+      },
+      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+    ),
+  );
+}
+
+/**
+ * The terms version this build asks players to accept.
+ */
+export function termsVersion(): number {
+  return FfiConverterUInt32.lift(
+    uniffiCaller.rustCall(
+      /*caller:*/ callStatus => {
+        return nativeModule().ubrn_uniffi_dcl_core_fn_func_terms_version(
+          callStatus,
+        );
+      },
+      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+    ),
+  );
+}
+
+/**
+ * Queues an analytics event; it ships once the EULA is accepted.
+ */
+export function track(event: string, props: Array<Property>): void /*throws*/ {
+  uniffiCaller.rustCallWithError(
+    /*liftError:*/ FfiConverterTypeCoreError.lift.bind(
+      FfiConverterTypeCoreError,
+    ),
+    /*caller:*/ callStatus => {
+      nativeModule().ubrn_uniffi_dcl_core_fn_func_track(
+        FfiConverterString.lower(event, nativeModule().rustbuffer_alloc),
+        FfiConverterSequenceTypeProperty.lower(
+          props,
+          nativeModule().rustbuffer_alloc,
+        ),
+        callStatus,
+      );
+    },
+    /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+  );
+}
+
+/**
+ * Queues a "Screen Viewed" for `name`.
+ */
+export function trackScreen(
+  name: string,
+  props: Array<Property>,
+): void /*throws*/ {
+  uniffiCaller.rustCallWithError(
+    /*liftError:*/ FfiConverterTypeCoreError.lift.bind(
+      FfiConverterTypeCoreError,
+    ),
+    /*caller:*/ callStatus => {
+      nativeModule().ubrn_uniffi_dcl_core_fn_func_track_screen(
+        FfiConverterString.lower(name, nativeModule().rustbuffer_alloc),
+        FfiConverterSequenceTypeProperty.lower(
+          props,
+          nativeModule().rustbuffer_alloc,
+        ),
+        callStatus,
+      );
+    },
+    /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+  );
 }
 
 export async function unblockUser(
@@ -1007,6 +2439,23 @@ export async function unblockUser(
 }
 
 /**
+ * Every URL the shell needs, for the current environment.
+ */
+export function urls(): Urls {
+  const __rb: Uint8Array = uniffiCaller.rustCall(
+    /*caller:*/ callStatus => {
+      return nativeModule().ubrn_uniffi_dcl_core_fn_func_urls(callStatus);
+    },
+    /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+  );
+  try {
+    return FfiConverterTypeUrls.lift(__rb);
+  } finally {
+    nativeModule().rustbuffer_free(__rb);
+  }
+}
+
+/**
  * The version to show: `x.y.z` in production, the full version otherwise.
  */
 export function version(): string /*throws*/ {
@@ -1026,48 +2475,92 @@ export function version(): string /*throws*/ {
   }
 }
 
-export type CacheSize = {
-  bytes: bigint;
-  maxBytes: bigint;
-};
-
 /**
- * Generated factory for {@link CacheSize} record objects.
+ * The update gate. Fail-open: any failure to ask lets the user in.
  */
-export const CacheSize = (() => {
-  const defaults = () => ({});
-  const create = (() => {
-    return uniffiCreateRecord<CacheSize, ReturnType<typeof defaults>>(defaults);
-  })();
-  return Object.freeze({
-    create,
-    new: create,
-    defaults: () => Object.freeze(defaults()) as Partial<CacheSize>,
-  });
-})();
-
-const FfiConverterTypeCacheSize = (() => {
-  type TypeName = CacheSize;
-  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
-    readFromCursor(c: Cursor): TypeName {
-      return {
-        bytes: FfiConverterUInt64.readFromCursor(c),
-        maxBytes: FfiConverterUInt64.readFromCursor(c),
-      };
+export async function versionGate(asyncOpts_?: {
+  signal: AbortSignal;
+}): Promise<VersionGate> /*throws*/ {
+  const __stack = uniffiIsDebug ? new Error().stack : undefined;
+  try {
+    return await uniffiRustCallAsync(
+      /*rustCaller:*/ uniffiCaller,
+      /*rustFutureFunc:*/ () => {
+        return nativeModule().ubrn_uniffi_dcl_core_fn_func_version_gate();
+      },
+      /*pollFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_poll_rust_buffer,
+      /*cancelFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_cancel_rust_buffer,
+      /*completeFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_complete_rust_buffer,
+      /*freeFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_free_rust_buffer,
+      // Async returns always go through the JS-side converter: the
+      // FFI symbol returns the future handle (u64), and the user-level
+      // RustBuffer comes back via the shared `rust_future_complete_*`
+      // export. The bytes the runtime hands back must be deserialized
+      // here using the per-callable return-type converter.
+      // Borrowed view over foreign memory: the call site owns the free,
+      // as on the sync paths. Unconditional — a no-op where buffers are
+      // already JS-owned.
+      /*liftFunc:*/ __rb => {
+        try {
+          return FfiConverterTypeVersionGate.lift(__rb);
+        } finally {
+          nativeModule().rustbuffer_free(__rb);
+        }
+      },
+      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+      /*asyncOpts:*/ asyncOpts_,
+      /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(
+        FfiConverterTypeCoreError,
+      ),
+    );
+  } catch (__error: any) {
+    if (uniffiIsDebug && __error instanceof Error) {
+      __error.stack = __stack;
     }
-    writeIntoCursor(value: TypeName, c: Cursor): void {
-      FfiConverterUInt64.writeIntoCursor(value.bytes, c);
-      FfiConverterUInt64.writeIntoCursor(value.maxBytes, c);
-    }
-    allocationSize(value: TypeName): number {
-      return (
-        FfiConverterUInt64.allocationSize(value.bytes) +
-        FfiConverterUInt64.allocationSize(value.maxBytes)
-      );
-    }
+    throw __error;
   }
-  return new FFIConverter();
-})();
+}
+
+export async function vote(
+  placeId: string,
+  choice: Vote,
+  isWorld: boolean,
+  asyncOpts_?: { signal: AbortSignal },
+): Promise<void> /*throws*/ {
+  const __stack = uniffiIsDebug ? new Error().stack : undefined;
+  try {
+    return await uniffiRustCallAsync(
+      /*rustCaller:*/ uniffiCaller,
+      /*rustFutureFunc:*/ () => {
+        return nativeModule().ubrn_uniffi_dcl_core_fn_func_vote(
+          FfiConverterString.lower(placeId, nativeModule().rustbuffer_alloc),
+          FfiConverterTypeVote.lower(choice, nativeModule().rustbuffer_alloc),
+          FfiConverterBool.lower(isWorld, nativeModule().rustbuffer_alloc),
+        );
+      },
+      /*pollFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_poll_void,
+      /*cancelFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_cancel_void,
+      /*completeFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_complete_void,
+      /*freeFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_free_void,
+      /*liftFunc:*/ _v => {},
+      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+      /*asyncOpts:*/ asyncOpts_,
+      /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(
+        FfiConverterTypeCoreError,
+      ),
+    );
+  } catch (__error: any) {
+    if (uniffiIsDebug && __error instanceof Error) {
+      __error.stack = __stack;
+    }
+    throw __error;
+  }
+}
 
 // Hermes (React Native ≥ 0.74) ships TextEncoder and encodeInto, but not
 // TextDecoder. For single-string decode (bytesToString), we polyfill via the
@@ -1130,6 +2623,146 @@ const stringConverter = (() => {
   };
 })();
 const FfiConverterString = uniffiCreateFfiConverterString(stringConverter);
+
+/**
+ * The equipped avatar; colors are `#rrggbb`, an empty emote slot is `""`.
+ */
+export type AvatarState = {
+  bodyShape: string;
+  wearables: Array<string>;
+  emotes: Array<string>;
+  skin: string;
+  hair: string;
+  eyes: string;
+};
+
+/**
+ * Generated factory for {@link AvatarState} record objects.
+ */
+export const AvatarState = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<AvatarState, ReturnType<typeof defaults>>(
+      defaults,
+    );
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults()) as Partial<AvatarState>,
+  });
+})();
+
+const FfiConverterTypeAvatarState = (() => {
+  type TypeName = AvatarState;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      return {
+        bodyShape: FfiConverterString.readFromCursor(c),
+        wearables: FfiConverterSequenceString.readFromCursor(c),
+        emotes: FfiConverterSequenceString.readFromCursor(c),
+        skin: FfiConverterString.readFromCursor(c),
+        hair: FfiConverterString.readFromCursor(c),
+        eyes: FfiConverterString.readFromCursor(c),
+      };
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      FfiConverterString.writeIntoCursor(value.bodyShape, c);
+      FfiConverterSequenceString.writeIntoCursor(value.wearables, c);
+      FfiConverterSequenceString.writeIntoCursor(value.emotes, c);
+      FfiConverterString.writeIntoCursor(value.skin, c);
+      FfiConverterString.writeIntoCursor(value.hair, c);
+      FfiConverterString.writeIntoCursor(value.eyes, c);
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterString.allocationSize(value.bodyShape) +
+        FfiConverterSequenceString.allocationSize(value.wearables) +
+        FfiConverterSequenceString.allocationSize(value.emotes) +
+        FfiConverterString.allocationSize(value.skin) +
+        FfiConverterString.allocationSize(value.hair) +
+        FfiConverterString.allocationSize(value.eyes)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
+export type CacheSize = {
+  bytes: bigint;
+  maxBytes: bigint;
+};
+
+/**
+ * Generated factory for {@link CacheSize} record objects.
+ */
+export const CacheSize = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<CacheSize, ReturnType<typeof defaults>>(defaults);
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults()) as Partial<CacheSize>,
+  });
+})();
+
+const FfiConverterTypeCacheSize = (() => {
+  type TypeName = CacheSize;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      return {
+        bytes: FfiConverterUInt64.readFromCursor(c),
+        maxBytes: FfiConverterUInt64.readFromCursor(c),
+      };
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      FfiConverterUInt64.writeIntoCursor(value.bytes, c);
+      FfiConverterUInt64.writeIntoCursor(value.maxBytes, c);
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterUInt64.allocationSize(value.bytes) +
+        FfiConverterUInt64.allocationSize(value.maxBytes)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
+export enum CampaignKind {
+  Genesis,
+  World,
+}
+
+const FfiConverterTypeCampaignKind = (() => {
+  type TypeName = CampaignKind;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      switch (c.readI32()) {
+        case 1:
+          return CampaignKind.Genesis;
+        case 2:
+          return CampaignKind.World;
+        default:
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      switch (value) {
+        case CampaignKind.Genesis:
+          return c.writeI32(1);
+        case CampaignKind.World:
+          return c.writeI32(2);
+      }
+    }
+    allocationSize(value: TypeName): number {
+      return 4;
+    }
+  }
+  return new FFIConverter();
+})();
 
 /**
  * A scene parcel on the world grid.
@@ -1219,6 +2852,637 @@ const FfiConverterTypeDestination = (() => {
       return (
         FfiConverterOptionalString.allocationSize(value.realm) +
         FfiConverterOptionalTypeParcel.allocationSize(value.parcel)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
+export type Campaign = {
+  token: string;
+  kind: CampaignKind;
+  /**
+   * Where to boot: the default realm and a parcel for Genesis, the world for a world.
+   */
+  destination: Destination;
+};
+
+/**
+ * Generated factory for {@link Campaign} record objects.
+ */
+export const Campaign = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<Campaign, ReturnType<typeof defaults>>(defaults);
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults()) as Partial<Campaign>,
+  });
+})();
+
+const FfiConverterTypeCampaign = (() => {
+  type TypeName = Campaign;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      return {
+        token: FfiConverterString.readFromCursor(c),
+        kind: FfiConverterTypeCampaignKind.readFromCursor(c),
+        destination: FfiConverterTypeDestination.readFromCursor(c),
+      };
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      FfiConverterString.writeIntoCursor(value.token, c);
+      FfiConverterTypeCampaignKind.writeIntoCursor(value.kind, c);
+      FfiConverterTypeDestination.writeIntoCursor(value.destination, c);
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterString.allocationSize(value.token) +
+        FfiConverterTypeCampaignKind.allocationSize(value.kind) +
+        FfiConverterTypeDestination.allocationSize(value.destination)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
+/**
+ * Why a launch fell back to the default first-run flow; shipped on the existing first-run
+ * metrics so personalized and default can be compared.
+ */
+export enum CampaignFallback {
+  NoToken,
+  UnknownToken,
+  ExpiredToken,
+  AlreadyConsumed,
+  ResolverUnavailable,
+  /**
+   * The campaign resolved but its target cannot be turned into a destination.
+   */
+  UnusableTarget,
+}
+
+const FfiConverterTypeCampaignFallback = (() => {
+  type TypeName = CampaignFallback;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      switch (c.readI32()) {
+        case 1:
+          return CampaignFallback.NoToken;
+        case 2:
+          return CampaignFallback.UnknownToken;
+        case 3:
+          return CampaignFallback.ExpiredToken;
+        case 4:
+          return CampaignFallback.AlreadyConsumed;
+        case 5:
+          return CampaignFallback.ResolverUnavailable;
+        case 6:
+          return CampaignFallback.UnusableTarget;
+        default:
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      switch (value) {
+        case CampaignFallback.NoToken:
+          return c.writeI32(1);
+        case CampaignFallback.UnknownToken:
+          return c.writeI32(2);
+        case CampaignFallback.ExpiredToken:
+          return c.writeI32(3);
+        case CampaignFallback.AlreadyConsumed:
+          return c.writeI32(4);
+        case CampaignFallback.ResolverUnavailable:
+          return c.writeI32(5);
+        case CampaignFallback.UnusableTarget:
+          return c.writeI32(6);
+      }
+    }
+    allocationSize(value: TypeName): number {
+      return 4;
+    }
+  }
+  return new FFIConverter();
+})();
+
+export type CampaignResolution = {
+  /**
+   * The token this launch carries, empty when none.
+   */
+  token: string;
+  campaign?: Campaign;
+  /**
+   * `None` exactly when `campaign` is set.
+   */
+  fallback?: CampaignFallback;
+};
+
+/**
+ * Generated factory for {@link CampaignResolution} record objects.
+ */
+export const CampaignResolution = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<CampaignResolution, ReturnType<typeof defaults>>(
+      defaults,
+    );
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults()) as Partial<CampaignResolution>,
+  });
+})();
+
+const FfiConverterTypeCampaignResolution = (() => {
+  type TypeName = CampaignResolution;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      return {
+        token: FfiConverterString.readFromCursor(c),
+        campaign: FfiConverterOptionalTypeCampaign.readFromCursor(c),
+        fallback: FfiConverterOptionalTypeCampaignFallback.readFromCursor(c),
+      };
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      FfiConverterString.writeIntoCursor(value.token, c);
+      FfiConverterOptionalTypeCampaign.writeIntoCursor(value.campaign, c);
+      FfiConverterOptionalTypeCampaignFallback.writeIntoCursor(
+        value.fallback,
+        c,
+      );
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterString.allocationSize(value.token) +
+        FfiConverterOptionalTypeCampaign.allocationSize(value.campaign) +
+        FfiConverterOptionalTypeCampaignFallback.allocationSize(value.fallback)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
+/**
+ * Who wrote a chat line, when the engine could resolve them.
+ */
+export type ChatProfile = {
+  name: string;
+  hasClaimedName: boolean;
+  profilePictureUrl: string;
+};
+
+/**
+ * Generated factory for {@link ChatProfile} record objects.
+ */
+export const ChatProfile = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<ChatProfile, ReturnType<typeof defaults>>(
+      defaults,
+    );
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults()) as Partial<ChatProfile>,
+  });
+})();
+
+const FfiConverterTypeChatProfile = (() => {
+  type TypeName = ChatProfile;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      return {
+        name: FfiConverterString.readFromCursor(c),
+        hasClaimedName: FfiConverterBool.readFromCursor(c),
+        profilePictureUrl: FfiConverterString.readFromCursor(c),
+      };
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      FfiConverterString.writeIntoCursor(value.name, c);
+      FfiConverterBool.writeIntoCursor(value.hasClaimedName, c);
+      FfiConverterString.writeIntoCursor(value.profilePictureUrl, c);
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterString.allocationSize(value.name) +
+        FfiConverterBool.allocationSize(value.hasClaimedName) +
+        FfiConverterString.allocationSize(value.profilePictureUrl)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
+export type ChatLine = {
+  address: string;
+  message: string;
+  timestamp: number;
+  profile?: ChatProfile;
+};
+
+/**
+ * Generated factory for {@link ChatLine} record objects.
+ */
+export const ChatLine = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<ChatLine, ReturnType<typeof defaults>>(defaults);
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults()) as Partial<ChatLine>,
+  });
+})();
+
+const FfiConverterTypeChatLine = (() => {
+  type TypeName = ChatLine;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      return {
+        address: FfiConverterString.readFromCursor(c),
+        message: FfiConverterString.readFromCursor(c),
+        timestamp: FfiConverterFloat64.readFromCursor(c),
+        profile: FfiConverterOptionalTypeChatProfile.readFromCursor(c),
+      };
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      FfiConverterString.writeIntoCursor(value.address, c);
+      FfiConverterString.writeIntoCursor(value.message, c);
+      FfiConverterFloat64.writeIntoCursor(value.timestamp, c);
+      FfiConverterOptionalTypeChatProfile.writeIntoCursor(value.profile, c);
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterString.allocationSize(value.address) +
+        FfiConverterString.allocationSize(value.message) +
+        FfiConverterFloat64.allocationSize(value.timestamp) +
+        FfiConverterOptionalTypeChatProfile.allocationSize(value.profile)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
+/**
+ * Spendable credits on the USD rail the Shop prices in. An environment without that rail reports
+ * 0 rather than the legacy MANA total, which is a different unit.
+ */
+export type CreditsBalance = {
+  credits: bigint;
+};
+
+/**
+ * Generated factory for {@link CreditsBalance} record objects.
+ */
+export const CreditsBalance = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<CreditsBalance, ReturnType<typeof defaults>>(
+      defaults,
+    );
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults()) as Partial<CreditsBalance>,
+  });
+})();
+
+const FfiConverterTypeCreditsBalance = (() => {
+  type TypeName = CreditsBalance;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      return {
+        credits: FfiConverterInt64.readFromCursor(c),
+      };
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      FfiConverterInt64.writeIntoCursor(value.credits, c);
+    }
+    allocationSize(value: TypeName): number {
+      return FfiConverterInt64.allocationSize(value.credits);
+    }
+  }
+  return new FFIConverter();
+})();
+
+/**
+ * What the shell shows for the scene the player is in.
+ */
+export type CurrentScene = {
+  title: string;
+  creator: string;
+  parcel: Parcel;
+  realm: string;
+  genesis: boolean;
+};
+
+/**
+ * Generated factory for {@link CurrentScene} record objects.
+ */
+export const CurrentScene = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<CurrentScene, ReturnType<typeof defaults>>(
+      defaults,
+    );
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults()) as Partial<CurrentScene>,
+  });
+})();
+
+const FfiConverterTypeCurrentScene = (() => {
+  type TypeName = CurrentScene;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      return {
+        title: FfiConverterString.readFromCursor(c),
+        creator: FfiConverterString.readFromCursor(c),
+        parcel: FfiConverterTypeParcel.readFromCursor(c),
+        realm: FfiConverterString.readFromCursor(c),
+        genesis: FfiConverterBool.readFromCursor(c),
+      };
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      FfiConverterString.writeIntoCursor(value.title, c);
+      FfiConverterString.writeIntoCursor(value.creator, c);
+      FfiConverterTypeParcel.writeIntoCursor(value.parcel, c);
+      FfiConverterString.writeIntoCursor(value.realm, c);
+      FfiConverterBool.writeIntoCursor(value.genesis, c);
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterString.allocationSize(value.title) +
+        FfiConverterString.allocationSize(value.creator) +
+        FfiConverterTypeParcel.allocationSize(value.parcel) +
+        FfiConverterString.allocationSize(value.realm) +
+        FfiConverterBool.allocationSize(value.genesis)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
+/**
+ * What the host can read off the device; empty or negative where it cannot.
+ */
+export type DeviceFacts = {
+  /**
+   * Total RAM in MB, -1 when unknown.
+   */
+  totalRamMb: number;
+  /**
+   * Hardware model: iOS `hw.machine` (`iPhone14,5`); informational on Android.
+   */
+  model: string;
+  /**
+   * Android `Build.SOC_MODEL` (API 31+).
+   */
+  socModel: string;
+  /**
+   * Android `ro.board.platform`, the chipset fallback below API 31.
+   */
+  boardPlatform: string;
+  /**
+   * Android `Build.HARDWARE`, the second fallback.
+   */
+  hardware: string;
+};
+
+/**
+ * Generated factory for {@link DeviceFacts} record objects.
+ */
+export const DeviceFacts = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<DeviceFacts, ReturnType<typeof defaults>>(
+      defaults,
+    );
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults()) as Partial<DeviceFacts>,
+  });
+})();
+
+const FfiConverterTypeDeviceFacts = (() => {
+  type TypeName = DeviceFacts;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      return {
+        totalRamMb: FfiConverterInt32.readFromCursor(c),
+        model: FfiConverterString.readFromCursor(c),
+        socModel: FfiConverterString.readFromCursor(c),
+        boardPlatform: FfiConverterString.readFromCursor(c),
+        hardware: FfiConverterString.readFromCursor(c),
+      };
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      FfiConverterInt32.writeIntoCursor(value.totalRamMb, c);
+      FfiConverterString.writeIntoCursor(value.model, c);
+      FfiConverterString.writeIntoCursor(value.socModel, c);
+      FfiConverterString.writeIntoCursor(value.boardPlatform, c);
+      FfiConverterString.writeIntoCursor(value.hardware, c);
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterInt32.allocationSize(value.totalRamMb) +
+        FfiConverterString.allocationSize(value.model) +
+        FfiConverterString.allocationSize(value.socModel) +
+        FfiConverterString.allocationSize(value.boardPlatform) +
+        FfiConverterString.allocationSize(value.hardware)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
+export enum SupportStatus {
+  Supported,
+  BelowMinspec,
+  EndOfSupport,
+}
+
+const FfiConverterTypeSupportStatus = (() => {
+  type TypeName = SupportStatus;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      switch (c.readI32()) {
+        case 1:
+          return SupportStatus.Supported;
+        case 2:
+          return SupportStatus.BelowMinspec;
+        case 3:
+          return SupportStatus.EndOfSupport;
+        default:
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      switch (value) {
+        case SupportStatus.Supported:
+          return c.writeI32(1);
+        case SupportStatus.BelowMinspec:
+          return c.writeI32(2);
+        case SupportStatus.EndOfSupport:
+          return c.writeI32(3);
+      }
+    }
+    allocationSize(value: TypeName): number {
+      return 4;
+    }
+  }
+  return new FFIConverter();
+})();
+
+/**
+ * The verdict the launch-time system report carries.
+ */
+export enum ReportVerdict {
+  Supported,
+  BelowMinspec,
+  EndOfSupport,
+  /**
+   * Neither platform check runs here.
+   */
+  NotChecked,
+}
+
+const FfiConverterTypeReportVerdict = (() => {
+  type TypeName = ReportVerdict;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      switch (c.readI32()) {
+        case 1:
+          return ReportVerdict.Supported;
+        case 2:
+          return ReportVerdict.BelowMinspec;
+        case 3:
+          return ReportVerdict.EndOfSupport;
+        case 4:
+          return ReportVerdict.NotChecked;
+        default:
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      switch (value) {
+        case ReportVerdict.Supported:
+          return c.writeI32(1);
+        case ReportVerdict.BelowMinspec:
+          return c.writeI32(2);
+        case ReportVerdict.EndOfSupport:
+          return c.writeI32(3);
+        case ReportVerdict.NotChecked:
+          return c.writeI32(4);
+      }
+    }
+    allocationSize(value: TypeName): number {
+      return 4;
+    }
+  }
+  return new FFIConverter();
+})();
+
+export enum SupportModal {
+  EndOfSupport,
+  BelowMinspec,
+}
+
+const FfiConverterTypeSupportModal = (() => {
+  type TypeName = SupportModal;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      switch (c.readI32()) {
+        case 1:
+          return SupportModal.EndOfSupport;
+        case 2:
+          return SupportModal.BelowMinspec;
+        default:
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      switch (value) {
+        case SupportModal.EndOfSupport:
+          return c.writeI32(1);
+        case SupportModal.BelowMinspec:
+          return c.writeI32(2);
+      }
+    }
+    allocationSize(value: TypeName): number {
+      return 4;
+    }
+  }
+  return new FFIConverter();
+})();
+
+export type DeviceSupport = {
+  /**
+   * The Android rule's result; always `Supported` elsewhere.
+   */
+  status: SupportStatus;
+  verdict: ReportVerdict;
+  /**
+   * The modal to show this session, per the persisted cadence; `None` when none is due.
+   */
+  modal?: SupportModal;
+  /**
+   * The chipset id the server was asked about; empty when none.
+   */
+  soc: string;
+};
+
+/**
+ * Generated factory for {@link DeviceSupport} record objects.
+ */
+export const DeviceSupport = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<DeviceSupport, ReturnType<typeof defaults>>(
+      defaults,
+    );
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults()) as Partial<DeviceSupport>,
+  });
+})();
+
+const FfiConverterTypeDeviceSupport = (() => {
+  type TypeName = DeviceSupport;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      return {
+        status: FfiConverterTypeSupportStatus.readFromCursor(c),
+        verdict: FfiConverterTypeReportVerdict.readFromCursor(c),
+        modal: FfiConverterOptionalTypeSupportModal.readFromCursor(c),
+        soc: FfiConverterString.readFromCursor(c),
+      };
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      FfiConverterTypeSupportStatus.writeIntoCursor(value.status, c);
+      FfiConverterTypeReportVerdict.writeIntoCursor(value.verdict, c);
+      FfiConverterOptionalTypeSupportModal.writeIntoCursor(value.modal, c);
+      FfiConverterString.writeIntoCursor(value.soc, c);
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterTypeSupportStatus.allocationSize(value.status) +
+        FfiConverterTypeReportVerdict.allocationSize(value.verdict) +
+        FfiConverterOptionalTypeSupportModal.allocationSize(value.modal) +
+        FfiConverterString.allocationSize(value.soc)
       );
     }
   }
@@ -1332,6 +3596,222 @@ const FfiConverterTypeFriendRequests = (() => {
 })();
 
 /**
+ * The physical pixels the HUD keeps clear on each side (notch, gesture bar, joypad).
+ */
+export type HudInsets = {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+};
+
+/**
+ * Generated factory for {@link HudInsets} record objects.
+ */
+export const HudInsets = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<HudInsets, ReturnType<typeof defaults>>(defaults);
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults()) as Partial<HudInsets>,
+  });
+})();
+
+const FfiConverterTypeHudInsets = (() => {
+  type TypeName = HudInsets;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      return {
+        top: FfiConverterFloat32.readFromCursor(c),
+        right: FfiConverterFloat32.readFromCursor(c),
+        bottom: FfiConverterFloat32.readFromCursor(c),
+        left: FfiConverterFloat32.readFromCursor(c),
+      };
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      FfiConverterFloat32.writeIntoCursor(value.top, c);
+      FfiConverterFloat32.writeIntoCursor(value.right, c);
+      FfiConverterFloat32.writeIntoCursor(value.bottom, c);
+      FfiConverterFloat32.writeIntoCursor(value.left, c);
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterFloat32.allocationSize(value.top) +
+        FfiConverterFloat32.allocationSize(value.right) +
+        FfiConverterFloat32.allocationSize(value.bottom) +
+        FfiConverterFloat32.allocationSize(value.left)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
+export type Vec3 = {
+  x: number;
+  y: number;
+  z: number;
+};
+
+/**
+ * Generated factory for {@link Vec3} record objects.
+ */
+export const Vec3 = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<Vec3, ReturnType<typeof defaults>>(defaults);
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults()) as Partial<Vec3>,
+  });
+})();
+
+const FfiConverterTypeVec3 = (() => {
+  type TypeName = Vec3;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      return {
+        x: FfiConverterFloat32.readFromCursor(c),
+        y: FfiConverterFloat32.readFromCursor(c),
+        z: FfiConverterFloat32.readFromCursor(c),
+      };
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      FfiConverterFloat32.writeIntoCursor(value.x, c);
+      FfiConverterFloat32.writeIntoCursor(value.y, c);
+      FfiConverterFloat32.writeIntoCursor(value.z, c);
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterFloat32.allocationSize(value.x) +
+        FfiConverterFloat32.allocationSize(value.y) +
+        FfiConverterFloat32.allocationSize(value.z)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
+/**
+ * The player's whereabouts, sent a few times a second while in a world.
+ */
+export type HudSnapshot = {
+  parcel: Parcel;
+  realm: string;
+  fps: number;
+  position: Vec3;
+};
+
+/**
+ * Generated factory for {@link HudSnapshot} record objects.
+ */
+export const HudSnapshot = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<HudSnapshot, ReturnType<typeof defaults>>(
+      defaults,
+    );
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults()) as Partial<HudSnapshot>,
+  });
+})();
+
+const FfiConverterTypeHudSnapshot = (() => {
+  type TypeName = HudSnapshot;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      return {
+        parcel: FfiConverterTypeParcel.readFromCursor(c),
+        realm: FfiConverterString.readFromCursor(c),
+        fps: FfiConverterFloat32.readFromCursor(c),
+        position: FfiConverterTypeVec3.readFromCursor(c),
+      };
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      FfiConverterTypeParcel.writeIntoCursor(value.parcel, c);
+      FfiConverterString.writeIntoCursor(value.realm, c);
+      FfiConverterFloat32.writeIntoCursor(value.fps, c);
+      FfiConverterTypeVec3.writeIntoCursor(value.position, c);
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterTypeParcel.allocationSize(value.parcel) +
+        FfiConverterString.allocationSize(value.realm) +
+        FfiConverterFloat32.allocationSize(value.fps) +
+        FfiConverterTypeVec3.allocationSize(value.position)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
+/**
+ * How far the world's content has downloaded.
+ */
+export type LoadingDetail = {
+  loaded: bigint;
+  total: bigint;
+  mbps: number;
+  /**
+   * 0..100
+   */
+  percent: number;
+};
+
+/**
+ * Generated factory for {@link LoadingDetail} record objects.
+ */
+export const LoadingDetail = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<LoadingDetail, ReturnType<typeof defaults>>(
+      defaults,
+    );
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults()) as Partial<LoadingDetail>,
+  });
+})();
+
+const FfiConverterTypeLoadingDetail = (() => {
+  type TypeName = LoadingDetail;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      return {
+        loaded: FfiConverterUInt64.readFromCursor(c),
+        total: FfiConverterUInt64.readFromCursor(c),
+        mbps: FfiConverterFloat32.readFromCursor(c),
+        percent: FfiConverterFloat32.readFromCursor(c),
+      };
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      FfiConverterUInt64.writeIntoCursor(value.loaded, c);
+      FfiConverterUInt64.writeIntoCursor(value.total, c);
+      FfiConverterFloat32.writeIntoCursor(value.mbps, c);
+      FfiConverterFloat32.writeIntoCursor(value.percent, c);
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterUInt64.allocationSize(value.loaded) +
+        FfiConverterUInt64.allocationSize(value.total) +
+        FfiConverterFloat32.allocationSize(value.mbps) +
+        FfiConverterFloat32.allocationSize(value.percent)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
+/**
  * Someone standing near the player.
  */
 export type NearbyUser = {
@@ -1381,6 +3861,398 @@ const FfiConverterTypeNearbyUser = (() => {
         FfiConverterString.allocationSize(value.name) +
         FfiConverterBool.allocationSize(value.hasClaimedName) +
         FfiConverterString.allocationSize(value.profilePictureUrl)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
+export type NotificationSender = {
+  address: string;
+  name: string;
+  profileImageUrl: string;
+  hasClaimedName: boolean;
+};
+
+/**
+ * Generated factory for {@link NotificationSender} record objects.
+ */
+export const NotificationSender = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<NotificationSender, ReturnType<typeof defaults>>(
+      defaults,
+    );
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults()) as Partial<NotificationSender>,
+  });
+})();
+
+const FfiConverterTypeNotificationSender = (() => {
+  type TypeName = NotificationSender;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      return {
+        address: FfiConverterString.readFromCursor(c),
+        name: FfiConverterString.readFromCursor(c),
+        profileImageUrl: FfiConverterString.readFromCursor(c),
+        hasClaimedName: FfiConverterBool.readFromCursor(c),
+      };
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      FfiConverterString.writeIntoCursor(value.address, c);
+      FfiConverterString.writeIntoCursor(value.name, c);
+      FfiConverterString.writeIntoCursor(value.profileImageUrl, c);
+      FfiConverterBool.writeIntoCursor(value.hasClaimedName, c);
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterString.allocationSize(value.address) +
+        FfiConverterString.allocationSize(value.name) +
+        FfiConverterString.allocationSize(value.profileImageUrl) +
+        FfiConverterBool.allocationSize(value.hasClaimedName)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
+// Enum: NotificationKind
+export enum NotificationKind_Tags {
+  FriendshipRequest = 'FriendshipRequest',
+  FriendshipAccepted = 'FriendshipAccepted',
+  EventStarted = 'EventStarted',
+  Reward = 'Reward',
+}
+export const NotificationKind = (() => {
+  type FriendshipRequest__interface = {
+    tag: NotificationKind_Tags.FriendshipRequest;
+    inner: Readonly<{ sender: NotificationSender }>;
+  };
+  class FriendshipRequest_
+    extends UniffiEnum
+    implements FriendshipRequest__interface
+  {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'NotificationKind';
+    readonly tag = NotificationKind_Tags.FriendshipRequest;
+    readonly inner: Readonly<{ sender: NotificationSender }>;
+    constructor(inner: { sender: NotificationSender }) {
+      super('NotificationKind', 'FriendshipRequest');
+
+      this.inner = Object.freeze(inner);
+    }
+    static new(inner: { sender: NotificationSender }): FriendshipRequest_ {
+      return new FriendshipRequest_(inner);
+    }
+
+    static instanceOf(obj: any): obj is FriendshipRequest_ {
+      return obj.tag === NotificationKind_Tags.FriendshipRequest;
+    }
+  }
+
+  type FriendshipAccepted__interface = {
+    tag: NotificationKind_Tags.FriendshipAccepted;
+    inner: Readonly<{ sender: NotificationSender }>;
+  };
+  class FriendshipAccepted_
+    extends UniffiEnum
+    implements FriendshipAccepted__interface
+  {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'NotificationKind';
+    readonly tag = NotificationKind_Tags.FriendshipAccepted;
+    readonly inner: Readonly<{ sender: NotificationSender }>;
+    constructor(inner: { sender: NotificationSender }) {
+      super('NotificationKind', 'FriendshipAccepted');
+
+      this.inner = Object.freeze(inner);
+    }
+    static new(inner: { sender: NotificationSender }): FriendshipAccepted_ {
+      return new FriendshipAccepted_(inner);
+    }
+
+    static instanceOf(obj: any): obj is FriendshipAccepted_ {
+      return obj.tag === NotificationKind_Tags.FriendshipAccepted;
+    }
+  }
+
+  type EventStarted__interface = {
+    tag: NotificationKind_Tags.EventStarted;
+    inner: Readonly<{
+      title: string;
+      image: string;
+      link: string;
+      eventId?: string;
+    }>;
+  };
+  /**
+   * An event the user follows started; `event_id` is the `id` of its jump link.
+   */
+  class EventStarted_ extends UniffiEnum implements EventStarted__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'NotificationKind';
+    readonly tag = NotificationKind_Tags.EventStarted;
+    readonly inner: Readonly<{
+      title: string;
+      image: string;
+      link: string;
+      eventId?: string;
+    }>;
+    constructor(inner: {
+      title: string;
+      image: string;
+      link: string;
+      eventId?: string;
+    }) {
+      super('NotificationKind', 'EventStarted');
+
+      this.inner = Object.freeze(inner);
+    }
+    static new(inner: {
+      title: string;
+      image: string;
+      link: string;
+      eventId?: string;
+    }): EventStarted_ {
+      return new EventStarted_(inner);
+    }
+
+    static instanceOf(obj: any): obj is EventStarted_ {
+      return obj.tag === NotificationKind_Tags.EventStarted;
+    }
+  }
+
+  type Reward__interface = {
+    tag: NotificationKind_Tags.Reward;
+    inner: Readonly<{ tokenName: string; tokenImage: string; title: string }>;
+  };
+  class Reward_ extends UniffiEnum implements Reward__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'NotificationKind';
+    readonly tag = NotificationKind_Tags.Reward;
+    readonly inner: Readonly<{
+      tokenName: string;
+      tokenImage: string;
+      title: string;
+    }>;
+    constructor(inner: {
+      tokenName: string;
+      tokenImage: string;
+      title: string;
+    }) {
+      super('NotificationKind', 'Reward');
+
+      this.inner = Object.freeze(inner);
+    }
+    static new(inner: {
+      tokenName: string;
+      tokenImage: string;
+      title: string;
+    }): Reward_ {
+      return new Reward_(inner);
+    }
+
+    static instanceOf(obj: any): obj is Reward_ {
+      return obj.tag === NotificationKind_Tags.Reward;
+    }
+  }
+
+  function instanceOf(obj: any): obj is NotificationKind {
+    return obj[uniffiTypeNameSymbol] === 'NotificationKind';
+  }
+
+  return Object.freeze({
+    instanceOf,
+    FriendshipRequest: FriendshipRequest_,
+    FriendshipAccepted: FriendshipAccepted_,
+    EventStarted: EventStarted_,
+    Reward: Reward_,
+  });
+})();
+export type NotificationKind = InstanceType<
+  (typeof NotificationKind)[
+    | 'FriendshipRequest'
+    | 'FriendshipAccepted'
+    | 'EventStarted'
+    | 'Reward']
+>;
+
+// FfiConverter for enum NotificationKind
+const FfiConverterTypeNotificationKind = (() => {
+  type TypeName = NotificationKind;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      switch (c.readI32()) {
+        case 1:
+          return new NotificationKind.FriendshipRequest({
+            sender: FfiConverterTypeNotificationSender.readFromCursor(c),
+          });
+        case 2:
+          return new NotificationKind.FriendshipAccepted({
+            sender: FfiConverterTypeNotificationSender.readFromCursor(c),
+          });
+        case 3:
+          return new NotificationKind.EventStarted({
+            title: FfiConverterString.readFromCursor(c),
+            image: FfiConverterString.readFromCursor(c),
+            link: FfiConverterString.readFromCursor(c),
+            eventId: FfiConverterOptionalString.readFromCursor(c),
+          });
+        case 4:
+          return new NotificationKind.Reward({
+            tokenName: FfiConverterString.readFromCursor(c),
+            tokenImage: FfiConverterString.readFromCursor(c),
+            title: FfiConverterString.readFromCursor(c),
+          });
+        default:
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      switch (value.tag) {
+        case NotificationKind_Tags.FriendshipRequest: {
+          c.writeI32(1);
+          const inner = value.inner;
+          FfiConverterTypeNotificationSender.writeIntoCursor(inner.sender, c);
+          return;
+        }
+        case NotificationKind_Tags.FriendshipAccepted: {
+          c.writeI32(2);
+          const inner = value.inner;
+          FfiConverterTypeNotificationSender.writeIntoCursor(inner.sender, c);
+          return;
+        }
+        case NotificationKind_Tags.EventStarted: {
+          c.writeI32(3);
+          const inner = value.inner;
+          FfiConverterString.writeIntoCursor(inner.title, c);
+          FfiConverterString.writeIntoCursor(inner.image, c);
+          FfiConverterString.writeIntoCursor(inner.link, c);
+          FfiConverterOptionalString.writeIntoCursor(inner.eventId, c);
+          return;
+        }
+        case NotificationKind_Tags.Reward: {
+          c.writeI32(4);
+          const inner = value.inner;
+          FfiConverterString.writeIntoCursor(inner.tokenName, c);
+          FfiConverterString.writeIntoCursor(inner.tokenImage, c);
+          FfiConverterString.writeIntoCursor(inner.title, c);
+          return;
+        }
+        default:
+          // Throwing from here means that NotificationKind_Tags hasn't matched an ordinal.
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+    allocationSize(value: TypeName): number {
+      switch (value.tag) {
+        case NotificationKind_Tags.FriendshipRequest: {
+          const inner = value.inner;
+          let size = 4;
+          size += FfiConverterTypeNotificationSender.allocationSize(
+            inner.sender,
+          );
+          return size;
+        }
+        case NotificationKind_Tags.FriendshipAccepted: {
+          const inner = value.inner;
+          let size = 4;
+          size += FfiConverterTypeNotificationSender.allocationSize(
+            inner.sender,
+          );
+          return size;
+        }
+        case NotificationKind_Tags.EventStarted: {
+          const inner = value.inner;
+          let size = 4;
+          size += FfiConverterString.allocationSize(inner.title);
+          size += FfiConverterString.allocationSize(inner.image);
+          size += FfiConverterString.allocationSize(inner.link);
+          size += FfiConverterOptionalString.allocationSize(inner.eventId);
+          return size;
+        }
+        case NotificationKind_Tags.Reward: {
+          const inner = value.inner;
+          let size = 4;
+          size += FfiConverterString.allocationSize(inner.tokenName);
+          size += FfiConverterString.allocationSize(inner.tokenImage);
+          size += FfiConverterString.allocationSize(inner.title);
+          return size;
+        }
+        default:
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+  }
+  return new FFIConverter();
+})();
+
+export type Notification = {
+  id: string;
+  /**
+   * Unix milliseconds.
+   */
+  timestamp: bigint;
+  read: boolean;
+  kind: NotificationKind;
+};
+
+/**
+ * Generated factory for {@link Notification} record objects.
+ */
+export const Notification = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<Notification, ReturnType<typeof defaults>>(
+      defaults,
+    );
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults()) as Partial<Notification>,
+  });
+})();
+
+const FfiConverterTypeNotification = (() => {
+  type TypeName = Notification;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      return {
+        id: FfiConverterString.readFromCursor(c),
+        timestamp: FfiConverterInt64.readFromCursor(c),
+        read: FfiConverterBool.readFromCursor(c),
+        kind: FfiConverterTypeNotificationKind.readFromCursor(c),
+      };
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      FfiConverterString.writeIntoCursor(value.id, c);
+      FfiConverterInt64.writeIntoCursor(value.timestamp, c);
+      FfiConverterBool.writeIntoCursor(value.read, c);
+      FfiConverterTypeNotificationKind.writeIntoCursor(value.kind, c);
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterString.allocationSize(value.id) +
+        FfiConverterInt64.allocationSize(value.timestamp) +
+        FfiConverterBool.allocationSize(value.read) +
+        FfiConverterTypeNotificationKind.allocationSize(value.kind)
       );
     }
   }
@@ -1470,6 +4342,690 @@ const FfiConverterTypeParamPair = (() => {
       return (
         FfiConverterString.allocationSize(value.key) +
         FfiConverterString.allocationSize(value.value)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
+/**
+ * A place as the favorites list shows it. `base_position` is `x,y` for a parcel; for a world the
+ * shell uses `world_name`.
+ */
+export type Place = {
+  id: string;
+  title: string;
+  /**
+   * The contact name, or the owner when there is none.
+   */
+  creator: string;
+  image: string;
+  users: number;
+  likeRate?: number;
+  world: boolean;
+  worldName: string;
+  basePosition: string;
+  description?: string;
+  categories: Array<string>;
+};
+
+/**
+ * Generated factory for {@link Place} record objects.
+ */
+export const Place = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<Place, ReturnType<typeof defaults>>(defaults);
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults()) as Partial<Place>,
+  });
+})();
+
+const FfiConverterTypePlace = (() => {
+  type TypeName = Place;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      return {
+        id: FfiConverterString.readFromCursor(c),
+        title: FfiConverterString.readFromCursor(c),
+        creator: FfiConverterString.readFromCursor(c),
+        image: FfiConverterString.readFromCursor(c),
+        users: FfiConverterUInt32.readFromCursor(c),
+        likeRate: FfiConverterOptionalFloat64.readFromCursor(c),
+        world: FfiConverterBool.readFromCursor(c),
+        worldName: FfiConverterString.readFromCursor(c),
+        basePosition: FfiConverterString.readFromCursor(c),
+        description: FfiConverterOptionalString.readFromCursor(c),
+        categories: FfiConverterSequenceString.readFromCursor(c),
+      };
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      FfiConverterString.writeIntoCursor(value.id, c);
+      FfiConverterString.writeIntoCursor(value.title, c);
+      FfiConverterString.writeIntoCursor(value.creator, c);
+      FfiConverterString.writeIntoCursor(value.image, c);
+      FfiConverterUInt32.writeIntoCursor(value.users, c);
+      FfiConverterOptionalFloat64.writeIntoCursor(value.likeRate, c);
+      FfiConverterBool.writeIntoCursor(value.world, c);
+      FfiConverterString.writeIntoCursor(value.worldName, c);
+      FfiConverterString.writeIntoCursor(value.basePosition, c);
+      FfiConverterOptionalString.writeIntoCursor(value.description, c);
+      FfiConverterSequenceString.writeIntoCursor(value.categories, c);
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterString.allocationSize(value.id) +
+        FfiConverterString.allocationSize(value.title) +
+        FfiConverterString.allocationSize(value.creator) +
+        FfiConverterString.allocationSize(value.image) +
+        FfiConverterUInt32.allocationSize(value.users) +
+        FfiConverterOptionalFloat64.allocationSize(value.likeRate) +
+        FfiConverterBool.allocationSize(value.world) +
+        FfiConverterString.allocationSize(value.worldName) +
+        FfiConverterString.allocationSize(value.basePosition) +
+        FfiConverterOptionalString.allocationSize(value.description) +
+        FfiConverterSequenceString.allocationSize(value.categories)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
+/**
+ * The user's vote on a place.
+ */
+export enum Vote {
+  Up,
+  Down,
+  None,
+}
+
+const FfiConverterTypeVote = (() => {
+  type TypeName = Vote;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      switch (c.readI32()) {
+        case 1:
+          return Vote.Up;
+        case 2:
+          return Vote.Down;
+        case 3:
+          return Vote.None;
+        default:
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      switch (value) {
+        case Vote.Up:
+          return c.writeI32(1);
+        case Vote.Down:
+          return c.writeI32(2);
+        case Vote.None:
+          return c.writeI32(3);
+      }
+    }
+    allocationSize(value: TypeName): number {
+      return 4;
+    }
+  }
+  return new FFIConverter();
+})();
+
+/**
+ * What the signed-in user did with one place.
+ */
+export type PlaceUserState = {
+  favorite: boolean;
+  vote: Vote;
+};
+
+/**
+ * Generated factory for {@link PlaceUserState} record objects.
+ */
+export const PlaceUserState = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<PlaceUserState, ReturnType<typeof defaults>>(
+      defaults,
+    );
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults()) as Partial<PlaceUserState>,
+  });
+})();
+
+const FfiConverterTypePlaceUserState = (() => {
+  type TypeName = PlaceUserState;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      return {
+        favorite: FfiConverterBool.readFromCursor(c),
+        vote: FfiConverterTypeVote.readFromCursor(c),
+      };
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      FfiConverterBool.writeIntoCursor(value.favorite, c);
+      FfiConverterTypeVote.writeIntoCursor(value.vote, c);
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterBool.allocationSize(value.favorite) +
+        FfiConverterTypeVote.allocationSize(value.vote)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
+export type ProfileLink = {
+  title: string;
+  url: string;
+};
+
+/**
+ * Generated factory for {@link ProfileLink} record objects.
+ */
+export const ProfileLink = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<ProfileLink, ReturnType<typeof defaults>>(
+      defaults,
+    );
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults()) as Partial<ProfileLink>,
+  });
+})();
+
+const FfiConverterTypeProfileLink = (() => {
+  type TypeName = ProfileLink;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      return {
+        title: FfiConverterString.readFromCursor(c),
+        url: FfiConverterString.readFromCursor(c),
+      };
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      FfiConverterString.writeIntoCursor(value.title, c);
+      FfiConverterString.writeIntoCursor(value.url, c);
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterString.allocationSize(value.title) +
+        FfiConverterString.allocationSize(value.url)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
+/**
+ * A profile, public or own. Absent text fields read as empty.
+ */
+export type Profile = {
+  address: string;
+  version: number;
+  hasClaimedName: boolean;
+  name: string;
+  description: string;
+  country: string;
+  pronouns: string;
+  gender: string;
+  sexualOrientation: string;
+  relationshipStatus: string;
+  employmentStatus: string;
+  profession: string;
+  realName: string;
+  hobbies: string;
+  links: Array<ProfileLink>;
+  /**
+   * Face snapshot of profiles that still carry one; empty for ADR-290 profiles, whose image
+   * the profile-images service renders.
+   */
+  profilePictureUrl: string;
+};
+
+/**
+ * Generated factory for {@link Profile} record objects.
+ */
+export const Profile = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<Profile, ReturnType<typeof defaults>>(defaults);
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults()) as Partial<Profile>,
+  });
+})();
+
+const FfiConverterTypeProfile = (() => {
+  type TypeName = Profile;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      return {
+        address: FfiConverterString.readFromCursor(c),
+        version: FfiConverterUInt32.readFromCursor(c),
+        hasClaimedName: FfiConverterBool.readFromCursor(c),
+        name: FfiConverterString.readFromCursor(c),
+        description: FfiConverterString.readFromCursor(c),
+        country: FfiConverterString.readFromCursor(c),
+        pronouns: FfiConverterString.readFromCursor(c),
+        gender: FfiConverterString.readFromCursor(c),
+        sexualOrientation: FfiConverterString.readFromCursor(c),
+        relationshipStatus: FfiConverterString.readFromCursor(c),
+        employmentStatus: FfiConverterString.readFromCursor(c),
+        profession: FfiConverterString.readFromCursor(c),
+        realName: FfiConverterString.readFromCursor(c),
+        hobbies: FfiConverterString.readFromCursor(c),
+        links: FfiConverterSequenceTypeProfileLink.readFromCursor(c),
+        profilePictureUrl: FfiConverterString.readFromCursor(c),
+      };
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      FfiConverterString.writeIntoCursor(value.address, c);
+      FfiConverterUInt32.writeIntoCursor(value.version, c);
+      FfiConverterBool.writeIntoCursor(value.hasClaimedName, c);
+      FfiConverterString.writeIntoCursor(value.name, c);
+      FfiConverterString.writeIntoCursor(value.description, c);
+      FfiConverterString.writeIntoCursor(value.country, c);
+      FfiConverterString.writeIntoCursor(value.pronouns, c);
+      FfiConverterString.writeIntoCursor(value.gender, c);
+      FfiConverterString.writeIntoCursor(value.sexualOrientation, c);
+      FfiConverterString.writeIntoCursor(value.relationshipStatus, c);
+      FfiConverterString.writeIntoCursor(value.employmentStatus, c);
+      FfiConverterString.writeIntoCursor(value.profession, c);
+      FfiConverterString.writeIntoCursor(value.realName, c);
+      FfiConverterString.writeIntoCursor(value.hobbies, c);
+      FfiConverterSequenceTypeProfileLink.writeIntoCursor(value.links, c);
+      FfiConverterString.writeIntoCursor(value.profilePictureUrl, c);
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterString.allocationSize(value.address) +
+        FfiConverterUInt32.allocationSize(value.version) +
+        FfiConverterBool.allocationSize(value.hasClaimedName) +
+        FfiConverterString.allocationSize(value.name) +
+        FfiConverterString.allocationSize(value.description) +
+        FfiConverterString.allocationSize(value.country) +
+        FfiConverterString.allocationSize(value.pronouns) +
+        FfiConverterString.allocationSize(value.gender) +
+        FfiConverterString.allocationSize(value.sexualOrientation) +
+        FfiConverterString.allocationSize(value.relationshipStatus) +
+        FfiConverterString.allocationSize(value.employmentStatus) +
+        FfiConverterString.allocationSize(value.profession) +
+        FfiConverterString.allocationSize(value.realName) +
+        FfiConverterString.allocationSize(value.hobbies) +
+        FfiConverterSequenceTypeProfileLink.allocationSize(value.links) +
+        FfiConverterString.allocationSize(value.profilePictureUrl)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
+/**
+ * The fields of a profile the shell edits; `None` leaves the field as it is. An empty string
+ * clears an optional text field, and an empty `links` clears the links.
+ */
+export type ProfileUpdate = {
+  name?: string;
+  description?: string;
+  country?: string;
+  pronouns?: string;
+  gender?: string;
+  sexualOrientation?: string;
+  relationshipStatus?: string;
+  employmentStatus?: string;
+  profession?: string;
+  realName?: string;
+  hobbies?: string;
+  hasClaimedName?: boolean;
+  links?: Array<ProfileLink>;
+};
+
+/**
+ * Generated factory for {@link ProfileUpdate} record objects.
+ */
+export const ProfileUpdate = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<ProfileUpdate, ReturnType<typeof defaults>>(
+      defaults,
+    );
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults()) as Partial<ProfileUpdate>,
+  });
+})();
+
+const FfiConverterTypeProfileUpdate = (() => {
+  type TypeName = ProfileUpdate;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      return {
+        name: FfiConverterOptionalString.readFromCursor(c),
+        description: FfiConverterOptionalString.readFromCursor(c),
+        country: FfiConverterOptionalString.readFromCursor(c),
+        pronouns: FfiConverterOptionalString.readFromCursor(c),
+        gender: FfiConverterOptionalString.readFromCursor(c),
+        sexualOrientation: FfiConverterOptionalString.readFromCursor(c),
+        relationshipStatus: FfiConverterOptionalString.readFromCursor(c),
+        employmentStatus: FfiConverterOptionalString.readFromCursor(c),
+        profession: FfiConverterOptionalString.readFromCursor(c),
+        realName: FfiConverterOptionalString.readFromCursor(c),
+        hobbies: FfiConverterOptionalString.readFromCursor(c),
+        hasClaimedName: FfiConverterOptionalBoolean.readFromCursor(c),
+        links: FfiConverterOptionalSequenceTypeProfileLink.readFromCursor(c),
+      };
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      FfiConverterOptionalString.writeIntoCursor(value.name, c);
+      FfiConverterOptionalString.writeIntoCursor(value.description, c);
+      FfiConverterOptionalString.writeIntoCursor(value.country, c);
+      FfiConverterOptionalString.writeIntoCursor(value.pronouns, c);
+      FfiConverterOptionalString.writeIntoCursor(value.gender, c);
+      FfiConverterOptionalString.writeIntoCursor(value.sexualOrientation, c);
+      FfiConverterOptionalString.writeIntoCursor(value.relationshipStatus, c);
+      FfiConverterOptionalString.writeIntoCursor(value.employmentStatus, c);
+      FfiConverterOptionalString.writeIntoCursor(value.profession, c);
+      FfiConverterOptionalString.writeIntoCursor(value.realName, c);
+      FfiConverterOptionalString.writeIntoCursor(value.hobbies, c);
+      FfiConverterOptionalBoolean.writeIntoCursor(value.hasClaimedName, c);
+      FfiConverterOptionalSequenceTypeProfileLink.writeIntoCursor(
+        value.links,
+        c,
+      );
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterOptionalString.allocationSize(value.name) +
+        FfiConverterOptionalString.allocationSize(value.description) +
+        FfiConverterOptionalString.allocationSize(value.country) +
+        FfiConverterOptionalString.allocationSize(value.pronouns) +
+        FfiConverterOptionalString.allocationSize(value.gender) +
+        FfiConverterOptionalString.allocationSize(value.sexualOrientation) +
+        FfiConverterOptionalString.allocationSize(value.relationshipStatus) +
+        FfiConverterOptionalString.allocationSize(value.employmentStatus) +
+        FfiConverterOptionalString.allocationSize(value.profession) +
+        FfiConverterOptionalString.allocationSize(value.realName) +
+        FfiConverterOptionalString.allocationSize(value.hobbies) +
+        FfiConverterOptionalBoolean.allocationSize(value.hasClaimedName) +
+        FfiConverterOptionalSequenceTypeProfileLink.allocationSize(value.links)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
+// Enum: PropertyValue
+export enum PropertyValue_Tags {
+  Text = 'Text',
+  Int = 'Int',
+  Float = 'Float',
+  Bool = 'Bool',
+}
+export const PropertyValue = (() => {
+  type Text__interface = {
+    tag: PropertyValue_Tags.Text;
+    inner: Readonly<{ value: string }>;
+  };
+  class Text_ extends UniffiEnum implements Text__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'PropertyValue';
+    readonly tag = PropertyValue_Tags.Text;
+    readonly inner: Readonly<{ value: string }>;
+    constructor(inner: { value: string }) {
+      super('PropertyValue', 'Text');
+
+      this.inner = Object.freeze(inner);
+    }
+    static new(inner: { value: string }): Text_ {
+      return new Text_(inner);
+    }
+
+    static instanceOf(obj: any): obj is Text_ {
+      return obj.tag === PropertyValue_Tags.Text;
+    }
+  }
+
+  type Int__interface = {
+    tag: PropertyValue_Tags.Int;
+    inner: Readonly<{ value: bigint }>;
+  };
+  class Int_ extends UniffiEnum implements Int__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'PropertyValue';
+    readonly tag = PropertyValue_Tags.Int;
+    readonly inner: Readonly<{ value: bigint }>;
+    constructor(inner: { value: bigint }) {
+      super('PropertyValue', 'Int');
+
+      this.inner = Object.freeze(inner);
+    }
+    static new(inner: { value: bigint }): Int_ {
+      return new Int_(inner);
+    }
+
+    static instanceOf(obj: any): obj is Int_ {
+      return obj.tag === PropertyValue_Tags.Int;
+    }
+  }
+
+  type Float__interface = {
+    tag: PropertyValue_Tags.Float;
+    inner: Readonly<{ value: number }>;
+  };
+  class Float_ extends UniffiEnum implements Float__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'PropertyValue';
+    readonly tag = PropertyValue_Tags.Float;
+    readonly inner: Readonly<{ value: number }>;
+    constructor(inner: { value: number }) {
+      super('PropertyValue', 'Float');
+
+      this.inner = Object.freeze(inner);
+    }
+    static new(inner: { value: number }): Float_ {
+      return new Float_(inner);
+    }
+
+    static instanceOf(obj: any): obj is Float_ {
+      return obj.tag === PropertyValue_Tags.Float;
+    }
+  }
+
+  type Bool__interface = {
+    tag: PropertyValue_Tags.Bool;
+    inner: Readonly<{ value: boolean }>;
+  };
+  class Bool_ extends UniffiEnum implements Bool__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'PropertyValue';
+    readonly tag = PropertyValue_Tags.Bool;
+    readonly inner: Readonly<{ value: boolean }>;
+    constructor(inner: { value: boolean }) {
+      super('PropertyValue', 'Bool');
+
+      this.inner = Object.freeze(inner);
+    }
+    static new(inner: { value: boolean }): Bool_ {
+      return new Bool_(inner);
+    }
+
+    static instanceOf(obj: any): obj is Bool_ {
+      return obj.tag === PropertyValue_Tags.Bool;
+    }
+  }
+
+  function instanceOf(obj: any): obj is PropertyValue {
+    return obj[uniffiTypeNameSymbol] === 'PropertyValue';
+  }
+
+  return Object.freeze({
+    instanceOf,
+    Text: Text_,
+    Int: Int_,
+    Float: Float_,
+    Bool: Bool_,
+  });
+})();
+export type PropertyValue = InstanceType<
+  (typeof PropertyValue)['Text' | 'Int' | 'Float' | 'Bool']
+>;
+
+// FfiConverter for enum PropertyValue
+const FfiConverterTypePropertyValue = (() => {
+  type TypeName = PropertyValue;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      switch (c.readI32()) {
+        case 1:
+          return new PropertyValue.Text({
+            value: FfiConverterString.readFromCursor(c),
+          });
+        case 2:
+          return new PropertyValue.Int({
+            value: FfiConverterInt64.readFromCursor(c),
+          });
+        case 3:
+          return new PropertyValue.Float({
+            value: FfiConverterFloat64.readFromCursor(c),
+          });
+        case 4:
+          return new PropertyValue.Bool({
+            value: FfiConverterBool.readFromCursor(c),
+          });
+        default:
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      switch (value.tag) {
+        case PropertyValue_Tags.Text: {
+          c.writeI32(1);
+          const inner = value.inner;
+          FfiConverterString.writeIntoCursor(inner.value, c);
+          return;
+        }
+        case PropertyValue_Tags.Int: {
+          c.writeI32(2);
+          const inner = value.inner;
+          FfiConverterInt64.writeIntoCursor(inner.value, c);
+          return;
+        }
+        case PropertyValue_Tags.Float: {
+          c.writeI32(3);
+          const inner = value.inner;
+          FfiConverterFloat64.writeIntoCursor(inner.value, c);
+          return;
+        }
+        case PropertyValue_Tags.Bool: {
+          c.writeI32(4);
+          const inner = value.inner;
+          FfiConverterBool.writeIntoCursor(inner.value, c);
+          return;
+        }
+        default:
+          // Throwing from here means that PropertyValue_Tags hasn't matched an ordinal.
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+    allocationSize(value: TypeName): number {
+      switch (value.tag) {
+        case PropertyValue_Tags.Text: {
+          const inner = value.inner;
+          let size = 4;
+          size += FfiConverterString.allocationSize(inner.value);
+          return size;
+        }
+        case PropertyValue_Tags.Int: {
+          const inner = value.inner;
+          let size = 4;
+          size += FfiConverterInt64.allocationSize(inner.value);
+          return size;
+        }
+        case PropertyValue_Tags.Float: {
+          const inner = value.inner;
+          let size = 4;
+          size += FfiConverterFloat64.allocationSize(inner.value);
+          return size;
+        }
+        case PropertyValue_Tags.Bool: {
+          const inner = value.inner;
+          let size = 4;
+          size += FfiConverterBool.allocationSize(inner.value);
+          return size;
+        }
+        default:
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+  }
+  return new FFIConverter();
+})();
+
+export type Property = {
+  key: string;
+  value: PropertyValue;
+};
+
+/**
+ * Generated factory for {@link Property} record objects.
+ */
+export const Property = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<Property, ReturnType<typeof defaults>>(defaults);
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults()) as Partial<Property>,
+  });
+})();
+
+const FfiConverterTypeProperty = (() => {
+  type TypeName = Property;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      return {
+        key: FfiConverterString.readFromCursor(c),
+        value: FfiConverterTypePropertyValue.readFromCursor(c),
+      };
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      FfiConverterString.writeIntoCursor(value.key, c);
+      FfiConverterTypePropertyValue.writeIntoCursor(value.value, c);
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterString.allocationSize(value.key) +
+        FfiConverterTypePropertyValue.allocationSize(value.value)
       );
     }
   }
@@ -1912,6 +5468,282 @@ const FfiConverterTypeReportTags = (() => {
       return (
         FfiConverterSequenceTypeReportTag.allocationSize(value.tags) +
         FfiConverterSequenceTypeReportTag.allocationSize(value.graphics)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
+export enum DestinationKind {
+  /**
+   * A Genesis City catalyst (the default realm or another DAO one).
+   */
+  Genesis,
+  /**
+   * A `.dcl.eth` world.
+   */
+  World,
+  /**
+   * A preview server on this machine or its network.
+   */
+  Preview,
+  /**
+   * Any other realm.
+   */
+  CustomRealm,
+}
+
+const FfiConverterTypeDestinationKind = (() => {
+  type TypeName = DestinationKind;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      switch (c.readI32()) {
+        case 1:
+          return DestinationKind.Genesis;
+        case 2:
+          return DestinationKind.World;
+        case 3:
+          return DestinationKind.Preview;
+        case 4:
+          return DestinationKind.CustomRealm;
+        default:
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      switch (value) {
+        case DestinationKind.Genesis:
+          return c.writeI32(1);
+        case DestinationKind.World:
+          return c.writeI32(2);
+        case DestinationKind.Preview:
+          return c.writeI32(3);
+        case DestinationKind.CustomRealm:
+          return c.writeI32(4);
+      }
+    }
+    allocationSize(value: TypeName): number {
+      return 4;
+    }
+  }
+  return new FFIConverter();
+})();
+
+/**
+ * What the world demands of this user, now.
+ */
+export enum AccessVerdict {
+  /**
+   * Open, or this user is allowed, or the secret they gave checked out.
+   */
+  Allowed,
+  /**
+   * A shared secret is required; `resolve_destination_with_secret` retries with one.
+   */
+  NeedsPassword,
+  /**
+   * A wallet allow-list that does not include this user.
+   */
+  NotAllowed,
+}
+
+const FfiConverterTypeAccessVerdict = (() => {
+  type TypeName = AccessVerdict;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      switch (c.readI32()) {
+        case 1:
+          return AccessVerdict.Allowed;
+        case 2:
+          return AccessVerdict.NeedsPassword;
+        case 3:
+          return AccessVerdict.NotAllowed;
+        default:
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      switch (value) {
+        case AccessVerdict.Allowed:
+          return c.writeI32(1);
+        case AccessVerdict.NeedsPassword:
+          return c.writeI32(2);
+        case AccessVerdict.NotAllowed:
+          return c.writeI32(3);
+      }
+    }
+    allocationSize(value: TypeName): number {
+      return 4;
+    }
+  }
+  return new FFIConverter();
+})();
+
+export enum ResolveFailure {
+  /**
+   * The input is not a coordinate, a world, a realm or a link naming one.
+   */
+  InvalidInput,
+  WorldNotFound,
+  ParcelOutOfBounds,
+  /**
+   * The realm has no scene at the parcel.
+   */
+  ParcelEmpty,
+  FetchFailed,
+  PreviewUnreachable,
+  Timeout,
+  RateLimited,
+}
+
+const FfiConverterTypeResolveFailure = (() => {
+  type TypeName = ResolveFailure;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      switch (c.readI32()) {
+        case 1:
+          return ResolveFailure.InvalidInput;
+        case 2:
+          return ResolveFailure.WorldNotFound;
+        case 3:
+          return ResolveFailure.ParcelOutOfBounds;
+        case 4:
+          return ResolveFailure.ParcelEmpty;
+        case 5:
+          return ResolveFailure.FetchFailed;
+        case 6:
+          return ResolveFailure.PreviewUnreachable;
+        case 7:
+          return ResolveFailure.Timeout;
+        case 8:
+          return ResolveFailure.RateLimited;
+        default:
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      switch (value) {
+        case ResolveFailure.InvalidInput:
+          return c.writeI32(1);
+        case ResolveFailure.WorldNotFound:
+          return c.writeI32(2);
+        case ResolveFailure.ParcelOutOfBounds:
+          return c.writeI32(3);
+        case ResolveFailure.ParcelEmpty:
+          return c.writeI32(4);
+        case ResolveFailure.FetchFailed:
+          return c.writeI32(5);
+        case ResolveFailure.PreviewUnreachable:
+          return c.writeI32(6);
+        case ResolveFailure.Timeout:
+          return c.writeI32(7);
+        case ResolveFailure.RateLimited:
+          return c.writeI32(8);
+      }
+    }
+    allocationSize(value: TypeName): number {
+      return 4;
+    }
+  }
+  return new FFIConverter();
+})();
+
+export type ResolvedDestination = {
+  kind: DestinationKind;
+  access: AccessVerdict;
+  /**
+   * Set when the destination was refused; `access` is then `Allowed` unless the refusal is
+   * about access.
+   */
+  failure?: ResolveFailure;
+  /**
+   * Entering is allowed: no failure and `access` is `Allowed`.
+   */
+  ready: boolean;
+  /**
+   * The `.dcl.eth` name for a world, empty otherwise.
+   */
+  worldName: string;
+  parcel?: Parcel;
+  /**
+   * What the loading screen shows, from the scene the existence check already read; empty is
+   * a normal answer and the Places catalog fills the gaps.
+   */
+  sceneId: string;
+  title: string;
+  creator: string;
+  imageUrl: string;
+  assetCount: number;
+  /**
+   * What `enter_world` takes.
+   */
+  destination: Destination;
+};
+
+/**
+ * Generated factory for {@link ResolvedDestination} record objects.
+ */
+export const ResolvedDestination = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<ResolvedDestination, ReturnType<typeof defaults>>(
+      defaults,
+    );
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults()) as Partial<ResolvedDestination>,
+  });
+})();
+
+const FfiConverterTypeResolvedDestination = (() => {
+  type TypeName = ResolvedDestination;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      return {
+        kind: FfiConverterTypeDestinationKind.readFromCursor(c),
+        access: FfiConverterTypeAccessVerdict.readFromCursor(c),
+        failure: FfiConverterOptionalTypeResolveFailure.readFromCursor(c),
+        ready: FfiConverterBool.readFromCursor(c),
+        worldName: FfiConverterString.readFromCursor(c),
+        parcel: FfiConverterOptionalTypeParcel.readFromCursor(c),
+        sceneId: FfiConverterString.readFromCursor(c),
+        title: FfiConverterString.readFromCursor(c),
+        creator: FfiConverterString.readFromCursor(c),
+        imageUrl: FfiConverterString.readFromCursor(c),
+        assetCount: FfiConverterUInt32.readFromCursor(c),
+        destination: FfiConverterTypeDestination.readFromCursor(c),
+      };
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      FfiConverterTypeDestinationKind.writeIntoCursor(value.kind, c);
+      FfiConverterTypeAccessVerdict.writeIntoCursor(value.access, c);
+      FfiConverterOptionalTypeResolveFailure.writeIntoCursor(value.failure, c);
+      FfiConverterBool.writeIntoCursor(value.ready, c);
+      FfiConverterString.writeIntoCursor(value.worldName, c);
+      FfiConverterOptionalTypeParcel.writeIntoCursor(value.parcel, c);
+      FfiConverterString.writeIntoCursor(value.sceneId, c);
+      FfiConverterString.writeIntoCursor(value.title, c);
+      FfiConverterString.writeIntoCursor(value.creator, c);
+      FfiConverterString.writeIntoCursor(value.imageUrl, c);
+      FfiConverterUInt32.writeIntoCursor(value.assetCount, c);
+      FfiConverterTypeDestination.writeIntoCursor(value.destination, c);
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterTypeDestinationKind.allocationSize(value.kind) +
+        FfiConverterTypeAccessVerdict.allocationSize(value.access) +
+        FfiConverterOptionalTypeResolveFailure.allocationSize(value.failure) +
+        FfiConverterBool.allocationSize(value.ready) +
+        FfiConverterString.allocationSize(value.worldName) +
+        FfiConverterOptionalTypeParcel.allocationSize(value.parcel) +
+        FfiConverterString.allocationSize(value.sceneId) +
+        FfiConverterString.allocationSize(value.title) +
+        FfiConverterString.allocationSize(value.creator) +
+        FfiConverterString.allocationSize(value.imageUrl) +
+        FfiConverterUInt32.allocationSize(value.assetCount) +
+        FfiConverterTypeDestination.allocationSize(value.destination)
       );
     }
   }
@@ -4022,6 +7854,1252 @@ const FfiConverterTypeSettingEntry = (() => {
   return new FFIConverter();
 })();
 
+/**
+ * Visibility of the engine's own UI, which the shell mirrors.
+ */
+export type UiState = {
+  hidden: boolean;
+  chatOpen: boolean;
+};
+
+/**
+ * Generated factory for {@link UiState} record objects.
+ */
+export const UiState = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<UiState, ReturnType<typeof defaults>>(defaults);
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults()) as Partial<UiState>,
+  });
+})();
+
+const FfiConverterTypeUiState = (() => {
+  type TypeName = UiState;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      return {
+        hidden: FfiConverterBool.readFromCursor(c),
+        chatOpen: FfiConverterBool.readFromCursor(c),
+      };
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      FfiConverterBool.writeIntoCursor(value.hidden, c);
+      FfiConverterBool.writeIntoCursor(value.chatOpen, c);
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterBool.allocationSize(value.hidden) +
+        FfiConverterBool.allocationSize(value.chatOpen)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
+export type Urls = {
+  /**
+   * `https://decentraland.<env>`
+   */
+  host: string;
+  help: string;
+  privacyPolicy: string;
+  termsOfService: string;
+  contentPolicy: string;
+  /**
+   * Places API base (`.../api`); the places list is `places`.
+   */
+  placesApi: string;
+  places: string;
+  /**
+   * `.../api/events`
+   */
+  eventsApi: string;
+  jumpEvents: string;
+  /**
+   * The default (Genesis City) realm.
+   */
+  mainRealm: string;
+  /**
+   * `.../world/`; a world's realm is this plus its lowercase name.
+   */
+  worldsContentServer: string;
+  peerBase: string;
+  peerContent: string;
+  peerLambdas: string;
+  mobileBff: string;
+  destinationsApi: string;
+  mobileEventsApi: string;
+  accountDeletion: string;
+  notificationsApi: string;
+  creditsServer: string;
+  socialService: string;
+  marketplace: string;
+  marketplaceApi: string;
+  marketplaceCatalogApi: string;
+  marketplaceClaimName: string;
+  authFrontend: string;
+  authMobileFrontend: string;
+  authApiBase: string;
+  authApiRequests: string;
+  /**
+   * Base of shared scene links; see `scene_link`.
+   */
+  mobileOpen: string;
+  /**
+   * Realms the dev-only picker offers.
+   */
+  devRealms: Array<string>;
+};
+
+/**
+ * Generated factory for {@link Urls} record objects.
+ */
+export const Urls = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<Urls, ReturnType<typeof defaults>>(defaults);
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults()) as Partial<Urls>,
+  });
+})();
+
+const FfiConverterTypeUrls = (() => {
+  type TypeName = Urls;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      return {
+        host: FfiConverterString.readFromCursor(c),
+        help: FfiConverterString.readFromCursor(c),
+        privacyPolicy: FfiConverterString.readFromCursor(c),
+        termsOfService: FfiConverterString.readFromCursor(c),
+        contentPolicy: FfiConverterString.readFromCursor(c),
+        placesApi: FfiConverterString.readFromCursor(c),
+        places: FfiConverterString.readFromCursor(c),
+        eventsApi: FfiConverterString.readFromCursor(c),
+        jumpEvents: FfiConverterString.readFromCursor(c),
+        mainRealm: FfiConverterString.readFromCursor(c),
+        worldsContentServer: FfiConverterString.readFromCursor(c),
+        peerBase: FfiConverterString.readFromCursor(c),
+        peerContent: FfiConverterString.readFromCursor(c),
+        peerLambdas: FfiConverterString.readFromCursor(c),
+        mobileBff: FfiConverterString.readFromCursor(c),
+        destinationsApi: FfiConverterString.readFromCursor(c),
+        mobileEventsApi: FfiConverterString.readFromCursor(c),
+        accountDeletion: FfiConverterString.readFromCursor(c),
+        notificationsApi: FfiConverterString.readFromCursor(c),
+        creditsServer: FfiConverterString.readFromCursor(c),
+        socialService: FfiConverterString.readFromCursor(c),
+        marketplace: FfiConverterString.readFromCursor(c),
+        marketplaceApi: FfiConverterString.readFromCursor(c),
+        marketplaceCatalogApi: FfiConverterString.readFromCursor(c),
+        marketplaceClaimName: FfiConverterString.readFromCursor(c),
+        authFrontend: FfiConverterString.readFromCursor(c),
+        authMobileFrontend: FfiConverterString.readFromCursor(c),
+        authApiBase: FfiConverterString.readFromCursor(c),
+        authApiRequests: FfiConverterString.readFromCursor(c),
+        mobileOpen: FfiConverterString.readFromCursor(c),
+        devRealms: FfiConverterSequenceString.readFromCursor(c),
+      };
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      FfiConverterString.writeIntoCursor(value.host, c);
+      FfiConverterString.writeIntoCursor(value.help, c);
+      FfiConverterString.writeIntoCursor(value.privacyPolicy, c);
+      FfiConverterString.writeIntoCursor(value.termsOfService, c);
+      FfiConverterString.writeIntoCursor(value.contentPolicy, c);
+      FfiConverterString.writeIntoCursor(value.placesApi, c);
+      FfiConverterString.writeIntoCursor(value.places, c);
+      FfiConverterString.writeIntoCursor(value.eventsApi, c);
+      FfiConverterString.writeIntoCursor(value.jumpEvents, c);
+      FfiConverterString.writeIntoCursor(value.mainRealm, c);
+      FfiConverterString.writeIntoCursor(value.worldsContentServer, c);
+      FfiConverterString.writeIntoCursor(value.peerBase, c);
+      FfiConverterString.writeIntoCursor(value.peerContent, c);
+      FfiConverterString.writeIntoCursor(value.peerLambdas, c);
+      FfiConverterString.writeIntoCursor(value.mobileBff, c);
+      FfiConverterString.writeIntoCursor(value.destinationsApi, c);
+      FfiConverterString.writeIntoCursor(value.mobileEventsApi, c);
+      FfiConverterString.writeIntoCursor(value.accountDeletion, c);
+      FfiConverterString.writeIntoCursor(value.notificationsApi, c);
+      FfiConverterString.writeIntoCursor(value.creditsServer, c);
+      FfiConverterString.writeIntoCursor(value.socialService, c);
+      FfiConverterString.writeIntoCursor(value.marketplace, c);
+      FfiConverterString.writeIntoCursor(value.marketplaceApi, c);
+      FfiConverterString.writeIntoCursor(value.marketplaceCatalogApi, c);
+      FfiConverterString.writeIntoCursor(value.marketplaceClaimName, c);
+      FfiConverterString.writeIntoCursor(value.authFrontend, c);
+      FfiConverterString.writeIntoCursor(value.authMobileFrontend, c);
+      FfiConverterString.writeIntoCursor(value.authApiBase, c);
+      FfiConverterString.writeIntoCursor(value.authApiRequests, c);
+      FfiConverterString.writeIntoCursor(value.mobileOpen, c);
+      FfiConverterSequenceString.writeIntoCursor(value.devRealms, c);
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterString.allocationSize(value.host) +
+        FfiConverterString.allocationSize(value.help) +
+        FfiConverterString.allocationSize(value.privacyPolicy) +
+        FfiConverterString.allocationSize(value.termsOfService) +
+        FfiConverterString.allocationSize(value.contentPolicy) +
+        FfiConverterString.allocationSize(value.placesApi) +
+        FfiConverterString.allocationSize(value.places) +
+        FfiConverterString.allocationSize(value.eventsApi) +
+        FfiConverterString.allocationSize(value.jumpEvents) +
+        FfiConverterString.allocationSize(value.mainRealm) +
+        FfiConverterString.allocationSize(value.worldsContentServer) +
+        FfiConverterString.allocationSize(value.peerBase) +
+        FfiConverterString.allocationSize(value.peerContent) +
+        FfiConverterString.allocationSize(value.peerLambdas) +
+        FfiConverterString.allocationSize(value.mobileBff) +
+        FfiConverterString.allocationSize(value.destinationsApi) +
+        FfiConverterString.allocationSize(value.mobileEventsApi) +
+        FfiConverterString.allocationSize(value.accountDeletion) +
+        FfiConverterString.allocationSize(value.notificationsApi) +
+        FfiConverterString.allocationSize(value.creditsServer) +
+        FfiConverterString.allocationSize(value.socialService) +
+        FfiConverterString.allocationSize(value.marketplace) +
+        FfiConverterString.allocationSize(value.marketplaceApi) +
+        FfiConverterString.allocationSize(value.marketplaceCatalogApi) +
+        FfiConverterString.allocationSize(value.marketplaceClaimName) +
+        FfiConverterString.allocationSize(value.authFrontend) +
+        FfiConverterString.allocationSize(value.authMobileFrontend) +
+        FfiConverterString.allocationSize(value.authApiBase) +
+        FfiConverterString.allocationSize(value.authApiRequests) +
+        FfiConverterString.allocationSize(value.mobileOpen) +
+        FfiConverterSequenceString.allocationSize(value.devRealms)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
+export enum UpdateDecision {
+  /**
+   * Up to date, snoozed, or the check could not complete.
+   */
+  Proceed,
+  /**
+   * A newer build is recommended; the user may dismiss it.
+   */
+  Optional,
+  /**
+   * The build is below the minimum; the app cannot be used.
+   */
+  Required,
+}
+
+const FfiConverterTypeUpdateDecision = (() => {
+  type TypeName = UpdateDecision;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      switch (c.readI32()) {
+        case 1:
+          return UpdateDecision.Proceed;
+        case 2:
+          return UpdateDecision.Optional;
+        case 3:
+          return UpdateDecision.Required;
+        default:
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      switch (value) {
+        case UpdateDecision.Proceed:
+          return c.writeI32(1);
+        case UpdateDecision.Optional:
+          return c.writeI32(2);
+        case UpdateDecision.Required:
+          return c.writeI32(3);
+      }
+    }
+    allocationSize(value: TypeName): number {
+      return 4;
+    }
+  }
+  return new FFIConverter();
+})();
+
+export type VersionGate = {
+  decision: UpdateDecision;
+  /**
+   * The running build as `major*100000 + minor*100 + patch`; -1 when it cannot be read.
+   */
+  current: bigint;
+  minimalRequired: bigint;
+  recommended: bigint;
+};
+
+/**
+ * Generated factory for {@link VersionGate} record objects.
+ */
+export const VersionGate = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<VersionGate, ReturnType<typeof defaults>>(
+      defaults,
+    );
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults()) as Partial<VersionGate>,
+  });
+})();
+
+const FfiConverterTypeVersionGate = (() => {
+  type TypeName = VersionGate;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      return {
+        decision: FfiConverterTypeUpdateDecision.readFromCursor(c),
+        current: FfiConverterInt64.readFromCursor(c),
+        minimalRequired: FfiConverterInt64.readFromCursor(c),
+        recommended: FfiConverterInt64.readFromCursor(c),
+      };
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      FfiConverterTypeUpdateDecision.writeIntoCursor(value.decision, c);
+      FfiConverterInt64.writeIntoCursor(value.current, c);
+      FfiConverterInt64.writeIntoCursor(value.minimalRequired, c);
+      FfiConverterInt64.writeIntoCursor(value.recommended, c);
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterTypeUpdateDecision.allocationSize(value.decision) +
+        FfiConverterInt64.allocationSize(value.current) +
+        FfiConverterInt64.allocationSize(value.minimalRequired) +
+        FfiConverterInt64.allocationSize(value.recommended)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
+export enum BuildEnvironment {
+  Production,
+  Staging,
+  Development,
+}
+
+const FfiConverterTypeBuildEnvironment = (() => {
+  type TypeName = BuildEnvironment;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      switch (c.readI32()) {
+        case 1:
+          return BuildEnvironment.Production;
+        case 2:
+          return BuildEnvironment.Staging;
+        case 3:
+          return BuildEnvironment.Development;
+        default:
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      switch (value) {
+        case BuildEnvironment.Production:
+          return c.writeI32(1);
+        case BuildEnvironment.Staging:
+          return c.writeI32(2);
+        case BuildEnvironment.Development:
+          return c.writeI32(3);
+      }
+    }
+    allocationSize(value: TypeName): number {
+      return 4;
+    }
+  }
+  return new FFIConverter();
+})();
+
+/**
+ * What the avatar preview camera frames: the whole body or one wearable category.
+ */
+export enum CameraFocus {
+  Overall,
+  Head,
+  Torso,
+  Legs,
+  Feet,
+  Hands,
+}
+
+const FfiConverterTypeCameraFocus = (() => {
+  type TypeName = CameraFocus;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      switch (c.readI32()) {
+        case 1:
+          return CameraFocus.Overall;
+        case 2:
+          return CameraFocus.Head;
+        case 3:
+          return CameraFocus.Torso;
+        case 4:
+          return CameraFocus.Legs;
+        case 5:
+          return CameraFocus.Feet;
+        case 6:
+          return CameraFocus.Hands;
+        default:
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      switch (value) {
+        case CameraFocus.Overall:
+          return c.writeI32(1);
+        case CameraFocus.Head:
+          return c.writeI32(2);
+        case CameraFocus.Torso:
+          return c.writeI32(3);
+        case CameraFocus.Legs:
+          return c.writeI32(4);
+        case CameraFocus.Feet:
+          return c.writeI32(5);
+        case CameraFocus.Hands:
+          return c.writeI32(6);
+      }
+    }
+    allocationSize(value: TypeName): number {
+      return 4;
+    }
+  }
+  return new FFIConverter();
+})();
+
+export enum ColorTarget {
+  Skin,
+  Hair,
+  Eyes,
+}
+
+const FfiConverterTypeColorTarget = (() => {
+  type TypeName = ColorTarget;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      switch (c.readI32()) {
+        case 1:
+          return ColorTarget.Skin;
+        case 2:
+          return ColorTarget.Hair;
+        case 3:
+          return ColorTarget.Eyes;
+        default:
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      switch (value) {
+        case ColorTarget.Skin:
+          return c.writeI32(1);
+        case ColorTarget.Hair:
+          return c.writeI32(2);
+        case ColorTarget.Eyes:
+          return c.writeI32(3);
+      }
+    }
+    allocationSize(value: TypeName): number {
+      return 4;
+    }
+  }
+  return new FFIConverter();
+})();
+
+// Enum: Control
+export enum Control_Tags {
+  Teleport = 'Teleport',
+  SendChat = 'SendChat',
+  Emote = 'Emote',
+  SetHudInsets = 'SetHudInsets',
+  SetChatWidth = 'SetChatWidth',
+  ChatOpen = 'ChatOpen',
+  HideUi = 'HideUi',
+  FocusCamera = 'FocusCamera',
+  Equip = 'Equip',
+  Unequip = 'Unequip',
+  SetBodyShape = 'SetBodyShape',
+  SetColor = 'SetColor',
+  PlayPreviewEmote = 'PlayPreviewEmote',
+  SetEmoteSlot = 'SetEmoteSlot',
+  RandomizeAvatar = 'RandomizeAvatar',
+  SetName = 'SetName',
+}
+/**
+ * What the shell asks of the engine once a world or the avatar preview is up. All of them are
+ * ignored by an engine that has nothing to apply them to (no world, no preview).
+ */
+export const Control = (() => {
+  type Teleport__interface = {
+    tag: Control_Tags.Teleport;
+    inner: Readonly<{ parcel: Parcel }>;
+  };
+  /**
+   * Move the player inside the current world.
+   */
+  class Teleport_ extends UniffiEnum implements Teleport__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'Control';
+    readonly tag = Control_Tags.Teleport;
+    readonly inner: Readonly<{ parcel: Parcel }>;
+    constructor(inner: { parcel: Parcel }) {
+      super('Control', 'Teleport');
+
+      this.inner = Object.freeze(inner);
+    }
+    static new(inner: { parcel: Parcel }): Teleport_ {
+      return new Teleport_(inner);
+    }
+
+    static instanceOf(obj: any): obj is Teleport_ {
+      return obj.tag === Control_Tags.Teleport;
+    }
+  }
+
+  type SendChat__interface = {
+    tag: Control_Tags.SendChat;
+    inner: Readonly<{ text: string }>;
+  };
+  class SendChat_ extends UniffiEnum implements SendChat__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'Control';
+    readonly tag = Control_Tags.SendChat;
+    readonly inner: Readonly<{ text: string }>;
+    constructor(inner: { text: string }) {
+      super('Control', 'SendChat');
+
+      this.inner = Object.freeze(inner);
+    }
+    static new(inner: { text: string }): SendChat_ {
+      return new SendChat_(inner);
+    }
+
+    static instanceOf(obj: any): obj is SendChat_ {
+      return obj.tag === Control_Tags.SendChat;
+    }
+  }
+
+  type Emote__interface = {
+    tag: Control_Tags.Emote;
+    inner: Readonly<{ urn: string }>;
+  };
+  /**
+   * An emote the player does in the world.
+   */
+  class Emote_ extends UniffiEnum implements Emote__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'Control';
+    readonly tag = Control_Tags.Emote;
+    readonly inner: Readonly<{ urn: string }>;
+    constructor(inner: { urn: string }) {
+      super('Control', 'Emote');
+
+      this.inner = Object.freeze(inner);
+    }
+    static new(inner: { urn: string }): Emote_ {
+      return new Emote_(inner);
+    }
+
+    static instanceOf(obj: any): obj is Emote_ {
+      return obj.tag === Control_Tags.Emote;
+    }
+  }
+
+  type SetHudInsets__interface = {
+    tag: Control_Tags.SetHudInsets;
+    inner: Readonly<{ insets: HudInsets }>;
+  };
+  class SetHudInsets_ extends UniffiEnum implements SetHudInsets__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'Control';
+    readonly tag = Control_Tags.SetHudInsets;
+    readonly inner: Readonly<{ insets: HudInsets }>;
+    constructor(inner: { insets: HudInsets }) {
+      super('Control', 'SetHudInsets');
+
+      this.inner = Object.freeze(inner);
+    }
+    static new(inner: { insets: HudInsets }): SetHudInsets_ {
+      return new SetHudInsets_(inner);
+    }
+
+    static instanceOf(obj: any): obj is SetHudInsets_ {
+      return obj.tag === Control_Tags.SetHudInsets;
+    }
+  }
+
+  type SetChatWidth__interface = {
+    tag: Control_Tags.SetChatWidth;
+    inner: Readonly<{ width: number }>;
+  };
+  class SetChatWidth_ extends UniffiEnum implements SetChatWidth__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'Control';
+    readonly tag = Control_Tags.SetChatWidth;
+    readonly inner: Readonly<{ width: number }>;
+    constructor(inner: { width: number }) {
+      super('Control', 'SetChatWidth');
+
+      this.inner = Object.freeze(inner);
+    }
+    static new(inner: { width: number }): SetChatWidth_ {
+      return new SetChatWidth_(inner);
+    }
+
+    static instanceOf(obj: any): obj is SetChatWidth_ {
+      return obj.tag === Control_Tags.SetChatWidth;
+    }
+  }
+
+  type ChatOpen__interface = {
+    tag: Control_Tags.ChatOpen;
+    inner: Readonly<{ open: boolean }>;
+  };
+  class ChatOpen_ extends UniffiEnum implements ChatOpen__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'Control';
+    readonly tag = Control_Tags.ChatOpen;
+    readonly inner: Readonly<{ open: boolean }>;
+    constructor(inner: { open: boolean }) {
+      super('Control', 'ChatOpen');
+
+      this.inner = Object.freeze(inner);
+    }
+    static new(inner: { open: boolean }): ChatOpen_ {
+      return new ChatOpen_(inner);
+    }
+
+    static instanceOf(obj: any): obj is ChatOpen_ {
+      return obj.tag === Control_Tags.ChatOpen;
+    }
+  }
+
+  type HideUi__interface = {
+    tag: Control_Tags.HideUi;
+    inner: Readonly<{ hidden: boolean }>;
+  };
+  class HideUi_ extends UniffiEnum implements HideUi__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'Control';
+    readonly tag = Control_Tags.HideUi;
+    readonly inner: Readonly<{ hidden: boolean }>;
+    constructor(inner: { hidden: boolean }) {
+      super('Control', 'HideUi');
+
+      this.inner = Object.freeze(inner);
+    }
+    static new(inner: { hidden: boolean }): HideUi_ {
+      return new HideUi_(inner);
+    }
+
+    static instanceOf(obj: any): obj is HideUi_ {
+      return obj.tag === Control_Tags.HideUi;
+    }
+  }
+
+  type FocusCamera__interface = {
+    tag: Control_Tags.FocusCamera;
+    inner: Readonly<{ focus: CameraFocus }>;
+  };
+  class FocusCamera_ extends UniffiEnum implements FocusCamera__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'Control';
+    readonly tag = Control_Tags.FocusCamera;
+    readonly inner: Readonly<{ focus: CameraFocus }>;
+    constructor(inner: { focus: CameraFocus }) {
+      super('Control', 'FocusCamera');
+
+      this.inner = Object.freeze(inner);
+    }
+    static new(inner: { focus: CameraFocus }): FocusCamera_ {
+      return new FocusCamera_(inner);
+    }
+
+    static instanceOf(obj: any): obj is FocusCamera_ {
+      return obj.tag === Control_Tags.FocusCamera;
+    }
+  }
+
+  type Equip__interface = {
+    tag: Control_Tags.Equip;
+    inner: Readonly<{ urn: string }>;
+  };
+  class Equip_ extends UniffiEnum implements Equip__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'Control';
+    readonly tag = Control_Tags.Equip;
+    readonly inner: Readonly<{ urn: string }>;
+    constructor(inner: { urn: string }) {
+      super('Control', 'Equip');
+
+      this.inner = Object.freeze(inner);
+    }
+    static new(inner: { urn: string }): Equip_ {
+      return new Equip_(inner);
+    }
+
+    static instanceOf(obj: any): obj is Equip_ {
+      return obj.tag === Control_Tags.Equip;
+    }
+  }
+
+  type Unequip__interface = {
+    tag: Control_Tags.Unequip;
+    inner: Readonly<{ urn: string }>;
+  };
+  class Unequip_ extends UniffiEnum implements Unequip__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'Control';
+    readonly tag = Control_Tags.Unequip;
+    readonly inner: Readonly<{ urn: string }>;
+    constructor(inner: { urn: string }) {
+      super('Control', 'Unequip');
+
+      this.inner = Object.freeze(inner);
+    }
+    static new(inner: { urn: string }): Unequip_ {
+      return new Unequip_(inner);
+    }
+
+    static instanceOf(obj: any): obj is Unequip_ {
+      return obj.tag === Control_Tags.Unequip;
+    }
+  }
+
+  type SetBodyShape__interface = {
+    tag: Control_Tags.SetBodyShape;
+    inner: Readonly<{ urn: string }>;
+  };
+  class SetBodyShape_ extends UniffiEnum implements SetBodyShape__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'Control';
+    readonly tag = Control_Tags.SetBodyShape;
+    readonly inner: Readonly<{ urn: string }>;
+    constructor(inner: { urn: string }) {
+      super('Control', 'SetBodyShape');
+
+      this.inner = Object.freeze(inner);
+    }
+    static new(inner: { urn: string }): SetBodyShape_ {
+      return new SetBodyShape_(inner);
+    }
+
+    static instanceOf(obj: any): obj is SetBodyShape_ {
+      return obj.tag === Control_Tags.SetBodyShape;
+    }
+  }
+
+  type SetColor__interface = {
+    tag: Control_Tags.SetColor;
+    inner: Readonly<{ target: ColorTarget; color: string }>;
+  };
+  /**
+   * `color` is `#rrggbb`.
+   */
+  class SetColor_ extends UniffiEnum implements SetColor__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'Control';
+    readonly tag = Control_Tags.SetColor;
+    readonly inner: Readonly<{ target: ColorTarget; color: string }>;
+    constructor(inner: { target: ColorTarget; color: string }) {
+      super('Control', 'SetColor');
+
+      this.inner = Object.freeze(inner);
+    }
+    static new(inner: { target: ColorTarget; color: string }): SetColor_ {
+      return new SetColor_(inner);
+    }
+
+    static instanceOf(obj: any): obj is SetColor_ {
+      return obj.tag === Control_Tags.SetColor;
+    }
+  }
+
+  type PlayPreviewEmote__interface = {
+    tag: Control_Tags.PlayPreviewEmote;
+    inner: Readonly<{ urn: string }>;
+  };
+  /**
+   * An emote played on the preview avatar.
+   */
+  class PlayPreviewEmote_
+    extends UniffiEnum
+    implements PlayPreviewEmote__interface
+  {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'Control';
+    readonly tag = Control_Tags.PlayPreviewEmote;
+    readonly inner: Readonly<{ urn: string }>;
+    constructor(inner: { urn: string }) {
+      super('Control', 'PlayPreviewEmote');
+
+      this.inner = Object.freeze(inner);
+    }
+    static new(inner: { urn: string }): PlayPreviewEmote_ {
+      return new PlayPreviewEmote_(inner);
+    }
+
+    static instanceOf(obj: any): obj is PlayPreviewEmote_ {
+      return obj.tag === Control_Tags.PlayPreviewEmote;
+    }
+  }
+
+  type SetEmoteSlot__interface = {
+    tag: Control_Tags.SetEmoteSlot;
+    inner: Readonly<{ slot: number; urn: string }>;
+  };
+  class SetEmoteSlot_ extends UniffiEnum implements SetEmoteSlot__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'Control';
+    readonly tag = Control_Tags.SetEmoteSlot;
+    readonly inner: Readonly<{ slot: number; urn: string }>;
+    constructor(inner: { slot: number; urn: string }) {
+      super('Control', 'SetEmoteSlot');
+
+      this.inner = Object.freeze(inner);
+    }
+    static new(inner: { slot: number; urn: string }): SetEmoteSlot_ {
+      return new SetEmoteSlot_(inner);
+    }
+
+    static instanceOf(obj: any): obj is SetEmoteSlot_ {
+      return obj.tag === Control_Tags.SetEmoteSlot;
+    }
+  }
+
+  type RandomizeAvatar__interface = {
+    tag: Control_Tags.RandomizeAvatar;
+  };
+  class RandomizeAvatar_
+    extends UniffiEnum
+    implements RandomizeAvatar__interface
+  {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'Control';
+    readonly tag = Control_Tags.RandomizeAvatar;
+    constructor() {
+      super('Control', 'RandomizeAvatar');
+    }
+
+    static new(): RandomizeAvatar_ {
+      return new RandomizeAvatar_();
+    }
+
+    static instanceOf(obj: any): obj is RandomizeAvatar_ {
+      return obj.tag === Control_Tags.RandomizeAvatar;
+    }
+  }
+
+  type SetName__interface = {
+    tag: Control_Tags.SetName;
+    inner: Readonly<{ name: string }>;
+  };
+  class SetName_ extends UniffiEnum implements SetName__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'Control';
+    readonly tag = Control_Tags.SetName;
+    readonly inner: Readonly<{ name: string }>;
+    constructor(inner: { name: string }) {
+      super('Control', 'SetName');
+
+      this.inner = Object.freeze(inner);
+    }
+    static new(inner: { name: string }): SetName_ {
+      return new SetName_(inner);
+    }
+
+    static instanceOf(obj: any): obj is SetName_ {
+      return obj.tag === Control_Tags.SetName;
+    }
+  }
+
+  function instanceOf(obj: any): obj is Control {
+    return obj[uniffiTypeNameSymbol] === 'Control';
+  }
+
+  return Object.freeze({
+    instanceOf,
+    Teleport: Teleport_,
+    SendChat: SendChat_,
+    Emote: Emote_,
+    SetHudInsets: SetHudInsets_,
+    SetChatWidth: SetChatWidth_,
+    ChatOpen: ChatOpen_,
+    HideUi: HideUi_,
+    FocusCamera: FocusCamera_,
+    Equip: Equip_,
+    Unequip: Unequip_,
+    SetBodyShape: SetBodyShape_,
+    SetColor: SetColor_,
+    PlayPreviewEmote: PlayPreviewEmote_,
+    SetEmoteSlot: SetEmoteSlot_,
+    RandomizeAvatar: RandomizeAvatar_,
+    SetName: SetName_,
+  });
+})();
+/**
+ * What the shell asks of the engine once a world or the avatar preview is up. All of them are
+ * ignored by an engine that has nothing to apply them to (no world, no preview).
+ */
+export type Control = InstanceType<
+  (typeof Control)[
+    | 'Teleport'
+    | 'SendChat'
+    | 'Emote'
+    | 'SetHudInsets'
+    | 'SetChatWidth'
+    | 'ChatOpen'
+    | 'HideUi'
+    | 'FocusCamera'
+    | 'Equip'
+    | 'Unequip'
+    | 'SetBodyShape'
+    | 'SetColor'
+    | 'PlayPreviewEmote'
+    | 'SetEmoteSlot'
+    | 'RandomizeAvatar'
+    | 'SetName']
+>;
+
+// FfiConverter for enum Control
+const FfiConverterTypeControl = (() => {
+  type TypeName = Control;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      switch (c.readI32()) {
+        case 1:
+          return new Control.Teleport({
+            parcel: FfiConverterTypeParcel.readFromCursor(c),
+          });
+        case 2:
+          return new Control.SendChat({
+            text: FfiConverterString.readFromCursor(c),
+          });
+        case 3:
+          return new Control.Emote({
+            urn: FfiConverterString.readFromCursor(c),
+          });
+        case 4:
+          return new Control.SetHudInsets({
+            insets: FfiConverterTypeHudInsets.readFromCursor(c),
+          });
+        case 5:
+          return new Control.SetChatWidth({
+            width: FfiConverterFloat32.readFromCursor(c),
+          });
+        case 6:
+          return new Control.ChatOpen({
+            open: FfiConverterBool.readFromCursor(c),
+          });
+        case 7:
+          return new Control.HideUi({
+            hidden: FfiConverterBool.readFromCursor(c),
+          });
+        case 8:
+          return new Control.FocusCamera({
+            focus: FfiConverterTypeCameraFocus.readFromCursor(c),
+          });
+        case 9:
+          return new Control.Equip({
+            urn: FfiConverterString.readFromCursor(c),
+          });
+        case 10:
+          return new Control.Unequip({
+            urn: FfiConverterString.readFromCursor(c),
+          });
+        case 11:
+          return new Control.SetBodyShape({
+            urn: FfiConverterString.readFromCursor(c),
+          });
+        case 12:
+          return new Control.SetColor({
+            target: FfiConverterTypeColorTarget.readFromCursor(c),
+            color: FfiConverterString.readFromCursor(c),
+          });
+        case 13:
+          return new Control.PlayPreviewEmote({
+            urn: FfiConverterString.readFromCursor(c),
+          });
+        case 14:
+          return new Control.SetEmoteSlot({
+            slot: FfiConverterUInt32.readFromCursor(c),
+            urn: FfiConverterString.readFromCursor(c),
+          });
+        case 15:
+          return new Control.RandomizeAvatar();
+        case 16:
+          return new Control.SetName({
+            name: FfiConverterString.readFromCursor(c),
+          });
+        default:
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      switch (value.tag) {
+        case Control_Tags.Teleport: {
+          c.writeI32(1);
+          const inner = value.inner;
+          FfiConverterTypeParcel.writeIntoCursor(inner.parcel, c);
+          return;
+        }
+        case Control_Tags.SendChat: {
+          c.writeI32(2);
+          const inner = value.inner;
+          FfiConverterString.writeIntoCursor(inner.text, c);
+          return;
+        }
+        case Control_Tags.Emote: {
+          c.writeI32(3);
+          const inner = value.inner;
+          FfiConverterString.writeIntoCursor(inner.urn, c);
+          return;
+        }
+        case Control_Tags.SetHudInsets: {
+          c.writeI32(4);
+          const inner = value.inner;
+          FfiConverterTypeHudInsets.writeIntoCursor(inner.insets, c);
+          return;
+        }
+        case Control_Tags.SetChatWidth: {
+          c.writeI32(5);
+          const inner = value.inner;
+          FfiConverterFloat32.writeIntoCursor(inner.width, c);
+          return;
+        }
+        case Control_Tags.ChatOpen: {
+          c.writeI32(6);
+          const inner = value.inner;
+          FfiConverterBool.writeIntoCursor(inner.open, c);
+          return;
+        }
+        case Control_Tags.HideUi: {
+          c.writeI32(7);
+          const inner = value.inner;
+          FfiConverterBool.writeIntoCursor(inner.hidden, c);
+          return;
+        }
+        case Control_Tags.FocusCamera: {
+          c.writeI32(8);
+          const inner = value.inner;
+          FfiConverterTypeCameraFocus.writeIntoCursor(inner.focus, c);
+          return;
+        }
+        case Control_Tags.Equip: {
+          c.writeI32(9);
+          const inner = value.inner;
+          FfiConverterString.writeIntoCursor(inner.urn, c);
+          return;
+        }
+        case Control_Tags.Unequip: {
+          c.writeI32(10);
+          const inner = value.inner;
+          FfiConverterString.writeIntoCursor(inner.urn, c);
+          return;
+        }
+        case Control_Tags.SetBodyShape: {
+          c.writeI32(11);
+          const inner = value.inner;
+          FfiConverterString.writeIntoCursor(inner.urn, c);
+          return;
+        }
+        case Control_Tags.SetColor: {
+          c.writeI32(12);
+          const inner = value.inner;
+          FfiConverterTypeColorTarget.writeIntoCursor(inner.target, c);
+          FfiConverterString.writeIntoCursor(inner.color, c);
+          return;
+        }
+        case Control_Tags.PlayPreviewEmote: {
+          c.writeI32(13);
+          const inner = value.inner;
+          FfiConverterString.writeIntoCursor(inner.urn, c);
+          return;
+        }
+        case Control_Tags.SetEmoteSlot: {
+          c.writeI32(14);
+          const inner = value.inner;
+          FfiConverterUInt32.writeIntoCursor(inner.slot, c);
+          FfiConverterString.writeIntoCursor(inner.urn, c);
+          return;
+        }
+        case Control_Tags.RandomizeAvatar: {
+          c.writeI32(15);
+          return;
+        }
+        case Control_Tags.SetName: {
+          c.writeI32(16);
+          const inner = value.inner;
+          FfiConverterString.writeIntoCursor(inner.name, c);
+          return;
+        }
+        default:
+          // Throwing from here means that Control_Tags hasn't matched an ordinal.
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+    allocationSize(value: TypeName): number {
+      switch (value.tag) {
+        case Control_Tags.Teleport: {
+          const inner = value.inner;
+          let size = 4;
+          size += FfiConverterTypeParcel.allocationSize(inner.parcel);
+          return size;
+        }
+        case Control_Tags.SendChat: {
+          const inner = value.inner;
+          let size = 4;
+          size += FfiConverterString.allocationSize(inner.text);
+          return size;
+        }
+        case Control_Tags.Emote: {
+          const inner = value.inner;
+          let size = 4;
+          size += FfiConverterString.allocationSize(inner.urn);
+          return size;
+        }
+        case Control_Tags.SetHudInsets: {
+          const inner = value.inner;
+          let size = 4;
+          size += FfiConverterTypeHudInsets.allocationSize(inner.insets);
+          return size;
+        }
+        case Control_Tags.SetChatWidth: {
+          const inner = value.inner;
+          let size = 4;
+          size += FfiConverterFloat32.allocationSize(inner.width);
+          return size;
+        }
+        case Control_Tags.ChatOpen: {
+          const inner = value.inner;
+          let size = 4;
+          size += FfiConverterBool.allocationSize(inner.open);
+          return size;
+        }
+        case Control_Tags.HideUi: {
+          const inner = value.inner;
+          let size = 4;
+          size += FfiConverterBool.allocationSize(inner.hidden);
+          return size;
+        }
+        case Control_Tags.FocusCamera: {
+          const inner = value.inner;
+          let size = 4;
+          size += FfiConverterTypeCameraFocus.allocationSize(inner.focus);
+          return size;
+        }
+        case Control_Tags.Equip: {
+          const inner = value.inner;
+          let size = 4;
+          size += FfiConverterString.allocationSize(inner.urn);
+          return size;
+        }
+        case Control_Tags.Unequip: {
+          const inner = value.inner;
+          let size = 4;
+          size += FfiConverterString.allocationSize(inner.urn);
+          return size;
+        }
+        case Control_Tags.SetBodyShape: {
+          const inner = value.inner;
+          let size = 4;
+          size += FfiConverterString.allocationSize(inner.urn);
+          return size;
+        }
+        case Control_Tags.SetColor: {
+          const inner = value.inner;
+          let size = 4;
+          size += FfiConverterTypeColorTarget.allocationSize(inner.target);
+          size += FfiConverterString.allocationSize(inner.color);
+          return size;
+        }
+        case Control_Tags.PlayPreviewEmote: {
+          const inner = value.inner;
+          let size = 4;
+          size += FfiConverterString.allocationSize(inner.urn);
+          return size;
+        }
+        case Control_Tags.SetEmoteSlot: {
+          const inner = value.inner;
+          let size = 4;
+          size += FfiConverterUInt32.allocationSize(inner.slot);
+          size += FfiConverterString.allocationSize(inner.urn);
+          return size;
+        }
+        case Control_Tags.RandomizeAvatar: {
+          return 4;
+        }
+        case Control_Tags.SetName: {
+          const inner = value.inner;
+          let size = 4;
+          size += FfiConverterString.allocationSize(inner.name);
+          return size;
+        }
+        default:
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+  }
+  return new FFIConverter();
+})();
+
 // Error type: CoreError
 export enum CoreError_Tags {
   NotInstalled = 'NotInstalled',
@@ -4336,9 +9414,9 @@ const FfiConverterTypeDecision = (() => {
 })();
 
 export enum Environment {
-  Production,
-  Staging,
-  Development,
+  Org,
+  Zone,
+  Today,
 }
 
 const FfiConverterTypeEnvironment = (() => {
@@ -4347,22 +9425,22 @@ const FfiConverterTypeEnvironment = (() => {
     readFromCursor(c: Cursor): TypeName {
       switch (c.readI32()) {
         case 1:
-          return Environment.Production;
+          return Environment.Org;
         case 2:
-          return Environment.Staging;
+          return Environment.Zone;
         case 3:
-          return Environment.Development;
+          return Environment.Today;
         default:
           throw new UniffiInternalError.UnexpectedEnumCase();
       }
     }
     writeIntoCursor(value: TypeName, c: Cursor): void {
       switch (value) {
-        case Environment.Production:
+        case Environment.Org:
           return c.writeI32(1);
-        case Environment.Staging:
+        case Environment.Zone:
           return c.writeI32(2);
-        case Environment.Development:
+        case Environment.Today:
           return c.writeI32(3);
       }
     }
@@ -4850,6 +9928,18 @@ export interface AppListener {
    */
   authError(code: string): void;
   openUrl(request: OpenUrl): void;
+  friendsChanged(): void;
+  settingsChanged(entry: SettingEntry): void;
+  /**
+   * The player's whereabouts, a few times a second while in a world.
+   */
+  hud(snapshot: HudSnapshot): void;
+  chat(line: ChatLine): void;
+  unreadChat(count: number): void;
+  uiState(state: UiState): void;
+  openBackpack(emotes: boolean): void;
+  loadingDetail(detail: LoadingDetail): void;
+  avatarChanged(avatar: AvatarState): void;
 }
 
 /**
@@ -4920,6 +10010,137 @@ export class AppListenerImpl
           uniffiTypeAppListenerImplObjectFactory.clonePointer(this),
           FfiConverterTypeOpenUrl.lower(
             request,
+            nativeModule().rustbuffer_alloc,
+          ),
+          callStatus,
+        );
+      },
+      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+    );
+  }
+
+  friendsChanged(): void {
+    uniffiCaller.rustCall(
+      /*caller:*/ callStatus => {
+        nativeModule().ubrn_uniffi_dcl_core_fn_method_applistener_friends_changed(
+          uniffiTypeAppListenerImplObjectFactory.clonePointer(this),
+          callStatus,
+        );
+      },
+      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+    );
+  }
+
+  settingsChanged(entry: SettingEntry): void {
+    uniffiCaller.rustCall(
+      /*caller:*/ callStatus => {
+        nativeModule().ubrn_uniffi_dcl_core_fn_method_applistener_settings_changed(
+          uniffiTypeAppListenerImplObjectFactory.clonePointer(this),
+          FfiConverterTypeSettingEntry.lower(
+            entry,
+            nativeModule().rustbuffer_alloc,
+          ),
+          callStatus,
+        );
+      },
+      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+    );
+  }
+
+  /**
+   * The player's whereabouts, a few times a second while in a world.
+   */
+  hud(snapshot: HudSnapshot): void {
+    uniffiCaller.rustCall(
+      /*caller:*/ callStatus => {
+        nativeModule().ubrn_uniffi_dcl_core_fn_method_applistener_hud(
+          uniffiTypeAppListenerImplObjectFactory.clonePointer(this),
+          FfiConverterTypeHudSnapshot.lower(
+            snapshot,
+            nativeModule().rustbuffer_alloc,
+          ),
+          callStatus,
+        );
+      },
+      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+    );
+  }
+
+  chat(line: ChatLine): void {
+    uniffiCaller.rustCall(
+      /*caller:*/ callStatus => {
+        nativeModule().ubrn_uniffi_dcl_core_fn_method_applistener_chat(
+          uniffiTypeAppListenerImplObjectFactory.clonePointer(this),
+          FfiConverterTypeChatLine.lower(line, nativeModule().rustbuffer_alloc),
+          callStatus,
+        );
+      },
+      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+    );
+  }
+
+  unreadChat(count: number): void {
+    uniffiCaller.rustCall(
+      /*caller:*/ callStatus => {
+        nativeModule().ubrn_uniffi_dcl_core_fn_method_applistener_unread_chat(
+          uniffiTypeAppListenerImplObjectFactory.clonePointer(this),
+          FfiConverterUInt32.lower(count, nativeModule().rustbuffer_alloc),
+          callStatus,
+        );
+      },
+      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+    );
+  }
+
+  uiState(state: UiState): void {
+    uniffiCaller.rustCall(
+      /*caller:*/ callStatus => {
+        nativeModule().ubrn_uniffi_dcl_core_fn_method_applistener_ui_state(
+          uniffiTypeAppListenerImplObjectFactory.clonePointer(this),
+          FfiConverterTypeUiState.lower(state, nativeModule().rustbuffer_alloc),
+          callStatus,
+        );
+      },
+      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+    );
+  }
+
+  openBackpack(emotes: boolean): void {
+    uniffiCaller.rustCall(
+      /*caller:*/ callStatus => {
+        nativeModule().ubrn_uniffi_dcl_core_fn_method_applistener_open_backpack(
+          uniffiTypeAppListenerImplObjectFactory.clonePointer(this),
+          FfiConverterBool.lower(emotes, nativeModule().rustbuffer_alloc),
+          callStatus,
+        );
+      },
+      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+    );
+  }
+
+  loadingDetail(detail: LoadingDetail): void {
+    uniffiCaller.rustCall(
+      /*caller:*/ callStatus => {
+        nativeModule().ubrn_uniffi_dcl_core_fn_method_applistener_loading_detail(
+          uniffiTypeAppListenerImplObjectFactory.clonePointer(this),
+          FfiConverterTypeLoadingDetail.lower(
+            detail,
+            nativeModule().rustbuffer_alloc,
+          ),
+          callStatus,
+        );
+      },
+      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+    );
+  }
+
+  avatarChanged(avatar: AvatarState): void {
+    uniffiCaller.rustCall(
+      /*caller:*/ callStatus => {
+        nativeModule().ubrn_uniffi_dcl_core_fn_method_applistener_avatar_changed(
+          uniffiTypeAppListenerImplObjectFactory.clonePointer(this),
+          FfiConverterTypeAvatarState.lower(
+            avatar,
             nativeModule().rustbuffer_alloc,
           ),
           callStatus,
@@ -5098,6 +10319,183 @@ const uniffiCallbackInterfaceAppListener: {
       );
       return uniffiResult;
     },
+    friends_changed: (uniffiHandle: bigint) => {
+      const uniffiMakeCall = (): void => {
+        const jsCallback = FfiConverterTypeAppListener.lift(uniffiHandle);
+        return jsCallback.friendsChanged();
+      };
+      const uniffiResult = UniffiResult.ready<void>();
+      const uniffiHandleSuccess = (obj: any) => {};
+      const uniffiHandleError = (code: number, errBuf: UniffiByteArray) => {
+        UniffiResult.writeError(uniffiResult, code, errBuf);
+      };
+      uniffiTraitInterfaceCall(
+        /*makeCall:*/ uniffiMakeCall,
+        /*handleSuccess:*/ uniffiHandleSuccess,
+        /*handleError:*/ uniffiHandleError,
+        /*lowerString:*/ FfiConverterString.lower.bind(FfiConverterString),
+        /*alloc:*/ nativeModule().rustbuffer_alloc,
+      );
+      return uniffiResult;
+    },
+    settings_changed: (uniffiHandle: bigint, entry: Uint8Array) => {
+      const uniffiMakeCall = (): void => {
+        const jsCallback = FfiConverterTypeAppListener.lift(uniffiHandle);
+        return jsCallback.settingsChanged(
+          FfiConverterTypeSettingEntry.lift(entry),
+        );
+      };
+      const uniffiResult = UniffiResult.ready<void>();
+      const uniffiHandleSuccess = (obj: any) => {};
+      const uniffiHandleError = (code: number, errBuf: UniffiByteArray) => {
+        UniffiResult.writeError(uniffiResult, code, errBuf);
+      };
+      uniffiTraitInterfaceCall(
+        /*makeCall:*/ uniffiMakeCall,
+        /*handleSuccess:*/ uniffiHandleSuccess,
+        /*handleError:*/ uniffiHandleError,
+        /*lowerString:*/ FfiConverterString.lower.bind(FfiConverterString),
+        /*alloc:*/ nativeModule().rustbuffer_alloc,
+      );
+      return uniffiResult;
+    },
+    hud: (uniffiHandle: bigint, snapshot: Uint8Array) => {
+      const uniffiMakeCall = (): void => {
+        const jsCallback = FfiConverterTypeAppListener.lift(uniffiHandle);
+        return jsCallback.hud(FfiConverterTypeHudSnapshot.lift(snapshot));
+      };
+      const uniffiResult = UniffiResult.ready<void>();
+      const uniffiHandleSuccess = (obj: any) => {};
+      const uniffiHandleError = (code: number, errBuf: UniffiByteArray) => {
+        UniffiResult.writeError(uniffiResult, code, errBuf);
+      };
+      uniffiTraitInterfaceCall(
+        /*makeCall:*/ uniffiMakeCall,
+        /*handleSuccess:*/ uniffiHandleSuccess,
+        /*handleError:*/ uniffiHandleError,
+        /*lowerString:*/ FfiConverterString.lower.bind(FfiConverterString),
+        /*alloc:*/ nativeModule().rustbuffer_alloc,
+      );
+      return uniffiResult;
+    },
+    chat: (uniffiHandle: bigint, line: Uint8Array) => {
+      const uniffiMakeCall = (): void => {
+        const jsCallback = FfiConverterTypeAppListener.lift(uniffiHandle);
+        return jsCallback.chat(FfiConverterTypeChatLine.lift(line));
+      };
+      const uniffiResult = UniffiResult.ready<void>();
+      const uniffiHandleSuccess = (obj: any) => {};
+      const uniffiHandleError = (code: number, errBuf: UniffiByteArray) => {
+        UniffiResult.writeError(uniffiResult, code, errBuf);
+      };
+      uniffiTraitInterfaceCall(
+        /*makeCall:*/ uniffiMakeCall,
+        /*handleSuccess:*/ uniffiHandleSuccess,
+        /*handleError:*/ uniffiHandleError,
+        /*lowerString:*/ FfiConverterString.lower.bind(FfiConverterString),
+        /*alloc:*/ nativeModule().rustbuffer_alloc,
+      );
+      return uniffiResult;
+    },
+    unread_chat: (uniffiHandle: bigint, count: number) => {
+      const uniffiMakeCall = (): void => {
+        const jsCallback = FfiConverterTypeAppListener.lift(uniffiHandle);
+        return jsCallback.unreadChat(FfiConverterUInt32.lift(count));
+      };
+      const uniffiResult = UniffiResult.ready<void>();
+      const uniffiHandleSuccess = (obj: any) => {};
+      const uniffiHandleError = (code: number, errBuf: UniffiByteArray) => {
+        UniffiResult.writeError(uniffiResult, code, errBuf);
+      };
+      uniffiTraitInterfaceCall(
+        /*makeCall:*/ uniffiMakeCall,
+        /*handleSuccess:*/ uniffiHandleSuccess,
+        /*handleError:*/ uniffiHandleError,
+        /*lowerString:*/ FfiConverterString.lower.bind(FfiConverterString),
+        /*alloc:*/ nativeModule().rustbuffer_alloc,
+      );
+      return uniffiResult;
+    },
+    ui_state: (uniffiHandle: bigint, state: Uint8Array) => {
+      const uniffiMakeCall = (): void => {
+        const jsCallback = FfiConverterTypeAppListener.lift(uniffiHandle);
+        return jsCallback.uiState(FfiConverterTypeUiState.lift(state));
+      };
+      const uniffiResult = UniffiResult.ready<void>();
+      const uniffiHandleSuccess = (obj: any) => {};
+      const uniffiHandleError = (code: number, errBuf: UniffiByteArray) => {
+        UniffiResult.writeError(uniffiResult, code, errBuf);
+      };
+      uniffiTraitInterfaceCall(
+        /*makeCall:*/ uniffiMakeCall,
+        /*handleSuccess:*/ uniffiHandleSuccess,
+        /*handleError:*/ uniffiHandleError,
+        /*lowerString:*/ FfiConverterString.lower.bind(FfiConverterString),
+        /*alloc:*/ nativeModule().rustbuffer_alloc,
+      );
+      return uniffiResult;
+    },
+    open_backpack: (uniffiHandle: bigint, emotes: number) => {
+      const uniffiMakeCall = (): void => {
+        const jsCallback = FfiConverterTypeAppListener.lift(uniffiHandle);
+        return jsCallback.openBackpack(FfiConverterBool.lift(emotes));
+      };
+      const uniffiResult = UniffiResult.ready<void>();
+      const uniffiHandleSuccess = (obj: any) => {};
+      const uniffiHandleError = (code: number, errBuf: UniffiByteArray) => {
+        UniffiResult.writeError(uniffiResult, code, errBuf);
+      };
+      uniffiTraitInterfaceCall(
+        /*makeCall:*/ uniffiMakeCall,
+        /*handleSuccess:*/ uniffiHandleSuccess,
+        /*handleError:*/ uniffiHandleError,
+        /*lowerString:*/ FfiConverterString.lower.bind(FfiConverterString),
+        /*alloc:*/ nativeModule().rustbuffer_alloc,
+      );
+      return uniffiResult;
+    },
+    loading_detail: (uniffiHandle: bigint, detail: Uint8Array) => {
+      const uniffiMakeCall = (): void => {
+        const jsCallback = FfiConverterTypeAppListener.lift(uniffiHandle);
+        return jsCallback.loadingDetail(
+          FfiConverterTypeLoadingDetail.lift(detail),
+        );
+      };
+      const uniffiResult = UniffiResult.ready<void>();
+      const uniffiHandleSuccess = (obj: any) => {};
+      const uniffiHandleError = (code: number, errBuf: UniffiByteArray) => {
+        UniffiResult.writeError(uniffiResult, code, errBuf);
+      };
+      uniffiTraitInterfaceCall(
+        /*makeCall:*/ uniffiMakeCall,
+        /*handleSuccess:*/ uniffiHandleSuccess,
+        /*handleError:*/ uniffiHandleError,
+        /*lowerString:*/ FfiConverterString.lower.bind(FfiConverterString),
+        /*alloc:*/ nativeModule().rustbuffer_alloc,
+      );
+      return uniffiResult;
+    },
+    avatar_changed: (uniffiHandle: bigint, avatar: Uint8Array) => {
+      const uniffiMakeCall = (): void => {
+        const jsCallback = FfiConverterTypeAppListener.lift(uniffiHandle);
+        return jsCallback.avatarChanged(
+          FfiConverterTypeAvatarState.lift(avatar),
+        );
+      };
+      const uniffiResult = UniffiResult.ready<void>();
+      const uniffiHandleSuccess = (obj: any) => {};
+      const uniffiHandleError = (code: number, errBuf: UniffiByteArray) => {
+        UniffiResult.writeError(uniffiResult, code, errBuf);
+      };
+      uniffiTraitInterfaceCall(
+        /*makeCall:*/ uniffiMakeCall,
+        /*handleSuccess:*/ uniffiHandleSuccess,
+        /*handleError:*/ uniffiHandleError,
+        /*lowerString:*/ FfiConverterString.lower.bind(FfiConverterString),
+        /*alloc:*/ nativeModule().rustbuffer_alloc,
+      );
+      return uniffiResult;
+    },
     uniffi_free: (uniffiHandle: UniffiHandle): void => {
       // this will throw a stale handle error if the handle isn't found.
       FfiConverterTypeAppListener.drop(uniffiHandle);
@@ -5113,6 +10511,9 @@ const uniffiCallbackInterfaceAppListener: {
   },
 };
 
+// FfiConverter for Array<string>
+const FfiConverterSequenceString = new FfiConverterArray(FfiConverterString);
+
 // FfiConverter for string | undefined
 const FfiConverterOptionalString = new FfiConverterOptional(FfiConverterString);
 
@@ -5121,9 +10522,47 @@ const FfiConverterOptionalTypeParcel = new FfiConverterOptional(
   FfiConverterTypeParcel,
 );
 
+// FfiConverter for Campaign | undefined
+const FfiConverterOptionalTypeCampaign = new FfiConverterOptional(
+  FfiConverterTypeCampaign,
+);
+
+// FfiConverter for CampaignFallback | undefined
+const FfiConverterOptionalTypeCampaignFallback = new FfiConverterOptional(
+  FfiConverterTypeCampaignFallback,
+);
+
+// FfiConverter for ChatProfile | undefined
+const FfiConverterOptionalTypeChatProfile = new FfiConverterOptional(
+  FfiConverterTypeChatProfile,
+);
+
+// FfiConverter for SupportModal | undefined
+const FfiConverterOptionalTypeSupportModal = new FfiConverterOptional(
+  FfiConverterTypeSupportModal,
+);
+
 // FfiConverter for Array<Friend>
 const FfiConverterSequenceTypeFriend = new FfiConverterArray(
   FfiConverterTypeFriend,
+);
+
+// FfiConverter for number | undefined
+const FfiConverterOptionalFloat64 = new FfiConverterOptional(
+  FfiConverterFloat64,
+);
+
+// FfiConverter for Array<ProfileLink>
+const FfiConverterSequenceTypeProfileLink = new FfiConverterArray(
+  FfiConverterTypeProfileLink,
+);
+
+// FfiConverter for boolean | undefined
+const FfiConverterOptionalBoolean = new FfiConverterOptional(FfiConverterBool);
+
+// FfiConverter for Array<ProfileLink> | undefined
+const FfiConverterOptionalSequenceTypeProfileLink = new FfiConverterOptional(
+  FfiConverterSequenceTypeProfileLink,
 );
 
 // FfiConverter for bigint | undefined
@@ -5137,6 +10576,11 @@ const FfiConverterOptionalTypeReportSource = new FfiConverterOptional(
 // FfiConverter for Array<ReportTag>
 const FfiConverterSequenceTypeReportTag = new FfiConverterArray(
   FfiConverterTypeReportTag,
+);
+
+// FfiConverter for ResolveFailure | undefined
+const FfiConverterOptionalTypeResolveFailure = new FfiConverterOptional(
+  FfiConverterTypeResolveFailure,
 );
 
 // FfiConverter for Navigation | undefined
@@ -5154,9 +10598,32 @@ const FfiConverterSequenceTypeEffect = new FfiConverterArray(
   FfiConverterTypeEffect,
 );
 
+// FfiConverter for AvatarState | undefined
+const FfiConverterOptionalTypeAvatarState = new FfiConverterOptional(
+  FfiConverterTypeAvatarState,
+);
+
+// FfiConverter for Array<Place>
+const FfiConverterSequenceTypePlace = new FfiConverterArray(
+  FfiConverterTypePlace,
+);
+
 // FfiConverter for Array<NearbyUser>
 const FfiConverterSequenceTypeNearbyUser = new FfiConverterArray(
   FfiConverterTypeNearbyUser,
+);
+
+// FfiConverter for number | undefined
+const FfiConverterOptionalUInt32 = new FfiConverterOptional(FfiConverterUInt32);
+
+// FfiConverter for Array<Notification>
+const FfiConverterSequenceTypeNotification = new FfiConverterArray(
+  FfiConverterTypeNotification,
+);
+
+// FfiConverter for PlaceUserState | undefined
+const FfiConverterOptionalTypePlaceUserState = new FfiConverterOptional(
+  FfiConverterTypePlaceUserState,
 );
 
 // FfiConverter for Array<SettingEntry>
@@ -5167,6 +10634,11 @@ const FfiConverterSequenceTypeSettingEntry = new FfiConverterArray(
 // FfiConverter for SettingKey | undefined
 const FfiConverterOptionalTypeSettingKey = new FfiConverterOptional(
   FfiConverterTypeSettingKey,
+);
+
+// FfiConverter for Array<Property>
+const FfiConverterSequenceTypeProperty = new FfiConverterArray(
+  FfiConverterTypeProperty,
 );
 
 /**
@@ -5200,6 +10672,13 @@ function uniffiEnsureInitialized() {
     );
   }
   if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_accept_terms() !== 56996
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_accept_terms',
+    );
+  }
+  if (
     nativeModule().ubrn_uniffi_dcl_core_checksum_func_add_listener() !== 3284
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
@@ -5209,6 +10688,13 @@ function uniffiEnsureInitialized() {
   if (nativeModule().ubrn_uniffi_dcl_core_checksum_func_address() !== 48567) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_dcl_core_checksum_func_address',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_avatar_state() !== 41002
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_avatar_state',
     );
   }
   if (
@@ -5223,6 +10709,14 @@ function uniffiEnsureInitialized() {
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_dcl_core_checksum_func_cache_size',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_campaign_resolution() !==
+    29207
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_campaign_resolution',
     );
   }
   if (
@@ -5241,6 +10735,22 @@ function uniffiEnsureInitialized() {
     );
   }
   if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_capture_campaign_token() !==
+    63817
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_capture_campaign_token',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_capture_screenshot() !==
+    6662
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_capture_screenshot',
+    );
+  }
+  if (
     nativeModule().ubrn_uniffi_dcl_core_checksum_func_clear_cache() !== 6642
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
@@ -5256,6 +10766,34 @@ function uniffiEnsureInitialized() {
     );
   }
   if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_consume_campaign() !==
+    33889
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_consume_campaign',
+    );
+  }
+  if (nativeModule().ubrn_uniffi_dcl_core_checksum_func_control() !== 40860) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_control',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_credits_balance() !==
+    15557
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_credits_balance',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_current_scene() !== 47542
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_current_scene',
+    );
+  }
+  if (
     nativeModule().ubrn_uniffi_dcl_core_checksum_func_debug_delay() !== 40806
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
@@ -5268,6 +10806,85 @@ function uniffiEnsureInitialized() {
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_dcl_core_checksum_func_debug_fire_events',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_delete_account() !== 55097
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_delete_account',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_deploy_profile() !== 1763
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_deploy_profile',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_device_support() !== 17039
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_device_support',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_device_support_modal_shown() !==
+    33881
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_device_support_modal_shown',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_enter_world() !== 1564
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_enter_world',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_environment() !== 64706
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_environment',
+    );
+  }
+  if (nativeModule().ubrn_uniffi_dcl_core_checksum_func_event_url() !== 39202) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_event_url',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_exit_world() !== 20332
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_exit_world',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_favorite_places() !==
+    42199
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_favorite_places',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_first_screen_drawn() !==
+    43145
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_first_screen_drawn',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_flush_analytics() !==
+    43920
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_flush_analytics',
     );
   }
   if (
@@ -5291,14 +10908,96 @@ function uniffiEnsureInitialized() {
       'uniffi_dcl_core_checksum_func_handle_deep_link',
     );
   }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_hide_avatar_preview() !==
+    14579
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_hide_avatar_preview',
+    );
+  }
   if (nativeModule().ubrn_uniffi_dcl_core_checksum_func_installs() !== 12585) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_dcl_core_checksum_func_installs',
     );
   }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_jump_position_url() !==
+    59849
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_jump_position_url',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_jump_realm_url() !== 65028
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_jump_realm_url',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_mark_notifications_read() !==
+    44554
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_mark_notifications_read',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_marketplace_browse_url() !==
+    45629
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_marketplace_browse_url',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_marketplace_item_url() !==
+    33149
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_marketplace_item_url',
+    );
+  }
   if (nativeModule().ubrn_uniffi_dcl_core_checksum_func_nearby() !== 53248) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_dcl_core_checksum_func_nearby',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_notifications() !== 89
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_notifications',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_owned_names() !== 60384
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_owned_names',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_pending_campaign() !==
+    12453
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_pending_campaign',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_place_user_state() !==
+    56631
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_place_user_state',
+    );
+  }
+  if (nativeModule().ubrn_uniffi_dcl_core_checksum_func_profile() !== 57615) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_profile',
     );
   }
   if (
@@ -5318,11 +11017,65 @@ function uniffiEnsureInitialized() {
     );
   }
   if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_resolve_destination() !==
+    50626
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_resolve_destination',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_resolve_destination_with_secret() !==
+    33658
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_resolve_destination_with_secret',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_scene_link_url() !== 17535
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_scene_link_url',
+    );
+  }
+  if (
     nativeModule().ubrn_uniffi_dcl_core_checksum_func_send_friend_request() !==
     38105
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_dcl_core_checksum_func_send_friend_request',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_set_analytics_consent() !==
+    3274
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_set_analytics_consent',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_set_analytics_flush_interval() !==
+    15998
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_set_analytics_flush_interval',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_set_event_reminder() !==
+    64454
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_set_event_reminder',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_set_favorite() !== 17690
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_set_favorite',
     );
   }
   if (
@@ -5351,6 +11104,14 @@ function uniffiEnsureInitialized() {
   if (nativeModule().ubrn_uniffi_dcl_core_checksum_func_settings() !== 31672) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_dcl_core_checksum_func_settings',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_show_avatar_preview() !==
+    37826
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_show_avatar_preview',
     );
   }
   if (
@@ -5405,9 +11166,44 @@ function uniffiEnsureInitialized() {
       'uniffi_dcl_core_checksum_func_sign_out',
     );
   }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_snooze_version_gate() !==
+    47791
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_snooze_version_gate',
+    );
+  }
   if (nativeModule().ubrn_uniffi_dcl_core_checksum_func_state() !== 49552) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_dcl_core_checksum_func_state',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_terms_accepted_version() !==
+    57854
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_terms_accepted_version',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_terms_version() !== 31234
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_terms_version',
+    );
+  }
+  if (nativeModule().ubrn_uniffi_dcl_core_checksum_func_track() !== 58769) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_track',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_track_screen() !== 1070
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_track_screen',
     );
   }
   if (
@@ -5417,9 +11213,26 @@ function uniffiEnsureInitialized() {
       'uniffi_dcl_core_checksum_func_unblock_user',
     );
   }
+  if (nativeModule().ubrn_uniffi_dcl_core_checksum_func_urls() !== 18044) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_urls',
+    );
+  }
   if (nativeModule().ubrn_uniffi_dcl_core_checksum_func_version() !== 61107) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_dcl_core_checksum_func_version',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_version_gate() !== 14949
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_version_gate',
+    );
+  }
+  if (nativeModule().ubrn_uniffi_dcl_core_checksum_func_vote() !== 3271) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_vote',
     );
   }
   if (
@@ -5454,6 +11267,78 @@ function uniffiEnsureInitialized() {
       'uniffi_dcl_core_checksum_method_applistener_open_url',
     );
   }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_method_applistener_friends_changed() !==
+    29000
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_method_applistener_friends_changed',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_method_applistener_settings_changed() !==
+    46828
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_method_applistener_settings_changed',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_method_applistener_hud() !==
+    60997
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_method_applistener_hud',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_method_applistener_chat() !==
+    531
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_method_applistener_chat',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_method_applistener_unread_chat() !==
+    24311
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_method_applistener_unread_chat',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_method_applistener_ui_state() !==
+    19224
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_method_applistener_ui_state',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_method_applistener_open_backpack() !==
+    10542
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_method_applistener_open_backpack',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_method_applistener_loading_detail() !==
+    64549
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_method_applistener_loading_detail',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_method_applistener_avatar_changed() !==
+    44573
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_method_applistener_avatar_changed',
+    );
+  }
 
   uniffiCallbackInterfaceAppListener.register();
 }
@@ -5461,23 +11346,53 @@ function uniffiEnsureInitialized() {
 export default Object.freeze({
   initialize: uniffiEnsureInitialized,
   converters: {
+    FfiConverterTypeAccessVerdict,
     FfiConverterTypeAnalyticsEvent,
     FfiConverterTypeAppListener,
+    FfiConverterTypeAvatarState,
+    FfiConverterTypeBuildEnvironment,
     FfiConverterTypeCacheSize,
+    FfiConverterTypeCameraFocus,
+    FfiConverterTypeCampaign,
+    FfiConverterTypeCampaignFallback,
+    FfiConverterTypeCampaignKind,
+    FfiConverterTypeCampaignResolution,
+    FfiConverterTypeChatLine,
+    FfiConverterTypeChatProfile,
+    FfiConverterTypeColorTarget,
     FfiConverterTypeConfigParam,
+    FfiConverterTypeControl,
     FfiConverterTypeCoreError,
+    FfiConverterTypeCreditsBalance,
+    FfiConverterTypeCurrentScene,
     FfiConverterTypeDecision,
     FfiConverterTypeDestination,
+    FfiConverterTypeDestinationKind,
+    FfiConverterTypeDeviceFacts,
+    FfiConverterTypeDeviceSupport,
     FfiConverterTypeEffect,
     FfiConverterTypeEnvironment,
     FfiConverterTypeFriend,
     FfiConverterTypeFriendRequests,
+    FfiConverterTypeHudInsets,
+    FfiConverterTypeHudSnapshot,
+    FfiConverterTypeLoadingDetail,
     FfiConverterTypeNavigation,
     FfiConverterTypeNearbyUser,
+    FfiConverterTypeNotification,
+    FfiConverterTypeNotificationKind,
+    FfiConverterTypeNotificationSender,
     FfiConverterTypeOpenUrl,
     FfiConverterTypeParamPair,
     FfiConverterTypeParcel,
+    FfiConverterTypePlace,
+    FfiConverterTypePlaceUserState,
     FfiConverterTypePlatform,
+    FfiConverterTypeProfile,
+    FfiConverterTypeProfileLink,
+    FfiConverterTypeProfileUpdate,
+    FfiConverterTypeProperty,
+    FfiConverterTypePropertyValue,
     FfiConverterTypeRect,
     FfiConverterTypeReportContext,
     FfiConverterTypeReportEvent,
@@ -5485,6 +11400,9 @@ export default Object.freeze({
     FfiConverterTypeReportSource,
     FfiConverterTypeReportTag,
     FfiConverterTypeReportTags,
+    FfiConverterTypeReportVerdict,
+    FfiConverterTypeResolveFailure,
+    FfiConverterTypeResolvedDestination,
     FfiConverterTypeRouted,
     FfiConverterTypeSettingEntry,
     FfiConverterTypeSettingKey,
@@ -5493,5 +11411,13 @@ export default Object.freeze({
     FfiConverterTypeSignInStep,
     FfiConverterTypeStartKind,
     FfiConverterTypeState,
+    FfiConverterTypeSupportModal,
+    FfiConverterTypeSupportStatus,
+    FfiConverterTypeUiState,
+    FfiConverterTypeUpdateDecision,
+    FfiConverterTypeUrls,
+    FfiConverterTypeVec3,
+    FfiConverterTypeVersionGate,
+    FfiConverterTypeVote,
   },
 });

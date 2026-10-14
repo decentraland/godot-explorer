@@ -716,7 +716,7 @@ internal object UniffiLib {
     ): Long
     external fun uniffi_dcl_host_fn_func_debug_fire_host_events(`count`: Int,`perSecond`: Int,
     ): Long
-    external fun uniffi_dcl_host_fn_func_install(`dataDir`: RustBuffer.ByValue,`platform`: RustBuffer.ByValue,`deviceAnchor`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+    external fun uniffi_dcl_host_fn_func_install(`dataDir`: RustBuffer.ByValue,`platform`: RustBuffer.ByValue,`deviceAnchor`: RustBuffer.ByValue,`appVersion`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_dcl_host_fn_func_remove_host_listener(`id`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
@@ -845,7 +845,7 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if (lib.uniffi_dcl_host_checksum_func_debug_fire_host_events() != 15944) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_dcl_host_checksum_func_install() != 10366) {
+    if (lib.uniffi_dcl_host_checksum_func_install() != 64282) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_dcl_host_checksum_func_remove_host_listener() != 55733) {
@@ -1693,15 +1693,15 @@ public object FfiConverterTypeHostPlatform: FfiConverterRustBuffer<HostPlatform>
 
         /**
          * Creates the process's one core at app launch, with the data dir the Godot-exported app used
-         * (D-19), and restores the saved account. `device_anchor` is the platform's stable device id
-         * (SSAID, Keychain item) the guest wallet derives from. Calling it again with the same
-         * arguments is a no-op.
-         */ fun `install`(`dataDir`: kotlin.String, `platform`: HostPlatform, `deviceAnchor`: kotlin.String)
+         * (D-19), restores the saved account and starts analytics. `device_anchor` is the platform's
+         * stable device id (SSAID, Keychain item) the guest wallet derives from; `app_version` is the
+         * store version. Calling it again with the same arguments is a no-op.
+         */ fun `install`(`dataDir`: kotlin.String, `platform`: HostPlatform, `deviceAnchor`: kotlin.String, `appVersion`: kotlin.String)
         = 
     uniffiRustCall() { _status ->
     UniffiLib.uniffi_dcl_host_fn_func_install(
     
-        FfiConverterString.lower(`dataDir`),FfiConverterTypeHostPlatform.lower(`platform`),FfiConverterString.lower(`deviceAnchor`),_status)
+        FfiConverterString.lower(`dataDir`),FfiConverterTypeHostPlatform.lower(`platform`),FfiConverterString.lower(`deviceAnchor`),FfiConverterString.lower(`appVersion`),_status)
 }
     
     

@@ -985,15 +985,16 @@ public func debugFireHostEvents(count: UInt32, perSecond: UInt32)async throws  -
 }
 /**
  * Creates the process's one core at app launch, with the data dir the Godot-exported app used
- * (D-19), and restores the saved account. `device_anchor` is the platform's stable device id
- * (SSAID, Keychain item) the guest wallet derives from. Calling it again with the same
- * arguments is a no-op.
+ * (D-19), restores the saved account and starts analytics. `device_anchor` is the platform's
+ * stable device id (SSAID, Keychain item) the guest wallet derives from; `app_version` is the
+ * store version. Calling it again with the same arguments is a no-op.
  */
-public func install(dataDir: String, platform: HostPlatform, deviceAnchor: String)  {try! rustCall() {
+public func install(dataDir: String, platform: HostPlatform, deviceAnchor: String, appVersion: String)  {try! rustCall() {
     uniffi_dcl_host_fn_func_install(
         FfiConverterString.lower(dataDir),
         FfiConverterTypeHostPlatform_lower(platform),
-        FfiConverterString.lower(deviceAnchor),$0
+        FfiConverterString.lower(deviceAnchor),
+        FfiConverterString.lower(appVersion),$0
     )
 }
 }
@@ -1025,7 +1026,7 @@ private let initializationResult: InitializationResult = {
     if (uniffi_dcl_host_checksum_func_debug_fire_host_events() != 15944) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_dcl_host_checksum_func_install() != 10366) {
+    if (uniffi_dcl_host_checksum_func_install() != 64282) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_dcl_host_checksum_func_remove_host_listener() != 55733) {

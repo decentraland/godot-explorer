@@ -12,6 +12,7 @@ import {
   startBrowserSignIn,
   startGuest,
   verifyEmailCode,
+  welcome,
   whenSignedIn,
 } from './auth';
 import { initialFlow, reduceFlow } from './flowMachine';
@@ -74,7 +75,10 @@ export function EntryFlow({
     const failed = () =>
       !cancelled &&
       dispatch({ type: 'authFailed', message: t('FLOW_SIGN_IN_FAILED') });
-    if (step === 'auth_wait' && (provider === 'google' || provider === 'apple')) {
+    if (
+      step === 'auth_wait' &&
+      (provider === 'google' || provider === 'apple')
+    ) {
       startBrowserSignIn(provider);
       whenSignedIn().then(succeeded, failed);
     } else if (step === 'guest_wait') {

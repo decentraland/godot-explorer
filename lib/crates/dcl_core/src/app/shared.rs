@@ -78,6 +78,27 @@ impl AppEvents for HostEvents {
     fn settings_changed(&self, entry: &crate::settings::SettingEntry) {
         self.each(|l| l.settings_changed(entry));
     }
+    fn hud(&self, snapshot: &super::HudSnapshot) {
+        self.each(|l| l.hud(snapshot));
+    }
+    fn chat(&self, line: &super::ChatLine) {
+        self.each(|l| l.chat(line));
+    }
+    fn unread_chat(&self, count: u32) {
+        self.each(|l| l.unread_chat(count));
+    }
+    fn ui_state(&self, state: &super::UiState) {
+        self.each(|l| l.ui_state(state));
+    }
+    fn open_backpack(&self, emotes: bool) {
+        self.each(|l| l.open_backpack(emotes));
+    }
+    fn loading_detail(&self, detail: &super::LoadingDetail) {
+        self.each(|l| l.loading_detail(detail));
+    }
+    fn avatar_changed(&self, avatar: &super::AvatarState) {
+        self.each(|l| l.avatar_changed(avatar));
+    }
 }
 
 /// An `EngineSink` that any thread can push to and the engine's main thread drains each frame.

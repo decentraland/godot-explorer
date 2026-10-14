@@ -408,3 +408,169 @@ fn every_state_change_is_reported_once() {
         ]
     );
 }
+
+#[derive(Default)]
+struct Facts {
+    seen: Mutex<Vec<String>>,
+}
+
+impl AppEvents for Facts {
+    fn state_changed(&self, _: &State) {}
+    fn engine_required(&self) {}
+    fn avatar_preview_mode(&self, _: bool) {}
+    fn scene_crashed(&self) {}
+    fn hud(&self, snapshot: &HudSnapshot) {
+        self.seen
+            .lock()
+            .unwrap()
+            .push(format!("hud {}", snapshot.realm));
+    }
+    fn chat(&self, line: &ChatLine) {
+        self.seen
+            .lock()
+            .unwrap()
+            .push(format!("chat {}", line.message));
+    }
+    fn unread_chat(&self, count: u32) {
+        self.seen.lock().unwrap().push(format!("unread {count}"));
+    }
+    fn ui_state(&self, state: &UiState) {
+        self.seen
+            .lock()
+            .unwrap()
+            .push(format!("ui {}", state.hidden));
+    }
+    fn open_backpack(&self, emotes: bool) {
+        self.seen.lock().unwrap().push(format!("backpack {emotes}"));
+    }
+    fn loading_detail(&self, detail: &LoadingDetail) {
+        self.seen
+            .lock()
+            .unwrap()
+            .push(format!("loading {}", detail.percent));
+    }
+    fn avatar_changed(&self, avatar: &AvatarState) {
+        self.seen
+            .lock()
+            .unwrap()
+            .push(format!("avatar {}", avatar.body_shape));
+    }
+}
+
+fn in_a_world(facts: &Arc<Facts>) -> (App, Arc<FakeEngine>) {
+    let mut app = App::new(facts.clone());
+    app.finish_boot(true).unwrap();
+    let engine = with_engine(&mut app);
+    app.enter_world(plaza()).unwrap();
+    app.engine_event(EngineEvent::LoadingFinished {
+        realm: "main".into(),
+        parcel: Parcel::new(0, 0),
+    });
+    engine.take();
+    (app, engine)
+}
+
+#[test]
+fn shell_commands_reach_the_engine_and_wait_for_it_when_it_is_not_up() {
+    let (mut app, events) = signed_in();
+    app.control(Control::SendChat { text: "hi".into() });
+    assert_eq!(*events.engine_required.lock().unwrap(), 1);
+
+    let engine = Arc::new(FakeEngine::default());
+    app.engine_attach(engine.clone());
+    assert_eq!(
+        engine.take()[0],
+        EngineCommand::Control(Control::SendChat { text: "hi".into() })
+    );
+    app.control(Control::Teleport {
+        parcel: Parcel::new(3, 4),
+    });
+    assert_eq!(
+        engine.take(),
+        vec![EngineCommand::Control(Control::Teleport {
+            parcel: Parcel::new(3, 4)
+        })]
+    );
+}
+
+#[test]
+fn engine_facts_reach_the_listeners() {
+    let facts = Arc::new(Facts::default());
+    let (mut app, _engine) = in_a_world(&facts);
+    app.engine_event(EngineEvent::Hud(HudSnapshot {
+        parcel: Parcel::new(1, 2),
+        realm: "main".into(),
+        fps: 30.0,
+        position: Vec3 {
+            x: 1.0,
+            y: 2.0,
+            z: 3.0,
+        },
+    }));
+    app.engine_event(EngineEvent::Chat(ChatLine {
+        address: "0x1".into(),
+        message: "hello".into(),
+        timestamp: 1.0,
+        profile: None,
+    }));
+    app.engine_event(EngineEvent::UnreadChat(3));
+    app.engine_event(EngineEvent::UiState(UiState {
+        hidden: true,
+        chat_open: false,
+    }));
+    app.engine_event(EngineEvent::OpenBackpack { emotes: true });
+    app.engine_event(EngineEvent::Avatar(AvatarState {
+        body_shape: "female".into(),
+        wearables: vec![],
+        emotes: vec![],
+        skin: "#ffffff".into(),
+        hair: "#000000".into(),
+        eyes: "#000000".into(),
+    }));
+    assert_eq!(
+        *facts.seen.lock().unwrap(),
+        vec![
+            "hud main",
+            "chat hello",
+            "unread 3",
+            "ui true",
+            "backpack true",
+            "avatar female"
+        ]
+    );
+    assert_eq!(app.avatar().unwrap().body_shape, "female");
+}
+
+#[test]
+fn hud_and_loading_detail_are_ignored_outside_their_states() {
+    let facts = Arc::new(Facts::default());
+    let mut app = App::new(facts.clone());
+    app.finish_boot(true).unwrap();
+    app.engine_event(EngineEvent::Hud(HudSnapshot {
+        parcel: Parcel::new(0, 0),
+        realm: "x".into(),
+        fps: 0.0,
+        position: Vec3 {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        },
+    }));
+    app.engine_event(EngineEvent::LoadingDetail(LoadingDetail {
+        loaded: 1,
+        total: 2,
+        mbps: 1.0,
+        percent: 50.0,
+    }));
+    assert!(facts.seen.lock().unwrap().is_empty());
+
+    with_engine(&mut app);
+    app.enter_world(plaza()).unwrap();
+    app.engine_event(EngineEvent::LoadingDetail(LoadingDetail {
+        loaded: 1,
+        total: 2,
+        mbps: 1.0,
+        percent: 50.0,
+    }));
+    assert_eq!(*facts.seen.lock().unwrap(), vec!["loading 50"]);
+}

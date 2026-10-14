@@ -304,7 +304,7 @@ uint64_t uniffi_dcl_host_fn_func_debug_fire_host_events(uint32_t count, uint32_t
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_FUNC_INSTALL
 #define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_FUNC_INSTALL
-void uniffi_dcl_host_fn_func_install(RustBuffer data_dir, RustBuffer platform, RustBuffer device_anchor, RustCallStatus *_Nonnull out_status
+void uniffi_dcl_host_fn_func_install(RustBuffer data_dir, RustBuffer platform, RustBuffer device_anchor, RustBuffer app_version, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_FUNC_REMOVE_HOST_LISTENER

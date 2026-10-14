@@ -9,7 +9,9 @@ const EVENTS_PER_SECOND = 1000;
 function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   return Promise.race([
     promise,
-    new Promise<T>((_, reject) => setTimeout(() => reject(new Error('timeout')), ms)),
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error('timeout')), ms),
+    ),
   ]);
 }
 
@@ -39,6 +41,15 @@ export async function runCoreSelfTest(): Promise<void> {
         sceneCrashed: () => {},
         authError: () => {},
         openUrl: () => {},
+        friendsChanged: () => {},
+        settingsChanged: () => {},
+        hud: () => {},
+        chat: () => {},
+        unreadChat: () => {},
+        uiState: () => {},
+        openBackpack: () => {},
+        loadingDetail: () => {},
+        avatarChanged: () => {},
       };
       const id = core.addListener(listener);
       const fired = await withTimeout(
@@ -47,9 +58,15 @@ export async function runCoreSelfTest(): Promise<void> {
       );
       core.removeListener(id);
       await new Promise<void>(resolve => setTimeout(resolve, 500));
-      log('events', received, 'of', fired, received === fired ? 'PASS' : 'FAIL');
+      log(
+        'events',
+        received,
+        'of',
+        fired,
+        received === fired ? 'PASS' : 'FAIL',
+      );
     }
   } catch (e) {
-    log('FAIL', String(e), JSON.stringify((e as {inner?: unknown}).inner));
+    log('FAIL', String(e), JSON.stringify((e as { inner?: unknown }).inner));
   }
 }
