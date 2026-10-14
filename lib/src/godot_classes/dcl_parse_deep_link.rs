@@ -51,6 +51,12 @@ pub struct DclParseDeepLink {
     #[var]
     path: GString,
 
+    /// The destination `path` names, collapsed to one name ("jump", "events",
+    /// "places", "open", "mobile"). Route on this, not on `path`: the website
+    /// nests its landing pages under /jump/<section>. See deep_link::section_for.
+    #[var]
+    section: GString,
+
     /// Dev/testing: short-circuit profile deploys (deep link param: disable-profile-deploy=true)
     #[var]
     disable_profile_deploy: bool,
@@ -72,6 +78,14 @@ pub struct DclParseDeepLink {
     /// Simulate low-spec iPhone warnings from deep link (low_spec_warning=true)
     #[var]
     low_spec_warning: bool,
+
+    /// Force the "device no longer supported" modal (end_of_device_support_warning=true, #2936)
+    #[var]
+    end_of_device_support_warning: bool,
+
+    /// Force the "below minimum spec" modal (below_minspec_warning=true, #2935)
+    #[var]
+    below_minspec_warning: bool,
 
     /// Genesis Plaza profiling benchmark trigger (gp-benchmark=true).
     /// Mobile alternative to the desktop `--gp-benchmark` CLI flag.
@@ -111,11 +125,14 @@ impl DclParseDeepLink {
             saved_profile: GString::new(),
             multiplayer_debug: false,
             path: GString::new(),
+            section: GString::new(),
             disable_profile_deploy: false,
             fake_owned_wearables: PackedStringArray::new(),
             scene_inspector: GString::new(),
             scene_inspector_file: false,
             low_spec_warning: false,
+            end_of_device_support_warning: false,
+            below_minspec_warning: false,
             gp_benchmark: false,
             safe_margin_debug: false,
             scene_stats: false,
@@ -143,6 +160,7 @@ impl DclParseDeepLink {
             saved_profile: GString::from(&r.saved_profile),
             multiplayer_debug: r.multiplayer_debug,
             path: GString::from(&r.path),
+            section: GString::from(&r.section),
             disable_profile_deploy: r.disable_profile_deploy,
             fake_owned_wearables: PackedStringArray::from_iter(
                 r.fake_owned_wearables.iter().map(GString::from),
@@ -150,6 +168,8 @@ impl DclParseDeepLink {
             scene_inspector: GString::from(&r.scene_inspector),
             scene_inspector_file: r.scene_inspector_file,
             low_spec_warning: r.low_spec_warning,
+            end_of_device_support_warning: r.end_of_device_support_warning,
+            below_minspec_warning: r.below_minspec_warning,
             gp_benchmark: r.gp_benchmark,
             safe_margin_debug: r.safe_margin_debug,
             scene_stats: r.scene_stats,

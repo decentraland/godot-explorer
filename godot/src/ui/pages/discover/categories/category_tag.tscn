@@ -1,7 +1,6 @@
 [gd_scene format=3 uid="uid://epmfrytaggib"]
 
 [ext_resource type="StyleBox" uid="uid://bbpboh50cfhkv" path="res://assets/themes/dcl_theme/category_pill.tres" id="1_aabwc"]
-[ext_resource type="Texture2D" uid="uid://vvy3lmew34mg" path="res://assets/ui/places_categories/art.svg" id="2_1u7bb"]
 [ext_resource type="Script" uid="uid://ycx76vg1tikm" path="res://src/ui/pages/discover/categories/category_tag.gd" id="2_7ciks"]
 [ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="3_7ciks"]
 
@@ -23,20 +22,9 @@ theme_override_constants/margin_right = 10
 [node name="HBoxContainer" type="HBoxContainer" parent="MarginContainer" unique_id=177211066]
 layout_mode = 2
 
-[node name="TextureRect" type="TextureRect" parent="MarginContainer/HBoxContainer" unique_id=1808057264]
-unique_name_in_owner = true
-modulate = Color(0.9254902, 0.92156863, 0.92941177, 1)
-custom_minimum_size = Vector2(22, 26)
-layout_mode = 2
-size_flags_horizontal = 4
-size_flags_vertical = 4
-texture = ExtResource("2_1u7bb")
-expand_mode = 1
-stretch_mode = 5
-
 [node name="Label" type="Label" parent="MarginContainer/HBoxContainer" unique_id=935447562]
-auto_translate_mode = 2
 unique_name_in_owner = true
+auto_translate_mode = 2
 layout_mode = 2
 text = "ART"
 label_settings = SubResource("LabelSettings_vq3of")
