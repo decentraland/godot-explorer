@@ -37,6 +37,8 @@ export async function runCoreSelfTest(): Promise<void> {
           received += 1;
         },
         sceneCrashed: () => {},
+        authError: () => {},
+        openUrl: () => {},
       };
       const id = core.addListener(listener);
       const fired = await withTimeout(

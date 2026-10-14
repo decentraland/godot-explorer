@@ -9,7 +9,13 @@ use crate::{
     Core,
 };
 
+mod notifications;
+mod places;
+mod profile;
+mod scene;
 mod session;
+mod settings;
+mod social;
 
 #[derive(Debug, uniffi::Error)]
 pub enum CoreError {
