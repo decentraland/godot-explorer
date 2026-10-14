@@ -11,13 +11,13 @@ use crate::{core, HostError};
 
 #[derive(Debug, uniffi::Error)]
 pub enum AttestationFailure {
-    Failed { message: String },
+    Failed { reason: String },
 }
 
 impl std::fmt::Display for AttestationFailure {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Failed { message } => write!(f, "{message}"),
+            Self::Failed { reason } => write!(f, "{reason}"),
         }
     }
 }
@@ -162,7 +162,7 @@ mod tests {
             self.token
                 .clone()
                 .map(|t| format!("{t}:{hash}"))
-                .map_err(|message| AttestationFailure::Failed { message })
+                .map_err(|reason| AttestationFailure::Failed { reason })
         }
         async fn ios_generate_key(&self) -> Result<String, AttestationFailure> {
             Ok("key".into())

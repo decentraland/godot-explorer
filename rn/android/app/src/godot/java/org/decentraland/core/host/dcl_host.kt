@@ -2328,10 +2328,10 @@ sealed class AttestationFailure: kotlin.Exception() {
     
     class Failed(
         
-        val `message`: kotlin.String
+        val `reason`: kotlin.String
         ) : AttestationFailure() {
         override val message
-            get() = "message=${ `message` }"
+            get() = "reason=${ `reason` }"
     }
     
 
@@ -2365,7 +2365,7 @@ public object FfiConverterTypeAttestationFailure : FfiConverterRustBuffer<Attest
             is AttestationFailure.Failed -> (
                 // Add the size for the Int that specifies the variant plus the size needed for all fields
                 4UL
-                + FfiConverterString.allocationSize(value.`message`)
+                + FfiConverterString.allocationSize(value.`reason`)
             )
         }
     }
@@ -2374,7 +2374,7 @@ public object FfiConverterTypeAttestationFailure : FfiConverterRustBuffer<Attest
         when(value) {
             is AttestationFailure.Failed -> {
                 buf.putInt(1)
-                FfiConverterString.write(value.`message`, buf)
+                FfiConverterString.write(value.`reason`, buf)
                 Unit
             }
         }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }

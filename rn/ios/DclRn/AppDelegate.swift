@@ -107,14 +107,14 @@ final class AppAttestAttestation: AttestationService {
   }
 
   func playIntegrityToken(requestHashB64url: String) async throws -> String {
-    throw AttestationFailure.Failed(message: "Play Integrity is Android only")
+    throw AttestationFailure.Failed(reason: "Play Integrity is Android only")
   }
 
   func iosGenerateKey() async throws -> String {
     do {
       return Self.base64url(fromBase64: try await DCAppAttestService.shared.generateKey())
     } catch {
-      throw AttestationFailure.Failed(message: error.localizedDescription)
+      throw AttestationFailure.Failed(reason: error.localizedDescription)
     }
   }
 
@@ -124,7 +124,7 @@ final class AppAttestAttestation: AttestationService {
         Self.base64(fromBase64url: keyId), clientDataHash: clientDataHash)
       return Self.base64url(fromBase64: object.base64EncodedString())
     } catch {
-      throw AttestationFailure.Failed(message: error.localizedDescription)
+      throw AttestationFailure.Failed(reason: error.localizedDescription)
     }
   }
 
