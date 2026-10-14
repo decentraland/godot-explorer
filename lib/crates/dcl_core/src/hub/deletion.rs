@@ -37,15 +37,10 @@ impl Hub {
 
     /// How the signed-in account is deleted. The upgrade state is a fresh query: the cached flag
     /// is cold outside the upgrade card, and a recoverable account must never be misread as a
-    /// plain guest. When the query fails the cached flag decides.
+    /// plain guest. When the query fails the plan is `Server`, which never unlinks anything.
     pub async fn deletion_plan(&self) -> DeletionPlan {
-        let (disposable, thirdweb, cached) = self.with_session(|s| {
-            (
-                s.is_disposable_guest(),
-                s.is_thirdweb_guest,
-                s.is_thirdweb_guest_upgraded,
-            )
-        });
+        let (disposable, thirdweb) =
+            self.with_session(|s| (s.is_disposable_guest(), s.is_thirdweb_guest));
         if disposable {
             return DeletionPlan::Local;
         }
@@ -55,8 +50,8 @@ impl Hub {
         let upgraded = match self.backend.guest_upgraded(self.anchor()).await {
             Ok(upgraded) => upgraded,
             Err(e) => {
-                tracing::warn!("deletion: the upgrade check failed, using the cached flag: {e}");
-                cached
+                tracing::warn!("deletion: the upgrade check failed, asking the server: {e}");
+                return DeletionPlan::Server;
             }
         };
         match (upgraded, self.upgraded_deletion.load(Ordering::Relaxed)) {

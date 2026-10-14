@@ -15,7 +15,7 @@ var _layer: CanvasLayer = null
 var _canvas_cull_mask := 0
 var _preview: AvatarPreview = null
 var _preload_pending := false
-var _preloaded := false
+var _preloaded_for := ""
 
 
 ## Builds the avatar in a hidden preview so the screen that shows it only has to place it.
@@ -26,9 +26,10 @@ func async_preload() -> void:
 	_ensure_preview()
 	_preview.visible = false
 	_preview.subviewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
-	await _async_refresh_avatar()
+	var address: String = Global.player_identity.get_address_str()
+	if await _async_refresh_avatar():
+		_preloaded_for = address
 	_preload_pending = false
-	_preloaded = true
 	preload_finished.emit()
 
 
@@ -38,8 +39,8 @@ func async_open(rect: Rect2) -> void:
 	place(rect)
 	if _preload_pending:
 		await preload_finished
-	if _preloaded:
-		_preloaded = false
+	if _preloaded_for == Global.player_identity.get_address_str():
+		_preloaded_for = ""
 	else:
 		await _async_refresh_avatar()
 	place(rect)
@@ -221,13 +222,14 @@ func _set_overlay(on: bool, avatar_only: bool) -> void:
 		get_viewport().transparent_bg = on
 
 
-func _async_refresh_avatar() -> void:
+func _async_refresh_avatar() -> bool:
 	var profile = Global.player_identity.get_mutable_profile()
 	var avatar = Global.player_identity.get_mutable_avatar()
 	if profile == null or avatar == null or _preview == null:
-		return
+		return false
 	profile.set_avatar(avatar)
 	await _preview.avatar.async_update_avatar_from_profile(profile)
+	return true
 
 
 func _emit_avatar() -> void:

@@ -53,7 +53,11 @@ async fn a_failed_upgrade_check_never_turns_a_recoverable_account_into_a_plain_g
     assert_eq!(s.hub.deletion_plan().await, DeletionPlan::Server);
 
     s.hub.with_session(|x| x.is_thirdweb_guest_upgraded = false);
-    assert_eq!(s.hub.deletion_plan().await, DeletionPlan::Guest);
+    assert_eq!(
+        s.hub.deletion_plan().await,
+        DeletionPlan::Server,
+        "a cold flag is not proof of a plain guest"
+    );
 }
 
 #[tokio::test]
