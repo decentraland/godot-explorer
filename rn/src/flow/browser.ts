@@ -20,13 +20,21 @@ export function startLinkHandling() {
     openUrl: ({ url }) => {
       InAppBrowser.isAvailable()
         .then(available =>
-          available ? InAppBrowser.open(url) : Linking.openURL(url),
+          available ? openAndWatch(url) : Linking.openURL(url),
         )
         .catch(() => Linking.openURL(url));
     },
   });
   Linking.addEventListener('url', ({ url }) => routeLink(url, StartKind.Warm));
   Linking.getInitialURL().then(url => url && routeLink(url, StartKind.Cold));
+}
+
+/** A tab the player closes ends the sign-in it was opened for; one we close after the link returns does not. */
+async function openAndWatch(url: string) {
+  const result = await InAppBrowser.open(url);
+  if (result.type === 'cancel' && core().state().tag === 'SigningIn') {
+    core().cancelSignIn();
+  }
 }
 
 function routeLink(url: string, start: StartKind) {

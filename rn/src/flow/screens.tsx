@@ -204,8 +204,8 @@ export function NamingScreen({
   const [name, setName] = useState(initial);
   const valid = isValidName(name);
   return (
-    <KeyboardAvoidingView style={styles.fill} behavior="padding">
-      <FlowFrame onBack={onBack}>
+    <FlowFrame onBack={onBack}>
+      <KeyboardAvoidingView style={styles.fill} behavior="padding">
         <AppText variant="heading" style={styles.titleLeft}>
           {t('FLOW_NAME_TITLE')}
         </AppText>
@@ -231,8 +231,8 @@ export function NamingScreen({
           disabled={!valid}
           onPress={() => onSubmit(name.trim())}
         />
-      </FlowFrame>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </FlowFrame>
   );
 }
 
@@ -266,8 +266,8 @@ function TextStep({
 }) {
   const [value, setValue] = useState(initial);
   return (
-    <KeyboardAvoidingView style={styles.fill} behavior="padding">
-      <FlowFrame onBack={onBack}>
+    <FlowFrame onBack={onBack}>
+      <KeyboardAvoidingView style={styles.fill} behavior="padding">
         <View style={styles.center}>
           <AppText variant="heading" style={styles.title}>
             {title}
@@ -299,8 +299,8 @@ function TextStep({
           disabled={busy || !valid(value)}
           onPress={() => onSubmit(value.trim())}
         />
-      </FlowFrame>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </FlowFrame>
   );
 }
 
