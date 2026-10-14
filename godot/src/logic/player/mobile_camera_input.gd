@@ -145,7 +145,14 @@ func _input(event: InputEvent) -> void:
 
 	if event is InputEventScreenTouch:  # pressed
 		_touches[event.index] = event.position
-		_on_touch_count_changed()
+		# Deferred, not immediate: for a press landing in the joystick's active area, the
+		# joystick's OWN gui_input (which updates is_pressed/touch_index for this same
+		# press) runs after _input() returns, later in this same frame. Checking
+		# _free_pinch_candidates() synchronously here would race it — the joystick still
+		# reads as idle in the instant before it claims the touch, so lifting and
+		# re-pressing the joystick thumb (or any fresh press over it) could be misread as
+		# a free pinch candidate (#2979). Deferring lets the joystick settle first.
+		_on_touch_count_changed.call_deferred()
 	elif event is InputEventScreenDrag:
 		_touches[event.index] = event.position
 		if _pinch_active:

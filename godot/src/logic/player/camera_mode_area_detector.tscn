@@ -3,9 +3,9 @@
 [ext_resource type="Script" uid="uid://bcvdbc4b5iya0" path="res://src/logic/player/camera_mode_area_detector.gd" id="1_wchgk"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_aqpo3"]
-margin = 0.05
-radius = 0.25
-height = 1.5
+margin = 0.08
+radius = 0.3
+height = 1.6
 
 [node name="camera_mode_area_detector" type="Area3D" unique_id=830678283]
 collision_layer = 2147483648
@@ -15,7 +15,7 @@ monitorable = false
 script = ExtResource("1_wchgk")
 
 [node name="CollisionShape3D_Body" type="CollisionShape3D" parent="." unique_id=1878372857]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.153, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.8, 0)
 shape = SubResource("CapsuleShape3D_aqpo3")
 
 [connection signal="area_entered" from="." to="." method="_on_area_entered"]

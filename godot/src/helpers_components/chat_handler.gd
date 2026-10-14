@@ -14,13 +14,10 @@ func _on_chats_arrived(chats: Array):
 		var chat = chats[i]
 		var address: String = chat[0]
 		var timestamp: float = chat[1]
-
 		var message: String = chat[2]
 		if message.begins_with(EMOTE):
-			# Legacy `␐<urn> <timestamp>` emote. Hidden, not played: every sender also
-			# broadcasts the rfc4 PlayerEmote, which carries the mask and is deduped
-			# across rooms — this copy has neither, so replaying it could win the
-			# cooldown race and play an upper-body emote as full body.
+			# Only needed because Bevy releases still send the legacy ␐ emote; drop it so it never
+			# shows as chat text. Safe to remove entirely once Bevy stops sending it.
 			pass
 		elif message.begins_with(REQUEST_PING):
 			pass  # TODO: Send ACK

@@ -243,6 +243,11 @@ pseudolocalization/suffix="»"
 3d_physics/layer_31="CL_AVATAR_MODIFIER_AREA"
 3d_physics/layer_32="CL_CAMERA_MODE_AREA"
 
+[physics]
+
+; #2844: Jolt replaces Godot Physics as the 3D server on all targets.
+3d/physics_engine="Jolt Physics"
+
 [network]
 
 limits/debugger/max_chars_per_second=3276800

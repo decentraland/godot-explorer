@@ -82,8 +82,8 @@ const PREVIEW_SCENE_ID_PREFIX: &str = "b64-";
 /// Whether avatar sync — movement and emotes — still goes over LiveKit.
 ///
 /// Pulse is the carrier: while it is established, LiveKit gets none of it (main room,
-/// archipelago island and scene room alike). The authoritative server reads avatar state off
-/// Pulse as a scene listener, so the LiveKit copy is duplication.
+/// archipelago island and scene room alike). The authoritative
+/// server reads avatar state off Pulse as a scene listener, so the LiveKit copy is duplication.
 ///
 /// The gate is deliberately scoped to `pulse_established` rather than to activation, so a Pulse
 /// drop resumes every LiveKit send on the next frame — the cutover can never leave a player
@@ -2069,8 +2069,6 @@ impl CommunicationManager {
     /// full body, 1 = upper body), matching Unity.
     #[func]
     pub fn send_emote(&mut self, emote_urn: GString, mask: i64) -> bool {
-        // No legacy `␐<urn> <timestamp>` chat copy: Unity and Bevy drop it, and every Godot
-        // build that reads it also reads this PlayerEmote, which carries the mask.
         let emote_over_livekit = self.emote_over_livekit();
 
         // Incremented unconditionally: the counter is this peer's emote sequence, and skipping

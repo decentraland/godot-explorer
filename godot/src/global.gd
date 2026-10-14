@@ -51,6 +51,7 @@ signal camera_mode_block_changed(blocked: bool)
 signal favorite_destination_set
 signal orientation_changed(is_portrait: bool)
 signal chat_write_mode_changed(is_writing: bool)
+signal device_support_status_resolved
 
 enum CameraMode { FIRST_PERSON = 0, THIRD_PERSON = 1, CINEMATIC = 2 }
 
@@ -1485,6 +1486,7 @@ func async_join_world(world_realm: String) -> void:
 		# stays here rather than booting straight into a world we can't enter (#1725).
 		if not await _async_precheck_realm_access(world_realm):
 			return
+		Global.get_config().add_place_to_last_places(Vector2i.ZERO, world_realm)  # "Last visited"
 		Global.set_orientation_landscape()
 		Global.close_menu.emit()
 		Global.get_config().last_realm_joined = world_realm
@@ -1498,8 +1500,9 @@ func async_join_world(world_realm: String) -> void:
 		Time.get_unix_time_from_system()
 	)
 	Global.close_menu.emit()
-	# No parcel: the world names its own spawn point.
-	await Navigator.async_go(Destination.from_input(world_realm), "on_world")
+	# No parcel: the world names its own spawn point, so teleport_to never records it.
+	if await Navigator.async_go(Destination.from_input(world_realm), "on_world"):
+		Global.get_config().add_place_to_last_places(Vector2i.ZERO, world_realm)  # "Last visited"
 
 
 func _http_method_to_string(method: int) -> String:

@@ -528,7 +528,7 @@ theme_override_styles/separator = SubResource("StyleBoxLine_4wgrb")
 
 [node name="CategoriesBar" parent="Control_Card/PanelContainer_Card/PanelContainer_Content/SafeMarginContainer/MarginContainer/ScrollDescription/VBoxContainer/VBoxContainer_Description" unique_id=748967130 instance=ExtResource("19_7t5hv")]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 30)
+custom_minimum_size = Vector2(0, 42)
 layout_mode = 2
 size_flags_vertical = 1
 

@@ -974,8 +974,8 @@ func async_sync_attended_events() -> void:
 	if not has_local_notification_permission():
 		_debug_log("Notification permission not granted; scheduling anyway (OS will handle)")
 
-	# iOS plugin doesn't emit permission_changed, so the lobby grant never reaches
-	# _on_permission_changed. Trigger day1 here instead — its own guards handle dedup.
+	# Day 1 again here: a grant made from OS Settings never goes through our prompt, so
+	# _on_permission_changed never sees it. Its own guards make the retry a no-op.
 	async_schedule_day1_notification.call_deferred()
 
 	# Use the canonical events service (events.decentraland.org/api/events): when
