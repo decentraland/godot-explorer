@@ -2,11 +2,10 @@
 class_name ClaimButton
 extends Button
 
-## Button with a background texture (e.g. a gradient) clipped to its own bounds — the texture
-## shows while the button is at rest and hides on press/hover-press, letting the theme's own
-## pressed stylebox read through underneath instead of stacking on top of it. Also owns the
-## async reward-claim lifecycle: start_claiming() dims the whole node and loops "CLAIMING." /
-## ".." / "..."; finish_claiming() is the terminal state — "CLAIMED", disabled, background hidden.
+## Button with one background texture per visual state (texture_normal/_tapped/_waiting/_done,
+## each also dimmed to DIMMED_OPACITY except texture_normal/_tapped), clipped to its own bounds.
+## Also owns the async reward-claim lifecycle: start_claiming() dims the label and loops
+## "CLAIMING." / ".." / "..."; finish_claiming() is the terminal state — "CLAIMED", disabled.
 ##
 ## Self-contained: assign claim_action to an async Callable that performs the actual claim and
 ## returns true on success (the owner's business logic — which campaign, guest vs not, closing a
@@ -18,23 +17,66 @@ extends Button
 
 enum ClaimState { IDLE, CLAIMING, CLAIMED }
 
-const CLAIMING_OPACITY := 0.7
+## Shared by the label (while CLAIMING) and the background (while CLAIMING or CLAIMED).
+const DIMMED_OPACITY := 0.7
 const DOT_INTERVAL := 0.4
 const MAX_DOTS := 3
+# A claim that fails instantly (e.g. the campaign isn't published yet — see RewardClaimer's
+# empty-campaign check) would otherwise flash CLAIMING for a single frame, reading as "the button
+# did nothing" rather than "the claim failed" (issue #3018). Floor the visible CLAIMING time.
+const MIN_CLAIMING_DURATION_SEC := 1.0
 
-@export var background_texture: Texture2D:
+@export var texture_normal: Texture2D:
 	set(value):
-		background_texture = value
+		texture_normal = value
 		if is_node_ready():
 			_update_background()
 
-## Translation key for the idle (pre-claim) label — e.g. "STREAK_CTA_CLAIM". Ignored once
-## start_claiming()/finish_claiming() has moved the button past the idle state.
-@export var custom_text: String:
+## Momentary press/hover-press feedback while still IDLE — the button is disabled once CLAIMING
+## actually starts, so get_draw_mode() never reports pressed there; this is IDLE-only.
+@export var texture_tapped: Texture2D:
 	set(value):
-		custom_text = value
+		texture_tapped = value
+		if is_node_ready():
+			_update_background()
+
+@export var texture_waiting: Texture2D:
+	set(value):
+		texture_waiting = value
+		if is_node_ready():
+			_update_background()
+
+@export var texture_done: Texture2D:
+	set(value):
+		texture_done = value
+		if is_node_ready():
+			_update_background()
+
+## Translation key for the idle (pre-claim) label. Ignored once start_claiming()/finish_claiming()
+## has moved the button past the idle state.
+@export var text_normal: String = "STREAK_CTA_CLAIM":
+	set(value):
+		text_normal = value
 		if is_node_ready() and _claim_state == ClaimState.IDLE:
 			_refresh_text()
+
+## Translation key for the CLAIMING label, before the animated dots (see show_waiting_dots).
+@export var text_waiting: String = "CLAIM_BUTTON_CLAIMING":
+	set(value):
+		text_waiting = value
+		if is_node_ready() and _claim_state == ClaimState.CLAIMING:
+			_refresh_text()
+
+## Translation key for the terminal CLAIMED label.
+@export var text_done: String = "CLAIM_BUTTON_CLAIMED":
+	set(value):
+		text_done = value
+		if is_node_ready() and _claim_state == ClaimState.CLAIMED:
+			_refresh_text()
+
+## Whether the CLAIMING label animates "." / ".." / "..." while waiting. False shows text_waiting
+## as a static string instead (and skips starting the dot timer entirely).
+@export var show_waiting_dots: bool = true
 
 ## Assigned by the owner — an async function that performs the real claim and returns true on
 ## success. Left unassigned, this button just emits the inherited `pressed` signal and does
@@ -67,15 +109,17 @@ func start_claiming() -> void:
 	_claim_state = ClaimState.CLAIMING
 	_dot_count = 1
 	disabled = true
-	modulate.a = CLAIMING_OPACITY
+	_label.modulate.a = DIMMED_OPACITY
 	_refresh_text()
-	_dot_timer.start(DOT_INTERVAL)
+	_update_background()
+	if show_waiting_dots:
+		_dot_timer.start(DOT_INTERVAL)
 
 
 func finish_claiming() -> void:
 	_claim_state = ClaimState.CLAIMED
 	_dot_timer.stop()
-	modulate.a = 1.0
+	_label.modulate.a = 1.0
 	disabled = true
 	_refresh_text()
 	_update_background()
@@ -90,7 +134,15 @@ func _on_pressed() -> void:
 	if not claim_action.is_valid() or _claim_state != ClaimState.IDLE:
 		return
 	start_claiming()
+	var started_at := Time.get_ticks_msec()
 	var success: bool = await claim_action.call()
+	if not is_instance_valid(self):
+		return
+	var elapsed_sec := (Time.get_ticks_msec() - started_at) / 1000.0
+	if elapsed_sec < MIN_CLAIMING_DURATION_SEC:
+		await get_tree().create_timer(MIN_CLAIMING_DURATION_SEC - elapsed_sec).timeout
+	if not is_instance_valid(self):
+		return
 	if success:
 		finish_claiming()
 	else:
@@ -100,7 +152,7 @@ func _on_pressed() -> void:
 func _reset_to_idle() -> void:
 	_claim_state = ClaimState.IDLE
 	disabled = false
-	modulate.a = 1.0
+	_label.modulate.a = 1.0
 	_dot_timer.stop()
 	_refresh_text()
 	_update_background()
@@ -109,23 +161,25 @@ func _reset_to_idle() -> void:
 func _refresh_text() -> void:
 	match _claim_state:
 		ClaimState.CLAIMING:
-			_label.text = (
-				TranslationKey.new("CLAIM_BUTTON_CLAIMING").text() + ".".repeat(_dot_count)
-			)
+			var dots := ".".repeat(_dot_count) if show_waiting_dots else ""
+			_label.text = TranslationKey.new(text_waiting).text() + dots
 		ClaimState.CLAIMED:
-			_label.text = TranslationKey.new("CLAIM_BUTTON_CLAIMED").text()
+			_label.text = TranslationKey.new(text_done).text()
 		ClaimState.IDLE:
-			_label.text = TranslationKey.new(custom_text).text() if custom_text else ""
+			_label.text = TranslationKey.new(text_normal).text() if text_normal else ""
 
 
 func _update_background() -> void:
 	if not _background:
 		return
-	if _claim_state == ClaimState.CLAIMED:
-		_background.visible = false
-		return
-	_background.texture = background_texture
-	var mode := get_draw_mode()
-	_background.visible = (
-		background_texture != null and mode != DRAW_PRESSED and mode != DRAW_HOVER_PRESSED
-	)
+	match _claim_state:
+		ClaimState.IDLE:
+			var mode := get_draw_mode()
+			var is_pressed := mode == DRAW_PRESSED or mode == DRAW_HOVER_PRESSED
+			_background.texture = texture_tapped if is_pressed else texture_normal
+		ClaimState.CLAIMING:
+			_background.texture = texture_waiting
+		ClaimState.CLAIMED:
+			_background.texture = texture_done
+	_background.visible = _background.texture != null
+	_background.modulate.a = 1.0 if _claim_state == ClaimState.IDLE else DIMMED_OPACITY

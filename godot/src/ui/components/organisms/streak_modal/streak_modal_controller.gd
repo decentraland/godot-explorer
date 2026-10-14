@@ -7,22 +7,15 @@ extends Node
 ## convention this follows (new behaviour gets its own file, not a block bolted onto the big one).
 ##
 ## Mirrors ModalManager's own create/show/close/tree_exited/remove skeleton (see
-## async_show_reward_modal et al. there) for the streak modal itself, and leans on ModalManager's
-## existing reward_modal + add-email OTP flow for the actual claim rather than duplicating either.
-
-signal guest_claim_ready(upgraded: bool)
+## async_show_reward_modal et al. there) for the streak modal itself. The actual claim reuses
+## RewardClaimer (shared with reward_modal.gd) directly — the streak modal's own ClaimButton stays
+## open the whole time, it never navigates to another modal (issue #3018 claim-flow fix).
 
 const STREAK_MODAL_SCENE_PATH = "res://src/ui/components/organisms/streak_modal/streak_modal.tscn"
 
 var current_streak_modal: StreakModal = null
 var streak_modal_scene: PackedScene = null
 var _streak_canvas_layer: CanvasLayer = null
-
-# Set by _async_claim_guest() while a guest is running the shared OTP upgrade flow to claim a
-# streak reward; consumed by _on_guest_upgrade_state_refreshed() once that flow resolves. 0 means
-# "no streak claim is riding along" — an unrelated upgrade (e.g. the aspirational nudge) must not
-# be mistaken for this one.
-var _pending_guest_claim_day: int = 0
 
 
 func _ready() -> void:
@@ -34,7 +27,6 @@ func _ready() -> void:
 				+ STREAK_MODAL_SCENE_PATH
 			)
 		)
-	Global.guest_upgrade_state_refreshed.connect(_on_guest_upgrade_state_refreshed)
 
 
 func is_open() -> bool:
@@ -127,38 +119,32 @@ func async_claim_reward(day: int, is_guest: bool) -> bool:
 	return await _async_claim_direct(day)
 
 
-## Shows the reward modal for a login-streak entitlement and awaits its actual resolution (the
-## player still has to tap Claim inside the modal — "shown" isn't "resolved"). Marks it claimed in
-## StreakManager and reports LOGIN_STREAK_CLAIM either way.
+## Performs the actual claim in place (no modal navigation — the streak modal's own ClaimButton
+## drives its CLAIMING/CLAIMED visual off this call's result). Marks it claimed in StreakManager
+## and reports LOGIN_STREAK_CLAIM either way.
 func _async_claim_direct(day: int) -> bool:
 	var key := "LoginStreakD3" if day == 3 else "LoginStreakD7"
-	var shown := await Global.modal_manager.async_show_reward_modal(RewardCampaigns.CAMPAIGNS[key])
-	if not shown or not is_instance_valid(Global.modal_manager.current_reward_modal):
-		return false
-	var success: bool = await Global.modal_manager.current_reward_modal.claim_resolved
-	_on_streak_claim_resolved(success, day)
-	return success
+	var result := await RewardClaimer.async_claim(RewardCampaigns.CAMPAIGNS[key])
+	_on_streak_claim_resolved(result.ok, day)
+	return result.ok
 
 
 ## Starts the SAME shared OTP upgrade flow as every other guest-upgrade entry point
-## (ModalManager.async_start_add_email_flow — untouched, not parameterized for this) and chains
-## into this entitlement's own reward modal once it succeeds. The flow's own MobilePet reward
-## (issue #2372) shows first — a deliberate "chain, don't merge or suppress" answer to the
-## collision the issue itself flags as open ("guest-upgrade reward fires too").
+## (AddEmailFlow.async_start_add_email_flow), with its default grant_campaign_key ("MobilePet") so
+## the account-upgrade reward still shows (Figma "OTP-Claimed") — the issue's own open question
+## ("guest-upgrade reward fires too — chain, merge, suppress?") is answered "chain": the upgrade
+## reward shows first, then this resumes and completes the D3/D7 claim automatically (Figma "CLAIM
+## AUTOMATICALLY") in the SAME streak modal, which stays open underneath the whole time (separate
+## CanvasLayers, see _async_create_streak_modal). Tags the account-creation event with
+## source=login_streak (issue #3018 deliverable) so it's attributable despite sharing the reward.
+## Awaits AddEmailFlow's own flow_concluded — NOT Global.guest_upgrade_state_refreshed, which never
+## fires on a cancel/error and would leave the ClaimButton stuck on CLAIMING forever.
 func _async_claim_guest(day: int) -> bool:
-	_pending_guest_claim_day = day
-	Global.modal_manager.async_start_add_email_flow()
-	var upgraded: bool = await guest_claim_ready
-	_pending_guest_claim_day = 0
+	Global.add_email_flow.async_start_add_email_flow("MobilePet", "login_streak")
+	var upgraded: bool = await Global.add_email_flow.flow_concluded
 	if not upgraded:
 		return false
 	return await _async_claim_direct(day)
-
-
-func _on_guest_upgrade_state_refreshed(is_upgraded: bool) -> void:
-	if _pending_guest_claim_day == 0:
-		return
-	guest_claim_ready.emit(is_upgraded)
 
 
 func _on_streak_claim_resolved(success: bool, day: int) -> void:

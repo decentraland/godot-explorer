@@ -72,8 +72,20 @@ func credit_jump_in() -> void:
 
 func _finish_credit(config: ConfigData, day: int) -> void:
 	config.save_to_settings_file()
-	var is_guest := Global.player_identity != null and Global.player_identity.is_guest
-	Global.metrics.track_login_streak_day_counted(day, is_guest)
+	Global.metrics.track_login_streak_day_counted(day, is_unlinked_guest())
+
+
+## True for a thirdweb guest that hasn't linked an email yet — the account must upgrade before
+## claiming a reward. NOT PlayerIdentity.is_guest, which is reserved for disposable LocalWallet
+## sessions and stays false for a thirdweb guest (see is_thirdweb_guest's own doc comment in
+## dcl_player_identity.rs) — checking that instead silently skipped the upgrade flow entirely.
+static func is_unlinked_guest() -> bool:
+	var identity = Global.player_identity
+	return (
+		identity != null
+		and identity.is_thirdweb_guest()
+		and not identity.is_thirdweb_guest_upgraded()
+	)
 
 
 ## Defers entirely to get_claimable_day() rather than comparing the day to CHECKPOINT_DAY/
@@ -107,13 +119,20 @@ func debug_advance_day() -> void:
 ## DEBUG ONLY — the inverse of debug_advance_day(): steps progress back one day (floor 0) and
 ## un-claims D3/D7 once progress drops below their checkpoint, so the claim flow can be re-tested
 ## by advancing again. Also steps streak_last_credit_day_unix back a day to keep it consistent
-## with the lowered progress, same persistence tradeoffs as debug_advance_day.
+## with the lowered progress, same persistence tradeoffs as debug_advance_day — except at the
+## progress_day == 0 floor, where streak_last_credit_day_unix resets to 0 instead of one more day
+## back. credit_jump_in() only ever takes its "first-ever credit" (WELCOME) branch when that's
+## exactly 0; a real jump-in never leaves progress_day at 0 with a non-zero timestamp (every
+## production write path lands on 1 or CHECKPOINT_DAY + 1), so without this reset the next jump-in
+## here would see a multi-day gap instead and wrongly show "lost the streak" over a fresh WELCOME.
 func debug_rewind_day() -> void:
 	var config: ConfigData = Global.config
 	if config.streak_progress_day <= 0:
 		return
 	config.streak_progress_day -= 1
-	if config.streak_last_credit_day_unix > 0:
+	if config.streak_progress_day == 0:
+		config.streak_last_credit_day_unix = 0
+	elif config.streak_last_credit_day_unix > 0:
 		config.streak_last_credit_day_unix -= DAY_SECONDS
 	if config.streak_progress_day < CHECKPOINT_DAY:
 		config.streak_d3_claimed = false

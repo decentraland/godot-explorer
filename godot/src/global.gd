@@ -128,6 +128,7 @@ var upgrade_nudge_coordinator: UpgradeNudgeCoordinator
 var review_prompt_coordinator: ReviewPromptCoordinator
 var streak_manager: StreakManager
 var streak_modal_controller: StreakModalController
+var add_email_flow: AddEmailFlow
 
 var standalone = false
 
@@ -700,6 +701,9 @@ func _ready():
 	)
 	self.streak_modal_controller.set_name("streak_modal_controller")
 
+	self.add_email_flow = load("res://src/ui/components/organisms/modal/add_email_flow.gd").new()
+	self.add_email_flow.set_name("add_email_flow")
+
 	get_tree().root.add_child.call_deferred(self.cli)
 	get_tree().root.add_child.call_deferred(self.music_player)
 	get_tree().root.add_child.call_deferred(self.scene_fetcher)
@@ -710,6 +714,7 @@ func _ready():
 	get_tree().root.add_child.call_deferred(self.review_prompt_coordinator)
 	get_tree().root.add_child.call_deferred(self.streak_manager)
 	get_tree().root.add_child.call_deferred(self.streak_modal_controller)
+	get_tree().root.add_child.call_deferred(self.add_email_flow)
 	get_tree().root.add_child.call_deferred(self.content_provider)
 	get_tree().root.add_child.call_deferred(self.scene_runner)
 	get_tree().root.add_child.call_deferred(self.realm)

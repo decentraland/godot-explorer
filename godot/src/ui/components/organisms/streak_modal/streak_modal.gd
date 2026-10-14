@@ -51,6 +51,10 @@ var _is_guest: bool = false
 # number to render as still-pending in the row/title, since _progress_day itself hasn't caught
 # up to it yet.
 var _pending_day: int = 0
+# True while claim_button's claim_action is awaiting the claim (and, for guests, the upgrade
+# flow ahead of it) — guards _on_gui_input so tapping outside can't free this modal mid-request
+# (same guard reward_modal.gd keeps against its own _claiming).
+var _claiming_reward: bool = false
 
 @onready var label_title: Label = %Label_Title
 @onready var label_subtitle: RichTextLabel = %Label_Subtitle
@@ -88,6 +92,8 @@ func setup(state: State, progress_day: int, is_guest: bool, pending_day: int = 0
 
 
 func _on_gui_input(event: InputEvent) -> void:
+	if _claiming_reward:
+		return
 	if event is InputEventScreenTouch and event.pressed:
 		Global.streak_modal_controller.close_streak_modal()
 
@@ -182,10 +188,18 @@ func _set_cta(text: String, secondary: bool) -> void:
 
 ## Hides Button_CTA and shows ClaimButton instead — used once the D3/D7 reward is actually
 ## claimable, so the gradient + claiming/claimed states replace the plain acknowledgement CTA.
+## Wires claim_action here (not _ready()) since it needs the day/is_guest for THIS setup() call.
 func _show_claim_button(text_key: String) -> void:
 	button_cta.visible = false
 	claim_button.visible = true
-	claim_button.custom_text = text_key
+	claim_button.text_normal = text_key
+	var day := FINAL_DAY if _state == State.D7_COMPLETE else CHECKPOINT_DAY
+	var is_guest := _is_guest
+	claim_button.claim_action = func() -> bool:
+		_claiming_reward = true
+		var success: bool = await Global.streak_modal_controller.async_claim_reward(day, is_guest)
+		_claiming_reward = false
+		return success
 
 
 func _screen_view_name() -> String:
@@ -203,13 +217,15 @@ func _on_button_cta_pressed() -> void:
 	var cta_text := (
 		button_cta.text
 		if button_cta.visible
-		else TranslationKey.new(claim_button.custom_text).text()
+		else TranslationKey.new(claim_button.text_normal).text()
 	)
 	Global.metrics.track_click_button(cta_text, _screen_view_name(), "")
 	match _state:
 		State.WELCOME, State.DAY_PROGRESS, State.LOST:
 			Global.streak_modal_controller.close_streak_modal()
 		State.D3_COMPLETE, State.D7_COMPLETE:
-			var day := FINAL_DAY if _state == State.D7_COMPLETE else CHECKPOINT_DAY
-			Global.streak_modal_controller.close_streak_modal()
-			Global.streak_modal_controller.async_claim_reward(day, _is_guest)
+			# ClaimButton owns the whole claim lifecycle itself via claim_action (see
+			# _show_claim_button) and stays open through CLAIMING/CLAIMED — this modal is never
+			# closed or replaced by the claim. Dismissing is the existing "tap outside" gesture
+			# (_on_gui_input), matching Figma's "Tap to continue" once CLAIMED.
+			pass

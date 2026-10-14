@@ -21,6 +21,17 @@ var _claimable_day: int = 0
 @onready var button_claim: ClaimButton = %Button_Claim
 
 
+func _ready() -> void:
+	visibility_changed.connect(_on_visibility_changed)
+
+
+## Mirrors GuestUpgradeCard's own _on_visibility_changed — visibility_changed also fires from an
+## ancestor (e.g. Discover itself showing/hiding on tab switch), so guard with is_visible_in_tree().
+func _on_visibility_changed() -> void:
+	if is_visible_in_tree():
+		Global.metrics.track_screen_viewed("LOGIN_STREAK_WIDGET_SHOW", "")
+
+
 ## Same method name/shape as GuestUpgradeCard's — discover.gd calls both the same way.
 func refresh_visibility() -> void:
 	visible = Global.streak_manager.is_widget_visible()
@@ -43,7 +54,7 @@ func refresh_visibility() -> void:
 	if _claimable_day == 0:
 		return
 	var day := _claimable_day
-	var is_guest := Global.player_identity != null and Global.player_identity.is_guest
+	var is_guest := StreakManager.is_unlinked_guest()
 	button_claim.claim_action = func() -> bool:
 		Global.metrics.track_click_button("CLAIM", "LOGIN_STREAK_WIDGET_SHOW", "")
 		return await Global.streak_modal_controller.async_claim_reward(day, is_guest)
