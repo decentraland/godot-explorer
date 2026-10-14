@@ -15,7 +15,6 @@ import com.facebook.react.uimanager.TouchTargetHelper
 import org.godotengine.godot.Godot
 import org.godotengine.godot.GodotFragment
 import org.godotengine.godot.GodotHost
-import org.godotengine.godot.plugin.GodotPlugin
 
 /**
  * React Native activity that hosts the Godot client as a fragment *under* the React root view,
@@ -34,6 +33,7 @@ class MainActivity : ReactActivity(), GodotHost {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(null)
     instance = this
+    if (CoreHost.engineWanted) startEngine()
   }
 
   override fun onDestroy() {
@@ -41,7 +41,15 @@ class MainActivity : ReactActivity(), GodotHost {
     super.onDestroy()
   }
 
-  /** Starts the Godot engine once, under the RN root. The engine cannot be restarted in-process. */
+  override fun onResume() {
+    super.onResume()
+    if (CoreHost.engineWanted) startEngine()
+  }
+
+  /**
+   * Starts the Godot engine once, under the RN root, when the core asks for it (`engine_required`).
+   * The engine cannot be restarted in-process; it then attaches itself to the core.
+   */
   fun startEngine() {
     if (godotFragment != null) return
     val content = findViewById<ViewGroup>(android.R.id.content)
@@ -59,7 +67,12 @@ class MainActivity : ReactActivity(), GodotHost {
         .commitNowAllowingStateLoss()
   }
 
-  // Warm deep links: the dcl-godot-android plugin re-reads activity.intent on focus.
+  /** The Godot surface goes above the RN view while the avatar preview shows. */
+  fun setSurfaceOnTop(onTop: Boolean) {
+    runOnUiThread { godotFragment?.godot?.renderView?.view?.setZOrderOnTop(onTop) }
+  }
+
+  // Warm deep links reach JS through RN's Linking, which routes them to the core.
   override fun onNewIntent(intent: Intent) {
     super.onNewIntent(intent)
     setIntent(intent)
@@ -92,21 +105,12 @@ class MainActivity : ReactActivity(), GodotHost {
 
   override fun getCommandLine(): List<String> = BOOT_ARGS
 
-  override fun getHostPlugins(engine: Godot): Set<GodotPlugin> = setOf(RnHostPlugin(engine))
-
   companion object {
     private const val TAG = "DclRn"
     private const val GODOT_CONTAINER_ID = 0x00D0D0
 
-    // No world: the engine only renders the avatar preview (see rn_avatar_host.gd).
-    private val BOOT_ARGS = listOf("--rn-host", "--rn-avatar-only", "--force-mobile", "--no-pulse", "--perf-log")
+    private val BOOT_ARGS = listOf("--force-mobile", "--no-pulse", "--perf-log")
 
     @Volatile var instance: MainActivity? = null
-
-    init {
-      // JNI_OnLoad in libdclgodot is needed by livekit/webrtc before the engine starts.
-      System.loadLibrary("c++_shared")
-      System.loadLibrary("dclgodot")
-    }
   }
 }

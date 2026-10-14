@@ -34,6 +34,8 @@ pub struct App {
     rendering_sent: Option<bool>,
     avatar: Option<AvatarState>,
     last_hud: Option<HudSnapshot>,
+    /// The preview is shown over a running world (the in-world backpack), not as a state of its own.
+    overlay: bool,
 }
 
 impl App {
@@ -48,6 +50,7 @@ impl App {
             rendering_sent: None,
             avatar: None,
             last_hud: None,
+            overlay: false,
         }
     }
 
@@ -154,12 +157,19 @@ impl App {
     /// Keeps the session: back to the menus.
     pub fn exit_world(&mut self) -> Result<(), AppError> {
         self.expect(self.state.in_world_flow(), "exit_world")?;
+        self.set_overlay(false);
         self.send(EngineCommand::ExitWorld);
         self.set_state(State::SignedIn);
         Ok(())
     }
 
+    /// In a world the preview is an overlay and the state stays `InWorld`.
     pub fn show_avatar_preview(&mut self, rect: Rect) -> Result<(), AppError> {
+        if matches!(self.state, State::InWorld { .. }) {
+            self.send(EngineCommand::ShowAvatarPreview(rect));
+            self.set_overlay(true);
+            return Ok(());
+        }
         self.expect(
             matches!(self.state, State::SignedIn | State::AvatarPreview { .. }),
             "show_avatar_preview",
@@ -170,10 +180,22 @@ impl App {
     }
 
     pub fn hide_avatar_preview(&mut self) -> Result<(), AppError> {
+        if self.overlay {
+            self.send(EngineCommand::HideAvatarPreview);
+            self.set_overlay(false);
+            return Ok(());
+        }
         self.expect(self.state.is_preview(), "hide_avatar_preview")?;
         self.send(EngineCommand::HideAvatarPreview);
         self.set_state(State::SignedIn);
         Ok(())
+    }
+
+    fn set_overlay(&mut self, on: bool) {
+        if self.overlay != on {
+            self.overlay = on;
+            self.events.avatar_preview_mode(on);
+        }
     }
 
     /// The engine started and registered itself: send what waited for it.

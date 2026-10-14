@@ -12,10 +12,7 @@ class MainApplication : Application(), ReactApplication {
   override val reactHost: ReactHost by lazy {
     getDefaultReactHost(
       context = applicationContext,
-      packageList =
-        PackageList(this).packages.apply {
-          addAll(HostPackages.all())
-        },
+      packageList = PackageList(this).packages,
     )
   }
 

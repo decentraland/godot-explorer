@@ -12,7 +12,6 @@ const OVERLAY_CANVAS_LAYER := 1 << 19
 var _layer: CanvasLayer = null
 var _canvas_cull_mask := 0
 var _preview: AvatarPreview = null
-var _surface_on_top := false
 
 
 func async_open(rect: Rect2) -> void:
@@ -187,15 +186,11 @@ func _show_preview(on: bool) -> void:
 	explorer.ui_root.visible = not on
 
 
-# The host's Godot surface goes above the RN view while the preview shows, so the avatar draws
-# over RN content; in explorer mode the root is also made transparent for that.
+# While the preview shows the avatar draws over RN content: the host puts the Godot surface above
+# the RN view (the core's avatar_preview_mode), and in explorer mode the root is transparent too.
 func _set_overlay(on: bool, avatar_only: bool) -> void:
 	if not avatar_only:
 		get_viewport().transparent_bg = on
-	# Each flip recreates the Android surface, so only flip on a real change.
-	if Engine.has_singleton("RnHostPlugin") and on != _surface_on_top:
-		_surface_on_top = on
-		Engine.get_singleton("RnHostPlugin").call("set_surface_on_top", on)
 
 
 func _async_refresh_avatar() -> void:

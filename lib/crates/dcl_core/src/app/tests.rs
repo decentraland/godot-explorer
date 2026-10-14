@@ -574,3 +574,33 @@ fn hud_and_loading_detail_are_ignored_outside_their_states() {
     }));
     assert_eq!(*facts.seen.lock().unwrap(), vec!["loading 50"]);
 }
+
+#[test]
+fn the_preview_over_a_running_world_is_an_overlay_that_keeps_the_state() {
+    let facts = Arc::new(Facts::default());
+    let (mut app, engine) = in_a_world(&facts);
+    app.show_avatar_preview(RECT).unwrap();
+    assert!(matches!(app.state(), State::InWorld { .. }));
+    assert_eq!(engine.take(), vec![EngineCommand::ShowAvatarPreview(RECT)]);
+
+    app.hide_avatar_preview().unwrap();
+    assert!(matches!(app.state(), State::InWorld { .. }));
+    assert_eq!(engine.take(), vec![EngineCommand::HideAvatarPreview]);
+    assert!(app.hide_avatar_preview().is_err(), "nothing left to hide");
+}
+
+#[test]
+fn leaving_the_world_closes_the_overlay() {
+    let recorder = Arc::new(Recorder::default());
+    let mut app = App::new(recorder.clone());
+    app.finish_boot(true).unwrap();
+    with_engine(&mut app);
+    app.enter_world(plaza()).unwrap();
+    app.engine_event(EngineEvent::LoadingFinished {
+        realm: "main".into(),
+        parcel: Parcel::new(0, 0),
+    });
+    app.show_avatar_preview(RECT).unwrap();
+    app.exit_world().unwrap();
+    assert_eq!(*recorder.preview_modes.lock().unwrap(), vec![true, false]);
+}
