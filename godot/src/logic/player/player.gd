@@ -127,9 +127,9 @@ const LONG_FALL_ANIM_SPEED := 8.0
 # #1553: fall animation threshold (Unity AnimationFallSpeed = -3) — the fall
 # pose waits for real falling speed; apex floats in the Mid state.
 const FALL_ANIM_SPEED := 3.0
-# Measured ground speed below this is not a step: pushing a wall keeps the move
-# input held while the avatar stays put, and the gait drives the step sounds.
-const GAIT_MIN_SPEED := 0.1
+# Unity AnimationMovementBlendLogic.BLEND_EPSILON: a blend below this is idle,
+# which is what keeps a wall-pinned avatar from stepping in place.
+const GAIT_BLEND_EPSILON := 0.01
 # #2854 M12: external-force multiplier while gliding (Unity GlideWindResponse).
 const GLIDE_WIND_RESPONSE := 1.5
 # cos(46deg): a slide collision flatter than this is walkable ground; steeper
@@ -342,12 +342,26 @@ func set_camera_mode(mode: Global.CameraMode, play_sound: bool = true):
 
 
 func update_avatar_movement_state(vel: float):
-	# #2856: gait bools mirror the input-mode kind (idle when no move input);
-	# movement_speed feeds the continuous blend in avatar.gd.
-	var stepping := vel > GAIT_MIN_SPEED
-	avatar.walk = movement_kind == 1 and has_move_input and stepping
-	avatar.jog = movement_kind == 2 and has_move_input and stepping
-	avatar.run = movement_kind == 3 and has_move_input and stepping
+	# The gait is whatever the animation blend says it is (Unity
+	# AnimationMovementBlendLogic.CalculateBlendValue): measured speed relative to
+	# the speed the input mode asks for, times the mode. Holding run against a
+	# wall that only allows walk pace therefore steps at walk, not at run.
+	var limit := 0.0
+	match movement_kind:
+		1:
+			limit = walk_speed
+		2:
+			limit = jog_speed
+		3:
+			limit = run_speed
+	var blend := 0.0
+	if has_move_input and limit > 0.0:
+		blend = clampf(vel / limit, 0.0, 1.0) * movement_kind
+	if blend <= GAIT_BLEND_EPSILON:
+		blend = 0.0
+	avatar.walk = blend > 0.0 and blend <= 1.0
+	avatar.jog = blend > 1.0 and blend <= 2.0
+	avatar.run = blend > 2.0
 	avatar.movement_speed = vel
 
 
