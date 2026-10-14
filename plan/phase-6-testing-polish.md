@@ -34,14 +34,9 @@ engine-facing fix.
 - [ ] **6.4 Polish**. Visual pass against the Figma frames (the gallery in `docs/rn-ui-spec/`
   gives one preview per frame), animation and loading states, empty and error states, safe areas
   on every device in the matrix, orientation transitions in and out of the world.
-  - [ ] **Godot engine warm-up**. Since the first avatar preview is reached in the entry flow, start
-    the engine in Idle through the core's lifecycle event and the native host after the first RN
-    screen is visible, before the preview is requested. Prepare the avatar and its wearables as soon
-    as the core has the profile, then show the live preview when its rect arrives. Keep engine
-    startup one-time and off the RN launch path. Measure cold app launch, time from entering the
-    avatar screen to the first usable 3D frame, and peak memory on Android and iOS before and
-    after; keep the warm-up only if it reduces the preview wait without an unacceptable launch or
-    memory regression. A snapshot placeholder is outside this item (D-29).
+  - [ ] **Engine start policy tuning**. The policy is D-42, built in 3.2: check its three numbers on
+    the device matrix (cold launch to the first RN screen, `engine_required` to the first 3D frame,
+    memory in menus with the engine idle) and adjust when `engine_required` fires.
 - [ ] **6.5 Performance and stability**. GP benchmark on both phones vs 1.15; memory on the
   low-end Android through a 30-minute session; thermal and fps-cap behaviour; the deliberate crash
   test for symbolication (R-7) on both platforms.

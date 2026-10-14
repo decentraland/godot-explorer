@@ -77,7 +77,7 @@ differed because `social/` needs the wallet and auth chain first.
   on a Godot `Timer`, not a tokio interval, because each tick polls main-thread plugins.
   `Metrics` is still 1,317 lines.
 - [x] **1.9 Notifications.** There was no DB or poll in `lib/.../notifications.rs` (it is all
-  itests); the local-reminder DB is the native plugin's and stays. `dcl_core::notifications::Feed`
+  itests); the local-reminder DB is the native plugin's; an RN notifications library replaces it in 4.6 (D-41). `dcl_core::notifications::Feed`
   holds the feed: supported-type filter, blocked-sender filter, id dedupe, the toast age rule,
   read state, newest-first order and the toast queue. **Not moved:** the signed fetch, the 30 s
   poll `Timer` and the toasts stay in `notifications_manager.gd` (signing goes through the

@@ -29,12 +29,16 @@ and no item carries an estimate.
   Shop, Badges + Scrapbook), of which Android IAP is the largest, and the release candidate. December is also how the team learns the architecture.
 - **2.0.0 ships in January** as an update of the existing store app, with nothing a 1.15 user had
   missing and no GDScript in the client.
-- **Phase 8, after the release:** publishing the emulator under its own name (8.1) and replacing the
-  host's plugin code with RN libraries (8.2). Neither is needed for the gate. VR is removed before
+- **Phase 8, after the release:** publishing the emulator under its own name (8.1) and, if 2.0.0 kept
+  the video-only plugin, moving video into the host (8.2). Neither is needed for the gate. VR is removed before
   the gate (5.12): 2.0.0 has no VR at all.
+- **Checkpoint on 1 November** (D-39): where stack 1 stands, the RN-host measurement, and one of four
+  options written in advance (gate stands; zero `.gd` moves to 2.1; the dates move or phase 7 shrinks;
+  Plan B for the shell, D-open-16).
 - `main` keeps shipping 1.16, possibly 1.17, for LMT3 until the December merge. LMT3 is a marketing
   campaign on the current client; the crash, performance, SDK and fonts/skybox work for it happens on
-  `main` and is picked up by the branch every day (D-31).
+  `main` and is picked up by the branch every day (D-31). Before the merge, a permanent `1.x` branch is
+  cut for every later 1.x release (D-40).
 
 ## Files
 
@@ -52,7 +56,7 @@ and no item carries an estimate.
 | [phase-6-testing-polish.md](phase-6-testing-polish.md) | team, December, first: fix what the AI got wrong, validate and polish everything |
 | [phase-7-new-features.md](phase-7-new-features.md) | team, December, then: the five new features in RN on the polished core, release candidate, store readiness |
 | [phase-5-engine-port.md](phase-5-engine-port.md) | gdext upgraded to its modern API first, then avatar, player, SDK components, fetcher into `dcl_engine`; VR removed; zero `.gd` |
-| [phase-8-after-release.md](phase-8-after-release.md) | After the release: the emulator under its own name, RN libraries for the host's plugin code |
+| [phase-8-after-release.md](phase-8-after-release.md) | After the release: the emulator under its own name, video into the host if 2.0.0 kept the video-only plugin |
 | [decisions.md](decisions.md) | Decided and open decisions, each with a recommendation |
 | [risks.md](risks.md) | Risks, guardrails, and the measurement each one needs |
 
@@ -63,8 +67,9 @@ and no item carries an estimate.
 | 1. Core carve-out | none | Mateo + AI | code done; phone regression open |
 | 2. Rust root + emulator | 1.1 landed | Mateo + AI | code done; device checks (2.8, 2.9) open |
 | 3. FFI + entry flow | 2.1 landed | Mateo + AI | not started |
-| 4. UI sweep + every domain on the core | phase 3 | Mateo + AI | not started |
+| 4. UI sweep + every domain on the core | phase 3; the 4.0 sweep also waits for 2.9 (D-open-16) | Mateo + AI | not started |
 | 5. Modern gdext, engine-side port, VR removed | 2.1 landed; mostly after 4.0 | Mateo + AI | not started |
+| **Checkpoint 1 Nov** (D-39): real state of stack 1, one of options (a)–(d) chosen | | | |
 | **Gate: full migration** (parity checklist green and zero `.gd`), target 30 Nov | | | |
 | 6. Fix, validate, polish (December, first) | full-migration gate | full team | not started |
 | 7. New features, RC cut (December, then) | phase 6; specs in hand | full team | not started |
@@ -90,6 +95,9 @@ to watch is how many items are open at the gate and how many `.gd` files remain 
    its own fixes.
 6. **No raising `max-file-lines` or `max-public-methods` in `.gdlintrc`.** The files at the cap are
    being deleted.
+7. **No Godot plugin.** App features use RN libraries where one exists; the few native parts we write
+   (attestation, device id, video, engine view) live in the host (`rn/android`, `rn/ios`) and reach the
+   core through uniffi's Kotlin/Swift bindings; the engine gets platform services from the core (D-41).
 
 ## How work lands
 

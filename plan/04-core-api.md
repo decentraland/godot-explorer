@@ -32,7 +32,7 @@ state is the only thing the shell renders from; the HUD's `booting|loading|playi
 | Domain | Calls | Replaces |
 |---|---|---|
 | State | `state()`, `on_state_changed` (event) | `engine.ts` snapshot, `world`/`ready` events |
-| Session | `sign_in_guest()`, `sign_in_email_start(email)`, `sign_in_email_verify(code)`, `sign_in_browser(provider)` (opens via `open_url` event, completes on `handle_deep_link`), `sign_in_wallet(provider)` (the host runs the native wallet flow and hands the signature to the core, D-25), `sign_out()`, `delete_account()`, `profile()`, `accept_terms(version)` | `lobby.gd`, `flow/auth.ts` stub, `account.*` |
+| Session | `sign_in_guest()`, `sign_in_email_start(email)`, `sign_in_email_verify(code)`, `sign_in_browser(provider)` (opens via `open_url` event, completes on `handle_deep_link`), `sign_in_wallet(provider)` (Reown AppKit for RN runs the wallet flow; the shell hands the signature to the core, D-25), `sign_out()`, `delete_account()`, `profile()`, `accept_terms(version)` | `lobby.gd`, `flow/auth.ts` stub, `account.*` |
 | Boot gates | `version_gate()`, `device_support()`, `pending_campaign()` | `version_gate.gd`, `device_support_coordinator.gd`, `campaigns.gd` |
 | Destination | `resolve_destination(input) -> Destination` (place, world, parcel, access verdict), `enter_world(Destination)`, `exit_world()`, `teleport(parcel)` | `destination_resolver.gd`, `navigator.gd`, `enter_world`/`exit_world`/`teleport` commands |
 | URLs | `urls() -> Urls` (places, events, catalyst, lambdas, marketplace, help, terms, …), `environment()` | hardcoded hosts in `rn/src`, `DclUrls` |
@@ -42,7 +42,7 @@ state is the only thing the shell renders from; the HUD's `booting|loading|playi
 | Notifications | `notifications(page)`, `mark_read(ids)`, `set_push_token(token)`, `on_notification` (event) | `notifications.*`, `notifications_manager.gd` |
 | Places, events (signed part) | `favorite(place_id, bool)`, `vote(place_id, up)`, `set_event_reminder(id, bool)` | `places.*`, `fetch.signed` |
 | Settings | `settings()`, `set_setting(key, value)`, `cache_size()`, `clear_cache()`, `version()`, `on_settings_changed` | `settings.*`, `config_data.gd` |
-| Credits, IAP | `credits_balance()`, `quote(product)`, `verify_purchase(receipt)`, `marketplace_url()`; the store call itself runs in the host (StoreKit today, Play Billing with 7.4) | `iap_manager.gd` signed calls |
+| Credits, IAP | `credits_balance()`, `quote(product)`, `verify_purchase(receipt)`, `marketplace_url()`; the store call itself runs in an RN IAP library (StoreKit, and Play Billing with 7.4; D-41) | `iap_manager.gd` signed calls |
 | Deep links | `handle_deep_link(url) -> Routed` | `deep_link_router.gd`, iOS `AppDelegate` forwarding |
 | Analytics | `track(event, props)`, `track_screen(name, props)` | `Global.metrics.track_*` (~106 call sites), no Segment RN SDK |
 | Reporting | `report_js_error(…)` is **not** offered; see Sentry in decisions | |
@@ -54,23 +54,30 @@ never a generic signed fetch.
 
 ## Core → shell (events)
 
-`state_changed(state)`, `engine_required()` (host creates the Godot view and attaches the engine),
-`avatar_preview_mode(bool)` (host flips surface order), `open_url(url, kind)` (browser, webview,
+`state_changed(state)`, `open_url(url, kind)` (browser, webview,
 store), `scene_request(id, request)`, `chat_message`, `unread_count`, `notification`,
 `friends_changed`, `settings_changed(key)`, `loading_progress`, `auth_error(code)`,
 `report(event)` (Rust panic or engine error to forward to the crash reporter), `track` is not an
 event (the core sends to Segment itself).
 
+Two events go to the host's Kotlin/Swift callback instead of JS: `engine_required()` (the host creates
+the Godot view; the engine then starts on Godot's thread and attaches itself, D-42) and
+`avatar_preview_mode(bool)` (the host flips surface order).
+
 ## Host responsibilities (Kotlin / Swift, not JS)
 
 - Create `Core` at app start with the data dir the Godot-exported app used (risks R-6), the
   environment and the platform.
-- Register the event callback and forward to JS.
-- On `engine_required`: create the Godot view, call `Engine::start(core)`. On `avatar_preview_mode`:
+- Register its own Kotlin/Swift callback for the host events; JS registers its own through the
+  generated TS bindings.
+- On `engine_required`: create the Godot view; the engine attaches itself (D-42). On `avatar_preview_mode`:
   flip the surface order (`set_surface_on_top`; iOS equivalent still to be written).
-- Provide the OS calls the core needs as callbacks: attestation (Play Integrity / App Attest), push
-  token, store purchase result, wallet signature, clipboard, share sheet, calendar. For 2.0.0 these
-  call today's Kotlin/Swift plugin code (D-21); RN libraries replace it after the release (8.2).
+- Provide what JS must not or cannot, as Rust traits implemented in Kotlin/Swift and registered with
+  the core through uniffi's Kotlin/Swift bindings (D-41): attestation (Play Integrity / App Attest;
+  the token never passes through JS), the device id, and the `VideoBackend` the engine plays scene
+  videos through. Push and local notifications, wallet sign-in, IAP, install referrer, Firebase
+  Analytics, share, calendar, review prompt, clipboard and image picker are RN libraries the shell
+  calls; it hands their results (push token, purchase receipt, wallet signature) to the core.
 - Touch routing stays as the hosts do it today: RN when a real RN view is under the finger, Godot
   otherwise.
 

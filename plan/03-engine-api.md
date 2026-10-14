@@ -14,7 +14,8 @@ in-process sink call, not an FFI, and stays per-frame cheap.
 
 | Call | What the engine does |
 |---|---|
-| `start(core, GraphicsPreset, AudioSettings)` | Once per process. Creates the world root, registers its event sink with the core, enters Idle. |
+| `start(core, GraphicsPreset, AudioSettings)` | Once per process, called by `DclRoot` on Godot's thread after the host created the view, never by the host (D-42). Attaches to the existing core, creates the world root, registers its event sink, enters Idle. |
+| `set_rendering(bool)` | Rendering on only while a state shows the engine (AvatarPreview, Loading, InWorld); while off, the process loop keeps draining the command queue (D-42). |
 | `enter_world(RealmAbout, Parcel, Identity, Profile)` | Idle → World. Realm change, scene fetch, loading episode. Replaces `rn_world.gd async_enter` and `explorer.gd` realm handling. |
 | `exit_world()` | World → Idle. Tears scenes and comms fan-out down; the core keeps transports and session. Replaces `rn_world.gd async_exit`. |
 | `teleport(Parcel)` / `change_realm(RealmAbout, Parcel)` | In World. Replaces `navigator.gd`. |
@@ -60,6 +61,8 @@ instead of `/root/explorer` paths.
   settings and graphics presets, feature flags, analytics, the content cache *policy* and data dir.
 - The engine reads core state through `Arc<Core>` (identity for signed fetches, blacklist for hiding
   avatars, settings for graphics). It never writes core state; it emits events.
+- Platform services the engine needs (scene video) are traits the host registers with the core;
+  the engine reads them from `Arc<Core>` and never calls the host (D-41).
 
 ## What exists (phase 2)
 
@@ -84,5 +87,5 @@ and the event sink for loading and player events (phase 3 and 5).
 | `dcl_player_identity.rs` → `lobby.gd` callbacks | core `session` events (phase 1.4) |
 | `notifications.rs` → `notifications_manager.gd` | core `notifications` (phase 1.9, 4.6) |
 | `profile_service.rs` → `save_to_settings_file` | core `settings` (phase 4.5) |
-| `dcl_video_player.rs`, `dcl_audio_stream.rs` → `_backend_*` | Rust video/audio components (phase 5.5) |
-| `dcl_ios_plugin.rs`, `dcl_swift_lib.rs`, `DclAndroidPlugin` | OS intake in the shell's native host; engine keeps only what scenes need (phase 3–4) |
+| `dcl_video_player.rs`, `dcl_audio_stream.rs` → `_backend_*` | Rust video/audio components; video frames from the host's `VideoBackend` (phase 5.5, D-41) |
+| `dcl_ios_plugin.rs`, `dcl_swift_lib.rs`, `DclAndroidPlugin` | gone with the Godot plugins (D-41); OS services live in the host, video reaches the engine as a `VideoBackend` from the core (phase 3–5) |

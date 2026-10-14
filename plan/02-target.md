@@ -4,9 +4,10 @@ Three layers with one rule between them: the shell and the engine never talk to 
 talk to the core, and the core holds the single app state machine.
 
 ```
-Shell    React Native, TypeScript          every screen and modal, HUD over the engine surface,
-                                           OS intake (deep links, push, store, attest, Sentry)
-   ↕ typed FFI (uniffi), callback interface for events
+Shell    React Native, TypeScript          every screen and modal, HUD over the engine surface
+         + native host, Kotlin/Swift       engine view, OS intake (deep links, push, store, attest,
+                                           Sentry), OS services for the core and engine (video)
+   ↕ typed FFI (uniffi): TS for the screens, Kotlin/Swift for the host; callbacks for events
 Core     dcl_core, Rust, no Godot          app state machine, session, attestation, realm and
                                            destination, signed requests, HTTP queue and cache policy,
                                            comms transports, friends, notifications poll, settings,
@@ -37,14 +38,15 @@ godot/
   addons/                    editor-only; see decisions D-open-5
   (no src/)
 rn/                          the app. src/core/ is the typed FFI surface; src/godot/ keeps only the
-                             engine view placeholder for no-engine builds
+                             engine view placeholder for no-engine builds. android/ and ios/ are the
+                             host: the only native code we write, no Godot plugins (D-41)
 src/                         xtask, unchanged commands
 ```
 
 Deleted on the way: `godot/src/ui`, `godot/src/logic`, `godot/src/rn_bridge`, `godot/src/iap`,
 `godot/src/auth`, `godot/src/config`, `godot/src/decentraland_components`, `godot/src/test`,
 `godot/src/tool(s)`, `global.gd`, `main.gd`, `.gdlintrc`, the gdformat/gdlint/check-gdscript CI steps,
-the sentry-godot addon, `rn/src/GodotBridge.ts`, `rn/src/bridge/`, `rn/src/engine.ts`, `rn/src/events.ts`.
+the sentry-godot addon, `plugins/` and the committed plugin binaries (D-41), `rn/src/GodotBridge.ts`, `rn/src/bridge/`, `rn/src/engine.ts`, `rn/src/events.ts`.
 
 ## One core per process
 
@@ -57,16 +59,19 @@ and not in a third shared library.
 
 `dcl_core::Core` is created once per process (`Core::install(CoreConfig { data_dir, env, platform })`)
 and reached by `Core::get()`; the engine takes an `Arc<Core>` at `Engine::start`. On desktop the Rust
-root does both; on phones the native host does both when the core first needs an engine.
+root does both. On phones the host installs the core at launch, and the engine attaches to it when
+Godot boots after the host created its view (D-42).
 
 ## Who starts what
 
 - The app process starts the core at launch through the FFI, before any engine exists. Sign-in,
   session recovery, Discover, friends, notifications and settings all run with no engine.
-- The engine starts lazily on the first state that needs 3D (`AvatarPreview` or `Loading`) and lives
-  until the process dies: Godot cannot restart in-process. The native host creates the Godot
-  view (Android `GodotFragment`, iOS `GDTViewController`) when the core raises `engine_required`,
-  then calls `Engine::start(core)`. The JS side never does this.
+- The core decides when the engine starts (D-42): in advance, right after the first RN screen, when
+  3D is expected soon; otherwise on the first state that needs it (`AvatarPreview` or `Loading`);
+  never at process launch. It lives until the process dies: Godot cannot restart in-process. On
+  `engine_required` the native host creates the Godot view (Android `GodotFragment`, iOS
+  `GDTViewController`); Godot boots, `DclRoot` starts the engine on Godot's thread and it attaches to
+  the core. The JS side never does this. The engine renders only while a state shows it.
 - Everything that must survive leaving a world lives in the core: session, settings, friends,
   notifications, comms transports.
 

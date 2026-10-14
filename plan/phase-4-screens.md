@@ -60,16 +60,17 @@ files about to be deleted. One bounded job, then pure wiring.
   `clear_cache` work on the cache dir with no engine running. RN `settings/` exists. Delete
   `dcl_config.rs`'s `ConfigFile`.
 - [ ] **4.6 Notifications, including push**. Core poll and read state from 1.9; RN renders the
-  list and toasts; local OS notifications and the push token through the host, calling today's
-  plugin code (Firebase on Android, APNs on iOS) until an RN library replaces it after the
-  release (D-21); `core.set_push_token`; push attribution in deep-link routing. Delete
+  list and toasts; local OS notifications and the push token through an RN notifications library (D-41),
+  checked for: data-only FCM messages shown with the app killed (headless task on Android), the same
+  token kinds as today (FCM on Android, raw APNs on iOS), the same Android channel ids, and the
+  reminders 1.x scheduled (rescheduled at the first 2.0 launch, or dropped by decision); `core.set_push_token`; push attribution in deep-link routing. Delete
   `lib/src/notifications.rs`.
 - [ ] **4.7 Profile**. RN `profile/` exists; names, deploy, snapshots through the core. Delete
   `logic/player/player_identity.gd`.
 - [ ] **4.8 IAP and credits on iOS**. Quote, verify, balance and the marketplace round-trip in
   `dcl_core::credits` (from `iap_manager.gd` 1,078 and `marketplace_tracker.gd` 363); StoreKit
-  through the host, calling today's Swift lib (D-21); the credits UI in RN. Android IAP is new
-  and lands in phase 7 (7.4). Delete `DclStoreKitPlugin` as a Godot class.
+  through one RN IAP library, its transaction listener started at app launch (D-41); the credits UI
+  in RN. Android IAP is new and lands in phase 7 (7.4) on the same library. `dcl-swift-lib` is deleted.
 - [ ] **4.9 Modals and scene requests**. The 30 kinds in `modal_manager.gd` (1,900) become RN
   modals; the ones with policy (scene requests from 2.3, guest upgrade nudge, version gate, device
   support, scene timeout, discard-edit confirm) take their verdicts from the core.
@@ -79,8 +80,9 @@ files about to be deleted. One bounded job, then pure wiring.
 - [ ] **4.11 Small coordinators, share, calendar**. `session_tracker.gd` (App Opened
   chaining, `session_state.cfg`), `campaigns.gd`, `review_prompt_coordinator.gd`,
   `upgrade_nudge_coordinator.gd` (18 h / 5 d / 5 d schedule), `bug_report/` (Intercom proxy, log
-  attachment), `connection_quality_monitor.gd` → core logic, RN UI. Share sheet and calendar
-  through the host (today's plugin code, D-21).
+  attachment), `connection_quality_monitor.gd` → core logic, RN UI. Share sheet, calendar,
+  review prompt and the bug-report image picker through RN libraries; install referrer, Firebase
+  Analytics and the deferred deep link through RN libraries too (D-41).
 - [ ] **4.12 Analytics taxonomy**. The ~106 GDScript track calls disappear with their screens;
   RN tracks through `core.track` / `core.track_screen`. Diff the screen and button names against
   `legacy-godot.md`.
