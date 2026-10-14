@@ -2,6 +2,8 @@ class_name EngineBackpack
 extends Node
 ## Owns the single avatar preview the React Native screens draw through a hole.
 
+signal preload_finished
+
 const PREVIEW_SCENE := preload("res://src/ui/pages/backpack/avatar_preview.tscn")
 const EMOTE_SLOTS := 10
 
@@ -12,23 +14,49 @@ const OVERLAY_CANVAS_LAYER := 1 << 19
 var _layer: CanvasLayer = null
 var _canvas_cull_mask := 0
 var _preview: AvatarPreview = null
+var _preload_pending := false
+var _preloaded := false
+
+
+## Builds the avatar in a hidden preview so the screen that shows it only has to place it.
+func async_preload() -> void:
+	if _preload_pending or _preview != null:
+		return
+	_preload_pending = true
+	_ensure_preview()
+	_preview.visible = false
+	_preview.subviewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
+	await _async_refresh_avatar()
+	_preload_pending = false
+	_preloaded = true
+	preload_finished.emit()
 
 
 func async_open(rect: Rect2) -> void:
-	if _preview == null:
-		_layer = CanvasLayer.new()
-		_layer.layer = 1
-		add_child(_layer)
-		_preview = PREVIEW_SCENE.instantiate()
-		_preview.fit_avatar = true
-		_preview.stretch = true
-		_layer.add_child(_preview)
-		_preview.visibility_layer = OVERLAY_CANVAS_LAYER
+	_ensure_preview()
 	_show_preview(true)
 	place(rect)
-	await _async_refresh_avatar()
+	if _preload_pending:
+		await preload_finished
+	if _preloaded:
+		_preloaded = false
+	else:
+		await _async_refresh_avatar()
 	place(rect)
 	_emit_avatar()
+
+
+func _ensure_preview() -> void:
+	if _preview != null:
+		return
+	_layer = CanvasLayer.new()
+	_layer.layer = 1
+	add_child(_layer)
+	_preview = PREVIEW_SCENE.instantiate()
+	_preview.fit_avatar = true
+	_preview.stretch = true
+	_layer.add_child(_preview)
+	_preview.visibility_layer = OVERLAY_CANVAS_LAYER
 
 
 func is_shown() -> bool:

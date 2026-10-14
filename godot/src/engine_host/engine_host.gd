@@ -49,6 +49,7 @@ func _async_first_launch_benchmark() -> void:
 func on_avatar_host_ready() -> void:
 	_avatar_host_up = true
 	_exiting = false
+	_backpack.async_preload()
 	if not _pending_enter.is_empty():
 		var pending := _pending_enter
 		_pending_enter = {}
