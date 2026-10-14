@@ -784,9 +784,7 @@ func async_queue_local_notification(
 	if !Global.is_android() and !Global.is_ios():
 		return false
 	if not _local_notifications_enabled:
-		_debug_log(
-			"Queue notification skipped (local notifications disabled): id=%s" % notification_id
-		)
+		_debug_log("Queue skipped, local notifications off: id=%s" % notification_id)
 		return false
 	if notification_id.is_empty():
 		push_error("Queue notification: notification_id cannot be empty")
