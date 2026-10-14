@@ -134,6 +134,9 @@ impl DclEngine {
     /// The world finished loading and the player is in it.
     #[func]
     pub fn report_loading_finished(&self, realm: GString, x: i32, y: i32) {
+        if let Some(core) = dcl_core::Core::try_get() {
+            core.hub().set_report_tag("realm", &realm.to_string());
+        }
         self.report(EngineEvent::LoadingFinished {
             realm: realm.to_string(),
             parcel: Parcel::new(x, y),

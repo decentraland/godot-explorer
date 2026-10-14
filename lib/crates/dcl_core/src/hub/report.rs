@@ -18,6 +18,9 @@ use super::Hub;
 const FLAG_SAMPLE_RATE: &str = "sentry-sample-rate";
 const FLAG_ERROR_EVENTS: &str = "sentry-error-events";
 
+const MAX_SCENE_CRASH_REPORTS: usize = 10;
+const SCENE_CRASH_REASON_MAX: usize = 160;
+
 /// A report the policy kept, with everything the SDK needs to send it.
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "ffi", derive(uniffi::Record))]
@@ -59,6 +62,27 @@ impl Hub {
             }
         };
         self.events.report(&payload);
+    }
+
+    /// The one report a crashed scene sends: once per entity, and for the first ten scenes only.
+    pub fn report_scene_crash(
+        &self,
+        entity_id: &str,
+        title: &str,
+        parcel: (i32, i32),
+        reason: &str,
+    ) {
+        {
+            let mut seen = self.scene_crashes.lock().unwrap_or_else(|e| e.into_inner());
+            if seen.len() >= MAX_SCENE_CRASH_REPORTS || !seen.insert(entity_id.to_string()) {
+                return;
+            }
+        }
+        let reason: String = reason.chars().take(SCENE_CRASH_REASON_MAX).collect();
+        self.report(ReportEvent::scene_crash(&format!(
+            "Scene crashed: {title} ({},{}): {reason}",
+            parcel.0, parcel.1
+        )));
     }
 
     /// Adds a tag to every later report; cheap enough for a per-resource call. The shell hears

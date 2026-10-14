@@ -583,6 +583,21 @@ fn a_preview_link_points_the_engine_at_the_preview_server_and_is_not_left_to_the
         })));
 }
 
+#[tokio::test]
+async fn the_is_guest_tag_follows_who_is_signed_in() {
+    let s = setup();
+    signed_out(&s);
+    s.hub.sign_in_guest().await.unwrap();
+    let tags = || s.heard.tags.lock().unwrap().clone();
+    assert!(tags().contains(&("is_guest".to_string(), Some("true".to_string()))));
+
+    s.hub.sign_out().unwrap();
+    assert_eq!(
+        tags().last(),
+        Some(&("is_guest".to_string(), Some("true".to_string())))
+    );
+}
+
 #[test]
 fn a_kept_report_reaches_the_listeners_with_the_tags_and_a_dropped_one_does_not() {
     use crate::report::{BuildEnvironment, ReportContext, ReportEvent, ReportSource};
@@ -612,6 +627,33 @@ fn a_kept_report_reaches_the_listeners_with_the_tags_and_a_dropped_one_does_not(
         1,
         "development builds report nothing"
     );
+}
+
+#[test]
+fn a_crashed_scene_is_reported_once_and_only_ten_scenes_are() {
+    use crate::report::{BuildEnvironment, ReportContext, ReportSource};
+    let s = setup();
+    s.hub
+        .set_report_context(ReportContext::default(), BuildEnvironment::Production);
+
+    s.hub
+        .report_scene_crash("urn:a", "Plaza", (3, -2), "out of memory");
+    s.hub
+        .report_scene_crash("urn:a", "Plaza", (3, -2), "out of memory");
+    let reports = s.heard.reports.lock().unwrap().clone();
+    assert_eq!(reports.len(), 1);
+    assert_eq!(reports[0].source, ReportSource::SceneCrash);
+    assert_eq!(reports[0].tags.tag("event_kind"), Some("scene_crash"));
+    assert!(reports[0]
+        .event
+        .message
+        .contains("Plaza (3,-2): out of memory"));
+
+    for i in 0..20 {
+        s.hub
+            .report_scene_crash(&format!("urn:{i}"), "x", (0, 0), "boom");
+    }
+    assert_eq!(s.heard.reports.lock().unwrap().len(), 10);
 }
 
 #[test]

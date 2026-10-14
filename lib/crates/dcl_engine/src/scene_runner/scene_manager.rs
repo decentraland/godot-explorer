@@ -2269,6 +2269,12 @@ impl SceneManager {
     }
 
     fn emit_scene_crash_report(&mut self, report: SceneCrashReport) {
+        super::report_tags::report_crash(
+            &report.entity_id,
+            &report.title,
+            (report.base_parcel.x, report.base_parcel.y),
+            &report.reason,
+        );
         self.base_mut().emit_signal(
             "scene_crash_report",
             &[
@@ -2740,6 +2746,21 @@ impl SceneManager {
         }
 
         self.last_current_parcel_scene_id = self.current_parcel_scene_id;
+
+        let current = self.scenes.get(&self.current_parcel_scene_id).map(|scene| {
+            let definition = &scene.scene_entity_definition;
+            let base = definition.scene_meta_scene.scene.base;
+            (
+                definition.id.clone(),
+                definition.get_title(),
+                (base.x, base.y),
+            )
+        });
+        super::report_tags::tag_current_scene(
+            current
+                .as_ref()
+                .map(|(urn, title, parcel)| (urn.as_str(), title.as_str(), *parcel)),
+        );
 
         let scene_id = Variant::from(self.current_parcel_scene_id.0);
         self.base_mut()

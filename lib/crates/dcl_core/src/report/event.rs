@@ -103,6 +103,19 @@ impl ReportEvent {
         }
     }
 
+    /// A scene that stopped abnormally; the scene's own tags travel with the report.
+    pub fn scene_crash(message: &str) -> Self {
+        Self {
+            source: None,
+            level: ReportLevel::Error,
+            message: message.to_string(),
+            is_crash: false,
+            event_kind: Some("scene_crash".to_string()),
+            category: None,
+            exception: None,
+        }
+    }
+
     /// A panic of the core.
     pub fn panic(message: &str) -> Self {
         Self {

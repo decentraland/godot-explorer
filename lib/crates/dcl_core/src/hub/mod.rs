@@ -74,6 +74,8 @@ pub struct Hub {
     report_tags: Arc<TagCoalescer>,
     /// Gates developer-only link parameters; on until the engine says this is a dev build.
     production: AtomicBool,
+    /// Entity ids of the crashed scenes already reported: one issue per scene, and a cap.
+    scene_crashes: Mutex<std::collections::HashSet<String>>,
     /// A developer link allowed deleting an upgraded guest; never on in production.
     upgraded_deletion: AtomicBool,
     data_dir: std::path::PathBuf,
@@ -100,6 +102,7 @@ impl Hub {
             )),
             report_tags: Arc::new(TagCoalescer::new(REPORT_TAG_INTERVAL)),
             production: AtomicBool::new(true),
+            scene_crashes: Mutex::new(Default::default()),
             upgraded_deletion: AtomicBool::new(false),
             data_dir: data_dir.to_path_buf(),
         }
@@ -182,6 +185,18 @@ impl Hub {
         for observer in observers {
             observer.session_event(event);
         }
+        self.tag_reports_with_identity(event);
+    }
+
+    /// Every report says whether a guest was playing; a signed-out player counts as one.
+    fn tag_reports_with_identity(&self, event: &SessionEvent) {
+        let guest = match event {
+            SessionEvent::WalletConnected { .. } => {
+                self.with_session(|s| s.is_thirdweb_guest || s.is_disposable_guest())
+            }
+            SessionEvent::Logout => true,
+        };
+        self.set_report_tag("is_guest", if guest { "true" } else { "false" });
     }
 
     fn notify_guest_login(&self, report: &GuestLoginReport) {

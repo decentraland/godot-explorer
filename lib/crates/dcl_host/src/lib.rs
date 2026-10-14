@@ -78,10 +78,12 @@ pub fn install(
     });
     if first {
         core.hub().set_device_anchor(&device_anchor);
+        let session_id = uuid::Uuid::new_v4().to_string();
+        core.hub().set_report_tag("dcl_session_id", &session_id);
         dcl_core::analytics::global::install(
             core,
             dcl_core::analytics::global::AnalyticsInstall {
-                session_id: uuid::Uuid::new_v4().to_string(),
+                session_id,
                 os_name: match platform {
                     HostPlatform::Android => "Android",
                     HostPlatform::Ios => "iOS",
