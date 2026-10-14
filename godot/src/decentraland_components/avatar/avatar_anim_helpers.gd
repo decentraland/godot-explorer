@@ -36,9 +36,9 @@ static func capture_mesh_visibility(avatar) -> void:
 		return
 	for child in avatar.body_shape_skeleton_3d.get_children():
 		if child is MeshInstance3D:
-			# Meshes hidden by the spawn reveal (#1554) are logically visible —
-			# capture them as such or they never come back.
-			child.set_meta("lod_visible", child.visible or child.has_meta("ghost_hidden"))
+			# The reveal hides the whole skeleton node, never a mesh, so this is the
+			# mesh's own logical visibility.
+			child.set_meta("lod_visible", child.visible)
 	avatar._mesh_lod_visibility_captured = true
 
 

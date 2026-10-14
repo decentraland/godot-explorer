@@ -131,6 +131,10 @@ var mask_material = preload("res://assets/avatar/mask_material.tres")
 # Signal-based wearable loader for threaded loading
 var wearable_loader: WearableLoader = null
 
+# The spawn hologram belongs to an avatar spawning into the world; a preview
+# (backpack, renderer) shows a profile that never spawned, so it turns this off.
+var spawn_reveal_enabled: bool = true
+
 # anchor_point_id -> AnchorState for currently-attached anchors only. Entries
 # are added lazily by register_anchor_use() and removed when the last
 # AvatarAttach using them is unregistered.
@@ -544,6 +548,9 @@ func _unset_avatar_modifier_area():
 
 func async_update_avatar_from_profile(profile: DclUserProfile):
 	_profile_ready = true
+	# The reveal waits for the body and for the ground too, so the give-up clock
+	# restarts here: a slow profile must not spend the budget before it can start.
+	_born_ms = Time.get_ticks_msec()
 	var avatar = profile.get_avatar()
 	var new_avatar_name: String = profile.get_name()
 	if not profile.has_claimed_name():
@@ -1415,9 +1422,7 @@ func _ensure_impostor_layer(distance: float) -> void:
 		return
 	_impostor_layer_is_overflow = _use_overflow_impostor
 	# Capture only when the slot owns a real layer that hasn't been filled yet.
-	# Never mid spawn-reveal (#1554): the bake would catch the ghost or a
-	# half-hidden avatar and stick as the billboard texture.
-	if _spawn_reveal.is_idle() and Global.avatars.impostor_needs_capture(get_instance_id()):
+	if Global.avatars.impostor_needs_capture(get_instance_id()):
 		ImpostorCapturer.request_capture(self)
 
 
@@ -1622,6 +1627,7 @@ func _process(delta):
 	# loading screen — the reveal must play when someone can see it.
 	if (
 		not _spawn_reveal_started
+		and spawn_reveal_enabled
 		and body_shape_skeleton_3d != null
 		and _profile_ready
 		and not avatar_name.is_empty()  # name/color fully resolved
