@@ -8,6 +8,7 @@ use godot::{
     prelude::*,
 };
 
+use crate::godot_classes::dcl_global::DclGlobal;
 use crate::{
     dcl::components::{
         proto_components::{
@@ -127,7 +128,8 @@ impl DclUiInput {
     #[func]
     pub fn on_focus_entered(&mut self) {
         if let Some(mut engine) = DclEngine::get() {
-            engine.bind_mut().set_text_input_focus(true);
+            let rect = self.base().get_global_rect();
+            engine.bind_mut().set_text_input_focus(true, rect);
         }
     }
 
@@ -135,7 +137,13 @@ impl DclUiInput {
     pub fn on_focus_exited(&mut self) {
         DisplayServer::singleton().virtual_keyboard_hide();
         if let Some(mut engine) = DclEngine::get() {
-            engine.bind_mut().set_text_input_focus(false);
+            engine
+                .bind_mut()
+                .set_text_input_focus(false, Rect2::default());
+        }
+        // Movement is gated on the explorer holding focus: hand it back.
+        if let Some(mut global) = DclGlobal::try_singleton() {
+            global.call_deferred("explorer_grab_focus", &[]);
         }
     }
 

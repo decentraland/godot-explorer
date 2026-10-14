@@ -1066,6 +1066,9 @@ func explorer_grab_focus() -> void:
 	var explorer = get_explorer()
 	if explorer == null:
 		return
+	# A scene text input being typed in keeps focus (and its keyboard) until it blurs.
+	if engine.is_text_input_focused():
+		return
 
 	explorer.ui_root.grab_focus.call_deferred()
 

@@ -31,8 +31,13 @@ pub struct DclEngine {
     /// A scene text input holds focus, and the keyboard height last reported for it.
     text_input_focused: bool,
     keyboard_height: i32,
+    /// Global rect of the focused input when it took focus, in viewport units (before any shift).
+    focused_input_rect: Rect2,
     base: Base<Node>,
 }
+
+/// Space kept between a focused input and the top of the keyboard, in viewport units.
+const KEYBOARD_MARGIN: f32 = 16.0;
 
 /// Seconds between `[Perf]` lines.
 const PERF_LOG_INTERVAL_SECS: f64 = 5.0;
@@ -47,6 +52,7 @@ impl INode for DclEngine {
             perf_countdown: None,
             text_input_focused: false,
             keyboard_height: 0,
+            focused_input_rect: Rect2::default(),
             base,
         }
     }
@@ -98,9 +104,18 @@ impl DclEngine {
         self.sink = sink;
     }
 
-    /// Called by a scene text input on focus gained or lost.
-    pub fn set_text_input_focus(&mut self, focused: bool) {
+    /// Whether a scene text input holds focus: the explorer must not take focus back from it.
+    #[func]
+    pub fn is_text_input_focused(&self) -> bool {
+        self.text_input_focused
+    }
+
+    /// Called by a scene text input on focus gained (with its rect) or lost.
+    pub fn set_text_input_focus(&mut self, focused: bool, input_rect: Rect2) {
         self.text_input_focused = focused;
+        if focused {
+            self.focused_input_rect = input_rect;
+        }
         self.keyboard_height = if focused {
             Self::keyboard_height_now()
         } else {
@@ -111,6 +126,7 @@ impl DclEngine {
             "text_input_focus",
             &[focused.to_variant(), height.to_variant()],
         );
+        self.keep_focused_input_above_keyboard();
     }
 
     fn keyboard_height_now() -> i32 {
@@ -129,7 +145,35 @@ impl DclEngine {
                 "text_input_focus",
                 &[true.to_variant(), height.to_variant()],
             );
+            self.keep_focused_input_above_keyboard();
         }
+    }
+
+    /// Slides the scene UI up by the part of the focused input the keyboard would cover, and
+    /// back down when the keyboard goes away. The field never moves past the top of the screen.
+    fn keep_focused_input_above_keyboard(&self) {
+        let Some(explorer) = self.explorer() else {
+            return;
+        };
+        let Some(container) = explorer.get_node_or_null("UI/SceneUIContainer") else {
+            return;
+        };
+        let Ok(mut container) = container.try_cast::<Control>() else {
+            return;
+        };
+        let mut offset = 0.0;
+        if self.text_input_focused && self.keyboard_height > 0 {
+            if let Some(viewport) = explorer.get_viewport() {
+                let screen_height = viewport.get_visible_rect().size.y;
+                let keyboard_top = screen_height
+                    - Self::device_pixels_to_viewport_units(&explorer, self.keyboard_height as f32);
+                let rect = self.focused_input_rect;
+                let overlap = rect.end().y + KEYBOARD_MARGIN - keyboard_top;
+                offset = overlap.clamp(0.0, rect.position.y.max(0.0));
+            }
+        }
+        let x = container.get_position().x;
+        container.set_position(Vector2::new(x, -offset));
     }
 
     /// Registers the world once the explorer has built its player; the handles are dropped when

@@ -903,7 +903,7 @@ func capture_mouse():
 	if label_crosshair and ui_root:
 		if not Global.touch_controls_hide_crosshair:  # respect scene-driven crosshair hide
 			label_crosshair.show()
-		ui_root.grab_focus.call_deferred()
+		Global.explorer_grab_focus()
 
 
 func release_mouse():
