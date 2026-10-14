@@ -8,6 +8,6 @@ mod tags;
 #[cfg(test)]
 mod tests;
 
-pub use event::{Decision, Environment, ReportEvent, ReportLevel, ReportSource};
+pub use event::{BuildEnvironment, Decision, ReportEvent, ReportLevel, ReportSource};
 pub use policy::{RandomSource, ReportPolicy, ThreadRandom};
 pub use tags::{ReportContext, ReportTag, ReportTags, LOADING_RESOURCE_TAG};

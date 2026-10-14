@@ -52,7 +52,9 @@ impl Core {
     /// parts of the process disagree about who owns the core.
     pub fn install(config: CoreConfig) -> &'static Core {
         INSTALLS.fetch_add(1, Ordering::Relaxed);
+        let mut first = false;
         let core = CORE.get_or_init(|| {
+            first = true;
             crate::logging::init(config.platform);
             let runtime = Builder::new_multi_thread()
                 .enable_all()
@@ -65,6 +67,9 @@ impl Core {
                 runtime,
             }
         });
+        if first {
+            crate::lifecycle::wire(core);
+        }
         debug_assert_eq!(
             core.config, config,
             "Core::install called again with a different config"

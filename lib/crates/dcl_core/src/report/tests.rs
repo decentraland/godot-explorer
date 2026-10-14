@@ -31,7 +31,7 @@ impl RandomSource for Scripted {
 
 const NO_LOG: f64 = 0.5; // first draw: above 0.01, so no log upload
 
-fn policy(env: Environment, draws: &[f64]) -> (ReportPolicy, Arc<Scripted>) {
+fn policy(env: BuildEnvironment, draws: &[f64]) -> (ReportPolicy, Arc<Scripted>) {
     let mut all = vec![NO_LOG];
     all.extend_from_slice(draws);
     let rng = Scripted::new(&all);
@@ -39,7 +39,7 @@ fn policy(env: Environment, draws: &[f64]) -> (ReportPolicy, Arc<Scripted>) {
 }
 
 fn prod(draws: &[f64]) -> (ReportPolicy, Arc<Scripted>) {
-    policy(Environment::Production, draws)
+    policy(BuildEnvironment::Production, draws)
 }
 
 fn keep(source: ReportSource) -> Decision {
@@ -84,7 +84,7 @@ fn source_tags_and_rates() {
 
 #[test]
 fn development_drops_everything() {
-    let (p, _) = policy(Environment::Development, &[]);
+    let (p, _) = policy(BuildEnvironment::Development, &[]);
     assert_eq!(p.decide(&ReportEvent::panic("boom")), Decision::Drop);
     assert_eq!(
         p.decide(&with_source(ReportSource::Feedback)),
@@ -94,7 +94,7 @@ fn development_drops_everything() {
 
 #[test]
 fn staging_reports_like_production() {
-    let (p, _) = policy(Environment::Staging, &[]);
+    let (p, _) = policy(BuildEnvironment::Staging, &[]);
     assert_eq!(
         p.decide(&ReportEvent::panic("boom")),
         keep(ReportSource::Crash)
@@ -104,7 +104,7 @@ fn staging_reports_like_production() {
 #[test]
 fn attach_log_is_a_per_session_roll() {
     for (draw, expected) in [(0.0, true), (0.0099, true), (0.01, false), (0.9, false)] {
-        let p = ReportPolicy::new(Environment::Production, Scripted::new(&[draw]));
+        let p = ReportPolicy::new(BuildEnvironment::Production, Scripted::new(&[draw]));
         assert_eq!(p.attach_log(), expected, "draw {draw}");
         assert_eq!(
             p.decide(&ReportEvent::panic("x")),
@@ -399,7 +399,7 @@ fn panic_event_is_fatal_crash() {
 
 #[test]
 fn thread_random_policy_keeps_a_crash() {
-    let p = ReportPolicy::with_thread_random(Environment::Production);
+    let p = ReportPolicy::with_thread_random(BuildEnvironment::Production);
     assert!(matches!(
         p.decide(&ReportEvent::panic("x")),
         Decision::Keep { .. }

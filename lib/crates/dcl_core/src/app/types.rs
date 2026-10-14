@@ -144,6 +144,9 @@ pub trait AppEvents: Send + Sync {
     fn auth_error(&self, _code: &str) {}
     /// The shell shows `request.url` in a browser or webview.
     fn open_url(&self, _request: &crate::OpenUrlRequest) {}
+    /// Friends, requests or blocks changed; the shell refetches what it shows.
+    fn friends_changed(&self) {}
+    fn settings_changed(&self, _entry: &crate::settings::SettingEntry) {}
 }
 
 #[derive(Debug, PartialEq)]

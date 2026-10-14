@@ -77,6 +77,8 @@ pub trait AppListener: Send + Sync {
     /// A sign-in step failed; `code` is stable and the shell maps it to copy.
     fn auth_error(&self, code: String);
     fn open_url(&self, request: OpenUrl);
+    fn friends_changed(&self);
+    fn settings_changed(&self, entry: crate::settings::SettingEntry);
 }
 
 struct ListenerAdapter(Arc<dyn AppListener>);
@@ -95,6 +97,12 @@ impl AppEvents for ListenerAdapter {
             url: request.url.clone(),
             use_webview: request.use_webview,
         });
+    }
+    fn friends_changed(&self) {
+        self.0.friends_changed();
+    }
+    fn settings_changed(&self, entry: &crate::settings::SettingEntry) {
+        self.0.settings_changed(entry.clone());
     }
     fn scene_crashed(&self) {
         self.0.scene_crashed();

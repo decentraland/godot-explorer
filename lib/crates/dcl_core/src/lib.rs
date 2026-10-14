@@ -15,6 +15,7 @@ pub mod flags;
 pub mod gates;
 pub mod http;
 pub mod hub;
+mod lifecycle;
 pub mod logging;
 pub mod network_inspector;
 pub mod notifications;

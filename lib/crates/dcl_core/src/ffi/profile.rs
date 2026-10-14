@@ -1,13 +1,10 @@
 //! FFI for the profile domain: the own profile, public profiles, owned names, deploying edits
 //! and the account deletion request. `sign_out` is in `session`.
 
-use std::sync::{Arc, OnceLock};
+use std::sync::Arc;
 
 use super::{core, CoreError};
-use crate::profile::{
-    Endpoints, Profile, ProfileError, ProfileService, ProfileUpdate, ReqwestTransport,
-    SessionIdentity,
-};
+use crate::profile::{Profile, ProfileError, ProfileService, ProfileUpdate};
 
 impl From<ProfileError> for CoreError {
     fn from(error: ProfileError) -> Self {
@@ -18,16 +15,7 @@ impl From<ProfileError> for CoreError {
 }
 
 fn service() -> Arc<ProfileService> {
-    static SERVICE: OnceLock<Arc<ProfileService>> = OnceLock::new();
-    SERVICE
-        .get_or_init(|| {
-            Arc::new(ProfileService::new(
-                Arc::new(ReqwestTransport::new()),
-                Arc::new(SessionIdentity),
-                Endpoints::live(),
-            ))
-        })
-        .clone()
+    crate::profile::global()
 }
 
 /// Runs the call on the core runtime, so it has a tokio context whatever executor polls it.

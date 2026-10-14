@@ -1109,9 +1109,11 @@ dependencies = [
 name = "dcl_host"
 version = "1.15.0"
 dependencies = [
+ "chrono",
  "dcl_core",
  "tokio",
  "uniffi",
+ "uuid 1.11.0",
 ]
 
 [[package]]

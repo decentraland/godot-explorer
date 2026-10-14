@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use super::event::{Decision, Environment, ReportEvent, ReportLevel, ReportSource};
+use super::event::{BuildEnvironment, Decision, ReportEvent, ReportLevel, ReportSource};
 
 /// Share of sessions that upload the engine log.
 pub const ATTACH_LOG_SAMPLE_RATE: f64 = 0.01;
@@ -25,7 +25,7 @@ impl RandomSource for ThreadRandom {
 }
 
 pub struct ReportPolicy {
-    environment: Environment,
+    environment: BuildEnvironment,
     remote_rate: f64,
     error_events_enabled: bool,
     attach_log: bool,
@@ -34,7 +34,7 @@ pub struct ReportPolicy {
 
 impl ReportPolicy {
     /// Rolls the per-session log-upload sample once.
-    pub fn new(environment: Environment, random: Arc<dyn RandomSource>) -> Self {
+    pub fn new(environment: BuildEnvironment, random: Arc<dyn RandomSource>) -> Self {
         let attach_log = random.next_f64() < ATTACH_LOG_SAMPLE_RATE;
         Self {
             environment,
@@ -45,7 +45,7 @@ impl ReportPolicy {
         }
     }
 
-    pub fn with_thread_random(environment: Environment) -> Self {
+    pub fn with_thread_random(environment: BuildEnvironment) -> Self {
         Self::new(environment, Arc::new(ThreadRandom))
     }
 
@@ -72,7 +72,7 @@ impl ReportPolicy {
     }
 
     pub fn decide(&self, event: &ReportEvent) -> Decision {
-        if self.environment == Environment::Development {
+        if self.environment == BuildEnvironment::Development {
             return Decision::Drop;
         }
         match self.source_of(event) {

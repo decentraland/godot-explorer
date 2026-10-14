@@ -14,3 +14,18 @@ pub use identity::{Identity, SessionIdentity};
 pub use model::{AvatarPayload, Profile, ProfileDocument, ProfileLink, ProfileUpdate};
 pub use service::{Endpoints, ProfileError, ProfileService};
 pub use transport::{HttpReply, HttpRequest, ReqwestTransport, Transport};
+
+/// The process's profile service, shared by the shell's FFI and the account lifecycle.
+pub fn global() -> std::sync::Arc<ProfileService> {
+    static SERVICE: std::sync::OnceLock<std::sync::Arc<ProfileService>> =
+        std::sync::OnceLock::new();
+    SERVICE
+        .get_or_init(|| {
+            std::sync::Arc::new(ProfileService::new(
+                std::sync::Arc::new(ReqwestTransport::new()),
+                std::sync::Arc::new(SessionIdentity),
+                Endpoints::live(),
+            ))
+        })
+        .clone()
+}

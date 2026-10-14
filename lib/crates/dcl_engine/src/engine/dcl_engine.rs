@@ -66,6 +66,7 @@ impl INode for DclEngine {
         let perf_log = DclGlobal::try_singleton()
             .is_some_and(|global| global.bind().get_cli().bind().perf_log);
         self.perf_countdown = perf_log.then_some(PERF_LOG_INTERVAL_SECS);
+        Self::register_core_services();
         if Self::core_is_driving() {
             self.attach_to_core();
         }

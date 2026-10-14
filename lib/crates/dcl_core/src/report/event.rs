@@ -65,7 +65,7 @@ pub enum ReportLevel {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "ffi", derive(uniffi::Enum))]
-pub enum Environment {
+pub enum BuildEnvironment {
     Production,
     Staging,
     Development,

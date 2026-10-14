@@ -52,11 +52,16 @@ fn core() -> Result<&'static Core, HostError> {
 }
 
 /// Creates the process's one core at app launch, with the data dir the Godot-exported app used
-/// (D-19), and restores the saved account. `device_anchor` is the platform's stable device id
-/// (SSAID, Keychain item) the guest wallet derives from. Calling it again with the same
-/// arguments is a no-op.
+/// (D-19), restores the saved account and starts analytics. `device_anchor` is the platform's
+/// stable device id (SSAID, Keychain item) the guest wallet derives from; `app_version` is the
+/// store version. Calling it again with the same arguments is a no-op.
 #[uniffi::export]
-pub fn install(data_dir: String, platform: HostPlatform, device_anchor: String) {
+pub fn install(
+    data_dir: String,
+    platform: HostPlatform,
+    device_anchor: String,
+    app_version: String,
+) {
     let first = Core::try_get().is_none();
     let core = Core::install(CoreConfig {
         data_dir: PathBuf::from(data_dir),
@@ -67,6 +72,19 @@ pub fn install(data_dir: String, platform: HostPlatform, device_anchor: String) 
     });
     if first {
         core.hub().set_device_anchor(&device_anchor);
+        dcl_core::analytics::global::install(
+            core,
+            dcl_core::analytics::global::AnalyticsInstall {
+                session_id: uuid::Uuid::new_v4().to_string(),
+                os_name: match platform {
+                    HostPlatform::Android => "Android",
+                    HostPlatform::Ios => "iOS",
+                }
+                .to_string(),
+                renderer_version: app_version,
+                utc_offset_minutes: chrono::Local::now().offset().local_minus_utc() / 60,
+            },
+        );
         core.hub().boot();
     }
 }

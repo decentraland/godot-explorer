@@ -8,7 +8,7 @@ use dcl_core::Core;
 use godot::classes::RenderingServer;
 use godot::prelude::*;
 
-use super::DclEngine;
+use super::{scene_link, screenshot_link, settings_link, social_link, DclEngine};
 
 fn destination_args(destination: &Destination) -> VarDictionary {
     let parcel = destination.parcel.unwrap_or(Parcel::new(0, 0));
@@ -41,6 +41,15 @@ fn signal_payload(command: &EngineCommand) -> Option<(&'static str, VarDictionar
 }
 
 impl DclEngine {
+    /// Hands the core the engine's side of each service contract (settings applier, nearby
+    /// avatars, scene facts, screenshots).
+    pub(super) fn register_core_services() {
+        settings_link::register();
+        social_link::register();
+        scene_link::register();
+        screenshot_link::register();
+    }
+
     /// Registers this engine with the core's app. Called once the host-driven flow is running.
     pub(super) fn attach_to_core(&mut self) {
         let Some(core) = Core::try_get() else {

@@ -39,7 +39,12 @@ object CoreHost {
   }
 
   fun install(app: Application) {
-    installCore(app.filesDir.absolutePath, HostPlatform.ANDROID, deviceAnchor(app))
+    installCore(
+        app.filesDir.absolutePath,
+        HostPlatform.ANDROID,
+        deviceAnchor(app),
+        BuildConfig.VERSION_NAME,
+    )
     addHostListener(listener)
     Log.i(TAG, "core installed")
     if (app.applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE != 0) {
