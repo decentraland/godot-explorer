@@ -117,10 +117,9 @@ const EDGE_NO_SLIP_DIST := 0.1
 # #2852 M5: head-on wall contact multiplies speed toward this (Unity
 # WallSlideMaxMoveSpeedMultiplier = 0), lerped by |facing · wall normal|.
 const WALL_SLIDE_MIN_MULT := 0.0
-# #2852 M6: hard landing = fall height above this (Unity JumpHeightStun),
-# stun duration (Unity LongFallStunTime).
+# #2852 M6: hard landing = fall height above this (Unity JumpHeightStun) with
+# the scene's stun duration (Unity LongFallStunTime, 0 disables the stun).
 const HARD_LANDING_FALL_HEIGHT := 8.0
-const HARD_LANDING_STUN_TIME := 0.75
 # #2855: long-fall animation threshold (Unity AnimationLongFallSpeed = -8).
 const LONG_FALL_ANIM_SPEED := 8.0
 # #1553: fall animation threshold (Unity AnimationFallSpeed = -3) — the fall
@@ -216,6 +215,8 @@ var _crosshair_prev_mode: Global.CameraMode = Global.CameraMode.THIRD_PERSON
 # typed Array[RID] avoids per-element dynamic cast when passed to
 # PhysicsRayQueryParameters3D.exclude every physics frame.
 var _raycast_exclude: Array[RID] = []
+# Edge-slip sphere probe, built in _ready (see _edge_slip_gravity_dir).
+var _edge_slip_cast: ShapeCast3D = null
 
 # --- Pinch-to-zoom (mobile, issue #2709) -------------------------------------
 # Team decision: two fixed camera positions (1p/3p, same as prod) — no continuous
@@ -390,6 +391,20 @@ func _ready():
 	# avatar subtree colliders, including the TriggerDetector which would
 	# otherwise make the ray report ~0m at all times).
 	_build_raycast_exclude()
+	# Edge slip needs a sphere: a ray down the capsule axis can only ever hit on
+	# that axis, so the off-axis contact the slip looks for never showed up.
+	var slip_sphere := SphereShape3D.new()
+	slip_sphere.radius = CAPSULE_RADIUS
+	_edge_slip_cast = ShapeCast3D.new()
+	_edge_slip_cast.shape = slip_sphere
+	_edge_slip_cast.collision_mask = collision_mask
+	_edge_slip_cast.target_position = Vector3(0.0, -CAPSULE_CENTER_Y * 1.2, 0.0)
+	_edge_slip_cast.position = Vector3(0.0, CAPSULE_CENTER_Y, 0.0)
+	# Updated on demand; an always-on sweep would report the frame before.
+	_edge_slip_cast.enabled = false
+	add_child(_edge_slip_cast)
+	for rid in _raycast_exclude:
+		_edge_slip_cast.add_exception_rid(rid)
 	# The scene pointer raycast excludes the same set: with the third-person avatar
 	# centered on screen (issue #2709), the ray from the camera would hit its back.
 	Global.scene_runner.set_pointer_raycast_exclude(_raycast_exclude)
@@ -743,11 +758,15 @@ func _physics_process(dt: float) -> void:
 	elif supported:
 		if not avatar.land:
 			avatar.land = true
-			# #2852 M6: fall-height trigger replaces the scene-driven cooldown
-			# (Unity StunCharacterSystem: JumpHeightStun 8m, LongFallStunTime 0.75).
+			# #2852 M6: fall-height trigger with the scene's stun duration
+			# (Unity StunCharacterSystem: JumpHeightStun 8m fixed, LongFallStunTime
+			# overridable per scene, 0 disables the stun).
 			# Arms immediately; a bounce pad cancels it after the impulse applies.
-			if _fall_apex_y - global_position.y > HARD_LANDING_FALL_HEIGHT:
-				_hard_landing_timer = HARD_LANDING_STUN_TIME
+			if (
+				hard_landing_cooldown > 0.0
+				and _fall_apex_y - global_position.y > HARD_LANDING_FALL_HEIGHT
+			):
+				_hard_landing_timer = hard_landing_cooldown
 				avatar.stunned = true
 		_fall_apex_y = global_position.y
 
@@ -1156,27 +1175,22 @@ func _steep_slide_dir() -> Vector3:
 
 
 func _edge_slip_gravity_dir() -> Vector3:
-	# #2852 M4 — ApplyEdgeSlip.cs: probe down from the capsule axis; a ground
-	# contact offset past NoSlipDistance (edge!) tilts gravity toward the
+	# #2852 M4 — ApplyEdgeSlip.cs: sphere-cast down from the capsule axis; a
+	# ground contact offset past NoSlipDistance (edge!) tilts gravity toward the
 	# contact normal's downhill tangent. Skipped when ground sits directly
 	# below within EdgeSlipSafeDistance (0.4) — no slipping on gentle ground.
-	if not is_on_floor():
+	if not is_on_floor() or _edge_slip_cast == null:
+		return Vector3.ZERO
+	_edge_slip_cast.force_shapecast_update()
+	if not _edge_slip_cast.is_colliding():
+		return Vector3.ZERO
+	var center := global_position + Vector3(0.0, CAPSULE_CENTER_Y, 0.0)
+	var rel: Vector3 = _edge_slip_cast.get_collision_point(0) - center
+	rel.y = 0.0
+	if rel.length() <= EDGE_NO_SLIP_DIST:
 		return Vector3.ZERO
 	var space := get_world_3d().direct_space_state
 	if space == null:
-		return Vector3.ZERO
-	var rq := PhysicsRayQueryParameters3D.new()
-	var center := global_position + Vector3(0.0, CAPSULE_CENTER_Y, 0.0)
-	rq.from = center
-	rq.to = center + Vector3(0.0, -CAPSULE_CENTER_Y * 1.2, 0.0)
-	rq.collision_mask = collision_mask
-	rq.exclude = _raycast_exclude
-	var hit := space.intersect_ray(rq)
-	if hit.is_empty():
-		return Vector3.ZERO
-	var rel: Vector3 = hit.position - center
-	rel.y = 0.0
-	if rel.length() <= EDGE_NO_SLIP_DIST:
 		return Vector3.ZERO
 	var straight := PhysicsRayQueryParameters3D.new()
 	straight.from = global_position
@@ -1185,7 +1199,7 @@ func _edge_slip_gravity_dir() -> Vector3:
 	straight.exclude = _raycast_exclude
 	if not space.intersect_ray(straight).is_empty():
 		return Vector3.ZERO
-	var n: Vector3 = hit.normal
+	var n: Vector3 = _edge_slip_cast.get_collision_normal(0)
 	var g_vec := Vector3(0.0, -1.0, 0.0)
 	return (g_vec - n * g_vec.dot(n)).normalized()
 
@@ -1691,6 +1705,8 @@ func move_to(target: Vector3, check_stuck: bool = true):
 	_glide_timer = 0.0
 	_jump_buffer = 0.0
 	_air_jump_delay_timer = 0.0
+	# Landing at the destination: a teleport down is not a fall.
+	_fall_apex_y = target.y
 	if check_stuck and stuck_detector:
 		stuck_detector.check_stuck()
 
