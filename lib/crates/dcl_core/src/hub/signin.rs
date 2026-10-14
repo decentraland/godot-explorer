@@ -24,7 +24,7 @@ pub struct SignInError {
 }
 
 impl SignInError {
-    fn new(code: impl Into<String>, detail: impl std::fmt::Display) -> Self {
+    pub(super) fn new(code: impl Into<String>, detail: impl std::fmt::Display) -> Self {
         Self {
             code: code.into(),
             detail: detail.to_string(),

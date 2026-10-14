@@ -4,7 +4,10 @@
 use std::sync::Arc;
 
 use super::{core, CoreError};
-use crate::profile::{Profile, ProfileError, ProfileService, ProfileUpdate};
+use crate::{
+    hub::DeletionPlan,
+    profile::{Profile, ProfileError, ProfileService, ProfileUpdate},
+};
 
 impl From<ProfileError> for CoreError {
     fn from(error: ProfileError) -> Self {
@@ -55,9 +58,39 @@ pub async fn deploy_profile(update: ProfileUpdate) -> Result<Profile, CoreError>
     on_core(async move { service.deploy(&update).await }).await
 }
 
-/// Asks the server to delete the account; the request is processed on its side.
+/// What deleting the account did.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, uniffi::Enum)]
+pub enum AccountDeletion {
+    /// The server processes the request; the player stays signed in.
+    Requested,
+    /// A guest was removed from the device and signed out.
+    Deleted,
+}
+
+/// Deletes the account: a guest on the device (its thirdweb user is unlinked, the identity files
+/// wiped, the player signed out), any other account through the server's deletion request.
 #[uniffi::export]
-pub async fn delete_account() -> Result<(), CoreError> {
+pub async fn delete_account() -> Result<AccountDeletion, CoreError> {
+    let core = core()?;
     let service = service();
-    on_core(async move { service.request_account_deletion().await }).await
+    core.handle()
+        .spawn(async move {
+            let hub = core.hub();
+            match hub.deletion_plan().await {
+                DeletionPlan::Server => service
+                    .request_account_deletion()
+                    .await
+                    .map(|()| AccountDeletion::Requested)
+                    .map_err(CoreError::from),
+                plan => hub
+                    .delete_guest(plan)
+                    .await
+                    .map(|()| AccountDeletion::Deleted)
+                    .map_err(CoreError::from),
+            }
+        })
+        .await
+        .map_err(|e| CoreError::InvalidCall {
+            detail: e.to_string(),
+        })?
 }

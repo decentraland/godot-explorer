@@ -106,7 +106,7 @@ describe('mock api', () => {
     expect(await api.getCacheSize()).toBe(0);
     expect((await api.getAccount()).guest).toBe(true);
     expect((await api.getVersion()).short).toBe('1.14.0');
-    expect(await api.deleteAccount()).toEqual({ ok: true });
+    expect(await api.deleteAccount()).toEqual({ ok: true, deleted: true });
   });
 
   it('notifies subscribers until they unsubscribe', async () => {

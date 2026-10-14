@@ -267,6 +267,9 @@ interface NativeModuleInterface {
   ubrn_uniffi_dcl_core_fn_func_installs(
     uniffi_out_err: UniffiRustCallStatus,
   ): number;
+  ubrn_uniffi_dcl_core_fn_func_is_guest(
+    uniffi_out_err: UniffiRustCallStatus,
+  ): number;
   ubrn_uniffi_dcl_core_fn_func_jump_position_url(
     position: Uint8Array,
     uniffi_out_err: UniffiRustCallStatus,
@@ -519,6 +522,7 @@ interface NativeModuleInterface {
   ubrn_uniffi_dcl_core_checksum_func_handle_deep_link(): number;
   ubrn_uniffi_dcl_core_checksum_func_hide_avatar_preview(): number;
   ubrn_uniffi_dcl_core_checksum_func_installs(): number;
+  ubrn_uniffi_dcl_core_checksum_func_is_guest(): number;
   ubrn_uniffi_dcl_core_checksum_func_jump_position_url(): number;
   ubrn_uniffi_dcl_core_checksum_func_jump_realm_url(): number;
   ubrn_uniffi_dcl_core_checksum_func_mark_notifications_read(): number;

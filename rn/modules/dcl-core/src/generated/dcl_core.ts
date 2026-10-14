@@ -686,11 +686,12 @@ export async function debugFireEvents(
 }
 
 /**
- * Asks the server to delete the account; the request is processed on its side.
+ * Deletes the account: a guest on the device (its thirdweb user is unlinked, the identity files
+ * wiped, the player signed out), any other account through the server's deletion request.
  */
 export async function deleteAccount(asyncOpts_?: {
   signal: AbortSignal;
-}): Promise<void> /*throws*/ {
+}): Promise<AccountDeletion> /*throws*/ {
   const __stack = uniffiIsDebug ? new Error().stack : undefined;
   try {
     return await uniffiRustCallAsync(
@@ -698,12 +699,29 @@ export async function deleteAccount(asyncOpts_?: {
       /*rustFutureFunc:*/ () => {
         return nativeModule().ubrn_uniffi_dcl_core_fn_func_delete_account();
       },
-      /*pollFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_poll_void,
-      /*cancelFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_cancel_void,
+      /*pollFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_poll_rust_buffer,
+      /*cancelFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_cancel_rust_buffer,
       /*completeFunc:*/ nativeModule()
-        .ubrn_ffi_dcl_core_rust_future_complete_void,
-      /*freeFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_free_void,
-      /*liftFunc:*/ _v => {},
+        .ubrn_ffi_dcl_core_rust_future_complete_rust_buffer,
+      /*freeFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_free_rust_buffer,
+      // Async returns always go through the JS-side converter: the
+      // FFI symbol returns the future handle (u64), and the user-level
+      // RustBuffer comes back via the shared `rust_future_complete_*`
+      // export. The bytes the runtime hands back must be deserialized
+      // here using the per-callable return-type converter.
+      // Borrowed view over foreign memory: the call site owns the free,
+      // as on the sync paths. Unconditional — a no-op where buffers are
+      // already JS-owned.
+      /*liftFunc:*/ __rb => {
+        try {
+          return FfiConverterTypeAccountDeletion.lift(__rb);
+        } finally {
+          nativeModule().rustbuffer_free(__rb);
+        }
+      },
       /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
       /*asyncOpts:*/ asyncOpts_,
       /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(
@@ -1185,6 +1203,23 @@ export function installs(): number {
     uniffiCaller.rustCall(
       /*caller:*/ callStatus => {
         return nativeModule().ubrn_uniffi_dcl_core_fn_func_installs(callStatus);
+      },
+      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+    ),
+  );
+}
+
+/**
+ * Whether the signed-in account is a guest (the silent device login or a throwaway wallet).
+ */
+export function isGuest(): boolean /*throws*/ {
+  return FfiConverterBool.lift(
+    uniffiCaller.rustCallWithError(
+      /*liftError:*/ FfiConverterTypeCoreError.lift.bind(
+        FfiConverterTypeCoreError,
+      ),
+      /*caller:*/ callStatus => {
+        return nativeModule().ubrn_uniffi_dcl_core_fn_func_is_guest(callStatus);
       },
       /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
     ),
@@ -8242,6 +8277,48 @@ const FfiConverterTypeVersionGate = (() => {
   return new FFIConverter();
 })();
 
+/**
+ * What deleting the account did.
+ */
+export enum AccountDeletion {
+  /**
+   * The server processes the request; the player stays signed in.
+   */
+  Requested,
+  /**
+   * A guest was removed from the device and signed out.
+   */
+  Deleted,
+}
+
+const FfiConverterTypeAccountDeletion = (() => {
+  type TypeName = AccountDeletion;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      switch (c.readI32()) {
+        case 1:
+          return AccountDeletion.Requested;
+        case 2:
+          return AccountDeletion.Deleted;
+        default:
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      switch (value) {
+        case AccountDeletion.Requested:
+          return c.writeI32(1);
+        case AccountDeletion.Deleted:
+          return c.writeI32(2);
+      }
+    }
+    allocationSize(value: TypeName): number {
+      return 4;
+    }
+  }
+  return new FFIConverter();
+})();
+
 export enum BuildEnvironment {
   Production,
   Staging,
@@ -10956,7 +11033,7 @@ function uniffiEnsureInitialized() {
     );
   }
   if (
-    nativeModule().ubrn_uniffi_dcl_core_checksum_func_delete_account() !== 55097
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_delete_account() !== 27200
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_dcl_core_checksum_func_delete_account',
@@ -11066,6 +11143,11 @@ function uniffiEnsureInitialized() {
   if (nativeModule().ubrn_uniffi_dcl_core_checksum_func_installs() !== 12585) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_dcl_core_checksum_func_installs',
+    );
+  }
+  if (nativeModule().ubrn_uniffi_dcl_core_checksum_func_is_guest() !== 46824) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_is_guest',
     );
   }
   if (
@@ -11510,6 +11592,7 @@ export default Object.freeze({
   initialize: uniffiEnsureInitialized,
   converters: {
     FfiConverterTypeAccessVerdict,
+    FfiConverterTypeAccountDeletion,
     FfiConverterTypeAnalyticsEvent,
     FfiConverterTypeAppListener,
     FfiConverterTypeAvatarState,

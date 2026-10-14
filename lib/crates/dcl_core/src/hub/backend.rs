@@ -5,7 +5,10 @@ use crate::session::{
     auth_identity::complete_mobile_auth,
     ephemeral_auth_chain::EphemeralAuthChain,
     review_login,
-    thirdweb_flows::{perform_email_login, perform_thirdweb_guest_login, GuestLoginOutcome},
+    thirdweb_flows::{
+        perform_delete_guest_account, perform_delete_upgraded_account, perform_email_login,
+        perform_guest_upgraded, perform_thirdweb_guest_login, GuestLoginOutcome,
+    },
     thirdweb_guest::{self, GuestLoginError},
 };
 
@@ -24,6 +27,12 @@ pub trait SignInBackend: Send + Sync {
         &self,
         identity_id: String,
     ) -> Result<(EphemeralAuthChain, u64), anyhow::Error>;
+    /// Whether the guest of this device has linked an email or social login.
+    async fn guest_upgraded(&self, device_anchor: String) -> Result<bool, anyhow::Error>;
+    /// Removes the guest's thirdweb user, so the device mints a fresh wallet next time.
+    async fn unlink_guest(&self, device_anchor: String) -> Result<(), anyhow::Error>;
+    /// Removes an upgraded guest's thirdweb user: the guest and every linked login.
+    async fn unlink_upgraded(&self, device_anchor: String) -> Result<(), anyhow::Error>;
 }
 
 /// Thirdweb for guest and email, the auth server for the browser hand-off, and mobile-bff for the
@@ -61,5 +70,17 @@ impl SignInBackend for LiveBackend {
         identity_id: String,
     ) -> Result<(EphemeralAuthChain, u64), anyhow::Error> {
         complete_mobile_auth(identity_id).await
+    }
+
+    async fn guest_upgraded(&self, device_anchor: String) -> Result<bool, anyhow::Error> {
+        perform_guest_upgraded(device_anchor).await
+    }
+
+    async fn unlink_guest(&self, device_anchor: String) -> Result<(), anyhow::Error> {
+        perform_delete_guest_account(device_anchor).await
+    }
+
+    async fn unlink_upgraded(&self, device_anchor: String) -> Result<(), anyhow::Error> {
+        perform_delete_upgraded_account(device_anchor).await
     }
 }

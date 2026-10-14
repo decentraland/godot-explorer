@@ -28,7 +28,8 @@ export interface SettingsApi {
   /** Starts the guest-to-email upgrade flow (OTP, owned by the engine). */
   startEmailUpgrade(): Promise<void>;
   signOut(): Promise<void>;
-  deleteAccount(): Promise<{ ok: boolean; error?: string }>;
+  /** `deleted`: a guest was removed from the device; otherwise the server got a deletion request. */
+  deleteAccount(): Promise<{ ok: boolean; deleted?: boolean; error?: string }>;
   openBugReport(): Promise<void>;
   openReportContent(): Promise<void>;
   devAction(action: DevAction): Promise<void>;

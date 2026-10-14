@@ -1,6 +1,10 @@
 import { core } from '../core';
 import { onCoreEvents } from '../core/events';
-import { SettingKey as CoreKey, SettingValue } from '../core/native';
+import {
+  AccountDeletion,
+  SettingKey as CoreKey,
+  SettingValue,
+} from '../core/native';
 import type { SettingEntry } from '../core/native';
 import type { SettingsApi } from './api';
 import {
@@ -73,7 +77,7 @@ export function createCoreSettingsApi(): SettingsApi {
         name: p.name,
         tag: p.hasClaimedName ? '' : `#${p.address.slice(-GUEST_TAG_LENGTH)}`,
         address: p.address,
-        guest: false,
+        guest: core().isGuest(),
         email: null,
       };
     },
@@ -93,8 +97,8 @@ export function createCoreSettingsApi(): SettingsApi {
     },
     deleteAccount: async () => {
       try {
-        await core().deleteAccount();
-        return { ok: true };
+        const deletion = await core().deleteAccount();
+        return { ok: true, deleted: deletion === AccountDeletion.Deleted };
       } catch (e) {
         return { ok: false, error: e instanceof Error ? e.message : String(e) };
       }

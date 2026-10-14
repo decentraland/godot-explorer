@@ -80,6 +80,9 @@ impl Hub {
                         tracing::warn!("deep link log filter: {e}");
                     }
                 }
+                Effect::Config {
+                    param: ConfigParam::EnableUpgradedDeletion,
+                } => self.allow_upgraded_deletion(),
                 other => rest.push(other),
             }
         }

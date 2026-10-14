@@ -189,3 +189,11 @@ pub async fn perform_delete_upgraded_account(
     let session = thirdweb_guest::refresh_guest_session(&device_anchor_id).await?;
     thirdweb_guest::unlink_upgraded_account(&session.token).await
 }
+
+/// Whether the guest behind this device anchor has linked a method beyond the silent login
+/// (email, social). A fresh thirdweb query: the cached flag is cold outside the upgrade card.
+pub async fn perform_guest_upgraded(device_anchor_id: String) -> Result<bool, anyhow::Error> {
+    let session = thirdweb_guest::refresh_guest_session(&device_anchor_id).await?;
+    let types = thirdweb_guest::get_linked_profile_types(&session.token).await?;
+    Ok(types.iter().any(|kind| kind != "guest"))
+}

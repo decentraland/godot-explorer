@@ -15,13 +15,17 @@ use crate::{
     OpenUrlRequest,
 };
 
-fn chain() -> (H160, EphemeralAuthChain) {
+pub(super) fn chain() -> (H160, EphemeralAuthChain) {
     let wallet = LocalWallet::new(&mut thread_rng());
     (wallet.address(), create_local_ephemeral(&wallet))
 }
 
 #[derive(Default)]
-struct Fake {
+pub(super) struct Fake {
+    /// What the upgrade query answers; `None` makes it fail.
+    pub(super) upgraded: Mutex<Option<bool>>,
+    /// The unlinks the hub asked for, in order.
+    pub(super) unlinks: Mutex<Vec<&'static str>>,
     fail_guest: Mutex<Option<&'static str>>,
     fail_email_send: Mutex<bool>,
     good_code: Mutex<String>,
@@ -82,6 +86,20 @@ impl SignInBackend for Fake {
         }
         Ok((chain().1, 1))
     }
+
+    async fn guest_upgraded(&self, _anchor: String) -> Result<bool, anyhow::Error> {
+        (*self.upgraded.lock().unwrap()).ok_or_else(|| anyhow::anyhow!("offline"))
+    }
+
+    async fn unlink_guest(&self, _anchor: String) -> Result<(), anyhow::Error> {
+        self.unlinks.lock().unwrap().push("guest");
+        Ok(())
+    }
+
+    async fn unlink_upgraded(&self, _anchor: String) -> Result<(), anyhow::Error> {
+        self.unlinks.lock().unwrap().push("upgraded");
+        Ok(())
+    }
 }
 
 #[derive(Default)]
@@ -128,14 +146,14 @@ impl SessionObserver for Heard {
     }
 }
 
-struct Setup {
-    hub: Hub,
-    backend: Arc<Fake>,
+pub(super) struct Setup {
+    pub(super) hub: Hub,
+    pub(super) backend: Arc<Fake>,
     heard: Arc<Heard>,
-    dir: tempfile::TempDir,
+    pub(super) dir: tempfile::TempDir,
 }
 
-fn setup() -> Setup {
+pub(super) fn setup() -> Setup {
     let dir = tempfile::tempdir().unwrap();
     let backend = Arc::new(Fake::default());
     let hub = Hub::new(dir.path(), backend.clone());
@@ -150,7 +168,7 @@ fn setup() -> Setup {
     }
 }
 
-fn signed_out(s: &Setup) {
+pub(super) fn signed_out(s: &Setup) {
     s.hub.boot();
     assert_eq!(s.hub.with_app(|a| a.state().clone()), State::SignedOut);
 }
@@ -162,7 +180,7 @@ fn saved_account(s: &Setup) -> String {
         .unwrap_or_default()
 }
 
-fn state(s: &Setup) -> State {
+pub(super) fn state(s: &Setup) -> State {
     s.hub.with_app(|a| a.state().clone())
 }
 

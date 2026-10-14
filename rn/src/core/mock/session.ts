@@ -29,6 +29,7 @@ export function createMockSession(
   return {
     state: () => bus.state(),
     address: () => wallet,
+    isGuest: () => wallet?.startsWith('0xguest') ?? false,
     installs: () => 1,
     addListener: listener => bus.add(listener),
     removeListener: id => bus.remove(id),

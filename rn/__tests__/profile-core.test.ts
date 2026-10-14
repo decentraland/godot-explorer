@@ -1,5 +1,6 @@
 import { setCoreForTests } from '../src/core';
 import { createMockCore } from '../src/core/mock';
+import { AccountDeletion } from '../src/core/native';
 import { fromCoreProfile } from '../src/profile/coreApi';
 import { resetProfileStore } from '../src/profile/store';
 import { getProfileApi, mockApi, setProfileApi } from '../src/profile/api';
@@ -53,7 +54,7 @@ describe('core profile mock', () => {
   it('lists owned names and accepts account deletion', async () => {
     const core = await signIn('signInEmailVerify');
     expect(await core.ownedNames()).toContain('Name 01');
-    await expect(core.deleteAccount()).resolves.toBeUndefined();
+    await expect(core.deleteAccount()).resolves.toBe(AccountDeletion.Requested);
   });
 });
 

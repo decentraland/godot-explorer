@@ -84,6 +84,9 @@ export const settings = {
   SETTINGS_DELETE_BODY:
     'This will permanently delete your account and cannot be undone.',
   SETTINGS_DELETE_CONFIRM: 'DELETE',
+  SETTINGS_DELETE_REQUESTED_TITLE: 'Deletion requested',
+  SETTINGS_DELETE_REQUESTED_BODY:
+    'We received your request. Your account will be deleted soon.',
   SETTINGS_DELETE_FAILED_TITLE: 'Could not delete account',
   SETTINGS_DELETE_FAILED_BODY: 'Something went wrong. Please try again later.',
   SETTINGS_OK: 'OK',

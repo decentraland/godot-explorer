@@ -6,6 +6,7 @@ export type SessionApi = Pick<
   typeof Native,
   | 'state'
   | 'address'
+  | 'isGuest'
   | 'installs'
   | 'addListener'
   | 'removeListener'

@@ -302,6 +302,7 @@ uniffi_dcl_core_fn_func_complete_browser(RustBuffer identity_id);
 RustBuffer
 uniffi_dcl_core_fn_func_handle_deep_link(RustBuffer url, RustBuffer start,
                                          RustCallStatus *uniffi_out_err);
+int8_t uniffi_dcl_core_fn_func_is_guest(RustCallStatus *uniffi_out_err);
 void uniffi_dcl_core_fn_func_sign_in_browser(RustBuffer provider,
                                              RustCallStatus *uniffi_out_err);
 /*handle*/ uint64_t
@@ -516,6 +517,7 @@ uint16_t uniffi_dcl_core_checksum_func_address();
 uint16_t uniffi_dcl_core_checksum_func_cancel_sign_in();
 uint16_t uniffi_dcl_core_checksum_func_complete_browser();
 uint16_t uniffi_dcl_core_checksum_func_handle_deep_link();
+uint16_t uniffi_dcl_core_checksum_func_is_guest();
 uint16_t uniffi_dcl_core_checksum_func_sign_in_browser();
 uint16_t uniffi_dcl_core_checksum_func_sign_in_email_start();
 uint16_t uniffi_dcl_core_checksum_func_sign_in_email_verify();
@@ -5096,6 +5098,17 @@ NativeDclCore::NativeDclCore(
             return this->cpp_uniffi_dcl_core_fn_func_handle_deep_link(
                 rt, thisVal, args, count);
           });
+  props["ubrn_uniffi_dcl_core_fn_func_is_guest"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(rt,
+                                    "ubrn_uniffi_dcl_core_fn_func_is_guest"),
+          0,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_dcl_core_fn_func_is_guest(rt, thisVal, args,
+                                                              count);
+          });
   props["ubrn_uniffi_dcl_core_fn_func_sign_in_browser"] =
       jsi::Function::createFromHostFunction(
           rt,
@@ -6508,6 +6521,17 @@ NativeDclCore::NativeDclCore(
           [this](jsi::Runtime &rt, const jsi::Value &thisVal,
                  const jsi::Value *args, size_t count) -> jsi::Value {
             return this->cpp_uniffi_dcl_core_checksum_func_handle_deep_link(
+                rt, thisVal, args, count);
+          });
+  props["ubrn_uniffi_dcl_core_checksum_func_is_guest"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_checksum_func_is_guest"),
+          0,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_dcl_core_checksum_func_is_guest(
                 rt, thisVal, args, count);
           });
   props["ubrn_uniffi_dcl_core_checksum_func_sign_in_browser"] =
@@ -8089,6 +8113,17 @@ jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_handle_deep_link(
 
   return uniffi::dcl_core::Bridging<RustBuffer>::toJs(rt, callInvoker, value);
 }
+jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_is_guest(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  RustCallStatus status =
+      uniffi::dcl_core::Bridging<RustCallStatus>::rustSuccess(rt);
+  auto value = uniffi_dcl_core_fn_func_is_guest(&status);
+  uniffi::dcl_core::Bridging<RustCallStatus>::copyIntoJs(
+      rt, callInvoker, status, args[count - 1]);
+
+  return uniffi_jsi::Bridging<int8_t>::toJs(rt, callInvoker, value);
+}
 jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_sign_in_browser(
     jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
     size_t count) {
@@ -9272,6 +9307,13 @@ jsi::Value NativeDclCore::cpp_uniffi_dcl_core_checksum_func_handle_deep_link(
     jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
     size_t count) {
   auto value = uniffi_dcl_core_checksum_func_handle_deep_link();
+
+  return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
+}
+jsi::Value NativeDclCore::cpp_uniffi_dcl_core_checksum_func_is_guest(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  auto value = uniffi_dcl_core_checksum_func_is_guest();
 
   return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
 }

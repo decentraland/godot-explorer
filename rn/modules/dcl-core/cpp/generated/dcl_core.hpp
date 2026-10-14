@@ -278,6 +278,10 @@ protected:
   jsi::Value cpp_uniffi_dcl_core_fn_func_handle_deep_link(
       jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
       size_t count);
+  jsi::Value cpp_uniffi_dcl_core_fn_func_is_guest(jsi::Runtime &rt,
+                                                  const jsi::Value &thisVal,
+                                                  const jsi::Value *args,
+                                                  size_t count);
   jsi::Value cpp_uniffi_dcl_core_fn_func_sign_in_browser(
       jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
       size_t count);
@@ -709,6 +713,9 @@ protected:
       jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
       size_t count);
   jsi::Value cpp_uniffi_dcl_core_checksum_func_handle_deep_link(
+      jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+      size_t count);
+  jsi::Value cpp_uniffi_dcl_core_checksum_func_is_guest(
       jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
       size_t count);
   jsi::Value cpp_uniffi_dcl_core_checksum_func_sign_in_browser(

@@ -97,6 +97,12 @@ pub fn address() -> Result<Option<String>, CoreError> {
     Ok(hub()?.with_session(|s| s.try_address().map(|a| format!("{a:#x}"))))
 }
 
+/// Whether the signed-in account is a guest (the silent device login or a throwaway wallet).
+#[uniffi::export]
+pub fn is_guest() -> Result<bool, CoreError> {
+    Ok(hub()?.with_session(|s| s.is_thirdweb_guest || s.is_disposable_guest()))
+}
+
 /// Routes a deep link. A browser sign-in it carries is finished here; the shell gets the
 /// navigation, the settings the engine owns and the analytics to record.
 #[uniffi::export]

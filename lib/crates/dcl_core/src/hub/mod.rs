@@ -3,10 +3,13 @@
 //! owns the process's hub; tests build their own with a fake backend.
 
 mod backend;
+mod deletion;
 mod links;
 mod report;
 mod signin;
 
+#[cfg(test)]
+mod deletion_tests;
 #[cfg(test)]
 mod tests;
 
@@ -30,6 +33,7 @@ use crate::{
 const REPORT_TAG_INTERVAL: std::time::Duration = std::time::Duration::from_millis(250);
 
 pub use backend::{LiveBackend, SignInBackend};
+pub use deletion::{DeletionPlan, GUEST_DEVICE_FILES};
 pub use links::LinkOutcome;
 pub use report::ReportPayload;
 pub use signin::SignInError;
@@ -70,6 +74,9 @@ pub struct Hub {
     report_tags: Arc<TagCoalescer>,
     /// Gates developer-only link parameters; on until the engine says this is a dev build.
     production: AtomicBool,
+    /// A developer link allowed deleting an upgraded guest; never on in production.
+    upgraded_deletion: AtomicBool,
+    data_dir: std::path::PathBuf,
 }
 
 impl Hub {
@@ -93,6 +100,8 @@ impl Hub {
             )),
             report_tags: Arc::new(TagCoalescer::new(REPORT_TAG_INTERVAL)),
             production: AtomicBool::new(true),
+            upgraded_deletion: AtomicBool::new(false),
+            data_dir: data_dir.to_path_buf(),
         }
     }
 

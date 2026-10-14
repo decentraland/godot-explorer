@@ -1,4 +1,5 @@
 import { core } from '..';
+import { AccountDeletion } from '../native';
 import type { Profile, ProfileUpdate } from '../native';
 import type { ProfileApi } from '../api/profile';
 
@@ -62,6 +63,6 @@ export function createMockProfile(): ProfileApi {
       byAddress.set(address, next);
       return next;
     },
-    deleteAccount: async () => {},
+    deleteAccount: async () => AccountDeletion.Requested,
   };
 }
