@@ -13,6 +13,7 @@ import { useAnalyticsLifecycle } from './src/app/useAnalyticsLifecycle';
 import { startApp } from './src/app/startup';
 import { useAppWiring } from './src/app/wiring';
 import { core } from './src/core';
+import { useCoreState } from './src/core/useCoreState';
 import { useJumpIn } from './src/discover/sheetHooks';
 import { colors, ToastProvider } from './src/ds';
 import { runCoreSelfTest } from './src/core/selfTest';
@@ -28,6 +29,15 @@ function AppBody() {
   useEffect(() => {
     core().firstScreenDrawn();
   }, []);
+
+  // Signing out or deleting the account sends the player back to the entry flow.
+  const signedOut = useCoreState().tag === 'SignedOut';
+  useEffect(() => {
+    if (signedOut && entered) {
+      setEntered(false);
+      reset({ name: 'home' });
+    }
+  }, [signedOut, entered, reset]);
 
   // A deep link navigates once the player is past the entry flow.
   useEffect(

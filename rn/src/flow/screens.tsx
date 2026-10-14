@@ -205,7 +205,11 @@ export function NamingScreen({
   const valid = isValidName(name);
   return (
     <FlowFrame onBack={onBack}>
-      <KeyboardAvoidingView style={styles.fill} behavior="padding">
+      <KeyboardAvoidingView
+        style={styles.fill}
+        behavior="padding"
+        keyboardVerticalOffset={u(48)}
+      >
         <AppText variant="heading" style={styles.titleLeft}>
           {t('FLOW_NAME_TITLE')}
         </AppText>
@@ -267,7 +271,11 @@ function TextStep({
   const [value, setValue] = useState(initial);
   return (
     <FlowFrame onBack={onBack}>
-      <KeyboardAvoidingView style={styles.fill} behavior="padding">
+      <KeyboardAvoidingView
+        style={styles.fill}
+        behavior="padding"
+        keyboardVerticalOffset={u(48)}
+      >
         <View style={styles.center}>
           <AppText variant="heading" style={styles.title}>
             {title}
