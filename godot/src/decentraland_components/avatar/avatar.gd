@@ -1555,6 +1555,7 @@ func _process(delta):
 	_loco_state["stunned"] = self.stunned
 	_loco_state["glide_state"] = self.glide_state
 	_loco_state["movement_speed"] = self.movement_speed
+	_loco_state["position_y"] = global_position.y
 	_loco_state["local"] = is_local_player
 	_loco_state["emote_single"] = emote_controller.playing_single
 	_loco_state["emote_mixed"] = emote_controller.playing_mixed

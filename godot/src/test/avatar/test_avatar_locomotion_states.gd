@@ -36,10 +36,6 @@ const CONDITION_NAMES: Array[String] = [
 	"nemote",
 	"emix",
 	"nemix",
-	"run",
-	"jog",
-	"walk",
-	"still",
 	"rise_walk",
 	"rise_run",
 	"rise_bounce",
@@ -120,6 +116,16 @@ const CASES := [
 	["Jump_Rise", {"double_jump": true}, ["Double_Jump_Rise"]],
 	["Jump_End", {"rise": true}, ["Jump_Rise", "Jump_Start"]],
 	["Long_Fall", {"rise": true}, ["Jump_Rise", "Jump_Start"]],
+	# An air jump rises out of the long fall whatever the gait is; the edge used
+	# to need a bounce pad (jump_count == 0).
+	["Long_Fall", {"rise": true, "gait": 3, "jump_count": 1}, ["Jump_Rise", "Jump_Start"]],
+	# The double jump opens the flipper from the long fall, as it does from
+	# Jump_Fall — both edges match, and the double jump wins the tie.
+	[
+		"Long_Fall",
+		{"double_jump": true, "rise": true, "gait": 3, "jump_count": 2},
+		["Double_Jump_Rise"]
+	],
 	# Landings, including the long fall that stuns.
 	["Jump_Fall", {"grounded": true}, ["Jump_End", "Grounded"]],
 	["Run_Jump_Fall", {"grounded": true}, ["Run_Jump_End", "Grounded"]],
@@ -211,13 +217,15 @@ func _vector(primitives: Dictionary) -> Dictionary:
 	var emix: bool = primitives.get("emix", false)
 	var fall_fast: bool = primitives.get("fall_fast", false)
 	var long_fall: bool = primitives.get("long_fall", false)
+	# Bounce pads launch without a jump; an air jump increments it.
+	var jump_count: int = primitives.get("jump_count", 0)
 
 	var vector := {}
 	vector["nfall"] = grounded
 	vector["rise"] = rise
 	vector["rise_walk"] = rise and gait < 3
 	vector["rise_run"] = rise and gait == 3
-	vector["rise_bounce"] = rise and gait == 0
+	vector["rise_bounce"] = rise and jump_count == 0
 	vector["fall"] = primitives.get("fall", false)
 	vector["fall_fast"] = fall_fast
 	vector["fall_short"] = fall_fast and not long_fall
@@ -230,10 +238,6 @@ func _vector(primitives: Dictionary) -> Dictionary:
 	vector["double_jump"] = primitives.get("double_jump", false)
 	vector["emote"] = emote
 	vector["emix"] = emix
-	vector["walk"] = primitives.get("walk", gait == 1)
-	vector["jog"] = gait == 2
-	vector["run"] = gait == 3
-	vector["still"] = gait == 0
 	vector["nemote"] = not emote
 	vector["nemix"] = not emix
 	vector["nstunned"] = not stunned

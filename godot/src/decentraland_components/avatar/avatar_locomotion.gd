@@ -11,8 +11,12 @@ const GAIT_BLEND_MAX_SPEEDS := [0.0, 1.5, 8.0, 10.0]
 const GAIT_BLEND_SPEED := 5.0
 const STILL_BLEND_THRESHOLD := 0.25
 # #2855: Unity LongFallStunTime — the hard-landing stun animation covers the
-# input lock (loco2 M6). Remote avatars derive it from the wire long_fall.
+# input lock (loco2 M6).
 const LONG_FALL_STUN_TIME := 0.75
+# Unity JumpHeightStun: the stun comes from a fall HEIGHT, not from the fall-
+# speed flag the wire carries (that one trips at ~3.3m). Remotes measure their
+# own height against this.
+const HARD_LANDING_FALL_HEIGHT := 8.0
 
 var _tree: AnimationTree
 var _sm_double_jump_rise: AnimationNodeAnimation
@@ -27,10 +31,13 @@ var _last_jump_count := 0
 # the first frame must not read a wire-provided jump_count >= 2 as a rising
 # edge, or a remote avatar first seen mid-double-jump plays SFX from nothing.
 var _jump_count_sync_pending := true
-var _was_long_falling := false
+# Apex of the remote avatar's airborne stretch, read from its own y.
+var _remote_fall_apex_y := 0.0
 var _remote_stun_timer := 0.0
 var _stunned_now := false
 var _glide_forward_blend := 0.0
+# Reused so a frame allocates nothing; callers read it before the next call.
+var _result: Dictionary = {}
 
 
 func _init(tree: AnimationTree) -> void:
@@ -41,10 +48,11 @@ func _init(tree: AnimationTree) -> void:
 
 # One frame of locomotion conditions. `state` carries what the avatar read from
 # itself — run, jog, walk, rise, fall, land, grounded, fall_fast, long_fall,
-# jump_count, stunned, glide_state, movement_speed — plus `local` and the emote
-# controller's playing_single/playing_mixed. The dictionary is only read, never
-# kept, so the caller may refill and reuse it. Returns the resolved values the
-# avatar still needs: grounded, stunned, movement_speed, jump_rising_edge.
+# jump_count, stunned, glide_state, movement_speed, position_y — plus `local`
+# and the emote controller's playing_single/playing_mixed. The dictionary is
+# only read, never kept, so the caller may refill and reuse it. Returns the
+# values the avatar still needs — grounded, stunned, movement_speed,
+# jump_rising_edge — in a dictionary it must read before the next call.
 func apply(delta: float, state: Dictionary) -> Dictionary:
 	var run_now: bool = state["run"]
 	var jog_now: bool = state["jog"]
@@ -86,9 +94,6 @@ func apply(delta: float, state: Dictionary) -> Dictionary:
 		kind = 2
 	elif walk_now:
 		kind = 1
-	_tree.set("parameters/Locomotion/conditions/run", kind == 3)
-	_tree.set("parameters/Locomotion/conditions/jog", kind == 2)
-	_tree.set("parameters/Locomotion/conditions/walk", kind == 1)
 	var target_blend := 0.0
 	if kind > 0:
 		target_blend = clampf(movement_speed_now / GAIT_BLEND_MAX_SPEEDS[kind], 0.0, 1.0) * kind
@@ -97,7 +102,6 @@ func apply(delta: float, state: Dictionary) -> Dictionary:
 	)
 	_movement_blend = move_toward(_movement_blend, target_blend, blend_rate * delta)
 	_tree.set("parameters/Locomotion/Grounded/blend_position", _movement_blend)
-	_tree.set("parameters/Locomotion/conditions/still", _movement_blend < STILL_BLEND_THRESHOLD)
 	# #2856: jump-chain selection by gait, as single-condition transitions.
 	_tree.set("parameters/Locomotion/conditions/rise_walk", rise_now and kind < 3)
 	_tree.set("parameters/Locomotion/conditions/rise_run", rise_now and kind == 3)
@@ -126,12 +130,16 @@ func apply(delta: float, state: Dictionary) -> Dictionary:
 	if is_local_player:
 		_stunned_now = stunned_now
 	else:
-		if long_fall_now and not grounded_now:
-			_was_long_falling = true
+		# The sender stuns on fall height (Unity JumpHeightStun, 8m); the wire
+		# only carries the fall-speed flag, so an 8m drop and a 3.3m one look
+		# identical there. This avatar's own y is the same measure.
+		var y_now: float = state["position_y"]
 		if grounded_now:
-			if _was_long_falling:
+			if _remote_fall_apex_y - y_now > HARD_LANDING_FALL_HEIGHT:
 				_remote_stun_timer = LONG_FALL_STUN_TIME
-			_was_long_falling = false
+			_remote_fall_apex_y = y_now
+		else:
+			_remote_fall_apex_y = maxf(_remote_fall_apex_y, y_now)
 		_remote_stun_timer = maxf(_remote_stun_timer - delta, 0.0)
 		_stunned_now = _remote_stun_timer > 0.0
 	_tree.set("parameters/Locomotion/conditions/long_fall", long_fall_now)
@@ -144,6 +152,10 @@ func apply(delta: float, state: Dictionary) -> Dictionary:
 
 	# Rising-edge detection for one-frame AnimationTree condition pulses.
 	var jump_rising_edge: bool = jump_count_now > _last_jump_count and jump_count_now >= 2
+	if _jump_count_sync_pending:
+		# First frame: a wire-provided jump_count is not an edge.
+		jump_rising_edge = false
+		_jump_count_sync_pending = false
 	_double_jump_latch = _double_jump_latch or jump_rising_edge
 	# #2856: jump variation — every air jump re-rolls 0|1 and the double-jump rise
 	# swaps between the two clip variants for the current gait (Unity's Jump state
@@ -157,12 +169,8 @@ func apply(delta: float, state: Dictionary) -> Dictionary:
 			gait = "Jog"
 		var dj_clip := "Double_Jump_" + gait + ("_Right" if _jump_variation > 0.5 else "")
 		_sm_double_jump_rise.animation = StringName("double_jump_and_glide/" + dj_clip)
-	if _jump_count_sync_pending:
-		jump_rising_edge = false
-		_jump_count_sync_pending = false
 	_last_jump_count = jump_count_now
 	var gliding_now: bool = glide_state_now == 1 or glide_state_now == 2
-
 	_tree.set("parameters/Locomotion/conditions/double_jump", _double_jump_latch)
 	_tree.set("parameters/Locomotion/conditions/gliding", gliding_now)
 	_tree.set("parameters/Locomotion/conditions/ngliding", not gliding_now)
@@ -178,9 +186,8 @@ func apply(delta: float, state: Dictionary) -> Dictionary:
 		if pb.get_current_node() == "Double_Jump_Rise" or grounded_now:
 			_double_jump_latch = false
 
-	return {
-		"grounded": grounded_now,
-		"stunned": _stunned_now,
-		"movement_speed": movement_speed_now,
-		"jump_rising_edge": jump_rising_edge,
-	}
+	_result["grounded"] = grounded_now
+	_result["stunned"] = _stunned_now
+	_result["movement_speed"] = movement_speed_now
+	_result["jump_rising_edge"] = jump_rising_edge
+	return _result
