@@ -1,4 +1,3 @@
-# gdlint: disable=max-file-lines
 class_name Avatar
 extends DclAvatar
 
@@ -24,10 +23,6 @@ const SCREEN_NOTIFIER_AABB: AABB = AABB(Vector3(-1.0, -0.3, -1.0), Vector3(2.0, 
 
 # Fallback nametag height when no meshes are loaded yet (meters above avatar origin).
 const DEFAULT_NAMETAG_HEIGHT := 1.9
-
-# head sync: Unity HeadIKRemotePlayersDistance — a remote head turn is dropped
-# past this, so a crowd costs nothing at distance.
-const REMOTE_HEAD_IK_DISTANCE := 10.0
 
 # Maps AvatarAnchorPointType (SDK proto, see avatar_attach.proto) to skeleton
 # bone names. Ids 0 (POSITION) and 1 (NAME_TAG) are non-skeletal and resolved
@@ -154,17 +149,9 @@ var _loco_state := {}
 var _spawn_reveal: AvatarSpawnReveal = null
 var _spawn_reveal_started: bool = false
 var _born_ms: int = 0
-var _feet_ik: AvatarFeetIK = null
-var _hands_ik: AvatarHandsIK = null
-var _head_ik: AvatarHeadIK = null
-# Latched so we don't spam Close audio / Glider_End restart / hide-timer scheduling.
-var _glider_close_initiated: bool = false
-# Previous glide_state for _update_glider_prop's edge detection.
-var _prop_last_glide_state: int = 0
-# first call to _update_glider_prop should adopt whatever curr_state
-# came in on the wire (OPENING/GLIDING/CLOSING) without spamming audio, instead
-# of staying invisible because prev_state==0 doesn't match any branch.
-var _prop_sync_pending: bool = true
+var _ik: AvatarIK = null
+# The glider prop (wings, clip sequence, audio) — see AvatarGliderProp.
+var _glider: AvatarGliderProp = null
 
 # Network emote that arrived while the avatar was still loading — Pulse replays
 # the peer's last emote announcement at join, and LiveKit emotes can race the
@@ -284,9 +271,8 @@ func _ready():
 	# the spawn hologram swaps the real avatar in.
 	body_shape_skeleton_3d.visible = false
 	_born_ms = Time.get_ticks_msec()
-	_feet_ik = AvatarFeetIK.new(self, body_shape_skeleton_3d)
-	_hands_ik = AvatarHandsIK.new(self, body_shape_skeleton_3d)
-	_head_ik = AvatarHeadIK.new(self, body_shape_skeleton_3d)
+	_ik = AvatarIK.new(self)
+	_glider = AvatarGliderProp.new(self)
 	_spawn_reveal = AvatarSpawnReveal.new(self)
 	_mesh_assembler.apply_toon_material_recursive(glider_prop)
 	# #1554: warm the hologram pipeline once per process — Godot renders a solid
@@ -1571,54 +1557,17 @@ func _process(delta):
 	if bool(loco["jump_rising_edge"]):
 		audio_player_double_jump.play()
 
-	_update_glider_prop()
+	_glider.update()
 
-	# Feet and hands IK: visual only — bone modifiers, never a physics query.
-	# Unity gates both on the same rig state.
-	var ik_enabled := (
-		is_local_player
-		and grounded_now
-		and not stunned_now
-		and not emote_controller.is_playing()
-		and _lod_state == LODState.FULL
+	# Feet, hands and head IK — see AvatarIK. Visual only: bone modifiers. The
+	# rig is free when nothing else owns the pose.
+	var rig_free: bool = (
+		_lod_state == LODState.FULL
 		and _spawn_reveal.is_idle()
 		and not _world_is_loading
+		and not emote_controller.is_playing()
 	)
-	if is_local_player:
-		_feet_ik.update_ik(delta, ik_enabled)
-		_hands_ik.update_ik(delta, ik_enabled)
-
-		# Head IK: looks where the view camera looks, and only while nearly
-		# standing still (Unity disables it above ~0.7 m/s of movement).
-		var camera := get_viewport().get_camera_3d()
-		var head_on: bool = (
-			ik_enabled and movement_speed_now < AvatarHeadIK.MAX_SPEED and camera != null
-		)
-		_head_ik.update_ik(
-			delta, head_on, Vector3.ZERO if camera == null else -camera.global_transform.basis.z
-		)
-		# head sync: broadcast the head turn so other clients aim our head
-		# at us (Unity HeadSync sends yaw+pitch, not a look-at vector). Mirrored
-		# here so the sender's dirty check can see the turn while it stands still.
-		self.head_ik_yaw = _head_ik.head_yaw_deg
-		self.head_ik_pitch = _head_ik.head_pitch_deg
-		self.head_ik_yaw_enabled = head_on
-		self.head_ik_pitch_enabled = head_on
-		Global.comms.set_head_ik(head_on, _head_ik.head_yaw_deg, _head_ik.head_pitch_deg)
-	else:
-		# A remote avatar's head comes over the wire, never from our camera. Head
-		# only: Unity's hands/feet IK need the sender's rigid transform, which a
-		# remote entity does not carry, so those stay local-only.
-		var head_on: bool = (
-			(self.head_ik_yaw_enabled or self.head_ik_pitch_enabled)
-			and _lod_distance <= REMOTE_HEAD_IK_DISTANCE
-			and _lod_state == LODState.FULL
-			and _spawn_reveal.is_idle()
-			and not _world_is_loading
-			and not stunned_now
-			and not emote_controller.is_playing()
-		)
-		_head_ik.update_remote(delta, head_on, self.head_ik_yaw, self.head_ik_pitch)
+	_ik.update(delta, rig_free, grounded_now, stunned_now, movement_speed_now)
 
 	# #1554: avatars ghost in on first appearance — covers local spawn AND
 	# teleports as well as remotes appearing. The ghost body is
@@ -1644,117 +1593,6 @@ func _process(delta):
 		# Profile never resolved (scene NPCs, fetch failures) — never stay hidden.
 		_spawn_reveal_started = true
 		body_shape_skeleton_3d.visible = true
-
-
-# Toggles GliderProp visibility based on glide_state transitions. The prop is a
-# persistent child (rotated 180° Y to compensate the Unity→Godot axis flip), so
-# audio and AnimationPlayer stay warm across glide cycles.
-func _update_glider_prop() -> void:
-	if is_avatar_shape:
-		if glider_prop.visible:
-			glider_prop.visible = false
-		_prop_last_glide_state = self.glide_state
-		_prop_sync_pending = false
-		return
-
-	var curr_state: int = self.glide_state
-
-	# first tick — adopt whatever state came in without firing open/close
-	# SFX, so a remote seen mid-glide actually shows wings and the idle loop.
-	if _prop_sync_pending:
-		_prop_sync_pending = false
-		_prop_last_glide_state = curr_state
-		if curr_state == 1 or curr_state == 2:
-			glider_prop.visible = true
-			_glider_close_initiated = false
-			# Jump straight to Glider_Idle; no Start/Open sfx for state we joined into.
-			_play_glider_clip_if_different("Glider_Idle")
-			if curr_state == 1:
-				_play_glider_audio("AudioPlayer_Idle")
-			else:
-				_play_glider_audio("AudioPlayer_Idle")
-		elif curr_state == 3:
-			# Joined during CLOSING: show prop, let the existing CLOSING→CLOSED
-			# transition scheduled by the next tick hide it naturally.
-			glider_prop.visible = true
-			_glider_close_initiated = true
-		return
-
-	var prev_state: int = _prop_last_glide_state
-	_prop_last_glide_state = curr_state
-
-	if prev_state == 0 and curr_state == 1:
-		glider_prop.visible = true
-		_glider_close_initiated = false
-		_play_glider_audio("AudioPlayer_Open")
-		_play_glider_audio("AudioPlayer_Idle")
-		_play_glider_clip("Glider_Start")
-	elif (prev_state == 1 or prev_state == 2) and curr_state == 3:
-		# Start close immediately on CLOSING edge — don't wait for the FSM to
-		# reach CLOSED (0.15s later) or the user sees wings-open mid-close.
-		_glider_close_initiated = true
-		_stop_glider_audio("AudioPlayer_Idle")
-		_play_glider_audio("AudioPlayer_Close")
-		_play_glider_clip("Glider_End")
-	elif prev_state == 3 and curr_state == 0 and glider_prop.visible:
-		_schedule_glider_hide()
-	elif curr_state == 0 and glider_prop.visible and not _glider_close_initiated:
-		# Fallback: state jumped directly to CLOSED without passing CLOSING.
-		_glider_close_initiated = true
-		_stop_glider_audio("AudioPlayer_Idle")
-		_play_glider_audio("AudioPlayer_Close")
-		_play_glider_clip("Glider_End")
-		_schedule_glider_hide()
-
-	if curr_state == 2 and glider_prop.visible:
-		var glider_moving: bool = self.walk or self.jog or self.run
-		var glider_clip: String = "Glider_Forward" if glider_moving else "Glider_Idle"
-		_play_glider_clip_if_different(glider_clip, 0.25)
-
-
-func _schedule_glider_hide() -> void:
-	var tree := get_tree()
-	if tree != null:
-		var timer := tree.create_timer(0.25)
-		timer.timeout.connect(_hide_glider_prop)
-	else:
-		_hide_glider_prop()
-
-
-func _hide_glider_prop() -> void:
-	# Skip the hide if the user re-opened glide during the fade-out window.
-	if self.glide_state == 0:
-		glider_prop.visible = false
-
-
-## The three glider players keep `max_distance = 50` for the same reason as
-## `avatar_sfxs.gd`: a cheap per-avatar cutoff, traded against Unity-exact
-## rolloff. See the comment there.
-func _play_glider_audio(node_name: String) -> void:
-	var player := glider_prop.get_node_or_null(node_name) as AudioStreamPlayer3D
-	if player != null:
-		player.play()
-
-
-func _stop_glider_audio(node_name: String) -> void:
-	var player := glider_prop.get_node_or_null(node_name) as AudioStreamPlayer3D
-	if player != null:
-		player.stop()
-
-
-func _play_glider_clip(clip: String) -> void:
-	var ap := glider_prop.get_node_or_null("AnimationPlayer") as AnimationPlayer
-	if ap == null or not ap.has_animation(clip):
-		return
-	ap.play(clip)
-
-
-func _play_glider_clip_if_different(clip: String, blend_time: float = -1.0) -> void:
-	var ap := glider_prop.get_node_or_null("AnimationPlayer") as AnimationPlayer
-	if ap == null or not ap.has_animation(clip):
-		return
-	if ap.current_animation != clip:
-		ap.play(clip, blend_time)
 
 
 func spawn_voice_channel(sample_rate, _num_channels, _samples_per_channel):
