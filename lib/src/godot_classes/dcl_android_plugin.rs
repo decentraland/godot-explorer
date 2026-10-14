@@ -196,6 +196,32 @@ impl DclAndroidPlugin {
             .unwrap_or(-1)
     }
 
+    /// Chipset (SoC) model, e.g. "SM6125" (API 31+ only). Empty string if unavailable.
+    #[func]
+    pub fn get_soc_model() -> GString {
+        Self::get_mobile_device_info_internal()
+            .map(|info| GString::from(&info.soc_model))
+            .unwrap_or_default()
+    }
+
+    /// `ro.board.platform` system property — a chipset-id fallback for API < 31 devices that
+    /// have no Build.SOC_MODEL. Empty string if unavailable.
+    #[func]
+    pub fn get_board_platform() -> GString {
+        Self::get_mobile_device_info_internal()
+            .map(|info| GString::from(&info.board_platform))
+            .unwrap_or_default()
+    }
+
+    /// Build.HARDWARE — a second chipset-id fallback, sometimes populated when both SOC_MODEL
+    /// and board_platform are not. Empty string if unavailable.
+    #[func]
+    pub fn get_hardware() -> GString {
+        Self::get_mobile_device_info_internal()
+            .map(|info| GString::from(&info.hardware))
+            .unwrap_or_default()
+    }
+
     /// Add a calendar event with title, description, start time, end time, and location
     /// Times are in milliseconds since Unix epoch (Jan 1, 1970)
     /// Returns true if the calendar UI was shown successfully, false otherwise

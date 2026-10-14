@@ -247,6 +247,18 @@ var day1_notification_scheduled: bool = false
 
 var low_spec_warning_shown: bool = false
 
+# End-of-support modal cadence (#2936): re-shows on a day-based schedule relative to the first
+# session it was ever detected on — first session, then day 5, day 10, day 30, then every 30
+# days after that while the device remains excluded (see
+# DeviceSupportCoordinator.is_end_of_support_modal_due). The anchor is stamped once in lobby.gd
+# the first time the server reports this device excluded, and never changes afterwards.
+# shown_count indexes which schedule tier is next; 0 means never shown.
+var end_of_device_support_first_detected_unix: int = 0
+var end_of_device_support_modal_shown_count: int = 0
+
+# Below-minspec modal (#2935) shows at most once, ever — unlike end-of-support, it never repeats.
+var below_minspec_modal_shown: bool = false
+
 # Which controls the first-entry overlay has already labelled (ControlsFtueOverlay ids).
 var controls_ftue_shown: PackedStringArray = []
 
@@ -639,6 +651,19 @@ func load_from_settings_file():
 		"config", "low_spec_warning_shown", data_default.low_spec_warning_shown
 	)
 
+	self.end_of_device_support_first_detected_unix = settings_file.get_value(
+		"config",
+		"end_of_device_support_first_detected_unix",
+		data_default.end_of_device_support_first_detected_unix
+	)
+	self.end_of_device_support_modal_shown_count = settings_file.get_value(
+		"config",
+		"end_of_device_support_modal_shown_count",
+		data_default.end_of_device_support_modal_shown_count
+	)
+	self.below_minspec_modal_shown = settings_file.get_value(
+		"config", "below_minspec_modal_shown", data_default.below_minspec_modal_shown
+	)
 	self.controls_ftue_shown = settings_file.get_value(
 		"config", "controls_ftue_shown", data_default.controls_ftue_shown
 	)
@@ -747,6 +772,19 @@ func save_to_settings_file():
 		"config", "day1_notification_scheduled", self.day1_notification_scheduled
 	)
 	new_settings_file.set_value("config", "low_spec_warning_shown", self.low_spec_warning_shown)
+	new_settings_file.set_value(
+		"config",
+		"end_of_device_support_first_detected_unix",
+		self.end_of_device_support_first_detected_unix
+	)
+	new_settings_file.set_value(
+		"config",
+		"end_of_device_support_modal_shown_count",
+		self.end_of_device_support_modal_shown_count
+	)
+	new_settings_file.set_value(
+		"config", "below_minspec_modal_shown", self.below_minspec_modal_shown
+	)
 	new_settings_file.set_value("config", "controls_ftue_shown", self.controls_ftue_shown)
 	new_settings_file.set_value("config", "ftue_tutorial_offered", self.ftue_tutorial_offered)
 	new_settings_file.set_value("config", "ftue_tutorial_completed", self.ftue_tutorial_completed)

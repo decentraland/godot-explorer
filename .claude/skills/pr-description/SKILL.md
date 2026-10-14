@@ -128,6 +128,9 @@ Follow `REVIEW.md` §4 exactly. In short:
   (*"CI: Static checks + Clippy green"*). Do not invent cases.
 - **Behaviour change**: one block per case. **Setup** line only when the required state is
   non-obvious (specific wearables, second account, guest vs signed-in, a deeplink or flag).
+  **Deeplinks** go in the Test plan as `https://mobile.dclexplorer.com/open?...` links
+  (`realm=`, `position=` / `location=`, other params as needed), never `decentraland://`, so QA
+  taps one link and lands in the right place; the case's first step is "Open the link above".
   **Steps** numbered, one user action per line, **starting from opening the app**, with concrete
   on-screen names and values. **Expected** result observable enough to mark pass/fail without
   reading code. A **Regression** line whenever shared code was touched. Platform only when the

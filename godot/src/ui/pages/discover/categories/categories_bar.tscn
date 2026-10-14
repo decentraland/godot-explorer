@@ -2,8 +2,10 @@
 
 [ext_resource type="Script" uid="uid://bl7drgk24rxl1" path="res://src/ui/pages/discover/categories/categories_bar.gd" id="1_vj73w"]
 
-[node name="CategoriesBar" type="HBoxContainer" unique_id=736185290]
+[node name="CategoriesBar" type="HFlowContainer" unique_id=736185290]
 size_flags_horizontal = 3
 size_flags_vertical = 3
-theme_override_constants/separation = 10
+theme_override_constants/h_separation = 10
+theme_override_constants/v_separation = 10
 script = ExtResource("1_vj73w")
+metadata/mobile_preview_orientation = "portrait"
