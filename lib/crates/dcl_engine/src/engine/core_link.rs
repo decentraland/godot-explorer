@@ -89,6 +89,7 @@ pub(super) fn control_payload(control: &Control) -> (&'static str, VarDictionary
             "set_color",
             vdict! { "target": color_target_name(*target), "color": color.clone() },
         ),
+        Control::SetPreviewUrl { url } => ("set_preview_url", vdict! { "url": url.clone() }),
         Control::PlayPreviewEmote { urn } => ("play_preview_emote", vdict! { "urn": urn.clone() }),
         Control::SetEmoteSlot { slot, urn } => (
             "set_emote_slot",

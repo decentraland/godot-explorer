@@ -210,6 +210,7 @@ fn every_control_maps_to_a_kind_with_typed_args(_ctx: &TestContext) {
         Control::SetBodyShape { urn: String::new() },
         Control::PlayPreviewEmote { urn: String::new() },
         Control::RandomizeAvatar,
+        Control::SetPreviewUrl { url: String::new() },
         Control::SetName {
             name: String::new(),
         },
@@ -230,6 +231,7 @@ fn every_control_maps_to_a_kind_with_typed_args(_ctx: &TestContext) {
             "set_body_shape",
             "play_preview_emote",
             "randomize_avatar",
+            "set_preview_url",
             "set_name"
         ]
     );

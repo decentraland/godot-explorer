@@ -8468,6 +8468,7 @@ export enum Control_Tags {
   PlayPreviewEmote = 'PlayPreviewEmote',
   SetEmoteSlot = 'SetEmoteSlot',
   RandomizeAvatar = 'RandomizeAvatar',
+  SetPreviewUrl = 'SetPreviewUrl',
   SetName = 'SetName',
 }
 /**
@@ -8880,6 +8881,35 @@ export const Control = (() => {
     }
   }
 
+  type SetPreviewUrl__interface = {
+    tag: Control_Tags.SetPreviewUrl;
+    inner: Readonly<{ url: string }>;
+  };
+  /**
+   * Hot reload: the preview server the scenes of the world follow.
+   */
+  class SetPreviewUrl_ extends UniffiEnum implements SetPreviewUrl__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'Control';
+    readonly tag = Control_Tags.SetPreviewUrl;
+    readonly inner: Readonly<{ url: string }>;
+    constructor(inner: { url: string }) {
+      super('Control', 'SetPreviewUrl');
+
+      this.inner = Object.freeze(inner);
+    }
+    static new(inner: { url: string }): SetPreviewUrl_ {
+      return new SetPreviewUrl_(inner);
+    }
+
+    static instanceOf(obj: any): obj is SetPreviewUrl_ {
+      return obj.tag === Control_Tags.SetPreviewUrl;
+    }
+  }
+
   type SetName__interface = {
     tag: Control_Tags.SetName;
     inner: Readonly<{ name: string }>;
@@ -8927,6 +8957,7 @@ export const Control = (() => {
     PlayPreviewEmote: PlayPreviewEmote_,
     SetEmoteSlot: SetEmoteSlot_,
     RandomizeAvatar: RandomizeAvatar_,
+    SetPreviewUrl: SetPreviewUrl_,
     SetName: SetName_,
   });
 })();
@@ -8951,6 +8982,7 @@ export type Control = InstanceType<
     | 'PlayPreviewEmote'
     | 'SetEmoteSlot'
     | 'RandomizeAvatar'
+    | 'SetPreviewUrl'
     | 'SetName']
 >;
 
@@ -9021,6 +9053,10 @@ const FfiConverterTypeControl = (() => {
         case 15:
           return new Control.RandomizeAvatar();
         case 16:
+          return new Control.SetPreviewUrl({
+            url: FfiConverterString.readFromCursor(c),
+          });
+        case 17:
           return new Control.SetName({
             name: FfiConverterString.readFromCursor(c),
           });
@@ -9120,8 +9156,14 @@ const FfiConverterTypeControl = (() => {
           c.writeI32(15);
           return;
         }
-        case Control_Tags.SetName: {
+        case Control_Tags.SetPreviewUrl: {
           c.writeI32(16);
+          const inner = value.inner;
+          FfiConverterString.writeIntoCursor(inner.url, c);
+          return;
+        }
+        case Control_Tags.SetName: {
+          c.writeI32(17);
           const inner = value.inner;
           FfiConverterString.writeIntoCursor(inner.name, c);
           return;
@@ -9221,6 +9263,12 @@ const FfiConverterTypeControl = (() => {
         }
         case Control_Tags.RandomizeAvatar: {
           return 4;
+        }
+        case Control_Tags.SetPreviewUrl: {
+          const inner = value.inner;
+          let size = 4;
+          size += FfiConverterString.allocationSize(inner.url);
+          return size;
         }
         case Control_Tags.SetName: {
           const inner = value.inner;

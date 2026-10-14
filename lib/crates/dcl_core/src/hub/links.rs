@@ -83,6 +83,9 @@ impl Hub {
                 Effect::Config {
                     param: ConfigParam::EnableUpgradedDeletion,
                 } => self.allow_upgraded_deletion(),
+                Effect::SetPreviewUrl { url } => {
+                    self.with_app(|app| app.control(crate::app::Control::SetPreviewUrl { url }))
+                }
                 other => rest.push(other),
             }
         }

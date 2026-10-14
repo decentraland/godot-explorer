@@ -545,6 +545,44 @@ fn a_link_that_navigates_returns_the_destination_to_the_shell() {
     assert!(desktop.routed.navigation.is_none());
 }
 
+#[derive(Default)]
+struct Sink(Mutex<Vec<crate::app::EngineCommand>>);
+
+impl crate::app::EngineSink for Sink {
+    fn send(&self, command: crate::app::EngineCommand) {
+        self.0.lock().unwrap().push(command);
+    }
+}
+
+#[test]
+fn a_preview_link_points_the_engine_at_the_preview_server_and_is_not_left_to_the_shell() {
+    use crate::app::{Control, EngineCommand};
+    use crate::deep_link_route::{Effect, StartKind};
+    let s = setup();
+    signed_out(&s);
+    let sink = Arc::new(Sink::default());
+    s.hub.with_app(|app| app.engine_attach(sink.clone()));
+
+    let outcome = s.hub.route_deep_link(
+        "decentraland://open?preview=http://192.168.1.2:8000",
+        StartKind::Warm,
+        crate::Platform::Android,
+    );
+
+    assert!(!outcome
+        .routed
+        .effects
+        .iter()
+        .any(|effect| matches!(effect, Effect::SetPreviewUrl { .. })));
+    assert!(sink
+        .0
+        .lock()
+        .unwrap()
+        .contains(&EngineCommand::Control(Control::SetPreviewUrl {
+            url: "http://192.168.1.2:8000".into()
+        })));
+}
+
 #[test]
 fn a_kept_report_reaches_the_listeners_with_the_tags_and_a_dropped_one_does_not() {
     use crate::report::{BuildEnvironment, ReportContext, ReportEvent, ReportSource};

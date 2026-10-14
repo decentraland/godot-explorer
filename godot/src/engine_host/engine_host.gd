@@ -24,6 +24,7 @@ var _avatar_host_up := false
 var _exiting := false
 var _entering := false
 var _pending_enter: Dictionary = {}
+var _preview_url := ""
 
 
 func _ready() -> void:
@@ -90,6 +91,10 @@ func _on_core_command(kind: String, args: Dictionary) -> void:
 				_backpack.async_open(rect)
 		"hide_avatar_preview":
 			_backpack.close()
+		"set_preview_url":
+			_preview_url = args.url
+			if _explorer != null:
+				Global.scene_fetcher.set_preview_url(_preview_url)
 		"focus_camera":
 			_backpack.focus_camera(args.focus)
 		_:
@@ -151,6 +156,8 @@ func _async_enter_world(args: Dictionary) -> void:
 	_entering = true
 	_explorer = null
 	var parcel := Vector2i(args.x, args.y)
+	if not _preview_url.is_empty():
+		Global.deep_link_obj.preview = _preview_url
 	var started := await EngineWorld.async_enter(
 		parcel, args.realm, func() -> bool: return not _entering
 	)

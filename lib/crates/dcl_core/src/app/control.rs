@@ -85,6 +85,10 @@ pub enum Control {
         urn: String,
     },
     RandomizeAvatar,
+    /// Hot reload: the preview server the scenes of the world follow.
+    SetPreviewUrl {
+        url: String,
+    },
     SetName {
         name: String,
     },
