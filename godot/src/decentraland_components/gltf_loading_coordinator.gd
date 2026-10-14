@@ -115,6 +115,10 @@ func get_stats() -> Dictionary:
 	}
 
 
+func _ready() -> void:
+	FrameWorkBudget.ensure_driver()
+
+
 #region Public API — called by gltf_container.gd
 
 
@@ -306,6 +310,10 @@ func _ensure_load_pump() -> void:
 # gdlint:ignore = async-function-name
 func _run_load_pump() -> void:
 	while not _load_queue.is_empty() or not _threaded_loading.is_empty():
+		# Off the loading screen the pump is one FrameWorkBudget step that batches while time is left.
+		if not FrameWorkBudget.loading:
+			# Priority: scene models must not queue behind remote avatar builds.
+			await FrameWorkBudget.async_acquire("GltfCoordinator::pump", null, true)
 		var frame_t0 := Time.get_ticks_usec()
 		var realized: Array = []  # [group, batch] pairs realized this frame
 
@@ -353,6 +361,8 @@ func _run_load_pump() -> void:
 			if not batch.is_empty():
 				realized.append([group, batch])
 			if Time.get_ticks_usec() - frame_t0 >= LOAD_PUMP_BUDGET_USEC:
+				break
+			if not FrameWorkBudget.loading and not FrameWorkBudget.has_time():
 				break
 		_stats_pump_frames += 1
 		_stats_pump_usec += Time.get_ticks_usec() - frame_t0
