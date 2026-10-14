@@ -203,6 +203,8 @@ pub enum SegmentEvent {
     Loading(Box<SegmentEventLoading>),
     GuestWalletCreation(SegmentEventGuestWalletCreation),
     ReviewPrompted(SegmentEventReviewPrompted),
+    LoginStreakDayCounted(SegmentEventLoginStreakDayCounted),
+    LoginStreakClaim(SegmentEventLoginStreakClaim),
     RequestResult(SegmentEventRequestResult),
     SceneLocaleRequested(SegmentEventSceneLocaleRequested),
     PushOpened(SegmentEventPushOpened),
@@ -602,6 +604,23 @@ pub struct SegmentEventReviewPrompted {
     pub trigger_id: String,
 }
 
+/// LOGIN_STREAK_DAY_COUNTED (issue #3018): a day was credited to the 7-day login streak.
+#[derive(Serialize, Clone)]
+pub struct SegmentEventLoginStreakDayCounted {
+    // Day just credited, 1..=7.
+    pub day: u32,
+    pub is_guest: bool,
+}
+
+/// LOGIN_STREAK_CLAIM (issue #3018): a D3 or D7 reward claim resolved.
+#[derive(Serialize, Clone)]
+pub struct SegmentEventLoginStreakClaim {
+    // "d3" | "d7".
+    pub reward: String,
+    // "success" | "error".
+    pub result: String,
+}
+
 #[derive(Serialize, Clone)]
 pub struct SegmentEventScreenViewed {
     // Name of the screen viewed.
@@ -961,6 +980,16 @@ pub fn build_segment_event_batch_item(
         ),
         SegmentEvent::ReviewPrompted(event) => (
             "review_prompted".to_string(),
+            serde_json::to_value(event).unwrap(),
+            None,
+        ),
+        SegmentEvent::LoginStreakDayCounted(event) => (
+            "LOGIN_STREAK_DAY_COUNTED".to_string(),
+            serde_json::to_value(event).unwrap(),
+            None,
+        ),
+        SegmentEvent::LoginStreakClaim(event) => (
+            "LOGIN_STREAK_CLAIM".to_string(),
             serde_json::to_value(event).unwrap(),
             None,
         ),

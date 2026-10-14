@@ -193,6 +193,23 @@ var review_session_count: int = 0
 var review_shots_fired: int = 0
 var review_last_shot_unix: int = 0
 
+# 7-day login streak cadence (issue #3018). streak_progress_day is the furthest day credited in
+# the current cycle (0..7); streak_last_credit_day_unix is the local-midnight-truncated timestamp
+# of the last credited day, used to detect same-day/consecutive-day/missed-day gaps on the next
+# jump-in. streak_d3_claimed/streak_d7_claimed are per-reward entitlements that survive a later
+# progress reset (see StreakManager). streak_pending_modal queues which modal Discover should show
+# on its next landing, set by the credit step and consumed once. streak_current_reminder_shown_day
+# is the day number the "come finish today's mission" reminder was last shown for (Figma
+# "D2-Streak" vs "D2-Streak-Completed" — the pending day's own reminder, distinct from the
+# post-credit celebration), so it fires once per pending day rather than on every Discover
+# landing. See StreakManager.
+var streak_progress_day: int = 0
+var streak_last_credit_day_unix: int = 0
+var streak_d3_claimed: bool = false
+var streak_d7_claimed: bool = false
+var streak_pending_modal: String = ""
+var streak_current_reminder_shown_day: int = 0
+
 # Unix timestamp (seconds) of the last OS notification-permission prompt. Throttles
 # re-prompts (see NotificationsManager.PERMISSION_PROMPT_COOLDOWN_SEC): a denied
 # request — which on Android returns immediately without a dialog — isn't re-attempted
@@ -584,6 +601,30 @@ func load_from_settings_file():
 		"user", "review_last_shot_unix", data_default.review_last_shot_unix
 	)
 
+	self.streak_progress_day = settings_file.get_value(
+		"user", "streak_progress_day", data_default.streak_progress_day
+	)
+
+	self.streak_last_credit_day_unix = settings_file.get_value(
+		"user", "streak_last_credit_day_unix", data_default.streak_last_credit_day_unix
+	)
+
+	self.streak_d3_claimed = settings_file.get_value(
+		"user", "streak_d3_claimed", data_default.streak_d3_claimed
+	)
+
+	self.streak_d7_claimed = settings_file.get_value(
+		"user", "streak_d7_claimed", data_default.streak_d7_claimed
+	)
+
+	self.streak_pending_modal = settings_file.get_value(
+		"user", "streak_pending_modal", data_default.streak_pending_modal
+	)
+
+	self.streak_current_reminder_shown_day = settings_file.get_value(
+		"user", "streak_current_reminder_shown_day", data_default.streak_current_reminder_shown_day
+	)
+
 	self.notif_permission_last_prompt_unix = settings_file.get_value(
 		"user", "notif_permission_last_prompt_unix", data_default.notif_permission_last_prompt_unix
 	)
@@ -763,5 +804,15 @@ func save_to_settings_file():
 	new_settings_file.set_value("user", "review_session_count", self.review_session_count)
 	new_settings_file.set_value("user", "review_shots_fired", self.review_shots_fired)
 	new_settings_file.set_value("user", "review_last_shot_unix", self.review_last_shot_unix)
+	new_settings_file.set_value("user", "streak_progress_day", self.streak_progress_day)
+	new_settings_file.set_value(
+		"user", "streak_last_credit_day_unix", self.streak_last_credit_day_unix
+	)
+	new_settings_file.set_value("user", "streak_d3_claimed", self.streak_d3_claimed)
+	new_settings_file.set_value("user", "streak_d7_claimed", self.streak_d7_claimed)
+	new_settings_file.set_value("user", "streak_pending_modal", self.streak_pending_modal)
+	new_settings_file.set_value(
+		"user", "streak_current_reminder_shown_day", self.streak_current_reminder_shown_day
+	)
 	new_settings_file.set_value("analytics", "user_id", self.analytics_user_id)
 	new_settings_file.save(DclConfig.get_settings_file_path())

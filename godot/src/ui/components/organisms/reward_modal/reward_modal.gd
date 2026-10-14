@@ -1,6 +1,13 @@
 class_name RewardModal
 extends ColorRect
 
+## Emitted once the claim request actually resolves — NOT when the modal is merely shown; the
+## player still has to tap Claim. `success` is true for a fresh grant or an already-claimed item
+## (the entitlement is confirmed either way), false for any error. Callers that need to react to
+## the outcome (e.g. StreakManager.mark_claimed) connect to this instead of assuming "shown" means
+## "claimed".
+signal claim_resolved(success: bool)
+
 ## Two-minute window (in seconds) used to tell a fresh claim apart from an item the
 ## wallet already owned, mirroring Genesis' claim.ts `assigned_at` check.
 const ALREADY_CLAIMED_WINDOW_SEC := 120.0
@@ -228,6 +235,7 @@ func _reveal_claimed() -> void:
 	if is_instance_valid(label_tap_to_continue):
 		label_tap_to_continue.visible = true
 	animation_player.play("claim")
+	claim_resolved.emit(true)
 
 
 ## Maps a rewards-server error code to user-facing copy. Unknown codes fall through to a
@@ -256,3 +264,4 @@ func _show_error(message: String) -> void:
 	button_claim.disabled = false
 	button_claim.text = tr("REWARD_MODAL_CLAIM_REWARD")
 	label_text.text = message
+	claim_resolved.emit(false)

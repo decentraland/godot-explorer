@@ -1,0 +1,88 @@
+class_name StreakDayRow
+extends MarginContainer
+
+## Renders the 7-day pill row for the login streak (issue #3018). Figma: "Streak panel"
+## (file SKoahICmYk21D8GKErKxYK, node 21:5538 / 11:1305) — the bordered gradient card IS this
+## component, reused verbatim by the streak modal and the Discover widget (neither wraps it in
+## another card). Root is a MarginContainer with negative margins (lets the %Background
+## NinePatchRect bleed past this node's own layout footprint) wrapping an inner HBoxContainer
+## that lays out the 7 StreakDayPill children, instanced at runtime by render().
+
+const DAY_COUNT := 7
+
+@export var streak_day_pill_scene: PackedScene
+
+var _pills: Array[StreakDayPill] = []
+
+@onready var row: HBoxContainer = %Row
+
+
+func _ensure_pills() -> void:
+	if not _pills.is_empty():
+		return
+	for i in range(DAY_COUNT):
+		if i > 0:
+			# Grows/shrinks to absorb all extra row width so the pills themselves stay at their
+			# own fixed size and the MarginContainer's side margins never stretch.
+			var spacer := Control.new()
+			spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			row.add_child(spacer)
+		var pill := streak_day_pill_scene.instantiate() as StreakDayPill
+		row.add_child(pill)
+		_pills.append(pill)
+
+
+## @param progress_day: furthest day actually credited (0..7) — always rendered DONE/REWARD_PASSED,
+## never a "today" highlight, since by the time anything shows progress_day's jump-in already
+## happened (issue #3018 / Figma "Widget-Discover-Complete": a completed day always reads as the
+## checked pill, with no distinct "today" look).
+## @param reward_days: 1-indexed days that grant a reward (D3 checkpoint + D7 final by default).
+## @param claimed_days: 1-indexed reward days already claimed — rendered with REWARD_DONE's
+## distinct (green, claimed) look, even though the progress floor can later reset back to that
+## same day (issue #3018: "the Day 3 reward is not lost when the streak breaks").
+## @param today_day: which day gets the "current, not yet done" TODAY/REWARD_TODAY look — defaults
+## to progress_day itself (the streak modal's own behavior: it only ever shows right after a
+## credit, so the day it's celebrating IS "today"). The Discover widget is visible at any time,
+## including before today's jump-in, so it passes StreakManager.get_pending_today_day() here
+## instead — a day strictly after progress_day, or 0 when today is already credited (Figma
+## "Widget-Discover" vs "Widget-Discover-Complete").
+func render(
+	progress_day: int,
+	reward_days: Array[int] = [3, 7],
+	claimed_days: Array[int] = [],
+	today_day: int = -1
+) -> void:
+	if today_day < 0:
+		today_day = progress_day
+	_ensure_pills()
+	for i in range(DAY_COUNT):
+		var day_number := i + 1
+		var is_reward_day := day_number in reward_days
+		var is_today := day_number == today_day and today_day > 0 and today_day < DAY_COUNT
+		var state: StreakDayPill.State
+		if day_number in claimed_days:
+			state = StreakDayPill.State.REWARD_DONE
+		elif day_number <= progress_day:
+			if is_reward_day:
+				# Distinct looks: "today is this reward day" vs "already past it, still
+				# unclaimed" — Figma ships these as two separate exports, not one shared state.
+				state = (
+					StreakDayPill.State.REWARD_TODAY
+					if is_today
+					else StreakDayPill.State.REWARD_PASSED
+				)
+			else:
+				# A credited plain day is always DONE, never TODAY — TODAY is reserved for the
+				# still-pending day (day_number > progress_day below). Leftover bug: this used to
+				# also highlight day_number == today_day here, which showed the day you just
+				# credited as "current" instead of checked.
+				state = StreakDayPill.State.DONE
+		elif is_today:
+			state = (
+				StreakDayPill.State.REWARD_TODAY if is_reward_day else StreakDayPill.State.TODAY
+			)
+		elif is_reward_day:
+			state = StreakDayPill.State.REWARD_LOCKED
+		else:
+			state = StreakDayPill.State.FUTURE
+		_pills[i].set_state(day_number, state)

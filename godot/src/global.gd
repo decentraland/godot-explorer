@@ -126,6 +126,8 @@ var locations: Node
 var modal_manager: ModalManager
 var upgrade_nudge_coordinator: UpgradeNudgeCoordinator
 var review_prompt_coordinator: ReviewPromptCoordinator
+var streak_manager: StreakManager
+var streak_modal_controller: StreakModalController
 
 var standalone = false
 
@@ -690,6 +692,14 @@ func _ready():
 	self.review_prompt_coordinator = load("res://src/review_prompt_coordinator.gd").new()
 	self.review_prompt_coordinator.set_name("review_prompt_coordinator")
 
+	self.streak_manager = load("res://src/logic/streak_manager.gd").new()
+	self.streak_manager.set_name("streak_manager")
+
+	self.streak_modal_controller = (
+		load("res://src/ui/components/organisms/streak_modal/streak_modal_controller.gd").new()
+	)
+	self.streak_modal_controller.set_name("streak_modal_controller")
+
 	get_tree().root.add_child.call_deferred(self.cli)
 	get_tree().root.add_child.call_deferred(self.music_player)
 	get_tree().root.add_child.call_deferred(self.scene_fetcher)
@@ -698,6 +708,8 @@ func _ready():
 	get_tree().root.add_child.call_deferred(self.modal_manager)
 	get_tree().root.add_child.call_deferred(self.upgrade_nudge_coordinator)
 	get_tree().root.add_child.call_deferred(self.review_prompt_coordinator)
+	get_tree().root.add_child.call_deferred(self.streak_manager)
+	get_tree().root.add_child.call_deferred(self.streak_modal_controller)
 	get_tree().root.add_child.call_deferred(self.content_provider)
 	get_tree().root.add_child.call_deferred(self.scene_runner)
 	get_tree().root.add_child.call_deferred(self.realm)

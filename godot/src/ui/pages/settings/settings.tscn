@@ -25,7 +25,7 @@
 [ext_resource type="PackedScene" uid="uid://o5vt3nrlfw3j" path="res://src/ui/components/atoms/buttons/custom_button/custom_button.tscn" id="22_mwb5b"]
 [ext_resource type="FontFile" uid="uid://d2vlaexk003yw" path="res://assets/themes/fonts/inter/Inter-Medium.ttf" id="23_c03rv"]
 [ext_resource type="PackedScene" uid="uid://bij0xgcmb6ivs" path="res://src/ui/components/atoms/inputs/line_edit_custom/line_edit_custom.tscn" id="24_47ptg"]
-[ext_resource type="PackedScene" path="res://src/ui/components/molecules/settings_warning/settings_warning.tscn" id="24_hsnd0"]
+[ext_resource type="PackedScene" uid="uid://42hlc2a47tn2" path="res://src/ui/components/molecules/settings_warning/settings_warning.tscn" id="24_hsnd0"]
 [ext_resource type="Texture2D" uid="uid://c24qpurggpmfj" path="res://assets/ui/open-external-link.svg" id="24_jf4mt"]
 [ext_resource type="Script" uid="uid://c2g5q0fivu5hs" path="res://src/ui/layouts/orientation_spacer.gd" id="24_nqmh4"]
 [ext_resource type="StyleBox" uid="uid://dkykkgjyku6h1" path="res://assets/themes/secondary_outlined_normal.tres" id="26_30x8d"]
@@ -89,6 +89,8 @@ Label/colors/font_color = Color(0.164706, 0.164706, 0.164706, 1)
 Label/font_sizes/font_size = 19
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_ewc0a"]
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_hsnd0"]
 
 [sub_resource type="LabelSettings" id="LabelSettings_30x8d"]
 font = ExtResource("16_blskf")
@@ -1032,7 +1034,6 @@ is_percentage = true
 
 [node name="VBoxContainer_Advanced" type="VBoxContainer" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections" unique_id=2077198387]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
 mouse_filter = 2
 theme = SubResource("Theme_3h20j")
@@ -1050,6 +1051,46 @@ layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 24
 theme_override_styles/separator = SubResource("StyleBoxEmpty_ewc0a")
+
+[node name="StreakDayDebug" type="VBoxContainer" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced" unique_id=1988369848]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="HBoxContainer_StreakDayButtons" type="HBoxContainer" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/StreakDayDebug" unique_id=608744698]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="Label_StreakDayTitle" type="Label" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/StreakDayDebug/HBoxContainer_StreakDayButtons" unique_id=638726586]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_fonts/font = ExtResource("16_blskf")
+theme_override_font_sizes/font_size = 14
+text = "SETTINGS_STREAK_DAY_TITLE"
+label_settings = ExtResource("17_67hd5")
+
+[node name="VSeparator" type="VSeparator" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/StreakDayDebug/HBoxContainer_StreakDayButtons" unique_id=1073565131]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/separator = SubResource("StyleBoxEmpty_hsnd0")
+
+[node name="Button_StreakAdvanceDay" type="Button" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/StreakDayDebug/HBoxContainer_StreakDayButtons" unique_id=1797213665]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(64, 0)
+layout_mode = 2
+tooltip_text = "SETTINGS_STREAK_ADVANCE_DAY"
+theme = ExtResource("12_sa1v7")
+theme_override_font_sizes/font_size = 39
+text = "+"
+
+[node name="Button_StreakRewindDay" type="Button" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/StreakDayDebug/HBoxContainer_StreakDayButtons" unique_id=848562720]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(64, 0)
+layout_mode = 2
+tooltip_text = "SETTINGS_STREAK_REWIND_DAY"
+theme = ExtResource("12_sa1v7")
+theme_override_font_sizes/font_size = 39
+text = "-"
 
 [node name="HBoxContainer5" type="VBoxContainer" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced" unique_id=1392654186]
 layout_mode = 2
@@ -1387,6 +1428,7 @@ portrait_minimum_size = Vector2(0, 24)
 
 [node name="VBoxContainer_HelpSupport" type="VBoxContainer" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections" unique_id=1900000001]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 mouse_filter = 2
 theme = SubResource("Theme_5xlkc")
@@ -1628,6 +1670,7 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_47ptg")
 
 [node name="AvatarPreview_Account" parent="." unique_id=771001010 instance=ExtResource("29_avatar")]
 unique_name_in_owner = true
+visible = false
 layout_mode = 1
 mouse_filter = 0
 stretch = true
@@ -1660,6 +1703,8 @@ preview_margin_right = 20
 [connection signal="value_changed" from="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Audio/VBoxContainer/AvatarAndEmotesVolume" to="." method="_on_avatar_and_emotes_volume_value_changed"]
 [connection signal="value_changed" from="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Audio/VBoxContainer/VoiceChatVolume" to="." method="_on_h_slider_voice_chat_volume_value_changed"]
 [connection signal="value_changed" from="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Audio/VBoxContainer/MicAmplification" to="." method="_on_h_slider_mic_amplification_value_changed"]
+[connection signal="pressed" from="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/StreakDayDebug/HBoxContainer_StreakDayButtons/Button_StreakAdvanceDay" to="." method="_on_button_streak_advance_day_pressed"]
+[connection signal="pressed" from="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/StreakDayDebug/HBoxContainer_StreakDayButtons/Button_StreakRewindDay" to="." method="_on_button_streak_rewind_day_pressed"]
 [connection signal="toggled" from="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/SceneLogsEnabled/CheckButton_SceneLogsEnabled" to="." method="_on_check_button_scene_logs_enabled_toggled"]
 [connection signal="toggled" from="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/RaycastDebugger/CheckButton_RaycastDebugger" to="." method="_on_check_button_raycast_debugger_toggled"]
 [connection signal="toggled" from="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/ShowInteractableArea/CheckButton_ShowInteractableArea" to="." method="_on_check_button_show_interactable_area_toggled"]

@@ -23,6 +23,12 @@ const CAMPAIGNS := {
 		"Vn0WimL5RjKMpIeDoJIvHfz9lBI490tEkvYXoPEK5Ts=.3QEbxeMg9QXkY/vZrcZyDUYNL0MFrHFatF/KZJ1g7WA=",
 		"urn": "",
 	},
+	# TODO(#3018): login-streak D3 item — not published yet, blocked on content. Empty
+	# campaign_id/campaign_key surface reward_modal's existing "out of stock" claim error
+	# until the real campaign exists; don't fill these in with placeholder credentials.
+	"LoginStreakD3": {"campaign_id": "", "campaign_key": "", "urn": ""},
+	# TODO(#3018): login-streak D7 reward ("Corona de Fuego" is a placeholder name) — same as above.
+	"LoginStreakD7": {"campaign_id": "", "campaign_key": "", "urn": ""},
 }
 
 
