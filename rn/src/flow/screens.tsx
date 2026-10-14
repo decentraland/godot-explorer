@@ -4,7 +4,6 @@ import {
   Image,
   KeyboardAvoidingView,
   Linking,
-  Platform,
   Pressable,
   StyleSheet,
   TextInput,
@@ -205,10 +204,7 @@ export function NamingScreen({
   const [name, setName] = useState(initial);
   const valid = isValidName(name);
   return (
-    <KeyboardAvoidingView
-      style={styles.fill}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
+    <KeyboardAvoidingView style={styles.fill} behavior="padding">
       <FlowFrame onBack={onBack}>
         <AppText variant="heading" style={styles.titleLeft}>
           {t('FLOW_NAME_TITLE')}
@@ -270,10 +266,7 @@ function TextStep({
 }) {
   const [value, setValue] = useState(initial);
   return (
-    <KeyboardAvoidingView
-      style={styles.fill}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
+    <KeyboardAvoidingView style={styles.fill} behavior="padding">
       <FlowFrame onBack={onBack}>
         <View style={styles.center}>
           <AppText variant="heading" style={styles.title}>
