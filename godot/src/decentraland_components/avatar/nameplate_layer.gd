@@ -85,6 +85,10 @@ static var _plate_ray_targets: Dictionary = {}
 # applied content tier (apply only on change).
 static var _plate_dists: Dictionary = {}
 static var _plate_tiers: Dictionary = {}
+# Focused (crosshair-hovered) avatar, resolved once per frame —
+# Global.get_selected_avatar() is an FFI call and update() runs per avatar.
+static var _focused_frame := -1
+static var _focused_avatar: Variant = null
 
 
 ## The Control to parent nameplates under (screen-space). Created on first use.
@@ -170,8 +174,17 @@ static func update(avatar) -> void:
 				# so close-together avatars' tags (and their chat bubbles, which live
 				# inside the same Control) stay readable.
 				pos = _stack_position(ui, pos, screen_size, view_rect.size)
-				_apply_tier(ui, tier)
-				_plate_dists[ui.get_instance_id()] = {"dist": dist, "focused": focused}
+				# Chat bubbles gate on distance only (#2938) — the crowd cap must not
+				# hide the bubble of someone standing next to you.
+				var show_chat := focused or dist <= TIER_FULL_END
+				_apply_tier(ui, tier, show_chat)
+				# Mutate the entry in place: a fresh Dictionary literal per plate per
+				# frame showed up in allocation profiles.
+				var id: int = ui.get_instance_id()
+				var entry: Dictionary = _plate_dists.get(id, {})
+				entry.dist = dist
+				entry.focused = focused
+				_plate_dists[id] = entry
 				target_a = _tier_alpha(tier, dist, focused)
 			else:
 				_untrack_plate(ui)
@@ -196,7 +209,11 @@ static func update(avatar) -> void:
 
 ## Crosshair-hovered avatar always gets the full tag (#2938).
 static func _is_focused(avatar) -> bool:
-	return Global.get_selected_avatar() == avatar
+	var frame := Engine.get_process_frames()
+	if frame != _focused_frame:
+		_focused_frame = frame
+		_focused_avatar = Global.get_selected_avatar()
+	return _focused_avatar == avatar
 
 
 ## Content tier for a plate at `dist`: distance bands, with the crowd cap
@@ -225,41 +242,50 @@ static func _tier_alpha(tier: int, dist: float, focused: bool) -> float:
 
 
 ## True if this plate is within the CROWD_MAX_FULL closest (focused plates take
-## priority). ponytail: ranks against last-frame distances — a 1-frame lag in a
-## crowd swap is invisible.
+## priority; ties break by instance id so equal-distance plates don't all lose).
+## Plates already FULL get one extra slot of stickiness so borderline crowds
+## don't flicker tiers as people walk. Ranks against last-frame distances — a
+## 1-frame lag in a crowd swap is invisible.
 static func _crowd_allows_full(ui_id: int, dist: float) -> bool:
 	var better := 0
 	for other_id in _plate_dists:
 		if other_id == ui_id:
 			continue
 		var other: Dictionary = _plate_dists[other_id]
-		if other.focused or other.dist < minf(dist, TIER_FULL_END):
+		# Only close or focused plates compete for full-tier slots.
+		if not other.focused and other.dist > TIER_FULL_END:
+			continue
+		if other.focused or other.dist < dist or (other.dist == dist and other_id < ui_id):
 			better += 1
-	return better < CROWD_MAX_FULL
+	var cached = _plate_tiers.get(ui_id)
+	var was_full: bool = cached != null and cached[0] == Tier.FULL
+	return better < CROWD_MAX_FULL + (1 if was_full else 0)
 
 
-## Show/hide the NicknameUI rows for the tier: hash `#xxxx` and chat bubble only
-## in FULL, badge (claimed checkmark + mic) dropped in NAME. Cached per plate —
-## the setters in nickname_ui.gd (mic/name_claimed) re-apply on their own writes.
-static func _apply_tier(ui: Control, tier: int) -> void:
+## Show/hide the NicknameUI rows for the tier: hash `#xxxx` only in FULL, badge
+## (claimed checkmark + mic) dropped in NAME; the chat bubble follows distance
+## (`show_chat`), not the capped tier. Cached per plate — the setters in
+## nickname_ui.gd (mic/name_claimed) re-apply on their own writes.
+static func _apply_tier(ui: Control, tier: int, show_chat: bool) -> void:
 	var id := ui.get_instance_id()
-	if _plate_tiers.get(id, -1) == tier:
+	var cached = _plate_tiers.get(id)
+	if cached != null and cached[0] == tier and cached[1] == show_chat:
 		return
-	_plate_tiers[id] = tier
-	_set_tier_nodes(ui, tier)
+	_plate_tiers[id] = [tier, show_chat]
+	_set_tier_nodes(ui, tier, show_chat)
 
 
 ## Re-apply the cached tier after a nickname_ui setter (mic, name_claimed) wrote
 ## row visibility directly. No-op for plates without an applied tier.
 static func reassert_tier(ui: Control) -> void:
-	var tier: int = _plate_tiers.get(ui.get_instance_id(), -1)
-	if tier != -1:
-		_set_tier_nodes(ui, tier)
+	var cached = _plate_tiers.get(ui.get_instance_id())
+	if cached != null:
+		_set_tier_nodes(ui, cached[0], cached[1])
 
 
-static func _set_tier_nodes(ui: Control, tier: int) -> void:
+static func _set_tier_nodes(ui: Control, tier: int, show_chat: bool) -> void:
 	ui.hash_container.visible = tier == Tier.FULL and not ui.name_claimed
-	ui.message_clip.visible = tier == Tier.FULL
+	ui.message_clip.visible = show_chat
 	ui.checkmark_container.visible = tier != Tier.NAME and ui.name_claimed
 	ui.mic_enabled_icon.visible = tier != Tier.NAME and ui.mic_enabled
 
@@ -291,7 +317,7 @@ static func update_occlusion(avatar) -> void:
 ## Soft de-overlap: each visible plate carries an offset from its projected anchor.
 ## The offset springs home when unconstrained, and overlaps push it apart — along
 ## the axis of least penetration (sideways when cheaper, else up) — easing by a
-## fraction per frame. ponytail: O(n²) over visible plates within FADE_END (15m);
+## fraction per frame. ponytail: O(n²) over visible plates within FADE_END (25m);
 ## n is small. Upgrade to a spatial hash if ever laggy.
 static func _stack_position(
 	ui: Control, desired: Vector2, screen_size: Vector2, view_size: Vector2

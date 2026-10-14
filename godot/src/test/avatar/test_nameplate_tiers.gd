@@ -1,20 +1,26 @@
-extends SceneTree
+extends Node
 
 # Tests for NameplateLayer distance tiers + crowd cap (#2938).
 # Pins: tier band boundaries (8/12m), focused override, crowd cap degrading the
-# farthest close plates to the badge tier, and the per-tier alpha targets.
+# farthest close plates to the badge tier (distant plates don't consume slots,
+# ties break by instance id, incumbents keep one slot of stickiness), and the
+# per-tier alpha targets.
 #
-# Run headless:
-#   .bin/godot/godot4_bin --headless --path godot \
-#     --script res://src/test/avatar/test_nameplate_tiers.gd
+# Runs as a scene, not --script: NameplateLayer reaches Global, and --script
+# compiles before the autoloads exist.
+
+## Guards against a silent early return: every check below must have run.
+const EXPECTED_CHECKS := 19
 
 var _failures: Array[String] = []
+var _checks: int = 0
 
 
-func _initialize() -> void:
+func _ready() -> void:
 	_test_tier_bands()
 	_test_focused_override()
 	_test_crowd_cap()
+	_test_crowd_tiebreak_and_stickiness()
 	_test_tier_alpha()
 	_finish()
 
@@ -83,17 +89,55 @@ func _test_crowd_cap() -> void:
 		NameplateLayer.Tier.BADGE,
 		NameplateLayer._content_tier(another, 5.0, false)
 	)
-	# Plates beyond the full band don't consume cap slots.
+	# Plates beyond the full band don't consume cap slots — fill with 7 of them;
+	# if they counted, the cap would be full and `far` would degrade.
 	NameplateLayer._plate_dists.clear()
-	var distant := Control.new()
-	NameplateLayer._plate_dists[distant.get_instance_id()] = {"dist": 15.0, "focused": false}
+	var distant: Array[Control] = []
+	for i in NameplateLayer.CROWD_MAX_FULL:
+		var c := Control.new()
+		distant.append(c)
+		NameplateLayer._plate_dists[c.get_instance_id()] = {"dist": 15.0, "focused": false}
 	_expect(
 		"distant plates don't consume slots",
 		NameplateLayer.Tier.FULL,
 		NameplateLayer._content_tier(far, 5.0, false)
 	)
 	NameplateLayer._plate_dists.clear()
-	for c in nearer + [far, focused, another, distant]:
+	for c in nearer + [far, focused, another] + distant:
+		c.free()
+
+
+func _test_crowd_tiebreak_and_stickiness() -> void:
+	# Equal distances break by instance id. `first` is created before the 7
+	# plates that fill the cap, so it wins every tie; `last` loses them all.
+	NameplateLayer._plate_dists.clear()
+	var first := Control.new()
+	var others: Array[Control] = []
+	for i in NameplateLayer.CROWD_MAX_FULL:
+		var c := Control.new()
+		others.append(c)
+		NameplateLayer._plate_dists[c.get_instance_id()] = {"dist": 5.0, "focused": false}
+	var last := Control.new()
+	_expect(
+		"tie as oldest plate -> stays FULL",
+		NameplateLayer.Tier.FULL,
+		NameplateLayer._content_tier(first, 5.0, false)
+	)
+	_expect(
+		"tie against older plates -> degrades",
+		NameplateLayer.Tier.BADGE,
+		NameplateLayer._content_tier(last, 5.0, false)
+	)
+	# Stickiness: a plate already rendered FULL keeps its slot at one over cap.
+	NameplateLayer._plate_tiers[last.get_instance_id()] = [NameplateLayer.Tier.FULL, true]
+	_expect(
+		"incumbent FULL keeps slot at cap+0",
+		NameplateLayer.Tier.FULL,
+		NameplateLayer._content_tier(last, 5.0, false)
+	)
+	NameplateLayer._plate_tiers.erase(last.get_instance_id())
+	NameplateLayer._plate_dists.clear()
+	for c in others + [first, last]:
 		c.free()
 
 
@@ -124,16 +168,19 @@ func _test_tier_alpha() -> void:
 
 
 func _expect(ctx: String, expected: Variant, actual: Variant) -> void:
+	_checks += 1
 	if expected != actual:
 		_failures.append("%s: expected %s, got %s" % [ctx, expected, actual])
 
 
 func _finish() -> void:
+	if _checks != EXPECTED_CHECKS:
+		_failures.append("ran %d checks, expected %d" % [_checks, EXPECTED_CHECKS])
 	if _failures.is_empty():
 		print("[test_nameplate_tiers] PASS")
-		quit(0)
+		get_tree().quit(0)
 		return
 	for f in _failures:
 		printerr(f)
 	printerr("[test_nameplate_tiers] FAIL: %d case(s)" % _failures.size())
-	quit(1)
+	get_tree().quit(1)
