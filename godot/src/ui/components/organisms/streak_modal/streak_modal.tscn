@@ -6,12 +6,12 @@
 [ext_resource type="Texture2D" uid="uid://ctp3j1f8ikdph" path="res://src/ui/components/organisms/streak_modal/streak-flame-big.png" id="5_da6u2"]
 [ext_resource type="Texture2D" uid="uid://dvikg8vwbu4fs" path="res://src/ui/components/organisms/streak_modal/streak-chip.png" id="5_t1wcr"]
 [ext_resource type="Texture2D" uid="uid://it0wxtlkvw8t" path="res://src/ui/components/organisms/streak_modal/reward-icon.svg" id="8_ro0bi"]
+[ext_resource type="FontFile" uid="uid://ckaye4autekyg" path="res://assets/themes/fonts/inter/Inter-ExtraBold.ttf" id="8_t1wcr"]
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="8_theme"]
 [ext_resource type="FontFile" uid="uid://di6yadh02vrla" path="res://assets/themes/fonts/inter/Inter-Regular.ttf" id="10_ro0bi"]
 [ext_resource type="PackedScene" uid="uid://oyokdq67n0i3" path="res://src/ui/components/atoms/buttons/claim_button/claim_button.tscn" id="12_t1wcr"]
 [ext_resource type="LabelSettings" path="res://src/ui/components/organisms/streak_modal/label-settings-title.tres" id="12_title"]
 [ext_resource type="Texture2D" uid="uid://h5ue7bs7rsiu" path="res://src/ui/components/organisms/streak_modal/reward-pedestal.png" id="15_pedestal"]
-[ext_resource type="LabelSettings" uid="uid://krgyjcs70hvd" path="res://src/ui/components/organisms/streak_modal/label-settings-body-small.tres" id="19_chip_label"]
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="20_footer_bold"]
 [ext_resource type="Texture2D" uid="uid://bwtmy18me7ank" path="res://src/ui/components/organisms/streak_modal/reward-pedestal-claimed.png" id="21_pedestal_claimed"]
 
@@ -34,6 +34,10 @@ shader_parameter/blur_amount = 3.0
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_t1wcr"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_kgder"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_da6u2"]
+font = ExtResource("8_t1wcr")
+font_color = Color(0.27450982, 0.05882353, 0.43529412, 1)
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_da6u2"]
 
@@ -169,7 +173,7 @@ stretch_mode = 5
 [node name="Label" type="Label" parent="VBoxContainer/PanelContainer/MarginContainer2/RewardShowcase/Pedestal/MarginContainer/MarginContainer/HBoxContainer" unique_id=1786737293]
 layout_mode = 2
 text = "STREAK_EXCLUSIVE_REWARD_LABEL"
-label_settings = ExtResource("19_chip_label")
+label_settings = SubResource("LabelSettings_da6u2")
 
 [node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/PanelContainer" unique_id=1674520283]
 layout_mode = 2
