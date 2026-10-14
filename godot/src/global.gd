@@ -212,7 +212,7 @@ var _gltf_load_timeout_coalescer: Node = null
 # Guards sign_out() against re-entrancy. comms.disconnect(true) emits the
 # player_identity.logout signal deferred, which can route back into sign_out() a
 # frame later; without this the whole teardown + scene swap would run twice.
-# Cleared in lobby._ready once we're back on a clean screen.
+# Cleared at the end of sign_out, once the session is gone.
 var _signing_out: bool = false
 
 # Guards return_to_discover() against re-entrancy (e.g. a double tap on the Dev
@@ -677,7 +677,7 @@ func _dcl_swift_lib_smoke_test() -> void:
 
 
 ## Check if first launch benchmark should run (mobile only, first launch or dev builds)
-## This is called by lobby.gd AFTER the loading screen is visible to avoid blocking UI.
+## This is called by the engine host once the engine is up, to avoid blocking the first frames.
 ## Skipped in bench mode: HardwareBenchmark calls viewport_set_measure_render_time and
 ## can clobber the gp_benchmark_runner's measurement state mid-bench.
 func should_run_first_launch_benchmark() -> bool:
@@ -686,7 +686,7 @@ func should_run_first_launch_benchmark() -> bool:
 	return is_mobile() and (not get_config().first_launch_completed or DclGlobal.is_dev())
 
 
-## Run the first launch benchmark. Called by lobby.gd after loading screen is visible.
+## Run the first launch benchmark. Called by the engine host once the engine is up.
 func run_first_launch_benchmark() -> void:
 	if _hardware_benchmark != null:
 		return  # Already running
@@ -979,10 +979,7 @@ func sign_out() -> void:
 	#    (GODOT-EXPLORER-1DY). The orphan is freed by the next recreate_base_ui().
 	scene_runner.detach_base_ui()
 
-	# 9. Swap to a fresh lobby on the next frame, after the current signal/await
-	#    stack fully unwinds (sign_out may have been reached via the deferred
-	#    logout signal). lobby._ready clears _signing_out.
-	get_tree().change_scene_to_file.call_deferred("res://src/ui/pages/auth/lobby.tscn")
+	_signing_out = false
 
 
 ## Soft sign-out used by the Dev Tools "RETURN TO DISCOVER" button. Leaves the
@@ -1199,7 +1196,7 @@ func set_orientation_landscape():
 	# swap, stranding the lobby/login in landscape (issue #2508).
 	if _signing_out or _returning_to_discover:
 		return
-	if cli.rn_host:
+	if engine.is_host_driven():
 		_follow_host_orientation()
 		return
 	# Set orientation BEFORE changing window size so listeners get correct value
@@ -1236,7 +1233,7 @@ func is_orientation_portrait() -> bool:
 
 
 func set_orientation_portrait():
-	if cli.rn_host:
+	if engine.is_host_driven():
 		_follow_host_orientation()
 		return
 	# Set orientation BEFORE changing window size so listeners get correct value

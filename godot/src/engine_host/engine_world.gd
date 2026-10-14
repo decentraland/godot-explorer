@@ -1,9 +1,9 @@
-class_name RnWorld
+class_name EngineWorld
 extends RefCounted
 ## Moves the RN host between the avatar-only scene and the explorer.
 
 const EXPLORER_SCENE := "res://src/ui/explorer.tscn"
-const AVATAR_HOST_SCENE := "res://src/rn_bridge/rn_avatar_host.tscn"
+const AVATAR_HOST_SCENE := "res://src/engine_host/avatar_host.tscn"
 
 # RN flips the device orientation right around enter/exit; building or freeing a world while the
 # Android surface is being recreated crashed the Mali driver, so wait for the window to settle.

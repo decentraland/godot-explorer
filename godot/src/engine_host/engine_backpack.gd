@@ -1,4 +1,4 @@
-class_name RnBackpack
+class_name EngineBackpack
 extends Node
 ## Owns the single avatar preview the React Native screens draw through a hole.
 

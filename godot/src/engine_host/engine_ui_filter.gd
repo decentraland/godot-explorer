@@ -1,4 +1,4 @@
-class_name RnUiFilter
+class_name EngineUiFilter
 extends RefCounted
 ## Hides every Godot UI node except the ones that stay native.
 

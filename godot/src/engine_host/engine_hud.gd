@@ -1,4 +1,4 @@
-class_name RnHud
+class_name EngineHud
 extends RefCounted
 ## Executes the shell's HUD controls (insets, chat, hide UI) and reports the native HUD state.
 
@@ -86,12 +86,16 @@ func _async_on_chat_message(address: String, message: String, timestamp: float) 
 
 func _async_profile(address: String) -> Dictionary:
 	if not _profiles.has(address):
-		var entry := await RnProfileLookup.async_friend_entry(address)
+		var fetched: Variant = await PromiseUtils.async_awaiter(
+			Global.content_provider.fetch_profile(address)
+		)
+		var profile: Variant = null if fetched is PromiseError else fetched
 		if _profiles.size() >= CHAT_CACHE_MAX:
 			_profiles.clear()
 		_profiles[address] = {
-			"name": entry["name"],
-			"has_claimed_name": entry["has_claimed_name"],
-			"profile_picture_url": entry["profile_picture_url"],
+			"name": profile.get_name() if profile != null else address,
+			"has_claimed_name": profile.has_claimed_name() if profile != null else false,
+			"profile_picture_url":
+			profile.get_avatar().get_snapshots_face_url() if profile != null else "",
 		}
 	return _profiles[address]

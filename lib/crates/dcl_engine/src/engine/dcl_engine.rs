@@ -118,6 +118,13 @@ impl DclEngine {
     #[signal]
     pub fn core_command(kind: GString, args: VarDictionary);
 
+    /// Whether the host booted the core before the engine started, i.e. the shell drives the app
+    /// and the engine only renders. False for the emulator, tests and desktop runs.
+    #[func]
+    pub fn is_host_driven(&self) -> bool {
+        Self::core_is_driving()
+    }
+
     /// Loading progress of the world being entered, 0..1.
     #[func]
     pub fn report_loading_progress(&self, progress: f32) {

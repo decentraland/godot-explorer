@@ -33,19 +33,9 @@ pub struct DclCli {
     #[var(get)]
     pub force_mobile: bool,
     #[var(get)]
-    pub skip_lobby: bool,
-    #[var(get)]
-    pub skip_lobby_to_menu: bool,
-    #[var(get)]
-    pub rn_host: bool,
-    #[var(get)]
-    pub rn_avatar_only: bool,
-    #[var(get)]
     pub lighting_renderer: bool,
     #[var(get)]
     pub perf_log: bool,
-    #[var(get)]
-    pub guest_profile: bool,
     #[var(get)]
     pub preview_mode: bool,
     #[var(get)]
@@ -244,26 +234,6 @@ impl DclCli {
                 category: "UI/Display".to_string(),
             },
             ArgDefinition {
-                name: "--skip-lobby".to_string(),
-                description: "Skip the lobby screen and go directly to the explorer".to_string(),
-                arg_type: ArgType::Flag,
-                category: "UI/Display".to_string(),
-            },
-            ArgDefinition {
-                name: "--rn-host".to_string(),
-                description: "Run embedded in a React Native host: hide all Godot UI and expose the RnBridge command/event channel"
-                    .to_string(),
-                arg_type: ArgType::Flag,
-                category: "UI/Display".to_string(),
-            },
-            ArgDefinition {
-                name: "--rn-avatar-only".to_string(),
-                description: "With --rn-host, boot into the transparent avatar scene (Idle) instead of the explorer"
-                    .to_string(),
-                arg_type: ArgType::Flag,
-                category: "UI/Display".to_string(),
-            },
-            ArgDefinition {
                 name: "--perf-log".to_string(),
                 description: "Log one `[Perf] fps=… rss_mb=…` line every 5 s while a world is loaded (logcat / device console), for comparing hosts"
                     .to_string(),
@@ -275,13 +245,6 @@ impl DclCli {
                 description: "Run the lighting renderer tool scene".to_string(),
                 arg_type: ArgType::Flag,
                 category: "Testing".to_string(),
-            },
-            ArgDefinition {
-                name: "--skip-lobby-to-menu".to_string(),
-                description: "Skip the lobby screen and go directly to the menu/discover screen"
-                    .to_string(),
-                arg_type: ArgType::Flag,
-                category: "UI/Display".to_string(),
             },
             ArgDefinition {
                 name: "--emulate-ios".to_string(),
@@ -306,16 +269,10 @@ impl DclCli {
                 category: "UI/Display".to_string(),
             },
             // Authentication
-            ArgDefinition {
-                name: "--guest-profile".to_string(),
-                description: "Use a guest profile without authentication".to_string(),
-                arg_type: ArgType::Flag,
-                category: "Authentication".to_string(),
-            },
             // World/Scene
             ArgDefinition {
                 name: "--realm".to_string(),
-                description: "Realm URL to enter. Without --rn-host, a realm or --preview starts the emulator: a throwaway guest straight into the world, no lobby".to_string(),
+                description: "Realm URL to enter. A realm or --preview starts the emulator: a throwaway guest straight into the world".to_string(),
                 arg_type: ArgType::Value("<URL>".to_string()),
                 category: "World/Scene".to_string(),
             },
@@ -793,13 +750,8 @@ impl INode for DclCli {
 
         // Extract common flags
         let force_mobile = args_map.contains_key("--force-mobile");
-        let skip_lobby = args_map.contains_key("--skip-lobby");
-        let skip_lobby_to_menu = args_map.contains_key("--skip-lobby-to-menu");
-        let rn_host = args_map.contains_key("--rn-host");
-        let rn_avatar_only = args_map.contains_key("--rn-avatar-only");
         let lighting_renderer = args_map.contains_key("--lighting-renderer");
         let perf_log = args_map.contains_key("--perf-log");
-        let guest_profile = args_map.contains_key("--guest-profile");
         let preview_mode = args_map.contains_key("--preview");
         let scene_test_mode = args_map.contains_key("--scene-test");
         let scene_renderer_mode = args_map.contains_key("--scene-renderer");
@@ -993,13 +945,8 @@ impl INode for DclCli {
             args_map,
             arg_definitions: Self::register_arguments(),
             force_mobile,
-            skip_lobby,
-            skip_lobby_to_menu,
-            rn_host,
-            rn_avatar_only,
             lighting_renderer,
             perf_log,
-            guest_profile,
             preview_mode,
             scene_test_mode,
             scene_renderer_mode,

@@ -8,9 +8,8 @@ use godot::prelude::*;
 
 use crate::godot_classes::dcl_global::DclGlobal;
 
-const LOBBY: &str = "res://src/ui/pages/auth/lobby.tscn";
 const EXPLORER: &str = "res://src/ui/explorer.tscn";
-const RN_AVATAR_HOST: &str = "res://src/rn_bridge/rn_avatar_host.tscn";
+const ENGINE_IDLE: &str = "res://src/engine_host/avatar_host.tscn";
 
 /// Where a command line sends the process. The first match wins.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -22,9 +21,8 @@ pub enum BootMode {
     Scene(&'static str),
     /// Scene tests and scene renders: a throwaway guest, straight into the explorer.
     SceneTest,
-    /// A realm or preview given on the command line without a host: the emulator.
+    /// No host: the emulator, a throwaway guest straight into a world.
     Emulator,
-    Lobby,
 }
 
 /// The routing facts of a command line.
@@ -38,10 +36,10 @@ pub struct BootFlags {
     pub asset_renderer: bool,
     pub client_test: bool,
     pub lighting_renderer: bool,
-    pub rn_avatar_only: bool,
+    /// The host booted the core before the engine started.
+    pub host_driven: bool,
     pub scene_test: bool,
     pub scene_renderer: bool,
-    pub rn_host: bool,
     pub preview: bool,
     pub has_realm: bool,
 }
@@ -63,14 +61,12 @@ pub fn boot_mode(flags: &BootFlags) -> BootMode {
         BootMode::Scene("res://src/client_tests/client_test_scene.tscn")
     } else if flags.lighting_renderer {
         BootMode::Scene("res://src/tool/lighting_renderer/lighting_renderer_standalone.tscn")
-    } else if flags.rn_avatar_only {
-        BootMode::Scene(RN_AVATAR_HOST)
+    } else if flags.host_driven {
+        BootMode::Scene(ENGINE_IDLE)
     } else if flags.scene_test || flags.scene_renderer {
         BootMode::SceneTest
-    } else if !flags.rn_host && (flags.preview || flags.has_realm) {
-        BootMode::Emulator
     } else {
-        BootMode::Lobby
+        BootMode::Emulator
     }
 }
 
@@ -111,7 +107,7 @@ impl INode for DclRoot {
             self.started.elapsed().as_millis()
         );
         let mut global = DclGlobal::singleton();
-        if !global.bind().get_cli().bind().rn_host {
+        if !global.bind().get_engine().bind().is_host_driven() {
             global.call("set_orientation_portrait", &[]);
         }
         // #2386: apply the UI content-scale synchronously, before the first frame is presented,
@@ -229,10 +225,9 @@ impl DclRoot {
                 asset_renderer: cli.asset_renderer_mode,
                 client_test: cli.client_test_mode,
                 lighting_renderer: cli.lighting_renderer,
-                rn_avatar_only: cli.rn_avatar_only,
+                host_driven: global.bind().get_engine().bind().is_host_driven(),
                 scene_test: cli.scene_test_mode,
                 scene_renderer: cli.scene_renderer_mode,
-                rn_host: cli.rn_host,
                 preview: cli.preview_mode,
                 has_realm: !cli.realm.is_empty(),
             }
@@ -271,11 +266,6 @@ impl DclRoot {
                 Self::start_throwaway_guest(&global, false);
                 Self::remember_throwaway_account(&global);
                 self.change_scene(EXPLORER);
-            }
-            BootMode::Lobby => {
-                godot_print!("Running in regular mode");
-                // The EULA check lives in the lobby.
-                self.change_scene(LOBBY);
             }
         }
     }
@@ -377,8 +367,8 @@ mod tests {
     }
 
     #[test]
-    fn a_plain_command_line_opens_the_lobby() {
-        assert_eq!(boot_mode(&BootFlags::default()), BootMode::Lobby);
+    fn a_plain_command_line_opens_the_emulator() {
+        assert_eq!(boot_mode(&BootFlags::default()), BootMode::Emulator);
     }
 
     #[test]
@@ -389,13 +379,13 @@ mod tests {
         });
         assert_eq!(boot_mode(&both), BootMode::AssetServer);
 
-        let avatar_before_scene_test = flags(|f| {
-            f.rn_avatar_only = true;
+        let host_before_scene_test = flags(|f| {
+            f.host_driven = true;
             f.scene_test = true;
         });
         assert_eq!(
-            boot_mode(&avatar_before_scene_test),
-            BootMode::Scene(RN_AVATAR_HOST)
+            boot_mode(&host_before_scene_test),
+            BootMode::Scene(ENGINE_IDLE)
         );
     }
 
@@ -423,10 +413,10 @@ mod tests {
     #[test]
     fn a_host_never_boots_the_emulator() {
         let hosted = flags(|f| {
-            f.rn_host = true;
+            f.host_driven = true;
             f.has_realm = true;
         });
-        assert_eq!(boot_mode(&hosted), BootMode::Lobby);
+        assert_eq!(boot_mode(&hosted), BootMode::Scene(ENGINE_IDLE));
     }
 
     #[test]

@@ -1,6 +1,6 @@
 extends Node
 ## Executes the core's typed commands on the engine and reports what the engine observes
-## (`Global.engine.core_command` in, `Global.engine.report_*` out). Active with --rn-host only.
+## (`Global.engine.core_command` in, `Global.engine.report_*` out). Active when the host drives the app.
 
 const STATE_INTERVAL := 0.25
 const HIDE_INTERVAL := 0.2
@@ -18,8 +18,8 @@ const AVATAR_CONTROLS := [
 var _explorer: Explorer = null
 var _state_elapsed := 0.0
 var _hide_elapsed := 0.0
-var _backpack := RnBackpack.new()
-var _hud := RnHud.new()
+var _backpack := EngineBackpack.new()
+var _hud := EngineHud.new()
 var _avatar_host_up := false
 var _exiting := false
 var _entering := false
@@ -27,12 +27,21 @@ var _pending_enter: Dictionary = {}
 
 
 func _ready() -> void:
-	if not Global.cli.rn_host:
+	if not Global.engine.is_host_driven():
 		set_process(false)
 		return
 	Global.engine.core_command.connect(_on_core_command)
 	_hud.connect_signals()
 	add_child(_backpack)
+	_async_first_launch_benchmark()
+
+
+## The hardware benchmark that picks the first graphics profile, once the engine is up.
+func _async_first_launch_benchmark() -> void:
+	await get_tree().process_frame
+	await get_tree().process_frame
+	if Global.should_run_first_launch_benchmark():
+		Global.run_first_launch_benchmark()
 
 
 ## Called by the avatar-only host scene once the identity and profile exist.
@@ -60,7 +69,7 @@ func _process(dt: float) -> void:
 	_hide_elapsed += dt
 	if _hide_elapsed >= HIDE_INTERVAL:
 		_hide_elapsed = 0.0
-		RnUiFilter.hide_non_native(_explorer.ui_root)
+		EngineUiFilter.hide_non_native(_explorer.ui_root)
 	_state_elapsed += dt
 	if _state_elapsed >= STATE_INTERVAL:
 		_state_elapsed = 0.0
@@ -137,7 +146,7 @@ func _async_enter_world(args: Dictionary) -> void:
 	_entering = true
 	_explorer = null
 	var parcel := Vector2i(args.x, args.y)
-	var started := await RnWorld.async_enter(
+	var started := await EngineWorld.async_enter(
 		parcel, args.realm, func() -> bool: return not _entering
 	)
 	if started:
@@ -155,7 +164,7 @@ func _exit_world() -> void:
 		_explorer = null
 		_avatar_host_up = true
 		_exiting = true
-		RnWorld.async_exit()
+		EngineWorld.async_exit()
 
 
 func _report_hud() -> void:
