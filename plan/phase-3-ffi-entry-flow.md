@@ -128,8 +128,9 @@ deleted.
   wearables, with emotes and their audio loaded afterwards (the idle animation is bundled); the cache
   index scanned in the background at boot, last-used times kept between launches, the lookup that can
   run before the scan fixed, and one cache limit (today 1 GB from settings vs the 2 GB default); the
-  Android shader baker on, as for iOS, if it measures better; only the services the preview needs
-  created before `enter_world`. The starter set and the placeholder follow D-open-17.
+  Android shader baker on, as for iOS, if it measures better; avoid creating world-only services for
+  the preview where safe, with the complete Idle/World ownership split in 5.7. The starter set and
+  the placeholder follow D-open-17.
 
 ## Verification
 

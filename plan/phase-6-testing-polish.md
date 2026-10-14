@@ -37,6 +37,11 @@ engine-facing fix.
   - [ ] **Engine start policy tuning**. The policy is D-42, built in 3.2: check its three numbers on
     the device matrix (cold launch to the first RN screen, `engine_required` to the first 3D frame,
     memory in menus with the engine idle) and adjust when `engine_required` fires.
+  - [ ] **Avatar/World resource pass**. On the device matrix, record CPU and peak/steady memory in
+    Idle before the preview, with the avatar visible, in the first world, and after exit. Check time
+    to the first usable avatar and first playable world, including a second enter/exit cycle. Trim
+    resources retained by Idle or leaked by World, and verify that deferring world services does not
+    cause an unacceptable first-scene delay.
 - [ ] **6.5 Performance and stability**. GP benchmark on both phones vs 1.15; memory on the
   low-end Android through a 30-minute session; thermal and fps-cap behaviour; the deliberate crash
   test for symbolication (R-7) on both platforms.
