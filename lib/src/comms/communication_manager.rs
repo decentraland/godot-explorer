@@ -1834,7 +1834,10 @@ impl CommunicationManager {
                 head_ik_yaw_enabled: self.head_ik_enabled,
                 head_ik_pitch_enabled: self.head_ik_enabled,
                 head_yaw: self.head_ik_yaw,
-                head_pitch: self.head_ik_pitch,
+                // Unity carries pitch as the X euler wrapped to [0, 360]
+                // (HeadIKComponent.GetHeadYawAndPitch) where positive looks
+                // down, and ours looks up.
+                head_pitch: -self.head_ik_pitch,
                 point_at_x: 0.0, // TODO: implement point-at
                 point_at_y: 0.0,
                 point_at_z: 0.0,
