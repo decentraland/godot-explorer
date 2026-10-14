@@ -6,6 +6,8 @@ const SPRINTING_CAMERA_FOV = 75.0
 
 # Double-jump + glide tuning (values mirror Unity CharacterControllerSettings.asset).
 const MAX_AIR_JUMPS := 1
+# Air jumps are counted from 1, so a fall with no jump yet sits at 0 and still
+# has MAX_AIR_JUMPS presses left (Unity ApplyJump.cs:44, :76).
 const JUMP_BUFFER_WINDOW := 0.15
 const JUMP_COOLDOWN := 0.3
 # Coyote-style debounce on the ANIMATION grounded flag: at mobile physics
@@ -656,7 +658,9 @@ func _physics_process(dt: float) -> void:
 				)
 				velocity.x = horiz_dir.x * impulse
 				velocity.z = horiz_dir.z * impulse
-			jump_count += 1
+			# Unity counts a fall as one jump already used (ApplyJump.cs:44)
+			# before this air jump spends the next one, as StartJump does.
+			jump_count = maxi(jump_count, 1) + 1
 			_time_since_last_jump = 0.0
 			avatar.rise = true
 			avatar.fall = false
@@ -681,9 +685,10 @@ func _physics_process(dt: float) -> void:
 		velocity.y -= (_current_gravity() - external_acceleration.y) * dt
 
 		# Air-jump: 0.2s hover then impulse (matches Unity ApplyJump two-step).
+		# Unity's max(JumpCount, 1) <= MaxAirJumpCount (ApplyJump.cs:76): a
+		# stepped-off-a-ledge fall still has its air jump available.
 		if (
 			_jump_buffer > 0.0
-			and jump_count >= 1
 			and jump_count <= MAX_AIR_JUMPS
 			and glide_state == GLIDE_CLOSED
 			and not jump_disabled
@@ -695,10 +700,9 @@ func _physics_process(dt: float) -> void:
 			_air_jump_direction = current_direction
 			_jump_buffer = 0.0
 
-		# Glide toggle-open (mobile-friendly). Diverges from Unity's hold-to-glide
-		# and from the Unity-exact `jump_count > MAX_AIR_JUMPS` entry gate — we
-		# let a stepped-off-a-ledge player open glide without first double-jumping.
-		# Air-jump still takes priority (above) because it consumes the buffer first.
+		# Glide toggle-open (mobile-friendly): Unity holds glide open, we toggle it.
+		# The air jump above consumes the buffer first, so this is only reached
+		# once both jumps are spent or jumping is disabled.
 		if _jump_buffer > 0.0 and glide_state == GLIDE_CLOSED:
 			var gate_enabled := not jump_disabled and not glide_disabled
 			var gate_altitude := _ground_distance > GLIDE_MIN_GROUND_DISTANCE
@@ -1650,8 +1654,7 @@ func get_jump_action() -> int:
 		return JUMP_ACTION_NONE
 	# glide_state == GLIDE_CLOSED. Air-jump takes priority over glide-open.
 	if (
-		jump_count >= 1
-		and jump_count <= MAX_AIR_JUMPS
+		jump_count <= MAX_AIR_JUMPS
 		and not Global.is_double_jump_disabled()
 		and _time_since_last_jump >= JUMP_COOLDOWN
 	):
@@ -1672,12 +1675,12 @@ func can_toggle_glide() -> bool:
 		return true
 	if glide_state != GLIDE_CLOSED:
 		return false
-	# jump_count in [1..MAX_AIR_JUMPS] => next press fires air-jump, not glide-open.
+	# jump_count <= MAX_AIR_JUMPS => next press fires air-jump, not glide-open.
 	var grounded := is_on_floor() or position.y <= 0.0 or time_falling <= 0.0
 	var input_blocked := (
 		Global.is_jump_disabled() or Global.is_all_input_disabled() or Global.is_glide_disabled()
 	)
-	var air_jump_consumes_press := jump_count >= 1 and jump_count <= MAX_AIR_JUMPS
+	var air_jump_consumes_press := jump_count <= MAX_AIR_JUMPS
 	var too_low := _ground_distance <= GLIDE_MIN_GROUND_DISTANCE
 	var on_cooldown := (
 		_time_since_last_jump < JUMP_TO_GLIDE_INTERVAL or _time_since_glide_end < GLIDE_COOLDOWN
