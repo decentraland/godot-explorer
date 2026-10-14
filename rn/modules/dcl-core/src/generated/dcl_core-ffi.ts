@@ -175,6 +175,9 @@ interface NativeModuleInterface {
   ubrn_uniffi_dcl_core_fn_init_callback_vtable_applistener(
     vtable: UniffiVTableCallbackInterfaceDclCoreAppListener,
   ): void;
+  ubrn_uniffi_dcl_core_fn_func_accept_friend_request(
+    address: Uint8Array,
+  ): bigint;
   ubrn_uniffi_dcl_core_fn_func_add_listener(
     listener: bigint,
     uniffi_out_err: UniffiRustCallStatus,
@@ -182,22 +185,62 @@ interface NativeModuleInterface {
   ubrn_uniffi_dcl_core_fn_func_address(
     uniffi_out_err: UniffiRustCallStatus,
   ): Uint8Array;
+  ubrn_uniffi_dcl_core_fn_func_block_user(address: Uint8Array): bigint;
+  ubrn_uniffi_dcl_core_fn_func_cache_size(
+    uniffi_out_err: UniffiRustCallStatus,
+  ): Uint8Array;
+  ubrn_uniffi_dcl_core_fn_func_cancel_friend_request(
+    address: Uint8Array,
+  ): bigint;
   ubrn_uniffi_dcl_core_fn_func_cancel_sign_in(
     uniffi_out_err: UniffiRustCallStatus,
   ): void;
+  ubrn_uniffi_dcl_core_fn_func_clear_cache(): bigint;
   ubrn_uniffi_dcl_core_fn_func_complete_browser(identityId: Uint8Array): bigint;
   ubrn_uniffi_dcl_core_fn_func_debug_delay(millis: number): bigint;
   ubrn_uniffi_dcl_core_fn_func_debug_fire_events(
     count: number,
     perSecond: number,
   ): bigint;
+  ubrn_uniffi_dcl_core_fn_func_friend_requests(): bigint;
+  ubrn_uniffi_dcl_core_fn_func_friends(limit: number, offset: number): bigint;
+  ubrn_uniffi_dcl_core_fn_func_handle_deep_link(
+    url: Uint8Array,
+    start: Uint8Array,
+    uniffi_out_err: UniffiRustCallStatus,
+  ): Uint8Array;
   ubrn_uniffi_dcl_core_fn_func_installs(
     uniffi_out_err: UniffiRustCallStatus,
   ): number;
+  ubrn_uniffi_dcl_core_fn_func_nearby(): bigint;
+  ubrn_uniffi_dcl_core_fn_func_reject_friend_request(
+    address: Uint8Array,
+  ): bigint;
   ubrn_uniffi_dcl_core_fn_func_remove_listener(
     id: bigint,
     uniffi_out_err: UniffiRustCallStatus,
   ): void;
+  ubrn_uniffi_dcl_core_fn_func_send_friend_request(
+    address: Uint8Array,
+    message: Uint8Array,
+  ): bigint;
+  ubrn_uniffi_dcl_core_fn_func_set_setting(
+    key: Uint8Array,
+    value: Uint8Array,
+    commit: number,
+    uniffi_out_err: UniffiRustCallStatus,
+  ): Uint8Array;
+  ubrn_uniffi_dcl_core_fn_func_setting_key_from_name(
+    name: Uint8Array,
+    uniffi_out_err: UniffiRustCallStatus,
+  ): Uint8Array;
+  ubrn_uniffi_dcl_core_fn_func_setting_key_name(
+    key: Uint8Array,
+    uniffi_out_err: UniffiRustCallStatus,
+  ): Uint8Array;
+  ubrn_uniffi_dcl_core_fn_func_settings(
+    uniffi_out_err: UniffiRustCallStatus,
+  ): Uint8Array;
   ubrn_uniffi_dcl_core_fn_func_sign_in_browser(
     provider: Uint8Array,
     uniffi_out_err: UniffiRustCallStatus,
@@ -222,6 +265,10 @@ interface NativeModuleInterface {
   ubrn_uniffi_dcl_core_fn_func_state(
     uniffi_out_err: UniffiRustCallStatus,
   ): Uint8Array;
+  ubrn_uniffi_dcl_core_fn_func_unblock_user(address: Uint8Array): bigint;
+  ubrn_uniffi_dcl_core_fn_func_version(
+    uniffi_out_err: UniffiRustCallStatus,
+  ): Uint8Array;
   ubrn_uniffi_dcl_core_fn_method_applistener_state_changed(
     uniffiSelf: bigint,
     state: Uint8Array,
@@ -242,14 +289,29 @@ interface NativeModuleInterface {
     uniffi_out_err: UniffiRustCallStatus,
   ): void;
   ubrn_ffi_dcl_core_uniffi_contract_version(): number;
+  ubrn_uniffi_dcl_core_checksum_func_accept_friend_request(): number;
   ubrn_uniffi_dcl_core_checksum_func_add_listener(): number;
   ubrn_uniffi_dcl_core_checksum_func_address(): number;
+  ubrn_uniffi_dcl_core_checksum_func_block_user(): number;
+  ubrn_uniffi_dcl_core_checksum_func_cache_size(): number;
+  ubrn_uniffi_dcl_core_checksum_func_cancel_friend_request(): number;
   ubrn_uniffi_dcl_core_checksum_func_cancel_sign_in(): number;
+  ubrn_uniffi_dcl_core_checksum_func_clear_cache(): number;
   ubrn_uniffi_dcl_core_checksum_func_complete_browser(): number;
   ubrn_uniffi_dcl_core_checksum_func_debug_delay(): number;
   ubrn_uniffi_dcl_core_checksum_func_debug_fire_events(): number;
+  ubrn_uniffi_dcl_core_checksum_func_friend_requests(): number;
+  ubrn_uniffi_dcl_core_checksum_func_friends(): number;
+  ubrn_uniffi_dcl_core_checksum_func_handle_deep_link(): number;
   ubrn_uniffi_dcl_core_checksum_func_installs(): number;
+  ubrn_uniffi_dcl_core_checksum_func_nearby(): number;
+  ubrn_uniffi_dcl_core_checksum_func_reject_friend_request(): number;
   ubrn_uniffi_dcl_core_checksum_func_remove_listener(): number;
+  ubrn_uniffi_dcl_core_checksum_func_send_friend_request(): number;
+  ubrn_uniffi_dcl_core_checksum_func_set_setting(): number;
+  ubrn_uniffi_dcl_core_checksum_func_setting_key_from_name(): number;
+  ubrn_uniffi_dcl_core_checksum_func_setting_key_name(): number;
+  ubrn_uniffi_dcl_core_checksum_func_settings(): number;
   ubrn_uniffi_dcl_core_checksum_func_sign_in_browser(): number;
   ubrn_uniffi_dcl_core_checksum_func_sign_in_email_start(): number;
   ubrn_uniffi_dcl_core_checksum_func_sign_in_email_verify(): number;
@@ -258,6 +320,8 @@ interface NativeModuleInterface {
   ubrn_uniffi_dcl_core_checksum_func_sign_in_wallet_complete(): number;
   ubrn_uniffi_dcl_core_checksum_func_sign_out(): number;
   ubrn_uniffi_dcl_core_checksum_func_state(): number;
+  ubrn_uniffi_dcl_core_checksum_func_unblock_user(): number;
+  ubrn_uniffi_dcl_core_checksum_func_version(): number;
   ubrn_uniffi_dcl_core_checksum_method_applistener_state_changed(): number;
   ubrn_uniffi_dcl_core_checksum_method_applistener_scene_crashed(): number;
   ubrn_uniffi_dcl_core_checksum_method_applistener_auth_error(): number;

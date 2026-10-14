@@ -71,6 +71,13 @@ export function createMockSession(): SessionApi {
       return 'Mock message to sign';
     },
     signInWalletComplete: () => signedIn('0xwallet000000000000000000000000000000000004'),
+    handleDeepLink: url => {
+      const id = /[?&]signin=([^&]+)/.exec(url)?.[1];
+      if (id) {
+        signedIn('0xbrowser0000000000000000000000000000000003');
+      }
+      return { navigation: undefined, effects: [] };
+    },
     signOut: () => {
       wallet = undefined;
       emit(new State.SignedOut());

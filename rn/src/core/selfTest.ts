@@ -14,7 +14,7 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
 }
 
 export async function runCoreSelfTest(): Promise<void> {
-  const log = (...args: unknown[]) => console.log('[CoreSelfTest]', ...args);
+  const log = (...args: unknown[]) => console.info('[CoreSelfTest]', ...args);
   let core: CoreModule;
   try {
     core = require('dcl-core');

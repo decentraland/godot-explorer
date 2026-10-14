@@ -136,6 +136,25 @@ impl Core {
         self.hub.events().state_changed(state);
     }
 
+    /// Routes a deep link: finishes a browser sign-in it carries and returns the rest for the
+    /// shell (navigation, settings, analytics).
+    pub fn handle_deep_link(
+        &'static self,
+        url: &str,
+        start: crate::deep_link_route::StartKind,
+    ) -> crate::deep_link_route::Routed {
+        let outcome = self.hub.route_deep_link(url, start, self.config.platform);
+        if let Some(identity_id) = outcome.complete_sign_in {
+            let hub = &self.hub;
+            self.handle().spawn(async move {
+                if let Err(e) = hub.complete_browser(identity_id).await {
+                    tracing::warn!("deep link sign-in: {e}");
+                }
+            });
+        }
+        outcome.routed
+    }
+
     /// Sends an `avatar_preview_mode` event to every listener (exercises the host callback path).
     pub fn broadcast_avatar_preview_mode(&self, on: bool) {
         self.hub.events().avatar_preview_mode(on);

@@ -1,11 +1,19 @@
-import { useCallback, useEffect, useReducer } from 'react';
+import { useCallback, useEffect, useReducer, useState } from 'react';
 import { BackHandler, StyleSheet, View } from 'react-native';
 import { BackpackScreen } from '../backpack/BackpackScreen';
 import { PrimaryButton } from '../ds';
 import { send } from '../engine';
 import type { Place } from '../discover/api';
 import { FtueScreen } from '../discover/FtueScreen';
-import { signIn, startGuestSession } from './auth';
+import {
+  authCode,
+  cancelSignIn,
+  sendEmailCode,
+  startBrowserSignIn,
+  startGuest,
+  verifyEmailCode,
+  whenSignedIn,
+} from './auth';
 import { initialFlow, reduceFlow } from './flowMachine';
 import {
   AvatarCreateScreen,
@@ -14,6 +22,8 @@ import {
 } from './previewScreens';
 import {
   AccountScreen,
+  CodeScreen,
+  EmailScreen,
   NamingScreen,
   SignInScreen,
   SplashScreen,
@@ -54,25 +64,23 @@ export function EntryFlow({
     }
   }, [step, onDone]);
 
+  const [busy, setBusy] = useState(false);
+  const [emailError, setEmailError] = useState<string | null>(null);
+
   useEffect(() => {
     let cancelled = false;
-    if (step === 'auth_wait' && provider) {
-      signIn(provider)
-        .then(
-          result =>
-            !cancelled && dispatch({ type: 'authSucceeded', ...result }),
-        )
-        .catch(
-          () =>
-            !cancelled &&
-            dispatch({
-              type: 'authFailed',
-              message: t('FLOW_SIGN_IN_FAILED'),
-            }),
-        );
+    const succeeded = async () =>
+      !cancelled && dispatch({ type: 'authSucceeded', ...(await welcome()) });
+    const failed = () =>
+      !cancelled &&
+      dispatch({ type: 'authFailed', message: t('FLOW_SIGN_IN_FAILED') });
+    if (step === 'auth_wait' && (provider === 'google' || provider === 'apple')) {
+      startBrowserSignIn(provider);
+      whenSignedIn().then(succeeded, failed);
     } else if (step === 'guest_wait') {
-      startGuestSession().then(
+      startGuest().then(
         () => !cancelled && dispatch({ type: 'guestReady' }),
+        failed,
       );
     }
     return () => {
@@ -80,8 +88,46 @@ export function EntryFlow({
     };
   }, [step, provider]);
 
+  const submitEmail = useCallback(async (email: string) => {
+    setBusy(true);
+    setEmailError(null);
+    try {
+      await sendEmailCode(email);
+      dispatch({ type: 'emailSent', email });
+    } catch {
+      setEmailError(t('FLOW_EMAIL_SEND_FAILED'));
+    } finally {
+      setBusy(false);
+    }
+  }, []);
+
+  const submitCode = useCallback(
+    async (code: string) => {
+      setBusy(true);
+      setEmailError(null);
+      try {
+        await verifyEmailCode(flow.email, code);
+        dispatch({ type: 'authSucceeded', ...(await welcome()) });
+      } catch (e) {
+        setEmailError(
+          authCode(e) === 'invalid_code'
+            ? t('FLOW_CODE_INVALID')
+            : t('FLOW_SIGN_IN_FAILED'),
+        );
+      } finally {
+        setBusy(false);
+      }
+    },
+    [flow.email],
+  );
+
+  const back = useCallback(() => {
+    cancelSignIn();
+    setEmailError(null);
+    dispatch({ type: 'back' });
+  }, []);
+
   const booted = useCallback(() => dispatch({ type: 'booted' }), []);
-  const back = useCallback(() => dispatch({ type: 'back' }), []);
   const confirmAvatar = useCallback(
     () => dispatch({ type: 'avatarConfirmed' }),
     [],
@@ -107,6 +153,26 @@ export function EntryFlow({
           onProvider={next =>
             dispatch({ type: 'chooseProvider', provider: next })
           }
+          onBack={back}
+        />
+      );
+    case 'email_entry':
+      return (
+        <EmailScreen
+          initial={flow.email}
+          error={emailError}
+          busy={busy}
+          onSubmit={submitEmail}
+          onBack={back}
+        />
+      );
+    case 'email_code':
+      return (
+        <CodeScreen
+          email={flow.email}
+          error={emailError}
+          busy={busy}
+          onSubmit={submitCode}
           onBack={back}
         />
       );

@@ -18,4 +18,5 @@ export type SessionApi = Pick<
   | 'signInWalletBegin'
   | 'signInWalletComplete'
   | 'signOut'
+  | 'handleDeepLink'
 >;

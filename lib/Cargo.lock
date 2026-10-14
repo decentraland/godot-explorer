@@ -1062,6 +1062,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "dcl_bindings"
+version = "1.15.0"
+dependencies = [
+ "dcl_core",
+ "dcl_host",
+]
+
+[[package]]
 name = "dcl_core"
 version = "1.15.0"
 dependencies = [

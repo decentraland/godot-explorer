@@ -96,3 +96,13 @@ pub fn sign_out() -> Result<(), CoreError> {
 pub fn address() -> Result<Option<String>, CoreError> {
     Ok(hub()?.with_session(|s| s.try_address().map(|a| format!("{a:#x}"))))
 }
+
+/// Routes a deep link. A browser sign-in it carries is finished here; the shell gets the
+/// navigation, the settings the engine owns and the analytics to record.
+#[uniffi::export]
+pub fn handle_deep_link(
+    url: String,
+    start: crate::deep_link_route::StartKind,
+) -> Result<crate::deep_link_route::Routed, CoreError> {
+    Ok(core()?.handle_deep_link(&url, start))
+}

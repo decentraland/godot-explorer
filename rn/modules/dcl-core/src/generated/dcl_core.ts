@@ -23,6 +23,7 @@ import {
   FfiConverterArray,
   FfiConverterBool,
   FfiConverterFloat32,
+  FfiConverterFloat64,
   FfiConverterInt32,
   FfiConverterInt64,
   FfiConverterObject,
@@ -57,6 +58,39 @@ const uniffiIsDebug =
   false;
 
 // Public interface members begin here.
+
+export async function acceptFriendRequest(
+  address: string,
+  asyncOpts_?: { signal: AbortSignal },
+): Promise<void> /*throws*/ {
+  const __stack = uniffiIsDebug ? new Error().stack : undefined;
+  try {
+    return await uniffiRustCallAsync(
+      /*rustCaller:*/ uniffiCaller,
+      /*rustFutureFunc:*/ () => {
+        return nativeModule().ubrn_uniffi_dcl_core_fn_func_accept_friend_request(
+          FfiConverterString.lower(address, nativeModule().rustbuffer_alloc),
+        );
+      },
+      /*pollFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_poll_void,
+      /*cancelFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_cancel_void,
+      /*completeFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_complete_void,
+      /*freeFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_free_void,
+      /*liftFunc:*/ _v => {},
+      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+      /*asyncOpts:*/ asyncOpts_,
+      /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(
+        FfiConverterTypeCoreError,
+      ),
+    );
+  } catch (__error: any) {
+    if (uniffiIsDebug && __error instanceof Error) {
+      __error.stack = __stack;
+    }
+    throw __error;
+  }
+}
 
 /**
  * Registers the shell's receiver of the app's events. The id removes it again.
@@ -101,6 +135,89 @@ export function address(): string | undefined /*throws*/ {
   }
 }
 
+export async function blockUser(
+  address: string,
+  asyncOpts_?: { signal: AbortSignal },
+): Promise<void> /*throws*/ {
+  const __stack = uniffiIsDebug ? new Error().stack : undefined;
+  try {
+    return await uniffiRustCallAsync(
+      /*rustCaller:*/ uniffiCaller,
+      /*rustFutureFunc:*/ () => {
+        return nativeModule().ubrn_uniffi_dcl_core_fn_func_block_user(
+          FfiConverterString.lower(address, nativeModule().rustbuffer_alloc),
+        );
+      },
+      /*pollFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_poll_void,
+      /*cancelFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_cancel_void,
+      /*completeFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_complete_void,
+      /*freeFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_free_void,
+      /*liftFunc:*/ _v => {},
+      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+      /*asyncOpts:*/ asyncOpts_,
+      /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(
+        FfiConverterTypeCoreError,
+      ),
+    );
+  } catch (__error: any) {
+    if (uniffiIsDebug && __error instanceof Error) {
+      __error.stack = __stack;
+    }
+    throw __error;
+  }
+}
+
+export function cacheSize(): CacheSize /*throws*/ {
+  const __rb: Uint8Array = uniffiCaller.rustCallWithError(
+    /*liftError:*/ FfiConverterTypeCoreError.lift.bind(
+      FfiConverterTypeCoreError,
+    ),
+    /*caller:*/ callStatus => {
+      return nativeModule().ubrn_uniffi_dcl_core_fn_func_cache_size(callStatus);
+    },
+    /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+  );
+  try {
+    return FfiConverterTypeCacheSize.lift(__rb);
+  } finally {
+    nativeModule().rustbuffer_free(__rb);
+  }
+}
+
+export async function cancelFriendRequest(
+  address: string,
+  asyncOpts_?: { signal: AbortSignal },
+): Promise<void> /*throws*/ {
+  const __stack = uniffiIsDebug ? new Error().stack : undefined;
+  try {
+    return await uniffiRustCallAsync(
+      /*rustCaller:*/ uniffiCaller,
+      /*rustFutureFunc:*/ () => {
+        return nativeModule().ubrn_uniffi_dcl_core_fn_func_cancel_friend_request(
+          FfiConverterString.lower(address, nativeModule().rustbuffer_alloc),
+        );
+      },
+      /*pollFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_poll_void,
+      /*cancelFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_cancel_void,
+      /*completeFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_complete_void,
+      /*freeFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_free_void,
+      /*liftFunc:*/ _v => {},
+      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+      /*asyncOpts:*/ asyncOpts_,
+      /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(
+        FfiConverterTypeCoreError,
+      ),
+    );
+  } catch (__error: any) {
+    if (uniffiIsDebug && __error instanceof Error) {
+      __error.stack = __stack;
+    }
+    throw __error;
+  }
+}
+
 /**
  * The user closed the browser or the wallet before finishing.
  */
@@ -114,6 +231,44 @@ export function cancelSignIn(): void /*throws*/ {
     },
     /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
   );
+}
+
+/**
+ * Empties the content cache and returns the bytes it still holds.
+ */
+export async function clearCache(asyncOpts_?: {
+  signal: AbortSignal;
+}): Promise<bigint> /*throws*/ {
+  const __stack = uniffiIsDebug ? new Error().stack : undefined;
+  try {
+    return await uniffiRustCallAsync(
+      /*rustCaller:*/ uniffiCaller,
+      /*rustFutureFunc:*/ () => {
+        return nativeModule().ubrn_uniffi_dcl_core_fn_func_clear_cache();
+      },
+      /*pollFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_poll_u64,
+      /*cancelFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_cancel_u64,
+      /*completeFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_complete_u64,
+      /*freeFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_free_u64,
+      // Async returns always go through the JS-side converter: the
+      // FFI symbol returns the future handle (u64), and the user-level
+      // RustBuffer comes back via the shared `rust_future_complete_*`
+      // export. The bytes the runtime hands back must be deserialized
+      // here using the per-callable return-type converter.
+      /*liftFunc:*/ FfiConverterUInt64.lift.bind(FfiConverterUInt64),
+      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+      /*asyncOpts:*/ asyncOpts_,
+      /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(
+        FfiConverterTypeCoreError,
+      ),
+    );
+  } catch (__error: any) {
+    if (uniffiIsDebug && __error instanceof Error) {
+      __error.stack = __stack;
+    }
+    throw __error;
+  }
 }
 
 /**
@@ -239,6 +394,139 @@ export async function debugFireEvents(
 }
 
 /**
+ * Pending requests, received and sent.
+ */
+export async function friendRequests(asyncOpts_?: {
+  signal: AbortSignal;
+}): Promise<FriendRequests> /*throws*/ {
+  const __stack = uniffiIsDebug ? new Error().stack : undefined;
+  try {
+    return await uniffiRustCallAsync(
+      /*rustCaller:*/ uniffiCaller,
+      /*rustFutureFunc:*/ () => {
+        return nativeModule().ubrn_uniffi_dcl_core_fn_func_friend_requests();
+      },
+      /*pollFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_poll_rust_buffer,
+      /*cancelFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_cancel_rust_buffer,
+      /*completeFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_complete_rust_buffer,
+      /*freeFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_free_rust_buffer,
+      // Async returns always go through the JS-side converter: the
+      // FFI symbol returns the future handle (u64), and the user-level
+      // RustBuffer comes back via the shared `rust_future_complete_*`
+      // export. The bytes the runtime hands back must be deserialized
+      // here using the per-callable return-type converter.
+      // Borrowed view over foreign memory: the call site owns the free,
+      // as on the sync paths. Unconditional — a no-op where buffers are
+      // already JS-owned.
+      /*liftFunc:*/ __rb => {
+        try {
+          return FfiConverterTypeFriendRequests.lift(__rb);
+        } finally {
+          nativeModule().rustbuffer_free(__rb);
+        }
+      },
+      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+      /*asyncOpts:*/ asyncOpts_,
+      /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(
+        FfiConverterTypeCoreError,
+      ),
+    );
+  } catch (__error: any) {
+    if (uniffiIsDebug && __error instanceof Error) {
+      __error.stack = __stack;
+    }
+    throw __error;
+  }
+}
+
+/**
+ * One page of the friends list. `limit` 0 asks for the service's default page.
+ */
+export async function friends(
+  limit: number,
+  offset: number,
+  asyncOpts_?: { signal: AbortSignal },
+): Promise<Array<Friend>> /*throws*/ {
+  const __stack = uniffiIsDebug ? new Error().stack : undefined;
+  try {
+    return await uniffiRustCallAsync(
+      /*rustCaller:*/ uniffiCaller,
+      /*rustFutureFunc:*/ () => {
+        return nativeModule().ubrn_uniffi_dcl_core_fn_func_friends(
+          FfiConverterUInt32.lower(limit, nativeModule().rustbuffer_alloc),
+          FfiConverterUInt32.lower(offset, nativeModule().rustbuffer_alloc),
+        );
+      },
+      /*pollFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_poll_rust_buffer,
+      /*cancelFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_cancel_rust_buffer,
+      /*completeFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_complete_rust_buffer,
+      /*freeFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_free_rust_buffer,
+      // Async returns always go through the JS-side converter: the
+      // FFI symbol returns the future handle (u64), and the user-level
+      // RustBuffer comes back via the shared `rust_future_complete_*`
+      // export. The bytes the runtime hands back must be deserialized
+      // here using the per-callable return-type converter.
+      // Borrowed view over foreign memory: the call site owns the free,
+      // as on the sync paths. Unconditional — a no-op where buffers are
+      // already JS-owned.
+      /*liftFunc:*/ __rb => {
+        try {
+          return FfiConverterSequenceTypeFriend.lift(__rb);
+        } finally {
+          nativeModule().rustbuffer_free(__rb);
+        }
+      },
+      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+      /*asyncOpts:*/ asyncOpts_,
+      /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(
+        FfiConverterTypeCoreError,
+      ),
+    );
+  } catch (__error: any) {
+    if (uniffiIsDebug && __error instanceof Error) {
+      __error.stack = __stack;
+    }
+    throw __error;
+  }
+}
+
+/**
+ * Routes a deep link. A browser sign-in it carries is finished here; the shell gets the
+ * navigation, the settings the engine owns and the analytics to record.
+ */
+export function handleDeepLink(
+  url: string,
+  start: StartKind,
+): Routed /*throws*/ {
+  const __rb: Uint8Array = uniffiCaller.rustCallWithError(
+    /*liftError:*/ FfiConverterTypeCoreError.lift.bind(
+      FfiConverterTypeCoreError,
+    ),
+    /*caller:*/ callStatus => {
+      return nativeModule().ubrn_uniffi_dcl_core_fn_func_handle_deep_link(
+        FfiConverterString.lower(url, nativeModule().rustbuffer_alloc),
+        FfiConverterTypeStartKind.lower(start, nativeModule().rustbuffer_alloc),
+        callStatus,
+      );
+    },
+    /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+  );
+  try {
+    return FfiConverterTypeRouted.lift(__rb);
+  } finally {
+    nativeModule().rustbuffer_free(__rb);
+  }
+}
+
+/**
  * How many times the process asked to install a core; the engine asserts it is not a second one.
  */
 export function installs(): number {
@@ -250,6 +538,89 @@ export function installs(): number {
       /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
     ),
   );
+}
+
+/**
+ * Players around, without the blocked ones.
+ */
+export async function nearby(asyncOpts_?: {
+  signal: AbortSignal;
+}): Promise<Array<NearbyUser>> /*throws*/ {
+  const __stack = uniffiIsDebug ? new Error().stack : undefined;
+  try {
+    return await uniffiRustCallAsync(
+      /*rustCaller:*/ uniffiCaller,
+      /*rustFutureFunc:*/ () => {
+        return nativeModule().ubrn_uniffi_dcl_core_fn_func_nearby();
+      },
+      /*pollFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_poll_rust_buffer,
+      /*cancelFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_cancel_rust_buffer,
+      /*completeFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_complete_rust_buffer,
+      /*freeFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_free_rust_buffer,
+      // Async returns always go through the JS-side converter: the
+      // FFI symbol returns the future handle (u64), and the user-level
+      // RustBuffer comes back via the shared `rust_future_complete_*`
+      // export. The bytes the runtime hands back must be deserialized
+      // here using the per-callable return-type converter.
+      // Borrowed view over foreign memory: the call site owns the free,
+      // as on the sync paths. Unconditional — a no-op where buffers are
+      // already JS-owned.
+      /*liftFunc:*/ __rb => {
+        try {
+          return FfiConverterSequenceTypeNearbyUser.lift(__rb);
+        } finally {
+          nativeModule().rustbuffer_free(__rb);
+        }
+      },
+      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+      /*asyncOpts:*/ asyncOpts_,
+      /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(
+        FfiConverterTypeCoreError,
+      ),
+    );
+  } catch (__error: any) {
+    if (uniffiIsDebug && __error instanceof Error) {
+      __error.stack = __stack;
+    }
+    throw __error;
+  }
+}
+
+export async function rejectFriendRequest(
+  address: string,
+  asyncOpts_?: { signal: AbortSignal },
+): Promise<void> /*throws*/ {
+  const __stack = uniffiIsDebug ? new Error().stack : undefined;
+  try {
+    return await uniffiRustCallAsync(
+      /*rustCaller:*/ uniffiCaller,
+      /*rustFutureFunc:*/ () => {
+        return nativeModule().ubrn_uniffi_dcl_core_fn_func_reject_friend_request(
+          FfiConverterString.lower(address, nativeModule().rustbuffer_alloc),
+        );
+      },
+      /*pollFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_poll_void,
+      /*cancelFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_cancel_void,
+      /*completeFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_complete_void,
+      /*freeFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_free_void,
+      /*liftFunc:*/ _v => {},
+      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+      /*asyncOpts:*/ asyncOpts_,
+      /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(
+        FfiConverterTypeCoreError,
+      ),
+    );
+  } catch (__error: any) {
+    if (uniffiIsDebug && __error instanceof Error) {
+      __error.stack = __stack;
+    }
+    throw __error;
+  }
 }
 
 export function removeListener(id: bigint): void /*throws*/ {
@@ -265,6 +636,132 @@ export function removeListener(id: bigint): void /*throws*/ {
     },
     /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
   );
+}
+
+export async function sendFriendRequest(
+  address: string,
+  message: string,
+  asyncOpts_?: { signal: AbortSignal },
+): Promise<void> /*throws*/ {
+  const __stack = uniffiIsDebug ? new Error().stack : undefined;
+  try {
+    return await uniffiRustCallAsync(
+      /*rustCaller:*/ uniffiCaller,
+      /*rustFutureFunc:*/ () => {
+        return nativeModule().ubrn_uniffi_dcl_core_fn_func_send_friend_request(
+          FfiConverterString.lower(address, nativeModule().rustbuffer_alloc),
+          FfiConverterString.lower(message, nativeModule().rustbuffer_alloc),
+        );
+      },
+      /*pollFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_poll_void,
+      /*cancelFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_cancel_void,
+      /*completeFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_complete_void,
+      /*freeFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_free_void,
+      /*liftFunc:*/ _v => {},
+      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+      /*asyncOpts:*/ asyncOpts_,
+      /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(
+        FfiConverterTypeCoreError,
+      ),
+    );
+  } catch (__error: any) {
+    if (uniffiIsDebug && __error instanceof Error) {
+      __error.stack = __stack;
+    }
+    throw __error;
+  }
+}
+
+/**
+ * Sets a value (a number of the wrong width is coerced, a wrong type is refused). `commit`
+ * saves it to disk; without it the change lasts until the next commit. Returns every entry
+ * that changed or was re-announced: the key, then the three settings a graphic profile drives.
+ */
+export function setSetting(
+  key: SettingKey,
+  value: SettingValue,
+  commit: boolean,
+): Array<SettingEntry> /*throws*/ {
+  const __rb: Uint8Array = uniffiCaller.rustCallWithError(
+    /*liftError:*/ FfiConverterTypeCoreError.lift.bind(
+      FfiConverterTypeCoreError,
+    ),
+    /*caller:*/ callStatus => {
+      return nativeModule().ubrn_uniffi_dcl_core_fn_func_set_setting(
+        FfiConverterTypeSettingKey.lower(key, nativeModule().rustbuffer_alloc),
+        FfiConverterTypeSettingValue.lower(
+          value,
+          nativeModule().rustbuffer_alloc,
+        ),
+        FfiConverterBool.lower(commit, nativeModule().rustbuffer_alloc),
+        callStatus,
+      );
+    },
+    /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+  );
+  try {
+    return FfiConverterSequenceTypeSettingEntry.lift(__rb);
+  } finally {
+    nativeModule().rustbuffer_free(__rb);
+  }
+}
+
+export function settingKeyFromName(name: string): SettingKey | undefined {
+  const __rb: Uint8Array = uniffiCaller.rustCall(
+    /*caller:*/ callStatus => {
+      return nativeModule().ubrn_uniffi_dcl_core_fn_func_setting_key_from_name(
+        FfiConverterString.lower(name, nativeModule().rustbuffer_alloc),
+        callStatus,
+      );
+    },
+    /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+  );
+  try {
+    return FfiConverterOptionalTypeSettingKey.lift(__rb);
+  } finally {
+    nativeModule().rustbuffer_free(__rb);
+  }
+}
+
+/**
+ * The name `settings.cfg` and the shell's keys file use for `key`.
+ */
+export function settingKeyName(key: SettingKey): string {
+  const __rb: Uint8Array = uniffiCaller.rustCall(
+    /*caller:*/ callStatus => {
+      return nativeModule().ubrn_uniffi_dcl_core_fn_func_setting_key_name(
+        FfiConverterTypeSettingKey.lower(key, nativeModule().rustbuffer_alloc),
+        callStatus,
+      );
+    },
+    /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+  );
+  try {
+    return FfiConverterString.lift(__rb);
+  } finally {
+    nativeModule().rustbuffer_free(__rb);
+  }
+}
+
+/**
+ * Every setting the shell can read, with its current value.
+ */
+export function settings(): Array<SettingEntry> /*throws*/ {
+  const __rb: Uint8Array = uniffiCaller.rustCallWithError(
+    /*liftError:*/ FfiConverterTypeCoreError.lift.bind(
+      FfiConverterTypeCoreError,
+    ),
+    /*caller:*/ callStatus => {
+      return nativeModule().ubrn_uniffi_dcl_core_fn_func_settings(callStatus);
+    },
+    /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+  );
+  try {
+    return FfiConverterSequenceTypeSettingEntry.lift(__rb);
+  } finally {
+    nativeModule().rustbuffer_free(__rb);
+  }
 }
 
 /**
@@ -476,6 +973,102 @@ export function state(): State /*throws*/ {
   }
 }
 
+export async function unblockUser(
+  address: string,
+  asyncOpts_?: { signal: AbortSignal },
+): Promise<void> /*throws*/ {
+  const __stack = uniffiIsDebug ? new Error().stack : undefined;
+  try {
+    return await uniffiRustCallAsync(
+      /*rustCaller:*/ uniffiCaller,
+      /*rustFutureFunc:*/ () => {
+        return nativeModule().ubrn_uniffi_dcl_core_fn_func_unblock_user(
+          FfiConverterString.lower(address, nativeModule().rustbuffer_alloc),
+        );
+      },
+      /*pollFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_poll_void,
+      /*cancelFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_cancel_void,
+      /*completeFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_complete_void,
+      /*freeFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_free_void,
+      /*liftFunc:*/ _v => {},
+      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+      /*asyncOpts:*/ asyncOpts_,
+      /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(
+        FfiConverterTypeCoreError,
+      ),
+    );
+  } catch (__error: any) {
+    if (uniffiIsDebug && __error instanceof Error) {
+      __error.stack = __stack;
+    }
+    throw __error;
+  }
+}
+
+/**
+ * The version to show: `x.y.z` in production, the full version otherwise.
+ */
+export function version(): string /*throws*/ {
+  const __rb: Uint8Array = uniffiCaller.rustCallWithError(
+    /*liftError:*/ FfiConverterTypeCoreError.lift.bind(
+      FfiConverterTypeCoreError,
+    ),
+    /*caller:*/ callStatus => {
+      return nativeModule().ubrn_uniffi_dcl_core_fn_func_version(callStatus);
+    },
+    /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+  );
+  try {
+    return FfiConverterString.lift(__rb);
+  } finally {
+    nativeModule().rustbuffer_free(__rb);
+  }
+}
+
+export type CacheSize = {
+  bytes: bigint;
+  maxBytes: bigint;
+};
+
+/**
+ * Generated factory for {@link CacheSize} record objects.
+ */
+export const CacheSize = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<CacheSize, ReturnType<typeof defaults>>(defaults);
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults()) as Partial<CacheSize>,
+  });
+})();
+
+const FfiConverterTypeCacheSize = (() => {
+  type TypeName = CacheSize;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      return {
+        bytes: FfiConverterUInt64.readFromCursor(c),
+        maxBytes: FfiConverterUInt64.readFromCursor(c),
+      };
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      FfiConverterUInt64.writeIntoCursor(value.bytes, c);
+      FfiConverterUInt64.writeIntoCursor(value.maxBytes, c);
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterUInt64.allocationSize(value.bytes) +
+        FfiConverterUInt64.allocationSize(value.maxBytes)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
 // Hermes (React Native ≥ 0.74) ships TextEncoder and encodeInto, but not
 // TextDecoder. For single-string decode (bytesToString), we polyfill via the
 // C++ string_from_buffer helper using a duck-typed object matching the
@@ -626,6 +1219,168 @@ const FfiConverterTypeDestination = (() => {
       return (
         FfiConverterOptionalString.allocationSize(value.realm) +
         FfiConverterOptionalTypeParcel.allocationSize(value.parcel)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
+/**
+ * A person in the friends list or in a request list. `friendship_id` is only known for requests.
+ */
+export type Friend = {
+  address: string;
+  name: string;
+  hasClaimedName: boolean;
+  profilePictureUrl: string;
+  friendshipId: string;
+};
+
+/**
+ * Generated factory for {@link Friend} record objects.
+ */
+export const Friend = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<Friend, ReturnType<typeof defaults>>(defaults);
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults()) as Partial<Friend>,
+  });
+})();
+
+const FfiConverterTypeFriend = (() => {
+  type TypeName = Friend;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      return {
+        address: FfiConverterString.readFromCursor(c),
+        name: FfiConverterString.readFromCursor(c),
+        hasClaimedName: FfiConverterBool.readFromCursor(c),
+        profilePictureUrl: FfiConverterString.readFromCursor(c),
+        friendshipId: FfiConverterString.readFromCursor(c),
+      };
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      FfiConverterString.writeIntoCursor(value.address, c);
+      FfiConverterString.writeIntoCursor(value.name, c);
+      FfiConverterBool.writeIntoCursor(value.hasClaimedName, c);
+      FfiConverterString.writeIntoCursor(value.profilePictureUrl, c);
+      FfiConverterString.writeIntoCursor(value.friendshipId, c);
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterString.allocationSize(value.address) +
+        FfiConverterString.allocationSize(value.name) +
+        FfiConverterBool.allocationSize(value.hasClaimedName) +
+        FfiConverterString.allocationSize(value.profilePictureUrl) +
+        FfiConverterString.allocationSize(value.friendshipId)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
+/**
+ * Pending friend requests, in both directions.
+ */
+export type FriendRequests = {
+  received: Array<Friend>;
+  sent: Array<Friend>;
+};
+
+/**
+ * Generated factory for {@link FriendRequests} record objects.
+ */
+export const FriendRequests = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<FriendRequests, ReturnType<typeof defaults>>(
+      defaults,
+    );
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults()) as Partial<FriendRequests>,
+  });
+})();
+
+const FfiConverterTypeFriendRequests = (() => {
+  type TypeName = FriendRequests;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      return {
+        received: FfiConverterSequenceTypeFriend.readFromCursor(c),
+        sent: FfiConverterSequenceTypeFriend.readFromCursor(c),
+      };
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      FfiConverterSequenceTypeFriend.writeIntoCursor(value.received, c);
+      FfiConverterSequenceTypeFriend.writeIntoCursor(value.sent, c);
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterSequenceTypeFriend.allocationSize(value.received) +
+        FfiConverterSequenceTypeFriend.allocationSize(value.sent)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
+/**
+ * Someone standing near the player.
+ */
+export type NearbyUser = {
+  address: string;
+  name: string;
+  hasClaimedName: boolean;
+  profilePictureUrl: string;
+};
+
+/**
+ * Generated factory for {@link NearbyUser} record objects.
+ */
+export const NearbyUser = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<NearbyUser, ReturnType<typeof defaults>>(
+      defaults,
+    );
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults()) as Partial<NearbyUser>,
+  });
+})();
+
+const FfiConverterTypeNearbyUser = (() => {
+  type TypeName = NearbyUser;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      return {
+        address: FfiConverterString.readFromCursor(c),
+        name: FfiConverterString.readFromCursor(c),
+        hasClaimedName: FfiConverterBool.readFromCursor(c),
+        profilePictureUrl: FfiConverterString.readFromCursor(c),
+      };
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      FfiConverterString.writeIntoCursor(value.address, c);
+      FfiConverterString.writeIntoCursor(value.name, c);
+      FfiConverterBool.writeIntoCursor(value.hasClaimedName, c);
+      FfiConverterString.writeIntoCursor(value.profilePictureUrl, c);
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterString.allocationSize(value.address) +
+        FfiConverterString.allocationSize(value.name) +
+        FfiConverterBool.allocationSize(value.hasClaimedName) +
+        FfiConverterString.allocationSize(value.profilePictureUrl)
       );
     }
   }
@@ -2900,6 +3655,373 @@ const FfiConverterTypeRouted = (() => {
   return new FFIConverter();
 })();
 
+/**
+ * The keys the shell may read and write, nothing else in the legacy config.
+ */
+export enum SettingKey {
+  SubmitMessageClosesChat,
+  Locale,
+  GraphicProfile,
+  DynamicGraphicsEnabled,
+  DynamicSkybox,
+  SkyboxTime,
+  ViewDistance,
+  ParticleQuality,
+  LimitFps,
+  MaxCacheSize,
+  AudioGeneralVolume,
+  AudioSceneVolume,
+  AudioVoiceChatVolume,
+  AudioUiVolume,
+  AudioMusicVolume,
+  AudioAvatarAndEmotesVolume,
+  AudioMicAmplification,
+}
+
+const FfiConverterTypeSettingKey = (() => {
+  type TypeName = SettingKey;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      switch (c.readI32()) {
+        case 1:
+          return SettingKey.SubmitMessageClosesChat;
+        case 2:
+          return SettingKey.Locale;
+        case 3:
+          return SettingKey.GraphicProfile;
+        case 4:
+          return SettingKey.DynamicGraphicsEnabled;
+        case 5:
+          return SettingKey.DynamicSkybox;
+        case 6:
+          return SettingKey.SkyboxTime;
+        case 7:
+          return SettingKey.ViewDistance;
+        case 8:
+          return SettingKey.ParticleQuality;
+        case 9:
+          return SettingKey.LimitFps;
+        case 10:
+          return SettingKey.MaxCacheSize;
+        case 11:
+          return SettingKey.AudioGeneralVolume;
+        case 12:
+          return SettingKey.AudioSceneVolume;
+        case 13:
+          return SettingKey.AudioVoiceChatVolume;
+        case 14:
+          return SettingKey.AudioUiVolume;
+        case 15:
+          return SettingKey.AudioMusicVolume;
+        case 16:
+          return SettingKey.AudioAvatarAndEmotesVolume;
+        case 17:
+          return SettingKey.AudioMicAmplification;
+        default:
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      switch (value) {
+        case SettingKey.SubmitMessageClosesChat:
+          return c.writeI32(1);
+        case SettingKey.Locale:
+          return c.writeI32(2);
+        case SettingKey.GraphicProfile:
+          return c.writeI32(3);
+        case SettingKey.DynamicGraphicsEnabled:
+          return c.writeI32(4);
+        case SettingKey.DynamicSkybox:
+          return c.writeI32(5);
+        case SettingKey.SkyboxTime:
+          return c.writeI32(6);
+        case SettingKey.ViewDistance:
+          return c.writeI32(7);
+        case SettingKey.ParticleQuality:
+          return c.writeI32(8);
+        case SettingKey.LimitFps:
+          return c.writeI32(9);
+        case SettingKey.MaxCacheSize:
+          return c.writeI32(10);
+        case SettingKey.AudioGeneralVolume:
+          return c.writeI32(11);
+        case SettingKey.AudioSceneVolume:
+          return c.writeI32(12);
+        case SettingKey.AudioVoiceChatVolume:
+          return c.writeI32(13);
+        case SettingKey.AudioUiVolume:
+          return c.writeI32(14);
+        case SettingKey.AudioMusicVolume:
+          return c.writeI32(15);
+        case SettingKey.AudioAvatarAndEmotesVolume:
+          return c.writeI32(16);
+        case SettingKey.AudioMicAmplification:
+          return c.writeI32(17);
+      }
+    }
+    allocationSize(value: TypeName): number {
+      return 4;
+    }
+  }
+  return new FFIConverter();
+})();
+
+// Enum: SettingValue
+export enum SettingValue_Tags {
+  Bool = 'Bool',
+  Int = 'Int',
+  Float = 'Float',
+  Text = 'Text',
+}
+export const SettingValue = (() => {
+  type Bool__interface = {
+    tag: SettingValue_Tags.Bool;
+    inner: Readonly<[boolean]>;
+  };
+  class Bool_ extends UniffiEnum implements Bool__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'SettingValue';
+    readonly tag = SettingValue_Tags.Bool;
+    readonly inner: Readonly<[boolean]>;
+    constructor(v0: boolean) {
+      super('SettingValue', 'Bool');
+
+      this.inner = Object.freeze([v0]);
+    }
+    static new(v0: boolean): Bool_ {
+      return new Bool_(v0);
+    }
+
+    static instanceOf(obj: any): obj is Bool_ {
+      return obj.tag === SettingValue_Tags.Bool;
+    }
+  }
+
+  type Int__interface = {
+    tag: SettingValue_Tags.Int;
+    inner: Readonly<[bigint]>;
+  };
+  class Int_ extends UniffiEnum implements Int__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'SettingValue';
+    readonly tag = SettingValue_Tags.Int;
+    readonly inner: Readonly<[bigint]>;
+    constructor(v0: bigint) {
+      super('SettingValue', 'Int');
+
+      this.inner = Object.freeze([v0]);
+    }
+    static new(v0: bigint): Int_ {
+      return new Int_(v0);
+    }
+
+    static instanceOf(obj: any): obj is Int_ {
+      return obj.tag === SettingValue_Tags.Int;
+    }
+  }
+
+  type Float__interface = {
+    tag: SettingValue_Tags.Float;
+    inner: Readonly<[number]>;
+  };
+  class Float_ extends UniffiEnum implements Float__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'SettingValue';
+    readonly tag = SettingValue_Tags.Float;
+    readonly inner: Readonly<[number]>;
+    constructor(v0: number) {
+      super('SettingValue', 'Float');
+
+      this.inner = Object.freeze([v0]);
+    }
+    static new(v0: number): Float_ {
+      return new Float_(v0);
+    }
+
+    static instanceOf(obj: any): obj is Float_ {
+      return obj.tag === SettingValue_Tags.Float;
+    }
+  }
+
+  type Text__interface = {
+    tag: SettingValue_Tags.Text;
+    inner: Readonly<[string]>;
+  };
+  class Text_ extends UniffiEnum implements Text__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'SettingValue';
+    readonly tag = SettingValue_Tags.Text;
+    readonly inner: Readonly<[string]>;
+    constructor(v0: string) {
+      super('SettingValue', 'Text');
+
+      this.inner = Object.freeze([v0]);
+    }
+    static new(v0: string): Text_ {
+      return new Text_(v0);
+    }
+
+    static instanceOf(obj: any): obj is Text_ {
+      return obj.tag === SettingValue_Tags.Text;
+    }
+  }
+
+  function instanceOf(obj: any): obj is SettingValue {
+    return obj[uniffiTypeNameSymbol] === 'SettingValue';
+  }
+
+  return Object.freeze({
+    instanceOf,
+    Bool: Bool_,
+    Int: Int_,
+    Float: Float_,
+    Text: Text_,
+  });
+})();
+export type SettingValue = InstanceType<
+  (typeof SettingValue)['Bool' | 'Int' | 'Float' | 'Text']
+>;
+
+// FfiConverter for enum SettingValue
+const FfiConverterTypeSettingValue = (() => {
+  type TypeName = SettingValue;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      switch (c.readI32()) {
+        case 1:
+          return new SettingValue.Bool(FfiConverterBool.readFromCursor(c));
+        case 2:
+          return new SettingValue.Int(FfiConverterInt64.readFromCursor(c));
+        case 3:
+          return new SettingValue.Float(FfiConverterFloat64.readFromCursor(c));
+        case 4:
+          return new SettingValue.Text(FfiConverterString.readFromCursor(c));
+        default:
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      switch (value.tag) {
+        case SettingValue_Tags.Bool: {
+          c.writeI32(1);
+          const inner = value.inner;
+          FfiConverterBool.writeIntoCursor(inner[0], c);
+          return;
+        }
+        case SettingValue_Tags.Int: {
+          c.writeI32(2);
+          const inner = value.inner;
+          FfiConverterInt64.writeIntoCursor(inner[0], c);
+          return;
+        }
+        case SettingValue_Tags.Float: {
+          c.writeI32(3);
+          const inner = value.inner;
+          FfiConverterFloat64.writeIntoCursor(inner[0], c);
+          return;
+        }
+        case SettingValue_Tags.Text: {
+          c.writeI32(4);
+          const inner = value.inner;
+          FfiConverterString.writeIntoCursor(inner[0], c);
+          return;
+        }
+        default:
+          // Throwing from here means that SettingValue_Tags hasn't matched an ordinal.
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+    allocationSize(value: TypeName): number {
+      switch (value.tag) {
+        case SettingValue_Tags.Bool: {
+          const inner = value.inner;
+          let size = 4;
+          size += FfiConverterBool.allocationSize(inner[0]);
+          return size;
+        }
+        case SettingValue_Tags.Int: {
+          const inner = value.inner;
+          let size = 4;
+          size += FfiConverterInt64.allocationSize(inner[0]);
+          return size;
+        }
+        case SettingValue_Tags.Float: {
+          const inner = value.inner;
+          let size = 4;
+          size += FfiConverterFloat64.allocationSize(inner[0]);
+          return size;
+        }
+        case SettingValue_Tags.Text: {
+          const inner = value.inner;
+          let size = 4;
+          size += FfiConverterString.allocationSize(inner[0]);
+          return size;
+        }
+        default:
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+  }
+  return new FFIConverter();
+})();
+
+export type SettingEntry = {
+  key: SettingKey;
+  value: SettingValue;
+};
+
+/**
+ * Generated factory for {@link SettingEntry} record objects.
+ */
+export const SettingEntry = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<SettingEntry, ReturnType<typeof defaults>>(
+      defaults,
+    );
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults()) as Partial<SettingEntry>,
+  });
+})();
+
+const FfiConverterTypeSettingEntry = (() => {
+  type TypeName = SettingEntry;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      return {
+        key: FfiConverterTypeSettingKey.readFromCursor(c),
+        value: FfiConverterTypeSettingValue.readFromCursor(c),
+      };
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      FfiConverterTypeSettingKey.writeIntoCursor(value.key, c);
+      FfiConverterTypeSettingValue.writeIntoCursor(value.value, c);
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterTypeSettingKey.allocationSize(value.key) +
+        FfiConverterTypeSettingValue.allocationSize(value.value)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
 // Error type: CoreError
 export enum CoreError_Tags {
   NotInstalled = 'NotInstalled',
@@ -3999,6 +5121,11 @@ const FfiConverterOptionalTypeParcel = new FfiConverterOptional(
   FfiConverterTypeParcel,
 );
 
+// FfiConverter for Array<Friend>
+const FfiConverterSequenceTypeFriend = new FfiConverterArray(
+  FfiConverterTypeFriend,
+);
+
 // FfiConverter for bigint | undefined
 const FfiConverterOptionalInt64 = new FfiConverterOptional(FfiConverterInt64);
 
@@ -4027,6 +5154,21 @@ const FfiConverterSequenceTypeEffect = new FfiConverterArray(
   FfiConverterTypeEffect,
 );
 
+// FfiConverter for Array<NearbyUser>
+const FfiConverterSequenceTypeNearbyUser = new FfiConverterArray(
+  FfiConverterTypeNearbyUser,
+);
+
+// FfiConverter for Array<SettingEntry>
+const FfiConverterSequenceTypeSettingEntry = new FfiConverterArray(
+  FfiConverterTypeSettingEntry,
+);
+
+// FfiConverter for SettingKey | undefined
+const FfiConverterOptionalTypeSettingKey = new FfiConverterOptional(
+  FfiConverterTypeSettingKey,
+);
+
 /**
  * This should be called before anything else.
  *
@@ -4050,6 +5192,14 @@ function uniffiEnsureInitialized() {
     );
   }
   if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_accept_friend_request() !==
+    47162
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_accept_friend_request',
+    );
+  }
+  if (
     nativeModule().ubrn_uniffi_dcl_core_checksum_func_add_listener() !== 3284
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
@@ -4062,10 +5212,39 @@ function uniffiEnsureInitialized() {
     );
   }
   if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_block_user() !== 55013
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_block_user',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_cache_size() !== 31999
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_cache_size',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_cancel_friend_request() !==
+    57597
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_cancel_friend_request',
+    );
+  }
+  if (
     nativeModule().ubrn_uniffi_dcl_core_checksum_func_cancel_sign_in() !== 5353
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_dcl_core_checksum_func_cancel_sign_in',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_clear_cache() !== 6642
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_clear_cache',
     );
   }
   if (
@@ -4091,9 +5270,43 @@ function uniffiEnsureInitialized() {
       'uniffi_dcl_core_checksum_func_debug_fire_events',
     );
   }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_friend_requests() !==
+    47957
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_friend_requests',
+    );
+  }
+  if (nativeModule().ubrn_uniffi_dcl_core_checksum_func_friends() !== 50839) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_friends',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_handle_deep_link() !==
+    59962
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_handle_deep_link',
+    );
+  }
   if (nativeModule().ubrn_uniffi_dcl_core_checksum_func_installs() !== 12585) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_dcl_core_checksum_func_installs',
+    );
+  }
+  if (nativeModule().ubrn_uniffi_dcl_core_checksum_func_nearby() !== 53248) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_nearby',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_reject_friend_request() !==
+    62479
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_reject_friend_request',
     );
   }
   if (
@@ -4102,6 +5315,42 @@ function uniffiEnsureInitialized() {
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_dcl_core_checksum_func_remove_listener',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_send_friend_request() !==
+    38105
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_send_friend_request',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_set_setting() !== 61000
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_set_setting',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_setting_key_from_name() !==
+    19330
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_setting_key_from_name',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_setting_key_name() !==
+    55716
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_setting_key_name',
+    );
+  }
+  if (nativeModule().ubrn_uniffi_dcl_core_checksum_func_settings() !== 31672) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_settings',
     );
   }
   if (
@@ -4162,6 +5411,18 @@ function uniffiEnsureInitialized() {
     );
   }
   if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_unblock_user() !== 37381
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_unblock_user',
+    );
+  }
+  if (nativeModule().ubrn_uniffi_dcl_core_checksum_func_version() !== 61107) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_version',
+    );
+  }
+  if (
     nativeModule().ubrn_uniffi_dcl_core_checksum_method_applistener_state_changed() !==
     39688
   ) {
@@ -4202,13 +5463,17 @@ export default Object.freeze({
   converters: {
     FfiConverterTypeAnalyticsEvent,
     FfiConverterTypeAppListener,
+    FfiConverterTypeCacheSize,
     FfiConverterTypeConfigParam,
     FfiConverterTypeCoreError,
     FfiConverterTypeDecision,
     FfiConverterTypeDestination,
     FfiConverterTypeEffect,
     FfiConverterTypeEnvironment,
+    FfiConverterTypeFriend,
+    FfiConverterTypeFriendRequests,
     FfiConverterTypeNavigation,
+    FfiConverterTypeNearbyUser,
     FfiConverterTypeOpenUrl,
     FfiConverterTypeParamPair,
     FfiConverterTypeParcel,
@@ -4221,6 +5486,9 @@ export default Object.freeze({
     FfiConverterTypeReportTag,
     FfiConverterTypeReportTags,
     FfiConverterTypeRouted,
+    FfiConverterTypeSettingEntry,
+    FfiConverterTypeSettingKey,
+    FfiConverterTypeSettingValue,
     FfiConverterTypeSignInMethod,
     FfiConverterTypeSignInStep,
     FfiConverterTypeStartKind,

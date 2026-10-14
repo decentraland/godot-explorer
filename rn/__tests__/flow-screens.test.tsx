@@ -68,3 +68,15 @@ describe('entry flow Figma screens', () => {
     expect(onGuest).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('email sign-in screens', () => {
+  it('validates the address and the code before enabling the button', () => {
+    const { isValidCode, isValidEmail } = require('../src/flow/screens');
+    expect(isValidEmail('ana@example.com')).toBe(true);
+    expect(isValidEmail('ana@example')).toBe(false);
+    expect(isValidEmail('not an email')).toBe(false);
+    expect(isValidCode('123456')).toBe(true);
+    expect(isValidCode('12')).toBe(false);
+    expect(isValidCode('12a456')).toBe(false);
+  });
+});

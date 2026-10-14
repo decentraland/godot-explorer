@@ -20,6 +20,7 @@
     "expo": "~57.0.27",
     "react": "19.2.3",
     "react-native": "0.86.3",
+    "react-native-inappbrowser-reborn": "^3.7.1",
     "react-native-safe-area-context": "~5.7.0",
     "react-native-svg": "^15.15.5",
     "uniffi-bindgen-react-native": "0.31.0-6"

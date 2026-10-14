@@ -12,6 +12,7 @@ pub mod env;
 #[cfg(feature = "ffi")]
 pub mod ffi;
 pub mod flags;
+pub mod gates;
 pub mod http;
 pub mod hub;
 pub mod logging;
@@ -23,6 +24,7 @@ pub mod profile;
 pub mod proto;
 pub mod realm;
 pub mod report;
+pub mod scene;
 pub mod scene_requests;
 pub mod session;
 pub mod settings;

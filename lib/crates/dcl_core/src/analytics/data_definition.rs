@@ -198,6 +198,17 @@ pub enum SegmentEvent {
     SceneLocaleRequested(SegmentEventSceneLocaleRequested),
     PushOpened(SegmentEventPushOpened),
     AppOpened(SegmentEventAppOpened),
+    /// An event the shell names and fills itself (`Analytics::track`).
+    Custom(SegmentEventCustom),
+}
+
+/// An event whose name and properties the caller chose; the common explorer fields are merged
+/// in like for every other event.
+#[derive(Clone)]
+pub struct SegmentEventCustom {
+    pub name: String,
+    /// A JSON object.
+    pub properties: serde_json::Value,
 }
 
 /// SCENE_LOCALE_REQUESTED (#2707): a scene subscribed to the player's language.
@@ -1045,6 +1056,7 @@ pub fn build_segment_event_batch_item(
             serde_json::to_value(event).unwrap(),
             None,
         ),
+        SegmentEvent::Custom(event) => (event.name, event.properties, None),
     };
 
     let mut properties = serde_json::to_value(common).unwrap();

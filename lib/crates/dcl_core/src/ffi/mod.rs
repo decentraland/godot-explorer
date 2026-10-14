@@ -9,6 +9,7 @@ use crate::{
     Core,
 };
 
+mod gates;
 mod notifications;
 mod places;
 mod profile;

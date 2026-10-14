@@ -1,13 +1,14 @@
 #!/usr/bin/env node
-// Regenerates everything bound from dcl_core's FFI, from a built libdclgodot (any target: the
-// uniffi metadata is the same):
+// Regenerates everything bound from the core's FFI (dcl_core and dcl_host), from a library that
+// carries their uniffi metadata: libdclgodot of any target, or the small libdcl_bindings
+// (`cargo build -p dcl_bindings`), which is the default:
 //   modules/dcl-core/{src,cpp}/generated   TypeScript + C++ for the JSI TurboModule (ubrn)
 //   modules/dcl-core/{android,ios}, src/{NativeDclCore,index}   the TurboModule glue (ubrn)
 //   android/app/src/godot/java/.../host    Kotlin bindings of dcl_host, for the host (uniffi)
 //   ios/DclRn/Generated                    Swift bindings of dcl_host, for the host (uniffi)
 // A foreign trait has one vtable per process, so the JS shell implements dcl_core's traits and the
 // host implements dcl_host's: each language gets the bindings of its own crate only.
-// Usage: node scripts/ubrn-generate.mjs [path/to/libdclgodot.so|.dylib]
+// Usage: node scripts/ubrn-generate.mjs [path/to/library]
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readdirSync, copyFileSync, rmSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
@@ -18,10 +19,11 @@ const lib = resolve(rn, '../lib');
 const module = join(rn, 'modules/dcl-core');
 const ubrn = join(rn, 'node_modules/uniffi-bindgen-react-native/bin/cli.cjs');
 
-const hostLib = process.platform === 'darwin' ? 'libdclgodot.dylib' : 'libdclgodot.so';
+const hostLib =
+  process.platform === 'darwin' ? 'libdcl_bindings.dylib' : 'libdcl_bindings.so';
 const library = resolve(process.argv[2] ?? join(lib, 'target/debug', hostLib));
 if (!existsSync(library)) {
-  console.error(`missing ${library} (run: cargo run -- build)`);
+  console.error(`missing ${library} (run: cd lib && cargo build -p dcl_bindings)`);
   process.exit(1);
 }
 

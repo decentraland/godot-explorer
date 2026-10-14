@@ -395,8 +395,7 @@ async fn sign_out_clears_the_session_and_the_saved_account() {
         .sessions
         .lock()
         .unwrap()
-        .iter()
-        .any(|e| *e == SessionEvent::Logout));
+        .contains(&SessionEvent::Logout));
     assert!(s.hub.sign_out().is_err());
 }
 
@@ -438,4 +437,81 @@ async fn profile_slots_are_independent_and_keep_the_guest_profile() {
     let slot = SessionStore::new(s.dir.path()).slot("").unwrap();
     assert_eq!(slot.guest_profile, "keep me");
     assert!(SessionStore::new(s.dir.path()).slot("_other").is_none());
+}
+
+#[tokio::test]
+async fn a_warm_link_finishes_the_browser_sign_in_that_this_process_started() {
+    use crate::deep_link_route::{Effect, StartKind};
+    let s = setup();
+    signed_out(&s);
+    s.hub.sign_in_browser(None, None, None).unwrap();
+
+    let outcome = s.hub.route_deep_link(
+        "decentraland://open?signin=abc123",
+        StartKind::Warm,
+        crate::Platform::Android,
+    );
+    assert_eq!(outcome.complete_sign_in.as_deref(), Some("abc123"));
+    assert!(!outcome
+        .routed
+        .effects
+        .iter()
+        .any(|e| matches!(e, Effect::CompleteMobileSignIn { .. })));
+    s.hub
+        .complete_browser(outcome.complete_sign_in.unwrap())
+        .await
+        .unwrap();
+    assert_eq!(state(&s), State::SignedIn);
+}
+
+#[test]
+fn a_cold_link_signs_in_a_signed_out_user_and_is_dropped_for_a_signed_in_one() {
+    use crate::deep_link_route::StartKind;
+    let s = setup();
+    signed_out(&s);
+    let outcome = s.hub.route_deep_link(
+        "decentraland://open?signin=cold1",
+        StartKind::Cold,
+        crate::Platform::Android,
+    );
+    assert_eq!(outcome.complete_sign_in.as_deref(), Some("cold1"));
+    assert!(s.hub.resume_parked_sign_in().is_none(), "single shot");
+
+    let booting = setup();
+    let outcome = booting.hub.route_deep_link(
+        "decentraland://open?signin=early",
+        StartKind::Cold,
+        crate::Platform::Android,
+    );
+    assert!(
+        outcome.complete_sign_in.is_none(),
+        "the saved account is not looked up yet"
+    );
+    booting.hub.boot();
+    assert_eq!(
+        booting.hub.resume_parked_sign_in().as_deref(),
+        Some("early")
+    );
+}
+
+#[test]
+fn a_link_that_navigates_returns_the_destination_to_the_shell() {
+    use crate::deep_link_route::{Navigation, StartKind};
+    let s = setup();
+    signed_out(&s);
+    let outcome = s.hub.route_deep_link(
+        "decentraland://open?position=10,20",
+        StartKind::Warm,
+        crate::Platform::Android,
+    );
+    assert!(matches!(
+        outcome.routed.navigation,
+        Some(Navigation::Teleport { .. })
+    ));
+    let desktop = s.hub.route_deep_link(
+        "decentraland://open?position=10,20",
+        StartKind::Warm,
+        crate::Platform::Desktop,
+    );
+    assert!(desktop.routed.navigation.is_none());
 }

@@ -3,6 +3,7 @@
 //! owns the process's hub; tests build their own with a fake backend.
 
 mod backend;
+mod links;
 mod signin;
 
 #[cfg(test)]
@@ -15,6 +16,7 @@ use std::sync::{
 
 use crate::{
     app::{App, HostEvents},
+    deep_link_route::{DeepLinkRouter, SystemClock},
     session::{
         account_codec,
         identity::{Session, SessionEvent},
@@ -23,6 +25,7 @@ use crate::{
 };
 
 pub use backend::{LiveBackend, SignInBackend};
+pub use links::LinkOutcome;
 pub use signin::SignInError;
 
 /// Observes what the sign-in flows do to the session. The engine's identity node mirrors it into
@@ -55,6 +58,9 @@ pub struct Hub {
     backend: Arc<dyn SignInBackend>,
     observers: Mutex<Vec<Arc<dyn SessionObserver>>>,
     wallet_pending: Mutex<Option<signin::PendingWallet>>,
+    router: Mutex<DeepLinkRouter>,
+    /// Gates developer-only link parameters; on until the engine says this is a dev build.
+    production: AtomicBool,
 }
 
 impl Hub {
@@ -71,6 +77,8 @@ impl Hub {
             backend,
             observers: Mutex::new(Vec::new()),
             wallet_pending: Mutex::new(None),
+            router: Mutex::new(Self::new_router(Arc::new(SystemClock::new()))),
+            production: AtomicBool::new(true),
         }
     }
 
@@ -108,6 +116,11 @@ impl Hub {
     /// per-install file.
     pub fn set_device_anchor(&self, anchor: &str) {
         *self.device_anchor.lock().unwrap_or_else(|e| e.into_inner()) = anchor.to_string();
+    }
+
+    /// Whether this is a production build; defaults to yes, the safe side for developer links.
+    pub fn set_production(&self, production: bool) {
+        self.production.store(production, Ordering::Relaxed);
     }
 
     pub fn set_persist_session(&self, persist: bool) {
