@@ -136,6 +136,10 @@ func start_replay() -> void:
 func _on_loading_started() -> void:
 	_generation += 1
 	_close_welcome()
+	# The card would stay over the loading screen; it comes back once the new scene is in.
+	if is_instance_valid(_reward_layer):
+		_close_reward()
+		_forced_reward = true
 
 
 func _on_loading_finished() -> void:
@@ -156,7 +160,7 @@ func _async_on_scene_entered() -> void:
 		await get_tree().process_frame
 		if generation != _generation:
 			return
-	if not is_instance_valid(explorer) or is_running():
+	if not is_instance_valid(explorer) or is_running() or is_instance_valid(_welcome):
 		return
 	if _forced_reward:
 		_forced_reward = false
@@ -207,10 +211,14 @@ func _close_welcome() -> void:
 
 
 func _async_start_replay() -> void:
+	var generation := _generation
 	var explorer := Global.get_explorer()
 	while is_instance_valid(explorer) and explorer.control_menu.visible:
 		await get_tree().process_frame
-	if is_instance_valid(explorer) and not is_running():
+	# A load that started meanwhile would never suspend a run started after it.
+	if generation != _generation or not is_instance_valid(explorer) or explorer.loading_ui.visible:
+		return
+	if not is_running():
 		_start(explorer, true)
 
 
@@ -227,9 +235,9 @@ func _start(explorer: Explorer, is_replay: bool) -> void:
 	_runner.start(
 		explorer,
 		_overlay,
-		flags.get_number(FLAG_MOVE_METERS, DEFAULT_MOVE_METERS),
-		flags.get_number(FLAG_CAMERA_DEGREES, DEFAULT_CAMERA_DEGREES),
-		flags.get_number(FLAG_SOCIAL_SECONDS, DEFAULT_SOCIAL_SECONDS),
+		clampf(flags.get_number(FLAG_MOVE_METERS, DEFAULT_MOVE_METERS), 0.1, 20.0),
+		clampf(flags.get_number(FLAG_CAMERA_DEGREES, DEFAULT_CAMERA_DEGREES), 1.0, 360.0),
+		clampf(flags.get_number(FLAG_SOCIAL_SECONDS, DEFAULT_SOCIAL_SECONDS), 0.0, 10.0),
 		clampf(flags.get_number(FLAG_STEP_DELAY_SECONDS, DEFAULT_STEP_DELAY_SECONDS), 0.0, 10.0),
 		clampf(flags.get_number(FLAG_CHAT_SECONDS, DEFAULT_CHAT_SECONDS), 0.0, 10.0)
 	)

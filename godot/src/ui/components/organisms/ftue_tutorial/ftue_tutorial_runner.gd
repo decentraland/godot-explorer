@@ -382,6 +382,10 @@ func _restore_hud() -> void:
 	if _hud == Hud.FULL:
 		return
 	_hud = Hud.FULL
+	# Settings > Hide UI keeps the HUD hidden; set_visible_ui(true, true) would ignore it.
+	if _explorer.is_session_hide_main_hud():
+		_explorer.apply_deferred_hide_ui()
+		return
 	_explorer.set_visible_ui(true, true)
 	_explorer.mobile_ui.show()
 	_explorer.joypad.show()
