@@ -348,12 +348,16 @@ func _keep_settled(navbar_open: bool) -> void:
 		_enter_step(step)
 
 
-# Steps 1-3: the player did what the step asked. It stays on screen for a moment, so the
-# next instruction does not replace this one the instant it is done.
+# Steps 1-3: the player did what the step asked. Its text and highlight go away and nothing
+# is shown for a moment, so the next instruction does not replace this one the instant it is
+# done. The controls stay as the step left them.
 func _advance(next: Step) -> void:
 	if _advancing:
 		return
 	_advancing = true
+	_overlay.ring.stop()
+	_overlay.hide_tooltip()
+	_overlay.hide_gesture()
 	_enter_step_after(next, _step_delay_seconds)
 
 
