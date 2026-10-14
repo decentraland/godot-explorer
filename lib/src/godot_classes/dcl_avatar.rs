@@ -56,7 +56,9 @@ struct Packet {
     anim: AnimState,
 }
 
-/// Animation flags consumed by avatar.gd's AnimationTree conditions.
+/// Animation flags consumed by avatar.gd's AnimationTree conditions. One per
+/// buffered packet, so a rendered segment never mixes one packet's rise/fall
+/// with another's air pose or gait speed.
 #[derive(Default, Clone, Copy)]
 struct AnimState {
     walk: bool,
@@ -66,6 +68,9 @@ struct AnimState {
     fall: bool,
     land: bool,
     is_grounded: bool,
+    long_fall: bool,
+    fall_fast: bool,
+    movement_speed: f32,
 }
 
 const PACKET_BUFFER_CAPACITY: usize = 8;
@@ -488,6 +493,9 @@ impl DclAvatar {
             fall: self.fall,
             land: self.land,
             is_grounded: self.is_grounded,
+            long_fall: self.long_fall,
+            fall_fast: self.fall_fast,
+            movement_speed: self.movement_speed,
         }
     }
 
@@ -501,6 +509,9 @@ impl DclAvatar {
         self.fall = anim.fall;
         self.land = anim.land;
         self.is_grounded = anim.is_grounded;
+        self.long_fall = anim.long_fall;
+        self.fall_fast = anim.fall_fast;
+        self.movement_speed = anim.movement_speed;
     }
 
     /// Re-snapshot the newest packet's anim after wire-authoritative state
