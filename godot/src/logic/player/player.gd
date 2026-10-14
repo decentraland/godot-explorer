@@ -127,6 +127,9 @@ const LONG_FALL_ANIM_SPEED := 8.0
 # #1553: fall animation threshold (Unity AnimationFallSpeed = -3) — the fall
 # pose waits for real falling speed; apex floats in the Mid state.
 const FALL_ANIM_SPEED := 3.0
+# Measured ground speed below this is not a step: pushing a wall keeps the move
+# input held while the avatar stays put, and the gait drives the step sounds.
+const GAIT_MIN_SPEED := 0.1
 # #2854 M12: external-force multiplier while gliding (Unity GlideWindResponse).
 const GLIDE_WIND_RESPONSE := 1.5
 # cos(46deg): a slide collision flatter than this is walkable ground; steeper
@@ -341,9 +344,10 @@ func set_camera_mode(mode: Global.CameraMode, play_sound: bool = true):
 func update_avatar_movement_state(vel: float):
 	# #2856: gait bools mirror the input-mode kind (idle when no move input);
 	# movement_speed feeds the continuous blend in avatar.gd.
-	avatar.walk = movement_kind == 1 and has_move_input
-	avatar.jog = movement_kind == 2 and has_move_input
-	avatar.run = movement_kind == 3 and has_move_input
+	var stepping := vel > GAIT_MIN_SPEED
+	avatar.walk = movement_kind == 1 and has_move_input and stepping
+	avatar.jog = movement_kind == 2 and has_move_input and stepping
+	avatar.run = movement_kind == 3 and has_move_input and stepping
 	avatar.movement_speed = vel
 
 
