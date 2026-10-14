@@ -557,33 +557,36 @@ func async_show_ban_kicked_modal() -> void:
 
 ## Shows the modal for a DuplicateIdentity disconnect (another session signed in with same account).
 ## Primary action signs the user out and returns them to the sign-in screen.
-func async_show_session_ended_modal() -> void:
+func async_show_session_ended_modal(is_current: Callable = Callable()) -> void:
 	await _async_show_disconnect_modal(
 		session_ended_duplicate_title,
 		session_ended_duplicate_body,
 		session_ended_sign_in_primary,
-		_on_session_ended_sign_in
+		_on_session_ended_sign_in,
+		is_current
 	)
 
 
 ## Shows the modal for a RoomClosed disconnect. Primary action retries the connection.
-func async_show_room_closed_modal() -> void:
+func async_show_room_closed_modal(is_current: Callable = Callable()) -> void:
 	await _async_show_disconnect_modal(
 		session_ended_room_closed_title,
 		session_ended_room_closed_body,
 		session_ended_retry_primary,
-		_on_session_ended_retry
+		_on_session_ended_retry,
+		is_current
 	)
 
 
 ## Shows the modal for a generic/other disconnect (after reconnect attempts are exhausted).
 ## Primary action retries the connection.
-func async_show_disconnected_modal() -> void:
+func async_show_disconnected_modal(is_current: Callable = Callable()) -> void:
 	await _async_show_disconnect_modal(
 		session_ended_other_title,
 		session_ended_other_body,
 		session_ended_retry_primary,
-		_on_session_ended_retry
+		_on_session_ended_retry,
+		is_current
 	)
 
 
@@ -591,23 +594,12 @@ func _async_show_disconnect_modal(
 	title: TranslationKey,
 	body: TranslationKey,
 	primary_label: TranslationKey,
-	primary_handler: Callable
+	primary_handler: Callable,
+	is_current: Callable = Callable()
 ) -> void:
-	if not await _async_ensure_modal("ModalManager._async_show_disconnect_modal"):
-		return
-
-	current_modal.blocker = true
-	current_modal.set_title(title)
-	current_modal.set_body(body)
-	current_modal.set_primary_button_text(primary_label)
-	current_modal.set_secondary_button_text(session_ended_secondary)
-	current_modal.show_icon(Modal.MODAL_CONNECTION_ICON)
-	current_modal.hide_url()
-	current_modal.show()
-
-	_disconnect_button_signals()
-	current_modal.button_primary.pressed.connect(primary_handler)
-	current_modal.button_secondary.pressed.connect(_on_session_ended_secondary)
+	await CommsDisconnectModal.async_show_modal(
+		self, title, body, primary_label, primary_handler, is_current
+	)
 
 
 func _on_session_ended_sign_in() -> void:
