@@ -117,6 +117,8 @@ func _build() -> void:
 		var ray := RayCast3D.new()
 		ray.name = "IKHandRay" + side.capitalize()
 		ray.collision_mask = RAY_MASK
+		# Every read follows a forced update, so the engine never needs to sweep it.
+		ray.enabled = false
 		_avatar.add_child(ray)
 		var chain := TwoBoneIK3D.new()
 		chain.name = "IKHand" + side.capitalize()

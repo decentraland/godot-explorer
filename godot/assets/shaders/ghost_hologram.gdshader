@@ -41,7 +41,9 @@ void fragment() {
 		discard;
 	}
 	vec3 view_dir = normalize(CAMERA_POSITION_WORLD - world_pos);
-	vec3 normal_ws = normalize(NORMAL);
+	// NORMAL is view space in the fragment stage and view_dir is world; the
+	// fresnel needs both in the same space or the rim lands on the wrong faces.
+	vec3 normal_ws = normalize((INV_VIEW_MATRIX * vec4(NORMAL, 0.0)).xyz);
 	float base_fresnel = pow(1.0 - clamp(dot(view_dir, normal_ws), 0.0, 1.0), fresnel_power);
 
 	float bright_band = floor(world_pos.y * fresnel_band_density);

@@ -4,6 +4,13 @@ const GLIDER_PROP_SCENE: PackedScene = preload(
 	"res://src/decentraland_components/avatar/glider_prop.tscn"
 )
 
+# The tree blends the gait by speed, so flipping a gait flag alone leaves the
+# avatar in the idle pose. These are the speeds each kind blends at full
+# (player.gd's walk/jog/run defaults).
+const GAIT_PREVIEW_SPEED_WALK := 1.5
+const GAIT_PREVIEW_SPEED_JOG := 8.0
+const GAIT_PREVIEW_SPEED_RUN := 10.0
+
 var avatar_list: Array = []
 
 # Emote batch testing
@@ -546,14 +553,30 @@ func _on_anim_restore_tree_pressed() -> void:
 
 func _on_flag_walk_toggled(pressed: bool) -> void:
 	avatar.walk = pressed
+	_preview_gait()
 
 
 func _on_flag_jog_toggled(pressed: bool) -> void:
 	avatar.jog = pressed
+	_preview_gait()
 
 
 func _on_flag_run_toggled(pressed: bool) -> void:
 	avatar.run = pressed
+	_preview_gait()
+
+
+# The gait flags alone move nothing: the blend reads the measured speed, which
+# is zero on a standing avatar.
+func _preview_gait() -> void:
+	var speed := 0.0
+	if avatar.run:
+		speed = GAIT_PREVIEW_SPEED_RUN
+	elif avatar.jog:
+		speed = GAIT_PREVIEW_SPEED_JOG
+	elif avatar.walk:
+		speed = GAIT_PREVIEW_SPEED_WALK
+	avatar.movement_speed = speed
 
 
 func _on_flag_rise_toggled(pressed: bool) -> void:

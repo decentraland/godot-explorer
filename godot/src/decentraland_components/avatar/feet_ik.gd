@@ -187,6 +187,8 @@ func _build() -> void:
 		probe.shape = ball
 		probe.collision_mask = RAY_MASK
 		probe.target_position = Vector3(0.0, -CAST_LENGTH, 0.0)
+		# Every read follows a forced update, so the engine never needs to sweep it.
+		probe.enabled = false
 		_avatar.add_child(probe)
 		var chain := TwoBoneIK3D.new()
 		chain.name = "IKFoot" + side.capitalize()
