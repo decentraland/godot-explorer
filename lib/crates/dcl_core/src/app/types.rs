@@ -140,6 +140,10 @@ pub trait AppEvents: Send + Sync {
     /// The host flips the surface order.
     fn avatar_preview_mode(&self, on: bool);
     fn scene_crashed(&self);
+    /// A sign-in step failed; `code` is stable and the shell maps it to copy.
+    fn auth_error(&self, _code: &str) {}
+    /// The shell shows `request.url` in a browser or webview.
+    fn open_url(&self, _request: &crate::OpenUrlRequest) {}
 }
 
 #[derive(Debug, PartialEq)]

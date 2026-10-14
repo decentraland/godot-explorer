@@ -1,6 +1,7 @@
 package com.dclrn
 
 import android.app.Application
+import android.provider.Settings
 import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -31,8 +32,14 @@ object CoreHost {
         }
       }
 
+  /** The SSAID, which survives reinstalls; empty on devices with the known-bad value. */
+  private fun deviceAnchor(app: Application): String {
+    val ssaid = Settings.Secure.getString(app.contentResolver, Settings.Secure.ANDROID_ID) ?: ""
+    return if (ssaid.equals("9774d56d682e549c", ignoreCase = true)) "" else ssaid
+  }
+
   fun install(app: Application) {
-    installCore(app.filesDir.absolutePath, HostPlatform.ANDROID)
+    installCore(app.filesDir.absolutePath, HostPlatform.ANDROID, deviceAnchor(app))
     addHostListener(listener)
     Log.i(TAG, "core installed")
     if (app.applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE != 0) {

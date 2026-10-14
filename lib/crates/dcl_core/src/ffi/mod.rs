@@ -9,10 +9,19 @@ use crate::{
     Core,
 };
 
+mod session;
+
 #[derive(Debug, uniffi::Error)]
 pub enum CoreError {
     NotInstalled,
-    InvalidCall { detail: String },
+    InvalidCall {
+        detail: String,
+    },
+    /// A sign-in step failed; `code` is the stable value the shell maps to copy.
+    SignIn {
+        code: String,
+        detail: String,
+    },
 }
 
 impl std::fmt::Display for CoreError {
@@ -20,8 +29,25 @@ impl std::fmt::Display for CoreError {
         match self {
             Self::NotInstalled => write!(f, "the core is not installed"),
             Self::InvalidCall { detail } => write!(f, "{detail}"),
+            Self::SignIn { code, detail } => write!(f, "{code}: {detail}"),
         }
     }
+}
+
+impl From<crate::hub::SignInError> for CoreError {
+    fn from(error: crate::hub::SignInError) -> Self {
+        Self::SignIn {
+            code: error.code,
+            detail: error.detail,
+        }
+    }
+}
+
+/// A page the shell shows in an in-app browser or webview.
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct OpenUrl {
+    pub url: String,
+    pub use_webview: bool,
 }
 
 impl std::error::Error for CoreError {}
@@ -41,6 +67,9 @@ impl From<crate::app::AppError> for CoreError {
 pub trait AppListener: Send + Sync {
     fn state_changed(&self, state: State);
     fn scene_crashed(&self);
+    /// A sign-in step failed; `code` is stable and the shell maps it to copy.
+    fn auth_error(&self, code: String);
+    fn open_url(&self, request: OpenUrl);
 }
 
 struct ListenerAdapter(Arc<dyn AppListener>);
@@ -51,12 +80,21 @@ impl AppEvents for ListenerAdapter {
     }
     fn engine_required(&self) {}
     fn avatar_preview_mode(&self, _on: bool) {}
+    fn auth_error(&self, code: &str) {
+        self.0.auth_error(code.to_string());
+    }
+    fn open_url(&self, request: &crate::OpenUrlRequest) {
+        self.0.open_url(OpenUrl {
+            url: request.url.clone(),
+            use_webview: request.use_webview,
+        });
+    }
     fn scene_crashed(&self) {
         self.0.scene_crashed();
     }
 }
 
-fn core() -> Result<&'static Core, CoreError> {
+pub(crate) fn core() -> Result<&'static Core, CoreError> {
     Core::try_get().ok_or(CoreError::NotInstalled)
 }
 

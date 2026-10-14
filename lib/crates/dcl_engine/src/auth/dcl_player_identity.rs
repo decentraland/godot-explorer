@@ -2,6 +2,7 @@ use ethers_core::types::H160;
 use ethers_signers::LocalWallet;
 use godot::prelude::*;
 use rand::thread_rng;
+use std::sync::Arc;
 use std::time::{Instant, UNIX_EPOCH};
 use tokio::task::JoinHandle;
 
@@ -11,6 +12,7 @@ use crate::dcl::scene_apis::RpcResultSender;
 use crate::godot_classes::dcl_global::DclGlobal;
 use crate::godot_classes::promise::Promise;
 use crate::http_request::request_response::RequestResponse;
+use dcl_core::hub::{GuestLoginReport, SessionObserver};
 use dcl_core::Core;
 
 use super::auth_identity::{
@@ -32,8 +34,6 @@ use super::wallet::AsH160;
 #[derive(GodotClass)]
 #[class(base=Node)]
 pub struct DclPlayerIdentity {
-    session: Session,
-
     profile: Option<Gd<DclUserProfile>>,
 
     try_connect_account_handle: Option<JoinHandle<()>>,
@@ -44,11 +44,68 @@ pub struct DclPlayerIdentity {
     base: Base<Node>,
 }
 
+/// Mirrors what the core's sign-in flows do to the account into this node's signals, so the
+/// engine-side GDScript that reacts to `wallet_connected` (the profile fetch) keeps working.
+struct IdentityObserver(InstanceId);
+
+impl IdentityObserver {
+    fn node(&self) -> Option<Gd<DclPlayerIdentity>> {
+        Gd::<DclPlayerIdentity>::try_from_instance_id(self.0).ok()
+    }
+}
+
+impl SessionObserver for IdentityObserver {
+    fn session_event(&self, event: &SessionEvent) {
+        let Some(mut node) = self.node() else {
+            return;
+        };
+        match event {
+            SessionEvent::WalletConnected {
+                address,
+                chain_id,
+                is_guest,
+            } => node.call_deferred(
+                "_apply_core_wallet",
+                &[
+                    address.to_variant(),
+                    chain_id.to_variant(),
+                    is_guest.to_variant(),
+                ],
+            ),
+            SessionEvent::Logout => node.call_deferred("_apply_core_logout", &[]),
+        };
+    }
+
+    fn guest_login(&self, report: &GuestLoginReport) {
+        let Some(mut node) = self.node() else {
+            return;
+        };
+        node.call_deferred(
+            "emit_signal",
+            &[
+                "guest_login_outcome".to_variant(),
+                (if report.success { "success" } else { "failure" }).to_variant(),
+                report.is_new_user.to_variant(),
+                report.failure_reason.to_variant(),
+                report.http_status.map(i64::from).unwrap_or(-1).to_variant(),
+                (report.duration_ms as i64).to_variant(),
+            ],
+        );
+    }
+}
+
 #[godot_api]
 impl INode for DclPlayerIdentity {
     fn init(base: Base<Node>) -> Self {
+        // The core may have restored an account before this node existed (the host boots it at
+        // launch); `_sync_core_session` announces it once the node is up.
+        if let Some(core) = Core::try_get() {
+            let mut node = base.to_init_gd();
+            core.hub()
+                .add_observer(Arc::new(IdentityObserver(node.instance_id())));
+            node.call_deferred("_sync_core_session", &[]);
+        }
         Self {
-            session: Session::default(),
             profile: None,
             base,
             is_guest: false,
@@ -88,6 +145,33 @@ impl DclPlayerIdentity {
     );
 
     #[func]
+    fn _apply_core_wallet(&mut self, address: GString, chain_id: u64, is_guest: bool) {
+        self.apply_event(SessionEvent::WalletConnected {
+            address: address.to_string(),
+            chain_id,
+            is_guest,
+        });
+    }
+
+    #[func]
+    fn _apply_core_logout(&mut self) {
+        self.profile = None;
+        self.apply_event(SessionEvent::Logout);
+    }
+
+    #[func]
+    fn _sync_core_session(&mut self) {
+        let Some(account) = self.with_session(|s| s.recoverable_account()) else {
+            return;
+        };
+        self.apply_event(SessionEvent::WalletConnected {
+            address: format!("{:#x}", account.account_address),
+            chain_id: account.chain_id,
+            is_guest: !account.local_wallet.is_empty(),
+        });
+    }
+
+    #[func]
     fn try_set_remote_wallet(
         &mut self,
         address_string: GString,
@@ -115,9 +199,8 @@ impl DclPlayerIdentity {
             }
         };
 
-        let event = self
-            .session
-            .install_remote(address, chain_id, ephemeral_auth_chain);
+        let event =
+            self.with_session(|s| s.install_remote(address, chain_id, ephemeral_auth_chain));
         self.apply_event(event);
         true
     }
@@ -128,14 +211,14 @@ impl DclPlayerIdentity {
     /// wallet and reset the marker to `false`.
     #[func]
     fn _set_thirdweb_guest_flag(&mut self, value: bool) {
-        self.session.is_thirdweb_guest = value;
+        self.with_session(|s| s.is_thirdweb_guest = value);
     }
 
     /// Whether the active account is a silent persistent thirdweb guest. Gates
     /// the Settings "Upgrade to OTP" affordance from GDScript.
     #[func]
     fn is_thirdweb_guest(&self) -> bool {
-        self.session.is_thirdweb_guest
+        self.with_session(|s| s.is_thirdweb_guest)
     }
 
     /// Deferred setter for the upgraded marker. Called from the thirdweb thread
@@ -143,7 +226,7 @@ impl DclPlayerIdentity {
     /// successful email link, so the write lands on the main thread.
     #[func]
     fn _set_thirdweb_guest_upgraded_flag(&mut self, value: bool) {
-        self.session.is_thirdweb_guest_upgraded = value;
+        self.with_session(|s| s.is_thirdweb_guest_upgraded = value);
     }
 
     /// Whether the active thirdweb guest has already linked a non-`guest` auth
@@ -152,7 +235,7 @@ impl DclPlayerIdentity {
     /// the UI hide the Upgrade affordance for already-upgraded guests.
     #[func]
     fn is_thirdweb_guest_upgraded(&self) -> bool {
-        self.session.is_thirdweb_guest_upgraded
+        self.with_session(|s| s.is_thirdweb_guest_upgraded)
     }
 
     #[func]
@@ -668,7 +751,7 @@ impl DclPlayerIdentity {
         if let Some(handle) = self.try_connect_account_handle.take() {
             handle.abort();
         }
-        self.session.abort_connect();
+        self.with_session(|s| s.abort_connect());
     }
 
     /// Starts mobile auth flow. Opens browser and returns immediately.
@@ -681,7 +764,7 @@ impl DclPlayerIdentity {
         user_id: GString,
         session_id: GString,
     ) {
-        self.session.begin_mobile_auth();
+        self.with_session(|s| s.begin_mobile_auth());
 
         let Some(handle) = Core::try_handle() else {
             panic!("tokio runtime not initialized")
@@ -720,7 +803,8 @@ impl DclPlayerIdentity {
                 Ok(pending) => {
                     tracing::info!("Mobile auth started, waiting for deep link");
                     let () = pending;
-                    this.bind_mut().session.set_pending_mobile_auth();
+                    this.bind_mut()
+                        .with_session(|s| s.set_pending_mobile_auth());
                 }
                 Err(err) => {
                     tracing::error!("Error starting mobile auth: {:?}", err);
@@ -744,7 +828,7 @@ impl DclPlayerIdentity {
     /// expired id already fails there with a real error.
     #[func]
     fn complete_mobile_connect_account(&mut self, identity_id: GString) {
-        self.session.take_pending_mobile_auth();
+        self.with_session(|s| s.take_pending_mobile_auth());
 
         let Some(handle) = Core::try_handle() else {
             panic!("tokio runtime not initialized")
@@ -752,7 +836,7 @@ impl DclPlayerIdentity {
 
         let instance_id = self.base().instance_id();
         let identity_id = identity_id.to_string();
-        let attempt = self.session.mobile_auth_attempt();
+        let attempt = self.with_session(|s| s.mobile_auth_attempt());
 
         let complete_handle = handle.spawn(async move {
             let result = complete_mobile_auth(identity_id).await;
@@ -806,7 +890,7 @@ impl DclPlayerIdentity {
         chain_id: u64,
         ephemeral_auth_chain: GString,
     ) {
-        if !self.session.is_current_mobile_attempt(attempt) {
+        if !self.with_session(|s| s.is_current_mobile_attempt(attempt)) {
             tracing::info!("Discarding a completed mobile sign-in: attempt was retired");
             return;
         }
@@ -817,7 +901,7 @@ impl DclPlayerIdentity {
     /// whatever screen the user moved on to.
     #[func]
     fn _mobile_auth_failed(&mut self, attempt: u32, error_message: GString) {
-        if !self.session.is_current_mobile_attempt(attempt) {
+        if !self.with_session(|s| s.is_current_mobile_attempt(attempt)) {
             tracing::info!("Discarding a failed mobile sign-in: attempt was retired");
             return;
         }
@@ -828,13 +912,13 @@ impl DclPlayerIdentity {
     /// Returns true if there's a pending mobile auth waiting for deep link
     #[func]
     fn has_pending_mobile_auth(&self) -> bool {
-        self.session.has_pending_mobile_auth()
+        self.with_session(|s| s.has_pending_mobile_auth())
     }
 
     /// True if the user cancelled a browser sign-in in this process.
     #[func]
     fn was_mobile_auth_cancelled(&self) -> bool {
-        self.session.was_mobile_auth_cancelled()
+        self.with_session(|s| s.was_mobile_auth_cancelled())
     }
 
     /// Generates ephemeral identity data for external signing (e.g., WalletConnect).
@@ -894,9 +978,8 @@ impl DclPlayerIdentity {
         ) {
             Ok(ephemeral_auth_chain) => {
                 let address = ephemeral_auth_chain.signer();
-                let event = self
-                    .session
-                    .install_walletconnect(address, ephemeral_auth_chain);
+                let event =
+                    self.with_session(|s| s.install_walletconnect(address, ephemeral_auth_chain));
                 self.apply_event(event);
 
                 tracing::info!("WalletConnect auth successful for address: {:#x}", address);
@@ -944,12 +1027,13 @@ impl DclPlayerIdentity {
         };
 
         let is_local = !local_wallet_bytes.is_empty();
-        let Some(event) = self.session.recover(RecoverableAccount {
+        let account = RecoverableAccount {
             account_address,
             chain_id,
             ephemeral_auth_chain,
             local_wallet: local_wallet_bytes.as_slice().to_vec(),
-        }) else {
+        };
+        let Some(event) = self.with_session(|s| s.recover(account)) else {
             return false;
         };
         self.apply_event(event);
@@ -961,7 +1045,7 @@ impl DclPlayerIdentity {
 
     #[func]
     pub fn get_recover_account_to(&self, mut dict: VarDictionary) -> bool {
-        let Some(account) = self.session.recoverable_account() else {
+        let Some(account) = self.with_session(|s| s.recoverable_account()) else {
             return false;
         };
 
@@ -1042,16 +1126,16 @@ impl DclPlayerIdentity {
 
     #[func]
     pub fn get_address_str(&self) -> GString {
-        GString::from(&self.session.address_string())
+        GString::from(&self.with_session(|s| s.address_string()))
     }
 
     #[func]
     pub fn async_get_ephemeral_auth_chain(&self) -> Gd<Promise> {
         let promise = Promise::new_alloc();
 
-        if let Some(ephemeral_auth_chain) = self.session.ephemeral_auth_chain() {
+        if let Some(ephemeral_auth_chain) = self.try_get_ephemeral_auth_chain() {
             let auth_chain_str =
-                serde_json::to_string(ephemeral_auth_chain).unwrap_or_else(|_| "{}".to_string());
+                serde_json::to_string(&ephemeral_auth_chain).unwrap_or_else(|_| "{}".to_string());
             let mut promise_clone = promise.clone();
             promise_clone
                 .bind_mut()
@@ -1066,8 +1150,8 @@ impl DclPlayerIdentity {
         promise
     }
 
-    pub fn get_ephemeral_auth_chain(&self) -> Option<&EphemeralAuthChain> {
-        self.session.ephemeral_auth_chain()
+    pub fn get_ephemeral_auth_chain(&self) -> Option<EphemeralAuthChain> {
+        self.try_get_ephemeral_auth_chain()
     }
 
     #[func]
@@ -1081,7 +1165,7 @@ impl DclPlayerIdentity {
         let promise_instance_id = promise.instance_id();
 
         // Check ephemeral auth chain before spawning
-        let Some(ephemeral_auth_chain) = self.session.ephemeral_auth_chain().cloned() else {
+        let Some(ephemeral_auth_chain) = self.try_get_ephemeral_auth_chain() else {
             tracing::error!("ephemeral auth chain not initialized");
             let mut promise_clone = promise.clone();
             promise_clone
@@ -1210,6 +1294,11 @@ impl DclPlayerIdentity {
 }
 
 impl DclPlayerIdentity {
+    /// The account state lives in the core, which the sign-in flows also drive.
+    fn with_session<R>(&self, f: impl FnOnce(&mut Session) -> R) -> R {
+        Core::get().with_session(f)
+    }
+
     /// Emits the signal for a session event on the main thread and mirrors `is_guest`.
     fn apply_event(&mut self, event: SessionEvent) {
         match event {
@@ -1237,7 +1326,7 @@ impl DclPlayerIdentity {
     }
 
     fn install_local_wallet(&mut self, bytes: &[u8], ephemeral_auth_chain: EphemeralAuthChain) {
-        match self.session.install_local(bytes, ephemeral_auth_chain) {
+        match self.with_session(|s| s.install_local(bytes, ephemeral_auth_chain)) {
             Ok(event) => {
                 self.apply_event(event);
                 self.profile = None;
@@ -1247,7 +1336,7 @@ impl DclPlayerIdentity {
     }
 
     pub fn try_get_ephemeral_auth_chain(&self) -> Option<EphemeralAuthChain> {
-        self.session.ephemeral_auth_chain().cloned()
+        self.with_session(|s| s.ephemeral_auth_chain().cloned())
     }
 
     pub fn clone_profile(&self) -> Option<UserProfile> {
@@ -1255,7 +1344,7 @@ impl DclPlayerIdentity {
     }
 
     pub fn try_get_address(&self) -> Option<H160> {
-        self.session.try_address()
+        self.with_session(|s| s.try_address())
     }
 
     pub fn get_address(&self) -> H160 {
@@ -1264,7 +1353,7 @@ impl DclPlayerIdentity {
 
     // is not exposed to godot, because it should only be called by comms
     pub fn logout(&mut self) {
-        let Some(event) = self.session.logout() else {
+        let Some(event) = self.with_session(|s| s.logout()) else {
             return;
         };
         self.profile = None;
@@ -1281,7 +1370,7 @@ impl DclPlayerIdentity {
             .get_dcl_tokio_rpc()
             .bind()
             .get_sender();
-        let Some(auth_chain) = self.session.ephemeral_auth_chain().cloned() else {
+        let Some(auth_chain) = self.try_get_ephemeral_auth_chain() else {
             return;
         };
         body.auth_chain = Some(auth_chain.auth_chain().clone());

@@ -20,8 +20,11 @@ import {
   type UniffiRustCallStatus,
   AbstractFfiConverterByteArray,
   Cursor,
+  FfiConverterArray,
+  FfiConverterBool,
   FfiConverterFloat32,
   FfiConverterInt32,
+  FfiConverterInt64,
   FfiConverterObject,
   FfiConverterObjectWithCallbacks,
   FfiConverterOptional,
@@ -76,6 +79,77 @@ export function addListener(listener: AppListener): bigint /*throws*/ {
       /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
     ),
   );
+}
+
+/**
+ * The signed-in address, `None` when signed out.
+ */
+export function address(): string | undefined /*throws*/ {
+  const __rb: Uint8Array = uniffiCaller.rustCallWithError(
+    /*liftError:*/ FfiConverterTypeCoreError.lift.bind(
+      FfiConverterTypeCoreError,
+    ),
+    /*caller:*/ callStatus => {
+      return nativeModule().ubrn_uniffi_dcl_core_fn_func_address(callStatus);
+    },
+    /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+  );
+  try {
+    return FfiConverterOptionalString.lift(__rb);
+  } finally {
+    nativeModule().rustbuffer_free(__rb);
+  }
+}
+
+/**
+ * The user closed the browser or the wallet before finishing.
+ */
+export function cancelSignIn(): void /*throws*/ {
+  uniffiCaller.rustCallWithError(
+    /*liftError:*/ FfiConverterTypeCoreError.lift.bind(
+      FfiConverterTypeCoreError,
+    ),
+    /*caller:*/ callStatus => {
+      nativeModule().ubrn_uniffi_dcl_core_fn_func_cancel_sign_in(callStatus);
+    },
+    /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+  );
+}
+
+/**
+ * Finishes a browser sign-in with the id from `decentraland://open?signin=<id>`.
+ */
+export async function completeBrowser(
+  identityId: string,
+  asyncOpts_?: { signal: AbortSignal },
+): Promise<void> /*throws*/ {
+  const __stack = uniffiIsDebug ? new Error().stack : undefined;
+  try {
+    return await uniffiRustCallAsync(
+      /*rustCaller:*/ uniffiCaller,
+      /*rustFutureFunc:*/ () => {
+        return nativeModule().ubrn_uniffi_dcl_core_fn_func_complete_browser(
+          FfiConverterString.lower(identityId, nativeModule().rustbuffer_alloc),
+        );
+      },
+      /*pollFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_poll_void,
+      /*cancelFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_cancel_void,
+      /*completeFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_complete_void,
+      /*freeFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_free_void,
+      /*liftFunc:*/ _v => {},
+      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+      /*asyncOpts:*/ asyncOpts_,
+      /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(
+        FfiConverterTypeCoreError,
+      ),
+    );
+  } catch (__error: any) {
+    if (uniffiIsDebug && __error instanceof Error) {
+      __error.stack = __stack;
+    }
+    throw __error;
+  }
 }
 
 /**
@@ -188,6 +262,198 @@ export function removeListener(id: bigint): void /*throws*/ {
         FfiConverterUInt64.lower(id, nativeModule().rustbuffer_alloc),
         callStatus,
       );
+    },
+    /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+  );
+}
+
+/**
+ * Starts a browser sign-in: the page to show arrives as an `open_url` event, and
+ * `complete_browser` finishes it from the deep link.
+ */
+export function signInBrowser(provider: string | undefined): void /*throws*/ {
+  uniffiCaller.rustCallWithError(
+    /*liftError:*/ FfiConverterTypeCoreError.lift.bind(
+      FfiConverterTypeCoreError,
+    ),
+    /*caller:*/ callStatus => {
+      nativeModule().ubrn_uniffi_dcl_core_fn_func_sign_in_browser(
+        FfiConverterOptionalString.lower(
+          provider,
+          nativeModule().rustbuffer_alloc,
+        ),
+        callStatus,
+      );
+    },
+    /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+  );
+}
+
+/**
+ * Sends a one-time code to `email` and waits for it.
+ */
+export async function signInEmailStart(
+  email: string,
+  asyncOpts_?: { signal: AbortSignal },
+): Promise<void> /*throws*/ {
+  const __stack = uniffiIsDebug ? new Error().stack : undefined;
+  try {
+    return await uniffiRustCallAsync(
+      /*rustCaller:*/ uniffiCaller,
+      /*rustFutureFunc:*/ () => {
+        return nativeModule().ubrn_uniffi_dcl_core_fn_func_sign_in_email_start(
+          FfiConverterString.lower(email, nativeModule().rustbuffer_alloc),
+        );
+      },
+      /*pollFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_poll_void,
+      /*cancelFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_cancel_void,
+      /*completeFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_complete_void,
+      /*freeFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_free_void,
+      /*liftFunc:*/ _v => {},
+      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+      /*asyncOpts:*/ asyncOpts_,
+      /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(
+        FfiConverterTypeCoreError,
+      ),
+    );
+  } catch (__error: any) {
+    if (uniffiIsDebug && __error instanceof Error) {
+      __error.stack = __stack;
+    }
+    throw __error;
+  }
+}
+
+/**
+ * Verifies the code. A wrong code keeps the sign-in on the code step.
+ */
+export async function signInEmailVerify(
+  email: string,
+  code: string,
+  asyncOpts_?: { signal: AbortSignal },
+): Promise<void> /*throws*/ {
+  const __stack = uniffiIsDebug ? new Error().stack : undefined;
+  try {
+    return await uniffiRustCallAsync(
+      /*rustCaller:*/ uniffiCaller,
+      /*rustFutureFunc:*/ () => {
+        return nativeModule().ubrn_uniffi_dcl_core_fn_func_sign_in_email_verify(
+          FfiConverterString.lower(email, nativeModule().rustbuffer_alloc),
+          FfiConverterString.lower(code, nativeModule().rustbuffer_alloc),
+        );
+      },
+      /*pollFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_poll_void,
+      /*cancelFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_cancel_void,
+      /*completeFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_complete_void,
+      /*freeFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_free_void,
+      /*liftFunc:*/ _v => {},
+      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+      /*asyncOpts:*/ asyncOpts_,
+      /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(
+        FfiConverterTypeCoreError,
+      ),
+    );
+  } catch (__error: any) {
+    if (uniffiIsDebug && __error instanceof Error) {
+      __error.stack = __stack;
+    }
+    throw __error;
+  }
+}
+
+/**
+ * Silent guest login: the same device always gets the same wallet.
+ */
+export async function signInGuest(asyncOpts_?: {
+  signal: AbortSignal;
+}): Promise<void> /*throws*/ {
+  const __stack = uniffiIsDebug ? new Error().stack : undefined;
+  try {
+    return await uniffiRustCallAsync(
+      /*rustCaller:*/ uniffiCaller,
+      /*rustFutureFunc:*/ () => {
+        return nativeModule().ubrn_uniffi_dcl_core_fn_func_sign_in_guest();
+      },
+      /*pollFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_poll_void,
+      /*cancelFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_cancel_void,
+      /*completeFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_complete_void,
+      /*freeFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_free_void,
+      /*liftFunc:*/ _v => {},
+      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+      /*asyncOpts:*/ asyncOpts_,
+      /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(
+        FfiConverterTypeCoreError,
+      ),
+    );
+  } catch (__error: any) {
+    if (uniffiIsDebug && __error instanceof Error) {
+      __error.stack = __stack;
+    }
+    throw __error;
+  }
+}
+
+/**
+ * Starts an external-wallet sign-in: returns the message the wallet must sign. The ephemeral key
+ * it delegates to never leaves the core.
+ */
+export function signInWalletBegin(): string /*throws*/ {
+  const __rb: Uint8Array = uniffiCaller.rustCallWithError(
+    /*liftError:*/ FfiConverterTypeCoreError.lift.bind(
+      FfiConverterTypeCoreError,
+    ),
+    /*caller:*/ callStatus => {
+      return nativeModule().ubrn_uniffi_dcl_core_fn_func_sign_in_wallet_begin(
+        callStatus,
+      );
+    },
+    /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+  );
+  try {
+    return FfiConverterString.lift(__rb);
+  } finally {
+    nativeModule().rustbuffer_free(__rb);
+  }
+}
+
+/**
+ * Finishes the wallet sign-in with the signature of the message `sign_in_wallet_begin` returned.
+ */
+export function signInWalletComplete(
+  signerAddress: string,
+  signature: string,
+): void /*throws*/ {
+  uniffiCaller.rustCallWithError(
+    /*liftError:*/ FfiConverterTypeCoreError.lift.bind(
+      FfiConverterTypeCoreError,
+    ),
+    /*caller:*/ callStatus => {
+      nativeModule().ubrn_uniffi_dcl_core_fn_func_sign_in_wallet_complete(
+        FfiConverterString.lower(
+          signerAddress,
+          nativeModule().rustbuffer_alloc,
+        ),
+        FfiConverterString.lower(signature, nativeModule().rustbuffer_alloc),
+        callStatus,
+      );
+    },
+    /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+  );
+}
+
+/**
+ * Forgets the account here and on disk.
+ */
+export function signOut(): void /*throws*/ {
+  uniffiCaller.rustCallWithError(
+    /*liftError:*/ FfiConverterTypeCoreError.lift.bind(
+      FfiConverterTypeCoreError,
+    ),
+    /*caller:*/ callStatus => {
+      nativeModule().ubrn_uniffi_dcl_core_fn_func_sign_out(callStatus);
     },
     /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
   );
@@ -367,6 +633,95 @@ const FfiConverterTypeDestination = (() => {
 })();
 
 /**
+ * A page the shell shows in an in-app browser or webview.
+ */
+export type OpenUrl = {
+  url: string;
+  useWebview: boolean;
+};
+
+/**
+ * Generated factory for {@link OpenUrl} record objects.
+ */
+export const OpenUrl = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<OpenUrl, ReturnType<typeof defaults>>(defaults);
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults()) as Partial<OpenUrl>,
+  });
+})();
+
+const FfiConverterTypeOpenUrl = (() => {
+  type TypeName = OpenUrl;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      return {
+        url: FfiConverterString.readFromCursor(c),
+        useWebview: FfiConverterBool.readFromCursor(c),
+      };
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      FfiConverterString.writeIntoCursor(value.url, c);
+      FfiConverterBool.writeIntoCursor(value.useWebview, c);
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterString.allocationSize(value.url) +
+        FfiConverterBool.allocationSize(value.useWebview)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
+export type ParamPair = {
+  key: string;
+  value: string;
+};
+
+/**
+ * Generated factory for {@link ParamPair} record objects.
+ */
+export const ParamPair = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<ParamPair, ReturnType<typeof defaults>>(defaults);
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults()) as Partial<ParamPair>,
+  });
+})();
+
+const FfiConverterTypeParamPair = (() => {
+  type TypeName = ParamPair;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      return {
+        key: FfiConverterString.readFromCursor(c),
+        value: FfiConverterString.readFromCursor(c),
+      };
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      FfiConverterString.writeIntoCursor(value.key, c);
+      FfiConverterString.writeIntoCursor(value.value, c);
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterString.allocationSize(value.key) +
+        FfiConverterString.allocationSize(value.value)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
+/**
  * Pixels in the host's surface, where the avatar preview should render.
  */
 export type Rect = {
@@ -420,10 +775,2136 @@ const FfiConverterTypeRect = (() => {
   return new FFIConverter();
 })();
 
+/**
+ * Facts about the build and device that the tags come from.
+ */
+export type ReportContext = {
+  platform: string;
+  debugBuild: boolean;
+  gpuName: string;
+  gpuVendor: string;
+  gpuApiVersion: string;
+  locale: string;
+  commitHash: string;
+  /**
+   * `None` where the OS does not report it (Android; the host supplies the tag there).
+   */
+  physicalRamBytes?: bigint;
+  /**
+   * Staging and development builds only.
+   */
+  attachBranchInfo: boolean;
+  branchName: string;
+  commitMessage: string;
+};
+
+/**
+ * Generated factory for {@link ReportContext} record objects.
+ */
+export const ReportContext = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<ReportContext, ReturnType<typeof defaults>>(
+      defaults,
+    );
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults()) as Partial<ReportContext>,
+  });
+})();
+
+const FfiConverterTypeReportContext = (() => {
+  type TypeName = ReportContext;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      return {
+        platform: FfiConverterString.readFromCursor(c),
+        debugBuild: FfiConverterBool.readFromCursor(c),
+        gpuName: FfiConverterString.readFromCursor(c),
+        gpuVendor: FfiConverterString.readFromCursor(c),
+        gpuApiVersion: FfiConverterString.readFromCursor(c),
+        locale: FfiConverterString.readFromCursor(c),
+        commitHash: FfiConverterString.readFromCursor(c),
+        physicalRamBytes: FfiConverterOptionalInt64.readFromCursor(c),
+        attachBranchInfo: FfiConverterBool.readFromCursor(c),
+        branchName: FfiConverterString.readFromCursor(c),
+        commitMessage: FfiConverterString.readFromCursor(c),
+      };
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      FfiConverterString.writeIntoCursor(value.platform, c);
+      FfiConverterBool.writeIntoCursor(value.debugBuild, c);
+      FfiConverterString.writeIntoCursor(value.gpuName, c);
+      FfiConverterString.writeIntoCursor(value.gpuVendor, c);
+      FfiConverterString.writeIntoCursor(value.gpuApiVersion, c);
+      FfiConverterString.writeIntoCursor(value.locale, c);
+      FfiConverterString.writeIntoCursor(value.commitHash, c);
+      FfiConverterOptionalInt64.writeIntoCursor(value.physicalRamBytes, c);
+      FfiConverterBool.writeIntoCursor(value.attachBranchInfo, c);
+      FfiConverterString.writeIntoCursor(value.branchName, c);
+      FfiConverterString.writeIntoCursor(value.commitMessage, c);
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterString.allocationSize(value.platform) +
+        FfiConverterBool.allocationSize(value.debugBuild) +
+        FfiConverterString.allocationSize(value.gpuName) +
+        FfiConverterString.allocationSize(value.gpuVendor) +
+        FfiConverterString.allocationSize(value.gpuApiVersion) +
+        FfiConverterString.allocationSize(value.locale) +
+        FfiConverterString.allocationSize(value.commitHash) +
+        FfiConverterOptionalInt64.allocationSize(value.physicalRamBytes) +
+        FfiConverterBool.allocationSize(value.attachBranchInfo) +
+        FfiConverterString.allocationSize(value.branchName) +
+        FfiConverterString.allocationSize(value.commitMessage)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
+/**
+ * Event taxonomy, sent as the `source` tag.
+ */
+export enum ReportSource {
+  Crash,
+  Capture,
+  Scene,
+  RustApp,
+  RustDep,
+  Engine,
+  SceneCrash,
+  ExitReason,
+  Feedback,
+  FreedInstance,
+}
+
+const FfiConverterTypeReportSource = (() => {
+  type TypeName = ReportSource;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      switch (c.readI32()) {
+        case 1:
+          return ReportSource.Crash;
+        case 2:
+          return ReportSource.Capture;
+        case 3:
+          return ReportSource.Scene;
+        case 4:
+          return ReportSource.RustApp;
+        case 5:
+          return ReportSource.RustDep;
+        case 6:
+          return ReportSource.Engine;
+        case 7:
+          return ReportSource.SceneCrash;
+        case 8:
+          return ReportSource.ExitReason;
+        case 9:
+          return ReportSource.Feedback;
+        case 10:
+          return ReportSource.FreedInstance;
+        default:
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      switch (value) {
+        case ReportSource.Crash:
+          return c.writeI32(1);
+        case ReportSource.Capture:
+          return c.writeI32(2);
+        case ReportSource.Scene:
+          return c.writeI32(3);
+        case ReportSource.RustApp:
+          return c.writeI32(4);
+        case ReportSource.RustDep:
+          return c.writeI32(5);
+        case ReportSource.Engine:
+          return c.writeI32(6);
+        case ReportSource.SceneCrash:
+          return c.writeI32(7);
+        case ReportSource.ExitReason:
+          return c.writeI32(8);
+        case ReportSource.Feedback:
+          return c.writeI32(9);
+        case ReportSource.FreedInstance:
+          return c.writeI32(10);
+      }
+    }
+    allocationSize(value: TypeName): number {
+      return 4;
+    }
+  }
+  return new FFIConverter();
+})();
+
+export enum ReportLevel {
+  Debug,
+  Info,
+  Warning,
+  Error,
+  Fatal,
+}
+
+const FfiConverterTypeReportLevel = (() => {
+  type TypeName = ReportLevel;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      switch (c.readI32()) {
+        case 1:
+          return ReportLevel.Debug;
+        case 2:
+          return ReportLevel.Info;
+        case 3:
+          return ReportLevel.Warning;
+        case 4:
+          return ReportLevel.Error;
+        case 5:
+          return ReportLevel.Fatal;
+        default:
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      switch (value) {
+        case ReportLevel.Debug:
+          return c.writeI32(1);
+        case ReportLevel.Info:
+          return c.writeI32(2);
+        case ReportLevel.Warning:
+          return c.writeI32(3);
+        case ReportLevel.Error:
+          return c.writeI32(4);
+        case ReportLevel.Fatal:
+          return c.writeI32(5);
+      }
+    }
+    allocationSize(value: TypeName): number {
+      return 4;
+    }
+  }
+  return new FFIConverter();
+})();
+
+/**
+ * An error or panic to forward to the crash reporter, with what the keep/drop decision reads.
+ */
+export type ReportEvent = {
+  /**
+   * Set by whoever knows it (a core panic is `Crash`); `None` derives it from the fields below.
+   */
+  source?: ReportSource;
+  level: ReportLevel;
+  message: string;
+  /**
+   * A native crash record.
+   */
+  isCrash: boolean;
+  /**
+   * Value of the `event_kind` tag.
+   */
+  eventKind?: string;
+  /**
+   * Value of the `category` tag.
+   */
+  category?: string;
+  /**
+   * Value of the first exception; `None` when the event has no exception.
+   */
+  exception?: string;
+};
+
+/**
+ * Generated factory for {@link ReportEvent} record objects.
+ */
+export const ReportEvent = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<ReportEvent, ReturnType<typeof defaults>>(
+      defaults,
+    );
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults()) as Partial<ReportEvent>,
+  });
+})();
+
+const FfiConverterTypeReportEvent = (() => {
+  type TypeName = ReportEvent;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      return {
+        source: FfiConverterOptionalTypeReportSource.readFromCursor(c),
+        level: FfiConverterTypeReportLevel.readFromCursor(c),
+        message: FfiConverterString.readFromCursor(c),
+        isCrash: FfiConverterBool.readFromCursor(c),
+        eventKind: FfiConverterOptionalString.readFromCursor(c),
+        category: FfiConverterOptionalString.readFromCursor(c),
+        exception: FfiConverterOptionalString.readFromCursor(c),
+      };
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      FfiConverterOptionalTypeReportSource.writeIntoCursor(value.source, c);
+      FfiConverterTypeReportLevel.writeIntoCursor(value.level, c);
+      FfiConverterString.writeIntoCursor(value.message, c);
+      FfiConverterBool.writeIntoCursor(value.isCrash, c);
+      FfiConverterOptionalString.writeIntoCursor(value.eventKind, c);
+      FfiConverterOptionalString.writeIntoCursor(value.category, c);
+      FfiConverterOptionalString.writeIntoCursor(value.exception, c);
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterOptionalTypeReportSource.allocationSize(value.source) +
+        FfiConverterTypeReportLevel.allocationSize(value.level) +
+        FfiConverterString.allocationSize(value.message) +
+        FfiConverterBool.allocationSize(value.isCrash) +
+        FfiConverterOptionalString.allocationSize(value.eventKind) +
+        FfiConverterOptionalString.allocationSize(value.category) +
+        FfiConverterOptionalString.allocationSize(value.exception)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
+export type ReportTag = {
+  key: string;
+  value: string;
+};
+
+/**
+ * Generated factory for {@link ReportTag} record objects.
+ */
+export const ReportTag = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<ReportTag, ReturnType<typeof defaults>>(defaults);
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults()) as Partial<ReportTag>,
+  });
+})();
+
+const FfiConverterTypeReportTag = (() => {
+  type TypeName = ReportTag;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      return {
+        key: FfiConverterString.readFromCursor(c),
+        value: FfiConverterString.readFromCursor(c),
+      };
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      FfiConverterString.writeIntoCursor(value.key, c);
+      FfiConverterString.writeIntoCursor(value.value, c);
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterString.allocationSize(value.key) +
+        FfiConverterString.allocationSize(value.value)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
+/**
+ * What the shell attaches to every event: tags plus the `graphics` context.
+ */
+export type ReportTags = {
+  tags: Array<ReportTag>;
+  graphics: Array<ReportTag>;
+};
+
+/**
+ * Generated factory for {@link ReportTags} record objects.
+ */
+export const ReportTags = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<ReportTags, ReturnType<typeof defaults>>(
+      defaults,
+    );
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults()) as Partial<ReportTags>,
+  });
+})();
+
+const FfiConverterTypeReportTags = (() => {
+  type TypeName = ReportTags;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      return {
+        tags: FfiConverterSequenceTypeReportTag.readFromCursor(c),
+        graphics: FfiConverterSequenceTypeReportTag.readFromCursor(c),
+      };
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      FfiConverterSequenceTypeReportTag.writeIntoCursor(value.tags, c);
+      FfiConverterSequenceTypeReportTag.writeIntoCursor(value.graphics, c);
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterSequenceTypeReportTag.allocationSize(value.tags) +
+        FfiConverterSequenceTypeReportTag.allocationSize(value.graphics)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
+// Enum: Navigation
+export enum Navigation_Tags {
+  Teleport = 'Teleport',
+  JoinWorld = 'JoinWorld',
+  OpenJumpPanel = 'OpenJumpPanel',
+  OpenEvent = 'OpenEvent',
+  OpenPlace = 'OpenPlace',
+  OpenDiscover = 'OpenDiscover',
+}
+export const Navigation = (() => {
+  type Teleport__interface = {
+    tag: Navigation_Tags.Teleport;
+    inner: Readonly<{ realm?: string; parcel: Parcel }>;
+  };
+  /**
+   * `realm: None` is the default realm.
+   */
+  class Teleport_ extends UniffiEnum implements Teleport__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'Navigation';
+    readonly tag = Navigation_Tags.Teleport;
+    readonly inner: Readonly<{ realm?: string; parcel: Parcel }>;
+    constructor(inner: { realm?: string; parcel: Parcel }) {
+      super('Navigation', 'Teleport');
+
+      this.inner = Object.freeze(inner);
+    }
+    static new(inner: { realm?: string; parcel: Parcel }): Teleport_ {
+      return new Teleport_(inner);
+    }
+
+    static instanceOf(obj: any): obj is Teleport_ {
+      return obj.tag === Navigation_Tags.Teleport;
+    }
+  }
+
+  type JoinWorld__interface = {
+    tag: Navigation_Tags.JoinWorld;
+    inner: Readonly<{ realm: string }>;
+  };
+  /**
+   * A world (`name.dcl.eth`) without a position: enter at its spawn.
+   */
+  class JoinWorld_ extends UniffiEnum implements JoinWorld__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'Navigation';
+    readonly tag = Navigation_Tags.JoinWorld;
+    readonly inner: Readonly<{ realm: string }>;
+    constructor(inner: { realm: string }) {
+      super('Navigation', 'JoinWorld');
+
+      this.inner = Object.freeze(inner);
+    }
+    static new(inner: { realm: string }): JoinWorld_ {
+      return new JoinWorld_(inner);
+    }
+
+    static instanceOf(obj: any): obj is JoinWorld_ {
+      return obj.tag === Navigation_Tags.JoinWorld;
+    }
+  }
+
+  type OpenJumpPanel__interface = {
+    tag: Navigation_Tags.OpenJumpPanel;
+  };
+  class OpenJumpPanel_ extends UniffiEnum implements OpenJumpPanel__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'Navigation';
+    readonly tag = Navigation_Tags.OpenJumpPanel;
+    constructor() {
+      super('Navigation', 'OpenJumpPanel');
+    }
+
+    static new(): OpenJumpPanel_ {
+      return new OpenJumpPanel_();
+    }
+
+    static instanceOf(obj: any): obj is OpenJumpPanel_ {
+      return obj.tag === Navigation_Tags.OpenJumpPanel;
+    }
+  }
+
+  type OpenEvent__interface = {
+    tag: Navigation_Tags.OpenEvent;
+    inner: Readonly<{ id: string }>;
+  };
+  class OpenEvent_ extends UniffiEnum implements OpenEvent__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'Navigation';
+    readonly tag = Navigation_Tags.OpenEvent;
+    readonly inner: Readonly<{ id: string }>;
+    constructor(inner: { id: string }) {
+      super('Navigation', 'OpenEvent');
+
+      this.inner = Object.freeze(inner);
+    }
+    static new(inner: { id: string }): OpenEvent_ {
+      return new OpenEvent_(inner);
+    }
+
+    static instanceOf(obj: any): obj is OpenEvent_ {
+      return obj.tag === Navigation_Tags.OpenEvent;
+    }
+  }
+
+  type OpenPlace__interface = {
+    tag: Navigation_Tags.OpenPlace;
+    inner: Readonly<{ id: string }>;
+  };
+  class OpenPlace_ extends UniffiEnum implements OpenPlace__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'Navigation';
+    readonly tag = Navigation_Tags.OpenPlace;
+    readonly inner: Readonly<{ id: string }>;
+    constructor(inner: { id: string }) {
+      super('Navigation', 'OpenPlace');
+
+      this.inner = Object.freeze(inner);
+    }
+    static new(inner: { id: string }): OpenPlace_ {
+      return new OpenPlace_(inner);
+    }
+
+    static instanceOf(obj: any): obj is OpenPlace_ {
+      return obj.tag === Navigation_Tags.OpenPlace;
+    }
+  }
+
+  type OpenDiscover__interface = {
+    tag: Navigation_Tags.OpenDiscover;
+  };
+  class OpenDiscover_ extends UniffiEnum implements OpenDiscover__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'Navigation';
+    readonly tag = Navigation_Tags.OpenDiscover;
+    constructor() {
+      super('Navigation', 'OpenDiscover');
+    }
+
+    static new(): OpenDiscover_ {
+      return new OpenDiscover_();
+    }
+
+    static instanceOf(obj: any): obj is OpenDiscover_ {
+      return obj.tag === Navigation_Tags.OpenDiscover;
+    }
+  }
+
+  function instanceOf(obj: any): obj is Navigation {
+    return obj[uniffiTypeNameSymbol] === 'Navigation';
+  }
+
+  return Object.freeze({
+    instanceOf,
+    Teleport: Teleport_,
+    JoinWorld: JoinWorld_,
+    OpenJumpPanel: OpenJumpPanel_,
+    OpenEvent: OpenEvent_,
+    OpenPlace: OpenPlace_,
+    OpenDiscover: OpenDiscover_,
+  });
+})();
+export type Navigation = InstanceType<
+  (typeof Navigation)[
+    | 'Teleport'
+    | 'JoinWorld'
+    | 'OpenJumpPanel'
+    | 'OpenEvent'
+    | 'OpenPlace'
+    | 'OpenDiscover']
+>;
+
+// FfiConverter for enum Navigation
+const FfiConverterTypeNavigation = (() => {
+  type TypeName = Navigation;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      switch (c.readI32()) {
+        case 1:
+          return new Navigation.Teleport({
+            realm: FfiConverterOptionalString.readFromCursor(c),
+            parcel: FfiConverterTypeParcel.readFromCursor(c),
+          });
+        case 2:
+          return new Navigation.JoinWorld({
+            realm: FfiConverterString.readFromCursor(c),
+          });
+        case 3:
+          return new Navigation.OpenJumpPanel();
+        case 4:
+          return new Navigation.OpenEvent({
+            id: FfiConverterString.readFromCursor(c),
+          });
+        case 5:
+          return new Navigation.OpenPlace({
+            id: FfiConverterString.readFromCursor(c),
+          });
+        case 6:
+          return new Navigation.OpenDiscover();
+        default:
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      switch (value.tag) {
+        case Navigation_Tags.Teleport: {
+          c.writeI32(1);
+          const inner = value.inner;
+          FfiConverterOptionalString.writeIntoCursor(inner.realm, c);
+          FfiConverterTypeParcel.writeIntoCursor(inner.parcel, c);
+          return;
+        }
+        case Navigation_Tags.JoinWorld: {
+          c.writeI32(2);
+          const inner = value.inner;
+          FfiConverterString.writeIntoCursor(inner.realm, c);
+          return;
+        }
+        case Navigation_Tags.OpenJumpPanel: {
+          c.writeI32(3);
+          return;
+        }
+        case Navigation_Tags.OpenEvent: {
+          c.writeI32(4);
+          const inner = value.inner;
+          FfiConverterString.writeIntoCursor(inner.id, c);
+          return;
+        }
+        case Navigation_Tags.OpenPlace: {
+          c.writeI32(5);
+          const inner = value.inner;
+          FfiConverterString.writeIntoCursor(inner.id, c);
+          return;
+        }
+        case Navigation_Tags.OpenDiscover: {
+          c.writeI32(6);
+          return;
+        }
+        default:
+          // Throwing from here means that Navigation_Tags hasn't matched an ordinal.
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+    allocationSize(value: TypeName): number {
+      switch (value.tag) {
+        case Navigation_Tags.Teleport: {
+          const inner = value.inner;
+          let size = 4;
+          size += FfiConverterOptionalString.allocationSize(inner.realm);
+          size += FfiConverterTypeParcel.allocationSize(inner.parcel);
+          return size;
+        }
+        case Navigation_Tags.JoinWorld: {
+          const inner = value.inner;
+          let size = 4;
+          size += FfiConverterString.allocationSize(inner.realm);
+          return size;
+        }
+        case Navigation_Tags.OpenJumpPanel: {
+          return 4;
+        }
+        case Navigation_Tags.OpenEvent: {
+          const inner = value.inner;
+          let size = 4;
+          size += FfiConverterString.allocationSize(inner.id);
+          return size;
+        }
+        case Navigation_Tags.OpenPlace: {
+          const inner = value.inner;
+          let size = 4;
+          size += FfiConverterString.allocationSize(inner.id);
+          return size;
+        }
+        case Navigation_Tags.OpenDiscover: {
+          return 4;
+        }
+        default:
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+  }
+  return new FFIConverter();
+})();
+
+// Enum: ConfigParam
+export enum ConfigParam_Tags {
+  RustLog = 'RustLog',
+  PulseServer = 'PulseServer',
+  PulseRealm = 'PulseRealm',
+  PulseEnabled = 'PulseEnabled',
+  DualChannel = 'DualChannel',
+  LivekitEnabled = 'LivekitEnabled',
+  MultiplayerDebug = 'MultiplayerDebug',
+  OptimizedContentBaseUrl = 'OptimizedContentBaseUrl',
+  RotateGuest = 'RotateGuest',
+  CampaignToken = 'CampaignToken',
+  SkipGltf = 'SkipGltf',
+  KillSky = 'KillSky',
+  TouchFeedback = 'TouchFeedback',
+  EnableUpgradedDeletion = 'EnableUpgradedDeletion',
+  GpBenchmark = 'GpBenchmark',
+  SafeMarginDebug = 'SafeMarginDebug',
+}
+/**
+ * A setting a link carries, for the owner of that setting to apply.
+ */
+export const ConfigParam = (() => {
+  type RustLog__interface = {
+    tag: ConfigParam_Tags.RustLog;
+    inner: Readonly<{ filter: string }>;
+  };
+  class RustLog_ extends UniffiEnum implements RustLog__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'ConfigParam';
+    readonly tag = ConfigParam_Tags.RustLog;
+    readonly inner: Readonly<{ filter: string }>;
+    constructor(inner: { filter: string }) {
+      super('ConfigParam', 'RustLog');
+
+      this.inner = Object.freeze(inner);
+    }
+    static new(inner: { filter: string }): RustLog_ {
+      return new RustLog_(inner);
+    }
+
+    static instanceOf(obj: any): obj is RustLog_ {
+      return obj.tag === ConfigParam_Tags.RustLog;
+    }
+  }
+
+  type PulseServer__interface = {
+    tag: ConfigParam_Tags.PulseServer;
+    inner: Readonly<{ server: string }>;
+  };
+  class PulseServer_ extends UniffiEnum implements PulseServer__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'ConfigParam';
+    readonly tag = ConfigParam_Tags.PulseServer;
+    readonly inner: Readonly<{ server: string }>;
+    constructor(inner: { server: string }) {
+      super('ConfigParam', 'PulseServer');
+
+      this.inner = Object.freeze(inner);
+    }
+    static new(inner: { server: string }): PulseServer_ {
+      return new PulseServer_(inner);
+    }
+
+    static instanceOf(obj: any): obj is PulseServer_ {
+      return obj.tag === ConfigParam_Tags.PulseServer;
+    }
+  }
+
+  type PulseRealm__interface = {
+    tag: ConfigParam_Tags.PulseRealm;
+    inner: Readonly<{ realm: string }>;
+  };
+  class PulseRealm_ extends UniffiEnum implements PulseRealm__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'ConfigParam';
+    readonly tag = ConfigParam_Tags.PulseRealm;
+    readonly inner: Readonly<{ realm: string }>;
+    constructor(inner: { realm: string }) {
+      super('ConfigParam', 'PulseRealm');
+
+      this.inner = Object.freeze(inner);
+    }
+    static new(inner: { realm: string }): PulseRealm_ {
+      return new PulseRealm_(inner);
+    }
+
+    static instanceOf(obj: any): obj is PulseRealm_ {
+      return obj.tag === ConfigParam_Tags.PulseRealm;
+    }
+  }
+
+  type PulseEnabled__interface = {
+    tag: ConfigParam_Tags.PulseEnabled;
+    inner: Readonly<{ enabled: boolean }>;
+  };
+  class PulseEnabled_ extends UniffiEnum implements PulseEnabled__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'ConfigParam';
+    readonly tag = ConfigParam_Tags.PulseEnabled;
+    readonly inner: Readonly<{ enabled: boolean }>;
+    constructor(inner: { enabled: boolean }) {
+      super('ConfigParam', 'PulseEnabled');
+
+      this.inner = Object.freeze(inner);
+    }
+    static new(inner: { enabled: boolean }): PulseEnabled_ {
+      return new PulseEnabled_(inner);
+    }
+
+    static instanceOf(obj: any): obj is PulseEnabled_ {
+      return obj.tag === ConfigParam_Tags.PulseEnabled;
+    }
+  }
+
+  type DualChannel__interface = {
+    tag: ConfigParam_Tags.DualChannel;
+    inner: Readonly<{ enabled: boolean }>;
+  };
+  class DualChannel_ extends UniffiEnum implements DualChannel__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'ConfigParam';
+    readonly tag = ConfigParam_Tags.DualChannel;
+    readonly inner: Readonly<{ enabled: boolean }>;
+    constructor(inner: { enabled: boolean }) {
+      super('ConfigParam', 'DualChannel');
+
+      this.inner = Object.freeze(inner);
+    }
+    static new(inner: { enabled: boolean }): DualChannel_ {
+      return new DualChannel_(inner);
+    }
+
+    static instanceOf(obj: any): obj is DualChannel_ {
+      return obj.tag === ConfigParam_Tags.DualChannel;
+    }
+  }
+
+  type LivekitEnabled__interface = {
+    tag: ConfigParam_Tags.LivekitEnabled;
+    inner: Readonly<{ enabled: boolean }>;
+  };
+  class LivekitEnabled_
+    extends UniffiEnum
+    implements LivekitEnabled__interface
+  {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'ConfigParam';
+    readonly tag = ConfigParam_Tags.LivekitEnabled;
+    readonly inner: Readonly<{ enabled: boolean }>;
+    constructor(inner: { enabled: boolean }) {
+      super('ConfigParam', 'LivekitEnabled');
+
+      this.inner = Object.freeze(inner);
+    }
+    static new(inner: { enabled: boolean }): LivekitEnabled_ {
+      return new LivekitEnabled_(inner);
+    }
+
+    static instanceOf(obj: any): obj is LivekitEnabled_ {
+      return obj.tag === ConfigParam_Tags.LivekitEnabled;
+    }
+  }
+
+  type MultiplayerDebug__interface = {
+    tag: ConfigParam_Tags.MultiplayerDebug;
+  };
+  class MultiplayerDebug_
+    extends UniffiEnum
+    implements MultiplayerDebug__interface
+  {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'ConfigParam';
+    readonly tag = ConfigParam_Tags.MultiplayerDebug;
+    constructor() {
+      super('ConfigParam', 'MultiplayerDebug');
+    }
+
+    static new(): MultiplayerDebug_ {
+      return new MultiplayerDebug_();
+    }
+
+    static instanceOf(obj: any): obj is MultiplayerDebug_ {
+      return obj.tag === ConfigParam_Tags.MultiplayerDebug;
+    }
+  }
+
+  type OptimizedContentBaseUrl__interface = {
+    tag: ConfigParam_Tags.OptimizedContentBaseUrl;
+    inner: Readonly<{ url: string }>;
+  };
+  /**
+   * Already validated: https on a Decentraland domain or a local network, non-production.
+   */
+  class OptimizedContentBaseUrl_
+    extends UniffiEnum
+    implements OptimizedContentBaseUrl__interface
+  {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'ConfigParam';
+    readonly tag = ConfigParam_Tags.OptimizedContentBaseUrl;
+    readonly inner: Readonly<{ url: string }>;
+    constructor(inner: { url: string }) {
+      super('ConfigParam', 'OptimizedContentBaseUrl');
+
+      this.inner = Object.freeze(inner);
+    }
+    static new(inner: { url: string }): OptimizedContentBaseUrl_ {
+      return new OptimizedContentBaseUrl_(inner);
+    }
+
+    static instanceOf(obj: any): obj is OptimizedContentBaseUrl_ {
+      return obj.tag === ConfigParam_Tags.OptimizedContentBaseUrl;
+    }
+  }
+
+  type RotateGuest__interface = {
+    tag: ConfigParam_Tags.RotateGuest;
+  };
+  class RotateGuest_ extends UniffiEnum implements RotateGuest__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'ConfigParam';
+    readonly tag = ConfigParam_Tags.RotateGuest;
+    constructor() {
+      super('ConfigParam', 'RotateGuest');
+    }
+
+    static new(): RotateGuest_ {
+      return new RotateGuest_();
+    }
+
+    static instanceOf(obj: any): obj is RotateGuest_ {
+      return obj.tag === ConfigParam_Tags.RotateGuest;
+    }
+  }
+
+  type CampaignToken__interface = {
+    tag: ConfigParam_Tags.CampaignToken;
+    inner: Readonly<{ token: string }>;
+  };
+  /**
+   * Already validated; stored first-write-wins by the owner of the install attribution.
+   */
+  class CampaignToken_ extends UniffiEnum implements CampaignToken__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'ConfigParam';
+    readonly tag = ConfigParam_Tags.CampaignToken;
+    readonly inner: Readonly<{ token: string }>;
+    constructor(inner: { token: string }) {
+      super('ConfigParam', 'CampaignToken');
+
+      this.inner = Object.freeze(inner);
+    }
+    static new(inner: { token: string }): CampaignToken_ {
+      return new CampaignToken_(inner);
+    }
+
+    static instanceOf(obj: any): obj is CampaignToken_ {
+      return obj.tag === ConfigParam_Tags.CampaignToken;
+    }
+  }
+
+  type SkipGltf__interface = {
+    tag: ConfigParam_Tags.SkipGltf;
+    inner: Readonly<{ enabled: boolean }>;
+  };
+  class SkipGltf_ extends UniffiEnum implements SkipGltf__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'ConfigParam';
+    readonly tag = ConfigParam_Tags.SkipGltf;
+    readonly inner: Readonly<{ enabled: boolean }>;
+    constructor(inner: { enabled: boolean }) {
+      super('ConfigParam', 'SkipGltf');
+
+      this.inner = Object.freeze(inner);
+    }
+    static new(inner: { enabled: boolean }): SkipGltf_ {
+      return new SkipGltf_(inner);
+    }
+
+    static instanceOf(obj: any): obj is SkipGltf_ {
+      return obj.tag === ConfigParam_Tags.SkipGltf;
+    }
+  }
+
+  type KillSky__interface = {
+    tag: ConfigParam_Tags.KillSky;
+    inner: Readonly<{ enabled: boolean }>;
+  };
+  class KillSky_ extends UniffiEnum implements KillSky__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'ConfigParam';
+    readonly tag = ConfigParam_Tags.KillSky;
+    readonly inner: Readonly<{ enabled: boolean }>;
+    constructor(inner: { enabled: boolean }) {
+      super('ConfigParam', 'KillSky');
+
+      this.inner = Object.freeze(inner);
+    }
+    static new(inner: { enabled: boolean }): KillSky_ {
+      return new KillSky_(inner);
+    }
+
+    static instanceOf(obj: any): obj is KillSky_ {
+      return obj.tag === ConfigParam_Tags.KillSky;
+    }
+  }
+
+  type TouchFeedback__interface = {
+    tag: ConfigParam_Tags.TouchFeedback;
+    inner: Readonly<{ enabled: boolean }>;
+  };
+  class TouchFeedback_ extends UniffiEnum implements TouchFeedback__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'ConfigParam';
+    readonly tag = ConfigParam_Tags.TouchFeedback;
+    readonly inner: Readonly<{ enabled: boolean }>;
+    constructor(inner: { enabled: boolean }) {
+      super('ConfigParam', 'TouchFeedback');
+
+      this.inner = Object.freeze(inner);
+    }
+    static new(inner: { enabled: boolean }): TouchFeedback_ {
+      return new TouchFeedback_(inner);
+    }
+
+    static instanceOf(obj: any): obj is TouchFeedback_ {
+      return obj.tag === ConfigParam_Tags.TouchFeedback;
+    }
+  }
+
+  type EnableUpgradedDeletion__interface = {
+    tag: ConfigParam_Tags.EnableUpgradedDeletion;
+  };
+  class EnableUpgradedDeletion_
+    extends UniffiEnum
+    implements EnableUpgradedDeletion__interface
+  {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'ConfigParam';
+    readonly tag = ConfigParam_Tags.EnableUpgradedDeletion;
+    constructor() {
+      super('ConfigParam', 'EnableUpgradedDeletion');
+    }
+
+    static new(): EnableUpgradedDeletion_ {
+      return new EnableUpgradedDeletion_();
+    }
+
+    static instanceOf(obj: any): obj is EnableUpgradedDeletion_ {
+      return obj.tag === ConfigParam_Tags.EnableUpgradedDeletion;
+    }
+  }
+
+  type GpBenchmark__interface = {
+    tag: ConfigParam_Tags.GpBenchmark;
+  };
+  class GpBenchmark_ extends UniffiEnum implements GpBenchmark__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'ConfigParam';
+    readonly tag = ConfigParam_Tags.GpBenchmark;
+    constructor() {
+      super('ConfigParam', 'GpBenchmark');
+    }
+
+    static new(): GpBenchmark_ {
+      return new GpBenchmark_();
+    }
+
+    static instanceOf(obj: any): obj is GpBenchmark_ {
+      return obj.tag === ConfigParam_Tags.GpBenchmark;
+    }
+  }
+
+  type SafeMarginDebug__interface = {
+    tag: ConfigParam_Tags.SafeMarginDebug;
+  };
+  class SafeMarginDebug_
+    extends UniffiEnum
+    implements SafeMarginDebug__interface
+  {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'ConfigParam';
+    readonly tag = ConfigParam_Tags.SafeMarginDebug;
+    constructor() {
+      super('ConfigParam', 'SafeMarginDebug');
+    }
+
+    static new(): SafeMarginDebug_ {
+      return new SafeMarginDebug_();
+    }
+
+    static instanceOf(obj: any): obj is SafeMarginDebug_ {
+      return obj.tag === ConfigParam_Tags.SafeMarginDebug;
+    }
+  }
+
+  function instanceOf(obj: any): obj is ConfigParam {
+    return obj[uniffiTypeNameSymbol] === 'ConfigParam';
+  }
+
+  return Object.freeze({
+    instanceOf,
+    RustLog: RustLog_,
+    PulseServer: PulseServer_,
+    PulseRealm: PulseRealm_,
+    PulseEnabled: PulseEnabled_,
+    DualChannel: DualChannel_,
+    LivekitEnabled: LivekitEnabled_,
+    MultiplayerDebug: MultiplayerDebug_,
+    OptimizedContentBaseUrl: OptimizedContentBaseUrl_,
+    RotateGuest: RotateGuest_,
+    CampaignToken: CampaignToken_,
+    SkipGltf: SkipGltf_,
+    KillSky: KillSky_,
+    TouchFeedback: TouchFeedback_,
+    EnableUpgradedDeletion: EnableUpgradedDeletion_,
+    GpBenchmark: GpBenchmark_,
+    SafeMarginDebug: SafeMarginDebug_,
+  });
+})();
+/**
+ * A setting a link carries, for the owner of that setting to apply.
+ */
+export type ConfigParam = InstanceType<
+  (typeof ConfigParam)[
+    | 'RustLog'
+    | 'PulseServer'
+    | 'PulseRealm'
+    | 'PulseEnabled'
+    | 'DualChannel'
+    | 'LivekitEnabled'
+    | 'MultiplayerDebug'
+    | 'OptimizedContentBaseUrl'
+    | 'RotateGuest'
+    | 'CampaignToken'
+    | 'SkipGltf'
+    | 'KillSky'
+    | 'TouchFeedback'
+    | 'EnableUpgradedDeletion'
+    | 'GpBenchmark'
+    | 'SafeMarginDebug']
+>;
+
+// FfiConverter for enum ConfigParam
+const FfiConverterTypeConfigParam = (() => {
+  type TypeName = ConfigParam;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      switch (c.readI32()) {
+        case 1:
+          return new ConfigParam.RustLog({
+            filter: FfiConverterString.readFromCursor(c),
+          });
+        case 2:
+          return new ConfigParam.PulseServer({
+            server: FfiConverterString.readFromCursor(c),
+          });
+        case 3:
+          return new ConfigParam.PulseRealm({
+            realm: FfiConverterString.readFromCursor(c),
+          });
+        case 4:
+          return new ConfigParam.PulseEnabled({
+            enabled: FfiConverterBool.readFromCursor(c),
+          });
+        case 5:
+          return new ConfigParam.DualChannel({
+            enabled: FfiConverterBool.readFromCursor(c),
+          });
+        case 6:
+          return new ConfigParam.LivekitEnabled({
+            enabled: FfiConverterBool.readFromCursor(c),
+          });
+        case 7:
+          return new ConfigParam.MultiplayerDebug();
+        case 8:
+          return new ConfigParam.OptimizedContentBaseUrl({
+            url: FfiConverterString.readFromCursor(c),
+          });
+        case 9:
+          return new ConfigParam.RotateGuest();
+        case 10:
+          return new ConfigParam.CampaignToken({
+            token: FfiConverterString.readFromCursor(c),
+          });
+        case 11:
+          return new ConfigParam.SkipGltf({
+            enabled: FfiConverterBool.readFromCursor(c),
+          });
+        case 12:
+          return new ConfigParam.KillSky({
+            enabled: FfiConverterBool.readFromCursor(c),
+          });
+        case 13:
+          return new ConfigParam.TouchFeedback({
+            enabled: FfiConverterBool.readFromCursor(c),
+          });
+        case 14:
+          return new ConfigParam.EnableUpgradedDeletion();
+        case 15:
+          return new ConfigParam.GpBenchmark();
+        case 16:
+          return new ConfigParam.SafeMarginDebug();
+        default:
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      switch (value.tag) {
+        case ConfigParam_Tags.RustLog: {
+          c.writeI32(1);
+          const inner = value.inner;
+          FfiConverterString.writeIntoCursor(inner.filter, c);
+          return;
+        }
+        case ConfigParam_Tags.PulseServer: {
+          c.writeI32(2);
+          const inner = value.inner;
+          FfiConverterString.writeIntoCursor(inner.server, c);
+          return;
+        }
+        case ConfigParam_Tags.PulseRealm: {
+          c.writeI32(3);
+          const inner = value.inner;
+          FfiConverterString.writeIntoCursor(inner.realm, c);
+          return;
+        }
+        case ConfigParam_Tags.PulseEnabled: {
+          c.writeI32(4);
+          const inner = value.inner;
+          FfiConverterBool.writeIntoCursor(inner.enabled, c);
+          return;
+        }
+        case ConfigParam_Tags.DualChannel: {
+          c.writeI32(5);
+          const inner = value.inner;
+          FfiConverterBool.writeIntoCursor(inner.enabled, c);
+          return;
+        }
+        case ConfigParam_Tags.LivekitEnabled: {
+          c.writeI32(6);
+          const inner = value.inner;
+          FfiConverterBool.writeIntoCursor(inner.enabled, c);
+          return;
+        }
+        case ConfigParam_Tags.MultiplayerDebug: {
+          c.writeI32(7);
+          return;
+        }
+        case ConfigParam_Tags.OptimizedContentBaseUrl: {
+          c.writeI32(8);
+          const inner = value.inner;
+          FfiConverterString.writeIntoCursor(inner.url, c);
+          return;
+        }
+        case ConfigParam_Tags.RotateGuest: {
+          c.writeI32(9);
+          return;
+        }
+        case ConfigParam_Tags.CampaignToken: {
+          c.writeI32(10);
+          const inner = value.inner;
+          FfiConverterString.writeIntoCursor(inner.token, c);
+          return;
+        }
+        case ConfigParam_Tags.SkipGltf: {
+          c.writeI32(11);
+          const inner = value.inner;
+          FfiConverterBool.writeIntoCursor(inner.enabled, c);
+          return;
+        }
+        case ConfigParam_Tags.KillSky: {
+          c.writeI32(12);
+          const inner = value.inner;
+          FfiConverterBool.writeIntoCursor(inner.enabled, c);
+          return;
+        }
+        case ConfigParam_Tags.TouchFeedback: {
+          c.writeI32(13);
+          const inner = value.inner;
+          FfiConverterBool.writeIntoCursor(inner.enabled, c);
+          return;
+        }
+        case ConfigParam_Tags.EnableUpgradedDeletion: {
+          c.writeI32(14);
+          return;
+        }
+        case ConfigParam_Tags.GpBenchmark: {
+          c.writeI32(15);
+          return;
+        }
+        case ConfigParam_Tags.SafeMarginDebug: {
+          c.writeI32(16);
+          return;
+        }
+        default:
+          // Throwing from here means that ConfigParam_Tags hasn't matched an ordinal.
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+    allocationSize(value: TypeName): number {
+      switch (value.tag) {
+        case ConfigParam_Tags.RustLog: {
+          const inner = value.inner;
+          let size = 4;
+          size += FfiConverterString.allocationSize(inner.filter);
+          return size;
+        }
+        case ConfigParam_Tags.PulseServer: {
+          const inner = value.inner;
+          let size = 4;
+          size += FfiConverterString.allocationSize(inner.server);
+          return size;
+        }
+        case ConfigParam_Tags.PulseRealm: {
+          const inner = value.inner;
+          let size = 4;
+          size += FfiConverterString.allocationSize(inner.realm);
+          return size;
+        }
+        case ConfigParam_Tags.PulseEnabled: {
+          const inner = value.inner;
+          let size = 4;
+          size += FfiConverterBool.allocationSize(inner.enabled);
+          return size;
+        }
+        case ConfigParam_Tags.DualChannel: {
+          const inner = value.inner;
+          let size = 4;
+          size += FfiConverterBool.allocationSize(inner.enabled);
+          return size;
+        }
+        case ConfigParam_Tags.LivekitEnabled: {
+          const inner = value.inner;
+          let size = 4;
+          size += FfiConverterBool.allocationSize(inner.enabled);
+          return size;
+        }
+        case ConfigParam_Tags.MultiplayerDebug: {
+          return 4;
+        }
+        case ConfigParam_Tags.OptimizedContentBaseUrl: {
+          const inner = value.inner;
+          let size = 4;
+          size += FfiConverterString.allocationSize(inner.url);
+          return size;
+        }
+        case ConfigParam_Tags.RotateGuest: {
+          return 4;
+        }
+        case ConfigParam_Tags.CampaignToken: {
+          const inner = value.inner;
+          let size = 4;
+          size += FfiConverterString.allocationSize(inner.token);
+          return size;
+        }
+        case ConfigParam_Tags.SkipGltf: {
+          const inner = value.inner;
+          let size = 4;
+          size += FfiConverterBool.allocationSize(inner.enabled);
+          return size;
+        }
+        case ConfigParam_Tags.KillSky: {
+          const inner = value.inner;
+          let size = 4;
+          size += FfiConverterBool.allocationSize(inner.enabled);
+          return size;
+        }
+        case ConfigParam_Tags.TouchFeedback: {
+          const inner = value.inner;
+          let size = 4;
+          size += FfiConverterBool.allocationSize(inner.enabled);
+          return size;
+        }
+        case ConfigParam_Tags.EnableUpgradedDeletion: {
+          return 4;
+        }
+        case ConfigParam_Tags.GpBenchmark: {
+          return 4;
+        }
+        case ConfigParam_Tags.SafeMarginDebug: {
+          return 4;
+        }
+        default:
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+  }
+  return new FFIConverter();
+})();
+
+/**
+ * Whether the link launched the process.
+ */
+export enum StartKind {
+  Cold,
+  Warm,
+}
+
+const FfiConverterTypeStartKind = (() => {
+  type TypeName = StartKind;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      switch (c.readI32()) {
+        case 1:
+          return StartKind.Cold;
+        case 2:
+          return StartKind.Warm;
+        default:
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      switch (value) {
+        case StartKind.Cold:
+          return c.writeI32(1);
+        case StartKind.Warm:
+          return c.writeI32(2);
+      }
+    }
+    allocationSize(value: TypeName): number {
+      return 4;
+    }
+  }
+  return new FFIConverter();
+})();
+
+// Enum: AnalyticsEvent
+export enum AnalyticsEvent_Tags {
+  PushOpened = 'PushOpened',
+  DeepLinkReceived = 'DeepLinkReceived',
+}
+export const AnalyticsEvent = (() => {
+  type PushOpened__interface = {
+    tag: AnalyticsEvent_Tags.PushOpened;
+    inner: Readonly<{
+      campaignId: string;
+      pushId: string;
+      startKind: StartKind;
+    }>;
+  };
+  class PushOpened_ extends UniffiEnum implements PushOpened__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'AnalyticsEvent';
+    readonly tag = AnalyticsEvent_Tags.PushOpened;
+    readonly inner: Readonly<{
+      campaignId: string;
+      pushId: string;
+      startKind: StartKind;
+    }>;
+    constructor(inner: {
+      campaignId: string;
+      pushId: string;
+      startKind: StartKind;
+    }) {
+      super('AnalyticsEvent', 'PushOpened');
+
+      this.inner = Object.freeze(inner);
+    }
+    static new(inner: {
+      campaignId: string;
+      pushId: string;
+      startKind: StartKind;
+    }): PushOpened_ {
+      return new PushOpened_(inner);
+    }
+
+    static instanceOf(obj: any): obj is PushOpened_ {
+      return obj.tag === AnalyticsEvent_Tags.PushOpened;
+    }
+  }
+
+  type DeepLinkReceived__interface = {
+    tag: AnalyticsEvent_Tags.DeepLinkReceived;
+    inner: Readonly<{ params: Array<ParamPair> }>;
+  };
+  /**
+   * Every non-empty link, for the `App Opened` attribution.
+   */
+  class DeepLinkReceived_
+    extends UniffiEnum
+    implements DeepLinkReceived__interface
+  {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'AnalyticsEvent';
+    readonly tag = AnalyticsEvent_Tags.DeepLinkReceived;
+    readonly inner: Readonly<{ params: Array<ParamPair> }>;
+    constructor(inner: { params: Array<ParamPair> }) {
+      super('AnalyticsEvent', 'DeepLinkReceived');
+
+      this.inner = Object.freeze(inner);
+    }
+    static new(inner: { params: Array<ParamPair> }): DeepLinkReceived_ {
+      return new DeepLinkReceived_(inner);
+    }
+
+    static instanceOf(obj: any): obj is DeepLinkReceived_ {
+      return obj.tag === AnalyticsEvent_Tags.DeepLinkReceived;
+    }
+  }
+
+  function instanceOf(obj: any): obj is AnalyticsEvent {
+    return obj[uniffiTypeNameSymbol] === 'AnalyticsEvent';
+  }
+
+  return Object.freeze({
+    instanceOf,
+    PushOpened: PushOpened_,
+    DeepLinkReceived: DeepLinkReceived_,
+  });
+})();
+export type AnalyticsEvent = InstanceType<
+  (typeof AnalyticsEvent)['PushOpened' | 'DeepLinkReceived']
+>;
+
+// FfiConverter for enum AnalyticsEvent
+const FfiConverterTypeAnalyticsEvent = (() => {
+  type TypeName = AnalyticsEvent;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      switch (c.readI32()) {
+        case 1:
+          return new AnalyticsEvent.PushOpened({
+            campaignId: FfiConverterString.readFromCursor(c),
+            pushId: FfiConverterString.readFromCursor(c),
+            startKind: FfiConverterTypeStartKind.readFromCursor(c),
+          });
+        case 2:
+          return new AnalyticsEvent.DeepLinkReceived({
+            params: FfiConverterSequenceTypeParamPair.readFromCursor(c),
+          });
+        default:
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      switch (value.tag) {
+        case AnalyticsEvent_Tags.PushOpened: {
+          c.writeI32(1);
+          const inner = value.inner;
+          FfiConverterString.writeIntoCursor(inner.campaignId, c);
+          FfiConverterString.writeIntoCursor(inner.pushId, c);
+          FfiConverterTypeStartKind.writeIntoCursor(inner.startKind, c);
+          return;
+        }
+        case AnalyticsEvent_Tags.DeepLinkReceived: {
+          c.writeI32(2);
+          const inner = value.inner;
+          FfiConverterSequenceTypeParamPair.writeIntoCursor(inner.params, c);
+          return;
+        }
+        default:
+          // Throwing from here means that AnalyticsEvent_Tags hasn't matched an ordinal.
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+    allocationSize(value: TypeName): number {
+      switch (value.tag) {
+        case AnalyticsEvent_Tags.PushOpened: {
+          const inner = value.inner;
+          let size = 4;
+          size += FfiConverterString.allocationSize(inner.campaignId);
+          size += FfiConverterString.allocationSize(inner.pushId);
+          size += FfiConverterTypeStartKind.allocationSize(inner.startKind);
+          return size;
+        }
+        case AnalyticsEvent_Tags.DeepLinkReceived: {
+          const inner = value.inner;
+          let size = 4;
+          size += FfiConverterSequenceTypeParamPair.allocationSize(
+            inner.params,
+          );
+          return size;
+        }
+        default:
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+  }
+  return new FFIConverter();
+})();
+
+// Enum: Effect
+export enum Effect_Tags {
+  Config = 'Config',
+  Analytics = 'Analytics',
+  SetPreviewUrl = 'SetPreviewUrl',
+  MarketplaceReturn = 'MarketplaceReturn',
+  CaptureReviewPromptParams = 'CaptureReviewPromptParams',
+  StartAvatarImpostorBenchmark = 'StartAvatarImpostorBenchmark',
+  SwitchEnvironment = 'SwitchEnvironment',
+  CompleteMobileSignIn = 'CompleteMobileSignIn',
+  SignInParked = 'SignInParked',
+}
+export const Effect = (() => {
+  type Config__interface = {
+    tag: Effect_Tags.Config;
+    inner: Readonly<{ param: ConfigParam }>;
+  };
+  class Config_ extends UniffiEnum implements Config__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'Effect';
+    readonly tag = Effect_Tags.Config;
+    readonly inner: Readonly<{ param: ConfigParam }>;
+    constructor(inner: { param: ConfigParam }) {
+      super('Effect', 'Config');
+
+      this.inner = Object.freeze(inner);
+    }
+    static new(inner: { param: ConfigParam }): Config_ {
+      return new Config_(inner);
+    }
+
+    static instanceOf(obj: any): obj is Config_ {
+      return obj.tag === Effect_Tags.Config;
+    }
+  }
+
+  type Analytics__interface = {
+    tag: Effect_Tags.Analytics;
+    inner: Readonly<{ event: AnalyticsEvent }>;
+  };
+  class Analytics_ extends UniffiEnum implements Analytics__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'Effect';
+    readonly tag = Effect_Tags.Analytics;
+    readonly inner: Readonly<{ event: AnalyticsEvent }>;
+    constructor(inner: { event: AnalyticsEvent }) {
+      super('Effect', 'Analytics');
+
+      this.inner = Object.freeze(inner);
+    }
+    static new(inner: { event: AnalyticsEvent }): Analytics_ {
+      return new Analytics_(inner);
+    }
+
+    static instanceOf(obj: any): obj is Analytics_ {
+      return obj.tag === Effect_Tags.Analytics;
+    }
+  }
+
+  type SetPreviewUrl__interface = {
+    tag: Effect_Tags.SetPreviewUrl;
+    inner: Readonly<{ url: string }>;
+  };
+  /**
+   * Point the preview WebSocket (hot reload) at this server.
+   */
+  class SetPreviewUrl_ extends UniffiEnum implements SetPreviewUrl__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'Effect';
+    readonly tag = Effect_Tags.SetPreviewUrl;
+    readonly inner: Readonly<{ url: string }>;
+    constructor(inner: { url: string }) {
+      super('Effect', 'SetPreviewUrl');
+
+      this.inner = Object.freeze(inner);
+    }
+    static new(inner: { url: string }): SetPreviewUrl_ {
+      return new SetPreviewUrl_(inner);
+    }
+
+    static instanceOf(obj: any): obj is SetPreviewUrl_ {
+      return obj.tag === Effect_Tags.SetPreviewUrl;
+    }
+  }
+
+  type MarketplaceReturn__interface = {
+    tag: Effect_Tags.MarketplaceReturn;
+  };
+  /**
+   * The in-app marketplace webview handed control back.
+   */
+  class MarketplaceReturn_
+    extends UniffiEnum
+    implements MarketplaceReturn__interface
+  {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'Effect';
+    readonly tag = Effect_Tags.MarketplaceReturn;
+    constructor() {
+      super('Effect', 'MarketplaceReturn');
+    }
+
+    static new(): MarketplaceReturn_ {
+      return new MarketplaceReturn_();
+    }
+
+    static instanceOf(obj: any): obj is MarketplaceReturn_ {
+      return obj.tag === Effect_Tags.MarketplaceReturn;
+    }
+  }
+
+  type CaptureReviewPromptParams__interface = {
+    tag: Effect_Tags.CaptureReviewPromptParams;
+    inner: Readonly<{ params: Array<ParamPair> }>;
+  };
+  /**
+   * QA harness: the review-prompt coordinator reads its own params.
+   */
+  class CaptureReviewPromptParams_
+    extends UniffiEnum
+    implements CaptureReviewPromptParams__interface
+  {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'Effect';
+    readonly tag = Effect_Tags.CaptureReviewPromptParams;
+    readonly inner: Readonly<{ params: Array<ParamPair> }>;
+    constructor(inner: { params: Array<ParamPair> }) {
+      super('Effect', 'CaptureReviewPromptParams');
+
+      this.inner = Object.freeze(inner);
+    }
+    static new(inner: {
+      params: Array<ParamPair>;
+    }): CaptureReviewPromptParams_ {
+      return new CaptureReviewPromptParams_(inner);
+    }
+
+    static instanceOf(obj: any): obj is CaptureReviewPromptParams_ {
+      return obj.tag === Effect_Tags.CaptureReviewPromptParams;
+    }
+  }
+
+  type StartAvatarImpostorBenchmark__interface = {
+    tag: Effect_Tags.StartAvatarImpostorBenchmark;
+  };
+  class StartAvatarImpostorBenchmark_
+    extends UniffiEnum
+    implements StartAvatarImpostorBenchmark__interface
+  {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'Effect';
+    readonly tag = Effect_Tags.StartAvatarImpostorBenchmark;
+    constructor() {
+      super('Effect', 'StartAvatarImpostorBenchmark');
+    }
+
+    static new(): StartAvatarImpostorBenchmark_ {
+      return new StartAvatarImpostorBenchmark_();
+    }
+
+    static instanceOf(obj: any): obj is StartAvatarImpostorBenchmark_ {
+      return obj.tag === Effect_Tags.StartAvatarImpostorBenchmark;
+    }
+  }
+
+  type SwitchEnvironment__interface = {
+    tag: Effect_Tags.SwitchEnvironment;
+    inner: Readonly<{ dclenv: string }>;
+  };
+  /**
+   * Sign out and restart in this environment.
+   */
+  class SwitchEnvironment_
+    extends UniffiEnum
+    implements SwitchEnvironment__interface
+  {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'Effect';
+    readonly tag = Effect_Tags.SwitchEnvironment;
+    readonly inner: Readonly<{ dclenv: string }>;
+    constructor(inner: { dclenv: string }) {
+      super('Effect', 'SwitchEnvironment');
+
+      this.inner = Object.freeze(inner);
+    }
+    static new(inner: { dclenv: string }): SwitchEnvironment_ {
+      return new SwitchEnvironment_(inner);
+    }
+
+    static instanceOf(obj: any): obj is SwitchEnvironment_ {
+      return obj.tag === Effect_Tags.SwitchEnvironment;
+    }
+  }
+
+  type CompleteMobileSignIn__interface = {
+    tag: Effect_Tags.CompleteMobileSignIn;
+    inner: Readonly<{ identityId: string }>;
+  };
+  /**
+   * Warm resume: this process opened the browser; complete the connect now.
+   */
+  class CompleteMobileSignIn_
+    extends UniffiEnum
+    implements CompleteMobileSignIn__interface
+  {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'Effect';
+    readonly tag = Effect_Tags.CompleteMobileSignIn;
+    readonly inner: Readonly<{ identityId: string }>;
+    constructor(inner: { identityId: string }) {
+      super('Effect', 'CompleteMobileSignIn');
+
+      this.inner = Object.freeze(inner);
+    }
+    static new(inner: { identityId: string }): CompleteMobileSignIn_ {
+      return new CompleteMobileSignIn_(inner);
+    }
+
+    static instanceOf(obj: any): obj is CompleteMobileSignIn_ {
+      return obj.tag === Effect_Tags.CompleteMobileSignIn;
+    }
+  }
+
+  type SignInParked__interface = {
+    tag: Effect_Tags.SignInParked;
+  };
+  /**
+   * Cold start: the token is parked for [`DeepLinkRouter::take_pending_signin_identity_id`].
+   */
+  class SignInParked_ extends UniffiEnum implements SignInParked__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'Effect';
+    readonly tag = Effect_Tags.SignInParked;
+    constructor() {
+      super('Effect', 'SignInParked');
+    }
+
+    static new(): SignInParked_ {
+      return new SignInParked_();
+    }
+
+    static instanceOf(obj: any): obj is SignInParked_ {
+      return obj.tag === Effect_Tags.SignInParked;
+    }
+  }
+
+  function instanceOf(obj: any): obj is Effect {
+    return obj[uniffiTypeNameSymbol] === 'Effect';
+  }
+
+  return Object.freeze({
+    instanceOf,
+    Config: Config_,
+    Analytics: Analytics_,
+    SetPreviewUrl: SetPreviewUrl_,
+    MarketplaceReturn: MarketplaceReturn_,
+    CaptureReviewPromptParams: CaptureReviewPromptParams_,
+    StartAvatarImpostorBenchmark: StartAvatarImpostorBenchmark_,
+    SwitchEnvironment: SwitchEnvironment_,
+    CompleteMobileSignIn: CompleteMobileSignIn_,
+    SignInParked: SignInParked_,
+  });
+})();
+export type Effect = InstanceType<
+  (typeof Effect)[
+    | 'Config'
+    | 'Analytics'
+    | 'SetPreviewUrl'
+    | 'MarketplaceReturn'
+    | 'CaptureReviewPromptParams'
+    | 'StartAvatarImpostorBenchmark'
+    | 'SwitchEnvironment'
+    | 'CompleteMobileSignIn'
+    | 'SignInParked']
+>;
+
+// FfiConverter for enum Effect
+const FfiConverterTypeEffect = (() => {
+  type TypeName = Effect;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      switch (c.readI32()) {
+        case 1:
+          return new Effect.Config({
+            param: FfiConverterTypeConfigParam.readFromCursor(c),
+          });
+        case 2:
+          return new Effect.Analytics({
+            event: FfiConverterTypeAnalyticsEvent.readFromCursor(c),
+          });
+        case 3:
+          return new Effect.SetPreviewUrl({
+            url: FfiConverterString.readFromCursor(c),
+          });
+        case 4:
+          return new Effect.MarketplaceReturn();
+        case 5:
+          return new Effect.CaptureReviewPromptParams({
+            params: FfiConverterSequenceTypeParamPair.readFromCursor(c),
+          });
+        case 6:
+          return new Effect.StartAvatarImpostorBenchmark();
+        case 7:
+          return new Effect.SwitchEnvironment({
+            dclenv: FfiConverterString.readFromCursor(c),
+          });
+        case 8:
+          return new Effect.CompleteMobileSignIn({
+            identityId: FfiConverterString.readFromCursor(c),
+          });
+        case 9:
+          return new Effect.SignInParked();
+        default:
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      switch (value.tag) {
+        case Effect_Tags.Config: {
+          c.writeI32(1);
+          const inner = value.inner;
+          FfiConverterTypeConfigParam.writeIntoCursor(inner.param, c);
+          return;
+        }
+        case Effect_Tags.Analytics: {
+          c.writeI32(2);
+          const inner = value.inner;
+          FfiConverterTypeAnalyticsEvent.writeIntoCursor(inner.event, c);
+          return;
+        }
+        case Effect_Tags.SetPreviewUrl: {
+          c.writeI32(3);
+          const inner = value.inner;
+          FfiConverterString.writeIntoCursor(inner.url, c);
+          return;
+        }
+        case Effect_Tags.MarketplaceReturn: {
+          c.writeI32(4);
+          return;
+        }
+        case Effect_Tags.CaptureReviewPromptParams: {
+          c.writeI32(5);
+          const inner = value.inner;
+          FfiConverterSequenceTypeParamPair.writeIntoCursor(inner.params, c);
+          return;
+        }
+        case Effect_Tags.StartAvatarImpostorBenchmark: {
+          c.writeI32(6);
+          return;
+        }
+        case Effect_Tags.SwitchEnvironment: {
+          c.writeI32(7);
+          const inner = value.inner;
+          FfiConverterString.writeIntoCursor(inner.dclenv, c);
+          return;
+        }
+        case Effect_Tags.CompleteMobileSignIn: {
+          c.writeI32(8);
+          const inner = value.inner;
+          FfiConverterString.writeIntoCursor(inner.identityId, c);
+          return;
+        }
+        case Effect_Tags.SignInParked: {
+          c.writeI32(9);
+          return;
+        }
+        default:
+          // Throwing from here means that Effect_Tags hasn't matched an ordinal.
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+    allocationSize(value: TypeName): number {
+      switch (value.tag) {
+        case Effect_Tags.Config: {
+          const inner = value.inner;
+          let size = 4;
+          size += FfiConverterTypeConfigParam.allocationSize(inner.param);
+          return size;
+        }
+        case Effect_Tags.Analytics: {
+          const inner = value.inner;
+          let size = 4;
+          size += FfiConverterTypeAnalyticsEvent.allocationSize(inner.event);
+          return size;
+        }
+        case Effect_Tags.SetPreviewUrl: {
+          const inner = value.inner;
+          let size = 4;
+          size += FfiConverterString.allocationSize(inner.url);
+          return size;
+        }
+        case Effect_Tags.MarketplaceReturn: {
+          return 4;
+        }
+        case Effect_Tags.CaptureReviewPromptParams: {
+          const inner = value.inner;
+          let size = 4;
+          size += FfiConverterSequenceTypeParamPair.allocationSize(
+            inner.params,
+          );
+          return size;
+        }
+        case Effect_Tags.StartAvatarImpostorBenchmark: {
+          return 4;
+        }
+        case Effect_Tags.SwitchEnvironment: {
+          const inner = value.inner;
+          let size = 4;
+          size += FfiConverterString.allocationSize(inner.dclenv);
+          return size;
+        }
+        case Effect_Tags.CompleteMobileSignIn: {
+          const inner = value.inner;
+          let size = 4;
+          size += FfiConverterString.allocationSize(inner.identityId);
+          return size;
+        }
+        case Effect_Tags.SignInParked: {
+          return 4;
+        }
+        default:
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+  }
+  return new FFIConverter();
+})();
+
+export type Routed = {
+  navigation?: Navigation;
+  effects: Array<Effect>;
+};
+
+/**
+ * Generated factory for {@link Routed} record objects.
+ */
+export const Routed = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<Routed, ReturnType<typeof defaults>>(defaults);
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults()) as Partial<Routed>,
+  });
+})();
+
+const FfiConverterTypeRouted = (() => {
+  type TypeName = Routed;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      return {
+        navigation: FfiConverterOptionalTypeNavigation.readFromCursor(c),
+        effects: FfiConverterSequenceTypeEffect.readFromCursor(c),
+      };
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      FfiConverterOptionalTypeNavigation.writeIntoCursor(value.navigation, c);
+      FfiConverterSequenceTypeEffect.writeIntoCursor(value.effects, c);
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterOptionalTypeNavigation.allocationSize(value.navigation) +
+        FfiConverterSequenceTypeEffect.allocationSize(value.effects)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
 // Error type: CoreError
 export enum CoreError_Tags {
   NotInstalled = 'NotInstalled',
   InvalidCall = 'InvalidCall',
+  SignIn = 'SignIn',
 }
 export const CoreError = (() => {
   type NotInstalled__interface = {
@@ -485,6 +2966,42 @@ export const CoreError = (() => {
     }
   }
 
+  type SignIn__interface = {
+    tag: CoreError_Tags.SignIn;
+    inner: Readonly<{ code: string; detail: string }>;
+  };
+  /**
+   * A sign-in step failed; `code` is the stable value the shell maps to copy.
+   */
+  class SignIn_ extends UniffiError implements SignIn__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'CoreError';
+    readonly tag = CoreError_Tags.SignIn;
+    readonly inner: Readonly<{ code: string; detail: string }>;
+    constructor(inner: { code: string; detail: string }) {
+      super('CoreError', 'SignIn');
+
+      this.inner = Object.freeze(inner);
+    }
+    static new(inner: { code: string; detail: string }): SignIn_ {
+      return new SignIn_(inner);
+    }
+
+    static instanceOf(obj: any): obj is SignIn_ {
+      return obj.tag === CoreError_Tags.SignIn;
+    }
+    static hasInner(obj: any): obj is SignIn_ {
+      return SignIn_.instanceOf(obj);
+    }
+
+    static getInner(obj: SignIn_): Readonly<{ code: string; detail: string }> {
+      return obj.inner;
+    }
+  }
+
   function instanceOf(obj: any): obj is CoreError {
     return obj[uniffiTypeNameSymbol] === 'CoreError';
   }
@@ -493,10 +3010,11 @@ export const CoreError = (() => {
     instanceOf,
     NotInstalled: NotInstalled_,
     InvalidCall: InvalidCall_,
+    SignIn: SignIn_,
   });
 })();
 export type CoreError = InstanceType<
-  (typeof CoreError)['NotInstalled' | 'InvalidCall']
+  (typeof CoreError)['NotInstalled' | 'InvalidCall' | 'SignIn']
 >;
 
 // FfiConverter for enum CoreError
@@ -509,6 +3027,11 @@ const FfiConverterTypeCoreError = (() => {
           return new CoreError.NotInstalled();
         case 2:
           return new CoreError.InvalidCall({
+            detail: FfiConverterString.readFromCursor(c),
+          });
+        case 3:
+          return new CoreError.SignIn({
+            code: FfiConverterString.readFromCursor(c),
             detail: FfiConverterString.readFromCursor(c),
           });
         default:
@@ -524,6 +3047,13 @@ const FfiConverterTypeCoreError = (() => {
         case CoreError_Tags.InvalidCall: {
           c.writeI32(2);
           const inner = value.inner;
+          FfiConverterString.writeIntoCursor(inner.detail, c);
+          return;
+        }
+        case CoreError_Tags.SignIn: {
+          c.writeI32(3);
+          const inner = value.inner;
+          FfiConverterString.writeIntoCursor(inner.code, c);
           FfiConverterString.writeIntoCursor(inner.detail, c);
           return;
         }
@@ -543,9 +3073,179 @@ const FfiConverterTypeCoreError = (() => {
           size += FfiConverterString.allocationSize(inner.detail);
           return size;
         }
+        case CoreError_Tags.SignIn: {
+          const inner = value.inner;
+          let size = 4;
+          size += FfiConverterString.allocationSize(inner.code);
+          size += FfiConverterString.allocationSize(inner.detail);
+          return size;
+        }
         default:
           throw new UniffiInternalError.UnexpectedEnumCase();
       }
+    }
+  }
+  return new FFIConverter();
+})();
+
+// Enum: Decision
+export enum Decision_Tags {
+  Keep = 'Keep',
+  Drop = 'Drop',
+}
+export const Decision = (() => {
+  type Keep__interface = {
+    tag: Decision_Tags.Keep;
+    inner: Readonly<{ source: ReportSource; attachLog: boolean }>;
+  };
+  /**
+   * Send it, tagged `source`; `attach_log` is the per-session log-upload sample.
+   */
+  class Keep_ extends UniffiEnum implements Keep__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'Decision';
+    readonly tag = Decision_Tags.Keep;
+    readonly inner: Readonly<{ source: ReportSource; attachLog: boolean }>;
+    constructor(inner: { source: ReportSource; attachLog: boolean }) {
+      super('Decision', 'Keep');
+
+      this.inner = Object.freeze(inner);
+    }
+    static new(inner: { source: ReportSource; attachLog: boolean }): Keep_ {
+      return new Keep_(inner);
+    }
+
+    static instanceOf(obj: any): obj is Keep_ {
+      return obj.tag === Decision_Tags.Keep;
+    }
+  }
+
+  type Drop__interface = {
+    tag: Decision_Tags.Drop;
+  };
+  class Drop_ extends UniffiEnum implements Drop__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'Decision';
+    readonly tag = Decision_Tags.Drop;
+    constructor() {
+      super('Decision', 'Drop');
+    }
+
+    static new(): Drop_ {
+      return new Drop_();
+    }
+
+    static instanceOf(obj: any): obj is Drop_ {
+      return obj.tag === Decision_Tags.Drop;
+    }
+  }
+
+  function instanceOf(obj: any): obj is Decision {
+    return obj[uniffiTypeNameSymbol] === 'Decision';
+  }
+
+  return Object.freeze({
+    instanceOf,
+    Keep: Keep_,
+    Drop: Drop_,
+  });
+})();
+export type Decision = InstanceType<(typeof Decision)['Keep' | 'Drop']>;
+
+// FfiConverter for enum Decision
+const FfiConverterTypeDecision = (() => {
+  type TypeName = Decision;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      switch (c.readI32()) {
+        case 1:
+          return new Decision.Keep({
+            source: FfiConverterTypeReportSource.readFromCursor(c),
+            attachLog: FfiConverterBool.readFromCursor(c),
+          });
+        case 2:
+          return new Decision.Drop();
+        default:
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      switch (value.tag) {
+        case Decision_Tags.Keep: {
+          c.writeI32(1);
+          const inner = value.inner;
+          FfiConverterTypeReportSource.writeIntoCursor(inner.source, c);
+          FfiConverterBool.writeIntoCursor(inner.attachLog, c);
+          return;
+        }
+        case Decision_Tags.Drop: {
+          c.writeI32(2);
+          return;
+        }
+        default:
+          // Throwing from here means that Decision_Tags hasn't matched an ordinal.
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+    allocationSize(value: TypeName): number {
+      switch (value.tag) {
+        case Decision_Tags.Keep: {
+          const inner = value.inner;
+          let size = 4;
+          size += FfiConverterTypeReportSource.allocationSize(inner.source);
+          size += FfiConverterBool.allocationSize(inner.attachLog);
+          return size;
+        }
+        case Decision_Tags.Drop: {
+          return 4;
+        }
+        default:
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+  }
+  return new FFIConverter();
+})();
+
+export enum Environment {
+  Production,
+  Staging,
+  Development,
+}
+
+const FfiConverterTypeEnvironment = (() => {
+  type TypeName = Environment;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      switch (c.readI32()) {
+        case 1:
+          return Environment.Production;
+        case 2:
+          return Environment.Staging;
+        case 3:
+          return Environment.Development;
+        default:
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      switch (value) {
+        case Environment.Production:
+          return c.writeI32(1);
+        case Environment.Staging:
+          return c.writeI32(2);
+        case Environment.Development:
+          return c.writeI32(3);
+      }
+    }
+    allocationSize(value: TypeName): number {
+      return 4;
     }
   }
   return new FFIConverter();
@@ -1023,6 +3723,11 @@ const FfiConverterTypeState = (() => {
 export interface AppListener {
   stateChanged(state: State): void;
   sceneCrashed(): void;
+  /**
+   * A sign-in step failed; `code` is stable and the shell maps it to copy.
+   */
+  authError(code: string): void;
+  openUrl(request: OpenUrl): void;
 }
 
 /**
@@ -1063,6 +3768,38 @@ export class AppListenerImpl
       /*caller:*/ callStatus => {
         nativeModule().ubrn_uniffi_dcl_core_fn_method_applistener_scene_crashed(
           uniffiTypeAppListenerImplObjectFactory.clonePointer(this),
+          callStatus,
+        );
+      },
+      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+    );
+  }
+
+  /**
+   * A sign-in step failed; `code` is stable and the shell maps it to copy.
+   */
+  authError(code: string): void {
+    uniffiCaller.rustCall(
+      /*caller:*/ callStatus => {
+        nativeModule().ubrn_uniffi_dcl_core_fn_method_applistener_auth_error(
+          uniffiTypeAppListenerImplObjectFactory.clonePointer(this),
+          FfiConverterString.lower(code, nativeModule().rustbuffer_alloc),
+          callStatus,
+        );
+      },
+      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+    );
+  }
+
+  openUrl(request: OpenUrl): void {
+    uniffiCaller.rustCall(
+      /*caller:*/ callStatus => {
+        nativeModule().ubrn_uniffi_dcl_core_fn_method_applistener_open_url(
+          uniffiTypeAppListenerImplObjectFactory.clonePointer(this),
+          FfiConverterTypeOpenUrl.lower(
+            request,
+            nativeModule().rustbuffer_alloc,
+          ),
           callStatus,
         );
       },
@@ -1201,6 +3938,44 @@ const uniffiCallbackInterfaceAppListener: {
       );
       return uniffiResult;
     },
+    auth_error: (uniffiHandle: bigint, code: Uint8Array) => {
+      const uniffiMakeCall = (): void => {
+        const jsCallback = FfiConverterTypeAppListener.lift(uniffiHandle);
+        return jsCallback.authError(FfiConverterString.lift(code));
+      };
+      const uniffiResult = UniffiResult.ready<void>();
+      const uniffiHandleSuccess = (obj: any) => {};
+      const uniffiHandleError = (code: number, errBuf: UniffiByteArray) => {
+        UniffiResult.writeError(uniffiResult, code, errBuf);
+      };
+      uniffiTraitInterfaceCall(
+        /*makeCall:*/ uniffiMakeCall,
+        /*handleSuccess:*/ uniffiHandleSuccess,
+        /*handleError:*/ uniffiHandleError,
+        /*lowerString:*/ FfiConverterString.lower.bind(FfiConverterString),
+        /*alloc:*/ nativeModule().rustbuffer_alloc,
+      );
+      return uniffiResult;
+    },
+    open_url: (uniffiHandle: bigint, request: Uint8Array) => {
+      const uniffiMakeCall = (): void => {
+        const jsCallback = FfiConverterTypeAppListener.lift(uniffiHandle);
+        return jsCallback.openUrl(FfiConverterTypeOpenUrl.lift(request));
+      };
+      const uniffiResult = UniffiResult.ready<void>();
+      const uniffiHandleSuccess = (obj: any) => {};
+      const uniffiHandleError = (code: number, errBuf: UniffiByteArray) => {
+        UniffiResult.writeError(uniffiResult, code, errBuf);
+      };
+      uniffiTraitInterfaceCall(
+        /*makeCall:*/ uniffiMakeCall,
+        /*handleSuccess:*/ uniffiHandleSuccess,
+        /*handleError:*/ uniffiHandleError,
+        /*lowerString:*/ FfiConverterString.lower.bind(FfiConverterString),
+        /*alloc:*/ nativeModule().rustbuffer_alloc,
+      );
+      return uniffiResult;
+    },
     uniffi_free: (uniffiHandle: UniffiHandle): void => {
       // this will throw a stale handle error if the handle isn't found.
       FfiConverterTypeAppListener.drop(uniffiHandle);
@@ -1222,6 +3997,34 @@ const FfiConverterOptionalString = new FfiConverterOptional(FfiConverterString);
 // FfiConverter for Parcel | undefined
 const FfiConverterOptionalTypeParcel = new FfiConverterOptional(
   FfiConverterTypeParcel,
+);
+
+// FfiConverter for bigint | undefined
+const FfiConverterOptionalInt64 = new FfiConverterOptional(FfiConverterInt64);
+
+// FfiConverter for ReportSource | undefined
+const FfiConverterOptionalTypeReportSource = new FfiConverterOptional(
+  FfiConverterTypeReportSource,
+);
+
+// FfiConverter for Array<ReportTag>
+const FfiConverterSequenceTypeReportTag = new FfiConverterArray(
+  FfiConverterTypeReportTag,
+);
+
+// FfiConverter for Navigation | undefined
+const FfiConverterOptionalTypeNavigation = new FfiConverterOptional(
+  FfiConverterTypeNavigation,
+);
+
+// FfiConverter for Array<ParamPair>
+const FfiConverterSequenceTypeParamPair = new FfiConverterArray(
+  FfiConverterTypeParamPair,
+);
+
+// FfiConverter for Array<Effect>
+const FfiConverterSequenceTypeEffect = new FfiConverterArray(
+  FfiConverterTypeEffect,
 );
 
 /**
@@ -1253,6 +4056,26 @@ function uniffiEnsureInitialized() {
       'uniffi_dcl_core_checksum_func_add_listener',
     );
   }
+  if (nativeModule().ubrn_uniffi_dcl_core_checksum_func_address() !== 48567) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_address',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_cancel_sign_in() !== 5353
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_cancel_sign_in',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_complete_browser() !==
+    51016
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_complete_browser',
+    );
+  }
   if (
     nativeModule().ubrn_uniffi_dcl_core_checksum_func_debug_delay() !== 40806
   ) {
@@ -1281,6 +4104,58 @@ function uniffiEnsureInitialized() {
       'uniffi_dcl_core_checksum_func_remove_listener',
     );
   }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_sign_in_browser() !==
+    13080
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_sign_in_browser',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_sign_in_email_start() !==
+    43591
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_sign_in_email_start',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_sign_in_email_verify() !==
+    55649
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_sign_in_email_verify',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_sign_in_guest() !== 7170
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_sign_in_guest',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_sign_in_wallet_begin() !==
+    61092
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_sign_in_wallet_begin',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_sign_in_wallet_complete() !==
+    50888
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_sign_in_wallet_complete',
+    );
+  }
+  if (nativeModule().ubrn_uniffi_dcl_core_checksum_func_sign_out() !== 45505) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_sign_out',
+    );
+  }
   if (nativeModule().ubrn_uniffi_dcl_core_checksum_func_state() !== 49552) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_dcl_core_checksum_func_state',
@@ -1302,6 +4177,22 @@ function uniffiEnsureInitialized() {
       'uniffi_dcl_core_checksum_method_applistener_scene_crashed',
     );
   }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_method_applistener_auth_error() !==
+    25710
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_method_applistener_auth_error',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_method_applistener_open_url() !==
+    28199
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_method_applistener_open_url',
+    );
+  }
 
   uniffiCallbackInterfaceAppListener.register();
 }
@@ -1309,14 +4200,30 @@ function uniffiEnsureInitialized() {
 export default Object.freeze({
   initialize: uniffiEnsureInitialized,
   converters: {
+    FfiConverterTypeAnalyticsEvent,
     FfiConverterTypeAppListener,
+    FfiConverterTypeConfigParam,
     FfiConverterTypeCoreError,
+    FfiConverterTypeDecision,
     FfiConverterTypeDestination,
+    FfiConverterTypeEffect,
+    FfiConverterTypeEnvironment,
+    FfiConverterTypeNavigation,
+    FfiConverterTypeOpenUrl,
+    FfiConverterTypeParamPair,
     FfiConverterTypeParcel,
     FfiConverterTypePlatform,
     FfiConverterTypeRect,
+    FfiConverterTypeReportContext,
+    FfiConverterTypeReportEvent,
+    FfiConverterTypeReportLevel,
+    FfiConverterTypeReportSource,
+    FfiConverterTypeReportTag,
+    FfiConverterTypeReportTags,
+    FfiConverterTypeRouted,
     FfiConverterTypeSignInMethod,
     FfiConverterTypeSignInStep,
+    FfiConverterTypeStartKind,
     FfiConverterTypeState,
   },
 });

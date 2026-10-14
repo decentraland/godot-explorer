@@ -52,16 +52,23 @@ fn core() -> Result<&'static Core, HostError> {
 }
 
 /// Creates the process's one core at app launch, with the data dir the Godot-exported app used
-/// (D-19). Calling it again with the same arguments is a no-op.
+/// (D-19), and restores the saved account. `device_anchor` is the platform's stable device id
+/// (SSAID, Keychain item) the guest wallet derives from. Calling it again with the same
+/// arguments is a no-op.
 #[uniffi::export]
-pub fn install(data_dir: String, platform: HostPlatform) {
-    Core::install(CoreConfig {
+pub fn install(data_dir: String, platform: HostPlatform, device_anchor: String) {
+    let first = Core::try_get().is_none();
+    let core = Core::install(CoreConfig {
         data_dir: PathBuf::from(data_dir),
         platform: match platform {
             HostPlatform::Android => Platform::Android,
             HostPlatform::Ios => Platform::Ios,
         },
     });
+    if first {
+        core.hub().set_device_anchor(&device_anchor);
+        core.hub().boot();
+    }
 }
 
 /// Registers the host's receiver of `engine_required` and `avatar_preview_mode`.

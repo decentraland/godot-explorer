@@ -66,6 +66,12 @@ impl AppEvents for HostEvents {
     fn scene_crashed(&self) {
         self.each(|l| l.scene_crashed());
     }
+    fn auth_error(&self, code: &str) {
+        self.each(|l| l.auth_error(code));
+    }
+    fn open_url(&self, request: &crate::OpenUrlRequest) {
+        self.each(|l| l.open_url(request));
+    }
 }
 
 /// An `EngineSink` that any thread can push to and the engine's main thread drains each frame.

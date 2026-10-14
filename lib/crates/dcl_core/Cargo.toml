@@ -25,6 +25,8 @@ ethers-core = { version = "2.0" }
 ethers-signers = { version = "2.0" }
 ethers-providers = { version = "2.0", features = ["ws", "rustls"] }
 async-trait = "0.1.68"
+sha2 = "0.10"
+base64 = "0.21.5"
 futures-lite = "1.12.0"
 chrono = "0.4.31"
 prost = "0.11.8"
@@ -44,6 +46,8 @@ oslog = "0.2"
 
 [dev-dependencies]
 tracing-test = "0.2.4"
+tempfile = "3"
+tokio = { version = "1.40.0", features = ["test-util"] }
 
 [features]
 use_pulse = []

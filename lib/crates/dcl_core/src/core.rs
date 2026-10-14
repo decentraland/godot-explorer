@@ -3,11 +3,13 @@ use std::{
     path::{Path, PathBuf},
     sync::{
         atomic::{AtomicUsize, Ordering},
-        Arc, Mutex, OnceLock,
+        Arc, OnceLock,
     },
 };
 
-use crate::app::{App, AppEvents, HostEvents};
+use crate::app::{App, AppEvents};
+use crate::hub::{Hub, LiveBackend};
+use crate::session::identity::Session;
 use tokio::runtime::{Builder, Handle, Runtime};
 
 static CORE: OnceLock<Core> = OnceLock::new();
@@ -41,8 +43,7 @@ pub struct CoreConfig {
 pub struct Core {
     config: CoreConfig,
     runtime: Runtime,
-    host_events: Arc<HostEvents>,
-    app: Mutex<App>,
+    hub: Hub,
 }
 
 impl Core {
@@ -58,12 +59,10 @@ impl Core {
                 .thread_name("dcl-core-tokio")
                 .build()
                 .expect("failed to build the core tokio runtime");
-            let host_events = Arc::new(HostEvents::default());
             Core {
+                hub: Hub::new(&config.data_dir, Arc::new(LiveBackend)),
                 config: config.clone(),
                 runtime,
-                app: Mutex::new(App::new(host_events.clone())),
-                host_events,
             }
         });
         debug_assert_eq!(
@@ -104,33 +103,42 @@ impl Core {
         &self.config
     }
 
+    /// The account hub: app state, session, saved account and the sign-in flows.
+    pub fn hub(&self) -> &Hub {
+        &self.hub
+    }
+
     /// Runs `f` on the app state machine, one caller at a time. `f` must not call back into the
-    /// core's app, and the registered listener runs inside it.
+    /// core's app, and the registered listeners run inside it.
     pub fn with_app<R>(&self, f: impl FnOnce(&mut App) -> R) -> R {
-        f(&mut self.app.lock().unwrap_or_else(|e| e.into_inner()))
+        self.hub.with_app(f)
+    }
+
+    /// Runs `f` on the account state of the running app: the wallet, its ephemeral auth chain and
+    /// the sign-in bookkeeping.
+    pub fn with_session<R>(&self, f: impl FnOnce(&mut Session) -> R) -> R {
+        self.hub.with_session(f)
     }
 
     /// Registers a receiver of the app's events (the shell and the host each add one); the id
     /// removes it.
     pub fn add_app_listener(&self, listener: Arc<dyn AppEvents>) -> u64 {
-        self.host_events.add_listener(listener)
+        self.hub.events().add_listener(listener)
     }
 
     pub fn remove_app_listener(&self, id: u64) {
-        self.host_events.remove_listener(id);
+        self.hub.events().remove_listener(id);
     }
 
     /// Sends `state` to every listener without changing the app (used to exercise the callback
     /// path under load).
     pub fn broadcast_state(&self, state: &crate::app::State) {
-        use crate::app::AppEvents;
-        self.host_events.state_changed(state);
+        self.hub.events().state_changed(state);
     }
 
     /// Sends an `avatar_preview_mode` event to every listener (exercises the host callback path).
     pub fn broadcast_avatar_preview_mode(&self, on: bool) {
-        use crate::app::AppEvents;
-        self.host_events.avatar_preview_mode(on);
+        self.hub.events().avatar_preview_mode(on);
     }
 
     /// Spawns on the core runtime. Without an installed core it fails in debug builds; release

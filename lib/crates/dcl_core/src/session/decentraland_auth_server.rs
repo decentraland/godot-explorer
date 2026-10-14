@@ -377,6 +377,29 @@ async fn create_new_request(
     }
 }
 
+/// The browser URL of the mobile sign-in, with the optional provider, user and session query.
+pub fn mobile_auth_url(
+    provider: Option<String>,
+    user_id: Option<String>,
+    session_id: Option<String>,
+) -> String {
+    let mut params = Vec::new();
+    if let Some(provider) = provider {
+        params.push(format!("provider={provider}"));
+    }
+    if let Some(user_id) = user_id {
+        params.push(format!("u={user_id}"));
+    }
+    if let Some(session_id) = session_id {
+        params.push(format!("s={session_id}"));
+    }
+    if params.is_empty() {
+        urls::auth_mobile_frontend()
+    } else {
+        format!("{}?{}", urls::auth_mobile_frontend(), params.join("&"))
+    }
+}
+
 /// Creates an auth request and opens the browser for mobile.
 /// Instead of polling, the app should wait for a deep link with the identity ID.
 pub async fn do_request_mobile(
@@ -391,22 +414,7 @@ pub async fn do_request_mobile(
         provider
     );
 
-    // Build URL with optional query parameters
-    let mut params = Vec::new();
-    if let Some(provider) = provider {
-        params.push(format!("provider={provider}"));
-    }
-    if let Some(user_id) = user_id {
-        params.push(format!("u={user_id}"));
-    }
-    if let Some(session_id) = session_id {
-        params.push(format!("s={session_id}"));
-    }
-    let url = if params.is_empty() {
-        urls::auth_mobile_frontend()
-    } else {
-        format!("{}?{}", urls::auth_mobile_frontend(), params.join("&"))
-    };
+    let url = mobile_auth_url(provider, user_id, session_id);
     tracing::debug!("do_request_mobile: opening auth URL={}", url);
 
     url_reporter

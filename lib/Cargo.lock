@@ -1067,6 +1067,7 @@ version = "1.15.0"
 dependencies = [
  "anyhow",
  "async-trait",
+ "base64 0.21.7",
  "chrono",
  "dcl-rpc",
  "ethers-core",
@@ -1084,6 +1085,8 @@ dependencies = [
  "reqwest",
  "serde",
  "serde_json",
+ "sha2",
+ "tempfile",
  "tokio",
  "tokio-util",
  "tracing",

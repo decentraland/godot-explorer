@@ -6,12 +6,14 @@ pub mod attestation;
 pub mod clock;
 mod core;
 pub mod deep_link;
+pub mod deep_link_route;
 pub mod destination;
 pub mod env;
 #[cfg(feature = "ffi")]
 pub mod ffi;
 pub mod flags;
 pub mod http;
+pub mod hub;
 pub mod logging;
 pub mod network_inspector;
 pub mod notifications;

@@ -179,6 +179,13 @@ interface NativeModuleInterface {
     listener: bigint,
     uniffi_out_err: UniffiRustCallStatus,
   ): bigint;
+  ubrn_uniffi_dcl_core_fn_func_address(
+    uniffi_out_err: UniffiRustCallStatus,
+  ): Uint8Array;
+  ubrn_uniffi_dcl_core_fn_func_cancel_sign_in(
+    uniffi_out_err: UniffiRustCallStatus,
+  ): void;
+  ubrn_uniffi_dcl_core_fn_func_complete_browser(identityId: Uint8Array): bigint;
   ubrn_uniffi_dcl_core_fn_func_debug_delay(millis: number): bigint;
   ubrn_uniffi_dcl_core_fn_func_debug_fire_events(
     count: number,
@@ -189,6 +196,27 @@ interface NativeModuleInterface {
   ): number;
   ubrn_uniffi_dcl_core_fn_func_remove_listener(
     id: bigint,
+    uniffi_out_err: UniffiRustCallStatus,
+  ): void;
+  ubrn_uniffi_dcl_core_fn_func_sign_in_browser(
+    provider: Uint8Array,
+    uniffi_out_err: UniffiRustCallStatus,
+  ): void;
+  ubrn_uniffi_dcl_core_fn_func_sign_in_email_start(email: Uint8Array): bigint;
+  ubrn_uniffi_dcl_core_fn_func_sign_in_email_verify(
+    email: Uint8Array,
+    code: Uint8Array,
+  ): bigint;
+  ubrn_uniffi_dcl_core_fn_func_sign_in_guest(): bigint;
+  ubrn_uniffi_dcl_core_fn_func_sign_in_wallet_begin(
+    uniffi_out_err: UniffiRustCallStatus,
+  ): Uint8Array;
+  ubrn_uniffi_dcl_core_fn_func_sign_in_wallet_complete(
+    signerAddress: Uint8Array,
+    signature: Uint8Array,
+    uniffi_out_err: UniffiRustCallStatus,
+  ): void;
+  ubrn_uniffi_dcl_core_fn_func_sign_out(
     uniffi_out_err: UniffiRustCallStatus,
   ): void;
   ubrn_uniffi_dcl_core_fn_func_state(
@@ -203,15 +231,37 @@ interface NativeModuleInterface {
     uniffiSelf: bigint,
     uniffi_out_err: UniffiRustCallStatus,
   ): void;
+  ubrn_uniffi_dcl_core_fn_method_applistener_auth_error(
+    uniffiSelf: bigint,
+    code: Uint8Array,
+    uniffi_out_err: UniffiRustCallStatus,
+  ): void;
+  ubrn_uniffi_dcl_core_fn_method_applistener_open_url(
+    uniffiSelf: bigint,
+    request: Uint8Array,
+    uniffi_out_err: UniffiRustCallStatus,
+  ): void;
   ubrn_ffi_dcl_core_uniffi_contract_version(): number;
   ubrn_uniffi_dcl_core_checksum_func_add_listener(): number;
+  ubrn_uniffi_dcl_core_checksum_func_address(): number;
+  ubrn_uniffi_dcl_core_checksum_func_cancel_sign_in(): number;
+  ubrn_uniffi_dcl_core_checksum_func_complete_browser(): number;
   ubrn_uniffi_dcl_core_checksum_func_debug_delay(): number;
   ubrn_uniffi_dcl_core_checksum_func_debug_fire_events(): number;
   ubrn_uniffi_dcl_core_checksum_func_installs(): number;
   ubrn_uniffi_dcl_core_checksum_func_remove_listener(): number;
+  ubrn_uniffi_dcl_core_checksum_func_sign_in_browser(): number;
+  ubrn_uniffi_dcl_core_checksum_func_sign_in_email_start(): number;
+  ubrn_uniffi_dcl_core_checksum_func_sign_in_email_verify(): number;
+  ubrn_uniffi_dcl_core_checksum_func_sign_in_guest(): number;
+  ubrn_uniffi_dcl_core_checksum_func_sign_in_wallet_begin(): number;
+  ubrn_uniffi_dcl_core_checksum_func_sign_in_wallet_complete(): number;
+  ubrn_uniffi_dcl_core_checksum_func_sign_out(): number;
   ubrn_uniffi_dcl_core_checksum_func_state(): number;
   ubrn_uniffi_dcl_core_checksum_method_applistener_state_changed(): number;
   ubrn_uniffi_dcl_core_checksum_method_applistener_scene_crashed(): number;
+  ubrn_uniffi_dcl_core_checksum_method_applistener_auth_error(): number;
+  ubrn_uniffi_dcl_core_checksum_method_applistener_open_url(): number;
   ubrn_uniffi_internal_fn_method_applistener_ffi__bless_pointer(
     pointer: bigint,
     uniffi_out_err: UniffiRustCallStatus,
@@ -245,6 +295,14 @@ type UniffiCallbackInterfaceDclCoreAppListenerMethod0 = (
 type UniffiCallbackInterfaceDclCoreAppListenerMethod1 = (
   uniffiHandle: bigint,
 ) => UniffiResult<void>;
+type UniffiCallbackInterfaceDclCoreAppListenerMethod2 = (
+  uniffiHandle: bigint,
+  code: Uint8Array,
+) => UniffiResult<void>;
+type UniffiCallbackInterfaceDclCoreAppListenerMethod3 = (
+  uniffiHandle: bigint,
+  request: Uint8Array,
+) => UniffiResult<void>;
 type UniffiCallbackInterfaceCloneDclCoreAppListener = (
   handle: bigint,
 ) => UniffiResult<void>;
@@ -254,6 +312,8 @@ export type UniffiVTableCallbackInterfaceDclCoreAppListener = {
   uniffi_clone: UniffiCallbackInterfaceCloneDclCoreAppListener;
   state_changed: UniffiCallbackInterfaceDclCoreAppListenerMethod0;
   scene_crashed: UniffiCallbackInterfaceDclCoreAppListenerMethod1;
+  auth_error: UniffiCallbackInterfaceDclCoreAppListenerMethod2;
+  open_url: UniffiCallbackInterfaceDclCoreAppListenerMethod3;
 };
 
 // UniffiRustFutureContinuationCallback is generated as part of the component interface's
