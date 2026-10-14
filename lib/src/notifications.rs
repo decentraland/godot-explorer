@@ -261,6 +261,62 @@ mod local_notification_queue_tests {
         );
     }
 
+    /// The `local-notifications` remote flag: off disarms everything the OS holds while the
+    /// DB keeps the rows, and on re-arms them from the DB.
+    #[godot::test::itest]
+    fn test_remote_flag_disarms_and_rearms(_ctx: &TestContext) {
+        let fixture = NotificationTestFixture::new();
+        let mut mock = fixture.mock.clone();
+        let mut manager = fixture.manager.clone();
+
+        let time = godot::classes::Time::singleton();
+        let trigger_timestamp = (time.get_unix_time_from_system() as i64) + 3600;
+        mock.call(
+            "db_insert_notification",
+            &[
+                Variant::from("flagged_notif"),
+                Variant::from("Flagged"),
+                Variant::from("Body"),
+                Variant::from(trigger_timestamp),
+                Variant::from(0),
+                Variant::from(""),
+                Variant::from(""),
+            ],
+        );
+        manager.call("_sync_notification_queue", &[]);
+        assert_eq!(
+            get_os_scheduled_count(&mut mock),
+            1,
+            "armed before the flag"
+        );
+
+        manager.call("set_local_notifications_enabled", &[Variant::from(false)]);
+        assert!(!manager
+            .call("is_local_notifications_enabled", &[])
+            .to::<bool>());
+        assert_eq!(
+            get_os_scheduled_count(&mut mock),
+            0,
+            "flag off disarms the OS"
+        );
+        assert!(
+            !is_notification_scheduled(&mut mock, "flagged_notif"),
+            "DB row is marked unscheduled"
+        );
+        assert!(
+            notification_exists(&mut mock, "flagged_notif"),
+            "DB row is kept for re-arming"
+        );
+
+        manager.call("set_local_notifications_enabled", &[Variant::from(true)]);
+        assert_eq!(
+            get_os_scheduled_count(&mut mock),
+            1,
+            "flag on re-arms from the DB"
+        );
+        assert!(is_notification_scheduled(&mut mock, "flagged_notif"));
+    }
+
     /// Test 3: End-to-end sync algorithm validation
     /// This test validates the complete _sync_notification_queue() algorithm with a complex scenario
     #[godot::test::itest]
