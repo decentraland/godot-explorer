@@ -1,6 +1,6 @@
 /**
- * RN entry flow, then the tab shell. Godot is booted lazily:
- * first to draw the single avatar preview, then (on Jump In) to run the world (see src/engine.ts).
+ * RN entry flow, then the tab shell. The core starts the engine when a screen needs it: the avatar
+ * preview first, then the world on Jump In.
  */
 import { useCallback, useEffect, useState } from 'react';
 import { StatusBar, StyleSheet, View } from 'react-native';
@@ -8,11 +8,13 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NavProvider, useNav } from './src/app/NavProvider';
 import { gallery, usePreviewRoute } from './src/app/preview';
 import { Shell } from './src/app/Shell';
+import { useAnalyticsLifecycle } from './src/app/useAnalyticsLifecycle';
 import { useAppWiring } from './src/app/wiring';
+import { core } from './src/core';
 import { useJumpIn } from './src/discover/sheetHooks';
 import { colors, ToastProvider } from './src/ds';
 import { runCoreSelfTest } from './src/core/selfTest';
-import { send } from './src/engine';
+import { startLinkHandling } from './src/flow/browser';
 import { EntryFlow } from './src/flow/EntryFlow';
 
 function AppBody() {
@@ -21,10 +23,17 @@ function AppBody() {
   const onDone = useCallback(() => setEntered(true), []);
 
   const jumpIn = useJumpIn();
+  useAnalyticsLifecycle(entered);
+  useEffect(() => {
+    core().firstScreenDrawn();
+  }, []);
 
   const leave = useCallback(() => {
-    send({ type: 'exit_world' });
-    reset({ name: 'home' });
+    try {
+      core().exitWorld();
+    } finally {
+      reset({ name: 'home' });
+    }
   }, [reset]);
   useAppWiring(leave);
 
@@ -50,6 +59,7 @@ function AppBody() {
 function App() {
   const preview = usePreviewRoute();
   useEffect(() => {
+    startLinkHandling();
     if (__DEV__) {
       runCoreSelfTest();
     }

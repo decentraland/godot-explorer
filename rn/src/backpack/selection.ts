@@ -1,6 +1,6 @@
-import { AvatarState } from '../events';
+import { Control } from '../core/native';
+import type { AvatarState } from '../core/native';
 import { Wearable } from './catalog';
-import type { BackpackCommand } from './api';
 import { isRemovable, Slot, TabKey } from './taxonomy';
 
 export type ItemFilter = 'all' | 'collectibles';
@@ -9,7 +9,7 @@ const same = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
 
 export const isEquipped = (avatar: AvatarState | null, urn: string): boolean =>
   avatar !== null &&
-  (same(avatar.body_shape, urn) ||
+  (same(avatar.bodyShape, urn) ||
     avatar.wearables.some(worn => same(worn, urn)));
 
 /** Wearables the current body shape can wear; the body shapes themselves are always listed. */
@@ -27,7 +27,7 @@ export function visibleWearables(
     }
     return (
       item.bodyShapes.length === 0 ||
-      item.bodyShapes.some(shape => same(shape, avatar.body_shape))
+      item.bodyShapes.some(shape => same(shape, avatar.bodyShape))
     );
   });
 }
@@ -86,16 +86,16 @@ export function targetEmoteSlot(emotes: string[], selected: number): number {
 export function wearableCommand(
   item: Wearable,
   equipped: boolean,
-): BackpackCommand | null {
+): Control | null {
   if (item.category === 'body_shape') {
-    return equipped ? null : { type: 'set_body_shape', urn: item.id };
+    return equipped ? null : new Control.SetBodyShape({ urn: item.id });
   }
   if (equipped) {
     return isRemovable(item.category)
-      ? { type: 'unequip', urn: item.id }
+      ? new Control.Unequip({ urn: item.id })
       : null;
   }
-  return { type: 'equip', urn: item.id };
+  return new Control.Equip({ urn: item.id });
 }
 
 /** The UNEQUIP strip is drawn on the body shape too (Figma), though tapping it does nothing. */

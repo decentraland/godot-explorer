@@ -1,4 +1,4 @@
-import type { AvatarColorTarget } from '../GodotBridge';
+import { CameraFocus, ColorTarget as CoreColorTarget } from '../core/native';
 import type { I18nKey } from '../i18n';
 
 export type TabKey = 'all' | 'body' | 'face' | 'clothing' | 'extras';
@@ -88,12 +88,24 @@ export const COLOR_TITLES: Record<ColorTarget, I18nKey> = {
   eyes: 'BACKPACK_COLOR_EYES',
 };
 
-/** The engine only knows skin, hair and eyes; the other hair-like targets share `hair`. */
-export const bridgeTarget = (target: ColorTarget): AvatarColorTarget =>
+/** The avatar's colours: the engine only knows skin, hair and eyes; the other hair-like targets
+ * share `hair`. */
+export type AvatarColorKey = 'skin' | 'hair' | 'eyes';
+
+export const colorKey = (target: ColorTarget): AvatarColorKey =>
   target === 'skin' || target === 'eyes' ? target : 'hair';
 
+const CORE_COLOR: Record<AvatarColorKey, CoreColorTarget> = {
+  skin: CoreColorTarget.Skin,
+  hair: CoreColorTarget.Hair,
+  eyes: CoreColorTarget.Eyes,
+};
+
+export const coreColorTarget = (target: ColorTarget): CoreColorTarget =>
+  CORE_COLOR[colorKey(target)];
+
 /** Palettes from the lobby editor (godot/src/ui/components/avatar presets). */
-export const PALETTES: Record<AvatarColorTarget, string[]> = {
+export const PALETTES: Record<AvatarColorKey, string[]> = {
   skin: [
     '#ffe4c6',
     '#ffdcb6',
@@ -128,8 +140,6 @@ export const PALETTES: Record<AvatarColorTarget, string[]> = {
   ],
 };
 
-export type CameraFocus = 'overall' | 'head';
-
 /** Face slots zoom to the head (Figma backpack-a 122-130); everything else shows the whole avatar. */
 export const cameraFocusFor = (tab: TabKey): CameraFocus =>
-  tab === 'face' ? 'head' : 'overall';
+  tab === 'face' ? CameraFocus.Head : CameraFocus.Overall;

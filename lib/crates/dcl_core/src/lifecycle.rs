@@ -7,6 +7,7 @@ use crate::{
     app::{AppEvents, HostEvents},
     hub::{GuestLoginReport, SessionObserver},
     profile,
+    report::ReportEvent,
     session::identity::SessionEvent,
     settings::{self, SettingEntry, SettingsListener},
     social, Core,
@@ -48,6 +49,13 @@ impl SettingsListener for SettingsToEvents {
 pub(crate) fn wire(core: &'static Core) {
     let events = core.hub().events().clone();
     core.hub().add_observer(Arc::new(Lifecycle));
+    crate::logging::set_error_sink(Box::new(move |message, is_panic| {
+        core.hub().report(if is_panic {
+            ReportEvent::panic(message)
+        } else {
+            ReportEvent::logged_error(message)
+        });
+    }));
     settings::global(core.data_dir()).add_listener(Arc::new(SettingsToEvents(events.clone())));
     social::friends().add_friends_changed_listener(Arc::new(move || events.friends_changed()));
 }

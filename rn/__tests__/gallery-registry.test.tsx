@@ -2,7 +2,7 @@ import { ReactElement } from 'react';
 import { Text } from 'react-native';
 import { act, create } from 'react-test-renderer';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { setOrientation } from '../src/GodotBridge';
+import { setOrientation } from '../src/platform/orientation';
 import { GalleryHost } from '../src/gallery';
 import {
   getPreview,
@@ -12,7 +12,7 @@ import {
   resetRegistryForTests,
 } from '../src/gallery/registry';
 
-jest.mock('../src/GodotBridge', () => ({
+jest.mock('../src/platform/orientation', () => ({
   sendCommand: jest.fn(),
   startEngine: jest.fn(),
   setOrientation: jest.fn(),

@@ -1,6 +1,9 @@
 use std::{rc::Rc, sync::Arc};
 
-use dcl_core::app::{CommandQueue, EngineEvent, Parcel};
+use dcl_core::app::{
+    AvatarState, ChatLine, ChatProfile, CommandQueue, EngineEvent, HudSnapshot, LoadingDetail,
+    Parcel, UiState, Vec3,
+};
 
 use godot::classes::{Control, DisplayServer, Engine};
 use godot::obj::Singleton;
@@ -73,6 +76,7 @@ impl INode for DclEngine {
     }
 
     fn exit_tree(&mut self) {
+        dcl_core::scene::set_screenshot_provider(None);
         self.detach_from_core();
     }
 
@@ -109,7 +113,8 @@ impl DclEngine {
     pub fn text_input_focus(focused: bool, keyboard_height: i32);
 
     /// A command from the core's app (`enter_world`, `exit_world`, `show_avatar_preview`,
-    /// `hide_avatar_preview`) with its arguments; the engine-side GDScript executes it.
+    /// `hide_avatar_preview` and one per shell control, see `core_link::control_payload`) with its
+    /// typed arguments; the engine-side GDScript executes it.
     #[signal]
     pub fn core_command(kind: GString, args: VarDictionary);
 
@@ -131,6 +136,96 @@ impl DclEngine {
     #[func]
     pub fn report_scene_crashed(&self) {
         self.report(EngineEvent::SceneCrashed);
+    }
+
+    /// The player's whereabouts, a few times a second while in a world.
+    #[func]
+    #[allow(clippy::too_many_arguments)]
+    pub fn report_hud(&self, realm: GString, x: i32, y: i32, fps: f32, px: f32, py: f32, pz: f32) {
+        self.report(EngineEvent::Hud(HudSnapshot {
+            parcel: Parcel::new(x, y),
+            realm: realm.to_string(),
+            fps,
+            position: Vec3 {
+                x: px,
+                y: py,
+                z: pz,
+            },
+        }));
+    }
+
+    /// A chat line; `has_profile` tells whether `name`, `claimed` and `picture` resolve its sender.
+    #[func]
+    #[allow(clippy::too_many_arguments)]
+    pub fn report_chat(
+        &self,
+        address: GString,
+        message: GString,
+        timestamp: f64,
+        has_profile: bool,
+        name: GString,
+        claimed: bool,
+        picture: GString,
+    ) {
+        self.report(EngineEvent::Chat(ChatLine {
+            address: address.to_string(),
+            message: message.to_string(),
+            timestamp,
+            profile: has_profile.then(|| ChatProfile {
+                name: name.to_string(),
+                has_claimed_name: claimed,
+                profile_picture_url: picture.to_string(),
+            }),
+        }));
+    }
+
+    #[func]
+    pub fn report_unread_chat(&self, count: i32) {
+        self.report(EngineEvent::UnreadChat(count.max(0) as u32));
+    }
+
+    #[func]
+    pub fn report_ui_state(&self, hidden: bool, chat_open: bool) {
+        self.report(EngineEvent::UiState(UiState { hidden, chat_open }));
+    }
+
+    #[func]
+    pub fn report_open_backpack(&self, emotes: bool) {
+        self.report(EngineEvent::OpenBackpack { emotes });
+    }
+
+    #[func]
+    pub fn report_loading_detail(&self, loaded: i64, total: i64, mbps: f32, percent: f32) {
+        self.report(EngineEvent::LoadingDetail(LoadingDetail {
+            loaded: loaded.max(0) as u64,
+            total: total.max(0) as u64,
+            mbps,
+            percent,
+        }));
+    }
+
+    /// The equipped avatar; colors are `#rrggbb`, an empty emote slot is `""`.
+    #[func]
+    pub fn report_avatar(
+        &self,
+        body_shape: GString,
+        wearables: PackedStringArray,
+        emotes: PackedStringArray,
+        skin: GString,
+        hair: GString,
+        eyes: GString,
+    ) {
+        let strings = |array: &PackedStringArray| -> Vec<String> {
+            array.as_slice().iter().map(|s| s.to_string()).collect()
+        };
+        self.report(EngineEvent::Avatar(AvatarState {
+            body_shape: body_shape.to_string(),
+            wearables: strings(&wearables),
+            emotes: strings(&emotes),
+            skin: skin.to_string(),
+            hair: hair.to_string(),
+            eyes: eyes.to_string(),
+        }));
     }
 
     /// The engine owned by the `Global` autoload, `None` before it exists.

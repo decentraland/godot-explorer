@@ -1,5 +1,5 @@
 import type { DiscoverEvent, Place } from './api';
-import { MAIN_REALM, worldRealm } from './api';
+import { mockUrls, mockWorldRealm } from '../core/mock/gates';
 import type { Banner, Friend } from './types';
 
 /** `mock:<n>` images draw a deterministic gradient so previews need no network. */
@@ -19,7 +19,7 @@ const place = (
   users: 12,
   likeRate: 1,
   location: '0,0',
-  realm: MAIN_REALM,
+  realm: mockUrls().mainRealm,
   x: 0,
   y: 0,
   world: false,
@@ -56,7 +56,7 @@ export const PLACES: Place[] = [
   place('world', 'Mmmmmmmmmmmmmmmmm', 12, {
     world: true,
     location: 'mmmmmmmmmmmmmmmm.dcl.eth',
-    realm: worldRealm('mmmmmmmmmmmmmmmm.dcl.eth'),
+    realm: mockWorldRealm('mmmmmmmmmmmmmmmm.dcl.eth'),
     users: 0,
     likeRate: 1,
   }),
@@ -134,7 +134,7 @@ export const EVENTS: DiscoverEvent[] = [
     place: place('event-world', 'Experience in a world', 19, {
       world: true,
       location: 'aaaaaaaaaaaaaaaa.dcl.eth',
-      realm: worldRealm('aaaaaaaaaaaaaaaa.dcl.eth'),
+      realm: mockWorldRealm('aaaaaaaaaaaaaaaa.dcl.eth'),
       users: 0,
       likeRate: null,
     }),

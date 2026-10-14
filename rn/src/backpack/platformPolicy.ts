@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import { core } from '../core';
 
 /** What the empty-state hint offers: a Marketplace link, a plain "Shop" mention, or nothing. */
 export type EmptyCopy = 'marketplace_link' | 'shop' | 'none';
@@ -20,4 +21,6 @@ export function setEmptyCopy(policy: EmptyCopy | null): void {
 
 export const getEmptyCopy = (): EmptyCopy => current ?? defaultEmptyCopy();
 
-export const MARKETPLACE_URL = 'https://decentraland.org/marketplace/browse';
+/** The storefront's wearables listing, in the environment the core runs in. */
+export const marketplaceUrl = (): string =>
+  core().marketplaceBrowseUrl('wearables');

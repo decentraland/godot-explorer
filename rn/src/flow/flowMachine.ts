@@ -27,7 +27,8 @@ export type FlowState = {
 };
 
 export type FlowAction =
-  | { type: 'booted' }
+  | { type: 'booted'; next?: 'terms' | 'account' }
+  | { type: 'recovered'; hasProfile: boolean; name: string }
   | { type: 'acceptTerms' }
   | { type: 'playAsGuest' }
   | { type: 'guestReady' }
@@ -65,7 +66,17 @@ const go = (
 export function reduceFlow(state: FlowState, action: FlowAction): FlowState {
   switch (action.type) {
     case 'booted':
-      return state.step === 'splash' ? go(state, 'terms') : state;
+      return state.step === 'splash'
+        ? go(state, action.next ?? 'terms')
+        : state;
+    case 'recovered':
+      // A restored account that already has a name goes straight into the app, as the lobby did.
+      if (state.step !== 'splash') {
+        return state;
+      }
+      return action.hasProfile
+        ? go(state, 'done', { name: action.name })
+        : go(state, 'avatar_create');
     case 'acceptTerms':
       return go(state, 'account');
     case 'playAsGuest':

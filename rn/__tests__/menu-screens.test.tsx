@@ -3,7 +3,8 @@ import { act, create, ReactTestInstance } from 'react-test-renderer';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { getPreview, previewIds } from '../src/gallery/registry';
 import '../src/menu/gallery';
-import { send } from '../src/engine';
+import { setCoreForTests } from '../src/core';
+import { createMockCore } from '../src/core/mock';
 import { MenuDrawer } from '../src/menu/MenuDrawer';
 import { setMenuApi } from '../src/menu/api';
 import {
@@ -18,10 +19,7 @@ import { NavProvider, useNav } from '../src/app/NavProvider';
 import { shareScene } from '../src/menu/share';
 import { Share } from 'react-native';
 
-jest.mock('../src/engine', () => ({
-  ...jest.requireActual('../src/engine'),
-  send: jest.fn(),
-}));
+const enterWorld = jest.fn();
 
 const metrics = {
   frame: { x: 0, y: 0, width: 800, height: 360 },
@@ -116,9 +114,13 @@ describe('MenuDrawer', () => {
   beforeEach(() => {
     resetDrawerForTests();
     setMenuApi(createMockApi());
-    (send as jest.Mock).mockClear();
+    enterWorld.mockClear();
+    setCoreForTests({ ...createMockCore(), enterWorld });
   });
-  afterAll(() => setMenuApi(null));
+  afterAll(() => {
+    setMenuApi(null);
+    setCoreForTests(undefined);
+  });
 
   it('renders nothing while closed', () => {
     const tree = mount(<MenuDrawer navigate={jest.fn()} />);
@@ -150,13 +152,16 @@ describe('MenuDrawer', () => {
     act(() => closeMenu());
   });
 
-  it('jumps in from the place modal with a teleport', async () => {
+  it('jumps in from the place modal by entering the place', async () => {
     const tree = mount(<MenuDrawer navigate={jest.fn()} />);
     act(() => openMenu('discover'));
     await settle();
     press(tree, 'Genesis Plaza');
     press(tree, 'JUMP IN');
-    expect(send).toHaveBeenCalledWith({ type: 'teleport', x: 0, y: 0 });
+    expect(enterWorld).toHaveBeenCalledWith({
+      realm: undefined,
+      parcel: { x: 0, y: 0 },
+    });
   });
 
   it('accepts a friend request and marks notifications read', async () => {

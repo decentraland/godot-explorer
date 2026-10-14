@@ -17,6 +17,26 @@ describe('entry flow', () => {
     );
   });
 
+  it('skips the terms the player already accepted', () => {
+    expect(run([{ type: 'booted', next: 'account' }]).step).toBe('account');
+  });
+
+  it('a restored account with a name goes straight in, one without builds an avatar', () => {
+    const named = run([{ type: 'recovered', hasProfile: true, name: 'Ana' }]);
+    expect(named.step).toBe('done');
+    expect(named.name).toBe('Ana');
+    expect(run([{ type: 'recovered', hasProfile: false, name: '' }]).step).toBe(
+      'avatar_create',
+    );
+    expect(
+      reduceFlow(run([{ type: 'booted' }]), {
+        type: 'recovered',
+        hasProfile: true,
+        name: 'x',
+      }).step,
+    ).toBe('terms');
+  });
+
   it('guest path skips naming and ends in the ftue', () => {
     const state = run([
       { type: 'booted' },

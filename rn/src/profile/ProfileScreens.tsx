@@ -3,7 +3,8 @@ import { useWindowDimensions } from 'react-native';
 import { useNav } from '../app/NavProvider';
 import type { ScreenProps } from '../app/registry';
 import { EmptyState, Snap, useToast } from '../ds';
-import { send } from '../engine';
+import { core } from '../core';
+import { Control } from '../core/native';
 import { t } from '../i18n';
 import { getProfileApi } from './api';
 import { EditProfile } from './EditProfile';
@@ -14,7 +15,7 @@ import type { EquippedItem, ProfileDeployPayload } from './types';
 
 const playEmote = (item: EquippedItem) => {
   if (item.isEmote) {
-    send({ type: 'play_emote', urn: item.id });
+    core().control(new Control.PlayPreviewEmote({ urn: item.id }));
   }
 };
 

@@ -34,7 +34,7 @@ import {
   tabBadges,
 } from '../src/menu/social';
 import { ctaFor } from '../src/menu/PlaceModal';
-import { MAIN_REALM } from '../src/discover/api';
+import { mainRealm } from '../src/discover/api';
 
 const MIN = 60_000;
 const DAY = 24 * 60 * MIN;
@@ -259,7 +259,7 @@ describe('share and links', () => {
   });
 
   it('uses a position in Genesis City and the world name elsewhere', () => {
-    expect(linkQueryFor(MAIN_REALM, 3, -4)).toBe('position=3,-4');
+    expect(linkQueryFor(mainRealm(), 3, -4)).toBe('position=3,-4');
     expect(
       linkQueryFor(
         'https://worlds-content-server.decentraland.org/world/foo.dcl.eth',

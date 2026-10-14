@@ -4,6 +4,7 @@
 
 mod backend;
 mod links;
+mod report;
 mod signin;
 
 #[cfg(test)]
@@ -17,6 +18,7 @@ use std::sync::{
 use crate::{
     app::{App, HostEvents},
     deep_link_route::{DeepLinkRouter, SystemClock},
+    report::{BuildEnvironment, ReportPolicy, ReportTags},
     session::{
         account_codec,
         identity::{Session, SessionEvent},
@@ -26,6 +28,7 @@ use crate::{
 
 pub use backend::{LiveBackend, SignInBackend};
 pub use links::LinkOutcome;
+pub use report::ReportPayload;
 pub use signin::SignInError;
 
 /// Observes what the sign-in flows do to the session. The engine's identity node mirrors it into
@@ -59,6 +62,8 @@ pub struct Hub {
     observers: Mutex<Vec<Arc<dyn SessionObserver>>>,
     wallet_pending: Mutex<Option<signin::PendingWallet>>,
     router: Mutex<DeepLinkRouter>,
+    /// The keep/drop policy and the tags every kept report carries.
+    report: Mutex<(ReportPolicy, ReportTags)>,
     /// Gates developer-only link parameters; on until the engine says this is a dev build.
     production: AtomicBool,
 }
@@ -78,6 +83,10 @@ impl Hub {
             observers: Mutex::new(Vec::new()),
             wallet_pending: Mutex::new(None),
             router: Mutex::new(Self::new_router(Arc::new(SystemClock::new()))),
+            report: Mutex::new((
+                ReportPolicy::with_thread_random(BuildEnvironment::Production),
+                ReportTags::default(),
+            )),
             production: AtomicBool::new(true),
         }
     }

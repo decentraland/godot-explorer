@@ -6,14 +6,6 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import '../src/hud/gallery';
 import { getPreview, previewIds } from '../src/gallery/registry';
 
-jest.mock('../src/GodotBridge', () => ({
-  sendCommand: jest.fn(),
-  startEngine: jest.fn(),
-  setOrientation: jest.fn(),
-  subscribe: jest.fn(() => () => {}),
-  godotAvailable: false,
-}));
-
 const manifest = JSON.parse(
   fs.readFileSync(
     path.join(__dirname, '..', '..', 'docs', 'rn-ui-spec', 'manifest.json'),

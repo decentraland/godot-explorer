@@ -2,19 +2,22 @@ import { useCallback, useEffect, useReducer, useState } from 'react';
 import { BackHandler, StyleSheet, View } from 'react-native';
 import { BackpackScreen } from '../backpack/BackpackScreen';
 import { PrimaryButton } from '../ds';
-import { send } from '../engine';
 import type { Place } from '../discover/api';
 import { FtueScreen } from '../discover/FtueScreen';
 import {
+  acceptTerms,
   authCode,
   cancelSignIn,
   sendEmailCode,
+  setAvatarName,
   startBrowserSignIn,
   startGuest,
+  termsAccepted,
   verifyEmailCode,
   welcome,
   whenSignedIn,
 } from './auth';
+import { core } from '../core';
 import { initialFlow, reduceFlow } from './flowMachine';
 import {
   AvatarCreateScreen,
@@ -131,7 +134,17 @@ export function EntryFlow({
     dispatch({ type: 'back' });
   }, []);
 
-  const booted = useCallback(() => dispatch({ type: 'booted' }), []);
+  const booted = useCallback(async () => {
+    if (core().state().tag === 'SignedIn') {
+      try {
+        dispatch({ type: 'recovered', ...(await welcome()) });
+        return;
+      } catch {
+        // The profile could not be read: fall through to the normal start.
+      }
+    }
+    dispatch({ type: 'booted', next: termsAccepted() ? 'account' : 'terms' });
+  }, []);
   const confirmAvatar = useCallback(
     () => dispatch({ type: 'avatarConfirmed' }),
     [],
@@ -141,7 +154,14 @@ export function EntryFlow({
     case 'splash':
       return <SplashScreen onDone={booted} />;
     case 'terms':
-      return <TermsScreen onAccept={() => dispatch({ type: 'acceptTerms' })} />;
+      return (
+        <TermsScreen
+          onAccept={() => {
+            acceptTerms().catch(() => {});
+            dispatch({ type: 'acceptTerms' });
+          }}
+        />
+      );
     case 'account':
       return (
         <AccountScreen
@@ -232,7 +252,7 @@ export function EntryFlow({
           preview={<PreviewFill />}
           onBack={back}
           onSubmit={name => {
-            send({ type: 'set_name', name });
+            setAvatarName(name);
             dispatch({ type: 'named', name });
           }}
         />

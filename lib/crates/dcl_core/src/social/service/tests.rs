@@ -98,6 +98,7 @@ impl ProfileSource for FakeProfiles {
 struct FakeNearby {
     addresses: Vec<String>,
     blocked: Vec<String>,
+    changes: std::sync::Mutex<Vec<(String, bool)>>,
 }
 
 impl NearbyProvider for FakeNearby {
@@ -106,6 +107,13 @@ impl NearbyProvider for FakeNearby {
     }
     fn is_blocked(&self, address: &str) -> bool {
         self.blocked.iter().any(|b| b == address)
+    }
+
+    fn blocked_changed(&self, address: &str, blocked: bool) {
+        self.changes
+            .lock()
+            .unwrap()
+            .push((address.to_string(), blocked));
     }
 }
 
@@ -320,7 +328,11 @@ async fn reset_stops_the_subscription() {
 
 fn nearby_friends(addresses: Vec<String>, blocked: Vec<String>) -> Friends {
     let (friends, _) = service_with(None);
-    friends.set_nearby_provider(Arc::new(FakeNearby { addresses, blocked }));
+    friends.set_nearby_provider(Arc::new(FakeNearby {
+        addresses,
+        blocked,
+        changes: Default::default(),
+    }));
     friends
 }
 
@@ -375,4 +387,31 @@ async fn nearby_caps_after_filtering_blocked() {
     let users = friends.nearby().await;
     assert_eq!(users.len(), NEARBY_LIMIT);
     assert_eq!(users[0].address, "0x2");
+}
+
+#[tokio::test]
+async fn a_block_or_unblock_the_server_accepted_is_told_to_the_engine() {
+    let api = Arc::new(FakeApi::default());
+    let (friends, _) = service_with(Some(api.clone()));
+    let provider = Arc::new(FakeNearby {
+        addresses: vec![],
+        blocked: vec![],
+        changes: Default::default(),
+    });
+    friends.set_nearby_provider(provider.clone());
+
+    friends.block("0xa").await.unwrap();
+    friends.unblock("0xb").await.unwrap();
+    assert_eq!(
+        *provider.changes.lock().unwrap(),
+        vec![("0xa".to_string(), true), ("0xb".to_string(), false)]
+    );
+
+    *api.fail.lock().unwrap() = Some(SocialError::request("refused"));
+    assert!(friends.block("0xc").await.is_err());
+    assert_eq!(
+        provider.changes.lock().unwrap().len(),
+        2,
+        "a refused block is not told"
+    );
 }

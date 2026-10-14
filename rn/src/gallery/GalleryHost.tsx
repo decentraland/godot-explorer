@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { LayoutChangeEvent, StyleSheet, View } from 'react-native';
 import { AppText, colors, u } from '../ds';
-import { setOrientation } from '../GodotBridge';
+import { setOrientation } from '../platform/orientation';
 import { GalleryList } from './GalleryList';
 import { getPreview } from './registry';
 import { PreviewRoute } from './url';

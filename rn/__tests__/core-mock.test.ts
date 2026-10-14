@@ -39,11 +39,10 @@ describe('mock core', () => {
     expect(core().state().tag).toBe('SigningIn');
 
     const wrong = core().signInEmailVerify('a@b.c', '000000');
-    const rejected = expect(wrong).rejects.toMatchObject({
+    jest.runAllTimers();
+    await expect(wrong).rejects.toMatchObject({
       inner: { code: 'invalid_code' },
     });
-    jest.runAllTimers();
-    await rejected;
     expect(errors).toEqual(['invalid_code']);
 
     const right = core().signInEmailVerify('a@b.c', '123456');

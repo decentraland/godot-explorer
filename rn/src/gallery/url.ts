@@ -1,4 +1,4 @@
-import type { Orientation } from '../GodotBridge';
+import type { Orientation } from '../platform/orientation';
 
 export type PreviewRoute = {
   /** Manifest id, or null for the list. */

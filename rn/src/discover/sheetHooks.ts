@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNav } from '../app/NavProvider';
 import { useToast } from '../ds';
-import { ensureEngine, send } from '../engine';
 import { t } from '../i18n';
+import { enterPlace } from '../world/enterPlace';
 import { Place } from './api';
 import { useApi } from './ApiContext';
 import { recordPlayed } from './history';
@@ -11,14 +11,19 @@ import type { EventDetail, Friend, PlaceDetail, VoteState } from './types';
 /** Enters the world at `place` from a sheet route (the Discover tab gets the same via its onJumpIn prop). */
 export function useJumpIn(): (place: Place) => void {
   const { push } = useNav();
+  const toast = useToast();
   return useCallback(
     place => {
+      try {
+        enterPlace(place);
+      } catch {
+        toast(t('DISCOVER_ACTION_FAILED'));
+        return;
+      }
       recordPlayed(place);
-      ensureEngine();
-      send({ type: 'enter_world', x: place.x, y: place.y, realm: place.realm });
       push({ name: 'world', params: { place } });
     },
-    [push],
+    [push, toast],
   );
 }
 

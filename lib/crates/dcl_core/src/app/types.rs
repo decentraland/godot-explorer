@@ -162,6 +162,8 @@ pub trait AppEvents: Send + Sync {
     fn open_backpack(&self, _emotes: bool) {}
     fn loading_detail(&self, _detail: &super::LoadingDetail) {}
     fn avatar_changed(&self, _avatar: &super::AvatarState) {}
+    /// A panic or error the keep/drop policy let through, for the crash reporter.
+    fn report(&self, _payload: &crate::hub::ReportPayload) {}
 }
 
 #[derive(Debug, PartialEq)]

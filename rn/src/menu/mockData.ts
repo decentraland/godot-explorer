@@ -1,4 +1,5 @@
-import { MAIN_REALM, type DiscoverEvent, type Place } from '../discover/api';
+import type { DiscoverEvent, Place } from '../discover/api';
+import { mockUrls } from '../core/mock/gates';
 import type {
   Friend,
   FriendRequest,
@@ -57,7 +58,7 @@ const place = (n: number, title: string): Place => ({
   users: 0,
   likeRate: 1,
   location: '0,0',
-  realm: MAIN_REALM,
+  realm: mockUrls().mainRealm,
   x: 0,
   y: 0,
 });

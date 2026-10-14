@@ -1,13 +1,18 @@
+import { core } from '../core';
 import { Rarity } from '../ds';
 
 export const BASE_PREFIX = 'urn:decentraland:off-chain:base-avatars:';
 export const MALE = `${BASE_PREFIX}BaseMale`;
 export const FEMALE = `${BASE_PREFIX}BaseFemale`;
 
-const PEER = 'https://peer.decentraland.org';
-export const WEARABLES_URL = `${PEER}/lambdas/collections/wearables?collectionId=urn:decentraland:off-chain:base-avatars`;
-export const ENTITIES_URL = `${PEER}/content/entities/active`;
-export const CONTENTS_URL = `${PEER}/content/contents/`;
+export const wearablesUrl = (): string =>
+  `${
+    core().urls().peerLambdas
+  }collections/wearables?collectionId=urn:decentraland:off-chain:base-avatars`;
+export const entitiesUrl = (): string =>
+  `${core().urls().peerContent}entities/active`;
+export const contentsUrl = (): string =>
+  `${core().urls().peerContent}contents/`;
 
 export type Wearable = {
   id: string;
@@ -99,7 +104,7 @@ export function parseWearables(payload: unknown): Wearable[] {
 export async function fetchWearables(
   fetchImpl: typeof fetch = fetch,
 ): Promise<Wearable[]> {
-  const response = await fetchImpl(WEARABLES_URL);
+  const response = await fetchImpl(wearablesUrl());
   if (!response.ok) {
     throw new Error(`wearables catalog responded ${response.status}`);
   }

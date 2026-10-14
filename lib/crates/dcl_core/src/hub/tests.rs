@@ -91,6 +91,7 @@ struct Heard {
     urls: Mutex<Vec<String>>,
     sessions: Mutex<Vec<SessionEvent>>,
     guest_reports: Mutex<Vec<GuestLoginReport>>,
+    reports: Mutex<Vec<crate::hub::ReportPayload>>,
 }
 
 impl AppEvents for Heard {
@@ -105,6 +106,9 @@ impl AppEvents for Heard {
     }
     fn open_url(&self, request: &OpenUrlRequest) {
         self.urls.lock().unwrap().push(request.url.clone());
+    }
+    fn report(&self, payload: &crate::hub::ReportPayload) {
+        self.reports.lock().unwrap().push(payload.clone());
     }
 }
 
@@ -514,4 +518,34 @@ fn a_link_that_navigates_returns_the_destination_to_the_shell() {
         crate::Platform::Desktop,
     );
     assert!(desktop.routed.navigation.is_none());
+}
+
+#[test]
+fn a_kept_report_reaches_the_listeners_with_the_tags_and_a_dropped_one_does_not() {
+    use crate::report::{BuildEnvironment, ReportContext, ReportEvent, ReportSource};
+    let s = setup();
+    s.hub.set_report_context(
+        ReportContext {
+            platform: "Android".into(),
+            gpu_vendor: "ARM".into(),
+            ..Default::default()
+        },
+        BuildEnvironment::Production,
+    );
+
+    s.hub.report(ReportEvent::panic("boom"));
+    let reports = s.heard.reports.lock().unwrap().clone();
+    assert_eq!(reports.len(), 1);
+    assert_eq!(reports[0].source, ReportSource::Crash);
+    assert_eq!(reports[0].tags.tag("platform"), Some("Android"));
+    assert_eq!(reports[0].tags.tag("gpu_vendor"), Some("ARM"));
+
+    s.hub
+        .set_report_context(ReportContext::default(), BuildEnvironment::Development);
+    s.hub.report(ReportEvent::panic("boom"));
+    assert_eq!(
+        s.heard.reports.lock().unwrap().len(),
+        1,
+        "development builds report nothing"
+    );
 }

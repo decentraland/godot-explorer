@@ -99,6 +99,9 @@ impl AppEvents for HostEvents {
     fn avatar_changed(&self, avatar: &super::AvatarState) {
         self.each(|l| l.avatar_changed(avatar));
     }
+    fn report(&self, payload: &crate::hub::ReportPayload) {
+        self.each(|l| l.report(payload));
+    }
 }
 
 /// An `EngineSink` that any thread can push to and the engine's main thread drains each frame.

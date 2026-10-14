@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useMemo, useReducer, useState } from 'react';
 import { Linking, StyleSheet, View } from 'react-native';
-import { MAIN_REALM, type DiscoverEvent, type Place } from '../discover/api';
+import { onCoreEvents } from '../core/events';
+import type { DiscoverEvent, Place } from '../discover/api';
 import { recordPlayed, usePlayed } from '../discover/history';
 import { useToast } from '../ds';
 import { t } from '../i18n';
-import { send } from '../engine';
-import { setOrientation } from '../GodotBridge';
+import { setOrientation } from '../platform/orientation';
+import { enterPlace } from '../world/enterPlace';
 import { getMenuApi } from './api';
-import { GuestError } from './bridgeApi';
+import { GuestError } from './coreSocialApi';
 import { BugReportModal } from './BugReportModal';
 import { DiscoverIngame } from './DiscoverIngame';
 import { DiscoverPanel } from './DiscoverPanel';
@@ -44,11 +45,7 @@ export type Navigate = (page: 'backpack' | 'settings' | 'profile') => void;
 export function jumpTo(place: Place): void {
   closeMenu();
   recordPlayed(place);
-  send(
-    place.realm === MAIN_REALM
-      ? { type: 'teleport', x: place.x, y: place.y }
-      : { type: 'enter_world', x: place.x, y: place.y, realm: place.realm },
-  );
+  enterPlace(place);
 }
 
 function OpenDrawer({ navigate }: { navigate: Navigate }) {
@@ -66,20 +63,32 @@ function OpenDrawer({ navigate }: { navigate: Navigate }) {
   const notes = useLoad(api.notifications);
   const [social, dispatch] = useReducer(socialReducer, { status: 'loading' });
 
-  const loadSocial = useCallback(() => {
-    if (api.isGuest()) {
-      dispatch({ type: 'guest' });
-      return;
-    }
-    dispatch({ type: 'loading' });
-    api
-      .social()
-      .then(data => dispatch({ type: 'loaded', data }))
-      .catch(error =>
-        dispatch({ type: error instanceof GuestError ? 'guest' : 'failed' }),
-      );
-  }, [api]);
-  useEffect(loadSocial, [loadSocial]);
+  const loadSocial = useCallback(
+    (silent = false) => {
+      if (api.isGuest()) {
+        dispatch({ type: 'guest' });
+        return;
+      }
+      if (!silent) {
+        dispatch({ type: 'loading' });
+      }
+      api
+        .social()
+        .then(data => dispatch({ type: 'loaded', data }))
+        .catch(error => {
+          if (silent) {
+            return;
+          }
+          dispatch({ type: error instanceof GuestError ? 'guest' : 'failed' });
+        });
+    },
+    [api],
+  );
+  useEffect(() => loadSocial(), [loadSocial]);
+  useEffect(
+    () => onCoreEvents({ friendsChanged: () => loadSocial(true) }),
+    [loadSocial],
+  );
 
   const items =
     notes.state.status === 'ready' && notes.state.data.status === 'ok'
@@ -174,7 +183,7 @@ function OpenDrawer({ navigate }: { navigate: Navigate }) {
               cancel: social$(api.cancelRequest, 'removed'),
               add: social$(api.sendRequest, 'requested'),
               unblock: social$(api.unblock, 'unblocked'),
-              retry: loadSocial,
+              retry: () => loadSocial(),
             }}
           />
         );

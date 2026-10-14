@@ -4,7 +4,7 @@ import { AppText, HsvSliders, Icon, layout } from '../ds';
 import { t } from '../i18n';
 import { isCustomColor } from './selection';
 import { SwatchStrip } from './SwatchStrip';
-import { bridgeTarget, COLOR_TITLES, ColorTarget, PALETTES } from './taxonomy';
+import { colorKey, COLOR_TITLES, ColorTarget, PALETTES } from './taxonomy';
 import { u } from '../ds/scale';
 
 const SEND_INTERVAL_MS = 120;
@@ -55,7 +55,7 @@ export function ColorEditor({
     [],
   );
 
-  const palette = PALETTES[bridgeTarget(target)];
+  const palette = PALETTES[colorKey(target)];
   return (
     <ScrollView
       removeClippedSubviews={false}

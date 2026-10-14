@@ -2,6 +2,10 @@ import { ReactElement } from 'react';
 import { Dimensions } from 'react-native';
 import { act, create, ReactTestRenderer } from 'react-test-renderer';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { setCoreForTests } from '../src/core';
+import type { CoreApi } from '../src/core';
+import { createMockCore } from '../src/core/mock';
+import { CameraFocus, ColorTarget, Control } from '../src/core/native';
 import { BackpackScreen } from '../src/backpack/BackpackScreen';
 import { BackpackState } from '../src/backpack/backpackState';
 import { DEFAULT_EMOTES } from '../src/backpack/emotes';
@@ -13,12 +17,15 @@ import {
 import { MOCK_CATALOG, MOCK_WEARABLES } from '../src/backpack/mockCatalog';
 import { EmptyCopy } from '../src/backpack/platformPolicy';
 
-jest.mock('../src/GodotBridge', () => ({
-  sendCommand: jest.fn(),
-  startEngine: jest.fn(),
-  setOrientation: jest.fn(),
-  subscribe: jest.fn(() => () => {}),
-}));
+const mockCore = {
+  ...createMockCore(),
+  showAvatarPreview: jest.fn(),
+  hideAvatarPreview: jest.fn(),
+  control: jest.fn(),
+  avatarState: () => undefined,
+} as CoreApi;
+
+beforeEach(() => setCoreForTests(mockCore));
 
 const metrics = {
   frame: { x: 0, y: 0, width: 400, height: 900 },
@@ -119,17 +126,15 @@ describe('Backpack wearables', () => {
     const { tree, api } = await mount({ initial: { tab: 'extras' } });
     const hat = MOCK_WEARABLES.find(w => w.category === 'hat')!;
     press(tree, hat.name);
-    expect(api.calls).toContainEqual({ type: 'equip', urn: hat.id });
+    expect(api.calls).toContainEqual(new Control.Equip({ urn: hat.id }));
     press(tree, hat.name);
-    expect(api.calls).toContainEqual({ type: 'unequip', urn: hat.id });
+    expect(api.calls).toContainEqual(new Control.Unequip({ urn: hat.id }));
     const { tree: body, api: bodyApi } = await mount({
       initial: { tab: 'body' },
     });
     press(body, 'BaseMale');
     expect(
-      bodyApi.calls.some(
-        c => c.type === 'set_body_shape' || c.type === 'unequip',
-      ),
+      bodyApi.calls.some(c => c.tag === 'SetBodyShape' || c.tag === 'Unequip'),
     ).toBe(false);
   });
 
@@ -138,11 +143,9 @@ describe('Backpack wearables', () => {
       initial: { tab: 'face', slotByTab: { face: 'facial_hair' } },
     });
     press(tree, '#5a3410');
-    expect(api.calls).toContainEqual({
-      type: 'set_color',
-      target: 'hair',
-      color: '#5a3410',
-    });
+    expect(api.calls).toContainEqual(
+      new Control.SetColor({ target: ColorTarget.Hair, color: '#5a3410' }),
+    );
     press(tree, 'Custom color');
     expect(text(tree)).toContain('Facial hair color');
     expect(text(tree)).toContain('Saturation');
@@ -179,7 +182,9 @@ describe('Backpack wearables', () => {
   it('sends the head zoom when the face tab opens', async () => {
     const { tree, api } = await mount();
     pressText(tree, 'FACE');
-    expect(api.calls).toContainEqual({ type: 'focus_camera', target: 'head' });
+    expect(api.calls).toContainEqual(
+      new Control.FocusCamera({ focus: CameraFocus.Head }),
+    );
   });
 
   it.each([
@@ -240,14 +245,14 @@ describe('Backpack emotes', () => {
     expect(text(tree)).toContain(MOCK_CATALOG.emotes[1].name);
     const target = DEFAULT_EMOTES[2];
     press(tree, MOCK_CATALOG.emotes[2].name);
-    expect(api.calls).toContainEqual({ type: 'play_emote', urn: target.urn });
+    expect(api.calls).toContainEqual(
+      new Control.PlayPreviewEmote({ urn: target.urn }),
+    );
     expect(text(tree)).toContain('Equip');
     press(tree, MOCK_CATALOG.emotes[2].name);
-    expect(api.calls).toContainEqual({
-      type: 'set_emote_slot',
-      slot: 1,
-      urn: target.urn,
-    });
+    expect(api.calls).toContainEqual(
+      new Control.SetEmoteSlot({ slot: 1, urn: target.urn }),
+    );
     expect(text(tree)).toContain('Equipped');
   });
 
@@ -256,11 +261,9 @@ describe('Backpack emotes', () => {
       initial: { mode: 'emotes', emoteSlot: 0 },
     });
     press(tree, MOCK_CATALOG.emotes[0].name);
-    expect(api.calls).toContainEqual({
-      type: 'set_emote_slot',
-      slot: 0,
-      urn: '',
-    });
+    expect(api.calls).toContainEqual(
+      new Control.SetEmoteSlot({ slot: 0, urn: '' }),
+    );
     const none = await mount({
       initial: { mode: 'emotes', filter: 'collectibles' },
       api: { catalog: { ...MOCK_CATALOG, emotes: DEFAULT_EMOTES } },

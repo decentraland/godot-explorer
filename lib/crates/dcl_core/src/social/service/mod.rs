@@ -30,6 +30,8 @@ pub trait NearbyProvider: Send + Sync {
     fn nearby_addresses(&self) -> Vec<String>;
     /// The engine's local blocked list.
     fn is_blocked(&self, address: &str) -> bool;
+    /// The server accepted a block or unblock: the engine updates its own list to match.
+    fn blocked_changed(&self, _address: &str, _blocked: bool) {}
 }
 
 /// Called from a core thread whenever the friend or request lists changed on the server, and
@@ -175,11 +177,22 @@ impl Friends {
     }
 
     pub async fn block(&self, address: &str) -> Result<(), SocialError> {
-        self.api()?.block(address).await
+        self.api()?.block(address).await?;
+        self.tell_provider(address, true);
+        Ok(())
     }
 
     pub async fn unblock(&self, address: &str) -> Result<(), SocialError> {
-        self.api()?.unblock(address).await
+        self.api()?.unblock(address).await?;
+        self.tell_provider(address, false);
+        Ok(())
+    }
+
+    fn tell_provider(&self, address: &str, blocked: bool) {
+        let provider = self.nearby.lock().unwrap().clone();
+        if let Some(provider) = provider {
+            provider.blocked_changed(address, blocked);
+        }
     }
 
     /// Up to `NEARBY_LIMIT` players around, blocked ones left out, with their public profile. A

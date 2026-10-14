@@ -10,6 +10,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { core } from '../core';
 import { AppText, colors, PrimaryButton, radii } from '../ds';
 import { FlowFrame } from './FlowFrame';
 import { isValidName, Provider } from './flowMachine';
@@ -17,8 +18,6 @@ import { I18nKey, t } from '../i18n';
 import { u } from '../ds/scale';
 
 const logo = require('../assets/logo.png');
-
-const TERMS_URL = 'https://decentraland.org/terms';
 
 export function SplashScreen({ onDone }: { onDone: () => void }) {
   useEffect(() => {
@@ -47,7 +46,7 @@ export function TermsScreen({ onAccept }: { onAccept: () => void }) {
         </AppText>
         <Pressable
           accessibilityRole="link"
-          onPress={() => Linking.openURL(TERMS_URL)}
+          onPress={() => Linking.openURL(core().urls().termsOfService)}
           hitSlop={8}
         >
           <AppText variant="button" style={styles.link}>

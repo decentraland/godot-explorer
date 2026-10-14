@@ -2,7 +2,9 @@ import { DEFAULT_EMOTES } from '../src/backpack/emotes';
 import { chipName, emoteStrip, tapEmote } from '../src/backpack/emoteLogic';
 import { initialBackpack, reduceBackpack } from '../src/backpack/backpackState';
 import { BASE_PREFIX, FEMALE, MALE, Wearable } from '../src/backpack/catalog';
-import { applyCommand, createMockApi } from '../src/backpack/mockApi';
+import { createMockApi } from '../src/backpack/mockApi';
+import { createMockAvatar } from '../src/core/mock/avatar';
+import { CameraFocus, ColorTarget, Control } from '../src/core/native';
 import {
   MOCK_AVATAR,
   MOCK_CATALOG,
@@ -20,7 +22,8 @@ import {
   wearableCommand,
 } from '../src/backpack/selection';
 import {
-  bridgeTarget,
+  colorKey,
+  coreColorTarget,
   cameraFocusFor,
   COLOR_TITLES,
   PALETTES,
@@ -51,11 +54,13 @@ describe('emote strips and taps', () => {
 
   it('first tap previews and arms, second tap equips into the selected slot', () => {
     const first = tapEmote(fist, slots, 1, null);
-    expect(first.commands).toEqual([{ type: 'play_emote', urn: fist.urn }]);
+    expect(first.commands).toEqual([
+      new Control.PlayPreviewEmote({ urn: fist.urn }),
+    ]);
     expect(first.pending).toBe(fist.id);
     const second = tapEmote(fist, slots, 1, fist.id);
     expect(second.commands).toEqual([
-      { type: 'set_emote_slot', slot: 1, urn: fist.urn },
+      new Control.SetEmoteSlot({ slot: 1, urn: fist.urn }),
     ]);
     expect(second.equippedSlot).toBe(1);
     expect(second.pending).toBeNull();
@@ -64,8 +69,8 @@ describe('emote strips and taps', () => {
   it('moves an emote worn elsewhere and picks the first empty slot without a selection', () => {
     const moved = tapEmote(DEFAULT_EMOTES[1], slots, 3, DEFAULT_EMOTES[1].id);
     expect(moved.commands).toEqual([
-      { type: 'set_emote_slot', slot: 0, urn: '' },
-      { type: 'set_emote_slot', slot: 3, urn: DEFAULT_EMOTES[1].urn },
+      new Control.SetEmoteSlot({ slot: 0, urn: '' }),
+      new Control.SetEmoteSlot({ slot: 3, urn: DEFAULT_EMOTES[1].urn }),
     ]);
     const auto = tapEmote(fist, slots, null, fist.id);
     expect(auto.equippedSlot).toBe(1);
@@ -74,7 +79,7 @@ describe('emote strips and taps', () => {
   it('empties the slot of an UNEQUIP tile', () => {
     const tap = tapEmote(DEFAULT_EMOTES[1], slots, 0, null);
     expect(tap.commands).toEqual([
-      { type: 'set_emote_slot', slot: 0, urn: '' },
+      new Control.SetEmoteSlot({ slot: 0, urn: '' }),
     ]);
     expect(tap.pending).toBeNull();
   });
@@ -104,16 +109,14 @@ describe('wearable taps', () => {
   });
 
   it('equips, unequips and swaps the body shape', () => {
-    expect(wearableCommand(item('hat'), false)).toEqual({
-      type: 'equip',
-      urn: item('hat').id,
-    });
-    expect(wearableCommand(item('hat'), true)).toEqual({
-      type: 'unequip',
-      urn: item('hat').id,
-    });
-    expect(wearableCommand(item('body_shape'), false)?.type).toBe(
-      'set_body_shape',
+    expect(wearableCommand(item('hat'), false)).toEqual(
+      new Control.Equip({ urn: item('hat').id }),
+    );
+    expect(wearableCommand(item('hat'), true)).toEqual(
+      new Control.Unequip({ urn: item('hat').id }),
+    );
+    expect(wearableCommand(item('body_shape'), false)?.tag).toBe(
+      'SetBodyShape',
     );
   });
 
@@ -143,11 +146,12 @@ describe('wearable taps', () => {
 
 describe('colour taxonomy', () => {
   it('maps the hair-like targets onto the single hair colour', () => {
-    expect(bridgeTarget('hair')).toBe('hair');
-    expect(bridgeTarget('facial_hair')).toBe('hair');
-    expect(bridgeTarget('eyebrows')).toBe('hair');
-    expect(bridgeTarget('skin')).toBe('skin');
-    expect(bridgeTarget('eyes')).toBe('eyes');
+    expect(colorKey('hair')).toBe('hair');
+    expect(colorKey('facial_hair')).toBe('hair');
+    expect(colorKey('eyebrows')).toBe('hair');
+    expect(colorKey('skin')).toBe('skin');
+    expect(colorKey('eyes')).toBe('eyes');
+    expect(coreColorTarget('eyebrows')).toBe(ColorTarget.Hair);
   });
 
   it('titles every target', () => {
@@ -161,8 +165,8 @@ describe('colour taxonomy', () => {
   });
 
   it('zooms to the head on the face tab only', () => {
-    expect(cameraFocusFor('face')).toBe('head');
-    expect(cameraFocusFor('clothing')).toBe('overall');
+    expect(cameraFocusFor('face')).toBe(CameraFocus.Head);
+    expect(cameraFocusFor('clothing')).toBe(CameraFocus.Overall);
   });
 
   it('lists the five face slots and four clothing slots', () => {
@@ -228,64 +232,75 @@ describe('platform policy', () => {
   });
 });
 
-describe('mock api', () => {
+describe('mock avatar', () => {
   const hat = MOCK_WEARABLES.find(w => w.category === 'hat')!;
   const cap = MOCK_WEARABLES.find(
     w => w.category === 'hat' && w.id !== hat.id,
   )!;
+  const fresh = () =>
+    createMockAvatar({
+      initial: MOCK_AVATAR,
+      wearables: MOCK_WEARABLES,
+    });
+  const wornAfter = (...commands: Control[]) => {
+    const avatar = fresh();
+    commands.forEach(avatar.applyAvatarControl);
+    return avatar.avatarState()!;
+  };
 
   it('swaps same-category wearables and unequips', () => {
-    const on = applyCommand(
-      MOCK_AVATAR,
-      { type: 'equip', urn: hat.id },
-      MOCK_CATALOG,
-    )!;
-    const swapped = applyCommand(
-      on,
-      { type: 'equip', urn: cap.id },
-      MOCK_CATALOG,
-    )!;
+    const swapped = wornAfter(
+      new Control.Equip({ urn: hat.id }),
+      new Control.Equip({ urn: cap.id }),
+    );
     expect(swapped.wearables).toContain(cap.id);
     expect(swapped.wearables).not.toContain(hat.id);
-    const off = applyCommand(
-      swapped,
-      { type: 'unequip', urn: cap.id },
-      MOCK_CATALOG,
-    )!;
+    const off = wornAfter(
+      new Control.Equip({ urn: cap.id }),
+      new Control.Unequip({ urn: cap.id }),
+    );
     expect(off.wearables).not.toContain(cap.id);
   });
 
   it('applies body shape, colours and emote slots, and ignores the rest', () => {
-    const shaped = applyCommand(
-      MOCK_AVATAR,
-      { type: 'set_body_shape', urn: FEMALE },
-      MOCK_CATALOG,
-    )!;
-    expect(shaped.body_shape).toBe(FEMALE);
-    expect(MOCK_AVATAR.body_shape).toBe(MALE);
+    expect(wornAfter(new Control.SetBodyShape({ urn: FEMALE })).bodyShape).toBe(
+      FEMALE,
+    );
+    expect(MOCK_AVATAR.bodyShape).toBe(MALE);
     expect(
-      applyCommand(
-        MOCK_AVATAR,
-        { type: 'set_color', target: 'hair', color: '#fff' },
-        MOCK_CATALOG,
-      )?.hair,
+      wornAfter(
+        new Control.SetColor({ target: ColorTarget.Hair, color: '#fff' }),
+      ).hair,
     ).toBe('#fff');
     expect(
-      applyCommand(
-        MOCK_AVATAR,
-        { type: 'set_emote_slot', slot: 0, urn: '' },
-        MOCK_CATALOG,
-      )?.emotes[0],
+      wornAfter(new Control.SetEmoteSlot({ slot: 0, urn: '' })).emotes[0],
     ).toBe('');
     expect(
-      applyCommand(
-        MOCK_AVATAR,
-        { type: 'focus_camera', target: 'head' },
-        MOCK_CATALOG,
-      ),
-    ).toBeNull();
+      wornAfter(new Control.FocusCamera({ focus: CameraFocus.Head })),
+    ).toBe(MOCK_AVATAR);
   });
 
+  it('randomizes into a valid avatar and tells its listeners', () => {
+    const avatar = fresh();
+    const seen = jest.fn();
+    avatar.onChange(seen);
+    avatar.applyAvatarControl(new Control.RandomizeAvatar());
+    const next = avatar.avatarState()!;
+    expect([MALE, FEMALE]).toContain(next.bodyShape);
+    expect(next.wearables.length).toBeGreaterThan(0);
+    expect(seen).toHaveBeenCalledWith(next);
+  });
+
+  it('keeps the avatar object when nothing changes', () => {
+    const avatar = fresh();
+    const seen = jest.fn();
+    avatar.onChange(seen);
+    avatar.applyAvatarControl(new Control.SetName({ name: 'Ana' }));
+    expect(seen).not.toHaveBeenCalled();
+  });
+});
+
+describe('mock api', () => {
   it('resolves, never resolves or rejects the catalog and records calls', async () => {
     const api = createMockApi();
     await expect(api.loadCatalog()).resolves.toBe(MOCK_CATALOG);
@@ -296,9 +311,10 @@ describe('mock api', () => {
     createMockApi({ catalog: 'loading' }).loadCatalog().then(pending);
     await Promise.resolve();
     expect(pending).not.toHaveBeenCalled();
-    api.send({ type: 'focus_camera', target: 'head' });
+    const focus = new Control.FocusCamera({ focus: CameraFocus.Head });
+    api.send(focus);
     api.openMarketplace();
-    expect(api.calls).toEqual([{ type: 'focus_camera', target: 'head' }]);
+    expect(api.calls).toEqual([focus]);
     expect(api.marketplaceOpens).toBe(1);
   });
 });

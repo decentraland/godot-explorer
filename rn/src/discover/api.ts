@@ -1,12 +1,16 @@
-export const MAIN_REALM = 'https://realm-provider-ea.decentraland.org/main';
-const WORLDS = 'https://worlds-content-server.decentraland.org/world';
-export const PLACES_API = 'https://places.decentraland.org/api/places';
-export const EVENTS_API = 'https://events.decentraland.org/api/events';
+import { core } from '../core';
 
-export const FEATURED_URL = `${PLACES_API}?only_highlighted=true&limit=12&order_by=like_score`;
-export const MOST_ACTIVE_URL = `${PLACES_API}?limit=12&order_by=most_active&order=desc`;
-export const LIVE_EVENTS_URL = `${EVENTS_API}?list=live&limit=10`;
-export const UPCOMING_EVENTS_URL = `${EVENTS_API}?list=upcoming&limit=10`;
+export const mainRealm = (): string => core().urls().mainRealm;
+export const placesApi = (): string => core().urls().places;
+export const eventsApi = (): string => core().urls().eventsApi;
+
+export const featuredUrl = (): string =>
+  `${placesApi()}?only_highlighted=true&limit=12&order_by=like_score`;
+export const mostActiveUrl = (): string =>
+  `${placesApi()}?limit=12&order_by=most_active&order=desc`;
+export const liveEventsUrl = (): string => `${eventsApi()}?list=live&limit=10`;
+export const upcomingEventsUrl = (): string =>
+  `${eventsApi()}?list=upcoming&limit=10`;
 
 /** What the Discover cards and the detail sheet show, whether it came from a place or an event. */
 export type Place = {
@@ -46,7 +50,7 @@ export type DiscoverEvent = {
 };
 
 export const worldRealm = (name: string): string =>
-  `${WORLDS}/${name.toLowerCase()}`;
+  `${core().urls().worldsContentServer}${name.toLowerCase()}`;
 
 const parseParcel = (position: string): [number, number] => {
   const [x, y] = position.split(',').map(Number);
@@ -86,7 +90,7 @@ export function parsePlaces(payload: unknown): Place[] {
         users: num(raw.user_count),
         likeRate: typeof raw.like_rate === 'number' ? raw.like_rate : null,
         location: isWorld ? worldName : position,
-        realm: isWorld && worldName ? worldRealm(worldName) : MAIN_REALM,
+        realm: isWorld && worldName ? worldRealm(worldName) : mainRealm(),
         x,
         y,
         world: isWorld,
@@ -140,7 +144,9 @@ export function parseEvents(payload: unknown): DiscoverEvent[] {
           likeRate: null,
           location: world ? str(raw.server) : `${num(raw.x)},${num(raw.y)}`,
           realm:
-            world && str(raw.server) ? worldRealm(str(raw.server)) : MAIN_REALM,
+            world && str(raw.server)
+              ? worldRealm(str(raw.server))
+              : mainRealm(),
           x: world ? 0 : num(raw.x),
           y: world ? 0 : num(raw.y),
           world,
@@ -172,10 +178,10 @@ export async function fetchDiscover(
   fetchImpl: typeof fetch = fetch,
 ): Promise<DiscoverData> {
   const [featured, mostActive, live, upcoming] = await Promise.all([
-    getJson(FEATURED_URL, fetchImpl),
-    getJson(MOST_ACTIVE_URL, fetchImpl),
-    getJson(LIVE_EVENTS_URL, fetchImpl).catch(() => null),
-    getJson(UPCOMING_EVENTS_URL, fetchImpl).catch(() => null),
+    getJson(featuredUrl(), fetchImpl),
+    getJson(mostActiveUrl(), fetchImpl),
+    getJson(liveEventsUrl(), fetchImpl).catch(() => null),
+    getJson(upcomingEventsUrl(), fetchImpl).catch(() => null),
   ]);
   return {
     featured: parsePlaces(featured),

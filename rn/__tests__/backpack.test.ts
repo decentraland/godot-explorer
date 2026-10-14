@@ -1,4 +1,4 @@
-import { AvatarState } from '../src/events';
+import type { AvatarState } from '../src/core/native';
 import {
   initialBackpack,
   reduceBackpack,
@@ -58,7 +58,7 @@ const catalog = parseWearables({
 });
 
 const avatar = (patch: Partial<AvatarState> = {}): AvatarState => ({
-  body_shape: MALE,
+  bodyShape: MALE,
   wearables: [BASE_PREFIX + 'hoodie'],
   emotes: ['wave', '', '', '', '', '', '', '', '', ''],
   skin: '#ffdcb6',

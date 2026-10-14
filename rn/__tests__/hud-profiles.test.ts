@@ -1,62 +1,113 @@
-import { subscribe } from '../src/GodotBridge';
-import { request } from '../src/bridge/request';
-import { bridgeHudApi, fallbackProfile } from '../src/hud/hudApi';
+import { setCoreForTests } from '../src/core';
+import { resetCoreEventsForTests } from '../src/core/events';
+import { createMockCore } from '../src/core/mock';
+import { Control } from '../src/core/native';
+import type { AppListener } from '../src/core/native';
+import { coreHudApi, fallbackProfile } from '../src/hud/hudApi';
 
-jest.mock('../src/GodotBridge', () => ({
-  sendCommand: jest.fn(),
-  subscribe: jest.fn(() => () => {}),
-}));
-jest.mock('../src/bridge/request', () => ({ request: jest.fn() }));
+const profile = jest.fn();
+const nearby = jest.fn();
+let listener!: AppListener;
 
-const mockRequest = request as jest.Mock;
+beforeEach(() => {
+  profile.mockReset();
+  nearby.mockReset();
+  resetCoreEventsForTests();
+  setCoreForTests({
+    ...createMockCore(),
+    profile,
+    nearby,
+    addListener: l => {
+      listener = l;
+      return 0n;
+    },
+  });
+});
 
-const mockSubscribe = subscribe as jest.Mock;
+afterEach(() => setCoreForTests(undefined));
 
-beforeEach(() => mockRequest.mockReset());
+const person = (over = {}) => ({
+  address: '0xabcdef1234',
+  name: 'Neo',
+  hasClaimedName: false,
+  profilePictureUrl: '',
+  ...over,
+});
 
-describe('bridgeHudApi chat events', () => {
-  it('keys the profile Godot attaches to a chat line by its sender address', () => {
-    let emit: (event: unknown) => void = () => {};
-    mockSubscribe.mockImplementation(handler => {
-      emit = handler;
-      return () => {};
+describe('coreHudApi events', () => {
+  it('keys the profile the engine attaches to a chat line by its sender address', () => {
+    const seen = jest.fn();
+    coreHudApi.subscribe(seen);
+    listener.chat({
+      address: '0xabcdef1234',
+      message: 'hi',
+      timestamp: 1,
+      profile: { name: 'Neo', hasClaimedName: false, profilePictureUrl: '' },
     });
-    const listener = jest.fn();
-    bridgeHudApi.subscribe(listener);
-    emit({
-      type: 'chat',
-      data: {
-        address: '0xabcdef1234',
-        message: 'hi',
-        timestamp: 1,
-        profile: {
-          name: 'Neo',
-          has_claimed_name: false,
-          profile_picture_url: '',
-        },
-      },
-    });
-    expect(listener.mock.calls[0][0].data.profile).toMatchObject({
+    expect(seen.mock.calls[0][0].data.profile).toMatchObject({
       address: '0xabcdef1234',
       name: 'Neo',
       tag: '#1234',
     });
   });
+
+  it('forwards a line without a profile as it is', () => {
+    const seen = jest.fn();
+    coreHudApi.subscribe(seen);
+    listener.chat({
+      address: 'system',
+      message: 'welcome',
+      timestamp: 2,
+      profile: undefined,
+    });
+    expect(seen.mock.calls[0][0]).toEqual({
+      type: 'chat',
+      data: { address: 'system', message: 'welcome', timestamp: 2 },
+    });
+  });
+
+  it('turns the loading detail into plain numbers', () => {
+    const seen = jest.fn();
+    coreHudApi.subscribe(seen);
+    listener.loadingDetail({
+      loaded: 412n,
+      total: 584n,
+      mbps: 3.2,
+      percent: 71,
+    });
+    expect(seen).toHaveBeenCalledWith({
+      type: 'loading_progress',
+      data: { loaded: 412, total: 584, mbps: 3.2, percent: 71 },
+    });
+  });
+
+  it('forwards the unread count and the backpack request', () => {
+    const seen = jest.fn();
+    coreHudApi.subscribe(seen);
+    listener.unreadChat(3);
+    listener.openBackpack(true);
+    expect(seen.mock.calls.map(([event]) => event)).toEqual([
+      { type: 'unread_chat', data: { count: 3 } },
+      { type: 'open_backpack', data: { emotes: true } },
+    ]);
+  });
+
+  it('stops forwarding after the unsubscribe', () => {
+    const seen = jest.fn();
+    coreHudApi.subscribe(seen)();
+    listener.unreadChat(1);
+    expect(seen).not.toHaveBeenCalled();
+  });
 });
 
-describe('bridgeHudApi profiles', () => {
-  it('resolves a sender through profile.get', async () => {
-    mockRequest.mockResolvedValue({
-      address: '0xabcdef1234',
-      name: 'Neo',
-      has_claimed_name: true,
-      profile_picture_url: 'https://x/face.png',
-    });
-    const profile = await bridgeHudApi.resolveProfile('0xabcdef1234');
-    expect(mockRequest).toHaveBeenCalledWith('profile.get', {
-      address: '0xabcdef1234',
-    });
-    expect(profile).toMatchObject({
+describe('coreHudApi profiles', () => {
+  it('resolves a sender through the core profile', async () => {
+    profile.mockResolvedValue(
+      person({ hasClaimedName: true, profilePictureUrl: 'https://x/face.png' }),
+    );
+    const resolved = await coreHudApi.resolveProfile('0xabcdef1234');
+    expect(profile).toHaveBeenCalledWith('0xabcdef1234');
+    expect(resolved).toMatchObject({
       name: 'Neo',
       tag: '',
       claimed: true,
@@ -66,8 +117,8 @@ describe('bridgeHudApi profiles', () => {
   });
 
   it('tags unclaimed names with the address suffix', async () => {
-    mockRequest.mockResolvedValue({ address: '0xabcdef1234', name: 'Trin' });
-    expect(await bridgeHudApi.resolveProfile('0xabcdef1234')).toMatchObject({
+    profile.mockResolvedValue(person({ name: 'Trin' }));
+    expect(await coreHudApi.resolveProfile('0xabcdef1234')).toMatchObject({
       name: 'Trin',
       tag: '#1234',
       claimed: false,
@@ -75,40 +126,41 @@ describe('bridgeHudApi profiles', () => {
   });
 
   it('falls back to the short address when the lookup fails', async () => {
-    mockRequest.mockRejectedValue(new Error('no mock handler'));
-    expect(await bridgeHudApi.resolveProfile('0xabcdef1234')).toEqual(
+    profile.mockRejectedValue(new Error('offline'));
+    nearby.mockRejectedValue(new Error('offline'));
+    expect(await coreHudApi.resolveProfile('0xabcdef1234')).toEqual(
       fallbackProfile('0xabcdef1234'),
     );
-    expect((await bridgeHudApi.ownProfile()).own).toBe(true);
-    expect(await bridgeHudApi.nearby()).toEqual([]);
+    expect((await coreHudApi.ownProfile()).own).toBe(true);
+    expect(await coreHudApi.nearby()).toEqual([]);
   });
 
   it('reads the own profile without an address', async () => {
-    mockRequest.mockResolvedValue({
-      address: '0xme00',
-      name: 'Me',
-      has_claimed_name: true,
-    });
-    expect(await bridgeHudApi.ownProfile()).toMatchObject({
+    profile.mockResolvedValue(
+      person({ address: '0xme00', name: 'Me', hasClaimedName: true }),
+    );
+    expect(await coreHudApi.ownProfile()).toMatchObject({
       name: 'Me',
       own: true,
     });
-    expect(mockRequest).toHaveBeenCalledWith('profile.get', undefined);
+    expect(profile).toHaveBeenCalledWith(undefined);
   });
 
-  it('maps friends.nearby to chat profiles', async () => {
-    mockRequest.mockResolvedValue({
-      users: [
-        {
-          address: '0xaaaa0001',
-          name: 'Cy',
-          has_claimed_name: false,
-          profile_picture_url: '',
-        },
-      ],
-    });
-    expect(await bridgeHudApi.nearby()).toMatchObject([
+  it('maps the nearby users to chat profiles', async () => {
+    nearby.mockResolvedValue([person({ address: '0xaaaa0001', name: 'Cy' })]);
+    expect(await coreHudApi.nearby()).toMatchObject([
       { address: '0xaaaa0001', name: 'Cy', tag: '#0001', claimed: false },
     ]);
+  });
+
+  it('sends commands to the core and enters worlds through it', () => {
+    const control = jest.fn();
+    const enterWorld = jest.fn();
+    setCoreForTests({ ...createMockCore(), control, enterWorld });
+    const teleport = new Control.Teleport({ parcel: { x: 1, y: 2 } });
+    coreHudApi.send(teleport);
+    expect(control).toHaveBeenCalledWith(teleport);
+    coreHudApi.enterWorld({ realm: 'r', parcel: undefined });
+    expect(enterWorld).toHaveBeenCalledWith({ realm: 'r', parcel: undefined });
   });
 });

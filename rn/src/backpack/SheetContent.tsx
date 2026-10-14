@@ -7,7 +7,7 @@ import type { EmptyCopy } from './platformPolicy';
 import { visibleEmotes } from './selection';
 import { BackpackController } from './useBackpack';
 import { WearablesPanel } from './WearablesPanel';
-import { bridgeTarget } from './taxonomy';
+import { colorKey } from './taxonomy';
 
 /** What lives inside the sheet (portrait) or right panel (landscape) for the current mode. */
 export function SheetContent({
@@ -34,7 +34,7 @@ export function SheetContent({
     return (
       <ColorEditor
         target={target}
-        value={avatar[bridgeTarget(target)]}
+        value={avatar[colorKey(target)]}
         onChange={controller.setColor(target)}
         onBack={closeColor}
         bottomInset={bottomInset}

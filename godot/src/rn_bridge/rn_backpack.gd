@@ -2,8 +2,6 @@ class_name RnBackpack
 extends Node
 ## Owns the single avatar preview the React Native screens draw through a hole.
 
-signal avatar_changed(state: Dictionary)
-
 const PREVIEW_SCENE := preload("res://src/ui/pages/backpack/avatar_preview.tscn")
 const EMOTE_SLOTS := 10
 
@@ -32,6 +30,10 @@ func async_open(rect: Rect2) -> void:
 	await _async_refresh_avatar()
 	place(rect)
 	_emit_avatar()
+
+
+func is_shown() -> bool:
+	return _preview != null and _preview.visible
 
 
 func place(rect: Rect2) -> void:
@@ -209,16 +211,11 @@ func _emit_avatar() -> void:
 	var avatar = Global.player_identity.get_mutable_avatar()
 	if avatar == null:
 		return
-	(
-		avatar_changed
-		. emit(
-			{
-				"body_shape": avatar.get_body_shape(),
-				"wearables": Array(avatar.get_wearables()),
-				"emotes": Array(avatar.get_emotes()),
-				"skin": "#" + avatar.get_skin_color().to_html(false),
-				"hair": "#" + avatar.get_hair_color().to_html(false),
-				"eyes": "#" + avatar.get_eyes_color().to_html(false),
-			}
-		)
+	Global.engine.report_avatar(
+		avatar.get_body_shape(),
+		avatar.get_wearables(),
+		avatar.get_emotes(),
+		"#" + avatar.get_skin_color().to_html(false),
+		"#" + avatar.get_hair_color().to_html(false),
+		"#" + avatar.get_eyes_color().to_html(false)
 	)

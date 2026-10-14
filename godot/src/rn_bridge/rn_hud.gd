@@ -1,43 +1,36 @@
 class_name RnHud
 extends RefCounted
-## HUD commands from RN (insets, chat, hide UI) and the events that report native HUD state.
+## Executes the shell's HUD controls (insets, chat, hide UI) and reports the native HUD state.
 
 const CHAT_CACHE_MAX := 200
 
-var _emit: Callable
 var _hidden := false
 var _chat_open := false
 var _unread := 0
 var _profiles: Dictionary = {}
 
 
-func _init(emit: Callable) -> void:
-	_emit = emit
-
-
 func connect_signals() -> void:
 	Global.on_chat_message.connect(_async_on_chat_message)
-	Global.open_backpack.connect(
-		func(emotes: bool) -> void: _emit.call("open_backpack", {"emotes": emotes})
-	)
+	Global.open_backpack.connect(Global.engine.report_open_backpack)
 	if Global.scene_runner != null:
 		Global.scene_runner.loading_progress.connect(_on_loading_progress)
 
 
-## Returns true when the command belonged to the HUD.
-func handle(explorer: Explorer, cmd: Dictionary) -> bool:
-	match cmd.get("type", ""):
+## Returns true when the control belonged to the HUD.
+func handle(explorer: Explorer, kind: String, args: Dictionary) -> bool:
+	match kind:
 		"set_hud_insets":
-			_set_insets(explorer, cmd)
+			Global.engine.set_hud_insets(args.top, args.right, args.bottom, args.left)
 		"set_chat_width":
-			Global.chat_notifications_width = int(_to_viewport_units(float(cmd.get("width", 0))))
+			Global.chat_notifications_width = int(_to_viewport_units(args.width))
 			explorer._push_scene_interactable_area()
 		"chat_open":
-			_set_chat_open(explorer, bool(cmd.get("open", false)))
+			_set_chat_open(explorer, args.open)
 		"hide_ui":
-			_hidden = bool(cmd.get("hidden", false))
+			_hidden = args.hidden
 			explorer._apply_mobile_controls_hide_ui(_hidden)
-			_emit_hud_state()
+			Global.engine.report_ui_state(_hidden, _chat_open)
 		_:
 			return false
 	return true
@@ -49,15 +42,6 @@ func reset() -> void:
 	_unread = 0
 
 
-func _set_insets(_explorer: Explorer, cmd: Dictionary) -> void:
-	Global.engine.set_hud_insets(
-		float(cmd.get("top", 0)),
-		float(cmd.get("right", 0)),
-		float(cmd.get("bottom", 0)),
-		float(cmd.get("left", 0))
-	)
-
-
 func _set_chat_open(explorer: Explorer, open: bool) -> void:
 	if open == _chat_open:
 		return
@@ -65,14 +49,10 @@ func _set_chat_open(explorer: Explorer, open: bool) -> void:
 	if open:
 		explorer._on_chat_focus_entered()
 		_unread = 0
-		_emit.call("unread_chat", {"count": 0})
+		Global.engine.report_unread_chat(0)
 	else:
 		explorer._on_chat_focus_exited()
-	_emit_hud_state()
-
-
-func _emit_hud_state() -> void:
-	_emit.call("hud_state", {"hidden": _hidden, "chat_open": _chat_open})
+	Global.engine.report_ui_state(_hidden, _chat_open)
 
 
 func _to_viewport_units(pixels: float) -> float:
@@ -83,19 +63,25 @@ func _to_viewport_units(pixels: float) -> float:
 
 
 func _on_loading_progress(percent: float, loaded: int, total: int) -> void:
-	_emit.call(
-		"loading_progress", {"loaded": loaded, "total": total, "mbps": 0.0, "percent": percent}
-	)
+	Global.engine.report_loading_detail(loaded, total, 0.0, percent)
 
 
 func _async_on_chat_message(address: String, message: String, timestamp: float) -> void:
-	var data := {"address": address, "message": message, "timestamp": timestamp}
+	var profile := {}
 	if address.begins_with("0x"):
-		data["profile"] = await _async_profile(address)
+		profile = await _async_profile(address)
 	if not _chat_open:
 		_unread += 1
-		_emit.call("unread_chat", {"count": _unread})
-	_emit.call("chat", data)
+		Global.engine.report_unread_chat(_unread)
+	Global.engine.report_chat(
+		address,
+		message,
+		timestamp,
+		not profile.is_empty(),
+		profile.get("name", ""),
+		profile.get("has_claimed_name", false),
+		profile.get("profile_picture_url", "")
+	)
 
 
 func _async_profile(address: String) -> Dictionary:

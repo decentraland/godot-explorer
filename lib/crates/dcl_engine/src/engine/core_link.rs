@@ -3,9 +3,12 @@
 
 use std::sync::Arc;
 
-use dcl_core::app::{CommandQueue, Destination, EngineCommand, EngineEvent, Parcel, State};
+use dcl_core::app::{
+    CameraFocus, ColorTarget, CommandQueue, Control, Destination, EngineCommand, EngineEvent,
+    Parcel, State,
+};
 use dcl_core::Core;
-use godot::classes::RenderingServer;
+use godot::classes::{Os, RenderingServer};
 use godot::prelude::*;
 
 use super::{scene_link, screenshot_link, settings_link, social_link, DclEngine};
@@ -37,13 +40,108 @@ fn signal_payload(command: &EngineCommand) -> Option<(&'static str, VarDictionar
         )),
         EngineCommand::HideAvatarPreview => Some(("hide_avatar_preview", VarDictionary::new())),
         EngineCommand::SetRendering(_) => None,
+        EngineCommand::Control(control) => Some(control_payload(control)),
+    }
+}
+
+fn focus_name(focus: CameraFocus) -> &'static str {
+    match focus {
+        CameraFocus::Overall => "overall",
+        CameraFocus::Head => "head",
+        CameraFocus::Torso => "torso",
+        CameraFocus::Legs => "legs",
+        CameraFocus::Feet => "feet",
+        CameraFocus::Hands => "hands",
+    }
+}
+
+fn color_target_name(target: ColorTarget) -> &'static str {
+    match target {
+        ColorTarget::Skin => "skin",
+        ColorTarget::Hair => "hair",
+        ColorTarget::Eyes => "eyes",
+    }
+}
+
+/// `(kind, args)` of the `core_command` signal for a shell control.
+pub(super) fn control_payload(control: &Control) -> (&'static str, VarDictionary) {
+    match control {
+        Control::Teleport { parcel } => ("teleport", vdict! { "x": parcel.x, "y": parcel.y }),
+        Control::SendChat { text } => ("send_chat", vdict! { "text": text.clone() }),
+        Control::Emote { urn } => ("emote", vdict! { "urn": urn.clone() }),
+        Control::SetHudInsets { insets } => (
+            "set_hud_insets",
+            vdict! {
+                "top": insets.top,
+                "right": insets.right,
+                "bottom": insets.bottom,
+                "left": insets.left,
+            },
+        ),
+        Control::SetChatWidth { width } => ("set_chat_width", vdict! { "width": *width }),
+        Control::ChatOpen { open } => ("chat_open", vdict! { "open": *open }),
+        Control::HideUi { hidden } => ("hide_ui", vdict! { "hidden": *hidden }),
+        Control::FocusCamera { focus } => ("focus_camera", vdict! { "focus": focus_name(*focus) }),
+        Control::Equip { urn } => ("equip", vdict! { "urn": urn.clone() }),
+        Control::Unequip { urn } => ("unequip", vdict! { "urn": urn.clone() }),
+        Control::SetBodyShape { urn } => ("set_body_shape", vdict! { "urn": urn.clone() }),
+        Control::SetColor { target, color } => (
+            "set_color",
+            vdict! { "target": color_target_name(*target), "color": color.clone() },
+        ),
+        Control::PlayPreviewEmote { urn } => ("play_preview_emote", vdict! { "urn": urn.clone() }),
+        Control::SetEmoteSlot { slot, urn } => (
+            "set_emote_slot",
+            vdict! { "slot": *slot, "urn": urn.clone() },
+        ),
+        Control::RandomizeAvatar => ("randomize_avatar", VarDictionary::new()),
+        Control::SetName { name } => ("set_name", vdict! { "name": name.clone() }),
     }
 }
 
 impl DclEngine {
+    /// The device and build facts every crash report is tagged with, now that the GPU is known.
+    fn set_report_context() {
+        use crate::godot_classes::dcl_global::DclGlobal;
+        use dcl_core::report::{BuildEnvironment, ReportContext};
+        let Some(core) = Core::try_get() else {
+            return;
+        };
+        let rendering = RenderingServer::singleton();
+        let os = Os::singleton();
+        let environment = if DclGlobal::is_production() {
+            BuildEnvironment::Production
+        } else if DclGlobal::is_staging() {
+            BuildEnvironment::Staging
+        } else {
+            BuildEnvironment::Development
+        };
+        let physical_ram_bytes = os
+            .get_memory_info()
+            .get("physical")
+            .and_then(|v| v.try_to::<i64>().ok());
+        core.hub().set_report_context(
+            ReportContext {
+                platform: os.get_name().to_string(),
+                debug_build: os.is_debug_build(),
+                gpu_name: rendering.get_video_adapter_name().to_string(),
+                gpu_vendor: rendering.get_video_adapter_vendor().to_string(),
+                gpu_api_version: rendering.get_video_adapter_api_version().to_string(),
+                locale: os.get_locale().to_string(),
+                commit_hash: DclGlobal::get_commit_hash().to_string(),
+                physical_ram_bytes,
+                attach_branch_info: !DclGlobal::is_production(),
+                branch_name: DclGlobal::get_branch_name().to_string(),
+                commit_message: DclGlobal::get_commit_message().to_string(),
+            },
+            environment,
+        );
+    }
+
     /// Hands the core the engine's side of each service contract (settings applier, nearby
     /// avatars, scene facts, screenshots).
     pub(super) fn register_core_services() {
+        Self::set_report_context();
         settings_link::register();
         social_link::register();
         scene_link::register();

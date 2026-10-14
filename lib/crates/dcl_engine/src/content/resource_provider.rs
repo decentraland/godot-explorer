@@ -775,6 +775,13 @@ impl ResourceProvider {
         self.max_cache_size.store(size, Ordering::SeqCst);
     }
 
+    /// Like `get_cache_total_size` but safe inside the tokio runtime; `None` while a writer holds
+    /// the cache index.
+    pub fn try_cache_total_size(&self) -> Option<i64> {
+        let existing_files = self.existing_files.try_read().ok()?;
+        Some(self.total_size(&existing_files))
+    }
+
     pub fn get_cache_total_size(&self) -> i64 {
         let existing_files = self.existing_files.blocking_read();
         self.total_size(&existing_files)

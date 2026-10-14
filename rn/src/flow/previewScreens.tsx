@@ -1,18 +1,16 @@
-import { useEffect } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AvatarHole, StageBackground } from '../backpack/AvatarStage';
 import { AppText, PrimaryButton } from '../ds';
-import { ensureEngine, send, useEngine } from '../engine';
+import { core } from '../core';
+import { Control } from '../core/native';
+import { useAvatar } from '../backpack/useAvatar';
 import { t } from '../i18n';
 import { u } from '../ds/scale';
 
 /** Stage + the single Godot avatar window, with a spinner behind it until the avatar arrives. */
 export function PreviewArea() {
-  const { avatar } = useEngine();
-  useEffect(() => {
-    ensureEngine();
-  }, []);
+  const avatar = useAvatar();
   return (
     <View style={styles.area}>
       <StageBackground />
@@ -39,7 +37,7 @@ export function AvatarCreateScreen({
   onBack: () => void;
 }) {
   const insets = useSafeAreaInsets();
-  const { avatar } = useEngine();
+  const avatar = useAvatar();
   return (
     <View style={styles.fill}>
       <PreviewArea />
@@ -58,7 +56,7 @@ export function AvatarCreateScreen({
               label={t('FLOW_AVATAR_RANDOMIZE')}
               tone="secondary"
               disabled={!avatar}
-              onPress={() => send({ type: 'randomize_avatar' })}
+              onPress={() => core().control(new Control.RandomizeAvatar())}
             />
           </View>
           <View style={styles.flex}>
@@ -89,7 +87,7 @@ export function WelcomeBackScreen({
   onContinue: () => void;
 }) {
   const insets = useSafeAreaInsets();
-  const { avatar } = useEngine();
+  const avatar = useAvatar();
   return (
     <View style={styles.fill}>
       <PreviewArea />

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useReducer, useState } from 'react';
+import { CameraFocus, Control } from '../core/native';
 import { BackpackApi, getBackpackApi } from './api';
 import {
   activeSlot,
@@ -10,7 +11,7 @@ import { Wearable } from './catalog';
 import { Emote, EMOTE_SLOTS } from './emotes';
 import { tapEmote } from './emoteLogic';
 import { wearableCommand } from './selection';
-import { bridgeTarget, cameraFocusFor, ColorTarget } from './taxonomy';
+import { cameraFocusFor, ColorTarget, coreColorTarget } from './taxonomy';
 import { CatalogState, useCatalog } from './useCatalog';
 
 const TOAST_MS = 900;
@@ -33,9 +34,10 @@ export function useBackpack(options: BackpackOptions = {}) {
   const holdToast = options.initial?.equippedToast === true;
   const [busy, setBusy] = useState<string | null>(null);
 
-  const focus = state.mode === 'emotes' ? 'overall' : cameraFocusFor(state.tab);
+  const focus =
+    state.mode === 'emotes' ? CameraFocus.Overall : cameraFocusFor(state.tab);
   useEffect(() => {
-    api.send({ type: 'focus_camera', target: focus });
+    api.send(new Control.FocusCamera({ focus }));
   }, [api, focus]);
 
   // The avatar event is the engine's answer to an equip/unequip: it ends the pending dim.
@@ -70,7 +72,9 @@ export function useBackpack(options: BackpackOptions = {}) {
 
   const setColor = useCallback(
     (target: ColorTarget) => (color: string) =>
-      api.send({ type: 'set_color', target: bridgeTarget(target), color }),
+      api.send(
+        new Control.SetColor({ target: coreColorTarget(target), color }),
+      ),
     [api],
   );
 

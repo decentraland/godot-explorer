@@ -1,5 +1,5 @@
 import type { ReactElement } from 'react';
-import type { Orientation } from '../GodotBridge';
+import type { Orientation } from '../platform/orientation';
 
 export type PreviewEntry = {
   title: string;

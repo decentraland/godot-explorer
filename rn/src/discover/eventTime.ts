@@ -1,3 +1,4 @@
+import { core } from '../core';
 import { I18nKey, t } from '../i18n';
 import type { DiscoverEvent, Place } from './api';
 
@@ -97,12 +98,7 @@ export function calendarUrl(e: {
 
 export const placeJumpLink = (place: Place): string =>
   place.world
-    ? `https://decentraland.org/jump/?realm=${encodeURIComponent(
-        place.location,
-      )}`
-    : `https://decentraland.org/jump/?position=${encodeURIComponent(
-        place.location,
-      )}`;
+    ? core().jumpRealmUrl(place.location)
+    : core().jumpPositionUrl(place.location);
 
-export const eventJumpLink = (id: string): string =>
-  `https://decentraland.org/events/event/?id=${encodeURIComponent(id)}`;
+export const eventJumpLink = (id: string): string => core().eventUrl(id);

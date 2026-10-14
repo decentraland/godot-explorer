@@ -1,7 +1,7 @@
 import { Linking, View } from 'react-native';
 import { LinkRow, WarningBanner } from '../ds';
 import { t } from '../i18n';
-import { DISCORD_URL, HELP_URL, LEGAL_LINKS } from './links';
+import { DISCORD_URL, helpUrl, legalLinks } from './links';
 import { Group, SectionCaption } from './rows';
 import type { SettingsModel } from './useSettings';
 
@@ -48,7 +48,7 @@ export function HelpSection({
           external
           label={t('SETTINGS_HELP')}
           onPress={() => {
-            openUrl(HELP_URL);
+            openUrl(helpUrl());
           }}
         />
       </Group>
@@ -66,7 +66,7 @@ export function HelpSection({
       </Group>
       <SectionCaption title={t('SETTINGS_LEGAL_CAPS')} gap={1} />
       <Group gap={0} after={30}>
-        {LEGAL_LINKS.map(link => (
+        {legalLinks().map(link => (
           <LinkRow
             height={42}
             key={link.url}

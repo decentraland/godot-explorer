@@ -23,6 +23,32 @@ pub trait EventSink: Send + Sync {
 static FILTER: OnceLock<reload::Handle<EnvFilter, Registry>> = OnceLock::new();
 static ENGINE_SINKS: RwLock<Vec<Box<dyn EventSink>>> = RwLock::new(Vec::new());
 static PLATFORM_ENABLED: AtomicBool = AtomicBool::new(true);
+static ERROR_SINK: RwLock<Option<ErrorSink>> = RwLock::new(None);
+
+/// Receives the core's panics and `ERROR` logs: `(message, is_panic)`.
+pub type ErrorSink = Box<dyn Fn(&str, bool) + Send + Sync>;
+
+thread_local! {
+    /// An error logged while reporting one must not report again.
+    static REPORTING: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+/// Where panics and `ERROR` logs go to be reported.
+pub fn set_error_sink(sink: ErrorSink) {
+    *ERROR_SINK.write().unwrap_or_else(|e| e.into_inner()) = Some(sink);
+}
+
+fn report_error(message: &str, is_panic: bool) {
+    if REPORTING.with(|r| r.replace(true)) {
+        return;
+    }
+    if let Ok(sink) = ERROR_SINK.try_read() {
+        if let Some(sink) = sink.as_ref() {
+            sink(message, is_panic);
+        }
+    }
+    REPORTING.with(|r| r.set(false));
+}
 
 /// Extracts the `message` field of an event.
 #[derive(Default)]
@@ -148,6 +174,7 @@ fn install_panic_hook() {
     std::panic::set_hook(Box::new(move |info| {
         let backtrace = std::backtrace::Backtrace::force_capture();
         tracing::error!(target: "panic", "{info}\n{backtrace}");
+        report_error(&info.to_string(), true);
         previous(info);
     }));
 }

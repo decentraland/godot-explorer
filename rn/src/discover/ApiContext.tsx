@@ -1,14 +1,11 @@
 import { createContext, ReactNode, useContext } from 'react';
-import { godotAvailable } from '../GodotBridge';
-import { createBridgeDiscoverApi } from './bridgeApi';
+import { createCoreDiscoverApi } from './coreApi';
 import { publicApi } from './publicApi';
 import type { DiscoverApi } from './types';
 
-const ApiContext = createContext<DiscoverApi>(
-  godotAvailable ? createBridgeDiscoverApi(publicApi) : publicApi,
-);
+const ApiContext = createContext<DiscoverApi>(createCoreDiscoverApi(publicApi));
 
-/** Gallery and tests wrap screens with the mock; the app uses the bridge-backed API with the engine and the public one without. */
+/** Gallery and tests wrap screens with the mock; the app uses the public listings plus the signed calls of the core. */
 export function ApiProvider({
   api,
   children,

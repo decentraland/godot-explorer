@@ -15,18 +15,6 @@ import { StoryScreen } from '../src/discover/StoryScreen';
 import { getPreview } from '../src/gallery/registry';
 import '../src/discover/gallery';
 
-jest.mock('../src/engine', () => ({
-  ...jest.requireActual('../src/engine'),
-  ensureEngine: jest.fn(),
-  send: jest.fn(),
-}));
-jest.mock('../src/GodotBridge', () => ({
-  sendCommand: jest.fn(),
-  startEngine: jest.fn(),
-  setOrientation: jest.fn(),
-  subscribe: jest.fn(() => () => {}),
-}));
-
 const metrics = {
   frame: { x: 0, y: 0, width: 360, height: 800 },
   insets: { top: 0, left: 0, right: 0, bottom: 0 },

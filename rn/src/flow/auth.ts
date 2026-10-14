@@ -1,6 +1,6 @@
 import { core } from '../core';
 import { onCoreEvents } from '../core/events';
-import { CoreError } from '../core/native';
+import { Control, CoreError } from '../core/native';
 
 export type AuthResult = { hasProfile: boolean; name: string };
 
@@ -48,3 +48,16 @@ export async function welcome(): Promise<AuthResult> {
   const name = profile.name.trim();
   return { hasProfile: name.length > 0, name };
 }
+
+/** Terms the player already accepted in this version (or an older run of the same one). */
+export const termsAccepted = () =>
+  core().termsAcceptedVersion() >= core().termsVersion();
+
+/** Records the acceptance and lets analytics start (nothing is sent before this). */
+export async function acceptTerms(): Promise<void> {
+  core().acceptTerms(core().termsVersion());
+  await core().setAnalyticsConsent(true);
+}
+
+export const setAvatarName = (name: string) =>
+  core().control(new Control.SetName({ name }));

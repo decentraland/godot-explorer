@@ -88,6 +88,8 @@ pub trait AppListener: Send + Sync {
     fn open_backpack(&self, emotes: bool);
     fn loading_detail(&self, detail: crate::app::LoadingDetail);
     fn avatar_changed(&self, avatar: crate::app::AvatarState);
+    /// A panic or error to send to the crash reporter, already past the keep/drop policy.
+    fn report(&self, payload: crate::hub::ReportPayload);
 }
 
 struct ListenerAdapter(Arc<dyn AppListener>);
@@ -133,6 +135,9 @@ impl AppEvents for ListenerAdapter {
     }
     fn avatar_changed(&self, avatar: &crate::app::AvatarState) {
         self.0.avatar_changed(avatar.clone());
+    }
+    fn report(&self, payload: &crate::hub::ReportPayload) {
+        self.0.report(payload.clone());
     }
     fn scene_crashed(&self) {
         self.0.scene_crashed();

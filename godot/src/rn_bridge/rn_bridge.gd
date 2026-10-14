@@ -1,22 +1,26 @@
 extends Node
-## JSON command/event channel for a React Native host (--rn-host only).
-## Commands arrive as `{"type": ..., ...}` strings; events leave as `{"type": ..., "data": {...}}`.
+## Executes the core's typed commands on the engine and reports what the engine observes
+## (`Global.engine.core_command` in, `Global.engine.report_*` out). Active with --rn-host only.
 
-const PLUGIN_SINGLETON := "RnHostPlugin"
 const STATE_INTERVAL := 0.25
 const HIDE_INTERVAL := 0.2
+const AVATAR_CONTROLS := [
+	"equip",
+	"unequip",
+	"set_body_shape",
+	"set_color",
+	"play_preview_emote",
+	"set_emote_slot",
+	"randomize_avatar",
+	"set_name",
+]
 
-var last_event: Dictionary = {}
-
-var _plugin: Object = null
 var _explorer: Explorer = null
 var _state_elapsed := 0.0
 var _hide_elapsed := 0.0
 var _backpack := RnBackpack.new()
-var _requests: RnRequests
-var _hud: RnHud
+var _hud := RnHud.new()
 var _avatar_host_up := false
-var _in_world := false
 var _exiting := false
 var _entering := false
 var _pending_enter: Dictionary = {}
@@ -26,17 +30,8 @@ func _ready() -> void:
 	if not Global.cli.rn_host:
 		set_process(false)
 		return
-	if Engine.has_singleton(PLUGIN_SINGLETON):
-		_plugin = Engine.get_singleton(PLUGIN_SINGLETON)
-		_plugin.connect("rn_command", handle_command)
 	Global.engine.core_command.connect(_on_core_command)
-	Global.loading_started.connect(_emit.bind("loading", {"state": "started"}))
-	Global.loading_finished.connect(_emit.bind("loading", {"state": "finished"}))
-	_requests = RnRequests.new(_emit)
-	_hud = RnHud.new(_emit)
-	_requests.connect_signals()
 	_hud.connect_signals()
-	_backpack.avatar_changed.connect(func(state: Dictionary) -> void: _emit("avatar", state))
 	add_child(_backpack)
 
 
@@ -44,14 +39,10 @@ func _ready() -> void:
 func on_avatar_host_ready() -> void:
 	_avatar_host_up = true
 	_exiting = false
-	if _in_world:
-		_in_world = false
-		_emit("world", {"state": "exited"})
-	_emit("ready", {})
 	if not _pending_enter.is_empty():
 		var pending := _pending_enter
 		_pending_enter = {}
-		_handle_avatar_command(pending)
+		_async_enter_world(pending)
 
 
 func _process(dt: float) -> void:
@@ -61,14 +52,11 @@ func _process(dt: float) -> void:
 		_explorer = Global.get_explorer()
 		if _explorer == null:
 			return
-		_emit("world", {"state": "entered"})
 		Global.engine.report_loading_finished(
 			Global.realm.get_realm_string(),
 			_explorer.parcel_position.x,
 			_explorer.parcel_position.y
 		)
-		if not Global.cli.has_arg("--rn-avatar-only"):
-			_emit("ready", {})
 	_hide_elapsed += dt
 	if _hide_elapsed >= HIDE_INTERVAL:
 		_hide_elapsed = 0.0
@@ -76,87 +64,81 @@ func _process(dt: float) -> void:
 	_state_elapsed += dt
 	if _state_elapsed >= STATE_INTERVAL:
 		_state_elapsed = 0.0
-		_emit_state()
+		_report_hud()
 
 
-func handle_command(json: String) -> void:
-	var cmd: Variant = JSON.parse_string(json)
-	if not cmd is Dictionary:
-		return
-	if _requests.handle(cmd):
-		return
-	if cmd.get("type", "") == "focus_camera":
-		_backpack.focus_camera(str(cmd.get("target", "overall")))
-		return
-	if _avatar_host_up:
-		_handle_avatar_command(cmd)
-	elif _entering and cmd.get("type", "") == "exit_world":
-		_entering = false
-	elif _explorer != null:
-		_handle_explorer_command(cmd)
-
-
-## Runs a command from the core's app through the same paths the JSON commands use.
 func _on_core_command(kind: String, args: Dictionary) -> void:
 	match kind:
 		"enter_world":
-			handle_command(
-				JSON.stringify(
-					{"type": "enter_world", "x": args.x, "y": args.y, "realm": args.realm}
-				)
-			)
+			_enter_world(args)
 		"exit_world":
-			handle_command(JSON.stringify({"type": "exit_world"}))
+			_exit_world()
 		"show_avatar_preview":
-			handle_command(
-				JSON.stringify(
-					{"type": "backpack_open", "x": args.x, "y": args.y, "w": args.w, "h": args.h}
-				)
-			)
+			var rect := Rect2(args.x, args.y, args.w, args.h)
+			if _backpack.is_shown():
+				_backpack.place(rect)
+			else:
+				_backpack.async_open(rect)
 		"hide_avatar_preview":
-			handle_command(JSON.stringify({"type": "backpack_close"}))
-
-
-func _handle_avatar_command(cmd: Dictionary) -> void:
-	match cmd.get("type", ""):
-		"backpack_open":
-			_backpack.async_open(_rect(cmd))
-		"backpack_place":
-			_backpack.place(_rect(cmd))
-		"backpack_close":
 			_backpack.close()
+		"focus_camera":
+			_backpack.focus_camera(args.focus)
+		_:
+			if kind in AVATAR_CONTROLS:
+				_run_avatar_control(kind, args)
+			elif _explorer != null:
+				_run_world_control(kind, args)
+
+
+func _run_avatar_control(kind: String, args: Dictionary) -> void:
+	match kind:
 		"equip":
-			_backpack.async_equip(str(cmd.get("urn", "")))
+			_backpack.async_equip(args.urn)
 		"unequip":
-			_backpack.async_unequip(str(cmd.get("urn", "")))
+			_backpack.async_unequip(args.urn)
 		"set_body_shape":
-			_backpack.async_set_body_shape(str(cmd.get("urn", "")))
+			_backpack.async_set_body_shape(args.urn)
 		"set_color":
-			_backpack.async_set_color(str(cmd.get("target", "")), str(cmd.get("color", "")))
-		"play_emote":
-			_backpack.play_emote(str(cmd.get("urn", "")))
+			_backpack.async_set_color(args.target, args.color)
+		"play_preview_emote":
+			_backpack.play_emote(args.urn)
 		"set_emote_slot":
-			_backpack.set_emote_slot(int(cmd.get("slot", -1)), str(cmd.get("urn", "")))
+			_backpack.set_emote_slot(args.slot, args.urn)
 		"randomize_avatar":
 			_backpack.async_randomize()
 		"set_name":
-			_backpack.async_set_profile_name(str(cmd.get("name", "")))
-		"enter_world":
-			if _exiting:
-				_pending_enter = cmd
-				return
-			_async_enter_world(cmd)
+			_backpack.async_set_profile_name(args.name)
 
 
-func _async_enter_world(cmd: Dictionary) -> void:
+func _run_world_control(kind: String, args: Dictionary) -> void:
+	match kind:
+		"teleport":
+			Global.engine.teleport(Vector2i(args.x, args.y))
+		"send_chat":
+			_explorer._on_panel_chat_submit_message(args.text)
+		"emote":
+			Global.engine.play_local_emote(args.urn)
+		_:
+			_hud.handle(_explorer, kind, args)
+
+
+func _enter_world(args: Dictionary) -> void:
+	if not _avatar_host_up:
+		return
+	if _exiting:
+		_pending_enter = args
+		return
+	_async_enter_world(args)
+
+
+func _async_enter_world(args: Dictionary) -> void:
 	_backpack.close()
 	_avatar_host_up = false
-	_in_world = true
 	_entering = true
 	_explorer = null
-	var parcel := Vector2i(int(cmd.get("x", 0)), int(cmd.get("y", 0)))
+	var parcel := Vector2i(args.x, args.y)
 	var started := await RnWorld.async_enter(
-		parcel, str(cmd.get("realm", "")), func() -> bool: return not _entering
+		parcel, args.realm, func() -> bool: return not _entering
 	)
 	if started:
 		_entering = false
@@ -164,57 +146,26 @@ func _async_enter_world(cmd: Dictionary) -> void:
 		on_avatar_host_ready()
 
 
-func _handle_explorer_command(cmd: Dictionary) -> void:
-	match cmd.get("type", ""):
-		"teleport":
-			Global.engine.teleport(Vector2i(int(cmd.get("x", 0)), int(cmd.get("y", 0))))
-		"send_chat":
-			_explorer._on_panel_chat_submit_message(str(cmd.get("text", "")))
-		"emote":
-			Global.engine.play_local_emote(str(cmd.get("urn", "")))
-		"backpack_open", "backpack_place":
-			var rect := Rect2(cmd.get("x", 0), cmd.get("y", 0), cmd.get("w", 0), cmd.get("h", 0))
-			if cmd["type"] == "backpack_open":
-				_backpack.async_open(rect)
-			else:
-				_backpack.place(rect)
-		"backpack_close":
-			_backpack.close()
-		"equip":
-			_backpack.async_equip(str(cmd.get("urn", "")))
-		"exit_world":
-			_backpack.close()
-			_hud.reset()
-			_explorer = null
-			_avatar_host_up = true
-			_exiting = true
-			RnWorld.async_exit()
-		_:
-			_hud.handle(_explorer, cmd)
+func _exit_world() -> void:
+	if _entering:
+		_entering = false
+	elif _explorer != null:
+		_backpack.close()
+		_hud.reset()
+		_explorer = null
+		_avatar_host_up = true
+		_exiting = true
+		RnWorld.async_exit()
 
 
-func _rect(cmd: Dictionary) -> Rect2:
-	return Rect2(cmd.get("x", 0), cmd.get("y", 0), cmd.get("w", 0), cmd.get("h", 0))
-
-
-func _player() -> Player:
-	return _explorer.player as Player
-
-
-func _emit_state() -> void:
-	var pos := _player().global_position
-	_emit(
-		"state",
-		{
-			"parcel": [_explorer.parcel_position.x, _explorer.parcel_position.y],
-			"realm": Global.realm.get_realm_string(),
-			"fps": Engine.get_frames_per_second(),
-			"position": [pos.x, pos.y, pos.z],
-		}
+func _report_hud() -> void:
+	var pos := (_explorer.player as Player).global_position
+	Global.engine.report_hud(
+		Global.realm.get_realm_string(),
+		_explorer.parcel_position.x,
+		_explorer.parcel_position.y,
+		Engine.get_frames_per_second(),
+		pos.x,
+		pos.y,
+		pos.z
 	)
-
-
-func _emit(type: String, data: Dictionary) -> void:
-	last_event = {"type": type, "data": data}
-	if _plugin != null:
-		_plugin.call("rn_event", JSON.stringify(last_event))
