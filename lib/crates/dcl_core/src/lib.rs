@@ -2,6 +2,7 @@
 
 pub mod analytics;
 pub mod app;
+pub mod attestation;
 pub mod clock;
 mod core;
 pub mod deep_link;
@@ -17,6 +18,7 @@ pub mod notifications;
 mod open_url;
 pub mod proto;
 pub mod realm;
+pub mod report;
 pub mod scene_requests;
 pub mod session;
 pub mod social;
