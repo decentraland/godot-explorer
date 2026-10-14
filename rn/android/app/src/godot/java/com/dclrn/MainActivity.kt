@@ -99,7 +99,7 @@ class MainActivity : ReactActivity(), GodotHost {
     private const val GODOT_CONTAINER_ID = 0x00D0D0
 
     // No world: the engine only renders the avatar preview (see rn_avatar_host.gd).
-    private val BOOT_ARGS = listOf("--rn-host", "--rn-avatar-only", "--force-mobile", "--no-pulse")
+    private val BOOT_ARGS = listOf("--rn-host", "--rn-avatar-only", "--force-mobile", "--no-pulse", "--perf-log")
 
     @Volatile var instance: MainActivity? = null
 
