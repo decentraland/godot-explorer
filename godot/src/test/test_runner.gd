@@ -7,12 +7,16 @@ const DebugCollectorCountsTest = preload(
 const BeforeSendFreedInstanceTest = preload(
 	"res://src/test/sentry/before_send_freed_instance_test.gd"
 )
+const ForceBackfaceCullingTest = preload("res://src/test/gltf/test_force_backface_culling.gd")
 
 
 func start():
 	var rust_test_runner = TestRunnerSuite.new()
 	var gdscript_tests: Array = [
-		GroundedGraceTest.new(), DebugCollectorCountsTest.new(), BeforeSendFreedInstanceTest.new()
+		GroundedGraceTest.new(),
+		DebugCollectorCountsTest.new(),
+		BeforeSendFreedInstanceTest.new(),
+		ForceBackfaceCullingTest.new()
 	]
 	var success: bool = rust_test_runner.run_all_tests(gdscript_tests, 0, true, self)
 
