@@ -343,6 +343,7 @@ pub fn _process_scene(
                         } else {
                             true
                         };
+                        let scene_origin = scene.godot_dcl_scene.root_node_3d.get_position();
 
                         DclGlobal::singleton()
                             .bind()
@@ -352,6 +353,7 @@ pub fn _process_scene(
                                 crdt_state,
                                 filter_by_scene_id,
                                 primary_player_inside,
+                                scene_origin,
                             );
 
                         let main_camera =

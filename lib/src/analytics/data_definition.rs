@@ -50,14 +50,40 @@ pub struct SegmentIdentifyBody {
     context: serde_json::Value,
 }
 
+/// Which push transport this install is addressable on. Each keeps its own token trait
+/// (`fcm_token` / `apns_token`) so an audience query never has to guess a token's provider.
+#[derive(Clone, Copy)]
+pub enum PushPlatform {
+    Android,
+    Ios,
+}
+
+impl PushPlatform {
+    fn name(self) -> &'static str {
+        match self {
+            PushPlatform::Android => "android",
+            PushPlatform::Ios => "ios",
+        }
+    }
+
+    fn token_trait(self) -> &'static str {
+        match self {
+            PushPlatform::Android => "fcm_token",
+            PushPlatform::Ios => "apns_token",
+        }
+    }
+}
+
 /// Traits describing this install's ability to receive push.
 ///
 /// Sent on every launch regardless of whether permission was granted: the denied rows are the
 /// denominator: without them "how many users can we reach" has no answer, only a numerator.
 pub struct PushIdentifyTraits {
-    /// FCM registration token; empty when the device cannot receive push at all.
-    pub fcm_token: String,
-    /// "granted" | "denied" — the app-level POST_NOTIFICATIONS permission.
+    pub platform: PushPlatform,
+    /// FCM registration token, or the APNs device token as hex; empty when the device cannot
+    /// receive push at all.
+    pub token: String,
+    /// "granted" | "denied" — the app-level POST_NOTIFICATIONS / UNAuthorizationStatus answer.
     pub push_permission: String,
     /// Explorer release, so a campaign can be held back from versions that mishandle a deeplink.
     pub app_version: String,
@@ -82,8 +108,8 @@ pub fn build_segment_identify_body(
         message_id,
         timestamp: iso_ts.clone(),
         traits: serde_json::json!({
-            "fcm_token": traits.fcm_token,
-            "push_platform": "android",
+            traits.platform.token_trait(): traits.token,
+            "push_platform": traits.platform.name(),
             "push_permission": traits.push_permission,
             "app_version": traits.app_version,
             "locale": traits.locale,
@@ -92,8 +118,8 @@ pub fn build_segment_identify_body(
         }),
         context: serde_json::json!({
             "device": {
-                "token": traits.fcm_token,
-                "type": "android",
+                "token": traits.token,
+                "type": traits.platform.name(),
             }
         }),
     }
@@ -517,18 +543,38 @@ pub struct SegmentEventExplorerMoveToParcel {
     pub old_parcel: String,
 }
 
+/// Device hardware, once per launch (#3033). Every unknown is an explicit `null` — never `""`
+/// or `-1` — so a warehouse column can be typed and filtered on IS NULL.
 #[derive(Serialize, Clone)]
 pub struct SegmentEventSystemInfoReport {
-    // Processor used by the user.
-    processor_type: String,
-    // How many processors are available in user's device.
-    processor_count: u32,
-    // Graphic Device used by the user.
-    graphics_device_name: String,
-    // Graphic device memory in mb.
-    graphics_memory_mb: u32,
-    // RAM memory in mb.
-    system_memory_size_mb: u32,
+    // Build.BRAND ("samsung") / "Apple"; null on desktop.
+    pub device_brand: Option<String>,
+    // Build.MODEL ("SM-A536B") / hw.machine ("iPhone14,5"); null on desktop.
+    pub device_model: Option<String>,
+    // "Android 14", "iOS 18.1", "macOS 15.6.1".
+    pub os_version: Option<String>,
+    // Build.SOC_MANUFACTURER ("Samsung", "Qualcomm") / "Apple"; null on desktop and Android < 12.
+    pub soc_manufacturer: Option<String>,
+    // The chipset id the device-support lookup keyed on (Build.SOC_MODEL, or the board/hardware
+    // fallback on Android < 12), normalized exactly as sent to mobile-bff. Null off Android.
+    pub soc_model: Option<String>,
+    // CPU name as the OS reports it: brand string on desktop, primary ABI on Android, null on iOS.
+    pub processor_type: Option<String>,
+    // Logical cores.
+    pub processor_count: Option<u32>,
+    // Fastest core's max clock; Android only.
+    pub processor_max_freq_mhz: Option<u32>,
+    // GPU as the renderer sees it ("Mali-G68", "Adreno (TM) 610", "Apple A15 GPU").
+    pub graphics_device_name: Option<String>,
+    // "ARM", "Qualcomm", "Apple", "NVIDIA".
+    pub graphics_device_vendor: Option<String>,
+    // Graphics API + version in use ("Vulkan 1.1.128", "Metal 3.1", "OpenGL ES 3.2 ...").
+    pub graphics_api_version: Option<String>,
+    // Total RAM.
+    pub system_memory_size_mb: Option<u32>,
+    // Verdict of the launch-time device-support checks: "supported" | "below_minspec" |
+    // "end_of_support" | "not_checked".
+    pub device_support: String,
 }
 
 #[derive(Serialize, Clone)]
@@ -1035,5 +1081,72 @@ pub fn build_segment_event_batch_item(
         message_id,
         timestamp: iso_ts,
         properties,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn common() -> SegmentEventCommonExplorerFields {
+        SegmentEventCommonExplorerFields {
+            dcl_eth_address: "0xabc".into(),
+            dcl_is_guest: true,
+            realm: "no-realm".into(),
+            position: "no-position".into(),
+            dcl_renderer_type: "dao-godot-Android".into(),
+            session_id: "session".into(),
+            renderer_version: "1.0.0".into(),
+            utc_offset_minutes: -180,
+        }
+    }
+
+    // #3033: a warehouse column is only typed and IS NULL-filterable if every unknown lands as an
+    // explicit null, so no field may be skipped or sent as "" / -1.
+    #[test]
+    fn system_info_report_sends_unknowns_as_null() {
+        let event = SegmentEvent::SystemInfoReport(SegmentEventSystemInfoReport {
+            device_brand: Some("samsung".into()),
+            device_model: None,
+            os_version: None,
+            soc_manufacturer: None,
+            soc_model: None,
+            processor_type: None,
+            processor_count: Some(8),
+            processor_max_freq_mhz: None,
+            graphics_device_name: None,
+            graphics_device_vendor: None,
+            graphics_api_version: None,
+            system_memory_size_mb: None,
+            device_support: "not_checked".into(),
+        });
+
+        let body = build_segment_event_batch_item(
+            "user".into(),
+            &common(),
+            event,
+            Utc::now(),
+            "message".into(),
+        );
+        let props = body.properties.as_object().unwrap();
+
+        assert_eq!(body.event, "System Info Report");
+        assert_eq!(props["device_brand"], "samsung");
+        assert_eq!(props["processor_count"], 8);
+        assert_eq!(props["device_support"], "not_checked");
+        for key in [
+            "device_model",
+            "os_version",
+            "soc_manufacturer",
+            "soc_model",
+            "processor_type",
+            "processor_max_freq_mhz",
+            "graphics_device_name",
+            "graphics_device_vendor",
+            "graphics_api_version",
+            "system_memory_size_mb",
+        ] {
+            assert!(props[key].is_null(), "{key} must be an explicit null");
+        }
     }
 }

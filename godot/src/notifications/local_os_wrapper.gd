@@ -32,17 +32,25 @@ func initialize() -> void:
 			if (
 				_android_plugin.has_signal("notification_permission_result")
 				and not _android_plugin.notification_permission_result.is_connected(
-					_on_android_permission_result
+					_on_permission_result
 				)
 			):
-				_android_plugin.notification_permission_result.connect(
-					_on_android_permission_result
-				)
+				_android_plugin.notification_permission_result.connect(_on_permission_result)
 		else:
 			push_warning("Local notifications: Android plugin not found")
 	elif OS.get_name() == "iOS":
 		_ios_plugin = Engine.get_singleton("DclGodotiOS")
-		if not _ios_plugin:
+		if _ios_plugin:
+			# requestAuthorization resolves asynchronously too; the plugin relays the answer
+			# on the same signal, with the same values, as Android.
+			if (
+				_ios_plugin.has_signal("notification_permission_result")
+				and not _ios_plugin.notification_permission_result.is_connected(
+					_on_permission_result
+				)
+			):
+				_ios_plugin.notification_permission_result.connect(_on_permission_result)
+		else:
 			push_warning("Local notifications: iOS plugin not found")
 
 
@@ -59,13 +67,13 @@ func request_permission() -> void:
 		if already_granted:
 			permission_changed.emit(true)
 	elif OS.get_name() == "iOS" and _ios_plugin:
+		# The answer arrives via notification_permission_result, like Android's dialog.
 		_ios_plugin.request_notification_permission()
-		# Permission result is async on iOS
 
 
-## Android delivers the POST_NOTIFICATIONS dialog outcome asynchronously via the
-## plugin's notification_permission_result signal ("granted"/"denied").
-func _on_android_permission_result(result: String) -> void:
+## Both plugins deliver the permission dialog's outcome asynchronously via their
+## notification_permission_result signal ("granted"/"denied").
+func _on_permission_result(result: String) -> void:
 	permission_changed.emit(result == "granted")
 
 

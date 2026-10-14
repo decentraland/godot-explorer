@@ -82,7 +82,7 @@ const PREVIEW_SCENE_ID_PREFIX: &str = "b64-";
 /// Whether avatar sync — movement and emotes — still goes over LiveKit.
 ///
 /// Pulse is the carrier: while it is established, LiveKit gets none of it (main room,
-/// archipelago island, scene room, and the legacy `␐` chat emote alike). The authoritative
+/// archipelago island and scene room alike). The authoritative
 /// server reads avatar state off Pulse as a scene listener, so the LiveKit copy is duplication.
 ///
 /// The gate is deliberately scoped to `pulse_established` rather than to activation, so a Pulse
@@ -2065,9 +2065,7 @@ impl CommunicationManager {
     /// full body, 1 = upper body), matching Unity.
     #[func]
     pub fn send_emote(&mut self, emote_urn: GString, mask: i64) -> bool {
-        // Same gate as movement (see `avatar_sync_over_livekit`); it covers both LiveKit forms
-        // of an emote — the rfc4 PlayerEmote and the legacy `␐<urn> <timestamp>` chat encoding
-        // older clients read.
+        // Same gate as movement (see `avatar_sync_over_livekit`) for the rfc4 PlayerEmote.
         #[cfg(feature = "use_pulse")]
         let emote_over_livekit = avatar_sync_over_livekit(
             self.is_livekit_movement_dual_channel(),
@@ -2077,13 +2075,6 @@ impl CommunicationManager {
         );
         #[cfg(not(feature = "use_pulse"))]
         let emote_over_livekit = true;
-
-        if emote_over_livekit {
-            let timestamp = godot::classes::Time::singleton().get_unix_time_from_system() * 1000.0;
-            self.send_chat(GString::from(
-                format!("␐{} {}", emote_urn, timestamp).as_str(),
-            ));
-        }
 
         // Incremented unconditionally: the counter is this peer's emote sequence, and skipping
         // values while Pulse carries the emote would break receiver-side dedup if LiveKit

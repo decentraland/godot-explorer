@@ -188,6 +188,10 @@ impl DclUrls {
     pub fn feature_flags() -> GString {
         urls::feature_flags().to_godot()
     }
+    #[func]
+    pub fn device_support() -> GString {
+        urls::device_support().to_godot()
+    }
 
     #[func]
     pub fn campaigns() -> GString {
