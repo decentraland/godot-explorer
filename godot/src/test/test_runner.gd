@@ -1,6 +1,7 @@
 extends Node
 
 const GroundedGraceTest = preload("res://src/test/player/grounded_grace_test.gd")
+const GlideIconActionTest = preload("res://src/test/player/glide_icon_action_test.gd")
 const DebugCollectorCountsTest = preload(
 	"res://src/test/debug_server/test_debug_collector_counts.gd"
 )
@@ -12,7 +13,10 @@ const BeforeSendFreedInstanceTest = preload(
 func start():
 	var rust_test_runner = TestRunnerSuite.new()
 	var gdscript_tests: Array = [
-		GroundedGraceTest.new(), DebugCollectorCountsTest.new(), BeforeSendFreedInstanceTest.new()
+		GroundedGraceTest.new(),
+		GlideIconActionTest.new(),
+		DebugCollectorCountsTest.new(),
+		BeforeSendFreedInstanceTest.new()
 	]
 	var success: bool = rust_test_runner.run_all_tests(gdscript_tests, 0, true, self)
 
