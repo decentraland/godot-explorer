@@ -524,6 +524,435 @@ fileprivate struct FfiConverterString: FfiConverter {
     }
 }
 
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterData: FfiConverterRustBuffer {
+    typealias SwiftType = Data
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Data {
+        let len: Int32 = try readInt(&buf)
+        return Data(try readBytes(&buf, count: Int(len)))
+    }
+
+    public static func write(_ value: Data, into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        writeBytes(&buf, value)
+    }
+}
+
+
+
+
+/**
+ * Implemented in Kotlin/Swift: the OS calls attestation needs. Called from a core thread.
+ */
+public protocol AttestationService: AnyObject, Sendable {
+    
+    /**
+     * False on the iOS simulator and Android without Play Services.
+     */
+    func isSupported()  -> Bool
+    
+    /**
+     * Android: a Play Integrity token whose nonce is the base64url (no padding) request hash.
+     */
+    func playIntegrityToken(requestHashB64url: String) async throws  -> String
+    
+    /**
+     * iOS: `DCAppAttestService.generateKey`, the key id.
+     */
+    func iosGenerateKey() async throws  -> String
+    
+    /**
+     * iOS: `attestKey`, the attestation object as base64url.
+     */
+    func iosAttestKey(keyId: String, clientDataHash: Data) async throws  -> String
+    
+}
+/**
+ * Implemented in Kotlin/Swift: the OS calls attestation needs. Called from a core thread.
+ */
+open class AttestationServiceImpl: AttestationService, @unchecked Sendable {
+    fileprivate let handle: UInt64
+
+    /// Used to instantiate a [FFIObject] without an actual handle, for fakes in tests, mostly.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public struct NoHandle {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    required public init(unsafeFromHandle handle: UInt64) {
+        self.handle = handle
+    }
+
+    // This constructor can be used to instantiate a fake object.
+    // - Parameter noHandle: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    //
+    // - Warning:
+    //     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing handle the FFI lower functions will crash.
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public init(noHandle: NoHandle) {
+        self.handle = 0
+    }
+
+#if swift(>=5.8)
+    @_documentation(visibility: private)
+#endif
+    public func uniffiCloneHandle() -> UInt64 {
+        return try! rustCall { uniffi_dcl_host_fn_clone_attestationservice(self.handle, $0) }
+    }
+    // No primary constructor declared for this class.
+
+    deinit {
+        if handle == 0 {
+            // Mock objects have handle=0 don't try to free them
+            return
+        }
+
+        try! rustCall { uniffi_dcl_host_fn_free_attestationservice(handle, $0) }
+    }
+
+    
+
+    
+    /**
+     * False on the iOS simulator and Android without Play Services.
+     */
+open func isSupported() -> Bool  {
+    return try!  FfiConverterBool.lift(try! rustCall() {
+    uniffi_dcl_host_fn_method_attestationservice_is_supported(
+            self.uniffiCloneHandle(),$0
+    )
+})
+}
+    
+    /**
+     * Android: a Play Integrity token whose nonce is the base64url (no padding) request hash.
+     */
+open func playIntegrityToken(requestHashB64url: String)async throws  -> String  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_dcl_host_fn_method_attestationservice_play_integrity_token(
+                    self.uniffiCloneHandle(),
+                    FfiConverterString.lower(requestHashB64url)
+                )
+            },
+            pollFunc: ffi_dcl_host_rust_future_poll_rust_buffer,
+            completeFunc: ffi_dcl_host_rust_future_complete_rust_buffer,
+            freeFunc: ffi_dcl_host_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterString.lift,
+            errorHandler: FfiConverterTypeAttestationFailure_lift
+        )
+}
+    
+    /**
+     * iOS: `DCAppAttestService.generateKey`, the key id.
+     */
+open func iosGenerateKey()async throws  -> String  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_dcl_host_fn_method_attestationservice_ios_generate_key(
+                    self.uniffiCloneHandle()
+                    
+                )
+            },
+            pollFunc: ffi_dcl_host_rust_future_poll_rust_buffer,
+            completeFunc: ffi_dcl_host_rust_future_complete_rust_buffer,
+            freeFunc: ffi_dcl_host_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterString.lift,
+            errorHandler: FfiConverterTypeAttestationFailure_lift
+        )
+}
+    
+    /**
+     * iOS: `attestKey`, the attestation object as base64url.
+     */
+open func iosAttestKey(keyId: String, clientDataHash: Data)async throws  -> String  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_dcl_host_fn_method_attestationservice_ios_attest_key(
+                    self.uniffiCloneHandle(),
+                    FfiConverterString.lower(keyId),FfiConverterData.lower(clientDataHash)
+                )
+            },
+            pollFunc: ffi_dcl_host_rust_future_poll_rust_buffer,
+            completeFunc: ffi_dcl_host_rust_future_complete_rust_buffer,
+            freeFunc: ffi_dcl_host_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterString.lift,
+            errorHandler: FfiConverterTypeAttestationFailure_lift
+        )
+}
+    
+
+    
+}
+
+
+
+// Put the implementation in a struct so we don't pollute the top-level namespace
+fileprivate struct UniffiCallbackInterfaceAttestationService {
+
+    // Create the VTable using a series of closures.
+    // Swift automatically converts these into C callback functions.
+    //
+    // Store the vtable directly.
+    static let vtable: UniffiVTableCallbackInterfaceAttestationService = UniffiVTableCallbackInterfaceAttestationService(
+        uniffiFree: { (uniffiHandle: UInt64) -> () in
+            do {
+                try FfiConverterTypeAttestationService.handleMap.remove(handle: uniffiHandle)
+            } catch {
+                print("Uniffi callback interface AttestationService: handle missing in uniffiFree")
+            }
+        },
+        uniffiClone: { (uniffiHandle: UInt64) -> UInt64 in
+            do {
+                return try FfiConverterTypeAttestationService.handleMap.clone(handle: uniffiHandle)
+            } catch {
+                fatalError("Uniffi callback interface AttestationService: handle missing in uniffiClone")
+            }
+        },
+        isSupported: { (
+            uniffiHandle: UInt64,
+            uniffiOutReturn: UnsafeMutablePointer<Int8>,
+            uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
+        ) in
+            let makeCall = {
+                () throws -> Bool in
+                guard let uniffiObj = try? FfiConverterTypeAttestationService.handleMap.get(handle: uniffiHandle) else {
+                    throw UniffiInternalError.unexpectedStaleHandle
+                }
+                return uniffiObj.isSupported(
+                )
+            }
+
+            
+            let writeReturn = { uniffiOutReturn.pointee = FfiConverterBool.lower($0) }
+            uniffiTraitInterfaceCall(
+                callStatus: uniffiCallStatus,
+                makeCall: makeCall,
+                writeReturn: writeReturn
+            )
+        },
+        playIntegrityToken: { (
+            uniffiHandle: UInt64,
+            requestHashB64url: RustBuffer,
+            uniffiFutureCallback: @escaping UniffiForeignFutureCompleteRustBuffer,
+            uniffiCallbackData: UInt64,
+            uniffiOutDroppedCallback: UnsafeMutablePointer<UniffiForeignFutureDroppedCallbackStruct>
+        ) in
+            let makeCall = {
+                () async throws -> String in
+                guard let uniffiObj = try? FfiConverterTypeAttestationService.handleMap.get(handle: uniffiHandle) else {
+                    throw UniffiInternalError.unexpectedStaleHandle
+                }
+                return try await uniffiObj.playIntegrityToken(
+                     requestHashB64url: try FfiConverterString.lift(requestHashB64url)
+                )
+            }
+
+            let uniffiHandleSuccess = { (returnValue: String) in
+                uniffiFutureCallback(
+                    uniffiCallbackData,
+                    UniffiForeignFutureResultRustBuffer(
+                        returnValue: FfiConverterString.lower(returnValue),
+                        callStatus: RustCallStatus()
+                    )
+                )
+            }
+            let uniffiHandleError = { (statusCode, errorBuf) in
+                uniffiFutureCallback(
+                    uniffiCallbackData,
+                    UniffiForeignFutureResultRustBuffer(
+                        returnValue: RustBuffer.empty(),
+                        callStatus: RustCallStatus(code: statusCode, errorBuf: errorBuf)
+                    )
+                )
+            }
+            uniffiTraitInterfaceCallAsyncWithError(
+                makeCall: makeCall,
+                handleSuccess: uniffiHandleSuccess,
+                handleError: uniffiHandleError,
+                lowerError: FfiConverterTypeAttestationFailure_lower,
+                droppedCallback: uniffiOutDroppedCallback
+            )
+        },
+        iosGenerateKey: { (
+            uniffiHandle: UInt64,
+            uniffiFutureCallback: @escaping UniffiForeignFutureCompleteRustBuffer,
+            uniffiCallbackData: UInt64,
+            uniffiOutDroppedCallback: UnsafeMutablePointer<UniffiForeignFutureDroppedCallbackStruct>
+        ) in
+            let makeCall = {
+                () async throws -> String in
+                guard let uniffiObj = try? FfiConverterTypeAttestationService.handleMap.get(handle: uniffiHandle) else {
+                    throw UniffiInternalError.unexpectedStaleHandle
+                }
+                return try await uniffiObj.iosGenerateKey(
+                )
+            }
+
+            let uniffiHandleSuccess = { (returnValue: String) in
+                uniffiFutureCallback(
+                    uniffiCallbackData,
+                    UniffiForeignFutureResultRustBuffer(
+                        returnValue: FfiConverterString.lower(returnValue),
+                        callStatus: RustCallStatus()
+                    )
+                )
+            }
+            let uniffiHandleError = { (statusCode, errorBuf) in
+                uniffiFutureCallback(
+                    uniffiCallbackData,
+                    UniffiForeignFutureResultRustBuffer(
+                        returnValue: RustBuffer.empty(),
+                        callStatus: RustCallStatus(code: statusCode, errorBuf: errorBuf)
+                    )
+                )
+            }
+            uniffiTraitInterfaceCallAsyncWithError(
+                makeCall: makeCall,
+                handleSuccess: uniffiHandleSuccess,
+                handleError: uniffiHandleError,
+                lowerError: FfiConverterTypeAttestationFailure_lower,
+                droppedCallback: uniffiOutDroppedCallback
+            )
+        },
+        iosAttestKey: { (
+            uniffiHandle: UInt64,
+            keyId: RustBuffer,
+            clientDataHash: RustBuffer,
+            uniffiFutureCallback: @escaping UniffiForeignFutureCompleteRustBuffer,
+            uniffiCallbackData: UInt64,
+            uniffiOutDroppedCallback: UnsafeMutablePointer<UniffiForeignFutureDroppedCallbackStruct>
+        ) in
+            let makeCall = {
+                () async throws -> String in
+                guard let uniffiObj = try? FfiConverterTypeAttestationService.handleMap.get(handle: uniffiHandle) else {
+                    throw UniffiInternalError.unexpectedStaleHandle
+                }
+                return try await uniffiObj.iosAttestKey(
+                     keyId: try FfiConverterString.lift(keyId),
+                     clientDataHash: try FfiConverterData.lift(clientDataHash)
+                )
+            }
+
+            let uniffiHandleSuccess = { (returnValue: String) in
+                uniffiFutureCallback(
+                    uniffiCallbackData,
+                    UniffiForeignFutureResultRustBuffer(
+                        returnValue: FfiConverterString.lower(returnValue),
+                        callStatus: RustCallStatus()
+                    )
+                )
+            }
+            let uniffiHandleError = { (statusCode, errorBuf) in
+                uniffiFutureCallback(
+                    uniffiCallbackData,
+                    UniffiForeignFutureResultRustBuffer(
+                        returnValue: RustBuffer.empty(),
+                        callStatus: RustCallStatus(code: statusCode, errorBuf: errorBuf)
+                    )
+                )
+            }
+            uniffiTraitInterfaceCallAsyncWithError(
+                makeCall: makeCall,
+                handleSuccess: uniffiHandleSuccess,
+                handleError: uniffiHandleError,
+                lowerError: FfiConverterTypeAttestationFailure_lower,
+                droppedCallback: uniffiOutDroppedCallback
+            )
+        }
+    )
+
+    // Rust stores this pointer for future callback invocations, so it must live
+    // for the process lifetime (not just for the init function call).
+    //
+    // `nonisolated(unsafe)` is needed under Swift 6 strict concurrency.
+    // This is safe because the pointee is initialized once during static init
+    // and never mutated by either side of the FFI.  Its fields are C function pointers.
+    nonisolated(unsafe) static let vtablePtr: UnsafePointer<UniffiVTableCallbackInterfaceAttestationService> = {
+        let ptr = UnsafeMutablePointer<UniffiVTableCallbackInterfaceAttestationService>.allocate(capacity: 1)
+        ptr.initialize(to: vtable)
+        return UnsafePointer(ptr)
+    }()
+}
+
+private func uniffiCallbackInitAttestationService() {
+    uniffi_dcl_host_fn_init_callback_vtable_attestationservice(UniffiCallbackInterfaceAttestationService.vtablePtr)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeAttestationService: FfiConverter {
+    fileprivate static let handleMap = UniffiHandleMap<AttestationService>()
+
+    typealias FfiType = UInt64
+    typealias SwiftType = AttestationService
+
+    public static func lift(_ handle: UInt64) throws -> AttestationService {
+        if ((handle & 1) == 0) {
+            // Rust-generated handle, construct a new class that uses the handle to implement the
+            // interface
+            return AttestationServiceImpl(unsafeFromHandle: handle)
+        } else {
+            // Swift-generated handle, get the object from the handle map
+            return try handleMap.remove(handle: handle)
+        }
+    }
+
+    public static func lower(_ value: AttestationService) -> UInt64 {
+         if let rustImpl = value as? AttestationServiceImpl {
+             // Rust-implemented object.  Clone the handle and return it
+            return rustImpl.uniffiCloneHandle()
+         } else {
+            // Swift object, generate a new vtable handle and return that.
+            return handleMap.insert(obj: value)
+         }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> AttestationService {
+        let handle: UInt64 = try readInt(&buf)
+        return try lift(handle)
+    }
+
+    public static func write(_ value: AttestationService, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeAttestationService_lift(_ handle: UInt64) throws -> AttestationService {
+    return try FfiConverterTypeAttestationService.lift(handle)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeAttestationService_lower(_ value: AttestationService) -> UInt64 {
+    return FfiConverterTypeAttestationService.lower(value)
+}
+
+
+
 
 
 
@@ -771,6 +1200,151 @@ public func FfiConverterTypeHostListener_lower(_ value: HostListener) -> UInt64 
 
 
 
+/**
+ * Where attestation stands, for diagnostics.
+ */
+public struct AttestationStatus: Equatable, Hashable {
+    public var supported: Bool
+    /**
+     * `idle`, `waiting_eula`, `attesting` or `backoff`.
+     */
+    public var state: String
+    public var hasValidSession: Bool
+    public var lastFailure: String?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(supported: Bool, 
+        /**
+         * `idle`, `waiting_eula`, `attesting` or `backoff`.
+         */state: String, hasValidSession: Bool, lastFailure: String?) {
+        self.supported = supported
+        self.state = state
+        self.hasValidSession = hasValidSession
+        self.lastFailure = lastFailure
+    }
+
+    
+
+    
+}
+
+#if compiler(>=6)
+extension AttestationStatus: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeAttestationStatus: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> AttestationStatus {
+        return
+            try AttestationStatus(
+                supported: FfiConverterBool.read(from: &buf), 
+                state: FfiConverterString.read(from: &buf), 
+                hasValidSession: FfiConverterBool.read(from: &buf), 
+                lastFailure: FfiConverterOptionString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: AttestationStatus, into buf: inout [UInt8]) {
+        FfiConverterBool.write(value.supported, into: &buf)
+        FfiConverterString.write(value.state, into: &buf)
+        FfiConverterBool.write(value.hasValidSession, into: &buf)
+        FfiConverterOptionString.write(value.lastFailure, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeAttestationStatus_lift(_ buf: RustBuffer) throws -> AttestationStatus {
+    return try FfiConverterTypeAttestationStatus.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeAttestationStatus_lower(_ value: AttestationStatus) -> RustBuffer {
+    return FfiConverterTypeAttestationStatus.lower(value)
+}
+
+
+public enum AttestationFailure: Swift.Error, Equatable, Hashable, Foundation.LocalizedError {
+
+    
+    
+    case Failed(message: String
+    )
+
+    
+
+    
+
+    
+    public var errorDescription: String? {
+        String(reflecting: self)
+    }
+    
+}
+
+#if compiler(>=6)
+extension AttestationFailure: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeAttestationFailure: FfiConverterRustBuffer {
+    typealias SwiftType = AttestationFailure
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> AttestationFailure {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+
+        
+
+        
+        case 1: return .Failed(
+            message: try FfiConverterString.read(from: &buf)
+            )
+
+         default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: AttestationFailure, into buf: inout [UInt8]) {
+        switch value {
+
+        
+
+        
+        
+        case let .Failed(message):
+            writeInt(&buf, Int32(1))
+            FfiConverterString.write(message, into: &buf)
+            
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeAttestationFailure_lift(_ buf: RustBuffer) throws -> AttestationFailure {
+    return try FfiConverterTypeAttestationFailure.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeAttestationFailure_lower(_ value: AttestationFailure) -> RustBuffer {
+    return FfiConverterTypeAttestationFailure.lower(value)
+}
+
+
 public enum HostError: Swift.Error, Equatable, Hashable, Foundation.LocalizedError {
 
     
@@ -906,6 +1480,54 @@ public func FfiConverterTypeHostPlatform_lower(_ value: HostPlatform) -> RustBuf
     return FfiConverterTypeHostPlatform.lower(value)
 }
 
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterOptionString: FfiConverterRustBuffer {
+    typealias SwiftType = String?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterString.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterString.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterOptionTypeAttestationStatus: FfiConverterRustBuffer {
+    typealias SwiftType = AttestationStatus?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeAttestationStatus.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeAttestationStatus.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
 private let UNIFFI_RUST_FUTURE_POLL_READY: Int8 = 0
 private let UNIFFI_RUST_FUTURE_POLL_WAKE: Int8 = 1
 
@@ -953,6 +1575,96 @@ fileprivate func uniffiFutureContinuationCallback(handle: UInt64, pollResult: In
     } else {
         print("uniffiFutureContinuationCallback invalid handle")
     }
+}
+private func uniffiTraitInterfaceCallAsync<T>(
+    makeCall: @escaping () async throws -> T,
+    handleSuccess: @escaping (T) -> (),
+    handleError: @escaping (Int8, RustBuffer) -> (),
+    droppedCallback: UnsafeMutablePointer<UniffiForeignFutureDroppedCallbackStruct>
+) {
+    let task = Task {
+        // Note: it's important we call either `handleSuccess` or `handleError` exactly once.  Each
+        // call consumes an Arc reference, which means there should be no possibility of a double
+        // call.  The following code is structured so that will will never call both `handleSuccess`
+        // and `handleError`, even in the face of weird errors.
+        //
+        // On platforms that need extra machinery to make C-ABI calls, like JNA or ctypes, it's
+        // possible that we fail to make either call.  However, it doesn't seem like this is
+        // possible on Swift since swift can just make the C call directly.
+        var callResult: T
+        do {
+            callResult = try await makeCall()
+        } catch {
+            handleError(CALL_UNEXPECTED_ERROR, FfiConverterString.lower(String(describing: error)))
+            return
+        }
+        handleSuccess(callResult)
+    }
+    let handle = UNIFFI_FOREIGN_FUTURE_HANDLE_MAP.insert(obj: task)
+    droppedCallback.pointee = UniffiForeignFutureDroppedCallbackStruct(
+        handle: handle,
+        free: uniffiForeignFutureDroppedCallback
+    )
+}
+
+private func uniffiTraitInterfaceCallAsyncWithError<T, E>(
+    makeCall: @escaping () async throws -> T,
+    handleSuccess: @escaping (T) -> (),
+    handleError: @escaping (Int8, RustBuffer) -> (),
+    lowerError: @escaping (E) -> RustBuffer,
+    droppedCallback: UnsafeMutablePointer<UniffiForeignFutureDroppedCallbackStruct>
+) {
+    let task = Task {
+        // See the note in uniffiTraitInterfaceCallAsync for details on `handleSuccess` and
+        // `handleError`.
+        var callResult: T
+        do {
+            callResult = try await makeCall()
+        } catch let error as E {
+            handleError(CALL_ERROR, lowerError(error))
+            return
+        } catch {
+            handleError(CALL_UNEXPECTED_ERROR, FfiConverterString.lower(String(describing: error)))
+            return
+        }
+        handleSuccess(callResult)
+    }
+    let handle = UNIFFI_FOREIGN_FUTURE_HANDLE_MAP.insert(obj: task)
+    droppedCallback.pointee = UniffiForeignFutureDroppedCallbackStruct(
+        handle: handle,
+        free: uniffiForeignFutureDroppedCallback
+    )
+}
+
+// Borrow the callback handle map implementation to store foreign future handles
+// TODO: consolidate the handle-map code (https://github.com/mozilla/uniffi-rs/pull/1823)
+fileprivate let UNIFFI_FOREIGN_FUTURE_HANDLE_MAP = UniffiHandleMap<UniffiForeignFutureTask>()
+
+// Protocol for tasks that handle foreign futures.
+//
+// Defining a protocol allows all tasks to be stored in the same handle map.  This can't be done
+// with the task object itself, since has generic parameters.
+fileprivate protocol UniffiForeignFutureTask {
+    func cancel()
+}
+
+extension Task: UniffiForeignFutureTask {}
+
+private func uniffiForeignFutureDroppedCallback(handle: UInt64) {
+    do {
+        let task = try UNIFFI_FOREIGN_FUTURE_HANDLE_MAP.remove(handle: handle)
+        // Set the cancellation flag on the task.  If it's still running, the code can check the
+        // cancellation flag or call `Task.checkCancellation()`.  If the task has completed, this is
+        // a no-op.
+        task.cancel()
+    } catch {
+        print("uniffiForeignFutureDroppedCallback: handle missing from handlemap")
+    }
+}
+
+// For testing
+public func uniffiForeignFutureHandleCountDclHost() -> Int {
+    UNIFFI_FOREIGN_FUTURE_HANDLE_MAP.count
 }
 /**
  * Registers the host's receiver of `engine_required` and `avatar_preview_mode`.
@@ -1004,6 +1716,22 @@ public func removeHostListener(id: UInt64)throws   {try rustCallWithError(FfiCon
     )
 }
 }
+public func attestationStatus() -> AttestationStatus?  {
+    return try!  FfiConverterOptionTypeAttestationStatus.lift(try! rustCall() {
+    uniffi_dcl_host_fn_func_attestation_status($0
+    )
+})
+}
+/**
+ * Hands the core the OS half of attestation and starts it: the session is created once the
+ * player accepted the terms, cached on disk and renewed by the core. Calling it again is a no-op.
+ */
+public func installAttestation(service: AttestationService)throws   {try rustCallWithError(FfiConverterTypeHostError_lift) {
+    uniffi_dcl_host_fn_func_install_attestation(
+        FfiConverterTypeAttestationService_lower(service),$0
+    )
+}
+}
 
 private enum InitializationResult {
     case ok
@@ -1032,13 +1760,32 @@ private let initializationResult: InitializationResult = {
     if (uniffi_dcl_host_checksum_func_remove_host_listener() != 55733) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_dcl_host_checksum_func_attestation_status() != 59461) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_dcl_host_checksum_func_install_attestation() != 45674) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_dcl_host_checksum_method_hostlistener_engine_required() != 17284) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_dcl_host_checksum_method_hostlistener_avatar_preview_mode() != 51262) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_dcl_host_checksum_method_attestationservice_is_supported() != 55985) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_dcl_host_checksum_method_attestationservice_play_integrity_token() != 36729) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_dcl_host_checksum_method_attestationservice_ios_generate_key() != 14645) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_dcl_host_checksum_method_attestationservice_ios_attest_key() != 22304) {
+        return InitializationResult.apiChecksumMismatch
+    }
 
+    uniffiCallbackInitAttestationService()
     uniffiCallbackInitHostListener()
     return InitializationResult.ok
 }()

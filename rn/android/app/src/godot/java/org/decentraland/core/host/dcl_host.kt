@@ -626,6 +626,18 @@ internal interface UniffiCallbackInterfaceHostListenerMethod0 : com.sun.jna.Call
 internal interface UniffiCallbackInterfaceHostListenerMethod1 : com.sun.jna.Callback {
     fun callback(`uniffiHandle`: Long,`on`: Byte,`uniffiOutReturn`: Pointer,uniffiCallStatus: UniffiRustCallStatus,)
 }
+internal interface UniffiCallbackInterfaceAttestationServiceMethod0 : com.sun.jna.Callback {
+    fun callback(`uniffiHandle`: Long,`uniffiOutReturn`: ByteByReference,uniffiCallStatus: UniffiRustCallStatus,)
+}
+internal interface UniffiCallbackInterfaceAttestationServiceMethod1 : com.sun.jna.Callback {
+    fun callback(`uniffiHandle`: Long,`requestHashB64url`: RustBuffer.ByValue,`uniffiFutureCallback`: UniffiForeignFutureCompleteRustBuffer,`uniffiCallbackData`: Long,`uniffiOutDroppedCallback`: UniffiForeignFutureDroppedCallbackStruct,)
+}
+internal interface UniffiCallbackInterfaceAttestationServiceMethod2 : com.sun.jna.Callback {
+    fun callback(`uniffiHandle`: Long,`uniffiFutureCallback`: UniffiForeignFutureCompleteRustBuffer,`uniffiCallbackData`: Long,`uniffiOutDroppedCallback`: UniffiForeignFutureDroppedCallbackStruct,)
+}
+internal interface UniffiCallbackInterfaceAttestationServiceMethod3 : com.sun.jna.Callback {
+    fun callback(`uniffiHandle`: Long,`keyId`: RustBuffer.ByValue,`clientDataHash`: RustBuffer.ByValue,`uniffiFutureCallback`: UniffiForeignFutureCompleteRustBuffer,`uniffiCallbackData`: Long,`uniffiOutDroppedCallback`: UniffiForeignFutureDroppedCallbackStruct,)
+}
 @Structure.FieldOrder("uniffiFree", "uniffiClone", "engineRequired", "avatarPreviewMode")
 internal open class UniffiVTableCallbackInterfaceHostListener(
     @JvmField internal var `uniffiFree`: UniffiCallbackInterfaceFree? = null,
@@ -645,6 +657,34 @@ internal open class UniffiVTableCallbackInterfaceHostListener(
         `uniffiClone` = other.`uniffiClone`
         `engineRequired` = other.`engineRequired`
         `avatarPreviewMode` = other.`avatarPreviewMode`
+    }
+
+}
+@Structure.FieldOrder("uniffiFree", "uniffiClone", "isSupported", "playIntegrityToken", "iosGenerateKey", "iosAttestKey")
+internal open class UniffiVTableCallbackInterfaceAttestationService(
+    @JvmField internal var `uniffiFree`: UniffiCallbackInterfaceFree? = null,
+    @JvmField internal var `uniffiClone`: UniffiCallbackInterfaceClone? = null,
+    @JvmField internal var `isSupported`: UniffiCallbackInterfaceAttestationServiceMethod0? = null,
+    @JvmField internal var `playIntegrityToken`: UniffiCallbackInterfaceAttestationServiceMethod1? = null,
+    @JvmField internal var `iosGenerateKey`: UniffiCallbackInterfaceAttestationServiceMethod2? = null,
+    @JvmField internal var `iosAttestKey`: UniffiCallbackInterfaceAttestationServiceMethod3? = null,
+) : Structure() {
+    class UniffiByValue(
+        `uniffiFree`: UniffiCallbackInterfaceFree? = null,
+        `uniffiClone`: UniffiCallbackInterfaceClone? = null,
+        `isSupported`: UniffiCallbackInterfaceAttestationServiceMethod0? = null,
+        `playIntegrityToken`: UniffiCallbackInterfaceAttestationServiceMethod1? = null,
+        `iosGenerateKey`: UniffiCallbackInterfaceAttestationServiceMethod2? = null,
+        `iosAttestKey`: UniffiCallbackInterfaceAttestationServiceMethod3? = null,
+    ): UniffiVTableCallbackInterfaceAttestationService(`uniffiFree`,`uniffiClone`,`isSupported`,`playIntegrityToken`,`iosGenerateKey`,`iosAttestKey`,), Structure.ByValue
+
+   internal fun uniffiSetValue(other: UniffiVTableCallbackInterfaceAttestationService) {
+        `uniffiFree` = other.`uniffiFree`
+        `uniffiClone` = other.`uniffiClone`
+        `isSupported` = other.`isSupported`
+        `playIntegrityToken` = other.`playIntegrityToken`
+        `iosGenerateKey` = other.`iosGenerateKey`
+        `iosAttestKey` = other.`iosAttestKey`
     }
 
 }
@@ -679,9 +719,21 @@ internal object IntegrityCheckingUniffiLib {
     ): Int
     external fun uniffi_dcl_host_checksum_func_remove_host_listener(
     ): Int
+    external fun uniffi_dcl_host_checksum_func_attestation_status(
+    ): Int
+    external fun uniffi_dcl_host_checksum_func_install_attestation(
+    ): Int
     external fun uniffi_dcl_host_checksum_method_hostlistener_engine_required(
     ): Int
     external fun uniffi_dcl_host_checksum_method_hostlistener_avatar_preview_mode(
+    ): Int
+    external fun uniffi_dcl_host_checksum_method_attestationservice_is_supported(
+    ): Int
+    external fun uniffi_dcl_host_checksum_method_attestationservice_play_integrity_token(
+    ): Int
+    external fun uniffi_dcl_host_checksum_method_attestationservice_ios_generate_key(
+    ): Int
+    external fun uniffi_dcl_host_checksum_method_attestationservice_ios_attest_key(
     ): Int
     external fun ffi_dcl_host_uniffi_contract_version(
     ): Int
@@ -699,6 +751,7 @@ internal object UniffiLib {
 
     init {
         Native.register(UniffiLib::class.java, findLibraryName(componentName = "dcl_host"))
+        uniffiCallbackInterfaceAttestationService.register(this)
         uniffiCallbackInterfaceHostListener.register(this)
         
     }
@@ -712,6 +765,20 @@ internal object UniffiLib {
     ): Unit
     external fun uniffi_dcl_host_fn_method_hostlistener_avatar_preview_mode(`ptr`: Long,`on`: Byte,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
+    external fun uniffi_dcl_host_fn_clone_attestationservice(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Long
+    external fun uniffi_dcl_host_fn_free_attestationservice(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_dcl_host_fn_init_callback_vtable_attestationservice(`vtable`: UniffiVTableCallbackInterfaceAttestationService,
+    ): Unit
+    external fun uniffi_dcl_host_fn_method_attestationservice_is_supported(`ptr`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Byte
+    external fun uniffi_dcl_host_fn_method_attestationservice_play_integrity_token(`ptr`: Long,`requestHashB64url`: RustBuffer.ByValue,
+    ): Long
+    external fun uniffi_dcl_host_fn_method_attestationservice_ios_generate_key(`ptr`: Long,
+    ): Long
+    external fun uniffi_dcl_host_fn_method_attestationservice_ios_attest_key(`ptr`: Long,`keyId`: RustBuffer.ByValue,`clientDataHash`: RustBuffer.ByValue,
+    ): Long
     external fun uniffi_dcl_host_fn_func_add_host_listener(`listener`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Long
     external fun uniffi_dcl_host_fn_func_debug_fire_host_events(`count`: Int,`perSecond`: Int,
@@ -719,6 +786,10 @@ internal object UniffiLib {
     external fun uniffi_dcl_host_fn_func_install(`dataDir`: RustBuffer.ByValue,`platform`: RustBuffer.ByValue,`deviceAnchor`: RustBuffer.ByValue,`appVersion`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun uniffi_dcl_host_fn_func_remove_host_listener(`id`: Long,uniffi_out_err: UniffiRustCallStatus, 
+    ): Unit
+    external fun uniffi_dcl_host_fn_func_attestation_status(uniffi_out_err: UniffiRustCallStatus, 
+    ): RustBuffer.ByValue
+    external fun uniffi_dcl_host_fn_func_install_attestation(`service`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): Unit
     external fun ffi_dcl_host_rustbuffer_alloc(`size`: Long,uniffi_out_err: UniffiRustCallStatus, 
     ): RustBuffer.ByValue
@@ -851,10 +922,28 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if (lib.uniffi_dcl_host_checksum_func_remove_host_listener() != 55733) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_dcl_host_checksum_func_attestation_status() != 59461) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_dcl_host_checksum_func_install_attestation() != 45674) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_dcl_host_checksum_method_hostlistener_engine_required() != 17284) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_dcl_host_checksum_method_hostlistener_avatar_preview_mode() != 51262) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_dcl_host_checksum_method_attestationservice_is_supported() != 55985) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_dcl_host_checksum_method_attestationservice_play_integrity_token() != 36729) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_dcl_host_checksum_method_attestationservice_ios_generate_key() != 14645) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_dcl_host_checksum_method_attestationservice_ios_attest_key() != 22304) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
 }
@@ -910,6 +999,95 @@ internal suspend fun<T, F, E: kotlin.Exception> uniffiRustCallAsync(
         freeFunc(rustFuture)
     }
 }
+internal inline fun<T> uniffiTraitInterfaceCallAsync(
+    crossinline makeCall: suspend () -> T,
+    crossinline handleSuccess: (T) -> Unit,
+    crossinline handleError: (UniffiRustCallStatus.ByValue) -> Unit,
+    uniffiOutDroppedCallback: UniffiForeignFutureDroppedCallbackStruct,
+) {
+    // Using `GlobalScope` is labeled as a "delicate API" and generally discouraged in Kotlin programs, since it breaks structured concurrency.
+    // However, our parent task is a Rust future, so we're going to need to break structure concurrency in any case.
+    //
+    // Uniffi does its best to support structured concurrency across the FFI.
+    // If the Rust future is dropped, `uniffiForeignFutureDroppedCallbackImpl` is called, which will cancel the Kotlin coroutine if it's still running.
+    @OptIn(DelicateCoroutinesApi::class)
+    val job = GlobalScope.launch coroutineBlock@ {
+        // Note: it's important we call either `handleSuccess` or `handleError` exactly once.  Each
+        // call consumes an Arc reference, which means there should be no possibility of a double
+        // call.  The following code is structured so that will will never call both `handleSuccess`
+        // and `handleError`, even in the face of weird exceptions.
+        //
+        // In extreme circumstances we may not call either, for example if we fail to make the JNA
+        // call to `handleSuccess`.  This means we will leak the Arc reference, which is better than
+        // double-freeing it.
+        val callResult = try {
+            makeCall()
+        } catch(e: kotlin.Exception) {
+            handleError(
+                UniffiRustCallStatus.create(
+                    UNIFFI_CALL_UNEXPECTED_ERROR,
+                    FfiConverterString.lower(e.toString()),
+                )
+            )
+            return@coroutineBlock
+        }
+        handleSuccess(callResult)
+    }
+    val handle = uniffiForeignFutureHandleMap.insert(job)
+    uniffiOutDroppedCallback.uniffiSetValue(UniffiForeignFutureDroppedCallbackStruct(handle, uniffiForeignFutureDroppedCallbackImpl))
+}
+
+internal inline fun<T, reified E: Throwable> uniffiTraitInterfaceCallAsyncWithError(
+    crossinline makeCall: suspend () -> T,
+    crossinline handleSuccess: (T) -> Unit,
+    crossinline handleError: (UniffiRustCallStatus.ByValue) -> Unit,
+    crossinline lowerError: (E) -> RustBuffer.ByValue,
+    uniffiOutDroppedCallback: UniffiForeignFutureDroppedCallbackStruct,
+) {
+    // See uniffiTraitInterfaceCallAsync for details on `DelicateCoroutinesApi`
+    @OptIn(DelicateCoroutinesApi::class)
+    val job = GlobalScope.launch coroutineBlock@ {
+        // See the note in uniffiTraitInterfaceCallAsync for details on `handleSuccess` and
+        // `handleError`.
+        val callResult = try {
+            makeCall()
+        } catch(e: kotlin.Exception) {
+            if (e is E) {
+                handleError(
+                    UniffiRustCallStatus.create(
+                        UNIFFI_CALL_ERROR,
+                        lowerError(e),
+                    )
+                )
+            } else {
+                handleError(
+                    UniffiRustCallStatus.create(
+                        UNIFFI_CALL_UNEXPECTED_ERROR,
+                        FfiConverterString.lower(e.toString()),
+                    )
+                )
+            }
+            return@coroutineBlock
+        }
+        handleSuccess(callResult)
+    }
+    val handle = uniffiForeignFutureHandleMap.insert(job)
+    uniffiOutDroppedCallback.uniffiSetValue(UniffiForeignFutureDroppedCallbackStruct(handle, uniffiForeignFutureDroppedCallbackImpl))
+}
+
+internal val uniffiForeignFutureHandleMap = UniffiHandleMap<Job>()
+
+internal object uniffiForeignFutureDroppedCallbackImpl: UniffiForeignFutureDroppedCallback {
+    override fun callback(handle: Long) {
+        val job = uniffiForeignFutureHandleMap.remove(handle)
+        if (!job.isCompleted) {
+            job.cancel()
+        }
+    }
+}
+
+// For testing
+public fun uniffiForeignFutureHandleCount() = uniffiForeignFutureHandleMap.size
 
 // Public interface members begin here.
 
@@ -1208,6 +1386,534 @@ public object FfiConverterString: FfiConverter<String, RustBuffer.ByValue> {
         val byteBuf = toUtf8(value)
         buf.putInt(byteBuf.limit())
         buf.put(byteBuf)
+    }
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterByteArray: FfiConverterRustBuffer<ByteArray> {
+    override fun read(buf: ByteBuffer): ByteArray {
+        val len = buf.getInt()
+        val byteArr = ByteArray(len)
+        buf.get(byteArr)
+        return byteArr
+    }
+    override fun allocationSize(value: ByteArray): ULong {
+        return 4UL + value.size.toULong()
+    }
+    override fun write(value: ByteArray, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        buf.put(value)
+    }
+}
+
+
+// This template implements a class for working with a Rust struct via a handle
+// to the live Rust struct on the other side of the FFI.
+//
+// There's some subtlety here, because we have to be careful not to operate on a Rust
+// struct after it has been dropped, and because we must expose a public API for freeing
+// theq Kotlin wrapper object in lieu of reliable finalizers. The core requirements are:
+//
+//   * Each instance holds an opaque handle to the underlying Rust struct.
+//     Method calls need to read this handle from the object's state and pass it in to
+//     the Rust FFI.
+//
+//   * When an instance is no longer needed, its handle should be passed to a
+//     special destructor function provided by the Rust FFI, which will drop the
+//     underlying Rust struct.
+//
+//   * Given an instance, calling code is expected to call the special
+//     `destroy` method in order to free it after use, either by calling it explicitly
+//     or by using a higher-level helper like the `use` method. Failing to do so risks
+//     leaking the underlying Rust struct.
+//
+//   * We can't assume that calling code will do the right thing, and must be prepared
+//     to handle Kotlin method calls executing concurrently with or even after a call to
+//     `destroy`, and to handle multiple (possibly concurrent!) calls to `destroy`.
+//
+//   * We must never allow Rust code to operate on the underlying Rust struct after
+//     the destructor has been called, and must never call the destructor more than once.
+//     Doing so may trigger memory unsafety.
+//
+//   * To mitigate many of the risks of leaking memory and use-after-free unsafety, a `Cleaner`
+//     is implemented to call the destructor when the Kotlin object becomes unreachable.
+//     This is done in a background thread. This is not a panacea, and client code should be aware that
+//      1. the thread may starve if some there are objects that have poorly performing
+//     `drop` methods or do significant work in their `drop` methods.
+//      2. the thread is shared across the whole library. This can be tuned by using `android_cleaner = true`,
+//         or `android = true` in the [`kotlin` section of the `uniffi.toml` file](https://mozilla.github.io/uniffi-rs/kotlin/configuration.html).
+//
+// If we try to implement this with mutual exclusion on access to the handle, there is the
+// possibility of a race between a method call and a concurrent call to `destroy`:
+//
+//    * Thread A starts a method call, reads the value of the handle, but is interrupted
+//      before it can pass the handle over the FFI to Rust.
+//    * Thread B calls `destroy` and frees the underlying Rust struct.
+//    * Thread A resumes, passing the already-read handle value to Rust and triggering
+//      a use-after-free.
+//
+// One possible solution would be to use a `ReadWriteLock`, with each method call taking
+// a read lock (and thus allowed to run concurrently) and the special `destroy` method
+// taking a write lock (and thus blocking on live method calls). However, we aim not to
+// generate methods with any hidden blocking semantics, and a `destroy` method that might
+// block if called incorrectly seems to meet that bar.
+//
+// So, we achieve our goals by giving each instance an associated `AtomicLong` counter to track
+// the number of in-flight method calls, and an `AtomicBoolean` flag to indicate whether `destroy`
+// has been called. These are updated according to the following rules:
+//
+//    * The initial value of the counter is 1, indicating a live object with no in-flight calls.
+//      The initial value for the flag is false.
+//
+//    * At the start of each method call, we atomically check the counter.
+//      If it is 0 then the underlying Rust struct has already been destroyed and the call is aborted.
+//      If it is nonzero them we atomically increment it by 1 and proceed with the method call.
+//
+//    * At the end of each method call, we atomically decrement and check the counter.
+//      If it has reached zero then we destroy the underlying Rust struct.
+//
+//    * When `destroy` is called, we atomically flip the flag from false to true.
+//      If the flag was already true we silently fail.
+//      Otherwise we atomically decrement and check the counter.
+//      If it has reached zero then we destroy the underlying Rust struct.
+//
+// Astute readers may observe that this all sounds very similar to the way that Rust's `Arc<T>` works,
+// and indeed it is, with the addition of a flag to guard against multiple calls to `destroy`.
+//
+// The overall effect is that the underlying Rust struct is destroyed only when `destroy` has been
+// called *and* all in-flight method calls have completed, avoiding violating any of the expectations
+// of the underlying Rust code.
+//
+// This makes a cleaner a better alternative to _not_ calling `destroy()` as
+// and when the object is finished with, but the abstraction is not perfect: if the Rust object's `drop`
+// method is slow, and/or there are many objects to cleanup, and it's on a low end Android device, then the cleaner
+// thread may be starved, and the app will leak memory.
+//
+// In this case, `destroy`ing manually may be a better solution.
+//
+// The cleaner can live side by side with the manual calling of `destroy`. In the order of responsiveness, uniffi objects
+// with Rust peers are reclaimed:
+//
+// 1. By calling the `destroy` method of the object, which calls `rustObject.free()`. If that doesn't happen:
+// 2. When the object becomes unreachable, AND the Cleaner thread gets to call `rustObject.free()`. If the thread is starved then:
+// 3. The memory is reclaimed when the process terminates.
+//
+// [1] https://stackoverflow.com/questions/24376768/can-java-finalize-an-object-when-it-is-still-in-scope/24380219
+//
+
+
+/**
+ * Implemented in Kotlin/Swift: the OS calls attestation needs. Called from a core thread.
+ */
+public interface AttestationService {
+    
+    /**
+     * False on the iOS simulator and Android without Play Services.
+     */
+    fun `isSupported`(): kotlin.Boolean
+    
+    /**
+     * Android: a Play Integrity token whose nonce is the base64url (no padding) request hash.
+     */
+    suspend fun `playIntegrityToken`(`requestHashB64url`: kotlin.String): kotlin.String
+    
+    /**
+     * iOS: `DCAppAttestService.generateKey`, the key id.
+     */
+    suspend fun `iosGenerateKey`(): kotlin.String
+    
+    /**
+     * iOS: `attestKey`, the attestation object as base64url.
+     */
+    suspend fun `iosAttestKey`(`keyId`: kotlin.String, `clientDataHash`: kotlin.ByteArray): kotlin.String
+    
+    companion object
+}
+
+/**
+ * Implemented in Kotlin/Swift: the OS calls attestation needs. Called from a core thread.
+ */
+open class AttestationServiceImpl: Disposable, AutoCloseable, AttestationService
+{
+
+    @Suppress("UNUSED_PARAMETER")
+    /**
+     * @suppress
+     */
+    constructor(withHandle: UniffiWithHandle, handle: Long) {
+        this.handle = handle
+        this.cleanable = UniffiLib.CLEANER.register(this, UniffiCleanAction(handle))
+    }
+
+    /**
+     * @suppress
+     *
+     * This constructor can be used to instantiate a fake object. Only used for tests. Any
+     * attempt to actually use an object constructed this way will fail as there is no
+     * connected Rust object.
+     */
+    @Suppress("UNUSED_PARAMETER")
+    constructor(noHandle: NoHandle) {
+        this.handle = 0
+        this.cleanable = null
+    }
+
+    protected val handle: Long
+    protected val cleanable: UniffiCleaner.Cleanable?
+
+    private val wasDestroyed = AtomicBoolean(false)
+    private val callCounter = AtomicLong(1)
+
+    override fun destroy() {
+        // Only allow a single call to this method.
+        // TODO: maybe we should log a warning if called more than once?
+        if (this.wasDestroyed.compareAndSet(false, true)) {
+            // This decrement always matches the initial count of 1 given at creation time.
+            if (this.callCounter.decrementAndGet() == 0L) {
+                cleanable?.clean()
+            }
+        }
+    }
+
+    @Synchronized
+    override fun close() {
+        this.destroy()
+    }
+
+    internal inline fun <R> callWithHandle(block: (handle: Long) -> R): R {
+        // Check and increment the call counter, to keep the object alive.
+        // This needs a compare-and-set retry loop in case of concurrent updates.
+        do {
+            val c = this.callCounter.get()
+            if (c == 0L) {
+                throw IllegalStateException("${this.javaClass.simpleName} object has already been destroyed")
+            }
+            if (c == Long.MAX_VALUE) {
+                throw IllegalStateException("${this.javaClass.simpleName} call counter would overflow")
+            }
+        } while (! this.callCounter.compareAndSet(c, c + 1L))
+        // Now we can safely do the method call without the handle being freed concurrently.
+        try {
+            return block(this.uniffiCloneHandle())
+        } finally {
+            // This decrement always matches the increment we performed above.
+            if (this.callCounter.decrementAndGet() == 0L) {
+                cleanable?.clean()
+            }
+        }
+    }
+
+    // Use a static inner class instead of a closure so as not to accidentally
+    // capture `this` as part of the cleanable's action.
+    private class UniffiCleanAction(private val handle: Long) : Runnable {
+        override fun run() {
+            if (handle == 0.toLong()) {
+                // Fake object created with `NoHandle`, don't try to free.
+                return;
+            }
+            uniffiRustCall { status ->
+                UniffiLib.uniffi_dcl_host_fn_free_attestationservice(handle, status)
+            }
+        }
+    }
+
+    /**
+     * @suppress
+     */
+    fun uniffiCloneHandle(): Long {
+        if (handle == 0.toLong()) {
+            throw InternalException("uniffiCloneHandle() called on NoHandle object");
+        }
+        return uniffiRustCall() { status ->
+            UniffiLib.uniffi_dcl_host_fn_clone_attestationservice(handle, status)
+        }
+    }
+
+    
+    /**
+     * False on the iOS simulator and Android without Play Services.
+     */override fun `isSupported`(): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    callWithHandle {
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_dcl_host_fn_method_attestationservice_is_supported(
+        it,
+        _status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Android: a Play Integrity token whose nonce is the base64url (no padding) request hash.
+     */
+    @Throws(AttestationFailure::class)
+    @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
+    override suspend fun `playIntegrityToken`(`requestHashB64url`: kotlin.String) : kotlin.String {
+        return uniffiRustCallAsync(
+        callWithHandle { uniffiHandle ->
+            UniffiLib.uniffi_dcl_host_fn_method_attestationservice_play_integrity_token(
+                uniffiHandle,
+                FfiConverterString.lower(`requestHashB64url`),
+            )
+        },
+        { future, callback, continuation -> UniffiLib.ffi_dcl_host_rust_future_poll_rust_buffer(future, callback, continuation) },
+        { future, continuation -> UniffiLib.ffi_dcl_host_rust_future_complete_rust_buffer(future, continuation) },
+        { future -> UniffiLib.ffi_dcl_host_rust_future_free_rust_buffer(future) },
+        // lift function
+        { FfiConverterString.lift(it) },
+        // Error FFI converter
+        AttestationFailure.ErrorHandler,
+    )
+    }
+
+    
+    /**
+     * iOS: `DCAppAttestService.generateKey`, the key id.
+     */
+    @Throws(AttestationFailure::class)
+    @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
+    override suspend fun `iosGenerateKey`() : kotlin.String {
+        return uniffiRustCallAsync(
+        callWithHandle { uniffiHandle ->
+            UniffiLib.uniffi_dcl_host_fn_method_attestationservice_ios_generate_key(
+                uniffiHandle,
+                
+            )
+        },
+        { future, callback, continuation -> UniffiLib.ffi_dcl_host_rust_future_poll_rust_buffer(future, callback, continuation) },
+        { future, continuation -> UniffiLib.ffi_dcl_host_rust_future_complete_rust_buffer(future, continuation) },
+        { future -> UniffiLib.ffi_dcl_host_rust_future_free_rust_buffer(future) },
+        // lift function
+        { FfiConverterString.lift(it) },
+        // Error FFI converter
+        AttestationFailure.ErrorHandler,
+    )
+    }
+
+    
+    /**
+     * iOS: `attestKey`, the attestation object as base64url.
+     */
+    @Throws(AttestationFailure::class)
+    @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
+    override suspend fun `iosAttestKey`(`keyId`: kotlin.String, `clientDataHash`: kotlin.ByteArray) : kotlin.String {
+        return uniffiRustCallAsync(
+        callWithHandle { uniffiHandle ->
+            UniffiLib.uniffi_dcl_host_fn_method_attestationservice_ios_attest_key(
+                uniffiHandle,
+                FfiConverterString.lower(`keyId`),FfiConverterByteArray.lower(`clientDataHash`),
+            )
+        },
+        { future, callback, continuation -> UniffiLib.ffi_dcl_host_rust_future_poll_rust_buffer(future, callback, continuation) },
+        { future, continuation -> UniffiLib.ffi_dcl_host_rust_future_complete_rust_buffer(future, continuation) },
+        { future -> UniffiLib.ffi_dcl_host_rust_future_free_rust_buffer(future) },
+        // lift function
+        { FfiConverterString.lift(it) },
+        // Error FFI converter
+        AttestationFailure.ErrorHandler,
+    )
+    }
+
+    
+
+    
+
+
+    
+    
+    /**
+     * @suppress
+     */
+    companion object
+    
+}
+
+
+
+// Put the implementation in an object so we don't pollute the top-level namespace
+internal object uniffiCallbackInterfaceAttestationService {
+    internal object `isSupported`: UniffiCallbackInterfaceAttestationServiceMethod0 {
+        override fun callback(`uniffiHandle`: Long,`uniffiOutReturn`: ByteByReference,uniffiCallStatus: UniffiRustCallStatus,) {
+            val uniffiObj = FfiConverterTypeAttestationService.handleMap.get(uniffiHandle)
+            val makeCall = { ->
+                uniffiObj.`isSupported`(
+                )
+            }
+            val writeReturn = { value: kotlin.Boolean -> uniffiOutReturn.setValue(FfiConverterBoolean.lower(value)) }
+            uniffiTraitInterfaceCall(uniffiCallStatus, makeCall, writeReturn)
+        }
+    }
+    internal object `playIntegrityToken`: UniffiCallbackInterfaceAttestationServiceMethod1 {
+        override fun callback(`uniffiHandle`: Long,`requestHashB64url`: RustBuffer.ByValue,`uniffiFutureCallback`: UniffiForeignFutureCompleteRustBuffer,`uniffiCallbackData`: Long,`uniffiOutDroppedCallback`: UniffiForeignFutureDroppedCallbackStruct,) {
+            val uniffiObj = FfiConverterTypeAttestationService.handleMap.get(uniffiHandle)
+            val makeCall = suspend { ->
+                uniffiObj.`playIntegrityToken`(
+                    FfiConverterString.lift(`requestHashB64url`),
+                )
+            }
+            val uniffiHandleSuccess = { returnValue: kotlin.String ->
+                val uniffiResult = UniffiForeignFutureResultRustBuffer.UniffiByValue(
+                    FfiConverterString.lower(returnValue),
+                    UniffiRustCallStatus.ByValue()
+                )
+                uniffiResult.write()
+                uniffiFutureCallback.callback(uniffiCallbackData, uniffiResult)
+            }
+            val uniffiHandleError = { callStatus: UniffiRustCallStatus.ByValue ->
+                uniffiFutureCallback.callback(
+                    uniffiCallbackData,
+                    UniffiForeignFutureResultRustBuffer.UniffiByValue(
+                        RustBuffer.ByValue(),
+                        callStatus,
+                    ),
+                )
+            }
+            uniffiTraitInterfaceCallAsyncWithError(
+                makeCall,
+                uniffiHandleSuccess,
+                uniffiHandleError,
+                { e: AttestationFailure -> FfiConverterTypeAttestationFailure.lower(e) },
+                uniffiOutDroppedCallback
+            )
+        }
+    }
+    internal object `iosGenerateKey`: UniffiCallbackInterfaceAttestationServiceMethod2 {
+        override fun callback(`uniffiHandle`: Long,`uniffiFutureCallback`: UniffiForeignFutureCompleteRustBuffer,`uniffiCallbackData`: Long,`uniffiOutDroppedCallback`: UniffiForeignFutureDroppedCallbackStruct,) {
+            val uniffiObj = FfiConverterTypeAttestationService.handleMap.get(uniffiHandle)
+            val makeCall = suspend { ->
+                uniffiObj.`iosGenerateKey`(
+                )
+            }
+            val uniffiHandleSuccess = { returnValue: kotlin.String ->
+                val uniffiResult = UniffiForeignFutureResultRustBuffer.UniffiByValue(
+                    FfiConverterString.lower(returnValue),
+                    UniffiRustCallStatus.ByValue()
+                )
+                uniffiResult.write()
+                uniffiFutureCallback.callback(uniffiCallbackData, uniffiResult)
+            }
+            val uniffiHandleError = { callStatus: UniffiRustCallStatus.ByValue ->
+                uniffiFutureCallback.callback(
+                    uniffiCallbackData,
+                    UniffiForeignFutureResultRustBuffer.UniffiByValue(
+                        RustBuffer.ByValue(),
+                        callStatus,
+                    ),
+                )
+            }
+            uniffiTraitInterfaceCallAsyncWithError(
+                makeCall,
+                uniffiHandleSuccess,
+                uniffiHandleError,
+                { e: AttestationFailure -> FfiConverterTypeAttestationFailure.lower(e) },
+                uniffiOutDroppedCallback
+            )
+        }
+    }
+    internal object `iosAttestKey`: UniffiCallbackInterfaceAttestationServiceMethod3 {
+        override fun callback(`uniffiHandle`: Long,`keyId`: RustBuffer.ByValue,`clientDataHash`: RustBuffer.ByValue,`uniffiFutureCallback`: UniffiForeignFutureCompleteRustBuffer,`uniffiCallbackData`: Long,`uniffiOutDroppedCallback`: UniffiForeignFutureDroppedCallbackStruct,) {
+            val uniffiObj = FfiConverterTypeAttestationService.handleMap.get(uniffiHandle)
+            val makeCall = suspend { ->
+                uniffiObj.`iosAttestKey`(
+                    FfiConverterString.lift(`keyId`),
+                    FfiConverterByteArray.lift(`clientDataHash`),
+                )
+            }
+            val uniffiHandleSuccess = { returnValue: kotlin.String ->
+                val uniffiResult = UniffiForeignFutureResultRustBuffer.UniffiByValue(
+                    FfiConverterString.lower(returnValue),
+                    UniffiRustCallStatus.ByValue()
+                )
+                uniffiResult.write()
+                uniffiFutureCallback.callback(uniffiCallbackData, uniffiResult)
+            }
+            val uniffiHandleError = { callStatus: UniffiRustCallStatus.ByValue ->
+                uniffiFutureCallback.callback(
+                    uniffiCallbackData,
+                    UniffiForeignFutureResultRustBuffer.UniffiByValue(
+                        RustBuffer.ByValue(),
+                        callStatus,
+                    ),
+                )
+            }
+            uniffiTraitInterfaceCallAsyncWithError(
+                makeCall,
+                uniffiHandleSuccess,
+                uniffiHandleError,
+                { e: AttestationFailure -> FfiConverterTypeAttestationFailure.lower(e) },
+                uniffiOutDroppedCallback
+            )
+        }
+    }
+
+    internal object uniffiFree: UniffiCallbackInterfaceFree {
+        override fun callback(handle: Long) {
+            FfiConverterTypeAttestationService.handleMap.remove(handle)
+        }
+    }
+
+    internal object uniffiClone: UniffiCallbackInterfaceClone {
+        override fun callback(handle: Long): Long {
+            return FfiConverterTypeAttestationService.handleMap.clone(handle)
+        }
+    }
+
+    internal var vtable = UniffiVTableCallbackInterfaceAttestationService.UniffiByValue(
+        uniffiFree,
+        uniffiClone,
+        `isSupported`,
+        `playIntegrityToken`,
+        `iosGenerateKey`,
+        `iosAttestKey`,
+    )
+
+    // Registers the foreign callback with the Rust side.
+    // This method is generated for each callback interface.
+    internal fun register(lib: UniffiLib) {
+        lib.uniffi_dcl_host_fn_init_callback_vtable_attestationservice(vtable)
+    }
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeAttestationService: FfiConverter<AttestationService, Long> {
+    internal val handleMap = UniffiHandleMap<AttestationService>()
+
+    override fun lower(value: AttestationService): Long {
+        if (value is AttestationServiceImpl) {
+             // Rust-implemented object.  Clone the handle and return it
+            return value.uniffiCloneHandle()
+         } else {
+            // Kotlin object, generate a new vtable handle and return that.
+            return handleMap.insert(value)
+         }
+    }
+
+    override fun lift(value: Long): AttestationService {
+        if ((value and 1.toLong()) == 0.toLong()) {
+            // Rust-generated handle, construct a new class that uses the handle to implement the
+            // interface
+            return AttestationServiceImpl(UniffiWithHandle, value)
+        } else {
+            // Kotlin-generated handle, get the object from the handle map
+            return handleMap.remove(value)
+        }
+    }
+
+    override fun read(buf: ByteBuffer): AttestationService {
+        return lift(buf.getLong())
+    }
+
+    override fun allocationSize(value: AttestationService) = 8UL
+
+    override fun write(value: AttestationService, buf: ByteBuffer) {
+        buf.putLong(lower(value))
     }
 }
 
@@ -1562,6 +2268,122 @@ public object FfiConverterTypeHostListener: FfiConverter<HostListener, Long> {
 
 
 
+/**
+ * Where attestation stands, for diagnostics.
+ */
+data class AttestationStatus (
+    var `supported`: kotlin.Boolean
+    , 
+    /**
+     * `idle`, `waiting_eula`, `attesting` or `backoff`.
+     */
+    var `state`: kotlin.String
+    , 
+    var `hasValidSession`: kotlin.Boolean
+    , 
+    var `lastFailure`: kotlin.String?
+    
+){
+    
+
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeAttestationStatus: FfiConverterRustBuffer<AttestationStatus> {
+    override fun read(buf: ByteBuffer): AttestationStatus {
+        return AttestationStatus(
+            FfiConverterBoolean.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterOptionalString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: AttestationStatus) = (
+            FfiConverterBoolean.allocationSize(value.`supported`) +
+            FfiConverterString.allocationSize(value.`state`) +
+            FfiConverterBoolean.allocationSize(value.`hasValidSession`) +
+            FfiConverterOptionalString.allocationSize(value.`lastFailure`)
+    )
+
+    override fun write(value: AttestationStatus, buf: ByteBuffer) {
+            FfiConverterBoolean.write(value.`supported`, buf)
+            FfiConverterString.write(value.`state`, buf)
+            FfiConverterBoolean.write(value.`hasValidSession`, buf)
+            FfiConverterOptionalString.write(value.`lastFailure`, buf)
+    }
+}
+
+
+
+
+
+sealed class AttestationFailure: kotlin.Exception() {
+    
+    class Failed(
+        
+        val `message`: kotlin.String
+        ) : AttestationFailure() {
+        override val message
+            get() = "message=${ `message` }"
+    }
+    
+
+    
+
+
+    companion object ErrorHandler : UniffiRustCallStatusErrorHandler<AttestationFailure> {
+        override fun lift(error_buf: RustBuffer.ByValue): AttestationFailure = FfiConverterTypeAttestationFailure.lift(error_buf)
+    }
+
+    
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeAttestationFailure : FfiConverterRustBuffer<AttestationFailure> {
+    override fun read(buf: ByteBuffer): AttestationFailure {
+        
+
+        return when(buf.getInt()) {
+            1 -> AttestationFailure.Failed(
+                FfiConverterString.read(buf),
+                )
+            else -> throw RuntimeException("invalid error enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: AttestationFailure): ULong {
+        return when(value) {
+            is AttestationFailure.Failed -> (
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                4UL
+                + FfiConverterString.allocationSize(value.`message`)
+            )
+        }
+    }
+
+    override fun write(value: AttestationFailure, buf: ByteBuffer) {
+        when(value) {
+            is AttestationFailure.Failed -> {
+                buf.putInt(1)
+                FfiConverterString.write(value.`message`, buf)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+
+}
+
+
+
 
 
 sealed class HostException: kotlin.Exception() {
@@ -1653,6 +2475,70 @@ public object FfiConverterTypeHostPlatform: FfiConverterRustBuffer<HostPlatform>
 
 
 
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalString: FfiConverterRustBuffer<kotlin.String?> {
+    override fun read(buf: ByteBuffer): kotlin.String? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterString.read(buf)
+    }
+
+    override fun allocationSize(value: kotlin.String?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterString.allocationSize(value)
+        }
+    }
+
+    override fun write(value: kotlin.String?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterString.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalTypeAttestationStatus: FfiConverterRustBuffer<AttestationStatus?> {
+    override fun read(buf: ByteBuffer): AttestationStatus? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeAttestationStatus.read(buf)
+    }
+
+    override fun allocationSize(value: AttestationStatus?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeAttestationStatus.allocationSize(value)
+        }
+    }
+
+    override fun write(value: AttestationStatus?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeAttestationStatus.write(value, buf)
+        }
+    }
+}
+
+
+
+
 
 
 
@@ -1712,6 +2598,30 @@ public object FfiConverterTypeHostPlatform: FfiConverterRustBuffer<HostPlatform>
     UniffiLib.uniffi_dcl_host_fn_func_remove_host_listener(
     
         FfiConverterULong.lower(`id`),_status)
+}
+    
+    
+ fun `attestationStatus`(): AttestationStatus? {
+            return FfiConverterOptionalTypeAttestationStatus.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.uniffi_dcl_host_fn_func_attestation_status(
+    
+        _status)
+}
+    )
+    }
+    
+
+        /**
+         * Hands the core the OS half of attestation and starts it: the session is created once the
+         * player accepted the terms, cached on disk and renewed by the core. Calling it again is a no-op.
+         */
+    @Throws(HostException::class) fun `installAttestation`(`service`: AttestationService)
+        = 
+    uniffiRustCallWithError(HostException) { _status ->
+    UniffiLib.uniffi_dcl_host_fn_func_install_attestation(
+    
+        FfiConverterTypeAttestationService.lower(`service`),_status)
 }
     
     

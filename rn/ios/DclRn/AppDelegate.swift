@@ -1,3 +1,4 @@
+import DeviceCheck
 import Security
 import UIKit
 import React
@@ -98,6 +99,48 @@ final class HostEvents: HostListener {
   }
 }
 
+/// The OS half of iOS attestation (App Attest); the core owns the session, the cache and the
+/// retries. Key ids and attestation objects travel as base64url, as the GDScript service had them.
+final class AppAttestAttestation: AttestationService {
+  func isSupported() -> Bool {
+    DCAppAttestService.shared.isSupported
+  }
+
+  func playIntegrityToken(requestHashB64url: String) async throws -> String {
+    throw AttestationFailure.Failed(message: "Play Integrity is Android only")
+  }
+
+  func iosGenerateKey() async throws -> String {
+    do {
+      return Self.base64url(fromBase64: try await DCAppAttestService.shared.generateKey())
+    } catch {
+      throw AttestationFailure.Failed(message: error.localizedDescription)
+    }
+  }
+
+  func iosAttestKey(keyId: String, clientDataHash: Data) async throws -> String {
+    do {
+      let object = try await DCAppAttestService.shared.attestKey(
+        Self.base64(fromBase64url: keyId), clientDataHash: clientDataHash)
+      return Self.base64url(fromBase64: object.base64EncodedString())
+    } catch {
+      throw AttestationFailure.Failed(message: error.localizedDescription)
+    }
+  }
+
+  private static func base64url(fromBase64 value: String) -> String {
+    value.replacingOccurrences(of: "+", with: "-")
+      .replacingOccurrences(of: "/", with: "_")
+      .replacingOccurrences(of: "=", with: "")
+  }
+
+  private static func base64(fromBase64url value: String) -> String {
+    let standard = value.replacingOccurrences(of: "-", with: "+")
+      .replacingOccurrences(of: "_", with: "/")
+    return standard + String(repeating: "=", count: (4 - standard.count % 4) % 4)
+  }
+}
+
 /// Creates the core through the uniffi Swift bindings of the same library the engine is linked
 /// into (D-6). The data dir is Godot's `user://` on iOS (D-19).
 enum CoreHost {
@@ -113,6 +156,7 @@ enum CoreHost {
       appVersion: version
     )
     _ = try? addHostListener(listener: listener)
+    try? installAttestation(service: AppAttestAttestation())
   }
 
   /// The Keychain UUID that survives reinstalls (the guest wallet derives from it): the same item

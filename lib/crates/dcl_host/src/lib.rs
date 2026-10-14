@@ -2,6 +2,12 @@
 
 uniffi::setup_scaffolding!();
 
+mod attestation;
+pub use attestation::{
+    attestation_status, install_attestation, AttestationFailure, AttestationService,
+    AttestationStatus,
+};
+
 use std::{path::PathBuf, sync::Arc, time::Duration};
 
 use dcl_core::{app::AppEvents, Core, CoreConfig, Platform};
@@ -47,7 +53,7 @@ impl AppEvents for HostAdapter {
     fn scene_crashed(&self) {}
 }
 
-fn core() -> Result<&'static Core, HostError> {
+pub(crate) fn core() -> Result<&'static Core, HostError> {
     Core::try_get().ok_or(HostError::NotInstalled)
 }
 

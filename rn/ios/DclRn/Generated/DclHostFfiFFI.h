@@ -257,6 +257,31 @@ typedef void (*UniffiCallbackInterfaceHostListenerMethod1)(uint64_t, int8_t, voi
     );
 
 #endif
+#ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_ATTESTATION_SERVICE_METHOD0
+#define UNIFFI_FFIDEF_CALLBACK_INTERFACE_ATTESTATION_SERVICE_METHOD0
+typedef void (*UniffiCallbackInterfaceAttestationServiceMethod0)(uint64_t, int8_t* _Nonnull, 
+        RustCallStatus *_Nonnull uniffiCallStatus
+    );
+
+#endif
+#ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_ATTESTATION_SERVICE_METHOD1
+#define UNIFFI_FFIDEF_CALLBACK_INTERFACE_ATTESTATION_SERVICE_METHOD1
+typedef void (*UniffiCallbackInterfaceAttestationServiceMethod1)(uint64_t, RustBuffer, UniffiForeignFutureCompleteRustBuffer _Nonnull, uint64_t, UniffiForeignFutureDroppedCallbackStruct* _Nonnull
+    );
+
+#endif
+#ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_ATTESTATION_SERVICE_METHOD2
+#define UNIFFI_FFIDEF_CALLBACK_INTERFACE_ATTESTATION_SERVICE_METHOD2
+typedef void (*UniffiCallbackInterfaceAttestationServiceMethod2)(uint64_t, UniffiForeignFutureCompleteRustBuffer _Nonnull, uint64_t, UniffiForeignFutureDroppedCallbackStruct* _Nonnull
+    );
+
+#endif
+#ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_ATTESTATION_SERVICE_METHOD3
+#define UNIFFI_FFIDEF_CALLBACK_INTERFACE_ATTESTATION_SERVICE_METHOD3
+typedef void (*UniffiCallbackInterfaceAttestationServiceMethod3)(uint64_t, RustBuffer, RustBuffer, UniffiForeignFutureCompleteRustBuffer _Nonnull, uint64_t, UniffiForeignFutureDroppedCallbackStruct* _Nonnull
+    );
+
+#endif
 #ifndef UNIFFI_FFIDEF_V_TABLE_CALLBACK_INTERFACE_HOST_LISTENER
 #define UNIFFI_FFIDEF_V_TABLE_CALLBACK_INTERFACE_HOST_LISTENER
 typedef struct UniffiVTableCallbackInterfaceHostListener {
@@ -265,6 +290,18 @@ typedef struct UniffiVTableCallbackInterfaceHostListener {
     UniffiCallbackInterfaceHostListenerMethod0 _Nonnull engineRequired;
     UniffiCallbackInterfaceHostListenerMethod1 _Nonnull avatarPreviewMode;
 } UniffiVTableCallbackInterfaceHostListener;
+
+#endif
+#ifndef UNIFFI_FFIDEF_V_TABLE_CALLBACK_INTERFACE_ATTESTATION_SERVICE
+#define UNIFFI_FFIDEF_V_TABLE_CALLBACK_INTERFACE_ATTESTATION_SERVICE
+typedef struct UniffiVTableCallbackInterfaceAttestationService {
+    UniffiCallbackInterfaceFree _Nonnull uniffiFree;
+    UniffiCallbackInterfaceClone _Nonnull uniffiClone;
+    UniffiCallbackInterfaceAttestationServiceMethod0 _Nonnull isSupported;
+    UniffiCallbackInterfaceAttestationServiceMethod1 _Nonnull playIntegrityToken;
+    UniffiCallbackInterfaceAttestationServiceMethod2 _Nonnull iosGenerateKey;
+    UniffiCallbackInterfaceAttestationServiceMethod3 _Nonnull iosAttestKey;
+} UniffiVTableCallbackInterfaceAttestationService;
 
 #endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_CLONE_HOSTLISTENER
@@ -292,6 +329,41 @@ void uniffi_dcl_host_fn_method_hostlistener_engine_required(uint64_t ptr, RustCa
 void uniffi_dcl_host_fn_method_hostlistener_avatar_preview_mode(uint64_t ptr, int8_t on, RustCallStatus *_Nonnull out_status
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_CLONE_ATTESTATIONSERVICE
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_CLONE_ATTESTATIONSERVICE
+uint64_t uniffi_dcl_host_fn_clone_attestationservice(uint64_t handle, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_FREE_ATTESTATIONSERVICE
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_FREE_ATTESTATIONSERVICE
+void uniffi_dcl_host_fn_free_attestationservice(uint64_t handle, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_INIT_CALLBACK_VTABLE_ATTESTATIONSERVICE
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_INIT_CALLBACK_VTABLE_ATTESTATIONSERVICE
+void uniffi_dcl_host_fn_init_callback_vtable_attestationservice(const UniffiVTableCallbackInterfaceAttestationService* _Nonnull vtable
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_METHOD_ATTESTATIONSERVICE_IS_SUPPORTED
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_METHOD_ATTESTATIONSERVICE_IS_SUPPORTED
+int8_t uniffi_dcl_host_fn_method_attestationservice_is_supported(uint64_t ptr, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_METHOD_ATTESTATIONSERVICE_PLAY_INTEGRITY_TOKEN
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_METHOD_ATTESTATIONSERVICE_PLAY_INTEGRITY_TOKEN
+uint64_t uniffi_dcl_host_fn_method_attestationservice_play_integrity_token(uint64_t ptr, RustBuffer request_hash_b64url
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_METHOD_ATTESTATIONSERVICE_IOS_GENERATE_KEY
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_METHOD_ATTESTATIONSERVICE_IOS_GENERATE_KEY
+uint64_t uniffi_dcl_host_fn_method_attestationservice_ios_generate_key(uint64_t ptr
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_METHOD_ATTESTATIONSERVICE_IOS_ATTEST_KEY
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_METHOD_ATTESTATIONSERVICE_IOS_ATTEST_KEY
+uint64_t uniffi_dcl_host_fn_method_attestationservice_ios_attest_key(uint64_t ptr, RustBuffer key_id, RustBuffer client_data_hash
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_FUNC_ADD_HOST_LISTENER
 #define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_FUNC_ADD_HOST_LISTENER
 uint64_t uniffi_dcl_host_fn_func_add_host_listener(uint64_t listener, RustCallStatus *_Nonnull out_status
@@ -310,6 +382,17 @@ void uniffi_dcl_host_fn_func_install(RustBuffer data_dir, RustBuffer platform, R
 #ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_FUNC_REMOVE_HOST_LISTENER
 #define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_FUNC_REMOVE_HOST_LISTENER
 void uniffi_dcl_host_fn_func_remove_host_listener(uint64_t id, RustCallStatus *_Nonnull out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_FUNC_ATTESTATION_STATUS
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_FUNC_ATTESTATION_STATUS
+RustBuffer uniffi_dcl_host_fn_func_attestation_status(RustCallStatus *_Nonnull out_status
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_FUNC_INSTALL_ATTESTATION
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_FN_FUNC_INSTALL_ATTESTATION
+void uniffi_dcl_host_fn_func_install_attestation(uint64_t service, RustCallStatus *_Nonnull out_status
 );
 #endif
 #ifndef UNIFFI_FFIDEF_FFI_DCL_HOST_RUSTBUFFER_ALLOC
@@ -596,6 +679,18 @@ uint16_t uniffi_dcl_host_checksum_func_remove_host_listener(void
     
 );
 #endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_CHECKSUM_FUNC_ATTESTATION_STATUS
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_CHECKSUM_FUNC_ATTESTATION_STATUS
+uint16_t uniffi_dcl_host_checksum_func_attestation_status(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_CHECKSUM_FUNC_INSTALL_ATTESTATION
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_CHECKSUM_FUNC_INSTALL_ATTESTATION
+uint16_t uniffi_dcl_host_checksum_func_install_attestation(void
+    
+);
+#endif
 #ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_CHECKSUM_METHOD_HOSTLISTENER_ENGINE_REQUIRED
 #define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_CHECKSUM_METHOD_HOSTLISTENER_ENGINE_REQUIRED
 uint16_t uniffi_dcl_host_checksum_method_hostlistener_engine_required(void
@@ -605,6 +700,30 @@ uint16_t uniffi_dcl_host_checksum_method_hostlistener_engine_required(void
 #ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_CHECKSUM_METHOD_HOSTLISTENER_AVATAR_PREVIEW_MODE
 #define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_CHECKSUM_METHOD_HOSTLISTENER_AVATAR_PREVIEW_MODE
 uint16_t uniffi_dcl_host_checksum_method_hostlistener_avatar_preview_mode(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_CHECKSUM_METHOD_ATTESTATIONSERVICE_IS_SUPPORTED
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_CHECKSUM_METHOD_ATTESTATIONSERVICE_IS_SUPPORTED
+uint16_t uniffi_dcl_host_checksum_method_attestationservice_is_supported(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_CHECKSUM_METHOD_ATTESTATIONSERVICE_PLAY_INTEGRITY_TOKEN
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_CHECKSUM_METHOD_ATTESTATIONSERVICE_PLAY_INTEGRITY_TOKEN
+uint16_t uniffi_dcl_host_checksum_method_attestationservice_play_integrity_token(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_CHECKSUM_METHOD_ATTESTATIONSERVICE_IOS_GENERATE_KEY
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_CHECKSUM_METHOD_ATTESTATIONSERVICE_IOS_GENERATE_KEY
+uint16_t uniffi_dcl_host_checksum_method_attestationservice_ios_generate_key(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_DCL_HOST_CHECKSUM_METHOD_ATTESTATIONSERVICE_IOS_ATTEST_KEY
+#define UNIFFI_FFIDEF_UNIFFI_DCL_HOST_CHECKSUM_METHOD_ATTESTATIONSERVICE_IOS_ATTEST_KEY
+uint16_t uniffi_dcl_host_checksum_method_attestationservice_ios_attest_key(void
     
 );
 #endif

@@ -350,8 +350,8 @@ impl DclBootstrap {
     #[func]
     pub fn create_extra_services(mut global: Gd<Node>) -> bool {
         let mut ok = true;
-        // Platform attestation needs a Node (timers and native plugin signals); it gates itself
-        // on EULA acceptance and caches its session token on disk.
+        // Platform attestation (emulator and desktop runs) needs a Node for timers and native
+        // plugin signals; it gates itself on EULA acceptance and caches its session token on disk.
         // Feature flags fetch on `_ready`; campaigns only watch install attribution there.
         for (property, script, name) in [
             ("attestation", "src/auth/attestation_service.gd", None),
@@ -362,6 +362,10 @@ impl DclBootstrap {
             ),
             ("campaigns", "src/campaigns.gd", Some("campaigns")),
         ] {
+            // The host-driven core runs attestation itself (the host provides the OS calls).
+            if property == "attestation" && super::DclEngine::core_is_driving() {
+                continue;
+            }
             match instantiate_script(script) {
                 Ok(instance) => {
                     if let Ok(mut node) = instance.try_to::<Gd<Node>>() {

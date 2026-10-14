@@ -11,6 +11,7 @@ use crate::{
 
 mod control;
 mod gates;
+pub use gates::eula_accepted;
 mod notifications;
 mod places;
 mod profile;

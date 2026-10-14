@@ -1109,6 +1109,7 @@ dependencies = [
 name = "dcl_host"
 version = "1.15.0"
 dependencies = [
+ "async-trait",
  "chrono",
  "dcl_core",
  "tokio",

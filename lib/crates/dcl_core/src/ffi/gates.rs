@@ -199,6 +199,11 @@ pub fn terms_accepted_version() -> Result<u32, CoreError> {
     Ok(gates()?.terms_accepted_version())
 }
 
+/// True once the player accepted this build's terms: what gates attestation.
+pub fn eula_accepted() -> bool {
+    terms_accepted_version().is_ok_and(|accepted| accepted >= crate::gates::TERMS_VERSION)
+}
+
 #[uniffi::export]
 pub fn accept_terms(version: u32) -> Result<(), CoreError> {
     gates()?.accept_terms(version).map_err(io_error)

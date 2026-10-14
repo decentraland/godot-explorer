@@ -6,6 +6,7 @@ import android.util.Log
 import org.decentraland.core.host.HostListener
 import org.decentraland.core.host.HostPlatform
 import org.decentraland.core.host.addHostListener
+import org.decentraland.core.host.installAttestation
 import org.decentraland.core.host.install as installCore
 
 /**
@@ -51,6 +52,7 @@ object CoreHost {
         BuildConfig.VERSION_NAME,
     )
     addHostListener(listener)
+    installAttestation(PlayIntegrityAttestation(app))
     Log.i(TAG, "core installed")
   }
 }
