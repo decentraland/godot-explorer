@@ -1,12 +1,16 @@
 use std::{
     future::Future,
     path::{Path, PathBuf},
-    sync::OnceLock,
+    sync::{
+        atomic::{AtomicUsize, Ordering},
+        OnceLock,
+    },
 };
 
 use tokio::runtime::{Builder, Handle, Runtime};
 
 static CORE: OnceLock<Core> = OnceLock::new();
+static INSTALLS: AtomicUsize = AtomicUsize::new(0);
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Platform {
@@ -25,7 +29,7 @@ impl Platform {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct CoreConfig {
     pub data_dir: PathBuf,
     pub platform: Platform,
@@ -38,16 +42,34 @@ pub struct Core {
 }
 
 impl Core {
-    /// Installs the core once; a second call keeps the first and returns it.
+    /// Installs the core once, with the process logger and panic hook. A second call returns the
+    /// first core; in debug builds it must pass the same config, since a different one means two
+    /// parts of the process disagree about who owns the core.
     pub fn install(config: CoreConfig) -> &'static Core {
-        CORE.get_or_init(|| {
+        INSTALLS.fetch_add(1, Ordering::Relaxed);
+        let core = CORE.get_or_init(|| {
+            crate::logging::init(config.platform);
             let runtime = Builder::new_multi_thread()
                 .enable_all()
                 .thread_name("dcl-core-tokio")
                 .build()
                 .expect("failed to build the core tokio runtime");
-            Core { config, runtime }
-        })
+            Core {
+                config: config.clone(),
+                runtime,
+            }
+        });
+        debug_assert_eq!(
+            core.config, config,
+            "Core::install called again with a different config"
+        );
+        core
+    }
+
+    /// How many times `install` was called; the host and the engine share one core, so each
+    /// process-level caller counts once and the engine asserts it did not create a second.
+    pub fn installs() -> usize {
+        INSTALLS.load(Ordering::Relaxed)
     }
 
     /// Panics before `install`; use `try_get` where the core may not exist yet.
@@ -75,8 +97,9 @@ impl Core {
         &self.config
     }
 
-    /// Spawns on the core runtime. Without an installed core (unit tests, early boot) it runs the
-    /// future on a short-lived thread with its own runtime instead of dropping it.
+    /// Spawns on the core runtime. Without an installed core it fails in debug builds; release
+    /// builds and `dcl_core`'s own tests run the future on a short-lived thread with its own
+    /// runtime instead of dropping it.
     pub fn spawn<F>(future: F)
     where
         F: Future + Send + 'static,
@@ -86,6 +109,9 @@ impl Core {
             core.handle().spawn(future);
             return;
         }
+        #[cfg(all(debug_assertions, not(test)))]
+        panic!("Core::spawn called before Core::install");
+        #[allow(unreachable_code)]
         std::thread::spawn(move || match Runtime::new() {
             Ok(runtime) => {
                 runtime.block_on(future);
@@ -127,10 +153,17 @@ mod tests {
         assert_eq!(rx.recv().unwrap(), "core");
         assert!(std::ptr::eq(core, Core::get()));
 
-        let again = Core::install(CoreConfig {
-            data_dir: PathBuf::from("/other"),
-            platform: Platform::Android,
-        });
-        assert!(std::ptr::eq(core, again));
+        let same = Core::install(core.config().clone());
+        assert!(std::ptr::eq(core, same));
+        assert_eq!(Core::installs(), 2);
+
+        #[cfg(debug_assertions)]
+        assert!(std::panic::catch_unwind(|| {
+            Core::install(CoreConfig {
+                data_dir: PathBuf::from("/other"),
+                platform: Platform::Android,
+            })
+        })
+        .is_err());
     }
 }

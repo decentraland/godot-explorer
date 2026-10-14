@@ -1,35 +1,8 @@
-use std::sync::OnceLock;
-
+use dcl_core::logging::EventSink;
+pub use dcl_core::logging::MessageVisitor;
 use godot::classes::Os;
 use godot::prelude::*;
-use tracing::{Level, Subscriber};
-use tracing_subscriber::filter::EnvFilter;
-use tracing_subscriber::registry::LookupSpan;
-use tracing_subscriber::{reload, Layer, Registry};
-
-/// Global handle to swap the log filter at runtime.
-static RELOAD_HANDLE: OnceLock<reload::Handle<EnvFilter, Registry>> = OnceLock::new();
-
-/// Visitor to extract the message field from a tracing event.
-/// Shared between GodotTracingLayer and IosOsLogLayer.
-#[derive(Default)]
-pub struct MessageVisitor {
-    pub message: String,
-}
-
-impl tracing::field::Visit for MessageVisitor {
-    fn record_debug(&mut self, field: &tracing::field::Field, value: &dyn std::fmt::Debug) {
-        if field.name() == "message" || self.message.is_empty() {
-            self.message = format!("{:?}", value);
-        }
-    }
-
-    fn record_str(&mut self, field: &tracing::field::Field, value: &str) {
-        if field.name() == "message" || self.message.is_empty() {
-            self.message = value.to_string();
-        }
-    }
-}
+use tracing::Level;
 
 /// Log targets whose ERROR/WARN output is demoted to a plain print.
 ///
@@ -46,19 +19,12 @@ fn is_demoted_target(target: &str) -> bool {
         .any(|demoted| target.starts_with(demoted))
 }
 
-/// A tracing Layer that forwards all log messages to Godot's print functions.
+/// A core log sink that forwards all log messages to Godot's print functions.
 /// This unifies Rust logging output into the Godot console across all platforms.
 pub struct GodotTracingLayer;
 
-impl<S> Layer<S> for GodotTracingLayer
-where
-    S: Subscriber + for<'a> LookupSpan<'a>,
-{
-    fn on_event(
-        &self,
-        event: &tracing::Event<'_>,
-        _ctx: tracing_subscriber::layer::Context<'_, S>,
-    ) {
+impl EventSink for GodotTracingLayer {
+    fn on_event(&self, event: &tracing::Event<'_>) {
         let metadata = event.metadata();
         let target = metadata.target();
 
@@ -246,95 +212,27 @@ pub fn should_pipe_to_godot() -> bool {
     should_pipe
 }
 
-/// Build an `EnvFilter` from `--rust-log` arg, `RUST_LOG` env var, or the given default.
-///
-/// Priority: `--rust-log <filter>` > `RUST_LOG` env var > `default_filter`.
-/// On Android/iOS, `RUST_LOG` is typically unavailable so `--rust-log` via
-/// deeplink is the primary way to override the default.
-fn build_log_filter(default_filter: &str) -> EnvFilter {
+/// Applies `--rust-log <filter>` over the filter the core installed (its default, or `RUST_LOG`).
+/// On Android/iOS `RUST_LOG` is unavailable, so the argument (cmdline or deeplink) is the way in.
+pub fn apply_cmdline_log_filter() {
     let args = get_godot_args();
-
-    godot_print!(
-        "[RustLogger] build_log_filter called with default_filter=\"{}\"",
-        default_filter
-    );
     godot_print!(
         "[RustLogger] Godot cmdline args ({} total): {:?}",
         args.len(),
         args
     );
-
-    // 1. --rust-log flag (works on all platforms via deeplink or cmdline)
     if let Some(filter) = find_arg_value(&args, "--rust-log") {
-        godot_print!(
-            "[RustLogger] Found --rust-log arg, using filter: \"{}\"",
-            filter
-        );
-        return EnvFilter::new(filter);
+        if let Err(e) = set_log_filter(&filter) {
+            godot_error!("[RustLogger] {}", e);
+        }
     }
-    godot_print!("[RustLogger] No --rust-log arg found in cmdline args");
-
-    // 2. RUST_LOG env var (mostly useful on desktop)
-    match std::env::var("RUST_LOG") {
-        Ok(val) => godot_print!("[RustLogger] RUST_LOG env var found: \"{}\"", val),
-        Err(_) => godot_print!("[RustLogger] RUST_LOG env var not set"),
-    }
-    if let Ok(filter) = EnvFilter::try_from_default_env() {
-        godot_print!("[RustLogger] Using RUST_LOG env var as filter");
-        return filter;
-    }
-
-    // 3. Default
-    godot_print!("[RustLogger] Using default filter: \"{}\"", default_filter);
-    EnvFilter::new(default_filter)
-}
-
-/// Create a reloadable filter layer and store the handle for runtime updates.
-///
-/// The returned layer acts as a global filter applied to all layers in the subscriber.
-/// Use [`set_log_filter`] to change the filter at runtime.
-pub fn create_reload_filter(default_filter: &str) -> reload::Layer<EnvFilter, Registry> {
-    godot_print!(
-        "[RustLogger] create_reload_filter called with default_filter=\"{}\"",
-        default_filter
-    );
-    let filter = build_log_filter(default_filter);
-    godot_print!("[RustLogger] EnvFilter created: {:?}", filter);
-    let (layer, handle) = reload::Layer::<EnvFilter, Registry>::new(filter);
-    match RELOAD_HANDLE.set(handle) {
-        Ok(()) => godot_print!("[RustLogger] Reload handle stored successfully"),
-        Err(_) => godot_print!("[RustLogger] Reload handle was already set (duplicate init?)"),
-    }
-    layer
 }
 
 /// Change the log filter at runtime. Accepts any valid `EnvFilter` string.
 ///
 /// Examples: `"debug"`, `"info"`, `"dclgodot::comms=debug,warn"`.
 pub fn set_log_filter(filter_str: &str) -> Result<(), String> {
-    godot_print!(
-        "[RustLogger] set_log_filter called with: \"{}\"",
-        filter_str
-    );
-    let handle = RELOAD_HANDLE.get().ok_or_else(|| {
-        let msg = "Logger not initialized (RELOAD_HANDLE is empty)".to_string();
-        godot_error!("[RustLogger] {}", msg);
-        msg
-    })?;
-    let new_filter = EnvFilter::try_new(filter_str).map_err(|e| {
-        let msg = format!("Invalid filter string \"{}\": {}", filter_str, e);
-        godot_error!("[RustLogger] {}", msg);
-        msg
-    })?;
-    godot_print!("[RustLogger] New EnvFilter parsed: {:?}", new_filter);
-    handle.reload(new_filter).map_err(|e| {
-        let msg = format!("Failed to reload filter: {}", e);
-        godot_error!("[RustLogger] {}", msg);
-        msg
-    })?;
-    godot_print!(
-        "[RustLogger] Filter reloaded successfully to: \"{}\"",
-        filter_str
-    );
-    Ok(())
+    dcl_core::logging::set_filter(filter_str).inspect(|_| {
+        godot_print!("[RustLogger] Filter set to: \"{}\"", filter_str);
+    })
 }

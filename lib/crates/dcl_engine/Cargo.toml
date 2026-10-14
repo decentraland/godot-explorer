@@ -44,7 +44,6 @@ anyhow = "1.0.70"
 tracing = "0.1"
 tracing-subscriber = "0.3"
 poll-promise = "0.2.0"
-log-panics = { version = "2", features = ["with-backtrace"]}
 
 v8 = { version = "0.106.0", optional = true }
 deno_core = { version = "0.308.0", optional = true }

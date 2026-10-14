@@ -10,6 +10,7 @@ crate-type = ["rlib"]
 [dependencies]
 tokio = { version = "1.40.0", features = ["rt-multi-thread", "time", "macros", "net", "sync", "fs", "io-util"] }
 tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt", "registry"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0.92", features = ["raw_value"] }
 anyhow = "1.0.70"
@@ -33,6 +34,12 @@ dcl-rpc = { git = "https://github.com/decentraland/rpc-rust", rev = "aa2302d6918
 [build-dependencies]
 prost-build = "0.11.8"
 dcl-rpc = { git = "https://github.com/decentraland/rpc-rust", rev = "aa2302d6918e2d1c7f2e298aa972d8a6bba6c389", features = ["client", "websockets", "codegen", "server", "tungstenite-rustls"] }
+
+[target.'cfg(target_os = "android")'.dependencies]
+paranoid-android = "0.2.1"
+
+[target.'cfg(target_os = "ios")'.dependencies]
+oslog = "0.2"
 
 [dev-dependencies]
 tracing-test = "0.2.4"

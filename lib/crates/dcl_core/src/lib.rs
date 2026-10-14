@@ -8,6 +8,7 @@ pub mod destination;
 pub mod env;
 pub mod flags;
 pub mod http;
+pub mod logging;
 pub mod network_inspector;
 pub mod notifications;
 mod open_url;
