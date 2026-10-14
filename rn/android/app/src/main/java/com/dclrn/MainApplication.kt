@@ -21,6 +21,7 @@ class MainApplication : Application(), ReactApplication {
 
   override fun onCreate() {
     super.onCreate()
+    CoreHost.install(this)
     loadReactNative(this)
   }
 }

@@ -7,6 +7,8 @@ mod core;
 pub mod deep_link;
 pub mod destination;
 pub mod env;
+#[cfg(feature = "ffi")]
+pub mod ffi;
 pub mod flags;
 pub mod http;
 pub mod logging;
@@ -19,6 +21,9 @@ pub mod scene_requests;
 pub mod session;
 pub mod social;
 pub mod urls;
+
+#[cfg(feature = "ffi")]
+uniffi::setup_scaffolding!();
 
 pub use crate::core::{data_file, Core, CoreConfig, Platform};
 pub use crate::open_url::OpenUrlRequest;

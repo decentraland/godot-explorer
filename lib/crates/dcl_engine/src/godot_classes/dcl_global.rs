@@ -67,9 +67,10 @@ fn ensure_core() -> &'static Core {
             platform: Platform::current(),
         }),
     };
+    debug_assert_eq!(Core::installs(), 1, "one core per process");
     debug_assert_eq!(
-        core.data_dir(),
-        user_dir,
+        std::fs::canonicalize(core.data_dir()).ok(),
+        std::fs::canonicalize(&user_dir).ok(),
         "the core data dir must be Godot's user://"
     );
     core

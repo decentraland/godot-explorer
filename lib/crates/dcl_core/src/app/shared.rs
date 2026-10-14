@@ -1,46 +1,70 @@
 use std::{
     collections::VecDeque,
-    sync::{Arc, Mutex, RwLock},
+    sync::{
+        atomic::{AtomicU64, Ordering},
+        Arc, Mutex, RwLock,
+    },
 };
 
 use super::{AppEvents, EngineCommand, EngineSink, State};
 
-/// Forwards the app's events to whoever registered last (the FFI callback interface). Events
-/// fire while the app lock is held, so a listener must not call back into the app synchronously.
+/// Forwards the app's events to every registered listener (the shell's, the host's). Events fire
+/// while the app lock is held, so a listener must not call back into the app synchronously.
 #[derive(Default)]
 pub struct HostEvents {
-    listener: RwLock<Option<Arc<dyn AppEvents>>>,
+    listeners: RwLock<Vec<(u64, Arc<dyn AppEvents>)>>,
+    next_id: AtomicU64,
 }
 
 impl HostEvents {
-    pub fn set_listener(&self, listener: Arc<dyn AppEvents>) {
-        *self.listener.write().unwrap_or_else(|e| e.into_inner()) = Some(listener);
+    /// Registers a listener; the id removes it again.
+    pub fn add_listener(&self, listener: Arc<dyn AppEvents>) -> u64 {
+        let id = self.next_id.fetch_add(1, Ordering::Relaxed);
+        self.listeners
+            .write()
+            .unwrap_or_else(|e| e.into_inner())
+            .push((id, listener));
+        id
     }
 
-    fn with(&self, f: impl FnOnce(&dyn AppEvents)) {
-        if let Some(listener) = self
-            .listener
+    pub fn remove_listener(&self, id: u64) {
+        self.listeners
+            .write()
+            .unwrap_or_else(|e| e.into_inner())
+            .retain(|(listener_id, _)| *listener_id != id);
+    }
+
+    /// A listener that panics (a shell whose JS runtime was reloaded leaves a stale handle) is
+    /// dropped and logged; it must not stop the others from hearing the event.
+    fn each(&self, f: impl Fn(&dyn AppEvents)) {
+        let listeners = self
+            .listeners
             .read()
             .unwrap_or_else(|e| e.into_inner())
-            .as_ref()
-        {
-            f(listener.as_ref());
+            .clone();
+        for (id, listener) in listeners {
+            let outcome =
+                std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| f(listener.as_ref())));
+            if outcome.is_err() {
+                tracing::error!("app listener {id} failed and was removed");
+                self.remove_listener(id);
+            }
         }
     }
 }
 
 impl AppEvents for HostEvents {
     fn state_changed(&self, state: &State) {
-        self.with(|l| l.state_changed(state));
+        self.each(|l| l.state_changed(state));
     }
     fn engine_required(&self) {
-        self.with(|l| l.engine_required());
+        self.each(|l| l.engine_required());
     }
     fn avatar_preview_mode(&self, on: bool) {
-        self.with(|l| l.avatar_preview_mode(on));
+        self.each(|l| l.avatar_preview_mode(on));
     }
     fn scene_crashed(&self) {
-        self.with(|l| l.scene_crashed());
+        self.each(|l| l.scene_crashed());
     }
 }
 
@@ -92,7 +116,38 @@ mod tests {
     }
 
     #[test]
-    fn events_without_a_listener_are_dropped_and_with_one_are_forwarded() {
+    fn a_panicking_listener_is_removed_and_the_others_still_hear_the_event() {
+        struct Panics;
+        impl AppEvents for Panics {
+            fn state_changed(&self, _: &State) {
+                panic!("stale handle");
+            }
+            fn engine_required(&self) {}
+            fn avatar_preview_mode(&self, _: bool) {}
+            fn scene_crashed(&self) {}
+        }
+        struct Count(Mutex<u32>);
+        impl AppEvents for Count {
+            fn state_changed(&self, _: &State) {
+                *self.0.lock().unwrap() += 1;
+            }
+            fn engine_required(&self) {}
+            fn avatar_preview_mode(&self, _: bool) {}
+            fn scene_crashed(&self) {}
+        }
+
+        let events = HostEvents::default();
+        let count = Arc::new(Count(Mutex::new(0)));
+        events.add_listener(Arc::new(Panics));
+        events.add_listener(count.clone());
+        events.state_changed(&State::SignedIn);
+        events.state_changed(&State::SignedIn);
+        assert_eq!(*count.0.lock().unwrap(), 2);
+        assert_eq!(events.listeners.read().unwrap().len(), 1);
+    }
+
+    #[test]
+    fn events_reach_every_listener_until_it_is_removed() {
         struct Count(Mutex<u32>);
         impl AppEvents for Count {
             fn state_changed(&self, _: &State) {
@@ -105,9 +160,16 @@ mod tests {
 
         let events = HostEvents::default();
         events.state_changed(&State::SignedIn);
-        let count = Arc::new(Count(Mutex::new(0)));
-        events.set_listener(count.clone());
+        let (shell, host) = (
+            Arc::new(Count(Mutex::new(0))),
+            Arc::new(Count(Mutex::new(0))),
+        );
+        let shell_id = events.add_listener(shell.clone());
+        events.add_listener(host.clone());
         events.state_changed(&State::SignedIn);
-        assert_eq!(*count.0.lock().unwrap(), 1);
+        events.remove_listener(shell_id);
+        events.state_changed(&State::SignedIn);
+        assert_eq!(*shell.0.lock().unwrap(), 1);
+        assert_eq!(*host.0.lock().unwrap(), 2);
     }
 }

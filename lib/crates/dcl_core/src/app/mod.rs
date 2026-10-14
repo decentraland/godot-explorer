@@ -14,8 +14,8 @@ use std::sync::Arc;
 pub use policy::EngineStartPolicy;
 pub use shared::{CommandQueue, HostEvents};
 pub use types::{
-    AppError, AppEvents, Destination, EngineCommand, EngineEvent, EngineSink, Rect, SignInMethod,
-    SignInStep, State,
+    AppError, AppEvents, Destination, EngineCommand, EngineEvent, EngineSink, Parcel, Rect,
+    SignInMethod, SignInStep, State,
 };
 
 pub struct App {

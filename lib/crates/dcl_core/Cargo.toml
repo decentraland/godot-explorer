@@ -10,6 +10,7 @@ crate-type = ["rlib"]
 [dependencies]
 tokio = { version = "1.40.0", features = ["rt-multi-thread", "time", "macros", "net", "sync", "fs", "io-util"] }
 tracing = "0.1"
+uniffi = { version = "=0.31", optional = true }
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt", "registry"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0.92", features = ["raw_value"] }
@@ -46,3 +47,5 @@ tracing-test = "0.2.4"
 
 [features]
 use_pulse = []
+# The typed FFI the RN shell and the native hosts call; exported from libdclgodot (D-6).
+ffi = ["dep:uniffi"]

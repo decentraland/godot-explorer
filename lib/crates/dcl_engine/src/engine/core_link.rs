@@ -3,7 +3,7 @@
 
 use std::sync::Arc;
 
-use dcl_core::app::{CommandQueue, Destination, EngineCommand, EngineEvent, State};
+use dcl_core::app::{CommandQueue, Destination, EngineCommand, EngineEvent, Parcel, State};
 use dcl_core::Core;
 use godot::classes::RenderingServer;
 use godot::prelude::*;
@@ -11,11 +11,11 @@ use godot::prelude::*;
 use super::DclEngine;
 
 fn destination_args(destination: &Destination) -> VarDictionary {
-    let (x, y) = destination.parcel.unwrap_or((0, 0));
+    let parcel = destination.parcel.unwrap_or(Parcel::new(0, 0));
     vdict! {
         "realm": destination.realm.clone().unwrap_or_default(),
-        "x": x,
-        "y": y,
+        "x": parcel.x,
+        "y": parcel.y,
     }
 }
 

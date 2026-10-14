@@ -2,7 +2,7 @@
  * RN entry flow, then the tab shell. Godot is booted lazily:
  * first to draw the single avatar preview, then (on Jump In) to run the world (see src/engine.ts).
  */
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { StatusBar, StyleSheet, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NavProvider, useNav } from './src/app/NavProvider';
@@ -11,6 +11,7 @@ import { Shell } from './src/app/Shell';
 import { useAppWiring } from './src/app/wiring';
 import { useJumpIn } from './src/discover/sheetHooks';
 import { colors, ToastProvider } from './src/ds';
+import { runCoreSelfTest } from './src/core/selfTest';
 import { send } from './src/engine';
 import { EntryFlow } from './src/flow/EntryFlow';
 
@@ -48,6 +49,11 @@ function AppBody() {
 
 function App() {
   const preview = usePreviewRoute();
+  useEffect(() => {
+    if (__DEV__) {
+      runCoreSelfTest();
+    }
+  }, []);
   const Host = gallery?.GalleryHost;
 
   return (

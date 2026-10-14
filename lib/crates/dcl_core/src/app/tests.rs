@@ -52,7 +52,7 @@ const RECT: Rect = Rect {
 fn plaza() -> Destination {
     Destination {
         realm: None,
-        parcel: Some((0, 0)),
+        parcel: Some(Parcel::new(0, 0)),
     }
 }
 
@@ -191,13 +191,13 @@ fn loading_events_drive_in_world() {
 
     app.engine_event(EngineEvent::LoadingFinished {
         realm: "main".into(),
-        parcel: (3, -4),
+        parcel: Parcel::new(3, -4),
     });
     assert_eq!(
         app.state(),
         &State::InWorld {
             realm: "main".into(),
-            parcel: (3, -4)
+            parcel: Parcel::new(3, -4)
         }
     );
 }
@@ -208,7 +208,7 @@ fn engine_events_that_do_not_fit_the_state_are_ignored() {
     app.engine_event(EngineEvent::LoadingProgress(0.3));
     app.engine_event(EngineEvent::LoadingFinished {
         realm: "main".into(),
-        parcel: (0, 0),
+        parcel: Parcel::new(0, 0),
     });
     app.engine_event(EngineEvent::SceneCrashed);
     assert_eq!(app.state(), &State::SignedIn);
@@ -222,7 +222,7 @@ fn a_scene_crash_stays_in_world_and_raises_an_event() {
     app.enter_world(plaza()).unwrap();
     app.engine_event(EngineEvent::LoadingFinished {
         realm: "main".into(),
-        parcel: (0, 0),
+        parcel: Parcel::new(0, 0),
     });
     app.engine_event(EngineEvent::SceneCrashed);
     assert!(matches!(app.state(), State::InWorld { .. }));
@@ -236,7 +236,7 @@ fn exit_world_keeps_the_session_and_can_enter_again() {
     app.enter_world(plaza()).unwrap();
     app.engine_event(EngineEvent::LoadingFinished {
         realm: "main".into(),
-        parcel: (0, 0),
+        parcel: Parcel::new(0, 0),
     });
     engine.take();
 

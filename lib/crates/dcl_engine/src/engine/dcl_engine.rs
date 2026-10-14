@@ -1,6 +1,6 @@
 use std::{rc::Rc, sync::Arc};
 
-use dcl_core::app::{CommandQueue, EngineEvent};
+use dcl_core::app::{CommandQueue, EngineEvent, Parcel};
 
 use godot::classes::{Control, DisplayServer, Engine};
 use godot::obj::Singleton;
@@ -123,7 +123,7 @@ impl DclEngine {
     pub fn report_loading_finished(&self, realm: GString, x: i32, y: i32) {
         self.report(EngineEvent::LoadingFinished {
             realm: realm.to_string(),
-            parcel: (x, y),
+            parcel: Parcel::new(x, y),
         });
     }
 

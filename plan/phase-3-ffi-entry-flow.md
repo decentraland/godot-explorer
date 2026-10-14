@@ -55,6 +55,15 @@ deleted.
      thread; on Android the Kotlin bindings (JNA) load the copy Godot opened (`libdclgodot.so`
      linked with a soname, checked in `/proc/self/maps`). This one is D-41's, not D-17's.
   Record the result against D-17 in `decisions.md`.
+  **Result, Android (Moto, 14 Oct 2026; iOS not run, it needs a Mac):** 1 pass (RN 0.86, new arch,
+  Hermes, our own cargo build with `-Wl,-soname,libdclgodot.so`); 2 pass (`libdcl-core.so` has
+  `NEEDED libdclgodot.so`, one path in `/proc/PID/maps`, bindgen runs in library mode against it);
+  3 pass (`debugDelay` resolves, 1000 events at 1k/s reach the JS listener); 4 and 5 pending in 3.3
+  and 3.10; 6 Android pass (Kotlin implements a Rust trait, called from a tokio thread, JNA loads the
+  same copy). **Finding:** a foreign trait has one vtable per process, so Kotlin and JS cannot both
+  implement `AppListener` (the later registration wins and the other side's handles resolve in the
+  wrong runtime). Each foreign trait belongs to one runtime: the shell's in `dcl_core`'s FFI (JS),
+  the host's in the `dcl_host` crate (Kotlin/Swift), each with its own namespace and bindings.
 - [ ] **3.2 Core state machine**. The states of `04-core-api.md` as `dcl_core::app::State`;
   `Booting` recovers the persisted session; `enter_world` resolves the destination, raises
   `engine_required` if no engine is attached, then drives Idle → Loading → InWorld from engine

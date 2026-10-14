@@ -1,6 +1,21 @@
 use std::fmt;
 
+/// A scene parcel on the world grid.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "ffi", derive(uniffi::Record))]
+pub struct Parcel {
+    pub x: i32,
+    pub y: i32,
+}
+
+impl Parcel {
+    pub fn new(x: i32, y: i32) -> Self {
+        Self { x, y }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "ffi", derive(uniffi::Enum))]
 pub enum SignInMethod {
     Guest,
     Email,
@@ -9,6 +24,7 @@ pub enum SignInMethod {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "ffi", derive(uniffi::Enum))]
 pub enum SignInStep {
     Starting,
     AwaitingCode,
@@ -29,6 +45,7 @@ impl SignInStep {
 
 /// Pixels in the host's surface, where the avatar preview should render.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "ffi", derive(uniffi::Record))]
 pub struct Rect {
     pub x: i32,
     pub y: i32,
@@ -37,13 +54,15 @@ pub struct Rect {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ffi", derive(uniffi::Record))]
 pub struct Destination {
     /// Realm URL; `None` is the default realm.
     pub realm: Option<String>,
-    pub parcel: Option<(i32, i32)>,
+    pub parcel: Option<Parcel>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ffi", derive(uniffi::Enum))]
 pub enum State {
     Booting,
     SignedOut,
@@ -61,7 +80,7 @@ pub enum State {
     },
     InWorld {
         realm: String,
-        parcel: (i32, i32),
+        parcel: Parcel,
     },
 }
 
@@ -104,7 +123,7 @@ pub enum EngineCommand {
 #[derive(Clone, Debug, PartialEq)]
 pub enum EngineEvent {
     LoadingProgress(f32),
-    LoadingFinished { realm: String, parcel: (i32, i32) },
+    LoadingFinished { realm: String, parcel: Parcel },
     SceneCrashed,
 }
 

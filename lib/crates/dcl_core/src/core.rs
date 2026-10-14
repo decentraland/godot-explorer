@@ -14,6 +14,7 @@ static CORE: OnceLock<Core> = OnceLock::new();
 static INSTALLS: AtomicUsize = AtomicUsize::new(0);
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "ffi", derive(uniffi::Enum))]
 pub enum Platform {
     Android,
     Ios,
@@ -109,9 +110,27 @@ impl Core {
         f(&mut self.app.lock().unwrap_or_else(|e| e.into_inner()))
     }
 
-    /// Where the app's events go (the shell and the host register here).
-    pub fn set_app_listener(&self, listener: Arc<dyn AppEvents>) {
-        self.host_events.set_listener(listener);
+    /// Registers a receiver of the app's events (the shell and the host each add one); the id
+    /// removes it.
+    pub fn add_app_listener(&self, listener: Arc<dyn AppEvents>) -> u64 {
+        self.host_events.add_listener(listener)
+    }
+
+    pub fn remove_app_listener(&self, id: u64) {
+        self.host_events.remove_listener(id);
+    }
+
+    /// Sends `state` to every listener without changing the app (used to exercise the callback
+    /// path under load).
+    pub fn broadcast_state(&self, state: &crate::app::State) {
+        use crate::app::AppEvents;
+        self.host_events.state_changed(state);
+    }
+
+    /// Sends an `avatar_preview_mode` event to every listener (exercises the host callback path).
+    pub fn broadcast_avatar_preview_mode(&self, on: bool) {
+        use crate::app::AppEvents;
+        self.host_events.avatar_preview_mode(on);
     }
 
     /// Spawns on the core runtime. Without an installed core it fails in debug builds; release
