@@ -4,7 +4,7 @@ use super::event::{BuildEnvironment, Decision, ReportEvent, ReportLevel, ReportS
 
 /// Share of sessions that upload the engine log.
 pub const ATTACH_LOG_SAMPLE_RATE: f64 = 0.01;
-/// Remote rate until the `sentry_sample_rate` flag loads, or when it is absent.
+/// Remote rate until the `sentry-sample-rate` flag loads, or when it is absent.
 pub const DEFAULT_REMOTE_RATE: f64 = 1.0;
 
 const RUST_SCENE_PREFIX: &str = "[Rust:dclgodot::dcl::js]";
@@ -57,7 +57,7 @@ impl ReportPolicy {
         self.remote_rate
     }
 
-    /// From the `sentry_sample_rate` flag: clamped to `[0, 1]`, NaN falls back to the default.
+    /// From the `sentry-sample-rate` flag: clamped to `[0, 1]`, NaN falls back to the default.
     pub fn set_remote_rate(&mut self, rate: f64) {
         self.remote_rate = if rate.is_nan() {
             DEFAULT_REMOTE_RATE
@@ -66,7 +66,7 @@ impl ReportPolicy {
         };
     }
 
-    /// From the `sentry_error_events` flag: lets non-fatal exception events through.
+    /// From the `sentry-error-events` flag: lets non-fatal exception events through.
     pub fn set_error_events_enabled(&mut self, enabled: bool) {
         self.error_events_enabled = enabled;
     }

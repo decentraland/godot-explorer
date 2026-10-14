@@ -157,10 +157,6 @@ var chat_notifications_width: int = 0
 # first_move_in_world detection). Instantiated after `metrics` is created.
 var analytics_controller: AnalyticsController = null
 
-# Seeds Sentry user / context / tags from realm / scene_fetcher /
-# player_identity / comms signals. Instantiated alongside scene_fetcher.
-var sentry_seeder: SentrySeeder = null
-
 # Platform attestation orchestrator (App Attest / Play Integrity → mobile-bff session
 # token). Owns its own EULA-gated dispatch and the FSM that runs attestation cycles —
 # see attestation_service.gd. Other code obtains a token via

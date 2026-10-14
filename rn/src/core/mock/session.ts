@@ -1,26 +1,24 @@
 import { CoreError, SignInMethod, SignInStep, State } from '../native';
-import type { AppListener } from '../native';
 import type { SessionApi } from '../api/session';
+import { createMockBus } from './emitter';
+import type { MockBus } from './emitter';
 
 const STEP_MS = 400;
 const sleep = (ms: number) =>
   new Promise<void>(resolve => setTimeout(resolve, ms));
 
 /** A session that signs in after a short wait, for builds without the engine library. */
-export function createMockSession(): SessionApi {
-  let state: State = new State.SignedOut();
-  let nextId = 0n;
+export function createMockSession(
+  bus: MockBus = createMockBus(new State.SignedOut()),
+): SessionApi {
   let wallet: string | undefined;
-  const listeners = new Map<bigint, AppListener>();
-  const emit = (next: State) => {
-    state = next;
-    listeners.forEach(l => l.stateChanged(next));
-  };
+  const emit = (next: State) => bus.setState(next);
   const signedIn = (address: string) => {
     wallet = address;
     emit(new State.SignedIn());
   };
   const needSignedOut = () => {
+    const state = bus.state();
     if (state.tag !== 'SignedOut' && state.tag !== 'SigningIn') {
       throw new CoreError.InvalidCall({
         detail: `not signed out: ${state.tag}`,
@@ -29,16 +27,11 @@ export function createMockSession(): SessionApi {
   };
 
   return {
-    state: () => state,
+    state: () => bus.state(),
     address: () => wallet,
     installs: () => 1,
-    addListener: listener => {
-      listeners.set(nextId, listener);
-      return nextId++;
-    },
-    removeListener: id => {
-      listeners.delete(id);
-    },
+    addListener: listener => bus.add(listener),
+    removeListener: id => bus.remove(id),
     signInGuest: async () => {
       needSignedOut();
       emit(
@@ -69,7 +62,7 @@ export function createMockSession(): SessionApi {
     signInEmailVerify: async (_email, code) => {
       await sleep(STEP_MS);
       if (code !== '123456') {
-        listeners.forEach(l => l.authError('invalid_code'));
+        bus.emit(l => l.authError('invalid_code'));
         throw new CoreError.SignIn({
           code: 'invalid_code',
           detail: 'wrong code',

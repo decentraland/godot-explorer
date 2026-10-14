@@ -37,8 +37,6 @@ dependencies {
     implementation "androidx.fragment:fragment:1.8.6"
     implementation "androidx.core:core-splashscreen:1.0.1"
     implementation "androidx.documentfile:documentfile:1.0.1"
-    // Java side of the sentry-godot plugin AAR.
-    implementation "io.sentry:sentry-android:8.51.0"
 
     // Maven dependencies of the dcl-godot-android plugin AAR: keep in sync with
     // _get_android_dependencies in godot/addons/dcl-godot-android/export_plugin.gd.

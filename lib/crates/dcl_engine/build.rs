@@ -799,7 +799,7 @@ fn set_godot_explorer_version() {
     // Here the build number goes into the numeric `+build` metadata slot (build number
     // is globally monotonic per commit, so `release.build:>=N` == "this build or newer").
     // The commit hash and environment are intentionally dropped — they're already carried
-    // by Sentry `dist` and `environment` respectively (see project_main_loop.gd init).
+    // by Sentry `dist` and `environment` respectively.
     // When no build number is allocated (local/fork builds) the bare `{version}` is still
     // valid semver.
     let sentry_release = match build_segment.strip_prefix('.') {

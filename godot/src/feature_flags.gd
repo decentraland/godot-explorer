@@ -5,16 +5,15 @@ extends Node
 ## in the core (DclFeatureFlags); this node applies them to the rest of the app.
 ##
 ## The fetch is fire-and-forget: it starts when the node enters the tree
-## (global.gd) and flags with runtime effects (comms, Sentry sampling) are
+## (global.gd) and flags with runtime effects (comms) are
 ## applied as soon as the response arrives — normally long before the first
 ## comms connection. If a flag lands
 ## after comms already connected, the Rust-side runtime toggles reconcile
 ## gracefully (e.g. tearing archipelago down while keeping scene rooms alive).
 ##
 ## Fail-open: on timeout, network error or malformed payload every flag keeps
-## its default and the feature stays enabled. Exceptions: `pulse` and
-## `sentry-error-events` are fail-closed — they activate only when the payload
-## explicitly enables them (see _apply_flags).
+## its default and the feature stays enabled. Exception: `pulse` is fail-closed — it
+## activates only when the payload explicitly enables it (see _apply_flags).
 
 signal flags_loaded
 
@@ -22,14 +21,6 @@ signal flags_loaded
 const FLAG_ARCHIPELAGO := "archipielago"
 const FLAG_PULSE := "pulse"
 const FLAG_DUAL_CHANNEL := "dual-channel"
-# Sentry error-event sampling, served as a number in [0, 1].
-const FLAG_SENTRY_SAMPLE_RATE := "sentry-sample-rate"
-# Report ERROR-level Sentry events (the engine/Rust error firehose). Fail-closed:
-# absent flag = crash/fatal-only reporting — see ProjectMainLoop._before_send.
-const FLAG_SENTRY_ERROR_EVENTS := "sentry-error-events"
-# The bff also serves `sentry-traces-sample-rate`, but sentry-godot exposes no
-# performance-tracing API yet — there is nothing to apply it to until the SDK
-# grows one.
 # Collect FCM push tokens and map them in Segment. Fail-open, and note what it does
 # NOT do: turning it off stops new tokens from being registered, it does not stop
 # delivery to tokens already collected — that is a server-side decision.
@@ -95,17 +86,6 @@ func _apply_flags() -> void:
 	Global.comms.set_archipelago_enabled(is_enabled(FLAG_ARCHIPELAGO, true))
 	Global.comms.set_pulse_flag_enabled(is_enabled(FLAG_PULSE, false))
 	Global.comms.set_dual_channel_flag_enabled(is_enabled(FLAG_DUAL_CHANNEL, true))
-
-	# SentrySDK.init runs at process start (before this fetch resolves), so the
-	# remote rate is enforced through the _before_send gate, not the init option.
-	# The cast fails only outside a normal game run (editor tools/tests), where
-	# there is no Sentry to throttle.
-	var main_loop := get_tree() as ProjectMainLoop
-	if main_loop != null:
-		main_loop.set_sentry_sample_rate(
-			get_number(FLAG_SENTRY_SAMPLE_RATE, ProjectMainLoop.DEFAULT_SENTRY_SAMPLE_RATE)
-		)
-		main_loop.set_sentry_error_events_enabled(is_enabled(FLAG_SENTRY_ERROR_EVENTS, false))
 
 	# Push registration. This is the only place the flag is read, and Metrics holds the startup
 	# identify until it arrives: the cached FCM token is already there in Metrics::ready(), so

@@ -201,8 +201,7 @@ func _async_submit() -> void:
 	modal_actions.set_busy(true)
 	_rebuild_screenshot_slots()
 	# Yield one frame so the busy state actually paints: async_submit() does its
-	# JPEG encode, log-tail read and Sentry capture BEFORE its first await, so
-	# without this the spinner's frame never renders (PR #2779 review).
+	# JPEG encode BEFORE its first await, so without this the spinner's frame never renders (PR #2779 review).
 	await get_tree().process_frame
 	var result := await BugReportService.async_submit(uuid, dcl_text_edit.get_text_value(), _shots)
 	modal_actions.set_busy(false)

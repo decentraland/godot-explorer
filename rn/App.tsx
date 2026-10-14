@@ -9,12 +9,12 @@ import { NavProvider, useNav } from './src/app/NavProvider';
 import { gallery, usePreviewRoute } from './src/app/preview';
 import { Shell } from './src/app/Shell';
 import { useAnalyticsLifecycle } from './src/app/useAnalyticsLifecycle';
+import { startApp } from './src/app/startup';
 import { useAppWiring } from './src/app/wiring';
 import { core } from './src/core';
 import { useJumpIn } from './src/discover/sheetHooks';
 import { colors, ToastProvider } from './src/ds';
 import { runCoreSelfTest } from './src/core/selfTest';
-import { startLinkHandling } from './src/flow/browser';
 import { EntryFlow } from './src/flow/EntryFlow';
 
 function AppBody() {
@@ -59,7 +59,7 @@ function AppBody() {
 function App() {
   const preview = usePreviewRoute();
   useEffect(() => {
-    startLinkHandling();
+    startApp();
     if (__DEV__) {
       runCoreSelfTest();
     }

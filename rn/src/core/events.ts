@@ -6,6 +6,7 @@ import type {
   HudSnapshot,
   LoadingDetail,
   OpenUrl,
+  ReportPayload,
   SettingEntry,
   State,
   UiState,
@@ -41,6 +42,10 @@ function ensureRegistered() {
       handlers.forEach(h => h.loadingDetail?.(detail)),
     avatarChanged: (avatar: AvatarState) =>
       handlers.forEach(h => h.avatarChanged?.(avatar)),
+    report: (payload: ReportPayload) =>
+      handlers.forEach(h => h.report?.(payload)),
+    reportTag: (key: string, value: string | undefined) =>
+      handlers.forEach(h => h.reportTag?.(key, value)),
   });
 }
 

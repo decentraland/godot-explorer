@@ -57,6 +57,31 @@ impl DclSessionStore {
         }
     }
 
+    /// Saves the guest profile of a slot and leaves its account as the core saved it: the account
+    /// belongs to the core's sign-in flows.
+    #[func]
+    pub fn save_guest_profile(suffix: GString, guest_profile: GString) -> bool {
+        let Some(store) = store() else {
+            return false;
+        };
+        let suffix = suffix.to_string();
+        let account = store
+            .slot(&suffix)
+            .map(|slot| slot.account)
+            .unwrap_or_default();
+        let slot = SessionSlot {
+            account,
+            guest_profile: guest_profile.to_string(),
+        };
+        match store.set_slot(&suffix, slot) {
+            Ok(()) => true,
+            Err(e) => {
+                tracing::error!("session store: failed to save the guest profile: {e}");
+                false
+            }
+        }
+    }
+
     #[func]
     pub fn load_analytics_user_id() -> GString {
         store()

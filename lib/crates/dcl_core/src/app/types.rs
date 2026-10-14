@@ -164,6 +164,9 @@ pub trait AppEvents: Send + Sync {
     fn avatar_changed(&self, _avatar: &super::AvatarState) {}
     /// A panic or error the keep/drop policy let through, for the crash reporter.
     fn report(&self, _payload: &crate::hub::ReportPayload) {}
+    /// A tag to add to (or, with `None`, remove from) every later crash report. Batched by the
+    /// core: the latest value per key, at most a few times a second.
+    fn report_tag(&self, _key: &str, _value: Option<&str>) {}
 }
 
 #[derive(Debug, PartialEq)]

@@ -490,3 +490,21 @@ fn empty_and_unknown_values_are_omitted() {
 fn loading_resource_tag_name() {
     assert_eq!(LOADING_RESOURCE_TAG, "loading_resource");
 }
+
+#[test]
+fn event_tags_add_source_and_the_kind_and_category_when_present() {
+    let base = ReportTags::from_context(&context(), false);
+    let mut event = ReportEvent::panic("boom");
+    let tags = base.for_event(ReportSource::Crash, &event);
+    assert_eq!(tags.tag("source"), Some("crash"));
+    assert_eq!(tags.tag("event_kind"), None);
+    assert_eq!(tags.tag("platform"), Some("Android"));
+
+    event.event_kind = Some("scene_crash".into());
+    event.category = Some("FEEDBACK".into());
+    let tags = base.for_event(ReportSource::SceneCrash, &event);
+    assert_eq!(tags.tag("source"), Some("scene_crash"));
+    assert_eq!(tags.tag("event_kind"), Some("scene_crash"));
+    assert_eq!(tags.tag("category"), Some("FEEDBACK"));
+    assert_eq!(base.tag("source"), None, "the stored tags are untouched");
+}

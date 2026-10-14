@@ -1,3 +1,5 @@
+use super::{ReportEvent, ReportSource};
+
 /// Tag naming the resource a worker thread is loading; the engine sets and clears it.
 pub const LOADING_RESOURCE_TAG: &str = "loading_resource";
 
@@ -31,6 +33,21 @@ impl ReportTags {
             key: key.to_string(),
             value: value.into(),
         });
+    }
+
+    /// These tags plus what the kept event adds: `source`, and `event_kind` / `category` when set.
+    pub fn for_event(&self, source: ReportSource, event: &ReportEvent) -> Self {
+        let mut out = self.clone();
+        out.push("source", source.tag());
+        for (key, value) in [
+            ("event_kind", &event.event_kind),
+            ("category", &event.category),
+        ] {
+            if let Some(value) = value {
+                out.push(key, value.as_str());
+            }
+        }
+        out
     }
 
     /// Tags set once at start-up. Empty commit, branch, message and an unknown RAM are omitted.

@@ -50,6 +50,8 @@ export async function runCoreSelfTest(): Promise<void> {
         openBackpack: () => {},
         loadingDetail: () => {},
         avatarChanged: () => {},
+        report: () => {},
+        reportTag: () => {},
       };
       const id = core.addListener(listener);
       const fired = await withTimeout(

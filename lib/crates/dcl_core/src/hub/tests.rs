@@ -92,6 +92,7 @@ struct Heard {
     sessions: Mutex<Vec<SessionEvent>>,
     guest_reports: Mutex<Vec<GuestLoginReport>>,
     reports: Mutex<Vec<crate::hub::ReportPayload>>,
+    tags: Mutex<Vec<(String, Option<String>)>>,
 }
 
 impl AppEvents for Heard {
@@ -109,6 +110,12 @@ impl AppEvents for Heard {
     }
     fn report(&self, payload: &crate::hub::ReportPayload) {
         self.reports.lock().unwrap().push(payload.clone());
+    }
+    fn report_tag(&self, key: &str, value: Option<&str>) {
+        self.tags
+            .lock()
+            .unwrap()
+            .push((key.to_string(), value.map(str::to_string)));
     }
 }
 
@@ -537,6 +544,7 @@ fn a_kept_report_reaches_the_listeners_with_the_tags_and_a_dropped_one_does_not(
     let reports = s.heard.reports.lock().unwrap().clone();
     assert_eq!(reports.len(), 1);
     assert_eq!(reports[0].source, ReportSource::Crash);
+    assert_eq!(reports[0].tags.tag("source"), Some("crash"));
     assert_eq!(reports[0].tags.tag("platform"), Some("Android"));
     assert_eq!(reports[0].tags.tag("gpu_vendor"), Some("ARM"));
 
@@ -548,4 +556,30 @@ fn a_kept_report_reaches_the_listeners_with_the_tags_and_a_dropped_one_does_not(
         1,
         "development builds report nothing"
     );
+}
+
+#[test]
+fn a_burst_of_report_tags_reaches_the_listeners_as_the_first_and_the_latest() {
+    let s = setup();
+    for i in 0..200 {
+        s.hub
+            .set_report_tag("loading_resource", &format!("res://{i}"));
+        s.hub.clear_report_tag("loading_resource");
+    }
+    s.hub.set_report_tag("loading_resource", "res://last");
+    assert_eq!(
+        s.heard.tags.lock().unwrap().clone(),
+        vec![("loading_resource".to_string(), Some("res://0".to_string()))],
+        "the burst is held back after the first change"
+    );
+
+    for _ in 0..100 {
+        if s.heard.tags.lock().unwrap().len() > 1 {
+            break;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(10));
+    }
+    let heard = s.heard.tags.lock().unwrap().clone();
+    assert_eq!(heard.len(), 2, "one trailing delivery: {heard:?}");
+    assert_eq!(heard[1].1.as_deref(), Some("res://last"));
 }

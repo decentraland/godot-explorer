@@ -1,20 +1,29 @@
 //! Crash reports: panics and errors of the core go through the keep/drop policy, then to the
 //! shell, which owns the Sentry SDK and sends them with the tags the core builds.
 
+use std::{thread, time::Instant};
+
 use crate::{
-    app::AppEvents,
+    app::{AppEvents, HostEvents},
     flags,
-    report::{BuildEnvironment, Decision, ReportContext, ReportEvent, ReportSource, ReportTags},
+    report::{
+        BuildEnvironment, Decision, Push, ReportContext, ReportEvent, ReportSource, ReportTags,
+        TagChange,
+    },
 };
 
 use super::Hub;
+
+/// Flag names as the mobile-bff serves them.
+const FLAG_SAMPLE_RATE: &str = "sentry-sample-rate";
+const FLAG_ERROR_EVENTS: &str = "sentry-error-events";
 
 /// A report the policy kept, with everything the SDK needs to send it.
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "ffi", derive(uniffi::Record))]
 pub struct ReportPayload {
     pub event: ReportEvent,
-    /// The `source` tag.
+    /// Also in `tags` as the `source` tag.
     pub source: ReportSource,
     pub attach_log: bool,
     pub tags: ReportTags,
@@ -37,18 +46,48 @@ impl Hub {
                 return;
             };
             let (policy, tags) = &mut *state;
-            policy.set_remote_rate(flags::get_number("sentry_sample_rate", 1.0));
-            policy.set_error_events_enabled(flags::is_enabled("sentry-error-events", false));
+            policy.set_remote_rate(flags::get_number(FLAG_SAMPLE_RATE, 1.0));
+            policy.set_error_events_enabled(flags::is_enabled(FLAG_ERROR_EVENTS, false));
             match policy.decide(&event) {
                 Decision::Keep { source, attach_log } => ReportPayload {
+                    tags: tags.for_event(source, &event),
                     event,
                     source,
                     attach_log,
-                    tags: tags.clone(),
                 },
                 Decision::Drop => return,
             }
         };
         self.events.report(&payload);
+    }
+
+    /// Adds a tag to every later report; cheap enough for a per-resource call. The shell hears
+    /// the latest value per key, at most every 250 ms.
+    pub fn set_report_tag(&self, key: &str, value: &str) {
+        self.push_report_tag(key, Some(value));
+    }
+
+    pub fn clear_report_tag(&self, key: &str) {
+        self.push_report_tag(key, None);
+    }
+
+    fn push_report_tag(&self, key: &str, value: Option<&str>) {
+        match self.report_tags.push(key, value, Instant::now()) {
+            Push::Deliver(changes) => deliver_tags(&self.events, changes),
+            Push::Queued => {}
+            Push::FlushIn(wait) => {
+                let (events, tags) = (self.events.clone(), self.report_tags.clone());
+                thread::spawn(move || {
+                    thread::sleep(wait);
+                    deliver_tags(&events, tags.flush(Instant::now()));
+                });
+            }
+        }
+    }
+}
+
+fn deliver_tags(events: &HostEvents, changes: Vec<TagChange>) {
+    for (key, value) in changes {
+        events.report_tag(&key, value.as_deref());
     }
 }

@@ -90,6 +90,8 @@ pub trait AppListener: Send + Sync {
     fn avatar_changed(&self, avatar: crate::app::AvatarState);
     /// A panic or error to send to the crash reporter, already past the keep/drop policy.
     fn report(&self, payload: crate::hub::ReportPayload);
+    /// A tag for every later crash report; `None` removes it. Batched by the core.
+    fn report_tag(&self, key: String, value: Option<String>);
 }
 
 struct ListenerAdapter(Arc<dyn AppListener>);
@@ -138,6 +140,10 @@ impl AppEvents for ListenerAdapter {
     }
     fn report(&self, payload: &crate::hub::ReportPayload) {
         self.0.report(payload.clone());
+    }
+    fn report_tag(&self, key: &str, value: Option<&str>) {
+        self.0
+            .report_tag(key.to_string(), value.map(str::to_string));
     }
     fn scene_crashed(&self) {
         self.0.scene_crashed();

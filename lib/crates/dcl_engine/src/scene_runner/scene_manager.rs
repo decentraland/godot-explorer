@@ -256,8 +256,7 @@ impl SceneManager {
 
     /// Emitted right after `scene_crashed` for every abnormal scene exit, parcel
     /// or global: JS thread panic, runtime error, or a thread that ended without
-    /// a kill signal. Carries what Sentry needs to file the death as its own
-    /// issue while the definition is still in hand (consumed by SentrySeeder).
+    /// a kill signal. Carries the scene identity while the definition is still in hand.
     /// `reason` is single-line and bounded (see `crash_reason_summary`).
     #[signal]
     fn scene_crash_report(
@@ -3005,7 +3004,7 @@ impl SceneManager {
 
     /// Headroom before the OS kills the process, in MB, as computed by the
     /// background memory monitor. -1 on desktop (monitor not running) and
-    /// before its first sample. Read by SentrySeeder for the `memory` context.
+    /// before its first sample.
     #[func]
     fn get_available_memory_mb(&self) -> i32 {
         crate::tools::memory_monitor::available_memory_mb()

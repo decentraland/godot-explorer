@@ -102,6 +102,9 @@ impl AppEvents for HostEvents {
     fn report(&self, payload: &crate::hub::ReportPayload) {
         self.each(|l| l.report(payload));
     }
+    fn report_tag(&self, key: &str, value: Option<&str>) {
+        self.each(|l| l.report_tag(key, value));
+    }
 }
 
 /// An `EngineSink` that any thread can push to and the engine's main thread drains each frame.

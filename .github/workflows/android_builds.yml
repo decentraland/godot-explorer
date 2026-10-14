@@ -454,20 +454,7 @@ jobs:
             echo "⚠️  Godot AAR not found at $GODOT_AAR"
           fi
 
-          # 3. sentry-godot's own native lib, so a crash inside the SDK is readable too. Its
-          #    debug files are a separate asset of the pinned release (src/consts.rs); the
-          #    server already has them after the first build of a given SDK version.
-          SENTRY_ADDON_URL=$(grep -o 'https://github.com/getsentry/sentry-godot/releases/download/[^"]*' src/consts.rs | head -1)
-          SENTRY_ADDON_SYMBOLS_URL="${SENTRY_ADDON_URL/sentry-godot-/sentry-godot-debug-symbols-}"
-          if curl -sfL -o /tmp/sentry-godot-symbols.zip "$SENTRY_ADDON_SYMBOLS_URL"; then
-            rm -rf /tmp/sentry-godot-symbols && mkdir -p /tmp/sentry-godot-symbols
-            unzip -o -q /tmp/sentry-godot-symbols.zip "addons/sentry/bin/android/*" -d /tmp/sentry-godot-symbols
-            upload_dif "sentry-godot android symbols" "/tmp/sentry-godot-symbols/addons/sentry/bin/android"
-          else
-            echo "⚠️  could not download $SENTRY_ADDON_SYMBOLS_URL"
-          fi
-
-          # 4. Register the release under the runtime's name, attach commits and mark it
+          # 3. Register the release under the runtime's name, attach commits and mark it
           #    deployed to the environment this build targets, so issues get "first seen in",
           #    suspect commits and regression detection.
           case "${PROD_FLAG:-}" in

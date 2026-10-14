@@ -14,6 +14,8 @@ import { PLACES } from '../src/discover/mockData';
 import { StoryScreen } from '../src/discover/StoryScreen';
 import { getPreview } from '../src/gallery/registry';
 import '../src/discover/gallery';
+import { setCoreForTests } from '../src/core';
+import { createMockCore } from '../src/core/mock';
 
 const metrics = {
   frame: { x: 0, y: 0, width: 360, height: 800 },
@@ -52,6 +54,9 @@ beforeEach(() => {
   jest.useFakeTimers();
 });
 afterEach(() => jest.useRealTimers());
+
+beforeEach(() => setCoreForTests(createMockCore({ signedIn: true })));
+afterEach(() => setCoreForTests(undefined));
 
 describe('every Discover preview renders', () => {
   const ids = Object.values(ID).filter(id => getPreview(id));

@@ -1,4 +1,5 @@
 import { Vote, type Place } from '../native';
+import { createMockNotifications } from './notifications';
 import type { PlacesApi } from '../api/places';
 
 export type MockPlacesApi = Omit<
@@ -92,17 +93,9 @@ export function createMockPlacesWithoutNotifications(): MockPlacesApi {
   };
 }
 
-const notMocked = (name: string) => () => {
-  throw new Error(
-    `core mock: ${name} is not mocked here, see mock/notifications`,
-  );
-};
-
-/** The notifications functions belong to their own mock; the coordinator swaps these two for `createMockNotifications()`. */
 export function createMockPlaces(): PlacesApi {
   return {
     ...createMockPlacesWithoutNotifications(),
-    notifications: notMocked('notifications'),
-    markNotificationsRead: notMocked('markNotificationsRead'),
+    ...createMockNotifications(),
   };
 }

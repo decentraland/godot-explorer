@@ -134,6 +134,12 @@ typedef void (*UniffiCallbackInterfaceAppListenerMethod11)(
 typedef void (*UniffiCallbackInterfaceAppListenerMethod12)(
     uint64_t uniffi_handle, RustBuffer avatar, void *uniffi_out_return,
     RustCallStatus *rust_call_status);
+typedef void (*UniffiCallbackInterfaceAppListenerMethod13)(
+    uint64_t uniffi_handle, RustBuffer payload, void *uniffi_out_return,
+    RustCallStatus *rust_call_status);
+typedef void (*UniffiCallbackInterfaceAppListenerMethod14)(
+    uint64_t uniffi_handle, RustBuffer key, RustBuffer value,
+    void *uniffi_out_return, RustCallStatus *rust_call_status);
 typedef struct UniffiVTableCallbackInterfaceAppListener {
   UniffiCallbackInterfaceFree uniffi_free;
   UniffiCallbackInterfaceClone uniffi_clone;
@@ -150,6 +156,8 @@ typedef struct UniffiVTableCallbackInterfaceAppListener {
   UniffiCallbackInterfaceAppListenerMethod10 open_backpack;
   UniffiCallbackInterfaceAppListenerMethod11 loading_detail;
   UniffiCallbackInterfaceAppListenerMethod12 avatar_changed;
+  UniffiCallbackInterfaceAppListenerMethod13 report;
+  UniffiCallbackInterfaceAppListenerMethod14 report_tag;
 } UniffiVTableCallbackInterfaceAppListener;
 /*handle*/ uint64_t uniffi_dcl_core_fn_clone_applistener(
     /*handle*/ uint64_t handle, RustCallStatus *uniffi_out_err);
@@ -185,6 +193,12 @@ void uniffi_dcl_core_fn_method_applistener_loading_detail(
     /*handle*/ uint64_t ptr, RustBuffer detail, RustCallStatus *uniffi_out_err);
 void uniffi_dcl_core_fn_method_applistener_avatar_changed(
     /*handle*/ uint64_t ptr, RustBuffer avatar, RustCallStatus *uniffi_out_err);
+void uniffi_dcl_core_fn_method_applistener_report(
+    /*handle*/ uint64_t ptr, RustBuffer payload,
+    RustCallStatus *uniffi_out_err);
+void uniffi_dcl_core_fn_method_applistener_report_tag(
+    /*handle*/ uint64_t ptr, RustBuffer key, RustBuffer value,
+    RustCallStatus *uniffi_out_err);
 uint64_t uniffi_dcl_core_fn_func_add_listener(
     /*handle*/ uint64_t listener, RustCallStatus *uniffi_out_err);
 /*handle*/ uint64_t uniffi_dcl_core_fn_func_debug_delay(uint32_t millis);
@@ -538,6 +552,8 @@ uint16_t uniffi_dcl_core_checksum_method_applistener_ui_state();
 uint16_t uniffi_dcl_core_checksum_method_applistener_open_backpack();
 uint16_t uniffi_dcl_core_checksum_method_applistener_loading_detail();
 uint16_t uniffi_dcl_core_checksum_method_applistener_avatar_changed();
+uint16_t uniffi_dcl_core_checksum_method_applistener_report();
+uint16_t uniffi_dcl_core_checksum_method_applistener_report_tag();
 uint32_t ffi_dcl_core_uniffi_contract_version();
 }
 
@@ -3815,6 +3831,280 @@ static void cleanup() {
 }
 } // namespace
   // uniffi::dcl_core::cb::callbackinterfaceapplistenermethod12::vtablecallbackinterfaceapplistener
+  // Implementation of CallbackInterfaceAppListenerMethod13 for vtable field
+  // report in VTableCallbackInterfaceAppListener
+
+// Callback function:
+// uniffi::dcl_core::cb::callbackinterfaceapplistenermethod13::vtablecallbackinterfaceapplistener::UniffiCallbackInterfaceAppListenerMethod13
+//
+// We have the following constraints:
+// - we need to pass a function pointer to Rust.
+// - we need a jsi::Runtime and jsi::Function to call into JS.
+// - function pointers can't store state, so we can't use a lamda.
+//
+// For this, we store a lambda as a global, as `rsLambda`. The `callback`
+// function calls the lambda, which itself calls the `body` which then calls
+// into JS.
+//
+// We then give the `callback` function pointer to Rust which will call the
+// lambda sometime in the future.
+namespace uniffi::dcl_core::cb::callbackinterfaceapplistenermethod13::
+    vtablecallbackinterfaceapplistener {
+using namespace facebook;
+
+// We need to store a lambda in a global so we can call it from
+// a function pointer. The function pointer is passed to Rust.
+static std::function<void(uint64_t, RustBuffer, void *, RustCallStatus *)>
+    rsLambda = nullptr;
+
+// This is the main body of the callback. It's called from the lambda,
+// which itself is called from the callback function which is passed to Rust.
+static void body(jsi::Runtime &rt,
+                 std::shared_ptr<uniffi_runtime::UniffiCallInvoker> callInvoker,
+                 std::shared_ptr<jsi::Value> callbackValue,
+                 uint64_t rs_uniffiHandle, RustBuffer rs_payload,
+                 void *rs_uniffiOutReturn, RustCallStatus *uniffi_call_status) {
+
+  // Convert the arguments from Rust, into jsi::Values.
+  // We'll use the Bridging class to do this…
+  auto js_uniffiHandle =
+      uniffi_jsi::Bridging<uint64_t>::toJs(rt, callInvoker, rs_uniffiHandle);
+  auto js_payload =
+      uniffi::dcl_core::Bridging<RustBuffer>::toJs(rt, callInvoker, rs_payload);
+
+  // Now we are ready to call the callback.
+  // We are already on the JS thread, because this `body` function was
+  // invoked from the CallInvoker.
+  try {
+    // Getting the callback function
+    auto cb = callbackValue->asObject(rt).asFunction(rt);
+    auto uniffiResult = cb.call(rt, js_uniffiHandle, js_payload);
+
+    // Now copy the result back from JS into the RustCallStatus object.
+    uniffi::dcl_core::Bridging<RustCallStatus>::copyFromJs(
+        rt, callInvoker, uniffiResult, uniffi_call_status);
+
+    if (uniffi_call_status->code != UNIFFI_CALL_STATUS_OK) {
+      // The JS callback finished abnormally, so we cannot retrieve the return
+      // value.
+      return;
+    }
+
+  } catch (const jsi::JSError &error) {
+    std::cout
+        << "Error in callback UniffiCallbackInterfaceAppListenerMethod13: "
+        << error.what() << std::endl;
+    throw error;
+  }
+}
+
+static void callback(uint64_t rs_uniffiHandle, RustBuffer rs_payload,
+                     void *rs_uniffiOutReturn,
+                     RustCallStatus *uniffi_call_status) {
+  // If the runtime has shutdown, then there is no point in trying to
+  // call into Javascript. BUT how do we tell if the runtime has shutdown?
+  //
+  // Answer: the module destructor calls into callback `cleanup` method,
+  // which nulls out the rsLamda.
+  //
+  // If rsLamda is null, then there is no runtime to call into.
+  if (rsLambda == nullptr) {
+    // This only occurs when destructors are calling into Rust free/drop,
+    // which causes the JS callback to be dropped.
+    return;
+  }
+
+  // The runtime, the actual callback jsi::funtion, and the callInvoker
+  // are all in the lambda.
+  rsLambda(rs_uniffiHandle, rs_payload, rs_uniffiOutReturn, uniffi_call_status);
+}
+
+[[maybe_unused]] static UniffiCallbackInterfaceAppListenerMethod13
+makeCallbackFunction( // uniffi::dcl_core::cb::callbackinterfaceapplistenermethod13::vtablecallbackinterfaceapplistener
+    jsi::Runtime &rt,
+    std::shared_ptr<uniffi_runtime::UniffiCallInvoker> callInvoker,
+    const jsi::Value &value) {
+  if (rsLambda != nullptr) {
+    // `makeCallbackFunction` is called in two circumstances:
+    //
+    // 1. at startup, when initializing callback interface vtables.
+    // 2. when polling futures. This happens at least once per future that is
+    //    exposed to Javascript. We know that this is always the same function,
+    //    `uniffiFutureContinuationCallback` in `async-rust-calls.ts`.
+    //
+    // We can therefore return the callback function without making anything
+    // new if we've been initialized already.
+    return callback;
+  }
+  auto callbackFunction = value.asObject(rt).asFunction(rt);
+  auto callbackValue = std::make_shared<jsi::Value>(rt, callbackFunction);
+  rsLambda = [&rt, callInvoker, callbackValue](
+                 uint64_t rs_uniffiHandle, RustBuffer rs_payload,
+                 void *rs_uniffiOutReturn, RustCallStatus *uniffi_call_status) {
+    // We immediately make a lambda which will do the work of transforming the
+    // arguments into JSI values and calling the callback.
+    uniffi_runtime::UniffiCallFunc jsLambda =
+        [callInvoker, callbackValue, rs_uniffiHandle, rs_payload,
+         rs_uniffiOutReturn, uniffi_call_status](jsi::Runtime &rt) mutable {
+          body(rt, callInvoker, callbackValue, rs_uniffiHandle, rs_payload,
+               rs_uniffiOutReturn, uniffi_call_status);
+        };
+    // We'll then call that lambda from the callInvoker which will
+    // look after calling it on the correct thread.
+    callInvoker->invokeBlocking(rt, jsLambda);
+  };
+  return callback;
+}
+
+// This method is called from the destructor of NativeDclCore, which only
+// happens when the jsi::Runtime is being destroyed.
+static void cleanup() {
+  // The lambda holds a reference to the the Runtime, so when this is nulled
+  // out, then the pointer will no longer be left dangling.
+  rsLambda = nullptr;
+}
+} // namespace
+  // uniffi::dcl_core::cb::callbackinterfaceapplistenermethod13::vtablecallbackinterfaceapplistener
+  // Implementation of CallbackInterfaceAppListenerMethod14 for vtable field
+  // report_tag in VTableCallbackInterfaceAppListener
+
+// Callback function:
+// uniffi::dcl_core::cb::callbackinterfaceapplistenermethod14::vtablecallbackinterfaceapplistener::UniffiCallbackInterfaceAppListenerMethod14
+//
+// We have the following constraints:
+// - we need to pass a function pointer to Rust.
+// - we need a jsi::Runtime and jsi::Function to call into JS.
+// - function pointers can't store state, so we can't use a lamda.
+//
+// For this, we store a lambda as a global, as `rsLambda`. The `callback`
+// function calls the lambda, which itself calls the `body` which then calls
+// into JS.
+//
+// We then give the `callback` function pointer to Rust which will call the
+// lambda sometime in the future.
+namespace uniffi::dcl_core::cb::callbackinterfaceapplistenermethod14::
+    vtablecallbackinterfaceapplistener {
+using namespace facebook;
+
+// We need to store a lambda in a global so we can call it from
+// a function pointer. The function pointer is passed to Rust.
+static std::function<void(uint64_t, RustBuffer, RustBuffer, void *,
+                          RustCallStatus *)>
+    rsLambda = nullptr;
+
+// This is the main body of the callback. It's called from the lambda,
+// which itself is called from the callback function which is passed to Rust.
+static void body(jsi::Runtime &rt,
+                 std::shared_ptr<uniffi_runtime::UniffiCallInvoker> callInvoker,
+                 std::shared_ptr<jsi::Value> callbackValue,
+                 uint64_t rs_uniffiHandle, RustBuffer rs_key,
+                 RustBuffer rs_value, void *rs_uniffiOutReturn,
+                 RustCallStatus *uniffi_call_status) {
+
+  // Convert the arguments from Rust, into jsi::Values.
+  // We'll use the Bridging class to do this…
+  auto js_uniffiHandle =
+      uniffi_jsi::Bridging<uint64_t>::toJs(rt, callInvoker, rs_uniffiHandle);
+  auto js_key =
+      uniffi::dcl_core::Bridging<RustBuffer>::toJs(rt, callInvoker, rs_key);
+  auto js_value =
+      uniffi::dcl_core::Bridging<RustBuffer>::toJs(rt, callInvoker, rs_value);
+
+  // Now we are ready to call the callback.
+  // We are already on the JS thread, because this `body` function was
+  // invoked from the CallInvoker.
+  try {
+    // Getting the callback function
+    auto cb = callbackValue->asObject(rt).asFunction(rt);
+    auto uniffiResult = cb.call(rt, js_uniffiHandle, js_key, js_value);
+
+    // Now copy the result back from JS into the RustCallStatus object.
+    uniffi::dcl_core::Bridging<RustCallStatus>::copyFromJs(
+        rt, callInvoker, uniffiResult, uniffi_call_status);
+
+    if (uniffi_call_status->code != UNIFFI_CALL_STATUS_OK) {
+      // The JS callback finished abnormally, so we cannot retrieve the return
+      // value.
+      return;
+    }
+
+  } catch (const jsi::JSError &error) {
+    std::cout
+        << "Error in callback UniffiCallbackInterfaceAppListenerMethod14: "
+        << error.what() << std::endl;
+    throw error;
+  }
+}
+
+static void callback(uint64_t rs_uniffiHandle, RustBuffer rs_key,
+                     RustBuffer rs_value, void *rs_uniffiOutReturn,
+                     RustCallStatus *uniffi_call_status) {
+  // If the runtime has shutdown, then there is no point in trying to
+  // call into Javascript. BUT how do we tell if the runtime has shutdown?
+  //
+  // Answer: the module destructor calls into callback `cleanup` method,
+  // which nulls out the rsLamda.
+  //
+  // If rsLamda is null, then there is no runtime to call into.
+  if (rsLambda == nullptr) {
+    // This only occurs when destructors are calling into Rust free/drop,
+    // which causes the JS callback to be dropped.
+    return;
+  }
+
+  // The runtime, the actual callback jsi::funtion, and the callInvoker
+  // are all in the lambda.
+  rsLambda(rs_uniffiHandle, rs_key, rs_value, rs_uniffiOutReturn,
+           uniffi_call_status);
+}
+
+[[maybe_unused]] static UniffiCallbackInterfaceAppListenerMethod14
+makeCallbackFunction( // uniffi::dcl_core::cb::callbackinterfaceapplistenermethod14::vtablecallbackinterfaceapplistener
+    jsi::Runtime &rt,
+    std::shared_ptr<uniffi_runtime::UniffiCallInvoker> callInvoker,
+    const jsi::Value &value) {
+  if (rsLambda != nullptr) {
+    // `makeCallbackFunction` is called in two circumstances:
+    //
+    // 1. at startup, when initializing callback interface vtables.
+    // 2. when polling futures. This happens at least once per future that is
+    //    exposed to Javascript. We know that this is always the same function,
+    //    `uniffiFutureContinuationCallback` in `async-rust-calls.ts`.
+    //
+    // We can therefore return the callback function without making anything
+    // new if we've been initialized already.
+    return callback;
+  }
+  auto callbackFunction = value.asObject(rt).asFunction(rt);
+  auto callbackValue = std::make_shared<jsi::Value>(rt, callbackFunction);
+  rsLambda = [&rt, callInvoker,
+              callbackValue](uint64_t rs_uniffiHandle, RustBuffer rs_key,
+                             RustBuffer rs_value, void *rs_uniffiOutReturn,
+                             RustCallStatus *uniffi_call_status) {
+    // We immediately make a lambda which will do the work of transforming the
+    // arguments into JSI values and calling the callback.
+    uniffi_runtime::UniffiCallFunc jsLambda =
+        [callInvoker, callbackValue, rs_uniffiHandle, rs_key, rs_value,
+         rs_uniffiOutReturn, uniffi_call_status](jsi::Runtime &rt) mutable {
+          body(rt, callInvoker, callbackValue, rs_uniffiHandle, rs_key,
+               rs_value, rs_uniffiOutReturn, uniffi_call_status);
+        };
+    // We'll then call that lambda from the callInvoker which will
+    // look after calling it on the correct thread.
+    callInvoker->invokeBlocking(rt, jsLambda);
+  };
+  return callback;
+}
+
+// This method is called from the destructor of NativeDclCore, which only
+// happens when the jsi::Runtime is being destroyed.
+static void cleanup() {
+  // The lambda holds a reference to the the Runtime, so when this is nulled
+  // out, then the pointer will no longer be left dangling.
+  rsLambda = nullptr;
+}
+} // namespace
+  // uniffi::dcl_core::cb::callbackinterfaceapplistenermethod14::vtablecallbackinterfaceapplistener
 namespace uniffi::dcl_core {
 using namespace facebook;
 using CallInvoker = uniffi_runtime::UniffiCallInvoker;
@@ -3894,6 +4184,14 @@ template <> struct Bridging<UniffiVTableCallbackInterfaceAppListener> {
         uniffi::dcl_core::cb::callbackinterfaceapplistenermethod12::
             vtablecallbackinterfaceapplistener::makeCallbackFunction(
                 rt, callInvoker, jsObject.getProperty(rt, "avatar_changed"));
+    rsObject.report =
+        uniffi::dcl_core::cb::callbackinterfaceapplistenermethod13::
+            vtablecallbackinterfaceapplistener::makeCallbackFunction(
+                rt, callInvoker, jsObject.getProperty(rt, "report"));
+    rsObject.report_tag =
+        uniffi::dcl_core::cb::callbackinterfaceapplistenermethod14::
+            vtablecallbackinterfaceapplistener::makeCallbackFunction(
+                rt, callInvoker, jsObject.getProperty(rt, "report_tag"));
 
     return rsObject;
   }
@@ -4154,6 +4452,28 @@ NativeDclCore::NativeDclCore(
             return this
                 ->cpp_uniffi_dcl_core_fn_method_applistener_avatar_changed(
                     rt, thisVal, args, count);
+          });
+  props["ubrn_uniffi_dcl_core_fn_method_applistener_report"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_fn_method_applistener_report"),
+          2,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_dcl_core_fn_method_applistener_report(
+                rt, thisVal, args, count);
+          });
+  props["ubrn_uniffi_dcl_core_fn_method_applistener_report_tag"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_fn_method_applistener_report_tag"),
+          3,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_dcl_core_fn_method_applistener_report_tag(
+                rt, thisVal, args, count);
           });
   props["ubrn_uniffi_dcl_core_fn_func_add_listener"] =
       jsi::Function::createFromHostFunction(
@@ -6607,6 +6927,30 @@ NativeDclCore::NativeDclCore(
                 ->cpp_uniffi_dcl_core_checksum_method_applistener_avatar_changed(
                     rt, thisVal, args, count);
           });
+  props["ubrn_uniffi_dcl_core_checksum_method_applistener_report"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_checksum_method_applistener_report"),
+          0,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_dcl_core_checksum_method_applistener_report(
+                rt, thisVal, args, count);
+          });
+  props["ubrn_uniffi_dcl_core_checksum_method_applistener_report_tag"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt,
+              "ubrn_uniffi_dcl_core_checksum_method_applistener_report_tag"),
+          0,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this
+                ->cpp_uniffi_dcl_core_checksum_method_applistener_report_tag(
+                    rt, thisVal, args, count);
+          });
   props["ubrn_ffi_dcl_core_uniffi_contract_version"] =
       jsi::Function::createFromHostFunction(
           rt,
@@ -6798,6 +7142,10 @@ NativeDclCore::~NativeDclCore() {
   uniffi::dcl_core::cb::callbackinterfaceapplistenermethod11::
       vtablecallbackinterfaceapplistener::cleanup();
   uniffi::dcl_core::cb::callbackinterfaceapplistenermethod12::
+      vtablecallbackinterfaceapplistener::cleanup();
+  uniffi::dcl_core::cb::callbackinterfaceapplistenermethod13::
+      vtablecallbackinterfaceapplistener::cleanup();
+  uniffi::dcl_core::cb::callbackinterfaceapplistenermethod14::
       vtablecallbackinterfaceapplistener::cleanup();
 }
 
@@ -7081,6 +7429,37 @@ NativeDclCore::cpp_uniffi_dcl_core_fn_method_applistener_avatar_changed(
       uniffi_jsi::Bridging</*handle*/ uint64_t>::fromJs(rt, callInvoker,
                                                         args[0]),
       uniffi::dcl_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[1]),
+      &status);
+  uniffi::dcl_core::Bridging<RustCallStatus>::copyIntoJs(
+      rt, callInvoker, status, args[count - 1]);
+
+  return jsi::Value::undefined();
+}
+jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_method_applistener_report(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  RustCallStatus status =
+      uniffi::dcl_core::Bridging<RustCallStatus>::rustSuccess(rt);
+  uniffi_dcl_core_fn_method_applistener_report(
+      uniffi_jsi::Bridging</*handle*/ uint64_t>::fromJs(rt, callInvoker,
+                                                        args[0]),
+      uniffi::dcl_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[1]),
+      &status);
+  uniffi::dcl_core::Bridging<RustCallStatus>::copyIntoJs(
+      rt, callInvoker, status, args[count - 1]);
+
+  return jsi::Value::undefined();
+}
+jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_method_applistener_report_tag(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  RustCallStatus status =
+      uniffi::dcl_core::Bridging<RustCallStatus>::rustSuccess(rt);
+  uniffi_dcl_core_fn_method_applistener_report_tag(
+      uniffi_jsi::Bridging</*handle*/ uint64_t>::fromJs(rt, callInvoker,
+                                                        args[0]),
+      uniffi::dcl_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[1]),
+      uniffi::dcl_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[2]),
       &status);
   uniffi::dcl_core::Bridging<RustCallStatus>::copyIntoJs(
       rt, callInvoker, status, args[count - 1]);
@@ -9163,6 +9542,22 @@ NativeDclCore::cpp_uniffi_dcl_core_checksum_method_applistener_avatar_changed(
     jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
     size_t count) {
   auto value = uniffi_dcl_core_checksum_method_applistener_avatar_changed();
+
+  return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
+}
+jsi::Value
+NativeDclCore::cpp_uniffi_dcl_core_checksum_method_applistener_report(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  auto value = uniffi_dcl_core_checksum_method_applistener_report();
+
+  return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
+}
+jsi::Value
+NativeDclCore::cpp_uniffi_dcl_core_checksum_method_applistener_report_tag(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  auto value = uniffi_dcl_core_checksum_method_applistener_report_tag();
 
   return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
 }

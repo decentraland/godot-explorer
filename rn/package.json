@@ -16,6 +16,7 @@
   "dependencies": {
     "@react-native-clipboard/clipboard": "^1.16.3",
     "@react-native/new-app-screen": "0.86.3",
+    "@sentry/react-native": "^8.30.0",
     "@ubjs/core": "0.31.0-6",
     "dcl-core": "file:./modules/dcl-core",
     "expo": "~57.0.27",

@@ -77,6 +77,8 @@ describe('mock core', () => {
       openBackpack: () => {},
       loadingDetail: () => {},
       avatarChanged: () => {},
+      report: () => {},
+      reportTag: () => {},
     });
     core().removeListener(id);
     core().signOut();

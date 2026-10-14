@@ -321,7 +321,7 @@ fn resolved_optimized_base_url() -> String {
 /// await in the calling async block.
 fn load_baked_texture_entry(godot_path: &str, original_size: Option<ImageSize>) -> Option<Variant> {
     // A bad file traps inside Godot's loader (GODOT-EXPLORER-302), so the path has
-    // to be on the Sentry scope before the call, not after it.
+    // to be in the report tags before the call, not after it.
     crash_context::set_loading_resource(godot_path);
     let loaded = ResourceLoader::singleton().load(&GString::from(godot_path));
     crash_context::clear_loading_resource();

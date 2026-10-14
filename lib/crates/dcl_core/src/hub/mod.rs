@@ -18,13 +18,16 @@ use std::sync::{
 use crate::{
     app::{App, HostEvents},
     deep_link_route::{DeepLinkRouter, SystemClock},
-    report::{BuildEnvironment, ReportPolicy, ReportTags},
+    report::{BuildEnvironment, ReportPolicy, ReportTags, TagCoalescer},
     session::{
         account_codec,
         identity::{Session, SessionEvent},
         store::{SessionSlot, SessionStore},
     },
 };
+
+/// How often at most the shell hears about report-tag changes.
+const REPORT_TAG_INTERVAL: std::time::Duration = std::time::Duration::from_millis(250);
 
 pub use backend::{LiveBackend, SignInBackend};
 pub use links::LinkOutcome;
@@ -64,6 +67,7 @@ pub struct Hub {
     router: Mutex<DeepLinkRouter>,
     /// The keep/drop policy and the tags every kept report carries.
     report: Mutex<(ReportPolicy, ReportTags)>,
+    report_tags: Arc<TagCoalescer>,
     /// Gates developer-only link parameters; on until the engine says this is a dev build.
     production: AtomicBool,
 }
@@ -87,6 +91,7 @@ impl Hub {
                 ReportPolicy::with_thread_random(BuildEnvironment::Production),
                 ReportTags::default(),
             )),
+            report_tags: Arc::new(TagCoalescer::new(REPORT_TAG_INTERVAL)),
             production: AtomicBool::new(true),
         }
     }

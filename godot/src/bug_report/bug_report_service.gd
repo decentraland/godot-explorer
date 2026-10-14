@@ -58,14 +58,7 @@ static func async_submit(
 	if trimmed.is_empty():
 		return {"ok": false, "id": "", "error": "missing description"}
 
-	# Before the POST: the returned links are inputs to the description. They are
-	# "" whenever Sentry is unavailable, and the report is filed regardless.
-	var images: Array[PackedByteArray] = []
-	for shot in shots:
-		images.append(shot.get("bytes", PackedByteArray()))
-	var sentry_links := SentryUserFeedback.submit(trimmed, images)
-
-	var payload := {"ticket_attributes": _build_attributes(issue_type_uuid, trimmed, sentry_links)}
+	var payload := {"ticket_attributes": _build_attributes(issue_type_uuid, trimmed)}
 
 	var evidence := await _async_build_evidence(shots)
 	if not evidence.is_empty():
@@ -101,13 +94,11 @@ static func async_submit(
 
 
 # Every value is a String except Platform, which the proxy expects as an int.
-static func _build_attributes(
-	issue_type_uuid: String, description: String, sentry_links: Dictionary
-) -> Dictionary:
+static func _build_attributes(issue_type_uuid: String, description: String) -> Dictionary:
 	var device := _collect_device_info()
 	var attributes := {
 		"_default_title_": "Bug Report: %s" % _label_for_uuid(issue_type_uuid),
-		"_default_description_": _compose_description(description, sentry_links),
+		"_default_description_": _compose_description(description),
 		"Issue Type": issue_type_uuid,
 		"Operating System": device["os"],
 		"Graphic Card": device["gpu"],
@@ -139,14 +130,8 @@ static func _current_scene_sdk_version() -> String:
 	return String(scene_data.scene_entity_definition.get_runtime_version())
 
 
-# Mirrors Unity's ComposeTicketDescription so both clients read the same in
-# Intercom. `Internal diagnostics` is a Sentry deep link to the event carrying the
-# log tail and screenshot; it falls back to "unavailable" — the same string Unity
-# emits when its Sentry step fails — whenever SentryUserFeedback returns nothing,
-# which is every dev build, since _before_send discards those events.
-# `Sentry feedback` is Godot-only: the feedback entry for this report (see
-# SentryUserFeedback), omitted rather than "unavailable" when there is none.
-static func _compose_description(description: String, sentry_links: Dictionary) -> String:
+# Mirrors Unity's ComposeTicketDescription so both clients read the same in Intercom.
+static func _compose_description(description: String) -> String:
 	var lines := [description, "", "---"]
 	# Only in-world. `last_parcel_position` is persisted spawn config (config_data.gd),
 	# not a live position — explorer.gd writes it as the player moves and reads it back
@@ -158,13 +143,6 @@ static func _compose_description(description: String, sentry_links: Dictionary) 
 		var position = Global.get_config().last_parcel_position
 		if position != null:
 			lines.append("Coordinates: %d,%d" % [position.x, position.y])
-	var event_url := str(sentry_links.get("event_url", ""))
-	lines.append(
-		"Internal diagnostics: %s" % (event_url if not event_url.is_empty() else "unavailable")
-	)
-	var feedback_url := str(sentry_links.get("feedback_url", ""))
-	if not feedback_url.is_empty():
-		lines.append("Sentry feedback: %s" % feedback_url)
 	return "\n".join(lines)
 
 
@@ -211,9 +189,7 @@ static func _collect_device_info() -> Dictionary:
 # we go: each image gets the remaining bytes divided by the images still to come,
 # so one that comes in small or gets dropped leaves more room for the rest. An
 # image over its share is re-encoded smaller, and dropped only when even that
-# fails, so it can't take the whole ticket down with it. The originals still
-# reach Sentry via SentryUserFeedback, so a dropped image is missing from the
-# ticket but not lost.
+# fails, so it can't take the whole ticket down with it.
 static func _async_build_evidence(shots: Array[Dictionary]) -> Array:
 	var present: Array[Dictionary] = []
 	for shot in shots:

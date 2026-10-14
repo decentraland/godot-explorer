@@ -19,6 +19,8 @@ const silent: AppListener = {
   openBackpack: nothing,
   loadingDetail: nothing,
   avatarChanged: nothing,
+  report: nothing,
+  reportTag: nothing,
 };
 
 function setup(initial: State = new State.SignedIn()) {

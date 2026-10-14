@@ -303,7 +303,7 @@ impl DclBootstrap {
     }
 
     /// Creates the services of a full boot, assigns them to `global`, and queues the `/root`
-    /// adds. Metrics and the Sentry seeder are skipped when telemetry is off.
+    /// adds. Metrics are skipped when telemetry is off.
     #[func]
     pub fn create_app_services(
         mut global: Gd<Node>,
@@ -322,23 +322,7 @@ impl DclBootstrap {
             global.set("metrics", &metrics.to_variant());
         }
 
-        let mut ok = create(&mut global, &APP_SERVICES[..1]);
-
-        // The seeder reads the services created so far.
-        if telemetry_enabled {
-            match instantiate_script("src/logic/sentry_seeder.gd") {
-                Ok(seeder) => {
-                    global.set("sentry_seeder", &seeder);
-                    seeder.call("setup", &[]);
-                }
-                Err(reason) => {
-                    godot_error!("bootstrap: cannot create `sentry_seeder`: {reason}");
-                    ok = false;
-                }
-            }
-        }
-
-        ok &= create(&mut global, &APP_SERVICES[1..]);
+        let mut ok = create(&mut global, &APP_SERVICES);
 
         for property in ROOT_NODES {
             add_to_root_deferred(&global, property);

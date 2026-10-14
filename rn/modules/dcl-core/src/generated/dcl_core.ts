@@ -5474,6 +5474,65 @@ const FfiConverterTypeReportTags = (() => {
   return new FFIConverter();
 })();
 
+/**
+ * A report the policy kept, with everything the SDK needs to send it.
+ */
+export type ReportPayload = {
+  event: ReportEvent;
+  /**
+   * Also in `tags` as the `source` tag.
+   */
+  source: ReportSource;
+  attachLog: boolean;
+  tags: ReportTags;
+};
+
+/**
+ * Generated factory for {@link ReportPayload} record objects.
+ */
+export const ReportPayload = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<ReportPayload, ReturnType<typeof defaults>>(
+      defaults,
+    );
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults()) as Partial<ReportPayload>,
+  });
+})();
+
+const FfiConverterTypeReportPayload = (() => {
+  type TypeName = ReportPayload;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      return {
+        event: FfiConverterTypeReportEvent.readFromCursor(c),
+        source: FfiConverterTypeReportSource.readFromCursor(c),
+        attachLog: FfiConverterBool.readFromCursor(c),
+        tags: FfiConverterTypeReportTags.readFromCursor(c),
+      };
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      FfiConverterTypeReportEvent.writeIntoCursor(value.event, c);
+      FfiConverterTypeReportSource.writeIntoCursor(value.source, c);
+      FfiConverterBool.writeIntoCursor(value.attachLog, c);
+      FfiConverterTypeReportTags.writeIntoCursor(value.tags, c);
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterTypeReportEvent.allocationSize(value.event) +
+        FfiConverterTypeReportSource.allocationSize(value.source) +
+        FfiConverterBool.allocationSize(value.attachLog) +
+        FfiConverterTypeReportTags.allocationSize(value.tags)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
 export enum DestinationKind {
   /**
    * A Genesis City catalyst (the default realm or another DAO one).
@@ -9940,6 +9999,14 @@ export interface AppListener {
   openBackpack(emotes: boolean): void;
   loadingDetail(detail: LoadingDetail): void;
   avatarChanged(avatar: AvatarState): void;
+  /**
+   * A panic or error to send to the crash reporter, already past the keep/drop policy.
+   */
+  report(payload: ReportPayload): void;
+  /**
+   * A tag for every later crash report; `None` removes it. Batched by the core.
+   */
+  reportTag(key: string, value: string | undefined): void;
 }
 
 /**
@@ -10141,6 +10208,45 @@ export class AppListenerImpl
           uniffiTypeAppListenerImplObjectFactory.clonePointer(this),
           FfiConverterTypeAvatarState.lower(
             avatar,
+            nativeModule().rustbuffer_alloc,
+          ),
+          callStatus,
+        );
+      },
+      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+    );
+  }
+
+  /**
+   * A panic or error to send to the crash reporter, already past the keep/drop policy.
+   */
+  report(payload: ReportPayload): void {
+    uniffiCaller.rustCall(
+      /*caller:*/ callStatus => {
+        nativeModule().ubrn_uniffi_dcl_core_fn_method_applistener_report(
+          uniffiTypeAppListenerImplObjectFactory.clonePointer(this),
+          FfiConverterTypeReportPayload.lower(
+            payload,
+            nativeModule().rustbuffer_alloc,
+          ),
+          callStatus,
+        );
+      },
+      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+    );
+  }
+
+  /**
+   * A tag for every later crash report; `None` removes it. Batched by the core.
+   */
+  reportTag(key: string, value: string | undefined): void {
+    uniffiCaller.rustCall(
+      /*caller:*/ callStatus => {
+        nativeModule().ubrn_uniffi_dcl_core_fn_method_applistener_report_tag(
+          uniffiTypeAppListenerImplObjectFactory.clonePointer(this),
+          FfiConverterString.lower(key, nativeModule().rustbuffer_alloc),
+          FfiConverterOptionalString.lower(
+            value,
             nativeModule().rustbuffer_alloc,
           ),
           callStatus,
@@ -10480,6 +10586,47 @@ const uniffiCallbackInterfaceAppListener: {
         const jsCallback = FfiConverterTypeAppListener.lift(uniffiHandle);
         return jsCallback.avatarChanged(
           FfiConverterTypeAvatarState.lift(avatar),
+        );
+      };
+      const uniffiResult = UniffiResult.ready<void>();
+      const uniffiHandleSuccess = (obj: any) => {};
+      const uniffiHandleError = (code: number, errBuf: UniffiByteArray) => {
+        UniffiResult.writeError(uniffiResult, code, errBuf);
+      };
+      uniffiTraitInterfaceCall(
+        /*makeCall:*/ uniffiMakeCall,
+        /*handleSuccess:*/ uniffiHandleSuccess,
+        /*handleError:*/ uniffiHandleError,
+        /*lowerString:*/ FfiConverterString.lower.bind(FfiConverterString),
+        /*alloc:*/ nativeModule().rustbuffer_alloc,
+      );
+      return uniffiResult;
+    },
+    report: (uniffiHandle: bigint, payload: Uint8Array) => {
+      const uniffiMakeCall = (): void => {
+        const jsCallback = FfiConverterTypeAppListener.lift(uniffiHandle);
+        return jsCallback.report(FfiConverterTypeReportPayload.lift(payload));
+      };
+      const uniffiResult = UniffiResult.ready<void>();
+      const uniffiHandleSuccess = (obj: any) => {};
+      const uniffiHandleError = (code: number, errBuf: UniffiByteArray) => {
+        UniffiResult.writeError(uniffiResult, code, errBuf);
+      };
+      uniffiTraitInterfaceCall(
+        /*makeCall:*/ uniffiMakeCall,
+        /*handleSuccess:*/ uniffiHandleSuccess,
+        /*handleError:*/ uniffiHandleError,
+        /*lowerString:*/ FfiConverterString.lower.bind(FfiConverterString),
+        /*alloc:*/ nativeModule().rustbuffer_alloc,
+      );
+      return uniffiResult;
+    },
+    report_tag: (uniffiHandle: bigint, key: Uint8Array, value: Uint8Array) => {
+      const uniffiMakeCall = (): void => {
+        const jsCallback = FfiConverterTypeAppListener.lift(uniffiHandle);
+        return jsCallback.reportTag(
+          FfiConverterString.lift(key),
+          FfiConverterOptionalString.lift(value),
         );
       };
       const uniffiResult = UniffiResult.ready<void>();
@@ -11339,6 +11486,22 @@ function uniffiEnsureInitialized() {
       'uniffi_dcl_core_checksum_method_applistener_avatar_changed',
     );
   }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_method_applistener_report() !==
+    37505
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_method_applistener_report',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_method_applistener_report_tag() !==
+    2910
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_method_applistener_report_tag',
+    );
+  }
 
   uniffiCallbackInterfaceAppListener.register();
 }
@@ -11397,6 +11560,7 @@ export default Object.freeze({
     FfiConverterTypeReportContext,
     FfiConverterTypeReportEvent,
     FfiConverterTypeReportLevel,
+    FfiConverterTypeReportPayload,
     FfiConverterTypeReportSource,
     FfiConverterTypeReportTag,
     FfiConverterTypeReportTags,
