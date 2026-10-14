@@ -14,11 +14,13 @@ deleted.
 Built and checked on the Moto (Android): core install at launch, FFI, the app state machine, guest
 sign-in, session recovery, avatar preview, Genesis Plaza through `core.enter_world`, entering a
 world while one is up, the engine's exit and re-enter, deep links in a world.
-Written but **not verified**: iOS host, Reown/native wallets (wallet goes through the web page),
-Sentry delivery and symbol upload, attestation host services, email OTP and Google/Apple on a device.
-Open: 3.5 attestation host/FFI, 3.11 and the D-42 measurements, native WalletConnect, the
-`SwitchEnvironment`, `SetPreviewUrl`, `MarketplaceReturn` and benchmark deep-link effects, guest
-account auto-delete, the Sentry seeder tags. No RN screen calls `exit_world` yet (phase 4's confirm).
+Also checked on the Moto since: the Play Integrity round trip (token requested, attestation session
+ready after the terms), guest account deletion, the keyboard on the email step, the avatar preload (3.11).
+Written but **not verified**: iOS host (including App Attest), Reown/native wallets (a follow-up PR; the
+wallet goes through the web page), Sentry delivery and symbol upload, email OTP and Google/Apple logins.
+Open: native WalletConnect, the `SwitchEnvironment`, `MarketplaceReturn` and benchmark deep-link
+effects, the rest of 3.11 (baked-wearable lookup before the HEAD, one cache limit, emotes after the
+avatar, shader baker), friends' online status in the UI. No RN screen calls `exit_world` yet (phase 4).
 
 ## Exit criteria
 
@@ -95,11 +97,12 @@ account auto-delete, the Sentry seeder tags. No RN screen calls `exit_world` yet
   `GodotHost.mm` / `AppDelegate.swift`; the missing `set_surface_on_top` equivalent is written
   (CAMetalLayer order). `GODOT_USE_BRANCH` set so `install --targets ios` fetches
   `ios_host_release.a` from the engine branch build (D-23).
-- [ ] **3.5 Attestation**. `attestation_service.gd` (869) → `dcl_core::attestation`: session
+- [x] **3.5 Attestation**. `attestation_service.gd` (869) → `dcl_core::attestation`: session
   token exchange with the mobile-bff (URL from `urls`, not hardcoded), JWT cache under the data dir
   (importing `user://attest_session.json` once), retry policy. The host provides the OS call as a
   service trait (D-41): Play Integrity on Android, `DCAppAttestService` on iOS, the plugin code moved
-  into the host as-is.
+  into the host as-is. Android is checked on the Moto (a Play Integrity token request and the attestation
+  session ready after the terms); the Swift App Attest side is written and not verified.
 - [ ] **3.6 Entry flow on the core, every method**. `flow/auth.ts` stub → core calls. Guest;
   email OTP (the form and code modal are missing in RN today); Google and Apple through the
   browser hand-off (`open_url` event, app-return completes through `handle_deep_link`, all already
@@ -110,7 +113,7 @@ account auto-delete, the Sentry seeder tags. No RN screen calls `exit_world` yet
   choice per flow;
   welcome-back from the real profile; T&C version; version gate and device-support gate as core
   calls with RN modals; the FTUE "Jump in" through `resolve_destination`.
-- [ ] **3.7 Deep links**. RN `Linking` and the iOS `AppDelegate` → `core.handle_deep_link`;
+- [x] **3.7 Deep links**. RN `Linking` and the iOS `AppDelegate` → `core.handle_deep_link`;
   `deep_link_router.gd` routing (jump, open, events, places, sign-in resume with the 5-minute cap,
   config params, push attribution) → `dcl_core::deep_link::route` on the state machine.
 - [x] **3.8 Delete the bridge and the lobby, add the lint**. Remove `godot/src/rn_bridge/`
@@ -119,7 +122,7 @@ account auto-delete, the Sentry seeder tags. No RN screen calls `exit_world` yet
   (`lobby.gd` 1,428, `login.gd`, `sign_in_with_email.gd`, the lobby avatar editor), dead from this
   commit. Add the eslint `no-restricted-syntax` rule for hardcoded hosts; move the eight files in
   `01-today.md` to `core.urls()`.
-- [ ] **3.9 Sentry**. `@sentry/react-native` in the app with the native SDKs
+- [x] **3.9 Sentry**. `@sentry/react-native` in the app with the native SDKs
   under it; the sentry-godot addon and `SentryObjC.framework` leave the RN build; the policy in
   `project_main_loop.gd` (per-source keep rates, remote rate from flags) → `dcl_core::report` with
   tests; Rust panics (`log_panics`) and engine errors reach the shell as `report` events and are
@@ -142,6 +145,14 @@ account auto-delete, the Sentry seeder tags. No RN screen calls `exit_world` yet
   Android shader baker on, as for iOS, if it measures better; avoid creating world-only services for
   the preview where safe, with the complete Idle/World ownership split in 5.7. The starter set and
   the placeholder follow D-open-17.
+  Measured on the Moto edge 60 pro (14 Oct, debug APK): second launch, process start to the activity
+  shown +0.2 s, `engine_required` 0.3 s after the process start, the avatar preview requested 3.7 s after
+  `engine_required` (engine boot), avatar assembled 2.7–2.9 s after that. Fresh install: the avatar
+  took 3.2 s to assemble after the preview was requested. Done: the avatar now loads into a hidden
+  preview when the engine is ready, so on a fresh install it is ready 1 ms after the screen asks for it
+  (the player is still in the entry flow while it loads); a recovered session still waits the 2.7 s
+  because the screen asks right after the engine is ready. Not done: the baked-wearable lookup before the
+  HEAD, one cache limit, emotes after the avatar, the Android shader baker.
 
 ## Verification
 
