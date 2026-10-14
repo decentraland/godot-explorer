@@ -11,6 +11,8 @@ pub struct Friend {
     pub has_claimed_name: bool,
     pub profile_picture_url: String,
     pub friendship_id: String,
+    /// Whether the friend is connected right now (online or away); false for request lists.
+    pub online: bool,
 }
 
 /// Pending friend requests, in both directions.

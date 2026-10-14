@@ -205,6 +205,61 @@ export async function blockUser(
   }
 }
 
+/**
+ * One page of the people the player blocked.
+ */
+export async function blockedUsers(
+  limit: number,
+  offset: number,
+  asyncOpts_?: { signal: AbortSignal },
+): Promise<Array<Friend>> /*throws*/ {
+  const __stack = uniffiIsDebug ? new Error().stack : undefined;
+  try {
+    return await uniffiRustCallAsync(
+      /*rustCaller:*/ uniffiCaller,
+      /*rustFutureFunc:*/ () => {
+        return nativeModule().ubrn_uniffi_dcl_core_fn_func_blocked_users(
+          FfiConverterUInt32.lower(limit, nativeModule().rustbuffer_alloc),
+          FfiConverterUInt32.lower(offset, nativeModule().rustbuffer_alloc),
+        );
+      },
+      /*pollFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_poll_rust_buffer,
+      /*cancelFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_cancel_rust_buffer,
+      /*completeFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_complete_rust_buffer,
+      /*freeFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_free_rust_buffer,
+      // Async returns always go through the JS-side converter: the
+      // FFI symbol returns the future handle (u64), and the user-level
+      // RustBuffer comes back via the shared `rust_future_complete_*`
+      // export. The bytes the runtime hands back must be deserialized
+      // here using the per-callable return-type converter.
+      // Borrowed view over foreign memory: the call site owns the free,
+      // as on the sync paths. Unconditional — a no-op where buffers are
+      // already JS-owned.
+      /*liftFunc:*/ __rb => {
+        try {
+          return FfiConverterSequenceTypeFriend.lift(__rb);
+        } finally {
+          nativeModule().rustbuffer_free(__rb);
+        }
+      },
+      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+      /*asyncOpts:*/ asyncOpts_,
+      /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(
+        FfiConverterTypeCoreError,
+      ),
+    );
+  } catch (__error: any) {
+    if (uniffiIsDebug && __error instanceof Error) {
+      __error.stack = __stack;
+    }
+    throw __error;
+  }
+}
+
 export function cacheSize(): CacheSize /*throws*/ {
   const __rb: Uint8Array = uniffiCaller.rustCallWithError(
     /*liftError:*/ FfiConverterTypeCoreError.lift.bind(
@@ -3533,6 +3588,10 @@ export type Friend = {
   hasClaimedName: boolean;
   profilePictureUrl: string;
   friendshipId: string;
+  /**
+   * Whether the friend is connected right now (online or away); false for request lists.
+   */
+  online: boolean;
 };
 
 /**
@@ -3560,6 +3619,7 @@ const FfiConverterTypeFriend = (() => {
         hasClaimedName: FfiConverterBool.readFromCursor(c),
         profilePictureUrl: FfiConverterString.readFromCursor(c),
         friendshipId: FfiConverterString.readFromCursor(c),
+        online: FfiConverterBool.readFromCursor(c),
       };
     }
     writeIntoCursor(value: TypeName, c: Cursor): void {
@@ -3568,6 +3628,7 @@ const FfiConverterTypeFriend = (() => {
       FfiConverterBool.writeIntoCursor(value.hasClaimedName, c);
       FfiConverterString.writeIntoCursor(value.profilePictureUrl, c);
       FfiConverterString.writeIntoCursor(value.friendshipId, c);
+      FfiConverterBool.writeIntoCursor(value.online, c);
     }
     allocationSize(value: TypeName): number {
       return (
@@ -3575,7 +3636,8 @@ const FfiConverterTypeFriend = (() => {
         FfiConverterString.allocationSize(value.name) +
         FfiConverterBool.allocationSize(value.hasClaimedName) +
         FfiConverterString.allocationSize(value.profilePictureUrl) +
-        FfiConverterString.allocationSize(value.friendshipId)
+        FfiConverterString.allocationSize(value.friendshipId) +
+        FfiConverterBool.allocationSize(value.online)
       );
     }
   }
@@ -10974,6 +11036,13 @@ function uniffiEnsureInitialized() {
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_dcl_core_checksum_func_block_user',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_blocked_users() !== 19086
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_blocked_users',
     );
   }
   if (

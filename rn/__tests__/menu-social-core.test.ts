@@ -63,6 +63,16 @@ describe('mock social core', () => {
     expect(nearby.map(u => u.address)).not.toContain(other.address);
   });
 
+  it('lists the people the player blocked, and unblocking removes them', async () => {
+    const social = createMockSocial();
+    const [, other] = await social.nearby();
+    expect(await social.blockedUsers(0, 0)).toHaveLength(0);
+    await social.blockUser(other.address);
+    expect(await social.blockedUsers(0, 0)).toHaveLength(1);
+    await social.unblockUser(other.address);
+    expect(await social.blockedUsers(0, 0)).toHaveLength(0);
+  });
+
   it('pages the friends list', async () => {
     const social = createMockSocial();
     expect(await social.friends(2, 1)).toHaveLength(2);

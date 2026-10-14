@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
 
 use super::*;
-use crate::social::types::PublicProfile;
+use crate::social::{api::Connectivity, types::PublicProfile};
 
 fn friend(address: &str) -> Friend {
     Friend {
@@ -20,6 +20,7 @@ struct FakeApi {
     fail: Mutex<Option<SocialError>>,
     streams: Mutex<Vec<UnboundedReceiver<()>>>,
     subscribes: AtomicUsize,
+    connectivity: Mutex<Vec<UnboundedReceiver<Connectivity>>>,
 }
 
 impl FakeApi {
@@ -32,6 +33,11 @@ impl FakeApi {
     }
     fn calls(&self) -> Vec<String> {
         self.calls.lock().unwrap().clone()
+    }
+    fn queue_connectivity(&self) -> UnboundedSender<Connectivity> {
+        let (tx, rx) = unbounded_channel();
+        self.connectivity.lock().unwrap().push(rx);
+        tx
     }
     /// Queues a stream for the next `subscribe` and returns its sender.
     fn queue_stream(&self) -> UnboundedSender<()> {
@@ -72,6 +78,16 @@ impl SocialApi for FakeApi {
     }
     async fn unblock(&self, a: &str) -> Result<(), SocialError> {
         self.record(format!("unblock {a}"))
+    }
+    async fn blocked_users(&self, limit: u32, offset: u32) -> Result<Vec<Friend>, SocialError> {
+        self.record(format!("blocked {limit} {offset}"))?;
+        Ok(vec![friend("0xb")])
+    }
+    async fn subscribe_connectivity(&self) -> Result<UnboundedReceiver<Connectivity>, SocialError> {
+        if self.connectivity.lock().unwrap().is_empty() {
+            return Err(SocialError::request("no connectivity stream"));
+        }
+        Ok(self.connectivity.lock().unwrap().remove(0))
     }
     async fn subscribe(&self) -> Result<UnboundedReceiver<()>, SocialError> {
         self.subscribes.fetch_add(1, Ordering::SeqCst);
@@ -136,6 +152,54 @@ async fn settle() {
     for _ in 0..20 {
         tokio::time::sleep(Duration::from_millis(5)).await;
     }
+}
+
+#[tokio::test]
+async fn blocked_users_pass_the_page_through() {
+    let api = Arc::new(FakeApi::default());
+    let (friends, _) = service_with(Some(api.clone()));
+    assert_eq!(
+        friends.blocked_users(50, 0).await.unwrap(),
+        vec![friend("0xb")]
+    );
+    assert_eq!(api.calls(), vec!["blocked 50 0"]);
+}
+
+#[tokio::test]
+async fn friends_are_online_while_the_connectivity_stream_says_so() {
+    let api = Arc::new(FakeApi::default());
+    let updates = api.queue_connectivity();
+    let (friends, _) = service_with(Some(api.clone()));
+    let heard = Arc::new(AtomicUsize::new(0));
+    let counter = heard.clone();
+    friends.add_friends_changed_listener(Arc::new(move || {
+        counter.fetch_add(1, Ordering::SeqCst);
+    }));
+    friends.start().unwrap();
+    assert!(!friends.friends(100, 0).await.unwrap()[0].online);
+
+    updates
+        .send(Connectivity {
+            address: "0xa".into(),
+            online: true,
+        })
+        .unwrap();
+    settle().await;
+    assert!(friends.friends(100, 0).await.unwrap()[0].online);
+    assert_eq!(
+        heard.load(Ordering::SeqCst),
+        1,
+        "the lists are fetched again"
+    );
+
+    updates
+        .send(Connectivity {
+            address: "0xa".into(),
+            online: false,
+        })
+        .unwrap();
+    settle().await;
+    assert!(!friends.friends(100, 0).await.unwrap()[0].online);
 }
 
 #[tokio::test]

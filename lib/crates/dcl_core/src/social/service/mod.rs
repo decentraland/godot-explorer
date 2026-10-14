@@ -2,7 +2,7 @@
 //! the `friends_changed` notification. The calls to the social service are behind `SocialApi`.
 
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     sync::{Arc, Mutex, OnceLock},
     time::Duration,
 };
@@ -12,7 +12,7 @@ use tokio::runtime::Handle;
 use tokio_util::sync::CancellationToken;
 
 use super::{
-    api::{ManagerApi, SocialApi},
+    api::{Connectivity, ManagerApi, SocialApi},
     profile_lookup::{LambdaProfileSource, ProfileSource},
     social_service_manager::SocialServiceManager,
     types::{Friend, FriendRequests, NearbyUser, SocialError},
@@ -59,6 +59,8 @@ pub struct Friends {
     resubscribe_delay: Duration,
     live: Mutex<Live>,
     listeners: Arc<Mutex<Listeners>>,
+    /// Addresses of the friends the connectivity stream says are connected.
+    online: Arc<Mutex<HashSet<String>>>,
     nearby: Mutex<Option<Arc<dyn NearbyProvider>>>,
 }
 
@@ -90,6 +92,7 @@ impl Friends {
             resubscribe_delay: RESUBSCRIBE_DELAY,
             live: Mutex::new(Live::default()),
             listeners: Arc::new(Mutex::new(Listeners::default())),
+            online: Arc::new(Mutex::new(HashSet::new())),
             nearby: Mutex::new(None),
         }
     }
@@ -112,6 +115,7 @@ impl Friends {
             token.cancel();
         }
         live.api = None;
+        self.online.lock().unwrap().clear();
     }
 
     pub fn add_friends_changed_listener(&self, listener: FriendsChangedListener) -> u64 {
@@ -143,13 +147,30 @@ impl Friends {
             self.listeners.clone(),
             self.resubscribe_delay,
         ));
+        self.handle.spawn(keep_connectivity(
+            api.clone(),
+            token.clone(),
+            self.online.clone(),
+            self.listeners.clone(),
+            self.resubscribe_delay,
+        ));
         live.api = Some(api.clone());
         live.subscription = Some(token);
         Ok(api)
     }
 
     pub async fn friends(&self, limit: u32, offset: u32) -> Result<Vec<Friend>, SocialError> {
-        self.api()?.friends(limit, offset).await
+        let mut friends = self.api()?.friends(limit, offset).await?;
+        let online = self.online.lock().unwrap();
+        for friend in &mut friends {
+            friend.online = online.contains(&friend.address);
+        }
+        Ok(friends)
+    }
+
+    /// The people the player blocked, newest first as the service returns them.
+    pub async fn blocked_users(&self, limit: u32, offset: u32) -> Result<Vec<Friend>, SocialError> {
+        self.api()?.blocked_users(limit, offset).await
     }
 
     pub async fn friend_requests(&self) -> Result<FriendRequests, SocialError> {
@@ -268,6 +289,53 @@ async fn keep_subscribed(
                 tracing::debug!("friendship updates dropped, resubscribing");
             }
             Err(e) => tracing::debug!("friendship subscription failed: {e}"),
+        }
+        tokio::select! {
+            _ = token.cancelled() => return,
+            _ = tokio::time::sleep(delay) => {}
+        }
+        delay = (delay * 2).min(RESUBSCRIBE_MAX_DELAY);
+    }
+}
+
+/// Follows who is online, re-subscribing with a growing delay when the stream drops. A change
+/// tells the listeners, which fetch the lists again; so does a re-established stream, since
+/// updates may have been missed (the old state is dropped first).
+async fn keep_connectivity(
+    api: Arc<dyn SocialApi>,
+    token: CancellationToken,
+    online: Arc<Mutex<HashSet<String>>>,
+    listeners: Arc<Mutex<Listeners>>,
+    base_delay: Duration,
+) {
+    let mut delay = base_delay;
+    loop {
+        let subscribed = tokio::select! {
+            _ = token.cancelled() => return,
+            result = api.subscribe_connectivity() => result,
+        };
+        if let Ok(mut updates) = subscribed {
+            delay = base_delay;
+            online.lock().unwrap().clear();
+            loop {
+                tokio::select! {
+                    _ = token.cancelled() => return,
+                    update = updates.recv() => match update {
+                        Some(Connectivity { address, online: connected }) => {
+                            {
+                                let mut set = online.lock().unwrap();
+                                if connected {
+                                    set.insert(address);
+                                } else {
+                                    set.remove(&address);
+                                }
+                            }
+                            notify(&listeners);
+                        }
+                        None => break,
+                    },
+                }
+            }
         }
         tokio::select! {
             _ = token.cancelled() => return,

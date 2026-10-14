@@ -193,6 +193,10 @@ interface NativeModuleInterface {
     uniffi_out_err: UniffiRustCallStatus,
   ): Uint8Array;
   ubrn_uniffi_dcl_core_fn_func_block_user(address: Uint8Array): bigint;
+  ubrn_uniffi_dcl_core_fn_func_blocked_users(
+    limit: number,
+    offset: number,
+  ): bigint;
   ubrn_uniffi_dcl_core_fn_func_cache_size(
     uniffi_out_err: UniffiRustCallStatus,
   ): Uint8Array;
@@ -492,6 +496,7 @@ interface NativeModuleInterface {
   ubrn_uniffi_dcl_core_checksum_func_address(): number;
   ubrn_uniffi_dcl_core_checksum_func_avatar_state(): number;
   ubrn_uniffi_dcl_core_checksum_func_block_user(): number;
+  ubrn_uniffi_dcl_core_checksum_func_blocked_users(): number;
   ubrn_uniffi_dcl_core_checksum_func_cache_size(): number;
   ubrn_uniffi_dcl_core_checksum_func_campaign_resolution(): number;
   ubrn_uniffi_dcl_core_checksum_func_cancel_friend_request(): number;

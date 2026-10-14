@@ -4,6 +4,7 @@ import type * as Native from '../native';
 export type SocialApi = Pick<
   typeof Native,
   | 'friends'
+  | 'blockedUsers'
   | 'friendRequests'
   | 'nearby'
   | 'sendFriendRequest'

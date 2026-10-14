@@ -37,6 +37,12 @@ pub async fn friends(limit: u32, offset: u32) -> Result<Vec<Friend>, CoreError> 
     on_core(async move { social::friends().friends(limit, offset).await }).await
 }
 
+/// One page of the people the player blocked.
+#[uniffi::export]
+pub async fn blocked_users(limit: u32, offset: u32) -> Result<Vec<Friend>, CoreError> {
+    on_core(async move { social::friends().blocked_users(limit, offset).await }).await
+}
+
 /// Pending requests, received and sent.
 #[uniffi::export]
 pub async fn friend_requests() -> Result<FriendRequests, CoreError> {

@@ -1,7 +1,5 @@
 use super::tests::{setup, signed_out, state, Setup};
 use super::*;
-use ethers_signers::Signer;
-
 use crate::{app::State, session::store::SessionSlot};
 
 async fn signed_in_guest(upgraded: Option<bool>) -> Setup {

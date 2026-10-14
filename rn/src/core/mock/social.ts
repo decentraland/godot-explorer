@@ -13,6 +13,7 @@ const user = (n: number, name: string, hasClaimedName = true): NearbyUser => ({
 const withId = (who: NearbyUser, friendshipId: string): Friend => ({
   ...who,
   friendshipId,
+  online: false,
 });
 
 const FRIENDS: Friend[] = [
@@ -56,6 +57,10 @@ export function createMockSocial(onChanged: () => void = () => {}): SocialApi {
   return {
     friends: async (limit, offset) =>
       friends.slice(offset, limit > 0 ? offset + limit : undefined),
+    blockedUsers: async (limit, offset) =>
+      blocked
+        .slice(offset, limit > 0 ? offset + limit : undefined)
+        .map(who => withId(user(0, who.slice(0, 6), false), '')),
     friendRequests: async () => ({ received, sent }),
     nearby: async () => nearby.filter(u => !blocked.includes(u.address)),
     sendFriendRequest: async who =>

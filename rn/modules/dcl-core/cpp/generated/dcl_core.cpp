@@ -332,6 +332,8 @@ RustBuffer uniffi_dcl_core_fn_func_version(RustCallStatus *uniffi_out_err);
 /*handle*/ uint64_t
 uniffi_dcl_core_fn_func_accept_friend_request(RustBuffer address);
 /*handle*/ uint64_t uniffi_dcl_core_fn_func_block_user(RustBuffer address);
+/*handle*/ uint64_t uniffi_dcl_core_fn_func_blocked_users(uint32_t limit,
+                                                          uint32_t offset);
 /*handle*/ uint64_t
 uniffi_dcl_core_fn_func_cancel_friend_request(RustBuffer address);
 /*handle*/ uint64_t uniffi_dcl_core_fn_func_friend_requests();
@@ -534,6 +536,7 @@ uint16_t uniffi_dcl_core_checksum_func_settings();
 uint16_t uniffi_dcl_core_checksum_func_version();
 uint16_t uniffi_dcl_core_checksum_func_accept_friend_request();
 uint16_t uniffi_dcl_core_checksum_func_block_user();
+uint16_t uniffi_dcl_core_checksum_func_blocked_users();
 uint16_t uniffi_dcl_core_checksum_func_cancel_friend_request();
 uint16_t uniffi_dcl_core_checksum_func_friend_requests();
 uint16_t uniffi_dcl_core_checksum_func_friends();
@@ -5284,6 +5287,17 @@ NativeDclCore::NativeDclCore(
             return this->cpp_uniffi_dcl_core_fn_func_block_user(rt, thisVal,
                                                                 args, count);
           });
+  props["ubrn_uniffi_dcl_core_fn_func_blocked_users"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_fn_func_blocked_users"),
+          2,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_dcl_core_fn_func_blocked_users(rt, thisVal,
+                                                                   args, count);
+          });
   props["ubrn_uniffi_dcl_core_fn_func_cancel_friend_request"] =
       jsi::Function::createFromHostFunction(
           rt,
@@ -6711,6 +6725,17 @@ NativeDclCore::NativeDclCore(
           [this](jsi::Runtime &rt, const jsi::Value &thisVal,
                  const jsi::Value *args, size_t count) -> jsi::Value {
             return this->cpp_uniffi_dcl_core_checksum_func_block_user(
+                rt, thisVal, args, count);
+          });
+  props["ubrn_uniffi_dcl_core_checksum_func_blocked_users"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_checksum_func_blocked_users"),
+          0,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_dcl_core_checksum_func_blocked_users(
                 rt, thisVal, args, count);
           });
   props["ubrn_uniffi_dcl_core_checksum_func_cancel_friend_request"] =
@@ -8299,6 +8324,16 @@ jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_block_user(
   return uniffi_jsi::Bridging</*handle*/ uint64_t>::toJs(rt, callInvoker,
                                                          value);
 }
+jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_blocked_users(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  auto value = uniffi_dcl_core_fn_func_blocked_users(
+      uniffi_jsi::Bridging<uint32_t>::fromJs(rt, callInvoker, args[0]),
+      uniffi_jsi::Bridging<uint32_t>::fromJs(rt, callInvoker, args[1]));
+
+  return uniffi_jsi::Bridging</*handle*/ uint64_t>::toJs(rt, callInvoker,
+                                                         value);
+}
 jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_cancel_friend_request(
     jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
     size_t count) {
@@ -9431,6 +9466,13 @@ jsi::Value NativeDclCore::cpp_uniffi_dcl_core_checksum_func_block_user(
     jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
     size_t count) {
   auto value = uniffi_dcl_core_checksum_func_block_user();
+
+  return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
+}
+jsi::Value NativeDclCore::cpp_uniffi_dcl_core_checksum_func_blocked_users(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  auto value = uniffi_dcl_core_checksum_func_blocked_users();
 
   return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
 }

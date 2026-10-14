@@ -17,6 +17,13 @@ use crate::proto::social_service::v2::{
 
 const SUBSCRIBE_TIMEOUT: Duration = Duration::from_secs(15);
 
+/// A friend coming online or going offline.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Connectivity {
+    pub address: String,
+    pub online: bool,
+}
+
 #[async_trait]
 pub trait SocialApi: Send + Sync {
     /// `limit == 0` asks for the service's default page.
@@ -30,6 +37,9 @@ pub trait SocialApi: Send + Sync {
     async fn cancel(&self, address: &str) -> Result<(), SocialError>;
     async fn block(&self, address: &str) -> Result<(), SocialError>;
     async fn unblock(&self, address: &str) -> Result<(), SocialError>;
+    async fn blocked_users(&self, limit: u32, offset: u32) -> Result<Vec<Friend>, SocialError>;
+    /// A friend coming online or going offline; the channel closes when the stream drops.
+    async fn subscribe_connectivity(&self) -> Result<UnboundedReceiver<Connectivity>, SocialError>;
     /// One `()` per friendship update that changes a list; the channel closes when the stream
     /// drops.
     async fn subscribe(&self) -> Result<UnboundedReceiver<()>, SocialError>;
@@ -49,6 +59,7 @@ fn friend(profile: FriendProfile, friendship_id: String) -> Friend {
         has_claimed_name: profile.has_claimed_name,
         profile_picture_url: profile.profile_picture_url,
         friendship_id,
+        online: false,
     }
 }
 
@@ -211,6 +222,54 @@ impl SocialApi for ManagerApi {
         }
     }
 
+    async fn blocked_users(&self, limit: u32, offset: u32) -> Result<Vec<Friend>, SocialError> {
+        let response = self
+            .0
+            .get_blocked_users(pagination(limit, offset))
+            .await
+            .map_err(|e| rpc("get blocked users", e))?;
+        Ok(response
+            .profiles
+            .into_iter()
+            .map(|p| Friend {
+                address: p.address,
+                name: p.name,
+                has_claimed_name: p.has_claimed_name,
+                profile_picture_url: p.profile_picture_url,
+                ..Friend::default()
+            })
+            .collect())
+    }
+
+    async fn subscribe_connectivity(&self) -> Result<UnboundedReceiver<Connectivity>, SocialError> {
+        use crate::proto::social_service::v2::ConnectivityStatus;
+        let mut updates = tokio::time::timeout(
+            SUBSCRIBE_TIMEOUT,
+            self.0.subscribe_to_friend_connectivity_updates(),
+        )
+        .await
+        .map_err(|_| SocialError::request("timeout subscribing to connectivity updates"))?
+        .map_err(|e| rpc("subscribe to connectivity updates", e))?;
+
+        let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
+        tokio::spawn(async move {
+            while let Some(update) = updates.recv().await {
+                let Some(friend) = update.friend else {
+                    continue;
+                };
+                let online = update.status != ConnectivityStatus::Offline as i32;
+                let update = Connectivity {
+                    address: friend.address,
+                    online,
+                };
+                if tx.send(update).is_err() {
+                    break;
+                }
+            }
+        });
+        Ok(rx)
+    }
+
     async fn subscribe(&self) -> Result<UnboundedReceiver<()>, SocialError> {
         let mut updates =
             tokio::time::timeout(SUBSCRIBE_TIMEOUT, self.0.subscribe_to_friendship_updates())
@@ -301,6 +360,7 @@ mod tests {
                 has_claimed_name: true,
                 profile_picture_url: "u".into(),
                 friendship_id: "id-1".into(),
+                online: false,
             }]
         );
     }

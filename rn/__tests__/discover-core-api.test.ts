@@ -17,6 +17,7 @@ const friend = (over: Partial<Friend>): Friend => ({
   hasClaimedName: true,
   profilePictureUrl: '',
   friendshipId: 'f1',
+  online: false,
   ...over,
 });
 
