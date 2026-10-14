@@ -5,6 +5,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { StatusBar, StyleSheet, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { onLinkTarget } from './src/app/links';
 import { NavProvider, useNav } from './src/app/NavProvider';
 import { gallery, usePreviewRoute } from './src/app/preview';
 import { Shell } from './src/app/Shell';
@@ -19,7 +20,7 @@ import { EntryFlow } from './src/flow/EntryFlow';
 
 function AppBody() {
   const [entered, setEntered] = useState(false);
-  const { reset, route } = useNav();
+  const { push, reset, route } = useNav();
   const onDone = useCallback(() => setEntered(true), []);
 
   const jumpIn = useJumpIn();
@@ -27,6 +28,26 @@ function AppBody() {
   useEffect(() => {
     core().firstScreenDrawn();
   }, []);
+
+  // A deep link navigates once the player is past the entry flow.
+  useEffect(
+    () =>
+      onLinkTarget(target => {
+        if (!entered) {
+          return;
+        }
+        if (target.kind === 'world') {
+          jumpIn(target.place);
+        } else if (target.kind === 'place') {
+          push({ name: 'placeDetail', params: { placeId: target.placeId } });
+        } else if (target.kind === 'event') {
+          push({ name: 'eventDetail', params: { eventId: target.eventId } });
+        } else {
+          reset({ name: 'home' });
+        }
+      }),
+    [entered, jumpIn, push, reset],
+  );
 
   const leave = useCallback(() => {
     try {

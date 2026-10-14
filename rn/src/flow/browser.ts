@@ -1,5 +1,6 @@
 import { Linking } from 'react-native';
 import InAppBrowser from 'react-native-inappbrowser-reborn';
+import { applyRouted } from '../app/links';
 import { core } from '../core';
 import { onCoreEvents } from '../core/events';
 import { StartKind } from '../core/native';
@@ -30,5 +31,5 @@ export function startLinkHandling() {
 
 function routeLink(url: string, start: StartKind) {
   InAppBrowser.close();
-  core().handleDeepLink(url, start);
+  applyRouted(core().handleDeepLink(url, start));
 }
