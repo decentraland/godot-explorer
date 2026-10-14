@@ -342,10 +342,9 @@ func set_camera_mode(mode: Global.CameraMode, play_sound: bool = true):
 
 
 func update_avatar_movement_state(vel: float):
-	# The gait is whatever the animation blend says it is (Unity
-	# AnimationMovementBlendLogic.CalculateBlendValue): measured speed relative to
-	# the speed the input mode asks for, times the mode. Holding run against a
-	# wall that only allows walk pace therefore steps at walk, not at run.
+	# Unity: the gait KIND comes from the input mode and the blend from the
+	# measured speed. Reading the kind off the blend flips it while a stick holds
+	# near a walk/jog cap, and the blend target jumps between normalizations.
 	var limit := 0.0
 	match movement_kind:
 		1:
@@ -357,11 +356,10 @@ func update_avatar_movement_state(vel: float):
 	var blend := 0.0
 	if has_move_input and limit > 0.0:
 		blend = clampf(vel / limit, 0.0, 1.0) * movement_kind
-	if blend <= GAIT_BLEND_EPSILON:
-		blend = 0.0
-	avatar.walk = blend > 0.0 and blend <= 1.0
-	avatar.jog = blend > 1.0 and blend <= 2.0
-	avatar.run = blend > 2.0
+	var moving := blend > GAIT_BLEND_EPSILON
+	avatar.walk = moving and movement_kind == 1
+	avatar.jog = moving and movement_kind == 2
+	avatar.run = moving and movement_kind == 3
 	avatar.movement_speed = vel
 
 
@@ -842,6 +840,8 @@ func _physics_process(dt: float) -> void:
 	)
 
 	camera.set_target_fov(DEFAULT_CAMERA_FOV)
+	# Unity MovementKind: no input is Idle, and only the input mode picks a gait.
+	movement_kind = 0
 	if has_move_input:
 		var wants_walk := Input.is_action_pressed("ia_walk")
 		var wants_sprint := Input.is_action_pressed("ia_sprint")
