@@ -39,9 +39,9 @@ jobs:
         working-directory: lib
         run: cargo clippy --workspace -- -D warnings
 
-      - name: dcl_core tests (no Godot)
+      - name: dcl_core and dcl_host tests (no Godot)
         working-directory: lib
-        run: cargo test -p dcl_core
+        run: cargo test -p dcl_core -p dcl_host
 
       - name: Version check
         run: cargo run -- version-check
