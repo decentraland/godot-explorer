@@ -14,7 +14,7 @@
 godot/src/ui/pages/auth/lobby.tscn	Magic Error 
 
 # Day-index label (D1..D7) formatted onto the login-streak pill, not prose.
-godot/src/ui/components/atoms/controls/streak_day_pill/streak_day_pill.gd	D%d
+godot/src/ui/components/atoms/controls/streak_day_pill/streak_day_pill.gd	D[b]%d[/b]
 
 # Debug-only button, only built when the debug guest-wallet reset is enabled.
 godot/src/ui/pages/auth/lobby.gd	RESET GUEST WALLET (DEBUG)
