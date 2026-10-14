@@ -33,6 +33,7 @@ func _on_visibility_changed() -> void:
 
 
 ## Same method name/shape as GuestUpgradeCard's — discover.gd calls both the same way.
+# gdlint:ignore = async-function-name
 func refresh_visibility() -> void:
 	visible = Global.streak_manager.is_widget_visible()
 	if not visible:

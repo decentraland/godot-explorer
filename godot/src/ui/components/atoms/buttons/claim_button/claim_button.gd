@@ -130,6 +130,7 @@ func _on_dot_timer_timeout() -> void:
 	_refresh_text()
 
 
+# gdlint:ignore = async-function-name
 func _on_pressed() -> void:
 	if not claim_action.is_valid() or _claim_state != ClaimState.IDLE:
 		return

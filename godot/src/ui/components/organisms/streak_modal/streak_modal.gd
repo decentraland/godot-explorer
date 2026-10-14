@@ -189,6 +189,7 @@ func _set_cta(text: String, secondary: bool) -> void:
 ## Hides Button_CTA and shows ClaimButton instead — used once the D3/D7 reward is actually
 ## claimable, so the gradient + claiming/claimed states replace the plain acknowledgement CTA.
 ## Wires claim_action here (not _ready()) since it needs the day/is_guest for THIS setup() call.
+# gdlint:ignore = async-function-name
 func _show_claim_button(text_key: String) -> void:
 	button_cta.visible = false
 	claim_button.visible = true
