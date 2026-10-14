@@ -2,6 +2,7 @@
 //! persistent node that lives under `/root`.
 
 pub mod bootstrap;
+mod core_link;
 mod dcl_engine;
 mod itests;
 pub mod root;

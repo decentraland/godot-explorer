@@ -3,10 +3,11 @@ use std::{
     path::{Path, PathBuf},
     sync::{
         atomic::{AtomicUsize, Ordering},
-        OnceLock,
+        Arc, Mutex, OnceLock,
     },
 };
 
+use crate::app::{App, AppEvents, HostEvents};
 use tokio::runtime::{Builder, Handle, Runtime};
 
 static CORE: OnceLock<Core> = OnceLock::new();
@@ -39,6 +40,8 @@ pub struct CoreConfig {
 pub struct Core {
     config: CoreConfig,
     runtime: Runtime,
+    host_events: Arc<HostEvents>,
+    app: Mutex<App>,
 }
 
 impl Core {
@@ -54,9 +57,12 @@ impl Core {
                 .thread_name("dcl-core-tokio")
                 .build()
                 .expect("failed to build the core tokio runtime");
+            let host_events = Arc::new(HostEvents::default());
             Core {
                 config: config.clone(),
                 runtime,
+                app: Mutex::new(App::new(host_events.clone())),
+                host_events,
             }
         });
         debug_assert_eq!(
@@ -95,6 +101,17 @@ impl Core {
 
     pub fn config(&self) -> &CoreConfig {
         &self.config
+    }
+
+    /// Runs `f` on the app state machine, one caller at a time. `f` must not call back into the
+    /// core's app, and the registered listener runs inside it.
+    pub fn with_app<R>(&self, f: impl FnOnce(&mut App) -> R) -> R {
+        f(&mut self.app.lock().unwrap_or_else(|e| e.into_inner()))
+    }
+
+    /// Where the app's events go (the shell and the host register here).
+    pub fn set_app_listener(&self, listener: Arc<dyn AppEvents>) {
+        self.host_events.set_listener(listener);
     }
 
     /// Spawns on the core runtime. Without an installed core it fails in debug builds; release

@@ -1,4 +1,6 @@
-use std::rc::Rc;
+use std::{rc::Rc, sync::Arc};
+
+use dcl_core::app::{CommandQueue, EngineEvent};
 
 use godot::classes::{Control, DisplayServer, Engine};
 use godot::obj::Singleton;
@@ -26,6 +28,8 @@ pub struct DclEngine {
     world: Option<WorldHandles>,
     pub(super) pending: PendingResponses,
     pub(super) sink: SharedSink,
+    /// Commands from the core's app; `Some` once this engine attached to it.
+    pub(super) core_commands: Option<Arc<CommandQueue>>,
     /// Seconds until the next `[Perf]` line; `None` when `--perf-log` is off.
     perf_countdown: Option<f64>,
     /// A scene text input holds focus, and the keyboard height last reported for it.
@@ -49,6 +53,7 @@ impl INode for DclEngine {
             world: None,
             pending: PendingResponses::default(),
             sink: Rc::new(GodotUiSink),
+            core_commands: None,
             perf_countdown: None,
             text_input_focused: false,
             keyboard_height: 0,
@@ -61,9 +66,17 @@ impl INode for DclEngine {
         let perf_log = DclGlobal::try_singleton()
             .is_some_and(|global| global.bind().get_cli().bind().perf_log);
         self.perf_countdown = perf_log.then_some(PERF_LOG_INTERVAL_SECS);
+        if Self::core_is_driving() {
+            self.attach_to_core();
+        }
+    }
+
+    fn exit_tree(&mut self) {
+        self.detach_from_core();
     }
 
     fn process(&mut self, delta: f64) {
+        self.run_core_commands();
         self.track_keyboard_height();
         let Some(countdown) = self.perf_countdown.as_mut() else {
             return;
@@ -93,6 +106,31 @@ impl DclEngine {
     /// keyboard is hidden or not yet up; it is sent again whenever it changes while focus holds.
     #[signal]
     pub fn text_input_focus(focused: bool, keyboard_height: i32);
+
+    /// A command from the core's app (`enter_world`, `exit_world`, `show_avatar_preview`,
+    /// `hide_avatar_preview`) with its arguments; the engine-side GDScript executes it.
+    #[signal]
+    pub fn core_command(kind: GString, args: VarDictionary);
+
+    /// Loading progress of the world being entered, 0..1.
+    #[func]
+    pub fn report_loading_progress(&self, progress: f32) {
+        self.report(EngineEvent::LoadingProgress(progress));
+    }
+
+    /// The world finished loading and the player is in it.
+    #[func]
+    pub fn report_loading_finished(&self, realm: GString, x: i32, y: i32) {
+        self.report(EngineEvent::LoadingFinished {
+            realm: realm.to_string(),
+            parcel: (x, y),
+        });
+    }
+
+    #[func]
+    pub fn report_scene_crashed(&self) {
+        self.report(EngineEvent::SceneCrashed);
+    }
 
     /// The engine owned by the `Global` autoload, `None` before it exists.
     pub fn get() -> Option<Gd<DclEngine>> {

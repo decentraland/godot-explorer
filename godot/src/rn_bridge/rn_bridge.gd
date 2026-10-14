@@ -29,6 +29,7 @@ func _ready() -> void:
 	if Engine.has_singleton(PLUGIN_SINGLETON):
 		_plugin = Engine.get_singleton(PLUGIN_SINGLETON)
 		_plugin.connect("rn_command", handle_command)
+	Global.engine.core_command.connect(_on_core_command)
 	Global.loading_started.connect(_emit.bind("loading", {"state": "started"}))
 	Global.loading_finished.connect(_emit.bind("loading", {"state": "finished"}))
 	_requests = RnRequests.new(_emit)
@@ -61,6 +62,11 @@ func _process(dt: float) -> void:
 		if _explorer == null:
 			return
 		_emit("world", {"state": "entered"})
+		Global.engine.report_loading_finished(
+			Global.realm.get_realm_string(),
+			_explorer.parcel_position.x,
+			_explorer.parcel_position.y
+		)
 		if not Global.cli.has_arg("--rn-avatar-only"):
 			_emit("ready", {})
 	_hide_elapsed += dt
@@ -88,6 +94,27 @@ func handle_command(json: String) -> void:
 		_entering = false
 	elif _explorer != null:
 		_handle_explorer_command(cmd)
+
+
+## Runs a command from the core's app through the same paths the JSON commands use.
+func _on_core_command(kind: String, args: Dictionary) -> void:
+	match kind:
+		"enter_world":
+			handle_command(
+				JSON.stringify(
+					{"type": "enter_world", "x": args.x, "y": args.y, "realm": args.realm}
+				)
+			)
+		"exit_world":
+			handle_command(JSON.stringify({"type": "exit_world"}))
+		"show_avatar_preview":
+			handle_command(
+				JSON.stringify(
+					{"type": "backpack_open", "x": args.x, "y": args.y, "w": args.w, "h": args.h}
+				)
+			)
+		"hide_avatar_preview":
+			handle_command(JSON.stringify({"type": "backpack_close"}))
 
 
 func _handle_avatar_command(cmd: Dictionary) -> void:
