@@ -2,9 +2,9 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://deikbyvw0457q"
-path.s3tc="res://.godot/imported/streak-flame.png-40661584acec09b1a3c0da7dacbe4aa2.s3tc.ctex"
-path.etc2="res://.godot/imported/streak-flame.png-40661584acec09b1a3c0da7dacbe4aa2.etc2.ctex"
+uid="uid://ctp3j1f8ikdph"
+path.s3tc="res://.godot/imported/streak-flame-big.png-81261c0a3e4d452c481b5b30fc6522ae.s3tc.ctex"
+path.etc2="res://.godot/imported/streak-flame-big.png-81261c0a3e4d452c481b5b30fc6522ae.etc2.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
@@ -12,8 +12,8 @@ metadata={
 
 [deps]
 
-source_file="res://src/ui/components/organisms/streak_modal/streak-flame.png"
-dest_files=["res://.godot/imported/streak-flame.png-40661584acec09b1a3c0da7dacbe4aa2.s3tc.ctex", "res://.godot/imported/streak-flame.png-40661584acec09b1a3c0da7dacbe4aa2.etc2.ctex"]
+source_file="res://src/ui/components/organisms/streak_modal/streak-flame-big.png"
+dest_files=["res://.godot/imported/streak-flame-big.png-81261c0a3e4d452c481b5b30fc6522ae.s3tc.ctex", "res://.godot/imported/streak-flame-big.png-81261c0a3e4d452c481b5b30fc6522ae.etc2.ctex"]
 
 [params]
 

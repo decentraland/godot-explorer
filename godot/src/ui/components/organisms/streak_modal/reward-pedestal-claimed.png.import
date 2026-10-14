@@ -2,9 +2,9 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://rpmdj68uiic1"
-path.s3tc="res://.godot/imported/flame_hero.png-5328ae0a85173a049348fcd38c0e595f.s3tc.ctex"
-path.etc2="res://.godot/imported/flame_hero.png-5328ae0a85173a049348fcd38c0e595f.etc2.ctex"
+uid="uid://bwtmy18me7ank"
+path.s3tc="res://.godot/imported/reward-pedestal-claimed.png-97b59b1c346791b88abf25a1dddb24e8.s3tc.ctex"
+path.etc2="res://.godot/imported/reward-pedestal-claimed.png-97b59b1c346791b88abf25a1dddb24e8.etc2.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
@@ -12,8 +12,8 @@ metadata={
 
 [deps]
 
-source_file="res://src/ui/components/organisms/streak_modal/flame_hero.png"
-dest_files=["res://.godot/imported/flame_hero.png-5328ae0a85173a049348fcd38c0e595f.s3tc.ctex", "res://.godot/imported/flame_hero.png-5328ae0a85173a049348fcd38c0e595f.etc2.ctex"]
+source_file="res://src/ui/components/organisms/streak_modal/reward-pedestal-claimed.png"
+dest_files=["res://.godot/imported/reward-pedestal-claimed.png-97b59b1c346791b88abf25a1dddb24e8.s3tc.ctex", "res://.godot/imported/reward-pedestal-claimed.png-97b59b1c346791b88abf25a1dddb24e8.etc2.ctex"]
 
 [params]
 

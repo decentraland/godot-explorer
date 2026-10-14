@@ -9,7 +9,6 @@
 [ext_resource type="Texture2D" uid="uid://bdl8nwp7vtr4n" path="res://src/ui/components/atoms/controls/streak_day_pill/reward-streak-complete.png" id="7_reward_complete"]
 [ext_resource type="Texture2D" uid="uid://cu570brsttxki" path="res://src/ui/components/atoms/controls/streak_day_pill/reward-streak-claimed.png" id="8_reward_claimed"]
 [ext_resource type="Texture2D" uid="uid://n1nio2wr8fjd" path="res://src/ui/components/atoms/controls/streak_day_pill/reward-streak-bg.png" id="9_40r7x"]
-[ext_resource type="LabelSettings" uid="uid://duo0x2p3h6wek" path="res://src/ui/components/atoms/controls/streak_day_pill/label_settings_day.tres" id="9_label"]
 
 [node name="StreakDayPill" type="Control" unique_id=374002987]
 custom_minimum_size = Vector2(68, 143)
@@ -55,7 +54,7 @@ offset_right = 34.0
 offset_bottom = 59.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/separation = -4
+theme_override_constants/separation = -2
 alignment = 1
 
 [node name="Icon" type="TextureRect" parent="VBoxContainer" unique_id=943705744]
@@ -67,11 +66,13 @@ texture = ExtResource("2_day_empty")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="Label_Day" type="Label" parent="VBoxContainer" unique_id=1840493563]
+[node name="Label_Day" type="RichTextLabel" parent="VBoxContainer" unique_id=1565345266]
 unique_name_in_owner = true
 auto_translate_mode = 2
 layout_mode = 2
-size_flags_horizontal = 4
+theme_override_font_sizes/normal_font_size = 27
+theme_override_font_sizes/bold_font_size = 27
+bbcode_enabled = true
 text = "D1"
-label_settings = ExtResource("9_label")
+fit_content = true
 horizontal_alignment = 1

@@ -32,20 +32,13 @@ func _ensure_pills() -> void:
 		_pills.append(pill)
 
 
-## @param progress_day: furthest day actually credited (0..7) — always rendered DONE/REWARD_PASSED,
-## never a "today" highlight, since by the time anything shows progress_day's jump-in already
-## happened (issue #3018 / Figma "Widget-Discover-Complete": a completed day always reads as the
-## checked pill, with no distinct "today" look).
+## @param progress_day: furthest day actually credited (0..7) — always DONE/REWARD_PASSED, never a
+## "today" highlight.
 ## @param reward_days: 1-indexed days that grant a reward (D3 checkpoint + D7 final by default).
-## @param claimed_days: 1-indexed reward days already claimed — rendered with REWARD_DONE's
-## distinct (green, claimed) look, even though the progress floor can later reset back to that
-## same day (issue #3018: "the Day 3 reward is not lost when the streak breaks").
-## @param today_day: which day gets the "current, not yet done" TODAY/REWARD_TODAY look — defaults
-## to progress_day itself (the streak modal's own behavior: it only ever shows right after a
-## credit, so the day it's celebrating IS "today"). The Discover widget is visible at any time,
-## including before today's jump-in, so it passes StreakManager.get_pending_today_day() here
-## instead — a day strictly after progress_day, or 0 when today is already credited (Figma
-## "Widget-Discover" vs "Widget-Discover-Complete").
+## @param claimed_days: 1-indexed reward days already claimed (REWARD_DONE's distinct green look).
+## @param today_day: day to render as "current, not yet done" (TODAY/REWARD_TODAY); defaults to
+## progress_day. The Discover widget passes StreakManager.get_pending_today_day() instead, since
+## it's visible even before today's jump-in.
 func render(
 	progress_day: int,
 	reward_days: Array[int] = [3, 7],
@@ -72,10 +65,7 @@ func render(
 					else StreakDayPill.State.REWARD_PASSED
 				)
 			else:
-				# A credited plain day is always DONE, never TODAY — TODAY is reserved for the
-				# still-pending day (day_number > progress_day below). Leftover bug: this used to
-				# also highlight day_number == today_day here, which showed the day you just
-				# credited as "current" instead of checked.
+				# Always DONE, never TODAY — TODAY is only for the still-pending day below.
 				state = StreakDayPill.State.DONE
 		elif is_today:
 			state = (

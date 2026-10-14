@@ -1,37 +1,11 @@
 class_name StreakModal
 extends ColorRect
 
-## 7-day login streak modal (issue #3018) — one scene, five copy/config states, each with two
-## looks: the "reminder" (setup()'s pending_day > 0 — Figma "D2-Streak", shown landing on
-## Discover with a day still pending, i.e. BEFORE that day's jump-in) and the post-credit
-## celebration (pending_day == 0, Figma "D2-Streak-Completed" — AFTER it). Same title/subtitle
-## copy either way; only the day row's pending-vs-checked pill differs. Always shown on Discover
-## only (never in-world), driven by ModalManager.async_show_streak_modal() from StreakManager's
-## queued pending state (see discover.gd). Design source: Figma file SKoahICmYk21D8GKErKxYK,
-## pages ATLAS (node 112:49801, spec annotations) and HIFI-WIP (node 86:6423, composed screens)
-## — NOT the earlier Draft-Proposal page.
-##
-## .tscn shape — same backdrop pattern as reward_modal.tscn (ColorRect → Blur shader →
-## VBoxContainer → PanelContainer):
-##   StreakModal (ColorRect, this script)
-##   ├─ Blur (ColorRect, reward_modal.tscn's shader setup)
-##   └─ VBoxContainer
-##      └─ PanelContainer (card chrome)
-##         └─ MarginContainer
-##            └─ VBoxContainer
-##               ├─ TextureRect_Hero       (flame_hero.png)
-##               ├─ VBoxContainer "Text"
-##               │  ├─ Label_Title         (unique name, auto_translate_mode = Disabled)
-##               │  └─ Label_Subtitle      (unique name, auto_translate_mode = Disabled)
-##               ├─ RewardShowcase         (Control, unique name — pedestal + placeholder item + chip,
-##               │                          always visible, no per-state text)
-##               ├─ StreakDayRow           (instance, unique name)
-##               ├─ Label_Footer           (unique name, auto_translate_mode = Disabled — guests
-##               │                          get an extra bold line inviting them to finish setup,
-##               │                          so it's always dynamic, not just a static key)
-##               ├─ ClaimButton            (instance, unique name — shown instead of Button_CTA
-##               │                          once the D3/D7 reward is actually claimable)
-##               └─ Button_CTA             (unique name)
+## 7-day login streak modal (issue #3018) — one scene, five states (WELCOME/DAY_PROGRESS/LOST/
+## D3_COMPLETE/D7_COMPLETE). async_setup()'s pending_day > 0 renders the "come finish today's
+## mission" reminder look (Figma "D2-Streak") instead of the post-credit celebration — same
+## title/subtitle copy either way, only the day row's pending-vs-checked pill differs. Shown on
+## Discover only (never in-world), driven by StreakManager's queued pending state (see discover.gd).
 
 # i18n-keys: STREAK_CTA_CLAIM, STREAK_CTA_FINISH_SETUP, STREAK_WELCOME_SUBTITLE,
 # i18n-keys: STREAK_PROGRESS_SUBTITLE_EARLY, STREAK_PROGRESS_SUBTITLE_LATE, STREAK_LOST_SUBTITLE,
@@ -42,6 +16,12 @@ enum State { WELCOME, DAY_PROGRESS, LOST, D3_COMPLETE, D7_COMPLETE }
 
 const CHECKPOINT_DAY := 3
 const FINAL_DAY := 7
+const BOUNCE_OFFSET_PX := 10.0
+const BOUNCE_HALF_DURATION_SEC := 0.9
+
+## Shown behind the reward art while it's still unclaimed / once the live claim succeeds.
+@export var texture_pedestal_normal: Texture2D
+@export var texture_pedestal_claimed: Texture2D
 
 var _state: State = State.WELCOME
 var _progress_day: int = 0
@@ -62,6 +42,8 @@ var _claiming_reward: bool = false
 @onready var streak_day_row: StreakDayRow = %StreakDayRow
 @onready var button_cta: Button = %Button_CTA
 @onready var claim_button: ClaimButton = %ClaimButton
+@onready var pedestal: TextureRect = %Pedestal
+@onready var reward_art: TextureRect = %TextureRect_RewardArt
 
 
 ## Maps StreakManager.take_pending_modal()'s string result to this modal's State enum.
@@ -81,14 +63,36 @@ static func state_from_pending(pending: String) -> State:
 	return State.WELCOME
 
 
-func setup(state: State, progress_day: int, is_guest: bool, pending_day: int = 0) -> void:
+## Awaits the reward-art fetch before reveal so the modal never shows the baked placeholder and
+## then visibly pops to the real thumbnail a moment later — on an empty urn, a cache miss or a
+## fetch error it just resolves immediately and the placeholder stands in as if nothing happened.
+# gdlint:ignore = async-function-name
+func async_setup(state: State, progress_day: int, is_guest: bool, pending_day: int = 0) -> void:
 	_state = state
 	_progress_day = progress_day
 	_is_guest = is_guest
 	_pending_day = pending_day
 	_render()
+	await _async_apply_reward_thumbnail(
+		str(RewardCampaigns.CAMPAIGNS[_preview_campaign_key()].get("urn", ""))
+	)
+	if not is_instance_valid(self):
+		return
 	show()
 	Global.metrics.track_screen_viewed(_screen_view_name(), "")
+
+
+## RewardShowcase is always visible regardless of state, so the bounce runs for the modal's
+## whole lifetime rather than being tied to any one state's setup.
+func _ready() -> void:
+	var base_y := reward_art.position.y
+	var tween := create_tween()
+	tween.set_loops()
+	tween.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	tween.tween_property(
+		reward_art, "position:y", base_y - BOUNCE_OFFSET_PX, BOUNCE_HALF_DURATION_SEC
+	)
+	tween.tween_property(reward_art, "position:y", base_y, BOUNCE_HALF_DURATION_SEC)
 
 
 func _on_gui_input(event: InputEvent) -> void:
@@ -107,10 +111,12 @@ func _notification(what: int) -> void:
 
 
 func _render() -> void:
+	var d3_claimed := Global.streak_manager.is_d3_claimed()
+	var d7_claimed := Global.streak_manager.is_d7_claimed()
 	var claimed_days: Array[int] = []
-	if Global.streak_manager.is_d3_claimed():
+	if d3_claimed:
 		claimed_days.append(CHECKPOINT_DAY)
-	if Global.streak_manager.is_d7_claimed():
+	if d7_claimed:
 		claimed_days.append(FINAL_DAY)
 	streak_day_row.render(
 		_progress_day,
@@ -118,6 +124,13 @@ func _render() -> void:
 		claimed_days,
 		_pending_day if _pending_day > 0 else -1
 	)
+
+	# RewardShowcase previews whichever reward is next, independent of _state: D1-D3 preview D3,
+	# D4-D7 preview D7 (once D3 is claimed, D3 can never be "next" again — the floor-reset after a
+	# later streak loss still only ever lands back at D3, not before it). Only the pedestal's base
+	# texture is redone here — the thumbnail fetch itself runs once, from async_setup().
+	var preview_claimed := d7_claimed if _preview_campaign_key() == "LoginStreakD7" else false
+	pedestal.texture = texture_pedestal_claimed if preview_claimed else texture_pedestal_normal
 
 	var footer_key := "STREAK_FOOTER_CAPTION_GUEST" if _is_guest else "STREAK_FOOTER_CAPTION"
 	label_footer.text = TranslationKey.new(footer_key).text()
@@ -168,6 +181,11 @@ func _render() -> void:
 				_show_claim_button("STREAK_CTA_CLAIM")
 
 
+## RewardCampaigns key for whichever reward is next in line — see _render()'s own comment.
+func _preview_campaign_key() -> String:
+	return "LoginStreakD7" if Global.streak_manager.is_d3_claimed() else "LoginStreakD3"
+
+
 ## Empty key hides the subtitle entirely (Figma's D3 claim screen has none) rather than leaving
 ## an empty RichTextLabel taking up its row's separation gap.
 func _set_subtitle(key: String) -> void:
@@ -189,6 +207,7 @@ func _set_cta(text: String, secondary: bool) -> void:
 ## Hides Button_CTA and shows ClaimButton instead — used once the D3/D7 reward is actually
 ## claimable, so the gradient + claiming/claimed states replace the plain acknowledgement CTA.
 ## Wires claim_action here (not _ready()) since it needs the day/is_guest for THIS setup() call.
+## pedestal/reward_art themselves are driven generally by _render()'s own preview logic, not here.
 # gdlint:ignore = async-function-name
 func _show_claim_button(text_key: String) -> void:
 	button_cta.visible = false
@@ -200,7 +219,37 @@ func _show_claim_button(text_key: String) -> void:
 		_claiming_reward = true
 		var success: bool = await Global.streak_modal_controller.async_claim_reward(day, is_guest)
 		_claiming_reward = false
+		if success:
+			pedestal.texture = texture_pedestal_claimed
 		return success
+
+
+## Swaps the baked placeholder reward_art for the real wearable's thumbnail, same resolve-then-
+## fetch shape as wearable_item.gd/backpack.gd's own thumbnail loads. Cosmetic only — on an empty
+## urn, a cache miss or a fetch error it silently keeps the placeholder; it never blocks the claim.
+func _async_apply_reward_thumbnail(urn: String) -> void:
+	if urn.is_empty():
+		return
+	var wearable = Global.content_provider.get_wearable(urn)
+	if wearable == null:
+		var content_url := Global.realm.get_profile_content_url()
+		await PromiseUtils.async_all(Global.content_provider.fetch_wearables([urn], content_url))
+		if not is_instance_valid(self):
+			return
+		wearable = Global.content_provider.get_wearable(urn)
+	if wearable == null:
+		printerr("StreakModal: could not resolve wearable entity for urn: ", urn)
+		return
+	var promise: Promise = Global.content_provider.fetch_texture(
+		wearable.get_thumbnail(), wearable.get_content_mapping()
+	)
+	var res = await PromiseUtils.async_awaiter(promise)
+	if not is_instance_valid(self):
+		return
+	if res is PromiseError:
+		printerr("StreakModal: reward thumbnail fetch failed for ", urn, ": ", res.get_error())
+		return
+	reward_art.texture = res.texture
 
 
 func _screen_view_name() -> String:
@@ -221,12 +270,7 @@ func _on_button_cta_pressed() -> void:
 		else TranslationKey.new(claim_button.text_normal).text()
 	)
 	Global.metrics.track_click_button(cta_text, _screen_view_name(), "")
-	match _state:
-		State.WELCOME, State.DAY_PROGRESS, State.LOST:
-			Global.streak_modal_controller.close_streak_modal()
-		State.D3_COMPLETE, State.D7_COMPLETE:
-			# ClaimButton owns the whole claim lifecycle itself via claim_action (see
-			# _show_claim_button) and stays open through CLAIMING/CLAIMED — this modal is never
-			# closed or replaced by the claim. Dismissing is the existing "tap outside" gesture
-			# (_on_gui_input), matching Figma's "Tap to continue" once CLAIMED.
-			pass
+	# D3_COMPLETE/D7_COMPLETE: ClaimButton owns the claim lifecycle itself (see _show_claim_button)
+	# and stays open through CLAIMING/CLAIMED — dismissing is the "tap outside" gesture below.
+	if _state in [State.WELCOME, State.DAY_PROGRESS, State.LOST]:
+		Global.streak_modal_controller.close_streak_modal()

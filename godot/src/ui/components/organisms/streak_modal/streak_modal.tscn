@@ -3,17 +3,17 @@
 [ext_resource type="Script" uid="uid://smioqy8ujg4a" path="res://src/ui/components/organisms/streak_modal/streak_modal.gd" id="1_script"]
 [ext_resource type="Texture2D" uid="uid://calx7uvjvq6bx" path="res://src/ui/components/organisms/streak_modal/streak-modal-bg.png" id="2_ro0bi"]
 [ext_resource type="PackedScene" uid="uid://bh2ah441y8m84" path="res://src/ui/components/molecules/streak_day_row/streak_day_row.tscn" id="3_row"]
+[ext_resource type="Texture2D" uid="uid://ctp3j1f8ikdph" path="res://src/ui/components/organisms/streak_modal/streak-flame-big.png" id="5_da6u2"]
 [ext_resource type="Texture2D" uid="uid://dvikg8vwbu4fs" path="res://src/ui/components/organisms/streak_modal/streak-chip.png" id="5_t1wcr"]
 [ext_resource type="Texture2D" uid="uid://it0wxtlkvw8t" path="res://src/ui/components/organisms/streak_modal/reward-icon.svg" id="8_ro0bi"]
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="8_theme"]
 [ext_resource type="FontFile" uid="uid://di6yadh02vrla" path="res://assets/themes/fonts/inter/Inter-Regular.ttf" id="10_ro0bi"]
-[ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="20_footer_bold"]
 [ext_resource type="PackedScene" uid="uid://oyokdq67n0i3" path="res://src/ui/components/atoms/buttons/claim_button/claim_button.tscn" id="12_t1wcr"]
-[ext_resource type="LabelSettings" path="res://src/ui/components/organisms/streak_modal/label_settings_title.tres" id="12_title"]
-[ext_resource type="Texture2D" uid="uid://deikbyvw0457q" path="res://src/ui/components/organisms/streak_modal/streak-flame.png" id="14_t1wcr"]
-[ext_resource type="Texture2D" uid="uid://h5ue7bs7rsiu" path="res://src/ui/components/organisms/streak_modal/reward_pedestal.png" id="15_pedestal"]
-[ext_resource type="Texture2D" uid="uid://dtu32x8oroptu" path="res://src/ui/components/organisms/reward_modal/dog-reward.png" id="16_reward_art"]
-[ext_resource type="LabelSettings" uid="uid://bcyj1si3mj5yx" path="res://src/ui/components/organisms/streak_modal/label_settings_chip.tres" id="19_chip_label"]
+[ext_resource type="LabelSettings" path="res://src/ui/components/organisms/streak_modal/label-settings-title.tres" id="12_title"]
+[ext_resource type="Texture2D" uid="uid://h5ue7bs7rsiu" path="res://src/ui/components/organisms/streak_modal/reward-pedestal.png" id="15_pedestal"]
+[ext_resource type="LabelSettings" uid="uid://krgyjcs70hvd" path="res://src/ui/components/organisms/streak_modal/label-settings-body-small.tres" id="19_chip_label"]
+[ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="20_footer_bold"]
+[ext_resource type="Texture2D" uid="uid://bwtmy18me7ank" path="res://src/ui/components/organisms/streak_modal/reward-pedestal-claimed.png" id="21_pedestal_claimed"]
 
 [sub_resource type="Shader" id="Shader_blur"]
 code = "shader_type canvas_item;
@@ -45,6 +45,8 @@ grow_horizontal = 2
 grow_vertical = 2
 color = Color(0, 0, 0, 0.333333)
 script = ExtResource("1_script")
+texture_pedestal_normal = ExtResource("15_pedestal")
+texture_pedestal_claimed = ExtResource("21_pedestal_claimed")
 metadata/mobile_preview_orientation = "portrait"
 
 [node name="Blur" type="ColorRect" parent="." unique_id=2033739271]
@@ -90,6 +92,7 @@ layout_mode = 2
 size_flags_horizontal = 4
 
 [node name="Pedestal" type="TextureRect" parent="VBoxContainer/PanelContainer/MarginContainer2/RewardShowcase" unique_id=1445235328]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(544, 544)
 layout_mode = 1
 anchors_preset = 5
@@ -104,6 +107,7 @@ expand_mode = 1
 stretch_mode = 4
 
 [node name="TextureRect_RewardArt" type="TextureRect" parent="VBoxContainer/PanelContainer/MarginContainer2/RewardShowcase/Pedestal" unique_id=1433207045]
+unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 5
 anchor_left = 0.5
@@ -113,8 +117,9 @@ offset_top = 86.0
 offset_right = 157.5
 offset_bottom = 326.0
 grow_horizontal = 2
-texture = ExtResource("16_reward_art")
-stretch_mode = 4
+texture = ExtResource("5_da6u2")
+expand_mode = 1
+stretch_mode = 5
 
 [node name="MarginContainer" type="PanelContainer" parent="VBoxContainer/PanelContainer/MarginContainer2/RewardShowcase/Pedestal" unique_id=48432598]
 layout_mode = 1
@@ -123,10 +128,10 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -65.0
-offset_top = 37.0
-offset_right = 65.0
-offset_bottom = 107.0
+offset_left = -133.5
+offset_top = 72.0
+offset_right = 133.5
+offset_bottom = 142.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxEmpty_kgder")
@@ -258,17 +263,19 @@ size_flags_horizontal = 4
 size_flags_vertical = 0
 
 [node name="TextureRect_Hero" type="TextureRect" parent="VBoxContainer/PanelContainer/Control" unique_id=1254785975]
-custom_minimum_size = Vector2(200, 200)
-layout_mode = 0
-offset_left = -100.0
-offset_top = -80.0
-offset_right = 100.0
-offset_bottom = 120.0
+custom_minimum_size = Vector2(170, 170)
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -85.0
+offset_top = -68.0
+offset_right = 85.0
+offset_bottom = 102.0
 grow_horizontal = 2
-grow_vertical = 2
 size_flags_horizontal = 4
 size_flags_vertical = 0
-texture = ExtResource("14_t1wcr")
+texture = ExtResource("5_da6u2")
 expand_mode = 1
 stretch_mode = 5
 

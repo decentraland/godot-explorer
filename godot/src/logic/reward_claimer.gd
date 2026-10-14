@@ -23,16 +23,10 @@ static func async_claim(campaign: Dictionary) -> Dictionary:
 	if campaign_id.is_empty() or campaign_key.is_empty():
 		return _error(TranslationServer.translate("REWARD_NOT_AVAILABLE"))
 
-	# The rewards server matches `catalyst` by ORIGIN (scheme://host) against the DAO catalyst
-	# allow-list AND then actually reaches it, so we must send the origin of a REAL, reachable
-	# catalyst peer — NOT the realm-provider load balancer:
-	#   - content_base_url = /about content.publicUrl → the resolved peer we're connected to
-	#     (e.g. https://peer-ec1.decentraland.org/content/ → https://peer-ec1.decentraland.org ✓).
-	#     Genesis' claim.ts sends realmInfo.baseUrl, which is likewise the resolved catalyst.
-	#   - fallback (claiming outside a realm — post-upgrade from Discover / the dev-tools button):
-	#     a concrete DAO catalyst peer. We must NOT fall back to main_realm(): its origin
-	#     (realm-provider-ea…) passes the allow-list but is "catalyst_unreachable" at the bare
-	#     origin — the load balancer only responds under a /main path we can't include here.
+	# The rewards server matches `catalyst` by ORIGIN against the DAO allow-list and then actually
+	# reaches it — must be a REAL reachable catalyst peer, NOT the realm-provider load balancer.
+	# content_base_url resolves to the connected peer; the fallback (claiming outside a realm) uses
+	# a concrete DAO peer, never main_realm() — its origin passes the allow-list but can't be reached.
 	var catalyst := _catalyst_origin(str(Global.realm.content_base_url))
 	if catalyst.is_empty():
 		catalyst = _catalyst_origin(Realm.DAO_SERVERS[0])

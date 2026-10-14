@@ -1,9 +1,0 @@
-[gd_resource type="LabelSettings" format=3 uid="uid://duo0x2p3h6wek"]
-
-[ext_resource type="FontFile" uid="uid://di6yadh02vrla" path="res://assets/themes/fonts/inter/Inter-Regular.ttf" id="1_font"]
-
-[resource]
-line_spacing = 0.0
-font = ExtResource("1_font")
-font_size = 27
-font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)

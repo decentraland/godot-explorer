@@ -2,14 +2,9 @@ class_name StreakModalController
 extends Node
 
 ## Owns the login-streak modal's lifecycle and its reward-claim handoff (issue #3018). Split out
-## from ModalManager — which sits at the repo's 1900-line gdlint cap — rather than growing that
-## file further; see godot/src/ui/COMPONENT_AUDIT.md and CLAUDE.md "Code hygiene" for the
-## convention this follows (new behaviour gets its own file, not a block bolted onto the big one).
-##
-## Mirrors ModalManager's own create/show/close/tree_exited/remove skeleton (see
-## async_show_reward_modal et al. there) for the streak modal itself. The actual claim reuses
-## RewardClaimer (shared with reward_modal.gd) directly — the streak modal's own ClaimButton stays
-## open the whole time, it never navigates to another modal (issue #3018 claim-flow fix).
+## from ModalManager to stay under its 1900-line gdlint cap (CLAUDE.md "Code hygiene"); mirrors
+## ModalManager's own create/show/close skeleton. Claims go through RewardClaimer directly — the
+## streak modal's own ClaimButton stays open the whole time, it never navigates to another modal.
 
 const STREAK_MODAL_SCENE_PATH = "res://src/ui/components/organisms/streak_modal/streak_modal.tscn"
 
@@ -44,7 +39,7 @@ func async_show_streak_modal(
 	var modal = await _async_create_streak_modal()
 	if not is_instance_valid(modal):
 		return false
-	modal.setup(state, progress_day, is_guest, pending_day)
+	await modal.async_setup(state, progress_day, is_guest, pending_day)
 	return true
 
 
@@ -129,16 +124,11 @@ func _async_claim_direct(day: int) -> bool:
 	return result.ok
 
 
-## Starts the SAME shared OTP upgrade flow as every other guest-upgrade entry point
-## (AddEmailFlow.async_start_add_email_flow), with its default grant_campaign_key ("MobilePet") so
-## the account-upgrade reward still shows (Figma "OTP-Claimed") — the issue's own open question
-## ("guest-upgrade reward fires too — chain, merge, suppress?") is answered "chain": the upgrade
-## reward shows first, then this resumes and completes the D3/D7 claim automatically (Figma "CLAIM
-## AUTOMATICALLY") in the SAME streak modal, which stays open underneath the whole time (separate
-## CanvasLayers, see _async_create_streak_modal). Tags the account-creation event with
-## source=login_streak (issue #3018 deliverable) so it's attributable despite sharing the reward.
-## Awaits AddEmailFlow's own flow_concluded — NOT Global.guest_upgrade_state_refreshed, which never
-## fires on a cancel/error and would leave the ClaimButton stuck on CLAIMING forever.
+## Runs the shared OTP upgrade flow (default grant_campaign_key "MobilePet", so the upgrade reward
+## shows first — chain, not suppress), tagged source="login_streak" for attribution, then completes
+## the D3/D7 claim in the same streak modal. Awaits AddEmailFlow's own flow_concluded, not
+## Global.guest_upgrade_state_refreshed — that one never fires on cancel/error and would leave the
+## ClaimButton stuck on CLAIMING forever.
 func _async_claim_guest(day: int) -> bool:
 	Global.add_email_flow.async_start_add_email_flow("MobilePet", "login_streak")
 	var upgraded: bool = await Global.add_email_flow.flow_concluded

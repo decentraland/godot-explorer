@@ -25,10 +25,24 @@ const CAMPAIGNS := {
 	},
 	# TODO(#3018): login-streak D3 item — not published yet, blocked on content. Empty
 	# campaign_id/campaign_key surface reward_modal's existing "out of stock" claim error
-	# until the real campaign exists; don't fill these in with placeholder credentials.
-	"LoginStreakD3": {"campaign_id": "", "campaign_key": "", "urn": ""},
-	# TODO(#3018): login-streak D7 reward ("Corona de Fuego" is a placeholder name) — same as above.
-	"LoginStreakD7": {"campaign_id": "", "campaign_key": "", "urn": ""},
+	# until the real campaign exists; don't fill these in with placeholder credentials. `urn` is
+	# ONLY a preview hint (no claim risk), so it's mocked with a real published on-chain wearable
+	# (decentraland.org/marketplace/contracts/0x996b51131698ba70dcfb3fb5956e6816c5778eda/items/0)
+	# to exercise the thumbnail-fetch path — swap for the real item's urn once it's published.
+	"LoginStreakD3":
+	{
+		"campaign_id": "",
+		"campaign_key": "",
+		"urn": "urn:decentraland:matic:collections-v2:0x996b51131698ba70dcfb3fb5956e6816c5778eda:0",
+	},
+	# TODO(#3018): login-streak D7 reward ("Corona de Fuego" is a placeholder name) — same as
+	# above; `urn` mocked with the same item for now (no second reference item on hand yet).
+	"LoginStreakD7":
+	{
+		"campaign_id": "",
+		"campaign_key": "",
+		"urn": "urn:decentraland:matic:collections-v2:0x996b51131698ba70dcfb3fb5956e6816c5778eda:0",
+	},
 }
 
 

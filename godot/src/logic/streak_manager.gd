@@ -101,13 +101,10 @@ func _pending_for_progress() -> String:
 	return PENDING_PROGRESS
 
 
-## DEBUG ONLY — advances the REFERENCE CLOCK by one day, not the streak itself: it only rewinds
-## streak_last_credit_day_unix, so get_pending_today_day() reports a new pending day exactly like
-## a real calendar day turning over would. It deliberately does NOT credit anything — a real
-## jump-in (Global.loading_finished → credit_jump_in()) is still required to actually complete
-## that day, same as in production. Pressing this twice in a row with no jump-in in between
-## simulates missing a day: the next real jump-in sees gap_days > 1 and resets the streak, exactly
-## like it would if the player had actually been away two real days.
+## DEBUG ONLY — advances the REFERENCE CLOCK by one day (not the streak itself): rewinds
+## streak_last_credit_day_unix so get_pending_today_day() reports a new pending day, same as a
+## real calendar day turning over. Doesn't credit anything itself — a real jump-in still does
+## that. Press twice with no jump-in between to simulate missing a day (gap_days > 1).
 func debug_advance_day() -> void:
 	var config: ConfigData = Global.config
 	if config.streak_last_credit_day_unix <= 0:
@@ -116,15 +113,11 @@ func debug_advance_day() -> void:
 	config.save_to_settings_file()
 
 
-## DEBUG ONLY — the inverse of debug_advance_day(): steps progress back one day (floor 0) and
-## un-claims D3/D7 once progress drops below their checkpoint, so the claim flow can be re-tested
-## by advancing again. Also steps streak_last_credit_day_unix back a day to keep it consistent
-## with the lowered progress, same persistence tradeoffs as debug_advance_day — except at the
-## progress_day == 0 floor, where streak_last_credit_day_unix resets to 0 instead of one more day
-## back. credit_jump_in() only ever takes its "first-ever credit" (WELCOME) branch when that's
-## exactly 0; a real jump-in never leaves progress_day at 0 with a non-zero timestamp (every
-## production write path lands on 1 or CHECKPOINT_DAY + 1), so without this reset the next jump-in
-## here would see a multi-day gap instead and wrongly show "lost the streak" over a fresh WELCOME.
+## DEBUG ONLY — the inverse of debug_advance_day(): steps progress back one day (floor 0),
+## un-claims D3/D7 once below their checkpoint, and steps streak_last_credit_day_unix back a day
+## to match — except at the progress_day == 0 floor, where it resets to 0 instead, so the next
+## jump-in re-enters WELCOME rather than reading as a multi-day gap (LOST). Unlike
+## debug_advance_day(), this doesn't queue any pending modal itself — only a real jump-in does.
 func debug_rewind_day() -> void:
 	var config: ConfigData = Global.config
 	if config.streak_progress_day <= 0:
@@ -216,12 +209,12 @@ func take_current_reminder() -> int:
 	return pending
 
 
-## Visible once the player has credited at least one day; after the D7 reward is claimed it
-## stays visible for the remainder of that local day, then disappears for good.
+## Visible from the very first Discover landing — even before the player has jumped in once,
+## showing Day 1 as the pending "current" pill (an invitation to start, not a progress readout).
+## After the D7 reward is claimed it stays visible for the remainder of that local day, then
+## disappears for good.
 func is_widget_visible() -> bool:
 	var config: ConfigData = Global.config
-	if config.streak_progress_day <= 0:
-		return false
 	if not config.streak_d7_claimed:
 		return true
 	return (

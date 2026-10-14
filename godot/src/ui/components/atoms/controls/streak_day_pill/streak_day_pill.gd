@@ -40,39 +40,33 @@ const CLAIMABLE_STATES := [State.REWARD_TODAY, State.REWARD_PASSED]
 @export var texture_reward_done: Texture2D
 
 @onready var icon: TextureRect = %Icon
-@onready var label_day: Label = %Label_Day
+@onready var label_day: RichTextLabel = %Label_Day
 @onready var claimable_background: TextureRect = %Claimable_Background
 
 
-func _ready() -> void:
-	# label_day.label_settings is shared (the same .tres resource) across every pill instance
-	# until duplicated — mutating font_color on it directly would recolor every other pill too.
-	label_day.label_settings = label_day.label_settings.duplicate()
-
-
 func set_state(day_number: int, state: State) -> void:
-	label_day.text = "D%d" % day_number
+	label_day.text = "D[b]%d[/b]" % day_number
 	icon.custom_minimum_size = ICON_SIZE_REWARD if state in REWARD_STATES else ICON_SIZE_DAY
 	claimable_background.visible = state in CLAIMABLE_STATES
 	match state:
 		State.FUTURE:
 			icon.texture = texture_future
-			label_day.label_settings.font_color = COLOR_DEFAULT
+			label_day.modulate = COLOR_DEFAULT
 		State.TODAY:
 			icon.texture = texture_today
-			label_day.label_settings.font_color = COLOR_DEFAULT
+			label_day.modulate = COLOR_DEFAULT
 		State.DONE:
 			icon.texture = texture_done
-			label_day.label_settings.font_color = COLOR_DEFAULT
+			label_day.modulate = COLOR_DEFAULT
 		State.REWARD_LOCKED:
 			icon.texture = texture_reward_locked
-			label_day.label_settings.font_color = COLOR_REWARD_LOCKED
+			label_day.modulate = COLOR_REWARD_LOCKED
 		State.REWARD_TODAY:
 			icon.texture = texture_reward_today
-			label_day.label_settings.font_color = COLOR_CLAIMABLE
+			label_day.modulate = COLOR_CLAIMABLE
 		State.REWARD_PASSED:
 			icon.texture = texture_reward_passed
-			label_day.label_settings.font_color = COLOR_CLAIMABLE
+			label_day.modulate = COLOR_CLAIMABLE
 		State.REWARD_DONE:
 			icon.texture = texture_reward_done
-			label_day.label_settings.font_color = COLOR_REWARD_DONE
+			label_day.modulate = COLOR_REWARD_DONE

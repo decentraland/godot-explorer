@@ -3,8 +3,8 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://h5ue7bs7rsiu"
-path.s3tc="res://.godot/imported/reward_pedestal.png-958132bca1c9c843c6dd89d4a54229b1.s3tc.ctex"
-path.etc2="res://.godot/imported/reward_pedestal.png-958132bca1c9c843c6dd89d4a54229b1.etc2.ctex"
+path.s3tc="res://.godot/imported/reward-pedestal.png-a8f383e78b93573c8d4d5179209f767c.s3tc.ctex"
+path.etc2="res://.godot/imported/reward-pedestal.png-a8f383e78b93573c8d4d5179209f767c.etc2.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
@@ -12,8 +12,8 @@ metadata={
 
 [deps]
 
-source_file="res://src/ui/components/organisms/streak_modal/reward_pedestal.png"
-dest_files=["res://.godot/imported/reward_pedestal.png-958132bca1c9c843c6dd89d4a54229b1.s3tc.ctex", "res://.godot/imported/reward_pedestal.png-958132bca1c9c843c6dd89d4a54229b1.etc2.ctex"]
+source_file="res://src/ui/components/organisms/streak_modal/reward-pedestal.png"
+dest_files=["res://.godot/imported/reward-pedestal.png-a8f383e78b93573c8d4d5179209f767c.s3tc.ctex", "res://.godot/imported/reward-pedestal.png-a8f383e78b93573c8d4d5179209f767c.etc2.ctex"]
 
 [params]
 
