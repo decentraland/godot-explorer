@@ -4,14 +4,14 @@
 
 A React Native app that draws all UI in React Native. It ships under the existing store identity
 (`org.decentraland.godotexplorer`) as an update of the Godot-exported app it replaces. The Godot engine is
-started lazily (`GodotBridge.startEngine()`) in **avatar-only mode** (`--rn-host --rn-avatar-only`): it
-loads no world, creates a disposable account with a random profile, and only renders one avatar preview
-that RN screens leave a transparent hole for. `enter_world` runs the explorer in the same session (the
+started when the core asks for it (`engine_required`), in **avatar-only mode**: the core drives it, it
+loads no world, uses the core's account, and only renders one avatar preview
+that RN screens leave a transparent hole for. `core.enterWorld` runs the explorer in the same session (the
 engine cannot be restarted in-process, so it starts once and lives until the app dies). Scene (SDK) UI,
 the joystick, the on-screen gamepad and camera look stay native in Godot; everything else is React.
 
 ```
-Godot view (bottom)  <- Android: GodotFragment (created on startEngine), iOS: GDTViewController as child VC of DclHostViewController
+Godot view (bottom)  <- Android: GodotFragment (created on `engine_required`), iOS: GDTViewController as child VC of DclHostViewController
 RN root view (top)   <- all screens
 GodotBridge          <- JSON commands/events <-> RnHostPlugin singleton <-> godot/src/rn_bridge/rn_bridge.gd
 ```
@@ -101,8 +101,8 @@ Expo modules. Upgrading RN means moving to the Expo SDK that ships it.
 - `--godot-only` stops `export` after Godot's own export, at its usual paths.
 
 `DclHostViewController` stacks the RN view over Godot's and routes each touch: to RN when a real RN view is under
-it, to Godot otherwise. Both hosts start the engine with `--rn-host --rn-avatar-only` (Idle: no lobby, no
-world); the world is entered with the `enter_world` command. Android also passes `--force-mobile --no-pulse`
+it, to Godot otherwise. The engine is host-driven when the host installed the core (Idle: no lobby, no
+world); the world is entered with `core.enterWorld`. Android also passes `--force-mobile --no-pulse`
 (`MainActivity.BOOT_ARGS`); iOS does not. `--force-mobile` marks the client as a *virtual* mobile, so on a desktop it
 resizes the window to 1280×720 on the landscape switch and the virtual-keyboard height poll in `global.gd` is
 skipped — check both on a device before aligning the two lists (plan 2.8). The iOS `AppDelegate` forwards deep

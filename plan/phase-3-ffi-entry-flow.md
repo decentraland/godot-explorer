@@ -9,23 +9,34 @@ every method 1.15 has: guest, email OTP, Google and Apple through the browser ha
 Android, WalletConnect on iOS. The JSON bridge, `godot/src/rn_bridge/` and the GDScript lobby are
 deleted.
 
+## Status (branch `feat/react-native-phase3`, 2026-10-14)
+
+Built and checked on the Moto (Android): core install at launch, FFI, the app state machine, guest
+sign-in, session recovery, avatar preview, Genesis Plaza through `core.enter_world`, entering a
+world while one is up, the engine's exit and re-enter, deep links in a world.
+Written but **not verified**: iOS host, Reown/native wallets (wallet goes through the web page),
+Sentry delivery and symbol upload, attestation host services, email OTP and Google/Apple on a device.
+Open: 3.5 attestation host/FFI, 3.11 and the D-42 measurements, native WalletConnect, the
+`SwitchEnvironment`, `SetPreviewUrl`, `MarketplaceReturn` and benchmark deep-link effects, guest
+account auto-delete, the Sentry seeder tags. No RN screen calls `exit_world` yet (phase 4's confirm).
+
 ## Exit criteria
 
 - [ ] On an Android phone and an iPhone, the RN app from `cargo run -- run --target android|ios`
       signs in with each method, recovers the session after a restart, enters Genesis Plaza
       through `core.enter_world`, leaves, and enters again.
-- [ ] `godot/src/rn_bridge/` and `godot/src/ui/pages/auth/` are gone; `rn/src/GodotBridge.ts`,
+- [x] `godot/src/rn_bridge/` and `godot/src/ui/pages/auth/` are gone; `rn/src/GodotBridge.ts`,
       `rn/src/bridge/`, `rn/src/engine.ts` and `rn/src/events.ts` are gone; `rn/src/core/` is the
       only way RN reaches the core and the engine.
 - [ ] One `Core` per process, verified: the TurboModule and the GDExtension share the library handle
       (an `installed()` counter asserts it in debug builds).
-- [ ] `rn/src` has no hardcoded `decentraland.org|zone` or `dclexplorer.com` outside `*mock*` and
+- [x] `rn/src` has no hardcoded `decentraland.org|zone` or `dclexplorer.com` outside `*mock*` and
       `simulator.ts`; the eslint rule is on.
 - [ ] Sentry (D-16) applied: one native crash handler in the app.
 
 ## Work items
 
-- [ ] **3.0 The core boots without Godot**. On phones the host creates the core at app launch,
+- [x] **3.0 The core boots without Godot**. On phones the host creates the core at app launch,
   before any engine. Today `DclGlobal::init` does that with Godot's `user_data_dir`, and it also
   installs the logger (which needs `Os::singleton()`) and `log_panics`. All three move to the core:
   `Core::install(CoreConfig)` is called by the host, or by `DclRoot` on desktop. The core installs the
@@ -36,7 +47,7 @@ deleted.
   being ignored or starting a private runtime. The content dir comes from `Core::data_dir()`, not
   `Os::get_user_data_dir()` (`content_provider.rs`), with a debug check at engine start that both
   match.
-- [ ] **3.1 Binding setup**. uniffi proc-macros on a slice of the core
+- [x] **3.1 Binding setup**. uniffi proc-macros on a slice of the core
   (`state()`, `sign_in_guest()`, one async call, the event callback interface), built into
   `libdclgodot` with the `ffi` feature. Set up `uniffi-bindgen-react-native` (D-17) for the
   generated C++/JSI TurboModule and TS types. The checks below are its acceptance; a failed one
@@ -64,14 +75,14 @@ deleted.
   implement `AppListener` (the later registration wins and the other side's handles resolve in the
   wrong runtime). Each foreign trait belongs to one runtime: the shell's in `dcl_core`'s FFI (JS),
   the host's in the `dcl_host` crate (Kotlin/Swift), each with its own namespace and bindings.
-- [ ] **3.2 Core state machine**. The states of `04-core-api.md` as `dcl_core::app::State`;
+- [x] **3.2 Core state machine**. The states of `04-core-api.md` as `dcl_core::app::State`;
   `Booting` recovers the persisted session; `enter_world` resolves the destination, raises
   `engine_required` if no engine is attached, then drives Idle → Loading → InWorld from engine
   events; `exit_world` keeps the session. The engine start policy is D-42: `engine_required` in advance or
   on demand, calls that need the engine wait for its attach, rendering on only while a state shows
   it. Unit tests cover every transition, the attach wait and the policy with a fake engine sink; the
   three D-42 numbers are measured on both phones.
-- [ ] **3.3 FFI surface v1**. Session, boot gates, destination, URLs, state, avatar preview rect,
+- [x] **3.3 FFI surface v1**. Session, boot gates, destination, URLs, state, avatar preview rect,
   analytics, lifecycle, deep links; the callback interface with every event in `04-core-api.md`.
   `rn/src/core/index.ts` is the typed surface; `rn/src/core/mock.ts` implements it for no-engine
   builds and replaces `mockBridge.ts` / `mockHandlers.ts`.
@@ -102,7 +113,7 @@ deleted.
 - [ ] **3.7 Deep links**. RN `Linking` and the iOS `AppDelegate` → `core.handle_deep_link`;
   `deep_link_router.gd` routing (jump, open, events, places, sign-in resume with the 5-minute cap,
   config params, push attribution) → `dcl_core::deep_link::route` on the state machine.
-- [ ] **3.8 Delete the bridge and the lobby, add the lint**. Remove `godot/src/rn_bridge/`
+- [x] **3.8 Delete the bridge and the lobby, add the lint**. Remove `godot/src/rn_bridge/`
   (15 files; `rn_ui_filter.gd` last, or after the phase-4 sweep), the `RnBridge` autoload,
   `--rn-host` / `--rn-avatar-only` in `dcl_cli.rs`, the RN JSON layer, and `ui/pages/auth/`
   (`lobby.gd` 1,428, `login.gd`, `sign_in_with_email.gd`, the lobby avatar editor), dead from this

@@ -19,8 +19,11 @@ export const sendEmailCode = (email: string) => core().signInEmailStart(email);
 export const verifyEmailCode = (email: string, code: string) =>
   core().signInEmailVerify(email, code);
 
-/** Google and Apple: the core asks the shell to open the page (see `watchOpenUrl`). */
-export const startBrowserSignIn = (provider: 'google' | 'apple') =>
+/**
+ * Google, Apple and external wallets: the core asks the shell to open the page (see
+ * `startLinkHandling`). No provider shows the page's own picker, which carries the wallets.
+ */
+export const startBrowserSignIn = (provider?: 'google' | 'apple') =>
   core().signInBrowser(provider);
 
 export const cancelSignIn = () => core().cancelSignIn();

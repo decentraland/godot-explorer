@@ -80,9 +80,9 @@ export function EntryFlow({
       dispatch({ type: 'authFailed', message: t('FLOW_SIGN_IN_FAILED') });
     if (
       step === 'auth_wait' &&
-      (provider === 'google' || provider === 'apple')
+      (provider === 'google' || provider === 'apple' || provider === 'wallet')
     ) {
-      startBrowserSignIn(provider);
+      startBrowserSignIn(provider === 'wallet' ? undefined : provider);
       whenSignedIn().then(succeeded, failed);
     } else if (step === 'guest_wait') {
       startGuest().then(

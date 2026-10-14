@@ -298,6 +298,8 @@ A `Button` inside a panel that appears over a `LineEdit` will steal focus → ke
 After programmatically inserting text into a `LineEdit` on mobile, call `DisplayServer.virtual_keyboard_show(text, …)` to re-sync the OS buffer, or backspace will behave as if the inserted text isn't there (#1822).
 
 ### Logging discipline & Sentry quota
+> **Mobile (RN app):** `sentry-godot` is not in the RN build. Logged errors, panics and scene crashes go to `dcl_core::report`, which applies the source keep rates and the remote rate, and the RN `@sentry/react-native` SDK sends them. `_before_send` and `NOISE_PATTERNS` in `project_main_loop.gd` apply to desktop builds only. The level rules below still decide what becomes an event.
+
 **This is the highest-leverage thing to scan a diff for that static checks will never catch.** Logs are not free: error- and warning-level logs flow into Godot's error stream, which the Sentry SDK captures and ships in prod/staging builds. Every such log added in a PR consumes the shared Sentry **event/attachment quota** for the lifetime of that code — and one mis-leveled log on a hot path can exhaust it.
 
 How a log reaches (or doesn't reach) Sentry — verified against `lib/src/tools/godot_logger.rs` and `godot/src/project_main_loop.gd`:
