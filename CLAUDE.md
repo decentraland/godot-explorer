@@ -146,7 +146,7 @@ bypasses that check for local debugging only. The baked files live in
 - **`godot/`**: Godot project
   - `src/decentraland_components/`: Custom Godot nodes for DCL features
     - `avatar/impostor/`: Distance-based avatar LOD (billboard sprites for far avatars). Render handled by `MultiMeshInstance3D` + `Texture2DArray` in Rust `AvatarScene`; capture path uses scene-tree off-screen `AvatarPreview`.
-  - `src/ui/`: UI components and HUD
+  - `src/ui/`: the in-world controls only (explorer world, joypad, emote wheel, pointer tooltip, safe-area layouts); every screen and modal is React Native in `rn/`
   - `src/tool/`: Editor tools
 - **`src/`**: xtask build system
 
@@ -275,7 +275,7 @@ The habits AI-assisted changes most often get wrong in this repo. Reviewers hold
 ### File size
 
 - **Files at the gdlint cap are closed for new features.** `.gdlintrc` caps GDScript at 1900
-  lines / 45 public methods, and `global.gd`, `explorer.gd`, `modal_manager.gd` and `avatar.gd`
+  lines / 45 public methods, and `explorer.gd` and `avatar.gd`
   are within 30 lines of it. New behaviour goes in its own file — a component, a `RefCounted`
   helper, an autoload — and the big file gets one call into it, not a new block. Same in Rust,
   where nothing enforces it: `communication_manager.rs`, `scene_manager.rs` and
