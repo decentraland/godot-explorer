@@ -1,6 +1,6 @@
 //! Pulse decode + per-subject sliding-window state.
 //! Ported from bevy-explorer `crates/comms/src/pulse/mod.rs` @ 3f65c164 (adaptations: godot
-//! `Vector3` instead of bevy `Vec3`; no `position_precision` / `scene_driven_animation` — our
+//! `Vec3` instead of bevy `Vec3`; no `position_precision` / `scene_driven_animation` — our
 //! vendored rfc4 predates those fields; teleports snap via `is_instant` set at bridge time).
 //!
 //! Reconstructs each subject's full state into an [`rfc4::Movement`], so that everything
@@ -20,7 +20,7 @@
 use std::collections::{HashMap, HashSet};
 
 use ethers_core::types::H160;
-use godot::prelude::Vector3;
+use glam::Vec3;
 
 use crate::auth::wallet::AsH160;
 use crate::dcl::components::proto_components::{kernel::comms::rfc4, pulse};
@@ -68,10 +68,10 @@ impl PulseParcelGrid {
 
     /// Inverse of the server's `ParcelEncoder.DecodeToGlobalPosition`. `local` is the in-parcel
     /// offset (DCL world convention; the render-frame flip happens later in `AvatarScene`).
-    pub fn decode_to_world(&self, parcel_index: i32, local: Vector3) -> Vector3 {
+    pub fn decode_to_world(&self, parcel_index: i32, local: Vec3) -> Vec3 {
         let x = parcel_index.rem_euclid(self.width) + self.min_x;
         let z = parcel_index.div_euclid(self.width) + self.min_z;
-        Vector3::new(
+        Vec3::new(
             (x * self.parcel_size) as f32 + local.x,
             local.y,
             (z * self.parcel_size) as f32 + local.z,
@@ -81,12 +81,12 @@ impl PulseParcelGrid {
     /// Inverse of [`Self::decode_to_world`]: a world position (DCL convention) → the server's
     /// `parcel_index` plus the in-parcel local offset, matching the server's `ParcelEncoder.Encode`
     /// + relative-position split. Used to build our own `TeleportRequest` / `PlayerStateInput`.
-    pub fn encode_to_parcel(&self, world: Vector3) -> (i32, Vector3) {
+    pub fn encode_to_parcel(&self, world: Vec3) -> (i32, Vec3) {
         let size = self.parcel_size as f32;
         let parcel_x = (world.x / size).floor() as i32;
         let parcel_z = (world.z / size).floor() as i32;
         let parcel_index = (parcel_x - self.min_x) + (parcel_z - self.min_z) * self.width;
-        let local = Vector3::new(
+        let local = Vec3::new(
             world.x - (parcel_x * self.parcel_size) as f32,
             world.y,
             world.z - (parcel_z * self.parcel_size) as f32,
@@ -97,7 +97,7 @@ impl PulseParcelGrid {
     /// Whether a world position (DCL convention) falls inside the grid. Out-of-grid positions
     /// (some Worlds/preview realms) must never be sent — the server disconnects with a terminal
     /// `InvalidTeleportField`/`InvalidInputField` code on an invalid parcel index.
-    pub fn contains_world(&self, world: Vector3) -> bool {
+    pub fn contains_world(&self, world: Vec3) -> bool {
         let size = self.parcel_size as f32;
         let parcel_x = (world.x / size).floor() as i32;
         let parcel_z = (world.z / size).floor() as i32;
@@ -174,8 +174,8 @@ struct Subject {
 struct SubjectState {
     parcel_index: i32,
     /// In-parcel local position (world altitude in `y`); parcel-decoded to world in `to_movement`.
-    position: Vector3,
-    velocity: Vector3,
+    position: Vec3,
+    velocity: Vec3,
     rotation_y: f32,
     movement_blend: f32,
     slide_blend: f32,
@@ -186,7 +186,7 @@ struct SubjectState {
     glide_state: i32,
     jump_count: i32,
     /// Absolute world point-at target; only meaningful when `POINTING_AT` is set in `state_flags`.
-    point_at: Vector3,
+    point_at: Vec3,
 }
 
 impl SubjectState {
@@ -194,12 +194,12 @@ impl SubjectState {
     fn from_player_state(s: &pulse::PlayerState) -> Self {
         Self {
             parcel_index: s.parcel_index,
-            position: Vector3::new(
+            position: Vec3::new(
                 s.position_x_dequantized(),
                 s.position_y_dequantized(),
                 s.position_z_dequantized(),
             ),
-            velocity: Vector3::new(
+            velocity: Vec3::new(
                 s.velocity_x_dequantized(),
                 s.velocity_y_dequantized(),
                 s.velocity_z_dequantized(),
@@ -212,7 +212,7 @@ impl SubjectState {
             state_flags: s.state_flags,
             glide_state: s.glide_state,
             jump_count: s.jump_count,
-            point_at: Vector3::new(
+            point_at: Vec3::new(
                 s.point_at_x_dequantized().unwrap_or_default(),
                 s.point_at_y_dequantized().unwrap_or_default(),
                 s.point_at_z_dequantized().unwrap_or_default(),
@@ -605,7 +605,7 @@ fn signed_angle(deg: f32) -> f32 {
 /// enable flag is set (matching Unity's `WritePlayerState`). Fields with no Pulse equivalent
 /// (`is_jumping`, `is_emoting`) are dropped — animation stays on LiveKit.
 pub fn from_movement(movement: &rfc4::Movement, grid: &PulseParcelGrid) -> pulse::PlayerState {
-    let world = Vector3::new(
+    let world = Vec3::new(
         movement.position_x,
         movement.position_y,
         movement.position_z,
@@ -739,7 +739,7 @@ mod tests {
     #[test]
     fn parcel_decode_matches_server_scheme() {
         let grid = PulseParcelGrid::default();
-        let world = grid.decode_to_world(PARCEL_INDEX, Vector3::new(1.0, 2.0, 3.0));
+        let world = grid.decode_to_world(PARCEL_INDEX, Vec3::new(1.0, 2.0, 3.0));
         approx(world.x, 161.0); // 10*16 + 1
         approx(world.y, 2.0);
         approx(world.z, 323.0); // 20*16 + 3
@@ -748,15 +748,15 @@ mod tests {
     #[test]
     fn parcel_encode_roundtrips_and_bounds_check_works() {
         let grid = PulseParcelGrid::default();
-        let world = Vector3::new(161.0, 2.0, 323.0);
+        let world = Vec3::new(161.0, 2.0, 323.0);
         let (index, local) = grid.encode_to_parcel(world);
         assert_eq!(index, PARCEL_INDEX);
         approx(local.x, 1.0);
         approx(local.z, 3.0);
         assert!(grid.contains_world(world));
         // Well outside the padded Genesis grid (parcel x > 163 + 2).
-        assert!(!grid.contains_world(Vector3::new(10_000.0, 0.0, 0.0)));
-        assert!(!grid.contains_world(Vector3::new(0.0, 0.0, -3000.0)));
+        assert!(!grid.contains_world(Vec3::new(10_000.0, 0.0, 0.0)));
+        assert!(!grid.contains_world(Vec3::new(0.0, 0.0, -3000.0)));
     }
 
     #[test]

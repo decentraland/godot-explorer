@@ -1,6 +1,8 @@
 use godot::prelude::*;
 
-use crate::comms::profile::{AvatarColor, AvatarEmote, AvatarSnapshots, AvatarWireFormat};
+use crate::comms::profile::{
+    AvatarColor, AvatarColor3, AvatarEmote, AvatarSnapshots, AvatarWireFormat,
+};
 
 const AVATAR_EMOTE_SLOTS_COUNT: usize = 10;
 const DEFAULT_EMOTES: [&str; AVATAR_EMOTE_SLOTS_COUNT] = [
@@ -236,5 +238,23 @@ impl DclAvatarWireFormat {
         let value = serde_json::to_string(&self.inner).unwrap_or_default();
         let value = godot::classes::Json::parse_string(&value);
         value.to::<VarDictionary>()
+    }
+}
+
+impl From<&AvatarColor> for Color {
+    fn from(val: &AvatarColor) -> Self {
+        Color::from_rgb(val.color.r, val.color.g, val.color.b)
+    }
+}
+
+impl From<&Color> for AvatarColor {
+    fn from(val: &Color) -> Self {
+        AvatarColor {
+            color: AvatarColor3 {
+                r: val.r,
+                g: val.g,
+                b: val.b,
+            },
+        }
     }
 }

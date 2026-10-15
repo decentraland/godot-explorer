@@ -12,10 +12,14 @@ use crate::{
     },
 };
 use ethers_core::types::H160;
-use godot::{classes::WebSocketPeer, prelude::*};
+use glam::Vec3;
 use prost::Message;
 
-use super::{adapter_trait::Adapter, livekit::LivekitRoom};
+use super::{
+    adapter_trait::Adapter,
+    livekit::LivekitRoom,
+    ws_client::{WsClient, WsState},
+};
 
 #[derive(Clone)]
 enum ArchipelagoState {
@@ -30,13 +34,13 @@ pub struct ArchipelagoManager {
     state: ArchipelagoState,
 
     // Connection
-    ws_url: GString,
+    ws_url: String,
     last_try_to_connect: Instant,
-    ws_peer: Gd<WebSocketPeer>,
+    ws: WsClient,
 
     player_address: H160,
     player_profile: Option<UserProfile>,
-    player_position: Vector3,
+    player_position: Vec3,
     ephemeral_auth_chain: EphemeralAuthChain,
     last_send_heartbeat: Instant,
 
@@ -86,8 +90,8 @@ impl ArchipelagoManager {
         };
 
         Self {
-            ws_peer: WebSocketPeer::new_gd(),
-            ws_url: GString::from(&ws_url),
+            ws: WsClient::new(),
+            ws_url,
             state: ArchipelagoState::Connecting,
             player_address: ephemeral_auth_chain.signer(),
             ephemeral_auth_chain,
@@ -95,7 +99,7 @@ impl ArchipelagoManager {
             last_try_to_connect: Instant::now(),
             adapter: None,
             shared_processor_sender: None,
-            player_position: Vector3::new(0.0, 0.0, 0.0),
+            player_position: Vec3::ZERO,
             last_send_heartbeat: Instant::now(),
             last_island_conn_str: None,
             last_island_id: None,
@@ -165,41 +169,30 @@ impl ArchipelagoManager {
             return false;
         }
 
-        let buf = PackedByteArray::from_iter(buf);
-        matches!(self.ws_peer.send(&buf), godot::global::Error::OK)
+        self.ws.send(buf)
     }
 
     pub fn poll(&mut self) {
-        let mut peer = self.ws_peer.clone();
-        peer.poll();
-
-        let ws_state = peer.get_ready_state();
+        let ws_state = self.ws.state();
 
         match self.state.clone() {
             ArchipelagoState::Connecting => match ws_state {
-                godot::classes::web_socket_peer::State::CLOSED => {
+                WsState::Closed => {
                     if (Instant::now() - self.last_try_to_connect).as_secs()
                         > RECONNECT_INTERVAL_SECS
                     {
-                        let ws_protocols = {
-                            let mut v = PackedStringArray::new();
-                            v.push(&GString::from("archipelago"));
-                            v
-                        };
-
-                        peer.set("supported_protocols", &ws_protocols.to_variant());
-                        peer.call("connect_to_url", &[self.ws_url.clone().to_variant()]);
+                        self.ws.connect(&self.ws_url, "archipelago");
 
                         self.last_try_to_connect = Instant::now();
                     }
                 }
-                godot::classes::web_socket_peer::State::OPEN => {
+                WsState::Open => {
                     self.state = ArchipelagoState::Connected;
                 }
                 _ => {}
             },
             ArchipelagoState::Connected => match ws_state {
-                godot::classes::web_socket_peer::State::OPEN => {
+                WsState::Open => {
                     let client_packet = ClientPacket {
                         message: Some(client_packet::Message::ChallengeRequest(
                             ChallengeRequestMessage {
@@ -215,8 +208,8 @@ impl ArchipelagoManager {
                 }
             },
             ArchipelagoState::IdentMessageSent => match ws_state {
-                godot::classes::web_socket_peer::State::OPEN => {
-                    while let Some((packet_length, message)) = get_next_packet(peer.clone()) {
+                WsState::Open => {
+                    while let Some((packet_length, message)) = get_next_packet(&mut self.ws) {
                         match message {
                             server_packet::Message::ChallengeResponse(challenge_msg) => {
                                 tracing::debug!("comms > peer msg {:?}", challenge_msg);
@@ -263,8 +256,8 @@ impl ArchipelagoManager {
                 }
             },
             ArchipelagoState::ChallengeMessageSent => match ws_state {
-                godot::classes::web_socket_peer::State::OPEN => {
-                    while let Some((packet_length, message)) = get_next_packet(peer.clone()) {
+                WsState::Open => {
+                    while let Some((packet_length, message)) = get_next_packet(&mut self.ws) {
                         match message {
                             server_packet::Message::Welcome(_welcome) => {
                                 self.state = ArchipelagoState::WelcomeMessageReceived;
@@ -283,7 +276,7 @@ impl ArchipelagoManager {
                 }
             },
             ArchipelagoState::WelcomeMessageReceived => match ws_state {
-                godot::classes::web_socket_peer::State::OPEN => {
+                WsState::Open => {
                     self._handle_messages();
                     if (Instant::now() - self.last_send_heartbeat) > HEARTBEAT_INTERVAL {
                         let client_packet = ClientPacket {
@@ -353,7 +346,7 @@ impl ArchipelagoManager {
                 self.island_connect_failures = 0;
                 self.last_island_conn_str = None;
                 self.island_reconnect_at = None;
-                self.ws_peer.close();
+                self.ws.close();
                 self.state = ArchipelagoState::Connecting;
                 // Backdate the last attempt so the Connecting arm redials immediately
                 // instead of waiting out the reconnect interval.
@@ -417,22 +410,14 @@ impl ArchipelagoManager {
     }
 
     pub fn clean(&mut self) {
-        let mut peer = self.ws_peer.clone();
-        peer.close();
-        match peer.get_ready_state() {
-            godot::classes::web_socket_peer::State::OPEN
-            | godot::classes::web_socket_peer::State::CONNECTING => {
-                peer.close();
-            }
-            _ => {}
-        }
+        self.ws.close();
         self.last_island_conn_str = None;
         self.last_island_id = None;
         self.island_reconnect_at = None;
     }
 
     fn _handle_messages(&mut self) {
-        while let Some((_packet_length, message)) = get_next_packet(self.ws_peer.clone()) {
+        while let Some((_packet_length, message)) = get_next_packet(&mut self.ws) {
             match message {
                 server_packet::Message::Kicked(msg) => {
                     tracing::warn!("comms > received PeerKicked {:?}", msg.reason);
@@ -445,7 +430,7 @@ impl ArchipelagoManager {
                             room_id: "archipelago".to_string(),
                         });
                     }
-                    self.ws_peer.close();
+                    self.ws.close();
                     self.state = ArchipelagoState::Connecting;
                     // Kicked voids the island membership along with the session — don't
                     // let the internal retry rejoin the island behind the server's back.
@@ -528,20 +513,14 @@ impl ArchipelagoManager {
         }
     }
 
-    pub fn update_position(&mut self, position: Vector3) {
+    pub fn update_position(&mut self, position: Vec3) {
         self.player_position = position;
     }
 }
 
-fn get_next_packet(mut peer: Gd<WebSocketPeer>) -> Option<(usize, server_packet::Message)> {
-    if peer.get_available_packet_count() > 0 {
-        let packet = peer.get_packet();
-        let packet_length = packet.len();
-        let packet = ServerPacket::decode(packet.as_slice());
-        if let Ok(packet) = packet {
-            packet.message.as_ref()?;
-            return Some((packet_length, packet.message.unwrap()));
-        }
-    }
-    None
+fn get_next_packet(ws: &mut WsClient) -> Option<(usize, server_packet::Message)> {
+    let packet = ws.next_packet()?;
+    let packet_length = packet.len();
+    let packet = ServerPacket::decode(packet.as_slice()).ok()?;
+    Some((packet_length, packet.message?))
 }

@@ -59,6 +59,7 @@ bytes = "1.4.0"
 url = "2.5"
 
 tokio-tungstenite = "0.20.1"
+glam = "0.32"
 futures-util = "0.3.30"
 
 livekit = { git = "https://github.com/robtfm/client-sdk-rust", rev="c59f7e4693579dc137dba72153a0e995079305c6", features=["rustls-tls-webpki-roots"], optional = true }

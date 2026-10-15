@@ -145,7 +145,7 @@ async fn extract_one(zip_path: &str, name: &str, dest: &str) -> Result<u64, Stri
 }
 
 async fn delete_zip(provider: &Arc<ResourceProvider>, zip_name: &str, zip_path: &str) {
-    if provider.delete_file_by_hash(zip_name).await.is_none() {
+    if !provider.delete_file_by_hash(zip_name).await {
         // Not tracked (adopted before `initialize`, or never registered) —
         // remove it from disk anyway.
         let _ = tokio::fs::remove_file(zip_path).await;

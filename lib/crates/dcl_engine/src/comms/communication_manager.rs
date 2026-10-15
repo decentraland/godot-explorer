@@ -5,6 +5,7 @@ use std::sync::Arc;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use crate::auth::wallet;
+use crate::avatars::avatar_sink::GlobalSceneSink;
 #[cfg(feature = "use_livekit")]
 use crate::comms::consts::DISABLE_ARCHIPELAGO;
 use crate::{
@@ -850,12 +851,17 @@ impl CommunicationManager {
             let player_profile = player_identity_bind.clone_profile();
             let avatar_scene = DclGlobal::singleton().bind().get_avatars();
 
-            let mut processor = MessageProcessor::new(player_address, player_profile, avatar_scene);
+            let mut processor = MessageProcessor::new(
+                player_address,
+                player_profile,
+                Box::new(avatar_scene),
+                Box::new(GlobalSceneSink),
+            );
 
             // Set the social blacklist if available
             let global = DclGlobal::singleton();
             let global_bind = global.bind();
-            processor.set_social_blacklist(global_bind.social_blacklist.clone());
+            processor.set_social_lists(Box::new(global_bind.social_blacklist.clone()));
 
             let sender = processor.get_message_sender();
             self.message_processor = Some(processor);
@@ -1111,7 +1117,10 @@ impl CommunicationManager {
         };
         if let Some(pulse_room) = self.pulse_room.as_mut() {
             if pulse_room.is_established() {
-                pulse_room.send_teleport(position, &realm_name);
+                pulse_room.send_teleport(
+                    glam::Vec3::new(position.x, position.y, position.z),
+                    &realm_name,
+                );
                 self.pulse_teleport_pending = false;
             }
         }
@@ -1755,7 +1764,7 @@ impl CommunicationManager {
         // Update archipelago position if connected via archipelago
         #[cfg(feature = "use_livekit")]
         if let CommsConnection::Archipelago(archipelago) = &mut self.current_connection {
-            archipelago.update_position(position);
+            archipelago.update_position(glam::Vec3::new(position.x, position.y, position.z));
         }
 
         // Cache the DCL-convention position (z negated, matching the rfc4 packet below) for the
@@ -1835,10 +1844,10 @@ impl CommunicationManager {
                 let time = self.start_time.elapsed().as_secs_f64();
 
                 let movement = Movement::new(
-                    position,
-                    velocity,
-                    self.realm_min_bounds,
-                    self.realm_max_bounds,
+                    glam::Vec3::new(position.x, position.y, position.z),
+                    glam::Vec3::new(velocity.x, velocity.y, velocity.z),
+                    glam::IVec2::new(self.realm_min_bounds.x, self.realm_min_bounds.y),
+                    glam::IVec2::new(self.realm_max_bounds.x, self.realm_max_bounds.y),
                 );
 
                 // Determine move kind from parameters
@@ -1962,7 +1971,7 @@ impl CommunicationManager {
         // Update archipelago position if connected via archipelago
         #[cfg(feature = "use_livekit")]
         if let CommsConnection::Archipelago(archipelago) = &mut self.current_connection {
-            archipelago.update_position(position);
+            archipelago.update_position(glam::Vec3::new(position.x, position.y, position.z));
         }
 
         let index = self.last_position_broadcast_index;
@@ -2337,7 +2346,7 @@ impl CommunicationManager {
                     format!("ws-room-{}", comms_address),
                     current_ephemeral_auth_chain,
                     player_profile,
-                    avatar_scene,
+                    Box::new(avatar_scene),
                 );
                 ws_room.set_message_processor_sender(processor_sender);
 
@@ -2897,7 +2906,10 @@ impl CommunicationManager {
         if let Some(processor) = self.message_processor.as_mut() {
             self.realm_min_bounds = min_bounds;
             self.realm_max_bounds = max_bounds;
-            processor.set_realm_bounds(min_bounds, max_bounds);
+            processor.set_realm_bounds(
+                glam::IVec2::new(min_bounds.x, min_bounds.y),
+                glam::IVec2::new(max_bounds.x, max_bounds.y),
+            );
             tracing::debug!(
                 "🌐 Realm bounds updated: min=({}, {}), max=({}, {})",
                 min_bounds.x,

@@ -1,3 +1,4 @@
+use dcl_core::cache::CacheIndex;
 use futures_util::StreamExt;
 use reqwest::Client;
 use std::collections::{HashMap, HashSet};
@@ -8,21 +9,16 @@ use std::time::Duration;
 use tokio::fs;
 use tokio::io::{self, AsyncReadExt, AsyncWriteExt};
 use tokio::sync::{Notify, OnceCell, RwLock};
-use tokio::time::{timeout, Instant};
+use tokio::time::timeout;
 
 #[cfg(feature = "use_resource_tracking")]
 use super::resource_download_tracking::ResourceDownloadTracking;
 use crate::content::cache_file_name::cache_file_name;
 use crate::content::semaphore_ext::CappedSemaphore;
 
-pub struct FileMetadata {
-    file_size: i64,
-    last_accessed: Instant,
-}
-
 pub struct ResourceProvider {
     cache_folder: PathBuf,
-    existing_files: RwLock<HashMap<String, FileMetadata>>,
+    existing_files: RwLock<CacheIndex>,
     max_cache_size: AtomicI64,
     downloaded_size: AtomicU64,
     pending_downloads: RwLock<HashMap<String, Arc<Notify>>>,
@@ -46,53 +42,6 @@ const CONNECT_TIMEOUT: Duration = Duration::from_secs(20);
 const RESPONSE_TIMEOUT: Duration = Duration::from_secs(30);
 const IDLE_CHUNK_TIMEOUT: Duration = Duration::from_secs(30);
 
-/// Base identity of a cache-folder file name — the key that ties every on-disk
-/// form of an asset back to its content hash (or url-hash). CID hashes contain
-/// no '.', and the hex of "hashed_{hex}" url-texture names never contains 'q':
-///   - "{hash}-mobile.zip"         -> "{hash}"        (optimized asset pack)
-///   - "{hash}.scn" / "{hash}.ext" -> "{hash}"        (runtime-processed forms)
-///   - "{hash}-{16 hex}.opt.scn"   -> "{hash}"        (baked scene GLB, `scene_bake_key`)
-///   - "hashed_{hex}_q{N}"         -> "hashed_{hex}"  (url-texture quality variant)
-///   - anything else               -> unchanged
-pub fn cache_file_base_name(file_name: &str) -> &str {
-    if let Some(base) = file_name.strip_suffix("-mobile.zip") {
-        return base;
-    }
-    let base = file_name.split('.').next().unwrap_or(file_name);
-    if base.len() > 17 {
-        let (head, tail) = base.split_at(base.len() - 17);
-        if tail.starts_with('-') && tail[1..].bytes().all(|b| b.is_ascii_hexdigit()) {
-            return head;
-        }
-    }
-    if let Some(hex_and_variant) = base.strip_prefix("hashed_") {
-        if let Some(pos) = hex_and_variant.rfind("_q") {
-            let digits = &hex_and_variant[pos + 2..];
-            if pos > 0 && !digits.is_empty() && digits.bytes().all(|b| b.is_ascii_digit()) {
-                return &base[.."hashed_".len() + pos];
-            }
-        }
-    }
-    base
-}
-
-/// Sum of tracked sizes for entries whose file's base name (see
-/// `cache_file_base_name`) is in `base_names`. Pure in-memory lookup.
-fn size_for_base_names(
-    existing_files: &HashMap<String, FileMetadata>,
-    base_names: &HashSet<String>,
-) -> i64 {
-    existing_files
-        .iter()
-        .filter_map(|(file_path, metadata)| {
-            let file_name = Path::new(file_path).file_name()?.to_str()?;
-            base_names
-                .contains(cache_file_base_name(file_name))
-                .then_some(metadata.file_size)
-        })
-        .sum()
-}
-
 impl ResourceProvider {
     // Synchronous constructor that sets up the ResourceProvider
     pub fn new(
@@ -103,7 +52,7 @@ impl ResourceProvider {
     ) -> Self {
         ResourceProvider {
             cache_folder: PathBuf::from(cache_folder),
-            existing_files: RwLock::new(HashMap::new()),
+            existing_files: RwLock::new(CacheIndex::default()),
             max_cache_size: AtomicI64::new(max_cache_size),
             pending_downloads: RwLock::new(HashMap::new()),
             client: Client::builder()
@@ -148,54 +97,33 @@ impl ResourceProvider {
         Ok(())
     }
 
-    async fn ensure_space_for(
-        &self,
-        existing_files: &mut HashMap<String, FileMetadata>,
-        file_size: i64,
-    ) {
-        // If adding the new file exceeds the cache size, remove less used files
+    async fn ensure_space_for(&self, existing_files: &mut CacheIndex, file_size: i64) {
         let max_cache_size = self.max_cache_size.load(Ordering::SeqCst);
-        while self.total_size(existing_files) + file_size > max_cache_size {
-            if !self.remove_less_used(existing_files).await {
-                break;
-            }
+        for evicted in existing_files.evict_for(file_size, max_cache_size) {
+            let _ = fs::remove_file(evicted).await;
         }
     }
 
-    async fn add_file(
-        &self,
-        existing_files: &mut HashMap<String, FileMetadata>,
-        file_path: String,
-        file_size: i64,
-    ) {
-        let metadata = FileMetadata {
-            file_size,
-            last_accessed: Instant::now(),
-        };
-        existing_files.insert(file_path, metadata);
+    async fn add_file(&self, existing_files: &mut CacheIndex, file_path: String, file_size: i64) {
+        existing_files.insert(file_path, file_size);
     }
 
-    async fn remove_file(
-        &self,
-        existing_files: &mut HashMap<String, FileMetadata>,
-        file_path: &str,
-    ) -> Option<FileMetadata> {
-        if let Some(metadata) = existing_files.remove(file_path) {
+    async fn remove_file(&self, existing_files: &mut CacheIndex, file_path: &str) -> bool {
+        let removed = existing_files.remove(file_path);
+        if removed {
             let _ = fs::remove_file(file_path).await;
-            Some(metadata)
-        } else {
-            None
         }
+        removed
     }
 
-    pub async fn delete_file(&self, file_path: &str) -> Option<FileMetadata> {
+    pub async fn delete_file(&self, file_path: &str) -> bool {
         let mut existing_files = self.existing_files.write().await;
         self.remove_file(&mut existing_files, file_path).await
     }
 
     /// Delete a file from the cache by its hash.
-    /// Returns the metadata if the file was found and deleted.
-    pub async fn delete_file_by_hash(&self, file_hash: &str) -> Option<FileMetadata> {
+    /// Returns true if the file was tracked and deleted.
+    pub async fn delete_file_by_hash(&self, file_hash: &str) -> bool {
         let file_path = self.cache_folder.join(cache_file_name(file_hash).as_ref());
         let file_path = file_path.to_str().unwrap().to_string();
         self.delete_file(&file_path).await
@@ -205,32 +133,6 @@ impl ResourceProvider {
     /// Used for cleanup where files might be shared or already deleted.
     pub async fn try_delete_file_by_hash(&self, file_hash: &str) {
         let _ = self.delete_file_by_hash(file_hash).await;
-    }
-
-    fn total_size(&self, existing_files: &HashMap<String, FileMetadata>) -> i64 {
-        existing_files
-            .values()
-            .map(|metadata| metadata.file_size)
-            .sum()
-    }
-
-    async fn remove_less_used(&self, existing_files: &mut HashMap<String, FileMetadata>) -> bool {
-        if let Some((file_path, _)) = existing_files
-            .iter()
-            .min_by_key(|(_, metadata)| metadata.last_accessed)
-            .map(|(path, metadata)| (path.clone(), metadata))
-        {
-            self.remove_file(existing_files, &file_path).await;
-            true
-        } else {
-            false
-        }
-    }
-
-    fn touch_file(&self, existing_files: &mut HashMap<String, FileMetadata>, file_path: &str) {
-        if let Some(metadata) = existing_files.get_mut(file_path) {
-            metadata.last_accessed = Instant::now();
-        }
     }
 
     /// Check if a remote file exists using a HEAD request.
@@ -432,7 +334,7 @@ impl ResourceProvider {
     async fn touch_existing_file(&self, absolute_file_path: &String) -> Result<(), String> {
         {
             let mut existing_files = self.existing_files.write().await;
-            self.touch_file(&mut existing_files, absolute_file_path);
+            existing_files.touch(absolute_file_path);
         }
         tokio::fs::metadata(absolute_file_path)
             .await
@@ -442,7 +344,7 @@ impl ResourceProvider {
 
     async fn handle_existing_file(&self, absolute_file_path: &String) -> Result<Vec<u8>, String> {
         let mut existing_files = self.existing_files.write().await;
-        self.touch_file(&mut existing_files, absolute_file_path);
+        existing_files.touch(absolute_file_path);
 
         let mut file = fs::File::open(absolute_file_path)
             .await
@@ -457,7 +359,7 @@ impl ResourceProvider {
     async fn handle_pending_download(
         &self,
         file_hash: &String,
-        absolute_file_path: &String,
+        absolute_file_path: &str,
     ) -> Result<(), String> {
         let notify = {
             let mut pending_downloads = self.pending_downloads.write().await;
@@ -473,7 +375,7 @@ impl ResourceProvider {
         if let Some(notify) = notify {
             notify.notified().await;
             let existing_files = self.existing_files.read().await;
-            if existing_files.contains_key(absolute_file_path) {
+            if existing_files.contains(absolute_file_path) {
                 return Ok(());
             } else {
                 return Err("File not found after waiting".to_string());
@@ -519,21 +421,19 @@ impl ResourceProvider {
         let existing_files = self.existing_files.read().await;
         let absolute_file_path = self.cache_folder.join(cache_file_name(file_hash).as_ref());
         let absolute_file_path = absolute_file_path.to_str().unwrap().to_string();
-        existing_files.contains_key(&absolute_file_path)
+        existing_files.contains(&absolute_file_path)
     }
 
     /// Check if a file exists in the cache by full path.
     pub async fn file_exists_by_path(&self, file_path: &str) -> bool {
         let existing_files = self.existing_files.read().await;
-        existing_files.contains_key(file_path)
+        existing_files.contains(file_path)
     }
 
     /// Touch a file to update its last_access time for LRU (async version).
     pub async fn touch_file_async(&self, file_path: &str) {
         let mut existing_files = self.existing_files.write().await;
-        if let Some(metadata) = existing_files.get_mut(file_path) {
-            metadata.last_accessed = Instant::now();
-        }
+        existing_files.touch(file_path);
     }
 
     pub async fn store_file(&self, file_hash: &str, bytes: &[u8]) -> Result<(), String> {
@@ -582,8 +482,8 @@ impl ResourceProvider {
         let mut existing_files = self.existing_files.write().await;
 
         // Don't register if already tracked
-        if existing_files.contains_key(file_path) {
-            self.touch_file(&mut existing_files, file_path);
+        if existing_files.contains(file_path) {
+            existing_files.touch(file_path);
             return;
         }
 
@@ -750,8 +650,7 @@ impl ResourceProvider {
         }
 
         let mut existing_files = self.existing_files.write().await;
-        let file_paths: Vec<String> = existing_files.keys().cloned().collect();
-        for file_path in file_paths {
+        for file_path in existing_files.paths() {
             self.remove_file(&mut existing_files, &file_path).await;
         }
     }
@@ -779,12 +678,12 @@ impl ResourceProvider {
     /// the cache index.
     pub fn try_cache_total_size(&self) -> Option<i64> {
         let existing_files = self.existing_files.try_read().ok()?;
-        Some(self.total_size(&existing_files))
+        Some(existing_files.total_size())
     }
 
     pub fn get_cache_total_size(&self) -> i64 {
         let existing_files = self.existing_files.blocking_read();
-        self.total_size(&existing_files)
+        existing_files.total_size()
     }
 
     /// Sum of tracked cache-file sizes whose base name (see
@@ -794,7 +693,7 @@ impl ResourceProvider {
     /// runtime (e.g. the Godot main thread).
     pub fn get_cache_size_for_base_names(&self, base_names: &HashSet<String>) -> i64 {
         let existing_files = self.existing_files.blocking_read();
-        size_for_base_names(&existing_files, base_names)
+        existing_files.size_for_base_names(base_names)
     }
 }
 
@@ -803,59 +702,6 @@ mod tests {
     use super::*;
     use futures_util::future::join_all;
     use tokio::io::Result;
-
-    #[test]
-    fn test_cache_file_base_name() {
-        // Raw download, processed form, optimized pack — same base.
-        assert_eq!(cache_file_base_name("bafkreiabc"), "bafkreiabc");
-        assert_eq!(cache_file_base_name("bafkreiabc.scn"), "bafkreiabc");
-        assert_eq!(cache_file_base_name("bafkreiabc-mobile.zip"), "bafkreiabc");
-        assert_eq!(
-            cache_file_base_name("bafkreiabc-0123456789abcdef.opt.scn"),
-            "bafkreiabc"
-        );
-        assert_eq!(cache_file_base_name("bafkreiabc.opt.scn"), "bafkreiabc");
-        assert_eq!(
-            cache_file_base_name("bafkreiabc-0123456789abcdeg.scn"),
-            "bafkreiabc-0123456789abcdeg"
-        );
-        assert_eq!(cache_file_base_name("Qm123.png"), "Qm123");
-        // Url-texture quality variants collapse onto the base url-hash.
-        assert_eq!(cache_file_base_name("hashed_a1b2c3"), "hashed_a1b2c3");
-        assert_eq!(cache_file_base_name("hashed_a1b2c3_q2"), "hashed_a1b2c3");
-        assert_eq!(cache_file_base_name("hashed_a1b2c3_q12"), "hashed_a1b2c3");
-        // Not quality suffixes: no digits / empty hex.
-        assert_eq!(cache_file_base_name("hashed_a1b2_qx"), "hashed_a1b2_qx");
-        assert_eq!(cache_file_base_name("hashed__q2"), "hashed__q2");
-    }
-
-    #[test]
-    fn test_size_for_base_names() {
-        let mut files: HashMap<String, FileMetadata> = HashMap::new();
-        for (path, size) in [
-            ("/cache/bafkhash1", 10),
-            ("/cache/bafkhash1.scn", 20),
-            ("/cache/bafkhash1-mobile.zip", 40),
-            ("/cache/bafkhash2", 100), // not requested
-            ("/cache/hashed_abc123", 3),
-            ("/cache/hashed_abc123_q2", 7),
-            ("/cache/hashed_ffff_q1", 1000), // not requested
-        ] {
-            files.insert(
-                path.to_string(),
-                FileMetadata {
-                    file_size: size,
-                    last_accessed: Instant::now(),
-                },
-            );
-        }
-        let wanted: HashSet<String> = ["bafkhash1", "hashed_abc123"]
-            .iter()
-            .map(|s| s.to_string())
-            .collect();
-        assert_eq!(size_for_base_names(&files, &wanted), 10 + 20 + 40 + 3 + 7);
-        assert_eq!(size_for_base_names(&files, &HashSet::new()), 0);
-    }
 
     async fn setup_cache_folder(path: &str) -> Result<()> {
         if tokio::fs::metadata(path).await.is_err() {
@@ -1109,20 +955,21 @@ mod tests {
         for file_hash in file_hashes {
             let absolute_file_path = format!("{}/{}", path, file_hash);
             let existing_files = provider.existing_files.read().await;
-            assert!(existing_files.contains_key(&absolute_file_path));
+            assert!(existing_files.contains(&absolute_file_path));
         }
 
         {
             let mut existing_files = provider.existing_files.write().await;
-            provider.remove_less_used(&mut existing_files).await;
-            assert!(existing_files.len() == 2);
+            let limit = existing_files.total_size() - 1;
+            assert_eq!(existing_files.evict_for(0, limit).len(), 1);
+            assert_eq!(existing_files.paths().len(), 2);
         }
 
         {
             provider.clear().await;
             let existing_files = provider.existing_files.read().await;
-            assert!(provider.total_size(&existing_files) == 0);
-            assert!(existing_files.is_empty());
+            assert_eq!(existing_files.total_size(), 0);
+            assert!(existing_files.paths().is_empty());
         }
 
         let _ = tokio::fs::remove_dir_all(path).await;

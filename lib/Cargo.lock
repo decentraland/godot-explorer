@@ -1092,6 +1092,7 @@ dependencies = [
  "fastwebsockets",
  "futures-lite",
  "futures-util",
+ "glam",
  "godot",
  "hex",
  "http 0.2.12",

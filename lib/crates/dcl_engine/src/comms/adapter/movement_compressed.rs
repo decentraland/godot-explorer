@@ -2,7 +2,7 @@
 #![allow(unused_parens)]
 use std::f32::consts::TAU;
 
-use godot::prelude::{Vector2i, Vector3};
+use glam::{IVec2, Vec3};
 use modular_bitfield::specifiers::*;
 use modular_bitfield::{bitfield, BitfieldSpecifier, Specifier};
 use num_traits::AsPrimitive;
@@ -174,8 +174,8 @@ pub enum Movement {
 }
 
 impl Movement {
-    pub fn new(position: Vector3, velocity: Vector3, map_min: Vector2i, map_max: Vector2i) -> Self {
-        if map_min == Vector2i::new(i32::MAX, i32::MAX) {
+    pub fn new(position: Vec3, velocity: Vec3, map_min: IVec2, map_max: IVec2) -> Self {
+        if map_min == IVec2::new(i32::MAX, i32::MAX) {
             return Self::Slow(MovementSlow::new());
         }
 
@@ -183,7 +183,7 @@ impl Movement {
             .x
             .saturating_sub(map_min.x)
             .saturating_add(2 * 2 + 1);
-        let parcel = Vector2i::new(
+        let parcel = IVec2::new(
             (position.x / 16.0).floor() as i32,
             (-position.z / 16.0).floor() as i32,
         );
@@ -199,7 +199,7 @@ impl Movement {
             );
         let parcel_index = parcel_index.clamp(0, (1 << 17) - 1);
 
-        let relative_position = Vector3::new(
+        let relative_position = Vec3::new(
             position.x - (parcel.x * 16) as f32,
             position.y,
             -position.z - (parcel.y * 16) as f32,
@@ -256,26 +256,26 @@ impl Movement {
         }
     }
 
-    pub fn parcel(&self, map_min: Vector2i, map_max: Vector2i) -> Vector2i {
+    pub fn parcel(&self, map_min: IVec2, map_max: IVec2) -> IVec2 {
         let index = self.parcel_index() as i32;
         let width = map_max
             .x
             .saturating_sub(map_min.x)
             .saturating_add(2 * 2 + 1);
-        Vector2i::new(
+        IVec2::new(
             (index % width).saturating_add(map_min.x.saturating_sub(2)),
             (index / width).saturating_add(map_min.y.saturating_sub(2)),
         )
     }
 
-    pub fn position(&self) -> Vector3 {
+    pub fn position(&self) -> Vec3 {
         match self {
-            Movement::Slow(val) => Vector3::new(
+            Movement::Slow(val) => Vec3::new(
                 dequantize::<B10>(val.position_x(), 0.0, 16.0),
                 dequantize::<B13>(val.position_y(), 0.0, 200.0),
                 dequantize::<B10>(val.position_z(), 0.0, 16.0),
             ),
-            Movement::Med(val) | Movement::Fast(val) => Vector3::new(
+            Movement::Med(val) | Movement::Fast(val) => Vec3::new(
                 dequantize::<B8>(val.position_x(), 0.0, 16.0),
                 dequantize::<B13>(val.position_y(), 0.0, 200.0),
                 dequantize::<B8>(val.position_z(), 0.0, 16.0),
@@ -283,11 +283,11 @@ impl Movement {
         }
     }
 
-    pub fn velocity(&self) -> Vector3 {
+    pub fn velocity(&self) -> Vec3 {
         match self {
             Movement::Slow(val) => {
                 const SPEED: f32 = 4.0;
-                Vector3::new(
+                Vec3::new(
                     dequantize::<B3>(val.velocity_x(), 0.0, SPEED)
                         * if val.velocity_x_sign() { -1.0 } else { 1.0 },
                     dequantize::<B3>(val.velocity_y(), 0.0, SPEED)
@@ -298,7 +298,7 @@ impl Movement {
             }
             Movement::Med(val) => {
                 const SPEED: f32 = 12.0;
-                Vector3::new(
+                Vec3::new(
                     dequantize::<B5>(val.velocity_x(), 0.0, SPEED)
                         * if val.velocity_x_sign() { -1.0 } else { 1.0 },
                     dequantize::<B5>(val.velocity_y(), 0.0, SPEED)
@@ -309,7 +309,7 @@ impl Movement {
             }
             Movement::Fast(val) => {
                 const SPEED: f32 = 50.0;
-                Vector3::new(
+                Vec3::new(
                     dequantize::<B5>(val.velocity_x(), 0.0, SPEED)
                         * if val.velocity_x_sign() { -1.0 } else { 1.0 },
                     dequantize::<B5>(val.velocity_y(), 0.0, SPEED)
@@ -361,23 +361,23 @@ impl MovementCompressed {
         tracing::debug!("rel pos: {}", v.movement.position());
         v
     }
-    pub fn position(&self, map_min: Vector2i, map_max: Vector2i) -> Vector3 {
-        if map_min == Vector2i::new(i32::MAX, i32::MAX) {
-            return Vector3::ZERO;
+    pub fn position(&self, map_min: IVec2, map_max: IVec2) -> Vec3 {
+        if map_min == IVec2::new(i32::MAX, i32::MAX) {
+            return Vec3::ZERO;
         }
         let parcel = self.movement.parcel(map_min, map_max);
         tracing::debug!("actual parcel (in {map_min} .. {map_max}: {parcel}");
-        let parcel_pos = Vector3::new((parcel.x * 16) as f32, 0.0, (parcel.y * 16) as f32);
+        let parcel_pos = Vec3::new((parcel.x * 16) as f32, 0.0, (parcel.y * 16) as f32);
         let rel_pos = self.movement.position();
-        Vector3::new(
+        Vec3::new(
             parcel_pos.x + rel_pos.x,
             rel_pos.y,
             parcel_pos.z + rel_pos.z,
         )
     }
 
-    pub fn velocity(&self) -> Vector3 {
+    pub fn velocity(&self) -> Vec3 {
         let vel = self.movement.velocity();
-        Vector3::new(vel.x, vel.y, -vel.z)
+        Vec3::new(vel.x, vel.y, -vel.z)
     }
 }
