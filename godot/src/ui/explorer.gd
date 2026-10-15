@@ -210,10 +210,7 @@ func _ready():
 		)
 		add_child(scene_renderer_orchestor)
 
-	var dcl_global_camera_controller = (
-		load("res://src/decentraland_components/dcl_global_camera_controller.tscn").instantiate()
-	)
-	add_child(dcl_global_camera_controller)
+	add_child(DclGlobalCameraController.new())
 
 
 func _on_need_open_url(url: String, _description: String, _use_webkit: bool) -> void:

@@ -2,6 +2,7 @@
 //! before the service is used: a service call that reaches back into `Global` (metrics, settings)
 //! would otherwise find it still bound.
 
+use godot::classes::Node;
 use godot::prelude::*;
 
 use crate::{
@@ -32,3 +33,11 @@ service!(realm, realm, DclRealm);
 service!(cli, cli, DclCli);
 service!(player_identity, player_identity, DclPlayerIdentity);
 service!(http_requester, http_requester, RustHttpQueueRequester);
+
+/// The explorer scene, when it is the current one.
+pub fn explorer() -> Option<Gd<Node>> {
+    DclGlobal::singleton()
+        .call("get_explorer", &[])
+        .try_to::<Gd<Node>>()
+        .ok()
+}

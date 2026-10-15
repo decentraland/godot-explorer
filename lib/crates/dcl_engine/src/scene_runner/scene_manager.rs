@@ -2601,7 +2601,7 @@ impl SceneManager {
     }
 
     #[func]
-    fn set_pointer_raycast_exclude(&mut self, rids: Array<Rid>) {
+    pub fn set_pointer_raycast_exclude(&mut self, rids: Array<Rid>) {
         self.pointer_raycast_exclude = rids;
     }
 
