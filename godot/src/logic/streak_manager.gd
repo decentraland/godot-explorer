@@ -7,11 +7,13 @@ extends Node
 ## on app-open or browsing Discover. Day 3 is a checkpoint: losing the streak after reaching it
 ## resets progress back to day 3 (not 0), and the day-3 reward stays claimable regardless. Day 7
 ## ends the streak for the account forever once claimed. State is local-only (ConfigData) for
-## this first pass — no backend, no multi-device sync.
+## this first pass — no backend, no multi-device sync — but IS keyed per wallet (issue #3018: "1
+## completed streak per account"), via ConfigData.streak_state_for_current_wallet(); switching
+## accounts on the same device gets that account's own streak, not whoever played last.
 ##
 ## Modal display is decoupled from crediting: credit_jump_in() runs in-world and only queues a
-## pending modal (streak_pending_modal); Discover is the only place a modal is shown ("Streak
-## modals on Discover only — never in-world" per the issue), via take_pending_modal().
+## pending modal (pending_modal); Discover is the only place a modal is shown ("Streak modals on
+## Discover only — never in-world" per the issue), via take_pending_modal().
 
 const DAY_SECONDS := 86400
 const CHECKPOINT_DAY := 3
@@ -29,7 +31,7 @@ func _ready() -> void:
 
 
 func _on_loading_finished() -> void:
-	if Global.config.streak_d7_claimed:
+	if Global.config.streak_state_for_current_wallet().d7_claimed:
 		return
 	credit_jump_in()
 
@@ -39,39 +41,39 @@ func _on_loading_finished() -> void:
 ## which also makes this safe against loading_finished firing more than once for the same
 ## real-world jump-in.
 func credit_jump_in() -> void:
-	var config: ConfigData = Global.config
+	var state: Dictionary = Global.config.streak_state_for_current_wallet()
 	var today := _local_midnight(int(Time.get_unix_time_from_system()))
 
-	if config.streak_last_credit_day_unix == 0:
+	if state.last_credit_day_unix == 0:
 		# First-ever credit.
-		config.streak_progress_day = 1
-		config.streak_last_credit_day_unix = today
-		config.streak_pending_modal = PENDING_WELCOME
-		_finish_credit(config, 1)
+		state.progress_day = 1
+		state.last_credit_day_unix = today
+		state.pending_modal = PENDING_WELCOME
+		_finish_credit(1)
 		return
 
-	var gap_days := (today - config.streak_last_credit_day_unix) / DAY_SECONDS
+	var gap_days: int = (today - state.last_credit_day_unix) / DAY_SECONDS
 	if gap_days <= 0:
 		# Already credited today (or a clock anomaly) — no-op.
 		return
 
-	config.streak_last_credit_day_unix = today
+	state.last_credit_day_unix = today
 
 	if gap_days == 1:
-		config.streak_progress_day += 1
-		config.streak_pending_modal = _pending_for_progress()
+		state.progress_day += 1
+		state.pending_modal = _pending_for_progress()
 	else:
 		# Missed at least one day: floor is the checkpoint if it was ever reached, else 0, and
 		# this jump-in itself is immediately credited as the day after the floor.
-		var floor_day := CHECKPOINT_DAY if config.streak_progress_day >= CHECKPOINT_DAY else 0
-		config.streak_progress_day = floor_day + 1
-		config.streak_pending_modal = PENDING_LOST
+		var floor_day := CHECKPOINT_DAY if state.progress_day >= CHECKPOINT_DAY else 0
+		state.progress_day = floor_day + 1
+		state.pending_modal = PENDING_LOST
 
-	_finish_credit(config, config.streak_progress_day)
+	_finish_credit(state.progress_day)
 
 
-func _finish_credit(config: ConfigData, day: int) -> void:
-	config.save_to_settings_file()
+func _finish_credit(day: int) -> void:
+	Global.config.save_to_settings_file()
 	Global.metrics.track_login_streak_day_counted(day, is_unlinked_guest())
 
 
@@ -102,69 +104,69 @@ func _pending_for_progress() -> String:
 
 
 ## DEBUG ONLY — advances the REFERENCE CLOCK by one day (not the streak itself): rewinds
-## streak_last_credit_day_unix so get_pending_today_day() reports a new pending day, same as a
-## real calendar day turning over. Doesn't credit anything itself — a real jump-in still does
-## that. Press twice with no jump-in between to simulate missing a day (gap_days > 1).
+## last_credit_day_unix so get_pending_today_day() reports a new pending day, same as a real
+## calendar day turning over. Doesn't credit anything itself — a real jump-in still does that.
+## Press twice with no jump-in between to simulate missing a day (gap_days > 1).
 func debug_advance_day() -> void:
-	var config: ConfigData = Global.config
-	if config.streak_last_credit_day_unix <= 0:
+	var state: Dictionary = Global.config.streak_state_for_current_wallet()
+	if state.last_credit_day_unix <= 0:
 		return
-	config.streak_last_credit_day_unix -= DAY_SECONDS
-	config.save_to_settings_file()
+	state.last_credit_day_unix -= DAY_SECONDS
+	Global.config.save_to_settings_file()
 
 
 ## DEBUG ONLY — the inverse of debug_advance_day(): steps progress back one day (floor 0),
-## un-claims D3/D7 once below their checkpoint, and steps streak_last_credit_day_unix back a day
-## to match — except at the progress_day == 0 floor, where it resets to 0 instead, so the next
+## un-claims D3/D7 once below their checkpoint, and steps last_credit_day_unix back a day to
+## match — except at the progress_day == 0 floor, where it resets to 0 instead, so the next
 ## jump-in re-enters WELCOME rather than reading as a multi-day gap (LOST). Unlike
 ## debug_advance_day(), this doesn't queue any pending modal itself — only a real jump-in does.
 func debug_rewind_day() -> void:
-	var config: ConfigData = Global.config
-	if config.streak_progress_day <= 0:
+	var state: Dictionary = Global.config.streak_state_for_current_wallet()
+	if state.progress_day <= 0:
 		return
-	config.streak_progress_day -= 1
-	if config.streak_progress_day == 0:
-		config.streak_last_credit_day_unix = 0
-	elif config.streak_last_credit_day_unix > 0:
-		config.streak_last_credit_day_unix -= DAY_SECONDS
-	if config.streak_progress_day < CHECKPOINT_DAY:
-		config.streak_d3_claimed = false
-	if config.streak_progress_day < FINAL_DAY:
-		config.streak_d7_claimed = false
-	config.save_to_settings_file()
+	state.progress_day -= 1
+	if state.progress_day == 0:
+		state.last_credit_day_unix = 0
+	elif state.last_credit_day_unix > 0:
+		state.last_credit_day_unix -= DAY_SECONDS
+	if state.progress_day < CHECKPOINT_DAY:
+		state.d3_claimed = false
+	if state.progress_day < FINAL_DAY:
+		state.d7_claimed = false
+	Global.config.save_to_settings_file()
 
 
 ## Returns the queued modal state ("", "welcome", "progress", "lost", "d3", "d7") and clears it,
 ## so a modal is shown at most once per credit event. Call exactly once per Discover landing.
 func take_pending_modal() -> String:
-	var config: ConfigData = Global.config
-	var pending := config.streak_pending_modal
+	var state: Dictionary = Global.config.streak_state_for_current_wallet()
+	var pending: String = state.pending_modal
 	if pending != "":
-		config.streak_pending_modal = ""
-		config.save_to_settings_file()
+		state.pending_modal = ""
+		Global.config.save_to_settings_file()
 	return pending
 
 
 func get_progress_day() -> int:
-	return Global.config.streak_progress_day
+	return Global.config.streak_state_for_current_wallet().progress_day
 
 
 ## What progress_day the player should see RIGHT NOW — can be lower than the persisted
-## streak_progress_day when 2+ calendar days have passed with no jump-in. The actual reset still
-## only commits on the next real jump-in (credit_jump_in() is the sole writer of
-## streak_progress_day, same as always) — this just stops the UI from showing the stale
-## pre-break days as checked in the meantime, so a dead streak reads as dead immediately instead
-## of only once the player happens to jump in again. Mirrors credit_jump_in()'s own floor logic
-## exactly, so what's shown here is exactly what a real jump-in right now would commit.
+## progress_day when 2+ calendar days have passed with no jump-in. The actual reset still only
+## commits on the next real jump-in (credit_jump_in() is the sole writer of progress_day, same as
+## always) — this just stops the UI from showing the stale pre-break days as checked in the
+## meantime, so a dead streak reads as dead immediately instead of only once the player happens to
+## jump in again. Mirrors credit_jump_in()'s own floor logic exactly, so what's shown here is
+## exactly what a real jump-in right now would commit.
 func get_effective_progress_day() -> int:
-	var config: ConfigData = Global.config
-	if config.streak_progress_day <= 0 or config.streak_last_credit_day_unix <= 0:
-		return config.streak_progress_day
+	var state: Dictionary = Global.config.streak_state_for_current_wallet()
+	if state.progress_day <= 0 or state.last_credit_day_unix <= 0:
+		return state.progress_day
 	var today := _local_midnight(int(Time.get_unix_time_from_system()))
-	var gap_days := (today - config.streak_last_credit_day_unix) / DAY_SECONDS
+	var gap_days: int = (today - state.last_credit_day_unix) / DAY_SECONDS
 	if gap_days <= 1:
-		return config.streak_progress_day
-	return CHECKPOINT_DAY if config.streak_progress_day >= CHECKPOINT_DAY else 0
+		return state.progress_day
+	return CHECKPOINT_DAY if state.progress_day >= CHECKPOINT_DAY else 0
 
 
 ## The day number (1..7) the player still needs to jump in for today to keep the streak going, or
@@ -174,20 +176,20 @@ func get_effective_progress_day() -> int:
 ## current day reads as the plain TODAY pill — not yet checked — until an actual jump-in credits
 ## it, at which point it becomes DONE like any other completed day).
 func get_pending_today_day() -> int:
-	var config: ConfigData = Global.config
-	if config.streak_d7_claimed:
+	var state: Dictionary = Global.config.streak_state_for_current_wallet()
+	if state.d7_claimed:
 		return 0
-	if config.streak_progress_day <= 0:
+	if state.progress_day <= 0:
 		return 1
 	var today := _local_midnight(int(Time.get_unix_time_from_system()))
-	if config.streak_last_credit_day_unix == today:
+	if state.last_credit_day_unix == today:
 		return 0
-	var gap_days := (today - config.streak_last_credit_day_unix) / DAY_SECONDS
+	var gap_days: int = (today - state.last_credit_day_unix) / DAY_SECONDS
 	if gap_days == 1:
-		return config.streak_progress_day + 1
+		return state.progress_day + 1
 	# Missed at least one day — mirrors credit_jump_in()'s own floor logic, so the pending day
 	# shown here is exactly the day a real jump-in right now would actually credit.
-	var floor_day := CHECKPOINT_DAY if config.streak_progress_day >= CHECKPOINT_DAY else 0
+	var floor_day := CHECKPOINT_DAY if state.progress_day >= CHECKPOINT_DAY else 0
 	return floor_day + 1
 
 
@@ -197,12 +199,19 @@ func get_pending_today_day() -> int:
 ## lost modal — first Discover landing after missed day, replaces daily progress") instead of only
 ## after a jump-in actually commits the reset via credit_jump_in().
 func is_pending_day_a_reset() -> bool:
-	var config: ConfigData = Global.config
-	if config.streak_last_credit_day_unix <= 0:
+	var state: Dictionary = Global.config.streak_state_for_current_wallet()
+	if state.last_credit_day_unix <= 0:
 		return false
 	var today := _local_midnight(int(Time.get_unix_time_from_system()))
-	var gap_days := (today - config.streak_last_credit_day_unix) / DAY_SECONDS
+	var gap_days: int = (today - state.last_credit_day_unix) / DAY_SECONDS
 	return gap_days > 1
+
+
+## DEBUG ONLY — wipes the current wallet's entire streak state back to brand new (as if that
+## account had never played), for resetting between test runs without juggling rewind/advance.
+func debug_reset_streak() -> void:
+	Global.config.reset_streak_for_current_wallet()
+	Global.config.save_to_settings_file()
 
 
 ## One-shot like take_pending_modal(): returns the pending day to show a "come finish today's
@@ -215,11 +224,11 @@ func take_current_reminder() -> int:
 	var pending := get_pending_today_day()
 	if pending == 0:
 		return 0
-	var config: ConfigData = Global.config
-	if config.streak_current_reminder_shown_day == pending:
+	var state: Dictionary = Global.config.streak_state_for_current_wallet()
+	if state.current_reminder_shown_day == pending:
 		return 0
-	config.streak_current_reminder_shown_day = pending
-	config.save_to_settings_file()
+	state.current_reminder_shown_day = pending
+	Global.config.save_to_settings_file()
 	return pending
 
 
@@ -228,20 +237,18 @@ func take_current_reminder() -> int:
 ## After the D7 reward is claimed it stays visible for the remainder of that local day, then
 ## disappears for good.
 func is_widget_visible() -> bool:
-	var config: ConfigData = Global.config
-	if not config.streak_d7_claimed:
+	var state: Dictionary = Global.config.streak_state_for_current_wallet()
+	if not state.d7_claimed:
 		return true
-	return (
-		_local_midnight(int(Time.get_unix_time_from_system())) == config.streak_last_credit_day_unix
-	)
+	return _local_midnight(int(Time.get_unix_time_from_system())) == state.last_credit_day_unix
 
 
 func is_d3_claimed() -> bool:
-	return Global.config.streak_d3_claimed
+	return Global.config.streak_state_for_current_wallet().d3_claimed
 
 
 func is_d7_claimed() -> bool:
-	return Global.config.streak_d7_claimed
+	return Global.config.streak_state_for_current_wallet().d7_claimed
 
 
 ## Every reward day claimable right now, ascending — both 3 and 7 can be pending at once when a
@@ -249,11 +256,11 @@ func is_d7_claimed() -> bool:
 ## expires). Drives the Discover widget's and the streak modal's CLAIM button (Figma
 ## "Widget-Discover-ClaimPendient"), including the "CLAIM REWARDS" (plural) copy when both are due.
 func get_claimable_days() -> Array[int]:
-	var config: ConfigData = Global.config
+	var state: Dictionary = Global.config.streak_state_for_current_wallet()
 	var days: Array[int] = []
-	if config.streak_progress_day >= CHECKPOINT_DAY and not config.streak_d3_claimed:
+	if state.progress_day >= CHECKPOINT_DAY and not state.d3_claimed:
 		days.append(CHECKPOINT_DAY)
-	if config.streak_progress_day >= FINAL_DAY and not config.streak_d7_claimed:
+	if state.progress_day >= FINAL_DAY and not state.d7_claimed:
 		days.append(FINAL_DAY)
 	return days
 
@@ -266,15 +273,15 @@ func get_claimable_day() -> int:
 
 
 func mark_claimed(day: int) -> void:
-	var config: ConfigData = Global.config
+	var state: Dictionary = Global.config.streak_state_for_current_wallet()
 	if day == CHECKPOINT_DAY:
-		config.streak_d3_claimed = true
+		state.d3_claimed = true
 	elif day == FINAL_DAY:
-		config.streak_d7_claimed = true
+		state.d7_claimed = true
 	else:
 		push_error("StreakManager.mark_claimed: unexpected day %d" % day)
 		return
-	config.save_to_settings_file()
+	Global.config.save_to_settings_file()
 
 
 ## Local-vs-UTC wall-clock offset right now, in seconds (negative west of UTC). Recomputed per

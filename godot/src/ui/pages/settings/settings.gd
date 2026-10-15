@@ -945,9 +945,9 @@ func _setup_impostor_benchmark_button() -> void:
 
 
 ## Scene-authored (settings.tscn's StreakDayDebug row, not built here) — only the production
-## gate and the two button handlers live in code. Advances/rewinds the 7-day login streak by one
-## day on demand (issue #3018), for exercising each day's modal/widget state without waiting for
-## a real jump-in. Not session-scoped — it writes through the same save path a real credit does
+## gate and the three button handlers live in code. Advances/rewinds/resets the 7-day login streak
+## on demand (issue #3018), for exercising each day's modal/widget state without waiting for a
+## real jump-in. Not session-scoped — it writes through the same save path a real credit does
 ## (see StreakManager.debug_advance_day).
 func _setup_streak_debug_button() -> void:
 	if Global.is_production():
@@ -962,6 +962,11 @@ func _on_button_streak_advance_day_pressed() -> void:
 func _on_button_streak_rewind_day_pressed() -> void:
 	Global.streak_manager.debug_rewind_day()
 	print("[StreakDebug] rewound to day %d" % Global.streak_manager.get_progress_day())
+
+
+func _on_button_streak_reset_pressed() -> void:
+	Global.streak_manager.debug_reset_streak()
+	print("[StreakDebug] reset to day %d" % Global.streak_manager.get_progress_day())
 
 
 func _setup_light_debug_controls() -> void:
