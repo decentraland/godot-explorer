@@ -29,9 +29,29 @@ files about to be deleted. One bounded job, then pure wiring.
       `docs/rn-ui-spec/reports/legacy-godot.md` has an RN equivalent, checked on an Android phone
       and an iPhone with a signed-in account.
 
+## Status on 15 Oct (draft PR #3073)
+
+| Item | State |
+|---|---|
+| 4.0 sweep | Done. `UiSounds` stays (camera transition and emote wheel use it). |
+| 4.1 friends | Removed with D-43; the UI runs on mock data until 6.9. |
+| 4.2 discover | RN screens; the mock data stays as test and gallery fixtures. |
+| 4.3 avatar | Rules, catalog parsing, palettes, base emotes and the edits are in `dcl_core::avatar`; the engine only renders. **Left:** owned wearables/emotes (need an account with items to check the lambda shape), deleting the rule half of `wearables.gd` and `player_identity.gd` (the renderer still uses them, 5.2). |
+| 4.4 chat / 4.10 HUD | Version and FPS line moved to RN. Avatar tap to a profile is not done (no player-profile screen). |
+| 4.5 settings | Done: engine reads the core's store, `ConfigFile`, `config_data.gd` and `DclConfig` are gone. `graphic_settings.gd`, `audio_settings.gd`, `locale_settings.gd`, `general_settings.gd` and the benchmark stay as appliers. |
+| 4.6 push | Registration through the core, permission, local reminders (Android, Kotlin plugin stack). iOS unwritten. Delivery unverified. |
+| 4.7 profile | Not touched this phase. |
+| 4.8 IAP | Deferred to 6/7 (D-44). |
+| 4.9 modals | RN queue, scene requests, destination checks, password, engine notices, update and device-support. Ban pre-check, NFT card and the loading-timeout verdict not done. |
+| 4.11 coordinators | Session chain, bug report, review prompt, connection quality in the core. Guest upgrade nudge waits for 6.8. Share, calendar, image picker, install referrer, Firebase Analytics libs not added. |
+| 4.12 analytics taxonomy | Not diffed. |
+| 4.14 back/orientation/IME | Back asks before leaving; orientation and HUD insets were already RN. Scene text input keyboard unverified. |
+| 4.15 i18n | Done; language switch not run on a device. |
+| 4.16 parity | `phase-4-parity.md`, not green. |
+
 ## Work items, in order
 
-- [ ] **4.0 The sweep**. Delete `godot/src/ui` wholesale except the engine-owned controls
+- [x] **4.0 The sweep**. Delete `godot/src/ui` wholesale except the engine-owned controls
   (scene UI container, safe-area controls, joystick, gamepad, emote wheel, mobile camera input,
   pointer tooltip, crosshair), `modal_manager.gd`, `explorer.gd`'s UI half, `iap/`, `auth/`,
   `config/` UI, `notifications_manager.gd`, `bug_report/`, the UI autoloads above, and
@@ -53,7 +73,7 @@ files about to be deleted. One bounded job, then pure wiring.
 - [ ] **4.4 Chat**. Chat through core events fed by the engine sink (transports stay in the
   engine until 5.1); nearby, mentions, commands (`ChatCommands`), speech bubbles stay engine-side. RN
   `hud/` chat exists.
-- [ ] **4.5 Settings**. `config_data.gd` (767) schema → `dcl_core::settings` (own JSON, one-time
+- [x] **4.5 Settings**. `config_data.gd` (767) schema → `dcl_core::settings` (own JSON, one-time
   import of `user://settings.cfg`, D-18); the keys in `rn/src/settings/keys.ts` are the contract;
   the engine reads graphics, audio and gameplay values from the core; benchmark results and the
   dynamic graphics preset are written by the engine through core events; `cache_size` and
@@ -92,7 +112,7 @@ files about to be deleted. One bounded job, then pure wiring.
 - [ ] **4.14 Android back button, orientation, IME**. Back closes RN sheets, then asks the core
   (`exit_world` confirm); orientation stays RN-owned (portrait before a scene, landscape in it);
   virtual-keyboard height from the host to the core for scene inputs.
-- [ ] **4.15 Localization**. `i18n/es` and `i18n/pt_BR` generated from `godot/locale/*.csv`
+- [x] **4.15 Localization**. `i18n/es` and `i18n/pt_BR` generated from `godot/locale/*.csv`
   (keys already match `en.csv`); a CI check for missing keys; language switch in Settings (D-26).
 - [ ] **4.16 Parity checklist**. One table from
   `docs/rn-ui-spec/reports/legacy-godot.md`: every screen, modal, behaviour, persisted key and
