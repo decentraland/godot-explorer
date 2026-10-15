@@ -29,8 +29,6 @@ var _sdk_touch_controls: SdkTouchControlsApplier = null
 @onready var ui_safe_area: Control = %SceneUIContainer
 @onready var label_crosshair = %Label_Crosshair
 @onready var control_pointer_tooltip = %Control_PointerTooltip
-@onready var label_version = %Label_Version
-@onready var label_fps = %Label_FPS
 @onready var mobile_ui = %MobileUI
 @onready var mobile_camera_input: Control = %MobileCameraInput
 @onready var safe_area_hud: MarginContainer = %SafeAreaHud
@@ -86,16 +84,11 @@ func _ready():
 
 	GraphicSettings.apply_full_processor_mode()
 
-	label_version.set_text(DclGlobal.get_version_with_env())
-	if DclGlobal.is_production():
-		label_fps.visible = false
-
 	Global.set_orientation_landscape()
 	UiSounds.install_audio_recusirve(self)
 	Global.music_player.stop()
 
 	Global.orientation_changed.connect(_on_orientation_changed)
-	Global.loading_finished.connect(_update_version_label)
 
 	player = load("res://src/logic/player/player.tscn").instantiate()
 
@@ -292,7 +285,6 @@ func _on_player_logout():
 func prepare_for_logout() -> void:
 	_safe_disconnect(Global.scene_runner.pointer_tooltip_changed, _on_pointer_tooltip_changed)
 	_safe_disconnect(Global.orientation_changed, _on_orientation_changed)
-	_safe_disconnect(Global.loading_finished, _update_version_label)
 	_safe_disconnect(Global.player_identity.logout, _on_player_logout)
 	if Global.avatars != null:
 		var profile_changed: Signal = Global.player_identity.profile_changed
@@ -513,8 +505,7 @@ func reset_cursor_position():
 	control_pointer_tooltip.set_global_cursor_position(center_position)
 
 
-func _on_timer_fps_label_timeout():
-	label_fps.set_text("- " + str(Engine.get_frames_per_second()) + " FPS")
+func _on_timer_save_position_timeout():
 	if dirty_save_position:
 		dirty_save_position = false
 		Global.engine.save_settings()
@@ -547,13 +538,6 @@ func _on_emote_wheel_emote_wheel_closed() -> void:
 
 func _on_emote_wheel_emote_wheel_opened() -> void:
 	virtual_joystick.hide()
-
-
-func _update_version_label() -> void:
-	var version_text = DclGlobal.get_version_with_env()
-	if not DclGlobal.is_production() and Global.content_provider.get_optimized_scene_count() > 0:
-		version_text += " - Opt"
-	label_version.set_text(version_text)
 
 
 func _notification(what: int) -> void:

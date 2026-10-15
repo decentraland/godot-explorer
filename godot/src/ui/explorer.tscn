@@ -126,41 +126,6 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="HBoxContainer_VersionFPS" type="HBoxContainer" parent="UI" unique_id=193054843]
-layout_mode = 1
-anchors_preset = 7
-anchor_left = 0.5
-anchor_top = 1.0
-anchor_right = 0.5
-anchor_bottom = 1.0
-offset_left = -77.0
-offset_top = -33.0
-offset_right = 77.0
-offset_bottom = -16.0
-grow_horizontal = 2
-grow_vertical = 0
-mouse_filter = 2
-
-[node name="Label_Version" type="Label" parent="UI/HBoxContainer_VersionFPS" unique_id=2080384115]
-auto_translate_mode = 2
-unique_name_in_owner = true
-layout_mode = 2
-theme_override_colors/font_color = Color(1, 1, 1, 0.705882)
-theme_override_colors/font_outline_color = Color(0.501961, 0.501961, 0.501961, 0.705882)
-theme_override_constants/outline_size = 4
-theme_override_font_sizes/font_size = 12
-text = "v0.1.0-alpha-abcd1f"
-
-[node name="Label_FPS" type="Label" parent="UI/HBoxContainer_VersionFPS" unique_id=1795956625]
-auto_translate_mode = 2
-unique_name_in_owner = true
-layout_mode = 2
-theme_override_colors/font_color = Color(1, 1, 1, 0.705882)
-theme_override_colors/font_outline_color = Color(0.501961, 0.501961, 0.501961, 0.705882)
-theme_override_constants/outline_size = 4
-theme_override_font_sizes/font_size = 12
-text = "FPS"
-
 [node name="SafeAreaHud" type="MarginContainer" parent="UI" unique_id=1210894567]
 unique_name_in_owner = true
 editor_description = "Safe-area frame for the interactive HUD (navbar, chat, navbar panels, emotes). Sits AFTER SceneUIContainer so it wins input over scene UI. Shares hud_margins.tres. The fullscreen Control_Menu draws opaque over the navbar (nothing hides it in code), so they never visually overlap."
@@ -185,7 +150,7 @@ mouse_filter = 2
 unique_name_in_owner = true
 layout_mode = 1
 
-[node name="Timer_FPSLabel" type="Timer" parent="UI" unique_id=926156601]
+[node name="Timer_SavePosition" type="Timer" parent="UI" unique_id=926156601]
 autostart = true
 
 [node name="VoiceChatRecorder" type="VoiceChatRecorder" parent="." unique_id=1690186631]
@@ -201,4 +166,4 @@ script = ExtResource("40_loading")
 
 [connection signal="emote_wheel_closed" from="UI/SafeAreaHud/InteractableHUD/EmoteWheel" to="." method="_on_emote_wheel_emote_wheel_closed"]
 [connection signal="emote_wheel_opened" from="UI/SafeAreaHud/InteractableHUD/EmoteWheel" to="." method="_on_emote_wheel_emote_wheel_opened"]
-[connection signal="timeout" from="UI/Timer_FPSLabel" to="." method="_on_timer_fps_label_timeout"]
+[connection signal="timeout" from="UI/Timer_SavePosition" to="." method="_on_timer_save_position_timeout"]
