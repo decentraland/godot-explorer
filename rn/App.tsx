@@ -11,6 +11,7 @@ import { gallery, usePreviewRoute } from './src/app/preview';
 import { Shell } from './src/app/Shell';
 import { useAnalyticsLifecycle } from './src/app/useAnalyticsLifecycle';
 import { startApp } from './src/app/startup';
+import { useLocaleSync } from './src/app/useLocaleSync';
 import { useAppWiring } from './src/app/wiring';
 import { core } from './src/core';
 import { useCoreState } from './src/core/useCoreState';
@@ -24,6 +25,7 @@ function AppBody() {
   const { push, reset, route } = useNav();
   const onDone = useCallback(() => setEntered(true), []);
 
+  const locale = useLocaleSync();
   const jumpIn = useJumpIn();
   useAnalyticsLifecycle(entered);
   useEffect(() => {
@@ -71,7 +73,7 @@ function AppBody() {
   // The world draws Godot underneath, so its background must stay transparent.
   const inWorld = route.name === 'world';
   return (
-    <View style={inWorld ? styles.transparent : styles.root}>
+    <View key={locale} style={inWorld ? styles.transparent : styles.root}>
       {entered ? (
         <Shell onJumpIn={jumpIn} onLeave={leave} />
       ) : (

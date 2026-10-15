@@ -2,7 +2,7 @@
 import fs from 'fs';
 import path from 'path';
 import { en } from '../src/i18n/en';
-import { plural, t } from '../src/i18n';
+import { getLocale, plural, setLocale, subscribeLocale, t } from '../src/i18n';
 
 describe('t / plural', () => {
   it('looks up and fills named placeholders, repeats included', () => {
@@ -78,5 +78,28 @@ describe('key table', () => {
         JSON.stringify(names(v)) !== JSON.stringify(names(legacy.get(k)!)),
     );
     expect(drift).toEqual([]);
+  });
+});
+
+describe('locales', () => {
+  afterEach(() => setLocale('en'));
+
+  it('uses the translation and falls back to English for a missing key', () => {
+    setLocale('es');
+    expect(t('LOADING_ENJOY_EXPERIENCE')).toBe('Disfruta de la experiencia');
+    expect(t('MENU_DISCOVER')).toBe(en.MENU_DISCOVER);
+    setLocale('en');
+    expect(t('LOADING_ENJOY_EXPERIENCE')).toBe('Enjoy your Experience');
+  });
+
+  it('keeps English for an unknown locale and tells listeners only about changes', () => {
+    const seen = jest.fn();
+    const off = subscribeLocale(seen);
+    setLocale('xx');
+    expect(getLocale()).toBe('en');
+    setLocale('pt_BR');
+    setLocale('pt_BR');
+    off();
+    expect(seen).toHaveBeenCalledTimes(1);
   });
 });

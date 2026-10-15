@@ -8,6 +8,7 @@ on:
   pull_request:
     paths:
       - 'rn/**'
+      - 'godot/locale/*.csv'
       - 'lib/crates/dcl_core/**'
       - 'lib/crates/dcl_host/**'
       - 'lib/crates/dcl_bindings/**'
@@ -47,6 +48,8 @@ jobs:
       - run: npx tsc --noEmit
       - run: npx eslint App.tsx src __tests__
       - run: npx jest
+      - name: Translations match godot/locale
+        run: node scripts/i18n-from-csv.mjs --check
 
   bindings:
     name: Bindings match the Rust API
