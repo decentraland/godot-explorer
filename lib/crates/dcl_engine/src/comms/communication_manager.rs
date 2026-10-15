@@ -841,7 +841,9 @@ impl CommunicationManager {
     fn ensure_message_processor(
         &mut self,
     ) -> mpsc::Sender<crate::comms::adapter::message_processor::IncomingMessage> {
-        if self.message_processor.is_none() {
+        if let Some(processor) = self.message_processor.as_ref() {
+            processor.get_message_sender()
+        } else {
             let player_identity = DclGlobal::singleton().bind().get_player_identity();
             let player_identity_bind = player_identity.bind();
             let player_address = player_identity_bind.get_address();
@@ -858,11 +860,6 @@ impl CommunicationManager {
             let sender = processor.get_message_sender();
             self.message_processor = Some(processor);
             sender
-        } else {
-            self.message_processor
-                .as_ref()
-                .unwrap()
-                .get_message_sender()
         }
     }
 
@@ -2211,14 +2208,14 @@ impl CommunicationManager {
     fn _internal_get_comms_from_realm(&self) -> Option<(String, Option<GString>)> {
         let realm = DclGlobal::singleton().bind().get_realm();
         let realm_about = VarDictionary::from_variant(&realm.get("realm_about"));
-        let comms = VarDictionary::from_variant(&realm_about.get(StringName::from("comms"))?);
-        let comms_protocol = String::from_variant(&comms.get(StringName::from("protocol"))?);
+        let comms = VarDictionary::from_variant(&realm_about.get(&StringName::from("comms"))?);
+        let comms_protocol = String::from_variant(&comms.get(&StringName::from("protocol"))?);
 
         let fixed_adapter_raw = comms
-            .get(StringName::from("fixedAdapter"))
+            .get(&StringName::from("fixedAdapter"))
             .map(|v| GString::from_variant(&v).to_string());
         let adapter_raw = comms
-            .get(StringName::from("adapter"))
+            .get(&StringName::from("adapter"))
             .map(|v| GString::from_variant(&v).to_string());
 
         #[cfg(feature = "use_livekit")]
@@ -2943,8 +2940,8 @@ impl CommunicationManager {
     pub fn get_debug_room_info(&self) -> VarDictionary {
         let mut dict = VarDictionary::new();
         dict.set(
-            "adapter".to_variant(),
-            self.current_connection_str.to_variant(),
+            &"adapter".to_variant(),
+            &self.current_connection_str.to_variant(),
         );
 
         let connection_state = match &self.current_connection {
@@ -2956,13 +2953,13 @@ impl CommunicationManager {
             CommsConnection::Connected(_) => "connected",
         };
         dict.set(
-            "connection_state".to_variant(),
-            connection_state.to_variant(),
+            &"connection_state".to_variant(),
+            &connection_state.to_variant(),
         );
 
         dict.set(
-            "livekit_enabled".to_variant(),
-            self.is_livekit_enabled().to_variant(),
+            &"livekit_enabled".to_variant(),
+            &self.is_livekit_enabled().to_variant(),
         );
 
         // Legacy coarse flag: a room struct exists (says nothing about the actual link)
@@ -2978,14 +2975,17 @@ impl CommunicationManager {
                     false
                 }
             };
-        dict.set("main_connected".to_variant(), main_connected.to_variant());
+        dict.set(&"main_connected".to_variant(), &main_connected.to_variant());
 
         let (main_room_type, main_room_state) = match &self.main_room {
             Some(room) => (room.type_str(), room.connection_state_str()),
             None => ("none", "none"),
         };
-        dict.set("main_room_type".to_variant(), main_room_type.to_variant());
-        dict.set("main_room_state".to_variant(), main_room_state.to_variant());
+        dict.set(&"main_room_type".to_variant(), &main_room_type.to_variant());
+        dict.set(
+            &"main_room_state".to_variant(),
+            &main_room_state.to_variant(),
+        );
 
         let mut archipelago_state = "none";
         let mut island_id = String::new();
@@ -2997,34 +2997,37 @@ impl CommunicationManager {
             island_room_state = archipelago.island_room_state();
         }
         dict.set(
-            "archipelago_state".to_variant(),
-            archipelago_state.to_variant(),
+            &"archipelago_state".to_variant(),
+            &archipelago_state.to_variant(),
         );
-        dict.set("island_id".to_variant(), island_id.to_variant());
+        dict.set(&"island_id".to_variant(), &island_id.to_variant());
         dict.set(
-            "island_room_state".to_variant(),
-            island_room_state.to_variant(),
+            &"island_room_state".to_variant(),
+            &island_room_state.to_variant(),
         );
 
         // Scene room status
         let scene_room_id = self.current_scene_id.clone().unwrap_or_default();
-        dict.set("scene_room".to_variant(), scene_room_id.to_variant());
+        dict.set(&"scene_room".to_variant(), &scene_room_id.to_variant());
         dict.set(
-            "comms_on_hold".to_variant(),
-            self.comms_on_hold.to_variant(),
+            &"comms_on_hold".to_variant(),
+            &self.comms_on_hold.to_variant(),
         );
         #[cfg(feature = "use_livekit")]
         {
             let scene_connected = self.scene_room.is_some();
-            dict.set("scene_connected".to_variant(), scene_connected.to_variant());
+            dict.set(
+                &"scene_connected".to_variant(),
+                &scene_connected.to_variant(),
+            );
             let scene_room_state = self
                 .scene_room
                 .as_ref()
                 .map(|room| room.connection_state_str())
                 .unwrap_or("none");
             dict.set(
-                "scene_room_state".to_variant(),
-                scene_room_state.to_variant(),
+                &"scene_room_state".to_variant(),
+                &scene_room_state.to_variant(),
             );
         }
         #[cfg(not(feature = "use_livekit"))]
@@ -3054,27 +3057,27 @@ impl CommunicationManager {
                     format!("{host}:{port}")
                 }
             };
-            dict.set("pulse_available".to_variant(), true.to_variant());
-            dict.set("pulse_enabled".to_variant(), pulse_enabled.to_variant());
-            dict.set("pulse_state".to_variant(), pulse_state.to_variant());
-            dict.set("pulse_endpoint".to_variant(), pulse_endpoint.to_variant());
+            dict.set(&"pulse_available".to_variant(), &true.to_variant());
+            dict.set(&"pulse_enabled".to_variant(), &pulse_enabled.to_variant());
+            dict.set(&"pulse_state".to_variant(), &pulse_state.to_variant());
+            dict.set(&"pulse_endpoint".to_variant(), &pulse_endpoint.to_variant());
             dict.set(
-                "pulse_failures".to_variant(),
-                (self.pulse_session_failures as i64).to_variant(),
+                &"pulse_failures".to_variant(),
+                &(self.pulse_session_failures as i64).to_variant(),
             );
             dict.set(
-                "pulse_disabled_for_session".to_variant(),
-                self.pulse_disabled_for_session.to_variant(),
+                &"pulse_disabled_for_session".to_variant(),
+                &self.pulse_disabled_for_session.to_variant(),
             );
             dict.set(
-                "dual_channel".to_variant(),
-                self.is_livekit_movement_dual_channel().to_variant(),
+                &"dual_channel".to_variant(),
+                &self.is_livekit_movement_dual_channel().to_variant(),
             );
             // The announced realm is the whole visibility contract and is matched exactly, so
             // surfacing it is the difference between "I see nobody" and "I am in lsd:b64-…"
             dict.set(
-                "pulse_realm".to_variant(),
-                self.pulse_realm_name().unwrap_or_default().to_variant(),
+                &"pulse_realm".to_variant(),
+                &self.pulse_realm_name().unwrap_or_default().to_variant(),
             );
         }
         #[cfg(not(feature = "use_pulse"))]
@@ -3101,9 +3104,9 @@ impl CommunicationManager {
             for (address, rooms, name) in processor.get_peer_room_info() {
                 let mut dict = VarDictionary::new();
                 let address_str = format!("{:#x}", address);
-                dict.set("address".to_variant(), address_str.to_variant());
-                dict.set("rooms".to_variant(), rooms.to_variant());
-                dict.set("name".to_variant(), name.to_variant());
+                dict.set(&"address".to_variant(), &address_str.to_variant());
+                dict.set(&"rooms".to_variant(), &rooms.to_variant());
+                dict.set(&"name".to_variant(), &name.to_variant());
                 arr.push(&dict.to_variant());
             }
         }

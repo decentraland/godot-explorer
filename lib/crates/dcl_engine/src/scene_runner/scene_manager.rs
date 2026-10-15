@@ -66,7 +66,7 @@ use super::{
 pub struct SceneManager {
     base: Base<Node>,
 
-    #[var]
+    #[var(pub)]
     base_ui: Gd<DclUiControl>,
 
     ui_canvas_information: PbUiCanvasInformation,
@@ -80,7 +80,7 @@ pub struct SceneManager {
     // The Player (avatar/body) dies with the Explorer on teardown while the
     // SceneManager autoload survives. Nullable + validity-filtered getters so a
     // property read in that window returns null instead of panicking on the
-    // freed instance (GODOT-EXPLORER-1DY family) — a plain #[var] getter would
+    // freed instance (GODOT-EXPLORER-1DY family) — a plain #[var(pub)] getter would
     // panic before any GDScript is_instance_valid() check could run.
     #[var(get = get_player_avatar_node, set = set_player_avatar_node)]
     player_avatar_node: Option<Gd<Node3D>>,
@@ -88,13 +88,13 @@ pub struct SceneManager {
     #[var(get = get_player_body_node, set = set_player_body_node)]
     player_body_node: Option<Gd<Node3D>>,
 
-    #[var]
+    #[var(pub)]
     console: Callable,
 
-    #[var]
+    #[var(pub)]
     cursor_position: Vector2,
 
-    #[var]
+    #[var(pub)]
     raycast_use_cursor_position: bool,
 
     // Cached center position of viewport for raycasting
@@ -152,12 +152,12 @@ pub struct SceneManager {
     last_hover_entity: Option<GodotDclRaycastResult>,
     last_proximity_entity: Option<(SceneId, SceneEntityId)>,
 
-    #[var]
+    #[var(pub)]
     pointer_tooltips: VarArray,
 
     // Entity under the crosshair that should show the hover highlight (outline),
     // or null. Read from GDScript on the pointer_tooltip_changed signal.
-    #[var]
+    #[var(pub)]
     highlighted_entity: Option<Gd<Node3D>>,
 
     // Stored as InstanceId, not Gd<DclAvatar>: the underlying Node3D may be freed
@@ -182,9 +182,9 @@ pub struct SceneManager {
 
     // Benchmark toggles (issue #1862). Set by gp_benchmark_runner.gd from
     // godot/bench/genesis_plaza.config.json before scenes start ticking.
-    #[var(get, set)]
+    #[var(pub)]
     bench_disable_tweens: bool,
-    #[var(get, set)]
+    #[var(pub)]
     bench_disable_transforms: bool,
 }
 
@@ -1040,8 +1040,8 @@ impl SceneManager {
         let content_provider = global.bind().content_provider.clone();
         let cp = content_provider.bind();
         (
-            cp.count_loaded_resources() as i64,
-            cp.count_loading_resources() as i64,
+            cp.count_loaded_resources(),
+            cp.count_loading_resources(),
             cp.get_download_speed_mbs(),
         )
     }
@@ -2919,10 +2919,10 @@ impl SceneManager {
         }
 
         let mut dict = VarDictionary::default();
-        dict.set("text", text.to_variant());
-        dict.set("text_detail_failed", text_detail_failed.to_variant());
-        dict.set("total", test_total.to_variant());
-        dict.set("fail", test_fail.to_variant());
+        dict.set("text", &text.to_variant());
+        dict.set("text_detail_failed", &text_detail_failed.to_variant());
+        dict.set("total", &test_total.to_variant());
+        dict.set("fail", &test_fail.to_variant());
 
         dict
     }
@@ -3056,7 +3056,7 @@ impl SceneManager {
             crate::content::external_content::snapshot(&scene.scene_entity_definition.id);
         dict.set(
             "files",
-            PackedStringArray::from_iter(files.iter().map(GString::from)),
+            &PackedStringArray::from_iter(files.iter().map(GString::from)),
         );
         dict.set("fetch_bytes", fetch_bytes as i64);
         dict
@@ -3392,12 +3392,12 @@ impl INode for SceneManager {
                             let mut dict = dict.unwrap_or_else(VarDictionary::new);
 
                             if is_pet_down {
-                                dict.set("text_pet_down", text.clone());
+                                dict.set("text_pet_down", &text.clone());
                             } else if is_pet_up {
-                                dict.set("text_pet_up", text.clone());
+                                dict.set("text_pet_up", &text.clone());
                             }
 
-                            dict.set("action", input_action_gstr.clone());
+                            dict.set("action", &input_action_gstr.clone());
 
                             if !exists {
                                 tooltips.push(&dict.to_variant());
@@ -3449,11 +3449,11 @@ impl INode for SceneManager {
                             .unwrap_or(InputAction::IaAny);
                         let mut dict = VarDictionary::new();
                         if is_pet_down {
-                            dict.set("text_pet_down", text);
+                            dict.set("text_pet_down", &text);
                         } else {
-                            dict.set("text_pet_up", text);
+                            dict.set("text_pet_up", &text);
                         }
-                        dict.set("action", GString::from(input_action.as_str_name()));
+                        dict.set("action", &GString::from(input_action.as_str_name()));
                         tooltips.push(&dict.to_variant());
                         break;
                     }

@@ -67,7 +67,7 @@ pub fn update_touch_screen_controls(
                     continue;
                 };
                 let mut dict = VarDictionary::new();
-                dict.set("action", GString::from(action_name));
+                dict.set("action", &GString::from(action_name));
                 dict.set("hide", input.hide);
                 // Resolve the scene-relative icon path to a content hash for the global
                 // joypad. Unresolved -> empty (built-in glyph). The URL is kept as a
@@ -94,8 +94,8 @@ pub fn update_touch_screen_controls(
                     ),
                     None => (String::new(), String::new()),
                 };
-                dict.set("icon_hash", GString::from(icon_hash.as_str()));
-                dict.set("icon_url", GString::from(icon_url.as_str()));
+                dict.set("icon_hash", &GString::from(icon_hash.as_str()));
+                dict.set("icon_url", &GString::from(icon_url.as_str()));
                 dict.set("scene_id", scene.scene_id.0);
                 inputs.push(&dict.to_variant());
             }

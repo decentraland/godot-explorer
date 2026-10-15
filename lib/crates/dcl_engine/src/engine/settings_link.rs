@@ -55,7 +55,7 @@ pub(super) fn on_process_frame(name: &str, mut frame: impl FnMut() + 'static) {
         godot_error!("engine links: no scene tree for {name}");
         return;
     };
-    let callable = Callable::from_fn(name, move |_| {
+    let callable = Callable::from_fn(name.to_string(), move |_| {
         frame();
         Variant::nil()
     });

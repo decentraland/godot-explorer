@@ -1065,8 +1065,7 @@ fn apply_sprite_sheet(
 fn build_draw_mesh(value: &PbParticleSystem, material: &Gd<StandardMaterial3D>) -> Gd<Mesh> {
     let billboard = value.billboard.unwrap_or(true);
 
-    if !billboard && value.initial_rotation.is_some() {
-        let q = value.initial_rotation.as_ref().unwrap();
+    if let (false, Some(q)) = (billboard, value.initial_rotation.as_ref()) {
         let rotation = Basis::from_quaternion(dcl_quat_to_godot(q.x, q.y, q.z, q.w));
 
         let corners = [

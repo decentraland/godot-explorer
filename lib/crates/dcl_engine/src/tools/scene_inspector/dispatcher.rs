@@ -123,8 +123,8 @@ impl SceneInspectorDispatcher {
 
     /// Returns the total number of entries processed since session start.
     #[func]
-    fn get_entry_count(&self) -> u64 {
-        self.entry_count
+    fn get_entry_count(&self) -> i64 {
+        self.entry_count as i64
     }
 
     /// Change the performance snapshot interval (in seconds). Clamped to [0.5, 60.0].
@@ -409,8 +409,8 @@ impl SceneInspectorDispatcher {
             drop(sr);
 
             let cp = global_ref.content_provider.bind();
-            let loading = cp.count_loading_resources();
-            let loaded = cp.count_loaded_resources();
+            let loading = cp.count_loading_resources() as u64;
+            let loaded = cp.count_loaded_resources() as u64;
             let speed = cp.get_download_speed_mbs();
             drop(cp);
 

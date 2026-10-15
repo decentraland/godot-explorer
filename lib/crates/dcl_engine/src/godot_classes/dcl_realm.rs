@@ -6,41 +6,42 @@ use crate::urls;
 #[class(init, base=Node)]
 pub struct DclRealm {
     #[export]
+    #[var(pub)]
     camera_mode: i32,
 
-    #[var]
+    #[var(pub)]
     realm_about: VarDictionary,
-    #[var]
+    #[var(pub)]
     realm_url: GString,
-    #[var]
+    #[var(pub)]
     realm_string: GString,
 
     // Mirror realm_about.get("configuration")
-    #[var]
+    #[var(pub)]
     realm_name: GString,
-    #[var]
+    #[var(pub)]
     network_id: i32,
-    #[var]
+    #[var(pub)]
     realm_scene_urns: Array<VarDictionary>,
-    #[var]
+    #[var(pub)]
     realm_global_scene_urns: Array<VarDictionary>,
-    #[var]
+    #[var(pub)]
     realm_city_loader_content_base_url: GString,
 
     lambda_server_base_url: GString,
 
-    #[var]
+    #[var(pub)]
     content_base_url: GString,
 
-    #[var]
+    #[var(pub)]
     realm_min_bounds: Vector2i,
 
-    #[var]
+    #[var(pub)]
     realm_max_bounds: Vector2i,
 
     /// Shared secret already validated against this world's comms endpoint (#2651).
     /// Empty for every other realm, which is what keeps `secret` off the wire.
-    #[var]
+    #[var(pub)]
     realm_credential: GString,
 
     _base: Base<Node>,

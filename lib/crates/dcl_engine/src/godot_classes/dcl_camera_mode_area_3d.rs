@@ -5,9 +5,11 @@ use godot::prelude::*;
 #[class(init, base=Area3D)]
 pub struct DclCameraModeArea3D {
     #[export]
+    #[var(pub)]
     forced_camera_mode: i32,
 
     #[export]
+    #[var(pub)]
     area: Vector3,
 
     _base: Base<Area3D>,

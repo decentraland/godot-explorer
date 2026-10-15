@@ -15,20 +15,21 @@ pub const STREAM_STATE_ERROR: i32 = 7;
 #[derive(GodotClass)]
 #[class(init, base=AudioStreamPlayer)]
 pub struct DclAudioStream {
-    #[var]
+    #[var(pub)]
     dcl_volume: f32,
 
-    #[var]
+    #[var(pub)]
     dcl_muted: bool,
 
     #[export]
+    #[var(pub)]
     dcl_source: GString,
 
-    #[var]
+    #[var(pub)]
     dcl_scene_id: i32,
 
     /// See `STREAM_STATE_*`. Written by GDScript from the native player.
-    #[var]
+    #[var(pub)]
     stream_state: i32,
 
     /// Last `MediaState` appended to `PBAudioEvent`, to avoid re-emitting it.

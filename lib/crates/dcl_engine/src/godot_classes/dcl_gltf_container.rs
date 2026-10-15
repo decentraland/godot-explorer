@@ -70,24 +70,31 @@ impl GltfContainerLoadingState {
 #[class(base=Node3D)]
 pub struct DclGltfContainer {
     #[export]
+    #[var(pub)]
     dcl_gltf_src: GString,
 
     #[export]
+    #[var(pub)]
     dcl_scene_id: i32,
 
     #[export]
+    #[var(pub)]
     dcl_entity_id: i32,
 
     #[export]
+    #[var(pub)]
     dcl_visible_cmask: i32,
 
     #[export]
+    #[var(pub)]
     dcl_invisible_cmask: i32,
 
     #[export(enum = (Unknown, Loading, NotFound, FinishedWithError, Finished))]
+    #[var(pub)]
     dcl_gltf_loading_state: GltfContainerLoadingState,
 
     #[export]
+    #[var(pub)]
     dcl_pending_node: Option<Gd<Node>>,
 
     base: Base<Node3D>,

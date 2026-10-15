@@ -24,15 +24,15 @@ impl SceneEmoteHash {
 #[class(init, base=RefCounted)]
 pub struct DclSceneEmoteData {
     base: Base<RefCounted>,
-    #[var]
+    #[var(pub)]
     pub glb_hash: GString,
-    #[var]
+    #[var(pub)]
     pub audio_hash: GString,
-    #[var]
+    #[var(pub)]
     pub looping: bool,
-    #[var]
+    #[var(pub)]
     pub base_url: GString,
-    #[var]
+    #[var(pub)]
     pub scene_id: GString,
 }
 

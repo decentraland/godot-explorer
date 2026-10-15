@@ -7,9 +7,9 @@ use crate::dcl::SceneId;
 use super::dcl_global::DclGlobal;
 
 // Global counter for unique avatar IDs (non-atomic since init is always on main thread)
-static mut AVATAR_ID_COUNTER: u32 = 0;
+static AVATAR_ID_COUNTER: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
 
-#[derive(Var, GodotConvert, Export)]
+#[derive(Clone, Copy, Var, GodotConvert, Export)]
 #[godot(via = i32)]
 pub enum AvatarMovementType {
     ExternalController = 0,
@@ -177,25 +177,26 @@ impl LerpState {
 #[derive(GodotClass)]
 #[class(base=Node3D)]
 pub struct DclAvatar {
-    #[var(get)]
+    #[var(no_set, pub)]
     unique_id: u32,
 
-    #[var]
+    #[var(pub)]
     avatar_data: Gd<DclAvatarWireFormat>,
 
-    #[var]
+    #[var(pub)]
     avatar_name: GString,
 
-    #[var]
+    #[var(pub)]
     pub blocked: bool,
 
     #[export]
+    #[var(pub)]
     movement_type: AvatarMovementType,
 
-    #[var]
+    #[var(pub)]
     current_parcel_scene_id: i32,
 
-    #[var]
+    #[var(pub)]
     current_parcel_position: Vector2i,
 
     // Peer streams wire locomotion/grounded state (Movement or compressed):
@@ -203,26 +204,35 @@ pub struct DclAvatar {
     wire_classification: bool,
 
     #[export]
+    #[var(pub)]
     walk: bool,
     #[export]
+    #[var(pub)]
     run: bool,
     #[export]
+    #[var(pub)]
     jog: bool,
     #[export]
+    #[var(pub)]
     rise: bool,
     #[export]
+    #[var(pub)]
     fall: bool,
     #[export]
+    #[var(pub)]
     land: bool,
 
     // Multi-jump + gliding state, driven by player.gd (local) or the remote-
     // movement decoder. Consumed by avatar.gd edge detection. glide_state
     // values: 0 CLOSED, 1 OPENING, 2 GLIDING, 3 CLOSING.
     #[export]
+    #[var(pub)]
     jump_count: i32,
     #[export]
+    #[var(pub)]
     glide_state: i32,
     #[export]
+    #[var(pub)]
     is_grounded: bool,
 
     lerp_state: LerpState,
@@ -232,12 +242,7 @@ pub struct DclAvatar {
 #[godot_api]
 impl INode3D for DclAvatar {
     fn init(base: Base<Node3D>) -> Self {
-        // Increment and get the next unique ID (safe since init is always on main thread)
-        let unique_id = unsafe {
-            let id = AVATAR_ID_COUNTER;
-            AVATAR_ID_COUNTER += 1;
-            id
-        };
+        let unique_id = AVATAR_ID_COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
 
         Self {
             unique_id,
@@ -670,8 +675,10 @@ mod tests {
     #[test]
     fn interval_defaults_to_livekit_cadence() {
         assert_eq!(LerpState::default().interval(), 0.1);
-        let mut state = LerpState::default();
-        state.packet_interval = 0.05; // Pulse tier-0
+        let state = LerpState {
+            packet_interval: 0.05, // Pulse tier-0
+            ..Default::default()
+        };
         assert_eq!(state.interval(), 0.05);
     }
 }
@@ -691,7 +698,7 @@ mod itest {
             .add_child(&avatar.clone().upcast::<Node>());
         avatar
             .bind_mut()
-            .set_movement_type(AvatarMovementType::LerpTwoPoints as i32);
+            .set_movement_type(AvatarMovementType::LerpTwoPoints);
         avatar.set("current_parcel_position", &Vector2i::ZERO.to_variant());
         avatar.set("current_parcel_scene_id", &1_i32.to_variant());
 
@@ -728,7 +735,7 @@ mod itest {
             .add_child(&avatar.clone().upcast::<Node>());
         avatar
             .bind_mut()
-            .set_movement_type(AvatarMovementType::LerpTwoPoints as i32);
+            .set_movement_type(AvatarMovementType::LerpTwoPoints);
         avatar.set("current_parcel_position", &Vector2i::ZERO.to_variant());
         avatar.set("current_parcel_scene_id", &1_i32.to_variant());
 
@@ -896,7 +903,7 @@ mod itest {
             .add_child(&avatar.clone().upcast::<Node>());
         avatar
             .bind_mut()
-            .set_movement_type(AvatarMovementType::LerpTwoPoints as i32);
+            .set_movement_type(AvatarMovementType::LerpTwoPoints);
         // Keep update_parcel_position away from DclGlobal (not available in
         // the test runner): pretend we're settled in parcel (0,0), scene 1.
         avatar.set("current_parcel_position", &Vector2i::ZERO.to_variant());

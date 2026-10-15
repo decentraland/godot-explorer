@@ -312,7 +312,7 @@ impl DclFloatingIslandsManager {
             }
         }
         if !self.prop_cache.is_populated() {
-            if let Some(tree) = self.base().get_tree() {
+            if let Some(tree) = self.base().get_tree_or_null() {
                 if let Some(cache) = props::PropCache::load_from_autoload(&tree) {
                     self.prop_cache = cache;
                 }
@@ -880,8 +880,8 @@ impl DclFloatingIslandsManager {
 
         let shape = physics.concave_polygon_shape_create();
         let mut shape_data = VarDictionary::new();
-        shape_data.set("faces", faces.to_variant());
-        shape_data.set("backface_collision", false.to_variant());
+        shape_data.set("faces", &faces.to_variant());
+        shape_data.set("backface_collision", &false.to_variant());
         physics.shape_set_data(shape, &shape_data.to_variant());
 
         let body = physics.body_create();

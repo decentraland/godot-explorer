@@ -277,8 +277,9 @@ pub(crate) fn scene_thread(
             godot::classes::file_access::ModeFlags::READ,
         );
 
-        if let Some(file) = file {
-            let buf = file.get_buffer(file.get_length() as i64).to_vec();
+        if let Some(mut file) = file {
+            let len = file.get_length() as i64;
+            let buf = file.get_buffer(len).to_vec();
 
             tracing::info!(
                 "{} main.crdt: raw_size={} bytes",

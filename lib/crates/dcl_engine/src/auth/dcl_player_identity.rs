@@ -38,7 +38,7 @@ pub struct DclPlayerIdentity {
 
     try_connect_account_handle: Option<JoinHandle<()>>,
 
-    #[var]
+    #[var(pub)]
     is_guest: bool,
 
     base: Base<Node>,
@@ -68,7 +68,7 @@ impl SessionObserver for IdentityObserver {
                 "_apply_core_wallet",
                 &[
                     address.to_variant(),
-                    chain_id.to_variant(),
+                    (*chain_id as i64).to_variant(),
                     is_guest.to_variant(),
                 ],
             ),
@@ -120,7 +120,7 @@ impl DclPlayerIdentity {
     fn logout();
 
     #[signal]
-    fn wallet_connected(address: GString, chain_id: u64, is_guest: bool);
+    fn wallet_connected(address: GString, chain_id: i64, is_guest: bool);
 
     #[signal]
     fn profile_changed(new_profile: Gd<DclUserProfile>);
@@ -145,10 +145,10 @@ impl DclPlayerIdentity {
     );
 
     #[func]
-    fn _apply_core_wallet(&mut self, address: GString, chain_id: u64, is_guest: bool) {
+    fn _apply_core_wallet(&mut self, address: GString, chain_id: i64, is_guest: bool) {
         self.apply_event(SessionEvent::WalletConnected {
             address: address.to_string(),
-            chain_id,
+            chain_id: chain_id as u64,
             is_guest,
         });
     }
@@ -175,7 +175,7 @@ impl DclPlayerIdentity {
     fn try_set_remote_wallet(
         &mut self,
         address_string: GString,
-        chain_id: u64,
+        chain_id: i64,
         ephemeral_auth_chain: GString,
     ) -> bool {
         let address = address_string
@@ -200,7 +200,7 @@ impl DclPlayerIdentity {
         };
 
         let event =
-            self.with_session(|s| s.install_remote(address, chain_id, ephemeral_auth_chain));
+            self.with_session(|s| s.install_remote(address, chain_id as u64, ephemeral_auth_chain));
         self.apply_event(event);
         true
     }
@@ -306,7 +306,7 @@ impl DclPlayerIdentity {
                             "try_set_remote_wallet",
                             &[
                                 address_str.clone().to_variant(),
-                                1_u64.to_variant(),
+                                1_i64.to_variant(),
                                 ephemeral_chain_json.to_variant(),
                             ],
                         );
@@ -523,7 +523,7 @@ impl DclPlayerIdentity {
                             "try_set_remote_wallet",
                             &[
                                 address_str.clone().to_variant(),
-                                1_u64.to_variant(),
+                                1_i64.to_variant(),
                                 ephemeral_chain_json.to_variant(),
                             ],
                         );
@@ -731,7 +731,7 @@ impl DclPlayerIdentity {
                         "try_set_remote_wallet",
                         &[
                             format!("{:#x}", wallet.address()).to_variant(),
-                            wallet.chain_id().to_variant(),
+                            (wallet.chain_id() as i64).to_variant(),
                             ephemeral_auth_chain_json_str.to_variant(),
                         ],
                     );
@@ -856,7 +856,7 @@ impl DclPlayerIdentity {
                         &[
                             attempt.to_variant(),
                             format!("{:#x}", address).to_variant(),
-                            chain_id.to_variant(),
+                            (chain_id as i64).to_variant(),
                             ephemeral_auth_chain_json_str.to_variant(),
                         ],
                     );
@@ -887,7 +887,7 @@ impl DclPlayerIdentity {
         &mut self,
         attempt: u32,
         address: GString,
-        chain_id: u64,
+        chain_id: i64,
         ephemeral_auth_chain: GString,
     ) {
         if !self.with_session(|s| s.is_current_mobile_attempt(attempt)) {
@@ -936,12 +936,12 @@ impl DclPlayerIdentity {
             .unwrap_or(0);
 
         let mut dict = VarDictionary::new();
-        let _ = dict.insert("message", ephemeral_message.to_variant());
+        let _ = dict.insert("message", &ephemeral_message.to_variant());
         let _ = dict.insert(
             "ephemeral_private_key",
-            PackedByteArray::from(signing_key_bytes.as_slice()).to_variant(),
+            &PackedByteArray::from(signing_key_bytes.as_slice()).to_variant(),
         );
-        let _ = dict.insert("expiration_timestamp", expiration_timestamp.to_variant());
+        let _ = dict.insert("expiration_timestamp", &expiration_timestamp.to_variant());
         dict
     }
 
@@ -1014,7 +1014,7 @@ impl DclPlayerIdentity {
         let Some(account_address) = account_address.to_string().as_h160() else {
             return false;
         };
-        let Ok(chain_id) = chain_id.try_to::<u64>() else {
+        let Ok(chain_id) = chain_id.try_to::<i64>().map(|c| c as u64) else {
             return false;
         };
         let Ok(ephemeral_auth_chain) = serde_json::from_str::<EphemeralAuthChain>(
@@ -1052,15 +1052,15 @@ impl DclPlayerIdentity {
         if !account.local_wallet.is_empty() {
             let _ = dict.insert(
                 "local_wallet",
-                PackedByteArray::from(account.local_wallet.as_slice()).to_variant(),
+                &PackedByteArray::from(account.local_wallet.as_slice()).to_variant(),
             );
         }
 
-        let _ = dict.insert("account_address", self.get_address_str().to_variant());
-        let _ = dict.insert("chain_id", account.chain_id.to_variant());
+        let _ = dict.insert("account_address", &self.get_address_str().to_variant());
+        let _ = dict.insert("chain_id", &(account.chain_id as i64).to_variant());
         let _ = dict.insert(
             "ephemeral_auth_chain",
-            serde_json::to_string(&account.ephemeral_auth_chain)
+            &serde_json::to_string(&account.ephemeral_auth_chain)
                 .expect("serialize ephemeral auth chain")
                 .to_variant(),
         );
@@ -1312,7 +1312,7 @@ impl DclPlayerIdentity {
                     &[
                         "wallet_connected".to_variant(),
                         address.to_variant(),
-                        chain_id.to_variant(),
+                        (chain_id as i64).to_variant(),
                         is_guest.to_variant(),
                     ],
                 );

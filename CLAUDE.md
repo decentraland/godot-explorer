@@ -295,7 +295,7 @@ The habits AI-assisted changes most often get wrong in this repo. Reviewers hold
 
 - The project uses a forked Godot 4.6.2 - don't update the engine version
 - Windows users should clone to short paths (e.g., `C:/gexplorer`)
-- The Rust toolchain is pinned in `rust-toolchain.toml` (1.90)
+- The Rust toolchain is pinned in `rust-toolchain.toml` (1.94)
 - For coverage testing, install: `rustup component add llvm-tools-preview && cargo install grcov`
 - Integration with Decentraland SDK7 requires the JavaScript runtime to be properly initialized
 - **Android builds**: don't use cargo-ndk (it breaks with NDK 27); build with plain cargo and `GN_ARGS=use_custom_libcxx=false`

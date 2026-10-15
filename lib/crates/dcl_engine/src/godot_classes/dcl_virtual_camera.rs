@@ -12,15 +12,19 @@ use crate::dcl::components::{
 pub struct DclVirtualCamera {
     // Used to mute and restore the volume
     #[export]
+    #[var(pub)]
     entity_id: i32,
 
     #[export]
+    #[var(pub)]
     look_at_entity_id: i32,
 
     #[export]
+    #[var(pub)]
     transition_time: f32,
 
     #[export]
+    #[var(pub)]
     transition_speed: f32,
 }
 

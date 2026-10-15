@@ -454,7 +454,10 @@ mod tests {
                 start_kind: StartKind::Cold,
             },
         };
-        assert_eq!(trigger_of(&[link.clone()]), Some(Trigger::Deeplink));
+        assert_eq!(
+            trigger_of(std::slice::from_ref(&link)),
+            Some(Trigger::Deeplink)
+        );
         assert_eq!(trigger_of(&[link, push]), Some(Trigger::Push));
         assert_eq!(trigger_of(&[Effect::MarketplaceReturn]), None);
         assert_eq!(trigger_of(&[]), None);

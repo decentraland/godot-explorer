@@ -1236,10 +1236,10 @@ impl Metrics {
                 let opt_wearables = content_provider_bind.get_optimized_wearable_count();
                 let rt_wearables = content_provider_bind.get_runtime_wearable_count();
 
-                metrics.optimized_scene_count = Some(opt_scenes);
-                metrics.runtime_scene_count = Some(rt_scenes);
-                metrics.optimized_wearable_count = Some(opt_wearables);
-                metrics.runtime_wearable_count = Some(rt_wearables);
+                metrics.optimized_scene_count = Some(opt_scenes as u64);
+                metrics.runtime_scene_count = Some(rt_scenes as u64);
+                metrics.optimized_wearable_count = Some(opt_wearables as u64);
+                metrics.runtime_wearable_count = Some(rt_wearables as u64);
 
                 let total_scenes = opt_scenes + rt_scenes;
                 metrics.optimized_scene_pct = if total_scenes > 0 {

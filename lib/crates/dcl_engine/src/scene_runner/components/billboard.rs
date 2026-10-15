@@ -81,7 +81,7 @@ pub fn update_billboard(
                 Billboard::None => {}
                 Billboard::Y => {
                     let origin = node_3d.get_global_position();
-                    let basis = Basis::looking_at(direction, Vector3::UP, false);
+                    let basis = Basis::looking_at(direction);
 
                     let mut euler_vector = basis.get_euler();
                     euler_vector.z = 0.0;
@@ -93,7 +93,7 @@ pub fn update_billboard(
                 // TODO: we do not distinguish between YX and All for now
                 Billboard::All | Billboard::YX => {
                     let origin = node_3d.get_global_position();
-                    let basis = Basis::looking_at(direction, Vector3::UP, false);
+                    let basis = Basis::looking_at(direction);
                     node_3d.set_global_transform(Transform3D { basis, origin });
                 }
             }

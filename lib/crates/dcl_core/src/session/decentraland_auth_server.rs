@@ -530,24 +530,18 @@ mod test {
         let (sx, mut rx) = tokio::sync::mpsc::channel(100);
 
         tokio::spawn(async move {
-            loop {
-                match rx.recv().await {
-                    Some(OpenUrlRequest {
-                        url,
-                        description,
-                        use_webview,
-                    }) => {
-                        tracing::info!(
-                            "url {:?} description {:?} use_webview {:?}",
-                            url,
-                            description,
-                            use_webview
-                        );
-                    }
-                    _ => {
-                        break;
-                    }
-                }
+            while let Some(OpenUrlRequest {
+                url,
+                description,
+                use_webview,
+            }) = rx.recv().await
+            {
+                tracing::info!(
+                    "url {:?} description {:?} use_webview {:?}",
+                    url,
+                    description,
+                    use_webview
+                );
             }
         });
 

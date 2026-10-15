@@ -33,7 +33,7 @@ impl ToDictionaryColorObject for crate::dcl::components::proto_components::commo
         dictionary.set("b", self.b);
         dictionary.set("a", 1.0);
         let mut ret_dictionary = VarDictionary::new();
-        ret_dictionary.set("color", dictionary);
+        ret_dictionary.set("color", &dictionary);
         ret_dictionary
     }
 }
@@ -45,7 +45,7 @@ impl ToDictionaryColorObject for crate::dcl::components::proto_components::commo
         dictionary.set("b", self.b);
         dictionary.set("a", self.a);
         let mut ret_dictionary = VarDictionary::new();
-        ret_dictionary.set("color", dictionary);
+        ret_dictionary.set("color", &dictionary);
         ret_dictionary
     }
 }

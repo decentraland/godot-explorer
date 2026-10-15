@@ -30,89 +30,89 @@ pub struct DclCli {
     arg_definitions: Vec<ArgDefinition>,
 
     // Common flags
-    #[var(get)]
+    #[var(no_set, pub)]
     pub force_mobile: bool,
-    #[var(get)]
+    #[var(no_set, pub)]
     pub lighting_renderer: bool,
-    #[var(get)]
+    #[var(no_set, pub)]
     pub perf_log: bool,
-    #[var(get)]
+    #[var(no_set, pub)]
     pub preview_mode: bool,
-    #[var(get)]
+    #[var(no_set, pub)]
     pub scene_test_mode: bool,
-    #[var(get)]
+    #[var(no_set, pub)]
     pub scene_renderer_mode: bool,
-    #[var(get)]
+    #[var(no_set, pub)]
     pub avatar_renderer_mode: bool,
-    #[var(get)]
+    #[var(no_set, pub)]
     pub asset_renderer_mode: bool,
-    #[var(get)]
+    #[var(no_set, pub)]
     pub client_test_mode: bool,
-    #[var(get)]
+    #[var(no_set, pub)]
     pub test_runner: bool,
-    #[var(get)]
+    #[var(no_set, pub)]
     pub clear_cache_startup: bool,
-    #[var(get)]
+    #[var(no_set, pub)]
     pub raycast_debugger: bool,
-    #[var(get)]
+    #[var(no_set, pub)]
     pub network_debugger: bool,
-    #[var(get)]
+    #[var(no_set, pub)]
     pub spawn_avatars: bool,
-    #[var(get)]
+    #[var(no_set, pub)]
     pub debug_minimap: bool,
-    #[var(get)]
+    #[var(no_set, pub)]
     pub debug_panel: bool,
-    #[var(get)]
+    #[var(no_set, pub)]
     pub use_test_input: bool,
-    #[var(get)]
+    #[var(no_set, pub)]
     pub test_camera_tune: bool,
-    #[var(get)]
+    #[var(no_set, pub)]
     pub measure_perf: bool,
-    #[var(get)]
+    #[var(no_set, pub)]
     pub dcl_benchmark: bool,
-    #[var(get)]
+    #[var(no_set, pub)]
     pub benchmark_report: bool,
-    #[var(get)]
+    #[var(no_set, pub)]
     pub fixed_skybox_time: bool,
-    #[var(get)]
+    #[var(no_set, pub)]
     pub developer_mode: bool,
-    #[var(get)]
+    #[var(no_set, pub)]
     pub help_requested: bool,
-    #[var(get)]
+    #[var(no_set, pub)]
     pub only_optimized: bool,
-    #[var(get)]
+    #[var(no_set, pub)]
     pub only_no_optimized: bool,
-    #[var(get)]
+    #[var(no_set, pub)]
     pub only_no_optimized_scene_emotes: bool,
-    #[var(get)]
+    #[var(no_set, pub)]
     pub emote_test_mode: bool,
-    #[var(get)]
+    #[var(no_set, pub)]
     pub stress_test: bool,
-    #[var(get)]
+    #[var(no_set, pub)]
     pub emulate_ios: bool,
-    #[var(get)]
+    #[var(no_set, pub)]
     pub emulate_android: bool,
-    #[var(get)]
+    #[var(no_set, pub)]
     pub landscape: bool,
-    #[var(get)]
+    #[var(no_set, pub)]
     pub asset_server: bool,
-    #[var(get)]
+    #[var(no_set, pub)]
     pub scene_inspector: GString,
-    #[var(get)]
+    #[var(no_set, pub)]
     pub scene_inspector_file: bool,
-    #[var(get)]
+    #[var(no_set, pub)]
     pub test_logging: bool,
-    #[var(get)]
+    #[var(no_set, pub)]
     pub low_spec_warning: bool,
-    #[var(get)]
+    #[var(no_set, pub)]
     pub end_of_device_support_warning: bool,
-    #[var(get)]
+    #[var(no_set, pub)]
     pub below_minspec_warning: bool,
-    #[var(get)]
+    #[var(no_set, pub)]
     pub fi_benchmark_size: i32,
-    #[var(get)]
+    #[var(no_set, pub)]
     pub avatar_impostor_benchmark: bool,
-    #[var(get)]
+    #[var(no_set, pub)]
     pub gp_benchmark: bool,
     // Bench substrate flag. When true, skip first-launch HardwareBenchmark
     // and skip DynamicGraphicsManager init. Auto-set by deeplink param
@@ -120,7 +120,7 @@ pub struct DclCli {
     // pass both. Avoids contaminating profile/measurement state with the
     // startup overhead and viewport_set_measure_render_time toggles those
     // subsystems do.
-    #[var]
+    #[var(pub)]
     pub bench_mode: bool,
 
     // V8 inspector target. When non-empty AND the build has the
@@ -128,7 +128,7 @@ pub struct DclCli {
     // attaches a Chrome DevTools-compatible inspector on 127.0.0.1:9222.
     // Title-match (instead of hash id) so it works from deeplinks without
     // having to discover the scene id beforehand.
-    #[var]
+    #[var(pub)]
     pub inspect_scene_title: GString,
 
     // Override the default optimized-content base URL. When set, runtime
@@ -140,45 +140,45 @@ pub struct DclCli {
     // (`OPTIMIZED_URL_OVERRIDE` in content_provider.rs) because tokio
     // workers can't reach `DclGlobal::try_singleton()` — Godot's singleton
     // registry is main-thread-only.
-    #[var(get, set = set_optimized_content_base_url)]
+    #[var(set = set_optimized_content_base_url, pub)]
     pub optimized_content_base_url: GString,
 
     // Diagnostic: skip every GltfContainer instantiation. Drains the dirty
     // set in `update_gltf_container` so the bench can measure the rendering
     // floor without any scene meshes loaded. Pure perf-debug knob.
-    #[var]
+    #[var(pub)]
     pub skip_gltf_load: bool,
 
     // Diagnostic: force every WorldEnvironment to BG_COLOR (no sky shader,
     // no procedural sky). Combined with `skip-gltf` measures the renderer
     // floor without sky fragment cost.
-    #[var]
+    #[var(pub)]
     pub kill_sky: bool,
 
     // Arguments with values
-    #[var(get)]
+    #[var(no_set, pub)]
     pub asset_server_port: i32,
-    #[var(get)]
+    #[var(no_set, pub)]
     pub realm: GString,
-    #[var(get)]
+    #[var(no_set, pub)]
     pub location: GString,
-    #[var(get)]
+    #[var(no_set, pub)]
     pub scene_input_file: GString,
-    #[var(get)]
+    #[var(no_set, pub)]
     pub avatars_file: GString,
-    #[var(get)]
+    #[var(no_set, pub)]
     pub asset_input_file: GString,
-    #[var(get)]
+    #[var(no_set, pub)]
     pub snapshot_folder: GString,
-    #[var(get)]
+    #[var(no_set, pub)]
     pub fake_deeplink: GString,
-    #[var(get)]
+    #[var(no_set, pub)]
     pub dcl_env: GString,
-    #[var(get)]
+    #[var(no_set, pub)]
     pub fi_benchmark_output: GString,
-    #[var(get)]
+    #[var(no_set, pub)]
     pub avatar_impostor_benchmark_output: GString,
-    #[var(get)]
+    #[var(no_set, pub)]
     pub saved_profile: GString,
 
     // Pulse transport (see comms/pulse/). `pulse` = not locally disabled (--no-pulse).
@@ -187,26 +187,26 @@ pub struct DclCli {
     // server `pulse` feature flag is absent or unreachable (without it activation is
     // fail-closed on the flag — see CommunicationManager::pulse_enabled). `pulse_server` empty
     // = default endpoint.
-    #[var(get)]
+    #[var(no_set, pub)]
     pub pulse: bool,
-    #[var(get)]
+    #[var(no_set, pub)]
     pub pulse_explicit: bool,
-    #[var(get)]
+    #[var(no_set, pub)]
     pub pulse_server: GString,
     // Realm announced on the Pulse handshake, overriding the derived one. Empty = derive it
     // (see CommunicationManager::pulse_realm_name).
-    #[var(get)]
+    #[var(no_set, pub)]
     pub pulse_realm: GString,
     // Explicit local dual-channel choice; either one outranks the deployment's `dual-channel`
     // flag for this run (see CommunicationManager::dual_channel_effective). Neither can cause
     // invisibility: LiveKit resumes on its own whenever Pulse is not established.
-    #[var(get)]
+    #[var(no_set, pub)]
     pub livekit_movement: bool,
-    #[var(get)]
+    #[var(no_set, pub)]
     pub no_livekit_movement: bool,
     // Pulse-only mode: no LiveKit-backed rooms at all (no chat/voice/scene messages).
     // Dev/testing switch; deeplink `livekit=false` is the runtime equivalent.
-    #[var(get)]
+    #[var(no_set, pub)]
     pub no_livekit: bool,
 }
 

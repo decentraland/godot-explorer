@@ -32,6 +32,7 @@ pub struct DclUiInput {
     current_font: Font,
 
     #[export]
+    #[var(pub)]
     dcl_entity_id: SceneEntityId,
 
     ui_result: Option<Rc<RefCell<UiResults>>>,

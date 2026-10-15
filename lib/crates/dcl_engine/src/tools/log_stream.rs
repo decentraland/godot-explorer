@@ -177,6 +177,8 @@ mod fd_capture {
         }
     }
 
+    /// # Safety
+    /// `target_fd` must be an open descriptor of this process.
     unsafe fn redirect_fd(target_fd: libc::c_int) -> Option<(libc::c_int, libc::c_int)> {
         let saved = libc::dup(target_fd);
         if saved < 0 {
@@ -205,6 +207,7 @@ mod fd_capture {
                 let mut buf = [0u8; READ_BUF];
                 let mut acc: Vec<u8> = Vec::with_capacity(READ_BUF);
                 loop {
+                    // SAFETY: `buf` is a live, writable buffer of `buf.len()` bytes; `read_fd` is owned by this thread.
                     let n = unsafe {
                         libc::read(read_fd, buf.as_mut_ptr() as *mut libc::c_void, buf.len())
                     };
@@ -213,6 +216,7 @@ mod fd_capture {
                     }
                     let chunk = &buf[..n as usize];
                     // Tee verbatim to the original console fd (keep --console intact).
+                    // SAFETY: `chunk` is a live slice of `n` bytes; `saved_fd` is the duplicate taken by `redirect_fd`.
                     unsafe {
                         let _ = libc::write(
                             saved_fd,

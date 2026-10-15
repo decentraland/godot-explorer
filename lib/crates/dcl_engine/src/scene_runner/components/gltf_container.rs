@@ -169,9 +169,7 @@ pub fn sync_gltf_loading_state(
         };
 
         let current_state_godot = match gltf_node {
-            Some(gltf_node) => {
-                GltfContainerLoadingState::from_i32(gltf_node.bind().get_dcl_gltf_loading_state())
-            }
+            Some(gltf_node) => gltf_node.bind().get_dcl_gltf_loading_state(),
             None => GltfContainerLoadingState::Unknown,
         };
 

@@ -273,9 +273,11 @@ mod tests {
     #[test]
     fn remote_install_resets_thirdweb_markers() {
         let (wallet, chain) = local();
-        let mut session = Session::default();
-        session.is_thirdweb_guest = true;
-        session.is_thirdweb_guest_upgraded = true;
+        let mut session = Session {
+            is_thirdweb_guest: true,
+            is_thirdweb_guest_upgraded: true,
+            ..Default::default()
+        };
         use ethers_signers::Signer;
         session.install_remote(wallet.address(), 1, chain);
         assert!(!session.is_thirdweb_guest && !session.is_thirdweb_guest_upgraded);

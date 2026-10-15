@@ -205,8 +205,8 @@ impl DclItemEntityDefinition {
         }
 
         // we apply this rule to hide the hands by default if the wearable is an upper body or hides the upper body
-        let is_or_hides_upper_body = hides.contains(&"upper_body".to_string())
-            || self.get_category().to_string() == "upper_body";
+        let is_or_hides_upper_body =
+            hides.contains(&"upper_body".to_string()) || self.get_category() == "upper_body";
 
         // the rule is ignored if the wearable contains the removal of this default rule (newer upper bodies since the release of hands)
         let removes_hand_default =
@@ -233,7 +233,7 @@ impl DclItemEntityDefinition {
         }
 
         // skin has implicit hides
-        if self.get_category().to_string() == "skin" {
+        if self.get_category() == "skin" {
             hides.extend(vec![
                 WearableCategory::HEAD.slot.to_string(),
                 WearableCategory::HAIR.slot.to_string(),

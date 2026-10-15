@@ -75,7 +75,7 @@ impl AvatarWireFormat {
 
     pub fn randomize_with_rng(rng: &mut impl Rng) -> Self {
         // Avatar configurations from paste.txt
-        let avatar_configs = vec![
+        let avatar_configs = [
             // Config 1: Female with cat eyes
             ("urn:decentraland:off-chain:base-avatars:BaseFemale", vec![
                 "urn:decentraland:matic:collections-v2:0x696156d1d58ecb6bcd0d8268fda2900032233d36:0:43",

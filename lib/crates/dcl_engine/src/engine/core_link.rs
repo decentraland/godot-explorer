@@ -18,9 +18,9 @@ use super::{scene_link, screenshot_link, settings_link, DclEngine};
 fn destination_args(destination: &Destination) -> VarDictionary {
     let parcel = destination.parcel.unwrap_or(Parcel::new(0, 0));
     vdict! {
-        "realm": destination.realm.clone().unwrap_or_default(),
-        "x": parcel.x,
-        "y": parcel.y,
+        "realm" => destination.realm.clone().unwrap_or_default(),
+        "x" => parcel.x,
+        "y" => parcel.y,
     }
 }
 
@@ -34,10 +34,10 @@ fn signal_payload(command: &EngineCommand) -> Option<(&'static str, VarDictionar
         EngineCommand::ShowAvatarPreview(rect) => Some((
             "show_avatar_preview",
             vdict! {
-                "x": rect.x,
-                "y": rect.y,
-                "w": rect.width,
-                "h": rect.height,
+                "x" => rect.x,
+                "y" => rect.y,
+                "w" => rect.width,
+                "h" => rect.height,
             },
         )),
         EngineCommand::HideAvatarPreview => Some(("hide_avatar_preview", VarDictionary::new())),
@@ -55,12 +55,12 @@ fn avatar_args(avatar: &AvatarState) -> VarDictionary {
             .collect::<PackedStringArray>()
     };
     vdict! {
-        "body_shape": avatar.body_shape.clone(),
-        "wearables": strings(&avatar.wearables),
-        "emotes": strings(&avatar.emotes),
-        "skin": avatar.skin.clone(),
-        "hair": avatar.hair.clone(),
-        "eyes": avatar.eyes.clone(),
+        "body_shape" => avatar.body_shape.clone(),
+        "wearables" => &strings(&avatar.wearables),
+        "emotes" => &strings(&avatar.emotes),
+        "skin" => avatar.skin.clone(),
+        "hair" => avatar.hair.clone(),
+        "eyes" => avatar.eyes.clone(),
     }
 }
 
@@ -79,29 +79,33 @@ fn focus_name(focus: CameraFocus) -> &'static str {
 /// runs itself (avatar edits become `apply_avatar`, scene answers are Rust).
 pub(super) fn control_payload(control: &Control) -> Option<(&'static str, VarDictionary)> {
     Some(match control {
-        Control::Teleport { parcel } => ("teleport", vdict! { "x": parcel.x, "y": parcel.y }),
-        Control::SendChat { text } => ("send_chat", vdict! { "text": text.clone() }),
-        Control::Emote { urn } => ("emote", vdict! { "urn": urn.clone() }),
+        Control::Teleport { parcel } => ("teleport", vdict! { "x" => parcel.x, "y" => parcel.y }),
+        Control::SendChat { text } => ("send_chat", vdict! { "text" => text.clone() }),
+        Control::Emote { urn } => ("emote", vdict! { "urn" => urn.clone() }),
         Control::SetHudInsets { insets } => (
             "set_hud_insets",
             vdict! {
-                "top": insets.top,
-                "right": insets.right,
-                "bottom": insets.bottom,
-                "left": insets.left,
+                "top" => insets.top,
+                "right" => insets.right,
+                "bottom" => insets.bottom,
+                "left" => insets.left,
             },
         ),
-        Control::SetChatWidth { width } => ("set_chat_width", vdict! { "width": *width }),
-        Control::ChatOpen { open } => ("chat_open", vdict! { "open": *open }),
-        Control::HideUi { hidden } => ("hide_ui", vdict! { "hidden": *hidden }),
-        Control::FocusCamera { focus } => ("focus_camera", vdict! { "focus": focus_name(*focus) }),
-        Control::SetPreviewUrl { url } => ("set_preview_url", vdict! { "url": url.clone() }),
-        Control::PlayPreviewEmote { urn } => ("play_preview_emote", vdict! { "urn": urn.clone() }),
-        Control::SetName { name } => ("set_name", vdict! { "name": name.clone() }),
+        Control::SetChatWidth { width } => ("set_chat_width", vdict! { "width" => *width }),
+        Control::ChatOpen { open } => ("chat_open", vdict! { "open" => *open }),
+        Control::HideUi { hidden } => ("hide_ui", vdict! { "hidden" => *hidden }),
+        Control::FocusCamera { focus } => {
+            ("focus_camera", vdict! { "focus" => focus_name(*focus) })
+        }
+        Control::SetPreviewUrl { url } => ("set_preview_url", vdict! { "url" => url.clone() }),
+        Control::PlayPreviewEmote { urn } => {
+            ("play_preview_emote", vdict! { "urn" => urn.clone() })
+        }
+        Control::SetName { name } => ("set_name", vdict! { "name" => name.clone() }),
         Control::Reconnect => ("reconnect", VarDictionary::new()),
         Control::SetWorldSecret { realm, secret } => (
             "set_world_secret",
-            vdict! { "realm": realm.clone(), "secret": secret.clone() },
+            vdict! { "realm" => realm.clone(), "secret" => secret.clone() },
         ),
         Control::Equip { .. }
         | Control::Unequip { .. }

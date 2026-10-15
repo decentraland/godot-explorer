@@ -41,7 +41,7 @@ impl VoiceChatRecorder {
 
     #[func]
     fn setup_audio_server(&mut self) {
-        let mut audio_server = AudioServer::singleton();
+        let audio_server = AudioServer::singleton();
         let idx = audio_server.get_bus_index("Capture");
         if idx != -1 {
             let bus_effect: Option<Gd<AudioEffectCapture>> = {

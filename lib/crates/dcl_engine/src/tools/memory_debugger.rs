@@ -20,6 +20,7 @@ pub static DEALLOCATION_COUNT: AtomicUsize = AtomicUsize::new(0);
 
 pub struct TrackingAllocator;
 
+// SAFETY: every call forwards to `System` with the caller's layout/pointer unchanged; the counters are atomics.
 unsafe impl GlobalAlloc for TrackingAllocator {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
         let ret = System.alloc(layout);
@@ -64,6 +65,7 @@ pub struct MemoryDebugger {
     print_interval: f64,
 
     #[export]
+    #[var(pub)]
     scene_manager_path: Option<Gd<Node>>,
 }
 

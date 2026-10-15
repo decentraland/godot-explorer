@@ -388,43 +388,39 @@ impl DclMaterial {
                     ..Default::default()
                 };
 
-                if pbr.alpha_test.is_some() {
-                    value.alpha_test = pbr.alpha_test.as_ref().unwrap().into();
+                if let Some(v) = pbr.alpha_test.as_ref() {
+                    value.alpha_test = v.into();
                 }
-                if pbr.cast_shadows.is_some() {
-                    value.cast_shadows = *pbr.cast_shadows.as_ref().unwrap();
+                if let Some(v) = pbr.cast_shadows.as_ref() {
+                    value.cast_shadows = *v;
                 }
-                if pbr.albedo_color.is_some() {
-                    value.albedo_color = RoundedColor4(pbr.albedo_color.as_ref().unwrap().clone());
+                if let Some(v) = pbr.albedo_color.as_ref() {
+                    value.albedo_color = RoundedColor4(v.clone());
                 }
-                if pbr.emissive_color.is_some() {
-                    value.emissive_color =
-                        RoundedColor3(pbr.emissive_color.as_ref().unwrap().clone());
+                if let Some(v) = pbr.emissive_color.as_ref() {
+                    value.emissive_color = RoundedColor3(v.clone());
                 }
-                if pbr.reflectivity_color.is_some() {
-                    value.reflectivity_color =
-                        RoundedColor3(pbr.reflectivity_color.as_ref().unwrap().clone());
+                if let Some(v) = pbr.reflectivity_color.as_ref() {
+                    value.reflectivity_color = RoundedColor3(v.clone());
                 }
-                if pbr.transparency_mode.is_some() {
-                    value.transparency_mode = MaterialTransparencyMode::from_i32(
-                        *pbr.transparency_mode.as_ref().unwrap(),
-                    )
-                    .unwrap_or_default();
+                if let Some(v) = pbr.transparency_mode.as_ref() {
+                    value.transparency_mode =
+                        MaterialTransparencyMode::from_i32(*v).unwrap_or_default();
                 }
-                if pbr.metallic.is_some() {
-                    value.metallic = pbr.metallic.as_ref().unwrap().into();
+                if let Some(v) = pbr.metallic.as_ref() {
+                    value.metallic = v.into();
                 }
-                if pbr.roughness.is_some() {
-                    value.roughness = pbr.roughness.as_ref().unwrap().into();
+                if let Some(v) = pbr.roughness.as_ref() {
+                    value.roughness = v.into();
                 }
-                if pbr.specular_intensity.is_some() {
-                    value.specular_intensity = pbr.specular_intensity.as_ref().unwrap().into();
+                if let Some(v) = pbr.specular_intensity.as_ref() {
+                    value.specular_intensity = v.into();
                 }
-                if pbr.emissive_intensity.is_some() {
-                    value.emissive_intensity = pbr.emissive_intensity.as_ref().unwrap().into();
+                if let Some(v) = pbr.emissive_intensity.as_ref() {
+                    value.emissive_intensity = v.into();
                 }
-                if pbr.direct_intensity.is_some() {
-                    value.direct_intensity = pbr.direct_intensity.as_ref().unwrap().into();
+                if let Some(v) = pbr.direct_intensity.as_ref() {
+                    value.direct_intensity = v.into();
                 }
 
                 DclMaterial::Pbr(value)
@@ -442,15 +438,14 @@ impl DclMaterial {
                     ..Default::default()
                 };
 
-                if unlit.alpha_test.is_some() {
-                    value.alpha_test = unlit.alpha_test.as_ref().unwrap().into();
+                if let Some(v) = unlit.alpha_test.as_ref() {
+                    value.alpha_test = v.into();
                 }
-                if unlit.cast_shadows.is_some() {
-                    value.cast_shadows = *unlit.cast_shadows.as_ref().unwrap();
+                if let Some(v) = unlit.cast_shadows.as_ref() {
+                    value.cast_shadows = *v;
                 }
-                if unlit.diffuse_color.is_some() {
-                    value.diffuse_color =
-                        RoundedColor4(unlit.diffuse_color.as_ref().unwrap().clone());
+                if let Some(v) = unlit.diffuse_color.as_ref() {
+                    value.diffuse_color = RoundedColor4(v.clone());
                 }
 
                 DclMaterial::Unlit(value)

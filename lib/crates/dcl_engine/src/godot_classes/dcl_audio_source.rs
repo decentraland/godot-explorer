@@ -20,35 +20,35 @@ const MAX_CATCHUP_FRAMES: i32 = (ANALYSIS_WINDOW * 4) as i32;
 #[derive(GodotClass)]
 #[class(init, base=AudioStreamPlayer3D)]
 pub struct DclAudioSource {
-    #[var]
+    #[var(pub)]
     dcl_audio_clip_url: GString,
 
-    #[var]
+    #[var(pub)]
     dcl_playing: bool,
 
-    #[var]
+    #[var(pub)]
     dcl_volume: f32,
 
-    #[var]
+    #[var(pub)]
     dcl_loop_activated: bool,
 
-    #[var]
+    #[var(pub)]
     dcl_pitch: f32,
 
-    #[var]
+    #[var(pub)]
     dcl_global: bool,
 
-    #[var]
+    #[var(pub)]
     dcl_current_time: f32,
 
-    #[var]
+    #[var(pub)]
     dcl_enable: bool,
 
-    #[var]
+    #[var(pub)]
     dcl_scene_id: i32,
 
     /// See `CLIP_STATE_*`.
-    #[var]
+    #[var(pub)]
     dcl_clip_state: i32,
 
     /// Last `MediaState` appended to `PBAudioEvent`, to avoid re-emitting it.

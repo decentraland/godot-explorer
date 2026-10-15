@@ -475,9 +475,9 @@ impl WebSocketRoom {
                 .peer_identities
                 .iter()
                 .filter_map(|(_, peer)| {
-                    if peer.profile.is_some() {
+                    if let Some(profile) = peer.profile.as_ref() {
                         let announced_version = peer.announced_version.unwrap_or(0);
-                        let current_version = peer.profile.as_ref().unwrap().version;
+                        let current_version = profile.version;
 
                         if announced_version > current_version {
                             None

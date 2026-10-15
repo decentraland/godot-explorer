@@ -11,44 +11,44 @@ pub use dcl_core::network_inspector::{
 #[derive(GodotClass)]
 #[class(init, base=RefCounted)]
 struct NetworkInspectedRequest {
-    #[var]
+    #[var(pub)]
     requested_by: GString,
 
     // REQUEST
-    #[var]
+    #[var(pub)]
     requested_at: u32,
 
-    #[var]
+    #[var(pub)]
     url: GString,
-    #[var]
+    #[var(pub)]
     method: GString,
 
-    #[var]
+    #[var(pub)]
     request_headers: VarDictionary,
 
     // RESPONSE
-    #[var]
+    #[var(pub)]
     response_received_at: u32,
-    #[var]
+    #[var(pub)]
     response_received: bool,
-    #[var]
+    #[var(pub)]
     response_ok: bool,
-    #[var]
+    #[var(pub)]
     response_error: GString,
 
-    #[var]
+    #[var(pub)]
     response_status_code: i32,
-    #[var]
+    #[var(pub)]
     response_headers: VarDictionary,
 
     // PAYLOAD RESPONSE
-    #[var]
+    #[var(pub)]
     response_payload_received: bool,
-    #[var]
+    #[var(pub)]
     response_payload_ok: bool,
-    #[var]
+    #[var(pub)]
     response_payload_received_at: u32,
-    #[var]
+    #[var(pub)]
     response_payload_error: GString,
 
     // not exposed
@@ -154,7 +154,7 @@ impl INode for NetworkInspector {
                         for (key, value) in headers {
                             let _ = inspected_request
                                 .request_headers
-                                .insert(key.to_variant(), value.to_variant());
+                                .insert(&key.to_variant(), &value.to_variant());
                         }
                     }
 
@@ -176,7 +176,7 @@ impl INode for NetworkInspector {
                                     for (key, value) in headers {
                                         let _ = request
                                             .response_headers
-                                            .insert(key.to_variant(), value.to_variant());
+                                            .insert(&key.to_variant(), &value.to_variant());
                                     }
                                 }
                             }
@@ -224,7 +224,7 @@ impl INode for NetworkInspector {
                                     for (key, value) in headers {
                                         let _ = request
                                             .response_headers
-                                            .insert(key.to_variant(), value.to_variant());
+                                            .insert(&key.to_variant(), &value.to_variant());
                                     }
                                 }
                                 request.response_body = body.map(|s| s.into_bytes());

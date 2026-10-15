@@ -28,11 +28,11 @@ fn test_decode_update_scene(_ctx: &TestContext) {
 
     assert_eq!(
         dict.get("type").unwrap().to::<GString>(),
-        "update_scene".into()
+        GString::from("update_scene")
     );
     assert_eq!(
         dict.get("scene_id").unwrap().to::<GString>(),
-        "bafkreiscene".into()
+        GString::from("bafkreiscene")
     );
 }
 
@@ -48,13 +48,16 @@ fn test_decode_update_model(_ctx: &TestContext) {
 
     assert_eq!(
         dict.get("type").unwrap().to::<GString>(),
-        "update_model".into()
+        GString::from("update_model")
     );
     assert_eq!(
         dict.get("src").unwrap().to::<GString>(),
-        "models/chair.glb".into()
+        GString::from("models/chair.glb")
     );
-    assert_eq!(dict.get("hash").unwrap().to::<GString>(), "b64-bmV3".into());
+    assert_eq!(
+        dict.get("hash").unwrap().to::<GString>(),
+        GString::from("b64-bmV3")
+    );
     assert!(!dict.get("removed").unwrap().to::<bool>());
 }
 

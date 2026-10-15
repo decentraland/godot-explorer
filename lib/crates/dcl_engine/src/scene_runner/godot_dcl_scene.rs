@@ -308,7 +308,7 @@ impl GodotDclScene {
             new_node_ui
                 .bind_mut()
                 .set_ui_result(self.ui_results.clone());
-            new_node_ui.bind_mut().set_dcl_entity_id(entity.as_i32());
+            new_node_ui.bind_mut().set_dcl_entity_id(*entity);
 
             self.root_node_ui
                 .add_child(&new_node_ui.clone().upcast::<Node>());

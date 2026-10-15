@@ -188,13 +188,13 @@ fn add_to_root_deferred(global: &Gd<Node>, property: &str) {
         godot_error!("bootstrap: `{property}` is not a node, not added to the tree");
         return;
     };
-    if let Some(mut root) = global.get_tree().and_then(|tree| tree.get_root()) {
+    if let Some(mut root) = global.get_tree_or_null().and_then(|tree| tree.get_root()) {
         root.call_deferred("add_child", &[node.to_variant()]);
     }
 }
 
 fn root_add_instance(global: &Gd<Node>, node: &Gd<Node>) {
-    if let Some(mut root) = global.get_tree().and_then(|tree| tree.get_root()) {
+    if let Some(mut root) = global.get_tree_or_null().and_then(|tree| tree.get_root()) {
         root.call_deferred("add_child", &[node.to_variant()]);
     }
 }

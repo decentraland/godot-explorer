@@ -108,6 +108,7 @@ fn print_error_with_source(msg: &str, metadata: &tracing::Metadata<'_>) {
     let func_c = format!("{}\0", function);
     let file_c = format!("{}\0", file);
 
+    // SAFETY: the three C strings are NUL-terminated and outlive the call; Godot copies them.
     unsafe {
         godot::sys::interface_fn!(print_error)(
             godot::sys::c_str_from_str(&msg_c),
@@ -129,6 +130,7 @@ fn print_warning_with_source(msg: &str, metadata: &tracing::Metadata<'_>) {
     let func_c = format!("{}\0", function);
     let file_c = format!("{}\0", file);
 
+    // SAFETY: the three C strings are NUL-terminated and outlive the call; Godot copies them.
     unsafe {
         godot::sys::interface_fn!(print_warning)(
             godot::sys::c_str_from_str(&msg_c),

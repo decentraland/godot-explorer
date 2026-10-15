@@ -836,7 +836,7 @@ impl AvatarScene {
 
         new_avatar
             .bind_mut()
-            .set_movement_type(AvatarMovementType::LerpTwoPoints as i32);
+            .set_movement_type(AvatarMovementType::LerpTwoPoints);
 
         let instance_id = self.base().instance_id();
         let avatar_entity_id = entity_id;
@@ -1730,7 +1730,8 @@ impl AvatarScene {
         for (entity_id, avatar) in self.avatar_godot_scene.iter() {
             // Only remote avatars interpolate; the local player
             // (ExternalController) already feeds scenes its exact transform.
-            if avatar.bind().get_movement_type() != AvatarMovementType::LerpTwoPoints as i32 {
+            if avatar.bind().get_movement_type() as i32 != AvatarMovementType::LerpTwoPoints as i32
+            {
                 continue;
             }
             let transform = avatar.get_global_transform();

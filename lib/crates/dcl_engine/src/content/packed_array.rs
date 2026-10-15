@@ -12,12 +12,7 @@ impl PackedByteArrayFromVec for PackedByteArray {
         let mut bytes = PackedByteArray::new();
         bytes.resize(byte_length);
 
-        let data_arr_ptr = bytes.as_mut_slice();
-        unsafe {
-            let dst_ptr = &mut data_arr_ptr[0] as *mut u8;
-            let src_ptr = &bytes_slice[0] as *const u8;
-            std::ptr::copy_nonoverlapping(src_ptr, dst_ptr, byte_length);
-        }
+        bytes.as_mut_slice().copy_from_slice(bytes_slice);
 
         bytes
     }

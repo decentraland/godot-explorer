@@ -205,8 +205,8 @@ pub fn process_emote_animations(
     let mut play_emote_audio_args = VarArray::new();
     play_emote_audio_args.push(&file_hash.to_variant());
     let play_emote_audio_call = VarDictionary::from_iter([
-        ("method", "_play_emote_audio".to_variant()),
-        ("args", play_emote_audio_args.to_variant()),
+        ("method".to_variant(), "_play_emote_audio".to_variant()),
+        ("args".to_variant(), play_emote_audio_args.to_variant()),
     ]);
 
     let mut audio_added = false;
@@ -457,11 +457,11 @@ pub fn build_dcl_emote_gltf(
 #[derive(GodotClass)]
 #[class(init, base=RefCounted)]
 pub struct DclEmoteGltf {
-    #[var]
+    #[var(pub)]
     armature_prop: Option<Gd<Node3D>>,
-    #[var]
+    #[var(pub)]
     default_animation: Option<Gd<Animation>>,
-    #[var]
+    #[var(pub)]
     prop_animation: Option<Gd<Animation>>,
 }
 

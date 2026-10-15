@@ -360,7 +360,7 @@ pub fn _process_scene(
                             scene.scene_id.0,
                             log.level as i32,
                             log.timestamp as f32,
-                            log.message.to_godot()
+                            &log.message.to_godot()
                         ];
                         console.callv(&arguments);
                     }

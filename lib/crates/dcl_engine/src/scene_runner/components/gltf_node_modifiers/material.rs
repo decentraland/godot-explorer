@@ -66,11 +66,7 @@ fn get_or_create_material(mesh: &Gd<MeshInstance3D>, surface_idx: i32) -> Gd<Sta
     if let Some(active_mat) = mesh.get_active_material(surface_idx) {
         if let Ok(std_mat) = active_mat.try_cast::<StandardMaterial3D>() {
             // Duplicate to avoid modifying the shared resource
-            if let Some(duplicated) = std_mat.duplicate() {
-                if let Ok(dup_std) = duplicated.try_cast::<StandardMaterial3D>() {
-                    return dup_std;
-                }
-            }
+            return std_mat.duplicate_resource();
         }
     }
 

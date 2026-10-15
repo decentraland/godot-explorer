@@ -134,7 +134,7 @@ impl DclRoot {
         let global = DclGlobal::singleton();
         let cli = global.bind().get_cli();
 
-        if let Some(mut tree) = self.base().get_tree() {
+        if let Some(mut tree) = self.base().get_tree_or_null() {
             tree.set_quit_on_go_back(false);
             if cli.bind().is_help_requested() {
                 // The help text is already printed.
@@ -167,7 +167,11 @@ impl DclRoot {
     }
 
     fn apply_display_settings(&self, global: &Gd<DclGlobal>) {
-        let Some(mut window) = self.base().get_tree().and_then(|tree| tree.get_root()) else {
+        let Some(mut window) = self
+            .base()
+            .get_tree_or_null()
+            .and_then(|tree| tree.get_root())
+        else {
             return;
         };
         call_static(
@@ -268,7 +272,7 @@ impl DclRoot {
     }
 
     fn change_scene(&mut self, path: &str) {
-        if let Some(mut tree) = self.base().get_tree() {
+        if let Some(mut tree) = self.base().get_tree_or_null() {
             tree.change_scene_to_file(path);
         }
     }
@@ -301,7 +305,7 @@ impl DclRoot {
                 "Asset server requires the 'asset_server' feature to be enabled during build."
             );
             godot_error!("Build with: cargo run -- build --features asset_server");
-            if let Some(mut tree) = self.base().get_tree() {
+            if let Some(mut tree) = self.base().get_tree_or_null() {
                 tree.quit_ex().exit_code(1).done();
             }
             return;
@@ -325,7 +329,11 @@ impl DclRoot {
                 .to_variant()],
         );
         server.set_name("AssetServer");
-        if let Some(mut root) = self.base().get_tree().and_then(|tree| tree.get_root()) {
+        if let Some(mut root) = self
+            .base()
+            .get_tree_or_null()
+            .and_then(|tree| tree.get_root())
+        {
             root.add_child(&server);
         }
         server.call("start", &[]);

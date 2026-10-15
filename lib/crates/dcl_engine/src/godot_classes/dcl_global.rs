@@ -80,39 +80,39 @@ fn ensure_core() -> &'static Core {
 pub struct DclGlobal {
     _base: Base<Node>,
 
-    #[var]
+    #[var(pub)]
     pub scene_runner: Gd<SceneManager>,
-    #[var]
+    #[var(pub)]
     pub comms: Gd<CommunicationManager>,
-    #[var]
+    #[var(pub)]
     pub avatars: Gd<AvatarScene>,
-    #[var]
+    #[var(pub)]
     pub realm: Gd<DclRealm>,
-    #[var]
+    #[var(pub)]
     pub portable_experience_controller: Gd<DclPortableExperienceController>,
-    #[var]
+    #[var(pub)]
     pub testing_tools: Gd<DclTestingTools>,
-    #[var]
+    #[var(pub)]
     pub preview_mode: bool,
-    #[var]
+    #[var(pub)]
     pub testing_scene_mode: bool,
-    #[var]
+    #[var(pub)]
     pub fixed_skybox_time: bool,
-    #[var]
+    #[var(pub)]
     pub player_identity: Gd<DclPlayerIdentity>,
-    #[var]
+    #[var(pub)]
     pub content_provider: Gd<ContentProvider>,
-    #[var(get)]
+    #[var(no_set, pub)]
     pub http_requester: Gd<RustHttpQueueRequester>,
-    #[var]
+    #[var(pub)]
     pub dcl_tokio_rpc: Gd<DclTokioRpc>,
 
     pub ethereum_provider: Arc<EthereumProvider>,
 
-    #[var]
+    #[var(pub)]
     pub metrics: Gd<Metrics>,
 
-    #[var]
+    #[var(pub)]
     pub renderer_version: GString,
 
     pub is_mobile: bool,
@@ -129,36 +129,36 @@ pub struct DclGlobal {
 
     pub is_virtual_mobile: bool,
 
-    #[var]
+    #[var(pub)]
     pub has_javascript_debugger: bool,
 
-    #[var]
+    #[var(pub)]
     pub network_inspector: Gd<NetworkInspector>,
 
-    #[var]
+    #[var(pub)]
     pub scene_inspector_dispatcher: Gd<crate::tools::scene_inspector::SceneInspectorDispatcher>,
 
-    #[var]
+    #[var(pub)]
     pub social_blacklist: Gd<DclSocialBlacklist>,
 
     #[cfg(feature = "use_memory_debugger")]
-    #[var]
+    #[var(pub)]
     pub memory_debugger: Gd<MemoryDebugger>,
 
     #[cfg(feature = "use_memory_debugger")]
-    #[var]
+    #[var(pub)]
     pub benchmark_report: Gd<BenchmarkReport>,
 
-    #[var(get)]
+    #[var(no_set, pub)]
     pub profile_service: Gd<ProfileService>,
 
-    #[var(get)]
+    #[var(no_set, pub)]
     pub cli: Gd<DclCli>,
 
-    #[var(get)]
+    #[var(no_set, pub)]
     pub engine: Gd<DclEngine>,
 
-    #[var(get)]
+    #[var(no_set, pub)]
     pub dynamic_graphics_manager: Gd<DclDynamicGraphicsManager>,
 
     // Stored as InstanceId, not Gd<DclAvatar>: the underlying Node3D may be freed
@@ -167,25 +167,25 @@ pub struct DclGlobal {
 
     // Scene Inspector active flag — set from GDScript when deeplink/CLI activates the Scene Inspector.
     // Checked by scene_manager when spawning scenes to decide if they should be instrumented.
-    #[var]
+    #[var(pub)]
     pub scene_inspector_active: bool,
 
     // Input modifier state - set by scenes via PBInputModifier component on PLAYER entity
-    #[var]
+    #[var(pub)]
     pub input_modifier_disable_all: bool,
-    #[var]
+    #[var(pub)]
     pub input_modifier_disable_walk: bool,
-    #[var]
+    #[var(pub)]
     pub input_modifier_disable_jog: bool,
-    #[var]
+    #[var(pub)]
     pub input_modifier_disable_run: bool,
-    #[var]
+    #[var(pub)]
     pub input_modifier_disable_jump: bool,
-    #[var]
+    #[var(pub)]
     pub input_modifier_disable_emote: bool,
-    #[var]
+    #[var(pub)]
     pub input_modifier_disable_double_jump: bool,
-    #[var]
+    #[var(pub)]
     pub input_modifier_disable_gliding: bool,
 
     // On-screen touch controls - set by scenes via PBTouchScreenControls on the ROOT entity.
@@ -193,23 +193,23 @@ pub struct DclGlobal {
     // is a denylist of per-button overrides (each a dictionary {action, hide, icon}); buttons
     // not listed keep their default (shown). `touch_controls_main_action` is the godot action
     // name for the large central button (empty = keep default jump).
-    #[var]
+    #[var(pub)]
     pub touch_controls_active: bool,
-    #[var]
+    #[var(pub)]
     pub touch_controls_hide_joystick: bool,
-    #[var]
+    #[var(pub)]
     pub touch_controls_hide_crosshair: bool,
-    #[var]
+    #[var(pub)]
     pub touch_controls_main_action: GString,
-    #[var]
+    #[var(pub)]
     pub touch_controls_inputs: VarArray,
 
     // SDK-controlled skybox time - set by scenes via PBSkyboxTime component on ROOT entity
-    #[var]
+    #[var(pub)]
     pub sdk_skybox_time_active: bool,
-    #[var]
+    #[var(pub)]
     pub sdk_skybox_fixed_time: u32,
-    #[var]
+    #[var(pub)]
     pub sdk_skybox_transition_forward: bool,
 }
 

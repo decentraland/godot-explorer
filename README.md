@@ -18,7 +18,7 @@ Decentraland Godot Explorer is a cross-platform metaverse client built with Godo
 ## 🚀 Quick Start
 
 1. **Prerequisites**:
-   - [Rust 1.90](https://www.rust-lang.org/tools/install)
+   - [Rust 1.94](https://www.rust-lang.org/tools/install)
    - Git
    - Platform-specific dependencies (see below)
 

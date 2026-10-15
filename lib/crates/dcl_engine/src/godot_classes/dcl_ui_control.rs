@@ -34,6 +34,7 @@ pub struct DclUiControl {
     base: Base<Control>,
 
     #[export]
+    #[var(pub)]
     dcl_entity_id: SceneEntityId,
 
     ui_result: Option<Rc<RefCell<UiResults>>>,

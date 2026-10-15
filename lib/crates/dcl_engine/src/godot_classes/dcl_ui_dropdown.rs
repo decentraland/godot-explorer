@@ -24,6 +24,7 @@ pub struct DclUiDropdown {
     current_font: Font,
 
     #[export]
+    #[var(pub)]
     dcl_entity_id: SceneEntityId,
 
     ui_result: Option<Rc<RefCell<UiResults>>>,

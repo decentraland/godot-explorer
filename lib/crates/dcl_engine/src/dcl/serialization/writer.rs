@@ -70,6 +70,7 @@ pub trait ToDclWriter {
     fn to_writer(&self, buf: &mut DclWriter);
 }
 
+// SAFETY: every method forwards to the wrapped `BytesMut`, which upholds the `BufMut` contract.
 unsafe impl<'a> prost::bytes::BufMut for DclWriter<'a> {
     fn remaining_mut(&self) -> usize {
         self.buffer.remaining_mut()

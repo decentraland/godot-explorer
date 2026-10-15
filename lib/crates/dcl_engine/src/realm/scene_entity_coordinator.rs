@@ -722,9 +722,9 @@ impl SceneEntityCoordinator {
             empty_parcels.push(&Variant::from(empty_parcel.as_str()));
         }
 
-        dict.set(GString::from("loadable_scenes"), loadable_scenes);
-        dict.set(GString::from("keep_alive_scenes"), keep_alive_scenes);
-        dict.set(GString::from("empty_parcels"), empty_parcels);
+        dict.set(&GString::from("loadable_scenes"), &loadable_scenes);
+        dict.set(&GString::from("keep_alive_scenes"), &keep_alive_scenes);
+        dict.set(&GString::from("empty_parcels"), &empty_parcels);
 
         dict
     }

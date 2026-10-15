@@ -140,6 +140,7 @@ pub struct BenchmarkReport {
     output_dir: PathBuf,
 
     #[export]
+    #[var(pub)]
     scene_manager_path: Option<Gd<Node>>,
 }
 

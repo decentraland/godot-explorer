@@ -24,7 +24,7 @@ impl DclDestinationRules {
     pub fn world_parcel_index(listing: VarDictionary) -> VarDictionary {
         let mut index = VarDictionary::new();
         for (parcel, entity) in destination::world_parcel_index(&to_json(&listing.to_variant())) {
-            index.set(parcel.as_str(), to_variant(&entity));
+            index.set(parcel.as_str(), &to_variant(&entity));
         }
         index
     }
@@ -100,6 +100,6 @@ impl DclDestinationRules {
     pub fn parse_bounds(about: VarDictionary) -> VarArray {
         let commit = realm::commit_from_about(&to_json(&about.to_variant()), &[]);
         let vec2i = |(x, y): (i32, i32)| Vector2i::new(x, y).to_variant();
-        varray![vec2i(commit.min_bounds), vec2i(commit.max_bounds)]
+        varray![&vec2i(commit.min_bounds), &vec2i(commit.max_bounds)]
     }
 }

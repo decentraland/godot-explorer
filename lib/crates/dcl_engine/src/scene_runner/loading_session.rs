@@ -593,7 +593,7 @@ mod tests {
         // Assets are NOT counted yet because floating_islands_phase_start is None
         let progress = session.calculate_progress();
         assert!(
-            progress >= 25.0 && progress < 26.0,
+            (25.0..26.0).contains(&progress),
             "Progress should be ~25%, got {}",
             progress
         );
