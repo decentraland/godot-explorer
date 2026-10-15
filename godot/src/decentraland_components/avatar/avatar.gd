@@ -1468,7 +1468,7 @@ func _process(delta):
 		emote_controller.is_playing() and (self_idle or emote_controller.playing_masked)
 	)
 	if is_local_player:
-		Global.comms.set_emoting(is_emoting)
+		Global.comms.set_emoting(is_emoting, emote_controller.playing_loop)
 
 	animation_tree.set("parameters/Locomotion/conditions/idle", self_idle)
 	animation_tree.set("parameters/Locomotion/conditions/emote", emote_controller.playing_single)
