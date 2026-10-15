@@ -20,6 +20,8 @@ var _currently_selected_emote_item: EmoteItemUi = null
 var _equipped_emote_urns: PackedStringArray = []
 var _only_collectibles: bool = false
 var _load_generation: int = 0
+# Item urns (…:<itemId>, no tokenId) already in the grid, so each owned emote gets one tile.
+var _emote_item_urns: Dictionary = {}
 var _ios_marketplace_section: MarketplaceRecommendedSection = null
 
 @onready var container_avatar_emotes = %VBoxContainer_AvatarEmotes
@@ -135,8 +137,10 @@ func _async_load_remote_emotes(generation: int):
 			# One element per owned token: keep only the newest copy of each item (#2551), and
 			# skip an emote inject_owned_emote already placed while the lambda was loading.
 			var item_urn := Backpack.newtag_item_urn(emote.urn, emote.token_id)
-			if _has_emote(Backpack.to_item_urn(emote.urn)):
+			var grid_urn := Backpack.to_item_urn(emote.urn)
+			if _emote_item_urns.has(grid_urn):
 				continue
+			_emote_item_urns[grid_urn] = true
 			var emote_item: EmoteItemUi = EMOTE_SQUARE_ITEM.instantiate()
 			emote_item.button_group = button_group_all_emotes
 			emote_item.async_load_from_urn(emote.urn)
@@ -173,6 +177,7 @@ func _async_load_emotes():
 		child.queue_free()
 
 	all_emote_items.clear()
+	_emote_item_urns.clear()
 
 	# Overlapping loads (_ready vs a filter toggle) would both append into this cleared grid.
 	_load_generation += 1
@@ -193,8 +198,10 @@ func inject_owned_emote(urn: String) -> void:
 		return
 	# Lambda-listed items hold the token-instance urn (…:<itemId>:<tokenId>) while the marketplace
 	# API yields the item urn: compare on the item form or every owned emote is re-added as NEW (#2460).
-	if _has_emote(Backpack.to_item_urn(urn)):
+	var item_urn := Backpack.to_item_urn(urn)
+	if _emote_item_urns.has(item_urn):
 		return
+	_emote_item_urns[item_urn] = true
 	var emote_item: EmoteItemUi = EMOTE_SQUARE_ITEM.instantiate()
 	emote_item.button_group = button_group_all_emotes
 	# Fire-and-forget before add_child (same as the remote load): the await inside
@@ -211,13 +218,6 @@ func inject_owned_emote(urn: String) -> void:
 	all_emote_items.push_front(emote_item)
 	_update_empty_state()
 	_update_grid_equipped_state()
-
-
-func _has_emote(item_urn: String) -> bool:
-	for item in all_emote_items:
-		if Backpack.to_item_urn(item.emote_urn) == item_urn:
-			return true
-	return false
 
 
 func _update_empty_state():
@@ -248,7 +248,8 @@ func _on_avatar_loaded():
 func _normalize_emote_urn(urn: String) -> String:
 	if Emotes.is_base_emote_urn(urn):
 		return Emotes.get_base_emote_id_from_urn(urn)
-	return urn
+	# The grid keeps one token per item while the profile may hold another (or the item urn).
+	return Backpack.to_item_urn(urn)
 
 
 # The urn to store in the avatar profile for an equipped emote. Lambda-listed owned emotes
