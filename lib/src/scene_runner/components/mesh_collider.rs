@@ -9,7 +9,7 @@ use crate::{
             SceneCrdtStateProtoComponents,
         },
     },
-    scene_runner::scene::Scene,
+    scene_runner::{components::physics_layers, scene::Scene},
 };
 use godot::{
     classes::{
@@ -297,7 +297,7 @@ pub fn create_or_update_mesh(
     };
 
     collision_shape.set_shape(&godot_shape);
-    static_body_3d.set_collision_layer(collision_mask);
+    static_body_3d.set_collision_layer(physics_layers::collider_layer(collision_mask));
     static_body_3d.set_collision_mask(0);
 }
 
