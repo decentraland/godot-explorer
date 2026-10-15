@@ -295,15 +295,22 @@ func _matches_where_clause(notif: Dictionary, where_clause: String) -> bool:
 		return true
 
 	# Simple parser for common WHERE clauses
-	# Supports: "is_scheduled = 0", "is_scheduled = 1", "trigger_timestamp > X", combinations with AND
+	# Supports: "id = 'X'", "is_scheduled = 0", "is_scheduled = 1", "trigger_timestamp > X",
+	# combinations with AND
 
 	var clauses = where_clause.split(" AND ")
 
 	for clause in clauses:
 		clause = clause.strip_edges()
 
+		# Parse "id = 'X'"
+		if clause.begins_with("id ="):
+			var expected_id = clause.split("=", true, 1)[1].strip_edges().trim_prefix("'")
+			if notif.get("id", "") != expected_id.trim_suffix("'"):
+				return false
+
 		# Parse "is_scheduled = X"
-		if clause.begins_with("is_scheduled"):
+		elif clause.begins_with("is_scheduled"):
 			var parts = clause.split("=")
 			if parts.size() == 2:
 				var expected_value = parts[1].strip_edges().to_int()
