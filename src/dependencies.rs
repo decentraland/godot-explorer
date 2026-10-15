@@ -30,7 +30,7 @@ impl BuildStatus {
 
     pub fn is_built_for_target(&self, target: &str) -> bool {
         match target {
-            "android" | "quest" => self.android_built,
+            "android" => self.android_built,
             "ios" => self.ios_built,
             "windows" | "win64" => self.windows_built,
             "macos" => self.macos_built,
@@ -90,7 +90,7 @@ pub fn check_protoc_installed() -> bool {
 pub fn check_export_templates_for_platform(platform: &str) -> bool {
     if let Some(templates_path) = crate::install_dependency::godot_export_templates_path() {
         match platform {
-            "android" | "quest" => {
+            "android" => {
                 let files = [
                     "android_debug.apk",
                     "android_release.apk",
@@ -232,7 +232,7 @@ pub fn suggest_next_steps(command: &str, target: Option<&str>) {
             print_section("Next Steps");
 
             if let Some(target_platform) = target {
-                if target_platform == "android" || target_platform == "quest" {
+                if target_platform == "android" {
                     print_message(MessageType::Step, "Export Android APK:");
                     print_message(
                         MessageType::Info,

@@ -41,8 +41,7 @@ var _sdk_touch_controls: SdkTouchControlsApplier = null
 
 
 func _process(_dt):
-	if not Global.is_xr():
-		_sdk_touch_controls.apply(_mobile_controls_hidden_for_hide_ui)
+	_sdk_touch_controls.apply(_mobile_controls_hidden_for_hide_ui)
 
 	parcel_position_real = Vector2(player.position.x * 0.0625, -player.position.z * 0.0625)
 
@@ -96,9 +95,6 @@ func _ready():
 	world.add_child(player)
 
 	timer_broadcast_position.player_node = player
-	if Global.is_xr():
-		player.vr_screen.set_instantiate_scene(ui_root)
-
 	emote_wheel.avatar_node = player.avatar
 	Global.engine.attach_world(self)
 
@@ -133,10 +129,7 @@ func _ready():
 		virtual_joystick, label_crosshair, player, control_pointer_tooltip
 	)
 
-	if Global.is_xr():
-		mobile_ui.hide()
-		label_crosshair.hide()
-	elif Global.is_mobile():
+	if Global.is_mobile():
 		mobile_ui.show()
 		label_crosshair.show()
 		reset_cursor_position()
@@ -391,18 +384,15 @@ func teleport_to(parcel: Vector2i) -> void:
 
 
 func player_look_at(look_at_position: Vector3):
-	if not Global.is_xr():
-		player.avatar_look_at(look_at_position)
+	player.avatar_look_at(look_at_position)
 
 
 func camera_look_at(look_at_position: Vector3):
-	if not Global.is_xr():
-		player.camera_look_at(look_at_position)
+	player.camera_look_at(look_at_position)
 
 
 func avatar_look_at_independent(look_at_position: Vector3):
-	if not Global.is_xr():
-		player.set_avatar_rotation_independent(look_at_position)
+	player.set_avatar_rotation_independent(look_at_position)
 
 
 func capture_mouse():
@@ -426,15 +416,7 @@ func set_visible_ui(value: bool, _use_hud_mode: bool = false):
 	ui_root.visible = value
 
 
-# Whether the on-screen controls (joypad + virtual joystick) are present. They show on
-# mobile and on desktop (development), but never in XR.
-func _onscreen_controls_enabled() -> bool:
-	return not Global.is_xr()
-
-
 func apply_mobile_controls_hide_ui(hidden: bool) -> void:
-	if not _onscreen_controls_enabled():
-		return
 	_mobile_controls_hidden_for_hide_ui = hidden
 	if hidden:
 		joypad.hide()
@@ -518,9 +500,8 @@ func _on_orientation_changed(is_portrait: bool) -> void:
 		emote_wheel.hide()
 		_set_scene_ui_visible(false)
 	else:
-		if _onscreen_controls_enabled():
-			mobile_ui.show()
-			_update_virtual_controls_visibility()
+		mobile_ui.show()
+		_update_virtual_controls_visibility()
 		emote_wheel.show()
 		_set_scene_ui_visible(true)
 

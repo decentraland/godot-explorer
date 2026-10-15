@@ -101,7 +101,7 @@ pub struct SceneManager {
     viewport_center: Vector2,
     // Screen point of the HUD crosshair (issue #2709). Set per-frame from GDScript
     // on mobile — where the crosshair rides above the avatar in third person — so
-    // interaction raycasts aim where the crosshair is drawn. None on desktop/XR,
+    // interaction raycasts aim where the crosshair is drawn. None on desktop,
     // where the crosshair stays at the viewport center.
     crosshair_screen_point: Option<Vector2>,
     // RIDs the pointer raycast must never hit: the local player's own colliders

@@ -172,9 +172,8 @@ var _scene_emote_registry: Dictionary = {}
 var _mesh_assembler: AvatarMeshAssembler = null
 
 var _lod_state: int = LODState.FULL
-# 2D screen-space nameplate (non-XR) vs legacy viewport quad (XR). Runtime lives in
-# NameplateLayer; these cache the hide-flag/FAR gate and the depth-occlusion result.
-var _use_2d_nameplate: bool = false
+# The nameplate's runtime lives in NameplateLayer; these cache the hide-flag/FAR gate and the
+# depth-occlusion result.
 var _nametag_gate_visible: bool = true
 var _nameplate_occluded: bool = false
 # False until a real profile has been applied (async_update_avatar_from_profile). Until
@@ -260,12 +259,7 @@ func _ready():
 	# immediately frozen) still gets a pose instead of staying in bind pose.
 	animation_tree.active = true
 	animation_tree.advance(0.0)
-	var billboard_mode = (
-		BaseMaterial3D.BillboardMode.BILLBOARD_FIXED_Y
-		if Global.is_xr()
-		else BaseMaterial3D.BillboardMode.BILLBOARD_ENABLED
-	)
-	nickname_quad.billboard = billboard_mode
+	nickname_quad.billboard = BaseMaterial3D.BillboardMode.BILLBOARD_ENABLED
 
 	# Scene NPCs (AvatarShape) live outside Global.avatars (comms-only) and have no
 	# physics colliders, so nameplate occlusion finds them via this group.
@@ -310,9 +304,7 @@ func _ready():
 	# Hide mic when the avatar is spawned
 	nickname_ui.mic_enabled = false
 	Global.on_chat_message.connect(on_chat_message)
-	_use_2d_nameplate = not Global.is_xr()
-	if _use_2d_nameplate:
-		NameplateLayer.attach(self)
+	NameplateLayer.attach(self)
 	_apply_nickname_visibility()
 
 	_lod_phase = int(self.unique_id) % AvatarImpostorConfig.DISTANCE_CHECK_PERIOD_FRAMES
@@ -335,7 +327,7 @@ func _exit_tree() -> void:
 	# bug). Instead just hide it while out of the tree; NameplateLayer.update() (driven by
 	# our _process) is paused meanwhile, so a last-visible tag would otherwise linger frozen.
 	# The real free happens in _notification(NOTIFICATION_PREDELETE) when the avatar dies.
-	if _use_2d_nameplate and is_instance_valid(nickname_ui):
+	if is_instance_valid(nickname_ui):
 		NameplateLayer._untrack_plate(nickname_ui)
 		nickname_ui.modulate.a = 0.0
 		nickname_ui.hide()
@@ -348,7 +340,7 @@ func _notification(what: int) -> void:
 	# Free the reparented nickname_ui only when the avatar object is actually deleted (not
 	# on transient tree exits) — see _exit_tree for why. NameplateLayer.detach() guards
 	# is_instance_valid, so a full-teardown double-free is harmless.
-	if what == NOTIFICATION_PREDELETE and _use_2d_nameplate:
+	if what == NOTIFICATION_PREDELETE:
 		NameplateLayer.detach(self)
 
 
@@ -387,7 +379,6 @@ func on_chat_message(address: String, message: String, _timestamp: float):
 	if avatar_id != address:
 		return
 	nickname_ui.async_show_message(message)
-	_request_nickname_redraw()
 
 
 func _input(event):
@@ -736,18 +727,6 @@ func set_force_hide_name(value: bool) -> void:
 		_apply_nickname_visibility()
 
 
-## Legacy XR-only: bump the nickname SubViewport to redraw one frame (UPDATE_ONCE
-## auto-resets). 2D nameplates are live Controls so content setters suffice.
-func _request_nickname_redraw() -> void:
-	if _use_2d_nameplate:
-		return
-	if nickname_viewport == null or nickname_quad == null:
-		return
-	if not nickname_quad.visible:
-		return
-	nickname_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
-
-
 func _apply_nickname_visibility() -> void:
 	if nickname_quad == null:
 		return
@@ -773,27 +752,15 @@ func _apply_nickname_visibility() -> void:
 		or hidden
 		or (profile_pending and Global.is_production())
 	)
-	if _use_2d_nameplate:
-		# _update_nameplate_2d() positions/shows when allowed; hide now if gated off.
-		_nametag_gate_visible = not should_hide
-		if should_hide and nickname_ui != null:
-			# Hard reset alpha too: NameplateLayer.update() recomputes visibility from
-			# move_toward()'d alpha every frame, so a plain hide() would be undone and the
-			# stale tag would linger as a ~6-frame fade-out. Zeroing alpha makes the hide
-			# instant; the gate reopening fades it back in cleanly from 0.
-			nickname_ui.modulate.a = 0.0
-			nickname_ui.hide()
-		return
-	if should_hide:
-		nickname_quad.hide()
-		if nickname_viewport != null:
-			nickname_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
-	else:
-		nickname_quad.show()
-		if nickname_viewport != null:
-			# UPDATE_ONCE: redraw one frame here, then the SubViewport idles until
-			# something nickname-related changes (see _request_nickname_redraw).
-			nickname_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
+	# _update_nameplate_2d() positions/shows when allowed; hide now if gated off.
+	_nametag_gate_visible = not should_hide
+	if should_hide and nickname_ui != null:
+		# Hard reset alpha too: NameplateLayer.update() recomputes visibility from
+		# move_toward()'d alpha every frame, so a plain hide() would be undone and the
+		# stale tag would linger as a ~6-frame fade-out. Zeroing alpha makes the hide
+		# instant; the gate reopening fades it back in cleanly from 0.
+		nickname_ui.modulate.a = 0.0
+		nickname_ui.hide()
 
 
 ## Dev/staging only: while the profile is still pending, replace the meaningless
@@ -808,7 +775,6 @@ func _apply_pending_profile_nameplate() -> void:
 	nickname_ui.nickname = "Failed" if failed else "Loading"
 	nickname_ui.tag = avatar_id.right(4) if not avatar_id.is_empty() else "…"
 	nickname_ui.nickname_color = Color(0.85, 0.4, 0.4) if failed else Color(0.7, 0.7, 0.7)
-	_request_nickname_redraw()
 
 
 ## Pushed from comms (message_processor.rs -> AvatarScene) when a profile fetch fails or
@@ -1425,19 +1391,14 @@ func _tick_animation_throttle(delta: float) -> void:
 func _physics_process(_delta):
 	# Occlusion raycast must run here, not in _process — direct_space_state crashes
 	# when queried from an idle frame.
-	if _use_2d_nameplate:
-		NameplateLayer.update_occlusion(self)
+	NameplateLayer.update_occlusion(self)
 
 
 func _process(delta):
 	# TODO: maybe a gdext crate bug? when process implement the INode3D, super(delta) doesn't work :/
 	self.process(delta)
 
-	if _use_2d_nameplate:
-		NameplateLayer.update(self)
-	elif nickname_viewport != null and nickname_viewport.size != Vector2i(nickname_ui.size):
-		nickname_viewport.size = Vector2i(nickname_ui.size)
-		_request_nickname_redraw()
+	NameplateLayer.update(self)
 
 	_maybe_update_lod()
 	_tick_animation_throttle(delta)
@@ -1650,8 +1611,7 @@ func push_voice_frame(frame):
 	voice_chat_audio_player.get_stream_playback().push_buffer(frame)
 	if not nickname_ui.mic_enabled:
 		nickname_ui.mic_enabled = true
-		_request_nickname_redraw()
-	timer_hide_mic.start()
+		timer_hide_mic.start()
 
 
 # Called by AvatarAttach.gd when it starts following a skeletal anchor on
@@ -1725,17 +1685,14 @@ func get_anchor_point_global_transform(anchor_point_id: int) -> Transform3D:
 
 func _on_timer_hide_mic_timeout():
 	nickname_ui.mic_enabled = false
-	_request_nickname_redraw()
 
 
 func set_client_version(version: String):
 	nickname_ui.client_version = version
-	_request_nickname_redraw()
 
 
 func set_room_debug(info: String):
 	nickname_ui.room_debug = info
-	_request_nickname_redraw()
 
 
 func _play_emote_audio(file_hash: String):

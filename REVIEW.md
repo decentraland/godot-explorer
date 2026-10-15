@@ -35,7 +35,7 @@ Decentraland's cross-platform metaverse client — the "Godot Explorer". Three l
 | Decentraland SDK7 scene code at runtime | **JavaScript / V8 / deno_core** | per-scene threads driven by `lib/src/scene_runner` |
 | `xtask` build system (doctor / install / build / run / export) | Rust | `src/` |
 
-Target platforms: **Android (API 29+) and iOS are the only actively supported and QA'd targets.** The repo still carries desktop (Linux / Windows / macOS) and Meta Quest (OpenXR) code paths and CI builds, but those are **legacy remnants, not current distribution targets**. Evaluate every change for **touch input and small screens**; keyboard/mouse parity is not a review requirement. Desktop-only or XR-only findings are **out of scope** — note them at most as a courtesy, never as a blocker — unless the PR explicitly targets desktop/XR.
+Target platforms: **Android (API 29+) and iOS are the only actively supported and QA'd targets.** The repo still carries desktop (Linux / Windows / macOS) code paths and CI builds, but those are **legacy remnants, not current distribution targets**. Evaluate every change for **touch input and small screens**; keyboard/mouse parity is not a review requirement. Desktop-only findings are **out of scope** — note them at most as a courtesy, never as a blocker — unless the PR explicitly targets desktop/XR.
 
 The engine is pinned to a custom Godot fork. The exact version lives in `project.godot` and is documented in `CLAUDE.md` — **do not hardcode the version into reviews**, and **do not suggest upgrading the engine** or using APIs that only exist on upstream Godot beyond the pinned version.
 
@@ -376,7 +376,7 @@ A reviewer should `grep` / eyeball the diff for these before reading logic:
 - Any change to `rust-toolchain.toml`, `Cargo.lock` across the whole dependency tree, or the Godot version → escalate; these need a human-stakeholder call.
 - Modifications under `plugins/dcl-godot-ios/godot` or any submodule pointer → verify intentional and not a submodule-drift side-effect.
 - `DclGlobal.is_ios()` / `is_android()` / `is_mobile()` in new GDScript → request `OS.get_name() == "iOS"` / `"Android"` to match the repo convention.
-- `OS.get_name()` checks that handle one mobile target but not the other (e.g. branches on `"Android"` but silently falls through on `"iOS"`) → ask which platforms were considered. Only `"Android"` / `"iOS"` need to be covered; desktop/XR fall-through is fine (see Section 1).
+- `OS.get_name()` checks that handle one mobile target but not the other (e.g. branches on `"Android"` but silently falls through on `"iOS"`) → ask which platforms were considered. Only `"Android"` / `"iOS"` need to be covered; desktop fall-through is fine (see Section 1).
 - `_process` doing physics-coupled work, or `_physics_process` doing UI work → see the pattern note in Section 5.
 - A new user-facing string literal in `.tscn`/`.gd`, or a key on an `auto_translate_mode = 2` node → must be a translation key, and mode 2 draws a key verbatim. The scanner cannot see strings passed as function arguments, held in data tables, or set as `@export` defaults — check those by eye. See Tier 2.
 

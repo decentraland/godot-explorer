@@ -963,9 +963,7 @@ func async_load_scene(
 	# file, no zip) and the scene boot files (`{hash}.js`, `{hash}.crdt`) live in
 	# the optimized bucket too; a 404 there just means "not optimized" and the
 	# file comes from the content server instead. Everything starts together.
-	var skip_optimized = (
-		Global.is_xr() or Global.get_testing_scene_mode() or Global.cli.only_no_optimized
-	)
+	var skip_optimized = Global.get_testing_scene_mode() or Global.cli.only_no_optimized
 	var opt_base: String = Global.content_provider.get_optimized_base_url()
 
 	# `{entity}-boot.zip` carries the manifest + main.js + main.crdt in ONE

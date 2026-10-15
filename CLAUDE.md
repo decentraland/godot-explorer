@@ -69,7 +69,6 @@ cargo run -- run --stest                  # Scene tests
 cargo run -- export --target android --format apk           # Build debug APK (uses debug keystore)
 cargo run -- export --target android --format apk --release # Build signed APK (uses release keystore)
 cargo run -- export --target android --format aab --release # Build AAB for Play Store
-cargo run -- export --target quest --format apk --release   # Meta Quest build
 
 # Note: Keystores are automatically created in .bin/ folder:
 # - .bin/debug.keystore for debug builds
@@ -161,7 +160,6 @@ bypasses that check for local debugging only. The baked files live in
 ### Platform Support
 - Desktop: Linux, Windows, macOS
 - Mobile: Android (API 29+), iOS
-- VR: OpenXR compatible devices
 
 ## Development Workflow
 

@@ -299,8 +299,3 @@ ambient_color={
 "value": Vector3(0.35, 0.36, 0.4)
 }
 
-[xr]
-
-openxr/foveation_level=3
-openxr/enabled.xr=false
-shaders/enabled.xr=false

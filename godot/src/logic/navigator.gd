@@ -118,7 +118,7 @@ static func _warm_boot_bundle(scene_id: String) -> void:
 		return
 	if Global.cli.preview_mode or not Global.deep_link_obj.preview.is_empty():
 		return
-	if Global.is_xr() or Global.get_testing_scene_mode() or Global.cli.only_no_optimized:
+	if Global.get_testing_scene_mode() or Global.cli.only_no_optimized:
 		return
 
 	var boot_zip := "%s-boot.zip" % scene_id

@@ -213,7 +213,6 @@ cargo run -- update-docker-snapshots --run-id 21769476899
 
 - **Desktop**: Linux, Windows, macOS
 - **Mobile**: Android (API 29+), iOS
-- **VR**: Quest (Meta), OpenXR compatible devices
 
 ## 📁 Project Structure
 

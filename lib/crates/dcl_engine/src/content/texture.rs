@@ -512,7 +512,7 @@ pub fn create_compressed_texture(image: &mut Gd<Image>, max_size: i32) -> Gd<Tex
 }
 
 /// Hard cap on any single dimension, regardless of pixel budget.
-/// Keeps us safely under common GPU `MAX_TEXTURE_SIZE` limits on mobile / Quest.
+/// Keeps us safely under common GPU `MAX_TEXTURE_SIZE` limits on mobile.
 const MAX_TEXTURE_DIMENSION: i32 = 4096;
 
 /// Downscale `image` (preserving aspect ratio) so that:

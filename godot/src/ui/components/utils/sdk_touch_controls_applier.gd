@@ -8,7 +8,7 @@ extends RefCounted
 ## itself (denylist / main_action).
 ##
 ## Driven from Explorer._process wherever the on-screen controls are shown (mobile +
-## desktop dev, never XR). Only acts on state changes and defers to the explorer's
+## desktop dev). Only acts on state changes and defers to the explorer's
 ## hide-ui state when restoring visibility. It also positions the crosshair per camera
 ## zoom (issue #2709): mobile rides it between screen center (first person) and an
 ## upper-third anchor above the avatar's head (third person), interpolated in sync

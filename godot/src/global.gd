@@ -191,10 +191,6 @@ var _signing_out: bool = false
 var _returning_to_discover: bool = false
 
 
-func is_xr() -> bool:
-	return OS.has_feature("xr") or get_viewport().use_xr
-
-
 func is_emulating_safe_area() -> bool:
 	return should_emulate_ios() or should_emulate_android()
 
@@ -713,7 +709,7 @@ func open_webview_url(url):
 
 
 func open_url(url: String, use_webkit: bool = false):
-	if use_webkit and not Global.is_xr():
+	if use_webkit:
 		if DclIosPlugin.is_available():
 			DclIosPlugin.open_safari_auth_url(url)
 		elif DclAndroidPlugin.is_available():
