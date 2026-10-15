@@ -1679,6 +1679,60 @@ export async function resolveDestinationWithSecret(
 }
 
 /**
+ * A trigger arrived: whether to wait the beat and fire. `rails` are the guard rails that are up.
+ */
+export function reviewCheck(rails: Array<Rail>): boolean /*throws*/ {
+  return FfiConverterBool.lift(
+    uniffiCaller.rustCallWithError(
+      /*liftError:*/ FfiConverterTypeCoreError.lift.bind(
+        FfiConverterTypeCoreError,
+      ),
+      /*caller:*/ callStatus => {
+        return nativeModule().ubrn_uniffi_dcl_core_fn_func_review_check(
+          FfiConverterSequenceTypeRail.lower(
+            rails,
+            nativeModule().rustbuffer_alloc,
+          ),
+          callStatus,
+        );
+      },
+      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+    ),
+  );
+}
+
+/**
+ * The beat passed: asks again and, when still fine, counts the shot and reports it. Returns the
+ * shot number to launch the card for, or nothing.
+ */
+export function reviewFire(
+  trigger: string,
+  rails: Array<Rail>,
+): number | undefined /*throws*/ {
+  const __rb: Uint8Array = uniffiCaller.rustCallWithError(
+    /*liftError:*/ FfiConverterTypeCoreError.lift.bind(
+      FfiConverterTypeCoreError,
+    ),
+    /*caller:*/ callStatus => {
+      return nativeModule().ubrn_uniffi_dcl_core_fn_func_review_fire(
+        FfiConverterString.lower(trigger, nativeModule().rustbuffer_alloc),
+        FfiConverterSequenceTypeRail.lower(
+          rails,
+          nativeModule().rustbuffer_alloc,
+        ),
+        callStatus,
+      );
+    },
+    /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+  );
+  try {
+    return FfiConverterOptionalUInt32.lift(__rb);
+  } finally {
+    nativeModule().rustbuffer_free(__rb);
+  }
+}
+
+/**
  * Shareable link to a scene: a position in Genesis City, the world's name elsewhere.
  */
 export function sceneLinkUrl(realm: string, x: number, y: number): string {
@@ -10345,6 +10399,53 @@ const FfiConverterTypePlatform = (() => {
   return new FFIConverter();
 })();
 
+/**
+ * What can hold a prompt back: an app that is loading, in an error state or mid-dialog is
+ * exactly when a rating prompt reads worst.
+ */
+export enum Rail {
+  Loading,
+  Modal,
+  DeviceSupport,
+  Connection,
+}
+
+const FfiConverterTypeRail = (() => {
+  type TypeName = Rail;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      switch (c.readI32()) {
+        case 1:
+          return Rail.Loading;
+        case 2:
+          return Rail.Modal;
+        case 3:
+          return Rail.DeviceSupport;
+        case 4:
+          return Rail.Connection;
+        default:
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      switch (value) {
+        case Rail.Loading:
+          return c.writeI32(1);
+        case Rail.Modal:
+          return c.writeI32(2);
+        case Rail.DeviceSupport:
+          return c.writeI32(3);
+        case Rail.Connection:
+          return c.writeI32(4);
+      }
+    }
+    allocationSize(value: TypeName): number {
+      return 4;
+    }
+  }
+  return new FFIConverter();
+})();
+
 // Enum: SceneRequest
 export enum SceneRequest_Tags {
   OpenExternalUrl = 'OpenExternalUrl',
@@ -11906,6 +12007,11 @@ const FfiConverterOptionalTypePlaceUserState = new FfiConverterOptional(
   FfiConverterTypePlaceUserState,
 );
 
+// FfiConverter for Array<Rail>
+const FfiConverterSequenceTypeRail = new FfiConverterArray(
+  FfiConverterTypeRail,
+);
+
 // FfiConverter for Array<SettingEntry>
 const FfiConverterSequenceTypeSettingEntry = new FfiConverterArray(
   FfiConverterTypeSettingEntry,
@@ -12304,6 +12410,20 @@ function uniffiEnsureInitialized() {
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_dcl_core_checksum_func_resolve_destination_with_secret',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_review_check() !== 46765
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_review_check',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_review_fire() !== 8996
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_review_fire',
     );
   }
   if (
@@ -12730,6 +12850,7 @@ export default Object.freeze({
     FfiConverterTypePropertyValue,
     FfiConverterTypePushPlatform,
     FfiConverterTypePushRegistration,
+    FfiConverterTypeRail,
     FfiConverterTypeRect,
     FfiConverterTypeReportContext,
     FfiConverterTypeReportEvent,

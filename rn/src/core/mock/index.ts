@@ -32,6 +32,8 @@ export function createMockCore(options: { signedIn?: boolean } = {}): CoreApi {
     sessionForegrounded: () => {},
     sessionBackgrounded: () => {},
     sessionTick: () => {},
+    reviewCheck: () => false,
+    reviewFire: () => undefined,
     ...createMockGates(),
     ...createMockScene(bus),
   };

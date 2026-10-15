@@ -312,6 +312,15 @@ interface NativeModuleInterface {
     input: Uint8Array,
     secret: Uint8Array,
   ): bigint;
+  ubrn_uniffi_dcl_core_fn_func_review_check(
+    rails: Uint8Array,
+    uniffi_out_err: UniffiRustCallStatus,
+  ): number;
+  ubrn_uniffi_dcl_core_fn_func_review_fire(
+    trigger: Uint8Array,
+    rails: Uint8Array,
+    uniffi_out_err: UniffiRustCallStatus,
+  ): Uint8Array;
   ubrn_uniffi_dcl_core_fn_func_scene_link_url(
     realm: Uint8Array,
     x: number,
@@ -557,6 +566,8 @@ interface NativeModuleInterface {
   ubrn_uniffi_dcl_core_checksum_func_remove_listener(): number;
   ubrn_uniffi_dcl_core_checksum_func_resolve_destination(): number;
   ubrn_uniffi_dcl_core_checksum_func_resolve_destination_with_secret(): number;
+  ubrn_uniffi_dcl_core_checksum_func_review_check(): number;
+  ubrn_uniffi_dcl_core_checksum_func_review_fire(): number;
   ubrn_uniffi_dcl_core_checksum_func_scene_link_url(): number;
   ubrn_uniffi_dcl_core_checksum_func_session_backgrounded(): number;
   ubrn_uniffi_dcl_core_checksum_func_session_foregrounded(): number;

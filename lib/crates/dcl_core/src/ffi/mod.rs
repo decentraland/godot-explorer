@@ -17,6 +17,7 @@ mod notifications;
 mod places;
 mod profile;
 mod push;
+mod review;
 mod scene;
 mod session;
 mod session_tracker;

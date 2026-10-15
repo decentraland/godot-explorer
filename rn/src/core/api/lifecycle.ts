@@ -7,4 +7,6 @@ export type LifecycleApi = Pick<
   | 'sessionForegrounded'
   | 'sessionBackgrounded'
   | 'sessionTick'
+  | 'reviewCheck'
+  | 'reviewFire'
 >;

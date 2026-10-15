@@ -44,6 +44,8 @@ export type ModalApi = {
   show: (spec: ModalSpec) => void;
   dismiss: (key: string) => void;
   askPassword: (spec: PasswordSpec) => void;
+  /** Whether a dialog is up: a review prompt must not land on top of one. */
+  isOpen: () => boolean;
 };
 
 const ModalContext = createContext<ModalApi | null>(null);
@@ -138,8 +140,10 @@ export function ModalProvider({ children }: { children: ReactNode }) {
     (spec: PasswordSpec) => setPassword(spec),
     [],
   );
+  const open = useRef(false);
+  open.current = queue.length > 0 || password !== null;
   const api = useMemo(
-    () => ({ show, dismiss, askPassword }),
+    () => ({ show, dismiss, askPassword, isOpen: () => open.current }),
     [show, dismiss, askPassword],
   );
   useEffect(() => {

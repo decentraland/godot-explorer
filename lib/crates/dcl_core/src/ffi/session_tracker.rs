@@ -12,6 +12,7 @@ fn tracker() -> Result<&'static session::SessionTracker, CoreError> {
 /// The process started; call once, as soon as the shell is up.
 #[uniffi::export]
 pub fn session_launched() -> Result<(), CoreError> {
+    crate::review::global(core()?).session_started();
     session::emit(tracker()?.launched(session::unix_now(), session::monotonic_ms()));
     Ok(())
 }

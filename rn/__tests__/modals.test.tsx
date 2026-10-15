@@ -331,6 +331,7 @@ describe('back from the world', () => {
       show: modal => shown.push(modal),
       dismiss: () => {},
       askPassword: () => {},
+      isOpen: () => false,
     });
     const leave = jest.fn();
     confirmLeave(leave);

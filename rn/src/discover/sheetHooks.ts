@@ -3,6 +3,7 @@ import { useNav } from '../app/NavProvider';
 import { useToast } from '../ds';
 import { t } from '../i18n';
 import { syncEventReminder } from '../notifications/push';
+import { maybeAskForReview } from '../notifications/review';
 import { enterPlaceChecked } from '../modals/destination';
 import { Place } from './api';
 import { useApi } from './ApiContext';
@@ -70,11 +71,24 @@ export function usePlaceDetail(placeId: string) {
   );
   const setFavorite = useCallback(
     (on: boolean) =>
-      update({ favorite: on }, () => api.setFavorite(placeId, on)),
+      update({ favorite: on }, () =>
+        api.setFavorite(placeId, on).then(() => {
+          if (on) {
+            maybeAskForReview('place_favorited').catch(() => {});
+          }
+        }),
+      ),
     [api, placeId, update],
   );
   const setVote = useCallback(
-    (vote: VoteState) => update({ vote }, () => api.setVote(placeId, vote)),
+    (vote: VoteState) =>
+      update({ vote }, () =>
+        api.setVote(placeId, vote).then(() => {
+          if (vote === 'like') {
+            maybeAskForReview('place_upvoted').catch(() => {});
+          }
+        }),
+      ),
     [api, placeId, update],
   );
   return { detail: value, failed, setFavorite, setVote };

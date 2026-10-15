@@ -21,6 +21,7 @@ import com.facebook.react.modules.core.PermissionListener
 import com.google.firebase.messaging.FirebaseMessaging
 import java.util.Locale
 import java.util.TimeZone
+import org.decentraland.godotexplorer.InAppReview
 import org.decentraland.godotexplorer.NotificationReceiver
 import org.decentraland.godotexplorer.PushTokenStore
 
@@ -33,6 +34,19 @@ class DclPushModule(private val context: ReactApplicationContext) :
     ReactContextBaseJavaModule(context) {
 
   override fun getName() = "DclPush"
+
+  private val review by lazy { InAppReview(TAG) }
+
+  /** Launches the store's review card; resolves true when the flow ran (not when the player rated). */
+  @ReactMethod
+  fun requestReview(promise: Promise) {
+    val activity = context.currentActivity
+    if (activity == null) {
+      promise.resolve(false)
+      return
+    }
+    review.launch(activity) { reason -> promise.resolve(reason.isEmpty()) }
+  }
 
   @ReactMethod
   fun getToken(promise: Promise) {

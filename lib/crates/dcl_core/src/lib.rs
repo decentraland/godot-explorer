@@ -25,6 +25,7 @@ pub mod places;
 pub mod profile;
 pub mod realm;
 pub mod report;
+pub mod review;
 pub mod scene;
 pub mod scene_requests;
 pub mod session;
