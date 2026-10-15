@@ -78,7 +78,7 @@ in phase 3 and not run again here. Rows marked "not done" are the work left befo
 | Low memory | Engine notice + modal | Not run | |
 | Connection lost / poor connection | `dcl_core::connection` + `useConnectionQuality` | Not run | iOS buttonless second dialog dropped |
 | Review prompt | `dcl_core::review` + Play card | Not run | Wearable-claimed trigger not wired |
-| Back button leaves the world | `confirmLeave` | Not run | |
+| Back button leaves the world | `confirmLeave` | Ran: confirm shown, LEAVE returns to Discover, re-enter loads | |
 | Orientation (portrait menus, landscape world) | `setOrientation` per screen | Ran: world in landscape | |
 | Creator preview HUD, multiplayer debug, interactable overlay | Dropped | | Dev tools; rebuild if wanted |
 
