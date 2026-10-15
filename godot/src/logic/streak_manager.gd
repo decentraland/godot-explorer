@@ -191,6 +191,20 @@ func get_pending_today_day() -> int:
 	return floor_day + 1
 
 
+## True when the pending day above is a floor-reset, not just tomorrow's sequential day or a true
+## first-ever landing — i.e. the streak is ALREADY broken before the player does anything. Lets
+## Discover show the LOST look on the very first landing after a missed day (issue #3018: "Streak
+## lost modal — first Discover landing after missed day, replaces daily progress") instead of only
+## after a jump-in actually commits the reset via credit_jump_in().
+func is_pending_day_a_reset() -> bool:
+	var config: ConfigData = Global.config
+	if config.streak_last_credit_day_unix <= 0:
+		return false
+	var today := _local_midnight(int(Time.get_unix_time_from_system()))
+	var gap_days := (today - config.streak_last_credit_day_unix) / DAY_SECONDS
+	return gap_days > 1
+
+
 ## One-shot like take_pending_modal(): returns the pending day to show a "come finish today's
 ## mission" reminder for (Figma "D2-Streak" — same title/copy as the post-credit modal, but the
 ## row renders that day as still-pending, not checked), or 0 if there's no pending day right now

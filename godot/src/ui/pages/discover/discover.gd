@@ -96,7 +96,13 @@ func _async_show_streak_current_reminder_if_pending() -> void:
 	var pending_day := Global.streak_manager.take_current_reminder()
 	if pending_day == 0:
 		return
-	var state := StreakModal.State.WELCOME if pending_day == 1 else StreakModal.State.DAY_PROGRESS
+	var state: int
+	if Global.streak_manager.is_pending_day_a_reset():
+		state = StreakModal.State.LOST
+	elif pending_day == 1:
+		state = StreakModal.State.WELCOME
+	else:
+		state = StreakModal.State.DAY_PROGRESS
 	await _async_show_streak_modal_and_wait(
 		state, Global.streak_manager.get_effective_progress_day(), pending_day
 	)
