@@ -4,12 +4,9 @@
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="2_bold"]
 [ext_resource type="FontFile" path="res://assets/themes/fonts/inter/Inter-Regular.ttf" id="3_medium"]
 [ext_resource type="PackedScene" path="res://src/ui/components/molecules/modal_actions/modal_actions.tscn" id="4_actions"]
+[ext_resource type="Texture2D" path="res://src/ui/components/organisms/ftue_tutorial/assets/welcome_glow.png" id="5_glow"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_card"]
-content_margin_left = 54.0
-content_margin_top = 54.0
-content_margin_right = 54.0
-content_margin_bottom = 48.0
 bg_color = Color(0.29803923, 0.078431375, 0.4862745, 1)
 corner_radius_top_left = 16
 corner_radius_top_right = 16
@@ -35,16 +32,32 @@ grow_vertical = 2
 mouse_filter = 2
 
 [node name="PanelContainer" type="PanelContainer" parent="CenterContainer"]
+clip_children = 2
 custom_minimum_size = Vector2(720, 400)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_card")
 
-[node name="VBoxContainer" type="VBoxContainer" parent="CenterContainer/PanelContainer"]
+[node name="TextureRect_Glow" type="TextureRect" parent="CenterContainer/PanelContainer"]
+layout_mode = 2
+mouse_filter = 2
+texture = ExtResource("5_glow")
+expand_mode = 1
+stretch_mode = 0
+
+[node name="MarginContainer" type="MarginContainer" parent="CenterContainer/PanelContainer"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 54
+theme_override_constants/margin_top = 54
+theme_override_constants/margin_right = 54
+theme_override_constants/margin_bottom = 48
+
+[node name="VBoxContainer" type="VBoxContainer" parent="CenterContainer/PanelContainer/MarginContainer"]
 layout_mode = 2
 theme_override_constants/separation = 16
 alignment = 1
 
-[node name="Label_Title" type="Label" parent="CenterContainer/PanelContainer/VBoxContainer"]
+[node name="Label_Title" type="Label" parent="CenterContainer/PanelContainer/MarginContainer/VBoxContainer"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 theme_override_fonts/font = ExtResource("2_bold")
@@ -53,7 +66,7 @@ text = "FTUE_TUTORIAL_WELCOME_TITLE"
 horizontal_alignment = 1
 autowrap_mode = 3
 
-[node name="Label_Body" type="Label" parent="CenterContainer/PanelContainer/VBoxContainer"]
+[node name="Label_Body" type="Label" parent="CenterContainer/PanelContainer/MarginContainer/VBoxContainer"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
 theme_override_fonts/font = ExtResource("3_medium")
@@ -62,16 +75,16 @@ text = "FTUE_TUTORIAL_WELCOME_BODY"
 horizontal_alignment = 1
 autowrap_mode = 3
 
-[node name="Spacer" type="Control" parent="CenterContainer/PanelContainer/VBoxContainer"]
+[node name="Spacer" type="Control" parent="CenterContainer/PanelContainer/MarginContainer/VBoxContainer"]
 custom_minimum_size = Vector2(0, 16)
 layout_mode = 2
 
-[node name="ModalActions" parent="CenterContainer/PanelContainer/VBoxContainer" instance=ExtResource("4_actions")]
+[node name="ModalActions" parent="CenterContainer/PanelContainer/MarginContainer/VBoxContainer" instance=ExtResource("4_actions")]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 40
 secondary_text = "FTUE_TUTORIAL_WELCOME_SKIP"
 primary_text = "FTUE_TUTORIAL_WELCOME_START"
 
-[connection signal="primary_pressed" from="CenterContainer/PanelContainer/VBoxContainer/ModalActions" to="." method="_on_modal_actions_primary_pressed"]
-[connection signal="secondary_pressed" from="CenterContainer/PanelContainer/VBoxContainer/ModalActions" to="." method="_on_modal_actions_secondary_pressed"]
+[connection signal="primary_pressed" from="CenterContainer/PanelContainer/MarginContainer/VBoxContainer/ModalActions" to="." method="_on_modal_actions_primary_pressed"]
+[connection signal="secondary_pressed" from="CenterContainer/PanelContainer/MarginContainer/VBoxContainer/ModalActions" to="." method="_on_modal_actions_secondary_pressed"]

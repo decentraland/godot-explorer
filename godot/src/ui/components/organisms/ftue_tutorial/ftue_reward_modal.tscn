@@ -7,13 +7,16 @@
 [ext_resource type="FontFile" uid="uid://d2vlaexk003yw" path="res://assets/themes/fonts/inter/Inter-Medium.ttf" id="5_medium"]
 [ext_resource type="FontFile" path="res://assets/themes/fonts/inter/Inter-Regular.ttf" id="7_regular"]
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="6_theme"]
+[ext_resource type="PackedScene" path="res://src/ui/components/molecules/emote_avatar_preview/emote_avatar_preview.tscn" id="8_emote"]
+[ext_resource type="Texture2D" path="res://src/ui/components/organisms/ftue_tutorial/assets/reward_bg.png" id="9_bg"]
+[ext_resource type="Material" uid="uid://ckiy5eidu1d5t" path="res://src/ui/components/atoms/images/blur_background/quick_blur.tres" id="10_blur"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_card"]
 bg_color = Color(0.298, 0.078, 0.486, 1)
-corner_radius_top_left = 24
-corner_radius_top_right = 24
-corner_radius_bottom_right = 24
-corner_radius_bottom_left = 24
+corner_radius_top_left = 16
+corner_radius_top_right = 16
+corner_radius_bottom_right = 16
+corner_radius_bottom_left = 16
 
 [sub_resource type="Animation" id="Animation_claim"]
 resource_name = "claim"
@@ -42,11 +45,21 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0, 0, 0, 0.6)
+color = Color(0.08627451, 0.08235294, 0.09411765, 0.4)
 script = ExtResource("1_modal")
 body_key = "FTUE_TUTORIAL_REWARD_BODY"
 managed_by_modal_manager = false
 guests_must_upgrade = true
+
+[node name="Blur" type="ColorRect" parent="."]
+material = ExtResource("10_blur")
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
 
 [node name="VBoxContainer" type="VBoxContainer" parent="."]
 layout_mode = 1
@@ -65,6 +78,12 @@ layout_mode = 2
 size_flags_horizontal = 4
 theme_override_styles/panel = SubResource("StyleBoxFlat_card")
 
+[node name="TextureRect_Background" type="TextureRect" parent="VBoxContainer/PanelContainer"]
+layout_mode = 2
+mouse_filter = 2
+texture = ExtResource("9_bg")
+expand_mode = 1
+
 [node name="MarginContainer_Reward" type="MarginContainer" parent="VBoxContainer/PanelContainer"]
 layout_mode = 2
 mouse_filter = 2
@@ -80,6 +99,11 @@ mouse_filter = 2
 texture = ExtResource("2_art")
 expand_mode = 1
 stretch_mode = 6
+
+[node name="EmoteAvatarPreview" parent="VBoxContainer/PanelContainer/MarginContainer_Reward" node_paths=PackedStringArray("fallback") instance=ExtResource("8_emote")]
+unique_name_in_owner = true
+layout_mode = 2
+fallback = NodePath("../TextureRect_Reward")
 
 [node name="CenterContainer" type="CenterContainer" parent="VBoxContainer/PanelContainer/MarginContainer_Reward"]
 layout_mode = 2

@@ -36,9 +36,8 @@ const SCREEN_WELCOME := "FTUE_TUTORIAL_WELCOME"
 const SCREEN_STEP := "FTUE_TUTORIAL_STEP"
 const SCREEN_COMPLETE := "FTUE_TUTORIAL_COMPLETE"
 const SCREEN_REWARD := "FTUE_TUTORIAL_REWARD"
-# Entry of RewardCampaigns.CAMPAIGNS the tutorial grants. The existing campaign stands in for
-# testing until the tutorial has its own (#2767).
-const REWARD_CAMPAIGN := "MobilePet"
+# Entry of RewardCampaigns.CAMPAIGNS the tutorial grants.
+const REWARD_CAMPAIGN := "FtueTutorial"
 const OVERLAY_SCENE := "res://src/ui/components/organisms/ftue_tutorial/ftue_tutorial_overlay.tscn"
 const WELCOME_SCENE := "res://src/ui/components/organisms/ftue_tutorial/ftue_welcome_modal.tscn"
 # i18n-keys: FTUE_TUTORIAL_REWARD_BODY

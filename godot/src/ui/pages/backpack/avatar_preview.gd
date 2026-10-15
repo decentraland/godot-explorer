@@ -84,6 +84,9 @@ var _last_snapped_parent_y: float = NAN
 var _baseline_offset_top: float = 0.0
 
 var _aabb_debug_nodes: Array[MeshInstance3D] = []
+# Set by fit_to_aabb(): the camera keeps framing this box instead of the standing body.
+var _fixed_fit_aabb: AABB = AABB()
+var _fixed_fit_view: Basis = Basis.IDENTITY
 
 @onready var avatar = %Avatar
 @onready var camera_center: Node3D = %CameraCenter
@@ -381,6 +384,9 @@ func _apply_snap_top_to_viewport() -> void:
 func _on_resized() -> void:
 	if size.x <= 0.0 or size.y <= 0.0:
 		return
+	if _fixed_fit_aabb.has_volume():
+		_apply_fixed_fit()
+		return
 	if (
 		"overall" in _cached_aabbs
 		and (
@@ -418,6 +424,8 @@ func async_on_avatar_loaded():
 	var first_load: bool = _cached_aabbs.is_empty()
 	_cached_aabbs = _compute_avatar_aabbs()
 	_update_aabb_debug_box(_cached_aabbs)
+	if _fixed_fit_aabb.has_volume():
+		return
 	var aabb_key: String = _camera_focus if _camera_focus in _cached_aabbs else "overall"
 	if aabb_key in _cached_aabbs:
 		if first_load:
@@ -554,11 +562,14 @@ func _symmetrize_aabb_x(aabb: AABB) -> AABB:
 	)
 
 
-func _compute_avatar_aabbs() -> Dictionary:
+# `view` measures in a turned frame (a camera's axes) instead of the avatar's, unmirrored.
+func _compute_avatar_aabbs(view := Basis.IDENTITY) -> Dictionary:
 	var skeleton: Skeleton3D = avatar.body_shape_skeleton_3d
 	if skeleton == null:
 		return {}
-	var avatar_xform_inv: Transform3D = (avatar.global_transform as Transform3D).affine_inverse()
+	var avatar_xform_inv: Transform3D = (
+		Transform3D(view.inverse()) * (avatar.global_transform as Transform3D).affine_inverse()
+	)
 	var results: Dictionary = {}
 	var firsts: Dictionary = {
 		"overall": true,
@@ -673,6 +684,8 @@ func _compute_avatar_aabbs() -> Dictionary:
 		if key in results:
 			var a: AABB = results[key]
 			results[key] = AABB(a.position + Vector3(0.0, -0.05, 0.0), a.size)
+	if view != Basis.IDENTITY:
+		return results
 	for key in results:
 		results[key] = _symmetrize_aabb_x(results[key])
 	return results
@@ -821,6 +834,35 @@ func _fit_to_overall() -> void:
 	_target_camera_size = cam_size
 
 
+## Frames `aabb` at once, and keeps framing it on resize instead of the standing body. The
+## camera looks along `view` (its axes, e.g. Basis.from_euler of a pitch and yaw) at the box
+## centre; `aabb` is measured along those axes: compute_current_fit_aabb(view).
+func fit_to_aabb(aabb: AABB, view := Basis.IDENTITY) -> void:
+	_fixed_fit_aabb = aabb
+	_fixed_fit_view = view
+	_apply_fixed_fit()
+
+
+func _apply_fixed_fit() -> void:
+	if not is_inside_tree() or size.x <= 0.0 or size.y <= 0.0:
+		return
+	var aabb := _fixed_fit_aabb
+	camera_center.basis = _fixed_fit_view
+	var vp_h: float = size.y
+	var eff_top: float = _effective_margin_top()
+	var eff_bottom: float = _effective_margin_bottom()
+	var inner_h: float = maxf(1.0, vp_h - eff_top - eff_bottom)
+	var inner_w: float = maxf(1.0, size.x - preview_margin_left - preview_margin_right)
+	var cam_size: float = maxf(aabb.size.y * vp_h / inner_h, aabb.size.x * vp_h / inner_w)
+	# Unequal top and bottom margins move the box off the middle of the view.
+	var center := aabb.get_center() + Vector3.UP * (eff_top - eff_bottom) * cam_size / (2.0 * vp_h)
+	var pivot := _fixed_fit_view * center
+	_target_camera_size = cam_size
+	_target_camera_center_y = pivot.y
+	camera_3d.size = cam_size
+	camera_center.position = pivot
+
+
 func _fit_camera_to_aabb(aabb: AABB, extra_margin: int = 0, instant: bool = false) -> void:
 	if not is_inside_tree():
 		return
@@ -960,9 +1002,10 @@ func async_capture_current_view(dest_size: Vector2i, ssaa: int = 1) -> Image:
 
 ## Overall AABB of the currently visible meshes in avatar-local space, skinned
 ## against the CURRENT bone poses — so a frozen emote pose or a lone wearable
-## (show_only_wearables) is measured as displayed. 2m fallback when empty.
-func compute_current_fit_aabb() -> AABB:
-	var aabbs := _compute_avatar_aabbs()
+## (show_only_wearables) is measured as displayed. 2m fallback when empty. With `view`, the box
+## is measured along those axes instead (see fit_to_aabb()).
+func compute_current_fit_aabb(view := Basis.IDENTITY) -> AABB:
+	var aabbs := _compute_avatar_aabbs(view)
 	var overall: AABB = aabbs.get("overall", AABB(Vector3(-1.0, 0.0, -1.0), Vector3(2.0, 2.0, 2.0)))
 	return overall
 

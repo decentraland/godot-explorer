@@ -44,6 +44,11 @@ func async_setup(campaign: Dictionary) -> void:
 	# whether or not the item is already in the wallet. Just reveal it (kept async for the caller's
 	# await contract; no network wait here anymore).
 	show()
+	# A scene with an emote preview shows the player performing the reward over the art.
+	var emote_preview := get_node_or_null("%EmoteAvatarPreview") as EmoteAvatarPreview
+	var urn := str(campaign.get("urn", ""))
+	if emote_preview != null and not urn.is_empty():
+		emote_preview.async_play(urn)
 
 
 func _ready() -> void:
