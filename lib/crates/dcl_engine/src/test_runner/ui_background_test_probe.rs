@@ -16,6 +16,7 @@ use godot::classes::{
 use godot::prelude::*;
 
 use crate::{
+    content::texture_quality::TextureQuality,
     content::{
         content_mapping::{ContentMappingAndUrl, ContentMappingAndUrlRef},
         texture::TextureEntry,
@@ -27,10 +28,7 @@ use crate::{
             sdk::components::{BackgroundTextureMode, PbUiBackground},
         },
     },
-    godot_classes::{
-        dcl_config::TextureQuality, dcl_global::DclGlobal, dcl_ui_background::DclUiBackground,
-        promise::Promise,
-    },
+    godot_classes::{dcl_global::DclGlobal, dcl_ui_background::DclUiBackground, promise::Promise},
 };
 
 /// Power-of-two, uncompressed: the snapshot is crisp and identical across renderers, so

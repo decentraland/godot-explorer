@@ -89,11 +89,6 @@ impl ProfileService {
 
         // Handle guest profile
         if is_guest {
-            let profile_dict = new_profile.bind().to_godot_dictionary();
-            let mut config = DclGlobal::singleton().bind().get_config();
-            config.set("guest_profile", &profile_dict.to_variant());
-            config.call("save_to_settings_file", &[]);
-
             if increment_version {
                 new_profile.bind_mut().increment_profile_version();
             }

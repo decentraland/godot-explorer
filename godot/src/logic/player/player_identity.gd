@@ -37,9 +37,7 @@ func async_fetch_profile(address: String, lambda_server_url: String) -> void:
 		return
 
 	if response is PromiseError:
-		# Profile not found or error - clear saved guest profile and start fresh
-		Global.get_config().guest_profile = {}
-		Global.get_config().save_to_settings_file()
+		# Profile not found or error - start fresh
 		self.set_default_profile()
 
 		if response.get_error().find("404") != -1:
@@ -55,15 +53,7 @@ func async_fetch_profile(address: String, lambda_server_url: String) -> void:
 
 
 func set_default_profile_or_guest_profile():
-	if Global.get_config().guest_profile.is_empty():
-		self.set_default_profile()
-	else:
-		var guest_profile := DclUserProfile.from_godot_dictionary(Global.get_config().guest_profile)
-		# Update the address to match the current wallet (guest profile may have old guest address)
-		var current_address = get_address_str()
-		if not current_address.is_empty():
-			guest_profile.set_ethereum_address(current_address)
-		self.set_profile(guest_profile)
+	self.set_default_profile()
 
 
 func _on_wallet_connected(address: String, _chain_id: int, is_guest_value: bool):

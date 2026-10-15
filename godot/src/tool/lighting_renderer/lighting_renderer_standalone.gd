@@ -86,14 +86,13 @@ func _debug_lights(label: String) -> void:
 
 # gdlint:ignore = async-function-name
 func _run_captures() -> void:
-	var config := Global.get_config()
-	config.dynamic_skybox = false
+	Global.engine.adopt_setting("dynamic_skybox", false)
 
 	if not DirAccess.dir_exists_absolute(OUTPUT_DIR):
 		DirAccess.make_dir_recursive_absolute(OUTPUT_DIR)
 
 	for capture in CAPTURES:
-		config.skybox_time = capture[1]
+		Global.engine.adopt_setting("skybox_time", capture[1])
 		for i in SETTLE_FRAMES:
 			await get_tree().process_frame
 		await RenderingServer.frame_post_draw

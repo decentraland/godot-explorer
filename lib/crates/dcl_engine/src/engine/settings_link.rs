@@ -12,7 +12,7 @@ use dcl_core::settings::{
     self, BuildInfo, ContentCache, EngineApplier, SettingKey, SettingKind, SettingValue,
 };
 use dcl_core::Core;
-use godot::classes::{object::ConnectFlags, Engine, SceneTree};
+use godot::classes::{Engine, SceneTree};
 use godot::prelude::*;
 use tokio::sync::oneshot;
 
@@ -25,14 +25,6 @@ const AUDIO: &str = "res://src/config/audio_settings.gd";
 const GENERAL: &str = "res://src/config/general_settings.gd";
 const LOCALE: &str = "res://src/config/locale_settings.gd";
 const AVATAR_ANIM: &str = "res://src/decentraland_components/avatar/avatar_anim_helpers.gd";
-
-/// The settings the dynamic graphics manager rewrites when it picks a profile.
-const DYNAMIC_PROFILE_KEYS: [SettingKey; 4] = [
-    SettingKey::GraphicProfile,
-    SettingKey::ViewDistance,
-    SettingKey::ParticleQuality,
-    SettingKey::LimitFps,
-];
 
 type Task = Box<dyn FnOnce() + Send>;
 
@@ -87,7 +79,6 @@ pub(super) fn register() {
         Some(cache) => settings.set_content_cache(Arc::new(cache)),
         None => godot_error!("settings_link: no content provider for the cache contract"),
     }
-    adopt_dynamic_graphics();
     // Without the host the legacy GDScript settings own the config; the core's store would
     // overwrite it with defaults.
     if DclEngine::core_is_driving() {
@@ -109,6 +100,97 @@ impl EngineApplier for MainThreadApplier {
     fn apply(&self, key: SettingKey, value: &SettingValue) {
         let value = value.clone();
         run_on_main(move || apply_in_engine(key, &value));
+    }
+}
+
+fn store() -> Option<&'static settings::Settings> {
+    Core::try_get().map(|core| settings::global(core.data_dir()))
+}
+
+/// The value of an engine-read setting; `None` without a core.
+pub(crate) fn value(key: SettingKey) -> Option<SettingValue> {
+    store().map(|settings| settings.get(key))
+}
+
+pub(crate) fn texture_quality_setting() -> crate::content::texture_quality::TextureQuality {
+    use crate::content::texture_quality::TextureQuality;
+    match value(SettingKey::TextureQuality) {
+        Some(SettingValue::Int(quality)) => TextureQuality::from_i32(quality as i32),
+        _ => TextureQuality::Medium,
+    }
+}
+
+pub(crate) fn benchmark_gpu_score() -> Option<f64> {
+    match value(SettingKey::BenchmarkGpuScore) {
+        Some(SettingValue::Float(score)) => Some(score),
+        _ => None,
+    }
+}
+
+/// What a GDScript value becomes for `key`: the key's own type, numbers converted.
+fn from_variant(key: SettingKey, value: &Variant) -> Option<SettingValue> {
+    match key.kind() {
+        SettingKind::Bool => value.try_to::<bool>().ok().map(SettingValue::Bool),
+        SettingKind::Int => value
+            .try_to::<i64>()
+            .ok()
+            .or_else(|| value.try_to::<f64>().ok().map(|f| f as i64))
+            .map(SettingValue::Int),
+        SettingKind::Float => value
+            .try_to::<f64>()
+            .ok()
+            .or_else(|| value.try_to::<i64>().ok().map(|i| i as f64))
+            .map(SettingValue::Float),
+        SettingKind::Text => value
+            .try_to::<GString>()
+            .ok()
+            .map(|text| SettingValue::Text(text.to_string())),
+    }
+}
+
+/// `Global.engine.setting`: the value as a Godot variant, nil for an unknown name.
+pub(super) fn get_variant(name: &str) -> Variant {
+    let Some(key) = SettingKey::from_name(name) else {
+        godot_error!("setting: unknown key {name}");
+        return Variant::nil();
+    };
+    value(key).map_or_else(Variant::nil, |value| to_variant(&value))
+}
+
+/// Tells the engine's listeners (the environment, ...) that `name` changed. Main thread.
+fn notify_changed(name: &str) {
+    let Some(global) = DclGlobal::try_singleton() else {
+        return;
+    };
+    let mut engine = global.bind().get_engine();
+    engine.emit_signal("setting_changed", &[GString::from(name).to_variant()]);
+}
+
+/// Stores a value the player or the engine chose. `adopt` skips applying and saving (the engine
+/// already did the work, e.g. a graphic profile); otherwise it applies and `commit` saves.
+pub(super) fn set_variant(name: &str, value: &Variant, commit: bool, adopt: bool) {
+    let (Some(key), Some(settings)) = (SettingKey::from_name(name), store()) else {
+        godot_error!("setting: cannot set {name}");
+        return;
+    };
+    let Some(value) = from_variant(key, value) else {
+        godot_error!("setting: {name} does not take {value}");
+        return;
+    };
+    let result = if adopt {
+        settings.adopt(key, value)
+    } else {
+        settings.set(key, value, commit)
+    };
+    match result {
+        Ok(_) => notify_changed(name),
+        Err(error) => godot_warn!("setting: {name}: {error}"),
+    }
+}
+
+pub(super) fn save() {
+    if let Some(settings) = store() {
+        settings.save();
     }
 }
 
@@ -141,20 +223,14 @@ fn apply_in_engine(key: SettingKey, value: &SettingValue) {
         godot_error!("settings_link: no global to apply {}", key.name());
         return;
     };
-    // The locale is stored by `LocaleSettings.set_locale` itself.
-    if key != SettingKey::Locale {
-        global
-            .bind()
-            .get_config()
-            .set(key.name(), &to_variant(value));
-    }
+    notify_changed(key.name());
     let int = match value {
         SettingValue::Int(v) => *v,
         _ => 0,
     };
     match (key, value) {
-        (SettingKey::Locale, SettingValue::Text(locale)) => {
-            call_static(LOCALE, "set_locale", &[locale.to_variant()]);
+        (SettingKey::Locale, SettingValue::Text(_)) => {
+            call_static(LOCALE, "apply_locale", &[]);
         }
         (SettingKey::GraphicProfile, _) => {
             // A custom profile index is a no-op there.
@@ -183,7 +259,14 @@ fn apply_in_engine(key: SettingKey, value: &SettingValue) {
             call_static(GRAPHICS, "apply_particle_quality", &[int.to_variant()]);
         }
         (SettingKey::LimitFps, _) => {
-            call_static(GRAPHICS, "apply_fps_limit", &[]);
+            let mut manager = global.bind().dynamic_graphics_manager.clone();
+            manager.bind_mut().on_fps_limit_changed(int as i32);
+            let thermal_cap = manager.bind().get_thermal_fps_cap();
+            call_static(
+                GRAPHICS,
+                "apply_fps_limit_with_thermal_cap",
+                &[int.to_variant(), thermal_cap.to_variant()],
+            );
         }
         (SettingKey::MaxCacheSize, _) => {
             call_static(GENERAL, "apply_max_cache_size", &[]);
@@ -192,47 +275,6 @@ fn apply_in_engine(key: SettingKey, value: &SettingValue) {
             if let Some(function) = audio_apply_function(key) {
                 call_static(AUDIO, function, &[]);
             }
-        }
-    }
-}
-
-/// Reports the profile the dynamic graphics manager picked: `global.gd` applies it to the config
-/// first, and this deferred handler reads the result back into the core's store.
-fn adopt_dynamic_graphics() {
-    let Some(global) = DclGlobal::try_singleton() else {
-        return;
-    };
-    let mut manager = global.bind().dynamic_graphics_manager.clone();
-    let callable = Callable::from_fn("adopt_dynamic_graphics", |_| {
-        adopt_config_values();
-        Variant::nil()
-    });
-    manager.connect_flags(
-        "profile_change_requested",
-        &callable,
-        ConnectFlags::DEFERRED,
-    );
-}
-
-fn adopt_config_values() {
-    let (Some(global), Some(core)) = (DclGlobal::try_singleton(), Core::try_get()) else {
-        return;
-    };
-    let config = global.bind().get_config();
-    let settings = settings::global(core.data_dir());
-    for key in DYNAMIC_PROFILE_KEYS {
-        let raw = config.get(key.name());
-        let value = match key.kind() {
-            SettingKind::Int => raw.try_to::<i64>().map(SettingValue::Int),
-            _ => raw.try_to::<f64>().map(SettingValue::Float),
-        };
-        match value {
-            Ok(value) => {
-                if let Err(error) = settings.adopt(key, value) {
-                    godot_warn!("settings_link: cannot adopt {}: {error}", key.name());
-                }
-            }
-            Err(_) => godot_warn!("settings_link: {} is not a number", key.name()),
         }
     }
 }

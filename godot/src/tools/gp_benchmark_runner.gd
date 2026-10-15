@@ -246,32 +246,22 @@ func _process(_delta: float) -> void:
 							)
 						)
 						GraphicSettings.apply_fps_limit_with_thermal_cap(
-							ConfigData.FpsLimitMode.NO_LIMIT, 0
+							GraphicSettings.FpsLimitMode.NO_LIMIT, 0
 						)
 					Engine.max_fps = 0
 					DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
 					OS.low_processor_usage_mode = false
-					# Disconnect both handlers that re-apply the cap when their
-					# signals fire. _on_config_param_changed reacts to
-					# limit_fps changes; _on_thermal_fps_cap_changed reacts to
-					# DG's thermal signal (which keeps firing even if DG state
-					# is Disabled, since process_thermal_fps_cap is gated by a
-					# different field).
-					if Global.get_config().param_changed.is_connected(
-						Global._on_config_param_changed
-					):
-						Global.get_config().param_changed.disconnect(
-							Global._on_config_param_changed
-						)
-						_log("param_changed → _on_config_param_changed disconnected")
+					# Disconnect the handler that re-applies the cap when DG's thermal signal fires
+					# (it keeps firing even if DG state is Disabled, since process_thermal_fps_cap is
+					# gated by a different field).
 					if (
 						Global.dynamic_graphics_manager != null
 						and Global.dynamic_graphics_manager.thermal_fps_cap_changed.is_connected(
-							Global._on_thermal_fps_cap_changed
+							Global.graphics_autotune._on_thermal_fps_cap_changed
 						)
 					):
 						Global.dynamic_graphics_manager.thermal_fps_cap_changed.disconnect(
-							Global._on_thermal_fps_cap_changed
+							Global.graphics_autotune._on_thermal_fps_cap_changed
 						)
 						_log("thermal_fps_cap_changed → _on_thermal_fps_cap_changed disconnected")
 					_log(
@@ -1000,7 +990,7 @@ func _apply_forced_graphic_profile() -> void:
 		# the device's real ceiling. Without this, profile 0=FPS_18,
 		# 1/2=FPS_30, 3=FPS_60 silently cap the run via the
 		# `param_changed → apply_fps_limit → Engine.max_fps=N` path.
-		Global.get_config().limit_fps = ConfigData.FpsLimitMode.NO_LIMIT
+		Global.engine.adopt_setting("limit_fps", GraphicSettings.FpsLimitMode.NO_LIMIT)
 		_log("forced graphic_profile=%d, limit_fps=NO_LIMIT (post-load)" % idx)
 	var scale_v = config.get("viewport_scale_3d", null)
 	if scale_v != null:
@@ -1017,21 +1007,20 @@ func _apply_forced_graphic_profile() -> void:
 
 	# Per-feature graphics overrides — applied after the forced profile so
 	# we can A/B "Medium with feature X off" to isolate that feature's cost.
-	var cfg = Global.get_config()
 	if config.has("gfx-aa"):
-		cfg.anti_aliasing = config["gfx-aa"]
+		Global.engine.adopt_setting("anti_aliasing", config["gfx-aa"])
 		_log("gfx-aa override = %d" % config["gfx-aa"])
 	if config.has("gfx-shadow"):
-		cfg.shadow_quality = config["gfx-shadow"]
+		Global.engine.adopt_setting("shadow_quality", config["gfx-shadow"])
 		_log("gfx-shadow override = %d" % config["gfx-shadow"])
 	if config.has("gfx-bloom"):
-		cfg.bloom_quality = config["gfx-bloom"]
+		Global.engine.adopt_setting("bloom_quality", config["gfx-bloom"])
 		_log("gfx-bloom override = %d" % config["gfx-bloom"])
 	if config.has("gfx-skybox"):
-		cfg.skybox_quality = config["gfx-skybox"]
+		Global.engine.adopt_setting("skybox", config["gfx-skybox"])
 		_log("gfx-skybox override = %d" % config["gfx-skybox"])
 	if config.has("gfx-texture"):
-		cfg.texture_quality = config["gfx-texture"]
+		Global.engine.adopt_setting("texture_quality", config["gfx-texture"])
 		_log("gfx-texture override = %d" % config["gfx-texture"])
 
 	# Debug-draw heatmap. Set last so it overrides any rendering-mode

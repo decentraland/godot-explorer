@@ -5,24 +5,25 @@ var sky: SkyBase = null
 
 
 func _ready():
-	set_skybox_and_shadow(Global.get_config().skybox)
-	set_anti_aliasing(Global.get_config().anti_aliasing)
-	set_bloom(Global.get_config().bloom_quality)
-	set_view_distance(Global.get_config().view_distance)
-	Global.get_config().param_changed.connect(self._on_config_changed)
+	set_skybox_and_shadow(Global.engine.setting("skybox"))
+	set_anti_aliasing(Global.engine.setting("anti_aliasing"))
+	set_bloom(Global.engine.setting("bloom_quality"))
+	set_view_distance(Global.engine.setting("view_distance"))
+	Global.engine.setting_changed.connect(_on_setting_changed)
 
 
-func _on_config_changed(param: ConfigData.ConfigParams):
-	if param == ConfigData.ConfigParams.SKY_BOX:
-		set_skybox_and_shadow(Global.get_config().skybox)
-	elif param == ConfigData.ConfigParams.SHADOW_QUALITY:
-		set_shadow(Global.get_config().shadow_quality)
-	elif param == ConfigData.ConfigParams.BLOOM_QUALITY:
-		set_bloom(Global.get_config().bloom_quality)
-	elif param == ConfigData.ConfigParams.ANTI_ALIASING:
-		set_anti_aliasing(Global.get_config().anti_aliasing)
-	elif param == ConfigData.ConfigParams.VIEW_DISTANCE:
-		set_view_distance(Global.get_config().view_distance)
+func _on_setting_changed(setting_name: String):
+	match setting_name:
+		"skybox":
+			set_skybox_and_shadow(Global.engine.setting("skybox"))
+		"shadow_quality":
+			set_shadow(Global.engine.setting("shadow_quality"))
+		"bloom_quality":
+			set_bloom(Global.engine.setting("bloom_quality"))
+		"anti_aliasing":
+			set_anti_aliasing(Global.engine.setting("anti_aliasing"))
+		"view_distance":
+			set_view_distance(Global.engine.setting("view_distance"))
 
 
 func set_view_distance(far: float):
@@ -75,9 +76,9 @@ func set_skybox_and_shadow(skybox_index: int):
 				sky = load("res://assets/environment/sky_high/sky_high.tscn").instantiate()
 
 	add_child(sky)
-	set_shadow(Global.get_config().shadow_quality)
+	set_shadow(Global.engine.setting("shadow_quality"))
 	# Sky recreation swaps the WorldEnvironment — re-apply fog/view distance.
-	set_view_distance(Global.get_config().view_distance)
+	set_view_distance(Global.engine.setting("view_distance"))
 
 
 func set_shadow(shadow_quality: int):
@@ -155,7 +156,7 @@ func set_bloom(bloom_quality: int):
 # so it is the same than the environment that we want
 func set_anti_aliasing(anti_aliasing: int):
 	var value: RenderingServer.ViewportMSAA = RenderingServer.VIEWPORT_MSAA_DISABLED
-	match Global.get_config().anti_aliasing:
+	match anti_aliasing:
 		0:  # OFF
 			value = RenderingServer.VIEWPORT_MSAA_DISABLED
 		1:  # x2

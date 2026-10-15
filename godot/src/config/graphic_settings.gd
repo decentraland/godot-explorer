@@ -1,5 +1,10 @@
 class_name GraphicSettings extends RefCounted
 
+enum FpsLimitMode { VSYNC = 0, NO_LIMIT = 1, FPS_18 = 2, FPS_30 = 3, FPS_60 = 4, FPS_120 = 5 }  # FPS_18: Very Low profile
+
+# Graphics profile index for Custom (manual settings)
+const PROFILE_CUSTOM: int = 4
+
 ## Profile definitions as data - easier to tune without code changes
 ## Keys: aa, shadow, bloom, skybox, texture, fps, scale, mesh_lod_threshold, view_distance, particle_quality
 ##
@@ -24,7 +29,7 @@ const PROFILE_DEFINITIONS: Array[Dictionary] = [
 		"bloom": 0,
 		"skybox": 0,
 		"texture": 0,
-		"fps": ConfigData.FpsLimitMode.FPS_18,
+		"fps": FpsLimitMode.FPS_18,
 		"scale": 0.5,
 		"mesh_lod_threshold": 8.0,
 		"view_distance": 100.0,
@@ -41,7 +46,7 @@ const PROFILE_DEFINITIONS: Array[Dictionary] = [
 		"bloom": 0,
 		"skybox": 0,
 		"texture": 0,
-		"fps": ConfigData.FpsLimitMode.FPS_30,
+		"fps": FpsLimitMode.FPS_30,
 		"scale": 0.75,
 		"mesh_lod_threshold": 6.0,
 		"view_distance": 150.0,
@@ -60,7 +65,7 @@ const PROFILE_DEFINITIONS: Array[Dictionary] = [
 		"bloom": 1,
 		"skybox": 1,
 		"texture": 1,
-		"fps": ConfigData.FpsLimitMode.FPS_30,
+		"fps": FpsLimitMode.FPS_30,
 		"scale": 1.0,
 		"mesh_lod_threshold": 3.0,
 		"view_distance": 200.0,
@@ -82,7 +87,7 @@ const PROFILE_DEFINITIONS: Array[Dictionary] = [
 		"bloom": 2,
 		"skybox": 2,
 		"texture": 2,
-		"fps": ConfigData.FpsLimitMode.FPS_60,
+		"fps": FpsLimitMode.FPS_60,
 		"scale": 1.0,
 		"mesh_lod_threshold": 2.0,
 		"view_distance": 300.0,
@@ -198,7 +203,7 @@ static func apply_window_config() -> void:
 	if Global.is_mobile():
 		return
 
-	match Global.get_config().window_mode:
+	match Global.engine.setting("window_mode"):
 		0:  # Windowed
 			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
 		1:  # Borderless
@@ -210,22 +215,22 @@ static func apply_window_config() -> void:
 ## Convert FpsLimitMode enum to actual FPS value (0 = unlimited)
 static func fps_limit_mode_to_fps(mode: int) -> int:
 	match mode:
-		ConfigData.FpsLimitMode.VSYNC:
+		FpsLimitMode.VSYNC:
 			return 0
-		ConfigData.FpsLimitMode.NO_LIMIT:
+		FpsLimitMode.NO_LIMIT:
 			return 0
-		ConfigData.FpsLimitMode.FPS_18:
+		FpsLimitMode.FPS_18:
 			return 18
-		ConfigData.FpsLimitMode.FPS_30:
+		FpsLimitMode.FPS_30:
 			return 30
-		ConfigData.FpsLimitMode.FPS_60:
+		FpsLimitMode.FPS_60:
 			return 60
 		_:
 			return 30
 
 
 static func apply_fps_limit():
-	apply_fps_limit_with_thermal_cap(Global.get_config().limit_fps, 0)
+	apply_fps_limit_with_thermal_cap(Global.engine.setting("limit_fps"), 0)
 
 
 ## Apply FPS limit considering both user setting and thermal cap
@@ -243,7 +248,7 @@ static func apply_fps_limit_with_thermal_cap(fps_limit_mode: int, thermal_fps_ca
 	var physics_fps := 30
 
 	# Handle VSYNC specially
-	if fps_limit_mode == ConfigData.FpsLimitMode.VSYNC and thermal_fps_cap == 0:
+	if fps_limit_mode == FpsLimitMode.VSYNC and thermal_fps_cap == 0:
 		Engine.max_fps = 0
 		DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_ENABLED)
 		physics_fps = 60
@@ -283,20 +288,19 @@ static func apply_graphic_profile(profile_index: int) -> void:
 	if profile_index < 0 or profile_index >= PROFILE_DEFINITIONS.size():
 		return
 
-	var config: DclConfig = Global.get_config()
 	var profile: Dictionary = PROFILE_DEFINITIONS[profile_index]
 
-	# Apply all settings from profile definition
-	config.anti_aliasing = profile.aa
-	config.shadow_quality = profile.shadow
-	config.bloom_quality = profile.bloom
-	config.skybox = profile.skybox
-	config.texture_quality = profile.texture
-	config.limit_fps = profile.fps
-	config.resolution_3d_scale = profile.scale
-	config.view_distance = profile.view_distance
-	config.particle_quality = profile.particle_quality
-	config.graphic_profile = profile_index
+	# The profile's values are the engine's own choice: stored and announced, not applied again
+	Global.engine.adopt_setting("anti_aliasing", profile.aa)
+	Global.engine.adopt_setting("shadow_quality", profile.shadow)
+	Global.engine.adopt_setting("bloom_quality", profile.bloom)
+	Global.engine.adopt_setting("skybox", profile.skybox)
+	Global.engine.adopt_setting("texture_quality", profile.texture)
+	Global.engine.adopt_setting("limit_fps", profile.fps)
+	Global.engine.adopt_setting("resolution_3d_scale", profile.scale)
+	Global.engine.adopt_setting("view_distance", profile.view_distance)
+	Global.engine.adopt_setting("particle_quality", profile.particle_quality)
+	Global.engine.adopt_setting("graphic_profile", profile_index)
 
 	# Apply FPS limit immediately
 	apply_fps_limit()
@@ -308,7 +312,7 @@ static func apply_graphic_profile(profile_index: int) -> void:
 	# Apply 3D resolution scale to viewport
 	var viewport := Global.get_tree().root.get_viewport()
 	if viewport:
-		viewport.scaling_3d_scale = config.resolution_3d_scale
+		viewport.scaling_3d_scale = profile.scale
 		# Apply per-profile mesh-LOD pixel threshold. Higher value = swap
 		# to lower-detail LOD sooner (more aggressive). LOD chain is
 		# baked at GLTF import time; this is the only knob that decides

@@ -16,6 +16,7 @@ pub mod resource_provider;
 mod scene_saver;
 pub mod semaphore_ext;
 pub mod texture;
+pub mod texture_quality;
 pub mod thread_safety;
 mod video;
 mod wearable_entities;

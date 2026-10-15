@@ -30,11 +30,11 @@ static func apply_volume_settings():
 
 
 static func apply_general_volume_settings():
-	_apply_bus_percentage(&"Master", Global.get_config().audio_general_volume)
+	_apply_bus_percentage(&"Master", Global.engine.setting("audio_general_volume"))
 
 
 static func apply_scene_volume_settings(force_value = null):
-	var scene_volume: float = Global.get_config().audio_scene_volume
+	var scene_volume: float = Global.engine.setting("audio_scene_volume")
 	if force_value is float:
 		scene_volume = force_value
 
@@ -42,7 +42,7 @@ static func apply_scene_volume_settings(force_value = null):
 
 
 static func apply_voice_chat_volume_settings(force_value = null):
-	var voice_volume: float = Global.get_config().audio_voice_chat_volume
+	var voice_volume: float = Global.engine.setting("audio_voice_chat_volume")
 	if force_value is float:
 		voice_volume = force_value
 
@@ -50,15 +50,15 @@ static func apply_voice_chat_volume_settings(force_value = null):
 
 
 static func apply_ui_volume_settings():
-	_apply_bus_percentage(&"UI", Global.get_config().audio_ui_volume)
+	_apply_bus_percentage(&"UI", Global.engine.setting("audio_ui_volume"))
 
 
 static func apply_music_volume_settings():
-	_apply_bus_percentage(&"Music", Global.get_config().audio_music_volume)
+	_apply_bus_percentage(&"Music", Global.engine.setting("audio_music_volume"))
 
 
 static func apply_avatar_and_emotes_volume_settings(force_value = null):
-	var avatar_volume: float = Global.get_config().audio_avatar_and_emotes_volume
+	var avatar_volume: float = Global.engine.setting("audio_avatar_and_emotes_volume")
 	if force_value is float:
 		avatar_volume = force_value
 

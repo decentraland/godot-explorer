@@ -52,7 +52,8 @@ func _process(_dt):
 	if _last_parcel_position != parcel_position:
 		Global.scene_fetcher.update_position(parcel_position, false)
 		_last_parcel_position = parcel_position
-		Global.get_config().last_parcel_position = parcel_position
+		Global.engine.set_setting("last_parcel_x", parcel_position.x, false)
+		Global.engine.set_setting("last_parcel_y", parcel_position.y, false)
 		dirty_save_position = true
 		Global.change_parcel.emit(parcel_position)
 		Global.metrics.update_position("%d,%d" % [parcel_position.x, parcel_position.y])
@@ -110,7 +111,7 @@ func _ready():
 
 	# The episode is opened by the navigation below, which knows the realm this boot is
 	# actually heading for -- last_realm_joined is the wrong one for a deeplink.
-	loading.begin(Global.get_config().last_realm_joined, "on_explorer_ready", false)
+	loading.begin(Global.engine.setting("last_realm_joined"), "on_explorer_ready", false)
 	var cmd_params = get_params_from_cmd()
 	var cmd_realm = Global.FORCE_TEST_REALM if Global.FORCE_TEST else cmd_params[0]
 	var cmd_location = cmd_params[1]
@@ -155,7 +156,9 @@ func _ready():
 		_update_virtual_controls_visibility()
 
 	control_pointer_tooltip.hide()
-	var start_parcel_position: Vector2i = Vector2i(Global.get_config().last_parcel_position)
+	var start_parcel_position := Vector2i(
+		Global.engine.setting("last_parcel_x"), Global.engine.setting("last_parcel_y")
+	)
 	if cmd_location != null:
 		start_parcel_position = cmd_location
 
@@ -166,7 +169,7 @@ func _ready():
 	player.look_at(16 * Vector3(start_parcel_position.x + 1, 0, -(start_parcel_position.y + 1)))
 
 	Global.player_camera_node = player.camera
-	Global.player_camera_node.far = Global.get_config().view_distance
+	Global.player_camera_node.far = Global.engine.setting("view_distance")
 	Global.scene_runner.player_avatar_node = player.avatar
 	Global.scene_runner.player_body_node = player
 	Global.scene_runner.pointer_tooltip_changed.connect(self._on_pointer_tooltip_changed)
@@ -192,7 +195,7 @@ func _ready():
 			if not Global.deep_link_obj.preview.is_empty():
 				Global.scene_fetcher.set_preview_url(cmd_realm)
 	else:
-		var boot_realm: String = Global.get_config().last_realm_joined
+		var boot_realm: String = Global.engine.setting("last_realm_joined")
 		if boot_realm.is_empty():
 			boot_realm = FALLBACK_BOOT_REALM
 		Navigator.async_go(
@@ -392,7 +395,6 @@ func move_to(position: Vector3, skip_loading: bool, check_stuck: bool = true):
 func teleport_to(parcel: Vector2i) -> void:
 	move_to(Vector3i(parcel.x * 16 + 8, 3, -parcel.y * 16 - 8), false)
 	Global.scene_fetcher.update_position(parcel, true)
-	Global.get_config().add_place_to_last_places(parcel, Global.realm.get_realm_string())
 	dirty_save_position = true
 
 
@@ -515,7 +517,7 @@ func _on_timer_fps_label_timeout():
 	label_fps.set_text("- " + str(Engine.get_frames_per_second()) + " FPS")
 	if dirty_save_position:
 		dirty_save_position = false
-		Global.get_config().save_to_settings_file()
+		Global.engine.save_settings()
 
 
 func _on_orientation_changed(is_portrait: bool) -> void:

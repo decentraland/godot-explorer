@@ -365,7 +365,7 @@ func _ready():
 			dcl_ios_singleton.deeplink_received.connect(deep_link_router.process_deep_link)
 
 	_dcl_swift_lib_smoke_test()
-	# The services every boot needs (config, realm, identity, ...) are created in Rust.
+	# The services every boot needs (realm, identity, ...) are created in Rust.
 	DclBootstrap.create_core_services(self)
 
 	var args = cli.get_all_args()
@@ -376,21 +376,13 @@ func _ready():
 	if FORCE_TEST:
 		Global.testing_scene_mode = true
 
-	config.load_from_settings_file()
-
 	# Restore profile particle budgets + avatar dust gate: the Rust atomics and
 	# the GDScript toggle default to full-budget, and nothing re-applies them
 	# until the user picks a profile again.
-	GraphicSettings.apply_particle_quality(config.particle_quality)
-	AvatarAnimHelpers.apply_particles_enabled(config.particle_quality > 0)
+	GraphicSettings.apply_particle_quality(engine.setting("particle_quality"))
+	AvatarAnimHelpers.apply_particles_enabled(engine.setting("particle_quality") > 0)
 
-	# Campaign token (#2670). Deliberately after the config load: the fake/baked deeplink is
-	# parsed further up in _ready, long before ConfigData exists, so capturing there wrote to
-	# a config that was then replaced by the one read from disk. deep_link_obj is eagerly
-	# constructed, so this is a no-op when no deeplink carried a token. The live mobile path
-	# captures from deep_link_router instead, which already runs well after this point.
 	deep_link_router._capture_debug_guest_rotate(deep_link_obj)
-	deep_link_router._capture_campaign_token(deep_link_obj)
 
 	# Resolve the UI language before any scene renders. Godot picks the OS locale at boot, which
 	# would surface a partially-translated locale the moment its .po has content; LocaleSettings
@@ -400,7 +392,7 @@ func _ready():
 	# would otherwise restore a saved FPS_18/FPS_30 cap) so no later
 	# `apply_fps_limit()` re-pins the engine. Real users keep their saved cap.
 	if cli.bench_mode:
-		config.limit_fps = ConfigData.FpsLimitMode.NO_LIMIT
+		engine.adopt_setting("limit_fps", GraphicSettings.FpsLimitMode.NO_LIMIT)
 		Engine.max_fps = 0
 		DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
 
@@ -453,7 +445,7 @@ func _ready():
 	if not DirAccess.dir_exists_absolute("user://content/"):
 		DirAccess.make_dir_absolute("user://content/")
 
-	session_id = DclConfig.generate_uuid_v4()
+	session_id = DclGlobal.generate_uuid_v4()
 	# Skip Segment metrics + Sentry tagging in asset-server mode, or when
 	# telemetry is disabled at build time (CI desktop builds use the
 	# `disable_telemetry` cargo feature).
@@ -462,13 +454,12 @@ func _ready():
 	DclBootstrap.create_app_services(self, session_id, telemetry_enabled)
 	if self.metrics != null:
 		# Fire install attribution once per install (Android only).
-		if self.is_android() and not self.config.install_referrer_sent:
+		if self.is_android() and not engine.setting("install_referrer_sent"):
 			self.metrics.track_install_referrer.call_deferred()
-			self.config.install_referrer_sent = true
-			self.config.save_to_settings_file()
+			engine.set_setting("install_referrer_sent", true, true)
 	DclBootstrap.create_extra_services(self)
 
-	# Initialize dynamic graphics manager after config is loaded. Self-skips in
+	# Initialize dynamic graphics manager after the settings are loaded. Self-skips in
 	# bench mode (the function early-returns on cli.bench_mode), so bench results
 	# stay comparable while production keeps thermal-cap + adaptive downgrade.
 	graphics_autotune.init_dynamic_graphics.call_deferred()
@@ -512,7 +503,9 @@ func _async_clear_cache_if_needed() -> void:
 		return
 
 	var should_clear_startup = cli.clear_cache_startup
-	var version_changed = config.local_assets_cache_version != Global.LOCAL_ASSETS_CACHE_VERSION
+	var version_changed = (
+		engine.setting("local_assets_cache_version") != Global.LOCAL_ASSETS_CACHE_VERSION
+	)
 
 	if should_clear_startup or version_changed:
 		if should_clear_startup:
@@ -525,8 +518,9 @@ func _async_clear_cache_if_needed() -> void:
 		prints("Cache cleared successfully!")
 
 		if version_changed:
-			config.local_assets_cache_version = Global.LOCAL_ASSETS_CACHE_VERSION
-			config.save_to_settings_file()
+			engine.set_setting(
+				"local_assets_cache_version", Global.LOCAL_ASSETS_CACHE_VERSION, true
+			)
 
 
 func set_raycast_debugger_enable(enable: bool):
@@ -589,9 +583,6 @@ func clear_guest_device_storage() -> int:
 				removed += 1
 			else:
 				push_error("[guest] delete: failed to remove %s (err %d)" % [path, err])
-	# The cached guest profile would otherwise be reused by the fresh wallet.
-	get_config().guest_profile = {}
-	get_config().save_to_settings_file()
 	return removed
 
 
@@ -650,14 +641,11 @@ func sign_out() -> void:
 	#    left as-is — once the Explorer is freed they report is_instance_valid()==false
 	#    and the SceneManager's existing guards skip them; explorer._ready() reassigns
 	#    them on the next login.
-	get_config().session_account = {}
 	# Forget the previous identity so the next account starts fresh — otherwise
 	# the prior profile/avatar lingers in memory and leaks into the new account's
 	# avatar editor (issue #1658). Also drop the saved guest look on explicit
 	# sign-out to close the guest->guest leak vector.
-	get_config().guest_profile = {}
 	player_identity.reset_identity()
-	get_config().save_to_settings_file()
 
 	# Lobby/login is portrait-only; reset orientation so logging out from a
 	# landscape screen (e.g. settings panel) doesn't strand the user there.
@@ -980,7 +968,7 @@ func get_device_anchor_id() -> String:
 	#    compile-time constant or the persisted `rotate-guest=true` deeplink override.
 	#    Gated to non-production so neither can ever ship even if left on.
 	if (
-		(DEBUG_GUEST_ROTATE_ANCHOR_ID or get_config().debug_rotate_guest_anchor)
+		(DEBUG_GUEST_ROTATE_ANCHOR_ID or engine.setting("debug_rotate_guest_anchor"))
 		and not is_production()
 	):
 		return ""

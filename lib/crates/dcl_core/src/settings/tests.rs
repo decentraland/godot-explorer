@@ -53,9 +53,10 @@ fn reopen(dir: &tempfile::TempDir) -> Settings {
 fn starts_with_every_default() {
     let (_dir, settings, _) = open();
     let entries = settings.entries();
-    assert_eq!(entries.len(), SettingKey::ALL.len());
-    for entry in entries {
-        assert_eq!(entry.value, entry.key.default_value());
+    assert_eq!(entries.len(), 17, "the shell lists its 17 keys only");
+    assert!(entries.iter().all(|entry| entry.key.shell_visible()));
+    for key in SettingKey::ALL {
+        assert_eq!(settings.get(key), key.default_value(), "{}", key.name());
     }
 }
 
@@ -294,4 +295,39 @@ fn version_needs_the_build() {
         production: true,
     });
     assert_eq!(settings.version().unwrap(), "1.14.0");
+}
+
+#[test]
+fn engine_state_is_stored_and_saved_but_never_applied_or_announced() {
+    let (dir, settings, rec) = open();
+    settings
+        .set(K::LastRealmJoined, V::Text("https://realm".into()), true)
+        .unwrap();
+    settings.set(K::LastParcelX, V::Float(12.0), true).unwrap();
+    settings.adopt(K::BenchmarkGpuScore, V::Float(7.5)).unwrap();
+    settings
+        .adopt(K::FirstLaunchCompleted, V::Bool(true))
+        .unwrap();
+
+    assert!(rec.applied.lock().unwrap().is_empty());
+    assert!(rec.announced.lock().unwrap().is_empty());
+    assert!(settings
+        .entries()
+        .iter()
+        .all(|entry| entry.key.shell_visible()));
+
+    settings.save();
+    let again = reopen(&dir);
+    assert_eq!(
+        again.get(K::LastRealmJoined),
+        V::Text("https://realm".into())
+    );
+    assert_eq!(
+        again.get(K::LastParcelX),
+        V::Int(12),
+        "a float truncates into an int key"
+    );
+    assert_eq!(again.get(K::BenchmarkGpuScore), V::Float(7.5));
+    assert_eq!(again.get(K::FirstLaunchCompleted), V::Bool(true));
+    assert_eq!(again.get(K::LastParcelY), V::Int(-10), "the default");
 }

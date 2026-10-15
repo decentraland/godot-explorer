@@ -10,6 +10,7 @@ use godot::{
 
 use crate::{
     content::content_mapping::{ContentMappingAndUrlRef, DclContentMappingAndUrl},
+    content::texture_quality::TextureQuality,
     dcl::components::{
         material::{DclSourceTex, DclTexture},
         proto_components::{
@@ -17,7 +18,6 @@ use crate::{
             sdk::components::{BackgroundTextureMode, PbUiBackground},
         },
     },
-    godot_classes::dcl_config::TextureQuality,
 };
 
 use super::dcl_global::DclGlobal;

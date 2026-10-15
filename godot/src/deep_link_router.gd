@@ -66,9 +66,6 @@ func process_deep_link(url: String, start_kind: String = "warm") -> void:
 	# With the host driving the app the core routes the link: the campaign token, push
 	# attribution, navigation and sign-in resume. Only the settings the engine owns stay here.
 	if not Global.engine.is_host_driven():
-		# Before any routing decision: the token has to survive whichever branch below consumes
-		# the deeplink (#2670).
-		_capture_campaign_token(Global.deep_link_obj)
 		# Push attribution. Deliberately a separate param from the ads campaign token `c=`.
 		_track_push_open_if_any(start_kind)
 
@@ -355,41 +352,9 @@ func _capture_debug_guest_rotate(obj: DclParseDeepLink) -> void:
 	if String(obj.params.get("rotate-guest", "")).to_lower() != "true":
 		return
 
-	var config := Global.get_config()
-	config.debug_rotate_guest_anchor = true
-	# Campaign state too, or the scenario would only work once: a stored token is never
-	# replaced and a consumed one falls back to the default FTUE.
-	config.campaign_token = ""
-	config.campaign_token_captured_at = 0
-	config.campaign_consumed = false
-	config.save_to_settings_file()
+	Global.engine.set_setting("debug_rotate_guest_anchor", true, true)
 	var removed := Global.clear_guest_device_storage()
-	print("[DEEPLINK] rotate-guest=true: cleared %d guest file(s) + campaign state" % removed)
-
-
-## Capture the ad/referrer campaign token carried by a deeplink as `?c=<token>` (#2670).
-## Shared by the desktop fake-deeplink path (_ready) and the mobile/iOS live path (router).
-##
-## First capture wins: an install has exactly one campaign, and a later in-session deeplink
-## must not repaint it. Hence the validation here rather than only at the point of use — a
-## junk token would take the slot the real install-attribution token needs.
-func _capture_campaign_token(obj: DclParseDeepLink) -> void:
-	var token: String = String(obj.params.get("c", "")).strip_edges()
-	if token.is_empty():
-		return
-	if not CampaignResolution.is_valid_token(token):
-		push_warning("[CAMPAIGN] ignoring malformed token from deeplink: " + token)
-		return
-
-	var config := Global.get_config()
-	if not config.campaign_token.is_empty():
-		print("[CAMPAIGN] token already captured (", config.campaign_token, "), ignoring: ", token)
-		return
-
-	config.campaign_token = token
-	config.campaign_token_captured_at = int(Time.get_unix_time_from_system())
-	config.save_to_settings_file()
-	print("[CAMPAIGN] captured token=", token, " at=", config.campaign_token_captured_at)
+	print("[DEEPLINK] rotate-guest=true: cleared %d guest file(s)" % removed)
 
 
 # Applies the comms deeplink params (pulse-server / pulse-realm / pulse / dual-channel / livekit).

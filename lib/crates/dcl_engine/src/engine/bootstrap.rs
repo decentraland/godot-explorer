@@ -7,6 +7,7 @@ use godot::prelude::*;
 
 use crate::analytics::metrics::Metrics;
 use crate::godot_classes::dcl_cli::DclCli;
+use crate::godot_classes::dcl_session_store::DclSessionStore;
 
 /// Where a created node goes.
 #[derive(Clone, Copy)]
@@ -42,7 +43,7 @@ const fn spec(
 }
 
 /// Services every boot needs, in creation order.
-const CORE_SERVICES: [ServiceSpec; 9] = [
+const CORE_SERVICES: [ServiceSpec; 8] = [
     spec(
         "nft_frame_loader",
         "src/decentraland_components/nft_frame_style_loader.gd",
@@ -67,7 +68,6 @@ const CORE_SERVICES: [ServiceSpec; 9] = [
         None,
         Attach::GlobalChild,
     ),
-    spec("config", "src/config/config_data.gd", None, Attach::None),
     spec("realm", "src/logic/realm.gd", Some("realm"), Attach::None),
     spec(
         "player_identity",
@@ -284,11 +284,11 @@ impl DclBootstrap {
         telemetry_enabled: bool,
     ) -> bool {
         if telemetry_enabled {
-            let user_id = global
-                .get("config")
-                .try_to::<Gd<Object>>()
-                .map(|config| config.get("analytics_user_id").to_string())
-                .unwrap_or_default();
+            let mut user_id = DclSessionStore::load_analytics_user_id().to_string();
+            if user_id.is_empty() {
+                user_id = uuid::Uuid::new_v4().to_string();
+                DclSessionStore::save_analytics_user_id(user_id.as_str().into());
+            }
             let mut metrics = Metrics::create_metrics(user_id, session_id.to_string());
             metrics.bind_mut().set_debug_level(0);
             metrics.set_name("metrics");

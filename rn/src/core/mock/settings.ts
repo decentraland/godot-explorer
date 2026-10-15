@@ -2,7 +2,8 @@ import { SettingKey, SettingValue } from '../native';
 import type { SettingEntry } from '../native';
 import type { SettingsApi } from '../api/settings';
 
-const NAMES: Record<SettingKey, string> = {
+/** The keys the shell lists; the engine-owned ones are not part of the mock. */
+const NAMES: Partial<Record<SettingKey, string>> = {
   [SettingKey.SubmitMessageClosesChat]: 'submit_message_closes_chat',
   [SettingKey.Locale]: 'locale',
   [SettingKey.GraphicProfile]: 'graphic_profile',
@@ -71,7 +72,7 @@ export function createMockSettings(): SettingsApi {
       entries = entries.map(e => (e.key === key ? next : e));
       return [next];
     },
-    settingKeyName: key => NAMES[key],
+    settingKeyName: key => NAMES[key] ?? '',
     settingKeyFromName: name => KEYS.find(key => NAMES[key] === name),
     cacheSize: () => ({ bytes: cacheBytes, maxBytes: TWO_GB }),
     clearCache: async () => {

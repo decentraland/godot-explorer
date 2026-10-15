@@ -1214,9 +1214,7 @@ impl Metrics {
                 }
 
                 // Hardware benchmark result from config (GDScript property)
-                let config = global_bind.config.clone();
-                let gpu_score = config.get("benchmark_gpu_score");
-                if let Ok(score) = gpu_score.try_to::<f64>() {
+                if let Some(score) = crate::engine::benchmark_gpu_score() {
                     if score > 0.0 {
                         metrics.benchmark_gpu_score = Some(score as f32);
                     }

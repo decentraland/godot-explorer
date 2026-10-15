@@ -61,14 +61,12 @@ static func recover_from_refusal(realm_string: String) -> void:
 static func _clear_boot_realm_if(realm_string: String) -> void:
 	if realm_string.is_empty():
 		return
-	var config = Global.get_config()
-	var stored: String = config.last_realm_joined
+	var stored: String = Global.engine.setting("last_realm_joined")
 	if stored.is_empty():
 		return
 	if Realm.normalize_realm_url(stored) != Realm.normalize_realm_url(realm_string):
 		return
-	config.last_realm_joined = DclUrls.main_realm()
-	config.save_to_settings_file()
+	Global.engine.set_setting("last_realm_joined", DclUrls.main_realm(), true)
 
 
 static func _async_enter(dest: Destination, when: String) -> bool:

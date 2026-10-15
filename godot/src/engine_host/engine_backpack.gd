@@ -90,6 +90,11 @@ func async_apply_avatar(args: Dictionary) -> void:
 	avatar.set_skin_color(Color.html(args.skin))
 	avatar.set_hair_color(Color.html(args.hair))
 	avatar.set_eyes_color(Color.html(args.eyes))
+	await PromiseUtils.async_all(
+		Global.content_provider.fetch_wearables(
+			avatar.get_wearables(), Global.realm.get_profile_content_url()
+		)
+	)
 	await _async_refresh_avatar()
 	if not _same_wearables(avatar.get_wearables(), args.wearables):
 		_emit_avatar()

@@ -522,8 +522,7 @@ func _async_on_desired_scene_changed():
 func _on_realm_changed():
 	var content_base_url = Global.realm.content_base_url
 
-	Global.get_config().last_realm_joined = Global.realm.realm_url
-	Global.get_config().save_to_settings_file()
+	Global.engine.set_setting("last_realm_joined", Global.realm.realm_url, true)
 
 	# In preview mode, purge cache on first scene load to avoid using stale cached content
 	# This prevents the race condition where cached content is used before

@@ -84,7 +84,7 @@ static func selectable_locales() -> PackedStringArray:
 ## With [constant FOLLOW_DEVICE_LOCALE] true, an install with no saved choice takes the device
 ## language when it maps to a supported locale, and English otherwise.
 static func resolve_locale() -> String:
-	var configured: String = Global.get_config().locale
+	var configured: String = Global.engine.setting("locale")
 	if configured == PSEUDO_LOCALE and is_pseudolocale_available():
 		# The pseudolocale renders English through Godot's pseudolocalization filter.
 		return FALLBACK_LOCALE
@@ -124,22 +124,10 @@ static func apply_locale() -> void:
 	TranslationServer.set_locale(locale)
 	# Scenes get the same resolved locale as the UI (#2707), never the raw OS locale.
 	DclGlobal.set_scene_locale(locale)
-	var pseudo: bool = Global.get_config().locale == PSEUDO_LOCALE and is_pseudolocale_available()
+	var pseudo: bool = (
+		Global.engine.setting("locale") == PSEUDO_LOCALE and is_pseudolocale_available()
+	)
 	TranslationServer.set_pseudolocalization_enabled(pseudo)
-
-
-## Persist a language choice and apply it immediately.
-##
-## Pass an empty string to clear the override and follow the device locale again.
-static func set_locale(new_locale: String) -> void:
-	if not new_locale.is_empty() and not new_locale in selectable_locales():
-		push_warning("LocaleSettings: ignoring unsupported locale '%s'" % new_locale)
-		return
-
-	var config := Global.get_config()
-	config.locale = new_locale
-	config.save_to_settings_file()
-	apply_locale()
 
 
 ## Human-readable name for a locale, for the Settings picker.

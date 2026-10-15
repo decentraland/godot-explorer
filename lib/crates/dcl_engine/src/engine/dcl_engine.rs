@@ -117,6 +117,10 @@ impl DclEngine {
     #[signal]
     pub fn core_command(kind: GString, args: VarDictionary);
 
+    /// A setting changed, whoever changed it (the shell through the core, or the engine itself).
+    #[signal]
+    pub fn setting_changed(name: GString);
+
     /// Whether the host booted the core before the engine started, i.e. the shell drives the app
     /// and the engine only renders. False for the emulator, tests and desktop runs.
     #[func]
@@ -245,6 +249,36 @@ impl DclEngine {
     /// Replaces who answers scene requests (the Godot UI, the emulator, or a test double).
     pub(crate) fn set_sink(&mut self, sink: SharedSink) {
         self.sink = sink;
+    }
+
+    /// A player setting or engine state read from the core's store; nil for an unknown name.
+    #[func]
+    pub fn setting(&self, name: GString) -> Variant {
+        super::settings_link::get_variant(&name.to_string())
+    }
+
+    /// Stores a setting, applies it in the engine and, with `commit`, saves it.
+    #[func]
+    pub fn set_setting(&self, name: GString, value: Variant, commit: bool) {
+        super::settings_link::set_variant(&name.to_string(), &value, commit, false);
+    }
+
+    /// Stores a setting the engine itself changed (a graphic profile, a benchmark result): it is
+    /// announced to the shell but neither applied again nor saved; `save_settings` saves.
+    #[func]
+    pub fn adopt_setting(&self, name: GString, value: Variant) {
+        super::settings_link::set_variant(&name.to_string(), &value, false, true);
+    }
+
+    #[func]
+    pub fn save_settings(&self) {
+        super::settings_link::save();
+    }
+
+    /// Whether the player accepted this build's terms.
+    #[func]
+    pub fn is_eula_accepted(&self) -> bool {
+        dcl_core::ffi::eula_accepted()
     }
 
     /// Whether a scene text input holds focus: the explorer must not take focus back from it.

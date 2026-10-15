@@ -7312,6 +7312,27 @@ export enum SettingKey {
   AudioMusicVolume,
   AudioAvatarAndEmotesVolume,
   AudioMicAmplification,
+  WindowMode,
+  UiZoom,
+  Resolution3dScale,
+  ProcessTickQuotaMs,
+  ShowFps,
+  Skybox,
+  ShadowQuality,
+  BloomQuality,
+  AntiAliasing,
+  TextureQuality,
+  AvatarImpostorsEnabled,
+  FirstLaunchCompleted,
+  BenchmarkGpuScore,
+  BenchmarkRamGb,
+  LastRealmJoined,
+  LastParcelX,
+  LastParcelY,
+  FirstMoveInWorldSent,
+  InstallReferrerSent,
+  DebugRotateGuestAnchor,
+  LocalAssetsCacheVersion,
 }
 
 const FfiConverterTypeSettingKey = (() => {
@@ -7353,6 +7374,48 @@ const FfiConverterTypeSettingKey = (() => {
           return SettingKey.AudioAvatarAndEmotesVolume;
         case 17:
           return SettingKey.AudioMicAmplification;
+        case 18:
+          return SettingKey.WindowMode;
+        case 19:
+          return SettingKey.UiZoom;
+        case 20:
+          return SettingKey.Resolution3dScale;
+        case 21:
+          return SettingKey.ProcessTickQuotaMs;
+        case 22:
+          return SettingKey.ShowFps;
+        case 23:
+          return SettingKey.Skybox;
+        case 24:
+          return SettingKey.ShadowQuality;
+        case 25:
+          return SettingKey.BloomQuality;
+        case 26:
+          return SettingKey.AntiAliasing;
+        case 27:
+          return SettingKey.TextureQuality;
+        case 28:
+          return SettingKey.AvatarImpostorsEnabled;
+        case 29:
+          return SettingKey.FirstLaunchCompleted;
+        case 30:
+          return SettingKey.BenchmarkGpuScore;
+        case 31:
+          return SettingKey.BenchmarkRamGb;
+        case 32:
+          return SettingKey.LastRealmJoined;
+        case 33:
+          return SettingKey.LastParcelX;
+        case 34:
+          return SettingKey.LastParcelY;
+        case 35:
+          return SettingKey.FirstMoveInWorldSent;
+        case 36:
+          return SettingKey.InstallReferrerSent;
+        case 37:
+          return SettingKey.DebugRotateGuestAnchor;
+        case 38:
+          return SettingKey.LocalAssetsCacheVersion;
         default:
           throw new UniffiInternalError.UnexpectedEnumCase();
       }
@@ -7393,6 +7456,48 @@ const FfiConverterTypeSettingKey = (() => {
           return c.writeI32(16);
         case SettingKey.AudioMicAmplification:
           return c.writeI32(17);
+        case SettingKey.WindowMode:
+          return c.writeI32(18);
+        case SettingKey.UiZoom:
+          return c.writeI32(19);
+        case SettingKey.Resolution3dScale:
+          return c.writeI32(20);
+        case SettingKey.ProcessTickQuotaMs:
+          return c.writeI32(21);
+        case SettingKey.ShowFps:
+          return c.writeI32(22);
+        case SettingKey.Skybox:
+          return c.writeI32(23);
+        case SettingKey.ShadowQuality:
+          return c.writeI32(24);
+        case SettingKey.BloomQuality:
+          return c.writeI32(25);
+        case SettingKey.AntiAliasing:
+          return c.writeI32(26);
+        case SettingKey.TextureQuality:
+          return c.writeI32(27);
+        case SettingKey.AvatarImpostorsEnabled:
+          return c.writeI32(28);
+        case SettingKey.FirstLaunchCompleted:
+          return c.writeI32(29);
+        case SettingKey.BenchmarkGpuScore:
+          return c.writeI32(30);
+        case SettingKey.BenchmarkRamGb:
+          return c.writeI32(31);
+        case SettingKey.LastRealmJoined:
+          return c.writeI32(32);
+        case SettingKey.LastParcelX:
+          return c.writeI32(33);
+        case SettingKey.LastParcelY:
+          return c.writeI32(34);
+        case SettingKey.FirstMoveInWorldSent:
+          return c.writeI32(35);
+        case SettingKey.InstallReferrerSent:
+          return c.writeI32(36);
+        case SettingKey.DebugRotateGuestAnchor:
+          return c.writeI32(37);
+        case SettingKey.LocalAssetsCacheVersion:
+          return c.writeI32(38);
       }
     }
     allocationSize(value: TypeName): number {

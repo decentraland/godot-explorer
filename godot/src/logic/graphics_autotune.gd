@@ -15,7 +15,7 @@ func should_run_first_launch_benchmark() -> bool:
 		return false
 	return (
 		Global.is_mobile()
-		and (not Global.get_config().first_launch_completed or DclGlobal.is_dev())
+		and (not Global.engine.setting("first_launch_completed") or DclGlobal.is_dev())
 	)
 
 
@@ -36,16 +36,14 @@ func init_dynamic_graphics() -> void:
 		return
 	# Initialize with config values and connect signals
 	Global.dynamic_graphics_manager.initialize(
-		Global.get_config().dynamic_graphics_enabled,
-		Global.get_config().graphic_profile,
-		Global.get_config().limit_fps
+		Global.engine.setting("dynamic_graphics_enabled"),
+		Global.engine.setting("graphic_profile"),
+		Global.engine.setting("limit_fps")
 	)
 	Global.loading_started.connect(Global.dynamic_graphics_manager.on_loading_started)
 	Global.loading_finished.connect(Global.dynamic_graphics_manager.on_loading_finished)
 	Global.dynamic_graphics_manager.profile_change_requested.connect(_on_dynamic_profile_change)
 	Global.dynamic_graphics_manager.thermal_fps_cap_changed.connect(_on_thermal_fps_cap_changed)
-	# Listen for FPS limit changes
-	Global.get_config().param_changed.connect(_on_config_param_changed)
 
 
 func _run_first_launch_benchmark() -> void:
@@ -65,9 +63,9 @@ func _on_first_launch_benchmark_completed(profile: int, gpu_score: float, ram_gb
 	)
 
 	# Store benchmark results for debugging/analytics
-	Global.get_config().benchmark_gpu_score = gpu_score
-	Global.get_config().benchmark_ram_gb = ram_gb
-	Global.get_config().first_launch_completed = true
+	Global.engine.adopt_setting("benchmark_gpu_score", gpu_score)
+	Global.engine.adopt_setting("benchmark_ram_gb", ram_gb)
+	Global.engine.adopt_setting("first_launch_completed", true)
 
 	# Apply the detected profile
 	GraphicSettings.apply_graphic_profile(profile)
@@ -76,7 +74,7 @@ func _on_first_launch_benchmark_completed(profile: int, gpu_score: float, ram_gb
 	Global.dynamic_graphics_manager.on_manual_profile_change(profile)
 
 	# Save configuration
-	Global.get_config().save_to_settings_file()
+	Global.engine.save_settings()
 
 	# Cleanup benchmark
 	if is_instance_valid(_hardware_benchmark):
@@ -84,18 +82,9 @@ func _on_first_launch_benchmark_completed(profile: int, gpu_score: float, ram_gb
 		_hardware_benchmark = null
 
 
-func _on_config_param_changed(param: int) -> void:
-	if param == ConfigData.ConfigParams.LIMIT_FPS:
-		Global.dynamic_graphics_manager.on_fps_limit_changed(Global.get_config().limit_fps)
-		# Re-apply FPS limit considering thermal cap
-		GraphicSettings.apply_fps_limit_with_thermal_cap(
-			Global.get_config().limit_fps, Global.dynamic_graphics_manager.get_thermal_fps_cap()
-		)
-
-
 func _on_thermal_fps_cap_changed(fps_cap: int) -> void:
 	# Apply the effective FPS limit (considering both user setting and thermal cap)
-	GraphicSettings.apply_fps_limit_with_thermal_cap(Global.get_config().limit_fps, fps_cap)
+	GraphicSettings.apply_fps_limit_with_thermal_cap(Global.engine.setting("limit_fps"), fps_cap)
 	if fps_cap == 0:
 		print("[ThermalFPS] Cap removed, using user setting")
 	else:
@@ -103,7 +92,7 @@ func _on_thermal_fps_cap_changed(fps_cap: int) -> void:
 
 
 func _on_dynamic_profile_change(new_profile: int) -> void:
-	var old_profile: int = Global.get_config().graphic_profile
+	var old_profile: int = Global.engine.setting("graphic_profile")
 	if old_profile == new_profile:
 		# No actual change, skip
 		return
@@ -115,4 +104,4 @@ func _on_dynamic_profile_change(new_profile: int) -> void:
 
 	# Apply the profile change requested by the dynamic graphics manager
 	GraphicSettings.apply_graphic_profile(new_profile)
-	Global.get_config().save_to_settings_file()
+	Global.engine.save_settings()

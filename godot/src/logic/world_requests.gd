@@ -42,9 +42,9 @@ static func async_teleport_to(parcel_position: Vector2i, new_realm: String) -> v
 		if not await Global._async_precheck_realm_access(new_realm):
 			return
 		Global.set_orientation_landscape()
-		Global.get_config().last_realm_joined = new_realm
-		Global.get_config().last_parcel_position = parcel_position
-		Global.get_config().add_place_to_last_places(parcel_position, new_realm)
+		Global.engine.set_setting("last_realm_joined", new_realm, false)
+		Global.engine.set_setting("last_parcel_x", parcel_position.x, false)
+		Global.engine.set_setting("last_parcel_y", parcel_position.y, true)
 		Global.get_tree().change_scene_to_file("res://src/ui/explorer.tscn")
 		return
 
@@ -64,10 +64,10 @@ static func async_join_world(world_realm: String) -> void:
 		# stays here rather than booting straight into a world we can't enter (#1725).
 		if not await Global._async_precheck_realm_access(world_realm):
 			return
-		Global.get_config().add_place_to_last_places(Vector2i.ZERO, world_realm)  # "Last visited"
 		Global.set_orientation_landscape()
-		Global.get_config().last_realm_joined = world_realm
-		Global.get_config().last_parcel_position = Vector2i.ZERO
+		Global.engine.set_setting("last_realm_joined", world_realm, false)
+		Global.engine.set_setting("last_parcel_x", 0, false)
+		Global.engine.set_setting("last_parcel_y", 0, true)
 		Global.get_tree().change_scene_to_file("res://src/ui/explorer.tscn")
 		return
 
@@ -77,8 +77,7 @@ static func async_join_world(world_realm: String) -> void:
 		Time.get_unix_time_from_system()
 	)
 	# No parcel: the world names its own spawn point, so teleport_to never records it.
-	if await Navigator.async_go(Destination.from_input(world_realm), "on_world"):
-		Global.get_config().add_place_to_last_places(Vector2i.ZERO, world_realm)  # "Last visited"
+	await Navigator.async_go(Destination.from_input(world_realm), "on_world")
 
 
 static func _http_method_to_string(method: int) -> String:
