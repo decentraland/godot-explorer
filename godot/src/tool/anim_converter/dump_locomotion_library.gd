@@ -12,6 +12,36 @@ const OUT := "res://assets/animations/locomotion_full.res"
 # Jump_Mid/Run_Jump_Mid loop so their auto-advance never fires — the apex
 # holds until fall_fast (vy<-3, Unity AnimationFallSpeed) triggers (#1553).
 const FORCE_LOOP := ["Idle", "Walk", "Jog", "Run", "Slide", "Jump_Mid", "Run_Jump_Mid"]
+# The grounded blend space plays every child on one shared clock, so clips of
+# different lengths sit at different phases there and their footfalls cancel
+# every 2.0s (walk 1.000s against jog 0.667s) — one missed contact per beat.
+# One common length lines the phases up; the authored cadence is restored
+# per frame in avatar_locomotion.gd.
+const GAIT_CLIPS := ["Idle", "Walk", "Jog", "Run"]
+const GAIT_COMMON_LENGTH := 1.0
+
+
+func _retime_gait(lib: AnimationLibrary) -> void:
+	for clip_name in GAIT_CLIPS:
+		var src: Animation = lib.get_animation(clip_name)
+		if src.length <= 0.0:
+			continue
+		var factor := GAIT_COMMON_LENGTH / src.length
+		var out := Animation.new()
+		out.length = GAIT_COMMON_LENGTH
+		out.loop_mode = src.loop_mode
+		for track in range(src.get_track_count()):
+			var new_track := out.add_track(src.track_get_type(track))
+			out.track_set_path(new_track, src.track_get_path(track))
+			out.track_set_interpolation_type(new_track, src.track_get_interpolation_type(track))
+			for key in range(src.track_get_key_count(track)):
+				out.track_insert_key(
+					new_track,
+					src.track_get_key_time(track, key) * factor,
+					src.track_get_key_value(track, key)
+				)
+		lib.remove_animation(clip_name)
+		lib.add_animation(clip_name, out)
 
 
 func _initialize() -> void:
@@ -23,6 +53,7 @@ func _initialize() -> void:
 	for clip_name in FORCE_LOOP:
 		if lib.has_animation(clip_name):
 			lib.get_animation(clip_name).loop_mode = Animation.LOOP_LINEAR
+	_retime_gait(lib)
 	var err := ResourceSaver.save(lib, OUT)
 	prints("clips:", lib.get_animation_list().size(), "saved:", OUT, "err:", err)
 	quit(0 if err == OK else 1)

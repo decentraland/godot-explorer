@@ -1,27 +1,36 @@
-[gd_resource type="AnimationNodeBlendSpace1D" format=3]
+[gd_resource type="AnimationNodeBlendTree" format=3]
 
-[sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_hoobf"]
-animation = &"loco/Idle"
+[sub_resource type="AnimationNodeTimeScale" id="AnimationNodeTimeScale_hoobf"]
 
 [sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_t3sgi"]
-animation = &"loco/Walk"
+animation = &"loco/Idle"
 
 [sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_6hma3"]
-animation = &"loco/Jog"
+animation = &"loco/Walk"
 
 [sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_mbjp4"]
+animation = &"loco/Jog"
+
+[sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_jmxd1"]
 animation = &"loco/Run"
 
-[resource]
-blend_point_0/node = SubResource("AnimationNodeAnimation_hoobf")
+[sub_resource type="AnimationNodeBlendSpace1D" id="AnimationNodeBlendSpace1D_eocym"]
+blend_point_0/node = SubResource("AnimationNodeAnimation_t3sgi")
 blend_point_0/pos = 0.0
-blend_point_1/node = SubResource("AnimationNodeAnimation_t3sgi")
+blend_point_1/node = SubResource("AnimationNodeAnimation_6hma3")
 blend_point_1/pos = 1.0
-blend_point_2/node = SubResource("AnimationNodeAnimation_6hma3")
+blend_point_2/node = SubResource("AnimationNodeAnimation_mbjp4")
 blend_point_2/pos = 2.0
-blend_point_3/node = SubResource("AnimationNodeAnimation_mbjp4")
+blend_point_3/node = SubResource("AnimationNodeAnimation_jmxd1")
 blend_point_3/pos = 3.0
 min_space = 0.0
 max_space = 3.0
 value_label = "movement_blend"
 sync = true
+
+[resource]
+nodes/gait/node = SubResource("AnimationNodeBlendSpace1D_eocym")
+nodes/gait/position = Vector2(0, 0)
+nodes/cadence/node = SubResource("AnimationNodeTimeScale_hoobf")
+nodes/cadence/position = Vector2(0, 0)
+node_connections = [&"output", 0, &"cadence", &"cadence", 0, &"gait"]

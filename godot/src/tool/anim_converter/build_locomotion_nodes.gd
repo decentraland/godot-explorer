@@ -38,7 +38,15 @@ func _make_grounded() -> void:
 	bs.min_space = 0.0
 	bs.max_space = 3.0
 	bs.value_label = "movement_blend"
-	_save(bs, "grounded")
+	# sync takes the blend's time reference from the closest child, so the cycle
+	# stepped 1.000s -> 0.667s at the walk/jog midpoint. Scaling time in front of it
+	# makes the played period a blend of the gait clips instead.
+	var wrap := AnimationNodeBlendTree.new()
+	wrap.add_node("gait", bs)
+	wrap.add_node("cadence", AnimationNodeTimeScale.new())
+	wrap.connect_node("cadence", 0, "gait")
+	wrap.connect_node("output", 0, "cadence")
+	_save(wrap, "grounded")
 
 
 # clip name -> start_offset aligning its left-foot contact to Walk's.

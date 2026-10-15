@@ -17,9 +17,15 @@ const LONG_FALL_STUN_TIME := 0.75
 # speed flag the wire carries (that one trips at ~3.3m). Remotes measure their
 # own height against this.
 const HARD_LANDING_FALL_HEIGHT := 8.0
+# Blend-space children in blend order; their clip lengths drive the cadence warp.
+const GAIT_CLIPS := ["Idle", "Walk", "Jog", "Run"]
+# Authored cycle length per gait. The clips ship retimed to one common length so
+# the blend space cannot phase them apart; these restore each gait's cadence.
+const GAIT_CYCLE_LENGTHS := [2.0, 1.0, 0.6666667, 0.5333333]
 
 var _tree: AnimationTree
 var _sm_double_jump_rise: AnimationNodeAnimation
+var _gait_clip_length: float = 0.0
 # Continuous gait blend (Unity MovementBlend), also read by the emote gate.
 var _movement_blend: float = 0.0
 # #2856: this air jump's variant, 0|1 (Unity JumpVariation).
@@ -101,7 +107,8 @@ func apply(delta: float, state: Dictionary) -> Dictionary:
 		GAIT_BLEND_SPEED, GAIT_BLEND_SPEED * absf(target_blend - _movement_blend)
 	)
 	_movement_blend = move_toward(_movement_blend, target_blend, blend_rate * delta)
-	_tree.set("parameters/Locomotion/Grounded/blend_position", _movement_blend)
+	_tree.set("parameters/Locomotion/Grounded/gait/blend_position", _movement_blend)
+	_warp_cadence(grounded_now)
 	# #2856: jump-chain selection by gait, as single-condition transitions.
 	_tree.set("parameters/Locomotion/conditions/rise_walk", rise_now and kind < 3)
 	_tree.set("parameters/Locomotion/conditions/rise_run", rise_now and kind == 3)
@@ -191,3 +198,19 @@ func apply(delta: float, state: Dictionary) -> Dictionary:
 	_result["movement_speed"] = movement_speed_now
 	_result["jump_rising_edge"] = jump_rising_edge
 	return _result
+
+
+# The gait clips ship retimed to one length so the blend space holds them in
+# phase; this puts each gait's authored cadence back, blended across the pair.
+func _warp_cadence(grounded_now: bool) -> void:
+	if not grounded_now:
+		_tree.set("parameters/Locomotion/Grounded/cadence/scale", 1.0)
+		return
+	if _gait_clip_length <= 0.0:
+		var anim: Animation = _tree.get_animation(StringName("loco/" + GAIT_CLIPS[0]))
+		_gait_clip_length = anim.length
+	var blend := clampf(_movement_blend, 0.0, float(GAIT_CLIPS.size() - 1))
+	var low := int(floorf(blend))
+	var high := mini(low + 1, GAIT_CLIPS.size() - 1)
+	var wanted := lerpf(GAIT_CYCLE_LENGTHS[low], GAIT_CYCLE_LENGTHS[high], blend - float(low))
+	_tree.set("parameters/Locomotion/Grounded/cadence/scale", _gait_clip_length / wanted)
