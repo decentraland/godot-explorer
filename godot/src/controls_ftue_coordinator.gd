@@ -9,6 +9,8 @@ extends Node
 ##
 ## The labelled set is device-local (config_data.gd) and written only when the player closes the
 ## overlay, so an app kill or a teleport while it is up shows the same labels again.
+##
+## A player gets this or the guided tutorial (#2767), whichever they close first.
 
 enum Decision { SHOW, DEFER }
 
@@ -52,10 +54,12 @@ func _ready() -> void:
 	Global.orientation_changed.connect(_on_orientation_changed)
 
 
-## `state` keys: test_mode, forced, enabled, existing_player, show_existing_players, scene_loaded,
-## modal_open, hud_usable, new_elements (count of visible controls not labelled yet).
+## `state` keys: test_mode, tutorial_busy, forced, enabled, existing_player,
+## show_existing_players, scene_loaded, modal_open, hud_usable, new_elements (count of visible
+## controls not labelled yet).
 static func decide(state: Dictionary) -> Decision:
-	if state.test_mode:
+	# The guided tutorial (#2767) teaches the same controls; the two never share a scene entry.
+	if state.test_mode or state.tutorial_busy:
 		return Decision.DEFER
 	if not state.forced:
 		if not state.enabled:
@@ -141,7 +145,8 @@ func _async_try_show() -> void:
 	)
 	var decision := decide(
 		{
-			"test_mode": _is_automated_run() or Global.is_xr(),
+			"test_mode": is_automated_run() or Global.is_xr(),
+			"tutorial_busy": Global.ftue_tutorial_coordinator.owns_scene_entry(),
 			"forced": _forced,
 			"enabled": flags.is_enabled(FLAG_ENABLED, true),
 			"existing_player": _existing_player,
@@ -196,13 +201,17 @@ func _mark_shown(elements: Array[String]) -> void:
 		if not config.controls_ftue_shown.has(element):
 			config.controls_ftue_shown.append(element)
 			changed = true
+	# A player gets this or the guided tutorial (#2767), whichever they close first.
+	if not config.ftue_tutorial_offered:
+		config.ftue_tutorial_offered = true
+		changed = true
 	if changed:
 		config.save_to_settings_file()
 
 
 # Scene tests, client tests, renderers and benchmarks start from a fresh config and must
 # never have their input or their screenshots covered.
-func _is_automated_run() -> bool:
+static func is_automated_run() -> bool:
 	var cli := Global.cli
 	return (
 		Global.testing_scene_mode

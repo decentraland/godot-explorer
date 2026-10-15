@@ -1,7 +1,7 @@
 class_name ControlsFtueLabel
 extends MarginContainer
 
-enum PointerSide { LEFT, TOP, BOTTOM }
+enum PointerSide { LEFT, TOP, BOTTOM, NONE }
 
 const FILL := Color(0.412, 0.122, 0.663, 0.8)
 const CORNER_RADIUS := 8.0
