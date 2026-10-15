@@ -12,6 +12,8 @@ use crate::app::{AvatarState, ColorTarget};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum AvatarError {
+    /// The wearables were not loaded, so nothing can be resolved or drawn from them.
+    CatalogNotLoaded,
     /// The engine has not reported the avatar yet, so there is nothing to edit.
     NoAvatar,
     /// The catalog does not know the item, so its category is not known either.
@@ -26,6 +28,7 @@ pub enum AvatarError {
 impl std::fmt::Display for AvatarError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            Self::CatalogNotLoaded => write!(f, "the wearable catalog is not loaded"),
             Self::NoAvatar => write!(f, "no avatar to edit yet"),
             Self::UnknownItem(urn) => write!(f, "unknown item {urn}"),
             Self::WrongBodyShape(urn) => write!(f, "{urn} does not fit this body shape"),
@@ -155,7 +158,11 @@ fn random_colour(target: ColorTarget, rng: &mut impl Rng) -> String {
 }
 
 /// A random avatar out of the free base wearables; the emotes stay as they are.
-pub fn randomize(avatar: &AvatarState, catalog: &Catalog, rng: &mut impl Rng) -> AvatarState {
+pub fn randomize(
+    avatar: &AvatarState,
+    catalog: &Catalog,
+    rng: &mut impl Rng,
+) -> Result<AvatarState, AvatarError> {
     let body_shape = if rng.gen_bool(0.5) { MALE } else { FEMALE };
     let fitting: Vec<&CatalogItem> = catalog
         .items()
@@ -164,6 +171,9 @@ pub fn randomize(avatar: &AvatarState, catalog: &Catalog, rng: &mut impl Rng) ->
             item.rarity == "base" && item.category != "body_shape" && item.fits(body_shape)
         })
         .collect();
+    if fitting.is_empty() {
+        return Err(AvatarError::CatalogNotLoaded);
+    }
     let mut categories: Vec<&str> = Vec::new();
     for item in &fitting {
         if !categories.contains(&item.category.as_str()) {
@@ -181,12 +191,12 @@ pub fn randomize(avatar: &AvatarState, catalog: &Catalog, rng: &mut impl Rng) ->
             wearables.push(pick(&choices, rng).urn.clone());
         }
     }
-    AvatarState {
+    Ok(AvatarState {
         body_shape: body_shape.to_string(),
         wearables,
         emotes: avatar.emotes.clone(),
         skin: random_colour(ColorTarget::Skin, rng),
         hair: random_colour(ColorTarget::Hair, rng),
         eyes: random_colour(ColorTarget::Eyes, rng),
-    }
+    })
 }

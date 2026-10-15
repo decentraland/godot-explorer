@@ -163,7 +163,7 @@ fn emote_slots_grow_a_short_list() {
 fn randomize_wears_every_required_category_once_and_only_base_items() {
     let start = avatar(MALE, &[]);
     for seed in 0..20 {
-        let next = randomize(&start, &catalog(), &mut StdRng::seed_from_u64(seed));
+        let next = randomize(&start, &catalog(), &mut StdRng::seed_from_u64(seed)).unwrap();
         for category in ["eyes", "eyebrows", "mouth"] {
             let worn = next
                 .wearables
@@ -185,11 +185,23 @@ fn randomize_wears_every_required_category_once_and_only_base_items() {
 }
 
 #[test]
+fn randomize_refuses_an_empty_catalog() {
+    assert_eq!(
+        randomize(
+            &avatar(MALE, &[]),
+            &Catalog::default(),
+            &mut StdRng::seed_from_u64(1)
+        ),
+        Err(AvatarError::CatalogNotLoaded)
+    );
+}
+
+#[test]
 fn randomize_is_deterministic_for_a_seed_and_keeps_the_emotes() {
     let mut start = avatar(MALE, &[]);
     start.emotes[0] = "wave".into();
-    let a = randomize(&start, &catalog(), &mut StdRng::seed_from_u64(7));
-    let b = randomize(&start, &catalog(), &mut StdRng::seed_from_u64(7));
+    let a = randomize(&start, &catalog(), &mut StdRng::seed_from_u64(7)).unwrap();
+    let b = randomize(&start, &catalog(), &mut StdRng::seed_from_u64(7)).unwrap();
     assert_eq!(a, b);
     assert_eq!(a.emotes[0], "wave");
 }

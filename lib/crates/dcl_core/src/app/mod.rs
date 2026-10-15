@@ -130,7 +130,7 @@ impl App {
             Control::SetBodyShape { urn } => avatar::set_body_shape(&current, &self.catalog, urn),
             Control::SetColor { target, color } => avatar::set_color(&current, *target, color),
             Control::SetEmoteSlot { slot, urn } => avatar::set_emote_slot(&current, *slot, urn),
-            _ => Ok(avatar::randomize(&current, &self.catalog, &mut self.rng)),
+            _ => avatar::randomize(&current, &self.catalog, &mut self.rng),
         })
     }
 

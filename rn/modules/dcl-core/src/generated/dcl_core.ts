@@ -1122,7 +1122,7 @@ export function jumpRealmUrl(realm: string): string {
 }
 
 /**
- * Loads the base wearables, makes them the catalog the avatar edits use and returns them.
+ * Loads the base wearables once, makes them the catalog the avatar edits use and returns them.
  */
 export async function loadAvatarCatalog(asyncOpts_?: {
   signal: AbortSignal;
@@ -11214,7 +11214,7 @@ function uniffiEnsureInitialized() {
   }
   if (
     nativeModule().ubrn_uniffi_dcl_core_checksum_func_load_avatar_catalog() !==
-    45002
+    40773
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_dcl_core_checksum_func_load_avatar_catalog',

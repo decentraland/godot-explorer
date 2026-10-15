@@ -8,10 +8,14 @@ use crate::{
     profile::{Endpoints, ReqwestTransport},
 };
 
-/// Loads the base wearables, makes them the catalog the avatar edits use and returns them.
+/// Loads the base wearables once, makes them the catalog the avatar edits use and returns them.
 #[uniffi::export]
 pub async fn load_avatar_catalog() -> Result<Vec<CatalogItem>, CoreError> {
     let core = core()?;
+    let loaded = core.with_app(|app| app.catalog().items().to_vec());
+    if !loaded.is_empty() {
+        return Ok(loaded);
+    }
     let items = core
         .handle()
         .spawn(
