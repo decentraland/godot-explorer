@@ -56,7 +56,7 @@ pub fn equip(
     let mut next = avatar.clone();
     next.wearables.retain(|worn| {
         !same(worn, urn)
-            && category_of(catalog, worn).map_or(true, |other| other.category != item.category)
+            && category_of(catalog, worn).is_none_or(|other| other.category != item.category)
     });
     next.wearables.push(urn.to_string());
     Ok(next)
@@ -88,7 +88,7 @@ pub fn set_body_shape(
     let mut next = avatar.clone();
     next.body_shape = shape.to_string();
     next.wearables
-        .retain(|worn| category_of(catalog, worn).map_or(true, |item| item.fits(shape)));
+        .retain(|worn| category_of(catalog, worn).is_none_or(|item| item.fits(shape)));
     for category in REQUIRED_WITH_DEFAULT {
         let present = next
             .wearables
