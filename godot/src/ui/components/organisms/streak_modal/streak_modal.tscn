@@ -110,17 +110,37 @@ texture = ExtResource("15_pedestal")
 expand_mode = 1
 stretch_mode = 4
 
-[node name="TextureRect_RewardArt" type="TextureRect" parent="VBoxContainer/PanelContainer/MarginContainer2/RewardShowcase/Pedestal" unique_id=1433207045]
+[node name="HBoxContainer_Rewards" type="HBoxContainer" parent="VBoxContainer/PanelContainer/MarginContainer2/RewardShowcase/Pedestal" unique_id=1836952668]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(400, 250)
 layout_mode = 1
-anchors_preset = 5
+anchors_preset = 8
 anchor_left = 0.5
+anchor_top = 0.5
 anchor_right = 0.5
-offset_left = -157.5
-offset_top = 86.0
-offset_right = 157.5
-offset_bottom = 326.0
+anchor_bottom = 0.5
+offset_left = -200.0
+offset_top = -149.0
+offset_right = 200.0
+offset_bottom = 101.0
 grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = -190
+
+[node name="TextureRect_RewardArt1" type="TextureRect" parent="VBoxContainer/PanelContainer/MarginContainer2/RewardShowcase/Pedestal/HBoxContainer_Rewards" unique_id=1433207045]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(250, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+texture = ExtResource("5_da6u2")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="TextureRect_RewardArt2" type="TextureRect" parent="VBoxContainer/PanelContainer/MarginContainer2/RewardShowcase/Pedestal/HBoxContainer_Rewards" unique_id=1374932280]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(250, 0)
+layout_mode = 2
+size_flags_horizontal = 3
 texture = ExtResource("5_da6u2")
 expand_mode = 1
 stretch_mode = 5

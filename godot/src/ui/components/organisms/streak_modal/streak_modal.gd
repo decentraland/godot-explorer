@@ -43,7 +43,9 @@ var _claiming_reward: bool = false
 @onready var button_cta: Button = %Button_CTA
 @onready var claim_button: ClaimButton = %ClaimButton
 @onready var pedestal: TextureRect = %Pedestal
-@onready var reward_art: TextureRect = %TextureRect_RewardArt
+@onready var h_box_container_rewards: HBoxContainer = %HBoxContainer_Rewards
+@onready var reward_art_1: TextureRect = %TextureRect_RewardArt1
+@onready var reward_art_2: TextureRect = %TextureRect_RewardArt2
 
 
 ## Maps StreakManager.take_pending_modal()'s string result to this modal's State enum.
@@ -73,9 +75,7 @@ func async_setup(state: State, progress_day: int, is_guest: bool, pending_day: i
 	_is_guest = is_guest
 	_pending_day = pending_day
 	_render()
-	await _async_apply_reward_thumbnail(
-		str(RewardCampaigns.CAMPAIGNS[_preview_campaign_key()].get("urn", ""))
-	)
+	await _async_apply_reward_thumbnails()
 	if not is_instance_valid(self):
 		return
 	show()
@@ -85,14 +85,14 @@ func async_setup(state: State, progress_day: int, is_guest: bool, pending_day: i
 ## RewardShowcase is always visible regardless of state, so the bounce runs for the modal's
 ## whole lifetime rather than being tied to any one state's setup.
 func _ready() -> void:
-	var base_y := reward_art.position.y
+	var base_y := h_box_container_rewards.position.y
 	var tween := create_tween()
 	tween.set_loops()
 	tween.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	tween.tween_property(
-		reward_art, "position:y", base_y - BOUNCE_OFFSET_PX, BOUNCE_HALF_DURATION_SEC
+		h_box_container_rewards, "position:y", base_y - BOUNCE_OFFSET_PX, BOUNCE_HALF_DURATION_SEC
 	)
-	tween.tween_property(reward_art, "position:y", base_y, BOUNCE_HALF_DURATION_SEC)
+	tween.tween_property(h_box_container_rewards, "position:y", base_y, BOUNCE_HALF_DURATION_SEC)
 
 
 func _on_gui_input(event: InputEvent) -> void:
@@ -131,6 +131,11 @@ func _render() -> void:
 	# texture is redone here — the thumbnail fetch itself runs once, from async_setup().
 	var preview_claimed := d7_claimed if _preview_campaign_key() == "LoginStreakD7" else false
 	pedestal.texture = texture_pedestal_claimed if preview_claimed else texture_pedestal_normal
+
+	# Second reward slot only when D3 and D7 are BOTH pending to claim at once (D3's entitlement
+	# survives skipping straight to D7) — reward_art_2 stays hidden and reward_art_1 is the sole
+	# preview the rest of the time.
+	reward_art_2.visible = Global.streak_manager.get_claimable_days().size() > 1
 
 	var footer_key := "STREAK_FOOTER_CAPTION_GUEST" if _is_guest else "STREAK_FOOTER_CAPTION"
 	label_footer.text = TranslationKey.new(footer_key).text()
@@ -191,6 +196,15 @@ func _preview_campaign_key() -> String:
 	return "LoginStreakD7" if Global.streak_manager.is_d3_claimed() else "LoginStreakD3"
 
 
+## RewardCampaigns keys for the reward-art slot(s) to populate — both D3 and D7 when both are
+## pending to claim at once (reward_art_2 visible, see _render()), otherwise just the single next
+## reward.
+func _preview_campaign_keys() -> Array[String]:
+	if Global.streak_manager.get_claimable_days().size() > 1:
+		return ["LoginStreakD3", "LoginStreakD7"]
+	return [_preview_campaign_key()]
+
+
 ## Empty key hides the subtitle entirely (Figma's D3 claim screen has none) rather than leaving
 ## an empty RichTextLabel taking up its row's separation gap.
 func _set_subtitle(key: String) -> void:
@@ -212,7 +226,7 @@ func _set_cta(text: String, secondary: bool) -> void:
 ## Hides Button_CTA and shows ClaimButton instead — used once the D3/D7 reward is actually
 ## claimable, so the gradient + claiming/claimed states replace the plain acknowledgement CTA.
 ## Wires claim_action here (not _ready()) since it needs the days/is_guest for THIS setup() call.
-## pedestal/reward_art themselves are driven generally by _render()'s own preview logic, not here.
+## pedestal/h_box_container_rewards themselves are driven generally by _render()'s own preview logic, not here.
 # gdlint:ignore = async-function-name
 func _show_claim_button(text_key: String) -> void:
 	button_cta.visible = false
@@ -229,10 +243,23 @@ func _show_claim_button(text_key: String) -> void:
 		return success
 
 
-## Swaps the baked placeholder reward_art for the real wearable's thumbnail, same resolve-then-
-## fetch shape as wearable_item.gd/backpack.gd's own thumbnail loads. Cosmetic only — on an empty
-## urn, a cache miss or a fetch error it silently keeps the placeholder; it never blocks the claim.
-func _async_apply_reward_thumbnail(urn: String) -> void:
+## Fills reward_art_1 (and reward_art_2 when both D3 and D7 are pending — see _render()) with the
+## real wearable/emote thumbnail(s), sequentially. Cosmetic only; a failed or empty fetch on either
+## slot silently keeps whatever placeholder is already on it, it never blocks the claim.
+func _async_apply_reward_thumbnails() -> void:
+	var keys := _preview_campaign_keys()
+	var targets: Array[TextureRect] = [reward_art_1, reward_art_2]
+	for i in keys.size():
+		await _async_apply_reward_thumbnail(
+			str(RewardCampaigns.CAMPAIGNS[keys[i]].get("urn", "")), targets[i]
+		)
+		if not is_instance_valid(self):
+			return
+
+
+## Swaps the baked placeholder art in `target` for the real wearable's thumbnail, same resolve-
+## then-fetch shape as wearable_item.gd/backpack.gd's own thumbnail loads.
+func _async_apply_reward_thumbnail(urn: String, target: TextureRect) -> void:
 	if urn.is_empty():
 		return
 	var wearable = Global.content_provider.get_wearable(urn)
@@ -254,7 +281,7 @@ func _async_apply_reward_thumbnail(urn: String) -> void:
 	if res is PromiseError:
 		printerr("StreakModal: reward thumbnail fetch failed for ", urn, ": ", res.get_error())
 		return
-	reward_art.texture = res.texture
+	target.texture = res.texture
 
 
 func _screen_view_name() -> String:
