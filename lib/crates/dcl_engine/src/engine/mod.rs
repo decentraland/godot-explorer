@@ -10,6 +10,5 @@ mod scene_link;
 pub mod scene_requests;
 mod screenshot_link;
 mod settings_link;
-mod social_link;
 
 pub use dcl_engine::DclEngine;

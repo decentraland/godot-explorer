@@ -11,7 +11,7 @@ use dcl_core::Core;
 use godot::classes::{Os, RenderingServer};
 use godot::prelude::*;
 
-use super::{scene_link, screenshot_link, settings_link, social_link, DclEngine};
+use super::{scene_link, screenshot_link, settings_link, DclEngine};
 
 fn destination_args(destination: &Destination) -> VarDictionary {
     let parcel = destination.parcel.unwrap_or(Parcel::new(0, 0));
@@ -139,12 +139,11 @@ impl DclEngine {
         );
     }
 
-    /// Hands the core the engine's side of each service contract (settings applier, nearby
-    /// avatars, scene facts, screenshots).
+    /// Hands the core the engine's side of each service contract (settings applier, scene
+    /// facts, screenshots).
     pub(super) fn register_core_services() {
         Self::set_report_context();
         settings_link::register();
-        social_link::register();
         scene_link::register();
         screenshot_link::register();
     }

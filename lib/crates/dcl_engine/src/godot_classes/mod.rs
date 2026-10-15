@@ -36,7 +36,6 @@ pub mod dcl_scene_locale;
 pub mod dcl_scene_node;
 pub mod dcl_session_store;
 pub mod dcl_social_blacklist;
-pub mod dcl_social_service;
 pub mod dcl_swift_lib;
 pub mod dcl_tokio_rpc;
 pub mod dcl_ui_background;

@@ -72,9 +72,6 @@ impl AppEvents for HostEvents {
     fn open_url(&self, request: &crate::OpenUrlRequest) {
         self.each(|l| l.open_url(request));
     }
-    fn friends_changed(&self) {
-        self.each(|l| l.friends_changed());
-    }
     fn settings_changed(&self, entry: &crate::settings::SettingEntry) {
         self.each(|l| l.settings_changed(entry));
     }

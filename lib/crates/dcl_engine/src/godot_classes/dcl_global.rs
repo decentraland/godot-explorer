@@ -36,8 +36,8 @@ const JOYPAD_INPUT_WINDOW: std::time::Duration = std::time::Duration::from_milli
 use super::{
     dcl_cli::DclCli, dcl_config::DclConfig,
     dcl_dynamic_graphics_manager::DclDynamicGraphicsManager, dcl_realm::DclRealm,
-    dcl_social_blacklist::DclSocialBlacklist, dcl_social_service::DclSocialService,
-    dcl_tokio_rpc::DclTokioRpc, portables::DclPortableExperienceController,
+    dcl_social_blacklist::DclSocialBlacklist, dcl_tokio_rpc::DclTokioRpc,
+    portables::DclPortableExperienceController,
 };
 
 /// Plugs the engine's sinks into the core's logger. On the platforms where Godot's output already
@@ -144,9 +144,6 @@ pub struct DclGlobal {
     #[var]
     pub social_blacklist: Gd<DclSocialBlacklist>,
 
-    #[var]
-    pub social_service: Gd<DclSocialService>,
-
     #[cfg(feature = "use_memory_debugger")]
     #[var]
     pub memory_debugger: Gd<MemoryDebugger>,
@@ -246,7 +243,6 @@ impl INode for DclGlobal {
             crate::tools::scene_inspector::SceneInspectorDispatcher,
         > = crate::tools::scene_inspector::SceneInspectorDispatcher::new_alloc();
         let mut social_blacklist: Gd<DclSocialBlacklist> = DclSocialBlacklist::new_alloc();
-        let mut social_service: Gd<DclSocialService> = DclSocialService::new_alloc();
 
         #[cfg(feature = "use_memory_debugger")]
         let mut memory_debugger: Gd<MemoryDebugger> = MemoryDebugger::new_alloc();
@@ -302,7 +298,6 @@ impl INode for DclGlobal {
             scene_inspector_dispatcher.bind().get_sender(),
         );
         social_blacklist.set_name("social_blacklist");
-        social_service.set_name("social_service");
 
         #[cfg(feature = "use_memory_debugger")]
         memory_debugger.set_name("memory_debugger");
@@ -378,7 +373,6 @@ impl INode for DclGlobal {
             network_inspector,
             scene_inspector_dispatcher,
             social_blacklist,
-            social_service,
 
             #[cfg(feature = "use_memory_debugger")]
             memory_debugger,

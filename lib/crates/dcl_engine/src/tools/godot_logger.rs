@@ -4,21 +4,6 @@ use godot::classes::Os;
 use godot::prelude::*;
 use tracing::Level;
 
-/// Log targets whose ERROR/WARN output is demoted to a plain print.
-///
-/// `dcl_rpc` is a git dependency we cannot patch. Its `StreamProtocol` and
-/// `ClientMessagesHandler` errors fire once per inbound server message on a
-/// stream whose consumer was already dropped, which is ~19% of all Sentry
-/// volume and not actionable from here. The root cause (subscription streams
-/// orphaned by the 30s resubscribe) is tracked separately in #2591.
-const DEMOTED_TARGETS: [&str; 1] = ["dcl_rpc"];
-
-fn is_demoted_target(target: &str) -> bool {
-    DEMOTED_TARGETS
-        .iter()
-        .any(|demoted| target.starts_with(demoted))
-}
-
 /// A core log sink that forwards all log messages to Godot's print functions.
 /// This unifies Rust logging output into the Godot console across all platforms.
 pub struct GodotTracingLayer;
@@ -47,12 +32,6 @@ impl EventSink for GodotTracingLayer {
 
 fn emit_to_godot(msg: &str, metadata: &tracing::Metadata<'_>) {
     match *metadata.level() {
-        // Demoted targets never reach Godot's error stream, which is what
-        // the Sentry SDK captures. They stay in the logs and stay out of
-        // the quota; `--rust-log` still shows them.
-        Level::ERROR | Level::WARN if is_demoted_target(metadata.target()) => {
-            godot_print!("{}", msg);
-        }
         Level::ERROR => {
             print_error_with_source(msg, metadata);
         }

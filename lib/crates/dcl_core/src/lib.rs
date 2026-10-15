@@ -22,14 +22,12 @@ pub mod notifications;
 mod open_url;
 pub mod places;
 pub mod profile;
-pub mod proto;
 pub mod realm;
 pub mod report;
 pub mod scene;
 pub mod scene_requests;
 pub mod session;
 pub mod settings;
-pub mod social;
 pub mod urls;
 
 #[cfg(feature = "ffi")]

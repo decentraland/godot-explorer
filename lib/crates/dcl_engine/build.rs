@@ -459,7 +459,6 @@ fn main() -> io::Result<()> {
     //     every time a new component is added; blanket-derive avoids that.
     let mut prost_config = prost_build::Config::new();
     prost_config.type_attribute(".", "#[derive(serde::Serialize)]");
-    prost_config.service_generator(Box::new(dcl_rpc::codegen::RPCServiceGenerator::new()));
     // Emit the descriptor set so build_quant can read the Pulse quantization
     // field options (the .proto stays the single source of truth for the wire ABI).
     let descriptor_path = Path::new(&env::var("OUT_DIR").unwrap()).join("proto_descriptor_set.bin");

@@ -59,39 +59,6 @@ const uniffiIsDebug =
 
 // Public interface members begin here.
 
-export async function acceptFriendRequest(
-  address: string,
-  asyncOpts_?: { signal: AbortSignal },
-): Promise<void> /*throws*/ {
-  const __stack = uniffiIsDebug ? new Error().stack : undefined;
-  try {
-    return await uniffiRustCallAsync(
-      /*rustCaller:*/ uniffiCaller,
-      /*rustFutureFunc:*/ () => {
-        return nativeModule().ubrn_uniffi_dcl_core_fn_func_accept_friend_request(
-          FfiConverterString.lower(address, nativeModule().rustbuffer_alloc),
-        );
-      },
-      /*pollFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_poll_void,
-      /*cancelFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_cancel_void,
-      /*completeFunc:*/ nativeModule()
-        .ubrn_ffi_dcl_core_rust_future_complete_void,
-      /*freeFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_free_void,
-      /*liftFunc:*/ _v => {},
-      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
-      /*asyncOpts:*/ asyncOpts_,
-      /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(
-        FfiConverterTypeCoreError,
-      ),
-    );
-  } catch (__error: any) {
-    if (uniffiIsDebug && __error instanceof Error) {
-      __error.stack = __stack;
-    }
-    throw __error;
-  }
-}
-
 export function acceptTerms(version: number): void /*throws*/ {
   uniffiCaller.rustCallWithError(
     /*liftError:*/ FfiConverterTypeCoreError.lift.bind(
@@ -172,94 +139,6 @@ export function avatarState(): AvatarState | undefined /*throws*/ {
   }
 }
 
-export async function blockUser(
-  address: string,
-  asyncOpts_?: { signal: AbortSignal },
-): Promise<void> /*throws*/ {
-  const __stack = uniffiIsDebug ? new Error().stack : undefined;
-  try {
-    return await uniffiRustCallAsync(
-      /*rustCaller:*/ uniffiCaller,
-      /*rustFutureFunc:*/ () => {
-        return nativeModule().ubrn_uniffi_dcl_core_fn_func_block_user(
-          FfiConverterString.lower(address, nativeModule().rustbuffer_alloc),
-        );
-      },
-      /*pollFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_poll_void,
-      /*cancelFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_cancel_void,
-      /*completeFunc:*/ nativeModule()
-        .ubrn_ffi_dcl_core_rust_future_complete_void,
-      /*freeFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_free_void,
-      /*liftFunc:*/ _v => {},
-      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
-      /*asyncOpts:*/ asyncOpts_,
-      /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(
-        FfiConverterTypeCoreError,
-      ),
-    );
-  } catch (__error: any) {
-    if (uniffiIsDebug && __error instanceof Error) {
-      __error.stack = __stack;
-    }
-    throw __error;
-  }
-}
-
-/**
- * One page of the people the player blocked.
- */
-export async function blockedUsers(
-  limit: number,
-  offset: number,
-  asyncOpts_?: { signal: AbortSignal },
-): Promise<Array<Friend>> /*throws*/ {
-  const __stack = uniffiIsDebug ? new Error().stack : undefined;
-  try {
-    return await uniffiRustCallAsync(
-      /*rustCaller:*/ uniffiCaller,
-      /*rustFutureFunc:*/ () => {
-        return nativeModule().ubrn_uniffi_dcl_core_fn_func_blocked_users(
-          FfiConverterUInt32.lower(limit, nativeModule().rustbuffer_alloc),
-          FfiConverterUInt32.lower(offset, nativeModule().rustbuffer_alloc),
-        );
-      },
-      /*pollFunc:*/ nativeModule()
-        .ubrn_ffi_dcl_core_rust_future_poll_rust_buffer,
-      /*cancelFunc:*/ nativeModule()
-        .ubrn_ffi_dcl_core_rust_future_cancel_rust_buffer,
-      /*completeFunc:*/ nativeModule()
-        .ubrn_ffi_dcl_core_rust_future_complete_rust_buffer,
-      /*freeFunc:*/ nativeModule()
-        .ubrn_ffi_dcl_core_rust_future_free_rust_buffer,
-      // Async returns always go through the JS-side converter: the
-      // FFI symbol returns the future handle (u64), and the user-level
-      // RustBuffer comes back via the shared `rust_future_complete_*`
-      // export. The bytes the runtime hands back must be deserialized
-      // here using the per-callable return-type converter.
-      // Borrowed view over foreign memory: the call site owns the free,
-      // as on the sync paths. Unconditional — a no-op where buffers are
-      // already JS-owned.
-      /*liftFunc:*/ __rb => {
-        try {
-          return FfiConverterSequenceTypeFriend.lift(__rb);
-        } finally {
-          nativeModule().rustbuffer_free(__rb);
-        }
-      },
-      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
-      /*asyncOpts:*/ asyncOpts_,
-      /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(
-        FfiConverterTypeCoreError,
-      ),
-    );
-  } catch (__error: any) {
-    if (uniffiIsDebug && __error instanceof Error) {
-      __error.stack = __stack;
-    }
-    throw __error;
-  }
-}
-
 export function cacheSize(): CacheSize /*throws*/ {
   const __rb: Uint8Array = uniffiCaller.rustCallWithError(
     /*liftError:*/ FfiConverterTypeCoreError.lift.bind(
@@ -313,39 +192,6 @@ export async function campaignResolution(asyncOpts_?: {
           nativeModule().rustbuffer_free(__rb);
         }
       },
-      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
-      /*asyncOpts:*/ asyncOpts_,
-      /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(
-        FfiConverterTypeCoreError,
-      ),
-    );
-  } catch (__error: any) {
-    if (uniffiIsDebug && __error instanceof Error) {
-      __error.stack = __stack;
-    }
-    throw __error;
-  }
-}
-
-export async function cancelFriendRequest(
-  address: string,
-  asyncOpts_?: { signal: AbortSignal },
-): Promise<void> /*throws*/ {
-  const __stack = uniffiIsDebug ? new Error().stack : undefined;
-  try {
-    return await uniffiRustCallAsync(
-      /*rustCaller:*/ uniffiCaller,
-      /*rustFutureFunc:*/ () => {
-        return nativeModule().ubrn_uniffi_dcl_core_fn_func_cancel_friend_request(
-          FfiConverterString.lower(address, nativeModule().rustbuffer_alloc),
-        );
-      },
-      /*pollFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_poll_void,
-      /*cancelFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_cancel_void,
-      /*completeFunc:*/ nativeModule()
-        .ubrn_ffi_dcl_core_rust_future_complete_void,
-      /*freeFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_free_void,
-      /*liftFunc:*/ _v => {},
       /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
       /*asyncOpts:*/ asyncOpts_,
       /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(
@@ -1104,111 +950,6 @@ export async function flushAnalytics(asyncOpts_?: {
 }
 
 /**
- * Pending requests, received and sent.
- */
-export async function friendRequests(asyncOpts_?: {
-  signal: AbortSignal;
-}): Promise<FriendRequests> /*throws*/ {
-  const __stack = uniffiIsDebug ? new Error().stack : undefined;
-  try {
-    return await uniffiRustCallAsync(
-      /*rustCaller:*/ uniffiCaller,
-      /*rustFutureFunc:*/ () => {
-        return nativeModule().ubrn_uniffi_dcl_core_fn_func_friend_requests();
-      },
-      /*pollFunc:*/ nativeModule()
-        .ubrn_ffi_dcl_core_rust_future_poll_rust_buffer,
-      /*cancelFunc:*/ nativeModule()
-        .ubrn_ffi_dcl_core_rust_future_cancel_rust_buffer,
-      /*completeFunc:*/ nativeModule()
-        .ubrn_ffi_dcl_core_rust_future_complete_rust_buffer,
-      /*freeFunc:*/ nativeModule()
-        .ubrn_ffi_dcl_core_rust_future_free_rust_buffer,
-      // Async returns always go through the JS-side converter: the
-      // FFI symbol returns the future handle (u64), and the user-level
-      // RustBuffer comes back via the shared `rust_future_complete_*`
-      // export. The bytes the runtime hands back must be deserialized
-      // here using the per-callable return-type converter.
-      // Borrowed view over foreign memory: the call site owns the free,
-      // as on the sync paths. Unconditional — a no-op where buffers are
-      // already JS-owned.
-      /*liftFunc:*/ __rb => {
-        try {
-          return FfiConverterTypeFriendRequests.lift(__rb);
-        } finally {
-          nativeModule().rustbuffer_free(__rb);
-        }
-      },
-      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
-      /*asyncOpts:*/ asyncOpts_,
-      /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(
-        FfiConverterTypeCoreError,
-      ),
-    );
-  } catch (__error: any) {
-    if (uniffiIsDebug && __error instanceof Error) {
-      __error.stack = __stack;
-    }
-    throw __error;
-  }
-}
-
-/**
- * One page of the friends list. `limit` 0 asks for the service's default page.
- */
-export async function friends(
-  limit: number,
-  offset: number,
-  asyncOpts_?: { signal: AbortSignal },
-): Promise<Array<Friend>> /*throws*/ {
-  const __stack = uniffiIsDebug ? new Error().stack : undefined;
-  try {
-    return await uniffiRustCallAsync(
-      /*rustCaller:*/ uniffiCaller,
-      /*rustFutureFunc:*/ () => {
-        return nativeModule().ubrn_uniffi_dcl_core_fn_func_friends(
-          FfiConverterUInt32.lower(limit, nativeModule().rustbuffer_alloc),
-          FfiConverterUInt32.lower(offset, nativeModule().rustbuffer_alloc),
-        );
-      },
-      /*pollFunc:*/ nativeModule()
-        .ubrn_ffi_dcl_core_rust_future_poll_rust_buffer,
-      /*cancelFunc:*/ nativeModule()
-        .ubrn_ffi_dcl_core_rust_future_cancel_rust_buffer,
-      /*completeFunc:*/ nativeModule()
-        .ubrn_ffi_dcl_core_rust_future_complete_rust_buffer,
-      /*freeFunc:*/ nativeModule()
-        .ubrn_ffi_dcl_core_rust_future_free_rust_buffer,
-      // Async returns always go through the JS-side converter: the
-      // FFI symbol returns the future handle (u64), and the user-level
-      // RustBuffer comes back via the shared `rust_future_complete_*`
-      // export. The bytes the runtime hands back must be deserialized
-      // here using the per-callable return-type converter.
-      // Borrowed view over foreign memory: the call site owns the free,
-      // as on the sync paths. Unconditional — a no-op where buffers are
-      // already JS-owned.
-      /*liftFunc:*/ __rb => {
-        try {
-          return FfiConverterSequenceTypeFriend.lift(__rb);
-        } finally {
-          nativeModule().rustbuffer_free(__rb);
-        }
-      },
-      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
-      /*asyncOpts:*/ asyncOpts_,
-      /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(
-        FfiConverterTypeCoreError,
-      ),
-    );
-  } catch (__error: any) {
-    if (uniffiIsDebug && __error instanceof Error) {
-      __error.stack = __stack;
-    }
-    throw __error;
-  }
-}
-
-/**
  * Routes a deep link. A browser sign-in it carries is finished here; the shell gets the
  * navigation, the settings the engine owns and the analytics to record.
  */
@@ -1409,56 +1150,6 @@ export function marketplaceItemUrl(
     return FfiConverterString.lift(__rb);
   } finally {
     nativeModule().rustbuffer_free(__rb);
-  }
-}
-
-/**
- * Players around, without the blocked ones.
- */
-export async function nearby(asyncOpts_?: {
-  signal: AbortSignal;
-}): Promise<Array<NearbyUser>> /*throws*/ {
-  const __stack = uniffiIsDebug ? new Error().stack : undefined;
-  try {
-    return await uniffiRustCallAsync(
-      /*rustCaller:*/ uniffiCaller,
-      /*rustFutureFunc:*/ () => {
-        return nativeModule().ubrn_uniffi_dcl_core_fn_func_nearby();
-      },
-      /*pollFunc:*/ nativeModule()
-        .ubrn_ffi_dcl_core_rust_future_poll_rust_buffer,
-      /*cancelFunc:*/ nativeModule()
-        .ubrn_ffi_dcl_core_rust_future_cancel_rust_buffer,
-      /*completeFunc:*/ nativeModule()
-        .ubrn_ffi_dcl_core_rust_future_complete_rust_buffer,
-      /*freeFunc:*/ nativeModule()
-        .ubrn_ffi_dcl_core_rust_future_free_rust_buffer,
-      // Async returns always go through the JS-side converter: the
-      // FFI symbol returns the future handle (u64), and the user-level
-      // RustBuffer comes back via the shared `rust_future_complete_*`
-      // export. The bytes the runtime hands back must be deserialized
-      // here using the per-callable return-type converter.
-      // Borrowed view over foreign memory: the call site owns the free,
-      // as on the sync paths. Unconditional — a no-op where buffers are
-      // already JS-owned.
-      /*liftFunc:*/ __rb => {
-        try {
-          return FfiConverterSequenceTypeNearbyUser.lift(__rb);
-        } finally {
-          nativeModule().rustbuffer_free(__rb);
-        }
-      },
-      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
-      /*asyncOpts:*/ asyncOpts_,
-      /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(
-        FfiConverterTypeCoreError,
-      ),
-    );
-  } catch (__error: any) {
-    if (uniffiIsDebug && __error instanceof Error) {
-      __error.stack = __stack;
-    }
-    throw __error;
   }
 }
 
@@ -1735,39 +1426,6 @@ export async function profile(
   }
 }
 
-export async function rejectFriendRequest(
-  address: string,
-  asyncOpts_?: { signal: AbortSignal },
-): Promise<void> /*throws*/ {
-  const __stack = uniffiIsDebug ? new Error().stack : undefined;
-  try {
-    return await uniffiRustCallAsync(
-      /*rustCaller:*/ uniffiCaller,
-      /*rustFutureFunc:*/ () => {
-        return nativeModule().ubrn_uniffi_dcl_core_fn_func_reject_friend_request(
-          FfiConverterString.lower(address, nativeModule().rustbuffer_alloc),
-        );
-      },
-      /*pollFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_poll_void,
-      /*cancelFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_cancel_void,
-      /*completeFunc:*/ nativeModule()
-        .ubrn_ffi_dcl_core_rust_future_complete_void,
-      /*freeFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_free_void,
-      /*liftFunc:*/ _v => {},
-      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
-      /*asyncOpts:*/ asyncOpts_,
-      /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(
-        FfiConverterTypeCoreError,
-      ),
-    );
-  } catch (__error: any) {
-    if (uniffiIsDebug && __error instanceof Error) {
-      __error.stack = __stack;
-    }
-    throw __error;
-  }
-}
-
 export function removeListener(id: bigint): void /*throws*/ {
   uniffiCaller.rustCallWithError(
     /*liftError:*/ FfiConverterTypeCoreError.lift.bind(
@@ -1911,41 +1569,6 @@ export function sceneLinkUrl(realm: string, x: number, y: number): string {
     return FfiConverterString.lift(__rb);
   } finally {
     nativeModule().rustbuffer_free(__rb);
-  }
-}
-
-export async function sendFriendRequest(
-  address: string,
-  message: string,
-  asyncOpts_?: { signal: AbortSignal },
-): Promise<void> /*throws*/ {
-  const __stack = uniffiIsDebug ? new Error().stack : undefined;
-  try {
-    return await uniffiRustCallAsync(
-      /*rustCaller:*/ uniffiCaller,
-      /*rustFutureFunc:*/ () => {
-        return nativeModule().ubrn_uniffi_dcl_core_fn_func_send_friend_request(
-          FfiConverterString.lower(address, nativeModule().rustbuffer_alloc),
-          FfiConverterString.lower(message, nativeModule().rustbuffer_alloc),
-        );
-      },
-      /*pollFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_poll_void,
-      /*cancelFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_cancel_void,
-      /*completeFunc:*/ nativeModule()
-        .ubrn_ffi_dcl_core_rust_future_complete_void,
-      /*freeFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_free_void,
-      /*liftFunc:*/ _v => {},
-      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
-      /*asyncOpts:*/ asyncOpts_,
-      /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(
-        FfiConverterTypeCoreError,
-      ),
-    );
-  } catch (__error: any) {
-    if (uniffiIsDebug && __error instanceof Error) {
-      __error.stack = __stack;
-    }
-    throw __error;
   }
 }
 
@@ -2493,39 +2116,6 @@ export function trackScreen(
     },
     /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
   );
-}
-
-export async function unblockUser(
-  address: string,
-  asyncOpts_?: { signal: AbortSignal },
-): Promise<void> /*throws*/ {
-  const __stack = uniffiIsDebug ? new Error().stack : undefined;
-  try {
-    return await uniffiRustCallAsync(
-      /*rustCaller:*/ uniffiCaller,
-      /*rustFutureFunc:*/ () => {
-        return nativeModule().ubrn_uniffi_dcl_core_fn_func_unblock_user(
-          FfiConverterString.lower(address, nativeModule().rustbuffer_alloc),
-        );
-      },
-      /*pollFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_poll_void,
-      /*cancelFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_cancel_void,
-      /*completeFunc:*/ nativeModule()
-        .ubrn_ffi_dcl_core_rust_future_complete_void,
-      /*freeFunc:*/ nativeModule().ubrn_ffi_dcl_core_rust_future_free_void,
-      /*liftFunc:*/ _v => {},
-      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
-      /*asyncOpts:*/ asyncOpts_,
-      /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(
-        FfiConverterTypeCoreError,
-      ),
-    );
-  } catch (__error: any) {
-    if (uniffiIsDebug && __error instanceof Error) {
-      __error.stack = __stack;
-    }
-    throw __error;
-  }
 }
 
 /**
@@ -3580,119 +3170,6 @@ const FfiConverterTypeDeviceSupport = (() => {
 })();
 
 /**
- * A person in the friends list or in a request list. `friendship_id` is only known for requests.
- */
-export type Friend = {
-  address: string;
-  name: string;
-  hasClaimedName: boolean;
-  profilePictureUrl: string;
-  friendshipId: string;
-  /**
-   * Whether the friend is connected right now (online or away); false for request lists.
-   */
-  online: boolean;
-};
-
-/**
- * Generated factory for {@link Friend} record objects.
- */
-export const Friend = (() => {
-  const defaults = () => ({});
-  const create = (() => {
-    return uniffiCreateRecord<Friend, ReturnType<typeof defaults>>(defaults);
-  })();
-  return Object.freeze({
-    create,
-    new: create,
-    defaults: () => Object.freeze(defaults()) as Partial<Friend>,
-  });
-})();
-
-const FfiConverterTypeFriend = (() => {
-  type TypeName = Friend;
-  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
-    readFromCursor(c: Cursor): TypeName {
-      return {
-        address: FfiConverterString.readFromCursor(c),
-        name: FfiConverterString.readFromCursor(c),
-        hasClaimedName: FfiConverterBool.readFromCursor(c),
-        profilePictureUrl: FfiConverterString.readFromCursor(c),
-        friendshipId: FfiConverterString.readFromCursor(c),
-        online: FfiConverterBool.readFromCursor(c),
-      };
-    }
-    writeIntoCursor(value: TypeName, c: Cursor): void {
-      FfiConverterString.writeIntoCursor(value.address, c);
-      FfiConverterString.writeIntoCursor(value.name, c);
-      FfiConverterBool.writeIntoCursor(value.hasClaimedName, c);
-      FfiConverterString.writeIntoCursor(value.profilePictureUrl, c);
-      FfiConverterString.writeIntoCursor(value.friendshipId, c);
-      FfiConverterBool.writeIntoCursor(value.online, c);
-    }
-    allocationSize(value: TypeName): number {
-      return (
-        FfiConverterString.allocationSize(value.address) +
-        FfiConverterString.allocationSize(value.name) +
-        FfiConverterBool.allocationSize(value.hasClaimedName) +
-        FfiConverterString.allocationSize(value.profilePictureUrl) +
-        FfiConverterString.allocationSize(value.friendshipId) +
-        FfiConverterBool.allocationSize(value.online)
-      );
-    }
-  }
-  return new FFIConverter();
-})();
-
-/**
- * Pending friend requests, in both directions.
- */
-export type FriendRequests = {
-  received: Array<Friend>;
-  sent: Array<Friend>;
-};
-
-/**
- * Generated factory for {@link FriendRequests} record objects.
- */
-export const FriendRequests = (() => {
-  const defaults = () => ({});
-  const create = (() => {
-    return uniffiCreateRecord<FriendRequests, ReturnType<typeof defaults>>(
-      defaults,
-    );
-  })();
-  return Object.freeze({
-    create,
-    new: create,
-    defaults: () => Object.freeze(defaults()) as Partial<FriendRequests>,
-  });
-})();
-
-const FfiConverterTypeFriendRequests = (() => {
-  type TypeName = FriendRequests;
-  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
-    readFromCursor(c: Cursor): TypeName {
-      return {
-        received: FfiConverterSequenceTypeFriend.readFromCursor(c),
-        sent: FfiConverterSequenceTypeFriend.readFromCursor(c),
-      };
-    }
-    writeIntoCursor(value: TypeName, c: Cursor): void {
-      FfiConverterSequenceTypeFriend.writeIntoCursor(value.received, c);
-      FfiConverterSequenceTypeFriend.writeIntoCursor(value.sent, c);
-    }
-    allocationSize(value: TypeName): number {
-      return (
-        FfiConverterSequenceTypeFriend.allocationSize(value.received) +
-        FfiConverterSequenceTypeFriend.allocationSize(value.sent)
-      );
-    }
-  }
-  return new FFIConverter();
-})();
-
-/**
  * The physical pixels the HUD keeps clear on each side (notch, gesture bar, joypad).
  */
 export type HudInsets = {
@@ -3902,62 +3379,6 @@ const FfiConverterTypeLoadingDetail = (() => {
         FfiConverterUInt64.allocationSize(value.total) +
         FfiConverterFloat32.allocationSize(value.mbps) +
         FfiConverterFloat32.allocationSize(value.percent)
-      );
-    }
-  }
-  return new FFIConverter();
-})();
-
-/**
- * Someone standing near the player.
- */
-export type NearbyUser = {
-  address: string;
-  name: string;
-  hasClaimedName: boolean;
-  profilePictureUrl: string;
-};
-
-/**
- * Generated factory for {@link NearbyUser} record objects.
- */
-export const NearbyUser = (() => {
-  const defaults = () => ({});
-  const create = (() => {
-    return uniffiCreateRecord<NearbyUser, ReturnType<typeof defaults>>(
-      defaults,
-    );
-  })();
-  return Object.freeze({
-    create,
-    new: create,
-    defaults: () => Object.freeze(defaults()) as Partial<NearbyUser>,
-  });
-})();
-
-const FfiConverterTypeNearbyUser = (() => {
-  type TypeName = NearbyUser;
-  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
-    readFromCursor(c: Cursor): TypeName {
-      return {
-        address: FfiConverterString.readFromCursor(c),
-        name: FfiConverterString.readFromCursor(c),
-        hasClaimedName: FfiConverterBool.readFromCursor(c),
-        profilePictureUrl: FfiConverterString.readFromCursor(c),
-      };
-    }
-    writeIntoCursor(value: TypeName, c: Cursor): void {
-      FfiConverterString.writeIntoCursor(value.address, c);
-      FfiConverterString.writeIntoCursor(value.name, c);
-      FfiConverterBool.writeIntoCursor(value.hasClaimedName, c);
-      FfiConverterString.writeIntoCursor(value.profilePictureUrl, c);
-    }
-    allocationSize(value: TypeName): number {
-      return (
-        FfiConverterString.allocationSize(value.address) +
-        FfiConverterString.allocationSize(value.name) +
-        FfiConverterBool.allocationSize(value.hasClaimedName) +
-        FfiConverterString.allocationSize(value.profilePictureUrl)
       );
     }
   }
@@ -10174,7 +9595,6 @@ export interface AppListener {
    */
   authError(code: string): void;
   openUrl(request: OpenUrl): void;
-  friendsChanged(): void;
   settingsChanged(entry: SettingEntry): void;
   /**
    * The player's whereabouts, a few times a second while in a world.
@@ -10266,18 +9686,6 @@ export class AppListenerImpl
             request,
             nativeModule().rustbuffer_alloc,
           ),
-          callStatus,
-        );
-      },
-      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
-    );
-  }
-
-  friendsChanged(): void {
-    uniffiCaller.rustCall(
-      /*caller:*/ callStatus => {
-        nativeModule().ubrn_uniffi_dcl_core_fn_method_applistener_friends_changed(
-          uniffiTypeAppListenerImplObjectFactory.clonePointer(this),
           callStatus,
         );
       },
@@ -10612,25 +10020,6 @@ const uniffiCallbackInterfaceAppListener: {
       );
       return uniffiResult;
     },
-    friends_changed: (uniffiHandle: bigint) => {
-      const uniffiMakeCall = (): void => {
-        const jsCallback = FfiConverterTypeAppListener.lift(uniffiHandle);
-        return jsCallback.friendsChanged();
-      };
-      const uniffiResult = UniffiResult.ready<void>();
-      const uniffiHandleSuccess = (obj: any) => {};
-      const uniffiHandleError = (code: number, errBuf: UniffiByteArray) => {
-        UniffiResult.writeError(uniffiResult, code, errBuf);
-      };
-      uniffiTraitInterfaceCall(
-        /*makeCall:*/ uniffiMakeCall,
-        /*handleSuccess:*/ uniffiHandleSuccess,
-        /*handleError:*/ uniffiHandleError,
-        /*lowerString:*/ FfiConverterString.lower.bind(FfiConverterString),
-        /*alloc:*/ nativeModule().rustbuffer_alloc,
-      );
-      return uniffiResult;
-    },
     settings_changed: (uniffiHandle: bigint, entry: Uint8Array) => {
       const uniffiMakeCall = (): void => {
         const jsCallback = FfiConverterTypeAppListener.lift(uniffiHandle);
@@ -10876,11 +10265,6 @@ const FfiConverterOptionalTypeSupportModal = new FfiConverterOptional(
   FfiConverterTypeSupportModal,
 );
 
-// FfiConverter for Array<Friend>
-const FfiConverterSequenceTypeFriend = new FfiConverterArray(
-  FfiConverterTypeFriend,
-);
-
 // FfiConverter for number | undefined
 const FfiConverterOptionalFloat64 = new FfiConverterOptional(
   FfiConverterFloat64,
@@ -10942,11 +10326,6 @@ const FfiConverterSequenceTypePlace = new FfiConverterArray(
   FfiConverterTypePlace,
 );
 
-// FfiConverter for Array<NearbyUser>
-const FfiConverterSequenceTypeNearbyUser = new FfiConverterArray(
-  FfiConverterTypeNearbyUser,
-);
-
 // FfiConverter for number | undefined
 const FfiConverterOptionalUInt32 = new FfiConverterOptional(FfiConverterUInt32);
 
@@ -10998,14 +10377,6 @@ function uniffiEnsureInitialized() {
     );
   }
   if (
-    nativeModule().ubrn_uniffi_dcl_core_checksum_func_accept_friend_request() !==
-    47162
-  ) {
-    throw new UniffiInternalError.ApiChecksumMismatch(
-      'uniffi_dcl_core_checksum_func_accept_friend_request',
-    );
-  }
-  if (
     nativeModule().ubrn_uniffi_dcl_core_checksum_func_accept_terms() !== 56996
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
@@ -11032,20 +10403,6 @@ function uniffiEnsureInitialized() {
     );
   }
   if (
-    nativeModule().ubrn_uniffi_dcl_core_checksum_func_block_user() !== 55013
-  ) {
-    throw new UniffiInternalError.ApiChecksumMismatch(
-      'uniffi_dcl_core_checksum_func_block_user',
-    );
-  }
-  if (
-    nativeModule().ubrn_uniffi_dcl_core_checksum_func_blocked_users() !== 19086
-  ) {
-    throw new UniffiInternalError.ApiChecksumMismatch(
-      'uniffi_dcl_core_checksum_func_blocked_users',
-    );
-  }
-  if (
     nativeModule().ubrn_uniffi_dcl_core_checksum_func_cache_size() !== 31999
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
@@ -11058,14 +10415,6 @@ function uniffiEnsureInitialized() {
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_dcl_core_checksum_func_campaign_resolution',
-    );
-  }
-  if (
-    nativeModule().ubrn_uniffi_dcl_core_checksum_func_cancel_friend_request() !==
-    57597
-  ) {
-    throw new UniffiInternalError.ApiChecksumMismatch(
-      'uniffi_dcl_core_checksum_func_cancel_friend_request',
     );
   }
   if (
@@ -11229,19 +10578,6 @@ function uniffiEnsureInitialized() {
     );
   }
   if (
-    nativeModule().ubrn_uniffi_dcl_core_checksum_func_friend_requests() !==
-    47957
-  ) {
-    throw new UniffiInternalError.ApiChecksumMismatch(
-      'uniffi_dcl_core_checksum_func_friend_requests',
-    );
-  }
-  if (nativeModule().ubrn_uniffi_dcl_core_checksum_func_friends() !== 50839) {
-    throw new UniffiInternalError.ApiChecksumMismatch(
-      'uniffi_dcl_core_checksum_func_friends',
-    );
-  }
-  if (
     nativeModule().ubrn_uniffi_dcl_core_checksum_func_handle_deep_link() !==
     59962
   ) {
@@ -11306,11 +10642,6 @@ function uniffiEnsureInitialized() {
       'uniffi_dcl_core_checksum_func_marketplace_item_url',
     );
   }
-  if (nativeModule().ubrn_uniffi_dcl_core_checksum_func_nearby() !== 53248) {
-    throw new UniffiInternalError.ApiChecksumMismatch(
-      'uniffi_dcl_core_checksum_func_nearby',
-    );
-  }
   if (
     nativeModule().ubrn_uniffi_dcl_core_checksum_func_notifications() !== 89
   ) {
@@ -11347,14 +10678,6 @@ function uniffiEnsureInitialized() {
     );
   }
   if (
-    nativeModule().ubrn_uniffi_dcl_core_checksum_func_reject_friend_request() !==
-    62479
-  ) {
-    throw new UniffiInternalError.ApiChecksumMismatch(
-      'uniffi_dcl_core_checksum_func_reject_friend_request',
-    );
-  }
-  if (
     nativeModule().ubrn_uniffi_dcl_core_checksum_func_remove_listener() !==
     15673
   ) {
@@ -11383,14 +10706,6 @@ function uniffiEnsureInitialized() {
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_dcl_core_checksum_func_scene_link_url',
-    );
-  }
-  if (
-    nativeModule().ubrn_uniffi_dcl_core_checksum_func_send_friend_request() !==
-    38105
-  ) {
-    throw new UniffiInternalError.ApiChecksumMismatch(
-      'uniffi_dcl_core_checksum_func_send_friend_request',
     );
   }
   if (
@@ -11552,13 +10867,6 @@ function uniffiEnsureInitialized() {
       'uniffi_dcl_core_checksum_func_track_screen',
     );
   }
-  if (
-    nativeModule().ubrn_uniffi_dcl_core_checksum_func_unblock_user() !== 37381
-  ) {
-    throw new UniffiInternalError.ApiChecksumMismatch(
-      'uniffi_dcl_core_checksum_func_unblock_user',
-    );
-  }
   if (nativeModule().ubrn_uniffi_dcl_core_checksum_func_urls() !== 18044) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_dcl_core_checksum_func_urls',
@@ -11614,16 +10922,8 @@ function uniffiEnsureInitialized() {
     );
   }
   if (
-    nativeModule().ubrn_uniffi_dcl_core_checksum_method_applistener_friends_changed() !==
-    29000
-  ) {
-    throw new UniffiInternalError.ApiChecksumMismatch(
-      'uniffi_dcl_core_checksum_method_applistener_friends_changed',
-    );
-  }
-  if (
     nativeModule().ubrn_uniffi_dcl_core_checksum_method_applistener_settings_changed() !==
-    46828
+    43786
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_dcl_core_checksum_method_applistener_settings_changed',
@@ -11631,7 +10931,7 @@ function uniffiEnsureInitialized() {
   }
   if (
     nativeModule().ubrn_uniffi_dcl_core_checksum_method_applistener_hud() !==
-    60997
+    26204
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_dcl_core_checksum_method_applistener_hud',
@@ -11639,7 +10939,7 @@ function uniffiEnsureInitialized() {
   }
   if (
     nativeModule().ubrn_uniffi_dcl_core_checksum_method_applistener_chat() !==
-    531
+    11686
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_dcl_core_checksum_method_applistener_chat',
@@ -11647,7 +10947,7 @@ function uniffiEnsureInitialized() {
   }
   if (
     nativeModule().ubrn_uniffi_dcl_core_checksum_method_applistener_unread_chat() !==
-    24311
+    48316
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_dcl_core_checksum_method_applistener_unread_chat',
@@ -11655,7 +10955,7 @@ function uniffiEnsureInitialized() {
   }
   if (
     nativeModule().ubrn_uniffi_dcl_core_checksum_method_applistener_ui_state() !==
-    19224
+    8047
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_dcl_core_checksum_method_applistener_ui_state',
@@ -11663,7 +10963,7 @@ function uniffiEnsureInitialized() {
   }
   if (
     nativeModule().ubrn_uniffi_dcl_core_checksum_method_applistener_open_backpack() !==
-    10542
+    3024
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_dcl_core_checksum_method_applistener_open_backpack',
@@ -11671,7 +10971,7 @@ function uniffiEnsureInitialized() {
   }
   if (
     nativeModule().ubrn_uniffi_dcl_core_checksum_method_applistener_loading_detail() !==
-    64549
+    26778
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_dcl_core_checksum_method_applistener_loading_detail',
@@ -11679,7 +10979,7 @@ function uniffiEnsureInitialized() {
   }
   if (
     nativeModule().ubrn_uniffi_dcl_core_checksum_method_applistener_avatar_changed() !==
-    44573
+    59350
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_dcl_core_checksum_method_applistener_avatar_changed',
@@ -11687,7 +10987,7 @@ function uniffiEnsureInitialized() {
   }
   if (
     nativeModule().ubrn_uniffi_dcl_core_checksum_method_applistener_report() !==
-    37505
+    54322
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_dcl_core_checksum_method_applistener_report',
@@ -11695,7 +10995,7 @@ function uniffiEnsureInitialized() {
   }
   if (
     nativeModule().ubrn_uniffi_dcl_core_checksum_method_applistener_report_tag() !==
-    2910
+    41347
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_dcl_core_checksum_method_applistener_report_tag',
@@ -11735,13 +11035,10 @@ export default Object.freeze({
     FfiConverterTypeDeviceSupport,
     FfiConverterTypeEffect,
     FfiConverterTypeEnvironment,
-    FfiConverterTypeFriend,
-    FfiConverterTypeFriendRequests,
     FfiConverterTypeHudInsets,
     FfiConverterTypeHudSnapshot,
     FfiConverterTypeLoadingDetail,
     FfiConverterTypeNavigation,
-    FfiConverterTypeNearbyUser,
     FfiConverterTypeNotification,
     FfiConverterTypeNotificationKind,
     FfiConverterTypeNotificationSender,

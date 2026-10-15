@@ -108,36 +108,33 @@ typedef void (*UniffiCallbackInterfaceAppListenerMethod3)(
     uint64_t uniffi_handle, RustBuffer request, void *uniffi_out_return,
     RustCallStatus *rust_call_status);
 typedef void (*UniffiCallbackInterfaceAppListenerMethod4)(
-    uint64_t uniffi_handle, void *uniffi_out_return,
-    RustCallStatus *rust_call_status);
-typedef void (*UniffiCallbackInterfaceAppListenerMethod5)(
     uint64_t uniffi_handle, RustBuffer entry, void *uniffi_out_return,
     RustCallStatus *rust_call_status);
-typedef void (*UniffiCallbackInterfaceAppListenerMethod6)(
+typedef void (*UniffiCallbackInterfaceAppListenerMethod5)(
     uint64_t uniffi_handle, RustBuffer snapshot, void *uniffi_out_return,
     RustCallStatus *rust_call_status);
-typedef void (*UniffiCallbackInterfaceAppListenerMethod7)(
+typedef void (*UniffiCallbackInterfaceAppListenerMethod6)(
     uint64_t uniffi_handle, RustBuffer line, void *uniffi_out_return,
     RustCallStatus *rust_call_status);
-typedef void (*UniffiCallbackInterfaceAppListenerMethod8)(
+typedef void (*UniffiCallbackInterfaceAppListenerMethod7)(
     uint64_t uniffi_handle, uint32_t count, void *uniffi_out_return,
     RustCallStatus *rust_call_status);
-typedef void (*UniffiCallbackInterfaceAppListenerMethod9)(
+typedef void (*UniffiCallbackInterfaceAppListenerMethod8)(
     uint64_t uniffi_handle, RustBuffer state, void *uniffi_out_return,
     RustCallStatus *rust_call_status);
-typedef void (*UniffiCallbackInterfaceAppListenerMethod10)(
+typedef void (*UniffiCallbackInterfaceAppListenerMethod9)(
     uint64_t uniffi_handle, int8_t emotes, void *uniffi_out_return,
     RustCallStatus *rust_call_status);
-typedef void (*UniffiCallbackInterfaceAppListenerMethod11)(
+typedef void (*UniffiCallbackInterfaceAppListenerMethod10)(
     uint64_t uniffi_handle, RustBuffer detail, void *uniffi_out_return,
     RustCallStatus *rust_call_status);
-typedef void (*UniffiCallbackInterfaceAppListenerMethod12)(
+typedef void (*UniffiCallbackInterfaceAppListenerMethod11)(
     uint64_t uniffi_handle, RustBuffer avatar, void *uniffi_out_return,
     RustCallStatus *rust_call_status);
-typedef void (*UniffiCallbackInterfaceAppListenerMethod13)(
+typedef void (*UniffiCallbackInterfaceAppListenerMethod12)(
     uint64_t uniffi_handle, RustBuffer payload, void *uniffi_out_return,
     RustCallStatus *rust_call_status);
-typedef void (*UniffiCallbackInterfaceAppListenerMethod14)(
+typedef void (*UniffiCallbackInterfaceAppListenerMethod13)(
     uint64_t uniffi_handle, RustBuffer key, RustBuffer value,
     void *uniffi_out_return, RustCallStatus *rust_call_status);
 typedef struct UniffiVTableCallbackInterfaceAppListener {
@@ -147,17 +144,16 @@ typedef struct UniffiVTableCallbackInterfaceAppListener {
   UniffiCallbackInterfaceAppListenerMethod1 scene_crashed;
   UniffiCallbackInterfaceAppListenerMethod2 auth_error;
   UniffiCallbackInterfaceAppListenerMethod3 open_url;
-  UniffiCallbackInterfaceAppListenerMethod4 friends_changed;
-  UniffiCallbackInterfaceAppListenerMethod5 settings_changed;
-  UniffiCallbackInterfaceAppListenerMethod6 hud;
-  UniffiCallbackInterfaceAppListenerMethod7 chat;
-  UniffiCallbackInterfaceAppListenerMethod8 unread_chat;
-  UniffiCallbackInterfaceAppListenerMethod9 ui_state;
-  UniffiCallbackInterfaceAppListenerMethod10 open_backpack;
-  UniffiCallbackInterfaceAppListenerMethod11 loading_detail;
-  UniffiCallbackInterfaceAppListenerMethod12 avatar_changed;
-  UniffiCallbackInterfaceAppListenerMethod13 report;
-  UniffiCallbackInterfaceAppListenerMethod14 report_tag;
+  UniffiCallbackInterfaceAppListenerMethod4 settings_changed;
+  UniffiCallbackInterfaceAppListenerMethod5 hud;
+  UniffiCallbackInterfaceAppListenerMethod6 chat;
+  UniffiCallbackInterfaceAppListenerMethod7 unread_chat;
+  UniffiCallbackInterfaceAppListenerMethod8 ui_state;
+  UniffiCallbackInterfaceAppListenerMethod9 open_backpack;
+  UniffiCallbackInterfaceAppListenerMethod10 loading_detail;
+  UniffiCallbackInterfaceAppListenerMethod11 avatar_changed;
+  UniffiCallbackInterfaceAppListenerMethod12 report;
+  UniffiCallbackInterfaceAppListenerMethod13 report_tag;
 } UniffiVTableCallbackInterfaceAppListener;
 /*handle*/ uint64_t uniffi_dcl_core_fn_clone_applistener(
     /*handle*/ uint64_t handle, RustCallStatus *uniffi_out_err);
@@ -174,8 +170,6 @@ void uniffi_dcl_core_fn_method_applistener_auth_error(
 void uniffi_dcl_core_fn_method_applistener_open_url(
     /*handle*/ uint64_t ptr, RustBuffer request,
     RustCallStatus *uniffi_out_err);
-void uniffi_dcl_core_fn_method_applistener_friends_changed(
-    /*handle*/ uint64_t ptr, RustCallStatus *uniffi_out_err);
 void uniffi_dcl_core_fn_method_applistener_settings_changed(
     /*handle*/ uint64_t ptr, RustBuffer entry, RustCallStatus *uniffi_out_err);
 void uniffi_dcl_core_fn_method_applistener_hud(
@@ -329,23 +323,6 @@ uniffi_dcl_core_fn_func_setting_key_name(RustBuffer key,
                                          RustCallStatus *uniffi_out_err);
 RustBuffer uniffi_dcl_core_fn_func_settings(RustCallStatus *uniffi_out_err);
 RustBuffer uniffi_dcl_core_fn_func_version(RustCallStatus *uniffi_out_err);
-/*handle*/ uint64_t
-uniffi_dcl_core_fn_func_accept_friend_request(RustBuffer address);
-/*handle*/ uint64_t uniffi_dcl_core_fn_func_block_user(RustBuffer address);
-/*handle*/ uint64_t uniffi_dcl_core_fn_func_blocked_users(uint32_t limit,
-                                                          uint32_t offset);
-/*handle*/ uint64_t
-uniffi_dcl_core_fn_func_cancel_friend_request(RustBuffer address);
-/*handle*/ uint64_t uniffi_dcl_core_fn_func_friend_requests();
-/*handle*/ uint64_t uniffi_dcl_core_fn_func_friends(uint32_t limit,
-                                                    uint32_t offset);
-/*handle*/ uint64_t uniffi_dcl_core_fn_func_nearby();
-/*handle*/ uint64_t
-uniffi_dcl_core_fn_func_reject_friend_request(RustBuffer address);
-/*handle*/ uint64_t
-uniffi_dcl_core_fn_func_send_friend_request(RustBuffer address,
-                                            RustBuffer message);
-/*handle*/ uint64_t uniffi_dcl_core_fn_func_unblock_user(RustBuffer address);
 RustBuffer ffi_dcl_core_rustbuffer_alloc(uint64_t size,
                                          RustCallStatus *uniffi_out_err);
 RustBuffer ffi_dcl_core_rustbuffer_from_bytes(ForeignBytes bytes,
@@ -534,21 +511,10 @@ uint16_t uniffi_dcl_core_checksum_func_setting_key_from_name();
 uint16_t uniffi_dcl_core_checksum_func_setting_key_name();
 uint16_t uniffi_dcl_core_checksum_func_settings();
 uint16_t uniffi_dcl_core_checksum_func_version();
-uint16_t uniffi_dcl_core_checksum_func_accept_friend_request();
-uint16_t uniffi_dcl_core_checksum_func_block_user();
-uint16_t uniffi_dcl_core_checksum_func_blocked_users();
-uint16_t uniffi_dcl_core_checksum_func_cancel_friend_request();
-uint16_t uniffi_dcl_core_checksum_func_friend_requests();
-uint16_t uniffi_dcl_core_checksum_func_friends();
-uint16_t uniffi_dcl_core_checksum_func_nearby();
-uint16_t uniffi_dcl_core_checksum_func_reject_friend_request();
-uint16_t uniffi_dcl_core_checksum_func_send_friend_request();
-uint16_t uniffi_dcl_core_checksum_func_unblock_user();
 uint16_t uniffi_dcl_core_checksum_method_applistener_state_changed();
 uint16_t uniffi_dcl_core_checksum_method_applistener_scene_crashed();
 uint16_t uniffi_dcl_core_checksum_method_applistener_auth_error();
 uint16_t uniffi_dcl_core_checksum_method_applistener_open_url();
-uint16_t uniffi_dcl_core_checksum_method_applistener_friends_changed();
 uint16_t uniffi_dcl_core_checksum_method_applistener_settings_changed();
 uint16_t uniffi_dcl_core_checksum_method_applistener_hud();
 uint16_t uniffi_dcl_core_checksum_method_applistener_chat();
@@ -2639,7 +2605,7 @@ static void cleanup() {
 } // namespace
   // uniffi::dcl_core::cb::callbackinterfaceapplistenermethod3::vtablecallbackinterfaceapplistener
   // Implementation of CallbackInterfaceAppListenerMethod4 for vtable field
-  // friends_changed in VTableCallbackInterfaceAppListener
+  // settings_changed in VTableCallbackInterfaceAppListener
 
 // Callback function:
 // uniffi::dcl_core::cb::callbackinterfaceapplistenermethod4::vtablecallbackinterfaceapplistener::UniffiCallbackInterfaceAppListenerMethod4
@@ -2656,136 +2622,6 @@ static void cleanup() {
 // We then give the `callback` function pointer to Rust which will call the
 // lambda sometime in the future.
 namespace uniffi::dcl_core::cb::callbackinterfaceapplistenermethod4::
-    vtablecallbackinterfaceapplistener {
-using namespace facebook;
-
-// We need to store a lambda in a global so we can call it from
-// a function pointer. The function pointer is passed to Rust.
-static std::function<void(uint64_t, void *, RustCallStatus *)> rsLambda =
-    nullptr;
-
-// This is the main body of the callback. It's called from the lambda,
-// which itself is called from the callback function which is passed to Rust.
-static void body(jsi::Runtime &rt,
-                 std::shared_ptr<uniffi_runtime::UniffiCallInvoker> callInvoker,
-                 std::shared_ptr<jsi::Value> callbackValue,
-                 uint64_t rs_uniffiHandle, void *rs_uniffiOutReturn,
-                 RustCallStatus *uniffi_call_status) {
-
-  // Convert the arguments from Rust, into jsi::Values.
-  // We'll use the Bridging class to do this…
-  auto js_uniffiHandle =
-      uniffi_jsi::Bridging<uint64_t>::toJs(rt, callInvoker, rs_uniffiHandle);
-
-  // Now we are ready to call the callback.
-  // We are already on the JS thread, because this `body` function was
-  // invoked from the CallInvoker.
-  try {
-    // Getting the callback function
-    auto cb = callbackValue->asObject(rt).asFunction(rt);
-    auto uniffiResult = cb.call(rt, js_uniffiHandle);
-
-    // Now copy the result back from JS into the RustCallStatus object.
-    uniffi::dcl_core::Bridging<RustCallStatus>::copyFromJs(
-        rt, callInvoker, uniffiResult, uniffi_call_status);
-
-    if (uniffi_call_status->code != UNIFFI_CALL_STATUS_OK) {
-      // The JS callback finished abnormally, so we cannot retrieve the return
-      // value.
-      return;
-    }
-
-  } catch (const jsi::JSError &error) {
-    std::cout << "Error in callback UniffiCallbackInterfaceAppListenerMethod4: "
-              << error.what() << std::endl;
-    throw error;
-  }
-}
-
-static void callback(uint64_t rs_uniffiHandle, void *rs_uniffiOutReturn,
-                     RustCallStatus *uniffi_call_status) {
-  // If the runtime has shutdown, then there is no point in trying to
-  // call into Javascript. BUT how do we tell if the runtime has shutdown?
-  //
-  // Answer: the module destructor calls into callback `cleanup` method,
-  // which nulls out the rsLamda.
-  //
-  // If rsLamda is null, then there is no runtime to call into.
-  if (rsLambda == nullptr) {
-    // This only occurs when destructors are calling into Rust free/drop,
-    // which causes the JS callback to be dropped.
-    return;
-  }
-
-  // The runtime, the actual callback jsi::funtion, and the callInvoker
-  // are all in the lambda.
-  rsLambda(rs_uniffiHandle, rs_uniffiOutReturn, uniffi_call_status);
-}
-
-[[maybe_unused]] static UniffiCallbackInterfaceAppListenerMethod4
-makeCallbackFunction( // uniffi::dcl_core::cb::callbackinterfaceapplistenermethod4::vtablecallbackinterfaceapplistener
-    jsi::Runtime &rt,
-    std::shared_ptr<uniffi_runtime::UniffiCallInvoker> callInvoker,
-    const jsi::Value &value) {
-  if (rsLambda != nullptr) {
-    // `makeCallbackFunction` is called in two circumstances:
-    //
-    // 1. at startup, when initializing callback interface vtables.
-    // 2. when polling futures. This happens at least once per future that is
-    //    exposed to Javascript. We know that this is always the same function,
-    //    `uniffiFutureContinuationCallback` in `async-rust-calls.ts`.
-    //
-    // We can therefore return the callback function without making anything
-    // new if we've been initialized already.
-    return callback;
-  }
-  auto callbackFunction = value.asObject(rt).asFunction(rt);
-  auto callbackValue = std::make_shared<jsi::Value>(rt, callbackFunction);
-  rsLambda = [&rt, callInvoker,
-              callbackValue](uint64_t rs_uniffiHandle, void *rs_uniffiOutReturn,
-                             RustCallStatus *uniffi_call_status) {
-    // We immediately make a lambda which will do the work of transforming the
-    // arguments into JSI values and calling the callback.
-    uniffi_runtime::UniffiCallFunc jsLambda =
-        [callInvoker, callbackValue, rs_uniffiHandle, rs_uniffiOutReturn,
-         uniffi_call_status](jsi::Runtime &rt) mutable {
-          body(rt, callInvoker, callbackValue, rs_uniffiHandle,
-               rs_uniffiOutReturn, uniffi_call_status);
-        };
-    // We'll then call that lambda from the callInvoker which will
-    // look after calling it on the correct thread.
-    callInvoker->invokeBlocking(rt, jsLambda);
-  };
-  return callback;
-}
-
-// This method is called from the destructor of NativeDclCore, which only
-// happens when the jsi::Runtime is being destroyed.
-static void cleanup() {
-  // The lambda holds a reference to the the Runtime, so when this is nulled
-  // out, then the pointer will no longer be left dangling.
-  rsLambda = nullptr;
-}
-} // namespace
-  // uniffi::dcl_core::cb::callbackinterfaceapplistenermethod4::vtablecallbackinterfaceapplistener
-  // Implementation of CallbackInterfaceAppListenerMethod5 for vtable field
-  // settings_changed in VTableCallbackInterfaceAppListener
-
-// Callback function:
-// uniffi::dcl_core::cb::callbackinterfaceapplistenermethod5::vtablecallbackinterfaceapplistener::UniffiCallbackInterfaceAppListenerMethod5
-//
-// We have the following constraints:
-// - we need to pass a function pointer to Rust.
-// - we need a jsi::Runtime and jsi::Function to call into JS.
-// - function pointers can't store state, so we can't use a lamda.
-//
-// For this, we store a lambda as a global, as `rsLambda`. The `callback`
-// function calls the lambda, which itself calls the `body` which then calls
-// into JS.
-//
-// We then give the `callback` function pointer to Rust which will call the
-// lambda sometime in the future.
-namespace uniffi::dcl_core::cb::callbackinterfaceapplistenermethod5::
     vtablecallbackinterfaceapplistener {
 using namespace facebook;
 
@@ -2828,7 +2664,7 @@ static void body(jsi::Runtime &rt,
     }
 
   } catch (const jsi::JSError &error) {
-    std::cout << "Error in callback UniffiCallbackInterfaceAppListenerMethod5: "
+    std::cout << "Error in callback UniffiCallbackInterfaceAppListenerMethod4: "
               << error.what() << std::endl;
     throw error;
   }
@@ -2855,8 +2691,8 @@ static void callback(uint64_t rs_uniffiHandle, RustBuffer rs_entry,
   rsLambda(rs_uniffiHandle, rs_entry, rs_uniffiOutReturn, uniffi_call_status);
 }
 
-[[maybe_unused]] static UniffiCallbackInterfaceAppListenerMethod5
-makeCallbackFunction( // uniffi::dcl_core::cb::callbackinterfaceapplistenermethod5::vtablecallbackinterfaceapplistener
+[[maybe_unused]] static UniffiCallbackInterfaceAppListenerMethod4
+makeCallbackFunction( // uniffi::dcl_core::cb::callbackinterfaceapplistenermethod4::vtablecallbackinterfaceapplistener
     jsi::Runtime &rt,
     std::shared_ptr<uniffi_runtime::UniffiCallInvoker> callInvoker,
     const jsi::Value &value) {
@@ -2900,12 +2736,12 @@ static void cleanup() {
   rsLambda = nullptr;
 }
 } // namespace
-  // uniffi::dcl_core::cb::callbackinterfaceapplistenermethod5::vtablecallbackinterfaceapplistener
-  // Implementation of CallbackInterfaceAppListenerMethod6 for vtable field hud
+  // uniffi::dcl_core::cb::callbackinterfaceapplistenermethod4::vtablecallbackinterfaceapplistener
+  // Implementation of CallbackInterfaceAppListenerMethod5 for vtable field hud
   // in VTableCallbackInterfaceAppListener
 
 // Callback function:
-// uniffi::dcl_core::cb::callbackinterfaceapplistenermethod6::vtablecallbackinterfaceapplistener::UniffiCallbackInterfaceAppListenerMethod6
+// uniffi::dcl_core::cb::callbackinterfaceapplistenermethod5::vtablecallbackinterfaceapplistener::UniffiCallbackInterfaceAppListenerMethod5
 //
 // We have the following constraints:
 // - we need to pass a function pointer to Rust.
@@ -2918,7 +2754,7 @@ static void cleanup() {
 //
 // We then give the `callback` function pointer to Rust which will call the
 // lambda sometime in the future.
-namespace uniffi::dcl_core::cb::callbackinterfaceapplistenermethod6::
+namespace uniffi::dcl_core::cb::callbackinterfaceapplistenermethod5::
     vtablecallbackinterfaceapplistener {
 using namespace facebook;
 
@@ -2961,7 +2797,7 @@ static void body(jsi::Runtime &rt,
     }
 
   } catch (const jsi::JSError &error) {
-    std::cout << "Error in callback UniffiCallbackInterfaceAppListenerMethod6: "
+    std::cout << "Error in callback UniffiCallbackInterfaceAppListenerMethod5: "
               << error.what() << std::endl;
     throw error;
   }
@@ -2989,8 +2825,8 @@ static void callback(uint64_t rs_uniffiHandle, RustBuffer rs_snapshot,
            uniffi_call_status);
 }
 
-[[maybe_unused]] static UniffiCallbackInterfaceAppListenerMethod6
-makeCallbackFunction( // uniffi::dcl_core::cb::callbackinterfaceapplistenermethod6::vtablecallbackinterfaceapplistener
+[[maybe_unused]] static UniffiCallbackInterfaceAppListenerMethod5
+makeCallbackFunction( // uniffi::dcl_core::cb::callbackinterfaceapplistenermethod5::vtablecallbackinterfaceapplistener
     jsi::Runtime &rt,
     std::shared_ptr<uniffi_runtime::UniffiCallInvoker> callInvoker,
     const jsi::Value &value) {
@@ -3034,12 +2870,12 @@ static void cleanup() {
   rsLambda = nullptr;
 }
 } // namespace
-  // uniffi::dcl_core::cb::callbackinterfaceapplistenermethod6::vtablecallbackinterfaceapplistener
-  // Implementation of CallbackInterfaceAppListenerMethod7 for vtable field chat
+  // uniffi::dcl_core::cb::callbackinterfaceapplistenermethod5::vtablecallbackinterfaceapplistener
+  // Implementation of CallbackInterfaceAppListenerMethod6 for vtable field chat
   // in VTableCallbackInterfaceAppListener
 
 // Callback function:
-// uniffi::dcl_core::cb::callbackinterfaceapplistenermethod7::vtablecallbackinterfaceapplistener::UniffiCallbackInterfaceAppListenerMethod7
+// uniffi::dcl_core::cb::callbackinterfaceapplistenermethod6::vtablecallbackinterfaceapplistener::UniffiCallbackInterfaceAppListenerMethod6
 //
 // We have the following constraints:
 // - we need to pass a function pointer to Rust.
@@ -3052,7 +2888,7 @@ static void cleanup() {
 //
 // We then give the `callback` function pointer to Rust which will call the
 // lambda sometime in the future.
-namespace uniffi::dcl_core::cb::callbackinterfaceapplistenermethod7::
+namespace uniffi::dcl_core::cb::callbackinterfaceapplistenermethod6::
     vtablecallbackinterfaceapplistener {
 using namespace facebook;
 
@@ -3095,7 +2931,7 @@ static void body(jsi::Runtime &rt,
     }
 
   } catch (const jsi::JSError &error) {
-    std::cout << "Error in callback UniffiCallbackInterfaceAppListenerMethod7: "
+    std::cout << "Error in callback UniffiCallbackInterfaceAppListenerMethod6: "
               << error.what() << std::endl;
     throw error;
   }
@@ -3122,8 +2958,8 @@ static void callback(uint64_t rs_uniffiHandle, RustBuffer rs_line,
   rsLambda(rs_uniffiHandle, rs_line, rs_uniffiOutReturn, uniffi_call_status);
 }
 
-[[maybe_unused]] static UniffiCallbackInterfaceAppListenerMethod7
-makeCallbackFunction( // uniffi::dcl_core::cb::callbackinterfaceapplistenermethod7::vtablecallbackinterfaceapplistener
+[[maybe_unused]] static UniffiCallbackInterfaceAppListenerMethod6
+makeCallbackFunction( // uniffi::dcl_core::cb::callbackinterfaceapplistenermethod6::vtablecallbackinterfaceapplistener
     jsi::Runtime &rt,
     std::shared_ptr<uniffi_runtime::UniffiCallInvoker> callInvoker,
     const jsi::Value &value) {
@@ -3167,12 +3003,12 @@ static void cleanup() {
   rsLambda = nullptr;
 }
 } // namespace
-  // uniffi::dcl_core::cb::callbackinterfaceapplistenermethod7::vtablecallbackinterfaceapplistener
-  // Implementation of CallbackInterfaceAppListenerMethod8 for vtable field
+  // uniffi::dcl_core::cb::callbackinterfaceapplistenermethod6::vtablecallbackinterfaceapplistener
+  // Implementation of CallbackInterfaceAppListenerMethod7 for vtable field
   // unread_chat in VTableCallbackInterfaceAppListener
 
 // Callback function:
-// uniffi::dcl_core::cb::callbackinterfaceapplistenermethod8::vtablecallbackinterfaceapplistener::UniffiCallbackInterfaceAppListenerMethod8
+// uniffi::dcl_core::cb::callbackinterfaceapplistenermethod7::vtablecallbackinterfaceapplistener::UniffiCallbackInterfaceAppListenerMethod7
 //
 // We have the following constraints:
 // - we need to pass a function pointer to Rust.
@@ -3185,7 +3021,7 @@ static void cleanup() {
 //
 // We then give the `callback` function pointer to Rust which will call the
 // lambda sometime in the future.
-namespace uniffi::dcl_core::cb::callbackinterfaceapplistenermethod8::
+namespace uniffi::dcl_core::cb::callbackinterfaceapplistenermethod7::
     vtablecallbackinterfaceapplistener {
 using namespace facebook;
 
@@ -3228,7 +3064,7 @@ static void body(jsi::Runtime &rt,
     }
 
   } catch (const jsi::JSError &error) {
-    std::cout << "Error in callback UniffiCallbackInterfaceAppListenerMethod8: "
+    std::cout << "Error in callback UniffiCallbackInterfaceAppListenerMethod7: "
               << error.what() << std::endl;
     throw error;
   }
@@ -3255,8 +3091,8 @@ static void callback(uint64_t rs_uniffiHandle, uint32_t rs_count,
   rsLambda(rs_uniffiHandle, rs_count, rs_uniffiOutReturn, uniffi_call_status);
 }
 
-[[maybe_unused]] static UniffiCallbackInterfaceAppListenerMethod8
-makeCallbackFunction( // uniffi::dcl_core::cb::callbackinterfaceapplistenermethod8::vtablecallbackinterfaceapplistener
+[[maybe_unused]] static UniffiCallbackInterfaceAppListenerMethod7
+makeCallbackFunction( // uniffi::dcl_core::cb::callbackinterfaceapplistenermethod7::vtablecallbackinterfaceapplistener
     jsi::Runtime &rt,
     std::shared_ptr<uniffi_runtime::UniffiCallInvoker> callInvoker,
     const jsi::Value &value) {
@@ -3300,12 +3136,12 @@ static void cleanup() {
   rsLambda = nullptr;
 }
 } // namespace
-  // uniffi::dcl_core::cb::callbackinterfaceapplistenermethod8::vtablecallbackinterfaceapplistener
-  // Implementation of CallbackInterfaceAppListenerMethod9 for vtable field
+  // uniffi::dcl_core::cb::callbackinterfaceapplistenermethod7::vtablecallbackinterfaceapplistener
+  // Implementation of CallbackInterfaceAppListenerMethod8 for vtable field
   // ui_state in VTableCallbackInterfaceAppListener
 
 // Callback function:
-// uniffi::dcl_core::cb::callbackinterfaceapplistenermethod9::vtablecallbackinterfaceapplistener::UniffiCallbackInterfaceAppListenerMethod9
+// uniffi::dcl_core::cb::callbackinterfaceapplistenermethod8::vtablecallbackinterfaceapplistener::UniffiCallbackInterfaceAppListenerMethod8
 //
 // We have the following constraints:
 // - we need to pass a function pointer to Rust.
@@ -3318,7 +3154,7 @@ static void cleanup() {
 //
 // We then give the `callback` function pointer to Rust which will call the
 // lambda sometime in the future.
-namespace uniffi::dcl_core::cb::callbackinterfaceapplistenermethod9::
+namespace uniffi::dcl_core::cb::callbackinterfaceapplistenermethod8::
     vtablecallbackinterfaceapplistener {
 using namespace facebook;
 
@@ -3361,7 +3197,7 @@ static void body(jsi::Runtime &rt,
     }
 
   } catch (const jsi::JSError &error) {
-    std::cout << "Error in callback UniffiCallbackInterfaceAppListenerMethod9: "
+    std::cout << "Error in callback UniffiCallbackInterfaceAppListenerMethod8: "
               << error.what() << std::endl;
     throw error;
   }
@@ -3388,8 +3224,8 @@ static void callback(uint64_t rs_uniffiHandle, RustBuffer rs_state,
   rsLambda(rs_uniffiHandle, rs_state, rs_uniffiOutReturn, uniffi_call_status);
 }
 
-[[maybe_unused]] static UniffiCallbackInterfaceAppListenerMethod9
-makeCallbackFunction( // uniffi::dcl_core::cb::callbackinterfaceapplistenermethod9::vtablecallbackinterfaceapplistener
+[[maybe_unused]] static UniffiCallbackInterfaceAppListenerMethod8
+makeCallbackFunction( // uniffi::dcl_core::cb::callbackinterfaceapplistenermethod8::vtablecallbackinterfaceapplistener
     jsi::Runtime &rt,
     std::shared_ptr<uniffi_runtime::UniffiCallInvoker> callInvoker,
     const jsi::Value &value) {
@@ -3433,12 +3269,12 @@ static void cleanup() {
   rsLambda = nullptr;
 }
 } // namespace
-  // uniffi::dcl_core::cb::callbackinterfaceapplistenermethod9::vtablecallbackinterfaceapplistener
-  // Implementation of CallbackInterfaceAppListenerMethod10 for vtable field
+  // uniffi::dcl_core::cb::callbackinterfaceapplistenermethod8::vtablecallbackinterfaceapplistener
+  // Implementation of CallbackInterfaceAppListenerMethod9 for vtable field
   // open_backpack in VTableCallbackInterfaceAppListener
 
 // Callback function:
-// uniffi::dcl_core::cb::callbackinterfaceapplistenermethod10::vtablecallbackinterfaceapplistener::UniffiCallbackInterfaceAppListenerMethod10
+// uniffi::dcl_core::cb::callbackinterfaceapplistenermethod9::vtablecallbackinterfaceapplistener::UniffiCallbackInterfaceAppListenerMethod9
 //
 // We have the following constraints:
 // - we need to pass a function pointer to Rust.
@@ -3451,7 +3287,7 @@ static void cleanup() {
 //
 // We then give the `callback` function pointer to Rust which will call the
 // lambda sometime in the future.
-namespace uniffi::dcl_core::cb::callbackinterfaceapplistenermethod10::
+namespace uniffi::dcl_core::cb::callbackinterfaceapplistenermethod9::
     vtablecallbackinterfaceapplistener {
 using namespace facebook;
 
@@ -3494,9 +3330,8 @@ static void body(jsi::Runtime &rt,
     }
 
   } catch (const jsi::JSError &error) {
-    std::cout
-        << "Error in callback UniffiCallbackInterfaceAppListenerMethod10: "
-        << error.what() << std::endl;
+    std::cout << "Error in callback UniffiCallbackInterfaceAppListenerMethod9: "
+              << error.what() << std::endl;
     throw error;
   }
 }
@@ -3522,8 +3357,8 @@ static void callback(uint64_t rs_uniffiHandle, int8_t rs_emotes,
   rsLambda(rs_uniffiHandle, rs_emotes, rs_uniffiOutReturn, uniffi_call_status);
 }
 
-[[maybe_unused]] static UniffiCallbackInterfaceAppListenerMethod10
-makeCallbackFunction( // uniffi::dcl_core::cb::callbackinterfaceapplistenermethod10::vtablecallbackinterfaceapplistener
+[[maybe_unused]] static UniffiCallbackInterfaceAppListenerMethod9
+makeCallbackFunction( // uniffi::dcl_core::cb::callbackinterfaceapplistenermethod9::vtablecallbackinterfaceapplistener
     jsi::Runtime &rt,
     std::shared_ptr<uniffi_runtime::UniffiCallInvoker> callInvoker,
     const jsi::Value &value) {
@@ -3567,12 +3402,12 @@ static void cleanup() {
   rsLambda = nullptr;
 }
 } // namespace
-  // uniffi::dcl_core::cb::callbackinterfaceapplistenermethod10::vtablecallbackinterfaceapplistener
-  // Implementation of CallbackInterfaceAppListenerMethod11 for vtable field
+  // uniffi::dcl_core::cb::callbackinterfaceapplistenermethod9::vtablecallbackinterfaceapplistener
+  // Implementation of CallbackInterfaceAppListenerMethod10 for vtable field
   // loading_detail in VTableCallbackInterfaceAppListener
 
 // Callback function:
-// uniffi::dcl_core::cb::callbackinterfaceapplistenermethod11::vtablecallbackinterfaceapplistener::UniffiCallbackInterfaceAppListenerMethod11
+// uniffi::dcl_core::cb::callbackinterfaceapplistenermethod10::vtablecallbackinterfaceapplistener::UniffiCallbackInterfaceAppListenerMethod10
 //
 // We have the following constraints:
 // - we need to pass a function pointer to Rust.
@@ -3585,7 +3420,7 @@ static void cleanup() {
 //
 // We then give the `callback` function pointer to Rust which will call the
 // lambda sometime in the future.
-namespace uniffi::dcl_core::cb::callbackinterfaceapplistenermethod11::
+namespace uniffi::dcl_core::cb::callbackinterfaceapplistenermethod10::
     vtablecallbackinterfaceapplistener {
 using namespace facebook;
 
@@ -3629,7 +3464,7 @@ static void body(jsi::Runtime &rt,
 
   } catch (const jsi::JSError &error) {
     std::cout
-        << "Error in callback UniffiCallbackInterfaceAppListenerMethod11: "
+        << "Error in callback UniffiCallbackInterfaceAppListenerMethod10: "
         << error.what() << std::endl;
     throw error;
   }
@@ -3656,8 +3491,8 @@ static void callback(uint64_t rs_uniffiHandle, RustBuffer rs_detail,
   rsLambda(rs_uniffiHandle, rs_detail, rs_uniffiOutReturn, uniffi_call_status);
 }
 
-[[maybe_unused]] static UniffiCallbackInterfaceAppListenerMethod11
-makeCallbackFunction( // uniffi::dcl_core::cb::callbackinterfaceapplistenermethod11::vtablecallbackinterfaceapplistener
+[[maybe_unused]] static UniffiCallbackInterfaceAppListenerMethod10
+makeCallbackFunction( // uniffi::dcl_core::cb::callbackinterfaceapplistenermethod10::vtablecallbackinterfaceapplistener
     jsi::Runtime &rt,
     std::shared_ptr<uniffi_runtime::UniffiCallInvoker> callInvoker,
     const jsi::Value &value) {
@@ -3701,12 +3536,12 @@ static void cleanup() {
   rsLambda = nullptr;
 }
 } // namespace
-  // uniffi::dcl_core::cb::callbackinterfaceapplistenermethod11::vtablecallbackinterfaceapplistener
-  // Implementation of CallbackInterfaceAppListenerMethod12 for vtable field
+  // uniffi::dcl_core::cb::callbackinterfaceapplistenermethod10::vtablecallbackinterfaceapplistener
+  // Implementation of CallbackInterfaceAppListenerMethod11 for vtable field
   // avatar_changed in VTableCallbackInterfaceAppListener
 
 // Callback function:
-// uniffi::dcl_core::cb::callbackinterfaceapplistenermethod12::vtablecallbackinterfaceapplistener::UniffiCallbackInterfaceAppListenerMethod12
+// uniffi::dcl_core::cb::callbackinterfaceapplistenermethod11::vtablecallbackinterfaceapplistener::UniffiCallbackInterfaceAppListenerMethod11
 //
 // We have the following constraints:
 // - we need to pass a function pointer to Rust.
@@ -3719,7 +3554,7 @@ static void cleanup() {
 //
 // We then give the `callback` function pointer to Rust which will call the
 // lambda sometime in the future.
-namespace uniffi::dcl_core::cb::callbackinterfaceapplistenermethod12::
+namespace uniffi::dcl_core::cb::callbackinterfaceapplistenermethod11::
     vtablecallbackinterfaceapplistener {
 using namespace facebook;
 
@@ -3763,7 +3598,7 @@ static void body(jsi::Runtime &rt,
 
   } catch (const jsi::JSError &error) {
     std::cout
-        << "Error in callback UniffiCallbackInterfaceAppListenerMethod12: "
+        << "Error in callback UniffiCallbackInterfaceAppListenerMethod11: "
         << error.what() << std::endl;
     throw error;
   }
@@ -3790,8 +3625,8 @@ static void callback(uint64_t rs_uniffiHandle, RustBuffer rs_avatar,
   rsLambda(rs_uniffiHandle, rs_avatar, rs_uniffiOutReturn, uniffi_call_status);
 }
 
-[[maybe_unused]] static UniffiCallbackInterfaceAppListenerMethod12
-makeCallbackFunction( // uniffi::dcl_core::cb::callbackinterfaceapplistenermethod12::vtablecallbackinterfaceapplistener
+[[maybe_unused]] static UniffiCallbackInterfaceAppListenerMethod11
+makeCallbackFunction( // uniffi::dcl_core::cb::callbackinterfaceapplistenermethod11::vtablecallbackinterfaceapplistener
     jsi::Runtime &rt,
     std::shared_ptr<uniffi_runtime::UniffiCallInvoker> callInvoker,
     const jsi::Value &value) {
@@ -3835,12 +3670,12 @@ static void cleanup() {
   rsLambda = nullptr;
 }
 } // namespace
-  // uniffi::dcl_core::cb::callbackinterfaceapplistenermethod12::vtablecallbackinterfaceapplistener
-  // Implementation of CallbackInterfaceAppListenerMethod13 for vtable field
+  // uniffi::dcl_core::cb::callbackinterfaceapplistenermethod11::vtablecallbackinterfaceapplistener
+  // Implementation of CallbackInterfaceAppListenerMethod12 for vtable field
   // report in VTableCallbackInterfaceAppListener
 
 // Callback function:
-// uniffi::dcl_core::cb::callbackinterfaceapplistenermethod13::vtablecallbackinterfaceapplistener::UniffiCallbackInterfaceAppListenerMethod13
+// uniffi::dcl_core::cb::callbackinterfaceapplistenermethod12::vtablecallbackinterfaceapplistener::UniffiCallbackInterfaceAppListenerMethod12
 //
 // We have the following constraints:
 // - we need to pass a function pointer to Rust.
@@ -3853,7 +3688,7 @@ static void cleanup() {
 //
 // We then give the `callback` function pointer to Rust which will call the
 // lambda sometime in the future.
-namespace uniffi::dcl_core::cb::callbackinterfaceapplistenermethod13::
+namespace uniffi::dcl_core::cb::callbackinterfaceapplistenermethod12::
     vtablecallbackinterfaceapplistener {
 using namespace facebook;
 
@@ -3897,7 +3732,7 @@ static void body(jsi::Runtime &rt,
 
   } catch (const jsi::JSError &error) {
     std::cout
-        << "Error in callback UniffiCallbackInterfaceAppListenerMethod13: "
+        << "Error in callback UniffiCallbackInterfaceAppListenerMethod12: "
         << error.what() << std::endl;
     throw error;
   }
@@ -3924,8 +3759,8 @@ static void callback(uint64_t rs_uniffiHandle, RustBuffer rs_payload,
   rsLambda(rs_uniffiHandle, rs_payload, rs_uniffiOutReturn, uniffi_call_status);
 }
 
-[[maybe_unused]] static UniffiCallbackInterfaceAppListenerMethod13
-makeCallbackFunction( // uniffi::dcl_core::cb::callbackinterfaceapplistenermethod13::vtablecallbackinterfaceapplistener
+[[maybe_unused]] static UniffiCallbackInterfaceAppListenerMethod12
+makeCallbackFunction( // uniffi::dcl_core::cb::callbackinterfaceapplistenermethod12::vtablecallbackinterfaceapplistener
     jsi::Runtime &rt,
     std::shared_ptr<uniffi_runtime::UniffiCallInvoker> callInvoker,
     const jsi::Value &value) {
@@ -3969,12 +3804,12 @@ static void cleanup() {
   rsLambda = nullptr;
 }
 } // namespace
-  // uniffi::dcl_core::cb::callbackinterfaceapplistenermethod13::vtablecallbackinterfaceapplistener
-  // Implementation of CallbackInterfaceAppListenerMethod14 for vtable field
+  // uniffi::dcl_core::cb::callbackinterfaceapplistenermethod12::vtablecallbackinterfaceapplistener
+  // Implementation of CallbackInterfaceAppListenerMethod13 for vtable field
   // report_tag in VTableCallbackInterfaceAppListener
 
 // Callback function:
-// uniffi::dcl_core::cb::callbackinterfaceapplistenermethod14::vtablecallbackinterfaceapplistener::UniffiCallbackInterfaceAppListenerMethod14
+// uniffi::dcl_core::cb::callbackinterfaceapplistenermethod13::vtablecallbackinterfaceapplistener::UniffiCallbackInterfaceAppListenerMethod13
 //
 // We have the following constraints:
 // - we need to pass a function pointer to Rust.
@@ -3987,7 +3822,7 @@ static void cleanup() {
 //
 // We then give the `callback` function pointer to Rust which will call the
 // lambda sometime in the future.
-namespace uniffi::dcl_core::cb::callbackinterfaceapplistenermethod14::
+namespace uniffi::dcl_core::cb::callbackinterfaceapplistenermethod13::
     vtablecallbackinterfaceapplistener {
 using namespace facebook;
 
@@ -4035,7 +3870,7 @@ static void body(jsi::Runtime &rt,
 
   } catch (const jsi::JSError &error) {
     std::cout
-        << "Error in callback UniffiCallbackInterfaceAppListenerMethod14: "
+        << "Error in callback UniffiCallbackInterfaceAppListenerMethod13: "
         << error.what() << std::endl;
     throw error;
   }
@@ -4063,8 +3898,8 @@ static void callback(uint64_t rs_uniffiHandle, RustBuffer rs_key,
            uniffi_call_status);
 }
 
-[[maybe_unused]] static UniffiCallbackInterfaceAppListenerMethod14
-makeCallbackFunction( // uniffi::dcl_core::cb::callbackinterfaceapplistenermethod14::vtablecallbackinterfaceapplistener
+[[maybe_unused]] static UniffiCallbackInterfaceAppListenerMethod13
+makeCallbackFunction( // uniffi::dcl_core::cb::callbackinterfaceapplistenermethod13::vtablecallbackinterfaceapplistener
     jsi::Runtime &rt,
     std::shared_ptr<uniffi_runtime::UniffiCallInvoker> callInvoker,
     const jsi::Value &value) {
@@ -4109,7 +3944,7 @@ static void cleanup() {
   rsLambda = nullptr;
 }
 } // namespace
-  // uniffi::dcl_core::cb::callbackinterfaceapplistenermethod14::vtablecallbackinterfaceapplistener
+  // uniffi::dcl_core::cb::callbackinterfaceapplistenermethod13::vtablecallbackinterfaceapplistener
 namespace uniffi::dcl_core {
 using namespace facebook;
 using CallInvoker = uniffi_runtime::UniffiCallInvoker;
@@ -4155,46 +3990,42 @@ template <> struct Bridging<UniffiVTableCallbackInterfaceAppListener> {
         uniffi::dcl_core::cb::callbackinterfaceapplistenermethod3::
             vtablecallbackinterfaceapplistener::makeCallbackFunction(
                 rt, callInvoker, jsObject.getProperty(rt, "open_url"));
-    rsObject.friends_changed =
+    rsObject.settings_changed =
         uniffi::dcl_core::cb::callbackinterfaceapplistenermethod4::
             vtablecallbackinterfaceapplistener::makeCallbackFunction(
-                rt, callInvoker, jsObject.getProperty(rt, "friends_changed"));
-    rsObject.settings_changed =
-        uniffi::dcl_core::cb::callbackinterfaceapplistenermethod5::
-            vtablecallbackinterfaceapplistener::makeCallbackFunction(
                 rt, callInvoker, jsObject.getProperty(rt, "settings_changed"));
-    rsObject.hud = uniffi::dcl_core::cb::callbackinterfaceapplistenermethod6::
+    rsObject.hud = uniffi::dcl_core::cb::callbackinterfaceapplistenermethod5::
         vtablecallbackinterfaceapplistener::makeCallbackFunction(
             rt, callInvoker, jsObject.getProperty(rt, "hud"));
-    rsObject.chat = uniffi::dcl_core::cb::callbackinterfaceapplistenermethod7::
+    rsObject.chat = uniffi::dcl_core::cb::callbackinterfaceapplistenermethod6::
         vtablecallbackinterfaceapplistener::makeCallbackFunction(
             rt, callInvoker, jsObject.getProperty(rt, "chat"));
     rsObject.unread_chat =
-        uniffi::dcl_core::cb::callbackinterfaceapplistenermethod8::
+        uniffi::dcl_core::cb::callbackinterfaceapplistenermethod7::
             vtablecallbackinterfaceapplistener::makeCallbackFunction(
                 rt, callInvoker, jsObject.getProperty(rt, "unread_chat"));
     rsObject.ui_state =
-        uniffi::dcl_core::cb::callbackinterfaceapplistenermethod9::
+        uniffi::dcl_core::cb::callbackinterfaceapplistenermethod8::
             vtablecallbackinterfaceapplistener::makeCallbackFunction(
                 rt, callInvoker, jsObject.getProperty(rt, "ui_state"));
     rsObject.open_backpack =
-        uniffi::dcl_core::cb::callbackinterfaceapplistenermethod10::
+        uniffi::dcl_core::cb::callbackinterfaceapplistenermethod9::
             vtablecallbackinterfaceapplistener::makeCallbackFunction(
                 rt, callInvoker, jsObject.getProperty(rt, "open_backpack"));
     rsObject.loading_detail =
-        uniffi::dcl_core::cb::callbackinterfaceapplistenermethod11::
+        uniffi::dcl_core::cb::callbackinterfaceapplistenermethod10::
             vtablecallbackinterfaceapplistener::makeCallbackFunction(
                 rt, callInvoker, jsObject.getProperty(rt, "loading_detail"));
     rsObject.avatar_changed =
-        uniffi::dcl_core::cb::callbackinterfaceapplistenermethod12::
+        uniffi::dcl_core::cb::callbackinterfaceapplistenermethod11::
             vtablecallbackinterfaceapplistener::makeCallbackFunction(
                 rt, callInvoker, jsObject.getProperty(rt, "avatar_changed"));
     rsObject.report =
-        uniffi::dcl_core::cb::callbackinterfaceapplistenermethod13::
+        uniffi::dcl_core::cb::callbackinterfaceapplistenermethod12::
             vtablecallbackinterfaceapplistener::makeCallbackFunction(
                 rt, callInvoker, jsObject.getProperty(rt, "report"));
     rsObject.report_tag =
-        uniffi::dcl_core::cb::callbackinterfaceapplistenermethod14::
+        uniffi::dcl_core::cb::callbackinterfaceapplistenermethod13::
             vtablecallbackinterfaceapplistener::makeCallbackFunction(
                 rt, callInvoker, jsObject.getProperty(rt, "report_tag"));
 
@@ -4352,18 +4183,6 @@ NativeDclCore::NativeDclCore(
                  const jsi::Value *args, size_t count) -> jsi::Value {
             return this->cpp_uniffi_dcl_core_fn_method_applistener_open_url(
                 rt, thisVal, args, count);
-          });
-  props["ubrn_uniffi_dcl_core_fn_method_applistener_friends_changed"] =
-      jsi::Function::createFromHostFunction(
-          rt,
-          jsi::PropNameID::forAscii(
-              rt, "ubrn_uniffi_dcl_core_fn_method_applistener_friends_changed"),
-          1,
-          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
-                 const jsi::Value *args, size_t count) -> jsi::Value {
-            return this
-                ->cpp_uniffi_dcl_core_fn_method_applistener_friends_changed(
-                    rt, thisVal, args, count);
           });
   props["ubrn_uniffi_dcl_core_fn_method_applistener_settings_changed"] =
       jsi::Function::createFromHostFunction(
@@ -5264,114 +5083,6 @@ NativeDclCore::NativeDclCore(
                  const jsi::Value *args, size_t count) -> jsi::Value {
             return this->cpp_uniffi_dcl_core_fn_func_version(rt, thisVal, args,
                                                              count);
-          });
-  props["ubrn_uniffi_dcl_core_fn_func_accept_friend_request"] =
-      jsi::Function::createFromHostFunction(
-          rt,
-          jsi::PropNameID::forAscii(
-              rt, "ubrn_uniffi_dcl_core_fn_func_accept_friend_request"),
-          1,
-          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
-                 const jsi::Value *args, size_t count) -> jsi::Value {
-            return this->cpp_uniffi_dcl_core_fn_func_accept_friend_request(
-                rt, thisVal, args, count);
-          });
-  props["ubrn_uniffi_dcl_core_fn_func_block_user"] =
-      jsi::Function::createFromHostFunction(
-          rt,
-          jsi::PropNameID::forAscii(rt,
-                                    "ubrn_uniffi_dcl_core_fn_func_block_user"),
-          1,
-          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
-                 const jsi::Value *args, size_t count) -> jsi::Value {
-            return this->cpp_uniffi_dcl_core_fn_func_block_user(rt, thisVal,
-                                                                args, count);
-          });
-  props["ubrn_uniffi_dcl_core_fn_func_blocked_users"] =
-      jsi::Function::createFromHostFunction(
-          rt,
-          jsi::PropNameID::forAscii(
-              rt, "ubrn_uniffi_dcl_core_fn_func_blocked_users"),
-          2,
-          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
-                 const jsi::Value *args, size_t count) -> jsi::Value {
-            return this->cpp_uniffi_dcl_core_fn_func_blocked_users(rt, thisVal,
-                                                                   args, count);
-          });
-  props["ubrn_uniffi_dcl_core_fn_func_cancel_friend_request"] =
-      jsi::Function::createFromHostFunction(
-          rt,
-          jsi::PropNameID::forAscii(
-              rt, "ubrn_uniffi_dcl_core_fn_func_cancel_friend_request"),
-          1,
-          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
-                 const jsi::Value *args, size_t count) -> jsi::Value {
-            return this->cpp_uniffi_dcl_core_fn_func_cancel_friend_request(
-                rt, thisVal, args, count);
-          });
-  props["ubrn_uniffi_dcl_core_fn_func_friend_requests"] =
-      jsi::Function::createFromHostFunction(
-          rt,
-          jsi::PropNameID::forAscii(
-              rt, "ubrn_uniffi_dcl_core_fn_func_friend_requests"),
-          0,
-          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
-                 const jsi::Value *args, size_t count) -> jsi::Value {
-            return this->cpp_uniffi_dcl_core_fn_func_friend_requests(
-                rt, thisVal, args, count);
-          });
-  props["ubrn_uniffi_dcl_core_fn_func_friends"] =
-      jsi::Function::createFromHostFunction(
-          rt,
-          jsi::PropNameID::forAscii(rt, "ubrn_uniffi_dcl_core_fn_func_friends"),
-          2,
-          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
-                 const jsi::Value *args, size_t count) -> jsi::Value {
-            return this->cpp_uniffi_dcl_core_fn_func_friends(rt, thisVal, args,
-                                                             count);
-          });
-  props["ubrn_uniffi_dcl_core_fn_func_nearby"] =
-      jsi::Function::createFromHostFunction(
-          rt,
-          jsi::PropNameID::forAscii(rt, "ubrn_uniffi_dcl_core_fn_func_nearby"),
-          0,
-          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
-                 const jsi::Value *args, size_t count) -> jsi::Value {
-            return this->cpp_uniffi_dcl_core_fn_func_nearby(rt, thisVal, args,
-                                                            count);
-          });
-  props["ubrn_uniffi_dcl_core_fn_func_reject_friend_request"] =
-      jsi::Function::createFromHostFunction(
-          rt,
-          jsi::PropNameID::forAscii(
-              rt, "ubrn_uniffi_dcl_core_fn_func_reject_friend_request"),
-          1,
-          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
-                 const jsi::Value *args, size_t count) -> jsi::Value {
-            return this->cpp_uniffi_dcl_core_fn_func_reject_friend_request(
-                rt, thisVal, args, count);
-          });
-  props["ubrn_uniffi_dcl_core_fn_func_send_friend_request"] =
-      jsi::Function::createFromHostFunction(
-          rt,
-          jsi::PropNameID::forAscii(
-              rt, "ubrn_uniffi_dcl_core_fn_func_send_friend_request"),
-          2,
-          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
-                 const jsi::Value *args, size_t count) -> jsi::Value {
-            return this->cpp_uniffi_dcl_core_fn_func_send_friend_request(
-                rt, thisVal, args, count);
-          });
-  props["ubrn_uniffi_dcl_core_fn_func_unblock_user"] =
-      jsi::Function::createFromHostFunction(
-          rt,
-          jsi::PropNameID::forAscii(
-              rt, "ubrn_uniffi_dcl_core_fn_func_unblock_user"),
-          1,
-          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
-                 const jsi::Value *args, size_t count) -> jsi::Value {
-            return this->cpp_uniffi_dcl_core_fn_func_unblock_user(rt, thisVal,
-                                                                  args, count);
           });
   props["ubrn_ffi_dcl_core_rust_future_poll_u8"] =
       jsi::Function::createFromHostFunction(
@@ -6704,119 +6415,6 @@ NativeDclCore::NativeDclCore(
             return this->cpp_uniffi_dcl_core_checksum_func_version(rt, thisVal,
                                                                    args, count);
           });
-  props["ubrn_uniffi_dcl_core_checksum_func_accept_friend_request"] =
-      jsi::Function::createFromHostFunction(
-          rt,
-          jsi::PropNameID::forAscii(
-              rt, "ubrn_uniffi_dcl_core_checksum_func_accept_friend_request"),
-          0,
-          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
-                 const jsi::Value *args, size_t count) -> jsi::Value {
-            return this
-                ->cpp_uniffi_dcl_core_checksum_func_accept_friend_request(
-                    rt, thisVal, args, count);
-          });
-  props["ubrn_uniffi_dcl_core_checksum_func_block_user"] =
-      jsi::Function::createFromHostFunction(
-          rt,
-          jsi::PropNameID::forAscii(
-              rt, "ubrn_uniffi_dcl_core_checksum_func_block_user"),
-          0,
-          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
-                 const jsi::Value *args, size_t count) -> jsi::Value {
-            return this->cpp_uniffi_dcl_core_checksum_func_block_user(
-                rt, thisVal, args, count);
-          });
-  props["ubrn_uniffi_dcl_core_checksum_func_blocked_users"] =
-      jsi::Function::createFromHostFunction(
-          rt,
-          jsi::PropNameID::forAscii(
-              rt, "ubrn_uniffi_dcl_core_checksum_func_blocked_users"),
-          0,
-          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
-                 const jsi::Value *args, size_t count) -> jsi::Value {
-            return this->cpp_uniffi_dcl_core_checksum_func_blocked_users(
-                rt, thisVal, args, count);
-          });
-  props["ubrn_uniffi_dcl_core_checksum_func_cancel_friend_request"] =
-      jsi::Function::createFromHostFunction(
-          rt,
-          jsi::PropNameID::forAscii(
-              rt, "ubrn_uniffi_dcl_core_checksum_func_cancel_friend_request"),
-          0,
-          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
-                 const jsi::Value *args, size_t count) -> jsi::Value {
-            return this
-                ->cpp_uniffi_dcl_core_checksum_func_cancel_friend_request(
-                    rt, thisVal, args, count);
-          });
-  props["ubrn_uniffi_dcl_core_checksum_func_friend_requests"] =
-      jsi::Function::createFromHostFunction(
-          rt,
-          jsi::PropNameID::forAscii(
-              rt, "ubrn_uniffi_dcl_core_checksum_func_friend_requests"),
-          0,
-          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
-                 const jsi::Value *args, size_t count) -> jsi::Value {
-            return this->cpp_uniffi_dcl_core_checksum_func_friend_requests(
-                rt, thisVal, args, count);
-          });
-  props["ubrn_uniffi_dcl_core_checksum_func_friends"] =
-      jsi::Function::createFromHostFunction(
-          rt,
-          jsi::PropNameID::forAscii(
-              rt, "ubrn_uniffi_dcl_core_checksum_func_friends"),
-          0,
-          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
-                 const jsi::Value *args, size_t count) -> jsi::Value {
-            return this->cpp_uniffi_dcl_core_checksum_func_friends(rt, thisVal,
-                                                                   args, count);
-          });
-  props["ubrn_uniffi_dcl_core_checksum_func_nearby"] =
-      jsi::Function::createFromHostFunction(
-          rt,
-          jsi::PropNameID::forAscii(
-              rt, "ubrn_uniffi_dcl_core_checksum_func_nearby"),
-          0,
-          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
-                 const jsi::Value *args, size_t count) -> jsi::Value {
-            return this->cpp_uniffi_dcl_core_checksum_func_nearby(rt, thisVal,
-                                                                  args, count);
-          });
-  props["ubrn_uniffi_dcl_core_checksum_func_reject_friend_request"] =
-      jsi::Function::createFromHostFunction(
-          rt,
-          jsi::PropNameID::forAscii(
-              rt, "ubrn_uniffi_dcl_core_checksum_func_reject_friend_request"),
-          0,
-          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
-                 const jsi::Value *args, size_t count) -> jsi::Value {
-            return this
-                ->cpp_uniffi_dcl_core_checksum_func_reject_friend_request(
-                    rt, thisVal, args, count);
-          });
-  props["ubrn_uniffi_dcl_core_checksum_func_send_friend_request"] =
-      jsi::Function::createFromHostFunction(
-          rt,
-          jsi::PropNameID::forAscii(
-              rt, "ubrn_uniffi_dcl_core_checksum_func_send_friend_request"),
-          0,
-          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
-                 const jsi::Value *args, size_t count) -> jsi::Value {
-            return this->cpp_uniffi_dcl_core_checksum_func_send_friend_request(
-                rt, thisVal, args, count);
-          });
-  props["ubrn_uniffi_dcl_core_checksum_func_unblock_user"] =
-      jsi::Function::createFromHostFunction(
-          rt,
-          jsi::PropNameID::forAscii(
-              rt, "ubrn_uniffi_dcl_core_checksum_func_unblock_user"),
-          0,
-          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
-                 const jsi::Value *args, size_t count) -> jsi::Value {
-            return this->cpp_uniffi_dcl_core_checksum_func_unblock_user(
-                rt, thisVal, args, count);
-          });
   props["ubrn_uniffi_dcl_core_checksum_method_applistener_state_changed"] =
       jsi::Function::createFromHostFunction(
           rt,
@@ -6866,18 +6464,6 @@ NativeDclCore::NativeDclCore(
                  const jsi::Value *args, size_t count) -> jsi::Value {
             return this
                 ->cpp_uniffi_dcl_core_checksum_method_applistener_open_url(
-                    rt, thisVal, args, count);
-          });
-  props["ubrn_uniffi_dcl_core_checksum_method_applistener_friends_changed"] =
-      jsi::Function::createFromHostFunction(
-          rt,
-          jsi::PropNameID::forAscii(rt, "ubrn_uniffi_dcl_core_checksum_method_"
-                                        "applistener_friends_changed"),
-          0,
-          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
-                 const jsi::Value *args, size_t count) -> jsi::Value {
-            return this
-                ->cpp_uniffi_dcl_core_checksum_method_applistener_friends_changed(
                     rt, thisVal, args, count);
           });
   props["ubrn_uniffi_dcl_core_checksum_method_applistener_settings_changed"] =
@@ -7194,8 +6780,6 @@ NativeDclCore::~NativeDclCore() {
       vtablecallbackinterfaceapplistener::cleanup();
   uniffi::dcl_core::cb::callbackinterfaceapplistenermethod13::
       vtablecallbackinterfaceapplistener::cleanup();
-  uniffi::dcl_core::cb::callbackinterfaceapplistenermethod14::
-      vtablecallbackinterfaceapplistener::cleanup();
 }
 
 // Utility functions for serialization/deserialization of strings.
@@ -7340,21 +6924,6 @@ jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_method_applistener_open_url(
       uniffi_jsi::Bridging</*handle*/ uint64_t>::fromJs(rt, callInvoker,
                                                         args[0]),
       uniffi::dcl_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[1]),
-      &status);
-  uniffi::dcl_core::Bridging<RustCallStatus>::copyIntoJs(
-      rt, callInvoker, status, args[count - 1]);
-
-  return jsi::Value::undefined();
-}
-jsi::Value
-NativeDclCore::cpp_uniffi_dcl_core_fn_method_applistener_friends_changed(
-    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
-    size_t count) {
-  RustCallStatus status =
-      uniffi::dcl_core::Bridging<RustCallStatus>::rustSuccess(rt);
-  uniffi_dcl_core_fn_method_applistener_friends_changed(
-      uniffi_jsi::Bridging</*handle*/ uint64_t>::fromJs(rt, callInvoker,
-                                                        args[0]),
       &status);
   uniffi::dcl_core::Bridging<RustCallStatus>::copyIntoJs(
       rt, callInvoker, status, args[count - 1]);
@@ -8305,97 +7874,6 @@ jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_version(
       rt, callInvoker, status, args[count - 1]);
 
   return uniffi::dcl_core::Bridging<RustBuffer>::toJs(rt, callInvoker, value);
-}
-jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_accept_friend_request(
-    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
-    size_t count) {
-  auto value = uniffi_dcl_core_fn_func_accept_friend_request(
-      uniffi::dcl_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[0]));
-
-  return uniffi_jsi::Bridging</*handle*/ uint64_t>::toJs(rt, callInvoker,
-                                                         value);
-}
-jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_block_user(
-    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
-    size_t count) {
-  auto value = uniffi_dcl_core_fn_func_block_user(
-      uniffi::dcl_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[0]));
-
-  return uniffi_jsi::Bridging</*handle*/ uint64_t>::toJs(rt, callInvoker,
-                                                         value);
-}
-jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_blocked_users(
-    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
-    size_t count) {
-  auto value = uniffi_dcl_core_fn_func_blocked_users(
-      uniffi_jsi::Bridging<uint32_t>::fromJs(rt, callInvoker, args[0]),
-      uniffi_jsi::Bridging<uint32_t>::fromJs(rt, callInvoker, args[1]));
-
-  return uniffi_jsi::Bridging</*handle*/ uint64_t>::toJs(rt, callInvoker,
-                                                         value);
-}
-jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_cancel_friend_request(
-    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
-    size_t count) {
-  auto value = uniffi_dcl_core_fn_func_cancel_friend_request(
-      uniffi::dcl_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[0]));
-
-  return uniffi_jsi::Bridging</*handle*/ uint64_t>::toJs(rt, callInvoker,
-                                                         value);
-}
-jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_friend_requests(
-    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
-    size_t count) {
-  auto value = uniffi_dcl_core_fn_func_friend_requests();
-
-  return uniffi_jsi::Bridging</*handle*/ uint64_t>::toJs(rt, callInvoker,
-                                                         value);
-}
-jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_friends(
-    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
-    size_t count) {
-  auto value = uniffi_dcl_core_fn_func_friends(
-      uniffi_jsi::Bridging<uint32_t>::fromJs(rt, callInvoker, args[0]),
-      uniffi_jsi::Bridging<uint32_t>::fromJs(rt, callInvoker, args[1]));
-
-  return uniffi_jsi::Bridging</*handle*/ uint64_t>::toJs(rt, callInvoker,
-                                                         value);
-}
-jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_nearby(
-    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
-    size_t count) {
-  auto value = uniffi_dcl_core_fn_func_nearby();
-
-  return uniffi_jsi::Bridging</*handle*/ uint64_t>::toJs(rt, callInvoker,
-                                                         value);
-}
-jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_reject_friend_request(
-    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
-    size_t count) {
-  auto value = uniffi_dcl_core_fn_func_reject_friend_request(
-      uniffi::dcl_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[0]));
-
-  return uniffi_jsi::Bridging</*handle*/ uint64_t>::toJs(rt, callInvoker,
-                                                         value);
-}
-jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_send_friend_request(
-    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
-    size_t count) {
-  auto value = uniffi_dcl_core_fn_func_send_friend_request(
-      uniffi::dcl_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[0]),
-      uniffi::dcl_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[1]));
-
-  return uniffi_jsi::Bridging</*handle*/ uint64_t>::toJs(rt, callInvoker,
-                                                         value);
-}
-jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_unblock_user(
-    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
-    size_t count) {
-  auto value = uniffi_dcl_core_fn_func_unblock_user(
-      uniffi::dcl_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[0]));
-
-  return uniffi_jsi::Bridging</*handle*/ uint64_t>::toJs(rt, callInvoker,
-                                                         value);
 }
 jsi::Value NativeDclCore::cpp_ffi_dcl_core_rust_future_poll_u8(
     jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
@@ -9455,79 +8933,6 @@ jsi::Value NativeDclCore::cpp_uniffi_dcl_core_checksum_func_version(
   return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
 }
 jsi::Value
-NativeDclCore::cpp_uniffi_dcl_core_checksum_func_accept_friend_request(
-    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
-    size_t count) {
-  auto value = uniffi_dcl_core_checksum_func_accept_friend_request();
-
-  return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
-}
-jsi::Value NativeDclCore::cpp_uniffi_dcl_core_checksum_func_block_user(
-    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
-    size_t count) {
-  auto value = uniffi_dcl_core_checksum_func_block_user();
-
-  return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
-}
-jsi::Value NativeDclCore::cpp_uniffi_dcl_core_checksum_func_blocked_users(
-    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
-    size_t count) {
-  auto value = uniffi_dcl_core_checksum_func_blocked_users();
-
-  return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
-}
-jsi::Value
-NativeDclCore::cpp_uniffi_dcl_core_checksum_func_cancel_friend_request(
-    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
-    size_t count) {
-  auto value = uniffi_dcl_core_checksum_func_cancel_friend_request();
-
-  return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
-}
-jsi::Value NativeDclCore::cpp_uniffi_dcl_core_checksum_func_friend_requests(
-    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
-    size_t count) {
-  auto value = uniffi_dcl_core_checksum_func_friend_requests();
-
-  return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
-}
-jsi::Value NativeDclCore::cpp_uniffi_dcl_core_checksum_func_friends(
-    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
-    size_t count) {
-  auto value = uniffi_dcl_core_checksum_func_friends();
-
-  return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
-}
-jsi::Value NativeDclCore::cpp_uniffi_dcl_core_checksum_func_nearby(
-    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
-    size_t count) {
-  auto value = uniffi_dcl_core_checksum_func_nearby();
-
-  return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
-}
-jsi::Value
-NativeDclCore::cpp_uniffi_dcl_core_checksum_func_reject_friend_request(
-    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
-    size_t count) {
-  auto value = uniffi_dcl_core_checksum_func_reject_friend_request();
-
-  return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
-}
-jsi::Value NativeDclCore::cpp_uniffi_dcl_core_checksum_func_send_friend_request(
-    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
-    size_t count) {
-  auto value = uniffi_dcl_core_checksum_func_send_friend_request();
-
-  return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
-}
-jsi::Value NativeDclCore::cpp_uniffi_dcl_core_checksum_func_unblock_user(
-    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
-    size_t count) {
-  auto value = uniffi_dcl_core_checksum_func_unblock_user();
-
-  return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
-}
-jsi::Value
 NativeDclCore::cpp_uniffi_dcl_core_checksum_method_applistener_state_changed(
     jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
     size_t count) {
@@ -9556,14 +8961,6 @@ NativeDclCore::cpp_uniffi_dcl_core_checksum_method_applistener_open_url(
     jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
     size_t count) {
   auto value = uniffi_dcl_core_checksum_method_applistener_open_url();
-
-  return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
-}
-jsi::Value
-NativeDclCore::cpp_uniffi_dcl_core_checksum_method_applistener_friends_changed(
-    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
-    size_t count) {
-  auto value = uniffi_dcl_core_checksum_method_applistener_friends_changed();
 
   return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
 }

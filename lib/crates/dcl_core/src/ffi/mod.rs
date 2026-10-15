@@ -18,7 +18,6 @@ mod profile;
 mod scene;
 mod session;
 mod settings;
-mod social;
 
 #[derive(Debug, uniffi::Error)]
 pub enum CoreError {
@@ -79,7 +78,6 @@ pub trait AppListener: Send + Sync {
     /// A sign-in step failed; `code` is stable and the shell maps it to copy.
     fn auth_error(&self, code: String);
     fn open_url(&self, request: OpenUrl);
-    fn friends_changed(&self);
     fn settings_changed(&self, entry: crate::settings::SettingEntry);
     /// The player's whereabouts, a few times a second while in a world.
     fn hud(&self, snapshot: crate::app::HudSnapshot);
@@ -111,9 +109,6 @@ impl AppEvents for ListenerAdapter {
             url: request.url.clone(),
             use_webview: request.use_webview,
         });
-    }
-    fn friends_changed(&self) {
-        self.0.friends_changed();
     }
     fn settings_changed(&self, entry: &crate::settings::SettingEntry) {
         self.0.settings_changed(entry.clone());

@@ -1,5 +1,5 @@
-//! Ties the domain services to the account: friends start after a real sign-in and every
-//! account-bound service forgets the user at sign-out; their change events reach the listeners.
+//! Ties the domain services to the account: every account-bound service forgets the user at
+//! sign-out; their change events reach the listeners.
 
 use std::sync::Arc;
 
@@ -10,27 +10,15 @@ use crate::{
     report::ReportEvent,
     session::identity::SessionEvent,
     settings::{self, SettingEntry, SettingsListener},
-    social, Core,
+    Core,
 };
 
 struct Lifecycle;
 
 impl SessionObserver for Lifecycle {
     fn session_event(&self, event: &SessionEvent) {
-        match event {
-            // Guests have no social service.
-            SessionEvent::WalletConnected {
-                is_guest: false, ..
-            } => {
-                if let Err(e) = social::friends().start() {
-                    tracing::warn!("friends: could not start: {e}");
-                }
-            }
-            SessionEvent::WalletConnected { .. } => {}
-            SessionEvent::Logout => {
-                social::friends().reset();
-                profile::global().reset();
-            }
+        if matches!(event, SessionEvent::Logout) {
+            profile::global().reset();
         }
     }
 
@@ -57,5 +45,4 @@ pub(crate) fn wire(core: &'static Core) {
         });
     }));
     settings::global(core.data_dir()).add_listener(Arc::new(SettingsToEvents(events.clone())));
-    social::friends().add_friends_changed_listener(Arc::new(move || events.friends_changed()));
 }

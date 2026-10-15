@@ -236,8 +236,6 @@ pub mod pulse {
     include!(concat!(env!("OUT_DIR"), "/pulse_quant.rs"));
 }
 
-pub use dcl_core::proto::social_service;
-
 /// Deserialize a component's binary data to JSON. Used by the runtime scene
 /// logger when a debugged scene receives a CRDT message.
 ///

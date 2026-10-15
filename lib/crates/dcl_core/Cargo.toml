@@ -29,14 +29,6 @@ sha2 = "0.10"
 base64 = "0.21.5"
 futures-lite = "1.12.0"
 chrono = "0.4.31"
-prost = "0.11.8"
-tokio-util = "0.7"
-futures-util = "0.3.30"
-dcl-rpc = { git = "https://github.com/decentraland/rpc-rust", rev = "aa2302d6918e2d1c7f2e298aa972d8a6bba6c389", features = ["client", "websockets", "codegen", "server", "tungstenite-rustls"] }
-
-[build-dependencies]
-prost-build = "0.11.8"
-dcl-rpc = { git = "https://github.com/decentraland/rpc-rust", rev = "aa2302d6918e2d1c7f2e298aa972d8a6bba6c389", features = ["client", "websockets", "codegen", "server", "tungstenite-rustls"] }
 
 [target.'cfg(target_os = "android")'.dependencies]
 paranoid-android = "0.2.1"
