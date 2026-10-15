@@ -281,7 +281,9 @@ pub fn create_or_update_mesh(
                         .unwrap_or(BoxShape3D::new_gd()),
                     None => BoxShape3D::new_gd(),
                 };
-                box_shape.set_size(godot::prelude::Vector3::new(1.0, 1.0, 0.0));
+                // Matches Unity's `PrimitivesSize.PLANE_SIZE` (1m x 1m, 1cm
+                // thick) instead of a degenerate zero-thickness box.
+                box_shape.set_size(godot::prelude::Vector3::new(1.0, 1.0, 0.01));
                 box_shape.upcast::<Shape3D>()
             }
         },
