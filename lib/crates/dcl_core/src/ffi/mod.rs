@@ -102,66 +102,108 @@ pub trait AppListener: Send + Sync {
     fn report_tag(&self, key: String, value: Option<String>);
 }
 
-struct ListenerAdapter(Arc<dyn AppListener>);
+/// Hands the app's events to the shell from a thread of its own, in order. The app fires events
+/// while it holds its lock, and the shell's JS thread can be waiting for that lock in a call of its
+/// own; delivering on the firing thread would then wait for each other.
+struct ListenerAdapter {
+    queue: std::sync::mpsc::Sender<Delivery>,
+}
+
+type Delivery = Box<dyn FnOnce(&dyn AppListener) + Send>;
+
+impl ListenerAdapter {
+    fn new(listener: Arc<dyn AppListener>) -> Self {
+        let (queue, deliveries) = std::sync::mpsc::channel::<Delivery>();
+        let spawned = std::thread::Builder::new()
+            .name("dcl-shell-events".into())
+            .spawn(move || {
+                for delivery in deliveries {
+                    let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                        delivery(&*listener)
+                    }));
+                }
+            });
+        if let Err(error) = spawned {
+            tracing::error!("shell events: cannot start the delivery thread: {error}");
+        }
+        Self { queue }
+    }
+
+    fn deliver(&self, delivery: impl FnOnce(&dyn AppListener) + Send + 'static) {
+        let _ = self.queue.send(Box::new(delivery));
+    }
+}
 
 impl AppEvents for ListenerAdapter {
     fn state_changed(&self, state: &State) {
-        self.0.state_changed(state.clone());
+        let state = state.clone();
+        self.deliver(move |l| l.state_changed(state));
     }
     fn engine_required(&self) {}
     fn avatar_preview_mode(&self, _on: bool) {}
     fn auth_error(&self, code: &str) {
-        self.0.auth_error(code.to_string());
+        let code = code.to_string();
+        self.deliver(move |l| l.auth_error(code));
     }
     fn open_url(&self, request: &crate::OpenUrlRequest) {
-        self.0.open_url(OpenUrl {
+        let request = OpenUrl {
             url: request.url.clone(),
             use_webview: request.use_webview,
-        });
+        };
+        self.deliver(move |l| l.open_url(request));
     }
     fn settings_changed(&self, entry: &crate::settings::SettingEntry) {
-        self.0.settings_changed(entry.clone());
+        let entry = entry.clone();
+        self.deliver(move |l| l.settings_changed(entry));
     }
     fn hud(&self, snapshot: &crate::app::HudSnapshot) {
-        self.0.hud(snapshot.clone());
+        let snapshot = snapshot.clone();
+        self.deliver(move |l| l.hud(snapshot));
     }
     fn chat(&self, line: &crate::app::ChatLine) {
-        self.0.chat(line.clone());
+        let line = line.clone();
+        self.deliver(move |l| l.chat(line));
     }
     fn unread_chat(&self, count: u32) {
-        self.0.unread_chat(count);
+        self.deliver(move |l| l.unread_chat(count));
     }
     fn ui_state(&self, state: &crate::app::UiState) {
-        self.0.ui_state(*state);
+        let state = *state;
+        self.deliver(move |l| l.ui_state(state));
     }
     fn open_backpack(&self, emotes: bool) {
-        self.0.open_backpack(emotes);
+        self.deliver(move |l| l.open_backpack(emotes));
     }
     fn loading_detail(&self, detail: &crate::app::LoadingDetail) {
-        self.0.loading_detail(*detail);
+        let detail = *detail;
+        self.deliver(move |l| l.loading_detail(detail));
     }
     fn avatar_changed(&self, avatar: &crate::app::AvatarState) {
-        self.0.avatar_changed(avatar.clone());
+        let avatar = avatar.clone();
+        self.deliver(move |l| l.avatar_changed(avatar));
     }
     fn scene_request(
         &self,
         id: crate::scene_requests::RequestId,
         request: &crate::scene_requests::SceneRequest,
     ) {
-        self.0.scene_request(id, request.clone());
+        let request = request.clone();
+        self.deliver(move |l| l.scene_request(id, request));
     }
     fn engine_notice(&self, notice: &crate::app::EngineNotice) {
-        self.0.engine_notice(notice.clone());
+        let notice = notice.clone();
+        self.deliver(move |l| l.engine_notice(notice));
     }
     fn report(&self, payload: &crate::hub::ReportPayload) {
-        self.0.report(payload.clone());
+        let payload = payload.clone();
+        self.deliver(move |l| l.report(payload));
     }
     fn report_tag(&self, key: &str, value: Option<&str>) {
-        self.0
-            .report_tag(key.to_string(), value.map(str::to_string));
+        let (key, value) = (key.to_string(), value.map(str::to_string));
+        self.deliver(move |l| l.report_tag(key, value));
     }
     fn scene_crashed(&self) {
-        self.0.scene_crashed();
+        self.deliver(|l| l.scene_crashed());
     }
 }
 
@@ -183,7 +225,7 @@ pub fn state() -> Result<State, CoreError> {
 /// Registers the shell's receiver of the app's events. The id removes it again.
 #[uniffi::export]
 pub fn add_listener(listener: Arc<dyn AppListener>) -> Result<u64, CoreError> {
-    Ok(core()?.add_app_listener(Arc::new(ListenerAdapter(listener))))
+    Ok(core()?.add_app_listener(Arc::new(ListenerAdapter::new(listener))))
 }
 
 #[uniffi::export]
@@ -232,4 +274,63 @@ pub async fn debug_fire_events(count: u32, per_second: u32) -> Result<u32, CoreE
         .map_err(|e| CoreError::InvalidCall {
             detail: e.to_string(),
         })
+}
+
+#[cfg(test)]
+mod adapter_tests {
+    use std::sync::{mpsc, Mutex};
+    use std::time::Duration;
+
+    use super::*;
+
+    /// Blocks every delivery until the test lets it through, like a shell whose JS thread is busy.
+    struct Gate {
+        open: Mutex<mpsc::Receiver<()>>,
+        seen: mpsc::Sender<u32>,
+    }
+
+    impl AppListener for Gate {
+        fn unread_chat(&self, count: u32) {
+            let _ = self.open.lock().unwrap().recv();
+            let _ = self.seen.send(count);
+        }
+        fn state_changed(&self, _: State) {}
+        fn scene_crashed(&self) {}
+        fn auth_error(&self, _: String) {}
+        fn open_url(&self, _: OpenUrl) {}
+        fn settings_changed(&self, _: crate::settings::SettingEntry) {}
+        fn hud(&self, _: crate::app::HudSnapshot) {}
+        fn chat(&self, _: crate::app::ChatLine) {}
+        fn ui_state(&self, _: crate::app::UiState) {}
+        fn open_backpack(&self, _: bool) {}
+        fn loading_detail(&self, _: crate::app::LoadingDetail) {}
+        fn avatar_changed(&self, _: crate::app::AvatarState) {}
+        fn scene_request(&self, _: u32, _: crate::scene_requests::SceneRequest) {}
+        fn engine_notice(&self, _: crate::app::EngineNotice) {}
+        fn report(&self, _: crate::hub::ReportPayload) {}
+        fn report_tag(&self, _: String, _: Option<String>) {}
+    }
+
+    #[test]
+    fn a_busy_shell_does_not_hold_up_the_thread_that_fires_the_event() {
+        let (release, open) = mpsc::channel();
+        let (seen_tx, seen) = mpsc::channel();
+        let adapter = ListenerAdapter::new(Arc::new(Gate {
+            open: Mutex::new(open),
+            seen: seen_tx,
+        }));
+
+        adapter.unread_chat(1);
+        adapter.unread_chat(2);
+        assert!(
+            seen.try_recv().is_err(),
+            "the shell has not been let through yet"
+        );
+
+        release.send(()).unwrap();
+        release.send(()).unwrap();
+        let timeout = Duration::from_secs(5);
+        assert_eq!(seen.recv_timeout(timeout), Ok(1));
+        assert_eq!(seen.recv_timeout(timeout), Ok(2));
+    }
 }
