@@ -23,25 +23,23 @@ const CAMPAIGNS := {
 		"Vn0WimL5RjKMpIeDoJIvHfz9lBI490tEkvYXoPEK5Ts=.3QEbxeMg9QXkY/vZrcZyDUYNL0MFrHFatF/KZJ1g7WA=",
 		"urn": "",
 	},
-	# TODO(#3018): login-streak D3 item — not published yet, blocked on content. Empty
-	# campaign_id/campaign_key surface reward_modal's existing "out of stock" claim error
-	# until the real campaign exists; don't fill these in with placeholder credentials. `urn` is
-	# ONLY a preview hint (no claim risk), so it's mocked with a real published on-chain wearable
-	# (decentraland.org/marketplace/contracts/0x996b51131698ba70dcfb3fb5956e6816c5778eda/items/0)
-	# to exercise the thumbnail-fetch path — swap for the real item's urn once it's published.
+	# login-streak D3 reward, "Mobile Pants" (decentraland.org/rewards/campaign/?id=4237615f-99b6-
+	# 46a0-8816-b2073a4f2780), item contract 0xca1e4214acd9ba53bda189639878214ecff4de5f.
 	"LoginStreakD3":
 	{
-		"campaign_id": "",
-		"campaign_key": "",
-		"urn": "urn:decentraland:matic:collections-v2:0x996b51131698ba70dcfb3fb5956e6816c5778eda:0",
+		"campaign_id": "4237615f-99b6-46a0-8816-b2073a4f2780",
+		"campaign_key":
+		"g8k3ewmNR5mxNWqW2ELAQkI3YV+ZtkagiBayBzpPJ4A=.Yp941hk9ViLVjnIhQ+lsI9Ro2Z4qCZwOFC1LQzKz1rw=",
+		"urn": "urn:decentraland:matic:collections-v2:0xca1e4214acd9ba53bda189639878214ecff4de5f:0",
 	},
-	# TODO(#3018): login-streak D7 reward ("Corona de Fuego" is a placeholder name) — same as
-	# above; `urn` mocked with the same item for now (no second reference item on hand yet).
+	# login-streak D7 reward, "Mobile Jacket" (decentraland.org/rewards/campaign/?id=ec79d7a9-566e-
+	# 4acc-8c48-40bf5390788b), item contract 0x914c9cb1e619f24734b61c345108fd69401f96ec.
 	"LoginStreakD7":
 	{
-		"campaign_id": "",
-		"campaign_key": "",
-		"urn": "urn:decentraland:matic:collections-v2:0x996b51131698ba70dcfb3fb5956e6816c5778eda:0",
+		"campaign_id": "ec79d7a9-566e-4acc-8c48-40bf5390788b",
+		"campaign_key":
+		"vseXLBe9SjyLN5QqHgShjex516lWbkrMjEhAv1OQeIs=.kguLt2+PLXHlMyA0avLtUnGtnJkeJ3ZqzwxYTguokpU=",
+		"urn": "urn:decentraland:matic:collections-v2:0x914c9cb1e619f24734b61c345108fd69401f96ec:0",
 	},
 }
 
