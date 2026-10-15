@@ -31,7 +31,7 @@ Decentraland's cross-platform metaverse client — the "Godot Explorer". Three l
 | Layer | Language | Role |
 |---|---|---|
 | Engine / rendering / UI / scene tree | **Godot (custom fork)** + GDScript | `godot/` |
-| Core systems (scene runner, comms, content, wallet, avatars, social) | **Rust** (compiled as GDExtension) | `lib/` |
+| Core systems (scene runner, comms, content, wallet, avatars) | **Rust** (compiled as GDExtension) | `lib/` |
 | Decentraland SDK7 scene code at runtime | **JavaScript / V8 / deno_core** | per-scene threads driven by `lib/src/scene_runner` |
 | `xtask` build system (doctor / install / build / run / export) | Rust | `src/` |
 
@@ -57,7 +57,6 @@ lib/src/
 ├── avatars/              Wearables, emotes, avatar assembly
 ├── profile/              Profile service, deploys
 ├── wallet/, auth/        Ethereum / sign-in
-├── social/               Friends, blocks, mentions
 ├── analytics/, tools/    Telemetry, scene inspector, dev tools
 └── godot_classes/        GDExtension binding definitions
 

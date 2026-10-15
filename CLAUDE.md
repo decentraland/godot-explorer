@@ -135,7 +135,7 @@ bypasses that check for local debugging only. The baked files live in
 
 ### Directory Structure
 - **`lib/`**: Cargo workspace (target dir, lockfile and version live here)
-  - `crates/dcl_core/`: engine-free core (no `godot` dependency, `cargo test -p dcl_core` runs without Godot): `Core` runtime, `env`/`urls`/`deep_link`, `session` (wallet, auth chain, thirdweb, `session.json`), `http` queue, `social`, `realm`, `flags`, `destination`, `analytics`, `notifications`
+  - `crates/dcl_core/`: engine-free core (no `godot` dependency, `cargo test -p dcl_core` runs without Godot): `Core` runtime, `env`/`urls`/`deep_link`, `session` (wallet, auth chain, thirdweb, `session.json`), `http` queue, `realm`, `flags`, `destination`, `analytics`, `notifications`
   - `crates/dcl_engine/`: the Godot GDExtension (package `dclgodot`); the `Dcl*` classes are adapters over the core
     - `src/dcl/`: Decentraland protocol types, SDK bindings, JS runtime glue
     - `src/scene_runner/`: Scene threads, CRDT handling, per-component systems (`components/`)
