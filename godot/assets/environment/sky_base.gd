@@ -43,40 +43,6 @@ func _ready():
 	anim_player.play("light_cycle")
 	anim_player.pause()
 
-	if Global.is_xr():
-		Global.loading_started.connect(self._on_loading_started)
-		Global.loading_finished.connect(self._on_loading_finished)
-
-
-func on_scene_runner_child_entered_tree(node: Node3D):
-	node.hide()
-	prints("Hiding:", node.name)
-
-
-func _on_loading_started():
-	world_environment.environment.background_energy_multiplier = 0.0
-	world_environment.environment.ambient_light_energy = 0.0
-	main_light.light_energy = 0.0
-
-	var scene_runner = Global.get_scene_runner()
-	scene_runner.child_entered_tree.connect(self.on_scene_runner_child_entered_tree)
-	for child in scene_runner.get_children():
-		child.hide()
-
-
-func _on_loading_finished():
-	var scene_runner = Global.get_scene_runner()
-	scene_runner.child_entered_tree.disconnect(self.on_scene_runner_child_entered_tree)
-	for child in scene_runner.get_children():
-		child.show()
-	var tween = get_tree().create_tween().set_parallel(true)
-	world_environment.environment.background_energy_multiplier = 0.0
-	world_environment.environment.ambient_light_energy = 0.0
-	main_light.light_energy = 0.0
-
-	tween.tween_property(world_environment, "environment:background_energy_multiplier", 1.0, 1.0)
-	tween.tween_property(world_environment, "environment:ambient_light_energy", 1.0, 1.0)
-	tween.tween_property(main_light, "light_energy", initial_sun_energy, 1.0)
 
 
 func _process(_delta: float) -> void:
