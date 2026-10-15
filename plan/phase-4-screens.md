@@ -39,8 +39,8 @@ files about to be deleted. One bounded job, then pure wiring.
   and `loading_screen` references, chat-open and virtual-keyboard state read by `player.gd`,
   nameplate and scene-UI hooks in `explorer.gd`; each becomes a core call, an `Engine` call or
   nothing. Exit: `--itest`/`--stest` green, the RN app enters a world, `global.gd` well under 1k lines.
-- [ ] **4.1 Friends and blacklist**. Core is pure since 1.2. RN `menu/` social screens on
-  `core.friends*`; online status and location from comms presence through the engine sink.
+- [ ] **4.1 Friends and blacklist screens**. The core has no friends API (D-43): RN `menu/` social
+  screens run on mock data in this phase; the real implementation is RN/TypeScript in 6.9.
 - [ ] **4.2 Discover, places, events**. RN `discover/` (5.2k) exists. Public GETs stay in RN
   with hosts from `core.urls()`; favorites, votes, reminders become typed core calls;
   `resolve_destination` for Jump In (from 1.5).

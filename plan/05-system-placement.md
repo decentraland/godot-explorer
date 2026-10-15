@@ -9,7 +9,7 @@ items in the phase files.
 | Tokio runtime | `scene_runner/tokio_runtime.rs`, a Node reached through `DclGlobal` | core, owned by `Core` | 1.1 |
 | HTTP queue | `http_queue_requester.rs` (pure) under `RustHttpQueueRequester` + `Promise` | core; the Godot class is a thin adapter until GDScript callers are gone | 1.2 |
 | URLs, env, deep-link parsing | `urls/`, `env/`, `deep_link.rs` (pure) under `DclUrls`, `DclParseDeepLink` | core | 1.2, 1.10 |
-| Friends, blacklist | `social/` (1.5k, pure) under `dcl_social_service.rs` (1,414) and `dcl_social_blacklist.rs` (293) | core; first migration | 1.2, 4.1 |
+| Friends, blacklist | `social/`, `dcl_social_service.rs`, `dcl_social_blacklist.rs` | deleted (D-43); RN/TypeScript, 6.9 | 3, 6.9 |
 | Session and identity | `auth/dcl_player_identity.rs` (1,597, shell), flow in `lobby.gd` (1,428), persistence in `config_data.gd` → `settings.cfg`, `thirdweb_guest.rs`, `device_anchor.rs` | core `session`, persisted by the core; the shell drives screens | 1.4, 3.2, 3.6 |
 | Realm `/about`, catalyst list | `logic/realm.gd` (440) over `DclRealm` | core `realm` | 1.5 |
 | Feature flags | `feature_flags.gd` (142) pushing values into Rust | core, fetched at boot | 1.5 |

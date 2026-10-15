@@ -5,8 +5,9 @@ First user-visible change on the branch.
 ## Goal
 
 A typed FFI from `dcl_core` to the RN app, the core app state machine, and real sign-in in RN with
-every method 1.15 has: guest, email OTP, Google and Apple through the browser hand-off, MetaMask on
-Android, WalletConnect on iOS. The JSON bridge, `godot/src/rn_bridge/` and the GDScript lobby are
+guest sign-in, every other method through the Decentraland auth page in the in-app browser (email OTP,
+Google, Apple, wallets). Native wallets through Reown and the real-account logins moved to phase 6
+(6.7, 6.8). The JSON bridge, `godot/src/rn_bridge/` and the GDScript lobby are
 deleted.
 
 ## Status (branch `feat/react-native-phase3`, 2026-10-14)
@@ -16,11 +17,12 @@ sign-in, session recovery, avatar preview, Genesis Plaza through `core.enter_wor
 world while one is up, the engine's exit and re-enter, deep links in a world.
 Also checked on the Moto since: the Play Integrity round trip (token requested, attestation session
 ready after the terms), guest account deletion, the keyboard on the email step, the avatar preload (3.11).
-Written but **not verified**: iOS host (including App Attest), Reown/native wallets (a follow-up PR; the
-wallet goes through the web page), Sentry delivery and symbol upload, email OTP and Google/Apple logins.
-Open: native WalletConnect, the `SwitchEnvironment`, `MarketplaceReturn` and benchmark deep-link
+Written but **not verified**: iOS host (including App Attest), Sentry delivery and symbol upload.
+Moved to phase 6: native wallets through Reown (6.7) and real email OTP, Google, Apple and wallet logins
+on devices (6.8). Friends leave the core: the API is deleted and friends come back in RN/TypeScript
+(D-43, 6.9). Open: the `SwitchEnvironment`, `MarketplaceReturn` and benchmark deep-link
 effects, the rest of 3.11 (baked-wearable lookup before the HEAD, one cache limit, emotes after the
-avatar, shader baker), friends' online status in the UI. No RN screen calls `exit_world` yet (phase 4).
+avatar, shader baker), No RN screen calls `exit_world` yet (phase 4).
 
 ## Exit criteria
 
@@ -103,7 +105,9 @@ avatar, shader baker), friends' online status in the UI. No RN screen calls `exi
   service trait (D-41): Play Integrity on Android, `DCAppAttestService` on iOS, the plugin code moved
   into the host as-is. Android is checked on the Moto (a Play Integrity token request and the attestation
   session ready after the terms); the Swift App Attest side is written and not verified.
-- [ ] **3.6 Entry flow on the core, every method**. `flow/auth.ts` stub → core calls. Guest;
+- [x] **3.6 Entry flow on the core**. Guest and the browser hand-off are done and checked on the
+  Moto; native wallets (Reown AppKit) and the real OTP, Google, Apple and wallet logins moved to
+  phase 6 (6.7, 6.8). Original scope: `flow/auth.ts` stub → core calls. Guest;
   email OTP (the form and code modal are missing in RN today); Google and Apple through the
   browser hand-off (`open_url` event, app-return completes through `handle_deep_link`, all already
   Rust in `decentraland_auth_server.rs` / `remote_wallet.rs`); MetaMask and
