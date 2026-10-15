@@ -9,6 +9,8 @@ extends Node
 ##
 ## The labelled set is device-local (config_data.gd) and written only when the player closes the
 ## overlay, so an app kill or a teleport while it is up shows the same labels again.
+##
+## A player gets this or the guided tutorial (#2767), whichever they close first.
 
 enum Decision { SHOW, DEFER }
 
@@ -199,6 +201,10 @@ func _mark_shown(elements: Array[String]) -> void:
 		if not config.controls_ftue_shown.has(element):
 			config.controls_ftue_shown.append(element)
 			changed = true
+	# A player gets this or the guided tutorial (#2767), whichever they close first.
+	if not config.ftue_tutorial_offered:
+		config.ftue_tutorial_offered = true
+		changed = true
 	if changed:
 		config.save_to_settings_file()
 

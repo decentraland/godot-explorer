@@ -7,6 +7,7 @@ extends Node
 ## Plaza by default) a new player who was never offered it gets the welcome card. "New" means
 ## the account was created on this install, so one recovered after a reinstall is not. START runs the
 ## seven steps; SKIP, there or at any step, ends it. Settings > Gameplay can replay it anywhere.
+## A player gets this or the controls overlay (#3014), whichever they answer first.
 ##
 ## A guest cannot claim the reward: CLAIM sends them to Add Email, and the reward card comes
 ## back once that account has an email and the player is in the world again.
@@ -105,8 +106,8 @@ func is_running() -> bool:
 
 
 ## True when this scene entry belongs to the tutorial: it is on screen or about to be offered.
-## The controls overlay (#3014) stays out of the way then, and shows wherever the tutorial
-## does not.
+## The controls overlay (#3014) stays out of the way then; once either one is answered, the
+## other is not shown again.
 func owns_scene_entry() -> bool:
 	if is_running() or is_instance_valid(_welcome) or _forced or _forced_reward:
 		return true
@@ -195,9 +196,13 @@ func _on_welcome_answered(start: bool) -> void:
 	_close_welcome()
 	# The pressed button took keyboard focus with it; movement is gated on the explorer having it.
 	Global.explorer_grab_focus()
-	# START alone does not settle it: a tutorial cut short by closing the app is offered again.
+	var config: ConfigData = Global.get_config()
+	# Either answer settles the player's FTUE: the controls overlay (#3014) never follows it.
+	config.controls_ftue_shown = PackedStringArray(ControlsFtueOverlay.ALL_ELEMENTS)
+	# START alone does not settle the tutorial: one cut short by closing the app is offered again.
 	if not start:
-		_mark_offered()
+		config.ftue_tutorial_offered = true
+	config.save_to_settings_file()
 	_track_click("start" if start else "skip", SCREEN_WELCOME, {"step": 0})
 	var explorer := Global.get_explorer()
 	if start and is_instance_valid(explorer):
