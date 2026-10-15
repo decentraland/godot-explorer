@@ -1,0 +1,114 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://src/ui/components/organisms/controls_ftue_overlay/controls_ftue_overlay.gd" id="1_overlay"]
+[ext_resource type="Script" path="res://src/ui/components/organisms/controls_ftue_overlay/controls_ftue_label.gd" id="2_label"]
+[ext_resource type="FontFile" uid="uid://d2vlaexk003yw" path="res://assets/themes/fonts/inter/Inter-Medium.ttf" id="3_font"]
+
+[node name="ControlsFtueOverlay" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_overlay")
+
+[node name="Dim" type="ColorRect" parent="."]
+unique_name_in_owner = true
+z_index = -1
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0, 0, 0, 0.6)
+
+[node name="Label_Menu" type="MarginContainer" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+mouse_filter = 2
+theme_override_constants/margin_left = 17
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 17
+theme_override_constants/margin_bottom = 8
+script = ExtResource("2_label")
+pointer_side = 1
+
+[node name="Label" type="Label" parent="Label_Menu"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+theme_override_fonts/font = ExtResource("3_font")
+theme_override_font_sizes/font_size = 26
+text = "CONTROLS_FTUE_MENU"
+horizontal_alignment = 1
+
+[node name="Label_Chat" type="MarginContainer" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+mouse_filter = 2
+theme_override_constants/margin_left = 17
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 17
+theme_override_constants/margin_bottom = 8
+script = ExtResource("2_label")
+
+[node name="Label" type="Label" parent="Label_Chat"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+theme_override_fonts/font = ExtResource("3_font")
+theme_override_font_sizes/font_size = 26
+text = "CONTROLS_FTUE_CHAT"
+horizontal_alignment = 1
+
+[node name="Label_Movement" type="MarginContainer" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+mouse_filter = 2
+theme_override_constants/margin_left = 17
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 17
+theme_override_constants/margin_bottom = 8
+script = ExtResource("2_label")
+pointer_side = 2
+
+[node name="Label" type="Label" parent="Label_Movement"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+theme_override_fonts/font = ExtResource("3_font")
+theme_override_font_sizes/font_size = 26
+text = "CONTROLS_FTUE_MOVEMENT"
+horizontal_alignment = 1
+
+[node name="Label_Emotes" type="MarginContainer" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+mouse_filter = 2
+theme_override_constants/margin_left = 17
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 17
+theme_override_constants/margin_bottom = 8
+script = ExtResource("2_label")
+
+[node name="Label" type="Label" parent="Label_Emotes"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+theme_override_fonts/font = ExtResource("3_font")
+theme_override_font_sizes/font_size = 26
+text = "CONTROLS_FTUE_EMOTES"
+horizontal_alignment = 1
+
+[node name="Label_TapToStart" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchor_top = 0.31
+anchor_right = 1.0
+anchor_bottom = 0.31
+offset_bottom = 34.0
+grow_horizontal = 2
+theme_override_colors/font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+theme_override_fonts/font = ExtResource("3_font")
+theme_override_font_sizes/font_size = 28
+text = "CONTROLS_FTUE_TAP_TO_START"
+horizontal_alignment = 1
