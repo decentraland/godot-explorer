@@ -184,7 +184,7 @@ func _ready():
 
 	if cmd_realm != null:
 		if Realm.is_dcl_ens(cmd_realm) and Global.deep_link_obj.preview.is_empty():
-			Global.async_join_world(cmd_realm)
+			WorldRequests.async_join_world(cmd_realm)
 		else:
 			Navigator.async_go(
 				Destination.restore(cmd_realm, start_parcel_position), "on_explorer_ready"

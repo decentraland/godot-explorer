@@ -49,7 +49,7 @@ static func async_patch_like(place_id: String, like: LIKE, is_world_place: bool 
 		LIKE.NO:
 			body = JSON.stringify({like = false})
 
-	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_PATCH, body)
+	var response = await WorldRequests.async_signed_fetch(url, HTTPClient.METHOD_PATCH, body)
 
 	return response
 
@@ -66,7 +66,7 @@ static func async_patch_favorite(
 	else:
 		body = JSON.stringify({favorites = false})
 
-	var respnse = await Global.async_signed_fetch(url, HTTPClient.METHOD_PATCH, body)
+	var respnse = await WorldRequests.async_signed_fetch(url, HTTPClient.METHOD_PATCH, body)
 
 	Global.favorite_destination_set.emit()
 
@@ -146,18 +146,18 @@ static func async_get_by_names(name: String) -> Variant:
 static func async_get_by_id(place_id: String) -> Variant:
 	var url: String = get_api_url() + place_id
 
-	return await Global.async_signed_fetch(url, HTTPClient.METHOD_GET)
+	return await WorldRequests.async_signed_fetch(url, HTTPClient.METHOD_GET)
 
 
 ## Fetches a single place by ID from the places API (same as fav_button, engagement_bar).
 ## Use this when destinations API get_by_id fails or returns different structure.
 static func async_get_place_by_id(place_id: String) -> Variant:
 	var url: String = DclUrls.places_api() + "/places/" + place_id
-	return await Global.async_signed_fetch(url, HTTPClient.METHOD_GET)
+	return await WorldRequests.async_signed_fetch(url, HTTPClient.METHOD_GET)
 
 
 static func async_fetch_places(url: String) -> FetchResult:
-	var response = await Global.async_signed_fetch(url, HTTPClient.METHOD_GET, "")
+	var response = await WorldRequests.async_signed_fetch(url, HTTPClient.METHOD_GET, "")
 
 	if response is PromiseError:
 		var fetch_result := FetchResult.new(FetchResultStatus.ERROR)

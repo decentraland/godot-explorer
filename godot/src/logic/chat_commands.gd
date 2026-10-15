@@ -42,13 +42,13 @@ func submit_message(message: String) -> void:
 				var world_realm = (
 					arg_string if arg_string.ends_with(".dcl.eth") else arg_string + ".dcl.eth"
 				)
-				Global.async_join_world(world_realm)
+				WorldRequests.async_join_world(world_realm)
 			else:
 				_async_try_change_realm(arg_string, "on_goto_realm")
 		elif command_str == "/changerealm" and params.size() > 1:
 			var target_realm = params[1]
 			if Realm.is_dcl_ens(target_realm):
-				Global.async_join_world(target_realm)
+				WorldRequests.async_join_world(target_realm)
 			else:
 				_async_try_change_realm(target_realm, "on_changerealm")
 

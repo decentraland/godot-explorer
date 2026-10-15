@@ -252,13 +252,13 @@ func _route_teleport() -> void:
 
 	# World realm without explicit location → join_world, skip ban pre-check (deferred post-loading)
 	if not realm.is_empty() and Realm.is_dcl_ens(realm) and not has_location:
-		Global.async_join_world(realm)
+		WorldRequests.async_join_world(realm)
 	elif has_location:
 		if realm.is_empty():
 			realm = DclUrls.main_realm()
-		Global.async_teleport_to(location, realm)
+		WorldRequests.async_teleport_to(location, realm)
 	elif not realm.is_empty():
-		Global.async_teleport_to(Vector2i.ZERO, realm)
+		WorldRequests.async_teleport_to(Vector2i.ZERO, realm)
 
 
 ## Redeem a `decentraland://open?signin=<identityId>` token.

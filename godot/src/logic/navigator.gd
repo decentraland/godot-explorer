@@ -129,7 +129,7 @@ static func warm(parcel: Vector2i, realm: String) -> void:
 
 
 static func _async_warm_scene(parcel: Vector2i) -> void:
-	_warm_boot_bundle(await Global.async_resolve_scene_entity_id(parcel))
+	_warm_boot_bundle(await WorldRequests.async_resolve_scene_entity_id(parcel))
 
 
 ## Compares resolved urls, not raw strings: "SpaceRunner.dcl.eth" and

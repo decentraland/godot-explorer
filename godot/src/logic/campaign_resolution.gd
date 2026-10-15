@@ -56,7 +56,7 @@ static func is_valid_token(token: String) -> bool:
 	return true
 
 
-## Reads a campaign's target as [position, realm], the pair Global.async_teleport_to and the
+## Reads a campaign's target as [position, realm], the pair WorldRequests.async_teleport_to and the
 ## FTUE jump signals already speak. Returns [] when the target is unusable, which callers
 ## treat as "render the default FTUE" rather than stranding the user somewhere.
 static func target_position_and_realm(campaign: Dictionary) -> Array:
