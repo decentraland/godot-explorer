@@ -161,8 +161,8 @@ var _enable_upgraded_deletion: bool = false
 # Scene Inspector bridge, created lazily at boot when a target is configured.
 var _scene_inspector_bridge: Node = null
 
-# Guard so the logging self-test runs at most once (cli or deeplink trigger).
-var _selftest_done: bool = false
+# Logging self-test trigger (cli flag or deeplink); runs at most once.
+var _logging_selftest := LoggingSelftest.new()
 
 # Cached reference to SafeAreaPresets (loaded dynamically to avoid export issues)
 var _safe_area_presets: GDScript = null
@@ -219,131 +219,6 @@ func should_emulate_android() -> bool:
 ## or mobile deep link (`decentraland://open?gp-benchmark=true&...`).
 func is_gp_benchmark() -> bool:
 	return cli.gp_benchmark or (deep_link_obj != null and deep_link_obj.gp_benchmark)
-
-
-## Logging self-test, triggered by `--test-logging` / `?test-logging=true`.
-## Exercises every logging form in every stack (GDScript / Rust / Swift / ObjC /
-## Kotlin) so we can confirm each pipes into the unified channel. Grep `[LOGTEST]`
-## to verify. The ERROR/WARN forms (push_error/push_warning, tracing error/warn,
-## NSLog/os_log faults, Log.e) also exercise the Sentry pipeline.
-## Run the logging self-test if requested (via `--test-logging` cli flag or a
-## `?test-logging=true` deeplink), at most once. Called at _ready (covers the cli
-## flag, e.g. iOS's baked arg) and on `deep_link_received` (Android delivers the
-## deeplink async, after _ready — and its launcher strips command-line args).
-func _maybe_run_logging_selftest() -> void:
-	if _selftest_done:
-		return
-	# Never run in production: the self-test deliberately fires push_error /
-	# tracing::error! / ERR_PRINT / Log.e, all of which ship to Sentry — otherwise
-	# reachable in prod via the `?test-logging=true` deeplink. Staging/TestFlight
-	# still run it so the Sentry path can be verified on a real build.
-	if is_production():
-		return
-	var requested := cli.test_logging
-	if not requested and deep_link_obj != null:
-		requested = str(deep_link_obj.params.get("test-logging", "")).to_lower() == "true"
-	if requested:
-		_selftest_done = true
-		_run_logging_selftest.call_deferred()
-
-
-func _run_logging_selftest() -> void:
-	print("[LOGTEST] ===== logging self-test start =====")
-
-	# --- GDScript stack: every logging form ---
-	print("[LOGTEST][gdscript] info via print()")
-	prints("[LOGTEST][gdscript]", "info", "via", "prints()")
-	print_rich("[LOGTEST][gdscript] info via print_rich() [color=yellow]rich[/color]")
-	printraw("[LOGTEST][gdscript] raw via printraw() (no newline)\n")
-	printerr("[LOGTEST][gdscript] error via printerr() (stderr)")
-	push_warning("[LOGTEST][gdscript] warn via push_warning() (expect Sentry)")
-	push_error("[LOGTEST][gdscript] error via push_error() (expect Sentry)")
-
-	# --- Rust stack: all tracing levels + raw println!/eprintln! (DclGlobal) ---
-	test_logging()
-
-	# --- Native stacks: gated by per-platform availability ---
-	if DclSwiftLibPlugin.is_available():
-		print("[LOGTEST][swift] DclSwiftLib.test_logging() -> ", DclSwiftLibPlugin.test_logging())
-	if DclAndroidPlugin.is_available():
-		DclAndroidPlugin.test_logging()
-		print("[LOGTEST][kotlin] invoked DclAndroidPlugin.test_logging()")
-	# has_singleton first: get_singleton logs an ERROR (→ Sentry) when absent.
-	if Engine.has_singleton("DclGodotiOS"):
-		var dcl_ios = Engine.get_singleton("DclGodotiOS")
-		if dcl_ios != null and dcl_ios.has_method("test_logging"):
-			dcl_ios.test_logging()
-			print("[LOGTEST][objc] invoked DclGodotiOS.test_logging()")
-
-	print("[LOGTEST] ===== logging self-test end =====")
-
-
-## Forward the optimized-content-base-url deeplink param into DclCli so the scene fetcher /
-## content provider use it for optimized loading (non-production; Decentraland https or LAN
-## hosts only). Shared by the desktop fake-deeplink path (_ready) and the mobile live path.
-func _apply_optimized_content_base_url(obj: DclParseDeepLink) -> void:
-	var opt_url: String = obj.params.get("optimized-content-base-url", "")
-	var allowed := UrlHost.is_decentraland_https(opt_url) or UrlHost.is_local_network(opt_url)
-	if opt_url.is_empty():
-		return
-	if is_production():
-		print("[DEEPLINK] optimized-content-base-url ignored on production builds")
-	elif not allowed:
-		print("[DEEPLINK] optimized-content-base-url rejected (not https Decentraland or LAN)")
-	else:
-		print("[DEEPLINK] optimized-content-base-url=", opt_url)
-		cli.optimized_content_base_url = opt_url
-
-
-## QA affordance: `decentraland://open?rotate-guest=true` mints a brand-new guest, the only
-## way back to the FTUE on a device whose native anchor survives reinstall (Android SSAID,
-## iOS Keychain). Also wipes the on-disk guest identity, so the FTUE is reachable from this
-## launch rather than the next one.
-##
-## Non-production means anything not cut from `release*`, so builds from `main` — TestFlight
-## included — honour it. Recoverable: the flag lives in user:// and the native anchor is
-## never touched, so reinstalling restores the original wallet.
-func _capture_debug_guest_rotate(obj: DclParseDeepLink) -> void:
-	if is_production():
-		return
-	if String(obj.params.get("rotate-guest", "")).to_lower() != "true":
-		return
-
-	var config := get_config()
-	config.debug_rotate_guest_anchor = true
-	# Campaign state too, or the scenario would only work once: a stored token is never
-	# replaced and a consumed one falls back to the default FTUE.
-	config.campaign_token = ""
-	config.campaign_token_captured_at = 0
-	config.campaign_consumed = false
-	config.save_to_settings_file()
-	var removed := clear_guest_device_storage()
-	print("[DEEPLINK] rotate-guest=true: cleared %d guest file(s) + campaign state" % removed)
-
-
-## Capture the ad/referrer campaign token carried by a deeplink as `?c=<token>` (#2670).
-## Shared by the desktop fake-deeplink path (_ready) and the mobile/iOS live path (router).
-##
-## First capture wins: an install has exactly one campaign, and a later in-session deeplink
-## must not repaint it. Hence the validation here rather than only at the point of use — a
-## junk token would take the slot the real install-attribution token needs.
-func _capture_campaign_token(obj: DclParseDeepLink) -> void:
-	var token: String = String(obj.params.get("c", "")).strip_edges()
-	if token.is_empty():
-		return
-	if not CampaignResolution.is_valid_token(token):
-		push_warning("[CAMPAIGN] ignoring malformed token from deeplink: " + token)
-		return
-
-	var config := get_config()
-	if not config.campaign_token.is_empty():
-		print("[CAMPAIGN] token already captured (", config.campaign_token, "), ignoring: ", token)
-		return
-
-	config.campaign_token = token
-	config.campaign_token_captured_at = int(Time.get_unix_time_from_system())
-	config.save_to_settings_file()
-	print("[CAMPAIGN] captured token=", token, " at=", config.campaign_token_captured_at)
 
 
 ## Lazy-init the GltfContainer load-timeout coalescer. Replaces the
@@ -469,11 +344,11 @@ func _ready():
 		else:
 			print("[DEEPLINK] No rust-log param in deeplink")
 
-		_apply_optimized_content_base_url(deep_link_obj)
+		deep_link_router._apply_optimized_content_base_url(deep_link_obj)
 
 		# Pulse transport params (this fake-deeplink path doesn't route through
 		# deep_link_router.process_deep_link).
-		_apply_comms_deeplink_params(deep_link_obj)
+		deep_link_router._apply_comms_deeplink_params(deep_link_obj)
 
 		print("[DEEPLINK] safemargindebug=", deep_link_obj.safe_margin_debug)
 		if deep_link_obj.safe_margin_debug:
@@ -515,8 +390,8 @@ func _ready():
 	# a config that was then replaced by the one read from disk. deep_link_obj is eagerly
 	# constructed, so this is a no-op when no deeplink carried a token. The live mobile path
 	# captures from deep_link_router instead, which already runs well after this point.
-	_capture_debug_guest_rotate(deep_link_obj)
-	_capture_campaign_token(deep_link_obj)
+	deep_link_router._capture_debug_guest_rotate(deep_link_obj)
+	deep_link_router._capture_campaign_token(deep_link_obj)
 
 	# Resolve the UI language before any scene renders. Godot picks the OS locale at boot, which
 	# would surface a partially-translated locale the moment its .po has content; LocaleSettings
@@ -611,8 +486,8 @@ func _ready():
 	# set, exercise every logging form in every stack so we can confirm each pipes
 	# into the unified channel + Sentry. Checked here (cli, e.g. iOS baked arg) AND
 	# on deeplink arrival (Android delivers it async, after _ready), run once.
-	_maybe_run_logging_selftest()
-	deep_link_router.deep_link_received.connect(_maybe_run_logging_selftest)
+	_logging_selftest.maybe_run()
+	deep_link_router.deep_link_received.connect(_logging_selftest.maybe_run)
 
 	DclMeshRenderer.init_primitive_shapes()
 	print("[Startup] global._ready end: %dms" % (Time.get_ticks_msec() - _startup_time))
@@ -1289,51 +1164,6 @@ func _check_dclenv_change() -> bool:
 	dcl_env_explicit = true
 	sign_out()
 	return true
-
-
-# Applies the comms deeplink params (pulse-server / pulse-realm / pulse / dual-channel / livekit).
-# Shared by deep_link_router.process_deep_link and the desktop --fake-deeplink path, so a new
-# param only has to be added once.
-func _apply_comms_deeplink_params(deep_link) -> void:
-	# `pulse-server=<host:port>` joins a specific Pulse server (shareable — everyone
-	# opening the link lands on the same instance; implies enabling).
-	var pulse_server_value = deep_link.params.get("pulse-server", "")
-	if not pulse_server_value.is_empty():
-		print("[DEEPLINK] pulse-server=", pulse_server_value)
-		comms.set_pulse_server(pulse_server_value)
-	# `pulse-realm=<realm>` announces this realm instead of the derived one (exact match; implies enabling).
-	var pulse_realm_value = deep_link.params.get("pulse-realm", "")
-	if not pulse_realm_value.is_empty():
-		print("[DEEPLINK] pulse-realm=", pulse_realm_value)
-		comms.set_pulse_realm(pulse_realm_value)
-	# `pulse=true/false` toggles the transport with the configured endpoint.
-	var pulse_value = deep_link.params.get("pulse", "")
-	if not pulse_value.is_empty():
-		print("[DEEPLINK] pulse=", pulse_value)
-		comms.set_pulse_enabled(pulse_value.to_lower() in ["true", "1", "yes"])
-	# `dual-channel=true/false`: whether movement and emotes keep going over LiveKit while
-	# Pulse is established. Overrides the deployment's `dual-channel` flag (default true) for this run.
-	var dual_channel_value = deep_link.params.get("dual-channel", "")
-	if not dual_channel_value.is_empty():
-		print("[DEEPLINK] dual-channel=", dual_channel_value)
-		comms.set_livekit_movement_dual_channel(
-			dual_channel_value.to_lower() in ["true", "1", "yes"]
-		)
-	# `livekit=false`: pulse-only mode — no LiveKit rooms at all (no chat/voice/
-	# scene messages). Dev/testing switch; `livekit=true` re-enables.
-	var livekit_value = deep_link.params.get("livekit", "")
-	if not livekit_value.is_empty():
-		print("[DEEPLINK] livekit=", livekit_value)
-		comms.set_livekit_enabled(livekit_value.to_lower() in ["true", "1", "yes"])
-	# `multiplayer_debug=true` (legacy alias livekit_debug): latch the flag on the
-	# comms manager, which survives scene changes — a deeplink with no navigation
-	# target is consumed while the lobby/menu is active, and the explorer that boots
-	# later re-reads the flag from comms (deep_link_obj is not a reliable carrier
-	# across that flow). Enable-only: absence of the param must not turn the panel
-	# off on a later deeplink.
-	if deep_link.multiplayer_debug:
-		print("[DEEPLINK] multiplayer_debug=true")
-		comms.set_multiplayer_debug(true)
 
 
 func _notification(what: int) -> void:
