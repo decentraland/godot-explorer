@@ -1,7 +1,7 @@
 [gd_scene format=3]
 
 [ext_resource type="Script" path="res://src/ui/components/organisms/reward_modal/reward_modal.gd" id="1_modal"]
-[ext_resource type="Texture2D" path="res://src/ui/components/organisms/ftue_tutorial/assets/reward_art.png" id="2_art"]
+[ext_resource type="Texture2D" path="res://src/ui/components/organisms/ftue_tutorial/assets/reward_emote.png" id="2_art"]
 [ext_resource type="PackedScene" uid="uid://buu3ox7iefpgx" path="res://src/ui/components/atoms/controls/loading_spinner/loading_spinner.tscn" id="3_spinner"]
 [ext_resource type="FontFile" uid="uid://hqi2efd5kd17" path="res://assets/themes/fonts/inter/Inter-Bold.ttf" id="4_bold"]
 [ext_resource type="FontFile" uid="uid://d2vlaexk003yw" path="res://assets/themes/fonts/inter/Inter-Medium.ttf" id="5_medium"]
@@ -98,7 +98,7 @@ layout_mode = 2
 mouse_filter = 2
 texture = ExtResource("2_art")
 expand_mode = 1
-stretch_mode = 6
+stretch_mode = 5
 
 [node name="EmoteAvatarPreview" parent="VBoxContainer/PanelContainer/MarginContainer_Reward" node_paths=PackedStringArray("fallback") instance=ExtResource("8_emote")]
 unique_name_in_owner = true

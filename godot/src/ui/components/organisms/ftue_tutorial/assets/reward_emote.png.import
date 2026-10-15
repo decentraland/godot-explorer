@@ -2,9 +2,9 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bh47gepsxjlx6"
-path.s3tc="res://.godot/imported/reward_art.png-14d31aafd32ae4bf6e039bc874042af8.s3tc.ctex"
-path.etc2="res://.godot/imported/reward_art.png-14d31aafd32ae4bf6e039bc874042af8.etc2.ctex"
+uid="uid://cpt0d1qdqqvob"
+path.s3tc="res://.godot/imported/reward_emote.png-1f4f32f9114511489c8494c352adb121.s3tc.ctex"
+path.etc2="res://.godot/imported/reward_emote.png-1f4f32f9114511489c8494c352adb121.etc2.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
@@ -12,8 +12,8 @@ metadata={
 
 [deps]
 
-source_file="res://src/ui/components/organisms/ftue_tutorial/assets/reward_art.png"
-dest_files=["res://.godot/imported/reward_art.png-14d31aafd32ae4bf6e039bc874042af8.s3tc.ctex", "res://.godot/imported/reward_art.png-14d31aafd32ae4bf6e039bc874042af8.etc2.ctex"]
+source_file="res://src/ui/components/organisms/ftue_tutorial/assets/reward_emote.png"
+dest_files=["res://.godot/imported/reward_emote.png-1f4f32f9114511489c8494c352adb121.s3tc.ctex", "res://.godot/imported/reward_emote.png-1f4f32f9114511489c8494c352adb121.etc2.ctex"]
 
 [params]
 

@@ -61,6 +61,9 @@ var _chat_seconds := 3.0
 
 var _hud := Hud.FULL
 var _suspended := false
+# A modal is open, or a menu one opened is still up: the overlay is hidden so it cannot eat the
+# modal's taps, and the step resumes once the player is back in the world.
+var _behind_modal := false
 var _last_position := Vector3.ZERO
 var _moved := 0.0
 var _last_yaw := 0.0
@@ -137,7 +140,7 @@ func skip() -> void:
 # Steps 1-3 hide most of the HUD, and explorer re-shows parts of it from several of its own
 # handlers; re-asserting every frame is simpler than hooking each one.
 func _process(_delta: float) -> void:
-	if _suspended:
+	if _wait_for_modal() or _suspended:
 		return
 	_apply_hud()
 	# A rotation or a layout pass moves the control after the highlight was drawn around it.
@@ -365,7 +368,7 @@ func _enter_step_after(next: Step, seconds: float) -> void:
 	var from := step
 	get_tree().create_timer(seconds).timeout.connect(
 		func() -> void:
-			if step == from and not _suspended:
+			if step == from and not _suspended and not _behind_modal:
 				_enter_step(next)
 	)
 
@@ -416,6 +419,32 @@ func _chat_button() -> Control:
 	return _explorer.chat_panel.get_node("%Chatbar").get_node("%Button_Chat")
 
 
+# A modal sits above the overlay, but the overlay takes touches in _input, before the modal's
+# buttons could. "Back to Discover" leaves a menu open: closing it would undo the player's choice.
+func _wait_for_modal() -> bool:
+	if Global.modal_manager.is_any_modal_open():
+		if not _behind_modal:
+			_behind_modal = true
+			_overlay.hide()
+		return true
+	if not _behind_modal:
+		return false
+	if _in_open_backpack():
+		# The Backpack steps happen inside the menu: carry on where the modal found them.
+		_behind_modal = false
+		_overlay.show()
+		if step == Step.EQUIP:
+			_enter_step(Step.EQUIP)
+		return true
+	if _explorer.control_menu.visible:
+		return true
+	_behind_modal = false
+	if not _suspended:
+		_overlay.show()
+		_enter_step(Step.BACKPACK if step == Step.EQUIP else step)
+	return true
+
+
 func _on_loading_started() -> void:
 	_suspended = true
 	_overlay.hide()
@@ -425,6 +454,8 @@ func _on_loading_finished() -> void:
 	if not _suspended:
 		return
 	_suspended = false
+	if _behind_modal:
+		return
 	_overlay.show()
 	_enter_step(Step.BACKPACK if step == Step.EQUIP else step)
 
@@ -550,7 +581,19 @@ func _has_equipped_something() -> bool:
 	return false
 
 
+# The page the menu switched to, not the Backpack node's visibility: it stays visible while
+# another page (Discover after "Back to Discover") fades in over it.
+func _in_open_backpack() -> bool:
+	if step != Step.EQUIP and not (step == Step.BACKPACK and _engaged):
+		return false
+	var menu = _explorer.control_menu
+	return menu.visible and menu.selected_node == menu.control_backpack
+
+
 func _on_menu_closed() -> void:
+	# Left behind a modal (e.g. its "Back to Discover"): not a way out; the step resumes.
+	if _behind_modal:
+		return
 	if step == Step.EQUIP and _engaged:
 		_enter_step(Step.DONE)
 	elif step == Step.EQUIP or (step == Step.BACKPACK and _engaged):
