@@ -176,9 +176,6 @@ func update_styles(toggled_on):
 
 
 func _async_schedule_local_notification() -> void:
-	if not NotificationsManager.is_local_notifications_enabled():
-		return
-
 	# Validate event data
 	if event_id_value.is_empty():
 		printerr("Cannot schedule notification: event_id is empty")

@@ -40,10 +40,9 @@ const FLAG_PUSH_ENABLED := "push-enabled"
 # and the deeplink `async-shaders=true/false` win over the flag.
 const FLAG_ASYNC_SHADER_COMPILATION := "async-shader-compilation"
 const ASYNC_SHADERS_METHOD := &"enable_async_shader_compilation"
-# Local (on-device) notifications: the Day 1 welcome and the event reminders. Fail-open
-# kill switch: off cancels what is armed and stops queueing. The lobby's OS permission
-# prompt is NOT gated by it — server push needs that same permission.
-const FLAG_LOCAL_NOTIFICATIONS := "local-notifications"
+# The Day 1 welcome local notification. Fail-open kill switch: off stops scheduling it and
+# disarms it if already armed. Event reminders and the OS permission prompt are not gated.
+const FLAG_DAY1_NOTIFICATION := "day1-notification"
 
 var _flags: Dictionary = {}
 var _loaded := false
@@ -154,7 +153,7 @@ func _apply_flags() -> void:
 	if Global.metrics != null:
 		Global.metrics.set_push_enabled(is_enabled(FLAG_PUSH_ENABLED, true))
 
-	NotificationsManager.set_local_notifications_enabled(is_enabled(FLAG_LOCAL_NOTIFICATIONS, true))
+	NotificationsManager.set_day1_notification_enabled(is_enabled(FLAG_DAY1_NOTIFICATION, true))
 	_update_async_shader_compilation()
 
 
