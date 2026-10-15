@@ -231,7 +231,7 @@ func async_show_scene_timeout_modal() -> void:
 ## Shows a CONNECTION_LOST type modal
 ## @param hide_buttons: If true, hides all buttons (used on iOS after retry fails)
 func async_show_connection_lost_modal(hide_buttons: bool = false) -> void:
-	if not await _async_ensure_modal("ModalManager.async_show_connection_lost_modal"):
+	if not await _async_ensure_modal("ModalManager.async_show_connection_lost_modal", true):
 		return
 
 	current_modal.blocker = true
@@ -389,7 +389,7 @@ func async_show_realm_teleport_modal(realm_name: String) -> void:
 ## Shows a SCENE_CRASH type modal
 ## @param entity_id: The entity ID of the crashed scene
 func async_show_scene_crash_modal(entity_id: String) -> void:
-	if not await _async_ensure_modal("ModalManager.async_show_scene_crash_modal"):
+	if not await _async_ensure_modal("ModalManager.async_show_scene_crash_modal", true):
 		return
 
 	current_modal.blocker = true
@@ -465,7 +465,7 @@ func _async_show_simple_modal(
 	primary_font_size: int = 0
 ) -> bool:
 	if not is_instance_valid(current_modal):
-		if not await _async_create_modal():
+		if not await _async_create_modal(icon == Modal.MODAL_BAN_ICON):
 			return false
 		if not NodeGuard.is_alive(current_modal, "ModalManager._async_show_simple_modal"):
 			return false
@@ -591,7 +591,7 @@ func _async_show_disconnect_modal(
 	primary_label: TranslationKey,
 	primary_handler: Callable
 ) -> void:
-	if not await _async_ensure_modal("ModalManager._async_show_disconnect_modal"):
+	if not await _async_ensure_modal("ModalManager._async_show_disconnect_modal", true):
 		return
 
 	current_modal.blocker = true
@@ -1005,19 +1005,19 @@ func _dismiss_chat_input_for_modal() -> void:
 		chat_panel.chat.close_write_mode_if_active()
 
 
-## Shared guard at the top of every async_show_*_modal(): reuses current_modal if it's already
-## alive, otherwise creates it. Returns false (caller should return immediately) when creation
-## failed or the modal died before NodeGuard could confirm it — `site` names the caller, for the
-## stale-node telemetry NodeGuard reports.
-func _async_ensure_modal(site: String) -> bool:
+## Shared guard at the top of every async_show_*_modal(): reuses current_modal if alive, else
+## creates it (`urgent`: see _async_create_modal). False when creation failed or the modal died
+## before NodeGuard confirmed it: return at once. `site` names the caller for NodeGuard telemetry.
+func _async_ensure_modal(site: String, urgent := false) -> bool:
 	if is_instance_valid(current_modal):
 		return true
-	if not await _async_create_modal():
+	if not await _async_create_modal(urgent):
 		return false
 	return NodeGuard.is_alive(current_modal, site)
 
 
-func _async_create_modal() -> Modal:
+func _async_create_modal(urgent := false) -> Modal:
+	await Global.controls_ftue_coordinator.async_wait_until_clear(urgent)
 	_dismiss_chat_input_for_modal()
 	# If there's already a modal open, close it first
 	if is_instance_valid(current_modal):

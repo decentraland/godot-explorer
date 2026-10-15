@@ -4,6 +4,13 @@ const GLIDER_PROP_SCENE: PackedScene = preload(
 	"res://src/decentraland_components/avatar/glider_prop.tscn"
 )
 
+# The tree blends the gait by speed, so flipping a gait flag alone leaves the
+# avatar in the idle pose. These are the speeds each kind blends at full
+# (player.gd's walk/jog/run defaults).
+const GAIT_PREVIEW_SPEED_WALK := 1.5
+const GAIT_PREVIEW_SPEED_JOG := 8.0
+const GAIT_PREVIEW_SPEED_RUN := 10.0
+
 var avatar_list: Array = []
 
 # Emote batch testing
@@ -21,7 +28,7 @@ var batch_test_timer: Timer = null
 # Animation tester state
 var _anim_library_keys: Array = []
 var _current_glider_prop: Node = null
-# #b4: track the loop_mode override so Stop / RestoreTree / next Play can undo
+# track the loop_mode override so Stop / RestoreTree / next Play can undo
 # it. Previously we awaited animation_finished, which never fires for looping
 # clips, so loop_mode stayed mutated on the shared Animation resource.
 var _looped_anim: Animation = null
@@ -477,7 +484,7 @@ func _suspend_state_machine() -> void:
 
 
 func _restore_loop_override() -> void:
-	# #b4: undo any pending loop_mode override on the shared Animation resource.
+	# undo any pending loop_mode override on the shared Animation resource.
 	if _looped_anim != null:
 		_looped_anim.loop_mode = _looped_anim_prev_mode
 		_looped_anim = null
@@ -494,7 +501,7 @@ func _play_selected_animation(loop: bool) -> void:
 		return
 
 	_suspend_state_machine()
-	# #b4: restore any previous override before mutating a new one.
+	# restore any previous override before mutating a new one.
 	_restore_loop_override()
 
 	var anim := player.get_animation(anim_path)
@@ -524,13 +531,13 @@ func _on_anim_play_loop_pressed() -> void:
 
 func _on_anim_stop_pressed() -> void:
 	avatar.animation_player.stop()
-	# #b4: undo the loop_mode override before the user walks away.
+	# undo the loop_mode override before the user walks away.
 	_restore_loop_override()
 	label_now_playing.text = "Now playing: —"
 
 
 func _on_anim_restore_tree_pressed() -> void:
-	# #b4: restore loop_mode before handing the AnimationPlayer back to the tree.
+	# restore loop_mode before handing the AnimationPlayer back to the tree.
 	_restore_loop_override()
 	avatar.animation_tree.active = true
 	avatar.set_process(true)
@@ -546,14 +553,30 @@ func _on_anim_restore_tree_pressed() -> void:
 
 func _on_flag_walk_toggled(pressed: bool) -> void:
 	avatar.walk = pressed
+	_preview_gait()
 
 
 func _on_flag_jog_toggled(pressed: bool) -> void:
 	avatar.jog = pressed
+	_preview_gait()
 
 
 func _on_flag_run_toggled(pressed: bool) -> void:
 	avatar.run = pressed
+	_preview_gait()
+
+
+# The gait flags alone move nothing: the blend reads the measured speed, which
+# is zero on a standing avatar.
+func _preview_gait() -> void:
+	var speed := 0.0
+	if avatar.run:
+		speed = GAIT_PREVIEW_SPEED_RUN
+	elif avatar.jog:
+		speed = GAIT_PREVIEW_SPEED_JOG
+	elif avatar.walk:
+		speed = GAIT_PREVIEW_SPEED_WALK
+	avatar.movement_speed = speed
 
 
 func _on_flag_rise_toggled(pressed: bool) -> void:

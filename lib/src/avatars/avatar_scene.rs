@@ -1911,6 +1911,16 @@ impl AvatarScene {
                     movement.velocity_z,
                 ),
             );
+            // Head sync: the head turn rides the uncompressed movement (and
+            // always the Pulse state, which is quantized from it). The compressed
+            // rfc4 bitfield has no head fields, so a peer reads no head turn.
+            // Wire pitch is Unity's X euler (positive looks down); ours looks up.
+            avatar.bind_mut().apply_wire_head_ik(
+                movement.head_yaw,
+                -movement.head_pitch,
+                movement.head_ik_yaw_enabled,
+                movement.head_ik_pitch_enabled,
+            );
             avatar.bind_mut().sync_newest_packet_anim();
         }
         self.last_movement_timestamp
