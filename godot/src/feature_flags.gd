@@ -35,6 +35,10 @@ const FLAG_SENTRY_ERROR_EVENTS := "sentry-error-events"
 # NOT do: turning it off stops new tokens from being registered, it does not stop
 # delivery to tokens already collected — that is a server-side decision.
 const FLAG_PUSH_ENABLED := "push-enabled"
+# Foundation parity, the same flag name Unity reads: scene glTF materials render with
+# backfaces culled, which is what an inverted-hull outline (a `doubleSided` shell with
+# flipped normals) expects. Read at material-fix time — see GltfContainer.fix_material.
+const FLAG_FORCE_BACKFACE_CULLING := "alfa-force-backface-culling"
 
 var _flags: Dictionary = {}
 var _loaded := false
