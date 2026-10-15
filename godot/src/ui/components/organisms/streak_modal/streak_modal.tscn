@@ -69,6 +69,7 @@ script = ExtResource("1_script")
 texture_pedestal_normal = ExtResource("15_pedestal")
 texture_pedestal_claimed = ExtResource("21_pedestal_claimed")
 metadata/mobile_preview_orientation = "portrait"
+metadata/_edit_horizontal_guides_ = [914.0]
 
 [node name="Blur" type="ColorRect" parent="." unique_id=2033739271]
 material = SubResource("ShaderMaterial_blur")
@@ -137,15 +138,17 @@ anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
 offset_left = -200.0
-offset_top = -149.0
+offset_top = -172.0
 offset_right = 200.0
-offset_bottom = 101.0
+offset_bottom = 78.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/separation = -190
+theme_override_constants/separation = -170
+alignment = 2
 
 [node name="TextureRect_RewardArt1" type="TextureRect" parent="VBoxContainer/PanelContainer/MarginContainer2/RewardShowcase/Pedestal/HBoxContainer_Rewards" unique_id=1433207045]
 unique_name_in_owner = true
+z_index = 1
 custom_minimum_size = Vector2(250, 0)
 layout_mode = 2
 size_flags_horizontal = 3
@@ -260,26 +263,23 @@ theme_override_styles/separator = SubResource("StyleBoxEmpty_da6u2")
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="CenterContainer" type="VBoxContainer" parent="VBoxContainer/PanelContainer/MarginContainer/VBoxContainer" unique_id=697726196]
-layout_mode = 2
-theme_override_constants/separation = 0
-
-[node name="MarginContainer_ClaimFailed" type="MarginContainer" parent="VBoxContainer/PanelContainer/MarginContainer/VBoxContainer/CenterContainer" unique_id=407207803]
+[node name="MarginContainer_ClaimFailed" type="MarginContainer" parent="VBoxContainer/PanelContainer/MarginContainer/VBoxContainer" unique_id=407207803]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 theme_override_constants/margin_top = 10
 theme_override_constants/margin_bottom = 24
 
-[node name="PanelContainer_ClaimFailed" type="PanelContainer" parent="VBoxContainer/PanelContainer/MarginContainer/VBoxContainer/CenterContainer/MarginContainer_ClaimFailed" unique_id=413903819]
+[node name="PanelContainer_ClaimFailed" type="PanelContainer" parent="VBoxContainer/PanelContainer/MarginContainer/VBoxContainer/MarginContainer_ClaimFailed" unique_id=413903819]
 custom_minimum_size = Vector2(0, 86)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_t1wcr")
 
-[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/PanelContainer/MarginContainer/VBoxContainer/CenterContainer/MarginContainer_ClaimFailed/PanelContainer_ClaimFailed" unique_id=1308955822]
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/PanelContainer/MarginContainer/VBoxContainer/MarginContainer_ClaimFailed/PanelContainer_ClaimFailed" unique_id=1308955822]
 layout_mode = 2
 theme_override_constants/separation = 24
 
-[node name="TextureRect" type="TextureRect" parent="VBoxContainer/PanelContainer/MarginContainer/VBoxContainer/CenterContainer/MarginContainer_ClaimFailed/PanelContainer_ClaimFailed/HBoxContainer" unique_id=70848392]
+[node name="TextureRect" type="TextureRect" parent="VBoxContainer/PanelContainer/MarginContainer/VBoxContainer/MarginContainer_ClaimFailed/PanelContainer_ClaimFailed/HBoxContainer" unique_id=70848392]
 modulate = Color(0.9882353, 0.9882353, 0.9882353, 1)
 custom_minimum_size = Vector2(63, 50)
 layout_mode = 2
@@ -289,7 +289,7 @@ texture = ExtResource("11_da6u2")
 expand_mode = 3
 stretch_mode = 3
 
-[node name="RichTextLabel" type="RichTextLabel" parent="VBoxContainer/PanelContainer/MarginContainer/VBoxContainer/CenterContainer/MarginContainer_ClaimFailed/PanelContainer_ClaimFailed/HBoxContainer" unique_id=22595839]
+[node name="RichTextLabel" type="RichTextLabel" parent="VBoxContainer/PanelContainer/MarginContainer/VBoxContainer/MarginContainer_ClaimFailed/PanelContainer_ClaimFailed/HBoxContainer" unique_id=22595839]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_colors/default_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
@@ -300,14 +300,20 @@ text = "STREAK_CLAIM_FAILED"
 fit_content = true
 vertical_alignment = 1
 
-[node name="HSeparator2" type="HSeparator" parent="VBoxContainer/PanelContainer/MarginContainer/VBoxContainer/CenterContainer" unique_id=790275547]
+[node name="VBoxContainer_Footer" type="VBoxContainer" parent="VBoxContainer/PanelContainer/MarginContainer/VBoxContainer" unique_id=697726196]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="HSeparator2" type="HSeparator" parent="VBoxContainer/PanelContainer/MarginContainer/VBoxContainer/VBoxContainer_Footer" unique_id=790275547]
 layout_mode = 2
 theme_override_constants/separation = 24
 theme_override_styles/separator = SubResource("StyleBoxEmpty_da6u2")
 
-[node name="Label_Footer" type="RichTextLabel" parent="VBoxContainer/PanelContainer/MarginContainer/VBoxContainer/CenterContainer" unique_id=427209760]
+[node name="Label_Footer" type="RichTextLabel" parent="VBoxContainer/PanelContainer/MarginContainer/VBoxContainer/VBoxContainer_Footer" unique_id=427209760]
 unique_name_in_owner = true
 auto_translate_mode = 1
+custom_minimum_size = Vector2(0, 52)
 layout_mode = 2
 size_flags_stretch_ratio = 1.33
 theme_override_colors/default_color = Color(0.9254902, 0.92156863, 0.92941177, 1)
@@ -316,12 +322,12 @@ theme_override_fonts/bold_font = ExtResource("20_footer_bold")
 theme_override_font_sizes/normal_font_size = 20
 theme_override_font_sizes/bold_font_size = 20
 bbcode_enabled = true
-text = "STREAK_FOOTER_CAPTION"
+text = "STREAK_FOOTER_CAPTION_GUEST"
 fit_content = true
 autowrap_mode = 2
 horizontal_alignment = 1
 
-[node name="HSeparator" type="HSeparator" parent="VBoxContainer/PanelContainer/MarginContainer/VBoxContainer/CenterContainer" unique_id=197038009]
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer/PanelContainer/MarginContainer/VBoxContainer/VBoxContainer_Footer" unique_id=197038009]
 layout_mode = 2
 theme_override_constants/separation = 44
 theme_override_styles/separator = SubResource("StyleBoxEmpty_da6u2")

@@ -20,6 +20,7 @@ const BOUNCE_OFFSET_PX := 10.0
 const BOUNCE_HALF_DURATION_SEC := 0.9
 const CLAIM_FAILED_SLIDE_OFFSET_PX := 24.0
 const CLAIM_FAILED_SLIDE_DURATION_SEC := 0.3
+const REWARD_ART_FADE_DURATION_SEC := 0.3
 
 ## Shown behind the reward art while it's still unclaimed / once the live claim succeeds.
 @export var texture_pedestal_normal: Texture2D
@@ -41,6 +42,7 @@ var _claiming_reward: bool = false
 @onready var label_title: Label = %Label_Title
 @onready var label_subtitle: RichTextLabel = %Label_Subtitle
 @onready var label_footer: RichTextLabel = %Label_Footer
+@onready var footer_container: VBoxContainer = %VBoxContainer_Footer
 @onready var streak_day_row: StreakDayRow = %StreakDayRow
 @onready var button_cta: Button = %Button_CTA
 @onready var claim_button: ClaimButton = %ClaimButton
@@ -68,9 +70,10 @@ static func state_from_pending(pending: String) -> State:
 	return State.WELCOME
 
 
-## Awaits the reward-art fetch before reveal so the modal never shows the baked placeholder and
-## then visibly pops to the real thumbnail a moment later — on an empty urn, a cache miss or a
-## fetch error it just resolves immediately and the placeholder stands in as if nothing happened.
+## Awaits the reward-art fetch before reveal — real thumbnail vs. baked placeholder is already
+## decided by the time the modal shows, so it's never sitting there with a bare/incomplete art
+## slot. The art itself still fades in (see _reveal_reward_thumbnails()) right as the modal
+## appears, rather than just popping in fully opaque.
 # gdlint:ignore = async-function-name
 func async_setup(state: State, progress_day: int, is_guest: bool, pending_day: int = 0) -> void:
 	_state = state
@@ -78,11 +81,12 @@ func async_setup(state: State, progress_day: int, is_guest: bool, pending_day: i
 	_is_guest = is_guest
 	_pending_day = pending_day
 	_render()
-	await _async_apply_reward_thumbnails()
+	var reward_targets := await _async_apply_reward_thumbnails()
 	if not is_instance_valid(self):
 		return
 	show()
 	Global.metrics.track_screen_viewed(_screen_view_name(), "")
+	_reveal_reward_thumbnails(reward_targets)
 
 
 ## RewardShowcase is always visible regardless of state, so the bounce runs for the modal's
@@ -114,6 +118,10 @@ func _notification(what: int) -> void:
 
 
 func _render() -> void:
+	# Every full render starts with the standard footer, not the claim-failed warning — only an
+	# actual failed attempt (inside _show_claim_button()'s claim_action) turns it back on, and
+	# only states that reach _show_claim_button() can ever show it in the first place.
+	_set_claim_failed_visible(false)
 	var d3_claimed := Global.streak_manager.is_d3_claimed()
 	var d7_claimed := Global.streak_manager.is_d7_claimed()
 	var claimed_days: Array[int] = []
@@ -235,7 +243,6 @@ func _show_claim_button(text_key: String) -> void:
 	button_cta.visible = false
 	claim_button.visible = true
 	claim_button.text_normal = text_key
-	_set_claim_failed_visible(false)
 	var days := Global.streak_manager.get_claimable_days()
 	var is_guest := _is_guest
 	claim_button.claim_action = func() -> bool:
@@ -256,7 +263,9 @@ func _show_claim_button(text_key: String) -> void:
 ## StreakModalController._async_create_streak_modal), never because this instance resets itself.
 func _set_claim_failed_visible(show_failed: bool) -> void:
 	claim_failed_panel.visible = show_failed
-	label_footer.visible = not show_failed
+	# Hides the whole footer block (label + its separators), not just the label — otherwise the
+	# separators' own spacing stays reserved and leaves a dead gap under the warning panel.
+	footer_container.visible = not show_failed
 	if show_failed:
 		_async_slide_in_claim_failed()
 
@@ -282,22 +291,31 @@ func _async_slide_in_claim_failed() -> void:
 
 
 ## Fills reward_art_1 (and reward_art_2 when both D3 and D7 are pending — see _render()) with the
-## real wearable/emote thumbnail(s), sequentially. Cosmetic only; a failed or empty fetch on either
-## slot silently keeps whatever placeholder is already on it, it never blocks the claim.
-func _async_apply_reward_thumbnails() -> void:
+## real wearable/emote thumbnail(s), sequentially. A failed or empty fetch on either slot leaves
+## whatever placeholder is already on it, it never blocks the claim. Leaves every touched slot at
+## alpha 0 — real-vs-placeholder is decided here, but _reveal_reward_thumbnails() does the actual
+## fade-in, once the caller is ready to show it. @return the slots this call actually touched, so
+## the caller only reveals those (not whichever slot sits unused/hidden this render).
+func _async_apply_reward_thumbnails() -> Array[TextureRect]:
 	var keys := _preview_campaign_keys()
-	var targets: Array[TextureRect] = [reward_art_1, reward_art_2]
+	var all_targets: Array[TextureRect] = [reward_art_1, reward_art_2]
+	var touched: Array[TextureRect] = []
 	for i in keys.size():
+		var target := all_targets[i]
+		touched.append(target)
 		await _async_apply_reward_thumbnail(
-			str(RewardCampaigns.CAMPAIGNS[keys[i]].get("urn", "")), targets[i]
+			str(RewardCampaigns.CAMPAIGNS[keys[i]].get("urn", "")), target
 		)
 		if not is_instance_valid(self):
-			return
+			return touched
+	return touched
 
 
-## Swaps the baked placeholder art in `target` for the real wearable's thumbnail, same resolve-
-## then-fetch shape as wearable_item.gd/backpack.gd's own thumbnail loads.
+## Resolves `target`'s texture (real thumbnail or the baked placeholder it already has), same
+## resolve-then-fetch shape as wearable_item.gd/backpack.gd's own thumbnail loads, but leaves it
+## fully transparent either way — the caller fades it in once it's ready to show it.
 func _async_apply_reward_thumbnail(urn: String, target: TextureRect) -> void:
+	target.modulate.a = 0.0
 	if urn.is_empty():
 		return
 	var wearable = Global.content_provider.get_wearable(urn)
@@ -320,6 +338,16 @@ func _async_apply_reward_thumbnail(urn: String, target: TextureRect) -> void:
 		printerr("StreakModal: reward thumbnail fetch failed for ", urn, ": ", res.get_error())
 		return
 	target.texture = res.texture
+
+
+## Fades each of `targets` in from transparent — called once, right as the modal becomes visible,
+## so the reveal plays out on-screen instead of finishing invisibly while the modal was still
+## hidden during the fetch.
+func _reveal_reward_thumbnails(targets: Array[TextureRect]) -> void:
+	for target in targets:
+		var tween := create_tween()
+		tween.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+		tween.tween_property(target, "modulate:a", 1.0, REWARD_ART_FADE_DURATION_SEC)
 
 
 func _screen_view_name() -> String:
