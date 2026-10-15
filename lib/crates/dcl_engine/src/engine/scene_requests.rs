@@ -19,7 +19,7 @@ pub enum Verdict {
     Pending,
 }
 
-/// The app side of a scene request: the Godot UI today, the shell when RN renders the modals.
+/// The app side of a scene request: the shell renders the modals; without one the emulator answers.
 pub trait SceneRequestSink {
     fn handle(&self, id: RequestId, request: &SceneRequest) -> Verdict;
 }
@@ -65,73 +65,6 @@ impl SceneRequestSink for ShellSink {
             None => Verdict::Done(Err("engine not available".to_string())),
         }
     }
-}
-
-/// The Godot modals, as before: the RPC answers `Ok` as soon as the modal is shown.
-pub struct GodotUiSink;
-
-impl GodotUiSink {
-    fn modal_manager() -> Result<Gd<Node>, String> {
-        DclGlobal::try_singleton()
-            .and_then(|global| global.get("modal_manager").try_to::<Gd<Node>>().ok())
-            .ok_or_else(|| "modal_manager not available".to_string())
-    }
-}
-
-impl SceneRequestSink for GodotUiSink {
-    fn handle(&self, _id: RequestId, request: &SceneRequest) -> Verdict {
-        let result = match request {
-            SceneRequest::OpenNft { urn } => open_nft_dialog(urn),
-            _ => Self::modal_manager().map(|mut modal_manager| match request {
-                SceneRequest::ChangeRealm { realm, message } => {
-                    modal_manager.call(
-                        "async_show_change_realm_modal",
-                        &[
-                            realm.to_variant(),
-                            message.clone().unwrap_or_default().to_variant(),
-                        ],
-                    );
-                }
-                SceneRequest::OpenExternalUrl { url } => {
-                    modal_manager.call("async_show_external_link_modal", &[url.to_variant()]);
-                }
-                SceneRequest::Teleport {
-                    parcel: Some(parcel),
-                    realm,
-                } => {
-                    modal_manager.call(
-                        "async_show_teleport_modal",
-                        &[
-                            Vector2i::new(parcel.x, parcel.y).to_variant(),
-                            realm.clone().unwrap_or_default().to_variant(),
-                        ],
-                    );
-                }
-                SceneRequest::Teleport {
-                    parcel: None,
-                    realm: Some(realm),
-                } => {
-                    modal_manager.call("async_show_realm_teleport_modal", &[realm.to_variant()]);
-                }
-                _ => {}
-            }),
-        };
-        Verdict::Done(result)
-    }
-}
-
-fn open_nft_dialog(urn: &str) -> Result<(), String> {
-    let mut dialog_stack = DclEngine::get()
-        .and_then(|engine| engine.bind().dialog_stack())
-        .ok_or_else(|| "DialogStack not available".to_string())?;
-    let mut dialog = godot::tools::load::<PackedScene>(
-        "res://src/ui/components/organisms/dialogs/nft_dialog.tscn",
-    )
-    .instantiate()
-    .ok_or_else(|| "NftDialog instantiate error".to_string())?;
-    dialog_stack.add_child(&dialog.clone());
-    dialog.call("async_load_nft", &[urn.to_variant()]);
-    Ok(())
 }
 
 /// The headless emulator has no user to ask: teleports and realm changes are taken, links and

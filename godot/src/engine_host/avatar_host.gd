@@ -11,7 +11,6 @@ func _ready() -> void:
 func _async_boot() -> void:
 	if not Global.player_identity.get_address_str().is_empty():
 		# Back from a world: keep the account and the customized profile.
-		SplashOverlay.fade_out()
 		EngineHost.on_avatar_host_ready()
 		return
 	Global.player_identity.create_disposable_account()
@@ -20,5 +19,4 @@ func _async_boot() -> void:
 	await get_tree().process_frame
 	Global.player_identity.set_random_profile()
 	await Global.player_identity.profile_changed
-	SplashOverlay.fade_out()
 	EngineHost.on_avatar_host_ready()

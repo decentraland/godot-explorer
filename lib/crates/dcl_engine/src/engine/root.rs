@@ -258,11 +258,6 @@ impl DclRoot {
             BootMode::Emulator => {
                 godot_print!("Running in Emulator mode");
                 Self::complete_emulator_arguments(&global);
-                global
-                    .bind()
-                    .get_engine()
-                    .bind_mut()
-                    .set_emulator_mode(true);
                 Self::start_throwaway_guest(&global, false);
                 Self::remember_throwaway_account(&global);
                 self.change_scene(EXPLORER);

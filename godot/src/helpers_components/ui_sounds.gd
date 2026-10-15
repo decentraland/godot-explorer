@@ -53,15 +53,7 @@ func install_audio(node: Node):
 	var sound_added = true
 	var attenuated = node.has_meta("attenuated_sound")
 
-	if node is WearableItem:
-		node.equip.connect(self.play_sound.bind(&"backpack_item_equip", attenuated))
-	elif node is PresetAvatarCard:
-		node.toggled.connect(
-			func(on):
-				if on:
-					play_sound(&"backpack_item_equip", attenuated)
-		)
-	elif node is EmoteItemUi:
+	if node is EmoteItemUi:
 		var emote_attenuated = node.has_meta("attenuated_sound")
 		node.mouse_entered.connect(self.play_sound.bind(&"generic_button_hover", emote_attenuated))
 		node.button_down.connect(self.play_sound.bind(&"generic_button_press", emote_attenuated))
@@ -69,12 +61,6 @@ func install_audio(node: Node):
 		node.play_emote.connect(
 			func(_data): self.play_sound(&"backpack_item_equip", emote_attenuated)
 		)
-	elif node is EmoteEditorItem:
-		node.select_emote.connect(
-			func(_data): self.play_sound(&"mainmenu_tile_highlight", attenuated)
-		)
-	elif node is PlaceItem:
-		node.item_pressed.connect(func(_data): play_sound(&"mainmenu_tile_highlight", attenuated))
 	elif node is CheckBox or node is OptionButton:
 		node.mouse_entered.connect(self.play_sound.bind(&"generic_button_hover", attenuated))
 		node.toggled.connect(
@@ -99,12 +85,6 @@ func install_audio(node: Node):
 				func(toggled_on):
 					play_sound(&"toggle_enable" if toggled_on else &"toggle_disable", attenuated)
 			)
-	elif node is DropdownList:
-		node.item_selected.connect(func(_index): play_sound(&"generic_button_press", attenuated))
-		node.toggled.connect(
-			func(is_open):
-				play_sound(&"toggle_enable" if is_open else &"toggle_disable", attenuated)
-		)
 	elif node is Slider:
 		node.value_changed.connect(func(_value): play_sound(&"inputfield_entertext", attenuated))
 	elif node is LineEdit:

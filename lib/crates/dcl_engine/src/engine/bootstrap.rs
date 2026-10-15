@@ -42,7 +42,7 @@ const fn spec(
 }
 
 /// Services every boot needs, in creation order.
-const CORE_SERVICES: [ServiceSpec; 10] = [
+const CORE_SERVICES: [ServiceSpec; 9] = [
     spec(
         "nft_frame_loader",
         "src/decentraland_components/nft_frame_style_loader.gd",
@@ -66,12 +66,6 @@ const CORE_SERVICES: [ServiceSpec; 10] = [
         "src/logic/snapshot.gd",
         None,
         Attach::GlobalChild,
-    ),
-    spec(
-        "preload_assets",
-        "src/logic/preload_assets.gd",
-        None,
-        Attach::None,
     ),
     spec("config", "src/config/config_data.gd", None, Attach::None),
     spec("realm", "src/logic/realm.gd", Some("realm"), Attach::None),
@@ -136,7 +130,7 @@ fn create(global: &mut Gd<Node>, specs: &[ServiceSpec]) -> bool {
 }
 
 /// Services of a full boot, created after the config exists. Each is held by its `Global` property.
-const APP_SERVICES: [ServiceSpec; 6] = [
+const APP_SERVICES: [ServiceSpec; 3] = [
     spec(
         "scene_fetcher",
         "src/logic/scene_fetcher.gd",
@@ -155,38 +149,17 @@ const APP_SERVICES: [ServiceSpec; 6] = [
         Some("locations"),
         Attach::None,
     ),
-    spec(
-        "modal_manager",
-        "src/ui/components/organisms/modal/modal_manager.gd",
-        Some("modal_manager"),
-        Attach::None,
-    ),
-    spec(
-        "upgrade_nudge_coordinator",
-        "src/upgrade_nudge_coordinator.gd",
-        Some("upgrade_nudge_coordinator"),
-        Attach::None,
-    ),
-    spec(
-        "review_prompt_coordinator",
-        "src/review_prompt_coordinator.gd",
-        Some("review_prompt_coordinator"),
-        Attach::None,
-    ),
 ];
 
 /// Nodes added to `/root` (deferred, in this order) once the app services exist. The order is
 /// the order the old `global.gd` used, and later deferred calls rely on it.
-const ROOT_NODES: [&str; 18] = [
+const ROOT_NODES: [&str; 15] = [
     "cli",
     "engine",
     "music_player",
     "scene_fetcher",
     "skybox_time",
     "locations",
-    "modal_manager",
-    "upgrade_nudge_coordinator",
-    "review_prompt_coordinator",
     "content_provider",
     "scene_runner",
     "realm",
@@ -345,14 +318,14 @@ impl DclBootstrap {
         ok
     }
 
-    /// The nodes that follow the metrics block: attestation, feature flags and campaigns under
+    /// The nodes that follow the metrics block: attestation and feature flags under
     /// `Global`, the late `/root` nodes, the scene-inspector bridge and the opt-in dev tools.
     #[func]
     pub fn create_extra_services(mut global: Gd<Node>) -> bool {
         let mut ok = true;
         // Platform attestation (emulator and desktop runs) needs a Node for timers and native
         // plugin signals; it gates itself on EULA acceptance and caches its session token on disk.
-        // Feature flags fetch on `_ready`; campaigns only watch install attribution there.
+        // Feature flags fetch on `_ready`.
         for (property, script, name) in [
             ("attestation", "src/auth/attestation_service.gd", None),
             (
@@ -360,7 +333,6 @@ impl DclBootstrap {
                 "src/feature_flags.gd",
                 Some("feature_flags"),
             ),
-            ("campaigns", "src/campaigns.gd", Some("campaigns")),
         ] {
             // The host-driven core runs attestation itself (the host provides the OS calls).
             if property == "attestation" && super::DclEngine::core_is_driving() {
@@ -422,12 +394,6 @@ impl DclBootstrap {
         if benchmark_report && global.get("benchmark_report").get_type() != VariantType::NIL {
             godot_print!("✓ BenchmarkReport initialized for full flow benchmarking");
             add_to_root_deferred(&global, "benchmark_report");
-            // Orchestrates the full benchmark flow.
-            spawn_on_root(
-                &global,
-                "src/tools/benchmark_flow_controller.gd",
-                "BenchmarkFlowController",
-            );
         } else if benchmark_report {
             godot_error!(
                 "BenchmarkReport requires --features use_memory_debugger to be enabled during build"

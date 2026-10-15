@@ -3,7 +3,6 @@ extends Node
 ## (`Global.engine.core_command` in, `Global.engine.report_*` out). Active when the host drives the app.
 
 const STATE_INTERVAL := 0.25
-const HIDE_INTERVAL := 0.2
 const AVATAR_CONTROLS := [
 	"equip",
 	"unequip",
@@ -17,7 +16,6 @@ const AVATAR_CONTROLS := [
 
 var _explorer: Explorer = null
 var _state_elapsed := 0.0
-var _hide_elapsed := 0.0
 var _backpack := EngineBackpack.new()
 var _hud := EngineHud.new()
 var _avatar_host_up := false
@@ -63,15 +61,6 @@ func _process(dt: float) -> void:
 		_explorer = Global.get_explorer()
 		if _explorer == null:
 			return
-		Global.engine.report_loading_finished(
-			Global.realm.get_realm_string(),
-			_explorer.parcel_position.x,
-			_explorer.parcel_position.y
-		)
-	_hide_elapsed += dt
-	if _hide_elapsed >= HIDE_INTERVAL:
-		_hide_elapsed = 0.0
-		EngineUiFilter.hide_non_native(_explorer.ui_root)
 	_state_elapsed += dt
 	if _state_elapsed >= STATE_INTERVAL:
 		_state_elapsed = 0.0
@@ -130,7 +119,7 @@ func _run_world_control(kind: String, args: Dictionary) -> void:
 		"teleport":
 			Global.engine.teleport(Vector2i(args.x, args.y))
 		"send_chat":
-			_explorer._on_panel_chat_submit_message(args.text)
+			_explorer.submit_chat_message(args.text)
 		"emote":
 			Global.engine.play_local_emote(args.urn)
 		_:

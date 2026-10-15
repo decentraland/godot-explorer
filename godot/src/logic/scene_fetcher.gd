@@ -173,25 +173,24 @@ func on_scene_killed(killed_scene_id, _entity_id):
 			return
 
 
-func _on_scene_crashed(crashed_scene_id: int, entity_id: String) -> void:
+func _on_scene_crashed(crashed_scene_id: int, _entity_id: String) -> void:
 	var current_scene_id: int = Global.scene_runner.get_current_parcel_scene_id()
 	if crashed_scene_id != current_scene_id:
 		return
-	if Global.modal_manager != null:
-		Global.modal_manager.async_show_scene_crash_modal(entity_id)
+	Global.engine.report_scene_crashed()
 
 
 # The memory monitor detected critical pressure with nothing left to evict but
-# the current scene (issue #2002). Instead of killing it, we warn and let the
-# user choose: "Continue anyway" (keep going, verbose logging) or "Back to
-# Discover". Rust emits this once per pressure episode for the current scene.
+# the current scene (issue #2002). Rust emits this once per pressure episode for the current scene.
 func _on_low_memory_warning(
 	_scene_id: int, entity_id: String, footprint_mb: int, available_mb: int
 ) -> void:
-	if Global.modal_manager != null:
-		Global.modal_manager.async_show_low_memory_warning_modal(
-			entity_id, footprint_mb, available_mb
+	push_warning(
+		(
+			"[memory] critical pressure in %s: %d MB footprint, %d MB available"
+			% [entity_id, footprint_mb, available_mb]
 		)
+	)
 
 
 func get_current_scene_data() -> SceneItem:
@@ -1241,16 +1240,14 @@ func _on_try_spawn_scene(
 func reload_scene(scene_id: String) -> void:
 	var scene = loaded_scenes.get(scene_id)
 	if scene != null:
-		# Show the loading screen up front so killing the scene doesn't flash an empty parcel
+		# Start the loading session up front so killing the scene doesn't flash an empty parcel
 		# before it re-loads. Skipped for preview hot-reload, which is meant to be seamless.
-		# If the re-fetch fails it's still taken back down: a null definition completes the
-		# loading session (report_scene_fetched), and any deeper failure is caught by the
-		# loading screen's own watchdog (Timer_CheckProgressTimeout: inactivity / max-time
-		# -> timeout modal + hide), which starts when enable_loading_screen is shown.
+		# If the re-fetch fails it's still ended: a null definition completes the loading
+		# session (report_scene_fetched), and any deeper failure is caught by its watchdog.
 		if not _is_hot_reloading:
 			var explorer = Global.get_explorer()
 			if is_instance_valid(explorer):
-				explorer.loading_ui.enable_loading_screen("", "on_reload")
+				explorer.loading.begin("", "on_reload")
 		var scene_number_id: int = scene.scene_number_id
 		if scene_number_id != -1:
 			Global.scene_runner.kill_scene(scene_number_id)

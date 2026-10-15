@@ -30,9 +30,8 @@ static func async_exit() -> void:
 	await _async_settle_surface()
 	var explorer := Global.get_explorer()
 	if explorer != null:
+		explorer.loading.cancel()
 		explorer.prepare_for_logout()
-	Global.modal_manager.close_current_modal()
-	NotificationsManager.stop_polling()
 	if Global.analytics_controller != null:
 		Global.analytics_controller.cancel_first_move_poll()
 	Global.scene_runner.kill_all_scenes()

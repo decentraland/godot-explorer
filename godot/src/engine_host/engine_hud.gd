@@ -29,7 +29,7 @@ func handle(explorer: Explorer, kind: String, args: Dictionary) -> bool:
 			_set_chat_open(explorer, args.open)
 		"hide_ui":
 			_hidden = args.hidden
-			explorer._apply_mobile_controls_hide_ui(_hidden)
+			explorer.apply_mobile_controls_hide_ui(_hidden)
 			Global.engine.report_ui_state(_hidden, _chat_open)
 		_:
 			return false
@@ -47,11 +47,11 @@ func _set_chat_open(explorer: Explorer, open: bool) -> void:
 		return
 	_chat_open = open
 	if open:
-		explorer._on_chat_focus_entered()
+		explorer.set_chat_focus(true)
 		_unread = 0
 		Global.engine.report_unread_chat(0)
 	else:
-		explorer._on_chat_focus_exited()
+		explorer.set_chat_focus(false)
 	Global.engine.report_ui_state(_hidden, _chat_open)
 
 

@@ -9,7 +9,7 @@ use godot::classes::{Control, DisplayServer, Engine};
 use godot::obj::Singleton;
 use godot::prelude::*;
 
-use super::scene_requests::{EmulatorSink, GodotUiSink, PendingResponses, SharedSink};
+use super::scene_requests::{EmulatorSink, PendingResponses, SharedSink};
 
 use crate::godot_classes::dcl_global::DclGlobal;
 
@@ -21,7 +21,6 @@ struct WorldHandles {
     player: InstanceId,
     avatar: InstanceId,
     touch_camera_input: InstanceId,
-    dialog_stack: InstanceId,
 }
 
 /// Owner of the engine-side handles. `Global.engine` exposes it; `explorer.gd` attaches the world.
@@ -55,7 +54,7 @@ impl INode for DclEngine {
         Self {
             world: None,
             pending: PendingResponses::default(),
-            sink: Rc::new(GodotUiSink),
+            sink: Rc::new(EmulatorSink),
             core_commands: None,
             perf_countdown: None,
             text_input_focused: false,
@@ -326,14 +325,11 @@ impl DclEngine {
     pub fn attach_world(&mut self, mut explorer: Gd<Node>) {
         let node_property =
             |owner: &Gd<Node>, name: &str| owner.get(name).try_to::<Gd<Node>>().ok();
-        let (Some(player), Some(touch_camera_input), Some(dialog_stack)) = (
+        let (Some(player), Some(touch_camera_input)) = (
             node_property(&explorer, "player"),
             node_property(&explorer, "mobile_camera_input"),
-            explorer.get_node_or_null("UI/DialogStack/Stack"),
         ) else {
-            tracing::error!(
-                "engine: the explorer is missing the player, camera input or dialog stack"
-            );
+            tracing::error!("engine: the explorer is missing the player or the camera input");
             return;
         };
         let Some(avatar) = node_property(&player, "avatar") else {
@@ -345,7 +341,6 @@ impl DclEngine {
             player: player.instance_id(),
             avatar: avatar.instance_id(),
             touch_camera_input: touch_camera_input.instance_id(),
-            dialog_stack: dialog_stack.instance_id(),
         });
         let detach = self.base().callable("detach_world");
         explorer.connect_flags(
@@ -372,16 +367,6 @@ impl DclEngine {
         }
     }
 
-    /// The emulator accepts what a scene asks instead of showing a modal.
-    #[func]
-    pub fn set_emulator_mode(&mut self, enabled: bool) {
-        self.sink = if enabled {
-            Rc::new(EmulatorSink)
-        } else {
-            Rc::new(GodotUiSink)
-        };
-    }
-
     #[func]
     pub fn has_world(&self) -> bool {
         self.world
@@ -402,11 +387,6 @@ impl DclEngine {
 
     pub fn touch_camera_input(&self) -> Option<Gd<Node>> {
         resolve(self.world?.touch_camera_input)
-    }
-
-    /// Where dialogs opened by scenes are parented.
-    pub fn dialog_stack(&self) -> Option<Gd<Node>> {
-        resolve(self.world?.dialog_stack)
     }
 
     /// Whether the explorer UI has focus; `true` when there is no world to ask.

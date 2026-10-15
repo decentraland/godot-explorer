@@ -7,7 +7,7 @@ use godot::prelude::*;
 use tokio::sync::oneshot::{self, error::TryRecvError};
 
 use super::{
-    scene_requests::{GodotUiSink, SceneRequestSink, Verdict},
+    scene_requests::{EmulatorSink, SceneRequestSink, Verdict},
     DclEngine,
 };
 use crate::{dcl::scene_apis::RpcResultSender, framework::TestContext};
@@ -48,7 +48,7 @@ impl SceneRequestSink for AnswersLater {
 }
 
 fn restore_default_sink() {
-    engine().bind_mut().set_sink(Rc::new(GodotUiSink));
+    engine().bind_mut().set_sink(Rc::new(EmulatorSink));
 }
 
 #[godot::test::itest]
@@ -112,22 +112,8 @@ fn declining_a_pending_request_is_an_error_for_the_scene(_ctx: &TestContext) {
 }
 
 #[godot::test::itest]
-fn the_godot_ui_sink_reports_a_missing_modal_manager(_ctx: &TestContext) {
-    // The test runner boots without the app services, so there is no modal manager.
-    restore_default_sink();
-    let (response, mut receiver) = responder();
-
-    DclEngine::scene_request(url(), response);
-
-    assert_eq!(
-        receiver.try_recv(),
-        Ok(Err("modal_manager not available".to_string()))
-    );
-}
-
-#[godot::test::itest]
 fn the_emulator_sink_accepts_links_and_nfts_without_a_ui(_ctx: &TestContext) {
-    engine().bind_mut().set_emulator_mode(true);
+    restore_default_sink();
     let (response, mut receiver) = responder();
     DclEngine::scene_request(url(), response);
     assert_eq!(receiver.try_recv(), Ok(Ok(())));
@@ -140,7 +126,6 @@ fn the_emulator_sink_accepts_links_and_nfts_without_a_ui(_ctx: &TestContext) {
         response,
     );
     assert_eq!(receiver.try_recv(), Ok(Ok(())));
-    engine().bind_mut().set_emulator_mode(false);
 }
 
 #[godot::test::itest]

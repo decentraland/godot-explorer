@@ -12,7 +12,7 @@ use dcl_core::Core;
 use godot::classes::{Os, RenderingServer};
 use godot::prelude::*;
 
-use super::scene_requests::{GodotUiSink, ShellSink};
+use super::scene_requests::{EmulatorSink, ShellSink};
 use super::{scene_link, screenshot_link, settings_link, DclEngine};
 
 fn destination_args(destination: &Destination) -> VarDictionary {
@@ -169,7 +169,7 @@ impl DclEngine {
 
     pub(super) fn detach_from_core(&mut self) {
         if self.core_commands.take().is_some() {
-            self.sink = Rc::new(GodotUiSink);
+            self.sink = Rc::new(EmulatorSink);
             if let Some(core) = Core::try_get() {
                 core.with_app(|app| app.engine_detach());
             }

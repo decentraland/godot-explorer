@@ -42,20 +42,13 @@ general/ios/session_category=3
 
 UiSounds="*res://src/helpers_components/ui_sounds.gd"
 Global="*res://src/global.gd"
-SessionTracker="*res://src/session_tracker.gd"
-SplashOverlay="*res://src/ui/splash_overlay/splash_overlay.gd"
-NotificationsManager="*res://src/notifications_manager.gd"
-ConnectionQualityMonitor="*res://src/connection_quality_monitor.gd"
 EmptyParcelProps="*res://assets/empty-scenes/empty_parcel_props.tscn"
-Iap="*res://src/iap/iap_manager.gd"
-MarketplaceTracker="*res://src/iap/marketplace_tracker.gd"
 ImpostorCapturer="*res://src/decentraland_components/avatar/impostor/impostor_capturer.gd"
 AvatarLODCoordinator="*res://src/decentraland_components/avatar/impostor/avatar_lod_coordinator.gd"
 DebugWs="*res://src/tool/debug_server/debug_ws_server.gd"
 DevLocalhostRelay="*res://src/tool/dev_localhost_relay.gd"
 GltfLoadingCoordinator="*res://src/decentraland_components/gltf_loading_coordinator.gd"
 LightSourceManager="*res://src/decentraland_components/light_source_manager.gd"
-TouchFeedback="*res://src/ui/touch_feedback/touch_feedback_overlay.gd"
 EngineHost="*res://src/engine_host/engine_host.gd"
 
 [debug]

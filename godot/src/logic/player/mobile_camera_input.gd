@@ -26,7 +26,6 @@ const LOOK_DEADZONE := 8.0
 # The spread/commit math lives in PinchGestureHelpers (unit-tested headless).
 
 var _player: Player = null
-var _chat_panel: Control = null
 var _joystick: VirtualJoystick = null
 
 # Single-finger camera look. Driven from gui_input (free touches only), so a
@@ -80,7 +79,6 @@ func _resolve_player() -> void:
 	var explorer := Global.get_explorer()
 	if explorer:
 		_player = explorer.player as Player
-		_chat_panel = explorer.chat_panel
 		_joystick = explorer.virtual_joystick as VirtualJoystick
 
 
@@ -96,14 +94,6 @@ func _notification(what: int) -> void:
 		_js_look_index = -1
 		if _pinch_active:
 			_end_pinch()
-
-
-func _is_chat_visible() -> bool:
-	if not is_instance_valid(_chat_panel):
-		var explorer := Global.get_explorer()
-		if explorer:
-			_chat_panel = explorer.chat_panel
-	return is_instance_valid(_chat_panel) and _chat_panel.is_chat_visible()
 
 
 # Global touch tracking + pinch recognition. Runs before gui_input, so it can take
@@ -302,12 +292,6 @@ func _end_pinch() -> void:
 
 
 func _on_gui_input(event: InputEvent) -> void:
-	# Chat open: a tap reaching this catcher means it wasn't consumed by the chat's
-	# own controls, so close the chat instead of moving the camera.
-	if _is_chat_visible() and event is InputEventScreenTouch and event.pressed:
-		Global.close_chat.emit()
-		accept_event()
-		return
 	# A tap reaching this catcher means no UI consumed it: reclaim ui_root focus so
 	# movement re-enables if some control stole it without handing it back.
 	if event is InputEventScreenTouch and event.pressed and not Global.explorer_has_focus():

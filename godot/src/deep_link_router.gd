@@ -71,8 +71,6 @@ func process_deep_link(url: String, start_kind: String = "warm") -> void:
 		Global._capture_campaign_token(Global.deep_link_obj)
 		# Push attribution. Deliberately a separate param from the ads campaign token `c=`.
 		_track_push_open_if_any(start_kind)
-		# Same funnel, same reason: this is where every deep link lands.
-		SessionTracker.notify_deep_link(Global.deep_link_obj.params)
 
 	# `skip-gltf` toggle has to be set BEFORE any scene's GLTF_CONTAINER
 	# component dirty-set is processed by `update_gltf_container`. The
@@ -88,13 +86,6 @@ func process_deep_link(url: String, start_kind: String = "warm") -> void:
 	if not kill_sky_value.is_empty():
 		Global.cli.set_kill_sky(kill_sky_value.to_lower() in ["true", "1", "yes"])
 		print("[DEEPLINK] kill-sky=", Global.cli.get_kill_sky())
-
-	# Touch-feedback debug overlay (issue #2562): off by default, enabled on demand.
-	var touch_feedback_value: String = Global.deep_link_obj.params.get("touch-feedback", "")
-	if not touch_feedback_value.is_empty():
-		var touch_feedback_enable: bool = touch_feedback_value.to_lower() in ["true", "1", "yes"]
-		TouchFeedback.set_enabled(touch_feedback_enable)
-		print("[DEEPLINK] touch-feedback=", touch_feedback_enable)
 
 	# Opt-in gate for deleting an UPGRADED (email-linked) guest. Sticky-on for the
 	# session; only takes effect on a NON-production build (see
@@ -122,40 +113,6 @@ func process_deep_link(url: String, start_kind: String = "warm") -> void:
 		Global.set_safe_margin_debug_enable(true)
 
 	if Global.engine.is_host_driven():
-		return
-
-	# Review-prompt QA harness (#2739). Untyped param, non-production only.
-	if Global.review_prompt_coordinator != null:
-		Global.review_prompt_coordinator.capture_deeplink(Global.deep_link_obj)
-
-	# Returning from the in-app marketplace webview: the web fires a
-	# decentraland://open?iap_enabled=true[&urn=<urn>] deep link to bring the app back. The
-	# native side dismisses the SFSafariViewController directly, which never fires the
-	# tracker's webview_closed signal — so drive the post-return handling here (restore the
-	# landscape the portrait-only IAP view took away, then poll for the purchase against the
-	# pre-purchase baseline and refresh the balance).
-	#
-	# `urn` is OPTIONAL — the web leaves it out whenever it has no purchased item in context
-	# — yet it used to be the only thing that triggered ANY of this. A urn-less return then
-	# did nothing at all: the app stayed in the forced portrait, where the backpack's
-	# landscape-only back button is hidden and the menu's portrait bottom bar has already
-	# been freed (clean_orientation.gd, when the menu was built in landscape), leaving no way
-	# out of the backpack; and the tracker stayed armed forever, so the purchase never
-	# surfaced either. So recognise the return by the TRACKER's own state, and use the
-	# `iap_enabled`/`urn` params only to decide whether the link is ours to swallow.
-	var return_urn: String = str(Global.deep_link_obj.params.get("urn", ""))
-	var iap_marker: String = str(Global.deep_link_obj.params.get("iap_enabled", ""))
-	var is_marketplace_return: bool = not return_urn.is_empty() or not iap_marker.is_empty()
-	if is_marketplace_return or MarketplaceTracker.is_awaiting_return():
-		print("[DEEPLINK] marketplace return — driving tracker return handling")
-		# A no-op unless a round-trip is actually in flight, so a duplicate delivery (iOS
-		# fires application:openURL: twice for a single tap) or a stale link is harmless.
-		MarketplaceTracker.notify_marketplace_return()
-	if is_marketplace_return:
-		# Swallow it so it doesn't fall through to the "/open" routing below and pop the
-		# jump-in panel (scene title + placeholders). A deep link that merely arrived while
-		# the tracker was armed is NOT ours, so it keeps routing normally.
-		_clear_deep_link()
 		return
 
 	# Trigger avatar impostor benchmark

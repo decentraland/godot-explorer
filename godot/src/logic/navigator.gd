@@ -17,24 +17,18 @@ static func async_go(dest: Destination, when: String) -> bool:
 	prints("[NAV] intent", dest, when)
 
 	var resolved := await DestinationResolver.async_resolve(dest)
-	if resolved.state == Destination.State.NEEDS_PASSWORD:
-		prints("[NAV] password needed #%d" % resolved.intent_id)
-		var prompt := WorldSecretPrompt.new(resolved)
-		resolved = await prompt.async_run()
 	_log_verdict(resolved, Time.get_ticks_msec() - started)
 
 	match resolved.state:
 		Destination.State.READY:
 			return await _async_enter(resolved, when)
 		Destination.State.NOT_ALLOWED:
-			Global.modal_manager.async_show_private_world_modal(_world_name(resolved))
 			recover_from_refusal(resolved.realm_string)
 			return _abandon("private_world_access_denied")
 		Destination.State.NEEDS_PASSWORD:
-			# Backed out of the password prompt: they stay exactly where they were.
-			return _abandon("cancelled")
+			# Nothing asks for the password yet: they stay exactly where they were.
+			return _abandon("needs_password")
 		_:
-			Global.modal_manager.async_show_invalid_destination_modal(resolved.failure)
 			Global.scene_runner.loading_realm_change_failed(
 				resolved.realm_string, resolved.failure_reason()
 			)
@@ -84,16 +78,11 @@ static func _async_enter(dest: Destination, when: String) -> bool:
 
 	# The episode is already open; a second one would report this intent as superseded
 	# by its own loading screen.
-	explorer.loading_ui.enable_loading_screen(dest.realm_string, when, false)
-	explorer.loading_ui.set_prefetched_scene(
-		dest.scene_title, dest.scene_creator, dest.scene_image_url, dest.asset_count
-	)
+	explorer.loading.begin(dest.realm_string, when, false)
 	_warm_caches(dest)
-	# Behind the screen: closing the menu first flashes the world being left.
-	explorer.hide_menu()
 
 	if _needs_realm_change(dest) and not await Global.realm.async_apply_destination(dest):
-		explorer.loading_ui.hide_loading_screen("Failed")
+		explorer.loading.end("Failed")
 		return false
 
 	# A restoration carries its parcel only so the resolve can describe it; _ready

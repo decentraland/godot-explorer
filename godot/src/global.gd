@@ -105,11 +105,7 @@ var nft_frame_loader: NftFrameStyleLoader
 
 var snapshot: Snapshot
 var music_player: MusicPlayer
-var preload_assets: PreloadAssets
 var locations: Node
-var modal_manager: ModalManager
-var upgrade_nudge_coordinator: UpgradeNudgeCoordinator
-var review_prompt_coordinator: ReviewPromptCoordinator
 
 var standalone = false
 
@@ -152,11 +148,6 @@ var attestation: AttestationService = null
 # `Global.feature_flags.is_enabled("flag-name")`; comms-affecting flags are
 # applied automatically when the response arrives — see feature_flags.gd.
 var feature_flags: FeatureFlags = null
-
-# Ad/referrer campaign map fetched from the mobile-bff at startup. Resolves the `?c=`
-# token captured at boot into a personalized FTUE or a direct boot into the target scene
-# — see campaigns.gd.
-var campaigns: Campaigns = null
 
 var _is_portrait: bool = true
 
@@ -418,7 +409,6 @@ func send_haptic_feedback(duration_ms: int = 20, amplitude: float = -1.0) -> voi
 # gdlint: ignore=async-function-name
 func _ready():
 	print("[Startup] global._ready start: %dms" % (Time.get_ticks_msec() - _startup_time))
-	BugReportCapture.listen_for_settings(self)
 	# Bench-only: uncap FPS / disable vsync before any code path can re-pin
 	# Engine.max_fps. Real users keep their saved cap + vsync; mobile bench
 	# uncaps via gp_benchmark_runner at the load->settling transition.
@@ -559,9 +549,7 @@ func _ready():
 		ProfileService.set_deploy_disabled(true)
 		print("[GLOBAL] Profile deploy DISABLED (local-only profile updates)")
 
-	self.realm.realm_change_failed.connect(_on_realm_change_failed_toast)
 	self.realm.realm_access_denied.connect(_on_realm_access_denied)
-	self.player_identity.profile_changed.connect(_on_player_profile_changed_sync_events)
 
 	# Ensure the content cache folder exists before clearing — clear runs against
 	# this directory and would log an error if it doesn't exist yet (fresh install).
@@ -604,15 +592,6 @@ func _ready():
 			self.metrics.track_install_referrer.call_deferred()
 			self.config.install_referrer_sent = true
 			self.config.save_to_settings_file()
-		# iOS only: report the StoreKit environment (production/sandbox) to
-		# analytics once at startup. StoreKit's environment is fixed by how the
-		# binary was distributed and can't be chosen by the app, so this is the
-		# ground truth for which IAP backend a device will hit. We ship this
-		# BEFORE any purchase flow to validate in prod that real App Store
-		# installs report `production`. Deferred so it runs after every autoload
-		# (incl. Iap) is in the tree. See docs/iap-zone-submission/.
-		if self.is_ios():
-			Iap.report_environment_to_analytics.call_deferred()
 	DclBootstrap.create_extra_services(self)
 
 	# Initialize dynamic graphics manager after config is loaded. Self-skips in
@@ -626,11 +605,7 @@ func _ready():
 	if cli.raycast_debugger:
 		set_raycast_debugger_enable(true)
 
-	if cli.network_debugger:
-		self.network_inspector.set_is_active(true)
-		open_network_inspector_ui()
-	else:
-		self.network_inspector.set_is_active(false)
+	self.network_inspector.set_is_active(cli.network_debugger)
 
 	# Logging self-test (debug aid). When --test-logging / ?test-logging=true is
 	# set, exercise every logging form in every stack so we can confirm each pipes
@@ -779,21 +754,12 @@ func _on_dynamic_profile_change(new_profile: int) -> void:
 
 	var old_name: String = GraphicSettings.PROFILE_NAMES[old_profile]
 	var new_name: String = GraphicSettings.PROFILE_NAMES[new_profile]
-	var is_downgrade: bool = new_profile < old_profile
 
 	print("[DynamicGraphics] Profile changed: %s -> %s" % [old_name, new_name])
 
 	# Apply the profile change requested by the dynamic graphics manager
 	GraphicSettings.apply_graphic_profile(new_profile)
 	get_config().save_to_settings_file()
-
-	# Show toast notification to user
-	var title: String = "Graphics %s" % ("Reduced" if is_downgrade else "Improved")
-	var description: String = (
-		"Profile changed to %s for better %s"
-		% [new_name, "performance" if is_downgrade else "quality"]
-	)
-	NotificationsManager.show_system_toast(title, description, "graphics_profile")
 
 
 func set_raycast_debugger_enable(enable: bool):
@@ -891,15 +857,7 @@ func sign_out() -> void:
 	if explorer != null:
 		explorer.prepare_for_logout()
 
-	# 2. Stop session pollers.
-	NotificationsManager.stop_polling()
-	# Wipe the previous account's in-memory notification history so it can't leak
-	# into the next session's panel/bell badge (issue #2104).
-	NotificationsManager.clear_notification_history()
-	# Drop the previous account's event reminders ("event_" entries) so they can't fire
-	# after sign-out; the per-install day1 welcome is left alone. The sync-on-next-login
-	# REMOVE pass only runs when authenticated, so a guest session would keep them armed.
-	NotificationsManager.clear_event_local_notifications()
+	# 2. Stop the session's background work.
 	# The analytics first-move poll (a Timer under this autoload) reads
 	# scene_runner.player_body_node; left running it would poll the freed Player
 	# after the swap, panicking the #[var] getter. It restarts on the next login.
@@ -938,7 +896,6 @@ func sign_out() -> void:
 	# avatar editor (issue #1658). Also drop the saved guest look on explicit
 	# sign-out to close the guest->guest leak vector.
 	get_config().guest_profile = {}
-	NamesRequest.invalidate_cache()
 	player_identity.reset_identity()
 	get_config().save_to_settings_file()
 
@@ -953,75 +910,6 @@ func sign_out() -> void:
 	scene_runner.detach_base_ui()
 
 	_signing_out = false
-
-
-## Soft sign-out used by the Dev Tools "RETURN TO DISCOVER" button. Leaves the
-## current world and drops the user back on the standalone Discover menu WHILE
-## staying signed in: it tears down the live Explorer, every running DCL scene,
-## comms world rooms and realm / scene-fetcher state, but deliberately KEEPS the
-## player identity, the persisted session and the
-## notification polling intact.
-##
-## This mirrors the world-teardown half of [sign_out]; the two intentionally
-## differ — sign_out additionally wipes the
-## session/identity and returns to the sign-in lobby. When adding a new
-## world/scene subsystem to tear down, update BOTH paths.
-func return_to_discover() -> void:
-	if _returning_to_discover or _signing_out:
-		return
-	_returning_to_discover = true
-
-	# 1. Tear down the live Explorer first, while it is still in the tree, so its
-	#    autoload-signal callbacks and retry timers are severed before the steps
-	#    below re-emit any of those signals or free the Explorer node. No-op when
-	#    the button is pressed from the standalone Discover menu (no Explorer yet).
-	var explorer := get_explorer()
-	if explorer != null:
-		explorer.prepare_for_logout()
-
-	# 2. Stop the analytics first-move poll: it reads scene_runner.player_body_node,
-	#    which is freed once the Explorer goes away — left running, its #[var]
-	#    getter would panic on the freed Player. It re-arms on the next
-	#    loading_finished (i.e. when the user jumps into a world again).
-	if analytics_controller != null:
-		analytics_controller.cancel_first_move_poll()
-
-	# 3. Kill every running DCL scene. The SceneManager reaps them in the
-	#    background (reap_dying_scenes runs even while Discover pauses the runner).
-	scene_runner.kill_all_scenes()
-
-	# 4. Reset realm and scene-fetcher state so nothing from the world we just left
-	#    leaks into the next jump-in. This matches the post-login Discover state,
-	#    where no realm is joined yet.
-	realm.async_clear_realm()
-	scene_fetcher.reset_for_logout()
-
-	# 5. Close comms world rooms (MainRoom / SceneRoom / LiveKit). Pass `false` so
-	#    the Rust player identity (wallet + ephemeral keys) is KEPT — this is the
-	#    key difference from sign_out, which passes `true` to also log out.
-	comms.disconnect(false)
-
-	# NOTE: unlike sign_out we deliberately DO NOT stop NotificationsManager
-	# polling, clear the blacklist, or wipe the
-	# persisted session — the session stays alive and the Discover screen's
-	# notifications keep working.
-
-	# Discover/menu is portrait-only; reset orientation so returning from a
-	# landscape in-world screen (settings) doesn't strand the user in landscape.
-	set_orientation_portrait()
-
-	# Detach scene_runner.base_ui from the dying Explorer so freeing it can't
-	# free UI nodes Rust still references — a cache-hot scene spawn racing the
-	# next explorer._ready() would panic on the freed control
-	# (GODOT-EXPLORER-1DY). The orphan is freed by the next recreate_base_ui().
-	scene_runner.detach_base_ui()
-
-	# Swap to the standalone Discover menu on the next frame, after the current
-	# call stack (the settings button handler) fully unwinds. menu._ready clears
-	# _returning_to_discover.
-	get_tree().change_scene_to_file.call_deferred(
-		"res://src/ui/components/organisms/menu/menu.tscn"
-	)
 
 
 func explorer_has_focus() -> bool:
@@ -1095,14 +983,6 @@ func open_url(url: String, use_webkit: bool = false):
 			OS.shell_open(url)
 
 
-func async_create_popup_warning(
-	warning_type: PopupWarning.WarningType, title: TranslationKey, description: TranslationKey
-):
-	var explorer = get_explorer()
-	if is_instance_valid(explorer):
-		await explorer.warning_messages.async_create_popup_warning(warning_type, title, description)
-
-
 func async_get_texture_size(content_mapping, src, sender: DclRpcSenderGetTextureSize) -> void:
 	var texture_hash: String = content_mapping.get_hash(src)
 	if texture_hash.is_empty():
@@ -1116,27 +996,6 @@ func async_get_texture_size(content_mapping, src, sender: DclRpcSenderGetTexture
 		return
 
 	sender.send(Vector2(result.original_size))
-
-
-func open_network_inspector_ui():
-	if is_instance_valid(network_inspector_window):
-		network_inspector_window.show()
-		return
-
-	get_viewport().set_embedding_subwindows(false)
-	network_inspector_window = Window.new()
-	network_inspector_window.size = Vector2i(1280, 720)
-	network_inspector_window.initial_position = (
-		Window.WINDOW_INITIAL_POSITION_CENTER_MAIN_WINDOW_SCREEN
-	)
-
-	const NETWORK_INSPECTOR_UI = preload(
-		"res://src/ui/components/organisms/debug_panel/network_inspector/network_inspector_ui.tscn"
-	)
-	network_inspector_window.add_child(NETWORK_INSPECTOR_UI.instantiate())
-
-	add_child(network_inspector_window)
-	network_inspector_window.show()
 
 
 func async_load_threaded(resource_path: String, promise: Promise) -> void:
@@ -1256,48 +1115,6 @@ func async_resolve_scene_entity_id(coord: Vector2i) -> String:
 	return ""
 
 
-func async_resolve_world_scene_id(world_realm: String) -> String:
-	var scenes_url = Realm.dcl_world_url(world_realm) + "/scenes"
-	var promise: Promise = Global.http_requester.request_json(
-		scenes_url, HTTPClient.METHOD_GET, "", {}
-	)
-	var result = await PromiseUtils.async_awaiter(promise)
-
-	if result is PromiseError:
-		push_warning("Failed to resolve world scene ID: " + result.get_error())
-		return ""
-
-	var json = result.get_string_response_as_json()
-	if json is Dictionary:
-		var scenes = json.get("scenes", [])
-		if not scenes.is_empty():
-			return scenes[0].get("entityId", "")
-	return ""
-
-
-func async_check_scene_access(scene_id: String, realm_name: String) -> bool:
-	if scene_id.is_empty():
-		return true  # fail-open
-
-	Global.comms.check_scene_access(scene_id, realm_name)
-
-	# Loop until we get the result for OUR scene_id (discard stale results from
-	# earlier navigations that may still be in-flight).
-	while true:
-		var result = await Global.comms.scene_access_checked
-		# result = [scene_id, allowed, error_message]
-		if str(result[0]) != scene_id:
-			continue
-
-		if not str(result[2]).is_empty():
-			push_warning("Ban check failed, allowing navigation: " + str(result[2]))
-			return true  # fail-open on error
-
-		return result[1]
-
-	return true  # unreachable, keeps compiler happy
-
-
 func async_teleport_to(parcel_position: Vector2i, new_realm: String) -> void:
 	var explorer = Global.get_explorer()
 	if not is_instance_valid(explorer):
@@ -1331,7 +1148,6 @@ func async_join_world(world_realm: String) -> void:
 			return
 		Global.get_config().add_place_to_last_places(Vector2i.ZERO, world_realm)  # "Last visited"
 		Global.set_orientation_landscape()
-		Global.close_menu.emit()
 		Global.get_config().last_realm_joined = world_realm
 		Global.get_config().last_parcel_position = Vector2i.ZERO
 		get_tree().change_scene_to_file("res://src/ui/explorer.tscn")
@@ -1342,7 +1158,6 @@ func async_join_world(world_realm: String) -> void:
 		tr("CHAT_SYSTEM_CHANGING_WORLD").format({"world": world_realm}),
 		Time.get_unix_time_from_system()
 	)
-	Global.close_menu.emit()
 	# No parcel: the world names its own spawn point, so teleport_to never records it.
 	if await Navigator.async_go(Destination.from_input(world_realm), "on_world"):
 		Global.get_config().add_place_to_last_places(Vector2i.ZERO, world_realm)  # "Last visited"
@@ -1418,14 +1233,6 @@ func shorten_address(address: String) -> String:
 	var first_part := address.substr(0, 5)
 	var last_part := address.substr(address.length() - 5, 5)
 	return first_part + "..." + last_part
-
-
-func get_backpack() -> Backpack:
-	var explorer = Global.get_explorer()
-	if explorer != null and is_instance_valid(explorer.control_menu):
-		return explorer.control_menu.control_backpack.instance
-	var control_menu = get_node_or_null("/root/Menu")
-	return control_menu.control_backpack.instance
 
 
 func _process(_delta: float) -> void:
@@ -1567,29 +1374,7 @@ func _notification(what: int) -> void:
 			)
 
 
-func _on_player_profile_changed_sync_events(_profile: DclUserProfile) -> void:
-	# Sync attended events notifications from server after authentication
-	NotificationsManager.async_sync_attended_events()
-
-
-func _on_realm_change_failed_toast(new_realm_string: String, reason: String) -> void:
-	# User-visible feedback when a requested realm cannot be loaded (e.g. /world
-	# pointing at a non-existent world). Only fires for Global.realm — transient
-	# Realm instances created elsewhere (e.g. portable experiences) are not wired
-	# to this handler.
-	NotificationsManager.show_system_toast(
-		tr("TOAST_WORLD_UNAVAILABLE_TITLE"),
-		tr("TOAST_WORLD_UNAVAILABLE_BODY").format({"world": new_realm_string, "error": reason}),
-		"error",
-		"alert"
-	)
-
-
-func _on_realm_access_denied(new_realm_string: String, world_name: String) -> void:
-	# The world restricts access and this user is not on its allow-list (#1725). Only
-	# Global.realm is wired here — transient Realm instances (portable experiences) just
-	# fail to load, same as they do for the generic failure toast.
-	Global.modal_manager.async_show_private_world_modal(world_name)
+func _on_realm_access_denied(new_realm_string: String, _world_name: String) -> void:
 	Navigator.recover_from_refusal(new_realm_string)
 
 
@@ -1608,18 +1393,6 @@ func _async_precheck_realm_access(new_realm_string: String) -> bool:
 		return true
 	_on_realm_access_denied(new_realm_string, world_name)
 	return false
-
-
-## Silent access check for a cold-start deeplink realm — like _async_precheck_realm_access but it
-## never shows the modal (the destination the caller routes to surfaces it). True for non-worlds
-## and allowed worlds. Used by the lobby to decide whether a deeplink can boot the explorer.
-func _async_is_realm_access_allowed(realm_string: String) -> bool:
-	var world_name := WorldPermissionsHelper.world_name_from_realm(
-		realm_string, Realm.resolve_realm_url(realm_string)
-	)
-	if world_name.is_empty():
-		return true
-	return await WorldPermissionsHelper.async_is_allowed(world_name)
 
 
 ## Fire-and-forget prefetch of a world's access, meant to run when its jump-in card opens.
