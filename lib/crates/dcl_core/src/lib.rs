@@ -5,6 +5,7 @@ pub mod app;
 pub mod attestation;
 pub mod avatar;
 pub mod clock;
+pub mod connection;
 mod core;
 pub mod deep_link;
 pub mod deep_link_route;

@@ -9,4 +9,8 @@ export type LifecycleApi = Pick<
   | 'sessionTick'
   | 'reviewCheck'
   | 'reviewFire'
+  | 'probeConnection'
+  | 'connectionRetry'
+  | 'connectionReset'
+  | 'connectionHealthy'
 >;

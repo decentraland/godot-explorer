@@ -16,6 +16,8 @@ import type { EngineNotice, SceneRequest } from '../core/native';
 import { t } from '../i18n';
 import { deviceFacts } from '../platform/deviceFacts';
 import { passwordError } from './destination';
+import { useToast } from '../ds';
+import { useConnectionQuality } from './useConnectionQuality';
 import { useModals } from './ModalProvider';
 import type { ModalApi } from './ModalProvider';
 import type { ModalSpec } from './ModalProvider';
@@ -243,6 +245,8 @@ export function askWorldPassword(modals: ModalApi, realm: string): void {
 export function CoreModals({ ready }: { ready: boolean }) {
   const modals = useModals();
   const { reset } = useNav();
+  const toast = useToast();
+  useConnectionQuality(ready, modals, toast, () => leaveWorld(reset));
 
   useEffect(
     () =>

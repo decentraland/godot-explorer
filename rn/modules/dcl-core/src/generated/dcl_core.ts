@@ -428,6 +428,46 @@ export async function completeBrowser(
 }
 
 /**
+ * Whether the connection is good enough that nothing is in an error state.
+ */
+export function connectionHealthy(): boolean {
+  return FfiConverterBool.lift(
+    uniffiCaller.rustCall(
+      /*caller:*/ callStatus => {
+        return nativeModule().ubrn_uniffi_dcl_core_fn_func_connection_healthy(
+          callStatus,
+        );
+      },
+      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+    ),
+  );
+}
+
+/**
+ * A world change settles: the score starts clean.
+ */
+export function connectionReset(): void {
+  uniffiCaller.rustCall(
+    /*caller:*/ callStatus => {
+      nativeModule().ubrn_uniffi_dcl_core_fn_func_connection_reset(callStatus);
+    },
+    /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+  );
+}
+
+/**
+ * The player pressed retry on the connection-lost dialog: it stays away for a growing window.
+ */
+export function connectionRetry(): void {
+  uniffiCaller.rustCall(
+    /*caller:*/ callStatus => {
+      nativeModule().ubrn_uniffi_dcl_core_fn_func_connection_retry(callStatus);
+    },
+    /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+  );
+}
+
+/**
  * The launch booted into the campaign's target: one campaign per install.
  */
 export function consumeCampaign(): void /*throws*/ {
@@ -1480,6 +1520,56 @@ export async function placeUserState(
       /*liftFunc:*/ __rb => {
         try {
           return FfiConverterOptionalTypePlaceUserState.lift(__rb);
+        } finally {
+          nativeModule().rustbuffer_free(__rb);
+        }
+      },
+      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+      /*asyncOpts:*/ asyncOpts_,
+      /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(
+        FfiConverterTypeCoreError,
+      ),
+    );
+  } catch (__error: any) {
+    if (uniffiIsDebug && __error instanceof Error) {
+      __error.stack = __stack;
+    }
+    throw __error;
+  }
+}
+
+/**
+ * One HEAD to the health url, scored. `in_world` follows the state the core is in.
+ */
+export async function probeConnection(asyncOpts_?: {
+  signal: AbortSignal;
+}): Promise<Report> /*throws*/ {
+  const __stack = uniffiIsDebug ? new Error().stack : undefined;
+  try {
+    return await uniffiRustCallAsync(
+      /*rustCaller:*/ uniffiCaller,
+      /*rustFutureFunc:*/ () => {
+        return nativeModule().ubrn_uniffi_dcl_core_fn_func_probe_connection();
+      },
+      /*pollFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_poll_rust_buffer,
+      /*cancelFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_cancel_rust_buffer,
+      /*completeFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_complete_rust_buffer,
+      /*freeFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_free_rust_buffer,
+      // Async returns always go through the JS-side converter: the
+      // FFI symbol returns the future handle (u64), and the user-level
+      // RustBuffer comes back via the shared `rust_future_complete_*`
+      // export. The bytes the runtime hands back must be deserialized
+      // here using the per-callable return-type converter.
+      // Borrowed view over foreign memory: the call site owns the free,
+      // as on the sync paths. Unconditional — a no-op where buffers are
+      // already JS-owned.
+      /*liftFunc:*/ __rb => {
+        try {
+          return FfiConverterTypeReport.lift(__rb);
         } finally {
           nativeModule().rustbuffer_free(__rb);
         }
@@ -5286,6 +5376,111 @@ const FfiConverterTypeRect = (() => {
         FfiConverterInt32.allocationSize(value.y) +
         FfiConverterInt32.allocationSize(value.width) +
         FfiConverterInt32.allocationSize(value.height)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
+export enum Quality {
+  Good,
+  Poor,
+  Lost,
+}
+
+const FfiConverterTypeQuality = (() => {
+  type TypeName = Quality;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      switch (c.readI32()) {
+        case 1:
+          return Quality.Good;
+        case 2:
+          return Quality.Poor;
+        case 3:
+          return Quality.Lost;
+        default:
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      switch (value) {
+        case Quality.Good:
+          return c.writeI32(1);
+        case Quality.Poor:
+          return c.writeI32(2);
+        case Quality.Lost:
+          return c.writeI32(3);
+      }
+    }
+    allocationSize(value: TypeName): number {
+      return 4;
+    }
+  }
+  return new FFIConverter();
+})();
+
+/**
+ * What a sample changed, for the shell to show.
+ */
+export type Report = {
+  quality: Quality;
+  /**
+   * Degrading from good to poor while in a world: the toast.
+   */
+  toast: boolean;
+  /**
+   * Lost (or poor with no world to toast in) and not snoozed: the dialog.
+   */
+  alarm: boolean;
+  /**
+   * Back to good from poor or lost: the dialog goes away for good.
+   */
+  restored: boolean;
+  nextPollMs: bigint;
+};
+
+/**
+ * Generated factory for {@link Report} record objects.
+ */
+export const Report = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<Report, ReturnType<typeof defaults>>(defaults);
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults()) as Partial<Report>,
+  });
+})();
+
+const FfiConverterTypeReport = (() => {
+  type TypeName = Report;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      return {
+        quality: FfiConverterTypeQuality.readFromCursor(c),
+        toast: FfiConverterBool.readFromCursor(c),
+        alarm: FfiConverterBool.readFromCursor(c),
+        restored: FfiConverterBool.readFromCursor(c),
+        nextPollMs: FfiConverterUInt64.readFromCursor(c),
+      };
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      FfiConverterTypeQuality.writeIntoCursor(value.quality, c);
+      FfiConverterBool.writeIntoCursor(value.toast, c);
+      FfiConverterBool.writeIntoCursor(value.alarm, c);
+      FfiConverterBool.writeIntoCursor(value.restored, c);
+      FfiConverterUInt64.writeIntoCursor(value.nextPollMs, c);
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterTypeQuality.allocationSize(value.quality) +
+        FfiConverterBool.allocationSize(value.toast) +
+        FfiConverterBool.allocationSize(value.alarm) +
+        FfiConverterBool.allocationSize(value.restored) +
+        FfiConverterUInt64.allocationSize(value.nextPollMs)
       );
     }
   }
@@ -12151,6 +12346,30 @@ function uniffiEnsureInitialized() {
     );
   }
   if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_connection_healthy() !==
+    5466
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_connection_healthy',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_connection_reset() !==
+    44179
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_connection_reset',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_connection_retry() !==
+    21424
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_connection_retry',
+    );
+  }
+  if (
     nativeModule().ubrn_uniffi_dcl_core_checksum_func_consume_campaign() !==
     33889
   ) {
@@ -12381,6 +12600,14 @@ function uniffiEnsureInitialized() {
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_dcl_core_checksum_func_place_user_state',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_probe_connection() !==
+    23905
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_probe_connection',
     );
   }
   if (nativeModule().ubrn_uniffi_dcl_core_checksum_func_profile() !== 57615) {
@@ -12850,8 +13077,10 @@ export default Object.freeze({
     FfiConverterTypePropertyValue,
     FfiConverterTypePushPlatform,
     FfiConverterTypePushRegistration,
+    FfiConverterTypeQuality,
     FfiConverterTypeRail,
     FfiConverterTypeRect,
+    FfiConverterTypeReport,
     FfiConverterTypeReportContext,
     FfiConverterTypeReportEvent,
     FfiConverterTypeReportLevel,

@@ -10,6 +10,7 @@ use crate::{
 };
 
 mod avatar;
+mod connection;
 mod control;
 mod gates;
 pub use gates::eula_accepted;

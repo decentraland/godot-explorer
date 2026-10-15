@@ -213,6 +213,15 @@ interface NativeModuleInterface {
   ubrn_uniffi_dcl_core_fn_func_capture_screenshot(): bigint;
   ubrn_uniffi_dcl_core_fn_func_clear_cache(): bigint;
   ubrn_uniffi_dcl_core_fn_func_complete_browser(identityId: Uint8Array): bigint;
+  ubrn_uniffi_dcl_core_fn_func_connection_healthy(
+    uniffi_out_err: UniffiRustCallStatus,
+  ): number;
+  ubrn_uniffi_dcl_core_fn_func_connection_reset(
+    uniffi_out_err: UniffiRustCallStatus,
+  ): void;
+  ubrn_uniffi_dcl_core_fn_func_connection_retry(
+    uniffi_out_err: UniffiRustCallStatus,
+  ): void;
   ubrn_uniffi_dcl_core_fn_func_consume_campaign(
     uniffi_out_err: UniffiRustCallStatus,
   ): void;
@@ -302,6 +311,7 @@ interface NativeModuleInterface {
   ubrn_uniffi_dcl_core_fn_func_owned_names(): bigint;
   ubrn_uniffi_dcl_core_fn_func_pending_campaign(): bigint;
   ubrn_uniffi_dcl_core_fn_func_place_user_state(placeId: Uint8Array): bigint;
+  ubrn_uniffi_dcl_core_fn_func_probe_connection(): bigint;
   ubrn_uniffi_dcl_core_fn_func_profile(address: Uint8Array): bigint;
   ubrn_uniffi_dcl_core_fn_func_remove_listener(
     id: bigint,
@@ -530,6 +540,9 @@ interface NativeModuleInterface {
   ubrn_uniffi_dcl_core_checksum_func_capture_screenshot(): number;
   ubrn_uniffi_dcl_core_checksum_func_clear_cache(): number;
   ubrn_uniffi_dcl_core_checksum_func_complete_browser(): number;
+  ubrn_uniffi_dcl_core_checksum_func_connection_healthy(): number;
+  ubrn_uniffi_dcl_core_checksum_func_connection_reset(): number;
+  ubrn_uniffi_dcl_core_checksum_func_connection_retry(): number;
   ubrn_uniffi_dcl_core_checksum_func_consume_campaign(): number;
   ubrn_uniffi_dcl_core_checksum_func_control(): number;
   ubrn_uniffi_dcl_core_checksum_func_credits_balance(): number;
@@ -562,6 +575,7 @@ interface NativeModuleInterface {
   ubrn_uniffi_dcl_core_checksum_func_owned_names(): number;
   ubrn_uniffi_dcl_core_checksum_func_pending_campaign(): number;
   ubrn_uniffi_dcl_core_checksum_func_place_user_state(): number;
+  ubrn_uniffi_dcl_core_checksum_func_probe_connection(): number;
   ubrn_uniffi_dcl_core_checksum_func_profile(): number;
   ubrn_uniffi_dcl_core_checksum_func_remove_listener(): number;
   ubrn_uniffi_dcl_core_checksum_func_resolve_destination(): number;

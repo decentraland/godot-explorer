@@ -1,5 +1,5 @@
 import type { CoreApi } from '../api';
-import { State } from '../native';
+import { Quality, State } from '../native';
 import { createMockAvatar } from './avatar';
 import { createMockAvatarApi } from './avatarApi';
 import { createMockControl } from './control';
@@ -34,6 +34,16 @@ export function createMockCore(options: { signedIn?: boolean } = {}): CoreApi {
     sessionTick: () => {},
     reviewCheck: () => false,
     reviewFire: () => undefined,
+    probeConnection: async () => ({
+      quality: Quality.Good,
+      toast: false,
+      alarm: false,
+      restored: false,
+      nextPollMs: 10_000n,
+    }),
+    connectionRetry: () => {},
+    connectionReset: () => {},
+    connectionHealthy: () => true,
     ...createMockGates(),
     ...createMockScene(bus),
   };

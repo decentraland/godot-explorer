@@ -223,6 +223,11 @@ int8_t
 uniffi_dcl_core_fn_func_is_removable_category(RustBuffer category,
                                               RustCallStatus *uniffi_out_err);
 /*handle*/ uint64_t uniffi_dcl_core_fn_func_load_avatar_catalog();
+int8_t
+uniffi_dcl_core_fn_func_connection_healthy(RustCallStatus *uniffi_out_err);
+void uniffi_dcl_core_fn_func_connection_reset(RustCallStatus *uniffi_out_err);
+void uniffi_dcl_core_fn_func_connection_retry(RustCallStatus *uniffi_out_err);
+/*handle*/ uint64_t uniffi_dcl_core_fn_func_probe_connection();
 RustBuffer uniffi_dcl_core_fn_func_avatar_state(RustCallStatus *uniffi_out_err);
 void uniffi_dcl_core_fn_func_control(RustBuffer command,
                                      RustCallStatus *uniffi_out_err);
@@ -487,6 +492,10 @@ uint16_t uniffi_dcl_core_checksum_func_avatar_palette();
 uint16_t uniffi_dcl_core_checksum_func_base_emotes();
 uint16_t uniffi_dcl_core_checksum_func_is_removable_category();
 uint16_t uniffi_dcl_core_checksum_func_load_avatar_catalog();
+uint16_t uniffi_dcl_core_checksum_func_connection_healthy();
+uint16_t uniffi_dcl_core_checksum_func_connection_reset();
+uint16_t uniffi_dcl_core_checksum_func_connection_retry();
+uint16_t uniffi_dcl_core_checksum_func_probe_connection();
 uint16_t uniffi_dcl_core_checksum_func_avatar_state();
 uint16_t uniffi_dcl_core_checksum_func_control();
 uint16_t uniffi_dcl_core_checksum_func_enter_world();
@@ -4766,6 +4775,50 @@ NativeDclCore::NativeDclCore(
             return this->cpp_uniffi_dcl_core_fn_func_load_avatar_catalog(
                 rt, thisVal, args, count);
           });
+  props["ubrn_uniffi_dcl_core_fn_func_connection_healthy"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_fn_func_connection_healthy"),
+          0,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_dcl_core_fn_func_connection_healthy(
+                rt, thisVal, args, count);
+          });
+  props["ubrn_uniffi_dcl_core_fn_func_connection_reset"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_fn_func_connection_reset"),
+          0,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_dcl_core_fn_func_connection_reset(
+                rt, thisVal, args, count);
+          });
+  props["ubrn_uniffi_dcl_core_fn_func_connection_retry"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_fn_func_connection_retry"),
+          0,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_dcl_core_fn_func_connection_retry(
+                rt, thisVal, args, count);
+          });
+  props["ubrn_uniffi_dcl_core_fn_func_probe_connection"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_fn_func_probe_connection"),
+          0,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_dcl_core_fn_func_probe_connection(
+                rt, thisVal, args, count);
+          });
   props["ubrn_uniffi_dcl_core_fn_func_avatar_state"] =
       jsi::Function::createFromHostFunction(
           rt,
@@ -6222,6 +6275,50 @@ NativeDclCore::NativeDclCore(
           [this](jsi::Runtime &rt, const jsi::Value &thisVal,
                  const jsi::Value *args, size_t count) -> jsi::Value {
             return this->cpp_uniffi_dcl_core_checksum_func_load_avatar_catalog(
+                rt, thisVal, args, count);
+          });
+  props["ubrn_uniffi_dcl_core_checksum_func_connection_healthy"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_checksum_func_connection_healthy"),
+          0,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_dcl_core_checksum_func_connection_healthy(
+                rt, thisVal, args, count);
+          });
+  props["ubrn_uniffi_dcl_core_checksum_func_connection_reset"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_checksum_func_connection_reset"),
+          0,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_dcl_core_checksum_func_connection_reset(
+                rt, thisVal, args, count);
+          });
+  props["ubrn_uniffi_dcl_core_checksum_func_connection_retry"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_checksum_func_connection_retry"),
+          0,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_dcl_core_checksum_func_connection_retry(
+                rt, thisVal, args, count);
+          });
+  props["ubrn_uniffi_dcl_core_checksum_func_probe_connection"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_checksum_func_probe_connection"),
+          0,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_dcl_core_checksum_func_probe_connection(
                 rt, thisVal, args, count);
           });
   props["ubrn_uniffi_dcl_core_checksum_func_avatar_state"] =
@@ -7907,6 +8004,47 @@ jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_load_avatar_catalog(
   return uniffi_jsi::Bridging</*handle*/ uint64_t>::toJs(rt, callInvoker,
                                                          value);
 }
+jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_connection_healthy(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  RustCallStatus status =
+      uniffi::dcl_core::Bridging<RustCallStatus>::rustSuccess(rt);
+  auto value = uniffi_dcl_core_fn_func_connection_healthy(&status);
+  uniffi::dcl_core::Bridging<RustCallStatus>::copyIntoJs(
+      rt, callInvoker, status, args[count - 1]);
+
+  return uniffi_jsi::Bridging<int8_t>::toJs(rt, callInvoker, value);
+}
+jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_connection_reset(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  RustCallStatus status =
+      uniffi::dcl_core::Bridging<RustCallStatus>::rustSuccess(rt);
+  uniffi_dcl_core_fn_func_connection_reset(&status);
+  uniffi::dcl_core::Bridging<RustCallStatus>::copyIntoJs(
+      rt, callInvoker, status, args[count - 1]);
+
+  return jsi::Value::undefined();
+}
+jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_connection_retry(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  RustCallStatus status =
+      uniffi::dcl_core::Bridging<RustCallStatus>::rustSuccess(rt);
+  uniffi_dcl_core_fn_func_connection_retry(&status);
+  uniffi::dcl_core::Bridging<RustCallStatus>::copyIntoJs(
+      rt, callInvoker, status, args[count - 1]);
+
+  return jsi::Value::undefined();
+}
+jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_probe_connection(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  auto value = uniffi_dcl_core_fn_func_probe_connection();
+
+  return uniffi_jsi::Bridging</*handle*/ uint64_t>::toJs(rt, callInvoker,
+                                                         value);
+}
 jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_avatar_state(
     jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
     size_t count) {
@@ -9342,6 +9480,34 @@ jsi::Value NativeDclCore::cpp_uniffi_dcl_core_checksum_func_load_avatar_catalog(
     jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
     size_t count) {
   auto value = uniffi_dcl_core_checksum_func_load_avatar_catalog();
+
+  return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
+}
+jsi::Value NativeDclCore::cpp_uniffi_dcl_core_checksum_func_connection_healthy(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  auto value = uniffi_dcl_core_checksum_func_connection_healthy();
+
+  return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
+}
+jsi::Value NativeDclCore::cpp_uniffi_dcl_core_checksum_func_connection_reset(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  auto value = uniffi_dcl_core_checksum_func_connection_reset();
+
+  return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
+}
+jsi::Value NativeDclCore::cpp_uniffi_dcl_core_checksum_func_connection_retry(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  auto value = uniffi_dcl_core_checksum_func_connection_retry();
+
+  return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
+}
+jsi::Value NativeDclCore::cpp_uniffi_dcl_core_checksum_func_probe_connection(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  auto value = uniffi_dcl_core_checksum_func_probe_connection();
 
   return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
 }
