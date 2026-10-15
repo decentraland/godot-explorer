@@ -100,7 +100,7 @@ func process_deep_link(url: String, start_kind: String = "warm") -> void:
 	# then — spawn here once the deeplink lands and only if no runner exists.
 	if Global.deep_link_obj.gp_benchmark and Global.get_node_or_null("GPBenchmarkRunner") == null:
 		# Flip bench_mode BEFORE spawning the runner: this fires earlier than
-		# DG's deferred _init_dynamic_graphics_manager (07.4xx vs 07.7xx on A54)
+		# DG's deferred init_dynamic_graphics (07.4xx vs 07.7xx on A54)
 		# and before lobby.gd's first-launch HW bench trigger, so both honor it.
 		Global.cli.bench_mode = true
 		print("[DEEPLINK] bench_mode=true (gp-benchmark deeplink)")

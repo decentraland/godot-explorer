@@ -39,8 +39,8 @@ func _ready() -> void:
 func _async_first_launch_benchmark() -> void:
 	await get_tree().process_frame
 	await get_tree().process_frame
-	if Global.should_run_first_launch_benchmark():
-		Global.run_first_launch_benchmark()
+	if Global.graphics_autotune.should_run_first_launch_benchmark():
+		Global.graphics_autotune.run_first_launch_benchmark()
 
 
 ## Called by the avatar-only host scene once the identity and profile exist.
