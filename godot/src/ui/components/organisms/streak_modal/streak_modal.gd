@@ -18,6 +18,8 @@ const CHECKPOINT_DAY := 3
 const FINAL_DAY := 7
 const BOUNCE_OFFSET_PX := 10.0
 const BOUNCE_HALF_DURATION_SEC := 0.9
+const CLAIM_FAILED_SLIDE_OFFSET_PX := 24.0
+const CLAIM_FAILED_SLIDE_DURATION_SEC := 0.3
 
 ## Shown behind the reward art while it's still unclaimed / once the live claim succeeds.
 @export var texture_pedestal_normal: Texture2D
@@ -46,6 +48,7 @@ var _claiming_reward: bool = false
 @onready var h_box_container_rewards: HBoxContainer = %HBoxContainer_Rewards
 @onready var reward_art_1: TextureRect = %TextureRect_RewardArt1
 @onready var reward_art_2: TextureRect = %TextureRect_RewardArt2
+@onready var claim_failed_panel: MarginContainer = %MarginContainer_ClaimFailed
 
 
 ## Maps StreakManager.take_pending_modal()'s string result to this modal's State enum.
@@ -232,6 +235,7 @@ func _show_claim_button(text_key: String) -> void:
 	button_cta.visible = false
 	claim_button.visible = true
 	claim_button.text_normal = text_key
+	_set_claim_failed_visible(false)
 	var days := Global.streak_manager.get_claimable_days()
 	var is_guest := _is_guest
 	claim_button.claim_action = func() -> bool:
@@ -240,7 +244,41 @@ func _show_claim_button(text_key: String) -> void:
 		_claiming_reward = false
 		if success:
 			pedestal.texture = texture_pedestal_claimed
+		else:
+			_set_claim_failed_visible(true)
 		return success
+
+
+## Mutually exclusive with the footer caption — the claim-failed panel only appears after an
+## actual failed attempt and then stays up for the rest of this modal's lifetime (it does NOT
+## clear itself on a retry); it only ever starts hidden again because a brand new StreakModal
+## instance is created the next time the modal opens (see
+## StreakModalController._async_create_streak_modal), never because this instance resets itself.
+func _set_claim_failed_visible(show_failed: bool) -> void:
+	claim_failed_panel.visible = show_failed
+	label_footer.visible = not show_failed
+	if show_failed:
+		_async_slide_in_claim_failed()
+
+
+## Slides the panel up from below + fades it in. Awaits one frame first so the VBoxContainer
+## above it has already re-sorted off the fresh `visible = true` and claim_failed_panel.position
+## reflects its real resting spot — animating from a stale pre-layout position would start the
+## slide from the wrong place.
+func _async_slide_in_claim_failed() -> void:
+	await get_tree().process_frame
+	if not is_instance_valid(self):
+		return
+	var resting_y := claim_failed_panel.position.y
+	claim_failed_panel.position.y = resting_y + CLAIM_FAILED_SLIDE_OFFSET_PX
+	claim_failed_panel.modulate.a = 0.0
+	var tween := create_tween()
+	tween.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	tween.set_parallel(true)
+	tween.tween_property(
+		claim_failed_panel, "position:y", resting_y, CLAIM_FAILED_SLIDE_DURATION_SEC
+	)
+	tween.tween_property(claim_failed_panel, "modulate:a", 1.0, CLAIM_FAILED_SLIDE_DURATION_SEC)
 
 
 ## Fills reward_art_1 (and reward_art_2 when both D3 and D7 are pending — see _render()) with the
