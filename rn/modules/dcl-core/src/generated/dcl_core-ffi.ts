@@ -315,6 +315,18 @@ interface NativeModuleInterface {
     y: number,
     uniffi_out_err: UniffiRustCallStatus,
   ): Uint8Array;
+  ubrn_uniffi_dcl_core_fn_func_session_backgrounded(
+    uniffi_out_err: UniffiRustCallStatus,
+  ): void;
+  ubrn_uniffi_dcl_core_fn_func_session_foregrounded(
+    uniffi_out_err: UniffiRustCallStatus,
+  ): void;
+  ubrn_uniffi_dcl_core_fn_func_session_launched(
+    uniffi_out_err: UniffiRustCallStatus,
+  ): void;
+  ubrn_uniffi_dcl_core_fn_func_session_tick(
+    uniffi_out_err: UniffiRustCallStatus,
+  ): void;
   ubrn_uniffi_dcl_core_fn_func_set_analytics_consent(accepted: number): bigint;
   ubrn_uniffi_dcl_core_fn_func_set_analytics_flush_interval(
     seconds: number,
@@ -541,6 +553,10 @@ interface NativeModuleInterface {
   ubrn_uniffi_dcl_core_checksum_func_resolve_destination(): number;
   ubrn_uniffi_dcl_core_checksum_func_resolve_destination_with_secret(): number;
   ubrn_uniffi_dcl_core_checksum_func_scene_link_url(): number;
+  ubrn_uniffi_dcl_core_checksum_func_session_backgrounded(): number;
+  ubrn_uniffi_dcl_core_checksum_func_session_foregrounded(): number;
+  ubrn_uniffi_dcl_core_checksum_func_session_launched(): number;
+  ubrn_uniffi_dcl_core_checksum_func_session_tick(): number;
   ubrn_uniffi_dcl_core_checksum_func_set_analytics_consent(): number;
   ubrn_uniffi_dcl_core_checksum_func_set_analytics_flush_interval(): number;
   ubrn_uniffi_dcl_core_checksum_func_set_event_reminder(): number;

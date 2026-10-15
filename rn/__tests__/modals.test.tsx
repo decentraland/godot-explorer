@@ -24,6 +24,8 @@ import {
   noticeModal,
   sceneRequestModal,
 } from '../src/modals/CoreModals';
+import { confirmLeave } from '../src/app/wiring';
+import { registerModalApi } from '../src/modals/bridge';
 import {
   destinationInput,
   entryVerdict,
@@ -319,5 +321,32 @@ describe('leaving', () => {
     } as CoreApi);
     expect(() => leaveWorld(reset)).not.toThrow();
     expect(reset).toHaveBeenCalledWith({ name: 'home' });
+  });
+});
+
+describe('back from the world', () => {
+  it('asks before leaving, and leaves on yes only', () => {
+    const shown: ModalSpec[] = [];
+    registerModalApi({
+      show: modal => shown.push(modal),
+      dismiss: () => {},
+      askPassword: () => {},
+    });
+    const leave = jest.fn();
+    confirmLeave(leave);
+    expect(leave).not.toHaveBeenCalled();
+    expect(shown[0].key).toBe('leave-world');
+    shown[0].buttons[0].onPress?.();
+    expect(leave).not.toHaveBeenCalled();
+    shown[0].buttons[1].onPress?.();
+    expect(leave).toHaveBeenCalledTimes(1);
+    registerModalApi(null);
+  });
+
+  it('leaves at once when no modal host is mounted', () => {
+    registerModalApi(null);
+    const leave = jest.fn();
+    confirmLeave(leave);
+    expect(leave).toHaveBeenCalledTimes(1);
   });
 });

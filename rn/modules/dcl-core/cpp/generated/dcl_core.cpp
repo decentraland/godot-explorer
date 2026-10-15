@@ -333,6 +333,12 @@ void uniffi_dcl_core_fn_func_sign_in_wallet_complete(
     RustBuffer signer_address, RustBuffer signature,
     RustCallStatus *uniffi_out_err);
 void uniffi_dcl_core_fn_func_sign_out(RustCallStatus *uniffi_out_err);
+void uniffi_dcl_core_fn_func_session_backgrounded(
+    RustCallStatus *uniffi_out_err);
+void uniffi_dcl_core_fn_func_session_foregrounded(
+    RustCallStatus *uniffi_out_err);
+void uniffi_dcl_core_fn_func_session_launched(RustCallStatus *uniffi_out_err);
+void uniffi_dcl_core_fn_func_session_tick(RustCallStatus *uniffi_out_err);
 RustBuffer uniffi_dcl_core_fn_func_cache_size(RustCallStatus *uniffi_out_err);
 /*handle*/ uint64_t uniffi_dcl_core_fn_func_clear_cache();
 RustBuffer uniffi_dcl_core_fn_func_set_setting(RustBuffer key, RustBuffer value,
@@ -532,6 +538,10 @@ uint16_t uniffi_dcl_core_checksum_func_sign_in_guest();
 uint16_t uniffi_dcl_core_checksum_func_sign_in_wallet_begin();
 uint16_t uniffi_dcl_core_checksum_func_sign_in_wallet_complete();
 uint16_t uniffi_dcl_core_checksum_func_sign_out();
+uint16_t uniffi_dcl_core_checksum_func_session_backgrounded();
+uint16_t uniffi_dcl_core_checksum_func_session_foregrounded();
+uint16_t uniffi_dcl_core_checksum_func_session_launched();
+uint16_t uniffi_dcl_core_checksum_func_session_tick();
 uint16_t uniffi_dcl_core_checksum_func_cache_size();
 uint16_t uniffi_dcl_core_checksum_func_clear_cache();
 uint16_t uniffi_dcl_core_checksum_func_set_setting();
@@ -5398,6 +5408,50 @@ NativeDclCore::NativeDclCore(
             return this->cpp_uniffi_dcl_core_fn_func_sign_out(rt, thisVal, args,
                                                               count);
           });
+  props["ubrn_uniffi_dcl_core_fn_func_session_backgrounded"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_fn_func_session_backgrounded"),
+          0,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_dcl_core_fn_func_session_backgrounded(
+                rt, thisVal, args, count);
+          });
+  props["ubrn_uniffi_dcl_core_fn_func_session_foregrounded"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_fn_func_session_foregrounded"),
+          0,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_dcl_core_fn_func_session_foregrounded(
+                rt, thisVal, args, count);
+          });
+  props["ubrn_uniffi_dcl_core_fn_func_session_launched"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_fn_func_session_launched"),
+          0,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_dcl_core_fn_func_session_launched(
+                rt, thisVal, args, count);
+          });
+  props["ubrn_uniffi_dcl_core_fn_func_session_tick"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_fn_func_session_tick"),
+          0,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_dcl_core_fn_func_session_tick(rt, thisVal,
+                                                                  args, count);
+          });
   props["ubrn_uniffi_dcl_core_fn_func_cache_size"] =
       jsi::Function::createFromHostFunction(
           rt,
@@ -6782,6 +6836,50 @@ NativeDclCore::NativeDclCore(
           [this](jsi::Runtime &rt, const jsi::Value &thisVal,
                  const jsi::Value *args, size_t count) -> jsi::Value {
             return this->cpp_uniffi_dcl_core_checksum_func_sign_out(
+                rt, thisVal, args, count);
+          });
+  props["ubrn_uniffi_dcl_core_checksum_func_session_backgrounded"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_checksum_func_session_backgrounded"),
+          0,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_dcl_core_checksum_func_session_backgrounded(
+                rt, thisVal, args, count);
+          });
+  props["ubrn_uniffi_dcl_core_checksum_func_session_foregrounded"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_checksum_func_session_foregrounded"),
+          0,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_dcl_core_checksum_func_session_foregrounded(
+                rt, thisVal, args, count);
+          });
+  props["ubrn_uniffi_dcl_core_checksum_func_session_launched"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_checksum_func_session_launched"),
+          0,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_dcl_core_checksum_func_session_launched(
+                rt, thisVal, args, count);
+          });
+  props["ubrn_uniffi_dcl_core_checksum_func_session_tick"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_checksum_func_session_tick"),
+          0,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_dcl_core_checksum_func_session_tick(
                 rt, thisVal, args, count);
           });
   props["ubrn_uniffi_dcl_core_checksum_func_cache_size"] =
@@ -8362,6 +8460,50 @@ jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_sign_out(
 
   return jsi::Value::undefined();
 }
+jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_session_backgrounded(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  RustCallStatus status =
+      uniffi::dcl_core::Bridging<RustCallStatus>::rustSuccess(rt);
+  uniffi_dcl_core_fn_func_session_backgrounded(&status);
+  uniffi::dcl_core::Bridging<RustCallStatus>::copyIntoJs(
+      rt, callInvoker, status, args[count - 1]);
+
+  return jsi::Value::undefined();
+}
+jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_session_foregrounded(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  RustCallStatus status =
+      uniffi::dcl_core::Bridging<RustCallStatus>::rustSuccess(rt);
+  uniffi_dcl_core_fn_func_session_foregrounded(&status);
+  uniffi::dcl_core::Bridging<RustCallStatus>::copyIntoJs(
+      rt, callInvoker, status, args[count - 1]);
+
+  return jsi::Value::undefined();
+}
+jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_session_launched(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  RustCallStatus status =
+      uniffi::dcl_core::Bridging<RustCallStatus>::rustSuccess(rt);
+  uniffi_dcl_core_fn_func_session_launched(&status);
+  uniffi::dcl_core::Bridging<RustCallStatus>::copyIntoJs(
+      rt, callInvoker, status, args[count - 1]);
+
+  return jsi::Value::undefined();
+}
+jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_session_tick(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  RustCallStatus status =
+      uniffi::dcl_core::Bridging<RustCallStatus>::rustSuccess(rt);
+  uniffi_dcl_core_fn_func_session_tick(&status);
+  uniffi::dcl_core::Bridging<RustCallStatus>::copyIntoJs(
+      rt, callInvoker, status, args[count - 1]);
+
+  return jsi::Value::undefined();
+}
 jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_cache_size(
     jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
     size_t count) {
@@ -9484,6 +9626,36 @@ jsi::Value NativeDclCore::cpp_uniffi_dcl_core_checksum_func_sign_out(
     jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
     size_t count) {
   auto value = uniffi_dcl_core_checksum_func_sign_out();
+
+  return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
+}
+jsi::Value
+NativeDclCore::cpp_uniffi_dcl_core_checksum_func_session_backgrounded(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  auto value = uniffi_dcl_core_checksum_func_session_backgrounded();
+
+  return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
+}
+jsi::Value
+NativeDclCore::cpp_uniffi_dcl_core_checksum_func_session_foregrounded(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  auto value = uniffi_dcl_core_checksum_func_session_foregrounded();
+
+  return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
+}
+jsi::Value NativeDclCore::cpp_uniffi_dcl_core_checksum_func_session_launched(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  auto value = uniffi_dcl_core_checksum_func_session_launched();
+
+  return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
+}
+jsi::Value NativeDclCore::cpp_uniffi_dcl_core_checksum_func_session_tick(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  auto value = uniffi_dcl_core_checksum_func_session_tick();
 
   return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
 }

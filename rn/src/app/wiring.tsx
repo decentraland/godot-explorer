@@ -2,7 +2,9 @@ import { useEffect } from 'react';
 import { BackHandler } from 'react-native';
 import { BackpackScreen } from '../backpack/BackpackScreen';
 import { onIntent } from '../hud/hudSignals';
+import { t } from '../i18n';
 import { openMenu } from '../menu';
+import { modalApi } from '../modals/bridge';
 import { useNav } from './NavProvider';
 import { registerScreen } from './registry';
 import '../discover/routes';
@@ -16,6 +18,25 @@ function BackpackRoute() {
 }
 
 registerScreen('backpack', () => <BackpackRoute />);
+
+/** Back from the world asks first, so a slip of the thumb does not drop the player out of it.
+ * Anything open on top (the menu, the chat, a modal) handled the key before this ran. */
+export function confirmLeave(onLeave: () => void): void {
+  const modals = modalApi();
+  if (!modals) {
+    onLeave();
+    return;
+  }
+  modals.show({
+    key: 'leave-world',
+    title: t('WORLD_LEAVE_TITLE'),
+    body: t('WORLD_LEAVE_BODY'),
+    buttons: [
+      { label: t('COMMON_CANCEL'), tone: 'secondary' },
+      { label: t('WORLD_LEAVE_CONFIRM'), onPress: onLeave },
+    ],
+  });
+}
 
 /** Routes HUD requests to the screens that own them, and lets Android back leave the world. */
 export function useAppWiring(onLeave: () => void) {
@@ -41,7 +62,7 @@ export function useAppWiring(onLeave: () => void) {
       return;
     }
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-      onLeave();
+      confirmLeave(onLeave);
       return true;
     });
     return () => sub.remove();

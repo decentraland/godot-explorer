@@ -1682,6 +1682,70 @@ export function sceneLinkUrl(realm: string, x: number, y: number): string {
 }
 
 /**
+ * The app left the foreground.
+ */
+export function sessionBackgrounded(): void /*throws*/ {
+  uniffiCaller.rustCallWithError(
+    /*liftError:*/ FfiConverterTypeCoreError.lift.bind(
+      FfiConverterTypeCoreError,
+    ),
+    /*caller:*/ callStatus => {
+      nativeModule().ubrn_uniffi_dcl_core_fn_func_session_backgrounded(
+        callStatus,
+      );
+    },
+    /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+  );
+}
+
+/**
+ * The app came back from the background.
+ */
+export function sessionForegrounded(): void /*throws*/ {
+  uniffiCaller.rustCallWithError(
+    /*liftError:*/ FfiConverterTypeCoreError.lift.bind(
+      FfiConverterTypeCoreError,
+    ),
+    /*caller:*/ callStatus => {
+      nativeModule().ubrn_uniffi_dcl_core_fn_func_session_foregrounded(
+        callStatus,
+      );
+    },
+    /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+  );
+}
+
+/**
+ * The process started; call once, as soon as the shell is up.
+ */
+export function sessionLaunched(): void /*throws*/ {
+  uniffiCaller.rustCallWithError(
+    /*liftError:*/ FfiConverterTypeCoreError.lift.bind(
+      FfiConverterTypeCoreError,
+    ),
+    /*caller:*/ callStatus => {
+      nativeModule().ubrn_uniffi_dcl_core_fn_func_session_launched(callStatus);
+    },
+    /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+  );
+}
+
+/**
+ * Every few seconds while the app runs: ends the settle window and keeps the liveness mark fresh.
+ */
+export function sessionTick(): void /*throws*/ {
+  uniffiCaller.rustCallWithError(
+    /*liftError:*/ FfiConverterTypeCoreError.lift.bind(
+      FfiConverterTypeCoreError,
+    ),
+    /*caller:*/ callStatus => {
+      nativeModule().ubrn_uniffi_dcl_core_fn_func_session_tick(callStatus);
+    },
+    /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+  );
+}
+
+/**
  * Opens (or closes) the consent gate; opening ships what waited.
  */
 export async function setAnalyticsConsent(
@@ -10730,6 +10794,44 @@ const FfiConverterTypeState = (() => {
   return new FFIConverter();
 })();
 
+export enum Trigger {
+  Icon,
+  Deeplink,
+  Push,
+}
+
+const FfiConverterTypeTrigger = (() => {
+  type TypeName = Trigger;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      switch (c.readI32()) {
+        case 1:
+          return Trigger.Icon;
+        case 2:
+          return Trigger.Deeplink;
+        case 3:
+          return Trigger.Push;
+        default:
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      switch (value) {
+        case Trigger.Icon:
+          return c.writeI32(1);
+        case Trigger.Deeplink:
+          return c.writeI32(2);
+        case Trigger.Push:
+          return c.writeI32(3);
+      }
+    }
+    allocationSize(value: TypeName): number {
+      return 4;
+    }
+  }
+  return new FFIConverter();
+})();
+
 /**
  * Implemented by the JS shell only: a foreign trait has one vtable per process, so the host's
  * events are a different trait (`dcl_host::HostListener`). Called from a core thread; the
@@ -11987,6 +12089,37 @@ function uniffiEnsureInitialized() {
     );
   }
   if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_session_backgrounded() !==
+    52548
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_session_backgrounded',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_session_foregrounded() !==
+    12724
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_session_foregrounded',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_session_launched() !==
+    7407
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_session_launched',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_session_tick() !== 39793
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_session_tick',
+    );
+  }
+  if (
     nativeModule().ubrn_uniffi_dcl_core_checksum_func_set_analytics_consent() !==
     3274
   ) {
@@ -12384,6 +12517,7 @@ export default Object.freeze({
     FfiConverterTypeState,
     FfiConverterTypeSupportModal,
     FfiConverterTypeSupportStatus,
+    FfiConverterTypeTrigger,
     FfiConverterTypeUiState,
     FfiConverterTypeUpdateDecision,
     FfiConverterTypeUrls,

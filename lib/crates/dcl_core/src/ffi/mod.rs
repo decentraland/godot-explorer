@@ -19,6 +19,7 @@ mod profile;
 mod push;
 mod scene;
 mod session;
+mod session_tracker;
 mod settings;
 
 #[derive(Debug, uniffi::Error)]

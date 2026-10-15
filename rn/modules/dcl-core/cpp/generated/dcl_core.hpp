@@ -323,6 +323,19 @@ protected:
                                                   const jsi::Value &thisVal,
                                                   const jsi::Value *args,
                                                   size_t count);
+  jsi::Value cpp_uniffi_dcl_core_fn_func_session_backgrounded(
+      jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+      size_t count);
+  jsi::Value cpp_uniffi_dcl_core_fn_func_session_foregrounded(
+      jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+      size_t count);
+  jsi::Value cpp_uniffi_dcl_core_fn_func_session_launched(
+      jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+      size_t count);
+  jsi::Value cpp_uniffi_dcl_core_fn_func_session_tick(jsi::Runtime &rt,
+                                                      const jsi::Value &thisVal,
+                                                      const jsi::Value *args,
+                                                      size_t count);
   jsi::Value cpp_uniffi_dcl_core_fn_func_cache_size(jsi::Runtime &rt,
                                                     const jsi::Value &thisVal,
                                                     const jsi::Value *args,
@@ -740,6 +753,18 @@ protected:
       jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
       size_t count);
   jsi::Value cpp_uniffi_dcl_core_checksum_func_sign_out(
+      jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+      size_t count);
+  jsi::Value cpp_uniffi_dcl_core_checksum_func_session_backgrounded(
+      jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+      size_t count);
+  jsi::Value cpp_uniffi_dcl_core_checksum_func_session_foregrounded(
+      jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+      size_t count);
+  jsi::Value cpp_uniffi_dcl_core_checksum_func_session_launched(
+      jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+      size_t count);
+  jsi::Value cpp_uniffi_dcl_core_checksum_func_session_tick(
       jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
       size_t count);
   jsi::Value cpp_uniffi_dcl_core_checksum_func_cache_size(

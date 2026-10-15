@@ -12,6 +12,7 @@ import { Shell } from './src/app/Shell';
 import { useAnalyticsLifecycle } from './src/app/useAnalyticsLifecycle';
 import { startApp } from './src/app/startup';
 import { useLocaleSync } from './src/app/useLocaleSync';
+import { useSessionTracking } from './src/app/useSessionTracking';
 import { CoreModals } from './src/modals/CoreModals';
 import { ModalProvider } from './src/modals/ModalProvider';
 import { usePushRegistration } from './src/notifications/usePushRegistration';
@@ -101,6 +102,7 @@ function AppBody() {
 
 function App() {
   const preview = usePreviewRoute();
+  useSessionTracking();
   useEffect(() => {
     startApp();
     if (__DEV__) {

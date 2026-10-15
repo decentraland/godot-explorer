@@ -6,4 +6,5 @@ pub mod property;
 pub mod push;
 pub mod queue;
 pub mod service;
+pub mod session;
 pub mod transport;
