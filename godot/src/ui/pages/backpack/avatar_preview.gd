@@ -119,6 +119,8 @@ func _ready():
 	_target_avatar_rotation_y = avatar.rotation.y
 
 	avatar.avatar_loaded.connect(async_on_avatar_loaded)
+	# This preview shows our own profile, which never spawned: no hologram.
+	avatar.spawn_reveal_enabled = false
 	resized.connect(_on_resized)
 	if top_node_margin:
 		top_node_margin.resized.connect(_on_resized)

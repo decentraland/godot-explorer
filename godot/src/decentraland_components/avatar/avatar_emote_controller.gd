@@ -588,7 +588,7 @@ func _play_loaded_emote(emote_urn: String, mask: int = -1, owner_scene_id: int =
 	# Ensure state machine is initialized - if current_node is empty, it hasn't started
 	var cur_state = pb.get_current_node()
 	if cur_state.is_empty():
-		pb.start("Idle", true)
+		pb.start("Grounded", true)
 		# Need to wait a frame for state machine to initialize
 		# Use call_deferred to retry the play
 		_deferred_play_emote.call_deferred(emote_urn, mask, owner_scene_id)
@@ -1203,7 +1203,7 @@ func freeze_on_idle():
 	animation_tree.process_mode = Node.PROCESS_MODE_DISABLED
 
 	animation_player.stop()
-	animation_player.play("Idle", -1, 0.0)
+	animation_player.play("loco/Idle", -1, 0.0)
 
 	# Idle animation hides all the extra emotes
 	for child in avatar.get_children():
