@@ -4,16 +4,19 @@
 
 use std::collections::HashMap;
 
+use crate::app::Parcel;
+
 pub type RequestId = u32;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "ffi", derive(uniffi::Enum))]
 pub enum SceneRequest {
     OpenExternalUrl {
         url: String,
     },
     /// A parcel in the current realm (`realm` unset) or in the named one, or only a realm (spawn).
     Teleport {
-        parcel: Option<(i32, i32)>,
+        parcel: Option<Parcel>,
         realm: Option<String>,
     },
     ChangeRealm {

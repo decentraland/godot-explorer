@@ -96,6 +96,13 @@ impl AppEvents for HostEvents {
     fn avatar_changed(&self, avatar: &super::AvatarState) {
         self.each(|l| l.avatar_changed(avatar));
     }
+    fn scene_request(
+        &self,
+        id: crate::scene_requests::RequestId,
+        request: &crate::scene_requests::SceneRequest,
+    ) {
+        self.each(|l| l.scene_request(id, request));
+    }
     fn report(&self, payload: &crate::hub::ReportPayload) {
         self.each(|l| l.report(payload));
     }

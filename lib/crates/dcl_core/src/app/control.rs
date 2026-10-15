@@ -92,6 +92,11 @@ pub enum Control {
     SetName {
         name: String,
     },
+    /// The user's answer to a `scene_request` event.
+    AnswerSceneRequest {
+        id: u32,
+        accepted: bool,
+    },
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]

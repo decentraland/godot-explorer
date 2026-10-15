@@ -87,6 +87,8 @@ pub trait AppListener: Send + Sync {
     fn open_backpack(&self, emotes: bool);
     fn loading_detail(&self, detail: crate::app::LoadingDetail);
     fn avatar_changed(&self, avatar: crate::app::AvatarState);
+    /// A scene asked for the user's say (open a link, teleport, change realm, show an NFT).
+    fn scene_request(&self, id: u32, request: crate::scene_requests::SceneRequest);
     /// A panic or error to send to the crash reporter, already past the keep/drop policy.
     fn report(&self, payload: crate::hub::ReportPayload);
     /// A tag for every later crash report; `None` removes it. Batched by the core.
@@ -133,6 +135,13 @@ impl AppEvents for ListenerAdapter {
     }
     fn avatar_changed(&self, avatar: &crate::app::AvatarState) {
         self.0.avatar_changed(avatar.clone());
+    }
+    fn scene_request(
+        &self,
+        id: crate::scene_requests::RequestId,
+        request: &crate::scene_requests::SceneRequest,
+    ) {
+        self.0.scene_request(id, request.clone());
     }
     fn report(&self, payload: &crate::hub::ReportPayload) {
         self.0.report(payload.clone());

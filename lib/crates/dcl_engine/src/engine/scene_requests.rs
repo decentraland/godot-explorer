@@ -2,6 +2,7 @@
 
 use std::rc::Rc;
 
+use dcl_core::app::EngineEvent;
 use dcl_core::scene_requests::{PendingRequests, RequestId, SceneRequest};
 use godot::prelude::*;
 
@@ -47,6 +48,25 @@ impl DclEngine {
     }
 }
 
+/// The shell renders the modal: the request goes to the core as an event and the RPC answers when
+/// the shell sends `Control::AnswerSceneRequest`.
+pub struct ShellSink;
+
+impl SceneRequestSink for ShellSink {
+    fn handle(&self, id: RequestId, request: &SceneRequest) -> Verdict {
+        match DclEngine::get() {
+            Some(engine) => {
+                engine.bind().report(EngineEvent::SceneRequest {
+                    id,
+                    request: request.clone(),
+                });
+                Verdict::Pending
+            }
+            None => Verdict::Done(Err("engine not available".to_string())),
+        }
+    }
+}
+
 /// The Godot modals, as before: the RPC answers `Ok` as soon as the modal is shown.
 pub struct GodotUiSink;
 
@@ -76,13 +96,13 @@ impl SceneRequestSink for GodotUiSink {
                     modal_manager.call("async_show_external_link_modal", &[url.to_variant()]);
                 }
                 SceneRequest::Teleport {
-                    parcel: Some((x, y)),
+                    parcel: Some(parcel),
                     realm,
                 } => {
                     modal_manager.call(
                         "async_show_teleport_modal",
                         &[
-                            Vector2i::new(*x, *y).to_variant(),
+                            Vector2i::new(parcel.x, parcel.y).to_variant(),
                             realm.clone().unwrap_or_default().to_variant(),
                         ],
                     );
@@ -130,13 +150,13 @@ impl SceneRequestSink for EmulatorSink {
                 tracing::info!("[emulator] scene asked to show NFT {urn}");
             }
             SceneRequest::Teleport {
-                parcel: Some((x, y)),
+                parcel: Some(parcel),
                 realm,
             } => {
                 global.call_deferred(
                     "async_teleport_to",
                     &[
-                        Vector2i::new(*x, *y).to_variant(),
+                        Vector2i::new(parcel.x, parcel.y).to_variant(),
                         realm.clone().unwrap_or_default().to_variant(),
                     ],
                 );

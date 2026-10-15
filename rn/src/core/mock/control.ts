@@ -82,6 +82,8 @@ export function createMockControl(bus: MockBus = mockBus): ControlApi {
         case Control_Tags.HideUi:
           showUi({ hidden: command.inner.hidden });
           break;
+        case Control_Tags.AnswerSceneRequest:
+          break;
         default:
           avatar.applyAvatarControl(command);
       }

@@ -245,6 +245,9 @@ impl App {
                 self.events.avatar_changed(&avatar);
                 self.avatar = Some(avatar);
             }
+            (EngineEvent::SceneRequest { id, request }, _) => {
+                self.events.scene_request(id, &request)
+            }
             _ => {}
         }
     }

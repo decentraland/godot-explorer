@@ -18,6 +18,7 @@ const silent: AppListener = {
   openBackpack: nothing,
   loadingDetail: nothing,
   avatarChanged: nothing,
+  sceneRequest: nothing,
   report: nothing,
   reportTag: nothing,
 };

@@ -1,3 +1,4 @@
+use dcl_core::app::Parcel;
 use dcl_core::scene_requests::SceneRequest;
 
 use crate::{
@@ -192,7 +193,8 @@ pub fn teleport_to(
 
     DclEngine::scene_request(
         SceneRequest::Teleport {
-            parcel: world_coordinates.map(|coordinates| (coordinates[0], coordinates[1])),
+            parcel: world_coordinates
+                .map(|coordinates| Parcel::new(coordinates[0], coordinates[1])),
             realm: realm.clone(),
         },
         response.clone(),

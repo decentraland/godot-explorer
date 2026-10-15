@@ -124,15 +124,25 @@ pub enum EngineCommand {
 #[derive(Clone, Debug, PartialEq)]
 pub enum EngineEvent {
     LoadingProgress(f32),
-    LoadingFinished { realm: String, parcel: Parcel },
+    LoadingFinished {
+        realm: String,
+        parcel: Parcel,
+    },
     SceneCrashed,
     Hud(super::HudSnapshot),
     Chat(super::ChatLine),
     UnreadChat(u32),
     UiState(super::UiState),
-    OpenBackpack { emotes: bool },
+    OpenBackpack {
+        emotes: bool,
+    },
     LoadingDetail(super::LoadingDetail),
     Avatar(super::AvatarState),
+    /// A scene asked the user for something; answered with `Control::AnswerSceneRequest`.
+    SceneRequest {
+        id: crate::scene_requests::RequestId,
+        request: crate::scene_requests::SceneRequest,
+    },
 }
 
 /// What the attached engine implements.
@@ -160,6 +170,12 @@ pub trait AppEvents: Send + Sync {
     fn open_backpack(&self, _emotes: bool) {}
     fn loading_detail(&self, _detail: &super::LoadingDetail) {}
     fn avatar_changed(&self, _avatar: &super::AvatarState) {}
+    fn scene_request(
+        &self,
+        _id: crate::scene_requests::RequestId,
+        _request: &crate::scene_requests::SceneRequest,
+    ) {
+    }
     /// A panic or error the keep/drop policy let through, for the crash reporter.
     fn report(&self, _payload: &crate::hub::ReportPayload) {}
     /// A tag to add to (or, with `None`, remove from) every later crash report. Batched by the

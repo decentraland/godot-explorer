@@ -455,6 +455,12 @@ impl AppEvents for Facts {
             .unwrap()
             .push(format!("avatar {}", avatar.body_shape));
     }
+    fn scene_request(&self, id: u32, request: &crate::scene_requests::SceneRequest) {
+        self.seen
+            .lock()
+            .unwrap()
+            .push(format!("request {id} {request:?}"));
+    }
 }
 
 fn in_a_world(facts: &Arc<Facts>) -> (App, Arc<FakeEngine>) {
@@ -603,4 +609,33 @@ fn leaving_the_world_closes_the_overlay() {
     app.show_avatar_preview(RECT).unwrap();
     app.exit_world().unwrap();
     assert_eq!(*recorder.preview_modes.lock().unwrap(), vec![true, false]);
+}
+
+#[test]
+fn a_scene_request_reaches_the_shell_and_its_answer_reaches_the_engine() {
+    use crate::scene_requests::SceneRequest;
+    let facts = Arc::new(Facts::default());
+    let (mut app, engine) = in_a_world(&facts);
+    app.engine_event(EngineEvent::SceneRequest {
+        id: 7,
+        request: SceneRequest::OpenExternalUrl {
+            url: "https://decentraland.org".into(),
+        },
+    });
+    assert_eq!(
+        *facts.seen.lock().unwrap(),
+        vec!["request 7 OpenExternalUrl { url: \"https://decentraland.org\" }"]
+    );
+
+    app.control(Control::AnswerSceneRequest {
+        id: 7,
+        accepted: true,
+    });
+    assert_eq!(
+        engine.take(),
+        vec![EngineCommand::Control(Control::AnswerSceneRequest {
+            id: 7,
+            accepted: true
+        })]
+    );
 }

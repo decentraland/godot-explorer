@@ -1,6 +1,7 @@
 //! The engine's end of the app state machine (`dcl_core::app`): it attaches a command queue to the
 //! core, runs what the core sends on Godot's main thread, and reports loading back.
 
+use std::rc::Rc;
 use std::sync::Arc;
 
 use dcl_core::app::{
@@ -11,6 +12,7 @@ use dcl_core::Core;
 use godot::classes::{Os, RenderingServer};
 use godot::prelude::*;
 
+use super::scene_requests::{GodotUiSink, ShellSink};
 use super::{scene_link, screenshot_link, settings_link, DclEngine};
 
 fn destination_args(destination: &Destination) -> VarDictionary {
@@ -40,6 +42,7 @@ fn signal_payload(command: &EngineCommand) -> Option<(&'static str, VarDictionar
         )),
         EngineCommand::HideAvatarPreview => Some(("hide_avatar_preview", VarDictionary::new())),
         EngineCommand::SetRendering(_) => None,
+        EngineCommand::Control(Control::AnswerSceneRequest { .. }) => None,
         EngineCommand::Control(control) => Some(control_payload(control)),
     }
 }
@@ -97,6 +100,10 @@ pub(super) fn control_payload(control: &Control) -> (&'static str, VarDictionary
         ),
         Control::RandomizeAvatar => ("randomize_avatar", VarDictionary::new()),
         Control::SetName { name } => ("set_name", vdict! { "name": name.clone() }),
+        Control::AnswerSceneRequest { id, accepted } => (
+            "answer_scene_request",
+            vdict! { "id": *id, "accepted": *accepted },
+        ),
     }
 }
 
@@ -156,11 +163,13 @@ impl DclEngine {
         };
         let queue = Arc::new(CommandQueue::default());
         self.core_commands = Some(queue.clone());
+        self.sink = Rc::new(ShellSink);
         core.with_app(|app| app.engine_attach(queue));
     }
 
     pub(super) fn detach_from_core(&mut self) {
         if self.core_commands.take().is_some() {
+            self.sink = Rc::new(GodotUiSink);
             if let Some(core) = Core::try_get() {
                 core.with_app(|app| app.engine_detach());
             }
@@ -173,8 +182,14 @@ impl DclEngine {
             return;
         };
         for command in queue.drain() {
-            if let EngineCommand::SetRendering(on) = command {
-                RenderingServer::singleton().set_render_loop_enabled(on);
+            match &command {
+                EngineCommand::SetRendering(on) => {
+                    RenderingServer::singleton().set_render_loop_enabled(*on);
+                }
+                EngineCommand::Control(Control::AnswerSceneRequest { id, accepted }) => {
+                    self.answer_scene_request(*id, *accepted);
+                }
+                _ => {}
             }
             if let Some((kind, args)) = signal_payload(&command) {
                 self.base_mut()

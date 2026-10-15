@@ -7953,6 +7953,7 @@ export enum Control_Tags {
   RandomizeAvatar = 'RandomizeAvatar',
   SetPreviewUrl = 'SetPreviewUrl',
   SetName = 'SetName',
+  AnswerSceneRequest = 'AnswerSceneRequest',
 }
 /**
  * What the shell asks of the engine once a world or the avatar preview is up. All of them are
@@ -8419,6 +8420,38 @@ export const Control = (() => {
     }
   }
 
+  type AnswerSceneRequest__interface = {
+    tag: Control_Tags.AnswerSceneRequest;
+    inner: Readonly<{ id: number; accepted: boolean }>;
+  };
+  /**
+   * The user's answer to a `scene_request` event.
+   */
+  class AnswerSceneRequest_
+    extends UniffiEnum
+    implements AnswerSceneRequest__interface
+  {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'Control';
+    readonly tag = Control_Tags.AnswerSceneRequest;
+    readonly inner: Readonly<{ id: number; accepted: boolean }>;
+    constructor(inner: { id: number; accepted: boolean }) {
+      super('Control', 'AnswerSceneRequest');
+
+      this.inner = Object.freeze(inner);
+    }
+    static new(inner: { id: number; accepted: boolean }): AnswerSceneRequest_ {
+      return new AnswerSceneRequest_(inner);
+    }
+
+    static instanceOf(obj: any): obj is AnswerSceneRequest_ {
+      return obj.tag === Control_Tags.AnswerSceneRequest;
+    }
+  }
+
   function instanceOf(obj: any): obj is Control {
     return obj[uniffiTypeNameSymbol] === 'Control';
   }
@@ -8442,6 +8475,7 @@ export const Control = (() => {
     RandomizeAvatar: RandomizeAvatar_,
     SetPreviewUrl: SetPreviewUrl_,
     SetName: SetName_,
+    AnswerSceneRequest: AnswerSceneRequest_,
   });
 })();
 /**
@@ -8466,7 +8500,8 @@ export type Control = InstanceType<
     | 'SetEmoteSlot'
     | 'RandomizeAvatar'
     | 'SetPreviewUrl'
-    | 'SetName']
+    | 'SetName'
+    | 'AnswerSceneRequest']
 >;
 
 // FfiConverter for enum Control
@@ -8542,6 +8577,11 @@ const FfiConverterTypeControl = (() => {
         case 17:
           return new Control.SetName({
             name: FfiConverterString.readFromCursor(c),
+          });
+        case 18:
+          return new Control.AnswerSceneRequest({
+            id: FfiConverterUInt32.readFromCursor(c),
+            accepted: FfiConverterBool.readFromCursor(c),
           });
         default:
           throw new UniffiInternalError.UnexpectedEnumCase();
@@ -8651,6 +8691,13 @@ const FfiConverterTypeControl = (() => {
           FfiConverterString.writeIntoCursor(inner.name, c);
           return;
         }
+        case Control_Tags.AnswerSceneRequest: {
+          c.writeI32(18);
+          const inner = value.inner;
+          FfiConverterUInt32.writeIntoCursor(inner.id, c);
+          FfiConverterBool.writeIntoCursor(inner.accepted, c);
+          return;
+        }
         default:
           // Throwing from here means that Control_Tags hasn't matched an ordinal.
           throw new UniffiInternalError.UnexpectedEnumCase();
@@ -8757,6 +8804,13 @@ const FfiConverterTypeControl = (() => {
           const inner = value.inner;
           let size = 4;
           size += FfiConverterString.allocationSize(inner.name);
+          return size;
+        }
+        case Control_Tags.AnswerSceneRequest: {
+          const inner = value.inner;
+          let size = 4;
+          size += FfiConverterUInt32.allocationSize(inner.id);
+          size += FfiConverterBool.allocationSize(inner.accepted);
           return size;
         }
         default:
@@ -9151,6 +9205,241 @@ const FfiConverterTypePlatform = (() => {
     }
     allocationSize(value: TypeName): number {
       return 4;
+    }
+  }
+  return new FFIConverter();
+})();
+
+// Enum: SceneRequest
+export enum SceneRequest_Tags {
+  OpenExternalUrl = 'OpenExternalUrl',
+  Teleport = 'Teleport',
+  ChangeRealm = 'ChangeRealm',
+  OpenNft = 'OpenNft',
+}
+export const SceneRequest = (() => {
+  type OpenExternalUrl__interface = {
+    tag: SceneRequest_Tags.OpenExternalUrl;
+    inner: Readonly<{ url: string }>;
+  };
+  class OpenExternalUrl_
+    extends UniffiEnum
+    implements OpenExternalUrl__interface
+  {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'SceneRequest';
+    readonly tag = SceneRequest_Tags.OpenExternalUrl;
+    readonly inner: Readonly<{ url: string }>;
+    constructor(inner: { url: string }) {
+      super('SceneRequest', 'OpenExternalUrl');
+
+      this.inner = Object.freeze(inner);
+    }
+    static new(inner: { url: string }): OpenExternalUrl_ {
+      return new OpenExternalUrl_(inner);
+    }
+
+    static instanceOf(obj: any): obj is OpenExternalUrl_ {
+      return obj.tag === SceneRequest_Tags.OpenExternalUrl;
+    }
+  }
+
+  type Teleport__interface = {
+    tag: SceneRequest_Tags.Teleport;
+    inner: Readonly<{ parcel?: Parcel; realm?: string }>;
+  };
+  /**
+   * A parcel in the current realm (`realm` unset) or in the named one, or only a realm (spawn).
+   */
+  class Teleport_ extends UniffiEnum implements Teleport__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'SceneRequest';
+    readonly tag = SceneRequest_Tags.Teleport;
+    readonly inner: Readonly<{ parcel?: Parcel; realm?: string }>;
+    constructor(inner: { parcel?: Parcel; realm?: string }) {
+      super('SceneRequest', 'Teleport');
+
+      this.inner = Object.freeze(inner);
+    }
+    static new(inner: { parcel?: Parcel; realm?: string }): Teleport_ {
+      return new Teleport_(inner);
+    }
+
+    static instanceOf(obj: any): obj is Teleport_ {
+      return obj.tag === SceneRequest_Tags.Teleport;
+    }
+  }
+
+  type ChangeRealm__interface = {
+    tag: SceneRequest_Tags.ChangeRealm;
+    inner: Readonly<{ realm: string; message?: string }>;
+  };
+  class ChangeRealm_ extends UniffiEnum implements ChangeRealm__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'SceneRequest';
+    readonly tag = SceneRequest_Tags.ChangeRealm;
+    readonly inner: Readonly<{ realm: string; message?: string }>;
+    constructor(inner: { realm: string; message?: string }) {
+      super('SceneRequest', 'ChangeRealm');
+
+      this.inner = Object.freeze(inner);
+    }
+    static new(inner: { realm: string; message?: string }): ChangeRealm_ {
+      return new ChangeRealm_(inner);
+    }
+
+    static instanceOf(obj: any): obj is ChangeRealm_ {
+      return obj.tag === SceneRequest_Tags.ChangeRealm;
+    }
+  }
+
+  type OpenNft__interface = {
+    tag: SceneRequest_Tags.OpenNft;
+    inner: Readonly<{ urn: string }>;
+  };
+  class OpenNft_ extends UniffiEnum implements OpenNft__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'SceneRequest';
+    readonly tag = SceneRequest_Tags.OpenNft;
+    readonly inner: Readonly<{ urn: string }>;
+    constructor(inner: { urn: string }) {
+      super('SceneRequest', 'OpenNft');
+
+      this.inner = Object.freeze(inner);
+    }
+    static new(inner: { urn: string }): OpenNft_ {
+      return new OpenNft_(inner);
+    }
+
+    static instanceOf(obj: any): obj is OpenNft_ {
+      return obj.tag === SceneRequest_Tags.OpenNft;
+    }
+  }
+
+  function instanceOf(obj: any): obj is SceneRequest {
+    return obj[uniffiTypeNameSymbol] === 'SceneRequest';
+  }
+
+  return Object.freeze({
+    instanceOf,
+    OpenExternalUrl: OpenExternalUrl_,
+    Teleport: Teleport_,
+    ChangeRealm: ChangeRealm_,
+    OpenNft: OpenNft_,
+  });
+})();
+export type SceneRequest = InstanceType<
+  (typeof SceneRequest)[
+    | 'OpenExternalUrl'
+    | 'Teleport'
+    | 'ChangeRealm'
+    | 'OpenNft']
+>;
+
+// FfiConverter for enum SceneRequest
+const FfiConverterTypeSceneRequest = (() => {
+  type TypeName = SceneRequest;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      switch (c.readI32()) {
+        case 1:
+          return new SceneRequest.OpenExternalUrl({
+            url: FfiConverterString.readFromCursor(c),
+          });
+        case 2:
+          return new SceneRequest.Teleport({
+            parcel: FfiConverterOptionalTypeParcel.readFromCursor(c),
+            realm: FfiConverterOptionalString.readFromCursor(c),
+          });
+        case 3:
+          return new SceneRequest.ChangeRealm({
+            realm: FfiConverterString.readFromCursor(c),
+            message: FfiConverterOptionalString.readFromCursor(c),
+          });
+        case 4:
+          return new SceneRequest.OpenNft({
+            urn: FfiConverterString.readFromCursor(c),
+          });
+        default:
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      switch (value.tag) {
+        case SceneRequest_Tags.OpenExternalUrl: {
+          c.writeI32(1);
+          const inner = value.inner;
+          FfiConverterString.writeIntoCursor(inner.url, c);
+          return;
+        }
+        case SceneRequest_Tags.Teleport: {
+          c.writeI32(2);
+          const inner = value.inner;
+          FfiConverterOptionalTypeParcel.writeIntoCursor(inner.parcel, c);
+          FfiConverterOptionalString.writeIntoCursor(inner.realm, c);
+          return;
+        }
+        case SceneRequest_Tags.ChangeRealm: {
+          c.writeI32(3);
+          const inner = value.inner;
+          FfiConverterString.writeIntoCursor(inner.realm, c);
+          FfiConverterOptionalString.writeIntoCursor(inner.message, c);
+          return;
+        }
+        case SceneRequest_Tags.OpenNft: {
+          c.writeI32(4);
+          const inner = value.inner;
+          FfiConverterString.writeIntoCursor(inner.urn, c);
+          return;
+        }
+        default:
+          // Throwing from here means that SceneRequest_Tags hasn't matched an ordinal.
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+    allocationSize(value: TypeName): number {
+      switch (value.tag) {
+        case SceneRequest_Tags.OpenExternalUrl: {
+          const inner = value.inner;
+          let size = 4;
+          size += FfiConverterString.allocationSize(inner.url);
+          return size;
+        }
+        case SceneRequest_Tags.Teleport: {
+          const inner = value.inner;
+          let size = 4;
+          size += FfiConverterOptionalTypeParcel.allocationSize(inner.parcel);
+          size += FfiConverterOptionalString.allocationSize(inner.realm);
+          return size;
+        }
+        case SceneRequest_Tags.ChangeRealm: {
+          const inner = value.inner;
+          let size = 4;
+          size += FfiConverterString.allocationSize(inner.realm);
+          size += FfiConverterOptionalString.allocationSize(inner.message);
+          return size;
+        }
+        case SceneRequest_Tags.OpenNft: {
+          const inner = value.inner;
+          let size = 4;
+          size += FfiConverterString.allocationSize(inner.urn);
+          return size;
+        }
+        default:
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
     }
   }
   return new FFIConverter();
@@ -9607,6 +9896,10 @@ export interface AppListener {
   loadingDetail(detail: LoadingDetail): void;
   avatarChanged(avatar: AvatarState): void;
   /**
+   * A scene asked for the user's say (open a link, teleport, change realm, show an NFT).
+   */
+  sceneRequest(id: number, request: SceneRequest): void;
+  /**
    * A panic or error to send to the crash reporter, already past the keep/drop policy.
    */
   report(payload: ReportPayload): void;
@@ -9803,6 +10096,26 @@ export class AppListenerImpl
           uniffiTypeAppListenerImplObjectFactory.clonePointer(this),
           FfiConverterTypeAvatarState.lower(
             avatar,
+            nativeModule().rustbuffer_alloc,
+          ),
+          callStatus,
+        );
+      },
+      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+    );
+  }
+
+  /**
+   * A scene asked for the user's say (open a link, teleport, change realm, show an NFT).
+   */
+  sceneRequest(id: number, request: SceneRequest): void {
+    uniffiCaller.rustCall(
+      /*caller:*/ callStatus => {
+        nativeModule().ubrn_uniffi_dcl_core_fn_method_applistener_scene_request(
+          uniffiTypeAppListenerImplObjectFactory.clonePointer(this),
+          FfiConverterUInt32.lower(id, nativeModule().rustbuffer_alloc),
+          FfiConverterTypeSceneRequest.lower(
+            request,
             nativeModule().rustbuffer_alloc,
           ),
           callStatus,
@@ -10162,6 +10475,28 @@ const uniffiCallbackInterfaceAppListener: {
         const jsCallback = FfiConverterTypeAppListener.lift(uniffiHandle);
         return jsCallback.avatarChanged(
           FfiConverterTypeAvatarState.lift(avatar),
+        );
+      };
+      const uniffiResult = UniffiResult.ready<void>();
+      const uniffiHandleSuccess = (obj: any) => {};
+      const uniffiHandleError = (code: number, errBuf: UniffiByteArray) => {
+        UniffiResult.writeError(uniffiResult, code, errBuf);
+      };
+      uniffiTraitInterfaceCall(
+        /*makeCall:*/ uniffiMakeCall,
+        /*handleSuccess:*/ uniffiHandleSuccess,
+        /*handleError:*/ uniffiHandleError,
+        /*lowerString:*/ FfiConverterString.lower.bind(FfiConverterString),
+        /*alloc:*/ nativeModule().rustbuffer_alloc,
+      );
+      return uniffiResult;
+    },
+    scene_request: (uniffiHandle: bigint, id: number, request: Uint8Array) => {
+      const uniffiMakeCall = (): void => {
+        const jsCallback = FfiConverterTypeAppListener.lift(uniffiHandle);
+        return jsCallback.sceneRequest(
+          FfiConverterUInt32.lift(id),
+          FfiConverterTypeSceneRequest.lift(request),
         );
       };
       const uniffiResult = UniffiResult.ready<void>();
@@ -10986,8 +11321,16 @@ function uniffiEnsureInitialized() {
     );
   }
   if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_method_applistener_scene_request() !==
+    4466
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_method_applistener_scene_request',
+    );
+  }
+  if (
     nativeModule().ubrn_uniffi_dcl_core_checksum_method_applistener_report() !==
-    54322
+    37505
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_dcl_core_checksum_method_applistener_report',
@@ -10995,7 +11338,7 @@ function uniffiEnsureInitialized() {
   }
   if (
     nativeModule().ubrn_uniffi_dcl_core_checksum_method_applistener_report_tag() !==
-    41347
+    2910
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_dcl_core_checksum_method_applistener_report_tag',
@@ -11065,6 +11408,7 @@ export default Object.freeze({
     FfiConverterTypeResolveFailure,
     FfiConverterTypeResolvedDestination,
     FfiConverterTypeRouted,
+    FfiConverterTypeSceneRequest,
     FfiConverterTypeSettingEntry,
     FfiConverterTypeSettingKey,
     FfiConverterTypeSettingValue,
