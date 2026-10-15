@@ -59,5 +59,8 @@ func _async_run() -> void:
 			ok = false
 	for node in nodes:
 		node.free()
-	print("[test_frame_work_budget] ", "PASS" if ok else "FAIL", " (frames=%d)" % frames)
+	if ok:
+		print("[test_frame_work_budget] PASS (frames=%d)" % frames)
+	else:
+		print("[test_frame_work_budget] FAIL (frames=%d)" % frames)
 	quit(0 if ok else 1)
