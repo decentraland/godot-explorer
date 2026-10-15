@@ -1101,6 +1101,15 @@ theme = ExtResource("12_sa1v7")
 theme_override_font_sizes/font_size = 24
 text = "R"
 
+[node name="Button_StreakJumpIn" type="Button" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/StreakDayDebug/HBoxContainer_StreakDayButtons" unique_id=848562722]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(64, 0)
+layout_mode = 2
+tooltip_text = "SETTINGS_STREAK_SIMULATE_JUMP_IN"
+theme = ExtResource("12_sa1v7")
+theme_override_font_sizes/font_size = 24
+text = "J"
+
 [node name="HBoxContainer5" type="VBoxContainer" parent="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced" unique_id=1392654186]
 layout_mode = 2
 mouse_filter = 2
@@ -1715,6 +1724,7 @@ preview_margin_right = 20
 [connection signal="pressed" from="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/StreakDayDebug/HBoxContainer_StreakDayButtons/Button_StreakAdvanceDay" to="." method="_on_button_streak_advance_day_pressed"]
 [connection signal="pressed" from="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/StreakDayDebug/HBoxContainer_StreakDayButtons/Button_StreakRewindDay" to="." method="_on_button_streak_rewind_day_pressed"]
 [connection signal="pressed" from="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/StreakDayDebug/HBoxContainer_StreakDayButtons/Button_StreakResetDay" to="." method="_on_button_streak_reset_pressed"]
+[connection signal="pressed" from="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/StreakDayDebug/HBoxContainer_StreakDayButtons/Button_StreakJumpIn" to="." method="_on_button_streak_jump_in_pressed"]
 [connection signal="toggled" from="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/SceneLogsEnabled/CheckButton_SceneLogsEnabled" to="." method="_on_check_button_scene_logs_enabled_toggled"]
 [connection signal="toggled" from="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/RaycastDebugger/CheckButton_RaycastDebugger" to="." method="_on_check_button_raycast_debugger_toggled"]
 [connection signal="toggled" from="SafeMarginContainer/VBoxContainer2/HBoxContainer_Layout/Panel_Content/MarginContainer_Content/ContentScrollContainer/VBoxContainer_Sections/VBoxContainer_Advanced/HBoxContainer5/ShowInteractableArea/CheckButton_ShowInteractableArea" to="." method="_on_check_button_show_interactable_area_toggled"]

@@ -214,6 +214,14 @@ func debug_reset_streak() -> void:
 	Global.config.save_to_settings_file()
 
 
+## DEBUG ONLY — credits today's jump-in on demand, the exact same call a real "jump into an
+## experience" makes via _on_loading_finished(), without actually having to enter a scene.
+func debug_simulate_jump_in() -> void:
+	if Global.config.streak_state_for_current_wallet().d7_claimed:
+		return
+	credit_jump_in()
+
+
 ## One-shot like take_pending_modal(): returns the pending day to show a "come finish today's
 ## mission" reminder for (Figma "D2-Streak" — same title/copy as the post-credit modal, but the
 ## row renders that day as still-pending, not checked), or 0 if there's no pending day right now
