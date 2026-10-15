@@ -36,6 +36,10 @@ export function navReducer(state: NavState, action: NavAction): NavState {
 
 /** What the hardware back button does now, or null to let the OS leave the app. */
 export function backAction(state: NavState): NavAction | null {
+  // Back from the world asks to leave first (`confirmLeave`), so the stack does not pop it.
+  if (state.stack[state.stack.length - 1]?.name === 'world') {
+    return null;
+  }
   if (state.stack.length > 1) {
     return { type: 'pop' };
   }

@@ -58,6 +58,14 @@ describe('navReducer', () => {
     expect(backAction(s)).toBeNull();
   });
 
+  it('back from the world is left to the leave confirmation', () => {
+    const s = navReducer(initialNavState(), {
+      type: 'push',
+      route: { name: 'world', params: { place } },
+    });
+    expect(backAction(s)).toBeNull();
+  });
+
   it('only the world and what is above it is visible', () => {
     let s = navReducer(initialNavState(), {
       type: 'push',
