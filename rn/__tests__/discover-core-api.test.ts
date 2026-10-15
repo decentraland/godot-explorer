@@ -1,6 +1,6 @@
 import { setCoreForTests, type CoreApi } from '../src/core';
 import { createMockPlacesWithoutNotifications } from '../src/core/mock/places';
-import { Vote, type Friend } from '../src/core/native';
+import { Vote } from '../src/core/native';
 import { forgetAll, remember } from '../src/discover/catalog';
 import { createCoreDiscoverApi } from '../src/discover/coreApi';
 import { toPlace } from '../src/discover/corePlace';
@@ -10,16 +10,6 @@ const URLS = {
   mainRealm: 'https://realm.test/main',
   worldsContentServer: 'https://worlds.test/world/',
 };
-
-const friend = (over: Partial<Friend>): Friend => ({
-  address: '0xabcdef1234',
-  name: 'Ana',
-  hasClaimedName: true,
-  profilePictureUrl: '',
-  friendshipId: 'f1',
-  online: false,
-  ...over,
-});
 
 let calls: Array<[string, unknown[]]> = [];
 const spy = <T extends (...args: never[]) => unknown>(name: string, fn: T) =>
@@ -33,10 +23,6 @@ function install(over: Partial<CoreApi> = {}) {
   const core = {
     ...places,
     urls: () => URLS,
-    friends: async () => [
-      friend({}),
-      friend({ address: '0x9999zzzz', name: '', hasClaimedName: false }),
-    ],
     setFavorite: spy('setFavorite', places.setFavorite),
     vote: spy('vote', places.vote),
     setEventReminder: spy('setEventReminder', places.setEventReminder),
@@ -110,13 +96,11 @@ describe('discover core api', () => {
     expect(page.items.length).toBeGreaterThan(0);
   });
 
-  it('maps friends, tagging unclaimed names', async () => {
-    const friends = await install().friends();
-    expect(friends).toMatchObject([
-      { address: '0xabcdef1234', name: 'Ana', tag: undefined },
-      { name: '0x9999', tag: '#zzzz' },
-    ]);
-    expect((await install().friend('0x9999zzzz'))?.name).toBe('0x9999');
+  it('serves the mock friends until they move to TypeScript', async () => {
+    const api = install();
+    const friends = await api.friends();
+    expect(friends.length).toBeGreaterThan(0);
+    expect((await api.friend(friends[0].address))?.name).toBe(friends[0].name);
   });
 
   it('sets and clears event reminders', async () => {

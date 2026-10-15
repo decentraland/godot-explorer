@@ -98,9 +98,6 @@ export const coreHudApi: HudApi = {
   enterWorld: destination => core().enterWorld(destination),
   resolveProfile: address => lookup(address, false),
   ownProfile: () => lookup(undefined, true),
-  nearby: () =>
-    core()
-      .nearby()
-      .then(users => users.map(user => toChatProfile(user)))
-      .catch(() => []),
+  // The core has no nearby list; suggestions come back with friends in TypeScript (phase 6.9).
+  nearby: async () => [],
 };

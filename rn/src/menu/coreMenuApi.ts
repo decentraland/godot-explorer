@@ -1,6 +1,6 @@
 import { core } from '../core';
 import { fetchDiscover, mainRealm } from '../discover/api';
-import { createCoreSocialApi } from './coreSocialApi';
+import { createCoreNotificationsApi } from './coreNotificationsApi';
 import { linkQueryFor } from './api';
 import type { DiscoverFeed, MenuApi, SceneInfo } from './types';
 
@@ -11,8 +11,9 @@ const FALLBACK_SCENE: SceneInfo = {
 };
 
 /**
- * Scene and screenshots come from the core, the discover feed from the public places/events
- * APIs; bug reports stay with `base` until those are wired.
+ * Scene, screenshots and notifications come from the core, the discover feed from the public
+ * places/events APIs; friends and bug reports stay with `base` (mock data until friends are
+ * reimplemented in TypeScript, 6.9).
  */
 export function createCoreMenuApi(
   base: MenuApi,
@@ -46,6 +47,6 @@ export function createCoreMenuApi(
         featuredEvents: events.filter(e => e.featured).map(e => e.id),
       };
     },
-    ...createCoreSocialApi(),
+    ...createCoreNotificationsApi(),
   };
 }

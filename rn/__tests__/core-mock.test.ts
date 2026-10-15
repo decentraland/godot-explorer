@@ -68,7 +68,6 @@ describe('mock core', () => {
       sceneCrashed: () => {},
       authError: () => {},
       openUrl: () => {},
-      friendsChanged: () => {},
       settingsChanged: () => {},
       hud: () => {},
       chat: () => {},

@@ -1,13 +1,12 @@
 import { core } from '../core';
-import { Vote, type Friend as CoreFriend } from '../core/native';
-import { nameColor } from '../hud/chatModel';
+import { Vote } from '../core/native';
 import type { Place } from './api';
 import { recallPlace, remember } from './catalog';
+import { FRIENDS } from './mockData';
 import { toPlace } from './corePlace';
-import type { DiscoverApi, Friend, Page, PlaceRail, VoteState } from './types';
+import type { DiscoverApi, Page, PlaceRail, VoteState } from './types';
 
 const PAGE = 12;
-const FRIENDS = 100;
 
 const VOTES: Record<VoteState & string, Vote> = {
   like: Vote.Up,
@@ -16,17 +15,6 @@ const VOTES: Record<VoteState & string, Vote> = {
 
 const voteState = (vote: Vote): VoteState =>
   vote === Vote.Up ? 'like' : vote === Vote.Down ? 'dislike' : null;
-
-const toFriend = (raw: CoreFriend): Friend => {
-  const tag = raw.hasClaimedName ? undefined : `#${raw.address.slice(-4)}`;
-  return {
-    address: raw.address,
-    name: raw.name || raw.address.slice(0, 6),
-    tag,
-    color: nameColor(`${raw.name}${tag ?? ''}`),
-    place: null,
-  };
-};
 
 const pageOf = (items: Place[]): Page<Place> => ({
   items,
@@ -42,16 +30,16 @@ export function createCoreDiscoverApi(base: DiscoverApi): DiscoverApi {
     remember({ places: found });
     return found;
   };
-  const friends = async () => (await core().friends(FRIENDS, 0)).map(toFriend);
   const isWorld = (id: string) => recallPlace(id)?.world === true;
 
   return {
     ...base,
-    friends,
-    friend: async address =>
-      (await base.friend(address)) ??
-      (await friends()).find(f => f.address === address) ??
-      null,
+    // Mock friends until they are reimplemented in TypeScript (phase 6.9).
+    friends: async () => {
+      remember({ friends: FRIENDS });
+      return FRIENDS;
+    },
+    friend: async address => FRIENDS.find(f => f.address === address) ?? null,
     places: async (rail: PlaceRail, offset) =>
       rail === 'favorites'
         ? pageOf(await favorites(offset))

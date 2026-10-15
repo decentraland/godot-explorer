@@ -41,7 +41,6 @@ export async function runCoreSelfTest(): Promise<void> {
         sceneCrashed: () => {},
         authError: () => {},
         openUrl: () => {},
-        friendsChanged: () => {},
         settingsChanged: () => {},
         hud: () => {},
         chat: () => {},

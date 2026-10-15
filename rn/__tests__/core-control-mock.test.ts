@@ -10,7 +10,6 @@ const silent: AppListener = {
   sceneCrashed: nothing,
   authError: nothing,
   openUrl: nothing,
-  friendsChanged: nothing,
   settingsChanged: nothing,
   hud: nothing,
   chat: nothing,

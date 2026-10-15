@@ -29,7 +29,6 @@ function ensureRegistered() {
     sceneCrashed: () => handlers.forEach(h => h.sceneCrashed?.()),
     authError: (code: string) => handlers.forEach(h => h.authError?.(code)),
     openUrl: (request: OpenUrl) => handlers.forEach(h => h.openUrl?.(request)),
-    friendsChanged: () => handlers.forEach(h => h.friendsChanged?.()),
     settingsChanged: (entry: SettingEntry) =>
       handlers.forEach(h => h.settingsChanged?.(entry)),
     hud: (snapshot: HudSnapshot) => handlers.forEach(h => h.hud?.(snapshot)),

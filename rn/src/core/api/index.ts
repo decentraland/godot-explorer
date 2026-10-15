@@ -1,7 +1,6 @@
 import type { ControlApi } from './control';
 import type { SessionApi } from './session';
 import type { SettingsApi } from './settings';
-import type { SocialApi } from './social';
 import type { ProfileApi } from './profile';
 import type { PlacesApi } from './places';
 import type { GatesApi } from './gates';
@@ -11,7 +10,6 @@ import type { SceneApi } from './scene';
 export type CoreApi = SessionApi &
   ControlApi &
   SettingsApi &
-  SocialApi &
   ProfileApi &
   PlacesApi &
   GatesApi &

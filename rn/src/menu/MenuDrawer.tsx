@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useReducer, useState } from 'react';
 import { Linking, StyleSheet, View } from 'react-native';
-import { onCoreEvents } from '../core/events';
 import type { DiscoverEvent, Place } from '../discover/api';
 import { recordPlayed, usePlayed } from '../discover/history';
 import { useToast } from '../ds';
@@ -8,7 +7,7 @@ import { t } from '../i18n';
 import { setOrientation } from '../platform/orientation';
 import { enterPlace } from '../world/enterPlace';
 import { getMenuApi } from './api';
-import { GuestError } from './coreSocialApi';
+import { GuestError } from './coreNotificationsApi';
 import { BugReportModal } from './BugReportModal';
 import { DiscoverIngame } from './DiscoverIngame';
 import { DiscoverPanel } from './DiscoverPanel';
@@ -85,10 +84,6 @@ function OpenDrawer({ navigate }: { navigate: Navigate }) {
     [api],
   );
   useEffect(() => loadSocial(), [loadSocial]);
-  useEffect(
-    () => onCoreEvents({ friendsChanged: () => loadSocial(true) }),
-    [loadSocial],
-  );
 
   const items =
     notes.state.status === 'ready' && notes.state.data.status === 'ok'

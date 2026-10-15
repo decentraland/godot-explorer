@@ -8,7 +8,6 @@ import { createMockProfile } from './profile';
 import { createMockScene } from './scene';
 import { createMockSession } from './session';
 import { createMockSettings } from './settings';
-import { createMockSocial } from './social';
 
 /**
  * Implements the same interface as the native binding, for builds without the engine library. All
@@ -22,7 +21,6 @@ export function createMockCore(options: { signedIn?: boolean } = {}): CoreApi {
     ...createMockSession(bus),
     ...createMockControl(bus),
     ...createMockSettings(),
-    ...createMockSocial(() => bus.emit(l => l.friendsChanged())),
     ...createMockProfile(),
     ...createMockPlaces(),
     ...createMockGates(),

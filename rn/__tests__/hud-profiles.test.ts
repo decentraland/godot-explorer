@@ -6,17 +6,14 @@ import type { AppListener } from '../src/core/native';
 import { coreHudApi, fallbackProfile } from '../src/hud/hudApi';
 
 const profile = jest.fn();
-const nearby = jest.fn();
 let listener!: AppListener;
 
 beforeEach(() => {
   profile.mockReset();
-  nearby.mockReset();
   resetCoreEventsForTests();
   setCoreForTests({
     ...createMockCore(),
     profile,
-    nearby,
     addListener: l => {
       listener = l;
       return 0n;
@@ -127,12 +124,10 @@ describe('coreHudApi profiles', () => {
 
   it('falls back to the short address when the lookup fails', async () => {
     profile.mockRejectedValue(new Error('offline'));
-    nearby.mockRejectedValue(new Error('offline'));
     expect(await coreHudApi.resolveProfile('0xabcdef1234')).toEqual(
       fallbackProfile('0xabcdef1234'),
     );
     expect((await coreHudApi.ownProfile()).own).toBe(true);
-    expect(await coreHudApi.nearby()).toEqual([]);
   });
 
   it('reads the own profile without an address', async () => {
@@ -144,13 +139,6 @@ describe('coreHudApi profiles', () => {
       own: true,
     });
     expect(profile).toHaveBeenCalledWith(undefined);
-  });
-
-  it('maps the nearby users to chat profiles', async () => {
-    nearby.mockResolvedValue([person({ address: '0xaaaa0001', name: 'Cy' })]);
-    expect(await coreHudApi.nearby()).toMatchObject([
-      { address: '0xaaaa0001', name: 'Cy', tag: '#0001', claimed: false },
-    ]);
   });
 
   it('sends commands to the core and enters worlds through it', () => {
