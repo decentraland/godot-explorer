@@ -5,6 +5,7 @@ pub mod bootstrap;
 mod core_link;
 mod dcl_engine;
 mod itests;
+pub mod local_task;
 pub mod root;
 mod scene_link;
 pub mod scene_requests;

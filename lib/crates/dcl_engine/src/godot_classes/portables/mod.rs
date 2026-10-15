@@ -2,6 +2,12 @@ use std::collections::HashMap;
 
 use godot::prelude::*;
 
+use crate::{
+    engine::local_task::spawn_local,
+    fetcher::{realm_flow::world_scene_urns, scene_fetcher::SceneFetcher},
+    godot_classes::dcl_global::DclGlobal,
+};
+
 use crate::dcl::scene_apis::{PortableLocation, RpcResultSender, SpawnResponse};
 use crate::dcl::SceneId;
 
@@ -35,7 +41,136 @@ pub struct PortableExperience {
 pub struct DclPortableExperienceController {
     portable_experiences: HashMap<String, PortableExperience>,
 
+    /// The urns handed to the scene fetcher as global scenes.
+    desired: Vec<String>,
+    entity_id_to_pid: HashMap<String, String>,
+    pid_to_world: HashMap<String, String>,
+    world_to_urn: HashMap<String, String>,
+
     _base: Base<Node>,
+}
+
+#[godot_api]
+impl INode for DclPortableExperienceController {
+    fn ready(&mut self) {
+        let mut runner = crate::fetcher::globals::scene_runner();
+        let this = self.to_gd();
+        runner.connect(
+            "scene_killed",
+            &Callable::from_fn("portables_scene_killed", {
+                let mut this = this.clone();
+                move |args| {
+                    this.bind_mut().on_scene_killed(args[0].to::<i32>());
+                    Variant::nil()
+                }
+            }),
+        );
+        runner.connect(
+            "scene_spawned",
+            &Callable::from_fn("portables_scene_spawned", {
+                let mut this = this.clone();
+                move |args| {
+                    this.bind_mut().on_scene_spawned(
+                        args[0].to::<i32>(),
+                        &args[1].to::<GString>().to_string(),
+                    );
+                    Variant::nil()
+                }
+            }),
+        );
+    }
+
+    fn process(&mut self, _delta: f64) {
+        for pid in self.consume_requested_spawn().iter_shared() {
+            spawn_local(spawn_portable(self.to_gd(), pid.to_string()));
+        }
+        for pid in self.consume_requested_kill().iter_shared() {
+            self.kill_portable_experience(&pid.to_string());
+        }
+    }
+}
+
+impl DclPortableExperienceController {
+    fn push_desired(&self) {
+        let global = DclGlobal::singleton();
+        let Ok(mut fetcher) = global.get("scene_fetcher").try_to::<Gd<SceneFetcher>>() else {
+            return;
+        };
+        let urns: Vec<GString> = self.desired.iter().map(|urn| urn.as_str().into()).collect();
+        fetcher
+            .bind_mut()
+            .set_portable_experiences_urns(PackedStringArray::from(urns.as_slice()));
+    }
+
+    fn kill_portable_experience(&mut self, pid: &str) {
+        if let Some(at) = self.desired.iter().position(|urn| urn == pid) {
+            self.desired.remove(at);
+        }
+        self.push_desired();
+    }
+
+    fn on_scene_killed(&mut self, scene_id: i32) {
+        let pid = self.announce_killed_by_scene_id(scene_id).to_string();
+        if pid.is_empty() {
+            return;
+        }
+        self.kill_portable_experience(&pid);
+        if let Some(world) = self.pid_to_world.get(&pid).cloned() {
+            self.kill_portable_experience(&world);
+        }
+    }
+
+    fn on_scene_spawned(&mut self, scene_id: i32, entity_id: &str) {
+        let Some(mut pid) = self.entity_id_to_pid.get(entity_id).cloned() else {
+            return;
+        };
+        if !self.desired.contains(&pid) {
+            return;
+        }
+        if let Some(world) = self.pid_to_world.get(&pid) {
+            pid = world.clone();
+        }
+        self.announce_spawned(pid.as_str().into(), true, "".into(), scene_id);
+    }
+
+    /// Asks the scene fetcher to load `pid` as a global scene. A world's name resolves to the
+    /// urn of the scene it holds.
+    fn begin_spawn(&mut self, mut pid: String, world_urns: Option<Vec<String>>) {
+        if dcl_core::realm::is_dcl_ens(&pid) {
+            let world = pid.clone();
+            pid = match self.world_to_urn.get(&world) {
+                Some(urn) => urn.clone(),
+                None => match world_urns.as_deref() {
+                    Some([urn]) => {
+                        self.world_to_urn.insert(world.clone(), urn.clone());
+                        urn.clone()
+                    }
+                    _ => {
+                        tracing::error!("the portable experience world should have only one urn");
+                        return;
+                    }
+                },
+            };
+            self.pid_to_world.insert(pid.clone(), world);
+        }
+        let Some(urn) = dcl_core::realm::parse_urn(&pid) else {
+            tracing::error!("portable experience {pid} is not an urn");
+            return;
+        };
+        self.entity_id_to_pid.insert(urn.entity_id, pid.clone());
+        self.desired.push(pid);
+        self.push_desired();
+    }
+}
+
+async fn spawn_portable(mut this: Gd<DclPortableExperienceController>, pid: String) {
+    let cached = dcl_core::realm::is_dcl_ens(&pid) && this.bind().world_to_urn.contains_key(&pid);
+    let world_urns = if dcl_core::realm::is_dcl_ens(&pid) && !cached {
+        world_scene_urns(&pid).await
+    } else {
+        None
+    };
+    this.bind_mut().begin_spawn(pid, world_urns);
 }
 
 #[godot_api]

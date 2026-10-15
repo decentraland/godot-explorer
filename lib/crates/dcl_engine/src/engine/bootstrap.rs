@@ -6,6 +6,7 @@ use godot::classes::{GDScript, ResourceLoader};
 use godot::prelude::*;
 
 use crate::analytics::metrics::Metrics;
+use crate::fetcher::scene_fetcher::SceneFetcher;
 use crate::godot_classes::dcl_cli::DclCli;
 use crate::godot_classes::dcl_session_store::DclSessionStore;
 
@@ -43,7 +44,7 @@ const fn spec(
 }
 
 /// Services every boot needs, in creation order.
-const CORE_SERVICES: [ServiceSpec; 8] = [
+const CORE_SERVICES: [ServiceSpec; 6] = [
     spec(
         "nft_frame_loader",
         "src/decentraland_components/nft_frame_style_loader.gd",
@@ -68,7 +69,6 @@ const CORE_SERVICES: [ServiceSpec; 8] = [
         None,
         Attach::GlobalChild,
     ),
-    spec("realm", "src/logic/realm.gd", Some("realm"), Attach::None),
     spec(
         "player_identity",
         "src/logic/player/player_identity.gd",
@@ -81,13 +81,13 @@ const CORE_SERVICES: [ServiceSpec; 8] = [
         Some("testing_tool"),
         Attach::None,
     ),
-    spec(
-        "portable_experience_controller",
-        "src/logic/portable_experience_controller.gd",
-        Some("portable_experience_controller"),
-        Attach::None,
-    ),
 ];
+
+fn create_scene_fetcher(global: &mut Gd<Node>) {
+    let mut fetcher = SceneFetcher::new_alloc();
+    fetcher.set_name("scene_fetcher");
+    global.set("scene_fetcher", &fetcher.to_variant());
+}
 
 /// A new instance of the GDScript class at `res://src/<script>`.
 fn instantiate_script(script: &str) -> Result<Variant, String> {
@@ -130,13 +130,7 @@ fn create(global: &mut Gd<Node>, specs: &[ServiceSpec]) -> bool {
 }
 
 /// Services of a full boot, created after the config exists. Each is held by its `Global` property.
-const APP_SERVICES: [ServiceSpec; 3] = [
-    spec(
-        "scene_fetcher",
-        "src/logic/scene_fetcher.gd",
-        Some("scene_fetcher"),
-        Attach::None,
-    ),
+const APP_SERVICES: [ServiceSpec; 2] = [
     spec(
         "skybox_time",
         "assets/environment/time.gd",
@@ -261,7 +255,7 @@ impl DclBootstrap {
         if fi_benchmark {
             godot_print!("Running Floating Islands Benchmark...");
             // Only the components the benchmark needs.
-            create(&mut global, &APP_SERVICES[..1]);
+            create_scene_fetcher(&mut global);
             for property in ["scene_fetcher", "scene_runner", "content_provider"] {
                 add_to_root_deferred(&global, property);
             }
@@ -295,6 +289,7 @@ impl DclBootstrap {
             global.set("metrics", &metrics.to_variant());
         }
 
+        create_scene_fetcher(&mut global);
         let mut ok = create(&mut global, &APP_SERVICES);
 
         for property in ROOT_NODES {

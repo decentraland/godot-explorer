@@ -10,6 +10,7 @@ use crate::{
         rfc4::{self},
         rfc5::{ws_packet, WsIdentification, WsPacket, WsPeerUpdate, WsSignedChallenge},
     },
+    utils::ws_client::{WsClient, WsState},
 };
 use ethers_core::types::{Signature, H160};
 use prost::Message;
@@ -18,7 +19,6 @@ use tracing::error;
 use super::{
     adapter_trait::Adapter,
     message_processor::{IncomingMessage, MessageType, Rfc4Message},
-    ws_client::{WsClient, WsState},
 };
 
 // Constants

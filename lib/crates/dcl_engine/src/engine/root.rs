@@ -71,7 +71,7 @@ pub fn boot_mode(flags: &BootFlags) -> BootMode {
 }
 
 /// Calls a `static func` of a GDScript class.
-pub(super) fn call_static(script: &str, method: &str, args: &[Variant]) -> Variant {
+pub(crate) fn call_static(script: &str, method: &str, args: &[Variant]) -> Variant {
     let loaded = ResourceLoader::singleton()
         .load_ex(script)
         .type_hint("Script")

@@ -5,5 +5,4 @@ pub mod archipelago;
 pub mod livekit;
 pub mod message_processor;
 pub mod movement_compressed;
-pub mod ws_client;
 pub mod ws_room;

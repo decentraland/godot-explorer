@@ -297,7 +297,7 @@ impl SceneManager {
 
     // Testing a comment for the API
     #[func]
-    fn start_scene(
+    pub fn start_scene(
         &mut self,
         local_main_js_file_path: GString,
         local_main_crdt_file_path: GString,
@@ -484,7 +484,7 @@ impl SceneManager {
     }
 
     #[func]
-    fn kill_scene(&mut self, scene_id: i32) -> bool {
+    pub fn kill_scene(&mut self, scene_id: i32) -> bool {
         let scene_id = SceneId(scene_id);
         let now_us = (std::time::Instant::now() - self.begin_time).as_micros() as i64;
         if let Some(scene) = self.scenes.get_mut(&scene_id) {
@@ -498,7 +498,7 @@ impl SceneManager {
     }
 
     #[func]
-    fn kill_all_scenes(&mut self) {
+    pub fn kill_all_scenes(&mut self) {
         let now_us = (std::time::Instant::now() - self.begin_time).as_micros() as i64;
         for (scene_id, scene) in self.scenes.iter_mut() {
             if let SceneState::Alive = scene.state {
@@ -1227,7 +1227,7 @@ impl SceneManager {
     }
 
     #[func]
-    fn get_scene_content_mapping(&self, scene_id: i32) -> Gd<DclContentMappingAndUrl> {
+    pub fn get_scene_content_mapping(&self, scene_id: i32) -> Gd<DclContentMappingAndUrl> {
         if let Some(scene) = self.scenes.get(&SceneId(scene_id)) {
             DclContentMappingAndUrl::from_ref(scene.content_mapping.clone())
         } else {
@@ -1250,7 +1250,12 @@ impl SceneManager {
     /// Returns false when the scene isn't loaded, so callers can fall back to a
     /// full scene reload.
     #[func]
-    fn update_scene_content_entry(&mut self, scene_id: i32, src: GString, hash: GString) -> bool {
+    pub fn update_scene_content_entry(
+        &mut self,
+        scene_id: i32,
+        src: GString,
+        hash: GString,
+    ) -> bool {
         let Some(scene) = self.scenes.get_mut(&SceneId(scene_id)) else {
             return false;
         };
@@ -2424,7 +2429,7 @@ impl SceneManager {
     }
 
     #[func]
-    fn is_paused(&mut self) -> bool {
+    pub fn is_paused(&mut self) -> bool {
         self.pause
     }
 

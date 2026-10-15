@@ -176,7 +176,7 @@ func _on_command(cmd: String, args: Dictionary, request_id: String) -> void:
 		"reload_scene":
 			# Reload the current realm (same mechanism as /reload chat command)
 			if Global.realm:
-				Navigator.async_go(Destination.reload_current(), "on_reload")
+				DclNavigator.reload_current("on_reload")
 			else:
 				ok = false
 				data = {"error": "no active realm"}

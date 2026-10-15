@@ -795,11 +795,11 @@ func set_orientation_portrait():
 
 ## Entry points the emulator sink calls by name.
 func async_teleport_to(parcel_position: Vector2i, new_realm: String) -> void:
-	await WorldRequests.async_teleport_to(parcel_position, new_realm)
+	DclNavigator.teleport_to(parcel_position, new_realm)
 
 
 func async_join_world(world_realm: String) -> void:
-	await WorldRequests.async_join_world(world_realm)
+	DclNavigator.join_world(world_realm)
 
 
 func _process(_delta: float) -> void:
@@ -897,38 +897,7 @@ func _notification(what: int) -> void:
 
 
 func _on_realm_access_denied(new_realm_string: String, _world_name: String) -> void:
-	Navigator.recover_from_refusal(new_realm_string)
-
-
-## Checks a realm's private-world access BEFORE any navigation UI is shown, so a world the
-## user can't enter blocks with the modal instantly instead of first flashing a loading
-## transition (#1725). The answer is cached, so the safety-net gate in Realm.async_set_realm
-## reuses it without a second fetch. Non-worlds resolve synchronously with no network hit.
-## Returns false when access was denied (the modal is already up); true otherwise.
-func _async_precheck_realm_access(new_realm_string: String) -> bool:
-	var world_name := WorldPermissionsHelper.world_name_from_realm(
-		new_realm_string, Realm.resolve_realm_url(new_realm_string)
-	)
-	if world_name.is_empty():
-		return true
-	if await WorldPermissionsHelper.async_is_allowed(world_name):
-		return true
-	_on_realm_access_denied(new_realm_string, world_name)
-	return false
-
-
-## Fire-and-forget prefetch of a world's access, meant to run when its jump-in card opens.
-## By the time the user taps JUMP IN the answer is cached, so the click-time precheck resolves
-## synchronously: an allowed world goes straight to the loading screen with no visible gap, a
-## private one shows the modal instantly. No-op (and no network) for non-worlds. Silent — it
-## never shows a modal; the decision surfaces only on the actual navigation.
-func warm_realm_access(realm_string: String) -> void:
-	var world_name := WorldPermissionsHelper.world_name_from_realm(
-		realm_string, Realm.resolve_realm_url(realm_string)
-	)
-	if world_name.is_empty():
-		return
-	WorldPermissionsHelper.async_is_allowed(world_name)
+	DclNavigator.recover_from_refusal(new_realm_string)
 
 
 func set_camera_mode(camera_mode: Global.CameraMode) -> void:

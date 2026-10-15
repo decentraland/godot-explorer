@@ -49,7 +49,7 @@ use super::{
 
 #[derive(Debug, GodotClass)]
 #[class(base=Node)]
-struct SceneEntityCoordinator {
+pub struct SceneEntityCoordinator {
     parcel_radius_calculator: ParcelRadiusCalculator,
 
     // Position tracking
@@ -690,7 +690,7 @@ impl SceneEntityCoordinator {
 #[godot_api]
 impl SceneEntityCoordinator {
     #[func]
-    fn config(
+    pub fn config(
         &mut self,
         entities_active_url: GString,
         content_url: GString,

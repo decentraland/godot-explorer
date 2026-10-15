@@ -65,7 +65,7 @@ func _ready():
 
 	Global.realm.realm_changed.connect(self.on_realm_changed)
 
-	Global.realm._async_set_realm(scenes_to_process.realm_url)
+	DclNavigator.set_realm(scenes_to_process.realm_url)
 	prints(
 		"scene-renderer: realm",
 		scenes_to_process.realm_url,
@@ -178,7 +178,7 @@ func _process(_delta):
 
 func _on_timer_timeout():
 	# Continue only when every pointer around was fetched
-	if Global.scene_fetcher.scene_entity_coordinator.is_busy():
+	if Global.scene_fetcher.get_coordinator().is_busy():
 		return
 
 	if current_payload_index >= scenes_to_process.scenes.size():

@@ -15,7 +15,6 @@
 [ext_resource type="PackedScene" uid="uid://75a0brb4fw2g" path="res://src/helpers_components/scene_music_changer.tscn" id="26_5hhk2"]
 [ext_resource type="PackedScene" uid="uid://bycjwh7mskrsd" path="res://src/helpers_components/chat_handler.tscn" id="32_cq187"]
 [ext_resource type="Resource" uid="uid://ntu4pnce7xxr" path="res://src/ui/layouts/hud_margins.tres" id="34_hudmg"]
-[ext_resource type="Script" path="res://src/logic/loading_session.gd" id="40_loading"]
 
 [node name="explorer" type="Node" unique_id=1276646984]
 script = ExtResource("1_5n8xk")
@@ -160,9 +159,8 @@ script = ExtResource("20_064cw")
 
 [node name="ChatHandler" parent="." unique_id=440307884 instance=ExtResource("32_cq187")]
 
-[node name="LoadingSession" type="Node" parent="." unique_id=1234567890]
+[node name="LoadingSession" type="LoadingSession" parent="." unique_id=1234567890]
 unique_name_in_owner = true
-script = ExtResource("40_loading")
 
 [connection signal="emote_wheel_closed" from="UI/SafeAreaHud/InteractableHUD/EmoteWheel" to="." method="_on_emote_wheel_emote_wheel_closed"]
 [connection signal="emote_wheel_opened" from="UI/SafeAreaHud/InteractableHUD/EmoteWheel" to="." method="_on_emote_wheel_emote_wheel_opened"]

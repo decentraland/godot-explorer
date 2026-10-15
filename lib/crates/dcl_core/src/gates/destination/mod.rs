@@ -8,7 +8,10 @@ mod resolve;
 use crate::app::{Destination, Parcel};
 
 pub use input::{parse_input, Intent};
-pub use resolve::{resolve, DEADLINE, PREVIEW_DEADLINE};
+pub use resolve::{
+    access_of, genesis_failure, resolve, resolve_intent, world_name_from_realm, Resolution,
+    DEADLINE, PREVIEW_DEADLINE,
+};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "ffi", derive(uniffi::Enum))]

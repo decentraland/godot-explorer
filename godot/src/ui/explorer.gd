@@ -172,21 +172,17 @@ func _ready():
 	Global.scene_fetcher.update_position(start_parcel_position, true)
 
 	if cmd_realm != null:
-		if Realm.is_dcl_ens(cmd_realm) and Global.deep_link_obj.preview.is_empty():
-			WorldRequests.async_join_world(cmd_realm)
+		if DclRealmRules.is_dcl_ens(cmd_realm) and Global.deep_link_obj.preview.is_empty():
+			DclNavigator.join_world(cmd_realm)
 		else:
-			Navigator.async_go(
-				Destination.restore(cmd_realm, start_parcel_position), "on_explorer_ready"
-			)
+			DclNavigator.go_restore(cmd_realm, start_parcel_position, "on_explorer_ready")
 			if not Global.deep_link_obj.preview.is_empty():
 				Global.scene_fetcher.set_preview_url(cmd_realm)
 	else:
 		var boot_realm: String = Global.engine.setting("last_realm_joined")
 		if boot_realm.is_empty():
 			boot_realm = FALLBACK_BOOT_REALM
-		Navigator.async_go(
-			Destination.restore(boot_realm, start_parcel_position), "on_explorer_ready"
-		)
+		DclNavigator.go_restore(boot_realm, start_parcel_position, "on_explorer_ready")
 	Global.scene_runner.process_mode = Node.PROCESS_MODE_INHERIT
 
 	Global.player_identity.logout.connect(self._on_player_logout)

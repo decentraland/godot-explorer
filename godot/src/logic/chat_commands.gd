@@ -38,17 +38,17 @@ func submit_message(message: String) -> void:
 			var arg_string = " ".join(params.slice(1)).strip_edges()
 			if _is_coordinate_string(arg_string):
 				_async_goto_parcel(_parse_coordinates(arg_string))
-			elif Realm.is_dcl_ens(arg_string) or not arg_string.contains("."):
+			elif DclRealmRules.is_dcl_ens(arg_string) or not arg_string.contains("."):
 				var world_realm = (
 					arg_string if arg_string.ends_with(".dcl.eth") else arg_string + ".dcl.eth"
 				)
-				WorldRequests.async_join_world(world_realm)
+				DclNavigator.join_world(world_realm)
 			else:
 				_async_try_change_realm(arg_string, "on_goto_realm")
 		elif command_str == "/changerealm" and params.size() > 1:
 			var target_realm = params[1]
-			if Realm.is_dcl_ens(target_realm):
-				WorldRequests.async_join_world(target_realm)
+			if DclRealmRules.is_dcl_ens(target_realm):
+				DclNavigator.join_world(target_realm)
 			else:
 				_async_try_change_realm(target_realm, "on_changerealm")
 
@@ -57,7 +57,7 @@ func submit_message(message: String) -> void:
 		elif command_str == "/clear":
 			Global.realm.async_clear_realm()
 		elif command_str == "/reload":
-			Navigator.async_go(Destination.reload_current(), "on_reload")
+			DclNavigator.reload_current("on_reload")
 		elif command_str in DEBUG_ONLY_COMMANDS and DclGlobal.is_production():
 			_emit_system_message("🔴 Debug commands are disabled in production builds")
 		elif command_str == "/scenecrash":
@@ -89,7 +89,7 @@ func submit_message(message: String) -> void:
 ## now, so claiming success up front put "Teleported to (123,123)" in the chat directly
 ## above the Place not found modal that refused it.
 func _async_goto_parcel(parcel: Vector2i) -> void:
-	if await Navigator.async_go(Destination.from_input("", parcel), "on_teleport"):
+	if await PromiseUtils.async_awaiter(DclNavigator.go_input("", parcel, "on_teleport")):
 		Global.on_chat_message.emit(
 			"system",
 			tr("CHAT_SYSTEM_TELEPORTED").format({"location": str(parcel)}),
@@ -159,7 +159,7 @@ func _async_try_change_realm(realm_string: String, when: String) -> void:
 		tr("CHAT_SYSTEM_CHANGING_REALM").format({"realm": realm_string}),
 		Time.get_unix_time_from_system()
 	)
-	await Navigator.async_go(Destination.from_input(realm_string), when)
+	await PromiseUtils.async_awaiter(DclNavigator.go_input(realm_string, Vector2i.MAX, when))
 
 
 func _emit_pos_command_message() -> void:
@@ -213,11 +213,11 @@ func _emit_pos_command_message() -> void:
 	if realm_display.is_empty():
 		realm_display = Global.realm.realm_url
 	var realm_type: String
-	if Realm.is_genesis_city(Global.realm.realm_url):
+	if DclRealmRules.is_genesis_city(Global.realm.realm_url):
 		realm_type = "main"
-	elif Realm.is_dcl_ens(realm_display) or realm_display.ends_with(".dcl.eth"):
+	elif DclRealmRules.is_dcl_ens(realm_display) or realm_display.ends_with(".dcl.eth"):
 		realm_type = "world"
-	elif Realm.is_local_preview(Global.realm.realm_url):
+	elif DclRealmRules.is_local_preview(Global.realm.realm_url):
 		realm_type = "preview"
 	else:
 		realm_type = "realm"

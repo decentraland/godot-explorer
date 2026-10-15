@@ -44,7 +44,6 @@ func _ready():
 	anim_player.pause()
 
 
-
 func _process(_delta: float) -> void:
 	var skybox_time: float
 	if debug_cycle_seconds > 0.0:

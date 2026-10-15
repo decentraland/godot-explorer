@@ -10,16 +10,13 @@ use crate::{
             ServerPacket, SignedChallengeMessage,
         },
     },
+    utils::ws_client::{WsClient, WsState},
 };
 use ethers_core::types::H160;
 use glam::Vec3;
 use prost::Message;
 
-use super::{
-    adapter_trait::Adapter,
-    livekit::LivekitRoom,
-    ws_client::{WsClient, WsState},
-};
+use super::{adapter_trait::Adapter, livekit::LivekitRoom};
 
 #[derive(Clone)]
 enum ArchipelagoState {

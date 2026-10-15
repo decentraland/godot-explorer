@@ -11,6 +11,7 @@ use godot::prelude::*;
 
 use super::settings_link::on_process_frame;
 use crate::avatars::dcl_user_profile::DclUserProfile;
+use crate::fetcher::scene_fetcher::SceneFetcher;
 use crate::godot_classes::dcl_global::DclGlobal;
 
 const POLL_INTERVAL: Duration = Duration::from_millis(250);
@@ -55,35 +56,27 @@ fn read_facts(global: &Gd<DclGlobal>) -> SceneFacts {
             realm.get_realm_name().to_string(),
         )
     };
-    let fetcher = global.get("scene_fetcher").try_to::<Gd<Object>>().ok();
+    let fetcher = global
+        .get("scene_fetcher")
+        .try_to::<Gd<SceneFetcher>>()
+        .ok();
     SceneFacts {
         realm_url,
         parcel: fetcher.as_ref().map_or(Parcel::new(0, 0), parcel_of),
-        scene_title: fetcher.as_ref().and_then(scene_title_of),
+        scene_title: fetcher
+            .as_ref()
+            .and_then(|fetcher| fetcher.bind().current_scene_title()),
         realm_name,
     }
 }
 
-fn parcel_of(fetcher: &Gd<Object>) -> Parcel {
-    match fetcher.get("current_position").try_to::<Vector2i>() {
-        Ok(parcel) if parcel != NO_PARCEL => Parcel::new(parcel.x, parcel.y),
-        _ => Parcel::new(0, 0),
+fn parcel_of(fetcher: &Gd<SceneFetcher>) -> Parcel {
+    let parcel = fetcher.bind().get_current_position();
+    if parcel == NO_PARCEL {
+        Parcel::new(0, 0)
+    } else {
+        Parcel::new(parcel.x, parcel.y)
     }
-}
-
-/// The title of the scene under the player, `None` while none is loaded.
-fn scene_title_of(fetcher: &Gd<Object>) -> Option<String> {
-    let mut fetcher = fetcher.clone();
-    let item = fetcher
-        .call("get_current_scene_data", &[])
-        .try_to::<Gd<Object>>()
-        .ok()?;
-    let mut definition = item
-        .get("scene_entity_definition")
-        .try_to::<Gd<Object>>()
-        .ok()?;
-    let title = definition.call("get_title", &[]).try_to::<GString>().ok()?;
-    Some(title.to_string()).filter(|title| !title.is_empty())
 }
 
 /// The catalyst that serves profiles: the realm's lambdas, and the realm's content node for deploys.

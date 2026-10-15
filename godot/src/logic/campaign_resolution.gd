@@ -56,7 +56,7 @@ static func is_valid_token(token: String) -> bool:
 	return true
 
 
-## Reads a campaign's target as [position, realm], the pair WorldRequests.async_teleport_to and the
+## Reads a campaign's target as [position, realm], the pair DclNavigator.teleport_to and the
 ## FTUE jump signals already speak. Returns [] when the target is unusable, which callers
 ## treat as "render the default FTUE" rather than stranding the user somewhere.
 static func target_position_and_realm(campaign: Dictionary) -> Array:
@@ -68,9 +68,9 @@ static func target_position_and_realm(campaign: Dictionary) -> Array:
 
 	if target_type == TARGET_WORLD:
 		var world_name := String(target.get("name", ""))
-		# A name Realm.is_dcl_ens rejects is treated as a realm URL further down the teleport
+		# A name DclRealmRules.is_dcl_ens rejects is treated as a realm URL further down the teleport
 		# path and never reaches the intended world, so it does not resolve at all here.
-		if not Realm.is_dcl_ens(world_name):
+		if not DclRealmRules.is_dcl_ens(world_name):
 			return []
 		return [Vector2i.ZERO, world_name]
 

@@ -148,6 +148,32 @@ async fn an_open_world_lands_on_its_last_scene_or_the_one_at_the_parcel() {
 }
 
 #[tokio::test]
+async fn a_resolution_keeps_the_about_and_the_listing_it_read() {
+    let fetch = world_fetch(json!({}));
+    let intent = parse_input("arena.dcl.eth 5,5").unwrap();
+    let refused = resolve_intent(&fetch, ADDRESS, &intent, None).await;
+    // Even a refused parcel hands back what was read, so a restoration can land on grass.
+    assert_eq!(refused.resolved.failure, Some(ResolveFailure::ParcelEmpty));
+    assert_eq!(refused.about, Some(about()));
+    assert_eq!(
+        refused.listing.unwrap()["scenes"].as_array().unwrap().len(),
+        2
+    );
+
+    let open = resolve_intent(
+        &fetch,
+        ADDRESS,
+        &parse_input("arena.dcl.eth").unwrap(),
+        None,
+    )
+    .await;
+    assert!(open.resolved.ready && open.about.is_some() && open.listing.is_some());
+
+    let nowhere = resolve_intent(&FakeFetch::default(), ADDRESS, &intent, None).await;
+    assert!(nowhere.about.is_none() && nowhere.listing.is_none());
+}
+
+#[tokio::test]
 async fn a_world_url_is_the_same_world_as_its_name() {
     let fetch = world_fetch(json!({}));
     let by_url = go(&fetch, &format!("{}/", world_base())).await;

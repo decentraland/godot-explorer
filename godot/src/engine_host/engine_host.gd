@@ -73,7 +73,7 @@ func _on_core_command(kind: String, args: Dictionary) -> void:
 		"reconnect":
 			_watch.reconnect()
 		"set_world_secret":
-			Navigator.world_secrets[Realm.normalize_realm_url(args.realm)] = args.secret
+			DclNavigator.set_world_secret(args.realm, args.secret)
 		"show_avatar_preview":
 			var rect := Rect2(args.x, args.y, args.w, args.h)
 			if _backpack.is_shown():

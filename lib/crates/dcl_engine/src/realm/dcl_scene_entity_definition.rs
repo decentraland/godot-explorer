@@ -24,7 +24,7 @@ impl IRefCounted for DclSceneEntityDefinition {
 #[godot_api]
 impl DclSceneEntityDefinition {
     #[func]
-    fn get_parcels(&self) -> godot::prelude::Array<Vector2i> {
+    pub fn get_parcels(&self) -> godot::prelude::Array<Vector2i> {
         let mut ret = godot::prelude::Array::new();
         let parcels_str = &self.inner.scene_meta_scene.scene.parcels;
         parcels_str.iter().for_each(|parcel| ret.push(*parcel));
@@ -33,12 +33,12 @@ impl DclSceneEntityDefinition {
     }
 
     #[func]
-    fn get_base_parcel(&self) -> Vector2i {
+    pub fn get_base_parcel(&self) -> Vector2i {
         self.inner.scene_meta_scene.scene.base
     }
 
     #[func]
-    fn get_title(&self) -> GString {
+    pub fn get_title(&self) -> GString {
         let Some(scene_display) = self
             .inner
             .scene_meta_scene
@@ -54,7 +54,7 @@ impl DclSceneEntityDefinition {
     /// Relative path (within the scene's content mapping) of the scene.json
     /// `display.navmapThumbnail` image, or empty when the scene defines none.
     #[func]
-    fn get_navmap_thumbnail(&self) -> GString {
+    pub fn get_navmap_thumbnail(&self) -> GString {
         self.inner
             .scene_meta_scene
             .display
@@ -65,7 +65,7 @@ impl DclSceneEntityDefinition {
     }
 
     #[func]
-    fn is_global(&self) -> bool {
+    pub fn is_global(&self) -> bool {
         self.inner.is_global
     }
 
@@ -74,7 +74,7 @@ impl DclSceneEntityDefinition {
     /// client, so "SDK6" and "unknown" stay distinguishable — `is_sdk7()` folds
     /// both into `false`.
     #[func]
-    fn get_runtime_version(&self) -> GString {
+    pub fn get_runtime_version(&self) -> GString {
         self.inner
             .scene_meta_scene
             .runtime_version
@@ -84,7 +84,7 @@ impl DclSceneEntityDefinition {
     }
 
     #[func]
-    fn is_sdk7(&self) -> bool {
+    pub fn is_sdk7(&self) -> bool {
         if let Some(runtime_version) = self.inner.scene_meta_scene.runtime_version.as_ref() {
             runtime_version == "7"
         } else {
@@ -93,7 +93,7 @@ impl DclSceneEntityDefinition {
     }
 
     #[func]
-    fn get_main_js_hash(&self) -> GString {
+    pub fn get_main_js_hash(&self) -> GString {
         self.inner
             .content_mapping
             .get_hash(self.inner.scene_meta_scene.main.as_str())
@@ -103,17 +103,17 @@ impl DclSceneEntityDefinition {
     }
 
     #[func]
-    fn get_main_js_path(&self) -> GString {
+    pub fn get_main_js_path(&self) -> GString {
         self.inner.scene_meta_scene.main.as_str().into()
     }
 
     #[func]
-    fn get_content_mapping(&self) -> Gd<DclContentMappingAndUrl> {
+    pub fn get_content_mapping(&self) -> Gd<DclContentMappingAndUrl> {
         DclContentMappingAndUrl::from_ref(self.inner.content_mapping.clone())
     }
 
     #[func]
-    fn get_main_crdt_hash(&self) -> GString {
+    pub fn get_main_crdt_hash(&self) -> GString {
         self.inner
             .content_mapping
             .get_hash("main.crdt")
@@ -123,12 +123,12 @@ impl DclSceneEntityDefinition {
     }
 
     #[func]
-    fn get_base_url(&self) -> GString {
+    pub fn get_base_url(&self) -> GString {
         self.inner.content_mapping.base_url.to_godot()
     }
 
     #[func]
-    fn get_global_spawn_position(&self) -> Vector3 {
+    pub fn get_global_spawn_position(&self) -> Vector3 {
         self.inner.get_global_spawn_position()
     }
 
@@ -137,7 +137,7 @@ impl DclSceneEntityDefinition {
     /// true means show terrain; false opts out. Honored only for single-scene worlds and
     /// local dev by the caller; Genesis City ignores it.
     #[func]
-    fn is_landscape_terrain_enabled(&self) -> bool {
+    pub fn is_landscape_terrain_enabled(&self) -> bool {
         self.inner
             .scene_meta_scene
             .landscape_terrain

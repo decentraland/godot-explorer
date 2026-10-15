@@ -100,7 +100,7 @@ func _start_stress_test():
 
 			# Teleport
 			var load_start = Time.get_ticks_msec()
-			WorldRequests.async_teleport_to(pos, GOERLI_REALM)
+			DclNavigator.teleport_to(pos, GOERLI_REALM)
 
 			# Wait for loading
 			var load_success = await _wait_for_loading_with_timeout(30.0)

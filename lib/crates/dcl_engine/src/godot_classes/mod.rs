@@ -11,7 +11,6 @@ pub mod dcl_camera_mode_area_3d;
 pub mod dcl_cli;
 pub mod dcl_confirm_dialog;
 pub mod dcl_crash_generator;
-pub mod dcl_destination_rules;
 pub mod dcl_dynamic_graphics_manager;
 pub mod dcl_ether;
 pub mod dcl_feature_flags;
@@ -24,7 +23,6 @@ pub mod dcl_ios_plugin;
 pub mod dcl_locomotion_settings;
 pub mod dcl_node_entity_3d;
 pub mod dcl_parse_deep_link;
-pub mod dcl_preview_message;
 pub mod dcl_realm;
 pub mod dcl_realm_rules;
 #[cfg(feature = "use_resource_tracking")]

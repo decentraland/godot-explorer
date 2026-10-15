@@ -40,10 +40,7 @@ func run_benchmark():
 	# parcels around the expected centre — otherwise `current_position`
 	# is INVALID_PARCEL and nothing is ever considered in-view.
 	log_msg("FI Benchmark: Setting fake player position at center...")
-	Global.scene_fetcher.current_position = Vector2i(0, 0)
-	Global.scene_fetcher.player_parcel_changed.emit(Vector2i(0, 0))
-	if Global.scene_fetcher.islands_manager != null:
-		Global.scene_fetcher.islands_manager.set_player_parcel(Vector2i(0, 0))
+	Global.scene_fetcher.update_position(Vector2i(0, 0), false)
 
 	# Measure baseline
 	log_msg("FI Benchmark: Collecting baseline metrics...")
@@ -124,7 +121,7 @@ func count_total_nodes() -> int:
 	# With the Rust-side Floating Islands manager there are no per-parcel
 	# Node3D trees, so "total nodes" collapses to the count of active parcels
 	# — still a useful stability signal for `wait_for_generation_complete`.
-	var mgr = Global.scene_fetcher.islands_manager
+	var mgr = Global.scene_fetcher.get_islands_manager()
 	if mgr == null:
 		return 0
 	return mgr.get_active_parcel_count()
@@ -147,47 +144,23 @@ func generate_floating_islands():
 	else:
 		log_msg("FI Benchmark: 4 parcels in CROSS with arm_length=%d (worst case)" % arm_length)
 
-	# Create fake scene items to populate loaded_scenes
-	if arm_length == 99:
-		# Genesis Plaza: single scene with all 69 parcels
-		var fake_scene = SceneFetcher.SceneItem.new()
-		fake_scene.id = "genesis_plaza"
-		fake_scene.parcels = parcels
-		fake_scene.is_global = false
-		fake_scene.scene_number_id = 1000
-		sf.loaded_scenes[fake_scene.id] = fake_scene
-	else:
-		# Cross pattern: one scene per parcel
-		var idx = 0
-		for parcel_pos in parcels:
-			var fake_scene = SceneFetcher.SceneItem.new()
-			fake_scene.id = "benchmark_%d" % idx
-			var parcel_array: Array[Vector2i] = [parcel_pos]
-			fake_scene.parcels = parcel_array
-			fake_scene.is_global = false
-			fake_scene.scene_number_id = 1000 + idx
-			sf.loaded_scenes[fake_scene.id] = fake_scene
-			idx += 1
-
-	# Clear hash to force regeneration
-	sf.last_scene_group_hash = ""
-
-	log_msg("FI Benchmark: Triggering _regenerate_floating_islands()...")
-
-	# Call the REAL floating island generation
-	sf._regenerate_floating_islands()
+	log_msg("FI Benchmark: Laying out the islands...")
+	var layout: Array[Vector2i] = []
+	for parcel_pos in parcels:
+		layout.append(parcel_pos)
+	sf.benchmark_generate_islands(layout)
 
 	# Wait until the active parcel count stabilises or we hit a hard timeout.
 	# Using the `generation_complete` signal directly is fragile in benchmark
 	# mode because the manager emits it only when `in_view_candidates > 0`,
 	# which in turn depends on camera + player position being set up first.
-	if sf.islands_manager != null:
+	if sf.get_islands_manager() != null:
 		var last = -1
 		var stable = 0
 		var t0 = Time.get_ticks_msec()
 		while stable < 30 and Time.get_ticks_msec() - t0 < 30000:
 			await get_tree().process_frame
-			var count = sf.islands_manager.get_active_parcel_count()
+			var count = sf.get_islands_manager().get_active_parcel_count()
 			if count == last:
 				stable += 1
 			else:
@@ -195,8 +168,8 @@ func generate_floating_islands():
 				last = count
 
 	var active = 0
-	if sf.islands_manager != null:
-		active = sf.islands_manager.get_active_parcel_count()
+	if sf.get_islands_manager() != null:
+		active = sf.get_islands_manager().get_active_parcel_count()
 	log_msg("FI Benchmark: manager reports %d active empty parcels" % active)
 
 
@@ -345,7 +318,7 @@ func count_nodes_by_type() -> Dictionary:
 	# the active-parcel count. Keep the keys from the legacy schema for diff
 	# compatibility; they'll all read zero on the new path.
 	var counts = {"terrain": 0, "cliff": 0, "grass": 0, "tree": 0, "rock": 0, "prop": 0, "other": 0}
-	var mgr = Global.scene_fetcher.islands_manager
+	var mgr = Global.scene_fetcher.get_islands_manager()
 	if mgr != null:
 		counts["active_parcels"] = mgr.get_active_parcel_count()
 	return counts

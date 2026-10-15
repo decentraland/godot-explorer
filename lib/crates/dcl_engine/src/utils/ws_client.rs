@@ -19,12 +19,22 @@ pub enum WsState {
     Open,
 }
 
-/// A polled binary websocket: a tokio task owns the socket, the owner reads `state()` and
+pub enum Frame {
+    Binary(Vec<u8>),
+    Text(String),
+}
+
+enum Outgoing {
+    Frame(Message),
+    Close,
+}
+
+/// A polled websocket: a tokio task owns the socket, the owner reads `state()` and
 /// drains `next_packet()` from its own thread.
 pub struct WsClient {
     state: Arc<AtomicU8>,
-    incoming: Option<mpsc::UnboundedReceiver<Vec<u8>>>,
-    outgoing: Option<mpsc::UnboundedSender<Option<Vec<u8>>>>,
+    incoming: Option<mpsc::UnboundedReceiver<Frame>>,
+    outgoing: Option<mpsc::UnboundedSender<Outgoing>>,
 }
 
 impl WsClient {
@@ -69,21 +79,39 @@ impl WsClient {
 
     /// Queues a binary frame; false when the socket is not open.
     pub fn send(&self, data: Vec<u8>) -> bool {
-        if self.state() != WsState::Open {
-            return false;
-        }
-        self.outgoing
-            .as_ref()
-            .is_some_and(|tx| tx.send(Some(data)).is_ok())
+        self.queue(Message::Binary(data))
     }
 
-    pub fn next_packet(&mut self) -> Option<Vec<u8>> {
+    /// Queues a text frame; false when the socket is not open.
+    pub fn send_text(&self, text: String) -> bool {
+        self.queue(Message::Text(text))
+    }
+
+    fn queue(&self, message: Message) -> bool {
+        self.state() == WsState::Open
+            && self
+                .outgoing
+                .as_ref()
+                .is_some_and(|tx| tx.send(Outgoing::Frame(message)).is_ok())
+    }
+
+    pub fn next_frame(&mut self) -> Option<Frame> {
         self.incoming.as_mut()?.try_recv().ok()
+    }
+
+    /// The next binary frame; text frames are dropped.
+    pub fn next_packet(&mut self) -> Option<Vec<u8>> {
+        loop {
+            match self.next_frame()? {
+                Frame::Binary(data) => return Some(data),
+                Frame::Text(_) => {}
+            }
+        }
     }
 
     pub fn close(&mut self) {
         if let Some(tx) = self.outgoing.take() {
-            let _ = tx.send(None);
+            let _ = tx.send(Outgoing::Close);
         }
         self.incoming = None;
         self.state.store(CLOSED, Ordering::Release);
@@ -100,15 +128,18 @@ async fn run(
     url: String,
     protocol: String,
     state: Arc<AtomicU8>,
-    incoming: mpsc::UnboundedSender<Vec<u8>>,
-    mut outgoing: mpsc::UnboundedReceiver<Option<Vec<u8>>>,
+    incoming: mpsc::UnboundedSender<Frame>,
+    mut outgoing: mpsc::UnboundedReceiver<Outgoing>,
 ) {
     let Ok(mut request) = url.as_str().into_client_request() else {
         tracing::warn!("comms websocket: invalid url {url}");
         state.store(CLOSED, Ordering::Release);
         return;
     };
-    if let Ok(value) = HeaderValue::from_str(&protocol) {
+    if let Some(value) = (!protocol.is_empty())
+        .then(|| HeaderValue::from_str(&protocol).ok())
+        .flatten()
+    {
         request
             .headers_mut()
             .insert("Sec-WebSocket-Protocol", value);
@@ -133,7 +164,12 @@ async fn run(
         tokio::select! {
             msg = stream.next() => match msg {
                 Some(Ok(Message::Binary(data))) => {
-                    if incoming.send(data).is_err() {
+                    if incoming.send(Frame::Binary(data)).is_err() {
+                        break;
+                    }
+                }
+                Some(Ok(Message::Text(text))) => {
+                    if incoming.send(Frame::Text(text)).is_err() {
                         break;
                     }
                 }
@@ -144,12 +180,12 @@ async fn run(
                 Some(Ok(_)) => {}
             },
             out = outgoing.recv() => match out {
-                Some(Some(data)) => {
-                    if stream.send(Message::Binary(data)).await.is_err() {
+                Some(Outgoing::Frame(message)) => {
+                    if stream.send(message).await.is_err() {
                         break;
                     }
                 }
-                Some(None) | None => {
+                Some(Outgoing::Close) | None => {
                     let _ = stream.close(None).await;
                     break;
                 }

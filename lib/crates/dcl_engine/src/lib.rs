@@ -30,6 +30,7 @@ pub mod dcl;
 pub use dcl_core::deep_link;
 pub use dcl_core::env;
 pub mod engine;
+pub mod fetcher;
 pub mod godot_classes;
 pub mod http_request;
 pub mod profile;
