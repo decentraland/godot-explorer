@@ -27,6 +27,7 @@ export function createMockCore(options: { signedIn?: boolean } = {}): CoreApi {
     ...createMockSettings(),
     ...createMockProfile(),
     ...createMockPlaces(),
+    setPushRegistration: () => {},
     ...createMockGates(),
     ...createMockScene(bus),
   };

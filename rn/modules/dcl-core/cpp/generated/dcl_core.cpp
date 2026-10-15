@@ -293,6 +293,8 @@ uniffi_dcl_core_fn_func_set_event_reminder(RustBuffer event_id, int8_t on);
 /*handle*/ uint64_t uniffi_dcl_core_fn_func_deploy_profile(RustBuffer update);
 /*handle*/ uint64_t uniffi_dcl_core_fn_func_owned_names();
 /*handle*/ uint64_t uniffi_dcl_core_fn_func_profile(RustBuffer address);
+void uniffi_dcl_core_fn_func_set_push_registration(
+    RustBuffer registration, RustCallStatus *uniffi_out_err);
 /*handle*/ uint64_t uniffi_dcl_core_fn_func_capture_screenshot();
 /*handle*/ uint64_t uniffi_dcl_core_fn_func_current_scene();
 /*handle*/ uint64_t uniffi_dcl_core_fn_func_flush_analytics();
@@ -504,6 +506,7 @@ uint16_t uniffi_dcl_core_checksum_func_delete_account();
 uint16_t uniffi_dcl_core_checksum_func_deploy_profile();
 uint16_t uniffi_dcl_core_checksum_func_owned_names();
 uint16_t uniffi_dcl_core_checksum_func_profile();
+uint16_t uniffi_dcl_core_checksum_func_set_push_registration();
 uint16_t uniffi_dcl_core_checksum_func_capture_screenshot();
 uint16_t uniffi_dcl_core_checksum_func_current_scene();
 uint16_t uniffi_dcl_core_checksum_func_flush_analytics();
@@ -5019,6 +5022,17 @@ NativeDclCore::NativeDclCore(
             return this->cpp_uniffi_dcl_core_fn_func_profile(rt, thisVal, args,
                                                              count);
           });
+  props["ubrn_uniffi_dcl_core_fn_func_set_push_registration"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_fn_func_set_push_registration"),
+          1,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_dcl_core_fn_func_set_push_registration(
+                rt, thisVal, args, count);
+          });
   props["ubrn_uniffi_dcl_core_fn_func_capture_screenshot"] =
       jsi::Function::createFromHostFunction(
           rt,
@@ -6388,6 +6402,18 @@ NativeDclCore::NativeDclCore(
                  const jsi::Value *args, size_t count) -> jsi::Value {
             return this->cpp_uniffi_dcl_core_checksum_func_profile(rt, thisVal,
                                                                    args, count);
+          });
+  props["ubrn_uniffi_dcl_core_checksum_func_set_push_registration"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_checksum_func_set_push_registration"),
+          0,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this
+                ->cpp_uniffi_dcl_core_checksum_func_set_push_registration(
+                    rt, thisVal, args, count);
           });
   props["ubrn_uniffi_dcl_core_checksum_func_capture_screenshot"] =
       jsi::Function::createFromHostFunction(
@@ -7929,6 +7955,19 @@ jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_profile(
   return uniffi_jsi::Bridging</*handle*/ uint64_t>::toJs(rt, callInvoker,
                                                          value);
 }
+jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_set_push_registration(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  RustCallStatus status =
+      uniffi::dcl_core::Bridging<RustCallStatus>::rustSuccess(rt);
+  uniffi_dcl_core_fn_func_set_push_registration(
+      uniffi::dcl_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[0]),
+      &status);
+  uniffi::dcl_core::Bridging<RustCallStatus>::copyIntoJs(
+      rt, callInvoker, status, args[count - 1]);
+
+  return jsi::Value::undefined();
+}
 jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_capture_screenshot(
     jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
     size_t count) {
@@ -9111,6 +9150,14 @@ jsi::Value NativeDclCore::cpp_uniffi_dcl_core_checksum_func_profile(
     jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
     size_t count) {
   auto value = uniffi_dcl_core_checksum_func_profile();
+
+  return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
+}
+jsi::Value
+NativeDclCore::cpp_uniffi_dcl_core_checksum_func_set_push_registration(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  auto value = uniffi_dcl_core_checksum_func_set_push_registration();
 
   return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
 }

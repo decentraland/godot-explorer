@@ -5,6 +5,7 @@ import { flow } from './flow';
 import { hud } from './hud';
 import { menu } from './menu';
 import { profile } from './profile';
+import { push } from './push';
 import { settings } from './settings';
 
 /** One table per area, merged here; add a file and spread it in to start a new area. */
@@ -16,5 +17,6 @@ export const en = {
   ...hud,
   ...menu,
   ...profile,
+  ...push,
   ...settings,
 };

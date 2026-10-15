@@ -6,6 +6,7 @@ import { flow } from './flow';
 import { hud } from './hud';
 import { menu } from './menu';
 import { profile } from './profile';
+import { push } from './push';
 import { settings } from './settings';
 
 export const table: Record<string, string> = {
@@ -16,5 +17,6 @@ export const table: Record<string, string> = {
   ...hud,
   ...menu,
   ...profile,
+  ...push,
   ...settings,
 };

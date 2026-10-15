@@ -48,7 +48,8 @@ pub struct SegmentIdentifyBody {
 
 /// Which push transport this install is addressable on. Each keeps its own token trait
 /// (`fcm_token` / `apns_token`) so an audience query never has to guess a token's provider.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "ffi", derive(uniffi::Enum))]
 pub enum PushPlatform {
     Android,
     Ios,

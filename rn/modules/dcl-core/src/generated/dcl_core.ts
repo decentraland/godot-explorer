@@ -1811,6 +1811,30 @@ export async function setFavorite(
 }
 
 /**
+ * Registers how this install can be reached by push. Sent once the `push-enabled` flag is known
+ * and on; a token or permission change sends again.
+ */
+export function setPushRegistration(
+  registration: PushRegistration,
+): void /*throws*/ {
+  uniffiCaller.rustCallWithError(
+    /*liftError:*/ FfiConverterTypeCoreError.lift.bind(
+      FfiConverterTypeCoreError,
+    ),
+    /*caller:*/ callStatus => {
+      nativeModule().ubrn_uniffi_dcl_core_fn_func_set_push_registration(
+        FfiConverterTypePushRegistration.lower(
+          registration,
+          nativeModule().rustbuffer_alloc,
+        ),
+        callStatus,
+      );
+    },
+    /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+  );
+}
+
+/**
  * Sets a value (a number of the wrong width is coerced, a wrong type is refused). `commit`
  * saves it to disk; without it the change lasts until the next commit. Returns every entry
  * that changed or was re-announced: the key, then the three settings a graphic profile drives.
@@ -4771,6 +4795,113 @@ const FfiConverterTypeProperty = (() => {
       return (
         FfiConverterString.allocationSize(value.key) +
         FfiConverterTypePropertyValue.allocationSize(value.value)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
+/**
+ * Which push transport this install is addressable on. Each keeps its own token trait
+ * (`fcm_token` / `apns_token`) so an audience query never has to guess a token's provider.
+ */
+export enum PushPlatform {
+  Android,
+  Ios,
+}
+
+const FfiConverterTypePushPlatform = (() => {
+  type TypeName = PushPlatform;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      switch (c.readI32()) {
+        case 1:
+          return PushPlatform.Android;
+        case 2:
+          return PushPlatform.Ios;
+        default:
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      switch (value) {
+        case PushPlatform.Android:
+          return c.writeI32(1);
+        case PushPlatform.Ios:
+          return c.writeI32(2);
+      }
+    }
+    allocationSize(value: TypeName): number {
+      return 4;
+    }
+  }
+  return new FFIConverter();
+})();
+
+export type PushRegistration = {
+  platform: PushPlatform;
+  /**
+   * The FCM token or the APNs token as hex; empty when the device cannot receive push.
+   */
+  token: string;
+  /**
+   * "granted" | "denied"
+   */
+  permission: string;
+  appVersion: string;
+  /**
+   * The OS locale, e.g. "es_AR".
+   */
+  locale: string;
+  timezone: string;
+};
+
+/**
+ * Generated factory for {@link PushRegistration} record objects.
+ */
+export const PushRegistration = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<PushRegistration, ReturnType<typeof defaults>>(
+      defaults,
+    );
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults()) as Partial<PushRegistration>,
+  });
+})();
+
+const FfiConverterTypePushRegistration = (() => {
+  type TypeName = PushRegistration;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      return {
+        platform: FfiConverterTypePushPlatform.readFromCursor(c),
+        token: FfiConverterString.readFromCursor(c),
+        permission: FfiConverterString.readFromCursor(c),
+        appVersion: FfiConverterString.readFromCursor(c),
+        locale: FfiConverterString.readFromCursor(c),
+        timezone: FfiConverterString.readFromCursor(c),
+      };
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      FfiConverterTypePushPlatform.writeIntoCursor(value.platform, c);
+      FfiConverterString.writeIntoCursor(value.token, c);
+      FfiConverterString.writeIntoCursor(value.permission, c);
+      FfiConverterString.writeIntoCursor(value.appVersion, c);
+      FfiConverterString.writeIntoCursor(value.locale, c);
+      FfiConverterString.writeIntoCursor(value.timezone, c);
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterTypePushPlatform.allocationSize(value.platform) +
+        FfiConverterString.allocationSize(value.token) +
+        FfiConverterString.allocationSize(value.permission) +
+        FfiConverterString.allocationSize(value.appVersion) +
+        FfiConverterString.allocationSize(value.locale) +
+        FfiConverterString.allocationSize(value.timezone)
       );
     }
   }
@@ -11447,6 +11578,14 @@ function uniffiEnsureInitialized() {
     );
   }
   if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_set_push_registration() !==
+    56683
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_set_push_registration',
+    );
+  }
+  if (
     nativeModule().ubrn_uniffi_dcl_core_checksum_func_set_setting() !== 61000
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
@@ -11770,6 +11909,8 @@ export default Object.freeze({
     FfiConverterTypeProfileUpdate,
     FfiConverterTypeProperty,
     FfiConverterTypePropertyValue,
+    FfiConverterTypePushPlatform,
+    FfiConverterTypePushRegistration,
     FfiConverterTypeRect,
     FfiConverterTypeReportContext,
     FfiConverterTypeReportEvent,

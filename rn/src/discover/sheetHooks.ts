@@ -2,9 +2,11 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNav } from '../app/NavProvider';
 import { useToast } from '../ds';
 import { t } from '../i18n';
+import { syncEventReminder } from '../notifications/push';
 import { enterPlace } from '../world/enterPlace';
 import { Place } from './api';
 import { useApi } from './ApiContext';
+import { eventJumpLink } from './eventTime';
 import { recordPlayed } from './history';
 import type { EventDetail, Friend, PlaceDetail, VoteState } from './types';
 
@@ -91,10 +93,17 @@ export function useEventDetail(eventId: string) {
         return;
       }
       setValue({ ...value, reminder: on });
-      api.setReminder(eventId, on).catch(() => {
-        setValue(value);
-        toast(t('DISCOVER_ACTION_FAILED'));
-      });
+      api
+        .setReminder(eventId, on)
+        .then(() =>
+          syncEventReminder(value.event, on, eventJumpLink(eventId)).catch(
+            () => {},
+          ),
+        )
+        .catch(() => {
+          setValue(value);
+          toast(t('DISCOVER_ACTION_FAILED'));
+        });
     },
     [api, eventId, value, setValue, toast],
   );

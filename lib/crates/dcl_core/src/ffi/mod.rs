@@ -16,6 +16,7 @@ pub use gates::eula_accepted;
 mod notifications;
 mod places;
 mod profile;
+mod push;
 mod scene;
 mod session;
 mod settings;

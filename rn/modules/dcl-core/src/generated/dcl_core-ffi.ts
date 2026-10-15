@@ -329,6 +329,10 @@ interface NativeModuleInterface {
     value: number,
     isWorld: number,
   ): bigint;
+  ubrn_uniffi_dcl_core_fn_func_set_push_registration(
+    registration: Uint8Array,
+    uniffi_out_err: UniffiRustCallStatus,
+  ): void;
   ubrn_uniffi_dcl_core_fn_func_set_setting(
     key: Uint8Array,
     value: Uint8Array,
@@ -536,6 +540,7 @@ interface NativeModuleInterface {
   ubrn_uniffi_dcl_core_checksum_func_set_analytics_flush_interval(): number;
   ubrn_uniffi_dcl_core_checksum_func_set_event_reminder(): number;
   ubrn_uniffi_dcl_core_checksum_func_set_favorite(): number;
+  ubrn_uniffi_dcl_core_checksum_func_set_push_registration(): number;
   ubrn_uniffi_dcl_core_checksum_func_set_setting(): number;
   ubrn_uniffi_dcl_core_checksum_func_setting_key_from_name(): number;
   ubrn_uniffi_dcl_core_checksum_func_setting_key_name(): number;

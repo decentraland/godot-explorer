@@ -12,6 +12,7 @@ import { Shell } from './src/app/Shell';
 import { useAnalyticsLifecycle } from './src/app/useAnalyticsLifecycle';
 import { startApp } from './src/app/startup';
 import { useLocaleSync } from './src/app/useLocaleSync';
+import { usePushRegistration } from './src/notifications/usePushRegistration';
 import { useAppWiring } from './src/app/wiring';
 import { core } from './src/core';
 import { useCoreState } from './src/core/useCoreState';
@@ -33,7 +34,11 @@ function AppBody() {
   }, []);
 
   // Signing out or deleting the account sends the player back to the entry flow.
-  const signedOut = useCoreState().tag === 'SignedOut';
+  const coreTag = useCoreState().tag;
+  const signedOut = coreTag === 'SignedOut';
+  usePushRegistration(
+    coreTag !== 'SignedOut' && coreTag !== 'Booting' && coreTag !== 'SigningIn',
+  );
   useEffect(() => {
     if (signedOut && entered) {
       setEntered(false);
