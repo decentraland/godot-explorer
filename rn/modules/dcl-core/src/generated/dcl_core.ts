@@ -118,6 +118,29 @@ export function address(): string | undefined /*throws*/ {
 }
 
 /**
+ * The colour swatches the editor offers.
+ */
+export function avatarPalette(target: ColorTarget): Array<string> {
+  const __rb: Uint8Array = uniffiCaller.rustCall(
+    /*caller:*/ callStatus => {
+      return nativeModule().ubrn_uniffi_dcl_core_fn_func_avatar_palette(
+        FfiConverterTypeColorTarget.lower(
+          target,
+          nativeModule().rustbuffer_alloc,
+        ),
+        callStatus,
+      );
+    },
+    /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+  );
+  try {
+    return FfiConverterSequenceString.lift(__rb);
+  } finally {
+    nativeModule().rustbuffer_free(__rb);
+  }
+}
+
+/**
  * The equipped avatar as the engine last reported it.
  */
 export function avatarState(): AvatarState | undefined /*throws*/ {
@@ -134,6 +157,25 @@ export function avatarState(): AvatarState | undefined /*throws*/ {
   );
   try {
     return FfiConverterOptionalTypeAvatarState.lift(__rb);
+  } finally {
+    nativeModule().rustbuffer_free(__rb);
+  }
+}
+
+/**
+ * The emotes every account has.
+ */
+export function baseEmotes(): Array<BaseEmote> {
+  const __rb: Uint8Array = uniffiCaller.rustCall(
+    /*caller:*/ callStatus => {
+      return nativeModule().ubrn_uniffi_dcl_core_fn_func_base_emotes(
+        callStatus,
+      );
+    },
+    /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+  );
+  try {
+    return FfiConverterSequenceTypeBaseEmote.lift(__rb);
   } finally {
     nativeModule().rustbuffer_free(__rb);
   }
@@ -1023,6 +1065,23 @@ export function isGuest(): boolean /*throws*/ {
 }
 
 /**
+ * Whether the avatar may go without an item of this category.
+ */
+export function isRemovableCategory(category: string): boolean {
+  return FfiConverterBool.lift(
+    uniffiCaller.rustCall(
+      /*caller:*/ callStatus => {
+        return nativeModule().ubrn_uniffi_dcl_core_fn_func_is_removable_category(
+          FfiConverterString.lower(category, nativeModule().rustbuffer_alloc),
+          callStatus,
+        );
+      },
+      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+    ),
+  );
+}
+
+/**
  * Web link that opens the explorer at a Genesis City position, `"x,y"`.
  */
 export function jumpPositionUrl(position: string): string {
@@ -1059,6 +1118,56 @@ export function jumpRealmUrl(realm: string): string {
     return FfiConverterString.lift(__rb);
   } finally {
     nativeModule().rustbuffer_free(__rb);
+  }
+}
+
+/**
+ * Loads the base wearables, makes them the catalog the avatar edits use and returns them.
+ */
+export async function loadAvatarCatalog(asyncOpts_?: {
+  signal: AbortSignal;
+}): Promise<Array<CatalogItem>> /*throws*/ {
+  const __stack = uniffiIsDebug ? new Error().stack : undefined;
+  try {
+    return await uniffiRustCallAsync(
+      /*rustCaller:*/ uniffiCaller,
+      /*rustFutureFunc:*/ () => {
+        return nativeModule().ubrn_uniffi_dcl_core_fn_func_load_avatar_catalog();
+      },
+      /*pollFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_poll_rust_buffer,
+      /*cancelFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_cancel_rust_buffer,
+      /*completeFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_complete_rust_buffer,
+      /*freeFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_free_rust_buffer,
+      // Async returns always go through the JS-side converter: the
+      // FFI symbol returns the future handle (u64), and the user-level
+      // RustBuffer comes back via the shared `rust_future_complete_*`
+      // export. The bytes the runtime hands back must be deserialized
+      // here using the per-callable return-type converter.
+      // Borrowed view over foreign memory: the call site owns the free,
+      // as on the sync paths. Unconditional — a no-op where buffers are
+      // already JS-owned.
+      /*liftFunc:*/ __rb => {
+        try {
+          return FfiConverterSequenceTypeCatalogItem.lift(__rb);
+        } finally {
+          nativeModule().rustbuffer_free(__rb);
+        }
+      },
+      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+      /*asyncOpts:*/ asyncOpts_,
+      /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(
+        FfiConverterTypeCoreError,
+      ),
+    );
+  } catch (__error: any) {
+    if (uniffiIsDebug && __error instanceof Error) {
+      __error.stack = __stack;
+    }
+    throw __error;
   }
 }
 
@@ -2368,6 +2477,53 @@ const FfiConverterTypeAvatarState = (() => {
   return new FFIConverter();
 })();
 
+export type BaseEmote = {
+  id: string;
+  urn: string;
+  name: string;
+};
+
+/**
+ * Generated factory for {@link BaseEmote} record objects.
+ */
+export const BaseEmote = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<BaseEmote, ReturnType<typeof defaults>>(defaults);
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults()) as Partial<BaseEmote>,
+  });
+})();
+
+const FfiConverterTypeBaseEmote = (() => {
+  type TypeName = BaseEmote;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      return {
+        id: FfiConverterString.readFromCursor(c),
+        urn: FfiConverterString.readFromCursor(c),
+        name: FfiConverterString.readFromCursor(c),
+      };
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      FfiConverterString.writeIntoCursor(value.id, c);
+      FfiConverterString.writeIntoCursor(value.urn, c);
+      FfiConverterString.writeIntoCursor(value.name, c);
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterString.allocationSize(value.id) +
+        FfiConverterString.allocationSize(value.urn) +
+        FfiConverterString.allocationSize(value.name)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
 export type CacheSize = {
   bytes: bigint;
   maxBytes: bigint;
@@ -2700,6 +2856,77 @@ const FfiConverterTypeCampaignResolution = (() => {
         FfiConverterString.allocationSize(value.token) +
         FfiConverterOptionalTypeCampaign.allocationSize(value.campaign) +
         FfiConverterOptionalTypeCampaignFallback.allocationSize(value.fallback)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
+export type CatalogItem = {
+  urn: string;
+  name: string;
+  category: string;
+  thumbnail: string;
+  /**
+   * `base` for the free base avatars, else the collection rarity.
+   */
+  rarity: string;
+  /**
+   * Empty when the item fits every body shape.
+   */
+  bodyShapes: Array<string>;
+  collectible: boolean;
+};
+
+/**
+ * Generated factory for {@link CatalogItem} record objects.
+ */
+export const CatalogItem = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<CatalogItem, ReturnType<typeof defaults>>(
+      defaults,
+    );
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults()) as Partial<CatalogItem>,
+  });
+})();
+
+const FfiConverterTypeCatalogItem = (() => {
+  type TypeName = CatalogItem;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      return {
+        urn: FfiConverterString.readFromCursor(c),
+        name: FfiConverterString.readFromCursor(c),
+        category: FfiConverterString.readFromCursor(c),
+        thumbnail: FfiConverterString.readFromCursor(c),
+        rarity: FfiConverterString.readFromCursor(c),
+        bodyShapes: FfiConverterSequenceString.readFromCursor(c),
+        collectible: FfiConverterBool.readFromCursor(c),
+      };
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      FfiConverterString.writeIntoCursor(value.urn, c);
+      FfiConverterString.writeIntoCursor(value.name, c);
+      FfiConverterString.writeIntoCursor(value.category, c);
+      FfiConverterString.writeIntoCursor(value.thumbnail, c);
+      FfiConverterString.writeIntoCursor(value.rarity, c);
+      FfiConverterSequenceString.writeIntoCursor(value.bodyShapes, c);
+      FfiConverterBool.writeIntoCursor(value.collectible, c);
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterString.allocationSize(value.urn) +
+        FfiConverterString.allocationSize(value.name) +
+        FfiConverterString.allocationSize(value.category) +
+        FfiConverterString.allocationSize(value.thumbnail) +
+        FfiConverterString.allocationSize(value.rarity) +
+        FfiConverterSequenceString.allocationSize(value.bodyShapes) +
+        FfiConverterBool.allocationSize(value.collectible)
       );
     }
   }
@@ -10656,9 +10883,19 @@ const FfiConverterOptionalTypeAvatarState = new FfiConverterOptional(
   FfiConverterTypeAvatarState,
 );
 
+// FfiConverter for Array<BaseEmote>
+const FfiConverterSequenceTypeBaseEmote = new FfiConverterArray(
+  FfiConverterTypeBaseEmote,
+);
+
 // FfiConverter for Array<Place>
 const FfiConverterSequenceTypePlace = new FfiConverterArray(
   FfiConverterTypePlace,
+);
+
+// FfiConverter for Array<CatalogItem>
+const FfiConverterSequenceTypeCatalogItem = new FfiConverterArray(
+  FfiConverterTypeCatalogItem,
 );
 
 // FfiConverter for number | undefined
@@ -10731,10 +10968,24 @@ function uniffiEnsureInitialized() {
     );
   }
   if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_avatar_palette() !== 27355
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_avatar_palette',
+    );
+  }
+  if (
     nativeModule().ubrn_uniffi_dcl_core_checksum_func_avatar_state() !== 41002
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_dcl_core_checksum_func_avatar_state',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_base_emotes() !== 53548
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_base_emotes',
     );
   }
   if (
@@ -10939,6 +11190,14 @@ function uniffiEnsureInitialized() {
     );
   }
   if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_is_removable_category() !==
+    10657
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_is_removable_category',
+    );
+  }
+  if (
     nativeModule().ubrn_uniffi_dcl_core_checksum_func_jump_position_url() !==
     59849
   ) {
@@ -10951,6 +11210,14 @@ function uniffiEnsureInitialized() {
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_dcl_core_checksum_func_jump_realm_url',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_load_avatar_catalog() !==
+    45002
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_load_avatar_catalog',
     );
   }
   if (
@@ -11356,6 +11623,7 @@ export default Object.freeze({
     FfiConverterTypeAnalyticsEvent,
     FfiConverterTypeAppListener,
     FfiConverterTypeAvatarState,
+    FfiConverterTypeBaseEmote,
     FfiConverterTypeBuildEnvironment,
     FfiConverterTypeCacheSize,
     FfiConverterTypeCameraFocus,
@@ -11363,6 +11631,7 @@ export default Object.freeze({
     FfiConverterTypeCampaignFallback,
     FfiConverterTypeCampaignKind,
     FfiConverterTypeCampaignResolution,
+    FfiConverterTypeCatalogItem,
     FfiConverterTypeChatLine,
     FfiConverterTypeChatProfile,
     FfiConverterTypeColorTarget,

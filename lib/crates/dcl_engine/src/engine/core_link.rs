@@ -5,7 +5,7 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 use dcl_core::app::{
-    CameraFocus, ColorTarget, CommandQueue, Control, Destination, EngineCommand, EngineEvent,
+    AvatarState, CameraFocus, CommandQueue, Control, Destination, EngineCommand, EngineEvent,
     Parcel, State,
 };
 use dcl_core::Core;
@@ -42,8 +42,25 @@ fn signal_payload(command: &EngineCommand) -> Option<(&'static str, VarDictionar
         )),
         EngineCommand::HideAvatarPreview => Some(("hide_avatar_preview", VarDictionary::new())),
         EngineCommand::SetRendering(_) => None,
-        EngineCommand::Control(Control::AnswerSceneRequest { .. }) => None,
-        EngineCommand::Control(control) => Some(control_payload(control)),
+        EngineCommand::ApplyAvatar(avatar) => Some(("apply_avatar", avatar_args(avatar))),
+        EngineCommand::Control(control) => control_payload(control),
+    }
+}
+
+fn avatar_args(avatar: &AvatarState) -> VarDictionary {
+    let strings = |items: &[String]| {
+        items
+            .iter()
+            .map(|item| GString::from(item.as_str()))
+            .collect::<PackedStringArray>()
+    };
+    vdict! {
+        "body_shape": avatar.body_shape.clone(),
+        "wearables": strings(&avatar.wearables),
+        "emotes": strings(&avatar.emotes),
+        "skin": avatar.skin.clone(),
+        "hair": avatar.hair.clone(),
+        "eyes": avatar.eyes.clone(),
     }
 }
 
@@ -58,17 +75,10 @@ fn focus_name(focus: CameraFocus) -> &'static str {
     }
 }
 
-fn color_target_name(target: ColorTarget) -> &'static str {
-    match target {
-        ColorTarget::Skin => "skin",
-        ColorTarget::Hair => "hair",
-        ColorTarget::Eyes => "eyes",
-    }
-}
-
-/// `(kind, args)` of the `core_command` signal for a shell control.
-pub(super) fn control_payload(control: &Control) -> (&'static str, VarDictionary) {
-    match control {
+/// `(kind, args)` of the `core_command` signal for a shell control; `None` for the ones the core
+/// runs itself (avatar edits become `apply_avatar`, scene answers are Rust).
+pub(super) fn control_payload(control: &Control) -> Option<(&'static str, VarDictionary)> {
+    Some(match control {
         Control::Teleport { parcel } => ("teleport", vdict! { "x": parcel.x, "y": parcel.y }),
         Control::SendChat { text } => ("send_chat", vdict! { "text": text.clone() }),
         Control::Emote { urn } => ("emote", vdict! { "urn": urn.clone() }),
@@ -85,26 +95,17 @@ pub(super) fn control_payload(control: &Control) -> (&'static str, VarDictionary
         Control::ChatOpen { open } => ("chat_open", vdict! { "open": *open }),
         Control::HideUi { hidden } => ("hide_ui", vdict! { "hidden": *hidden }),
         Control::FocusCamera { focus } => ("focus_camera", vdict! { "focus": focus_name(*focus) }),
-        Control::Equip { urn } => ("equip", vdict! { "urn": urn.clone() }),
-        Control::Unequip { urn } => ("unequip", vdict! { "urn": urn.clone() }),
-        Control::SetBodyShape { urn } => ("set_body_shape", vdict! { "urn": urn.clone() }),
-        Control::SetColor { target, color } => (
-            "set_color",
-            vdict! { "target": color_target_name(*target), "color": color.clone() },
-        ),
         Control::SetPreviewUrl { url } => ("set_preview_url", vdict! { "url": url.clone() }),
         Control::PlayPreviewEmote { urn } => ("play_preview_emote", vdict! { "urn": urn.clone() }),
-        Control::SetEmoteSlot { slot, urn } => (
-            "set_emote_slot",
-            vdict! { "slot": *slot, "urn": urn.clone() },
-        ),
-        Control::RandomizeAvatar => ("randomize_avatar", VarDictionary::new()),
         Control::SetName { name } => ("set_name", vdict! { "name": name.clone() }),
-        Control::AnswerSceneRequest { id, accepted } => (
-            "answer_scene_request",
-            vdict! { "id": *id, "accepted": *accepted },
-        ),
-    }
+        Control::Equip { .. }
+        | Control::Unequip { .. }
+        | Control::SetBodyShape { .. }
+        | Control::SetColor { .. }
+        | Control::SetEmoteSlot { .. }
+        | Control::RandomizeAvatar
+        | Control::AnswerSceneRequest { .. } => return None,
+    })
 }
 
 impl DclEngine {

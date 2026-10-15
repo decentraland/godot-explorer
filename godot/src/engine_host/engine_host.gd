@@ -4,13 +4,8 @@ extends Node
 
 const STATE_INTERVAL := 0.25
 const AVATAR_CONTROLS := [
-	"equip",
-	"unequip",
-	"set_body_shape",
-	"set_color",
+	"apply_avatar",
 	"play_preview_emote",
-	"set_emote_slot",
-	"randomize_avatar",
 	"set_name",
 ]
 
@@ -96,20 +91,10 @@ func _on_core_command(kind: String, args: Dictionary) -> void:
 
 func _run_avatar_control(kind: String, args: Dictionary) -> void:
 	match kind:
-		"equip":
-			_backpack.async_equip(args.urn)
-		"unequip":
-			_backpack.async_unequip(args.urn)
-		"set_body_shape":
-			_backpack.async_set_body_shape(args.urn)
-		"set_color":
-			_backpack.async_set_color(args.target, args.color)
+		"apply_avatar":
+			_backpack.async_apply_avatar(args)
 		"play_preview_emote":
 			_backpack.play_emote(args.urn)
-		"set_emote_slot":
-			_backpack.set_emote_slot(args.slot, args.urn)
-		"randomize_avatar":
-			_backpack.async_randomize()
 		"set_name":
 			_backpack.async_set_profile_name(args.name)
 

@@ -9,6 +9,7 @@ use crate::{
     Core,
 };
 
+mod avatar;
 mod control;
 mod gates;
 pub use gates::eula_accepted;

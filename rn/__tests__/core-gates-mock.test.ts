@@ -14,7 +14,7 @@ import { placeJumpLink, eventJumpLink } from '../src/discover/eventTime';
 import { mainRealm, worldRealm } from '../src/discover/api';
 import { linkQueryFor, sceneLink } from '../src/menu/api';
 import { marketplaceUrl } from '../src/backpack/platformPolicy';
-import { entitiesUrl, wearablesUrl } from '../src/backpack/catalog';
+import { entitiesUrl } from '../src/backpack/catalog';
 
 afterEach(() => setCoreForTests(undefined));
 
@@ -76,9 +76,6 @@ describe('shell url helpers use the core', () => {
     );
     expect(eventJumpLink('e1')).toMatch(/\/events\/event\/\?id=e1$/);
     expect(marketplaceUrl()).toMatch(/\/items\?category=wearable$/);
-    expect(wearablesUrl()).toBe(
-      'https://peer.decentraland.org/lambdas/collections/wearables?collectionId=urn:decentraland:off-chain:base-avatars',
-    );
     expect(entitiesUrl()).toBe(
       'https://peer.decentraland.org/content/entities/active',
     );

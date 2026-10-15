@@ -12,6 +12,10 @@ mod tests;
 
 use std::sync::Arc;
 
+use rand::{rngs::StdRng, SeedableRng};
+
+use crate::avatar::{self, Catalog};
+
 pub use control::{
     AvatarState, CameraFocus, ChatLine, ChatProfile, ColorTarget, Control, HudInsets, HudSnapshot,
     LoadingDetail, UiState, Vec3,
@@ -36,6 +40,8 @@ pub struct App {
     last_hud: Option<HudSnapshot>,
     /// The preview is shown over a running world (the in-world backpack), not as a state of its own.
     overlay: bool,
+    catalog: Catalog,
+    rng: StdRng,
 }
 
 impl App {
@@ -51,6 +57,8 @@ impl App {
             avatar: None,
             last_hud: None,
             overlay: false,
+            catalog: Catalog::default(),
+            rng: StdRng::from_entropy(),
         }
     }
 
@@ -63,9 +71,67 @@ impl App {
         self.avatar.as_ref()
     }
 
-    /// Forwards a shell command to the engine, starting it if it is not up yet.
+    /// The wearables the avatar edits resolve against; set once the shell loaded them.
+    pub fn set_catalog(&mut self, catalog: Catalog) {
+        self.catalog = catalog;
+    }
+
+    pub fn catalog(&self) -> &Catalog {
+        &self.catalog
+    }
+
+    #[cfg(test)]
+    fn seed_rng(&mut self, seed: u64) {
+        self.rng = StdRng::seed_from_u64(seed);
+    }
+
+    /// Runs a shell command: avatar edits are computed here and the result goes to the engine to
+    /// render; the rest is forwarded, starting the engine if it is not up yet.
     pub fn control(&mut self, control: Control) {
+        if let Some(edit) = self.edit_avatar(&control) {
+            match edit {
+                Ok(next) if self.avatar.as_ref() != Some(&next) => {
+                    self.events.avatar_changed(&next);
+                    self.avatar = Some(next.clone());
+                    self.send(EngineCommand::ApplyAvatar(next));
+                }
+                Ok(_) => {}
+                Err(error) => tracing::warn!("avatar edit ignored: {error}"),
+            }
+            return;
+        }
         self.send(EngineCommand::Control(control));
+    }
+
+    /// `None` for a command that is not an avatar edit. An edit before the engine reported the
+    /// avatar has nothing to start from and is ignored.
+    fn edit_avatar(
+        &mut self,
+        control: &Control,
+    ) -> Option<Result<AvatarState, avatar::AvatarError>> {
+        let is_edit = matches!(
+            control,
+            Control::Equip { .. }
+                | Control::Unequip { .. }
+                | Control::SetBodyShape { .. }
+                | Control::SetColor { .. }
+                | Control::SetEmoteSlot { .. }
+                | Control::RandomizeAvatar
+        );
+        if !is_edit {
+            return None;
+        }
+        let Some(current) = self.avatar.clone() else {
+            return Some(Err(avatar::AvatarError::NoAvatar));
+        };
+        Some(match control {
+            Control::Equip { urn } => avatar::equip(&current, &self.catalog, urn),
+            Control::Unequip { urn } => Ok(avatar::unequip(&current, &self.catalog, urn)),
+            Control::SetBodyShape { urn } => avatar::set_body_shape(&current, &self.catalog, urn),
+            Control::SetColor { target, color } => avatar::set_color(&current, *target, color),
+            Control::SetEmoteSlot { slot, urn } => avatar::set_emote_slot(&current, *slot, urn),
+            _ => Ok(avatar::randomize(&current, &self.catalog, &mut self.rng)),
+        })
     }
 
     pub fn engine_attached(&self) -> bool {

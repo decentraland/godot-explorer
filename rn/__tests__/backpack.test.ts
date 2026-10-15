@@ -4,12 +4,7 @@ import {
   reduceBackpack,
   activeSlot,
 } from '../src/backpack/backpackState';
-import {
-  parseWearables,
-  MALE,
-  FEMALE,
-  BASE_PREFIX,
-} from '../src/backpack/catalog';
+import { MALE, FEMALE, BASE_PREFIX, Wearable } from '../src/backpack/catalog';
 import {
   DEFAULT_EMOTES,
   emoteIdOf,
@@ -25,37 +20,29 @@ import {
 } from '../src/backpack/selection';
 import { SLOTS, isRemovable } from '../src/backpack/taxonomy';
 
-const raw = (
+const w = (
   id: string,
   category: string,
-  shapes: string[] = [MALE, FEMALE],
-) => ({
-  id: BASE_PREFIX + id,
-  name: id,
+  bodyShapes: string[] = [],
+  rarity: Wearable['rarity'] = 'base',
+): Wearable => ({
+  id: rarity === 'base' ? BASE_PREFIX + id : id,
+  name: id.toUpperCase(),
+  category,
   thumbnail: `https://t/${id}`,
-  i18n: [{ code: 'en', text: id.toUpperCase() }],
-  data: {
-    category,
-    representations: shapes.map(bodyShapes => ({ bodyShapes: [bodyShapes] })),
-  },
+  rarity,
+  bodyShapes,
+  collectible: rarity !== 'base',
 });
 
-const catalog = parseWearables({
-  wearables: [
-    raw('BaseMale', 'body_shape', [MALE]),
-    raw('BaseFemale', 'body_shape', [FEMALE]),
-    raw('hoodie', 'upper_body', [MALE]),
-    raw('dress', 'upper_body', [FEMALE]),
-    raw('cap', 'hat'),
-    {
-      id: 'urn:decentraland:matic:collections-v2:0x1:0',
-      thumbnail: 't',
-      rarity: 'epic',
-      data: { category: 'hat' },
-    },
-    { id: 'broken' },
-  ],
-});
+const catalog: Wearable[] = [
+  w('BaseMale', 'body_shape', [MALE]),
+  w('BaseFemale', 'body_shape', [FEMALE]),
+  w('hoodie', 'upper_body', [MALE]),
+  w('dress', 'upper_body', [FEMALE]),
+  w('cap', 'hat'),
+  w('urn:decentraland:matic:collections-v2:0x1:0', 'hat', [], 'epic'),
+];
 
 const avatar = (patch: Partial<AvatarState> = {}): AvatarState => ({
   bodyShape: MALE,
@@ -65,25 +52,6 @@ const avatar = (patch: Partial<AvatarState> = {}): AvatarState => ({
   hair: '#1c1c1c',
   eyes: '#2b2b2b',
   ...patch,
-});
-
-describe('parseWearables', () => {
-  it('drops malformed entries and maps names, rarity and collectible flag', () => {
-    expect(catalog).toHaveLength(6);
-    expect(catalog.find(item => item.id.endsWith('hoodie'))?.name).toBe(
-      'HOODIE',
-    );
-    const epic = catalog.find(item => item.rarity === 'epic');
-    expect(epic?.collectible).toBe(true);
-    expect(catalog.find(item => item.id.endsWith('cap'))?.collectible).toBe(
-      false,
-    );
-  });
-
-  it('tolerates garbage payloads', () => {
-    expect(parseWearables(null)).toEqual([]);
-    expect(parseWearables({ wearables: 'nope' })).toEqual([]);
-  });
 });
 
 describe('selection', () => {

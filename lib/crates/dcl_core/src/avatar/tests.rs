@@ -229,3 +229,52 @@ fn the_base_emotes_are_the_21_the_client_ships() {
         "URN:DECENTRALAND:OFF-CHAIN:BASE-AVATARS:eyes_00"
     ));
 }
+
+struct Reply(Result<(u16, &'static str), &'static str>);
+
+#[async_trait::async_trait]
+impl crate::profile::Transport for Reply {
+    async fn send(
+        &self,
+        request: crate::profile::HttpRequest,
+    ) -> Result<crate::profile::HttpReply, String> {
+        assert!(request.url.ends_with(
+            "collections/wearables?collectionId=urn:decentraland:off-chain:base-avatars"
+        ));
+        self.0
+            .map(|(status, body)| crate::profile::HttpReply {
+                status,
+                body: body.to_string(),
+            })
+            .map_err(str::to_string)
+    }
+}
+
+fn run<T>(future: impl std::future::Future<Output = T>) -> T {
+    tokio::runtime::Builder::new_current_thread()
+        .build()
+        .unwrap()
+        .block_on(future)
+}
+
+#[test]
+fn the_base_catalog_is_read_from_the_lambdas() {
+    let endpoints = crate::profile::Endpoints::new("https://peer/lambdas", "https://peer/content");
+    let body = r#"{"wearables":[{"id":"urn:decentraland:off-chain:base-avatars:f_sweater",
+        "thumbnail":"t","data":{"category":"upper_body"}}]}"#;
+    let items = run(base_catalog(&Reply(Ok((200, body))), &endpoints)).unwrap();
+    assert_eq!(items.len(), 1);
+
+    assert_eq!(
+        run(base_catalog(&Reply(Ok((503, ""))), &endpoints)),
+        Err(CatalogError::Http(503))
+    );
+    assert_eq!(
+        run(base_catalog(&Reply(Ok((200, "{}"))), &endpoints)),
+        Err(CatalogError::Empty)
+    );
+    assert!(matches!(
+        run(base_catalog(&Reply(Err("offline")), &endpoints)),
+        Err(CatalogError::Network(_))
+    ));
+}

@@ -1,3 +1,4 @@
+import type { AvatarApi } from './avatar';
 import type { ControlApi } from './control';
 import type { SessionApi } from './session';
 import type { SettingsApi } from './settings';
@@ -8,6 +9,7 @@ import type { SceneApi } from './scene';
 
 /** Everything the shell can ask of the core: one slice per domain. */
 export type CoreApi = SessionApi &
+  AvatarApi &
   ControlApi &
   SettingsApi &
   ProfileApi &

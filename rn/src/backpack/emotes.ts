@@ -1,3 +1,4 @@
+import { core } from '../core';
 import { Rarity } from '../ds';
 import { contentsUrl, entitiesUrl } from './catalog';
 
@@ -14,36 +15,8 @@ export type Emote = {
   collectible?: boolean;
 };
 
-/** Base emotes the client ships (godot/src/ui/components/organisms/emotes/emotes.gd). */
-const BASE_EMOTES: [string, string][] = [
-  ['handsair', 'Hands Air'],
-  ['wave', 'Wave'],
-  ['fistpump', 'Fist Pump'],
-  ['dance', 'Dance'],
-  ['raiseHand', 'Raise Hand'],
-  ['clap', 'Clap'],
-  ['money', 'Money'],
-  ['kiss', 'Kiss'],
-  ['shrug', 'Shrug'],
-  ['headexplode', 'Head Explode'],
-  ['cry', 'Cry'],
-  ['dab', 'Dab'],
-  ['disco', 'Disco'],
-  ['dontsee', "Don't See"],
-  ['hammer', 'Hammer'],
-  ['hohoho', 'Ho Ho Ho'],
-  ['robot', 'Robot'],
-  ['snowfall', 'Snowfall'],
-  ['tektonik', 'Tektonik'],
-  ['tik', 'Tik'],
-  ['confettipopper', 'Confetti Popper'],
-];
-
-export const DEFAULT_EMOTES: Emote[] = BASE_EMOTES.map(([id, name]) => ({
-  id,
-  urn: BASE_EMOTE_PREFIX + id,
-  name,
-}));
+/** The emotes every account has, from the core. */
+export const DEFAULT_EMOTES: Emote[] = core().baseEmotes();
 
 /** Profiles store base emotes either as the bare id or as the full urn. */
 export function emoteIdOf(urnOrId: string): string {

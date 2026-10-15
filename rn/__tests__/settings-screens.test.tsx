@@ -11,6 +11,7 @@ import { createMockApi, MockSeed } from '../src/settings/mockApi';
 import { SettingsScreen } from '../src/settings/SettingsScreen';
 import type { SectionKey } from '../src/settings/sections';
 import type { PreviewState } from '../src/settings/SectionBody';
+import { setLocale } from '../src/i18n';
 
 const metrics = {
   frame: { x: 0, y: 0, width: 360, height: 640 },
@@ -95,6 +96,8 @@ const landscape = () =>
   });
 
 beforeEach(portrait);
+
+afterEach(() => setLocale('en'));
 
 describe('portrait master-detail', () => {
   it('lists the seven sections and the version, with no Dev Tools', async () => {

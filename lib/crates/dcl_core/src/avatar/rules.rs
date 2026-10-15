@@ -12,6 +12,8 @@ use crate::app::{AvatarState, ColorTarget};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum AvatarError {
+    /// The engine has not reported the avatar yet, so there is nothing to edit.
+    NoAvatar,
     /// The catalog does not know the item, so its category is not known either.
     UnknownItem(String),
     /// The item has no representation for the avatar's body shape.
@@ -24,6 +26,7 @@ pub enum AvatarError {
 impl std::fmt::Display for AvatarError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            Self::NoAvatar => write!(f, "no avatar to edit yet"),
             Self::UnknownItem(urn) => write!(f, "unknown item {urn}"),
             Self::WrongBodyShape(urn) => write!(f, "{urn} does not fit this body shape"),
             Self::InvalidBodyShape(urn) => write!(f, "{urn} is not a body shape"),

@@ -5,7 +5,6 @@ extends Node
 signal preload_finished
 
 const PREVIEW_SCENE := preload("res://src/ui/pages/backpack/avatar_preview.tscn")
-const EMOTE_SLOTS := 10
 
 # In explorer mode only the preview is drawn by the main viewport (nameplates and other 2D layers
 # are culled); disable_3d stops the world render.
@@ -79,66 +78,29 @@ func close() -> void:
 		_show_preview(false)
 
 
-func async_equip(urn: String) -> void:
+## Renders the avatar the core computed. The core already holds it, so the engine reports back only
+## when it ended up with something else (it forces defaults for missing required categories).
+func async_apply_avatar(args: Dictionary) -> void:
 	var avatar = Global.player_identity.get_mutable_avatar()
 	if avatar == null:
 		return
-	var current: PackedStringArray = avatar.get_wearables()
-	var wanted := PackedStringArray(current)
-	wanted.append(urn)
-	await PromiseUtils.async_all(
-		Global.content_provider.fetch_wearables(wanted, Global.realm.get_profile_content_url())
-	)
-	var category: String = Global.content_provider.get_wearable(urn).get_category()
-	var kept := PackedStringArray()
-	for existing in current:
-		var item = Global.content_provider.get_wearable(existing)
-		if item == null or item.get_category() != category:
-			kept.append(existing)
-	kept.append(urn)
-	avatar.set_wearables(kept)
-	await _async_commit()
+	avatar.set_body_shape(args.body_shape)
+	avatar.set_wearables(PackedStringArray(args.wearables))
+	avatar.set_emotes(PackedStringArray(args.emotes))
+	avatar.set_skin_color(Color.html(args.skin))
+	avatar.set_hair_color(Color.html(args.hair))
+	avatar.set_eyes_color(Color.html(args.eyes))
+	await _async_refresh_avatar()
+	if not _same_wearables(avatar.get_wearables(), args.wearables):
+		_emit_avatar()
 
 
-# Categories the engine forces back to defaults are kept: removing them would be undone anyway.
-func async_unequip(urn: String) -> void:
-	var avatar = Global.player_identity.get_mutable_avatar()
-	if avatar == null:
-		return
-	var item = Global.content_provider.get_wearable(urn)
-	if item != null and item.get_category() in Wearables.Categories.REQUIRED_CATEGORIES:
-		return
-	var kept := PackedStringArray()
-	for existing in avatar.get_wearables():
-		if existing != urn:
-			kept.append(existing)
-	avatar.set_wearables(kept)
-	await _async_commit()
-
-
-func async_set_body_shape(urn: String) -> void:
-	var avatar = Global.player_identity.get_mutable_avatar()
-	if avatar == null:
-		return
-	avatar.set_body_shape(urn)
-	await _async_commit()
-
-
-func async_set_color(target: String, html: String) -> void:
-	var avatar = Global.player_identity.get_mutable_avatar()
-	if avatar == null or not Color.html_is_valid(html):
-		return
-	var color := Color.html(html)
-	match target:
-		"skin":
-			avatar.set_skin_color(color)
-		"hair":
-			avatar.set_hair_color(color)
-		"eyes":
-			avatar.set_eyes_color(color)
-		_:
-			return
-	await _async_commit()
+func _same_wearables(a: PackedStringArray, b: PackedStringArray) -> bool:
+	var left := Array(a)
+	var right := Array(b)
+	left.sort()
+	right.sort()
+	return left == right
 
 
 func focus_camera(target: String) -> void:
@@ -164,22 +126,6 @@ func play_emote(urn: String) -> void:
 		return
 	var id := Emotes.get_base_emote_id_from_urn(urn) if Emotes.is_base_emote_urn(urn) else urn
 	_preview.avatar.emote_controller.async_play_emote(id)
-
-
-func set_emote_slot(slot: int, urn: String) -> void:
-	var avatar = Global.player_identity.get_mutable_avatar()
-	if avatar == null or slot < 0 or slot >= EMOTE_SLOTS:
-		return
-	var emotes: PackedStringArray = avatar.get_emotes()
-	emotes[slot] = urn
-	avatar.set_emotes(emotes)
-	_emit_avatar()
-
-
-func async_randomize() -> void:
-	Global.player_identity.set_random_profile()
-	await Global.player_identity.profile_changed
-	await _async_commit()
 
 
 func async_set_profile_name(new_name: String) -> void:

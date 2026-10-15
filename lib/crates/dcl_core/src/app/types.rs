@@ -117,6 +117,8 @@ pub enum EngineCommand {
     ShowAvatarPreview(Rect),
     HideAvatarPreview,
     SetRendering(bool),
+    /// The avatar the core computed from an edit; the engine renders it.
+    ApplyAvatar(super::AvatarState),
     Control(super::Control),
 }
 

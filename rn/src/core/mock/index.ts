@@ -1,5 +1,7 @@
 import type { CoreApi } from '../api';
 import { State } from '../native';
+import { createMockAvatar } from './avatar';
+import { createMockAvatarApi } from './avatarApi';
 import { createMockControl } from './control';
 import { createMockBus } from './emitter';
 import { createMockGates } from './gates';
@@ -17,9 +19,11 @@ export function createMockCore(options: { signedIn?: boolean } = {}): CoreApi {
   const bus = createMockBus(
     options.signedIn ? new State.SignedIn() : new State.SignedOut(),
   );
+  const avatar = createMockAvatar();
   return {
     ...createMockSession(bus),
-    ...createMockControl(bus),
+    ...createMockAvatarApi(avatar),
+    ...createMockControl(bus, avatar),
     ...createMockSettings(),
     ...createMockProfile(),
     ...createMockPlaces(),

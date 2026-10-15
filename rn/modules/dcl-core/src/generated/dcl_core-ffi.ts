@@ -186,7 +186,14 @@ interface NativeModuleInterface {
   ubrn_uniffi_dcl_core_fn_func_address(
     uniffi_out_err: UniffiRustCallStatus,
   ): Uint8Array;
+  ubrn_uniffi_dcl_core_fn_func_avatar_palette(
+    target: Uint8Array,
+    uniffi_out_err: UniffiRustCallStatus,
+  ): Uint8Array;
   ubrn_uniffi_dcl_core_fn_func_avatar_state(
+    uniffi_out_err: UniffiRustCallStatus,
+  ): Uint8Array;
+  ubrn_uniffi_dcl_core_fn_func_base_emotes(
     uniffi_out_err: UniffiRustCallStatus,
   ): Uint8Array;
   ubrn_uniffi_dcl_core_fn_func_cache_size(
@@ -261,6 +268,10 @@ interface NativeModuleInterface {
   ubrn_uniffi_dcl_core_fn_func_is_guest(
     uniffi_out_err: UniffiRustCallStatus,
   ): number;
+  ubrn_uniffi_dcl_core_fn_func_is_removable_category(
+    category: Uint8Array,
+    uniffi_out_err: UniffiRustCallStatus,
+  ): number;
   ubrn_uniffi_dcl_core_fn_func_jump_position_url(
     position: Uint8Array,
     uniffi_out_err: UniffiRustCallStatus,
@@ -269,6 +280,7 @@ interface NativeModuleInterface {
     realm: Uint8Array,
     uniffi_out_err: UniffiRustCallStatus,
   ): Uint8Array;
+  ubrn_uniffi_dcl_core_fn_func_load_avatar_catalog(): bigint;
   ubrn_uniffi_dcl_core_fn_func_mark_notifications_read(ids: Uint8Array): bigint;
   ubrn_uniffi_dcl_core_fn_func_marketplace_browse_url(
     section: Uint8Array,
@@ -473,7 +485,9 @@ interface NativeModuleInterface {
   ubrn_uniffi_dcl_core_checksum_func_accept_terms(): number;
   ubrn_uniffi_dcl_core_checksum_func_add_listener(): number;
   ubrn_uniffi_dcl_core_checksum_func_address(): number;
+  ubrn_uniffi_dcl_core_checksum_func_avatar_palette(): number;
   ubrn_uniffi_dcl_core_checksum_func_avatar_state(): number;
+  ubrn_uniffi_dcl_core_checksum_func_base_emotes(): number;
   ubrn_uniffi_dcl_core_checksum_func_cache_size(): number;
   ubrn_uniffi_dcl_core_checksum_func_campaign_resolution(): number;
   ubrn_uniffi_dcl_core_checksum_func_cancel_sign_in(): number;
@@ -502,8 +516,10 @@ interface NativeModuleInterface {
   ubrn_uniffi_dcl_core_checksum_func_hide_avatar_preview(): number;
   ubrn_uniffi_dcl_core_checksum_func_installs(): number;
   ubrn_uniffi_dcl_core_checksum_func_is_guest(): number;
+  ubrn_uniffi_dcl_core_checksum_func_is_removable_category(): number;
   ubrn_uniffi_dcl_core_checksum_func_jump_position_url(): number;
   ubrn_uniffi_dcl_core_checksum_func_jump_realm_url(): number;
+  ubrn_uniffi_dcl_core_checksum_func_load_avatar_catalog(): number;
   ubrn_uniffi_dcl_core_checksum_func_mark_notifications_read(): number;
   ubrn_uniffi_dcl_core_checksum_func_marketplace_browse_url(): number;
   ubrn_uniffi_dcl_core_checksum_func_marketplace_item_url(): number;

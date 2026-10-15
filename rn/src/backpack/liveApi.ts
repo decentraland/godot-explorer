@@ -1,7 +1,7 @@
 import { Linking } from 'react-native';
 import { core } from '../core';
 import type { BackpackApi, Catalog } from './api';
-import { fetchWearables } from './catalog';
+import { loadWearables } from './catalog';
 import { DEFAULT_EMOTES, fetchEmoteThumbnails } from './emotes';
 import { marketplaceUrl } from './platformPolicy';
 import { useAvatar } from './useAvatar';
@@ -10,7 +10,7 @@ let cached: Promise<Catalog> | null = null;
 
 function loadOnce(): Promise<Catalog> {
   cached ??= Promise.all([
-    fetchWearables(),
+    loadWearables(),
     fetchEmoteThumbnails().catch(() => DEFAULT_EMOTES),
   ])
     .then(([wearables, emotes]) => ({ wearables, emotes }))

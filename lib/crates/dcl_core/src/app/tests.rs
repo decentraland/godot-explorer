@@ -639,3 +639,126 @@ fn a_scene_request_reaches_the_shell_and_its_answer_reaches_the_engine() {
         })]
     );
 }
+
+fn wearable(urn: &str, category: &str) -> crate::avatar::CatalogItem {
+    crate::avatar::CatalogItem {
+        urn: urn.into(),
+        name: urn.into(),
+        category: category.into(),
+        thumbnail: "t".into(),
+        rarity: "base".into(),
+        body_shapes: vec![],
+        collectible: false,
+    }
+}
+
+fn reported(app: &mut App) {
+    app.set_catalog(crate::avatar::Catalog::new(vec![
+        wearable("shirt_a", "upper_body"),
+        wearable("shirt_b", "upper_body"),
+    ]));
+    app.engine_event(EngineEvent::Avatar(AvatarState {
+        body_shape: crate::avatar::MALE.into(),
+        wearables: vec!["shirt_a".into()],
+        emotes: vec![String::new(); 10],
+        skin: "#ffffff".into(),
+        hair: "#000000".into(),
+        eyes: "#000000".into(),
+    }));
+}
+
+#[test]
+fn an_avatar_edit_is_computed_here_and_the_engine_only_renders_it() {
+    let facts = Arc::new(Facts::default());
+    let (mut app, engine) = in_a_world(&facts);
+    reported(&mut app);
+    engine.take();
+    facts.seen.lock().unwrap().clear();
+
+    app.control(Control::Equip {
+        urn: "shirt_b".into(),
+    });
+
+    let sent = engine.take();
+    let [EngineCommand::ApplyAvatar(avatar)] = sent.as_slice() else {
+        panic!("expected one ApplyAvatar, got {sent:?}");
+    };
+    assert_eq!(avatar.wearables, vec!["shirt_b".to_string()]);
+    assert_eq!(app.avatar(), Some(avatar));
+    assert_eq!(
+        *facts.seen.lock().unwrap(),
+        vec![format!("avatar {}", crate::avatar::MALE)]
+    );
+}
+
+#[test]
+fn an_edit_that_changes_nothing_sends_nothing() {
+    let facts = Arc::new(Facts::default());
+    let (mut app, engine) = in_a_world(&facts);
+    reported(&mut app);
+    engine.take();
+    app.control(Control::Equip {
+        urn: "shirt_a".into(),
+    });
+    app.control(Control::Unequip {
+        urn: "not worn".into(),
+    });
+    assert_eq!(engine.take(), vec![]);
+}
+
+#[test]
+fn a_rejected_edit_or_one_before_the_avatar_is_known_is_ignored() {
+    let facts = Arc::new(Facts::default());
+    let (mut app, engine) = in_a_world(&facts);
+    engine.take();
+    app.control(Control::RandomizeAvatar);
+    assert_eq!(engine.take(), vec![], "no avatar reported yet");
+
+    reported(&mut app);
+    engine.take();
+    app.control(Control::Equip {
+        urn: "not in the catalog".into(),
+    });
+    app.control(Control::SetColor {
+        target: ColorTarget::Hair,
+        color: "red".into(),
+    });
+    app.control(Control::SetEmoteSlot {
+        slot: 99,
+        urn: "wave".into(),
+    });
+    assert_eq!(engine.take(), vec![]);
+}
+
+#[test]
+fn other_controls_still_go_to_the_engine() {
+    let facts = Arc::new(Facts::default());
+    let (mut app, engine) = in_a_world(&facts);
+    engine.take();
+    app.control(Control::SendChat { text: "hi".into() });
+    assert_eq!(
+        engine.take(),
+        vec![EngineCommand::Control(Control::SendChat {
+            text: "hi".into()
+        })]
+    );
+}
+
+#[test]
+fn randomize_draws_from_the_catalog_and_is_repeatable_for_a_seed() {
+    let facts = Arc::new(Facts::default());
+    let (mut a, engine_a) = in_a_world(&facts);
+    reported(&mut a);
+    a.seed_rng(3);
+    engine_a.take();
+    a.control(Control::RandomizeAvatar);
+    let first = engine_a.take();
+
+    let (mut b, engine_b) = in_a_world(&facts);
+    reported(&mut b);
+    b.seed_rng(3);
+    engine_b.take();
+    b.control(Control::RandomizeAvatar);
+    assert_eq!(first, engine_b.take());
+    assert!(matches!(first.as_slice(), [EngineCommand::ApplyAvatar(_)]));
+}
