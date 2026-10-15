@@ -6,10 +6,16 @@ class_name Navigator
 ## real, which turns a black screen over a discarded scene into a modal over the one the
 ## player is still standing in. Every resolver state leaves through here.
 
+## Passwords the shell collected for protected worlds, by normalized realm url.
+static var world_secrets: Dictionary = {}
+
 
 ## `when` is the loading-funnel bucket the dashboards index on. Returns true only when
 ## the player actually went somewhere.
 static func async_go(dest: Destination, when: String) -> bool:
+	var secret: String = world_secrets.get(Realm.normalize_realm_url(dest.realm_string), "")
+	if not secret.is_empty() and dest.credential.is_empty():
+		dest = dest.with_credential(secret)
 	# On the INTENT, not the loading screen: a navigation refused before the screen goes
 	# up still has to produce a funnel row.
 	Global.scene_runner.loading_begin_episode(when, dest.realm_string)
@@ -24,15 +30,18 @@ static func async_go(dest: Destination, when: String) -> bool:
 			return await _async_enter(resolved, when)
 		Destination.State.NOT_ALLOWED:
 			recover_from_refusal(resolved.realm_string)
+			Global.engine.report_notice("entry_private", resolved.realm_string)
 			return _abandon("private_world_access_denied")
 		Destination.State.NEEDS_PASSWORD:
-			# Nothing asks for the password yet: they stay exactly where they were.
+			# The shell asks for the password and enters again.
+			Global.engine.report_notice("entry_password", resolved.realm_string)
 			return _abandon("needs_password")
 		_:
 			Global.scene_runner.loading_realm_change_failed(
 				resolved.realm_string, resolved.failure_reason()
 			)
 			recover_from_refusal(resolved.realm_string)
+			Global.engine.report_notice("entry_not_found", resolved.realm_string)
 			return _abandon("resolve_failed")
 
 
@@ -40,6 +49,9 @@ static func async_go(dest: Destination, when: String) -> bool:
 ## realm kept as the boot realm reopens the same modal on every launch, and a boot that never
 ## committed a realm leaves nothing behind the modal to dismiss back to.
 static func recover_from_refusal(realm_string: String) -> void:
+	# The shell decides where the player goes after a refusal.
+	if Global.engine.is_host_driven():
+		return
 	# Still standing somewhere: the refusal cost nothing and the saved realm is still good.
 	# Only a refusal that left us with no realm at all is the one that repeats on every boot.
 	if is_instance_valid(Global.realm) and Global.realm.has_realm():

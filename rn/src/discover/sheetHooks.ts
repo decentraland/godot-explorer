@@ -3,7 +3,7 @@ import { useNav } from '../app/NavProvider';
 import { useToast } from '../ds';
 import { t } from '../i18n';
 import { syncEventReminder } from '../notifications/push';
-import { enterPlace } from '../world/enterPlace';
+import { enterPlaceChecked } from '../modals/destination';
 import { Place } from './api';
 import { useApi } from './ApiContext';
 import { eventJumpLink } from './eventTime';
@@ -16,14 +16,14 @@ export function useJumpIn(): (place: Place) => void {
   const toast = useToast();
   return useCallback(
     place => {
-      try {
-        enterPlace(place);
-      } catch {
-        toast(t('DISCOVER_ACTION_FAILED'));
-        return;
-      }
-      recordPlayed(place);
-      push({ name: 'world', params: { place } });
+      enterPlaceChecked(place)
+        .then(entered => {
+          if (entered) {
+            recordPlayed(place);
+            push({ name: 'world', params: { place } });
+          }
+        })
+        .catch(() => toast(t('DISCOVER_ACTION_FAILED')));
     },
     [push, toast],
   );

@@ -103,6 +103,9 @@ impl AppEvents for HostEvents {
     ) {
         self.each(|l| l.scene_request(id, request));
     }
+    fn engine_notice(&self, notice: &super::EngineNotice) {
+        self.each(|l| l.engine_notice(notice));
+    }
     fn report(&self, payload: &crate::hub::ReportPayload) {
         self.each(|l| l.report(payload));
     }
@@ -214,5 +217,37 @@ mod tests {
         events.state_changed(&State::SignedIn);
         assert_eq!(*shell.0.lock().unwrap(), 1);
         assert_eq!(*host.0.lock().unwrap(), 2);
+    }
+
+    #[test]
+    fn what_the_engine_tells_the_player_reaches_the_listeners() {
+        #[derive(Default)]
+        struct Seen(Mutex<Vec<String>>);
+        impl AppEvents for Seen {
+            fn state_changed(&self, _: &State) {}
+            fn engine_required(&self) {}
+            fn avatar_preview_mode(&self, _: bool) {}
+            fn scene_crashed(&self) {}
+            fn engine_notice(&self, notice: &super::super::EngineNotice) {
+                self.0.lock().unwrap().push(format!("{notice:?}"));
+            }
+            fn scene_request(
+                &self,
+                id: crate::scene_requests::RequestId,
+                _: &crate::scene_requests::SceneRequest,
+            ) {
+                self.0.lock().unwrap().push(format!("request {id}"));
+            }
+        }
+
+        let events = HostEvents::default();
+        let seen = Arc::new(Seen::default());
+        events.add_listener(seen.clone());
+        events.engine_notice(&super::super::EngineNotice::Banned);
+        events.scene_request(
+            4,
+            &crate::scene_requests::SceneRequest::OpenExternalUrl { url: "u".into() },
+        );
+        assert_eq!(*seen.0.lock().unwrap(), vec!["Banned", "request 4"]);
     }
 }

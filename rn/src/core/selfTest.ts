@@ -50,6 +50,7 @@ export async function runCoreSelfTest(): Promise<void> {
         loadingDetail: () => {},
         avatarChanged: () => {},
         sceneRequest: () => {},
+        engineNotice: () => {},
         report: () => {},
         reportTag: () => {},
       };

@@ -29,6 +29,7 @@ export function TextField({
   suffix,
   multilineHeight,
   autoFocus = false,
+  secureTextEntry = false,
 }: {
   label: string;
   value: string;
@@ -52,6 +53,7 @@ export function TextField({
   /** Height in dp of a multiline box. */
   multilineHeight?: number;
   autoFocus?: boolean;
+  secureTextEntry?: boolean;
 }) {
   const [focused, setFocused] = useState(false);
   const showClear = focused && value.length > 0 && !disabled && !!onClear;
@@ -95,6 +97,7 @@ export function TextField({
           maxLength={maxLength}
           editable={!disabled}
           autoFocus={autoFocus}
+          secureTextEntry={secureTextEntry}
           autoCapitalize={autoCapitalize}
           keyboardType={keyboardType}
           onFocus={() => setFocused(true)}

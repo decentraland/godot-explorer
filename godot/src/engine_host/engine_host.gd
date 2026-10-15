@@ -10,6 +10,7 @@ const AVATAR_CONTROLS := [
 ]
 
 var _explorer: Explorer = null
+var _watch := SessionWatch.new()
 var _state_elapsed := 0.0
 var _backpack := EngineBackpack.new()
 var _hud := EngineHud.new()
@@ -27,6 +28,7 @@ func _ready() -> void:
 	Global.engine.core_command.connect(_on_core_command)
 	_hud.connect_signals()
 	add_child(_backpack)
+	add_child(_watch)
 	_async_first_launch_benchmark()
 
 
@@ -68,6 +70,10 @@ func _on_core_command(kind: String, args: Dictionary) -> void:
 			_enter_world(args)
 		"exit_world":
 			_exit_world()
+		"reconnect":
+			_watch.reconnect()
+		"set_world_secret":
+			Navigator.world_secrets[Realm.normalize_realm_url(args.realm)] = args.secret
 		"show_avatar_preview":
 			var rect := Rect2(args.x, args.y, args.w, args.h)
 			if _backpack.is_shown():

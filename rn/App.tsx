@@ -12,6 +12,8 @@ import { Shell } from './src/app/Shell';
 import { useAnalyticsLifecycle } from './src/app/useAnalyticsLifecycle';
 import { startApp } from './src/app/startup';
 import { useLocaleSync } from './src/app/useLocaleSync';
+import { CoreModals } from './src/modals/CoreModals';
+import { ModalProvider } from './src/modals/ModalProvider';
 import { usePushRegistration } from './src/notifications/usePushRegistration';
 import { useAppWiring } from './src/app/wiring';
 import { core } from './src/core';
@@ -69,6 +71,8 @@ function AppBody() {
   const leave = useCallback(() => {
     try {
       core().exitWorld();
+    } catch {
+      // Not in a world flow (a refused entry already left it).
     } finally {
       reset({ name: 'home' });
     }
@@ -79,6 +83,7 @@ function AppBody() {
   const inWorld = route.name === 'world';
   return (
     <View key={locale} style={inWorld ? styles.transparent : styles.root}>
+      <CoreModals ready={entered} />
       {entered ? (
         <Shell onJumpIn={jumpIn} onLeave={leave} />
       ) : (
@@ -112,9 +117,11 @@ function App() {
           <Host {...preview.route} />
         ) : (
           <ToastProvider>
-            <NavProvider>
-              <AppBody />
-            </NavProvider>
+            <ModalProvider>
+              <NavProvider>
+                <AppBody />
+              </NavProvider>
+            </ModalProvider>
           </ToastProvider>
         )}
       </View>

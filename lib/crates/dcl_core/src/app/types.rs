@@ -109,6 +109,37 @@ impl State {
     }
 }
 
+/// Something the engine tells the shell the player has to hear about.
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "ffi", derive(uniffi::Enum))]
+pub enum EngineNotice {
+    /// The destination was refused, so the player stays where they were.
+    EntryRefused { reason: EntryRefusal, realm: String },
+    /// The comms connection ended and reconnecting did not bring it back.
+    Disconnected { reason: DisconnectReason },
+    /// The scene's own room banned the player.
+    Banned,
+    /// The device is running out of memory in this scene.
+    LowMemory,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "ffi", derive(uniffi::Enum))]
+pub enum EntryRefusal {
+    PrivateWorld,
+    NeedsPassword,
+    NotFound,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "ffi", derive(uniffi::Enum))]
+pub enum DisconnectReason {
+    /// The account logged in somewhere else.
+    DuplicateSession,
+    RoomClosed,
+    Other,
+}
+
 /// Core → engine. The engine executes; it never decides.
 #[derive(Clone, Debug, PartialEq)]
 pub enum EngineCommand {
@@ -140,6 +171,8 @@ pub enum EngineEvent {
     },
     LoadingDetail(super::LoadingDetail),
     Avatar(super::AvatarState),
+    /// The player has to hear about this; see `EngineNotice`.
+    Notice(EngineNotice),
     /// A scene asked the user for something; answered with `Control::AnswerSceneRequest`.
     SceneRequest {
         id: crate::scene_requests::RequestId,
@@ -178,6 +211,7 @@ pub trait AppEvents: Send + Sync {
         _request: &crate::scene_requests::SceneRequest,
     ) {
     }
+    fn engine_notice(&self, _notice: &EngineNotice) {}
     /// A panic or error the keep/drop policy let through, for the crash reporter.
     fn report(&self, _payload: &crate::hub::ReportPayload) {}
     /// A tag to add to (or, with `None`, remove from) every later crash report. Batched by the

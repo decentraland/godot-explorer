@@ -8416,6 +8416,8 @@ export enum Control_Tags {
   RandomizeAvatar = 'RandomizeAvatar',
   SetPreviewUrl = 'SetPreviewUrl',
   SetName = 'SetName',
+  Reconnect = 'Reconnect',
+  SetWorldSecret = 'SetWorldSecret',
   AnswerSceneRequest = 'AnswerSceneRequest',
 }
 /**
@@ -8883,6 +8885,65 @@ export const Control = (() => {
     }
   }
 
+  type Reconnect__interface = {
+    tag: Control_Tags.Reconnect;
+  };
+  /**
+   * Connects to the room again after a disconnect the player chose to retry.
+   */
+  class Reconnect_ extends UniffiEnum implements Reconnect__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'Control';
+    readonly tag = Control_Tags.Reconnect;
+    constructor() {
+      super('Control', 'Reconnect');
+    }
+
+    static new(): Reconnect_ {
+      return new Reconnect_();
+    }
+
+    static instanceOf(obj: any): obj is Reconnect_ {
+      return obj.tag === Control_Tags.Reconnect;
+    }
+  }
+
+  type SetWorldSecret__interface = {
+    tag: Control_Tags.SetWorldSecret;
+    inner: Readonly<{ realm: string; secret: string }>;
+  };
+  /**
+   * The password the player gave for a protected world, checked by the shell; the engine
+   * presents it when it connects to `realm`.
+   */
+  class SetWorldSecret_
+    extends UniffiEnum
+    implements SetWorldSecret__interface
+  {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'Control';
+    readonly tag = Control_Tags.SetWorldSecret;
+    readonly inner: Readonly<{ realm: string; secret: string }>;
+    constructor(inner: { realm: string; secret: string }) {
+      super('Control', 'SetWorldSecret');
+
+      this.inner = Object.freeze(inner);
+    }
+    static new(inner: { realm: string; secret: string }): SetWorldSecret_ {
+      return new SetWorldSecret_(inner);
+    }
+
+    static instanceOf(obj: any): obj is SetWorldSecret_ {
+      return obj.tag === Control_Tags.SetWorldSecret;
+    }
+  }
+
   type AnswerSceneRequest__interface = {
     tag: Control_Tags.AnswerSceneRequest;
     inner: Readonly<{ id: number; accepted: boolean }>;
@@ -8938,6 +8999,8 @@ export const Control = (() => {
     RandomizeAvatar: RandomizeAvatar_,
     SetPreviewUrl: SetPreviewUrl_,
     SetName: SetName_,
+    Reconnect: Reconnect_,
+    SetWorldSecret: SetWorldSecret_,
     AnswerSceneRequest: AnswerSceneRequest_,
   });
 })();
@@ -8964,6 +9027,8 @@ export type Control = InstanceType<
     | 'RandomizeAvatar'
     | 'SetPreviewUrl'
     | 'SetName'
+    | 'Reconnect'
+    | 'SetWorldSecret'
     | 'AnswerSceneRequest']
 >;
 
@@ -9042,6 +9107,13 @@ const FfiConverterTypeControl = (() => {
             name: FfiConverterString.readFromCursor(c),
           });
         case 18:
+          return new Control.Reconnect();
+        case 19:
+          return new Control.SetWorldSecret({
+            realm: FfiConverterString.readFromCursor(c),
+            secret: FfiConverterString.readFromCursor(c),
+          });
+        case 20:
           return new Control.AnswerSceneRequest({
             id: FfiConverterUInt32.readFromCursor(c),
             accepted: FfiConverterBool.readFromCursor(c),
@@ -9154,8 +9226,19 @@ const FfiConverterTypeControl = (() => {
           FfiConverterString.writeIntoCursor(inner.name, c);
           return;
         }
-        case Control_Tags.AnswerSceneRequest: {
+        case Control_Tags.Reconnect: {
           c.writeI32(18);
+          return;
+        }
+        case Control_Tags.SetWorldSecret: {
+          c.writeI32(19);
+          const inner = value.inner;
+          FfiConverterString.writeIntoCursor(inner.realm, c);
+          FfiConverterString.writeIntoCursor(inner.secret, c);
+          return;
+        }
+        case Control_Tags.AnswerSceneRequest: {
+          c.writeI32(20);
           const inner = value.inner;
           FfiConverterUInt32.writeIntoCursor(inner.id, c);
           FfiConverterBool.writeIntoCursor(inner.accepted, c);
@@ -9267,6 +9350,16 @@ const FfiConverterTypeControl = (() => {
           const inner = value.inner;
           let size = 4;
           size += FfiConverterString.allocationSize(inner.name);
+          return size;
+        }
+        case Control_Tags.Reconnect: {
+          return 4;
+        }
+        case Control_Tags.SetWorldSecret: {
+          const inner = value.inner;
+          let size = 4;
+          size += FfiConverterString.allocationSize(inner.realm);
+          size += FfiConverterString.allocationSize(inner.secret);
           return size;
         }
         case Control_Tags.AnswerSceneRequest: {
@@ -9587,6 +9680,309 @@ const FfiConverterTypeDecision = (() => {
           return size;
         }
         case Decision_Tags.Drop: {
+          return 4;
+        }
+        default:
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+  }
+  return new FFIConverter();
+})();
+
+export enum DisconnectReason {
+  /**
+   * The account logged in somewhere else.
+   */
+  DuplicateSession,
+  RoomClosed,
+  Other,
+}
+
+const FfiConverterTypeDisconnectReason = (() => {
+  type TypeName = DisconnectReason;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      switch (c.readI32()) {
+        case 1:
+          return DisconnectReason.DuplicateSession;
+        case 2:
+          return DisconnectReason.RoomClosed;
+        case 3:
+          return DisconnectReason.Other;
+        default:
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      switch (value) {
+        case DisconnectReason.DuplicateSession:
+          return c.writeI32(1);
+        case DisconnectReason.RoomClosed:
+          return c.writeI32(2);
+        case DisconnectReason.Other:
+          return c.writeI32(3);
+      }
+    }
+    allocationSize(value: TypeName): number {
+      return 4;
+    }
+  }
+  return new FFIConverter();
+})();
+
+export enum EntryRefusal {
+  PrivateWorld,
+  NeedsPassword,
+  NotFound,
+}
+
+const FfiConverterTypeEntryRefusal = (() => {
+  type TypeName = EntryRefusal;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      switch (c.readI32()) {
+        case 1:
+          return EntryRefusal.PrivateWorld;
+        case 2:
+          return EntryRefusal.NeedsPassword;
+        case 3:
+          return EntryRefusal.NotFound;
+        default:
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      switch (value) {
+        case EntryRefusal.PrivateWorld:
+          return c.writeI32(1);
+        case EntryRefusal.NeedsPassword:
+          return c.writeI32(2);
+        case EntryRefusal.NotFound:
+          return c.writeI32(3);
+      }
+    }
+    allocationSize(value: TypeName): number {
+      return 4;
+    }
+  }
+  return new FFIConverter();
+})();
+
+// Enum: EngineNotice
+export enum EngineNotice_Tags {
+  EntryRefused = 'EntryRefused',
+  Disconnected = 'Disconnected',
+  Banned = 'Banned',
+  LowMemory = 'LowMemory',
+}
+/**
+ * Something the engine tells the shell the player has to hear about.
+ */
+export const EngineNotice = (() => {
+  type EntryRefused__interface = {
+    tag: EngineNotice_Tags.EntryRefused;
+    inner: Readonly<{ reason: EntryRefusal; realm: string }>;
+  };
+  /**
+   * The destination was refused, so the player stays where they were.
+   */
+  class EntryRefused_ extends UniffiEnum implements EntryRefused__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'EngineNotice';
+    readonly tag = EngineNotice_Tags.EntryRefused;
+    readonly inner: Readonly<{ reason: EntryRefusal; realm: string }>;
+    constructor(inner: { reason: EntryRefusal; realm: string }) {
+      super('EngineNotice', 'EntryRefused');
+
+      this.inner = Object.freeze(inner);
+    }
+    static new(inner: { reason: EntryRefusal; realm: string }): EntryRefused_ {
+      return new EntryRefused_(inner);
+    }
+
+    static instanceOf(obj: any): obj is EntryRefused_ {
+      return obj.tag === EngineNotice_Tags.EntryRefused;
+    }
+  }
+
+  type Disconnected__interface = {
+    tag: EngineNotice_Tags.Disconnected;
+    inner: Readonly<{ reason: DisconnectReason }>;
+  };
+  /**
+   * The comms connection ended and reconnecting did not bring it back.
+   */
+  class Disconnected_ extends UniffiEnum implements Disconnected__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'EngineNotice';
+    readonly tag = EngineNotice_Tags.Disconnected;
+    readonly inner: Readonly<{ reason: DisconnectReason }>;
+    constructor(inner: { reason: DisconnectReason }) {
+      super('EngineNotice', 'Disconnected');
+
+      this.inner = Object.freeze(inner);
+    }
+    static new(inner: { reason: DisconnectReason }): Disconnected_ {
+      return new Disconnected_(inner);
+    }
+
+    static instanceOf(obj: any): obj is Disconnected_ {
+      return obj.tag === EngineNotice_Tags.Disconnected;
+    }
+  }
+
+  type Banned__interface = {
+    tag: EngineNotice_Tags.Banned;
+  };
+  /**
+   * The scene's own room banned the player.
+   */
+  class Banned_ extends UniffiEnum implements Banned__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'EngineNotice';
+    readonly tag = EngineNotice_Tags.Banned;
+    constructor() {
+      super('EngineNotice', 'Banned');
+    }
+
+    static new(): Banned_ {
+      return new Banned_();
+    }
+
+    static instanceOf(obj: any): obj is Banned_ {
+      return obj.tag === EngineNotice_Tags.Banned;
+    }
+  }
+
+  type LowMemory__interface = {
+    tag: EngineNotice_Tags.LowMemory;
+  };
+  /**
+   * The device is running out of memory in this scene.
+   */
+  class LowMemory_ extends UniffiEnum implements LowMemory__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'EngineNotice';
+    readonly tag = EngineNotice_Tags.LowMemory;
+    constructor() {
+      super('EngineNotice', 'LowMemory');
+    }
+
+    static new(): LowMemory_ {
+      return new LowMemory_();
+    }
+
+    static instanceOf(obj: any): obj is LowMemory_ {
+      return obj.tag === EngineNotice_Tags.LowMemory;
+    }
+  }
+
+  function instanceOf(obj: any): obj is EngineNotice {
+    return obj[uniffiTypeNameSymbol] === 'EngineNotice';
+  }
+
+  return Object.freeze({
+    instanceOf,
+    EntryRefused: EntryRefused_,
+    Disconnected: Disconnected_,
+    Banned: Banned_,
+    LowMemory: LowMemory_,
+  });
+})();
+/**
+ * Something the engine tells the shell the player has to hear about.
+ */
+export type EngineNotice = InstanceType<
+  (typeof EngineNotice)[
+    | 'EntryRefused'
+    | 'Disconnected'
+    | 'Banned'
+    | 'LowMemory']
+>;
+
+// FfiConverter for enum EngineNotice
+const FfiConverterTypeEngineNotice = (() => {
+  type TypeName = EngineNotice;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      switch (c.readI32()) {
+        case 1:
+          return new EngineNotice.EntryRefused({
+            reason: FfiConverterTypeEntryRefusal.readFromCursor(c),
+            realm: FfiConverterString.readFromCursor(c),
+          });
+        case 2:
+          return new EngineNotice.Disconnected({
+            reason: FfiConverterTypeDisconnectReason.readFromCursor(c),
+          });
+        case 3:
+          return new EngineNotice.Banned();
+        case 4:
+          return new EngineNotice.LowMemory();
+        default:
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      switch (value.tag) {
+        case EngineNotice_Tags.EntryRefused: {
+          c.writeI32(1);
+          const inner = value.inner;
+          FfiConverterTypeEntryRefusal.writeIntoCursor(inner.reason, c);
+          FfiConverterString.writeIntoCursor(inner.realm, c);
+          return;
+        }
+        case EngineNotice_Tags.Disconnected: {
+          c.writeI32(2);
+          const inner = value.inner;
+          FfiConverterTypeDisconnectReason.writeIntoCursor(inner.reason, c);
+          return;
+        }
+        case EngineNotice_Tags.Banned: {
+          c.writeI32(3);
+          return;
+        }
+        case EngineNotice_Tags.LowMemory: {
+          c.writeI32(4);
+          return;
+        }
+        default:
+          // Throwing from here means that EngineNotice_Tags hasn't matched an ordinal.
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+    allocationSize(value: TypeName): number {
+      switch (value.tag) {
+        case EngineNotice_Tags.EntryRefused: {
+          const inner = value.inner;
+          let size = 4;
+          size += FfiConverterTypeEntryRefusal.allocationSize(inner.reason);
+          size += FfiConverterString.allocationSize(inner.realm);
+          return size;
+        }
+        case EngineNotice_Tags.Disconnected: {
+          const inner = value.inner;
+          let size = 4;
+          size += FfiConverterTypeDisconnectReason.allocationSize(inner.reason);
+          return size;
+        }
+        case EngineNotice_Tags.Banned: {
+          return 4;
+        }
+        case EngineNotice_Tags.LowMemory: {
           return 4;
         }
         default:
@@ -10363,6 +10759,10 @@ export interface AppListener {
    */
   sceneRequest(id: number, request: SceneRequest): void;
   /**
+   * Something the engine tells the player: a refused entry, a disconnect, a ban.
+   */
+  engineNotice(notice: EngineNotice): void;
+  /**
    * A panic or error to send to the crash reporter, already past the keep/drop policy.
    */
   report(payload: ReportPayload): void;
@@ -10579,6 +10979,25 @@ export class AppListenerImpl
           FfiConverterUInt32.lower(id, nativeModule().rustbuffer_alloc),
           FfiConverterTypeSceneRequest.lower(
             request,
+            nativeModule().rustbuffer_alloc,
+          ),
+          callStatus,
+        );
+      },
+      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+    );
+  }
+
+  /**
+   * Something the engine tells the player: a refused entry, a disconnect, a ban.
+   */
+  engineNotice(notice: EngineNotice): void {
+    uniffiCaller.rustCall(
+      /*caller:*/ callStatus => {
+        nativeModule().ubrn_uniffi_dcl_core_fn_method_applistener_engine_notice(
+          uniffiTypeAppListenerImplObjectFactory.clonePointer(this),
+          FfiConverterTypeEngineNotice.lower(
+            notice,
             nativeModule().rustbuffer_alloc,
           ),
           callStatus,
@@ -10960,6 +11379,27 @@ const uniffiCallbackInterfaceAppListener: {
         return jsCallback.sceneRequest(
           FfiConverterUInt32.lift(id),
           FfiConverterTypeSceneRequest.lift(request),
+        );
+      };
+      const uniffiResult = UniffiResult.ready<void>();
+      const uniffiHandleSuccess = (obj: any) => {};
+      const uniffiHandleError = (code: number, errBuf: UniffiByteArray) => {
+        UniffiResult.writeError(uniffiResult, code, errBuf);
+      };
+      uniffiTraitInterfaceCall(
+        /*makeCall:*/ uniffiMakeCall,
+        /*handleSuccess:*/ uniffiHandleSuccess,
+        /*handleError:*/ uniffiHandleError,
+        /*lowerString:*/ FfiConverterString.lower.bind(FfiConverterString),
+        /*alloc:*/ nativeModule().rustbuffer_alloc,
+      );
+      return uniffiResult;
+    },
+    engine_notice: (uniffiHandle: bigint, notice: Uint8Array) => {
+      const uniffiMakeCall = (): void => {
+        const jsCallback = FfiConverterTypeAppListener.lift(uniffiHandle);
+        return jsCallback.engineNotice(
+          FfiConverterTypeEngineNotice.lift(notice),
         );
       };
       const uniffiResult = UniffiResult.ready<void>();
@@ -11840,8 +12280,16 @@ function uniffiEnsureInitialized() {
     );
   }
   if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_method_applistener_engine_notice() !==
+    50018
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_method_applistener_engine_notice',
+    );
+  }
+  if (
     nativeModule().ubrn_uniffi_dcl_core_checksum_method_applistener_report() !==
-    37505
+    65310
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_dcl_core_checksum_method_applistener_report',
@@ -11849,7 +12297,7 @@ function uniffiEnsureInitialized() {
   }
   if (
     nativeModule().ubrn_uniffi_dcl_core_checksum_method_applistener_report_tag() !==
-    2910
+    52194
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_dcl_core_checksum_method_applistener_report_tag',
@@ -11889,7 +12337,10 @@ export default Object.freeze({
     FfiConverterTypeDestinationKind,
     FfiConverterTypeDeviceFacts,
     FfiConverterTypeDeviceSupport,
+    FfiConverterTypeDisconnectReason,
     FfiConverterTypeEffect,
+    FfiConverterTypeEngineNotice,
+    FfiConverterTypeEntryRefusal,
     FfiConverterTypeEnvironment,
     FfiConverterTypeHudInsets,
     FfiConverterTypeHudSnapshot,

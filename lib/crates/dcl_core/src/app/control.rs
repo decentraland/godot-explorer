@@ -92,6 +92,14 @@ pub enum Control {
     SetName {
         name: String,
     },
+    /// Connects to the room again after a disconnect the player chose to retry.
+    Reconnect,
+    /// The password the player gave for a protected world, checked by the shell; the engine
+    /// presents it when it connects to `realm`.
+    SetWorldSecret {
+        realm: String,
+        secret: String,
+    },
     /// The user's answer to a `scene_request` event.
     AnswerSceneRequest {
         id: u32,

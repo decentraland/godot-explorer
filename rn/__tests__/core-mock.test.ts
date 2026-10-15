@@ -77,6 +77,7 @@ describe('mock core', () => {
       loadingDetail: () => {},
       avatarChanged: () => {},
       sceneRequest: () => {},
+      engineNotice: () => {},
       report: () => {},
       reportTag: () => {},
     });

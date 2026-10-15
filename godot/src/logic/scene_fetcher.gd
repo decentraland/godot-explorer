@@ -191,6 +191,7 @@ func _on_low_memory_warning(
 			% [entity_id, footprint_mb, available_mb]
 		)
 	)
+	Global.engine.report_notice("low_memory", "")
 
 
 func get_current_scene_data() -> SceneItem:

@@ -5,7 +5,7 @@ import { recordPlayed, usePlayed } from '../discover/history';
 import { useToast } from '../ds';
 import { t } from '../i18n';
 import { setOrientation } from '../platform/orientation';
-import { enterPlace } from '../world/enterPlace';
+import { enterPlaceChecked } from '../modals/destination';
 import { getMenuApi } from './api';
 import { GuestError } from './coreNotificationsApi';
 import { BugReportModal } from './BugReportModal';
@@ -44,7 +44,7 @@ export type Navigate = (page: 'backpack' | 'settings' | 'profile') => void;
 export function jumpTo(place: Place): void {
   closeMenu();
   recordPlayed(place);
-  enterPlace(place);
+  enterPlaceChecked(place).catch(() => undefined);
 }
 
 function OpenDrawer({ navigate }: { navigate: Navigate }) {

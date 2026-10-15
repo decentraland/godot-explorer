@@ -762,3 +762,63 @@ fn randomize_draws_from_the_catalog_and_is_repeatable_for_a_seed() {
     assert_eq!(first, engine_b.take());
     assert!(matches!(first.as_slice(), [EngineCommand::ApplyAvatar(_)]));
 }
+
+#[derive(Default)]
+struct Notices {
+    seen: Mutex<Vec<EngineNotice>>,
+}
+
+impl AppEvents for Notices {
+    fn state_changed(&self, _: &State) {}
+    fn engine_required(&self) {}
+    fn avatar_preview_mode(&self, _: bool) {}
+    fn scene_crashed(&self) {}
+    fn engine_notice(&self, notice: &EngineNotice) {
+        self.seen.lock().unwrap().push(notice.clone());
+    }
+}
+
+#[test]
+fn a_refused_entry_sends_the_player_back_to_the_menus_and_is_announced() {
+    let notices = Arc::new(Notices::default());
+    let mut app = App::new(notices.clone());
+    app.finish_boot(true).unwrap();
+    app.enter_world(plaza()).unwrap();
+    assert!(matches!(app.state(), State::Loading { .. }));
+
+    let refusal = EngineNotice::EntryRefused {
+        reason: EntryRefusal::PrivateWorld,
+        realm: "https://worlds/x.dcl.eth".into(),
+    };
+    app.engine_event(EngineEvent::Notice(refusal.clone()));
+
+    assert_eq!(*app.state(), State::SignedIn);
+    assert_eq!(*notices.seen.lock().unwrap(), vec![refusal]);
+}
+
+#[test]
+fn other_notices_do_not_move_the_state() {
+    let notices = Arc::new(Notices::default());
+    let mut app = App::new(notices.clone());
+    app.finish_boot(true).unwrap();
+    app.enter_world(plaza()).unwrap();
+    app.engine_event(EngineEvent::LoadingFinished {
+        realm: "main".into(),
+        parcel: Parcel::new(0, 0),
+    });
+    for notice in [
+        EngineNotice::Banned,
+        EngineNotice::LowMemory,
+        EngineNotice::Disconnected {
+            reason: DisconnectReason::RoomClosed,
+        },
+        EngineNotice::EntryRefused {
+            reason: EntryRefusal::NotFound,
+            realm: "r".into(),
+        },
+    ] {
+        app.engine_event(EngineEvent::Notice(notice));
+    }
+    assert!(matches!(app.state(), State::InWorld { .. }));
+    assert_eq!(notices.seen.lock().unwrap().len(), 4);
+}

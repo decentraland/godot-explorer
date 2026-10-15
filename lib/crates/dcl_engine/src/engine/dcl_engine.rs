@@ -1,8 +1,8 @@
 use std::{rc::Rc, sync::Arc};
 
 use dcl_core::app::{
-    AvatarState, ChatLine, ChatProfile, CommandQueue, EngineEvent, HudSnapshot, LoadingDetail,
-    Parcel, UiState, Vec3,
+    AvatarState, ChatLine, ChatProfile, CommandQueue, DisconnectReason, EngineEvent, EngineNotice,
+    EntryRefusal, HudSnapshot, LoadingDetail, Parcel, UiState, Vec3,
 };
 
 use godot::classes::{Control, DisplayServer, Engine};
@@ -144,6 +144,44 @@ impl DclEngine {
             realm: realm.to_string(),
             parcel: Parcel::new(x, y),
         });
+    }
+
+    /// Something the player has to hear about: `entry_private`, `entry_password` and
+    /// `entry_not_found` (detail: the realm), `disconnected_duplicate`, `disconnected_room_closed`,
+    /// `disconnected_other`, `banned` and `low_memory`.
+    #[func]
+    pub fn report_notice(&self, kind: GString, detail: GString) {
+        let realm = detail.to_string();
+        let notice = match kind.to_string().as_str() {
+            "entry_private" => EngineNotice::EntryRefused {
+                reason: EntryRefusal::PrivateWorld,
+                realm,
+            },
+            "entry_password" => EngineNotice::EntryRefused {
+                reason: EntryRefusal::NeedsPassword,
+                realm,
+            },
+            "entry_not_found" => EngineNotice::EntryRefused {
+                reason: EntryRefusal::NotFound,
+                realm,
+            },
+            "disconnected_duplicate" => EngineNotice::Disconnected {
+                reason: DisconnectReason::DuplicateSession,
+            },
+            "disconnected_room_closed" => EngineNotice::Disconnected {
+                reason: DisconnectReason::RoomClosed,
+            },
+            "disconnected_other" => EngineNotice::Disconnected {
+                reason: DisconnectReason::Other,
+            },
+            "banned" => EngineNotice::Banned,
+            "low_memory" => EngineNotice::LowMemory,
+            other => {
+                godot_error!("report_notice: unknown kind {other}");
+                return;
+            }
+        };
+        self.report(EngineEvent::Notice(notice));
     }
 
     #[func]

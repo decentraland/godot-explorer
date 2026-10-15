@@ -474,6 +474,11 @@ interface NativeModuleInterface {
     request: Uint8Array,
     uniffi_out_err: UniffiRustCallStatus,
   ): void;
+  ubrn_uniffi_dcl_core_fn_method_applistener_engine_notice(
+    uniffiSelf: bigint,
+    notice: Uint8Array,
+    uniffi_out_err: UniffiRustCallStatus,
+  ): void;
   ubrn_uniffi_dcl_core_fn_method_applistener_report(
     uniffiSelf: bigint,
     payload: Uint8Array,
@@ -576,6 +581,7 @@ interface NativeModuleInterface {
   ubrn_uniffi_dcl_core_checksum_method_applistener_loading_detail(): number;
   ubrn_uniffi_dcl_core_checksum_method_applistener_avatar_changed(): number;
   ubrn_uniffi_dcl_core_checksum_method_applistener_scene_request(): number;
+  ubrn_uniffi_dcl_core_checksum_method_applistener_engine_notice(): number;
   ubrn_uniffi_dcl_core_checksum_method_applistener_report(): number;
   ubrn_uniffi_dcl_core_checksum_method_applistener_report_tag(): number;
   ubrn_uniffi_internal_fn_method_applistener_ffi__bless_pointer(
@@ -658,9 +664,13 @@ type UniffiCallbackInterfaceDclCoreAppListenerMethod12 = (
 ) => UniffiResult<void>;
 type UniffiCallbackInterfaceDclCoreAppListenerMethod13 = (
   uniffiHandle: bigint,
-  payload: Uint8Array,
+  notice: Uint8Array,
 ) => UniffiResult<void>;
 type UniffiCallbackInterfaceDclCoreAppListenerMethod14 = (
+  uniffiHandle: bigint,
+  payload: Uint8Array,
+) => UniffiResult<void>;
+type UniffiCallbackInterfaceDclCoreAppListenerMethod15 = (
   uniffiHandle: bigint,
   key: Uint8Array,
   value: Uint8Array,
@@ -685,8 +695,9 @@ export type UniffiVTableCallbackInterfaceDclCoreAppListener = {
   loading_detail: UniffiCallbackInterfaceDclCoreAppListenerMethod10;
   avatar_changed: UniffiCallbackInterfaceDclCoreAppListenerMethod11;
   scene_request: UniffiCallbackInterfaceDclCoreAppListenerMethod12;
-  report: UniffiCallbackInterfaceDclCoreAppListenerMethod13;
-  report_tag: UniffiCallbackInterfaceDclCoreAppListenerMethod14;
+  engine_notice: UniffiCallbackInterfaceDclCoreAppListenerMethod13;
+  report: UniffiCallbackInterfaceDclCoreAppListenerMethod14;
+  report_tag: UniffiCallbackInterfaceDclCoreAppListenerMethod15;
 };
 
 // UniffiRustFutureContinuationCallback is generated as part of the component interface's

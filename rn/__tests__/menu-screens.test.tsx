@@ -158,6 +158,7 @@ describe('MenuDrawer', () => {
     await settle();
     press(tree, 'Genesis Plaza');
     press(tree, 'JUMP IN');
+    await settle();
     expect(enterWorld).toHaveBeenCalledWith({
       realm: undefined,
       parcel: { x: 0, y: 0 },

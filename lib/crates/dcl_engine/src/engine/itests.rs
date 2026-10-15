@@ -162,6 +162,17 @@ fn every_control_maps_to_a_kind_with_typed_args(_ctx: &TestContext) {
         ("focus_camera", Some("hands".to_string()))
     );
 
+    let (kind, args) = control_payload(&Control::SetWorldSecret {
+        realm: "https://worlds/x.dcl.eth".to_string(),
+        secret: "hunter2".to_string(),
+    })
+    .unwrap();
+    assert_eq!(kind, "set_world_secret");
+    assert_eq!(
+        args.get("secret").map(|v| v.to::<String>()),
+        Some("hunter2".to_string())
+    );
+
     // Avatar edits are computed by the core and reach the engine as `apply_avatar`.
     for edit in [
         Control::SetColor {

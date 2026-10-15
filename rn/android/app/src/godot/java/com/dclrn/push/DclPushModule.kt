@@ -5,6 +5,7 @@ import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.app.ActivityManager
 import android.content.pm.PackageManager
 import android.os.Build
 import android.util.Log
@@ -85,6 +86,29 @@ class DclPushModule(private val context: ReactApplicationContext) :
     info.putString("timezone", TimeZone.getDefault().id)
     promise.resolve(info)
   }
+
+  /** What the core's device-support rule needs; empty strings where the OS does not say. */
+  @ReactMethod
+  fun deviceFacts(promise: Promise) {
+    val facts = Arguments.createMap()
+    val memory = ActivityManager.MemoryInfo()
+    (context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager).getMemoryInfo(memory)
+    facts.putDouble("totalRamMb", memory.totalMem / (1024.0 * 1024.0))
+    facts.putString("model", Build.MODEL ?: "")
+    facts.putString("socModel", if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) Build.SOC_MODEL else "")
+    facts.putString("boardPlatform", systemProperty("ro.board.platform"))
+    facts.putString("hardware", Build.HARDWARE ?: "")
+    promise.resolve(facts)
+  }
+
+  private fun systemProperty(name: String): String =
+      try {
+        Class.forName("android.os.SystemProperties")
+            .getMethod("get", String::class.java, String::class.java)
+            .invoke(null, name, "") as String
+      } catch (e: Exception) {
+        ""
+      }
 
   /** A reminder `delaySeconds` from now; tapping it opens `deepLink` (empty: just the app). */
   @ReactMethod

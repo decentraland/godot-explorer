@@ -98,6 +98,11 @@ pub(super) fn control_payload(control: &Control) -> Option<(&'static str, VarDic
         Control::SetPreviewUrl { url } => ("set_preview_url", vdict! { "url": url.clone() }),
         Control::PlayPreviewEmote { urn } => ("play_preview_emote", vdict! { "urn": urn.clone() }),
         Control::SetName { name } => ("set_name", vdict! { "name": name.clone() }),
+        Control::Reconnect => ("reconnect", VarDictionary::new()),
+        Control::SetWorldSecret { realm, secret } => (
+            "set_world_secret",
+            vdict! { "realm": realm.clone(), "secret": secret.clone() },
+        ),
         Control::Equip { .. }
         | Control::Unequip { .. }
         | Control::SetBodyShape { .. }

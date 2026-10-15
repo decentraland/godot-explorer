@@ -4,6 +4,7 @@ import { discover } from './discover';
 import { flow } from './flow';
 import { hud } from './hud';
 import { menu } from './menu';
+import { modals } from './modals';
 import { profile } from './profile';
 import { push } from './push';
 import { settings } from './settings';
@@ -16,6 +17,7 @@ export const en = {
   ...flow,
   ...hud,
   ...menu,
+  ...modals,
   ...profile,
   ...push,
   ...settings,

@@ -23,8 +23,8 @@ pub use control::{
 pub use policy::EngineStartPolicy;
 pub use shared::{CommandQueue, HostEvents};
 pub use types::{
-    AppError, AppEvents, Destination, EngineCommand, EngineEvent, EngineSink, Parcel, Rect,
-    SignInMethod, SignInStep, State,
+    AppError, AppEvents, Destination, DisconnectReason, EngineCommand, EngineEvent, EngineNotice,
+    EngineSink, EntryRefusal, Parcel, Rect, SignInMethod, SignInStep, State,
 };
 
 pub struct App {
@@ -310,6 +310,16 @@ impl App {
             (EngineEvent::Avatar(avatar), _) => {
                 self.events.avatar_changed(&avatar);
                 self.avatar = Some(avatar);
+            }
+            (EngineEvent::Notice(notice), state) => {
+                tracing::debug!("engine notice: {notice:?} in {state:?}");
+                // A refused entry leaves the player where they were: the menus.
+                if matches!(notice, EngineNotice::EntryRefused { .. })
+                    && matches!(state, State::Loading { .. })
+                {
+                    self.set_state(State::SignedIn);
+                }
+                self.events.engine_notice(&notice);
             }
             (EngineEvent::SceneRequest { id, request }, _) => {
                 self.events.scene_request(id, &request)
