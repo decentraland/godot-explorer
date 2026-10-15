@@ -181,6 +181,25 @@ export function baseEmotes(): Array<BaseEmote> {
   }
 }
 
+/**
+ * The issue types a bug report can be filed under.
+ */
+export function bugReportIssueTypes(): Array<IssueType> {
+  const __rb: Uint8Array = uniffiCaller.rustCall(
+    /*caller:*/ callStatus => {
+      return nativeModule().ubrn_uniffi_dcl_core_fn_func_bug_report_issue_types(
+        callStatus,
+      );
+    },
+    /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+  );
+  try {
+    return FfiConverterSequenceTypeIssueType.lift(__rb);
+  } finally {
+    nativeModule().rustbuffer_free(__rb);
+  }
+}
+
 export function cacheSize(): CacheSize /*throws*/ {
   const __rb: Uint8Array = uniffiCaller.rustCallWithError(
     /*liftError:*/ FfiConverterTypeCoreError.lift.bind(
@@ -2234,6 +2253,63 @@ export function state(): State /*throws*/ {
 }
 
 /**
+ * Files a bug report as an Intercom ticket and returns its id. `coordinates` is filled in from
+ * the world the player is in when the shell leaves it empty.
+ */
+export async function submitBugReport(
+  report: BugReportInput,
+  asyncOpts_?: { signal: AbortSignal },
+): Promise<string> /*throws*/ {
+  const __stack = uniffiIsDebug ? new Error().stack : undefined;
+  try {
+    return await uniffiRustCallAsync(
+      /*rustCaller:*/ uniffiCaller,
+      /*rustFutureFunc:*/ () => {
+        return nativeModule().ubrn_uniffi_dcl_core_fn_func_submit_bug_report(
+          FfiConverterTypeBugReportInput.lower(
+            report,
+            nativeModule().rustbuffer_alloc,
+          ),
+        );
+      },
+      /*pollFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_poll_rust_buffer,
+      /*cancelFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_cancel_rust_buffer,
+      /*completeFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_complete_rust_buffer,
+      /*freeFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_free_rust_buffer,
+      // Async returns always go through the JS-side converter: the
+      // FFI symbol returns the future handle (u64), and the user-level
+      // RustBuffer comes back via the shared `rust_future_complete_*`
+      // export. The bytes the runtime hands back must be deserialized
+      // here using the per-callable return-type converter.
+      // Borrowed view over foreign memory: the call site owns the free,
+      // as on the sync paths. Unconditional — a no-op where buffers are
+      // already JS-owned.
+      /*liftFunc:*/ __rb => {
+        try {
+          return FfiConverterString.lift(__rb);
+        } finally {
+          nativeModule().rustbuffer_free(__rb);
+        }
+      },
+      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+      /*asyncOpts:*/ asyncOpts_,
+      /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(
+        FfiConverterTypeCoreError,
+      ),
+    );
+  } catch (__error: any) {
+    if (uniffiIsDebug && __error instanceof Error) {
+      __error.stack = __stack;
+    }
+    throw __error;
+  }
+}
+
+/**
  * The terms version the player accepted; 0 until they do.
  */
 export function termsAcceptedVersion(): number /*throws*/ {
@@ -2606,6 +2682,91 @@ const FfiConverterTypeBaseEmote = (() => {
         FfiConverterString.allocationSize(value.id) +
         FfiConverterString.allocationSize(value.urn) +
         FfiConverterString.allocationSize(value.name)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
+export type BugReportInput = {
+  /**
+   * An `IssueType::value`.
+   */
+  category: string;
+  description: string;
+  /**
+   * Files with JPEG screenshots, at most three; unreadable or oversized ones are left out.
+   */
+  screenshots: Array<string>;
+  operatingSystem: string;
+  /**
+   * Brand and model; they ride in the OS attribute, the ticket type has none of its own.
+   */
+  device: string;
+  graphicsCard: string;
+  ramMb: bigint;
+  clientVersion: string;
+  /**
+   * `x,y` while in a world, empty elsewhere.
+   */
+  coordinates: string;
+};
+
+/**
+ * Generated factory for {@link BugReportInput} record objects.
+ */
+export const BugReportInput = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<BugReportInput, ReturnType<typeof defaults>>(
+      defaults,
+    );
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults()) as Partial<BugReportInput>,
+  });
+})();
+
+const FfiConverterTypeBugReportInput = (() => {
+  type TypeName = BugReportInput;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      return {
+        category: FfiConverterString.readFromCursor(c),
+        description: FfiConverterString.readFromCursor(c),
+        screenshots: FfiConverterSequenceString.readFromCursor(c),
+        operatingSystem: FfiConverterString.readFromCursor(c),
+        device: FfiConverterString.readFromCursor(c),
+        graphicsCard: FfiConverterString.readFromCursor(c),
+        ramMb: FfiConverterInt64.readFromCursor(c),
+        clientVersion: FfiConverterString.readFromCursor(c),
+        coordinates: FfiConverterString.readFromCursor(c),
+      };
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      FfiConverterString.writeIntoCursor(value.category, c);
+      FfiConverterString.writeIntoCursor(value.description, c);
+      FfiConverterSequenceString.writeIntoCursor(value.screenshots, c);
+      FfiConverterString.writeIntoCursor(value.operatingSystem, c);
+      FfiConverterString.writeIntoCursor(value.device, c);
+      FfiConverterString.writeIntoCursor(value.graphicsCard, c);
+      FfiConverterInt64.writeIntoCursor(value.ramMb, c);
+      FfiConverterString.writeIntoCursor(value.clientVersion, c);
+      FfiConverterString.writeIntoCursor(value.coordinates, c);
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterString.allocationSize(value.category) +
+        FfiConverterString.allocationSize(value.description) +
+        FfiConverterSequenceString.allocationSize(value.screenshots) +
+        FfiConverterString.allocationSize(value.operatingSystem) +
+        FfiConverterString.allocationSize(value.device) +
+        FfiConverterString.allocationSize(value.graphicsCard) +
+        FfiConverterInt64.allocationSize(value.ramMb) +
+        FfiConverterString.allocationSize(value.clientVersion) +
+        FfiConverterString.allocationSize(value.coordinates)
       );
     }
   }
@@ -3635,6 +3796,57 @@ const FfiConverterTypeHudSnapshot = (() => {
         FfiConverterString.allocationSize(value.realm) +
         FfiConverterFloat32.allocationSize(value.fps) +
         FfiConverterTypeVec3.allocationSize(value.position)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
+/**
+ * An Intercom option of the Bug Report ticket type, from the Unity client's list; the proxy
+ * validates the ids. The label is English on purpose: it titles the ticket support reads.
+ */
+export type IssueType = {
+  value: string;
+  label: string;
+  uuid: string;
+};
+
+/**
+ * Generated factory for {@link IssueType} record objects.
+ */
+export const IssueType = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<IssueType, ReturnType<typeof defaults>>(defaults);
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults()) as Partial<IssueType>,
+  });
+})();
+
+const FfiConverterTypeIssueType = (() => {
+  type TypeName = IssueType;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      return {
+        value: FfiConverterString.readFromCursor(c),
+        label: FfiConverterString.readFromCursor(c),
+        uuid: FfiConverterString.readFromCursor(c),
+      };
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      FfiConverterString.writeIntoCursor(value.value, c);
+      FfiConverterString.writeIntoCursor(value.label, c);
+      FfiConverterString.writeIntoCursor(value.uuid, c);
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterString.allocationSize(value.value) +
+        FfiConverterString.allocationSize(value.label) +
+        FfiConverterString.allocationSize(value.uuid)
       );
     }
   }
@@ -11666,6 +11878,11 @@ const FfiConverterSequenceTypeBaseEmote = new FfiConverterArray(
   FfiConverterTypeBaseEmote,
 );
 
+// FfiConverter for Array<IssueType>
+const FfiConverterSequenceTypeIssueType = new FfiConverterArray(
+  FfiConverterTypeIssueType,
+);
+
 // FfiConverter for Array<Place>
 const FfiConverterSequenceTypePlace = new FfiConverterArray(
   FfiConverterTypePlace,
@@ -11764,6 +11981,14 @@ function uniffiEnsureInitialized() {
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_dcl_core_checksum_func_base_emotes',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_bug_report_issue_types() !==
+    17579
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_bug_report_issue_types',
     );
   }
   if (
@@ -12260,6 +12485,14 @@ function uniffiEnsureInitialized() {
     );
   }
   if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_submit_bug_report() !==
+    22569
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_submit_bug_report',
+    );
+  }
+  if (
     nativeModule().ubrn_uniffi_dcl_core_checksum_func_terms_accepted_version() !==
     57854
   ) {
@@ -12449,6 +12682,7 @@ export default Object.freeze({
     FfiConverterTypeAppListener,
     FfiConverterTypeAvatarState,
     FfiConverterTypeBaseEmote,
+    FfiConverterTypeBugReportInput,
     FfiConverterTypeBuildEnvironment,
     FfiConverterTypeCacheSize,
     FfiConverterTypeCameraFocus,
@@ -12477,6 +12711,7 @@ export default Object.freeze({
     FfiConverterTypeEnvironment,
     FfiConverterTypeHudInsets,
     FfiConverterTypeHudSnapshot,
+    FfiConverterTypeIssueType,
     FfiConverterTypeLoadingDetail,
     FfiConverterTypeNavigation,
     FfiConverterTypeNotification,

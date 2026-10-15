@@ -11,4 +11,6 @@ export type PlacesApi = Pick<
   | 'vote'
   | 'setEventReminder'
   | 'creditsBalance'
+  | 'submitBugReport'
+  | 'bugReportIssueTypes'
 >;

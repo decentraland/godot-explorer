@@ -224,6 +224,9 @@ protected:
   jsi::Value cpp_uniffi_dcl_core_fn_func_notifications(
       jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
       size_t count);
+  jsi::Value cpp_uniffi_dcl_core_fn_func_bug_report_issue_types(
+      jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+      size_t count);
   jsi::Value cpp_uniffi_dcl_core_fn_func_credits_balance(
       jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
       size_t count);
@@ -240,6 +243,9 @@ protected:
                                                       const jsi::Value &thisVal,
                                                       const jsi::Value *args,
                                                       size_t count);
+  jsi::Value cpp_uniffi_dcl_core_fn_func_submit_bug_report(
+      jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+      size_t count);
   jsi::Value cpp_uniffi_dcl_core_fn_func_vote(jsi::Runtime &rt,
                                               const jsi::Value &thisVal,
                                               const jsi::Value *args,
@@ -663,6 +669,9 @@ protected:
   jsi::Value cpp_uniffi_dcl_core_checksum_func_notifications(
       jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
       size_t count);
+  jsi::Value cpp_uniffi_dcl_core_checksum_func_bug_report_issue_types(
+      jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+      size_t count);
   jsi::Value cpp_uniffi_dcl_core_checksum_func_credits_balance(
       jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
       size_t count);
@@ -676,6 +685,9 @@ protected:
       jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
       size_t count);
   jsi::Value cpp_uniffi_dcl_core_checksum_func_set_favorite(
+      jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+      size_t count);
+  jsi::Value cpp_uniffi_dcl_core_checksum_func_submit_bug_report(
       jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
       size_t count);
   jsi::Value cpp_uniffi_dcl_core_checksum_func_vote(jsi::Runtime &rt,

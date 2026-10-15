@@ -95,6 +95,8 @@ class DclPushModule(private val context: ReactApplicationContext) :
     (context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager).getMemoryInfo(memory)
     facts.putDouble("totalRamMb", memory.totalMem / (1024.0 * 1024.0))
     facts.putString("model", Build.MODEL ?: "")
+    facts.putString("brand", Build.MANUFACTURER ?: "")
+    facts.putString("osVersion", "Android ${Build.VERSION.RELEASE}")
     facts.putString("socModel", if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) Build.SOC_MODEL else "")
     facts.putString("boardPlatform", systemProperty("ro.board.platform"))
     facts.putString("hardware", Build.HARDWARE ?: "")

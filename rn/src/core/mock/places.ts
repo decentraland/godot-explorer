@@ -90,6 +90,18 @@ export function createMockPlacesWithoutNotifications(): MockPlacesApi {
       reminders = next;
     },
     creditsBalance: async () => ({ credits: CREDITS }),
+    submitBugReport: async () => 'mock-ticket',
+    bugReportIssueTypes: () =>
+      [
+        'performance',
+        'crash',
+        'chat',
+        'streaming',
+        'friends',
+        'wearables',
+        'profile',
+        'other',
+      ].map(value => ({ value, label: value, uuid: value })),
   };
 }
 

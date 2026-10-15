@@ -196,6 +196,9 @@ interface NativeModuleInterface {
   ubrn_uniffi_dcl_core_fn_func_base_emotes(
     uniffi_out_err: UniffiRustCallStatus,
   ): Uint8Array;
+  ubrn_uniffi_dcl_core_fn_func_bug_report_issue_types(
+    uniffi_out_err: UniffiRustCallStatus,
+  ): Uint8Array;
   ubrn_uniffi_dcl_core_fn_func_cache_size(
     uniffi_out_err: UniffiRustCallStatus,
   ): Uint8Array;
@@ -393,6 +396,7 @@ interface NativeModuleInterface {
   ubrn_uniffi_dcl_core_fn_func_state(
     uniffi_out_err: UniffiRustCallStatus,
   ): Uint8Array;
+  ubrn_uniffi_dcl_core_fn_func_submit_bug_report(report: Uint8Array): bigint;
   ubrn_uniffi_dcl_core_fn_func_terms_accepted_version(
     uniffi_out_err: UniffiRustCallStatus,
   ): number;
@@ -509,6 +513,7 @@ interface NativeModuleInterface {
   ubrn_uniffi_dcl_core_checksum_func_avatar_palette(): number;
   ubrn_uniffi_dcl_core_checksum_func_avatar_state(): number;
   ubrn_uniffi_dcl_core_checksum_func_base_emotes(): number;
+  ubrn_uniffi_dcl_core_checksum_func_bug_report_issue_types(): number;
   ubrn_uniffi_dcl_core_checksum_func_cache_size(): number;
   ubrn_uniffi_dcl_core_checksum_func_campaign_resolution(): number;
   ubrn_uniffi_dcl_core_checksum_func_cancel_sign_in(): number;
@@ -576,6 +581,7 @@ interface NativeModuleInterface {
   ubrn_uniffi_dcl_core_checksum_func_sign_out(): number;
   ubrn_uniffi_dcl_core_checksum_func_snooze_version_gate(): number;
   ubrn_uniffi_dcl_core_checksum_func_state(): number;
+  ubrn_uniffi_dcl_core_checksum_func_submit_bug_report(): number;
   ubrn_uniffi_dcl_core_checksum_func_terms_accepted_version(): number;
   ubrn_uniffi_dcl_core_checksum_func_terms_version(): number;
   ubrn_uniffi_dcl_core_checksum_func_track(): number;

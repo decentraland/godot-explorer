@@ -2,12 +2,14 @@
 //! read-only GETs stay in the shell; each signed call here is typed, built on one internal
 //! signed request, and no generic signed fetch is exported.
 
+mod bug_report;
 mod credits;
 mod events;
 mod favorites;
 mod notifications_client;
 mod signed;
 
+pub use bug_report::{issue_types, submit_bug_report, BugReportInput, IssueType};
 pub use credits::{credits_balance, CreditsBalance};
 pub use events::set_event_reminder;
 pub use favorites::{

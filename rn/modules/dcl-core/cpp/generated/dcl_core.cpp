@@ -281,6 +281,8 @@ uniffi_dcl_core_fn_func_mark_notifications_read(RustBuffer ids);
 /*handle*/ uint64_t uniffi_dcl_core_fn_func_notifications(RustBuffer from,
                                                           RustBuffer limit,
                                                           int8_t only_unread);
+RustBuffer
+uniffi_dcl_core_fn_func_bug_report_issue_types(RustCallStatus *uniffi_out_err);
 /*handle*/ uint64_t uniffi_dcl_core_fn_func_credits_balance();
 /*handle*/ uint64_t uniffi_dcl_core_fn_func_favorite_places(uint32_t offset,
                                                             uint32_t limit,
@@ -292,6 +294,8 @@ uniffi_dcl_core_fn_func_set_event_reminder(RustBuffer event_id, int8_t on);
 /*handle*/ uint64_t uniffi_dcl_core_fn_func_set_favorite(RustBuffer place_id,
                                                          int8_t value,
                                                          int8_t is_world);
+/*handle*/ uint64_t
+uniffi_dcl_core_fn_func_submit_bug_report(RustBuffer report);
 /*handle*/ uint64_t uniffi_dcl_core_fn_func_vote(RustBuffer place_id,
                                                  RustBuffer choice,
                                                  int8_t is_world);
@@ -508,11 +512,13 @@ uint16_t uniffi_dcl_core_checksum_func_urls();
 uint16_t uniffi_dcl_core_checksum_func_version_gate();
 uint16_t uniffi_dcl_core_checksum_func_mark_notifications_read();
 uint16_t uniffi_dcl_core_checksum_func_notifications();
+uint16_t uniffi_dcl_core_checksum_func_bug_report_issue_types();
 uint16_t uniffi_dcl_core_checksum_func_credits_balance();
 uint16_t uniffi_dcl_core_checksum_func_favorite_places();
 uint16_t uniffi_dcl_core_checksum_func_place_user_state();
 uint16_t uniffi_dcl_core_checksum_func_set_event_reminder();
 uint16_t uniffi_dcl_core_checksum_func_set_favorite();
+uint16_t uniffi_dcl_core_checksum_func_submit_bug_report();
 uint16_t uniffi_dcl_core_checksum_func_vote();
 uint16_t uniffi_dcl_core_checksum_func_delete_account();
 uint16_t uniffi_dcl_core_checksum_func_deploy_profile();
@@ -5082,6 +5088,17 @@ NativeDclCore::NativeDclCore(
             return this->cpp_uniffi_dcl_core_fn_func_notifications(rt, thisVal,
                                                                    args, count);
           });
+  props["ubrn_uniffi_dcl_core_fn_func_bug_report_issue_types"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_fn_func_bug_report_issue_types"),
+          0,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_dcl_core_fn_func_bug_report_issue_types(
+                rt, thisVal, args, count);
+          });
   props["ubrn_uniffi_dcl_core_fn_func_credits_balance"] =
       jsi::Function::createFromHostFunction(
           rt,
@@ -5136,6 +5153,17 @@ NativeDclCore::NativeDclCore(
                  const jsi::Value *args, size_t count) -> jsi::Value {
             return this->cpp_uniffi_dcl_core_fn_func_set_favorite(rt, thisVal,
                                                                   args, count);
+          });
+  props["ubrn_uniffi_dcl_core_fn_func_submit_bug_report"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_fn_func_submit_bug_report"),
+          1,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_dcl_core_fn_func_submit_bug_report(
+                rt, thisVal, args, count);
           });
   props["ubrn_uniffi_dcl_core_fn_func_vote"] =
       jsi::Function::createFromHostFunction(
@@ -6504,6 +6532,18 @@ NativeDclCore::NativeDclCore(
             return this->cpp_uniffi_dcl_core_checksum_func_notifications(
                 rt, thisVal, args, count);
           });
+  props["ubrn_uniffi_dcl_core_checksum_func_bug_report_issue_types"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_checksum_func_bug_report_issue_types"),
+          0,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this
+                ->cpp_uniffi_dcl_core_checksum_func_bug_report_issue_types(
+                    rt, thisVal, args, count);
+          });
   props["ubrn_uniffi_dcl_core_checksum_func_credits_balance"] =
       jsi::Function::createFromHostFunction(
           rt,
@@ -6557,6 +6597,17 @@ NativeDclCore::NativeDclCore(
           [this](jsi::Runtime &rt, const jsi::Value &thisVal,
                  const jsi::Value *args, size_t count) -> jsi::Value {
             return this->cpp_uniffi_dcl_core_checksum_func_set_favorite(
+                rt, thisVal, args, count);
+          });
+  props["ubrn_uniffi_dcl_core_checksum_func_submit_bug_report"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_checksum_func_submit_bug_report"),
+          0,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_dcl_core_checksum_func_submit_bug_report(
                 rt, thisVal, args, count);
           });
   props["ubrn_uniffi_dcl_core_checksum_func_vote"] =
@@ -8147,6 +8198,17 @@ jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_notifications(
   return uniffi_jsi::Bridging</*handle*/ uint64_t>::toJs(rt, callInvoker,
                                                          value);
 }
+jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_bug_report_issue_types(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  RustCallStatus status =
+      uniffi::dcl_core::Bridging<RustCallStatus>::rustSuccess(rt);
+  auto value = uniffi_dcl_core_fn_func_bug_report_issue_types(&status);
+  uniffi::dcl_core::Bridging<RustCallStatus>::copyIntoJs(
+      rt, callInvoker, status, args[count - 1]);
+
+  return uniffi::dcl_core::Bridging<RustBuffer>::toJs(rt, callInvoker, value);
+}
 jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_credits_balance(
     jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
     size_t count) {
@@ -8192,6 +8254,15 @@ jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_set_favorite(
       uniffi::dcl_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[0]),
       uniffi_jsi::Bridging<int8_t>::fromJs(rt, callInvoker, args[1]),
       uniffi_jsi::Bridging<int8_t>::fromJs(rt, callInvoker, args[2]));
+
+  return uniffi_jsi::Bridging</*handle*/ uint64_t>::toJs(rt, callInvoker,
+                                                         value);
+}
+jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_submit_bug_report(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  auto value = uniffi_dcl_core_fn_func_submit_bug_report(
+      uniffi::dcl_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[0]));
 
   return uniffi_jsi::Bridging</*handle*/ uint64_t>::toJs(rt, callInvoker,
                                                          value);
@@ -9413,6 +9484,14 @@ jsi::Value NativeDclCore::cpp_uniffi_dcl_core_checksum_func_notifications(
 
   return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
 }
+jsi::Value
+NativeDclCore::cpp_uniffi_dcl_core_checksum_func_bug_report_issue_types(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  auto value = uniffi_dcl_core_checksum_func_bug_report_issue_types();
+
+  return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
+}
 jsi::Value NativeDclCore::cpp_uniffi_dcl_core_checksum_func_credits_balance(
     jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
     size_t count) {
@@ -9445,6 +9524,13 @@ jsi::Value NativeDclCore::cpp_uniffi_dcl_core_checksum_func_set_favorite(
     jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
     size_t count) {
   auto value = uniffi_dcl_core_checksum_func_set_favorite();
+
+  return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
+}
+jsi::Value NativeDclCore::cpp_uniffi_dcl_core_checksum_func_submit_bug_report(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  auto value = uniffi_dcl_core_checksum_func_submit_bug_report();
 
   return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
 }

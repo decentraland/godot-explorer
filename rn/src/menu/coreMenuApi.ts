@@ -1,8 +1,17 @@
 import { core } from '../core';
 import { fetchDiscover, mainRealm } from '../discover/api';
+import { deviceDetails } from '../platform/deviceFacts';
 import { createCoreNotificationsApi } from './coreNotificationsApi';
 import { linkQueryFor } from './api';
 import type { DiscoverFeed, MenuApi, SceneInfo } from './types';
+
+const safeVersion = (): string => {
+  try {
+    return core().version();
+  } catch {
+    return '';
+  }
+};
 
 const FALLBACK_SCENE: SceneInfo = {
   title: 'Decentraland',
@@ -12,7 +21,7 @@ const FALLBACK_SCENE: SceneInfo = {
 
 /**
  * Scene, screenshots and notifications come from the core, the discover feed from the public
- * places/events APIs; friends and bug reports stay with `base` (mock data until friends are
+ * places/events APIs; friends stay with `base` (mock data until friends are
  * reimplemented in TypeScript, 6.9).
  */
 export function createCoreMenuApi(
@@ -39,6 +48,20 @@ export function createCoreMenuApi(
       }
     },
     captureScreenshot: async () => `file://${await core().captureScreenshot()}`,
+    submitBugReport: async report => {
+      const device = await deviceDetails();
+      await core().submitBugReport({
+        category: report.category,
+        description: report.description,
+        screenshots: report.screenshots,
+        operatingSystem: device.osVersion,
+        device: `${device.brand} ${device.model}`.trim(),
+        graphicsCard: device.socModel || device.hardware,
+        ramMb: BigInt(Math.round(device.totalRamMb)),
+        clientVersion: safeVersion(),
+        coordinates: '',
+      });
+    },
     discover: async (): Promise<DiscoverFeed> => {
       const { featured, events } = await fetchDiscover(fetchImpl);
       return {
