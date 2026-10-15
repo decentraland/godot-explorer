@@ -9,6 +9,7 @@
 [ext_resource type="FontFile" uid="uid://ckaye4autekyg" path="res://assets/themes/fonts/inter/Inter-ExtraBold.ttf" id="8_t1wcr"]
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="8_theme"]
 [ext_resource type="FontFile" uid="uid://di6yadh02vrla" path="res://assets/themes/fonts/inter/Inter-Regular.ttf" id="10_ro0bi"]
+[ext_resource type="Texture2D" uid="uid://bldchilj3kjhx" path="res://assets/ui/warning-triangle.svg" id="11_da6u2"]
 [ext_resource type="PackedScene" uid="uid://oyokdq67n0i3" path="res://src/ui/components/atoms/buttons/claim_button/claim_button.tscn" id="12_t1wcr"]
 [ext_resource type="LabelSettings" path="res://src/ui/components/organisms/streak_modal/label-settings-title.tres" id="12_title"]
 [ext_resource type="Texture2D" uid="uid://h5ue7bs7rsiu" path="res://src/ui/components/organisms/streak_modal/reward-pedestal.png" id="15_pedestal"]
@@ -40,6 +41,22 @@ font = ExtResource("8_t1wcr")
 font_color = Color(0.27450982, 0.05882353, 0.43529412, 1)
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_da6u2"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_t1wcr"]
+content_margin_left = 24.0
+content_margin_top = 16.0
+content_margin_right = 24.0
+content_margin_bottom = 16.0
+bg_color = Color(0.105882354, 0, 0.1764706, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.9098039, 0.7254902, 1, 0.69803923)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
 
 [node name="StreakModal" type="ColorRect" unique_id=632254410]
 anchors_preset = 15
@@ -74,7 +91,7 @@ grow_vertical = 2
 alignment = 1
 
 [node name="PanelContainer" type="PanelContainer" parent="VBoxContainer" unique_id=1057280265]
-custom_minimum_size = Vector2(624, 0)
+custom_minimum_size = Vector2(624, 1010)
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 4
@@ -236,33 +253,75 @@ justification_flags = 131
 
 [node name="HSeparator3" type="HSeparator" parent="VBoxContainer/PanelContainer/MarginContainer/VBoxContainer" unique_id=907085871]
 layout_mode = 2
-theme_override_constants/separation = 418
+size_flags_vertical = 3
 theme_override_styles/separator = SubResource("StyleBoxEmpty_da6u2")
 
 [node name="StreakDayRow" parent="VBoxContainer/PanelContainer/MarginContainer/VBoxContainer" unique_id=831659065 instance=ExtResource("3_row")]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="HSeparator2" type="HSeparator" parent="VBoxContainer/PanelContainer/MarginContainer/VBoxContainer" unique_id=790275547]
+[node name="CenterContainer" type="VBoxContainer" parent="VBoxContainer/PanelContainer/MarginContainer/VBoxContainer" unique_id=697726196]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="MarginContainer_ClaimFailed" type="MarginContainer" parent="VBoxContainer/PanelContainer/MarginContainer/VBoxContainer/CenterContainer" unique_id=407207803]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_bottom = 24
+
+[node name="PanelContainer_ClaimFailed" type="PanelContainer" parent="VBoxContainer/PanelContainer/MarginContainer/VBoxContainer/CenterContainer/MarginContainer_ClaimFailed" unique_id=413903819]
+custom_minimum_size = Vector2(0, 86)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_t1wcr")
+
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/PanelContainer/MarginContainer/VBoxContainer/CenterContainer/MarginContainer_ClaimFailed/PanelContainer_ClaimFailed" unique_id=1308955822]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="TextureRect" type="TextureRect" parent="VBoxContainer/PanelContainer/MarginContainer/VBoxContainer/CenterContainer/MarginContainer_ClaimFailed/PanelContainer_ClaimFailed/HBoxContainer" unique_id=70848392]
+modulate = Color(0.9882353, 0.9882353, 0.9882353, 1)
+custom_minimum_size = Vector2(63, 50)
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+texture = ExtResource("11_da6u2")
+expand_mode = 3
+stretch_mode = 3
+
+[node name="RichTextLabel" type="RichTextLabel" parent="VBoxContainer/PanelContainer/MarginContainer/VBoxContainer/CenterContainer/MarginContainer_ClaimFailed/PanelContainer_ClaimFailed/HBoxContainer" unique_id=22595839]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/default_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+theme_override_font_sizes/normal_font_size = 26
+theme_override_font_sizes/bold_font_size = 26
+bbcode_enabled = true
+text = "STREAK_CLAIM_FAILED"
+fit_content = true
+vertical_alignment = 1
+
+[node name="HSeparator2" type="HSeparator" parent="VBoxContainer/PanelContainer/MarginContainer/VBoxContainer/CenterContainer" unique_id=790275547]
 layout_mode = 2
 theme_override_constants/separation = 24
 theme_override_styles/separator = SubResource("StyleBoxEmpty_da6u2")
 
-[node name="Label_Footer" type="RichTextLabel" parent="VBoxContainer/PanelContainer/MarginContainer/VBoxContainer" unique_id=427209760]
+[node name="Label_Footer" type="RichTextLabel" parent="VBoxContainer/PanelContainer/MarginContainer/VBoxContainer/CenterContainer" unique_id=427209760]
 unique_name_in_owner = true
-auto_translate_mode = 2
+auto_translate_mode = 1
 layout_mode = 2
+size_flags_stretch_ratio = 1.33
 theme_override_colors/default_color = Color(0.9254902, 0.92156863, 0.92941177, 1)
 theme_override_fonts/normal_font = ExtResource("10_ro0bi")
 theme_override_fonts/bold_font = ExtResource("20_footer_bold")
 theme_override_font_sizes/normal_font_size = 20
 theme_override_font_sizes/bold_font_size = 20
 bbcode_enabled = true
+text = "STREAK_FOOTER_CAPTION"
 fit_content = true
 autowrap_mode = 2
 horizontal_alignment = 1
 
-[node name="HSeparator" type="HSeparator" parent="VBoxContainer/PanelContainer/MarginContainer/VBoxContainer" unique_id=197038009]
+[node name="HSeparator" type="HSeparator" parent="VBoxContainer/PanelContainer/MarginContainer/VBoxContainer/CenterContainer" unique_id=197038009]
 layout_mode = 2
 theme_override_constants/separation = 44
 theme_override_styles/separator = SubResource("StyleBoxEmpty_da6u2")
