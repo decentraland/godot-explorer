@@ -37,6 +37,17 @@ func async_fetch_profile(address: String, lambda_server_url: String) -> void:
 		return
 
 	if response is PromiseError:
+		# A profile this client deployed can 404 for seconds while the catalysts sync (a new
+		# account boots into the world right after its first deploy); replacing it with the
+		# default here wipes the chosen name, and the next save deploys that.
+		var held := get_profile_or_null()
+		if (
+			held != null
+			and held.get_profile_version() > 0
+			and held.get_ethereum_address().to_lower() == address.to_lower()
+		):
+			return
+
 		# Profile not found or error - clear saved guest profile and start fresh
 		Global.get_config().guest_profile = {}
 		Global.get_config().save_to_settings_file()
