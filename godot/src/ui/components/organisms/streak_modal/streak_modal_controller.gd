@@ -105,13 +105,21 @@ func _remove_streak_modal() -> void:
 	_streak_canvas_layer = null
 
 
-## Performs a D3/D7 claim end-to-end and returns true on success — awaits the FULL round trip
-## (not just "a modal was shown"), so a ClaimButton's claim_action can safely drive its own
-## CLAIMING.../CLAIMED visual state off this call's result.
-func async_claim_reward(day: int, is_guest: bool) -> bool:
+## Claims every day in `days` end-to-end and returns true only if all of them succeeded — awaits
+## the FULL round trip (not just "a modal was shown"), so a ClaimButton's claim_action can safely
+## drive its own CLAIMING.../CLAIMED visual state off this call's result. `days` holds 1 or 2
+## entries — D3 and D7 can be pending at once when a player skips D3's claim and reaches D7 before
+## coming back for it. Safe to retry on a partial failure: RewardClaimer treats a repeat claim for
+## an already-granted day as a no-op success, not a duplicate grant.
+func async_claim_rewards(days: Array[int], is_guest: bool) -> bool:
 	if is_guest:
-		return await _async_claim_guest(day)
-	return await _async_claim_direct(day)
+		var upgraded := await _async_run_guest_upgrade()
+		if not upgraded:
+			return false
+	var all_ok := true
+	for day in days:
+		all_ok = await _async_claim_direct(day) and all_ok
+	return all_ok
 
 
 ## Performs the actual claim in place (no modal navigation — the streak modal's own ClaimButton
@@ -124,17 +132,13 @@ func _async_claim_direct(day: int) -> bool:
 	return result.ok
 
 
-## Runs the shared OTP upgrade flow (default grant_campaign_key "MobilePet", so the upgrade reward
-## shows first — chain, not suppress), tagged source="login_streak" for attribution, then completes
-## the D3/D7 claim in the same streak modal. Awaits AddEmailFlow's own flow_concluded, not
-## Global.guest_upgrade_state_refreshed — that one never fires on cancel/error and would leave the
-## ClaimButton stuck on CLAIMING forever.
-func _async_claim_guest(day: int) -> bool:
+## Runs the shared OTP upgrade flow once (default grant_campaign_key "MobilePet", so the upgrade
+## reward shows first — chain, not suppress), tagged source="login_streak" for attribution. Awaits
+## AddEmailFlow's own flow_concluded, not Global.guest_upgrade_state_refreshed — that one never
+## fires on cancel/error and would leave the ClaimButton stuck on CLAIMING forever.
+func _async_run_guest_upgrade() -> bool:
 	Global.add_email_flow.async_start_add_email_flow("MobilePet", "login_streak")
-	var upgraded: bool = await Global.add_email_flow.flow_concluded
-	if not upgraded:
-		return false
-	return await _async_claim_direct(day)
+	return await Global.add_email_flow.flow_concluded
 
 
 func _on_streak_claim_resolved(success: bool, day: int) -> void:

@@ -10,7 +10,8 @@ extends RefCounted
 const ALREADY_CLAIMED_WINDOW_SEC := 120.0
 
 
-## @param campaign: { campaign_id, campaign_key } — see RewardCampaigns.CAMPAIGNS.
+## @param campaign: { campaign_id, campaign_key, assign_target?, assign_value? } — see
+## RewardCampaigns.CAMPAIGNS.
 ## @return { ok: bool, already_owned: bool, error_message: String } — error_message is only set
 ## when ok is false; already_owned only matters when ok is true.
 static func async_claim(campaign: Dictionary) -> Dictionary:
@@ -36,6 +37,14 @@ static func async_claim(campaign: Dictionary) -> Dictionary:
 		"catalyst": catalyst,
 		"beneficiary": beneficiary,
 	}
+	# Campaigns that grant from a pool of possible items (vs. a single fixed one) need to say which
+	# — the server rejects the claim with "Missing parameters assign_target and assign_value or
+	# assign_group" otherwise. Omitted entirely when the campaign doesn't set them.
+	var assign_target := str(campaign.get("assign_target", ""))
+	var assign_value := str(campaign.get("assign_value", ""))
+	if not assign_target.is_empty() and not assign_value.is_empty():
+		body_dict["assign_target"] = assign_target
+		body_dict["assign_value"] = assign_value
 	var body := JSON.stringify(body_dict)
 	print("[RewardClaimer] claim POST ", url, " catalyst=", catalyst, " beneficiary=", beneficiary)
 

@@ -230,15 +230,25 @@ func is_d7_claimed() -> bool:
 	return Global.config.streak_d7_claimed
 
 
-## The reward day ready to claim right now (3 or 7), or 0 if none is pending — drives the
-## Discover widget's optional CLAIM button (Figma "Widget-Discover-ClaimPendient").
-func get_claimable_day() -> int:
+## Every reward day claimable right now, ascending — both 3 and 7 can be pending at once when a
+## player skips claiming D3 and reaches D7 before coming back for it (D3's entitlement never
+## expires). Drives the Discover widget's and the streak modal's CLAIM button (Figma
+## "Widget-Discover-ClaimPendient"), including the "CLAIM REWARDS" (plural) copy when both are due.
+func get_claimable_days() -> Array[int]:
 	var config: ConfigData = Global.config
-	if config.streak_progress_day >= FINAL_DAY and not config.streak_d7_claimed:
-		return FINAL_DAY
+	var days: Array[int] = []
 	if config.streak_progress_day >= CHECKPOINT_DAY and not config.streak_d3_claimed:
-		return CHECKPOINT_DAY
-	return 0
+		days.append(CHECKPOINT_DAY)
+	if config.streak_progress_day >= FINAL_DAY and not config.streak_d7_claimed:
+		days.append(FINAL_DAY)
+	return days
+
+
+## The single most relevant claimable day (7 over 3 when both are pending) — used where only one
+## day's context matters, e.g. deciding which modal state a fresh credit should queue.
+func get_claimable_day() -> int:
+	var days := get_claimable_days()
+	return days[-1] if not days.is_empty() else 0
 
 
 func mark_claimed(day: int) -> void:

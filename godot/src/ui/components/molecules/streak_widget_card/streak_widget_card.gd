@@ -12,10 +12,9 @@ extends Control
 ##   └─ VBoxContainer
 ##      ├─ StreakDayRow (instance, unique name)
 ##      └─ Button_Claim (ClaimButton instance, unique name, hidden unless a reward is claimable —
-##                        self-manages its own CLAIMING.../CLAIMED lifecycle via claim_action,
-##                        assigned fresh below each time the claimable day changes)
-
-var _claimable_day: int = 0
+##                        opens the full streak modal on tap (Figma "Widget-Discover" →
+##                        "D3-Streak"/"D7-Streak"), it never claims in place: claim_action is left
+##                        unassigned on purpose so pressed just fires, no CLAIMING/CLAIMED here)
 
 @onready var streak_day_row: StreakDayRow = %StreakDayRow
 @onready var button_claim: ClaimButton = %Button_Claim
@@ -23,6 +22,7 @@ var _claimable_day: int = 0
 
 func _ready() -> void:
 	visibility_changed.connect(_on_visibility_changed)
+	button_claim.pressed.connect(_on_button_claim_pressed)
 
 
 ## Mirrors GuestUpgradeCard's own _on_visibility_changed — visibility_changed also fires from an
@@ -33,7 +33,6 @@ func _on_visibility_changed() -> void:
 
 
 ## Same method name/shape as GuestUpgradeCard's — discover.gd calls both the same way.
-# gdlint:ignore = async-function-name
 func refresh_visibility() -> void:
 	visible = Global.streak_manager.is_widget_visible()
 	if not visible:
@@ -50,12 +49,29 @@ func refresh_visibility() -> void:
 		Global.streak_manager.get_pending_today_day()
 	)
 
-	_claimable_day = Global.streak_manager.get_claimable_day()
-	button_claim.visible = _claimable_day != 0
-	if _claimable_day == 0:
+	var claimable_days := Global.streak_manager.get_claimable_days()
+	button_claim.visible = not claimable_days.is_empty()
+	if claimable_days.is_empty():
 		return
-	var day := _claimable_day
-	var is_guest := StreakManager.is_unlinked_guest()
-	button_claim.claim_action = func() -> bool:
-		Global.metrics.track_click_button("CLAIM", "LOGIN_STREAK_WIDGET_SHOW", "")
-		return await Global.streak_modal_controller.async_claim_reward(day, is_guest)
+	button_claim.text_normal = (
+		"STREAK_CTA_CLAIM_REWARDS" if claimable_days.size() > 1 else "STREAK_CTA_CLAIM"
+	)
+
+
+## Opens the streak modal to the highest-priority claimable day's state (D7 over D3) rather than
+## claiming here — the modal owns the actual claim UI/lifecycle (Figma "Widget-Discover" tap →
+## "D3-Streak"/"D7-Streak"). The widget itself just refreshes (claimable_days empties out, button
+## hides) the next time refresh_visibility() runs after the modal closes.
+func _on_button_claim_pressed() -> void:
+	var day := Global.streak_manager.get_claimable_day()
+	if day == 0:
+		return
+	Global.metrics.track_click_button("CLAIM", "LOGIN_STREAK_WIDGET_SHOW", "")
+	var state := (
+		StreakModal.State.D7_COMPLETE
+		if day == StreakManager.FINAL_DAY
+		else StreakModal.State.D3_COMPLETE
+	)
+	Global.streak_modal_controller.async_show_streak_modal(
+		state, Global.streak_manager.get_progress_day(), StreakManager.is_unlinked_guest()
+	)

@@ -178,7 +178,12 @@ func _render() -> void:
 			if _is_guest:
 				_show_claim_button("STREAK_CTA_FINISH_SETUP")
 			else:
-				_show_claim_button("STREAK_CTA_CLAIM")
+				var claim_key := (
+					"STREAK_CTA_CLAIM_REWARDS"
+					if Global.streak_manager.get_claimable_days().size() > 1
+					else "STREAK_CTA_CLAIM"
+				)
+				_show_claim_button(claim_key)
 
 
 ## RewardCampaigns key for whichever reward is next in line — see _render()'s own comment.
@@ -206,18 +211,18 @@ func _set_cta(text: String, secondary: bool) -> void:
 
 ## Hides Button_CTA and shows ClaimButton instead — used once the D3/D7 reward is actually
 ## claimable, so the gradient + claiming/claimed states replace the plain acknowledgement CTA.
-## Wires claim_action here (not _ready()) since it needs the day/is_guest for THIS setup() call.
+## Wires claim_action here (not _ready()) since it needs the days/is_guest for THIS setup() call.
 ## pedestal/reward_art themselves are driven generally by _render()'s own preview logic, not here.
 # gdlint:ignore = async-function-name
 func _show_claim_button(text_key: String) -> void:
 	button_cta.visible = false
 	claim_button.visible = true
 	claim_button.text_normal = text_key
-	var day := FINAL_DAY if _state == State.D7_COMPLETE else CHECKPOINT_DAY
+	var days := Global.streak_manager.get_claimable_days()
 	var is_guest := _is_guest
 	claim_button.claim_action = func() -> bool:
 		_claiming_reward = true
-		var success: bool = await Global.streak_modal_controller.async_claim_reward(day, is_guest)
+		var success: bool = await Global.streak_modal_controller.async_claim_rewards(days, is_guest)
 		_claiming_reward = false
 		if success:
 			pedestal.texture = texture_pedestal_claimed
