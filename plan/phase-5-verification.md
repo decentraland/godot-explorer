@@ -28,8 +28,10 @@ Engine (phase 5)
 - [ ] **Creator preview** (`-- --preview` against the SDK example scenes) after the 5.6 fetcher port.
 - [ ] **Idle → World → Idle → World** on a phone, including nodes released on exit.
 - [ ] **`--features use_memory_debugger`** build (bootstrap has cfg branches).
-- [ ] Device: Moto G60 flow with the final tree (avatar → Genesis → emote wheel, tooltip, joypad, joystick →
-  chat → Back / Leave → re-enter). Results are in the PR body.
+- [x] Device, Moto G60, build of the final tree (16 Oct): avatar preview → name → Genesis (~30 fps) → emote wheel opens, joypad buttons render, camera swipe turns the view, chat panel opens; no panic, "already bound" or "Scene error" in logcat.
+- [ ] Still to run on the device: joystick walking, emote playback, Back / Leave → re-enter, tooltip on a pointer entity.
+- [ ] On the name screen the avatar renders small in a large hole (the rect is right, the framing is not): same symptom as the client snapshot framing, so it is likely the engine-side preview framing.
+- [ ] Android logs `ERROR: No GDExtension library found … dcl_swift_lib.gdextension` at boot (harmless, the Swift lib is iOS-only): remove the entry from the Android export.
 - [ ] fps / memory in Genesis against the phase-2 baseline. The Moto crash family (Mali / low RAM, see
   memory `qa-android-teleport-crash`) was not re-measured.
 
