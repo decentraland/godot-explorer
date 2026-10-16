@@ -83,6 +83,19 @@ pub struct AuthLink {
     pub signature: String,
 }
 
+/// Non-success status from `GET /identities/:id`, so callers can tell a terminal answer (the
+/// identity is gone or the verifier is wrong) from a transport failure worth retrying.
+#[derive(Debug)]
+pub struct IdentityStatusError(pub u16);
+
+impl std::fmt::Display for IdentityStatusError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Error fetching identity: status {}", self.0)
+    }
+}
+
+impl std::error::Error for IdentityStatusError {}
+
 /// Fetches an identity result by ID from the auth server.
 /// Used for mobile deep link auth flow where we receive the identity ID via deep link
 /// instead of polling for the result.
@@ -127,12 +140,10 @@ pub async fn fetch_identity_by_id(
 
     if status.as_u16() == 401 {
         tracing::error!(
-            "fetch_identity_by_id: verifier rejected for identity_id={}",
+            "fetch_identity_by_id: verifier rejected (status 401) for identity_id={}",
             identity_id
         );
-        return Err(anyhow::Error::msg(
-            "Sign-in belongs to another sign-in request (status 401)",
-        ));
+        return Err(IdentityStatusError(401).into());
     }
 
     if !status.is_success() {
@@ -142,10 +153,7 @@ pub async fn fetch_identity_by_id(
             status_code,
             identity_id
         );
-        return Err(anyhow::Error::msg(format!(
-            "Error fetching identity: status {}",
-            status_code
-        )));
+        return Err(IdentityStatusError(status_code).into());
     }
 
     let result = response.json::<IdentityResponse>().await?;
@@ -402,7 +410,7 @@ pub async fn do_request_mobile(
     provider: Option<String>,
     user_id: Option<String>,
     session_id: Option<String>,
-    auth_request_id: String,
+    auth_request_id: Option<String>,
 ) -> Result<(), anyhow::Error> {
     tracing::debug!(
         "do_request_mobile: starting mobile auth request, provider={:?}",
@@ -410,7 +418,10 @@ pub async fn do_request_mobile(
     );
 
     // Build URL with optional query parameters
-    let mut params = vec![format!("authRequestId={auth_request_id}")];
+    let mut params = Vec::new();
+    if let Some(auth_request_id) = auth_request_id {
+        params.push(format!("authRequestId={auth_request_id}"));
+    }
     if let Some(provider) = provider {
         params.push(format!("provider={provider}"));
     }
@@ -420,7 +431,11 @@ pub async fn do_request_mobile(
     if let Some(session_id) = session_id {
         params.push(format!("s={session_id}"));
     }
-    let url = format!("{}?{}", urls::auth_mobile_frontend(), params.join("&"));
+    let url = if params.is_empty() {
+        urls::auth_mobile_frontend()
+    } else {
+        format!("{}?{}", urls::auth_mobile_frontend(), params.join("&"))
+    };
     tracing::debug!("do_request_mobile: opening auth URL={}", url);
 
     url_reporter

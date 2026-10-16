@@ -79,7 +79,7 @@ pub async fn start_mobile_auth(
     provider: Option<String>,
     user_id: Option<String>,
     session_id: Option<String>,
-    auth_request_id: String,
+    auth_request_id: Option<String>,
 ) -> Result<(), anyhow::Error> {
     // For mobile auth, we use an empty request since the server will generate everything
     let request = CreateRequest::from_new_ephemeral("");
