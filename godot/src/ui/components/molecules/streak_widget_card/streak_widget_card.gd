@@ -23,6 +23,9 @@ extends Control
 func _ready() -> void:
 	visibility_changed.connect(_on_visibility_changed)
 	button_claim.pressed.connect(_on_button_claim_pressed)
+	# Refreshes immediately when a claim resolves (e.g. inside the modal this widget opened),
+	# rather than only the next time visibility/the modal's own close cycle re-renders this.
+	Global.streak_manager.claim_state_changed.connect(refresh_visibility)
 	_make_day_row_tappable()
 
 

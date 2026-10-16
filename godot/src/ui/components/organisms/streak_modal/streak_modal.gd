@@ -7,7 +7,7 @@ extends ColorRect
 ## title/subtitle copy either way, only the day row's pending-vs-checked pill differs. Shown on
 ## Discover only (never in-world), driven by StreakManager's queued pending state (see discover.gd).
 
-# i18n-keys: STREAK_CTA_CLAIM, STREAK_CTA_FINISH_SETUP, STREAK_WELCOME_SUBTITLE,
+# i18n-keys: STREAK_CTA_CLAIM, STREAK_WELCOME_SUBTITLE,
 # i18n-keys: STREAK_PROGRESS_SUBTITLE_EARLY, STREAK_PROGRESS_SUBTITLE_LATE, STREAK_LOST_SUBTITLE,
 # i18n-keys: STREAK_LOST_SUBTITLE_LATE, STREAK_D7_SUBTITLE, STREAK_FOOTER_CAPTION,
 # i18n-keys: STREAK_FOOTER_CAPTION_GUEST
@@ -100,6 +100,10 @@ func _ready() -> void:
 		h_box_container_rewards, "position:y", base_y - BOUNCE_OFFSET_PX, BOUNCE_HALF_DURATION_SEC
 	)
 	tween.tween_property(h_box_container_rewards, "position:y", base_y, BOUNCE_HALF_DURATION_SEC)
+	# A claim resolving updates StreakManager synchronously before this modal's own claim_action
+	# sees the result, so refreshing the row off this signal (rather than only re-rendering locally
+	# on success) also covers the day row staying stale otherwise.
+	Global.streak_manager.claim_state_changed.connect(_update_day_row)
 
 
 func _on_gui_input(event: InputEvent) -> void:
@@ -117,17 +121,14 @@ func _notification(what: int) -> void:
 		_render()
 
 
-func _render() -> void:
-	# Every full render starts with the standard footer, not the claim-failed warning — only an
-	# actual failed attempt (inside _show_claim_button()'s claim_action) turns it back on, and
-	# only states that reach _show_claim_button() can ever show it in the first place.
-	_set_claim_failed_visible(false)
-	var d3_claimed := Global.streak_manager.is_d3_claimed()
-	var d7_claimed := Global.streak_manager.is_d7_claimed()
+## Rebuilds the day row from StreakManager's current claimed state — split out of _render() so
+## claim_state_changed can refresh just this, without re-running the rest of _render()'s state
+## machine (which would re-enter _show_claim_button() and stomp the in-flight claim_action).
+func _update_day_row() -> void:
 	var claimed_days: Array[int] = []
-	if d3_claimed:
+	if Global.streak_manager.is_d3_claimed():
 		claimed_days.append(CHECKPOINT_DAY)
-	if d7_claimed:
+	if Global.streak_manager.is_d7_claimed():
 		claimed_days.append(FINAL_DAY)
 	streak_day_row.render(
 		_progress_day,
@@ -135,6 +136,15 @@ func _render() -> void:
 		claimed_days,
 		_pending_day if _pending_day > 0 else -1
 	)
+
+
+func _render() -> void:
+	# Every full render starts with the standard footer, not the claim-failed warning — only an
+	# actual failed attempt (inside _show_claim_button()'s claim_action) turns it back on, and
+	# only states that reach _show_claim_button() can ever show it in the first place.
+	_set_claim_failed_visible(false)
+	_update_day_row()
+	var d7_claimed := Global.streak_manager.is_d7_claimed()
 
 	# RewardShowcase previews whichever reward is next, independent of _state: D1-D3 preview D3,
 	# D4-D7 preview D7 (once D3 is claimed, D3 can never be "next" again — the floor-reset after a
@@ -191,15 +201,15 @@ func _render() -> void:
 			# Figma's D3 claim screen has no subtitle under the title at all; the guest "finish
 			# setup" nudge lives in the footer (see footer_key above), not here.
 			_set_subtitle("STREAK_D7_SUBTITLE" if is_d7 else "")
-			if _is_guest:
-				_show_claim_button("STREAK_CTA_FINISH_SETUP")
-			else:
-				var claim_key := (
-					"STREAK_CTA_CLAIM_REWARDS"
-					if Global.streak_manager.get_claimable_days().size() > 1
-					else "STREAK_CTA_CLAIM"
-				)
-				_show_claim_button(claim_key)
+			# CLAIM reads the same whether the player is a guest or not — a guest tapping it still
+			# runs the upgrade flow first (see _show_claim_button's claim_action), just without
+			# advertising that step on the button itself.
+			var claim_key := (
+				"STREAK_CTA_CLAIM_REWARDS"
+				if Global.streak_manager.get_claimable_days().size() > 1
+				else "STREAK_CTA_CLAIM"
+			)
+			_show_claim_button(claim_key)
 
 
 ## RewardCampaigns key for whichever reward is next in line — see _render()'s own comment.

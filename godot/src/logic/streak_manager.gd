@@ -15,6 +15,12 @@ extends Node
 ## pending modal (pending_modal); Discover is the only place a modal is shown ("Streak modals on
 ## Discover only — never in-world" per the issue), via take_pending_modal().
 
+## Emitted from mark_claimed() — every surface rendering the day row (the streak modal, the
+## Discover widget) refreshes off this instead of waiting for its own open/close or visibility
+## lifecycle to eventually re-render, so a claim's result shows immediately everywhere, not just
+## wherever the claim happened.
+signal claim_state_changed
+
 const DAY_SECONDS := 86400
 const CHECKPOINT_DAY := 3
 const FINAL_DAY := 7
@@ -290,6 +296,7 @@ func mark_claimed(day: int) -> void:
 		push_error("StreakManager.mark_claimed: unexpected day %d" % day)
 		return
 	Global.config.save_to_settings_file()
+	claim_state_changed.emit()
 
 
 ## Local-vs-UTC wall-clock offset right now, in seconds (negative west of UTC). Recomputed per
