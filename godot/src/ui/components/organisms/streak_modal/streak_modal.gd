@@ -38,6 +38,14 @@ var _pending_day: int = 0
 # flow ahead of it) — guards _on_gui_input so tapping outside can't free this modal mid-request
 # (same guard reward_modal.gd keeps against its own _claiming).
 var _claiming_reward: bool = false
+# Mirrors claim_failed_panel's own visible state — see _set_claim_failed_visible's doc comment.
+# Needed because _render() re-runs on a translation change, and re-deriving "should the
+# claim-failed panel be up" from this instead of unconditionally hiding it is what keeps that
+# panel up across a language switch instead of silently clearing it.
+var _claim_failed_shown: bool = false
+# Same reasoning as _claim_failed_shown, for Label_TapToContinue — it also defaults to visible
+# in the .tscn and relies entirely on code to hide it initially.
+var _tap_to_continue_shown: bool = false
 
 @onready var label_title: Label = %Label_Title
 @onready var label_subtitle: RichTextLabel = %Label_Subtitle
@@ -74,10 +82,10 @@ static func state_from_pending(pending: String) -> State:
 	return State.WELCOME
 
 
-## Awaits the reward-art fetch before reveal — real thumbnail vs. baked placeholder is already
-## decided by the time the modal shows, so it's never sitting there with a bare/incomplete art
-## slot. The art itself still fades in (see _reveal_reward_thumbnails()) right as the modal
-## appears, rather than just popping in fully opaque.
+## Awaits the reward-art fetch before reveal, so the modal never shows while a slot is still
+## mid-fetch — a failed or empty fetch just leaves that slot empty rather than racing the reveal.
+## The art itself still fades in (see _reveal_reward_thumbnails()) right as the modal appears,
+## rather than just popping in fully opaque.
 # gdlint:ignore = async-function-name
 func async_setup(state: State, progress_day: int, is_guest: bool, pending_day: int = 0) -> void:
 	_state = state
@@ -125,6 +133,15 @@ func _notification(what: int) -> void:
 		_render()
 
 
+## Split out of _render() for the same reason _update_day_row() is: _is_guest flips to false the
+## moment a guest upgrades mid-claim (see _show_claim_button's claim_action), and the footer needs
+## to drop its guest-specific caption right then, without re-running _render()'s full state
+## machine.
+func _update_footer() -> void:
+	var footer_key := "STREAK_FOOTER_CAPTION_GUEST" if _is_guest else "STREAK_FOOTER_CAPTION"
+	label_footer.text = TranslationKey.new(footer_key).text()
+
+
 ## Rebuilds the day row from StreakManager's current claimed state — split out of _render() so
 ## claim_state_changed can refresh just this, without re-running the rest of _render()'s state
 ## machine (which would re-enter _show_claim_button() and stomp the in-flight claim_action).
@@ -143,11 +160,11 @@ func _update_day_row() -> void:
 
 
 func _render() -> void:
-	# Every full render starts with the standard footer, not the claim-failed warning — only an
-	# actual failed attempt (inside _show_claim_button()'s claim_action) turns it back on, and
-	# only states that reach _show_claim_button() can ever show it in the first place.
-	_set_claim_failed_visible(false)
-	label_tap_to_continue.hide()
+	# Re-asserts the current claim-failed/tap-to-continue state rather than forcing it hidden —
+	# _render() also re-runs on a translation change (see _notification), and that must not
+	# silently clear either one before the player has acted on it.
+	_set_claim_failed_visible(_claim_failed_shown)
+	label_tap_to_continue.visible = _tap_to_continue_shown
 	_update_day_row()
 	var d7_claimed := Global.streak_manager.is_d7_claimed()
 
@@ -164,8 +181,7 @@ func _render() -> void:
 	# reward_art_2 stays hidden and reward_art_1 is the sole preview the rest of the time.
 	reward_art_2.visible = Global.streak_manager.get_claimable_days().size() > 1 or _both_claimed()
 
-	var footer_key := "STREAK_FOOTER_CAPTION_GUEST" if _is_guest else "STREAK_FOOTER_CAPTION"
-	label_footer.text = TranslationKey.new(footer_key).text()
+	_update_footer()
 
 	# The reminder (pending, pre-credit) and the celebration (post-credit) share the exact same
 	# title/subtitle copy per state — only the row above renders differently (pending vs checked).
@@ -271,7 +287,7 @@ func _show_claim_button(text_key: String) -> void:
 		# the day row later) — nothing to claim, so land straight on the terminal CLAIMED look
 		# instead of a tappable CLAIM that would do nothing.
 		claim_button.finish_claiming()
-		label_tap_to_continue.show()
+		_set_tap_to_continue_visible(true)
 		return
 	var is_guest := _is_guest
 	claim_button.claim_action = func() -> bool:
@@ -290,13 +306,17 @@ func _show_claim_button(text_key: String) -> void:
 			if not upgraded:
 				_claiming_reward = false
 				return false
+			# The account is no longer a guest from here on — drop the guest-specific footer
+			# caption instead of leaving it stale for the rest of this modal's session.
+			_is_guest = false
+			_update_footer()
 		var ok := await Global.streak_modal_controller.async_claim_rewards(days)
 		if not is_instance_valid(self):
 			return ok
 		_claiming_reward = false
 		if ok:
 			pedestal.texture = texture_pedestal_claimed
-			label_tap_to_continue.show()
+			_set_tap_to_continue_visible(true)
 		else:
 			_set_claim_failed_visible(true)
 		return ok
@@ -308,12 +328,19 @@ func _show_claim_button(text_key: String) -> void:
 ## instance is created the next time the modal opens (see
 ## StreakModalController._async_create_streak_modal), never because this instance resets itself.
 func _set_claim_failed_visible(show_failed: bool) -> void:
+	var was_shown := _claim_failed_shown
+	_claim_failed_shown = show_failed
 	claim_failed_panel.visible = show_failed
 	# Hides the whole footer block (label + its separators), not just the label — otherwise the
 	# separators' own spacing stays reserved and leaves a dead gap under the warning panel.
 	footer_container.visible = not show_failed
-	if show_failed:
+	if show_failed and not was_shown:
 		_async_slide_in_claim_failed()
+
+
+func _set_tap_to_continue_visible(show_it: bool) -> void:
+	_tap_to_continue_shown = show_it
+	label_tap_to_continue.visible = show_it
 
 
 ## Slides the panel up from below + fades it in. Awaits one frame first so the VBoxContainer
@@ -337,9 +364,9 @@ func _async_slide_in_claim_failed() -> void:
 
 
 ## Fills reward_art_1 (and reward_art_2 when both D3 and D7 are pending — see _render()) with the
-## real wearable/emote thumbnail(s), sequentially. A failed or empty fetch on either slot leaves
-## whatever placeholder is already on it, it never blocks the claim. Leaves every touched slot at
-## alpha 0 — real-vs-placeholder is decided here, but _reveal_reward_thumbnails() does the actual
+## real wearable/emote thumbnail(s), sequentially. A failed or empty fetch on either slot just
+## leaves it empty — there's no baked fallback art — it never blocks the claim. Leaves every
+## touched slot at alpha 0 regardless of outcome; _reveal_reward_thumbnails() does the actual
 ## fade-in, once the caller is ready to show it. @return the slots this call actually touched, so
 ## the caller only reveals those (not whichever slot sits unused/hidden this render).
 func _async_apply_reward_thumbnails() -> Array[TextureRect]:
@@ -357,9 +384,10 @@ func _async_apply_reward_thumbnails() -> Array[TextureRect]:
 	return touched
 
 
-## Resolves `target`'s texture (real thumbnail or the baked placeholder it already has), same
-## resolve-then-fetch shape as wearable_item.gd/backpack.gd's own thumbnail loads, but leaves it
-## fully transparent either way — the caller fades it in once it's ready to show it.
+## Resolves `target`'s texture to the real thumbnail, or leaves it untouched (empty) when `urn`
+## is blank or the fetch fails — same resolve-then-fetch shape as wearable_item.gd/backpack.gd's
+## own thumbnail loads. Leaves the slot fully transparent either way; the caller fades it in once
+## it's ready to show it.
 func _async_apply_reward_thumbnail(urn: String, target: TextureRect) -> void:
 	target.modulate.a = 0.0
 	if urn.is_empty():
