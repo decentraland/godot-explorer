@@ -111,3 +111,5 @@ pub mod framework {
         (tests, all_files.len(), is_focus_run)
     }
 }
+#[cfg(test)]
+mod call_targets_test;
