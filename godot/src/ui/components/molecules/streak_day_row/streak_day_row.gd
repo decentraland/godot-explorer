@@ -48,6 +48,11 @@ func render(
 	if today_day < 0:
 		today_day = progress_day
 	_ensure_pills()
+	# Every reward day claimed: the whole row's day labels — not just the reward days' — go green.
+	var all_claimed := (
+		not reward_days.is_empty()
+		and reward_days.all(func(day: int) -> bool: return day in claimed_days)
+	)
 	for i in range(DAY_COUNT):
 		var day_number := i + 1
 		var is_reward_day := day_number in reward_days
@@ -75,4 +80,4 @@ func render(
 			state = StreakDayPill.State.REWARD_LOCKED
 		else:
 			state = StreakDayPill.State.FUTURE
-		_pills[i].set_state(day_number, state)
+		_pills[i].set_state(day_number, state, all_claimed)

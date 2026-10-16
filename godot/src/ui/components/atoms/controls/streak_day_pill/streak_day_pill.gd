@@ -44,7 +44,11 @@ const CLAIMABLE_STATES := [State.REWARD_TODAY, State.REWARD_PASSED]
 @onready var claimable_background: TextureRect = %Claimable_Background
 
 
-func set_state(day_number: int, state: State) -> void:
+## @param all_claimed: true once both D3 and D7 are claimed — every day's label (not just the
+## reward days') turns the same REWARD_DONE green then, matching the finished-streak look. The
+## icon stays whatever this state's own texture already is — a distinct "all done" tick art per
+## state is planned but not baked yet.
+func set_state(day_number: int, state: State, all_claimed: bool = false) -> void:
 	label_day.text = "D[b]%d[/b]" % day_number
 	icon.custom_minimum_size = ICON_SIZE_REWARD if state in REWARD_STATES else ICON_SIZE_DAY
 	claimable_background.visible = state in CLAIMABLE_STATES
@@ -70,3 +74,5 @@ func set_state(day_number: int, state: State) -> void:
 		State.REWARD_DONE:
 			icon.texture = texture_reward_done
 			label_day.modulate = COLOR_REWARD_DONE
+	if all_claimed:
+		label_day.modulate = COLOR_REWARD_DONE
