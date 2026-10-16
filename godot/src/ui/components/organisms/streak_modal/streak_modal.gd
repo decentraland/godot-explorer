@@ -158,10 +158,11 @@ func _render() -> void:
 	var preview_claimed := d7_claimed if _preview_campaign_key() == "LoginStreakD7" else false
 	pedestal.texture = texture_pedestal_claimed if preview_claimed else texture_pedestal_normal
 
-	# Second reward slot only when D3 and D7 are BOTH pending to claim at once (D3's entitlement
-	# survives skipping straight to D7) — reward_art_2 stays hidden and reward_art_1 is the sole
-	# preview the rest of the time.
-	reward_art_2.visible = Global.streak_manager.get_claimable_days().size() > 1
+	# Second reward slot when D3 and D7 are BOTH pending to claim at once (D3's entitlement
+	# survives skipping straight to D7), or both are already claimed (revisiting afterward still
+	# shows both items earned, regardless of whether they were claimed together or separately) —
+	# reward_art_2 stays hidden and reward_art_1 is the sole preview the rest of the time.
+	reward_art_2.visible = Global.streak_manager.get_claimable_days().size() > 1 or _both_claimed()
 
 	var footer_key := "STREAK_FOOTER_CAPTION_GUEST" if _is_guest else "STREAK_FOOTER_CAPTION"
 	label_footer.text = TranslationKey.new(footer_key).text()
@@ -222,11 +223,17 @@ func _preview_campaign_key() -> String:
 	return "LoginStreakD7" if Global.streak_manager.is_d3_claimed() else "LoginStreakD3"
 
 
+## True once both reward days are claimed, however that happened — together in one tap or on
+## separate occasions days apart.
+func _both_claimed() -> bool:
+	return Global.streak_manager.is_d3_claimed() and Global.streak_manager.is_d7_claimed()
+
+
 ## RewardCampaigns keys for the reward-art slot(s) to populate — both D3 and D7 when both are
-## pending to claim at once (reward_art_2 visible, see _render()), otherwise just the single next
-## reward.
+## pending to claim at once, or both already claimed (see _render()'s reward_art_2 comment),
+## otherwise just the single next reward.
 func _preview_campaign_keys() -> Array[String]:
-	if Global.streak_manager.get_claimable_days().size() > 1:
+	if Global.streak_manager.get_claimable_days().size() > 1 or _both_claimed():
 		return ["LoginStreakD3", "LoginStreakD7"]
 	return [_preview_campaign_key()]
 
