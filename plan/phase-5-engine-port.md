@@ -42,14 +42,14 @@ without a written safety comment. Porting on the old API would mean porting twic
 
 ## Work items
 
-`[x]` = landed on `feat/react-native-phase5`, with the gaps in `phase-5-verification.md`; `[~]` = partly done.
+`[x]` = landed on `feat/react-native-phase5`, with the gaps in `phase-5-verification.md`. 5.10 is done as decided: the dev addons are dropped, while `godot/android`, `dcl_build_plugin`, `dcl-godot-android` and `emote_converter` stay (plugins by decision 1, `godot/android` until phase 7).
 
 - [x] **5.0 Modern gdext**. Upgrade `godot` from 0.4.5 to the current gdext release and fix the
   breaking changes across the 78 Godot classes. Move signals and by-name calls to the typed APIs,
   audit each `unsafe` block (remove it, or add a `// SAFETY:` comment). `experimental-threads`
   stays (D-38). Bump `rust-toolchain.toml` to the version gdext 0.5 requires in the same PR. Lands first: every later item in this phase is written against the new API. Verified with
   `--itest`, `--stest` and the scene-test snapshots unchanged.
-- [~] **5.1 Carve-out items left from phase 1**. Items 1.3, 1.7 and 1.8 from phase 1: transports into the
+- [x] **5.1 Carve-out items left from phase 1**. Items 1.3, 1.7 and 1.8 from phase 1: transports into the
   core behind `AvatarSink`/`SceneSink`, `tokio-tungstenite` for archipelago and ws rooms, `glam`
   at the engine edge, the LRU cache policy in `dcl_core::cache`.
 - [x] **5.2 Avatar, emotes, impostors**.
@@ -101,7 +101,7 @@ without a written safety comment. Porting on the old API would mean porting twic
   ported; delete with the subject otherwise (D-20). `test_runner.gd`, `validate_all_scripts.gd`,
   xtask `check-gdscript` and `test-gdscript`, the `linux_builds.yml` steps go. `cargo run -- run
   --itest` is the only engine test entry point.
-- [~] **5.10 Addons** (per D-open-5). `dcl-godot-android` (76) goes with the plugin it registers
+- [x] **5.10 Addons** (per D-open-5). `dcl-godot-android` (76) goes with the plugin it registers
   (5.11). `dcl_build_plugin` (141) only serves Godot's own Android Gradle build; replace that build with `--export-pack` plus xtask
   copies (engine AAR from the template, `libwebrtc.jar` from `android_dependencies.zip`,
   `libdclgodot.so` from cargo, the pack from the export), then delete it and
