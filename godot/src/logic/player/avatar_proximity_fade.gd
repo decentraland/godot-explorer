@@ -30,9 +30,16 @@ const FADE_GONE_DISTANCE := 0.3
 ## Head height above the avatar origin (matches the local player's Mount
 ## pivot at 1.71 closely enough for every avatar).
 const HEAD_HEIGHT := 1.7
+## Remote avatars farther than this stop polling for a while: the camera cannot close the gap
+## faster than MAX_APPROACH_SPEED, and the sleep is capped at MAX_SLEEP_SECONDS.
+const SLEEP_DISTANCE := 4.0
+const MAX_APPROACH_SPEED := 20.0
+const MAX_SLEEP_SECONDS := 0.5
 
 var _meshes: Array[MeshInstance3D] = []
 var _last_fade := -1.0
+# Floor for the fade set by AvatarGpuReadyGate while the renderer warms the avatar's pipelines.
+var _hold := 0.0
 
 @onready var _avatar: Node3D = get_parent()
 
@@ -52,6 +59,20 @@ func _recollect_deferred() -> void:
 func _collect_meshes() -> void:
 	_meshes.clear()
 	_walk(_avatar)
+	if _last_fade != 0.0:
+		_last_fade = -1.0
+
+
+## Keeps the avatar faded by at least `value` whatever the camera distance (0 releases it).
+func get_hold() -> float:
+	return _hold
+
+
+func set_hold(value: float) -> void:
+	if _hold == 0.0 and value > 0.0:
+		_collect_meshes()
+	_hold = value
+	_apply(maxf(_camera_fade(), _hold))
 
 
 func _walk(node: Node) -> void:
@@ -96,22 +117,42 @@ func _mat_supports_own_fade(mat: Material) -> bool:
 
 
 func _process(_delta: float) -> void:
+	_apply(maxf(_camera_fade(), _hold))
+
+
+func _camera_fade() -> float:
 	# Only avatars in the world (root viewport) fade. Avatar previews
 	# (backpack, passport) and the impostor capture live in SubViewports with
 	# close-up cameras of their own — exempt.
-	if get_viewport() != get_tree().root:
-		return
+	if not is_inside_tree() or get_viewport() != get_tree().root:
+		return 0.0
 	var camera := get_viewport().get_camera_3d()
 	if camera == null:
-		return
+		return 0.0
 
 	var head: Vector3 = _avatar.global_position + Vector3(0, HEAD_HEIGHT, 0)
 	var dist := camera.global_position.distance_to(head)
 	var fade := clampf(
 		(FADE_START_DISTANCE - dist) / (FADE_START_DISTANCE - FADE_GONE_DISTANCE), 0.0, 1.0
 	)
+	if (
+		fade == 0.0
+		and _hold == 0.0
+		and dist > SLEEP_DISTANCE
+		and not _avatar.get("is_local_player")
+	):
+		_sleep(minf((dist - FADE_START_DISTANCE) / MAX_APPROACH_SPEED, MAX_SLEEP_SECONDS))
+	return fade
+
+
+func _apply(fade: float) -> void:
 	if is_equal_approx(fade, _last_fade):
 		return
 	_last_fade = fade
 	for mesh in _meshes:
 		mesh.set_instance_shader_parameter(&"own_fade", fade)
+
+
+func _sleep(seconds: float) -> void:
+	set_process(false)
+	get_tree().create_timer(seconds).timeout.connect(set_process.bind(true))

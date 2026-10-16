@@ -511,9 +511,10 @@ func _physics_process(dt: float) -> void:
 	var scene_pending_impulses: PackedVector3Array = Global.scene_runner.consume_pending_impulses()
 	var external_acceleration: Vector3 = scene_external_force / CHARACTER_MASS
 
-	# Keep the top-level avatar co-located with the player (picks up teleports,
-	# external position changes, and ensures look_at below uses the correct origin)
-	avatar.global_position = global_position
+	# Keep the top-level avatar co-located with the player (picks up teleports and
+	# external position changes); each write re-propagates the whole avatar subtree.
+	if avatar.global_position != global_position:
+		avatar.global_position = global_position
 
 	# Handle hard landing cooldown
 	if _hard_landing_timer > 0:
@@ -785,9 +786,11 @@ func _physics_process(dt: float) -> void:
 		velocity.x = move_toward(velocity.x, target_x, accel * dt)
 		velocity.z = move_toward(velocity.z, target_z, accel * dt)
 
-		avatar.look_at(current_direction.normalized() + position)
-		avatar.rotation.x = 0.0
-		avatar.rotation.z = 0.0
+		# Yaw-only look_at, as one write and only when it changed.
+		if current_direction.x != 0.0 or current_direction.z != 0.0:
+			var yaw_only := Vector3(0.0, atan2(-current_direction.x, -current_direction.z), 0.0)
+			if not avatar.rotation.is_equal_approx(yaw_only):
+				avatar.rotation = yaw_only
 	else:
 		if on_floor:
 			# StopTimeSec=0: grounded stop is INSTANT in Unity (degenerate
@@ -901,7 +904,8 @@ func _physics_process(dt: float) -> void:
 		_step_armed = true
 		_step_pending = false
 	position.y = max(position.y, 0)
-	avatar.global_position = global_position
+	if avatar.global_position != global_position:
+		avatar.global_position = global_position
 
 	# Restore locomotion-only XZ; external_velocity carries its own state and is
 	# re-added next frame.

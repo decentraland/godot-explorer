@@ -30,8 +30,10 @@ const CL_PHYSICS := 2
 # the local player's CharacterBody3D.
 const CL_PLAYER := 4
 const BODY_MASK := CL_PHYSICS | CL_PLAYER
-# Frames between occlusion raycasts per avatar (staggered) — not every frame.
+# Physics steps between occlusion raycasts per avatar (staggered) — not every step.
 const OCCLUSION_PERIOD := 6
+# A plate with alpha 0 whose head is farther than this skips the anchor/projection work.
+const FAR_SKIP_DISTANCE := FADE_END + 5.0
 # Small gap above the computed bounds top (clearance already covers head/hat
 # volume — see Avatar.get_bounds_top_y).
 const NAMETAG_MARGIN := 0.1
@@ -69,6 +71,19 @@ static var _plate_alphas: Dictionary = {}
 # visible iff the camera can see the spot where it is actually drawn — otherwise a
 # cluster behind one occluder would lose every tag, even the stacked ones.
 static var _plate_ray_targets: Dictionary = {}
+# Occlusion is driven by one node (OcclusionDriver): attached avatars sit in OCCLUSION_PERIOD
+# buckets and only plates update() found on screen are raycast. A plate entering the screen
+# is tested on the next step and held at alpha 0 until then.
+static var _occlusion_buckets: Array = []
+static var _on_screen: Dictionary = {}
+static var _occlusion_untested: Dictionary = {}
+# Analytic avatar occluders, captured once per physics step (instance id, position, radius,
+# top y) instead of rebuilding the avatar list for every raycast.
+static var _occluders_frame: int = -1
+static var _occluder_ids: PackedInt64Array = PackedInt64Array()
+static var _occluder_positions: PackedVector3Array = PackedVector3Array()
+static var _occluder_radii: PackedFloat32Array = PackedFloat32Array()
+static var _occluder_tops: PackedFloat32Array = PackedFloat32Array()
 
 
 ## The Control to parent nameplates under (screen-space). Created on first use.
@@ -83,6 +98,9 @@ static func get_root() -> Control:
 	_root.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	layer.add_child(_root)
+	var driver := OcclusionDriver.new()
+	driver.name = "OcclusionDriver"
+	layer.add_child(driver)
 	# Under Global, never under the explorer: each avatar owns its plate (attach()
 	# reparents it here, detach() frees it on PREDELETE), so the layer has to outlive
 	# every avatar. Parented under the explorer it was freed first on sign-out and left
@@ -111,10 +129,18 @@ static func attach(avatar) -> void:
 	ui.modulate.a = 0.0
 	ui.hide()
 	get_root().add_child(ui)
+	# The quad only anchors the plate now; its fade is dead work.
+	avatar.nickname_quad.set_process(false)
+	_add_to_occlusion_bucket(avatar)
 
 
 ## Free the reparented NicknameUI (it lives in the shared layer, not under the avatar).
 static func detach(avatar) -> void:
+	var avatar_id: int = avatar.get_instance_id()
+	for bucket in _occlusion_buckets:
+		bucket.erase(avatar)
+	_on_screen.erase(avatar_id)
+	_occlusion_untested.erase(avatar_id)
 	if is_instance_valid(avatar.nickname_ui):
 		_untrack_plate(avatar.nickname_ui)
 		avatar.nickname_ui.queue_free()
@@ -130,7 +156,20 @@ static func update(avatar) -> void:
 	if ui == null:
 		return
 	var target_a := 0.0
+	var on_screen := false
 	var cam = avatar.get_viewport().get_camera_3d()
+	if (
+		ui.modulate.a == 0.0
+		and cam != null
+		and (
+			cam.global_position.distance_to(avatar.nickname_quad.global_position)
+			> FAR_SKIP_DISTANCE
+		)
+	):
+		_untrack_plate(ui)
+		_set_on_screen(avatar, false)
+		ui.visible = false
+		return
 	if cam != null and avatar._nametag_gate_visible:
 		var anchor: Vector3 = _anchor(avatar)
 		# Fade by the camera distance — what the camera actually sees.
@@ -144,8 +183,10 @@ static func update(avatar) -> void:
 				- Vector2(screen_size.x * 0.5, screen_size.y * ANCHOR_HEIGHT_FACTOR)
 			)
 			var view_rect := Rect2(Vector2.ZERO, avatar.get_viewport().get_visible_rect().size)
-			var on_screen := view_rect.intersects(Rect2(pos, screen_size))
-			if on_screen and not avatar._nameplate_occluded:
+			on_screen = view_rect.intersects(Rect2(pos, screen_size))
+			_set_on_screen(avatar, on_screen)
+			var untested: bool = _occlusion_untested.has(avatar.get_instance_id())
+			if on_screen and not avatar._nameplate_occluded and not untested:
 				# De-overlap: soft-constraint stack against the other visible plates,
 				# so close-together avatars' tags (and their chat bubbles, which live
 				# inside the same Control) stay readable.
@@ -166,21 +207,25 @@ static func update(avatar) -> void:
 			_untrack_plate(ui)
 	else:
 		_untrack_plate(ui)
+	if not on_screen:
+		_set_on_screen(avatar, false)
+	# The plate follows the GPU-ready hold so it never floats over an avatar that isn't drawn yet.
+	var fade = avatar.get_node_or_null(^"AvatarProximityFade")
+	if fade != null:
+		target_a *= 1.0 - fade.get_hold()
 	ui.modulate.a = move_toward(
 		ui.modulate.a, target_a, avatar.get_process_delta_time() * FADE_SPEED
 	)
 	ui.visible = ui.modulate.a > 0.01
 
 
-## Throttled occlusion raycast. MUST run from _physics_process — direct_space_state
-## crashes when queried from _process (idle frame).
+## Occlusion raycast for one plate. MUST run from _physics_process — direct_space_state
+## crashes when queried from _process (idle frame). Throttling is the driver's job.
 static func update_occlusion(avatar) -> void:
 	if debug_disable_occlusion:
 		avatar._nameplate_occluded = false
 		return
 	if not avatar._nametag_gate_visible:
-		return
-	if (Engine.get_physics_frames() + int(avatar.unique_id)) % OCCLUSION_PERIOD != 0:
 		return
 	var cam = avatar.get_viewport().get_camera_3d()
 	if cam == null:
@@ -194,6 +239,50 @@ static func update_occlusion(avatar) -> void:
 	if avatar.nickname_ui != null:
 		target = _plate_ray_targets.get(avatar.nickname_ui.get_instance_id(), anchor)
 	avatar._nameplate_occluded = _occluded(avatar, cam.global_position, target)
+
+
+## One physics step of the central driver: the current bucket's on-screen plates plus the
+## plates that just came on screen.
+static func _occlusion_step() -> void:
+	if _occlusion_buckets.is_empty():
+		return
+	if debug_disable_occlusion:
+		_occlusion_untested.clear()
+		for bucket in _occlusion_buckets:
+			for avatar in bucket:
+				avatar._nameplate_occluded = false
+		return
+	var due: Array = _occlusion_untested.values()
+	_occlusion_untested.clear()
+	for avatar in _occlusion_buckets[Engine.get_physics_frames() % OCCLUSION_PERIOD]:
+		if _on_screen.has(avatar.get_instance_id()) and not due.has(avatar):
+			due.append(avatar)
+	for avatar in due:
+		if is_instance_valid(avatar) and avatar.is_inside_tree():
+			update_occlusion(avatar)
+
+
+static func _add_to_occlusion_bucket(avatar) -> void:
+	if _occlusion_buckets.is_empty():
+		for i in OCCLUSION_PERIOD:
+			_occlusion_buckets.append([])
+	var smallest: Array = _occlusion_buckets[0]
+	for bucket in _occlusion_buckets:
+		if bucket.size() < smallest.size():
+			smallest = bucket
+	smallest.append(avatar)
+
+
+static func _set_on_screen(avatar, on_screen: bool) -> void:
+	var avatar_id: int = avatar.get_instance_id()
+	if on_screen == _on_screen.has(avatar_id):
+		return
+	if on_screen:
+		_on_screen[avatar_id] = avatar
+		_occlusion_untested[avatar_id] = avatar
+	else:
+		_on_screen.erase(avatar_id)
+		_occlusion_untested.erase(avatar_id)
 
 
 ## Soft de-overlap: each visible plate carries an offset from its projected anchor.
@@ -323,25 +412,17 @@ static func _occluded(avatar, from: Vector3, to: Vector3) -> bool:
 ## Covers comms avatars, scene NPCs (whose ClickArea shape is LOD-disabled) and
 ## the local player.
 static func _blocked_by_avatar(avatar, from: Vector3, to: Vector3) -> bool:
-	var others: Array = []
-	if Global.avatars != null:
-		others.append_array(Global.avatars.get_avatars())
-	var player_avatar = Global.scene_runner.player_avatar_node if Global.scene_runner else null
-	if player_avatar != null:
-		others.append(player_avatar)
-	# Scene NPCs (AvatarShape) are not in Global.avatars — they register in a group.
-	others.append_array(avatar.get_tree().get_nodes_in_group("avatar_shapes"))
+	_snapshot_occluders(avatar.get_tree())
+	var self_id: int = avatar.get_instance_id()
 	var delta := to - from
 	var d_xz := Vector2(delta.x, delta.z)
 	var d_xz_len_sq := d_xz.length_squared()
-	for other in others:
-		if other == avatar or not is_instance_valid(other) or not other.visible:
+	for i in _occluder_ids.size():
+		if _occluder_ids[i] == self_id:
 			continue
-		var o: Vector3 = other.global_position
-		# Cylinder sized to the other's real body+wearables: radius from its mesh
-		# bounds, top at its computed bounds top (both capped).
-		var radius: float = other.occlusion_radius
-		var top_y: float = minf(other.get_bounds_top_y(), o.y + 3.0)
+		var o: Vector3 = _occluder_positions[i]
+		var radius: float = _occluder_radii[i]
+		var top_y: float = _occluder_tops[i]
 		# Closest point (in XZ) of the segment to the other's vertical axis.
 		var t := 0.0
 		if d_xz_len_sq > 0.0001:
@@ -359,3 +440,39 @@ static func _blocked_by_avatar(avatar, from: Vector3, to: Vector3) -> bool:
 		if dx * dx + dz * dz < radius * radius:
 			return true
 	return false
+
+
+## Visible avatar cylinders (comms avatars, the local player, scene NPCs), once per physics
+## step: radius from mesh bounds, top at the computed bounds top (capped).
+static func _snapshot_occluders(tree: SceneTree) -> void:
+	var frame := Engine.get_physics_frames()
+	if frame == _occluders_frame:
+		return
+	_occluders_frame = frame
+	var others: Array = []
+	if Global.avatars != null:
+		others.append_array(Global.avatars.get_avatars())
+	var player_avatar = Global.scene_runner.player_avatar_node if Global.scene_runner else null
+	if player_avatar != null:
+		others.append(player_avatar)
+	# Scene NPCs (AvatarShape) are not in Global.avatars — they register in a group.
+	others.append_array(tree.get_nodes_in_group("avatar_shapes"))
+	_occluder_ids.clear()
+	_occluder_positions.clear()
+	_occluder_radii.clear()
+	_occluder_tops.clear()
+	for other in others:
+		if not is_instance_valid(other) or not other.visible:
+			continue
+		var o: Vector3 = other.global_position
+		_occluder_ids.append(other.get_instance_id())
+		_occluder_positions.append(o)
+		_occluder_radii.append(other.occlusion_radius)
+		_occluder_tops.append(minf(other.get_bounds_top_y(), o.y + 3.0))
+
+
+class OcclusionDriver:
+	extends Node
+
+	func _physics_process(_delta: float) -> void:
+		NameplateLayer._occlusion_step()
