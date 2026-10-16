@@ -269,15 +269,29 @@ func _show_claim_button(text_key: String) -> void:
 	var is_guest := _is_guest
 	claim_button.claim_action = func() -> bool:
 		_claiming_reward = true
-		var result: Dictionary = await Global.streak_modal_controller.async_claim_rewards(
-			days, is_guest
-		)
+		if is_guest:
+			# Hide for the upgrade step — its own email/code/reward modals are the only thing on
+			# screen, and nothing here claims (or even shows CLAIMING…) until the account is
+			# actually upgraded. Reappearing already mid-claim, rather than staying up stuck
+			# behind those modals the whole time, is what stops a tap meant for them from
+			# accidentally landing on (and dismissing) this one.
+			hide()
+			var upgraded := await Global.streak_modal_controller.async_run_guest_upgrade()
+			if not is_instance_valid(self):
+				return false
+			show()
+			if not upgraded:
+				_claiming_reward = false
+				return false
+		var ok := await Global.streak_modal_controller.async_claim_rewards(days)
+		if not is_instance_valid(self):
+			return ok
 		_claiming_reward = false
-		if result.ok:
+		if ok:
 			pedestal.texture = texture_pedestal_claimed
-		elif not result.cancelled:
+		else:
 			_set_claim_failed_visible(true)
-		return result.ok
+		return ok
 
 
 ## Mutually exclusive with the footer caption — the claim-failed panel only appears after an

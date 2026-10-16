@@ -110,19 +110,14 @@ func _remove_streak_modal() -> void:
 ## state off this call's result. `days` holds 1 or 2 entries — D3 and D7 can be pending at once
 ## when a player skips D3's claim and reaches D7 before coming back for it. Safe to retry on a
 ## partial failure: RewardClaimer treats a repeat claim for an already-granted day as a no-op
-## success, not a duplicate grant.
-## @return {"ok": bool, "cancelled": bool} — `ok` true only if every day succeeded; `cancelled` true
-## when a guest backed out of the upgrade flow before any claim was even attempted, which is not a
-## failure (see StreakModal._show_claim_button, which shows no error for it).
-func async_claim_rewards(days: Array[int], is_guest: bool) -> Dictionary:
-	if is_guest:
-		var upgraded := await _async_run_guest_upgrade()
-		if not upgraded:
-			return {"ok": false, "cancelled": true}
+## success, not a duplicate grant. Assumes the account can already claim — a guest runs
+## async_run_guest_upgrade() first (see StreakModal._show_claim_button, which hides the streak
+## modal for that step and only calls this once the account is actually upgraded).
+func async_claim_rewards(days: Array[int]) -> bool:
 	var all_ok := true
 	for day in days:
 		all_ok = await _async_claim_direct(day) and all_ok
-	return {"ok": all_ok, "cancelled": false}
+	return all_ok
 
 
 ## Performs the actual claim in place (no modal navigation — the streak modal's own ClaimButton
@@ -139,7 +134,7 @@ func _async_claim_direct(day: int) -> bool:
 ## reward shows first — chain, not suppress), tagged source="login_streak" for attribution. Awaits
 ## AddEmailFlow's own flow_concluded, not Global.guest_upgrade_state_refreshed — that one never
 ## fires on cancel/error and would leave the ClaimButton stuck on CLAIMING forever.
-func _async_run_guest_upgrade() -> bool:
+func async_run_guest_upgrade() -> bool:
 	Global.add_email_flow.async_start_add_email_flow("MobilePet", "login_streak")
 	return await Global.add_email_flow.flow_concluded
 
