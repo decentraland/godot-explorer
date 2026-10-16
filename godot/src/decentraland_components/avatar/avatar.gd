@@ -311,7 +311,6 @@ func _ready():
 	# are per-avatar copies (they are resource_local_to_scene anyway);
 	# AvatarLocomotion resolves the ones it drives from the tree.
 	_locomotion = AvatarLocomotion.new(animation_tree)
-	body_shape_skeleton_3d.skeleton_updated.connect(self._attach_point_skeleton_updated)
 	body_shape_skeleton_3d.skeleton_updated.connect(self._recompute_nametag_posed_top)
 	_recompute_nametag_clearance()
 	_recompute_nametag_posed_top()
@@ -728,6 +727,8 @@ func get_bounds_top_y() -> float:
 ## avatar only yaws/moves, so the per-frame cost in get_bounds_top_y is just
 ## adding the skeleton's world origin.
 func _recompute_nametag_posed_top() -> void:
+	if not _nametag_gate_visible:
+		return
 	var basis := body_shape_skeleton_3d.global_transform.basis
 	var y_row := Vector3(basis[0].y, basis[1].y, basis[2].y)
 	var top := -INF
@@ -887,12 +888,7 @@ func async_fetch_wearables_dependencies():
 
 	var async_calls_info: Array = []
 	var async_calls: Array = []
-	for emote_urn in avatar_data.get_emotes():
-		if emote_urn.begins_with("urn"):
-			var emote_promises = emote_controller.async_fetch_emote(emote_urn, body_shape_id)
-			for emote_promise in emote_promises:
-				async_calls.push_back(emote_promise)
-				async_calls_info.push_back(emote_urn)
+	emote_controller.fetch_equipped_emotes(body_shape_id, async_calls, async_calls_info)
 
 	# Use signal-based wearable loading with threaded ResourceLoader
 	# Safety check: avatar may have been freed during async operations
@@ -908,13 +904,16 @@ func async_fetch_wearables_dependencies():
 	await async_load_wearables()
 
 
-func async_try_to_set_body_shape(body_shape_hash):
+func async_try_to_set_body_shape(body_shape_hash, build: int):
 	# Safety check: avatar may have been freed during async operations
 	if not is_instance_valid(wearable_loader) or not is_inside_tree():
 		return
-	var body_shape: Node3D = await wearable_loader.async_get_wearable_node(body_shape_hash)
+	var body_shape: Node3D = await wearable_loader.async_get_wearable_node(body_shape_hash, self)
 	if body_shape == null:
 		printerr("Avatar: Failed to load body shape ", body_shape_hash)
+		return
+	if not _mesh_assembler.is_current(build):
+		body_shape.queue_free()
 		return
 
 	var new_skeleton = body_shape.find_child("Skeleton3D")
@@ -949,6 +948,7 @@ func async_load_wearables():
 	if not is_instance_valid(wearable_loader) or not is_inside_tree():
 		return
 
+	var build := _mesh_assembler.begin_build(self)
 	AvatarBuildProfiler.begin()
 
 	# Hide skeleton immediately if show_only_wearables to prevent flash of default body
@@ -983,6 +983,8 @@ func async_load_wearables():
 		# Safety check: avatar may have been freed during async operations
 		if not is_instance_valid(wearable_loader) or not is_inside_tree():
 			return
+		if not _mesh_assembler.is_current(build):
+			return
 		# Use signal-based wearable loading with threaded ResourceLoader
 		await wearable_loader.async_load_wearables(
 			curated_wearables.need_to_fetch, body_shape_wearable.get_id()
@@ -993,8 +995,10 @@ func async_load_wearables():
 			if wearable != null:
 				wearables_by_category[wearable.get_category()] = wearable
 
+	# Hidden until fully assembled: the build spans several frames (FrameWorkBudget).
+	body_shape_skeleton_3d.visible = false
 	await async_try_to_set_body_shape(
-		Wearables.get_item_main_file_hash(body_shape_wearable, avatar_data.get_body_shape())
+		Wearables.get_item_main_file_hash(body_shape_wearable, avatar_data.get_body_shape()), build
 	)
 	wearables_by_category.erase(Wearables.Categories.BODY_SHAPE)
 
@@ -1008,6 +1012,7 @@ func async_load_wearables():
 	for category in wearables_by_category:
 		# Safety check: avatar may have been freed during async operations
 		if not is_instance_valid(wearable_loader) or not is_inside_tree():
+			body_shape_skeleton_3d.visible = true
 			return
 
 		var wearable = wearables_by_category[category]
@@ -1017,31 +1022,16 @@ func async_load_wearables():
 			continue
 
 		var file_hash = Wearables.get_item_main_file_hash(wearable, avatar_data.get_body_shape())
-		var obj = await wearable_loader.async_get_wearable_node(file_hash)
+		var obj = await wearable_loader.async_get_wearable_node(file_hash, self)
 		if obj == null:
 			printerr("Avatar: Failed to load wearable ", category, " hash: ", file_hash)
 			continue
 
-		# Reparent wearable meshes directly (no need to duplicate since wearable_loader
-		# returns a fresh instantiated scene that we'll discard anyway)
-		var wearable_skeletons = obj.find_children("Skeleton3D")
-		for skeleton_3d in wearable_skeletons:
-			# Spring bones (ADR-316) and other extra bones not in the base armature
-			# must be copied into body_shape_skeleton_3d before meshes are reparented,
-			# otherwise mesh skins reference bone indices that don't exist here.
-			_mesh_assembler.merge_extra_bones(skeleton_3d)
-
-			for child in skeleton_3d.get_children():
-				if child is MeshInstance3D:
-					_mesh_assembler.rebind_skin_by_name(child, skeleton_3d)
-				skeleton_3d.remove_child(child)
-				child.set_owner(null)  # Clear owner since we're reparenting
-				# WEARABLE_NAME_PREFIX is used to identify non-bodyshape parts
-				child.name = child.name.to_lower() + WEARABLE_NAME_PREFIX + category
-				body_shape_skeleton_3d.add_child(child)
-
-		# Free the now-empty wearable container
-		obj.queue_free()
+		# WEARABLE_NAME_PREFIX is used to identify non-bodyshape parts
+		if not await _mesh_assembler.async_attach_wearable(
+			obj, WEARABLE_NAME_PREFIX + category, build
+		):
+			return
 
 		match category:
 			Wearables.Categories.UPPER_BODY:
@@ -1058,6 +1048,8 @@ func async_load_wearables():
 				has_own_skin = true
 
 	AvatarBuildProfiler.mark("load_reparent")
+	if not await _mesh_assembler.async_step("Avatar::finalize", build):
+		return
 
 	# Here hidings is an alias
 	var hidings = curated_wearables.hidden_categories
@@ -1136,30 +1128,12 @@ func async_load_wearables():
 	# #1554: during a spawn reveal the reveal owns the skeleton switch — the
 	# real avatar stays hidden until the hologram's swap releases it.
 	body_shape_skeleton_3d.visible = _spawn_reveal.is_idle()
+	_mesh_assembler.end_build()
 	_recompute_nametag_clearance()
 	finish_loading = true
-	# Emotes - get from cached emote scenes
-	for emote_urn in avatar_data.get_emotes():
-		if not emote_urn.begins_with("urn"):
-			# Default (utility emotes)
-			continue
-
-		var emote = Global.content_provider.get_wearable(emote_urn)
-		if emote == null:
-			continue
-		var file_hash = Wearables.get_item_main_file_hash(emote, avatar_data.get_body_shape())
-		if file_hash.is_empty():
-			continue
-		# Use emote_loader from emote_controller to get the cached emote (threaded loading)
-		var obj = await emote_controller.emote_loader.async_get_emote_gltf(
-			file_hash,
-			emote.get_representation_main_file(avatar_data.get_body_shape()),
-			emote.get_content_mapping()
-		)
-		if obj != null:
-			emote_controller.load_emote_from_dcl_emote_gltf(emote_urn, obj, file_hash)
-
-	emote_controller.clean_unused_emotes()
+	await emote_controller.async_load_equipped_emotes()
+	if not _mesh_assembler.is_current(build):
+		return
 
 	# Refresh LOD-related state since meshes were re-created.
 	_mesh_lod_visibility_captured = false
@@ -1479,13 +1453,6 @@ func _tick_animation_throttle(delta: float) -> void:
 		_anim_throttle_counter = 0
 
 
-func _physics_process(_delta):
-	# Occlusion raycast must run here, not in _process — direct_space_state crashes
-	# when queried from an idle frame.
-	if _use_2d_nameplate:
-		NameplateLayer.update_occlusion(self)
-
-
 func _process(delta):
 	# #1554: the spawn reveal driver must run even when the LOD/animation
 	# paths below bail early (a frozen reveal = permanently hidden avatar).
@@ -1630,6 +1597,10 @@ func register_anchor_use(anchor_id: int, attachment: Node) -> void:
 		_anchors[anchor_id] = state
 		if body_shape_skeleton_3d != null:
 			state.resolve(body_shape_skeleton_3d)
+			if not body_shape_skeleton_3d.skeleton_updated.is_connected(
+				_attach_point_skeleton_updated
+			):
+				body_shape_skeleton_3d.skeleton_updated.connect(_attach_point_skeleton_updated)
 	if not state.users.has(attachment):
 		state.users.append(attachment)
 
@@ -1644,6 +1615,12 @@ func unregister_anchor_use(anchor_id: int, attachment: Node) -> void:
 	state.users.erase(attachment)
 	if state.users.is_empty():
 		_anchors.erase(anchor_id)
+	if (
+		_anchors.is_empty()
+		and body_shape_skeleton_3d != null
+		and body_shape_skeleton_3d.skeleton_updated.is_connected(_attach_point_skeleton_updated)
+	):
+		body_shape_skeleton_3d.skeleton_updated.disconnect(_attach_point_skeleton_updated)
 
 
 # Refreshes bone poses for currently-active anchors only. Wired to the

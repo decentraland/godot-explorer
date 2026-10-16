@@ -33,6 +33,7 @@ func _initialize() -> void:
 	await _test_close_camera_fades_whole_avatar()
 	await _test_mid_distance_partial_fade()
 	await _test_subviewport_avatar_does_not_fade()
+	await _test_hold_overrides_far_camera()
 	_test_consts_sane()
 	_test_avatar_shaders_support_own_fade()
 	_test_avatar_gd_wires_the_node()
@@ -139,6 +140,23 @@ func _test_subviewport_avatar_does_not_fade() -> void:
 	if value != null and value != 0.0:
 		_fail("subviewport avatar: fade = %s, expected unset/0" % value)
 	sub.queue_free()
+
+
+# AvatarGpuReadyGate holds a far avatar fully dithered out, then releases it.
+# gdlint:ignore = async-function-name
+func _test_hold_overrides_far_camera() -> void:
+	var rig := _build_rig()
+	var fade: AvatarProximityFade = rig["avatar"].get_child(1)
+	fade.set_hold(1.0)
+	var held := await _fade_at(rig["mesh"], rig["camera"], Vector3(0, Fade.HEAD_HEIGHT, 3.0))
+	if held < 0.99:
+		_fail("held avatar: fade = %.2f, expected 1" % held)
+	fade.set_hold(0.0)
+	var released := await _fade_at(rig["mesh"], rig["camera"], Vector3(0, Fade.HEAD_HEIGHT, 3.0))
+	if released > 0.01:
+		_fail("released avatar: fade = %.2f, expected 0" % released)
+	rig["avatar"].queue_free()
+	rig["camera"].queue_free()
 
 
 func _test_consts_sane() -> void:
