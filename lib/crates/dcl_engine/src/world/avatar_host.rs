@@ -5,7 +5,7 @@ use godot::classes::{INode, Node};
 use godot::prelude::*;
 
 use super::host::on_avatar_host_ready;
-use crate::engine::local_task::{next_frame, signal_once, spawn_local};
+use crate::engine::local_task::{next_frame, spawn_local};
 use crate::fetcher::globals;
 
 #[derive(GodotClass)]
@@ -36,6 +36,10 @@ async fn boot() {
     next_frame().await;
     next_frame().await;
     identity.bind_mut().set_random_profile();
-    signal_once(&mut identity, "profile_changed").await;
+    let _ = identity
+        .signals()
+        .profile_changed()
+        .to_fallible_future()
+        .await;
     on_avatar_host_ready();
 }

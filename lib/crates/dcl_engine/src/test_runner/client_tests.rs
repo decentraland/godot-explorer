@@ -18,7 +18,7 @@ use crate::avatars::avatar::build::update_avatar;
 use crate::avatars::avatar_type::DclAvatarWireFormat;
 use crate::avatars::dcl_user_profile::DclUserProfile;
 use crate::avatars::preview::AvatarPreview;
-use crate::engine::local_task::{next_frame, signal_once, sleep, spawn_local};
+use crate::engine::local_task::{next_frame, sleep, spawn_local};
 use crate::fetcher::globals;
 use crate::godot_classes::dcl_global::DclGlobal;
 
@@ -139,8 +139,11 @@ async fn load_test_avatar(preview: &Gd<AvatarPreview>) {
 }
 
 async fn frames_after_draw() {
-    let mut server = RenderingServer::singleton();
-    signal_once(&mut server, "frame_post_draw").await;
+    let _ = RenderingServer::singleton()
+        .signals()
+        .frame_post_draw()
+        .to_fallible_future()
+        .await;
     next_frame().await;
     next_frame().await;
 }

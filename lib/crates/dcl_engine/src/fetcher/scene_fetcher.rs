@@ -15,9 +15,7 @@ use super::{
     walls::FloatingIslandWalls,
 };
 use crate::{
-    engine::local_task::{
-        await_promise, next_frame, next_physics_frame, physics_tick, spawn_local,
-    },
+    engine::local_task::{await_promise, next_frame, next_physics_frame, spawn_local},
     godot_classes::{
         dcl_floating_islands_manager::DclFloatingIslandsManager, dcl_global::DclGlobal,
         promise::PromiseError,
@@ -288,10 +286,6 @@ impl INode for SceneFetcher {
                 self.signals().notify_pending_loading_scenes().emit(true);
             }
         }
-    }
-
-    fn physics_process(&mut self, _delta: f64) {
-        physics_tick();
     }
 }
 
