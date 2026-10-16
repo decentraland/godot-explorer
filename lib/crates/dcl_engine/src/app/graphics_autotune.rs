@@ -15,6 +15,9 @@ use crate::ui::host;
 pub struct GraphicsAutotune {
     base: Base<RefCounted>,
     benchmark: Option<Gd<HardwareBenchmark>>,
+    /// Off while a benchmark holds the frame rate uncapped.
+    #[init(val = true)]
+    thermal_cap_applies: bool,
 }
 
 fn setting_i32(name: &str) -> i32 {
@@ -31,6 +34,10 @@ fn bench_mode() -> bool {
 
 #[godot_api]
 impl GraphicsAutotune {
+    pub fn set_thermal_cap_applies(&mut self, applies: bool) {
+        self.thermal_cap_applies = applies;
+    }
+
     /// Whether the first-launch benchmark should run (a phone, on a first launch or a dev build).
     /// Skipped in bench mode: it calls `viewport_set_measure_render_time` and could clobber the
     /// benchmark runner's own measurement state.
@@ -155,6 +162,9 @@ impl GraphicsAutotune {
 
     /// Applies the effective FPS limit: the player's setting and the thermal cap, the lower wins.
     fn on_thermal_fps_cap_changed(&mut self, fps_cap: i32) {
+        if !self.thermal_cap_applies {
+            return;
+        }
         graphics::apply_fps_limit_with_thermal_cap(setting_i32("limit_fps"), fps_cap);
         if fps_cap == 0 {
             godot_print!("[ThermalFPS] Cap removed, using user setting");
