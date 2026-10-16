@@ -56,7 +56,7 @@ func _test_assign_caps_under_pool() -> void:
 	var caps: Array = P.assign_caps(5, 8, 4)
 	_expect_eq("size", caps.size(), 5)
 	for i in range(caps.size()):
-		_expect_cap("rank %d" % i, caps[i], FULL, false)
+		_expect_cap("rank %d" % i, caps[i], FULL if i < P.FULL_RATE_CAP else MID, false)
 
 
 func _test_assign_caps_over_pool() -> void:
@@ -64,7 +64,7 @@ func _test_assign_caps_over_pool() -> void:
 	var caps: Array = P.assign_caps(10, 8, 4)
 	_expect_eq("size", caps.size(), 10)
 	for i in range(8):
-		_expect_cap("in-pool rank %d" % i, caps[i], FULL, false)
+		_expect_cap("in-pool rank %d" % i, caps[i], FULL if i < P.FULL_RATE_CAP else MID, false)
 	_expect_cap("first beyond pool", caps[8], FAR, false)
 	_expect_cap("second beyond pool", caps[9], FAR, false)
 

@@ -124,6 +124,8 @@ pub struct SceneManager {
     total_time_seconds_time: f32,
     pause: bool,
     begin_time: Instant,
+    budget_frame: u64,
+    budget_end_us: i64,
     sorted_scene_ids: Vec<SceneId>,
     dying_scene_ids: Vec<SceneId>,
     crashed_scene_ids: Vec<SceneId>,
@@ -1702,7 +1704,15 @@ impl SceneManager {
         };
 
         let start_time_us = (std::time::Instant::now() - self.begin_time).as_micros() as i64;
-        let end_time_us = start_time_us + MAX_TIME_PER_SCENE_TICK_US;
+        // Physics catch-up runs this up to 8 times per rendered frame; once loading is over they
+        // share one budget, so a slow frame doesn't buy the scenes 8 more ticks.
+        let frame = godot::classes::Engine::singleton().get_process_frames();
+        let new_frame = frame != self.budget_frame;
+        if new_frame || self.current_loading_session.is_some() {
+            self.budget_frame = frame;
+            self.budget_end_us = start_time_us + MAX_TIME_PER_SCENE_TICK_US;
+        }
+        let end_time_us = self.budget_end_us;
 
         self.total_time_seconds_time += delta as f32;
 
@@ -1914,7 +1924,7 @@ impl SceneManager {
                     scene.last_tick_us =
                         (std::time::Instant::now() - self.begin_time).as_micros() as i64;
                     scene.stuck_frames = 0;
-                } else if scene.current_dirty.waiting_process {
+                } else if scene.current_dirty.waiting_process && new_frame {
                     scene.stuck_frames += 1;
                 }
             }
@@ -3087,6 +3097,8 @@ impl INode for SceneManager {
 
             total_time_seconds_time: 0.0,
             begin_time: Instant::now(),
+            budget_frame: u64::MAX,
+            budget_end_us: 0,
             console: Callable::invalid(),
             input_state: InputState::default(),
             last_hover_entity: None,
@@ -3480,9 +3492,10 @@ impl INode for SceneManager {
     // first-person viewmodels) inherit their world transform from these
     // nodes, so they would visibly trail the camera by up to one physics
     // tick if this only ran in physics_process.
-    fn process(&mut self, _delta: f64) {
-        let Some(current_camera_node) = self.base().get_viewport().and_then(|x| x.get_camera_3d())
-        else {
+    fn process(&mut self, delta: f64) {
+        let camera = self.base().get_viewport().and_then(|x| x.get_camera_3d());
+        crate::godot_classes::scene_animation_throttle::tick(camera.as_ref(), delta);
+        let Some(current_camera_node) = camera else {
             return;
         };
 

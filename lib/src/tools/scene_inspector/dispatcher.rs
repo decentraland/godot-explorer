@@ -48,11 +48,12 @@ pub struct SceneInspectorDispatcher {
     paused: bool,
     entry_count: u64,
     perf_interval: f64,
-    /// Snapshot of latest LWW CRDT state: (scene_id, entity_id, component_name) → serialized JSON
-    crdt_lww_snapshot: HashMap<(i32, u32, Cow<'static, str>), String>,
-    /// Snapshot of GOS (append) CRDT state: (scene_id, entity_id, component_name) → serialized JSON entries.
+    /// Snapshot of latest LWW CRDT state: (scene_id, entity_id, component_name) → entry.
+    /// Kept unserialized so frames without a consumer pay no JSON; serialized on hot-connect.
+    crdt_lww_snapshot: HashMap<(i32, u32, Cow<'static, str>), CrdtLogEntry>,
+    /// Snapshot of GOS (append) CRDT state: (scene_id, entity_id, component_name) → entries.
     /// `VecDeque` so the per-key cap (see `update_crdt_snapshot`) drops the oldest entry in O(1).
-    crdt_gos_snapshot: HashMap<(i32, u32, Cow<'static, str>), VecDeque<String>>,
+    crdt_gos_snapshot: HashMap<(i32, u32, Cow<'static, str>), VecDeque<CrdtLogEntry>>,
     _base: Base<Node>,
 }
 
@@ -248,22 +249,14 @@ impl SceneInspectorDispatcher {
     /// reconstruct the full entity tree.
     #[func]
     fn get_crdt_snapshot_json(&self) -> GString {
-        let mut entries: Vec<&str> = Vec::with_capacity(
-            self.crdt_lww_snapshot.len()
-                + self
-                    .crdt_gos_snapshot
-                    .values()
-                    .map(|v| v.len())
-                    .sum::<usize>(),
-        );
-        for json in self.crdt_lww_snapshot.values() {
-            entries.push(json);
-        }
-        for gos_entries in self.crdt_gos_snapshot.values() {
-            for json in gos_entries {
-                entries.push(json);
-            }
-        }
+        let entries: Vec<String> = self
+            .crdt_lww_snapshot
+            .values()
+            .chain(self.crdt_gos_snapshot.values().flatten())
+            .filter_map(|crdt| {
+                serde_json::to_string(&SceneInspectorEntry::CrdtMessage(crdt.clone())).ok()
+            })
+            .collect();
         if entries.is_empty() {
             return GString::new();
         }
@@ -297,12 +290,12 @@ impl SceneInspectorDispatcher {
     }
 
     /// Update the CRDT snapshot based on an incoming CRDT entry.
-    fn update_crdt_snapshot(&mut self, crdt: &CrdtLogEntry, json: &str) {
+    fn update_crdt_snapshot(&mut self, crdt: CrdtLogEntry) {
         let sid = crdt.scene_id;
         let key = (sid, crdt.entity_id, crdt.component_name.clone());
         match crdt.operation {
             CrdtOperation::Put => {
-                self.crdt_lww_snapshot.insert(key, json.to_string());
+                self.crdt_lww_snapshot.insert(key, crdt);
             }
             CrdtOperation::Delete => {
                 self.crdt_lww_snapshot.remove(&key);
@@ -323,7 +316,7 @@ impl SceneInspectorDispatcher {
                 if entries.len() >= 100 {
                     entries.pop_front();
                 }
-                entries.push_back(json.to_string());
+                entries.push_back(crdt);
             }
         }
     }
@@ -486,29 +479,28 @@ impl INode for SceneInspectorDispatcher {
     fn process(&mut self, dt: f64) {
         let mut batch = Vec::new();
         let mut count = 0;
+        // Without a socket or file there is no reader: skip JSON, keep only the snapshot.
+        let has_reader = is_consumer_connected() || self.storage.is_some();
 
         while count < MAX_ENTRIES_PER_FRAME {
             match self.receiver.try_recv() {
                 Ok(entry) => {
                     self.entry_count += 1;
-                    // Serialize to JSON
-                    match serde_json::to_string(&entry) {
-                        Ok(json) => {
-                            // Maintain CRDT snapshot for hot-connect
-                            if let SceneInspectorEntry::CrdtMessage(ref crdt) = entry {
-                                self.update_crdt_snapshot(crdt, &json);
+                    if has_reader {
+                        match serde_json::to_string(&entry) {
+                            Ok(json) => {
+                                if let Some(ref mut storage) = self.storage {
+                                    let _ = storage.write_serialized(&json);
+                                }
+                                batch.push(json);
                             }
-                            // Write to file if enabled. Reuse the already-
-                            // serialized `json` rather than asking storage to
-                            // serialize the entry again.
-                            if let Some(ref mut storage) = self.storage {
-                                let _ = storage.write_serialized(&json);
+                            Err(e) => {
+                                tracing::warn!("Failed to serialize Scene Inspector entry: {}", e);
                             }
-                            batch.push(json);
                         }
-                        Err(e) => {
-                            tracing::warn!("Failed to serialize Scene Inspector entry: {}", e);
-                        }
+                    }
+                    if let SceneInspectorEntry::CrdtMessage(crdt) = entry {
+                        self.update_crdt_snapshot(crdt);
                     }
                     count += 1;
                 }
