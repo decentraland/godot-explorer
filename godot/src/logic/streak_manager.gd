@@ -286,6 +286,32 @@ func get_claimable_day() -> int:
 	return days[-1] if not days.is_empty() else 0
 
 
+## Single source of truth for "what should the streak modal show right now" — both
+## Discover._async_show_streak_current_reminder_if_pending() and StreakWidgetCard's own tap
+## handler used to hand-derive this themselves, which only guarantees the two copies drift.
+## @param pending_day: the day to treat as "current, not yet checked" (same value each caller
+## already has — take_current_reminder()'s result, or get_pending_today_day() for a live peek)
+## only matters for the WELCOME/DAY_PROGRESS distinction below; claimable/complete/reset are
+## derived from persisted state alone.
+func compute_modal_state(pending_day: int) -> int:
+	var claimable_days := get_claimable_days()
+	if not claimable_days.is_empty():
+		return (
+			StreakModal.State.D7_COMPLETE
+			if claimable_days[-1] == FINAL_DAY
+			else StreakModal.State.D3_COMPLETE
+		)
+	if is_d3_claimed() and is_d7_claimed():
+		# Both already claimed — reuse D7_COMPLETE's "Complete!" copy instead of the
+		# day-progress reminder, which would misread the finished streak as still going.
+		return StreakModal.State.D7_COMPLETE
+	if is_pending_day_a_reset():
+		return StreakModal.State.LOST
+	if pending_day == 1:
+		return StreakModal.State.WELCOME
+	return StreakModal.State.DAY_PROGRESS
+
+
 func mark_claimed(day: int) -> void:
 	var state: Dictionary = Global.config.streak_state_for_current_wallet()
 	if day == CHECKPOINT_DAY:

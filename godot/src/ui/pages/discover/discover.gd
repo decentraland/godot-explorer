@@ -3,6 +3,11 @@ extends Control
 
 var search_text: String = ""
 var _generator_statuses: Dictionary = {}
+# Guards _show_streak_modal_if_pending() against overlapping calls — it's awaited from both
+# _ready() and every _on_visibility_changed() re-show, and take_pending_modal()/
+# take_current_reminder() being one-shot consuming reads doesn't stop two concurrent calls from
+# each resolving a different state and racing to show/suppress-nudge/resume-nudge independently.
+var _showing_streak_modal: bool = false
 
 @onready var jump_in: SidePanelWrapper = %JumpIn
 @onready var event_details: SidePanelWrapper = %EventDetails
@@ -82,13 +87,17 @@ func _ready():
 ## (Figma "D2-Streak", for a day the player hasn't jumped into yet) get a chance to show instead.
 # gdlint:ignore = async-function-name
 func _show_streak_modal_if_pending() -> void:
+	if _showing_streak_modal:
+		return
+	_showing_streak_modal = true
 	var pending := Global.streak_manager.take_pending_modal()
 	if not pending.is_empty():
 		await _async_show_streak_modal_and_wait(
 			StreakModal.state_from_pending(pending), Global.streak_manager.get_progress_day()
 		)
-		return
-	await _async_show_streak_current_reminder_if_pending()
+	else:
+		await _async_show_streak_current_reminder_if_pending()
+	_showing_streak_modal = false
 
 
 # gdlint:ignore = async-function-name
@@ -96,15 +105,10 @@ func _async_show_streak_current_reminder_if_pending() -> void:
 	var pending_day := Global.streak_manager.take_current_reminder()
 	if pending_day == 0:
 		return
-	var state: int
-	if Global.streak_manager.is_pending_day_a_reset():
-		state = StreakModal.State.LOST
-	elif pending_day == 1:
-		state = StreakModal.State.WELCOME
-	else:
-		state = StreakModal.State.DAY_PROGRESS
 	await _async_show_streak_modal_and_wait(
-		state, Global.streak_manager.get_effective_progress_day(), pending_day
+		Global.streak_manager.compute_modal_state(pending_day),
+		Global.streak_manager.get_effective_progress_day(),
+		pending_day
 	)
 
 

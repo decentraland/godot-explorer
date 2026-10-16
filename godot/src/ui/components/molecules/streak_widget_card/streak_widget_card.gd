@@ -45,8 +45,14 @@ func _make_day_row_tappable() -> void:
 	streak_day_row.gui_input.connect(_on_streak_day_row_gui_input)
 
 
+## Fires on release, not press — CustomScrollRubberContainer (this widget sits inside
+## ScrollContainer_Content, discover.tscn) only cancels a child's activation by eating the
+## matching release once a drag crosses its own scroll_deadzone; the press itself is never
+## intercepted. Firing on press would bypass that protection entirely and pop the modal the
+## instant a vertical scroll starts with a finger on the row — the same reason Button_Claim
+## (a real Button, same container) never fires early either.
 func _on_streak_day_row_gui_input(event: InputEvent) -> void:
-	if event is InputEventScreenTouch and event.pressed:
+	if event is InputEventScreenTouch and not event.pressed:
 		_on_day_row_tapped()
 
 
@@ -55,31 +61,11 @@ func _on_streak_day_row_gui_input(event: InputEvent) -> void:
 ## then), landing on whatever state currently applies instead of always a claim screen.
 func _on_day_row_tapped() -> void:
 	Global.metrics.track_click_button("STREAK_DAY_ROW", "LOGIN_STREAK_WIDGET_SHOW", "")
+	var pending_day := Global.streak_manager.get_pending_today_day()
 	_async_show_streak_modal_and_wait(
-		_current_state(), Global.streak_manager.get_effective_progress_day()
+		Global.streak_manager.compute_modal_state(pending_day),
+		Global.streak_manager.get_effective_progress_day()
 	)
-
-
-## Mirrors Discover._async_show_streak_current_reminder_if_pending()'s state derivation, so the
-## modal a tap opens always matches what the row is currently showing.
-func _current_state() -> int:
-	var claimable_days := Global.streak_manager.get_claimable_days()
-	if not claimable_days.is_empty():
-		return (
-			StreakModal.State.D7_COMPLETE
-			if claimable_days[-1] == StreakManager.FINAL_DAY
-			else StreakModal.State.D3_COMPLETE
-		)
-	if Global.streak_manager.is_d3_claimed() and Global.streak_manager.is_d7_claimed():
-		# Both already claimed — reuse D7_COMPLETE's "Complete!" copy instead of falling through
-		# to the generic day-progress reminder, which would misread the finished streak as still
-		# going.
-		return StreakModal.State.D7_COMPLETE
-	if Global.streak_manager.is_pending_day_a_reset():
-		return StreakModal.State.LOST
-	if Global.streak_manager.get_pending_today_day() == 1:
-		return StreakModal.State.WELCOME
-	return StreakModal.State.DAY_PROGRESS
 
 
 ## Mirrors GuestUpgradeCard's own _on_visibility_changed — visibility_changed also fires from an
@@ -122,7 +108,11 @@ func _on_button_claim_pressed() -> void:
 	if Global.streak_manager.get_claimable_days().is_empty():
 		return
 	Global.metrics.track_click_button("CLAIM", "LOGIN_STREAK_WIDGET_SHOW", "")
-	_async_show_streak_modal_and_wait(_current_state(), Global.streak_manager.get_progress_day())
+	# pending_day is irrelevant here — get_claimable_days() is already non-empty, so
+	# compute_modal_state() resolves from its first branch regardless of what's passed.
+	_async_show_streak_modal_and_wait(
+		Global.streak_manager.compute_modal_state(0), Global.streak_manager.get_progress_day()
+	)
 
 
 ## Mirrors Discover._async_show_streak_modal_and_wait: suppresses the upgrade nudge while the
