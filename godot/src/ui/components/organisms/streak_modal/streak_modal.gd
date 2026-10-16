@@ -254,6 +254,12 @@ func _show_claim_button(text_key: String) -> void:
 	claim_button.visible = true
 	claim_button.text_normal = text_key
 	var days := Global.streak_manager.get_claimable_days()
+	if days.is_empty():
+		# Revisiting D3_COMPLETE/D7_COMPLETE after everything is already claimed (e.g. tapping
+		# the day row later) — nothing to claim, so land straight on the terminal CLAIMED look
+		# instead of a tappable CLAIM that would do nothing.
+		claim_button.finish_claiming()
+		return
 	var is_guest := _is_guest
 	claim_button.claim_action = func() -> bool:
 		_claiming_reward = true

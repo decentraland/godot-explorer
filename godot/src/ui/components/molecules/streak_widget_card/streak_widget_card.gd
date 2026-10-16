@@ -70,6 +70,11 @@ func _current_state() -> int:
 			if claimable_days[-1] == StreakManager.FINAL_DAY
 			else StreakModal.State.D3_COMPLETE
 		)
+	if Global.streak_manager.is_d3_claimed() and Global.streak_manager.is_d7_claimed():
+		# Both already claimed — reuse D7_COMPLETE's "Complete!" copy instead of falling through
+		# to the generic day-progress reminder, which would misread the finished streak as still
+		# going.
+		return StreakModal.State.D7_COMPLETE
 	if Global.streak_manager.is_pending_day_a_reset():
 		return StreakModal.State.LOST
 	if Global.streak_manager.get_pending_today_day() == 1:
