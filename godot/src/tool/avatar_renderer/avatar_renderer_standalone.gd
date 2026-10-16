@@ -152,8 +152,10 @@ func _async_on_avatar_avatar_loaded():
 	var dest_path := ensure_ends_with(profile.dest_path, ".png")
 	ensure_base_dir_exists(dest_path)
 
-	var body_image = await avatar_preview.async_get_viewport_image(
-		false, Vector2i(profile.width, profile.height), 2.5, SSAA_FACTOR
+	var body_image = await PromiseUtils.async_awaiter(
+		avatar_preview.async_get_viewport_image(
+			false, Vector2i(profile.width, profile.height), 2.5, SSAA_FACTOR
+		)
 	)
 	body_image.save_png(dest_path)
 	logs.push_back("🟢 " + dest_path)
@@ -162,8 +164,13 @@ func _async_on_avatar_avatar_loaded():
 		var face_dest_path := ensure_ends_with(profile.face_dest_path, ".png")
 		ensure_base_dir_exists(face_dest_path)
 
-		var face_image = await avatar_preview.async_get_viewport_image(
-			true, Vector2i(profile.face_width, profile.face_height), profile.face_zoom, SSAA_FACTOR
+		var face_image = await PromiseUtils.async_awaiter(
+			avatar_preview.async_get_viewport_image(
+				true,
+				Vector2i(profile.face_width, profile.face_height),
+				profile.face_zoom,
+				SSAA_FACTOR
+			)
 		)
 		face_image.save_png(face_dest_path)
 		logs.push_back("🟢 " + face_dest_path)

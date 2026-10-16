@@ -32,7 +32,9 @@ func async_generate_for_avatar(
 	)
 
 	# Generate face snapshot
-	var face: Image = await avatar_preview.async_get_viewport_image(true, Vector2i(256, 256), 0.55)
+	var face: Image = await PromiseUtils.async_awaiter(
+		avatar_preview.async_get_viewport_image(true, Vector2i(256, 256), 0.55, 1)
+	)
 
 	# Store face snapshot
 	var face_data: PackedByteArray = face.save_png_to_buffer()

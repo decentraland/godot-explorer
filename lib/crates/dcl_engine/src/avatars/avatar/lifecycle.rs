@@ -485,6 +485,10 @@ impl DclAvatar {
         }
     }
 
+    pub fn body_shape_skeleton(&self) -> Option<Gd<Skeleton3D>> {
+        self.nodes.as_ref().map(|n| n.skeleton.clone())
+    }
+
     pub fn apply_toon_material_to(&self, node: Gd<Node>) {
         apply_toon_material(&node);
     }

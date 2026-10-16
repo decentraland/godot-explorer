@@ -288,8 +288,8 @@ func _async_process_item(item: AssetRendererInputHelper.AssetItem, generation: i
 		_ensure_base_dir_exists(dest_path)
 		# Explicitly typed: awaiting a coroutine yields an untyped value, so `:=`
 		# cannot infer here (gdlint accepts it, the Godot compiler does not).
-		var image: Image = await avatar_preview.async_capture_current_view(
-			Vector2i(shot.width, shot.height), 1
+		var image: Image = await PromiseUtils.async_awaiter(
+			avatar_preview.async_capture_current_view(Vector2i(shot.width, shot.height), 1)
 		)
 		if image == null:
 			# Without this the coroutine would die here and the guard would

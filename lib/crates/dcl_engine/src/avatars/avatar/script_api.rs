@@ -86,7 +86,7 @@ impl DclAvatar {
 
     #[func(rename = get_body_shape_skeleton)]
     fn gd_body_shape_skeleton(&self) -> Option<Gd<Skeleton3D>> {
-        self.nodes.as_ref().map(|n| n.skeleton.clone())
+        self.body_shape_skeleton()
     }
 
     #[func(rename = register_anchor_use)]
