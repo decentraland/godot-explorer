@@ -1,6 +1,8 @@
 use godot::builtin::{Aabb, Basis, Rid, Transform3D, Vector3};
 use godot::classes::physics_server_3d::{BodyMode, BodyState};
-use godot::classes::{CollisionShape3D, MeshInstance3D, Node, PhysicsServer3D, SceneTree, Shape3D};
+use godot::classes::{
+    CollisionShape3D, MeshInstance3D, Node, PackedScene, PhysicsServer3D, Shape3D,
+};
 use godot::obj::Gd;
 use godot::prelude::*;
 
@@ -9,6 +11,8 @@ use super::{CornerConfig, ParcelState, PropPhysicsBlueprint, SimpleRng, SpawnLoc
 use super::{
     OBSTACLE_LAYER, PARCEL_FULL_HEIGHT, PARCEL_HALF_SIZE, PARCEL_HEIGHT_BOUND, PARCEL_SIZE,
 };
+
+const PROPS_SCENE: &str = "res://assets/empty-scenes/empty_parcel_props.tscn";
 
 const ROCK_MIN_FALLOFF: f32 = 0.5;
 const ROCK_MIN: i32 = 0;
@@ -64,15 +68,15 @@ impl PropCache {
         !self.props.is_empty() || !self.trees.is_empty() || !self.rocks.is_empty()
     }
 
-    /// Walks `/root/EmptyParcelProps` and extracts meshes + collision shapes.
-    /// Returns `None` if the autoload isn't ready yet (scene tree not built).
-    pub fn load_from_autoload(tree: &Gd<SceneTree>) -> Option<Self> {
-        let root = tree.clone().get_root()?;
-        let autoload = root.upcast::<Node>().get_node_or_null("EmptyParcelProps")?;
+    /// Instantiates the props scene, extracts its meshes and collision shapes (resources, so the
+    /// scene itself is freed) and returns them.
+    pub fn load_from_scene() -> Option<Self> {
+        let scene = try_load::<PackedScene>(PROPS_SCENE).ok()?.instantiate()?;
 
-        let props = load_category(&autoload, "%Props");
-        let trees = load_category(&autoload, "%Trees");
-        let rocks = load_category(&autoload, "%Rocks");
+        let props = load_category(&scene, "%Props");
+        let trees = load_category(&scene, "%Trees");
+        let rocks = load_category(&scene, "%Rocks");
+        scene.free();
 
         Some(Self {
             props,

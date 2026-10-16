@@ -42,7 +42,7 @@ Known engine bugs and leftovers
 - ~30 by-name `.call("…")` / `call_deferred("…")` remain, all on Rust classes or the iOS/Android plugin
   singletons (`dcl_ios_plugin.rs`, `emote_wheel.rs`, `joypad.rs`, `hud_button.rs`, `raycast.rs` meta,
   `text_shape/node.rs`, `thread_safety.rs`). `comms/voice_chat.rs` and `communication_manager.rs` still hold `Gd<…>`.
-- Four autoloads remain (`Global`, `GlobalBoot`, `EmptyParcelProps`, `EngineHost`), all native scenes.
+- Two autoloads remain (`Global`, `GlobalBoot`), both native. `EngineHost` is created by the boot node and the empty-parcel props scene is instantiated on demand (unverified on device: floating-island props).
 - (done) the four legacy `Explorer` `#[func]`s were removed; the touch-controls tooltip and emote props are typed calls.
 - `dcl_resource_tracker.rs` is dead now that the addon is gone.
 - 5.10 not finished: `dcl-godot-android`, `dcl_build_plugin`, `godot/android`, `emote_converter` and the Swift

@@ -42,8 +42,6 @@ general/ios/session_category=3
 
 Global="*res://src/global.tscn"
 GlobalBoot="*res://src/global_boot.tscn"
-EmptyParcelProps="*res://assets/empty-scenes/empty_parcel_props.tscn"
-EngineHost="*res://src/engine_host/engine_host.tscn"
 
 [debug]
 

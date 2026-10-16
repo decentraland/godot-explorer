@@ -73,6 +73,8 @@ impl INode for GlobalBoot {
         let started = godot::classes::Time::singleton().get_ticks_msec();
         godot_print!("[Startup] global._ready start: 0ms");
         boot_services();
+        let host = crate::world::EngineHost::new_alloc();
+        self.base_mut().add_child(&host);
         let watcher = AppFocusWatcher::new_alloc();
         self.base_mut().add_child(&watcher);
         spawn_local_now(finish_boot(started));

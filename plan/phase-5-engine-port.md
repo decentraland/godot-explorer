@@ -27,11 +27,11 @@ without a written safety comment. Porting on the old API would mean porting twic
 - [ ] `experimental-threads` is kept (D-38); every cross-thread `Gd` use is behind the content
       semaphore and named in a comment.
 - [x] `find godot/src -name '*.gd'` returns nothing (addons per decisions D-open-5).
-- [ ] `godot/project.godot` has one autoload, the Rust root, or none.
-      Not met: four autoloads remain (`Global`, `GlobalBoot`, `EmptyParcelProps`, `EngineHost`), all native scenes.
+- [~] `godot/project.godot` has one autoload, the Rust root, or none.
+      Two remain, both native roots: `Global` and `GlobalBoot` (the boot must run after `Global` is built; it also creates `EngineHost`). The props scene loads on demand.
 - [ ] No `.call("` / `.callv(` / `call_deferred("` with a GDScript target in `lib/`; (no GDScript target is left; ~30 by-name calls on Rust classes and the iOS plugin remain, listed in `phase-5-verification.md`); the eleven
       component `.tscn` files and `avatar.tscn` carry no script.
-- [ ] `comms/` holds no `Gd<…>` (not met: `voice_chat.rs` and `communication_manager.rs` still do); `message_processor.rs` pushes through a sink trait; the content
+- [x] `comms/` holds no `Gd<…>` for transports (only `voice_chat.rs` keeps the engine's `AudioEffectCapture`, which is an audio-bus resource, not a transport); `message_processor.rs` pushes through a sink trait; the content
       cache policy lives in the core (1.7, 1.8).
 - [x] `.gdlintrc`, `gdformat`/`gdlint` CI steps, `check-gdscript` and `test-gdscript` are gone; a CI
       step fails on any `.gd` under `godot/src`.

@@ -312,10 +312,8 @@ impl DclFloatingIslandsManager {
             }
         }
         if !self.prop_cache.is_populated() {
-            if let Some(tree) = self.base().get_tree_or_null() {
-                if let Some(cache) = props::PropCache::load_from_autoload(&tree) {
-                    self.prop_cache = cache;
-                }
+            if let Some(cache) = props::PropCache::load_from_scene() {
+                self.prop_cache = cache;
             }
         }
         if self.worker.is_none() {
