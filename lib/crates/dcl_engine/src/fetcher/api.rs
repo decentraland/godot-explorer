@@ -66,8 +66,8 @@ async fn start_explorer(realm: &str, parcel: (i32, i32)) {
     if !navigation::precheck_realm_access(realm).await {
         return;
     }
-    let mut global = DclGlobal::singleton();
-    global.call("set_orientation_landscape", &[]);
+    let global = DclGlobal::singleton();
+    DclGlobal::set_orientation_landscape();
     let engine = globals::engine();
     let engine = engine.bind();
     engine.set_setting("last_realm_joined".into(), realm.to_variant(), false);

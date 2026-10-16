@@ -43,8 +43,5 @@ pub fn skybox_time() -> Option<Gd<crate::sky::skybox_time::SkyboxTime>> {
 
 /// The explorer scene, when it is the current one.
 pub fn explorer() -> Option<Gd<Node>> {
-    DclGlobal::singleton()
-        .call("get_explorer", &[])
-        .try_to::<Gd<Node>>()
-        .ok()
+    DclGlobal::get_explorer()
 }

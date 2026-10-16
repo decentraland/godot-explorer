@@ -28,7 +28,7 @@ static func async_enter(parcel: Vector2i, realm: String, is_cancelled: Callable)
 ## the avatar host; orientation is left to RN.
 static func async_exit() -> void:
 	await _async_settle_surface()
-	var explorer := Global.get_explorer()
+	var explorer = DclGlobal.get_explorer()
 	if explorer != null:
 		explorer.loading.cancel()
 		explorer.prepare_for_logout()
@@ -37,14 +37,14 @@ static func async_exit() -> void:
 	Global.scene_runner.kill_all_scenes()
 	Global.realm.async_clear_realm()
 	Global.scene_fetcher.reset_for_logout()
-	Global.comms.disconnect(false)
+	Global.comms.leave(false)
 	Global.scene_runner.detach_base_ui()
 	Global.get_tree().change_scene_to_file.call_deferred(AVATAR_HOST_SCENE)
 
 
 static func _async_settle_surface() -> void:
-	var tree := Global.get_tree()
-	var window := Global.get_window()
+	var tree: SceneTree = Global.get_tree()
+	var window: Window = Global.get_window()
 	var size := window.size
 	var start := Time.get_ticks_msec()
 	var last_change := start

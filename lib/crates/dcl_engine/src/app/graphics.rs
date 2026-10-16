@@ -339,10 +339,7 @@ pub fn apply_graphic_profile(index: i32) {
     adopt("graphic_profile", index.to_variant());
 
     apply_fps_limit();
-    if let Ok(mut camera) = DclGlobal::singleton()
-        .get("player_camera_node")
-        .try_to::<Gd<godot::classes::Camera3D>>()
-    {
+    if let Some(mut camera) = DclGlobal::singleton().bind().player_camera_node.clone() {
         camera.set_far(p.view_distance);
     }
     if let Some(mut viewport) = root_window().and_then(|w| w.get_viewport()) {

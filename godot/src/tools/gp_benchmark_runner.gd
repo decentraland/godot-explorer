@@ -824,7 +824,7 @@ func _enforce_pinned_pose() -> void:
 		if "velocity" in player:
 			player.velocity = Vector3.ZERO
 	if Global.player_camera_node != null:
-		var t := Global.player_camera_node.global_transform
+		var t = Global.player_camera_node.global_transform
 		t.basis = pinned_camera_basis
 		Global.player_camera_node.global_transform = t
 

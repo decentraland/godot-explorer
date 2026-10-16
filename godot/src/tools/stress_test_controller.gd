@@ -139,7 +139,7 @@ func _wait_for_loading_with_timeout(timeout_seconds: float) -> bool:
 	var timeout_ms = timeout_seconds * 1000.0
 
 	# First check if loading screen is visible
-	var explorer = Global.get_explorer()
+	var explorer = DclGlobal.get_explorer()
 	if not is_instance_valid(explorer):
 		return false
 
@@ -160,7 +160,7 @@ func _wait_for_loading_with_timeout(timeout_seconds: float) -> bool:
 func _wait_for_loading_complete():
 	log_message("✓ Waiting for loading to complete...")
 
-	var explorer = Global.get_explorer()
+	var explorer = DclGlobal.get_explorer()
 	if not is_instance_valid(explorer):
 		return
 

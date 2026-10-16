@@ -1016,10 +1016,7 @@ fn kill_scene(scene_number_id: i32) {
 }
 
 pub(super) fn explorer() -> Option<Gd<Node>> {
-    DclGlobal::singleton()
-        .call("get_explorer", &[])
-        .try_to::<Gd<Node>>()
-        .ok()
+    DclGlobal::get_explorer()
 }
 
 fn explorer_loading() -> Option<Gd<super::loading_session::LoadingSession>> {

@@ -574,7 +574,7 @@ fn url_host(url: &str) -> Option<String> {
     (path_ok && host_ok && port_ok).then(|| host.to_string())
 }
 
-fn is_decentraland_https(url: &str) -> bool {
+pub fn is_decentraland_https(url: &str) -> bool {
     if !url.to_lowercase().starts_with("https://") {
         return false;
     }
@@ -585,7 +585,7 @@ fn is_decentraland_https(url: &str) -> bool {
     })
 }
 
-fn is_local_network(url: &str) -> bool {
+pub fn is_local_network(url: &str) -> bool {
     let Some(host) = url_host(url) else {
         return false;
     };

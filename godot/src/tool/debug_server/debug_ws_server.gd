@@ -57,7 +57,7 @@ func _ready() -> void:
 	# Poll keyboard focus each frame so the `focus` cmd has history. Same gate the
 	# loopback server used to auto-start under — debug builds (editor / debug
 	# exports), never in production.
-	set_process(OS.is_debug_build() and not Global.is_production())
+	set_process(OS.is_debug_build() and not DclGlobal.is_production())
 
 
 func _process(_dt: float) -> void:
@@ -147,7 +147,7 @@ func _wrap(d: Dictionary) -> Dictionary:
 
 ## Run arbitrary GDScript. Hard-gated out of production builds (it can mutate state).
 func _run_eval(p: Dictionary) -> Dictionary:
-	if Global.is_production():
+	if DclGlobal.is_production():
 		return {"ok": false, "error": "eval disabled in production builds"}
 	var code: String = str(p.get("code", ""))
 	if code.is_empty():

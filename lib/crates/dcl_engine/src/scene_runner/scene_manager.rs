@@ -450,7 +450,7 @@ impl SceneManager {
     /// is freed when the Explorer scene is torn down (change_scene_to_file/logout),
     /// leaving SceneManager with a dangling Gd<DclUiControl> reference.
     #[func]
-    fn recreate_base_ui(&mut self) {
+    pub fn recreate_base_ui(&mut self) {
         if self.base_ui.is_instance_valid() {
             self.base_ui.clone().free();
         }
@@ -474,7 +474,7 @@ impl SceneManager {
     /// still references (GODOT-EXPLORER-1DY); the orphan is freed by the next
     /// recreate_base_ui().
     #[func]
-    fn detach_base_ui(&mut self) {
+    pub fn detach_base_ui(&mut self) {
         if !self.base_ui.is_instance_valid() {
             return;
         }
@@ -2426,7 +2426,7 @@ impl SceneManager {
     }
 
     #[func]
-    fn set_pause(&mut self, value: bool) {
+    pub fn set_pause(&mut self, value: bool) {
         self.pause = value;
     }
 

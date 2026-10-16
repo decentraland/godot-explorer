@@ -7,6 +7,7 @@ use godot::prelude::*;
 
 use crate::analytics::metrics::Metrics;
 use crate::app::{
+    analytics_controller::AnalyticsController, feature_flags::FeatureFlags,
     gltf_importer::CustomGltfImporter, music_player::MusicPlayer, snapshot::Snapshot,
 };
 use crate::fetcher::scene_fetcher::SceneFetcher;
@@ -101,6 +102,19 @@ fn create_scene_fetcher(global: &mut Gd<Node>) {
     let mut fetcher = SceneFetcher::new_alloc();
     fetcher.set_name("scene_fetcher");
     global.set("scene_fetcher", &fetcher.to_variant());
+}
+
+/// Starts the Genesis Plaza profiling benchmark runner under `Global`.
+pub fn spawn_gp_benchmark_runner(global: &mut Gd<crate::godot_classes::dcl_global::DclGlobal>) {
+    match instantiate_script("src/tools/gp_benchmark_runner.gd") {
+        Ok(runner) => {
+            if let Ok(mut node) = runner.try_to::<Gd<Node>>() {
+                node.set_name("GPBenchmarkRunner");
+                global.add_child(&node);
+            }
+        }
+        Err(reason) => godot_error!("bootstrap: cannot create the GP benchmark runner: {reason}"),
+    }
 }
 
 /// A new instance of the GDScript class at `res://src/<script>`.
@@ -303,7 +317,7 @@ impl DclBootstrap {
             &CustomGltfImporter::new_gd(),
         );
         create_scene_fetcher(&mut global);
-        let mut ok = create(&mut global, &APP_SERVICES);
+        let ok = create(&mut global, &APP_SERVICES);
 
         for property in ROOT_NODES {
             add_to_root_deferred(&global, property);
@@ -322,16 +336,9 @@ impl DclBootstrap {
             root_add_instance(&global, &metrics);
             // Firebase/Segment orchestration lives in AnalyticsController, a RefCounted kept
             // alive by this reference; it spawns its own transient timer under Global.
-            match instantiate_script("src/logic/metrics/analytics_controller.gd") {
-                Ok(controller) => {
-                    global.set("analytics_controller", &controller);
-                    controller.call("setup", &[]);
-                }
-                Err(reason) => {
-                    godot_error!("bootstrap: cannot create `analytics_controller`: {reason}");
-                    ok = false;
-                }
-            }
+            let mut controller = AnalyticsController::new_gd();
+            global.set("analytics_controller", &controller.to_variant());
+            controller.bind_mut().setup();
         }
         ok
     }
@@ -342,31 +349,10 @@ impl DclBootstrap {
     pub fn create_extra_services(mut global: Gd<Node>) -> bool {
         let mut ok = true;
         // Feature flags fetch on `_ready`.
-        for (property, script, name) in [(
-            "feature_flags",
-            "src/feature_flags.gd",
-            Some("feature_flags"),
-        )] {
-            // The host-driven core runs attestation itself (the host provides the OS calls).
-            if property == "attestation" && super::DclEngine::core_is_driving() {
-                continue;
-            }
-            match instantiate_script(script) {
-                Ok(instance) => {
-                    if let Ok(mut node) = instance.try_to::<Gd<Node>>() {
-                        if let Some(name) = name {
-                            node.set_name(name);
-                        }
-                        global.add_child(&node);
-                    }
-                    global.set(property, &instance);
-                }
-                Err(reason) => {
-                    godot_error!("bootstrap: cannot create `{property}`: {reason}");
-                    ok = false;
-                }
-            }
-        }
+        let mut flags = FeatureFlags::new_alloc();
+        flags.set_name("feature_flags");
+        global.add_child(&flags);
+        global.set("feature_flags", &flags.to_variant());
 
         for property in LATE_ROOT_NODES {
             add_to_root_deferred(&global, property);
@@ -379,7 +365,7 @@ impl DclBootstrap {
                 if let Ok(mut node) = bridge.try_to::<Gd<Node>>() {
                     node.set_name("scene_inspector_bridge");
                 }
-                global.set("_scene_inspector_bridge", &bridge);
+                global.set("scene_inspector_bridge", &bridge);
                 bridge.call("activate_from_config", &[]);
                 if let Ok(node) = bridge.try_to::<Gd<Node>>() {
                     root_add_instance(&global, &node);

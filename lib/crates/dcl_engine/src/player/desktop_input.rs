@@ -33,10 +33,7 @@ impl PlayerDesktopInput {
 #[godot_api]
 impl INode for PlayerDesktopInput {
     fn input(&mut self, event: Gd<InputEvent>) {
-        let focused = DclGlobal::singleton()
-            .call("explorer_has_focus", &[])
-            .try_to::<bool>()
-            .unwrap_or(false);
+        let focused = DclGlobal::explorer_has_focus();
         if !focused {
             return;
         }

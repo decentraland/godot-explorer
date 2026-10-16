@@ -1433,7 +1433,7 @@ impl CommunicationManager {
     /// over LiveKit while Pulse is established. Off, they are Pulse-only *while established*;
     /// LiveKit sending auto-resumes if Pulse drops. No-op without the use_pulse feature.
     #[func]
-    fn set_livekit_movement_dual_channel(&mut self, enabled: bool) {
+    pub fn set_livekit_movement_dual_channel(&mut self, enabled: bool) {
         #[cfg(feature = "use_pulse")]
         {
             self.dual_channel_override = Some(enabled);
@@ -2635,8 +2635,9 @@ impl CommunicationManager {
         );
     }
 
+    /// Closes every room; with `sign_out_session` the player identity is cleared too (`logout`).
     #[func]
-    fn disconnect(&mut self, sign_out_session: bool) {
+    pub fn leave(&mut self, sign_out_session: bool) {
         self.clean();
         if sign_out_session {
             let mut player_identity = DclGlobal::singleton().bind().get_player_identity();

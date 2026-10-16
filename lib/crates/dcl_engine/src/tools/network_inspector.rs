@@ -87,7 +87,7 @@ pub struct NetworkInspector {
 #[godot_api]
 impl NetworkInspector {
     #[func]
-    fn set_is_active(&mut self, value: bool) {
+    pub fn set_is_active(&mut self, value: bool) {
         NETWORK_INSPECTOR_ENABLE.store(value, std::sync::atomic::Ordering::Relaxed);
     }
 

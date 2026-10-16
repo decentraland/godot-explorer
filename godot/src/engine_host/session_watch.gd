@@ -26,7 +26,7 @@ func _ready() -> void:
 
 ## The player chose to try again after a disconnect notice.
 func reconnect() -> void:
-	var adapter := (
+	var adapter: String = (
 		_adapter if not _adapter.is_empty() else Global.comms.get_current_adapter_conn_str()
 	)
 	_attempts = 0

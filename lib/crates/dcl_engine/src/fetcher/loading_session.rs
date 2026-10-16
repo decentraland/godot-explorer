@@ -168,7 +168,7 @@ impl LoadingSession {
             .bind_mut()
             .set_max_low_priority_downloads(MAX_DOWNLOADS);
         // Held back during the GP benchmark so two devices running the matrix never see each other.
-        if !global.call("is_gp_benchmark", &[]).to::<bool>() {
+        if !DclGlobal::is_gp_benchmark() {
             globals::comms().bind_mut().release_comms();
         }
         set_audio(None);
@@ -232,7 +232,7 @@ impl LoadingSession {
         // No voice, scene or avatar SFX (footsteps, jump/land) while loading.
         set_audio(Some(0.0));
         global.emit_signal("loading_started", &[]);
-        global.call("release_mouse", &[]);
+        DclGlobal::release_mouse();
         globals::engine().bind().report_loading_progress(0.0);
     }
 
@@ -273,10 +273,9 @@ impl LoadingSession {
             return;
         }
         // Tests and the GP benchmark have their own cap; a timeout would cut their sample short.
-        let mut global = global;
         let exempt = global.bind().testing_scene_mode
             || globals::cli().bind().scene_test_mode
-            || global.call("is_gp_benchmark", &[]).to::<bool>();
+            || DclGlobal::is_gp_benchmark();
         if exempt {
             return;
         }
@@ -299,10 +298,7 @@ impl LoadingSession {
 }
 
 fn fetcher() -> Option<Gd<super::scene_fetcher::SceneFetcher>> {
-    DclGlobal::singleton()
-        .get("scene_fetcher")
-        .try_to::<Gd<super::scene_fetcher::SceneFetcher>>()
-        .ok()
+    DclGlobal::singleton().bind().scene_fetcher.clone()
 }
 
 fn current_position() -> Vector2i {

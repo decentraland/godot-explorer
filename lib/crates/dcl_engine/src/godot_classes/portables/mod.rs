@@ -3,8 +3,7 @@ use std::collections::HashMap;
 use godot::prelude::*;
 
 use crate::{
-    engine::local_task::spawn_local,
-    fetcher::{realm_flow::world_scene_urns, scene_fetcher::SceneFetcher},
+    engine::local_task::spawn_local, fetcher::realm_flow::world_scene_urns,
     godot_classes::dcl_global::DclGlobal,
 };
 
@@ -92,8 +91,7 @@ impl INode for DclPortableExperienceController {
 
 impl DclPortableExperienceController {
     fn push_desired(&self) {
-        let global = DclGlobal::singleton();
-        let Ok(mut fetcher) = global.get("scene_fetcher").try_to::<Gd<SceneFetcher>>() else {
+        let Some(mut fetcher) = DclGlobal::singleton().bind().scene_fetcher.clone() else {
             return;
         };
         let urns: Vec<GString> = self.desired.iter().map(|urn| urn.as_str().into()).collect();

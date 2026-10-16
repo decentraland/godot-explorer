@@ -89,9 +89,9 @@ impl INode for DclRoot {
             "[Startup] root._ready: {}ms",
             self.started.elapsed().as_millis()
         );
-        let mut global = DclGlobal::singleton();
+        let global = DclGlobal::singleton();
         if !global.bind().get_engine().bind().is_host_driven() {
-            global.call("set_orientation_portrait", &[]);
+            DclGlobal::set_orientation_portrait();
         }
         // #2386: apply the UI content-scale synchronously, before the first frame is presented,
         // so the splash overlay and all UI render at their final scale from frame 0.
@@ -139,7 +139,7 @@ impl DclRoot {
             self.apply_display_settings(&global);
         }
 
-        if global.clone().call("is_mobile", &[]).to::<bool>() {
+        if global.bind().is_mobile {
             InputMap::singleton().action_erase_events("ia_pointer");
         }
         self.base_mut().call_deferred("start_mode", &[]);

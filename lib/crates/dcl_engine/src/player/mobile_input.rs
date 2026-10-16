@@ -197,13 +197,12 @@ impl IControl for MobileCameraInput {
     }
 
     fn gui_input(&mut self, event: Gd<InputEvent>) {
-        let global = DclGlobal::singleton();
         // A tap reaching this catcher means no UI consumed it: reclaim ui_root focus so movement
         // re-enables if some control stole it without handing it back.
         if let Ok(touch) = event.clone().try_cast::<InputEventScreenTouch>() {
-            let focused = global.clone().call("explorer_has_focus", &[]).to::<bool>();
+            let focused = DclGlobal::explorer_has_focus();
             if touch.is_pressed() && !focused {
-                global.clone().call("explorer_grab_focus", &[]);
+                DclGlobal::explorer_grab_focus();
             }
         }
         if globals::scene_runner()

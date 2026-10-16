@@ -171,7 +171,7 @@ pub struct Player {
 
     last_position: Vector3,
     #[var(pub)]
-    actual_velocity_xz: f32,
+    pub actual_velocity_xz: f32,
 
     // Locomotion settings, updated from the current scene's DclLocomotionSettings.
     #[var(pub)]
@@ -496,13 +496,13 @@ impl Player {
             self.camera_mode_change_blocked = true;
         }
         self.set_camera_mode_with_sound(CameraMode::from_i32(forced_mode), false);
-        DclGlobal::singleton().call("set_camera_mode_blocked", &[true.to_variant()]);
+        DclGlobal::singleton().bind_mut().camera_mode_blocked = true;
     }
 
     #[func]
     pub fn on_camera_mode_unblocked(&mut self) {
         self.camera_mode_change_blocked = false;
-        DclGlobal::singleton().call("set_camera_mode_blocked", &[false.to_variant()]);
+        DclGlobal::singleton().bind_mut().camera_mode_blocked = false;
         let stored = self.stored_camera_mode_before_block;
         self.set_camera_mode_with_sound(stored, false);
     }
@@ -1766,14 +1766,11 @@ impl Player {
 }
 
 fn set_global_camera_mode(mode: CameraMode) {
-    DclGlobal::singleton().call("set_camera_mode", &[mode.to_i32().to_variant()]);
+    DclGlobal::set_camera_mode(mode.to_i32());
 }
 
 fn explorer_has_focus() -> bool {
-    DclGlobal::singleton()
-        .call("explorer_has_focus", &[])
-        .try_to::<bool>()
-        .unwrap_or(false)
+    DclGlobal::explorer_has_focus()
 }
 
 fn play_ui_sound(name: &str) {

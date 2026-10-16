@@ -39,6 +39,20 @@ fn poll_tasks() {
     RUNNING.with(|slot| slot.borrow_mut().extend(running));
 }
 
+/// Like `spawn_local`, but polls `future` once right away, so everything up to its first real wait
+/// happens before this returns. For a flow that used to run synchronously inside a GDScript
+/// `_ready` and must still finish before the nodes that follow it.
+pub fn spawn_local_now(future: impl Future<Output = ()> + 'static) {
+    let mut future: LocalFuture = Box::pin(future);
+    let mut context = Context::from_waker(noop_waker_ref());
+    if future.as_mut().poll(&mut context).is_pending() {
+        SPAWNED.with(|spawned| spawned.borrow_mut().push(future));
+        if !DRIVER_CONNECTED.with(|connected| connected.replace(true)) {
+            on_process_frame("local_tasks", poll_tasks);
+        }
+    }
+}
+
 /// Completes on the next `process_frame`.
 pub fn next_frame() -> impl Future<Output = ()> {
     let mut polled = false;

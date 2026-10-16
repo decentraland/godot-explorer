@@ -55,7 +55,7 @@ func _process(dt: float) -> void:
 	if _avatar_host_up:
 		return
 	if _explorer == null:
-		_explorer = Global.get_explorer()
+		_explorer = DclGlobal.get_explorer()
 		if _explorer == null:
 			return
 	_state_elapsed += dt

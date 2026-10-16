@@ -57,10 +57,6 @@ func start():
 	if Global.cli.scene_test_mode:
 		scene_test_index = 0
 
-	if Global.FORCE_TEST:
-		scene_test_index = 0
-		Global.testing_scene_mode = true
-
 	if scene_test_index == -1:
 		self.process_mode = PROCESS_MODE_DISABLED
 		return
@@ -87,18 +83,17 @@ func start():
 	prints('snapshot_folder="' + snapshot_folder + '"')
 	prints('snapshot_comparison_folder="' + snapshot_comparison_folder + '"')
 
-	var parcels_str: String = Global.FORCE_TEST_ARG
-	if not Global.FORCE_TEST:
-		# Get the scene test argument value
-		var scene_test_arg = Global.cli.get_arg("--scene-test")
-		if not scene_test_arg.is_empty():
-			parcels_str = scene_test_arg.replace("'", '"')
-		else:
-			# Fallback to getting from args array for backward compatibility
-			var args := OS.get_cmdline_args()
-			var idx := args.find("--scene-test")
-			if idx != -1 and args.size() > idx + 1:
-				parcels_str = args[idx + 1].replace("'", '"')
+	var parcels_str := ""
+	# Get the scene test argument value
+	var scene_test_arg = Global.cli.get_arg("--scene-test")
+	if not scene_test_arg.is_empty():
+		parcels_str = scene_test_arg.replace("'", '"')
+	else:
+		# Fallback to getting from args array for backward compatibility
+		var args := OS.get_cmdline_args()
+		var idx := args.find("--scene-test")
+		if idx != -1 and args.size() > idx + 1:
+			parcels_str = args[idx + 1].replace("'", '"')
 
 	prints("parcels_str=" + str(parcels_str))
 
@@ -182,8 +177,8 @@ func async_take_and_compare_snapshot(
 	var max_wait_iterations := 100  # Max ~10 seconds (100 * 100ms)
 	var stable_frames := 0
 	for i in range(max_wait_iterations):
-		var pending_promises := Global.content_provider.get_pending_promises()
-		var loading_count := Global.content_provider.count_loading_resources()
+		var pending_promises = Global.content_provider.get_pending_promises()
+		var loading_count = Global.content_provider.count_loading_resources()
 
 		if pending_promises.is_empty() and loading_count == 0:
 			stable_frames += 1
@@ -214,7 +209,7 @@ func async_take_and_compare_snapshot(
 	test_camera_3d.global_position = camera_position
 	test_camera_3d.look_at(camera_target)
 
-	var explorer = Global.get_explorer()
+	var explorer = DclGlobal.get_explorer()
 	explorer.set_visible_ui(false)
 
 	# Freeze avatars animation and hide them

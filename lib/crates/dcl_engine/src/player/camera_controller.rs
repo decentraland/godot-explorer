@@ -109,14 +109,11 @@ impl INode for DclGlobalCameraController {
 }
 
 fn player_camera() -> Option<Gd<DclCamera3D>> {
-    DclGlobal::singleton()
-        .get("player_camera_node")
-        .try_to::<Gd<DclCamera3D>>()
-        .ok()
+    DclGlobal::singleton().bind().player_camera_node.clone()
 }
 
 fn set_global_camera_mode(mode: CameraMode) {
-    DclGlobal::singleton().call("set_camera_mode", &[mode.to_i32().to_variant()]);
+    DclGlobal::set_camera_mode(mode.to_i32());
 }
 
 impl DclGlobalCameraController {
@@ -347,9 +344,8 @@ impl DclGlobalCameraController {
         // reset when actually latched, so normal scene crossings don't re-tween or replay the
         // camera-mode fade. If the new scene is itself cinematic, `tick` re-enters it on the next
         // frame (its virtual-camera component is only applied then).
-        let global = DclGlobal::singleton();
         let cinematic =
-            global.get("current_camera_mode").to::<i32>() == CameraMode::Cinematic.to_i32();
+            DclGlobal::singleton().bind().current_camera_mode == CameraMode::Cinematic.to_i32();
         if cinematic
             || globals::scene_runner()
                 .bind()

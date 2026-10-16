@@ -83,7 +83,7 @@ func _ready():
 
 	GraphicSettings.apply_full_processor_mode()
 
-	Global.set_orientation_landscape()
+	DclGlobal.set_orientation_landscape()
 	UiSounds.install_audio_recursive(self)
 	Global.music_player.stop()
 
@@ -102,21 +102,19 @@ func _ready():
 	# actually heading for -- last_realm_joined is the wrong one for a deeplink.
 	loading.begin(Global.engine.setting("last_realm_joined"), "on_explorer_ready", false)
 	var cmd_params = get_params_from_cmd()
-	var cmd_realm = Global.FORCE_TEST_REALM if Global.FORCE_TEST else cmd_params[0]
+	var cmd_realm = cmd_params[0]
 	var cmd_location = cmd_params[1]
-	if Global.FORCE_TEST and cmd_location == null:
-		cmd_location = Global.FORCE_TEST_LOCATION
 
 	# Scene Inspector file output: --scene-inspector-file, or ?scene-inspector-file=true off prod
 	var scene_inspector_file: bool = (
-		(Global.deep_link_obj.scene_inspector_file and not Global.is_production())
+		(Global.deep_link_obj.scene_inspector_file and not DclGlobal.is_production())
 		or Global.cli.scene_inspector_file
 	)
 	if scene_inspector_file:
 		Global.scene_inspector_dispatcher.set_file_logging(true)
 
 	# Clear deep link after initial setup to prevent re-teleporting on first app resume
-	Global.deep_link_router._clear_deep_link()
+	Global.deep_link_router.clear_deep_link()
 
 	virtual_joystick.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	virtual_joystick_orig_position = virtual_joystick.get_position()
@@ -183,7 +181,7 @@ func _ready():
 	Global.player_identity.logout.connect(self._on_player_logout)
 	Global.player_identity.profile_changed.connect(Global.avatars.update_primary_player_profile)
 
-	var profile := Global.player_identity.get_profile_or_null()
+	var profile = Global.player_identity.get_profile_or_null()
 	if profile != null:
 		Global.player_identity.profile_changed.emit(profile)
 
@@ -210,7 +208,7 @@ func _ready():
 
 func _on_need_open_url(url: String, _description: String, _use_webkit: bool) -> void:
 	if not Global.player_identity.get_address_str().is_empty():
-		Global.open_url(url)
+		DclGlobal.open_url(url)
 
 
 ## The HUD safe rectangle (in SceneUIContainer/canvas coords): device safe area + the
@@ -253,13 +251,13 @@ func _push_scene_interactable_area() -> void:
 
 func _on_player_logout():
 	# Funnel any logout signal (e.g. session expiry) into the single canonical
-	# teardown instead of quitting the app. Global.sign_out() is re-entrancy
+	# teardown instead of quitting the app. DclGlobal.sign_out() is re-entrancy
 	# guarded, so this is safe even when sign_out() is what emitted the signal.
-	Global.sign_out()
+	DclGlobal.sign_out()
 
 
 ## Sever this Explorer from every persistent (autoload / window / Rust singleton)
-## emitter while the node is still in the tree. Called by Global.sign_out() and the world
+## emitter while the node is still in the tree. Called by DclGlobal.sign_out() and the world
 ## exit BEFORE they kill scenes / clear the realm, so none of those re-emit into this
 ## about-to-be-freed Explorer. Godot severs the connections whose receiver is freed; these
 ## are the ones that can fire synchronously during the teardown, and Global -> Global ones.
@@ -389,7 +387,7 @@ func capture_mouse():
 	if label_crosshair and ui_root:
 		if not Global.touch_controls_hide_crosshair:  # respect scene-driven crosshair hide
 			label_crosshair.show()
-		Global.explorer_grab_focus()
+		DclGlobal.explorer_grab_focus()
 
 
 func release_mouse():
@@ -447,7 +445,7 @@ func _update_virtual_controls_visibility() -> void:
 ## The shell's chat takes the screen: out of its way go the emote wheel and the movement controls.
 func set_chat_focus(open: bool) -> void:
 	chat_open = open
-	if Global.is_orientation_portrait() or _mobile_controls_hidden_for_hide_ui:
+	if DclGlobal.is_orientation_portrait() or _mobile_controls_hidden_for_hide_ui:
 		return
 	if open:
 		emote_wheel.close()
@@ -501,14 +499,9 @@ func _set_scene_ui_visible(is_visible: bool) -> void:
 
 
 func _on_emote_wheel_emote_wheel_closed() -> void:
-	if not Global.is_orientation_portrait() and not chat_open:
+	if not DclGlobal.is_orientation_portrait() and not chat_open:
 		virtual_joystick.show()
 
 
 func _on_emote_wheel_emote_wheel_opened() -> void:
 	virtual_joystick.hide()
-
-
-func _notification(what: int) -> void:
-	if what == NOTIFICATION_APPLICATION_FOCUS_IN:
-		Global.deep_link_router.route()

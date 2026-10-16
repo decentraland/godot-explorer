@@ -42,10 +42,7 @@ impl INode for SceneMusicChanger {
 
 impl SceneMusicChanger {
     fn on_change_scene_id(&mut self, scene_id: i32) {
-        let Ok(mut music) = DclGlobal::singleton()
-            .get("music_player")
-            .try_to::<Gd<crate::app::music_player::MusicPlayer>>()
-        else {
+        let Some(mut music) = DclGlobal::singleton().bind().music_player.clone() else {
             return;
         };
         if scene_id == EMPTY_PARCEL {

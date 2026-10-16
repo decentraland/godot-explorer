@@ -120,10 +120,10 @@ impl DclPlayerIdentity {
     fn logout();
 
     #[signal]
-    fn wallet_connected(address: GString, chain_id: i64, is_guest: bool);
+    pub fn wallet_connected(address: GString, chain_id: i64, is_guest: bool);
 
     #[signal]
-    fn profile_changed(new_profile: Gd<DclUserProfile>);
+    pub fn profile_changed(new_profile: Gd<DclUserProfile>);
 
     #[signal]
     fn auth_error(error_message: GString);
@@ -136,7 +136,7 @@ impl DclPlayerIdentity {
     /// whole attempt's wall-clock time. Emitted deferred from the login task so
     /// GDScript (analytics_controller.gd) can forward it to Segment.
     #[signal]
-    fn guest_login_outcome(
+    pub fn guest_login_outcome(
         outcome: GString,
         is_new_user: bool,
         failure_reason: GString,

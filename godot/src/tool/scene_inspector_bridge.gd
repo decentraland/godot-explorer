@@ -58,8 +58,8 @@ var _target: String = ""
 ## dedicated socket is added while the bridge is still outside the tree; both join
 ## the tree in the same deferred flush and the socket starts polling right after.
 func activate_from_config() -> void:
-	var target := Global.cli.scene_inspector
-	if target.is_empty() and OS.is_debug_build() and not Global.is_production():
+	var target = Global.cli.scene_inspector
+	if target.is_empty() and OS.is_debug_build() and not DclGlobal.is_production():
 		target = DEFAULT_DEBUG_TARGET
 	if not target.is_empty():
 		_start(target)
@@ -126,13 +126,13 @@ func _on_ws_disconnected() -> void:
 
 
 func _on_deep_link_received() -> void:
-	var link_target := Global.deep_link_obj.scene_inspector
+	var link_target = Global.deep_link_obj.scene_inspector
 	if link_target.is_empty() or link_target == _target:
 		return
-	if Global.is_production():
+	if DclGlobal.is_production():
 		print("SceneInspectorBridge: ignoring deeplink target on production builds")
 		return
-	if not UrlHost.is_local_network(link_target):
+	if not DeepLinkRouter.is_local_network(link_target):
 		print("SceneInspectorBridge: ignoring deeplink target ", link_target)
 		return
 	_start(link_target)
@@ -144,7 +144,7 @@ func _on_batch(entries_json: String) -> void:
 		# envelope as a literal avoids parse → re-stringify on every frame (up
 		# to 500 entries each). `session_id` goes through JSON.stringify so any
 		# special characters are properly escaped.
-		var envelope := (
+		var envelope: String = (
 			'{"type":"SCENE_INSPECTOR","payload":{"sessionId":'
 			+ JSON.stringify(_session_id)
 			+ ',"entries":'
@@ -155,7 +155,7 @@ func _on_batch(entries_json: String) -> void:
 
 
 func _on_command(cmd: String, args: Dictionary, request_id: String) -> void:
-	if Global.is_production() and not PRODUCTION_COMMANDS.has(cmd):
+	if DclGlobal.is_production() and not PRODUCTION_COMMANDS.has(cmd):
 		_send_ack(request_id, false, {"error": "%s is not available on production builds" % cmd})
 		return
 	var dispatcher = Global.scene_inspector_dispatcher
@@ -217,7 +217,7 @@ func _on_command(cmd: String, args: Dictionary, request_id: String) -> void:
 			var results := []
 			var qname: String = args.get("name", "")
 			var qprops: Array = args.get("props", [])
-			var qcalls: Array = [] if Global.is_production() else args.get("calls", [])
+			var qcalls: Array = [] if DclGlobal.is_production() else args.get("calls", [])
 			var qmax: int = args.get("max", 5)
 			var found := get_tree().root.find_children("*", "", true, false).filter(
 				func(n): return qname.to_lower() in n.name.to_lower()
@@ -274,11 +274,11 @@ func _apply_subscribe(args: Dictionary, enable: bool) -> void:
 
 
 func _send_crdt_snapshot() -> void:
-	var snapshot_json := Global.scene_inspector_dispatcher.get_crdt_snapshot_json()
+	var snapshot_json: String = Global.scene_inspector_dispatcher.get_crdt_snapshot_json()
 	if snapshot_json.is_empty():
 		return
 	if _dedicated_ws and _dedicated_ws.is_open():
-		var envelope := (
+		var envelope: String = (
 			'{"type":"SCENE_INSPECTOR","payload":{"sessionId":'
 			+ JSON.stringify(_session_id)
 			+ ',"entries":'

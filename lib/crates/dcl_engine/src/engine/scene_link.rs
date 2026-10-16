@@ -56,10 +56,7 @@ fn read_facts(global: &Gd<DclGlobal>) -> SceneFacts {
             realm.get_realm_name().to_string(),
         )
     };
-    let fetcher = global
-        .get("scene_fetcher")
-        .try_to::<Gd<SceneFetcher>>()
-        .ok();
+    let fetcher = global.bind().scene_fetcher.clone();
     SceneFacts {
         realm_url,
         parcel: fetcher.as_ref().map_or(Parcel::new(0, 0), parcel_of),

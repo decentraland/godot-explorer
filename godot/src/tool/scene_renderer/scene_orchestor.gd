@@ -29,7 +29,7 @@ var are_all_scene_loaded: bool = false
 
 func get_params_from_cmd():
 	var scene_data = null
-	var camera_tune := Global.cli.test_camera_tune
+	var camera_tune = Global.cli.test_camera_tune
 
 	# Only use from the editor
 	if USE_TEST_INPUT or Global.cli.use_test_input:
@@ -61,7 +61,7 @@ func _ready():
 		get_tree().quit(2)
 		return
 
-	Global.get_explorer().disable_move_to = true
+	DclGlobal.get_explorer().disable_move_to = true
 
 	Global.realm.realm_changed.connect(self.on_realm_changed)
 
@@ -244,7 +244,7 @@ func _on_timer_timeout():
 func async_take_scene_file(
 	input: SceneRendererInputHelper.SceneRendererInputSpecs, child: DclSceneNode
 ):
-	var pending_promises := Global.content_provider.get_pending_promises()
+	var pending_promises = Global.content_provider.get_pending_promises()
 	if not pending_promises.is_empty():
 		await PromiseUtils.async_all(Global.content_provider.get_pending_promises())
 
@@ -260,7 +260,7 @@ func async_take_scene_file(
 func async_take_camera_photo(input: SceneRendererInputHelper.SceneRendererInputSpecs):
 	prints("async_take_camera_photo", input)
 
-	var pending_promises := Global.content_provider.get_pending_promises()
+	var pending_promises = Global.content_provider.get_pending_promises()
 	if not pending_promises.is_empty():
 		await PromiseUtils.async_all(Global.content_provider.get_pending_promises())
 
@@ -295,7 +295,7 @@ func async_take_camera_photo(input: SceneRendererInputHelper.SceneRendererInputS
 		base_position
 	)
 
-	var explorer = Global.get_explorer()
+	var explorer = DclGlobal.get_explorer()
 	explorer.set_visible_ui(false)
 	Global.scene_runner.base_ui.visible = false
 

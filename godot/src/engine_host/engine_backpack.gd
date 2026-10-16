@@ -152,7 +152,7 @@ func _show_preview(on: bool) -> void:
 	_preview.subviewport.render_target_update_mode = (
 		SubViewport.UPDATE_WHEN_VISIBLE if on else SubViewport.UPDATE_DISABLED
 	)
-	var explorer := Global.get_explorer()
+	var explorer = DclGlobal.get_explorer()
 	_set_overlay(on, explorer == null)
 	if explorer == null:
 		return

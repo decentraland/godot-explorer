@@ -231,7 +231,7 @@ impl EmoteWheel {
         self.control_wheel.show();
         self.base_mut().emit_signal("emote_wheel_opened", &[]);
         self.base_mut().grab_focus();
-        DclGlobal::singleton().call("release_mouse", &[]);
+        DclGlobal::release_mouse();
     }
 }
 
@@ -266,7 +266,7 @@ impl EmoteWheel {
         // An empty slot has nothing to play: send the user to equip one.
         if urn.is_empty() {
             open_backpack_on_emotes();
-            DclGlobal::singleton().call("send_haptic_feedback", &[]);
+            DclGlobal::send_haptic_feedback(20, -1.0);
             return;
         }
         if DclGlobal::singleton().bind().is_emote_disabled() {
@@ -358,7 +358,7 @@ impl EmoteWheel {
 
 fn open_backpack_on_emotes() {
     DclGlobal::singleton().emit_signal("open_backpack", &[true.to_variant()]);
-    DclGlobal::singleton().call("send_haptic_feedback", &[]);
+    DclGlobal::send_haptic_feedback(20, -1.0);
 }
 
 #[cfg(test)]

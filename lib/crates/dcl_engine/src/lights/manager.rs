@@ -62,9 +62,9 @@ fn reference_position() -> Option<Vector3> {
 
 fn camera_view() -> Option<(Vector3, Vector3)> {
     let camera = DclGlobal::singleton()
-        .get("player_camera_node")
-        .try_to::<Gd<Node3D>>()
-        .ok()
+        .bind()
+        .player_camera_node
+        .clone()
         .filter(|c| c.is_instance_valid())?;
     let forward = -camera.get_global_transform().basis.col_c().normalized();
     Some((camera.get_global_position(), forward))
