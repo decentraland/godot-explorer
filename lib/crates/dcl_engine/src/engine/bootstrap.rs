@@ -287,6 +287,9 @@ impl DclBootstrap {
         let mut lod_system = crate::avatars::impostor_capture::AvatarLodSystem::new_alloc();
         lod_system.set_name("AvatarLodSystem");
         root_add_instance(&global, &lod_system.upcast());
+        let mut lights = crate::lights::manager::DclLightSourceManager::new_alloc();
+        lights.set_name("LightSourceManager");
+        root_add_instance(&global, &lights.upcast());
         if let Some(metrics) = node_of(&global, "metrics") {
             root_add_instance(&global, &metrics);
             // Firebase/Segment orchestration lives in AnalyticsController, a RefCounted kept

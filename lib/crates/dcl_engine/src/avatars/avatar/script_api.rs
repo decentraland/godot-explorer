@@ -64,6 +64,12 @@ impl DclAvatar {
         promise
     }
 
+    /// Called by name from the emote animation's method track.
+    #[func(rename = _play_emote_audio)]
+    fn gd_play_emote_audio(&mut self, file_hash: GString) {
+        self.play_emote_audio(&file_hash.to_string());
+    }
+
     #[func(rename = freeze_on_idle)]
     fn gd_freeze_on_idle(&mut self) {
         self.freeze_on_idle();

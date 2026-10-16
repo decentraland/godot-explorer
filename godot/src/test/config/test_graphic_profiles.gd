@@ -44,7 +44,7 @@ func _test_profiles_apply_all_keys() -> void:
 			"profile %d: particle_quality applied" % i
 		)
 		_expect(
-			DclLightSourceComponent.max_active_dcl_lights == profile.dcl_max_lights,
+			DclLightSourceComponent.get_max_active_lights() == profile.dcl_max_lights,
 			"profile %d: light budget applied" % i
 		)
 		_expect(
@@ -67,7 +67,7 @@ func _test_custom_is_noop() -> void:
 	GraphicSettings.apply_graphic_profile(0)
 	var view_before: float = Global.engine.setting("view_distance")
 	var particles_before: int = Global.engine.setting("particle_quality")
-	var lights_before: int = DclLightSourceComponent.max_active_dcl_lights
+	var lights_before: int = DclLightSourceComponent.get_max_active_lights()
 	GraphicSettings.apply_graphic_profile(GraphicSettings.PROFILE_CUSTOM)
 	_expect(
 		Global.engine.setting("view_distance") == view_before, "Custom: view_distance untouched"
@@ -77,7 +77,7 @@ func _test_custom_is_noop() -> void:
 		"Custom: particle_quality untouched"
 	)
 	_expect(
-		DclLightSourceComponent.max_active_dcl_lights == lights_before,
+		DclLightSourceComponent.get_max_active_lights() == lights_before,
 		"Custom: light budget untouched"
 	)
 

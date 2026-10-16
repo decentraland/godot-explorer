@@ -35,11 +35,13 @@ impl INode for AvatarProximityFade {
         self.collect_meshes();
         // Wearables and body shapes load dynamically: collect again on changes.
         if let Some(mut avatar) = self.base().get_parent() {
-            let callable = self.base().callable("recollect_deferred");
             if avatar.has_signal("avatar_loaded") {
-                avatar.connect("avatar_loaded", &callable);
+                avatar.connect("avatar_loaded", &self.base().callable("recollect_deferred"));
             }
-            avatar.connect("child_entered_tree", &callable);
+            avatar.connect(
+                "child_entered_tree",
+                &self.base().callable("recollect_on_child"),
+            );
         }
     }
 
@@ -86,7 +88,12 @@ impl INode for AvatarProximityFade {
 #[godot_api]
 impl AvatarProximityFade {
     #[func]
-    fn recollect_deferred(&mut self, _unused: Variant) {
+    fn recollect_deferred(&mut self) {
+        self.base_mut().call_deferred("collect_meshes", &[]);
+    }
+
+    #[func]
+    fn recollect_on_child(&mut self, _child: Gd<Node>) {
         self.base_mut().call_deferred("collect_meshes", &[]);
     }
 

@@ -33,6 +33,7 @@ pub mod engine;
 pub mod fetcher;
 pub mod godot_classes;
 pub mod http_request;
+pub mod lights;
 pub mod media;
 pub mod nft;
 pub mod player;

@@ -45,7 +45,6 @@ Global="*res://src/global.gd"
 EmptyParcelProps="*res://assets/empty-scenes/empty_parcel_props.tscn"
 DebugWs="*res://src/tool/debug_server/debug_ws_server.gd"
 DevLocalhostRelay="*res://src/tool/dev_localhost_relay.gd"
-LightSourceManager="*res://src/decentraland_components/light_source_manager.gd"
 EngineHost="*res://src/engine_host/engine_host.gd"
 
 [debug]

@@ -131,7 +131,7 @@ static func _walk_scene_resources(
 		# Authored counts, not budgeted — but skip lights authored off
 		# (active=false) or torn down (no Light3D): they never emit.
 		var dcl_light := node as DclLightSourceComponent
-		if dcl_light.runtime_light_enabled and dcl_light.current_light != null:
+		if dcl_light.emits_light():
 			acc["lights"] += 1
 			if dcl_light.runtime_shadows_enabled:
 				acc["shadow_casters"] += 1
