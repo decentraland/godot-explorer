@@ -203,7 +203,9 @@ impl Joypad {
             if touch.is_pressed() {
                 // Flipping the pressed state emits `toggled`, which opens or closes the menu.
                 let pressed = self.button_combo.is_pressed();
-                self.button_combo.set_pressed(!pressed);
+                // Deferred: `toggled` would re-enter this joypad while it is bound.
+                self.button_combo
+                    .call_deferred("set_pressed", &[(!pressed).to_variant()]);
                 self.button_combo.accept_event();
             }
         }
@@ -225,7 +227,7 @@ impl Joypad {
             // orb, which reads the pressed state.
             self.button_combo.set_pressed_no_signal(false);
             self.button_combo
-                .emit_signal("toggled", &[false.to_variant()]);
+                .call_deferred("emit_signal", &["toggled".to_variant(), false.to_variant()]);
         }
     }
 

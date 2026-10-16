@@ -215,7 +215,9 @@ impl EmoteWheel {
         // Clearing the pressed state with its signal lets the HUD button repaint its default look;
         // the re-entrant close() returns early since the wheel is hidden.
         if self.button_emotes.is_pressed() {
-            self.button_emotes.set_pressed(false);
+            // Deferred: `toggled` would re-enter this wheel while it is bound.
+            self.button_emotes
+                .call_deferred("set_pressed", &[false.to_variant()]);
         }
     }
 
@@ -315,7 +317,10 @@ impl EmoteWheel {
             // Re-emitting the item's own signal reuses its wiring: play and close here, and the
             // equip sound from UiSounds.
             let urn = item.bind().emote_urn.clone();
-            item.clone().emit_signal("play_emote", &[urn.to_variant()]);
+            item.clone().call_deferred(
+                "emit_signal",
+                &["play_emote".to_variant(), urn.to_variant()],
+            );
             item.clone().accept_event();
         }
     }
@@ -331,7 +336,8 @@ impl EmoteWheel {
                 self.emote_touch_index = touch.get_index();
                 self.button_emotes.emit_signal("button_down", &[]);
                 let pressed = self.button_emotes.is_pressed();
-                self.button_emotes.set_pressed(!pressed);
+                self.button_emotes
+                    .call_deferred("set_pressed", &[(!pressed).to_variant()]);
             }
             self.button_emotes.accept_event();
         } else if touch.get_index() == self.emote_touch_index {

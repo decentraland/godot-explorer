@@ -185,14 +185,23 @@ impl EmoteItemUi {
         };
         self.set_selected(selected);
         let urn = self.emote_urn.clone();
-        self.base_mut()
-            .emit_signal("select_emote", &[inside.to_variant(), urn.to_variant()]);
+        // Deferred: the wheel's handler reads this item, which is bound while it handles the hover.
+        self.base_mut().call_deferred(
+            "emit_signal",
+            &[
+                "select_emote".to_variant(),
+                inside.to_variant(),
+                urn.to_variant(),
+            ],
+        );
     }
 
     fn on_pressed(&mut self) {
         let urn = self.emote_urn.clone();
-        self.base_mut()
-            .emit_signal("play_emote", &[urn.to_variant()]);
+        self.base_mut().call_deferred(
+            "emit_signal",
+            &["play_emote".to_variant(), urn.to_variant()],
+        );
     }
 
     fn set_selected(&mut self, selected: bool) {

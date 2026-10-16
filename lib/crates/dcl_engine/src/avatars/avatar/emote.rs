@@ -188,7 +188,11 @@ impl DclAvatar {
         }
 
         // The idle clip is edited at runtime (props visibility): make it unshared.
-        if let Some(mut idle_library) = player.get_animation_library("idle") {
+        if let Some(mut idle_library) = player
+            .has_animation_library("idle")
+            .then(|| player.get_animation_library("idle"))
+            .flatten()
+        {
             idle_library = idle_library.duplicate_resource();
             if let Some(idle) = idle_library.get_animation("Anim") {
                 let idle = idle.duplicate_resource();
@@ -199,14 +203,16 @@ impl DclAvatar {
             player.add_animation_library("idle", &idle_library);
         }
 
-        let library = match player.get_animation_library("emotes") {
-            Some(library) => library,
-            None => {
-                let library = AnimationLibrary::new_gd();
-                player.add_animation_library("emotes", &library);
-                library
-            }
-        };
+        // Asking for a missing library logs an engine error, so check first.
+        let existing = player
+            .has_animation_library("emotes")
+            .then(|| player.get_animation_library("emotes"))
+            .flatten();
+        let library = existing.unwrap_or_else(|| {
+            let library = AnimationLibrary::new_gd();
+            player.add_animation_library("emotes", &library);
+            library
+        });
 
         self.emote.nodes = Some(EmoteNodes {
             single,
