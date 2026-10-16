@@ -1012,7 +1012,7 @@ func async_load_wearables():
 	for category in wearables_by_category:
 		# Safety check: avatar may have been freed during async operations
 		if not is_instance_valid(wearable_loader) or not is_inside_tree():
-			body_shape_skeleton_3d.visible = true
+			body_shape_skeleton_3d.visible = _spawn_reveal.is_idle()
 			return
 
 		var wearable = wearables_by_category[category]
