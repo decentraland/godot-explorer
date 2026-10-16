@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use crate::godot_classes::dcl_tokio_rpc::GodotTokioCall;
 use crate::urls;
 
+use super::signin_verifier::VERIFIER_HEADER;
 use super::wallet::SimpleAuthChain;
 
 const AUTH_SERVER_RETRY_INTERVAL: Duration = Duration::from_secs(1);
@@ -86,22 +87,28 @@ pub struct AuthLink {
 /// Used for mobile deep link auth flow where we receive the identity ID via deep link
 /// instead of polling for the result.
 /// Returns the full AuthIdentity including ephemeral private key and auth chain.
-pub async fn fetch_identity_by_id(identity_id: String) -> Result<IdentityResponse, anyhow::Error> {
+pub async fn fetch_identity_by_id(
+    identity_id: String,
+    verifier: Option<String>,
+) -> Result<IdentityResponse, anyhow::Error> {
     let url = format!("{}/identities/{identity_id}", urls::auth_api_base());
     tracing::debug!(
-        "fetch_identity_by_id: requesting identity_id={}, url={}",
+        "fetch_identity_by_id: requesting identity_id={}, url={}, with_verifier={}",
         identity_id,
-        url
+        url,
+        verifier.is_some()
     );
 
     tracing::debug!("[HTTP] GET {}", url);
-    let response = reqwest::Client::builder()
+    let mut request = reqwest::Client::builder()
         .timeout(AUTH_SERVER_REQUEST_TIMEOUT)
         .build()
         .expect("reqwest build error")
-        .get(&url)
-        .send()
-        .await?;
+        .get(&url);
+    if let Some(verifier) = verifier {
+        request = request.header(VERIFIER_HEADER, verifier);
+    }
+    let response = request.send().await?;
 
     let status = response.status();
     tracing::debug!(
@@ -116,6 +123,16 @@ pub async fn fetch_identity_by_id(identity_id: String) -> Result<IdentityRespons
             identity_id
         );
         return Err(anyhow::Error::msg("Identity not ready yet (204)"));
+    }
+
+    if status.as_u16() == 401 {
+        tracing::error!(
+            "fetch_identity_by_id: verifier rejected for identity_id={}",
+            identity_id
+        );
+        return Err(anyhow::Error::msg(
+            "Sign-in belongs to another sign-in request (status 401)",
+        ));
     }
 
     if !status.is_success() {
@@ -385,6 +402,7 @@ pub async fn do_request_mobile(
     provider: Option<String>,
     user_id: Option<String>,
     session_id: Option<String>,
+    auth_request_id: String,
 ) -> Result<(), anyhow::Error> {
     tracing::debug!(
         "do_request_mobile: starting mobile auth request, provider={:?}",
@@ -392,7 +410,7 @@ pub async fn do_request_mobile(
     );
 
     // Build URL with optional query parameters
-    let mut params = Vec::new();
+    let mut params = vec![format!("authRequestId={auth_request_id}")];
     if let Some(provider) = provider {
         params.push(format!("provider={provider}"));
     }
@@ -402,11 +420,7 @@ pub async fn do_request_mobile(
     if let Some(session_id) = session_id {
         params.push(format!("s={session_id}"));
     }
-    let url = if params.is_empty() {
-        urls::auth_mobile_frontend()
-    } else {
-        format!("{}?{}", urls::auth_mobile_frontend(), params.join("&"))
-    };
+    let url = format!("{}?{}", urls::auth_mobile_frontend(), params.join("&"));
     tracing::debug!("do_request_mobile: opening auth URL={}", url);
 
     url_reporter

@@ -22,6 +22,7 @@ use super::device_anchor;
 use super::ephemeral_auth_chain::EphemeralAuthChain;
 use super::remote_wallet::RemoteWallet;
 use super::review_login;
+use super::signin_verifier;
 use super::thirdweb_guest;
 use super::wallet::{AsH160, Wallet};
 
@@ -828,8 +829,13 @@ impl DclPlayerIdentity {
             Some(session_id.to_string())
         };
 
+        let verifier = signin_verifier::create_verifier();
+        signin_verifier::save_pending(&verifier);
+        let auth_request_id = signin_verifier::derive_auth_request_id(&verifier);
+
         handle.spawn(async move {
-            let result = start_mobile_auth(sender, provider, user_id, session_id).await;
+            let result =
+                start_mobile_auth(sender, provider, user_id, session_id, auth_request_id).await;
             let Ok(mut this) = Gd::<DclPlayerIdentity>::try_from_instance_id(instance_id) else {
                 return;
             };
@@ -871,9 +877,12 @@ impl DclPlayerIdentity {
         let instance_id = self.base().instance_id();
         let identity_id = identity_id.to_string();
         let attempt = self.mobile_auth_attempt;
+        // Single use like the identity id it guards; none (pre-verifier auth site) skips the header.
+        let verifier = signin_verifier::load_pending();
+        signin_verifier::clear_pending();
 
         let complete_handle = handle.spawn(async move {
-            let result = complete_mobile_auth(identity_id).await;
+            let result = complete_mobile_auth(identity_id, verifier).await;
             let Ok(mut this) = Gd::<DclPlayerIdentity>::try_from_instance_id(instance_id) else {
                 return;
             };
