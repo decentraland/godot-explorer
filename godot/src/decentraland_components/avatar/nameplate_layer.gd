@@ -47,39 +47,15 @@ const OCCLUSION_PERIOD := 6
 # Small gap above the computed bounds top (clearance already covers head/hat
 # volume — see Avatar.get_bounds_top_y).
 const NAMETAG_MARGIN := 0.1
-# Vertical gap kept between stacked nameplates.
-const STACK_PAD := 2.0
-# Fraction of the plate height excluded (top AND bottom) from the de-overlap
-# collision rect: the visible pill is much smaller than the Control (theme
-# margins), so colliding with the full rect leaves a big transparent gap.
-const STACK_COLLISION_INSET := 0.22
-# Fraction of the overlap corrected per frame (frame-to-frame relaxation) and of
-# the offset decayed back to the anchor when unconstrained (spring home). Partial
-# corrections are what make stacking smooth instead of snappy/jittery.
-const STACK_RELAX := 0.3
-# Extra separation (px) other plates keep from a fully-faded plate — fading tags
-# drift away instead of crowding while they disappear.
-const STACK_FADE_PAD := 30.0
-# Weakest spring factor for a fading plate (alpha 0 = this fraction of RELAX).
-const STACK_FADE_MIN_RELAX := 0.15
 # Debug: set true at runtime (e.g. the scene-inspector `eval` command, non-production) to bypass
 # the occlusion raycast entirely so tags fade by distance only — confirms whether a
 # vanishing tag is an occlusion artifact. `NameplateLayer.debug_disable_occlusion = true`.
 static var debug_disable_occlusion := false
 
 static var _root: Control = null
-# De-overlap state per visible plate (ui instance_id -> last placed Rect2 /
-# accumulated displacement from its projected anchor). Plates drift smoothly:
-# the offset springs back to zero when nothing overlaps, and overlaps are
-# resolved by partial per-frame corrections against other plates' rects.
-static var _plate_rects: Dictionary = {}
-static var _plate_offsets: Dictionary = {}
-# ui instance_id -> last known alpha (for fade-aware spacing).
-static var _plate_alphas: Dictionary = {}
-# ui instance_id -> world point the tag is drawn at (stacked screen pos unprojected
-# at anchor depth). Occlusion rays go HERE, not to the head anchor: the tag is
-# visible iff the camera can see the spot where it is actually drawn — otherwise a
-# cluster behind one occluder would lose every tag, even the stacked ones.
+# ui instance_id -> world point the tag is drawn at (screen pos unprojected at
+# anchor depth). Occlusion rays go HERE, not to the head anchor: the tag is
+# visible iff the camera can see the spot where it is actually drawn.
 static var _plate_ray_targets: Dictionary = {}
 # ui instance_id -> {dist, focused} for visible plates (crowd ranking) and -> last
 # applied content tier (apply only on change).
@@ -170,10 +146,9 @@ static func update(avatar) -> void:
 			var view_rect := Rect2(Vector2.ZERO, avatar.get_viewport().get_visible_rect().size)
 			var on_screen := view_rect.intersects(Rect2(pos, screen_size))
 			if on_screen and not avatar._nameplate_occluded:
-				# De-overlap: soft-constraint stack against the other visible plates,
-				# so close-together avatars' tags (and their chat bubbles, which live
-				# inside the same Control) stay readable.
-				pos = _stack_position(ui, pos, screen_size, view_rect.size)
+				# Plates stay pinned to their anchor (no de-overlap shifting) —
+				# design decision on #2938: in crowds the cap limits full tags
+				# instead of moving them around.
 				# Chat bubbles gate on distance only (#2938) — the crowd cap must not
 				# hide the bubble of someone standing next to you.
 				var show_chat := focused or dist <= TIER_FULL_END
@@ -314,73 +289,9 @@ static func update_occlusion(avatar) -> void:
 	avatar._nameplate_occluded = _occluded(avatar, cam.global_position, target)
 
 
-## Soft de-overlap: each visible plate carries an offset from its projected anchor.
-## The offset springs home when unconstrained, and overlaps push it apart — along
-## the axis of least penetration (sideways when cheaper, else up) — easing by a
-## fraction per frame. ponytail: O(n²) over visible plates within FADE_END (25m);
-## n is small. Upgrade to a spatial hash if ever laggy.
-static func _stack_position(
-	ui: Control, desired: Vector2, screen_size: Vector2, view_size: Vector2
-) -> Vector2:
-	var id := ui.get_instance_id()
-	var alpha: float = clampf(ui.modulate.a, 0.0, 1.0)
-	var offset: Vector2 = _plate_offsets.get(id, Vector2.ZERO)
-	# Collide with the visible pill, not the whole Control (transparent margins).
-	var inset := screen_size.y * STACK_COLLISION_INSET
-	var col_size := Vector2(screen_size.x, screen_size.y - inset * 2.0)
-	# Hard target: fully clear any overlapping plate along the axis of LEAST
-	# penetration (sideways when that's cheaper, upward otherwise — no name
-	# towers), computed from their last placed collision rects. Fixed point per
-	# frame, so no limit cycle. Only the higher-instance-id plate yields: if both
-	# moved, a pair would escalate without bound. ponytail: yield order is arbitrary
-	# (instance id = spawn order, not depth); with 3+ mutually overlapping plates
-	# the outcome is insertion-order dependent. Rank by distance/alpha if it ever
-	# looks wrong in crowds — the per-frame relaxation hides most of it.
-	var target := Vector2.ZERO
-	for other_id in _plate_rects:
-		if other_id == id or id < other_id:
-			continue
-		var other: Rect2 = _plate_rects[other_id]
-		var candidate := Rect2(desired + target + Vector2(0, inset), col_size)
-		if not candidate.intersects(other):
-			continue
-		# Keep extra distance from plates that are fading out.
-		var other_alpha: float = _plate_alphas.get(other_id, 1.0)
-		var pad := STACK_PAD + (1.0 - other_alpha) * STACK_FADE_PAD
-		var overlap_x: float = (
-			minf(candidate.end.x, other.end.x) - maxf(candidate.position.x, other.position.x)
-		)
-		var overlap_y: float = (
-			minf(candidate.end.y, other.end.y) - maxf(candidate.position.y, other.position.y)
-		)
-		if overlap_x < overlap_y:
-			# Sideways: push to the side this plate is already leaning toward.
-			if desired.x + col_size.x * 0.5 >= other.get_center().x:
-				target.x = other.end.x + pad - desired.x
-			else:
-				target.x = other.position.x - pad - col_size.x - desired.x
-		else:
-			target.y = other.position.y - pad - (desired.y + inset) - col_size.y
-	# Spring toward the target: exponential approach, smooth both ways. Fading
-	# plates get a weaker spring so they drift instead of snapping.
-	var relax: float = STACK_RELAX * lerpf(STACK_FADE_MIN_RELAX, 1.0, alpha)
-	offset = offset.lerp(target, relax)
-	var pos: Vector2 = desired + offset
-	pos.y = maxf(pos.y, 0.0)
-	pos.x = clampf(pos.x, 0.0, maxf(view_size.x - screen_size.x, 0.0))
-	_plate_offsets[id] = pos - desired
-	_plate_rects[id] = Rect2(pos + Vector2(0, inset), col_size)
-	_plate_alphas[id] = alpha
-	return pos
-
-
-## Drop a plate from the de-overlap solver (hidden/occluded/off-screen tags reserve
-## no space).
+## Drop a plate from tracking (hidden/occluded/off-screen tags).
 static func _untrack_plate(ui: Control) -> void:
 	var id := ui.get_instance_id()
-	_plate_rects.erase(id)
-	_plate_offsets.erase(id)
-	_plate_alphas.erase(id)
 	_plate_ray_targets.erase(id)
 	_plate_dists.erase(id)
 	_plate_tiers.erase(id)
