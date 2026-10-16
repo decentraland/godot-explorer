@@ -5,6 +5,7 @@ pub mod dcl_android_plugin;
 pub mod dcl_audio_source;
 pub mod dcl_audio_stream;
 pub mod dcl_avatar;
+pub mod dcl_avatar_attach;
 pub mod dcl_avatar_modifier_area_3d;
 pub mod dcl_camera_3d;
 pub mod dcl_camera_mode_area_3d;
@@ -69,3 +70,5 @@ where
         json5::from_str(json_str.as_str()).map_err(|e| e.to_string())
     }
 }
+pub mod force_global_scale;
+pub mod player_collider_filter;

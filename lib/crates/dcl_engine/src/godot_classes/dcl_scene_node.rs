@@ -37,13 +37,25 @@ impl DclSceneNode {
         obj
     }
 
+    /// The scene node `target` lives under (itself included).
+    pub fn search(target: &Gd<Node3D>) -> Option<Gd<DclSceneNode>> {
+        let mut node = Some(target.clone());
+        while let Some(current) = node {
+            if let Ok(scene) = current.clone().try_cast::<DclSceneNode>() {
+                return Some(scene);
+            }
+            node = current.get_parent_node_3d();
+        }
+        None
+    }
+
     #[func]
-    fn get_scene_id(&self) -> i32 {
+    pub fn get_scene_id(&self) -> i32 {
         self.scene_id
     }
 
     #[func]
-    fn is_global(&self) -> bool {
+    pub fn is_global(&self) -> bool {
         self.is_global
     }
 

@@ -83,8 +83,6 @@ pub struct DclCli {
     #[var(no_set, pub)]
     pub only_no_optimized_scene_emotes: bool,
     #[var(no_set, pub)]
-    pub emote_test_mode: bool,
-    #[var(no_set, pub)]
     pub stress_test: bool,
     #[var(no_set, pub)]
     pub emulate_ios: bool,
@@ -314,13 +312,6 @@ impl DclCli {
             ArgDefinition {
                 name: "--avatar-renderer".to_string(),
                 description: "Run in avatar renderer mode".to_string(),
-                arg_type: ArgType::Flag,
-                category: "Testing".to_string(),
-            },
-            ArgDefinition {
-                name: "--emote-test".to_string(),
-                description: "Run emote batch test (cycles through all emotes then exits)"
-                    .to_string(),
                 arg_type: ArgType::Flag,
                 category: "Testing".to_string(),
             },
@@ -768,7 +759,6 @@ impl INode for DclCli {
         // TODO: Remove this default=true after asset-server re-processes scene emotes correctly.
         // Currently optimized scene emotes have incorrect animation structure.
         let only_no_optimized_scene_emotes = !args_map.contains_key("--use-optimized-scene-emotes");
-        let emote_test_mode = args_map.contains_key("--emote-test");
         let stress_test = args_map.contains_key("--stress-test");
         let emulate_ios = args_map.contains_key("--emulate-ios");
         let emulate_android = args_map.contains_key("--emulate-android");
@@ -961,7 +951,6 @@ impl INode for DclCli {
             only_optimized,
             only_no_optimized,
             only_no_optimized_scene_emotes,
-            emote_test_mode,
             stress_test,
             emulate_ios,
             emulate_android,

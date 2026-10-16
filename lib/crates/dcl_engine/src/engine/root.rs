@@ -31,7 +31,6 @@ pub struct BootFlags {
     pub asset_server: bool,
     pub fi_benchmark: bool,
     pub avatar_impostor_benchmark: bool,
-    pub emote_test: bool,
     pub avatar_renderer: bool,
     pub asset_renderer: bool,
     pub client_test: bool,
@@ -51,8 +50,6 @@ pub fn boot_mode(flags: &BootFlags) -> BootMode {
         BootMode::FiBenchmark
     } else if flags.avatar_impostor_benchmark {
         BootMode::AvatarImpostorBenchmark
-    } else if flags.emote_test {
-        BootMode::Scene("res://src/test/emote/emote_tester_standalone.tscn")
     } else if flags.avatar_renderer {
         BootMode::Scene("res://src/tool/avatar_renderer/avatar_renderer_standalone.tscn")
     } else if flags.asset_renderer {
@@ -228,7 +225,6 @@ impl DclRoot {
                 asset_server: cli.asset_server,
                 fi_benchmark: cli.fi_benchmark_size >= 0,
                 avatar_impostor_benchmark: cli.avatar_impostor_benchmark,
-                emote_test: cli.emote_test_mode,
                 avatar_renderer: cli.avatar_renderer_mode,
                 asset_renderer: cli.asset_renderer_mode,
                 client_test: cli.client_test_mode,

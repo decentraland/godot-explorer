@@ -1,3 +1,4 @@
+use crate::godot_classes::dcl_avatar_attach::DclAvatarAttach;
 use crate::{
     dcl::{
         components::SceneComponentId,
@@ -28,7 +29,9 @@ pub fn update_avatar_attach(scene: &mut Scene, crdt_state: &mut SceneCrdtState) 
             let (_godot_entity_node, mut node_3d) = godot_dcl_scene.ensure_node_3d(entity);
 
             let new_value = new_value.value.clone();
-            let existing = node_3d.try_get_node_as::<Node>("AvatarAttach");
+            let existing = node_3d
+                .try_get_node_as::<Node>("AvatarAttach")
+                .and_then(|n| n.try_cast::<DclAvatarAttach>().ok());
 
             if new_value.is_none() {
                 if let Some(mut avatar_attach_node) = existing {
@@ -50,28 +53,21 @@ pub fn update_avatar_attach(scene: &mut Scene, crdt_state: &mut SceneCrdtState) 
                     let _ = apply_dcl_transform_to_node_3d(&mut transform, &mut node_3d);
                 }
             } else if let Some(new_value) = new_value {
-                let (mut avatar_attach_node, is_new) = if let Some(avatar_attach_node) = existing {
-                    (avatar_attach_node, false)
-                } else {
-                    let node = crate::scene_runner::scene_cache::packed_scene(
-                        "res://src/decentraland_components/avatar_attach.tscn",
-                    )
-                    .instantiate()
-                    .unwrap();
-                    (node, true)
+                let (mut avatar_attach_node, is_new) = match existing {
+                    Some(node) => (node, false),
+                    None => (DclAvatarAttach::new_alloc(), true),
                 };
 
-                avatar_attach_node.set(
-                    "user_id",
-                    &Variant::from(new_value.avatar_id.unwrap_or_default()),
-                );
-
-                avatar_attach_node.set("attach_point", &Variant::from(new_value.anchor_point_id));
+                {
+                    let mut attach = avatar_attach_node.bind_mut();
+                    attach.set_user_id(GString::from(&new_value.avatar_id.unwrap_or_default()));
+                    attach.set_attach_point(new_value.anchor_point_id);
+                }
 
                 if is_new {
                     avatar_attach_node.set_name("AvatarAttach");
-                    node_3d.add_child(&avatar_attach_node.clone());
-                    avatar_attach_node.call("init", &[]);
+                    node_3d.add_child(&avatar_attach_node.clone().upcast::<Node>());
+                    avatar_attach_node.bind_mut().start();
                 }
             }
         }

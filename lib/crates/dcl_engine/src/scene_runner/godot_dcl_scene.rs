@@ -1,3 +1,4 @@
+use crate::godot_classes::player_collider_filter::PlayerColliderFilter;
 use crate::{
     dcl::{
         components::{material::DclMaterial, proto_components, SceneComponentId, SceneEntityId},
@@ -273,16 +274,13 @@ impl GodotDclScene {
                 .add_child(&new_node_3d.clone().upcast::<Node>());
 
             if entity == &SceneEntityId::PLAYER || entity == &SceneEntityId::CAMERA {
-                let mut player_collider_filter = godot::tools::load::<PackedScene>(
-                    "res://src/decentraland_components/player_collider_filter.tscn",
-                )
-                .instantiate()
-                .expect("player_collider_filter scene is valid")
-                .cast::<Node>();
+                let mut player_collider_filter = PlayerColliderFilter::new_alloc();
                 player_collider_filter.set_name("PlayerColliderFilter");
 
-                new_node_3d.add_child(&player_collider_filter.clone());
-                player_collider_filter.call("init_player_collider_filter", &[]);
+                new_node_3d.add_child(&player_collider_filter.clone().upcast::<Node>());
+                player_collider_filter
+                    .bind_mut()
+                    .init_player_collider_filter();
             }
             godot_entity_node.base_3d = Some(new_node_3d.upcast());
         }

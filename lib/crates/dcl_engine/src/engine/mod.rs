@@ -10,7 +10,7 @@ pub mod root;
 mod scene_link;
 pub mod scene_requests;
 mod screenshot_link;
-mod settings_link;
+pub(crate) mod settings_link;
 
 pub use dcl_engine::DclEngine;
 pub(crate) use settings_link::{benchmark_gpu_score, texture_quality_setting};

@@ -19,7 +19,7 @@ var frame_times: Array[float] = []
 var max_frame_samples: int = 60
 
 # Video player reference (optional)
-var video_player: ExoPlayer = null
+var video_player: NativePlayer = null
 
 
 func _ready():
@@ -127,7 +127,7 @@ func _update_display():
 
 
 ## Set a video player to monitor
-func set_video_player(player: ExoPlayer):
+func set_video_player(player: NativePlayer):
 	video_player = player
 
 

@@ -24,7 +24,6 @@ const GRAPHICS: &str = "res://src/config/graphic_settings.gd";
 const AUDIO: &str = "res://src/config/audio_settings.gd";
 const GENERAL: &str = "res://src/config/general_settings.gd";
 const LOCALE: &str = "res://src/config/locale_settings.gd";
-const AVATAR_ANIM: &str = "res://src/decentraland_components/avatar/avatar_anim_helpers.gd";
 
 type Task = Box<dyn FnOnce() + Send>;
 
@@ -149,7 +148,7 @@ fn from_variant(key: SettingKey, value: &Variant) -> Option<SettingValue> {
 }
 
 /// `Global.engine.setting`: the value as a Godot variant, nil for an unknown name.
-pub(super) fn get_variant(name: &str) -> Variant {
+pub(crate) fn get_variant(name: &str) -> Variant {
     let Some(key) = SettingKey::from_name(name) else {
         godot_error!("setting: unknown key {name}");
         return Variant::nil();
@@ -251,11 +250,7 @@ fn apply_in_engine(key: SettingKey, value: &SettingValue) {
             }
         }
         (SettingKey::ParticleQuality, _) => {
-            call_static(
-                AVATAR_ANIM,
-                "apply_particles_enabled",
-                &[(int > 0).to_variant()],
-            );
+            crate::avatars::avatar::lod::apply_particles_enabled(int > 0);
             call_static(GRAPHICS, "apply_particle_quality", &[int.to_variant()]);
         }
         (SettingKey::LimitFps, _) => {

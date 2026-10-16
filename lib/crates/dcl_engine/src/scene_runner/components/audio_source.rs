@@ -67,10 +67,8 @@ pub fn update_audio_source(
                     new_audio_source
                 };
 
-                audio_source.call_deferred(
-                    "_async_refresh_data",
-                    &[new_value.current_time.is_some().to_variant()],
-                );
+                let time_specified = new_value.current_time.is_some();
+                audio_source.run_deferred(move |source| source.refresh_data(time_specified));
 
                 let mut audio_source = audio_source.bind_mut();
                 audio_source.set_dcl_audio_clip_url(GString::from(&new_value.audio_clip_url));
