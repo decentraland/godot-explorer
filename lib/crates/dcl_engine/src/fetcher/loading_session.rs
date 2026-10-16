@@ -43,20 +43,34 @@ impl INode for LoadingSession {
         runner
             .signals()
             .loading_started()
-            .connect(move |_session, _expected| session.bind().start());
+            .connect(move |_session, _expected| {
+                if session.is_instance_valid() {
+                    session.bind().start()
+                }
+            });
         let session = this.clone();
         runner
             .signals()
             .loading_progress()
-            .connect(move |percent, _ready, _total| session.bind().on_progress(percent));
+            .connect(move |percent, _ready, _total| {
+                if session.is_instance_valid() {
+                    session.bind().on_progress(percent)
+                }
+            });
         let session = this.clone();
         runner
             .signals()
             .loading_complete()
-            .connect(move |_session| session.bind().end("Success".into()));
+            .connect(move |_session| {
+                if session.is_instance_valid() {
+                    session.bind().end("Success".into())
+                }
+            });
         runner.signals().loading_timeout().connect(move |_session| {
-            godot_warn!("Loading session timed out");
-            this.bind().end("Success".into());
+            if this.is_instance_valid() {
+                godot_warn!("Loading session timed out");
+                this.bind().end("Success".into());
+            }
         });
     }
 

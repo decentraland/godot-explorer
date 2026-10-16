@@ -238,7 +238,7 @@ fn apply_in_engine(key: SettingKey, value: &SettingValue) {
             manager.bind_mut().set_enabled(*enabled);
         }
         (SettingKey::ViewDistance, SettingValue::Float(far)) => {
-            if let Some(mut camera) = global.bind().player_camera_node.clone() {
+            if let Some(mut camera) = global.bind().player_camera() {
                 camera.set_far(*far as f32);
             }
         }

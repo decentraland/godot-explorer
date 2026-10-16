@@ -57,10 +57,12 @@ fn reference_position() -> Option<Vector3> {
 }
 
 fn camera_view() -> Option<(Vector3, Vector3)> {
-    let camera = DclGlobal::singleton()
-        .bind()
+    let global = DclGlobal::singleton();
+    let global = global.bind();
+    // Cloning a freed `Gd` panics, so check the stored handle first.
+    let camera = global
         .player_camera_node
-        .clone()
+        .as_ref()
         .filter(|c| c.is_instance_valid())?;
     let forward = -camera.get_global_transform().basis.col_c().normalized();
     Some((camera.get_global_position(), forward))

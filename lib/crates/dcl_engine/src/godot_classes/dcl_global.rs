@@ -700,6 +700,14 @@ impl DclGlobal {
         root.has_node("Global")
     }
 
+    /// The player's camera, `None` once its world is gone (cloning a freed `Gd` panics).
+    pub fn player_camera(&self) -> Option<Gd<crate::godot_classes::dcl_camera_3d::DclCamera3D>> {
+        self.player_camera_node
+            .as_ref()
+            .filter(|camera| camera.is_instance_valid())
+            .cloned()
+    }
+
     pub fn try_singleton() -> Option<Gd<Self>> {
         let res = Engine::singleton()
             .get_main_loop()?

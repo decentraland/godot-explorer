@@ -99,7 +99,7 @@ impl INode for DclGlobalCameraController {
 }
 
 fn player_camera() -> Option<Gd<DclCamera3D>> {
-    DclGlobal::singleton().bind().player_camera_node.clone()
+    DclGlobal::singleton().bind().player_camera()
 }
 
 fn set_global_camera_mode(mode: CameraMode) {

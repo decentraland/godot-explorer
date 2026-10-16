@@ -343,8 +343,7 @@ impl GpBenchmarkRunner {
         player.look_at(POSE_LOOK_AT);
         let camera_basis = DclGlobal::singleton()
             .bind()
-            .player_camera_node
-            .clone()
+            .player_camera()
             .map(|camera| camera.get_global_transform().basis);
         self.pinned = Some((
             player.get_global_transform(),
@@ -364,7 +363,7 @@ impl GpBenchmarkRunner {
             player.set_global_transform(transform);
             player.set_velocity(Vector3::ZERO);
         }
-        let camera = DclGlobal::singleton().bind().player_camera_node.clone();
+        let camera = DclGlobal::singleton().bind().player_camera();
         if let Some(mut camera) = camera {
             let mut pose = camera.get_global_transform();
             pose.basis = basis;
