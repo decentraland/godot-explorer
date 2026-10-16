@@ -4,7 +4,6 @@
 [ext_resource type="PackedScene" uid="uid://cb6bcbjrusl4p" path="res://src/helpers_components/broadcast_position.tscn" id="4_2dkhu"]
 [ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="4_2vs87"]
 [ext_resource type="PackedScene" uid="uid://pg3ssuep5dm7" path="res://assets/environment/environment_selector.tscn" id="4_f5cdi"]
-[ext_resource type="Script" uid="uid://bhwm0bl5qoiph" path="res://src/ui/layouts/safe_margin_container.gd" id="5_c8ksg"]
 [ext_resource type="PackedScene" uid="uid://b7e8iko6dwv7p" path="res://src/ui/components/organisms/joypad/joypad.tscn" id="7_admxk"]
 [ext_resource type="PackedScene" uid="uid://dmr0fcamx7t56" path="res://src/mobile/joystick/virtual_joystick.tscn" id="9_lxw33"]
 [ext_resource type="PackedScene" uid="uid://mc4jrvowdpxp" path="res://src/ui/components/molecules/pointer_tooltip/pointer_tooltip.tscn" id="11_qjs00"]
@@ -13,7 +12,7 @@
 [ext_resource type="PackedScene" uid="uid://ec0egfeyv5fm" path="res://src/ui/components/organisms/emotes/emote_wheel.tscn" id="21_pows0"]
 [ext_resource type="PackedScene" uid="uid://75a0brb4fw2g" path="res://src/helpers_components/scene_music_changer.tscn" id="26_5hhk2"]
 [ext_resource type="PackedScene" uid="uid://bycjwh7mskrsd" path="res://src/helpers_components/chat_handler.tscn" id="32_cq187"]
-[ext_resource type="Resource" uid="uid://ntu4pnce7xxr" path="res://src/ui/layouts/hud_margins.tres" id="34_hudmg"]
+[ext_resource type="SafeAreaMargins" uid="uid://ntu4pnce7xxr" path="res://src/ui/layouts/hud_margins.tres" id="34_hudmg"]
 
 [node name="explorer" type="Node" unique_id=1276646984]
 script = ExtResource("1_5n8xk")
@@ -51,7 +50,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="SafeAreaControls" type="MarginContainer" parent="UI" unique_id=1539864391]
+[node name="SafeAreaControls" type="SafeMarginContainer" parent="UI" unique_id=1539864391]
 unique_name_in_owner = true
 editor_description = "Safe-area frame for the on-screen controls (joypad + joystick). Sits BEFORE SceneUIContainer so scene UI wins input where it draws. Shares hud_margins.tres — do not merge with SafeAreaHud (opposite side of the input pivot)."
 layout_mode = 1
@@ -61,7 +60,6 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-script = ExtResource("5_c8ksg")
 margin_profile = ExtResource("34_hudmg")
 symmetric_horizontal = true
 
@@ -77,7 +75,7 @@ layout_mode = 1
 
 [node name="VirtualJoystick_Left" parent="UI" unique_id=858042680 instance=ExtResource("9_lxw33")]
 unique_name_in_owner = true
-editor_description = "Virtual joystick to control avatar movement. Direct UI child (full-screen travel). margin_profile (hud_margins.tres) supplies the safe-area insets so the resting position (_joystick_default_position, safe-area-relative) adapts per device without constraining travel. A Resource ref is used (not a node path) so it survives editor re-saves."
+editor_description = "Virtual joystick to control avatar movement. Direct UI child (full-screen travel). margin_profile (hud_margins.tres) supplies the safe-area insets so the resting position (joystick_default_position, safe-area-relative) adapts per device without constraining travel. A Resource ref is used (not a node path) so it survives editor re-saves."
 layout_mode = 1
 deadzone_size = 0.0
 margin_profile = ExtResource("34_hudmg")
@@ -123,7 +121,7 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="SafeAreaHud" type="MarginContainer" parent="UI" unique_id=1210894567]
+[node name="SafeAreaHud" type="SafeMarginContainer" parent="UI" unique_id=1210894567]
 unique_name_in_owner = true
 editor_description = "Safe-area frame for the interactive HUD (navbar, chat, navbar panels, emotes). Sits AFTER SceneUIContainer so it wins input over scene UI. Shares hud_margins.tres. The fullscreen Control_Menu draws opaque over the navbar (nothing hides it in code), so they never visually overlap."
 layout_mode = 1
@@ -133,7 +131,6 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-script = ExtResource("5_c8ksg")
 margin_profile = ExtResource("34_hudmg")
 symmetric_horizontal = true
 

@@ -17,6 +17,7 @@ use godot::classes::{
 use godot::prelude::*;
 
 use super::{body::Player, rig};
+use crate::ui::joystick::VirtualJoystick;
 use crate::{fetcher::globals, godot_classes::dcl_global::DclGlobal};
 
 pub const HORIZONTAL_SENS: f32 = 0.5;
@@ -39,7 +40,7 @@ enum AdoptedMode {
 pub struct MobileCameraInput {
     base: Base<Control>,
     player: Option<Gd<Player>>,
-    joystick: Option<Gd<Control>>,
+    joystick: Option<Gd<VirtualJoystick>>,
 
     /// Single-finger camera look, driven from gui_input (free touches only), so a finger over the
     /// joystick, a button or scene UI never looks.
@@ -269,7 +270,7 @@ impl MobileCameraInput {
         self.player = explorer.get("player").try_to::<Gd<Player>>().ok();
         self.joystick = explorer
             .get("virtual_joystick")
-            .try_to::<Gd<Control>>()
+            .try_to::<Gd<VirtualJoystick>>()
             .ok();
     }
 
@@ -321,11 +322,11 @@ impl MobileCameraInput {
             return;
         }
         if let Some(joystick) = &mut self.joystick {
-            let area: Rect2 = joystick.call("get_active_area_global_rect", &[]).to();
+            let area = joystick.bind().get_active_area_global_rect();
             if area.contains_point(start_position) {
                 self.adopted.insert(index, AdoptedMode::Joystick);
-                joystick.call("external_begin", &[start_position.to_variant()]);
-                joystick.call("external_update", &[current_position.to_variant()]);
+                joystick.bind_mut().external_begin(start_position);
+                joystick.bind_mut().external_update(current_position);
                 return;
             }
         }
@@ -345,7 +346,7 @@ impl MobileCameraInput {
             }
             Some(AdoptedMode::Joystick) => {
                 if let Some(joystick) = &mut self.joystick {
-                    joystick.call("external_update", &[position.to_variant()]);
+                    joystick.bind_mut().external_update(position);
                 }
             }
             None => {}
@@ -378,11 +379,8 @@ impl MobileCameraInput {
             .collect();
         out.sort_unstable();
         if let Some(joystick) = &self.joystick {
-            if !joystick.get("is_pressed").to::<bool>() && !self.look_engaged {
-                let area: Rect2 = joystick
-                    .clone()
-                    .call("get_active_area_global_rect", &[])
-                    .to();
+            if !joystick.bind().is_pressed && !self.look_engaged {
+                let area = joystick.bind().get_active_area_global_rect();
                 let mut inside: Vec<i32> = self
                     .touches
                     .iter()
@@ -433,11 +431,8 @@ impl MobileCameraInput {
         };
         let index = event.get_index();
         if self.js_look_index == -1 {
-            let touch_index = joystick.get("touch_index").to::<i32>();
-            let area: Rect2 = joystick
-                .clone()
-                .call("get_active_area_global_rect", &[])
-                .to();
+            let touch_index = joystick.bind().touch_index;
+            let area = joystick.bind().get_active_area_global_rect();
             if touch_index != -1
                 && index != touch_index
                 && area.contains_point(event.get_position())
@@ -466,7 +461,7 @@ impl MobileCameraInput {
             || !self.free_touches.contains_key(&self.pinch_b)
         {
             if let Some(joystick) = &mut self.joystick {
-                joystick.call("cancel", &[]);
+                joystick.bind_mut().cancel();
             }
         }
         if let Some(player) = &mut self.player {
@@ -522,7 +517,7 @@ impl MobileCameraInput {
     fn end_adopted(&mut self, index: i32) {
         if self.adopted.get(&index) == Some(&AdoptedMode::Joystick) {
             if let Some(joystick) = &mut self.joystick {
-                joystick.call("external_end", &[]);
+                joystick.bind_mut().external_end();
             }
         }
         self.adopted.remove(&index);
