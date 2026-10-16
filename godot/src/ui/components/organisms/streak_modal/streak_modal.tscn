@@ -32,6 +32,8 @@ void fragment() {
 shader = SubResource("Shader_blur")
 shader_parameter/blur_amount = 3.0
 
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_tm3u3"]
+
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_t1wcr"]
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_kgder"]
@@ -41,12 +43,6 @@ font = ExtResource("8_t1wcr")
 font_color = Color(0.27450982, 0.05882353, 0.43529412, 1)
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_da6u2"]
-
-[sub_resource type="LabelSettings" id="LabelSettings_tap_continue"]
-font = ExtResource("10_ro0bi")
-font_size = 32
-font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
-shadow_color = Color(0, 0, 0, 0.49803922)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_t1wcr"]
 content_margin_left = 24.0
@@ -63,6 +59,12 @@ corner_radius_top_left = 12
 corner_radius_top_right = 12
 corner_radius_bottom_right = 12
 corner_radius_bottom_left = 12
+
+[sub_resource type="LabelSettings" id="LabelSettings_tap_continue"]
+font = ExtResource("10_ro0bi")
+font_size = 32
+font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+shadow_color = Color(0, 0, 0, 0.49803922)
 
 [node name="StreakModal" type="ColorRect" unique_id=632254410]
 anchors_preset = 15
@@ -95,6 +97,12 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 alignment = 1
+
+[node name="Separator_TapTop" type="HSeparator" parent="VBoxContainer" unique_id=1739791726]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 100
+theme_override_styles/separator = SubResource("StyleBoxEmpty_tm3u3")
 
 [node name="PanelContainer" type="PanelContainer" parent="VBoxContainer" unique_id=1057280265]
 custom_minimum_size = Vector2(624, 1010)
@@ -371,15 +379,16 @@ texture = ExtResource("5_da6u2")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="HSeparator4" type="HSeparator" parent="VBoxContainer"]
+[node name="MarginContainer_TapBottom" type="MarginContainer" parent="VBoxContainer" unique_id=323515195]
+custom_minimum_size = Vector2(0, 100)
 layout_mode = 2
-theme_override_constants/separation = 28
-theme_override_styles/separator = SubResource("StyleBoxEmpty_da6u2")
+mouse_filter = 2
+theme_override_constants/margin_top = 13
 
-[node name="Label_TapToContinue" type="Label" parent="VBoxContainer"]
+[node name="Label_TapToContinue" type="Label" parent="VBoxContainer/MarginContainer_TapBottom" unique_id=1495672431]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
+size_flags_vertical = 0
 text = "COMMON_TAP_TO_CONTINUE"
 label_settings = SubResource("LabelSettings_tap_continue")
 horizontal_alignment = 1
