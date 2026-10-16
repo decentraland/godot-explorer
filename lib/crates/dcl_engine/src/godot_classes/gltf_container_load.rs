@@ -451,7 +451,7 @@ fn fix_material(mut material: Gd<BaseMaterial3D>) {
 impl DclGltfContainer {
     /// Rust signals that the entity moved enough to need kinematic colliders.
     #[func]
-    fn on_switch_to_kinematic(&mut self) {
+    pub(crate) fn on_switch_to_kinematic(&mut self) {
         self.switch_to_kinematic_mode();
     }
 }

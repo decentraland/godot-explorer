@@ -52,6 +52,8 @@ pub mod world;
 
 struct DecentralandGodotLibrary;
 
+// SAFETY: gdext requires this marker; the library keeps the contract (no engine access before
+// `InitLevel::Scene`, no `Gd` handed to another thread without a deferred call).
 #[gdextension]
 unsafe impl ExtensionLibrary for DecentralandGodotLibrary {}
 

@@ -227,41 +227,23 @@ pub fn update_avatar_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                     // the ending is appended by the explorer.
                     let scene_id = scene.scene_id.0;
                     let entity_id = entity.as_i32();
-                    let emote_finished_callable = Callable::from_fn(
-                        "on_avatar_shape_emote_finished",
-                        move |args: &[&Variant]| {
-                            if args.len() != 3 {
-                                return Variant::nil();
-                            }
-                            let Ok(emote_id) = args[0].try_to::<GString>() else {
-                                return Variant::nil();
-                            };
-                            let Ok(interrupted) = args[1].try_to::<bool>() else {
-                                return Variant::nil();
-                            };
-                            let Ok(mask) = args[2].try_to::<i64>() else {
-                                return Variant::nil();
-                            };
-
+                    new_avatar_shape.signals().emote_finished().connect(
+                        move |emote_id: GString, interrupted, mask| {
                             DclGlobal::singleton()
                                 .bind()
                                 .scene_runner
                                 .clone()
-                                .call_deferred(
-                                    "on_avatar_shape_emote_finished",
-                                    &[
-                                        scene_id.to_variant(),
-                                        entity_id.to_variant(),
-                                        emote_id.to_variant(),
-                                        interrupted.to_variant(),
-                                        mask.to_variant(),
-                                    ],
-                                );
-
-                            Variant::nil()
+                                .run_deferred(move |runner| {
+                                    runner.on_avatar_shape_emote_finished(
+                                        scene_id,
+                                        entity_id,
+                                        emote_id,
+                                        interrupted,
+                                        mask,
+                                    )
+                                });
                         },
                     );
-                    new_avatar_shape.connect("emote_finished", &emote_finished_callable);
 
                     start_avatar_shape_update(
                         new_avatar_shape,

@@ -62,19 +62,21 @@ impl ILineEdit for DclUiInput {
         self.base_mut()
             .add_theme_stylebox_override("read_only", &style_box_empty.clone());
 
-        let callable_on_text_changed = self.base().callable("on_text_changed");
-        let callable_on_text_submitted = self.base().callable("on_text_submitted");
-        self.base_mut()
-            .connect("text_changed", &callable_on_text_changed);
-        self.base_mut()
-            .connect("text_submitted", &callable_on_text_submitted);
-
-        let callable_on_focus_entered = self.base().callable("on_focus_entered");
-        let callable_on_focus_exited = self.base().callable("on_focus_exited");
-        self.base_mut()
-            .connect("focus_entered", &callable_on_focus_entered);
-        self.base_mut()
-            .connect("focus_exited", &callable_on_focus_exited);
+        let this = self.to_gd();
+        let base = self.base().clone();
+        let mut signals = base.signals();
+        signals
+            .text_changed()
+            .connect_other(&this, |this: &mut Self, text| this.on_text_changed(text));
+        signals
+            .text_submitted()
+            .connect_other(&this, |this: &mut Self, text| this.on_text_submitted(text));
+        signals
+            .focus_entered()
+            .connect_other(&this, |this: &mut Self| this.on_focus_entered());
+        signals
+            .focus_exited()
+            .connect_other(&this, |this: &mut Self| this.on_focus_exited());
     }
 
     /// On mobile the scene UI reads raw touch events (see `DclUiControl`), which `LineEdit` does

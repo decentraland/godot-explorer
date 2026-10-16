@@ -39,7 +39,7 @@ pub struct DclUiControl {
 
     ui_result: Option<Rc<RefCell<UiResults>>>,
 
-    is_gui_input_signal_connected: bool,
+    gui_input_connection: Option<godot::signal::ConnectHandle>,
     force_pointer_filter_mode: PointerFilterMode,
 
     listening_mouse_down: bool,
@@ -64,7 +64,7 @@ impl IControl for DclUiControl {
     fn init(base: Base<Control>) -> Self {
         Self {
             base,
-            is_gui_input_signal_connected: false,
+            gui_input_connection: None,
             force_pointer_filter_mode: PointerFilterMode::PfmNone,
             listening_mouse_down: false,
             listening_mouse_up: false,
@@ -258,7 +258,7 @@ impl DclUiControl {
     pub fn update_mouse_filter(&mut self) {
         match self.force_pointer_filter_mode {
             PointerFilterMode::PfmNone => {
-                if self.is_gui_input_signal_connected {
+                if self.gui_input_connection.is_some() {
                     self.base_mut().set_mouse_filter(MouseFilter::STOP);
                 } else {
                     self.base_mut().set_mouse_filter(MouseFilter::IGNORE);
@@ -271,15 +271,17 @@ impl DclUiControl {
     }
 
     fn set_connect_gui_input(&mut self, connect: bool) {
-        if connect != self.is_gui_input_signal_connected {
-            self.is_gui_input_signal_connected = connect;
-
-            let callable_on_gui_input = self.base().callable("_on_gui_input").clone();
+        if connect != self.gui_input_connection.is_some() {
             if connect {
-                self.base_mut().connect("gui_input", &callable_on_gui_input);
-            } else {
-                self.base_mut()
-                    .disconnect("gui_input", &callable_on_gui_input);
+                let this = self.to_gd();
+                let handle = self
+                    .base_mut()
+                    .signals()
+                    .gui_input()
+                    .connect_other(&this, |this: &mut Self, input| this._on_gui_input(input));
+                self.gui_input_connection = Some(handle);
+            } else if let Some(handle) = self.gui_input_connection.take() {
+                handle.disconnect();
             }
             self.update_mouse_filter();
         }

@@ -111,10 +111,10 @@ pub fn update_transform_and_parent(
                         PhysicsServer3D::singleton().body_set_mode(rid, BodyMode::KINEMATIC);
                     }
                     // Switch existing GltfContainer colliders via signal
-                    if let Some(mut gltf_container) =
-                        node_3d.try_get_node_as::<Node>("GltfContainer")
+                    if let Some(gltf_container) =
+                        node_3d.try_get_node_as::<crate::godot_classes::dcl_gltf_container::DclGltfContainer>("GltfContainer")
                     {
-                        gltf_container.emit_signal("switch_to_kinematic", &[]);
+                        gltf_container.signals().switch_to_kinematic().emit();
                     }
                 }
             } else {

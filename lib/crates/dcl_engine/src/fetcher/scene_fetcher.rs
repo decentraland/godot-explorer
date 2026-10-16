@@ -157,16 +157,11 @@ impl INode for SceneFetcher {
         let this = self.to_gd();
         let global = DclGlobal::singleton();
         let realm = globals::realm();
-        realm.clone().connect(
-            "realm_changed",
-            &Callable::from_fn("fetcher_realm_changed", {
-                let mut this = this.clone();
-                move |_| {
-                    this.bind_mut().on_realm_changed();
-                    Variant::nil()
-                }
-            }),
-        );
+        realm
+            .clone()
+            .signals()
+            .realm_changed()
+            .connect_other(&this, |this: &mut Self| this.on_realm_changed());
 
         if self.is_using_floating_islands() {
             let mut walls = FloatingIslandWalls::new_alloc();
@@ -182,81 +177,62 @@ impl INode for SceneFetcher {
             let mut islands = DclFloatingIslandsManager::new_alloc();
             islands.set_name("FloatingIslandsManager");
             self.base_mut().add_child(&islands);
-            islands.connect(
-                "generation_progress",
-                &Callable::from_fn("fetcher_islands_progress", |args| {
-                    let (created, total) = (args[0].to::<i32>(), args[1].to::<i32>());
+            islands
+                .signals()
+                .generation_progress()
+                .connect(|created, total| {
                     globals::scene_runner()
                         .bind_mut()
                         .report_floating_islands_progress(created, total);
-                    Variant::nil()
-                }),
-            );
-            islands.connect(
-                "generation_complete",
-                &Callable::from_fn("fetcher_islands_complete", {
-                    let mut this = this.clone();
-                    move |_| {
-                        on_islands_generation_complete(&mut this);
-                        Variant::nil()
-                    }
-                }),
-            );
+                });
+            let mut fetcher = this.clone();
+            islands
+                .signals()
+                .generation_complete()
+                .connect(move || on_islands_generation_complete(&mut fetcher));
             self.islands_manager = Some(islands);
         }
 
         let radius = self.scene_radius();
         self.coordinator.bind_mut().set_scene_radius(radius);
 
-        let mut scene_runner = globals::scene_runner();
-        scene_runner.connect(
-            "scene_killed",
-            &Callable::from_fn("fetcher_scene_killed", {
-                let mut this = this.clone();
-                move |args| {
-                    this.bind_mut().on_scene_killed(args[0].to::<i32>());
-                    Variant::nil()
-                }
-            }),
-        );
-        scene_runner.connect(
-            "scene_crashed",
-            &Callable::from_fn("fetcher_scene_crashed", |args| {
-                let crashed = args[0].to::<i32>();
+        let scene_runner = globals::scene_runner();
+        scene_runner
+            .signals()
+            .scene_killed()
+            .connect_other(&this, |this: &mut Self, scene_id, _entity_id| {
+                this.on_scene_killed(scene_id)
+            });
+        scene_runner
+            .signals()
+            .scene_crashed()
+            .connect(|crashed, _entity_id| {
                 let current = globals::scene_runner().bind().get_current_parcel_scene_id();
                 if crashed == current {
                     globals::engine().bind().report_scene_crashed();
                 }
-                Variant::nil()
-            }),
-        );
+            });
         // The memory monitor found critical pressure with nothing left to evict but the current
         // scene (issue #2002); Rust emits this once per pressure episode.
-        scene_runner.connect(
-            "low_memory_warning",
-            &Callable::from_fn("fetcher_low_memory", |args| {
+        scene_runner.signals().low_memory_warning().connect(
+            |_scene_id, entity_id, footprint_mb, available_mb| {
                 godot_warn!(
                     "[memory] critical pressure in {}: {} MB footprint, {} MB available",
-                    args[1].to::<GString>(),
-                    args[2].to::<i32>(),
-                    args[3].to::<i32>()
+                    entity_id,
+                    footprint_mb,
+                    available_mb
                 );
                 globals::engine()
                     .bind()
                     .report_notice("low_memory".into(), "".into());
-                Variant::nil()
-            }),
+            },
         );
-        global.clone().connect(
-            "loading_finished",
-            &Callable::from_fn("fetcher_loading_finished", {
-                let mut this = this.clone();
-                move |_| {
-                    on_loading_finished(&mut this);
-                    Variant::nil()
-                }
-            }),
-        );
+        let mut fetcher = this.clone();
+        global
+            .clone()
+            .signals()
+            .loading_finished()
+            .connect(move || on_loading_finished(&mut fetcher));
     }
 
     fn process(&mut self, _delta: f64) {
@@ -299,8 +275,7 @@ impl INode for SceneFetcher {
             self.bypass_loading_check = false;
             if version != self.last_version_updated {
                 self.last_version_updated = version;
-                self.base_mut()
-                    .emit_signal("notify_pending_loading_scenes", &[false.to_variant()]);
+                self.signals().notify_pending_loading_scenes().emit(false);
                 self.start_desired_scenes_changed();
             }
         } else if version != self.last_version_updated {
@@ -310,8 +285,7 @@ impl INode for SceneFetcher {
         } else if version != self.last_version_checked {
             self.last_version_checked = version;
             if self.is_there_any_new_scene_to_load() {
-                self.base_mut()
-                    .emit_signal("notify_pending_loading_scenes", &[true.to_variant()]);
+                self.signals().notify_pending_loading_scenes().emit(true);
             }
         }
     }
@@ -324,13 +298,13 @@ impl INode for SceneFetcher {
 #[godot_api]
 impl SceneFetcher {
     #[signal]
-    fn parcels_processed(parcel_filled: VarArray, empty: VarArray);
+    pub fn parcels_processed(parcel_filled: VarArray, empty: VarArray);
     #[signal]
-    fn report_scene_load(done: bool, is_new_loading: bool, pending: i32);
+    pub fn report_scene_load(done: bool, is_new_loading: bool, pending: i32);
     #[signal]
-    fn notify_pending_loading_scenes(is_pending: bool);
+    pub fn notify_pending_loading_scenes(is_pending: bool);
     #[signal]
-    fn player_parcel_changed(new_position: Vector2i);
+    pub fn player_parcel_changed(new_position: Vector2i);
 
     #[func]
     pub fn get_coordinator(&self) -> Gd<SceneEntityCoordinator> {
@@ -506,8 +480,7 @@ impl SceneFetcher {
         if let Some(islands) = &mut self.islands_manager {
             islands.bind_mut().set_player_parcel(new_position);
         }
-        self.base_mut()
-            .emit_signal("player_parcel_changed", &[new_position.to_variant()]);
+        self.signals().player_parcel_changed().emit(new_position);
     }
 
     /// Lays the islands out around `parcels` as if scenes held them, for the island benchmark.
@@ -624,23 +597,17 @@ impl SceneFetcher {
 
         // Preview: purge the first scene's cache so stale content is never used before the
         // socket's SCENE_UPDATE can trigger a reload.
-        let preview_deep_link = global
-            .get("deep_link_obj")
-            .try_to::<Gd<Object>>()
-            .ok()
-            .map(|link| link.get("preview").to::<GString>().is_empty())
-            == Some(false);
+        let preview_deep_link = !global.bind().deep_link_obj.bind().preview.is_empty();
         if globals::cli().bind().preview_mode || preview_deep_link {
             self.purge_cache_on_first_load = true;
         }
 
         // `&dynamic-scene-loading=true` works for any realm, Genesis City included.
         let deep_link_dynamic = global
-            .get("deep_link_obj")
-            .try_to::<Gd<Object>>()
-            .ok()
-            .map(|link| link.get("dynamic_scene_loading").to::<bool>())
-            .unwrap_or(false);
+            .bind()
+            .deep_link_obj
+            .bind()
+            .get_dynamic_scene_loading();
         self.set_dynamic_loading_mode(deep_link_dynamic && self.is_using_floating_islands());
 
         // A fresh realm lays its islands out again.
@@ -1235,14 +1202,10 @@ async fn async_on_desired_scene_changed(mut this: Gd<SceneFetcher>) {
         loading_session_started = true;
     }
 
-    this.bind_mut().base_mut().emit_signal(
-        "report_scene_load",
-        &[
-            false.to_variant(),
-            new_loading.to_variant(),
-            (loadable.len() as i32).to_variant(),
-        ],
-    );
+    this.bind_mut()
+        .signals()
+        .report_scene_load()
+        .emit(false, new_loading, loadable.len() as i32);
 
     futures_util::future::join_all(
         to_load
@@ -1365,7 +1328,7 @@ async fn async_on_desired_scene_changed(mut this: Gd<SceneFetcher>) {
             && !runner.bind().has_active_loading_session()
             && (coordinator_was_busy || !is_reloading_now)
         {
-            runner.emit_signal("loading_complete", &[(-1_i64).to_variant()]);
+            runner.signals().loading_complete().emit(-1_i64);
         }
     }
 
@@ -1387,18 +1350,14 @@ async fn async_on_desired_scene_changed(mut this: Gd<SceneFetcher>) {
     let to_array =
         |parcels: Vec<Vector2i>| -> VarArray { parcels.iter().map(|p| p.to_variant()).collect() };
     let mut fetcher = this.bind_mut();
-    fetcher.base_mut().emit_signal(
-        "report_scene_load",
-        &[
-            true.to_variant(),
-            false.to_variant(),
-            (loadable.len() as i32).to_variant(),
-        ],
-    );
-    fetcher.base_mut().emit_signal(
-        "parcels_processed",
-        &[to_array(filled).to_variant(), to_array(empty).to_variant()],
-    );
+    fetcher
+        .signals()
+        .report_scene_load()
+        .emit(true, false, loadable.len() as i32);
+    fetcher
+        .signals()
+        .parcels_processed()
+        .emit(&to_array(filled), &to_array(empty));
 }
 
 /// Fetches a scene's code, crdt and optimized-assets manifest, then spawns it.
@@ -1758,16 +1717,12 @@ impl SceneFetcher {
     fn inspect_scene_title(&self) -> String {
         let global = DclGlobal::singleton();
         let from_link = global
-            .get("deep_link_obj")
-            .try_to::<Gd<Object>>()
-            .ok()
-            .and_then(|link| {
-                link.get("params")
-                    .try_to::<VarDictionary>()
-                    .ok()?
-                    .get("inspect-scene-title")
-                    .map(|v| v.to::<GString>().to_string())
-            })
+            .bind()
+            .deep_link_obj
+            .bind()
+            .params
+            .get("inspect-scene-title")
+            .map(|v| v.to::<GString>().to_string())
             .unwrap_or_default();
         if from_link.is_empty() {
             globals::cli().bind().inspect_scene_title.to_string()

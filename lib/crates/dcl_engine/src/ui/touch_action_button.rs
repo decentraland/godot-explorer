@@ -85,18 +85,16 @@ impl TouchActionButton {
                 self.base_mut().set_pressed_no_signal(true);
                 Input::singleton().action_press(&action);
                 DclGlobal::notify_joypad_input();
-                self.base_mut().emit_signal("button_down", &[]);
-                self.base_mut()
-                    .emit_signal("touch_action_changed", &[true.to_variant()]);
+                self.signals().button_down().emit();
+                self.signals().touch_action_changed().emit(true);
             }
             self.base_mut().accept_event();
         } else if touch.get_index() == self.touch_index {
             if self.action_active {
                 Input::singleton().action_release(&action);
                 self.action_active = false;
-                self.base_mut().emit_signal("button_up", &[]);
-                self.base_mut()
-                    .emit_signal("touch_action_changed", &[false.to_variant()]);
+                self.signals().button_up().emit();
+                self.signals().touch_action_changed().emit(false);
             }
             self.base_mut().set_pressed_no_signal(false);
             self.touch_index = NO_TOUCH;

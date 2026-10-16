@@ -28,17 +28,11 @@ impl IArea3D for StuckDetector {
         self.base_mut().set_monitoring(true);
         self.base_mut().set_monitorable(false);
         let this = self.to_gd();
-        self.base_mut().connect(
-            "body_exited",
-            &Callable::from_fn("stuck_detector_body_exited", {
-                let mut this = this.clone();
-                move |args| {
-                    if let Ok(body) = args[0].try_to::<Gd<Node3D>>() {
-                        this.bind_mut().on_body_exited(body.instance_id());
-                    }
-                    Variant::nil()
-                }
-            }),
+        self.base_mut().signals().body_exited().connect_other(
+            &this,
+            |this: &mut Self, body: Gd<Node3D>| {
+                this.on_body_exited(body.instance_id());
+            },
         );
     }
 
@@ -129,16 +123,10 @@ impl StuckDetector {
         // Disable the CL_PHYSICS bit (layer 2, bit index 1).
         collider.set_collision_layer(layer & !CL_PHYSICS);
         let this = self.to_gd();
-        collider.connect(
-            "tree_exiting",
-            &Callable::from_fn("stuck_detector_collider_removed", {
-                let mut this = this.clone();
-                move |_| {
-                    this.bind_mut().forget(id);
-                    Variant::nil()
-                }
-            }),
-        );
+        collider
+            .signals()
+            .tree_exiting()
+            .connect_other(&this, move |this: &mut Self| this.forget(id));
     }
 
     fn enable(&mut self, id: InstanceId) {

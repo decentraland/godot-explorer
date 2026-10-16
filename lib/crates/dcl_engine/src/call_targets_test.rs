@@ -9,24 +9,9 @@ use std::path::{Path, PathBuf};
 
 use regex::Regex;
 
-/// Names that belong to the engine, the forked engine, or the native plugins (JNI / Swift
-/// singletons), which this crate cannot see.
+/// Names that belong to the engine fork or the native plugins (JNI / Swift singletons), which
+/// this crate cannot see. Engine builtins are called typed, never by name.
 const EXTERNAL: &[&str] = &[
-    // Godot builtins
-    "add_child",
-    "emit_signal",
-    "format",
-    "get_meta",
-    "get_ref",
-    "has_meta",
-    "hide",
-    "load",
-    "remove_child",
-    "set_pressed",
-    "set_surface_override_material",
-    "set_texture",
-    "stop",
-    "start",
     // the engine fork's rich text
     "set_bbcode_enabled",
     "set_horizontal_alignment",
@@ -51,7 +36,10 @@ const EXTERNAL: &[&str] = &[
     "SetVolume",
     "Stop",
     "add_calendar_event",
+    "can_make_payments",
+    "current_environment",
     "debugBlockUiThread",
+    "finish_transaction",
     "getDeviceAnchorId",
     "get_apns_token",
     "get_deeplink_url",
@@ -59,14 +47,28 @@ const EXTERNAL: &[&str] = &[
     "get_mobile_device_info",
     "get_mobile_metrics",
     "has_notification_permission",
+    "load_products",
     "open_auth_url",
     "open_safari_auth_url",
     "open_webview_url",
     "ping",
+    "purchase",
+    "resolve_environment",
     "share_text",
     "share_text_with_image",
+    "start_listening",
     "test_logging",
     "version",
+];
+
+/// Signals of the native plugins, connected by name.
+const EXTERNAL_SIGNALS: &[&str] = &[
+    "apns_token_ready",
+    "deeplink_received",
+    "fcm_token_ready",
+    "fcm_token_refreshed",
+    "firebase_app_instance_id_ready",
+    "memory_trim",
 ];
 
 fn sources(dir: &Path, out: &mut Vec<PathBuf>) {
@@ -134,6 +136,24 @@ fn call_targets_exist_on_instances() {
                         path.display()
                     ));
                 }
+            }
+        }
+    }
+    // Signals are typed (`signals().name()`): a string-named emit never, a string-named connect
+    // only to a plugin's signal.
+    let emit = Regex::new(r#"emit_signal\(\s*""#).unwrap();
+    let connect = Regex::new(r#"\.(?:connect|connect_flags|has_signal)\(\s*"(\w+)""#).unwrap();
+    for (path, text) in &texts {
+        if emit.is_match(text) {
+            problems.insert(format!("emit_signal by name ({})", path.display()));
+        }
+        for caps in connect.captures_iter(text) {
+            let name = &caps[1];
+            if !EXTERNAL_SIGNALS.contains(&name) {
+                problems.insert(format!(
+                    "{name}: a signal connected by name ({})",
+                    path.display()
+                ));
             }
         }
     }

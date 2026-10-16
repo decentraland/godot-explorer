@@ -52,30 +52,19 @@ pub struct DclPortableExperienceController {
 #[godot_api]
 impl INode for DclPortableExperienceController {
     fn ready(&mut self) {
-        let mut runner = crate::fetcher::globals::scene_runner();
+        let runner = crate::fetcher::globals::scene_runner();
         let this = self.to_gd();
-        runner.connect(
-            "scene_killed",
-            &Callable::from_fn("portables_scene_killed", {
-                let mut this = this.clone();
-                move |args| {
-                    this.bind_mut().on_scene_killed(args[0].to::<i32>());
-                    Variant::nil()
-                }
-            }),
-        );
-        runner.connect(
-            "scene_spawned",
-            &Callable::from_fn("portables_scene_spawned", {
-                let mut this = this.clone();
-                move |args| {
-                    this.bind_mut().on_scene_spawned(
-                        args[0].to::<i32>(),
-                        &args[1].to::<GString>().to_string(),
-                    );
-                    Variant::nil()
-                }
-            }),
+        runner
+            .signals()
+            .scene_killed()
+            .connect_other(&this, |this: &mut Self, scene_id, _entity_id| {
+                this.on_scene_killed(scene_id)
+            });
+        runner.signals().scene_spawned().connect_other(
+            &this,
+            |this: &mut Self, scene_id, entity_id: GString| {
+                this.on_scene_spawned(scene_id, &entity_id.to_string())
+            },
         );
     }
 

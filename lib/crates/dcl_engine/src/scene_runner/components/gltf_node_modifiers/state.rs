@@ -15,7 +15,7 @@ use crate::dcl::components::{
 /// Tracks a material applied by GltfNodeModifiers that's waiting for textures
 pub struct ModifierMaterialItem {
     pub dcl_material: DclMaterial,
-    pub weak_ref: Variant,
+    pub weak_ref: Gd<godot::classes::WeakRef>,
     pub waiting_textures: bool,
 }
 

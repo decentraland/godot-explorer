@@ -42,9 +42,14 @@ impl IArea3D for DclCameraModeArea3D {
         }
         self.my_scene_id = scene.bind().get_scene_id();
 
-        self.base_mut().call_deferred("deferred_start", &[]);
-        let on_change = self.base().callable("on_change_scene_id");
-        globals::scene_runner().connect("on_change_scene_id", &on_change);
+        self.run_deferred(|this| this.deferred_start());
+        let this = self.to_gd();
+        globals::scene_runner()
+            .signals()
+            .on_change_scene_id()
+            .connect_other(&this, |this: &mut Self, scene_id| {
+                this.on_change_scene_id(scene_id)
+            });
     }
 }
 

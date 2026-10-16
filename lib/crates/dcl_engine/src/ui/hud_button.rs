@@ -93,7 +93,7 @@ impl IButton for HudButton {
             .button_up()
             .connect_other(&me, |this: &mut Self| {
                 this.pressing = false;
-                this.base_mut().call_deferred("refresh", &[]);
+                this.run_deferred(|this| this.refresh());
             });
         self.base()
             .signals()

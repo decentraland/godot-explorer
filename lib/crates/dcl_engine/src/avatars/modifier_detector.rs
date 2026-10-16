@@ -17,11 +17,13 @@ pub struct AvatarModifierAreaDetector {
 impl IArea3D for AvatarModifierAreaDetector {
     fn ready(&mut self) {
         let this = self.to_gd();
-        let mut base = self.base().clone();
-        let on_enter = this.callable("on_area_entered");
-        let on_exit = this.callable("on_area_exited");
-        base.connect("area_entered", &on_enter);
-        base.connect("area_exited", &on_exit);
+        let base = self.base().clone();
+        base.signals()
+            .area_entered()
+            .connect_other(&this, |this: &mut Self, area| this.on_area_entered(area));
+        base.signals()
+            .area_exited()
+            .connect_other(&this, |this: &mut Self, area| this.on_area_exited(area));
         // Arbitrary order.
         for area in self.base().get_overlapping_areas().iter_shared() {
             self.track(area);

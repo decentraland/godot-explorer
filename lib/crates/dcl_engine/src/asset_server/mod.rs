@@ -6,7 +6,7 @@
 //! Run via: `cargo run -- run --asset-server`
 
 mod bundle_writer;
-mod godot_wrapper;
+pub mod godot_wrapper;
 mod handlers;
 mod job_manager;
 mod packer;

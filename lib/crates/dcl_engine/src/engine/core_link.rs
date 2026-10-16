@@ -202,8 +202,7 @@ impl DclEngine {
                 _ => {}
             }
             if let Some((kind, args)) = signal_payload(&command) {
-                self.base_mut()
-                    .emit_signal("core_command", &[kind.to_variant(), args.to_variant()]);
+                self.signals().core_command().emit(kind, &args);
             }
         }
     }

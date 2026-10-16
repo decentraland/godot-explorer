@@ -94,20 +94,13 @@ fn collect_colliders(node: &Gd<Node>, out: &mut Vec<Gd<Node>>) {
     }
 }
 
-/// Connects `owner` to its scene's tree changes, so the filter follows the entity's colliders.
-pub fn watch_scene(owner: &Gd<Node>, parent: &Gd<Node>, method: &str) {
-    if let Some(scene) = parent
+/// The scene node `parent` belongs to, whose tree changes the filter follows.
+pub fn scene_of(parent: &Gd<Node>) -> Option<Gd<DclSceneNode>> {
+    parent
         .clone()
         .try_cast::<Node3D>()
         .ok()
         .and_then(|p| DclSceneNode::search(&p))
-    {
-        let on_changed = owner.callable(method);
-        scene
-            .clone()
-            .upcast::<Object>()
-            .connect("tree_changed", &on_changed);
-    }
 }
 
 /// The filter as a node of the player and camera entities.
@@ -135,7 +128,12 @@ impl PlayerColliderFilter {
             return;
         };
         let owner = self.base().clone();
-        watch_scene(&owner, &parent, "on_tree_changed");
+        if let Some(scene) = scene_of(&parent) {
+            scene
+                .signals()
+                .tree_changed()
+                .connect_other(&self.to_gd(), |this: &mut Self| this.on_tree_changed());
+        }
         self.filter.rescan(&parent, &owner);
     }
 

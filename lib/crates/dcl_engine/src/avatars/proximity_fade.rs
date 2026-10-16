@@ -34,14 +34,21 @@ impl INode for AvatarProximityFade {
     fn ready(&mut self) {
         self.collect_meshes();
         // Wearables and body shapes load dynamically: collect again on changes.
-        if let Some(mut avatar) = self.base().get_parent() {
-            if avatar.has_signal("avatar_loaded") {
-                avatar.connect("avatar_loaded", &self.base().callable("recollect_deferred"));
+        if let Some(avatar) = self.base().get_parent() {
+            let this = self.to_gd();
+            if let Ok(avatar) = avatar
+                .clone()
+                .try_cast::<crate::godot_classes::dcl_avatar::DclAvatar>()
+            {
+                avatar
+                    .signals()
+                    .avatar_loaded()
+                    .connect_other(&this, |this: &mut Self| this.recollect_deferred());
             }
-            avatar.connect(
-                "child_entered_tree",
-                &self.base().callable("recollect_on_child"),
-            );
+            avatar
+                .signals()
+                .child_entered_tree()
+                .connect_other(&this, |this: &mut Self, _child| this.recollect_deferred());
         }
     }
 
@@ -89,12 +96,12 @@ impl INode for AvatarProximityFade {
 impl AvatarProximityFade {
     #[func]
     fn recollect_deferred(&mut self) {
-        self.base_mut().call_deferred("collect_meshes", &[]);
+        self.run_deferred(|this| this.collect_meshes());
     }
 
     #[func]
     fn recollect_on_child(&mut self, _child: Gd<Node>) {
-        self.base_mut().call_deferred("collect_meshes", &[]);
+        self.run_deferred(|this| this.collect_meshes());
     }
 
     #[func]

@@ -472,7 +472,7 @@ async fn load_wearables(avatar: Gd<DclAvatar>) {
         )
     };
     // No bind is held here: listeners read the avatar back.
-    avatar.clone().emit_signal("avatar_loaded", &[]);
+    avatar.clone().signals().avatar_loaded().emit();
 
     if let Some(id) = pending_trigger {
         async_play_expression_trigger(avatar.clone(), id).await;

@@ -104,9 +104,12 @@ impl DclAvatar {
         self.base_mut().add_child(&fade);
 
         self.setup_emotes();
-        let on_skeleton = self.base().callable("on_skeleton_updated");
-        let mut skeleton_node = skeleton;
-        skeleton_node.connect("skeleton_updated", &on_skeleton);
+        let this = self.to_gd();
+        let skeleton_node = skeleton;
+        skeleton_node
+            .signals()
+            .skeleton_updated()
+            .connect_other(&this, |this: &mut Self| this.on_skeleton_updated());
         self.recompute_nametag_clearance();
         self.recompute_nametag_posed_top();
 
@@ -121,9 +124,14 @@ impl DclAvatar {
         if let Some(nodes) = self.nodes.as_mut() {
             nodes.nickname_ui.bind_mut().set_mic_enabled(false);
         }
-        let mut global = DclGlobal::singleton();
-        let on_chat = self.base().callable("on_global_chat_message");
-        global.connect("on_chat_message", &on_chat);
+        let global = DclGlobal::singleton();
+        let this = self.to_gd();
+        global.signals().on_chat_message().connect_other(
+            &this,
+            |this: &mut Self, address: GString, message: GString, timestamp| {
+                this.on_global_chat_message(address, message, timestamp)
+            },
+        );
         self.nameplate_attach();
         self.apply_nickname_visibility();
 
@@ -318,11 +326,9 @@ impl DclAvatar {
         if Input::singleton().get_mouse_mode() != MouseMode::CAPTURED {
             return;
         }
-        let avatar = self.to_gd().to_variant();
-        DclGlobal::singleton().call_deferred(
-            "emit_signal",
-            &["open_profile_by_avatar".to_variant(), avatar],
-        );
+        let avatar = self.to_gd();
+        DclGlobal::singleton()
+            .run_deferred(move |this| this.signals().open_profile_by_avatar().emit(&avatar));
     }
 
     /// Re-evaluates the modifier areas the avatar stands in.

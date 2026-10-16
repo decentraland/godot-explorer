@@ -324,10 +324,7 @@ impl DclEngine {
             0
         };
         let height = self.keyboard_height;
-        self.base_mut().emit_signal(
-            "text_input_focus",
-            &[focused.to_variant(), height.to_variant()],
-        );
+        self.signals().text_input_focus().emit(focused, height);
         self.keep_focused_input_above_keyboard();
     }
 
@@ -343,10 +340,7 @@ impl DclEngine {
         let height = Self::keyboard_height_now();
         if height != self.keyboard_height {
             self.keyboard_height = height;
-            self.base_mut().emit_signal(
-                "text_input_focus",
-                &[true.to_variant(), height.to_variant()],
-            );
+            self.signals().text_input_focus().emit(true, height);
             self.keep_focused_input_above_keyboard();
         }
     }

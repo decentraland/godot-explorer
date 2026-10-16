@@ -376,12 +376,7 @@ fn warm_boot_bundle(scene_id: &str) {
         return;
     }
     let global = DclGlobal::singleton();
-    let preview_link = global
-        .get("deep_link_obj")
-        .try_to::<Gd<Object>>()
-        .ok()
-        .map(|link| !link.get("preview").to::<GString>().is_empty())
-        .unwrap_or(false);
+    let preview_link = !global.bind().deep_link_obj.bind().preview.is_empty();
     let cli = globals::cli();
     let cli = cli.bind();
     if cli.preview_mode || preview_link || global.bind().testing_scene_mode || cli.only_no_optimized
@@ -409,11 +404,11 @@ pub async fn precheck_realm_access(realm_string: &str) -> bool {
     if world_access::is_allowed(&world, &signed_in_address()).await {
         return true;
     }
-    let mut realm_node = globals::realm();
-    realm_node.emit_signal(
-        "realm_access_denied",
-        &[realm_string.to_variant(), world.to_variant()],
-    );
+    let realm_node = globals::realm();
+    realm_node
+        .signals()
+        .realm_access_denied()
+        .emit(realm_string, &world);
     false
 }
 

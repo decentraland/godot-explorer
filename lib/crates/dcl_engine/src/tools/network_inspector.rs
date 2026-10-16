@@ -92,7 +92,7 @@ impl NetworkInspector {
     }
 
     #[signal]
-    fn request_changed(id: u32);
+    pub fn request_changed(id: u32);
 
     #[func]
     fn get_request_count(&self) -> u32 {
@@ -240,10 +240,7 @@ impl INode for NetworkInspector {
         }
 
         for id in request_changed {
-            self.base_mut().call_deferred(
-                "emit_signal",
-                &["request_changed".to_variant(), id.to_variant()],
-            );
+            self.run_deferred(move |this| this.signals().request_changed().emit(id));
         }
     }
 }

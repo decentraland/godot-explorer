@@ -125,8 +125,11 @@ pub struct Joypad {
 impl IControl for Joypad {
     fn ready(&mut self) {
         // The scene keeps a centered disc to align the buttons against while editing.
-        if let Some(mut guide) = self.base().get_node_or_null("%TextureRect_ToAlign") {
-            guide.set("visible", &false.to_variant());
+        if let Some(mut guide) = self
+            .base()
+            .try_get_node_as::<Control>("%TextureRect_ToAlign")
+        {
+            guide.set_visible(false);
         }
         let me = self.to_gd();
         for button in self.combo_buttons() {
@@ -205,7 +208,8 @@ impl Joypad {
                 let pressed = self.button_combo.is_pressed();
                 // Deferred: `toggled` would re-enter this joypad while it is bound.
                 self.button_combo
-                    .call_deferred("set_pressed", &[(!pressed).to_variant()]);
+                    .clone()
+                    .run_deferred_gd(move |mut button| button.set_pressed(!pressed));
                 self.button_combo.accept_event();
             }
         }
@@ -227,7 +231,8 @@ impl Joypad {
             // orb, which reads the pressed state.
             self.button_combo.set_pressed_no_signal(false);
             self.button_combo
-                .call_deferred("emit_signal", &["toggled".to_variant(), false.to_variant()]);
+                .clone()
+                .run_deferred_gd(|button| button.signals().toggled().emit(false));
         }
     }
 

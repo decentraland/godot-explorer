@@ -15,6 +15,7 @@ use godot::classes::{
 };
 use godot::global::MouseButton;
 use godot::prelude::*;
+use godot::signal::ConnectHandle;
 
 use self::fit::{
     aabb_endpoint, fit_camera, fit_limits, fit_to_overall, focus_extra_margin, focus_for_category,
@@ -113,7 +114,9 @@ pub struct AvatarPreview {
     pinch_start_camera_size: f32,
     pinch_start_midpoint: Vector2,
     pinch_start_center_y: f32,
-    snap_top_connected: bool,
+    snap_top_connection: Option<ConnectHandle>,
+    top_margin_connection: Option<ConnectHandle>,
+    bottom_margin_connection: Option<ConnectHandle>,
     last_snapped_parent_y: Option<f32>,
     baseline_offset_top: f32,
     aabb_debug_nodes: Vec<Gd<MeshInstance3D>>,
@@ -172,7 +175,9 @@ impl ISubViewportContainer for AvatarPreview {
             pinch_start_camera_size: 0.0,
             pinch_start_midpoint: Vector2::ZERO,
             pinch_start_center_y: 0.0,
-            snap_top_connected: false,
+            snap_top_connection: None,
+            top_margin_connection: None,
+            bottom_margin_connection: None,
             last_snapped_parent_y: None,
             baseline_offset_top: 0.0,
             aabb_debug_nodes: Vec::new(),
@@ -253,21 +258,19 @@ impl ISubViewportContainer for AvatarPreview {
             .map(|a| a.get_rotation().y)
             .unwrap_or_default();
 
-        let on_loaded = self.base().callable("on_avatar_loaded");
-        let on_resized = self.base().callable("on_resized");
+        let this = self.to_gd();
         if let Some(avatar) = self.avatar.as_mut() {
-            avatar.connect("avatar_loaded", &on_loaded);
+            avatar
+                .signals()
+                .avatar_loaded()
+                .connect_other(&this, |this: &mut Self| this.on_avatar_loaded());
         }
-        self.base_mut().connect("resized", &on_resized);
-        for node in [
-            self.top_node_margin.clone(),
-            self.bottom_node_margin.clone(),
-        ]
-        .into_iter()
-        .flatten()
-        {
-            node.clone().connect("resized", &on_resized);
-        }
+        self.base_mut()
+            .signals()
+            .resized()
+            .connect_other(&this, |this: &mut Self| this.on_resized());
+        self.top_margin_connection = self.watch_margin(self.top_node_margin.clone());
+        self.bottom_margin_connection = self.watch_margin(self.bottom_node_margin.clone());
 
         // Remembered so it can be restored if the flag flips back at runtime.
         self.baseline_offset_top = self.base().get_offset(Side::TOP);
@@ -633,18 +636,31 @@ impl AvatarPreview {
         }
     }
 
+    /// Refits when `node` (a margin control) resizes; `None` when there is no node.
+    fn watch_margin(&mut self, node: Option<Gd<Control>>) -> Option<ConnectHandle> {
+        let this = self.to_gd();
+        node.map(|node| {
+            node.signals()
+                .resized()
+                .connect_other(&this, |this: &mut Self| this.on_resized())
+        })
+    }
+
     fn refresh_snap_top_state(&mut self) {
-        let on_rect = self.base().callable("apply_snap_top_to_viewport");
         if self.snap_top_to_viewport {
-            if !self.snap_top_connected {
-                self.base_mut().connect("item_rect_changed", &on_rect);
-                self.snap_top_connected = true;
+            if self.snap_top_connection.is_none() {
+                let this = self.to_gd();
+                let handle = self
+                    .base_mut()
+                    .signals()
+                    .item_rect_changed()
+                    .connect_other(&this, |this: &mut Self| this.apply_snap_top_to_viewport());
+                self.snap_top_connection = Some(handle);
             }
             self.apply_snap_top_to_viewport();
         } else {
-            if self.snap_top_connected {
-                self.base_mut().disconnect("item_rect_changed", &on_rect);
-                self.snap_top_connected = false;
+            if let Some(handle) = self.snap_top_connection.take() {
+                handle.disconnect();
             }
             self.last_snapped_parent_y = None;
             let baseline = self.baseline_offset_top;
@@ -988,41 +1004,31 @@ impl AvatarPreview {
 
     #[func]
     pub fn set_top_margin_node(&mut self, node: Option<Gd<Control>>) {
-        let on_resized = self.base().callable("on_resized");
         let changed = self.top_node_margin.as_ref().map(|n| n.instance_id())
             != node.as_ref().map(|n| n.instance_id());
         if !changed {
             return;
         }
-        if let Some(old) = self.top_node_margin.as_mut() {
-            if old.is_connected("resized", &on_resized) {
-                old.disconnect("resized", &on_resized);
-            }
+        if let Some(handle) = self.top_margin_connection.take() {
+            handle.disconnect();
         }
-        self.top_node_margin = node;
-        if let Some(new) = self.top_node_margin.as_mut() {
-            new.connect("resized", &on_resized);
-        }
+        self.top_node_margin = node.clone();
+        self.top_margin_connection = self.watch_margin(node);
         self.refit_after_margin_change();
     }
 
     #[func]
     pub fn set_bottom_margin_node(&mut self, node: Option<Gd<Control>>) {
-        let on_resized = self.base().callable("on_resized");
         let changed = self.bottom_node_margin.as_ref().map(|n| n.instance_id())
             != node.as_ref().map(|n| n.instance_id());
         if !changed {
             return;
         }
-        if let Some(old) = self.bottom_node_margin.as_mut() {
-            if old.is_connected("resized", &on_resized) {
-                old.disconnect("resized", &on_resized);
-            }
+        if let Some(handle) = self.bottom_margin_connection.take() {
+            handle.disconnect();
         }
-        self.bottom_node_margin = node;
-        if let Some(new) = self.bottom_node_margin.as_mut() {
-            new.connect("resized", &on_resized);
-        }
+        self.bottom_node_margin = node.clone();
+        self.bottom_margin_connection = self.watch_margin(node);
         self.refit_after_margin_change();
     }
 

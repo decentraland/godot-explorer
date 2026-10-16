@@ -82,7 +82,7 @@ fn set_orientation(portrait: bool) {
     } else {
         resize_window(portrait);
     }
-    global().emit_signal("orientation_changed", &[portrait.to_variant()]);
+    global().signals().orientation_changed().emit(portrait);
 }
 
 /// The RN host owns the device orientation: mirror the window's shape into the layout state, and
@@ -92,15 +92,22 @@ pub fn follow_host_orientation() {
         return;
     };
     let mut me = global();
-    if !window.is_connected(
-        "size_changed",
-        &Callable::from_object_method(&me, "follow_host_orientation"),
-    ) {
-        window.clone().connect(
-            "size_changed",
-            &Callable::from_object_method(&me, "follow_host_orientation"),
-        );
+    thread_local! {
+        static RESIZE_WATCH: std::cell::RefCell<Option<godot::signal::ConnectHandle>> =
+            const { std::cell::RefCell::new(None) };
     }
+    RESIZE_WATCH.with(|watch| {
+        let mut watch = watch.borrow_mut();
+        if watch.is_none() {
+            *watch = Some(
+                window
+                    .clone()
+                    .signals()
+                    .size_changed()
+                    .connect(follow_host_orientation),
+            );
+        }
+    });
     let portrait = window_is_portrait(window.get_size());
     let changed = {
         let mut g = me.bind_mut();
@@ -109,8 +116,7 @@ pub fn follow_host_orientation() {
         changed
     };
     if changed {
-        me.clone()
-            .emit_signal("orientation_changed", &[portrait.to_variant()]);
+        me.clone().signals().orientation_changed().emit(portrait);
     }
 }
 
@@ -125,7 +131,7 @@ impl DclGlobal {
     #[func]
     pub fn set_camera_mode(camera_mode: i32) {
         global().bind_mut().current_camera_mode = camera_mode;
-        global().emit_signal("camera_mode_set", &[camera_mode.to_variant()]);
+        global().signals().camera_mode_set().emit(camera_mode);
     }
 
     // Orientation and the device safe area.

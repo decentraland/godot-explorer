@@ -2,7 +2,7 @@
 //! Firebase `login_success` on a wallet connection, the guest wallet creation outcome, and the
 //! one-shot Firebase `first_move_in_world` after the player's first real movement.
 
-use godot::classes::{Node, RefCounted, Timer};
+use godot::classes::{RefCounted, Timer};
 use godot::prelude::*;
 
 use crate::fetcher::globals;
@@ -39,7 +39,7 @@ impl AnalyticsController {
         // A returning user accepted the EULA on a prior run: open the consent gate at startup so
         // queued events ship. The Segment to Firebase link is Metrics' own business.
         if engine.bind().is_eula_accepted() {
-            globals::metrics().call_deferred("set_eula_accepted", &[true.to_variant()]);
+            globals::metrics().run_deferred(|metrics| metrics.set_eula_accepted(true));
         }
         let identity = DclGlobal::singleton().bind().player_identity.clone();
         identity
@@ -126,9 +126,8 @@ impl AnalyticsController {
             .signals()
             .timeout()
             .connect_other(&self.to_gd(), |this: &mut Self| this.on_poll_tick());
-        DclGlobal::singleton()
-            .upcast::<Node>()
-            .call_deferred("add_child", &[timer.to_variant()]);
+        let attached = timer.clone();
+        DclGlobal::singleton().run_deferred_gd(move |mut global| global.add_child(&attached));
         self.poll_timer = Some(timer);
     }
 

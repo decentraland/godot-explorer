@@ -258,7 +258,7 @@ pub fn connect_global_signal(root: &Gd<Window>) {
     let handle = root.clone();
     host::connect_fn("orientation_changed", move |_| {
         let mut handle = handle.clone();
-        handle.call_deferred("emit_signal", &["size_changed".to_variant()]);
+        handle.run_deferred_gd(|window| window.signals().size_changed().emit());
     });
 }
 

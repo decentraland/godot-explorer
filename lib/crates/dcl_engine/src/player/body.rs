@@ -345,19 +345,15 @@ impl ICharacterBody3D for Player {
             let input = PlayerDesktopInput::create(this.clone());
             self.base_mut().add_child(&input);
         }
-        let mut global_node = global.clone();
-        global_node.connect(
-            "camera_mode_set",
-            &Callable::from_fn("player_camera_mode_set", {
-                let mut this = this.clone();
-                move |args| {
-                    let mode = CameraMode::from_i32(args[0].to::<i32>());
-                    if mode != CameraMode::Cinematic {
-                        this.bind_mut().set_camera_mode_with_sound(mode, true);
-                    }
-                    Variant::nil()
+        let global_node = global.clone();
+        global_node.signals().camera_mode_set().connect_other(
+            &this,
+            |this: &mut Self, mode: i32| {
+                let mode = CameraMode::from_i32(mode);
+                if mode != CameraMode::Cinematic {
+                    this.set_camera_mode_with_sound(mode, true);
                 }
-            }),
+            },
         );
 
         // The outline system follows the main camera.
@@ -379,18 +375,12 @@ impl ICharacterBody3D for Player {
         self.base_mut()
             .set_floor_max_angle((SLOPE_LIMIT_DEG - 0.01).to_radians());
 
-        globals::player_identity().connect(
-            "profile_changed",
-            &Callable::from_fn("player_profile_changed", {
-                let mut this = this.clone();
-                move |args| {
-                    if let Ok(profile) = args[0].try_to::<Gd<Object>>() {
-                        this.bind_mut().on_player_profile_changed(profile);
-                    }
-                    Variant::nil()
-                }
-            }),
-        );
+        globals::player_identity()
+            .signals()
+            .profile_changed()
+            .connect_other(&this, |this: &mut Self, profile: Gd<DclUserProfile>| {
+                this.on_player_profile_changed(profile.upcast())
+            });
 
         if let Some(avatar) = &mut self.avatar {
             // The own avatar's click area is removed to avoid self-targeting.
@@ -402,51 +392,37 @@ impl ICharacterBody3D for Player {
         }
 
         let mut runner = globals::scene_runner();
-        runner.connect(
-            "on_change_scene_id",
-            &Callable::from_fn("player_scene_changed", {
-                let mut this = this.clone();
-                move |_| {
-                    this.bind_mut().on_scene_changed();
-                    Variant::nil()
-                }
-            }),
-        );
+        runner
+            .signals()
+            .on_change_scene_id()
+            .connect_other(&this, |this: &mut Self, _scene_id| this.on_scene_changed());
         // A masked (upper-body) emote only plays while its owning scene is the one the player is
         // standing in. Local player only: a remote avatar's emote lifetime is its own client's.
         if let Some(avatar) = &self.avatar {
-            runner.connect(
-                "on_change_scene_id",
-                &avatar.callable("on_current_scene_changed"),
-            );
+            runner
+                .signals()
+                .on_change_scene_id()
+                .connect_other(avatar, |avatar: &mut DclAvatar, scene_id| {
+                    avatar.on_current_scene_changed(scene_id)
+                });
         }
-        runner.connect(
-            "locomotion_settings_changed",
-            &Callable::from_fn("player_locomotion_settings_changed", {
-                let mut this = this.clone();
-                move |args| {
-                    if let Ok(settings) = args[0].try_to::<Gd<DclLocomotionSettings>>() {
-                        this.bind_mut().set_locomotion_settings(settings);
-                    }
-                    Variant::nil()
-                }
-            }),
-        );
+        runner
+            .signals()
+            .locomotion_settings_changed()
+            .connect_other(&this, |this: &mut Self, settings| {
+                this.set_locomotion_settings(settings)
+            });
         self.on_scene_changed();
 
         // Reset the pinch zoom on a deliberate transition only.
-        global_node.connect(
-            "loading_finished",
-            &Callable::from_fn("player_loading_finished", {
-                let mut this = this.clone();
-                move |_| {
-                    if DclGlobal::singleton().bind().is_mobile {
-                        this.bind_mut().reset_zoom_to_default();
-                    }
-                    Variant::nil()
+        global_node
+            .signals()
+            .loading_finished()
+            .connect_other(&this, |this: &mut Self| {
+                if DclGlobal::singleton().bind().is_mobile {
+                    this.reset_zoom_to_default();
                 }
-            }),
-        );
+            });
 
         // RIDs to exclude from ground-distance raycasts (the body and the avatar subtree's
         // colliders, including the TriggerDetector, which would otherwise make the ray report

@@ -38,7 +38,7 @@ const EXPLORER_READY: &str = "on_explorer_ready";
 pub struct Explorer {
     base: Base<Node>,
     /// The per-frame callback, disconnected when the explorer leaves the tree.
-    frame: Option<Callable>,
+    frame: Option<godot::signal::ConnectHandle>,
 }
 
 #[godot_api]
@@ -49,21 +49,19 @@ impl INode for Explorer {
             godot_error!("Explorer: explorer.tscn is missing a node, the world did not start");
             return;
         };
-        let frame = Callable::from_fn("explorer_frame", |_| {
-            tick::tick();
-            Variant::nil()
-        });
-        self.base().get_tree().connect("process_frame", &frame);
-        self.frame = Some(frame);
+        self.frame = Some(
+            self.base()
+                .get_tree()
+                .signals()
+                .process_frame()
+                .connect(tick::tick),
+        );
         start(explorer, &world);
     }
 
     fn exit_tree(&mut self) {
         if let Some(frame) = self.frame.take() {
-            let mut tree = self.base().get_tree();
-            if tree.is_connected("process_frame", &frame) {
-                tree.disconnect("process_frame", &frame);
-            }
+            frame.disconnect();
         }
         state::clear();
     }

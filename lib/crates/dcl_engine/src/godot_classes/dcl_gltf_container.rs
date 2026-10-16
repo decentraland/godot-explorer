@@ -117,7 +117,7 @@ impl DclGltfContainer {
     /// Signal emitted when the entity has moved enough times to require
     /// switching colliders from STATIC to KINEMATIC mode
     #[signal]
-    fn switch_to_kinematic();
+    pub fn switch_to_kinematic();
 
     #[func]
     pub fn get_gltf_resource(&self) -> Option<Gd<Node3D>> {
@@ -221,9 +221,10 @@ impl INode3D for DclGltfContainer {
         if self.base().has_meta("kinematic_requested") {
             self.kinematic_requested = true;
         }
-        let on_kinematic = self.base().callable("on_switch_to_kinematic");
-        self.base_mut()
-            .connect("switch_to_kinematic", &on_kinematic);
+        let this = self.to_gd();
+        self.signals()
+            .switch_to_kinematic()
+            .connect_other(&this, |this: &mut Self| this.on_switch_to_kinematic());
         self.defer_load();
     }
 

@@ -56,12 +56,9 @@ impl AvatarSink for Gd<AvatarScene> {
         if DclGlobal::is_production() {
             return;
         }
-        self.call(
-            "set_avatar_version_by_address",
-            &[
-                GString::from(&format!("{:#x}", address)).to_variant(),
-                GString::from(version).to_variant(),
-            ],
+        self.bind_mut().set_avatar_version_by_address(
+            GString::from(&format!("{:#x}", address)),
+            GString::from(version),
         );
     }
 

@@ -421,24 +421,21 @@ const NICKNAME_COLORS: [Color; 23] = [
 #[godot_api]
 impl DclAvatar {
     #[signal]
-    fn avatar_loaded();
+    pub fn avatar_loaded();
 
     #[signal]
-    fn change_parcel_position(parcel_position: Vector2);
-
-    #[signal]
-    fn change_scene_id(new_scene_id: i32, prev_scene_id: i32);
+    pub fn change_scene_id(new_scene_id: i32, prev_scene_id: i32);
 
     // `mask` uses the internal convention shared with GDScript: -1 = full body
     // (absent on the wire), 0 = AvatarMask.AM_UPPER_BODY.
     #[signal]
-    fn emote_triggered(id: GString, looping: bool, mask: i64);
+    pub fn emote_triggered(id: GString, looping: bool, mask: i64);
 
     // Emitted once per started emote when playback ends: `interrupted` is false for
     // the natural end of a non-looping emote, true for movement cancel, explicit
     // stop, or being superseded by another emote.
     #[signal]
-    fn emote_finished(id: GString, interrupted: bool, mask: i64);
+    pub fn emote_finished(id: GString, interrupted: bool, mask: i64);
 
     #[func]
     pub fn set_target_position(&mut self, new_target: Transform3D) {
@@ -550,14 +547,11 @@ impl DclAvatar {
 
         if prev_scene_id != scene_id {
             self.current_parcel_scene_id = scene_id;
-            self.base_mut().call_deferred(
-                "emit_signal",
-                &[
-                    "change_scene_id".to_variant(),
-                    scene_id.to_variant(),
-                    prev_scene_id.to_variant(),
-                ],
-            );
+            self.run_deferred(move |this| {
+                this.signals()
+                    .change_scene_id()
+                    .emit(scene_id, prev_scene_id)
+            });
         }
     }
 
@@ -652,13 +646,6 @@ impl DclAvatar {
 
         if self.current_parcel_position != parcel_position {
             self.current_parcel_position = parcel_position;
-            self.base_mut().call_deferred(
-                "emit_signal",
-                &[
-                    "change_parcel_position".to_variant(),
-                    parcel_position.to_variant(),
-                ],
-            );
 
             let scene_runner = DclGlobal::singleton().bind().get_scene_runner();
             let scene_id: i32 = scene_runner
@@ -668,14 +655,11 @@ impl DclAvatar {
             if self.current_parcel_scene_id != scene_id {
                 let prev_scene_id = self.current_parcel_scene_id;
                 self.current_parcel_scene_id = scene_id;
-                self.base_mut().call_deferred(
-                    "emit_signal",
-                    &[
-                        "change_scene_id".to_variant(),
-                        scene_id.to_variant(),
-                        prev_scene_id.to_variant(),
-                    ],
-                );
+                self.run_deferred(move |this| {
+                    this.signals()
+                        .change_scene_id()
+                        .emit(scene_id, prev_scene_id)
+                });
                 return true;
             }
         } else if self.current_parcel_scene_id == SceneId::INVALID.0 {
@@ -687,14 +671,11 @@ impl DclAvatar {
             if scene_id != SceneId::INVALID.0 {
                 let prev_scene_id = self.current_parcel_scene_id;
                 self.current_parcel_scene_id = scene_id;
-                self.base_mut().call_deferred(
-                    "emit_signal",
-                    &[
-                        "change_scene_id".to_variant(),
-                        scene_id.to_variant(),
-                        prev_scene_id.to_variant(),
-                    ],
-                );
+                self.run_deferred(move |this| {
+                    this.signals()
+                        .change_scene_id()
+                        .emit(scene_id, prev_scene_id)
+                });
                 return true;
             }
         }

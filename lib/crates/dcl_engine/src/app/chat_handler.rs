@@ -52,14 +52,10 @@ impl ChatHandler {
                 continue;
             };
             if is_chat_text(&message.to_string()) {
-                DclGlobal::singleton().emit_signal(
-                    "on_chat_message",
-                    &[
-                        address.to_variant(),
-                        message.to_variant(),
-                        timestamp.to_variant(),
-                    ],
-                );
+                DclGlobal::singleton()
+                    .signals()
+                    .on_chat_message()
+                    .emit(&address, &message, timestamp);
             }
         }
     }

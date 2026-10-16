@@ -49,8 +49,13 @@ pub struct MultipleAnimationController {
 impl IAnimationTree for MultipleAnimationController {
     fn ready(&mut self) {
         // connect animation_finished
-        let callable = self.base().callable("_animation_finished");
-        self.base_mut().connect("animation_finished", &callable);
+        let this = self.to_gd();
+        self.base_mut()
+            .signals()
+            .animation_finished()
+            .connect_other(&this, |this: &mut Self, name| {
+                this._animation_finished(name)
+            });
     }
 }
 

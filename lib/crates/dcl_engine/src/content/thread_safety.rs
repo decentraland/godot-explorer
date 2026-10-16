@@ -6,11 +6,16 @@
 //! Every other thread or blocking task in the crate (impostor PNG encode, the scene CRDT lock,
 //! the HTTP requester, the bundle cache) works on plain data and never holds a `Gd`.
 
-use godot::{builtin::Variant, meta::ToGodot, obj::Gd};
+use godot::{
+    builtin::{GString, Variant},
+    meta::ToGodot,
+    obj::Gd,
+};
 
 use crate::godot_classes::promise::Promise;
 
 use super::content_provider::ContentProviderContext;
+use crate::engine::local_task::defer_from_any_thread;
 
 pub struct GodotSingleThreadSafety {
     _guard: tokio::sync::OwnedSemaphorePermit,
@@ -42,25 +47,39 @@ pub fn set_thread_safety_checks_enabled(enabled: bool) {
     );
 }
 
+/// Settles the promise on the main thread: the promise is looked up again by its id there, and
+/// a value travels as the deferred call's argument.
+fn settle_promise(
+    get_promise: impl Fn() -> Option<Gd<Promise>>,
+    args: &[Variant],
+    settle: impl FnOnce(&mut Promise, &[&Variant]) + Send + 'static,
+) -> bool {
+    let Some(promise) = get_promise() else {
+        return false;
+    };
+    let id = promise.instance_id();
+    defer_from_any_thread(args, move |args| {
+        if let Ok(mut promise) = Gd::<Promise>::try_from_instance_id(id) {
+            settle(&mut promise.bind_mut(), args);
+        }
+    });
+    true
+}
+
 fn reject_promise(get_promise: impl Fn() -> Option<Gd<Promise>>, reason: String) -> bool {
-    if let Some(mut promise) = get_promise() {
-        promise.call_deferred("reject", &[reason.to_variant()]);
-        true
-    } else {
-        false
-    }
+    settle_promise(
+        get_promise,
+        &[GString::from(&reason).to_variant()],
+        |promise, args| promise.reject(args[0].to::<GString>()),
+    )
 }
 
 fn resolve_promise(get_promise: impl Fn() -> Option<Gd<Promise>>, value: Option<Variant>) -> bool {
-    if let Some(mut promise) = get_promise() {
-        if let Some(value) = value {
-            promise.call_deferred("resolve_with_data", &[value]);
-        } else {
-            promise.call_deferred("resolve", &[]);
-        }
-        true
-    } else {
-        false
+    match value {
+        Some(value) => settle_promise(get_promise, &[value], |promise, args| {
+            promise.resolve_with_data(args[0].clone())
+        }),
+        None => settle_promise(get_promise, &[], |promise, _| promise.resolve()),
     }
 }
 

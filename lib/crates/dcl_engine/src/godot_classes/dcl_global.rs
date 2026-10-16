@@ -495,7 +495,7 @@ impl INode for DclGlobal {
 #[godot_api]
 impl DclGlobal {
     #[signal]
-    fn sdk_skybox_time_active_changed(is_active: bool);
+    pub fn sdk_skybox_time_active_changed(is_active: bool);
 
     /// A chat line, for the shell's chat. `address` is `system` for the app's own notices.
     #[signal]
@@ -582,7 +582,7 @@ impl DclGlobal {
     }
 
     #[func]
-    fn _set_is_mobile(&mut self, is_mobile: bool) {
+    pub(crate) fn _set_is_mobile(&mut self, is_mobile: bool) {
         self.is_mobile = is_mobile;
         self.is_virtual_mobile = is_mobile;
     }

@@ -42,19 +42,15 @@ fn drain_main_tasks() {
 }
 
 /// Runs `frame` on every `process_frame` of the main loop. Main thread only.
-pub(super) fn on_process_frame(name: &str, mut frame: impl FnMut() + 'static) {
-    let Some(mut tree) = Engine::singleton()
+pub(super) fn on_process_frame(name: &str, frame: impl FnMut() + 'static) {
+    let Some(tree) = Engine::singleton()
         .get_main_loop()
         .and_then(|main_loop| main_loop.try_cast::<SceneTree>().ok())
     else {
         godot_error!("engine links: no scene tree for {name}");
         return;
     };
-    let callable = Callable::from_fn(name.to_string(), move |_| {
-        frame();
-        Variant::nil()
-    });
-    tree.connect("process_frame", &callable);
+    tree.signals().process_frame().connect(frame);
 }
 
 /// Registers the settings contracts with the core. Called once when the engine starts.
@@ -157,8 +153,11 @@ fn notify_changed(name: &str) {
     let Some(global) = DclGlobal::try_singleton() else {
         return;
     };
-    let mut engine = global.bind().get_engine();
-    engine.emit_signal("setting_changed", &[GString::from(name).to_variant()]);
+    let engine = global.bind().get_engine();
+    engine
+        .signals()
+        .setting_changed()
+        .emit(&GString::from(name));
 }
 
 /// Stores a value the player or the engine chose. `adopt` skips applying and saving (the engine

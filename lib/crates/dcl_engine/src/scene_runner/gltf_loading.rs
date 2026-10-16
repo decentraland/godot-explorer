@@ -296,9 +296,9 @@ fn queue_for_load(group: &Group) {
 /// A deeplink param, the benchmark knobs (`max-groups`, `threaded-load`).
 fn deep_link_param(name: &str) -> Option<i64> {
     let link = crate::godot_classes::dcl_global::DclGlobal::singleton()
-        .get("deep_link_obj")
-        .try_to::<Gd<crate::godot_classes::dcl_parse_deep_link::DclParseDeepLink>>()
-        .ok()?;
+        .bind()
+        .deep_link_obj
+        .clone();
     let params = link.bind().get_params();
     params.get(name)?.to_string().parse::<i64>().ok()
 }

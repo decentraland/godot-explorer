@@ -10,6 +10,7 @@ use crate::avatars::avatar_type::DclAvatarWireFormat;
 use crate::avatars::dcl_user_profile::DclUserProfile;
 use crate::comms::profile::UserProfile;
 use crate::dcl::scene_apis::RpcResultSender;
+use crate::engine::local_task::defer_from_any_thread;
 use crate::godot_classes::dcl_global::DclGlobal;
 use crate::godot_classes::promise::Promise;
 use crate::http_request::request_response::RequestResponse;
@@ -54,49 +55,42 @@ pub struct DclPlayerIdentity {
 /// engine-side GDScript that reacts to `wallet_connected` (the profile fetch) keeps working.
 struct IdentityObserver(InstanceId);
 
-impl IdentityObserver {
-    fn node(&self) -> Option<Gd<DclPlayerIdentity>> {
-        Gd::<DclPlayerIdentity>::try_from_instance_id(self.0).ok()
-    }
+/// Runs `f` on the identity node on the main thread, from any thread.
+fn on_main(id: InstanceId, f: impl FnOnce(&mut DclPlayerIdentity) + Send + 'static) {
+    defer_from_any_thread(&[], move |_| {
+        if let Ok(mut node) = Gd::<DclPlayerIdentity>::try_from_instance_id(id) {
+            f(&mut node.bind_mut());
+        }
+    });
 }
 
 impl SessionObserver for IdentityObserver {
     fn session_event(&self, event: &SessionEvent) {
-        let Some(mut node) = self.node() else {
-            return;
-        };
-        match event {
+        let event = event.clone();
+        on_main(self.0, move |node| match event {
             SessionEvent::WalletConnected {
                 address,
                 chain_id,
                 is_guest,
-            } => node.call_deferred(
-                "_apply_core_wallet",
-                &[
-                    address.to_variant(),
-                    (*chain_id as i64).to_variant(),
-                    is_guest.to_variant(),
-                ],
-            ),
-            SessionEvent::Logout => node.call_deferred("_apply_core_logout", &[]),
-        };
+            } => node.apply_core_wallet(address, chain_id, is_guest),
+            SessionEvent::Logout => node.apply_core_logout(),
+        });
     }
 
     fn guest_login(&self, report: &GuestLoginReport) {
-        let Some(mut node) = self.node() else {
-            return;
-        };
-        node.call_deferred(
-            "emit_signal",
-            &[
-                "guest_login_outcome".to_variant(),
-                (if report.success { "success" } else { "failure" }).to_variant(),
-                report.is_new_user.to_variant(),
-                report.failure_reason.to_variant(),
-                report.http_status.map(i64::from).unwrap_or(-1).to_variant(),
-                (report.duration_ms as i64).to_variant(),
-            ],
-        );
+        let outcome = if report.success { "success" } else { "failure" };
+        let (is_new_user, reason) = (report.is_new_user, report.failure_reason.clone());
+        let status = report.http_status.map(i64::from).unwrap_or(-1);
+        let duration = report.duration_ms as i64;
+        on_main(self.0, move |node| {
+            node.signals().guest_login_outcome().emit(
+                outcome,
+                is_new_user,
+                &reason,
+                status,
+                duration,
+            )
+        });
     }
 }
 
@@ -106,10 +100,10 @@ impl INode for DclPlayerIdentity {
         // The core may have restored an account before this node existed (the host boots it at
         // launch); `_sync_core_session` announces it once the node is up.
         if let Some(core) = Core::try_get() {
-            let mut node = base.to_init_gd();
+            let node = base.to_init_gd();
             core.hub()
                 .add_observer(Arc::new(IdentityObserver(node.instance_id())));
-            node.call_deferred("_sync_core_session", &[]);
+            on_main(node.instance_id(), |node| node.sync_core_session());
         }
         let mutable_profile = DclUserProfile::new_gd();
         let mutable_avatar = mutable_profile.bind().get_avatar();
@@ -141,7 +135,7 @@ impl DclPlayerIdentity {
     pub fn profile_changed(new_profile: Gd<DclUserProfile>);
 
     #[signal]
-    fn auth_error(error_message: GString);
+    pub fn auth_error(error_message: GString);
 
     /// One per silent thirdweb guest-login attempt, for analytics. `outcome` is
     /// "success" | "failure". On success `failure_reason` is "" and `http_status`
@@ -159,23 +153,20 @@ impl DclPlayerIdentity {
         duration_ms: i64,
     );
 
-    #[func]
-    fn _apply_core_wallet(&mut self, address: GString, chain_id: i64, is_guest: bool) {
+    fn apply_core_wallet(&mut self, address: String, chain_id: u64, is_guest: bool) {
         self.apply_event(SessionEvent::WalletConnected {
-            address: address.to_string(),
-            chain_id: chain_id as u64,
+            address,
+            chain_id,
             is_guest,
         });
     }
 
-    #[func]
-    fn _apply_core_logout(&mut self) {
+    fn apply_core_logout(&mut self) {
         self.profile = None;
         self.apply_event(SessionEvent::Logout);
     }
 
-    #[func]
-    fn _sync_core_session(&mut self) {
+    fn sync_core_session(&mut self) {
         let Some(account) = self.with_session(|s| s.recoverable_account()) else {
             return;
         };
@@ -186,30 +177,24 @@ impl DclPlayerIdentity {
         });
     }
 
-    #[func]
     fn try_set_remote_wallet(
         &mut self,
-        address_string: GString,
+        address_string: &str,
         chain_id: i64,
-        ephemeral_auth_chain: GString,
+        ephemeral_auth_chain: &str,
     ) -> bool {
-        let address = address_string
-            .to_string()
-            .as_str()
-            .as_h160()
-            .expect("invalid wallet address");
+        let address = address_string.as_h160().expect("invalid wallet address");
 
-        let ephemeral_auth_chain = match serde_json::from_str(&ephemeral_auth_chain.to_string()) {
+        let ephemeral_auth_chain = match serde_json::from_str(ephemeral_auth_chain) {
             Ok(p) => p,
             Err(e) => {
                 tracing::error!(
                     "error {e} invalid data ephemeral_auth_chain {:?}",
                     ephemeral_auth_chain
                 );
-                self.base_mut().call_deferred(
-                    "_error_getting_wallet",
-                    &["Error parsing ephemeral_auth_chain".to_variant()],
-                );
+                self.run_deferred(|this| {
+                    this.error_getting_wallet("Error parsing ephemeral_auth_chain")
+                });
                 return false;
             }
         };
@@ -224,8 +209,7 @@ impl DclPlayerIdentity {
     /// from `async_create_guest_account`'s success branch so the flag flips
     /// only after `try_set_remote_wallet` (also deferred) has installed the
     /// wallet and reset the marker to `false`.
-    #[func]
-    fn _set_thirdweb_guest_flag(&mut self, value: bool) {
+    fn set_thirdweb_guest_flag(&mut self, value: bool) {
         self.with_session(|s| s.is_thirdweb_guest = value);
     }
 
@@ -239,8 +223,7 @@ impl DclPlayerIdentity {
     /// Deferred setter for the upgraded marker. Called from the thirdweb thread
     /// after a profiles query (`async_refresh_thirdweb_upgrade_state`) or a
     /// successful email link, so the write lands on the main thread.
-    #[func]
-    fn _set_thirdweb_guest_upgraded_flag(&mut self, value: bool) {
+    fn set_thirdweb_guest_upgraded_flag(&mut self, value: bool) {
         self.with_session(|s| s.is_thirdweb_guest_upgraded = value);
     }
 
@@ -253,11 +236,9 @@ impl DclPlayerIdentity {
         self.with_session(|s| s.is_thirdweb_guest_upgraded)
     }
 
-    #[func]
-    fn _error_getting_wallet(&mut self, error_str: GString) {
-        tracing::error!("error getting wallet {:?}", error_str);
-        self.base_mut()
-            .emit_signal("auth_error", &[error_str.to_variant()]);
+    fn error_getting_wallet(&mut self, error: &str) {
+        tracing::error!("error getting wallet {:?}", error);
+        self.signals().auth_error().emit(error);
     }
 
     /// Creates a random throwaway wallet that lives only as long as the install.
@@ -317,29 +298,22 @@ impl DclPlayerIdentity {
                         // is concerned. The thirdweb "guest" label is just the auth
                         // method (no social link) and doesn't affect `is_guest`,
                         // which stays reserved for disposable LocalWallet sessions.
-                        identity.call_deferred(
-                            "try_set_remote_wallet",
-                            &[
-                                address_str.clone().to_variant(),
-                                1_i64.to_variant(),
-                                ephemeral_chain_json.to_variant(),
-                            ],
-                        );
-                        // Flip the thirdweb-guest marker after the (also
-                        // deferred) wallet install, which resets it to `false`.
-                        // Both run on the main thread in submission order.
-                        identity.call_deferred("_set_thirdweb_guest_flag", &[true.to_variant()]);
-                        identity.call_deferred(
-                            "emit_signal",
-                            &[
-                                "guest_login_outcome".to_variant(),
-                                "success".to_variant(),
-                                outcome.is_new_user.to_variant(),
-                                GString::from("").to_variant(),
-                                (-1_i64).to_variant(),
-                                duration_ms.to_variant(),
-                            ],
-                        );
+                        let address = address_str.clone();
+                        let chain = ephemeral_chain_json.clone();
+                        let (is_new_user, duration) = (outcome.is_new_user, duration_ms);
+                        // Flip the thirdweb-guest marker after the wallet install, which
+                        // resets it to `false`: one deferred step keeps them in order.
+                        on_main(identity.instance_id(), move |node| {
+                            node.try_set_remote_wallet(&address, 1, &chain);
+                            node.set_thirdweb_guest_flag(true);
+                            node.signals().guest_login_outcome().emit(
+                                "success",
+                                is_new_user,
+                                "",
+                                -1,
+                                duration,
+                            );
+                        });
                     }
 
                     promise
@@ -349,17 +323,14 @@ impl DclPlayerIdentity {
                 Err(e) => {
                     tracing::error!("thirdweb guest_login failed: {:?}", e);
                     if let Some(identity) = identity.as_mut() {
-                        identity.call_deferred(
-                            "emit_signal",
-                            &[
-                                "guest_login_outcome".to_variant(),
-                                "failure".to_variant(),
-                                false.to_variant(),
-                                e.reason.to_variant(),
-                                e.http_status.map(i64::from).unwrap_or(-1).to_variant(),
-                                duration_ms.to_variant(),
-                            ],
-                        );
+                        let reason = e.reason.to_string();
+                        let status = e.http_status.map(i64::from).unwrap_or(-1);
+                        let duration = duration_ms;
+                        on_main(identity.instance_id(), move |node| {
+                            node.signals()
+                                .guest_login_outcome()
+                                .emit("failure", false, &reason, status, duration);
+                        });
                     }
                     promise
                         .bind_mut()
@@ -468,14 +439,9 @@ impl DclPlayerIdentity {
                     // The guest now has an email linked — it's upgraded. Update
                     // the cached marker so the UI hides the affordance without a
                     // round trip to re-query profiles.
-                    if let Ok(mut identity) =
-                        Gd::<DclPlayerIdentity>::try_from_instance_id(instance_id)
-                    {
-                        identity.call_deferred(
-                            "_set_thirdweb_guest_upgraded_flag",
-                            &[true.to_variant()],
-                        );
-                    }
+                    on_main(instance_id, |node| {
+                        node.set_thirdweb_guest_upgraded_flag(true)
+                    });
                     promise
                         .bind_mut()
                         .resolve_with_data(format!("{:#x}", address).to_variant());
@@ -531,18 +497,10 @@ impl DclPlayerIdentity {
                     let ephemeral_chain_json = serde_json::to_string(&ephemeral_auth_chain)
                         .expect("serialize ephemeral auth chain");
 
-                    if let Ok(mut identity) =
-                        Gd::<DclPlayerIdentity>::try_from_instance_id(instance_id)
-                    {
-                        identity.call_deferred(
-                            "try_set_remote_wallet",
-                            &[
-                                address_str.clone().to_variant(),
-                                1_i64.to_variant(),
-                                ephemeral_chain_json.to_variant(),
-                            ],
-                        );
-                    }
+                    let address = address_str.clone();
+                    on_main(instance_id, move |node| {
+                        node.try_set_remote_wallet(&address, 1, &ephemeral_chain_json);
+                    });
 
                     promise
                         .bind_mut()
@@ -596,14 +554,9 @@ impl DclPlayerIdentity {
 
             match result {
                 Ok(upgraded) => {
-                    if let Ok(mut identity) =
-                        Gd::<DclPlayerIdentity>::try_from_instance_id(instance_id)
-                    {
-                        identity.call_deferred(
-                            "_set_thirdweb_guest_upgraded_flag",
-                            &[upgraded.to_variant()],
-                        );
-                    }
+                    on_main(instance_id, move |node| {
+                        node.set_thirdweb_guest_upgraded_flag(upgraded)
+                    });
                     promise.bind_mut().resolve_with_data(upgraded.to_variant());
                 }
                 Err(e) => {
@@ -732,7 +685,7 @@ impl DclPlayerIdentity {
 
         let try_connect_account_handle = handle.spawn(async move {
             let wallet = RemoteWallet::with_auth_identity(sender).await;
-            let Ok(mut this) = Gd::<DclPlayerIdentity>::try_from_instance_id(instance_id) else {
+            let Ok(this) = Gd::<DclPlayerIdentity>::try_from_instance_id(instance_id) else {
                 return;
             };
 
@@ -742,18 +695,21 @@ impl DclPlayerIdentity {
                         serde_json::to_string(&ephemeral_auth_chain)
                             .expect("serialize ephemeral auth chain");
 
-                    this.call_deferred(
-                        "try_set_remote_wallet",
-                        &[
-                            format!("{:#x}", wallet.address()).to_variant(),
-                            (wallet.chain_id() as i64).to_variant(),
-                            ephemeral_auth_chain_json_str.to_variant(),
-                        ],
-                    );
+                    let address = format!("{:#x}", wallet.address());
+                    let chain_id = wallet.chain_id() as i64;
+                    on_main(this.instance_id(), move |node| {
+                        node.try_set_remote_wallet(
+                            &address,
+                            chain_id,
+                            &ephemeral_auth_chain_json_str,
+                        );
+                    });
                 }
                 Err(err) => {
                     tracing::error!("error getting wallet {:?}", err);
-                    this.call_deferred("_error_getting_wallet", &["Unknown error".to_variant()]);
+                    on_main(this.instance_id(), |node| {
+                        node.error_getting_wallet("Unknown error")
+                    });
                 }
             }
         });
@@ -823,10 +779,10 @@ impl DclPlayerIdentity {
                 }
                 Err(err) => {
                     tracing::error!("Error starting mobile auth: {:?}", err);
-                    this.call_deferred(
-                        "_error_getting_wallet",
-                        &[format!("Mobile auth error: {}", err).to_variant()],
-                    );
+                    let message = format!("Mobile auth error: {}", err);
+                    on_main(this.instance_id(), move |node| {
+                        node.error_getting_wallet(&message)
+                    });
                 }
             }
         });
@@ -855,7 +811,7 @@ impl DclPlayerIdentity {
 
         let complete_handle = handle.spawn(async move {
             let result = complete_mobile_auth(identity_id).await;
-            let Ok(mut this) = Gd::<DclPlayerIdentity>::try_from_instance_id(instance_id) else {
+            let Ok(this) = Gd::<DclPlayerIdentity>::try_from_instance_id(instance_id) else {
                 return;
             };
 
@@ -866,25 +822,22 @@ impl DclPlayerIdentity {
                         serde_json::to_string(&ephemeral_auth_chain)
                             .expect("serialize ephemeral auth chain");
 
-                    this.call_deferred(
-                        "_mobile_auth_completed",
-                        &[
-                            attempt.to_variant(),
-                            format!("{:#x}", address).to_variant(),
-                            (chain_id as i64).to_variant(),
-                            ephemeral_auth_chain_json_str.to_variant(),
-                        ],
-                    );
+                    let address = format!("{:#x}", address);
+                    on_main(this.instance_id(), move |node| {
+                        node.mobile_auth_completed(
+                            attempt,
+                            &address,
+                            chain_id as i64,
+                            &ephemeral_auth_chain_json_str,
+                        )
+                    });
                 }
                 Err(err) => {
                     tracing::error!("Error completing mobile auth: {:?}", err);
-                    this.call_deferred(
-                        "_mobile_auth_failed",
-                        &[
-                            attempt.to_variant(),
-                            format!("Mobile auth completion error: {}", err).to_variant(),
-                        ],
-                    );
+                    let message = format!("Mobile auth completion error: {}", err);
+                    on_main(this.instance_id(), move |node| {
+                        node.mobile_auth_failed(attempt, &message)
+                    });
                 }
             }
         });
@@ -897,13 +850,12 @@ impl DclPlayerIdentity {
 
     /// Main-thread landing for a completed mobile sign-in, guarded by the attempt token so a
     /// result the user cancelled is discarded instead of applied.
-    #[func]
-    fn _mobile_auth_completed(
+    fn mobile_auth_completed(
         &mut self,
         attempt: u32,
-        address: GString,
+        address: &str,
         chain_id: i64,
-        ephemeral_auth_chain: GString,
+        ephemeral_auth_chain: &str,
     ) {
         if !self.with_session(|s| s.is_current_mobile_attempt(attempt)) {
             tracing::info!("Discarding a completed mobile sign-in: attempt was retired");
@@ -914,14 +866,13 @@ impl DclPlayerIdentity {
 
     /// Same guard for the failure arm: a cancelled attempt must not surface an error over
     /// whatever screen the user moved on to.
-    #[func]
-    fn _mobile_auth_failed(&mut self, attempt: u32, error_message: GString) {
+    fn mobile_auth_failed(&mut self, attempt: u32, error_message: &str) {
         if !self.with_session(|s| s.is_current_mobile_attempt(attempt)) {
             tracing::info!("Discarding a failed mobile sign-in: attempt was retired");
             return;
         }
-        self.base_mut()
-            .call_deferred("_error_getting_wallet", &[error_message.to_variant()]);
+        let message = error_message.to_string();
+        self.run_deferred(move |this| this.error_getting_wallet(&message));
     }
 
     /// Returns true if there's a pending mobile auth waiting for deep link
@@ -1002,10 +953,8 @@ impl DclPlayerIdentity {
             }
             Err(e) => {
                 tracing::error!("WalletConnect auth failed: {}", e);
-                self.base_mut().call_deferred(
-                    "_error_getting_wallet",
-                    &[format!("WalletConnect auth error: {}", e).to_variant()],
-                );
+                let message = format!("WalletConnect auth error: {}", e);
+                self.run_deferred(move |this| this.error_getting_wallet(&message));
                 false
             }
         }
@@ -1097,10 +1046,7 @@ impl DclPlayerIdentity {
         self.profile = Some(profile.clone());
         tracing::info!("profile > set default profile",);
 
-        self.base_mut().call_deferred(
-            "emit_signal",
-            &["profile_changed".to_variant(), profile.to_variant()],
-        );
+        self.run_deferred(move |this| this.signals().profile_changed().emit(&profile));
     }
 
     #[func]
@@ -1112,10 +1058,7 @@ impl DclPlayerIdentity {
         self.profile = Some(profile.clone());
         tracing::info!("profile > set random profile",);
 
-        self.base_mut().call_deferred(
-            "emit_signal",
-            &["profile_changed".to_variant(), profile.to_variant()],
-        );
+        self.run_deferred(move |this| this.signals().profile_changed().emit(&profile));
     }
 
     #[func]
@@ -1123,10 +1066,7 @@ impl DclPlayerIdentity {
         self.profile = Some(profile.clone());
         tracing::info!("profile > set profile func",);
 
-        self.base_mut().call_deferred(
-            "emit_signal",
-            &["profile_changed".to_variant(), profile.to_variant()],
-        );
+        self.run_deferred(move |this| this.signals().profile_changed().emit(&profile));
     }
 
     /// GDScript-callable logout used by the sign-out flow to fully forget the
@@ -1294,10 +1234,7 @@ impl DclPlayerIdentity {
                 self.profile = Some(new_profile.clone());
                 tracing::info!("profile > set profile from lambda",);
 
-                self.base_mut().call_deferred(
-                    "emit_signal",
-                    &["profile_changed".to_variant(), new_profile.to_variant()],
-                );
+                self.run_deferred(move |this| this.signals().profile_changed().emit(&new_profile));
                 true
             }
             Err(e) => {
@@ -1322,20 +1259,15 @@ impl DclPlayerIdentity {
                 chain_id,
                 is_guest,
             } => {
-                self.base_mut().call_deferred(
-                    "emit_signal",
-                    &[
-                        "wallet_connected".to_variant(),
-                        address.to_variant(),
-                        (chain_id as i64).to_variant(),
-                        is_guest.to_variant(),
-                    ],
-                );
+                self.run_deferred(move |this| {
+                    this.signals()
+                        .wallet_connected()
+                        .emit(&address, chain_id as i64, is_guest)
+                });
                 self.is_guest = is_guest;
             }
             SessionEvent::Logout => {
-                self.base_mut()
-                    .call_deferred("emit_signal", &["logout".to_variant()]);
+                self.run_deferred(move |this| this.signals().logout().emit());
             }
         }
     }

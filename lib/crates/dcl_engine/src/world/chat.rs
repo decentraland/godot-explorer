@@ -18,10 +18,10 @@ pub fn say(text: &str) {
 /// A translated line; `{name}` placeholders take the `replacements`.
 pub fn say_translated(key: &str, replacements: &VarDictionary) {
     let text = DclGlobal::singleton().tr(key);
-    let formatted = text
-        .to_variant()
-        .call("format", &[replacements.to_variant()]);
-    say(&formatted.to_string());
+    say(&crate::utils::template::fill_placeholders(
+        &text.to_string(),
+        replacements,
+    ));
 }
 
 /// A debug notice, dimmed.

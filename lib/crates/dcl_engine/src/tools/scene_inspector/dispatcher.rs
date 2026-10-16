@@ -550,10 +550,9 @@ impl INode for SceneInspectorDispatcher {
         // Emit signal with batched entries as JSON array
         if !batch.is_empty() {
             let json_array = format!("[{}]", batch.join(","));
-            self.base_mut().emit_signal(
-                "scene_inspector_batch",
-                &[GString::from(&json_array).to_variant()],
-            );
+            self.signals()
+                .scene_inspector_batch()
+                .emit(&GString::from(&json_array));
         }
     }
 }

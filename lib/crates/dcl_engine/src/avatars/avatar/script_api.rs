@@ -143,29 +143,34 @@ impl DclAvatar {
 
     /// The local player entered or left a scene (wired by the player body).
     #[func]
-    fn on_current_scene_changed(&mut self, scene_id: i32) {
+    pub(crate) fn on_current_scene_changed(&mut self, scene_id: i32) {
         self.on_current_scene_changed_impl(scene_id);
     }
 
     #[func]
-    fn on_skeleton_updated(&mut self) {
+    pub(crate) fn on_skeleton_updated(&mut self) {
         self.refresh_anchor_poses();
         self.recompute_nametag_posed_top();
     }
 
     #[func]
-    fn on_global_chat_message(&mut self, address: GString, message: GString, _timestamp: f64) {
+    pub(crate) fn on_global_chat_message(
+        &mut self,
+        address: GString,
+        message: GString,
+        _timestamp: f64,
+    ) {
         self.on_chat_message(&address.to_string(), &message.to_string());
     }
 
     #[func]
-    fn on_avatar_screen_entered(&mut self) {
+    pub(crate) fn on_avatar_screen_entered(&mut self) {
         self.lod.on_screen = true;
         self.apply_screen_freeze();
     }
 
     #[func]
-    fn on_avatar_screen_exited(&mut self) {
+    pub(crate) fn on_avatar_screen_exited(&mut self) {
         self.lod.on_screen = false;
         self.apply_screen_freeze();
     }

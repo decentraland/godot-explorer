@@ -35,49 +35,27 @@ pub struct LoadingSession {
 #[godot_api]
 impl INode for LoadingSession {
     fn ready(&mut self) {
-        let mut runner = globals::scene_runner();
+        let runner = globals::scene_runner();
         let this = self.to_gd();
-        runner.connect(
-            "loading_started",
-            &Callable::from_fn("loading_session_started", {
-                let this = this.clone();
-                move |_| {
-                    this.bind().start();
-                    Variant::nil()
-                }
-            }),
-        );
-        runner.connect(
-            "loading_progress",
-            &Callable::from_fn("loading_session_progress", {
-                let this = this.clone();
-                move |args| {
-                    this.bind().on_progress(args[0].to::<f32>());
-                    Variant::nil()
-                }
-            }),
-        );
-        runner.connect(
-            "loading_complete",
-            &Callable::from_fn("loading_session_complete", {
-                let this = this.clone();
-                move |_| {
-                    this.bind().end("Success".into());
-                    Variant::nil()
-                }
-            }),
-        );
-        runner.connect(
-            "loading_timeout",
-            &Callable::from_fn("loading_session_timeout", {
-                let this = this.clone();
-                move |_| {
-                    godot_warn!("Loading session timed out");
-                    this.bind().end("Success".into());
-                    Variant::nil()
-                }
-            }),
-        );
+        // Shared borrows on purpose: the session's state is in `Cell`s so a signal can reach it
+        // while something else reads it.
+        let mut signals = runner.signals();
+        let session = this.clone();
+        signals
+            .loading_started()
+            .connect(move |_session, _expected| session.bind().start());
+        let session = this.clone();
+        signals
+            .loading_progress()
+            .connect(move |percent, _ready, _total| session.bind().on_progress(percent));
+        let session = this.clone();
+        signals
+            .loading_complete()
+            .connect(move |_session| session.bind().end("Success".into()));
+        signals.loading_timeout().connect(move |_session| {
+            godot_warn!("Loading session timed out");
+            this.bind().end("Success".into());
+        });
     }
 
     fn process(&mut self, delta: f64) {
@@ -159,7 +137,7 @@ impl LoadingSession {
             return;
         }
         self.running.set(false);
-        let mut global = DclGlobal::singleton();
+        let global = DclGlobal::singleton();
         let mut provider = globals::content_provider();
         provider
             .bind_mut()
@@ -172,7 +150,7 @@ impl LoadingSession {
             globals::comms().bind_mut().release_comms();
         }
         set_audio(None);
-        global.emit_signal("loading_finished", &[]);
+        global.signals().loading_finished().emit();
         globals::scene_runner()
             .bind_mut()
             .loading_end_episode("hidden".into());
@@ -210,7 +188,7 @@ impl LoadingSession {
     fn start(&self) {
         let now = now_msec();
         self.last_activity_msec.set(now);
-        let mut global = DclGlobal::singleton();
+        let global = DclGlobal::singleton();
         let mut provider = globals::content_provider();
         if !self.running.get() {
             self.start_msec.set(now);
@@ -231,7 +209,7 @@ impl LoadingSession {
         globals::comms().bind_mut().hold_comms();
         // No voice, scene or avatar SFX (footsteps, jump/land) while loading.
         set_audio(Some(0.0));
-        global.emit_signal("loading_started", &[]);
+        global.signals().loading_started().emit();
         DclGlobal::release_mouse();
         globals::engine().bind().report_loading_progress(0.0);
     }
@@ -314,16 +292,12 @@ fn current_scene_entity_id() -> String {
 /// `max-downloads=<n>` (deeplink) overrides the default 12, for benchmarking the download stage.
 fn max_downloads() -> i32 {
     DclGlobal::singleton()
-        .get("deep_link_obj")
-        .try_to::<Gd<Object>>()
-        .ok()
-        .and_then(|link| {
-            link.get("params")
-                .try_to::<VarDictionary>()
-                .ok()?
-                .get("max-downloads")
-                .map(|v| v.stringify().to_string())
-        })
+        .bind()
+        .deep_link_obj
+        .bind()
+        .params
+        .get("max-downloads")
+        .map(|v| v.stringify().to_string())
         .and_then(|value| value.parse::<i32>().ok())
         .filter(|value| *value > 0)
         .unwrap_or(MAX_DOWNLOADS)

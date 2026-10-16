@@ -32,6 +32,7 @@ pub struct EmoteWheel {
     base: Base<Control>,
     #[var(get = get_avatar_node, set = set_avatar_node)]
     avatar_node: Option<Gd<DclAvatar>>,
+    avatar_connection: Option<godot::signal::ConnectHandle>,
     items: Vec<Gd<EmoteItemUi>>,
     last_selected_urn: String,
     /// The finger that owns the open/close press, so a second finger works while the joystick is
@@ -174,13 +175,10 @@ impl EmoteWheel {
         if avatar == self.avatar_node {
             return;
         }
-        if let Some(old) = self.avatar_node.take().filter(|a| a.is_instance_valid()) {
-            let callable = self.base().callable("on_avatar_loaded");
-            let mut old = old.upcast::<Object>();
-            if old.is_connected("avatar_loaded", &callable) {
-                old.disconnect("avatar_loaded", &callable);
-            }
+        if let Some(handle) = self.avatar_connection.take() {
+            handle.disconnect();
         }
+        self.avatar_node = None;
         if let Some(avatar) = &avatar {
             self.watch_avatar(avatar);
         }
@@ -210,14 +208,15 @@ impl EmoteWheel {
             return;
         }
         self.control_wheel.hide();
-        self.base_mut().emit_signal("emote_wheel_closed", &[]);
+        self.signals().emote_wheel_closed().emit();
         host::explorer_grab_focus();
         // Clearing the pressed state with its signal lets the HUD button repaint its default look;
         // the re-entrant close() returns early since the wheel is hidden.
         if self.button_emotes.is_pressed() {
             // Deferred: `toggled` would re-enter this wheel while it is bound.
             self.button_emotes
-                .call_deferred("set_pressed", &[false.to_variant()]);
+                .clone()
+                .run_deferred_gd(|mut button| button.set_pressed(false));
         }
     }
 
@@ -229,19 +228,25 @@ impl EmoteWheel {
         self.reset_name();
         self.last_selected_urn.clear();
         self.control_wheel.show();
-        self.base_mut().emit_signal("emote_wheel_opened", &[]);
+        self.signals().emote_wheel_opened().emit();
         self.base_mut().grab_focus();
         DclGlobal::release_mouse();
     }
 }
 
 impl EmoteWheel {
-    fn watch_avatar(&self, avatar: &Gd<DclAvatar>) {
-        let callable = self.base().callable("on_avatar_loaded");
-        let mut avatar = avatar.clone().upcast::<Object>();
-        if !avatar.is_connected("avatar_loaded", &callable) {
-            avatar.connect("avatar_loaded", &callable);
+    fn watch_avatar(&mut self, avatar: &Gd<DclAvatar>) {
+        if self.avatar_connection.is_some() {
+            return;
         }
+        let this = self.to_gd();
+        self.avatar_connection = Some(
+            avatar
+                .clone()
+                .signals()
+                .avatar_loaded()
+                .connect_other(&this, |this: &mut Self| this.on_avatar_loaded()),
+        );
     }
 
     /// The label is `auto_translate_mode = 2` because a creator-authored emote name is written into
@@ -317,10 +322,8 @@ impl EmoteWheel {
             // Re-emitting the item's own signal reuses its wiring: play and close here, and the
             // equip sound from UiSounds.
             let urn = item.bind().emote_urn.clone();
-            item.clone().call_deferred(
-                "emit_signal",
-                &["play_emote".to_variant(), urn.to_variant()],
-            );
+            item.clone()
+                .run_deferred_gd(move |item| item.signals().play_emote().emit(&urn));
             item.clone().accept_event();
         }
     }
@@ -334,15 +337,16 @@ impl EmoteWheel {
         if touch.is_pressed() {
             if self.emote_touch_index == NO_TOUCH {
                 self.emote_touch_index = touch.get_index();
-                self.button_emotes.emit_signal("button_down", &[]);
+                self.button_emotes.signals().button_down().emit();
                 let pressed = self.button_emotes.is_pressed();
                 self.button_emotes
-                    .call_deferred("set_pressed", &[(!pressed).to_variant()]);
+                    .clone()
+                    .run_deferred_gd(move |mut button| button.set_pressed(!pressed));
             }
             self.button_emotes.accept_event();
         } else if touch.get_index() == self.emote_touch_index {
             self.emote_touch_index = NO_TOUCH;
-            self.button_emotes.emit_signal("button_up", &[]);
+            self.button_emotes.signals().button_up().emit();
             self.button_emotes.accept_event();
         }
     }
@@ -351,13 +355,13 @@ impl EmoteWheel {
     fn on_button_visibility_changed(&mut self) {
         if self.emote_touch_index != NO_TOUCH && !self.button_emotes.is_visible_in_tree() {
             self.emote_touch_index = NO_TOUCH;
-            self.button_emotes.emit_signal("button_up", &[]);
+            self.button_emotes.signals().button_up().emit();
         }
     }
 }
 
 fn open_backpack_on_emotes() {
-    DclGlobal::singleton().emit_signal("open_backpack", &[true.to_variant()]);
+    DclGlobal::singleton().signals().open_backpack().emit(true);
     DclGlobal::send_haptic_feedback(20, -1.0);
 }
 

@@ -6,7 +6,7 @@ use godot::prelude::*;
 
 use crate::fetcher::globals;
 use crate::godot_classes::dcl_avatar::DclAvatar;
-use crate::godot_classes::player_collider_filter::{watch_scene, ColliderFilter};
+use crate::godot_classes::player_collider_filter::{scene_of, ColliderFilter};
 
 /// Anchor ids with a skeleton bone (POSITION 0 and NAME_TAG 1 are not skeletal).
 const SKELETAL_ANCHORS: std::ops::RangeInclusive<i32> = 2..=25;
@@ -92,7 +92,12 @@ impl DclAvatarAttach {
             return;
         };
         let owner = self.base().clone();
-        watch_scene(&owner, &parent, "on_tree_changed");
+        if let Some(scene) = scene_of(&parent) {
+            scene
+                .signals()
+                .tree_changed()
+                .connect_other(&self.to_gd(), |this: &mut Self| this.on_tree_changed());
+        }
         self.filter.rescan(&parent, &owner);
 
         self.follow_anchor();

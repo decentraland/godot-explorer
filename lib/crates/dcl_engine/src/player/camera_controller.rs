@@ -26,23 +26,17 @@ pub struct PersistantCamera {
 impl ICamera3D for PersistantCamera {
     fn ready(&mut self) {
         let this = self.to_gd();
-        self.base_mut().connect(
-            "tree_exiting",
-            &Callable::from_fn("persistant_camera_exiting", {
-                let mut this = this.clone();
-                move |_| {
-                    this.bind_mut().on_tree_exiting();
-                    Variant::nil()
-                }
-            }),
-        );
+        self.base_mut()
+            .signals()
+            .tree_exiting()
+            .connect_other(&this, |this: &mut Self| this.on_tree_exiting());
     }
 }
 
 impl PersistantCamera {
     fn on_tree_exiting(&mut self) {
         self.fallback_viewport = self.base().get_viewport();
-        self.base_mut().call_deferred("safety_reparent", &[]);
+        self.run_deferred(|this| this.safety_reparent());
     }
 }
 
@@ -91,16 +85,12 @@ impl INode for DclGlobalCameraController {
         // A scene always starts non-cinematic. The cinematic/virtual-camera state is reset
         // whenever the current parcel scene changes so the latch can't survive a teleport.
         let this = self.to_gd();
-        globals::scene_runner().connect(
-            "on_change_scene_id",
-            &Callable::from_fn("camera_controller_scene_changed", {
-                let mut this = this.clone();
-                move |_| {
-                    this.bind_mut().on_parcel_scene_changed();
-                    Variant::nil()
-                }
-            }),
-        );
+        globals::scene_runner()
+            .signals()
+            .on_change_scene_id()
+            .connect_other(&this, |this: &mut Self, _scene_id| {
+                this.on_parcel_scene_changed()
+            });
     }
 
     fn process(&mut self, delta: f64) {

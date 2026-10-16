@@ -91,17 +91,11 @@ fn forward_profile_changes() {
     let Some(global) = DclGlobal::try_singleton() else {
         return;
     };
-    let mut identity = global.bind().player_identity.clone();
-    let callable = Callable::from_fn("adopt_engine_profile", |args| {
-        if let Some(profile) = args
-            .first()
-            .and_then(|arg| arg.try_to::<Gd<DclUserProfile>>().ok())
-        {
-            adopt_profile(&profile);
-        }
-        Variant::nil()
-    });
-    identity.connect("profile_changed", &callable);
+    let identity = global.bind().player_identity.clone();
+    identity
+        .signals()
+        .profile_changed()
+        .connect(|profile| adopt_profile(&profile));
 }
 
 fn adopt_profile(profile: &Gd<DclUserProfile>) {

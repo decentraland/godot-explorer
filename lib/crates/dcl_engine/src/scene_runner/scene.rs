@@ -82,7 +82,7 @@ pub enum SceneState {
 
 pub struct MaterialItem {
     pub dcl_mat: DclMaterial,
-    pub weak_ref: godot::prelude::Variant,
+    pub weak_ref: godot::prelude::Gd<godot::classes::WeakRef>,
     pub waiting_textures: bool,
     pub alive: bool,
 }

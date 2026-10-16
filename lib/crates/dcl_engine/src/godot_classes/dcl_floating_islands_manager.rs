@@ -145,10 +145,10 @@ impl INode for DclFloatingIslandsManager {
 #[godot_api]
 impl DclFloatingIslandsManager {
     #[signal]
-    fn generation_progress(created: i32, total: i32);
+    pub fn generation_progress(created: i32, total: i32);
 
     #[signal]
-    fn generation_complete();
+    pub fn generation_complete();
 
     /// `corner_configs`: `parcels.len() * 8` bytes, laid out per parcel as
     /// `[N, S, E, W, NW, NE, SW, SE]` with values 0=EMPTY, 1=NOTHING, 2=LOADED
@@ -531,10 +531,7 @@ impl DclFloatingIslandsManager {
         if created_this_frame > 0 {
             let created = self.generated_so_far;
             let total = self.generation_total;
-            self.base_mut().emit_signal(
-                "generation_progress",
-                &[created.to_variant(), total.to_variant()],
-            );
+            self.signals().generation_progress().emit(created, total);
         }
 
         if self.generating {
@@ -542,7 +539,7 @@ impl DclFloatingIslandsManager {
                 self.empty_view_since_msec = 0;
                 if self.in_view_all_materialized(player, view, &camera) {
                     self.generating = false;
-                    self.base_mut().emit_signal("generation_complete", &[]);
+                    self.signals().generation_complete().emit();
                 }
             } else if self.empty_view_since_msec == 0 {
                 self.empty_view_since_msec = now_msec;
@@ -573,7 +570,7 @@ impl DclFloatingIslandsManager {
                 );
                 self.generating = false;
                 self.empty_view_since_msec = 0;
-                self.base_mut().emit_signal("generation_complete", &[]);
+                self.signals().generation_complete().emit();
             }
         }
     }

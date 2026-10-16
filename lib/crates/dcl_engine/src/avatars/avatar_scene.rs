@@ -166,10 +166,15 @@ impl INode for AvatarScene {
     }
 
     fn ready(&mut self) {
+        let this = self.to_gd();
         DclGlobal::singleton()
             .bind_mut()
             .scene_runner
-            .connect("scene_spawned", &self.base().callable("on_scene_spawned"));
+            .signals()
+            .scene_spawned()
+            .connect_other(&this, |this: &mut Self, scene_id, entity_id: GString| {
+                this.on_scene_spawned(scene_id, entity_id)
+            });
 
         self.setup_impostor_renderer();
     }
@@ -203,13 +208,13 @@ fn sync_crdt_lww_component<T>(
 #[godot_api]
 impl AvatarScene {
     #[signal]
-    fn avatar_scene_changed(avatars: Array<Gd<DclAvatar>>);
+    pub fn avatar_scene_changed(avatars: Array<Gd<DclAvatar>>);
 
     #[signal]
-    fn avatar_added(avatar: Gd<DclAvatar>);
+    pub fn avatar_added(avatar: Gd<DclAvatar>);
 
     #[signal]
-    fn avatar_removed(address: GString);
+    pub fn avatar_removed(address: GString);
 
     fn setup_impostor_renderer(&mut self) {
         // Load shader first; if it fails we bail out so we don't render
@@ -838,100 +843,33 @@ impl AvatarScene {
             .bind_mut()
             .set_movement_type(AvatarMovementType::LerpTwoPoints);
 
-        let instance_id = self.base().instance_id();
-        let avatar_entity_id = entity_id;
-        let avatar_changed_scene_callable =
-            Callable::from_fn("on_avatar_changed_scene", move |args: &[&Variant]| {
-                if args.len() != 2 {
-                    return Variant::nil();
-                }
-
-                let Ok(scene_id) = args[0].try_to::<i32>() else {
-                    return Variant::nil();
-                };
-                let Ok(prev_scene_id) = args[1].try_to::<i32>() else {
-                    return Variant::nil();
-                };
-
-                if let Ok(mut avatar_scene) = Gd::<AvatarScene>::try_from_instance_id(instance_id) {
-                    avatar_scene.call_deferred(
-                        "on_avatar_changed_scene",
-                        &[
-                            scene_id.to_variant(),
-                            prev_scene_id.to_variant(),
-                            avatar_entity_id.as_i32().to_variant(),
-                        ],
-                    );
-                }
-
-                Variant::nil()
-            });
-
-        let emote_triggered_callable =
-            Callable::from_fn("on_avatar_trigger_emote", move |args: &[&Variant]| {
-                if args.len() != 3 {
-                    return Variant::nil();
-                }
-
-                let Ok(emote_id) = args[0].try_to::<String>() else {
-                    return Variant::nil();
-                };
-                let Ok(looping) = args[1].try_to::<bool>() else {
-                    return Variant::nil();
-                };
-                let Ok(mask) = args[2].try_to::<i64>() else {
-                    return Variant::nil();
-                };
-
-                if let Ok(mut avatar_scene) = Gd::<AvatarScene>::try_from_instance_id(instance_id) {
-                    avatar_scene.call_deferred(
-                        "on_avatar_trigger_emote",
-                        &[
-                            emote_id.to_variant(),
-                            looping.to_variant(),
-                            mask.to_variant(),
-                            avatar_entity_id.as_i32().to_variant(),
-                        ],
-                    );
-                }
-
-                Variant::nil()
-            });
-
-        let emote_finished_callable =
-            Callable::from_fn("on_avatar_emote_finished", move |args: &[&Variant]| {
-                if args.len() != 3 {
-                    return Variant::nil();
-                }
-
-                let Ok(emote_id) = args[0].try_to::<String>() else {
-                    return Variant::nil();
-                };
-                let Ok(interrupted) = args[1].try_to::<bool>() else {
-                    return Variant::nil();
-                };
-                let Ok(mask) = args[2].try_to::<i64>() else {
-                    return Variant::nil();
-                };
-
-                if let Ok(mut avatar_scene) = Gd::<AvatarScene>::try_from_instance_id(instance_id) {
-                    avatar_scene.call_deferred(
-                        "on_avatar_emote_finished",
-                        &[
-                            emote_id.to_variant(),
-                            interrupted.to_variant(),
-                            mask.to_variant(),
-                            avatar_entity_id.as_i32().to_variant(),
-                        ],
-                    );
-                }
-
-                Variant::nil()
-            });
-
-        new_avatar.connect("change_scene_id", &avatar_changed_scene_callable);
-        new_avatar.connect("emote_triggered", &emote_triggered_callable);
-        new_avatar.connect("emote_finished", &emote_finished_callable);
+        // Each handler defers: it must not run while the avatar that raised the signal is bound.
+        let me = self.to_gd();
+        let avatar_entity_id = entity_id.as_i32();
+        new_avatar.signals().change_scene_id().connect_other(
+            &me,
+            move |this: &mut AvatarScene, scene_id, prev_scene_id| {
+                this.run_deferred(move |this| {
+                    this.on_avatar_changed_scene(scene_id, prev_scene_id, avatar_entity_id)
+                });
+            },
+        );
+        new_avatar.signals().emote_triggered().connect_other(
+            &me,
+            move |this: &mut AvatarScene, emote_id: GString, looping, mask| {
+                this.run_deferred(move |this| {
+                    this.on_avatar_trigger_emote(emote_id, looping, mask, avatar_entity_id)
+                });
+            },
+        );
+        new_avatar.signals().emote_finished().connect_other(
+            &me,
+            move |this: &mut AvatarScene, emote_id: GString, interrupted, mask| {
+                this.run_deferred(move |this| {
+                    this.on_avatar_emote_finished(emote_id, interrupted, mask, avatar_entity_id)
+                });
+            },
+        );
 
         self.base_mut().add_child(&new_avatar);
 
@@ -946,13 +884,11 @@ impl AvatarScene {
             .insert(entity_id, new_avatar.clone());
 
         // Emit signal for the new avatar
-        self.base_mut()
-            .emit_signal("avatar_added", &[new_avatar.to_variant()]);
+        self.signals().avatar_added().emit(&new_avatar);
 
         // Emit signal with updated avatar list (for backwards compatibility)
         let avatars = self.get_avatars();
-        self.base_mut()
-            .emit_signal("avatar_scene_changed", &[avatars.to_variant()]);
+        self.signals().avatar_scene_changed().emit(&avatars);
     }
 
     #[func]
@@ -1672,14 +1608,12 @@ impl AvatarScene {
             // Emit signal for the removed avatar with its address
             if let Some(address) = removed_address {
                 let address_str = format!("{:#x}", address);
-                self.base_mut()
-                    .emit_signal("avatar_removed", &[address_str.to_variant()]);
+                self.signals().avatar_removed().emit(&address_str);
             }
 
             // Emit signal with updated avatar list (for backwards compatibility)
             let avatars = self.get_avatars();
-            self.base_mut()
-                .emit_signal("avatar_scene_changed", &[avatars.to_variant()]);
+            self.signals().avatar_scene_changed().emit(&avatars);
 
             // Promotion pushes transforms to scenes, which binds the scene runner again.
             drop(scene_runner);

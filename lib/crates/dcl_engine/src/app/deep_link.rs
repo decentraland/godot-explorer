@@ -89,13 +89,12 @@ impl DeepLinkRouter {
             return;
         }
         track_push_open(&obj, &start_kind.to_string());
-        self.base_mut()
-            .call_deferred("emit_deep_link_received", &[]);
+        self.run_deferred(|this| this.emit_deep_link_received());
     }
 
     #[func]
     fn emit_deep_link_received(&mut self) {
-        self.base_mut().emit_signal("deep_link_received", &[]);
+        self.signals().deep_link_received().emit();
     }
 
     /// Whether a URL names a loopback, private-range or `.local` host.

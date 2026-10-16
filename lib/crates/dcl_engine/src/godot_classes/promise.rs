@@ -35,7 +35,7 @@ pub struct Promise {
 #[godot_api]
 impl Promise {
     #[signal]
-    fn on_resolved();
+    pub fn on_resolved();
 
     #[func]
     pub fn resolve(&mut self) {
@@ -43,8 +43,7 @@ impl Promise {
             return;
         }
         self.resolved = true;
-        self.base_mut()
-            .call_deferred("emit_signal", &["on_resolved".to_variant()]);
+        self.run_deferred(|this| this.signals().on_resolved().emit());
     }
 
     #[func]

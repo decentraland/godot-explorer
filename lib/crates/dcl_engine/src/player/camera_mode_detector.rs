@@ -15,53 +15,44 @@ pub struct CameraModeAreaDetector {
 impl IArea3D for CameraModeAreaDetector {
     fn ready(&mut self) {
         let this = self.to_gd();
-        self.base_mut().connect(
-            "area_entered",
-            &Callable::from_fn("camera_mode_area_entered", {
-                let mut this = this.clone();
-                move |args| {
-                    if let Ok(area) = args[0].try_to::<Gd<DclCameraModeArea3D>>() {
-                        this.bind_mut().overlapping.push(area);
-                        this.bind().check_areas();
-                    }
-                    Variant::nil()
+        let base = self.base().clone();
+        base.signals()
+            .area_entered()
+            .connect_other(&this, |this: &mut Self, area: Gd<Area3D>| {
+                if let Ok(area) = area.try_cast::<DclCameraModeArea3D>() {
+                    this.overlapping.push(area);
+                    this.check_areas();
                 }
-            }),
-        );
-        self.base_mut().connect(
-            "area_exited",
-            &Callable::from_fn("camera_mode_area_exited", {
-                let this = this.clone();
-                move |args| {
-                    if let Ok(area) = args[0].try_to::<Gd<DclCameraModeArea3D>>() {
-                        this.clone().bind_mut().overlapping.retain(|a| a != &area);
-                        this.bind().check_areas();
-                    }
-                    Variant::nil()
+            });
+        base.signals()
+            .area_exited()
+            .connect_other(&this, |this: &mut Self, area: Gd<Area3D>| {
+                if let Ok(area) = area.try_cast::<DclCameraModeArea3D>() {
+                    this.overlapping.retain(|a| a != &area);
+                    this.check_areas();
                 }
-            }),
-        );
+            });
     }
 }
 
 #[godot_api]
 impl CameraModeAreaDetector {
     #[signal]
-    fn block_camera_mode(mode: i32);
+    pub fn block_camera_mode(mode: i32);
     #[signal]
-    fn unblock_camera_mode();
+    pub fn unblock_camera_mode();
 }
 
 impl CameraModeAreaDetector {
     fn check_areas(&self) {
-        let mut base = self.to_gd();
+        let base = self.to_gd();
         match self.overlapping.last() {
             Some(area) => {
                 let mode = area.bind().get_forced_camera_mode();
-                base.emit_signal("block_camera_mode", &[mode.to_variant()]);
+                base.signals().block_camera_mode().emit(mode);
             }
             None => {
-                base.emit_signal("unblock_camera_mode", &[]);
+                base.signals().unblock_camera_mode().emit();
             }
         }
     }

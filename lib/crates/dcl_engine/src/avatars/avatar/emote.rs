@@ -296,15 +296,11 @@ impl DclAvatar {
         self.emote.current_mask = -1;
         self.emote.current_scene_id = -1;
         self.emote.masked_suspended = false;
-        self.base_mut().call_deferred(
-            "emit_signal",
-            &[
-                "emote_finished".to_variant(),
-                urn.to_variant(),
-                interrupted.to_variant(),
-                mask.to_variant(),
-            ],
-        );
+        self.run_deferred(move |this| {
+            this.signals()
+                .emote_finished()
+                .emit(&urn, interrupted, mask)
+        });
     }
 
     /// Plays an emote by id or urn that is already loaded.
@@ -351,15 +347,8 @@ impl DclAvatar {
             self.track_emote(id);
         }
         let looping = self.emote.playing_loop;
-        self.base_mut().call_deferred(
-            "emit_signal",
-            &[
-                "emote_triggered".to_variant(),
-                id.to_variant(),
-                looping.to_variant(),
-                mask.to_variant(),
-            ],
-        );
+        let id = id.to_string();
+        self.run_deferred(move |this| this.signals().emote_triggered().emit(&id, looping, mask));
     }
 
     fn play_utility_emote(&mut self, utility_id: &str) -> bool {

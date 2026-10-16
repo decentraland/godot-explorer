@@ -488,19 +488,16 @@ impl INode for CommunicationManager {
     }
 
     fn ready(&mut self) {
-        self.base_mut().call_deferred("init_rs", &[]);
+        self.run_deferred(|this| this.init_rs());
     }
 
     fn process(&mut self, _dt: f64) {
         // Handle scene access check results
         while let Ok((scene_id, allowed, error_message)) = self.scene_access_receiver.try_recv() {
-            self.base_mut().emit_signal(
-                "scene_access_checked",
-                &[
-                    GString::from(&scene_id).to_variant(),
-                    allowed.to_variant(),
-                    GString::from(&error_message).to_variant(),
-                ],
+            self.signals().scene_access_checked().emit(
+                &GString::from(&scene_id),
+                allowed,
+                &GString::from(&error_message),
             );
         }
 
@@ -529,8 +526,8 @@ impl INode for CommunicationManager {
                 let player_identity = DclGlobal::singleton().bind().get_player_identity();
 
                 if player_identity.bind().try_get_address().is_some() {
-                    let var = adapter_url.to_variant();
-                    self.base_mut().call_deferred("change_adapter", &[var]);
+                    let adapter = GString::from(adapter_url.as_str());
+                    self.run_deferred(move |this| this.change_adapter(adapter));
                 }
             }
             CommsConnection::SignedLogin(signed_login) => match signed_login.poll() {
@@ -559,8 +556,7 @@ impl INode for CommunicationManager {
 
                 if !chats.is_empty() {
                     let chats_variant_array = get_chat_array(chats);
-                    self.base_mut()
-                        .emit_signal("chat_message", &[chats_variant_array.to_variant()]);
+                    self.signals().chat_message().emit(&chats_variant_array);
                 }
 
                 if !adapter_polling_ok {
@@ -619,8 +615,7 @@ impl INode for CommunicationManager {
                     self.scene_room_connect_in_flight = None;
                 }
                 self.current_scene_id = None;
-                self.base_mut()
-                    .emit_signal("disconnected", &[2i32.to_variant()]);
+                self.signals().disconnected().emit(2i32);
             }
 
             if !processor_polling_ok {
@@ -631,8 +626,7 @@ impl INode for CommunicationManager {
 
         // Handle chat signals after borrowing is done
         for chats_variant_array in chat_signals {
-            self.base_mut()
-                .emit_signal("chat_message", &[chats_variant_array.to_variant()]);
+            self.signals().chat_message().emit(&chats_variant_array);
         }
 
         // Handle outgoing messages after borrowing is done
@@ -671,8 +665,7 @@ impl INode for CommunicationManager {
                     let saved_connection_str = self.current_connection_str.clone();
                     self.clean();
                     self.current_connection_str = saved_connection_str;
-                    self.base_mut()
-                        .emit_signal("disconnected", &[3i32.to_variant()]);
+                    self.signals().disconnected().emit(3i32);
                 }
             } else if reason == DisconnectReason::DuplicateIdentity {
                 // DuplicateIdentity from ANY room → full disconnect (existing behavior)
@@ -682,15 +675,13 @@ impl INode for CommunicationManager {
                 self.clean();
                 self.current_connection_str = saved_connection_str;
 
-                self.base_mut()
-                    .emit_signal("disconnected", &[0i32.to_variant()]);
+                self.signals().disconnected().emit(0i32);
             } else if room_id.starts_with("scene-") {
                 if reason == DisconnectReason::Kicked {
                     // Kicked from scene room → full disconnect (clean all rooms)
                     tracing::warn!("Kicked from scene room '{}' — disconnecting fully", room_id);
                     self.clean();
-                    self.base_mut()
-                        .emit_signal("disconnected", &[2i32.to_variant()]);
+                    self.signals().disconnected().emit(2i32);
                 } else {
                     // Other scene room disconnects → handled by reconnection timer
                     tracing::debug!(
@@ -715,8 +706,7 @@ impl INode for CommunicationManager {
                     DisconnectReason::Other => 3,
                 };
                 tracing::warn!("Disconnected from '{}': {:?}", room_id, reason);
-                self.base_mut()
-                    .emit_signal("disconnected", &[reason_code.to_variant()]);
+                self.signals().disconnected().emit(reason_code);
             }
         }
 
@@ -824,11 +814,10 @@ impl CommunicationManager {
         // Set voice chat to false since we don't have a main connection with voice support
         self.voice_chat_enabled = false;
 
-        let voice_chat_enabled = self.voice_chat_enabled.to_variant();
-        self.base_mut().emit_signal(
-            "on_adapter_changed",
-            &[voice_chat_enabled, "fallback".to_variant()],
-        );
+        let voice_chat_enabled = self.voice_chat_enabled;
+        self.signals()
+            .on_adapter_changed()
+            .emit(voice_chat_enabled, "fallback");
 
         // Pulse has no adapter string of its own — every path that ends in a live comms
         // state must offer it a (re)creation chance, or a fallback-only session (e.g. the
@@ -1379,7 +1368,7 @@ impl CommunicationManager {
     /// allowed: true if access is granted, false if banned
     /// error_message: non-empty if the check failed (network error, etc.)
     #[signal]
-    fn scene_access_checked(scene_id: GString, allowed: bool, error_message: GString);
+    pub fn scene_access_checked(scene_id: GString, allowed: bool, error_message: GString);
 
     #[func]
     pub fn broadcast_voice(&mut self, frame: PackedVector2Array) {
@@ -2167,33 +2156,40 @@ impl CommunicationManager {
 
     #[func]
     fn init_rs(&mut self) {
+        let this = self.to_gd();
         DclGlobal::singleton()
             .bind()
             .get_realm()
-            .connect("realm_changed", &self.base().callable("_on_realm_changed"));
+            .signals()
+            .realm_changed()
+            .connect_other(&this, |this: &mut Self| this._on_realm_changed());
 
-        let mut player_identity = DclGlobal::singleton().bind().get_player_identity();
-        player_identity.connect(
-            "profile_changed",
-            &self.base().callable("_on_profile_changed"),
-        );
+        let player_identity = DclGlobal::singleton().bind().get_player_identity();
+        player_identity
+            .signals()
+            .profile_changed()
+            .connect_other(&this, |this: &mut Self, _profile| {
+                this._on_profile_changed()
+            });
 
         // Connect to social blacklist changes
         let global = DclGlobal::singleton();
         let global_bind = global.bind();
-        let mut social_blacklist = global_bind.social_blacklist.clone();
-        social_blacklist.connect(
-            "blacklist_changed",
-            &self.base().callable("on_blacklist_changed"),
-        );
+        let social_blacklist = global_bind.social_blacklist.clone();
+        social_blacklist
+            .signals()
+            .blacklist_changed()
+            .connect_other(&this, |this: &mut Self| this.on_blacklist_changed());
 
         #[cfg(feature = "use_livekit")]
         {
-            let mut scene_runner = DclGlobal::singleton().bind().get_scene_runner();
-            scene_runner.connect(
-                "on_change_scene_id",
-                &self.base().callable("_on_change_scene_id"),
-            );
+            let scene_runner = DclGlobal::singleton().bind().get_scene_runner();
+            scene_runner
+                .signals()
+                .on_change_scene_id()
+                .connect_other(&this, |this: &mut Self, scene_id| {
+                    this._on_change_scene_id(scene_id)
+                });
         }
 
         #[cfg(feature = "use_livekit")]
@@ -2204,19 +2200,18 @@ impl CommunicationManager {
     }
 
     #[func]
-    fn _on_profile_changed(&mut self, _: Variant) {
-        self.base_mut().call_deferred("_on_update_profile", &[]);
+    fn _on_profile_changed(&mut self) {
+        self.run_deferred(|this| this._on_update_profile());
     }
 
     #[func]
     fn _on_realm_changed(&mut self) {
-        self.base_mut()
-            .call_deferred("_on_realm_changed_deferred", &[]);
+        self.run_deferred(|this| this._on_realm_changed_deferred());
     }
 
     fn _internal_get_comms_from_realm(&self) -> Option<(String, Option<GString>)> {
         let realm = DclGlobal::singleton().bind().get_realm();
-        let realm_about = VarDictionary::from_variant(&realm.get("realm_about"));
+        let realm_about = realm.bind().get_realm_about();
         let comms = VarDictionary::from_variant(&realm_about.get(&StringName::from("comms"))?);
         let comms_protocol = String::from_variant(&comms.get(&StringName::from("protocol"))?);
 
@@ -2365,8 +2360,8 @@ impl CommunicationManager {
                 };
 
                 let realm = DclGlobal::singleton().bind().get_realm();
-                let realm_url = realm.get("realm_url").to_string();
-                let secret = realm.get("realm_credential").to_string();
+                let realm_url = realm.bind().realm_url.to_string();
+                let secret = realm.bind().get_realm_credential().to_string();
                 let secret = (!secret.is_empty()).then_some(secret);
                 let Ok(origin) = Uri::try_from(&realm_url) else {
                     tracing::warn!("failed to parse origin comms_address as a uri: {realm_url}");
@@ -2477,11 +2472,10 @@ impl CommunicationManager {
             self.ensure_pulse_room();
         }
 
-        let voice_chat_enabled = self.voice_chat_enabled.to_variant();
-        self.base_mut().emit_signal(
-            "on_adapter_changed",
-            &[voice_chat_enabled, comms_fixed_adapter_gstr.to_variant()],
-        );
+        let voice_chat_enabled = self.voice_chat_enabled;
+        self.signals()
+            .on_adapter_changed()
+            .emit(voice_chat_enabled, &comms_fixed_adapter_gstr);
     }
 
     fn clean(&mut self) {
@@ -2684,8 +2678,7 @@ impl CommunicationManager {
                 self.scene_room_reconnect_at = None;
                 self.scene_room_connect_in_flight = None;
                 self.current_scene_id = None;
-                self.base_mut()
-                    .emit_signal("disconnected", &[2i32.to_variant()]);
+                self.signals().disconnected().emit(2i32);
             }
             SceneRoomConnectionRequest::Failed { scene_id } => {
                 // A reconnect attempt finished without a connection. Clear the in-flight

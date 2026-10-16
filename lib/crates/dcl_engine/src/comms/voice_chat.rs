@@ -82,8 +82,7 @@ impl IAudioStreamPlayer for VoiceChatRecorder {
             let frames_available = effect_capture.get_frames_available();
             let stereo_data = effect_capture.get_buffer(frames_available);
 
-            self.base_mut()
-                .emit_signal("audio", &[stereo_data.to_variant()]);
+            self.signals().audio().emit(&stereo_data);
         }
     }
 }

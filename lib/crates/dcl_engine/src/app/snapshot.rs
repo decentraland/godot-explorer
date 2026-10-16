@@ -31,7 +31,7 @@ impl INode for Snapshot {}
 #[godot_api]
 impl Snapshot {
     #[signal]
-    fn snapshot_generated(face_image: Gd<Image>);
+    pub fn snapshot_generated(face_image: Gd<Image>);
 
     /// Renders the face of `profile`, stores it and records its hash on `avatar_wire_format`.
     /// The promise resolves when that is done.
@@ -106,5 +106,5 @@ async fn generate(
     wire.bind_mut()
         .set_snapshots(hash.as_str().into(), "".into());
     preview.queue_free();
-    this.emit_signal("snapshot_generated", &[face.to_variant()]);
+    this.signals().snapshot_generated().emit(&face);
 }

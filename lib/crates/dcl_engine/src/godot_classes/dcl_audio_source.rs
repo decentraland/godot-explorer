@@ -144,8 +144,11 @@ impl IAudioStreamPlayer3D for DclAudioSource {
     }
 
     fn ready(&mut self) {
-        let on_finished = self.base().callable("on_finished");
-        self.base_mut().connect("finished", &on_finished);
+        let this = self.to_gd();
+        self.base_mut()
+            .signals()
+            .finished()
+            .connect_other(&this, |this: &mut Self| this.on_finished());
     }
 
     fn process(&mut self, delta: f64) {

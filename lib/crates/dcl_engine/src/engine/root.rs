@@ -3,7 +3,7 @@
 
 use std::time::Instant;
 
-use godot::classes::{ClassDb, InputMap, Os};
+use godot::classes::{InputMap, Os};
 use godot::prelude::*;
 
 use crate::app::{audio_settings, general_settings, graphics};
@@ -86,7 +86,7 @@ impl INode for DclRoot {
         if let Some(window) = self.base().get_window() {
             graphics::apply_ui_zoom(window);
         }
-        self.base_mut().call_deferred("start", &[]);
+        self.run_deferred(|this| this.start());
     }
 }
 
@@ -130,7 +130,7 @@ impl DclRoot {
         if global.bind().is_mobile {
             InputMap::singleton().action_erase_events("ia_pointer");
         }
-        self.base_mut().call_deferred("start_mode", &[]);
+        self.run_deferred(|this| this.start_mode());
     }
 
     fn apply_display_settings(&self, global: &Gd<DclGlobal>) {
@@ -151,7 +151,7 @@ impl DclRoot {
             .get_engine()
             .bind()
             .setting("resolution_3d_scale".into());
-        window.set("scaling_3d_scale", &scale);
+        window.set_scaling_3d_scale(scale.to::<f32>());
         audio_settings::apply_volume_settings();
         general_settings::apply_max_cache_size();
     }
@@ -225,39 +225,15 @@ impl DclRoot {
     fn start_throwaway_guest(global: &Gd<DclGlobal>) {
         let mut identity = global.bind().get_player_identity();
         identity.bind_mut().set_default_profile();
-        identity.call("create_disposable_account", &[]);
+        identity.bind_mut().create_disposable_account();
     }
 
+    #[cfg(feature = "asset_server")]
     fn start_asset_server(&mut self, global: &Gd<DclGlobal>) {
-        let class = StringName::from("DclAssetServer");
-        if !ClassDb::singleton().class_exists(&class) {
-            godot_error!(
-                "Asset server requires the 'asset_server' feature to be enabled during build."
-            );
-            godot_error!("Build with: cargo run -- build --features asset_server");
-            if let Some(mut tree) = self.base().get_tree_or_null() {
-                tree.quit_ex().exit_code(1).done();
-            }
-            return;
-        }
-        let Some(instance) = ClassDb::singleton()
-            .instantiate(&class)
-            .try_to::<Gd<Node>>()
-            .ok()
-        else {
-            godot_error!("Cannot create the asset server");
-            return;
-        };
-        let mut server = instance;
-        server.call(
-            "set_port",
-            &[global
-                .bind()
-                .get_cli()
-                .bind()
-                .asset_server_port
-                .to_variant()],
-        );
+        let mut server = crate::asset_server::godot_wrapper::DclAssetServer::new_alloc();
+        server
+            .bind_mut()
+            .set_port(global.bind().get_cli().bind().asset_server_port);
         server.set_name("AssetServer");
         if let Some(mut root) = self
             .base()
@@ -266,8 +242,19 @@ impl DclRoot {
         {
             root.add_child(&server);
         }
-        server.call("start", &[]);
+        server.bind_mut().start();
         godot_print!("Asset server is running. Press Ctrl+C to stop.");
+    }
+
+    #[cfg(not(feature = "asset_server"))]
+    fn start_asset_server(&mut self, _global: &Gd<DclGlobal>) {
+        godot_error!(
+            "Asset server requires the 'asset_server' feature to be enabled during build."
+        );
+        godot_error!("Build with: cargo run -- build --features asset_server");
+        if let Some(mut tree) = self.base().get_tree_or_null() {
+            tree.quit_ex().exit_code(1).done();
+        }
     }
 }
 

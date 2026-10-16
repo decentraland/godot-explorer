@@ -245,20 +245,20 @@ impl SceneCrashReport {
 #[godot_api]
 impl SceneManager {
     #[signal]
-    fn scene_spawned(scene_id: i32, entity_id: GString);
+    pub fn scene_spawned(scene_id: i32, entity_id: GString);
 
     #[signal]
-    fn scene_killed(scene_id: i32, entity_id: GString);
+    pub fn scene_killed(scene_id: i32, entity_id: GString);
 
     #[signal]
-    fn scene_crashed(scene_id: i32, entity_id: GString);
+    pub fn scene_crashed(scene_id: i32, entity_id: GString);
 
     /// Emitted right after `scene_crashed` for every abnormal scene exit, parcel
     /// or global: JS thread panic, runtime error, or a thread that ended without
     /// a kill signal. Carries the scene identity while the definition is still in hand.
     /// `reason` is single-line and bounded (see `crash_reason_summary`).
     #[signal]
-    fn scene_crash_report(
+    pub fn scene_crash_report(
         scene_id: i32,
         entity_id: GString,
         title: GString,
@@ -273,14 +273,19 @@ impl SceneManager {
     /// a warning modal letting the user "Continue anyway" or go "Back to
     /// Discover". Emitted once per pressure episode (issue #2002).
     #[signal]
-    fn low_memory_warning(scene_id: i32, entity_id: GString, footprint_mb: i32, available_mb: i32);
+    pub fn low_memory_warning(
+        scene_id: i32,
+        entity_id: GString,
+        footprint_mb: i32,
+        available_mb: i32,
+    );
 
     // Loading session signals
     #[signal]
-    fn loading_started(session_id: i64, expected_count: i32);
+    pub fn loading_started(session_id: i64, expected_count: i32);
 
     #[signal]
-    fn loading_phase_changed(phase: GString);
+    pub fn loading_phase_changed(phase: GString);
 
     #[signal]
     pub fn loading_progress(percent: f32, ready: i32, total: i32);
@@ -289,10 +294,10 @@ impl SceneManager {
     pub fn loading_complete(session_id: i64);
 
     #[signal]
-    fn loading_timeout(session_id: i64);
+    pub fn loading_timeout(session_id: i64);
 
     #[signal]
-    fn loading_cancelled(session_id: i64);
+    pub fn loading_cancelled(session_id: i64);
 
     // Testing a comment for the API
     #[func]
@@ -433,14 +438,11 @@ impl SceneManager {
         // Loading funnel: first scene spawned is a funnel milestone.
         self.loading_funnel.on_scene_spawned(Instant::now());
 
-        self.base_mut().call_deferred(
-            "emit_signal",
-            &[
-                "scene_spawned".to_variant(),
-                signal_data.0 .0.to_variant(),
-                signal_data.1.to_variant(),
-            ],
-        );
+        self.run_deferred(move |this| {
+            this.signals()
+                .scene_spawned()
+                .emit(signal_data.0 .0, &signal_data.1)
+        });
         new_scene_id.0
     }
 
@@ -461,8 +463,11 @@ impl SceneManager {
         // subtree inherits it and no Label/Button added later gets silently localized.
         base_ui.set_auto_translate_mode(AutoTranslateMode::DISABLED);
         base_ui.set_name("scenes_ui");
-        let callable_on_ui_resize = self.base().callable("_on_ui_resize");
-        base_ui.connect("resized", &callable_on_ui_resize);
+        let this = self.to_gd();
+        base_ui
+            .signals()
+            .resized()
+            .connect_other(&this, |this: &mut Self| this._on_ui_resize());
         self.base_ui = base_ui;
         self.ui_canvas_information = self.create_ui_canvas_information();
     }
@@ -516,8 +521,9 @@ impl SceneManager {
         // Cancel any existing session
         if let Some(old_session) = self.current_loading_session.take() {
             tracing::debug!("[LOADING] Cancelling previous session {}", old_session.id);
-            self.base_mut()
-                .emit_signal("loading_cancelled", &[(old_session.id as i64).to_variant()]);
+            self.signals()
+                .loading_cancelled()
+                .emit(old_session.id as i64);
         }
 
         self.next_session_id += 1;
@@ -540,18 +546,14 @@ impl SceneManager {
         // Handle empty case - complete immediately
         if ids.is_empty() {
             tracing::debug!("[LOADING] Empty session, completing immediately");
-            self.base_mut()
-                .emit_signal("loading_complete", &[session_id.to_variant()]);
+            self.signals().loading_complete().emit(session_id);
             return;
         }
 
         let session = LoadingSession::new(self.next_session_id, ids);
         self.current_loading_session = Some(session);
 
-        self.base_mut().emit_signal(
-            "loading_started",
-            &[session_id.to_variant(), count.to_variant()],
-        );
+        self.signals().loading_started().emit(session_id, count);
         // Loading funnel: begin an "auto" load if none is active yet (streaming into a parcel
         // with no loading-screen entry point), then record the initial metadata phase.
         if !self.loading_funnel.is_active() {
@@ -561,10 +563,9 @@ impl SceneManager {
         }
         self.loading_funnel
             .on_phase(LoadingPhase::Metadata, Instant::now());
-        self.base_mut().emit_signal(
-            "loading_phase_changed",
-            &[GString::from("metadata").to_variant()],
-        );
+        self.signals()
+            .loading_phase_changed()
+            .emit(&GString::from("metadata"));
     }
 
     /// Report that a scene entity's metadata was fetched
@@ -730,8 +731,7 @@ impl SceneManager {
     #[func]
     pub fn cancel_loading_session(&mut self) {
         if let Some(session) = self.current_loading_session.take() {
-            self.base_mut()
-                .emit_signal("loading_cancelled", &[(session.id as i64).to_variant()]);
+            self.signals().loading_cancelled().emit(session.id as i64);
         }
     }
 
@@ -784,18 +784,16 @@ impl SceneManager {
                 session_id
             );
             self.loading_funnel.on_phase(new_phase, Instant::now());
-            self.base_mut().emit_signal(
-                "loading_phase_changed",
-                &[GString::from(new_phase.as_str()).to_variant()],
-            );
+            self.signals()
+                .loading_phase_changed()
+                .emit(&GString::from(new_phase.as_str()));
         }
 
         if is_complete {
             tracing::debug!("[LOADING] COMPLETE - session {} finished", session_id);
             self.loading_funnel.on_complete(Instant::now());
             self.current_loading_session = None;
-            self.base_mut()
-                .emit_signal("loading_complete", &[session_id.to_variant()]);
+            self.signals().loading_complete().emit(session_id);
         }
     }
 
@@ -808,14 +806,9 @@ impl SceneManager {
         let (ready, total) = session.get_scene_counts();
         // Loading funnel: accumulate the 25-30% plateau band.
         self.loading_funnel.on_progress(progress, Instant::now());
-        self.base_mut().emit_signal(
-            "loading_progress",
-            &[
-                progress.to_variant(),
-                (ready as i32).to_variant(),
-                (total as i32).to_variant(),
-            ],
-        );
+        self.signals()
+            .loading_progress()
+            .emit(progress, ready as i32, total as i32);
     }
 
     /// Internal: Check for individual scene timeouts (called from physics_process)
@@ -1120,7 +1113,7 @@ impl SceneManager {
     // Terminal state for an emote played on a scene-owned AvatarShape entity (NPC).
     // Starts are authored by the scene itself, so only endings are appended here.
     #[func]
-    fn on_avatar_shape_emote_finished(
+    pub(crate) fn on_avatar_shape_emote_finished(
         &mut self,
         scene_id: i32,
         entity_id: i32,
@@ -2015,14 +2008,11 @@ impl SceneManager {
                     available, footprint, current.0
                 ));
                 self.memory_modal_active = true;
-                self.base_mut().emit_signal(
-                    "low_memory_warning",
-                    &[
-                        current.0.to_variant(),
-                        entity_id.to_godot().to_variant(),
-                        footprint.to_variant(),
-                        available.to_variant(),
-                    ],
+                self.signals().low_memory_warning().emit(
+                    current.0,
+                    &entity_id.to_godot(),
+                    footprint,
+                    available,
                 );
             }
         }
@@ -2257,17 +2247,15 @@ impl SceneManager {
                 .clear_emote_owned_by_scene(signal_data.0 .0);
         }
 
-        self.base_mut().emit_signal(
-            "scene_killed",
-            &[signal_data.0 .0.to_variant(), signal_data.1.to_variant()],
-        );
+        self.signals()
+            .scene_killed()
+            .emit(signal_data.0 .0, &signal_data.1);
 
         if self.crashed_scene_ids.contains(scene_id) {
             self.crashed_scene_ids.retain(|x| x != scene_id);
-            self.base_mut().emit_signal(
-                "scene_crashed",
-                &[signal_data.0 .0.to_variant(), signal_data.1.to_variant()],
-            );
+            self.signals()
+                .scene_crashed()
+                .emit(signal_data.0 .0, &signal_data.1);
         }
 
         if is_abnormal {
@@ -2282,16 +2270,13 @@ impl SceneManager {
             (report.base_parcel.x, report.base_parcel.y),
             &report.reason,
         );
-        self.base_mut().emit_signal(
-            "scene_crash_report",
-            &[
-                report.scene_id.0.to_variant(),
-                report.entity_id.to_variant(),
-                report.title.to_variant(),
-                report.base_parcel.to_variant(),
-                report.reason.to_variant(),
-                report.uptime_s.to_variant(),
-            ],
+        self.signals().scene_crash_report().emit(
+            report.scene_id.0,
+            &report.entity_id,
+            &report.title,
+            report.base_parcel,
+            &report.reason,
+            report.uptime_s,
         );
     }
 
@@ -2639,10 +2624,7 @@ impl SceneManager {
             let entity_id = scene.scene_entity_definition.id.clone();
             let report = SceneCrashReport::from_scene(scene, "debug: forced via /scenecrash");
             tracing::info!("Forcing crash signal for scene {:?}", scene_id);
-            self.base_mut().emit_signal(
-                "scene_crashed",
-                &[scene_id.0.to_variant(), entity_id.to_variant()],
-            );
+            self.signals().scene_crashed().emit(scene_id.0, &entity_id);
             // Same report the real path emits, so /scenecrash exercises the
             // whole Sentry pipeline (seeder -> _before_send -> issue).
             self.emit_scene_crash_report(report);
@@ -2667,7 +2649,10 @@ impl SceneManager {
             global_bind.reset_skybox_time();
             drop(global_bind);
             if was_skybox_active {
-                global.emit_signal("sdk_skybox_time_active_changed", &[false.to_variant()]);
+                global
+                    .signals()
+                    .sdk_skybox_time_active_changed()
+                    .emit(false);
             }
         }
 
@@ -2702,10 +2687,12 @@ impl SceneManager {
             // The UI root dies with the old Explorer's base_ui subtree on
             // teardown — cloning it freed would panic (GODOT-EXPLORER-1DY).
             if scene.godot_dcl_scene.root_node_ui.is_instance_valid() {
-                self.base_ui.call_deferred(
-                    "remove_child",
-                    &[scene.godot_dcl_scene.root_node_ui.clone().to_variant()],
-                );
+                let root_ui = scene.godot_dcl_scene.root_node_ui.clone();
+                self.base_ui.clone().run_deferred_gd(move |mut ui| {
+                    if root_ui.is_instance_valid() {
+                        ui.remove_child(&root_ui);
+                    }
+                });
             }
         }
 
@@ -2758,16 +2745,15 @@ impl SceneManager {
                 .map(|(urn, title, parcel)| (urn.as_str(), title.as_str(), *parcel)),
         );
 
-        let scene_id = Variant::from(self.current_parcel_scene_id.0);
-        self.base_mut()
-            .emit_signal("on_change_scene_id", &[scene_id]);
+        let scene_id = self.current_parcel_scene_id.0;
+        self.signals().on_change_scene_id().emit(scene_id);
     }
 
     #[signal]
     pub fn on_change_scene_id(scene_id: i32);
 
     #[signal]
-    fn locomotion_settings_changed(settings: Gd<DclLocomotionSettings>);
+    pub fn locomotion_settings_changed(settings: Gd<DclLocomotionSettings>);
 
     pub fn get_all_scenes_mut(&mut self) -> &mut HashMap<SceneId, Scene> {
         &mut self.scenes
@@ -3135,9 +3121,11 @@ impl INode for SceneManager {
     }
 
     fn ready(&mut self) {
-        let callable_on_ui_resize = self.base().callable("_on_ui_resize");
-
-        self.base_ui.connect("resized", &callable_on_ui_resize);
+        let this = self.to_gd();
+        self.base_ui
+            .signals()
+            .resized()
+            .connect_other(&this, |this: &mut Self| this._on_ui_resize());
         self.base_ui
             .set_auto_translate_mode(AutoTranslateMode::DISABLED);
         self.base_ui.set_name("scenes_ui");
@@ -3230,7 +3218,7 @@ impl INode for SceneManager {
                     }
 
                     // Emit signal for tooltip change
-                    self.base_mut().emit_signal("pointer_tooltip_changed", &[]);
+                    self.signals().pointer_tooltip_changed().emit();
                 }
 
                 // Handle pointer press/release on avatar for profile opening
@@ -3258,16 +3246,12 @@ impl INode for SceneManager {
                                 true // Default to true if global not available
                             };
 
-                            let passport_disabled: bool =
-                                avatar.get("passport_disabled").try_to().unwrap_or(false);
+                            let passport_disabled: bool = avatar.bind().passport_disabled;
 
                             if ui_has_focus && !passport_disabled {
                                 // Emit open_profile_by_avatar signal on the Global singleton
-                                if let Some(mut global) = DclGlobal::try_singleton() {
-                                    global.emit_signal(
-                                        "open_profile_by_avatar",
-                                        &[avatar.to_variant()],
-                                    );
+                                if let Some(global) = DclGlobal::try_singleton() {
+                                    global.signals().open_profile_by_avatar().emit(avatar);
                                 }
                             }
                         }
@@ -3291,7 +3275,7 @@ impl INode for SceneManager {
                     }
 
                     // Emit signal for tooltip change
-                    self.base_mut().emit_signal("pointer_tooltip_changed", &[]);
+                    self.signals().pointer_tooltip_changed().emit();
                 }
             }
         }
@@ -3490,7 +3474,7 @@ impl INode for SceneManager {
             self.highlighted_entity = new_highlighted;
         }
         if tooltips_changed || highlight_changed {
-            self.base_mut().emit_signal("pointer_tooltip_changed", &[]);
+            self.signals().pointer_tooltip_changed().emit();
         }
 
         GLOBAL_TICK_NUMBER.fetch_add(1, std::sync::atomic::Ordering::SeqCst);

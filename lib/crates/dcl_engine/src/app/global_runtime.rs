@@ -164,7 +164,7 @@ fn check_launch_link(cold: bool) {
 /// The synchronous part of the boot: the mobile and emulation flags, the startup deeplink and the
 /// services every boot needs.
 fn boot_services() {
-    let global = DclGlobal::singleton();
+    let mut global = DclGlobal::singleton();
     let cli = globals::cli();
     // Bench only: uncap the FPS and disable vsync before any code path can re-pin them. Real users
     // keep their saved cap and vsync.
@@ -175,12 +175,12 @@ fn boot_services() {
         Os::singleton().set_low_processor_usage_mode(false);
     }
     if cli.bind().force_mobile {
-        global.clone().call("_set_is_mobile", &[true.to_variant()]);
+        global.bind_mut()._set_is_mobile(true);
     }
 
     // Emulating a phone enables mobile mode and resizes the window.
     if let Some(phone) = super::global_api::emulated_phone() {
-        global.clone().call("_set_is_mobile", &[true.to_variant()]);
+        global.bind_mut()._set_is_mobile(true);
         let portrait = global.bind().is_portrait;
         if let Some(mut window) = global.get_tree_or_null().and_then(|t| t.get_root()) {
             window.set_size(safe_area_presets::window_size(phone, portrait));
@@ -199,10 +199,16 @@ fn boot_services() {
     // iOS delivers a warm link through a plugin signal; the cold one is read at ready.
     if DclIosPlugin::is_available() {
         if let Some(mut ios) = Engine::singleton().get_singleton("DclGodotiOS") {
-            let router = global.bind().deep_link_router.clone();
+            let mut router = global.bind().deep_link_router.clone();
+            // The plugin is not a class of this crate: its signal is connected by name.
             ios.connect(
                 "deeplink_received",
-                &Callable::from_object_method(&router, "process_deep_link"),
+                &Callable::from_fn("deeplink_received", move |args| {
+                    if let Some(url) = args.first().and_then(|v| v.try_to::<GString>().ok()) {
+                        router.bind_mut().process_deep_link(url, "warm".into());
+                    }
+                    Variant::nil()
+                }),
             );
         }
     }
@@ -351,7 +357,7 @@ async fn finish_boot(started_ms: u64) {
             .try_to::<bool>()
             .unwrap_or(false);
     if install_pending {
-        globals::metrics().call_deferred("track_install_referrer", &[]);
+        globals::metrics().run_deferred(|metrics| metrics.track_install_referrer());
         engine
             .bind()
             .set_setting("install_referrer_sent".into(), true.to_variant(), true);
@@ -361,7 +367,7 @@ async fn finish_boot(started_ms: u64) {
     // The dynamic graphics manager starts after the settings are loaded; it skips itself in bench
     // mode so results stay comparable, while production keeps the thermal cap and adaptive downgrade.
     let mut autotune = global.bind().graphics_autotune.clone();
-    autotune.call_deferred("init_dynamic_graphics", &[]);
+    autotune.run_deferred(|autotune| autotune.init_dynamic_graphics());
 
     if cli.bind().raycast_debugger {
         DclGlobal::set_raycast_debugger_enable(true);

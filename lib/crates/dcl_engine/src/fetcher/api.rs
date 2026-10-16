@@ -44,18 +44,13 @@ fn run_bool(task: impl std::future::Future<Output = bool> + 'static) -> Gd<Promi
 }
 
 fn say_in_chat(translation_key: &str, replacements: VarDictionary) {
-    let mut global = DclGlobal::singleton();
+    let global = DclGlobal::singleton();
     let text = global.tr(translation_key);
-    let text = text
-        .to_variant()
-        .call("format", &[replacements.to_variant()]);
-    global.emit_signal(
-        "on_chat_message",
-        &[
-            "system".to_variant(),
-            text,
-            Time::singleton().get_unix_time_from_system().to_variant(),
-        ],
+    let text = crate::utils::template::fill_placeholders(&text.to_string(), &replacements);
+    global.signals().on_chat_message().emit(
+        "system",
+        &text,
+        Time::singleton().get_unix_time_from_system(),
     );
 }
 

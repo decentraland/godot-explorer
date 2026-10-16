@@ -32,9 +32,7 @@ pub struct FeatureFlags {
 #[godot_api]
 impl INode for FeatureFlags {
     fn ready(&mut self) {
-        let me = self.to_gd();
-        self.base_mut().call_deferred("load", &[]);
-        let _ = me;
+        self.run_deferred(|this| this.load_flags());
     }
 }
 
@@ -65,14 +63,13 @@ impl FeatureFlags {
         DclFeatureFlags::get_number(flag_name, default_value)
     }
 
-    #[func(rename = load)]
-    fn gd_load(&mut self) {
+    fn load_flags(&mut self) {
         let me = self.to_gd();
         spawn_local(load(me));
     }
 }
 
-async fn load(mut node: Gd<FeatureFlags>) {
+async fn load(node: Gd<FeatureFlags>) {
     let result = await_promise(DclFeatureFlags::async_load()).await;
     if !node.is_instance_valid() {
         return;
@@ -86,7 +83,7 @@ async fn load(mut node: Gd<FeatureFlags>) {
         Err(_) => godot_print!("[FeatureFlags] loaded: {}", DclFeatureFlags::flags()),
     }
     node.bind().apply_flags();
-    node.emit_signal("flags_loaded", &[]);
+    node.signals().flags_loaded().emit();
 }
 
 impl FeatureFlags {

@@ -160,6 +160,20 @@ pub fn signal_once(
     })
 }
 
+/// Runs `f` once on the main thread at the end of the current frame, from any thread (the typed,
+/// thread-safe `call_deferred`). `f` carries ids and plain data, never a `Gd`; a `Variant` goes
+/// through `args`, which the engine hands to `f` on the main thread.
+pub fn defer_from_any_thread(args: &[Variant], f: impl FnOnce(&[&Variant]) + Send + 'static) {
+    let cell = std::sync::Mutex::new(Some(f));
+    Callable::from_sync_fn("defer_from_any_thread", move |args| {
+        if let Some(f) = cell.lock().unwrap_or_else(|e| e.into_inner()).take() {
+            f(args);
+        }
+        Variant::nil()
+    })
+    .call_deferred(args);
+}
+
 /// Runs `f` once, at the end of the current frame's message queue (the typed `call_deferred`).
 pub fn defer(f: impl FnOnce() + 'static) {
     let cell = RefCell::new(Some(f));

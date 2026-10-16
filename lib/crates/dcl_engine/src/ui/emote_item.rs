@@ -186,22 +186,12 @@ impl EmoteItemUi {
         self.set_selected(selected);
         let urn = self.emote_urn.clone();
         // Deferred: the wheel's handler reads this item, which is bound while it handles the hover.
-        self.base_mut().call_deferred(
-            "emit_signal",
-            &[
-                "select_emote".to_variant(),
-                inside.to_variant(),
-                urn.to_variant(),
-            ],
-        );
+        self.run_deferred(move |this| this.signals().select_emote().emit(inside, &urn));
     }
 
     fn on_pressed(&mut self) {
         let urn = self.emote_urn.clone();
-        self.base_mut().call_deferred(
-            "emit_signal",
-            &["play_emote".to_variant(), urn.to_variant()],
-        );
+        self.run_deferred(move |this| this.signals().play_emote().emit(&urn));
     }
 
     fn set_selected(&mut self, selected: bool) {

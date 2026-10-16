@@ -191,14 +191,9 @@ impl HardwareBenchmark {
             THRESHOLDS[profile].name
         );
         self.cleanup();
-        self.base_mut().emit_signal(
-            "benchmark_completed",
-            &[
-                (profile as i64).to_variant(),
-                (gpu as f64).to_variant(),
-                (ram as f64).to_variant(),
-            ],
-        );
+        self.signals()
+            .benchmark_completed()
+            .emit(profile as i64, gpu as f64, ram as f64);
     }
 
     fn cleanup(&mut self) {

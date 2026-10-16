@@ -55,10 +55,13 @@ impl IOptionButton for DclUiDropdown {
         self.base_mut()
             .add_theme_stylebox_override("pressed", &style_box_empty.clone());
 
-        let callable_on_item_selected = self.base().callable("on_item_selected");
+        let this = self.to_gd();
         self.base_mut()
-            .clone()
-            .connect("item_selected", &callable_on_item_selected);
+            .signals()
+            .item_selected()
+            .connect_other(&this, |this: &mut Self, index| {
+                this.on_item_selected(index as i32)
+            });
     }
 }
 

@@ -116,7 +116,7 @@ impl ITextureRect for OrbSkin {
                 .signals()
                 .button_up()
                 .connect_other(&me, |this: &mut Self| {
-                    this.base_mut().call_deferred("refresh", &[]);
+                    this.run_deferred(|this| this.refresh());
                 });
             button
                 .signals()

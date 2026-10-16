@@ -308,14 +308,13 @@ pub fn update_particle_system(
             });
 
             let waiting_texture = if let Some(hash) = &texture_hash {
-                content_provider.call_deferred(
-                    "fetch_texture_by_hash",
-                    &[
-                        hash.to_godot().to_variant(),
-                        DclContentMappingAndUrl::from_ref(scene.content_mapping.clone())
-                            .to_variant(),
-                    ],
+                let (hash, mapping) = (
+                    hash.to_godot(),
+                    DclContentMappingAndUrl::from_ref(scene.content_mapping.clone()),
                 );
+                content_provider.run_deferred(move |provider| {
+                    provider.fetch_texture_by_hash(hash, mapping);
+                });
                 true
             } else {
                 false
@@ -414,14 +413,13 @@ pub fn update_particle_system(
 
             // Re-fetch the texture (hash was resolved on the first apply).
             let waiting_texture = if let Some(hash) = &texture_hash {
-                content_provider.call_deferred(
-                    "fetch_texture_by_hash",
-                    &[
-                        hash.to_godot().to_variant(),
-                        DclContentMappingAndUrl::from_ref(scene.content_mapping.clone())
-                            .to_variant(),
-                    ],
+                let (hash, mapping) = (
+                    hash.to_godot(),
+                    DclContentMappingAndUrl::from_ref(scene.content_mapping.clone()),
                 );
+                content_provider.run_deferred(move |provider| {
+                    provider.fetch_texture_by_hash(hash, mapping);
+                });
                 true
             } else {
                 false

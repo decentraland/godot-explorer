@@ -504,10 +504,15 @@ impl DclAvatar {
         let mut notifier = VisibleOnScreenNotifier3D::new_alloc();
         notifier.set_aabb(SCREEN_NOTIFIER_AABB);
         self.base_mut().add_child(&notifier);
-        let on_enter = self.base().callable("on_avatar_screen_entered");
-        let on_exit = self.base().callable("on_avatar_screen_exited");
-        notifier.connect("screen_entered", &on_enter);
-        notifier.connect("screen_exited", &on_exit);
+        let this = self.to_gd();
+        notifier
+            .signals()
+            .screen_entered()
+            .connect_other(&this, |this: &mut Self| this.on_avatar_screen_entered());
+        notifier
+            .signals()
+            .screen_exited()
+            .connect_other(&this, |this: &mut Self| this.on_avatar_screen_exited());
         self.lod.screen_notifier = Some(notifier);
     }
 

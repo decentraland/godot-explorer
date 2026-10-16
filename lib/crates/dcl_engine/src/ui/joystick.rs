@@ -147,10 +147,10 @@ impl IControl for VirtualJoystick {
 #[godot_api]
 impl VirtualJoystick {
     #[signal]
-    fn stick_position(position: Vector2);
+    pub fn stick_position(position: Vector2);
 
     #[signal]
-    fn is_holded(held: bool);
+    pub fn is_holded(held: bool);
 
     #[func]
     fn on_loading_scene(&mut self) {
@@ -245,8 +245,7 @@ impl VirtualJoystick {
     }
 
     fn emit_stick(&mut self, value: Vector2) {
-        self.base_mut()
-            .emit_signal("stick_position", &[value.to_variant()]);
+        self.signals().stick_position().emit(value);
     }
 
     fn start_sprint(&mut self) {
@@ -367,8 +366,7 @@ impl VirtualJoystick {
     /// Back to rest: no gesture, no input, the base at its resting spot, shifted by the safe area.
     fn reset(&mut self) {
         self.is_pressed = false;
-        self.base_mut()
-            .emit_signal("is_holded", &[false.to_variant()]);
+        self.signals().is_holded().emit(false);
         self.output = Vector2::ZERO;
         self.touch_index = NO_TOUCH;
 

@@ -84,8 +84,7 @@ impl IControl for MobileCameraInput {
         self.pinch_a = -1;
         self.pinch_b = -1;
         self.base_mut().set_mouse_filter(MouseFilter::STOP);
-        let mut this = self.to_gd();
-        this.call_deferred("resolve_player", &[]);
+        self.run_deferred(|this| this.resolve_player());
     }
 
     /// Backgrounding the app or an OS gesture-cancel can drop the touch-release events, leaving
@@ -169,7 +168,7 @@ impl IControl for MobileCameraInput {
             // press) runs after input returns, later in this frame. Checking the candidates
             // synchronously would race it (lifting and re-pressing the joystick thumb could be
             // misread as a free pinch candidate).
-            self.base_mut().call_deferred("on_touch_count_changed", &[]);
+            self.run_deferred(|this| this.on_touch_count_changed());
         } else if let Ok(drag) = event.try_cast::<InputEventScreenDrag>() {
             let index = drag.get_index();
             self.touches.insert(index, drag.get_position());

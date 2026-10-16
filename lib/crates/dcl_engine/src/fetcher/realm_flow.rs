@@ -47,7 +47,7 @@ fn rows(urns: &[EntityUrn]) -> Array<VarDictionary> {
 
 /// Applies a landing to `realm`; false when the realm could not be committed.
 pub async fn apply(mut realm: Gd<DclRealm>, landing: Landing) -> bool {
-    realm.emit_signal("realm_changing", &[]);
+    realm.signals().realm_changing().emit();
     realm.bind_mut().set_credential(&landing.credential);
     commit(realm, landing).await
 }
@@ -127,7 +127,7 @@ async fn commit(mut realm_node: Gd<DclRealm>, landing: Landing) -> bool {
     );
     globals::metrics().bind_mut().update_realm(realm_url);
 
-    realm_node.emit_signal("realm_changed", &[]);
+    realm_node.signals().realm_changed().emit();
     true
 }
 
@@ -192,7 +192,7 @@ pub async fn world_scene_urns(world: &str) -> Option<Vec<String>> {
 /// Makes `realm_string` the current realm with no resolve and no explorer: the offline scene
 /// renderer's entry. Private worlds are refused up front; a failure is announced through
 /// `realm_change_failed`.
-pub async fn set_realm(mut realm_node: Gd<DclRealm>, realm_string: &str) -> bool {
+pub async fn set_realm(realm_node: Gd<DclRealm>, realm_string: &str) -> bool {
     let realm_url = realm::normalize_realm_url(realm_string);
     let world = super::world_access::world_name_from_realm(realm_string);
     if !world.is_empty() {
@@ -207,15 +207,15 @@ pub async fn set_realm(mut realm_node: Gd<DclRealm>, realm_string: &str) -> bool
                     realm_string.into(),
                     "private_world_access_denied".into(),
                 );
-            realm_node.emit_signal(
-                "realm_access_denied",
-                &[realm_string.to_variant(), world.to_variant()],
-            );
+            realm_node
+                .signals()
+                .realm_access_denied()
+                .emit(realm_string, &world);
             return false;
         }
     }
 
-    realm_node.emit_signal("realm_changing", &[]);
+    realm_node.signals().realm_changing().emit();
     let about = http::get_json(&format!("{realm_url}about")).await;
     let problem = match &about {
         None => Some("invalid response".to_string()),
@@ -226,10 +226,10 @@ pub async fn set_realm(mut realm_node: Gd<DclRealm>, realm_string: &str) -> bool
         globals::scene_runner()
             .bind_mut()
             .loading_realm_change_failed(realm_string.into(), reason.as_str().into());
-        realm_node.emit_signal(
-            "realm_change_failed",
-            &[realm_string.to_variant(), reason.to_variant()],
-        );
+        realm_node
+            .signals()
+            .realm_change_failed()
+            .emit(realm_string, &reason);
         return false;
     }
     globals::scene_runner().bind_mut().loading_mark_about_end();
