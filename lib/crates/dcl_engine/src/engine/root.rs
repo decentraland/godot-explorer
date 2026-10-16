@@ -17,10 +17,8 @@ const ENGINE_IDLE: &str = "res://src/engine_host/avatar_host.tscn";
 pub enum BootMode {
     AssetServer,
     /// The floating-islands benchmark builds its own scene.
-    FiBenchmark,
-    AvatarImpostorBenchmark,
     Scene(&'static str),
-    /// Scene tests and scene renders: a throwaway guest, straight into the explorer.
+    /// Scene tests: a throwaway guest, straight into the explorer.
     SceneTest,
     /// No host: the emulator, a throwaway guest straight into a world.
     Emulator,
@@ -30,16 +28,12 @@ pub enum BootMode {
 #[derive(Debug, Default, Clone)]
 pub struct BootFlags {
     pub asset_server: bool,
-    pub fi_benchmark: bool,
-    pub avatar_impostor_benchmark: bool,
     pub avatar_renderer: bool,
     pub asset_renderer: bool,
     pub client_test: bool,
-    pub lighting_renderer: bool,
     /// The host booted the core before the engine started.
     pub host_driven: bool,
     pub scene_test: bool,
-    pub scene_renderer: bool,
     pub preview: bool,
     pub has_realm: bool,
 }
@@ -47,21 +41,15 @@ pub struct BootFlags {
 pub fn boot_mode(flags: &BootFlags) -> BootMode {
     if flags.asset_server {
         BootMode::AssetServer
-    } else if flags.fi_benchmark {
-        BootMode::FiBenchmark
-    } else if flags.avatar_impostor_benchmark {
-        BootMode::AvatarImpostorBenchmark
     } else if flags.avatar_renderer {
         BootMode::Scene("res://src/tool/avatar_renderer/avatar_renderer_standalone.tscn")
     } else if flags.asset_renderer {
         BootMode::Scene("res://src/tool/asset_renderer/asset_renderer_standalone.tscn")
     } else if flags.client_test {
         BootMode::Scene("res://src/client_tests/client_test_scene.tscn")
-    } else if flags.lighting_renderer {
-        BootMode::Scene("res://src/tool/lighting_renderer/lighting_renderer_standalone.tscn")
     } else if flags.host_driven {
         BootMode::Scene(ENGINE_IDLE)
-    } else if flags.scene_test || flags.scene_renderer {
+    } else if flags.scene_test {
         BootMode::SceneTest
     } else {
         BootMode::Emulator
@@ -180,15 +168,11 @@ impl DclRoot {
             let cli = cli.bind();
             BootFlags {
                 asset_server: cli.asset_server,
-                fi_benchmark: cli.fi_benchmark_size >= 0,
-                avatar_impostor_benchmark: cli.avatar_impostor_benchmark,
                 avatar_renderer: cli.avatar_renderer_mode,
                 asset_renderer: cli.asset_renderer_mode,
                 client_test: cli.client_test_mode,
-                lighting_renderer: cli.lighting_renderer,
                 host_driven: global.bind().get_engine().bind().is_host_driven(),
                 scene_test: cli.scene_test_mode,
-                scene_renderer: cli.scene_renderer_mode,
                 preview: cli.preview_mode,
                 has_realm: !cli.realm.is_empty(),
             }
@@ -198,13 +182,6 @@ impl DclRoot {
             BootMode::AssetServer => {
                 godot_print!("Running in Asset Server mode");
                 self.start_asset_server(&global);
-            }
-            // The benchmark runner already built its own scene.
-            BootMode::FiBenchmark => {}
-            BootMode::AvatarImpostorBenchmark => {
-                godot_print!("Running in Avatar Impostor Benchmark mode");
-                Self::start_throwaway_guest(&global);
-                self.change_scene("res://src/tools/avatar_impostor_benchmark.tscn");
             }
             BootMode::Scene(path) => {
                 godot_print!("Running {path}");
@@ -328,13 +305,9 @@ mod tests {
     }
 
     #[test]
-    fn scene_tests_and_renders_share_a_boot() {
+    fn scene_tests_have_their_own_boot() {
         assert_eq!(
             boot_mode(&flags(|f| f.scene_test = true)),
-            BootMode::SceneTest
-        );
-        assert_eq!(
-            boot_mode(&flags(|f| f.scene_renderer = true)),
             BootMode::SceneTest
         );
     }
@@ -361,9 +334,6 @@ mod tests {
     fn tools_have_their_own_scenes() {
         assert!(
             matches!(boot_mode(&flags(|f| f.client_test = true)), BootMode::Scene(path) if path.contains("client_test"))
-        );
-        assert!(
-            matches!(boot_mode(&flags(|f| f.lighting_renderer = true)), BootMode::Scene(path) if path.contains("lighting"))
         );
     }
 }

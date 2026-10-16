@@ -6,6 +6,7 @@ use std::sync::Arc;
 use std::time::{Instant, UNIX_EPOCH};
 use tokio::task::JoinHandle;
 
+use crate::avatars::avatar_type::DclAvatarWireFormat;
 use crate::avatars::dcl_user_profile::DclUserProfile;
 use crate::comms::profile::UserProfile;
 use crate::dcl::scene_apis::RpcResultSender;
@@ -39,7 +40,12 @@ pub struct DclPlayerIdentity {
     try_connect_account_handle: Option<JoinHandle<()>>,
 
     #[var(pub)]
-    is_guest: bool,
+    pub is_guest: bool,
+
+    /// What the avatar editor changes: committed to `profile` by the core, not by the engine.
+    pub(super) mutable_profile: Gd<DclUserProfile>,
+    pub(super) mutable_avatar: Gd<DclAvatarWireFormat>,
+    pub(super) lambda_url: String,
 
     base: Base<Node>,
 }
@@ -105,19 +111,28 @@ impl INode for DclPlayerIdentity {
                 .add_observer(Arc::new(IdentityObserver(node.instance_id())));
             node.call_deferred("_sync_core_session", &[]);
         }
+        let mutable_profile = DclUserProfile::new_gd();
+        let mutable_avatar = mutable_profile.bind().get_avatar();
         Self {
             profile: None,
             base,
             is_guest: false,
             try_connect_account_handle: None,
+            mutable_profile,
+            mutable_avatar,
+            lambda_url: String::new(),
         }
+    }
+
+    fn ready(&mut self) {
+        self.connect_profile_flow();
     }
 }
 
 #[godot_api]
 impl DclPlayerIdentity {
     #[signal]
-    fn logout();
+    pub fn logout();
 
     #[signal]
     pub fn wallet_connected(address: GString, chain_id: i64, is_guest: bool);
@@ -250,7 +265,7 @@ impl DclPlayerIdentity {
     /// persistence, no recovery. Reserved for dev / hidden behind double-tap
     /// in non-prod. For silent + persistent guest, use `async_create_guest_account`.
     #[func]
-    fn create_disposable_account(&mut self) {
+    pub fn create_disposable_account(&mut self) {
         let local_wallet = LocalWallet::new(&mut thread_rng());
         let local_wallet_bytes = local_wallet.signer().to_bytes().to_vec();
         let ephemeral_auth_chain = create_local_ephemeral(&local_wallet);
@@ -1244,7 +1259,7 @@ impl DclPlayerIdentity {
     }
 
     #[func]
-    fn _update_profile_from_lambda(&mut self, response: Gd<RequestResponse>) -> bool {
+    pub(super) fn _update_profile_from_lambda(&mut self, response: Gd<RequestResponse>) -> bool {
         let base_url = DclGlobal::singleton()
             .bind()
             .get_realm()

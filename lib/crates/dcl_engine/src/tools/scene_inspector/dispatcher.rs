@@ -63,7 +63,7 @@ impl SceneInspectorDispatcher {
 
     /// Enable or disable JSONL file logging. Creates StorageManager on demand.
     #[func]
-    fn set_file_logging(&mut self, enabled: bool) {
+    pub fn set_file_logging(&mut self, enabled: bool) {
         if enabled && self.storage.is_none() {
             let config = SceneInspectorConfig::default();
             match StorageManager::new(config, self.session_id.clone()) {

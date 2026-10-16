@@ -8,7 +8,6 @@ use super::component::{
     is_recompute_pending, registered_lights, set_view, settings, take_recompute_pending,
 };
 use super::logic::rank_by_distance;
-use crate::fetcher::globals;
 use crate::godot_classes::dcl_global::DclGlobal;
 
 const UPDATE_INTERVAL: f32 = 0.25;
@@ -52,10 +51,7 @@ impl INode for DclLightSourceManager {
 }
 
 fn reference_position() -> Option<Vector3> {
-    globals::explorer()?
-        .get("player")
-        .try_to::<Gd<Node3D>>()
-        .ok()
+    crate::world::state::player()
         .filter(|p| p.is_instance_valid())
         .map(|p| p.get_global_position())
 }

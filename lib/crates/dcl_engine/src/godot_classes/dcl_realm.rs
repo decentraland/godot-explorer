@@ -12,7 +12,7 @@ pub struct DclRealm {
     #[var(pub)]
     realm_about: VarDictionary,
     #[var(pub)]
-    realm_url: GString,
+    pub realm_url: GString,
     #[var(pub)]
     realm_string: GString,
 

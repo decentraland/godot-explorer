@@ -82,7 +82,7 @@ func log_active_counts():
 	counts.mesh_savings_percent = (counts.potential_dedup_count * 100.0) / counts.mesh_rid_count
 
 	counts.timestamp = Time.get_datetime_string_from_system()
-	counts.parcel_position = DclGlobal.get_explorer().parcel_position
+	counts.parcel_position = DclGlobal.get_explorer().get_parcel_position()
 
 	counts.fps = Performance.get_monitor(Performance.TIME_FPS)
 	counts.draw_calls = Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)

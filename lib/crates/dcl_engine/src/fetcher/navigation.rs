@@ -18,7 +18,6 @@ use godot::classes::Time;
 use godot::prelude::*;
 
 use super::{
-    loading_session::LoadingSession,
     realm_flow::{self, Landing},
     scene_fetcher::explorer,
     world_access,
@@ -310,12 +309,12 @@ fn clear_boot_realm_if(realm_string: &str) {
 }
 
 async fn enter(navigation: &Navigation, resolution: Resolution, when: &str) -> bool {
-    let Some(mut explorer) = explorer() else {
+    if explorer().is_none() {
         return abandon("no_explorer");
-    };
+    }
     // The episode is already open; a second one would report this intent as superseded by its
     // own loading screen.
-    if let Some(loading) = loading_of(&explorer) {
+    if let Some(loading) = crate::world::state::loading() {
         loading
             .bind()
             .begin(navigation.realm.as_str().into(), when.into(), false);
@@ -327,7 +326,7 @@ async fn enter(navigation: &Navigation, resolution: Resolution, when: &str) -> b
         !navigation.is_intent || realm_url != globals::realm().bind().get_realm_url().to_string();
     if needs_change {
         let Some(about) = resolution.about else {
-            end_loading(&mut explorer, "Failed");
+            end_loading("Failed");
             return false;
         };
         let landing = Landing {
@@ -340,7 +339,7 @@ async fn enter(navigation: &Navigation, resolution: Resolution, when: &str) -> b
         };
         let realm = globals::realm();
         if !realm_flow::apply(realm, landing).await {
-            end_loading(&mut explorer, "Failed");
+            end_loading("Failed");
             return false;
         }
     }
@@ -348,17 +347,13 @@ async fn enter(navigation: &Navigation, resolution: Resolution, when: &str) -> b
     // A restoration carries its parcel only so the resolve can describe it: the explorer's
     // `_ready` already put the player there.
     if let (true, Some((x, y))) = (navigation.is_intent, navigation.parcel) {
-        explorer.call("teleport_to", &[Vector2i::new(x, y).to_variant()]);
+        crate::world::api::teleport_to(Vector2i::new(x, y));
     }
     true
 }
 
-fn loading_of(explorer: &Gd<Node>) -> Option<Gd<LoadingSession>> {
-    explorer.get("loading").try_to().ok()
-}
-
-fn end_loading(explorer: &mut Gd<Node>, status: &str) {
-    if let Some(loading) = loading_of(explorer) {
+fn end_loading(status: &str) {
+    if let Some(loading) = crate::world::state::loading() {
         loading.bind().end(status.into());
     }
 }

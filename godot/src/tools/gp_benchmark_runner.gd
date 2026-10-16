@@ -830,12 +830,10 @@ func _enforce_pinned_pose() -> void:
 
 
 func _get_player_node() -> Node3D:
-	var explorer := get_tree().current_scene
+	var explorer := DclGlobal.get_explorer()
 	if explorer == null:
 		return null
-	if "player" in explorer:
-		return explorer.player
-	return null
+	return explorer.get_player()
 
 
 func _apply_toggles() -> void:

@@ -6,15 +6,15 @@ use crate::deep_link;
 #[class(base=RefCounted)]
 pub struct DclParseDeepLink {
     #[var(pub)]
-    location: Vector2i,
+    pub location: Vector2i,
 
     #[var(pub)]
-    realm: GString,
+    pub realm: GString,
 
     /// Preview URL for hot reloading (e.g., http://192.168.0.55:8000)
     /// When set, skips lobby and enables preview mode with WebSocket hot reload
     #[var(pub)]
-    preview: GString,
+    pub preview: GString,
 
     /// Dynamic scene loading mode (deep link param: dynamic-scene-loading=true)
     /// When true, uses continuous scene loading/unloading without terrain generation.
@@ -73,7 +73,7 @@ pub struct DclParseDeepLink {
 
     /// Whether to write JSONL Scene Inspector files to disk
     #[var(pub)]
-    scene_inspector_file: bool,
+    pub scene_inspector_file: bool,
 
     /// Simulate low-spec iPhone warnings from deep link (low_spec_warning=true)
     #[var(pub)]

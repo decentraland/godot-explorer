@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # Start virtual display (kept for the non-asset-server presets that still
-# render a viewport, e.g. avatar-renderer / scene-renderer).
+# render a viewport, e.g. avatar-renderer / asset-renderer).
 /usr/bin/Xvfb -ac :99 -screen 0 1280x1024x24 &
 export DISPLAY=:99
 

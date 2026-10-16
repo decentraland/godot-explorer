@@ -6,3 +6,4 @@ pub use dcl_core::session::{
 
 pub mod dcl_player_identity;
 pub mod deploy_profile;
+mod identity_profile;

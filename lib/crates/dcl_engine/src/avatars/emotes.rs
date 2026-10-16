@@ -1,8 +1,5 @@
 //! Emote ids: the built-in base emotes, the scene-triggered utility emotes and the URNs.
 
-use godot::classes::RefCounted;
-use godot::prelude::*;
-
 pub const BASE_EMOTES_URN_PREFIX: &str = "urn:decentraland:off-chain:base-emotes:";
 
 /// Base emotes, loaded remotely as `base-emotes` URNs.
@@ -103,26 +100,6 @@ impl SceneEmoteUrn {
             glb_hash: rest[second + 1..].to_string(),
             looping,
         })
-    }
-}
-
-/// The id helpers for GDScript callers, until the backpack bridge is Rust.
-#[derive(GodotClass)]
-#[class(base=RefCounted, init)]
-pub struct Emotes {
-    base: Base<RefCounted>,
-}
-
-#[godot_api]
-impl Emotes {
-    #[func]
-    fn is_base_emote_urn(urn: GString) -> bool {
-        is_base_emote_urn(&urn.to_string())
-    }
-
-    #[func]
-    fn get_base_emote_id_from_urn(urn: GString) -> GString {
-        base_emote_id(&urn.to_string()).into()
     }
 }
 

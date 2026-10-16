@@ -136,9 +136,10 @@ impl IControl for VirtualJoystick {
             .signals()
             .resized()
             .connect_other(&me, |this| this.reset());
-        host::connect("on_menu_open", &me, "on_menu_open");
-        host::connect("on_menu_close", &me, "on_menu_close");
-        host::connect("loading_started", &me, "on_loading_scene");
+        crate::godot_classes::dcl_global::DclGlobal::singleton()
+            .signals()
+            .loading_started()
+            .connect_other(&me, |this| this.on_loading_scene());
         self.on_loading_scene();
     }
 }
@@ -150,16 +151,6 @@ impl VirtualJoystick {
 
     #[signal]
     fn is_holded(held: bool);
-
-    #[func]
-    fn on_menu_open(&mut self) {
-        self.active_area.set_mouse_filter(MouseFilter::IGNORE);
-    }
-
-    #[func]
-    fn on_menu_close(&mut self) {
-        self.active_area.set_mouse_filter(MouseFilter::STOP);
-    }
 
     #[func]
     fn on_loading_scene(&mut self) {

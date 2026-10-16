@@ -45,7 +45,7 @@ GlobalBoot="*res://src/global_boot.tscn"
 EmptyParcelProps="*res://assets/empty-scenes/empty_parcel_props.tscn"
 DebugWs="*res://src/tool/debug_server/debug_ws_server.gd"
 DevLocalhostRelay="*res://src/tool/dev_localhost_relay.gd"
-EngineHost="*res://src/engine_host/engine_host.gd"
+EngineHost="*res://src/engine_host/engine_host.tscn"
 
 [debug]
 

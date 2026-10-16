@@ -45,7 +45,7 @@ impl INode for DclTokioRpc {
 #[godot_api]
 impl DclTokioRpc {
     #[signal]
-    fn need_open_url(url: GString, description: GString, use_webview: bool);
+    pub fn need_open_url(url: GString, description: GString, use_webview: bool);
 
     pub fn get_sender(&self) -> tokio::sync::mpsc::Sender<OpenUrlRequest> {
         self.sender.clone()

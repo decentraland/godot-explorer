@@ -48,6 +48,7 @@ pub mod tools;
 pub mod ui;
 pub use dcl_core::urls;
 pub mod utils;
+pub mod world;
 
 struct DecentralandGodotLibrary;
 

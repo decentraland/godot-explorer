@@ -428,7 +428,7 @@ impl SceneFetcher {
     pub fn is_using_floating_islands(&self) -> bool {
         let cli = globals::cli();
         let cli = cli.bind();
-        !(cli.scene_test_mode || cli.scene_renderer_mode)
+        !cli.scene_test_mode
     }
 
     #[func]
@@ -1015,22 +1015,17 @@ fn kill_scene(scene_number_id: i32) {
     scene_runner().bind_mut().kill_scene(scene_number_id);
 }
 
-pub(super) fn explorer() -> Option<Gd<Node>> {
+pub(super) fn explorer() -> Option<Gd<crate::world::explorer::Explorer>> {
     DclGlobal::get_explorer()
 }
 
 fn explorer_loading() -> Option<Gd<super::loading_session::LoadingSession>> {
-    explorer()?.get("loading").try_to().ok()
+    crate::world::state::loading()
 }
 
 fn move_player_to(position: Vector3) {
-    if let Some(mut explorer) = explorer() {
-        // The spawn point is already validated, so skip the stuck check.
-        explorer.call(
-            "move_to",
-            &[position.to_variant(), true.to_variant(), false.to_variant()],
-        );
-    }
+    // The spawn point is already validated, so skip the stuck check.
+    crate::world::api::move_to(position, true, false);
 }
 
 async fn spawn_on_empty_parcel(this: Gd<SceneFetcher>, parcel: Vector2i) {

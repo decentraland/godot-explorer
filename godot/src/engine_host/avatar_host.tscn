@@ -1,6 +1,3 @@
 [gd_scene format=3 uid="uid://b3rnavatarhst0"]
 
-[ext_resource type="Script" uid="uid://f0mycqpb48lg" path="res://src/engine_host/avatar_host.gd" id="1_host"]
-
-[node name="RnAvatarHost" type="Node"]
-script = ExtResource("1_host")
+[node name="RnAvatarHost" type="AvatarHost"]

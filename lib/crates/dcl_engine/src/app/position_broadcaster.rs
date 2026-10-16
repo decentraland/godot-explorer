@@ -65,7 +65,7 @@ pub fn should_send(last: &Sent, now: &Sent, idle_ticks: u32) -> bool {
 pub struct PositionBroadcaster {
     base: Base<Timer>,
     #[export]
-    player_node: Option<Gd<Player>>,
+    pub player_node: Option<Gd<Player>>,
     last: Sent,
     idle_ticks: u32,
 }

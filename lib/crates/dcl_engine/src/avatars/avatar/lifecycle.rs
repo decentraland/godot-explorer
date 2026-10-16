@@ -318,16 +318,6 @@ impl DclAvatar {
         if Input::singleton().get_mouse_mode() != MouseMode::CAPTURED {
             return;
         }
-        if let Some(mut explorer) = globals::explorer() {
-            if explorer.is_instance_valid()
-                && explorer.call("is_session_hide_main_hud", &[]).booleanize()
-                && explorer
-                    .call("is_session_hide_view_profile", &[])
-                    .booleanize()
-            {
-                return;
-            }
-        }
         let avatar = self.to_gd().to_variant();
         DclGlobal::singleton().call_deferred(
             "emit_signal",

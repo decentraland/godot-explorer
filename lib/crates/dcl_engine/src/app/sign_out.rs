@@ -16,9 +16,7 @@ pub fn sign_out() {
     // 1. The live explorer first, while it is still in the tree, so its signal callbacks and retry
     //    timers are severed before the steps below re-emit any of those signals (orientation, the
     //    realm clear, the scene kill) or free it.
-    if let Some(mut explorer) = DclGlobal::get_explorer() {
-        explorer.call("prepare_for_logout", &[]);
-    }
+    crate::world::api::prepare_for_logout();
 
     // 2. The session's background work. The analytics first-move poll reads the player body; left
     //    running it would poll the freed player after the swap. It restarts on the next login.
@@ -47,7 +45,7 @@ pub fn sign_out() {
     // 6. Forget the previous identity so the next account starts fresh: otherwise the prior profile
     //    and avatar linger in memory and leak into the new account's avatar editor (#1658), and the
     //    saved guest look would carry from guest to guest.
-    globals::player_identity().call("reset_identity", &[]);
+    globals::player_identity().bind_mut().reset_identity();
 
     // The login is portrait only: logging out of a landscape screen must not strand it there.
     DclGlobal::set_orientation_portrait();

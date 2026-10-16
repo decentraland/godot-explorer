@@ -246,13 +246,13 @@ pub struct Player {
     #[var(no_set, pub)]
     mount_camera: Option<Gd<SpringArm3D>>,
     #[var(no_set, pub)]
-    camera: Option<Gd<DclCamera3D>>,
+    pub camera: Option<Gd<DclCamera3D>>,
     camera_collision_clamp: Option<Gd<CameraCollisionClamp>>,
     avatar_raycast: Option<Gd<RayCast3D>>,
     #[var(no_set, pub)]
-    outline_system: Option<Gd<OutlineSystem>>,
+    pub outline_system: Option<Gd<OutlineSystem>>,
     #[var(no_set, pub)]
-    avatar: Option<Gd<DclAvatar>>,
+    pub avatar: Option<Gd<DclAvatar>>,
     stuck_detector: Option<Gd<StuckDetector>>,
     /// Margin-less clone of the body shape for step-up motion tests (skin width would eat the
     /// step band).

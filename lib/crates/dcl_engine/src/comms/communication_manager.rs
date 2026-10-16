@@ -1373,7 +1373,7 @@ impl CommunicationManager {
     /// Signal emitted when disconnected from the server
     /// reason: 0 = DuplicateIdentity, 1 = RoomClosed, 2 = Kicked, 3 = Other
     #[signal]
-    fn disconnected(reason: i32);
+    pub fn disconnected(reason: i32);
 
     /// Signal emitted with the result of a scene access check
     /// allowed: true if access is granted, false if banned
@@ -2041,7 +2041,7 @@ impl CommunicationManager {
     }
 
     #[func]
-    fn send_chat(&mut self, text: GString) -> bool {
+    pub fn send_chat(&mut self, text: GString) -> bool {
         let packet = rfc4::Packet {
             message: Some(rfc4::packet::Message::Chat(rfc4::Chat {
                 message: text.to_string(),
@@ -2300,7 +2300,7 @@ impl CommunicationManager {
     }
 
     #[func]
-    fn change_adapter(&mut self, comms_fixed_adapter_gstr: GString) {
+    pub fn change_adapter(&mut self, comms_fixed_adapter_gstr: GString) {
         let comms_fixed_adapter_str = comms_fixed_adapter_gstr.to_string();
         let Some((protocol, comms_address)) = comms_fixed_adapter_str.as_str().split_once(':')
         else {

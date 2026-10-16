@@ -185,8 +185,8 @@ impl LoadingSession {
                 "status": status.to_string(),
             }),
         );
-        if let Some(explorer) = super::scene_fetcher::explorer() {
-            let parcel = explorer.get("parcel_position").to::<Vector2i>();
+        if let Some(world) = crate::world::state::current() {
+            let parcel = world.parcel.get();
             let realm = globals::realm().bind().get_realm_string();
             globals::engine()
                 .bind()

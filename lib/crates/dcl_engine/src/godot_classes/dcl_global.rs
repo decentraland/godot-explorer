@@ -316,6 +316,7 @@ impl INode for DclGlobal {
         let mut realm: Gd<DclRealm> = DclRealm::new_alloc();
         let mut dcl_tokio_rpc: Gd<DclTokioRpc> = DclTokioRpc::new_alloc();
         let mut player_identity: Gd<DclPlayerIdentity> = DclPlayerIdentity::new_alloc();
+        player_identity.set_name("player_identity");
         let mut testing_tools: Gd<DclTestingTools> = DclTestingTools::new_alloc();
         let mut portable_experience_controller: Gd<DclPortableExperienceController> =
             DclPortableExperienceController::new_alloc();

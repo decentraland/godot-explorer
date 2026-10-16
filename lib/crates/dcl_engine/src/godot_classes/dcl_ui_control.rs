@@ -5,7 +5,7 @@ use godot::{
         control::{FocusMode, MouseFilter},
         notify::ControlNotification,
         Control, IControl, Input, InputEvent, InputEventMouseButton, InputEventScreenDrag,
-        InputEventScreenTouch, Node,
+        InputEventScreenTouch,
     },
     global::MouseButton,
     prelude::*,
@@ -185,14 +185,11 @@ impl DclUiControl {
             let index = self.pressed_touch_index;
             let press_position = self.press_position;
             if let Some(mut mci) = self.get_mobile_camera_input() {
-                mci.call(
-                    "adopt_touch",
-                    &[
-                        index.to_variant(),
-                        press_position.to_variant(),
-                        global_position.to_variant(),
-                        event.get_relative().to_variant(),
-                    ],
+                mci.bind_mut().adopt_touch(
+                    index,
+                    press_position,
+                    global_position,
+                    event.get_relative(),
                 );
             }
         }
@@ -201,21 +198,15 @@ impl DclUiControl {
     fn update_adopted_touch(&mut self, global_position: Vector2, relative: Vector2) {
         let index = self.pressed_touch_index;
         if let Some(mut mci) = self.get_mobile_camera_input() {
-            mci.call(
-                "update_adopted_touch",
-                &[
-                    index.to_variant(),
-                    global_position.to_variant(),
-                    relative.to_variant(),
-                ],
-            );
+            mci.bind_mut()
+                .update_adopted_touch(index, global_position, relative);
         }
     }
 
     fn release_adopted_touch(&mut self) {
         let index = self.pressed_touch_index;
         if let Some(mut mci) = self.get_mobile_camera_input() {
-            mci.call("release_adopted_touch", &[index.to_variant()]);
+            mci.bind_mut().release_adopted_touch(index);
         }
     }
 
@@ -225,7 +216,9 @@ impl DclUiControl {
         self.base().get_global_transform() * local_position
     }
 
-    fn get_mobile_camera_input(&mut self) -> Option<Gd<Node>> {
+    fn get_mobile_camera_input(
+        &mut self,
+    ) -> Option<Gd<crate::player::mobile_input::MobileCameraInput>> {
         DclEngine::get()?.bind().touch_camera_input()
     }
 

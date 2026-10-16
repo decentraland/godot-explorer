@@ -33,15 +33,11 @@ pub struct DclCli {
     #[var(no_set, pub)]
     pub force_mobile: bool,
     #[var(no_set, pub)]
-    pub lighting_renderer: bool,
-    #[var(no_set, pub)]
     pub perf_log: bool,
     #[var(no_set, pub)]
     pub preview_mode: bool,
     #[var(no_set, pub)]
     pub scene_test_mode: bool,
-    #[var(no_set, pub)]
-    pub scene_renderer_mode: bool,
     #[var(no_set, pub)]
     pub avatar_renderer_mode: bool,
     #[var(no_set, pub)]
@@ -83,8 +79,6 @@ pub struct DclCli {
     #[var(no_set, pub)]
     pub only_no_optimized_scene_emotes: bool,
     #[var(no_set, pub)]
-    pub stress_test: bool,
-    #[var(no_set, pub)]
     pub emulate_ios: bool,
     #[var(no_set, pub)]
     pub emulate_android: bool,
@@ -104,10 +98,6 @@ pub struct DclCli {
     pub end_of_device_support_warning: bool,
     #[var(no_set, pub)]
     pub below_minspec_warning: bool,
-    #[var(no_set, pub)]
-    pub fi_benchmark_size: i32,
-    #[var(no_set, pub)]
-    pub avatar_impostor_benchmark: bool,
     #[var(no_set, pub)]
     pub gp_benchmark: bool,
     // Bench substrate flag. When true, skip first-launch HardwareBenchmark
@@ -159,8 +149,6 @@ pub struct DclCli {
     #[var(no_set, pub)]
     pub location: GString,
     #[var(no_set, pub)]
-    pub scene_input_file: GString,
-    #[var(no_set, pub)]
     pub avatars_file: GString,
     #[var(no_set, pub)]
     pub asset_input_file: GString,
@@ -170,10 +158,6 @@ pub struct DclCli {
     pub fake_deeplink: GString,
     #[var(no_set, pub)]
     pub dcl_env: GString,
-    #[var(no_set, pub)]
-    pub fi_benchmark_output: GString,
-    #[var(no_set, pub)]
-    pub avatar_impostor_benchmark_output: GString,
     #[var(no_set, pub)]
     pub saved_profile: GString,
 
@@ -237,12 +221,6 @@ impl DclCli {
                 category: "Testing".to_string(),
             },
             ArgDefinition {
-                name: "--lighting-renderer".to_string(),
-                description: "Run the lighting renderer tool scene".to_string(),
-                arg_type: ArgType::Flag,
-                category: "Testing".to_string(),
-            },
-            ArgDefinition {
                 name: "--emulate-ios".to_string(),
                 description: "Phone window and iOS safe areas (iPhone 14 Pro style notch). Window size only: it does not change what runs"
                     .to_string(),
@@ -295,18 +273,6 @@ impl DclCli {
                 name: "--client-test".to_string(),
                 description: "Run client visual tests (avatar outline tests)".to_string(),
                 arg_type: ArgType::Flag,
-                category: "Testing".to_string(),
-            },
-            ArgDefinition {
-                name: "--scene-renderer".to_string(),
-                description: "Run in scene renderer mode".to_string(),
-                arg_type: ArgType::Flag,
-                category: "Testing".to_string(),
-            },
-            ArgDefinition {
-                name: "--scene-input-file".to_string(),
-                description: "Path to scene input file for renderer".to_string(),
-                arg_type: ArgType::Value("<file>".to_string()),
                 category: "Testing".to_string(),
             },
             ArgDefinition {
@@ -438,14 +404,6 @@ impl DclCli {
                 arg_type: ArgType::Value("<URL>".to_string()),
                 category: "Testing".to_string(),
             },
-            ArgDefinition {
-                name: "--stress-test".to_string(),
-                description:
-                    "Run stress test with rapid teleportation to test scene loading/unloading"
-                        .to_string(),
-                arg_type: ArgType::Flag,
-                category: "Testing".to_string(),
-            },
             // Asset Server
             ArgDefinition {
                 name: "--asset-server".to_string(),
@@ -459,34 +417,6 @@ impl DclCli {
                 description: "Port for asset optimization server (default: 8080)".to_string(),
                 arg_type: ArgType::Value("<port>".to_string()),
                 category: "Server".to_string(),
-            },
-            // Floating Islands Benchmark
-            ArgDefinition {
-                name: "--fi-benchmark-size".to_string(),
-                description: "Number of parcels to generate for floating islands benchmark"
-                    .to_string(),
-                arg_type: ArgType::Value("<N>".to_string()),
-                category: "Performance".to_string(),
-            },
-            ArgDefinition {
-                name: "--fi-benchmark-output".to_string(),
-                description: "Output file path for benchmark results (JSON)".to_string(),
-                arg_type: ArgType::Value("<file>".to_string()),
-                category: "Performance".to_string(),
-            },
-            ArgDefinition {
-                name: "--avatar-impostor-benchmark".to_string(),
-                description: "Launch the avatar impostor benchmark scene at startup, run both phases, write results, and quit"
-                    .to_string(),
-                arg_type: ArgType::Flag,
-                category: "Performance".to_string(),
-            },
-            ArgDefinition {
-                name: "--avatar-impostor-benchmark-output".to_string(),
-                description: "Output file path for avatar impostor benchmark results (text)"
-                    .to_string(),
-                arg_type: ArgType::Value("<file>".to_string()),
-                category: "Performance".to_string(),
             },
             // Genesis Plaza Benchmark (issue #1862). Trigger only — all knobs
             // (toggles, durations, output path, tag) live in
@@ -733,11 +663,9 @@ impl INode for DclCli {
 
         // Extract common flags
         let force_mobile = args_map.contains_key("--force-mobile");
-        let lighting_renderer = args_map.contains_key("--lighting-renderer");
         let perf_log = args_map.contains_key("--perf-log");
         let preview_mode = args_map.contains_key("--preview");
         let scene_test_mode = args_map.contains_key("--scene-test");
-        let scene_renderer_mode = args_map.contains_key("--scene-renderer");
         let avatar_renderer_mode = args_map.contains_key("--avatar-renderer");
         let asset_renderer_mode = args_map.contains_key("--asset-renderer");
         let client_test_mode = args_map.contains_key("--client-test");
@@ -753,13 +681,12 @@ impl INode for DclCli {
         let dcl_benchmark = args_map.contains_key("--dcl-benchmark");
         let benchmark_report = args_map.contains_key("--benchmark-report");
         let developer_mode = args_map.contains_key("--dev");
-        let fixed_skybox_time = scene_test_mode || scene_renderer_mode;
+        let fixed_skybox_time = scene_test_mode;
         let only_optimized = args_map.contains_key("--only-optimized");
         let only_no_optimized = args_map.contains_key("--only-no-optimized");
         // TODO: Remove this default=true after asset-server re-processes scene emotes correctly.
         // Currently optimized scene emotes have incorrect animation structure.
         let only_no_optimized_scene_emotes = !args_map.contains_key("--use-optimized-scene-emotes");
-        let stress_test = args_map.contains_key("--stress-test");
         let emulate_ios = args_map.contains_key("--emulate-ios");
         let emulate_android = args_map.contains_key("--emulate-android");
         let landscape = args_map.contains_key("--landscape");
@@ -779,11 +706,6 @@ impl INode for DclCli {
         let end_of_device_support_warning =
             args_map.contains_key("--end-of-device-support-warning");
         let below_minspec_warning = args_map.contains_key("--below-minspec-warning");
-        let fi_benchmark_size = args_map
-            .get("--fi-benchmark-size")
-            .and_then(|v| v.as_ref().map(|s| s.parse::<i32>().unwrap_or(-1)))
-            .unwrap_or(-1);
-        let avatar_impostor_benchmark = args_map.contains_key("--avatar-impostor-benchmark");
         let gp_benchmark = args_map.contains_key("--gp-benchmark");
         let optimized_content_base_url: GString = args_map
             .get("--optimized-content-base-url")
@@ -825,11 +747,6 @@ impl INode for DclCli {
             .and_then(|v| v.as_ref())
             .map(GString::from)
             .unwrap_or_default();
-        let scene_input_file = args_map
-            .get("--scene-input-file")
-            .and_then(|v| v.as_ref())
-            .map(GString::from)
-            .unwrap_or_default();
         let avatars_file = args_map
             .get("--avatars")
             .and_then(|v| v.as_ref())
@@ -862,16 +779,6 @@ impl INode for DclCli {
             .unwrap_or_default();
         let dcl_env = args_map
             .get("--dclenv")
-            .and_then(|v| v.as_ref())
-            .map(GString::from)
-            .unwrap_or_default();
-        let fi_benchmark_output = args_map
-            .get("--fi-benchmark-output")
-            .and_then(|v| v.as_ref())
-            .map(GString::from)
-            .unwrap_or_default();
-        let avatar_impostor_benchmark_output = args_map
-            .get("--avatar-impostor-benchmark-output")
             .and_then(|v| v.as_ref())
             .map(GString::from)
             .unwrap_or_default();
@@ -926,11 +833,9 @@ impl INode for DclCli {
             args_map,
             arg_definitions: Self::register_arguments(),
             force_mobile,
-            lighting_renderer,
             perf_log,
             preview_mode,
             scene_test_mode,
-            scene_renderer_mode,
             avatar_renderer_mode,
             asset_renderer_mode,
             client_test_mode,
@@ -951,7 +856,6 @@ impl INode for DclCli {
             only_optimized,
             only_no_optimized,
             only_no_optimized_scene_emotes,
-            stress_test,
             emulate_ios,
             emulate_android,
             landscape,
@@ -962,8 +866,6 @@ impl INode for DclCli {
             low_spec_warning,
             end_of_device_support_warning,
             below_minspec_warning,
-            fi_benchmark_size,
-            avatar_impostor_benchmark,
             gp_benchmark,
             optimized_content_base_url,
             skip_gltf_load,
@@ -973,14 +875,11 @@ impl INode for DclCli {
             asset_server_port,
             realm,
             location,
-            scene_input_file,
             avatars_file,
             asset_input_file,
             snapshot_folder,
             fake_deeplink,
             dcl_env,
-            fi_benchmark_output,
-            avatar_impostor_benchmark_output,
             saved_profile,
             pulse,
             pulse_explicit,

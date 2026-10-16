@@ -2,13 +2,14 @@
 //! device safe area, the focus and mouse of the explorer, the platform URL openers and the sign-out.
 //! Everything here is static (or takes the handle) so none of it runs under `Global`'s own borrow.
 
-use godot::classes::{DisplayServer, Input, Node, Window};
+use godot::classes::{DisplayServer, Input, Window};
 use godot::prelude::*;
 
 use super::safe_area_presets::{self, Emulated};
 use super::session;
 use crate::fetcher::globals;
 use crate::godot_classes::dcl_global::DclGlobal;
+use crate::world::{self, explorer::Explorer};
 
 /// The orientation the window's shape says: portrait when it is at least as tall as wide.
 pub fn window_is_portrait(size: Vector2i) -> bool {
@@ -184,81 +185,60 @@ impl DclGlobal {
     // The explorer: focus, mouse and the platform.
 
     #[func]
-    pub fn get_explorer() -> Option<Gd<Node>> {
+    pub fn get_explorer() -> Option<Gd<Explorer>> {
         global()
             .get_tree_or_null()?
             .get_root()?
             .get_node_or_null("explorer")
             .filter(|n| n.is_instance_valid())
+            .and_then(|n| n.try_cast::<Explorer>().ok())
     }
 
     #[func]
     pub fn explorer_has_focus() -> bool {
-        let Some(explorer) = Self::get_explorer() else {
-            return false;
-        };
-        explorer
-            .get("ui_root")
-            .try_to::<Gd<godot::classes::Control>>()
-            .is_ok_and(|ui| ui.has_focus())
+        world::state::current().is_some_and(|w| w.ui_root.has_focus())
     }
 
     #[func]
     pub fn explorer_grab_focus() {
-        let Some(explorer) = Self::get_explorer() else {
+        let Some(world) = world::state::current() else {
             return;
         };
         // A scene text input being typed in keeps focus (and its keyboard) until it blurs.
         if globals::engine().bind().is_text_input_focused() {
             return;
         }
-        if let Ok(mut ui) = explorer
-            .get("ui_root")
-            .try_to::<Gd<godot::classes::Control>>()
-        {
-            ui.call_deferred("grab_focus", &[]);
-        }
+        let mut ui = world.ui_root.clone();
+        crate::engine::local_task::defer(move || ui.grab_focus());
     }
 
     #[func]
     pub fn explorer_release_focus() {
-        if let Some(explorer) = Self::get_explorer() {
-            if let Ok(mut ui) = explorer
-                .get("ui_root")
-                .try_to::<Gd<godot::classes::Control>>()
-            {
-                ui.call_deferred("release_focus", &[]);
-            }
+        if let Some(world) = world::state::current() {
+            let mut ui = world.ui_root.clone();
+            crate::engine::local_task::defer(move || ui.release_focus());
         }
     }
 
     #[func]
     pub fn capture_mouse() {
-        match Self::get_explorer() {
-            Some(mut explorer) => {
-                explorer.call("capture_mouse", &[]);
-            }
-            None if DisplayServer::singleton()
-                .has_feature(godot::classes::display_server::Feature::MOUSE) =>
-            {
-                Input::singleton().set_mouse_mode(godot::classes::input::MouseMode::CAPTURED);
-            }
-            None => {}
+        if world::state::current().is_some() {
+            world::capture_mouse();
+        } else if DisplayServer::singleton()
+            .has_feature(godot::classes::display_server::Feature::MOUSE)
+        {
+            Input::singleton().set_mouse_mode(godot::classes::input::MouseMode::CAPTURED);
         }
     }
 
     #[func]
     pub fn release_mouse() {
-        match Self::get_explorer() {
-            Some(mut explorer) => {
-                explorer.call("release_mouse", &[]);
-            }
-            None if DisplayServer::singleton()
-                .has_feature(godot::classes::display_server::Feature::MOUSE) =>
-            {
-                Input::singleton().set_mouse_mode(godot::classes::input::MouseMode::VISIBLE);
-            }
-            None => {}
+        if world::state::current().is_some() {
+            world::release_mouse();
+        } else if DisplayServer::singleton()
+            .has_feature(godot::classes::display_server::Feature::MOUSE)
+        {
+            Input::singleton().set_mouse_mode(godot::classes::input::MouseMode::VISIBLE);
         }
     }
 

@@ -71,7 +71,7 @@ const fn native(
 }
 
 /// Services every boot needs, in creation order.
-const CORE_SERVICES: [ServiceSpec; 4] = [
+const CORE_SERVICES: [ServiceSpec; 3] = [
     native(
         "music_player",
         || MusicPlayer::new_alloc().to_variant(),
@@ -83,12 +83,6 @@ const CORE_SERVICES: [ServiceSpec; 4] = [
         || Snapshot::new_alloc().to_variant(),
         None,
         Attach::GlobalChild,
-    ),
-    spec(
-        "player_identity",
-        "src/logic/player/player_identity.gd",
-        Some("player_identity"),
-        Attach::None,
     ),
     spec(
         "testing_tools",
@@ -220,21 +214,6 @@ fn cli(global: &Gd<Node>) -> Option<Gd<DclCli>> {
     global.get("cli").try_to::<Gd<DclCli>>().ok()
 }
 
-/// A script instance named and added to `/root`, with an optional call on it. Failures are logged.
-fn spawn_on_root(global: &Gd<Node>, script: &str, name: &str) -> Option<Gd<Node>> {
-    let mut node = instantiate_script(script)
-        .ok()
-        .and_then(|instance| instance.try_to::<Gd<Node>>().ok());
-    match node.as_mut() {
-        Some(node) => {
-            node.set_name(name);
-            root_add_instance(global, node);
-        }
-        None => godot_error!("bootstrap: cannot create `{name}` from {script}"),
-    }
-    node
-}
-
 /// Static entry points for `global.gd`.
 #[derive(GodotClass)]
 #[class(init, base=RefCounted)]
@@ -251,18 +230,13 @@ impl DclBootstrap {
         create(&mut global, &CORE_SERVICES)
     }
 
-    /// Runs the boot that is not the app: the Rust test runner, or the floating-islands
-    /// benchmark. Returns true when one started and `Global._ready` should stop there.
+    /// Runs the boot that is not the app: the Rust test runner. Returns true when one started and `Global._ready` should stop there.
     #[func]
     pub fn start_special_profile(mut global: Gd<Node>) -> bool {
         let Some(cli) = cli(&global) else {
             return false;
         };
-        let (test_runner, fi_benchmark) = {
-            let cli = cli.bind();
-            (cli.test_runner, cli.fi_benchmark_size >= 0)
-        };
-
+        let test_runner = cli.bind().test_runner;
         if test_runner {
             godot_print!("Running godot-tests...");
             // The #[itest]s only need a Godot context, not the whole explorer.
@@ -272,21 +246,6 @@ impl DclBootstrap {
                     runner.call_deferred("start", &[]);
                 }
             }
-            return true;
-        }
-
-        if fi_benchmark {
-            godot_print!("Running Floating Islands Benchmark...");
-            // Only the components the benchmark needs.
-            create_scene_fetcher(&mut global);
-            for property in ["scene_fetcher", "scene_runner", "content_provider"] {
-                add_to_root_deferred(&global, property);
-            }
-            spawn_on_root(
-                &global,
-                "src/tools/fi_benchmark_runner.gd",
-                "FIBenchmarkRunner",
-            );
             return true;
         }
         false
@@ -383,12 +342,7 @@ impl DclBootstrap {
             add_to_root_deferred(&global, "memory_debugger");
         }
 
-        let (benchmark_report, stress_test) = cli(&global)
-            .map(|cli| {
-                let cli = cli.bind();
-                (cli.benchmark_report, cli.stress_test)
-            })
-            .unwrap_or_default();
+        let benchmark_report = cli(&global).is_some_and(|cli| cli.bind().benchmark_report);
 
         if benchmark_report && global.get("benchmark_report").get_type() != VariantType::NIL {
             godot_print!("✓ BenchmarkReport initialized for full flow benchmarking");
@@ -396,15 +350,6 @@ impl DclBootstrap {
         } else if benchmark_report {
             godot_error!(
                 "BenchmarkReport requires --features use_memory_debugger to be enabled during build"
-            );
-        }
-
-        if stress_test {
-            godot_print!("✓ StressTest initialized for scene loading/unloading stress test");
-            spawn_on_root(
-                &global,
-                "src/tools/stress_test_controller.gd",
-                "StressTestController",
             );
         }
         ok

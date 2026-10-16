@@ -67,7 +67,7 @@ pub struct SceneManager {
     base: Base<Node>,
 
     #[var(pub)]
-    base_ui: Gd<DclUiControl>,
+    pub base_ui: Gd<DclUiControl>,
 
     ui_canvas_information: PbUiCanvasInformation,
     // Where scenes may draw interactive UI (safe rect minus the chat column).
@@ -153,12 +153,12 @@ pub struct SceneManager {
     last_proximity_entity: Option<(SceneId, SceneEntityId)>,
 
     #[var(pub)]
-    pointer_tooltips: VarArray,
+    pub pointer_tooltips: VarArray,
 
     // Entity under the crosshair that should show the hover highlight (outline),
     // or null. Read from GDScript on the pointer_tooltip_changed signal.
     #[var(pub)]
-    highlighted_entity: Option<Gd<Node3D>>,
+    pub highlighted_entity: Option<Gd<Node3D>>,
 
     // Stored as InstanceId, not Gd<DclAvatar>: the underlying Node3D may be freed
     // between physics ticks (despawn, scene unload, teleport).
@@ -284,7 +284,7 @@ impl SceneManager {
     fn loading_phase_changed(phase: GString);
 
     #[signal]
-    fn loading_progress(percent: f32, ready: i32, total: i32);
+    pub fn loading_progress(percent: f32, ready: i32, total: i32);
 
     #[signal]
     fn loading_complete(session_id: i64);
@@ -1191,7 +1191,7 @@ impl SceneManager {
     }
 
     #[func]
-    fn set_player_avatar_node(&mut self, node: Option<Gd<Node3D>>) {
+    pub fn set_player_avatar_node(&mut self, node: Option<Gd<Node3D>>) {
         // Wire the local player's emote reporting here rather than in GDScript, so
         // it sits next to the handlers below and mirrors how remote avatars are
         // connected in AvatarScene. Guarded because the setter runs again whenever
@@ -1222,7 +1222,7 @@ impl SceneManager {
     }
 
     #[func]
-    fn set_player_body_node(&mut self, node: Option<Gd<Node3D>>) {
+    pub fn set_player_body_node(&mut self, node: Option<Gd<Node3D>>) {
         self.player_body_node = node;
     }
 
@@ -1372,7 +1372,7 @@ impl SceneManager {
     }
 
     #[func]
-    fn get_scene_base_parcel(&self, scene_id: i32) -> Vector2i {
+    pub fn get_scene_base_parcel(&self, scene_id: i32) -> Vector2i {
         if let Some(scene) = self.scenes.get(&SceneId(scene_id)) {
             return scene.scene_entity_definition.scene_meta_scene.scene.base;
         }
@@ -2560,7 +2560,7 @@ impl SceneManager {
     }
 
     #[signal]
-    fn pointer_tooltip_changed();
+    pub fn pointer_tooltip_changed();
 
     fn create_ui_canvas_information(&self) -> PbUiCanvasInformation {
         let canvas_size = self.base_ui.get_size();
@@ -2625,13 +2625,13 @@ impl SceneManager {
     }
 
     #[func]
-    fn set_interactable_area(&mut self, interactable_area: Rect2i) {
+    pub fn set_interactable_area(&mut self, interactable_area: Rect2i) {
         self.interactable_area = interactable_area;
         self.ui_canvas_information = self.create_ui_canvas_information();
     }
 
     #[func]
-    fn set_safe_area(&mut self, safe_area: Rect2i) {
+    pub fn set_safe_area(&mut self, safe_area: Rect2i) {
         self.safe_area = safe_area;
         self.ui_canvas_information = self.create_ui_canvas_information();
     }

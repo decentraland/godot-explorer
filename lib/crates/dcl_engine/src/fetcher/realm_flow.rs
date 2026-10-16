@@ -161,9 +161,7 @@ async fn request_set_position(urn: &EntityUrn) {
         .split(',')
         .map(|part| part.trim().parse::<i32>().unwrap_or(0));
     let (x, y) = (parts.next().unwrap_or(0), parts.next().unwrap_or(0));
-    if let Some(mut explorer) = super::scene_fetcher::explorer() {
-        explorer.call("teleport_to", &[Vector2i::new(x, y).to_variant()]);
-    }
+    crate::world::api::teleport_to(Vector2i::new(x, y));
 }
 
 /// Reads the scene urn of a world without making it the current realm: the portable

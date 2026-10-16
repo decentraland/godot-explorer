@@ -122,3 +122,52 @@ pub fn on_core<T: Send + 'static>(
         Err(tokio::sync::oneshot::error::TryRecvError::Closed) => Poll::Ready(None),
     })
 }
+
+/// Completes once `seconds` have passed, checked each frame.
+pub async fn sleep(seconds: f64) {
+    let start = godot::classes::Time::singleton().get_ticks_msec();
+    let wait_msec = (seconds * 1000.0) as u64;
+    loop {
+        next_frame().await;
+        if godot::classes::Time::singleton().get_ticks_msec() - start >= wait_msec {
+            return;
+        }
+    }
+}
+
+/// Completes the next time `object` emits `signal`.
+pub fn signal_once(
+    object: &mut Gd<impl Inherits<Object>>,
+    signal: &str,
+) -> impl Future<Output = ()> {
+    let emitted = std::rc::Rc::new(Cell::new(false));
+    let flag = emitted.clone();
+    let callable = Callable::from_fn("signal_once", move |_| {
+        flag.set(true);
+        Variant::nil()
+    });
+    object.clone().upcast::<Object>().connect_flags(
+        signal,
+        &callable,
+        godot::classes::object::ConnectFlags::ONE_SHOT,
+    );
+    std::future::poll_fn(move |_| {
+        if emitted.get() {
+            Poll::Ready(())
+        } else {
+            Poll::Pending
+        }
+    })
+}
+
+/// Runs `f` once, at the end of the current frame's message queue (the typed `call_deferred`).
+pub fn defer(f: impl FnOnce() + 'static) {
+    let cell = RefCell::new(Some(f));
+    Callable::from_fn("defer", move |_| {
+        if let Some(f) = cell.borrow_mut().take() {
+            f();
+        }
+        Variant::nil()
+    })
+    .call_deferred(&[]);
+}

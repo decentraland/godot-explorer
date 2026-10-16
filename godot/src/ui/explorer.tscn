@@ -1,6 +1,5 @@
 [gd_scene format=3 uid="uid://deq5v42fmh0y7"]
 
-[ext_resource type="Script" uid="uid://b7upym7ptmks0" path="res://src/ui/explorer.gd" id="1_5n8xk"]
 [ext_resource type="Theme" uid="uid://chwr8vock83p4" path="res://assets/themes/dark_dcl_theme/dark_dcl_theme.tres" id="4_2vs87"]
 [ext_resource type="PackedScene" uid="uid://pg3ssuep5dm7" path="res://assets/environment/environment_selector.tscn" id="4_f5cdi"]
 [ext_resource type="PackedScene" uid="uid://b7e8iko6dwv7p" path="res://src/ui/components/organisms/joypad/joypad.tscn" id="7_admxk"]
@@ -10,8 +9,7 @@
 [ext_resource type="PackedScene" uid="uid://ec0egfeyv5fm" path="res://src/ui/components/organisms/emotes/emote_wheel.tscn" id="21_pows0"]
 [ext_resource type="SafeAreaMargins" uid="uid://ntu4pnce7xxr" path="res://src/ui/layouts/hud_margins.tres" id="34_hudmg"]
 
-[node name="explorer" type="Node" unique_id=1276646984]
-script = ExtResource("1_5n8xk")
+[node name="explorer" type="Explorer" unique_id=1276646984]
 metadata/mobile_preview_orientation = "landscape"
 metadata/_edit_horizontal_guides_ = [60.0]
 metadata/_edit_vertical_guides_ = [374.0]
@@ -151,7 +149,3 @@ autostart = true
 
 [node name="LoadingSession" type="LoadingSession" parent="." unique_id=1234567890]
 unique_name_in_owner = true
-
-[connection signal="emote_wheel_closed" from="UI/SafeAreaHud/InteractableHUD/EmoteWheel" to="." method="_on_emote_wheel_emote_wheel_closed"]
-[connection signal="emote_wheel_opened" from="UI/SafeAreaHud/InteractableHUD/EmoteWheel" to="." method="_on_emote_wheel_emote_wheel_opened"]
-[connection signal="timeout" from="UI/Timer_SavePosition" to="." method="_on_timer_save_position_timeout"]

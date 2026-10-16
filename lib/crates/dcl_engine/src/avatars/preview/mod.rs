@@ -119,13 +119,13 @@ pub struct AvatarPreview {
     aabb_debug_nodes: Vec<Gd<MeshInstance3D>>,
 
     #[var(pub)]
-    avatar: Option<Gd<DclAvatar>>,
+    pub avatar: Option<Gd<DclAvatar>>,
     camera_center: Option<Gd<Node3D>>,
     #[var(pub)]
     camera_3d: Option<Gd<Camera3D>>,
     platform: Option<Gd<Node3D>>,
     #[var(pub)]
-    subviewport: Option<Gd<SubViewport>>,
+    pub subviewport: Option<Gd<SubViewport>>,
     #[var(pub)]
     world_environment: Option<Gd<WorldEnvironment>>,
     outline_system: Option<Gd<OutlineSystem>>,

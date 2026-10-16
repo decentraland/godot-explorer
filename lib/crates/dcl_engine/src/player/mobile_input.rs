@@ -263,14 +263,11 @@ impl IControl for MobileCameraInput {
 impl MobileCameraInput {
     #[func]
     fn resolve_player(&mut self) {
-        let Some(explorer) = globals::explorer() else {
+        let Some(world) = crate::world::state::current() else {
             return;
         };
-        self.player = explorer.get("player").try_to::<Gd<Player>>().ok();
-        self.joystick = explorer
-            .get("virtual_joystick")
-            .try_to::<Gd<VirtualJoystick>>()
-            .ok();
+        self.player = Some(world.player.clone());
+        self.joystick = Some(world.joystick.clone());
     }
 
     /// (Re)establishes the candidate pair when the touch count changes; ends the pinch when it
@@ -502,9 +499,7 @@ impl MobileCameraInput {
         let Ok(touch) = event.clone().try_cast::<InputEventScreenTouch>() else {
             return;
         };
-        if let Some(mut explorer) = globals::explorer() {
-            explorer.call("set_cursor_position", &[touch.get_position().to_variant()]);
-        }
+        crate::world::set_cursor_position(touch.get_position());
         let mut input = Input::singleton();
         if touch.is_pressed() {
             input.action_press("ia_pointer");

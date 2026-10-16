@@ -195,9 +195,9 @@ func _build_focus_data() -> Dictionary:
 	# `explorer_has_focus` (and thus mobile walk/jump) is true iff this matches
 	# the explorer's `ui_root` (%UI). Compare `current` against it.
 	var ui_root_path := "<no explorer>"
-	var explorer := get_node_or_null("/root/explorer")
-	if explorer != null and explorer.get("ui_root") != null:
-		ui_root_path = str(explorer.ui_root.get_path())
+	var explorer := DclGlobal.get_explorer()
+	if explorer != null and explorer.get_ui_root() != null:
+		ui_root_path = str(explorer.get_ui_root().get_path())
 	return {
 		"current": _last_focus_desc,
 		"ui_root_path": ui_root_path,

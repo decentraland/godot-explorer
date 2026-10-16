@@ -159,10 +159,10 @@ impl IControl for EmoteWheel {
 #[godot_api]
 impl EmoteWheel {
     #[signal]
-    fn emote_wheel_opened();
+    pub fn emote_wheel_opened();
 
     #[signal]
-    fn emote_wheel_closed();
+    pub fn emote_wheel_closed();
 
     #[func]
     fn get_avatar_node(&self) -> Option<Gd<DclAvatar>> {
@@ -170,7 +170,7 @@ impl EmoteWheel {
     }
 
     #[func]
-    fn set_avatar_node(&mut self, avatar: Option<Gd<DclAvatar>>) {
+    pub fn set_avatar_node(&mut self, avatar: Option<Gd<DclAvatar>>) {
         if avatar == self.avatar_node {
             return;
         }

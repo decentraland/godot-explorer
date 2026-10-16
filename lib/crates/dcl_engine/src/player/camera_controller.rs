@@ -404,9 +404,7 @@ impl DclGlobalCameraController {
     /// is active the explorer uses tap-cursor raycasting, so the crosshair and the raycast
     /// origin are separate state that must be kept in sync.
     fn center_pointer_cursor(&self) {
-        if let Some(mut explorer) = globals::explorer() {
-            explorer.call("reset_cursor_position", &[]);
-        }
+        crate::world::reset_cursor_position();
         if let Some(viewport) = self.base().get_viewport() {
             let center = viewport.get_visible_rect().size * 0.5;
             globals::scene_runner()
@@ -417,8 +415,5 @@ impl DclGlobalCameraController {
 }
 
 fn explorer_player() -> Option<Gd<Player>> {
-    globals::explorer()?
-        .get("player")
-        .try_to::<Gd<Player>>()
-        .ok()
+    crate::world::state::player()
 }

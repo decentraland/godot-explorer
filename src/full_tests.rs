@@ -417,10 +417,6 @@ pub fn run_full_tests(
             tests::test_avatar_generation(None)
         });
 
-        step_tolerant!(runner, "Scene generation", tolerate, || {
-            tests::test_scene_generation(None)
-        });
-
         if update_snapshots {
             step!(runner, "Update snapshots", update_local_snapshots);
         }
