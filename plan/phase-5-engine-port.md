@@ -48,6 +48,19 @@ without a written safety comment. Porting on the old API would mean porting twic
   audit each `unsafe` block (remove it, or add a `// SAFETY:` comment). `experimental-threads`
   stays (D-38). Bump `rust-toolchain.toml` to the version gdext 0.5 requires in the same PR. Lands first: every later item in this phase is written against the new API. Verified with
   `--itest`, `--stest` and the scene-test snapshots unchanged.
+
+  **Done on 16 Oct 2026 (modern gdext 0.5.5):** signals are typed (`signals().x().emit/connect/connect_other`,
+  `ConnectHandle`) on every class of the crate and on the engine classes; deferred calls on our own nodes are
+  `run_deferred` / `run_deferred_gd`, and from any thread `defer_from_any_thread` with the instance id looked up
+  again on the main thread; logging goes through the safe `print_custom`. By name only: the JNI/Swift plugin
+  singletons and the engine fork's own methods; `call_targets_test` guards that. Safeguards: strict in debug
+  (`--itest`, `--ctest`, device debug builds), balanced in release, never disengaged.
+  **Not done, decided to leave for a follow-up:** pin the API to the fork (`api-custom-json` with the fork's
+  `extension_api.json` through `GDRUST_GODOT_API_JSON` in `.cargo/config.toml`, which turns the last by-name
+  engine calls into typed ones); move `local_task` to `godot::task::spawn` (signal futures, no per-frame polling);
+  the content loaders still call engine APIs from tokio threads under `GodotSingleThreadSafety` (gdext marks
+  `experimental-threads` as not sound; the safer shape is workers that decode bytes and the main thread that
+  creates the Godot objects).
 - [x] **5.1 Carve-out items left from phase 1**. Items 1.3, 1.7 and 1.8 from phase 1: transports into the
   core behind `AvatarSink`/`SceneSink`, `tokio-tungstenite` for archipelago and ws rooms, `glam`
   at the engine edge, the LRU cache policy in `dcl_core::cache`.
