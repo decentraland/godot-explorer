@@ -105,7 +105,7 @@ without a written safety comment. Porting on the old API would mean porting twic
   (5.11). `dcl_build_plugin` (141) only serves Godot's own Android Gradle build; replace that build with `--export-pack` plus xtask
   copies (engine AAR from the template, `libwebrtc.jar` from `android_dependencies.zip`,
   `libdclgodot.so` from cargo, the pack from the export), then delete it and
-  `godot/android`. Until then it is exempt from the `.gd` rule. Drop: `dcl_mobile_preview` (779, previews GDScript UI scenes in
+  `godot/android`. **Decision (16 Oct 2026): `godot/android` and `dcl_build_plugin` are not removed before phase 7**; they stay, exempt from the `.gd` rule. Drop: `dcl_mobile_preview` (779, previews GDScript UI scenes in
   the 2D editor; the runtime phone emulation is `--emulate-*` in the root, not this addon),
   `resource_tracker` (1,217), `dcl-ios-devtools` (161, Info.plist keys for Godot-exported debug
   iOS builds), `sentry` (D-16), and `dcl_dev_tools` (1,924) once `resource_counter.gd` is ported
