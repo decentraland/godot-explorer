@@ -86,7 +86,9 @@ func set_tooltip_data(text_pet_down: String, text_pet_up, action: String):
 		# Same table the joypad skins its buttons from, so the hint always matches the button.
 		# The label is a translation KEY: Label_Text is auto_translate_mode = 2 (it normally
 		# carries creator-authored PointerEvents text), so it is resolved here, not looked up.
-		var mobile_label: String = ActionIcons.tooltip_label_key(action_lower).text()
+		var mobile_label: String = (
+			TranslationKey.new(ActionIcons.tooltip_label_key(action_lower)).text()
+		)
 		var glyph: Texture2D = ActionIcons.tooltip_icon(action_lower)
 		if glyph != null:
 			_show_keyboard_icon(glyph)

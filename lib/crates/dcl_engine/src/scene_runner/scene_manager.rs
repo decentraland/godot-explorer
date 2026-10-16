@@ -2593,12 +2593,12 @@ impl SceneManager {
     }
 
     #[func]
-    fn set_crosshair_screen_point(&mut self, screen_point: Vector2) {
+    pub fn set_crosshair_screen_point(&mut self, screen_point: Vector2) {
         self.crosshair_screen_point = Some(screen_point);
     }
 
     #[func]
-    fn clear_crosshair_screen_point(&mut self) {
+    pub fn clear_crosshair_screen_point(&mut self) {
         self.crosshair_screen_point = None;
     }
 

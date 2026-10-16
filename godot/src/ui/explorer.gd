@@ -32,7 +32,7 @@ var _sdk_touch_controls: SdkTouchControlsApplier = null
 @onready var mobile_ui = %MobileUI
 @onready var mobile_camera_input: Control = %MobileCameraInput
 @onready var safe_area_hud: MarginContainer = %SafeAreaHud
-@onready var virtual_joystick: Control = %VirtualJoystick_Left
+@onready var virtual_joystick: VirtualJoystick = %VirtualJoystick_Left
 @onready var emote_wheel = %EmoteWheel
 @onready var world: Node3D = %world
 @onready var timer_broadcast_position: Timer = %Timer_BroadcastPosition
@@ -120,7 +120,7 @@ func _ready():
 
 	virtual_joystick.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	virtual_joystick_orig_position = virtual_joystick.get_position()
-	_sdk_touch_controls = SdkTouchControlsApplier.new(
+	_sdk_touch_controls = SdkTouchControlsApplier.create(
 		virtual_joystick, label_crosshair, player, control_pointer_tooltip
 	)
 
