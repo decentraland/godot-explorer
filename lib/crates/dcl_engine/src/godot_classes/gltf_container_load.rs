@@ -102,6 +102,14 @@ impl DclGltfContainer {
         );
     }
 
+    /// Whether the container is still loading its source.
+    pub fn is_loading(&self) -> bool {
+        matches!(
+            self.dcl_gltf_loading_state,
+            GltfContainerLoadingState::Unknown | GltfContainerLoadingState::Loading
+        )
+    }
+
     /// Whether the instance still has to be built: a load in flight and nothing added yet. Guards
     /// a group from being drained twice for late waiters.
     pub fn needs_realize(&self) -> bool {

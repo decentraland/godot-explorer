@@ -2,15 +2,13 @@
 //! on-screen controls. Every screen around it is the shell's. The node itself holds nothing
 //! (see `state`); it builds the world once its children are ready and ticks it each frame.
 
-use godot::classes::{Control, DisplayServer, INode, InputEvent, Label, Node, PackedScene};
-use godot::global::Error;
+use godot::classes::{Control, INode, InputEvent, Label, Node, PackedScene};
 use godot::prelude::*;
 
 use super::state::{self, World};
 use super::{controls, tick};
 use crate::app::graphics;
 use crate::app::position_broadcaster::PositionBroadcaster;
-use crate::engine::bootstrap::DclBootstrap;
 use crate::fetcher::api::DclNavigator;
 use crate::fetcher::globals;
 use crate::fetcher::loading_session::LoadingSession;
@@ -359,12 +357,7 @@ fn finish(world: &World, explorer: &Gd<Explorer>) {
         .update_identity(address, is_guest);
     globals::scene_runner().bind_mut().set_pause(false);
     let mut ui_root = world.ui_root.clone();
-    ui_root.call_deferred("grab_focus", &[]);
+    crate::engine::local_task::defer(move || ui_root.grab_focus());
     let mut host = explorer.clone();
     host.add_child(&DclGlobalCameraController::new_alloc());
-    let _ = (
-        DisplayServer::singleton(),
-        Error::OK,
-        DclBootstrap::class_id(),
-    );
 }

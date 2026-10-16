@@ -21,7 +21,6 @@ use crate::{
         dcl_locomotion_settings::DclLocomotionSettings, dcl_ui_control::DclUiControl,
         dcl_virtual_camera::DclVirtualCamera,
         rpc_sender::take_and_compare_snapshot_response::DclRpcSenderTakeAndCompareSnapshotResponse,
-        JsonGodotClass,
     },
     realm::dcl_scene_entity_definition::DclSceneEntityDefinition,
     tools::network_inspector::NETWORK_INSPECTOR_ENABLE,
@@ -183,9 +182,9 @@ pub struct SceneManager {
     // Benchmark toggles (issue #1862). Set by gp_benchmark_runner.gd from
     // godot/bench/genesis_plaza.config.json before scenes start ticking.
     #[var(pub)]
-    bench_disable_tweens: bool,
+    pub bench_disable_tweens: bool,
     #[var(pub)]
-    bench_disable_transforms: bool,
+    pub bench_disable_transforms: bool,
 }
 
 // This value is the current global tick number, is used for marking the cronolgy of lamport timestamp
@@ -287,7 +286,7 @@ impl SceneManager {
     pub fn loading_progress(percent: f32, ready: i32, total: i32);
 
     #[signal]
-    fn loading_complete(session_id: i64);
+    pub fn loading_complete(session_id: i64);
 
     #[signal]
     fn loading_timeout(session_id: i64);
@@ -1169,7 +1168,7 @@ impl SceneManager {
     }
 
     #[func]
-    fn set_player_node(
+    pub fn set_player_node(
         &mut self,
         player_avatar_node: Gd<Node3D>,
         player_body_node: Gd<Node3D>,
@@ -1271,7 +1270,7 @@ impl SceneManager {
     }
 
     #[func]
-    fn get_scene_title(&self, scene_id: i32) -> GString {
+    pub fn get_scene_title(&self, scene_id: i32) -> GString {
         if let Some(scene) = self.scenes.get(&SceneId(scene_id)) {
             return scene.scene_entity_definition.get_title().to_godot();
         }
@@ -1335,7 +1334,7 @@ impl SceneManager {
     }
 
     #[func]
-    fn get_scene_is_paused(&self, scene_id: i32) -> bool {
+    pub fn get_scene_is_paused(&self, scene_id: i32) -> bool {
         if let Some(scene) = self.scenes.get(&SceneId(scene_id)) {
             scene.paused
         } else {
@@ -1344,7 +1343,7 @@ impl SceneManager {
     }
 
     #[func]
-    fn set_scene_is_paused(&mut self, scene_id: i32, value: bool) {
+    pub fn set_scene_is_paused(&mut self, scene_id: i32, value: bool) {
         if let Some(scene) = self.scenes.get_mut(&SceneId(scene_id)) {
             scene.paused = value;
         }
@@ -1382,7 +1381,7 @@ impl SceneManager {
     /// Debug: list scene IDs currently loaded in the renderer. Used by the
     /// developer-only debug WebSocket endpoint.
     #[func]
-    fn debug_get_loaded_scene_ids(&self) -> PackedInt32Array {
+    pub fn debug_get_loaded_scene_ids(&self) -> PackedInt32Array {
         let mut out = PackedInt32Array::new();
         for scene_id in self.scenes.keys() {
             out.push(scene_id.0);
@@ -1414,14 +1413,14 @@ impl SceneManager {
 
     /// Debug: scene id of the parcel the player is standing on.
     #[func]
-    fn debug_current_parcel_scene_id(&self) -> i32 {
+    pub fn debug_current_parcel_scene_id(&self) -> i32 {
         self.current_parcel_scene_id.0
     }
 
     /// Debug: list every alive entity id in a scene's CRDT state.
     /// Returns an empty array if the scene is not loaded.
     #[func]
-    fn debug_list_entities(&self, scene_id: i32) -> PackedInt32Array {
+    pub fn debug_list_entities(&self, scene_id: i32) -> PackedInt32Array {
         let mut out = PackedInt32Array::new();
         let Some(scene) = self.scenes.get(&SceneId(scene_id)) else {
             return out;
@@ -1447,7 +1446,7 @@ impl SceneManager {
     /// (which lives separately from the 3D `DclNodeEntity3d` tree the
     /// `scene` / `entity` cmds walk).
     #[func]
-    fn debug_get_entity_ui_control_id(&self, scene_id: i32, entity_id: i32) -> i64 {
+    pub fn debug_get_entity_ui_control_id(&self, scene_id: i32, entity_id: i32) -> i64 {
         let Some(scene) = self.scenes.get(&SceneId(scene_id)) else {
             return -1;
         };
@@ -1462,7 +1461,7 @@ impl SceneManager {
     /// i64 (i32 encoded SceneEntityId). Returns -1 if no Transform exists for
     /// that entity or the scene is not loaded.
     #[func]
-    fn debug_get_entity_parent(&self, scene_id: i32, entity_id: i32) -> i64 {
+    pub fn debug_get_entity_parent(&self, scene_id: i32, entity_id: i32) -> i64 {
         let Some(scene) = self.scenes.get(&SceneId(scene_id)) else {
             return -1;
         };
@@ -1496,7 +1495,11 @@ impl SceneManager {
     /// entity for the WS server's component-name filter pass. GOS components
     /// are included if the entity has any entries in them.
     #[func]
-    fn debug_get_entity_component_names(&self, scene_id: i32, entity_id: i32) -> PackedStringArray {
+    pub fn debug_get_entity_component_names(
+        &self,
+        scene_id: i32,
+        entity_id: i32,
+    ) -> PackedStringArray {
         let mut out = PackedStringArray::new();
         let Some(scene) = self.scenes.get(&SceneId(scene_id)) else {
             return out;
@@ -1541,7 +1544,7 @@ impl SceneManager {
     ///   "gos": {"PointerEventsResult": [{...}, {...}], ...}}`
     /// Returns an empty string if the scene is not loaded.
     #[func]
-    fn debug_get_entity_components_json(&self, scene_id: i32, entity_id: i32) -> GString {
+    pub fn debug_get_entity_components_json(&self, scene_id: i32, entity_id: i32) -> GString {
         let Some(scene) = self.scenes.get(&SceneId(scene_id)) else {
             return GString::default();
         };
@@ -2391,30 +2394,19 @@ impl SceneManager {
                             Vector3::new(camera_target.x, camera_target.y, camera_target.z)
                                 + offset;
 
-                        let mut testing_tools = DclGlobal::singleton().bind().get_testing_tools();
-                        if testing_tools.has_method("async_take_and_compare_snapshot") {
-                            let mut dcl_rpc_sender: Gd<DclRpcSenderTakeAndCompareSnapshotResponse> =
-                                DclRpcSenderTakeAndCompareSnapshotResponse::new_gd();
-                            dcl_rpc_sender.bind_mut().set_sender(response);
-
-                            testing_tools.call_deferred(
-                                "async_take_and_compare_snapshot",
-                                &[
-                                    scene_id.0.to_variant(),
-                                    src_stored_snapshot.to_variant(),
-                                    global_camera_position.to_variant(),
-                                    global_camera_target.to_variant(),
-                                    screeshot_size.to_variant(),
-                                    method
-                                        .to_godot_from_json()
-                                        .unwrap_or(VarDictionary::new().to_variant())
-                                        .to_variant(),
-                                    dcl_rpc_sender.to_variant(),
-                                ],
-                            );
-                        } else {
-                            response.send(Err("Testing tools not available".to_string()));
-                        }
+                        let mut sender = DclRpcSenderTakeAndCompareSnapshotResponse::new_gd();
+                        sender.bind_mut().set_sender(response);
+                        crate::test_runner::testing_tools::take_and_compare_snapshot(
+                            crate::test_runner::testing_tools::SnapshotRequest {
+                                scene_id: scene_id.0,
+                                name: src_stored_snapshot,
+                                camera_position: global_camera_position,
+                                camera_target: global_camera_target,
+                                size: screeshot_size,
+                                grey_pixel_diff: method.wants_grey_pixel_diff(),
+                                sender,
+                            },
+                        );
                     }
                 },
                 Err(std::sync::mpsc::TryRecvError::Empty) => return,

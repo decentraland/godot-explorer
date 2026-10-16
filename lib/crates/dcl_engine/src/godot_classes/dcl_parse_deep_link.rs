@@ -23,7 +23,7 @@ pub struct DclParseDeepLink {
     dynamic_scene_loading: bool,
 
     #[var(pub)]
-    params: VarDictionary,
+    pub params: VarDictionary,
 
     /// The signin identity ID from deep link `decentraland://open?signin=${identityId}`
     #[var(pub)]
@@ -69,7 +69,7 @@ pub struct DclParseDeepLink {
 
     /// Scene Inspector target: empty=off, "true"=auto, "ws://host:port"=custom target
     #[var(pub)]
-    scene_inspector: GString,
+    pub scene_inspector: GString,
 
     /// Whether to write JSONL Scene Inspector files to disk
     #[var(pub)]

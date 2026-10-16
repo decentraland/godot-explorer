@@ -11,7 +11,6 @@ use crate::{consts::RUST_LIB_PROJECT_FOLDER, install_dependency::clear_cache_dir
 
 mod android_godot_lib;
 mod build_config;
-mod check_gdscript;
 mod consts;
 mod copy_files;
 mod dependencies;
@@ -114,10 +113,6 @@ fn main() -> Result<(), anyhow::Error> {
         )
         .subcommand(Command::new("docs"))
         .subcommand(Command::new("doctor").about("Check system health and dependencies"))
-        .subcommand(Command::new("check-gdscript").about("Validate all GDScript files for syntax errors"))
-        .subcommand(
-            Command::new("test-gdscript").about("Run every headless GDScript test"),
-        )
         .subcommand(Command::new("version-check").about("Check version consistency across files"))
         .subcommand(
             Command::new("full-tests")
@@ -1025,8 +1020,6 @@ fn main() -> Result<(), anyhow::Error> {
                 .context("please provide a package with -p")?,
         ),
         ("doctor", _) => doctor::run_doctor(),
-        ("check-gdscript", _) => check_gdscript::check_gdscript(),
-        ("test-gdscript", _) => check_gdscript::test_gdscript(),
         ("update-ios-xcode", sm) => ios_xcode::update_ios_xcode(
             sm.is_present("godot"),
             sm.is_present("plugin"),

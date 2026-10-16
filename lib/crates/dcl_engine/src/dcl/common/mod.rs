@@ -42,6 +42,12 @@ pub struct TestingScreenshotComparisonMethodRequest {
     grey_pixel_diff: Option<GreyPixelDiffRequest>,
 }
 
+impl TestingScreenshotComparisonMethodRequest {
+    pub fn wants_grey_pixel_diff(&self) -> bool {
+        self.grey_pixel_diff.is_some()
+    }
+}
+
 impl JsonGodotClass for TestingScreenshotComparisonMethodRequest {}
 
 #[derive(Debug, Deserialize, Serialize)]

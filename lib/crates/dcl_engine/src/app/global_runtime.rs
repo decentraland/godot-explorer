@@ -11,7 +11,7 @@ use super::deep_link;
 use super::graphics;
 use super::safe_area_presets;
 use super::session::LOCAL_ASSETS_CACHE_VERSION;
-use crate::engine::bootstrap::DclBootstrap;
+use crate::engine::bootstrap;
 use crate::engine::local_task::{await_promise, spawn_local_now};
 use crate::fetcher::api::DclNavigator;
 use crate::fetcher::globals;
@@ -206,7 +206,7 @@ fn boot_services() {
     }
     smoke_test_swift_lib();
     // The services every boot needs (realm, identity, ...) are created in Rust.
-    DclBootstrap::create_core_services(global.clone().upcast());
+    bootstrap::create_core_services(&mut global.clone());
 
     // A run of one scene opened directly (not the app root) is standalone.
     let args = Os::singleton().get_cmdline_args();
@@ -322,7 +322,7 @@ async fn finish_boot(started_ms: u64) {
     clear_cache_if_needed().await;
 
     // The test runner and the floating-islands benchmark boot without the app services.
-    if DclBootstrap::start_special_profile(global.clone().upcast()) {
+    if bootstrap::start_special_profile(&mut global.clone()) {
         return;
     }
     // The Genesis Plaza profiling benchmark (issue #1862) lives alongside the full explorer flow:
@@ -331,7 +331,7 @@ async fn finish_boot(started_ms: u64) {
     if DclGlobal::is_gp_benchmark() && !global.has_node("GPBenchmarkRunner") {
         godot_print!("Running Genesis Plaza Benchmark...");
         let mut node: Gd<DclGlobal> = global.clone();
-        crate::engine::bootstrap::spawn_gp_benchmark_runner(&mut node);
+        bootstrap::spawn_gp_benchmark_runner(&mut node);
     }
     ensure_content_dir();
 
@@ -340,7 +340,7 @@ async fn finish_boot(started_ms: u64) {
     // No Segment metrics or Sentry tagging in asset-server mode, or when telemetry is disabled at
     // build time (CI desktop builds use the `disable_telemetry` cargo feature).
     let telemetry = !cli.bind().asset_server && !DclGlobal::is_telemetry_disabled();
-    DclBootstrap::create_app_services(global.clone().upcast(), session_id, telemetry);
+    bootstrap::create_app_services(&mut global.clone(), &session_id.to_string(), telemetry);
     // Install attribution fires once per install, on Android.
     let install_pending = global.bind().is_android
         && !engine
@@ -354,7 +354,7 @@ async fn finish_boot(started_ms: u64) {
             .bind()
             .set_setting("install_referrer_sent".into(), true.to_variant(), true);
     }
-    DclBootstrap::create_extra_services(global.clone().upcast());
+    bootstrap::create_extra_services(&mut global.clone());
 
     // The dynamic graphics manager starts after the settings are loaded; it skips itself in bench
     // mode so results stay comparable, while production keeps the thermal cap and adaptive downgrade.

@@ -19,7 +19,7 @@ impl DclNodeEntity3d {
     }
 
     #[func]
-    fn e_id(&self) -> i32 {
+    pub fn e_id(&self) -> i32 {
         self.entity_id
     }
 }

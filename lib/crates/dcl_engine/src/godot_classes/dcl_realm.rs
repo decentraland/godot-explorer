@@ -31,7 +31,7 @@ pub struct DclRealm {
     lambda_server_base_url: GString,
 
     #[var(pub)]
-    content_base_url: GString,
+    pub content_base_url: GString,
 
     #[var(pub)]
     realm_min_bounds: Vector2i,

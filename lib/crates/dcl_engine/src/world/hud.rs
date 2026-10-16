@@ -146,12 +146,10 @@ impl Hud {
         if let Some(known) = self.profiles.borrow().get(address) {
             return Some(known.clone());
         }
-        let fetched = await_promise(
-            globals::content_provider()
-                .bind_mut()
-                .fetch_profile(address.into()),
-        )
-        .await;
+        let promise = globals::content_provider()
+            .bind_mut()
+            .fetch_profile(address.into());
+        let fetched = await_promise(promise).await;
         let profile = if fetched.try_to::<Gd<PromiseError>>().is_ok() {
             None
         } else {

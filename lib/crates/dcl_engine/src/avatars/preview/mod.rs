@@ -42,14 +42,14 @@ const PROFILE_HEAD_CAMERA_ROTATION: Vector3 = Vector3::new(0.0, 180.0, 0.0);
 pub struct AvatarPreview {
     #[export]
     #[var(pub)]
-    hide_name: bool,
+    pub hide_name: bool,
     #[export]
     #[var(pub)]
     show_platform: bool,
     /// Enables rotation and pan/zoom interactions.
     #[export]
     #[var(pub)]
-    can_move: bool,
+    pub can_move: bool,
     /// With `can_move`, gates wheel and pinch zoom, the pinch vertical pan and the per-category
     /// auto focus. Rotation is always enabled.
     #[export]
@@ -59,7 +59,7 @@ pub struct AvatarPreview {
     custom_environment: Option<Gd<Environment>>,
     #[export]
     #[var(pub)]
-    with_light: bool,
+    pub with_light: bool,
     #[export]
     #[var(pub)]
     preview_margin_top: i32,
@@ -83,7 +83,7 @@ pub struct AvatarPreview {
     show_aabb_debug: bool,
     #[export]
     #[var(pub)]
-    fit_avatar: bool,
+    pub fit_avatar: bool,
     /// Grows this container upward so its top sits at the screen's top whatever the parent layout
     /// did: for hosts with UI above the preview, the avatar then shows behind it.
     #[export]
@@ -122,12 +122,12 @@ pub struct AvatarPreview {
     pub avatar: Option<Gd<DclAvatar>>,
     camera_center: Option<Gd<Node3D>>,
     #[var(pub)]
-    camera_3d: Option<Gd<Camera3D>>,
+    pub camera_3d: Option<Gd<Camera3D>>,
     platform: Option<Gd<Node3D>>,
     #[var(pub)]
     pub subviewport: Option<Gd<SubViewport>>,
     #[var(pub)]
-    world_environment: Option<Gd<WorldEnvironment>>,
+    pub world_environment: Option<Gd<WorldEnvironment>>,
     outline_system: Option<Gd<OutlineSystem>>,
     base: Base<SubViewportContainer>,
 }

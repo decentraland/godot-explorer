@@ -985,7 +985,7 @@ impl AvatarScene {
     /// `last_updated_profile[PLAYER]`; we synthesize a row for it here so
     /// solo-debugging sessions still see "yourself".
     #[func]
-    fn debug_list_avatars(&self) -> Array<VarDictionary> {
+    pub fn debug_list_avatars(&self) -> Array<VarDictionary> {
         let mut out = Array::new();
 
         // Local player first (so the row order is stable: yourself, then
@@ -1058,7 +1058,7 @@ impl AvatarScene {
     /// node, or `-1` if it's been freed (e.g. just signed out). Pairs with
     /// the `avatar` command's `by: "local"` mode.
     #[func]
-    fn debug_get_local_player_instance_id(&self) -> i64 {
+    pub fn debug_get_local_player_instance_id(&self) -> i64 {
         let scene_runner = DclGlobal::singleton().bind().scene_runner.clone();
         let Some(player_node) = scene_runner.bind().get_player_avatar_node() else {
             return -1;
@@ -1069,7 +1069,7 @@ impl AvatarScene {
     /// Debug: returns the Godot `InstanceId` (as i64) of the avatar matching
     /// `address`, or `-1` if no avatar has that address.
     #[func]
-    fn debug_get_avatar_instance_id_by_address(&self, address: GString) -> i64 {
+    pub fn debug_get_avatar_instance_id_by_address(&self, address: GString) -> i64 {
         let Some(addr) = address.to_string().as_h160() else {
             return -1;
         };
@@ -1088,7 +1088,7 @@ impl AvatarScene {
     /// Debug: returns the Godot `InstanceId` (as i64) of the avatar matching
     /// `alias`, or `-1` if not found.
     #[func]
-    fn debug_get_avatar_instance_id_by_alias(&self, alias: i64) -> i64 {
+    pub fn debug_get_avatar_instance_id_by_alias(&self, alias: i64) -> i64 {
         let alias = alias as u32;
         let Some(entity_id) = self.avatar_entity.get(&alias) else {
             return -1;
@@ -1103,7 +1103,7 @@ impl AvatarScene {
     /// `entity_id` (in the avatar-internal SceneEntityId space), or `-1` if
     /// not found.
     #[func]
-    fn debug_get_avatar_instance_id_by_entity(&self, entity_id: i32) -> i64 {
+    pub fn debug_get_avatar_instance_id_by_entity(&self, entity_id: i32) -> i64 {
         let entity_id = SceneEntityId::from_i32(entity_id);
         match self.avatar_godot_scene.get(&entity_id) {
             Some(avatar) => avatar.instance_id().to_i64(),
