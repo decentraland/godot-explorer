@@ -9,6 +9,7 @@
 [ext_resource type="Texture2D" uid="uid://bdl8nwp7vtr4n" path="res://src/ui/components/atoms/controls/streak_day_pill/reward-streak-complete.png" id="7_reward_complete"]
 [ext_resource type="Texture2D" uid="uid://cu570brsttxki" path="res://src/ui/components/atoms/controls/streak_day_pill/reward-streak-claimed.png" id="8_reward_claimed"]
 [ext_resource type="Texture2D" uid="uid://n1nio2wr8fjd" path="res://src/ui/components/atoms/controls/streak_day_pill/reward-streak-bg.png" id="9_40r7x"]
+[ext_resource type="Texture2D" uid="uid://bvsch0vbnvicv" path="res://src/ui/components/atoms/controls/streak_day_pill/day-streak-all-complete.png" id="10_all_complete"]
 
 [node name="StreakDayPill" type="Control" unique_id=374002987]
 custom_minimum_size = Vector2(68, 143)
@@ -25,6 +26,7 @@ texture_reward_locked = ExtResource("5_reward_empty")
 texture_reward_today = ExtResource("6_reward_current")
 texture_reward_passed = ExtResource("7_reward_complete")
 texture_reward_done = ExtResource("8_reward_claimed")
+texture_all_complete = ExtResource("10_all_complete")
 
 [node name="Claimable_Background" type="TextureRect" parent="." unique_id=1310831350]
 unique_name_in_owner = true

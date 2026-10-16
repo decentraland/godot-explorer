@@ -38,16 +38,18 @@ const CLAIMABLE_STATES := [State.REWARD_TODAY, State.REWARD_PASSED]
 @export var texture_reward_today: Texture2D
 @export var texture_reward_passed: Texture2D
 @export var texture_reward_done: Texture2D
+## Shown on every pill, day or reward, once the whole streak is claimed — replaces whatever
+## texture this state's own `match` branch below would otherwise set.
+@export var texture_all_complete: Texture2D
 
 @onready var icon: TextureRect = %Icon
 @onready var label_day: RichTextLabel = %Label_Day
 @onready var claimable_background: TextureRect = %Claimable_Background
 
 
-## @param all_claimed: true once both D3 and D7 are claimed — every day's label (not just the
-## reward days') turns the same REWARD_DONE green then, matching the finished-streak look. The
-## icon stays whatever this state's own texture already is — a distinct "all done" tick art per
-## state is planned but not baked yet.
+## @param all_claimed: true once both D3 and D7 are claimed — every day's icon and label (not
+## just the reward days') switch to the finished-streak look (`texture_all_complete`, the same
+## REWARD_DONE green) regardless of its own per-day state.
 func set_state(day_number: int, state: State, all_claimed: bool = false) -> void:
 	label_day.text = "D[b]%d[/b]" % day_number
 	icon.custom_minimum_size = ICON_SIZE_REWARD if state in REWARD_STATES else ICON_SIZE_DAY
@@ -75,4 +77,5 @@ func set_state(day_number: int, state: State, all_claimed: bool = false) -> void
 			icon.texture = texture_reward_done
 			label_day.modulate = COLOR_REWARD_DONE
 	if all_claimed:
+		icon.texture = texture_all_complete
 		label_day.modulate = COLOR_REWARD_DONE
