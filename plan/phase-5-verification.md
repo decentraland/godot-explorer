@@ -27,7 +27,7 @@ Engine (phase 5)
 - [ ] **`--features use_memory_debugger`** build (bootstrap has cfg branches).
 - [x] Device, Moto G60, build of the final tree (16 Oct): avatar preview → name → Genesis (~30 fps) → emote wheel opens, joypad buttons render, camera swipe turns the view, chat panel opens; no panic, "already bound" or "Scene error" in logcat.
 - [x] Moto, later builds (16 Oct, `7199c95` and the two-autoload build): joystick walks the avatar, Back → Leave dialog → Discover → Jump in again re-enters Genesis, the pointer tooltip ("Talk") shows on an NPC; no panic or "Method not found" in logcat. fps 17–30 in a crowded plaza.
-- [ ] Still to run on the device: emote playback (the wheel opens; a selection was not confirmed), floating-island props, video.
+- [ ] Still to run on the device: emote playback (the wheel opens; a selection was not confirmed), floating-island props, video. Desktop at parcels 20,20 and 77,1 (empty Genesis land, 100 s after boot) shows the empty plane, no props, no panic, and island generation logs repeated regenerations; the props scene now loads on demand (`PropCache::load_from_scene`), so check an island edge by eye.
 - [ ] On the name screen the avatar renders small in a large hole (the rect is right, the framing is not): same symptom as the client snapshot framing, so it is likely the engine-side preview framing.
 - [ ] Android logs `ERROR: No GDExtension library found … dcl_swift_lib.gdextension` at boot (harmless, the Swift lib is iOS-only): remove the entry from the Android export.
 - [ ] fps / memory in Genesis against the phase-2 baseline. The Moto crash family (Mali / low RAM, see
