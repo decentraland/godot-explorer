@@ -1,6 +1,7 @@
 use std::collections::BTreeMap;
 
 use super::globals;
+use crate::godot_classes::dcl_gltf_container::DclGltfContainer;
 use glam::IVec2;
 use godot::classes::{
     file_access::ModeFlags, FileAccess, INode, PhysicsShapeQueryParameters3D, SphereShape3D,
@@ -857,22 +858,26 @@ impl SceneFetcher {
         spawn
     }
 
-    fn find_gltf_containers(&self, scene_number_id: i32, lower_src: &str) -> Vec<Gd<Node>> {
+    fn find_gltf_containers(
+        &self,
+        scene_number_id: i32,
+        lower_src: &str,
+    ) -> Vec<Gd<DclGltfContainer>> {
         let mut found = Vec::new();
         let mut stack = vec![globals::scene_runner().upcast::<Node>()];
         while let Some(node) = stack.pop() {
-            if node.is_class("DclGltfContainer")
-                && node.get("dcl_scene_id").to::<i32>() == scene_number_id
-                && node
-                    .get("dcl_gltf_src")
-                    .to::<GString>()
-                    .to_string()
-                    .to_lowercase()
-                    == lower_src
-            {
-                found.push(node.clone());
-            }
             stack.extend(node.get_children().iter_shared());
+            let Ok(container) = node.try_cast::<DclGltfContainer>() else {
+                continue;
+            };
+            let matches = {
+                let bound = container.bind();
+                bound.get_dcl_scene_id() == scene_number_id
+                    && bound.get_dcl_gltf_src().to_string().to_lowercase() == lower_src
+            };
+            if matches {
+                found.push(container);
+            }
         }
         found
     }
@@ -1139,7 +1144,7 @@ async fn on_preview_model_update(
     }
     for mut container in containers {
         if container.is_instance_valid() {
-            container.call("force_reload_gltf", &[]);
+            container.bind_mut().force_reload_gltf();
         }
     }
 }

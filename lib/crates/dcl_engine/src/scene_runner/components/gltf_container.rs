@@ -58,7 +58,9 @@ pub fn update_gltf_container(
             let (_godot_entity_node, mut node_3d) = godot_dcl_scene.ensure_node_3d(entity);
 
             let new_value = new_value.value.clone();
-            let existing = node_3d.try_get_node_as::<Node>("GltfContainer");
+            let existing = node_3d
+                .try_get_node_as::<Node>("GltfContainer")
+                .and_then(|n| n.try_cast::<DclGltfContainer>().ok());
 
             if new_value.is_none() {
                 if let Some(mut gltf_node) = existing {
@@ -76,13 +78,10 @@ pub fn update_gltf_container(
                     new_value.invisible_meshes_collision_mask.unwrap_or(3) as i32;
 
                 if let Some(mut gltf_node) = existing {
-                    gltf_node.call(
-                        "change_gltf",
-                        &[
-                            new_value.src.to_variant(),
-                            visible_meshes_collision_mask.to_variant(),
-                            invisible_meshes_collision_mask.to_variant(),
-                        ],
+                    gltf_node.bind_mut().change_gltf(
+                        &new_value.src,
+                        visible_meshes_collision_mask,
+                        invisible_meshes_collision_mask,
                     );
                     if scene.gltf_loading.insert(*entity) {
                         scene.gltf_loading_started_count += 1;

@@ -71,31 +71,43 @@ impl GltfContainerLoadingState {
 pub struct DclGltfContainer {
     #[export]
     #[var(pub)]
-    dcl_gltf_src: GString,
+    pub(crate) dcl_gltf_src: GString,
 
     #[export]
     #[var(pub)]
-    dcl_scene_id: i32,
+    pub(crate) dcl_scene_id: i32,
 
     #[export]
     #[var(pub)]
-    dcl_entity_id: i32,
+    pub(crate) dcl_entity_id: i32,
 
     #[export]
     #[var(pub)]
-    dcl_visible_cmask: i32,
+    pub(crate) dcl_visible_cmask: i32,
 
     #[export]
     #[var(pub)]
-    dcl_invisible_cmask: i32,
+    pub(crate) dcl_invisible_cmask: i32,
 
     #[export(enum = (Unknown, Loading, NotFound, FinishedWithError, Finished))]
     #[var(pub)]
-    dcl_gltf_loading_state: GltfContainerLoadingState,
+    pub(crate) dcl_gltf_loading_state: GltfContainerLoadingState,
 
     #[export]
     #[var(pub)]
-    dcl_pending_node: Option<Gd<Node>>,
+    pub(crate) dcl_pending_node: Option<Gd<Node>>,
+
+    /// Content hash of the source, empty before it resolves.
+    #[var(pub)]
+    pub(crate) dcl_gltf_hash: GString,
+    pub(crate) optimized: bool,
+    /// Set by `force_reload_gltf`: the next request bypasses ResourceLoader's cache, which would
+    /// serve the pre-edit model on a reused .scn path.
+    pub(crate) force_fresh_load: bool,
+    /// Once the entity is known to move, every collider spawns KINEMATIC.
+    pub(crate) kinematic_requested: bool,
+    /// The hash this container is registered under in the loading coordinator.
+    pub(crate) requested_hash: String,
 
     base: Base<Node3D>,
 }
@@ -126,7 +138,7 @@ impl DclGltfContainer {
     }
 
     #[func]
-    fn check_animations(&mut self) {
+    pub fn check_animations(&mut self) {
         if self.dcl_gltf_loading_state != GltfContainerLoadingState::Finished {
             return;
         }
@@ -195,7 +207,52 @@ impl INode3D for DclGltfContainer {
             dcl_entity_id: SceneEntityId::INVALID.as_i32(),
             dcl_gltf_loading_state: GltfContainerLoadingState::Unknown,
             dcl_pending_node: None,
+            dcl_gltf_hash: GString::new(),
+            optimized: false,
+            force_fresh_load: false,
+            kinematic_requested: false,
+            requested_hash: String::new(),
             base,
+        }
+    }
+
+    fn ready(&mut self) {
+        // Rust flagged the entity as kinematic (an active tween).
+        if self.base().has_meta("kinematic_requested") {
+            self.kinematic_requested = true;
+        }
+        let on_kinematic = self.base().callable("on_switch_to_kinematic");
+        self.base_mut()
+            .connect("switch_to_kinematic", &on_kinematic);
+        self.defer_load();
+    }
+
+    fn enter_tree(&mut self) {
+        // Re-parenting an entity (a normal SDK operation) takes its GltfContainer out of the tree
+        // and back in, and `ready` only runs once: without this the load is never re-requested,
+        // the container sits in LOADING behind no group, Rust keeps counting it in
+        // `scene.gltf_loading`, and the loading screen stays pinned until the 120 s timeout.
+        // Only re-request when genuinely mid-load and detached: a FINISHED or errored container
+        // must not reload.
+        if self.dcl_gltf_loading_state == GltfContainerLoadingState::Loading
+            && self.requested_hash.is_empty()
+        {
+            self.defer_load();
+        }
+    }
+
+    fn exit_tree(&mut self) {
+        // Detaches from the shared load group. Leaving the tree is not finishing the load: the
+        // state stays LOADING so a re-parented container resumes rather than reporting a false
+        // FINISHED. Clearing `requested_hash` marks it as attached to no group: `enter_tree`
+        // uses exactly that to re-request.
+        if !self.requested_hash.is_empty() {
+            let hash = std::mem::take(&mut self.requested_hash);
+            crate::scene_runner::gltf_loading::unregister(&self.to_gd(), &hash);
+        }
+        // A pending orphan node (legacy path).
+        if let Some(mut pending) = self.dcl_pending_node.take() {
+            pending.queue_free();
         }
     }
 }

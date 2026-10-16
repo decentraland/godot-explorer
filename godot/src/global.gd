@@ -170,12 +170,6 @@ var _safe_margin_debug_overlay: SafeMarginDebugOverlay = null
 # Startup instrumentation timestamp (set once at load time)
 var _startup_time: int = Time.get_ticks_msec()
 
-## Coalescer for GltfContainer load-timeouts. Lazy-init child node.
-## Adding `_process` directly on DclGlobal triggers a Godot Vulkan crash —
-## the coalescer must live on a separate Node to keep `_process` off the
-## autoload itself.
-var _gltf_load_timeout_coalescer: Node = null
-
 # Guards sign_out() against re-entrancy. comms.disconnect(true) emits the
 # player_identity.logout signal deferred, which can route back into sign_out() a
 # frame later; without this the whole teardown + scene swap would run twice.
@@ -211,20 +205,6 @@ func should_emulate_android() -> bool:
 ## or mobile deep link (`decentraland://open?gp-benchmark=true&...`).
 func is_gp_benchmark() -> bool:
 	return cli.gp_benchmark or (deep_link_obj != null and deep_link_obj.gp_benchmark)
-
-
-## Lazy-init the GltfContainer load-timeout coalescer. Replaces the
-## per-container Timer (~1419 in Genesis Plaza). Called from
-## gltf_container.gd; created on first use, persists for the app's lifetime.
-func get_gltf_load_timeout_coalescer() -> Node:
-	if _gltf_load_timeout_coalescer == null:
-		var coalescer_script = load(
-			"res://src/decentraland_components/gltf_load_timeout_coalescer.gd"
-		)
-		_gltf_load_timeout_coalescer = coalescer_script.new()
-		_gltf_load_timeout_coalescer.name = "GltfLoadTimeoutCoalescer"
-		add_child(_gltf_load_timeout_coalescer)
-	return _gltf_load_timeout_coalescer
 
 
 func _get_safe_area_presets() -> GDScript:

@@ -48,6 +48,7 @@ pub mod dcl_video_player;
 pub mod dcl_virtual_camera;
 pub mod floating_islands;
 pub mod font;
+pub mod gltf_container_load;
 pub mod portables;
 pub mod promise;
 pub mod rpc_sender;
