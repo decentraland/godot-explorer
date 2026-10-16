@@ -143,8 +143,10 @@ impl DclAvatar {
                     }
                     prop.set_owner(Gd::null_arg());
                     hotfix_legacy_prop_origin(&mut prop);
-                    if let Some(mut anim_player) = prop.get_node_or_null("AnimationPlayer") {
-                        anim_player.call("stop", &[]);
+                    if let Some(mut anim_player) =
+                        prop.try_get_node_as::<godot::classes::AnimationPlayer>("AnimationPlayer")
+                    {
+                        anim_player.stop();
                         anim_player.queue_free();
                     }
                     self.base_mut().add_child(&prop);
