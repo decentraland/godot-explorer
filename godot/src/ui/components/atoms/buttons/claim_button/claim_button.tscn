@@ -2,8 +2,8 @@
 
 [ext_resource type="Script" uid="uid://fi2qxkr2tw7d" path="res://src/ui/components/atoms/buttons/claim_button/claim_button.gd" id="1_script"]
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="2_theme"]
-[ext_resource type="Texture2D" uid="uid://ctk53fjldfod1" path="res://gradient-cerise.tres" id="3_gjoj3"]
-[ext_resource type="Texture2D" uid="uid://cwuo58dyo87gl" path="res://gradient-cerise-dark.tres" id="3_olwp6"]
+[ext_resource type="Texture2D" uid="uid://ctk53fjldfod1" path="res://src/ui/components/atoms/buttons/claim_button/gradient-cerise.tres" id="3_gjoj3"]
+[ext_resource type="Texture2D" uid="uid://cwuo58dyo87gl" path="res://src/ui/components/atoms/buttons/claim_button/gradient-cerise-dark.tres" id="3_olwp6"]
 [ext_resource type="FontFile" uid="uid://nlqb3vmhfsld" path="res://assets/themes/fonts/inter/inter_700.ttf" id="4_olwp6"]
 [ext_resource type="Material" uid="uid://bv7vw2bdrp1mm" path="res://src/ui/components/molecules/button_profile/texture_rect_rounded_px_material.tres" id="5_fmr2p"]
 

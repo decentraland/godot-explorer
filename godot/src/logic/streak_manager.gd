@@ -60,7 +60,7 @@ func credit_jump_in() -> void:
 	state.last_credit_day_unix = today
 
 	if gap_days == 1:
-		state.progress_day += 1
+		state.progress_day = mini(state.progress_day + 1, FINAL_DAY)
 		state.pending_modal = _pending_for_progress()
 	else:
 		# Missed at least one day: floor is the checkpoint if it was ever reached, else 0, and
@@ -186,7 +186,7 @@ func get_pending_today_day() -> int:
 		return 0
 	var gap_days: int = (today - state.last_credit_day_unix) / DAY_SECONDS
 	if gap_days == 1:
-		return state.progress_day + 1
+		return mini(state.progress_day + 1, FINAL_DAY)
 	# Missed at least one day — mirrors credit_jump_in()'s own floor logic, so the pending day
 	# shown here is exactly the day a real jump-in right now would actually credit.
 	var floor_day := CHECKPOINT_DAY if state.progress_day >= CHECKPOINT_DAY else 0

@@ -105,21 +105,24 @@ func _remove_streak_modal() -> void:
 	_streak_canvas_layer = null
 
 
-## Claims every day in `days` end-to-end and returns true only if all of them succeeded — awaits
-## the FULL round trip (not just "a modal was shown"), so a ClaimButton's claim_action can safely
-## drive its own CLAIMING.../CLAIMED visual state off this call's result. `days` holds 1 or 2
-## entries — D3 and D7 can be pending at once when a player skips D3's claim and reaches D7 before
-## coming back for it. Safe to retry on a partial failure: RewardClaimer treats a repeat claim for
-## an already-granted day as a no-op success, not a duplicate grant.
-func async_claim_rewards(days: Array[int], is_guest: bool) -> bool:
+## Claims every day in `days` end-to-end — awaits the FULL round trip (not just "a modal was
+## shown"), so a ClaimButton's claim_action can safely drive its own CLAIMING.../CLAIMED visual
+## state off this call's result. `days` holds 1 or 2 entries — D3 and D7 can be pending at once
+## when a player skips D3's claim and reaches D7 before coming back for it. Safe to retry on a
+## partial failure: RewardClaimer treats a repeat claim for an already-granted day as a no-op
+## success, not a duplicate grant.
+## @return {"ok": bool, "cancelled": bool} — `ok` true only if every day succeeded; `cancelled` true
+## when a guest backed out of the upgrade flow before any claim was even attempted, which is not a
+## failure (see StreakModal._show_claim_button, which shows no error for it).
+func async_claim_rewards(days: Array[int], is_guest: bool) -> Dictionary:
 	if is_guest:
 		var upgraded := await _async_run_guest_upgrade()
 		if not upgraded:
-			return false
+			return {"ok": false, "cancelled": true}
 	var all_ok := true
 	for day in days:
 		all_ok = await _async_claim_direct(day) and all_ok
-	return all_ok
+	return {"ok": all_ok, "cancelled": false}
 
 
 ## Performs the actual claim in place (no modal navigation — the streak modal's own ClaimButton

@@ -60,8 +60,9 @@ func refresh_visibility() -> void:
 
 ## Opens the streak modal to the highest-priority claimable day's state (D7 over D3) rather than
 ## claiming here — the modal owns the actual claim UI/lifecycle (Figma "Widget-Discover" tap →
-## "D3-Streak"/"D7-Streak"). The widget itself just refreshes (claimable_days empties out, button
-## hides) the next time refresh_visibility() runs after the modal closes.
+## "D3-Streak"/"D7-Streak"). Mirrors Discover._async_show_streak_modal_and_wait: suppresses the
+## upgrade nudge while the modal is up and refreshes this widget once it closes, so claiming from
+## here doesn't leave a stale pill row/CLAIM button up behind it.
 func _on_button_claim_pressed() -> void:
 	var day := Global.streak_manager.get_claimable_day()
 	if day == 0:
@@ -72,6 +73,15 @@ func _on_button_claim_pressed() -> void:
 		if day == StreakManager.FINAL_DAY
 		else StreakModal.State.D3_COMPLETE
 	)
-	Global.streak_modal_controller.async_show_streak_modal(
+	_async_show_streak_modal_and_wait(state)
+
+
+func _async_show_streak_modal_and_wait(state: int) -> void:
+	Global.upgrade_nudge_coordinator.suppress_until_cleared("streak")
+	var shown := await Global.streak_modal_controller.async_show_streak_modal(
 		state, Global.streak_manager.get_progress_day(), StreakManager.is_unlinked_guest()
 	)
+	if shown and is_instance_valid(Global.streak_modal_controller.current_streak_modal):
+		await Global.streak_modal_controller.current_streak_modal.tree_exited
+	refresh_visibility()
+	Global.upgrade_nudge_coordinator.resume("streak")

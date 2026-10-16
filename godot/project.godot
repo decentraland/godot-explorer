@@ -11,10 +11,10 @@ config_version=5
 [_mobile_preview]
 
 active=true
-is_ios=true
-is_portrait=true
-viewport_width=720
-viewport_height=1280
+is_ios=false
+is_portrait=false
+viewport_width=1600
+viewport_height=720
 
 [animation]
 
@@ -31,6 +31,7 @@ config/features=PackedStringArray("4.6")
 boot_splash/bg_color=Color(0.411765, 0.121569, 0.662745, 1)
 boot_splash/stretch_mode=0
 boot_splash/image="res://assets/ui/splash-isotype.png"
+boot_splash/show_image=true
 config/icon="res://decentraland_logo_squared.png"
 boot_splash/minimum_display_time=300
 
@@ -69,8 +70,8 @@ memory/limits/message_queue/max_size_mb=64
 
 [display]
 
-window/size/viewport_width=720
-window/size/viewport_height=1280
+window/size/viewport_width=1600
+window/size/viewport_height=720
 window/size/window_width_override=720
 window/size/window_height_override=1280
 window/frame_pacing/android/enable_frame_pacing=false
@@ -78,7 +79,6 @@ window/handheld/orientation=6
 
 [editor]
 
-run/main_run_args="--emulate-ios"
 import/use_multiple_threads=false
 
 [editor_plugins]
@@ -243,13 +243,14 @@ pseudolocalization/suffix="»"
 3d_physics/layer_31="CL_AVATAR_MODIFIER_AREA"
 3d_physics/layer_32="CL_CAMERA_MODE_AREA"
 
+[physics]
+
+; #2844: Jolt replaces Godot Physics as the 3D server on all targets.
+3d/physics_engine="Jolt Physics"
+
 [network]
 
 limits/debugger/max_chars_per_second=3276800
-
-[physics]
-
-3d/physics_engine="Jolt Physics"
 
 [rendering]
 
@@ -274,9 +275,9 @@ environment/screen_space_reflection/roughness_quality=0
 
 options/auto_init=false
 options/dsn="https://03559fa545b3fa2bc9e876a41d6aab2f@o4510187684298752.ingest.us.sentry.io/4510187688361984"
-schema_version=4
 options/debug_printing=0
 options/diagnostic_level=4
+schema_version=4
 
 [shader_globals]
 

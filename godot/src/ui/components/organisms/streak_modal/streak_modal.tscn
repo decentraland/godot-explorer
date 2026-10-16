@@ -69,7 +69,6 @@ script = ExtResource("1_script")
 texture_pedestal_normal = ExtResource("15_pedestal")
 texture_pedestal_claimed = ExtResource("21_pedestal_claimed")
 metadata/mobile_preview_orientation = "portrait"
-metadata/_edit_horizontal_guides_ = [914.0]
 
 [node name="Blur" type="ColorRect" parent="." unique_id=2033739271]
 material = SubResource("ShaderMaterial_blur")
@@ -152,7 +151,6 @@ z_index = 1
 custom_minimum_size = Vector2(250, 0)
 layout_mode = 2
 size_flags_horizontal = 3
-texture = ExtResource("5_da6u2")
 expand_mode = 1
 stretch_mode = 5
 
@@ -161,7 +159,6 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(250, 0)
 layout_mode = 2
 size_flags_horizontal = 3
-texture = ExtResource("5_da6u2")
 expand_mode = 1
 stretch_mode = 5
 

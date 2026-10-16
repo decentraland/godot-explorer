@@ -25,7 +25,6 @@ texture_reward_locked = ExtResource("5_reward_empty")
 texture_reward_today = ExtResource("6_reward_current")
 texture_reward_passed = ExtResource("7_reward_complete")
 texture_reward_done = ExtResource("8_reward_claimed")
-metadata/_edit_vertical_guides_ = [34.0, 57.0, 67.0]
 
 [node name="Claimable_Background" type="TextureRect" parent="." unique_id=1310831350]
 unique_name_in_owner = true

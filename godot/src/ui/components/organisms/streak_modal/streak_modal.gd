@@ -247,13 +247,15 @@ func _show_claim_button(text_key: String) -> void:
 	var is_guest := _is_guest
 	claim_button.claim_action = func() -> bool:
 		_claiming_reward = true
-		var success: bool = await Global.streak_modal_controller.async_claim_rewards(days, is_guest)
+		var result: Dictionary = await Global.streak_modal_controller.async_claim_rewards(
+			days, is_guest
+		)
 		_claiming_reward = false
-		if success:
+		if result.ok:
 			pedestal.texture = texture_pedestal_claimed
-		else:
+		elif not result.cancelled:
 			_set_claim_failed_visible(true)
-		return success
+		return result.ok
 
 
 ## Mutually exclusive with the footer caption — the claim-failed panel only appears after an
@@ -326,7 +328,7 @@ func _async_apply_reward_thumbnail(urn: String, target: TextureRect) -> void:
 			return
 		wearable = Global.content_provider.get_wearable(urn)
 	if wearable == null:
-		printerr("StreakModal: could not resolve wearable entity for urn: ", urn)
+		push_warning("StreakModal: could not resolve wearable entity for urn: ", urn)
 		return
 	var promise: Promise = Global.content_provider.fetch_texture(
 		wearable.get_thumbnail(), wearable.get_content_mapping()
@@ -335,7 +337,7 @@ func _async_apply_reward_thumbnail(urn: String, target: TextureRect) -> void:
 	if not is_instance_valid(self):
 		return
 	if res is PromiseError:
-		printerr("StreakModal: reward thumbnail fetch failed for ", urn, ": ", res.get_error())
+		push_warning("StreakModal: reward thumbnail fetch failed for ", urn, ": ", res.get_error())
 		return
 	target.texture = res.texture
 

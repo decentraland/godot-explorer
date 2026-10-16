@@ -48,6 +48,8 @@ func async_start_add_email_flow(
 		modal.confirmed.connect(_async_add_email_code_sent.bind(grant_campaign_key, source))
 		modal.failed.connect(_async_add_email_send_failed)
 		modal.cancelled.connect(_on_flow_cancelled)
+	else:
+		flow_concluded.emit(false)
 
 
 # Cancel at either the email or code step — whichever is actually open gets cleaned up properly
@@ -93,6 +95,8 @@ func _async_add_email_code_sent(email: String, grant_campaign_key: String, sourc
 			_async_add_email_confirmed.bind(email, grant_campaign_key, source)
 		)
 		code_modal.cancelled.connect(_on_flow_cancelled)
+	else:
+		flow_concluded.emit(false)
 
 
 # gdlint:ignore = async-function-name

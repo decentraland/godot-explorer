@@ -51,7 +51,7 @@ func render(
 	for i in range(DAY_COUNT):
 		var day_number := i + 1
 		var is_reward_day := day_number in reward_days
-		var is_today := day_number == today_day and today_day > 0 and today_day < DAY_COUNT
+		var is_today := day_number == today_day and today_day > 0 and today_day <= DAY_COUNT
 		var state: StreakDayPill.State
 		if day_number in claimed_days:
 			state = StreakDayPill.State.REWARD_DONE
