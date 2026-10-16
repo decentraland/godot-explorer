@@ -27,8 +27,8 @@ without a written safety comment. Porting on the old API would mean porting twic
 - [ ] `experimental-threads` is kept (D-38); every cross-thread `Gd` use is behind the content
       semaphore and named in a comment.
 - [x] `find godot/src -name '*.gd'` returns nothing (addons per decisions D-open-5).
-- [~] `godot/project.godot` has one autoload, the Rust root, or none.
-      Two remain, both native roots: `Global` and `GlobalBoot` (the boot must run after `Global` is built; it also creates `EngineHost`). The props scene loads on demand.
+- [x] `godot/project.godot` has the Rust roots only: two native autoloads, **decided to stay at two**.
+      `Global` is found by name from everywhere (the app, `--itest`, `--ctest`, the tools) and must exist before any main scene; `GlobalBoot` must run after `Global`'s `ready` returns, because the boot reads `Global` back at every step (gdext panics on the re-borrow inside `ready`) and `DclRoot::ready` needs the booted services. Deferring the boot would reorder it behind the main scene. `EngineHost` is created by the boot node and the props scene loads on demand.
 - [ ] No `.call("` / `.callv(` / `call_deferred("` with a GDScript target in `lib/`; (no GDScript target is left; ~30 by-name calls on Rust classes and the iOS plugin remain, listed in `phase-5-verification.md`); the eleven
       component `.tscn` files and `avatar.tscn` carry no script.
 - [x] `comms/` holds no `Gd<…>` for transports (only `voice_chat.rs` keeps the engine's `AudioEffectCapture`, which is an audio-bus resource, not a transport); `message_processor.rs` pushes through a sink trait; the content
