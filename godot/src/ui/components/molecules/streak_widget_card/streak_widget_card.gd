@@ -10,7 +10,7 @@ extends Control
 ## wrapped in another card):
 ##   StreakWidgetCard (MarginContainer, this script)
 ##   └─ VBoxContainer
-##      ├─ StreakDayRow (instance, unique name)
+##      ├─ StreakDayRow (instance, unique name) — also opens the modal on tap, same as Button_Claim
 ##      └─ Button_Claim (ClaimButton instance, unique name, hidden unless a reward is claimable —
 ##                        opens the full streak modal on tap (Figma "Widget-Discover" →
 ##                        "D3-Streak"/"D7-Streak"), it never claims in place: claim_action is left
@@ -23,6 +23,55 @@ extends Control
 func _ready() -> void:
 	visibility_changed.connect(_on_visibility_changed)
 	button_claim.pressed.connect(_on_button_claim_pressed)
+	_make_day_row_tappable()
+
+
+## StreakDayRow's own pills/labels default to MOUSE_FILTER_STOP (plain Controls), which would
+## swallow the tap before it ever reaches the row itself — set every descendant to IGNORE so the
+## whole panel acts as one tap target. Runtime-only and scoped to this widget's own StreakDayRow
+## instance; the shared scene (also used inside StreakModal, where pills aren't meant to be
+## individually interactive either) is never touched.
+func _make_day_row_tappable() -> void:
+	var stack: Array[Node] = [streak_day_row]
+	while not stack.is_empty():
+		var node: Node = stack.pop_back()
+		for child in node.get_children():
+			if child is Control:
+				child.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			stack.append(child)
+	streak_day_row.gui_input.connect(_on_streak_day_row_gui_input)
+
+
+func _on_streak_day_row_gui_input(event: InputEvent) -> void:
+	if event is InputEventScreenTouch and event.pressed:
+		_on_day_row_tapped()
+
+
+## Same entry point as Button_Claim (see its own doc comment) — both components open the modal;
+## tapping the row just reaches it even when nothing is claimable yet (Button_Claim is hidden
+## then), landing on whatever state currently applies instead of always a claim screen.
+func _on_day_row_tapped() -> void:
+	Global.metrics.track_click_button("STREAK_DAY_ROW", "LOGIN_STREAK_WIDGET_SHOW", "")
+	_async_show_streak_modal_and_wait(
+		_current_state(), Global.streak_manager.get_effective_progress_day()
+	)
+
+
+## Mirrors Discover._async_show_streak_current_reminder_if_pending()'s state derivation, so the
+## modal a tap opens always matches what the row is currently showing.
+func _current_state() -> int:
+	var claimable_days := Global.streak_manager.get_claimable_days()
+	if not claimable_days.is_empty():
+		return (
+			StreakModal.State.D7_COMPLETE
+			if claimable_days[-1] == StreakManager.FINAL_DAY
+			else StreakModal.State.D3_COMPLETE
+		)
+	if Global.streak_manager.is_pending_day_a_reset():
+		return StreakModal.State.LOST
+	if Global.streak_manager.get_pending_today_day() == 1:
+		return StreakModal.State.WELCOME
+	return StreakModal.State.DAY_PROGRESS
 
 
 ## Mirrors GuestUpgradeCard's own _on_visibility_changed — visibility_changed also fires from an
@@ -60,26 +109,21 @@ func refresh_visibility() -> void:
 
 ## Opens the streak modal to the highest-priority claimable day's state (D7 over D3) rather than
 ## claiming here — the modal owns the actual claim UI/lifecycle (Figma "Widget-Discover" tap →
-## "D3-Streak"/"D7-Streak"). Mirrors Discover._async_show_streak_modal_and_wait: suppresses the
-## upgrade nudge while the modal is up and refreshes this widget once it closes, so claiming from
-## here doesn't leave a stale pill row/CLAIM button up behind it.
+## "D3-Streak"/"D7-Streak").
 func _on_button_claim_pressed() -> void:
-	var day := Global.streak_manager.get_claimable_day()
-	if day == 0:
+	if Global.streak_manager.get_claimable_days().is_empty():
 		return
 	Global.metrics.track_click_button("CLAIM", "LOGIN_STREAK_WIDGET_SHOW", "")
-	var state := (
-		StreakModal.State.D7_COMPLETE
-		if day == StreakManager.FINAL_DAY
-		else StreakModal.State.D3_COMPLETE
-	)
-	_async_show_streak_modal_and_wait(state)
+	_async_show_streak_modal_and_wait(_current_state(), Global.streak_manager.get_progress_day())
 
 
-func _async_show_streak_modal_and_wait(state: int) -> void:
+## Mirrors Discover._async_show_streak_modal_and_wait: suppresses the upgrade nudge while the
+## modal is up and refreshes this widget once it closes, so claiming/viewing from here doesn't
+## leave a stale pill row/CLAIM button up behind it.
+func _async_show_streak_modal_and_wait(state: int, progress_day: int) -> void:
 	Global.upgrade_nudge_coordinator.suppress_until_cleared("streak")
 	var shown := await Global.streak_modal_controller.async_show_streak_modal(
-		state, Global.streak_manager.get_progress_day(), StreakManager.is_unlinked_guest()
+		state, progress_day, StreakManager.is_unlinked_guest()
 	)
 	if shown and is_instance_valid(Global.streak_modal_controller.current_streak_modal):
 		await Global.streak_modal_controller.current_streak_modal.tree_exited
