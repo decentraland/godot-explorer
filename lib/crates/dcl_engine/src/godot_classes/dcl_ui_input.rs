@@ -64,17 +64,16 @@ impl ILineEdit for DclUiInput {
 
         let this = self.to_gd();
         let base = self.base().clone();
-        let mut signals = base.signals();
-        signals
+        base.signals()
             .text_changed()
             .connect_other(&this, |this: &mut Self, text| this.on_text_changed(text));
-        signals
+        base.signals()
             .text_submitted()
             .connect_other(&this, |this: &mut Self, text| this.on_text_submitted(text));
-        signals
+        base.signals()
             .focus_entered()
             .connect_other(&this, |this: &mut Self| this.on_focus_entered());
-        signals
+        base.signals()
             .focus_exited()
             .connect_other(&this, |this: &mut Self| this.on_focus_exited());
     }

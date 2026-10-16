@@ -1,5 +1,7 @@
 use godot::prelude::*;
 
+use crate::engine::local_task::defer_from_any_thread;
+
 #[derive(GodotClass)]
 #[class(init, base=Object)]
 pub struct PromiseError {
@@ -43,7 +45,14 @@ impl Promise {
             return;
         }
         self.resolved = true;
-        self.run_deferred(|this| this.signals().on_resolved().emit());
+        // Settled from content threads too: the signal goes out on the main thread, where the
+        // promise is looked up again by its id.
+        let id = self.base().instance_id();
+        defer_from_any_thread(&[], move |_| {
+            if let Ok(promise) = Gd::<Promise>::try_from_instance_id(id) {
+                promise.signals().on_resolved().emit();
+            }
+        });
     }
 
     #[func]

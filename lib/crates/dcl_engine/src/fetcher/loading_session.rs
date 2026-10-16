@@ -38,21 +38,23 @@ impl INode for LoadingSession {
         let runner = globals::scene_runner();
         let this = self.to_gd();
         // Shared borrows on purpose: the session's state is in `Cell`s so a signal can reach it
-        // while something else reads it.
-        let mut signals = runner.signals();
+        // while something else reads it. `signals()` configures one signal at a time.
         let session = this.clone();
-        signals
+        runner
+            .signals()
             .loading_started()
             .connect(move |_session, _expected| session.bind().start());
         let session = this.clone();
-        signals
+        runner
+            .signals()
             .loading_progress()
             .connect(move |percent, _ready, _total| session.bind().on_progress(percent));
         let session = this.clone();
-        signals
+        runner
+            .signals()
             .loading_complete()
             .connect(move |_session| session.bind().end("Success".into()));
-        signals.loading_timeout().connect(move |_session| {
+        runner.signals().loading_timeout().connect(move |_session| {
             godot_warn!("Loading session timed out");
             this.bind().end("Success".into());
         });
