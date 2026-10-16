@@ -153,12 +153,6 @@ pub fn sync_gltf_loading_state(
             .1
             .try_get_node_as::<DclGltfContainer>("GltfContainer");
 
-        if let Some(mut gltf_node) = gltf_node.clone() {
-            if gltf_node.bind().get_dcl_pending_node().is_some() {
-                gltf_node.call("async_deferred_add_child", &[]);
-            }
-        }
-
         let current_state = match gltf_container_loading_state_component.get(entity) {
             Some(state) => match state.value.as_ref() {
                 Some(value) => GltfContainerLoadingState::from_proto(value.current_state()),

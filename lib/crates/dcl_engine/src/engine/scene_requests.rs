@@ -6,6 +6,7 @@ use dcl_core::app::EngineEvent;
 use dcl_core::scene_requests::{PendingRequests, RequestId, SceneRequest};
 use godot::prelude::*;
 
+use super::local_task::defer;
 use super::DclEngine;
 use crate::{dcl::scene_apis::RpcResultSender, godot_classes::dcl_global::DclGlobal};
 
@@ -74,7 +75,6 @@ pub struct EmulatorSink;
 
 impl SceneRequestSink for EmulatorSink {
     fn handle(&self, _id: RequestId, request: &SceneRequest) -> Verdict {
-        let mut global = DclGlobal::singleton();
         match request {
             SceneRequest::OpenExternalUrl { url } => {
                 tracing::info!("[emulator] scene asked to open {url}");
@@ -86,20 +86,19 @@ impl SceneRequestSink for EmulatorSink {
                 parcel: Some(parcel),
                 realm,
             } => {
-                global.call_deferred(
-                    "async_teleport_to",
-                    &[
-                        Vector2i::new(parcel.x, parcel.y).to_variant(),
-                        realm.clone().unwrap_or_default().to_variant(),
-                    ],
+                let (parcel, realm) = (
+                    Vector2i::new(parcel.x, parcel.y),
+                    realm.clone().unwrap_or_default(),
                 );
+                defer(move || DclGlobal::async_teleport_to(parcel, realm.as_str().into()));
             }
             SceneRequest::Teleport {
                 parcel: None,
                 realm: Some(realm),
             }
             | SceneRequest::ChangeRealm { realm, .. } => {
-                global.call_deferred("async_join_world", &[realm.to_variant()]);
+                let realm = realm.clone();
+                defer(move || DclGlobal::async_join_world(realm.as_str().into()));
             }
             SceneRequest::Teleport { .. } => {}
         }

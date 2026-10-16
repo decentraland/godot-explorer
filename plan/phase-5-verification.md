@@ -21,7 +21,7 @@ Engine (phase 5)
   5.2 preview-port regression or a machine/renderer difference. Bloom and uibackground pass (100%).
 - [ ] **Lights (5.5).** The light-source port compiles and loads; rendering was never compared against 1.15.
 - [ ] **Video (5.5).** URL video, HLS and LiveKit streams, in background and foreground: not run.
-- [ ] **Scene tests** (`--stest`): content is installed, the run was not completed.
+- [ ] **Scene tests** (`--stest`): not completed. One run executed the raycast scene (12 tests passed, 0 failed); later runs found a streaming stage scene at (52,-52), so the remote `scene-explorer-tests` realm no longer matches the parcel list in `src/main.rs` and the run never finishes. The run did expose and fix four dead by-name calls to static funcs (scene teleport / change realm, raycast debug draw, SDK6 texture size, UI input focus). Needs the parcel list refreshed against the current content.
 - [ ] **Asset renderer, GP benchmark, debug hub** were rebuilt in Rust and only exercised by unit tests and
   boot. Run each once: `--asset-renderer --use-test-input`, the GP benchmark deeplink, `debug-hub` +
   `unified.sh state|teleport|screenshot`.

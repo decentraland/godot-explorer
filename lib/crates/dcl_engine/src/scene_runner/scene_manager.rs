@@ -1049,12 +1049,9 @@ impl SceneManager {
         let Some(global) = DclGlobal::try_singleton() else {
             return String::new();
         };
-        let mut realm = global.bind().realm.clone();
-        realm
-            .call("get_realm_string", &[])
-            .try_to::<GString>()
-            .map(|g| g.to_string())
-            .unwrap_or_default()
+        let realm = global.bind().realm.clone();
+        let realm_string = realm.bind().get_realm_string().to_string();
+        realm_string
     }
 
     fn loading_process_frames() -> i64 {
@@ -2678,7 +2675,7 @@ impl SceneManager {
             for (_, audio_source_node) in scene.audio_sources.iter() {
                 let mut audio_source_node = audio_source_node.clone();
                 audio_source_node.bind_mut().set_dcl_enable(false);
-                audio_source_node.call("apply_audio_props", &[false.to_variant()]);
+                audio_source_node.bind_mut().apply_audio_props(false);
             }
             for (_, audio_stream_node) in scene.audio_streams.iter_mut() {
                 audio_stream_node.bind_mut().set_muted(true);
@@ -2716,7 +2713,7 @@ impl SceneManager {
             for (_, audio_source_node) in scene.audio_sources.iter() {
                 let mut audio_source_node = audio_source_node.clone();
                 audio_source_node.bind_mut().set_dcl_enable(true);
-                audio_source_node.call("apply_audio_props", &[false.to_variant()]);
+                audio_source_node.bind_mut().apply_audio_props(false);
             }
             for (_, audio_stream_node) in scene.audio_streams.iter_mut() {
                 audio_stream_node.bind_mut().set_muted(false);

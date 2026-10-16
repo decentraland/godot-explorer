@@ -416,10 +416,13 @@ impl SceneFetcher {
 
     #[func]
     pub fn get_parcel_scene_id(&self, x: i32, z: i32) -> i32 {
+        // Scenes may overlap (a world's big scene around small ones): the most specific one wins,
+        // and the id breaks ties, so the answer never depends on the map's order.
         self.loaded_scenes
             .values()
             .filter(|scene| scene.is_running())
-            .find(|scene| scene.parcels.iter().any(|p| p.x == x && p.y == z))
+            .filter(|scene| scene.parcels.iter().any(|p| p.x == x && p.y == z))
+            .min_by_key(|scene| (scene.parcels.len(), scene.scene_number_id))
             .map(|scene| scene.scene_number_id)
             .unwrap_or(NO_SCENE)
     }

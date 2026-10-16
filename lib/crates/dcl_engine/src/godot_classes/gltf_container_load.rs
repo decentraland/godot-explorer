@@ -228,11 +228,13 @@ impl DclGltfContainer {
         let mut mesh: Gd<Mesh> = mesh_instance.get_mesh()?;
         // The first instance to need the shape builds it and consumes `dcl_faces`; every later
         // instance of the same mesh finds it under `dcl_shape`.
-        let existing: Variant = mesh
-            .get_meta_ex("dcl_shape")
-            .default(&Variant::nil())
-            .done();
-        let shape = match existing.try_to::<Gd<ConcavePolygonShape3D>>() {
+        let existing = mesh
+            .has_meta("dcl_shape")
+            .then(|| mesh.get_meta("dcl_shape"));
+        let shape = match existing
+            .ok_or(())
+            .and_then(|v| v.try_to::<Gd<ConcavePolygonShape3D>>().map_err(|_| ()))
+        {
             Ok(shape) => shape,
             Err(_) => {
                 if !mesh.has_meta("dcl_faces") {

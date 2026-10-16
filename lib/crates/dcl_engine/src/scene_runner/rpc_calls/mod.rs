@@ -1,14 +1,16 @@
 mod handle_restricted_actions;
 mod portables;
 
-use godot::{meta::ToGodot, obj::NewGd};
+use godot::{meta::ToGodot, obj::NewGd, prelude::*};
 
 use crate::{
-    content::content_mapping::DclContentMappingAndUrl,
+    content::{content_mapping::DclContentMappingAndUrl, texture::TextureEntry},
     dcl::{
         scene_apis::{NetworkMessageRecipient, RpcCall},
         SceneId,
     },
+    engine::local_task::{await_promise, spawn_local},
+    fetcher::globals,
     godot_classes::{
         dcl_global::DclGlobal,
         rpc_sender::take_and_compare_snapshot_response::DclRpcSenderGetTextureSize,
@@ -134,15 +136,34 @@ pub fn process_rpcs(scene: &mut Scene, current_parcel_scene_id: &SceneId, rpc_ca
                 let content_mapping =
                     DclContentMappingAndUrl::from_ref(scene.content_mapping.clone());
 
-                DclGlobal::singleton().call_deferred(
-                    "async_get_texture_size",
-                    &[
-                        content_mapping.to_variant(),
-                        src.to_variant(),
-                        rpc_sender.to_variant(),
-                    ],
-                );
+                spawn_local(texture_size(content_mapping, src, rpc_sender));
             }
         }
     }
+}
+
+/// The SDK6 adaptation layer asks for a texture's size; a texture that cannot be fetched answers 2048².
+async fn texture_size(
+    content_mapping: Gd<DclContentMappingAndUrl>,
+    src: String,
+    mut sender: Gd<DclRpcSenderGetTextureSize>,
+) {
+    let mut hash = content_mapping.bind().get_hash(src.as_str().into());
+    if hash.is_empty() {
+        hash = src.as_str().into();
+    }
+    let promise = globals::content_provider()
+        .bind_mut()
+        .fetch_texture_by_hash(hash, content_mapping);
+    let result = await_promise(promise).await;
+    let size = match result.try_to::<Gd<TextureEntry>>() {
+        Ok(entry) => entry.bind().original_size,
+        Err(_) => {
+            tracing::warn!("couldn't get the size of {src}");
+            Vector2i::new(2048, 2048)
+        }
+    };
+    sender
+        .bind_mut()
+        .send(Vector2::new(size.x as f32, size.y as f32).to_variant());
 }

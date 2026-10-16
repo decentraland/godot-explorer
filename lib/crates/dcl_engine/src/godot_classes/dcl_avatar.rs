@@ -840,8 +840,11 @@ mod itest {
         avatar
             .bind_mut()
             .set_movement_type(AvatarMovementType::LerpTwoPoints);
-        avatar.set("current_parcel_position", &Vector2i::ZERO.to_variant());
-        avatar.set("current_parcel_scene_id", &1_i32.to_variant());
+        {
+            let mut bound = avatar.bind_mut();
+            bound.current_parcel_position = Vector2i::ZERO;
+            bound.current_parcel_scene_id = 1;
+        }
 
         // ~3 cm per 55 ms packet ≈ 0.55 m/s instantaneous — but alternate
         // zero-movement packets like the 6.3 cm quantization does, averaging
@@ -877,8 +880,11 @@ mod itest {
         avatar
             .bind_mut()
             .set_movement_type(AvatarMovementType::LerpTwoPoints);
-        avatar.set("current_parcel_position", &Vector2i::ZERO.to_variant());
-        avatar.set("current_parcel_scene_id", &1_i32.to_variant());
+        {
+            let mut bound = avatar.bind_mut();
+            bound.current_parcel_position = Vector2i::ZERO;
+            bound.current_parcel_scene_id = 1;
+        }
 
         let frame = 1.0f64 / 30.0;
         // 1 s of stationary packets (peer idle), then continuous walking.
@@ -1047,8 +1053,11 @@ mod itest {
             .set_movement_type(AvatarMovementType::LerpTwoPoints);
         // Keep update_parcel_position away from DclGlobal (not available in
         // the test runner): pretend we're settled in parcel (0,0), scene 1.
-        avatar.set("current_parcel_position", &Vector2i::ZERO.to_variant());
-        avatar.set("current_parcel_scene_id", &1_i32.to_variant());
+        {
+            let mut bound = avatar.bind_mut();
+            bound.current_parcel_position = Vector2i::ZERO;
+            bound.current_parcel_scene_id = 1;
+        }
 
         // Peer walks a circle (radius 2 m at 1 rad/s => 2 m/s) centered inside
         // parcel (0,0); packets sample it with the captured jitter.

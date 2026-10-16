@@ -14,6 +14,7 @@ use crate::{
             SceneCrdtStateProtoComponents,
         },
     },
+    engine::local_task::defer,
     godot_classes::dcl_global::DclGlobal,
     scene_runner::scene::Scene,
 };
@@ -156,18 +157,9 @@ fn do_raycast(scene: &Scene, node_3d: &Gd<Node3D>, raycast: &PbRaycast) -> PbRay
     raycast_query.set_collision_mask(collision_mask);
 
     // debug drawing the ray
-    if let Some(mut global) = DclGlobal::try_singleton() {
-        let id: i64 = node_3d.instance_id().to_i64();
-        global.call_deferred(
-            "add_raycast",
-            &[
-                Variant::from(id),
-                Variant::from(1.0),
-                Variant::from(raycast_from),
-                Variant::from(raycast_to),
-            ],
-        );
-    }
+    let id: i64 = node_3d.instance_id().to_i64();
+    let (origin, target) = (raycast_from, raycast_to);
+    defer(move || DclGlobal::add_raycast(id, 1.0, origin, target));
 
     let hits = match query_type {
         RaycastQueryType::RqtHitFirst => {

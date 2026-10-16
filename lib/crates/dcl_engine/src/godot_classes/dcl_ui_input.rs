@@ -8,6 +8,7 @@ use godot::{
     prelude::*,
 };
 
+use crate::engine::local_task::defer;
 use crate::godot_classes::dcl_global::DclGlobal;
 use crate::{
     dcl::components::{
@@ -143,9 +144,7 @@ impl DclUiInput {
                 .set_text_input_focus(false, Rect2::default());
         }
         // Movement is gated on the explorer holding focus: hand it back.
-        if let Some(mut global) = DclGlobal::try_singleton() {
-            global.call_deferred("explorer_grab_focus", &[]);
-        }
+        defer(DclGlobal::explorer_grab_focus);
     }
 
     fn show_soft_keyboard(&self) {
