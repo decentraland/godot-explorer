@@ -1,19 +1,19 @@
 ---
 name: mobile-dev-debug-tool
-description: Use when inspecting or reporting the state of the running Decentraland Godot Explorer client — on desktop or on a mobile device (iOS/Android) — over the unified scene-inspector debug-hub (`cargo run -- debug-hub`; device port 9231, consumer port 9230) that the client dials out to. Covers the SCENE_INSPECTOR_CMD JSON protocol, the five trees (`scene`/`entity`, `ui_scene`/`ui_entity`, `avatars`/`avatar`, `app_ui`, `ping`/`scenes`), the `focus` keyboard-focus tracker, the `log`/`network` streams, the shared `filters` dict, the `websocat` helper scripts (`scripts/unified.sh`, `unified-tail.sh`), and the wiring across `godot/src/tool/debug_server/`, `scene_inspector_bridge.gd` and the Rust `SceneManager::debug_*` / `AvatarScene::debug_*` hooks. Also covers the `eval` command for running arbitrary GDScript against the live client (non-production only). Trigger when the user asks what state the running app/client is in (what scenes/realm are loaded, where the avatar is, what the UI is showing — desktop or on-device/mobile/iOS/Android), asks to connect to or host the debug-hub, or mentions the scene-inspector channel, debug-hub, port 9230/9231, `DebugWs`, `debug_collector`, websocat against the client, or running/evaluating GDScript against the running client.
+description: Use when inspecting or reporting the state of the running Decentraland Godot Explorer client — on desktop or on a mobile device (iOS/Android) — over the unified scene-inspector debug-hub (`cargo run -- debug-hub`; device port 9231, consumer port 9230) that the client dials out to. Covers the SCENE_INSPECTOR_CMD JSON protocol, the five trees (`scene`/`entity`, `ui_scene`/`ui_entity`, `avatars`/`avatar`, `app_ui`, `ping`/`scenes`), the `focus` keyboard-focus tracker, the `log`/`network` streams, the shared `filters` dict, the `websocat` helper scripts (`scripts/unified.sh`, `unified-tail.sh`), and the wiring across `lib/crates/dcl_engine/src/tools/debug_hub/` and the Rust `SceneManager::debug_*` / `AvatarScene::debug_*` hooks. Also covers the typed commands `state`, `teleport`, `screenshot` and `log_filter` that replaced the old GDScript `eval`. Trigger when the user asks what state the running app/client is in (what scenes/realm are loaded, where the avatar is, what the UI is showing — desktop or on-device/mobile/iOS/Android), asks to connect to or host the debug-hub, or mentions the scene-inspector channel, debug-hub, port 9230/9231, websocat against the client, or teleporting/screenshotting/dumping the state of the running client.
 ---
 
 # Mobile dev debug tool — scene-inspector debug-hub
 
 A single WebSocket channel exposes live client state (scenes / entities / UI /
-avatars / focus), a `log`/`network`/lifecycle stream, and an `eval` command that
-runs arbitrary GDScript — reachable on **any platform, including iOS/Android
+avatars / focus), a `log`/`network`/lifecycle stream, and typed commands
+(`state`, `teleport`, `screenshot`, `log_filter`) — reachable on **any platform, including iOS/Android
 devices that can't be dialed into**. The client dials **out** to a desktop
 **debug-hub**; local tools (AI / websocat) connect to the hub's consumer port.
 
 There is **one transport**: the scene-inspector CMD protocol (the source-of-truth
 contract an external inspector app already parses, so additions stay
-backward-compatible). `eval` is hard-disabled in production builds.
+backward-compatible). The mutating commands (`teleport`, `log_filter`) are disabled in production builds.
 
 ## Bring up the hub
 
@@ -24,10 +24,8 @@ cargo run -- run -- --scene-inspector=ws://127.0.0.1:9231              # desktop
 cargo run -- run --target ios -- --scene-inspector=ws://<this-mac>:9231   # device
 ```
 
-On iOS the `dcl-ios-devtools` export plugin auto-bakes the hub address (debug
-builds), so even a Godot-editor deploy phones home — just accept the
-local-network prompt on first launch. The bridge activates at **boot**
-(`scene_inspector_bridge.gd::activate_from_config`, called from `Global._ready`),
+On iOS pass the hub address with `--scene-inspector=ws://<this-mac>:9231`; accept the local-network prompt on first launch. The bridge activates at **boot**
+(`SceneInspectorBridge`, started by `DclGlobal` at boot),
 so the channel is live from the lobby, **before login** — no need to enter a world
 first. A `?scene-inspector=ws://<lan-ip>:9231` deeplink is honoured only on
 non-production builds and only when it points at the local network.
@@ -49,16 +47,15 @@ Then query with the id-filtered helpers:
 ```bash
 scripts/unified.sh scenes
 scripts/unified.sh scene '{"scene_id":0,"filters":{"limit":5}}'
-scripts/unified.sh eval  'return {"scene": str(get_tree().current_scene.name), "scenes_loaded": Global.scene_runner.debug_get_loaded_scene_ids().size()}'
+scripts/unified.sh state
 ```
 
 **Why it just works:** the client **dials out** and **retries forever** (backoff
-1s→…→30 s cap, `scene_inspector_websocket.gd`), and debug builds **default the
-target to `ws://127.0.0.1:9231`** with no arg (`global.gd`), so a hub started
+1s→…→30 s cap, `debug_hub/socket.rs`), and debug builds **default the
+target to `ws://127.0.0.1:9231`** with no arg, so a hub started
 *after* the app is picked up within ≤30 s — no app restart needed. Per platform:
 
-- **iOS** — the `dcl-ios-devtools` export plugin bakes `ws://<LAN-IP>:9231` (even a
-  Godot-editor deploy phones home); accept the Local Network prompt once.
+- **iOS** — pass `--scene-inspector=ws://<LAN-IP>:9231`; accept the Local Network prompt once.
 - **Android** — NO plugin bakes the arg (the baking plugin is iOS-only, and Android
   editor-deploy CLI args don't reach the app). The **debug loopback default** +
   `adb reverse tcp:9231` (set by `hub-connect.sh`) carry it instead. A build made
@@ -72,13 +69,9 @@ hint it prints (usually: relaunch/redeploy the app).
 
 ## Wiring
 
-- Command backend: `DebugWs` autoload → `godot/src/tool/debug_server/debug_ws_server.gd`
-  (`run_command`) + `debug_collector.gd` (data assembly). Not a server — the
-  shared inspection/eval backend + keyboard-focus tracker.
-- Transport: `godot/src/tool/scene_inspector_bridge.gd` (drives CMD ↔ ACK and the
-  streams) + `godot/src/logic/scene_inspector_websocket.gd`; Rust side in
-  `lib/src/tools/scene_inspector/`. The hub is the `debug-hub` xtask
-  (`src/log_server.rs`).
+- Commands, collectors and the transport: `lib/crates/dcl_engine/src/tools/debug_hub/`
+  (`commands.rs`, `collector.rs`, `socket.rs`, the `SceneInspectorBridge` node). The hub is the
+  `debug-hub` xtask (`src/log_server.rs`).
 - Rust `#[func]` hooks for state only Rust can reach:
   - `SceneManager::debug_*` (`lib/src/scene_runner/scene_manager.rs`) —
     CRDT enumeration, deserialization, UI control lookup.
@@ -149,48 +142,20 @@ scripts/unified.sh app_ui '{"filters":{"depth":2}}'
 scripts/unified.sh focus
 ```
 
-## Eval — running GDScript
+## Typed commands
 
-`scripts/unified.sh eval '<gdscript>'` compiles and runs the snippet against the
-live client and returns the serialized result — the agent-facing equivalent of a
-devtools console. **Non-production only**: in a production build the cmd replies
-`{"ok":false,"error":"eval disabled in production builds"}`.
-
-`code` is a GDScript function body. Use `return X` to send a value back. Three
-locals are in scope:
-
-| local | what |
-|---|---|
-| `tree` | the `SceneTree` (`tree.root`, `tree.get_node(...)`) |
-| `global` | the `Global` autoload |
-| `server` | the `DebugWsServer` command-backend node |
-
-Autoloads (`Global`, `DebugWs`, …) and engine singletons (`OS`, `Engine`,
-`Time`, …) are reachable directly too. A bare single-line expression is
-auto-wrapped in `return`, so `eval '1 + 1'` works without the keyword.
-
-The result passes through the same `_variant_to_json` used elsewhere
-(primitives, `Vector*`, `Color`, `AABB`, `Array`, `Dictionary`; everything else
-— `Object`/`Node`/`Callable` — falls back to `str()`).
+There is no `eval`: the GDScript interpreter is gone with the GDScript. What it was used for has
+typed commands (the mutating ones are non-production only):
 
 ```bash
-# Bare expression (auto-wrapped)
-scripts/unified.sh eval 'Engine.get_frames_per_second()'
-
-# Reach into the tree
-scripts/unified.sh eval 'return tree.get_root().get_child_count()'
-
-# Multi-line statement body
-scripts/unified.sh eval 'var names = []
-for c in tree.get_root().get_children():
-	names.append(c.name)
-return names'
+scripts/unified.sh state                              # realm, parcel, scenes loaded, fps, memory
+scripts/unified.sh teleport '{"x":77,"y":1}'          # move the player to a parcel
+scripts/unified.sh screenshot '{"inline":true}'       # PNG of the viewport (inline = base64)
+scripts/unified.sh log_filter '{"filter":"dclgodot::comms=debug,warn"}'
 ```
 
-Limitations: **synchronous only** — `await` is not supported (it would return a
-coroutine signal, not the awaited value). GDScript **runtime errors** (e.g. a
-null access) are logged to the client console and the eval returns `null` with
-`ok:true`; only *compile* errors come back as `ok:false`.
+`eval` itself replies `ok:false` with a pointer to these. For a query nothing covers, add a typed
+command in `debug_hub/commands.rs`.
 
 ## `focus` — keyboard-focus tracker
 
@@ -200,12 +165,11 @@ plus a timestamped change history (no `filters`). Reply `data`:
 "history": [{"t_ms", "frame", "from", "to"}, ...]}` (last `FOCUS_HISTORY_MAX`
 = 64 changes; `"<none>"` means focus was released to null).
 
-`DebugWs` polls `get_viewport().gui_get_focus_owner()` every `_process` frame (in
-debug builds) so the history captures transient changes — including
+The bridge polls the viewport's focus owner every frame (in debug builds) so the history captures transient changes — including
 release-to-null, which the engine's `gui_focus_changed` signal misses.
 
 Use it for "input stops working" bugs: mobile walk/jump are gated by
-`player.gd` → `explorer_has_focus()` (`== ui_root.has_focus()`), so movement
+the player body's focus check (`ui_root.has_focus()`), so movement
 silently dies whenever `current` ≠ `ui_root_path`. The history shows which
 control stole focus and on which frame. (This is how the navbar-toggle
 focus-steal bug was found: the gate read true→false when a press landed focus
@@ -227,7 +191,7 @@ opt-in (the helper subscribes for you). `source` ∈ rust | godot | native
 
 **MCP / AI loop:** the hub's consumer port (`ws://127.0.0.1:9230`) is a stable
 local endpoint an MCP server (or the helpers above, called from Bash) can use to
-read all logs and issue `eval`/queries — the same contract the external app uses.
+read all logs and issue queries — the same contract the external app uses.
 
 ## Important notes
 
@@ -252,7 +216,7 @@ read all logs and issue `eval`/queries — the same contract the external app us
   large scenes, not a bug in the tool.
 - `app_ui` skips `<root>/SceneUIContainer/scenes_ui` by default to avoid
   shadowing `ui_scene`; pass `include_scene_ui: true` to lift the skip.
-- The inspection cmds are read-only; only `eval` can mutate client state.
+- The inspection cmds are read-only; only `teleport` and `log_filter` mutate client state.
 - Large replies (expanded `scene` / `app_ui`) can be huge — narrow `filters`
   (add `component` / `property_is`, drop `include_children`/`include_parents`,
   use `limit`) if a reply is unwieldy.
@@ -280,8 +244,7 @@ $H/unified.sh avatars                                          # avatars present
 $H/unified.sh avatar '{"by":"local"}'                          # your avatar (position, animations)
 $H/unified.sh app_ui '{"filters":{"depth":2}}'                 # the explorer's own UI tree
 ```
-Component histogram across the scene (via eval): loop `debug_list_entities` ×
-`debug_get_entity_component_names` in a `$H/unified.sh eval` snippet and tally.
+Component histogram across the scene: `scene` with `filters.component` per component name, then count.
 
 ### 2. See logs
 ```bash
@@ -308,7 +271,6 @@ on_update(_end), scene_shutdown. Silence the per-tick on_update firehose with th
 The dev loop while working ON this branch:
 1. Add a log at debug level for your feature:
    - Rust: `tracing::debug!("[myfeat] x={:?}", x);` — use `debug!`, not `info!`: mobile's default filter is `info`, so `info!` prints in every mobile session.
-   - GDScript: `print("[myfeat] ...")`  — captured as source `"godot"`.
 2. Run with debug logging on for your module:
    ```bash
    cargo run -- run -- --scene-inspector=ws://127.0.0.1:9231 --rust-log='dclgodot::yourmod=debug,warn'
@@ -319,14 +281,9 @@ The dev loop while working ON this branch:
    $H/unified-tail.sh log | jq -rc 'select(.type=="SCENE_INSPECTOR").payload.entries[]?
      | select(.type=="log" and (.msg|test("myfeat"))) | "[\(.source)] \(.msg)"'
    ```
-4. Poke it live without redeploying — `eval` to read state or call your code:
-   ```bash
-   $H/unified.sh eval 'return Global.your_singleton.your_state'
-   $H/unified.sh eval 'Global.your_singleton.trigger(); return "ok"'
-   ```
-   (`eval` mutates — non-prod only. Ideal for "does my new function actually do X?" with no rebuild.)
+4. Poke it live without redeploying — `state`, `teleport` and `log_filter` change what you see
+   without a rebuild; for anything else add a typed command.
 
-Caveats: GDScript `print` is captured but `push_warning`/`push_error` are NOT (only
-Rust warn/error, via the tracing layer). Mobile's default filter is `info`, so
+Caveats: only Rust logs flow (via the tracing layer). Mobile's default filter is `info`, so
 `debug!` lines need `--rust-log=...=debug`. Everything is connection-gated +
 opt-in, so a prod build with the tool present captures nothing until you connect.

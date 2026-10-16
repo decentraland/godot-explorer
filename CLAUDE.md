@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Decentraland Godot Explorer is a cross-platform metaverse client that combines:
 - **Godot Engine 4.6.2** (custom fork) for 3D rendering and UI
 - **Rust** for core systems and performance-critical components
-- **GDScript** for game logic
+- **Rust** also owns the game logic and the in-world UI: there is no GDScript in the engine project
 - **JavaScript/V8** runtime for executing Decentraland SDK scenes
 
 ## Essential Commands
@@ -96,13 +96,6 @@ cd lib
 cargo fmt --all
 cargo clippy -- -D warnings
 
-# GDScript formatting and linting
-gdformat godot/
-gdlint godot/
-
-# Validate all GDScript files
-cargo run -- check-gdscript
-
 # Generate test coverage
 cargo run -- coverage --dev
 
@@ -166,7 +159,6 @@ bypasses that check for local debugging only. The baked files live in
 1. **Always run formatting before commits**:
    ```bash
    cd lib && cargo fmt --all
-   gdformat godot/
    ```
 
 2. **Test changes with**:
@@ -272,15 +264,11 @@ The habits AI-assisted changes most often get wrong in this repo. Reviewers hold
 
 ### File size
 
-- **Files at the gdlint cap are closed for new features.** `.gdlintrc` caps GDScript at 1900
-  lines / 45 public methods, and `explorer.gd` and `avatar.gd`
-  are within 30 lines of it. New behaviour goes in its own file — a component, a `RefCounted`
-  helper, an autoload — and the big file gets one call into it, not a new block. Same in Rust,
-  where nothing enforces it: `communication_manager.rs`, `scene_manager.rs` and
-  `content_provider.rs` are past 3000 lines.
-- **Never raise `max-file-lines` / `max-public-methods` inside a feature PR.** The line cap has
-  been raised four times since December 2025 (1000 → 1900), every time inside a feature or fix
-  PR. If a change cannot land without it, split the file first, in its own PR.
+- **Large files are closed for new features.** `communication_manager.rs`, `scene_manager.rs` and
+  `content_provider.rs` are past 3000 lines and nothing enforces a cap: new behaviour goes in its own
+  file — a component, a helper, a module — and the big file gets one call into it, not a new block.
+- **No GDScript.** CI fails on any `.gd` under `godot/src`; only the kept editor/export addons
+  (`dcl-godot-android`, `dcl_build_plugin`, `emote_converter`) carry `.gd`.
 - **Rule of thumb:** over ~1500 lines, ask where else the code could live before adding to it.
 
 ### Diff discipline
@@ -314,7 +302,7 @@ Each xtask command checks its prerequisites and says what to run first:
 ### Adding a new Decentraland component:
 1. Create the Rust implementation in `lib/crates/dcl_engine/src/scene_runner/components/`
 2. Add GDExtension bindings in the component file
-3. Create corresponding GDScript class in `godot/src/decentraland_components/`
+3. Expose it as a `GodotClass` in the same file (no GDScript; `find godot/src -name '*.gd'` must stay empty)
 4. Register in the scene runner
 
 ### Rust Log Filtering
@@ -338,7 +326,7 @@ cargo run -- run -- --rust-log="dclgodot::scene_runner=trace,dclgodot::comms=deb
 
 Priority: `--rust-log` > `RUST_LOG` env var > default (`warn` on desktop, `info` on mobile).
 
-The filter can also be changed at runtime from GDScript: `DclGlobal.set_rust_log_filter("dclgodot::comms=debug,warn")`.
+The filter can also be changed at runtime through the debug hub: `log_filter {"filter": "dclgodot::comms=debug,warn"}`.
 
 **Rust Log Filter editor tool:**
 

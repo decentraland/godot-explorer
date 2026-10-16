@@ -219,7 +219,7 @@ cargo run -- update-docker-snapshots --run-id 21769476899
 ```
 godot-explorer/
 ├── godot/              # Godot project files
-│   ├── src/            # GDScript source code
+│   ├── src/            # Scenes and resources (no GDScript; logic is in lib/)
 │   └── project.godot   # Project configuration
 ├── lib/                # Rust library
 │   ├── src/            # Rust source code
