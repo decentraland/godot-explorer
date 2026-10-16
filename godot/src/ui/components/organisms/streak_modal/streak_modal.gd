@@ -51,6 +51,10 @@ var _claiming_reward: bool = false
 @onready var reward_art_1: TextureRect = %TextureRect_RewardArt1
 @onready var reward_art_2: TextureRect = %TextureRect_RewardArt2
 @onready var claim_failed_panel: MarginContainer = %MarginContainer_ClaimFailed
+## Trailing child of the card's own VBoxContainer, same structure reward_modal.tscn uses for its
+## own Label_TapToContinue — only visible once there's nothing left to claim (see
+## _show_claim_button).
+@onready var label_tap_to_continue: Label = %Label_TapToContinue
 
 
 ## Maps StreakManager.take_pending_modal()'s string result to this modal's State enum.
@@ -143,6 +147,7 @@ func _render() -> void:
 	# actual failed attempt (inside _show_claim_button()'s claim_action) turns it back on, and
 	# only states that reach _show_claim_button() can ever show it in the first place.
 	_set_claim_failed_visible(false)
+	label_tap_to_continue.hide()
 	_update_day_row()
 	var d7_claimed := Global.streak_manager.is_d7_claimed()
 
@@ -259,6 +264,7 @@ func _show_claim_button(text_key: String) -> void:
 		# the day row later) — nothing to claim, so land straight on the terminal CLAIMED look
 		# instead of a tappable CLAIM that would do nothing.
 		claim_button.finish_claiming()
+		label_tap_to_continue.show()
 		return
 	var is_guest := _is_guest
 	claim_button.claim_action = func() -> bool:

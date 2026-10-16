@@ -42,6 +42,12 @@ font_color = Color(0.27450982, 0.05882353, 0.43529412, 1)
 
 [sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_da6u2"]
 
+[sub_resource type="LabelSettings" id="LabelSettings_tap_continue"]
+font = ExtResource("10_ro0bi")
+font_size = 32
+font_color = Color(0.9882353, 0.9882353, 0.9882353, 1)
+shadow_color = Color(0, 0, 0, 0.49803922)
+
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_t1wcr"]
 content_margin_left = 24.0
 content_margin_top = 16.0
@@ -364,6 +370,19 @@ size_flags_vertical = 0
 texture = ExtResource("5_da6u2")
 expand_mode = 1
 stretch_mode = 5
+
+[node name="HSeparator4" type="HSeparator" parent="VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 28
+theme_override_styles/separator = SubResource("StyleBoxEmpty_da6u2")
+
+[node name="Label_TapToContinue" type="Label" parent="VBoxContainer"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+text = "COMMON_TAP_TO_CONTINUE"
+label_settings = SubResource("LabelSettings_tap_continue")
+horizontal_alignment = 1
 
 [connection signal="gui_input" from="." to="." method="_on_gui_input"]
 [connection signal="pressed" from="VBoxContainer/PanelContainer/MarginContainer/VBoxContainer/ClaimButton" to="." method="_on_button_cta_pressed"]
