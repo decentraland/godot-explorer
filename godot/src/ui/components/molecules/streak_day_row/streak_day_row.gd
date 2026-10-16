@@ -31,6 +31,12 @@ func _ensure_pills() -> void:
 			# own fixed size and the MarginContainer's side margins never stretch.
 			var spacer := Control.new()
 			spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			# Pure layout filler, never meant to intercept input — matters for the Discover
+			# widget's own StreakWidgetCard._make_day_row_tappable(), which sweeps existing
+			# descendants to IGNORE before this runs (pills are only instanced lazily, on the
+			# first render() call), so a spacer created afterward would otherwise swallow a tap
+			# landing in the gap between two pills instead of letting it reach the row itself.
+			spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			row.add_child(spacer)
 		var pill := streak_day_pill_scene.instantiate() as StreakDayPill
 		row.add_child(pill)
