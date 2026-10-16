@@ -18,6 +18,7 @@ anchors_preset = 0
 offset_right = 68.0
 offset_bottom = 130.0
 size_flags_horizontal = 4
+mouse_filter = 2
 script = ExtResource("1_script")
 texture_future = ExtResource("2_day_empty")
 texture_today = ExtResource("3_day_current")
@@ -27,6 +28,7 @@ texture_reward_today = ExtResource("6_reward_current")
 texture_reward_passed = ExtResource("7_reward_complete")
 texture_reward_done = ExtResource("8_reward_claimed")
 texture_all_complete = ExtResource("10_all_complete")
+metadata/mobile_preview_orientation = "portrait"
 
 [node name="Claimable_Background" type="TextureRect" parent="." unique_id=1310831350]
 unique_name_in_owner = true
@@ -39,6 +41,7 @@ offset_right = 94.0
 offset_bottom = 151.5
 grow_horizontal = 2
 grow_vertical = 2
+mouse_filter = 2
 texture = ExtResource("9_40r7x")
 expand_mode = 4
 
@@ -55,6 +58,7 @@ offset_right = 34.0
 offset_bottom = 59.0
 grow_horizontal = 2
 grow_vertical = 2
+mouse_filter = 2
 theme_override_constants/separation = -2
 alignment = 1
 
@@ -63,6 +67,7 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(56, 68)
 layout_mode = 2
 size_flags_horizontal = 4
+mouse_filter = 2
 texture = ExtResource("2_day_empty")
 expand_mode = 1
 stretch_mode = 5
@@ -71,6 +76,7 @@ stretch_mode = 5
 unique_name_in_owner = true
 auto_translate_mode = 2
 layout_mode = 2
+mouse_filter = 2
 theme_override_font_sizes/normal_font_size = 27
 theme_override_font_sizes/bold_font_size = 27
 bbcode_enabled = true
