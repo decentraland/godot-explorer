@@ -55,9 +55,10 @@ without a written safety comment. Porting on the old API would mean porting twic
   again on the main thread; logging goes through the safe `print_custom`. By name only: the JNI/Swift plugin
   singletons and the engine fork's own methods; `call_targets_test` guards that. Safeguards: strict in debug
   (`--itest`, `--ctest`, device debug builds), balanced in release, never disengaged.
+  **Also done:** `local_task` runs on gdext's `godot::task` (signal futures, no per-frame polling, task panics caught; checked on `--itest` and the Moto).
   **Not done, decided to leave for a follow-up:** pin the API to the fork (`api-custom-json` with the fork's
   `extension_api.json` through `GDRUST_GODOT_API_JSON` in `.cargo/config.toml`, which turns the last by-name
-  engine calls into typed ones); move `local_task` to `godot::task::spawn` (signal futures, no per-frame polling);
+  engine calls into typed ones); the engine pipeline (`decentraland/godotengine` `process_templates.yml`) would publish `extension_api.json` next to the editors, and `xtask install` would fetch it;
   the content loaders still call engine APIs from tokio threads under `GodotSingleThreadSafety` (gdext marks
   `experimental-threads` as not sound; the safer shape is workers that decode bytes and the main thread that
   creates the Godot objects).
