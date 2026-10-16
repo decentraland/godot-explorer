@@ -44,3 +44,13 @@ pub fn connect(signal: &str, target: &Gd<impl Inherits<Object>>, method: &str) {
     let callable = Callable::from_object_method(target, method);
     global().connect(signal, &callable);
 }
+
+/// Connects a `Global` signal to a closure that takes the signal's arguments.
+pub fn connect_fn(signal: &str, handler: impl FnMut(&[&Variant]) + 'static) {
+    let mut handler = handler;
+    let callable = Callable::from_fn(format!("host_{signal}"), move |args| {
+        handler(args);
+        Variant::nil()
+    });
+    global().connect(signal, &callable);
+}

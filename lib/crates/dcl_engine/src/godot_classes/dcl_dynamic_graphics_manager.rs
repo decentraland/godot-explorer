@@ -575,10 +575,10 @@ impl INode for DclDynamicGraphicsManager {
 #[godot_api]
 impl DclDynamicGraphicsManager {
     #[signal]
-    fn profile_change_requested(new_profile: i32);
+    pub fn profile_change_requested(new_profile: i32);
 
     #[signal]
-    fn thermal_fps_cap_changed(fps_cap: i32);
+    pub fn thermal_fps_cap_changed(fps_cap: i32);
 
     #[func]
     pub fn initialize(&mut self, enabled: bool, current_profile: i32, fps_limit: i32) {

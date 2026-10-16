@@ -741,8 +741,14 @@ impl DclGlobal {
             .is_some_and(|t| t > std::time::Instant::now())
     }
 
+    /// Resolves and applies the UI language (see `app::locale`).
+    #[func]
+    pub fn apply_locale() {
+        crate::app::locale::apply_locale();
+    }
+
     /// Locale forwarded to SDK7 scenes (`getExplorerInformation`, `localeChanged`).
-    /// Callers pass the resolved app locale (`LocaleSettings.resolve_locale()`), never the OS one.
+    /// Callers pass the resolved app locale (`app::locale`), never the OS one.
     #[func]
     pub fn set_scene_locale(locale: GString) {
         crate::godot_classes::dcl_scene_locale::set_scene_locale(&locale.to_string());

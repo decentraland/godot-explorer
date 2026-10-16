@@ -1,6 +1,6 @@
 //! Locale forwarded to SDK7 scenes (#2707): the client's resolved app locale, never the OS one.
 //!
-//! Set from `LocaleSettings.apply_locale()` via `DclGlobal.set_scene_locale`, read by the scene
+//! Set from `app::locale::apply_locale` via `DclGlobal.set_scene_locale`, read by the scene
 //! threads through `getExplorerInformation` and the `localeChanged` event. The version counter
 //! lets each scene detect a change without holding the lock across ticks.
 

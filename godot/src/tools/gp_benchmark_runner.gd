@@ -246,7 +246,7 @@ func _process(_delta: float) -> void:
 							)
 						)
 						GraphicSettings.apply_fps_limit_with_thermal_cap(
-							GraphicSettings.FpsLimitMode.NO_LIMIT, 0
+							GraphicSettings.NO_LIMIT, 0
 						)
 					Engine.max_fps = 0
 					DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
@@ -990,7 +990,7 @@ func _apply_forced_graphic_profile() -> void:
 		# the device's real ceiling. Without this, profile 0=FPS_18,
 		# 1/2=FPS_30, 3=FPS_60 silently cap the run via the
 		# `param_changed → apply_fps_limit → Engine.max_fps=N` path.
-		Global.engine.adopt_setting("limit_fps", GraphicSettings.FpsLimitMode.NO_LIMIT)
+		Global.engine.adopt_setting("limit_fps", GraphicSettings.NO_LIMIT)
 		_log("forced graphic_profile=%d, limit_fps=NO_LIMIT (post-load)" % idx)
 	var scale_v = config.get("viewport_scale_3d", null)
 	if scale_v != null:

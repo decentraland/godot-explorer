@@ -19,6 +19,7 @@ static GLOBAL: tools::memory_debugger::TrackingAllocator =
     tools::memory_debugger::TrackingAllocator;
 
 pub mod analytics;
+pub mod app;
 #[cfg(feature = "asset_server")]
 pub mod asset_server;
 pub mod auth;

@@ -360,12 +360,12 @@ func _ready():
 	# Resolve the UI language before any scene renders. Godot picks the OS locale at boot, which
 	# would surface a partially-translated locale the moment its .po has content; LocaleSettings
 	# gates on SUPPORTED_LOCALES so an incomplete language is never selected (see #270, #2062).
-	LocaleSettings.apply_locale()
+	DclGlobal.apply_locale()
 	# Bench-only: keep limit_fps at NO_LIMIT after the settings file load (which
 	# would otherwise restore a saved FPS_18/FPS_30 cap) so no later
 	# `apply_fps_limit()` re-pins the engine. Real users keep their saved cap.
 	if cli.bench_mode:
-		engine.adopt_setting("limit_fps", GraphicSettings.FpsLimitMode.NO_LIMIT)
+		engine.adopt_setting("limit_fps", GraphicSettings.NO_LIMIT)
 		Engine.max_fps = 0
 		DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
 
@@ -436,9 +436,6 @@ func _ready():
 	# bench mode (the function early-returns on cli.bench_mode), so bench results
 	# stay comparable while production keeps thermal-cap + adaptive downgrade.
 	graphics_autotune.init_dynamic_graphics.call_deferred()
-
-	var custom_importer = load("res://src/logic/custom_gltf_importer.gd").new()
-	GLTFDocument.register_gltf_document_extension(custom_importer)
 
 	if cli.raycast_debugger:
 		set_raycast_debugger_enable(true)

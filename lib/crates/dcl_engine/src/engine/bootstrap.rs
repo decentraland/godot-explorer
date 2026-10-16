@@ -6,6 +6,9 @@ use godot::classes::{GDScript, ResourceLoader};
 use godot::prelude::*;
 
 use crate::analytics::metrics::Metrics;
+use crate::app::{
+    gltf_importer::CustomGltfImporter, music_player::MusicPlayer, snapshot::Snapshot,
+};
 use crate::fetcher::scene_fetcher::SceneFetcher;
 use crate::godot_classes::dcl_cli::DclCli;
 use crate::godot_classes::dcl_session_store::DclSessionStore;
@@ -19,11 +22,19 @@ enum Attach {
     GlobalChild,
 }
 
+/// Where a service comes from.
+#[derive(Clone, Copy)]
+enum Source {
+    /// A GDScript class, under `res://`.
+    Script(&'static str),
+    /// A native class.
+    Native(fn() -> Variant),
+}
+
 struct ServiceSpec {
     /// The `Global` property that holds the service.
     property: &'static str,
-    /// Path of the GDScript class, under `res://`.
-    script: &'static str,
+    source: Source,
     /// `Node.name` to set, when the old code set one.
     node_name: Option<&'static str>,
     attach: Attach,
@@ -37,7 +48,21 @@ const fn spec(
 ) -> ServiceSpec {
     ServiceSpec {
         property,
-        script,
+        source: Source::Script(script),
+        node_name,
+        attach,
+    }
+}
+
+const fn native(
+    property: &'static str,
+    make: fn() -> Variant,
+    node_name: Option<&'static str>,
+    attach: Attach,
+) -> ServiceSpec {
+    ServiceSpec {
+        property,
+        source: Source::Native(make),
         node_name,
         attach,
     }
@@ -45,15 +70,15 @@ const fn spec(
 
 /// Services every boot needs, in creation order.
 const CORE_SERVICES: [ServiceSpec; 4] = [
-    spec(
+    native(
         "music_player",
-        "src/helpers_components/music_player.gd",
+        || MusicPlayer::new_alloc().to_variant(),
         None,
         Attach::None,
     ),
-    spec(
+    native(
         "snapshot",
-        "src/logic/snapshot.gd",
+        || Snapshot::new_alloc().to_variant(),
         None,
         Attach::GlobalChild,
     ),
@@ -98,7 +123,11 @@ fn instantiate_script(script: &str) -> Result<Variant, String> {
 fn create(global: &mut Gd<Node>, specs: &[ServiceSpec]) -> bool {
     let mut ok = true;
     for service in specs {
-        let instance = match instantiate_script(service.script) {
+        let made = match service.source {
+            Source::Script(script) => instantiate_script(script),
+            Source::Native(make) => Ok(make()),
+        };
+        let instance = match made {
             Ok(instance) => instance,
             Err(reason) => {
                 godot_error!("bootstrap: cannot create `{}`: {reason}", service.property);
@@ -277,6 +306,10 @@ impl DclBootstrap {
             global.set("metrics", &metrics.to_variant());
         }
 
+        // Rewrites glTF references before an import; the registry keeps it alive.
+        godot::classes::GltfDocument::register_gltf_document_extension(
+            &CustomGltfImporter::new_gd(),
+        );
         create_scene_fetcher(&mut global);
         let mut ok = create(&mut global, &APP_SERVICES);
 

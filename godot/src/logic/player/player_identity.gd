@@ -77,7 +77,9 @@ func async_save_profile() -> void:
 	_mutable_profile.set_has_connected_web3(!Global.player_identity.is_guest)
 
 	# Generate local snapshots for immediate UI display (not uploaded)
-	await Global.snapshot.async_generate_for_avatar(_mutable_avatar, _mutable_profile)
+	await PromiseUtils.async_awaiter(
+		Global.snapshot.async_generate_for_avatar(_mutable_avatar, _mutable_profile)
+	)
 
 	_mutable_profile.set_avatar(_mutable_avatar)
 

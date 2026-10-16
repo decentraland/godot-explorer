@@ -3,9 +3,10 @@
 
 use std::time::Instant;
 
-use godot::classes::{ClassDb, InputMap, Os, ResourceLoader};
+use godot::classes::{ClassDb, InputMap, Os};
 use godot::prelude::*;
 
+use crate::app::{audio_settings, general_settings, graphics};
 use crate::godot_classes::dcl_global::DclGlobal;
 
 const EXPLORER: &str = "res://src/ui/explorer.tscn";
@@ -67,21 +68,6 @@ pub fn boot_mode(flags: &BootFlags) -> BootMode {
     }
 }
 
-/// Calls a `static func` of a GDScript class.
-pub(crate) fn call_static(script: &str, method: &str, args: &[Variant]) -> Variant {
-    let loaded = ResourceLoader::singleton()
-        .load_ex(script)
-        .type_hint("Script")
-        .done();
-    match loaded {
-        Some(mut script) => script.call(method, args),
-        None => {
-            godot_error!("root: cannot load {script}");
-            Variant::nil()
-        }
-    }
-}
-
 #[derive(GodotClass)]
 #[class(base=Node)]
 pub struct DclRoot {
@@ -110,11 +96,7 @@ impl INode for DclRoot {
         // #2386: apply the UI content-scale synchronously, before the first frame is presented,
         // so the splash overlay and all UI render at their final scale from frame 0.
         if let Some(window) = self.base().get_window() {
-            call_static(
-                "res://src/config/graphic_settings.gd",
-                "apply_ui_zoom",
-                &[window.to_variant()],
-            );
+            graphics::apply_ui_zoom(window);
         }
         self.base_mut().call_deferred("start", &[]);
     }
@@ -171,44 +153,19 @@ impl DclRoot {
         else {
             return;
         };
-        call_static(
-            "res://src/config/graphic_settings.gd",
-            "apply_window_config",
-            &[],
-        );
-        call_static(
-            "res://src/config/graphic_settings.gd",
-            "apply_low_processor_mode",
-            &[],
-        );
+        graphics::apply_window_config();
+        graphics::apply_low_processor_mode();
         window.move_to_center();
-        let window_variant = window.to_variant();
-        call_static(
-            "res://src/config/graphic_settings.gd",
-            "connect_global_signal",
-            std::slice::from_ref(&window_variant),
-        );
-        call_static(
-            "res://src/config/graphic_settings.gd",
-            "apply_ui_zoom",
-            &[window_variant],
-        );
+        graphics::connect_global_signal(&window);
+        graphics::apply_ui_zoom(window.clone());
         let scale = global
             .bind()
             .get_engine()
             .bind()
             .setting("resolution_3d_scale".into());
         window.set("scaling_3d_scale", &scale);
-        call_static(
-            "res://src/config/audio_settings.gd",
-            "apply_volume_settings",
-            &[],
-        );
-        call_static(
-            "res://src/config/general_settings.gd",
-            "apply_max_cache_size",
-            &[],
-        );
+        audio_settings::apply_volume_settings();
+        general_settings::apply_max_cache_size();
     }
 
     #[func]

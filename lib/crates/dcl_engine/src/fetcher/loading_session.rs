@@ -4,7 +4,8 @@ use super::globals;
 use godot::classes::{INode, Time};
 use godot::prelude::*;
 
-use crate::{engine::root::call_static, godot_classes::dcl_global::DclGlobal};
+use crate::app::audio_settings;
+use crate::godot_classes::dcl_global::DclGlobal;
 
 /// Hard maximum loading time, whatever the download activity.
 const MAX_LOADING_TIME_SECONDS: f64 = 90.0;
@@ -12,7 +13,6 @@ const STALL_SECONDS: i64 = 20;
 const CHECK_INTERVAL_SECONDS: f64 = 1.0;
 const MAX_DOWNLOADS: i32 = 12;
 const MAX_LOW_PRIORITY_DOWNLOADS: i32 = 2;
-const AUDIO: &str = "res://src/config/audio_settings.gd";
 
 /// The engine's side of a world load: content limits, comms and audio while it runs, the
 /// loading funnel metrics, the stall timeout, and the report that ends the core's Loading
@@ -103,13 +103,12 @@ fn track(event: &str, data: serde_json::Value) {
 }
 
 fn set_audio(forced: Option<f32>) {
-    for function in [
-        "apply_scene_volume_settings",
-        "apply_voice_chat_volume_settings",
-        "apply_avatar_and_emotes_volume_settings",
+    for setting in [
+        audio_settings::SCENE_VOLUME,
+        audio_settings::VOICE_CHAT_VOLUME,
+        audio_settings::AVATAR_AND_EMOTES_VOLUME,
     ] {
-        let args: Vec<Variant> = forced.map(|v| v.to_variant()).into_iter().collect();
-        call_static(AUDIO, function, &args);
+        audio_settings::apply_setting_with(setting, forced);
     }
 }
 

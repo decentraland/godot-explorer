@@ -16,14 +16,10 @@ use godot::classes::{Engine, SceneTree};
 use godot::prelude::*;
 use tokio::sync::oneshot;
 
-use super::{root::call_static, DclEngine};
+use super::DclEngine;
+use crate::app::{audio_settings, general_settings, graphics, locale};
 use crate::content::resource_provider::ResourceProvider;
 use crate::godot_classes::dcl_global::DclGlobal;
-
-const GRAPHICS: &str = "res://src/config/graphic_settings.gd";
-const AUDIO: &str = "res://src/config/audio_settings.gd";
-const GENERAL: &str = "res://src/config/general_settings.gd";
-const LOCALE: &str = "res://src/config/locale_settings.gd";
 
 type Task = Box<dyn FnOnce() + Send>;
 
@@ -202,16 +198,17 @@ fn to_variant(value: &SettingValue) -> Variant {
     }
 }
 
-/// The `AudioSettings` function that re-reads the key's volume from the config.
+/// The volume setting a key re-reads into its audio bus. The mic amplification has no bus: it is
+/// read where the microphone is.
 fn audio_apply_function(key: SettingKey) -> Option<&'static str> {
     Some(match key {
-        SettingKey::AudioGeneralVolume => "apply_general_volume_settings",
-        SettingKey::AudioSceneVolume => "apply_scene_volume_settings",
-        SettingKey::AudioVoiceChatVolume => "apply_voice_chat_volume_settings",
-        SettingKey::AudioUiVolume => "apply_ui_volume_settings",
-        SettingKey::AudioMusicVolume => "apply_music_volume_settings",
-        SettingKey::AudioAvatarAndEmotesVolume => "apply_avatar_and_emotes_volume_settings",
-        SettingKey::AudioMicAmplification => "apply_mic_amplification_settings",
+        SettingKey::AudioGeneralVolume => "audio_general_volume",
+        SettingKey::AudioSceneVolume => "audio_scene_volume",
+        SettingKey::AudioVoiceChatVolume => "audio_voice_chat_volume",
+        SettingKey::AudioUiVolume => "audio_ui_volume",
+        SettingKey::AudioMusicVolume => "audio_music_volume",
+        SettingKey::AudioAvatarAndEmotesVolume => "audio_avatar_and_emotes_volume",
+        SettingKey::AudioMicAmplification => "audio_mic_amplification",
         _ => return None,
     })
 }
@@ -229,11 +226,11 @@ fn apply_in_engine(key: SettingKey, value: &SettingValue) {
     };
     match (key, value) {
         (SettingKey::Locale, SettingValue::Text(_)) => {
-            call_static(LOCALE, "apply_locale", &[]);
+            locale::apply_locale();
         }
         (SettingKey::GraphicProfile, _) => {
             // A custom profile index is a no-op there.
-            call_static(GRAPHICS, "apply_graphic_profile", &[int.to_variant()]);
+            graphics::apply_graphic_profile(int as i32);
             let mut manager = global.bind().dynamic_graphics_manager.clone();
             manager.bind_mut().on_manual_profile_change(int as i32);
         }
@@ -251,24 +248,20 @@ fn apply_in_engine(key: SettingKey, value: &SettingValue) {
         }
         (SettingKey::ParticleQuality, _) => {
             crate::avatars::avatar::lod::apply_particles_enabled(int > 0);
-            call_static(GRAPHICS, "apply_particle_quality", &[int.to_variant()]);
+            graphics::apply_particle_quality(int as i32);
         }
         (SettingKey::LimitFps, _) => {
             let mut manager = global.bind().dynamic_graphics_manager.clone();
             manager.bind_mut().on_fps_limit_changed(int as i32);
             let thermal_cap = manager.bind().get_thermal_fps_cap();
-            call_static(
-                GRAPHICS,
-                "apply_fps_limit_with_thermal_cap",
-                &[int.to_variant(), thermal_cap.to_variant()],
-            );
+            graphics::apply_fps_limit_with_thermal_cap(int as i32, thermal_cap);
         }
         (SettingKey::MaxCacheSize, _) => {
-            call_static(GENERAL, "apply_max_cache_size", &[]);
+            general_settings::apply_max_cache_size();
         }
         _ => {
-            if let Some(function) = audio_apply_function(key) {
-                call_static(AUDIO, function, &[]);
+            if let Some(setting) = audio_apply_function(key) {
+                audio_settings::apply_setting(setting);
             }
         }
     }
