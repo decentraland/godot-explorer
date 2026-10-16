@@ -33,7 +33,7 @@ Engine (phase 5)
 - [x] Debug hub on the Moto (`adb reverse 9231`, `cargo run -- debug-hub`): the typed commands `ping`, `state` (realm, fps, scenes, parcel, player position) and `teleport {x,y}` answered from the device; `eval` is gone by design.
 - [ ] Still to run on the device (the phone left adb during the check): floating-island props after the teleport to (12,12), and video. Desktop at parcels 20,20 and 77,1 (empty Genesis land, 100 s after boot) shows the empty plane, no props, no panic, and island generation logs repeated regenerations; the props scene now loads on demand (`PropCache::load_from_scene`), so check an island edge by eye.
 - [ ] On the name screen the avatar renders small in a large hole (the rect is right, the framing is not): same symptom as the client snapshot framing, so it is likely the engine-side preview framing.
-- [ ] Android logs `ERROR: No GDExtension library found … dcl_swift_lib.gdextension` at boot (harmless, the Swift lib is iOS-only): remove the entry from the Android export.
+- [ ] Android logged `ERROR: No GDExtension library found … dcl_swift_lib.gdextension` at boot (harmless, iOS-only): the Android preset now excludes the file (`exclude_filter`). Unverified until the next Android export.
 - [ ] fps / memory in Genesis against the phase-2 baseline. The Moto crash family (Mali / low RAM, see
   memory `qa-android-teleport-crash`) was not re-measured.
 
