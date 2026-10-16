@@ -84,7 +84,7 @@ func _ready():
 	GraphicSettings.apply_full_processor_mode()
 
 	Global.set_orientation_landscape()
-	UiSounds.install_audio_recusirve(self)
+	UiSounds.install_audio_recursive(self)
 	Global.music_player.stop()
 
 	Global.orientation_changed.connect(_on_orientation_changed)

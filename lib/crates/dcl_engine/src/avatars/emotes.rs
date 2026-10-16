@@ -1,5 +1,8 @@
 //! Emote ids: the built-in base emotes, the scene-triggered utility emotes and the URNs.
 
+use godot::classes::RefCounted;
+use godot::prelude::*;
+
 pub const BASE_EMOTES_URN_PREFIX: &str = "urn:decentraland:off-chain:base-emotes:";
 
 /// Base emotes, loaded remotely as `base-emotes` URNs.
@@ -48,6 +51,11 @@ const UTILITY_EMOTES: [&str; 17] = [
     "throw",
 ];
 
+/// The base emote ids in slot order: the wheel's initial state.
+pub fn default_emote_ids() -> &'static [&'static str] {
+    &DEFAULT_EMOTES
+}
+
 pub fn is_emote_default(id: &str) -> bool {
     DEFAULT_EMOTES.contains(&id)
 }
@@ -62,6 +70,11 @@ pub fn base_emote_urn(id: &str) -> String {
 
 pub fn is_base_emote_urn(urn: &str) -> bool {
     urn.starts_with(BASE_EMOTES_URN_PREFIX)
+}
+
+/// The id of a base-emote URN; anything else comes back as it is.
+pub fn base_emote_id(urn: &str) -> &str {
+    urn.strip_prefix(BASE_EMOTES_URN_PREFIX).unwrap_or(urn)
 }
 
 /// `urn:decentraland:off-chain:scene-emote:{scene}-{hash}-{loop}`, parsed from the end because
@@ -93,6 +106,26 @@ impl SceneEmoteUrn {
     }
 }
 
+/// The id helpers for GDScript callers, until the backpack bridge is Rust.
+#[derive(GodotClass)]
+#[class(base=RefCounted, init)]
+pub struct Emotes {
+    base: Base<RefCounted>,
+}
+
+#[godot_api]
+impl Emotes {
+    #[func]
+    fn is_base_emote_urn(urn: GString) -> bool {
+        is_base_emote_urn(&urn.to_string())
+    }
+
+    #[func]
+    fn get_base_emote_id_from_urn(urn: GString) -> GString {
+        base_emote_id(&urn.to_string()).into()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -106,6 +139,9 @@ mod tests {
             "urn:decentraland:off-chain:base-emotes:clap"
         );
         assert!(is_base_emote_urn(&base_emote_urn("clap")));
+        assert_eq!(base_emote_id(&base_emote_urn("clap")), "clap");
+        assert_eq!(base_emote_id("custom"), "custom");
+        assert_eq!(default_emote_ids().len(), 21);
     }
 
     #[test]

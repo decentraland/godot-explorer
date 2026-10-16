@@ -8,7 +8,6 @@
 [ext_resource type="PackedScene" uid="uid://dmr0fcamx7t56" path="res://src/mobile/joystick/virtual_joystick.tscn" id="9_lxw33"]
 [ext_resource type="PackedScene" uid="uid://mc4jrvowdpxp" path="res://src/ui/components/molecules/pointer_tooltip/pointer_tooltip.tscn" id="11_qjs00"]
 [ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="16_karsc"]
-[ext_resource type="Script" uid="uid://dqpk827xdxpcy" path="res://src/ui/components/organisms/voice_chat_recorder/voice_chat_recorder.gd" id="20_064cw"]
 [ext_resource type="PackedScene" uid="uid://ec0egfeyv5fm" path="res://src/ui/components/organisms/emotes/emote_wheel.tscn" id="21_pows0"]
 [ext_resource type="PackedScene" uid="uid://75a0brb4fw2g" path="res://src/helpers_components/scene_music_changer.tscn" id="26_5hhk2"]
 [ext_resource type="PackedScene" uid="uid://bycjwh7mskrsd" path="res://src/helpers_components/chat_handler.tscn" id="32_cq187"]
@@ -148,7 +147,6 @@ layout_mode = 1
 autostart = true
 
 [node name="VoiceChatRecorder" type="VoiceChatRecorder" parent="." unique_id=1690186631]
-script = ExtResource("20_064cw")
 
 [node name="SceneMusicChanger" parent="." unique_id=404245768 instance=ExtResource("26_5hhk2")]
 

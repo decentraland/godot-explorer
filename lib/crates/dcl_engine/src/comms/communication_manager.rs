@@ -1368,7 +1368,7 @@ impl CommunicationManager {
     fn chat_message(chats: VarArray);
 
     #[signal]
-    fn on_adapter_changed(voice_chat_enabled: bool, new_adapter: GString);
+    pub fn on_adapter_changed(voice_chat_enabled: bool, new_adapter: GString);
 
     /// Signal emitted when disconnected from the server
     /// reason: 0 = DuplicateIdentity, 1 = RoomClosed, 2 = Kicked, 3 = Other
@@ -1382,7 +1382,7 @@ impl CommunicationManager {
     fn scene_access_checked(scene_id: GString, allowed: bool, error_message: GString);
 
     #[func]
-    fn broadcast_voice(&mut self, frame: PackedVector2Array) {
+    pub fn broadcast_voice(&mut self, frame: PackedVector2Array) {
         let adapter = if let Some(main_room) = &mut self.main_room {
             match main_room {
                 MainRoom::WebSocket(_) => None, // WebSocket doesn't support voice

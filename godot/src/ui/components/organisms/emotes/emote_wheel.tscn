@@ -1,6 +1,5 @@
 [gd_scene format=3 uid="uid://ec0egfeyv5fm"]
 
-[ext_resource type="Script" uid="uid://bly6o82m2sh7x" path="res://src/ui/components/organisms/emotes/emote_wheel.gd" id="1_jcqth"]
 [ext_resource type="PackedScene" uid="uid://c7bnh6p6qygxu" path="res://src/ui/components/organisms/emotes/emote_wheel_item.tscn" id="2_h3qru"]
 [ext_resource type="Texture2D" uid="uid://bgx284betq718" path="res://src/ui/components/organisms/emotes/dance_figure.png" id="3_poid4"]
 [ext_resource type="FontFile" uid="uid://drw8yv4w843s4" path="res://assets/themes/fonts/inter/Inter-SemiBold.ttf" id="4_ntwf1"]
@@ -77,7 +76,7 @@ corner_radius_top_right = 12
 corner_radius_bottom_right = 12
 corner_radius_bottom_left = 12
 
-[node name="EmoteWheel" type="Control" unique_id=1128991434]
+[node name="EmoteWheel" type="EmoteWheel" unique_id=1128991434]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -86,7 +85,6 @@ grow_horizontal = 2
 grow_vertical = 2
 focus_mode = 1
 mouse_filter = 2
-script = ExtResource("1_jcqth")
 metadata/_edit_horizontal_guides_ = [1318.0]
 
 [node name="Control_Wheel" type="Control" parent="." unique_id=1881242977]
@@ -221,6 +219,3 @@ size_preset = 1
 icon_normal = ExtResource("9_emdef")
 icon_pressed = ExtResource("10_empre")
 
-[connection signal="gui_input" from="Control_Wheel" to="." method="_on_control_wheel_gui_input"]
-[connection signal="pressed" from="Control_Wheel/TextureRect_Background/VBoxContainer/Button_Edit" to="." method="_on_button_edit_pressed"]
-[connection signal="toggled" from="Button_Emotes" to="." method="_on_button_toggled"]

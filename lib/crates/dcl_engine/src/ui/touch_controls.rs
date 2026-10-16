@@ -3,13 +3,16 @@
 //! anchor above the avatar's head as the camera zooms.
 
 use godot::classes::input::MouseMode;
-use godot::classes::{Control, Input, RefCounted};
+use godot::classes::{Control, Input, RefCounted, Texture2D};
 use godot::prelude::*;
 
 use super::host;
 use super::joystick::VirtualJoystick;
+use crate::content::texture::TextureEntry;
+use crate::engine::local_task::await_promise;
 use crate::fetcher::globals;
 use crate::godot_classes::dcl_global::DclGlobal;
+use crate::godot_classes::promise::PromiseError;
 use crate::player::body::Player;
 
 /// A glyph a scene supplied for an action.
@@ -50,6 +53,38 @@ pub fn custom_icon_for_action(action: &str) -> Option<CustomIcon> {
         });
     }
     None
+}
+
+/// The scene's icon texture: from the cache when it is there, else fetched. The fetch by hash
+/// through the declaring scene's mapping shares the cache entry with the scene's own UI, so a
+/// preview hot reload's purge drops it too (#2796); the by-URL path is only for a scene that is
+/// already unloaded.
+pub async fn load_custom_icon(custom: &CustomIcon) -> Option<Gd<Texture2D>> {
+    let cached = globals::content_provider()
+        .bind_mut()
+        .get_texture_from_hash(custom.hash.as_str().into());
+    if cached.is_some() {
+        return cached;
+    }
+    let mapping = globals::scene_runner()
+        .bind()
+        .get_scene_content_mapping(custom.scene_id);
+    let promise = if mapping.bind().get_base_url().is_empty() {
+        globals::content_provider()
+            .bind_mut()
+            .fetch_texture_by_url(custom.hash.as_str().into(), custom.url.as_str().into())
+    } else {
+        globals::content_provider()
+            .bind_mut()
+            .fetch_texture_by_hash(custom.hash.as_str().into(), mapping)
+    };
+    let result = await_promise(promise).await;
+    if result.try_to::<Gd<PromiseError>>().is_ok() {
+        return None;
+    }
+    let entry = result.try_to::<Gd<TextureEntry>>().ok()?;
+    let texture = entry.bind().texture.clone();
+    Some(texture)
 }
 
 fn string_of(entry: &VarDictionary, key: &str) -> String {

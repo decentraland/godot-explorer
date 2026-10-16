@@ -1777,21 +1777,7 @@ fn explorer_has_focus() -> bool {
 }
 
 fn play_ui_sound(name: &str) {
-    let Some(mut ui_sounds) = DclGlobal::singleton()
-        .get_tree_or_null()
-        .and_then(|tree| tree.get_root())
-        .and_then(|root| root.get_node_or_null("UiSounds"))
-    else {
-        return;
-    };
-    ui_sounds.call(
-        "play_sound",
-        &[
-            name.to_variant(),
-            false.to_variant(),
-            CAMERA_TRANSITION_SOUND_DB.to_variant(),
-        ],
-    );
+    crate::ui::ui_sounds::play_sound(name, false, CAMERA_TRANSITION_SOUND_DB);
 }
 
 fn collect_collider_rids(node: &Gd<Node>, out: &mut Vec<Rid>) {

@@ -38,7 +38,7 @@ impl DclAvatar {
     }
 
     #[func(rename = async_play_emote)]
-    fn gd_play_emote(&mut self, urn: GString, mask: i64, scene_id: i32) -> Gd<Promise> {
+    pub(crate) fn gd_play_emote(&mut self, urn: GString, mask: i64, scene_id: i32) -> Gd<Promise> {
         promise_of(async_play_emote_or_stash(
             self.to_gd(),
             urn.to_string(),

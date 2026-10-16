@@ -92,6 +92,15 @@ pub fn button_icons(action: &str) -> Option<(Gd<Texture2D>, Gd<Texture2D>)> {
     Some((texture(look.normal)?, texture(look.pressed)?))
 }
 
+/// The glyph the interaction pill shows for `look`, or none when it uses a letter keycap.
+pub fn tooltip_icon_for(look: &ActionLook) -> Option<Gd<Texture2D>> {
+    if look.keycap.is_empty() {
+        texture(look.normal)
+    } else {
+        None
+    }
+}
+
 /// The same table for GDScript callers, until the tooltip that reads it is Rust too.
 #[derive(GodotClass)]
 #[class(base=RefCounted, init)]

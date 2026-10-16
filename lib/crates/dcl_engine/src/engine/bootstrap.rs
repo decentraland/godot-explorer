@@ -287,6 +287,9 @@ impl DclBootstrap {
         let mut lod_system = crate::avatars::impostor_capture::AvatarLodSystem::new_alloc();
         lod_system.set_name("AvatarLodSystem");
         root_add_instance(&global, &lod_system.upcast());
+        let mut sounds = crate::ui::ui_sounds::UiSounds::new_alloc();
+        sounds.set_name("UiSounds");
+        root_add_instance(&global, &sounds.upcast());
         let mut lights = crate::lights::manager::DclLightSourceManager::new_alloc();
         lights.set_name("LightSourceManager");
         root_add_instance(&global, &lights.upcast());

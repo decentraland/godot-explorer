@@ -13,11 +13,10 @@ use super::action_icons::{self, IC_JUMP_NORMAL, IC_JUMP_PRESSED};
 use super::joypad_arc::JoypadArc;
 use super::orb_skin::OrbSkin;
 use super::touch_action_button::TouchActionButton;
-use super::touch_controls::{custom_icon_for_action, CustomIcon};
-use crate::engine::local_task::{await_promise, spawn_local};
+use super::touch_controls::{custom_icon_for_action, load_custom_icon, CustomIcon};
+use crate::engine::local_task::spawn_local;
 use crate::fetcher::globals;
 use crate::godot_classes::dcl_global::DclGlobal;
-use crate::godot_classes::promise::PromiseError;
 use crate::player::body::{Player, GLIDE_CLOSED, JUMP_ACTION_GLIDE_TOGGLE, JUMP_ACTION_JUMP};
 
 const IC_DJUMP_NORMAL: &str = "uid://df6fla5fsgl2s";
@@ -586,35 +585,16 @@ fn reset_node_visuals(node: &mut Gd<TouchActionButton>) {
     button.remove_theme_font_size_override("font_size");
 }
 
-/// Loads a scene's icon through the content provider into a button's overlay. The fetch by hash
-/// through the scene's content mapping shares the cache entry with the scene's own UI, so a
-/// preview hot reload's purge drops it too (#2796); the by-URL path is only for a scene that is
-/// already unloaded. A stale apply (the config changed while loading) is dropped.
+/// Loads a scene's icon into a button's overlay. A stale apply (the config changed while it
+/// loaded) is dropped.
 fn async_set_button_icon(node: Gd<TouchActionButton>, custom: CustomIcon) {
     let mut button = node.clone();
     button.set_meta("tc_icon_hash", &custom.hash.as_str().to_variant());
-    let cached = globals::content_provider()
-        .bind_mut()
-        .get_texture_from_hash(custom.hash.as_str().into());
-    if let Some(texture) = cached {
-        apply_custom_icon(node, texture);
-        return;
-    }
-    let mapping = globals::scene_runner()
-        .bind()
-        .get_scene_content_mapping(custom.scene_id);
-    let promise = if mapping.bind().get_base_url().is_empty() {
-        globals::content_provider()
-            .bind_mut()
-            .fetch_texture_by_url(custom.hash.as_str().into(), custom.url.as_str().into())
-    } else {
-        globals::content_provider()
-            .bind_mut()
-            .fetch_texture_by_hash(custom.hash.as_str().into(), mapping)
-    };
     spawn_local(async move {
-        let result = await_promise(promise).await;
-        if !node.is_instance_valid() || result.try_to::<Gd<PromiseError>>().is_ok() {
+        let Some(texture) = load_custom_icon(&custom).await else {
+            return;
+        };
+        if !node.is_instance_valid() {
             return;
         }
         let current: GString = node
@@ -622,11 +602,7 @@ fn async_set_button_icon(node: Gd<TouchActionButton>, custom: CustomIcon) {
             .default(&"".to_variant())
             .done()
             .to();
-        if current.to_string() != custom.hash {
-            return;
-        }
-        if let Ok(entry) = result.try_to::<Gd<crate::content::texture::TextureEntry>>() {
-            let texture = entry.bind().texture.clone();
+        if current.to_string() == custom.hash {
             apply_custom_icon(node, texture);
         }
     });
