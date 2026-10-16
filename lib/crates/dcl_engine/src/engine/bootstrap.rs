@@ -147,30 +147,21 @@ fn create(global: &mut Gd<Node>, specs: &[ServiceSpec]) -> bool {
 }
 
 /// Services of a full boot, created after the config exists. Each is held by its `Global` property.
-const APP_SERVICES: [ServiceSpec; 2] = [
-    spec(
-        "skybox_time",
-        "assets/environment/time.gd",
-        Some("skybox_time"),
-        Attach::None,
-    ),
-    spec(
-        "locations",
-        "src/helpers_components/locations.gd",
-        Some("locations"),
-        Attach::None,
-    ),
-];
+const APP_SERVICES: [ServiceSpec; 1] = [spec(
+    "skybox_time",
+    "assets/environment/time.gd",
+    Some("skybox_time"),
+    Attach::None,
+)];
 
 /// Nodes added to `/root` (deferred, in this order) once the app services exist. The order is
 /// the order the old `global.gd` used, and later deferred calls rely on it.
-const ROOT_NODES: [&str; 15] = [
+const ROOT_NODES: [&str; 14] = [
     "cli",
     "engine",
     "music_player",
     "scene_fetcher",
     "skybox_time",
-    "locations",
     "content_provider",
     "scene_runner",
     "realm",
@@ -344,22 +335,17 @@ impl DclBootstrap {
         ok
     }
 
-    /// The nodes that follow the metrics block: attestation and feature flags under
-    /// `Global`, the late `/root` nodes, the scene-inspector bridge and the opt-in dev tools.
+    /// The nodes that follow the metrics block: feature flags under `Global`, the late `/root`
+    /// nodes, the scene-inspector bridge and the opt-in dev tools.
     #[func]
     pub fn create_extra_services(mut global: Gd<Node>) -> bool {
         let mut ok = true;
-        // Platform attestation (emulator and desktop runs) needs a Node for timers and native
-        // plugin signals; it gates itself on EULA acceptance and caches its session token on disk.
         // Feature flags fetch on `_ready`.
-        for (property, script, name) in [
-            ("attestation", "src/auth/attestation_service.gd", None),
-            (
-                "feature_flags",
-                "src/feature_flags.gd",
-                Some("feature_flags"),
-            ),
-        ] {
+        for (property, script, name) in [(
+            "feature_flags",
+            "src/feature_flags.gd",
+            Some("feature_flags"),
+        )] {
             // The host-driven core runs attestation itself (the host provides the OS calls).
             if property == "attestation" && super::DclEngine::core_is_driving() {
                 continue;

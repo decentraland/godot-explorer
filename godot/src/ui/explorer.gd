@@ -35,7 +35,7 @@ var _sdk_touch_controls: SdkTouchControlsApplier = null
 @onready var virtual_joystick: VirtualJoystick = %VirtualJoystick_Left
 @onready var emote_wheel = %EmoteWheel
 @onready var world: Node3D = %world
-@onready var timer_broadcast_position: Timer = %Timer_BroadcastPosition
+@onready var timer_broadcast_position: PositionBroadcaster = %Timer_BroadcastPosition
 @onready var joypad: Control = %Joypad
 @onready var loading: LoadingSession = %LoadingSession
 

@@ -1,4 +1,4 @@
-use godot::{builtin::Variant, classes::Script, meta::ToGodot, obj::Gd};
+use godot::{builtin::Variant, meta::ToGodot, obj::Gd};
 
 use crate::godot_classes::promise::Promise;
 
@@ -26,8 +26,12 @@ impl Drop for GodotSingleThreadSafety {
 // When this option is triggered (as false), be sure to not use async/await until you set it back to true
 // Following the same logic, do not exit of sync closure until you set it back to true
 pub fn set_thread_safety_checks_enabled(enabled: bool) {
-    let mut temp_script = godot::tools::load::<Script>("res://src/logic/thread_safety.gd");
-    temp_script.call("set_thread_safety_checks_enabled", &[enabled.to_variant()]);
+    // `Thread` is not in the generated API, so its static is called through ClassDB.
+    <godot::classes::ClassDb as godot::obj::Singleton>::singleton().class_call_static(
+        "Thread",
+        "set_thread_safety_checks_enabled",
+        &[enabled.to_variant()],
+    );
 }
 
 fn reject_promise(get_promise: impl Fn() -> Option<Gd<Promise>>, reason: String) -> bool {

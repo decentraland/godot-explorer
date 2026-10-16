@@ -2775,7 +2775,7 @@ impl SceneManager {
     }
 
     #[signal]
-    fn on_change_scene_id(scene_id: i32);
+    pub fn on_change_scene_id(scene_id: i32);
 
     #[signal]
     fn locomotion_settings_changed(settings: Gd<DclLocomotionSettings>);

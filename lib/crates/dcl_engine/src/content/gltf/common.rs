@@ -1066,9 +1066,12 @@ impl Drop for GodotThreadSafetyGuard {
 }
 
 fn set_thread_safety_checks_enabled(enabled: bool) {
-    let mut temp_script =
-        godot::tools::load::<godot::classes::Script>("res://src/logic/thread_safety.gd");
-    temp_script.call("set_thread_safety_checks_enabled", &[enabled.to_variant()]);
+    // `Thread` is not in the generated API, so its static is called through ClassDB.
+    <godot::classes::ClassDb as godot::obj::Singleton>::singleton().class_call_static(
+        "Thread",
+        "set_thread_safety_checks_enabled",
+        &[enabled.to_variant()],
+    );
 }
 
 /// Count the number of nodes in a tree

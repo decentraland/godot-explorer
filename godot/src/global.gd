@@ -102,7 +102,6 @@ var skybox_time: SkyboxTime = null
 
 var snapshot: Snapshot
 var music_player: MusicPlayer
-var locations: Node
 
 var standalone = false
 
@@ -134,13 +133,6 @@ var chat_notifications_width: int = 0
 # Orchestrates the Firebase / Segment glue (EULA gate, login suppression on session recovery,
 # first_move_in_world detection). Instantiated after `metrics` is created.
 var analytics_controller: AnalyticsController = null
-
-# Platform attestation orchestrator (App Attest / Play Integrity → mobile-bff session
-# token). Owns its own EULA-gated dispatch and the FSM that runs attestation cycles —
-# see attestation_service.gd. Other code obtains a token via
-# `await Global.attestation.async_get_valid_jwt()`. Instantiated in _ready as a Node
-# child of Global so it can use timers and signals across the session lifetime.
-var attestation: AttestationService = null
 
 # Remote feature flags fetched from the mobile-bff at startup. Query with
 # `Global.feature_flags.is_enabled("flag-name")`; comms-affecting flags are

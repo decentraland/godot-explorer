@@ -1365,7 +1365,7 @@ impl CommunicationManager {
 #[godot_api]
 impl CommunicationManager {
     #[signal]
-    fn chat_message(chats: VarArray);
+    pub fn chat_message(chats: VarArray);
 
     #[signal]
     pub fn on_adapter_changed(voice_chat_enabled: bool, new_adapter: GString);
@@ -1745,7 +1745,7 @@ impl CommunicationManager {
 
     #[func]
     #[allow(clippy::too_many_arguments)]
-    fn broadcast_movement(
+    pub fn broadcast_movement(
         &mut self,
         compressed: bool,
         position: Vector3,
