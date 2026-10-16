@@ -24,8 +24,8 @@ without a written safety comment. Porting on the old API would mean porting twic
       block in `dcl_engine` has a `// SAFETY:` comment, and the count is lower than the 24 lines
       measured on 13 Oct 2026.
       Done: gdext 0.5.5, Rust 1.94. Not re-measured: the remaining `unsafe` is in `memory_monitor`, `log_stream`, `godot_logger`, the writer, the allocator and the crash generator.
-- [ ] `experimental-threads` is kept (D-38); every cross-thread `Gd` use is behind the content
-      semaphore and named in a comment. The feature is kept; the audit of each cross-thread `Gd` use was not done (open, for the polish pass).
+- [x] `experimental-threads` is kept (D-38); every cross-thread `Gd` use is behind the content
+      semaphore and named in a comment. Audited on 16 Oct 2026: the only cross-thread `Gd` uses are the content loaders behind `GodotSingleThreadSafety`, named in the module doc of `content/thread_safety.rs`; the other threads and blocking tasks carry plain data.
 - [x] `find godot/src -name '*.gd'` returns nothing (addons per decisions D-open-5).
 - [x] `godot/project.godot` has the Rust roots only: two native autoloads, **decided to stay at two**.
       `Global` is found by name from everywhere (the app, `--itest`, `--ctest`, the tools) and must exist before any main scene; `GlobalBoot` must run after `Global`'s `ready` returns, because the boot reads `Global` back at every step (gdext panics on the re-borrow inside `ready`) and `DclRoot::ready` needs the booted services. Deferring the boot would reorder it behind the main scene. `EngineHost` is created by the boot node and the props scene loads on demand.

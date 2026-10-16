@@ -1,3 +1,11 @@
+//! Godot objects are used off the main thread only by the content loaders, and only while
+//! holding `GodotSingleThreadSafety` (the `godot_single_thread` semaphore, one permit): textures
+//! (`texture.rs`), audio (`audio.rs`), glTF (`gltf/common.rs`), the content provider's own
+//! loads (`content_provider.rs`) and the asset server processor. With a permit held the engine's
+//! thread-safety checks are off, so nothing between acquiring and dropping it may `.await`.
+//! Every other thread or blocking task in the crate (impostor PNG encode, the scene CRDT lock,
+//! the HTTP requester, the bundle cache) works on plain data and never holds a `Gd`.
+
 use godot::{builtin::Variant, meta::ToGodot, obj::Gd};
 
 use crate::godot_classes::promise::Promise;
