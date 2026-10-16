@@ -15,6 +15,11 @@ const DAY_COUNT := 7
 var _pills: Array[StreakDayPill] = []
 
 @onready var row: HBoxContainer = %Row
+@onready var background: NinePatchRect = %Background
+## Separate node (not a texture swap on %Background) because its own art has a different canvas
+## size, so it needs its own region_rect/patch_margin — sharing one NinePatchRect's margins
+## between two differently-sized textures miscalibrates whichever one isn't active.
+@onready var background_done: NinePatchRect = %BackgroundDone
 
 
 func _ensure_pills() -> void:
@@ -53,6 +58,8 @@ func render(
 		not reward_days.is_empty()
 		and reward_days.all(func(day: int) -> bool: return day in claimed_days)
 	)
+	background.visible = not all_claimed
+	background_done.visible = all_claimed
 	for i in range(DAY_COUNT):
 		var day_number := i + 1
 		var is_reward_day := day_number in reward_days
