@@ -1,3 +1,4 @@
+use crate::nft::{frames::FrameStyle, shape::NftShape};
 use crate::{
     dcl::{
         components::{proto_components::common::Color3, SceneComponentId},
@@ -27,7 +28,9 @@ pub fn update_nft_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
 
             let new_value = new_value.value.clone();
 
-            let existing = node_3d.try_get_node_as::<Node>("NFTShape");
+            let existing = node_3d
+                .try_get_node_as::<Node>("NFTShape")
+                .and_then(|n| n.try_cast::<NftShape>().ok());
 
             if new_value.is_none() {
                 if let Some(mut nft_shape_node) = existing {
@@ -44,24 +47,25 @@ pub fn update_nft_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 });
                 let color = color.to_godot();
 
-                let mut nft_shape_3d = if let Some(nft_shape_3d) = existing {
+                let nft_shape_3d = if let Some(nft_shape_3d) = existing {
                     nft_shape_3d
                 } else {
                     let mut nft_shape_3d = crate::scene_runner::scene_cache::packed_scene(
                         "res://src/decentraland_components/nft_shape.tscn",
                     )
                     .instantiate()
-                    .unwrap();
+                    .unwrap()
+                    .cast::<NftShape>();
 
                     nft_shape_3d.set_name("NFTShape");
                     add_own_visual_child(&mut node_3d, &nft_shape_3d.clone().upcast::<Node>());
                     nft_shape_3d
                 };
 
-                nft_shape_3d.call(
-                    "async_load_nft",
-                    &[urn.to_variant(), style.to_variant(), color.to_variant()],
-                );
+                match FrameStyle::from_i32(style) {
+                    Some(style) => NftShape::load_nft(&nft_shape_3d, urn.to_string(), style, color),
+                    None => godot_error!("NFTShape: unknown frame style {style}"),
+                }
             }
         }
     }

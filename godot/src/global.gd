@@ -100,9 +100,6 @@ var raycast_debugger: RaycastDebugger
 var scene_fetcher: SceneFetcher
 var skybox_time: SkyboxTime = null
 
-var nft_fetcher: OpenSeaFetcher
-var nft_frame_loader: NftFrameStyleLoader
-
 var snapshot: Snapshot
 var music_player: MusicPlayer
 var locations: Node
@@ -475,7 +472,6 @@ func _ready():
 	_logging_selftest.maybe_run()
 	deep_link_router.deep_link_received.connect(_logging_selftest.maybe_run)
 
-	DclMeshRenderer.init_primitive_shapes()
 	print("[Startup] global._ready end: %dms" % (Time.get_ticks_msec() - _startup_time))
 
 

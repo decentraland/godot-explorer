@@ -44,19 +44,7 @@ const fn spec(
 }
 
 /// Services every boot needs, in creation order.
-const CORE_SERVICES: [ServiceSpec; 6] = [
-    spec(
-        "nft_frame_loader",
-        "src/decentraland_components/nft_frame_style_loader.gd",
-        None,
-        Attach::None,
-    ),
-    spec(
-        "nft_fetcher",
-        "src/logic/content/opensea_nft_fetcher.gd",
-        None,
-        Attach::None,
-    ),
+const CORE_SERVICES: [ServiceSpec; 4] = [
     spec(
         "music_player",
         "src/helpers_components/music_player.gd",
