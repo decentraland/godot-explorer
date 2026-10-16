@@ -480,7 +480,7 @@ impl DclGlobal {
     }
 
     #[func]
-    fn get_selected_avatar(&mut self) -> Option<Gd<DclAvatar>> {
+    pub fn get_selected_avatar(&mut self) -> Option<Gd<DclAvatar>> {
         let id = self.selected_avatar?;
         match Gd::<DclAvatar>::try_from_instance_id(id) {
             Ok(gd) => Some(gd),

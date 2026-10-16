@@ -146,7 +146,7 @@ func _async_start():
 
 		# Nothing reloads the wire format between identical emote payloads, so
 		# emotes/props/animations would accumulate for the whole batch.
-		avatar_preview.avatar.emote_controller.clean_unused_emotes()
+		avatar_preview.avatar.clean_unused_emotes()
 
 	_write_report()
 
@@ -238,11 +238,11 @@ func _async_process_item(item: AssetRendererInputHelper.AssetItem, generation: i
 		)
 		return
 
-	await avatar_preview.avatar.async_update_avatar(wire, "")
+	await PromiseUtils.async_awaiter(avatar_preview.avatar.async_update_avatar(wire, ""))
 	if generation != _generation:
 		return
 
-	var emote_controller = avatar_preview.avatar.emote_controller
+	var emote_controller = avatar_preview.avatar
 	if item.kind != "emote":
 		emote_controller.freeze_on_idle()
 	avatar_preview.avatar.rotation.y = 0.0
@@ -266,7 +266,9 @@ func _async_process_item(item: AssetRendererInputHelper.AssetItem, generation: i
 			return
 
 		if item.kind == "emote":
-			var frozen: bool = await emote_controller.async_freeze_on_emote(item.urn, shot.at_time)
+			var frozen: bool = await PromiseUtils.async_awaiter(
+				emote_controller.async_freeze_on_emote(item.urn, shot.at_time)
+			)
 			if not frozen:
 				_commit_result(
 					generation,

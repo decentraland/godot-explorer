@@ -110,7 +110,7 @@ func _async_run() -> void:
 	# pipeline with emotes active (no longer bypasses impostor / cap).
 	var emotes := ["dance", "disco", "tektonik", "robot", "tik", "raiseHand", "hammer"]
 	for avatar in _avatars:
-		if not is_instance_valid(avatar) or avatar.emote_controller == null:
+		if not is_instance_valid(avatar):
 			continue
 		avatar.async_play_emote(emotes[rng.randi() % emotes.size()])
 
@@ -173,7 +173,7 @@ func _async_load_one(avatar: Node, address: String) -> void:
 		_loads_failed += 1
 		_loads_in_flight -= 1
 		return
-	await avatar.async_update_avatar_from_profile(profile_result)
+	await PromiseUtils.async_awaiter(avatar.async_update_avatar_from_profile(profile_result))
 	# Make sure the AnimationTree is awake so the avatar plays its default idle
 	# instead of sitting in T-pose. The avatar's own _process toggles this
 	# back off when LOD switches to FAR.

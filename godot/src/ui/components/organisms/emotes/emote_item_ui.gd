@@ -9,7 +9,7 @@ signal emote_name_ready(emote_name: String)
 # Empty-slot background tint for the wheel (issue #2458): design spec #24033B @ 50%.
 const EMPTY_SLOT_INNER_COLOR := Color("24033b80")
 
-@export var rarity: String = Wearables.ItemRarity.COMMON:
+@export var rarity: String = "common":
 	set(new_value):
 		rarity = new_value
 		_is_dirty = true
@@ -80,7 +80,7 @@ func async_load_from_urn(_emote_urn: String, _index: int = -1):
 			printerr("Unknown emote ID: ", _emote_urn)
 			return
 
-	await WearableRequest.async_fetch_emote(fetch_urn)
+	await PromiseUtils.async_awaiter(DclAvatar.async_fetch_emote_definition(fetch_urn))
 	var emote_data := Global.content_provider.get_wearable(fetch_urn)
 	if emote_data == null:
 		printerr("Failed to get emote data: ", fetch_urn)
@@ -148,21 +148,21 @@ func _ready():
 func set_rarity_background() -> void:
 	if is_instance_valid(texture_rect_background):
 		match rarity:
-			Wearables.ItemRarity.COMMON:
+			"common":
 				texture_rect_background.texture = common_thumbnail
-			Wearables.ItemRarity.UNCOMMON:
+			"uncommon":
 				texture_rect_background.texture = uncommon_thumbnail
-			Wearables.ItemRarity.RARE:
+			"rare":
 				texture_rect_background.texture = rare_thumbnail
-			Wearables.ItemRarity.EPIC:
+			"epic":
 				texture_rect_background.texture = epic_thumbnail
-			Wearables.ItemRarity.LEGENDARY:
+			"legendary":
 				texture_rect_background.texture = legendary_thumbnail
-			Wearables.ItemRarity.EXOTIC:
+			"exotic":
 				texture_rect_background.texture = exotic_thumbnail
-			Wearables.ItemRarity.MYTHIC:
+			"mythic":
 				texture_rect_background.texture = mythic_thumbnail
-			Wearables.ItemRarity.UNIQUE:
+			"unique":
 				texture_rect_background.texture = unique_thumbnail
 			_:
 				texture_rect_background.texture = base_thumbnail
@@ -172,7 +172,7 @@ func set_rarity_background() -> void:
 	if is_instance_valid(inner_rect):
 		# The wheel item (has %Inner) dims to the empty-slot color instead of a rarity tint.
 		inner_rect.self_modulate = EMPTY_SLOT_INNER_COLOR if _is_empty else _get_rarity_color()
-		glow_rect.visible = not _is_empty and rarity != Wearables.ItemRarity.COMMON
+		glow_rect.visible = not _is_empty and rarity != "common"
 
 
 # Empty wheel slot (#2458): hide the thumbnail and show the "+" add icon. Only the wheel
@@ -211,24 +211,24 @@ func _set_selected(selected: bool) -> void:
 
 func _get_rarity_color() -> Color:
 	match rarity:
-		Wearables.ItemRarity.COMMON:
-			return Wearables.RarityColor.COMMON
-		Wearables.ItemRarity.UNCOMMON:
-			return Wearables.RarityColor.UNCOMMON
-		Wearables.ItemRarity.RARE:
-			return Wearables.RarityColor.RARE
-		Wearables.ItemRarity.EPIC:
-			return Wearables.RarityColor.EPIC
-		Wearables.ItemRarity.LEGENDARY:
-			return Wearables.RarityColor.LEGENDARY
-		Wearables.ItemRarity.MYTHIC:
-			return Wearables.RarityColor.MYTHIC
-		Wearables.ItemRarity.UNIQUE:
-			return Wearables.RarityColor.UNIQUE
-		Wearables.ItemRarity.EXOTIC:
-			return Wearables.RarityColor.EXOTIC
+		"common":
+			return Color(115.0 / 255.0, 211.0 / 255.0, 211.0 / 255.0)
+		"uncommon":
+			return Color(255.0 / 255.0, 131.0 / 255.0, 98.0 / 255.0)
+		"rare":
+			return Color(52.0 / 255.0, 206.0 / 255.0, 118.0 / 255.0)
+		"epic":
+			return Color(67.0 / 255.0, 143.0 / 255.0, 255.0 / 255.0)
+		"legendary":
+			return Color(161.0 / 255.0, 75.0 / 255.0, 243.0 / 255.0)
+		"mythic":
+			return Color(255.0 / 255.0, 75.0 / 255.0, 237.0 / 255.0)
+		"unique":
+			return Color(254.0 / 255.0, 162.0 / 255.0, 23.0 / 255.0)
+		"exotic":
+			return Color(254.0 / 255.0, 162.0 / 255.0, 23.0 / 255.0)
 		_:
-			return Wearables.RarityColor.BASE
+			return Color(160.0 / 255.0, 155.0 / 255.0, 168.0 / 255.0)
 
 
 # Executed with @tool
@@ -311,6 +311,6 @@ func set_empty() -> void:
 	emote_urn = ""
 	emote_name = ""
 	picture = null
-	rarity = Wearables.ItemRarity.COMMON
+	rarity = "common"
 	_is_empty = true
 	_is_dirty = true

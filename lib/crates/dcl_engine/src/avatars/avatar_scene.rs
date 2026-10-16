@@ -409,7 +409,7 @@ impl AvatarScene {
     }
 
     #[func]
-    fn request_impostor_layer(
+    pub fn request_impostor_layer(
         &mut self,
         impostor_id: i64,
         avatar: Gd<DclAvatar>,
@@ -533,7 +533,7 @@ impl AvatarScene {
     }
 
     #[func]
-    fn impostor_needs_capture(&self, impostor_id: i64) -> bool {
+    pub fn impostor_needs_capture(&self, impostor_id: i64) -> bool {
         self.impostor_slots
             .get(&impostor_id)
             .map(|s| s.owns_layer && !s.texture_loaded)
@@ -585,7 +585,7 @@ impl AvatarScene {
     }
 
     #[func]
-    fn set_impostor_texture(&mut self, impostor_id: i64, image: Gd<Image>, avatar_id: GString) {
+    pub fn set_impostor_texture(&mut self, impostor_id: i64, image: Gd<Image>, avatar_id: GString) {
         let Some(slot) = self.impostor_slots.get_mut(&impostor_id) else {
             tracing::warn!(
                 "set_impostor_texture: no slot for impostor_id {}",
@@ -684,7 +684,7 @@ impl AvatarScene {
     }
 
     #[func]
-    fn set_impostor_state(
+    pub fn set_impostor_state(
         &mut self,
         impostor_id: i64,
         fade_alpha: f32,
@@ -707,7 +707,7 @@ impl AvatarScene {
     }
 
     #[func]
-    fn clear_impostor(&mut self, impostor_id: i64) {
+    pub fn clear_impostor(&mut self, impostor_id: i64) {
         if let Some(slot) = self.impostor_slots.remove(&impostor_id) {
             self.impostor_free_instances.push(slot.instance_index);
             // Pure overflow slots only borrowed a layer; the lender still
@@ -728,7 +728,7 @@ impl AvatarScene {
     }
 
     #[func]
-    fn invalidate_impostor_texture(&mut self, impostor_id: i64, avatar_id: GString) {
+    pub fn invalidate_impostor_texture(&mut self, impostor_id: i64, avatar_id: GString) {
         // Don't flip texture_loaded — keep rendering the (slightly stale)
         // pixels in the layer until the new capture lands. With many avatars
         // invalidating in lockstep (e.g. all remote profiles fetched at once),
@@ -745,17 +745,17 @@ impl AvatarScene {
     }
 
     #[func]
-    fn has_impostor_capacity(&self) -> bool {
+    pub fn has_impostor_capacity(&self) -> bool {
         !self.impostor_free_instances.is_empty()
     }
 
     #[func]
-    fn impostor_texture_size(&self) -> Vector2i {
+    pub fn impostor_texture_size(&self) -> Vector2i {
         Vector2i::new(IMPOSTOR_TEX_WIDTH, IMPOSTOR_TEX_HEIGHT)
     }
 
     #[func]
-    fn impostor_max_layers(&self) -> i32 {
+    pub fn impostor_max_layers(&self) -> i32 {
         IMPOSTOR_MAX_LAYERS as i32
     }
 
@@ -938,10 +938,9 @@ impl AvatarScene {
         // Setup trigger detection with the assigned entity_id
         // NOTE: This must be called AFTER add_child so that _ready() has been called
         // and the @onready trigger_detector variable is initialized
-        new_avatar.call(
-            "setup_trigger_detection",
-            &[entity_id.as_i32().to_variant()],
-        );
+        new_avatar
+            .bind_mut()
+            .setup_trigger_detection(entity_id.as_i32());
 
         self.avatar_godot_scene
             .insert(entity_id, new_avatar.clone());
@@ -1300,7 +1299,7 @@ impl AvatarScene {
             if let Some(alias) = self.avatar_address.get(&h160) {
                 if let Some(entity_id) = self.avatar_entity.get(alias) {
                     if let Some(avatar) = self.avatar_godot_scene.get_mut(entity_id) {
-                        avatar.call("set_client_version", &[version.to_variant()]);
+                        avatar.bind_mut().set_client_version(version);
                     }
                 }
             }
@@ -1314,7 +1313,7 @@ impl AvatarScene {
             if let Some(alias) = self.avatar_address.get(&h160) {
                 if let Some(entity_id) = self.avatar_entity.get(alias) {
                     if let Some(avatar) = self.avatar_godot_scene.get_mut(entity_id) {
-                        avatar.call("set_room_debug", &[room_info.to_variant()]);
+                        avatar.bind_mut().set_room_debug(room_info);
                     }
                 }
             }
@@ -1606,19 +1605,9 @@ impl AvatarScene {
         let Some(avatar) = self.avatar_godot_scene.get(&entity_id) else {
             return;
         };
-        let info = avatar.clone().call("take_unfinished_emote", &[]);
-        let Ok(info) = info.try_to::<VarArray>() else {
+        let Some((urn, mask)) = avatar.clone().bind_mut().take_unfinished_emote() else {
             return;
         };
-        if info.len() != 2 {
-            return;
-        }
-        let urn = info
-            .at(0)
-            .try_to::<GString>()
-            .unwrap_or_default()
-            .to_string();
-        let mask = info.at(1).try_to::<i64>().unwrap_or(-1);
 
         self.append_avatar_emote_command(
             entity_id.as_i32(),
@@ -1992,7 +1981,7 @@ impl AvatarScene {
     pub fn set_avatar_blocked(&mut self, alias: u32, blocked: bool) {
         if let Some(entity_id) = self.avatar_entity.get(&alias) {
             if let Some(avatar) = self.avatar_godot_scene.get_mut(entity_id) {
-                avatar.call("set_blocked_and_hidden", &[blocked.to_variant()]);
+                avatar.bind_mut().set_blocked_and_hidden(blocked);
             }
         } else if let Some(pending) = self.pending_avatar_mut(alias) {
             pending.blocked = blocked;
@@ -2004,10 +1993,9 @@ impl AvatarScene {
     pub fn set_avatar_profile_fetch_state(&mut self, alias: u32, failures: i32, banned: bool) {
         if let Some(entity_id) = self.avatar_entity.get(&alias) {
             if let Some(avatar) = self.avatar_godot_scene.get_mut(entity_id) {
-                avatar.call(
-                    "set_profile_request_state",
-                    &[failures.to_variant(), banned.to_variant()],
-                );
+                avatar
+                    .bind_mut()
+                    .set_profile_request_state(failures, banned);
             }
         }
     }
@@ -2050,9 +2038,13 @@ impl AvatarScene {
         self.last_emote_incremental_id.insert(alias, incremental_id);
 
         if let Some(avatar_scene) = self.avatar_godot_scene.get_mut(&entity_id) {
-            avatar_scene.call(
-                "async_play_emote",
-                &[emote_urn.to_variant(), mask.to_variant()],
+            crate::engine::local_task::spawn_local(
+                crate::avatars::avatar::emote_load::async_play_emote_or_stash(
+                    avatar_scene.clone(),
+                    emote_urn.clone(),
+                    mask,
+                    -1,
+                ),
             );
         }
     }
@@ -2065,7 +2057,9 @@ impl AvatarScene {
             return;
         };
         if let Some(avatar_scene) = self.avatar_godot_scene.get_mut(entity_id) {
-            avatar_scene.call("stop_emote_from_network", &[]);
+            let mut avatar = avatar_scene.bind_mut();
+            avatar.clear_pending_network_emote();
+            avatar.stop_emote();
         }
     }
 
@@ -2089,9 +2083,11 @@ impl AvatarScene {
 
         if let Some(avatar_scene) = self.avatar_godot_scene.get_mut(&entity_id) {
             let dcl_user_profile = DclUserProfile::from_gd(profile.clone());
-            avatar_scene.call(
-                "async_update_avatar_from_profile",
-                &[dcl_user_profile.to_variant()],
+            crate::engine::local_task::spawn_local(
+                crate::avatars::avatar::build::update_from_profile(
+                    avatar_scene.clone(),
+                    dcl_user_profile,
+                ),
             );
         }
 
@@ -2175,16 +2171,12 @@ impl AvatarScene {
             return;
         };
 
-        let (sample_rate, num_channels, samples_per_channel) = (
-            sample_rate.to_variant(),
-            num_channels.to_variant(),
-            samples_per_channel.to_variant(),
-        );
-
-        self.avatar_godot_scene.get_mut(&entity_id).unwrap().call(
-            "spawn_voice_channel",
-            &[sample_rate, num_channels, samples_per_channel],
-        );
+        let _ = (num_channels, samples_per_channel);
+        self.avatar_godot_scene
+            .get_mut(&entity_id)
+            .unwrap()
+            .bind_mut()
+            .spawn_voice_channel(sample_rate as f32);
     }
 
     pub fn push_voice_frame(&mut self, alias: u32, frame: PackedVector2Array) {
@@ -2198,7 +2190,8 @@ impl AvatarScene {
         self.avatar_godot_scene
             .get_mut(&entity_id)
             .unwrap()
-            .call("push_voice_frame", &[frame.to_variant()]);
+            .bind_mut()
+            .push_voice_frame(frame);
     }
 
     // This function should be only called in the first tick

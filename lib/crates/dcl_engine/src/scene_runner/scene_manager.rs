@@ -2248,11 +2248,13 @@ impl SceneManager {
         // A masked emote this scene started would otherwise outlive it: the scene can no
         // longer call stopEmote, and re-entry can't resume it either, so clear it for good.
         // Read the node out before base_mut() below borrows self.
-        if let Some(mut avatar_node) = self.get_player_avatar_node() {
-            avatar_node.call(
-                "clear_emote_owned_by_scene",
-                &[signal_data.0 .0.to_variant()],
-            );
+        if let Some(mut avatar) = self.get_player_avatar_node().and_then(|n| {
+            n.try_cast::<crate::godot_classes::dcl_avatar::DclAvatar>()
+                .ok()
+        }) {
+            avatar
+                .bind_mut()
+                .clear_emote_owned_by_scene(signal_data.0 .0);
         }
 
         self.base_mut().emit_signal(
@@ -3471,9 +3473,14 @@ impl INode for SceneManager {
         // Skip avatars inside an AvatarModifierArea with DisablePassports
         if let Some(RaycastResult::Avatar(avatar)) = &current_raycast {
             // Check if avatar has a valid avatar_id (non-empty and not just "npc-*")
-            let avatar_id: GString = avatar.get("avatar_id").try_to().unwrap_or_default();
-            let is_avatar_shape: bool = avatar.get("is_avatar_shape").try_to().unwrap_or(false);
-            let passport_disabled: bool = avatar.get("passport_disabled").try_to().unwrap_or(false);
+            let (avatar_id, is_avatar_shape, passport_disabled) = {
+                let avatar = avatar.bind();
+                (
+                    avatar.avatar_id.clone(),
+                    avatar.is_avatar_shape,
+                    avatar.passport_disabled,
+                )
+            };
             if !is_avatar_shape && !avatar_id.is_empty() && !passport_disabled {
                 let mut profile_dict = VarDictionary::new();
                 // A translation key, resolved in tooltip_label.gd. The tooltip label cannot

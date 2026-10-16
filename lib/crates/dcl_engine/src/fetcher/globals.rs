@@ -8,6 +8,7 @@ use godot::prelude::*;
 use crate::{
     analytics::metrics::Metrics,
     auth::dcl_player_identity::DclPlayerIdentity,
+    avatars::avatar_scene::AvatarScene,
     comms::communication_manager::CommunicationManager,
     content::content_provider::ContentProvider,
     engine::DclEngine,
@@ -25,6 +26,7 @@ macro_rules! service {
 }
 
 service!(scene_runner, scene_runner, SceneManager);
+service!(avatars_scene, avatars, AvatarScene);
 service!(engine, engine, DclEngine);
 service!(metrics, metrics, Metrics);
 service!(comms, comms, CommunicationManager);

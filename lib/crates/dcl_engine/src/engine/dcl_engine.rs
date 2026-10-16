@@ -11,6 +11,9 @@ use godot::prelude::*;
 
 use super::scene_requests::{EmulatorSink, PendingResponses, SharedSink};
 
+use super::local_task::spawn_local;
+use crate::avatars::avatar::emote_load::async_play_emote_or_stash;
+use crate::godot_classes::dcl_avatar::DclAvatar;
 use crate::godot_classes::dcl_global::DclGlobal;
 
 /// Nodes of the running world (`explorer.tscn`), registered by the explorer when it is ready and
@@ -453,8 +456,8 @@ impl DclEngine {
         resolve(self.world?.player)
     }
 
-    fn avatar(&self) -> Option<Gd<Node>> {
-        resolve(self.world?.avatar)
+    fn avatar(&self) -> Option<Gd<DclAvatar>> {
+        resolve(self.world?.avatar).and_then(|n| n.try_cast().ok())
     }
 
     pub fn touch_camera_input(&self) -> Option<Gd<Node>> {
@@ -484,8 +487,8 @@ impl DclEngine {
     /// Plays an emote on the local avatar.
     #[func]
     pub fn play_local_emote(&self, urn: GString) {
-        if let Some(mut avatar) = self.avatar() {
-            avatar.call("async_play_emote", &[urn.to_variant()]);
+        if let Some(avatar) = self.avatar() {
+            spawn_local(async_play_emote_or_stash(avatar, urn.to_string(), -1, -1));
         }
     }
 
@@ -555,15 +558,13 @@ impl DclEngine {
     // ---- local avatar emotes
 
     pub fn play_emote(&self, emote_id: &str, mask: i64, scene_id: i32) {
-        if let Some(mut avatar) = self.avatar() {
-            avatar.call(
-                "async_play_emote",
-                &[
-                    emote_id.to_variant(),
-                    mask.to_variant(),
-                    scene_id.to_variant(),
-                ],
-            );
+        if let Some(avatar) = self.avatar() {
+            spawn_local(async_play_emote_or_stash(
+                avatar,
+                emote_id.to_string(),
+                mask,
+                scene_id,
+            ));
         }
     }
 
@@ -576,21 +577,18 @@ impl DclEngine {
         audio_hash: &str,
     ) {
         if let Some(mut avatar) = self.avatar() {
-            avatar.call(
-                "register_scene_emote_content",
-                &[
-                    scene_entity_id.to_variant(),
-                    base_url.to_variant(),
-                    glb_hash.to_variant(),
-                    audio_hash.to_variant(),
-                ],
+            avatar.bind_mut().register_scene_emote_content(
+                scene_entity_id,
+                base_url,
+                glb_hash,
+                audio_hash,
             );
         }
     }
 
     pub fn stop_emote_from_scene(&self, scene_id: i32) {
         if let Some(mut avatar) = self.avatar() {
-            avatar.call("stop_emote_from_scene", &[scene_id.to_variant()]);
+            avatar.bind_mut().stop_emote_from_scene(scene_id);
         }
     }
 }

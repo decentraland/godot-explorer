@@ -18,8 +18,8 @@ var chat_open := false
 
 var _chat_commands := ChatCommands.new(self)
 var _last_parcel_position: Vector2i = Vector2i.MAX
-var _avatar_under_crosshair: Avatar = null
-var _last_outlined_avatar: Avatar = null
+var _avatar_under_crosshair: DclAvatar = null
+var _last_outlined_avatar: DclAvatar = null
 var _last_outlined_entity: Node3D = null
 var _mobile_controls_hidden_for_hide_ui: bool = false
 # Applies scene-driven (PBTouchScreenControls) joystick/crosshair hiding; see the class doc.
@@ -106,11 +106,6 @@ func _ready():
 	var cmd_location = cmd_params[1]
 	if Global.FORCE_TEST and cmd_location == null:
 		cmd_location = Global.FORCE_TEST_LOCATION
-
-	# --spawn-avatars
-	if Global.cli.spawn_avatars:
-		var test_spawn_and_move_avatars = TestSpawnAndMoveAvatars.new()
-		add_child(test_spawn_and_move_avatars)
 
 	# Scene Inspector file output: --scene-inspector-file, or ?scene-inspector-file=true off prod
 	var scene_inspector_file: bool = (
@@ -351,8 +346,8 @@ func move_to(position: Vector3, skip_loading: bool, check_stuck: bool = true):
 		return
 
 	# Set grace period on avatar's emote controller to prevent emote cancellation during teleport
-	if player.avatar and player.avatar.emote_controller:
-		player.avatar.emote_controller.set_teleport_grace()
+	if player.avatar:
+		player.avatar.set_teleport_grace()
 
 	player.move_to(position, check_stuck)
 	# Announce the instant reposition to the Pulse transport so remote peers

@@ -12,9 +12,11 @@ use super::{
     stuck_detector::StuckDetector,
 };
 use crate::{
+    avatars::{avatar::build::update_from_profile, dcl_user_profile::DclUserProfile},
+    engine::local_task::spawn_local,
     fetcher::globals,
     godot_classes::{
-        dcl_camera_3d::DclCamera3D, dcl_global::DclGlobal,
+        dcl_avatar::DclAvatar, dcl_camera_3d::DclCamera3D, dcl_global::DclGlobal,
         dcl_locomotion_settings::DclLocomotionSettings,
     },
 };
@@ -250,7 +252,7 @@ pub struct Player {
     #[var(no_set, pub)]
     outline_system: Option<Gd<OutlineSystem>>,
     #[var(no_set, pub)]
-    avatar: Option<Gd<Node3D>>,
+    avatar: Option<Gd<DclAvatar>>,
     stuck_detector: Option<Gd<StuckDetector>>,
     /// Margin-less clone of the body shape for step-up motion tests (skin width would eat the
     /// step band).
@@ -369,7 +371,7 @@ impl ICharacterBody3D for Player {
         // Third person on setup, without the transition sound.
         self.set_camera_mode_with_sound(CameraMode::ThirdPerson, false);
         if let Some(avatar) = &mut self.avatar {
-            avatar.set("is_local_player", &true.to_variant());
+            avatar.bind_mut().is_local_player = true;
         }
 
         // Unity's slopeLimit is exclusive (a 46 deg ramp does not climb); Godot's
@@ -396,7 +398,7 @@ impl ICharacterBody3D for Player {
                 click_area.queue_free();
             }
             // Trigger detection for the local avatar (entity_id=1, SceneEntityId::PLAYER).
-            avatar.call("setup_trigger_detection", &[1_i32.to_variant()]);
+            avatar.bind_mut().setup_trigger_detection(1);
         }
 
         let mut runner = globals::scene_runner();
@@ -716,8 +718,8 @@ impl Player {
         // Walk up to the Avatar node.
         let mut node = collider.try_cast::<Node>().ok();
         while let Some(current) = node {
-            if current.has_method("async_update_avatar_from_profile") {
-                return current.try_cast::<Node3D>().ok();
+            if let Ok(avatar) = current.clone().try_cast::<DclAvatar>() {
+                return Some(avatar.upcast());
             }
             node = current.get_parent();
         }
@@ -867,7 +869,7 @@ impl Player {
         let rotation_y = self.base().get_rotation().y;
         if third_person {
             if let Some(avatar) = &mut self.avatar {
-                avatar.call("set_hidden", &[false.to_variant()]);
+                avatar.bind_mut().apply_hidden(false);
                 avatar.set_rotation(Vector3::new(0.0, rotation_y, 0.0));
             }
             if play_sound {
@@ -880,7 +882,7 @@ impl Player {
                 .is_some_and(|camera| camera.is_current())
             {
                 if let Some(avatar) = &mut self.avatar {
-                    avatar.call("set_hidden", &[true.to_variant()]);
+                    avatar.bind_mut().apply_hidden(true);
                 }
             }
             if play_sound {
@@ -889,13 +891,16 @@ impl Player {
         }
     }
 
-    fn on_player_profile_changed(&mut self, mut profile: Gd<Object>) {
-        let version = profile.call("get_profile_version", &[]).to::<i32>();
+    fn on_player_profile_changed(&mut self, profile: Gd<Object>) {
+        let Ok(profile) = profile.try_cast::<DclUserProfile>() else {
+            return;
+        };
+        let version = profile.bind().get_profile_version() as i32;
         // Only update the avatar if the profile version changed.
         if version != self.current_profile_version {
             self.current_profile_version = version;
-            if let Some(avatar) = &mut self.avatar {
-                avatar.call("async_update_avatar_from_profile", &[profile.to_variant()]);
+            if let Some(avatar) = &self.avatar {
+                spawn_local(update_from_profile(avatar.clone(), profile));
             }
         }
     }
@@ -988,14 +993,36 @@ impl Player {
 
     fn set_avatar_flag(&mut self, name: &str, value: bool) {
         if let Some(avatar) = &mut self.avatar {
-            avatar.set(name, &value.to_variant());
+            let mut avatar = avatar.bind_mut();
+            match name {
+                "walk" => avatar.walk = value,
+                "jog" => avatar.jog = value,
+                "run" => avatar.run = value,
+                "rise" => avatar.rise = value,
+                "fall" => avatar.fall = value,
+                "land" => avatar.land = value,
+                "is_grounded" => avatar.is_grounded = value,
+                _ => godot_error!("unknown avatar flag `{name}`"),
+            }
         }
     }
 
     fn avatar_flag(&self, name: &str) -> bool {
         self.avatar
             .as_ref()
-            .map(|avatar| avatar.get(name).to::<bool>())
+            .map(|avatar| {
+                let avatar = avatar.bind();
+                match name {
+                    "walk" => avatar.walk,
+                    "jog" => avatar.jog,
+                    "run" => avatar.run,
+                    "rise" => avatar.rise,
+                    "fall" => avatar.fall,
+                    "land" => avatar.land,
+                    "is_grounded" => avatar.is_grounded,
+                    _ => false,
+                }
+            })
             .unwrap_or(false)
     }
 
@@ -1401,8 +1428,9 @@ impl Player {
         let jump_count = self.jump_count;
         let glide_state = self.glide_state;
         if let Some(avatar) = &mut self.avatar {
-            avatar.set("jump_count", &jump_count.to_variant());
-            avatar.set("glide_state", &glide_state.to_variant());
+            let mut avatar = avatar.bind_mut();
+            avatar.jump_count = jump_count;
+            avatar.glide_state = glide_state;
         }
         // Debounced ungrounding (see resolve_is_grounded). The jump-pad override below
         // (combined_vy > 0.3) runs after this and still wins.

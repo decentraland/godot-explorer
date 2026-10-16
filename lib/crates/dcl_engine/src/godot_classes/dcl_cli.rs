@@ -57,8 +57,6 @@ pub struct DclCli {
     #[var(no_set, pub)]
     pub network_debugger: bool,
     #[var(no_set, pub)]
-    pub spawn_avatars: bool,
-    #[var(no_set, pub)]
     pub debug_minimap: bool,
     #[var(no_set, pub)]
     pub debug_panel: bool,
@@ -285,12 +283,6 @@ impl DclCli {
             ArgDefinition {
                 name: "--preview".to_string(),
                 description: "Preview mode for scene development. With a URL (--preview http://localhost:8000) and no --realm, that URL is the realm".to_string(),
-                arg_type: ArgType::Flag,
-                category: "World/Scene".to_string(),
-            },
-            ArgDefinition {
-                name: "--spawn-avatars".to_string(),
-                description: "Spawn test avatars in the scene".to_string(),
                 arg_type: ArgType::Flag,
                 category: "World/Scene".to_string(),
             },
@@ -762,7 +754,6 @@ impl INode for DclCli {
         let clear_cache_startup = args_map.contains_key("--clear-cache-startup");
         let raycast_debugger = args_map.contains_key("--raycast-debugger");
         let network_debugger = args_map.contains_key("--network-debugger");
-        let spawn_avatars = args_map.contains_key("--spawn-avatars");
         let debug_minimap = args_map.contains_key("--debug-minimap");
         let debug_panel = args_map.contains_key("--debug-panel") || preview_mode;
         let use_test_input = args_map.contains_key("--use-test-input");
@@ -957,7 +948,6 @@ impl INode for DclCli {
             clear_cache_startup,
             raycast_debugger,
             network_debugger,
-            spawn_avatars,
             debug_minimap,
             debug_panel,
             use_test_input,

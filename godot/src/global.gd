@@ -376,7 +376,7 @@ func _ready():
 	# the GDScript toggle default to full-budget, and nothing re-applies them
 	# until the user picks a profile again.
 	GraphicSettings.apply_particle_quality(engine.setting("particle_quality"))
-	AvatarAnimHelpers.apply_particles_enabled(engine.setting("particle_quality") > 0)
+	DclAvatar.apply_particles_enabled(engine.setting("particle_quality") > 0)
 
 	deep_link_router._capture_debug_guest_rotate(deep_link_obj)
 

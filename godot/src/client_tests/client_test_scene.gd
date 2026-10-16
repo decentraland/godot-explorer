@@ -103,12 +103,14 @@ func async_load_test_avatar():
 
 	# Update avatar
 	print("Updating avatar...")
-	await avatar_preview_instance.avatar.async_update_avatar(test_avatar_data, "")
+	await PromiseUtils.async_awaiter(
+		avatar_preview_instance.avatar.async_update_avatar(test_avatar_data, "")
+	)
 	print("Avatar updated!")
 
 	# Disable animations to ensure consistent snapshots
 	# This is the same approach used in avatar_preview.gd's async_get_viewport_image
-	avatar_preview_instance.avatar.emote_controller.freeze_on_idle()
+	avatar_preview_instance.avatar.freeze_on_idle()
 	avatar_preview_instance.avatar.rotation.y = 0.0
 
 	# Wait a bit then run tests

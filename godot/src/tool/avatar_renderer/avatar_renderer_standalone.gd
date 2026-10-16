@@ -121,7 +121,7 @@ func async_update_avatar(index: int):
 
 	await get_tree().process_frame
 
-	await avatar_preview.avatar.async_update_avatar(current_avatar, "")
+	await PromiseUtils.async_awaiter(avatar_preview.avatar.async_update_avatar(current_avatar, ""))
 
 	await _async_on_avatar_avatar_loaded()
 

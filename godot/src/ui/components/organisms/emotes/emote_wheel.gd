@@ -3,7 +3,7 @@ extends Control
 signal emote_wheel_opened
 signal emote_wheel_closed
 
-@export var avatar_node: Avatar = null:
+@export var avatar_node: DclAvatar = null:
 	set(value):
 		if value != avatar_node:  # Prevent redundant assignments
 			if (
@@ -116,9 +116,8 @@ func _on_play_emote(emote_urn: String):
 		return
 
 	if avatar_node != null:
-		var emote_controller = avatar_node.emote_controller
 		# Use async_play_emote to ensure base emotes are loaded from remote
-		emote_controller.async_play_emote(emote_urn)
+		avatar_node.async_play_emote(emote_urn, -1, -1)
 		# -1 = full body: wheel emotes carry no avatar mask.
 		Global.comms.send_emote(emote_urn, -1)
 	else:

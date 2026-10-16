@@ -24,94 +24,94 @@ impl DclUserProfile {
 #[godot_api]
 impl DclUserProfile {
     #[func]
-    fn equal(&self, other: Gd<DclUserProfile>) -> bool {
+    pub fn equal(&self, other: Gd<DclUserProfile>) -> bool {
         self.inner == other.bind().inner
     }
 
     #[func]
-    fn duplicated(&self) -> Gd<DclUserProfile> {
+    pub fn duplicated(&self) -> Gd<DclUserProfile> {
         Self::from_gd(self.inner.clone())
     }
 
     /// Generate a randomized profile (varied wearables, colors, snapshots)
     /// suitable for stress testing. Mirrors the comms randomize_profile path.
     #[func]
-    fn randomized() -> Gd<DclUserProfile> {
+    pub fn randomized() -> Gd<DclUserProfile> {
         Self::from_gd(UserProfile::randomize())
     }
 
     /// Same as `randomized` but with a fixed seed so the resulting profile
     /// is reproducible across runs (used by the avatar impostor benchmark).
     #[func]
-    fn randomized_with_seed(seed: i64) -> Gd<DclUserProfile> {
+    pub fn randomized_with_seed(seed: i64) -> Gd<DclUserProfile> {
         Self::from_gd(UserProfile::randomize_with_seed(seed as u64))
     }
 
     /// Returns a copy of the inner avatar. Use `set_avatar` to modify the avatar.
     #[func]
-    fn get_avatar(&self) -> Gd<DclAvatarWireFormat> {
+    pub fn get_avatar(&self) -> Gd<DclAvatarWireFormat> {
         DclAvatarWireFormat::from_gd(self.inner.content.avatar.clone())
     }
 
     #[func]
-    fn get_base_url(&self) -> GString {
+    pub fn get_base_url(&self) -> GString {
         self.inner.base_url.clone().to_godot()
     }
 
     #[func]
-    fn has_connected_web3(&self) -> bool {
+    pub fn has_connected_web3(&self) -> bool {
         self.inner.content.has_connected_web3.unwrap_or_default()
     }
 
     #[func]
-    fn get_name(&self) -> GString {
+    pub fn get_name(&self) -> GString {
         self.inner.content.name.clone().to_godot()
     }
 
     #[func]
-    fn has_claimed_name(&self) -> bool {
+    pub fn has_claimed_name(&self) -> bool {
         self.inner.content.has_claimed_name.unwrap_or(false)
     }
 
     #[func]
-    fn get_description(&self) -> GString {
+    pub fn get_description(&self) -> GString {
         self.inner.content.description.clone().to_godot()
     }
 
     #[func]
-    fn get_ethereum_address(&self) -> GString {
+    pub fn get_ethereum_address(&self) -> GString {
         GString::from(&self.inner.content.eth_address)
     }
 
     #[func]
-    fn set_ethereum_address(&mut self, address: GString) {
+    pub fn set_ethereum_address(&mut self, address: GString) {
         let address_str = address.to_string();
         self.inner.content.eth_address = address_str.clone();
         self.inner.content.user_id = Some(address_str);
     }
 
     #[func]
-    fn set_description(&mut self, description: GString) {
+    pub fn set_description(&mut self, description: GString) {
         self.inner.content.description = description.to_string();
     }
 
     #[func]
-    fn set_name(&mut self, name: GString) {
+    pub fn set_name(&mut self, name: GString) {
         self.inner.content.name = name.to_string();
     }
 
     #[func]
-    fn set_has_connected_web3(&mut self, has_connected_web3: bool) {
+    pub fn set_has_connected_web3(&mut self, has_connected_web3: bool) {
         self.inner.content.has_connected_web3 = Some(has_connected_web3);
     }
 
     #[func]
-    fn set_has_claimed_name(&mut self, has_claimed_name: bool) {
+    pub fn set_has_claimed_name(&mut self, has_claimed_name: bool) {
         self.inner.content.has_claimed_name = Some(has_claimed_name);
     }
 
     #[func]
-    fn set_avatar(&mut self, avatar: Gd<DclAvatarWireFormat>) {
+    pub fn set_avatar(&mut self, avatar: Gd<DclAvatarWireFormat>) {
         self.inner.content.avatar = avatar.bind().inner.clone();
     }
 
@@ -122,12 +122,12 @@ impl DclUserProfile {
     }
 
     #[func]
-    fn get_profile_version(&self) -> u32 {
+    pub fn get_profile_version(&self) -> u32 {
         self.inner.content.version as u32
     }
 
     #[func]
-    fn set_profile_version(&mut self, version: u32) {
+    pub fn set_profile_version(&mut self, version: u32) {
         self.inner.content.version = version as i64;
         self.inner.version = version;
     }
@@ -191,12 +191,12 @@ impl DclUserProfile {
 
     // Nuevos campos del perfil
     #[func]
-    fn get_country(&self) -> GString {
+    pub fn get_country(&self) -> GString {
         GString::from(self.inner.content.country.as_deref().unwrap_or(""))
     }
 
     #[func]
-    fn set_country(&mut self, country: GString) {
+    pub fn set_country(&mut self, country: GString) {
         let country_str = country.to_string();
         self.inner.content.country = if country_str.is_empty() {
             None
@@ -206,12 +206,12 @@ impl DclUserProfile {
     }
 
     #[func]
-    fn get_gender(&self) -> GString {
+    pub fn get_gender(&self) -> GString {
         GString::from(self.inner.content.gender.as_deref().unwrap_or(""))
     }
 
     #[func]
-    fn set_gender(&mut self, gender: GString) {
+    pub fn set_gender(&mut self, gender: GString) {
         let gender_str = gender.to_string();
         self.inner.content.gender = if gender_str.is_empty() {
             None
@@ -221,12 +221,12 @@ impl DclUserProfile {
     }
 
     #[func]
-    fn get_pronouns(&self) -> GString {
+    pub fn get_pronouns(&self) -> GString {
         GString::from(self.inner.content.pronouns.as_deref().unwrap_or(""))
     }
 
     #[func]
-    fn set_pronouns(&mut self, pronouns: GString) {
+    pub fn set_pronouns(&mut self, pronouns: GString) {
         let pronouns_str = pronouns.to_string();
         self.inner.content.pronouns = if pronouns_str.is_empty() {
             None
@@ -236,7 +236,7 @@ impl DclUserProfile {
     }
 
     #[func]
-    fn get_relationship_status(&self) -> GString {
+    pub fn get_relationship_status(&self) -> GString {
         GString::from(
             self.inner
                 .content
@@ -247,7 +247,7 @@ impl DclUserProfile {
     }
 
     #[func]
-    fn set_relationship_status(&mut self, relationship_status: GString) {
+    pub fn set_relationship_status(&mut self, relationship_status: GString) {
         let status_str = relationship_status.to_string();
         self.inner.content.relation_ship_status = if status_str.is_empty() {
             None
@@ -257,7 +257,7 @@ impl DclUserProfile {
     }
 
     #[func]
-    fn get_sexual_orientation(&self) -> GString {
+    pub fn get_sexual_orientation(&self) -> GString {
         GString::from(
             self.inner
                 .content
@@ -268,7 +268,7 @@ impl DclUserProfile {
     }
 
     #[func]
-    fn set_sexual_orientation(&mut self, sexual_orientation: GString) {
+    pub fn set_sexual_orientation(&mut self, sexual_orientation: GString) {
         let orientation_str = sexual_orientation.to_string();
         self.inner.content.sexual_orientation = if orientation_str.is_empty() {
             None
@@ -278,12 +278,12 @@ impl DclUserProfile {
     }
 
     #[func]
-    fn get_language(&self) -> GString {
+    pub fn get_language(&self) -> GString {
         GString::from(self.inner.content.language.as_deref().unwrap_or(""))
     }
 
     #[func]
-    fn set_language(&mut self, language: GString) {
+    pub fn set_language(&mut self, language: GString) {
         let language_str = language.to_string();
         self.inner.content.language = if language_str.is_empty() {
             None
@@ -293,7 +293,7 @@ impl DclUserProfile {
     }
 
     #[func]
-    fn get_employment_status(&self) -> GString {
+    pub fn get_employment_status(&self) -> GString {
         GString::from(
             self.inner
                 .content
@@ -304,7 +304,7 @@ impl DclUserProfile {
     }
 
     #[func]
-    fn set_employment_status(&mut self, employment_status: GString) {
+    pub fn set_employment_status(&mut self, employment_status: GString) {
         let status_str = employment_status.to_string();
         self.inner.content.employment_status = if status_str.is_empty() {
             None
@@ -314,12 +314,12 @@ impl DclUserProfile {
     }
 
     #[func]
-    fn get_profession(&self) -> GString {
+    pub fn get_profession(&self) -> GString {
         GString::from(self.inner.content.profession.as_deref().unwrap_or(""))
     }
 
     #[func]
-    fn set_profession(&mut self, profession: GString) {
+    pub fn set_profession(&mut self, profession: GString) {
         let profession_str = profession.to_string();
         self.inner.content.profession = if profession_str.is_empty() {
             None
@@ -329,12 +329,12 @@ impl DclUserProfile {
     }
 
     #[func]
-    fn get_real_name(&self) -> GString {
+    pub fn get_real_name(&self) -> GString {
         GString::from(self.inner.content.real_name.as_deref().unwrap_or(""))
     }
 
     #[func]
-    fn set_real_name(&mut self, real_name: GString) {
+    pub fn set_real_name(&mut self, real_name: GString) {
         let real_name_str = real_name.to_string();
         self.inner.content.real_name = if real_name_str.is_empty() {
             None
@@ -344,12 +344,12 @@ impl DclUserProfile {
     }
 
     #[func]
-    fn get_hobbies(&self) -> GString {
+    pub fn get_hobbies(&self) -> GString {
         GString::from(self.inner.content.hobbies.as_deref().unwrap_or(""))
     }
 
     #[func]
-    fn set_hobbies(&mut self, hobbies: GString) {
+    pub fn set_hobbies(&mut self, hobbies: GString) {
         let hobbies_str = hobbies.to_string();
         self.inner.content.hobbies = if hobbies_str.is_empty() {
             None
@@ -359,12 +359,12 @@ impl DclUserProfile {
     }
 
     #[func]
-    fn get_birthdate(&self) -> i64 {
+    pub fn get_birthdate(&self) -> i64 {
         self.inner.content.birthdate.unwrap_or(0)
     }
 
     #[func]
-    fn set_birthdate(&mut self, birthdate: i64) {
+    pub fn set_birthdate(&mut self, birthdate: i64) {
         self.inner.content.birthdate = if birthdate == 0 {
             None
         } else {
@@ -373,7 +373,7 @@ impl DclUserProfile {
     }
 
     #[func]
-    fn get_interests(&self) -> Array<GString> {
+    pub fn get_interests(&self) -> Array<GString> {
         let mut arr = Array::new();
         if let Some(interests) = &self.inner.content.interests {
             for interest in interests {
@@ -384,7 +384,7 @@ impl DclUserProfile {
     }
 
     #[func]
-    fn set_interests(&mut self, interests_list: Array<GString>) {
+    pub fn set_interests(&mut self, interests_list: Array<GString>) {
         let interests_vec: Vec<String> = interests_list
             .iter_shared()
             .map(|s| s.to_string())
@@ -397,12 +397,12 @@ impl DclUserProfile {
     }
 
     #[func]
-    fn get_email(&self) -> GString {
+    pub fn get_email(&self) -> GString {
         GString::from(self.inner.content.email.as_deref().unwrap_or(""))
     }
 
     #[func]
-    fn set_email(&mut self, email: GString) {
+    pub fn set_email(&mut self, email: GString) {
         let email_str = email.to_string();
         self.inner.content.email = if email_str.is_empty() {
             None
@@ -412,22 +412,22 @@ impl DclUserProfile {
     }
 
     #[func]
-    fn get_tutorial_step(&self) -> u32 {
+    pub fn get_tutorial_step(&self) -> u32 {
         self.inner.content.tutorial_step
     }
 
     #[func]
-    fn set_tutorial_step(&mut self, tutorial_step: u32) {
+    pub fn set_tutorial_step(&mut self, tutorial_step: u32) {
         self.inner.content.tutorial_step = tutorial_step;
     }
 
     #[func]
-    fn get_user_id(&self) -> GString {
+    pub fn get_user_id(&self) -> GString {
         GString::from(&self.inner.content.get_user_id())
     }
 
     #[func]
-    fn set_user_id(&mut self, user_id: GString) {
+    pub fn set_user_id(&mut self, user_id: GString) {
         let user_id_str = user_id.to_string();
         self.inner.content.user_id = if user_id_str.is_empty() {
             None
@@ -437,7 +437,7 @@ impl DclUserProfile {
     }
 
     #[func]
-    fn get_links(&self) -> Array<VarDictionary> {
+    pub fn get_links(&self) -> Array<VarDictionary> {
         let mut arr = Array::new();
         if let Some(links) = &self.inner.content.links {
             for link in links {
@@ -451,7 +451,7 @@ impl DclUserProfile {
     }
 
     #[func]
-    fn set_links(&mut self, links_array: Array<VarDictionary>) {
+    pub fn set_links(&mut self, links_array: Array<VarDictionary>) {
         let links_vec: Vec<ProfileLink> = links_array
             .iter_shared()
             .filter_map(|dict| {

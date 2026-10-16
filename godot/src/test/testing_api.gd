@@ -219,11 +219,11 @@ func async_take_and_compare_snapshot(
 
 	# Freeze avatars animation and hide them
 	for avatar in Global.avatars.get_children():
-		if avatar is Avatar:
+		if avatar is DclAvatar:
 			avatar.hide()
-			avatar.emote_controller.freeze_on_idle()
+			avatar.freeze_on_idle()
 
-	Global.scene_runner.player_avatar_node.emote_controller.freeze_on_idle()
+	Global.scene_runner.player_avatar_node.freeze_on_idle()
 	Global.scene_runner.player_avatar_node.hide()
 
 	# Wait for rendering to settle - more frames for complex scenes

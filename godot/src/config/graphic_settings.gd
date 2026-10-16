@@ -321,7 +321,7 @@ static func apply_graphic_profile(profile_index: int) -> void:
 		viewport.mesh_lod_threshold = lod_thr
 
 	# Avatar move/jump/land dust particles follow the profile.
-	AvatarAnimHelpers.apply_particles_enabled(profile.particle_quality > 0)
+	DclAvatar.apply_particles_enabled(profile.particle_quality > 0)
 	# Scene particle budgets + CPU/GPU emitter selection (Rust side).
 	apply_particle_quality(profile.particle_quality)
 

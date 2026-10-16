@@ -27,7 +27,9 @@ func async_generate_for_avatar(
 	avatar_preview.set_position(get_viewport().get_visible_rect().size)
 
 	# Wait for avatar to be ready and load the profile
-	await avatar_preview.avatar.async_update_avatar_from_profile(profile)
+	await PromiseUtils.async_awaiter(
+		avatar_preview.avatar.async_update_avatar_from_profile(profile)
+	)
 
 	# Generate face snapshot
 	var face: Image = await avatar_preview.async_get_viewport_image(true, Vector2i(256, 256), 0.55)

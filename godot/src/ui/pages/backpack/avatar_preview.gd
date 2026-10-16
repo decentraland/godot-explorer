@@ -166,19 +166,19 @@ func focus_camera_on(type, instant: bool = false):
 		_camera_focus = "overall"
 	else:
 		match type:
-			Wearables.Categories.FACIAL_HAIR:
+			"facial_hair":
 				_camera_focus = "head_base_facial"
-			Wearables.Categories.EYES, Wearables.Categories.EYEBROWS, Wearables.Categories.MOUTH:
+			"eyes", "eyebrows", "mouth":
 				_camera_focus = "head_base"
-			Wearables.Categories.HAIR, Wearables.Categories.EYEWEAR, Wearables.Categories.TIARA, Wearables.Categories.FACIAL, Wearables.Categories.HAT, Wearables.Categories.EARRING, Wearables.Categories.MASK, Wearables.Categories.HELMET, Wearables.Categories.TOP_HEAD, Wearables.Categories.ALL_EXTRAS:
+			"hair", "eyewear", "tiara", "facial", "hat", "earring", "mask", "helmet", "top_head", "all_extras":
 				_camera_focus = "head"
-			Wearables.Categories.UPPER_BODY:
+			"upper_body":
 				_camera_focus = "torso"
-			Wearables.Categories.HANDS_WEAR, Wearables.Categories.HANDS:
+			"hands_wear", "hands":
 				_camera_focus = "hands"
-			Wearables.Categories.LOWER_BODY:
+			"lower_body":
 				_camera_focus = "legs"
-			Wearables.Categories.FEET:
+			"feet":
 				_camera_focus = "feet"
 			_:
 				_camera_focus = "overall"
@@ -555,7 +555,7 @@ func _symmetrize_aabb_x(aabb: AABB) -> AABB:
 
 
 func _compute_avatar_aabbs() -> Dictionary:
-	var skeleton: Skeleton3D = avatar.body_shape_skeleton_3d
+	var skeleton: Skeleton3D = avatar.get_body_shape_skeleton()
 	if skeleton == null:
 		return {}
 	var avatar_xform_inv: Transform3D = (avatar.global_transform as Transform3D).affine_inverse()
@@ -970,7 +970,7 @@ func compute_current_fit_aabb() -> AABB:
 func async_get_viewport_image(
 	face: bool, dest_size: Vector2i, ortho_size: float = 2.5, ssaa: int = 1
 ) -> Image:
-	avatar.emote_controller.freeze_on_idle()
+	avatar.freeze_on_idle()
 	avatar.rotation.y = 0.0
 	const PROFILE_BODY_CAMERA_POSITION = Vector3(0, 1.25, -3.5)
 	const PROFILE_HEAD_CAMERA_POSITION = Vector3(0, 1.70, -1.25)

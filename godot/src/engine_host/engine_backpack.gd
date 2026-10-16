@@ -114,15 +114,15 @@ func focus_camera(target: String) -> void:
 	var category := ""
 	match target:
 		"head":
-			category = Wearables.Categories.HAIR
+			category = "hair"
 		"torso":
-			category = Wearables.Categories.UPPER_BODY
+			category = "upper_body"
 		"legs":
-			category = Wearables.Categories.LOWER_BODY
+			category = "lower_body"
 		"feet":
-			category = Wearables.Categories.FEET
+			category = "feet"
 		"hands":
-			category = Wearables.Categories.HANDS
+			category = "hands"
 	_preview.focus_camera_on(category)
 
 
@@ -130,7 +130,7 @@ func play_emote(urn: String) -> void:
 	if _preview == null:
 		return
 	var id := Emotes.get_base_emote_id_from_urn(urn) if Emotes.is_base_emote_urn(urn) else urn
-	_preview.avatar.emote_controller.async_play_emote(id)
+	_preview.avatar.async_play_emote(id, -1, -1)
 
 
 func async_set_profile_name(new_name: String) -> void:
@@ -179,7 +179,7 @@ func _async_refresh_avatar() -> bool:
 	if profile == null or avatar == null or _preview == null:
 		return false
 	profile.set_avatar(avatar)
-	await _preview.avatar.async_update_avatar_from_profile(profile)
+	await PromiseUtils.async_awaiter(_preview.avatar.async_update_avatar_from_profile(profile))
 	return true
 
 

@@ -1,8 +1,5 @@
 extends DclAvatarModifierArea3D
 
-# Initial value SceneId::INVALID
-var scene_id: int = -1
-
 @onready var collision_shape_3d = $CollisionShape3D
 
 

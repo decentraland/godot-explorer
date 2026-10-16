@@ -295,6 +295,10 @@ impl DclBootstrap {
         for property in ROOT_NODES {
             add_to_root_deferred(&global, property);
         }
+        // Ranks the avatars by distance for the LOD pool and fills their impostor textures.
+        let mut lod_system = crate::avatars::impostor_capture::AvatarLodSystem::new_alloc();
+        lod_system.set_name("AvatarLodSystem");
+        root_add_instance(&global, &lod_system.upcast());
         if let Some(metrics) = node_of(&global, "metrics") {
             root_add_instance(&global, &metrics);
             // Firebase/Segment orchestration lives in AnalyticsController, a RefCounted kept

@@ -244,7 +244,7 @@ impl DclGlobalCameraController {
                     // AvatarModifierArea hide still applies.
                     if let Some(player) = explorer_player() {
                         if let Some(mut avatar) = player.bind().get_avatar() {
-                            avatar.call("set_hidden", &[false.to_variant()]);
+                            avatar.bind_mut().apply_hidden(false);
                         }
                         if let Some(mut outline) = player.bind().get_outline_system() {
                             outline.hide();
@@ -395,7 +395,7 @@ impl DclGlobalCameraController {
             });
             if first_person {
                 if let Some(mut avatar) = player.bind().get_avatar() {
-                    avatar.call("set_hidden", &[true.to_variant()]);
+                    avatar.bind_mut().apply_hidden(true);
                 }
             }
         }

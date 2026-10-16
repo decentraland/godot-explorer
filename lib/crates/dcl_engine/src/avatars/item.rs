@@ -108,7 +108,7 @@ impl DclItemEntityDefinition {
 #[godot_api]
 impl DclItemEntityDefinition {
     #[func]
-    fn get_emote_audio(&self, body_shape_id: String) -> GString {
+    pub fn get_emote_audio(&self, body_shape_id: String) -> GString {
         let Some(representation) = self.get_emote_representation(&body_shape_id) else {
             return GString::from("");
         };
@@ -122,7 +122,7 @@ impl DclItemEntityDefinition {
     }
 
     #[func]
-    fn get_emote_loop(&self) -> bool {
+    pub fn get_emote_loop(&self) -> bool {
         let Some(emote_data) = self.inner.item.emote_data.as_ref() else {
             return false;
         };
@@ -131,17 +131,17 @@ impl DclItemEntityDefinition {
     }
 
     #[func]
-    fn is_wearable(&self) -> bool {
+    pub fn is_wearable(&self) -> bool {
         self.inner.item.wearable_data.is_some()
     }
 
     #[func]
-    fn is_emote(&self) -> bool {
+    pub fn is_emote(&self) -> bool {
         self.inner.item.emote_data.is_some()
     }
 
     #[func]
-    fn get_category(&self) -> GString {
+    pub fn get_category(&self) -> GString {
         if let Some(wearable_data) = &self.inner.item.wearable_data {
             GString::from(wearable_data.category.slot)
         } else if let Some(emote_data) = &self.inner.item.emote_data {
@@ -152,7 +152,7 @@ impl DclItemEntityDefinition {
     }
 
     #[func]
-    fn has_representation(&self, body_shape_id: String) -> bool {
+    pub fn has_representation(&self, body_shape_id: String) -> bool {
         if self.inner.item.wearable_data.is_some() {
             self.get_wearable_representation(&body_shape_id).is_some()
         } else if self.inner.item.emote_data.is_some() {
@@ -163,7 +163,7 @@ impl DclItemEntityDefinition {
     }
 
     #[func]
-    fn get_representation_main_file(&self, body_shape_id: String) -> GString {
+    pub fn get_representation_main_file(&self, body_shape_id: String) -> GString {
         if self.inner.item.wearable_data.is_some() {
             GString::from(
                 self.get_wearable_representation(&body_shape_id)
@@ -185,7 +185,7 @@ impl DclItemEntityDefinition {
 
     /// Only for wearables
     #[func]
-    fn get_hides_list(&self, body_shape_id: String) -> PackedStringArray {
+    pub fn get_hides_list(&self, body_shape_id: String) -> PackedStringArray {
         // Ensure it's a wearable
         let Some(wearable_data) = &self.inner.item.wearable_data else {
             return PackedStringArray::new();
@@ -264,27 +264,27 @@ impl DclItemEntityDefinition {
     }
 
     #[func]
-    fn get_content_mapping(&self) -> Gd<DclContentMappingAndUrl> {
+    pub fn get_content_mapping(&self) -> Gd<DclContentMappingAndUrl> {
         DclContentMappingAndUrl::from_ref(self.inner.content_mapping.clone())
     }
 
     #[func]
-    fn get_id(&self) -> GString {
+    pub fn get_id(&self) -> GString {
         GString::from(&self.inner.id)
     }
 
     #[func]
-    fn get_thumbnail(&self) -> GString {
+    pub fn get_thumbnail(&self) -> GString {
         GString::from(&self.inner.item.thumbnail)
     }
 
     #[func]
-    fn get_rarity(&self) -> GString {
+    pub fn get_rarity(&self) -> GString {
         GString::from(self.inner.item.rarity.clone().unwrap_or_default().as_str())
     }
 
     #[func]
-    fn get_display_name(&self) -> GString {
+    pub fn get_display_name(&self) -> GString {
         GString::from(self.inner.item.i18n.first().map_or(
             self.inner.item.name.as_ref().unwrap_or(&String::new()),
             |i18n| &i18n.text,
@@ -292,7 +292,7 @@ impl DclItemEntityDefinition {
     }
 
     #[func]
-    fn is_valid_wearable(
+    pub fn is_valid_wearable(
         value: Option<Gd<DclItemEntityDefinition>>,
         body_shape_id: String,
         skip_content_integrity: bool,
@@ -345,7 +345,7 @@ impl DclItemEntityDefinition {
     }
 
     #[func]
-    fn to_json_string(&self) -> GString {
+    pub fn to_json_string(&self) -> GString {
         GString::from(
             serde_json::to_string(&self.inner.item)
                 .unwrap_or_default()

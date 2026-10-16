@@ -48,7 +48,7 @@ func _test_profiles_apply_all_keys() -> void:
 			"profile %d: light budget applied" % i
 		)
 		_expect(
-			AvatarAnimHelpers.particles_enabled == (profile.particle_quality > 0),
+			DclAvatar.particles_enabled() == (profile.particle_quality > 0),
 			"profile %d: avatar particles gate matches particle_quality" % i
 		)
 		# Rust-side mapping (would have caught apply_particle_quality not being

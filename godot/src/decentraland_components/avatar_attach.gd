@@ -17,7 +17,7 @@ var attach_point: int = -1:
 		attach_point = value
 		_register_with_current_avatar()
 
-var _player_avatar_node: Avatar
+var _player_avatar_node: DclAvatar
 # Tracks the anchor id this instance is currently registered with on
 # _player_avatar_node, so the matching unregister fires even if attach_point
 # or user_id changes mid-flight. -1 when not registered.
