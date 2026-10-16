@@ -51,9 +51,14 @@ func _make_day_row_tappable() -> void:
 ## intercepted. Firing on press would bypass that protection entirely and pop the modal the
 ## instant a vertical scroll starts with a finger on the row — the same reason Button_Claim
 ## (a real Button, same container) never fires early either.
+## Also checks the release is still within the row's own bounds — Godot keeps routing touch
+## events to whichever control received the press (gui.touch_focus) regardless of where the
+## finger ends up, so a sub-deadzone drag that ends off the row would otherwise still open the
+## modal; a real Button bails in that same case instead of firing.
 func _on_streak_day_row_gui_input(event: InputEvent) -> void:
 	if event is InputEventScreenTouch and not event.pressed:
-		_on_day_row_tapped()
+		if Rect2(Vector2.ZERO, streak_day_row.size).has_point(event.position):
+			_on_day_row_tapped()
 
 
 ## Same entry point as Button_Claim (see its own doc comment) — both components open the modal;

@@ -294,6 +294,19 @@ func get_claimable_day() -> int:
 ## only matters for the WELCOME/DAY_PROGRESS distinction below; claimable/complete/reset are
 ## derived from persisted state alone.
 func compute_modal_state(pending_day: int) -> int:
+	if is_d3_claimed() and is_d7_claimed():
+		# Both already claimed — reuse D7_COMPLETE's "Complete!" copy instead of the
+		# day-progress reminder, which would misread the finished streak as still going. Checked
+		# before the reset below: once the streak is permanently done, gap_days since the last
+		# (final) credit is a stale signal, not an active loss.
+		return StreakModal.State.D7_COMPLETE
+	if is_pending_day_a_reset():
+		# A pending reset outranks a stale claimable day: losing the streak never lowers
+		# progress_day by itself (only a real credit_jump_in() commits the reset), so an
+		# unclaimed D3/D7 from before the gap would otherwise win below and show "claim your
+		# reward" instead of "your streak ended" — contradicting what a real jump-in right now
+		# would actually do. The claim is still one tap away right after.
+		return StreakModal.State.LOST
 	var claimable_days := get_claimable_days()
 	if not claimable_days.is_empty():
 		return (
@@ -301,12 +314,6 @@ func compute_modal_state(pending_day: int) -> int:
 			if claimable_days[-1] == FINAL_DAY
 			else StreakModal.State.D3_COMPLETE
 		)
-	if is_d3_claimed() and is_d7_claimed():
-		# Both already claimed — reuse D7_COMPLETE's "Complete!" copy instead of the
-		# day-progress reminder, which would misread the finished streak as still going.
-		return StreakModal.State.D7_COMPLETE
-	if is_pending_day_a_reset():
-		return StreakModal.State.LOST
 	if pending_day == 1:
 		return StreakModal.State.WELCOME
 	return StreakModal.State.DAY_PROGRESS
