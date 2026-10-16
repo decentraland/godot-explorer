@@ -25,10 +25,10 @@ const FADE_SPEED := 6.0
 # because a single query with areas would also hit the nodeless, pooled DCL
 # scene-sensor Area3Ds on CL_PLAYER (layer 3, mask value 4) that sat in front of
 # the third-person camera and hid every tag (#2321). See #2637.
-const CL_PHYSICS := 2
+const CL_PHYSICS := AvatarCollisionLayers.CL_PHYSICS
 # CL_PLAYER = layer 3 (mask value 4), per project.godot — avatar TriggerDetectors +
 # the local player's CharacterBody3D.
-const CL_PLAYER := 4
+const CL_PLAYER := AvatarCollisionLayers.CL_PLAYER
 const BODY_MASK := CL_PHYSICS | CL_PLAYER
 # Physics steps between occlusion raycasts per avatar (staggered) — not every step.
 const OCCLUSION_PERIOD := 6

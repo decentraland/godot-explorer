@@ -1,4 +1,3 @@
-# gdlint: disable=max-file-lines
 class_name Avatar
 extends DclAvatar
 
@@ -10,13 +9,8 @@ signal avatar_loaded
 enum LODState { FULL, MID, CROSSFADE, FAR }
 
 # Debug to store each avatar loaded in user://avatars
-const DEBUG_SAVE_AVATAR_DATA = false
 
-# Collision layers (mirrors decentraland.sdk.components.ColliderLayer)
-# CL_PLAYER (4) is set on every avatar; CL_MAIN_PLAYER (8) is added on top for the
-# local player so scenes can distinguish the main player from remote avatars.
-const CL_PLAYER = 4
-const CL_MAIN_PLAYER = 8
+const DEBUG_SAVE_AVATAR_DATA = false
 
 # Useful to filter wearable categories (and distinguish between top_head and head)
 const WEARABLE_NAME_PREFIX = "__"
@@ -132,6 +126,10 @@ var mask_material = preload("res://assets/avatar/mask_material.tres")
 # Signal-based wearable loader for threaded loading
 var wearable_loader: WearableLoader = null
 
+# The spawn hologram belongs to an avatar spawning into the world; a preview
+# (backpack, renderer) shows a profile that never spawned, so it turns this off.
+var spawn_reveal_enabled: bool = true
+
 # anchor_point_id -> AnchorState for currently-attached anchors only. Entries
 # are added lazily by register_anchor_use() and removed when the last
 # AvatarAttach using them is unregistered.
@@ -140,15 +138,20 @@ var _anchors: Dictionary[int, AnchorState] = {}
 # Session-level override (e.g. "Hide UI" setting). This should not persist into avatar state.
 var _force_hide_name: bool = false
 
-var _locomotion := AvatarLocomotionDriver.new()
-# Latched so we don't spam Close audio / Glider_End restart / hide-timer scheduling.
-var _glider_close_initiated: bool = false
-# Previous glide_state for _update_glider_prop's edge detection.
-var _prop_last_glide_state: int = 0
-# #b1/#b12: first call to _update_glider_prop should adopt whatever curr_state
-# came in on the wire (OPENING/GLIDING/CLOSING) without spamming audio, instead
-# of staying invisible because prev_state==0 doesn't match any branch.
-var _prop_sync_pending: bool = true
+# The locomotion animation state (AvatarLocomotion): the gait blend, the jump
+# chain, the glide and the stun. Its per-frame input is refilled and reused here,
+# so the movement reads happen once a frame and no dictionary is allocated.
+var _locomotion: AvatarLocomotion = null
+var _loco_state := {}
+# The spawn/teleport hologram (see AvatarSpawnReveal). _spawn_reveal_started and
+# _born_ms belong to the trigger gate, not the reveal: they decide whether one
+# should ever start for this avatar, and the helper owns the rest of the state.
+var _spawn_reveal: AvatarSpawnReveal = null
+var _spawn_reveal_started: bool = false
+var _born_ms: int = 0
+var _ik: AvatarIK = null
+# The glider prop (wings, clip sequence, audio) — see AvatarGliderProp.
+var _glider: AvatarGliderProp = null
 
 # Network emote that arrived while the avatar was still loading — Pulse replays
 # the peer's last emote announcement at join, and LiveKit emotes can race the
@@ -166,6 +169,7 @@ var _scene_emote_registry: Dictionary = {}
 var _mesh_assembler: AvatarMeshAssembler = null
 
 var _lod_state: int = LODState.FULL
+var _lod_distance := 0.0  # to the view camera, refreshed with the LOD state
 # 2D screen-space nameplate (non-XR) vs legacy viewport quad (XR). Runtime lives in
 # NameplateLayer; these cache the hide-flag/FAR gate and the depth-occlusion result.
 var _use_2d_nameplate: bool = false
@@ -246,10 +250,40 @@ var _anim_throttle_active: bool = false
 @onready var glider_prop: Node3D = %GliderProp
 @onready var audio_player_double_jump: AudioStreamPlayer3D = %AudioPlayer_DoubleJump
 
+# A load in progress hides spawn reveals — they belong to visible gameplay.
+# Static so an avatar spawning mid-load (the burst after a teleport) starts from
+# the truth instead of "not loading", and one connection covers every avatar.
+static var _world_is_loading: bool = false
+static var _loading_signals_connected: bool = false
+
+
+static func _on_loading_started() -> void:
+	_world_is_loading = true
+
+
+static func _on_loading_finished() -> void:
+	_world_is_loading = false
+
 
 func _ready():
 	_mesh_assembler = AvatarMeshAssembler.new(body_shape_skeleton_3d)
+	# #1554: hidden from birth — nothing renders until the profile resolves and
+	# the spawn hologram swaps the real avatar in.
+	body_shape_skeleton_3d.visible = false
+	_born_ms = Time.get_ticks_msec()
+	_ik = AvatarIK.new(self)
+	_glider = AvatarGliderProp.new(self)
+	_spawn_reveal = AvatarSpawnReveal.new(self)
 	_mesh_assembler.apply_toon_material_recursive(glider_prop)
+	# #1554: warm the hologram pipeline once per process — Godot renders a solid
+	# placeholder until the shader compiles, and warming it per avatar would spawn
+	# ghost bodies per avatar in a spawn burst.
+	_spawn_reveal.async_warm_shader()
+	# #1554: gate spawn reveals to visible gameplay (not behind loading screens).
+	if not _loading_signals_connected:
+		_loading_signals_connected = true
+		Global.loading_started.connect(_on_loading_started)
+		Global.loading_finished.connect(_on_loading_finished)
 	# Seed one tree evaluation so an avatar that spawns off-screen/FAR (tree
 	# immediately frozen) still gets a pose instead of staying in bind pose.
 	animation_tree.active = true
@@ -273,6 +307,10 @@ func _ready():
 
 	wearable_loader = WearableLoader.new()
 	emote_controller = AvatarEmoteController.new(self, animation_player, animation_tree)
+	# #2856: the emote controller duplicated tree_root above, so the state nodes
+	# are per-avatar copies (they are resource_local_to_scene anyway);
+	# AvatarLocomotion resolves the ones it drives from the tree.
+	_locomotion = AvatarLocomotion.new(animation_tree)
 	body_shape_skeleton_3d.skeleton_updated.connect(self._recompute_nametag_posed_top)
 	_recompute_nametag_clearance()
 	_recompute_nametag_posed_top()
@@ -362,7 +400,9 @@ func setup_trigger_detection(p_entity_id: int) -> void:
 	# The local (main) player also lives on the CL_MAIN_PLAYER layer so scenes can
 	# tell it apart from remote avatars. Remote avatars stay on CL_PLAYER only.
 	if is_local_player:
-		trigger_detector.collision_layer = CL_PLAYER | CL_MAIN_PLAYER
+		trigger_detector.collision_layer = (
+			AvatarCollisionLayers.CL_PLAYER | AvatarCollisionLayers.CL_MAIN_PLAYER
+		)
 
 	# Enable the collision shape
 	trigger_detector.get_node("CollisionShape3D").disabled = false
@@ -493,6 +533,9 @@ func _unset_avatar_modifier_area():
 
 func async_update_avatar_from_profile(profile: DclUserProfile):
 	_profile_ready = true
+	# The reveal waits for the body and for the ground too, so the give-up clock
+	# restarts here: a slow profile must not spend the budget before it can start.
+	_born_ms = Time.get_ticks_msec()
 	var avatar = profile.get_avatar()
 	var new_avatar_name: String = profile.get_name()
 	if not profile.has_claimed_name():
@@ -822,7 +865,14 @@ func update_colors(eyes_color: Color, skin_color: Color, hair_color: Color) -> v
 
 	if finish_loading:
 		apply_color_and_facial()
-		if _impostor_layer >= 0 and not _impostor_layer_is_overflow and Global.avatars != null:
+		# Never capture mid spawn-reveal (#1554): the bake would stick the
+		# ghost as the billboard texture.
+		if (
+			_impostor_layer >= 0
+			and not _impostor_layer_is_overflow
+			and Global.avatars != null
+			and _spawn_reveal.is_idle()
+		):
 			Global.avatars.invalidate_impostor_texture(get_instance_id(), _get_impostor_cache_key())
 			ImpostorCapturer.request_capture(self)
 
@@ -962,7 +1012,7 @@ func async_load_wearables():
 	for category in wearables_by_category:
 		# Safety check: avatar may have been freed during async operations
 		if not is_instance_valid(wearable_loader) or not is_inside_tree():
-			body_shape_skeleton_3d.visible = true
+			body_shape_skeleton_3d.visible = _spawn_reveal.is_idle()
 			return
 
 		var wearable = wearables_by_category[category]
@@ -1075,7 +1125,9 @@ func async_load_wearables():
 		for i in range(body_shape_skeleton_3d.get_bone_count()):
 			body_shape_skeleton_3d.reset_bone_pose(i)
 
-	body_shape_skeleton_3d.visible = true
+	# #1554: during a spawn reveal the reveal owns the skeleton switch — the
+	# real avatar stays hidden until the hologram's swap releases it.
+	body_shape_skeleton_3d.visible = _spawn_reveal.is_idle()
 	_mesh_assembler.end_build()
 	_recompute_nametag_clearance()
 	finish_loading = true
@@ -1085,7 +1137,12 @@ func async_load_wearables():
 
 	# Refresh LOD-related state since meshes were re-created.
 	_mesh_lod_visibility_captured = false
-	if _impostor_layer >= 0 and not _impostor_layer_is_overflow and Global.avatars != null:
+	if (
+		_impostor_layer >= 0
+		and not _impostor_layer_is_overflow
+		and Global.avatars != null
+		and _spawn_reveal.is_idle()
+	):
 		Global.avatars.invalidate_impostor_texture(get_instance_id(), _get_impostor_cache_key())
 		ImpostorCapturer.request_capture(self)
 
@@ -1231,6 +1288,7 @@ func _update_lod() -> void:
 		return
 
 	var dist: float = camera.global_position.distance_to(global_position)
+	_lod_distance = dist
 
 	var new_state: int = _lod_state
 	var dither_alpha: float = 1.0
@@ -1337,6 +1395,10 @@ func _release_impostor() -> void:
 
 
 func _on_lod_state_changed(new_state: int, _prev_state: int) -> void:
+	# A spawn reveal owns mesh visibility while it runs; leaving FULL LOD hands
+	# rendering to the impostor — abort the reveal cleanly.
+	if not _spawn_reveal.is_idle() and new_state != LODState.FULL:
+		_spawn_reveal.end()
 	# At FAR the avatar is an impostor and its AnimationTree stops advancing, so a
 	# running emote would never reach its natural end and the scene would wait
 	# forever for a terminal EmoteState. Report it as interrupted now.
@@ -1392,6 +1454,9 @@ func _tick_animation_throttle(delta: float) -> void:
 
 
 func _process(delta):
+	# #1554: the spawn reveal driver must run even when the LOD/animation
+	# paths below bail early (a frozen reveal = permanently hidden avatar).
+	_spawn_reveal.tick(delta)
 	# TODO: maybe a gdext crate bug? when process implement the INode3D, super(delta) doesn't work :/
 	self.process(delta)
 
@@ -1416,128 +1481,85 @@ func _process(delta):
 	# off-screen freeze (that re-activation is what left frozen avatars stuck).
 	AvatarAnimHelpers.ensure_anim_active(self)
 
-	var anim_bits: int = get_anim_bits()
-	_locomotion.tick(self, anim_bits, delta)
-	_update_glider_prop(anim_bits)
+	# `is_grounded` guard suppresses the all-false condition window at the
+	# jump apex (rise/fall ±0.3 deadband) so Idle doesn't leak in mid-air.
+	var self_idle = (
+		self.is_grounded && !self.jog && !self.walk && !self.run && !self.rise && !self.fall
+	)
+	emote_controller.process(self_idle)
 
+	# Masked (upper-body) emotes keep playing while moving, so idle can't gate
+	# them — otherwise Pulse would broadcast EmoteStop for a walking emote.
+	var is_emoting = (
+		emote_controller.is_playing() and (self_idle or emote_controller.playing_masked)
+	)
+	if is_local_player:
+		Global.comms.set_emoting(is_emoting)
 
-# Toggles GliderProp visibility based on glide_state transitions. The prop is
-# a persistent child (rotated 180° Y to compensate the Unity→Godot axis flip)
-# so audio and AnimationPlayer stay warm across glide cycles.
-func _update_glider_prop(anim_bits: int) -> void:
-	var curr_state: int = AvatarLocomotionDriver.glide_state_of(anim_bits)
-	if is_avatar_shape:
-		if glider_prop.visible:
-			glider_prop.visible = false
-		_prop_last_glide_state = curr_state
-		_prop_sync_pending = false
-		return
+	# #2856: one read per movement flag per frame: these live in Rust (Avatar
+	# extends DclAvatar) and a read crosses the extension boundary at ~0.9 us.
+	# AvatarLocomotion turns them into the AnimationTree conditions the state
+	# machine in avatar.tscn reads, and reports back what the IK gates need.
+	_loco_state["run"] = self.run
+	_loco_state["jog"] = self.jog
+	_loco_state["walk"] = self.walk
+	_loco_state["rise"] = self.rise
+	_loco_state["fall"] = self.fall
+	_loco_state["land"] = self.land
+	_loco_state["grounded"] = self.is_grounded
+	_loco_state["fall_fast"] = self.fall_fast
+	_loco_state["long_fall"] = self.long_fall
+	_loco_state["jump_count"] = self.jump_count
+	_loco_state["stunned"] = self.stunned
+	_loco_state["glide_state"] = self.glide_state
+	_loco_state["movement_speed"] = self.movement_speed
+	_loco_state["position_y"] = global_position.y
+	_loco_state["local"] = is_local_player
+	_loco_state["emote_single"] = emote_controller.playing_single
+	_loco_state["emote_mixed"] = emote_controller.playing_mixed
+	var loco := _locomotion.apply(delta, _loco_state)
+	var grounded_now: bool = loco["grounded"]
+	var stunned_now: bool = loco["stunned"]
+	var movement_speed_now: float = loco["movement_speed"]
+	if bool(loco["jump_rising_edge"]):
+		audio_player_double_jump.play()
 
-	# No branch below acts on an unchanged state other than GLIDING or a visible CLOSED.
+	_glider.update()
+
+	# Feet, hands and head IK — see AvatarIK. Visual only: bone modifiers. The
+	# rig is free when nothing else owns the pose.
+	var rig_free: bool = (
+		_lod_state == LODState.FULL
+		and _spawn_reveal.is_idle()
+		and not _world_is_loading
+		and not emote_controller.is_playing()
+	)
+	_ik.update(delta, rig_free, grounded_now, stunned_now, movement_speed_now)
+
+	# #1554: avatars ghost in on first appearance — covers local spawn AND
+	# teleports as well as remotes appearing. The ghost body is
+	# self-sufficient (bundled GLB, no wearable wait). FULL LOD only: a FAR
+	# avatar is an impostor billboard, the effect is invisible. Not during the
+	# loading screen — the reveal must play when someone can see it.
 	if (
-		not _prop_sync_pending
-		and curr_state == _prop_last_glide_state
-		and curr_state != 2
-		and (curr_state != 0 or not glider_prop.visible)
+		not _spawn_reveal_started
+		and spawn_reveal_enabled
+		and body_shape_skeleton_3d != null
+		and _profile_ready
+		and not avatar_name.is_empty()  # name/color fully resolved
+		and _lod_state == LODState.FULL
+		and self.is_grounded
+		and not _world_is_loading
 	):
-		return
-
-	# #b1/#b12: first tick — adopt whatever state came in without firing open/close
-	# SFX, so a remote seen mid-glide actually shows wings and the idle loop.
-	if _prop_sync_pending:
-		_prop_sync_pending = false
-		_prop_last_glide_state = curr_state
-		if curr_state == 1 or curr_state == 2:
-			glider_prop.visible = true
-			_glider_close_initiated = false
-			# Jump straight to Glider_Idle; no Start/Open sfx for state we joined into.
-			_play_glider_clip_if_different("Glider_Idle")
-			if curr_state == 1:
-				_play_glider_audio("AudioPlayer_Idle")
-			else:
-				_play_glider_audio("AudioPlayer_Idle")
-		elif curr_state == 3:
-			# Joined during CLOSING: show prop, let the existing CLOSING→CLOSED
-			# transition scheduled by the next tick hide it naturally.
-			glider_prop.visible = true
-			_glider_close_initiated = true
-		return
-
-	var prev_state: int = _prop_last_glide_state
-	_prop_last_glide_state = curr_state
-
-	if prev_state == 0 and curr_state == 1:
-		glider_prop.visible = true
-		_glider_close_initiated = false
-		_play_glider_audio("AudioPlayer_Open")
-		_play_glider_audio("AudioPlayer_Idle")
-		_play_glider_clip("Glider_Start")
-	elif (prev_state == 1 or prev_state == 2) and curr_state == 3:
-		# Start close immediately on CLOSING edge — don't wait for the FSM to
-		# reach CLOSED (0.15s later) or the user sees wings-open mid-close.
-		_glider_close_initiated = true
-		_stop_glider_audio("AudioPlayer_Idle")
-		_play_glider_audio("AudioPlayer_Close")
-		_play_glider_clip("Glider_End")
-	elif prev_state == 3 and curr_state == 0 and glider_prop.visible:
-		_schedule_glider_hide()
-	elif curr_state == 0 and glider_prop.visible and not _glider_close_initiated:
-		# Fallback: state jumped directly to CLOSED without passing CLOSING.
-		_glider_close_initiated = true
-		_stop_glider_audio("AudioPlayer_Idle")
-		_play_glider_audio("AudioPlayer_Close")
-		_play_glider_clip("Glider_End")
-		_schedule_glider_hide()
-
-	if curr_state == 2 and glider_prop.visible:
-		var glider_moving: bool = (anim_bits & AvatarLocomotionDriver.MOVING) != 0
-		var glider_clip: String = "Glider_Forward" if glider_moving else "Glider_Idle"
-		_play_glider_clip_if_different(glider_clip, 0.25)
-
-
-func _schedule_glider_hide() -> void:
-	var tree := get_tree()
-	if tree != null:
-		var timer := tree.create_timer(0.25)
-		timer.timeout.connect(_hide_glider_prop)
-	else:
-		_hide_glider_prop()
-
-
-func _hide_glider_prop() -> void:
-	# Skip the hide if the user re-opened glide during the fade-out window.
-	if self.glide_state == 0:
-		glider_prop.visible = false
-
-
-## The three glider players keep `max_distance = 50` for the same reason as
-## `avatar_sfxs.gd`: a cheap per-avatar cutoff, traded against Unity-exact
-## rolloff. See the comment there.
-func _play_glider_audio(node_name: String) -> void:
-	var player := glider_prop.get_node_or_null(node_name) as AudioStreamPlayer3D
-	if player != null:
-		player.play()
-
-
-func _stop_glider_audio(node_name: String) -> void:
-	var player := glider_prop.get_node_or_null(node_name) as AudioStreamPlayer3D
-	if player != null:
-		player.stop()
-
-
-func _play_glider_clip(clip: String) -> void:
-	var ap := glider_prop.get_node_or_null("AnimationPlayer") as AnimationPlayer
-	if ap == null or not ap.has_animation(clip):
-		return
-	ap.play(clip)
-
-
-func _play_glider_clip_if_different(clip: String, blend_time: float = -1.0) -> void:
-	var ap := glider_prop.get_node_or_null("AnimationPlayer") as AnimationPlayer
-	if ap == null or not ap.has_animation(clip):
-		return
-	if ap.current_animation != clip:
-		ap.play(clip, blend_time)
+		_spawn_reveal_started = true
+		_spawn_reveal.start()
+	elif (
+		not _spawn_reveal_started
+		and Time.get_ticks_msec() - _born_ms > AvatarSpawnReveal.GIVE_UP_MS
+	):
+		# Profile never resolved (scene NPCs, fetch failures) — never stay hidden.
+		_spawn_reveal_started = true
+		body_shape_skeleton_3d.visible = true
 
 
 func spawn_voice_channel(sample_rate, _num_channels, _samples_per_channel):
