@@ -59,7 +59,7 @@ pub struct SceneInspectorDispatcher {
 #[godot_api]
 impl SceneInspectorDispatcher {
     #[signal]
-    fn scene_inspector_batch(entries_json: GString);
+    pub fn scene_inspector_batch(entries_json: GString);
 
     /// Enable or disable JSONL file logging. Creates StorageManager on demand.
     #[func]
@@ -104,51 +104,51 @@ impl SceneInspectorDispatcher {
 
     /// Returns the unique session ID for this logging session.
     #[func]
-    fn get_session_id(&self) -> GString {
+    pub fn get_session_id(&self) -> GString {
         GString::from(&self.session_id)
     }
 
     /// Track paused state for status reporting. Scene processing is paused from GDScript
     /// via `SceneManager.set_scene_is_paused`; this field is informational only.
     #[func]
-    fn set_paused(&mut self, paused: bool) {
+    pub fn set_paused(&mut self, paused: bool) {
         self.paused = paused;
     }
 
     /// Returns whether scene processing is currently paused.
     #[func]
-    fn is_paused(&self) -> bool {
+    pub fn is_paused(&self) -> bool {
         self.paused
     }
 
     /// Returns the total number of entries processed since session start.
     #[func]
-    fn get_entry_count(&self) -> i64 {
+    pub fn get_entry_count(&self) -> i64 {
         self.entry_count as i64
     }
 
     /// Change the performance snapshot interval (in seconds). Clamped to [0.5, 60.0].
     #[func]
-    fn set_perf_interval(&mut self, seconds: f64) {
+    pub fn set_perf_interval(&mut self, seconds: f64) {
         self.perf_interval = seconds.clamp(0.5, 60.0);
     }
 
     /// Returns the current performance snapshot interval.
     #[func]
-    fn get_perf_interval(&self) -> f64 {
+    pub fn get_perf_interval(&self) -> f64 {
         self.perf_interval
     }
 
     /// Returns whether file logging is currently enabled.
     #[func]
-    fn is_file_logging(&self) -> bool {
+    pub fn is_file_logging(&self) -> bool {
         self.storage.is_some()
     }
 
     /// Toggle per-tick lifecycle events (`OnUpdate` / `OnUpdateEnd`).
     /// Default is `true`; disable when CRDT/ops are the only signal of interest.
     #[func]
-    fn set_lifecycle_verbose(&mut self, enabled: bool) {
+    pub fn set_lifecycle_verbose(&mut self, enabled: bool) {
         set_lifecycle_verbose(enabled);
     }
 
@@ -163,7 +163,7 @@ impl SceneInspectorDispatcher {
     /// raw bytes are needed (proto diffing, unknown components, etc.). When off,
     /// hex is still attached as a fallback if JSON deserialization fails.
     #[func]
-    fn set_include_bin_payload(&mut self, enabled: bool) {
+    pub fn set_include_bin_payload(&mut self, enabled: bool) {
         set_include_bin_payload(enabled);
     }
 
@@ -177,7 +177,7 @@ impl SceneInspectorDispatcher {
     /// On disconnect, opt-in streams are reset off so nothing keeps capturing
     /// once the consumer is gone.
     #[func]
-    fn set_consumer_connected(&mut self, connected: bool) {
+    pub fn set_consumer_connected(&mut self, connected: bool) {
         set_consumer_connected(connected);
         if !connected {
             set_stream_logs(false);
@@ -196,7 +196,7 @@ impl SceneInspectorDispatcher {
     /// the stream as `"log"` entries. Off by default; the `subscribe` command
     /// turns it on. High-volume — opt-in only.
     #[func]
-    fn set_stream_logs(&mut self, enabled: bool) {
+    pub fn set_stream_logs(&mut self, enabled: bool) {
         set_stream_logs(enabled);
         if enabled {
             // Register the Godot logger sink (and, on iOS, the native fd capture)
@@ -216,7 +216,7 @@ impl SceneInspectorDispatcher {
     /// (bounded) and flushed on subscribe. Never armed in production — there,
     /// producers do nothing without a connection (no buffering "just in case").
     #[func]
-    fn set_early_log_capture(&mut self, enabled: bool) {
+    pub fn set_early_log_capture(&mut self, enabled: bool) {
         set_early_log_capture(enabled);
         if enabled {
             crate::tools::log_stream::install_capture();
@@ -232,7 +232,7 @@ impl SceneInspectorDispatcher {
     /// network inspector's enable flag, since producers only emit events while it
     /// is active.
     #[func]
-    fn set_stream_network(&mut self, enabled: bool) {
+    pub fn set_stream_network(&mut self, enabled: bool) {
         set_stream_network(enabled);
         crate::tools::network_inspector::NETWORK_INSPECTOR_ENABLE
             .store(enabled, std::sync::atomic::Ordering::Relaxed);
@@ -247,7 +247,7 @@ impl SceneInspectorDispatcher {
     /// Includes all LWW and GOS entries so a newly connected inspector can
     /// reconstruct the full entity tree.
     #[func]
-    fn get_crdt_snapshot_json(&self) -> GString {
+    pub fn get_crdt_snapshot_json(&self) -> GString {
         let mut entries: Vec<&str> = Vec::with_capacity(
             self.crdt_lww_snapshot.len()
                 + self
@@ -274,7 +274,7 @@ impl SceneInspectorDispatcher {
     /// Emit a session_start entry into the channel (sent over WS on next batch).
     /// Resolves device name lazily since mobile plugins may not be ready at init time.
     #[func]
-    fn emit_session_start(&mut self) {
+    pub fn emit_session_start(&mut self) {
         // Resolve device name lazily if not yet set
         if self.device_name.is_none() {
             self.device_name = Self::detect_device_name();
