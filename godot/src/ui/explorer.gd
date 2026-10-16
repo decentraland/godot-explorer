@@ -269,7 +269,7 @@ func _ready():
 		Global.scene_inspector_dispatcher.set_file_logging(true)
 
 	# Clear deep link after initial setup to prevent re-teleporting on first app resume
-	Global.deep_link_router._clear_deep_link()
+	Global.deep_link_router.consume_navigation_target()
 
 	virtual_joystick.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	virtual_joystick_orig_position = virtual_joystick.get_position()
