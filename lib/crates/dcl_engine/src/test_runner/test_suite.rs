@@ -1,13 +1,14 @@
 use std::time::{Duration, Instant};
 
+use crate::engine::local_task::defer;
 use godot::prelude::*;
-use tracing::error;
 
 use crate::framework::{RustTestCase, TestContext};
 
-#[derive(Debug, Default, GodotClass)]
-#[class(base=Node)]
-struct TestRunnerSuite {
+#[derive(GodotClass)]
+#[class(init, base=Node)]
+pub struct TestRunnerSuite {
+    base: Base<Node>,
     total: i64,
     passed: i64,
     skipped: i64,
@@ -15,16 +16,25 @@ struct TestRunnerSuite {
 }
 
 #[godot_api]
+impl INode for TestRunnerSuite {
+    fn ready(&mut self) {
+        let mut this = self.to_gd();
+        defer(move || this.bind_mut().start());
+    }
+}
+
 impl TestRunnerSuite {
-    #[allow(clippy::uninlined_format_args)]
-    #[func]
-    fn run_all_tests(
-        &mut self,
-        gdscript_tests: VarArray,
-        gdscript_file_count: i64,
-        allow_focus: bool,
-        scene_tree: Gd<Node>,
-    ) -> bool {
+    /// Runs every `#[itest]` and quits with its verdict as the exit code.
+    fn start(&mut self) {
+        let success = self.run_all_tests(true, self.to_gd().upcast());
+        let exit_code = if success { 0 } else { 1 };
+        println!("test-exiting with code {exit_code}");
+        if let Some(mut tree) = self.base().get_tree_or_null() {
+            tree.quit_ex().exit_code(exit_code).done();
+        }
+    }
+
+    fn run_all_tests(&mut self, allow_focus: bool, scene_tree: Gd<Node>) -> bool {
         println!("{}Run{} Godot integration tests...", FMT_CYAN_BOLD, FMT_END);
 
         let (rust_tests, rust_file_count, focus_run) = crate::framework::collect_rust_tests();
@@ -37,25 +47,10 @@ impl TestRunnerSuite {
             rust_tests.len(),
             rust_file_count
         );
-        if !focus_run {
-            println!(
-                "  GDScript: found {} tests in {} files.",
-                gdscript_tests.len(),
-                gdscript_file_count
-            );
-        }
 
         let clock = Instant::now();
         self.run_rust_tests(rust_tests, scene_tree);
-        let rust_time = clock.elapsed();
-        let gdscript_time = if !focus_run {
-            let extra_duration = self.run_gdscript_tests(gdscript_tests);
-            Some((clock.elapsed() - rust_time) + extra_duration)
-        } else {
-            None
-        };
-
-        self.conclude(rust_time, gdscript_time, allow_focus)
+        self.conclude(clock.elapsed(), allow_focus)
     }
 
     fn run_rust_tests(&mut self, tests: Vec<RustTestCase>, scene_tree: Gd<Node>) {
@@ -71,78 +66,27 @@ impl TestRunnerSuite {
         }
     }
 
-    fn run_gdscript_tests(&mut self, tests: VarArray) -> Duration {
-        let mut last_file = None;
-        let mut extra_duration = Duration::new(0, 0);
-
-        for test in tests.iter_shared() {
-            let test_file = get_property(&test, "suite_name");
-            let test_case = get_property(&test, "method_name");
-
-            print_test_pre(&test_case, test_file, &mut last_file, true);
-            let result = test.call("run", &[]);
-            // In case a test needs to disable error messages to ensure it runs properly.
-            godot::classes::Engine::singleton().set_print_error_messages(true);
-
-            if let Some(duration) = get_execution_time(&test) {
-                extra_duration += duration;
-            }
-            let success = result.try_to::<bool>().unwrap_or_else(|_| {
-                panic!("GDScript test case {test} returned non-bool: {result}")
-            });
-            for err in get_errors(&test).iter_shared() {
-                error!("{err}");
-            }
-            let outcome = TestOutcome::from_bool(success);
-
-            self.update_stats(&outcome);
-            print_test_post(&test_case, outcome);
-        }
-        extra_duration
-    }
-
-    fn conclude(
-        &self,
-        rust_time: Duration,
-        gdscript_time: Option<Duration>,
-        allow_focus: bool,
-    ) -> bool {
-        let Self {
-            total,
-            passed,
-            skipped,
-            ..
-        } = *self;
+    fn conclude(&self, time: Duration, allow_focus: bool) -> bool {
+        let (total, passed, skipped, focus_run) =
+            (self.total, self.passed, self.skipped, self.focus_run);
 
         // Consider 0 tests run as a failure too, because it's probably a problem with the run itself.
         let failed = total - passed - skipped;
         let all_passed = failed == 0 && total != 0;
-
         let outcome = TestOutcome::from_bool(all_passed);
-
-        let rust_time = rust_time.as_secs_f32();
-        let gdscript_time = gdscript_time.map(|t| t.as_secs_f32());
-        let focused_run = gdscript_time.is_none();
 
         let extra = if skipped > 0 {
             format!(", {skipped} skipped")
-        } else if focused_run {
+        } else if focus_run {
             " (focused run)".to_string()
         } else {
             "".to_string()
         };
 
         println!("\nTest result: {outcome}. {passed} passed; {failed} failed{extra}.");
-        if let Some(gdscript_time) = gdscript_time {
-            let total_time = rust_time + gdscript_time;
-            println!(
-                "  Time: {total_time:.2}s.  (Rust {rust_time:.2}s, GDScript {gdscript_time:.2}s)"
-            );
-        } else {
-            println!("  Time: {rust_time:.2}s.");
-        }
+        println!("  Time: {:.2}s.", time.as_secs_f32());
 
-        if focused_run && !allow_focus {
+        if focus_run && !allow_focus {
             println!("  {FMT_YELLOW}Focus run disallowed; return failure.{FMT_END}");
             false
         } else {
@@ -156,18 +100,6 @@ impl TestRunnerSuite {
             TestOutcome::Passed => self.passed += 1,
             TestOutcome::Failed => {}
             TestOutcome::Skipped => self.skipped += 1,
-        }
-    }
-}
-
-#[godot_api]
-impl INode for TestRunnerSuite {
-    fn init(_base: Base<Node>) -> Self {
-        TestRunnerSuite {
-            total: 0,
-            passed: 0,
-            skipped: 0,
-            focus_run: false,
         }
     }
 }
@@ -232,24 +164,6 @@ fn print_test_post(test_case: &str, outcome: TestOutcome) {
     } else {
         println!("{outcome}");
     }
-}
-
-fn get_property(test: &Variant, property: &str) -> String {
-    test.call("get", &[property.to_variant()]).to::<String>()
-}
-
-fn get_execution_time(test: &Variant) -> Option<Duration> {
-    let seconds = test
-        .call("get", &["execution_time_seconds".to_variant()])
-        .try_to::<f64>()
-        .ok()?;
-    Some(Duration::from_secs_f64(seconds))
-}
-
-fn get_errors(test: &Variant) -> Array<GString> {
-    test.call("get", &["errors".to_variant()])
-        .try_to::<Array<GString>>()
-        .unwrap_or_default()
 }
 
 enum TestOutcome {

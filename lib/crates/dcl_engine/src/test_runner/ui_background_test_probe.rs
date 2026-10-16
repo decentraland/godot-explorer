@@ -144,7 +144,7 @@ impl DclUiBackgroundTestProbe {
     /// Those UVs are non-axis-aligned, so `has_custom_uvs` is true and the shader path is
     /// taken; the 1.5 is what has to tile.
     #[func]
-    fn build_repeat_background(&mut self, size: Vector2) {
+    pub fn build_repeat_background(&mut self, size: Vector2) {
         let image = build_atlas_image();
         let texture: Gd<Texture2D> = ImageTexture::create_from_image(&image)
             .expect("failed to create the atlas texture")
