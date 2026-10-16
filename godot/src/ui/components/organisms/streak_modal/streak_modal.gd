@@ -289,6 +289,7 @@ func _show_claim_button(text_key: String) -> void:
 		_claiming_reward = false
 		if ok:
 			pedestal.texture = texture_pedestal_claimed
+			label_tap_to_continue.show()
 		else:
 			_set_claim_failed_visible(true)
 		return ok
