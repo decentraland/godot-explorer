@@ -73,33 +73,6 @@ impl INode for Explorer {
     }
 }
 
-/// What the remaining GDScript tools (debug hub, scene tests, benchmark) read of the world; it
-/// goes with them.
-#[godot_api]
-impl Explorer {
-    #[func]
-    fn get_player(&self) -> Option<Gd<Player>> {
-        state::player()
-    }
-
-    #[func]
-    fn get_ui_root(&self) -> Option<Gd<Control>> {
-        state::current().map(|w| w.ui_root.clone())
-    }
-
-    #[func]
-    fn get_parcel_position(&self) -> Vector2i {
-        state::parcel_position()
-    }
-
-    #[func]
-    fn set_visible_ui(&self, visible: bool) {
-        if let Some(world) = state::current() {
-            world.ui_root.clone().set_visible(visible);
-        }
-    }
-}
-
 fn node<T: GodotClass + Inherits<Node>>(explorer: &Gd<Explorer>, path: &str) -> Option<Gd<T>> {
     explorer.try_get_node_as::<T>(path)
 }
@@ -125,7 +98,7 @@ fn build_world(explorer: &Gd<Explorer>) -> Option<std::rc::Rc<World>> {
         Some(joystick.clone()),
         Some(crosshair.clone().upcast::<Control>()),
         Some(player.clone()),
-        Some(tooltip.clone().upcast::<Control>()),
+        Some(tooltip.clone()),
     );
 
     Some(state::install(World {

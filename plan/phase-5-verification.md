@@ -43,8 +43,7 @@ Known engine bugs and leftovers
   singletons (`dcl_ios_plugin.rs`, `emote_wheel.rs`, `joypad.rs`, `hud_button.rs`, `raycast.rs` meta,
   `text_shape/node.rs`, `thread_safety.rs`). `comms/voice_chat.rs` and `communication_manager.rs` still hold `Gd<…>`.
 - Four autoloads remain (`Global`, `GlobalBoot`, `EmptyParcelProps`, `EngineHost`), all native scenes.
-- `Explorer` still exposes four legacy `#[func]`s (`get_player`, `get_ui_root`, `get_parcel_position`,
-  `set_visible_ui`) with no GDScript caller.
+- (done) the four legacy `Explorer` `#[func]`s were removed; the touch-controls tooltip and emote props are typed calls.
 - `dcl_resource_tracker.rs` is dead now that the addon is gone.
 - 5.10 not finished: `dcl-godot-android`, `dcl_build_plugin`, `godot/android`, `emote_converter` and the Swift
   plugin are kept on purpose (decision 1); removal needs the user's call.

@@ -8,6 +8,7 @@ use godot::prelude::*;
 
 use super::host;
 use super::joystick::VirtualJoystick;
+use super::pointer_tooltip::PointerTooltip;
 use crate::content::texture::TextureEntry;
 use crate::engine::local_task::await_promise;
 use crate::fetcher::globals;
@@ -102,7 +103,7 @@ pub struct SdkTouchControlsApplier {
     joystick: Option<Gd<VirtualJoystick>>,
     crosshair: Option<Gd<Control>>,
     player: Option<Gd<Player>>,
-    pointer_tooltip: Option<Gd<Control>>,
+    pointer_tooltip: Option<Gd<PointerTooltip>>,
     hide_joystick_applied: bool,
     hide_crosshair_applied: bool,
 }
@@ -114,7 +115,7 @@ impl SdkTouchControlsApplier {
         joystick: Option<Gd<VirtualJoystick>>,
         crosshair: Option<Gd<Control>>,
         player: Option<Gd<Player>>,
-        pointer_tooltip: Option<Gd<Control>>,
+        pointer_tooltip: Option<Gd<PointerTooltip>>,
     ) -> Gd<Self> {
         Gd::from_init_fn(|base| Self {
             base,
@@ -216,7 +217,7 @@ impl SdkTouchControlsApplier {
         crosshair.set_modulate(modulate);
         // The tooltip follows the crosshair, or it would sit at the screen center.
         if let Some(tooltip) = self.pointer_tooltip.as_mut() {
-            tooltip.call("set_global_cursor_position", &[anchor.to_variant()]);
+            tooltip.bind_mut().set_global_cursor_position(anchor);
         }
         runner.bind_mut().set_crosshair_screen_point(anchor);
     }

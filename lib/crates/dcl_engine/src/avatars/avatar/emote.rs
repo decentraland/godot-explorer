@@ -693,8 +693,11 @@ impl DclAvatar {
     pub(crate) fn hide_all_props(&mut self) {
         let names = self.emote.prop_armature_names.clone();
         for name in names {
-            if let Some(mut prop) = self.base().get_node_or_null(name.as_str()) {
-                prop.call("hide", &[]);
+            if let Some(mut prop) = self
+                .base()
+                .try_get_node_as::<godot::classes::Node3D>(name.as_str())
+            {
+                prop.hide();
             }
         }
         // Props added before tracking.
