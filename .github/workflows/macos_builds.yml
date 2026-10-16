@@ -37,7 +37,7 @@ jobs:
 
       - name: Test
         working-directory: lib
-        run: cargo test --release -- --skip auth::decentraland_auth_server::test:: --skip auth::remote_wallet::test::
+        run: 'cargo test --release -- --skip auth::decentraland_auth_server::test:: --skip auth::remote_wallet::test::'
         env:
           PROTOC: ${{ github.workspace }}/.bin/protoc/bin/protoc
 
