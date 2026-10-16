@@ -36,6 +36,11 @@ service!(cli, cli, DclCli);
 service!(player_identity, player_identity, DclPlayerIdentity);
 service!(http_requester, http_requester, RustHttpQueueRequester);
 
+/// The sky's clock, once it exists.
+pub fn skybox_time() -> Option<Gd<crate::sky::skybox_time::SkyboxTime>> {
+    DclGlobal::singleton().bind().skybox_time.clone()
+}
+
 /// The explorer scene, when it is the current one.
 pub fn explorer() -> Option<Gd<Node>> {
     DclGlobal::singleton()

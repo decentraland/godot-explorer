@@ -98,7 +98,6 @@ const GUEST_DEVICE_STORAGE_FILES: Array[String] = [
 var raycast_debugger: RaycastDebugger
 
 var scene_fetcher: SceneFetcher
-var skybox_time: SkyboxTime = null
 
 var snapshot: Snapshot
 var music_player: MusicPlayer

@@ -12,6 +12,7 @@ use crate::app::{
 use crate::fetcher::scene_fetcher::SceneFetcher;
 use crate::godot_classes::dcl_cli::DclCli;
 use crate::godot_classes::dcl_session_store::DclSessionStore;
+use crate::sky::skybox_time::SkyboxTime;
 
 /// Where a created node goes.
 #[derive(Clone, Copy)]
@@ -147,9 +148,9 @@ fn create(global: &mut Gd<Node>, specs: &[ServiceSpec]) -> bool {
 }
 
 /// Services of a full boot, created after the config exists. Each is held by its `Global` property.
-const APP_SERVICES: [ServiceSpec; 1] = [spec(
+const APP_SERVICES: [ServiceSpec; 1] = [native(
     "skybox_time",
-    "assets/environment/time.gd",
+    || SkyboxTime::new_alloc().to_variant(),
     Some("skybox_time"),
     Attach::None,
 )];

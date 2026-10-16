@@ -41,6 +41,7 @@ pub mod player;
 pub mod profile;
 pub mod realm;
 pub mod scene_runner;
+pub mod sky;
 pub mod test_runner;
 pub mod text_shape;
 pub mod tools;

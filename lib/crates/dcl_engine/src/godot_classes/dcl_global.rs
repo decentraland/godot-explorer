@@ -207,6 +207,9 @@ pub struct DclGlobal {
     // SDK-controlled skybox time - set by scenes via PBSkyboxTime component on ROOT entity
     #[var(pub)]
     pub sdk_skybox_time_active: bool,
+    /// The sky's clock, created at boot.
+    #[var(pub)]
+    pub skybox_time: Option<Gd<crate::sky::skybox_time::SkyboxTime>>,
     #[var(pub)]
     pub sdk_skybox_fixed_time: u32,
     #[var(pub)]
@@ -405,6 +408,7 @@ impl INode for DclGlobal {
 
             // SDK skybox time starts as inactive
             sdk_skybox_time_active: false,
+            skybox_time: None,
             sdk_skybox_fixed_time: 0,
             sdk_skybox_transition_forward: true,
         }
