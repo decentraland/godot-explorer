@@ -126,11 +126,9 @@ without a written safety comment. Porting on the old API would mean porting twic
   port it to xtask.
 - [x] **5.11 Lint and docs**. Delete `.gdlintrc`; add the no-`.gd` CI step; remove the GDScript
   sections from `CLAUDE.md` and `REVIEW.md` (naming, formatting, file-size rules, `call_deferred`
-  patterns) and the gdtoolkit fork install from `static_checks.yml`; delete `plugins/` (all three projects), `plugins/build_*.sh`, the committed
-  plugin binaries (`godot/addons/dcl-godot-android/bin`, `godot/ios/plugins`, `godot/ios/dcl-swift-lib`,
-  `dcl_swift_lib.gdextension`), the plugin entries in `export_presets.cfg`, and the plugin AARs and
-  their Maven dependencies in `rn/android/app/godot.gradle` (D-41). Under the D-39 fallback,
-  `dcl-godot-android` and `dcl-godot-ios` are stripped to video instead and deleted in 8.2.
+  patterns) and the gdtoolkit fork install from `static_checks.yml`; the plugin deletion (`plugins/`, the committed plugin binaries, the plugin entries in
+  `export_presets.cfg`, the plugin AARs and their Maven dependencies in `rn/android/app/godot.gradle`,
+  D-41) **moved to phase 7 (user decision, 17 Oct 2026)**: it is not part of phase 5.
 - [x] **5.12 Remove VR**. The `quest` target in `src/export.rs` and `src/dependencies.rs`
   (`meta-quest.apk|aab`), the Quest export preset and the `xr_features/*` keys in
   `godot/export_presets.cfg`, the `[xr]` section of `project.godot`, the OpenXR toggling and the
