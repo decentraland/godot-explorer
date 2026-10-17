@@ -118,6 +118,29 @@ export function address(): string | undefined /*throws*/ {
 }
 
 /**
+ * The colour swatches the editor offers.
+ */
+export function avatarPalette(target: ColorTarget): Array<string> {
+  const __rb: Uint8Array = uniffiCaller.rustCall(
+    /*caller:*/ callStatus => {
+      return nativeModule().ubrn_uniffi_dcl_core_fn_func_avatar_palette(
+        FfiConverterTypeColorTarget.lower(
+          target,
+          nativeModule().rustbuffer_alloc,
+        ),
+        callStatus,
+      );
+    },
+    /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+  );
+  try {
+    return FfiConverterSequenceString.lift(__rb);
+  } finally {
+    nativeModule().rustbuffer_free(__rb);
+  }
+}
+
+/**
  * The equipped avatar as the engine last reported it.
  */
 export function avatarState(): AvatarState | undefined /*throws*/ {
@@ -134,6 +157,44 @@ export function avatarState(): AvatarState | undefined /*throws*/ {
   );
   try {
     return FfiConverterOptionalTypeAvatarState.lift(__rb);
+  } finally {
+    nativeModule().rustbuffer_free(__rb);
+  }
+}
+
+/**
+ * The emotes every account has.
+ */
+export function baseEmotes(): Array<BaseEmote> {
+  const __rb: Uint8Array = uniffiCaller.rustCall(
+    /*caller:*/ callStatus => {
+      return nativeModule().ubrn_uniffi_dcl_core_fn_func_base_emotes(
+        callStatus,
+      );
+    },
+    /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+  );
+  try {
+    return FfiConverterSequenceTypeBaseEmote.lift(__rb);
+  } finally {
+    nativeModule().rustbuffer_free(__rb);
+  }
+}
+
+/**
+ * The issue types a bug report can be filed under.
+ */
+export function bugReportIssueTypes(): Array<IssueType> {
+  const __rb: Uint8Array = uniffiCaller.rustCall(
+    /*caller:*/ callStatus => {
+      return nativeModule().ubrn_uniffi_dcl_core_fn_func_bug_report_issue_types(
+        callStatus,
+      );
+    },
+    /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+  );
+  try {
+    return FfiConverterSequenceTypeIssueType.lift(__rb);
   } finally {
     nativeModule().rustbuffer_free(__rb);
   }
@@ -364,6 +425,46 @@ export async function completeBrowser(
     }
     throw __error;
   }
+}
+
+/**
+ * Whether the connection is good enough that nothing is in an error state.
+ */
+export function connectionHealthy(): boolean {
+  return FfiConverterBool.lift(
+    uniffiCaller.rustCall(
+      /*caller:*/ callStatus => {
+        return nativeModule().ubrn_uniffi_dcl_core_fn_func_connection_healthy(
+          callStatus,
+        );
+      },
+      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+    ),
+  );
+}
+
+/**
+ * A world change settles: the score starts clean.
+ */
+export function connectionReset(): void {
+  uniffiCaller.rustCall(
+    /*caller:*/ callStatus => {
+      nativeModule().ubrn_uniffi_dcl_core_fn_func_connection_reset(callStatus);
+    },
+    /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+  );
+}
+
+/**
+ * The player pressed retry on the connection-lost dialog: it stays away for a growing window.
+ */
+export function connectionRetry(): void {
+  uniffiCaller.rustCall(
+    /*caller:*/ callStatus => {
+      nativeModule().ubrn_uniffi_dcl_core_fn_func_connection_retry(callStatus);
+    },
+    /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+  );
 }
 
 /**
@@ -1023,6 +1124,23 @@ export function isGuest(): boolean /*throws*/ {
 }
 
 /**
+ * Whether the avatar may go without an item of this category.
+ */
+export function isRemovableCategory(category: string): boolean {
+  return FfiConverterBool.lift(
+    uniffiCaller.rustCall(
+      /*caller:*/ callStatus => {
+        return nativeModule().ubrn_uniffi_dcl_core_fn_func_is_removable_category(
+          FfiConverterString.lower(category, nativeModule().rustbuffer_alloc),
+          callStatus,
+        );
+      },
+      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+    ),
+  );
+}
+
+/**
  * Web link that opens the explorer at a Genesis City position, `"x,y"`.
  */
 export function jumpPositionUrl(position: string): string {
@@ -1059,6 +1177,56 @@ export function jumpRealmUrl(realm: string): string {
     return FfiConverterString.lift(__rb);
   } finally {
     nativeModule().rustbuffer_free(__rb);
+  }
+}
+
+/**
+ * Loads the base wearables once, makes them the catalog the avatar edits use and returns them.
+ */
+export async function loadAvatarCatalog(asyncOpts_?: {
+  signal: AbortSignal;
+}): Promise<Array<CatalogItem>> /*throws*/ {
+  const __stack = uniffiIsDebug ? new Error().stack : undefined;
+  try {
+    return await uniffiRustCallAsync(
+      /*rustCaller:*/ uniffiCaller,
+      /*rustFutureFunc:*/ () => {
+        return nativeModule().ubrn_uniffi_dcl_core_fn_func_load_avatar_catalog();
+      },
+      /*pollFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_poll_rust_buffer,
+      /*cancelFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_cancel_rust_buffer,
+      /*completeFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_complete_rust_buffer,
+      /*freeFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_free_rust_buffer,
+      // Async returns always go through the JS-side converter: the
+      // FFI symbol returns the future handle (u64), and the user-level
+      // RustBuffer comes back via the shared `rust_future_complete_*`
+      // export. The bytes the runtime hands back must be deserialized
+      // here using the per-callable return-type converter.
+      // Borrowed view over foreign memory: the call site owns the free,
+      // as on the sync paths. Unconditional — a no-op where buffers are
+      // already JS-owned.
+      /*liftFunc:*/ __rb => {
+        try {
+          return FfiConverterSequenceTypeCatalogItem.lift(__rb);
+        } finally {
+          nativeModule().rustbuffer_free(__rb);
+        }
+      },
+      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+      /*asyncOpts:*/ asyncOpts_,
+      /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(
+        FfiConverterTypeCoreError,
+      ),
+    );
+  } catch (__error: any) {
+    if (uniffiIsDebug && __error instanceof Error) {
+      __error.stack = __stack;
+    }
+    throw __error;
   }
 }
 
@@ -1371,6 +1539,56 @@ export async function placeUserState(
 }
 
 /**
+ * One HEAD to the health url, scored. `in_world` follows the state the core is in.
+ */
+export async function probeConnection(asyncOpts_?: {
+  signal: AbortSignal;
+}): Promise<Report> /*throws*/ {
+  const __stack = uniffiIsDebug ? new Error().stack : undefined;
+  try {
+    return await uniffiRustCallAsync(
+      /*rustCaller:*/ uniffiCaller,
+      /*rustFutureFunc:*/ () => {
+        return nativeModule().ubrn_uniffi_dcl_core_fn_func_probe_connection();
+      },
+      /*pollFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_poll_rust_buffer,
+      /*cancelFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_cancel_rust_buffer,
+      /*completeFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_complete_rust_buffer,
+      /*freeFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_free_rust_buffer,
+      // Async returns always go through the JS-side converter: the
+      // FFI symbol returns the future handle (u64), and the user-level
+      // RustBuffer comes back via the shared `rust_future_complete_*`
+      // export. The bytes the runtime hands back must be deserialized
+      // here using the per-callable return-type converter.
+      // Borrowed view over foreign memory: the call site owns the free,
+      // as on the sync paths. Unconditional — a no-op where buffers are
+      // already JS-owned.
+      /*liftFunc:*/ __rb => {
+        try {
+          return FfiConverterTypeReport.lift(__rb);
+        } finally {
+          nativeModule().rustbuffer_free(__rb);
+        }
+      },
+      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+      /*asyncOpts:*/ asyncOpts_,
+      /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(
+        FfiConverterTypeCoreError,
+      ),
+    );
+  } catch (__error: any) {
+    if (uniffiIsDebug && __error instanceof Error) {
+      __error.stack = __stack;
+    }
+    throw __error;
+  }
+}
+
+/**
  * The own profile (`address` empty or `None`, or the signed-in address) or a public one.
  */
 export async function profile(
@@ -1551,6 +1769,60 @@ export async function resolveDestinationWithSecret(
 }
 
 /**
+ * A trigger arrived: whether to wait the beat and fire. `rails` are the guard rails that are up.
+ */
+export function reviewCheck(rails: Array<Rail>): boolean /*throws*/ {
+  return FfiConverterBool.lift(
+    uniffiCaller.rustCallWithError(
+      /*liftError:*/ FfiConverterTypeCoreError.lift.bind(
+        FfiConverterTypeCoreError,
+      ),
+      /*caller:*/ callStatus => {
+        return nativeModule().ubrn_uniffi_dcl_core_fn_func_review_check(
+          FfiConverterSequenceTypeRail.lower(
+            rails,
+            nativeModule().rustbuffer_alloc,
+          ),
+          callStatus,
+        );
+      },
+      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+    ),
+  );
+}
+
+/**
+ * The beat passed: asks again and, when still fine, counts the shot and reports it. Returns the
+ * shot number to launch the card for, or nothing.
+ */
+export function reviewFire(
+  trigger: string,
+  rails: Array<Rail>,
+): number | undefined /*throws*/ {
+  const __rb: Uint8Array = uniffiCaller.rustCallWithError(
+    /*liftError:*/ FfiConverterTypeCoreError.lift.bind(
+      FfiConverterTypeCoreError,
+    ),
+    /*caller:*/ callStatus => {
+      return nativeModule().ubrn_uniffi_dcl_core_fn_func_review_fire(
+        FfiConverterString.lower(trigger, nativeModule().rustbuffer_alloc),
+        FfiConverterSequenceTypeRail.lower(
+          rails,
+          nativeModule().rustbuffer_alloc,
+        ),
+        callStatus,
+      );
+    },
+    /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+  );
+  try {
+    return FfiConverterOptionalUInt32.lift(__rb);
+  } finally {
+    nativeModule().rustbuffer_free(__rb);
+  }
+}
+
+/**
  * Shareable link to a scene: a position in Genesis City, the world's name elsewhere.
  */
 export function sceneLinkUrl(realm: string, x: number, y: number): string {
@@ -1570,6 +1842,70 @@ export function sceneLinkUrl(realm: string, x: number, y: number): string {
   } finally {
     nativeModule().rustbuffer_free(__rb);
   }
+}
+
+/**
+ * The app left the foreground.
+ */
+export function sessionBackgrounded(): void /*throws*/ {
+  uniffiCaller.rustCallWithError(
+    /*liftError:*/ FfiConverterTypeCoreError.lift.bind(
+      FfiConverterTypeCoreError,
+    ),
+    /*caller:*/ callStatus => {
+      nativeModule().ubrn_uniffi_dcl_core_fn_func_session_backgrounded(
+        callStatus,
+      );
+    },
+    /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+  );
+}
+
+/**
+ * The app came back from the background.
+ */
+export function sessionForegrounded(): void /*throws*/ {
+  uniffiCaller.rustCallWithError(
+    /*liftError:*/ FfiConverterTypeCoreError.lift.bind(
+      FfiConverterTypeCoreError,
+    ),
+    /*caller:*/ callStatus => {
+      nativeModule().ubrn_uniffi_dcl_core_fn_func_session_foregrounded(
+        callStatus,
+      );
+    },
+    /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+  );
+}
+
+/**
+ * The process started; call once, as soon as the shell is up.
+ */
+export function sessionLaunched(): void /*throws*/ {
+  uniffiCaller.rustCallWithError(
+    /*liftError:*/ FfiConverterTypeCoreError.lift.bind(
+      FfiConverterTypeCoreError,
+    ),
+    /*caller:*/ callStatus => {
+      nativeModule().ubrn_uniffi_dcl_core_fn_func_session_launched(callStatus);
+    },
+    /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+  );
+}
+
+/**
+ * Every few seconds while the app runs: ends the settle window and keeps the liveness mark fresh.
+ */
+export function sessionTick(): void /*throws*/ {
+  uniffiCaller.rustCallWithError(
+    /*liftError:*/ FfiConverterTypeCoreError.lift.bind(
+      FfiConverterTypeCoreError,
+    ),
+    /*caller:*/ callStatus => {
+      nativeModule().ubrn_uniffi_dcl_core_fn_func_session_tick(callStatus);
+    },
+    /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+  );
 }
 
 /**
@@ -1699,6 +2035,30 @@ export async function setFavorite(
     }
     throw __error;
   }
+}
+
+/**
+ * Registers how this install can be reached by push. Sent once the `push-enabled` flag is known
+ * and on; a token or permission change sends again.
+ */
+export function setPushRegistration(
+  registration: PushRegistration,
+): void /*throws*/ {
+  uniffiCaller.rustCallWithError(
+    /*liftError:*/ FfiConverterTypeCoreError.lift.bind(
+      FfiConverterTypeCoreError,
+    ),
+    /*caller:*/ callStatus => {
+      nativeModule().ubrn_uniffi_dcl_core_fn_func_set_push_registration(
+        FfiConverterTypePushRegistration.lower(
+          registration,
+          nativeModule().rustbuffer_alloc,
+        ),
+        callStatus,
+      );
+    },
+    /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+  );
 }
 
 /**
@@ -2037,6 +2397,63 @@ export function state(): State /*throws*/ {
 }
 
 /**
+ * Files a bug report as an Intercom ticket and returns its id. `coordinates` is filled in from
+ * the world the player is in when the shell leaves it empty.
+ */
+export async function submitBugReport(
+  report: BugReportInput,
+  asyncOpts_?: { signal: AbortSignal },
+): Promise<string> /*throws*/ {
+  const __stack = uniffiIsDebug ? new Error().stack : undefined;
+  try {
+    return await uniffiRustCallAsync(
+      /*rustCaller:*/ uniffiCaller,
+      /*rustFutureFunc:*/ () => {
+        return nativeModule().ubrn_uniffi_dcl_core_fn_func_submit_bug_report(
+          FfiConverterTypeBugReportInput.lower(
+            report,
+            nativeModule().rustbuffer_alloc,
+          ),
+        );
+      },
+      /*pollFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_poll_rust_buffer,
+      /*cancelFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_cancel_rust_buffer,
+      /*completeFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_complete_rust_buffer,
+      /*freeFunc:*/ nativeModule()
+        .ubrn_ffi_dcl_core_rust_future_free_rust_buffer,
+      // Async returns always go through the JS-side converter: the
+      // FFI symbol returns the future handle (u64), and the user-level
+      // RustBuffer comes back via the shared `rust_future_complete_*`
+      // export. The bytes the runtime hands back must be deserialized
+      // here using the per-callable return-type converter.
+      // Borrowed view over foreign memory: the call site owns the free,
+      // as on the sync paths. Unconditional — a no-op where buffers are
+      // already JS-owned.
+      /*liftFunc:*/ __rb => {
+        try {
+          return FfiConverterString.lift(__rb);
+        } finally {
+          nativeModule().rustbuffer_free(__rb);
+        }
+      },
+      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+      /*asyncOpts:*/ asyncOpts_,
+      /*errorHandler:*/ FfiConverterTypeCoreError.lift.bind(
+        FfiConverterTypeCoreError,
+      ),
+    );
+  } catch (__error: any) {
+    if (uniffiIsDebug && __error instanceof Error) {
+      __error.stack = __stack;
+    }
+    throw __error;
+  }
+}
+
+/**
  * The terms version the player accepted; 0 until they do.
  */
 export function termsAcceptedVersion(): number /*throws*/ {
@@ -2362,6 +2779,138 @@ const FfiConverterTypeAvatarState = (() => {
         FfiConverterString.allocationSize(value.skin) +
         FfiConverterString.allocationSize(value.hair) +
         FfiConverterString.allocationSize(value.eyes)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
+export type BaseEmote = {
+  id: string;
+  urn: string;
+  name: string;
+};
+
+/**
+ * Generated factory for {@link BaseEmote} record objects.
+ */
+export const BaseEmote = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<BaseEmote, ReturnType<typeof defaults>>(defaults);
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults()) as Partial<BaseEmote>,
+  });
+})();
+
+const FfiConverterTypeBaseEmote = (() => {
+  type TypeName = BaseEmote;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      return {
+        id: FfiConverterString.readFromCursor(c),
+        urn: FfiConverterString.readFromCursor(c),
+        name: FfiConverterString.readFromCursor(c),
+      };
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      FfiConverterString.writeIntoCursor(value.id, c);
+      FfiConverterString.writeIntoCursor(value.urn, c);
+      FfiConverterString.writeIntoCursor(value.name, c);
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterString.allocationSize(value.id) +
+        FfiConverterString.allocationSize(value.urn) +
+        FfiConverterString.allocationSize(value.name)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
+export type BugReportInput = {
+  /**
+   * An `IssueType::value`.
+   */
+  category: string;
+  description: string;
+  /**
+   * Files with JPEG screenshots, at most three; unreadable or oversized ones are left out.
+   */
+  screenshots: Array<string>;
+  operatingSystem: string;
+  /**
+   * Brand and model; they ride in the OS attribute, the ticket type has none of its own.
+   */
+  device: string;
+  graphicsCard: string;
+  ramMb: bigint;
+  clientVersion: string;
+  /**
+   * `x,y` while in a world, empty elsewhere.
+   */
+  coordinates: string;
+};
+
+/**
+ * Generated factory for {@link BugReportInput} record objects.
+ */
+export const BugReportInput = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<BugReportInput, ReturnType<typeof defaults>>(
+      defaults,
+    );
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults()) as Partial<BugReportInput>,
+  });
+})();
+
+const FfiConverterTypeBugReportInput = (() => {
+  type TypeName = BugReportInput;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      return {
+        category: FfiConverterString.readFromCursor(c),
+        description: FfiConverterString.readFromCursor(c),
+        screenshots: FfiConverterSequenceString.readFromCursor(c),
+        operatingSystem: FfiConverterString.readFromCursor(c),
+        device: FfiConverterString.readFromCursor(c),
+        graphicsCard: FfiConverterString.readFromCursor(c),
+        ramMb: FfiConverterInt64.readFromCursor(c),
+        clientVersion: FfiConverterString.readFromCursor(c),
+        coordinates: FfiConverterString.readFromCursor(c),
+      };
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      FfiConverterString.writeIntoCursor(value.category, c);
+      FfiConverterString.writeIntoCursor(value.description, c);
+      FfiConverterSequenceString.writeIntoCursor(value.screenshots, c);
+      FfiConverterString.writeIntoCursor(value.operatingSystem, c);
+      FfiConverterString.writeIntoCursor(value.device, c);
+      FfiConverterString.writeIntoCursor(value.graphicsCard, c);
+      FfiConverterInt64.writeIntoCursor(value.ramMb, c);
+      FfiConverterString.writeIntoCursor(value.clientVersion, c);
+      FfiConverterString.writeIntoCursor(value.coordinates, c);
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterString.allocationSize(value.category) +
+        FfiConverterString.allocationSize(value.description) +
+        FfiConverterSequenceString.allocationSize(value.screenshots) +
+        FfiConverterString.allocationSize(value.operatingSystem) +
+        FfiConverterString.allocationSize(value.device) +
+        FfiConverterString.allocationSize(value.graphicsCard) +
+        FfiConverterInt64.allocationSize(value.ramMb) +
+        FfiConverterString.allocationSize(value.clientVersion) +
+        FfiConverterString.allocationSize(value.coordinates)
       );
     }
   }
@@ -2700,6 +3249,77 @@ const FfiConverterTypeCampaignResolution = (() => {
         FfiConverterString.allocationSize(value.token) +
         FfiConverterOptionalTypeCampaign.allocationSize(value.campaign) +
         FfiConverterOptionalTypeCampaignFallback.allocationSize(value.fallback)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
+export type CatalogItem = {
+  urn: string;
+  name: string;
+  category: string;
+  thumbnail: string;
+  /**
+   * `base` for the free base avatars, else the collection rarity.
+   */
+  rarity: string;
+  /**
+   * Empty when the item fits every body shape.
+   */
+  bodyShapes: Array<string>;
+  collectible: boolean;
+};
+
+/**
+ * Generated factory for {@link CatalogItem} record objects.
+ */
+export const CatalogItem = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<CatalogItem, ReturnType<typeof defaults>>(
+      defaults,
+    );
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults()) as Partial<CatalogItem>,
+  });
+})();
+
+const FfiConverterTypeCatalogItem = (() => {
+  type TypeName = CatalogItem;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      return {
+        urn: FfiConverterString.readFromCursor(c),
+        name: FfiConverterString.readFromCursor(c),
+        category: FfiConverterString.readFromCursor(c),
+        thumbnail: FfiConverterString.readFromCursor(c),
+        rarity: FfiConverterString.readFromCursor(c),
+        bodyShapes: FfiConverterSequenceString.readFromCursor(c),
+        collectible: FfiConverterBool.readFromCursor(c),
+      };
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      FfiConverterString.writeIntoCursor(value.urn, c);
+      FfiConverterString.writeIntoCursor(value.name, c);
+      FfiConverterString.writeIntoCursor(value.category, c);
+      FfiConverterString.writeIntoCursor(value.thumbnail, c);
+      FfiConverterString.writeIntoCursor(value.rarity, c);
+      FfiConverterSequenceString.writeIntoCursor(value.bodyShapes, c);
+      FfiConverterBool.writeIntoCursor(value.collectible, c);
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterString.allocationSize(value.urn) +
+        FfiConverterString.allocationSize(value.name) +
+        FfiConverterString.allocationSize(value.category) +
+        FfiConverterString.allocationSize(value.thumbnail) +
+        FfiConverterString.allocationSize(value.rarity) +
+        FfiConverterSequenceString.allocationSize(value.bodyShapes) +
+        FfiConverterBool.allocationSize(value.collectible)
       );
     }
   }
@@ -3320,6 +3940,57 @@ const FfiConverterTypeHudSnapshot = (() => {
         FfiConverterString.allocationSize(value.realm) +
         FfiConverterFloat32.allocationSize(value.fps) +
         FfiConverterTypeVec3.allocationSize(value.position)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
+/**
+ * An Intercom option of the Bug Report ticket type, from the Unity client's list; the proxy
+ * validates the ids. The label is English on purpose: it titles the ticket support reads.
+ */
+export type IssueType = {
+  value: string;
+  label: string;
+  uuid: string;
+};
+
+/**
+ * Generated factory for {@link IssueType} record objects.
+ */
+export const IssueType = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<IssueType, ReturnType<typeof defaults>>(defaults);
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults()) as Partial<IssueType>,
+  });
+})();
+
+const FfiConverterTypeIssueType = (() => {
+  type TypeName = IssueType;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      return {
+        value: FfiConverterString.readFromCursor(c),
+        label: FfiConverterString.readFromCursor(c),
+        uuid: FfiConverterString.readFromCursor(c),
+      };
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      FfiConverterString.writeIntoCursor(value.value, c);
+      FfiConverterString.writeIntoCursor(value.label, c);
+      FfiConverterString.writeIntoCursor(value.uuid, c);
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterString.allocationSize(value.value) +
+        FfiConverterString.allocationSize(value.label) +
+        FfiConverterString.allocationSize(value.uuid)
       );
     }
   }
@@ -4551,6 +5222,113 @@ const FfiConverterTypeProperty = (() => {
 })();
 
 /**
+ * Which push transport this install is addressable on. Each keeps its own token trait
+ * (`fcm_token` / `apns_token`) so an audience query never has to guess a token's provider.
+ */
+export enum PushPlatform {
+  Android,
+  Ios,
+}
+
+const FfiConverterTypePushPlatform = (() => {
+  type TypeName = PushPlatform;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      switch (c.readI32()) {
+        case 1:
+          return PushPlatform.Android;
+        case 2:
+          return PushPlatform.Ios;
+        default:
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      switch (value) {
+        case PushPlatform.Android:
+          return c.writeI32(1);
+        case PushPlatform.Ios:
+          return c.writeI32(2);
+      }
+    }
+    allocationSize(value: TypeName): number {
+      return 4;
+    }
+  }
+  return new FFIConverter();
+})();
+
+export type PushRegistration = {
+  platform: PushPlatform;
+  /**
+   * The FCM token or the APNs token as hex; empty when the device cannot receive push.
+   */
+  token: string;
+  /**
+   * "granted" | "denied"
+   */
+  permission: string;
+  appVersion: string;
+  /**
+   * The OS locale, e.g. "es_AR".
+   */
+  locale: string;
+  timezone: string;
+};
+
+/**
+ * Generated factory for {@link PushRegistration} record objects.
+ */
+export const PushRegistration = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<PushRegistration, ReturnType<typeof defaults>>(
+      defaults,
+    );
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults()) as Partial<PushRegistration>,
+  });
+})();
+
+const FfiConverterTypePushRegistration = (() => {
+  type TypeName = PushRegistration;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      return {
+        platform: FfiConverterTypePushPlatform.readFromCursor(c),
+        token: FfiConverterString.readFromCursor(c),
+        permission: FfiConverterString.readFromCursor(c),
+        appVersion: FfiConverterString.readFromCursor(c),
+        locale: FfiConverterString.readFromCursor(c),
+        timezone: FfiConverterString.readFromCursor(c),
+      };
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      FfiConverterTypePushPlatform.writeIntoCursor(value.platform, c);
+      FfiConverterString.writeIntoCursor(value.token, c);
+      FfiConverterString.writeIntoCursor(value.permission, c);
+      FfiConverterString.writeIntoCursor(value.appVersion, c);
+      FfiConverterString.writeIntoCursor(value.locale, c);
+      FfiConverterString.writeIntoCursor(value.timezone, c);
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterTypePushPlatform.allocationSize(value.platform) +
+        FfiConverterString.allocationSize(value.token) +
+        FfiConverterString.allocationSize(value.permission) +
+        FfiConverterString.allocationSize(value.appVersion) +
+        FfiConverterString.allocationSize(value.locale) +
+        FfiConverterString.allocationSize(value.timezone)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
+/**
  * Pixels in the host's surface, where the avatar preview should render.
  */
 export type Rect = {
@@ -4598,6 +5376,111 @@ const FfiConverterTypeRect = (() => {
         FfiConverterInt32.allocationSize(value.y) +
         FfiConverterInt32.allocationSize(value.width) +
         FfiConverterInt32.allocationSize(value.height)
+      );
+    }
+  }
+  return new FFIConverter();
+})();
+
+export enum Quality {
+  Good,
+  Poor,
+  Lost,
+}
+
+const FfiConverterTypeQuality = (() => {
+  type TypeName = Quality;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      switch (c.readI32()) {
+        case 1:
+          return Quality.Good;
+        case 2:
+          return Quality.Poor;
+        case 3:
+          return Quality.Lost;
+        default:
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      switch (value) {
+        case Quality.Good:
+          return c.writeI32(1);
+        case Quality.Poor:
+          return c.writeI32(2);
+        case Quality.Lost:
+          return c.writeI32(3);
+      }
+    }
+    allocationSize(value: TypeName): number {
+      return 4;
+    }
+  }
+  return new FFIConverter();
+})();
+
+/**
+ * What a sample changed, for the shell to show.
+ */
+export type Report = {
+  quality: Quality;
+  /**
+   * Degrading from good to poor while in a world: the toast.
+   */
+  toast: boolean;
+  /**
+   * Lost (or poor with no world to toast in) and not snoozed: the dialog.
+   */
+  alarm: boolean;
+  /**
+   * Back to good from poor or lost: the dialog goes away for good.
+   */
+  restored: boolean;
+  nextPollMs: bigint;
+};
+
+/**
+ * Generated factory for {@link Report} record objects.
+ */
+export const Report = (() => {
+  const defaults = () => ({});
+  const create = (() => {
+    return uniffiCreateRecord<Report, ReturnType<typeof defaults>>(defaults);
+  })();
+  return Object.freeze({
+    create,
+    new: create,
+    defaults: () => Object.freeze(defaults()) as Partial<Report>,
+  });
+})();
+
+const FfiConverterTypeReport = (() => {
+  type TypeName = Report;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      return {
+        quality: FfiConverterTypeQuality.readFromCursor(c),
+        toast: FfiConverterBool.readFromCursor(c),
+        alarm: FfiConverterBool.readFromCursor(c),
+        restored: FfiConverterBool.readFromCursor(c),
+        nextPollMs: FfiConverterUInt64.readFromCursor(c),
+      };
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      FfiConverterTypeQuality.writeIntoCursor(value.quality, c);
+      FfiConverterBool.writeIntoCursor(value.toast, c);
+      FfiConverterBool.writeIntoCursor(value.alarm, c);
+      FfiConverterBool.writeIntoCursor(value.restored, c);
+      FfiConverterUInt64.writeIntoCursor(value.nextPollMs, c);
+    }
+    allocationSize(value: TypeName): number {
+      return (
+        FfiConverterTypeQuality.allocationSize(value.quality) +
+        FfiConverterBool.allocationSize(value.toast) +
+        FfiConverterBool.allocationSize(value.alarm) +
+        FfiConverterBool.allocationSize(value.restored) +
+        FfiConverterUInt64.allocationSize(value.nextPollMs)
       );
     }
   }
@@ -7085,6 +7968,27 @@ export enum SettingKey {
   AudioMusicVolume,
   AudioAvatarAndEmotesVolume,
   AudioMicAmplification,
+  WindowMode,
+  UiZoom,
+  Resolution3dScale,
+  ProcessTickQuotaMs,
+  ShowFps,
+  Skybox,
+  ShadowQuality,
+  BloomQuality,
+  AntiAliasing,
+  TextureQuality,
+  AvatarImpostorsEnabled,
+  FirstLaunchCompleted,
+  BenchmarkGpuScore,
+  BenchmarkRamGb,
+  LastRealmJoined,
+  LastParcelX,
+  LastParcelY,
+  FirstMoveInWorldSent,
+  InstallReferrerSent,
+  DebugRotateGuestAnchor,
+  LocalAssetsCacheVersion,
 }
 
 const FfiConverterTypeSettingKey = (() => {
@@ -7126,6 +8030,48 @@ const FfiConverterTypeSettingKey = (() => {
           return SettingKey.AudioAvatarAndEmotesVolume;
         case 17:
           return SettingKey.AudioMicAmplification;
+        case 18:
+          return SettingKey.WindowMode;
+        case 19:
+          return SettingKey.UiZoom;
+        case 20:
+          return SettingKey.Resolution3dScale;
+        case 21:
+          return SettingKey.ProcessTickQuotaMs;
+        case 22:
+          return SettingKey.ShowFps;
+        case 23:
+          return SettingKey.Skybox;
+        case 24:
+          return SettingKey.ShadowQuality;
+        case 25:
+          return SettingKey.BloomQuality;
+        case 26:
+          return SettingKey.AntiAliasing;
+        case 27:
+          return SettingKey.TextureQuality;
+        case 28:
+          return SettingKey.AvatarImpostorsEnabled;
+        case 29:
+          return SettingKey.FirstLaunchCompleted;
+        case 30:
+          return SettingKey.BenchmarkGpuScore;
+        case 31:
+          return SettingKey.BenchmarkRamGb;
+        case 32:
+          return SettingKey.LastRealmJoined;
+        case 33:
+          return SettingKey.LastParcelX;
+        case 34:
+          return SettingKey.LastParcelY;
+        case 35:
+          return SettingKey.FirstMoveInWorldSent;
+        case 36:
+          return SettingKey.InstallReferrerSent;
+        case 37:
+          return SettingKey.DebugRotateGuestAnchor;
+        case 38:
+          return SettingKey.LocalAssetsCacheVersion;
         default:
           throw new UniffiInternalError.UnexpectedEnumCase();
       }
@@ -7166,6 +8112,48 @@ const FfiConverterTypeSettingKey = (() => {
           return c.writeI32(16);
         case SettingKey.AudioMicAmplification:
           return c.writeI32(17);
+        case SettingKey.WindowMode:
+          return c.writeI32(18);
+        case SettingKey.UiZoom:
+          return c.writeI32(19);
+        case SettingKey.Resolution3dScale:
+          return c.writeI32(20);
+        case SettingKey.ProcessTickQuotaMs:
+          return c.writeI32(21);
+        case SettingKey.ShowFps:
+          return c.writeI32(22);
+        case SettingKey.Skybox:
+          return c.writeI32(23);
+        case SettingKey.ShadowQuality:
+          return c.writeI32(24);
+        case SettingKey.BloomQuality:
+          return c.writeI32(25);
+        case SettingKey.AntiAliasing:
+          return c.writeI32(26);
+        case SettingKey.TextureQuality:
+          return c.writeI32(27);
+        case SettingKey.AvatarImpostorsEnabled:
+          return c.writeI32(28);
+        case SettingKey.FirstLaunchCompleted:
+          return c.writeI32(29);
+        case SettingKey.BenchmarkGpuScore:
+          return c.writeI32(30);
+        case SettingKey.BenchmarkRamGb:
+          return c.writeI32(31);
+        case SettingKey.LastRealmJoined:
+          return c.writeI32(32);
+        case SettingKey.LastParcelX:
+          return c.writeI32(33);
+        case SettingKey.LastParcelY:
+          return c.writeI32(34);
+        case SettingKey.FirstMoveInWorldSent:
+          return c.writeI32(35);
+        case SettingKey.InstallReferrerSent:
+          return c.writeI32(36);
+        case SettingKey.DebugRotateGuestAnchor:
+          return c.writeI32(37);
+        case SettingKey.LocalAssetsCacheVersion:
+          return c.writeI32(38);
       }
     }
     allocationSize(value: TypeName): number {
@@ -7953,6 +8941,9 @@ export enum Control_Tags {
   RandomizeAvatar = 'RandomizeAvatar',
   SetPreviewUrl = 'SetPreviewUrl',
   SetName = 'SetName',
+  Reconnect = 'Reconnect',
+  SetWorldSecret = 'SetWorldSecret',
+  AnswerSceneRequest = 'AnswerSceneRequest',
 }
 /**
  * What the shell asks of the engine once a world or the avatar preview is up. All of them are
@@ -8419,6 +9410,97 @@ export const Control = (() => {
     }
   }
 
+  type Reconnect__interface = {
+    tag: Control_Tags.Reconnect;
+  };
+  /**
+   * Connects to the room again after a disconnect the player chose to retry.
+   */
+  class Reconnect_ extends UniffiEnum implements Reconnect__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'Control';
+    readonly tag = Control_Tags.Reconnect;
+    constructor() {
+      super('Control', 'Reconnect');
+    }
+
+    static new(): Reconnect_ {
+      return new Reconnect_();
+    }
+
+    static instanceOf(obj: any): obj is Reconnect_ {
+      return obj.tag === Control_Tags.Reconnect;
+    }
+  }
+
+  type SetWorldSecret__interface = {
+    tag: Control_Tags.SetWorldSecret;
+    inner: Readonly<{ realm: string; secret: string }>;
+  };
+  /**
+   * The password the player gave for a protected world, checked by the shell; the engine
+   * presents it when it connects to `realm`.
+   */
+  class SetWorldSecret_
+    extends UniffiEnum
+    implements SetWorldSecret__interface
+  {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'Control';
+    readonly tag = Control_Tags.SetWorldSecret;
+    readonly inner: Readonly<{ realm: string; secret: string }>;
+    constructor(inner: { realm: string; secret: string }) {
+      super('Control', 'SetWorldSecret');
+
+      this.inner = Object.freeze(inner);
+    }
+    static new(inner: { realm: string; secret: string }): SetWorldSecret_ {
+      return new SetWorldSecret_(inner);
+    }
+
+    static instanceOf(obj: any): obj is SetWorldSecret_ {
+      return obj.tag === Control_Tags.SetWorldSecret;
+    }
+  }
+
+  type AnswerSceneRequest__interface = {
+    tag: Control_Tags.AnswerSceneRequest;
+    inner: Readonly<{ id: number; accepted: boolean }>;
+  };
+  /**
+   * The user's answer to a `scene_request` event.
+   */
+  class AnswerSceneRequest_
+    extends UniffiEnum
+    implements AnswerSceneRequest__interface
+  {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'Control';
+    readonly tag = Control_Tags.AnswerSceneRequest;
+    readonly inner: Readonly<{ id: number; accepted: boolean }>;
+    constructor(inner: { id: number; accepted: boolean }) {
+      super('Control', 'AnswerSceneRequest');
+
+      this.inner = Object.freeze(inner);
+    }
+    static new(inner: { id: number; accepted: boolean }): AnswerSceneRequest_ {
+      return new AnswerSceneRequest_(inner);
+    }
+
+    static instanceOf(obj: any): obj is AnswerSceneRequest_ {
+      return obj.tag === Control_Tags.AnswerSceneRequest;
+    }
+  }
+
   function instanceOf(obj: any): obj is Control {
     return obj[uniffiTypeNameSymbol] === 'Control';
   }
@@ -8442,6 +9524,9 @@ export const Control = (() => {
     RandomizeAvatar: RandomizeAvatar_,
     SetPreviewUrl: SetPreviewUrl_,
     SetName: SetName_,
+    Reconnect: Reconnect_,
+    SetWorldSecret: SetWorldSecret_,
+    AnswerSceneRequest: AnswerSceneRequest_,
   });
 })();
 /**
@@ -8466,7 +9551,10 @@ export type Control = InstanceType<
     | 'SetEmoteSlot'
     | 'RandomizeAvatar'
     | 'SetPreviewUrl'
-    | 'SetName']
+    | 'SetName'
+    | 'Reconnect'
+    | 'SetWorldSecret'
+    | 'AnswerSceneRequest']
 >;
 
 // FfiConverter for enum Control
@@ -8542,6 +9630,18 @@ const FfiConverterTypeControl = (() => {
         case 17:
           return new Control.SetName({
             name: FfiConverterString.readFromCursor(c),
+          });
+        case 18:
+          return new Control.Reconnect();
+        case 19:
+          return new Control.SetWorldSecret({
+            realm: FfiConverterString.readFromCursor(c),
+            secret: FfiConverterString.readFromCursor(c),
+          });
+        case 20:
+          return new Control.AnswerSceneRequest({
+            id: FfiConverterUInt32.readFromCursor(c),
+            accepted: FfiConverterBool.readFromCursor(c),
           });
         default:
           throw new UniffiInternalError.UnexpectedEnumCase();
@@ -8651,6 +9751,24 @@ const FfiConverterTypeControl = (() => {
           FfiConverterString.writeIntoCursor(inner.name, c);
           return;
         }
+        case Control_Tags.Reconnect: {
+          c.writeI32(18);
+          return;
+        }
+        case Control_Tags.SetWorldSecret: {
+          c.writeI32(19);
+          const inner = value.inner;
+          FfiConverterString.writeIntoCursor(inner.realm, c);
+          FfiConverterString.writeIntoCursor(inner.secret, c);
+          return;
+        }
+        case Control_Tags.AnswerSceneRequest: {
+          c.writeI32(20);
+          const inner = value.inner;
+          FfiConverterUInt32.writeIntoCursor(inner.id, c);
+          FfiConverterBool.writeIntoCursor(inner.accepted, c);
+          return;
+        }
         default:
           // Throwing from here means that Control_Tags hasn't matched an ordinal.
           throw new UniffiInternalError.UnexpectedEnumCase();
@@ -8757,6 +9875,23 @@ const FfiConverterTypeControl = (() => {
           const inner = value.inner;
           let size = 4;
           size += FfiConverterString.allocationSize(inner.name);
+          return size;
+        }
+        case Control_Tags.Reconnect: {
+          return 4;
+        }
+        case Control_Tags.SetWorldSecret: {
+          const inner = value.inner;
+          let size = 4;
+          size += FfiConverterString.allocationSize(inner.realm);
+          size += FfiConverterString.allocationSize(inner.secret);
+          return size;
+        }
+        case Control_Tags.AnswerSceneRequest: {
+          const inner = value.inner;
+          let size = 4;
+          size += FfiConverterUInt32.allocationSize(inner.id);
+          size += FfiConverterBool.allocationSize(inner.accepted);
           return size;
         }
         default:
@@ -9080,6 +10215,309 @@ const FfiConverterTypeDecision = (() => {
   return new FFIConverter();
 })();
 
+export enum DisconnectReason {
+  /**
+   * The account logged in somewhere else.
+   */
+  DuplicateSession,
+  RoomClosed,
+  Other,
+}
+
+const FfiConverterTypeDisconnectReason = (() => {
+  type TypeName = DisconnectReason;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      switch (c.readI32()) {
+        case 1:
+          return DisconnectReason.DuplicateSession;
+        case 2:
+          return DisconnectReason.RoomClosed;
+        case 3:
+          return DisconnectReason.Other;
+        default:
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      switch (value) {
+        case DisconnectReason.DuplicateSession:
+          return c.writeI32(1);
+        case DisconnectReason.RoomClosed:
+          return c.writeI32(2);
+        case DisconnectReason.Other:
+          return c.writeI32(3);
+      }
+    }
+    allocationSize(value: TypeName): number {
+      return 4;
+    }
+  }
+  return new FFIConverter();
+})();
+
+export enum EntryRefusal {
+  PrivateWorld,
+  NeedsPassword,
+  NotFound,
+}
+
+const FfiConverterTypeEntryRefusal = (() => {
+  type TypeName = EntryRefusal;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      switch (c.readI32()) {
+        case 1:
+          return EntryRefusal.PrivateWorld;
+        case 2:
+          return EntryRefusal.NeedsPassword;
+        case 3:
+          return EntryRefusal.NotFound;
+        default:
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      switch (value) {
+        case EntryRefusal.PrivateWorld:
+          return c.writeI32(1);
+        case EntryRefusal.NeedsPassword:
+          return c.writeI32(2);
+        case EntryRefusal.NotFound:
+          return c.writeI32(3);
+      }
+    }
+    allocationSize(value: TypeName): number {
+      return 4;
+    }
+  }
+  return new FFIConverter();
+})();
+
+// Enum: EngineNotice
+export enum EngineNotice_Tags {
+  EntryRefused = 'EntryRefused',
+  Disconnected = 'Disconnected',
+  Banned = 'Banned',
+  LowMemory = 'LowMemory',
+}
+/**
+ * Something the engine tells the shell the player has to hear about.
+ */
+export const EngineNotice = (() => {
+  type EntryRefused__interface = {
+    tag: EngineNotice_Tags.EntryRefused;
+    inner: Readonly<{ reason: EntryRefusal; realm: string }>;
+  };
+  /**
+   * The destination was refused, so the player stays where they were.
+   */
+  class EntryRefused_ extends UniffiEnum implements EntryRefused__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'EngineNotice';
+    readonly tag = EngineNotice_Tags.EntryRefused;
+    readonly inner: Readonly<{ reason: EntryRefusal; realm: string }>;
+    constructor(inner: { reason: EntryRefusal; realm: string }) {
+      super('EngineNotice', 'EntryRefused');
+
+      this.inner = Object.freeze(inner);
+    }
+    static new(inner: { reason: EntryRefusal; realm: string }): EntryRefused_ {
+      return new EntryRefused_(inner);
+    }
+
+    static instanceOf(obj: any): obj is EntryRefused_ {
+      return obj.tag === EngineNotice_Tags.EntryRefused;
+    }
+  }
+
+  type Disconnected__interface = {
+    tag: EngineNotice_Tags.Disconnected;
+    inner: Readonly<{ reason: DisconnectReason }>;
+  };
+  /**
+   * The comms connection ended and reconnecting did not bring it back.
+   */
+  class Disconnected_ extends UniffiEnum implements Disconnected__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'EngineNotice';
+    readonly tag = EngineNotice_Tags.Disconnected;
+    readonly inner: Readonly<{ reason: DisconnectReason }>;
+    constructor(inner: { reason: DisconnectReason }) {
+      super('EngineNotice', 'Disconnected');
+
+      this.inner = Object.freeze(inner);
+    }
+    static new(inner: { reason: DisconnectReason }): Disconnected_ {
+      return new Disconnected_(inner);
+    }
+
+    static instanceOf(obj: any): obj is Disconnected_ {
+      return obj.tag === EngineNotice_Tags.Disconnected;
+    }
+  }
+
+  type Banned__interface = {
+    tag: EngineNotice_Tags.Banned;
+  };
+  /**
+   * The scene's own room banned the player.
+   */
+  class Banned_ extends UniffiEnum implements Banned__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'EngineNotice';
+    readonly tag = EngineNotice_Tags.Banned;
+    constructor() {
+      super('EngineNotice', 'Banned');
+    }
+
+    static new(): Banned_ {
+      return new Banned_();
+    }
+
+    static instanceOf(obj: any): obj is Banned_ {
+      return obj.tag === EngineNotice_Tags.Banned;
+    }
+  }
+
+  type LowMemory__interface = {
+    tag: EngineNotice_Tags.LowMemory;
+  };
+  /**
+   * The device is running out of memory in this scene.
+   */
+  class LowMemory_ extends UniffiEnum implements LowMemory__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'EngineNotice';
+    readonly tag = EngineNotice_Tags.LowMemory;
+    constructor() {
+      super('EngineNotice', 'LowMemory');
+    }
+
+    static new(): LowMemory_ {
+      return new LowMemory_();
+    }
+
+    static instanceOf(obj: any): obj is LowMemory_ {
+      return obj.tag === EngineNotice_Tags.LowMemory;
+    }
+  }
+
+  function instanceOf(obj: any): obj is EngineNotice {
+    return obj[uniffiTypeNameSymbol] === 'EngineNotice';
+  }
+
+  return Object.freeze({
+    instanceOf,
+    EntryRefused: EntryRefused_,
+    Disconnected: Disconnected_,
+    Banned: Banned_,
+    LowMemory: LowMemory_,
+  });
+})();
+/**
+ * Something the engine tells the shell the player has to hear about.
+ */
+export type EngineNotice = InstanceType<
+  (typeof EngineNotice)[
+    | 'EntryRefused'
+    | 'Disconnected'
+    | 'Banned'
+    | 'LowMemory']
+>;
+
+// FfiConverter for enum EngineNotice
+const FfiConverterTypeEngineNotice = (() => {
+  type TypeName = EngineNotice;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      switch (c.readI32()) {
+        case 1:
+          return new EngineNotice.EntryRefused({
+            reason: FfiConverterTypeEntryRefusal.readFromCursor(c),
+            realm: FfiConverterString.readFromCursor(c),
+          });
+        case 2:
+          return new EngineNotice.Disconnected({
+            reason: FfiConverterTypeDisconnectReason.readFromCursor(c),
+          });
+        case 3:
+          return new EngineNotice.Banned();
+        case 4:
+          return new EngineNotice.LowMemory();
+        default:
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      switch (value.tag) {
+        case EngineNotice_Tags.EntryRefused: {
+          c.writeI32(1);
+          const inner = value.inner;
+          FfiConverterTypeEntryRefusal.writeIntoCursor(inner.reason, c);
+          FfiConverterString.writeIntoCursor(inner.realm, c);
+          return;
+        }
+        case EngineNotice_Tags.Disconnected: {
+          c.writeI32(2);
+          const inner = value.inner;
+          FfiConverterTypeDisconnectReason.writeIntoCursor(inner.reason, c);
+          return;
+        }
+        case EngineNotice_Tags.Banned: {
+          c.writeI32(3);
+          return;
+        }
+        case EngineNotice_Tags.LowMemory: {
+          c.writeI32(4);
+          return;
+        }
+        default:
+          // Throwing from here means that EngineNotice_Tags hasn't matched an ordinal.
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+    allocationSize(value: TypeName): number {
+      switch (value.tag) {
+        case EngineNotice_Tags.EntryRefused: {
+          const inner = value.inner;
+          let size = 4;
+          size += FfiConverterTypeEntryRefusal.allocationSize(inner.reason);
+          size += FfiConverterString.allocationSize(inner.realm);
+          return size;
+        }
+        case EngineNotice_Tags.Disconnected: {
+          const inner = value.inner;
+          let size = 4;
+          size += FfiConverterTypeDisconnectReason.allocationSize(inner.reason);
+          return size;
+        }
+        case EngineNotice_Tags.Banned: {
+          return 4;
+        }
+        case EngineNotice_Tags.LowMemory: {
+          return 4;
+        }
+        default:
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+  }
+  return new FFIConverter();
+})();
+
 export enum Environment {
   Org,
   Zone,
@@ -9151,6 +10589,288 @@ const FfiConverterTypePlatform = (() => {
     }
     allocationSize(value: TypeName): number {
       return 4;
+    }
+  }
+  return new FFIConverter();
+})();
+
+/**
+ * What can hold a prompt back: an app that is loading, in an error state or mid-dialog is
+ * exactly when a rating prompt reads worst.
+ */
+export enum Rail {
+  Loading,
+  Modal,
+  DeviceSupport,
+  Connection,
+}
+
+const FfiConverterTypeRail = (() => {
+  type TypeName = Rail;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      switch (c.readI32()) {
+        case 1:
+          return Rail.Loading;
+        case 2:
+          return Rail.Modal;
+        case 3:
+          return Rail.DeviceSupport;
+        case 4:
+          return Rail.Connection;
+        default:
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      switch (value) {
+        case Rail.Loading:
+          return c.writeI32(1);
+        case Rail.Modal:
+          return c.writeI32(2);
+        case Rail.DeviceSupport:
+          return c.writeI32(3);
+        case Rail.Connection:
+          return c.writeI32(4);
+      }
+    }
+    allocationSize(value: TypeName): number {
+      return 4;
+    }
+  }
+  return new FFIConverter();
+})();
+
+// Enum: SceneRequest
+export enum SceneRequest_Tags {
+  OpenExternalUrl = 'OpenExternalUrl',
+  Teleport = 'Teleport',
+  ChangeRealm = 'ChangeRealm',
+  OpenNft = 'OpenNft',
+}
+export const SceneRequest = (() => {
+  type OpenExternalUrl__interface = {
+    tag: SceneRequest_Tags.OpenExternalUrl;
+    inner: Readonly<{ url: string }>;
+  };
+  class OpenExternalUrl_
+    extends UniffiEnum
+    implements OpenExternalUrl__interface
+  {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'SceneRequest';
+    readonly tag = SceneRequest_Tags.OpenExternalUrl;
+    readonly inner: Readonly<{ url: string }>;
+    constructor(inner: { url: string }) {
+      super('SceneRequest', 'OpenExternalUrl');
+
+      this.inner = Object.freeze(inner);
+    }
+    static new(inner: { url: string }): OpenExternalUrl_ {
+      return new OpenExternalUrl_(inner);
+    }
+
+    static instanceOf(obj: any): obj is OpenExternalUrl_ {
+      return obj.tag === SceneRequest_Tags.OpenExternalUrl;
+    }
+  }
+
+  type Teleport__interface = {
+    tag: SceneRequest_Tags.Teleport;
+    inner: Readonly<{ parcel?: Parcel; realm?: string }>;
+  };
+  /**
+   * A parcel in the current realm (`realm` unset) or in the named one, or only a realm (spawn).
+   */
+  class Teleport_ extends UniffiEnum implements Teleport__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'SceneRequest';
+    readonly tag = SceneRequest_Tags.Teleport;
+    readonly inner: Readonly<{ parcel?: Parcel; realm?: string }>;
+    constructor(inner: { parcel?: Parcel; realm?: string }) {
+      super('SceneRequest', 'Teleport');
+
+      this.inner = Object.freeze(inner);
+    }
+    static new(inner: { parcel?: Parcel; realm?: string }): Teleport_ {
+      return new Teleport_(inner);
+    }
+
+    static instanceOf(obj: any): obj is Teleport_ {
+      return obj.tag === SceneRequest_Tags.Teleport;
+    }
+  }
+
+  type ChangeRealm__interface = {
+    tag: SceneRequest_Tags.ChangeRealm;
+    inner: Readonly<{ realm: string; message?: string }>;
+  };
+  class ChangeRealm_ extends UniffiEnum implements ChangeRealm__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'SceneRequest';
+    readonly tag = SceneRequest_Tags.ChangeRealm;
+    readonly inner: Readonly<{ realm: string; message?: string }>;
+    constructor(inner: { realm: string; message?: string }) {
+      super('SceneRequest', 'ChangeRealm');
+
+      this.inner = Object.freeze(inner);
+    }
+    static new(inner: { realm: string; message?: string }): ChangeRealm_ {
+      return new ChangeRealm_(inner);
+    }
+
+    static instanceOf(obj: any): obj is ChangeRealm_ {
+      return obj.tag === SceneRequest_Tags.ChangeRealm;
+    }
+  }
+
+  type OpenNft__interface = {
+    tag: SceneRequest_Tags.OpenNft;
+    inner: Readonly<{ urn: string }>;
+  };
+  class OpenNft_ extends UniffiEnum implements OpenNft__interface {
+    /**
+     * @private
+     * This field is private and should not be used, use `tag` instead.
+     */
+    readonly [uniffiTypeNameSymbol] = 'SceneRequest';
+    readonly tag = SceneRequest_Tags.OpenNft;
+    readonly inner: Readonly<{ urn: string }>;
+    constructor(inner: { urn: string }) {
+      super('SceneRequest', 'OpenNft');
+
+      this.inner = Object.freeze(inner);
+    }
+    static new(inner: { urn: string }): OpenNft_ {
+      return new OpenNft_(inner);
+    }
+
+    static instanceOf(obj: any): obj is OpenNft_ {
+      return obj.tag === SceneRequest_Tags.OpenNft;
+    }
+  }
+
+  function instanceOf(obj: any): obj is SceneRequest {
+    return obj[uniffiTypeNameSymbol] === 'SceneRequest';
+  }
+
+  return Object.freeze({
+    instanceOf,
+    OpenExternalUrl: OpenExternalUrl_,
+    Teleport: Teleport_,
+    ChangeRealm: ChangeRealm_,
+    OpenNft: OpenNft_,
+  });
+})();
+export type SceneRequest = InstanceType<
+  (typeof SceneRequest)[
+    | 'OpenExternalUrl'
+    | 'Teleport'
+    | 'ChangeRealm'
+    | 'OpenNft']
+>;
+
+// FfiConverter for enum SceneRequest
+const FfiConverterTypeSceneRequest = (() => {
+  type TypeName = SceneRequest;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      switch (c.readI32()) {
+        case 1:
+          return new SceneRequest.OpenExternalUrl({
+            url: FfiConverterString.readFromCursor(c),
+          });
+        case 2:
+          return new SceneRequest.Teleport({
+            parcel: FfiConverterOptionalTypeParcel.readFromCursor(c),
+            realm: FfiConverterOptionalString.readFromCursor(c),
+          });
+        case 3:
+          return new SceneRequest.ChangeRealm({
+            realm: FfiConverterString.readFromCursor(c),
+            message: FfiConverterOptionalString.readFromCursor(c),
+          });
+        case 4:
+          return new SceneRequest.OpenNft({
+            urn: FfiConverterString.readFromCursor(c),
+          });
+        default:
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      switch (value.tag) {
+        case SceneRequest_Tags.OpenExternalUrl: {
+          c.writeI32(1);
+          const inner = value.inner;
+          FfiConverterString.writeIntoCursor(inner.url, c);
+          return;
+        }
+        case SceneRequest_Tags.Teleport: {
+          c.writeI32(2);
+          const inner = value.inner;
+          FfiConverterOptionalTypeParcel.writeIntoCursor(inner.parcel, c);
+          FfiConverterOptionalString.writeIntoCursor(inner.realm, c);
+          return;
+        }
+        case SceneRequest_Tags.ChangeRealm: {
+          c.writeI32(3);
+          const inner = value.inner;
+          FfiConverterString.writeIntoCursor(inner.realm, c);
+          FfiConverterOptionalString.writeIntoCursor(inner.message, c);
+          return;
+        }
+        case SceneRequest_Tags.OpenNft: {
+          c.writeI32(4);
+          const inner = value.inner;
+          FfiConverterString.writeIntoCursor(inner.urn, c);
+          return;
+        }
+        default:
+          // Throwing from here means that SceneRequest_Tags hasn't matched an ordinal.
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+    allocationSize(value: TypeName): number {
+      switch (value.tag) {
+        case SceneRequest_Tags.OpenExternalUrl: {
+          const inner = value.inner;
+          let size = 4;
+          size += FfiConverterString.allocationSize(inner.url);
+          return size;
+        }
+        case SceneRequest_Tags.Teleport: {
+          const inner = value.inner;
+          let size = 4;
+          size += FfiConverterOptionalTypeParcel.allocationSize(inner.parcel);
+          size += FfiConverterOptionalString.allocationSize(inner.realm);
+          return size;
+        }
+        case SceneRequest_Tags.ChangeRealm: {
+          const inner = value.inner;
+          let size = 4;
+          size += FfiConverterString.allocationSize(inner.realm);
+          size += FfiConverterOptionalString.allocationSize(inner.message);
+          return size;
+        }
+        case SceneRequest_Tags.OpenNft: {
+          const inner = value.inner;
+          let size = 4;
+          size += FfiConverterString.allocationSize(inner.urn);
+          return size;
+        }
+        default:
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
     }
   }
   return new FFIConverter();
@@ -9582,6 +11302,44 @@ const FfiConverterTypeState = (() => {
   return new FFIConverter();
 })();
 
+export enum Trigger {
+  Icon,
+  Deeplink,
+  Push,
+}
+
+const FfiConverterTypeTrigger = (() => {
+  type TypeName = Trigger;
+  class FFIConverter extends AbstractFfiConverterByteArray<TypeName> {
+    readFromCursor(c: Cursor): TypeName {
+      switch (c.readI32()) {
+        case 1:
+          return Trigger.Icon;
+        case 2:
+          return Trigger.Deeplink;
+        case 3:
+          return Trigger.Push;
+        default:
+          throw new UniffiInternalError.UnexpectedEnumCase();
+      }
+    }
+    writeIntoCursor(value: TypeName, c: Cursor): void {
+      switch (value) {
+        case Trigger.Icon:
+          return c.writeI32(1);
+        case Trigger.Deeplink:
+          return c.writeI32(2);
+        case Trigger.Push:
+          return c.writeI32(3);
+      }
+    }
+    allocationSize(value: TypeName): number {
+      return 4;
+    }
+  }
+  return new FFIConverter();
+})();
+
 /**
  * Implemented by the JS shell only: a foreign trait has one vtable per process, so the host's
  * events are a different trait (`dcl_host::HostListener`). Called from a core thread; the
@@ -9606,6 +11364,14 @@ export interface AppListener {
   openBackpack(emotes: boolean): void;
   loadingDetail(detail: LoadingDetail): void;
   avatarChanged(avatar: AvatarState): void;
+  /**
+   * A scene asked for the user's say (open a link, teleport, change realm, show an NFT).
+   */
+  sceneRequest(id: number, request: SceneRequest): void;
+  /**
+   * Something the engine tells the player: a refused entry, a disconnect, a ban.
+   */
+  engineNotice(notice: EngineNotice): void;
   /**
    * A panic or error to send to the crash reporter, already past the keep/drop policy.
    */
@@ -9803,6 +11569,45 @@ export class AppListenerImpl
           uniffiTypeAppListenerImplObjectFactory.clonePointer(this),
           FfiConverterTypeAvatarState.lower(
             avatar,
+            nativeModule().rustbuffer_alloc,
+          ),
+          callStatus,
+        );
+      },
+      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+    );
+  }
+
+  /**
+   * A scene asked for the user's say (open a link, teleport, change realm, show an NFT).
+   */
+  sceneRequest(id: number, request: SceneRequest): void {
+    uniffiCaller.rustCall(
+      /*caller:*/ callStatus => {
+        nativeModule().ubrn_uniffi_dcl_core_fn_method_applistener_scene_request(
+          uniffiTypeAppListenerImplObjectFactory.clonePointer(this),
+          FfiConverterUInt32.lower(id, nativeModule().rustbuffer_alloc),
+          FfiConverterTypeSceneRequest.lower(
+            request,
+            nativeModule().rustbuffer_alloc,
+          ),
+          callStatus,
+        );
+      },
+      /*liftString:*/ FfiConverterString.lift.bind(FfiConverterString),
+    );
+  }
+
+  /**
+   * Something the engine tells the player: a refused entry, a disconnect, a ban.
+   */
+  engineNotice(notice: EngineNotice): void {
+    uniffiCaller.rustCall(
+      /*caller:*/ callStatus => {
+        nativeModule().ubrn_uniffi_dcl_core_fn_method_applistener_engine_notice(
+          uniffiTypeAppListenerImplObjectFactory.clonePointer(this),
+          FfiConverterTypeEngineNotice.lower(
+            notice,
             nativeModule().rustbuffer_alloc,
           ),
           callStatus,
@@ -10178,6 +11983,49 @@ const uniffiCallbackInterfaceAppListener: {
       );
       return uniffiResult;
     },
+    scene_request: (uniffiHandle: bigint, id: number, request: Uint8Array) => {
+      const uniffiMakeCall = (): void => {
+        const jsCallback = FfiConverterTypeAppListener.lift(uniffiHandle);
+        return jsCallback.sceneRequest(
+          FfiConverterUInt32.lift(id),
+          FfiConverterTypeSceneRequest.lift(request),
+        );
+      };
+      const uniffiResult = UniffiResult.ready<void>();
+      const uniffiHandleSuccess = (obj: any) => {};
+      const uniffiHandleError = (code: number, errBuf: UniffiByteArray) => {
+        UniffiResult.writeError(uniffiResult, code, errBuf);
+      };
+      uniffiTraitInterfaceCall(
+        /*makeCall:*/ uniffiMakeCall,
+        /*handleSuccess:*/ uniffiHandleSuccess,
+        /*handleError:*/ uniffiHandleError,
+        /*lowerString:*/ FfiConverterString.lower.bind(FfiConverterString),
+        /*alloc:*/ nativeModule().rustbuffer_alloc,
+      );
+      return uniffiResult;
+    },
+    engine_notice: (uniffiHandle: bigint, notice: Uint8Array) => {
+      const uniffiMakeCall = (): void => {
+        const jsCallback = FfiConverterTypeAppListener.lift(uniffiHandle);
+        return jsCallback.engineNotice(
+          FfiConverterTypeEngineNotice.lift(notice),
+        );
+      };
+      const uniffiResult = UniffiResult.ready<void>();
+      const uniffiHandleSuccess = (obj: any) => {};
+      const uniffiHandleError = (code: number, errBuf: UniffiByteArray) => {
+        UniffiResult.writeError(uniffiResult, code, errBuf);
+      };
+      uniffiTraitInterfaceCall(
+        /*makeCall:*/ uniffiMakeCall,
+        /*handleSuccess:*/ uniffiHandleSuccess,
+        /*handleError:*/ uniffiHandleError,
+        /*lowerString:*/ FfiConverterString.lower.bind(FfiConverterString),
+        /*alloc:*/ nativeModule().rustbuffer_alloc,
+      );
+      return uniffiResult;
+    },
     report: (uniffiHandle: bigint, payload: Uint8Array) => {
       const uniffiMakeCall = (): void => {
         const jsCallback = FfiConverterTypeAppListener.lift(uniffiHandle);
@@ -10321,9 +12169,24 @@ const FfiConverterOptionalTypeAvatarState = new FfiConverterOptional(
   FfiConverterTypeAvatarState,
 );
 
+// FfiConverter for Array<BaseEmote>
+const FfiConverterSequenceTypeBaseEmote = new FfiConverterArray(
+  FfiConverterTypeBaseEmote,
+);
+
+// FfiConverter for Array<IssueType>
+const FfiConverterSequenceTypeIssueType = new FfiConverterArray(
+  FfiConverterTypeIssueType,
+);
+
 // FfiConverter for Array<Place>
 const FfiConverterSequenceTypePlace = new FfiConverterArray(
   FfiConverterTypePlace,
+);
+
+// FfiConverter for Array<CatalogItem>
+const FfiConverterSequenceTypeCatalogItem = new FfiConverterArray(
+  FfiConverterTypeCatalogItem,
 );
 
 // FfiConverter for number | undefined
@@ -10337,6 +12200,11 @@ const FfiConverterSequenceTypeNotification = new FfiConverterArray(
 // FfiConverter for PlaceUserState | undefined
 const FfiConverterOptionalTypePlaceUserState = new FfiConverterOptional(
   FfiConverterTypePlaceUserState,
+);
+
+// FfiConverter for Array<Rail>
+const FfiConverterSequenceTypeRail = new FfiConverterArray(
+  FfiConverterTypeRail,
 );
 
 // FfiConverter for Array<SettingEntry>
@@ -10396,10 +12264,32 @@ function uniffiEnsureInitialized() {
     );
   }
   if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_avatar_palette() !== 27355
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_avatar_palette',
+    );
+  }
+  if (
     nativeModule().ubrn_uniffi_dcl_core_checksum_func_avatar_state() !== 41002
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_dcl_core_checksum_func_avatar_state',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_base_emotes() !== 53548
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_base_emotes',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_bug_report_issue_types() !==
+    17579
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_bug_report_issue_types',
     );
   }
   if (
@@ -10453,6 +12343,30 @@ function uniffiEnsureInitialized() {
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_dcl_core_checksum_func_complete_browser',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_connection_healthy() !==
+    5466
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_connection_healthy',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_connection_reset() !==
+    44179
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_connection_reset',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_connection_retry() !==
+    21424
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_connection_retry',
     );
   }
   if (
@@ -10604,6 +12518,14 @@ function uniffiEnsureInitialized() {
     );
   }
   if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_is_removable_category() !==
+    10657
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_is_removable_category',
+    );
+  }
+  if (
     nativeModule().ubrn_uniffi_dcl_core_checksum_func_jump_position_url() !==
     59849
   ) {
@@ -10616,6 +12538,14 @@ function uniffiEnsureInitialized() {
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_dcl_core_checksum_func_jump_realm_url',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_load_avatar_catalog() !==
+    40773
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_load_avatar_catalog',
     );
   }
   if (
@@ -10672,6 +12602,14 @@ function uniffiEnsureInitialized() {
       'uniffi_dcl_core_checksum_func_place_user_state',
     );
   }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_probe_connection() !==
+    23905
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_probe_connection',
+    );
+  }
   if (nativeModule().ubrn_uniffi_dcl_core_checksum_func_profile() !== 57615) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_dcl_core_checksum_func_profile',
@@ -10702,10 +12640,55 @@ function uniffiEnsureInitialized() {
     );
   }
   if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_review_check() !== 46765
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_review_check',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_review_fire() !== 8996
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_review_fire',
+    );
+  }
+  if (
     nativeModule().ubrn_uniffi_dcl_core_checksum_func_scene_link_url() !== 17535
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_dcl_core_checksum_func_scene_link_url',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_session_backgrounded() !==
+    52548
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_session_backgrounded',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_session_foregrounded() !==
+    12724
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_session_foregrounded',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_session_launched() !==
+    7407
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_session_launched',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_session_tick() !== 39793
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_session_tick',
     );
   }
   if (
@@ -10737,6 +12720,14 @@ function uniffiEnsureInitialized() {
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_dcl_core_checksum_func_set_favorite',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_set_push_registration() !==
+    56683
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_set_push_registration',
     );
   }
   if (
@@ -10838,6 +12829,14 @@ function uniffiEnsureInitialized() {
   if (nativeModule().ubrn_uniffi_dcl_core_checksum_func_state() !== 49552) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_dcl_core_checksum_func_state',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_func_submit_bug_report() !==
+    22569
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_func_submit_bug_report',
     );
   }
   if (
@@ -10986,8 +12985,24 @@ function uniffiEnsureInitialized() {
     );
   }
   if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_method_applistener_scene_request() !==
+    4466
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_method_applistener_scene_request',
+    );
+  }
+  if (
+    nativeModule().ubrn_uniffi_dcl_core_checksum_method_applistener_engine_notice() !==
+    50018
+  ) {
+    throw new UniffiInternalError.ApiChecksumMismatch(
+      'uniffi_dcl_core_checksum_method_applistener_engine_notice',
+    );
+  }
+  if (
     nativeModule().ubrn_uniffi_dcl_core_checksum_method_applistener_report() !==
-    54322
+    65310
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_dcl_core_checksum_method_applistener_report',
@@ -10995,7 +13010,7 @@ function uniffiEnsureInitialized() {
   }
   if (
     nativeModule().ubrn_uniffi_dcl_core_checksum_method_applistener_report_tag() !==
-    41347
+    52194
   ) {
     throw new UniffiInternalError.ApiChecksumMismatch(
       'uniffi_dcl_core_checksum_method_applistener_report_tag',
@@ -11013,6 +13028,8 @@ export default Object.freeze({
     FfiConverterTypeAnalyticsEvent,
     FfiConverterTypeAppListener,
     FfiConverterTypeAvatarState,
+    FfiConverterTypeBaseEmote,
+    FfiConverterTypeBugReportInput,
     FfiConverterTypeBuildEnvironment,
     FfiConverterTypeCacheSize,
     FfiConverterTypeCameraFocus,
@@ -11020,6 +13037,7 @@ export default Object.freeze({
     FfiConverterTypeCampaignFallback,
     FfiConverterTypeCampaignKind,
     FfiConverterTypeCampaignResolution,
+    FfiConverterTypeCatalogItem,
     FfiConverterTypeChatLine,
     FfiConverterTypeChatProfile,
     FfiConverterTypeColorTarget,
@@ -11033,10 +13051,14 @@ export default Object.freeze({
     FfiConverterTypeDestinationKind,
     FfiConverterTypeDeviceFacts,
     FfiConverterTypeDeviceSupport,
+    FfiConverterTypeDisconnectReason,
     FfiConverterTypeEffect,
+    FfiConverterTypeEngineNotice,
+    FfiConverterTypeEntryRefusal,
     FfiConverterTypeEnvironment,
     FfiConverterTypeHudInsets,
     FfiConverterTypeHudSnapshot,
+    FfiConverterTypeIssueType,
     FfiConverterTypeLoadingDetail,
     FfiConverterTypeNavigation,
     FfiConverterTypeNotification,
@@ -11053,7 +13075,12 @@ export default Object.freeze({
     FfiConverterTypeProfileUpdate,
     FfiConverterTypeProperty,
     FfiConverterTypePropertyValue,
+    FfiConverterTypePushPlatform,
+    FfiConverterTypePushRegistration,
+    FfiConverterTypeQuality,
+    FfiConverterTypeRail,
     FfiConverterTypeRect,
+    FfiConverterTypeReport,
     FfiConverterTypeReportContext,
     FfiConverterTypeReportEvent,
     FfiConverterTypeReportLevel,
@@ -11065,6 +13092,7 @@ export default Object.freeze({
     FfiConverterTypeResolveFailure,
     FfiConverterTypeResolvedDestination,
     FfiConverterTypeRouted,
+    FfiConverterTypeSceneRequest,
     FfiConverterTypeSettingEntry,
     FfiConverterTypeSettingKey,
     FfiConverterTypeSettingValue,
@@ -11074,6 +13102,7 @@ export default Object.freeze({
     FfiConverterTypeState,
     FfiConverterTypeSupportModal,
     FfiConverterTypeSupportStatus,
+    FfiConverterTypeTrigger,
     FfiConverterTypeUiState,
     FfiConverterTypeUpdateDecision,
     FfiConverterTypeUrls,

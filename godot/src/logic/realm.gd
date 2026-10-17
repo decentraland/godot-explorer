@@ -235,8 +235,7 @@ func _async_commit_realm(
 	if not realm_scene_urns.is_empty() and should_resolve_pos:
 		await async_request_set_position(realm_scene_urns.back())
 
-	Global.get_config().last_realm_joined = realm_url
-	Global.get_config().save_to_settings_file()
+	Global.engine.set_setting("last_realm_joined", realm_url, true)
 
 	Global.metrics.update_realm(realm_url)
 

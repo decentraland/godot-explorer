@@ -1238,8 +1238,7 @@ func _update_lod() -> void:
 	# Bypass: when the impostor system is globally disabled, force FULL so
 	# the benchmark's OFF phase measures full-mesh rendering with zero
 	# impostor capture/eviction work.
-	var config = Global.get_config()
-	if config != null and not config.avatar_impostors_enabled:
+	if not Global.engine.setting("avatar_impostors_enabled"):
 		if _lod_state != LODState.FULL:
 			_apply_lod_state(LODState.FULL, 1.0, 0.0, 0.0, 0.0)
 		return

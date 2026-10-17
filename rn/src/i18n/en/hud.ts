@@ -55,4 +55,7 @@ export const hud = {
   COACH_CONTROLS: 'Controls',
   COACH_SWITCH_CAMERA: 'Switch camera',
   COACH_NEXT: 'Next tip',
+  WORLD_LEAVE_TITLE: 'Leave this world?',
+  WORLD_LEAVE_BODY: 'You will go back to the menus.',
+  WORLD_LEAVE_CONFIRM: 'LEAVE',
 } as const;

@@ -132,9 +132,15 @@ typedef void (*UniffiCallbackInterfaceAppListenerMethod11)(
     uint64_t uniffi_handle, RustBuffer avatar, void *uniffi_out_return,
     RustCallStatus *rust_call_status);
 typedef void (*UniffiCallbackInterfaceAppListenerMethod12)(
+    uint64_t uniffi_handle, uint32_t id, RustBuffer request,
+    void *uniffi_out_return, RustCallStatus *rust_call_status);
+typedef void (*UniffiCallbackInterfaceAppListenerMethod13)(
+    uint64_t uniffi_handle, RustBuffer notice, void *uniffi_out_return,
+    RustCallStatus *rust_call_status);
+typedef void (*UniffiCallbackInterfaceAppListenerMethod14)(
     uint64_t uniffi_handle, RustBuffer payload, void *uniffi_out_return,
     RustCallStatus *rust_call_status);
-typedef void (*UniffiCallbackInterfaceAppListenerMethod13)(
+typedef void (*UniffiCallbackInterfaceAppListenerMethod15)(
     uint64_t uniffi_handle, RustBuffer key, RustBuffer value,
     void *uniffi_out_return, RustCallStatus *rust_call_status);
 typedef struct UniffiVTableCallbackInterfaceAppListener {
@@ -152,8 +158,10 @@ typedef struct UniffiVTableCallbackInterfaceAppListener {
   UniffiCallbackInterfaceAppListenerMethod9 open_backpack;
   UniffiCallbackInterfaceAppListenerMethod10 loading_detail;
   UniffiCallbackInterfaceAppListenerMethod11 avatar_changed;
-  UniffiCallbackInterfaceAppListenerMethod12 report;
-  UniffiCallbackInterfaceAppListenerMethod13 report_tag;
+  UniffiCallbackInterfaceAppListenerMethod12 scene_request;
+  UniffiCallbackInterfaceAppListenerMethod13 engine_notice;
+  UniffiCallbackInterfaceAppListenerMethod14 report;
+  UniffiCallbackInterfaceAppListenerMethod15 report_tag;
 } UniffiVTableCallbackInterfaceAppListener;
 /*handle*/ uint64_t uniffi_dcl_core_fn_clone_applistener(
     /*handle*/ uint64_t handle, RustCallStatus *uniffi_out_err);
@@ -187,6 +195,11 @@ void uniffi_dcl_core_fn_method_applistener_loading_detail(
     /*handle*/ uint64_t ptr, RustBuffer detail, RustCallStatus *uniffi_out_err);
 void uniffi_dcl_core_fn_method_applistener_avatar_changed(
     /*handle*/ uint64_t ptr, RustBuffer avatar, RustCallStatus *uniffi_out_err);
+void uniffi_dcl_core_fn_method_applistener_scene_request(
+    /*handle*/ uint64_t ptr, uint32_t id, RustBuffer request,
+    RustCallStatus *uniffi_out_err);
+void uniffi_dcl_core_fn_method_applistener_engine_notice(
+    /*handle*/ uint64_t ptr, RustBuffer notice, RustCallStatus *uniffi_out_err);
 void uniffi_dcl_core_fn_method_applistener_report(
     /*handle*/ uint64_t ptr, RustBuffer payload,
     RustCallStatus *uniffi_out_err);
@@ -202,6 +215,19 @@ uint32_t uniffi_dcl_core_fn_func_installs(RustCallStatus *uniffi_out_err);
 void uniffi_dcl_core_fn_func_remove_listener(uint64_t id,
                                              RustCallStatus *uniffi_out_err);
 RustBuffer uniffi_dcl_core_fn_func_state(RustCallStatus *uniffi_out_err);
+RustBuffer
+uniffi_dcl_core_fn_func_avatar_palette(RustBuffer target,
+                                       RustCallStatus *uniffi_out_err);
+RustBuffer uniffi_dcl_core_fn_func_base_emotes(RustCallStatus *uniffi_out_err);
+int8_t
+uniffi_dcl_core_fn_func_is_removable_category(RustBuffer category,
+                                              RustCallStatus *uniffi_out_err);
+/*handle*/ uint64_t uniffi_dcl_core_fn_func_load_avatar_catalog();
+int8_t
+uniffi_dcl_core_fn_func_connection_healthy(RustCallStatus *uniffi_out_err);
+void uniffi_dcl_core_fn_func_connection_reset(RustCallStatus *uniffi_out_err);
+void uniffi_dcl_core_fn_func_connection_retry(RustCallStatus *uniffi_out_err);
+/*handle*/ uint64_t uniffi_dcl_core_fn_func_probe_connection();
 RustBuffer uniffi_dcl_core_fn_func_avatar_state(RustCallStatus *uniffi_out_err);
 void uniffi_dcl_core_fn_func_control(RustBuffer command,
                                      RustCallStatus *uniffi_out_err);
@@ -260,6 +286,8 @@ uniffi_dcl_core_fn_func_mark_notifications_read(RustBuffer ids);
 /*handle*/ uint64_t uniffi_dcl_core_fn_func_notifications(RustBuffer from,
                                                           RustBuffer limit,
                                                           int8_t only_unread);
+RustBuffer
+uniffi_dcl_core_fn_func_bug_report_issue_types(RustCallStatus *uniffi_out_err);
 /*handle*/ uint64_t uniffi_dcl_core_fn_func_credits_balance();
 /*handle*/ uint64_t uniffi_dcl_core_fn_func_favorite_places(uint32_t offset,
                                                             uint32_t limit,
@@ -271,6 +299,8 @@ uniffi_dcl_core_fn_func_set_event_reminder(RustBuffer event_id, int8_t on);
 /*handle*/ uint64_t uniffi_dcl_core_fn_func_set_favorite(RustBuffer place_id,
                                                          int8_t value,
                                                          int8_t is_world);
+/*handle*/ uint64_t
+uniffi_dcl_core_fn_func_submit_bug_report(RustBuffer report);
 /*handle*/ uint64_t uniffi_dcl_core_fn_func_vote(RustBuffer place_id,
                                                  RustBuffer choice,
                                                  int8_t is_world);
@@ -278,6 +308,13 @@ uniffi_dcl_core_fn_func_set_event_reminder(RustBuffer event_id, int8_t on);
 /*handle*/ uint64_t uniffi_dcl_core_fn_func_deploy_profile(RustBuffer update);
 /*handle*/ uint64_t uniffi_dcl_core_fn_func_owned_names();
 /*handle*/ uint64_t uniffi_dcl_core_fn_func_profile(RustBuffer address);
+void uniffi_dcl_core_fn_func_set_push_registration(
+    RustBuffer registration, RustCallStatus *uniffi_out_err);
+int8_t uniffi_dcl_core_fn_func_review_check(RustBuffer rails,
+                                            RustCallStatus *uniffi_out_err);
+RustBuffer uniffi_dcl_core_fn_func_review_fire(RustBuffer trigger,
+                                               RustBuffer rails,
+                                               RustCallStatus *uniffi_out_err);
 /*handle*/ uint64_t uniffi_dcl_core_fn_func_capture_screenshot();
 /*handle*/ uint64_t uniffi_dcl_core_fn_func_current_scene();
 /*handle*/ uint64_t uniffi_dcl_core_fn_func_flush_analytics();
@@ -310,6 +347,12 @@ void uniffi_dcl_core_fn_func_sign_in_wallet_complete(
     RustBuffer signer_address, RustBuffer signature,
     RustCallStatus *uniffi_out_err);
 void uniffi_dcl_core_fn_func_sign_out(RustCallStatus *uniffi_out_err);
+void uniffi_dcl_core_fn_func_session_backgrounded(
+    RustCallStatus *uniffi_out_err);
+void uniffi_dcl_core_fn_func_session_foregrounded(
+    RustCallStatus *uniffi_out_err);
+void uniffi_dcl_core_fn_func_session_launched(RustCallStatus *uniffi_out_err);
+void uniffi_dcl_core_fn_func_session_tick(RustCallStatus *uniffi_out_err);
 RustBuffer uniffi_dcl_core_fn_func_cache_size(RustCallStatus *uniffi_out_err);
 /*handle*/ uint64_t uniffi_dcl_core_fn_func_clear_cache();
 RustBuffer uniffi_dcl_core_fn_func_set_setting(RustBuffer key, RustBuffer value,
@@ -445,6 +488,14 @@ uint16_t uniffi_dcl_core_checksum_func_debug_fire_events();
 uint16_t uniffi_dcl_core_checksum_func_installs();
 uint16_t uniffi_dcl_core_checksum_func_remove_listener();
 uint16_t uniffi_dcl_core_checksum_func_state();
+uint16_t uniffi_dcl_core_checksum_func_avatar_palette();
+uint16_t uniffi_dcl_core_checksum_func_base_emotes();
+uint16_t uniffi_dcl_core_checksum_func_is_removable_category();
+uint16_t uniffi_dcl_core_checksum_func_load_avatar_catalog();
+uint16_t uniffi_dcl_core_checksum_func_connection_healthy();
+uint16_t uniffi_dcl_core_checksum_func_connection_reset();
+uint16_t uniffi_dcl_core_checksum_func_connection_retry();
+uint16_t uniffi_dcl_core_checksum_func_probe_connection();
 uint16_t uniffi_dcl_core_checksum_func_avatar_state();
 uint16_t uniffi_dcl_core_checksum_func_control();
 uint16_t uniffi_dcl_core_checksum_func_enter_world();
@@ -475,16 +526,21 @@ uint16_t uniffi_dcl_core_checksum_func_urls();
 uint16_t uniffi_dcl_core_checksum_func_version_gate();
 uint16_t uniffi_dcl_core_checksum_func_mark_notifications_read();
 uint16_t uniffi_dcl_core_checksum_func_notifications();
+uint16_t uniffi_dcl_core_checksum_func_bug_report_issue_types();
 uint16_t uniffi_dcl_core_checksum_func_credits_balance();
 uint16_t uniffi_dcl_core_checksum_func_favorite_places();
 uint16_t uniffi_dcl_core_checksum_func_place_user_state();
 uint16_t uniffi_dcl_core_checksum_func_set_event_reminder();
 uint16_t uniffi_dcl_core_checksum_func_set_favorite();
+uint16_t uniffi_dcl_core_checksum_func_submit_bug_report();
 uint16_t uniffi_dcl_core_checksum_func_vote();
 uint16_t uniffi_dcl_core_checksum_func_delete_account();
 uint16_t uniffi_dcl_core_checksum_func_deploy_profile();
 uint16_t uniffi_dcl_core_checksum_func_owned_names();
 uint16_t uniffi_dcl_core_checksum_func_profile();
+uint16_t uniffi_dcl_core_checksum_func_set_push_registration();
+uint16_t uniffi_dcl_core_checksum_func_review_check();
+uint16_t uniffi_dcl_core_checksum_func_review_fire();
 uint16_t uniffi_dcl_core_checksum_func_capture_screenshot();
 uint16_t uniffi_dcl_core_checksum_func_current_scene();
 uint16_t uniffi_dcl_core_checksum_func_flush_analytics();
@@ -504,6 +560,10 @@ uint16_t uniffi_dcl_core_checksum_func_sign_in_guest();
 uint16_t uniffi_dcl_core_checksum_func_sign_in_wallet_begin();
 uint16_t uniffi_dcl_core_checksum_func_sign_in_wallet_complete();
 uint16_t uniffi_dcl_core_checksum_func_sign_out();
+uint16_t uniffi_dcl_core_checksum_func_session_backgrounded();
+uint16_t uniffi_dcl_core_checksum_func_session_foregrounded();
+uint16_t uniffi_dcl_core_checksum_func_session_launched();
+uint16_t uniffi_dcl_core_checksum_func_session_tick();
 uint16_t uniffi_dcl_core_checksum_func_cache_size();
 uint16_t uniffi_dcl_core_checksum_func_clear_cache();
 uint16_t uniffi_dcl_core_checksum_func_set_setting();
@@ -523,6 +583,8 @@ uint16_t uniffi_dcl_core_checksum_method_applistener_ui_state();
 uint16_t uniffi_dcl_core_checksum_method_applistener_open_backpack();
 uint16_t uniffi_dcl_core_checksum_method_applistener_loading_detail();
 uint16_t uniffi_dcl_core_checksum_method_applistener_avatar_changed();
+uint16_t uniffi_dcl_core_checksum_method_applistener_scene_request();
+uint16_t uniffi_dcl_core_checksum_method_applistener_engine_notice();
 uint16_t uniffi_dcl_core_checksum_method_applistener_report();
 uint16_t uniffi_dcl_core_checksum_method_applistener_report_tag();
 uint32_t ffi_dcl_core_uniffi_contract_version();
@@ -3672,7 +3734,7 @@ static void cleanup() {
 } // namespace
   // uniffi::dcl_core::cb::callbackinterfaceapplistenermethod11::vtablecallbackinterfaceapplistener
   // Implementation of CallbackInterfaceAppListenerMethod12 for vtable field
-  // report in VTableCallbackInterfaceAppListener
+  // scene_request in VTableCallbackInterfaceAppListener
 
 // Callback function:
 // uniffi::dcl_core::cb::callbackinterfaceapplistenermethod12::vtablecallbackinterfaceapplistener::UniffiCallbackInterfaceAppListenerMethod12
@@ -3689,6 +3751,279 @@ static void cleanup() {
 // We then give the `callback` function pointer to Rust which will call the
 // lambda sometime in the future.
 namespace uniffi::dcl_core::cb::callbackinterfaceapplistenermethod12::
+    vtablecallbackinterfaceapplistener {
+using namespace facebook;
+
+// We need to store a lambda in a global so we can call it from
+// a function pointer. The function pointer is passed to Rust.
+static std::function<void(uint64_t, uint32_t, RustBuffer, void *,
+                          RustCallStatus *)>
+    rsLambda = nullptr;
+
+// This is the main body of the callback. It's called from the lambda,
+// which itself is called from the callback function which is passed to Rust.
+static void body(jsi::Runtime &rt,
+                 std::shared_ptr<uniffi_runtime::UniffiCallInvoker> callInvoker,
+                 std::shared_ptr<jsi::Value> callbackValue,
+                 uint64_t rs_uniffiHandle, uint32_t rs_id,
+                 RustBuffer rs_request, void *rs_uniffiOutReturn,
+                 RustCallStatus *uniffi_call_status) {
+
+  // Convert the arguments from Rust, into jsi::Values.
+  // We'll use the Bridging class to do this…
+  auto js_uniffiHandle =
+      uniffi_jsi::Bridging<uint64_t>::toJs(rt, callInvoker, rs_uniffiHandle);
+  auto js_id = uniffi_jsi::Bridging<uint32_t>::toJs(rt, callInvoker, rs_id);
+  auto js_request =
+      uniffi::dcl_core::Bridging<RustBuffer>::toJs(rt, callInvoker, rs_request);
+
+  // Now we are ready to call the callback.
+  // We are already on the JS thread, because this `body` function was
+  // invoked from the CallInvoker.
+  try {
+    // Getting the callback function
+    auto cb = callbackValue->asObject(rt).asFunction(rt);
+    auto uniffiResult = cb.call(rt, js_uniffiHandle, js_id, js_request);
+
+    // Now copy the result back from JS into the RustCallStatus object.
+    uniffi::dcl_core::Bridging<RustCallStatus>::copyFromJs(
+        rt, callInvoker, uniffiResult, uniffi_call_status);
+
+    if (uniffi_call_status->code != UNIFFI_CALL_STATUS_OK) {
+      // The JS callback finished abnormally, so we cannot retrieve the return
+      // value.
+      return;
+    }
+
+  } catch (const jsi::JSError &error) {
+    std::cout
+        << "Error in callback UniffiCallbackInterfaceAppListenerMethod12: "
+        << error.what() << std::endl;
+    throw error;
+  }
+}
+
+static void callback(uint64_t rs_uniffiHandle, uint32_t rs_id,
+                     RustBuffer rs_request, void *rs_uniffiOutReturn,
+                     RustCallStatus *uniffi_call_status) {
+  // If the runtime has shutdown, then there is no point in trying to
+  // call into Javascript. BUT how do we tell if the runtime has shutdown?
+  //
+  // Answer: the module destructor calls into callback `cleanup` method,
+  // which nulls out the rsLamda.
+  //
+  // If rsLamda is null, then there is no runtime to call into.
+  if (rsLambda == nullptr) {
+    // This only occurs when destructors are calling into Rust free/drop,
+    // which causes the JS callback to be dropped.
+    return;
+  }
+
+  // The runtime, the actual callback jsi::funtion, and the callInvoker
+  // are all in the lambda.
+  rsLambda(rs_uniffiHandle, rs_id, rs_request, rs_uniffiOutReturn,
+           uniffi_call_status);
+}
+
+[[maybe_unused]] static UniffiCallbackInterfaceAppListenerMethod12
+makeCallbackFunction( // uniffi::dcl_core::cb::callbackinterfaceapplistenermethod12::vtablecallbackinterfaceapplistener
+    jsi::Runtime &rt,
+    std::shared_ptr<uniffi_runtime::UniffiCallInvoker> callInvoker,
+    const jsi::Value &value) {
+  if (rsLambda != nullptr) {
+    // `makeCallbackFunction` is called in two circumstances:
+    //
+    // 1. at startup, when initializing callback interface vtables.
+    // 2. when polling futures. This happens at least once per future that is
+    //    exposed to Javascript. We know that this is always the same function,
+    //    `uniffiFutureContinuationCallback` in `async-rust-calls.ts`.
+    //
+    // We can therefore return the callback function without making anything
+    // new if we've been initialized already.
+    return callback;
+  }
+  auto callbackFunction = value.asObject(rt).asFunction(rt);
+  auto callbackValue = std::make_shared<jsi::Value>(rt, callbackFunction);
+  rsLambda = [&rt, callInvoker,
+              callbackValue](uint64_t rs_uniffiHandle, uint32_t rs_id,
+                             RustBuffer rs_request, void *rs_uniffiOutReturn,
+                             RustCallStatus *uniffi_call_status) {
+    // We immediately make a lambda which will do the work of transforming the
+    // arguments into JSI values and calling the callback.
+    uniffi_runtime::UniffiCallFunc jsLambda =
+        [callInvoker, callbackValue, rs_uniffiHandle, rs_id, rs_request,
+         rs_uniffiOutReturn, uniffi_call_status](jsi::Runtime &rt) mutable {
+          body(rt, callInvoker, callbackValue, rs_uniffiHandle, rs_id,
+               rs_request, rs_uniffiOutReturn, uniffi_call_status);
+        };
+    // We'll then call that lambda from the callInvoker which will
+    // look after calling it on the correct thread.
+    callInvoker->invokeBlocking(rt, jsLambda);
+  };
+  return callback;
+}
+
+// This method is called from the destructor of NativeDclCore, which only
+// happens when the jsi::Runtime is being destroyed.
+static void cleanup() {
+  // The lambda holds a reference to the the Runtime, so when this is nulled
+  // out, then the pointer will no longer be left dangling.
+  rsLambda = nullptr;
+}
+} // namespace
+  // uniffi::dcl_core::cb::callbackinterfaceapplistenermethod12::vtablecallbackinterfaceapplistener
+  // Implementation of CallbackInterfaceAppListenerMethod13 for vtable field
+  // engine_notice in VTableCallbackInterfaceAppListener
+
+// Callback function:
+// uniffi::dcl_core::cb::callbackinterfaceapplistenermethod13::vtablecallbackinterfaceapplistener::UniffiCallbackInterfaceAppListenerMethod13
+//
+// We have the following constraints:
+// - we need to pass a function pointer to Rust.
+// - we need a jsi::Runtime and jsi::Function to call into JS.
+// - function pointers can't store state, so we can't use a lamda.
+//
+// For this, we store a lambda as a global, as `rsLambda`. The `callback`
+// function calls the lambda, which itself calls the `body` which then calls
+// into JS.
+//
+// We then give the `callback` function pointer to Rust which will call the
+// lambda sometime in the future.
+namespace uniffi::dcl_core::cb::callbackinterfaceapplistenermethod13::
+    vtablecallbackinterfaceapplistener {
+using namespace facebook;
+
+// We need to store a lambda in a global so we can call it from
+// a function pointer. The function pointer is passed to Rust.
+static std::function<void(uint64_t, RustBuffer, void *, RustCallStatus *)>
+    rsLambda = nullptr;
+
+// This is the main body of the callback. It's called from the lambda,
+// which itself is called from the callback function which is passed to Rust.
+static void body(jsi::Runtime &rt,
+                 std::shared_ptr<uniffi_runtime::UniffiCallInvoker> callInvoker,
+                 std::shared_ptr<jsi::Value> callbackValue,
+                 uint64_t rs_uniffiHandle, RustBuffer rs_notice,
+                 void *rs_uniffiOutReturn, RustCallStatus *uniffi_call_status) {
+
+  // Convert the arguments from Rust, into jsi::Values.
+  // We'll use the Bridging class to do this…
+  auto js_uniffiHandle =
+      uniffi_jsi::Bridging<uint64_t>::toJs(rt, callInvoker, rs_uniffiHandle);
+  auto js_notice =
+      uniffi::dcl_core::Bridging<RustBuffer>::toJs(rt, callInvoker, rs_notice);
+
+  // Now we are ready to call the callback.
+  // We are already on the JS thread, because this `body` function was
+  // invoked from the CallInvoker.
+  try {
+    // Getting the callback function
+    auto cb = callbackValue->asObject(rt).asFunction(rt);
+    auto uniffiResult = cb.call(rt, js_uniffiHandle, js_notice);
+
+    // Now copy the result back from JS into the RustCallStatus object.
+    uniffi::dcl_core::Bridging<RustCallStatus>::copyFromJs(
+        rt, callInvoker, uniffiResult, uniffi_call_status);
+
+    if (uniffi_call_status->code != UNIFFI_CALL_STATUS_OK) {
+      // The JS callback finished abnormally, so we cannot retrieve the return
+      // value.
+      return;
+    }
+
+  } catch (const jsi::JSError &error) {
+    std::cout
+        << "Error in callback UniffiCallbackInterfaceAppListenerMethod13: "
+        << error.what() << std::endl;
+    throw error;
+  }
+}
+
+static void callback(uint64_t rs_uniffiHandle, RustBuffer rs_notice,
+                     void *rs_uniffiOutReturn,
+                     RustCallStatus *uniffi_call_status) {
+  // If the runtime has shutdown, then there is no point in trying to
+  // call into Javascript. BUT how do we tell if the runtime has shutdown?
+  //
+  // Answer: the module destructor calls into callback `cleanup` method,
+  // which nulls out the rsLamda.
+  //
+  // If rsLamda is null, then there is no runtime to call into.
+  if (rsLambda == nullptr) {
+    // This only occurs when destructors are calling into Rust free/drop,
+    // which causes the JS callback to be dropped.
+    return;
+  }
+
+  // The runtime, the actual callback jsi::funtion, and the callInvoker
+  // are all in the lambda.
+  rsLambda(rs_uniffiHandle, rs_notice, rs_uniffiOutReturn, uniffi_call_status);
+}
+
+[[maybe_unused]] static UniffiCallbackInterfaceAppListenerMethod13
+makeCallbackFunction( // uniffi::dcl_core::cb::callbackinterfaceapplistenermethod13::vtablecallbackinterfaceapplistener
+    jsi::Runtime &rt,
+    std::shared_ptr<uniffi_runtime::UniffiCallInvoker> callInvoker,
+    const jsi::Value &value) {
+  if (rsLambda != nullptr) {
+    // `makeCallbackFunction` is called in two circumstances:
+    //
+    // 1. at startup, when initializing callback interface vtables.
+    // 2. when polling futures. This happens at least once per future that is
+    //    exposed to Javascript. We know that this is always the same function,
+    //    `uniffiFutureContinuationCallback` in `async-rust-calls.ts`.
+    //
+    // We can therefore return the callback function without making anything
+    // new if we've been initialized already.
+    return callback;
+  }
+  auto callbackFunction = value.asObject(rt).asFunction(rt);
+  auto callbackValue = std::make_shared<jsi::Value>(rt, callbackFunction);
+  rsLambda = [&rt, callInvoker, callbackValue](
+                 uint64_t rs_uniffiHandle, RustBuffer rs_notice,
+                 void *rs_uniffiOutReturn, RustCallStatus *uniffi_call_status) {
+    // We immediately make a lambda which will do the work of transforming the
+    // arguments into JSI values and calling the callback.
+    uniffi_runtime::UniffiCallFunc jsLambda =
+        [callInvoker, callbackValue, rs_uniffiHandle, rs_notice,
+         rs_uniffiOutReturn, uniffi_call_status](jsi::Runtime &rt) mutable {
+          body(rt, callInvoker, callbackValue, rs_uniffiHandle, rs_notice,
+               rs_uniffiOutReturn, uniffi_call_status);
+        };
+    // We'll then call that lambda from the callInvoker which will
+    // look after calling it on the correct thread.
+    callInvoker->invokeBlocking(rt, jsLambda);
+  };
+  return callback;
+}
+
+// This method is called from the destructor of NativeDclCore, which only
+// happens when the jsi::Runtime is being destroyed.
+static void cleanup() {
+  // The lambda holds a reference to the the Runtime, so when this is nulled
+  // out, then the pointer will no longer be left dangling.
+  rsLambda = nullptr;
+}
+} // namespace
+  // uniffi::dcl_core::cb::callbackinterfaceapplistenermethod13::vtablecallbackinterfaceapplistener
+  // Implementation of CallbackInterfaceAppListenerMethod14 for vtable field
+  // report in VTableCallbackInterfaceAppListener
+
+// Callback function:
+// uniffi::dcl_core::cb::callbackinterfaceapplistenermethod14::vtablecallbackinterfaceapplistener::UniffiCallbackInterfaceAppListenerMethod14
+//
+// We have the following constraints:
+// - we need to pass a function pointer to Rust.
+// - we need a jsi::Runtime and jsi::Function to call into JS.
+// - function pointers can't store state, so we can't use a lamda.
+//
+// For this, we store a lambda as a global, as `rsLambda`. The `callback`
+// function calls the lambda, which itself calls the `body` which then calls
+// into JS.
+//
+// We then give the `callback` function pointer to Rust which will call the
+// lambda sometime in the future.
+namespace uniffi::dcl_core::cb::callbackinterfaceapplistenermethod14::
     vtablecallbackinterfaceapplistener {
 using namespace facebook;
 
@@ -3732,7 +4067,7 @@ static void body(jsi::Runtime &rt,
 
   } catch (const jsi::JSError &error) {
     std::cout
-        << "Error in callback UniffiCallbackInterfaceAppListenerMethod12: "
+        << "Error in callback UniffiCallbackInterfaceAppListenerMethod14: "
         << error.what() << std::endl;
     throw error;
   }
@@ -3759,8 +4094,8 @@ static void callback(uint64_t rs_uniffiHandle, RustBuffer rs_payload,
   rsLambda(rs_uniffiHandle, rs_payload, rs_uniffiOutReturn, uniffi_call_status);
 }
 
-[[maybe_unused]] static UniffiCallbackInterfaceAppListenerMethod12
-makeCallbackFunction( // uniffi::dcl_core::cb::callbackinterfaceapplistenermethod12::vtablecallbackinterfaceapplistener
+[[maybe_unused]] static UniffiCallbackInterfaceAppListenerMethod14
+makeCallbackFunction( // uniffi::dcl_core::cb::callbackinterfaceapplistenermethod14::vtablecallbackinterfaceapplistener
     jsi::Runtime &rt,
     std::shared_ptr<uniffi_runtime::UniffiCallInvoker> callInvoker,
     const jsi::Value &value) {
@@ -3804,12 +4139,12 @@ static void cleanup() {
   rsLambda = nullptr;
 }
 } // namespace
-  // uniffi::dcl_core::cb::callbackinterfaceapplistenermethod12::vtablecallbackinterfaceapplistener
-  // Implementation of CallbackInterfaceAppListenerMethod13 for vtable field
+  // uniffi::dcl_core::cb::callbackinterfaceapplistenermethod14::vtablecallbackinterfaceapplistener
+  // Implementation of CallbackInterfaceAppListenerMethod15 for vtable field
   // report_tag in VTableCallbackInterfaceAppListener
 
 // Callback function:
-// uniffi::dcl_core::cb::callbackinterfaceapplistenermethod13::vtablecallbackinterfaceapplistener::UniffiCallbackInterfaceAppListenerMethod13
+// uniffi::dcl_core::cb::callbackinterfaceapplistenermethod15::vtablecallbackinterfaceapplistener::UniffiCallbackInterfaceAppListenerMethod15
 //
 // We have the following constraints:
 // - we need to pass a function pointer to Rust.
@@ -3822,7 +4157,7 @@ static void cleanup() {
 //
 // We then give the `callback` function pointer to Rust which will call the
 // lambda sometime in the future.
-namespace uniffi::dcl_core::cb::callbackinterfaceapplistenermethod13::
+namespace uniffi::dcl_core::cb::callbackinterfaceapplistenermethod15::
     vtablecallbackinterfaceapplistener {
 using namespace facebook;
 
@@ -3870,7 +4205,7 @@ static void body(jsi::Runtime &rt,
 
   } catch (const jsi::JSError &error) {
     std::cout
-        << "Error in callback UniffiCallbackInterfaceAppListenerMethod13: "
+        << "Error in callback UniffiCallbackInterfaceAppListenerMethod15: "
         << error.what() << std::endl;
     throw error;
   }
@@ -3898,8 +4233,8 @@ static void callback(uint64_t rs_uniffiHandle, RustBuffer rs_key,
            uniffi_call_status);
 }
 
-[[maybe_unused]] static UniffiCallbackInterfaceAppListenerMethod13
-makeCallbackFunction( // uniffi::dcl_core::cb::callbackinterfaceapplistenermethod13::vtablecallbackinterfaceapplistener
+[[maybe_unused]] static UniffiCallbackInterfaceAppListenerMethod15
+makeCallbackFunction( // uniffi::dcl_core::cb::callbackinterfaceapplistenermethod15::vtablecallbackinterfaceapplistener
     jsi::Runtime &rt,
     std::shared_ptr<uniffi_runtime::UniffiCallInvoker> callInvoker,
     const jsi::Value &value) {
@@ -3944,7 +4279,7 @@ static void cleanup() {
   rsLambda = nullptr;
 }
 } // namespace
-  // uniffi::dcl_core::cb::callbackinterfaceapplistenermethod13::vtablecallbackinterfaceapplistener
+  // uniffi::dcl_core::cb::callbackinterfaceapplistenermethod15::vtablecallbackinterfaceapplistener
 namespace uniffi::dcl_core {
 using namespace facebook;
 using CallInvoker = uniffi_runtime::UniffiCallInvoker;
@@ -4020,12 +4355,20 @@ template <> struct Bridging<UniffiVTableCallbackInterfaceAppListener> {
         uniffi::dcl_core::cb::callbackinterfaceapplistenermethod11::
             vtablecallbackinterfaceapplistener::makeCallbackFunction(
                 rt, callInvoker, jsObject.getProperty(rt, "avatar_changed"));
-    rsObject.report =
+    rsObject.scene_request =
         uniffi::dcl_core::cb::callbackinterfaceapplistenermethod12::
+            vtablecallbackinterfaceapplistener::makeCallbackFunction(
+                rt, callInvoker, jsObject.getProperty(rt, "scene_request"));
+    rsObject.engine_notice =
+        uniffi::dcl_core::cb::callbackinterfaceapplistenermethod13::
+            vtablecallbackinterfaceapplistener::makeCallbackFunction(
+                rt, callInvoker, jsObject.getProperty(rt, "engine_notice"));
+    rsObject.report =
+        uniffi::dcl_core::cb::callbackinterfaceapplistenermethod14::
             vtablecallbackinterfaceapplistener::makeCallbackFunction(
                 rt, callInvoker, jsObject.getProperty(rt, "report"));
     rsObject.report_tag =
-        uniffi::dcl_core::cb::callbackinterfaceapplistenermethod13::
+        uniffi::dcl_core::cb::callbackinterfaceapplistenermethod15::
             vtablecallbackinterfaceapplistener::makeCallbackFunction(
                 rt, callInvoker, jsObject.getProperty(rt, "report_tag"));
 
@@ -4277,6 +4620,30 @@ NativeDclCore::NativeDclCore(
                 ->cpp_uniffi_dcl_core_fn_method_applistener_avatar_changed(
                     rt, thisVal, args, count);
           });
+  props["ubrn_uniffi_dcl_core_fn_method_applistener_scene_request"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_fn_method_applistener_scene_request"),
+          3,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this
+                ->cpp_uniffi_dcl_core_fn_method_applistener_scene_request(
+                    rt, thisVal, args, count);
+          });
+  props["ubrn_uniffi_dcl_core_fn_method_applistener_engine_notice"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_fn_method_applistener_engine_notice"),
+          2,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this
+                ->cpp_uniffi_dcl_core_fn_method_applistener_engine_notice(
+                    rt, thisVal, args, count);
+          });
   props["ubrn_uniffi_dcl_core_fn_method_applistener_report"] =
       jsi::Function::createFromHostFunction(
           rt,
@@ -4363,6 +4730,94 @@ NativeDclCore::NativeDclCore(
                  const jsi::Value *args, size_t count) -> jsi::Value {
             return this->cpp_uniffi_dcl_core_fn_func_state(rt, thisVal, args,
                                                            count);
+          });
+  props["ubrn_uniffi_dcl_core_fn_func_avatar_palette"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_fn_func_avatar_palette"),
+          1,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_dcl_core_fn_func_avatar_palette(
+                rt, thisVal, args, count);
+          });
+  props["ubrn_uniffi_dcl_core_fn_func_base_emotes"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(rt,
+                                    "ubrn_uniffi_dcl_core_fn_func_base_emotes"),
+          0,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_dcl_core_fn_func_base_emotes(rt, thisVal,
+                                                                 args, count);
+          });
+  props["ubrn_uniffi_dcl_core_fn_func_is_removable_category"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_fn_func_is_removable_category"),
+          1,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_dcl_core_fn_func_is_removable_category(
+                rt, thisVal, args, count);
+          });
+  props["ubrn_uniffi_dcl_core_fn_func_load_avatar_catalog"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_fn_func_load_avatar_catalog"),
+          0,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_dcl_core_fn_func_load_avatar_catalog(
+                rt, thisVal, args, count);
+          });
+  props["ubrn_uniffi_dcl_core_fn_func_connection_healthy"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_fn_func_connection_healthy"),
+          0,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_dcl_core_fn_func_connection_healthy(
+                rt, thisVal, args, count);
+          });
+  props["ubrn_uniffi_dcl_core_fn_func_connection_reset"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_fn_func_connection_reset"),
+          0,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_dcl_core_fn_func_connection_reset(
+                rt, thisVal, args, count);
+          });
+  props["ubrn_uniffi_dcl_core_fn_func_connection_retry"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_fn_func_connection_retry"),
+          0,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_dcl_core_fn_func_connection_retry(
+                rt, thisVal, args, count);
+          });
+  props["ubrn_uniffi_dcl_core_fn_func_probe_connection"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_fn_func_probe_connection"),
+          0,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_dcl_core_fn_func_probe_connection(
+                rt, thisVal, args, count);
           });
   props["ubrn_uniffi_dcl_core_fn_func_avatar_state"] =
       jsi::Function::createFromHostFunction(
@@ -4693,6 +5148,17 @@ NativeDclCore::NativeDclCore(
             return this->cpp_uniffi_dcl_core_fn_func_notifications(rt, thisVal,
                                                                    args, count);
           });
+  props["ubrn_uniffi_dcl_core_fn_func_bug_report_issue_types"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_fn_func_bug_report_issue_types"),
+          0,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_dcl_core_fn_func_bug_report_issue_types(
+                rt, thisVal, args, count);
+          });
   props["ubrn_uniffi_dcl_core_fn_func_credits_balance"] =
       jsi::Function::createFromHostFunction(
           rt,
@@ -4748,6 +5214,17 @@ NativeDclCore::NativeDclCore(
             return this->cpp_uniffi_dcl_core_fn_func_set_favorite(rt, thisVal,
                                                                   args, count);
           });
+  props["ubrn_uniffi_dcl_core_fn_func_submit_bug_report"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_fn_func_submit_bug_report"),
+          1,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_dcl_core_fn_func_submit_bug_report(
+                rt, thisVal, args, count);
+          });
   props["ubrn_uniffi_dcl_core_fn_func_vote"] =
       jsi::Function::createFromHostFunction(
           rt,
@@ -4799,6 +5276,39 @@ NativeDclCore::NativeDclCore(
                  const jsi::Value *args, size_t count) -> jsi::Value {
             return this->cpp_uniffi_dcl_core_fn_func_profile(rt, thisVal, args,
                                                              count);
+          });
+  props["ubrn_uniffi_dcl_core_fn_func_set_push_registration"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_fn_func_set_push_registration"),
+          1,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_dcl_core_fn_func_set_push_registration(
+                rt, thisVal, args, count);
+          });
+  props["ubrn_uniffi_dcl_core_fn_func_review_check"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_fn_func_review_check"),
+          1,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_dcl_core_fn_func_review_check(rt, thisVal,
+                                                                  args, count);
+          });
+  props["ubrn_uniffi_dcl_core_fn_func_review_fire"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(rt,
+                                    "ubrn_uniffi_dcl_core_fn_func_review_fire"),
+          2,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_dcl_core_fn_func_review_fire(rt, thisVal,
+                                                                 args, count);
           });
   props["ubrn_uniffi_dcl_core_fn_func_capture_screenshot"] =
       jsi::Function::createFromHostFunction(
@@ -5007,6 +5517,50 @@ NativeDclCore::NativeDclCore(
                  const jsi::Value *args, size_t count) -> jsi::Value {
             return this->cpp_uniffi_dcl_core_fn_func_sign_out(rt, thisVal, args,
                                                               count);
+          });
+  props["ubrn_uniffi_dcl_core_fn_func_session_backgrounded"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_fn_func_session_backgrounded"),
+          0,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_dcl_core_fn_func_session_backgrounded(
+                rt, thisVal, args, count);
+          });
+  props["ubrn_uniffi_dcl_core_fn_func_session_foregrounded"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_fn_func_session_foregrounded"),
+          0,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_dcl_core_fn_func_session_foregrounded(
+                rt, thisVal, args, count);
+          });
+  props["ubrn_uniffi_dcl_core_fn_func_session_launched"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_fn_func_session_launched"),
+          0,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_dcl_core_fn_func_session_launched(
+                rt, thisVal, args, count);
+          });
+  props["ubrn_uniffi_dcl_core_fn_func_session_tick"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_fn_func_session_tick"),
+          0,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_dcl_core_fn_func_session_tick(rt, thisVal,
+                                                                  args, count);
           });
   props["ubrn_uniffi_dcl_core_fn_func_cache_size"] =
       jsi::Function::createFromHostFunction(
@@ -5678,6 +6232,95 @@ NativeDclCore::NativeDclCore(
             return this->cpp_uniffi_dcl_core_checksum_func_state(rt, thisVal,
                                                                  args, count);
           });
+  props["ubrn_uniffi_dcl_core_checksum_func_avatar_palette"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_checksum_func_avatar_palette"),
+          0,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_dcl_core_checksum_func_avatar_palette(
+                rt, thisVal, args, count);
+          });
+  props["ubrn_uniffi_dcl_core_checksum_func_base_emotes"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_checksum_func_base_emotes"),
+          0,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_dcl_core_checksum_func_base_emotes(
+                rt, thisVal, args, count);
+          });
+  props["ubrn_uniffi_dcl_core_checksum_func_is_removable_category"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_checksum_func_is_removable_category"),
+          0,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this
+                ->cpp_uniffi_dcl_core_checksum_func_is_removable_category(
+                    rt, thisVal, args, count);
+          });
+  props["ubrn_uniffi_dcl_core_checksum_func_load_avatar_catalog"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_checksum_func_load_avatar_catalog"),
+          0,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_dcl_core_checksum_func_load_avatar_catalog(
+                rt, thisVal, args, count);
+          });
+  props["ubrn_uniffi_dcl_core_checksum_func_connection_healthy"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_checksum_func_connection_healthy"),
+          0,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_dcl_core_checksum_func_connection_healthy(
+                rt, thisVal, args, count);
+          });
+  props["ubrn_uniffi_dcl_core_checksum_func_connection_reset"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_checksum_func_connection_reset"),
+          0,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_dcl_core_checksum_func_connection_reset(
+                rt, thisVal, args, count);
+          });
+  props["ubrn_uniffi_dcl_core_checksum_func_connection_retry"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_checksum_func_connection_retry"),
+          0,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_dcl_core_checksum_func_connection_retry(
+                rt, thisVal, args, count);
+          });
+  props["ubrn_uniffi_dcl_core_checksum_func_probe_connection"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_checksum_func_probe_connection"),
+          0,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_dcl_core_checksum_func_probe_connection(
+                rt, thisVal, args, count);
+          });
   props["ubrn_uniffi_dcl_core_checksum_func_avatar_state"] =
       jsi::Function::createFromHostFunction(
           rt,
@@ -6015,6 +6658,18 @@ NativeDclCore::NativeDclCore(
             return this->cpp_uniffi_dcl_core_checksum_func_notifications(
                 rt, thisVal, args, count);
           });
+  props["ubrn_uniffi_dcl_core_checksum_func_bug_report_issue_types"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_checksum_func_bug_report_issue_types"),
+          0,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this
+                ->cpp_uniffi_dcl_core_checksum_func_bug_report_issue_types(
+                    rt, thisVal, args, count);
+          });
   props["ubrn_uniffi_dcl_core_checksum_func_credits_balance"] =
       jsi::Function::createFromHostFunction(
           rt,
@@ -6068,6 +6723,17 @@ NativeDclCore::NativeDclCore(
           [this](jsi::Runtime &rt, const jsi::Value &thisVal,
                  const jsi::Value *args, size_t count) -> jsi::Value {
             return this->cpp_uniffi_dcl_core_checksum_func_set_favorite(
+                rt, thisVal, args, count);
+          });
+  props["ubrn_uniffi_dcl_core_checksum_func_submit_bug_report"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_checksum_func_submit_bug_report"),
+          0,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_dcl_core_checksum_func_submit_bug_report(
                 rt, thisVal, args, count);
           });
   props["ubrn_uniffi_dcl_core_checksum_func_vote"] =
@@ -6124,6 +6790,40 @@ NativeDclCore::NativeDclCore(
                  const jsi::Value *args, size_t count) -> jsi::Value {
             return this->cpp_uniffi_dcl_core_checksum_func_profile(rt, thisVal,
                                                                    args, count);
+          });
+  props["ubrn_uniffi_dcl_core_checksum_func_set_push_registration"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_checksum_func_set_push_registration"),
+          0,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this
+                ->cpp_uniffi_dcl_core_checksum_func_set_push_registration(
+                    rt, thisVal, args, count);
+          });
+  props["ubrn_uniffi_dcl_core_checksum_func_review_check"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_checksum_func_review_check"),
+          0,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_dcl_core_checksum_func_review_check(
+                rt, thisVal, args, count);
+          });
+  props["ubrn_uniffi_dcl_core_checksum_func_review_fire"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_checksum_func_review_fire"),
+          0,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_dcl_core_checksum_func_review_fire(
+                rt, thisVal, args, count);
           });
   props["ubrn_uniffi_dcl_core_checksum_func_capture_screenshot"] =
       jsi::Function::createFromHostFunction(
@@ -6335,6 +7035,50 @@ NativeDclCore::NativeDclCore(
           [this](jsi::Runtime &rt, const jsi::Value &thisVal,
                  const jsi::Value *args, size_t count) -> jsi::Value {
             return this->cpp_uniffi_dcl_core_checksum_func_sign_out(
+                rt, thisVal, args, count);
+          });
+  props["ubrn_uniffi_dcl_core_checksum_func_session_backgrounded"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_checksum_func_session_backgrounded"),
+          0,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_dcl_core_checksum_func_session_backgrounded(
+                rt, thisVal, args, count);
+          });
+  props["ubrn_uniffi_dcl_core_checksum_func_session_foregrounded"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_checksum_func_session_foregrounded"),
+          0,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_dcl_core_checksum_func_session_foregrounded(
+                rt, thisVal, args, count);
+          });
+  props["ubrn_uniffi_dcl_core_checksum_func_session_launched"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_checksum_func_session_launched"),
+          0,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_dcl_core_checksum_func_session_launched(
+                rt, thisVal, args, count);
+          });
+  props["ubrn_uniffi_dcl_core_checksum_func_session_tick"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt, "ubrn_uniffi_dcl_core_checksum_func_session_tick"),
+          0,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this->cpp_uniffi_dcl_core_checksum_func_session_tick(
                 rt, thisVal, args, count);
           });
   props["ubrn_uniffi_dcl_core_checksum_func_cache_size"] =
@@ -6562,6 +7306,32 @@ NativeDclCore::NativeDclCore(
                 ->cpp_uniffi_dcl_core_checksum_method_applistener_avatar_changed(
                     rt, thisVal, args, count);
           });
+  props["ubrn_uniffi_dcl_core_checksum_method_applistener_scene_request"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt,
+              "ubrn_uniffi_dcl_core_checksum_method_applistener_scene_request"),
+          0,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this
+                ->cpp_uniffi_dcl_core_checksum_method_applistener_scene_request(
+                    rt, thisVal, args, count);
+          });
+  props["ubrn_uniffi_dcl_core_checksum_method_applistener_engine_notice"] =
+      jsi::Function::createFromHostFunction(
+          rt,
+          jsi::PropNameID::forAscii(
+              rt,
+              "ubrn_uniffi_dcl_core_checksum_method_applistener_engine_notice"),
+          0,
+          [this](jsi::Runtime &rt, const jsi::Value &thisVal,
+                 const jsi::Value *args, size_t count) -> jsi::Value {
+            return this
+                ->cpp_uniffi_dcl_core_checksum_method_applistener_engine_notice(
+                    rt, thisVal, args, count);
+          });
   props["ubrn_uniffi_dcl_core_checksum_method_applistener_report"] =
       jsi::Function::createFromHostFunction(
           rt,
@@ -6779,6 +7549,10 @@ NativeDclCore::~NativeDclCore() {
   uniffi::dcl_core::cb::callbackinterfaceapplistenermethod12::
       vtablecallbackinterfaceapplistener::cleanup();
   uniffi::dcl_core::cb::callbackinterfaceapplistenermethod13::
+      vtablecallbackinterfaceapplistener::cleanup();
+  uniffi::dcl_core::cb::callbackinterfaceapplistenermethod14::
+      vtablecallbackinterfaceapplistener::cleanup();
+  uniffi::dcl_core::cb::callbackinterfaceapplistenermethod15::
       vtablecallbackinterfaceapplistener::cleanup();
 }
 
@@ -7053,6 +7827,39 @@ NativeDclCore::cpp_uniffi_dcl_core_fn_method_applistener_avatar_changed(
 
   return jsi::Value::undefined();
 }
+jsi::Value
+NativeDclCore::cpp_uniffi_dcl_core_fn_method_applistener_scene_request(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  RustCallStatus status =
+      uniffi::dcl_core::Bridging<RustCallStatus>::rustSuccess(rt);
+  uniffi_dcl_core_fn_method_applistener_scene_request(
+      uniffi_jsi::Bridging</*handle*/ uint64_t>::fromJs(rt, callInvoker,
+                                                        args[0]),
+      uniffi_jsi::Bridging<uint32_t>::fromJs(rt, callInvoker, args[1]),
+      uniffi::dcl_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[2]),
+      &status);
+  uniffi::dcl_core::Bridging<RustCallStatus>::copyIntoJs(
+      rt, callInvoker, status, args[count - 1]);
+
+  return jsi::Value::undefined();
+}
+jsi::Value
+NativeDclCore::cpp_uniffi_dcl_core_fn_method_applistener_engine_notice(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  RustCallStatus status =
+      uniffi::dcl_core::Bridging<RustCallStatus>::rustSuccess(rt);
+  uniffi_dcl_core_fn_method_applistener_engine_notice(
+      uniffi_jsi::Bridging</*handle*/ uint64_t>::fromJs(rt, callInvoker,
+                                                        args[0]),
+      uniffi::dcl_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[1]),
+      &status);
+  uniffi::dcl_core::Bridging<RustCallStatus>::copyIntoJs(
+      rt, callInvoker, status, args[count - 1]);
+
+  return jsi::Value::undefined();
+}
 jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_method_applistener_report(
     jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
     size_t count) {
@@ -7151,6 +7958,92 @@ jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_state(
       rt, callInvoker, status, args[count - 1]);
 
   return uniffi::dcl_core::Bridging<RustBuffer>::toJs(rt, callInvoker, value);
+}
+jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_avatar_palette(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  RustCallStatus status =
+      uniffi::dcl_core::Bridging<RustCallStatus>::rustSuccess(rt);
+  auto value = uniffi_dcl_core_fn_func_avatar_palette(
+      uniffi::dcl_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[0]),
+      &status);
+  uniffi::dcl_core::Bridging<RustCallStatus>::copyIntoJs(
+      rt, callInvoker, status, args[count - 1]);
+
+  return uniffi::dcl_core::Bridging<RustBuffer>::toJs(rt, callInvoker, value);
+}
+jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_base_emotes(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  RustCallStatus status =
+      uniffi::dcl_core::Bridging<RustCallStatus>::rustSuccess(rt);
+  auto value = uniffi_dcl_core_fn_func_base_emotes(&status);
+  uniffi::dcl_core::Bridging<RustCallStatus>::copyIntoJs(
+      rt, callInvoker, status, args[count - 1]);
+
+  return uniffi::dcl_core::Bridging<RustBuffer>::toJs(rt, callInvoker, value);
+}
+jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_is_removable_category(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  RustCallStatus status =
+      uniffi::dcl_core::Bridging<RustCallStatus>::rustSuccess(rt);
+  auto value = uniffi_dcl_core_fn_func_is_removable_category(
+      uniffi::dcl_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[0]),
+      &status);
+  uniffi::dcl_core::Bridging<RustCallStatus>::copyIntoJs(
+      rt, callInvoker, status, args[count - 1]);
+
+  return uniffi_jsi::Bridging<int8_t>::toJs(rt, callInvoker, value);
+}
+jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_load_avatar_catalog(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  auto value = uniffi_dcl_core_fn_func_load_avatar_catalog();
+
+  return uniffi_jsi::Bridging</*handle*/ uint64_t>::toJs(rt, callInvoker,
+                                                         value);
+}
+jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_connection_healthy(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  RustCallStatus status =
+      uniffi::dcl_core::Bridging<RustCallStatus>::rustSuccess(rt);
+  auto value = uniffi_dcl_core_fn_func_connection_healthy(&status);
+  uniffi::dcl_core::Bridging<RustCallStatus>::copyIntoJs(
+      rt, callInvoker, status, args[count - 1]);
+
+  return uniffi_jsi::Bridging<int8_t>::toJs(rt, callInvoker, value);
+}
+jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_connection_reset(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  RustCallStatus status =
+      uniffi::dcl_core::Bridging<RustCallStatus>::rustSuccess(rt);
+  uniffi_dcl_core_fn_func_connection_reset(&status);
+  uniffi::dcl_core::Bridging<RustCallStatus>::copyIntoJs(
+      rt, callInvoker, status, args[count - 1]);
+
+  return jsi::Value::undefined();
+}
+jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_connection_retry(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  RustCallStatus status =
+      uniffi::dcl_core::Bridging<RustCallStatus>::rustSuccess(rt);
+  uniffi_dcl_core_fn_func_connection_retry(&status);
+  uniffi::dcl_core::Bridging<RustCallStatus>::copyIntoJs(
+      rt, callInvoker, status, args[count - 1]);
+
+  return jsi::Value::undefined();
+}
+jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_probe_connection(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  auto value = uniffi_dcl_core_fn_func_probe_connection();
+
+  return uniffi_jsi::Bridging</*handle*/ uint64_t>::toJs(rt, callInvoker,
+                                                         value);
 }
 jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_avatar_state(
     jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
@@ -7494,6 +8387,17 @@ jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_notifications(
   return uniffi_jsi::Bridging</*handle*/ uint64_t>::toJs(rt, callInvoker,
                                                          value);
 }
+jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_bug_report_issue_types(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  RustCallStatus status =
+      uniffi::dcl_core::Bridging<RustCallStatus>::rustSuccess(rt);
+  auto value = uniffi_dcl_core_fn_func_bug_report_issue_types(&status);
+  uniffi::dcl_core::Bridging<RustCallStatus>::copyIntoJs(
+      rt, callInvoker, status, args[count - 1]);
+
+  return uniffi::dcl_core::Bridging<RustBuffer>::toJs(rt, callInvoker, value);
+}
 jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_credits_balance(
     jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
     size_t count) {
@@ -7543,6 +8447,15 @@ jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_set_favorite(
   return uniffi_jsi::Bridging</*handle*/ uint64_t>::toJs(rt, callInvoker,
                                                          value);
 }
+jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_submit_bug_report(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  auto value = uniffi_dcl_core_fn_func_submit_bug_report(
+      uniffi::dcl_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[0]));
+
+  return uniffi_jsi::Bridging</*handle*/ uint64_t>::toJs(rt, callInvoker,
+                                                         value);
+}
 jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_vote(
     jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
     size_t count) {
@@ -7587,6 +8500,46 @@ jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_profile(
 
   return uniffi_jsi::Bridging</*handle*/ uint64_t>::toJs(rt, callInvoker,
                                                          value);
+}
+jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_set_push_registration(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  RustCallStatus status =
+      uniffi::dcl_core::Bridging<RustCallStatus>::rustSuccess(rt);
+  uniffi_dcl_core_fn_func_set_push_registration(
+      uniffi::dcl_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[0]),
+      &status);
+  uniffi::dcl_core::Bridging<RustCallStatus>::copyIntoJs(
+      rt, callInvoker, status, args[count - 1]);
+
+  return jsi::Value::undefined();
+}
+jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_review_check(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  RustCallStatus status =
+      uniffi::dcl_core::Bridging<RustCallStatus>::rustSuccess(rt);
+  auto value = uniffi_dcl_core_fn_func_review_check(
+      uniffi::dcl_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[0]),
+      &status);
+  uniffi::dcl_core::Bridging<RustCallStatus>::copyIntoJs(
+      rt, callInvoker, status, args[count - 1]);
+
+  return uniffi_jsi::Bridging<int8_t>::toJs(rt, callInvoker, value);
+}
+jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_review_fire(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  RustCallStatus status =
+      uniffi::dcl_core::Bridging<RustCallStatus>::rustSuccess(rt);
+  auto value = uniffi_dcl_core_fn_func_review_fire(
+      uniffi::dcl_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[0]),
+      uniffi::dcl_core::Bridging<RustBuffer>::fromJs(rt, callInvoker, args[1]),
+      &status);
+  uniffi::dcl_core::Bridging<RustCallStatus>::copyIntoJs(
+      rt, callInvoker, status, args[count - 1]);
+
+  return uniffi::dcl_core::Bridging<RustBuffer>::toJs(rt, callInvoker, value);
 }
 jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_capture_screenshot(
     jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
@@ -7789,6 +8742,50 @@ jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_sign_out(
   RustCallStatus status =
       uniffi::dcl_core::Bridging<RustCallStatus>::rustSuccess(rt);
   uniffi_dcl_core_fn_func_sign_out(&status);
+  uniffi::dcl_core::Bridging<RustCallStatus>::copyIntoJs(
+      rt, callInvoker, status, args[count - 1]);
+
+  return jsi::Value::undefined();
+}
+jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_session_backgrounded(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  RustCallStatus status =
+      uniffi::dcl_core::Bridging<RustCallStatus>::rustSuccess(rt);
+  uniffi_dcl_core_fn_func_session_backgrounded(&status);
+  uniffi::dcl_core::Bridging<RustCallStatus>::copyIntoJs(
+      rt, callInvoker, status, args[count - 1]);
+
+  return jsi::Value::undefined();
+}
+jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_session_foregrounded(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  RustCallStatus status =
+      uniffi::dcl_core::Bridging<RustCallStatus>::rustSuccess(rt);
+  uniffi_dcl_core_fn_func_session_foregrounded(&status);
+  uniffi::dcl_core::Bridging<RustCallStatus>::copyIntoJs(
+      rt, callInvoker, status, args[count - 1]);
+
+  return jsi::Value::undefined();
+}
+jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_session_launched(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  RustCallStatus status =
+      uniffi::dcl_core::Bridging<RustCallStatus>::rustSuccess(rt);
+  uniffi_dcl_core_fn_func_session_launched(&status);
+  uniffi::dcl_core::Bridging<RustCallStatus>::copyIntoJs(
+      rt, callInvoker, status, args[count - 1]);
+
+  return jsi::Value::undefined();
+}
+jsi::Value NativeDclCore::cpp_uniffi_dcl_core_fn_func_session_tick(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  RustCallStatus status =
+      uniffi::dcl_core::Bridging<RustCallStatus>::rustSuccess(rt);
+  uniffi_dcl_core_fn_func_session_tick(&status);
   uniffi::dcl_core::Bridging<RustCallStatus>::copyIntoJs(
       rt, callInvoker, status, args[count - 1]);
 
@@ -8457,6 +9454,63 @@ jsi::Value NativeDclCore::cpp_uniffi_dcl_core_checksum_func_state(
 
   return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
 }
+jsi::Value NativeDclCore::cpp_uniffi_dcl_core_checksum_func_avatar_palette(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  auto value = uniffi_dcl_core_checksum_func_avatar_palette();
+
+  return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
+}
+jsi::Value NativeDclCore::cpp_uniffi_dcl_core_checksum_func_base_emotes(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  auto value = uniffi_dcl_core_checksum_func_base_emotes();
+
+  return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
+}
+jsi::Value
+NativeDclCore::cpp_uniffi_dcl_core_checksum_func_is_removable_category(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  auto value = uniffi_dcl_core_checksum_func_is_removable_category();
+
+  return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
+}
+jsi::Value NativeDclCore::cpp_uniffi_dcl_core_checksum_func_load_avatar_catalog(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  auto value = uniffi_dcl_core_checksum_func_load_avatar_catalog();
+
+  return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
+}
+jsi::Value NativeDclCore::cpp_uniffi_dcl_core_checksum_func_connection_healthy(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  auto value = uniffi_dcl_core_checksum_func_connection_healthy();
+
+  return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
+}
+jsi::Value NativeDclCore::cpp_uniffi_dcl_core_checksum_func_connection_reset(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  auto value = uniffi_dcl_core_checksum_func_connection_reset();
+
+  return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
+}
+jsi::Value NativeDclCore::cpp_uniffi_dcl_core_checksum_func_connection_retry(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  auto value = uniffi_dcl_core_checksum_func_connection_retry();
+
+  return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
+}
+jsi::Value NativeDclCore::cpp_uniffi_dcl_core_checksum_func_probe_connection(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  auto value = uniffi_dcl_core_checksum_func_probe_connection();
+
+  return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
+}
 jsi::Value NativeDclCore::cpp_uniffi_dcl_core_checksum_func_avatar_state(
     jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
     size_t count) {
@@ -8674,6 +9728,14 @@ jsi::Value NativeDclCore::cpp_uniffi_dcl_core_checksum_func_notifications(
 
   return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
 }
+jsi::Value
+NativeDclCore::cpp_uniffi_dcl_core_checksum_func_bug_report_issue_types(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  auto value = uniffi_dcl_core_checksum_func_bug_report_issue_types();
+
+  return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
+}
 jsi::Value NativeDclCore::cpp_uniffi_dcl_core_checksum_func_credits_balance(
     jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
     size_t count) {
@@ -8709,6 +9771,13 @@ jsi::Value NativeDclCore::cpp_uniffi_dcl_core_checksum_func_set_favorite(
 
   return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
 }
+jsi::Value NativeDclCore::cpp_uniffi_dcl_core_checksum_func_submit_bug_report(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  auto value = uniffi_dcl_core_checksum_func_submit_bug_report();
+
+  return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
+}
 jsi::Value NativeDclCore::cpp_uniffi_dcl_core_checksum_func_vote(
     jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
     size_t count) {
@@ -8741,6 +9810,28 @@ jsi::Value NativeDclCore::cpp_uniffi_dcl_core_checksum_func_profile(
     jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
     size_t count) {
   auto value = uniffi_dcl_core_checksum_func_profile();
+
+  return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
+}
+jsi::Value
+NativeDclCore::cpp_uniffi_dcl_core_checksum_func_set_push_registration(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  auto value = uniffi_dcl_core_checksum_func_set_push_registration();
+
+  return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
+}
+jsi::Value NativeDclCore::cpp_uniffi_dcl_core_checksum_func_review_check(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  auto value = uniffi_dcl_core_checksum_func_review_check();
+
+  return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
+}
+jsi::Value NativeDclCore::cpp_uniffi_dcl_core_checksum_func_review_fire(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  auto value = uniffi_dcl_core_checksum_func_review_fire();
 
   return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
 }
@@ -8879,6 +9970,36 @@ jsi::Value NativeDclCore::cpp_uniffi_dcl_core_checksum_func_sign_out(
     jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
     size_t count) {
   auto value = uniffi_dcl_core_checksum_func_sign_out();
+
+  return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
+}
+jsi::Value
+NativeDclCore::cpp_uniffi_dcl_core_checksum_func_session_backgrounded(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  auto value = uniffi_dcl_core_checksum_func_session_backgrounded();
+
+  return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
+}
+jsi::Value
+NativeDclCore::cpp_uniffi_dcl_core_checksum_func_session_foregrounded(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  auto value = uniffi_dcl_core_checksum_func_session_foregrounded();
+
+  return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
+}
+jsi::Value NativeDclCore::cpp_uniffi_dcl_core_checksum_func_session_launched(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  auto value = uniffi_dcl_core_checksum_func_session_launched();
+
+  return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
+}
+jsi::Value NativeDclCore::cpp_uniffi_dcl_core_checksum_func_session_tick(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  auto value = uniffi_dcl_core_checksum_func_session_tick();
 
   return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
 }
@@ -9023,6 +10144,22 @@ NativeDclCore::cpp_uniffi_dcl_core_checksum_method_applistener_avatar_changed(
     jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
     size_t count) {
   auto value = uniffi_dcl_core_checksum_method_applistener_avatar_changed();
+
+  return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
+}
+jsi::Value
+NativeDclCore::cpp_uniffi_dcl_core_checksum_method_applistener_scene_request(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  auto value = uniffi_dcl_core_checksum_method_applistener_scene_request();
+
+  return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
+}
+jsi::Value
+NativeDclCore::cpp_uniffi_dcl_core_checksum_method_applistener_engine_notice(
+    jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+    size_t count) {
+  auto value = uniffi_dcl_core_checksum_method_applistener_engine_notice();
 
   return uniffi_jsi::Bridging<uint16_t>::toJs(rt, callInvoker, value);
 }

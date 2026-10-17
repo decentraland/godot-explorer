@@ -114,6 +114,7 @@ impl Settings {
         let values = lock(&self.values);
         SettingKey::ALL
             .into_iter()
+            .filter(|key| key.shell_visible())
             .map(|key| SettingEntry {
                 key,
                 value: values
@@ -164,6 +165,14 @@ impl Settings {
         let announced = self.store_value(key, &value, false);
         self.announce(&announced);
         Ok(announced)
+    }
+
+    /// Writes every stored value to disk.
+    pub fn save(&self) {
+        let values = lock(&self.values);
+        if let Err(error) = self.store.save(&values) {
+            tracing::error!("settings: could not save: {error}");
+        }
     }
 
     /// Applies every stored value; the engine calls it once when it attaches.
@@ -254,7 +263,7 @@ impl Settings {
             .iter()
             .map(|(_, l)| l.clone())
             .collect();
-        for entry in entries {
+        for entry in entries.iter().filter(|entry| entry.key.shell_visible()) {
             for listener in &listeners {
                 listener.settings_changed(entry);
             }

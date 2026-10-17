@@ -80,3 +80,24 @@ pub async fn set_event_reminder(event_id: String, on: bool) -> Result<(), CoreEr
 pub async fn credits_balance() -> Result<CreditsBalance, CoreError> {
     on_core(|client| async move { places::credits_balance(&client).await }).await
 }
+
+/// Files a bug report as an Intercom ticket and returns its id. `coordinates` is filled in from
+/// the world the player is in when the shell leaves it empty.
+#[uniffi::export]
+pub async fn submit_bug_report(mut report: places::BugReportInput) -> Result<String, CoreError> {
+    if report.coordinates.is_empty() {
+        if let Some(crate::app::State::InWorld { parcel, .. }) = core()
+            .ok()
+            .map(|core| core.with_app(|app| app.state().clone()))
+        {
+            report.coordinates = format!("{},{}", parcel.x, parcel.y);
+        }
+    }
+    on_core(move |client| async move { places::submit_bug_report(&client, &report).await }).await
+}
+
+/// The issue types a bug report can be filed under.
+#[uniffi::export]
+pub fn bug_report_issue_types() -> Vec<places::IssueType> {
+    places::issue_types()
+}

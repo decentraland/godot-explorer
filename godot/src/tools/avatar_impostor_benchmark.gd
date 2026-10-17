@@ -44,7 +44,7 @@ func _ready() -> void:
 	GraphicSettings.apply_full_processor_mode()
 
 	# Start with impostors ON; the bench flips to OFF later for the comparison.
-	Global.get_config().avatar_impostors_enabled = true
+	Global.engine.set_setting("avatar_impostors_enabled", true, false)
 
 	_auto_quit = (
 		Global.cli.avatar_impostor_benchmark
@@ -185,7 +185,7 @@ func _async_load_one(avatar: Node, address: String) -> void:
 
 
 func _start_phase(phase: int, impostors_enabled: bool) -> void:
-	Global.get_config().avatar_impostors_enabled = impostors_enabled
+	Global.engine.set_setting("avatar_impostors_enabled", impostors_enabled, false)
 	_phase = phase
 	_phase_dts.clear()
 	_phase_start_ms = Time.get_ticks_msec()
@@ -359,7 +359,7 @@ func _process(delta: float) -> void:
 			avg_dt += dt
 		avg_dt /= float(_frame_dts.size())
 		var fps: float = 1.0 / avg_dt if avg_dt > 0.0 else 0.0
-		var imp_state: String = "ON" if Global.get_config().avatar_impostors_enabled else "OFF"
+		var imp_state: String = "ON" if Global.engine.setting("avatar_impostors_enabled") else "OFF"
 		_label_fps.text = (
 			"FPS: %5.1f   |   %5.2f ms   |   N=%d   |   IMPOSTORS %s"
 			% [fps, avg_dt * 1000.0, _avatars.size(), imp_state]

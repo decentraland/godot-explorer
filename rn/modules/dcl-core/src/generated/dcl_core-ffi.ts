@@ -186,7 +186,17 @@ interface NativeModuleInterface {
   ubrn_uniffi_dcl_core_fn_func_address(
     uniffi_out_err: UniffiRustCallStatus,
   ): Uint8Array;
+  ubrn_uniffi_dcl_core_fn_func_avatar_palette(
+    target: Uint8Array,
+    uniffi_out_err: UniffiRustCallStatus,
+  ): Uint8Array;
   ubrn_uniffi_dcl_core_fn_func_avatar_state(
+    uniffi_out_err: UniffiRustCallStatus,
+  ): Uint8Array;
+  ubrn_uniffi_dcl_core_fn_func_base_emotes(
+    uniffi_out_err: UniffiRustCallStatus,
+  ): Uint8Array;
+  ubrn_uniffi_dcl_core_fn_func_bug_report_issue_types(
     uniffi_out_err: UniffiRustCallStatus,
   ): Uint8Array;
   ubrn_uniffi_dcl_core_fn_func_cache_size(
@@ -203,6 +213,15 @@ interface NativeModuleInterface {
   ubrn_uniffi_dcl_core_fn_func_capture_screenshot(): bigint;
   ubrn_uniffi_dcl_core_fn_func_clear_cache(): bigint;
   ubrn_uniffi_dcl_core_fn_func_complete_browser(identityId: Uint8Array): bigint;
+  ubrn_uniffi_dcl_core_fn_func_connection_healthy(
+    uniffi_out_err: UniffiRustCallStatus,
+  ): number;
+  ubrn_uniffi_dcl_core_fn_func_connection_reset(
+    uniffi_out_err: UniffiRustCallStatus,
+  ): void;
+  ubrn_uniffi_dcl_core_fn_func_connection_retry(
+    uniffi_out_err: UniffiRustCallStatus,
+  ): void;
   ubrn_uniffi_dcl_core_fn_func_consume_campaign(
     uniffi_out_err: UniffiRustCallStatus,
   ): void;
@@ -261,6 +280,10 @@ interface NativeModuleInterface {
   ubrn_uniffi_dcl_core_fn_func_is_guest(
     uniffi_out_err: UniffiRustCallStatus,
   ): number;
+  ubrn_uniffi_dcl_core_fn_func_is_removable_category(
+    category: Uint8Array,
+    uniffi_out_err: UniffiRustCallStatus,
+  ): number;
   ubrn_uniffi_dcl_core_fn_func_jump_position_url(
     position: Uint8Array,
     uniffi_out_err: UniffiRustCallStatus,
@@ -269,6 +292,7 @@ interface NativeModuleInterface {
     realm: Uint8Array,
     uniffi_out_err: UniffiRustCallStatus,
   ): Uint8Array;
+  ubrn_uniffi_dcl_core_fn_func_load_avatar_catalog(): bigint;
   ubrn_uniffi_dcl_core_fn_func_mark_notifications_read(ids: Uint8Array): bigint;
   ubrn_uniffi_dcl_core_fn_func_marketplace_browse_url(
     section: Uint8Array,
@@ -287,6 +311,7 @@ interface NativeModuleInterface {
   ubrn_uniffi_dcl_core_fn_func_owned_names(): bigint;
   ubrn_uniffi_dcl_core_fn_func_pending_campaign(): bigint;
   ubrn_uniffi_dcl_core_fn_func_place_user_state(placeId: Uint8Array): bigint;
+  ubrn_uniffi_dcl_core_fn_func_probe_connection(): bigint;
   ubrn_uniffi_dcl_core_fn_func_profile(address: Uint8Array): bigint;
   ubrn_uniffi_dcl_core_fn_func_remove_listener(
     id: bigint,
@@ -297,12 +322,33 @@ interface NativeModuleInterface {
     input: Uint8Array,
     secret: Uint8Array,
   ): bigint;
+  ubrn_uniffi_dcl_core_fn_func_review_check(
+    rails: Uint8Array,
+    uniffi_out_err: UniffiRustCallStatus,
+  ): number;
+  ubrn_uniffi_dcl_core_fn_func_review_fire(
+    trigger: Uint8Array,
+    rails: Uint8Array,
+    uniffi_out_err: UniffiRustCallStatus,
+  ): Uint8Array;
   ubrn_uniffi_dcl_core_fn_func_scene_link_url(
     realm: Uint8Array,
     x: number,
     y: number,
     uniffi_out_err: UniffiRustCallStatus,
   ): Uint8Array;
+  ubrn_uniffi_dcl_core_fn_func_session_backgrounded(
+    uniffi_out_err: UniffiRustCallStatus,
+  ): void;
+  ubrn_uniffi_dcl_core_fn_func_session_foregrounded(
+    uniffi_out_err: UniffiRustCallStatus,
+  ): void;
+  ubrn_uniffi_dcl_core_fn_func_session_launched(
+    uniffi_out_err: UniffiRustCallStatus,
+  ): void;
+  ubrn_uniffi_dcl_core_fn_func_session_tick(
+    uniffi_out_err: UniffiRustCallStatus,
+  ): void;
   ubrn_uniffi_dcl_core_fn_func_set_analytics_consent(accepted: number): bigint;
   ubrn_uniffi_dcl_core_fn_func_set_analytics_flush_interval(
     seconds: number,
@@ -317,6 +363,10 @@ interface NativeModuleInterface {
     value: number,
     isWorld: number,
   ): bigint;
+  ubrn_uniffi_dcl_core_fn_func_set_push_registration(
+    registration: Uint8Array,
+    uniffi_out_err: UniffiRustCallStatus,
+  ): void;
   ubrn_uniffi_dcl_core_fn_func_set_setting(
     key: Uint8Array,
     value: Uint8Array,
@@ -365,6 +415,7 @@ interface NativeModuleInterface {
   ubrn_uniffi_dcl_core_fn_func_state(
     uniffi_out_err: UniffiRustCallStatus,
   ): Uint8Array;
+  ubrn_uniffi_dcl_core_fn_func_submit_bug_report(report: Uint8Array): bigint;
   ubrn_uniffi_dcl_core_fn_func_terms_accepted_version(
     uniffi_out_err: UniffiRustCallStatus,
   ): number;
@@ -452,6 +503,17 @@ interface NativeModuleInterface {
     avatar: Uint8Array,
     uniffi_out_err: UniffiRustCallStatus,
   ): void;
+  ubrn_uniffi_dcl_core_fn_method_applistener_scene_request(
+    uniffiSelf: bigint,
+    id: number,
+    request: Uint8Array,
+    uniffi_out_err: UniffiRustCallStatus,
+  ): void;
+  ubrn_uniffi_dcl_core_fn_method_applistener_engine_notice(
+    uniffiSelf: bigint,
+    notice: Uint8Array,
+    uniffi_out_err: UniffiRustCallStatus,
+  ): void;
   ubrn_uniffi_dcl_core_fn_method_applistener_report(
     uniffiSelf: bigint,
     payload: Uint8Array,
@@ -467,7 +529,10 @@ interface NativeModuleInterface {
   ubrn_uniffi_dcl_core_checksum_func_accept_terms(): number;
   ubrn_uniffi_dcl_core_checksum_func_add_listener(): number;
   ubrn_uniffi_dcl_core_checksum_func_address(): number;
+  ubrn_uniffi_dcl_core_checksum_func_avatar_palette(): number;
   ubrn_uniffi_dcl_core_checksum_func_avatar_state(): number;
+  ubrn_uniffi_dcl_core_checksum_func_base_emotes(): number;
+  ubrn_uniffi_dcl_core_checksum_func_bug_report_issue_types(): number;
   ubrn_uniffi_dcl_core_checksum_func_cache_size(): number;
   ubrn_uniffi_dcl_core_checksum_func_campaign_resolution(): number;
   ubrn_uniffi_dcl_core_checksum_func_cancel_sign_in(): number;
@@ -475,6 +540,9 @@ interface NativeModuleInterface {
   ubrn_uniffi_dcl_core_checksum_func_capture_screenshot(): number;
   ubrn_uniffi_dcl_core_checksum_func_clear_cache(): number;
   ubrn_uniffi_dcl_core_checksum_func_complete_browser(): number;
+  ubrn_uniffi_dcl_core_checksum_func_connection_healthy(): number;
+  ubrn_uniffi_dcl_core_checksum_func_connection_reset(): number;
+  ubrn_uniffi_dcl_core_checksum_func_connection_retry(): number;
   ubrn_uniffi_dcl_core_checksum_func_consume_campaign(): number;
   ubrn_uniffi_dcl_core_checksum_func_control(): number;
   ubrn_uniffi_dcl_core_checksum_func_credits_balance(): number;
@@ -496,8 +564,10 @@ interface NativeModuleInterface {
   ubrn_uniffi_dcl_core_checksum_func_hide_avatar_preview(): number;
   ubrn_uniffi_dcl_core_checksum_func_installs(): number;
   ubrn_uniffi_dcl_core_checksum_func_is_guest(): number;
+  ubrn_uniffi_dcl_core_checksum_func_is_removable_category(): number;
   ubrn_uniffi_dcl_core_checksum_func_jump_position_url(): number;
   ubrn_uniffi_dcl_core_checksum_func_jump_realm_url(): number;
+  ubrn_uniffi_dcl_core_checksum_func_load_avatar_catalog(): number;
   ubrn_uniffi_dcl_core_checksum_func_mark_notifications_read(): number;
   ubrn_uniffi_dcl_core_checksum_func_marketplace_browse_url(): number;
   ubrn_uniffi_dcl_core_checksum_func_marketplace_item_url(): number;
@@ -505,15 +575,23 @@ interface NativeModuleInterface {
   ubrn_uniffi_dcl_core_checksum_func_owned_names(): number;
   ubrn_uniffi_dcl_core_checksum_func_pending_campaign(): number;
   ubrn_uniffi_dcl_core_checksum_func_place_user_state(): number;
+  ubrn_uniffi_dcl_core_checksum_func_probe_connection(): number;
   ubrn_uniffi_dcl_core_checksum_func_profile(): number;
   ubrn_uniffi_dcl_core_checksum_func_remove_listener(): number;
   ubrn_uniffi_dcl_core_checksum_func_resolve_destination(): number;
   ubrn_uniffi_dcl_core_checksum_func_resolve_destination_with_secret(): number;
+  ubrn_uniffi_dcl_core_checksum_func_review_check(): number;
+  ubrn_uniffi_dcl_core_checksum_func_review_fire(): number;
   ubrn_uniffi_dcl_core_checksum_func_scene_link_url(): number;
+  ubrn_uniffi_dcl_core_checksum_func_session_backgrounded(): number;
+  ubrn_uniffi_dcl_core_checksum_func_session_foregrounded(): number;
+  ubrn_uniffi_dcl_core_checksum_func_session_launched(): number;
+  ubrn_uniffi_dcl_core_checksum_func_session_tick(): number;
   ubrn_uniffi_dcl_core_checksum_func_set_analytics_consent(): number;
   ubrn_uniffi_dcl_core_checksum_func_set_analytics_flush_interval(): number;
   ubrn_uniffi_dcl_core_checksum_func_set_event_reminder(): number;
   ubrn_uniffi_dcl_core_checksum_func_set_favorite(): number;
+  ubrn_uniffi_dcl_core_checksum_func_set_push_registration(): number;
   ubrn_uniffi_dcl_core_checksum_func_set_setting(): number;
   ubrn_uniffi_dcl_core_checksum_func_setting_key_from_name(): number;
   ubrn_uniffi_dcl_core_checksum_func_setting_key_name(): number;
@@ -528,6 +606,7 @@ interface NativeModuleInterface {
   ubrn_uniffi_dcl_core_checksum_func_sign_out(): number;
   ubrn_uniffi_dcl_core_checksum_func_snooze_version_gate(): number;
   ubrn_uniffi_dcl_core_checksum_func_state(): number;
+  ubrn_uniffi_dcl_core_checksum_func_submit_bug_report(): number;
   ubrn_uniffi_dcl_core_checksum_func_terms_accepted_version(): number;
   ubrn_uniffi_dcl_core_checksum_func_terms_version(): number;
   ubrn_uniffi_dcl_core_checksum_func_track(): number;
@@ -548,6 +627,8 @@ interface NativeModuleInterface {
   ubrn_uniffi_dcl_core_checksum_method_applistener_open_backpack(): number;
   ubrn_uniffi_dcl_core_checksum_method_applistener_loading_detail(): number;
   ubrn_uniffi_dcl_core_checksum_method_applistener_avatar_changed(): number;
+  ubrn_uniffi_dcl_core_checksum_method_applistener_scene_request(): number;
+  ubrn_uniffi_dcl_core_checksum_method_applistener_engine_notice(): number;
   ubrn_uniffi_dcl_core_checksum_method_applistener_report(): number;
   ubrn_uniffi_dcl_core_checksum_method_applistener_report_tag(): number;
   ubrn_uniffi_internal_fn_method_applistener_ffi__bless_pointer(
@@ -625,9 +706,18 @@ type UniffiCallbackInterfaceDclCoreAppListenerMethod11 = (
 ) => UniffiResult<void>;
 type UniffiCallbackInterfaceDclCoreAppListenerMethod12 = (
   uniffiHandle: bigint,
-  payload: Uint8Array,
+  id: number,
+  request: Uint8Array,
 ) => UniffiResult<void>;
 type UniffiCallbackInterfaceDclCoreAppListenerMethod13 = (
+  uniffiHandle: bigint,
+  notice: Uint8Array,
+) => UniffiResult<void>;
+type UniffiCallbackInterfaceDclCoreAppListenerMethod14 = (
+  uniffiHandle: bigint,
+  payload: Uint8Array,
+) => UniffiResult<void>;
+type UniffiCallbackInterfaceDclCoreAppListenerMethod15 = (
   uniffiHandle: bigint,
   key: Uint8Array,
   value: Uint8Array,
@@ -651,8 +741,10 @@ export type UniffiVTableCallbackInterfaceDclCoreAppListener = {
   open_backpack: UniffiCallbackInterfaceDclCoreAppListenerMethod9;
   loading_detail: UniffiCallbackInterfaceDclCoreAppListenerMethod10;
   avatar_changed: UniffiCallbackInterfaceDclCoreAppListenerMethod11;
-  report: UniffiCallbackInterfaceDclCoreAppListenerMethod12;
-  report_tag: UniffiCallbackInterfaceDclCoreAppListenerMethod13;
+  scene_request: UniffiCallbackInterfaceDclCoreAppListenerMethod12;
+  engine_notice: UniffiCallbackInterfaceDclCoreAppListenerMethod13;
+  report: UniffiCallbackInterfaceDclCoreAppListenerMethod14;
+  report_tag: UniffiCallbackInterfaceDclCoreAppListenerMethod15;
 };
 
 // UniffiRustFutureContinuationCallback is generated as part of the component interface's

@@ -78,6 +78,12 @@ protected:
   jsi::Value cpp_uniffi_dcl_core_fn_method_applistener_avatar_changed(
       jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
       size_t count);
+  jsi::Value cpp_uniffi_dcl_core_fn_method_applistener_scene_request(
+      jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+      size_t count);
+  jsi::Value cpp_uniffi_dcl_core_fn_method_applistener_engine_notice(
+      jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+      size_t count);
   jsi::Value cpp_uniffi_dcl_core_fn_method_applistener_report(
       jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
       size_t count);
@@ -106,6 +112,31 @@ protected:
                                                const jsi::Value &thisVal,
                                                const jsi::Value *args,
                                                size_t count);
+  jsi::Value cpp_uniffi_dcl_core_fn_func_avatar_palette(
+      jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+      size_t count);
+  jsi::Value cpp_uniffi_dcl_core_fn_func_base_emotes(jsi::Runtime &rt,
+                                                     const jsi::Value &thisVal,
+                                                     const jsi::Value *args,
+                                                     size_t count);
+  jsi::Value cpp_uniffi_dcl_core_fn_func_is_removable_category(
+      jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+      size_t count);
+  jsi::Value cpp_uniffi_dcl_core_fn_func_load_avatar_catalog(
+      jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+      size_t count);
+  jsi::Value cpp_uniffi_dcl_core_fn_func_connection_healthy(
+      jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+      size_t count);
+  jsi::Value cpp_uniffi_dcl_core_fn_func_connection_reset(
+      jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+      size_t count);
+  jsi::Value cpp_uniffi_dcl_core_fn_func_connection_retry(
+      jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+      size_t count);
+  jsi::Value cpp_uniffi_dcl_core_fn_func_probe_connection(
+      jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+      size_t count);
   jsi::Value cpp_uniffi_dcl_core_fn_func_avatar_state(jsi::Runtime &rt,
                                                       const jsi::Value &thisVal,
                                                       const jsi::Value *args,
@@ -205,6 +236,9 @@ protected:
   jsi::Value cpp_uniffi_dcl_core_fn_func_notifications(
       jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
       size_t count);
+  jsi::Value cpp_uniffi_dcl_core_fn_func_bug_report_issue_types(
+      jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+      size_t count);
   jsi::Value cpp_uniffi_dcl_core_fn_func_credits_balance(
       jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
       size_t count);
@@ -221,6 +255,9 @@ protected:
                                                       const jsi::Value &thisVal,
                                                       const jsi::Value *args,
                                                       size_t count);
+  jsi::Value cpp_uniffi_dcl_core_fn_func_submit_bug_report(
+      jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+      size_t count);
   jsi::Value cpp_uniffi_dcl_core_fn_func_vote(jsi::Runtime &rt,
                                               const jsi::Value &thisVal,
                                               const jsi::Value *args,
@@ -239,6 +276,17 @@ protected:
                                                  const jsi::Value &thisVal,
                                                  const jsi::Value *args,
                                                  size_t count);
+  jsi::Value cpp_uniffi_dcl_core_fn_func_set_push_registration(
+      jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+      size_t count);
+  jsi::Value cpp_uniffi_dcl_core_fn_func_review_check(jsi::Runtime &rt,
+                                                      const jsi::Value &thisVal,
+                                                      const jsi::Value *args,
+                                                      size_t count);
+  jsi::Value cpp_uniffi_dcl_core_fn_func_review_fire(jsi::Runtime &rt,
+                                                     const jsi::Value &thisVal,
+                                                     const jsi::Value *args,
+                                                     size_t count);
   jsi::Value cpp_uniffi_dcl_core_fn_func_capture_screenshot(
       jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
       size_t count);
@@ -301,6 +349,19 @@ protected:
                                                   const jsi::Value &thisVal,
                                                   const jsi::Value *args,
                                                   size_t count);
+  jsi::Value cpp_uniffi_dcl_core_fn_func_session_backgrounded(
+      jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+      size_t count);
+  jsi::Value cpp_uniffi_dcl_core_fn_func_session_foregrounded(
+      jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+      size_t count);
+  jsi::Value cpp_uniffi_dcl_core_fn_func_session_launched(
+      jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+      size_t count);
+  jsi::Value cpp_uniffi_dcl_core_fn_func_session_tick(jsi::Runtime &rt,
+                                                      const jsi::Value &thisVal,
+                                                      const jsi::Value *args,
+                                                      size_t count);
   jsi::Value cpp_uniffi_dcl_core_fn_func_cache_size(jsi::Runtime &rt,
                                                     const jsi::Value &thisVal,
                                                     const jsi::Value *args,
@@ -525,6 +586,30 @@ protected:
                                                      const jsi::Value &thisVal,
                                                      const jsi::Value *args,
                                                      size_t count);
+  jsi::Value cpp_uniffi_dcl_core_checksum_func_avatar_palette(
+      jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+      size_t count);
+  jsi::Value cpp_uniffi_dcl_core_checksum_func_base_emotes(
+      jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+      size_t count);
+  jsi::Value cpp_uniffi_dcl_core_checksum_func_is_removable_category(
+      jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+      size_t count);
+  jsi::Value cpp_uniffi_dcl_core_checksum_func_load_avatar_catalog(
+      jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+      size_t count);
+  jsi::Value cpp_uniffi_dcl_core_checksum_func_connection_healthy(
+      jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+      size_t count);
+  jsi::Value cpp_uniffi_dcl_core_checksum_func_connection_reset(
+      jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+      size_t count);
+  jsi::Value cpp_uniffi_dcl_core_checksum_func_connection_retry(
+      jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+      size_t count);
+  jsi::Value cpp_uniffi_dcl_core_checksum_func_probe_connection(
+      jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+      size_t count);
   jsi::Value cpp_uniffi_dcl_core_checksum_func_avatar_state(
       jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
       size_t count);
@@ -616,6 +701,9 @@ protected:
   jsi::Value cpp_uniffi_dcl_core_checksum_func_notifications(
       jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
       size_t count);
+  jsi::Value cpp_uniffi_dcl_core_checksum_func_bug_report_issue_types(
+      jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+      size_t count);
   jsi::Value cpp_uniffi_dcl_core_checksum_func_credits_balance(
       jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
       size_t count);
@@ -629,6 +717,9 @@ protected:
       jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
       size_t count);
   jsi::Value cpp_uniffi_dcl_core_checksum_func_set_favorite(
+      jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+      size_t count);
+  jsi::Value cpp_uniffi_dcl_core_checksum_func_submit_bug_report(
       jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
       size_t count);
   jsi::Value cpp_uniffi_dcl_core_checksum_func_vote(jsi::Runtime &rt,
@@ -645,6 +736,15 @@ protected:
       jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
       size_t count);
   jsi::Value cpp_uniffi_dcl_core_checksum_func_profile(
+      jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+      size_t count);
+  jsi::Value cpp_uniffi_dcl_core_checksum_func_set_push_registration(
+      jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+      size_t count);
+  jsi::Value cpp_uniffi_dcl_core_checksum_func_review_check(
+      jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+      size_t count);
+  jsi::Value cpp_uniffi_dcl_core_checksum_func_review_fire(
       jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
       size_t count);
   jsi::Value cpp_uniffi_dcl_core_checksum_func_capture_screenshot(
@@ -705,6 +805,18 @@ protected:
   jsi::Value cpp_uniffi_dcl_core_checksum_func_sign_out(
       jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
       size_t count);
+  jsi::Value cpp_uniffi_dcl_core_checksum_func_session_backgrounded(
+      jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+      size_t count);
+  jsi::Value cpp_uniffi_dcl_core_checksum_func_session_foregrounded(
+      jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+      size_t count);
+  jsi::Value cpp_uniffi_dcl_core_checksum_func_session_launched(
+      jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+      size_t count);
+  jsi::Value cpp_uniffi_dcl_core_checksum_func_session_tick(
+      jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+      size_t count);
   jsi::Value cpp_uniffi_dcl_core_checksum_func_cache_size(
       jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
       size_t count);
@@ -760,6 +872,12 @@ protected:
       jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
       size_t count);
   jsi::Value cpp_uniffi_dcl_core_checksum_method_applistener_avatar_changed(
+      jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+      size_t count);
+  jsi::Value cpp_uniffi_dcl_core_checksum_method_applistener_scene_request(
+      jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
+      size_t count);
+  jsi::Value cpp_uniffi_dcl_core_checksum_method_applistener_engine_notice(
       jsi::Runtime &rt, const jsi::Value &thisVal, const jsi::Value *args,
       size_t count);
   jsi::Value cpp_uniffi_dcl_core_checksum_method_applistener_report(

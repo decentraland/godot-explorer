@@ -9,17 +9,12 @@ const TRANSITION_SPEED: float = 0.5  # normalized time per second (0.5 = half da
 # Debug mode - set to true to make a full day/night cycle every 10 seconds
 @export var debug_time_rotation: bool = false
 
-var config: DclConfig
 var last_value: float
 var normalized_time := 0.0
 var debug_time_accumulator: float = 0.0
 var target_time := 0.0
 var is_transitioning := false
 var transition_forward := true  # Direction of transition
-
-
-func _ready():
-	config = Global.get_config()
 
 
 func get_normalized_time():
@@ -55,10 +50,10 @@ func _process(delta: float) -> void:
 		is_transitioning = false
 	else:
 		# Normal behavior: use config or world time
-		if config.dynamic_skybox:
+		if Global.engine.setting("dynamic_skybox"):
 			target_time = float(DclGlobalTime.get_world_time()) / 86400.0
 		else:
-			target_time = float(config.skybox_time) / 86400.0
+			target_time = float(Global.engine.setting("skybox_time")) / 86400.0
 
 		# When not SDK controlled, transition back smoothly if needed
 		if is_transitioning:

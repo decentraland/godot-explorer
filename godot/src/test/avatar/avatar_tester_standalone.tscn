@@ -5,7 +5,6 @@
 [ext_resource type="Environment" uid="uid://c6yftsnvufsg8" path="res://assets/environment/cli_environment.tres" id="3_2n2br"]
 [ext_resource type="PackedScene" uid="uid://ec0egfeyv5fm" path="res://src/ui/components/organisms/emotes/emote_wheel.tscn" id="3_ubmva"]
 [ext_resource type="Texture2D" uid="uid://ckn18yn0v8tsa" path="res://src/ui/components/organisms/debug_panel/icons/Clear.svg" id="4_wetld"]
-[ext_resource type="PackedScene" uid="uid://buu3ox7iefpgx" path="res://src/ui/components/atoms/controls/loading_spinner/loading_spinner.tscn" id="6_wsp5b"]
 
 [sub_resource type="CodeHighlighter" id="CodeHighlighter_684t6"]
 number_color = Color(0, 0.670588, 0, 1)
@@ -382,7 +381,7 @@ size_flags_horizontal = 3
 layout_mode = 2
 text = "Play"
 
-[node name="Spinner" parent="." unique_id=339749764 instance=ExtResource("6_wsp5b")]
+[node name="Spinner" type="Control" parent="." unique_id=339749764]
 layout_mode = 0
 offset_left = 875.0
 offset_top = 257.0

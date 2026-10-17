@@ -56,7 +56,13 @@ export function AvatarCreateScreen({
               label={t('FLOW_AVATAR_RANDOMIZE')}
               tone="secondary"
               disabled={!avatar}
-              onPress={() => core().control(new Control.RandomizeAvatar())}
+              onPress={() => {
+                // The core draws from the wearable catalog, so it has to be there first.
+                core()
+                  .loadAvatarCatalog()
+                  .then(() => core().control(new Control.RandomizeAvatar()))
+                  .catch(() => {});
+              }}
             />
           </View>
           <View style={styles.flex}>

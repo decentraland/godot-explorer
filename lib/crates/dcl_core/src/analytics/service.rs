@@ -86,6 +86,11 @@ impl Analytics {
         self.state.lock().unwrap_or_else(|e| e.into_inner())
     }
 
+    /// The session this process runs, the one every event carries.
+    pub fn session_id(&self) -> String {
+        self.state().common.session_id.clone()
+    }
+
     /// Queues an event the shell names. Keys that would overwrite a field every event carries
     /// (`session_id`, `realm`, ...) are dropped.
     pub fn track(&self, name: &str, properties: &[Property]) {

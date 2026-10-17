@@ -1,15 +1,15 @@
 use std::{rc::Rc, sync::Arc};
 
 use dcl_core::app::{
-    AvatarState, ChatLine, ChatProfile, CommandQueue, EngineEvent, HudSnapshot, LoadingDetail,
-    Parcel, UiState, Vec3,
+    AvatarState, ChatLine, ChatProfile, CommandQueue, DisconnectReason, EngineEvent, EngineNotice,
+    EntryRefusal, HudSnapshot, LoadingDetail, Parcel, UiState, Vec3,
 };
 
 use godot::classes::{Control, DisplayServer, Engine};
 use godot::obj::Singleton;
 use godot::prelude::*;
 
-use super::scene_requests::{EmulatorSink, GodotUiSink, PendingResponses, SharedSink};
+use super::scene_requests::{EmulatorSink, PendingResponses, SharedSink};
 
 use crate::godot_classes::dcl_global::DclGlobal;
 
@@ -21,7 +21,6 @@ struct WorldHandles {
     player: InstanceId,
     avatar: InstanceId,
     touch_camera_input: InstanceId,
-    dialog_stack: InstanceId,
 }
 
 /// Owner of the engine-side handles. `Global.engine` exposes it; `explorer.gd` attaches the world.
@@ -55,7 +54,7 @@ impl INode for DclEngine {
         Self {
             world: None,
             pending: PendingResponses::default(),
-            sink: Rc::new(GodotUiSink),
+            sink: Rc::new(EmulatorSink),
             core_commands: None,
             perf_countdown: None,
             text_input_focused: false,
@@ -118,6 +117,10 @@ impl DclEngine {
     #[signal]
     pub fn core_command(kind: GString, args: VarDictionary);
 
+    /// A setting changed, whoever changed it (the shell through the core, or the engine itself).
+    #[signal]
+    pub fn setting_changed(name: GString);
+
     /// Whether the host booted the core before the engine started, i.e. the shell drives the app
     /// and the engine only renders. False for the emulator, tests and desktop runs.
     #[func]
@@ -141,6 +144,44 @@ impl DclEngine {
             realm: realm.to_string(),
             parcel: Parcel::new(x, y),
         });
+    }
+
+    /// Something the player has to hear about: `entry_private`, `entry_password` and
+    /// `entry_not_found` (detail: the realm), `disconnected_duplicate`, `disconnected_room_closed`,
+    /// `disconnected_other`, `banned` and `low_memory`.
+    #[func]
+    pub fn report_notice(&self, kind: GString, detail: GString) {
+        let realm = detail.to_string();
+        let notice = match kind.to_string().as_str() {
+            "entry_private" => EngineNotice::EntryRefused {
+                reason: EntryRefusal::PrivateWorld,
+                realm,
+            },
+            "entry_password" => EngineNotice::EntryRefused {
+                reason: EntryRefusal::NeedsPassword,
+                realm,
+            },
+            "entry_not_found" => EngineNotice::EntryRefused {
+                reason: EntryRefusal::NotFound,
+                realm,
+            },
+            "disconnected_duplicate" => EngineNotice::Disconnected {
+                reason: DisconnectReason::DuplicateSession,
+            },
+            "disconnected_room_closed" => EngineNotice::Disconnected {
+                reason: DisconnectReason::RoomClosed,
+            },
+            "disconnected_other" => EngineNotice::Disconnected {
+                reason: DisconnectReason::Other,
+            },
+            "banned" => EngineNotice::Banned,
+            "low_memory" => EngineNotice::LowMemory,
+            other => {
+                godot_error!("report_notice: unknown kind {other}");
+                return;
+            }
+        };
+        self.report(EngineEvent::Notice(notice));
     }
 
     #[func]
@@ -248,6 +289,36 @@ impl DclEngine {
         self.sink = sink;
     }
 
+    /// A player setting or engine state read from the core's store; nil for an unknown name.
+    #[func]
+    pub fn setting(&self, name: GString) -> Variant {
+        super::settings_link::get_variant(&name.to_string())
+    }
+
+    /// Stores a setting, applies it in the engine and, with `commit`, saves it.
+    #[func]
+    pub fn set_setting(&self, name: GString, value: Variant, commit: bool) {
+        super::settings_link::set_variant(&name.to_string(), &value, commit, false);
+    }
+
+    /// Stores a setting the engine itself changed (a graphic profile, a benchmark result): it is
+    /// announced to the shell but neither applied again nor saved; `save_settings` saves.
+    #[func]
+    pub fn adopt_setting(&self, name: GString, value: Variant) {
+        super::settings_link::set_variant(&name.to_string(), &value, false, true);
+    }
+
+    #[func]
+    pub fn save_settings(&self) {
+        super::settings_link::save();
+    }
+
+    /// Whether the player accepted this build's terms.
+    #[func]
+    pub fn is_eula_accepted(&self) -> bool {
+        dcl_core::ffi::eula_accepted()
+    }
+
     /// Whether a scene text input holds focus: the explorer must not take focus back from it.
     #[func]
     pub fn is_text_input_focused(&self) -> bool {
@@ -326,14 +397,11 @@ impl DclEngine {
     pub fn attach_world(&mut self, mut explorer: Gd<Node>) {
         let node_property =
             |owner: &Gd<Node>, name: &str| owner.get(name).try_to::<Gd<Node>>().ok();
-        let (Some(player), Some(touch_camera_input), Some(dialog_stack)) = (
+        let (Some(player), Some(touch_camera_input)) = (
             node_property(&explorer, "player"),
             node_property(&explorer, "mobile_camera_input"),
-            explorer.get_node_or_null("UI/DialogStack/Stack"),
         ) else {
-            tracing::error!(
-                "engine: the explorer is missing the player, camera input or dialog stack"
-            );
+            tracing::error!("engine: the explorer is missing the player or the camera input");
             return;
         };
         let Some(avatar) = node_property(&player, "avatar") else {
@@ -345,7 +413,6 @@ impl DclEngine {
             player: player.instance_id(),
             avatar: avatar.instance_id(),
             touch_camera_input: touch_camera_input.instance_id(),
-            dialog_stack: dialog_stack.instance_id(),
         });
         let detach = self.base().callable("detach_world");
         explorer.connect_flags(
@@ -372,16 +439,6 @@ impl DclEngine {
         }
     }
 
-    /// The emulator accepts what a scene asks instead of showing a modal.
-    #[func]
-    pub fn set_emulator_mode(&mut self, enabled: bool) {
-        self.sink = if enabled {
-            Rc::new(EmulatorSink)
-        } else {
-            Rc::new(GodotUiSink)
-        };
-    }
-
     #[func]
     pub fn has_world(&self) -> bool {
         self.world
@@ -402,11 +459,6 @@ impl DclEngine {
 
     pub fn touch_camera_input(&self) -> Option<Gd<Node>> {
         resolve(self.world?.touch_camera_input)
-    }
-
-    /// Where dialogs opened by scenes are parented.
-    pub fn dialog_stack(&self) -> Option<Gd<Node>> {
-        resolve(self.world?.dialog_stack)
     }
 
     /// Whether the explorer UI has focus; `true` when there is no world to ask.

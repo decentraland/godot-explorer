@@ -109,6 +109,37 @@ impl State {
     }
 }
 
+/// Something the engine tells the shell the player has to hear about.
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "ffi", derive(uniffi::Enum))]
+pub enum EngineNotice {
+    /// The destination was refused, so the player stays where they were.
+    EntryRefused { reason: EntryRefusal, realm: String },
+    /// The comms connection ended and reconnecting did not bring it back.
+    Disconnected { reason: DisconnectReason },
+    /// The scene's own room banned the player.
+    Banned,
+    /// The device is running out of memory in this scene.
+    LowMemory,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "ffi", derive(uniffi::Enum))]
+pub enum EntryRefusal {
+    PrivateWorld,
+    NeedsPassword,
+    NotFound,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "ffi", derive(uniffi::Enum))]
+pub enum DisconnectReason {
+    /// The account logged in somewhere else.
+    DuplicateSession,
+    RoomClosed,
+    Other,
+}
+
 /// Core → engine. The engine executes; it never decides.
 #[derive(Clone, Debug, PartialEq)]
 pub enum EngineCommand {
@@ -117,6 +148,8 @@ pub enum EngineCommand {
     ShowAvatarPreview(Rect),
     HideAvatarPreview,
     SetRendering(bool),
+    /// The avatar the core computed from an edit; the engine renders it.
+    ApplyAvatar(super::AvatarState),
     Control(super::Control),
 }
 
@@ -124,15 +157,27 @@ pub enum EngineCommand {
 #[derive(Clone, Debug, PartialEq)]
 pub enum EngineEvent {
     LoadingProgress(f32),
-    LoadingFinished { realm: String, parcel: Parcel },
+    LoadingFinished {
+        realm: String,
+        parcel: Parcel,
+    },
     SceneCrashed,
     Hud(super::HudSnapshot),
     Chat(super::ChatLine),
     UnreadChat(u32),
     UiState(super::UiState),
-    OpenBackpack { emotes: bool },
+    OpenBackpack {
+        emotes: bool,
+    },
     LoadingDetail(super::LoadingDetail),
     Avatar(super::AvatarState),
+    /// The player has to hear about this; see `EngineNotice`.
+    Notice(EngineNotice),
+    /// A scene asked the user for something; answered with `Control::AnswerSceneRequest`.
+    SceneRequest {
+        id: crate::scene_requests::RequestId,
+        request: crate::scene_requests::SceneRequest,
+    },
 }
 
 /// What the attached engine implements.
@@ -160,6 +205,13 @@ pub trait AppEvents: Send + Sync {
     fn open_backpack(&self, _emotes: bool) {}
     fn loading_detail(&self, _detail: &super::LoadingDetail) {}
     fn avatar_changed(&self, _avatar: &super::AvatarState) {}
+    fn scene_request(
+        &self,
+        _id: crate::scene_requests::RequestId,
+        _request: &crate::scene_requests::SceneRequest,
+    ) {
+    }
+    fn engine_notice(&self, _notice: &EngineNotice) {}
     /// A panic or error the keep/drop policy let through, for the crash reporter.
     fn report(&self, _payload: &crate::hub::ReportPayload) {}
     /// A tag to add to (or, with `None`, remove from) every later crash report. Batched by the

@@ -118,12 +118,13 @@ last_places={
         assert_eq!(v[&K::AudioGeneralVolume], V::Float(80.0));
         assert_eq!(v[&K::AudioSceneVolume], V::Float(100.0));
         assert_eq!(v[&K::AudioMusicVolume], V::Float(0.0));
-        assert_eq!(v.len(), 13);
+        assert_eq!(v[&K::ProcessTickQuotaMs], V::Int(10));
+        assert_eq!(v.len(), 14);
     }
 
     #[test]
     fn ignores_other_sections_and_unknown_keys() {
-        let v = parse("[user]\nlocale=\"es\"\n[config]\nshow_fps=true\nbogus=1\n");
+        let v = parse("[user]\nlocale=\"es\"\n[config]\nbogus=1\n");
         assert!(v.is_empty());
     }
 

@@ -157,7 +157,18 @@ impl Core {
                 }
             });
         }
+        self.attribute_open(&outcome.routed);
         outcome.routed
+    }
+
+    /// What brought the player in, for the pending `App Opened`: a push, a link, nothing.
+    fn attribute_open(&self, routed: &crate::deep_link_route::Routed) {
+        use crate::analytics::session;
+        if let (Some(trigger), Some(tracker)) =
+            (session::trigger_of(&routed.effects), session::global(self))
+        {
+            session::emit(tracker.deep_link(trigger, session::monotonic_ms()));
+        }
     }
 
     /// Sends an `avatar_preview_mode` event to every listener (exercises the host callback path).

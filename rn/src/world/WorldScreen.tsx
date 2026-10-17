@@ -5,6 +5,7 @@ import { useCoreState } from '../core/useCoreState';
 import { setOrientation } from '../platform/orientation';
 import { getHudApi } from '../hud/activeApi';
 import { Hud } from '../hud/Hud';
+import { VersionFps } from '../hud/VersionFps';
 import { enterPlace } from './enterPlace';
 import { LoadingCover } from './LoadingCover';
 import { useLoading } from './useLoading';
@@ -36,6 +37,7 @@ export function WorldScreen({
   return (
     <View style={styles.root} pointerEvents="box-none">
       {state.phase === 'finished' && <Hud />}
+      {state.phase === 'finished' && <VersionFps />}
       <LoadingCover
         place={place}
         phase={state.phase}

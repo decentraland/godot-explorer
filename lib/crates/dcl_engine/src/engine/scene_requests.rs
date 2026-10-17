@@ -2,6 +2,7 @@
 
 use std::rc::Rc;
 
+use dcl_core::app::EngineEvent;
 use dcl_core::scene_requests::{PendingRequests, RequestId, SceneRequest};
 use godot::prelude::*;
 
@@ -18,7 +19,7 @@ pub enum Verdict {
     Pending,
 }
 
-/// The app side of a scene request: the Godot UI today, the shell when RN renders the modals.
+/// The app side of a scene request: the shell renders the modals; without one the emulator answers.
 pub trait SceneRequestSink {
     fn handle(&self, id: RequestId, request: &SceneRequest) -> Verdict;
 }
@@ -47,71 +48,23 @@ impl DclEngine {
     }
 }
 
-/// The Godot modals, as before: the RPC answers `Ok` as soon as the modal is shown.
-pub struct GodotUiSink;
+/// The shell renders the modal: the request goes to the core as an event and the RPC answers when
+/// the shell sends `Control::AnswerSceneRequest`.
+pub struct ShellSink;
 
-impl GodotUiSink {
-    fn modal_manager() -> Result<Gd<Node>, String> {
-        DclGlobal::try_singleton()
-            .and_then(|global| global.get("modal_manager").try_to::<Gd<Node>>().ok())
-            .ok_or_else(|| "modal_manager not available".to_string())
+impl SceneRequestSink for ShellSink {
+    fn handle(&self, id: RequestId, request: &SceneRequest) -> Verdict {
+        match DclEngine::get() {
+            Some(engine) => {
+                engine.bind().report(EngineEvent::SceneRequest {
+                    id,
+                    request: request.clone(),
+                });
+                Verdict::Pending
+            }
+            None => Verdict::Done(Err("engine not available".to_string())),
+        }
     }
-}
-
-impl SceneRequestSink for GodotUiSink {
-    fn handle(&self, _id: RequestId, request: &SceneRequest) -> Verdict {
-        let result = match request {
-            SceneRequest::OpenNft { urn } => open_nft_dialog(urn),
-            _ => Self::modal_manager().map(|mut modal_manager| match request {
-                SceneRequest::ChangeRealm { realm, message } => {
-                    modal_manager.call(
-                        "async_show_change_realm_modal",
-                        &[
-                            realm.to_variant(),
-                            message.clone().unwrap_or_default().to_variant(),
-                        ],
-                    );
-                }
-                SceneRequest::OpenExternalUrl { url } => {
-                    modal_manager.call("async_show_external_link_modal", &[url.to_variant()]);
-                }
-                SceneRequest::Teleport {
-                    parcel: Some((x, y)),
-                    realm,
-                } => {
-                    modal_manager.call(
-                        "async_show_teleport_modal",
-                        &[
-                            Vector2i::new(*x, *y).to_variant(),
-                            realm.clone().unwrap_or_default().to_variant(),
-                        ],
-                    );
-                }
-                SceneRequest::Teleport {
-                    parcel: None,
-                    realm: Some(realm),
-                } => {
-                    modal_manager.call("async_show_realm_teleport_modal", &[realm.to_variant()]);
-                }
-                _ => {}
-            }),
-        };
-        Verdict::Done(result)
-    }
-}
-
-fn open_nft_dialog(urn: &str) -> Result<(), String> {
-    let mut dialog_stack = DclEngine::get()
-        .and_then(|engine| engine.bind().dialog_stack())
-        .ok_or_else(|| "DialogStack not available".to_string())?;
-    let mut dialog = godot::tools::load::<PackedScene>(
-        "res://src/ui/components/organisms/dialogs/nft_dialog.tscn",
-    )
-    .instantiate()
-    .ok_or_else(|| "NftDialog instantiate error".to_string())?;
-    dialog_stack.add_child(&dialog.clone());
-    dialog.call("async_load_nft", &[urn.to_variant()]);
-    Ok(())
 }
 
 /// The headless emulator has no user to ask: teleports and realm changes are taken, links and
@@ -130,13 +83,13 @@ impl SceneRequestSink for EmulatorSink {
                 tracing::info!("[emulator] scene asked to show NFT {urn}");
             }
             SceneRequest::Teleport {
-                parcel: Some((x, y)),
+                parcel: Some(parcel),
                 realm,
             } => {
                 global.call_deferred(
                     "async_teleport_to",
                     &[
-                        Vector2i::new(*x, *y).to_variant(),
+                        Vector2i::new(parcel.x, parcel.y).to_variant(),
                         realm.clone().unwrap_or_default().to_variant(),
                     ],
                 );

@@ -31,13 +31,16 @@ func _test_profiles_apply_all_keys() -> void:
 	for i in range(GraphicSettings.PROFILE_DEFINITIONS.size()):
 		var profile: Dictionary = GraphicSettings.PROFILE_DEFINITIONS[i]
 		GraphicSettings.apply_graphic_profile(i)
-		var config := Global.get_config()
-		_expect(config.graphic_profile == i, "profile %d: graphic_profile set" % i)
+		_expect(
+			Global.engine.setting("graphic_profile") == i, "profile %d: graphic_profile set" % i
+		)
 		_expect_near(
-			config.view_distance, profile.view_distance, "profile %d: view_distance applied" % i
+			Global.engine.setting("view_distance"),
+			profile.view_distance,
+			"profile %d: view_distance applied" % i
 		)
 		_expect(
-			config.particle_quality == profile.particle_quality,
+			Global.engine.setting("particle_quality") == profile.particle_quality,
 			"profile %d: particle_quality applied" % i
 		)
 		_expect(
@@ -62,13 +65,17 @@ func _test_profiles_apply_all_keys() -> void:
 
 func _test_custom_is_noop() -> void:
 	GraphicSettings.apply_graphic_profile(0)
-	var config := Global.get_config()
-	var view_before: float = config.view_distance
-	var particles_before: int = config.particle_quality
+	var view_before: float = Global.engine.setting("view_distance")
+	var particles_before: int = Global.engine.setting("particle_quality")
 	var lights_before: int = DclLightSourceComponent.max_active_dcl_lights
-	GraphicSettings.apply_graphic_profile(ConfigData.PROFILE_CUSTOM)
-	_expect(config.view_distance == view_before, "Custom: view_distance untouched")
-	_expect(config.particle_quality == particles_before, "Custom: particle_quality untouched")
+	GraphicSettings.apply_graphic_profile(GraphicSettings.PROFILE_CUSTOM)
+	_expect(
+		Global.engine.setting("view_distance") == view_before, "Custom: view_distance untouched"
+	)
+	_expect(
+		Global.engine.setting("particle_quality") == particles_before,
+		"Custom: particle_quality untouched"
+	)
 	_expect(
 		DclLightSourceComponent.max_active_dcl_lights == lights_before,
 		"Custom: light budget untouched"
@@ -77,11 +84,10 @@ func _test_custom_is_noop() -> void:
 
 func _test_invalid_index_is_noop() -> void:
 	GraphicSettings.apply_graphic_profile(0)
-	var config := Global.get_config()
-	var view_before: float = config.view_distance
+	var view_before: float = Global.engine.setting("view_distance")
 	GraphicSettings.apply_graphic_profile(-1)
 	GraphicSettings.apply_graphic_profile(GraphicSettings.PROFILE_DEFINITIONS.size() + 1)
-	_expect(config.view_distance == view_before, "invalid index: nothing applied")
+	_expect(Global.engine.setting("view_distance") == view_before, "invalid index: nothing applied")
 
 
 func _expect(cond: bool, label: String) -> void:

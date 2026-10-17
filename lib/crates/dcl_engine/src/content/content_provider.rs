@@ -19,13 +19,9 @@ use tokio::sync::{oneshot, watch, RwLock, Semaphore};
 use crate::{
     auth::wallet::AsH160,
     avatars::{dcl_user_profile::DclUserProfile, item::DclItemEntityDefinition},
-    content::content_mapping::DclContentMappingAndUrl,
+    content::{content_mapping::DclContentMappingAndUrl, texture_quality::TextureQuality},
     dcl::common::string::FindNthChar,
-    godot_classes::{
-        dcl_config::{DclConfig, TextureQuality},
-        dcl_global::DclGlobal,
-        promise::Promise,
-    },
+    godot_classes::{dcl_global::DclGlobal, promise::Promise},
     http_request::http_queue_requester::HttpQueueRequester,
 };
 
@@ -389,7 +385,7 @@ impl INode for ContentProvider {
             content_folder,
             promises: HashMap::new(),
             godot_single_thread: Arc::new(Semaphore::new(1)),
-            texture_quality: DclConfig::static_get_texture_quality(),
+            texture_quality: crate::engine::texture_quality_setting(),
             every_second_tick: 0.0,
             loading_resources: Arc::new(AtomicU64::new(0)),
             loaded_resources: Arc::new(AtomicU64::new(0)),
@@ -1895,7 +1891,7 @@ impl ContentProvider {
     }
 
     /// Fetches a texture by URL with an explicit quality, bypassing the global texture
-    /// quality setting. From GDScript, use `DclConfig.TEXTURE_QUALITY_LOW/MEDIUM/HIGH/SOURCE`.
+    /// quality setting. From GDScript pass 0 (low), 1 (medium), 2 (high) or 3 (source).
     #[func]
     pub fn fetch_texture_by_url_with_quality(
         &mut self,
@@ -1962,7 +1958,7 @@ impl ContentProvider {
     /// with explicit-quality fetches at the same quality (cache key: `{hash}_q{N}`).
     #[func]
     pub fn fetch_texture_by_url(&mut self, file_hash: GString, url: GString) -> Gd<Promise> {
-        let quality = DclConfig::static_get_texture_quality();
+        let quality = crate::engine::texture_quality_setting();
         self.fetch_texture_by_url_with_quality(file_hash, url, quality)
     }
 

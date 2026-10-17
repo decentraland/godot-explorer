@@ -68,7 +68,7 @@ and no item carries an estimate.
 | 1. Core carve-out | none | Mateo + AI | code done; phone regression open |
 | 2. Rust root + emulator | 1.1 landed | Mateo + AI | code done; device checks (2.8, 2.9) open |
 | 3. FFI + entry flow | 2.1 landed | Mateo + AI | not started |
-| 4. UI sweep + every domain on the core | phase 3; the 4.0 sweep also waits for 2.9 (D-open-16) | Mateo + AI | not started |
+| 4. UI sweep + every domain on the core | phase 3 (the 4.0 sweep goes first, D-44) | Mateo + AI | not started |
 | 5. Modern gdext, engine-side port, VR removed | 2.1 landed; mostly after 4.0 | Mateo + AI | not started |
 | **Checkpoint 1 Nov** (D-39): real state of stack 1, one of options (a)–(d) chosen | | | |
 | **Gate: full migration** (parity checklist green and zero `.gd`), target 30 Nov | | | |

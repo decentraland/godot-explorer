@@ -29,13 +29,33 @@ files about to be deleted. One bounded job, then pure wiring.
       `docs/rn-ui-spec/reports/legacy-godot.md` has an RN equivalent, checked on an Android phone
       and an iPhone with a signed-in account.
 
+## Status on 15 Oct (draft PR #3073)
+
+| Item | State |
+|---|---|
+| 4.0 sweep | Done. `UiSounds` stays (camera transition and emote wheel use it). |
+| 4.1 friends | Removed with D-43; the UI runs on mock data until 6.9. |
+| 4.2 discover | RN screens; the mock data stays as test and gallery fixtures. |
+| 4.3 avatar | Rules, catalog parsing, palettes, base emotes and the edits are in `dcl_core::avatar`; the engine only renders. **Left:** owned wearables/emotes (need an account with items to check the lambda shape), deleting the rule half of `wearables.gd` and `player_identity.gd` (the renderer still uses them, 5.2). |
+| 4.4 chat / 4.10 HUD | Version and FPS line moved to RN. Avatar tap to a profile is not done (no player-profile screen). |
+| 4.5 settings | Done: engine reads the core's store, `ConfigFile`, `config_data.gd` and `DclConfig` are gone. `graphic_settings.gd`, `audio_settings.gd`, `locale_settings.gd`, `general_settings.gd` and the benchmark stay as appliers. |
+| 4.6 push | Registration through the core, permission, local reminders (Android, Kotlin plugin stack). iOS unwritten. Delivery unverified. |
+| 4.7 profile | Not touched this phase. |
+| 4.8 IAP | Deferred to 6/7 (D-44). |
+| 4.9 modals | RN queue, scene requests, destination checks, password, engine notices, update and device-support. Ban pre-check, NFT card and the loading-timeout verdict not done. |
+| 4.11 coordinators | Session chain, bug report, review prompt, connection quality in the core. Guest upgrade nudge waits for 6.8. Share, calendar, image picker, install referrer, Firebase Analytics libs not added. |
+| 4.12 analytics taxonomy | Not diffed. |
+| 4.14 back/orientation/IME | Back asks before leaving; orientation and HUD insets were already RN. Scene text input keyboard unverified. |
+| 4.15 i18n | Done; language switch not run on a device. |
+| 4.16 parity | `phase-4-parity.md`, not green. |
+
 ## Work items, in order
 
-- [ ] **4.0 The sweep**. Delete `godot/src/ui` wholesale except the engine-owned controls
+- [x] **4.0 The sweep**. Delete `godot/src/ui` wholesale except the engine-owned controls
   (scene UI container, safe-area controls, joystick, gamepad, emote wheel, mobile camera input,
   pointer tooltip, crosshair), `modal_manager.gd`, `explorer.gd`'s UI half, `iap/`, `auth/`,
   `config/` UI, `notifications_manager.gd`, `bug_report/`, the UI autoloads above, and
-  `rn_ui_filter.gd` if 3.8 left it. Fix what breaks in the engine-side GDScript: `Global.modal_manager`
+  `engine_ui_filter.gd` (what 3.8 left). The keep list is wider than this: also `SafeAreaHud/InteractableHUD`, `HudDismissCatcher`, `DialogStack/Stack` until the Rust attach stops needing it, `ui/layouts/safe_*`, `avatar_preview.tscn` (until 5.2), and `config/*_settings.gd` + `config_data.gd` + `auth/attestation_service.gd` (the engine loads them until 4.5 / phase 5). Fix what breaks in the engine-side GDScript: `Global.modal_manager`
   and `loading_screen` references, chat-open and virtual-keyboard state read by `player.gd`,
   nameplate and scene-UI hooks in `explorer.gd`; each becomes a core call, an `Engine` call or
   nothing. Exit: `--itest`/`--stest` green, the RN app enters a world, `global.gd` well under 1k lines.
@@ -53,21 +73,21 @@ files about to be deleted. One bounded job, then pure wiring.
 - [ ] **4.4 Chat**. Chat through core events fed by the engine sink (transports stay in the
   engine until 5.1); nearby, mentions, commands (`ChatCommands`), speech bubbles stay engine-side. RN
   `hud/` chat exists.
-- [ ] **4.5 Settings**. `config_data.gd` (767) schema → `dcl_core::settings` (own JSON, one-time
+- [x] **4.5 Settings**. `config_data.gd` (767) schema → `dcl_core::settings` (own JSON, one-time
   import of `user://settings.cfg`, D-18); the keys in `rn/src/settings/keys.ts` are the contract;
   the engine reads graphics, audio and gameplay values from the core; benchmark results and the
   dynamic graphics preset are written by the engine through core events; `cache_size` and
   `clear_cache` work on the cache dir with no engine running. RN `settings/` exists. Delete
-  `dcl_config.rs`'s `ConfigFile`.
+  `godot_classes/dcl_config.rs`'s `ConfigFile`.
 - [ ] **4.6 Notifications, including push**. Core poll and read state from 1.9; RN renders the
   list and toasts; local OS notifications and the push token through an RN notifications library (D-41),
   checked for: data-only FCM messages shown with the app killed (headless task on Android), the same
   token kinds as today (FCM on Android, raw APNs on iOS), the same Android channel ids, and the
   reminders 1.x scheduled (rescheduled at the first 2.0 launch, or dropped by decision); `core.set_push_token`; push attribution in deep-link routing. Delete
-  `lib/src/notifications.rs`.
+  `lib/crates/dcl_engine/src/notifications.rs`.
 - [ ] **4.7 Profile**. RN `profile/` exists; names, deploy, snapshots through the core. Delete
   `logic/player/player_identity.gd`.
-- [ ] **4.8 IAP and credits on iOS**. Quote, verify, balance and the marketplace round-trip in
+- [ ] **4.8 IAP and credits on iOS** (moved to phase 6/7, D-44: needs Figma for the shop and an iPhone). Quote, verify, balance and the marketplace round-trip in
   `dcl_core::credits` (from `iap_manager.gd` 1,078 and `marketplace_tracker.gd` 363); StoreKit
   through one RN IAP library, its transaction listener started at app launch (D-41); the credits UI
   in RN. Android IAP is new and lands in phase 7 (7.4) on the same library. `dcl-swift-lib` is deleted.
@@ -86,13 +106,13 @@ files about to be deleted. One bounded job, then pure wiring.
 - [ ] **4.12 Analytics taxonomy**. The ~106 GDScript track calls disappear with their screens;
   RN tracks through `core.track` / `core.track_screen`. Diff the screen and button names against
   `legacy-godot.md`.
-- [ ] **4.13 Hosts**. Whatever 3.8 left: `discover/api.ts`, `discover/eventTime.ts`,
+- [x] **4.13 Hosts** (done in phase 3; only verify the no-hardcoded-hosts lint covers these). Whatever 3.8 left: `discover/api.ts`, `discover/eventTime.ts`,
   `backpack/catalog.ts`, `backpack/platformPolicy.ts`, `settings/links.ts`, `hud/Hud.tsx`,
   `flow/screens.tsx`, `menu/api.ts` read `core.urls()`.
 - [ ] **4.14 Android back button, orientation, IME**. Back closes RN sheets, then asks the core
   (`exit_world` confirm); orientation stays RN-owned (portrait before a scene, landscape in it);
   virtual-keyboard height from the host to the core for scene inputs.
-- [ ] **4.15 Localization**. `i18n/es` and `i18n/pt_BR` generated from `godot/locale/*.csv`
+- [x] **4.15 Localization**. `i18n/es` and `i18n/pt_BR` generated from `godot/locale/*.csv`
   (keys already match `en.csv`); a CI check for missing keys; language switch in Settings (D-26).
 - [ ] **4.16 Parity checklist**. One table from
   `docs/rn-ui-spec/reports/legacy-godot.md`: every screen, modal, behaviour, persisted key and

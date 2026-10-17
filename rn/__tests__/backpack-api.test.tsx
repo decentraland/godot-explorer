@@ -38,13 +38,14 @@ describe('liveApi', () => {
   });
 
   it('rejects when the catalog cannot load and retries afterwards', async () => {
-    const fetchMock = jest
-      .spyOn(globalThis, 'fetch')
-      .mockRejectedValue(new Error('offline'));
+    const load = jest.fn().mockRejectedValue(new Error('offline'));
+    setCoreForTests({
+      ...createMockCore(),
+      loadAvatarCatalog: load,
+    } as CoreApi);
     await expect(liveApi.loadCatalog()).rejects.toThrow('offline');
-    fetchMock.mockClear();
     await expect(liveApi.loadCatalog()).rejects.toThrow('offline');
-    expect(fetchMock).toHaveBeenCalled();
+    expect(load).toHaveBeenCalledTimes(2);
   });
 });
 

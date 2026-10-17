@@ -1,3 +1,4 @@
+import { core } from '../core';
 import { CameraFocus, ColorTarget as CoreColorTarget } from '../core/native';
 import type { I18nKey } from '../i18n';
 
@@ -75,10 +76,9 @@ export const SLOTS: Record<Exclude<TabKey, 'all'>, Slot[]> = {
   ],
 };
 
-/** Body parts the avatar can't be without; the client ignores unequipping them. */
-const REQUIRED = new Set(['body_shape', 'eyes', 'eyebrows', 'mouth']);
-
-export const isRemovable = (category: string) => !REQUIRED.has(category);
+/** Body parts the avatar can't be without are the core's call. */
+export const isRemovable = (category: string) =>
+  core().isRemovableCategory(category);
 
 export const COLOR_TITLES: Record<ColorTarget, I18nKey> = {
   skin: 'BACKPACK_COLOR_SKIN',
@@ -104,40 +104,11 @@ const CORE_COLOR: Record<AvatarColorKey, CoreColorTarget> = {
 export const coreColorTarget = (target: ColorTarget): CoreColorTarget =>
   CORE_COLOR[colorKey(target)];
 
-/** Palettes from the lobby editor (godot/src/ui/components/avatar presets). */
+/** The swatches the editor offers, from the core. */
 export const PALETTES: Record<AvatarColorKey, string[]> = {
-  skin: [
-    '#ffe4c6',
-    '#ffdcb6',
-    '#f3c9a8',
-    '#d9a982',
-    '#c49168',
-    '#a56f4a',
-    '#8a5a3a',
-    '#6b3f28',
-    '#4a2a1a',
-  ],
-  hair: [
-    '#1c1c1c',
-    '#3b2412',
-    '#5a3410',
-    '#7b4c14',
-    '#9a6338',
-    '#8a2515',
-    '#e0952c',
-    '#c9b27a',
-    '#d9d9d9',
-  ],
-  eyes: [
-    '#2b2b2b',
-    '#4a3220',
-    '#6b4a2e',
-    '#2f6f4a',
-    '#2f6fb0',
-    '#6a8fa8',
-    '#7a3f8f',
-    '#9a9a9a',
-  ],
+  skin: core().avatarPalette(CoreColorTarget.Skin),
+  hair: core().avatarPalette(CoreColorTarget.Hair),
+  eyes: core().avatarPalette(CoreColorTarget.Eyes),
 };
 
 /** Face slots zoom to the head (Figma backpack-a 122-130); everything else shows the whole avatar. */

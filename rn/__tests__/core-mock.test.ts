@@ -76,6 +76,8 @@ describe('mock core', () => {
       openBackpack: () => {},
       loadingDetail: () => {},
       avatarChanged: () => {},
+      sceneRequest: () => {},
+      engineNotice: () => {},
       report: () => {},
       reportTag: () => {},
     });

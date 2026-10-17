@@ -1,16 +1,18 @@
 //! The engine's end of the app state machine (`dcl_core::app`): it attaches a command queue to the
 //! core, runs what the core sends on Godot's main thread, and reports loading back.
 
+use std::rc::Rc;
 use std::sync::Arc;
 
 use dcl_core::app::{
-    CameraFocus, ColorTarget, CommandQueue, Control, Destination, EngineCommand, EngineEvent,
+    AvatarState, CameraFocus, CommandQueue, Control, Destination, EngineCommand, EngineEvent,
     Parcel, State,
 };
 use dcl_core::Core;
 use godot::classes::{Os, RenderingServer};
 use godot::prelude::*;
 
+use super::scene_requests::{EmulatorSink, ShellSink};
 use super::{scene_link, screenshot_link, settings_link, DclEngine};
 
 fn destination_args(destination: &Destination) -> VarDictionary {
@@ -40,7 +42,25 @@ fn signal_payload(command: &EngineCommand) -> Option<(&'static str, VarDictionar
         )),
         EngineCommand::HideAvatarPreview => Some(("hide_avatar_preview", VarDictionary::new())),
         EngineCommand::SetRendering(_) => None,
-        EngineCommand::Control(control) => Some(control_payload(control)),
+        EngineCommand::ApplyAvatar(avatar) => Some(("apply_avatar", avatar_args(avatar))),
+        EngineCommand::Control(control) => control_payload(control),
+    }
+}
+
+fn avatar_args(avatar: &AvatarState) -> VarDictionary {
+    let strings = |items: &[String]| {
+        items
+            .iter()
+            .map(|item| GString::from(item.as_str()))
+            .collect::<PackedStringArray>()
+    };
+    vdict! {
+        "body_shape": avatar.body_shape.clone(),
+        "wearables": strings(&avatar.wearables),
+        "emotes": strings(&avatar.emotes),
+        "skin": avatar.skin.clone(),
+        "hair": avatar.hair.clone(),
+        "eyes": avatar.eyes.clone(),
     }
 }
 
@@ -55,17 +75,10 @@ fn focus_name(focus: CameraFocus) -> &'static str {
     }
 }
 
-fn color_target_name(target: ColorTarget) -> &'static str {
-    match target {
-        ColorTarget::Skin => "skin",
-        ColorTarget::Hair => "hair",
-        ColorTarget::Eyes => "eyes",
-    }
-}
-
-/// `(kind, args)` of the `core_command` signal for a shell control.
-pub(super) fn control_payload(control: &Control) -> (&'static str, VarDictionary) {
-    match control {
+/// `(kind, args)` of the `core_command` signal for a shell control; `None` for the ones the core
+/// runs itself (avatar edits become `apply_avatar`, scene answers are Rust).
+pub(super) fn control_payload(control: &Control) -> Option<(&'static str, VarDictionary)> {
+    Some(match control {
         Control::Teleport { parcel } => ("teleport", vdict! { "x": parcel.x, "y": parcel.y }),
         Control::SendChat { text } => ("send_chat", vdict! { "text": text.clone() }),
         Control::Emote { urn } => ("emote", vdict! { "urn": urn.clone() }),
@@ -82,22 +95,22 @@ pub(super) fn control_payload(control: &Control) -> (&'static str, VarDictionary
         Control::ChatOpen { open } => ("chat_open", vdict! { "open": *open }),
         Control::HideUi { hidden } => ("hide_ui", vdict! { "hidden": *hidden }),
         Control::FocusCamera { focus } => ("focus_camera", vdict! { "focus": focus_name(*focus) }),
-        Control::Equip { urn } => ("equip", vdict! { "urn": urn.clone() }),
-        Control::Unequip { urn } => ("unequip", vdict! { "urn": urn.clone() }),
-        Control::SetBodyShape { urn } => ("set_body_shape", vdict! { "urn": urn.clone() }),
-        Control::SetColor { target, color } => (
-            "set_color",
-            vdict! { "target": color_target_name(*target), "color": color.clone() },
-        ),
         Control::SetPreviewUrl { url } => ("set_preview_url", vdict! { "url": url.clone() }),
         Control::PlayPreviewEmote { urn } => ("play_preview_emote", vdict! { "urn": urn.clone() }),
-        Control::SetEmoteSlot { slot, urn } => (
-            "set_emote_slot",
-            vdict! { "slot": *slot, "urn": urn.clone() },
-        ),
-        Control::RandomizeAvatar => ("randomize_avatar", VarDictionary::new()),
         Control::SetName { name } => ("set_name", vdict! { "name": name.clone() }),
-    }
+        Control::Reconnect => ("reconnect", VarDictionary::new()),
+        Control::SetWorldSecret { realm, secret } => (
+            "set_world_secret",
+            vdict! { "realm": realm.clone(), "secret": secret.clone() },
+        ),
+        Control::Equip { .. }
+        | Control::Unequip { .. }
+        | Control::SetBodyShape { .. }
+        | Control::SetColor { .. }
+        | Control::SetEmoteSlot { .. }
+        | Control::RandomizeAvatar
+        | Control::AnswerSceneRequest { .. } => return None,
+    })
 }
 
 impl DclEngine {
@@ -156,11 +169,13 @@ impl DclEngine {
         };
         let queue = Arc::new(CommandQueue::default());
         self.core_commands = Some(queue.clone());
+        self.sink = Rc::new(ShellSink);
         core.with_app(|app| app.engine_attach(queue));
     }
 
     pub(super) fn detach_from_core(&mut self) {
         if self.core_commands.take().is_some() {
+            self.sink = Rc::new(EmulatorSink);
             if let Some(core) = Core::try_get() {
                 core.with_app(|app| app.engine_detach());
             }
@@ -173,8 +188,14 @@ impl DclEngine {
             return;
         };
         for command in queue.drain() {
-            if let EngineCommand::SetRendering(on) = command {
-                RenderingServer::singleton().set_render_loop_enabled(on);
+            match &command {
+                EngineCommand::SetRendering(on) => {
+                    RenderingServer::singleton().set_render_loop_enabled(*on);
+                }
+                EngineCommand::Control(Control::AnswerSceneRequest { id, accepted }) => {
+                    self.answer_scene_request(*id, *accepted);
+                }
+                _ => {}
             }
             if let Some((kind, args)) = signal_payload(&command) {
                 self.base_mut()

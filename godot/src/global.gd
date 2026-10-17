@@ -105,11 +105,7 @@ var nft_frame_loader: NftFrameStyleLoader
 
 var snapshot: Snapshot
 var music_player: MusicPlayer
-var preload_assets: PreloadAssets
 var locations: Node
-var modal_manager: ModalManager
-var upgrade_nudge_coordinator: UpgradeNudgeCoordinator
-var review_prompt_coordinator: ReviewPromptCoordinator
 
 var standalone = false
 
@@ -123,6 +119,7 @@ var previous_height_2: int = -1
 var deep_link_obj: DclParseDeepLink = DclParseDeepLink.new()
 var deep_link_url: String = ""
 var deep_link_router := DeepLinkRouter.new()
+var graphics_autotune := GraphicsAutotune.new()
 
 ## true when the env came from --dclenv or a deeplink dclenv=… (incl. dclenv=org).
 ## When true, Iap's sandbox auto-switch must NOT override the explicit choice.
@@ -153,11 +150,6 @@ var attestation: AttestationService = null
 # applied automatically when the response arrives — see feature_flags.gd.
 var feature_flags: FeatureFlags = null
 
-# Ad/referrer campaign map fetched from the mobile-bff at startup. Resolves the `?c=`
-# token captured at boot into a personalized FTUE or a direct boot into the target scene
-# — see campaigns.gd.
-var campaigns: Campaigns = null
-
 var _is_portrait: bool = true
 
 # Opt-in, set by a `decentraland://open?enable-upgraded-deletion=true` deeplink
@@ -170,13 +162,11 @@ var _enable_upgraded_deletion: bool = false
 # Scene Inspector bridge, created lazily at boot when a target is configured.
 var _scene_inspector_bridge: Node = null
 
-# Guard so the logging self-test runs at most once (cli or deeplink trigger).
-var _selftest_done: bool = false
+# Logging self-test trigger (cli flag or deeplink); runs at most once.
+var _logging_selftest := LoggingSelftest.new()
 
 # Cached reference to SafeAreaPresets (loaded dynamically to avoid export issues)
 var _safe_area_presets: GDScript = null
-
-var _hardware_benchmark: HardwareBenchmark = null
 
 var _safe_margin_debug_overlay: SafeMarginDebugOverlay = null
 
@@ -228,131 +218,6 @@ func should_emulate_android() -> bool:
 ## or mobile deep link (`decentraland://open?gp-benchmark=true&...`).
 func is_gp_benchmark() -> bool:
 	return cli.gp_benchmark or (deep_link_obj != null and deep_link_obj.gp_benchmark)
-
-
-## Logging self-test, triggered by `--test-logging` / `?test-logging=true`.
-## Exercises every logging form in every stack (GDScript / Rust / Swift / ObjC /
-## Kotlin) so we can confirm each pipes into the unified channel. Grep `[LOGTEST]`
-## to verify. The ERROR/WARN forms (push_error/push_warning, tracing error/warn,
-## NSLog/os_log faults, Log.e) also exercise the Sentry pipeline.
-## Run the logging self-test if requested (via `--test-logging` cli flag or a
-## `?test-logging=true` deeplink), at most once. Called at _ready (covers the cli
-## flag, e.g. iOS's baked arg) and on `deep_link_received` (Android delivers the
-## deeplink async, after _ready — and its launcher strips command-line args).
-func _maybe_run_logging_selftest() -> void:
-	if _selftest_done:
-		return
-	# Never run in production: the self-test deliberately fires push_error /
-	# tracing::error! / ERR_PRINT / Log.e, all of which ship to Sentry — otherwise
-	# reachable in prod via the `?test-logging=true` deeplink. Staging/TestFlight
-	# still run it so the Sentry path can be verified on a real build.
-	if is_production():
-		return
-	var requested := cli.test_logging
-	if not requested and deep_link_obj != null:
-		requested = str(deep_link_obj.params.get("test-logging", "")).to_lower() == "true"
-	if requested:
-		_selftest_done = true
-		_run_logging_selftest.call_deferred()
-
-
-func _run_logging_selftest() -> void:
-	print("[LOGTEST] ===== logging self-test start =====")
-
-	# --- GDScript stack: every logging form ---
-	print("[LOGTEST][gdscript] info via print()")
-	prints("[LOGTEST][gdscript]", "info", "via", "prints()")
-	print_rich("[LOGTEST][gdscript] info via print_rich() [color=yellow]rich[/color]")
-	printraw("[LOGTEST][gdscript] raw via printraw() (no newline)\n")
-	printerr("[LOGTEST][gdscript] error via printerr() (stderr)")
-	push_warning("[LOGTEST][gdscript] warn via push_warning() (expect Sentry)")
-	push_error("[LOGTEST][gdscript] error via push_error() (expect Sentry)")
-
-	# --- Rust stack: all tracing levels + raw println!/eprintln! (DclGlobal) ---
-	test_logging()
-
-	# --- Native stacks: gated by per-platform availability ---
-	if DclSwiftLibPlugin.is_available():
-		print("[LOGTEST][swift] DclSwiftLib.test_logging() -> ", DclSwiftLibPlugin.test_logging())
-	if DclAndroidPlugin.is_available():
-		DclAndroidPlugin.test_logging()
-		print("[LOGTEST][kotlin] invoked DclAndroidPlugin.test_logging()")
-	# has_singleton first: get_singleton logs an ERROR (→ Sentry) when absent.
-	if Engine.has_singleton("DclGodotiOS"):
-		var dcl_ios = Engine.get_singleton("DclGodotiOS")
-		if dcl_ios != null and dcl_ios.has_method("test_logging"):
-			dcl_ios.test_logging()
-			print("[LOGTEST][objc] invoked DclGodotiOS.test_logging()")
-
-	print("[LOGTEST] ===== logging self-test end =====")
-
-
-## Forward the optimized-content-base-url deeplink param into DclCli so the scene fetcher /
-## content provider use it for optimized loading (non-production; Decentraland https or LAN
-## hosts only). Shared by the desktop fake-deeplink path (_ready) and the mobile live path.
-func _apply_optimized_content_base_url(obj: DclParseDeepLink) -> void:
-	var opt_url: String = obj.params.get("optimized-content-base-url", "")
-	var allowed := UrlHost.is_decentraland_https(opt_url) or UrlHost.is_local_network(opt_url)
-	if opt_url.is_empty():
-		return
-	if is_production():
-		print("[DEEPLINK] optimized-content-base-url ignored on production builds")
-	elif not allowed:
-		print("[DEEPLINK] optimized-content-base-url rejected (not https Decentraland or LAN)")
-	else:
-		print("[DEEPLINK] optimized-content-base-url=", opt_url)
-		cli.optimized_content_base_url = opt_url
-
-
-## QA affordance: `decentraland://open?rotate-guest=true` mints a brand-new guest, the only
-## way back to the FTUE on a device whose native anchor survives reinstall (Android SSAID,
-## iOS Keychain). Also wipes the on-disk guest identity, so the FTUE is reachable from this
-## launch rather than the next one.
-##
-## Non-production means anything not cut from `release*`, so builds from `main` — TestFlight
-## included — honour it. Recoverable: the flag lives in user:// and the native anchor is
-## never touched, so reinstalling restores the original wallet.
-func _capture_debug_guest_rotate(obj: DclParseDeepLink) -> void:
-	if is_production():
-		return
-	if String(obj.params.get("rotate-guest", "")).to_lower() != "true":
-		return
-
-	var config := get_config()
-	config.debug_rotate_guest_anchor = true
-	# Campaign state too, or the scenario would only work once: a stored token is never
-	# replaced and a consumed one falls back to the default FTUE.
-	config.campaign_token = ""
-	config.campaign_token_captured_at = 0
-	config.campaign_consumed = false
-	config.save_to_settings_file()
-	var removed := clear_guest_device_storage()
-	print("[DEEPLINK] rotate-guest=true: cleared %d guest file(s) + campaign state" % removed)
-
-
-## Capture the ad/referrer campaign token carried by a deeplink as `?c=<token>` (#2670).
-## Shared by the desktop fake-deeplink path (_ready) and the mobile/iOS live path (router).
-##
-## First capture wins: an install has exactly one campaign, and a later in-session deeplink
-## must not repaint it. Hence the validation here rather than only at the point of use — a
-## junk token would take the slot the real install-attribution token needs.
-func _capture_campaign_token(obj: DclParseDeepLink) -> void:
-	var token: String = String(obj.params.get("c", "")).strip_edges()
-	if token.is_empty():
-		return
-	if not CampaignResolution.is_valid_token(token):
-		push_warning("[CAMPAIGN] ignoring malformed token from deeplink: " + token)
-		return
-
-	var config := get_config()
-	if not config.campaign_token.is_empty():
-		print("[CAMPAIGN] token already captured (", config.campaign_token, "), ignoring: ", token)
-		return
-
-	config.campaign_token = token
-	config.campaign_token_captured_at = int(Time.get_unix_time_from_system())
-	config.save_to_settings_file()
-	print("[CAMPAIGN] captured token=", token, " at=", config.campaign_token_captured_at)
 
 
 ## Lazy-init the GltfContainer load-timeout coalescer. Replaces the
@@ -418,7 +283,6 @@ func send_haptic_feedback(duration_ms: int = 20, amplitude: float = -1.0) -> voi
 # gdlint: ignore=async-function-name
 func _ready():
 	print("[Startup] global._ready start: %dms" % (Time.get_ticks_msec() - _startup_time))
-	BugReportCapture.listen_for_settings(self)
 	# Bench-only: uncap FPS / disable vsync before any code path can re-pin
 	# Engine.max_fps. Real users keep their saved cap + vsync; mobile bench
 	# uncaps via gp_benchmark_runner at the load->settling transition.
@@ -479,11 +343,11 @@ func _ready():
 		else:
 			print("[DEEPLINK] No rust-log param in deeplink")
 
-		_apply_optimized_content_base_url(deep_link_obj)
+		deep_link_router._apply_optimized_content_base_url(deep_link_obj)
 
 		# Pulse transport params (this fake-deeplink path doesn't route through
 		# deep_link_router.process_deep_link).
-		_apply_comms_deeplink_params(deep_link_obj)
+		deep_link_router._apply_comms_deeplink_params(deep_link_obj)
 
 		print("[DEEPLINK] safemargindebug=", deep_link_obj.safe_margin_debug)
 		if deep_link_obj.safe_margin_debug:
@@ -501,7 +365,7 @@ func _ready():
 			dcl_ios_singleton.deeplink_received.connect(deep_link_router.process_deep_link)
 
 	_dcl_swift_lib_smoke_test()
-	# The services every boot needs (config, realm, identity, ...) are created in Rust.
+	# The services every boot needs (realm, identity, ...) are created in Rust.
 	DclBootstrap.create_core_services(self)
 
 	var args = cli.get_all_args()
@@ -512,21 +376,13 @@ func _ready():
 	if FORCE_TEST:
 		Global.testing_scene_mode = true
 
-	config.load_from_settings_file()
-
 	# Restore profile particle budgets + avatar dust gate: the Rust atomics and
 	# the GDScript toggle default to full-budget, and nothing re-applies them
 	# until the user picks a profile again.
-	GraphicSettings.apply_particle_quality(config.particle_quality)
-	AvatarAnimHelpers.apply_particles_enabled(config.particle_quality > 0)
+	GraphicSettings.apply_particle_quality(engine.setting("particle_quality"))
+	AvatarAnimHelpers.apply_particles_enabled(engine.setting("particle_quality") > 0)
 
-	# Campaign token (#2670). Deliberately after the config load: the fake/baked deeplink is
-	# parsed further up in _ready, long before ConfigData exists, so capturing there wrote to
-	# a config that was then replaced by the one read from disk. deep_link_obj is eagerly
-	# constructed, so this is a no-op when no deeplink carried a token. The live mobile path
-	# captures from deep_link_router instead, which already runs well after this point.
-	_capture_debug_guest_rotate(deep_link_obj)
-	_capture_campaign_token(deep_link_obj)
+	deep_link_router._capture_debug_guest_rotate(deep_link_obj)
 
 	# Resolve the UI language before any scene renders. Godot picks the OS locale at boot, which
 	# would surface a partially-translated locale the moment its .po has content; LocaleSettings
@@ -536,7 +392,7 @@ func _ready():
 	# would otherwise restore a saved FPS_18/FPS_30 cap) so no later
 	# `apply_fps_limit()` re-pins the engine. Real users keep their saved cap.
 	if cli.bench_mode:
-		config.limit_fps = ConfigData.FpsLimitMode.NO_LIMIT
+		engine.adopt_setting("limit_fps", GraphicSettings.FpsLimitMode.NO_LIMIT)
 		Engine.max_fps = 0
 		DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
 
@@ -559,9 +415,7 @@ func _ready():
 		ProfileService.set_deploy_disabled(true)
 		print("[GLOBAL] Profile deploy DISABLED (local-only profile updates)")
 
-	self.realm.realm_change_failed.connect(_on_realm_change_failed_toast)
 	self.realm.realm_access_denied.connect(_on_realm_access_denied)
-	self.player_identity.profile_changed.connect(_on_player_profile_changed_sync_events)
 
 	# Ensure the content cache folder exists before clearing — clear runs against
 	# this directory and would log an error if it doesn't exist yet (fresh install).
@@ -591,7 +445,7 @@ func _ready():
 	if not DirAccess.dir_exists_absolute("user://content/"):
 		DirAccess.make_dir_absolute("user://content/")
 
-	session_id = DclConfig.generate_uuid_v4()
+	session_id = DclGlobal.generate_uuid_v4()
 	# Skip Segment metrics + Sentry tagging in asset-server mode, or when
 	# telemetry is disabled at build time (CI desktop builds use the
 	# `disable_telemetry` cargo feature).
@@ -600,25 +454,15 @@ func _ready():
 	DclBootstrap.create_app_services(self, session_id, telemetry_enabled)
 	if self.metrics != null:
 		# Fire install attribution once per install (Android only).
-		if self.is_android() and not self.config.install_referrer_sent:
+		if self.is_android() and not engine.setting("install_referrer_sent"):
 			self.metrics.track_install_referrer.call_deferred()
-			self.config.install_referrer_sent = true
-			self.config.save_to_settings_file()
-		# iOS only: report the StoreKit environment (production/sandbox) to
-		# analytics once at startup. StoreKit's environment is fixed by how the
-		# binary was distributed and can't be chosen by the app, so this is the
-		# ground truth for which IAP backend a device will hit. We ship this
-		# BEFORE any purchase flow to validate in prod that real App Store
-		# installs report `production`. Deferred so it runs after every autoload
-		# (incl. Iap) is in the tree. See docs/iap-zone-submission/.
-		if self.is_ios():
-			Iap.report_environment_to_analytics.call_deferred()
+			engine.set_setting("install_referrer_sent", true, true)
 	DclBootstrap.create_extra_services(self)
 
-	# Initialize dynamic graphics manager after config is loaded. Self-skips in
+	# Initialize dynamic graphics manager after the settings are loaded. Self-skips in
 	# bench mode (the function early-returns on cli.bench_mode), so bench results
 	# stay comparable while production keeps thermal-cap + adaptive downgrade.
-	_init_dynamic_graphics_manager.call_deferred()
+	graphics_autotune.init_dynamic_graphics.call_deferred()
 
 	var custom_importer = load("res://src/logic/custom_gltf_importer.gd").new()
 	GLTFDocument.register_gltf_document_extension(custom_importer)
@@ -626,18 +470,14 @@ func _ready():
 	if cli.raycast_debugger:
 		set_raycast_debugger_enable(true)
 
-	if cli.network_debugger:
-		self.network_inspector.set_is_active(true)
-		open_network_inspector_ui()
-	else:
-		self.network_inspector.set_is_active(false)
+	self.network_inspector.set_is_active(cli.network_debugger)
 
 	# Logging self-test (debug aid). When --test-logging / ?test-logging=true is
 	# set, exercise every logging form in every stack so we can confirm each pipes
 	# into the unified channel + Sentry. Checked here (cli, e.g. iOS baked arg) AND
 	# on deeplink arrival (Android delivers it async, after _ready), run once.
-	_maybe_run_logging_selftest()
-	deep_link_router.deep_link_received.connect(_maybe_run_logging_selftest)
+	_logging_selftest.maybe_run()
+	deep_link_router.deep_link_received.connect(_logging_selftest.maybe_run)
 
 	DclMeshRenderer.init_primitive_shapes()
 	print("[Startup] global._ready end: %dms" % (Time.get_ticks_msec() - _startup_time))
@@ -656,23 +496,6 @@ func _dcl_swift_lib_smoke_test() -> void:
 	)
 
 
-## Check if first launch benchmark should run (mobile only, first launch or dev builds)
-## This is called by the engine host once the engine is up, to avoid blocking the first frames.
-## Skipped in bench mode: HardwareBenchmark calls viewport_set_measure_render_time and
-## can clobber the gp_benchmark_runner's measurement state mid-bench.
-func should_run_first_launch_benchmark() -> bool:
-	if cli.bench_mode:
-		return false
-	return is_mobile() and (not get_config().first_launch_completed or DclGlobal.is_dev())
-
-
-## Run the first launch benchmark. Called by the engine host once the engine is up.
-func run_first_launch_benchmark() -> void:
-	if _hardware_benchmark != null:
-		return  # Already running
-	_run_first_launch_benchmark()
-
-
 ## Async helper to clear cache and wait for completion before anything loads.
 func _async_clear_cache_if_needed() -> void:
 	# Skip cache clearing in asset server mode - we want to preserve the download cache
@@ -680,7 +503,9 @@ func _async_clear_cache_if_needed() -> void:
 		return
 
 	var should_clear_startup = cli.clear_cache_startup
-	var version_changed = config.local_assets_cache_version != Global.LOCAL_ASSETS_CACHE_VERSION
+	var version_changed = (
+		engine.setting("local_assets_cache_version") != Global.LOCAL_ASSETS_CACHE_VERSION
+	)
 
 	if should_clear_startup or version_changed:
 		if should_clear_startup:
@@ -693,107 +518,9 @@ func _async_clear_cache_if_needed() -> void:
 		prints("Cache cleared successfully!")
 
 		if version_changed:
-			config.local_assets_cache_version = Global.LOCAL_ASSETS_CACHE_VERSION
-			config.save_to_settings_file()
-
-
-func _init_dynamic_graphics_manager() -> void:
-	# In bench mode, skip DG init entirely: the bench runner pins force-graphic-profile,
-	# disables thermal cap, and disconnects DG's signal handlers anyway — initializing
-	# DG just adds startup CPU noise and queues thermal_fps_cap signals that race the
-	# bench setup.
-	if cli.bench_mode:
-		print("[DynamicGraphics] skipped (bench_mode=true)")
-		return
-	# Initialize with config values and connect signals
-	dynamic_graphics_manager.initialize(
-		get_config().dynamic_graphics_enabled, get_config().graphic_profile, get_config().limit_fps
-	)
-	loading_started.connect(dynamic_graphics_manager.on_loading_started)
-	loading_finished.connect(dynamic_graphics_manager.on_loading_finished)
-	dynamic_graphics_manager.profile_change_requested.connect(_on_dynamic_profile_change)
-	dynamic_graphics_manager.thermal_fps_cap_changed.connect(_on_thermal_fps_cap_changed)
-	# Listen for FPS limit changes
-	get_config().param_changed.connect(_on_config_param_changed)
-
-
-func _run_first_launch_benchmark() -> void:
-	print("[HardwareBenchmark] Running first launch benchmark...")
-	_hardware_benchmark = HardwareBenchmark.new()
-	_hardware_benchmark.benchmark_completed.connect(_on_first_launch_benchmark_completed)
-	get_tree().root.add_child(_hardware_benchmark)
-	_hardware_benchmark.run_benchmark()
-
-
-func _on_first_launch_benchmark_completed(profile: int, gpu_score: float, ram_gb: float) -> void:
-	print(
-		(
-			"[HardwareBenchmark] First launch complete: profile=%d, gpu=%.1fms, ram=%.1fGB"
-			% [profile, gpu_score, ram_gb]
-		)
-	)
-
-	# Store benchmark results for debugging/analytics
-	get_config().benchmark_gpu_score = gpu_score
-	get_config().benchmark_ram_gb = ram_gb
-	get_config().first_launch_completed = true
-
-	# Apply the detected profile
-	GraphicSettings.apply_graphic_profile(profile)
-
-	# Sync the dynamic graphics manager with the new profile
-	dynamic_graphics_manager.on_manual_profile_change(profile)
-
-	# Save configuration
-	get_config().save_to_settings_file()
-
-	# Cleanup benchmark
-	if is_instance_valid(_hardware_benchmark):
-		_hardware_benchmark.queue_free()
-		_hardware_benchmark = null
-
-
-func _on_config_param_changed(param: int) -> void:
-	if param == ConfigData.ConfigParams.LIMIT_FPS:
-		dynamic_graphics_manager.on_fps_limit_changed(get_config().limit_fps)
-		# Re-apply FPS limit considering thermal cap
-		GraphicSettings.apply_fps_limit_with_thermal_cap(
-			get_config().limit_fps, dynamic_graphics_manager.get_thermal_fps_cap()
-		)
-
-
-func _on_thermal_fps_cap_changed(fps_cap: int) -> void:
-	# Apply the effective FPS limit (considering both user setting and thermal cap)
-	GraphicSettings.apply_fps_limit_with_thermal_cap(get_config().limit_fps, fps_cap)
-	if fps_cap == 0:
-		print("[ThermalFPS] Cap removed, using user setting")
-	else:
-		print("[ThermalFPS] Cap applied: %d FPS" % fps_cap)
-
-
-func _on_dynamic_profile_change(new_profile: int) -> void:
-	var old_profile: int = get_config().graphic_profile
-	if old_profile == new_profile:
-		# No actual change, skip
-		return
-
-	var old_name: String = GraphicSettings.PROFILE_NAMES[old_profile]
-	var new_name: String = GraphicSettings.PROFILE_NAMES[new_profile]
-	var is_downgrade: bool = new_profile < old_profile
-
-	print("[DynamicGraphics] Profile changed: %s -> %s" % [old_name, new_name])
-
-	# Apply the profile change requested by the dynamic graphics manager
-	GraphicSettings.apply_graphic_profile(new_profile)
-	get_config().save_to_settings_file()
-
-	# Show toast notification to user
-	var title: String = "Graphics %s" % ("Reduced" if is_downgrade else "Improved")
-	var description: String = (
-		"Profile changed to %s for better %s"
-		% [new_name, "performance" if is_downgrade else "quality"]
-	)
-	NotificationsManager.show_system_toast(title, description, "graphics_profile")
+			engine.set_setting(
+				"local_assets_cache_version", Global.LOCAL_ASSETS_CACHE_VERSION, true
+			)
 
 
 func set_raycast_debugger_enable(enable: bool):
@@ -830,13 +557,6 @@ func add_raycast(id: int, time: float, from: Vector3, to: Vector3) -> void:
 		raycast_debugger.add_raycast(id, time, from, to)
 
 
-func print_node_tree(node: Node, prefix = ""):
-	print(prefix + node.name)
-	for child in node.get_children():
-		if child is Node:
-			print_node_tree(child, prefix + node.name + "/")
-
-
 func get_explorer() -> Explorer:
 	var explorer = get_node_or_null("/root/explorer")
 	if is_instance_valid(explorer):
@@ -863,9 +583,6 @@ func clear_guest_device_storage() -> int:
 				removed += 1
 			else:
 				push_error("[guest] delete: failed to remove %s (err %d)" % [path, err])
-	# The cached guest profile would otherwise be reused by the fresh wallet.
-	get_config().guest_profile = {}
-	get_config().save_to_settings_file()
 	return removed
 
 
@@ -891,15 +608,7 @@ func sign_out() -> void:
 	if explorer != null:
 		explorer.prepare_for_logout()
 
-	# 2. Stop session pollers.
-	NotificationsManager.stop_polling()
-	# Wipe the previous account's in-memory notification history so it can't leak
-	# into the next session's panel/bell badge (issue #2104).
-	NotificationsManager.clear_notification_history()
-	# Drop the previous account's event reminders ("event_" entries) so they can't fire
-	# after sign-out; the per-install day1 welcome is left alone. The sync-on-next-login
-	# REMOVE pass only runs when authenticated, so a guest session would keep them armed.
-	NotificationsManager.clear_event_local_notifications()
+	# 2. Stop the session's background work.
 	# The analytics first-move poll (a Timer under this autoload) reads
 	# scene_runner.player_body_node; left running it would poll the freed Player
 	# after the swap, panicking the #[var] getter. It restarts on the next login.
@@ -932,15 +641,11 @@ func sign_out() -> void:
 	#    left as-is — once the Explorer is freed they report is_instance_valid()==false
 	#    and the SceneManager's existing guards skip them; explorer._ready() reassigns
 	#    them on the next login.
-	get_config().session_account = {}
 	# Forget the previous identity so the next account starts fresh — otherwise
 	# the prior profile/avatar lingers in memory and leaks into the new account's
 	# avatar editor (issue #1658). Also drop the saved guest look on explicit
 	# sign-out to close the guest->guest leak vector.
-	get_config().guest_profile = {}
-	NamesRequest.invalidate_cache()
 	player_identity.reset_identity()
-	get_config().save_to_settings_file()
 
 	# Lobby/login is portrait-only; reset orientation so logging out from a
 	# landscape screen (e.g. settings panel) doesn't strand the user there.
@@ -953,75 +658,6 @@ func sign_out() -> void:
 	scene_runner.detach_base_ui()
 
 	_signing_out = false
-
-
-## Soft sign-out used by the Dev Tools "RETURN TO DISCOVER" button. Leaves the
-## current world and drops the user back on the standalone Discover menu WHILE
-## staying signed in: it tears down the live Explorer, every running DCL scene,
-## comms world rooms and realm / scene-fetcher state, but deliberately KEEPS the
-## player identity, the persisted session and the
-## notification polling intact.
-##
-## This mirrors the world-teardown half of [sign_out]; the two intentionally
-## differ — sign_out additionally wipes the
-## session/identity and returns to the sign-in lobby. When adding a new
-## world/scene subsystem to tear down, update BOTH paths.
-func return_to_discover() -> void:
-	if _returning_to_discover or _signing_out:
-		return
-	_returning_to_discover = true
-
-	# 1. Tear down the live Explorer first, while it is still in the tree, so its
-	#    autoload-signal callbacks and retry timers are severed before the steps
-	#    below re-emit any of those signals or free the Explorer node. No-op when
-	#    the button is pressed from the standalone Discover menu (no Explorer yet).
-	var explorer := get_explorer()
-	if explorer != null:
-		explorer.prepare_for_logout()
-
-	# 2. Stop the analytics first-move poll: it reads scene_runner.player_body_node,
-	#    which is freed once the Explorer goes away — left running, its #[var]
-	#    getter would panic on the freed Player. It re-arms on the next
-	#    loading_finished (i.e. when the user jumps into a world again).
-	if analytics_controller != null:
-		analytics_controller.cancel_first_move_poll()
-
-	# 3. Kill every running DCL scene. The SceneManager reaps them in the
-	#    background (reap_dying_scenes runs even while Discover pauses the runner).
-	scene_runner.kill_all_scenes()
-
-	# 4. Reset realm and scene-fetcher state so nothing from the world we just left
-	#    leaks into the next jump-in. This matches the post-login Discover state,
-	#    where no realm is joined yet.
-	realm.async_clear_realm()
-	scene_fetcher.reset_for_logout()
-
-	# 5. Close comms world rooms (MainRoom / SceneRoom / LiveKit). Pass `false` so
-	#    the Rust player identity (wallet + ephemeral keys) is KEPT — this is the
-	#    key difference from sign_out, which passes `true` to also log out.
-	comms.disconnect(false)
-
-	# NOTE: unlike sign_out we deliberately DO NOT stop NotificationsManager
-	# polling, clear the blacklist, or wipe the
-	# persisted session — the session stays alive and the Discover screen's
-	# notifications keep working.
-
-	# Discover/menu is portrait-only; reset orientation so returning from a
-	# landscape in-world screen (settings) doesn't strand the user in landscape.
-	set_orientation_portrait()
-
-	# Detach scene_runner.base_ui from the dying Explorer so freeing it can't
-	# free UI nodes Rust still references — a cache-hot scene spawn racing the
-	# next explorer._ready() would panic on the freed control
-	# (GODOT-EXPLORER-1DY). The orphan is freed by the next recreate_base_ui().
-	scene_runner.detach_base_ui()
-
-	# Swap to the standalone Discover menu on the next frame, after the current
-	# call stack (the settings button handler) fully unwinds. menu._ready clears
-	# _returning_to_discover.
-	get_tree().change_scene_to_file.call_deferred(
-		"res://src/ui/components/organisms/menu/menu.tscn"
-	)
 
 
 func explorer_has_focus() -> bool:
@@ -1095,72 +731,6 @@ func open_url(url: String, use_webkit: bool = false):
 			OS.shell_open(url)
 
 
-func async_create_popup_warning(
-	warning_type: PopupWarning.WarningType, title: TranslationKey, description: TranslationKey
-):
-	var explorer = get_explorer()
-	if is_instance_valid(explorer):
-		await explorer.warning_messages.async_create_popup_warning(warning_type, title, description)
-
-
-func async_get_texture_size(content_mapping, src, sender: DclRpcSenderGetTextureSize) -> void:
-	var texture_hash: String = content_mapping.get_hash(src)
-	if texture_hash.is_empty():
-		texture_hash = src
-
-	var promise = Global.content_provider.fetch_texture_by_hash(texture_hash, content_mapping)
-	var result = await PromiseUtils.async_awaiter(promise)
-	if result is PromiseError:
-		printerr(src, "couldn't get the size", result.get_error())
-		sender.send(Vector2(2048.0, 2048))
-		return
-
-	sender.send(Vector2(result.original_size))
-
-
-func open_network_inspector_ui():
-	if is_instance_valid(network_inspector_window):
-		network_inspector_window.show()
-		return
-
-	get_viewport().set_embedding_subwindows(false)
-	network_inspector_window = Window.new()
-	network_inspector_window.size = Vector2i(1280, 720)
-	network_inspector_window.initial_position = (
-		Window.WINDOW_INITIAL_POSITION_CENTER_MAIN_WINDOW_SCREEN
-	)
-
-	const NETWORK_INSPECTOR_UI = preload(
-		"res://src/ui/components/organisms/debug_panel/network_inspector/network_inspector_ui.tscn"
-	)
-	network_inspector_window.add_child(NETWORK_INSPECTOR_UI.instantiate())
-
-	add_child(network_inspector_window)
-	network_inspector_window.show()
-
-
-func async_load_threaded(resource_path: String, promise: Promise) -> void:
-	prints("loading async", resource_path)
-
-	var main_tree = get_tree()
-	var err = ResourceLoader.load_threaded_request(resource_path)
-	if err != OK:
-		promise.reject("async_load_threaded error load_threaded_request not ok")
-		return
-
-	var status = ResourceLoader.load_threaded_get_status(resource_path)
-	while status == 1:
-		await main_tree.process_frame
-		status = ResourceLoader.load_threaded_get_status(resource_path)
-
-	var resource = ResourceLoader.load_threaded_get(resource_path)
-	if resource == null:
-		promise.reject("async_load_threaded error load_threaded_request result null")
-		return
-
-	promise.resolve_with_data(resource)
-
-
 func set_orientation_landscape():
 	# While tearing down the session toward a portrait-only screen (sign-out ->
 	# lobby, or return-to-discover -> Discover), ignore stray landscape flips. The
@@ -1227,205 +797,13 @@ func set_orientation_portrait():
 	orientation_changed.emit(true)
 
 
-func async_resolve_scene_entity_id(coord: Vector2i) -> String:
-	# Try cache first
-	var cached = Global.scene_fetcher.scene_entity_coordinator.get_scene_entity_id(coord)
-	if not cached.is_empty():
-		return cached
-
-	# Make HTTP request to entities/active
-	var content_url = Global.realm.content_base_url
-	if content_url.is_empty():
-		return ""
-
-	var url = content_url.trim_suffix("/") + "/entities/active"
-	var body = JSON.stringify({"pointers": [str(coord.x) + "," + str(coord.y)]})
-	var headers = {"Content-Type": "application/json"}
-	var promise: Promise = Global.http_requester.request_json(
-		url, HTTPClient.METHOD_POST, body, headers
-	)
-	var result = await PromiseUtils.async_awaiter(promise)
-
-	if result is PromiseError:
-		push_warning("Failed to resolve scene entity ID: " + result.get_error())
-		return ""
-
-	var json = result.get_string_response_as_json()
-	if json is Array and not json.is_empty():
-		return json[0].get("id", "")
-	return ""
-
-
-func async_resolve_world_scene_id(world_realm: String) -> String:
-	var scenes_url = Realm.dcl_world_url(world_realm) + "/scenes"
-	var promise: Promise = Global.http_requester.request_json(
-		scenes_url, HTTPClient.METHOD_GET, "", {}
-	)
-	var result = await PromiseUtils.async_awaiter(promise)
-
-	if result is PromiseError:
-		push_warning("Failed to resolve world scene ID: " + result.get_error())
-		return ""
-
-	var json = result.get_string_response_as_json()
-	if json is Dictionary:
-		var scenes = json.get("scenes", [])
-		if not scenes.is_empty():
-			return scenes[0].get("entityId", "")
-	return ""
-
-
-func async_check_scene_access(scene_id: String, realm_name: String) -> bool:
-	if scene_id.is_empty():
-		return true  # fail-open
-
-	Global.comms.check_scene_access(scene_id, realm_name)
-
-	# Loop until we get the result for OUR scene_id (discard stale results from
-	# earlier navigations that may still be in-flight).
-	while true:
-		var result = await Global.comms.scene_access_checked
-		# result = [scene_id, allowed, error_message]
-		if str(result[0]) != scene_id:
-			continue
-
-		if not str(result[2]).is_empty():
-			push_warning("Ban check failed, allowing navigation: " + str(result[2]))
-			return true  # fail-open on error
-
-		return result[1]
-
-	return true  # unreachable, keeps compiler happy
-
-
+## Entry points the emulator sink calls by name.
 func async_teleport_to(parcel_position: Vector2i, new_realm: String) -> void:
-	var explorer = Global.get_explorer()
-	if not is_instance_valid(explorer):
-		# Cold start from the lobby: there is no scene to protect and no explorer to route
-		# through, so the private-world gate stays here — booting straight into a world the
-		# user can't enter is the bug #1725 fixed.
-		if not await _async_precheck_realm_access(new_realm):
-			return
-		Global.set_orientation_landscape()
-		Global.get_config().last_realm_joined = new_realm
-		Global.get_config().last_parcel_position = parcel_position
-		Global.get_config().add_place_to_last_places(parcel_position, new_realm)
-		get_tree().change_scene_to_file("res://src/ui/explorer.tscn")
-		return
-
-	var dest := Destination.from_input(new_realm, parcel_position)
-	if await Navigator.async_go(dest, "on_teleport"):
-		Global.on_chat_message.emit(
-			"system",
-			tr("CHAT_SYSTEM_TELEPORTED").format({"location": str(parcel_position)}),
-			Time.get_unix_time_from_system()
-		)
+	await WorldRequests.async_teleport_to(parcel_position, new_realm)
 
 
 func async_join_world(world_realm: String) -> void:
-	var explorer = Global.get_explorer()
-	if not is_instance_valid(explorer):
-		# Cold start from the lobby: no explorer to route through, so the private-world gate
-		# stays here rather than booting straight into a world we can't enter (#1725).
-		if not await _async_precheck_realm_access(world_realm):
-			return
-		Global.get_config().add_place_to_last_places(Vector2i.ZERO, world_realm)  # "Last visited"
-		Global.set_orientation_landscape()
-		Global.close_menu.emit()
-		Global.get_config().last_realm_joined = world_realm
-		Global.get_config().last_parcel_position = Vector2i.ZERO
-		get_tree().change_scene_to_file("res://src/ui/explorer.tscn")
-		return
-
-	Global.on_chat_message.emit(
-		"system",
-		tr("CHAT_SYSTEM_CHANGING_WORLD").format({"world": world_realm}),
-		Time.get_unix_time_from_system()
-	)
-	Global.close_menu.emit()
-	# No parcel: the world names its own spawn point, so teleport_to never records it.
-	if await Navigator.async_go(Destination.from_input(world_realm), "on_world"):
-		Global.get_config().add_place_to_last_places(Vector2i.ZERO, world_realm)  # "Last visited"
-
-
-func _http_method_to_string(method: int) -> String:
-	match method:
-		HTTPClient.METHOD_GET:
-			return "GET"
-		HTTPClient.METHOD_POST:
-			return "POST"
-		HTTPClient.METHOD_PUT:
-			return "PUT"
-		HTTPClient.METHOD_DELETE:
-			return "DELETE"
-		HTTPClient.METHOD_HEAD:
-			return "HEAD"
-		HTTPClient.METHOD_OPTIONS:
-			return "OPTIONS"
-		HTTPClient.METHOD_PATCH:
-			return "PATCH"
-		HTTPClient.METHOD_CONNECT:
-			return "CONNECT"
-		HTTPClient.METHOD_TRACE:
-			return "TRACE"
-		_:
-			return "GET"  # Default fallback
-
-
-func async_signed_fetch(
-	url: String,
-	method: int,
-	_body: String = "",
-	_metadata_override: String = "",
-	_extra_headers: Dictionary = {}
-):
-	# Decentraland signed-fetch (ADR-44) carries the request metadata in the
-	# x-identity-metadata header. The server verifier requires it to be a JSON
-	# object: a bodyless request would otherwise be signed as `null`, which the
-	# credits-server crypto-middleware (>=4.0.0) now rejects with
-	# "Invalid chain metadata". Sign an empty object `{}` for bodyless requests
-	# (backward-compatible: older verifiers accept both), leaving the actual HTTP
-	# body untouched.
-	#
-	# Most DCL services verify the body as the signed metadata. Some don't: the
-	# intercom-proxy signs `{}` and leaves the JSON body unsigned, so callers can
-	# override rather than fork this helper.
-	var metadata := _metadata_override
-	if metadata.is_empty():
-		metadata = _body if not _body.is_empty() else "{}"
-	var headers_promise = Global.player_identity.async_get_identity_headers(
-		url, metadata, _http_method_to_string(method)
-	)
-	var headers_result = await PromiseUtils.async_awaiter(headers_promise)
-
-	if headers_result is PromiseError:
-		return headers_result
-
-	var headers: Dictionary = headers_result
-	if not _body.is_empty():
-		headers["Content-Type"] = "application/json"
-	for key in _extra_headers:
-		headers[key] = _extra_headers[key]
-
-	var response_promise: Promise = Global.http_requester.request_json(url, method, _body, headers)
-
-	return await PromiseUtils.async_awaiter(response_promise)
-
-
-func shorten_address(address: String) -> String:
-	if address.length() <= 8:
-		return address
-	var first_part := address.substr(0, 5)
-	var last_part := address.substr(address.length() - 5, 5)
-	return first_part + "..." + last_part
-
-
-func get_backpack() -> Backpack:
-	var explorer = Global.get_explorer()
-	if explorer != null and is_instance_valid(explorer.control_menu):
-		return explorer.control_menu.control_backpack.instance
-	var control_menu = get_node_or_null("/root/Menu")
-	return control_menu.control_backpack.instance
+	await WorldRequests.async_join_world(world_realm)
 
 
 func _process(_delta: float) -> void:
@@ -1484,51 +862,6 @@ func _check_dclenv_change() -> bool:
 	return true
 
 
-# Applies the comms deeplink params (pulse-server / pulse-realm / pulse / dual-channel / livekit).
-# Shared by deep_link_router.process_deep_link and the desktop --fake-deeplink path, so a new
-# param only has to be added once.
-func _apply_comms_deeplink_params(deep_link) -> void:
-	# `pulse-server=<host:port>` joins a specific Pulse server (shareable — everyone
-	# opening the link lands on the same instance; implies enabling).
-	var pulse_server_value = deep_link.params.get("pulse-server", "")
-	if not pulse_server_value.is_empty():
-		print("[DEEPLINK] pulse-server=", pulse_server_value)
-		comms.set_pulse_server(pulse_server_value)
-	# `pulse-realm=<realm>` announces this realm instead of the derived one (exact match; implies enabling).
-	var pulse_realm_value = deep_link.params.get("pulse-realm", "")
-	if not pulse_realm_value.is_empty():
-		print("[DEEPLINK] pulse-realm=", pulse_realm_value)
-		comms.set_pulse_realm(pulse_realm_value)
-	# `pulse=true/false` toggles the transport with the configured endpoint.
-	var pulse_value = deep_link.params.get("pulse", "")
-	if not pulse_value.is_empty():
-		print("[DEEPLINK] pulse=", pulse_value)
-		comms.set_pulse_enabled(pulse_value.to_lower() in ["true", "1", "yes"])
-	# `dual-channel=true/false`: whether movement and emotes keep going over LiveKit while
-	# Pulse is established. Overrides the deployment's `dual-channel` flag (default true) for this run.
-	var dual_channel_value = deep_link.params.get("dual-channel", "")
-	if not dual_channel_value.is_empty():
-		print("[DEEPLINK] dual-channel=", dual_channel_value)
-		comms.set_livekit_movement_dual_channel(
-			dual_channel_value.to_lower() in ["true", "1", "yes"]
-		)
-	# `livekit=false`: pulse-only mode — no LiveKit rooms at all (no chat/voice/
-	# scene messages). Dev/testing switch; `livekit=true` re-enables.
-	var livekit_value = deep_link.params.get("livekit", "")
-	if not livekit_value.is_empty():
-		print("[DEEPLINK] livekit=", livekit_value)
-		comms.set_livekit_enabled(livekit_value.to_lower() in ["true", "1", "yes"])
-	# `multiplayer_debug=true` (legacy alias livekit_debug): latch the flag on the
-	# comms manager, which survives scene changes — a deeplink with no navigation
-	# target is consumed while the lobby/menu is active, and the explorer that boots
-	# later re-reads the flag from comms (deep_link_obj is not a reliable carrier
-	# across that flow). Enable-only: absence of the param must not turn the panel
-	# off on a later deeplink.
-	if deep_link.multiplayer_debug:
-		print("[DEEPLINK] multiplayer_debug=true")
-		comms.set_multiplayer_debug(true)
-
-
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_APPLICATION_FOCUS_IN:
 		# Mobile OSes cut app networking shortly after backgrounding, killing every comms
@@ -1567,29 +900,7 @@ func _notification(what: int) -> void:
 			)
 
 
-func _on_player_profile_changed_sync_events(_profile: DclUserProfile) -> void:
-	# Sync attended events notifications from server after authentication
-	NotificationsManager.async_sync_attended_events()
-
-
-func _on_realm_change_failed_toast(new_realm_string: String, reason: String) -> void:
-	# User-visible feedback when a requested realm cannot be loaded (e.g. /world
-	# pointing at a non-existent world). Only fires for Global.realm — transient
-	# Realm instances created elsewhere (e.g. portable experiences) are not wired
-	# to this handler.
-	NotificationsManager.show_system_toast(
-		tr("TOAST_WORLD_UNAVAILABLE_TITLE"),
-		tr("TOAST_WORLD_UNAVAILABLE_BODY").format({"world": new_realm_string, "error": reason}),
-		"error",
-		"alert"
-	)
-
-
-func _on_realm_access_denied(new_realm_string: String, world_name: String) -> void:
-	# The world restricts access and this user is not on its allow-list (#1725). Only
-	# Global.realm is wired here — transient Realm instances (portable experiences) just
-	# fail to load, same as they do for the generic failure toast.
-	Global.modal_manager.async_show_private_world_modal(world_name)
+func _on_realm_access_denied(new_realm_string: String, _world_name: String) -> void:
 	Navigator.recover_from_refusal(new_realm_string)
 
 
@@ -1608,18 +919,6 @@ func _async_precheck_realm_access(new_realm_string: String) -> bool:
 		return true
 	_on_realm_access_denied(new_realm_string, world_name)
 	return false
-
-
-## Silent access check for a cold-start deeplink realm — like _async_precheck_realm_access but it
-## never shows the modal (the destination the caller routes to surfaces it). True for non-worlds
-## and allowed worlds. Used by the lobby to decide whether a deeplink can boot the explorer.
-func _async_is_realm_access_allowed(realm_string: String) -> bool:
-	var world_name := WorldPermissionsHelper.world_name_from_realm(
-		realm_string, Realm.resolve_realm_url(realm_string)
-	)
-	if world_name.is_empty():
-		return true
-	return await WorldPermissionsHelper.async_is_allowed(world_name)
 
 
 ## Fire-and-forget prefetch of a world's access, meant to run when its jump-in card opens.
@@ -1669,7 +968,7 @@ func get_device_anchor_id() -> String:
 	#    compile-time constant or the persisted `rotate-guest=true` deeplink override.
 	#    Gated to non-production so neither can ever ship even if left on.
 	if (
-		(DEBUG_GUEST_ROTATE_ANCHOR_ID or get_config().debug_rotate_guest_anchor)
+		(DEBUG_GUEST_ROTATE_ANCHOR_ID or engine.setting("debug_rotate_guest_anchor"))
 		and not is_production()
 	):
 		return ""

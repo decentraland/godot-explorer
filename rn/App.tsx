@@ -11,6 +11,11 @@ import { gallery, usePreviewRoute } from './src/app/preview';
 import { Shell } from './src/app/Shell';
 import { useAnalyticsLifecycle } from './src/app/useAnalyticsLifecycle';
 import { startApp } from './src/app/startup';
+import { useLocaleSync } from './src/app/useLocaleSync';
+import { useSessionTracking } from './src/app/useSessionTracking';
+import { CoreModals } from './src/modals/CoreModals';
+import { ModalProvider } from './src/modals/ModalProvider';
+import { usePushRegistration } from './src/notifications/usePushRegistration';
 import { useAppWiring } from './src/app/wiring';
 import { core } from './src/core';
 import { useCoreState } from './src/core/useCoreState';
@@ -24,6 +29,7 @@ function AppBody() {
   const { push, reset, route } = useNav();
   const onDone = useCallback(() => setEntered(true), []);
 
+  const locale = useLocaleSync();
   const jumpIn = useJumpIn();
   useAnalyticsLifecycle(entered);
   useEffect(() => {
@@ -31,7 +37,11 @@ function AppBody() {
   }, []);
 
   // Signing out or deleting the account sends the player back to the entry flow.
-  const signedOut = useCoreState().tag === 'SignedOut';
+  const coreTag = useCoreState().tag;
+  const signedOut = coreTag === 'SignedOut';
+  usePushRegistration(
+    coreTag !== 'SignedOut' && coreTag !== 'Booting' && coreTag !== 'SigningIn',
+  );
   useEffect(() => {
     if (signedOut && entered) {
       setEntered(false);
@@ -62,6 +72,8 @@ function AppBody() {
   const leave = useCallback(() => {
     try {
       core().exitWorld();
+    } catch {
+      // Not in a world flow (a refused entry already left it).
     } finally {
       reset({ name: 'home' });
     }
@@ -71,7 +83,8 @@ function AppBody() {
   // The world draws Godot underneath, so its background must stay transparent.
   const inWorld = route.name === 'world';
   return (
-    <View style={inWorld ? styles.transparent : styles.root}>
+    <View key={locale} style={inWorld ? styles.transparent : styles.root}>
+      <CoreModals ready={entered} />
       {entered ? (
         <Shell onJumpIn={jumpIn} onLeave={leave} />
       ) : (
@@ -89,6 +102,7 @@ function AppBody() {
 
 function App() {
   const preview = usePreviewRoute();
+  useSessionTracking();
   useEffect(() => {
     startApp();
     if (__DEV__) {
@@ -105,9 +119,11 @@ function App() {
           <Host {...preview.route} />
         ) : (
           <ToastProvider>
-            <NavProvider>
-              <AppBody />
-            </NavProvider>
+            <ModalProvider>
+              <NavProvider>
+                <AppBody />
+              </NavProvider>
+            </ModalProvider>
           </ToastProvider>
         )}
       </View>

@@ -34,8 +34,7 @@ use crate::tools::benchmark_report::BenchmarkReport;
 const JOYPAD_INPUT_WINDOW: std::time::Duration = std::time::Duration::from_millis(250);
 
 use super::{
-    dcl_cli::DclCli, dcl_config::DclConfig,
-    dcl_dynamic_graphics_manager::DclDynamicGraphicsManager, dcl_realm::DclRealm,
+    dcl_cli::DclCli, dcl_dynamic_graphics_manager::DclDynamicGraphicsManager, dcl_realm::DclRealm,
     dcl_social_blacklist::DclSocialBlacklist, dcl_tokio_rpc::DclTokioRpc,
     portables::DclPortableExperienceController,
 };
@@ -81,8 +80,6 @@ fn ensure_core() -> &'static Core {
 pub struct DclGlobal {
     _base: Base<Node>,
 
-    #[var]
-    pub config: Gd<DclConfig>,
     #[var]
     pub scene_runner: Gd<SceneManager>,
     #[var]
@@ -343,9 +340,6 @@ impl INode for DclGlobal {
         let is_android = std::env::consts::OS == "android";
         let is_ios = std::env::consts::OS == "ios";
 
-        // For now, use base class - ConfigData will be created in global.gd
-        let config = DclConfig::new_gd();
-
         Self {
             _base: base,
             is_mobile,
@@ -366,7 +360,6 @@ impl INode for DclGlobal {
             player_identity,
             content_provider,
             http_requester: RustHttpQueueRequester::new_gd(),
-            config,
             ethereum_provider: Arc::new(EthereumProvider::new()),
             metrics,
             renderer_version: env!("GODOT_EXPLORER_VERSION").into(),
@@ -531,6 +524,11 @@ impl DclGlobal {
         } else {
             GString::from(&format!("{} - {}", version, repr))
         }
+    }
+
+    #[func]
+    pub fn generate_uuid_v4() -> GString {
+        uuid::Uuid::new_v4().to_string().to_godot()
     }
 
     #[func]

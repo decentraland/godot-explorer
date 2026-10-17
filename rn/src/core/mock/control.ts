@@ -2,6 +2,7 @@ import { Control_Tags, CoreError, State } from '../native';
 import type { UiState } from '../native';
 import type { ControlApi } from '../api/control';
 import { createMockAvatar } from './avatar';
+import type { MockAvatar } from './avatar';
 import { mockBus } from './emitter';
 import type { MockBus } from './emitter';
 import { createMockWorld } from './worldSim';
@@ -19,9 +20,11 @@ const inWorldFlow = (state: State) =>
   state.tag === 'Loading' || state.tag === 'InWorld';
 
 /** Worlds that load, the avatar preview and the engine commands, in memory. */
-export function createMockControl(bus: MockBus = mockBus): ControlApi {
+export function createMockControl(
+  bus: MockBus = mockBus,
+  avatar: MockAvatar = createMockAvatar(),
+): ControlApi {
   const world = createMockWorld(bus);
-  const avatar = createMockAvatar();
   avatar.onChange(next => bus.emit(l => l.avatarChanged(next)));
   let ui: UiState = { hidden: false, chatOpen: false };
   const showUi = (patch: Partial<UiState>) => {
@@ -81,6 +84,8 @@ export function createMockControl(bus: MockBus = mockBus): ControlApi {
           break;
         case Control_Tags.HideUi:
           showUi({ hidden: command.inner.hidden });
+          break;
+        case Control_Tags.AnswerSceneRequest:
           break;
         default:
           avatar.applyAvatarControl(command);

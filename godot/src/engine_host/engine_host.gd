@@ -3,21 +3,15 @@ extends Node
 ## (`Global.engine.core_command` in, `Global.engine.report_*` out). Active when the host drives the app.
 
 const STATE_INTERVAL := 0.25
-const HIDE_INTERVAL := 0.2
 const AVATAR_CONTROLS := [
-	"equip",
-	"unequip",
-	"set_body_shape",
-	"set_color",
+	"apply_avatar",
 	"play_preview_emote",
-	"set_emote_slot",
-	"randomize_avatar",
 	"set_name",
 ]
 
 var _explorer: Explorer = null
+var _watch := SessionWatch.new()
 var _state_elapsed := 0.0
-var _hide_elapsed := 0.0
 var _backpack := EngineBackpack.new()
 var _hud := EngineHud.new()
 var _avatar_host_up := false
@@ -34,6 +28,7 @@ func _ready() -> void:
 	Global.engine.core_command.connect(_on_core_command)
 	_hud.connect_signals()
 	add_child(_backpack)
+	add_child(_watch)
 	_async_first_launch_benchmark()
 
 
@@ -41,8 +36,8 @@ func _ready() -> void:
 func _async_first_launch_benchmark() -> void:
 	await get_tree().process_frame
 	await get_tree().process_frame
-	if Global.should_run_first_launch_benchmark():
-		Global.run_first_launch_benchmark()
+	if Global.graphics_autotune.should_run_first_launch_benchmark():
+		Global.graphics_autotune.run_first_launch_benchmark()
 
 
 ## Called by the avatar-only host scene once the identity and profile exist.
@@ -63,15 +58,6 @@ func _process(dt: float) -> void:
 		_explorer = Global.get_explorer()
 		if _explorer == null:
 			return
-		Global.engine.report_loading_finished(
-			Global.realm.get_realm_string(),
-			_explorer.parcel_position.x,
-			_explorer.parcel_position.y
-		)
-	_hide_elapsed += dt
-	if _hide_elapsed >= HIDE_INTERVAL:
-		_hide_elapsed = 0.0
-		EngineUiFilter.hide_non_native(_explorer.ui_root)
 	_state_elapsed += dt
 	if _state_elapsed >= STATE_INTERVAL:
 		_state_elapsed = 0.0
@@ -84,6 +70,10 @@ func _on_core_command(kind: String, args: Dictionary) -> void:
 			_enter_world(args)
 		"exit_world":
 			_exit_world()
+		"reconnect":
+			_watch.reconnect()
+		"set_world_secret":
+			Navigator.world_secrets[Realm.normalize_realm_url(args.realm)] = args.secret
 		"show_avatar_preview":
 			var rect := Rect2(args.x, args.y, args.w, args.h)
 			if _backpack.is_shown():
@@ -107,20 +97,10 @@ func _on_core_command(kind: String, args: Dictionary) -> void:
 
 func _run_avatar_control(kind: String, args: Dictionary) -> void:
 	match kind:
-		"equip":
-			_backpack.async_equip(args.urn)
-		"unequip":
-			_backpack.async_unequip(args.urn)
-		"set_body_shape":
-			_backpack.async_set_body_shape(args.urn)
-		"set_color":
-			_backpack.async_set_color(args.target, args.color)
+		"apply_avatar":
+			_backpack.async_apply_avatar(args)
 		"play_preview_emote":
 			_backpack.play_emote(args.urn)
-		"set_emote_slot":
-			_backpack.set_emote_slot(args.slot, args.urn)
-		"randomize_avatar":
-			_backpack.async_randomize()
 		"set_name":
 			_backpack.async_set_profile_name(args.name)
 
@@ -130,7 +110,7 @@ func _run_world_control(kind: String, args: Dictionary) -> void:
 		"teleport":
 			Global.engine.teleport(Vector2i(args.x, args.y))
 		"send_chat":
-			_explorer._on_panel_chat_submit_message(args.text)
+			_explorer.submit_chat_message(args.text)
 		"emote":
 			Global.engine.play_local_emote(args.urn)
 		_:

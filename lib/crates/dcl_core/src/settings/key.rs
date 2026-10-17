@@ -21,10 +21,32 @@ pub enum SettingKey {
     AudioMusicVolume,
     AudioAvatarAndEmotesVolume,
     AudioMicAmplification,
+    // Engine-owned: the shell does not list them, the engine reads and writes them.
+    WindowMode,
+    UiZoom,
+    Resolution3dScale,
+    ProcessTickQuotaMs,
+    ShowFps,
+    Skybox,
+    ShadowQuality,
+    BloomQuality,
+    AntiAliasing,
+    TextureQuality,
+    AvatarImpostorsEnabled,
+    FirstLaunchCompleted,
+    BenchmarkGpuScore,
+    BenchmarkRamGb,
+    LastRealmJoined,
+    LastParcelX,
+    LastParcelY,
+    FirstMoveInWorldSent,
+    InstallReferrerSent,
+    DebugRotateGuestAnchor,
+    LocalAssetsCacheVersion,
 }
 
 impl SettingKey {
-    pub const ALL: [SettingKey; 17] = [
+    pub const ALL: [SettingKey; 38] = [
         Self::SubmitMessageClosesChat,
         Self::Locale,
         Self::GraphicProfile,
@@ -42,6 +64,27 @@ impl SettingKey {
         Self::AudioMusicVolume,
         Self::AudioAvatarAndEmotesVolume,
         Self::AudioMicAmplification,
+        Self::WindowMode,
+        Self::UiZoom,
+        Self::Resolution3dScale,
+        Self::ProcessTickQuotaMs,
+        Self::ShowFps,
+        Self::Skybox,
+        Self::ShadowQuality,
+        Self::BloomQuality,
+        Self::AntiAliasing,
+        Self::TextureQuality,
+        Self::AvatarImpostorsEnabled,
+        Self::FirstLaunchCompleted,
+        Self::BenchmarkGpuScore,
+        Self::BenchmarkRamGb,
+        Self::LastRealmJoined,
+        Self::LastParcelX,
+        Self::LastParcelY,
+        Self::FirstMoveInWorldSent,
+        Self::InstallReferrerSent,
+        Self::DebugRotateGuestAnchor,
+        Self::LocalAssetsCacheVersion,
     ];
 
     /// The name used by `settings.cfg` and the shell's `keys.ts`.
@@ -64,6 +107,27 @@ impl SettingKey {
             Self::AudioMusicVolume => "audio_music_volume",
             Self::AudioAvatarAndEmotesVolume => "audio_avatar_and_emotes_volume",
             Self::AudioMicAmplification => "audio_mic_amplification",
+            Self::WindowMode => "window_mode",
+            Self::UiZoom => "ui_zoom",
+            Self::Resolution3dScale => "resolution_3d_scale",
+            Self::ProcessTickQuotaMs => "process_tick_quota_ms",
+            Self::ShowFps => "show_fps",
+            Self::Skybox => "skybox",
+            Self::ShadowQuality => "shadow_quality",
+            Self::BloomQuality => "bloom_quality",
+            Self::AntiAliasing => "anti_aliasing",
+            Self::TextureQuality => "texture_quality",
+            Self::AvatarImpostorsEnabled => "avatar_impostors_enabled",
+            Self::FirstLaunchCompleted => "first_launch_completed",
+            Self::BenchmarkGpuScore => "benchmark_gpu_score",
+            Self::BenchmarkRamGb => "benchmark_ram_gb",
+            Self::LastRealmJoined => "last_realm_joined",
+            Self::LastParcelX => "last_parcel_x",
+            Self::LastParcelY => "last_parcel_y",
+            Self::FirstMoveInWorldSent => "first_move_in_world_sent",
+            Self::InstallReferrerSent => "install_referrer_sent",
+            Self::DebugRotateGuestAnchor => "debug_rotate_guest_anchor",
+            Self::LocalAssetsCacheVersion => "local_assets_cache_version",
         }
     }
 
@@ -73,15 +137,31 @@ impl SettingKey {
 
     pub fn kind(self) -> SettingKind {
         match self {
-            Self::SubmitMessageClosesChat | Self::DynamicGraphicsEnabled | Self::DynamicSkybox => {
-                SettingKind::Bool
-            }
-            Self::Locale => SettingKind::Text,
+            Self::SubmitMessageClosesChat
+            | Self::DynamicGraphicsEnabled
+            | Self::DynamicSkybox
+            | Self::ShowFps
+            | Self::AvatarImpostorsEnabled
+            | Self::FirstLaunchCompleted
+            | Self::FirstMoveInWorldSent
+            | Self::InstallReferrerSent
+            | Self::DebugRotateGuestAnchor => SettingKind::Bool,
+            Self::Locale | Self::LastRealmJoined => SettingKind::Text,
             Self::GraphicProfile
             | Self::SkyboxTime
             | Self::ParticleQuality
             | Self::LimitFps
-            | Self::MaxCacheSize => SettingKind::Int,
+            | Self::MaxCacheSize
+            | Self::WindowMode
+            | Self::ProcessTickQuotaMs
+            | Self::Skybox
+            | Self::ShadowQuality
+            | Self::BloomQuality
+            | Self::AntiAliasing
+            | Self::TextureQuality
+            | Self::LastParcelX
+            | Self::LastParcelY
+            | Self::LocalAssetsCacheVersion => SettingKind::Int,
             Self::ViewDistance
             | Self::AudioGeneralVolume
             | Self::AudioSceneVolume
@@ -89,7 +169,11 @@ impl SettingKey {
             | Self::AudioUiVolume
             | Self::AudioMusicVolume
             | Self::AudioAvatarAndEmotesVolume
-            | Self::AudioMicAmplification => SettingKind::Float,
+            | Self::AudioMicAmplification
+            | Self::UiZoom
+            | Self::Resolution3dScale
+            | Self::BenchmarkGpuScore
+            | Self::BenchmarkRamGb => SettingKind::Float,
         }
     }
 
@@ -111,16 +195,43 @@ impl SettingKey {
             | Self::AudioMusicVolume
             | Self::AudioAvatarAndEmotesVolume
             | Self::AudioMicAmplification => SettingValue::Float(100.0),
+            Self::WindowMode => SettingValue::Int(0),
+            Self::UiZoom => SettingValue::Float(-1.0),
+            Self::Resolution3dScale => SettingValue::Float(1.0),
+            Self::ProcessTickQuotaMs => SettingValue::Int(10),
+            Self::ShowFps => SettingValue::Bool(true),
+            Self::Skybox => SettingValue::Int(0),
+            Self::ShadowQuality => SettingValue::Int(0),
+            Self::BloomQuality => SettingValue::Int(0),
+            Self::AntiAliasing => SettingValue::Int(0),
+            Self::TextureQuality => SettingValue::Int(1),
+            Self::AvatarImpostorsEnabled => SettingValue::Bool(true),
+            Self::FirstLaunchCompleted => SettingValue::Bool(false),
+            Self::BenchmarkGpuScore => SettingValue::Float(-1.0),
+            Self::BenchmarkRamGb => SettingValue::Float(-1.0),
+            Self::LastRealmJoined => SettingValue::Text(String::new()),
+            Self::LastParcelX => SettingValue::Int(72),
+            Self::LastParcelY => SettingValue::Int(-10),
+            Self::FirstMoveInWorldSent => SettingValue::Bool(false),
+            Self::InstallReferrerSent => SettingValue::Bool(false),
+            Self::DebugRotateGuestAnchor => SettingValue::Bool(false),
+            Self::LocalAssetsCacheVersion => SettingValue::Int(0),
         }
     }
 
     /// Whether the engine has something to do when the key changes. The chat, skybox-mode and
     /// skybox-time keys are only read by their consumers.
     pub fn needs_apply(self) -> bool {
-        !matches!(
-            self,
-            Self::SubmitMessageClosesChat | Self::DynamicSkybox | Self::SkyboxTime
-        )
+        self.shell_visible()
+            && !matches!(
+                self,
+                Self::SubmitMessageClosesChat | Self::DynamicSkybox | Self::SkyboxTime
+            )
+    }
+
+    /// The keys the shell lists; the rest are the engine's own state.
+    pub fn shell_visible(self) -> bool {
+        Self::ALL[..17].contains(&self)
     }
 }
 

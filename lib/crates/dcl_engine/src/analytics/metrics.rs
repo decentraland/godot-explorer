@@ -329,6 +329,16 @@ impl Metrics {
     /// batch, so the EULA gate, size limits and retry buffer still apply — an identify queued
     /// before consent waits exactly like an event does.
     fn emit_push_identify(&mut self, token: String) {
+        // With the shell in front it reads the token and the permission and registers through the
+        // core; the plugin signals here only matter for a run without a host.
+        if DclGlobal::singleton()
+            .bind()
+            .get_engine()
+            .bind()
+            .is_host_driven()
+        {
+            return;
+        }
         if !self.push_flag_resolved {
             tracing::debug!("[Push] identify held until the push-enabled flag resolves");
             self.push_identify_pending = Some(token);
@@ -1214,9 +1224,7 @@ impl Metrics {
                 }
 
                 // Hardware benchmark result from config (GDScript property)
-                let config = global_bind.config.clone();
-                let gpu_score = config.get("benchmark_gpu_score");
-                if let Ok(score) = gpu_score.try_to::<f64>() {
+                if let Some(score) = crate::engine::benchmark_gpu_score() {
                     if score > 0.0 {
                         metrics.benchmark_gpu_score = Some(score as f32);
                     }

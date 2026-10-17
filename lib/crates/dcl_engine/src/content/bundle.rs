@@ -205,7 +205,7 @@ mod tests {
                 crate::http_request::http_queue_requester::HttpQueueRequester::new(1, None),
             ),
             godot_single_thread: Arc::new(tokio::sync::Semaphore::new(1)),
-            texture_quality: crate::godot_classes::dcl_config::TextureQuality::Medium,
+            texture_quality: crate::content::texture_quality::TextureQuality::Medium,
         }
     }
 

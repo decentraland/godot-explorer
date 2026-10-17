@@ -3,7 +3,7 @@ class_name GeneralSettings
 
 static func apply_max_cache_size():
 	var max_cache_size = 0
-	match Global.get_config().max_cache_size:
+	match Global.engine.setting("max_cache_size"):
 		0:
 			max_cache_size = 1024 * 1000 * 1000  # 1gb
 		1:

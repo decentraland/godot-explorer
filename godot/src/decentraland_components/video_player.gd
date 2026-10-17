@@ -360,9 +360,8 @@ func _update_effective_volume():
 func _calculate_native_effective_volume() -> float:
 	if dcl_muted:
 		return 0.0
-	var config = Global.get_config()
-	var master_volume: float = config.audio_general_volume / 100.0
-	var scene_volume: float = config.audio_scene_volume / 100.0
+	var master_volume: float = Global.engine.setting("audio_general_volume") / 100.0
+	var scene_volume: float = Global.engine.setting("audio_scene_volume") / 100.0
 	return master_volume * scene_volume * dcl_volume
 
 

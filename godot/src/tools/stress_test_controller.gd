@@ -100,7 +100,7 @@ func _start_stress_test():
 
 			# Teleport
 			var load_start = Time.get_ticks_msec()
-			Global.async_teleport_to(pos, GOERLI_REALM)
+			WorldRequests.async_teleport_to(pos, GOERLI_REALM)
 
 			# Wait for loading
 			var load_success = await _wait_for_loading_with_timeout(30.0)
@@ -143,16 +143,12 @@ func _wait_for_loading_with_timeout(timeout_seconds: float) -> bool:
 	if not is_instance_valid(explorer):
 		return false
 
-	# Loading screen is at UI/Loading in the explorer scene
-	var loading_ui = explorer.get_node_or_null("UI/Loading")
-
-	# Wait for loading screen to appear (might take a frame)
+	# Wait for the loading session to start (might take a frame)
 	await get_tree().create_timer(0.1).timeout
 
 	# Now wait for it to complete
 	while Time.get_ticks_msec() - start < timeout_ms:
-		loading_ui = explorer.get_node_or_null("UI/Loading")
-		if loading_ui == null or not loading_ui.visible:
+		if not explorer.loading.is_running():
 			return true
 		await get_tree().create_timer(0.2).timeout
 
@@ -168,9 +164,7 @@ func _wait_for_loading_complete():
 	if not is_instance_valid(explorer):
 		return
 
-	# Loading screen is at UI/Loading in the explorer scene
-	var loading_ui = explorer.get_node_or_null("UI/Loading")
-	if loading_ui != null and loading_ui.visible:
+	if explorer.loading.is_running():
 		await Global.loading_finished
 	else:
 		await get_tree().create_timer(2.0).timeout

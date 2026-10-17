@@ -77,6 +77,8 @@ fn store(flags: Map<String, Value>) {
     let mut state = STATE.write().unwrap_or_else(|e| e.into_inner());
     state.flags = flags;
     state.loaded = true;
+    drop(state);
+    crate::analytics::push::on_flags_loaded();
 }
 
 fn flags_from_response(response: HttpResponse) -> Result<Map<String, Value>, String> {

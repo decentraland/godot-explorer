@@ -3,10 +3,12 @@ import type {
   AppListener,
   AvatarState,
   ChatLine,
+  EngineNotice,
   HudSnapshot,
   LoadingDetail,
   OpenUrl,
   ReportPayload,
+  SceneRequest,
   SettingEntry,
   State,
   UiState,
@@ -41,6 +43,10 @@ function ensureRegistered() {
       handlers.forEach(h => h.loadingDetail?.(detail)),
     avatarChanged: (avatar: AvatarState) =>
       handlers.forEach(h => h.avatarChanged?.(avatar)),
+    sceneRequest: (id: number, request: SceneRequest) =>
+      handlers.forEach(h => h.sceneRequest?.(id, request)),
+    engineNotice: (notice: EngineNotice) =>
+      handlers.forEach(h => h.engineNotice?.(notice)),
     report: (payload: ReportPayload) =>
       handlers.forEach(h => h.report?.(payload)),
     reportTag: (key: string, value: string | undefined) =>

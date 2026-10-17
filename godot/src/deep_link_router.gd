@@ -55,24 +55,19 @@ func process_deep_link(url: String, start_kind: String = "warm") -> void:
 
 	# Pulse transport params (pulse-server / pulse-realm / pulse / dual-channel /
 	# livekit); the shared helper no-ops on builds without the use_pulse feature.
-	Global._apply_comms_deeplink_params(Global.deep_link_obj)
+	_apply_comms_deeplink_params(Global.deep_link_obj)
 
-	Global._apply_optimized_content_base_url(Global.deep_link_obj)
+	_apply_optimized_content_base_url(Global.deep_link_obj)
 
 	# QA affordance, non-production only: mint a brand-new guest so the FTUE is reachable
 	# again on a device whose native anchor survives reinstall.
-	Global._capture_debug_guest_rotate(Global.deep_link_obj)
+	_capture_debug_guest_rotate(Global.deep_link_obj)
 
 	# With the host driving the app the core routes the link: the campaign token, push
 	# attribution, navigation and sign-in resume. Only the settings the engine owns stay here.
 	if not Global.engine.is_host_driven():
-		# Before any routing decision: the token has to survive whichever branch below consumes
-		# the deeplink (#2670).
-		Global._capture_campaign_token(Global.deep_link_obj)
 		# Push attribution. Deliberately a separate param from the ads campaign token `c=`.
 		_track_push_open_if_any(start_kind)
-		# Same funnel, same reason: this is where every deep link lands.
-		SessionTracker.notify_deep_link(Global.deep_link_obj.params)
 
 	# `skip-gltf` toggle has to be set BEFORE any scene's GLTF_CONTAINER
 	# component dirty-set is processed by `update_gltf_container`. The
@@ -89,13 +84,6 @@ func process_deep_link(url: String, start_kind: String = "warm") -> void:
 		Global.cli.set_kill_sky(kill_sky_value.to_lower() in ["true", "1", "yes"])
 		print("[DEEPLINK] kill-sky=", Global.cli.get_kill_sky())
 
-	# Touch-feedback debug overlay (issue #2562): off by default, enabled on demand.
-	var touch_feedback_value: String = Global.deep_link_obj.params.get("touch-feedback", "")
-	if not touch_feedback_value.is_empty():
-		var touch_feedback_enable: bool = touch_feedback_value.to_lower() in ["true", "1", "yes"]
-		TouchFeedback.set_enabled(touch_feedback_enable)
-		print("[DEEPLINK] touch-feedback=", touch_feedback_enable)
-
 	# Opt-in gate for deleting an UPGRADED (email-linked) guest. Sticky-on for the
 	# session; only takes effect on a NON-production build (see
 	# Global.is_upgraded_deletion_enabled() + account_deletion_popup.gd).
@@ -109,7 +97,7 @@ func process_deep_link(url: String, start_kind: String = "warm") -> void:
 	# then — spawn here once the deeplink lands and only if no runner exists.
 	if Global.deep_link_obj.gp_benchmark and Global.get_node_or_null("GPBenchmarkRunner") == null:
 		# Flip bench_mode BEFORE spawning the runner: this fires earlier than
-		# DG's deferred _init_dynamic_graphics_manager (07.4xx vs 07.7xx on A54)
+		# DG's deferred init_dynamic_graphics (07.4xx vs 07.7xx on A54)
 		# and before lobby.gd's first-launch HW bench trigger, so both honor it.
 		Global.cli.bench_mode = true
 		print("[DEEPLINK] bench_mode=true (gp-benchmark deeplink)")
@@ -122,40 +110,6 @@ func process_deep_link(url: String, start_kind: String = "warm") -> void:
 		Global.set_safe_margin_debug_enable(true)
 
 	if Global.engine.is_host_driven():
-		return
-
-	# Review-prompt QA harness (#2739). Untyped param, non-production only.
-	if Global.review_prompt_coordinator != null:
-		Global.review_prompt_coordinator.capture_deeplink(Global.deep_link_obj)
-
-	# Returning from the in-app marketplace webview: the web fires a
-	# decentraland://open?iap_enabled=true[&urn=<urn>] deep link to bring the app back. The
-	# native side dismisses the SFSafariViewController directly, which never fires the
-	# tracker's webview_closed signal — so drive the post-return handling here (restore the
-	# landscape the portrait-only IAP view took away, then poll for the purchase against the
-	# pre-purchase baseline and refresh the balance).
-	#
-	# `urn` is OPTIONAL — the web leaves it out whenever it has no purchased item in context
-	# — yet it used to be the only thing that triggered ANY of this. A urn-less return then
-	# did nothing at all: the app stayed in the forced portrait, where the backpack's
-	# landscape-only back button is hidden and the menu's portrait bottom bar has already
-	# been freed (clean_orientation.gd, when the menu was built in landscape), leaving no way
-	# out of the backpack; and the tracker stayed armed forever, so the purchase never
-	# surfaced either. So recognise the return by the TRACKER's own state, and use the
-	# `iap_enabled`/`urn` params only to decide whether the link is ours to swallow.
-	var return_urn: String = str(Global.deep_link_obj.params.get("urn", ""))
-	var iap_marker: String = str(Global.deep_link_obj.params.get("iap_enabled", ""))
-	var is_marketplace_return: bool = not return_urn.is_empty() or not iap_marker.is_empty()
-	if is_marketplace_return or MarketplaceTracker.is_awaiting_return():
-		print("[DEEPLINK] marketplace return — driving tracker return handling")
-		# A no-op unless a round-trip is actually in flight, so a duplicate delivery (iOS
-		# fires application:openURL: twice for a single tap) or a stale link is harmless.
-		MarketplaceTracker.notify_marketplace_return()
-	if is_marketplace_return:
-		# Swallow it so it doesn't fall through to the "/open" routing below and pop the
-		# jump-in panel (scene title + placeholders). A deep link that merely arrived while
-		# the tracker was armed is NOT ours, so it keeps routing normally.
-		_clear_deep_link()
 		return
 
 	# Trigger avatar impostor benchmark
@@ -295,13 +249,13 @@ func _route_teleport() -> void:
 
 	# World realm without explicit location → join_world, skip ban pre-check (deferred post-loading)
 	if not realm.is_empty() and Realm.is_dcl_ens(realm) and not has_location:
-		Global.async_join_world(realm)
+		WorldRequests.async_join_world(realm)
 	elif has_location:
 		if realm.is_empty():
 			realm = DclUrls.main_realm()
-		Global.async_teleport_to(location, realm)
+		WorldRequests.async_teleport_to(location, realm)
 	elif not realm.is_empty():
-		Global.async_teleport_to(Vector2i.ZERO, realm)
+		WorldRequests.async_teleport_to(Vector2i.ZERO, realm)
 
 
 ## Redeem a `decentraland://open?signin=<identityId>` token.
@@ -365,3 +319,84 @@ func _clear_deep_link() -> void:
 	# deep_link_obj is still needed by scene_fetcher (preview mode)
 	# and other systems that check deep link parameters.
 	Global.deep_link_url = ""
+
+
+## Forward the optimized-content-base-url deeplink param into DclCli so the scene fetcher /
+## content provider use it for optimized loading (non-production; Decentraland https or LAN
+## hosts only). Shared by the desktop fake-deeplink path (_ready) and the mobile live path.
+func _apply_optimized_content_base_url(obj: DclParseDeepLink) -> void:
+	var opt_url: String = obj.params.get("optimized-content-base-url", "")
+	var allowed := UrlHost.is_decentraland_https(opt_url) or UrlHost.is_local_network(opt_url)
+	if opt_url.is_empty():
+		return
+	if Global.is_production():
+		print("[DEEPLINK] optimized-content-base-url ignored on production builds")
+	elif not allowed:
+		print("[DEEPLINK] optimized-content-base-url rejected (not https Decentraland or LAN)")
+	else:
+		print("[DEEPLINK] optimized-content-base-url=", opt_url)
+		Global.cli.optimized_content_base_url = opt_url
+
+
+## QA affordance: `decentraland://open?rotate-guest=true` mints a brand-new guest, the only
+## way back to the FTUE on a device whose native anchor survives reinstall (Android SSAID,
+## iOS Keychain). Also wipes the on-disk guest identity, so the FTUE is reachable from this
+## launch rather than the next one.
+##
+## Non-production means anything not cut from `release*`, so builds from `main` — TestFlight
+## included — honour it. Recoverable: the flag lives in user:// and the native anchor is
+## never touched, so reinstalling restores the original wallet.
+func _capture_debug_guest_rotate(obj: DclParseDeepLink) -> void:
+	if Global.is_production():
+		return
+	if String(obj.params.get("rotate-guest", "")).to_lower() != "true":
+		return
+
+	Global.engine.set_setting("debug_rotate_guest_anchor", true, true)
+	var removed := Global.clear_guest_device_storage()
+	print("[DEEPLINK] rotate-guest=true: cleared %d guest file(s)" % removed)
+
+
+# Applies the comms deeplink params (pulse-server / pulse-realm / pulse / dual-channel / livekit).
+# Shared by deep_link_router.process_deep_link and the desktop --fake-deeplink path, so a new
+# param only has to be added once.
+func _apply_comms_deeplink_params(deep_link) -> void:
+	# `pulse-server=<host:port>` joins a specific Pulse server (shareable — everyone
+	# opening the link lands on the same instance; implies enabling).
+	var pulse_server_value = deep_link.params.get("pulse-server", "")
+	if not pulse_server_value.is_empty():
+		print("[DEEPLINK] pulse-server=", pulse_server_value)
+		Global.comms.set_pulse_server(pulse_server_value)
+	# `pulse-realm=<realm>` announces this realm instead of the derived one (exact match; implies enabling).
+	var pulse_realm_value = deep_link.params.get("pulse-realm", "")
+	if not pulse_realm_value.is_empty():
+		print("[DEEPLINK] pulse-realm=", pulse_realm_value)
+		Global.comms.set_pulse_realm(pulse_realm_value)
+	# `pulse=true/false` toggles the transport with the configured endpoint.
+	var pulse_value = deep_link.params.get("pulse", "")
+	if not pulse_value.is_empty():
+		print("[DEEPLINK] pulse=", pulse_value)
+		Global.comms.set_pulse_enabled(pulse_value.to_lower() in ["true", "1", "yes"])
+	# `dual-channel=true/false`: whether movement and emotes keep going over LiveKit while
+	# Pulse is established. Overrides the deployment's `dual-channel` flag (default true) for this run.
+	var dual_channel_value = deep_link.params.get("dual-channel", "")
+	if not dual_channel_value.is_empty():
+		print("[DEEPLINK] dual-channel=", dual_channel_value)
+		Global.comms.set_livekit_movement_dual_channel(
+			dual_channel_value.to_lower() in ["true", "1", "yes"]
+		)
+	# `livekit=false`: pulse-only mode — no LiveKit rooms at all (no chat/voice/
+	# scene messages). Dev/testing switch; `livekit=true` re-enables.
+	var livekit_value = deep_link.params.get("livekit", "")
+	if not livekit_value.is_empty():
+		print("[DEEPLINK] livekit=", livekit_value)
+		Global.comms.set_livekit_enabled(livekit_value.to_lower() in ["true", "1", "yes"])
+	# `multiplayer_debug=true` (legacy alias livekit_debug): latch the flag on the
+	# comms manager, which survives scene changes — a deeplink with no navigation
+	# target is consumed while the lobby/menu is active, and the explorer that boots
+	# later re-reads the flag from comms (Global.deep_link_obj is not a reliable carrier
+	# across that flow). Enable-only: absence of the param must not turn the panel
+	# off on a later deeplink.
+	if deep_link.multiplayer_debug:
+		print("[DEEPLINK] multiplayer_debug=true")
+		Global.comms.set_multiplayer_debug(true)

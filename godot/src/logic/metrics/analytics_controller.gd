@@ -38,7 +38,7 @@ func setup() -> void:
 	# queued events ship. Segment ↔ Firebase link is handled automatically by Metrics (user_id /
 	# session_id seeded as Firebase user properties; `Firebase Init` Segment event queued via the
 	# plugin's app-instance-id signal).
-	if Global.get_config().terms_and_conditions_version == Global.TERMS_AND_CONDITIONS_VERSION:
+	if Global.engine.is_eula_accepted():
 		Global.metrics.set_eula_accepted.call_deferred(true)
 
 	# Connection order is load-bearing: this handler must run BEFORE lobby.gd's
@@ -103,7 +103,7 @@ func _on_loading_started() -> void:
 
 
 func _on_loading_finished() -> void:
-	if Global.get_config().first_move_in_world_sent:
+	if Global.engine.setting("first_move_in_world_sent"):
 		return
 	_start_first_move_poller()
 
@@ -153,7 +153,5 @@ func _on_first_move_poll_tick() -> void:
 	if Global.metrics != null:
 		fired = Global.metrics.track_first_move_in_world()
 	if fired:
-		var config := Global.get_config()
-		config.first_move_in_world_sent = true
-		config.save_to_settings_file()
+		Global.engine.set_setting("first_move_in_world_sent", true, true)
 	_stop_first_move_poller()

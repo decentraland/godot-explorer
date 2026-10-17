@@ -2,7 +2,6 @@ import { ColorTarget, Control_Tags } from '../native';
 import type { AvatarState, Control } from '../native';
 import type { ControlApi } from '../api/control';
 import type { Wearable } from '../../backpack/catalog';
-import { isRemovable } from '../../backpack/taxonomy';
 
 const BASE = 'urn:decentraland:off-chain:base-avatars:';
 const MALE = `${BASE}BaseMale`;
@@ -29,6 +28,8 @@ const COLOR_KEYS = {
   [ColorTarget.Eyes]: 'eyes',
 } as const;
 const OPTIONAL_CHANCE = 0.6;
+const REQUIRED = ['body_shape', 'eyes', 'eyebrows', 'mouth'];
+export const isRemovable = (category: string) => !REQUIRED.includes(category);
 
 const same = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
 
@@ -44,6 +45,8 @@ export type MockAvatar = Pick<ControlApi, 'avatarState'> & {
   applyAvatarControl(control: Control): void;
   /** Called after every change, for the mock core to emit `avatarChanged`. */
   onChange(listener: (avatar: AvatarState) => void): () => void;
+  /** What equip resolves categories against; the mock core sets it when the catalog loads. */
+  setWearables(wearables: Wearable[]): void;
 };
 
 const pick = <T>(items: T[], random: () => number): T =>
@@ -126,11 +129,8 @@ export function reduceAvatar(
 
 /** An in-memory equipped avatar for builds without the engine. */
 export function createMockAvatar(options: MockAvatarOptions = {}): MockAvatar {
-  const {
-    initial = DEFAULT_AVATAR,
-    wearables = [],
-    random = Math.random,
-  } = options;
+  const { initial = DEFAULT_AVATAR, random = Math.random } = options;
+  let wearables = options.wearables ?? [];
   let avatar = initial;
   const listeners = new Set<(avatar: AvatarState) => void>();
   return {
@@ -141,6 +141,9 @@ export function createMockAvatar(options: MockAvatarOptions = {}): MockAvatar {
         avatar = next;
         listeners.forEach(listener => listener(next));
       }
+    },
+    setWearables: next => {
+      wearables = next;
     },
     onChange: listener => {
       listeners.add(listener);

@@ -1,5 +1,5 @@
 import { Dropdown } from '../ds';
-import { t } from '../i18n';
+import { setLocale, t } from '../i18n';
 import { LOCALES } from './keys';
 import type { SettingsModel } from './useSettings';
 
@@ -25,7 +25,10 @@ export function LanguageSection({
       value={m.values.locale}
       options={LOCALES.map(l => ({ value: l, label: t(NAMES[l]) }))}
       defaultOpen={defaultOpen}
-      onChange={v => m.set('locale', v)}
+      onChange={v => {
+        m.set('locale', v);
+        setLocale(v);
+      }}
     />
   );
 }

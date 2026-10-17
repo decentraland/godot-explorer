@@ -6,10 +6,16 @@ class_name Navigator
 ## real, which turns a black screen over a discarded scene into a modal over the one the
 ## player is still standing in. Every resolver state leaves through here.
 
+## Passwords the shell collected for protected worlds, by normalized realm url.
+static var world_secrets: Dictionary = {}
+
 
 ## `when` is the loading-funnel bucket the dashboards index on. Returns true only when
 ## the player actually went somewhere.
 static func async_go(dest: Destination, when: String) -> bool:
+	var secret: String = world_secrets.get(Realm.normalize_realm_url(dest.realm_string), "")
+	if not secret.is_empty() and dest.credential.is_empty():
+		dest = dest.with_credential(secret)
 	# On the INTENT, not the loading screen: a navigation refused before the screen goes
 	# up still has to produce a funnel row.
 	Global.scene_runner.loading_begin_episode(when, dest.realm_string)
@@ -17,28 +23,25 @@ static func async_go(dest: Destination, when: String) -> bool:
 	prints("[NAV] intent", dest, when)
 
 	var resolved := await DestinationResolver.async_resolve(dest)
-	if resolved.state == Destination.State.NEEDS_PASSWORD:
-		prints("[NAV] password needed #%d" % resolved.intent_id)
-		var prompt := WorldSecretPrompt.new(resolved)
-		resolved = await prompt.async_run()
 	_log_verdict(resolved, Time.get_ticks_msec() - started)
 
 	match resolved.state:
 		Destination.State.READY:
 			return await _async_enter(resolved, when)
 		Destination.State.NOT_ALLOWED:
-			Global.modal_manager.async_show_private_world_modal(_world_name(resolved))
 			recover_from_refusal(resolved.realm_string)
+			Global.engine.report_notice("entry_private", resolved.realm_string)
 			return _abandon("private_world_access_denied")
 		Destination.State.NEEDS_PASSWORD:
-			# Backed out of the password prompt: they stay exactly where they were.
-			return _abandon("cancelled")
+			# The shell asks for the password and enters again.
+			Global.engine.report_notice("entry_password", resolved.realm_string)
+			return _abandon("needs_password")
 		_:
-			Global.modal_manager.async_show_invalid_destination_modal(resolved.failure)
 			Global.scene_runner.loading_realm_change_failed(
 				resolved.realm_string, resolved.failure_reason()
 			)
 			recover_from_refusal(resolved.realm_string)
+			Global.engine.report_notice("entry_not_found", resolved.realm_string)
 			return _abandon("resolve_failed")
 
 
@@ -46,6 +49,9 @@ static func async_go(dest: Destination, when: String) -> bool:
 ## realm kept as the boot realm reopens the same modal on every launch, and a boot that never
 ## committed a realm leaves nothing behind the modal to dismiss back to.
 static func recover_from_refusal(realm_string: String) -> void:
+	# The shell decides where the player goes after a refusal.
+	if Global.engine.is_host_driven():
+		return
 	# Still standing somewhere: the refusal cost nothing and the saved realm is still good.
 	# Only a refusal that left us with no realm at all is the one that repeats on every boot.
 	if is_instance_valid(Global.realm) and Global.realm.has_realm():
@@ -67,14 +73,12 @@ static func recover_from_refusal(realm_string: String) -> void:
 static func _clear_boot_realm_if(realm_string: String) -> void:
 	if realm_string.is_empty():
 		return
-	var config = Global.get_config()
-	var stored: String = config.last_realm_joined
+	var stored: String = Global.engine.setting("last_realm_joined")
 	if stored.is_empty():
 		return
 	if Realm.normalize_realm_url(stored) != Realm.normalize_realm_url(realm_string):
 		return
-	config.last_realm_joined = DclUrls.main_realm()
-	config.save_to_settings_file()
+	Global.engine.set_setting("last_realm_joined", DclUrls.main_realm(), true)
 
 
 static func _async_enter(dest: Destination, when: String) -> bool:
@@ -84,16 +88,11 @@ static func _async_enter(dest: Destination, when: String) -> bool:
 
 	# The episode is already open; a second one would report this intent as superseded
 	# by its own loading screen.
-	explorer.loading_ui.enable_loading_screen(dest.realm_string, when, false)
-	explorer.loading_ui.set_prefetched_scene(
-		dest.scene_title, dest.scene_creator, dest.scene_image_url, dest.asset_count
-	)
+	explorer.loading.begin(dest.realm_string, when, false)
 	_warm_caches(dest)
-	# Behind the screen: closing the menu first flashes the world being left.
-	explorer.hide_menu()
 
 	if _needs_realm_change(dest) and not await Global.realm.async_apply_destination(dest):
-		explorer.loading_ui.hide_loading_screen("Failed")
+		explorer.loading.end("Failed")
 		return false
 
 	# A restoration carries its parcel only so the resolve can describe it; _ready
@@ -140,7 +139,7 @@ static func warm(parcel: Vector2i, realm: String) -> void:
 
 
 static func _async_warm_scene(parcel: Vector2i) -> void:
-	_warm_boot_bundle(await Global.async_resolve_scene_entity_id(parcel))
+	_warm_boot_bundle(await WorldRequests.async_resolve_scene_entity_id(parcel))
 
 
 ## Compares resolved urls, not raw strings: "SpaceRunner.dcl.eth" and

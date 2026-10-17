@@ -296,7 +296,7 @@ static func _async_verify_credential(dest: Destination, about: Dictionary):
 	var metadata := handshake_metadata(
 		Realm.normalize_realm_url(dest.realm_string), dest.credential
 	)
-	var res = await Global.async_signed_fetch(url, HTTPClient.METHOD_POST, "", metadata)
+	var res = await WorldRequests.async_signed_fetch(url, HTTPClient.METHOD_POST, "", metadata)
 	if res is RequestResponse:
 		return null
 

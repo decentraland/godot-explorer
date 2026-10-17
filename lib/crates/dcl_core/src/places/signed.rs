@@ -173,6 +173,34 @@ impl SignedClient {
         }
     }
 
+    /// A request whose signed metadata is not the body: the intercom-proxy signs `{}` and leaves
+    /// the JSON body unsigned. `extra_headers` ride along with the identity headers.
+    pub(super) async fn request_with_metadata(
+        &self,
+        method: &str,
+        url: &str,
+        body: &Value,
+        extra_headers: &[(String, String)],
+    ) -> Result<Reply, SignedError> {
+        let uri = http::Uri::try_from(url).map_err(|_| SignedError::BadUrl(url.to_owned()))?;
+        let mut headers =
+            wallet::sign_request(method, &uri, &self.chain, serde_json::json!({})).await;
+        headers.extend(extra_headers.iter().cloned());
+        let reply = self
+            .transport
+            .send(method, url, &headers, Some(&body.to_string()))
+            .await
+            .map_err(SignedError::Network)?;
+        if (200..300).contains(&reply.status) {
+            Ok(reply)
+        } else {
+            Err(SignedError::Status {
+                status: reply.status,
+                body: reply.body,
+            })
+        }
+    }
+
     /// `request` whose answer must be a JSON value.
     pub(super) async fn request_json(
         &self,

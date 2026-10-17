@@ -227,10 +227,7 @@ func _async_boot_dispatch() -> void:
 func _is_eula_accepted() -> bool:
 	if Global == null:
 		return false
-	var cfg = Global.get_config()
-	if cfg == null:
-		return false
-	return cfg.terms_and_conditions_version == Global.TERMS_AND_CONDITIONS_VERSION
+	return Global.engine.is_eula_accepted()
 
 
 # ---------------- FSM core ----------------
@@ -269,7 +266,7 @@ func _async_run_cycle() -> void:
 	var cycle_t0 := Time.get_ticks_msec()
 	# cycle_id stays constant across attempts. Analysts group by it to
 	# compute success rate, retry distribution, and abandonment.
-	var cycle_id := DclConfig.generate_uuid_v4()
+	var cycle_id := DclGlobal.generate_uuid_v4()
 	var trigger := _pending_trigger
 	var attempt: int = 0
 	while true:

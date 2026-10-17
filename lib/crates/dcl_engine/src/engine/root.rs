@@ -192,7 +192,11 @@ impl DclRoot {
             "apply_ui_zoom",
             &[window_variant],
         );
-        let scale = global.bind().get_config().get("resolution_3d_scale");
+        let scale = global
+            .bind()
+            .get_engine()
+            .bind()
+            .setting("resolution_3d_scale".into());
         window.set("scaling_3d_scale", &scale);
         call_static(
             "res://src/config/audio_settings.gd",
@@ -242,7 +246,7 @@ impl DclRoot {
             BootMode::FiBenchmark => {}
             BootMode::AvatarImpostorBenchmark => {
                 godot_print!("Running in Avatar Impostor Benchmark mode");
-                Self::start_throwaway_guest(&global, true);
+                Self::start_throwaway_guest(&global);
                 self.change_scene("res://src/tools/avatar_impostor_benchmark.tscn");
             }
             BootMode::Scene(path) => {
@@ -251,20 +255,13 @@ impl DclRoot {
             }
             BootMode::SceneTest => {
                 godot_print!("Running in Scene Test mode");
-                Self::start_throwaway_guest(&global, true);
-                Self::remember_throwaway_account(&global);
+                Self::start_throwaway_guest(&global);
                 self.change_scene(EXPLORER);
             }
             BootMode::Emulator => {
                 godot_print!("Running in Emulator mode");
                 Self::complete_emulator_arguments(&global);
-                global
-                    .bind()
-                    .get_engine()
-                    .bind_mut()
-                    .set_emulator_mode(true);
-                Self::start_throwaway_guest(&global, false);
-                Self::remember_throwaway_account(&global);
+                Self::start_throwaway_guest(&global);
                 self.change_scene(EXPLORER);
             }
         }
@@ -290,31 +287,11 @@ impl DclRoot {
         }
     }
 
-    /// Creates a disposable guest. `persist` clears and saves the stored guest profile (as the
-    /// scene tests always did); the emulator leaves the saved session alone.
-    fn start_throwaway_guest(global: &Gd<DclGlobal>, persist: bool) {
-        let mut config = global.bind().get_config();
-        if persist {
-            config.set("guest_profile", &VarDictionary::new().to_variant());
-            config.call("save_to_settings_file", &[]);
-        } else {
-            config.set("session_is_ephemeral", &true.to_variant());
-        }
+    /// Creates a disposable guest; nothing of it outlives the run.
+    fn start_throwaway_guest(global: &Gd<DclGlobal>) {
         let mut identity = global.bind().get_player_identity();
         identity.bind_mut().set_default_profile();
         identity.call("create_disposable_account", &[]);
-    }
-
-    /// Mirrors the new account into the config so the explorer finds a session.
-    fn remember_throwaway_account(global: &Gd<DclGlobal>) {
-        let identity = global.bind().get_player_identity();
-        let stored = VarDictionary::new();
-        if identity.bind().get_recover_account_to(stored.clone()) {
-            global
-                .bind()
-                .get_config()
-                .set("session_account", &stored.to_variant());
-        }
     }
 
     fn start_asset_server(&mut self, global: &Gd<DclGlobal>) {

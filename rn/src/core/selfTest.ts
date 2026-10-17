@@ -49,6 +49,8 @@ export async function runCoreSelfTest(): Promise<void> {
         openBackpack: () => {},
         loadingDetail: () => {},
         avatarChanged: () => {},
+        sceneRequest: () => {},
+        engineNotice: () => {},
         report: () => {},
         reportTag: () => {},
       };
