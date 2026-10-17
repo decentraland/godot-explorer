@@ -201,16 +201,15 @@ impl BenchmarkReport {
         let performance = Performance::singleton();
 
         // Memory metrics (in MiB)
-        let godot_static_memory_mb =
-            performance.get_monitor(Monitor::MEMORY_STATIC) as f64 / 1_048_576.0;
+        let godot_static_memory_mb = performance.get_monitor(Monitor::MEMORY_STATIC) / 1_048_576.0;
         let godot_static_memory_peak_mb =
-            performance.get_monitor(Monitor::MEMORY_STATIC_MAX) as f64 / 1_048_576.0;
+            performance.get_monitor(Monitor::MEMORY_STATIC_MAX) / 1_048_576.0;
         let gpu_video_ram_mb =
-            performance.get_monitor(Monitor::RENDER_VIDEO_MEM_USED) as f64 / 1_048_576.0;
+            performance.get_monitor(Monitor::RENDER_VIDEO_MEM_USED) / 1_048_576.0;
         let gpu_texture_memory_mb =
-            performance.get_monitor(Monitor::RENDER_TEXTURE_MEM_USED) as f64 / 1_048_576.0;
+            performance.get_monitor(Monitor::RENDER_TEXTURE_MEM_USED) / 1_048_576.0;
         let gpu_buffer_memory_mb =
-            performance.get_monitor(Monitor::RENDER_BUFFER_MEM_USED) as f64 / 1_048_576.0;
+            performance.get_monitor(Monitor::RENDER_BUFFER_MEM_USED) / 1_048_576.0;
 
         // Rust heap memory
         #[cfg(feature = "use_memory_debugger")]
@@ -253,7 +252,7 @@ impl BenchmarkReport {
         }
 
         // Rendering
-        let fps = performance.get_monitor(Monitor::TIME_FPS) as f64;
+        let fps = performance.get_monitor(Monitor::TIME_FPS);
         let draw_calls = performance.get_monitor(Monitor::RENDER_TOTAL_DRAW_CALLS_IN_FRAME) as i64;
         let primitives_in_frame =
             performance.get_monitor(Monitor::RENDER_TOTAL_PRIMITIVES_IN_FRAME) as i64;
@@ -266,65 +265,47 @@ impl BenchmarkReport {
 
         // Create dictionary with metrics
         let mut dict = VarDictionary::new();
-        dict.set("test_name", test_name.to_variant());
-        dict.set("timestamp", self.get_timestamp().to_variant());
-        dict.set("location", location.to_variant());
-        dict.set("realm", realm.to_variant());
+        dict.set("test_name", &test_name);
+        dict.set("timestamp", self.get_timestamp());
+        dict.set("location", &location);
+        dict.set("realm", &realm);
 
-        dict.set(
-            "godot_static_memory_mb",
-            godot_static_memory_mb.to_variant(),
-        );
-        dict.set(
-            "godot_static_memory_peak_mb",
-            godot_static_memory_peak_mb.to_variant(),
-        );
-        dict.set("gpu_video_ram_mb", gpu_video_ram_mb.to_variant());
-        dict.set("gpu_texture_memory_mb", gpu_texture_memory_mb.to_variant());
-        dict.set("gpu_buffer_memory_mb", gpu_buffer_memory_mb.to_variant());
-        dict.set("rust_heap_usage_mb", rust_heap_usage_mb.to_variant());
-        dict.set(
-            "rust_total_allocated_mb",
-            rust_total_allocated_mb.to_variant(),
-        );
-        dict.set("deno_total_memory_mb", deno_total_memory_mb.to_variant());
-        dict.set(
-            "deno_external_memory_mb",
-            deno_external_memory_mb.to_variant(),
-        );
-        dict.set("deno_scene_count", deno_scene_count.to_variant());
-        dict.set(
-            "deno_average_memory_mb",
-            deno_average_memory_mb.to_variant(),
-        );
-        dict.set("alive_scene_count", alive_scene_count.to_variant());
+        dict.set("godot_static_memory_mb", godot_static_memory_mb);
+        dict.set("godot_static_memory_peak_mb", godot_static_memory_peak_mb);
+        dict.set("gpu_video_ram_mb", gpu_video_ram_mb);
+        dict.set("gpu_texture_memory_mb", gpu_texture_memory_mb);
+        dict.set("gpu_buffer_memory_mb", gpu_buffer_memory_mb);
+        dict.set("rust_heap_usage_mb", rust_heap_usage_mb);
+        dict.set("rust_total_allocated_mb", rust_total_allocated_mb);
+        dict.set("deno_total_memory_mb", deno_total_memory_mb);
+        dict.set("deno_external_memory_mb", deno_external_memory_mb);
+        dict.set("deno_scene_count", deno_scene_count);
+        dict.set("deno_average_memory_mb", deno_average_memory_mb);
+        dict.set("alive_scene_count", alive_scene_count);
 
-        dict.set("total_objects", total_objects.to_variant());
-        dict.set("resource_count", resource_count.to_variant());
-        dict.set("node_count", node_count.to_variant());
-        dict.set("orphan_node_count", orphan_node_count.to_variant());
+        dict.set("total_objects", total_objects);
+        dict.set("resource_count", resource_count);
+        dict.set("node_count", node_count);
+        dict.set("orphan_node_count", orphan_node_count);
 
-        dict.set("fps", fps.to_variant());
-        dict.set("draw_calls", draw_calls.to_variant());
-        dict.set("primitives_in_frame", primitives_in_frame.to_variant());
-        dict.set("objects_in_frame", objects_in_frame.to_variant());
+        dict.set("fps", fps);
+        dict.set("draw_calls", draw_calls);
+        dict.set("primitives_in_frame", primitives_in_frame);
+        dict.set("objects_in_frame", objects_in_frame);
 
         if let Some(mem) = mobile_memory_usage_mb {
-            dict.set("mobile_memory_usage_mb", mem.to_variant());
+            dict.set("mobile_memory_usage_mb", mem);
         }
         if let Some(temp) = mobile_temperature_celsius {
-            dict.set("mobile_temperature_celsius", temp.to_variant());
+            dict.set("mobile_temperature_celsius", temp);
         }
         if let Some(battery) = mobile_battery_percent {
-            dict.set("mobile_battery_percent", battery.to_variant());
+            dict.set("mobile_battery_percent", battery);
         }
 
         // Process info
         let process_memory_usage_mb = self.get_process_memory_usage_mb();
-        dict.set(
-            "process_memory_usage_mb",
-            process_memory_usage_mb.to_variant(),
-        );
+        dict.set("process_memory_usage_mb", process_memory_usage_mb);
 
         dict
     }
@@ -347,15 +328,13 @@ impl BenchmarkReport {
             realm: realm.to_string(),
 
             // Memory metrics
-            godot_static_memory_mb: performance.get_monitor(Monitor::MEMORY_STATIC) as f64
+            godot_static_memory_mb: performance.get_monitor(Monitor::MEMORY_STATIC) / 1_048_576.0,
+            godot_static_memory_peak_mb: performance.get_monitor(Monitor::MEMORY_STATIC_MAX)
                 / 1_048_576.0,
-            godot_static_memory_peak_mb: performance.get_monitor(Monitor::MEMORY_STATIC_MAX) as f64
+            gpu_video_ram_mb: performance.get_monitor(Monitor::RENDER_VIDEO_MEM_USED) / 1_048_576.0,
+            gpu_texture_memory_mb: performance.get_monitor(Monitor::RENDER_TEXTURE_MEM_USED)
                 / 1_048_576.0,
-            gpu_video_ram_mb: performance.get_monitor(Monitor::RENDER_VIDEO_MEM_USED) as f64
-                / 1_048_576.0,
-            gpu_texture_memory_mb: performance.get_monitor(Monitor::RENDER_TEXTURE_MEM_USED) as f64
-                / 1_048_576.0,
-            gpu_buffer_memory_mb: performance.get_monitor(Monitor::RENDER_BUFFER_MEM_USED) as f64
+            gpu_buffer_memory_mb: performance.get_monitor(Monitor::RENDER_BUFFER_MEM_USED)
                 / 1_048_576.0,
 
             #[cfg(feature = "use_memory_debugger")]
@@ -386,7 +365,7 @@ impl BenchmarkReport {
             orphan_node_count: performance.get_monitor(Monitor::OBJECT_ORPHAN_NODE_COUNT) as i64,
 
             // Rendering
-            fps: performance.get_monitor(Monitor::TIME_FPS) as f64,
+            fps: performance.get_monitor(Monitor::TIME_FPS),
             draw_calls: performance.get_monitor(Monitor::RENDER_TOTAL_DRAW_CALLS_IN_FRAME) as i64,
             primitives_in_frame: performance.get_monitor(Monitor::RENDER_TOTAL_PRIMITIVES_IN_FRAME)
                 as i64,
@@ -644,7 +623,7 @@ impl BenchmarkReport {
                 metrics.deno_average_memory_mb
             ));
         }
-        report.push_str("\n");
+        report.push('\n');
 
         // Object Counts
         report.push_str("## Object Counts\n\n");
@@ -657,7 +636,7 @@ impl BenchmarkReport {
             "| Orphan Nodes | {} |\n",
             metrics.orphan_node_count
         ));
-        report.push_str("\n");
+        report.push('\n');
 
         // Rendering
         report.push_str("## Rendering Metrics\n\n");
@@ -676,7 +655,7 @@ impl BenchmarkReport {
             "| Objects per Frame | {} |\n",
             metrics.objects_in_frame
         ));
-        report.push_str("\n");
+        report.push('\n');
 
         // Resource Analysis
         if metrics.total_meshes > 0 {
@@ -707,7 +686,7 @@ impl BenchmarkReport {
                 "| Potential Deduplication | {} ({:.1}% savings) |\n",
                 metrics.potential_dedup_count, metrics.mesh_savings_percent
             ));
-            report.push_str("\n");
+            report.push('\n');
         }
 
         // Mobile Metrics
@@ -724,7 +703,7 @@ impl BenchmarkReport {
             if let Some(battery) = metrics.mobile_battery_percent {
                 report.push_str(&format!("| Battery | {}% |\n", battery));
             }
-            report.push_str("\n");
+            report.push('\n');
         }
 
         report
@@ -764,7 +743,7 @@ impl BenchmarkReport {
                 total
             ));
         }
-        report.push_str("\n");
+        report.push('\n');
 
         // Performance comparison table
         report.push_str("## Performance Comparison\n\n");
@@ -780,7 +759,7 @@ impl BenchmarkReport {
                 metrics.objects_in_frame
             ));
         }
-        report.push_str("\n");
+        report.push('\n');
 
         // Resource analysis comparison (if available)
         if self.metrics_history.iter().any(|m| m.total_meshes > 0) {
@@ -800,7 +779,7 @@ impl BenchmarkReport {
                     ));
                 }
             }
-            report.push_str("\n");
+            report.push('\n');
         }
 
         // Object counts comparison
@@ -817,7 +796,7 @@ impl BenchmarkReport {
                 metrics.orphan_node_count
             ));
         }
-        report.push_str("\n");
+        report.push('\n');
 
         // Individual test details
         report.push_str("---\n\n");
