@@ -3038,8 +3038,8 @@ impl CommunicationManager {
         }
         #[cfg(not(feature = "use_livekit"))]
         {
-            dict.set("scene_connected".to_variant(), false.to_variant());
-            dict.set("scene_room_state".to_variant(), "unavailable".to_variant());
+            dict.set("scene_connected", false);
+            dict.set("scene_room_state", "unavailable");
         }
 
         #[cfg(feature = "use_pulse")]
@@ -3088,16 +3088,13 @@ impl CommunicationManager {
         }
         #[cfg(not(feature = "use_pulse"))]
         {
-            dict.set("pulse_available".to_variant(), false.to_variant());
-            dict.set("pulse_enabled".to_variant(), false.to_variant());
-            dict.set("pulse_state".to_variant(), "unavailable".to_variant());
-            dict.set("pulse_endpoint".to_variant(), "".to_variant());
-            dict.set("pulse_failures".to_variant(), 0i64.to_variant());
-            dict.set(
-                "pulse_disabled_for_session".to_variant(),
-                false.to_variant(),
-            );
-            dict.set("dual_channel".to_variant(), true.to_variant());
+            dict.set("pulse_available", false);
+            dict.set("pulse_enabled", false);
+            dict.set("pulse_state", "unavailable");
+            dict.set("pulse_endpoint", "");
+            dict.set("pulse_failures", 0i64);
+            dict.set("pulse_disabled_for_session", false);
+            dict.set("dual_channel", true);
         }
 
         dict
