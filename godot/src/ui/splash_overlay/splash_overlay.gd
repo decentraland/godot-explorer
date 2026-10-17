@@ -10,7 +10,7 @@ extends CanvasLayer
 ## fades out once real content is ready (driven by the lobby, see lobby.gd).
 ##
 ## This replaces the per-scene `dcl_splash.tscn` instances that used to live inside
-## main.tscn and lobby.tscn (which caused a gray scene-swap flash + a size pop).
+## dcl_root.tscn and lobby.tscn (which caused a gray scene-swap flash + a size pop).
 
 const PURPLE := Color(0.411765, 0.121569, 0.662745, 1.0)
 const LOGO_SIZE := Vector2(96, 96)

@@ -25,7 +25,7 @@ compatibility/default_parent_skeleton_in_mesh_instance_3d=true
 
 config/name="Decentraland"
 config/description="Decentraland Explorer powered by Decentraland DAO"
-run/main_scene="res://src/main.tscn"
+run/main_scene="res://src/dcl_root.tscn"
 run/main_loop_type="ProjectMainLoop"
 config/features=PackedStringArray("4.6")
 boot_splash/bg_color=Color(0.411765, 0.121569, 0.662745, 1)
@@ -57,6 +57,7 @@ DevLocalhostRelay="*res://src/tool/dev_localhost_relay.gd"
 GltfLoadingCoordinator="*res://src/decentraland_components/gltf_loading_coordinator.gd"
 LightSourceManager="*res://src/decentraland_components/light_source_manager.gd"
 TouchFeedback="*res://src/ui/touch_feedback/touch_feedback_overlay.gd"
+RnBridge="*res://src/rn_bridge/rn_bridge.gd"
 
 [debug]
 

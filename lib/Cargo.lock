@@ -927,6 +927,35 @@ dependencies = [
 ]
 
 [[package]]
+name = "dcl_core"
+version = "1.15.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "chrono",
+ "dcl-rpc",
+ "ethers-core",
+ "ethers-providers",
+ "ethers-signers",
+ "futures-lite",
+ "futures-util",
+ "http 0.2.12",
+ "once_cell",
+ "prost 0.11.9",
+ "prost-build 0.11.9",
+ "rand",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tokio-util",
+ "tracing",
+ "tracing-test",
+ "url",
+ "uuid 1.11.0",
+]
+
+[[package]]
 name = "dclgodot"
 version = "1.15.0"
 dependencies = [
@@ -938,6 +967,7 @@ dependencies = [
  "cid",
  "cpal",
  "dcl-rpc",
+ "dcl_core",
  "deno_core",
  "ethers-core",
  "ethers-providers",

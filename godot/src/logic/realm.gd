@@ -9,91 +9,51 @@ signal realm_change_failed(new_realm_string: String, reason: String)
 ## instead of the generic "World unavailable" toast.
 signal realm_access_denied(new_realm_string: String, world_name: String)
 
-const DAO_SERVERS: Array[String] = [
-	"https://peer-ec1.decentraland.org/",
-	"https://peer-ec2.decentraland.org/",
-	"https://peer-wc1.decentraland.org/",
-	"https://peer-eu1.decentraland.org/",
-	"https://peer-ap1.decentraland.org/",
-	"https://interconnected.online/",
-	"https://peer.decentral.io/",
-	"https://peer.melonwave.com/",
-	"https://peer.kyllian.me/",
-	"https://peer.uadevops.com/",
-	"https://peer.dclnodes.io/",
-	"https://realm-provider.decentraland.org/main/",
-	"https://realm-provider-ea.decentraland.org/main/"
-]
-
 var _has_realm = false
 
 
 static func is_dcl_ens(str_param: String) -> bool:
-	var regex = RegEx.new()
-	regex.compile("^[a-zA-Z0-9]+\\.dcl\\.eth$")
-	return regex.search(str_param) != null
+	return DclRealmRules.is_dcl_ens(str_param)
 
 
 static func is_genesis_city(_realm_name: String) -> bool:
-	_realm_name = Realm.ensure_ends_with_slash(Realm.resolve_realm_url(_realm_name))
-	_realm_name = Realm.ensure_starts_with_https(_realm_name)
-	if DAO_SERVERS.has(_realm_name):
-		return true
-	return false
+	return DclRealmRules.is_genesis_city(_realm_name)
 
 
 static func is_local_preview(_realm_name: String) -> bool:
-	var regex = RegEx.new()
-	regex.compile("(?mi)^https?://[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+")
-	return regex.search(_realm_name) != null
+	return DclRealmRules.is_local_preview(_realm_name)
 
 
 static func dcl_world_url(dcl_name: String) -> String:
-	return DclUrls.worlds_content_server() + dcl_name.to_lower().uri_encode()
+	return DclRealmRules.dcl_world_url(dcl_name)
 
 
 static func ensure_reduce_url(url):
-	return remove_scheme(ensure_remove_slash(ensure_dcl_ens(url)))
+	return DclRealmRules.ensure_reduce_url(url)
 
 
 static func ensure_dcl_ens(url: String) -> String:
-	return url.replace(DclUrls.worlds_content_server(), "")
+	return DclRealmRules.ensure_dcl_ens(url)
 
 
 static func ensure_remove_slash(str_param: String) -> String:
-	if str_param.ends_with("/"):
-		return str_param.left(str_param.length() - 1)
-	return str_param
+	return DclRealmRules.ensure_remove_slash(str_param)
 
 
 static func ensure_ends_with_slash(str_param: String) -> String:
-	if str_param.is_empty():
-		return ""
-
-	return str_param.trim_suffix("/") + "/"
+	return DclRealmRules.ensure_ends_with_slash(str_param)
 
 
 static func ensure_starts_with_https(str_param: String) -> String:
-	if str_param.begins_with("https://"):
-		return str_param
-
-	if str_param.begins_with("http://"):
-		return str_param
-
-	return "https://" + str_param
+	return DclRealmRules.ensure_starts_with_https(str_param)
 
 
 static func remove_scheme(str_param: String) -> String:
-	str_param = str_param.trim_prefix("https://")
-	str_param = str_param.trim_prefix("http://")
-
-	return str_param
+	return DclRealmRules.remove_scheme(str_param)
 
 
 static func resolve_realm_url(value: String) -> String:
-	if Realm.is_dcl_ens(value):
-		return Realm.dcl_world_url(value)
-	return value
+	return DclRealmRules.resolve_realm_url(value)
 
 
 ## The canonical url a realm string resolves to — the form async_set_realm connects with and
@@ -102,40 +62,15 @@ static func resolve_realm_url(value: String) -> String:
 ## so callers can tell "somewhere else" from "where we already are" (#2816: the realm now comes
 ## from arbitrary scene input, where `realm_string` equality is not enough).
 static func normalize_realm_url(value: String) -> String:
-	if value.is_empty():
-		return ""
-	return Realm.ensure_starts_with_https(
-		Realm.ensure_ends_with_slash(Realm.resolve_realm_url(value))
-	)
+	return DclRealmRules.normalize_realm_url(value)
 
 
 static func get_params(url: String) -> Dictionary:
-	var ret: Dictionary = {}
-	var parts = url.split("?")
-	if parts.size() > 1:
-		var params = parts[1].split("&")
-		for param in params:
-			var key_value = param.split("=")
-			var current_values = ret.get(key_value[0], [])
-			if key_value.size() > 1:
-				current_values.push_back(key_value[1])
-			else:
-				current_values.push_back(true)
-			ret[key_value[0]] = current_values
-	return ret
+	return DclRealmRules.get_params(url)
 
 
 static func parse_urn(urn: String):
-	var regex = RegEx.new()
-	regex.compile("^(urn\\:decentraland\\:entity\\:(ba[a-zA-Z0-9]{57}))")
-	var matches = regex.search(urn)
-
-	if matches == null:
-		return null
-
-	var base_url = get_params(urn).get("baseUrl", [""])[0]
-
-	return {"urn": matches.get_string(0), "entityId": matches.get_string(2), "baseUrl": base_url}
+	return DclRealmRules.parse_urn(urn)
 
 
 func has_realm():
@@ -204,22 +139,12 @@ func _async_set_realm(new_realm_string: String) -> bool:
 	var response: RequestResponse = res
 	Global.scene_runner.loading_mark_about_end()
 	var json = response.get_string_response_as_json()
-	if json == null or not json is Dictionary:
-		var reason := "invalid /about response"
-		printerr("[REALM] ", reason, " for ", new_realm_string)
-		_emit_realm_change_failed(new_realm_string, reason)
-		return false
-
-	# Guard malformed /about `content` BEFORE committing realm state. A null/missing
-	# `content` or a non-String `content.publicUrl` would otherwise throw at
-	# `content_base_url` below — after realm state was already partially committed and with
-	# NO `realm_change_failed` emitted — leaving a silently stuck loading screen (F-11 / RC-6).
-	# (`or` short-circuits, so `.get()` is never called on a non-Dictionary `content`.)
-	var about_content = json.get("content")
-	if not about_content is Dictionary or not about_content.get("publicUrl") is String:
-		var reason := "/about missing or malformed content.publicUrl"
-		printerr("[REALM] ", reason, " for ", new_realm_string)
-		_emit_realm_change_failed(new_realm_string, reason)
+	# Checked BEFORE committing any realm state: a malformed `content` would otherwise throw
+	# part-way through the commit, with no `realm_change_failed`, leaving a stuck loading screen.
+	var about_problem := DclRealmRules.about_problem(json)
+	if not about_problem.is_empty():
+		printerr("[REALM] ", about_problem, " for ", new_realm_string)
+		_emit_realm_change_failed(new_realm_string, about_problem)
 		return false
 
 	return await _async_commit_realm(new_realm_string, candidate_realm_url, json, false)
@@ -259,14 +184,9 @@ func _async_commit_realm(
 
 	var configuration: Dictionary = realm_about.get("configurations", {})
 
-	realm_scene_urns.clear()
-	for urn in configuration.get("scenesUrn", []):
-		var parsed_urn = Realm.parse_urn(urn)
-		if parsed_urn != null:
-			realm_scene_urns.push_back(parsed_urn)
-
 	# For DCL worlds, the /about endpoint only returns the last deployed scene.
 	# Fetch all scenes from the /scenes endpoint to support multi-scene worlds.
+	var world_scenes: Array = []
 	var resolved_realm_name = configuration.get("realmName", "")
 	if Realm.is_dcl_ens(resolved_realm_name):
 		# Use the worlds content server /contents/ URL for baseUrl,
@@ -275,80 +195,38 @@ func _async_commit_realm(
 		var worlds_base = DclUrls.worlds_content_server().replace("/world/", "/")
 		var world_content_url = worlds_base + "contents/"
 		# The resolve already read this listing; asking again is a second round trip.
-		var all_urns := DestinationResolver.world_scene_urns(known_scenes, world_content_url)
-		if all_urns.is_empty():
-			all_urns = await _async_fetch_world_scenes(resolved_realm_name, world_content_url)
-		if not all_urns.is_empty():
-			realm_scene_urns.clear()
-			var urns_array: Array = []
-			for urn_data in all_urns:
-				realm_scene_urns.push_back(urn_data)
-				urns_array.push_back(urn_data.urn + "?=&baseUrl=" + urn_data.baseUrl)
-			# Update scenesUrn in realm_about so scene_fetcher reads the full list
-			configuration["scenesUrn"] = urns_array
+		world_scenes = DestinationResolver.world_scene_urns(known_scenes, world_content_url)
+		if world_scenes.is_empty():
+			world_scenes = await _async_fetch_world_scenes(resolved_realm_name, world_content_url)
+
+	var commit := DclRealmRules.commit_from_about(realm_about, world_scenes)
+
+	realm_scene_urns.clear()
+	for urn_data in commit.scene_urns:
+		realm_scene_urns.push_back(urn_data)
+	if commit.scenes_urn_override != null:
+		# So scene_fetcher reads the full list from realm_about.
+		configuration["scenesUrn"] = commit.scenes_urn_override
 
 	realm_global_scene_urns.clear()
-	for urn in configuration.get("globalScenesUrn", []):
-		var parsed_urn = Realm.parse_urn(urn)
-		if parsed_urn != null:
-			realm_global_scene_urns.push_back(parsed_urn)
+	for urn_data in commit.global_scene_urns:
+		realm_global_scene_urns.push_back(urn_data)
 
-	realm_city_loader_content_base_url = configuration.get("cityLoaderContentServer", "")
-	if not realm_city_loader_content_base_url.is_empty():
-		realm_city_loader_content_base_url = Realm.ensure_ends_with_slash(
-			configuration.get("cityLoaderContentServer", "")
-		)
-
-	var new_lambda_server_base_url = realm_about.get("lambdas", {}).get(
-		"publicUrl", DclUrls.peer_lambdas()
-	)
-	if not new_lambda_server_base_url.is_empty():
-		new_lambda_server_base_url = Realm.ensure_ends_with_slash(new_lambda_server_base_url)
-
-	self.set_lambda_server_base_url(new_lambda_server_base_url)
-
-	realm_name = configuration.get("realmName", "no_realm_name")
-	network_id = int(configuration.get("networkId", 1))  # 1=Ethereum
+	realm_city_loader_content_base_url = commit.city_loader_content_base_url
+	self.set_lambda_server_base_url(commit.lambda_server_base_url)
+	realm_name = commit.realm_name
+	network_id = commit.network_id  # 1=Ethereum
 
 	# A local preview realm advertises the parcels it serves locally. This is the only signal
 	# available on the QR/deeplink preview path (`decentraland://open?preview=http://…`), which
 	# never sets the `--preview` CLI flag — Pulse uses it to apply the same explicit-opt-in rule
 	# there as on desktop, and to announce the LSD realm key instead of `LocalPreview`.
-	var serves_local_scenes: bool = not configuration.get("localSceneParcels", []).is_empty()
-	Global.comms.set_local_scene_development(serves_local_scenes)
+	Global.comms.set_local_scene_development(commit.serves_local_scenes)
 
-	# get minimap
-	var map_config = configuration.get("map", {})
-	var sizes = map_config.get("sizes", [])
+	set_realm_min_bounds(commit.min_bounds)
+	set_realm_max_bounds(commit.max_bounds)
 
-	# Initialize with extreme values
-	var min_bounds: Vector2i = Vector2i(INF, INF)
-	var max_bounds: Vector2i = Vector2i(-INF, -INF)
-
-	# Process each size entry
-	for size_dict in sizes:
-		var left = size_dict.get("left", 0)
-		var top = size_dict.get("top", 0)
-		var right = size_dict.get("right", 0)
-		var bottom = size_dict.get("bottom", 0)
-
-		# Update minimum bounds (leftmost and bottommost points)
-		min_bounds.x = mini(min_bounds.x, left)
-		min_bounds.y = mini(min_bounds.y, bottom)
-
-		# Update maximum bounds (rightmost and topmost points)
-		max_bounds.x = maxi(max_bounds.x, right)
-		max_bounds.y = maxi(max_bounds.y, top)
-
-	# Handle empty array case
-	if sizes.is_empty():
-		min_bounds = Vector2i(-150, -150)
-		max_bounds = Vector2i(163, 158)
-
-	set_realm_min_bounds(min_bounds)
-	set_realm_max_bounds(max_bounds)
-
-	content_base_url = Realm.ensure_ends_with_slash(realm_about.get("content", {}).get("publicUrl"))
+	content_base_url = commit.content_base_url
 
 	# For DCL worlds, always resolve spawn position from scene metadata
 	# since the caller may not know the correct parcel coordinates.
@@ -390,18 +268,7 @@ func _async_fetch_world_scenes(world_name: String, base_content_url: String) -> 
 			printerr("[REALM] Invalid response from /scenes endpoint")
 			return []
 
-		var scenes = json.get("scenes", [])
-		if scenes.is_empty():
-			return []
-
-		var result: Array = []
-		for scene in scenes:
-			var entity_id = scene.get("entityId", "")
-			if entity_id.is_empty():
-				continue
-			var urn = "urn:decentraland:entity:" + entity_id
-			result.push_back({"urn": urn, "entityId": entity_id, "baseUrl": base_content_url})
-
+		var result: Array = DclDestinationRules.world_scene_urns(json, base_content_url)
 		if result.size() > 1:
 			prints("[REALM] Loaded", result.size(), "scenes for world", world_name)
 

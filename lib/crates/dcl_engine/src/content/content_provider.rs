@@ -1,0 +1,3233 @@
+use std::{
+    collections::{HashMap, HashSet, VecDeque},
+    sync::{
+        atomic::{AtomicU64, Ordering},
+        Arc,
+    },
+};
+
+use dcl_core::Core;
+use futures_util::future::try_join_all;
+use godot::{
+    classes::{AudioStream, Material, Mesh, Os, ResourceLoader, Texture2D},
+    obj::Singleton,
+    prelude::*,
+};
+use serde::{Deserialize, Serialize};
+use tokio::sync::{oneshot, watch, RwLock, Semaphore};
+
+use crate::{
+    auth::wallet::AsH160,
+    avatars::{dcl_user_profile::DclUserProfile, item::DclItemEntityDefinition},
+    content::content_mapping::DclContentMappingAndUrl,
+    dcl::common::string::FindNthChar,
+    godot_classes::{
+        dcl_config::{DclConfig, TextureQuality},
+        dcl_global::DclGlobal,
+        promise::Promise,
+    },
+    http_request::http_queue_requester::HttpQueueRequester,
+};
+
+#[cfg(feature = "use_resource_tracking")]
+use crate::godot_classes::dcl_resource_tracker::{
+    check_and_report_timeouts, report_download_speed, report_resource_deleted,
+    report_resource_download_done, report_resource_downloading, report_resource_error,
+    report_resource_loaded, report_resource_start,
+};
+
+use super::{
+    audio::load_audio,
+    cache_file_name::{cache_file_name, cache_file_path},
+    crash_context,
+    gltf::{
+        build_dcl_emote_gltf, get_last_16_alphanumeric, load_and_save_emote_gltf,
+        load_and_save_scene_gltf, load_and_save_wearable_gltf, process_emote_animations,
+        DclEmoteGltf,
+    },
+    profile::{
+        prepare_request_requirements, request_lambda_profile, request_lambda_profile_by_url,
+    },
+    resource_provider::ResourceProvider,
+    scene_saver::{get_emote_path_for_hash, get_scene_path_for_hash, get_wearable_path_for_hash},
+    texture::{load_image_texture, TextureEntry},
+    thread_safety::{set_thread_safety_checks_enabled, then_promise, GodotSingleThreadSafety},
+    video::download_video,
+    wearable_entities::{request_wearables, WearableManyResolved},
+};
+
+#[cfg(feature = "use_resource_tracking")]
+use super::resource_download_tracking::ResourceDownloadTracking;
+
+pub struct OptimizedData {
+    // Set of optimized hashes that we know that exists...
+    assets: RwLock<HashSet<String>>,
+    // HashMap with all optimized hashes and its dependencies...
+    dependencies: RwLock<HashMap<String, HashSet<String>>>,
+    /// GLB hash -> `scene_bake_key` (only GLBs with external textures; the
+    /// rest are keyed by their hash). Std lock: read from `#[func]`s on the
+    /// main thread, where a tokio lock cannot be awaited.
+    scene_keys: std::sync::RwLock<HashMap<String, String>>,
+    /// Cache file name -> state of the static bundle that will produce it.
+    /// `async_fetch_optimized_asset` waits here before downloading per-file.
+    bundle_files: RwLock<HashMap<String, watch::Receiver<BundleState>>>,
+    /// Zip name -> its state, so a scene re-registering the same bundle reuses
+    /// the in-flight task instead of downloading it twice.
+    bundle_tasks: RwLock<HashMap<String, watch::Receiver<BundleState>>>,
+}
+
+/// Lifecycle of a `{entity}-static.zip`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BundleState {
+    /// downloading / extracting — files it covers are not on disk yet
+    Pending,
+    /// every file it covers is in the cache folder
+    Ready,
+    /// download or extraction failed — covered files download per-file
+    Failed,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ContentData {
+    optimized_content: Vec<String>,
+    external_scene_dependencies: HashMap<String, HashSet<String>>,
+    original_sizes: HashMap<String, ImageSize>,
+    hash_size_map: HashMap<String, u64>,
+    /// `{entity}-static.zip`: the models `main.crdt` composes, extracted into
+    /// `user://content/` in one download (`files` = entry names = cache names).
+    #[serde(default)]
+    static_bundle: Option<StaticBundle>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct StaticBundle {
+    file: String,
+    files: Vec<String>,
+    #[serde(default)]
+    bytes: u64,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Copy)]
+#[serde(rename_all = "camelCase")]
+struct ImageSize {
+    height: i32,
+    width: i32,
+}
+
+/// Main-thread queue for `ProjectSettings.load_resource_pack`. That call
+/// mutates Godot's virtual filesystem and is main-thread-only; running it
+/// on a tokio worker raced with the render thread over Godot's internal
+/// ResourceLoader/filesystem locks and intermittently DEADLOCKED the load
+/// (both VkThread and a tokio worker parked in futex_wait). Workers now
+/// enqueue (zip_path, reply) here and await the reply; `process()` drains
+/// it on the main thread where the call belongs.
+#[allow(clippy::type_complexity)]
+static MAIN_THREAD_PACK_QUEUE: once_cell::sync::Lazy<
+    std::sync::Mutex<Vec<(String, oneshot::Sender<bool>)>>,
+> = once_cell::sync::Lazy::new(|| std::sync::Mutex::new(Vec::new()));
+
+/// Enqueue a resource-pack mount for the main thread and await its result.
+/// Safe to call from any tokio worker.
+async fn load_resource_pack_on_main(zip_path: String) -> bool {
+    let (tx, rx) = oneshot::channel();
+    match MAIN_THREAD_PACK_QUEUE.lock() {
+        Ok(mut q) => q.push((zip_path, tx)),
+        Err(_) => return false,
+    }
+    rx.await.unwrap_or(false)
+}
+
+#[derive(GodotClass)]
+#[class(base=Node)]
+pub struct ContentProvider {
+    base: Base<Node>,
+    content_folder: Arc<String>,
+    resource_provider: Arc<ResourceProvider>,
+    #[cfg(feature = "use_resource_tracking")]
+    resource_download_tracking: Arc<ResourceDownloadTracking>,
+    http_queue_requester: Arc<HttpQueueRequester>,
+    // InstanceId of Promise - if nobody holds the promise, it gets garbage collected
+    // and try_from_instance_id will fail, allowing us to clean up the entry
+    promises: HashMap<String, InstanceId>,
+    godot_single_thread: Arc<Semaphore>,
+    texture_quality: TextureQuality, // copy from DclGlobal on startup
+    every_second_tick: f64,
+    download_speed_mbs: f64,
+    network_speed_peak_mbs: f64,
+    network_download_history_mb: VecDeque<f64>, // Last 60 seconds of download sizes in MB
+    loading_resources: Arc<AtomicU64>,
+    loaded_resources: Arc<AtomicU64>,
+    optimized_scene_count: Arc<AtomicU64>,
+    runtime_scene_count: Arc<AtomicU64>,
+    optimized_wearable_count: Arc<AtomicU64>,
+    runtime_wearable_count: Arc<AtomicU64>,
+    #[cfg(feature = "use_resource_tracking")]
+    tracking_tick: f64,
+    optimized_data: Arc<OptimizedData>,
+    // Set of optimized hashes that we know that exists...
+    optimized_assets: HashSet<String>,
+    optimized_original_size: HashMap<String, ImageSize>,
+    // URL base for optimized wearable/emote assets (e.g., "http://127.0.0.1:9090/")
+    optimized_wearable_base_url: Option<String>,
+}
+
+#[derive(Clone)]
+pub struct ContentProviderContext {
+    pub content_folder: Arc<String>,
+    pub resource_provider: Arc<ResourceProvider>,
+    pub http_queue_requester: Arc<HttpQueueRequester>,
+    pub godot_single_thread: Arc<Semaphore>,
+    pub texture_quality: TextureQuality, // copy from DclGlobal on startup
+}
+
+unsafe impl Send for ContentProviderContext {}
+
+/// Context for scene GLTF loading (simpler than ContentProviderContext)
+#[derive(Clone)]
+pub struct SceneGltfContext {
+    pub content_folder: Arc<String>,
+    pub resource_provider: Arc<ResourceProvider>,
+    pub godot_single_thread: Arc<Semaphore>,
+    pub texture_quality: TextureQuality,
+    /// Force ETC2 compression even on non-mobile platforms (for asset server)
+    pub force_compress: bool,
+    /// Run the post-generate optimization pipeline (split → LODs → shadows →
+    /// materials). Set true ONLY when running as the asset processor — the
+    /// pipeline is expensive and is meant to be baked once into the saved
+    /// .scn, not re-run on every phone load.
+    pub apply_optimizations: bool,
+    /// Reference every glTF image that has a content hash as an external
+    /// `user://content/{hash}.opt.res` (the standalone baked texture) instead of
+    /// embedding a copy in the .scn. Asset-server scene bakes only: the client
+    /// downloads each `externalSceneDependencies` file before loading the .scn
+    /// (`fetch_optimized_asset_with_dependencies`), so the paths resolve.
+    pub external_texture_refs: bool,
+}
+
+unsafe impl Send for SceneGltfContext {}
+
+/// Default optimized-assets bucket. The CLI `--optimized-content-base-url`
+/// override (see `optimized_url_override`) takes precedence when set.
+const ASSET_OPTIMIZED_BASE_URL: &str = "https://optimized-assets.dclregenesislabs.xyz/v6";
+
+/// Which baked artifact an optimized hash resolves to. v6 bakes publish the
+/// Godot resources as plain files (`{hash}.scn` / `{hash}.res`) instead of one
+/// zip per asset: the client downloads them straight into `user://content/`
+/// and loads them by path, with no `ProjectSettings.load_resource_pack` mount
+/// (each mount re-parsed the global class list + UID cache on the main thread —
+/// ~2 ms × ~900 mounts per Genesis Plaza load).
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum OptimizedKind {
+    Scene,
+    Texture,
+}
+
+impl OptimizedKind {
+    fn ext(self) -> &'static str {
+        match self {
+            OptimizedKind::Scene => "scn",
+            OptimizedKind::Texture => "res",
+        }
+    }
+}
+
+/// Published file name of a baked asset in the bucket.
+pub fn optimized_remote_name(hash: &str, kind: OptimizedKind) -> String {
+    format!("{}.{}", hash, kind.ext())
+}
+
+/// On-device cache file name. `.opt.` keeps it apart from the runtime-processed
+/// `{hash}.scn` (same GLB, different structure) while `cache_file_base_name`
+/// still folds it back to `{hash}` for the per-scene size accounting.
+pub fn optimized_cache_name(hash: &str, kind: OptimizedKind) -> String {
+    format!("{}.opt.{}", hash, kind.ext())
+}
+
+/// Godot path the client (and the baked `.scn` ExtResources) load the asset from.
+pub fn optimized_godot_path(hash: &str, kind: OptimizedKind) -> String {
+    format!("user://content/{}", optimized_cache_name(hash, kind))
+}
+
+/// Identity of a baked scene GLB — the `hash` the `Scene` naming functions
+/// take. A GLB references its textures by file name, so the same GLB hash
+/// resolves to a different texture set in another deployment (a redeploy that
+/// swaps one image, another scene mapping the model to its own textures), and
+/// its `.scn` embeds that set as ExtResources. Keying the file by the GLB hash
+/// alone let the last bake overwrite the others in the shared bucket, leaving
+/// every other scene's manifest pointing at textures the `.scn` does not
+/// reference (28 GLBs lost in Genesis Plaza alone). So: the GLB hash when it
+/// has no external textures, else `{glb}-{16 hex of sha256(sorted textures)}`.
+/// Server and client derive it from the manifest's `externalSceneDependencies`.
+pub fn scene_bake_key<'a>(glb_hash: &str, deps: impl IntoIterator<Item = &'a str>) -> String {
+    let mut deps: Vec<&str> = deps.into_iter().collect();
+    if deps.is_empty() {
+        return glb_hash.to_string();
+    }
+    deps.sort_unstable();
+    deps.dedup();
+    use sha2::{Digest, Sha256};
+    let mut hasher = Sha256::new();
+    for dep in deps {
+        hasher.update(dep.as_bytes());
+        hasher.update(b"\n");
+    }
+    format!("{}-{}", glb_hash, hex::encode(&hasher.finalize()[..8]))
+}
+
+/// CLI override for the optimized-content base URL (`--optimized-content-base-url`),
+/// the single source of truth for `resolved_optimized_base_url()`.
+///
+/// Written from the main thread only — by the CLI parse at boot and by the
+/// `#[var(set)]` setter on `DclCli` (deeplink path) — and read from anywhere,
+/// most callers being tokio workers. Mirror of `cli.optimized_content_base_url`.
+static OPTIMIZED_URL_OVERRIDE: std::sync::RwLock<String> = std::sync::RwLock::new(String::new());
+
+pub fn set_optimized_url_override(value: &str) {
+    if let Ok(mut w) = OPTIMIZED_URL_OVERRIDE.write() {
+        *w = value.to_string();
+    }
+}
+
+/// Read the `--optimized-content-base-url` override from the mirrored static.
+/// Both writers (CLI parse at boot and the `DclCli` setter used by the
+/// deeplink path) update the mirror, so the singleton lookup that used to come
+/// first is redundant — and from a tokio worker it tripped Godot's thread guard
+/// (`/root: The caller thread can't call get_node_or_null()`), one error print
+/// per asset URL: 511 of them on a cold Genesis Plaza load. Empty when unset.
+fn optimized_url_override() -> String {
+    OPTIMIZED_URL_OVERRIDE
+        .read()
+        .ok()
+        .map(|r| r.clone())
+        .unwrap_or_default()
+}
+
+/// Optimized-assets base URL with no trailing slash: the CLI override when set
+/// (so local-dev / benchmark builds can point at a LAN preview server),
+/// otherwise the prod bucket.
+fn resolved_optimized_base_url() -> String {
+    let override_url = optimized_url_override();
+    if !override_url.is_empty() {
+        return override_url.trim_end_matches('/').to_string();
+    }
+    ASSET_OPTIMIZED_BASE_URL.to_string()
+}
+
+/// Load a baked texture variant from a mounted resource pack and build a
+/// TextureEntry variant. Returns None if the resource is missing or invalid.
+/// Synchronous on purpose: the non-Send Godot objects must not live across an
+/// await in the calling async block.
+fn load_baked_texture_entry(godot_path: &str, original_size: Option<ImageSize>) -> Option<Variant> {
+    // A bad file traps inside Godot's loader (GODOT-EXPLORER-302), so the path has
+    // to be on the Sentry scope before the call, not after it.
+    crash_context::set_loading_resource(godot_path);
+    let loaded = ResourceLoader::singleton().load(&GString::from(godot_path));
+    crash_context::clear_loading_resource();
+    let resource = loaded?;
+
+    // v5 bakes store a `PortableCompressedTexture2D` (ETC2 buffer, shared with
+    // the .scn ExtResources of every GLB that uses the texture). Older bakes
+    // stored a compressed `Image`; wrap those in an `ImageTexture`. Never read
+    // the image back from a `Texture2D` here — on device that is a GPU readback
+    // and nothing consumes `TextureEntry.image` for baked textures.
+    let (image, texture): (Gd<godot::classes::Image>, Gd<godot::classes::Texture2D>) =
+        if let Ok(img) = resource.clone().try_cast::<godot::classes::Image>() {
+            let tex = godot::classes::ImageTexture::create_from_image(&img)?;
+            (img, tex.upcast())
+        } else {
+            let tex = resource.try_cast::<godot::classes::Texture2D>().ok()?;
+            let img = godot::classes::Image::create_empty(
+                1,
+                1,
+                false,
+                godot::classes::image::Format::RGBA8,
+            )?;
+            (img, tex)
+        };
+    let original_size = if let Some(original_size) = original_size {
+        Vector2i::new(original_size.width, original_size.height)
+    } else {
+        texture.get_size().cast_int()
+    };
+    let texture_entry = Gd::from_init_fn(|_base| TextureEntry {
+        original_size,
+        image,
+        texture,
+        failed: false,
+    });
+    Some(texture_entry.to_variant())
+}
+
+#[godot_api]
+impl INode for ContentProvider {
+    fn init(base: Base<Node>) -> Self {
+        let content_folder = Arc::new(format!("{}/content/", Os::singleton().get_user_data_dir()));
+
+        #[cfg(feature = "use_resource_tracking")]
+        let resource_download_tracking = Arc::new(ResourceDownloadTracking::new());
+
+        Self {
+            base,
+            resource_provider: Arc::new(ResourceProvider::new(
+                content_folder.clone().as_str(),
+                2048 * 1000 * 1000,
+                32,
+                #[cfg(feature = "use_resource_tracking")]
+                resource_download_tracking.clone(),
+            )),
+            #[cfg(feature = "use_resource_tracking")]
+            resource_download_tracking,
+            http_queue_requester: Arc::new(HttpQueueRequester::new(
+                12,
+                DclGlobal::get_network_inspector_sender(),
+            )),
+            content_folder,
+            promises: HashMap::new(),
+            godot_single_thread: Arc::new(Semaphore::new(1)),
+            texture_quality: DclConfig::static_get_texture_quality(),
+            every_second_tick: 0.0,
+            loading_resources: Arc::new(AtomicU64::new(0)),
+            loaded_resources: Arc::new(AtomicU64::new(0)),
+            optimized_scene_count: Arc::new(AtomicU64::new(0)),
+            runtime_scene_count: Arc::new(AtomicU64::new(0)),
+            optimized_wearable_count: Arc::new(AtomicU64::new(0)),
+            runtime_wearable_count: Arc::new(AtomicU64::new(0)),
+            download_speed_mbs: 0.0,
+            network_speed_peak_mbs: 0.0,
+            network_download_history_mb: VecDeque::with_capacity(60),
+            #[cfg(feature = "use_resource_tracking")]
+            tracking_tick: 0.0,
+            optimized_data: Arc::new(OptimizedData {
+                assets: RwLock::new(HashSet::default()),
+                dependencies: RwLock::new(HashMap::default()),
+                scene_keys: std::sync::RwLock::new(HashMap::default()),
+                bundle_files: RwLock::new(HashMap::default()),
+                bundle_tasks: RwLock::new(HashMap::default()),
+            }),
+            optimized_assets: HashSet::default(),
+            optimized_original_size: HashMap::default(),
+            // Default to the same URL used for scene optimized assets (CLI
+            // override first, then the prod bucket).
+            optimized_wearable_base_url: Some(format!("{}/", resolved_optimized_base_url())),
+        }
+    }
+    fn ready(&mut self) {}
+    fn exit_tree(&mut self) {
+        self.promises.clear();
+        tracing::debug!("ContentProvider::exit_tree");
+    }
+
+    fn process(&mut self, dt: f64) {
+        // Print the log lines Rust worker threads queued (Android: printing
+        // off the main thread crashes sentry-godot, see godot_logger).
+        crate::tools::godot_logger::flush_background_logs();
+
+        // Mount any resource packs queued by worker threads. Done here,
+        // on the main thread, because load_resource_pack mutates Godot's
+        // virtual filesystem and deadlocks against the render thread when
+        // called from tokio workers. See MAIN_THREAD_PACK_QUEUE.
+        //
+        // Serialize against concurrent worker Godot calls: load_resource_pack
+        // mutates ProjectSettings (the global vfs lookup table), so a
+        // worker that's holding `godot_single_thread` and executing another
+        // Godot API can race against the mount. `try_acquire_owned()` skips
+        // this tick when a worker is mid-godot-call — `process()` runs
+        // every frame so we'll get another shot next tick once the worker
+        // releases. We can't `await` here (main thread is sync), and a
+        // blocking acquire would deadlock the engine while workers wait
+        // for it.
+        if let Ok(_permit) = self.godot_single_thread.clone().try_acquire_owned() {
+            let queued: Vec<(String, oneshot::Sender<bool>)> = match MAIN_THREAD_PACK_QUEUE.lock() {
+                Ok(mut q) => std::mem::take(&mut *q),
+                Err(_) => Vec::new(),
+            };
+            for (zip_path, reply) in queued {
+                let ok = godot::classes::ProjectSettings::singleton()
+                    .load_resource_pack_ex(&zip_path)
+                    .replace_files(false)
+                    .done();
+                let _ = reply.send(ok);
+            }
+        }
+
+        // Update resource download tracking
+        #[cfg(feature = "use_resource_tracking")]
+        {
+            self.tracking_tick += dt;
+            if self.tracking_tick >= 0.1 {
+                let mut speed = 0.0;
+                self.tracking_tick = 0.0;
+                let states = self.resource_download_tracking.consume_downloads_state();
+                for (file_hash, state_info) in states {
+                    if state_info.done {
+                        report_resource_download_done(&file_hash, state_info.current_size);
+                    } else {
+                        report_resource_downloading(
+                            &file_hash,
+                            state_info.current_size,
+                            state_info.speed,
+                        );
+                    }
+                    speed += state_info.speed;
+                }
+                report_download_speed(speed);
+
+                // Check for timed out resources (no progress for 20 seconds)
+                check_and_report_timeouts();
+            }
+        }
+
+        self.every_second_tick += dt;
+        if self.every_second_tick >= 1.0 {
+            self.every_second_tick = 0.0;
+
+            let downloaded_size = self.resource_provider.consume_download_size();
+            let downloaded_size_mb = (downloaded_size as f64) / 1024.0 / 1024.0;
+            self.download_speed_mbs = downloaded_size_mb;
+
+            // Update peak speed
+            if self.download_speed_mbs > self.network_speed_peak_mbs {
+                self.network_speed_peak_mbs = self.download_speed_mbs;
+            }
+
+            // Track last 60 seconds of downloads
+            self.network_download_history_mb
+                .push_back(downloaded_size_mb);
+            if self.network_download_history_mb.len() > 60 {
+                self.network_download_history_mb.pop_front();
+            }
+
+            // Clean up dead promises - if nobody holds the promise, the InstanceId becomes invalid
+            self.promises.retain(|_hash_id, instance_id| {
+                if Gd::<Promise>::try_from_instance_id(*instance_id).is_err() {
+                    #[cfg(feature = "use_resource_tracking")]
+                    report_resource_deleted(_hash_id);
+                    return false;
+                }
+                true
+            });
+        }
+    }
+}
+
+#[godot_api]
+impl ContentProvider {
+    // =========================================================================
+    // Scene GLTF Loading Functions (Promise-based)
+    // =========================================================================
+
+    /// Request to load a scene GLTF (for non-optimized assets)
+    ///
+    /// Returns a Promise that resolves with the scene_path (GString) when loaded,
+    /// or rejects with an error message.
+    ///
+    /// Note: Colliders are created with mask=0. Caller should set masks after instantiating.
+    #[func]
+    pub fn load_scene_gltf(
+        &mut self,
+        file_path: GString,
+        content_mapping: Gd<DclContentMappingAndUrl>,
+    ) -> Option<Gd<Promise>> {
+        let file_path_str = file_path.to_string().to_lowercase();
+        let content_mapping_ref = content_mapping.bind().get_content_mapping();
+
+        // Resolve file path to hash
+        let file_hash = match content_mapping_ref.get_hash(&file_path_str) {
+            Some(hash) => hash.clone(),
+            None => {
+                return None;
+            }
+        };
+
+        // Use prefixed cache key to avoid conflicts with wearable/emote loaders
+        let cache_key = format!("scene_{}", file_hash);
+
+        // Return existing promise if already loading/loaded
+        if let Some(existing) = self.get_cached_promise(&cache_key) {
+            // If the promise is still loading (not resolved), return it
+            if !existing.bind().is_resolved() {
+                return Some(existing);
+            }
+            // If resolved, check if the file still exists on disk
+            // (cache eviction may have removed it)
+            let scene_path = get_scene_path_for_hash(&self.content_folder, &file_hash);
+            if std::path::Path::new(&scene_path).exists() {
+                return Some(existing);
+            }
+            // File was evicted from cache - remove stale promise and re-download
+            // NOTE: Any caller still holding the old promise may try to load a non-existent file.
+            // This is handled gracefully in GDScript by checking file existence before loading.
+            tracing::debug!("Scene GLTF cache EVICTED: {} - re-downloading", file_hash);
+            self.promises.remove(&cache_key);
+        }
+
+        // Create new promise and cache it
+        let (promise, get_promise) = Promise::make_to_async();
+        self.cache_promise(cache_key, &promise);
+
+        // Create context for async operation
+        let ctx = SceneGltfContext {
+            content_folder: self.content_folder.clone(),
+            resource_provider: self.resource_provider.clone(),
+            godot_single_thread: self.godot_single_thread.clone(),
+            texture_quality: self.texture_quality.clone(),
+            force_compress: false,
+            apply_optimizations: false,
+            external_texture_refs: false,
+        };
+
+        let file_hash_clone = file_hash.clone();
+        let runtime_scene_counter = self.runtime_scene_count.clone();
+
+        // Spawn async task - cache check and loading all happens here
+        Core::spawn(async move {
+            // Check if scene is already cached on disk
+            let scene_path = get_scene_path_for_hash(&ctx.content_folder, &file_hash_clone);
+
+            let result = if ctx.resource_provider.file_exists_by_path(&scene_path).await {
+                // Cache HIT - just touch and return the path
+                tracing::debug!(
+                    "Scene GLTF cache HIT: {} -> {}",
+                    file_hash_clone,
+                    scene_path
+                );
+                // Track cached resource so it appears in resource report
+                #[cfg(feature = "use_resource_tracking")]
+                {
+                    report_resource_start(&file_hash_clone, "gltf_cached");
+                    report_resource_loaded(&file_hash_clone);
+                }
+                ctx.resource_provider.touch_file_async(&scene_path).await;
+                Ok(Some(GString::from(&scene_path).to_variant()))
+            } else {
+                // Cache MISS - load, process, and save
+                tracing::debug!("Scene GLTF cache MISS: {} - loading", file_hash_clone);
+                match load_and_save_scene_gltf(
+                    file_path_str,
+                    file_hash_clone.clone(),
+                    content_mapping_ref,
+                    ctx,
+                )
+                .await
+                {
+                    Ok(path) => Ok(Some(GString::from(&path).to_variant())),
+                    Err(e) => Err(e),
+                }
+            };
+
+            if result.is_ok() {
+                runtime_scene_counter.fetch_add(1, Ordering::Relaxed);
+            }
+            then_promise(get_promise, result);
+        });
+
+        Some(promise)
+    }
+
+    /// Check if a scene is cached on disk
+    #[func]
+    pub fn is_scene_cached(&self, file_hash: GString) -> bool {
+        let scene_path = get_scene_path_for_hash(&self.content_folder, &file_hash.to_string());
+        std::path::Path::new(&scene_path).exists()
+    }
+
+    /// Get the path where a scene would be cached
+    #[func]
+    pub fn get_scene_cache_path(&self, file_hash: GString) -> GString {
+        let path = get_scene_path_for_hash(&self.content_folder, &file_hash.to_string());
+        GString::from(path.as_str())
+    }
+
+    /// `user://content/<name>` for a downloaded file: the name a hash gets on disk.
+    ///
+    /// Preview hashes (`b64-<base64 of the scene's absolute path>`) can be longer than the
+    /// 255-byte filename limit, so they are folded — GDScript must go through here instead of
+    /// concatenating the raw hash, or it will look for a file the cache never wrote.
+    #[func]
+    pub fn get_cache_file_path(&self, file_hash: GString) -> GString {
+        let name = cache_file_name(&file_hash.to_string()).into_owned();
+        GString::from(format!("user://content/{}", name).as_str())
+    }
+
+    // =========================================================================
+    // Wearable GLTF Loading Functions (Promise-based)
+    // =========================================================================
+
+    /// Request to load a wearable GLTF.
+    ///
+    /// If an optimized wearable base URL is configured, this will first check for
+    /// a pre-optimized ZIP bundle at `{base_url}/{hash}-mobile.zip`. If found,
+    /// it loads the resource pack and returns `res://glbs/{hash}.scn`.
+    ///
+    /// Otherwise, falls back to runtime GLTF processing (downloading the GLTF,
+    /// processing it, and saving to `user://content/wearables/{hash}.tscn`).
+    ///
+    /// Returns a Promise that resolves with the scene_path (GString) when loaded,
+    /// or rejects with an error message.
+    #[func]
+    pub fn load_wearable_gltf(
+        &mut self,
+        file_path: GString,
+        content_mapping: Gd<DclContentMappingAndUrl>,
+    ) -> Option<Gd<Promise>> {
+        let file_path_str = file_path.to_string().to_lowercase();
+        let content_mapping_ref = content_mapping.bind().get_content_mapping();
+
+        // Resolve file path to hash
+        let file_hash = match content_mapping_ref.get_hash(&file_path_str) {
+            Some(hash) => hash.clone(),
+            None => {
+                return None;
+            }
+        };
+
+        // Use prefixed cache key to avoid conflicts with scene/emote loaders
+        let cache_key = format!("wearable_{}", file_hash);
+
+        // Return existing promise if already loading/loaded
+        if let Some(existing) = self.get_cached_promise(&cache_key) {
+            // If the promise is still loading (not resolved), return it
+            if !existing.bind().is_resolved() {
+                return Some(existing);
+            }
+            // If resolved, check what kind of result we have
+            let existing_data = existing.bind().get_data();
+            if let Ok(scene_path_str) = existing_data.try_to::<GString>() {
+                let scene_path = scene_path_str.to_string();
+                // For optimized assets (res://), we can't check disk existence easily,
+                // but they're loaded via resource pack so should be available
+                if scene_path.starts_with("res://") {
+                    return Some(existing);
+                }
+                // For runtime-processed assets, check if file still exists
+                if std::path::Path::new(&scene_path).exists() {
+                    return Some(existing);
+                }
+            }
+            // File was evicted from cache or data invalid - remove stale promise and re-download
+            tracing::debug!(
+                "Wearable GLTF cache EVICTED: {} - re-downloading",
+                file_hash
+            );
+            self.promises.remove(&cache_key);
+        }
+
+        // Create new promise and cache it
+        let (promise, get_promise) = Promise::make_to_async();
+        self.cache_promise(cache_key, &promise);
+
+        // Create context for async operation
+        let ctx = SceneGltfContext {
+            content_folder: self.content_folder.clone(),
+            resource_provider: self.resource_provider.clone(),
+            godot_single_thread: self.godot_single_thread.clone(),
+            texture_quality: self.texture_quality.clone(),
+            force_compress: false,
+            apply_optimizations: false,
+            external_texture_refs: false,
+        };
+
+        let file_hash_clone = file_hash.clone();
+        let optimized_base_url = self.optimized_wearable_base_url.clone();
+        let opt_wearable_counter = self.optimized_wearable_count.clone();
+        let rt_wearable_counter = self.runtime_wearable_count.clone();
+
+        // Spawn async task - cache check and loading all happens here
+        Core::spawn(async move {
+            let result = Self::async_load_wearable_or_emote(
+                file_hash_clone,
+                file_path_str,
+                content_mapping_ref,
+                ctx,
+                optimized_base_url,
+                false, // is_emote = false
+                opt_wearable_counter,
+                rt_wearable_counter,
+            )
+            .await;
+
+            then_promise(get_promise, result);
+        });
+
+        Some(promise)
+    }
+
+    /// Check if a wearable is cached (either in promise cache as optimized asset, or on disk)
+    #[func]
+    pub fn is_wearable_cached(&self, file_hash: GString) -> bool {
+        let hash_str = file_hash.to_string();
+        let cache_key = format!("wearable_{}", hash_str);
+
+        // Check if we have a cached promise with a valid path (handles optimized res:// assets)
+        if let Some(promise) = self.get_cached_promise(&cache_key) {
+            if promise.bind().is_resolved() && !promise.bind().is_rejected() {
+                let data = promise.bind().get_data();
+                if let Ok(scene_path) = data.try_to::<GString>() {
+                    if !scene_path.is_empty() {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        // Fall back to checking disk path
+        let scene_path = get_wearable_path_for_hash(&self.content_folder, &hash_str);
+        std::path::Path::new(&scene_path).exists()
+    }
+
+    /// Get the path where a wearable is cached.
+    /// If an optimized version was loaded (res://), returns that path.
+    /// Otherwise returns the runtime-processed path (user://).
+    #[func]
+    pub fn get_wearable_cache_path(&self, file_hash: GString) -> GString {
+        let hash_str = file_hash.to_string();
+        let cache_key = format!("wearable_{}", hash_str);
+
+        // Check if we have a cached promise with the actual path
+        if let Some(promise) = self.get_cached_promise(&cache_key) {
+            if promise.bind().is_resolved() && !promise.bind().is_rejected() {
+                let data = promise.bind().get_data();
+                if let Ok(scene_path) = data.try_to::<GString>() {
+                    if !scene_path.is_empty() {
+                        return scene_path;
+                    }
+                }
+            }
+        }
+
+        // Fall back to runtime-processed path
+        let path = get_wearable_path_for_hash(&self.content_folder, &hash_str);
+        GString::from(path.as_str())
+    }
+
+    // =========================================================================
+    // Emote GLTF Loading Functions (Promise-based)
+    // =========================================================================
+
+    /// Request to load an emote GLTF.
+    ///
+    /// If an optimized wearable base URL is configured, this will first check for
+    /// a pre-optimized ZIP bundle at `{base_url}/{hash}-mobile.zip`. If found,
+    /// it loads the resource pack and returns `res://glbs/{hash}.scn`.
+    ///
+    /// Otherwise, falls back to runtime GLTF processing (downloading the GLTF,
+    /// processing it, and saving to `user://content/emotes/{hash}.tscn`).
+    ///
+    /// Returns a Promise that resolves with the scene_path (GString) when loaded,
+    /// or rejects with an error message.
+    #[func]
+    pub fn load_emote_gltf(
+        &mut self,
+        file_path: GString,
+        content_mapping: Gd<DclContentMappingAndUrl>,
+    ) -> Option<Gd<Promise>> {
+        let file_path_str = file_path.to_string().to_lowercase();
+        let content_mapping_ref = content_mapping.bind().get_content_mapping();
+
+        // Resolve file path to hash
+        let file_hash = match content_mapping_ref.get_hash(&file_path_str) {
+            Some(hash) => hash.clone(),
+            None => {
+                return None;
+            }
+        };
+
+        // Use prefixed cache key to avoid conflicts with scene/wearable loaders
+        let cache_key = format!("emote_{}", file_hash);
+
+        // Return existing promise if already loading/loaded
+        if let Some(existing) = self.get_cached_promise(&cache_key) {
+            // If the promise is still loading (not resolved), return it
+            if !existing.bind().is_resolved() {
+                return Some(existing);
+            }
+            // If resolved, check what kind of result we have
+            let existing_data = existing.bind().get_data();
+            if let Ok(scene_path_str) = existing_data.try_to::<GString>() {
+                let scene_path = scene_path_str.to_string();
+                // For optimized assets (res://), we can't check disk existence easily,
+                // but they're loaded via resource pack so should be available
+                if scene_path.starts_with("res://") {
+                    return Some(existing);
+                }
+                // For runtime-processed assets, check if file still exists
+                if std::path::Path::new(&scene_path).exists() {
+                    return Some(existing);
+                }
+            }
+            // File was evicted from cache or data invalid - remove stale promise and re-download
+            tracing::debug!("Emote GLTF cache EVICTED: {} - re-downloading", file_hash);
+            self.promises.remove(&cache_key);
+        }
+
+        // Create new promise and cache it
+        let (promise, get_promise) = Promise::make_to_async();
+        self.cache_promise(cache_key, &promise);
+
+        // Create context for async operation
+        let ctx = SceneGltfContext {
+            content_folder: self.content_folder.clone(),
+            resource_provider: self.resource_provider.clone(),
+            godot_single_thread: self.godot_single_thread.clone(),
+            texture_quality: self.texture_quality.clone(),
+            force_compress: false,
+            apply_optimizations: false,
+            external_texture_refs: false,
+        };
+
+        let file_hash_clone = file_hash.clone();
+        let optimized_base_url = self.optimized_wearable_base_url.clone();
+        let opt_wearable_counter = self.optimized_wearable_count.clone();
+        let rt_wearable_counter = self.runtime_wearable_count.clone();
+
+        // Spawn async task - cache check and loading all happens here
+        Core::spawn(async move {
+            let result = Self::async_load_wearable_or_emote(
+                file_hash_clone,
+                file_path_str,
+                content_mapping_ref,
+                ctx,
+                optimized_base_url,
+                true, // is_emote = true
+                opt_wearable_counter,
+                rt_wearable_counter,
+            )
+            .await;
+
+            then_promise(get_promise, result);
+        });
+
+        Some(promise)
+    }
+
+    /// Load emote GLTF without using optimized assets (runtime processing only).
+    /// Use this for scene emotes when --only-no-optimized-scene-emotes is set.
+    #[func]
+    pub fn load_emote_gltf_runtime_only(
+        &mut self,
+        file_path: GString,
+        content_mapping: Gd<DclContentMappingAndUrl>,
+    ) -> Option<Gd<Promise>> {
+        let file_path_str = file_path.to_string().to_lowercase();
+        let content_mapping_ref = content_mapping.bind().get_content_mapping();
+
+        // Resolve file path to hash
+        let file_hash = match content_mapping_ref.get_hash(&file_path_str) {
+            Some(hash) => hash.clone(),
+            None => {
+                return None;
+            }
+        };
+
+        // Use prefixed cache key - add "_rt" suffix for runtime-only to avoid conflicts
+        let cache_key = format!("emote_{}_rt", file_hash);
+
+        // Return existing promise if already loading/loaded
+        if let Some(existing) = self.get_cached_promise(&cache_key) {
+            if !existing.bind().is_resolved() {
+                return Some(existing);
+            }
+            let existing_data = existing.bind().get_data();
+            if let Ok(scene_path_str) = existing_data.try_to::<GString>() {
+                let scene_path = scene_path_str.to_string();
+                // Runtime-only assets should never be res://
+                if !scene_path.starts_with("res://") && std::path::Path::new(&scene_path).exists() {
+                    return Some(existing);
+                }
+            }
+            self.promises.remove(&cache_key);
+        }
+
+        let (promise, get_promise) = Promise::make_to_async();
+        self.cache_promise(cache_key, &promise);
+
+        let ctx = SceneGltfContext {
+            content_folder: self.content_folder.clone(),
+            resource_provider: self.resource_provider.clone(),
+            godot_single_thread: self.godot_single_thread.clone(),
+            texture_quality: self.texture_quality.clone(),
+            force_compress: false,
+            apply_optimizations: false,
+            external_texture_refs: false,
+        };
+
+        let file_hash_clone = file_hash.clone();
+        let rt_wearable_counter = self.runtime_wearable_count.clone();
+
+        // Spawn async task - NO optimized URL = runtime processing only
+        Core::spawn(async move {
+            let result = Self::async_load_wearable_or_emote(
+                file_hash_clone,
+                file_path_str,
+                content_mapping_ref,
+                ctx,
+                None, // No optimized URL - forces runtime processing
+                true, // is_emote = true
+                std::sync::Arc::new(std::sync::atomic::AtomicU64::new(0)), // Dummy counter
+                rt_wearable_counter,
+            )
+            .await;
+
+            then_promise(get_promise, result);
+        });
+
+        Some(promise)
+    }
+
+    /// Check if an emote is cached (either in promise cache as optimized asset, or on disk)
+    #[func]
+    pub fn is_emote_cached(&self, file_hash: GString) -> bool {
+        let hash_str = file_hash.to_string();
+        let cache_key = format!("emote_{}", hash_str);
+
+        // Check if we have a cached promise with a valid path (handles optimized res:// assets)
+        if let Some(promise) = self.get_cached_promise(&cache_key) {
+            if promise.bind().is_resolved() && !promise.bind().is_rejected() {
+                let data = promise.bind().get_data();
+                if let Ok(scene_path) = data.try_to::<GString>() {
+                    if !scene_path.is_empty() {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        // Fall back to checking disk path
+        let scene_path = get_emote_path_for_hash(&self.content_folder, &hash_str);
+        std::path::Path::new(&scene_path).exists()
+    }
+
+    /// Get the path where an emote is cached.
+    /// If an optimized version was loaded (res://), returns that path.
+    /// Otherwise returns the runtime-processed path (user://).
+    #[func]
+    pub fn get_emote_cache_path(&self, file_hash: GString) -> GString {
+        let hash_str = file_hash.to_string();
+        let cache_key = format!("emote_{}", hash_str);
+
+        // Check if we have a cached promise with the actual path
+        if let Some(promise) = self.get_cached_promise(&cache_key) {
+            if promise.bind().is_resolved() && !promise.bind().is_rejected() {
+                let data = promise.bind().get_data();
+                if let Ok(scene_path) = data.try_to::<GString>() {
+                    if !scene_path.is_empty() {
+                        return scene_path;
+                    }
+                }
+            }
+        }
+
+        // Fall back to runtime-processed path
+        let path = get_emote_path_for_hash(&self.content_folder, &hash_str);
+        GString::from(path.as_str())
+    }
+
+    // =========================================================================
+    // Cache Loaders (load from disk cache)
+    // =========================================================================
+
+    /// Load a cached wearable scene from disk
+    ///
+    /// This instantiates the PackedScene that was previously saved by load_wearable_gltf.
+    /// Returns the Node3D ready to be added to the scene tree.
+    #[func]
+    pub fn load_cached_wearable(&self, scene_path: GString) -> Option<Gd<Node3D>> {
+        let packed_scene = godot::tools::load::<godot::classes::PackedScene>(&scene_path);
+        let instance = packed_scene.instantiate()?;
+        instance.try_cast::<Node3D>().ok()
+    }
+
+    /// Extract emote data from an already-loaded PackedScene.
+    ///
+    /// This takes a pre-loaded PackedScene (loaded via ResourceLoader.load_threaded_request)
+    /// and extracts the animations and armature prop from it.
+    /// Use this for non-blocking emote loading.
+    #[func]
+    pub fn extract_emote_from_scene(
+        &self,
+        packed_scene: Gd<godot::classes::PackedScene>,
+        file_hash: GString,
+    ) -> Option<Gd<DclEmoteGltf>> {
+        use godot::classes::AnimationPlayer;
+
+        tracing::debug!("[extract_emote] Starting for hash={}", file_hash);
+
+        let Some(instance) = packed_scene.instantiate() else {
+            tracing::debug!("[extract_emote] FAILED: packed_scene.instantiate() returned None");
+            return None;
+        };
+
+        let Ok(root) = instance.try_cast::<Node3D>() else {
+            tracing::debug!("[extract_emote] FAILED: instance is not Node3D");
+            return None;
+        };
+
+        // Log children for debugging
+        let children: Vec<String> = root
+            .get_children()
+            .iter_shared()
+            .map(|c| format!("{}({})", c.get_name(), c.get_class()))
+            .collect();
+        tracing::debug!("[extract_emote] Root children: {:?}", children);
+
+        // Pre-baked optimized assets come in two generations. Processed bakes went
+        // through `process_emote_animations` at bake time: an "EmoteAnimations"
+        // player, hash-suffix animation names, a prop renamed "Armature_Prop_{hash}"
+        // that was 180°-flipped, and a baked `Armature_Prop_{hash}:visible` track.
+        // Raw bakes are a plain GLTF->scn conversion: a raw "AnimationPlayer" with
+        // Blender animation names, a prop named exactly "Armature_Prop", no flip and
+        // NO `visible` track — the controller hides props at load and visibility is
+        // purely animation-driven, so a raw prop can be extracted correctly and still
+        // never show. Detect the raw shape and run the exact same processing the
+        // runtime pipeline applies to a freshly imported emote GLTF.
+        if root
+            .try_get_node_as::<AnimationPlayer>("EmoteAnimations")
+            .is_none()
+            && root
+                .try_get_node_as::<AnimationPlayer>("AnimationPlayer")
+                .is_some()
+        {
+            tracing::debug!(
+                "[extract_emote] hash={}: raw (unprocessed) bake detected, running emote processing",
+                file_hash
+            );
+            return Self::extract_raw_emote_from_root(root, &file_hash);
+        }
+
+        // Processed bake: read armature_prop by NAME, the way the runtime pipeline
+        // named it (`gltf::emote::process_emote_animations`). Position alone is not
+        // enough: `avatar_emote_controller` only accepts names starting with
+        // "Armature_Prop" (so it can't destroy the avatar skeleton), and silently
+        // drops anything else.
+        let mut armature_prop: Option<Gd<Node3D>> = None;
+        let mut first_node3d: Option<Gd<Node3D>> = None;
+        for child in root.get_children().iter_shared() {
+            if child.is_class("AnimationPlayer") {
+                continue;
+            }
+            let named_prop = child.get_name().to_string().starts_with("Armature_Prop");
+            if let Ok(node3d) = child.try_cast::<Node3D>() {
+                if named_prop {
+                    armature_prop = Some(node3d);
+                    break;
+                }
+                if first_node3d.is_none() {
+                    first_node3d = Some(node3d);
+                }
+            }
+        }
+        if armature_prop.is_none() {
+            if let Some(node) = first_node3d.as_ref() {
+                tracing::warn!(
+                    "[extract_emote] hash={}: no 'Armature_Prop*' child; falling back to '{}'. \
+                     Consumers that match on the name will drop this prop.",
+                    file_hash,
+                    node.get_name()
+                );
+            }
+            armature_prop = first_node3d;
+        }
+
+        // Read animations from embedded AnimationPlayer
+        // Try "EmoteAnimations" first (runtime-processed), then fallback to "AnimationPlayer" (optimized assets)
+        let anim_player = root
+            .try_get_node_as::<AnimationPlayer>("EmoteAnimations")
+            .or_else(|| root.try_get_node_as::<AnimationPlayer>("AnimationPlayer"));
+
+        let Some(anim_player) = anim_player else {
+            tracing::debug!("[extract_emote] FAILED: No AnimationPlayer found (tried 'EmoteAnimations' and 'AnimationPlayer')");
+            return None;
+        };
+
+        let hash_suffix = get_last_16_alphanumeric(&file_hash.to_string());
+        let default_anim_name = StringName::from(&hash_suffix);
+        let prop_anim_name = StringName::from(&format!("{}_prop", hash_suffix));
+
+        // Log available animations for debugging
+        let anim_list: Vec<String> = anim_player
+            .get_animation_list()
+            .as_slice()
+            .iter()
+            .map(|v| v.to_string())
+            .collect();
+        tracing::debug!(
+            "[extract_emote] AnimationPlayer has {} animations: {:?}, looking for '{}' or '{}'",
+            anim_list.len(),
+            anim_list,
+            hash_suffix,
+            format!("{}_prop", hash_suffix)
+        );
+
+        // Try to find animations by hash suffix (runtime-processed assets)
+        let mut default_animation = if anim_player.has_animation(&default_anim_name) {
+            tracing::debug!(
+                "[extract_emote] Found default animation by hash suffix: {}",
+                hash_suffix
+            );
+            anim_player.get_animation(&default_anim_name)
+        } else {
+            None
+        };
+        let mut prop_animation = if anim_player.has_animation(&prop_anim_name) {
+            tracing::debug!(
+                "[extract_emote] Found prop animation by hash suffix: {}_prop",
+                hash_suffix
+            );
+            anim_player.get_animation(&prop_anim_name)
+        } else {
+            None
+        };
+
+        // If hash-based lookup failed, fall back to heuristics for optimized assets
+        // which may have original animation names like "Animation", "Take 001", "_avatar", "_prop"
+        if default_animation.is_none() && !anim_list.is_empty() {
+            tracing::debug!(
+                "[extract_emote] Hash suffix not found, using heuristics for optimized assets"
+            );
+
+            let is_single = anim_list.len() == 1;
+
+            for anim_name in &anim_list {
+                let name_lower = anim_name.to_lowercase();
+
+                if default_animation.is_none() {
+                    // For single animation, use it as default
+                    // Otherwise look for "_avatar" suffix or use first non-prop animation
+                    if is_single || name_lower.ends_with("_avatar") {
+                        default_animation = anim_player.get_animation(&StringName::from(anim_name));
+                        tracing::debug!(
+                            "[extract_emote] Selected default animation: {}",
+                            anim_name
+                        );
+                    }
+                }
+
+                if prop_animation.is_none() && !is_single {
+                    // Look for prop animations
+                    if name_lower.ends_with("_prop")
+                        || name_lower.contains("prop")
+                        || name_lower == "action"
+                    {
+                        prop_animation = anim_player.get_animation(&StringName::from(anim_name));
+                        tracing::debug!("[extract_emote] Selected prop animation: {}", anim_name);
+                    }
+                }
+            }
+
+            // If still no default animation, just use the first one
+            if default_animation.is_none() {
+                if let Some(first_anim) = anim_list.first() {
+                    default_animation = anim_player.get_animation(&StringName::from(first_anim));
+                    tracing::debug!(
+                        "[extract_emote] Fallback: using first animation as default: {}",
+                        first_anim
+                    );
+                }
+            }
+        }
+
+        // Remove armature_prop from root before freeing (so it survives)
+        // Animations are Resources, they survive independently
+        if let Some(ref mut prop) = armature_prop {
+            if let Some(mut parent) = prop.get_parent() {
+                parent.remove_child(&prop.clone().upcast::<Node>());
+            }
+        }
+
+        // Free the loaded scene root
+        root.free();
+
+        Some(build_dcl_emote_gltf(
+            armature_prop,
+            default_animation,
+            prop_animation,
+        ))
+    }
+
+    /// Extract emote data from a raw (unprocessed) emote scene — an optimized bake
+    /// that skipped `process_emote_animations` at bake time.
+    ///
+    /// Animations on a PackedScene are shared `Resource`s across every
+    /// `instantiate()` of that scene, and `process_emote_animations` mutates them
+    /// in place (renames, track remaps, added visible/audio tracks). Make them
+    /// instance-local first, so extracting the same emote again for another avatar
+    /// can't process the shared animations twice.
+    fn extract_raw_emote_from_root(
+        root: Gd<Node3D>,
+        file_hash: &GString,
+    ) -> Option<Gd<DclEmoteGltf>> {
+        use godot::classes::{Animation, AnimationLibrary, AnimationPlayer};
+
+        let mut anim_player = root.try_get_node_as::<AnimationPlayer>("AnimationPlayer")?;
+
+        let lib_names: Vec<StringName> = anim_player
+            .get_animation_library_list()
+            .iter_shared()
+            .collect();
+        for lib_name in lib_names {
+            let Some(lib) = anim_player.get_animation_library(&lib_name) else {
+                continue;
+            };
+            let mut local_lib = AnimationLibrary::new_gd();
+            for anim_name in lib.get_animation_list().iter_shared() {
+                let Some(anim) = lib.get_animation(&anim_name) else {
+                    continue;
+                };
+                let Some(dup) = anim.duplicate() else {
+                    continue;
+                };
+                let Ok(mut dup) = dup.try_cast::<Animation>() else {
+                    continue;
+                };
+                dup.set_name(&anim.get_name());
+                local_lib.add_animation(&anim_name, &dup);
+            }
+            anim_player.remove_animation_library(&lib_name);
+            anim_player.add_animation_library(&lib_name, &local_lib);
+        }
+
+        let processed = process_emote_animations(&file_hash.to_string(), &root);
+
+        let Some((mut armature_prop, default_animation, prop_animation)) = processed else {
+            tracing::debug!("[extract_emote] FAILED: raw emote processing returned None");
+            root.free();
+            return None;
+        };
+
+        // Detach the prop before freeing the scene so it survives; the animations
+        // are Resources and survive independently.
+        if let Some(ref mut prop) = armature_prop {
+            if let Some(mut parent) = prop.get_parent() {
+                parent.remove_child(&prop.clone().upcast::<Node>());
+            }
+        }
+        root.free();
+
+        Some(build_dcl_emote_gltf(
+            armature_prop,
+            default_animation,
+            prop_animation,
+        ))
+    }
+
+    // DEPRECATED: The promise/cache pattern here is being phased out.
+    // This function still loads pre-baked optimized assets via ResourceLoader,
+    // but the promise-based caching will be removed in favor of direct loading.
+    #[func]
+    pub fn fetch_optimized_asset_with_dependencies(&mut self, file_hash: GString) -> Gd<Promise> {
+        let (promise, get_promise) = Promise::make_to_async();
+        let ctx = self.get_context();
+        let optimized_data = self.optimized_data.clone();
+
+        let file_hash = file_hash.to_string();
+        let loading_resources = self.loading_resources.clone();
+        let loaded_resources = self.loaded_resources.clone();
+        let optimized_scene_counter = self.optimized_scene_count.clone();
+
+        Core::spawn(async move {
+            #[cfg(feature = "use_resource_tracking")]
+            report_resource_start(&file_hash, "optimized_asset");
+
+            loading_resources.fetch_add(1, Ordering::Relaxed);
+
+            let result = ContentProvider::async_fetch_optimized_asset(
+                file_hash.clone(),
+                OptimizedKind::Scene,
+                ctx,
+                optimized_data,
+                true,
+            )
+            .await;
+
+            #[cfg(feature = "use_resource_tracking")]
+            if let Err(error) = &result {
+                report_resource_error(&file_hash, &error.to_string());
+            } else {
+                report_resource_loaded(&file_hash);
+            }
+
+            match result {
+                Ok(_) => then_promise(get_promise, Ok(None)),
+                Err(e) => then_promise(get_promise, Err(anyhow::anyhow!(e))),
+            }
+
+            loaded_resources.fetch_add(1, Ordering::Relaxed);
+            optimized_scene_counter.fetch_add(1, Ordering::Relaxed);
+        });
+
+        promise
+    }
+
+    #[func]
+    pub fn fetch_optimized_asset(&mut self, file_hash: GString) -> Gd<Promise> {
+        if self.optimized_asset_exists(file_hash.clone()) {
+            return Promise::from_rejected(format!(
+                "Optimized asset hash={} doesn't exists",
+                file_hash
+            ));
+        }
+
+        let (promise, get_promise) = Promise::make_to_async();
+        let ctx = self.get_context();
+        let optimized_data = self.optimized_data.clone();
+
+        let file_hash = file_hash.to_string();
+
+        let loading_resources = self.loading_resources.clone();
+        let loaded_resources = self.loaded_resources.clone();
+        let optimized_scene_counter = self.optimized_scene_count.clone();
+        Core::spawn(async move {
+            #[cfg(feature = "use_resource_tracking")]
+            report_resource_start(&file_hash, "optimized_asset");
+
+            loading_resources.fetch_add(1, Ordering::Relaxed);
+
+            let result = ContentProvider::async_fetch_optimized_asset(
+                file_hash.clone(),
+                OptimizedKind::Texture,
+                ctx,
+                optimized_data,
+                false,
+            )
+            .await;
+
+            #[cfg(feature = "use_resource_tracking")]
+            if let Err(error) = &result {
+                report_resource_error(&file_hash, &error.to_string());
+            } else {
+                report_resource_loaded(&file_hash);
+            }
+
+            match result {
+                Ok(_) => then_promise(get_promise, Ok(None)),
+                Err(e) => then_promise(get_promise, Err(anyhow::anyhow!(e))),
+            }
+
+            loaded_resources.fetch_add(1, Ordering::Relaxed);
+            optimized_scene_counter.fetch_add(1, Ordering::Relaxed);
+        });
+
+        promise
+    }
+
+    #[func]
+    pub fn optimized_asset_exists(&self, file_hash: GString) -> bool {
+        let hash_str = file_hash.to_string();
+        self.optimized_assets.contains(&hash_str)
+    }
+
+    /// `user://content/{key}.opt.scn` — where a baked scene GLB is loaded from
+    /// once `fetch_optimized_asset_with_dependencies` resolved (`key` per
+    /// `scene_bake_key`, from the manifest loaded for the GLB's scene).
+    #[func]
+    pub fn get_optimized_scene_path(&self, file_hash: GString) -> GString {
+        GString::from(self.optimized_scene_path(&file_hash.to_string()).as_str())
+    }
+
+    pub fn optimized_scene_path(&self, file_hash: &str) -> String {
+        let key = self
+            .optimized_data
+            .scene_keys
+            .read()
+            .unwrap()
+            .get(file_hash)
+            .cloned()
+            .unwrap_or_else(|| file_hash.to_string());
+        optimized_godot_path(&key, OptimizedKind::Scene)
+    }
+
+    /// Download `{entity}-boot.zip` (manifest + main.js + main.crdt) and extract
+    /// it into `user://content/`. Resolves `true` when the files are on disk,
+    /// `false` when the bucket has no such bundle (404 — the caller falls back
+    /// to fetching the three files), and rejects on any other failure.
+    #[func]
+    pub fn fetch_boot_bundle(&mut self, file_name: GString, url: GString) -> Gd<Promise> {
+        let (promise, get_promise) = Promise::make_to_async();
+        let ctx = self.get_context();
+        let file_name = file_name.to_string();
+        let url = url.to_string();
+        Core::spawn(async move {
+            match super::bundle::fetch_and_extract_bundle(&ctx, &file_name, &url, None).await {
+                Ok(Some(report)) => {
+                    tracing::debug!("boot bundle {}: {:?}", file_name, report);
+                    then_promise(get_promise, Ok(Some(true.to_variant())));
+                }
+                Ok(None) => then_promise(get_promise, Ok(Some(false.to_variant()))),
+                Err(e) => then_promise(get_promise, Err(anyhow::anyhow!(e))),
+            }
+        });
+        promise
+    }
+
+    #[func]
+    pub fn load_optimized_assets_metadata(&mut self, file_content: GString) -> Gd<Promise> {
+        let content_data: Result<ContentData, serde_json::Error> =
+            serde_json::from_str(&file_content.to_string());
+
+        let (promise, get_promise) = Promise::make_to_async();
+
+        if let Ok(content_data) = content_data {
+            tracing::info!(
+                "load_optimized_assets_metadata: loaded {} optimized content hashes",
+                content_data.optimized_content.len()
+            );
+
+            self.optimized_original_size
+                .extend(content_data.original_sizes);
+
+            self.optimized_assets
+                .extend(content_data.optimized_content.clone());
+
+            let optimized_data = self.optimized_data.clone();
+            let ctx = self.get_context();
+
+            Core::spawn(async move {
+                {
+                    let mut scene_keys = optimized_data.scene_keys.write().unwrap();
+                    for (glb, deps) in &content_data.external_scene_dependencies {
+                        if !deps.is_empty() {
+                            scene_keys.insert(
+                                glb.clone(),
+                                scene_bake_key(glb, deps.iter().map(String::as_str)),
+                            );
+                        }
+                    }
+                }
+                optimized_data
+                    .dependencies
+                    .write()
+                    .await
+                    .extend(content_data.external_scene_dependencies);
+                optimized_data
+                    .assets
+                    .write()
+                    .await
+                    .extend(content_data.optimized_content);
+                // Before the promise resolves: once GDScript continues it spawns
+                // the scene, whose first GLB requests must already find the gate.
+                if let Some(bundle) = content_data.static_bundle {
+                    ContentProvider::register_static_bundle(ctx, optimized_data, bundle).await;
+                }
+                then_promise(get_promise, Ok(None));
+            });
+        } else if let Err(error) = content_data {
+            //promise.bind_mut().reject();
+            then_promise(
+                get_promise,
+                Err(anyhow::anyhow!(format!(
+                    "Failed to parse content data of the scene {:?}",
+                    error
+                ))),
+            );
+        }
+
+        promise
+    }
+
+    #[func]
+    pub fn fetch_file(
+        &mut self,
+        file_path: GString,
+        content_mapping: Gd<DclContentMappingAndUrl>,
+    ) -> Gd<Promise> {
+        let file_hash = content_mapping.bind().get_hash(file_path);
+        let url = format!("{}{}", content_mapping.bind().get_base_url(), file_hash);
+
+        self.fetch_file_by_url(file_hash, GString::from(url.as_str()))
+    }
+
+    #[func]
+    pub fn fetch_file_by_url(&mut self, file_hash: GString, url: GString) -> Gd<Promise> {
+        let file_hash = file_hash.to_string();
+        // Namespaced, because this promise resolves with no resource at all —
+        // it only guarantees the file is on disk. Sharing the bare hash with a
+        // typed fetcher hands it a promise that resolves to null, which is how
+        // an `AssetLoad` preload used to break `AudioSource` (#2741).
+        let cache_key = format!("file_{file_hash}");
+
+        // Check cache first - prevent duplicate downloads of the same file
+        // Note: For raw file downloads, we only cache in-flight promises.
+        // Once resolved, we don't cache because the file might be evicted from disk.
+        // The async task will check if file exists before downloading.
+        if let Some(promise) = self.get_cached_promise(&cache_key) {
+            if !promise.bind().is_resolved() {
+                return promise;
+            }
+            // Promise is resolved - remove it so we create a fresh one that will
+            // verify the file exists in the async task
+            self.promises.remove(&cache_key);
+        }
+
+        let url = url.to_string();
+        let (promise, get_promise) = Promise::make_to_async();
+        let ctx = self.get_context();
+
+        let loading_resources = self.loading_resources.clone();
+        let loaded_resources = self.loaded_resources.clone();
+        let hash_id = file_hash.clone();
+        Core::spawn(async move {
+            #[cfg(feature = "use_resource_tracking")]
+            report_resource_start(&hash_id, "file");
+
+            loading_resources.fetch_add(1, Ordering::Relaxed);
+
+            let absolute_file_path = cache_file_path(&ctx.content_folder, &hash_id);
+
+            match ctx
+                .resource_provider
+                .fetch_resource(url, hash_id.clone(), absolute_file_path)
+                .await
+            {
+                Ok(_) => {
+                    #[cfg(feature = "use_resource_tracking")]
+                    report_resource_loaded(&hash_id.clone());
+
+                    then_promise(get_promise, Ok(None));
+                }
+                Err(e) => {
+                    // Keep the HTTP status in the message: callers that probe
+                    // an optional location (optimized manifest / boot files)
+                    // treat a 404 as "not there" and anything else as a failure.
+                    let error = anyhow::anyhow!("Failed to download file: {}", e);
+
+                    #[cfg(feature = "use_resource_tracking")]
+                    report_resource_error(&hash_id.clone(), &error.to_string());
+
+                    then_promise(get_promise, Err(error));
+                }
+            }
+            loaded_resources.fetch_add(1, Ordering::Relaxed);
+        });
+
+        // Insert into cache to prevent duplicate downloads
+        self.cache_promise(cache_key, &promise);
+
+        promise
+    }
+
+    #[func]
+    pub fn store_file(&mut self, file_hash: GString, bytes: PackedByteArray) -> Gd<Promise> {
+        let file_hash = file_hash.to_string();
+
+        let (promise, get_promise) = Promise::make_to_async();
+        let ctx = self.get_context();
+
+        let bytes = bytes.to_vec();
+
+        Core::spawn(async move {
+            if ctx
+                .resource_provider
+                .store_file(file_hash.as_str(), bytes.as_slice())
+                .await
+                .is_ok()
+            {
+                then_promise(get_promise, Ok(None));
+            } else {
+                then_promise(get_promise, Err(anyhow::anyhow!("Failed to store file")));
+            }
+        });
+
+        promise
+    }
+
+    #[func]
+    pub fn fetch_audio(
+        &mut self,
+        file_path: GString,
+        content_mapping: Gd<DclContentMappingAndUrl>,
+    ) -> Gd<Promise> {
+        let content_mapping = content_mapping.bind().get_content_mapping();
+        let Some(file_hash) = content_mapping.get_hash(file_path.to_string().as_str()) else {
+            return Promise::from_rejected(format!("File not found: {}", file_path));
+        };
+
+        if let Some(promise) = self.get_cached_promise(file_hash) {
+            return promise;
+        }
+
+        let file_hash = file_hash.clone();
+        let (promise, get_promise) = Promise::make_to_async();
+        let audio_file_path = file_path.to_string();
+        let content_provider_context = self.get_context();
+
+        let loading_resources = self.loading_resources.clone();
+        let loaded_resources = self.loaded_resources.clone();
+        #[cfg(feature = "use_resource_tracking")]
+        let hash_id = file_hash.clone();
+        Core::spawn(async move {
+            #[cfg(feature = "use_resource_tracking")]
+            report_resource_start(&hash_id, "audio");
+
+            loading_resources.fetch_add(1, Ordering::Relaxed);
+
+            let result =
+                load_audio(audio_file_path, content_mapping, content_provider_context).await;
+
+            #[cfg(feature = "use_resource_tracking")]
+            if let Err(error) = &result {
+                report_resource_error(&hash_id, &error.to_string());
+            } else {
+                report_resource_loaded(&hash_id);
+            }
+            then_promise(get_promise, result);
+
+            loaded_resources.fetch_add(1, Ordering::Relaxed);
+        });
+
+        self.cache_promise(file_hash, &promise);
+
+        promise
+    }
+
+    #[func]
+    pub fn fetch_texture(
+        &mut self,
+        file_path: GString,
+        content_mapping: Gd<DclContentMappingAndUrl>,
+    ) -> Gd<Promise> {
+        let file_hash = content_mapping.bind().get_hash(file_path);
+        if file_hash.is_empty() {
+            return Promise::from_rejected("Texture not found in the mappings.".to_string());
+        };
+
+        self.fetch_texture_by_hash(file_hash, content_mapping)
+    }
+
+    #[func]
+    pub fn fetch_texture_by_hash(
+        &mut self,
+        file_hash_godot: GString,
+        content_mapping: Gd<DclContentMappingAndUrl>,
+    ) -> Gd<Promise> {
+        let file_hash = file_hash_godot.to_string();
+
+        // Validate file_hash is not empty to prevent "Is a directory" errors
+        if file_hash.is_empty() {
+            tracing::warn!("fetch_texture_by_hash: empty file_hash, returning rejected promise");
+            return Promise::from_rejected("Empty texture hash".to_string());
+        }
+
+        if let Some(promise) = self.get_cached_promise(&file_hash) {
+            return promise;
+        }
+
+        // TODO: In the future, this would be handled by each component handler
+        //  and check if the hostname is allowed (set up in the scene.json)
+        //  https://github.com/decentraland/godot-explorer/issues/363
+        if file_hash.starts_with("http") {
+            // get file_hash from url
+            let new_file_hash =
+                crate::content::external_content::external_texture_file_name(&file_hash_godot);
+            let promise = self.fetch_texture_by_url(GString::from(&new_file_hash), file_hash_godot);
+            self.cache_promise(file_hash, &promise);
+            return promise;
+        }
+
+        let (promise, get_promise) = Promise::make_to_async();
+        let ctx = self.get_context();
+
+        if self.optimized_asset_exists(file_hash_godot.clone()) {
+            let hash_id = file_hash.clone();
+            let optimized_data = self.optimized_data.clone();
+
+            let original_size = self.optimized_original_size.get(&hash_id).copied();
+
+            let url = format!(
+                "{}{}",
+                content_mapping.bind().get_base_url(),
+                file_hash.clone()
+            );
+
+            Core::spawn(async move {
+                let _ = ContentProvider::async_fetch_optimized_asset(
+                    hash_id.clone(),
+                    OptimizedKind::Texture,
+                    ctx.clone(),
+                    optimized_data,
+                    false,
+                )
+                .await;
+
+                let godot_path = optimized_godot_path(&hash_id, OptimizedKind::Texture);
+
+                // Hold the Godot permit like every other worker-side Godot call:
+                // without it this load raced the main thread mounting resource
+                // packs (ContentProvider::process) and read a pack mid-mount
+                // (SIGTRAP in ResourceLoaderBinary::_get_string, GODOT-EXPLORER-302).
+                if let Some(_thread_safe_check) = GodotSingleThreadSafety::acquire_owned(&ctx).await
+                {
+                    if let Some(entry_variant) =
+                        load_baked_texture_entry(&godot_path, original_size)
+                    {
+                        then_promise(get_promise, Ok(Some(entry_variant)));
+                        return;
+                    }
+                } else {
+                    tracing::warn!("Godot permit closed, skipping baked texture {}", godot_path);
+                }
+
+                // Baked artifact missing or unreadable (e.g. a stale ZIP in the
+                // local cache): fall back to download + decode.
+                tracing::warn!(
+                    "Failed to load baked texture {}, falling back to runtime decode",
+                    godot_path
+                );
+                let result = load_image_texture(url, hash_id.clone(), ctx, true).await;
+                then_promise(get_promise, result);
+            });
+        } else {
+            let url = format!(
+                "{}{}",
+                content_mapping.bind().get_base_url(),
+                file_hash.clone()
+            );
+
+            let loading_resources = self.loading_resources.clone();
+            let loaded_resources = self.loaded_resources.clone();
+            let hash_id = file_hash.clone();
+            Core::spawn(async move {
+                #[cfg(feature = "use_resource_tracking")]
+                report_resource_start(&hash_id, "texture");
+
+                loading_resources.fetch_add(1, Ordering::Relaxed);
+
+                let result = load_image_texture(url, hash_id.clone(), ctx, true).await;
+
+                #[cfg(feature = "use_resource_tracking")]
+                if let Err(error) = &result {
+                    report_resource_error(&hash_id, &error.to_string());
+                } else {
+                    report_resource_loaded(&hash_id);
+                }
+
+                then_promise(get_promise, result);
+
+                loaded_resources.fetch_add(1, Ordering::Relaxed);
+            });
+        }
+
+        self.cache_promise(file_hash, &promise);
+
+        promise
+    }
+
+    /// Fetches a texture by hash with an explicit quality, bypassing the optimization
+    /// pipeline. Useful for UI textures that need a specific (usually Source) quality.
+    /// Cache key: `{hash}_q{N}` — shared with `fetch_texture_by_url_with_quality`.
+    pub fn fetch_texture_by_hash_with_quality(
+        &mut self,
+        file_hash_godot: GString,
+        content_mapping: Gd<DclContentMappingAndUrl>,
+        quality: TextureQuality,
+    ) -> Gd<Promise> {
+        let file_hash = file_hash_godot.to_string();
+
+        // Validate file_hash is not empty to prevent "Is a directory" errors
+        if file_hash.is_empty() {
+            tracing::warn!(
+                "fetch_texture_by_hash_with_quality: empty file_hash, returning rejected promise"
+            );
+            return Promise::from_rejected("Empty texture hash".to_string());
+        }
+
+        let cache_key = format!("{}_q{}", file_hash, quality.to_i32());
+
+        if let Some(promise) = self.get_cached_promise(&cache_key) {
+            return promise;
+        }
+
+        // Handle URL-based textures
+        if file_hash.starts_with("http") {
+            let new_file_hash =
+                crate::content::external_content::external_texture_file_name(&file_hash_godot);
+            let promise = self.fetch_texture_by_url_with_quality(
+                GString::from(&new_file_hash),
+                file_hash_godot,
+                quality,
+            );
+            self.cache_promise(cache_key, &promise);
+            return promise;
+        }
+
+        let (promise, get_promise) = Promise::make_to_async();
+
+        let mut ctx = self.get_context();
+        ctx.texture_quality = quality;
+
+        let url = format!(
+            "{}{}",
+            content_mapping.bind().get_base_url(),
+            file_hash.clone()
+        );
+
+        let loading_resources = self.loading_resources.clone();
+        let loaded_resources = self.loaded_resources.clone();
+        let hash_id = file_hash.clone();
+
+        Core::spawn(async move {
+            #[cfg(feature = "use_resource_tracking")]
+            report_resource_start(&hash_id, "texture_with_quality");
+
+            loading_resources.fetch_add(1, Ordering::Relaxed);
+
+            let result = load_image_texture(url, hash_id.clone(), ctx, true).await;
+
+            #[cfg(feature = "use_resource_tracking")]
+            if let Err(error) = &result {
+                report_resource_error(&hash_id, &error.to_string());
+            } else {
+                report_resource_loaded(&hash_id);
+            }
+
+            then_promise(get_promise, result);
+
+            loaded_resources.fetch_add(1, Ordering::Relaxed);
+        });
+
+        self.cache_promise(cache_key, &promise);
+
+        promise
+    }
+
+    /// Fetches a texture by URL with an explicit quality, bypassing the global texture
+    /// quality setting. From GDScript, use `DclConfig.TEXTURE_QUALITY_LOW/MEDIUM/HIGH/SOURCE`.
+    #[func]
+    pub fn fetch_texture_by_url_with_quality(
+        &mut self,
+        file_hash: GString,
+        url: GString,
+        quality: TextureQuality,
+    ) -> Gd<Promise> {
+        let file_hash = format!("{}_q{}", file_hash, quality.to_i32());
+        if let Some(promise) = self.get_cached_promise(&file_hash) {
+            return promise;
+        }
+        tracing::debug!(
+            "fetch_texture_by_url_with_quality: {} -> {}",
+            url,
+            file_hash
+        );
+        let url = url.to_string();
+        let (promise, get_promise) = Promise::make_to_async();
+
+        let mut content_provider_context = self.get_context();
+        content_provider_context.texture_quality = quality;
+
+        let sent_file_hash = file_hash.clone();
+
+        let loading_resources = self.loading_resources.clone();
+        let loaded_resources = self.loaded_resources.clone();
+
+        #[cfg(feature = "use_resource_tracking")]
+        let hash_id = file_hash.clone();
+        #[cfg(feature = "use_resource_tracking")]
+        let url_for_error = url.clone();
+        Core::spawn(async move {
+            #[cfg(feature = "use_resource_tracking")]
+            report_resource_start(&hash_id, "texture_url_with_quality");
+
+            loading_resources.fetch_add(1, Ordering::Relaxed);
+
+            let url_for_log = url.clone();
+            let result =
+                load_image_texture(url, sent_file_hash, content_provider_context, true).await;
+            if let Err(error) = &result {
+                tracing::warn!("fetch_texture_by_url failed for {}: {}", url_for_log, error);
+            }
+
+            #[cfg(feature = "use_resource_tracking")]
+            if let Err(error) = &result {
+                report_resource_error(&hash_id, &format!("url={} error={}", url_for_error, error));
+            } else {
+                report_resource_loaded(&hash_id);
+            }
+
+            then_promise(get_promise, result);
+
+            loaded_resources.fetch_add(1, Ordering::Relaxed);
+        });
+
+        self.cache_promise(file_hash, &promise);
+
+        promise
+    }
+
+    /// Fetches a texture by URL using the global texture-quality setting.
+    /// Thin wrapper over `fetch_texture_by_url_with_quality`, so it shares cache slots
+    /// with explicit-quality fetches at the same quality (cache key: `{hash}_q{N}`).
+    #[func]
+    pub fn fetch_texture_by_url(&mut self, file_hash: GString, url: GString) -> Gd<Promise> {
+        let quality = DclConfig::static_get_texture_quality();
+        self.fetch_texture_by_url_with_quality(file_hash, url, quality)
+    }
+
+    #[func]
+    pub fn get_texture_from_hash(&mut self, file_hash: GString) -> Option<Gd<Texture2D>> {
+        let promise = self.get_cached_promise(&file_hash.to_string())?;
+        let promise_data = promise.bind().get_data();
+        let texture_entry = promise_data.try_to::<Gd<TextureEntry>>().ok()?;
+        let texture = texture_entry.bind().texture.clone();
+        Some(texture)
+    }
+
+    #[func]
+    pub fn get_audio_from_hash(&mut self, file_hash: GString) -> Option<Gd<AudioStream>> {
+        let promise = self.get_cached_promise(&file_hash.to_string())?;
+        let promise_data = promise.bind().get_data();
+        promise_data.try_to::<Gd<AudioStream>>().ok()
+    }
+
+    #[func]
+    pub fn is_resource_from_hash_loaded(&self, file_hash: GString) -> bool {
+        if let Some(promise) = self.get_cached_promise(&file_hash.to_string()) {
+            return promise.bind().is_resolved();
+        }
+        false
+    }
+
+    #[func]
+    pub fn fetch_video(
+        &mut self,
+        file_hash: GString,
+        content_mapping: Gd<DclContentMappingAndUrl>,
+    ) -> Gd<Promise> {
+        let content_mapping = content_mapping.bind().get_content_mapping();
+        let (promise, get_promise) = Promise::make_to_async();
+        let file_hash = file_hash.to_string();
+        let video_file_hash = file_hash.clone();
+        let content_provider_context = self.get_context();
+
+        let loading_resources = self.loading_resources.clone();
+        let loaded_resources = self.loaded_resources.clone();
+        #[cfg(feature = "use_resource_tracking")]
+        let hash_id = file_hash.clone();
+        Core::spawn(async move {
+            #[cfg(feature = "use_resource_tracking")]
+            report_resource_start(&hash_id, "video");
+
+            loading_resources.fetch_add(1, Ordering::Relaxed);
+
+            let result =
+                download_video(video_file_hash, content_mapping, content_provider_context).await;
+
+            #[cfg(feature = "use_resource_tracking")]
+            if let Err(error) = &result {
+                report_resource_error(&hash_id, &error.to_string());
+            } else {
+                report_resource_loaded(&hash_id);
+            }
+
+            then_promise(get_promise, result);
+
+            loaded_resources.fetch_add(1, Ordering::Relaxed);
+        });
+
+        self.cache_promise(file_hash, &promise);
+
+        promise
+    }
+
+    #[func]
+    pub fn duplicate_materials(&mut self, target_meshes: VarArray) -> Gd<Promise> {
+        let data = target_meshes
+            .iter_shared()
+            .map(|dict| {
+                let dict = dict.try_to::<VarDictionary>().ok()?;
+                let mesh = dict.get("mesh")?.try_to::<Gd<Mesh>>().ok()?;
+                let n = dict.get("n")?.try_to::<i32>().ok()?;
+
+                Some((mesh.instance_id(), n))
+            })
+            .filter(|v| v.is_some())
+            .flatten()
+            .collect::<Vec<_>>();
+
+        let (promise, get_promise) = Promise::make_to_async();
+        Core::spawn(async move {
+            set_thread_safety_checks_enabled(false);
+
+            for (mesh_instance_id, n) in data {
+                let mut mesh = Gd::<Mesh>::from_instance_id(mesh_instance_id);
+                for i in 0..n {
+                    let Some(new_material) = mesh.surface_get_material(i) else {
+                        continue;
+                    };
+                    let Some(new_material) = new_material.duplicate() else {
+                        continue;
+                    };
+
+                    mesh.surface_set_material(i, &new_material.cast::<Material>());
+                }
+            }
+
+            set_thread_safety_checks_enabled(true);
+
+            then_promise(get_promise, Ok(None));
+        });
+
+        promise
+    }
+
+    #[func]
+    pub fn fetch_wearables(
+        &mut self,
+        wearables: VarArray,
+        content_base_url: GString,
+    ) -> Array<Gd<Promise>> {
+        let mut promise_ids = HashSet::new();
+        let mut new_promise = None;
+        let mut wearable_to_fetch = HashSet::new();
+
+        for wearable in wearables.iter_shared() {
+            let wearable_id = wearable.to_string();
+            let token_id_pos = wearable_id
+                .find_nth_char(6, ':')
+                .unwrap_or(wearable_id.len());
+            let wearable_id = wearable_id[0..token_id_pos].to_lowercase();
+
+            if let Some(promise) = self.get_cached_promise(&wearable_id) {
+                promise_ids.insert(promise.instance_id());
+            } else {
+                wearable_to_fetch.insert(wearable_id.clone());
+                if new_promise.is_none() {
+                    let (promise, get_promise) = Promise::make_to_async();
+                    promise_ids.insert(promise.instance_id());
+                    new_promise = Some((promise, get_promise));
+                }
+
+                self.cache_promise(wearable_id, &new_promise.as_ref().unwrap().0);
+            }
+        }
+
+        if !wearable_to_fetch.is_empty() {
+            let (promise, get_promise) = new_promise.unwrap();
+            let content_provider_context = self.get_context();
+            let content_base_url = content_base_url.to_string();
+            let extra_slash = if content_base_url.ends_with('/') {
+                ""
+            } else {
+                "/"
+            };
+            let content_base_url = format!("{}{extra_slash}", content_base_url);
+            let ipfs_content_base_url = format!("{content_base_url}contents/");
+            Core::spawn(async move {
+                let result = request_wearables(
+                    content_base_url,
+                    ipfs_content_base_url,
+                    wearable_to_fetch.into_iter().collect(),
+                    content_provider_context,
+                )
+                .await;
+                then_promise(get_promise, result);
+            });
+            self.cache_promise("wearables".to_string(), &promise);
+        }
+
+        Array::from_iter(promise_ids.into_iter().map(Gd::from_instance_id))
+    }
+
+    #[func]
+    pub fn get_wearable(&mut self, id: GString) -> Option<Gd<DclItemEntityDefinition>> {
+        let id = id.to_string();
+        let token_id_pos = id.find_nth_char(6, ':').unwrap_or(id.len());
+        let id = id[0..token_id_pos].to_lowercase();
+
+        if let Some(promise) = self.get_cached_promise(&id) {
+            if let Ok(results) = promise
+                .bind()
+                .get_data()
+                .try_to::<Gd<WearableManyResolved>>()
+            {
+                if let Some(wearable) = results.bind().wearable_map.get(&id) {
+                    return Some(DclItemEntityDefinition::from_gd(wearable.clone()));
+                }
+            }
+        }
+        None
+    }
+
+    #[func]
+    pub fn get_pending_promises(&self) -> Array<Gd<Promise>> {
+        let mut result = Array::new();
+        for instance_id in self.promises.values() {
+            if let Ok(promise) = Gd::<Promise>::try_from_instance_id(*instance_id) {
+                if !promise.bind().is_resolved() {
+                    result.push(&promise);
+                }
+            }
+        }
+        result
+    }
+
+    #[func]
+    pub fn get_profile(&mut self, user_id: GString) -> Option<Gd<DclUserProfile>> {
+        let user_id = user_id.to_string().as_str().as_h160()?;
+        let hash = format!("profile_{:x}", user_id);
+        if let Some(promise) = self.get_cached_promise(&hash) {
+            let promise_data = promise.bind().get_data();
+            promise_data.try_to::<Gd<DclUserProfile>>().ok()
+        } else {
+            None
+        }
+    }
+
+    #[func]
+    pub fn clear_cache_folder(&mut self) -> Gd<Promise> {
+        // Clear the promises cache to prevent stale references to deleted files
+        let promises_count = self.promises.len();
+        self.promises.clear();
+        tracing::info!(
+            "clear_cache_folder: Clearing {} cached promises and disk cache",
+            promises_count
+        );
+
+        let (promise, get_promise) = Promise::make_to_async();
+        let resource_provider = self.resource_provider.clone();
+
+        Core::spawn(async move {
+            resource_provider.clear().await;
+            tracing::info!("clear_cache_folder: Disk cache cleared");
+            then_promise(get_promise, Ok(None));
+        });
+
+        promise
+    }
+
+    #[func]
+    pub fn set_cache_folder_max_size(&mut self, size: i64) {
+        self.resource_provider.set_max_cache_size(size)
+    }
+
+    #[func]
+    pub fn get_cache_folder_total_size(&mut self) -> i64 {
+        self.resource_provider.get_cache_total_size()
+    }
+
+    /// Total tracked cache size in bytes for the given base names —
+    /// content-mapping hashes and/or url-texture "hashed_{hex}" names. Every
+    /// on-disk form of each entry is counted ("{hash}", "{hash}.scn",
+    /// "{hash}-mobile.zip", "hashed_{hex}_q{N}"). Reads the ResourceProvider's
+    /// in-memory metadata (no disk I/O), so the value converges as downloads
+    /// land. Powers the preview scene-stats Content size / External content rows.
+    #[func]
+    pub fn get_cache_size_for_base_names(&self, base_names: PackedStringArray) -> i64 {
+        // Match against the names the cache actually wrote: long preview hashes are folded.
+        let wanted: std::collections::HashSet<String> = base_names
+            .as_slice()
+            .iter()
+            .map(|s| cache_file_name(&s.to_string()).into_owned())
+            .collect();
+        self.resource_provider
+            .get_cache_size_for_base_names(&wanted)
+    }
+
+    /// Get current disk cache size in MiB for memory diagnostics
+    #[func]
+    pub fn get_cache_size_mb(&mut self) -> f64 {
+        self.resource_provider.get_cache_total_size() as f64 / 1_048_576.0
+    }
+
+    #[func]
+    pub fn get_download_speed_mbs(&self) -> f64 {
+        self.download_speed_mbs
+    }
+
+    #[func]
+    pub fn get_network_speed_peak_mbs(&self) -> f64 {
+        self.network_speed_peak_mbs
+    }
+
+    #[func]
+    pub fn get_network_used_last_minute_mb(&self) -> f64 {
+        self.network_download_history_mb.iter().sum()
+    }
+
+    #[func]
+    pub fn get_optimized_scene_count(&self) -> u64 {
+        self.optimized_scene_count.load(Ordering::Relaxed)
+    }
+
+    #[func]
+    pub fn get_runtime_scene_count(&self) -> u64 {
+        self.runtime_scene_count.load(Ordering::Relaxed)
+    }
+
+    #[func]
+    pub fn get_optimized_wearable_count(&self) -> u64 {
+        self.optimized_wearable_count.load(Ordering::Relaxed)
+    }
+
+    #[func]
+    pub fn get_runtime_wearable_count(&self) -> u64 {
+        self.runtime_wearable_count.load(Ordering::Relaxed)
+    }
+
+    #[func]
+    pub fn count_loaded_resources(&self) -> u64 {
+        self.loaded_resources.load(Ordering::Relaxed)
+    }
+
+    #[func]
+    pub fn count_loading_resources(&self) -> u64 {
+        self.loading_resources.load(Ordering::Relaxed)
+    }
+
+    #[func]
+    pub fn set_max_concurrent_downloads(&mut self, number: i32) {
+        self.resource_provider
+            .set_max_concurrent_downloads(number as usize)
+    }
+
+    #[func]
+    pub fn set_max_low_priority_downloads(&mut self, number: i32) {
+        self.resource_provider
+            .set_max_low_priority_downloads(number as usize)
+    }
+
+    #[func]
+    pub fn get_optimized_base_url(&self) -> GString {
+        resolved_optimized_base_url().to_godot()
+    }
+
+    /// Set the base URL for optimized wearable/emote assets.
+    /// When set, load_wearable_gltf and load_emote_gltf will check for
+    /// pre-optimized ZIPs at this URL before falling back to runtime processing.
+    /// Example: "http://127.0.0.1:9090/" or "https://cdn.example.com/optimized/"
+    #[func]
+    pub fn set_optimized_wearable_base_url(&mut self, url: GString) {
+        let url_str = url.to_string();
+        if url_str.is_empty() {
+            self.optimized_wearable_base_url = None;
+            tracing::info!("Optimized wearable base URL cleared");
+        } else {
+            // Ensure URL ends with slash
+            let url_with_slash = if url_str.ends_with('/') {
+                url_str
+            } else {
+                format!("{}/", url_str)
+            };
+            tracing::info!("Optimized wearable base URL set to: {}", url_with_slash);
+            self.optimized_wearable_base_url = Some(url_with_slash);
+        }
+    }
+
+    /// Get the configured optimized wearable base URL, if any.
+    #[func]
+    pub fn get_optimized_wearable_base_url(&self) -> GString {
+        match &self.optimized_wearable_base_url {
+            Some(url) => GString::from(url.as_str()),
+            None => GString::new(),
+        }
+    }
+
+    /// Check if a remote file exists using a HEAD request.
+    /// Returns a Promise that resolves with:
+    /// - true: file exists (2xx response)
+    /// - false: file not found (404)
+    /// - rejects with error for other failures (network issues, server errors)
+    #[func]
+    pub fn check_remote_file_exists(&self, url: GString) -> Gd<Promise> {
+        let url = url.to_string();
+        let resource_provider = self.resource_provider.clone();
+        let (promise, get_promise) = Promise::make_to_async();
+
+        Core::spawn(async move {
+            match resource_provider.check_remote_file_exists(&url).await {
+                Ok(exists) => {
+                    then_promise(get_promise, Ok(Some(exists.to_variant())));
+                }
+                Err(e) => {
+                    then_promise(get_promise, Err(anyhow::anyhow!(e)));
+                }
+            }
+        });
+
+        promise
+    }
+
+    #[func]
+    pub fn fetch_profile(&mut self, user_id: GString) -> Gd<Promise> {
+        let Some(user_id) = user_id.to_string().as_str().as_h160() else {
+            return Promise::from_rejected("Invalid user id".to_string());
+        };
+
+        let hash = format!("profile_{:x}", user_id);
+        if let Some(promise) = self.get_cached_promise(&hash) {
+            return promise;
+        }
+
+        let (lamda_server_base_url, profile_base_url, http_requester) =
+            prepare_request_requirements();
+        let (promise, get_promise) = Promise::make_to_async();
+        let content_provider_context = self.get_context();
+
+        Core::spawn(async move {
+            let result = request_lambda_profile(
+                user_id,
+                lamda_server_base_url.as_str(),
+                profile_base_url.as_str(),
+                http_requester,
+            )
+            .await;
+
+            let Some(_thread_safe_check) =
+                GodotSingleThreadSafety::acquire_owned(&content_provider_context).await
+            else {
+                tracing::error!("Failed to acquire semaphore");
+                return;
+            };
+            let result = result.map(|value| Some(DclUserProfile::from_gd(value).to_variant()));
+
+            then_promise(get_promise, result)
+        });
+
+        self.cache_promise(hash, &promise);
+
+        promise
+    }
+
+    /// Report a resource as failed (for use by GDScript when loading times out)
+    #[cfg(feature = "use_resource_tracking")]
+    #[func]
+    pub fn report_resource_failed(&self, file_hash: GString, reason: GString) {
+        report_resource_error(&file_hash.to_string(), &reason.to_string());
+    }
+
+    /// Stub for when resource tracking is disabled
+    #[cfg(not(feature = "use_resource_tracking"))]
+    #[func]
+    pub fn report_resource_failed(&self, _file_hash: GString, _reason: GString) {
+        // No-op when resource tracking is disabled
+    }
+
+    /// Fetches an avatar's face texture by user ID.
+    /// This handles the two-step process of:
+    /// 1. Fetching the user's profile
+    /// 2. Extracting the face256 URL and fetching the texture
+    ///
+    /// The result is cached with key `avatar_texture_{user_id_hex}`.
+    #[func]
+    pub fn fetch_avatar_texture(&mut self, user_id: GString) -> Gd<Promise> {
+        let user_id_str = user_id.to_string();
+
+        // Try to parse as H160, use normalized cache key if valid, otherwise use raw string
+        let (user_id_h160, cache_key) = match user_id_str.as_str().as_h160() {
+            Some(h160) => (Some(h160), format!("avatar_texture_{:x}", h160)),
+            None => (None, format!("avatar_texture_invalid_{}", user_id_str)),
+        };
+
+        // Check cache first (works for both valid and invalid user IDs)
+        if let Some(promise) = self.get_cached_promise(&cache_key) {
+            tracing::debug!(
+                "fetch_avatar_texture: Returning cached promise for {}",
+                cache_key
+            );
+            return promise;
+        }
+
+        // If invalid user ID, cache a rejected promise and return
+        let Some(user_id_h160) = user_id_h160 else {
+            tracing::warn!("fetch_avatar_texture: Invalid user id: {}", user_id);
+            let rejected_promise = Promise::from_rejected("Invalid user id".to_string());
+            self.cache_promise(cache_key, &rejected_promise);
+            return rejected_promise;
+        };
+
+        tracing::debug!(
+            "fetch_avatar_texture: Starting fetch for user_id={:x}",
+            user_id_h160
+        );
+
+        let (promise, get_promise) = Promise::make_to_async();
+        let ctx = self.get_context();
+
+        let (lambda_server_base_url, profile_base_url, http_requester) =
+            prepare_request_requirements();
+
+        let loading_resources = self.loading_resources.clone();
+        let loaded_resources = self.loaded_resources.clone();
+
+        Core::spawn(async move {
+            loading_resources.fetch_add(1, Ordering::Relaxed);
+
+            // Step 1: Fetch the profile
+            tracing::debug!(
+                "fetch_avatar_texture: Fetching profile for {:x}",
+                user_id_h160
+            );
+            let profile_result = request_lambda_profile(
+                user_id_h160,
+                lambda_server_base_url.as_str(),
+                profile_base_url.as_str(),
+                http_requester,
+            )
+            .await;
+
+            let profile = match profile_result {
+                Ok(profile) => {
+                    tracing::debug!(
+                        "fetch_avatar_texture: Profile fetched for {:x}",
+                        user_id_h160
+                    );
+                    profile
+                }
+                Err(e) => {
+                    tracing::error!(
+                        "fetch_avatar_texture: Failed to fetch profile for {:x}: {}",
+                        user_id_h160,
+                        e
+                    );
+                    loaded_resources.fetch_add(1, Ordering::Relaxed);
+                    then_promise(
+                        get_promise,
+                        Err(anyhow::anyhow!("Failed to fetch profile: {}", e)),
+                    );
+                    return;
+                }
+            };
+
+            // Step 2: Extract face256 URL from snapshots
+            let Some(snapshots) = profile.content.avatar.snapshots.as_ref() else {
+                tracing::error!(
+                    "fetch_avatar_texture: Profile has no snapshots for {:x}",
+                    user_id_h160
+                );
+                loaded_resources.fetch_add(1, Ordering::Relaxed);
+                then_promise(
+                    get_promise,
+                    Err(anyhow::anyhow!("Profile has no snapshots")),
+                );
+                return;
+            };
+
+            let face256_url = snapshots
+                .face_url
+                .clone()
+                .unwrap_or_else(|| format!("{}{}", profile.base_url, snapshots.face256));
+
+            tracing::debug!(
+                "fetch_avatar_texture: Fetching texture from {} for {:x}",
+                face256_url,
+                user_id_h160
+            );
+
+            let texture_hash = format!("avatar_face_{:x}", user_id_h160);
+
+            // Step 3: Fetch the texture
+            let result = load_image_texture(face256_url, texture_hash, ctx, true).await;
+
+            if let Err(e) = &result {
+                tracing::error!(
+                    "fetch_avatar_texture: Failed to load texture for {:x}: {}",
+                    user_id_h160,
+                    e
+                );
+            }
+
+            loaded_resources.fetch_add(1, Ordering::Relaxed);
+            then_promise(get_promise, result);
+        });
+
+        self.cache_promise(cache_key, &promise);
+
+        promise
+    }
+
+    /// Fetches an avatar's body snapshot texture by user ID.
+    /// Mirrors `fetch_avatar_texture` but reads `snapshots.body_url` instead of `face256`.
+    /// The result is cached with key `avatar_body_texture_{user_id_hex}`.
+    #[func]
+    pub fn fetch_avatar_body_texture(&mut self, user_id: GString) -> Gd<Promise> {
+        let user_id_str = user_id.to_string();
+
+        let (user_id_h160, cache_key) = match user_id_str.as_str().as_h160() {
+            Some(h160) => (Some(h160), format!("avatar_body_texture_{:x}", h160)),
+            None => (None, format!("avatar_body_texture_invalid_{}", user_id_str)),
+        };
+
+        if let Some(promise) = self.get_cached_promise(&cache_key) {
+            return promise;
+        }
+
+        let Some(user_id_h160) = user_id_h160 else {
+            let rejected_promise = Promise::from_rejected("Invalid user id".to_string());
+            self.cache_promise(cache_key, &rejected_promise);
+            return rejected_promise;
+        };
+
+        let (promise, get_promise) = Promise::make_to_async();
+        let ctx = self.get_context();
+
+        let (lambda_server_base_url, profile_base_url, http_requester) =
+            prepare_request_requirements();
+
+        let loading_resources = self.loading_resources.clone();
+        let loaded_resources = self.loaded_resources.clone();
+
+        Core::spawn(async move {
+            loading_resources.fetch_add(1, Ordering::Relaxed);
+
+            let profile_result = request_lambda_profile(
+                user_id_h160,
+                lambda_server_base_url.as_str(),
+                profile_base_url.as_str(),
+                http_requester,
+            )
+            .await;
+
+            let profile = match profile_result {
+                Ok(profile) => profile,
+                Err(e) => {
+                    loaded_resources.fetch_add(1, Ordering::Relaxed);
+                    then_promise(
+                        get_promise,
+                        Err(anyhow::anyhow!("Failed to fetch profile: {}", e)),
+                    );
+                    return;
+                }
+            };
+
+            let Some(snapshots) = profile.content.avatar.snapshots.as_ref() else {
+                loaded_resources.fetch_add(1, Ordering::Relaxed);
+                then_promise(
+                    get_promise,
+                    Err(anyhow::anyhow!("Profile has no snapshots")),
+                );
+                return;
+            };
+
+            let body_url_raw = snapshots
+                .body_url
+                .clone()
+                .unwrap_or_else(|| format!("{}{}", profile.base_url, snapshots.body));
+
+            if body_url_raw.is_empty()
+                || body_url_raw.ends_with('/')
+                || body_url_raw == profile.base_url
+            {
+                loaded_resources.fetch_add(1, Ordering::Relaxed);
+                then_promise(
+                    get_promise,
+                    Err(anyhow::anyhow!("Profile has no body snapshot")),
+                );
+                return;
+            }
+
+            let texture_hash = format!("avatar_body_{:x}", user_id_h160);
+
+            // Impostors only consume the raw pixels (resize/mips/PNG cache);
+            // the texture itself is never rendered. Skip ETC2 compression.
+            let result = load_image_texture(body_url_raw, texture_hash, ctx, false).await;
+
+            loaded_resources.fetch_add(1, Ordering::Relaxed);
+            then_promise(get_promise, result);
+        });
+
+        self.cache_promise(cache_key, &promise);
+
+        promise
+    }
+
+    /// Fetches one of the catalyst's stock default-avatar body snapshots
+    /// (`profiles/default{slot}`, slot 1..=160). Used as the impostor fallback
+    /// for avatars without a fetchable profile (scene AvatarShapes) so we never
+    /// run the heavy main-thread local bake. All 160 are shared across avatars
+    /// and cached by slot, so each is downloaded at most once per session.
+    #[func]
+    pub fn fetch_default_avatar_body_texture(&mut self, slot: i32) -> Gd<Promise> {
+        let slot = slot.clamp(1, 160);
+        let cache_key = format!("avatar_body_default_{}", slot);
+
+        if let Some(promise) = self.get_cached_promise(&cache_key) {
+            return promise;
+        }
+
+        let (promise, get_promise) = Promise::make_to_async();
+        let ctx = self.get_context();
+
+        let (lambda_server_base_url, profile_base_url, http_requester) =
+            prepare_request_requirements();
+
+        let loading_resources = self.loading_resources.clone();
+        let loaded_resources = self.loaded_resources.clone();
+
+        Core::spawn(async move {
+            loading_resources.fetch_add(1, Ordering::Relaxed);
+
+            let url = format!(
+                "{}/profiles/default{}",
+                lambda_server_base_url.trim_end_matches('/'),
+                slot
+            );
+            let profile_result =
+                request_lambda_profile_by_url(url, profile_base_url.as_str(), http_requester).await;
+
+            let profile = match profile_result {
+                Ok(profile) => profile,
+                Err(e) => {
+                    loaded_resources.fetch_add(1, Ordering::Relaxed);
+                    then_promise(
+                        get_promise,
+                        Err(anyhow::anyhow!("Failed to fetch default profile: {}", e)),
+                    );
+                    return;
+                }
+            };
+
+            let Some(snapshots) = profile.content.avatar.snapshots.as_ref() else {
+                loaded_resources.fetch_add(1, Ordering::Relaxed);
+                then_promise(
+                    get_promise,
+                    Err(anyhow::anyhow!("Default profile has no snapshots")),
+                );
+                return;
+            };
+
+            let body_url_raw = snapshots
+                .body_url
+                .clone()
+                .unwrap_or_else(|| format!("{}{}", profile.base_url, snapshots.body));
+
+            if body_url_raw.is_empty()
+                || body_url_raw.ends_with('/')
+                || body_url_raw == profile.base_url
+            {
+                loaded_resources.fetch_add(1, Ordering::Relaxed);
+                then_promise(
+                    get_promise,
+                    Err(anyhow::anyhow!("Default profile has no body snapshot")),
+                );
+                return;
+            }
+
+            let texture_hash = format!("avatar_body_default_{}", slot);
+
+            // Same as fetch_avatar_body_texture: impostor-only, no compression.
+            let result = load_image_texture(body_url_raw, texture_hash, ctx, false).await;
+
+            loaded_resources.fetch_add(1, Ordering::Relaxed);
+            then_promise(get_promise, result);
+        });
+
+        self.cache_promise(cache_key, &promise);
+
+        promise
+    }
+
+    /// Gets the avatar face texture from cache if available.
+    #[func]
+    pub fn get_avatar_texture(&mut self, user_id: GString) -> Option<Gd<Texture2D>> {
+        let user_id_str = user_id.to_string();
+
+        // Use the same cache key logic as fetch_avatar_texture
+        let cache_key = match user_id_str.as_str().as_h160() {
+            Some(h160) => format!("avatar_texture_{:x}", h160),
+            None => format!("avatar_texture_invalid_{}", user_id_str),
+        };
+
+        let promise = self.get_cached_promise(&cache_key)?;
+        let promise_bind = promise.bind();
+        if promise_bind.is_rejected() {
+            let promise_data = promise_bind.get_data();
+            if let Ok(error) =
+                promise_data.try_to::<Gd<crate::godot_classes::promise::PromiseError>>()
+            {
+                tracing::debug!(
+                    "get_avatar_texture: Promise was rejected for {}, reason: {}",
+                    cache_key,
+                    error.bind().error_description
+                );
+            }
+            return None;
+        }
+        let promise_data = promise_bind.get_data();
+        drop(promise_bind);
+        let texture_entry = promise_data.try_to::<Gd<TextureEntry>>().ok()?;
+        let texture = texture_entry.bind().texture.clone();
+        Some(texture)
+    }
+
+    /// Checks if an avatar texture is loaded for the given user ID.
+    #[func]
+    pub fn is_avatar_texture_loaded(&self, user_id: GString) -> bool {
+        let user_id_str = user_id.to_string();
+
+        // Use the same cache key logic as fetch_avatar_texture
+        let cache_key = match user_id_str.as_str().as_h160() {
+            Some(h160) => format!("avatar_texture_{:x}", h160),
+            None => format!("avatar_texture_invalid_{}", user_id_str),
+        };
+
+        if let Some(promise) = self.get_cached_promise(&cache_key) {
+            let is_resolved = promise.bind().is_resolved();
+            let is_rejected = promise.bind().is_rejected();
+            if is_rejected {
+                tracing::debug!(
+                    "is_avatar_texture_loaded: Promise rejected for {}, returning true to stop polling",
+                    cache_key
+                );
+                return true; // Return true to stop polling, get_avatar_texture will return None
+            }
+            return is_resolved;
+        }
+        false
+    }
+
+    #[func]
+    pub fn purge_file(&mut self, file_hash: GString) -> Gd<Promise> {
+        let file_hash_str = file_hash.to_string();
+        let absolute_file_path = cache_file_path(&self.content_folder, &file_hash_str);
+
+        let scene_path = get_scene_path_for_hash(&self.content_folder, &file_hash_str);
+
+        let resource_provider = self.resource_provider.clone();
+        let (promise, get_promise) = Promise::make_to_async();
+
+        self.promises.remove(&file_hash_str);
+        // GLTFs are cached under a prefixed key and as a derived .scn next to the
+        // raw download (see `load_scene_gltf`); dropping only the raw entry would
+        // leave a stale model behind whenever a hash is reused — which the preview
+        // server does on every edit, since it hashes file paths, not contents.
+        self.promises.remove(&format!("scene_{file_hash_str}"));
+
+        Core::spawn(async move {
+            resource_provider.delete_file(&absolute_file_path).await;
+            // Both calls are needed for the .scn. `delete_file` drops the
+            // `existing_files` entry, which is what `load_scene_gltf`'s cache check
+            // actually consults (`file_exists_by_path` reads that map, not the
+            // disk) — but it only unlinks paths it is tracking, and a .scn written
+            // by the scene saver in an earlier session isn't in the map, so the
+            // file itself would survive and be re-adopted later.
+            resource_provider.delete_file(&scene_path).await;
+            let _ = tokio::fs::remove_file(&scene_path).await;
+            then_promise(get_promise, Ok(None));
+        });
+
+        promise
+    }
+}
+
+impl ContentProvider {
+    fn get_context(&self) -> ContentProviderContext {
+        ContentProviderContext {
+            content_folder: self.content_folder.clone(),
+            http_queue_requester: self.http_queue_requester.clone(),
+            resource_provider: self.resource_provider.clone(),
+            godot_single_thread: self.godot_single_thread.clone(),
+            texture_quality: self.texture_quality.clone(),
+        }
+    }
+
+    /// Get a promise from the cache if it still exists (InstanceId is valid)
+    fn get_cached_promise(&self, key: &str) -> Option<Gd<Promise>> {
+        let instance_id = self.promises.get(key)?;
+        Gd::<Promise>::try_from_instance_id(*instance_id).ok()
+    }
+
+    /// Insert a promise into the cache using its InstanceId
+    pub(crate) fn cache_promise(&mut self, key: String, promise: &Gd<Promise>) {
+        self.promises.insert(key, promise.instance_id());
+    }
+
+    /// Announce a scene's `{entity}-static.zip`: from now on every cache file it
+    /// covers waits for the bundle instead of downloading per-file. The scene
+    /// spawns meanwhile — this never blocks the caller. Warm revisit (every
+    /// file already on disk) flips to `Ready` without a download; a bundle
+    /// already in flight for the same zip is reused.
+    async fn register_static_bundle(
+        ctx: ContentProviderContext,
+        optimized_data: Arc<OptimizedData>,
+        bundle: StaticBundle,
+    ) {
+        let (tx, rx) = watch::channel(BundleState::Pending);
+        {
+            let mut tasks = optimized_data.bundle_tasks.write().await;
+            if let Some(existing) = tasks.get(&bundle.file) {
+                if *existing.borrow() == BundleState::Pending {
+                    tracing::debug!("static bundle {} already in flight", bundle.file);
+                    return;
+                }
+            }
+            tasks.insert(bundle.file.clone(), rx.clone());
+        }
+
+        let mut missing: Vec<String> = Vec::new();
+        for name in &bundle.files {
+            let path = cache_file_path(&ctx.content_folder, name);
+            if !std::path::Path::new(&path).exists() {
+                missing.push(name.clone());
+            }
+        }
+        if missing.is_empty() {
+            let _ = tx.send(BundleState::Ready);
+            tracing::info!(
+                "static bundle {}: all {} files cached, skipping download",
+                bundle.file,
+                bundle.files.len()
+            );
+            return;
+        }
+        {
+            let mut files = optimized_data.bundle_files.write().await;
+            for name in &missing {
+                files.insert(name.clone(), rx.clone());
+            }
+        }
+
+        let url = format!("{}/{}", resolved_optimized_base_url(), bundle.file);
+        let expected: HashSet<String> = bundle.files.iter().cloned().collect();
+        let zip_name = bundle.file.clone();
+        Core::spawn(async move {
+            let started = std::time::Instant::now();
+            let result =
+                super::bundle::fetch_and_extract_bundle(&ctx, &zip_name, &url, Some(&expected))
+                    .await;
+            let state = match result {
+                Ok(Some(report)) => {
+                    tracing::info!(
+                        "static bundle {}: {} bytes announced, {:?} in {:.1}s",
+                        zip_name,
+                        bundle.bytes,
+                        report,
+                        started.elapsed().as_secs_f32()
+                    );
+                    BundleState::Ready
+                }
+                Ok(None) => {
+                    tracing::warn!(
+                        "static bundle {}: not found (404); loading per-file",
+                        zip_name
+                    );
+                    BundleState::Failed
+                }
+                Err(e) => {
+                    tracing::warn!("static bundle {}: {}; loading per-file", zip_name, e);
+                    BundleState::Failed
+                }
+            };
+            let _ = tx.send(state);
+        });
+    }
+
+    /// Wait for the static bundle that will produce `cache_name`, if one is in
+    /// flight. `Ready` / `Failed` / no bundle all return; the caller then goes
+    /// through `fetch_resource`, which is a disk hit for `Ready` and a normal
+    /// download otherwise.
+    async fn await_bundle_for(optimized_data: &OptimizedData, cache_name: &str) {
+        let rx = {
+            let files = optimized_data.bundle_files.read().await;
+            files.get(cache_name).cloned()
+        };
+        let Some(mut rx) = rx else {
+            return;
+        };
+        // A dropped sender (task panicked) ends the wait: treated as Failed.
+        let _ = rx.wait_for(|state| *state != BundleState::Pending).await;
+    }
+
+    /// Make a baked asset (and, for scene GLBs, every texture its `.scn`
+    /// references) present in `user://content/` so `ResourceLoader.load` on the
+    /// path from `optimized_godot_path` succeeds.
+    ///
+    /// Every dependency is awaited here, always: `ResourceProvider` already
+    /// de-duplicates in-flight downloads per hash, so a texture shared by two
+    /// GLBs is fetched once and BOTH waiters block until it is on disk. (The v5
+    /// zip flow tracked "already claimed" hashes and skipped the wait, so the
+    /// second GLB could load its .scn before the first had mounted the shared
+    /// texture — 28 GLBs of Genesis Plaza failed that way on a cold cache.)
+    pub async fn async_fetch_optimized_asset(
+        file_hash: String,
+        kind: OptimizedKind,
+        ctx: ContentProviderContext,
+        optimized_data: Arc<OptimizedData>,
+        with_dependencies: bool,
+    ) -> Result<(), String> {
+        tracing::debug!(
+            "async_fetch_optimized_asset: {} ({:?}, with_dependencies: {})",
+            file_hash,
+            kind,
+            with_dependencies
+        );
+
+        // `(name key, kind)`: textures by hash, the scene by `scene_bake_key`.
+        let mut wanted: Vec<(String, OptimizedKind)> = Vec::new();
+        let mut scene_key = file_hash.clone();
+        {
+            let dependencies_guard = optimized_data.dependencies.read().await;
+            if let Some(deps) = dependencies_guard.get(&file_hash) {
+                if kind == OptimizedKind::Scene {
+                    scene_key = scene_bake_key(&file_hash, deps.iter().map(String::as_str));
+                }
+                if with_dependencies {
+                    for dep in deps {
+                        wanted.push((dep.clone(), OptimizedKind::Texture));
+                    }
+                }
+            }
+        }
+        wanted.push((scene_key, kind));
+
+        // Files a static bundle is bringing in: wait for it rather than starting
+        // a per-file download of the same bytes (the GLB and each texture — a
+        // dynamic GLB can share a texture with a static one).
+        for (hash, kind) in &wanted {
+            Self::await_bundle_for(&optimized_data, &optimized_cache_name(hash, *kind)).await;
+        }
+
+        let base_url = resolved_optimized_base_url();
+        let futures_to_wait: Vec<_> = wanted
+            .into_iter()
+            .map(|(hash, kind)| {
+                let ctx = ctx.clone();
+                let url = format!("{}/{}", base_url, optimized_remote_name(&hash, kind));
+                let cache_name = optimized_cache_name(&hash, kind);
+                let absolute_path = format!("{}{}", ctx.content_folder, cache_name);
+                async move {
+                    #[cfg(feature = "use_resource_tracking")]
+                    report_resource_start(&cache_name, "optimized_asset_dep");
+                    let result = ctx
+                        .resource_provider
+                        .fetch_resource(url.clone(), cache_name.clone(), absolute_path)
+                        .await;
+                    match &result {
+                        Ok(_) => tracing::debug!("Optimized asset ready: {}", url),
+                        Err(e) => tracing::error!("Failed to download {}: {}", url, e),
+                    }
+                    #[cfg(feature = "use_resource_tracking")]
+                    if let Err(ref e) = result {
+                        report_resource_error(&cache_name, &e.to_string());
+                    } else {
+                        report_resource_loaded(&cache_name);
+                    }
+                    result
+                }
+            })
+            .collect();
+
+        // If ANY download fails, abort — loading a .scn whose ExtResource is
+        // missing makes Godot hand back a null resource (and on some builds
+        // segfaults during instantiation). The caller falls through to the
+        // runtime path or reports a clean error instead.
+        try_join_all(futures_to_wait)
+            .await
+            .map(|_| ())
+            .map_err(|e| format!("optimized asset download failed: {}", e))
+    }
+}
+
+impl ContentProvider {
+    /// Get the resource provider for sharing with other systems (like ContentProvider2)
+    pub fn get_resource_provider(&self) -> Arc<ResourceProvider> {
+        self.resource_provider.clone()
+    }
+
+    /// Shared async function for loading wearables and emotes.
+    /// Checks for optimized ZIP bundles first, falls back to runtime processing.
+    #[allow(clippy::too_many_arguments)]
+    async fn async_load_wearable_or_emote(
+        file_hash: String,
+        file_path: String,
+        content_mapping: super::content_mapping::ContentMappingAndUrlRef,
+        ctx: SceneGltfContext,
+        optimized_base_url: Option<String>,
+        is_emote: bool,
+        optimized_wearable_counter: Arc<AtomicU64>,
+        runtime_wearable_counter: Arc<AtomicU64>,
+    ) -> Result<Option<Variant>, anyhow::Error> {
+        let asset_type = if is_emote { "emote" } else { "wearable" };
+
+        // 1. Check if optimized ZIP is already downloaded locally (only if optimized URL is provided)
+        let zip_name = format!("{}-mobile.zip", file_hash);
+        let local_zip_path = format!("{}{}", ctx.content_folder, zip_name);
+
+        // 2. Determine if we should use optimized version
+        // IMPORTANT: Only check for local ZIP if optimized_base_url is Some
+        // When None is passed (runtime-only mode), skip optimized assets entirely
+        let use_optimized = if let Some(base_url) = optimized_base_url {
+            // Check local cache first
+            let local_zip_exists = std::path::Path::new(&local_zip_path).exists();
+            if local_zip_exists {
+                tracing::debug!(
+                    "[OPTIMIZED] {} ZIP found locally: {} (hash={})",
+                    asset_type.to_uppercase(),
+                    local_zip_path,
+                    file_hash
+                );
+                true
+            } else {
+                // Try to check if optimized version exists on remote server
+                let zip_url = format!("{}{}", base_url, zip_name);
+                tracing::debug!("Checking for optimized {} at: {}", asset_type, zip_url);
+
+                match ctx
+                    .resource_provider
+                    .check_remote_file_exists(&zip_url)
+                    .await
+                {
+                    Ok(true) => {
+                        // File exists on server - download it
+                        tracing::debug!(
+                            "[OPTIMIZED] Downloading {} ZIP from: {}",
+                            asset_type.to_uppercase(),
+                            zip_url
+                        );
+                        match ctx
+                            .resource_provider
+                            .fetch_resource_low_priority(
+                                zip_url.clone(),
+                                zip_name.clone(),
+                                local_zip_path.clone(),
+                            )
+                            .await
+                        {
+                            Ok(_) => {
+                                tracing::debug!(
+                                    "[OPTIMIZED] Downloaded {} ZIP: {} (hash={})",
+                                    asset_type.to_uppercase(),
+                                    zip_name,
+                                    file_hash
+                                );
+                                true
+                            }
+                            Err(e) => {
+                                tracing::warn!(
+                                    "Failed to download optimized {}: {} - falling back to runtime processing",
+                                    asset_type,
+                                    e
+                                );
+                                false
+                            }
+                        }
+                    }
+                    Ok(false) => {
+                        tracing::debug!("No optimized {} available at: {}", asset_type, zip_url);
+                        false
+                    }
+                    Err(e) => {
+                        tracing::debug!(
+                            "Failed to check optimized {} existence: {} - falling back to runtime processing",
+                            asset_type,
+                            e
+                        );
+                        false
+                    }
+                }
+            }
+        } else {
+            // No optimized_base_url provided - use runtime processing only
+            tracing::debug!(
+                "[RUNTIME] {} forced runtime-only mode (no optimized URL): hash={}",
+                asset_type.to_uppercase(),
+                file_hash
+            );
+            false
+        };
+
+        // 3. Load optimized or fall back to runtime processing
+        if use_optimized {
+            // Load the resource pack
+            let zip_godot_path = format!("user://content/{}", zip_name);
+
+            // Mount on the MAIN thread (see MAIN_THREAD_PACK_QUEUE) —
+            // load_resource_pack from a worker deadlocks the render thread.
+            let result = load_resource_pack_on_main(zip_godot_path.clone()).await;
+
+            if result {
+                let scene_path = format!("res://glbs/{}.scn", file_hash);
+                tracing::debug!(
+                    "[OPTIMIZED] {} LOADED: hash={} -> {}",
+                    asset_type.to_uppercase(),
+                    file_hash,
+                    scene_path
+                );
+                optimized_wearable_counter.fetch_add(1, Ordering::Relaxed);
+                Ok(Some(GString::from(&scene_path).to_variant()))
+            } else {
+                tracing::warn!(
+                    "Failed to load {} resource pack: {}",
+                    asset_type,
+                    zip_godot_path
+                );
+                Err(anyhow::anyhow!(
+                    "Failed to load resource pack: {}",
+                    zip_godot_path
+                ))
+            }
+        } else {
+            // Fall back to runtime processing - check cache first
+            let cache_path = if is_emote {
+                get_emote_path_for_hash(&ctx.content_folder, &file_hash)
+            } else {
+                get_wearable_path_for_hash(&ctx.content_folder, &file_hash)
+            };
+
+            if ctx.resource_provider.file_exists_by_path(&cache_path).await {
+                // Cache HIT - runtime-processed version exists
+                tracing::info!(
+                    "[RUNTIME] {} cache HIT: hash={} -> {}",
+                    asset_type.to_uppercase(),
+                    file_hash,
+                    cache_path
+                );
+                #[cfg(feature = "use_resource_tracking")]
+                {
+                    let resource_type = if is_emote {
+                        "emote_cached"
+                    } else {
+                        "wearable_cached"
+                    };
+                    report_resource_start(&file_hash, resource_type);
+                    report_resource_loaded(&file_hash);
+                }
+                ctx.resource_provider.touch_file_async(&cache_path).await;
+                runtime_wearable_counter.fetch_add(1, Ordering::Relaxed);
+                Ok(Some(GString::from(&cache_path).to_variant()))
+            } else {
+                // Cache MISS - load, process, and save
+                tracing::info!(
+                    "[RUNTIME] {} processing: hash={} (no optimized version available)",
+                    asset_type.to_uppercase(),
+                    file_hash
+                );
+                let result = if is_emote {
+                    load_and_save_emote_gltf(file_path, file_hash.clone(), content_mapping, ctx)
+                        .await
+                } else {
+                    load_and_save_wearable_gltf(file_path, file_hash.clone(), content_mapping, ctx)
+                        .await
+                };
+
+                match result {
+                    Ok(path) => {
+                        runtime_wearable_counter.fetch_add(1, Ordering::Relaxed);
+                        Ok(Some(GString::from(&path).to_variant()))
+                    }
+                    Err(e) => Err(e),
+                }
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn scene_bake_key_is_the_hash_without_textures_and_stable_with_them() {
+        assert_eq!(scene_bake_key("glb", []), "glb");
+        let a = scene_bake_key("glb", ["t1", "t2"]);
+        assert!(a.starts_with("glb-") && a.len() == "glb-".len() + 16);
+        // order- and duplicate-insensitive: server (Vec) and client (HashSet) agree
+        assert_eq!(a, scene_bake_key("glb", ["t2", "t1", "t2"]));
+        // a different texture set is a different file
+        assert_ne!(a, scene_bake_key("glb", ["t1", "t3"]));
+        assert_ne!(a, scene_bake_key("glb2", ["t1", "t2"]));
+        assert_eq!(
+            optimized_cache_name(&a, OptimizedKind::Scene),
+            format!("{a}.opt.scn")
+        );
+    }
+}

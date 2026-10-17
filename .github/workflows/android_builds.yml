@@ -151,6 +151,20 @@ jobs:
           cargo-key: ${{ steps.cache.outputs.cargo-key }}
           rust-key: ${{ steps.cache.outputs.rust-key }}
 
+      # The shipping app is the React Native app in rn/: `cargo run -- export` builds it from the
+      # Godot export, and its Gradle build bundles the JS with Node.
+      - name: Set up Node (React Native app)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: rn/package-lock.json
+
+      # AGP 8.12 (React Native 0.86) needs build-tools 35; the builder image ships 33/34. compileSdk 35
+      # and NDK 28.1 are already in the image.
+      - name: Install Android build-tools 35
+        run: echo y | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "build-tools;35.0.0"
+
       - name: Export Android APK
         run: |
           cargo run -- export --target android --format apk --release

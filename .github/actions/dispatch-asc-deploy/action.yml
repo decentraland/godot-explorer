@@ -62,8 +62,10 @@ runs:
           exit 1
         fi
         SAFE_BRANCH=$(echo "$REF" | tr '/' '-')
+        # The React Native app builds on asc-deploy's feat/react-native-app; main keeps building the
+        # Godot-only app for the current releases. Back to main once asc-deploy merges that branch.
         gh workflow run deploy_testflight.yml \
-          --repo decentraland/godot-asc-deploy --ref main \
+          --repo decentraland/godot-asc-deploy --ref feat/react-native-app \
           -f branch="$SAFE_BRANCH" -f sha="$SHA" -f whats_new="$WHATS_NEW" \
           -f pr_number="$PR_NUMBER" -f slack_ts="$TS" \
           -f build_version="$BUILD_VERSION" -f build_number="$BUILD_NUMBER" -f triggered_by="$TRIGGERED_BY"

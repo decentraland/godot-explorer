@@ -33,21 +33,8 @@ const DEBUG_SCHEDULE_TEST_EVENT_NOTIFICATION = false
 ## DEBUG: Set to true to schedule the Day 1 notification 30 seconds from now instead of 24h
 const DEBUG_DAY1_SHORT_DELAY = false
 
-## Supported notification types (whitelist)
-## Only these types will be shown to the user (systems that are implemented)
-const SUPPORTED_NOTIFICATION_TYPES = [
-	"events_started",  # Events: Event has started (we only notify on start, not "starts soon")
-	"reward_assignment",  # Rewards: Reward assigned/received
-	# "reward_in_progress" disabled for now — its wearable thumbnail doesn't render (image not ready).
-	"social_service_friendship_request",  # Friends: Friend request received (server notification)
-	"social_service_friendship_accepted",  # Friends: Friend request accepted (server notification)
-]
-
 # Queue management constants (Phase 3)
 const MAX_OS_SCHEDULED_NOTIFICATIONS = 24  # Maximum notifications scheduled with OS at once
-
-# Toast display: Only show notifications newer than 5 minutes
-const TOAST_MAX_AGE_MS = 5 * 60 * 1000  # 5 minutes in milliseconds
 
 # Event notification sync constants
 const NOTIFICATION_ADVANCE_MINUTES = 3  # Notify 3 minutes before event starts
@@ -65,11 +52,10 @@ const PERMISSION_PROMPT_COOLDOWN_SEC = 300
 ## Only active in debug builds (OS.is_debug_build())
 var _debug_notifications_enabled: bool = false
 
-var _notifications: Array = []
+## The server feed, its supported-type filter and the toast queue live in the core.
+var _feed := DclNotificationFeed.new()
 var _poll_timer: Timer = null
 var _is_polling: bool = false
-var _previous_notification_ids: Array = []
-var _notification_queue: Array = []  # Queue for new unread notifications to show as toasts
 var _debug_timer: Timer = null  # Timer for debug random notifications
 var _queue_paused: bool = false  # Whether the notification queue is paused
 
@@ -158,51 +144,20 @@ func stop_polling() -> void:
 ## the lobby scene swap, so without this the cached list persists across accounts.
 ## Emitting notifications_updated refreshes the open panel and the bell badge.
 func clear_notification_history() -> void:
-	_notifications.clear()
-	_notification_queue.clear()
-	_previous_notification_ids.clear()
+	_feed.clear()
 	notifications_updated.emit()
 
 
 ## Get currently cached notifications sorted by timestamp descending (newest first)
 func get_notifications() -> Array:
-	var sorted = _notifications.duplicate()
-	# Cast: some notifications carry the timestamp as a String, and String > int raises at runtime.
-	sorted.sort_custom(func(a, b): return int(a.get("timestamp", 0)) > int(b.get("timestamp", 0)))
-	return sorted
+	return _feed.get_sorted()
 
 
 ## Filter notifications to only include supported types
 func _filter_notifications(notifications: Array) -> Array:
-	# If filtering is disabled, return all notifications
-	if not ENABLE_NOTIFICATION_FILTER:
-		return notifications
-
-	var filtered = []
-
-	for notif in notifications:
-		if notif is Dictionary and "type" in notif:
-			var notif_type = notif["type"]
-			if notif_type in SUPPORTED_NOTIFICATION_TYPES:
-				# Additional filtering: exclude friend request notifications from blocked users
-				if notif_type == "social_service_friendship_request":
-					# Check if the sender is blocked
-					var sender_address = ""
-					if "metadata" in notif and notif["metadata"] is Dictionary:
-						var metadata = notif["metadata"]
-						if "sender" in metadata and metadata["sender"] is Dictionary:
-							sender_address = metadata["sender"].get("address", "")
-
-					# Skip this notification if sender is blocked
-					if (
-						not sender_address.is_empty()
-						and Global.social_blacklist.is_blocked(sender_address)
-					):
-						continue
-
-				filtered.append(notif)
-
-	return filtered
+	return _feed.filter(
+		notifications, ENABLE_NOTIFICATION_FILTER, Global.social_blacklist.is_blocked
+	)
 
 
 ## Generate a fake notification for testing
@@ -407,42 +362,19 @@ func _async_fetch_notifications(promise: Promise, url: String) -> void:
 		var fake_notif = _generate_fake_notification()
 		filtered_notifications.append(fake_notif)
 
-	# Merge new notifications with existing ones (avoid duplicates by ID)
-	var existing_ids = {}
-	for notif in _notifications:
-		if "id" in notif:
-			existing_ids[notif["id"]] = true
-
-	# Detect new notifications and queue them
-	var new_notifs: Array = []
-	for notif in filtered_notifications:
-		if "id" in notif:
-			var notif_id = notif["id"]
-			# Check if this is a new notification not in our existing set
-			if notif_id not in existing_ids:
-				# Add to notifications list
-				_notifications.append(notif)
-				existing_ids[notif_id] = true
-
-				# Queue unread notifications for toast display (only if recent)
-				if not notif.get("read", false):
-					var notif_timestamp: int = int(notif.get("timestamp", 0))
-					var current_time_ms: int = int(Time.get_unix_time_from_system() * 1000)
-					var is_recent: bool = notif_timestamp > (current_time_ms - TOAST_MAX_AGE_MS)
-
-					if is_recent:
-						new_notifs.append(notif)
-						_notification_queue.append(notif)
-
-	if new_notifs.size() > 0:
-		# Emit signal to start processing queue
-		if _notification_queue.size() == new_notifs.size():  # Only trigger if queue was empty
-			notification_queued.emit(_notification_queue[0])
+	# Merge new notifications with existing ones (duplicates by ID are skipped) and queue the
+	# new unread, recent ones for toasts.
+	var outcome := _feed.ingest(
+		filtered_notifications, int(Time.get_unix_time_from_system() * 1000)
+	)
+	if outcome.raise != null:
+		# The queue was empty: start processing it.
+		notification_queued.emit(outcome.raise)
 
 	# Emit updated notifications list
-	new_notifications.emit(_notifications.duplicate())
+	new_notifications.emit(_feed.get_all())
 	notifications_updated.emit()
-	promise.resolve_with_data(_notifications.duplicate())
+	promise.resolve_with_data(_feed.get_all())
 
 
 ## Mark notifications as read
@@ -496,9 +428,7 @@ func _async_mark_as_read(
 
 	var updated_count = data["updated"]
 
-	for notif in _notifications:
-		if notif["id"] in notification_ids:
-			notif["read"] = true
+	_feed.mark_read(notification_ids)
 
 	notifications_updated.emit()
 	promise.resolve_with_data(updated_count)
@@ -534,19 +464,17 @@ func _on_notification_cancelled(notification_id: String) -> void:
 
 ## Get the next notification from the queue
 func get_next_queued_notification() -> Dictionary:
-	if _notification_queue.size() > 0:
-		return _notification_queue[0]
-	return {}
+	return _feed.peek()
 
 
 ## Remove the first notification from the queue and return the next one
 func dequeue_notification() -> Dictionary:
-	if _notification_queue.size() > 0:
-		_notification_queue.pop_front()
+	if _feed.queue_size() > 0:
+		_feed.pop()
 
 		# Return next notification if available and queue is not paused
-		if _notification_queue.size() > 0 and not _queue_paused:
-			var next_notif = _notification_queue[0]
+		if _feed.queue_size() > 0 and not _queue_paused:
+			var next_notif := _feed.peek()
 			notification_queued.emit(next_notif)
 			return next_notif
 
@@ -555,7 +483,7 @@ func dequeue_notification() -> Dictionary:
 
 ## Check if there are notifications in the queue
 func has_queued_notifications() -> bool:
-	return _notification_queue.size() > 0
+	return _feed.queue_size() > 0
 
 
 ## Re-start the toast pump from the consumer side (explorer). The queue only auto-emits when it
@@ -564,29 +492,21 @@ func has_queued_notifications() -> bool:
 func kick_queue() -> void:
 	if _queue_paused:
 		return
-	if _notification_queue.size() > 0:
-		notification_queued.emit(_notification_queue[0])
+	if _feed.queue_size() > 0:
+		notification_queued.emit(_feed.peek())
 
 
 ## Drop transient system toasts (copied-to-clipboard, etc.) still queued from a previous run so they
 ## don't parade on world entry. Real notifications (friend requests, rewards) are kept.
 func clear_system_toasts() -> void:
-	# Never touch the head: index 0 may be the toast currently on screen, and the consumer's
-	# on-close dequeue() pops index 0 — filtering it out would orphan the visible toast and make
-	# that dequeue swallow the next real notification. Only drop system toasts still waiting behind it.
-	if _notification_queue.is_empty():
-		return
-	var head: Dictionary = _notification_queue[0]
-	var rest: Array = _notification_queue.slice(1).filter(
-		func(n): return n.get("type", "") != "system"
-	)
-	rest.insert(0, head)
-	_notification_queue = rest
+	# The head may be the toast currently on screen, and the consumer's on-close dequeue() pops
+	# index 0, so only system toasts waiting behind it are dropped.
+	_feed.clear_system_toasts()
 
 
 ## Get the number of notifications in the queue
 func get_queue_size() -> int:
-	return _notification_queue.size()
+	return _feed.queue_size()
 
 
 ## Pause the notification queue (prevents new toasts from showing)
@@ -599,8 +519,8 @@ func pause_queue() -> void:
 func resume_queue(emit_next: bool = false) -> void:
 	_queue_paused = false
 	# Only emit if explicitly requested (for when toast is dismissed)
-	if emit_next and _notification_queue.size() > 0:
-		notification_queued.emit(_notification_queue[0])
+	if emit_next and _feed.queue_size() > 0:
+		notification_queued.emit(_feed.peek())
 
 
 ## Check if user is authenticated (not a guest)
@@ -622,12 +542,12 @@ func _start_debug_timer() -> void:
 ## DEBUG: Called when debug timer times out - requeues a random old notification
 func _on_debug_timer_timeout() -> void:
 	# Pick a random notification from existing ones to requeue
-	if _notifications.size() > 0:
-		var random_index = randi() % _notifications.size()
-		var notif = _notifications[random_index]
+	var all_notifications := _feed.get_all()
+	if all_notifications.size() > 0:
+		var notif = all_notifications[randi() % all_notifications.size()]
 
 		# Add to queue for toast display
-		_notification_queue.append(notif)
+		_feed.enqueue(notif)
 
 		# Emit signal to show toast
 		notification_queued.emit(notif)
@@ -663,10 +583,10 @@ func show_system_toast(
 	}
 
 	# Add to queue for toast display
-	_notification_queue.append(notif)
+	var queue_size := _feed.enqueue(notif)
 
 	# Emit signal to show toast if this is the only one in queue
-	if _notification_queue.size() == 1 and not _queue_paused:
+	if queue_size == 1 and not _queue_paused:
 		notification_queued.emit(notif)
 
 	# MARKETPLACE-IAP-TOAST: a portrait-aware toast for marketplace arrivals would hook

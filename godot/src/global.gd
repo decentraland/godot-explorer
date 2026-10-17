@@ -521,24 +521,17 @@ func _ready():
 			dcl_ios_singleton.deeplink_received.connect(deep_link_router.process_deep_link)
 
 	_dcl_swift_lib_smoke_test()
-	# Setup
-	nft_frame_loader = NftFrameStyleLoader.new()
-	nft_fetcher = OpenSeaFetcher.new()
-	music_player = MusicPlayer.new()
-	snapshot = Snapshot.new()
-	add_child(snapshot)
-	preload_assets = PreloadAssets.new()
+	# The services every boot needs (config, realm, identity, ...) are created in Rust.
+	DclBootstrap.create_core_services(self)
 
 	var args = cli.get_all_args()
 	if args.size() == 1 and args[0].begins_with("res://"):
-		if args[0] != "res://src/main.tscn":
+		if args[0] != "res://src/dcl_root.tscn":
 			self.standalone = true
 
 	if FORCE_TEST:
 		Global.testing_scene_mode = true
 
-	# Create GDScript extensions of Rust classes
-	self.config = ConfigData.new()
 	config.load_from_settings_file()
 
 	# Restore profile particle budgets + avatar dust gate: the Rust atomics and
@@ -586,23 +579,9 @@ func _ready():
 		ProfileService.set_deploy_disabled(true)
 		print("[GLOBAL] Profile deploy DISABLED (local-only profile updates)")
 
-	self.realm = Realm.new()
-	self.realm.set_name("realm")
 	self.realm.realm_change_failed.connect(_on_realm_change_failed_toast)
 	self.realm.realm_access_denied.connect(_on_realm_access_denied)
-
-	self.dcl_tokio_rpc = DclTokioRpc.new()
-	self.dcl_tokio_rpc.set_name("dcl_tokio_rpc")
-
-	self.player_identity = PlayerIdentity.new()
-	self.player_identity.set_name("player_identity")
 	self.player_identity.profile_changed.connect(_on_player_profile_changed_sync_events)
-
-	self.testing_tools = TestingTools.new()
-	self.testing_tools.set_name("testing_tool")
-
-	self.portable_experience_controller = PortableExperienceController.new()
-	self.portable_experience_controller.set_name("portable_experience_controller")
 
 	# Ensure the content cache folder exists before clearing — clear runs against
 	# this directory and would log an error if it doesn't exist yet (fresh install).
@@ -616,28 +595,8 @@ func _ready():
 	await _async_clear_cache_if_needed()
 	print("[Startup] global._async_clear_cache end: %dms" % (Time.get_ticks_msec() - _startup_time))
 
-	# #[itest] only needs a godot context, not the all explorer one
-	if cli.test_runner:
-		print("Running godot-tests...")
-		var test_runner = load("res://src/test/test_runner.gd").new()
-		add_child(test_runner)
-		test_runner.start.call_deferred()
-		return
-
-	# Floating Islands Benchmark mode
-	if cli.fi_benchmark_size >= 0:
-		print("Running Floating Islands Benchmark...")
-
-		# Create minimal required components for benchmark
-		self.scene_fetcher = SceneFetcher.new()
-		self.scene_fetcher.set_name("scene_fetcher")
-		get_tree().root.add_child.call_deferred(self.scene_fetcher)
-		get_tree().root.add_child.call_deferred(self.scene_runner)
-		get_tree().root.add_child.call_deferred(self.content_provider)
-
-		var fi_runner = load("res://src/tools/fi_benchmark_runner.gd").new()
-		fi_runner.set_name("FIBenchmarkRunner")
-		get_tree().root.add_child.call_deferred(fi_runner)
+	# The Rust test runner and the floating-islands benchmark boot without the app services.
+	if DclBootstrap.start_special_profile(self):
 		return
 
 	# Genesis Plaza profiling benchmark (issue #1862). Lives alongside the full
@@ -658,68 +617,13 @@ func _ready():
 	# `disable_telemetry` cargo feature).
 	var telemetry_enabled := not cli.asset_server and not DclGlobal.is_telemetry_disabled()
 
-	# Initialize metrics with proper user_id and session_id
-	if telemetry_enabled:
-		self.metrics = Metrics.create_metrics(self.config.analytics_user_id, session_id)
-		self.metrics.set_debug_level(0)  # 0 off - 1 on
-		self.metrics.set_name("metrics")
-
-	# Create the GDScript-only components
-	self.scene_fetcher = SceneFetcher.new()
-	self.scene_fetcher.set_name("scene_fetcher")
-
-	# RefCounted, kept alive by this strong reference. Seeds Sentry user /
-	# context / tags from the runtime signals exposed by the subsystems
-	# created above. No scene-tree presence.
-	if telemetry_enabled:
-		self.sentry_seeder = SentrySeeder.new()
-		self.sentry_seeder.setup()
-
-	self.skybox_time = SkyboxTime.new()
-	self.skybox_time.set_name("skybox_time")
-
-	self.locations = load("res://src/helpers_components/locations.gd").new()
-	self.locations.set_name("locations")
-
-	self.modal_manager = load("res://src/ui/components/organisms/modal/modal_manager.gd").new()
-	self.modal_manager.set_name("modal_manager")
-
-	self.upgrade_nudge_coordinator = load("res://src/upgrade_nudge_coordinator.gd").new()
-	self.upgrade_nudge_coordinator.set_name("upgrade_nudge_coordinator")
-
-	self.review_prompt_coordinator = load("res://src/review_prompt_coordinator.gd").new()
-	self.review_prompt_coordinator.set_name("review_prompt_coordinator")
-
-	get_tree().root.add_child.call_deferred(self.cli)
-	get_tree().root.add_child.call_deferred(self.music_player)
-	get_tree().root.add_child.call_deferred(self.scene_fetcher)
-	get_tree().root.add_child.call_deferred(self.skybox_time)
-	get_tree().root.add_child.call_deferred(self.locations)
-	get_tree().root.add_child.call_deferred(self.modal_manager)
-	get_tree().root.add_child.call_deferred(self.upgrade_nudge_coordinator)
-	get_tree().root.add_child.call_deferred(self.review_prompt_coordinator)
-	get_tree().root.add_child.call_deferred(self.content_provider)
-	get_tree().root.add_child.call_deferred(self.scene_runner)
-	get_tree().root.add_child.call_deferred(self.realm)
-	get_tree().root.add_child.call_deferred(self.dcl_tokio_rpc)
-	get_tree().root.add_child.call_deferred(self.player_identity)
-	get_tree().root.add_child.call_deferred(self.comms)
-	get_tree().root.add_child.call_deferred(self.avatars)
-	get_tree().root.add_child.call_deferred(self.portable_experience_controller)
-	get_tree().root.add_child.call_deferred(self.testing_tools)
+	DclBootstrap.create_app_services(self, session_id, telemetry_enabled)
 	if self.metrics != null:
-		get_tree().root.add_child.call_deferred(self.metrics)
 		# Fire install attribution once per install (Android only).
 		if self.is_android() and not self.config.install_referrer_sent:
 			self.metrics.track_install_referrer.call_deferred()
 			self.config.install_referrer_sent = true
 			self.config.save_to_settings_file()
-		# All Firebase/Segment orchestration lives in AnalyticsController — see its docstring.
-		# RefCounted, kept alive by this strong reference. No scene-tree presence by default;
-		# spawns a transient Timer under Global only while polling for first_move_in_world.
-		self.analytics_controller = AnalyticsController.new()
-		self.analytics_controller.setup()
-
 		# iOS only: report the StoreKit environment (production/sandbox) to
 		# analytics once at startup. StoreKit's environment is fixed by how the
 		# binary was distributed and can't be chosen by the app, so this is the
@@ -729,58 +633,7 @@ func _ready():
 		# (incl. Iap) is in the tree. See docs/iap-zone-submission/.
 		if self.is_ios():
 			Iap.report_environment_to_analytics.call_deferred()
-	# Platform attestation: needs to be a Node (uses timers + native plugin signals). The
-	# service self-gates on EULA acceptance and caches the issued session token on disk.
-	self.attestation = AttestationService.new()
-	add_child(self.attestation)
-	# Remote feature flags: the node kicks its own fire-and-forget fetch on _ready
-	# and applies comms-affecting flags (e.g. `archipielago`) when they arrive.
-	self.feature_flags = FeatureFlags.new()
-	self.feature_flags.set_name("feature_flags")
-	add_child(self.feature_flags)
-	# Campaign resolver. Unlike the flags above it does NOT fetch on _ready: the map is only
-	# requested once a token actually needs resolving, so an install with no campaign — the
-	# large majority — never touches the endpoint. What starts here is the watcher that
-	# persists a token coming from install attribution.
-	self.campaigns = Campaigns.new()
-	self.campaigns.set_name("campaigns")
-	add_child(self.campaigns)
-	get_tree().root.add_child.call_deferred(self.network_inspector)
-	get_tree().root.add_child.call_deferred(self.scene_inspector_dispatcher)
-	get_tree().root.add_child.call_deferred(self.social_blacklist)
-	get_tree().root.add_child.call_deferred(self.dynamic_graphics_manager)
-
-	# Scene Inspector: dial the configured hub from app startup (second 0) rather
-	# than in-world, so the channel — and, in debug, boot-log capture — is live
-	# from boot. The bridge also handles `?scene-inspector=` deeplinks.
-	_scene_inspector_bridge = SceneInspectorBridge.new()
-	_scene_inspector_bridge.set_name("scene_inspector_bridge")
-	_scene_inspector_bridge.activate_from_config()
-	get_tree().root.add_child.call_deferred(_scene_inspector_bridge)
-
-	if "memory_debugger" in self:
-		get_tree().root.add_child.call_deferred(self.memory_debugger)
-
-	# Initialize BenchmarkReport singleton if benchmarking is enabled (requires use_memory_debugger feature)
-	if cli.benchmark_report and "benchmark_report" in self:
-		print("✓ BenchmarkReport initialized for full flow benchmarking")
-		get_tree().root.add_child.call_deferred(self.benchmark_report)
-
-		# Add benchmark flow controller to orchestrate the full benchmark flow
-		var benchmark_flow_controller = load("res://src/tools/benchmark_flow_controller.gd").new()
-		benchmark_flow_controller.set_name("BenchmarkFlowController")
-		get_tree().root.add_child.call_deferred(benchmark_flow_controller)
-	elif cli.benchmark_report:
-		push_error(
-			"BenchmarkReport requires --features use_memory_debugger to be enabled during build"
-		)
-
-	# Add stress test controller if stress testing is enabled
-	if cli.stress_test:
-		print("✓ StressTest initialized for scene loading/unloading stress test")
-		var stress_test_controller = load("res://src/tools/stress_test_controller.gd").new()
-		stress_test_controller.set_name("StressTestController")
-		get_tree().root.add_child.call_deferred(stress_test_controller)
+	DclBootstrap.create_extra_services(self)
 
 	# Initialize dynamic graphics manager after config is loaded. Self-skips in
 	# bench mode (the function early-returns on cli.bench_mode), so bench results
@@ -1213,6 +1066,9 @@ func explorer_grab_focus() -> void:
 	var explorer = get_explorer()
 	if explorer == null:
 		return
+	# A scene text input being typed in keeps focus (and its keyboard) until it blurs.
+	if engine.is_text_input_focused():
+		return
 
 	explorer.ui_root.grab_focus.call_deferred()
 
@@ -1343,6 +1199,9 @@ func set_orientation_landscape():
 	# swap, stranding the lobby/login in landscape (issue #2508).
 	if _signing_out or _returning_to_discover:
 		return
+	if cli.rn_host:
+		_follow_host_orientation()
+		return
 	# Set orientation BEFORE changing window size so listeners get correct value
 	_is_portrait = false
 	if Global.is_mobile() and !Global.is_virtual_mobile():
@@ -1361,11 +1220,25 @@ func set_orientation_landscape():
 	orientation_changed.emit(false)
 
 
+# The RN host owns the device orientation: only mirror the window shape into the layout state.
+func _follow_host_orientation() -> void:
+	var window := get_window()
+	if not window.size_changed.is_connected(_follow_host_orientation):
+		window.size_changed.connect(_follow_host_orientation)
+	var portrait := window.size.y >= window.size.x
+	if portrait != _is_portrait:
+		_is_portrait = portrait
+		orientation_changed.emit(portrait)
+
+
 func is_orientation_portrait() -> bool:
 	return _is_portrait
 
 
 func set_orientation_portrait():
+	if cli.rn_host:
+		_follow_host_orientation()
+		return
 	# Set orientation BEFORE changing window size so listeners get correct value
 	_is_portrait = true
 	if Global.is_mobile() and !Global.is_virtual_mobile():
@@ -1711,7 +1584,7 @@ func _notification(what: int) -> void:
 
 			# On cold start, set the environment from the deeplink BEFORE processing it, or
 			# _check_dclenv_change() sees default "org" vs deeplink env and calls sign_out()
-			# prematurely, skipping the orientation/UI zoom setup in main.gd.
+			# prematurely, skipping the orientation/UI zoom setup in DclRoot.
 			if what == NOTIFICATION_READY:
 				var parsed = DclParseDeepLink.parse_decentraland_link(new_url)
 				if not parsed.dclenv.is_empty():

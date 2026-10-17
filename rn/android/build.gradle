@@ -1,0 +1,24 @@
+buildscript {
+    ext {
+        // compileSdk and NDK match the Godot Android template and the CI builder image
+        // (quay.io/decentraland/dcl-godot-android-builder); build-tools 35 is AGP 8.12's minimum.
+        buildToolsVersion = "35.0.0"
+        minSdkVersion = 24
+        compileSdkVersion = 35
+        targetSdkVersion = 36
+        ndkVersion = "28.1.13356709"
+        kotlinVersion = "2.1.20"
+    }
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath("com.android.tools.build:gradle")
+        classpath("com.facebook.react:react-native-gradle-plugin")
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin")
+        classpath("com.google.gms:google-services:4.4.4")
+    }
+}
+
+apply plugin: "com.facebook.react.rootproject"

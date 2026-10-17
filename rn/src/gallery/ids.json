@@ -1,0 +1,1567 @@
+[
+  {
+    "id": "backpack__body-body-shape__43-918",
+    "source": "backpack",
+    "orientation": "portrait"
+  },
+  {
+    "id": "backpack__body-body-shape__126-2652",
+    "source": "backpack",
+    "orientation": "portrait"
+  },
+  {
+    "id": "backpack__body-body-shape__271-8440",
+    "source": "backpack",
+    "orientation": "portrait"
+  },
+  {
+    "id": "backpack__emotes__83-2357",
+    "source": "backpack",
+    "orientation": "portrait"
+  },
+  {
+    "id": "backpack__body-skin-empty__126-2391",
+    "source": "backpack",
+    "orientation": "portrait"
+  },
+  {
+    "id": "backpack__body-skin__156-4350",
+    "source": "backpack",
+    "orientation": "portrait"
+  },
+  {
+    "id": "backpack__body-skin__169-4714",
+    "source": "backpack",
+    "orientation": "portrait"
+  },
+  {
+    "id": "backpack__emotes__215-8041",
+    "source": "backpack",
+    "orientation": "portrait"
+  },
+  {
+    "id": "backpack__emotes__215-8436",
+    "source": "backpack",
+    "orientation": "portrait"
+  },
+  {
+    "id": "backpack__emotes__215-8842",
+    "source": "backpack",
+    "orientation": "portrait"
+  },
+  {
+    "id": "backpack__emotes__912-19520",
+    "source": "backpack",
+    "orientation": "portrait"
+  },
+  {
+    "id": "backpack__emotes__916-10419",
+    "source": "backpack",
+    "orientation": "portrait"
+  },
+  {
+    "id": "backpack__emotes__916-10839",
+    "source": "backpack",
+    "orientation": "portrait"
+  },
+  {
+    "id": "backpack__emotes__916-11246",
+    "source": "backpack",
+    "orientation": "portrait"
+  },
+  {
+    "id": "backpack__emotes__980-14266",
+    "source": "backpack",
+    "orientation": "portrait"
+  },
+  {
+    "id": "backpack__emotes__984-15749",
+    "source": "backpack",
+    "orientation": "portrait"
+  },
+  {
+    "id": "backpack__emotes__984-16132",
+    "source": "backpack",
+    "orientation": "portrait"
+  },
+  {
+    "id": "backpack__face-hairstyle__169-4931",
+    "source": "backpack",
+    "orientation": "portrait"
+  },
+  {
+    "id": "backpack__face-facialhair__182-2523",
+    "source": "backpack",
+    "orientation": "portrait"
+  },
+  {
+    "id": "backpack__face-eye__182-2866",
+    "source": "backpack",
+    "orientation": "portrait"
+  },
+  {
+    "id": "backpack__face-eyebrows__182-3242",
+    "source": "backpack",
+    "orientation": "portrait"
+  },
+  {
+    "id": "backpack__face-mouth__182-3630",
+    "source": "backpack",
+    "orientation": "portrait"
+  },
+  {
+    "id": "backpack__face-hairstyle-color__342-12908",
+    "source": "backpack",
+    "orientation": "portrait"
+  },
+  {
+    "id": "backpack__face-facialhair-color__342-13098",
+    "source": "backpack",
+    "orientation": "portrait"
+  },
+  {
+    "id": "backpack__face-eye-color__342-13288",
+    "source": "backpack",
+    "orientation": "portrait"
+  },
+  {
+    "id": "backpack__face-eyebrows-color__342-13478",
+    "source": "backpack",
+    "orientation": "portrait"
+  },
+  {
+    "id": "backpack__emotes__226-9279",
+    "source": "backpack",
+    "orientation": "portrait"
+  },
+  {
+    "id": "backpack__emotes__226-9697",
+    "source": "backpack",
+    "orientation": "portrait"
+  },
+  {
+    "id": "backpack__emotes__226-10131",
+    "source": "backpack",
+    "orientation": "portrait"
+  },
+  {
+    "id": "backpack__emotes__226-10557",
+    "source": "backpack",
+    "orientation": "portrait"
+  },
+  {
+    "id": "backpack__emotes__1378-16445",
+    "source": "backpack",
+    "orientation": "portrait"
+  },
+  {
+    "id": "backpack__clothing-chest__186-4510",
+    "source": "backpack",
+    "orientation": "portrait"
+  },
+  {
+    "id": "backpack__clothing-legs__206-5723",
+    "source": "backpack",
+    "orientation": "portrait"
+  },
+  {
+    "id": "backpack__clothing-feet__206-5978",
+    "source": "backpack",
+    "orientation": "portrait"
+  },
+  {
+    "id": "backpack__clothing-hand__271-8932",
+    "source": "backpack",
+    "orientation": "portrait"
+  },
+  {
+    "id": "backpack__emotes__880-18121",
+    "source": "backpack",
+    "orientation": "portrait"
+  },
+  {
+    "id": "backpack__emotes__880-18182",
+    "source": "backpack",
+    "orientation": "portrait"
+  },
+  {
+    "id": "backpack__emotes__880-18244",
+    "source": "backpack",
+    "orientation": "portrait"
+  },
+  {
+    "id": "backpack__emotes__880-18306",
+    "source": "backpack",
+    "orientation": "portrait"
+  },
+  {
+    "id": "backpack__accessories-hat__239-8072",
+    "source": "backpack",
+    "orientation": "portrait"
+  },
+  {
+    "id": "backpack__accessories-hat__186-3439",
+    "source": "backpack",
+    "orientation": "portrait"
+  },
+  {
+    "id": "backpack__accessories-helmet__186-3838",
+    "source": "backpack",
+    "orientation": "portrait"
+  },
+  {
+    "id": "backpack__accessories-tiaras__206-6599",
+    "source": "backpack",
+    "orientation": "portrait"
+  },
+  {
+    "id": "backpack__accessories-glasses__215-4551",
+    "source": "backpack",
+    "orientation": "portrait"
+  },
+  {
+    "id": "backpack__accessories-mask__215-4822",
+    "source": "backpack",
+    "orientation": "portrait"
+  },
+  {
+    "id": "backpack__accessories-earrings__215-5262",
+    "source": "backpack",
+    "orientation": "portrait"
+  },
+  {
+    "id": "backpack__menu__215-6293",
+    "source": "backpack",
+    "orientation": "portrait"
+  },
+  {
+    "id": "backpack__menu-open-all__215-6540",
+    "source": "backpack",
+    "orientation": "portrait"
+  },
+  {
+    "id": "backpack__menu-open-collectibles__215-6808",
+    "source": "backpack",
+    "orientation": "portrait"
+  },
+  {
+    "id": "backpack__menu__215-7318",
+    "source": "backpack",
+    "orientation": "portrait"
+  },
+  {
+    "id": "backpack__equip01__373-9823",
+    "source": "backpack",
+    "orientation": "portrait"
+  },
+  {
+    "id": "backpack__equp02__373-10073",
+    "source": "backpack",
+    "orientation": "portrait"
+  },
+  {
+    "id": "backpack__skeleton__727-13070",
+    "source": "backpack",
+    "orientation": "portrait"
+  },
+  {
+    "id": "backpack__android__855-14530",
+    "source": "backpack",
+    "orientation": "portrait"
+  },
+  {
+    "id": "backpack__ios__855-14723",
+    "source": "backpack",
+    "orientation": "portrait"
+  },
+  {
+    "id": "backpack__all__861-15341",
+    "source": "backpack",
+    "orientation": "portrait"
+  },
+  {
+    "id": "backpack__all__1665-13665",
+    "source": "backpack",
+    "orientation": "portrait"
+  },
+  {
+    "id": "backpack__body__1663-13206",
+    "source": "backpack",
+    "orientation": "portrait"
+  },
+  {
+    "id": "backpack__face__1658-15000",
+    "source": "backpack",
+    "orientation": "portrait"
+  },
+  {
+    "id": "backpack__clothing__1462-12305",
+    "source": "backpack",
+    "orientation": "portrait"
+  },
+  {
+    "id": "backpack__extra__1658-15475",
+    "source": "backpack",
+    "orientation": "portrait"
+  },
+  {
+    "id": "backpack__full__1462-13153",
+    "source": "backpack",
+    "orientation": "portrait"
+  },
+  {
+    "id": "backpack__full-avatar__1531-19038",
+    "source": "backpack",
+    "orientation": "portrait"
+  },
+  {
+    "id": "backpack__body__1665-17382",
+    "source": "backpack",
+    "orientation": "portrait"
+  },
+  {
+    "id": "backpack__full__1665-16724",
+    "source": "backpack",
+    "orientation": "portrait"
+  },
+  {
+    "id": "backpack__wearables__226-12623",
+    "source": "backpack",
+    "orientation": "landscape"
+  },
+  {
+    "id": "backpack__wearables__1261-16342",
+    "source": "backpack",
+    "orientation": "landscape"
+  },
+  {
+    "id": "backpack__all__1658-14380",
+    "source": "backpack",
+    "orientation": "landscape"
+  },
+  {
+    "id": "backpack__body__1665-14477",
+    "source": "backpack",
+    "orientation": "landscape"
+  },
+  {
+    "id": "backpack__face__1665-14732",
+    "source": "backpack",
+    "orientation": "landscape"
+  },
+  {
+    "id": "backpack__clothing__1665-14225",
+    "source": "backpack",
+    "orientation": "landscape"
+  },
+  {
+    "id": "backpack__extra__1665-15169",
+    "source": "backpack",
+    "orientation": "landscape"
+  },
+  {
+    "id": "menu__backpack-wearable__533-5322",
+    "source": "menu",
+    "orientation": "landscape"
+  },
+  {
+    "id": "menu__backpack-emotes__609-3439",
+    "source": "menu",
+    "orientation": "landscape"
+  },
+  {
+    "id": "loading__loading-1__13-11729",
+    "source": "loading",
+    "orientation": "landscape"
+  },
+  {
+    "id": "loading__loading-2-tip-emotes__175-530",
+    "source": "loading",
+    "orientation": "landscape"
+  },
+  {
+    "id": "loading__loading-3-tip-friends__178-21086",
+    "source": "loading",
+    "orientation": "landscape"
+  },
+  {
+    "id": "loading__loading-4-tip-chat__178-21128",
+    "source": "loading",
+    "orientation": "landscape"
+  },
+  {
+    "id": "extra/loading-predata",
+    "source": "extra",
+    "orientation": "landscape"
+  },
+  {
+    "id": "extra/loading-slow",
+    "source": "extra",
+    "orientation": "landscape"
+  },
+  {
+    "id": "extra/loading-failed",
+    "source": "extra",
+    "orientation": "landscape"
+  },
+  {
+    "id": "hud__hud__609-7021",
+    "source": "hud",
+    "orientation": "landscape"
+  },
+  {
+    "id": "hud__hud-4-side-buttons__706-6623",
+    "source": "hud",
+    "orientation": "landscape"
+  },
+  {
+    "id": "hud__joystick-movement__706-6537",
+    "source": "hud",
+    "orientation": "landscape"
+  },
+  {
+    "id": "hud__hud-3-secondaries__706-6149",
+    "source": "hud",
+    "orientation": "landscape"
+  },
+  {
+    "id": "hud__hud-2-secondaries__706-6231",
+    "source": "hud",
+    "orientation": "landscape"
+  },
+  {
+    "id": "hud__hud-defaults__1111-12496",
+    "source": "hud",
+    "orientation": "landscape"
+  },
+  {
+    "id": "hud__hud-1-secondary__706-6304",
+    "source": "hud",
+    "orientation": "landscape"
+  },
+  {
+    "id": "hud__hud-no-secondary__706-6373",
+    "source": "hud",
+    "orientation": "landscape"
+  },
+  {
+    "id": "hud__hideui__706-1414",
+    "source": "hud",
+    "orientation": "landscape"
+  },
+  {
+    "id": "menu__hud__106-2203",
+    "source": "menu",
+    "orientation": "landscape"
+  },
+  {
+    "id": "menu__hud__108-2191",
+    "source": "menu",
+    "orientation": "landscape"
+  },
+  {
+    "id": "menu__hud__367-4161",
+    "source": "menu",
+    "orientation": "landscape"
+  },
+  {
+    "id": "extra/hud-chat-open",
+    "source": "extra",
+    "orientation": "landscape"
+  },
+  {
+    "id": "extra/hud-chat-writing",
+    "source": "extra",
+    "orientation": "landscape"
+  },
+  {
+    "id": "discover__discover__133-5392",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__discover-01__388-8777",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__discover-01__414-8213",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__discover-01__1061-16348",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__discover-01__1061-17624",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__discover-skeleton-scroll__546-14740",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__discover-skeleton-scroll__546-16604",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__discover-portrait__1293-25827",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__discover-friends__1607-21908",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__discover-featurebanners__1767-39473",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__discover-categories01__2107-25669",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__discover-all-carousels__2123-26835",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__discover-landscape__566-18371",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__discover-landscape__635-18998",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__discover-landscape-loading__635-18547",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__discover-connection-lost-01__1582-20007",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__discover-skeleton__546-11668",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__discover-skeleton-scroll__566-22151",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__discover-skeleton-scroll__546-16084",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__discover-skeleton-scroll__546-17533",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__discover-connection-lost-02__1582-20203",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__discover-friends__1693-20759",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__discover-categories01__2190-22565",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__discover-background__2214-22767",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__discover-overlay__2214-23123",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__discover-ftue__516-9558",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__discover-ftue__1710-23643",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__discover-ftue__1712-23706",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__02-detail-place__168-5039",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__03-detail-place-more__168-10160",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__04-detail-place-more-fav__313-2460",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__06-detail-place-more-like__319-6130",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__07-detail-place-more-dislike__319-6640",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__02-detail-place__1520-24684",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__02-detail-world__1520-25203",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__04-detail-place-fav__319-4672",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__06-detail-place-like__319-5158",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__07-detail-place-dislike__319-5643",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__02-detail-place__1521-28149",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__02-detail-world__1521-27686",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__01-alert-data-places__771-16251",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__discover-featurebanners-detail__1944-34968",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__discover-featurebanners-detail__2005-21896",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__02-detail-event__376-5429",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__01-alert-data-events__771-15737",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__03-detail-event-more__376-7236",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__detail-event-01__805-21685",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__02-detail-event-world__1019-22562",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__02-detail-event__1520-27182",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__02-detail-event-rimind-off__388-9300",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__03-detail-event-rimind-on__399-12413",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__01-alert-data-events__1539-20007",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__02-search__414-10514",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__02-search__1061-16762",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__02-search__1061-17760",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__03-searching__433-9004",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__03-searching__509-12698",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__03-searching__461-9328",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__04-sugestions__433-11550",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__discover-skeleton__635-17545",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__05-results__433-11756",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__06-message-error__635-17806",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__07-not-results__627-12457",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__03-searching__500-10741",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__03-searching__1061-17183",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__05-results__1061-17307",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__03-searching__1061-17854",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__05-results__1061-17716",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__category__2110-26055",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__category-search__2159-27663",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__discover-story__1693-21242",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__discover-story__1700-23498",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__05-detail-place-more-share__319-3148",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__05-detail-place-share__319-3669",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__04-detail-event-share__399-12958",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__04-detail-event-more-calendar__461-11695",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__05-detail-event-calendar__399-13457",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__06-detail-event-calendar__399-13955",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__thirdperson__635-18454",
+    "source": "discover",
+    "orientation": "landscape"
+  },
+  {
+    "id": "discover__loading__319-8950",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "discover__loading__1783-41275",
+    "source": "discover",
+    "orientation": "portrait"
+  },
+  {
+    "id": "settings-portrait__dcl-splash__738-8292",
+    "source": "settings-portrait",
+    "orientation": "portrait"
+  },
+  {
+    "id": "settings-portrait__dcl-splash__738-8297",
+    "source": "settings-portrait",
+    "orientation": "portrait"
+  },
+  {
+    "id": "settings-portrait__account-home__738-8278",
+    "source": "settings-portrait",
+    "orientation": "portrait"
+  },
+  {
+    "id": "settings-portrait__account-home__738-8261",
+    "source": "settings-portrait",
+    "orientation": "portrait"
+  },
+  {
+    "id": "settings-revamp__settings-graphics__1397-6501",
+    "source": "settings-revamp",
+    "orientation": "portrait"
+  },
+  {
+    "id": "settings-revamp__settings-audio__1397-6829",
+    "source": "settings-revamp",
+    "orientation": "portrait"
+  },
+  {
+    "id": "settings-revamp__settings-gameplay__1397-6961",
+    "source": "settings-revamp",
+    "orientation": "portrait"
+  },
+  {
+    "id": "settings-revamp__settings-language__1397-7138",
+    "source": "settings-revamp",
+    "orientation": "portrait"
+  },
+  {
+    "id": "settings-revamp__settings-language__1401-1032",
+    "source": "settings-revamp",
+    "orientation": "portrait"
+  },
+  {
+    "id": "settings-revamp__settings-language-dropdown-open__1401-1082",
+    "source": "settings-revamp",
+    "orientation": "portrait"
+  },
+  {
+    "id": "settings-revamp__settings-language__1401-4359",
+    "source": "settings-revamp",
+    "orientation": "portrait"
+  },
+  {
+    "id": "settings-revamp__settings-account-section-menu__1397-6528",
+    "source": "settings-revamp",
+    "orientation": "portrait"
+  },
+  {
+    "id": "settings-revamp__settings-account-section-menu__1401-1132",
+    "source": "settings-revamp",
+    "orientation": "portrait"
+  },
+  {
+    "id": "settings-revamp__settings-account-guest-upgrade__1398-7315",
+    "source": "settings-revamp",
+    "orientation": "portrait"
+  },
+  {
+    "id": "settings-revamp__settings-account-upgraded__1398-7378",
+    "source": "settings-revamp",
+    "orientation": "portrait"
+  },
+  {
+    "id": "settings-revamp__settings-help__1398-7818",
+    "source": "settings-revamp",
+    "orientation": "portrait"
+  },
+  {
+    "id": "settings-revamp__settings-help-temporary-files-dev-tools__1398-8062",
+    "source": "settings-revamp",
+    "orientation": "portrait"
+  },
+  {
+    "id": "settings-revamp__settings-language-landscape__1401-4513",
+    "source": "settings-revamp",
+    "orientation": "landscape"
+  },
+  {
+    "id": "settings-revamp__settings-language-landscape-dropdown-open__1401-4572",
+    "source": "settings-revamp",
+    "orientation": "landscape"
+  },
+  {
+    "id": "settings-revamp__settings-language-landscape__1401-4790",
+    "source": "settings-revamp",
+    "orientation": "landscape"
+  },
+  {
+    "id": "settings-portrait__settings-back__851-10490",
+    "source": "settings-portrait",
+    "orientation": "portrait"
+  },
+  {
+    "id": "settings-portrait__settings-graphics__348-1584",
+    "source": "settings-portrait",
+    "orientation": "portrait"
+  },
+  {
+    "id": "settings-portrait__settings-graphics__290-2035",
+    "source": "settings-portrait",
+    "orientation": "portrait"
+  },
+  {
+    "id": "settings-portrait__settings-graphics__348-1986",
+    "source": "settings-portrait",
+    "orientation": "portrait"
+  },
+  {
+    "id": "settings-portrait__settings-graphics__718-6559",
+    "source": "settings-portrait",
+    "orientation": "portrait"
+  },
+  {
+    "id": "settings-portrait__settings-graphics__718-6713",
+    "source": "settings-portrait",
+    "orientation": "portrait"
+  },
+  {
+    "id": "settings-portrait__settings-audio__303-2221",
+    "source": "settings-portrait",
+    "orientation": "portrait"
+  },
+  {
+    "id": "settings-portrait__settings-audio__738-7766",
+    "source": "settings-portrait",
+    "orientation": "portrait"
+  },
+  {
+    "id": "settings-portrait__settings-gameplay__1348-4487",
+    "source": "settings-portrait",
+    "orientation": "portrait"
+  },
+  {
+    "id": "settings-portrait__settings-gameplay__1348-4378",
+    "source": "settings-portrait",
+    "orientation": "portrait"
+  },
+  {
+    "id": "settings-portrait__settings-gameplay__1348-4615",
+    "source": "settings-portrait",
+    "orientation": "portrait"
+  },
+  {
+    "id": "settings-portrait__settings-gameplay__1349-4751",
+    "source": "settings-portrait",
+    "orientation": "portrait"
+  },
+  {
+    "id": "settings-portrait__settings-gameplay__1350-4893",
+    "source": "settings-portrait",
+    "orientation": "portrait"
+  },
+  {
+    "id": "settings-portrait__settings-storage__348-1419",
+    "source": "settings-portrait",
+    "orientation": "portrait"
+  },
+  {
+    "id": "settings-portrait__settings-storage__412-4560",
+    "source": "settings-portrait",
+    "orientation": "portrait"
+  },
+  {
+    "id": "settings-portrait__settings-dev-tools__381-3096",
+    "source": "settings-portrait",
+    "orientation": "portrait"
+  },
+  {
+    "id": "settings-portrait__settings-graphics__718-5548",
+    "source": "settings-portrait",
+    "orientation": "portrait"
+  },
+  {
+    "id": "settings-portrait__settings-graphics__718-5766",
+    "source": "settings-portrait",
+    "orientation": "portrait"
+  },
+  {
+    "id": "settings-portrait__settings-graphics__738-7476",
+    "source": "settings-portrait",
+    "orientation": "portrait"
+  },
+  {
+    "id": "settings-portrait__settings-graphics__738-6935",
+    "source": "settings-portrait",
+    "orientation": "portrait"
+  },
+  {
+    "id": "settings-portrait__settings-gameplay__1348-4266",
+    "source": "settings-portrait",
+    "orientation": "portrait"
+  },
+  {
+    "id": "settings-portrait__settings-account-singout__412-4763",
+    "source": "settings-portrait",
+    "orientation": "portrait"
+  },
+  {
+    "id": "settings-portrait__settings-storage__412-4288",
+    "source": "settings-portrait",
+    "orientation": "portrait"
+  },
+  {
+    "id": "settings-portrait__settings-storage__738-8796",
+    "source": "settings-portrait",
+    "orientation": "portrait"
+  },
+  {
+    "id": "settings-portrait__settings-storage__738-9027",
+    "source": "settings-portrait",
+    "orientation": "portrait"
+  },
+  {
+    "id": "settings-portrait__settings-graphics__1099-5103",
+    "source": "settings-portrait",
+    "orientation": "portrait"
+  },
+  {
+    "id": "settings-portrait__settings-account-delete__432-1708",
+    "source": "settings-portrait",
+    "orientation": "portrait"
+  },
+  {
+    "id": "settings-portrait__settings-account__303-3251",
+    "source": "settings-portrait",
+    "orientation": "portrait"
+  },
+  {
+    "id": "settings-portrait__settings-account__738-7985",
+    "source": "settings-portrait",
+    "orientation": "portrait"
+  },
+  {
+    "id": "settings-portrait__thirdperson__851-10734",
+    "source": "settings-portrait",
+    "orientation": "landscape"
+  },
+  {
+    "id": "settings-portrait__place__969-4359",
+    "source": "settings-portrait",
+    "orientation": "landscape"
+  },
+  {
+    "id": "menu__discover__367-5030",
+    "source": "menu",
+    "orientation": "landscape"
+  },
+  {
+    "id": "menu__discover-menu-open__609-3721",
+    "source": "menu",
+    "orientation": "landscape"
+  },
+  {
+    "id": "menu__discover__888-16872",
+    "source": "menu",
+    "orientation": "landscape"
+  },
+  {
+    "id": "menu__discover-event__1511-6307",
+    "source": "menu",
+    "orientation": "landscape"
+  },
+  {
+    "id": "menu__discover-menu-open__893-15236",
+    "source": "menu",
+    "orientation": "landscape"
+  },
+  {
+    "id": "menu__discover-menu-open__893-15568",
+    "source": "menu",
+    "orientation": "landscape"
+  },
+  {
+    "id": "menu__discover-menu-open__894-17477",
+    "source": "menu",
+    "orientation": "landscape"
+  },
+  {
+    "id": "menu__discover-place__1351-15649",
+    "source": "menu",
+    "orientation": "landscape"
+  },
+  {
+    "id": "menu__discover-event-live__1511-6210",
+    "source": "menu",
+    "orientation": "landscape"
+  },
+  {
+    "id": "menu__discover-event-reminder__1525-5237",
+    "source": "menu",
+    "orientation": "landscape"
+  },
+  {
+    "id": "menu__discover-event-set__1525-5303",
+    "source": "menu",
+    "orientation": "landscape"
+  },
+  {
+    "id": "extra/menu-event-guest",
+    "source": "extra",
+    "orientation": "landscape"
+  },
+  {
+    "id": "extra/menu-discover-loading",
+    "source": "extra",
+    "orientation": "landscape"
+  },
+  {
+    "id": "extra/menu-discover-error",
+    "source": "extra",
+    "orientation": "landscape"
+  },
+  {
+    "id": "menu__social__426-5733",
+    "source": "menu",
+    "orientation": "landscape"
+  },
+  {
+    "id": "menu__social-request__889-4540",
+    "source": "menu",
+    "orientation": "landscape"
+  },
+  {
+    "id": "menu__social-request-accept__889-5102",
+    "source": "menu",
+    "orientation": "landscape"
+  },
+  {
+    "id": "menu__social-request-decline__889-5361",
+    "source": "menu",
+    "orientation": "landscape"
+  },
+  {
+    "id": "menu__social-nearby__889-5850",
+    "source": "menu",
+    "orientation": "landscape"
+  },
+  {
+    "id": "menu__social-nearby-empty__931-24777",
+    "source": "menu",
+    "orientation": "landscape"
+  },
+  {
+    "id": "menu__social__933-25219",
+    "source": "menu",
+    "orientation": "landscape"
+  },
+  {
+    "id": "menu__social__1135-16597",
+    "source": "menu",
+    "orientation": "landscape"
+  },
+  {
+    "id": "menu__social__933-26017",
+    "source": "menu",
+    "orientation": "landscape"
+  },
+  {
+    "id": "menu__social__933-26834",
+    "source": "menu",
+    "orientation": "landscape"
+  },
+  {
+    "id": "extra/menu-social-requests-empty",
+    "source": "extra",
+    "orientation": "landscape"
+  },
+  {
+    "id": "extra/menu-social-loading",
+    "source": "extra",
+    "orientation": "landscape"
+  },
+  {
+    "id": "extra/menu-social-error",
+    "source": "extra",
+    "orientation": "landscape"
+  },
+  {
+    "id": "extra/menu-social-guest",
+    "source": "extra",
+    "orientation": "landscape"
+  },
+  {
+    "id": "menu__notifications__426-6356",
+    "source": "menu",
+    "orientation": "landscape"
+  },
+  {
+    "id": "extra/menu-notifications-empty",
+    "source": "extra",
+    "orientation": "landscape"
+  },
+  {
+    "id": "extra/menu-notifications-guest",
+    "source": "extra",
+    "orientation": "landscape"
+  },
+  {
+    "id": "extra/menu-notifications-error",
+    "source": "extra",
+    "orientation": "landscape"
+  },
+  {
+    "id": "extra/menu-notifications-loading",
+    "source": "extra",
+    "orientation": "landscape"
+  },
+  {
+    "id": "extra/menu-notifications-all-read",
+    "source": "extra",
+    "orientation": "landscape"
+  },
+  {
+    "id": "menu__notifications__891-8628",
+    "source": "menu",
+    "orientation": "landscape"
+  },
+  {
+    "id": "menu__notifications__891-6976",
+    "source": "menu",
+    "orientation": "landscape"
+  },
+  {
+    "id": "menu__notifications__891-6977",
+    "source": "menu",
+    "orientation": "landscape"
+  },
+  {
+    "id": "menu__notifications__891-6978",
+    "source": "menu",
+    "orientation": "landscape"
+  },
+  {
+    "id": "extra/menu-notification-generic",
+    "source": "extra",
+    "orientation": "landscape"
+  },
+  {
+    "id": "menu__discover-ingame__889-4068",
+    "source": "menu",
+    "orientation": "portrait"
+  },
+  {
+    "id": "menu__settings-account__893-16220",
+    "source": "menu",
+    "orientation": "portrait"
+  },
+  {
+    "id": "extra/menu-bug-sent",
+    "source": "extra",
+    "orientation": "portrait"
+  },
+  {
+    "id": "menu__discover-share__893-14904",
+    "source": "menu",
+    "orientation": "landscape"
+  },
+  {
+    "id": "menu__report-content-form__894-16932",
+    "source": "menu",
+    "orientation": "portrait"
+  },
+  {
+    "id": "profile__profile__9-509",
+    "source": "profile",
+    "orientation": "portrait"
+  },
+  {
+    "id": "profile__profile__340-4509",
+    "source": "profile",
+    "orientation": "portrait"
+  },
+  {
+    "id": "profile__profile-fullview__49-1616",
+    "source": "profile",
+    "orientation": "portrait"
+  },
+  {
+    "id": "profile__profile__340-5133",
+    "source": "profile",
+    "orientation": "portrait"
+  },
+  {
+    "id": "profile__profile__340-5575",
+    "source": "profile",
+    "orientation": "portrait"
+  },
+  {
+    "id": "profile__profile__270-10205",
+    "source": "profile",
+    "orientation": "portrait"
+  },
+  {
+    "id": "profile__profile-landscape__232-2269",
+    "source": "profile",
+    "orientation": "landscape"
+  },
+  {
+    "id": "profile__profile-landscape__232-2806",
+    "source": "profile",
+    "orientation": "landscape"
+  },
+  {
+    "id": "profile__profile-landscape__303-4252",
+    "source": "profile",
+    "orientation": "landscape"
+  },
+  {
+    "id": "profile__profile-landscape__303-5189",
+    "source": "profile",
+    "orientation": "landscape"
+  },
+  {
+    "id": "profile__profile-landscape__303-5658",
+    "source": "profile",
+    "orientation": "landscape"
+  },
+  {
+    "id": "menu__profile__533-5757",
+    "source": "menu",
+    "orientation": "landscape"
+  },
+  {
+    "id": "profile__edit-profile__270-8413",
+    "source": "profile",
+    "orientation": "portrait"
+  },
+  {
+    "id": "profile__edit-profile__270-9413",
+    "source": "profile",
+    "orientation": "portrait"
+  },
+  {
+    "id": "profile__edit-profile__415-8560",
+    "source": "profile",
+    "orientation": "portrait"
+  },
+  {
+    "id": "profile__edit-profile__491-9606",
+    "source": "profile",
+    "orientation": "portrait"
+  },
+  {
+    "id": "profile__edit-profile__415-8733",
+    "source": "profile",
+    "orientation": "portrait"
+  },
+  {
+    "id": "profile__addllink-modal__417-9081",
+    "source": "profile",
+    "orientation": "portrait"
+  },
+  {
+    "id": "profile__addllink-modal__417-11210",
+    "source": "profile",
+    "orientation": "portrait"
+  },
+  {
+    "id": "profile__addllink-modal__418-11432",
+    "source": "profile",
+    "orientation": "portrait"
+  },
+  {
+    "id": "profile__addllink-modal__418-11672",
+    "source": "profile",
+    "orientation": "portrait"
+  },
+  {
+    "id": "profile__edit-profile__491-8375",
+    "source": "profile",
+    "orientation": "portrait"
+  },
+  {
+    "id": "profile__edit-profile__491-8558",
+    "source": "profile",
+    "orientation": "portrait"
+  },
+  {
+    "id": "profile__edit-profile__491-9803",
+    "source": "profile",
+    "orientation": "portrait"
+  },
+  {
+    "id": "profile__edit-profile__491-10036",
+    "source": "profile",
+    "orientation": "portrait"
+  },
+  {
+    "id": "profile__edit-profile__491-8739",
+    "source": "profile",
+    "orientation": "portrait"
+  },
+  {
+    "id": "profile__edit-profile__491-8960",
+    "source": "profile",
+    "orientation": "portrait"
+  },
+  {
+    "id": "profile__edit-profile__491-9149",
+    "source": "profile",
+    "orientation": "portrait"
+  },
+  {
+    "id": "profile__edit-profile__86-2417",
+    "source": "profile",
+    "orientation": "portrait"
+  },
+  {
+    "id": "profile__edit-profile__242-2171",
+    "source": "profile",
+    "orientation": "portrait"
+  },
+  {
+    "id": "profile__edit-profile__144-2750",
+    "source": "profile",
+    "orientation": "portrait"
+  },
+  {
+    "id": "profile__edit-profile__144-2195",
+    "source": "profile",
+    "orientation": "portrait"
+  },
+  {
+    "id": "profile__edit-profile__144-2419",
+    "source": "profile",
+    "orientation": "portrait"
+  },
+  {
+    "id": "profile__edit-profile__54-2414",
+    "source": "profile",
+    "orientation": "portrait"
+  },
+  {
+    "id": "profile__edit-profile__86-2087",
+    "source": "profile",
+    "orientation": "portrait"
+  },
+  {
+    "id": "profile__dropdown__244-2980",
+    "source": "profile",
+    "orientation": "landscape"
+  },
+  {
+    "id": "profile__dropdown__244-3045",
+    "source": "profile",
+    "orientation": "landscape"
+  },
+  {
+    "id": "profile__dropdown__244-3076",
+    "source": "profile",
+    "orientation": "landscape"
+  },
+  {
+    "id": "profile__dropdown__254-3614",
+    "source": "profile",
+    "orientation": "landscape"
+  },
+  {
+    "id": "extra/flow-terms",
+    "source": "extra",
+    "orientation": "portrait"
+  },
+  {
+    "id": "extra/flow-account",
+    "source": "extra",
+    "orientation": "portrait"
+  },
+  {
+    "id": "extra/flow-wait",
+    "source": "extra",
+    "orientation": "portrait"
+  }
+]

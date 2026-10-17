@@ -1,0 +1,9 @@
+{
+  "name": "DclRn",
+  "displayName": "Decentraland",
+  "expo": {
+    "name": "Decentraland",
+    "slug": "dclrn",
+    "orientation": "landscape"
+  }
+}

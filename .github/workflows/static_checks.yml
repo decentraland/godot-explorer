@@ -13,6 +13,19 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: No new .gd files (plan rule 1)
+        if: github.event_name == 'pull_request'
+        run: |
+          set -eu
+          NEW_GD=$(git diff --diff-filter=A --name-only "origin/${{ github.base_ref }}...HEAD" -- '*.gd')
+          if [ -n "$NEW_GD" ]; then
+            echo "::error::New GDScript files are not allowed on this branch (new behaviour goes to RN or Rust):"
+            echo "$NEW_GD"
+            exit 1
+          fi
 
       - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # @stable
         with:
@@ -50,4 +63,4 @@ jobs:
         run: python3 tools/i18n/extract_strings.py --check
 
       - name: WebSocket JS shim unit tests
-        run: node --test lib/src/dcl/js/js_modules/ws.test.cjs
+        run: node --test lib/crates/dcl_engine/src/dcl/js/js_modules/ws.test.cjs

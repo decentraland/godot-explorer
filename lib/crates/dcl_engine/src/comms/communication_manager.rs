@@ -1,0 +1,3765 @@
+use ethers_core::types::H160;
+use godot::prelude::*;
+use http::Uri;
+use std::sync::Arc;
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+
+use crate::auth::wallet;
+#[cfg(feature = "use_livekit")]
+use crate::comms::consts::DISABLE_ARCHIPELAGO;
+use crate::{
+    comms::{
+        adapter::{
+            message_processor::MessageProcessor, movement_compressed::MoveKind,
+            ws_room::WebSocketRoom,
+        },
+        consts::DEFAULT_PROTOCOL_VERSION,
+        signed_login::SignedLoginMeta,
+    },
+    dcl::{components::proto_components::kernel::comms::rfc4, scene_apis::NetworkMessageRecipient},
+    godot_classes::dcl_global::DclGlobal,
+};
+use dcl_core::Core;
+use serde::{Deserialize, Serialize};
+use tokio::sync::mpsc;
+
+use super::{
+    adapter::adapter_trait::Adapter,
+    signed_login::{SignedLogin, SignedLoginPollStatus},
+};
+
+use crate::comms::adapter::movement_compressed::{Movement, MovementCompressed, Temporal};
+
+#[derive(Serialize, Deserialize)]
+pub struct GatekeeperResponse {
+    adapter: String,
+}
+
+#[derive(Debug)]
+pub enum SceneRoomConnectionRequest {
+    Connect {
+        scene_id: String,
+        livekit_url: String,
+    },
+    Banned {
+        scene_id: String,
+    },
+    /// A reconnect attempt finished without producing a connection (the
+    /// gatekeeper request failed). Carries no room change; it only clears the
+    /// in-flight marker so the reconnect loop can try again.
+    Failed {
+        scene_id: String,
+    },
+}
+
+#[derive(Debug)]
+enum SceneAdapterError {
+    Banned,
+    Other(String),
+}
+
+/// Safety net for the scene-room reconnect in-flight guard: if an attempt's
+/// terminal signal is ever lost, treat it as stale after this long and allow a
+/// fresh attempt rather than wedging reconnection forever.
+#[cfg(feature = "use_livekit")]
+const SCENE_ROOM_CONNECT_TIMEOUT: Duration = Duration::from_secs(20);
+
+/// Base delay before the first scene-room reconnect attempt after a disconnect.
+#[cfg(feature = "use_livekit")]
+const SCENE_ROOM_RECONNECT_BASE_SECS: u64 = 5;
+/// Cap for the exponential backoff between failing scene-room reconnect attempts.
+/// Backoff (base → 2× per failure, capped here) stops a persistently-failing
+/// reconnect from hammering the gatekeeper every 5s while connectivity is poor —
+/// each successful attempt is a server-side re-join (issue #2382).
+#[cfg(feature = "use_livekit")]
+const SCENE_ROOM_RECONNECT_MAX_SECS: u64 = 60;
+
+/// Entity-id prefix the SDK preview server stamps on the scenes it serves
+/// (`b64-<base64(absoluteProjectRoot + "-" + machineId)>`). Marks a scene as a local-preview
+/// one on every path into a preview — CLI `--preview` and the QR/deeplink `preview=` alike.
+#[cfg(feature = "use_pulse")]
+const PREVIEW_SCENE_ID_PREFIX: &str = "b64-";
+
+/// Whether avatar sync — movement and emotes — still goes over LiveKit.
+///
+/// Pulse is the carrier: while it is established, LiveKit gets none of it (main room,
+/// archipelago island and scene room alike). The authoritative
+/// server reads avatar state off Pulse as a scene listener, so the LiveKit copy is duplication.
+///
+/// The gate is deliberately scoped to `pulse_established` rather than to activation, so a Pulse
+/// drop resumes every LiveKit send on the next frame — the cutover can never leave a player
+/// invisible. `dual_channel` (`--livekit-movement`, `dual-channel=true`) restores the old
+/// both-at-once behaviour for debugging.
+#[cfg(feature = "use_pulse")]
+fn avatar_sync_over_livekit(dual_channel: bool, pulse_established: bool) -> bool {
+    dual_channel || !pulse_established
+}
+
+/// Whether the Pulse transport activates. Pure so the precedence is unit-testable.
+///
+/// `locally_enabled` is `!--no-pulse`, which always wins. `explicit_opt_in` is `--pulse`, an
+/// endpoint (`--pulse-server` / PULSE_SERVER) or a realm (`--pulse-realm` / PULSE_REALM).
+/// Otherwise the deployment's `pulse` flag decides, fail-closed — except in `--preview`.
+///
+/// **A local preview never joins Pulse on the strength of the flag alone.** Its realm key is
+/// `lsd:` + the preview scene's entity id, which is reversible base64 of the developer's
+/// absolute project path and hostname; letting a fleet-wide flag push that to the default
+/// (production) Pulse from every `dcl start` would be a surprise. `sdk-commands` gates its own
+/// `--pulse-realm` off by default for the same reason, so Local Scene Development opts in
+/// explicitly — which is exactly what the orchestrator and `DCL_SERVER_PULSE_REALM=1` do.
+#[cfg(feature = "use_pulse")]
+fn pulse_activation(
+    locally_enabled: bool,
+    explicit_opt_in: bool,
+    preview_mode: bool,
+    flag_enabled: Option<bool>,
+) -> bool {
+    if !locally_enabled {
+        return false;
+    }
+    if explicit_opt_in {
+        return true;
+    }
+    !preview_mode && flag_enabled == Some(true)
+}
+
+/// Effective dual-channel setting. An explicit local choice (CLI `--livekit-movement` /
+/// `--no-livekit-movement`, deeplink `dual-channel=`) always wins; otherwise the deployment's
+/// `dual-channel` feature flag decides, defaulting to ON until the flags fetch settles.
+///
+/// The flag is the rollout control for this cutover, and it defaults ON deliberately: an
+/// authoritative server only stops needing the LiveKit copy of avatar state once it ingests
+/// Pulse as a scene listener, and that is a property of the *deployment*, not of this client.
+/// Flipping the flag off is what hands avatar sync to Pulse fleet-wide, reversibly.
+#[cfg(feature = "use_pulse")]
+fn dual_channel_effective(local_override: Option<bool>, flag_enabled: bool) -> bool {
+    local_override.unwrap_or(flag_enabled)
+}
+
+/// Decides whether the scene-room reconnect loop should spawn a new attempt now.
+/// Pure (no Godot/Tokio deps) so the in-flight guard is unit-testable. The guard:
+/// don't start a reconnect while one is already in flight, unless it has been
+/// outstanding longer than `connect_timeout` (a lost-signal safety net).
+#[cfg(feature = "use_livekit")]
+#[allow(clippy::too_many_arguments)]
+fn should_start_scene_room_reconnect(
+    comms_on_hold: bool,
+    scene_room_is_some: bool,
+    current_scene_id_is_some: bool,
+    reconnect_at: Option<Instant>,
+    connect_in_flight: Option<Instant>,
+    now: Instant,
+    connect_timeout: Duration,
+) -> bool {
+    if comms_on_hold || scene_room_is_some || !current_scene_id_is_some {
+        return false;
+    }
+    if reconnect_at.is_none_or(|t| t > now) {
+        return false;
+    }
+    // Block a new attempt while one is still in flight, unless it has gone stale.
+    !matches!(connect_in_flight, Some(started) if now.duration_since(started) < connect_timeout)
+}
+
+#[allow(clippy::large_enum_variant)]
+enum MainRoom {
+    WebSocket(WebSocketRoom),
+    #[cfg(feature = "use_livekit")]
+    LiveKit(LivekitRoom),
+}
+
+impl MainRoom {
+    fn poll(&mut self) -> bool {
+        match self {
+            MainRoom::WebSocket(ws_room) => {
+                ws_room.poll();
+                true
+            }
+            #[cfg(feature = "use_livekit")]
+            MainRoom::LiveKit(livekit_room) => livekit_room.poll(),
+        }
+    }
+
+    fn send_rfc4(&mut self, packet: rfc4::Packet, unreliable: bool) -> bool {
+        match self {
+            MainRoom::WebSocket(ws_room) => ws_room.send_rfc4(packet, unreliable),
+            #[cfg(feature = "use_livekit")]
+            MainRoom::LiveKit(livekit_room) => livekit_room.send_rfc4(packet, unreliable),
+        }
+    }
+
+    fn clean(&mut self) {
+        match self {
+            MainRoom::WebSocket(ws_room) => ws_room.clean(),
+            #[cfg(feature = "use_livekit")]
+            MainRoom::LiveKit(livekit_room) => livekit_room.clean(),
+        }
+    }
+
+    fn support_voice_chat(&self) -> bool {
+        match self {
+            MainRoom::WebSocket(_) => false,
+            #[cfg(feature = "use_livekit")]
+            MainRoom::LiveKit(livekit_room) => livekit_room.support_voice_chat(),
+        }
+    }
+
+    fn type_str(&self) -> &'static str {
+        match self {
+            MainRoom::WebSocket(_) => "websocket",
+            #[cfg(feature = "use_livekit")]
+            MainRoom::LiveKit(_) => "livekit",
+        }
+    }
+
+    fn connection_state_str(&self) -> &'static str {
+        match self {
+            MainRoom::WebSocket(ws_room) => ws_room.state_name(),
+            #[cfg(feature = "use_livekit")]
+            MainRoom::LiveKit(livekit_room) => livekit_room.connection_state_str(),
+        }
+    }
+}
+
+#[cfg(feature = "use_livekit")]
+use crate::comms::adapter::{archipelago::ArchipelagoManager, livekit::LivekitRoom};
+#[cfg(feature = "use_pulse")]
+use crate::comms::pulse::{
+    lsd_realm,
+    pulse_room::{PulseRoom, PulseRoomEvent},
+    transport::{PulseDisconnect, PulseTransportConfig},
+};
+use crate::http_request::http_queue_requester::HttpQueueRequester;
+
+/// Consecutive never-established Pulse connection attempts before giving up for the whole
+/// session (Unity parity: 5 attempts, then permanent LiveKit-only fallback until restart).
+#[cfg(feature = "use_pulse")]
+const PULSE_SESSION_FAILURE_LIMIT: u32 = 5;
+
+/// How long after `notify_app_resumed` a `DuplicateIdentity`/`DuplicateSession` eviction is
+/// treated as our own pre-background session being reclaimed (retry) rather than another
+/// device taking over the account (park + modal). Mobile OSes cut the app's network within
+/// seconds of backgrounding, so every resume rebuilds sessions that may still be alive
+/// server-side — the eviction that follows is self-inflicted.
+const RESUME_GRACE_PERIOD: Duration = Duration::from_secs(30);
+
+#[allow(clippy::large_enum_variant)]
+enum CommsConnection {
+    None,
+    WaitingForIdentity(String),
+    SignedLogin(SignedLogin),
+    #[cfg(feature = "use_livekit")]
+    Archipelago(ArchipelagoManager),
+    #[allow(dead_code)]
+    Connected(Box<dyn Adapter>),
+}
+
+/// Main communication orchestrator for Decentraland Godot Explorer
+///
+/// Manages all network communications including:
+/// - Main room connections (WebSocket or LiveKit for archipelago)
+/// - Scene-specific rooms (LiveKit for proximity voice/data)
+/// - Profile announcements and updates
+/// - Movement and position updates
+/// - Voice chat
+///
+/// Architecture:
+/// - Uses a shared MessageProcessor for centralized message handling
+/// - Supports multiple simultaneous room connections
+/// - Handles peer lifecycle across different rooms
+#[derive(GodotClass)]
+#[class(base=Node)]
+pub struct CommunicationManager {
+    current_connection: CommsConnection,
+    current_connection_str: GString,
+    last_position_broadcast_index: u64,
+    last_emote_incremental_id: u32,
+    is_emoting: bool,
+    voice_chat_enabled: bool,
+    start_time: Instant,
+    last_profile_version_broadcast: Instant,
+    archipelago_profile_announced: bool,
+    /// Flag to prevent automatic reconnection after DuplicateIdentity disconnect
+    block_auto_reconnect: bool,
+    /// End of the post-resume window during which Duplicate* evictions are retried instead
+    /// of treated as another device (see [`RESUME_GRACE_PERIOD`]). `None` = no window armed.
+    resume_grace_until: Option<Instant>,
+
+    /// When true, all comms are disconnected/deferred until loading finishes
+    comms_on_hold: bool,
+    /// Saved adapter string so we can reconnect after loading finishes
+    saved_adapter_for_resume: GString,
+
+    realm_min_bounds: Vector2i,
+    realm_max_bounds: Vector2i,
+
+    // Multiplayer debug mode (in-world panel + avatar room labels)
+    multiplayer_debug: bool,
+    multiplayer_debug_last_update: Instant,
+
+    // Shared message processor for all adapters
+    message_processor: Option<MessageProcessor>,
+
+    // Store active rooms
+    main_room: Option<MainRoom>,
+    #[cfg(feature = "use_livekit")]
+    scene_room: Option<LivekitRoom>,
+    current_scene_id: Option<GString>,
+
+    // Pulse (ENet avatar-state relay) — an always-on parallel room, not a MainRoom variant:
+    // its death must never surface as a session disconnect (LiveKit keeps the session alive).
+    #[cfg(feature = "use_pulse")]
+    pulse_room: Option<PulseRoom>,
+    /// Consecutive attempts that never reached Established; survives clean() so realm changes
+    /// don't reset the strike count. At PULSE_SESSION_FAILURE_LIMIT → one-way session disable.
+    #[cfg(feature = "use_pulse")]
+    pulse_session_failures: u32,
+    #[cfg(feature = "use_pulse")]
+    pulse_disabled_for_session: bool,
+    /// The initial TeleportRequest is deferred until both a valid realm name and a broadcast
+    /// position exist (sending a bogus realm would silo us into a phantom partition).
+    #[cfg(feature = "use_pulse")]
+    pulse_teleport_pending: bool,
+    /// Local player position in DCL world convention, cached from broadcast_movement; feeds
+    /// the Pulse TeleportRequest.
+    #[cfg(feature = "use_pulse")]
+    last_dcl_position: Option<Vector3>,
+    /// Explicit local dual-channel choice (CLI `--livekit-movement` / `--no-livekit-movement`,
+    /// deeplink `dual-channel=`): `None` follows the server flag. See `dual_channel_effective`.
+    #[cfg(feature = "use_pulse")]
+    dual_channel_override: Option<bool>,
+    /// Deployment `dual-channel` flag: whether movement and emotes keep going over LiveKit while
+    /// Pulse is established. Defaults ON (today's behaviour) and is reported by feature_flags.gd
+    /// once the fetch settles — flipping it off is what makes Pulse the sole avatar-sync carrier.
+    /// Either way the gate is `established`-scoped: LiveKit sending auto-resumes the moment Pulse
+    /// drops, so neither setting can make the player invisible.
+    #[cfg(feature = "use_pulse")]
+    dual_channel_flag: bool,
+    /// Runtime activation override (deeplink `pulse=true/false`): `None` follows the CLI/env.
+    #[cfg(feature = "use_pulse")]
+    pulse_runtime_enabled: Option<bool>,
+    /// Server `pulse` feature-flag verdict, reported once per run by feature_flags.gd when
+    /// the mobile-bff fetch settles. Fail-closed: `None` (not reported yet) and `Some(false)`
+    /// (flag off, absent, or fetch failed) both keep Pulse off unless an explicit
+    /// runtime/CLI opt-in overrides it — see `pulse_enabled`.
+    #[cfg(feature = "use_pulse")]
+    pulse_flag_enabled: Option<bool>,
+    /// Runtime endpoint override (deeplink `pulse-server=host:port`, shareable so a group can
+    /// join the same server). Wins over --pulse-server / PULSE_SERVER / the default endpoint.
+    #[cfg(feature = "use_pulse")]
+    pulse_endpoint_override: Option<String>,
+    /// Runtime realm override (deeplink `pulse-realm=`): `None` follows --pulse-realm /
+    /// PULSE_REALM, then the derivation in `pulse_realm_name`.
+    #[cfg(feature = "use_pulse")]
+    pulse_realm_override: Option<String>,
+    /// Whether the connected realm is a local preview, reported by realm.gd from the realm's own
+    /// `about` (which advertises `localSceneParcels`). Equivalent to `--preview` for activation,
+    /// and the only signal on the QR/deeplink preview path, which never sets the CLI flag.
+    #[cfg(feature = "use_pulse")]
+    local_scene_development: bool,
+    /// Pulse EmoteStart deferred from `send_emote` (press time) to `set_emoting` (playback
+    /// start). Pressing the wheel precedes the async emote load and the idle gate — an
+    /// EmoteStart at press time gets chased by the per-frame animation poll's EmoteStop,
+    /// cancelling it remotely before it ever plays. Overwritten by every new trigger.
+    #[cfg(feature = "use_pulse")]
+    // (urn, internal mask) of an emote start deferred until playback is live.
+    pending_pulse_emote_urn: Option<(String, i64)>,
+    /// Runtime "pulse-only" switch (deeplink `livekit=false`, CLI `--no-livekit`): `None`
+    /// follows the CLI. While disabled, no LiveKit-backed rooms are created or kept (main
+    /// livekit room, archipelago island room, scene rooms) — chat/voice/scene messages are
+    /// gone with them. Pulse and ws-room realms are unaffected. Dev/testing switch.
+    #[cfg(feature = "use_livekit")]
+    livekit_runtime_enabled: Option<bool>,
+    /// Runtime archipelago switch (remote feature flag `archipielago`, applied from GDScript
+    /// via `set_archipelago_enabled`): `None` follows the compile-time default
+    /// (`!DISABLE_ARCHIPELAGO`). While disabled, the archipelago adapter is skipped and a
+    /// fallback connection keeps the shared message processor — and with it scene rooms and
+    /// Pulse — alive.
+    #[cfg(feature = "use_livekit")]
+    archipelago_runtime_enabled: Option<bool>,
+
+    // Reconnection timer for scene rooms
+    #[cfg(feature = "use_livekit")]
+    scene_room_reconnect_at: Option<Instant>,
+
+    // Guards against overlapping scene-room reconnect attempts. `reconnect_scene_room`
+    // spawns an async gatekeeper request and returns immediately, leaving `scene_room`
+    // None for the whole round-trip; without this marker the 5s reconnect loop would
+    // fire another attempt every tick while one is still in flight, each producing a
+    // duplicate authoritative-server join (issue #2382). Some(t) = an attempt spawned
+    // at t is outstanding; cleared on its terminal outcome or after a safety timeout.
+    #[cfg(feature = "use_livekit")]
+    scene_room_connect_in_flight: Option<Instant>,
+
+    // Current backoff (seconds) between scene-room reconnect attempts. Reset to
+    // SCENE_ROOM_RECONNECT_BASE_SECS on a fresh disconnect / successful connect,
+    // doubled (capped) after each failing attempt.
+    #[cfg(feature = "use_livekit")]
+    scene_room_reconnect_backoff_secs: u64,
+
+    // Channel for scene room connection requests from async tasks
+    #[cfg(feature = "use_livekit")]
+    scene_room_connection_receiver: mpsc::Receiver<SceneRoomConnectionRequest>,
+    #[cfg(feature = "use_livekit")]
+    scene_room_connection_sender: mpsc::Sender<SceneRoomConnectionRequest>,
+
+    // Channel for scene access check results
+    scene_access_receiver: mpsc::Receiver<(String, bool, String)>,
+    scene_access_sender: mpsc::Sender<(String, bool, String)>,
+
+    base: Base<Node>,
+}
+
+#[godot_api]
+impl INode for CommunicationManager {
+    fn init(base: Base<Node>) -> Self {
+        #[cfg(feature = "use_livekit")]
+        let (scene_room_connection_sender, scene_room_connection_receiver) = mpsc::channel(10);
+        let (scene_access_sender, scene_access_receiver) = mpsc::channel(10);
+
+        CommunicationManager {
+            current_connection: CommsConnection::None,
+            current_connection_str: GString::default(),
+            last_position_broadcast_index: 0,
+            last_emote_incremental_id: 0,
+            is_emoting: false,
+            voice_chat_enabled: false,
+            start_time: Instant::now(),
+            last_profile_version_broadcast: Instant::now(),
+            archipelago_profile_announced: false,
+            block_auto_reconnect: false,
+            resume_grace_until: None,
+            comms_on_hold: false,
+            saved_adapter_for_resume: GString::default(),
+            multiplayer_debug: false,
+            multiplayer_debug_last_update: Instant::now(),
+            message_processor: None,
+            main_room: None,
+            #[cfg(feature = "use_livekit")]
+            scene_room: None,
+            current_scene_id: None,
+            #[cfg(feature = "use_pulse")]
+            pulse_room: None,
+            #[cfg(feature = "use_pulse")]
+            pulse_session_failures: 0,
+            #[cfg(feature = "use_pulse")]
+            pulse_disabled_for_session: false,
+            #[cfg(feature = "use_pulse")]
+            pulse_teleport_pending: false,
+            #[cfg(feature = "use_pulse")]
+            last_dcl_position: None,
+            #[cfg(feature = "use_pulse")]
+            dual_channel_override: None,
+            #[cfg(feature = "use_pulse")]
+            dual_channel_flag: true,
+            #[cfg(feature = "use_pulse")]
+            pulse_runtime_enabled: None,
+            #[cfg(feature = "use_pulse")]
+            pulse_flag_enabled: None,
+            #[cfg(feature = "use_pulse")]
+            pulse_endpoint_override: None,
+            #[cfg(feature = "use_pulse")]
+            pulse_realm_override: None,
+            #[cfg(feature = "use_pulse")]
+            local_scene_development: false,
+            #[cfg(feature = "use_pulse")]
+            pending_pulse_emote_urn: None,
+            #[cfg(feature = "use_livekit")]
+            livekit_runtime_enabled: None,
+            #[cfg(feature = "use_livekit")]
+            archipelago_runtime_enabled: None,
+            #[cfg(feature = "use_livekit")]
+            scene_room_reconnect_at: None,
+            #[cfg(feature = "use_livekit")]
+            scene_room_connect_in_flight: None,
+            #[cfg(feature = "use_livekit")]
+            scene_room_reconnect_backoff_secs: SCENE_ROOM_RECONNECT_BASE_SECS,
+            #[cfg(feature = "use_livekit")]
+            scene_room_connection_receiver,
+            #[cfg(feature = "use_livekit")]
+            scene_room_connection_sender,
+            scene_access_receiver,
+            scene_access_sender,
+            realm_min_bounds: godot::prelude::Vector2i::new(-150, -150),
+            realm_max_bounds: godot::prelude::Vector2i::new(163, 158),
+            base,
+        }
+    }
+
+    fn ready(&mut self) {
+        self.base_mut().call_deferred("init_rs", &[]);
+    }
+
+    fn process(&mut self, _dt: f64) {
+        // Handle scene access check results
+        while let Ok((scene_id, allowed, error_message)) = self.scene_access_receiver.try_recv() {
+            self.base_mut().emit_signal(
+                "scene_access_checked",
+                &[
+                    GString::from(&scene_id).to_variant(),
+                    allowed.to_variant(),
+                    GString::from(&error_message).to_variant(),
+                ],
+            );
+        }
+
+        // Handle scene room connection requests from async tasks
+        #[cfg(feature = "use_livekit")]
+        if !self.comms_on_hold {
+            while let Ok(request) = self.scene_room_connection_receiver.try_recv() {
+                self.handle_scene_room_connection_request(request);
+            }
+        }
+
+        // Check if we need to announce profile for archipelago (before borrowing)
+        #[cfg(feature = "use_livekit")]
+        let should_announce_archipelago =
+            if let CommsConnection::Archipelago(ref archipelago) = &self.current_connection {
+                !self.archipelago_profile_announced && archipelago.adapter().is_some()
+            } else {
+                false
+            };
+        #[cfg(not(feature = "use_livekit"))]
+        let should_announce_archipelago = false;
+
+        match &mut self.current_connection {
+            CommsConnection::None => {}
+            CommsConnection::WaitingForIdentity(adapter_url) => {
+                let player_identity = DclGlobal::singleton().bind().get_player_identity();
+
+                if player_identity.bind().try_get_address().is_some() {
+                    let var = adapter_url.to_variant();
+                    self.base_mut().call_deferred("change_adapter", &[var]);
+                }
+            }
+            CommsConnection::SignedLogin(signed_login) => match signed_login.poll() {
+                SignedLoginPollStatus::Pending => {}
+                SignedLoginPollStatus::Complete(response) => {
+                    self.change_adapter(
+                        response
+                            .fixed_adapter
+                            .unwrap_or_else(|| "offline".to_string())
+                            .to_godot(),
+                    );
+                }
+                SignedLoginPollStatus::Error(e) => {
+                    tracing::error!("Error in signed login: {:?}", e);
+                    self.current_connection = CommsConnection::None;
+                }
+            },
+            #[cfg(feature = "use_livekit")]
+            CommsConnection::Archipelago(archipelago) => {
+                archipelago.poll();
+            }
+            CommsConnection::Connected(adapter) => {
+                let adapter = adapter.as_mut();
+                let adapter_polling_ok = adapter.poll();
+                let chats = adapter.consume_chats();
+
+                if !chats.is_empty() {
+                    let chats_variant_array = get_chat_array(chats);
+                    self.base_mut()
+                        .emit_signal("chat_message", &[chats_variant_array.to_variant()]);
+                }
+
+                if !adapter_polling_ok {
+                    self.current_connection = CommsConnection::None;
+                }
+            }
+        }
+
+        // Announce profile for archipelago if needed (after releasing the borrow)
+        if should_announce_archipelago {
+            self.announce_initial_profile();
+            self.archipelago_profile_announced = true;
+            tracing::debug!("📡 Initial profile announced for archipelago connection");
+        }
+
+        // Poll the shared message processor (if active)
+        let mut processor_reset = false;
+        let mut chat_signals = Vec::new();
+        let mut outgoing_messages = Vec::new();
+        let mut disconnect_info: Option<(
+            crate::comms::adapter::message_processor::DisconnectReason,
+            String,
+        )> = None;
+
+        if let Some(processor) = &mut self.message_processor {
+            let processor_polling_ok = processor.poll();
+            let chats = processor.consume_chats();
+
+            if !chats.is_empty() {
+                chat_signals.push(get_chat_array(chats));
+            }
+
+            // Handle outgoing messages from MessageProcessor (like ProfileResponse)
+            outgoing_messages = processor.consume_outgoing_messages();
+            if !outgoing_messages.is_empty() {
+                tracing::debug!(
+                    "📤 Consumed {} outgoing messages from MessageProcessor",
+                    outgoing_messages.len()
+                );
+            }
+
+            // Check if disconnected from the server (returns reason + room_id)
+            disconnect_info = processor.consume_disconnect_reason();
+
+            // Check if room metadata indicates the player was banned.
+            // Only clean the scene room — keep main room alive for navigation.
+            if processor.consume_room_metadata_banned() {
+                tracing::warn!("Detected ban via room metadata — emitting kicked disconnect");
+                #[cfg(feature = "use_livekit")]
+                {
+                    if let Some(scene_room) = &mut self.scene_room {
+                        scene_room.clean();
+                    }
+                    self.scene_room = None;
+                    self.scene_room_reconnect_at = None;
+                    self.scene_room_connect_in_flight = None;
+                }
+                self.current_scene_id = None;
+                self.base_mut()
+                    .emit_signal("disconnected", &[2i32.to_variant()]);
+            }
+
+            if !processor_polling_ok {
+                // Reset the message processor if it fails
+                processor_reset = true;
+            }
+        }
+
+        // Handle chat signals after borrowing is done
+        for chats_variant_array in chat_signals {
+            self.base_mut()
+                .emit_signal("chat_message", &[chats_variant_array.to_variant()]);
+        }
+
+        // Handle outgoing messages after borrowing is done
+        for outgoing in outgoing_messages {
+            // Always broadcast to all rooms
+            if let Some(main_room) = &mut self.main_room {
+                main_room.send_rfc4(outgoing.packet.clone(), outgoing.unreliable);
+            }
+            #[cfg(feature = "use_livekit")]
+            if let Some(scene_room) = &mut self.scene_room {
+                scene_room.send_rfc4(outgoing.packet.clone(), outgoing.unreliable);
+            }
+            tracing::debug!("📤 Broadcast outgoing message to all rooms");
+        }
+
+        if processor_reset {
+            self.message_processor = None;
+        }
+
+        // Emit disconnected signal if needed (after borrowing is done)
+        if let Some((reason, room_id)) = disconnect_info {
+            use crate::comms::adapter::message_processor::DisconnectReason;
+
+            if reason == DisconnectReason::DuplicateIdentity && self.in_resume_grace() {
+                // Right after a resume the server can still hold this client's
+                // pre-background session; the eviction that follows our rejoin is
+                // self-inflicted, not another device. Scene and island rooms have their own
+                // reconnect machinery (5s timer / ArchipelagoManager) — only a main-room
+                // eviction needs an explicit retry, routed through the DisconnectHandler's
+                // auto-reconnect path (reason 3 = Other).
+                tracing::warn!(
+                    "Disconnected from '{}': DuplicateIdentity within resume grace — treating as stale self-session eviction, reconnecting",
+                    room_id
+                );
+                if !room_id.starts_with("scene-") && !room_id.starts_with("archipelago-livekit-") {
+                    let saved_connection_str = self.current_connection_str.clone();
+                    self.clean();
+                    self.current_connection_str = saved_connection_str;
+                    self.base_mut()
+                        .emit_signal("disconnected", &[3i32.to_variant()]);
+                }
+            } else if reason == DisconnectReason::DuplicateIdentity {
+                // DuplicateIdentity from ANY room → full disconnect (existing behavior)
+                tracing::warn!("Disconnected from '{}': DuplicateIdentity - another client connected with same identity", room_id);
+                self.block_auto_reconnect = true;
+                let saved_connection_str = self.current_connection_str.clone();
+                self.clean();
+                self.current_connection_str = saved_connection_str;
+
+                self.base_mut()
+                    .emit_signal("disconnected", &[0i32.to_variant()]);
+            } else if room_id.starts_with("scene-") {
+                if reason == DisconnectReason::Kicked {
+                    // Kicked from scene room → full disconnect (clean all rooms)
+                    tracing::warn!("Kicked from scene room '{}' — disconnecting fully", room_id);
+                    self.clean();
+                    self.base_mut()
+                        .emit_signal("disconnected", &[2i32.to_variant()]);
+                } else {
+                    // Other scene room disconnects → handled by reconnection timer
+                    tracing::debug!(
+                        "Scene room '{}' disconnected ({:?}) — reconnection scheduled",
+                        room_id,
+                        reason
+                    );
+                }
+            } else if room_id.starts_with("archipelago-livekit-") {
+                // Archipelago LiveKit room disconnect → handled by ArchipelagoManager
+                tracing::debug!(
+                    "Archipelago room '{}' disconnected ({:?}) — reconnection handled internally",
+                    room_id,
+                    reason
+                );
+            } else {
+                // Main room disconnect → emit signal (DisconnectHandler handles)
+                let reason_code: i32 = match reason {
+                    DisconnectReason::DuplicateIdentity => 0,
+                    DisconnectReason::RoomClosed => 1,
+                    DisconnectReason::Kicked => 2,
+                    DisconnectReason::Other => 3,
+                };
+                tracing::warn!("Disconnected from '{}': {:?}", room_id, reason);
+                self.base_mut()
+                    .emit_signal("disconnected", &[reason_code.to_variant()]);
+            }
+        }
+
+        // Poll main room (if active)
+        {
+            let main_room_alive = if let Some(main_room) = &mut self.main_room {
+                main_room.poll()
+            } else {
+                true
+            };
+            if !main_room_alive {
+                tracing::warn!("🔌 Main room disconnected");
+                self.main_room = None;
+            }
+        }
+
+        // Poll scene room (if active)
+        // Skip if we already handled a kick (clean() already removed the scene room)
+        #[cfg(feature = "use_livekit")]
+        {
+            let scene_room_alive = if let Some(scene_room) = &mut self.scene_room {
+                scene_room.poll()
+            } else {
+                true
+            };
+            if !scene_room_alive {
+                self.scene_room = None; // Remove dead room, keep current_scene_id
+                                        // Only schedule reconnection if we weren't kicked
+                                        // (kick handling above already called clean() which clears current_scene_id)
+                if self.current_scene_id.is_some() {
+                    // Fresh outage: reset the backoff and schedule the first attempt.
+                    self.scene_room_reconnect_backoff_secs = SCENE_ROOM_RECONNECT_BASE_SECS;
+                    tracing::warn!(
+                        "🔌 Scene room disconnected, scheduling reconnection in {}s",
+                        SCENE_ROOM_RECONNECT_BASE_SECS
+                    );
+                    self.scene_room_reconnect_at =
+                        Some(Instant::now() + Duration::from_secs(SCENE_ROOM_RECONNECT_BASE_SECS));
+                }
+            }
+        }
+
+        // Attempt scene room reconnection if the timer has expired and no attempt
+        // is already in flight. The in-flight guard prevents overlapping gatekeeper
+        // requests from each producing a duplicate authoritative join, and the
+        // backoff prevents hammering while connectivity is poor (issue #2382).
+        #[cfg(feature = "use_livekit")]
+        if should_start_scene_room_reconnect(
+            self.comms_on_hold,
+            self.scene_room.is_some(),
+            self.current_scene_id.is_some(),
+            self.scene_room_reconnect_at,
+            self.scene_room_connect_in_flight,
+            Instant::now(),
+            SCENE_ROOM_CONNECT_TIMEOUT,
+        ) {
+            tracing::debug!(
+                "🔄 Scene room reconnect attempt (next retry in {}s)",
+                self.scene_room_reconnect_backoff_secs
+            );
+            self.scene_room_connect_in_flight = Some(Instant::now());
+            self.reconnect_scene_room();
+            // Schedule next retry (in case this attempt fails) with exponential backoff.
+            self.scene_room_reconnect_at =
+                Some(Instant::now() + Duration::from_secs(self.scene_room_reconnect_backoff_secs));
+            self.scene_room_reconnect_backoff_secs =
+                (self.scene_room_reconnect_backoff_secs * 2).min(SCENE_ROOM_RECONNECT_MAX_SECS);
+        }
+
+        // Poll the Pulse room (state machine + inbound bridging)
+        #[cfg(feature = "use_pulse")]
+        self.poll_pulse_room();
+
+        // Periodic ProfileVersion broadcasting (every 10 seconds)
+        if self.last_profile_version_broadcast.elapsed().as_secs() >= 10 {
+            self.broadcast_profile_version();
+            self.last_profile_version_broadcast = Instant::now();
+        }
+
+        // Multiplayer debug: update avatar room labels (~1/sec)
+        if self.multiplayer_debug && self.multiplayer_debug_last_update.elapsed().as_secs() >= 1 {
+            self.multiplayer_debug_last_update = Instant::now();
+            if let Some(processor) = &self.message_processor {
+                let avatar_scene = DclGlobal::singleton().bind().get_avatars();
+                for (address, rooms, _) in processor.get_peer_room_info() {
+                    let address_str = format!("{:#x}", address);
+                    let mut avatar_scene_ref = avatar_scene.clone();
+                    avatar_scene_ref
+                        .bind_mut()
+                        .set_avatar_room_debug_by_address(address_str.to_godot(), rooms.to_godot());
+                }
+            }
+        }
+    }
+}
+
+impl CommunicationManager {
+    #[cfg(feature = "use_livekit")]
+    fn create_fallback_connection(&mut self) {
+        tracing::debug!("🔧 Creating fallback MessageProcessor for scene room support");
+
+        // Ensure we have a MessageProcessor for scene rooms to work
+        let _ = self.ensure_message_processor();
+
+        // Set voice chat to false since we don't have a main connection with voice support
+        self.voice_chat_enabled = false;
+
+        let voice_chat_enabled = self.voice_chat_enabled.to_variant();
+        self.base_mut().emit_signal(
+            "on_adapter_changed",
+            &[voice_chat_enabled, "fallback".to_variant()],
+        );
+
+        // Pulse has no adapter string of its own — every path that ends in a live comms
+        // state must offer it a (re)creation chance, or a fallback-only session (e.g. the
+        // archipelago kill switch with no fixedAdapter) silently never starts it.
+        #[cfg(feature = "use_pulse")]
+        self.ensure_pulse_room();
+
+        tracing::debug!("✅ Fallback connection established - scene rooms will work");
+    }
+
+    fn ensure_message_processor(
+        &mut self,
+    ) -> mpsc::Sender<crate::comms::adapter::message_processor::IncomingMessage> {
+        if self.message_processor.is_none() {
+            let player_identity = DclGlobal::singleton().bind().get_player_identity();
+            let player_identity_bind = player_identity.bind();
+            let player_address = player_identity_bind.get_address();
+            let player_profile = player_identity_bind.clone_profile();
+            let avatar_scene = DclGlobal::singleton().bind().get_avatars();
+
+            let mut processor = MessageProcessor::new(player_address, player_profile, avatar_scene);
+
+            // Set the social blacklist if available
+            let global = DclGlobal::singleton();
+            let global_bind = global.bind();
+            processor.set_social_blacklist(global_bind.social_blacklist.clone());
+
+            let sender = processor.get_message_sender();
+            self.message_processor = Some(processor);
+            sender
+        } else {
+            self.message_processor
+                .as_ref()
+                .unwrap()
+                .get_message_sender()
+        }
+    }
+
+    /// Effective Pulse activation. Precedence: runtime override (deeplink `pulse=` /
+    /// `pulse-server=`) > CLI (`--no-pulse` always disables, `--pulse` force-enables) >
+    /// server `pulse` feature flag, fail-closed — Pulse stays off until feature_flags.gd
+    /// confirms the flag is on (fetch failure or an absent flag keeps it off). A server
+    /// flag can never force-enable Pulse over a local opt-out.
+    ///
+    /// In `--preview` the flag alone is not enough — see [`pulse_activation`].
+    #[cfg(feature = "use_pulse")]
+    fn pulse_enabled(&self, cli: &crate::godot_classes::dcl_cli::DclCli) -> bool {
+        self.pulse_runtime_enabled.unwrap_or_else(|| {
+            pulse_activation(
+                cli.pulse,
+                cli.pulse_explicit,
+                cli.preview_mode || self.local_scene_development,
+                self.pulse_flag_enabled,
+            )
+        })
+    }
+
+    /// Create the Pulse room if activation is on and it doesn't exist yet.
+    /// Activation: see `pulse_enabled` (deeplink > CLI > feature flag, fail-closed).
+    /// Endpoint: deeplink `pulse-server=` > `--pulse-server` / `PULSE_SERVER` > default
+    /// `urls::pulse_server():7777` (env-resolved via the `comms` group; `dclenv=zone`
+    /// or `dclenv=comms::zone,org` both target the zone deployment).
+    #[cfg(feature = "use_pulse")]
+    fn ensure_pulse_room(&mut self) {
+        if self.pulse_room.is_some() || self.pulse_disabled_for_session || self.comms_on_hold {
+            return;
+        }
+
+        let global = DclGlobal::singleton();
+
+        // The shared MessageProcessor (and the Pulse handshake itself) need an identity.
+        // A deeplink can land before login (Global._ready) — keep the runtime overrides and
+        // defer; change_adapter re-runs this once the identity exists.
+        if global
+            .bind()
+            .get_player_identity()
+            .bind()
+            .try_get_address()
+            .is_none()
+        {
+            tracing::debug!("pulse: no identity yet; deferring room creation");
+            return;
+        }
+
+        let cli = global.bind().cli.clone();
+        let cli = cli.bind();
+        if !self.pulse_enabled(&cli) {
+            return;
+        }
+        if cli.livekit_movement {
+            self.dual_channel_override = Some(true);
+        } else if cli.no_livekit_movement {
+            self.dual_channel_override = Some(false);
+        }
+
+        let (host, port) = self.resolve_pulse_endpoint(&cli);
+
+        let processor_sender = self.ensure_message_processor();
+        tracing::info!("pulse: room created for {host}:{port}");
+        self.pulse_room = Some(PulseRoom::new(
+            PulseTransportConfig { host, port },
+            processor_sender,
+        ));
+    }
+
+    /// Whether LiveKit-backed rooms may be created (see `livekit_runtime_enabled`).
+    #[cfg(feature = "use_livekit")]
+    fn livekit_enabled(&self) -> bool {
+        self.livekit_runtime_enabled.unwrap_or_else(|| {
+            let global = DclGlobal::singleton();
+            let cli = global.bind().cli.clone();
+            let no_livekit = cli.bind().no_livekit;
+            !no_livekit
+        })
+    }
+
+    /// Whether the archipelago connection may be established (see
+    /// `archipelago_runtime_enabled`).
+    #[cfg(feature = "use_livekit")]
+    fn archipelago_enabled(&self) -> bool {
+        self.archipelago_runtime_enabled
+            .unwrap_or(!DISABLE_ARCHIPELAGO)
+    }
+
+    /// Endpoint precedence: deeplink `pulse-server=` override > CLI `--pulse-server` /
+    /// `PULSE_SERVER` env > env-resolved default host at the standard port.
+    #[cfg(feature = "use_pulse")]
+    fn resolve_pulse_endpoint(&self, cli: &crate::godot_classes::dcl_cli::DclCli) -> (String, u16) {
+        let endpoint = self
+            .pulse_endpoint_override
+            .clone()
+            .unwrap_or_else(|| cli.pulse_server.to_string());
+        if endpoint.is_empty() {
+            (
+                crate::urls::pulse_server(),
+                crate::comms::consts::PULSE_SERVER_PORT,
+            )
+        } else {
+            match endpoint
+                .rsplit_once(':')
+                .and_then(|(h, p)| p.parse::<u16>().ok().map(|p| (h.to_owned(), p)))
+            {
+                Some(parsed) => parsed,
+                None => (endpoint, crate::comms::consts::PULSE_SERVER_PORT),
+            }
+        }
+    }
+
+    #[cfg(feature = "use_pulse")]
+    fn poll_pulse_room(&mut self) {
+        let events = {
+            let Some(pulse_room) = self.pulse_room.as_mut() else {
+                return;
+            };
+            pulse_room.poll(Instant::now(), || {
+                let player_identity = DclGlobal::singleton().bind().get_player_identity();
+                let player_identity = player_identity.bind();
+                let ephemeral = player_identity.try_get_ephemeral_auth_chain()?;
+                let profile_version = player_identity
+                    .clone_profile()
+                    .map(|p| p.version as i32)
+                    .unwrap_or(0);
+                Some((ephemeral, profile_version))
+            })
+        };
+
+        for event in events {
+            match event {
+                PulseRoomEvent::Established => {
+                    self.pulse_session_failures = 0;
+                    // Mandatory first gameplay message; deferred until realm + position exist.
+                    self.pulse_teleport_pending = true;
+                }
+                PulseRoomEvent::AttemptFailed => {
+                    self.pulse_session_failures += 1;
+                    if self.pulse_session_failures >= PULSE_SESSION_FAILURE_LIMIT {
+                        tracing::warn!(
+                            "pulse: {} consecutive failed attempts — falling back to LiveKit-only for this session",
+                            self.pulse_session_failures
+                        );
+                        self.pulse_disabled_for_session = true;
+                        if let Some(mut pulse_room) = self.pulse_room.take() {
+                            pulse_room.clean();
+                        }
+                        return;
+                    }
+                }
+                PulseRoomEvent::Dead { reason } => {
+                    // The Pulse server evicts oldest-first on a duplicate wallet, so a
+                    // DuplicateSession right after a resume is our own pre-background zombie
+                    // being reclaimed — one rebuild wins the session back.
+                    if reason == Some(PulseDisconnect::DuplicateSession) && self.in_resume_grace() {
+                        tracing::warn!(
+                            "pulse: DuplicateSession within resume grace — rebuilding room to reclaim the session"
+                        );
+                        if let Some(mut pulse_room) = self.pulse_room.take() {
+                            pulse_room.clean();
+                        }
+                        self.ensure_pulse_room();
+                        return;
+                    }
+                    // Terminal code — parked until the next change_adapter rebuilds the room.
+                    tracing::warn!("pulse: room dead until next adapter change");
+                }
+            }
+        }
+
+        if self.pulse_teleport_pending {
+            self.try_send_pulse_teleport();
+        }
+    }
+
+    /// The realm to announce on the Pulse handshake — the string Pulse partitions visibility
+    /// by, matched exactly and never exchanged. `None` means "not knowable yet"; the caller
+    /// waits rather than announcing a wrong one, because a mismatch is silent (the player joins
+    /// a phantom realm, invisible to everyone, with zero errors).
+    ///
+    /// Precedence:
+    /// 1. the runtime/CLI override (`pulse-realm=` deeplink, `--pulse-realm` / PULSE_REALM) —
+    ///    what the orchestrator states to an engine it spawned;
+    /// 2. in a local preview, the Local Scene Development key derived from the preview scene's
+    ///    entity id (see [`lsd_realm::lsd_realm_key`]) — the same string sdk-commands mints and
+    ///    the other explorers derive. Detected from the entity id itself (`b64-` = served by a
+    ///    preview server, the same test `get_scene_adapter` already uses), not from `--preview`,
+    ///    so a QR/deeplink preview (`decentraland://open?preview=http://…`, which never sets the
+    ///    CLI flag) announces the same realm as a desktop `--preview` run;
+    /// 3. otherwise the realm's own `about.configurations.realmName` — `main` for Genesis City,
+    ///    the world name for a world, which is exactly what the orchestrator states on
+    ///    add-scene. `realm.gd`'s `no_realm_name` fallback is not a realm.
+    #[cfg(feature = "use_pulse")]
+    fn pulse_realm_name(&self) -> Option<String> {
+        let global = DclGlobal::singleton();
+
+        let cli = global.bind().cli.clone();
+        let cli_realm = cli.bind().pulse_realm.to_string();
+        let override_realm = self
+            .pulse_realm_override
+            .clone()
+            .unwrap_or(cli_realm)
+            .trim()
+            .to_owned();
+        if !override_realm.is_empty() {
+            return Some(override_realm);
+        }
+
+        // The preview server already serves the id this key is built from, so it is read back
+        // rather than re-derived from the project path — one less place to drift. Its `b64-`
+        // prefix is also what marks the scene as a preview one at all.
+        let scene_runner = global.bind().get_scene_runner();
+        let scene_id = scene_runner.bind().get_current_parcel_scene_id();
+        let entity_id = scene_runner
+            .bind()
+            .get_scene_entity_id(scene_id)
+            .to_string();
+        if entity_id.starts_with(PREVIEW_SCENE_ID_PREFIX) {
+            return Some(lsd_realm::lsd_realm_key(&entity_id));
+        }
+        if (cli.bind().preview_mode || self.local_scene_development) && entity_id.is_empty() {
+            return None; // preview realm, not standing in its scene yet — retried next poll
+        }
+
+        let realm_name = global
+            .bind()
+            .get_realm()
+            .bind()
+            .get_realm_name()
+            .to_string();
+        if realm_name.is_empty() || realm_name == "no_realm_name" {
+            return None;
+        }
+        Some(realm_name)
+    }
+
+    /// Send the initial/announce TeleportRequest once the realm and a cached position are both
+    /// known. `pulse_teleport_pending` stays set until it goes out, so this is retried on every
+    /// poll while either half is still missing.
+    #[cfg(feature = "use_pulse")]
+    fn try_send_pulse_teleport(&mut self) {
+        let Some(position) = self.last_dcl_position else {
+            return;
+        };
+        let Some(realm_name) = self.pulse_realm_name() else {
+            return;
+        };
+        if let Some(pulse_room) = self.pulse_room.as_mut() {
+            if pulse_room.is_established() {
+                pulse_room.send_teleport(position, &realm_name);
+                self.pulse_teleport_pending = false;
+            }
+        }
+    }
+
+    #[cfg(feature = "use_livekit")]
+    fn reconnect_scene_room(&self) {
+        let Some(scene_entity_id) = &self.current_scene_id else {
+            return;
+        };
+        let scene_entity_id = scene_entity_id.to_string();
+
+        let player_identity = DclGlobal::singleton().bind().get_player_identity();
+        let player_identity_bind = player_identity.bind();
+        let Some(ephemeral_auth_chain) = player_identity_bind.try_get_ephemeral_auth_chain() else {
+            tracing::error!("No ephemeral auth chain for scene room reconnection");
+            return;
+        };
+        let realm = DclGlobal::singleton().bind().get_realm();
+        let realm_name = realm.bind().get_realm_name().to_string();
+        let http_requester: Arc<HttpQueueRequester> = DclGlobal::singleton()
+            .bind()
+            .get_http_requester()
+            .bind()
+            .get_http_queue_requester();
+        let connection_sender = self.scene_room_connection_sender.clone();
+
+        Core::spawn(async move {
+            tracing::debug!("🔄 Reconnecting scene room for scene: {}", scene_entity_id);
+            match get_scene_adapter(
+                http_requester,
+                &scene_entity_id,
+                &realm_name,
+                &ephemeral_auth_chain,
+            )
+            .await
+            {
+                Ok(adapter_url) => {
+                    if let Some(livekit_url) = adapter_url.strip_prefix("livekit:") {
+                        let _ = connection_sender
+                            .send(SceneRoomConnectionRequest::Connect {
+                                scene_id: scene_entity_id,
+                                livekit_url: livekit_url.to_string(),
+                            })
+                            .await;
+                    } else {
+                        // Non-livekit adapter: nothing to connect. Signal Failed so the
+                        // in-flight guard clears and the loop can retry.
+                        tracing::warn!(
+                            "🔄 Scene room adapter was not a livekit URL: {}",
+                            adapter_url
+                        );
+                        let _ = connection_sender
+                            .send(SceneRoomConnectionRequest::Failed {
+                                scene_id: scene_entity_id,
+                            })
+                            .await;
+                    }
+                }
+                Err(SceneAdapterError::Banned) => {
+                    tracing::warn!("🚫 Scene room reconnection denied: user is banned");
+                    let _ = connection_sender
+                        .send(SceneRoomConnectionRequest::Banned {
+                            scene_id: scene_entity_id,
+                        })
+                        .await;
+                }
+                Err(SceneAdapterError::Other(e)) => {
+                    tracing::warn!("🔄 Scene room reconnection failed (will retry): {}", e);
+                    let _ = connection_sender
+                        .send(SceneRoomConnectionRequest::Failed {
+                            scene_id: scene_entity_id,
+                        })
+                        .await;
+                }
+            }
+        });
+    }
+
+    pub fn send_scene_message(
+        &mut self,
+        scene_id: String,
+        data: Vec<u8>,
+        recipient: NetworkMessageRecipient,
+    ) {
+        let data_len = data.len();
+        let scene_message = rfc4::Packet {
+            message: Some(rfc4::packet::Message::Scene(rfc4::Scene { scene_id, data })),
+            protocol_version: DEFAULT_PROTOCOL_VERSION,
+        };
+
+        // Send only through scene room (matching bevy behavior - scene comms
+        // are isolated to the scene room channel, not broadcast via main room)
+        #[cfg(feature = "use_livekit")]
+        if let Some(scene_room) = &mut self.scene_room {
+            tracing::debug!(
+                "📤 Sending scene message ({} bytes) via scene room, recipient: {:?}",
+                data_len,
+                recipient
+            );
+            scene_room.send_rfc4_targeted(scene_message, false, recipient);
+        }
+        #[cfg(feature = "use_livekit")]
+        if self.scene_room.is_none() {
+            tracing::warn!(
+                "⚠️ send_scene_message called but scene_room is None — message dropped!"
+            );
+        }
+    }
+
+    pub fn get_pending_messages(&mut self, scene_id: &str) -> Vec<(H160, Vec<u8>)> {
+        // Use shared message processor if available
+        if let Some(processor) = &mut self.message_processor {
+            processor.consume_scene_messages(scene_id)
+        } else {
+            // Fallback to legacy adapter-based consumption
+            match &mut self.current_connection {
+                CommsConnection::Connected(adapter) => adapter.consume_scene_messages(scene_id),
+                _ => vec![],
+            }
+        }
+    }
+
+    fn broadcast_profile_version(&mut self) {
+        let player_identity = DclGlobal::singleton().bind().get_player_identity();
+        let player_identity_bind = player_identity.bind();
+
+        if let Some(player_profile) = player_identity_bind.clone_profile() {
+            let profile_version_packet = rfc4::Packet {
+                message: Some(rfc4::packet::Message::ProfileVersion(
+                    rfc4::AnnounceProfileVersion {
+                        profile_version: player_profile.version,
+                    },
+                )),
+                protocol_version: DEFAULT_PROTOCOL_VERSION,
+            };
+
+            // Send to main room if available
+            if let Some(main_room) = &mut self.main_room {
+                main_room.send_rfc4(profile_version_packet.clone(), false);
+                tracing::debug!(
+                    "📡 ProfileVersion broadcast to main room: version {}",
+                    player_profile.version
+                );
+            }
+
+            // Also send to scene room if available
+            #[cfg(feature = "use_livekit")]
+            if let Some(scene_room) = &mut self.scene_room {
+                scene_room.send_rfc4(profile_version_packet.clone(), false);
+                tracing::debug!(
+                    "📡 ProfileVersion broadcast to scene room: version {}",
+                    player_profile.version
+                );
+            }
+
+            // Send through archipelago's adapter if available
+            #[cfg(feature = "use_livekit")]
+            if let CommsConnection::Archipelago(archipelago) = &mut self.current_connection {
+                if let Some(adapter) = archipelago.adapter_as_mut() {
+                    adapter.send_rfc4(profile_version_packet, false);
+                    tracing::debug!(
+                        "📡 ProfileVersion broadcast through archipelago: version {}",
+                        player_profile.version
+                    );
+                }
+            }
+
+            // Dual-send to Pulse. PulseRoom dedups on version internally — the 10s rebroadcast
+            // loop is a LiveKit liveness idiom, pure noise on a reliable server-stored channel.
+            #[cfg(feature = "use_pulse")]
+            if let Some(pulse_room) = &mut self.pulse_room {
+                pulse_room.send_profile_version(player_profile.version);
+            }
+        }
+    }
+
+    fn announce_initial_profile(&mut self) {
+        let player_identity = DclGlobal::singleton().bind().get_player_identity();
+        let player_identity_bind = player_identity.bind();
+
+        if let Some(player_profile) = player_identity_bind.clone_profile() {
+            // Send ProfileResponse packet
+            let profile_response_packet = rfc4::Packet {
+                message: Some(rfc4::packet::Message::ProfileResponse(
+                    rfc4::ProfileResponse {
+                        serialized_profile: serde_json::to_string(&player_profile.content)
+                            .unwrap_or_default(),
+                        base_url: player_profile.base_url.clone(),
+                    },
+                )),
+                protocol_version: DEFAULT_PROTOCOL_VERSION,
+            };
+
+            // Send ProfileVersion packet
+            let profile_version_packet = rfc4::Packet {
+                message: Some(rfc4::packet::Message::ProfileVersion(
+                    rfc4::AnnounceProfileVersion {
+                        profile_version: player_profile.version,
+                    },
+                )),
+                protocol_version: DEFAULT_PROTOCOL_VERSION,
+            };
+
+            // Send to main room if available
+            if let Some(main_room) = &mut self.main_room {
+                main_room.send_rfc4(profile_response_packet.clone(), false);
+                main_room.send_rfc4(profile_version_packet.clone(), false);
+                tracing::debug!(
+                    "📡 Initial profile announced to main room: version {}",
+                    player_profile.version
+                );
+            }
+
+            // Also send to scene room if available
+            #[cfg(feature = "use_livekit")]
+            if let Some(scene_room) = &mut self.scene_room {
+                scene_room.send_rfc4(profile_response_packet.clone(), false);
+                scene_room.send_rfc4(profile_version_packet.clone(), false);
+                tracing::debug!(
+                    "📡 Initial profile announced to scene room: version {}",
+                    player_profile.version
+                );
+            }
+
+            // Send through archipelago's adapter if available
+            #[cfg(feature = "use_livekit")]
+            if let CommsConnection::Archipelago(archipelago) = &mut self.current_connection {
+                if let Some(adapter) = archipelago.adapter_as_mut() {
+                    adapter.send_rfc4(profile_response_packet, false);
+                    adapter.send_rfc4(profile_version_packet, false);
+                    tracing::debug!(
+                        "📡 Initial profile announced through archipelago: version {}",
+                        player_profile.version
+                    );
+                }
+            }
+        }
+    }
+}
+
+#[godot_api]
+impl CommunicationManager {
+    #[signal]
+    fn chat_message(chats: VarArray);
+
+    #[signal]
+    fn on_adapter_changed(voice_chat_enabled: bool, new_adapter: GString);
+
+    /// Signal emitted when disconnected from the server
+    /// reason: 0 = DuplicateIdentity, 1 = RoomClosed, 2 = Kicked, 3 = Other
+    #[signal]
+    fn disconnected(reason: i32);
+
+    /// Signal emitted with the result of a scene access check
+    /// allowed: true if access is granted, false if banned
+    /// error_message: non-empty if the check failed (network error, etc.)
+    #[signal]
+    fn scene_access_checked(scene_id: GString, allowed: bool, error_message: GString);
+
+    #[func]
+    fn broadcast_voice(&mut self, frame: PackedVector2Array) {
+        let adapter = if let Some(main_room) = &mut self.main_room {
+            match main_room {
+                MainRoom::WebSocket(_) => None, // WebSocket doesn't support voice
+                #[cfg(feature = "use_livekit")]
+                MainRoom::LiveKit(livekit_room) => Some(livekit_room as &mut dyn Adapter),
+            }
+        } else {
+            match &mut self.current_connection {
+                CommsConnection::Connected(adapter) => Some(adapter.as_mut()),
+                #[cfg(feature = "use_livekit")]
+                CommsConnection::Archipelago(archipelago) => {
+                    archipelago.adapter_as_mut().map(|a| a.as_mut())
+                }
+                _ => None,
+            }
+        };
+
+        let Some(adapter) = adapter else {
+            return;
+        };
+        if !adapter.support_voice_chat() {
+            return;
+        }
+
+        let mut max_value = 0;
+        let vec = frame
+            .as_slice()
+            .iter()
+            .map(|v| {
+                let value = ((0.5 * (v.x + v.y)) * i16::MAX as f32) as i16;
+
+                max_value = std::cmp::max(max_value, value);
+                value
+            })
+            .collect::<Vec<i16>>();
+
+        if max_value > 0 {
+            adapter.broadcast_voice(vec);
+        }
+    }
+
+    #[func]
+    fn is_voice_chat_enabled(&self) -> bool {
+        self.voice_chat_enabled
+    }
+
+    /// Dual-channel avatar-sync toggle (default OFF): whether movement and emotes keep going
+    /// over LiveKit while Pulse is established. Off, they are Pulse-only *while established*;
+    /// LiveKit sending auto-resumes if Pulse drops. No-op without the use_pulse feature.
+    #[func]
+    fn set_livekit_movement_dual_channel(&mut self, enabled: bool) {
+        #[cfg(feature = "use_pulse")]
+        {
+            self.dual_channel_override = Some(enabled);
+        }
+        #[cfg(not(feature = "use_pulse"))]
+        let _ = enabled;
+    }
+
+    #[func]
+    fn is_livekit_movement_dual_channel(&self) -> bool {
+        #[cfg(feature = "use_pulse")]
+        {
+            dual_channel_effective(self.dual_channel_override, self.dual_channel_flag)
+        }
+        // Without Pulse there is nothing to hand avatar sync over to: LiveKit carries it.
+        #[cfg(not(feature = "use_pulse"))]
+        true
+    }
+
+    /// Runtime (deeplink `pulse-server=host:port`): join a specific Pulse server. Shareable —
+    /// everyone opening the same deeplink lands on the same instance. Overrides the CLI/env
+    /// endpoint, clears any session fallback (an explicit user action earns a fresh chance),
+    /// and rebuilds the room immediately.
+    #[func]
+    pub fn set_pulse_server(&mut self, host_port: GString) {
+        #[cfg(feature = "use_pulse")]
+        {
+            let endpoint = host_port.to_string();
+            if endpoint.is_empty() {
+                return;
+            }
+            tracing::info!("pulse: runtime endpoint set to {endpoint}");
+            self.pulse_endpoint_override = Some(endpoint);
+            self.pulse_runtime_enabled = Some(true);
+            self.pulse_disabled_for_session = false;
+            self.pulse_session_failures = 0;
+            if let Some(mut pulse_room) = self.pulse_room.take() {
+                pulse_room.clean();
+                self.pulse_teleport_pending = false;
+                self.pending_pulse_emote_urn = None;
+            }
+            self.ensure_pulse_room();
+        }
+        #[cfg(not(feature = "use_pulse"))]
+        let _ = host_port;
+    }
+
+    /// Reported by realm.gd on every realm change: whether this realm is a local preview (its
+    /// `about` advertises `localSceneParcels`). Equivalent to `--preview` for Pulse activation,
+    /// so the QR/deeplink preview path — which never sets the CLI flag — gets the same
+    /// explicit-opt-in rule. Tears an already-built room down if we only learn this after it was
+    /// created; an opted-in run rebuilds it through the realm change's `ensure_pulse_room`.
+    #[func]
+    pub fn set_local_scene_development(&mut self, is_preview: bool) {
+        #[cfg(feature = "use_pulse")]
+        {
+            if self.local_scene_development == is_preview {
+                return;
+            }
+            self.local_scene_development = is_preview;
+            tracing::info!("pulse: local scene development realm = {is_preview}");
+
+            let global = DclGlobal::singleton();
+            let cli = global.bind().cli.clone();
+            let enabled = self.pulse_enabled(&cli.bind());
+            if !enabled {
+                if let Some(mut pulse_room) = self.pulse_room.take() {
+                    tracing::info!(
+                        "pulse: leaving — a local preview joins only on an explicit opt-in"
+                    );
+                    pulse_room.clean();
+                    self.pulse_teleport_pending = false;
+                    self.pending_pulse_emote_urn = None;
+                }
+            }
+        }
+        #[cfg(not(feature = "use_pulse"))]
+        let _ = is_preview;
+    }
+
+    /// Deployment `dual-channel` flag, reported by feature_flags.gd once the fetch settles.
+    /// Only the default: an explicit local choice (`--livekit-movement` /
+    /// `--no-livekit-movement`, deeplink `dual-channel=`) always wins. No-op without use_pulse.
+    #[func]
+    pub fn set_dual_channel_flag_enabled(&mut self, enabled: bool) {
+        #[cfg(feature = "use_pulse")]
+        {
+            self.dual_channel_flag = enabled;
+            tracing::info!("pulse: dual-channel flag = {enabled}");
+        }
+        #[cfg(not(feature = "use_pulse"))]
+        let _ = enabled;
+    }
+
+    /// Runtime (deeplink `pulse-realm=<realm>`): announce a specific realm instead of the
+    /// derived one. Rebuilds the room rather than re-announcing on the live one — this client
+    /// tears the Pulse room down on every realm change, and the decoder's subject state is
+    /// per-realm.
+    #[func]
+    pub fn set_pulse_realm(&mut self, realm: GString) {
+        #[cfg(feature = "use_pulse")]
+        {
+            let realm = realm.to_string().trim().to_owned();
+            if realm.is_empty() {
+                return;
+            }
+            tracing::info!("pulse: runtime realm set to {realm}");
+            self.pulse_realm_override = Some(realm);
+            self.pulse_runtime_enabled = Some(true);
+            self.pulse_disabled_for_session = false;
+            self.pulse_session_failures = 0;
+            if let Some(mut pulse_room) = self.pulse_room.take() {
+                pulse_room.clean();
+                self.pulse_teleport_pending = false;
+                self.pending_pulse_emote_urn = None;
+            }
+            self.ensure_pulse_room();
+        }
+        #[cfg(not(feature = "use_pulse"))]
+        let _ = realm;
+    }
+
+    /// Runtime (deeplink `pulse=true/false`): toggle the Pulse transport with the configured
+    /// endpoint. Enabling clears any session fallback; disabling tears the room down.
+    #[func]
+    pub fn set_pulse_enabled(&mut self, enabled: bool) {
+        #[cfg(feature = "use_pulse")]
+        {
+            self.pulse_runtime_enabled = Some(enabled);
+            if enabled {
+                self.pulse_disabled_for_session = false;
+                self.pulse_session_failures = 0;
+                self.ensure_pulse_room();
+            } else if let Some(mut pulse_room) = self.pulse_room.take() {
+                pulse_room.clean();
+                self.pulse_teleport_pending = false;
+                self.pending_pulse_emote_urn = None;
+            }
+            tracing::info!("pulse: runtime enabled = {enabled}");
+        }
+        #[cfg(not(feature = "use_pulse"))]
+        let _ = enabled;
+    }
+
+    /// Server `pulse` feature-flag verdict (feature_flags.gd, once per run when the
+    /// mobile-bff fetch settles; `false` on fetch failure or an absent flag — fail-closed).
+    /// Decides the default only: explicit runtime/CLI opt-ins and opt-outs win (see
+    /// `pulse_enabled`), so the flag can neither kill a `pulse=true`/`pulse-server=`
+    /// deeplink test run nor force-enable Pulse over `--no-pulse`.
+    #[func]
+    pub fn set_pulse_flag_enabled(&mut self, enabled: bool) {
+        #[cfg(feature = "use_pulse")]
+        {
+            self.pulse_flag_enabled = Some(enabled);
+            tracing::info!("pulse: feature flag enabled = {enabled}");
+            let global = DclGlobal::singleton();
+            let cli = global.bind().cli.clone();
+            let effective = self.pulse_enabled(&cli.bind());
+            if effective {
+                self.ensure_pulse_room();
+            } else if let Some(mut pulse_room) = self.pulse_room.take() {
+                pulse_room.clean();
+                self.pulse_teleport_pending = false;
+                self.pending_pulse_emote_urn = None;
+            }
+        }
+        #[cfg(not(feature = "use_pulse"))]
+        let _ = enabled;
+    }
+
+    /// Runtime (deeplink `livekit=false`, CLI `--no-livekit`): pulse-only mode. Disabling
+    /// tears down every LiveKit-backed room (main livekit room, archipelago island room,
+    /// scene room) — chat, voice and scene messages go with them; avatar sync continues over
+    /// Pulse only. Re-enabling rebuilds the current adapter and reconnects the scene room.
+    /// ws-room realms are not LiveKit and are unaffected. Dev/testing switch.
+    #[func]
+    pub fn set_livekit_enabled(&mut self, enabled: bool) {
+        #[cfg(feature = "use_livekit")]
+        {
+            self.livekit_runtime_enabled = Some(enabled);
+            tracing::info!("livekit: runtime enabled = {enabled}");
+            if enabled {
+                let adapter = self.current_connection_str.clone();
+                if !adapter.is_empty() {
+                    self.change_adapter(adapter);
+                }
+                if self.current_scene_id.is_some() {
+                    self.reconnect_scene_room();
+                }
+            } else {
+                #[cfg(feature = "use_pulse")]
+                if !self.pulse_room.as_ref().is_some_and(|p| p.is_established()) {
+                    tracing::warn!(
+                        "livekit disabled while Pulse is not established — no avatar sync source"
+                    );
+                }
+                if matches!(self.main_room, Some(MainRoom::LiveKit(_))) {
+                    if let Some(mut main_room) = self.main_room.take() {
+                        main_room.clean();
+                    }
+                }
+                if matches!(self.current_connection, CommsConnection::Archipelago(_)) {
+                    if let CommsConnection::Archipelago(archipelago) = &mut self.current_connection
+                    {
+                        archipelago.clean();
+                    }
+                    self.current_connection = CommsConnection::None;
+                }
+                if let Some(scene_room) = &mut self.scene_room {
+                    scene_room.clean();
+                }
+                self.scene_room = None;
+                self.scene_room_reconnect_at = None;
+                self.voice_chat_enabled = false;
+            }
+        }
+        #[cfg(not(feature = "use_livekit"))]
+        let _ = enabled;
+    }
+
+    #[func]
+    pub fn is_livekit_enabled(&self) -> bool {
+        #[cfg(feature = "use_livekit")]
+        {
+            self.livekit_enabled()
+        }
+        #[cfg(not(feature = "use_livekit"))]
+        false
+    }
+
+    /// Runtime (remote feature flag `archipielago`): toggle the archipelago connection.
+    /// Disabling while connected tears archipelago (and its island room) down and falls back
+    /// to a processor-only connection, so scene rooms and Pulse keep working. Enabling
+    /// re-derives the adapter from the current realm about — the archipelago adapter string
+    /// is filtered out while the flag is off, so it can't be replayed from
+    /// `current_connection_str`.
+    #[func]
+    pub fn set_archipelago_enabled(&mut self, enabled: bool) {
+        #[cfg(feature = "use_livekit")]
+        {
+            let changed = self.archipelago_enabled() != enabled;
+            self.archipelago_runtime_enabled = Some(enabled);
+            if !changed {
+                return;
+            }
+            tracing::info!("archipelago: runtime enabled = {enabled}");
+            if enabled {
+                if self.block_auto_reconnect {
+                    return;
+                }
+                if let Some((protocol, Some(adapter))) = self._internal_get_comms_from_realm() {
+                    // Skip non-v3 realms and realms whose adapter is already connected
+                    // (non-archipelago realms are unaffected by this flag).
+                    if protocol != "v3" || adapter == self.current_connection_str {
+                        return;
+                    }
+                    if self.comms_on_hold {
+                        self.saved_adapter_for_resume = adapter;
+                    } else {
+                        self.change_adapter(adapter);
+                    }
+                }
+            } else if matches!(self.current_connection, CommsConnection::Archipelago(_)) {
+                if let CommsConnection::Archipelago(archipelago) = &mut self.current_connection {
+                    archipelago.clean();
+                }
+                self.current_connection = CommsConnection::None;
+                self.create_fallback_connection();
+            }
+        }
+        #[cfg(not(feature = "use_livekit"))]
+        let _ = enabled;
+    }
+
+    #[func]
+    pub fn is_archipelago_enabled(&self) -> bool {
+        #[cfg(feature = "use_livekit")]
+        {
+            self.archipelago_enabled()
+        }
+        #[cfg(not(feature = "use_livekit"))]
+        false
+    }
+
+    /// The local player was instantly repositioned (explorer.gd move_to: UI teleports and
+    /// scene movePlayerTo both funnel through it). Announce it to the Pulse server as a
+    /// same-realm TeleportRequest so remote peers snap instead of interpolating across the
+    /// jump. `position` is in Godot world convention (same as broadcast_movement's).
+    ///
+    /// Latches pulse_teleport_pending rather than sending directly: process() flushes at most
+    /// one teleport per frame (teleports share the server's 20/s discrete-event budget with
+    /// emotes — a scene spamming movePlayerTo must not burn it) and re-checks the realm guard.
+    #[func]
+    pub fn notify_player_teleported(&mut self, position: Vector3) {
+        #[cfg(feature = "use_pulse")]
+        {
+            self.last_dcl_position = Some(Vector3::new(position.x, position.y, -position.z));
+            if self
+                .pulse_room
+                .as_ref()
+                .is_some_and(|pulse| pulse.is_established())
+            {
+                self.pulse_teleport_pending = true;
+            }
+        }
+        #[cfg(not(feature = "use_pulse"))]
+        let _ = position;
+    }
+
+    #[func]
+    #[allow(clippy::too_many_arguments)]
+    fn broadcast_movement(
+        &mut self,
+        compressed: bool,
+        position: Vector3,
+        rotation_y: f32,
+        velocity: Vector3,
+        walk: bool,
+        run: bool,
+        jog: bool,
+        rise: bool,
+        fall: bool,
+        land: bool,
+        jump_count: i32,
+        glide_state: i32,
+        is_grounded: bool,
+    ) -> bool {
+        // Update archipelago position if connected via archipelago
+        #[cfg(feature = "use_livekit")]
+        if let CommsConnection::Archipelago(archipelago) = &mut self.current_connection {
+            archipelago.update_position(position);
+        }
+
+        // Cache the DCL-convention position (z negated, matching the rfc4 packet below) for the
+        // Pulse TeleportRequest.
+        #[cfg(feature = "use_pulse")]
+        {
+            self.last_dcl_position = Some(Vector3::new(position.x, position.y, -position.z));
+        }
+
+        let velocity = Vector3::new(velocity.x, velocity.y, -velocity.z);
+
+        // The Temporal bitfield doesn't carry jump_count / glide_state yet, so
+        // force uncompressed when either carries info beyond what rise/fall/land
+        // already encode.
+        // #b8: jump_count == 1 is a plain ground jump that rise/fall covers, so
+        // no need to force uncompressed. A player that steps off a ledge keeps
+        // jump_count=1 until landing, so forcing on `> 0` would burn bandwidth
+        // during every long fall.
+        let needs_uncompressed = jump_count >= 2 || glide_state != 0;
+        let use_compressed = compressed && !needs_uncompressed;
+
+        // Always built (not just for the uncompressed wire path): it is also the Pulse
+        // PlayerStateInput source, quantized via decoder::from_movement.
+        let uncompressed_movement = {
+            // Get elapsed time since start
+            let timestamp = self.start_time.elapsed().as_secs_f32();
+
+            // Calculate movement blend value based on velocity and movement type
+            let movement_blend_value = if run {
+                3.0
+            } else if jog {
+                2.0
+            } else if walk {
+                1.0
+            } else {
+                0.0
+            };
+
+            rfc4::Movement {
+                timestamp,
+                position_x: position.x,
+                position_y: position.y,
+                position_z: -position.z,
+                velocity_x: velocity.x,
+                velocity_y: velocity.y,
+                velocity_z: velocity.z,
+                // Negate + rad→deg to match Unity Foundation Client, then wrap so the value
+                // actually lands in the documented [0, 360) range — rfc4 receivers tolerate
+                // signed degrees, but the Pulse quantizer clamps them to 0.
+                rotation_y: (-rotation_y).to_degrees().rem_euclid(360.0),
+                movement_blend_value,
+                slide_blend_value: 0.0,
+                is_grounded,
+                is_jumping: rise,
+                jump_count,
+                is_long_jump: false,
+                is_long_fall: false,
+                is_falling: fall,
+                is_stunned: false,
+                glide_state,
+                is_instant: false,
+                is_emoting: self.is_emoting,
+                head_ik_yaw_enabled: false, // TODO: implement head sync
+                head_ik_pitch_enabled: false,
+                head_yaw: 0.0,
+                head_pitch: 0.0,
+                point_at_x: 0.0, // TODO: implement point-at
+                point_at_y: 0.0,
+                point_at_z: 0.0,
+                is_pointing_at: false,
+            }
+        };
+
+        let get_packet = || {
+            if use_compressed {
+                // Get elapsed time since start
+                let time = self.start_time.elapsed().as_secs_f64();
+
+                let movement = Movement::new(
+                    position,
+                    velocity,
+                    self.realm_min_bounds,
+                    self.realm_max_bounds,
+                );
+
+                // Determine move kind from parameters
+                let move_kind = if run {
+                    MoveKind::Run
+                } else if jog {
+                    MoveKind::Jog
+                } else if walk {
+                    MoveKind::Walk
+                } else {
+                    MoveKind::Idle
+                };
+
+                // rotation_y on the wire is Unity left-handed yaw in radians;
+                // negate to cross into Godot's right-handed frame.
+                let _ = land; // kept in signature for GDScript API stability
+                let temporal = Temporal::from_parts(
+                    time,
+                    false,
+                    -rotation_y,
+                    movement.velocity_tier(),
+                    move_kind,
+                    is_grounded,
+                );
+
+                let movement_compressed = MovementCompressed { temporal, movement };
+
+                let movement_packet = rfc4::MovementCompressed {
+                    temporal_data: i32::from_le_bytes(movement_compressed.temporal.into_bytes()),
+                    movement_data: i64::from_le_bytes(movement_compressed.movement.into_bytes()),
+                    head_sync_data: 0, // TODO: implement head sync compression
+                    point_at_data: 0,  // TODO: implement point-at compression
+                };
+
+                rfc4::Packet {
+                    message: Some(rfc4::packet::Message::MovementCompressed(movement_packet)),
+                    protocol_version: DEFAULT_PROTOCOL_VERSION,
+                }
+            } else {
+                rfc4::Packet {
+                    message: Some(rfc4::packet::Message::Movement(
+                        uncompressed_movement.clone(),
+                    )),
+                    protocol_version: DEFAULT_PROTOCOL_VERSION,
+                }
+            }
+        };
+
+        // See `avatar_sync_over_livekit`: while Pulse is established it is the only carrier.
+        #[cfg(feature = "use_pulse")]
+        let pulse_established = self
+            .pulse_room
+            .as_ref()
+            .is_some_and(|pulse| pulse.is_established());
+        #[cfg(not(feature = "use_pulse"))]
+        let pulse_established = false;
+        #[cfg(feature = "use_pulse")]
+        let movement_over_livekit =
+            avatar_sync_over_livekit(self.is_livekit_movement_dual_channel(), pulse_established);
+        #[cfg(not(feature = "use_pulse"))]
+        let movement_over_livekit = true;
+
+        // Send to main room if available
+        let mut message_sent = match &mut self.main_room {
+            Some(main_room) if movement_over_livekit => {
+                let sent = main_room.send_rfc4(get_packet(), true);
+                if sent {
+                    tracing::debug!("📡 Movement sent to main room");
+                }
+                sent
+            }
+            _ => false,
+        };
+
+        // Also send to scene room if available (dual broadcasting) — but not while Pulse is
+        // established: the authoritative server behind a scene room now reads avatar state off
+        // Pulse as a scene listener, so this copy would be pure duplication.
+        #[cfg(feature = "use_livekit")]
+        if movement_over_livekit {
+            if let Some(scene_room) = &mut self.scene_room {
+                let scene_sent = scene_room.send_rfc4(get_packet(), true);
+                message_sent = message_sent || scene_sent; // Consider successful if either main or scene room succeeded
+                if scene_sent {
+                    tracing::debug!("📡 Movement also sent to scene room");
+                }
+            }
+        }
+
+        // Also send through archipelago's adapter if available
+        #[cfg(feature = "use_livekit")]
+        if movement_over_livekit {
+            if let CommsConnection::Archipelago(archipelago) = &mut self.current_connection {
+                if let Some(adapter) = archipelago.adapter_as_mut() {
+                    let sent = adapter.send_rfc4(get_packet(), true);
+                    if sent {
+                        tracing::debug!("📡 Movement also sent through archipelago");
+                        message_sent = true;
+                    }
+                }
+            }
+        }
+
+        // Tee to Pulse (quantized PlayerStateInput, unreliable-sequenced). The 10Hz/1Hz cadence
+        // is inherited from broadcast_position.gd — under the server's 20Hz disconnect cap.
+        #[cfg(feature = "use_pulse")]
+        if pulse_established {
+            if let Some(pulse_room) = &mut self.pulse_room {
+                pulse_room.send_movement(&uncompressed_movement);
+                message_sent = true;
+            }
+        }
+
+        if message_sent {
+            self.last_position_broadcast_index += 1;
+        }
+        message_sent
+    }
+
+    #[func]
+    fn broadcast_position_and_rotation(&mut self, position: Vector3, rotation: Quaternion) -> bool {
+        // Update archipelago position if connected via archipelago
+        #[cfg(feature = "use_livekit")]
+        if let CommsConnection::Archipelago(archipelago) = &mut self.current_connection {
+            archipelago.update_position(position);
+        }
+
+        let index = self.last_position_broadcast_index;
+        let get_packet = || {
+            let position_packet = rfc4::Position {
+                index: index as u32,
+                position_x: position.x,
+                position_y: position.y,
+                position_z: -position.z,
+                rotation_x: rotation.x,
+                rotation_y: rotation.y,
+                rotation_z: -rotation.z,
+                rotation_w: -rotation.w,
+            };
+
+            rfc4::Packet {
+                message: Some(rfc4::packet::Message::Position(position_packet)),
+                protocol_version: DEFAULT_PROTOCOL_VERSION,
+            }
+        };
+
+        // Send to main room if available
+        let mut message_sent = if let Some(main_room) = &mut self.main_room {
+            let sent = main_room.send_rfc4(get_packet(), true);
+            if sent {
+                tracing::debug!("📡 Position sent to main room");
+            }
+            sent
+        } else {
+            false
+        };
+
+        // Also send to scene room if available (dual broadcasting)
+        #[cfg(feature = "use_livekit")]
+        if let Some(scene_room) = &mut self.scene_room {
+            let scene_sent = scene_room.send_rfc4(get_packet(), true);
+            message_sent = message_sent || scene_sent; // Consider successful if either main or scene room succeeded
+            if scene_sent {
+                tracing::debug!("📡 Position also sent to scene room");
+            }
+        }
+
+        // Also send through archipelago's adapter if available
+        #[cfg(feature = "use_livekit")]
+        if let CommsConnection::Archipelago(archipelago) = &mut self.current_connection {
+            if let Some(adapter) = archipelago.adapter_as_mut() {
+                let sent = adapter.send_rfc4(get_packet(), true);
+                if sent {
+                    tracing::debug!("📡 Position also sent through archipelago");
+                    message_sent = true;
+                }
+            }
+        }
+
+        if message_sent {
+            self.last_position_broadcast_index += 1;
+        }
+        message_sent
+    }
+
+    /// Called when the social blacklist changes to update the MessageProcessor cache
+    #[func]
+    pub fn on_blacklist_changed(&mut self) {
+        if let Some(processor) = &mut self.message_processor {
+            processor.refresh_blacklist_cache();
+        }
+    }
+
+    #[func]
+    fn send_chat(&mut self, text: GString) -> bool {
+        let packet = rfc4::Packet {
+            message: Some(rfc4::packet::Message::Chat(rfc4::Chat {
+                message: text.to_string(),
+                timestamp: ole_timestamp_now(),
+                forwarded_from: None,
+            })),
+            protocol_version: DEFAULT_PROTOCOL_VERSION,
+        };
+
+        let mut sent = false;
+
+        // Send to main room if available
+        if let Some(main_room) = &mut self.main_room {
+            sent = main_room.send_rfc4(packet.clone(), false) || sent;
+        }
+
+        // Also send to scene room if available
+        #[cfg(feature = "use_livekit")]
+        if let Some(scene_room) = &mut self.scene_room {
+            sent = scene_room.send_rfc4(packet, false) || sent;
+        }
+
+        sent
+    }
+
+    /// `mask` uses the internal convention (-1 = full body, 0 = AM_UPPER_BODY);
+    /// on the wire it becomes the comms `AvatarEmoteMask` encoding (absent/0 =
+    /// full body, 1 = upper body), matching Unity.
+    #[func]
+    pub fn send_emote(&mut self, emote_urn: GString, mask: i64) -> bool {
+        // Same gate as movement (see `avatar_sync_over_livekit`) for the rfc4 PlayerEmote.
+        #[cfg(feature = "use_pulse")]
+        let emote_over_livekit = avatar_sync_over_livekit(
+            self.is_livekit_movement_dual_channel(),
+            self.pulse_room
+                .as_ref()
+                .is_some_and(|pulse| pulse.is_established()),
+        );
+        #[cfg(not(feature = "use_pulse"))]
+        let emote_over_livekit = true;
+
+        // Incremented unconditionally: the counter is this peer's emote sequence, and skipping
+        // values while Pulse carries the emote would break receiver-side dedup if LiveKit
+        // sending resumes mid-session.
+        self.last_emote_incremental_id += 1;
+
+        let packet = rfc4::Packet {
+            message: Some(rfc4::packet::Message::PlayerEmote(rfc4::PlayerEmote {
+                urn: emote_urn.to_string(),
+                incremental_id: self.last_emote_incremental_id,
+                timestamp: self.start_time.elapsed().as_secs_f32(),
+                is_stopping: None,
+                mask: crate::avatars::emote_mask::wire_mask_from_internal(mask),
+                ..Default::default()
+            })),
+            protocol_version: DEFAULT_PROTOCOL_VERSION,
+        };
+
+        let mut sent = false;
+
+        if emote_over_livekit {
+            // Send to main room if available
+            if let Some(main_room) = &mut self.main_room {
+                sent = main_room.send_rfc4(packet.clone(), false) || sent;
+            }
+
+            // Also send to scene room if available
+            #[cfg(feature = "use_livekit")]
+            if let Some(scene_room) = &mut self.scene_room {
+                sent = scene_room.send_rfc4(packet, false) || sent;
+            }
+        }
+
+        // Pulse EmoteStart is deferred to set_emoting (actual playback start), NOT sent here:
+        // the trigger fires before the emote is async-loaded and idle-gated, and sending now
+        // means the per-frame animation poll reports "not emoting" next frame, chasing this
+        // with an EmoteStop that cancels it remotely before it ever plays (first-use emotes
+        // never propagated). Deferring also makes the PlayerState attached to the EmoteStart
+        // an idle one — Unity parks remote emote intents while the networked movement blend
+        // is > 0.1, so a press-time state (still decelerating) delays/loses the emote there.
+        #[cfg(feature = "use_pulse")]
+        {
+            self.pending_pulse_emote_urn = Some((emote_urn.to_string(), mask));
+            // Queued for Pulse counts as sent — otherwise this reports failure on exactly the
+            // path that is now the normal one.
+            sent = sent || !emote_over_livekit;
+        }
+
+        sent
+    }
+
+    #[func]
+    pub fn set_emoting(&mut self, emoting: bool) {
+        // Called every frame by the local avatar with its actual animation state.
+        #[cfg(feature = "use_pulse")]
+        {
+            if emoting {
+                // Playback is live — flush the deferred EmoteStart (see send_emote). Checked on
+                // every `true`, not just the false→true edge, so re-triggering while an emote is
+                // already playing (no edge) still announces the new emote.
+                if let Some((urn, mask)) = self.pending_pulse_emote_urn.take() {
+                    if let Some(pulse_room) = &mut self.pulse_room {
+                        pulse_room.send_emote_start(&urn, mask);
+                    }
+                }
+            } else if self.is_emoting {
+                // true→false: the local emote ended or was cancelled — reliable EmoteStop. Also
+                // load-bearing for one-shots: our EmoteStart carries no duration_ms, so the
+                // server never auto-completes them — without this stop the server ledger keeps
+                // us emoting forever and every later movement snapshot says is_emoting=true.
+                if let Some(pulse_room) = &mut self.pulse_room {
+                    pulse_room.send_emote_stop();
+                }
+                // Drop any never-flushed intent: an emote pressed while moving never reaches
+                // playback (idle gate), and its stale urn must not be announced by the next
+                // unrelated emote. Only on this edge — clearing on every `false` would eat
+                // the intent during the async emote load.
+                self.pending_pulse_emote_urn = None;
+            }
+        }
+        self.is_emoting = emoting;
+    }
+
+    #[func]
+    fn init_rs(&mut self) {
+        DclGlobal::singleton()
+            .bind()
+            .get_realm()
+            .connect("realm_changed", &self.base().callable("_on_realm_changed"));
+
+        let mut player_identity = DclGlobal::singleton().bind().get_player_identity();
+        player_identity.connect(
+            "profile_changed",
+            &self.base().callable("_on_profile_changed"),
+        );
+
+        // Connect to social blacklist changes
+        let global = DclGlobal::singleton();
+        let global_bind = global.bind();
+        let mut social_blacklist = global_bind.social_blacklist.clone();
+        social_blacklist.connect(
+            "blacklist_changed",
+            &self.base().callable("on_blacklist_changed"),
+        );
+
+        #[cfg(feature = "use_livekit")]
+        {
+            let mut scene_runner = DclGlobal::singleton().bind().get_scene_runner();
+            scene_runner.connect(
+                "on_change_scene_id",
+                &self.base().callable("_on_change_scene_id"),
+            );
+        }
+
+        #[cfg(feature = "use_livekit")]
+        {
+            let scene_runner = DclGlobal::singleton().bind().get_scene_runner();
+            self._on_change_scene_id(scene_runner.bind().get_current_parcel_scene_id());
+        }
+    }
+
+    #[func]
+    fn _on_profile_changed(&mut self, _: Variant) {
+        self.base_mut().call_deferred("_on_update_profile", &[]);
+    }
+
+    #[func]
+    fn _on_realm_changed(&mut self) {
+        self.base_mut()
+            .call_deferred("_on_realm_changed_deferred", &[]);
+    }
+
+    fn _internal_get_comms_from_realm(&self) -> Option<(String, Option<GString>)> {
+        let realm = DclGlobal::singleton().bind().get_realm();
+        let realm_about = VarDictionary::from_variant(&realm.get("realm_about"));
+        let comms = VarDictionary::from_variant(&realm_about.get(StringName::from("comms"))?);
+        let comms_protocol = String::from_variant(&comms.get(StringName::from("protocol"))?);
+
+        let fixed_adapter_raw = comms
+            .get(StringName::from("fixedAdapter"))
+            .map(|v| GString::from_variant(&v).to_string());
+        let adapter_raw = comms
+            .get(StringName::from("adapter"))
+            .map(|v| GString::from_variant(&v).to_string());
+
+        #[cfg(feature = "use_livekit")]
+        let disable_archipelago = !self.archipelago_enabled();
+        #[cfg(not(feature = "use_livekit"))]
+        let disable_archipelago = false;
+
+        let comms_fixed_adapter = parse_comms_adapter_value(
+            fixed_adapter_raw.as_deref(),
+            adapter_raw.as_deref(),
+            disable_archipelago,
+            cfg!(feature = "use_livekit"),
+        );
+
+        tracing::debug!(
+            "Comms protocol: {}, fixedAdapter: {:?}",
+            comms_protocol,
+            comms_fixed_adapter
+        );
+
+        Some((comms_protocol, comms_fixed_adapter.map(|s| s.to_godot())))
+    }
+
+    #[func]
+    fn _on_realm_changed_deferred(&mut self) {
+        // Skip automatic reconnection if blocked (e.g., after DuplicateIdentity)
+        if self.block_auto_reconnect {
+            tracing::warn!("Skipping automatic reconnection due to block_auto_reconnect flag");
+            return;
+        }
+
+        self.clean();
+
+        let comms = self._internal_get_comms_from_realm();
+        if comms.is_none() {
+            tracing::warn!("invalid comms from realm.");
+            return;
+        }
+
+        let (comms_protocol, comms_fixed_adapter) = comms.unwrap();
+        if comms_protocol != "v3" {
+            tracing::warn!("Only protocol 'v3' is supported.");
+            return;
+        }
+
+        if comms_fixed_adapter.is_none() {
+            #[cfg(feature = "use_livekit")]
+            if !self.archipelago_enabled() {
+                // When archipelago is disabled, fall back to a direct LiveKit connection
+                tracing::warn!(
+                    "🔄 Archipelago disabled, attempting fallback to direct LiveKit connection"
+                );
+                // Try to create a direct LiveKit connection as fallback
+                self.create_fallback_connection();
+            } else {
+                tracing::warn!("As far, only fixedAdapter is supported.");
+            }
+            #[cfg(not(feature = "use_livekit"))]
+            tracing::warn!("As far, only fixedAdapter is supported.");
+            return;
+        }
+
+        let comms_fixed_adapter_str = comms_fixed_adapter.unwrap().to_string();
+
+        // If loading, save the adapter for reconnection after loading finishes
+        if self.comms_on_hold {
+            self.saved_adapter_for_resume = comms_fixed_adapter_str.to_godot();
+            tracing::info!("Realm changed while comms on hold, saved adapter for resume");
+            return;
+        }
+
+        self.change_adapter(comms_fixed_adapter_str.to_godot());
+    }
+
+    #[func]
+    fn change_adapter(&mut self, comms_fixed_adapter_gstr: GString) {
+        let comms_fixed_adapter_str = comms_fixed_adapter_gstr.to_string();
+        let Some((protocol, comms_address)) = comms_fixed_adapter_str.as_str().split_once(':')
+        else {
+            tracing::warn!("unrecognised fixed adapter string: {comms_fixed_adapter_str}");
+            return;
+        };
+
+        let player_identity = DclGlobal::singleton().bind().get_player_identity();
+
+        if player_identity.bind().try_get_address().is_none() {
+            self.current_connection = CommsConnection::WaitingForIdentity(comms_fixed_adapter_str);
+            return;
+        }
+
+        self.current_connection = CommsConnection::None;
+        self.current_connection_str
+            .clone_from(&comms_fixed_adapter_str.to_godot());
+        self.archipelago_profile_announced = false; // Reset flag when changing adapters
+        self.block_auto_reconnect = false; // Reset block flag to allow this reconnection
+        let avatar_scene = DclGlobal::singleton().bind().get_avatars();
+
+        tracing::warn!(
+            "🔌 Comms reconnection attempt - protocol: '{}', address: '{}'",
+            protocol,
+            comms_address
+        );
+
+        let current_ephemeral_auth_chain = player_identity
+            .bind()
+            .try_get_ephemeral_auth_chain()
+            .expect("ephemeral auth chain needed to start a comms connection");
+
+        let player_profile = player_identity.bind().clone_profile();
+
+        match protocol {
+            "ws-room" => {
+                // Ensure shared message processor is created
+                let processor_sender = self.ensure_message_processor();
+
+                // Create WebSocket room with shared message processor
+                let mut ws_room = WebSocketRoom::new(
+                    comms_address,
+                    format!("ws-room-{}", comms_address),
+                    current_ephemeral_auth_chain,
+                    player_profile,
+                    avatar_scene,
+                );
+                ws_room.set_message_processor_sender(processor_sender);
+
+                // Store the room - no need to change connection type
+                self.main_room = Some(MainRoom::WebSocket(ws_room));
+
+                // Announce initial profile to the room
+                self.announce_initial_profile();
+            }
+            "signed-login" => {
+                let Ok(uri) = Uri::try_from(comms_address.to_string()) else {
+                    tracing::warn!(
+                        "failed to parse signed login comms_address as a uri: {comms_address}"
+                    );
+                    return;
+                };
+
+                let realm = DclGlobal::singleton().bind().get_realm();
+                let realm_url = realm.get("realm_url").to_string();
+                let secret = realm.get("realm_credential").to_string();
+                let secret = (!secret.is_empty()).then_some(secret);
+                let Ok(origin) = Uri::try_from(&realm_url) else {
+                    tracing::warn!("failed to parse origin comms_address as a uri: {realm_url}");
+                    return;
+                };
+
+                self.current_connection = CommsConnection::SignedLogin(SignedLogin::new(
+                    uri,
+                    current_ephemeral_auth_chain,
+                    SignedLoginMeta::new(true, origin, secret),
+                ));
+            }
+
+            #[cfg(feature = "use_livekit")]
+            "livekit" => {
+                if !self.livekit_enabled() {
+                    tracing::warn!("🔇 LiveKit disabled (pulse-only mode) — skipping main room");
+                    // Pulse and avatars still need the shared processor
+                    let _ = self.ensure_message_processor();
+                } else {
+                    // Ensure shared message processor is created
+                    let processor_sender = self.ensure_message_processor();
+
+                    // Create LiveKit room with shared message processor
+                    // Main rooms use auto_subscribe: true (default) to automatically receive all peers
+                    let mut livekit_room = LivekitRoom::new(
+                        comms_address.to_string(),
+                        format!("livekit-{}", comms_address),
+                    );
+                    livekit_room.set_message_processor_sender(processor_sender);
+
+                    // Store the room - no need to change connection type
+                    self.main_room = Some(MainRoom::LiveKit(livekit_room));
+
+                    // Announce initial profile to the room
+                    self.announce_initial_profile();
+                }
+            }
+
+            #[cfg(not(feature = "use_livekit"))]
+            "livekit" => {
+                tracing::error!("livekit wasn't included in this build");
+            }
+
+            "offline" => {
+                tracing::debug!("set offline");
+            }
+            #[cfg(feature = "use_livekit")]
+            "archipelago" => {
+                if !self.archipelago_enabled() {
+                    tracing::info!("⚠️  Archipelago connection skipped (disabled by flag)");
+                    // Scene rooms and Pulse still need the shared processor
+                    let _ = self.ensure_message_processor();
+                } else if !self.livekit_enabled() {
+                    tracing::warn!("🔇 LiveKit disabled (pulse-only mode) — skipping archipelago");
+                    // Pulse and avatars still need the shared processor
+                    let _ = self.ensure_message_processor();
+                } else {
+                    // Ensure we have a message processor
+                    let processor_sender = self.ensure_message_processor();
+
+                    let mut archipelago = ArchipelagoManager::new(
+                        comms_address,
+                        current_ephemeral_auth_chain.clone(),
+                        player_profile,
+                    );
+                    archipelago.set_shared_processor_sender(processor_sender);
+
+                    self.current_connection = CommsConnection::Archipelago(archipelago);
+                }
+            }
+            _ => {
+                tracing::debug!("unknown adapter {:?}", protocol);
+            }
+        }
+
+        // Determine voice chat support based on available adapters
+        self.voice_chat_enabled = if let Some(main_room) = &self.main_room {
+            main_room.support_voice_chat()
+        } else {
+            match &self.current_connection {
+                CommsConnection::Connected(adapter) => adapter.support_voice_chat(),
+                #[cfg(feature = "use_livekit")]
+                CommsConnection::Archipelago(archipelago) => {
+                    if let Some(adapter) = archipelago.adapter() {
+                        adapter.support_voice_chat()
+                    } else {
+                        // Only support voice if the feature is enabled
+                        #[cfg(feature = "use_voice_chat")]
+                        {
+                            true
+                        }
+                        #[cfg(not(feature = "use_voice_chat"))]
+                        {
+                            false
+                        }
+                    }
+                }
+                _ => false,
+            }
+        };
+
+        // Pulse rides alongside every real adapter (it has no adapter string of its own —
+        // endpoint is fixed/CLI-provided). Recreating it here gives realm changes a fresh
+        // handshake + TeleportRequest with the new realm name for free.
+        #[cfg(feature = "use_pulse")]
+        if protocol != "offline" {
+            self.ensure_pulse_room();
+        }
+
+        let voice_chat_enabled = self.voice_chat_enabled.to_variant();
+        self.base_mut().emit_signal(
+            "on_adapter_changed",
+            &[voice_chat_enabled, comms_fixed_adapter_gstr.to_variant()],
+        );
+    }
+
+    fn clean(&mut self) {
+        #[cfg(feature = "use_pulse")]
+        if let Some(mut pulse_room) = self.pulse_room.take() {
+            pulse_room.clean();
+            self.pulse_teleport_pending = false;
+            self.pending_pulse_emote_urn = None;
+        }
+
+        match &mut self.current_connection {
+            CommsConnection::None
+            | CommsConnection::SignedLogin(_)
+            | CommsConnection::WaitingForIdentity(_) => {}
+            CommsConnection::Connected(adapter) => {
+                adapter.clean();
+            }
+            #[cfg(feature = "use_livekit")]
+            CommsConnection::Archipelago(archipelago) => archipelago.clean(),
+        }
+
+        // Clean up shared message processor
+        if let Some(processor) = &mut self.message_processor {
+            processor.clean();
+        }
+        self.message_processor = None;
+
+        // Clean up rooms
+        if let Some(main_room) = &mut self.main_room {
+            main_room.clean();
+        }
+        self.main_room = None;
+
+        #[cfg(feature = "use_livekit")]
+        if let Some(scene_room) = &mut self.scene_room {
+            scene_room.clean();
+        }
+        #[cfg(feature = "use_livekit")]
+        {
+            self.scene_room = None;
+            self.scene_room_reconnect_at = None;
+            self.scene_room_connect_in_flight = None;
+        }
+        self.current_scene_id = None;
+        self.current_connection = CommsConnection::None;
+        self.current_connection_str = GString::default();
+        self.archipelago_profile_announced = false;
+    }
+
+    /// The app returned to the foreground (GDScript calls this on
+    /// `NOTIFICATION_APPLICATION_FOCUS_IN`). Mobile OSes cut the app's network shortly after
+    /// backgrounding, so every transport is rebuilding right now: forgive the Pulse failure
+    /// strikes that a slow-returning radio would burn, and arm the grace window that lets
+    /// Duplicate* evictions (our own zombie sessions being reclaimed) retry instead of
+    /// locking comms behind the "session ended" modal.
+    #[func]
+    pub fn notify_app_resumed(&mut self) {
+        #[cfg(feature = "use_pulse")]
+        if self.pulse_session_failures > 0 {
+            tracing::info!(
+                "app resumed — clearing {} pulse session failure strike(s)",
+                self.pulse_session_failures
+            );
+            self.pulse_session_failures = 0;
+        }
+        self.resume_grace_until = Some(Instant::now() + RESUME_GRACE_PERIOD);
+        tracing::info!("app resumed — comms resume grace window armed");
+    }
+
+    fn in_resume_grace(&self) -> bool {
+        self.resume_grace_until
+            .is_some_and(|until| Instant::now() < until)
+    }
+
+    /// Disconnect all comms while a scene is loading.
+    /// Saves the current adapter so we can reconnect after loading finishes.
+    #[func]
+    pub fn hold_comms(&mut self) {
+        // Always save adapter if comms are connected, even if already on hold.
+        // Handles the case where hold is called at startup (comms not ready)
+        // and then again from _on_loading_started (comms now connected).
+        if !self.current_connection_str.is_empty() {
+            self.saved_adapter_for_resume = self.current_connection_str.clone();
+            self.clean();
+        }
+        self.comms_on_hold = true;
+        tracing::info!("Comms on hold (loading)");
+    }
+
+    /// Reconnect all comms after loading finishes.
+    #[func]
+    pub fn release_comms(&mut self) {
+        if !self.comms_on_hold {
+            return;
+        }
+        self.comms_on_hold = false;
+
+        // Discard stale scene room connection requests that queued during the hold
+        #[cfg(feature = "use_livekit")]
+        while self.scene_room_connection_receiver.try_recv().is_ok() {}
+
+        let adapter = std::mem::take(&mut self.saved_adapter_for_resume);
+        if !adapter.is_empty() {
+            tracing::info!("Comms resuming after loading");
+            self.change_adapter(adapter);
+        }
+
+        // A hold that started before comms were up leaves saved_adapter empty and skips
+        // change_adapter — resurrect Pulse explicitly (idempotent; deferred during the hold
+        // by ensure_pulse_room's comms_on_hold check).
+        #[cfg(feature = "use_pulse")]
+        self.ensure_pulse_room();
+
+        // Reconnect the scene room — _on_change_scene_id saved current_scene_id
+        // during the hold but deferred the actual connection. Mark the attempt
+        // in-flight so the poll loop doesn't spawn an overlapping reconnect.
+        #[cfg(feature = "use_livekit")]
+        if self.current_scene_id.is_some() {
+            self.scene_room_connect_in_flight = Some(Instant::now());
+            self.reconnect_scene_room();
+        }
+    }
+
+    #[func]
+    fn _on_update_profile(&mut self) {
+        let dcl_player_identity = DclGlobal::singleton().bind().get_player_identity();
+        let player_identity = dcl_player_identity.bind();
+
+        let Some(player_profile) = player_identity.clone_profile() else {
+            return;
+        };
+        // Update shared message processor if available
+        if let Some(processor) = &mut self.message_processor {
+            processor.change_profile(player_profile.clone());
+        }
+
+        // Also update adapters that need direct profile updates
+        let profile_version = player_profile.version;
+        match &mut self.current_connection {
+            CommsConnection::Connected(adapter) => adapter.change_profile(player_profile.clone()),
+            #[cfg(feature = "use_livekit")]
+            CommsConnection::Archipelago(archipelago) => archipelago.change_profile(player_profile),
+            _ => {}
+        }
+
+        // Immediately broadcast ProfileVersion when profile changes
+        self.broadcast_profile_version();
+        tracing::debug!(
+            "📡 Profile changed - immediately broadcasting ProfileVersion: version {}",
+            profile_version
+        );
+    }
+
+    #[func]
+    fn disconnect(&mut self, sign_out_session: bool) {
+        self.clean();
+        if sign_out_session {
+            let mut player_identity = DclGlobal::singleton().bind().get_player_identity();
+            player_identity.bind_mut().logout();
+        }
+    }
+
+    #[func]
+    pub fn get_current_adapter_conn_str(&self) -> GString {
+        self.current_connection_str.clone()
+    }
+
+    #[func]
+    pub fn get_current_scene_room_id(&self) -> GString {
+        self.current_scene_id.clone().unwrap_or_default()
+    }
+
+    #[func]
+    pub fn is_connected_to_scene_room(&self) -> bool {
+        #[cfg(feature = "use_livekit")]
+        {
+            self.scene_room.is_some()
+        }
+        #[cfg(not(feature = "use_livekit"))]
+        {
+            false
+        }
+    }
+
+    #[cfg(feature = "use_livekit")]
+    fn handle_scene_room_connection_request(&mut self, request: SceneRoomConnectionRequest) {
+        match request {
+            SceneRoomConnectionRequest::Banned { scene_id } => {
+                // Handle banned signal from scene room connection/reconnection.
+                // Only clean the scene room — keep main room alive so the user can navigate away.
+                tracing::warn!(
+                    "🚫 User is banned from scene '{}' — emitting kicked disconnect",
+                    scene_id
+                );
+                if let Some(scene_room) = &mut self.scene_room {
+                    scene_room.clean();
+                }
+                self.scene_room = None;
+                self.scene_room_reconnect_at = None;
+                self.scene_room_connect_in_flight = None;
+                self.current_scene_id = None;
+                self.base_mut()
+                    .emit_signal("disconnected", &[2i32.to_variant()]);
+            }
+            SceneRoomConnectionRequest::Failed { scene_id } => {
+                // A reconnect attempt finished without a connection. Clear the in-flight
+                // marker so the reconnect loop can retry on the next expiry; leave the
+                // room/timer state untouched (backoff already scheduled the next attempt).
+                tracing::debug!("🔄 Scene room reconnect attempt failed for '{}'", scene_id);
+                self.scene_room_connect_in_flight = None;
+            }
+            SceneRoomConnectionRequest::Connect {
+                scene_id,
+                livekit_url,
+            } => {
+                // An async gatekeeper result may land after a runtime disable — drop it
+                if !self.livekit_enabled() {
+                    tracing::debug!(
+                        "🔇 LiveKit disabled — dropping scene room connect for '{}'",
+                        scene_id
+                    );
+                    return;
+                }
+                tracing::debug!(
+                    "🔌 Processing scene room connection request for scene '{}' with URL: {}",
+                    scene_id,
+                    livekit_url
+                );
+
+                // Ensure we have a message processor (create one if needed)
+                let processor_sender = self.ensure_message_processor();
+
+                // Clean up existing scene room
+                if let Some(scene_room) = &mut self.scene_room {
+                    tracing::debug!("🧹 Cleaning up existing scene room");
+                    scene_room.clean();
+                }
+
+                // Create new LiveKit room for the scene
+                // Scene rooms use auto_subscribe: false to manually control subscriptions
+                let room_id = format!("scene-{}", scene_id);
+                tracing::debug!("🚀 Creating new scene room with ID: {}", room_id);
+
+                let mut scene_room =
+                    LivekitRoom::new_with_options(livekit_url.clone(), room_id, false);
+
+                // Connect the scene room to the message processor
+                scene_room.set_message_processor_sender(processor_sender);
+
+                self.scene_room = Some(scene_room);
+                self.scene_room_reconnect_at = None;
+                self.scene_room_connect_in_flight = None;
+                // Successful connect: reset the backoff for the next outage.
+                self.scene_room_reconnect_backoff_secs = SCENE_ROOM_RECONNECT_BASE_SECS;
+
+                // Announce initial profile to the scene room
+                self.announce_initial_profile();
+
+                tracing::debug!(
+                    "✅ Scene room successfully created and connected to message processor"
+                );
+            }
+        }
+    }
+
+    #[cfg(feature = "use_livekit")]
+    #[func]
+    pub fn _on_change_scene_id(&mut self, scene_id: i32) {
+        use std::sync::Arc;
+
+        use crate::{
+            comms::consts::DISABLE_SCENE_ROOM,
+            http_request::http_queue_requester::HttpQueueRequester,
+        };
+
+        let scene_runner = DclGlobal::singleton().bind().get_scene_runner();
+        let scene_entity_id = scene_runner.bind().get_scene_entity_id(scene_id);
+
+        if scene_entity_id.is_empty() {
+            return; // ignore if empty
+        }
+
+        // Check if scene has actually changed
+        if let Some(current_scene) = &self.current_scene_id {
+            if current_scene == &scene_entity_id {
+                return; // No change needed
+            }
+        }
+
+        tracing::debug!("Scene changed to: {}", scene_entity_id);
+
+        // Clean up existing scene room and cancel any pending reconnection
+        if let Some(scene_room) = &mut self.scene_room {
+            scene_room.clean();
+        }
+        self.scene_room = None;
+        self.scene_room_reconnect_at = None;
+        self.scene_room_connect_in_flight = None;
+        self.current_scene_id = Some(scene_entity_id.clone());
+
+        // If loading is in progress, defer scene room creation until release
+        if self.comms_on_hold {
+            tracing::debug!(
+                "Scene room on hold, deferring connection for: {}",
+                scene_entity_id
+            );
+            return;
+        }
+
+        // Check if scene rooms are disabled
+        if DISABLE_SCENE_ROOM {
+            tracing::debug!("⚠️  Scene room connections are disabled (DISABLE_SCENE_ROOM = true)");
+            return;
+        }
+
+        // current_scene_id stays set above so re-enabling can reconnect_scene_room()
+        if !self.livekit_enabled() {
+            tracing::debug!("🔇 LiveKit disabled (pulse-only mode) — skipping scene room");
+            return;
+        }
+
+        // Get player identity for signing
+        let player_identity = DclGlobal::singleton().bind().get_player_identity();
+        let player_identity_bind = player_identity.bind();
+
+        let Some(ephemeral_auth_chain) = player_identity_bind.try_get_ephemeral_auth_chain() else {
+            tracing::error!("No ephemeral auth chain available for scene room connection");
+            return;
+        };
+
+        let _avatar_scene = DclGlobal::singleton().bind().get_avatars();
+        let _player_profile = player_identity_bind.clone_profile();
+
+        // Spawn async task to get scene adapter and connect
+        let scene_entity_id = scene_entity_id.to_string();
+        let realm = DclGlobal::singleton().bind().get_realm();
+        let realm_name = realm.bind().get_realm_name().to_string();
+        let http_requester: Arc<HttpQueueRequester> = DclGlobal::singleton()
+            .bind()
+            .get_http_requester()
+            .bind()
+            .get_http_queue_requester();
+        let connection_sender = self.scene_room_connection_sender.clone();
+
+        self.set_realm_bounds(
+            realm.bind().get_realm_min_bounds(),
+            realm.bind().get_realm_max_bounds(),
+        );
+
+        Core::spawn(async move {
+            tracing::debug!("Requesting scene adapter for scene: {}", scene_entity_id);
+            match get_scene_adapter(
+                http_requester,
+                &scene_entity_id,
+                &realm_name,
+                &ephemeral_auth_chain,
+            )
+            .await
+            {
+                Ok(adapter_url) => {
+                    tracing::debug!(
+                        "✅ Got scene adapter URL for scene '{}': {}",
+                        scene_entity_id,
+                        adapter_url
+                    );
+
+                    // Parse the adapter URL to extract LiveKit connection details
+                    if adapter_url.starts_with("livekit:") {
+                        // Extract the actual LiveKit URL after "livekit:"
+                        let livekit_url =
+                            adapter_url.strip_prefix("livekit:").unwrap_or(&adapter_url);
+                        tracing::debug!(
+                            "🔗 Preparing to connect scene room to LiveKit: {}",
+                            livekit_url
+                        );
+
+                        // Send connection request to main thread via channel
+                        let request = SceneRoomConnectionRequest::Connect {
+                            scene_id: scene_entity_id.clone(),
+                            livekit_url: livekit_url.to_string(),
+                        };
+
+                        match connection_sender.send(request).await {
+                            Ok(()) => {
+                                tracing::debug!("📤 Scene room connection request sent to main thread for scene '{}'", scene_entity_id);
+                            }
+                            Err(e) => {
+                                tracing::error!(
+                                    "❌ Failed to send scene room connection request: {}",
+                                    e
+                                );
+                            }
+                        }
+                    } else {
+                        tracing::warn!("⚠️  Unsupported scene adapter type: {}", adapter_url);
+                    }
+                }
+                Err(SceneAdapterError::Banned) => {
+                    tracing::warn!(
+                        "🚫 Scene adapter denied: user is banned from scene '{}'",
+                        scene_entity_id
+                    );
+                    let _ = connection_sender
+                        .send(SceneRoomConnectionRequest::Banned {
+                            scene_id: scene_entity_id,
+                        })
+                        .await;
+                }
+                Err(SceneAdapterError::Other(e)) => {
+                    tracing::error!(
+                        "❌ Failed to get scene adapter for scene '{}': {}",
+                        scene_entity_id,
+                        e
+                    );
+                }
+            }
+        });
+    }
+
+    #[func]
+    pub fn set_realm_bounds(&mut self, min_bounds: Vector2i, max_bounds: Vector2i) {
+        if let Some(processor) = self.message_processor.as_mut() {
+            self.realm_min_bounds = min_bounds;
+            self.realm_max_bounds = max_bounds;
+            processor.set_realm_bounds(min_bounds, max_bounds);
+            tracing::debug!(
+                "🌐 Realm bounds updated: min=({}, {}), max=({}, {})",
+                min_bounds.x,
+                min_bounds.y,
+                max_bounds.x,
+                max_bounds.y
+            );
+        } else {
+            tracing::warn!("⚠️  Cannot set realm bounds: MessageProcessor not initialized");
+        }
+    }
+
+    #[func]
+    pub fn set_multiplayer_debug(&mut self, enabled: bool) {
+        self.multiplayer_debug = enabled;
+        if !enabled {
+            // Clear all avatar room debug labels
+            let avatar_scene = DclGlobal::singleton().bind().get_avatars();
+            if let Some(processor) = &self.message_processor {
+                for (address, _, _) in processor.get_peer_room_info() {
+                    let address_str = format!("{:#x}", address);
+                    let mut avatar_scene_ref = avatar_scene.clone();
+                    avatar_scene_ref
+                        .bind_mut()
+                        .set_avatar_room_debug_by_address(
+                            address_str.to_godot(),
+                            GString::default(),
+                        );
+                }
+            }
+        }
+    }
+
+    #[func]
+    pub fn get_multiplayer_debug(&self) -> bool {
+        self.multiplayer_debug
+    }
+
+    #[func]
+    pub fn get_debug_room_info(&self) -> VarDictionary {
+        let mut dict = VarDictionary::new();
+        dict.set(
+            "adapter".to_variant(),
+            self.current_connection_str.to_variant(),
+        );
+
+        let connection_state = match &self.current_connection {
+            CommsConnection::None => "none",
+            CommsConnection::WaitingForIdentity(_) => "waiting_identity",
+            CommsConnection::SignedLogin(_) => "signed_login",
+            #[cfg(feature = "use_livekit")]
+            CommsConnection::Archipelago(_) => "archipelago",
+            CommsConnection::Connected(_) => "connected",
+        };
+        dict.set(
+            "connection_state".to_variant(),
+            connection_state.to_variant(),
+        );
+
+        dict.set(
+            "livekit_enabled".to_variant(),
+            self.is_livekit_enabled().to_variant(),
+        );
+
+        // Legacy coarse flag: a room struct exists (says nothing about the actual link)
+        let main_connected = self.main_room.is_some()
+            || matches!(&self.current_connection, CommsConnection::Connected(_))
+            || {
+                #[cfg(feature = "use_livekit")]
+                {
+                    matches!(&self.current_connection, CommsConnection::Archipelago(_))
+                }
+                #[cfg(not(feature = "use_livekit"))]
+                {
+                    false
+                }
+            };
+        dict.set("main_connected".to_variant(), main_connected.to_variant());
+
+        let (main_room_type, main_room_state) = match &self.main_room {
+            Some(room) => (room.type_str(), room.connection_state_str()),
+            None => ("none", "none"),
+        };
+        dict.set("main_room_type".to_variant(), main_room_type.to_variant());
+        dict.set("main_room_state".to_variant(), main_room_state.to_variant());
+
+        let mut archipelago_state = "none";
+        let mut island_id = String::new();
+        let mut island_room_state = "none";
+        #[cfg(feature = "use_livekit")]
+        if let CommsConnection::Archipelago(archipelago) = &self.current_connection {
+            archipelago_state = archipelago.state_name();
+            island_id = archipelago.island_id().unwrap_or("").to_owned();
+            island_room_state = archipelago.island_room_state();
+        }
+        dict.set(
+            "archipelago_state".to_variant(),
+            archipelago_state.to_variant(),
+        );
+        dict.set("island_id".to_variant(), island_id.to_variant());
+        dict.set(
+            "island_room_state".to_variant(),
+            island_room_state.to_variant(),
+        );
+
+        // Scene room status
+        let scene_room_id = self.current_scene_id.clone().unwrap_or_default();
+        dict.set("scene_room".to_variant(), scene_room_id.to_variant());
+        dict.set(
+            "comms_on_hold".to_variant(),
+            self.comms_on_hold.to_variant(),
+        );
+        #[cfg(feature = "use_livekit")]
+        {
+            let scene_connected = self.scene_room.is_some();
+            dict.set("scene_connected".to_variant(), scene_connected.to_variant());
+            let scene_room_state = self
+                .scene_room
+                .as_ref()
+                .map(|room| room.connection_state_str())
+                .unwrap_or("none");
+            dict.set(
+                "scene_room_state".to_variant(),
+                scene_room_state.to_variant(),
+            );
+        }
+        #[cfg(not(feature = "use_livekit"))]
+        {
+            dict.set("scene_connected".to_variant(), false.to_variant());
+            dict.set("scene_room_state".to_variant(), "unavailable".to_variant());
+        }
+
+        #[cfg(feature = "use_pulse")]
+        {
+            let global = DclGlobal::singleton();
+            let cli = global.bind().cli.clone();
+            let cli = cli.bind();
+            let pulse_enabled = self.pulse_enabled(&cli);
+            let pulse_state = if self.pulse_disabled_for_session {
+                "disabled_for_session"
+            } else if let Some(pulse_room) = &self.pulse_room {
+                pulse_room.state_name()
+            } else {
+                "off"
+            };
+            // The room's actual endpoint when it exists; what a rebuild would resolve otherwise
+            let pulse_endpoint = match &self.pulse_room {
+                Some(pulse_room) => pulse_room.endpoint(),
+                None => {
+                    let (host, port) = self.resolve_pulse_endpoint(&cli);
+                    format!("{host}:{port}")
+                }
+            };
+            dict.set("pulse_available".to_variant(), true.to_variant());
+            dict.set("pulse_enabled".to_variant(), pulse_enabled.to_variant());
+            dict.set("pulse_state".to_variant(), pulse_state.to_variant());
+            dict.set("pulse_endpoint".to_variant(), pulse_endpoint.to_variant());
+            dict.set(
+                "pulse_failures".to_variant(),
+                (self.pulse_session_failures as i64).to_variant(),
+            );
+            dict.set(
+                "pulse_disabled_for_session".to_variant(),
+                self.pulse_disabled_for_session.to_variant(),
+            );
+            dict.set(
+                "dual_channel".to_variant(),
+                self.is_livekit_movement_dual_channel().to_variant(),
+            );
+            // The announced realm is the whole visibility contract and is matched exactly, so
+            // surfacing it is the difference between "I see nobody" and "I am in lsd:b64-…"
+            dict.set(
+                "pulse_realm".to_variant(),
+                self.pulse_realm_name().unwrap_or_default().to_variant(),
+            );
+        }
+        #[cfg(not(feature = "use_pulse"))]
+        {
+            dict.set("pulse_available".to_variant(), false.to_variant());
+            dict.set("pulse_enabled".to_variant(), false.to_variant());
+            dict.set("pulse_state".to_variant(), "unavailable".to_variant());
+            dict.set("pulse_endpoint".to_variant(), "".to_variant());
+            dict.set("pulse_failures".to_variant(), 0i64.to_variant());
+            dict.set(
+                "pulse_disabled_for_session".to_variant(),
+                false.to_variant(),
+            );
+            dict.set("dual_channel".to_variant(), true.to_variant());
+        }
+
+        dict
+    }
+
+    #[func]
+    pub fn get_debug_peer_rooms(&self) -> VarArray {
+        let mut arr = VarArray::new();
+        if let Some(processor) = &self.message_processor {
+            for (address, rooms, name) in processor.get_peer_room_info() {
+                let mut dict = VarDictionary::new();
+                let address_str = format!("{:#x}", address);
+                dict.set("address".to_variant(), address_str.to_variant());
+                dict.set("rooms".to_variant(), rooms.to_variant());
+                dict.set("name".to_variant(), name.to_variant());
+                arr.push(&dict.to_variant());
+            }
+        }
+        arr
+    }
+
+    /// Check if the current user has access to a scene (not banned).
+    /// Emits `scene_access_checked(scene_id, allowed, error_message)` with the result.
+    #[func]
+    pub fn check_scene_access(&self, scene_id: GString, realm_name: GString) {
+        let scene_id_str = scene_id.to_string();
+        let realm_name_str = realm_name.to_string();
+
+        let player_identity = DclGlobal::singleton().bind().get_player_identity();
+        let player_identity_bind = player_identity.bind();
+
+        let Some(ephemeral_auth_chain) = player_identity_bind.try_get_ephemeral_auth_chain() else {
+            tracing::warn!("No ephemeral auth chain for scene access check");
+            let sender = self.scene_access_sender.clone();
+            let sid = scene_id_str.clone();
+            Core::spawn(async move {
+                let _ = sender
+                    .send((sid, true, "No auth chain available".to_string()))
+                    .await;
+            });
+            return;
+        };
+
+        let http_requester: Arc<HttpQueueRequester> = DclGlobal::singleton()
+            .bind()
+            .get_http_requester()
+            .bind()
+            .get_http_queue_requester();
+        let sender = self.scene_access_sender.clone();
+
+        Core::spawn(async move {
+            let result = check_gatekeeper_access(
+                http_requester,
+                &scene_id_str,
+                &realm_name_str,
+                &ephemeral_auth_chain,
+            )
+            .await;
+
+            match result {
+                Ok(allowed) => {
+                    let _ = sender.send((scene_id_str, allowed, String::new())).await;
+                }
+                Err(e) => {
+                    tracing::warn!("Scene access check failed: {}", e);
+                    let _ = sender.send((scene_id_str, true, e)).await;
+                }
+            }
+        });
+    }
+}
+
+/// Check if the user has access to a scene via the gatekeeper.
+/// Returns Ok(true) if allowed, Ok(false) if banned (HTTP 403), Err for other failures.
+async fn check_gatekeeper_access(
+    http_requester: Arc<HttpQueueRequester>,
+    scene_id: &str,
+    realm_name: &str,
+    ephemeral_auth_chain: &crate::auth::ephemeral_auth_chain::EphemeralAuthChain,
+) -> Result<bool, String> {
+    use crate::{
+        comms::consts::{gatekeeper_url, gatekeeper_url_local},
+        http_request::request_response::{RequestOption, ResponseType},
+    };
+
+    let gatekeeper = if scene_id.starts_with("b64-") {
+        gatekeeper_url_local()
+    } else {
+        gatekeeper_url()
+    };
+
+    let request_body = serde_json::json!({
+        "sceneId": scene_id,
+        "realmName": realm_name
+    });
+    let metadata_json_string = request_body.to_string();
+
+    let uri = gatekeeper
+        .parse::<http::Uri>()
+        .map_err(|e| format!("Invalid gatekeeper URL: {}", e))?;
+    let method = http::Method::POST;
+
+    // The metadata must reach the server unfolded: comms-gatekeeper reads `sceneId` /
+    // `realmName` off the metadata header (`oldValidate`), not off the body, and rejects the
+    // request outright when `realmName` is missing — which is what a folded `realmname` key
+    // looks like to it.
+    let headers =
+        wallet::sign_request(method.as_str(), &uri, ephemeral_auth_chain, request_body).await;
+
+    let request_option = RequestOption::new(
+        0,
+        uri.to_string(),
+        method,
+        ResponseType::AsJson,
+        Some(metadata_json_string.as_bytes().to_vec()),
+        Some(headers.into_iter().collect()),
+        None,
+    );
+
+    let response = http_requester
+        .request(request_option, 0)
+        .await
+        .map_err(|e| format!("Request failed: {}", e.error_message))?;
+
+    if response.status_code == http::StatusCode::FORBIDDEN {
+        tracing::info!(
+            "Scene access denied (403) for scene '{}' in realm '{}'",
+            scene_id,
+            realm_name
+        );
+        return Ok(false);
+    }
+
+    if !response.status_code.is_success() {
+        return Err(format!("HTTP error: {}", response.status_code));
+    }
+
+    Ok(true)
+}
+
+#[cfg(feature = "use_livekit")]
+async fn get_scene_adapter(
+    http_requester: Arc<HttpQueueRequester>,
+    scene_id: &str,
+    realm_name: &str,
+    ephemeral_auth_chain: &crate::auth::ephemeral_auth_chain::EphemeralAuthChain,
+) -> Result<String, SceneAdapterError> {
+    // Create the request body
+
+    use crate::{
+        comms::consts::{gatekeeper_url, gatekeeper_url_local},
+        http_request::request_response::{RequestOption, ResponseEnum, ResponseType},
+    };
+
+    // Use preview gatekeeper for local scenes (b64- prefix indicates local preview)
+    let gatekeeper = if scene_id.starts_with("b64-") {
+        gatekeeper_url_local()
+    } else {
+        gatekeeper_url()
+    };
+
+    let request_body = serde_json::json!({
+        "sceneId": scene_id,
+        "realmName": realm_name
+    });
+    let metadata_json_string = request_body.to_string();
+
+    tracing::debug!("🔄 Making scene adapter request to: {}", gatekeeper);
+    tracing::debug!("📋 Request body: {}", metadata_json_string);
+
+    // Create URI
+    let uri = gatekeeper
+        .parse::<http::Uri>()
+        .map_err(|e| SceneAdapterError::Other(format!("Invalid gatekeeper URL: {}", e)))?;
+    let method = http::Method::POST;
+
+    // Sign the request
+    tracing::debug!("🔐 Signing request with ephemeral auth chain");
+    // Unfolded for the same reason as the access check above: the gatekeeper authorizes
+    // on the metadata header's `sceneId` / `realmName`.
+    let headers = wallet::sign_request(
+        method.as_str(),
+        &uri,
+        ephemeral_auth_chain,
+        request_body, // Pass the serde_json::Value directly, not the string
+    )
+    .await;
+
+    tracing::debug!("📝 Generated {} authentication headers", headers.len());
+
+    let request_option = RequestOption::new(
+        0,
+        uri.to_string(),
+        method,
+        ResponseType::AsJson,
+        Some(metadata_json_string.as_bytes().to_vec()),
+        Some(headers.into_iter().collect()),
+        None,
+    );
+
+    let response = http_requester
+        .request(request_option, 0)
+        .await
+        .map_err(|e| SceneAdapterError::Other(format!("Request failed: {}", e.error_message)))?;
+
+    tracing::debug!(
+        "📡 Received HTTP response with status: {}",
+        response.status_code
+    );
+
+    if response.status_code == http::StatusCode::FORBIDDEN {
+        tracing::info!(
+            "Scene adapter denied (403) for scene '{}' in realm '{}' — user is banned",
+            scene_id,
+            realm_name
+        );
+        return Err(SceneAdapterError::Banned);
+    }
+
+    if !response.status_code.is_success() {
+        tracing::error!(
+            "❌ HTTP request failed with status: {}",
+            response.status_code
+        );
+        return Err(SceneAdapterError::Other(format!(
+            "HTTP error: {}",
+            response.status_code
+        )));
+    }
+
+    // Extract response data
+    let response_data = response
+        .response_data
+        .map_err(|e| SceneAdapterError::Other(format!("Response data error: {}", e)))?;
+
+    // Parse the response based on type
+    tracing::debug!("🔍 Parsing gatekeeper response");
+    let gatekeeper_response: GatekeeperResponse = match response_data {
+        ResponseEnum::String(text) => {
+            tracing::debug!("📄 Response as string: {}", text);
+            serde_json::from_str(&text)
+                .map_err(|e| SceneAdapterError::Other(format!("JSON parse error: {}", e)))?
+        }
+        ResponseEnum::Json(json_result) => {
+            let json_value = json_result
+                .map_err(|e| SceneAdapterError::Other(format!("JSON result error: {}", e)))?;
+            tracing::debug!("📊 Response as JSON: {}", json_value);
+            serde_json::from_value(json_value)
+                .map_err(|e| SceneAdapterError::Other(format!("JSON value parse error: {}", e)))?
+        }
+        ResponseEnum::Bytes(bytes) => {
+            let text = String::from_utf8(bytes)
+                .map_err(|e| SceneAdapterError::Other(format!("Invalid UTF-8: {}", e)))?;
+            tracing::debug!("📄 Response as bytes->string: {}", text);
+            serde_json::from_str(&text)
+                .map_err(|e| SceneAdapterError::Other(format!("JSON parse error: {}", e)))?
+        }
+        _ => {
+            return Err(SceneAdapterError::Other(
+                "Unexpected response type".to_string(),
+            ))
+        }
+    };
+
+    tracing::debug!(
+        "✅ Successfully parsed gatekeeper response: adapter = '{}'",
+        gatekeeper_response.adapter
+    );
+    Ok(gatekeeper_response.adapter)
+}
+
+fn ole_timestamp_now() -> f64 {
+    let unix_seconds = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs_f64();
+
+    unix_seconds / 86400.0 + 25569.0
+}
+
+fn get_chat_array(chats: Vec<(H160, rfc4::Chat)>) -> VarArray {
+    let mut chats_variant_array = VarArray::new();
+    for (address, chat) in chats {
+        let mut chat_arr = VarArray::new();
+        let address = format!("{:#x}", address);
+        chat_arr.push(&address.to_variant());
+        chat_arr.push(&chat.timestamp.to_variant());
+        chat_arr.push(&chat.message.to_variant());
+
+        chats_variant_array.push(&chat_arr.to_variant());
+    }
+    chats_variant_array
+}
+
+/// Parse the comms adapter from realm about data.
+///
+/// Takes the raw `adapter` or `fixedAdapter` value from the about endpoint's comms section
+/// and resolves it to the final adapter string that should be passed to `change_adapter`.
+///
+/// Returns `None` if the adapter value is not recognized.
+///
+/// The `fixed_adapter` parameter corresponds to the `fixedAdapter` key.
+/// The `adapter` parameter corresponds to the `adapter` key.
+/// `fixed_adapter` takes priority over `adapter` when both are present.
+fn parse_comms_adapter_value(
+    fixed_adapter: Option<&str>,
+    adapter: Option<&str>,
+    disable_archipelago: bool,
+    livekit_enabled: bool,
+) -> Option<String> {
+    // fixedAdapter takes priority
+    let raw = if let Some(fa) = fixed_adapter {
+        Some(fa.to_string())
+    } else if let Some(a) = adapter {
+        if let Some(archipelago_url) = a.strip_prefix("archipelago:") {
+            if !livekit_enabled {
+                tracing::debug!(
+                    "⚠️  Archipelago URL detected but LiveKit feature is not enabled: {}",
+                    a
+                );
+                return None;
+            }
+            if disable_archipelago {
+                tracing::debug!(
+                    "⚠️  Archipelago URL detected but ignored (archipelago disabled): {}",
+                    a
+                );
+                return None;
+            }
+            // Strip "archipelago:" prefix, keep the rest as the adapter value
+            Some(archipelago_url.to_string())
+        } else if a.starts_with("fixed-adapter:") {
+            // World about endpoints return adapter = "fixed-adapter:signed-login:..."
+            Some(a.to_string())
+        } else {
+            None
+        }
+    } else {
+        None
+    };
+
+    // Strip "fixed-adapter:" prefix if present
+    raw.map(|s| s.strip_prefix("fixed-adapter:").unwrap_or(&s).to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ==========================================
+    // Tests for should_start_scene_room_reconnect (issue #2382 in-flight guard)
+    // ==========================================
+
+    #[cfg(feature = "use_livekit")]
+    mod scene_room_reconnect_guard {
+        use super::*;
+
+        const TIMEOUT: Duration = SCENE_ROOM_CONNECT_TIMEOUT;
+
+        // Base state that WOULD start a reconnect: not on hold, no room, a scene is
+        // set, timer expired, nothing in flight.
+        fn call(
+            connect_in_flight: Option<Instant>,
+            reconnect_at: Option<Instant>,
+            now: Instant,
+        ) -> bool {
+            should_start_scene_room_reconnect(
+                false, // comms_on_hold
+                false, // scene_room_is_some
+                true,  // current_scene_id_is_some
+                reconnect_at,
+                connect_in_flight,
+                now,
+                TIMEOUT,
+            )
+        }
+
+        #[test]
+        fn eligible_when_nothing_in_flight() {
+            let now = Instant::now();
+            let expired = now - Duration::from_secs(1);
+            assert!(call(None, Some(expired), now));
+        }
+
+        #[test]
+        fn blocked_while_recent_attempt_in_flight() {
+            // The core regression: an attempt started 3s ago must block a new one even
+            // though the 5s timer has expired.
+            let now = Instant::now();
+            let expired = now - Duration::from_secs(1);
+            let in_flight = now - Duration::from_secs(3);
+            assert!(!call(Some(in_flight), Some(expired), now));
+        }
+
+        #[test]
+        fn retries_when_in_flight_attempt_is_stale() {
+            // Self-heal: if the terminal signal was lost, an attempt older than the
+            // timeout must not wedge reconnection forever.
+            let now = Instant::now();
+            let expired = now - Duration::from_secs(1);
+            let stale = now - TIMEOUT - Duration::from_secs(1);
+            assert!(call(Some(stale), Some(expired), now));
+        }
+
+        #[test]
+        fn blocked_when_timer_not_expired() {
+            let now = Instant::now();
+            let future = now + Duration::from_secs(5);
+            assert!(!call(None, Some(future), now));
+        }
+
+        #[test]
+        fn blocked_when_no_reconnect_timer_set() {
+            let now = Instant::now();
+            assert!(!call(None, None, now));
+        }
+
+        #[test]
+        fn blocked_when_on_hold_or_room_present_or_no_scene() {
+            let now = Instant::now();
+            let expired = now - Duration::from_secs(1);
+            // on hold
+            assert!(!should_start_scene_room_reconnect(
+                true,
+                false,
+                true,
+                Some(expired),
+                None,
+                now,
+                TIMEOUT
+            ));
+            // room already present
+            assert!(!should_start_scene_room_reconnect(
+                false,
+                true,
+                true,
+                Some(expired),
+                None,
+                now,
+                TIMEOUT
+            ));
+            // no current scene
+            assert!(!should_start_scene_room_reconnect(
+                false,
+                false,
+                false,
+                Some(expired),
+                None,
+                now,
+                TIMEOUT
+            ));
+        }
+    }
+
+    // ==========================================
+    // Tests for avatar_sync_over_livekit (Pulse is the avatar-sync carrier)
+    // ==========================================
+
+    #[cfg(feature = "use_pulse")]
+    mod avatar_sync_gate {
+        use super::*;
+
+        /// The point of the change: once Pulse is up, LiveKit carries no movement or emotes.
+        #[test]
+        fn established_pulse_takes_livekit_out_of_the_path() {
+            assert!(!avatar_sync_over_livekit(false, true));
+        }
+
+        /// The safety net: any state where Pulse is not established keeps LiveKit sending, so
+        /// a drop, a failed handshake or a disabled transport can never hide the player.
+        #[test]
+        fn livekit_carries_avatar_sync_whenever_pulse_is_not_established() {
+            assert!(avatar_sync_over_livekit(false, false));
+        }
+
+        /// The escape hatch still forces both channels at once.
+        #[test]
+        fn dual_channel_forces_livekit_regardless() {
+            assert!(avatar_sync_over_livekit(true, true));
+            assert!(avatar_sync_over_livekit(true, false));
+        }
+
+        /// Until the deployment flips `dual-channel` off, LiveKit keeps carrying avatar sync —
+        /// an authoritative server that does not yet ingest Pulse must not be starved of it.
+        #[test]
+        fn flag_defaults_on_so_the_cutover_is_opt_in_per_deployment() {
+            assert!(dual_channel_effective(None, true));
+            assert!(!dual_channel_effective(None, false));
+        }
+
+        /// A local choice outranks the flag in both directions, so a dev can force either mode.
+        #[test]
+        fn local_override_beats_the_flag() {
+            assert!(dual_channel_effective(Some(true), false));
+            assert!(!dual_channel_effective(Some(false), true));
+        }
+    }
+
+    // ==========================================
+    // Tests for pulse_activation (who gets to turn the transport on)
+    // ==========================================
+
+    #[cfg(feature = "use_pulse")]
+    mod pulse_activation_rules {
+        use super::*;
+
+        /// Outside preview the deployment flag decides, fail-closed on absent/unfetched.
+        #[test]
+        fn flag_decides_outside_preview() {
+            assert!(pulse_activation(true, false, false, Some(true)));
+            assert!(!pulse_activation(true, false, false, Some(false)));
+            assert!(!pulse_activation(true, false, false, None));
+        }
+
+        /// The point of the preview carve-out: a plain `dcl start` preview must not be pushed
+        /// onto production Pulse by a fleet-wide flag, because its realm key carries the
+        /// developer's project path and hostname.
+        #[test]
+        fn preview_ignores_the_flag_without_an_explicit_opt_in() {
+            assert!(!pulse_activation(true, false, true, Some(true)));
+        }
+
+        /// ...but an explicit opt-in (--pulse-realm / --pulse-server / --pulse) still works,
+        /// which is how the orchestrator and DCL_SERVER_PULSE_REALM=1 drive Local Scene
+        /// Development.
+        #[test]
+        fn preview_joins_on_an_explicit_opt_in() {
+            assert!(pulse_activation(true, true, true, Some(true)));
+            assert!(pulse_activation(true, true, true, None));
+        }
+
+        /// --no-pulse always wins, everywhere.
+        #[test]
+        fn local_opt_out_always_wins() {
+            assert!(!pulse_activation(false, true, false, Some(true)));
+            assert!(!pulse_activation(false, true, true, Some(true)));
+        }
+    }
+
+    // ==========================================
+    // Tests for parse_comms_adapter_value
+    // ==========================================
+
+    #[test]
+    fn test_fixed_adapter_direct_livekit() {
+        // Preview scenes use fixedAdapter directly
+        let result = parse_comms_adapter_value(
+            Some("livekit:wss://preview.decentraland.org/rooms/test"),
+            None,
+            false,
+            true,
+        );
+        assert_eq!(
+            result,
+            Some("livekit:wss://preview.decentraland.org/rooms/test".to_string())
+        );
+    }
+
+    #[test]
+    fn test_fixed_adapter_with_prefix() {
+        // fixedAdapter with "fixed-adapter:" prefix should be stripped
+        let result = parse_comms_adapter_value(
+            Some("fixed-adapter:signed-login:https://worlds.decentraland.org/comms"),
+            None,
+            false,
+            true,
+        );
+        assert_eq!(
+            result,
+            Some("signed-login:https://worlds.decentraland.org/comms".to_string())
+        );
+    }
+
+    #[test]
+    fn test_fixed_adapter_takes_priority_over_adapter() {
+        let result = parse_comms_adapter_value(
+            Some("livekit:wss://preview.decentraland.org/rooms/test"),
+            Some("archipelago:archipelago:wss://archipelago.decentraland.org/ws"),
+            false,
+            true,
+        );
+        assert_eq!(
+            result,
+            Some("livekit:wss://preview.decentraland.org/rooms/test".to_string())
+        );
+    }
+
+    #[test]
+    fn test_adapter_archipelago_genesis_city() {
+        // Genesis City: adapter = "archipelago:archipelago:wss://..."
+        let result = parse_comms_adapter_value(
+            None,
+            Some("archipelago:archipelago:wss://archipelago-ws-connector.decentraland.org/ws"),
+            false,
+            true,
+        );
+        assert_eq!(
+            result,
+            Some("archipelago:wss://archipelago-ws-connector.decentraland.org/ws".to_string())
+        );
+    }
+
+    #[test]
+    fn test_adapter_archipelago_disabled() {
+        let result = parse_comms_adapter_value(
+            None,
+            Some("archipelago:archipelago:wss://archipelago.decentraland.org/ws"),
+            true, // disable_archipelago
+            true,
+        );
+        assert_eq!(result, None);
+    }
+
+    #[test]
+    fn test_adapter_archipelago_no_livekit() {
+        let result = parse_comms_adapter_value(
+            None,
+            Some("archipelago:archipelago:wss://archipelago.decentraland.org/ws"),
+            false,
+            false, // livekit not enabled
+        );
+        assert_eq!(result, None);
+    }
+
+    // ==========================================
+    // BUG REPRODUCTION: Issue #1719
+    // World adapter "fixed-adapter:signed-login:..." in the `adapter` field
+    // is not recognized, causing commsAdapter to remain empty.
+    // ==========================================
+
+    #[test]
+    fn test_world_adapter_fixed_adapter_signed_login() {
+        // World about returns: adapter = "fixed-adapter:signed-login:https://worlds-content-server..."
+        // This MUST be recognized and stripped to "signed-login:https://..."
+        let result = parse_comms_adapter_value(
+            None,
+            Some("fixed-adapter:signed-login:https://worlds-content-server.decentraland.org/worlds/aesironline.dcl.eth/comms"),
+            false,
+            true,
+        );
+        assert_eq!(
+            result,
+            Some("signed-login:https://worlds-content-server.decentraland.org/worlds/aesironline.dcl.eth/comms".to_string())
+        );
+    }
+
+    #[test]
+    fn test_world_adapter_fixed_adapter_livekit() {
+        // Some worlds might return: adapter = "fixed-adapter:livekit:wss://..."
+        let result = parse_comms_adapter_value(
+            None,
+            Some("fixed-adapter:livekit:wss://livekit.decentraland.org/rooms/world-room"),
+            false,
+            true,
+        );
+        assert_eq!(
+            result,
+            Some("livekit:wss://livekit.decentraland.org/rooms/world-room".to_string())
+        );
+    }
+
+    #[test]
+    fn test_no_comms_data() {
+        let result = parse_comms_adapter_value(None, None, false, true);
+        assert_eq!(result, None);
+    }
+
+    #[test]
+    fn test_adapter_unknown_protocol_ignored() {
+        // Unknown adapter values (not archipelago, not fixed-adapter) should be None
+        let result = parse_comms_adapter_value(None, Some("unknown:something"), false, true);
+        assert_eq!(result, None);
+    }
+}
