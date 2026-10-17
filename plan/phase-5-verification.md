@@ -59,8 +59,8 @@ iOS: **never built.** Every iOS-affecting change in phases 3–5 is unverified a
 
 ## Fork API pin (5.0)
 
-- [x] `decentraland/godotengine` #29 (`spike/ios-host-embedding`, commit `333404e`): `process_templates.yml` dumps `extension_api.json` and `gdextension_interface.h` with the Linux editor and uploads them with the editors (`branches/<branch>/editors/`, or the SHA path on `4.6.2`). Unverified until that CI run finishes.
-- [ ] Explorer side, after the file exists in R2: `xtask install` downloads it, an `api-custom-json` feature of `godot` and `GDRUST_GODOT_API_JSON` in `.cargo/config.toml`, then the by-name fork calls (`set_bbcode_enabled`, RichTextLabel alignment) become typed.
+- [x] `decentraland/godotengine` #29 (`spike/ios-host-embedding`, commit `333404e`): `process_templates.yml` dumps `extension_api.json` and `gdextension_interface.h` with the Linux editor and uploads them with the editors. Verified: the PR's CI run published `https://godot-engine-releases.dclexplorer.com/branches/spike-ios-host-embedding/editors/extension_api.json` (4.6.2.stable.gh, 6.7 MB), and it carries `Label3D::set_bbcode_enabled`, `set_bold_font`, `set_outline_size_float`.
+- [ ] Explorer side, **blocked on a decision**: the pinned path (`4.6.2.stable.gh.5ce8f80f4`) has no `extension_api.json` (404), and it only appears once #29 is merged into `4.6.2` and `GODOT_BUILD_SHA` is bumped. The alternative, `GODOT_USE_BRANCH = Some("spike/ios-host-embedding")`, moves every editor and template to an unreviewed spike branch. Until then wiring it would break every build (the `godot` crate panics without the file). When it can land: `xtask install` downloads the file next to the editor, the `godot` crate gets `api-custom-json`, `GDRUST_GODOT_API_JSON` goes in `lib/.cargo/config.toml` (`[env]`, relative), and `text_shape/node.rs` plus `dcl_rich_ui_text.rs` call the fork methods typed (removing their `has_method` probes and the `call_targets_test` allowlist entries). CI jobs that run cargo without `install` first need checking.
 
 ## Dev features removed (not ported, on purpose)
 
