@@ -63,17 +63,6 @@ fn trim_line_edges(text: &str) -> String {
         .join("\n")
 }
 
-/// Which fork-only `Label3D` properties exist.
-#[derive(Default, Clone, Copy)]
-struct ForkFeatures {
-    bbcode: bool,
-    character_spacing: bool,
-    shadow: bool,
-    bold_font: bool,
-    /// The float outline overrides the integer one: no whole-pixel stepping or MSDF saturation.
-    outline_float: bool,
-}
-
 #[derive(GodotClass)]
 #[class(init, base=Node3D)]
 pub struct DclTextShape {
@@ -81,7 +70,6 @@ pub struct DclTextShape {
     font: Option<Gd<Font>>,
     bold_font: Option<Gd<Font>>,
     font_index: Option<i32>,
-    features: ForkFeatures,
     base: Base<Node3D>,
 }
 
@@ -119,10 +107,8 @@ impl DclTextShape {
         let face = Face::from_index(index);
         self.font = try_load::<Font>(face.font_uid()).ok();
         self.bold_font = try_load::<Font>(face.bold_font_uid()).ok();
-        if self.features.bold_font {
-            if let Some(label) = self.label.as_mut() {
-                label.set("bold_font", &self.bold_font.to_variant());
-            }
+        if let Some(label) = self.label.as_mut() {
+            label.set_bold_font(self.bold_font.as_ref());
         }
     }
 
@@ -142,29 +128,16 @@ impl DclTextShape {
         // Hard-cutoff alpha: the text stays visible as opacity drops, then vanishes entirely
         // once coverage times opacity falls below this (a TextShape opacity under ~0.1).
         label.set_alpha_scissor_threshold(0.1);
-        let features = ForkFeatures {
-            bbcode: label.has_method("set_bbcode_enabled"),
-            character_spacing: label.has_method("set_character_spacing"),
-            shadow: label.has_method("set_shadow_color"),
-            bold_font: label.has_method("set_bold_font"),
-            outline_float: label.has_method("set_outline_size_float"),
-        };
-        if features.bbcode {
-            label.call("set_bbcode_enabled", &[true.to_variant()]);
-        }
-        if features.bold_font {
-            label.set("bold_font", &self.bold_font.to_variant());
-        }
+        label.set_bbcode_enabled(true);
+        label.set_bold_font(self.bold_font.as_ref());
         label.set_outline_render_priority(1);
         // Label3D's own edge trimming would drop a "\n\n" blank line: trimming is ours.
         label.set_autowrap_trim_flags(LineBreakFlag::NONE);
-        self.features = features;
         self.base_mut().add_child(&label);
         self.label = Some(label);
     }
 
     fn apply_resolved(&mut self, resolved: &ResolvedText, face: Option<Face>) {
-        let features = self.features;
         let font = self.font.clone();
         let Some(label) = self.label.as_mut() else {
             return;
@@ -172,45 +145,25 @@ impl DclTextShape {
         label.set_pixel_size(PIXEL_SIZE);
         let spacing = resolved.glyph_spacing_px;
         if let Some(font) = font.as_ref() {
-            // The fork's native character_spacing, else the spacing baked into the font (both
-            // would double it).
-            let baked = if features.character_spacing {
-                0
-            } else {
-                spacing
-            };
-            label.set_font(&spaced_font(font, baked));
+            // The fork's native character_spacing carries the spacing: baking it into the font
+            // too would double it.
+            label.set_font(&spaced_font(font, 0));
         }
-        if features.character_spacing {
-            label.set("character_spacing", &spacing.to_variant());
-        }
+        label.set_character_spacing(spacing);
         // A transparent shadow color turns the shadow off.
-        if features.shadow {
-            label.set("shadow_color", &resolved.shadow_color.to_variant());
-            label.set("shadow_offset", &resolved.shadow_offset.to_variant());
-            label.set(
-                "shadow_outline_size",
-                &resolved.shadow_outline_size.to_variant(),
-            );
-        }
-        let text = if features.bbcode {
-            trim_line_edges(&to_bbcode(&resolved.raw_text, resolved.godot_font_size))
-        } else {
-            trim_line_edges(&resolved.plain_text)
-        };
+        label.set_shadow_color(resolved.shadow_color);
+        label.set_shadow_offset(resolved.shadow_offset);
+        label.set_shadow_outline_size(resolved.shadow_outline_size);
+        let text = trim_line_edges(&to_bbcode(&resolved.raw_text, resolved.godot_font_size));
         label.set_text(&text);
         label.set_modulate(resolved.fill_color);
         label.set_outline_modulate(resolved.outline_color);
         label.set_font_size(resolved.godot_font_size);
         label.set_line_spacing(line_spacing_px(face, resolved.godot_font_size));
-        if features.outline_float {
-            // The fork falls back to outline_size when the float is 0, so a lingering integer
-            // would draw an outline on the no-outline case.
-            label.set_outline_size(0);
-            label.set("outline_size_float", &resolved.outline_size_f.to_variant());
-        } else {
-            label.set_outline_size(resolved.outline_size_f.round() as i32);
-        }
+        // The fork falls back to outline_size when the float is 0, so a lingering integer
+        // would draw an outline on the no-outline case.
+        label.set_outline_size(0);
+        label.set_outline_size_float(resolved.outline_size_f);
         label.set_autowrap_mode(if resolved.text_wrapping {
             AutowrapMode::WORD_SMART
         } else {

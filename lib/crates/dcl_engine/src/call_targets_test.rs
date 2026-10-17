@@ -12,11 +12,6 @@ use regex::Regex;
 /// Names that belong to the engine fork or the native plugins (JNI / Swift singletons), which
 /// this crate cannot see. Engine builtins are called typed, never by name.
 const EXTERNAL: &[&str] = &[
-    // the engine fork's rich text
-    "set_bbcode_enabled",
-    "set_horizontal_alignment",
-    "set_vertical_alignment",
-    "set_justification_flags",
     // native plugins
     "GetDuration",
     "GetPosition",

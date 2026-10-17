@@ -31,3 +31,4 @@ rustflags = [
 
 [env]
 CARGO_FEATURE_CRT_STATIC = "ohyes"
+GDRUST_GODOT_API_JSON = { value = "../.bin/godot/extension_api.json", relative = true }

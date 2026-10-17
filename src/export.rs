@@ -27,7 +27,6 @@ use crate::{
     ui::{create_spinner, print_message, print_section, MessageType},
 };
 
-
 /// Strips debug symbols from iOS static libraries (.a files) inside ios.zip to reduce size.
 /// This extracts the zip, strips the libraries, and re-compresses it.
 /// This is only run on macOS since iOS templates are only used there.

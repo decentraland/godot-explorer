@@ -182,6 +182,11 @@ impl BinPaths {
         PathBuf::from(BIN_FOLDER).join("godot")
     }
 
+    /// The fork's GDExtension API, which `lib/.cargo/config.toml` hands to the `godot` crate.
+    pub fn extension_api() -> PathBuf {
+        Self::godot().join("extension_api.json")
+    }
+
     pub fn godot_bin() -> PathBuf {
         Self::godot().join("godot4_bin")
     }

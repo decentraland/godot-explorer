@@ -60,7 +60,10 @@ iOS: **never built.** Every iOS-affecting change in phases 3–5 is unverified a
 ## Fork API pin (5.0)
 
 - [x] `decentraland/godotengine` #29 (`spike/ios-host-embedding`, commit `333404e`): `process_templates.yml` dumps `extension_api.json` and `gdextension_interface.h` with the Linux editor and uploads them with the editors. Verified: the PR's CI run published `https://godot-engine-releases.dclexplorer.com/branches/spike-ios-host-embedding/editors/extension_api.json` (4.6.2.stable.gh, 6.7 MB), and it carries `Label3D::set_bbcode_enabled`, `set_bold_font`, `set_outline_size_float`.
-- [ ] Explorer side, **blocked on a decision**: the pinned path (`4.6.2.stable.gh.5ce8f80f4`) has no `extension_api.json` (404), and it only appears once #29 is merged into `4.6.2` and `GODOT_BUILD_SHA` is bumped. The alternative, `GODOT_USE_BRANCH = Some("spike/ios-host-embedding")`, moves every editor and template to an unreviewed spike branch. Until then wiring it would break every build (the `godot` crate panics without the file). When it can land: `xtask install` downloads the file next to the editor, the `godot` crate gets `api-custom-json`, `GDRUST_GODOT_API_JSON` goes in `lib/.cargo/config.toml` (`[env]`, relative), and `text_shape/node.rs` plus `dcl_rich_ui_text.rs` call the fork methods typed (removing their `has_method` probes and the `call_targets_test` allowlist entries). CI jobs that run cargo without `install` first need checking.
+- [x] Explorer side (user decision, 17 Oct: `GODOT_USE_BRANCH = Some("spike/ios-host-embedding")` for the whole RN refactor, back to the pinned SHA when #29 merges in phase 7): `install` downloads `extension_api.json` into `.bin/godot/`, the `godot` crate has `api-custom-json`, `lib/.cargo/config.toml` points `GDRUST_GODOT_API_JSON` at it, and `text_shape/node.rs` / `dcl_rich_ui_text.rs` call the fork methods typed (the `has_method` probes and four allowlist entries are gone). Verified: clippy, 511 unit tests. Not run: `--itest` and the device with the branch editor.
+- Avatar snapshots: no offline wearable source for now, moved to phase 8 (user decision).
+- Lights, video (HLS, LiveKit), creator preview: moved to team polish (user decision).
+- iOS: tested by the user on another machine.
 
 ## Dev features removed (not ported, on purpose)
 

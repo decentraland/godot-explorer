@@ -1,3 +1,4 @@
+use godot::classes::text_server::JustificationFlag;
 use godot::{
     classes::{
         control::{LayoutPreset, MouseFilter},
@@ -146,25 +147,10 @@ impl DclRichUiText {
             ),
         };
 
-        // RichTextLabel supports both horizontal and vertical alignment
-        // Use call() method to ensure compatibility across Godot versions
-        self.base_mut().call(
-            "set_horizontal_alignment",
-            &[godot::prelude::Variant::from(hor_align.ord())],
-        );
-        self.base_mut().call(
-            "set_vertical_alignment",
-            &[godot::prelude::Variant::from(vert_align.ord())],
-        );
-        self.base_mut().call(
-            "set_justification_flags",
-            &[godot::prelude::Variant::from(0)],
-        );
-
-        // Set justification flags to NONE (no text justification, just alignment)
-        // self.base_mut().set_justification_flags(
-        //     godot::classes::text_server::JustificationFlag::JUSTIFICATION_NONE,
-        // );
+        self.base_mut().set_horizontal_alignment(hor_align);
+        self.base_mut().set_vertical_alignment(vert_align);
+        self.base_mut()
+            .set_justification_flags(JustificationFlag::NONE);
 
         // Set the BBCode text with converted Unity tags to Godot BBCode
         self.base_mut().set_text(converted_text);
