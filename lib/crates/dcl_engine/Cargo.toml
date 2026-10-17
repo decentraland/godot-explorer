@@ -17,9 +17,7 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0.92", features = ["raw_value"] }
 zip = { version = "0.6", default-features = false, features = ["deflate"] }
 tokio = { version = "1.40.0", features = ["full"] }
-tokio-util = "0.7"
 json5 = "0.4"
-protobuf = "3.2.0"
 prost = "0.11.8"
 once_cell = "1.16.0"
 futures-lite = "1.12.0"
@@ -27,24 +25,19 @@ futures-lite = "1.12.0"
 hyper = { version = "1.0.0-rc.3", features = ["full"] }
 hyper-util = { version = "0.1.0-rc.1", features = ["tokio"], optional = true }
 http-body-util = "0.1.0-rc.2"
-reqwest = { version = "0.11", default-features = false, features = ["json", "rustls-tls", "blocking", "stream", "gzip", "brotli"] }
+reqwest = { version = "0.11", default-features = false, features = ["json", "rustls-tls", "stream", "gzip", "brotli"] }
 regex = "*"
 urn = "0.7.0"
 
 ethers-core = { version = "2.0" }
 ethers-signers = { version = "2.0" }
-ethers-providers = { version = "2.0", features = ["ws","rustls"] }
 
 async-trait = "0.1.68"
 
-cpal = { version = "0.15.2", optional = true }
 
-thiserror = "1.0"
 anyhow = "1.0.70"
 
 tracing = "0.1"
-tracing-subscriber = "0.3"
-poll-promise = "0.2.0"
 
 v8 = { version = "0.106.0", optional = true }
 deno_core = { version = "0.308.0", optional = true }
@@ -53,7 +46,6 @@ fastwebsockets = { version = "0.3.1", features = ["upgrade"], optional = true }
 hyper1 = { package = "hyper", version = "0.14.26", features = ["server","runtime", "http1"], optional = true }
 num-traits = "0.2"
 num-derive = "0.4"
-num = "0.4"
 http = "0.2.9"
 bytes = "1.4.0"
 url = "2.5"
@@ -71,7 +63,6 @@ livekit = { git = "https://github.com/robtfm/client-sdk-rust", rev="c59f7e469357
 rusty_enet = { git = "https://github.com/dcl-regenesislabs/rusty_enet", rev = "8023f9b39e12d4b11a2a054ade49fa8365a5e250", optional = true }
 
 taffy = "0.5.2"
-tracing-test = "0.2.4"
 
 base64 = "0.21.5"
 hex = "0.4.3"
