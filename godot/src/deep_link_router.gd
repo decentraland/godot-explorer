@@ -365,3 +365,11 @@ func _clear_deep_link() -> void:
 	# deep_link_obj is still needed by scene_fetcher (preview mode)
 	# and other systems that check deep link parameters.
 	Global.deep_link_url = ""
+
+
+## Called once the explorer has read its start target. realm/location are reset so a later
+## explorer boot (cancel to Discover, then pick a place) does not land on them again (#3088).
+func consume_navigation_target() -> void:
+	_clear_deep_link()
+	Global.deep_link_obj.realm = ""
+	Global.deep_link_obj.location = Vector2i.MAX
