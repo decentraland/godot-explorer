@@ -161,6 +161,7 @@ pub fn create_extra_services(global: &mut Gd<DclGlobal>) {
         if crate::fetcher::globals::cli().bind().benchmark_report {
             godot_print!("✓ BenchmarkReport initialized for full flow benchmarking");
             add_to_root_deferred(global, report.upcast());
+            crate::engine::local_task::spawn_local(crate::tools::benchmark_flow::run());
         }
     }
     #[cfg(not(feature = "use_memory_debugger"))]

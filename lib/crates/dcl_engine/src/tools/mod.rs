@@ -9,6 +9,8 @@ pub mod network_inspector;
 pub mod offscreen;
 
 #[cfg(feature = "use_memory_debugger")]
+pub mod benchmark_flow;
+#[cfg(feature = "use_memory_debugger")]
 pub mod memory_debugger;
 
 #[cfg(feature = "use_memory_debugger")]
