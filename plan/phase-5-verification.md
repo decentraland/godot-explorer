@@ -48,7 +48,7 @@ Engine (phase 5)
 RN (phase 4 and earlier, still open)
 - [x] The name screen's avatar hole kept a small rect: fixed in RN (see above), verified on the Moto.
 - [ ] RN crashes on `begin_sign_in` while already `SignedIn`. **Polish stage (RN, not phase 5).**
-- [ ] Push notifications, reminders, error modals, settings relaunch, es / pt_BR, joystick movement on a phone. **Polish stage (RN, not phase 5).**
+- [ ] Push notifications, reminders, error modals, settings relaunch, es / pt_BR on a phone. (Joystick movement is verified, see the Moto lines above.) **Polish stage (RN, not phase 5).**
 - [ ] OTP / Google / Gmail logins, native wallets and friends (moved to the polish stage).
 
 iOS: **never built.** Every iOS-affecting change in phases 3–5 is unverified and needs the user's hands
