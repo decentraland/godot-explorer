@@ -194,6 +194,7 @@ func _ready():
 	_setup_dynamic_graphics()
 	_update_dynamic_graphics_status()
 	_setup_impostor_benchmark_button()
+	_setup_streak_debug_button()
 	_setup_fast_day_cycle_toggle()
 	_setup_light_debug_controls()
 	_setup_custom_profile_controls()
@@ -951,6 +952,41 @@ func _setup_impostor_benchmark_button() -> void:
 			get_tree().change_scene_to_file("res://src/tools/avatar_impostor_benchmark.tscn")
 	)
 	container_advanced.add_child(bench_button)
+
+
+## Scene-authored (settings.tscn's StreakDayDebug row, not built here) — only the production
+## gate and the four button handlers live in code. Advances/rewinds/resets/credits the 7-day login
+## streak on demand (issue #3018), for exercising each day's modal/widget state without waiting
+## for a real jump-in. Not session-scoped — it writes through the same save path a real credit does
+## (see StreakManager.debug_advance_day).
+func _setup_streak_debug_button() -> void:
+	if Global.is_production():
+		%StreakDayDebug.hide()
+
+
+func _on_button_streak_advance_day_pressed() -> void:
+	Global.streak_manager.debug_advance_day()
+	print("[StreakDebug] advanced to day %d" % Global.streak_manager.get_progress_day())
+
+
+func _on_button_streak_rewind_day_pressed() -> void:
+	Global.streak_manager.debug_rewind_day()
+	print("[StreakDebug] rewound to day %d" % Global.streak_manager.get_progress_day())
+
+
+func _on_button_streak_reset_pressed() -> void:
+	Global.streak_manager.debug_reset_streak()
+	print("[StreakDebug] reset to day %d" % Global.streak_manager.get_progress_day())
+
+
+func _on_button_streak_jump_in_pressed() -> void:
+	Global.streak_manager.debug_simulate_jump_in()
+	print(
+		(
+			"[StreakDebug] simulated jump-in, progress day %d"
+			% Global.streak_manager.get_progress_day()
+		)
+	)
 
 
 func _setup_light_debug_controls() -> void:

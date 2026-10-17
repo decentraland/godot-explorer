@@ -193,6 +193,19 @@ var review_session_count: int = 0
 var review_shots_fired: int = 0
 var review_last_shot_unix: int = 0
 
+# 7-day login streak cadence (issue #3018), keyed by lowercased wallet address — "1 completed
+# streak per account", not per device (see streak_state_for_current_wallet()). Each entry:
+# progress_day is the furthest day credited in the current cycle (0..7); last_credit_day_unix is
+# the local-midnight-truncated timestamp of the last credited day, used to detect same-day/
+# consecutive-day/missed-day gaps on the next jump-in. d3_claimed/d7_claimed are per-reward
+# entitlements that survive a later progress reset (see StreakManager). pending_modal queues which
+# modal Discover should show on its next landing, set by the credit step and consumed once.
+# current_reminder_shown_day is the day number the "come finish today's mission" reminder was last
+# shown for (Figma "D2-Streak" vs "D2-Streak-Completed" — the pending day's own reminder, distinct
+# from the post-credit celebration), so it fires once per pending day rather than on every
+# Discover landing. See StreakManager.
+var streak_by_wallet: Dictionary = {}
+
 # Unix timestamp (seconds) of the last OS notification-permission prompt. Throttles
 # re-prompts (see NotificationsManager.PERMISSION_PROMPT_COOLDOWN_SEC): a denied
 # request — which on Android returns immediately without a dialog — isn't re-attempted
@@ -362,6 +375,35 @@ func _last_places_for_current_wallet() -> Array:
 		last_places_by_wallet[wallet] = _legacy_last_places
 		_legacy_last_places = []
 	return last_places_by_wallet[wallet]
+
+
+## The current wallet's streak sub-dict (keys: progress_day, last_credit_day_unix, d3_claimed,
+## d7_claimed, pending_modal, current_reminder_shown_day), created empty on first touch. Mutating
+## the returned Dictionary mutates streak_by_wallet directly — it's the same reference, not a copy
+## — so callers just need save_to_settings_file() after, same as any other field.
+func streak_state_for_current_wallet() -> Dictionary:
+	var wallet := ""
+	if Global.player_identity != null:
+		wallet = Global.player_identity.get_address_str().to_lower()
+	if not streak_by_wallet.has(wallet):
+		streak_by_wallet[wallet] = {
+			"progress_day": 0,
+			"last_credit_day_unix": 0,
+			"d3_claimed": false,
+			"d7_claimed": false,
+			"pending_modal": "",
+			"current_reminder_shown_day": 0,
+		}
+	return streak_by_wallet[wallet]
+
+
+## DEBUG ONLY — wipes the current wallet's streak entry entirely, as if that account had never
+## played (see StreakManager.debug_reset_streak).
+func reset_streak_for_current_wallet() -> void:
+	var wallet := ""
+	if Global.player_identity != null:
+		wallet = Global.player_identity.get_address_str().to_lower()
+	streak_by_wallet.erase(wallet)
 
 
 func add_place_to_last_places(position: Vector2i, realm: String) -> void:
@@ -595,6 +637,10 @@ func load_from_settings_file():
 		"user", "review_last_shot_unix", data_default.review_last_shot_unix
 	)
 
+	self.streak_by_wallet = settings_file.get_value(
+		"user", "streak_by_wallet", data_default.streak_by_wallet
+	)
+
 	self.notif_permission_last_prompt_unix = settings_file.get_value(
 		"user", "notif_permission_last_prompt_unix", data_default.notif_permission_last_prompt_unix
 	)
@@ -802,5 +848,6 @@ func save_to_settings_file():
 	new_settings_file.set_value("user", "review_session_count", self.review_session_count)
 	new_settings_file.set_value("user", "review_shots_fired", self.review_shots_fired)
 	new_settings_file.set_value("user", "review_last_shot_unix", self.review_last_shot_unix)
+	new_settings_file.set_value("user", "streak_by_wallet", self.streak_by_wallet)
 	new_settings_file.set_value("analytics", "user_id", self.analytics_user_id)
 	new_settings_file.save(DclConfig.get_settings_file_path())

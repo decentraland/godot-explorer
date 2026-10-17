@@ -34,10 +34,10 @@ use super::{
         SegmentEventBlockUser, SegmentEventChatMessageSent, SegmentEventClickButton,
         SegmentEventCommonExplorerFields, SegmentEventExplorerMoveToParcel,
         SegmentEventFirebaseInit, SegmentEventGuestWalletCreation,
-        SegmentEventIosStoreKitEnvironment, SegmentEventLoading, SegmentEventPushOpened,
-        SegmentEventRequestFriend, SegmentEventRequestResult, SegmentEventReviewPrompted,
-        SegmentEventSceneLocaleRequested, SegmentEventScreenViewed, SegmentEventSystemInfoReport,
-        SegmentEventUnfriend,
+        SegmentEventIosStoreKitEnvironment, SegmentEventLoading, SegmentEventLoginStreakClaim,
+        SegmentEventLoginStreakDayCounted, SegmentEventPushOpened, SegmentEventRequestFriend,
+        SegmentEventRequestResult, SegmentEventReviewPrompted, SegmentEventSceneLocaleRequested,
+        SegmentEventScreenViewed, SegmentEventSystemInfoReport, SegmentEventUnfriend,
     },
     frame::Frame,
     install_attribution::InstallAttribution,
@@ -726,6 +726,27 @@ impl Metrics {
             trigger_id,
         });
         self.queue_event("review_prompted", event);
+    }
+
+    /// A day was credited to the 7-day login streak (issue #3018). Called from
+    /// StreakManager.credit_jump_in().
+    #[func]
+    pub fn track_login_streak_day_counted(&mut self, day: i32, is_guest: bool) {
+        let event = SegmentEvent::LoginStreakDayCounted(SegmentEventLoginStreakDayCounted {
+            day: day.max(0) as u32,
+            is_guest,
+        });
+        self.queue_event("LOGIN_STREAK_DAY_COUNTED", event);
+    }
+
+    /// A D3 or D7 login-streak reward claim resolved (issue #3018). `reward` is "d3" or "d7",
+    /// `result` is "success" or "error". Called from
+    /// StreakModalController._on_streak_claim_resolved() once the claim request actually
+    /// resolves (not when the modal is merely shown).
+    #[func]
+    pub fn track_login_streak_claim(&mut self, reward: String, result: String) {
+        let event = SegmentEvent::LoginStreakClaim(SegmentEventLoginStreakClaim { reward, result });
+        self.queue_event("LOGIN_STREAK_CLAIM", event);
     }
 
     #[func]
