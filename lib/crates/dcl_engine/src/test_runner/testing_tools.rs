@@ -160,6 +160,22 @@ impl DclTestingTools {
             let test = &mut self.plan[index];
             test.finished = true;
             test.report = Some(report);
+            return;
+        }
+        // A scene without tests (or a different scene on this parcel) must fail the run, not
+        // hang it.
+        let test = &mut self.plan[index];
+        if !test.seen {
+            test.seen = true;
+            test.reset_timeout();
+        } else if test.timed_out() {
+            godot_error!(
+                "Scene {scene_id} on ({}, {}) reported no test result in {} seconds",
+                test.parcel.x,
+                test.parcel.y,
+                SCENE_TIMEOUT.as_secs()
+            );
+            test.finished = true;
         }
     }
 

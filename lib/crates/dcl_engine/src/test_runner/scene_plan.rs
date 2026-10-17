@@ -33,6 +33,8 @@ pub struct SceneTest {
     pub parcel: Vector2i,
     pub finished: bool,
     pub teleported: bool,
+    /// The scene was found; its own clock to report its tests started then.
+    pub seen: bool,
     pub report: Option<SceneReport>,
     started: Instant,
 }
@@ -43,6 +45,7 @@ impl SceneTest {
             parcel,
             finished: false,
             teleported: false,
+            seen: false,
             report: None,
             started: Instant::now(),
         }
