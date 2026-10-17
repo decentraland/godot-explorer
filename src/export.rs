@@ -32,6 +32,7 @@ use crate::{
 /// This is only run on macOS since iOS templates are only used there.
 #[cfg(target_os = "macos")]
 fn strip_ios_template_symbols(templates_path: &str) -> Result<(), anyhow::Error> {
+    use walkdir::WalkDir;
     use zip::write::FileOptions;
 
     let ios_zip_path = Path::new(templates_path).join("ios.zip");

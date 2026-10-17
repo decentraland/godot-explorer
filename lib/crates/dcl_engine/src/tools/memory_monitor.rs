@@ -245,11 +245,19 @@ pub fn used_memory_mb() -> i32 {
     {
         // phys_footprint via proc_pid_rusage — the real charge the OS tracks,
         // GPU/IOSurface memory included (same value jetsam and Xcode report).
+        // Declared here: libc only binds it for macOS, though iOS's libSystem has it.
+        extern "C" {
+            fn proc_pid_rusage(
+                pid: libc::c_int,
+                flavor: libc::c_int,
+                buffer: *mut libc::rusage_info_t,
+            ) -> libc::c_int;
+        }
         let mut info = std::mem::MaybeUninit::<libc::rusage_info_v2>::zeroed();
         // SAFETY: proc_pid_rusage fills a v2 rusage struct for our own pid; the
         // buffer is a correctly-sized, zeroed rusage_info_v2.
         let ret = unsafe {
-            libc::proc_pid_rusage(
+            proc_pid_rusage(
                 std::process::id() as libc::c_int,
                 libc::RUSAGE_INFO_V2,
                 info.as_mut_ptr() as *mut libc::rusage_info_t,

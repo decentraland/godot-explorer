@@ -135,6 +135,5 @@ avatar host). New events: `res`, `loading_progress {loaded,total,mbps,percent}`,
 
 - The debug Godot template runs at about 11–15 fps on phones; `cargo run -- run -r` uses the release one.
 - The Android back button is not forwarded to Godot.
-- iOS: the backpack overlay is not wired yet (no `set_surface_on_top` in the iOS bridge, opaque Metal layer).
 - Push, deep links, Sentry and IAP use today's Godot plugins inside the host; verified on the Android emulator
   (plugin loads, deep link teleports), not yet on iOS devices or with real push/TestFlight signing.
