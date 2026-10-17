@@ -33,10 +33,8 @@ Engine (phase 5)
 - [x] Moto, build `d1ca7fb` (fresh install, guest, Genesis, teleport to 12,12 over the debug hub): the empty-parcel land around a scene renders its props (trees, rocks, plants, red grass), 52–60 fps, no panic, "call failed" or "freed" in logcat. A URL video (mp4) played through ExoPlayer in the same session (backend initialised, `READY`, GPU surface 854x480, released on leaving). HLS and LiveKit streams were not run.
 - [ ] On the name screen the avatar renders small in a large hole (the rect is right, the framing is not): same symptom as the client snapshot framing. Instrumented 17 Oct (`fit_to_overall` / `on_resized` logs on the Moto): the initial fit commits `size = 2.0`, the `MIN_CAMERA_SIZE_OVERALL` clamp, for both the 719x840 first-screen rect and a 720x1600 one, so the clamp is the first suspect for the small avatar (the hole is taller than the avatar's height needs). The name screen is only reached with a non-guest account (guest goes straight to Welcome), so it was not reproduced; needs a signed-in test account. Logs reverted.
 - [x] The `dcl_swift_lib.gdextension` boot error is gone on Android: the preset's `exclude_filter` removes it (0 hits in the logcat of build `d1ca7fb`).
-- [ ] fps / memory in Genesis against the phase-2 baseline. Measured on the Moto, build `c0ea5d3`: Genesis 18 fps, 397–403 MB static memory; 12,12 (empty parcel with a TextShape scene): 235 MB. No phase-2 number is recorded in the plan to compare with. The Moto crash family (Mali / low RAM, see
-  memory `qa-android-teleport-crash`) was not re-measured.
-
-Known engine bugs and leftovers
+- [ ] fps / memory in Genesis against the phase-2 baseline. Measured on the Moto (17 Oct, build `c0ea5d3`): Genesis 10-18 fps, 397-448 MB static memory; no phase-2 number is recorded in the plan to compare with.
+- [x] Mali / low-RAM crash family, stress run (Moto, 17 Oct): eight teleports between Genesis, Goerli, (-9,-9), 52,-52 and 100,100, 25 s apart, no restart (same pid), no SIGSEGV / SIGABRT / fatal signal / ANR in logcat; Genesis static memory returned to 448 MB each time (no growth), the other parcels sat at 250-290 MB. fps stayed 10-11 in that session.
 - `import-assets` exits with a crash on a warm `godot/.godot` (editor-import teardown). Output is complete.
 - A 404 profile is logged as an error (Sentry quota risk).
 - Deep-link routing is dropped from the engine outside host mode.
