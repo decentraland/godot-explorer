@@ -16,7 +16,7 @@ These are blocking prerequisites. Resolve each one (or explicitly note its statu
 2. **iOS build must be present for platform-sensitive changes.** Mobile builds are gated on the `build` label (alias: `build-ios`) and skipped by default. Check the PR's **📱 Mobile build pipeline** comment (posted by the `build` label) for a `🍏 iOS` row reading "✅ TestFlight build N". A row reading "❓ TestFlight result unknown" means CI could not confirm the outcome (the watch timed out or the API call failed), **not** that no build exists — check the linked `godot-asc-deploy` run or Slack before holding on it.
    - If the PR touches: native iOS plugins (`plugins/dcl-godot-ios/**`), `OS.get_name() == "iOS"` branches, deeplinks, virtual keyboard / safe-area / `UIView` paths, audio/video/livekit interop, or anything under `lib/src/comms/` or `lib/src/av/` → **an iOS build is required**.
    - If no iOS artifact exists, output exactly: *"No iOS build on this PR — a maintainer can add the `build` label to trigger one. I will not approve platform-sensitive iOS changes without a green iOS build."* and hold approval.
-   - If the PR is purely backend / GDScript-with-no-platform-branch / docs, an iOS build is **not** required — call that out and proceed.
+   - If the PR is purely backend / Rust-with-no-platform-branch / docs, an iOS build is **not** required — call that out and proceed.
 3. **Submodule pointer drift.** If `git diff main...HEAD` shows changes under `plugins/dcl-godot-ios/godot` or any submodule and the PR description does not mention it, treat it as accidental and ask the author to confirm.
 4. **The description says what and why.** Read `## What` and `## Why`. If they are missing or do not tell you what changed and why in plain language, or it reads as raw AI output (see Section 4 → "PR description shape"), ask the author to rewrite it in their own words before a substantive review. The description is the author's statement of understanding; reverse-engineering it from the diff moves that work onto the reviewer.
 
@@ -30,12 +30,12 @@ Decentraland's cross-platform metaverse client — the "Godot Explorer". Three l
 
 | Layer | Language | Role |
 |---|---|---|
-| Engine / rendering / UI / scene tree | **Godot (custom fork)** + GDScript | `godot/` |
+| Engine / rendering / UI / scene tree | **Godot (custom fork)** + Rust nodes (`dcl_engine`) | `godot/` |
 | Core systems (scene runner, comms, content, wallet, avatars) | **Rust** (compiled as GDExtension) | `lib/` |
 | Decentraland SDK7 scene code at runtime | **JavaScript / V8 / deno_core** | per-scene threads driven by `lib/src/scene_runner` |
 | `xtask` build system (doctor / install / build / run / export) | Rust | `src/` |
 
-Target platforms: **Android (API 29+) and iOS are the only actively supported and QA'd targets.** The repo still carries desktop (Linux / Windows / macOS) and Meta Quest (OpenXR) code paths and CI builds, but those are **legacy remnants, not current distribution targets**. Evaluate every change for **touch input and small screens**; keyboard/mouse parity is not a review requirement. Desktop-only or XR-only findings are **out of scope** — note them at most as a courtesy, never as a blocker — unless the PR explicitly targets desktop/XR.
+Target platforms: **Android (API 29+) and iOS are the only actively supported and QA'd targets.** The repo still carries desktop (Linux / Windows / macOS) code paths and CI builds, but those are **legacy remnants, not current distribution targets**. Evaluate every change for **touch input and small screens**; keyboard/mouse parity is not a review requirement. Desktop-only findings are **out of scope** — note them at most as a courtesy, never as a blocker — unless the PR explicitly targets desktop/XR.
 
 The engine is pinned to a custom Godot fork. The exact version lives in `project.godot` and is documented in `CLAUDE.md` — **do not hardcode the version into reviews**, and **do not suggest upgrading the engine** or using APIs that only exist on upstream Godot beyond the pinned version.
 
@@ -61,11 +61,11 @@ lib/src/
 └── godot_classes/        GDExtension binding definitions
 
 godot/src/
-├── decentraland_components/   GDScript mirrors of SDK components (gltf_container, avatar_attach, …)
+├── decentraland_components/   scenes of the SDK components (the nodes are Rust)
 ├── ui/                        HUD, chat, notifications, dialogs, explorer scene
 ├── logic/                     Scene fetcher, realm, session, placement
 ├── tool/, tools/              Editor-only tools
-└── global.gd                  Session-wide autoload (huge; touched by many PRs)
+└── global.tscn                Session-wide autoload root (native `DclGlobal`)
 
 src/                    xtask commands (doctor, install, build, run, export, …)
 docs/                   Architecture notes — scene-architecture.md is the best starting point
@@ -91,7 +91,7 @@ Apply this order. Everything below "Correctness" is negotiable; the top tier is 
 
 ### Tier 2 — Correctness
 
-7. **No new GDScript UI.** `godot/src/ui/` keeps only the in-world controls the engine owns (explorer world, joypad, emote wheel, pointer tooltip, safe-area layouts, avatar preview). Screens, modals and toasts are React Native in `rn/` (`rn/src/modals/` for dialogs). A PR that adds a Control scene or a modal to `godot/src/ui/` is a hold unless it is one of those engine-owned controls.
+7. **No GDScript, no new UI scenes.** CI fails on any `.gd` under `godot/src`. `godot/src/ui/` keeps only the in-world controls the engine owns (explorer world, joypad, emote wheel, pointer tooltip, safe-area layouts, avatar preview). Screens, modals and toasts are React Native in `rn/` (`rn/src/modals/` for dialogs). A PR that adds a Control scene or a modal to `godot/src/ui/` is a hold unless it is one of those engine-owned controls.
 
 8. **User-facing text must be a translation key.** Every player-visible string lives in `godot/locale/en.csv` and is translated in `es.csv` / `pt_BR.csv`; `tools/i18n/` fails CI on new hardcoded UI text. The checks have real blind spots, so read the diff rather than trusting the green tick — a string passed as a **function argument** (`_add_row(tpl, "Scene Lights", …)`), held in a **data table**, or used as an **`@export var` default** is invisible to the scanner, and an `@export` default silently clobbers a correct key set in the `.tscn`. Reject:
    - A new literal shown to a player, anywhere the scanner does not reach.
@@ -119,7 +119,7 @@ Apply this order. Everything below "Correctness" is negotiable; the top tier is 
 17. **Performance on the hot path.** The scene-runner update loop, pointer-event loop, and shaders are hot. Watch for per-pixel `acos`/`normalize`/`pow` that can be replaced by compares, per-frame `find_node` / `get_node` lookups, unbounded `for x in all_entities` scans inside scene systems, and JSON serialization on the scene thread.
 18. **Description and test plan quality.** PR descriptions in this repo are `## What`, `## Why`, an optional collapsed `## Details`, and a `## Test plan` (see Section 4 → "PR description shape", including the AG rule on AI-generated text). A description with no What/Why, or whose What/Why read as raw AI output, is a rewrite request before code review. A missing or vague test plan is a legitimate review comment, especially for UI changes. Mobile-visible changes should say *which* platform was tested on. **The QA team runs these by hand on a real phone** (builds auto-distribute via TestFlight / Firebase App Distribution) — a case a tester couldn't reproduce cold (steps that don't start from opening the app, no observable expected result, no `- [ ]` to tick, or non-obvious required state left unsaid) is worth holding on. See Section 4 → "Writing test steps QA can execute" for the required format and a worked example.
 19. **Comments follow `CLAUDE.md` → "Code hygiene".** Flag comments that restate the code, run past three lines, or describe code that is no longer there ("a prior attempt…", "previously…", "used to live in…") — tombstones; the history lives in git, not the source. Praise the ones that explain a non-obvious Godot quirk or cite a matching Unity file/line.
-20. **File growth.** `explorer.gd` and `avatar.gd` sit near the gdlint cap (1900 lines / 45 public methods). Net additions to them are a question, not a nit: could this live in its own file? A bump to `max-file-lines` / `max-public-methods` in `.gdlintrc` inside a feature PR is a hold — split the file first, in its own PR.
+20. **File growth.** `communication_manager.rs`, `scene_manager.rs` and `content_provider.rs` are past 3000 lines. Net additions to them are a question, not a nit: could this live in its own file?
 
 ---
 
@@ -213,24 +213,16 @@ Anti-patterns that make a case un-executable — a reviewer should ask the autho
 - **No box to tick** — a case written as prose, as a "Do this / Expect" table, or with a bare `- [ ]` under a prose Expected gives QA nowhere to record pass/fail. Put the Expected text on the box: `- [ ] **Expected:** …`.
 - **Steps that assume code knowledge** — referencing a private method, signal, or guard by name. Translate it into the user-visible action that exercises it.
 
-### Naming (from `.gdlintrc`)
-- Classes / scenes / scripts: `PascalCase` (`ConnectionQualityMonitor`, `MentionItem`).
-- Functions, variables, signals: `snake_case`. Signal handlers auto-named `_on_SomeNode_some_signal` (or `_on_` + `snake_case`).
-- Constants: `SCREAMING_SNAKE_CASE`. Enums: `PascalCase` enum name with `SCREAMING_SNAKE_CASE` elements.
-- Max file length: **1900 lines**, max public methods: **45**, max function args: **10**. `global.gd`, `explorer.gd`, `modal_manager.gd` and `avatar.gd` are at the cap — new code there gets pushback (Tier 3 #20).
-
 ### Formatting / linting (must pass CI)
 - Rust: `cd lib && cargo fmt --all && cargo clippy -- -D warnings`.
-- GDScript: `gdformat godot/` and `gdlint godot/`. Use the `dcl-regenesislabs` fork of gdtoolkit — stock gdtoolkit 4 will produce spurious diffs.
 - Asset imports: the project runs `tests/check_asset_imports.py`; lossless/`compress_mode` on imported textures matters. PRs that add PNGs should also commit the `.import` file.
 
 ### Validation
-- Every GDScript file must pass `cargo run -- check-gdscript`. A script with a typo that only fails at runtime will pass CI — flag suspicious `get_node`/`$NodePath` references.
-- `.tscn` files reference `.gd.uid` files; if a script is renamed or deleted, orphaned `.uid` files must go too.
+- `.tscn` files reference scripts only through native classes; an orphaned `.gd.uid` must go.
 
 ### CI gates
 The PR-level workflows a reviewer should expect green before approving:
-- `📊 Static checks` — rustfmt + `gdformat -d` + `gdlint`
+- `📊 Static checks` — rustfmt + the no-`.gd` check
 - `Clippy` — `-D warnings`
 - `🐧 Linux`, `🪟 Windows`, `🍎 macOS` builds — build-only smoke checks; desktop is not a distribution target (see Section 1). Keep them green, but a desktop-only runtime issue is not grounds to block.
 - `🤖 Android` builds (APK/AAB posted as a sticky comment on the PR)
@@ -365,8 +357,7 @@ A reviewer should `grep` / eyeball the diff for these before reading logic:
 - Non-English comment or identifier anywhere in the diff (incl. `.gdshader` / `.tscn` / `.tres` / `.glsl`, which `gdlint`/`clippy` never read) → codebase is English-only. Accented chars (`á é í ó ú ñ ¿ ¡`) or non-English words in comments/identifiers block approval until translated. Localized user-facing strings are exempt; raw literals and comments are not. See Tier 1.
 - `# TODO` / `# FIXME` added in this PR (vs already existed) → ask for an issue link.
 - A comment describing code that is not in the file any more ("previously…", "was removed because…", "used to live in…") → tombstone; ask to delete it, git holds the history (Tier 3 #19).
-- `.gdlintrc` `max-file-lines` / `max-public-methods` raised in the same PR as feature code → hold; split the file first (Tier 3 #20).
-- Net additions to `global.gd` / `explorer.gd` / `modal_manager.gd` / `avatar.gd` → ask whether the code could live in its own file (Tier 3 #20).
+- Net additions to `communication_manager.rs` / `scene_manager.rs` / `content_provider.rs` → ask whether the code could live in its own file (Tier 3 #20).
 - `await …` inside `_ready` / `_process` / `_input` without guards → re-entrancy risk.
 - New `custom_minimum_size = Vector2(…)` on an overlay container → probable mouse-filter bug.
 - `shader_parameter/<name>` in a `.tres` that doesn't exist in the referenced `.gdshader` → orphan.
@@ -376,7 +367,7 @@ A reviewer should `grep` / eyeball the diff for these before reading logic:
 - Any change to `rust-toolchain.toml`, `Cargo.lock` across the whole dependency tree, or the Godot version → escalate; these need a human-stakeholder call.
 - Modifications under `plugins/dcl-godot-ios/godot` or any submodule pointer → verify intentional and not a submodule-drift side-effect.
 - `DclGlobal.is_ios()` / `is_android()` / `is_mobile()` in new GDScript → request `OS.get_name() == "iOS"` / `"Android"` to match the repo convention.
-- `OS.get_name()` checks that handle one mobile target but not the other (e.g. branches on `"Android"` but silently falls through on `"iOS"`) → ask which platforms were considered. Only `"Android"` / `"iOS"` need to be covered; desktop/XR fall-through is fine (see Section 1).
+- `OS.get_name()` checks that handle one mobile target but not the other (e.g. branches on `"Android"` but silently falls through on `"iOS"`) → ask which platforms were considered. Only `"Android"` / `"iOS"` need to be covered; desktop fall-through is fine (see Section 1).
 - `_process` doing physics-coupled work, or `_physics_process` doing UI work → see the pattern note in Section 5.
 - A new user-facing string literal in `.tscn`/`.gd`, or a key on an `auto_translate_mode = 2` node → must be a translation key, and mode 2 draws a key verbatim. The scanner cannot see strings passed as function arguments, held in data tables, or set as `@export` defaults — check those by eye. See Tier 2.
 

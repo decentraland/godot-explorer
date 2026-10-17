@@ -4,7 +4,7 @@
 //! for the Decentraland explorer.
 
 mod common;
-mod emote;
+pub mod emote;
 mod scene;
 mod wearable;
 

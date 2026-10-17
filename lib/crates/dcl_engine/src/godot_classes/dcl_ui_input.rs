@@ -8,6 +8,7 @@ use godot::{
     prelude::*,
 };
 
+use crate::engine::local_task::defer;
 use crate::godot_classes::dcl_global::DclGlobal;
 use crate::{
     dcl::components::{
@@ -32,6 +33,7 @@ pub struct DclUiInput {
     current_font: Font,
 
     #[export]
+    #[var(pub)]
     dcl_entity_id: SceneEntityId,
 
     ui_result: Option<Rc<RefCell<UiResults>>>,
@@ -60,19 +62,20 @@ impl ILineEdit for DclUiInput {
         self.base_mut()
             .add_theme_stylebox_override("read_only", &style_box_empty.clone());
 
-        let callable_on_text_changed = self.base().callable("on_text_changed");
-        let callable_on_text_submitted = self.base().callable("on_text_submitted");
-        self.base_mut()
-            .connect("text_changed", &callable_on_text_changed);
-        self.base_mut()
-            .connect("text_submitted", &callable_on_text_submitted);
-
-        let callable_on_focus_entered = self.base().callable("on_focus_entered");
-        let callable_on_focus_exited = self.base().callable("on_focus_exited");
-        self.base_mut()
-            .connect("focus_entered", &callable_on_focus_entered);
-        self.base_mut()
-            .connect("focus_exited", &callable_on_focus_exited);
+        let this = self.to_gd();
+        let base = self.base().clone();
+        base.signals()
+            .text_changed()
+            .connect_other(&this, |this: &mut Self, text| this.on_text_changed(text));
+        base.signals()
+            .text_submitted()
+            .connect_other(&this, |this: &mut Self, text| this.on_text_submitted(text));
+        base.signals()
+            .focus_entered()
+            .connect_other(&this, |this: &mut Self| this.on_focus_entered());
+        base.signals()
+            .focus_exited()
+            .connect_other(&this, |this: &mut Self| this.on_focus_exited());
     }
 
     /// On mobile the scene UI reads raw touch events (see `DclUiControl`), which `LineEdit` does
@@ -142,9 +145,7 @@ impl DclUiInput {
                 .set_text_input_focus(false, Rect2::default());
         }
         // Movement is gated on the explorer holding focus: hand it back.
-        if let Some(mut global) = DclGlobal::try_singleton() {
-            global.call_deferred("explorer_grab_focus", &[]);
-        }
+        defer(DclGlobal::explorer_grab_focus);
     }
 
     fn show_soft_keyboard(&self) {

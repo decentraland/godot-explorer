@@ -4,6 +4,7 @@ pub mod analytics;
 pub mod app;
 pub mod attestation;
 pub mod avatar;
+pub mod cache;
 pub mod clock;
 pub mod connection;
 mod core;

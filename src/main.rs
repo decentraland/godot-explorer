@@ -10,16 +10,13 @@ use xtaskops::ops::{clean_files, cmd, confirm, remove_dir};
 use crate::{consts::RUST_LIB_PROJECT_FOLDER, install_dependency::clear_cache_dir};
 
 mod android_godot_lib;
-mod avatar_impostor_benchmark;
 mod build_config;
-mod check_gdscript;
 mod consts;
 mod copy_files;
 mod dependencies;
 mod doctor;
 mod download_file;
 mod export;
-mod fi_benchmark;
 mod full_tests;
 mod helpers;
 mod image_comparison;
@@ -116,39 +113,7 @@ fn main() -> Result<(), anyhow::Error> {
         )
         .subcommand(Command::new("docs"))
         .subcommand(Command::new("doctor").about("Check system health and dependencies"))
-        .subcommand(Command::new("check-gdscript").about("Validate all GDScript files for syntax errors"))
-        .subcommand(
-            Command::new("test-gdscript").about("Run every headless GDScript test"),
-        )
         .subcommand(Command::new("version-check").about("Check version consistency across files"))
-        .subcommand(
-            Command::new("fi-benchmark")
-                .about("Run floating islands memory benchmark with multiple client sessions")
-                .arg(
-                    Arg::new("headless")
-                        .long("headless")
-                        .help("Run in headless mode (faster, no screenshots)")
-                        .action(clap::ArgAction::SetTrue),
-                ),
-        )
-        .subcommand(
-            Command::new("avatar-impostor-benchmark")
-                .about(
-                    "Run avatar impostor benchmark (100 avatars, OFF then ON phases) and write results to benchmark-results/. Use --target ios to launch on a connected iPhone (assumes the app has been deployed via `cargo run -- run --target ios`).",
-                )
-                .arg(
-                    Arg::new("headless")
-                        .long("headless")
-                        .help("Run headless (host only). Skinning still uses GPU; FPS may differ from windowed mode.")
-                        .action(clap::ArgAction::SetTrue),
-                )
-                .arg(
-                    Arg::new("target")
-                        .long("target")
-                        .help("Target platform: host (default) or ios.")
-                        .takes_value(true),
-                ),
-        )
         .subcommand(
             Command::new("full-tests")
                 .about("Run ALL test workflows locally in sequence with timing information")
@@ -1055,8 +1020,6 @@ fn main() -> Result<(), anyhow::Error> {
                 .context("please provide a package with -p")?,
         ),
         ("doctor", _) => doctor::run_doctor(),
-        ("check-gdscript", _) => check_gdscript::check_gdscript(),
-        ("test-gdscript", _) => check_gdscript::test_gdscript(),
         ("update-ios-xcode", sm) => ios_xcode::update_ios_xcode(
             sm.is_present("godot"),
             sm.is_present("plugin"),
@@ -1078,17 +1041,6 @@ fn main() -> Result<(), anyhow::Error> {
             sm.is_present("verbose"),
             sm.is_present("sentry-release"),
         ),
-        ("fi-benchmark", sm) => fi_benchmark::run_fi_benchmark(sm.get_flag("headless")),
-        ("avatar-impostor-benchmark", sm) => {
-            let target: &str = sm
-                .get_one::<String>("target")
-                .map(|s| s.as_str())
-                .unwrap_or("");
-            avatar_impostor_benchmark::run_avatar_impostor_benchmark(
-                sm.get_flag("headless"),
-                target,
-            )
-        }
         ("full-tests", sm) => full_tests::run_full_tests(
             sm.is_present("continue-on-failure"),
             sm.is_present("skip-visual"),

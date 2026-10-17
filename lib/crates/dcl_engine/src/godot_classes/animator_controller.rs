@@ -49,8 +49,13 @@ pub struct MultipleAnimationController {
 impl IAnimationTree for MultipleAnimationController {
     fn ready(&mut self) {
         // connect animation_finished
-        let callable = self.base().callable("_animation_finished");
-        self.base_mut().connect("animation_finished", &callable);
+        let this = self.to_gd();
+        self.base_mut()
+            .signals()
+            .animation_finished()
+            .connect_other(&this, |this: &mut Self, name| {
+                this._animation_finished(name)
+            });
     }
 }
 
@@ -688,7 +693,7 @@ pub fn apply_anims(gltf_container_node: Gd<Node3D>, value: &PbAnimator) {
         // a loop=true clip to stop). See issue #2497.
         if let Some(shared_lib) = anim_player.get_animation_library("") {
             let unique_lib: Gd<AnimationLibrary> =
-                shared_lib.duplicate_ex().deep(true).done().unwrap().cast();
+                shared_lib.duplicate_resource_ex().deep_internal().done();
             anim_player.remove_animation_library("");
             anim_player.add_animation_library("", &unique_lib);
         }

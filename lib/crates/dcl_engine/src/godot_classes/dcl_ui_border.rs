@@ -1,5 +1,6 @@
 use godot::{
     builtin::Corner,
+    builtin::Side,
     classes::{
         control::{LayoutPreset, MouseFilter},
         Control, IControl, StyleBoxFlat,
@@ -40,11 +41,17 @@ impl IControl for DclUiBorder {
         self.base_mut().set_mouse_filter(MouseFilter::IGNORE);
         self.base_mut().set_anchors_preset(LayoutPreset::FULL_RECT);
 
-        let mut parent = self
+        let parent = self
             .base()
             .get_parent()
             .expect("ui_border must have a parent");
-        parent.connect("resized", &self.base().callable("_on_parent_size"));
+        let this = self.to_gd();
+        if let Ok(parent) = parent.try_cast::<Control>() {
+            parent
+                .signals()
+                .resized()
+                .connect_other(&this, |this: &mut Self| this._on_parent_size());
+        }
     }
 
     fn draw(&mut self) {

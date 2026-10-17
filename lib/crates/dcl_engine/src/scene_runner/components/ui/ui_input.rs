@@ -50,7 +50,7 @@ pub fn update_ui_input(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 node.set_name("input");
                 node.set_anchors_preset(godot::classes::control::LayoutPreset::FULL_RECT);
 
-                node.bind_mut().set_dcl_entity_id(entity.as_i32());
+                node.bind_mut().set_dcl_entity_id(*entity);
 
                 existing_ui_input
                     .base_control

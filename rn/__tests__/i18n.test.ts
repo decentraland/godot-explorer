@@ -2,7 +2,14 @@
 import fs from 'fs';
 import path from 'path';
 import { en } from '../src/i18n/en';
-import { getLocale, plural, setLocale, subscribeLocale, t } from '../src/i18n';
+import {
+  getLocale,
+  localeFromDevice,
+  plural,
+  setLocale,
+  subscribeLocale,
+  t,
+} from '../src/i18n';
 
 describe('t / plural', () => {
   it('looks up and fills named placeholders, repeats included', () => {
@@ -101,5 +108,22 @@ describe('locales', () => {
     setLocale('pt_BR');
     off();
     expect(seen).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('localeFromDevice', () => {
+  it('maps the device identifier to a supported locale', () => {
+    expect(localeFromDevice('pt_BR')).toBe('pt_BR');
+    expect(localeFromDevice('pt-BR')).toBe('pt_BR');
+    expect(localeFromDevice('pt_PT')).toBe('pt_BR');
+    expect(localeFromDevice('es_AR')).toBe('es');
+    expect(localeFromDevice('es')).toBe('es');
+    expect(localeFromDevice('en_US')).toBe('en');
+  });
+
+  it('falls back to English for anything else', () => {
+    expect(localeFromDevice('de_DE')).toBe('en');
+    expect(localeFromDevice('')).toBe('en');
+    expect(localeFromDevice(undefined)).toBe('en');
   });
 });

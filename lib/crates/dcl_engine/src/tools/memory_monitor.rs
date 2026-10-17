@@ -539,6 +539,7 @@ fn read_available_mb() -> i32 {
         // terminates it; 0 when not determinable (e.g. simulator).
         fn os_proc_available_memory() -> usize;
     }
+    // SAFETY: plain libSystem call with no arguments and no preconditions.
     let bytes = unsafe { os_proc_available_memory() };
     if bytes == 0 {
         -1

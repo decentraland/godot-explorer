@@ -12,7 +12,6 @@ use crate::{
     godot_classes::dcl_global::DclGlobal,
     scene_runner::scene::{Scene, SceneType},
 };
-use godot::prelude::ToGodot;
 
 /// Updates the global SDK skybox time state based on the SkyboxTime component
 /// set on the ROOT entity in the current parcel scene.
@@ -90,7 +89,7 @@ pub fn update_skybox_time(
             drop(global_bind);
 
             if became_active {
-                global.emit_signal("sdk_skybox_time_active_changed", &[true.to_variant()]);
+                global.signals().sdk_skybox_time_active_changed().emit(true);
             }
         }
         None => {
@@ -102,7 +101,10 @@ pub fn update_skybox_time(
             drop(global_bind);
 
             if was_active {
-                global.emit_signal("sdk_skybox_time_active_changed", &[false.to_variant()]);
+                global
+                    .signals()
+                    .sdk_skybox_time_active_changed()
+                    .emit(false);
             }
         }
     }

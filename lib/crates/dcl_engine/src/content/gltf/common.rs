@@ -278,7 +278,7 @@ fn apply_post_generate_godot_lods(root: Gd<Node>) {
         };
         let is_chunk = mi
             .get_parent()
-            .map(|p| p.get_name().to_string() == "_splitted")
+            .map(|p| p.get_name() == "_splitted")
             .unwrap_or(false);
         let Some(mesh) = mi.get_mesh() else { continue };
         let Ok(am) = mesh.try_cast::<ArrayMesh>() else {
@@ -532,7 +532,7 @@ pub(super) fn apply_pre_generate_mesh_simplification(
     let mut lod_idx_total: u64 = 0;
 
     for mi in 0..mesh_count {
-        let mut gltf_mesh = meshes.at(mi);
+        let gltf_mesh = meshes.at(mi);
         let Some(mut importer) = gltf_mesh.get_mesh() else {
             continue;
         };
@@ -676,7 +676,9 @@ pub(super) fn apply_pre_generate_mesh_simplification(
                 for (k, &i) in lod_indices.iter().enumerate() {
                     slc[k] = i as i32;
                 }
-                let _ = snap.lods.insert(sse_key.to_variant(), packed.to_variant());
+                let _ = snap
+                    .lods
+                    .insert(&sse_key.to_variant(), &packed.to_variant());
                 lod_idx_total = lod_idx_total.saturating_add(lod_indices.len() as u64);
                 surface_had_lod = true;
             }
@@ -749,7 +751,7 @@ fn apply_post_generate_lod_chain(root: Gd<Node>) {
         };
         let is_chunk = mi
             .get_parent()
-            .map(|p| p.get_name().to_string() == "_splitted")
+            .map(|p| p.get_name() == "_splitted")
             .unwrap_or(false);
         if is_chunk {
             chunks_seen += 1;
@@ -913,7 +915,7 @@ fn build_lods_for_surface(
         for (k, &i) in lod_indices.iter().enumerate() {
             slc[k] = i as i32;
         }
-        let _ = lods.insert(sse_key.to_variant(), packed.to_variant());
+        let _ = lods.insert(&sse_key.to_variant(), &packed.to_variant());
         total_lod += lod_indices.len();
         any = true;
     }
@@ -1064,9 +1066,12 @@ impl Drop for GodotThreadSafetyGuard {
 }
 
 fn set_thread_safety_checks_enabled(enabled: bool) {
-    let mut temp_script =
-        godot::tools::load::<godot::classes::Script>("res://src/logic/thread_safety.gd");
-    temp_script.call("set_thread_safety_checks_enabled", &[enabled.to_variant()]);
+    // `Thread` is not in the generated API, so its static is called through ClassDB.
+    <godot::classes::ClassDb as godot::obj::Singleton>::singleton().class_call_static(
+        "Thread",
+        "set_thread_safety_checks_enabled",
+        &[enabled.to_variant()],
+    );
 }
 
 /// Count the number of nodes in a tree

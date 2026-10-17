@@ -14,6 +14,7 @@ use crate::{
             SceneCrdtStateProtoComponents,
         },
     },
+    engine::local_task::defer,
     godot_classes::dcl_global::DclGlobal,
     scene_runner::scene::Scene,
 };
@@ -156,18 +157,9 @@ fn do_raycast(scene: &Scene, node_3d: &Gd<Node3D>, raycast: &PbRaycast) -> PbRay
     raycast_query.set_collision_mask(collision_mask);
 
     // debug drawing the ray
-    if let Some(mut global) = DclGlobal::try_singleton() {
-        let id: i64 = node_3d.instance_id().to_i64();
-        global.call_deferred(
-            "add_raycast",
-            &[
-                Variant::from(id),
-                Variant::from(1.0),
-                Variant::from(raycast_from),
-                Variant::from(raycast_to),
-            ],
-        );
-    }
+    let id: i64 = node_3d.instance_id().to_i64();
+    let (origin, target) = (raycast_from, raycast_to);
+    defer(move || DclGlobal::add_raycast(id, 1.0, origin, target));
 
     let hits = match query_type {
         RaycastQueryType::RqtHitFirst => {
@@ -232,7 +224,7 @@ fn get_raycast_hit(
 ) -> Option<(Option<RaycastHit>, Rid)> {
     let raycast_result = space.intersect_ray(&raycast_query);
     let rid = raycast_result.get("rid")?.to::<Rid>();
-    let Some(mut collider) = raycast_result
+    let Some(collider) = raycast_result
         .get("collider")
         .and_then(|collider| collider.try_to::<Gd<Object>>().ok())
         .filter(|collider| collider.is_instance_valid())
@@ -240,21 +232,15 @@ fn get_raycast_hit(
         return Some((None, rid));
     };
 
-    let has_dcl_entity_id = collider
-        .call("has_meta", &[Variant::from("dcl_entity_id")])
-        .booleanize();
+    let has_dcl_entity_id = collider.has_meta("dcl_entity_id");
 
     // Note here, if the collider is not in the scene, it stops all query type
     if !has_dcl_entity_id {
         return None;
     }
 
-    let dcl_entity_id = collider
-        .call("get_meta", &[Variant::from("dcl_entity_id")])
-        .to::<i32>();
-    let dcl_scene_id = collider
-        .call("get_meta", &[Variant::from("dcl_scene_id")])
-        .to::<i32>();
+    let dcl_entity_id = collider.get_meta("dcl_entity_id").to::<i32>();
+    let dcl_scene_id = collider.get_meta("dcl_scene_id").to::<i32>();
 
     if dcl_scene_id != scene.scene_id.0 {
         return None;

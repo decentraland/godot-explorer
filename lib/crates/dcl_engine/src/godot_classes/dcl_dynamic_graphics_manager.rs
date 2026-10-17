@@ -566,8 +566,7 @@ impl INode for DclDynamicGraphicsManager {
                     p
                 }
             };
-            self.base_mut()
-                .emit_signal("profile_change_requested", &[new_profile.to_variant()]);
+            self.signals().profile_change_requested().emit(new_profile);
         }
     }
 }
@@ -575,10 +574,10 @@ impl INode for DclDynamicGraphicsManager {
 #[godot_api]
 impl DclDynamicGraphicsManager {
     #[signal]
-    fn profile_change_requested(new_profile: i32);
+    pub fn profile_change_requested(new_profile: i32);
 
     #[signal]
-    fn thermal_fps_cap_changed(fps_cap: i32);
+    pub fn thermal_fps_cap_changed(fps_cap: i32);
 
     #[func]
     pub fn initialize(&mut self, enabled: bool, current_profile: i32, fps_limit: i32) {
@@ -896,8 +895,7 @@ impl DclDynamicGraphicsManager {
         let old_cap = self.thermal_fps_cap;
         self.thermal_fps_cap = new_cap;
 
-        self.base_mut()
-            .emit_signal("thermal_fps_cap_changed", &[new_cap.to_variant()]);
+        self.signals().thermal_fps_cap_changed().emit(new_cap);
 
         godot_print!(
             "[DynamicGraphics] Thermal FPS cap: {} -> {} (charging={})",

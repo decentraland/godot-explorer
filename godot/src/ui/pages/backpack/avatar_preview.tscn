@@ -1,7 +1,6 @@
 [gd_scene format=3 uid="uid://cy43hvd5bivso"]
 
 [ext_resource type="PackedScene" uid="uid://dvu5i0n51gph3" path="res://src/decentraland_components/avatar/avatar.tscn" id="1_dtjd5"]
-[ext_resource type="Script" uid="uid://cajm3jjqosrt1" path="res://src/ui/pages/backpack/avatar_preview.gd" id="1_sayag"]
 [ext_resource type="PackedScene" uid="uid://0ccix5xpw76a" path="res://assets/ui/backpack/platform_compressed.glb" id="3_i62gc"]
 [ext_resource type="PackedScene" uid="uid://qyi7gcf7tphy" path="res://src/logic/player/outline_system.tscn" id="4_outline"]
 
@@ -21,14 +20,13 @@ ambient_light_sky_contribution = 0.6
 adjustment_enabled = true
 adjustment_brightness = 1.4
 
-[node name="AvatarPreview" type="SubViewportContainer" unique_id=1871875129]
+[node name="AvatarPreview" type="AvatarPreview" unique_id=1871875129]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 size_flags_horizontal = 4
-script = ExtResource("1_sayag")
 
 [node name="SubViewport" type="SubViewport" parent="." unique_id=677482808]
 unique_name_in_owner = true

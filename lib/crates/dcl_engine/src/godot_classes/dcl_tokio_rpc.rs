@@ -29,15 +29,11 @@ impl INode for DclTokioRpc {
             use_webview,
         }) = self.receiver.try_recv()
         {
-            self.base_mut().call_deferred(
-                "emit_signal",
-                &[
-                    "need_open_url".to_variant(),
-                    url.to_variant(),
-                    description.to_variant(),
-                    use_webview.to_variant(),
-                ],
-            );
+            self.run_deferred(move |this| {
+                this.signals()
+                    .need_open_url()
+                    .emit(&url, &description, use_webview)
+            });
         }
     }
 }
@@ -45,7 +41,7 @@ impl INode for DclTokioRpc {
 #[godot_api]
 impl DclTokioRpc {
     #[signal]
-    fn need_open_url(url: GString, description: GString, use_webview: bool);
+    pub fn need_open_url(url: GString, description: GString, use_webview: bool);
 
     pub fn get_sender(&self) -> tokio::sync::mpsc::Sender<OpenUrlRequest> {
         self.sender.clone()

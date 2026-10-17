@@ -5,13 +5,12 @@ use std::{
 
 use dcl_core::Core;
 use ethers_core::types::H160;
-use godot::prelude::{GString, Gd, ToGodot};
+use glam::IVec2;
 use std::cmp::Ordering;
 use tokio::sync::mpsc;
 
 use crate::{
     auth::wallet::AsH160,
-    avatars::avatar_scene::AvatarScene,
     comms::{
         consts::{
             truncate_utf8_safe, DEFAULT_PROTOCOL_VERSION, INACTIVE_PEER_THRESHOLD_SECS,
@@ -20,12 +19,12 @@ use crate::{
             PROFILE_UPDATE_CHANNEL_SIZE, PULSE_ROOM_ID,
         },
         profile::{SerializedProfile, UserProfile},
+        sink::{AvatarSink, SceneSink, SocialLists},
     },
     content::profile::{
         prepare_request_requirements, request_lambda_profile, request_registry_profile,
     },
     dcl::components::proto_components::kernel::comms::rfc4,
-    godot_classes::{dcl_global::DclGlobal, dcl_social_blacklist::DclSocialBlacklist},
 };
 
 use super::movement_compressed::MovementCompressed;
@@ -277,7 +276,8 @@ pub struct MessageProcessor {
     outgoing_sender: mpsc::Sender<OutgoingMessage>,
 
     // Avatar management
-    avatars: Gd<AvatarScene>,
+    avatars: Box<dyn AvatarSink>,
+    scenes: Box<dyn SceneSink>,
     peer_identities: HashMap<H160, Peer>,
     peer_alias_counter: u32,
 
@@ -306,11 +306,11 @@ pub struct MessageProcessor {
     profile_failure_sender: mpsc::Sender<ProfileFetchFailure>,
 
     // Configurable realm bounds for movement compression
-    realm_min: godot::prelude::Vector2i,
-    realm_max: godot::prelude::Vector2i,
+    realm_min: IVec2,
+    realm_max: IVec2,
 
     // Social blacklist for blocked/muted filtering
-    social_blacklist: Option<Gd<DclSocialBlacklist>>,
+    social_lists: Option<Box<dyn SocialLists>>,
 
     // Cached blocked/muted sets for performance (updated when social_blacklist changes)
     cached_blocked: HashSet<H160>,
@@ -355,7 +355,8 @@ impl MessageProcessor {
     pub fn new(
         player_address: H160,
         player_profile: Option<UserProfile>,
-        avatars: Gd<AvatarScene>,
+        avatars: Box<dyn AvatarSink>,
+        scenes: Box<dyn SceneSink>,
     ) -> Self {
         let (message_sender, message_receiver) = mpsc::channel(MESSAGE_CHANNEL_SIZE);
         let (outgoing_sender, outgoing_receiver) = mpsc::channel(OUTGOING_CHANNEL_SIZE);
@@ -370,6 +371,7 @@ impl MessageProcessor {
             outgoing_receiver,
             outgoing_sender,
             avatars,
+            scenes,
             peer_identities: HashMap::new(),
             peer_alias_counter: 0,
             player_address,
@@ -384,9 +386,9 @@ impl MessageProcessor {
             profile_failure_receiver,
             profile_failure_sender,
             // Default realm bounds
-            realm_min: godot::prelude::Vector2i::new(-150, -150),
-            realm_max: godot::prelude::Vector2i::new(163, 158),
-            social_blacklist: None,
+            realm_min: IVec2::new(-150, -150),
+            realm_max: IVec2::new(163, 158),
+            social_lists: None,
             cached_blocked: HashSet::new(),
             cached_muted: HashSet::new(),
             active_video_tracks: HashMap::new(),
@@ -448,26 +450,19 @@ impl MessageProcessor {
     }
 
     /// Sets the social blacklist reference for filtering blocked/muted users
-    pub fn set_social_blacklist(&mut self, blacklist: Gd<DclSocialBlacklist>) {
-        // Update cached sets when blacklist changes
-        let blacklist_bind = blacklist.bind();
-        self.cached_blocked
-            .clone_from(blacklist_bind.get_blocked_set());
-
-        // Merge blocked users into muted cache (blocked users are also muted)
-        self.cached_muted.clone_from(blacklist_bind.get_muted_set());
-        self.cached_muted.extend(blacklist_bind.get_blocked_set());
-        drop(blacklist_bind);
-
-        self.social_blacklist = Some(blacklist);
+    pub fn set_social_lists(&mut self, lists: Box<dyn SocialLists>) {
+        let (blocked, muted) = lists.sets();
+        // Blocked users are also muted.
+        self.cached_muted = muted;
+        self.cached_muted.extend(&blocked);
+        self.cached_blocked = blocked;
+        self.social_lists = Some(lists);
     }
 
     /// Updates the cached blocked/muted sets from the social blacklist
     pub fn refresh_blacklist_cache(&mut self) {
-        if let Some(blacklist) = &self.social_blacklist {
-            let blacklist_bind = blacklist.bind();
-            let new_blocked = blacklist_bind.get_blocked_set().clone();
-            let new_muted = blacklist_bind.get_muted_set().clone();
+        if let Some(lists) = &self.social_lists {
+            let (new_blocked, new_muted) = lists.sets();
 
             // Find newly blocked addresses (in new set but not in old set)
             let newly_blocked: Vec<H160> = new_blocked
@@ -490,9 +485,6 @@ impl MessageProcessor {
 
             // Hide avatars for newly blocked users
             if !newly_blocked.is_empty() {
-                let mut avatar_scene_ref = self.avatars.clone();
-                let mut avatar_scene = avatar_scene_ref.bind_mut();
-
                 for blocked_address in newly_blocked {
                     if let Some(peer) = self.peer_identities.get(&blocked_address) {
                         tracing::debug!(
@@ -500,16 +492,13 @@ impl MessageProcessor {
                             blocked_address,
                             peer.alias
                         );
-                        avatar_scene.set_avatar_blocked(peer.alias, true);
+                        self.avatars.set_blocked(peer.alias, true);
                     }
                 }
             }
 
             // Show avatars for newly unblocked users
             if !newly_unblocked.is_empty() {
-                let mut avatar_scene_ref = self.avatars.clone();
-                let mut avatar_scene = avatar_scene_ref.bind_mut();
-
                 for unblocked_address in newly_unblocked {
                     if let Some(peer) = self.peer_identities.get(&unblocked_address) {
                         tracing::debug!(
@@ -517,7 +506,7 @@ impl MessageProcessor {
                             unblocked_address,
                             peer.alias
                         );
-                        avatar_scene.set_avatar_blocked(peer.alias, false);
+                        self.avatars.set_blocked(peer.alias, false);
                     }
                 }
             }
@@ -539,11 +528,7 @@ impl MessageProcessor {
     /// # Arguments
     /// * `min` - The minimum x,y coordinates of the realm
     /// * `max` - The maximum x,y coordinates of the realm
-    pub fn set_realm_bounds(
-        &mut self,
-        min: godot::prelude::Vector2i,
-        max: godot::prelude::Vector2i,
-    ) {
+    pub fn set_realm_bounds(&mut self, min: IVec2, max: IVec2) {
         self.realm_min = min;
         self.realm_max = max;
         tracing::debug!("Updated realm bounds: min={:?}, max={:?}", min, max);
@@ -595,9 +580,8 @@ impl MessageProcessor {
 
             // Brief borrow scope for avatar update
             {
-                let mut avatar_scene_ref = self.avatars.clone();
-                let mut avatar_scene = avatar_scene_ref.bind_mut();
-                avatar_scene.update_avatar_by_alias(update.peer_alias, &update.profile);
+                self.avatars
+                    .update_profile(update.peer_alias, &update.profile);
             }
 
             if let Some(peer) = self.peer_identities.get_mut(&update.address) {
@@ -634,9 +618,8 @@ impl MessageProcessor {
             }
             // Surface the state to the avatar's nameplate (dev shows "Loading"/"Failed").
             if let Some((alias, failures, banned)) = fetch_state {
-                let mut avatar_scene_ref = self.avatars.clone();
-                let mut avatar_scene = avatar_scene_ref.bind_mut();
-                avatar_scene.set_avatar_profile_fetch_state(alias, failures, banned);
+                self.avatars
+                    .set_profile_fetch_state(alias, failures, banned);
             }
         }
 
@@ -707,9 +690,6 @@ impl MessageProcessor {
 
         // Remove peers that have no active rooms and timed out
         if !peers_to_remove.is_empty() {
-            let mut avatar_scene_ref = self.avatars.clone();
-            let mut avatar_scene = avatar_scene_ref.bind_mut();
-
             for address in peers_to_remove {
                 if let Some(peer) = self.peer_identities.remove(&address) {
                     tracing::debug!(
@@ -717,7 +697,7 @@ impl MessageProcessor {
                         address,
                         peer.alias
                     );
-                    avatar_scene.remove_avatar(peer.alias);
+                    self.avatars.remove_avatar(peer.alias);
 
                     // Clean up chat timestamp tracking for removed peer
                     self.last_chat_timestamps.remove(&address);
@@ -784,17 +764,8 @@ impl MessageProcessor {
                 if self.selected_video_sid.as_deref() != Some(video_frame.sid.as_str()) {
                     return;
                 }
-                use crate::godot_classes::dcl_global::DclGlobal;
-                let mut scene_runner = DclGlobal::singleton().bind().scene_runner.clone();
-                let mut scene_runner = scene_runner.bind_mut();
-
-                for (_, scene) in scene_runner.get_all_scenes_mut().iter_mut() {
-                    scene.process_livekit_video_frame(
-                        video_frame.width,
-                        video_frame.height,
-                        &video_frame.data,
-                    );
-                }
+                self.scenes
+                    .video_frame(video_frame.width, video_frame.height, &video_frame.data);
             }
             MessageType::VideoTrackEnded(sid) => {
                 if self.active_video_tracks.remove(&sid).is_some() {
@@ -823,36 +794,14 @@ impl MessageProcessor {
                     audio_init.samples_per_channel
                 );
 
-                // Forward to all scenes to initialize their video player audio
-                use crate::godot_classes::dcl_global::DclGlobal;
-                let mut scene_runner = DclGlobal::singleton().bind().scene_runner.clone();
-                let mut scene_runner = scene_runner.bind_mut();
-
-                for (_, scene) in scene_runner.get_all_scenes_mut().iter_mut() {
-                    scene.init_livekit_audio(
-                        audio_init.sample_rate,
-                        audio_init.num_channels,
-                        audio_init.samples_per_channel,
-                    );
-                }
+                self.scenes.init_audio(
+                    audio_init.sample_rate,
+                    audio_init.num_channels,
+                    audio_init.samples_per_channel,
+                );
             }
             MessageType::StreamerAudioFrame(audio_frame) => {
-                // Convert i16 audio data to PackedVector2Array (same as voice chat)
-                let frame = godot::prelude::PackedVector2Array::from_iter(
-                    audio_frame.data.iter().map(|c| {
-                        let val = (*c as f32) / (i16::MAX as f32);
-                        godot::prelude::Vector2 { x: val, y: val }
-                    }),
-                );
-
-                // Forward to all scenes
-                use crate::godot_classes::dcl_global::DclGlobal;
-                let mut scene_runner = DclGlobal::singleton().bind().scene_runner.clone();
-                let mut scene_runner = scene_runner.bind_mut();
-
-                for (_, scene) in scene_runner.get_all_scenes_mut().iter_mut() {
-                    scene.process_livekit_audio_frame(frame.clone());
-                }
+                self.scenes.audio_frame(&audio_frame.data);
             }
             _ => {} // Other message types are not media messages
         }
@@ -1034,10 +983,7 @@ impl MessageProcessor {
 
             // Brief borrow to add new avatar
             {
-                let mut avatar_scene_ref = self.avatars.clone();
-                let mut avatar_scene = avatar_scene_ref.bind_mut();
-                avatar_scene
-                    .add_avatar(new_alias, GString::from(&format!("{:#x}", message.address)));
+                self.avatars.add_avatar(new_alias, &message.address);
 
                 // If the user is blocked, hide the avatar immediately
                 if self.cached_blocked.contains(&message.address) {
@@ -1046,7 +992,7 @@ impl MessageProcessor {
                         message.address,
                         new_alias
                     );
-                    avatar_scene.set_avatar_blocked(new_alias, true);
+                    self.avatars.set_blocked(new_alias, true);
                 }
             }
 
@@ -1087,9 +1033,7 @@ impl MessageProcessor {
         // Handle non-RFC4 messages that need avatar_scene
         match &message.message {
             MessageType::InitVoice(voice_init) => {
-                let mut avatar_scene_ref = self.avatars.clone();
-                let mut avatar_scene = avatar_scene_ref.bind_mut();
-                avatar_scene.spawn_voice_channel(
+                self.avatars.spawn_voice_channel(
                     peer_alias,
                     voice_init.sample_rate,
                     voice_init.num_channels,
@@ -1108,16 +1052,7 @@ impl MessageProcessor {
                     return;
                 }
 
-                let frame = godot::prelude::PackedVector2Array::from_iter(
-                    voice_frame.data.iter().map(|c| {
-                        let val = (*c as f32) / (i16::MAX as f32);
-                        godot::prelude::Vector2 { x: val, y: val }
-                    }),
-                );
-
-                let mut avatar_scene_ref = self.avatars.clone();
-                let mut avatar_scene = avatar_scene_ref.bind_mut();
-                avatar_scene.push_voice_frame(peer_alias, frame);
+                self.avatars.push_voice_frame(peer_alias, &voice_frame.data);
             }
             // Media messages (InitVideo, VideoFrame, InitStreamerAudio, StreamerAudioFrame)
             // are handled early in process_message() via process_media_message() before
@@ -1168,18 +1103,7 @@ impl MessageProcessor {
                         );
                         if let Some(peer) = self.peer_identities.get_mut(&message.address) {
                             peer.peer_version = Some(version.to_string());
-                            // Only show version label for non-production builds
-                            if !DclGlobal::is_production() {
-                                let mut avatar_scene_ref = self.avatars.clone();
-                                let address_str = format!("{:#x}", message.address);
-                                avatar_scene_ref.call(
-                                    "set_avatar_version_by_address",
-                                    &[
-                                        GString::from(&address_str).to_variant(),
-                                        GString::from(version).to_variant(),
-                                    ],
-                                );
-                            }
+                            self.avatars.set_version(&message.address, version);
                         }
                     }
                     if let Some(endpoint) = json
@@ -1258,8 +1182,7 @@ impl MessageProcessor {
             alias,
             if live { "pulse" } else { "livekit" }
         );
-        let mut avatar_scene_ref = self.avatars.clone();
-        avatar_scene_ref.bind_mut().reset_movement_dedup(alias);
+        self.avatars.reset_movement_dedup(alias);
     }
 
     fn handle_peer_left(&mut self, address: H160, room_id: String) {
@@ -1288,9 +1211,7 @@ impl MessageProcessor {
                 );
 
                 // Remove avatar
-                let mut avatar_scene_ref = self.avatars.clone();
-                let mut avatar_scene = avatar_scene_ref.bind_mut();
-                avatar_scene.remove_avatar(alias);
+                self.avatars.remove_avatar(alias);
 
                 // Clean up chat timestamp tracking for removed peer
                 self.last_chat_timestamps.remove(&address);
@@ -1349,9 +1270,7 @@ impl MessageProcessor {
                 );
 
                 // Let avatar_scene handle timestamp validation
-                let mut avatar_scene_ref = self.avatars.clone();
-                let mut avatar_scene = avatar_scene_ref.bind_mut();
-                avatar_scene.update_avatar_transform_with_rfc4_position(peer_alias, &position);
+                self.avatars.update_position(peer_alias, &position);
             }
             rfc4::packet::Message::Movement(movement) => {
                 // Deduplicate: skip if timestamp is not newer (dual-room broadcasting).
@@ -1387,9 +1306,7 @@ impl MessageProcessor {
                 );
 
                 // Let avatar_scene handle timestamp validation
-                let mut avatar_scene_ref = self.avatars.clone();
-                let mut avatar_scene = avatar_scene_ref.bind_mut();
-                avatar_scene.update_avatar_transform_with_movement(peer_alias, &movement);
+                self.avatars.update_movement(peer_alias, &movement);
             }
             rfc4::packet::Message::MovementCompressed(movement_compressed) => {
                 tracing::debug!("movement compressed data: {movement_compressed:?}");
@@ -1428,9 +1345,7 @@ impl MessageProcessor {
                 );
 
                 // Let avatar_scene handle timestamp validation
-                let mut avatar_scene_ref = self.avatars.clone();
-                let mut avatar_scene = avatar_scene_ref.bind_mut();
-                avatar_scene.update_avatar_transform_with_movement_compressed(
+                self.avatars.update_movement_compressed(
                     peer_alias,
                     pos,
                     rotation_rad,
@@ -1901,10 +1816,8 @@ impl MessageProcessor {
                         base_url: profile_response.base_url.clone(),
                     };
 
-                    let mut avatar_scene_ref = self.avatars.clone();
-                    let mut avatar_scene = avatar_scene_ref.bind_mut();
                     // Use the peer's alias for the address in the profile
-                    avatar_scene.update_avatar_by_alias(peer.alias, &profile);
+                    self.avatars.update_profile(peer.alias, &profile);
                     peer.profile = Some(profile);
                     peer.profile_fetch_attempted = false; // Reset so we can fetch again if needed
 
@@ -1961,8 +1874,7 @@ impl MessageProcessor {
                 // carry no meaningful id; Unity's LiveKit stops reuse the start's id).
                 if player_emote.is_stopping == Some(true) {
                     tracing::debug!("Received PlayerEmote stop from {:#x}", address);
-                    let mut avatar_scene_ref = self.avatars.clone();
-                    avatar_scene_ref.bind_mut().stop_emote(peer_alias);
+                    self.avatars.stop_emote(peer_alias);
                     return;
                 }
 
@@ -1987,9 +1899,7 @@ impl MessageProcessor {
                 );
 
                 // Let avatar_scene handle emotes
-                let mut avatar_scene_ref = self.avatars.clone();
-                let mut avatar_scene = avatar_scene_ref.bind_mut();
-                avatar_scene.play_emote(
+                self.avatars.play_emote(
                     peer_alias,
                     player_emote.incremental_id,
                     &player_emote.urn,
@@ -2041,8 +1951,7 @@ impl MessageProcessor {
         self.peer_identities.clear();
         self.last_chat_timestamps.clear();
         // Clean up all avatars when disconnected
-        let mut avatar_scene_ref = self.avatars.clone();
-        avatar_scene_ref.bind_mut().clean();
+        self.avatars.clean();
     }
 
     /// Returns room connectivity info for each peer.
@@ -2094,12 +2003,84 @@ impl MessageProcessor {
     }
 }
 
-// MessageProcessor itself needs a live Godot engine (Gd<AvatarScene>), so the full
-// interleaved pulse/livekit sequences are covered by the cross-client QA matrix; what IS
-// engine-free — the gate's message classification — is pinned here.
+// The interleaved pulse/livekit sequences are covered by the cross-client QA matrix; the
+// sinks keep the processor engine-free, so the gate's classification and the peer lifecycle
+// are pinned here.
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::{cell::RefCell, rc::Rc};
+
+    #[derive(Default)]
+    struct AvatarLog(Vec<String>);
+
+    struct RecordingAvatars(Rc<RefCell<AvatarLog>>);
+
+    impl AvatarSink for RecordingAvatars {
+        fn add_avatar(&mut self, alias: u32, _address: &H160) {
+            self.0.borrow_mut().0.push(format!("add {alias}"));
+        }
+        fn remove_avatar(&mut self, alias: u32) {
+            self.0.borrow_mut().0.push(format!("remove {alias}"));
+        }
+        fn set_blocked(&mut self, alias: u32, blocked: bool) {
+            self.0
+                .borrow_mut()
+                .0
+                .push(format!("blocked {alias} {blocked}"));
+        }
+        fn clean(&mut self) {}
+        fn update_profile(&mut self, _: u32, _: &UserProfile) {}
+        fn set_profile_fetch_state(&mut self, _: u32, _: i32, _: bool) {}
+        fn set_version(&mut self, _: &H160, _: &str) {}
+        fn update_movement(&mut self, _: u32, _: &rfc4::Movement) {}
+        fn update_position(&mut self, _: u32, _: &rfc4::Position) {}
+        fn update_movement_compressed(
+            &mut self,
+            _: u32,
+            _: glam::Vec3,
+            _: f32,
+            _: f32,
+            _: glam::Vec3,
+            _: bool,
+        ) {
+        }
+        fn play_emote(&mut self, _: u32, _: u32, _: &str, _: i64) {}
+        fn stop_emote(&mut self, _: u32) {}
+        fn reset_movement_dedup(&mut self, _: u32) {}
+        fn spawn_voice_channel(&mut self, _: u32, _: u32, _: u32, _: u32) {}
+        fn push_voice_frame(&mut self, _: u32, _: &[i16]) {}
+    }
+
+    struct NoScenes;
+
+    impl SceneSink for NoScenes {
+        fn video_frame(&mut self, _: u32, _: u32, _: &[u8]) {}
+        fn init_audio(&mut self, _: u32, _: u32, _: u32) {}
+        fn audio_frame(&mut self, _: &[i16]) {}
+    }
+
+    #[test]
+    fn peer_joined_adds_an_avatar_through_the_sink() {
+        let log = Rc::new(RefCell::new(AvatarLog::default()));
+        let mut processor = MessageProcessor::new(
+            H160::from_low_u64_be(0x1000),
+            None,
+            Box::new(RecordingAvatars(log.clone())),
+            Box::new(NoScenes),
+        );
+        let peer = H160::from_low_u64_be(0x2000);
+        processor
+            .get_message_sender()
+            .try_send(IncomingMessage {
+                message: MessageType::PeerJoined,
+                address: peer,
+                room_id: "room".to_string(),
+            })
+            .unwrap();
+        processor.poll();
+        assert_eq!(log.borrow().0, vec!["add 1".to_string()]);
+    }
 
     #[test]
     fn pulse_preference_gates_exactly_the_avatar_sync_slice() {

@@ -5,7 +5,7 @@ use godot::{
         control::{FocusMode, MouseFilter},
         notify::ControlNotification,
         Control, IControl, Input, InputEvent, InputEventMouseButton, InputEventScreenDrag,
-        InputEventScreenTouch, Node,
+        InputEventScreenTouch,
     },
     global::MouseButton,
     prelude::*,
@@ -34,11 +34,12 @@ pub struct DclUiControl {
     base: Base<Control>,
 
     #[export]
+    #[var(pub)]
     dcl_entity_id: SceneEntityId,
 
     ui_result: Option<Rc<RefCell<UiResults>>>,
 
-    is_gui_input_signal_connected: bool,
+    gui_input_connection: Option<godot::signal::ConnectHandle>,
     force_pointer_filter_mode: PointerFilterMode,
 
     listening_mouse_down: bool,
@@ -63,7 +64,7 @@ impl IControl for DclUiControl {
     fn init(base: Base<Control>) -> Self {
         Self {
             base,
-            is_gui_input_signal_connected: false,
+            gui_input_connection: None,
             force_pointer_filter_mode: PointerFilterMode::PfmNone,
             listening_mouse_down: false,
             listening_mouse_up: false,
@@ -184,14 +185,11 @@ impl DclUiControl {
             let index = self.pressed_touch_index;
             let press_position = self.press_position;
             if let Some(mut mci) = self.get_mobile_camera_input() {
-                mci.call(
-                    "adopt_touch",
-                    &[
-                        index.to_variant(),
-                        press_position.to_variant(),
-                        global_position.to_variant(),
-                        event.get_relative().to_variant(),
-                    ],
+                mci.bind_mut().adopt_touch(
+                    index,
+                    press_position,
+                    global_position,
+                    event.get_relative(),
                 );
             }
         }
@@ -200,21 +198,15 @@ impl DclUiControl {
     fn update_adopted_touch(&mut self, global_position: Vector2, relative: Vector2) {
         let index = self.pressed_touch_index;
         if let Some(mut mci) = self.get_mobile_camera_input() {
-            mci.call(
-                "update_adopted_touch",
-                &[
-                    index.to_variant(),
-                    global_position.to_variant(),
-                    relative.to_variant(),
-                ],
-            );
+            mci.bind_mut()
+                .update_adopted_touch(index, global_position, relative);
         }
     }
 
     fn release_adopted_touch(&mut self) {
         let index = self.pressed_touch_index;
         if let Some(mut mci) = self.get_mobile_camera_input() {
-            mci.call("release_adopted_touch", &[index.to_variant()]);
+            mci.bind_mut().release_adopted_touch(index);
         }
     }
 
@@ -224,7 +216,9 @@ impl DclUiControl {
         self.base().get_global_transform() * local_position
     }
 
-    fn get_mobile_camera_input(&mut self) -> Option<Gd<Node>> {
+    fn get_mobile_camera_input(
+        &mut self,
+    ) -> Option<Gd<crate::player::mobile_input::MobileCameraInput>> {
         DclEngine::get()?.bind().touch_camera_input()
     }
 
@@ -264,7 +258,7 @@ impl DclUiControl {
     pub fn update_mouse_filter(&mut self) {
         match self.force_pointer_filter_mode {
             PointerFilterMode::PfmNone => {
-                if self.is_gui_input_signal_connected {
+                if self.gui_input_connection.is_some() {
                     self.base_mut().set_mouse_filter(MouseFilter::STOP);
                 } else {
                     self.base_mut().set_mouse_filter(MouseFilter::IGNORE);
@@ -277,15 +271,17 @@ impl DclUiControl {
     }
 
     fn set_connect_gui_input(&mut self, connect: bool) {
-        if connect != self.is_gui_input_signal_connected {
-            self.is_gui_input_signal_connected = connect;
-
-            let callable_on_gui_input = self.base().callable("_on_gui_input").clone();
+        if connect != self.gui_input_connection.is_some() {
             if connect {
-                self.base_mut().connect("gui_input", &callable_on_gui_input);
-            } else {
-                self.base_mut()
-                    .disconnect("gui_input", &callable_on_gui_input);
+                let this = self.to_gd();
+                let handle = self
+                    .base_mut()
+                    .signals()
+                    .gui_input()
+                    .connect_other(&this, |this: &mut Self, input| this._on_gui_input(input));
+                self.gui_input_connection = Some(handle);
+            } else if let Some(handle) = self.gui_input_connection.take() {
+                handle.disconnect();
             }
             self.update_mouse_filter();
         }

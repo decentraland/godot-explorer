@@ -729,6 +729,7 @@ mod tests {
             let (stream, _) = listener.accept().await.unwrap();
             let mut ws = tokio_tungstenite::accept_hdr_async(
                 stream,
+                #[allow(clippy::result_large_err)]
                 |_req: &Request, mut resp: Response| {
                     resp.headers_mut()
                         .insert("sec-websocket-protocol", "json".parse().unwrap());

@@ -1,3 +1,7 @@
+use crate::avatars::avatar::build::{start_avatar_shape_update, AvatarShapeConfig};
+use crate::avatars::avatar::emote_load::async_play_emote_or_stash;
+use crate::engine::local_task::spawn_local;
+use crate::godot_classes::dcl_avatar::DclAvatar;
 use crate::{
     avatars::avatar_type::DclAvatarWireFormat,
     comms::profile::{AvatarColor, AvatarColor3, AvatarEmote, AvatarWireFormat},
@@ -33,7 +37,7 @@ impl ToDictionaryColorObject for crate::dcl::components::proto_components::commo
         dictionary.set("b", self.b);
         dictionary.set("a", 1.0);
         let mut ret_dictionary = VarDictionary::new();
-        ret_dictionary.set("color", dictionary);
+        ret_dictionary.set("color", &dictionary);
         ret_dictionary
     }
 }
@@ -45,7 +49,7 @@ impl ToDictionaryColorObject for crate::dcl::components::proto_components::commo
         dictionary.set("b", self.b);
         dictionary.set("a", self.a);
         let mut ret_dictionary = VarDictionary::new();
-        ret_dictionary.set("color", dictionary);
+        ret_dictionary.set("color", &dictionary);
         ret_dictionary
     }
 }
@@ -63,15 +67,8 @@ fn color3_to_avatar_color(color: Color3) -> AvatarColor {
 /// Pull the emote still mid-playback off an avatar node about to be freed and turn
 /// it into an `ES_INTERRUPTED` entry. Returns None when nothing was playing.
 fn take_unfinished_emote(avatar_node: &mut Gd<Node>) -> Option<PbAvatarEmoteCommand> {
-    let info = avatar_node
-        .call("take_unfinished_emote", &[])
-        .try_to::<VarArray>()
-        .ok()?;
-    if info.len() != 2 {
-        return None;
-    }
-    let urn = info.at(0).try_to::<GString>().ok()?.to_string();
-    let mask = info.at(1).try_to::<i64>().unwrap_or(-1);
+    let mut avatar = avatar_node.clone().try_cast::<DclAvatar>().ok()?;
+    let (urn, mask) = avatar.bind_mut().take_unfinished_emote()?;
     Some(PbAvatarEmoteCommand {
         emote_urn: urn,
         r#loop: false,
@@ -150,15 +147,12 @@ pub fn update_avatar_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
 
                 let new_avatar_data = DclAvatarWireFormat::from_gd(new_avatar_data);
 
-                // Build AvatarShape-specific config dictionary
-                let mut avatar_shape_config = VarDictionary::new();
-                avatar_shape_config.set("is_avatar_shape", true);
-                // Forward the AvatarShape.id when it looks like an eth address.
-                // GDScript uses this to route the impostor capture path through
-                // the catalyst body-texture endpoint (cheap, pre-baked) instead
-                // of an off-screen avatar render (heavy, ~1 frame each).
+                let mut avatar_shape_config = AvatarShapeConfig::default();
+                // Forward the AvatarShape.id when it looks like an eth address: the impostor
+                // capture then takes the catalyst body-texture endpoint (cheap, pre-baked)
+                // instead of an off-screen avatar render (heavy, ~1 frame each).
                 if new_value.id.starts_with("0x") && new_value.id.len() == 42 {
-                    avatar_shape_config.set("id", new_value.id.clone());
+                    avatar_shape_config.id = new_value.id.clone();
                 }
                 if let Some(expression_trigger_id) = &new_value.expression_trigger_id {
                     // Check if this is a scene emote (GLB/GLTF path)
@@ -181,7 +175,7 @@ pub fn update_avatar_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                                 expression_trigger_id,
                                 scene_emote_urn
                             );
-                            avatar_shape_config.set("expression_trigger_id", scene_emote_urn);
+                            avatar_shape_config.expression_trigger_id = scene_emote_urn;
                         } else {
                             tracing::warn!(
                                 "AvatarShape expression_trigger: scene emote '{}' not found in content mapping",
@@ -190,92 +184,72 @@ pub fn update_avatar_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                         }
                     } else {
                         // URN or default emote - pass as-is
-                        avatar_shape_config
-                            .set("expression_trigger_id", expression_trigger_id.clone());
+                        avatar_shape_config.expression_trigger_id = expression_trigger_id.clone();
                     }
                 }
                 if let Some(expression_trigger_timestamp) = new_value.expression_trigger_timestamp {
-                    avatar_shape_config
-                        .set("expression_trigger_timestamp", expression_trigger_timestamp);
+                    avatar_shape_config.expression_trigger_timestamp =
+                        Some(expression_trigger_timestamp);
                 }
 
-                if let Some(mut avatar_node) = existing {
-                    avatar_node.call_deferred(
-                        "async_update_avatar",
-                        &[
-                            new_avatar_data.to_variant(),
-                            avatar_name.to_variant(),
-                            avatar_shape_config.to_variant(),
-                        ],
+                if let Some(avatar_node) = existing.and_then(|n| n.try_cast::<DclAvatar>().ok()) {
+                    start_avatar_shape_update(
+                        avatar_node,
+                        new_avatar_data,
+                        avatar_name,
+                        avatar_shape_config,
                     );
                 } else {
                     let mut new_avatar_shape = crate::scene_runner::scene_cache::packed_scene(
                         "res://src/decentraland_components/avatar/avatar.tscn",
                     )
                     .instantiate()
-                    .unwrap();
+                    .unwrap()
+                    .cast::<DclAvatar>();
 
-                    new_avatar_shape.set("skip_process", &true.to_variant());
-                    // Flag it as an AvatarShape *before* add_child fires _ready, so the
-                    // nameplate gate can apply the "scene NPC with no real name -> hide"
-                    // rule from frame one. Otherwise _ready runs with is_avatar_shape=false
-                    // (it's only delivered by the deferred async_update_avatar below) and
-                    // the default "NPC" tag flashes on screen until that deferred call lands.
-                    new_avatar_shape.set("is_avatar_shape", &true.to_variant());
+                    {
+                        let mut avatar = new_avatar_shape.bind_mut();
+                        avatar.skip_process = true;
+                        // Flagged before add_child fires `ready`, so the nameplate gate can
+                        // apply the "scene NPC with no real name -> hide" rule from frame one:
+                        // the real value only arrives with the update below, and the default
+                        // "NPC" tag would flash on screen until it lands.
+                        avatar.is_avatar_shape = true;
+                    }
                     new_avatar_shape.set_name("AvatarShape");
                     add_own_visual_child(&mut node_3d, &new_avatar_shape.clone().upcast::<Node>());
 
-                    // Remove trigger detection for AvatarShapes - scene NPCs should not trigger areas
-                    new_avatar_shape.call("remove_trigger_detection", &[]);
+                    // Scene NPCs should not trigger areas.
+                    new_avatar_shape.bind_mut().remove_trigger_detection();
 
                     // Report emote terminal states (finished/interrupted) back to this
                     // scene's AvatarEmoteCommand set. Starts are scene-authored, so only
                     // the ending is appended by the explorer.
                     let scene_id = scene.scene_id.0;
                     let entity_id = entity.as_i32();
-                    let emote_finished_callable = Callable::from_fn(
-                        "on_avatar_shape_emote_finished",
-                        move |args: &[&Variant]| {
-                            if args.len() != 3 {
-                                return Variant::nil();
-                            }
-                            let Ok(emote_id) = args[0].try_to::<GString>() else {
-                                return Variant::nil();
-                            };
-                            let Ok(interrupted) = args[1].try_to::<bool>() else {
-                                return Variant::nil();
-                            };
-                            let Ok(mask) = args[2].try_to::<i64>() else {
-                                return Variant::nil();
-                            };
-
+                    new_avatar_shape.signals().emote_finished().connect(
+                        move |emote_id: GString, interrupted, mask| {
                             DclGlobal::singleton()
                                 .bind()
                                 .scene_runner
                                 .clone()
-                                .call_deferred(
-                                    "on_avatar_shape_emote_finished",
-                                    &[
-                                        scene_id.to_variant(),
-                                        entity_id.to_variant(),
-                                        emote_id.to_variant(),
-                                        interrupted.to_variant(),
-                                        mask.to_variant(),
-                                    ],
-                                );
-
-                            Variant::nil()
+                                .run_deferred(move |runner| {
+                                    runner.on_avatar_shape_emote_finished(
+                                        scene_id,
+                                        entity_id,
+                                        emote_id,
+                                        interrupted,
+                                        mask,
+                                    )
+                                });
                         },
                     );
-                    new_avatar_shape.connect("emote_finished", &emote_finished_callable);
 
-                    new_avatar_shape.call_deferred(
-                        "async_update_avatar",
-                        &[
-                            new_avatar_data.to_variant(),
-                            avatar_name.to_variant(),
-                            avatar_shape_config.to_variant(),
-                        ],
+                    start_avatar_shape_update(
+                        new_avatar_shape,
+                        new_avatar_data,
+                        avatar_name,
+                        avatar_shape_config,
                     );
                 }
             }
@@ -303,7 +277,10 @@ pub fn update_avatar_shape_emote_command(scene: &mut Scene, crdt_state: &mut Sce
                 continue;
             };
 
-            let Some(mut avatar_node) = node_3d.try_get_node_as::<Node>("AvatarShape") else {
+            let Some(mut avatar_node) = node_3d
+                .try_get_node_as::<Node>("AvatarShape")
+                .and_then(|n| n.try_cast::<DclAvatar>().ok())
+            else {
                 continue;
             };
 
@@ -351,43 +328,31 @@ pub fn update_avatar_shape_emote_command(scene: &mut Scene, crdt_state: &mut Sce
                 );
 
                 // Register content URL for this scene (so GDScript can look it up)
-                avatar_node.call_deferred(
-                    "register_scene_emote_content",
-                    &[
-                        scene.scene_entity_definition.id.to_godot().to_variant(),
-                        scene.content_mapping.base_url.to_godot().to_variant(),
-                        emote_hash.glb_hash.to_godot().to_variant(),
-                        emote_hash
-                            .audio_hash
-                            .as_deref()
-                            .unwrap_or_default()
-                            .to_godot()
-                            .to_variant(),
-                    ],
+                avatar_node.bind_mut().register_scene_emote_content(
+                    &scene.scene_entity_definition.id,
+                    &scene.content_mapping.base_url,
+                    &emote_hash.glb_hash,
+                    emote_hash.audio_hash.as_deref().unwrap_or_default(),
                 );
 
-                // Call the SAME function as wearable emotes!
-                avatar_node.call_deferred(
-                    "async_play_emote",
-                    &[
-                        scene_emote_urn.to_variant(),
-                        crate::avatars::emote_mask::internal_from_component_mask(emote.mask)
-                            .to_variant(),
-                    ],
-                );
+                // The same path as wearable emotes.
+                spawn_local(async_play_emote_or_stash(
+                    avatar_node.clone(),
+                    scene_emote_urn,
+                    crate::avatars::emote_mask::internal_from_component_mask(emote.mask),
+                    -1,
+                ));
             } else {
                 tracing::debug!(
                     "AvatarEmoteCommand: playing wearable emote urn={}",
                     emote.emote_urn
                 );
-                avatar_node.call_deferred(
-                    "async_play_emote",
-                    &[
-                        emote.emote_urn.to_variant(),
-                        crate::avatars::emote_mask::internal_from_component_mask(emote.mask)
-                            .to_variant(),
-                    ],
-                );
+                spawn_local(async_play_emote_or_stash(
+                    avatar_node.clone(),
+                    emote.emote_urn.clone(),
+                    crate::avatars::emote_mask::internal_from_component_mask(emote.mask),
+                    -1,
+                ));
             }
         }
     }

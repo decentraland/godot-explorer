@@ -15,6 +15,7 @@ key is a core function; public GETs stay in RN; hosts from `core.urls()`.
 
 ## Exit criteria
 
+- [ ] The Android Godot plugins are removed (moved from phase 5, user decision 17 Oct 2026): `plugins/`, `dcl-godot-android`, `godot/android`, `dcl_build_plugin`, the committed plugin binaries, the plugin entries in `export_presets.cfg` and the plugin AARs with their Maven dependencies in `rn/android/app/godot.gradle` (D-41); replace the Gradle build with `--export-pack` plus xtask copies. Under the D-39 fallback the video-only plugin stays until 8.2. The fork also leaves `GODOT_USE_BRANCH` here: merge decentraland/godotengine#29 into `4.6.2` and bump `GODOT_BUILD_SHA`.
 - [ ] Each feature behind a feature flag from the core, on by default in the RC.
 - [ ] Each feature has its parity-checklist rows (4.16) and a QA script in the `REVIEW.md` §4 format.
 - [ ] No new `.gd`, no hardcoded host, no engine command from RN: the branch rules hold.

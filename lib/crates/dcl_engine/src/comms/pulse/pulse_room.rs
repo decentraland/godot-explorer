@@ -24,7 +24,7 @@
 use std::time::{Duration, Instant};
 
 use ethers_core::types::H160;
-use godot::prelude::Vector3;
+use glam::Vec3;
 use prost::Message as _;
 use tokio::sync::mpsc;
 
@@ -212,7 +212,7 @@ impl PulseRoom {
         if !self.is_established() {
             return;
         }
-        let world = Vector3::new(
+        let world = Vec3::new(
             movement.position_x,
             movement.position_y,
             movement.position_z,
@@ -287,7 +287,7 @@ impl PulseRoom {
     /// mandatory first gameplay message after the handshake, re-sent on instant repositions
     /// (server supports same-realm re-teleports). The caller guards the realm-name validity;
     /// this guards the grid bounds.
-    pub fn send_teleport(&mut self, world: Vector3, realm: &str) {
+    pub fn send_teleport(&mut self, world: Vec3, realm: &str) {
         if !self.check_in_grid(world) {
             return;
         }
@@ -310,7 +310,7 @@ impl PulseRoom {
 
     /// Grid-bounds guard shared by every position-bearing send. Out-of-grid (some Worlds /
     /// preview realms) → suppress and log once per excursion.
-    fn check_in_grid(&mut self, world: Vector3) -> bool {
+    fn check_in_grid(&mut self, world: Vec3) -> bool {
         if self.grid.contains_world(world) {
             self.warned_out_of_grid = false;
             true

@@ -1,6 +1,8 @@
 use godot::prelude::*;
 
-use crate::comms::profile::{AvatarColor, AvatarEmote, AvatarSnapshots, AvatarWireFormat};
+use crate::comms::profile::{
+    AvatarColor, AvatarColor3, AvatarEmote, AvatarSnapshots, AvatarWireFormat,
+};
 
 const AVATAR_EMOTE_SLOTS_COUNT: usize = 10;
 const DEFAULT_EMOTES: [&str; AVATAR_EMOTE_SLOTS_COUNT] = [
@@ -31,12 +33,12 @@ impl DclAvatarWireFormat {
 #[godot_api]
 impl DclAvatarWireFormat {
     #[func]
-    fn equal(&self, other: Gd<DclAvatarWireFormat>) -> bool {
+    pub fn equal(&self, other: Gd<DclAvatarWireFormat>) -> bool {
         self.inner == other.bind().inner
     }
 
     #[func]
-    fn get_body_shape(&self) -> GString {
+    pub fn get_body_shape(&self) -> GString {
         if let Some(body_shape) = self.inner.body_shape.as_ref() {
             GString::from(body_shape)
         } else {
@@ -45,7 +47,7 @@ impl DclAvatarWireFormat {
     }
 
     #[func]
-    fn get_eyes_color(&self) -> Color {
+    pub fn get_eyes_color(&self) -> Color {
         if let Some(eyes) = self.inner.eyes.as_ref() {
             eyes.into()
         } else {
@@ -54,7 +56,7 @@ impl DclAvatarWireFormat {
     }
 
     #[func]
-    fn get_hair_color(&self) -> Color {
+    pub fn get_hair_color(&self) -> Color {
         if let Some(hair) = self.inner.hair.as_ref() {
             hair.into()
         } else {
@@ -63,7 +65,7 @@ impl DclAvatarWireFormat {
     }
 
     #[func]
-    fn get_skin_color(&self) -> Color {
+    pub fn get_skin_color(&self) -> Color {
         if let Some(skin) = self.inner.skin.as_ref() {
             skin.into()
         } else {
@@ -72,7 +74,7 @@ impl DclAvatarWireFormat {
     }
 
     #[func]
-    fn get_wearables(&self) -> PackedStringArray {
+    pub fn get_wearables(&self) -> PackedStringArray {
         let mut wearables = PackedStringArray::new();
         for wearable in self.inner.wearables.iter() {
             wearables.push(&GString::from(wearable));
@@ -81,7 +83,7 @@ impl DclAvatarWireFormat {
     }
 
     #[func]
-    fn get_emotes(&self) -> PackedStringArray {
+    pub fn get_emotes(&self) -> PackedStringArray {
         let mut emotes = PackedStringArray::new();
         let empty_emotes = vec![];
         let used_emotes = self.inner.emotes.as_ref().unwrap_or(&empty_emotes);
@@ -99,7 +101,7 @@ impl DclAvatarWireFormat {
     }
 
     #[func]
-    fn get_snapshots_face_hash(&self) -> GString {
+    pub fn get_snapshots_face_hash(&self) -> GString {
         self.inner.snapshots.as_ref().map_or_else(
             || GString::from(""),
             |snapshots| snapshots.face256.clone().to_godot(),
@@ -107,7 +109,7 @@ impl DclAvatarWireFormat {
     }
 
     #[func]
-    fn get_snapshots_face_url(&self) -> GString {
+    pub fn get_snapshots_face_url(&self) -> GString {
         self.inner
             .snapshots
             .as_ref()
@@ -116,7 +118,7 @@ impl DclAvatarWireFormat {
     }
 
     #[func]
-    fn get_force_render(&self) -> Array<GString> {
+    pub fn get_force_render(&self) -> Array<GString> {
         if let Some(array) = &self.inner.force_render {
             Array::from_iter(array.iter().map(GString::from))
         } else {
@@ -125,12 +127,12 @@ impl DclAvatarWireFormat {
     }
 
     #[func]
-    fn get_show_only_wearables(&self) -> bool {
+    pub fn get_show_only_wearables(&self) -> bool {
         self.inner.show_only_wearables
     }
 
     #[func]
-    fn get_snapshots_body_url(&self) -> GString {
+    pub fn get_snapshots_body_url(&self) -> GString {
         self.inner
             .snapshots
             .as_ref()
@@ -139,34 +141,34 @@ impl DclAvatarWireFormat {
     }
 
     #[func]
-    fn set_force_render(&mut self, force_render: Array<Variant>) {
+    pub fn set_force_render(&mut self, force_render: Array<Variant>) {
         self.inner.force_render = Some(Vec::from_iter(
             force_render.iter_shared().map(|v| v.to_string()),
         ));
     }
 
     #[func]
-    fn set_body_shape(&mut self, body_shape: GString) {
+    pub fn set_body_shape(&mut self, body_shape: GString) {
         self.inner.body_shape = Some(body_shape.to_string());
     }
 
     #[func]
-    fn set_eyes_color(&mut self, color: Color) {
+    pub fn set_eyes_color(&mut self, color: Color) {
         self.inner.eyes = Some(AvatarColor::from(&color));
     }
 
     #[func]
-    fn set_hair_color(&mut self, color: Color) {
+    pub fn set_hair_color(&mut self, color: Color) {
         self.inner.hair = Some(AvatarColor::from(&color));
     }
 
     #[func]
-    fn set_skin_color(&mut self, color: Color) {
+    pub fn set_skin_color(&mut self, color: Color) {
         self.inner.skin = Some(AvatarColor::from(&color));
     }
 
     #[func]
-    fn set_wearables(&mut self, wearables: PackedStringArray) {
+    pub fn set_wearables(&mut self, wearables: PackedStringArray) {
         let mut wearables_vec = Vec::new();
         for i in 0..wearables.len() {
             if let Some(wearable) = wearables.get(i).as_ref() {
@@ -179,7 +181,7 @@ impl DclAvatarWireFormat {
     }
 
     #[func]
-    fn set_emotes(&mut self, emotes: PackedStringArray) {
+    pub fn set_emotes(&mut self, emotes: PackedStringArray) {
         if emotes.len() != AVATAR_EMOTE_SLOTS_COUNT {
             tracing::warn!("Invalid emotes array length");
             return;
@@ -206,7 +208,7 @@ impl DclAvatarWireFormat {
     // This stores locally generated snapshots for immediate display in the UI.
     // The profile-images service generates snapshots on-demand for other users.
     #[func]
-    fn set_snapshots(&mut self, face256: GString, body: GString) {
+    pub fn set_snapshots(&mut self, face256: GString, body: GString) {
         // Use "local:" prefix to indicate these are locally stored files
         // The content provider will find them by hash in the local content folder
         let face_local_url = format!("local:{}", face256);
@@ -236,5 +238,23 @@ impl DclAvatarWireFormat {
         let value = serde_json::to_string(&self.inner).unwrap_or_default();
         let value = godot::classes::Json::parse_string(&value);
         value.to::<VarDictionary>()
+    }
+}
+
+impl From<&AvatarColor> for Color {
+    fn from(val: &AvatarColor) -> Self {
+        Color::from_rgb(val.color.r, val.color.g, val.color.b)
+    }
+}
+
+impl From<&Color> for AvatarColor {
+    fn from(val: &Color) -> Self {
+        AvatarColor {
+            color: AvatarColor3 {
+                r: val.r,
+                g: val.g,
+                b: val.b,
+            },
+        }
     }
 }

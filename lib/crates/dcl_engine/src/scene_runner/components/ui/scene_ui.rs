@@ -75,7 +75,7 @@ fn assign_z_index_recursive(
         // and render BELOW any child UI placed inside the scroll (which
         // got higher absolute z values from this same counter).
         if let Some(ui_node) = godot_dcl_scene.get_node_or_null_ui_mut(entity) {
-            if let Some(mut scroll) = ui_node.scroll_container.clone() {
+            if let Some(scroll) = ui_node.scroll_container.clone() {
                 *z_counter += 1;
                 let bar_z = (*z_counter).clamp(
                     RenderingServer::CANVAS_ITEM_Z_MIN,

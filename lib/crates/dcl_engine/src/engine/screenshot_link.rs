@@ -41,18 +41,17 @@ pub(super) fn register() {
 /// Waits for the next `frame_post_draw`, then saves the viewport. Main thread.
 fn capture_after_draw(sender: oneshot::Sender<CaptureResult>) {
     let mut sender = Some(sender);
-    let callable = Callable::from_fn("capture_screenshot", move |_| {
-        // A caller that timed out is gone: skip the PNG.
-        if let Some(sender) = sender.take().filter(|sender| !sender.is_closed()) {
-            let _ = sender.send(save_viewport());
-        }
-        Variant::nil()
-    });
-    RenderingServer::singleton().connect_flags(
-        "frame_post_draw",
-        &callable,
-        ConnectFlags::ONE_SHOT,
-    );
+    RenderingServer::singleton()
+        .signals()
+        .frame_post_draw()
+        .builder()
+        .flags(ConnectFlags::ONE_SHOT)
+        .connect(move || {
+            // A caller that timed out is gone: skip the PNG.
+            if let Some(sender) = sender.take().filter(|sender| !sender.is_closed()) {
+                let _ = sender.send(save_viewport());
+            }
+        });
 }
 
 fn save_viewport() -> CaptureResult {

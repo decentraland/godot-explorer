@@ -5,15 +5,14 @@ use std::{
 
 use crate::{
     auth::{ephemeral_auth_chain::EphemeralAuthChain, wallet::AsH160},
-    avatars::avatar_scene::AvatarScene,
-    comms::profile::UserProfile,
+    comms::{profile::UserProfile, sink::AvatarSink},
     dcl::components::proto_components::kernel::comms::{
         rfc4::{self},
         rfc5::{ws_packet, WsIdentification, WsPacket, WsPeerUpdate, WsSignedChallenge},
     },
+    utils::ws_client::{WsClient, WsState},
 };
 use ethers_core::types::{Signature, H160};
-use godot::{classes::WebSocketPeer, prelude::*};
 use prost::Message;
 use tracing::error;
 
@@ -57,9 +56,9 @@ pub struct WebSocketRoom {
     state: WsRoomState,
 
     // Connection
-    ws_url: GString,
+    ws_url: String,
     last_try_to_connect: Instant,
-    ws_peer: Gd<WebSocketPeer>,
+    ws: WsClient,
     signature: Option<Signature>,
 
     // Self alias
@@ -74,7 +73,7 @@ pub struct WebSocketRoom {
     message_processor_sender: Option<tokio::sync::mpsc::Sender<IncomingMessage>>,
 
     // Trade-off with other peers (kept for backwards compatibility)
-    avatars: Gd<AvatarScene>,
+    avatars: Box<dyn AvatarSink>,
     #[allow(dead_code)]
     last_profile_response_sent: Instant,
     last_profile_request_sent: Instant,
@@ -86,7 +85,7 @@ impl WebSocketRoom {
         room_id: String,
         ephemeral_auth_chain: EphemeralAuthChain,
         player_profile: Option<UserProfile>,
-        avatars: Gd<AvatarScene>,
+        avatars: Box<dyn AvatarSink>,
     ) -> Self {
         let lower_url = ws_url.to_lowercase();
         let ws_url = if !lower_url.starts_with("ws://") && !lower_url.starts_with("wss://") {
@@ -102,8 +101,8 @@ impl WebSocketRoom {
         let old_time = Instant::now() - Duration::from_secs(INITIAL_TIMESTAMP_OFFSET_SECS);
 
         Self {
-            ws_peer: WebSocketPeer::new_gd(),
-            ws_url: GString::from(&ws_url),
+            ws: WsClient::new(),
+            ws_url,
             state: WsRoomState::Connecting,
             player_address: ephemeral_auth_chain.signer(),
             ephemeral_auth_chain,
@@ -164,30 +163,19 @@ impl WebSocketRoom {
             return false;
         }
 
-        let buf = PackedByteArray::from_iter(buf);
-        matches!(self.ws_peer.send(&buf), godot::global::Error::OK)
+        self.ws.send(buf)
     }
 
     fn _poll(&mut self) {
-        let mut peer = self.ws_peer.clone();
-        peer.poll();
-
-        let ws_state = peer.get_ready_state();
+        let ws_state = self.ws.state();
 
         match self.state.clone() {
             WsRoomState::Connecting => match ws_state {
-                godot::classes::web_socket_peer::State::CLOSED => {
+                WsState::Closed => {
                     if (Instant::now() - self.last_try_to_connect).as_secs()
                         > RECONNECT_INTERVAL_SECS
                     {
-                        let ws_protocols = {
-                            let mut v = PackedStringArray::new();
-                            v.push(&GString::from("rfc5"));
-                            v
-                        };
-
-                        peer.set("supported_protocols", &ws_protocols.to_variant());
-                        peer.call("connect_to_url", &[self.ws_url.clone().to_variant()]);
+                        self.ws.connect(&self.ws_url, "rfc5");
 
                         self.last_try_to_connect = Instant::now();
                         self.peer_identities.clear();
@@ -195,13 +183,13 @@ impl WebSocketRoom {
                         self.signature = None;
                     }
                 }
-                godot::classes::web_socket_peer::State::OPEN => {
+                WsState::Open => {
                     self.state = WsRoomState::Connected;
                 }
                 _ => {}
             },
             WsRoomState::Connected => match ws_state {
-                godot::classes::web_socket_peer::State::OPEN => {
+                WsState::Open => {
                     self._send(
                         WsPacket {
                             message: Some(ws_packet::Message::PeerIdentification(
@@ -220,8 +208,8 @@ impl WebSocketRoom {
                 }
             },
             WsRoomState::IdentMessageSent => match ws_state {
-                godot::classes::web_socket_peer::State::OPEN => {
-                    while let Some((packet_length, message)) = get_next_packet(peer.clone()) {
+                WsState::Open => {
+                    while let Some((packet_length, message)) = get_next_packet(&mut self.ws) {
                         match message {
                             ws_packet::Message::ChallengeMessage(challenge_msg) => {
                                 tracing::debug!("comms > peer msg {:?}", challenge_msg);
@@ -275,8 +263,8 @@ impl WebSocketRoom {
                 }
             },
             WsRoomState::ChallengeMessageSent => match ws_state {
-                godot::classes::web_socket_peer::State::OPEN => {
-                    while let Some((packet_length, message)) = get_next_packet(peer.clone()) {
+                WsState::Open => {
+                    while let Some((packet_length, message)) = get_next_packet(&mut self.ws) {
                         match message {
                             ws_packet::Message::WelcomeMessage(welcome_msg) => {
                                 // welcome_msg.
@@ -292,12 +280,9 @@ impl WebSocketRoom {
 
                                 // Profile announcement is now handled by CommunicationManager
 
-                                self.avatars.bind_mut().clean();
+                                self.avatars.clean();
                                 for (alias, peer) in self.peer_identities.iter() {
-                                    self.avatars.bind_mut().add_avatar(
-                                        *alias,
-                                        GString::from(&format!("{:#x}", peer.address)),
-                                    );
+                                    self.avatars.add_avatar(*alias, &peer.address);
 
                                     // Send PeerJoined event to MessageProcessor
                                     if let Some(sender) = &self.message_processor_sender {
@@ -328,7 +313,7 @@ impl WebSocketRoom {
                 }
             },
             WsRoomState::WelcomeMessageReceived => match ws_state {
-                godot::classes::web_socket_peer::State::OPEN => {
+                WsState::Open => {
                     self._handle_messages();
                 }
                 _ => {
@@ -338,20 +323,12 @@ impl WebSocketRoom {
         }
     }
 
-    fn _clean(&self) {
-        let mut peer = self.ws_peer.clone();
-        peer.close();
-        match peer.get_ready_state() {
-            godot::classes::web_socket_peer::State::OPEN
-            | godot::classes::web_socket_peer::State::CONNECTING => {
-                peer.close();
-            }
-            _ => {}
-        }
+    fn _clean(&mut self) {
+        self.ws.close();
     }
 
     fn _handle_messages(&mut self) {
-        while let Some((_packet_length, message)) = get_next_packet(self.ws_peer.clone()) {
+        while let Some((_packet_length, message)) = get_next_packet(&mut self.ws) {
             match message {
                 ws_packet::Message::ChallengeMessage(_)
                 | ws_packet::Message::PeerIdentification(_)
@@ -362,9 +339,7 @@ impl WebSocketRoom {
                 ws_packet::Message::PeerJoinMessage(peer) => {
                     if let Some(h160) = peer.address.as_h160() {
                         self.peer_identities.insert(peer.alias, Peer::new(h160));
-                        self.avatars
-                            .bind_mut()
-                            .add_avatar(peer.alias, GString::from(&format!("{:#x}", h160)));
+                        self.avatars.add_avatar(peer.alias, &h160);
 
                         // Send PeerJoined event to MessageProcessor
                         if let Some(sender) = &self.message_processor_sender {
@@ -385,7 +360,7 @@ impl WebSocketRoom {
                 }
                 ws_packet::Message::PeerLeaveMessage(peer) => {
                     if let Some(peer_data) = self.peer_identities.remove(&peer.alias) {
-                        self.avatars.bind_mut().remove_avatar(peer.alias);
+                        self.avatars.remove_avatar(peer.alias);
 
                         // Send PeerLeft event to MessageProcessor
                         if let Some(sender) = &self.message_processor_sender {
@@ -435,12 +410,7 @@ impl WebSocketRoom {
                         // Fallback: handle locally (legacy mode)
                         match message {
                             rfc4::packet::Message::Position(position) => {
-                                self.avatars
-                                    .bind_mut()
-                                    .update_avatar_transform_with_rfc4_position(
-                                        update.from_alias,
-                                        &position,
-                                    );
+                                self.avatars.update_position(update.from_alias, &position);
                             }
                             _ => {
                                 tracing::debug!(
@@ -462,7 +432,7 @@ impl WebSocketRoom {
                             room_id: self.room_id.clone(),
                         });
                     }
-                    self.ws_peer.close();
+                    self.ws.close();
                     self.state = WsRoomState::Connecting;
                 }
             }
@@ -475,9 +445,9 @@ impl WebSocketRoom {
                 .peer_identities
                 .iter()
                 .filter_map(|(_, peer)| {
-                    if peer.profile.is_some() {
+                    if let Some(profile) = peer.profile.as_ref() {
                         let announced_version = peer.announced_version.unwrap_or(0);
-                        let current_version = peer.profile.as_ref().unwrap().version;
+                        let current_version = profile.version;
 
                         if announced_version > current_version {
                             None
@@ -524,17 +494,11 @@ impl WebSocketRoom {
     }
 }
 
-fn get_next_packet(mut peer: Gd<WebSocketPeer>) -> Option<(usize, ws_packet::Message)> {
-    if peer.get_available_packet_count() > 0 {
-        let packet = peer.get_packet();
-        let packet_length = packet.len();
-        let packet = WsPacket::decode(packet.as_slice());
-        if let Ok(packet) = packet {
-            packet.message.as_ref()?;
-            return Some((packet_length, packet.message.unwrap()));
-        }
-    }
-    None
+fn get_next_packet(ws: &mut WsClient) -> Option<(usize, ws_packet::Message)> {
+    let packet = ws.next_packet()?;
+    let packet_length = packet.len();
+    let packet = WsPacket::decode(packet.as_slice()).ok()?;
+    Some((packet_length, packet.message?))
 }
 
 impl Adapter for WebSocketRoom {

@@ -131,7 +131,7 @@ impl INinePatchRect for DclUiBackground {
     }
 
     fn ready(&mut self) {
-        let mut parent = self
+        let parent = self
             .base()
             .get_parent()
             .expect("ui_background suppose to have a parent");
@@ -140,7 +140,13 @@ impl INinePatchRect for DclUiBackground {
             "[UI_BKG] ready: connecting to parent resize signal, parent_size={:?}",
             parent_size
         );
-        parent.connect("resized", &self.base().callable("_on_parent_size"));
+        let this = self.to_gd();
+        if let Ok(parent) = parent.try_cast::<Control>() {
+            parent
+                .signals()
+                .resized()
+                .connect_other(&this, |this: &mut Self| this._on_parent_size());
+        }
 
         self._set_white_pixel();
     }
@@ -673,7 +679,7 @@ impl DclUiBackground {
                         let global = DclGlobal::singleton();
                         let mut content_provider = global.bind().get_content_provider();
                         let quality = TextureQuality::Source;
-                        let mut promise = content_provider
+                        let promise = content_provider
                             .bind_mut()
                             .fetch_texture_by_hash_with_quality(
                                 texture_hash.to_godot(),
@@ -686,14 +692,16 @@ impl DclUiBackground {
                             format!("{}_q{}", texture_hash, quality.to_i32()).to_godot();
 
                         if !promise.bind().is_resolved() {
-                            promise.connect(
-                                "on_resolved",
-                                &self.base().callable("_on_texture_loaded"),
-                            );
+                            promise
+                                .signals()
+                                .on_resolved()
+                                .connect_other(&self.to_gd(), |this: &mut Self| {
+                                    this._on_texture_loaded()
+                                });
                         }
 
                         self.first_texture_load_shot = true;
-                        self.base_mut().call_deferred("_on_texture_loaded", &[]);
+                        self.run_deferred(|this| this._on_texture_loaded());
                     }
                     DclSourceTex::VideoTexture(_) => {
                         // TODO: implement video texture
@@ -701,7 +709,7 @@ impl DclUiBackground {
                     DclSourceTex::AvatarTexture(user_id) => {
                         let global = DclGlobal::singleton();
                         let mut content_provider = global.bind().get_content_provider();
-                        let mut promise = content_provider
+                        let promise = content_provider
                             .bind_mut()
                             .fetch_avatar_texture(user_id.to_godot());
 
@@ -709,15 +717,16 @@ impl DclUiBackground {
                         self.waiting_hash = format!("avatar:{}", user_id).to_godot();
 
                         if !promise.bind().is_resolved() {
-                            promise.connect(
-                                "on_resolved",
-                                &self.base().callable("_on_avatar_texture_loaded"),
-                            );
+                            promise
+                                .signals()
+                                .on_resolved()
+                                .connect_other(&self.to_gd(), |this: &mut Self| {
+                                    this._on_avatar_texture_loaded()
+                                });
                         }
 
                         self.first_texture_load_shot = true;
-                        self.base_mut()
-                            .call_deferred("_on_avatar_texture_loaded", &[]);
+                        self.run_deferred(|this| this._on_avatar_texture_loaded());
                     }
                 }
             } else {

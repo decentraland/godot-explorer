@@ -80,39 +80,39 @@ fn ensure_core() -> &'static Core {
 pub struct DclGlobal {
     _base: Base<Node>,
 
-    #[var]
+    #[var(pub)]
     pub scene_runner: Gd<SceneManager>,
-    #[var]
+    #[var(pub)]
     pub comms: Gd<CommunicationManager>,
-    #[var]
+    #[var(pub)]
     pub avatars: Gd<AvatarScene>,
-    #[var]
+    #[var(pub)]
     pub realm: Gd<DclRealm>,
-    #[var]
+    #[var(pub)]
     pub portable_experience_controller: Gd<DclPortableExperienceController>,
-    #[var]
+    #[var(pub)]
     pub testing_tools: Gd<DclTestingTools>,
-    #[var]
+    #[var(pub)]
     pub preview_mode: bool,
-    #[var]
+    #[var(pub)]
     pub testing_scene_mode: bool,
-    #[var]
+    #[var(pub)]
     pub fixed_skybox_time: bool,
-    #[var]
+    #[var(pub)]
     pub player_identity: Gd<DclPlayerIdentity>,
-    #[var]
+    #[var(pub)]
     pub content_provider: Gd<ContentProvider>,
-    #[var(get)]
+    #[var(no_set, pub)]
     pub http_requester: Gd<RustHttpQueueRequester>,
-    #[var]
+    #[var(pub)]
     pub dcl_tokio_rpc: Gd<DclTokioRpc>,
 
     pub ethereum_provider: Arc<EthereumProvider>,
 
-    #[var]
+    #[var(pub)]
     pub metrics: Gd<Metrics>,
 
-    #[var]
+    #[var(pub)]
     pub renderer_version: GString,
 
     pub is_mobile: bool,
@@ -129,36 +129,36 @@ pub struct DclGlobal {
 
     pub is_virtual_mobile: bool,
 
-    #[var]
+    #[var(pub)]
     pub has_javascript_debugger: bool,
 
-    #[var]
+    #[var(pub)]
     pub network_inspector: Gd<NetworkInspector>,
 
-    #[var]
+    #[var(pub)]
     pub scene_inspector_dispatcher: Gd<crate::tools::scene_inspector::SceneInspectorDispatcher>,
 
-    #[var]
+    #[var(pub)]
     pub social_blacklist: Gd<DclSocialBlacklist>,
 
     #[cfg(feature = "use_memory_debugger")]
-    #[var]
+    #[var(pub)]
     pub memory_debugger: Gd<MemoryDebugger>,
 
     #[cfg(feature = "use_memory_debugger")]
-    #[var]
+    #[var(pub)]
     pub benchmark_report: Gd<BenchmarkReport>,
 
-    #[var(get)]
+    #[var(no_set, pub)]
     pub profile_service: Gd<ProfileService>,
 
-    #[var(get)]
+    #[var(no_set, pub)]
     pub cli: Gd<DclCli>,
 
-    #[var(get)]
+    #[var(no_set, pub)]
     pub engine: Gd<DclEngine>,
 
-    #[var(get)]
+    #[var(no_set, pub)]
     pub dynamic_graphics_manager: Gd<DclDynamicGraphicsManager>,
 
     // Stored as InstanceId, not Gd<DclAvatar>: the underlying Node3D may be freed
@@ -167,25 +167,25 @@ pub struct DclGlobal {
 
     // Scene Inspector active flag — set from GDScript when deeplink/CLI activates the Scene Inspector.
     // Checked by scene_manager when spawning scenes to decide if they should be instrumented.
-    #[var]
+    #[var(pub)]
     pub scene_inspector_active: bool,
 
     // Input modifier state - set by scenes via PBInputModifier component on PLAYER entity
-    #[var]
+    #[var(pub)]
     pub input_modifier_disable_all: bool,
-    #[var]
+    #[var(pub)]
     pub input_modifier_disable_walk: bool,
-    #[var]
+    #[var(pub)]
     pub input_modifier_disable_jog: bool,
-    #[var]
+    #[var(pub)]
     pub input_modifier_disable_run: bool,
-    #[var]
+    #[var(pub)]
     pub input_modifier_disable_jump: bool,
-    #[var]
+    #[var(pub)]
     pub input_modifier_disable_emote: bool,
-    #[var]
+    #[var(pub)]
     pub input_modifier_disable_double_jump: bool,
-    #[var]
+    #[var(pub)]
     pub input_modifier_disable_gliding: bool,
 
     // On-screen touch controls - set by scenes via PBTouchScreenControls on the ROOT entity.
@@ -193,23 +193,81 @@ pub struct DclGlobal {
     // is a denylist of per-button overrides (each a dictionary {action, hide, icon}); buttons
     // not listed keep their default (shown). `touch_controls_main_action` is the godot action
     // name for the large central button (empty = keep default jump).
-    #[var]
+    #[var(pub)]
     pub touch_controls_active: bool,
-    #[var]
+    #[var(pub)]
     pub touch_controls_hide_joystick: bool,
-    #[var]
+    #[var(pub)]
     pub touch_controls_hide_crosshair: bool,
-    #[var]
+    #[var(pub)]
     pub touch_controls_main_action: GString,
-    #[var]
+    #[var(pub)]
     pub touch_controls_inputs: VarArray,
 
     // SDK-controlled skybox time - set by scenes via PBSkyboxTime component on ROOT entity
-    #[var]
+    #[var(pub)]
     pub sdk_skybox_time_active: bool,
-    #[var]
+    /// The sky's clock, created at boot.
+    #[var(pub)]
+    pub skybox_time: Option<Gd<crate::sky::skybox_time::SkyboxTime>>,
+
+    // The services the app root creates at boot (see `engine::bootstrap`).
+    #[var(pub)]
+    pub scene_fetcher: Option<Gd<crate::fetcher::scene_fetcher::SceneFetcher>>,
+    #[var(pub)]
+    pub snapshot: Option<Gd<crate::app::snapshot::Snapshot>>,
+    #[var(pub)]
+    pub music_player: Option<Gd<crate::app::music_player::MusicPlayer>>,
+    #[var(pub)]
+    pub raycast_debugger: Option<Gd<crate::app::raycast_debugger::RaycastDebugger>>,
+    #[var(pub)]
+    pub analytics_controller: Option<Gd<crate::app::analytics_controller::AnalyticsController>>,
+    #[var(pub)]
+    pub feature_flags: Option<Gd<crate::app::feature_flags::FeatureFlags>>,
+    #[var(pub)]
+    pub graphics_autotune: Gd<crate::app::graphics_autotune::GraphicsAutotune>,
+    #[var(pub)]
+    pub deep_link_router: Gd<crate::app::deep_link::DeepLinkRouter>,
+    /// The scene inspector's bridge, a GDScript node until the debug tooling is Rust.
+    pub scene_inspector_bridge: Option<Gd<Node>>,
+
+    // The deep link the app was opened with, parsed; the URL is cleared once consumed.
+    #[var(pub)]
+    pub deep_link_obj: Gd<crate::godot_classes::dcl_parse_deep_link::DclParseDeepLink>,
+    #[var(pub)]
+    pub deep_link_url: GString,
+    /// The environment came from `--dclenv` or a deeplink `dclenv=` (including `org`): the IAP
+    /// sandbox auto-switch must not override that explicit choice.
+    #[var(pub)]
+    pub dcl_env_explicit: bool,
+
+    // The player's camera and its mode, kept here for the code that has no handle on the player.
+    #[var(pub)]
+    pub player_camera_node: Option<Gd<crate::godot_classes::dcl_camera_3d::DclCamera3D>>,
+    #[var(pub)]
+    pub current_camera_mode: i32,
+    #[var(pub)]
+    pub camera_mode_blocked: bool,
+
+    /// Set by a run launched on its own (a scene opened directly in the editor), not by `DclRoot`.
+    #[var(pub)]
+    pub standalone: bool,
+    #[var(pub)]
+    pub session_id: GString,
+    /// Fixed width (canvas px) of the chat's notifications column, reported by the chat so the
+    /// scene interactable area is computed without hardcoding it. Stable per device.
+    #[var(pub)]
+    pub chat_notifications_width: i32,
+    /// The orientation layout state. The RN host owns the device orientation: the engine only
+    /// mirrors the window's shape.
+    pub is_portrait: bool,
+    /// Guards `sign_out` against re-entrancy: the comms disconnect emits the logout signal
+    /// deferred, which can route back into it a frame later.
+    pub signing_out: bool,
+    pub logging_selftest: crate::app::logging_selftest::LoggingSelftest,
+    #[var(pub)]
     pub sdk_skybox_fixed_time: u32,
-    #[var]
+    #[var(pub)]
     pub sdk_skybox_transition_forward: bool,
 }
 
@@ -258,6 +316,7 @@ impl INode for DclGlobal {
         let mut realm: Gd<DclRealm> = DclRealm::new_alloc();
         let mut dcl_tokio_rpc: Gd<DclTokioRpc> = DclTokioRpc::new_alloc();
         let mut player_identity: Gd<DclPlayerIdentity> = DclPlayerIdentity::new_alloc();
+        player_identity.set_name("player_identity");
         let mut testing_tools: Gd<DclTestingTools> = DclTestingTools::new_alloc();
         let mut portable_experience_controller: Gd<DclPortableExperienceController> =
             DclPortableExperienceController::new_alloc();
@@ -405,6 +464,28 @@ impl INode for DclGlobal {
 
             // SDK skybox time starts as inactive
             sdk_skybox_time_active: false,
+            skybox_time: None,
+            scene_fetcher: None,
+            snapshot: None,
+            music_player: None,
+            raycast_debugger: None,
+            analytics_controller: None,
+            feature_flags: None,
+            graphics_autotune: crate::app::graphics_autotune::GraphicsAutotune::new_gd(),
+            deep_link_router: crate::app::deep_link::DeepLinkRouter::new_gd(),
+            scene_inspector_bridge: None,
+            deep_link_obj: crate::godot_classes::dcl_parse_deep_link::DclParseDeepLink::new_gd(),
+            deep_link_url: GString::new(),
+            dcl_env_explicit: false,
+            player_camera_node: None,
+            current_camera_mode: crate::player::body::CameraMode::ThirdPerson.to_i32(),
+            camera_mode_blocked: false,
+            standalone: false,
+            session_id: GString::new(),
+            chat_notifications_width: 0,
+            is_portrait: true,
+            signing_out: false,
+            logging_selftest: Default::default(),
             sdk_skybox_fixed_time: 0,
             sdk_skybox_transition_forward: true,
         }
@@ -414,7 +495,34 @@ impl INode for DclGlobal {
 #[godot_api]
 impl DclGlobal {
     #[signal]
-    fn sdk_skybox_time_active_changed(is_active: bool);
+    pub fn sdk_skybox_time_active_changed(is_active: bool);
+
+    /// A chat line, for the shell's chat. `address` is `system` for the app's own notices.
+    #[signal]
+    pub fn on_chat_message(address: GString, message: GString, timestamp: f64);
+
+    #[signal]
+    pub fn loading_started();
+
+    #[signal]
+    pub fn loading_finished();
+
+    #[signal]
+    pub fn change_parcel(new_parcel: Vector2i);
+
+    /// The player tapped an avatar. The Godot passport is gone: the shell opens profiles through
+    /// its own intent, so nothing listens for this today.
+    #[signal]
+    pub fn open_profile_by_avatar(avatar: Gd<DclAvatar>);
+
+    #[signal]
+    pub fn open_backpack(on_emotes: bool);
+
+    #[signal]
+    pub fn camera_mode_set(camera_mode: i32);
+
+    #[signal]
+    pub fn orientation_changed(is_portrait: bool);
 
     #[func]
     fn set_scene_log_enabled(&self, enabled: bool) {
@@ -428,7 +536,7 @@ impl DclGlobal {
     /// exercise the Godot→Sentry path; `println!`/`eprintln!` exercise the iOS fd
     /// capture (they never go through `tracing`).
     #[func]
-    fn test_logging(&self) {
+    pub fn test_logging(&self) {
         tracing::trace!("[LOGTEST][rust] trace via tracing::trace!");
         tracing::debug!("[LOGTEST][rust] debug via tracing::debug!");
         tracing::info!("[LOGTEST][rust] info via tracing::info!");
@@ -444,7 +552,7 @@ impl DclGlobal {
     }
 
     #[func]
-    fn is_telemetry_disabled() -> bool {
+    pub fn is_telemetry_disabled() -> bool {
         cfg!(feature = "disable_telemetry")
     }
 
@@ -474,13 +582,13 @@ impl DclGlobal {
     }
 
     #[func]
-    fn _set_is_mobile(&mut self, is_mobile: bool) {
+    pub(crate) fn _set_is_mobile(&mut self, is_mobile: bool) {
         self.is_mobile = is_mobile;
         self.is_virtual_mobile = is_mobile;
     }
 
     #[func]
-    fn get_selected_avatar(&mut self) -> Option<Gd<DclAvatar>> {
+    pub fn get_selected_avatar(&mut self) -> Option<Gd<DclAvatar>> {
         let id = self.selected_avatar?;
         match Gd::<DclAvatar>::try_from_instance_id(id) {
             Ok(gd) => Some(gd),
@@ -590,6 +698,14 @@ impl DclGlobal {
             return false;
         };
         root.has_node("Global")
+    }
+
+    /// The player's camera, `None` once its world is gone (cloning a freed `Gd` panics).
+    pub fn player_camera(&self) -> Option<Gd<crate::godot_classes::dcl_camera_3d::DclCamera3D>> {
+        self.player_camera_node
+            .as_ref()
+            .filter(|camera| camera.is_instance_valid())
+            .cloned()
     }
 
     pub fn try_singleton() -> Option<Gd<Self>> {
@@ -741,8 +857,14 @@ impl DclGlobal {
             .is_some_and(|t| t > std::time::Instant::now())
     }
 
+    /// Resolves and applies the UI language (see `app::locale`).
+    #[func]
+    pub fn apply_locale() {
+        crate::app::locale::apply_locale();
+    }
+
     /// Locale forwarded to SDK7 scenes (`getExplorerInformation`, `localeChanged`).
-    /// Callers pass the resolved app locale (`LocaleSettings.resolve_locale()`), never the OS one.
+    /// Callers pass the resolved app locale (`app::locale`), never the OS one.
     #[func]
     pub fn set_scene_locale(locale: GString) {
         crate::godot_classes::dcl_scene_locale::set_scene_locale(&locale.to_string());
@@ -758,14 +880,5 @@ impl DclGlobal {
             emitter_cap,
             use_cpu,
         );
-    }
-
-    /// Current particle budgets as [scene_budget, emitter_cap, use_cpu].
-    /// Exists for the graphic-profile tests (asserts the GDScript mapping).
-    #[func]
-    pub fn get_particle_profile_budgets() -> VarArray {
-        let (budget, cap, use_cpu) =
-            crate::scene_runner::components::particle_system::get_particle_profile_budgets();
-        varray![budget, cap, use_cpu]
     }
 }

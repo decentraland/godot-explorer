@@ -145,10 +145,10 @@ impl INode for DclFloatingIslandsManager {
 #[godot_api]
 impl DclFloatingIslandsManager {
     #[signal]
-    fn generation_progress(created: i32, total: i32);
+    pub fn generation_progress(created: i32, total: i32);
 
     #[signal]
-    fn generation_complete();
+    pub fn generation_complete();
 
     /// `corner_configs`: `parcels.len() * 8` bytes, laid out per parcel as
     /// `[N, S, E, W, NW, NE, SW, SE]` with values 0=EMPTY, 1=NOTHING, 2=LOADED
@@ -312,10 +312,8 @@ impl DclFloatingIslandsManager {
             }
         }
         if !self.prop_cache.is_populated() {
-            if let Some(tree) = self.base().get_tree() {
-                if let Some(cache) = props::PropCache::load_from_autoload(&tree) {
-                    self.prop_cache = cache;
-                }
+            if let Some(cache) = props::PropCache::load_from_scene() {
+                self.prop_cache = cache;
             }
         }
         if self.worker.is_none() {
@@ -533,10 +531,7 @@ impl DclFloatingIslandsManager {
         if created_this_frame > 0 {
             let created = self.generated_so_far;
             let total = self.generation_total;
-            self.base_mut().emit_signal(
-                "generation_progress",
-                &[created.to_variant(), total.to_variant()],
-            );
+            self.signals().generation_progress().emit(created, total);
         }
 
         if self.generating {
@@ -544,7 +539,7 @@ impl DclFloatingIslandsManager {
                 self.empty_view_since_msec = 0;
                 if self.in_view_all_materialized(player, view, &camera) {
                     self.generating = false;
-                    self.base_mut().emit_signal("generation_complete", &[]);
+                    self.signals().generation_complete().emit();
                 }
             } else if self.empty_view_since_msec == 0 {
                 self.empty_view_since_msec = now_msec;
@@ -575,7 +570,7 @@ impl DclFloatingIslandsManager {
                 );
                 self.generating = false;
                 self.empty_view_since_msec = 0;
-                self.base_mut().emit_signal("generation_complete", &[]);
+                self.signals().generation_complete().emit();
             }
         }
     }
@@ -880,8 +875,8 @@ impl DclFloatingIslandsManager {
 
         let shape = physics.concave_polygon_shape_create();
         let mut shape_data = VarDictionary::new();
-        shape_data.set("faces", faces.to_variant());
-        shape_data.set("backface_collision", false.to_variant());
+        shape_data.set("faces", &faces.to_variant());
+        shape_data.set("backface_collision", &false.to_variant());
         physics.shape_set_data(shape, &shape_data.to_variant());
 
         let body = physics.body_create();

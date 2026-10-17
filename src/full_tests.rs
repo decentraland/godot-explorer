@@ -8,7 +8,7 @@ use crate::consts::RUST_LIB_PROJECT_FOLDER;
 use crate::helpers::BinPaths;
 use crate::image_comparison::compare_images_similarity;
 use crate::ui::{self, format_duration, MessageType, SummaryRow};
-use crate::{check_gdscript, run, tests, version_check};
+use crate::{run, tests, version_check};
 
 #[derive(Clone, Debug)]
 #[allow(dead_code)]
@@ -200,60 +200,6 @@ fn run_external_command(
     }
 }
 
-const GDTOOLKIT_FORK_URL: &str = "https://github.com/dcl-regenesislabs/godot-gdscript-toolkit.git";
-const GDTOOLKIT_VENV_DIR: &str = ".bin/gdtoolkit-venv";
-
-/// Get the path to gdformat/gdlint binaries inside the local venv.
-fn gdtoolkit_bin(tool: &str) -> String {
-    format!("{}/bin/{}", GDTOOLKIT_VENV_DIR, tool)
-}
-
-/// Ensure the correct (forked) version of gdtoolkit is installed in .bin/gdtoolkit-venv/.
-fn ensure_gdtoolkit() -> Result<(), anyhow::Error> {
-    let venv_dir = Path::new(GDTOOLKIT_VENV_DIR);
-    let gdformat_bin = venv_dir.join("bin/gdformat");
-
-    if gdformat_bin.exists() {
-        ui::print_message(
-            MessageType::Success,
-            "gdtoolkit fork already installed in .bin/gdtoolkit-venv/",
-        );
-        return Ok(());
-    }
-
-    ui::print_message(
-        MessageType::Info,
-        "Installing DCL fork of gdtoolkit into .bin/gdtoolkit-venv/...",
-    );
-
-    let status = std::process::Command::new("python3")
-        .args(["-m", "venv", GDTOOLKIT_VENV_DIR])
-        .status()?;
-    if !status.success() {
-        return Err(anyhow::anyhow!(
-            "Failed to create Python venv at {}",
-            GDTOOLKIT_VENV_DIR
-        ));
-    }
-
-    let pip_bin = format!("{}/bin/pip", GDTOOLKIT_VENV_DIR);
-    let status = std::process::Command::new(&pip_bin)
-        .args(["install", &format!("git+{}", GDTOOLKIT_FORK_URL)])
-        .status()?;
-    if !status.success() {
-        let _ = std::fs::remove_dir_all(venv_dir);
-        return Err(anyhow::anyhow!(
-            "Failed to install gdtoolkit fork into venv"
-        ));
-    }
-
-    ui::print_message(
-        MessageType::Success,
-        "gdtoolkit fork installed in .bin/gdtoolkit-venv/",
-    );
-    Ok(())
-}
-
 /// Copy comparison output images back to snapshot baseline directories.
 fn update_local_snapshots() -> Result<(), anyhow::Error> {
     ui::print_section("Updating Snapshots");
@@ -321,30 +267,22 @@ pub fn run_full_tests(
     let mut runner = StepRunner::new(continue_on_failure);
     let lib_dir = Some(RUST_LIB_PROJECT_FOLDER);
 
-    // ── Setup: ensure gdtoolkit fork ──
-    ensure_gdtoolkit()?;
-
     // ── Phase 1: Static Checks ──
 
     ui::print_message(MessageType::Step, "Phase 1: Static Checks");
 
-    let gdformat_bin = gdtoolkit_bin("gdformat");
-    let gdlint_bin = gdtoolkit_bin("gdlint");
-
     step!(runner, "Cargo fmt", || {
         run_external_command("cargo", &["fmt", "--all", "--", "--check"], lib_dir)
-    });
-    step!(runner, "GDScript format", || {
-        run_external_command(&gdformat_bin, &["-d", "godot/"], None)
-    });
-    step!(runner, "GDScript lint", || {
-        run_external_command(&gdlint_bin, &["godot/"], None)
     });
     step!(runner, "Cargo check", || {
         run_external_command("cargo", &["check", "--workspace"], lib_dir)
     });
     step!(runner, "Cargo clippy", || {
-        run_external_command("cargo", &["clippy", "--workspace", "--", "-D", "warnings"], lib_dir)
+        run_external_command(
+            "cargo",
+            &["clippy", "--workspace", "--", "-D", "warnings"],
+            lib_dir,
+        )
     });
     step!(runner, "Asset import check", || {
         run_external_command("python3", &["tests/check_asset_imports.py"], None)
@@ -356,7 +294,11 @@ pub fn run_full_tests(
     ui::print_message(MessageType::Step, "Phase 2: Rust Unit Tests");
 
     step!(runner, "Rust unit tests", || {
-        run_external_command("cargo", &["test", "--workspace", "--", "--skip", "auth"], lib_dir)
+        run_external_command(
+            "cargo",
+            &["test", "--workspace", "--", "--skip", "auth"],
+            lib_dir,
+        )
     });
 
     // ── Phase 3: Build & Godot Tests ──
@@ -377,11 +319,6 @@ pub fn run_full_tests(
             ))
         }
     });
-    step!(
-        runner,
-        "GDScript validation",
-        check_gdscript::check_gdscript
-    );
     step!(runner, "Integration tests", || {
         run::run(false, true, vec![], false, false, false)
     });
@@ -415,10 +352,6 @@ pub fn run_full_tests(
 
         step_tolerant!(runner, "Avatar generation", tolerate, || {
             tests::test_avatar_generation(None)
-        });
-
-        step_tolerant!(runner, "Scene generation", tolerate, || {
-            tests::test_scene_generation(None)
         });
 
         if update_snapshots {

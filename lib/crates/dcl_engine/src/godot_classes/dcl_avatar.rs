@@ -1,15 +1,30 @@
 use crate::godot_classes::dcl_hashing::get_hash_number;
 use godot::prelude::*;
 
+use std::collections::HashMap;
+
+use godot::classes::notify::Node3DNotification;
+use godot::classes::{AudioStreamPlayer, InputEvent};
+
+use crate::avatars::avatar::anchors::Anchors;
+use crate::avatars::avatar::emote::EmoteState;
+use crate::avatars::avatar::emote_load::SceneEmoteContent;
+use crate::avatars::avatar::glider::GliderState;
+use crate::avatars::avatar::lod::LodRuntime;
+use crate::avatars::avatar::nametag::NametagState;
+use crate::avatars::avatar::{AvatarNodes, PendingEmote};
 use crate::avatars::avatar_type::DclAvatarWireFormat;
+use crate::avatars::loaders::WearableLoader;
+use crate::avatars::mesh_assembler::MeshAssembler;
+use crate::avatars::wearables::ByCategory;
 use crate::dcl::SceneId;
 
 use super::dcl_global::DclGlobal;
 
 // Global counter for unique avatar IDs (non-atomic since init is always on main thread)
-static mut AVATAR_ID_COUNTER: u32 = 0;
+static AVATAR_ID_COUNTER: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
 
-#[derive(Var, GodotConvert, Export)]
+#[derive(Clone, Copy, Var, GodotConvert, Export)]
 #[godot(via = i32)]
 pub enum AvatarMovementType {
     ExternalController = 0,
@@ -177,67 +192,124 @@ impl LerpState {
 #[derive(GodotClass)]
 #[class(base=Node3D)]
 pub struct DclAvatar {
-    #[var(get)]
-    unique_id: u32,
+    #[var(no_set, pub)]
+    pub(crate) unique_id: u32,
 
-    #[var]
-    avatar_data: Gd<DclAvatarWireFormat>,
+    #[var(pub)]
+    pub(crate) avatar_data: Gd<DclAvatarWireFormat>,
 
-    #[var]
-    avatar_name: GString,
+    #[var(pub)]
+    pub(crate) avatar_name: GString,
 
-    #[var]
+    #[var(pub)]
     pub blocked: bool,
 
     #[export]
-    movement_type: AvatarMovementType,
+    #[var(pub)]
+    pub(crate) movement_type: AvatarMovementType,
 
-    #[var]
-    current_parcel_scene_id: i32,
+    #[var(pub)]
+    pub(crate) current_parcel_scene_id: i32,
 
-    #[var]
-    current_parcel_position: Vector2i,
+    #[var(pub)]
+    pub(crate) current_parcel_position: Vector2i,
 
     // Peer streams wire locomotion/grounded state (Movement or compressed):
     // the local dy/interval classification in set_target_position is skipped.
     wire_classification: bool,
 
     #[export]
-    walk: bool,
+    #[var(pub)]
+    pub(crate) walk: bool,
     #[export]
-    run: bool,
+    #[var(pub)]
+    pub(crate) run: bool,
     #[export]
-    jog: bool,
+    #[var(pub)]
+    pub(crate) jog: bool,
     #[export]
-    rise: bool,
+    #[var(pub)]
+    pub(crate) rise: bool,
     #[export]
-    fall: bool,
+    #[var(pub)]
+    pub(crate) fall: bool,
     #[export]
-    land: bool,
+    #[var(pub)]
+    pub(crate) land: bool,
 
     // Multi-jump + gliding state, driven by player.gd (local) or the remote-
     // movement decoder. Consumed by avatar.gd edge detection. glide_state
     // values: 0 CLOSED, 1 OPENING, 2 GLIDING, 3 CLOSING.
     #[export]
-    jump_count: i32,
+    #[var(pub)]
+    pub(crate) jump_count: i32,
     #[export]
-    glide_state: i32,
+    #[var(pub)]
+    pub(crate) glide_state: i32,
     #[export]
-    is_grounded: bool,
+    #[var(pub)]
+    pub(crate) is_grounded: bool,
 
     lerp_state: LerpState,
+
+    #[export]
+    #[var(pub)]
+    pub skip_process: bool,
+    #[export]
+    #[var(set = set_hide_name)]
+    pub hide_name: bool,
+    #[export]
+    #[var(pub)]
+    pub non_3d_audio: bool,
+    #[var(pub)]
+    pub dcl_entity_id: i32,
+    #[var(pub)]
+    pub is_local_player: bool,
+    #[var(pub)]
+    pub avatar_id: GString,
+    #[var(get = get_hidden, set = set_hidden)]
+    pub hidden: bool,
+    #[var(pub)]
+    pub passport_disabled: bool,
+    #[var(pub)]
+    pub nametag_hidden: bool,
+    /// Horizontal occlusion radius for nametag raycasts: the widest head-zone mesh half-extent,
+    /// clamped so a 3 m wearable cannot black out half the screen.
+    #[var(pub)]
+    pub occlusion_radius: f32,
+    #[var(pub)]
+    pub avatar_ready: bool,
+    #[var(pub)]
+    pub has_connected_web3: bool,
+    #[var(pub)]
+    pub is_avatar_shape: bool,
+    #[var(pub)]
+    pub finish_loading: bool,
+
+    pub(crate) last_expression_trigger_timestamp: i64,
+    pub(crate) last_expression_trigger_id: String,
+    pub(crate) pending_expression_trigger: Option<String>,
+    pub(crate) wearables_by_category: ByCategory,
+    pub(crate) wearable_loader: WearableLoader,
+    pub(crate) mesh_assembler: Option<MeshAssembler>,
+    pub(crate) voice_player: Option<Gd<AudioStreamPlayer>>,
+    /// Session override ("Hide UI"): not persisted into the avatar's own state.
+    pub(crate) force_hide_name: bool,
+    pub(crate) lod: LodRuntime,
+    pub(crate) glider: GliderState,
+    pub(crate) nametag: NametagState,
+    pub(crate) anchors: Anchors,
+    pub(crate) nodes: Option<AvatarNodes>,
+    pub(crate) emote: EmoteState,
+    pub(crate) scene_emote_registry: HashMap<String, SceneEmoteContent>,
+    pub(crate) pending_emote: Option<PendingEmote>,
     base: Base<Node3D>,
 }
 
 #[godot_api]
 impl INode3D for DclAvatar {
     fn init(base: Base<Node3D>) -> Self {
-        // Increment and get the next unique ID (safe since init is always on main thread)
-        let unique_id = unsafe {
-            let id = AVATAR_ID_COUNTER;
-            AVATAR_ID_COUNTER += 1;
-            id
-        };
+        let unique_id = AVATAR_ID_COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
 
         Self {
             unique_id,
@@ -246,6 +318,36 @@ impl INode3D for DclAvatar {
             current_parcel_position: Vector2i::new(i32::MAX, i32::MAX),
             wire_classification: false,
             lerp_state: Default::default(),
+            skip_process: false,
+            hide_name: false,
+            non_3d_audio: false,
+            dcl_entity_id: -1,
+            is_local_player: false,
+            avatar_id: GString::new(),
+            hidden: false,
+            passport_disabled: false,
+            nametag_hidden: false,
+            occlusion_radius: 0.4,
+            avatar_ready: false,
+            has_connected_web3: false,
+            is_avatar_shape: false,
+            finish_loading: false,
+            last_expression_trigger_timestamp: -1,
+            last_expression_trigger_id: String::new(),
+            pending_expression_trigger: None,
+            wearables_by_category: ByCategory::default(),
+            wearable_loader: WearableLoader::default(),
+            mesh_assembler: None,
+            voice_player: None,
+            force_hide_name: false,
+            lod: LodRuntime::default(),
+            glider: GliderState::default(),
+            nametag: NametagState::default(),
+            anchors: Anchors::new(),
+            nodes: None,
+            emote: EmoteState::new(),
+            scene_emote_registry: HashMap::new(),
+            pending_emote: None,
             base,
             walk: false,
             run: false,
@@ -259,6 +361,32 @@ impl INode3D for DclAvatar {
             avatar_data: DclAvatarWireFormat::from_gd(Default::default()),
             avatar_name: "".into(),
             blocked: false,
+        }
+    }
+
+    fn ready(&mut self) {
+        self.life_ready();
+    }
+
+    fn exit_tree(&mut self) {
+        self.life_exit_tree();
+    }
+
+    fn process(&mut self, delta: f64) {
+        self.life_process(delta);
+    }
+
+    fn physics_process(&mut self, _delta: f64) {
+        self.life_physics_process();
+    }
+
+    fn input(&mut self, event: Gd<InputEvent>) {
+        self.life_input(event);
+    }
+
+    fn on_notification(&mut self, what: Node3DNotification) {
+        if what == Node3DNotification::PREDELETE {
+            self.life_predelete();
         }
     }
 }
@@ -293,21 +421,21 @@ const NICKNAME_COLORS: [Color; 23] = [
 #[godot_api]
 impl DclAvatar {
     #[signal]
-    fn change_parcel_position(parcel_position: Vector2);
+    pub fn avatar_loaded();
 
     #[signal]
-    fn change_scene_id(new_scene_id: i32, prev_scene_id: i32);
+    pub fn change_scene_id(new_scene_id: i32, prev_scene_id: i32);
 
     // `mask` uses the internal convention shared with GDScript: -1 = full body
     // (absent on the wire), 0 = AvatarMask.AM_UPPER_BODY.
     #[signal]
-    fn emote_triggered(id: GString, looping: bool, mask: i64);
+    pub fn emote_triggered(id: GString, looping: bool, mask: i64);
 
     // Emitted once per started emote when playback ends: `interrupted` is false for
     // the natural end of a non-looping emote, true for movement cancel, explicit
     // stop, or being superseded by another emote.
     #[signal]
-    fn emote_finished(id: GString, interrupted: bool, mask: i64);
+    pub fn emote_finished(id: GString, interrupted: bool, mask: i64);
 
     #[func]
     pub fn set_target_position(&mut self, new_target: Transform3D) {
@@ -419,14 +547,11 @@ impl DclAvatar {
 
         if prev_scene_id != scene_id {
             self.current_parcel_scene_id = scene_id;
-            self.base_mut().call_deferred(
-                "emit_signal",
-                &[
-                    "change_scene_id".to_variant(),
-                    scene_id.to_variant(),
-                    prev_scene_id.to_variant(),
-                ],
-            );
+            self.run_deferred(move |this| {
+                this.signals()
+                    .change_scene_id()
+                    .emit(scene_id, prev_scene_id)
+            });
         }
     }
 
@@ -521,13 +646,6 @@ impl DclAvatar {
 
         if self.current_parcel_position != parcel_position {
             self.current_parcel_position = parcel_position;
-            self.base_mut().call_deferred(
-                "emit_signal",
-                &[
-                    "change_parcel_position".to_variant(),
-                    parcel_position.to_variant(),
-                ],
-            );
 
             let scene_runner = DclGlobal::singleton().bind().get_scene_runner();
             let scene_id: i32 = scene_runner
@@ -537,14 +655,11 @@ impl DclAvatar {
             if self.current_parcel_scene_id != scene_id {
                 let prev_scene_id = self.current_parcel_scene_id;
                 self.current_parcel_scene_id = scene_id;
-                self.base_mut().call_deferred(
-                    "emit_signal",
-                    &[
-                        "change_scene_id".to_variant(),
-                        scene_id.to_variant(),
-                        prev_scene_id.to_variant(),
-                    ],
-                );
+                self.run_deferred(move |this| {
+                    this.signals()
+                        .change_scene_id()
+                        .emit(scene_id, prev_scene_id)
+                });
                 return true;
             }
         } else if self.current_parcel_scene_id == SceneId::INVALID.0 {
@@ -556,14 +671,11 @@ impl DclAvatar {
             if scene_id != SceneId::INVALID.0 {
                 let prev_scene_id = self.current_parcel_scene_id;
                 self.current_parcel_scene_id = scene_id;
-                self.base_mut().call_deferred(
-                    "emit_signal",
-                    &[
-                        "change_scene_id".to_variant(),
-                        scene_id.to_variant(),
-                        prev_scene_id.to_variant(),
-                    ],
-                );
+                self.run_deferred(move |this| {
+                    this.signals()
+                        .change_scene_id()
+                        .emit(scene_id, prev_scene_id)
+                });
                 return true;
             }
         }
@@ -571,7 +683,7 @@ impl DclAvatar {
     }
 
     #[func]
-    fn process(&mut self, dt: f64) {
+    pub(crate) fn advance_movement(&mut self, dt: f64) {
         match self.movement_type {
             AvatarMovementType::ExternalController => {
                 self.lerp_state.factor += dt as f32;
@@ -624,10 +736,25 @@ impl DclAvatar {
     }
 
     #[func]
+    pub fn set_hide_name(&mut self, value: bool) {
+        self.hide_name = value;
+        self.apply_nickname_visibility();
+    }
+
+    #[func]
+    pub fn set_hidden(&mut self, value: bool) {
+        self.apply_hidden(value);
+    }
+
+    #[func]
+    pub fn get_hidden(&self) -> bool {
+        self.hidden
+    }
+
+    #[func]
     pub fn set_blocked_and_hidden(&mut self, value: bool) {
         self.blocked = value;
-        // Call the GDScript set_hidden method
-        self.base_mut().call("set_hidden", &[value.to_variant()]);
+        self.apply_hidden(value);
     }
 }
 
@@ -670,8 +797,10 @@ mod tests {
     #[test]
     fn interval_defaults_to_livekit_cadence() {
         assert_eq!(LerpState::default().interval(), 0.1);
-        let mut state = LerpState::default();
-        state.packet_interval = 0.05; // Pulse tier-0
+        let state = LerpState {
+            packet_interval: 0.05, // Pulse tier-0
+            ..Default::default()
+        };
         assert_eq!(state.interval(), 0.05);
     }
 }
@@ -691,9 +820,12 @@ mod itest {
             .add_child(&avatar.clone().upcast::<Node>());
         avatar
             .bind_mut()
-            .set_movement_type(AvatarMovementType::LerpTwoPoints as i32);
-        avatar.set("current_parcel_position", &Vector2i::ZERO.to_variant());
-        avatar.set("current_parcel_scene_id", &1_i32.to_variant());
+            .set_movement_type(AvatarMovementType::LerpTwoPoints);
+        {
+            let mut bound = avatar.bind_mut();
+            bound.current_parcel_position = Vector2i::ZERO;
+            bound.current_parcel_scene_id = 1;
+        }
 
         // ~3 cm per 55 ms packet ≈ 0.55 m/s instantaneous — but alternate
         // zero-movement packets like the 6.3 cm quantization does, averaging
@@ -710,7 +842,7 @@ mod itest {
                     .bind_mut()
                     .set_target_position(Transform3D::new(Basis::IDENTITY, last_pos));
             }
-            avatar.bind_mut().process(frame);
+            avatar.bind_mut().advance_movement(frame);
         }
         let avatar = avatar.bind();
         assert!(!avatar.walk, "slow quantization steps read as walk");
@@ -728,9 +860,12 @@ mod itest {
             .add_child(&avatar.clone().upcast::<Node>());
         avatar
             .bind_mut()
-            .set_movement_type(AvatarMovementType::LerpTwoPoints as i32);
-        avatar.set("current_parcel_position", &Vector2i::ZERO.to_variant());
-        avatar.set("current_parcel_scene_id", &1_i32.to_variant());
+            .set_movement_type(AvatarMovementType::LerpTwoPoints);
+        {
+            let mut bound = avatar.bind_mut();
+            bound.current_parcel_position = Vector2i::ZERO;
+            bound.current_parcel_scene_id = 1;
+        }
 
         let frame = 1.0f64 / 30.0;
         // 1 s of stationary packets (peer idle), then continuous walking.
@@ -750,7 +885,7 @@ mod itest {
                     .bind_mut()
                     .set_target_position(Transform3D::new(Basis::IDENTITY, pos));
             }
-            avatar.bind_mut().process(frame);
+            avatar.bind_mut().advance_movement(frame);
             let pos = avatar.get_global_position();
             if step > 0 {
                 if first_move_frame < 0 && pos.distance_to(prev) > 0.005 {
@@ -896,11 +1031,14 @@ mod itest {
             .add_child(&avatar.clone().upcast::<Node>());
         avatar
             .bind_mut()
-            .set_movement_type(AvatarMovementType::LerpTwoPoints as i32);
+            .set_movement_type(AvatarMovementType::LerpTwoPoints);
         // Keep update_parcel_position away from DclGlobal (not available in
         // the test runner): pretend we're settled in parcel (0,0), scene 1.
-        avatar.set("current_parcel_position", &Vector2i::ZERO.to_variant());
-        avatar.set("current_parcel_scene_id", &1_i32.to_variant());
+        {
+            let mut bound = avatar.bind_mut();
+            bound.current_parcel_position = Vector2i::ZERO;
+            bound.current_parcel_scene_id = 1;
+        }
 
         // Peer walks a circle (radius 2 m at 1 rad/s => 2 m/s) centered inside
         // parcel (0,0); packets sample it with the captured jitter.
@@ -927,7 +1065,7 @@ mod itest {
                     .bind_mut()
                     .set_target_position(Transform3D::new(Basis::IDENTITY, pos));
             }
-            avatar.bind_mut().process(frame);
+            avatar.bind_mut().advance_movement(frame);
             let pos = avatar.get_global_position();
             if step > 0 {
                 let step_len = pos.distance_to(prev);

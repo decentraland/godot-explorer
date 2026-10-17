@@ -67,9 +67,9 @@ and no item carries an estimate.
 |---|---|---|---|
 | 1. Core carve-out | none | Mateo + AI | code done; phone regression open |
 | 2. Rust root + emulator | 1.1 landed | Mateo + AI | code done; device checks (2.8, 2.9) open |
-| 3. FFI + entry flow | 2.1 landed | Mateo + AI | not started |
+| 3. FFI + entry flow | 2.1 landed | Mateo + AI | code complete on `feat/react-native-phase5` (draft PR #3081); phase 5 closed on 17 Oct 2026; the open items are handed to phase 6 polish, see [phase-5-verification.md](phase-5-verification.md) |
 | 4. UI sweep + every domain on the core | phase 3 (the 4.0 sweep goes first, D-44) | Mateo + AI | not started |
-| 5. Modern gdext, engine-side port, VR removed | 2.1 landed; mostly after 4.0 | Mateo + AI | not started |
+| 5. Modern gdext, engine-side port, VR removed | 2.1 landed; mostly after 4.0 | Mateo + AI | code on `feat/react-native-phase5` (draft PR #3081); phase 5 closed on 17 Oct 2026; the open items are handed to phase 6 polish, see [phase-5-verification.md](phase-5-verification.md) |
 | **Checkpoint 1 Nov** (D-39): real state of stack 1, one of options (a)–(d) chosen | | | |
 | **Gate: full migration** (parity checklist green and zero `.gd`), target 30 Nov | | | |
 | 6. Fix, validate, polish (December, first) | full-migration gate | full team | not started |

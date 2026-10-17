@@ -1,5 +1,6 @@
 use std::time::Instant;
 
+use crate::godot_classes::dcl_mesh_renderer::DclMeshRenderer;
 use crate::{
     dcl::{
         components::{
@@ -18,40 +19,26 @@ use godot::{
     prelude::*,
 };
 
-pub fn create_or_update_mesh(mesh_instance: &mut Gd<MeshInstance3D>, mesh: &PbMeshRenderer) {
+pub fn create_or_update_mesh(mesh_instance: &mut Gd<DclMeshRenderer>, mesh: &PbMeshRenderer) {
     let current_mesh = mesh_instance.get_mesh();
 
     match mesh.mesh.as_ref() {
         Some(mesh) => match mesh {
             pb_mesh_renderer::Mesh::Box(box_mesh) => {
-                let uvs = box_mesh
-                    .uvs
-                    .iter()
-                    .map(f32::to_variant)
-                    .collect::<VarArray>()
-                    .to_variant();
-                mesh_instance.call("set_box", &[uvs]);
+                mesh_instance.bind_mut().set_box(&box_mesh.uvs);
             }
             pb_mesh_renderer::Mesh::Sphere(_) => {
-                mesh_instance.call("set_sphere", &[]);
+                mesh_instance.bind_mut().set_sphere();
             }
             pb_mesh_renderer::Mesh::Cylinder(cylinder_mesh_value) => {
                 let top_radius = cylinder_mesh_value.radius_top.unwrap_or(0.5);
                 let bottom_radius = cylinder_mesh_value.radius_bottom.unwrap_or(0.5);
-                mesh_instance.call(
-                    "set_cylinder",
-                    &[top_radius.to_variant(), bottom_radius.to_variant()],
-                );
+                mesh_instance
+                    .bind_mut()
+                    .set_cylinder(top_radius, bottom_radius);
             }
             pb_mesh_renderer::Mesh::Plane(plane_mesh) => {
-                let uvs = plane_mesh
-                    .uvs
-                    .iter()
-                    .map(f32::to_variant)
-                    .collect::<VarArray>()
-                    .to_variant();
-
-                mesh_instance.call("set_plane", &[uvs]);
+                mesh_instance.bind_mut().set_plane(&plane_mesh.uvs);
             }
         },
         _ => {
@@ -94,7 +81,9 @@ pub fn update_mesh_renderer(
             let (_godot_entity_node, mut node_3d) = godot_dcl_scene.ensure_node_3d(entity);
 
             let new_value = new_value.value.clone();
-            let existing = node_3d.try_get_node_as::<MeshInstance3D>("MeshRenderer");
+            let existing = node_3d
+                .try_get_node_as::<MeshInstance3D>("MeshRenderer")
+                .and_then(|n| n.try_cast::<DclMeshRenderer>().ok());
 
             if new_value.is_none() {
                 if let Some(mut mesh_renderer_node) = existing {
@@ -104,12 +93,7 @@ pub fn update_mesh_renderer(
             } else if let Some(new_value) = new_value {
                 let (mut mesh_instance_3d, add_to_base) = match existing {
                     Some(mesh_instance_3d) => (mesh_instance_3d, false),
-                    None => (
-                        crate::scene_runner::scene_cache::instantiate::<MeshInstance3D>(
-                            "res://src/decentraland_components/mesh_renderer.tscn",
-                        ),
-                        true,
-                    ),
+                    None => (DclMeshRenderer::new_alloc(), true),
                 };
 
                 create_or_update_mesh(&mut mesh_instance_3d, &new_value);

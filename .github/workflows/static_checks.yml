@@ -16,20 +16,19 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: No new .gd files (plan rule 1)
-        if: github.event_name == 'pull_request'
+      - name: No GDScript in the engine project
         run: |
           set -eu
-          NEW_GD=$(git diff --diff-filter=A --name-only "origin/${{ github.base_ref }}...HEAD" -- '*.gd')
-          if [ -n "$NEW_GD" ]; then
-            echo "::error::New GDScript files are not allowed on this branch (new behaviour goes to RN or Rust):"
-            echo "$NEW_GD"
+          FOUND=$(find godot/src -name '*.gd')
+          if [ -n "$FOUND" ]; then
+            echo "::error::GDScript is not allowed under godot/src (the engine is Rust; the screens are React Native):"
+            echo "$FOUND"
             exit 1
           fi
 
       - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # @stable
         with:
-          toolchain: "1.90"
+          toolchain: "1.94"
           components: rustfmt
 
       - name: Set up Python
@@ -39,15 +38,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
-
-      - name: Install gdtoolkit 4
-        run: pip3 install git+https://github.com/dcl-regenesislabs/godot-gdscript-toolkit.git
-
-      - name: Check format GDScript
-        run: gdformat -d godot/
-
-      - name: GDScript Linter
-        run: gdlint godot/
 
       - name: cargo fmt
         working-directory: lib

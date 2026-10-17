@@ -19,6 +19,7 @@ static GLOBAL: tools::memory_debugger::TrackingAllocator =
     tools::memory_debugger::TrackingAllocator;
 
 pub mod analytics;
+pub mod app;
 #[cfg(feature = "asset_server")]
 pub mod asset_server;
 pub mod auth;
@@ -30,20 +31,29 @@ pub mod dcl;
 pub use dcl_core::deep_link;
 pub use dcl_core::env;
 pub mod engine;
+pub mod fetcher;
 pub mod godot_classes;
 pub mod http_request;
-#[cfg(test)]
-mod hud_input_lint;
+pub mod lights;
+pub mod media;
+pub mod nft;
+pub mod player;
 pub mod profile;
 pub mod realm;
 pub mod scene_runner;
+pub mod sky;
 pub mod test_runner;
+pub mod text_shape;
 pub mod tools;
+pub mod ui;
 pub use dcl_core::urls;
 pub mod utils;
+pub mod world;
 
 struct DecentralandGodotLibrary;
 
+// SAFETY: gdext requires this marker; the library keeps the contract (no engine access before
+// `InitLevel::Scene`, no `Gd` handed to another thread without a deferred call).
 #[gdextension]
 unsafe impl ExtensionLibrary for DecentralandGodotLibrary {}
 
@@ -51,7 +61,7 @@ pub mod framework {
     use godot::prelude::*;
 
     // Registers all the `#[itest]` tests.
-    godot::sys::plugin_registry!(pub(crate) __GODOT_ITEST: RustTestCase);
+    godot::sys::shard_registry!(pub(crate) __GODOT_ITEST: RustTestCase);
 
     pub struct TestContext {
         #[allow(dead_code)]
@@ -65,6 +75,8 @@ pub mod framework {
         pub skipped: bool,
         /// If one or more tests are focused, only they will be executed. Helpful for debugging and working on specific features.
         pub focused: bool,
+        /// Tests that need the editor; the in-game runner skips them.
+        pub editor_only: bool,
         #[allow(dead_code)]
         pub line: u32,
         pub function: fn(&TestContext),
@@ -76,7 +88,11 @@ pub mod framework {
         let mut tests: Vec<RustTestCase> = vec![];
         let mut is_focus_run = false;
 
-        godot::sys::plugin_foreach!(__GODOT_ITEST; |test: &RustTestCase| {
+        godot::sys::shard_foreach!(__GODOT_ITEST; |test: &RustTestCase| {
+            if test.editor_only {
+                return;
+            }
+
             // First time a focused test is encountered, switch to "focused" mode and throw everything away.
             if !is_focus_run && test.focused {
                 tests.clear();
@@ -97,3 +113,5 @@ pub mod framework {
         (tests, all_files.len(), is_focus_run)
     }
 }
+#[cfg(test)]
+mod call_targets_test;

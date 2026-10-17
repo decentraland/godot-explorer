@@ -693,6 +693,18 @@ pub fn install(
         );
     }
 
+    // The API file changes with the branch build, so it is fetched on every install.
+    let api_url = format!(
+        "{}extension_api.json",
+        match effective_branch {
+            Some(b) => godot_editor_base_url_for_branch(b),
+            None => godot_editor_base_url(),
+        }
+    );
+    print_message(MessageType::Info, &format!("Downloading: {api_url}"));
+    fs::create_dir_all(BinPaths::godot())?;
+    download_file(&api_url, BinPaths::extension_api().to_str().unwrap())?;
+
     // Set executable permissions for protoc if on Unix-like systems
     match (env::consts::OS, env::consts::ARCH) {
         ("linux", _) | ("macos", _) => {

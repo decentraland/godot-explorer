@@ -131,7 +131,7 @@ impl DclRealmRules {
                     ParamValue::Flag => true.to_variant(),
                 })
                 .collect();
-            dict.set(key.as_str(), values);
+            dict.set(key.as_str(), &values);
         }
         dict
     }
@@ -165,10 +165,10 @@ impl DclRealmRules {
         let commit = realm::commit_from_about(&about_to_json(&about), &world_scenes);
 
         let mut dict = VarDictionary::new();
-        dict.set("scene_urns", urns_to_array(&commit.scene_urns));
+        dict.set("scene_urns", &urns_to_array(&commit.scene_urns));
         dict.set(
             "scenes_urn_override",
-            commit
+            &commit
                 .scenes_urn_override
                 .map(|urns| {
                     urns.iter()
@@ -180,7 +180,7 @@ impl DclRealmRules {
         );
         dict.set(
             "global_scene_urns",
-            urns_to_array(&commit.global_scene_urns),
+            &urns_to_array(&commit.global_scene_urns),
         );
         dict.set(
             "city_loader_content_base_url",

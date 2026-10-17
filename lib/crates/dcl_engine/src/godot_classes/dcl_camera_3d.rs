@@ -6,12 +6,15 @@ use godot::{
 #[class(init, base=Camera3D)]
 pub struct DclCamera3D {
     #[export]
+    #[var(pub)]
     camera_mode: i32,
 
     #[export]
+    #[var(pub)]
     smoothing_speed: f32,
 
     #[export]
+    #[var(pub)]
     target_fov: f32,
 
     _base: Base<Camera3D>,

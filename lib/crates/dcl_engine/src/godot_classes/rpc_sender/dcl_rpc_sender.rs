@@ -22,7 +22,7 @@ macro_rules! generate_dcl_rpc_sender {
         #[godot::prelude::godot_api]
         impl $struct_name {
             #[func]
-            fn send(&mut self, response: godot::prelude::Variant) {
+            pub fn send(&mut self, response: godot::prelude::Variant) {
                 if let Some(sender) = self.sender.as_ref() {
                     let response =
                         <$response_type>::try_from_variant(&response).expect("send convertion");

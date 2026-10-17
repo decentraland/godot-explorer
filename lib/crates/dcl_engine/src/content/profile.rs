@@ -117,23 +117,6 @@ pub(crate) fn lambda_profile_url(lamda_server_base_url: &str, user_id: H160) -> 
 // Fetches and parses a lambda profile from an explicit URL. Used both by the
 // h160 path above and by the default-profile path (`profiles/default{N}`),
 // whose id is not an eth address.
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn lambda_profile_url_tolerates_both_trailing_slash_styles() {
-        let user = H160::from_low_u64_be(0x1234);
-        let slashed = lambda_profile_url("https://peer.decentraland.org/lambdas/", user);
-        let bare = lambda_profile_url("https://peer.decentraland.org/lambdas", user);
-        assert_eq!(slashed, bare);
-        assert_eq!(
-            slashed,
-            "https://peer.decentraland.org/lambdas/profiles/0x0000000000000000000000000000000000001234"
-        );
-    }
-}
-
 pub(crate) async fn request_lambda_profile_by_url(
     url: String,
     profile_base_url: &str,
@@ -156,4 +139,21 @@ pub(crate) async fn request_lambda_profile_by_url(
         .map_err(|v| anyhow::Error::msg(v.error_message))?;
 
     UserProfile::from_lambda_response(&response, profile_base_url)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn lambda_profile_url_tolerates_both_trailing_slash_styles() {
+        let user = H160::from_low_u64_be(0x1234);
+        let slashed = lambda_profile_url("https://peer.decentraland.org/lambdas/", user);
+        let bare = lambda_profile_url("https://peer.decentraland.org/lambdas", user);
+        assert_eq!(slashed, bare);
+        assert_eq!(
+            slashed,
+            "https://peer.decentraland.org/lambdas/profiles/0x0000000000000000000000000000000000001234"
+        );
+    }
 }

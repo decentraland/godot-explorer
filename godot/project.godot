@@ -40,16 +40,8 @@ general/ios/session_category=3
 
 [autoload]
 
-UiSounds="*res://src/helpers_components/ui_sounds.gd"
-Global="*res://src/global.gd"
-EmptyParcelProps="*res://assets/empty-scenes/empty_parcel_props.tscn"
-ImpostorCapturer="*res://src/decentraland_components/avatar/impostor/impostor_capturer.gd"
-AvatarLODCoordinator="*res://src/decentraland_components/avatar/impostor/avatar_lod_coordinator.gd"
-DebugWs="*res://src/tool/debug_server/debug_ws_server.gd"
-DevLocalhostRelay="*res://src/tool/dev_localhost_relay.gd"
-GltfLoadingCoordinator="*res://src/decentraland_components/gltf_loading_coordinator.gd"
-LightSourceManager="*res://src/decentraland_components/light_source_manager.gd"
-EngineHost="*res://src/engine_host/engine_host.gd"
+Global="*res://src/global.tscn"
+GlobalBoot="*res://src/global_boot.tscn"
 
 [debug]
 
@@ -76,7 +68,7 @@ import/use_multiple_threads=false
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/dcl-godot-android/plugin.cfg", "res://addons/dcl-ios-devtools/plugin.cfg", "res://addons/dcl_build_plugin/plugin.cfg", "res://addons/dcl_dev_tools/plugin.cfg", "res://addons/dcl_mobile_preview/plugin.cfg", "res://addons/emote_converter/plugin.cfg", "res://addons/resource_tracker/plugin.cfg")
+enabled=PackedStringArray("res://addons/dcl-godot-android/plugin.cfg", "res://addons/dcl_build_plugin/plugin.cfg", "res://addons/emote_converter/plugin.cfg")
 
 [filesystem]
 
@@ -299,8 +291,3 @@ ambient_color={
 "value": Vector3(0.35, 0.36, 0.4)
 }
 
-[xr]
-
-openxr/foveation_level=3
-openxr/enabled.xr=false
-shaders/enabled.xr=false

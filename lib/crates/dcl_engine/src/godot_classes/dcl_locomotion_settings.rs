@@ -14,21 +14,27 @@ pub const DEFAULT_HARD_LANDING_COOLDOWN: f32 = 0.0;
 #[class(base=RefCounted)]
 pub struct DclLocomotionSettings {
     #[export]
+    #[var(pub)]
     walk_speed: f32,
 
     #[export]
+    #[var(pub)]
     jog_speed: f32,
 
     #[export]
+    #[var(pub)]
     run_speed: f32,
 
     #[export]
+    #[var(pub)]
     jump_height: f32,
 
     #[export]
+    #[var(pub)]
     run_jump_height: f32,
 
     #[export]
+    #[var(pub)]
     hard_landing_cooldown: f32,
 }
 

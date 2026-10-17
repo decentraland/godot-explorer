@@ -231,7 +231,8 @@ pub fn update_gltf_node_modifiers(
                                 path.clone(),
                                 MaterialItem {
                                     dcl_material,
-                                    weak_ref: weakref(&godot_material.to_variant()),
+                                    weak_ref: weakref(&godot_material.to_variant())
+                                        .to::<Gd<godot::classes::WeakRef>>(),
                                     waiting_textures: true,
                                 },
                             );
@@ -263,7 +264,8 @@ pub fn update_gltf_node_modifiers(
                                     material_key,
                                     MaterialItem {
                                         dcl_material,
-                                        weak_ref: weakref(&godot_material.to_variant()),
+                                        weak_ref: weakref(&godot_material.to_variant())
+                                            .to::<Gd<godot::classes::WeakRef>>(),
                                         waiting_textures: true,
                                     },
                                 );

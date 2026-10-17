@@ -77,7 +77,7 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 }
 
                 let existing_material = if let Some(material_item) = scene.materials.get(entity) {
-                    let material_item = material_item.weak_ref.call("get_ref", &[]);
+                    let material_item = material_item.weak_ref.get_ref();
 
                     if material_item.is_nil() {
                         None
@@ -100,23 +100,20 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                                     hash,
                                 );
                             }
-                            content_provider.call_deferred(
-                                "fetch_texture_by_hash",
-                                &[
-                                    hash.to_godot().to_variant(),
-                                    DclContentMappingAndUrl::from_ref(
-                                        scene.content_mapping.clone(),
-                                    )
-                                    .to_variant(),
-                                ],
+                            let (hash, mapping) = (
+                                hash.to_godot(),
+                                DclContentMappingAndUrl::from_ref(scene.content_mapping.clone()),
                             );
+                            content_provider.run_deferred(move |provider| {
+                                provider.fetch_texture_by_hash(hash, mapping);
+                            });
                         }
                         DclSourceTex::AvatarTexture(user_id) => {
                             // Prefetch avatar texture immediately when material is created
-                            content_provider.call_deferred(
-                                "fetch_avatar_texture",
-                                &[user_id.to_godot().to_variant()],
-                            );
+                            let user_id = user_id.to_godot();
+                            content_provider.run_deferred(move |provider| {
+                                provider.fetch_avatar_texture(user_id);
+                            });
                         }
                         DclSourceTex::VideoTexture(_) => {
                             // Video textures are handled separately
@@ -188,7 +185,8 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                     *entity,
                     MaterialItem {
                         dcl_mat: dcl_material.clone(),
-                        weak_ref: weakref(&godot_material.to_variant()),
+                        weak_ref: weakref(&godot_material.to_variant())
+                            .to::<Gd<godot::classes::WeakRef>>(),
                         waiting_textures,
                         alive: true,
                     },
@@ -205,10 +203,7 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                 let mesh_renderer = node_3d.try_get_node_as::<MeshInstance3D>("MeshRenderer");
 
                 if let Some(mut mesh_renderer) = mesh_renderer {
-                    mesh_renderer.call(
-                        "set_surface_override_material",
-                        &[0.to_variant(), Variant::nil()],
-                    );
+                    mesh_renderer.set_surface_override_material(0, Gd::null_arg());
                     godot_entity_node.material.take();
                 }
             }
@@ -225,7 +220,7 @@ pub fn update_material(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
         for (entity, item) in scene.materials.iter() {
             let dcl_material = item.dcl_mat.clone();
             if item.waiting_textures {
-                let material_item = item.weak_ref.call("get_ref", &[]);
+                let material_item = item.weak_ref.get_ref();
                 if material_item.is_nil() {
                     dead_materials.insert(*entity);
                     continue;
@@ -513,44 +508,26 @@ fn clear_removed_textures(material: &mut Gd<StandardMaterial3D>, dcl_material: &
         DclMaterial::Unlit(unlit) => {
             // Clear albedo texture if neither main texture nor alpha_texture is present
             if unlit.texture.is_none() && unlit.alpha_texture.is_none() {
-                material.call(
-                    "set_texture",
-                    &[TextureParam::ALBEDO.ord().to_variant(), Variant::nil()],
-                );
+                material.set_texture(TextureParam::ALBEDO, Gd::null_arg());
             }
             // Unlit materials don't have normal/emission textures
-            material.call(
-                "set_texture",
-                &[TextureParam::NORMAL.ord().to_variant(), Variant::nil()],
-            );
-            material.call(
-                "set_texture",
-                &[TextureParam::EMISSION.ord().to_variant(), Variant::nil()],
-            );
+            material.set_texture(TextureParam::NORMAL, Gd::null_arg());
+            material.set_texture(TextureParam::EMISSION, Gd::null_arg());
         }
         DclMaterial::Pbr(pbr) => {
             // Clear albedo texture if not present (and no alpha texture either)
             if pbr.texture.is_none() && pbr.alpha_texture.is_none() {
-                material.call(
-                    "set_texture",
-                    &[TextureParam::ALBEDO.ord().to_variant(), Variant::nil()],
-                );
+                material.set_texture(TextureParam::ALBEDO, Gd::null_arg());
             }
             // Clear normal texture if not present
             if pbr.bump_texture.is_none() {
-                material.call(
-                    "set_texture",
-                    &[TextureParam::NORMAL.ord().to_variant(), Variant::nil()],
-                );
+                material.set_texture(TextureParam::NORMAL, Gd::null_arg());
                 // Also disable the normal map feature
                 material.set_feature(Feature::NORMAL_MAPPING, false);
             }
             // Clear emission texture if not present
             if pbr.emissive_texture.is_none() {
-                material.call(
-                    "set_texture",
-                    &[TextureParam::EMISSION.ord().to_variant(), Variant::nil()],
-                );
+                material.set_texture(TextureParam::EMISSION, Gd::null_arg());
             }
         }
     }
@@ -727,7 +704,7 @@ pub fn update_video_material_textures(scene: &mut Scene) {
             continue;
         }
 
-        let material_ref = item.weak_ref.call("get_ref", &[]);
+        let material_ref = item.weak_ref.get_ref();
         if material_ref.is_nil() {
             continue;
         }

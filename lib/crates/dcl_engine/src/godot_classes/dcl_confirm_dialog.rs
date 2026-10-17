@@ -81,19 +81,26 @@ impl IControl for DclConfirmDialog {
     }
 
     fn ready(&mut self) {
-        let mut ok_button = self
+        let ok_button = self
             .base()
             .get_node_or_null("%OkButton")
             .expect("Missing %OkButton")
             .cast::<Button>();
-        let mut reject_button = self
+        let reject_button = self
             .base()
             .get_node_or_null("%RejectButton")
             .expect("Missing %RejectButton")
             .cast::<Button>();
 
-        ok_button.connect("pressed", &self.base().callable("_on_ok_pressed"));
-        reject_button.connect("pressed", &self.base().callable("_on_reject_pressed"));
+        let this = self.to_gd();
+        ok_button
+            .signals()
+            .pressed()
+            .connect_other(&this, |this: &mut Self| this._on_ok_pressed());
+        reject_button
+            .signals()
+            .pressed()
+            .connect_other(&this, |this: &mut Self| this._on_reject_pressed());
 
         self.title_label = Some(
             self.base()

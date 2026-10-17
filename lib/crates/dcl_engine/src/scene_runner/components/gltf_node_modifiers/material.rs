@@ -42,10 +42,7 @@ pub fn restore_original_materials(
             mesh.set_surface_override_material(i as i32, material);
         } else {
             // Use Variant::nil() to properly clear the override
-            mesh.call(
-                "set_surface_override_material",
-                &[(i as i32).to_variant(), Variant::nil()],
-            );
+            mesh.set_surface_override_material(i as i32, Gd::null_arg());
         }
     }
 }
@@ -66,11 +63,7 @@ fn get_or_create_material(mesh: &Gd<MeshInstance3D>, surface_idx: i32) -> Gd<Sta
     if let Some(active_mat) = mesh.get_active_material(surface_idx) {
         if let Ok(std_mat) = active_mat.try_cast::<StandardMaterial3D>() {
             // Duplicate to avoid modifying the shared resource
-            if let Some(duplicated) = std_mat.duplicate() {
-                if let Ok(dup_std) = duplicated.try_cast::<StandardMaterial3D>() {
-                    return dup_std;
-                }
-            }
+            return std_mat.duplicate_resource();
         }
     }
 
@@ -102,13 +95,13 @@ pub fn apply_material_to_mesh(
             if hash.starts_with("http") {
                 crate::content::external_content::register_external_texture(scene_ent_id, hash);
             }
-            content_provider.call_deferred(
-                "fetch_texture_by_hash",
-                &[
-                    hash.to_godot().to_variant(),
-                    DclContentMappingAndUrl::from_ref(content_mapping.clone()).to_variant(),
-                ],
+            let (hash, mapping) = (
+                hash.to_godot(),
+                DclContentMappingAndUrl::from_ref(content_mapping.clone()),
             );
+            content_provider.run_deferred(move |provider| {
+                provider.fetch_texture_by_hash(hash, mapping);
+            });
         }
     }
 
@@ -211,7 +204,7 @@ pub fn update_modifier_textures(scene: &mut Scene) {
             }
 
             // Check if material is still valid
-            let material_variant = item.weak_ref.call("get_ref", &[]);
+            let material_variant = item.weak_ref.get_ref();
             if material_variant.is_nil() {
                 return false;
             }
@@ -357,7 +350,7 @@ pub fn update_modifier_video_textures(scene: &mut Scene) {
                 continue;
             }
 
-            let material_ref = item.weak_ref.call("get_ref", &[]);
+            let material_ref = item.weak_ref.get_ref();
             if material_ref.is_nil() {
                 continue;
             }

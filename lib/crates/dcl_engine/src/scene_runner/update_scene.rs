@@ -5,6 +5,7 @@ use std::{
     time::Instant,
 };
 
+use godot::obj::WithUserSignals;
 use godot::{
     obj::Singleton,
     prelude::{varray, Callable, ToGodot, Transform3D},
@@ -360,7 +361,7 @@ pub fn _process_scene(
                             scene.scene_id.0,
                             log.level as i32,
                             log.timestamp as f32,
-                            log.message.to_godot()
+                            &log.message.to_godot()
                         ];
                         console.callv(&arguments);
                     }
@@ -509,13 +510,12 @@ pub fn _process_scene(
                             .bind()
                             .scene_runner
                             .clone()
-                            .call_deferred(
-                                "emit_signal",
-                                &[
-                                    "locomotion_settings_changed".to_variant(),
-                                    settings.to_variant(),
-                                ],
-                            );
+                            .run_deferred(move |runner| {
+                                runner
+                                    .signals()
+                                    .locomotion_settings_changed()
+                                    .emit(&settings)
+                            });
                     }
                     false
                 }
@@ -580,7 +580,8 @@ pub fn _process_scene(
                         scene
                             .godot_dcl_scene
                             .root_node_3d
-                            .call_deferred("emit_signal", &["tree_changed".to_variant()]);
+                            .clone()
+                            .run_deferred_gd(|root| root.signals().tree_changed().emit());
                         scene.godot_dcl_scene.hierarchy_changed_3d = false;
                     }
 

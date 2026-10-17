@@ -20,6 +20,8 @@ use crate::{
 
 use godot::{classes::Node, prelude::*};
 
+use crate::lights::component::DclLightSourceComponent;
+
 const DEBUG_DCL_LIGHTS_LOG: bool = false;
 
 fn fmt_v3(v: Vector3) -> String {
@@ -29,7 +31,7 @@ fn fmt_v3(v: Vector3) -> String {
 pub fn create_or_update_light(
     content_mapping: &ContentMappingAndUrlRef,
     entity_node: &Gd<Node3D>,
-    light_node: &mut Gd<Node3D>,
+    light_node: &mut Gd<DclLightSourceComponent>,
     light: &PbLightSource,
     entity_debug_name: &str,
 ) {
@@ -39,7 +41,7 @@ pub fn create_or_update_light(
     let g = color.map(|c| c.g).unwrap_or(1.0);
     let b = color.map(|c| c.b).unwrap_or(1.0);
 
-    let color_variant = Color::from_rgb(r, g, b).to_variant();
+    let color = Color::from_rgb(r, g, b);
 
     // Proto defaults: intensity 16000 (candela); range -1 means "auto",
     // computed as pow(intensity, 0.25) — same as the Unity reference client.
@@ -56,11 +58,11 @@ pub fn create_or_update_light(
     // SDK `active` field (default true): maps to the runtime enable flag so a
     // scene can switch a light off without removing the component.
     let active = light.active.unwrap_or(true);
-    light_node.call("set_light_enabled", &[active.to_variant()]);
+    light_node.bind_mut().set_light_enabled(active);
 
     // Proto default shadow=false: lights only cast when the scene opts in.
     let shadow = light.shadow.unwrap_or(false);
-    light_node.call("set_shadow_enabled", &[shadow.to_variant()]);
+    light_node.bind_mut().set_shadow_enabled(shadow);
 
     if let Some(texture_union) = light.shadow_mask_texture.as_ref() {
         has_shadow_mask_texture = true;
@@ -86,20 +88,16 @@ pub fn create_or_update_light(
                 projector_texture_path = texture_path.clone();
 
                 // Always keep the authored source path for debug/display purposes.
-                light_node.call(
-                    "set_projector_texture_display_path",
-                    &[projector_src.to_variant()],
-                );
+                light_node
+                    .bind_mut()
+                    .set_projector_texture_display_path(projector_src.as_str().into());
 
-                let current_path = light_node
-                    .call("get_projector_texture_path", &[])
-                    .try_to::<String>()
-                    .unwrap_or_default();
+                let current_path = light_node.bind().get_projector_texture_path().to_string();
 
                 if current_path != texture_path {
-                    light_node.call(
-                        "set_projector_texture",
-                        &[texture_path.to_variant(), projector_src.to_variant()],
+                    light_node.bind_mut().set_projector_texture(
+                        texture_path.as_str().into(),
+                        projector_src.as_str().into(),
                     );
                 }
             }
@@ -107,12 +105,11 @@ pub fn create_or_update_light(
     } else {
         // The update removed the shadow mask: clear any projector texture
         // left over from a previous value of this component.
-        let current_path = light_node
-            .call("get_projector_texture_path", &[])
-            .try_to::<String>()
-            .unwrap_or_default();
+        let current_path = light_node.bind().get_projector_texture_path().to_string();
         if !current_path.is_empty() && current_path != "res://assets/white_pixel.png" {
-            light_node.call("set_projector_texture", &["".to_variant()]);
+            light_node
+                .bind_mut()
+                .set_projector_texture("".into(), "".into());
         }
     }
 
@@ -176,28 +173,15 @@ pub fn create_or_update_light(
             let inner_angle = spot.inner_angle.unwrap_or(0.0);
             let outer_angle = spot.outer_angle.unwrap_or(30.0);
 
-            light_node.call(
-                "set_spot",
-                &[
-                    color_variant,
-                    intensity.to_variant(),
-                    range.to_variant(),
-                    inner_angle.to_variant(),
-                    outer_angle.to_variant(),
-                ],
-            );
+            light_node
+                .bind_mut()
+                .set_spot(color, intensity, range, inner_angle, outer_angle);
         }
         Some(pb_light_source::Type::Point(_point)) => {
-            light_node.call(
-                "set_point",
-                &[color_variant, intensity.to_variant(), range.to_variant()],
-            );
+            light_node.bind_mut().set_point(color, intensity, range);
         }
         _ => {
-            light_node.call(
-                "set_point",
-                &[color_variant, intensity.to_variant(), range.to_variant()],
-            );
+            light_node.bind_mut().set_point(color, intensity, range);
         }
     }
 }
@@ -230,7 +214,7 @@ pub fn update_light_source(
             let (_godot_entity_node, mut node_3d) = godot_dcl_scene.ensure_node_3d(entity);
 
             let light_value = new_value.value.clone();
-            let existing = node_3d.try_get_node_as::<Node3D>("LightSource");
+            let existing = node_3d.try_get_node_as::<DclLightSourceComponent>("LightSource");
 
             match light_value {
                 None => {
@@ -244,7 +228,7 @@ pub fn update_light_source(
                     }
 
                     if let Some(mut light_node) = existing {
-                        light_node.call("remove_light", &[]);
+                        light_node.bind_mut().remove_light();
                         node_3d.remove_child(&light_node.clone().upcast::<Node>());
                         light_node.queue_free();
                     }
@@ -253,11 +237,7 @@ pub fn update_light_source(
                     let mut light_node = match existing {
                         Some(light_node) => light_node,
                         None => {
-                            let scene = crate::scene_runner::scene_cache::packed_scene(
-                                "res://src/decentraland_components/light_source_component.tscn",
-                            );
-
-                            let mut new_light_node = scene.instantiate().unwrap().cast::<Node3D>();
+                            let mut new_light_node = DclLightSourceComponent::new_alloc();
                             new_light_node.set_name("LightSource");
                             // Important:
                             // Add the node to the tree first so Godot runs _ready()

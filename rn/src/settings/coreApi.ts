@@ -1,3 +1,4 @@
+import { I18nManager } from 'react-native';
 import { core } from '../core';
 import { onCoreEvents } from '../core/events';
 import {
@@ -6,6 +7,7 @@ import {
   SettingValue,
 } from '../core/native';
 import type { SettingEntry } from '../core/native';
+import { localeFromDevice } from '../i18n';
 import type { SettingsApi } from './api';
 import {
   defaultEnv,
@@ -59,6 +61,8 @@ export function createCoreSettingsApi(): SettingsApi {
   return {
     getAll: async () => ({
       ...defaultSettings(),
+      // No saved choice: the engine follows the device, so the shell does too.
+      locale: localeFromDevice(I18nManager.getConstants().localeIdentifier),
       ...entriesToValues(core().settings()),
       ...local,
     }),

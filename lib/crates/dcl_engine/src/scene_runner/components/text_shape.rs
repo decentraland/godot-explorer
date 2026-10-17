@@ -7,11 +7,9 @@ use crate::{
         },
     },
     scene_runner::{godot_dcl_scene::add_own_visual_child, scene::Scene},
+    text_shape::{layout::TextShapeParams, node::DclTextShape},
 };
 use godot::{classes::Node, prelude::*};
-
-const DCL_TEXT_SHAPE_SCENE: &str =
-    "res://src/decentraland_components/text_shape/dcl_text_shape.tscn";
 
 pub fn update_text_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
     let godot_dcl_scene = &mut scene.godot_dcl_scene;
@@ -29,7 +27,9 @@ pub fn update_text_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
             let (_godot_entity_node, mut node_3d) = godot_dcl_scene.ensure_node_3d(entity);
 
             let new_value = new_value.value.clone();
-            let existing = node_3d.try_get_node_as::<Node3D>("TextShape");
+            let existing = node_3d
+                .try_get_node_as::<Node3D>("TextShape")
+                .and_then(|n| n.try_cast::<DclTextShape>().ok());
 
             if new_value.is_none() {
                 if let Some(mut text_shape_node) = existing {
@@ -37,93 +37,53 @@ pub fn update_text_shape(scene: &mut Scene, crdt_state: &mut SceneCrdtState) {
                     node_3d.remove_child(&text_shape_node.upcast::<Node>());
                 }
             } else if let Some(new_value) = new_value {
-                // All rendering, sizing and tag handling lives in GDScript
-                // (DclTextShape + renderers). Rust only instantiates the node and
-                // forwards the raw PbTextShape fields.
                 let mut text_shape_node = match existing {
                     Some(node) => node,
                     None => {
-                        let Some(instance) =
-                            crate::scene_runner::scene_cache::packed_scene(DCL_TEXT_SHAPE_SCENE)
-                                .instantiate()
-                        else {
-                            tracing::error!("Failed to instantiate {DCL_TEXT_SHAPE_SCENE}");
-                            continue;
-                        };
-                        let mut node = instance.cast::<Node3D>();
+                        let mut node = DclTextShape::new_alloc();
                         node.set_name("TextShape");
                         add_own_visual_child(&mut node_3d, &node.clone().upcast::<Node>());
                         node
                     }
                 };
 
-                let params = build_text_shape_params(&new_value);
-                text_shape_node.call("apply", &[params.to_variant()]);
+                text_shape_node
+                    .bind_mut()
+                    .apply(&text_shape_params(&new_value));
             }
         }
     }
 }
 
-/// Builds the `apply(params)` payload from the raw proto fields. Optional fields
-/// carry a `has_*` flag so GDScript can apply the exact same defaults the previous
-/// Rust path used.
-fn build_text_shape_params(
+/// The raw proto fields as the renderer's params.
+fn text_shape_params(
     value: &crate::dcl::components::proto_components::sdk::components::PbTextShape,
-) -> VarDictionary {
-    let mut params = VarDictionary::new();
-    params.set("text", value.text.clone());
-
-    set_opt_int(&mut params, "font", value.font);
-    set_opt_float(&mut params, "font_size", value.font_size);
-    set_opt_bool(&mut params, "font_auto_size", value.font_auto_size);
-    set_opt_int(&mut params, "text_align", value.text_align);
-    set_opt_float(&mut params, "width", value.width);
-    set_opt_float(&mut params, "height", value.height);
-    set_opt_bool(&mut params, "text_wrapping", value.text_wrapping);
-    set_opt_float(&mut params, "outline_width", value.outline_width);
-    set_opt_float(&mut params, "line_spacing", value.line_spacing);
-
-    let text_color = value
-        .text_color
-        .as_ref()
-        .map(|c| Color::from_rgba(c.r, c.g, c.b, c.a));
-    set_opt_color(&mut params, "text_color", text_color);
-
-    let outline_color = value
-        .outline_color
-        .as_ref()
-        .map(|c| Color::from_rgba(c.r, c.g, c.b, 1.0));
-    set_opt_color(&mut params, "outline_color", outline_color);
-
-    set_opt_float(&mut params, "shadow_blur", value.shadow_blur);
-    set_opt_float(&mut params, "shadow_offset_x", value.shadow_offset_x);
-    set_opt_float(&mut params, "shadow_offset_y", value.shadow_offset_y);
-
-    let shadow_color = value
-        .shadow_color
-        .as_ref()
-        .map(|c| Color::from_rgba(c.r, c.g, c.b, 1.0));
-    set_opt_color(&mut params, "shadow_color", shadow_color);
-
-    params
-}
-
-fn set_opt_int(params: &mut VarDictionary, key: &str, value: Option<i32>) {
-    params.set(format!("has_{key}"), value.is_some());
-    params.set(key, value.unwrap_or_default());
-}
-
-fn set_opt_float(params: &mut VarDictionary, key: &str, value: Option<f32>) {
-    params.set(format!("has_{key}"), value.is_some());
-    params.set(key, value.unwrap_or_default());
-}
-
-fn set_opt_bool(params: &mut VarDictionary, key: &str, value: Option<bool>) {
-    params.set(format!("has_{key}"), value.is_some());
-    params.set(key, value.unwrap_or_default());
-}
-
-fn set_opt_color(params: &mut VarDictionary, key: &str, value: Option<Color>) {
-    params.set(format!("has_{key}"), value.is_some());
-    params.set(key, value.unwrap_or(Color::from_rgba(1.0, 1.0, 1.0, 1.0)));
+) -> TextShapeParams {
+    TextShapeParams {
+        text: value.text.clone(),
+        font: value.font,
+        font_size: value.font_size,
+        font_auto_size: value.font_auto_size,
+        text_align: value.text_align,
+        width: value.width,
+        height: value.height,
+        text_wrapping: value.text_wrapping,
+        outline_width: value.outline_width,
+        line_spacing: value.line_spacing,
+        text_color: value
+            .text_color
+            .as_ref()
+            .map(|c| Color::from_rgba(c.r, c.g, c.b, c.a)),
+        outline_color: value
+            .outline_color
+            .as_ref()
+            .map(|c| Color::from_rgba(c.r, c.g, c.b, 1.0)),
+        shadow_blur: value.shadow_blur,
+        shadow_offset_x: value.shadow_offset_x,
+        shadow_offset_y: value.shadow_offset_y,
+        shadow_color: value
+            .shadow_color
+            .as_ref()
+            .map(|c| Color::from_rgba(c.r, c.g, c.b, 1.0)),
+    }
 }

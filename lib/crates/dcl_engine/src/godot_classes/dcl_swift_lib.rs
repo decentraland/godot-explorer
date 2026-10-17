@@ -105,32 +105,32 @@ pub struct DclStoreKitPlugin {
 #[godot_api]
 impl DclStoreKitPlugin {
     #[signal]
-    fn products_loaded(json: GString);
+    pub fn products_loaded(json: GString);
 
     #[signal]
-    fn products_load_failed(error: GString);
+    pub fn products_load_failed(error: GString);
 
     #[signal]
-    fn purchase_completed(json: GString);
+    pub fn purchase_completed(json: GString);
 
     #[signal]
-    fn purchase_failed(product_id: GString, reason: GString);
+    pub fn purchase_failed(product_id: GString, reason: GString);
 
     #[signal]
-    fn purchase_cancelled(product_id: GString);
+    pub fn purchase_cancelled(product_id: GString);
 
     #[signal]
-    fn purchase_pending(product_id: GString);
+    pub fn purchase_pending(product_id: GString);
 
     #[signal]
-    fn transaction_updated(json: GString);
+    pub fn transaction_updated(json: GString);
 
     /// `(environment, source, resolve_ms)` — emitted exactly once after
     /// `resolve_environment()`, guaranteed even on timeout. `environment` is
     /// `"production"` | `"sandbox"` | `"xcode"` | `"unknown"`; `source` tells how
     /// it was determined; `resolve_ms` is how long `AppTransaction` took.
     #[signal]
-    fn environment_resolved(environment: GString, source: GString, resolve_ms: f64);
+    pub fn environment_resolved(environment: GString, source: GString, resolve_ms: f64);
 
     fn ensure_inner(&mut self) -> bool {
         if self.inner.is_some() {
@@ -154,29 +154,74 @@ impl DclStoreKitPlugin {
         if self.wired || self.inner.is_none() {
             return;
         }
-        let cb_products_loaded = self.base().callable("_on_products_loaded");
-        let cb_products_load_failed = self.base().callable("_on_products_load_failed");
-        let cb_purchase_completed = self.base().callable("_on_purchase_completed");
-        let cb_purchase_failed = self.base().callable("_on_purchase_failed");
-        let cb_purchase_cancelled = self.base().callable("_on_purchase_cancelled");
-        let cb_purchase_pending = self.base().callable("_on_purchase_pending");
-        let cb_transaction_updated = self.base().callable("_on_transaction_updated");
-        let cb_environment_resolved = self.base().callable("_on_environment_resolved");
+        // The Swift side is not a class of this crate, so its signals are connected by name; the
+        // handlers are typed closures over this node.
+        let me = self.to_gd();
+        let forward = |name: &'static str, handler: fn(&mut Self, &[&Variant])| {
+            let mut me = me.clone();
+            Callable::from_fn(name, move |args| {
+                handler(&mut me.bind_mut(), args);
+                Variant::nil()
+            })
+        };
+        let handlers = [
+            (
+                "products_loaded",
+                forward("products_loaded", |this, a| {
+                    this._on_products_loaded(a[0].to())
+                }),
+            ),
+            (
+                "products_load_failed",
+                forward("products_load_failed", |this, a| {
+                    this._on_products_load_failed(a[0].to())
+                }),
+            ),
+            (
+                "purchase_completed",
+                forward("purchase_completed", |this, a| {
+                    this._on_purchase_completed(a[0].to())
+                }),
+            ),
+            (
+                "purchase_failed",
+                forward("purchase_failed", |this, a| {
+                    this._on_purchase_failed(a[0].to(), a[1].to())
+                }),
+            ),
+            (
+                "purchase_cancelled",
+                forward("purchase_cancelled", |this, a| {
+                    this._on_purchase_cancelled(a[0].to())
+                }),
+            ),
+            (
+                "purchase_pending",
+                forward("purchase_pending", |this, a| {
+                    this._on_purchase_pending(a[0].to())
+                }),
+            ),
+            (
+                "transaction_updated",
+                forward("transaction_updated", |this, a| {
+                    this._on_transaction_updated(a[0].to())
+                }),
+            ),
+            (
+                "environment_resolved",
+                forward("environment_resolved", |this, a| {
+                    this._on_environment_resolved(a[0].to(), a[1].to(), a[2].to())
+                }),
+            ),
+        ];
 
-        // The Swift signals are emitted from background `Task`s (StoreKit runs
-        // its async work off the main thread). Connect DEFERRED so the forwarders
-        // — and everything they re-emit into GDScript — run on the main thread,
+        // The Swift signals are emitted from background `Task`s (StoreKit runs its async work
+        // off the main thread). Connect DEFERRED so the forwarders run on the main thread,
         // where scene-tree mutations are safe.
         let inner = self.inner.as_mut().unwrap();
-        let deferred = ConnectFlags::DEFERRED;
-        inner.connect_flags("products_loaded", &cb_products_loaded, deferred);
-        inner.connect_flags("products_load_failed", &cb_products_load_failed, deferred);
-        inner.connect_flags("purchase_completed", &cb_purchase_completed, deferred);
-        inner.connect_flags("purchase_failed", &cb_purchase_failed, deferred);
-        inner.connect_flags("purchase_cancelled", &cb_purchase_cancelled, deferred);
-        inner.connect_flags("purchase_pending", &cb_purchase_pending, deferred);
-        inner.connect_flags("transaction_updated", &cb_transaction_updated, deferred);
-        inner.connect_flags("environment_resolved", &cb_environment_resolved, deferred);
+        for (signal, callable) in &handlers {
+            inner.connect_flags(*signal, callable, ConnectFlags::DEFERRED);
+        }
         self.wired = true;
     }
 
@@ -277,57 +322,43 @@ impl DclStoreKitPlugin {
 
     #[func]
     fn _on_products_loaded(&mut self, json: GString) {
-        self.base_mut()
-            .emit_signal("products_loaded", &[json.to_variant()]);
+        self.signals().products_loaded().emit(&json);
     }
 
     #[func]
     fn _on_products_load_failed(&mut self, error: GString) {
-        self.base_mut()
-            .emit_signal("products_load_failed", &[error.to_variant()]);
+        self.signals().products_load_failed().emit(&error);
     }
 
     #[func]
     fn _on_purchase_completed(&mut self, json: GString) {
-        self.base_mut()
-            .emit_signal("purchase_completed", &[json.to_variant()]);
+        self.signals().purchase_completed().emit(&json);
     }
 
     #[func]
     fn _on_purchase_failed(&mut self, product_id: GString, reason: GString) {
-        self.base_mut().emit_signal(
-            "purchase_failed",
-            &[product_id.to_variant(), reason.to_variant()],
-        );
+        self.signals().purchase_failed().emit(&product_id, &reason);
     }
 
     #[func]
     fn _on_purchase_cancelled(&mut self, product_id: GString) {
-        self.base_mut()
-            .emit_signal("purchase_cancelled", &[product_id.to_variant()]);
+        self.signals().purchase_cancelled().emit(&product_id);
     }
 
     #[func]
     fn _on_purchase_pending(&mut self, product_id: GString) {
-        self.base_mut()
-            .emit_signal("purchase_pending", &[product_id.to_variant()]);
+        self.signals().purchase_pending().emit(&product_id);
     }
 
     #[func]
     fn _on_transaction_updated(&mut self, json: GString) {
-        self.base_mut()
-            .emit_signal("transaction_updated", &[json.to_variant()]);
+        self.signals().transaction_updated().emit(&json);
     }
 
     #[func]
     fn _on_environment_resolved(&mut self, environment: GString, source: GString, resolve_ms: f64) {
-        self.base_mut().emit_signal(
-            "environment_resolved",
-            &[
-                environment.to_variant(),
-                source.to_variant(),
-                resolve_ms.to_variant(),
-            ],
-        );
+        self.signals()
+            .environment_resolved()
+            .emit(&environment, &source, resolve_ms);
     }
 }

@@ -17,19 +17,15 @@ pub const GODOT_CURRENT_VERSION: &str = "4.6.2";
 /// local download cache (keys embed it) and pins the immutable per-SHA release URLs below.
 pub const GODOT_BUILD_SHA: &str = "5ce8f80f4";
 
-/// TEMPORARY per-checkout override to pull the Godot editor + export templates from a specific
-/// fork *branch* build (published by CI under `/branches/<slug>/`) instead of the pinned stable
-/// release — without having to pass `--branch` on every `install` / `run` / `export`.
+/// Per-checkout override to pull the Godot editor, export templates and `extension_api.json` from a
+/// fork *branch* build (published by CI under `/branches/<slug>/`) instead of the pinned release.
+/// An explicit `--branch` on the CLI still takes precedence over this.
 ///
-/// `None` = use the pinned stable build (`GODOT_BUILD_SHA`). `Some("<branch>")` = use that
-/// branch's CI build. An explicit `--branch` on the CLI still takes precedence over this.
-///
-/// Reset to `None` once the branch is merged and `GODOT_BUILD_SHA` is bumped to the merge commit —
-/// leaving a branch pinned here makes every dev/CI pull an unmerged engine build. Currently unset:
-/// the release freed-instance check (decentraland/godotengine#25) is merged into `4.6.2` and
-/// `GODOT_BUILD_SHA` points at that merge commit, which also carries the failed-`Main::setup2`
-/// Android fix (#21), the Mali vertex-lighting NaN fix (#23) and the sha1 build-id fix (#20).
-pub const GODOT_USE_BRANCH: Option<&str> = None;
+/// Pinned to the React Native engine branch for the whole refactor: only that build publishes
+/// `extension_api.json`, which the `godot` crate binds against (typed calls to the fork's methods).
+/// Back to `None` when decentraland/godotengine#29 is merged into `4.6.2` (phase 7) and
+/// `GODOT_BUILD_SHA` is bumped to the merge commit.
+pub const GODOT_USE_BRANCH: Option<&str> = Some("spike/ios-host-embedding");
 
 /// Release tag identifying a specific fork build — `<version>.stable.gh.<sha>`, mirroring the
 /// `--version` string. Single source for the release URL path segment, the on-disk template SHA

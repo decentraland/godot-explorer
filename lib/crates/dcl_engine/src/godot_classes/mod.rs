@@ -5,13 +5,13 @@ pub mod dcl_android_plugin;
 pub mod dcl_audio_source;
 pub mod dcl_audio_stream;
 pub mod dcl_avatar;
+pub mod dcl_avatar_attach;
 pub mod dcl_avatar_modifier_area_3d;
 pub mod dcl_camera_3d;
 pub mod dcl_camera_mode_area_3d;
 pub mod dcl_cli;
 pub mod dcl_confirm_dialog;
 pub mod dcl_crash_generator;
-pub mod dcl_destination_rules;
 pub mod dcl_dynamic_graphics_manager;
 pub mod dcl_ether;
 pub mod dcl_feature_flags;
@@ -22,9 +22,9 @@ pub mod dcl_gltf_container;
 pub mod dcl_hashing;
 pub mod dcl_ios_plugin;
 pub mod dcl_locomotion_settings;
+pub mod dcl_mesh_renderer;
 pub mod dcl_node_entity_3d;
 pub mod dcl_parse_deep_link;
-pub mod dcl_preview_message;
 pub mod dcl_realm;
 pub mod dcl_realm_rules;
 #[cfg(feature = "use_resource_tracking")]
@@ -48,6 +48,7 @@ pub mod dcl_video_player;
 pub mod dcl_virtual_camera;
 pub mod floating_islands;
 pub mod font;
+pub mod gltf_container_load;
 pub mod portables;
 pub mod promise;
 pub mod rpc_sender;
@@ -71,3 +72,5 @@ where
         json5::from_str(json_str.as_str()).map_err(|e| e.to_string())
     }
 }
+pub mod force_global_scale;
+pub mod player_collider_filter;

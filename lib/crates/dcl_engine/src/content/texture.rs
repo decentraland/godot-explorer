@@ -82,15 +82,15 @@ fn create_fallback_texture_entry() -> Gd<TextureEntry> {
 #[derive(GodotClass)]
 #[class(init, base=RefCounted)]
 pub struct TextureEntry {
-    #[var]
+    #[var(pub)]
     pub image: Gd<Image>,
-    #[var]
+    #[var(pub)]
     pub texture: Gd<Texture2D>,
-    #[var]
+    #[var(pub)]
     pub original_size: Vector2i,
     /// True when this entry holds the fallback texture because decoding failed
     /// or the format is unsupported. Callers should treat the texture as a placeholder.
-    #[var]
+    #[var(pub)]
     pub failed: bool,
 }
 
@@ -512,7 +512,7 @@ pub fn create_compressed_texture(image: &mut Gd<Image>, max_size: i32) -> Gd<Tex
 }
 
 /// Hard cap on any single dimension, regardless of pixel budget.
-/// Keeps us safely under common GPU `MAX_TEXTURE_SIZE` limits on mobile / Quest.
+/// Keeps us safely under common GPU `MAX_TEXTURE_SIZE` limits on mobile.
 const MAX_TEXTURE_DIMENSION: i32 = 4096;
 
 /// Downscale `image` (preserving aspect ratio) so that:

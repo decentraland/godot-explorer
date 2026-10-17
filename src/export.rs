@@ -27,8 +27,6 @@ use crate::{
     ui::{create_spinner, print_message, print_section, MessageType},
 };
 
-use walkdir::WalkDir;
-
 /// Strips debug symbols from iOS static libraries (.a files) inside ios.zip to reduce size.
 /// This extracts the zip, strips the libraries, and re-compresses it.
 /// This is only run on macOS since iOS templates are only used there.
@@ -230,14 +228,10 @@ pub fn get_target_os(target: Option<&str>) -> anyhow::Result<String> {
                 // Android can usually be built from multiple platforms assuming you have the correct export templates
                 "android".to_string()
             }
-            "quest" => {
-                // Quest is essentially Android with specific settings
-                "quest".to_string()
-            }
             "linux" | "win64" | "macos" => t.to_string(),
             _ => {
                 return Err(anyhow::anyhow!(
-                    "Unsupported provided target: {}. Supported targets: ios, android, quest, linux, win64, macos.",
+                    "Unsupported provided target: {}. Supported targets: ios, android, linux, win64, macos.",
                     t
                 ));
             }
@@ -473,7 +467,7 @@ pub fn export(
     print_message(MessageType::Info, &format!("Target platform: {}", target));
 
     // Extract Android template if needed
-    if target == "android" || target == "quest" {
+    if target == "android" {
         extract_android_template()?;
     }
 
@@ -489,13 +483,6 @@ pub fn export(
                 "decentraland.godot.client.aab".to_string()
             } else {
                 "decentraland.godot.client.apk".to_string()
-            }
-        }
-        "quest" => {
-            if format == "aab" {
-                "meta-quest.aab".to_string()
-            } else {
-                "meta-quest.apk".to_string()
             }
         }
         _ => return Err(anyhow::anyhow!("Unexpected final target: {}", target)),
@@ -525,8 +512,8 @@ pub fn export(
     // Store targets get the build number (Android versionCode / iOS CFBundleVersion) stamped
     // into export_presets.cfg at export time, then restored afterward so the working tree keeps
     // its committed placeholder values. AAB additionally needs format/architecture/signing tweaks.
-    let is_store_target = matches!(target.as_str(), "android" | "quest" | "ios");
-    let aab_tweaks = (target == "android" || target == "quest") && format == "aab" && !rn_android;
+    let is_store_target = matches!(target.as_str(), "android" | "ios");
+    let aab_tweaks = target == "android" && format == "aab" && !rn_android;
     // Resolve the build number: `--build-number` wins, otherwise the `DCL_BUILD_NUMBER` env var
     // (set in CI by the Cloudflare allocator, idempotent per commit SHA). When neither is present
     // (local / fork builds) the committed placeholder in export_presets.cfg is kept as-is — those
@@ -604,8 +591,8 @@ pub fn export(
         std::fs::canonicalize(GODOT_PROJECT_FOLDER).unwrap(),
     ));
 
-    // Set Android keystore environment variables if exporting for Android/Quest
-    if target == "android" || target == "quest" {
+    // Set Android keystore environment variables if exporting for Android
+    if target == "android" {
         let keystore_type = if release { "release" } else { "debug" };
 
         // Generate keystore if it doesn't exist

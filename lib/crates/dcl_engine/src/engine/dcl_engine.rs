@@ -5,29 +5,21 @@ use dcl_core::app::{
     EntryRefusal, HudSnapshot, LoadingDetail, Parcel, UiState, Vec3,
 };
 
-use godot::classes::{Control, DisplayServer, Engine};
+use godot::classes::{DisplayServer, Engine};
 use godot::obj::Singleton;
 use godot::prelude::*;
 
 use super::scene_requests::{EmulatorSink, PendingResponses, SharedSink};
 
+use super::local_task::spawn_local;
+use crate::avatars::avatar::emote_load::async_play_emote_or_stash;
+use crate::godot_classes::dcl_avatar::DclAvatar;
 use crate::godot_classes::dcl_global::DclGlobal;
 
-/// Nodes of the running world (`explorer.tscn`), registered by the explorer when it is ready and
-/// dropped when it leaves the tree. Held by instance id: any of them can be freed between frames.
-#[derive(Clone, Copy)]
-struct WorldHandles {
-    explorer: InstanceId,
-    player: InstanceId,
-    avatar: InstanceId,
-    touch_camera_input: InstanceId,
-}
-
-/// Owner of the engine-side handles. `Global.engine` exposes it; `explorer.gd` attaches the world.
+/// Owner of the engine-side handles. `Global.engine` exposes it.
 #[derive(GodotClass)]
 #[class(base=Node)]
 pub struct DclEngine {
-    world: Option<WorldHandles>,
     pub(super) pending: PendingResponses,
     pub(super) sink: SharedSink,
     /// Commands from the core's app; `Some` once this engine attached to it.
@@ -52,7 +44,6 @@ const PERF_LOG_INTERVAL_SECS: f64 = 5.0;
 impl INode for DclEngine {
     fn init(base: Base<Node>) -> Self {
         Self {
-            world: None,
             pending: PendingResponses::default(),
             sink: Rc::new(EmulatorSink),
             core_commands: None,
@@ -98,10 +89,6 @@ impl INode for DclEngine {
             ));
         }
     }
-}
-
-fn resolve(id: InstanceId) -> Option<Gd<Node>> {
-    Gd::<Node>::try_from_instance_id(id).ok()
 }
 
 #[godot_api]
@@ -337,10 +324,7 @@ impl DclEngine {
             0
         };
         let height = self.keyboard_height;
-        self.base_mut().emit_signal(
-            "text_input_focus",
-            &[focused.to_variant(), height.to_variant()],
-        );
+        self.signals().text_input_focus().emit(focused, height);
         self.keep_focused_input_above_keyboard();
     }
 
@@ -356,10 +340,7 @@ impl DclEngine {
         let height = Self::keyboard_height_now();
         if height != self.keyboard_height {
             self.keyboard_height = height;
-            self.base_mut().emit_signal(
-                "text_input_focus",
-                &[true.to_variant(), height.to_variant()],
-            );
+            self.signals().text_input_focus().emit(true, height);
             self.keep_focused_input_above_keyboard();
         }
     }
@@ -367,21 +348,18 @@ impl DclEngine {
     /// Slides the scene UI up by the part of the focused input the keyboard would cover, and
     /// back down when the keyboard goes away. The field never moves past the top of the screen.
     fn keep_focused_input_above_keyboard(&self) {
-        let Some(explorer) = self.explorer() else {
+        let Some(world) = crate::world::state::current() else {
             return;
         };
-        let Some(container) = explorer.get_node_or_null("UI/SceneUIContainer") else {
-            return;
-        };
-        let Ok(mut container) = container.try_cast::<Control>() else {
-            return;
-        };
+        let mut container = world.scene_ui.clone();
         let mut offset = 0.0;
         if self.text_input_focused && self.keyboard_height > 0 {
-            if let Some(viewport) = explorer.get_viewport() {
+            if let Some(viewport) = world.explorer.get_viewport() {
                 let screen_height = viewport.get_visible_rect().size.y;
                 let keyboard_top = screen_height
-                    - Self::device_pixels_to_viewport_units(&explorer, self.keyboard_height as f32);
+                    - crate::world::api::device_pixels_to_viewport_units(
+                        self.keyboard_height as f32,
+                    );
                 let rect = self.focused_input_rect;
                 let overlap = rect.end().y + KEYBOARD_MARGIN - keyboard_top;
                 offset = overlap.clamp(0.0, rect.position.y.max(0.0));
@@ -389,42 +367,6 @@ impl DclEngine {
         }
         let x = container.get_position().x;
         container.set_position(Vector2::new(x, -offset));
-    }
-
-    /// Registers the world once the explorer has built its player; the handles are dropped when
-    /// the explorer leaves the tree.
-    #[func]
-    pub fn attach_world(&mut self, mut explorer: Gd<Node>) {
-        let node_property =
-            |owner: &Gd<Node>, name: &str| owner.get(name).try_to::<Gd<Node>>().ok();
-        let (Some(player), Some(touch_camera_input)) = (
-            node_property(&explorer, "player"),
-            node_property(&explorer, "mobile_camera_input"),
-        ) else {
-            tracing::error!("engine: the explorer is missing the player or the camera input");
-            return;
-        };
-        let Some(avatar) = node_property(&player, "avatar") else {
-            tracing::error!("engine: the player has no avatar");
-            return;
-        };
-        self.world = Some(WorldHandles {
-            explorer: explorer.instance_id(),
-            player: player.instance_id(),
-            avatar: avatar.instance_id(),
-            touch_camera_input: touch_camera_input.instance_id(),
-        });
-        let detach = self.base().callable("detach_world");
-        explorer.connect_flags(
-            "tree_exiting",
-            &detach,
-            godot::classes::object::ConnectFlags::ONE_SHOT,
-        );
-    }
-
-    #[func]
-    pub fn detach_world(&mut self) {
-        self.world = None;
     }
 
     /// Answers a scene request a sink left pending.
@@ -441,34 +383,20 @@ impl DclEngine {
 
     #[func]
     pub fn has_world(&self) -> bool {
-        self.world
-            .is_some_and(|world| resolve(world.explorer).is_some())
+        crate::world::state::current().is_some()
     }
 
-    fn explorer(&self) -> Option<Gd<Node>> {
-        resolve(self.world?.explorer)
+    fn avatar(&self) -> Option<Gd<DclAvatar>> {
+        crate::world::state::current()?.player.bind().avatar.clone()
     }
 
-    pub fn player(&self) -> Option<Gd<Node>> {
-        resolve(self.world?.player)
-    }
-
-    fn avatar(&self) -> Option<Gd<Node>> {
-        resolve(self.world?.avatar)
-    }
-
-    pub fn touch_camera_input(&self) -> Option<Gd<Node>> {
-        resolve(self.world?.touch_camera_input)
+    pub fn touch_camera_input(&self) -> Option<Gd<crate::player::mobile_input::MobileCameraInput>> {
+        crate::world::state::current().map(|w| w.camera_input.clone())
     }
 
     /// Whether the explorer UI has focus; `true` when there is no world to ask.
     pub fn ui_has_focus(&self) -> bool {
-        match self.explorer() {
-            Some(mut explorer) if explorer.has_method("ui_has_focus") => {
-                explorer.call("ui_has_focus", &[]).to::<bool>()
-            }
-            _ => true,
-        }
+        crate::world::api::ui_has_focus()
     }
 
     // ---- facade for the host (the JSON bridge today, the shell later)
@@ -476,94 +404,52 @@ impl DclEngine {
     /// Moves the local player to the centre of `parcel` in the current realm.
     #[func]
     pub fn teleport(&self, parcel: Vector2i) {
-        if let Some(mut explorer) = self.explorer() {
-            explorer.call("teleport_to", &[parcel.to_variant()]);
-        }
+        crate::world::api::teleport_to(parcel);
     }
 
     /// Plays an emote on the local avatar.
     #[func]
     pub fn play_local_emote(&self, urn: GString) {
-        if let Some(mut avatar) = self.avatar() {
-            avatar.call("async_play_emote", &[urn.to_variant()]);
+        if let Some(avatar) = self.avatar() {
+            spawn_local(async_play_emote_or_stash(avatar, urn.to_string(), -1, -1));
         }
     }
 
-    /// Where the host's native controls sit, in device pixels: the HUD and scene UI keep clear
+    /// Where the shell's native controls sit, in device pixels: the HUD and scene UI keep clear
     /// of these margins.
     #[func]
     pub fn set_hud_insets(&self, top: f32, right: f32, bottom: f32, left: f32) {
-        let Some(mut explorer) = self.explorer() else {
-            return;
-        };
-        let Ok(mut hud) = explorer.get("safe_area_hud").try_to::<Gd<Control>>() else {
-            return;
-        };
-        for (side, pixels) in [
-            ("top", top),
-            ("right", right),
-            ("bottom", bottom),
-            ("left", left),
-        ] {
-            let units = Self::device_pixels_to_viewport_units(&explorer, pixels);
-            hud.add_theme_constant_override(&format!("margin_{side}"), units as i32);
-        }
-        explorer.call("_push_scene_interactable_area", &[]);
-    }
-
-    /// The host reports device pixels; Godot lays out in its scaled viewport units.
-    fn device_pixels_to_viewport_units(explorer: &Gd<Node>, pixels: f32) -> f32 {
-        let window_width = DisplayServer::singleton().window_get_size().x;
-        let viewport_width = explorer
-            .get_viewport()
-            .map(|viewport| viewport.get_visible_rect().size.x);
-        match viewport_width {
-            Some(width) if window_width > 0 => pixels * width / window_width as f32,
-            _ => pixels,
-        }
+        crate::world::api::set_hud_insets(top, right, bottom, left);
     }
 
     // ---- local player
 
     pub fn move_player_to(&self, position: Vector3, skip_loading: bool) {
-        if let Some(mut explorer) = self.explorer() {
-            explorer.call(
-                "move_to",
-                &[position.to_variant(), skip_loading.to_variant()],
-            );
-        }
+        crate::world::api::move_to(position, skip_loading, true);
     }
 
     pub fn player_look_at(&self, target: Vector3) {
-        if let Some(mut explorer) = self.explorer() {
-            explorer.call("player_look_at", &[target.to_variant()]);
-        }
+        crate::world::api::player_look_at(target);
     }
 
     pub fn camera_look_at(&self, target: Vector3) {
-        if let Some(mut explorer) = self.explorer() {
-            explorer.call("camera_look_at", &[target.to_variant()]);
-        }
+        crate::world::api::camera_look_at(target);
     }
 
     pub fn avatar_look_at_independent(&self, target: Vector3) {
-        if let Some(mut explorer) = self.explorer() {
-            explorer.call("avatar_look_at_independent", &[target.to_variant()]);
-        }
+        crate::world::api::avatar_look_at_independent(target);
     }
 
     // ---- local avatar emotes
 
     pub fn play_emote(&self, emote_id: &str, mask: i64, scene_id: i32) {
-        if let Some(mut avatar) = self.avatar() {
-            avatar.call(
-                "async_play_emote",
-                &[
-                    emote_id.to_variant(),
-                    mask.to_variant(),
-                    scene_id.to_variant(),
-                ],
-            );
+        if let Some(avatar) = self.avatar() {
+            spawn_local(async_play_emote_or_stash(
+                avatar,
+                emote_id.to_string(),
+                mask,
+                scene_id,
+            ));
         }
     }
 
@@ -576,21 +462,18 @@ impl DclEngine {
         audio_hash: &str,
     ) {
         if let Some(mut avatar) = self.avatar() {
-            avatar.call(
-                "register_scene_emote_content",
-                &[
-                    scene_entity_id.to_variant(),
-                    base_url.to_variant(),
-                    glb_hash.to_variant(),
-                    audio_hash.to_variant(),
-                ],
+            avatar.bind_mut().register_scene_emote_content(
+                scene_entity_id,
+                base_url,
+                glb_hash,
+                audio_hash,
             );
         }
     }
 
     pub fn stop_emote_from_scene(&self, scene_id: i32) {
         if let Some(mut avatar) = self.avatar() {
-            avatar.call("stop_emote_from_scene", &[scene_id.to_variant()]);
+            avatar.bind_mut().stop_emote_from_scene(scene_id);
         }
     }
 }

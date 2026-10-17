@@ -1,6 +1,7 @@
 use dcl_core::logging::EventSink;
 pub use dcl_core::logging::MessageVisitor;
 use godot::classes::Os;
+use godot::global::{print_custom, PrintLevel, PrintRecord, PrintSource};
 use godot::prelude::*;
 use tracing::Level;
 
@@ -33,10 +34,10 @@ impl EventSink for GodotTracingLayer {
 fn emit_to_godot(msg: &str, metadata: &tracing::Metadata<'_>) {
     match *metadata.level() {
         Level::ERROR => {
-            print_error_with_source(msg, metadata);
+            print_with_source(PrintLevel::Error, msg, metadata);
         }
         Level::WARN => {
-            print_warning_with_source(msg, metadata);
+            print_with_source(PrintLevel::Warn, msg, metadata);
         }
         Level::INFO => godot_print!("{}", msg),
         Level::DEBUG => godot_print!("[DEBUG] {}", msg),
@@ -97,47 +98,20 @@ pub fn flush_background_logs() {
     android_background::flush();
 }
 
-/// Like `godot_error!` but with the real source location from tracing metadata,
+/// Like `godot_error!`/`godot_warn!` but with the real source location from tracing metadata,
 /// so Sentry and the Godot debugger show the actual Rust call site.
-fn print_error_with_source(msg: &str, metadata: &tracing::Metadata<'_>) {
-    let file = metadata.file().unwrap_or("unknown");
-    let line = metadata.line().unwrap_or(0) as i32;
-    let function = metadata.target();
-
-    let msg_c = format!("{}\0", msg);
-    let func_c = format!("{}\0", function);
-    let file_c = format!("{}\0", file);
-
-    unsafe {
-        godot::sys::interface_fn!(print_error)(
-            godot::sys::c_str_from_str(&msg_c),
-            godot::sys::c_str_from_str(&func_c),
-            godot::sys::c_str_from_str(&file_c),
-            line,
-            false as godot::sys::GDExtensionBool,
-        );
-    }
-}
-
-/// Like `godot_warn!` but with the real source location from tracing metadata.
-fn print_warning_with_source(msg: &str, metadata: &tracing::Metadata<'_>) {
-    let file = metadata.file().unwrap_or("unknown");
-    let line = metadata.line().unwrap_or(0) as i32;
-    let function = metadata.target();
-
-    let msg_c = format!("{}\0", msg);
-    let func_c = format!("{}\0", function);
-    let file_c = format!("{}\0", file);
-
-    unsafe {
-        godot::sys::interface_fn!(print_warning)(
-            godot::sys::c_str_from_str(&msg_c),
-            godot::sys::c_str_from_str(&func_c),
-            godot::sys::c_str_from_str(&file_c),
-            line,
-            false as godot::sys::GDExtensionBool,
-        );
-    }
+fn print_with_source(level: PrintLevel, msg: &str, metadata: &tracing::Metadata<'_>) {
+    print_custom(PrintRecord {
+        level,
+        message: msg,
+        rationale: None,
+        source: Some(PrintSource {
+            function: metadata.target(),
+            file: metadata.file().unwrap_or("unknown"),
+            line: metadata.line().unwrap_or(0),
+        }),
+        editor_notify: false,
+    });
 }
 
 /// Collects Godot cmdline args (both regular and user args after `--`).

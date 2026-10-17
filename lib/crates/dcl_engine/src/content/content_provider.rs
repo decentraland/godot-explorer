@@ -9,7 +9,7 @@ use std::{
 use dcl_core::Core;
 use futures_util::future::try_join_all;
 use godot::{
-    classes::{AudioStream, Material, Mesh, ResourceLoader, Texture2D},
+    classes::{AudioStream, Mesh, ResourceLoader, Texture2D},
     obj::Singleton,
     prelude::*,
 };
@@ -178,8 +178,6 @@ pub struct ContentProviderContext {
     pub texture_quality: TextureQuality, // copy from DclGlobal on startup
 }
 
-unsafe impl Send for ContentProviderContext {}
-
 /// Context for scene GLTF loading (simpler than ContentProviderContext)
 #[derive(Clone)]
 pub struct SceneGltfContext {
@@ -201,8 +199,6 @@ pub struct SceneGltfContext {
     /// (`fetch_optimized_asset_with_dependencies`), so the paths resolve.
     pub external_texture_refs: bool,
 }
-
-unsafe impl Send for SceneGltfContext {}
 
 /// Default optimized-assets bucket. The CLI `--optimized-content-base-url`
 /// override (see `optimized_url_override`) takes precedence when set.
@@ -276,7 +272,7 @@ pub fn scene_bake_key<'a>(glb_hash: &str, deps: impl IntoIterator<Item = &'a str
 /// the single source of truth for `resolved_optimized_base_url()`.
 ///
 /// Written from the main thread only — by the CLI parse at boot and by the
-/// `#[var(set)]` setter on `DclCli` (deeplink path) — and read from anywhere,
+/// `#[var(set = …)]` setter on `DclCli` (deeplink path) — and read from anywhere,
 /// most callers being tokio workers. Mirror of `cli.optimized_content_base_url`.
 static OPTIMIZED_URL_OVERRIDE: std::sync::RwLock<String> = std::sync::RwLock::new(String::new());
 
@@ -345,7 +341,7 @@ fn load_baked_texture_entry(godot_path: &str, original_size: Option<ImageSize>) 
     let original_size = if let Some(original_size) = original_size {
         Vector2i::new(original_size.width, original_size.height)
     } else {
-        texture.get_size().cast_int()
+        texture.get_size().to_vector2i()
     };
     let texture_entry = Gd::from_init_fn(|_base| TextureEntry {
         original_size,
@@ -1257,7 +1253,7 @@ impl ContentProvider {
         root: Gd<Node3D>,
         file_hash: &GString,
     ) -> Option<Gd<DclEmoteGltf>> {
-        use godot::classes::{Animation, AnimationLibrary, AnimationPlayer};
+        use godot::classes::{AnimationLibrary, AnimationPlayer};
 
         let mut anim_player = root.try_get_node_as::<AnimationPlayer>("AnimationPlayer")?;
 
@@ -1274,12 +1270,7 @@ impl ContentProvider {
                 let Some(anim) = lib.get_animation(&anim_name) else {
                     continue;
                 };
-                let Some(dup) = anim.duplicate() else {
-                    continue;
-                };
-                let Ok(mut dup) = dup.try_cast::<Animation>() else {
-                    continue;
-                };
+                let mut dup = anim.duplicate_resource();
                 dup.set_name(&anim.get_name());
                 local_lib.add_animation(&anim_name, &dup);
             }
@@ -2053,11 +2044,9 @@ impl ContentProvider {
                     let Some(new_material) = mesh.surface_get_material(i) else {
                         continue;
                     };
-                    let Some(new_material) = new_material.duplicate() else {
-                        continue;
-                    };
+                    let new_material = new_material.duplicate_resource();
 
-                    mesh.surface_set_material(i, &new_material.cast::<Material>());
+                    mesh.surface_set_material(i, &new_material);
                 }
             }
 
@@ -2244,33 +2233,33 @@ impl ContentProvider {
     }
 
     #[func]
-    pub fn get_optimized_scene_count(&self) -> u64 {
-        self.optimized_scene_count.load(Ordering::Relaxed)
+    pub fn get_optimized_scene_count(&self) -> i64 {
+        self.optimized_scene_count.load(Ordering::Relaxed) as i64
     }
 
     #[func]
-    pub fn get_runtime_scene_count(&self) -> u64 {
-        self.runtime_scene_count.load(Ordering::Relaxed)
+    pub fn get_runtime_scene_count(&self) -> i64 {
+        self.runtime_scene_count.load(Ordering::Relaxed) as i64
     }
 
     #[func]
-    pub fn get_optimized_wearable_count(&self) -> u64 {
-        self.optimized_wearable_count.load(Ordering::Relaxed)
+    pub fn get_optimized_wearable_count(&self) -> i64 {
+        self.optimized_wearable_count.load(Ordering::Relaxed) as i64
     }
 
     #[func]
-    pub fn get_runtime_wearable_count(&self) -> u64 {
-        self.runtime_wearable_count.load(Ordering::Relaxed)
+    pub fn get_runtime_wearable_count(&self) -> i64 {
+        self.runtime_wearable_count.load(Ordering::Relaxed) as i64
     }
 
     #[func]
-    pub fn count_loaded_resources(&self) -> u64 {
-        self.loaded_resources.load(Ordering::Relaxed)
+    pub fn count_loaded_resources(&self) -> i64 {
+        self.loaded_resources.load(Ordering::Relaxed) as i64
     }
 
     #[func]
-    pub fn count_loading_resources(&self) -> u64 {
-        self.loading_resources.load(Ordering::Relaxed)
+    pub fn count_loading_resources(&self) -> i64 {
+        self.loading_resources.load(Ordering::Relaxed) as i64
     }
 
     #[func]

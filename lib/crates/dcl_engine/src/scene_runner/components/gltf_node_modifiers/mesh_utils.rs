@@ -88,7 +88,7 @@ pub fn find_node_by_path(root: &Gd<Node3D>, path: &str) -> Option<Gd<Node3D>> {
 
         for i in 0..child_count {
             if let Some(child) = current.get_child(i) {
-                if child.get_name().to_string() == part {
+                if child.get_name() == part {
                     current = child;
                     found = true;
                     break;

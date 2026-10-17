@@ -66,7 +66,9 @@ pub fn update_avatar_modifier_area(scene: &mut Scene, crdt_state: &mut SceneCrdt
                     // avatar has already entered the area. The setter alone
                     // does not re-trigger detection, so we nudge overlapping
                     // detectors to re-evaluate.
-                    avatar_modifier_area_3d.call("refresh_overlapping_detectors", &[]);
+                    avatar_modifier_area_3d
+                        .bind()
+                        .refresh_overlapping_detectors();
                 } else {
                     let mut avatar_modifier_area =
                         crate::scene_runner::scene_cache::instantiate::<DclAvatarModifierArea3D>(

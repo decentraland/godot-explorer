@@ -16,15 +16,10 @@ use godot::classes::{Engine, SceneTree};
 use godot::prelude::*;
 use tokio::sync::oneshot;
 
-use super::{root::call_static, DclEngine};
+use super::DclEngine;
+use crate::app::{audio_settings, general_settings, graphics, locale};
 use crate::content::resource_provider::ResourceProvider;
 use crate::godot_classes::dcl_global::DclGlobal;
-
-const GRAPHICS: &str = "res://src/config/graphic_settings.gd";
-const AUDIO: &str = "res://src/config/audio_settings.gd";
-const GENERAL: &str = "res://src/config/general_settings.gd";
-const LOCALE: &str = "res://src/config/locale_settings.gd";
-const AVATAR_ANIM: &str = "res://src/decentraland_components/avatar/avatar_anim_helpers.gd";
 
 type Task = Box<dyn FnOnce() + Send>;
 
@@ -47,19 +42,15 @@ fn drain_main_tasks() {
 }
 
 /// Runs `frame` on every `process_frame` of the main loop. Main thread only.
-pub(super) fn on_process_frame(name: &str, mut frame: impl FnMut() + 'static) {
-    let Some(mut tree) = Engine::singleton()
+pub(super) fn on_process_frame(name: &str, frame: impl FnMut() + 'static) {
+    let Some(tree) = Engine::singleton()
         .get_main_loop()
         .and_then(|main_loop| main_loop.try_cast::<SceneTree>().ok())
     else {
         godot_error!("engine links: no scene tree for {name}");
         return;
     };
-    let callable = Callable::from_fn(name, move |_| {
-        frame();
-        Variant::nil()
-    });
-    tree.connect("process_frame", &callable);
+    tree.signals().process_frame().connect(frame);
 }
 
 /// Registers the settings contracts with the core. Called once when the engine starts.
@@ -149,7 +140,7 @@ fn from_variant(key: SettingKey, value: &Variant) -> Option<SettingValue> {
 }
 
 /// `Global.engine.setting`: the value as a Godot variant, nil for an unknown name.
-pub(super) fn get_variant(name: &str) -> Variant {
+pub(crate) fn get_variant(name: &str) -> Variant {
     let Some(key) = SettingKey::from_name(name) else {
         godot_error!("setting: unknown key {name}");
         return Variant::nil();
@@ -162,8 +153,11 @@ fn notify_changed(name: &str) {
     let Some(global) = DclGlobal::try_singleton() else {
         return;
     };
-    let mut engine = global.bind().get_engine();
-    engine.emit_signal("setting_changed", &[GString::from(name).to_variant()]);
+    let engine = global.bind().get_engine();
+    engine
+        .signals()
+        .setting_changed()
+        .emit(&GString::from(name));
 }
 
 /// Stores a value the player or the engine chose. `adopt` skips applying and saving (the engine
@@ -203,16 +197,17 @@ fn to_variant(value: &SettingValue) -> Variant {
     }
 }
 
-/// The `AudioSettings` function that re-reads the key's volume from the config.
+/// The volume setting a key re-reads into its audio bus. The mic amplification has no bus: it is
+/// read where the microphone is.
 fn audio_apply_function(key: SettingKey) -> Option<&'static str> {
     Some(match key {
-        SettingKey::AudioGeneralVolume => "apply_general_volume_settings",
-        SettingKey::AudioSceneVolume => "apply_scene_volume_settings",
-        SettingKey::AudioVoiceChatVolume => "apply_voice_chat_volume_settings",
-        SettingKey::AudioUiVolume => "apply_ui_volume_settings",
-        SettingKey::AudioMusicVolume => "apply_music_volume_settings",
-        SettingKey::AudioAvatarAndEmotesVolume => "apply_avatar_and_emotes_volume_settings",
-        SettingKey::AudioMicAmplification => "apply_mic_amplification_settings",
+        SettingKey::AudioGeneralVolume => "audio_general_volume",
+        SettingKey::AudioSceneVolume => "audio_scene_volume",
+        SettingKey::AudioVoiceChatVolume => "audio_voice_chat_volume",
+        SettingKey::AudioUiVolume => "audio_ui_volume",
+        SettingKey::AudioMusicVolume => "audio_music_volume",
+        SettingKey::AudioAvatarAndEmotesVolume => "audio_avatar_and_emotes_volume",
+        SettingKey::AudioMicAmplification => "audio_mic_amplification",
         _ => return None,
     })
 }
@@ -230,11 +225,11 @@ fn apply_in_engine(key: SettingKey, value: &SettingValue) {
     };
     match (key, value) {
         (SettingKey::Locale, SettingValue::Text(_)) => {
-            call_static(LOCALE, "apply_locale", &[]);
+            locale::apply_locale();
         }
         (SettingKey::GraphicProfile, _) => {
             // A custom profile index is a no-op there.
-            call_static(GRAPHICS, "apply_graphic_profile", &[int.to_variant()]);
+            graphics::apply_graphic_profile(int as i32);
             let mut manager = global.bind().dynamic_graphics_manager.clone();
             manager.bind_mut().on_manual_profile_change(int as i32);
         }
@@ -243,37 +238,26 @@ fn apply_in_engine(key: SettingKey, value: &SettingValue) {
             manager.bind_mut().set_enabled(*enabled);
         }
         (SettingKey::ViewDistance, SettingValue::Float(far)) => {
-            if let Ok(mut camera) = global
-                .get("player_camera_node")
-                .try_to::<Gd<godot::classes::Camera3D>>()
-            {
+            if let Some(mut camera) = global.bind().player_camera() {
                 camera.set_far(*far as f32);
             }
         }
         (SettingKey::ParticleQuality, _) => {
-            call_static(
-                AVATAR_ANIM,
-                "apply_particles_enabled",
-                &[(int > 0).to_variant()],
-            );
-            call_static(GRAPHICS, "apply_particle_quality", &[int.to_variant()]);
+            crate::avatars::avatar::lod::apply_particles_enabled(int > 0);
+            graphics::apply_particle_quality(int as i32);
         }
         (SettingKey::LimitFps, _) => {
             let mut manager = global.bind().dynamic_graphics_manager.clone();
             manager.bind_mut().on_fps_limit_changed(int as i32);
             let thermal_cap = manager.bind().get_thermal_fps_cap();
-            call_static(
-                GRAPHICS,
-                "apply_fps_limit_with_thermal_cap",
-                &[int.to_variant(), thermal_cap.to_variant()],
-            );
+            graphics::apply_fps_limit_with_thermal_cap(int as i32, thermal_cap);
         }
         (SettingKey::MaxCacheSize, _) => {
-            call_static(GENERAL, "apply_max_cache_size", &[]);
+            general_settings::apply_max_cache_size();
         }
         _ => {
-            if let Some(function) = audio_apply_function(key) {
-                call_static(AUDIO, function, &[]);
+            if let Some(setting) = audio_apply_function(key) {
+                audio_settings::apply_setting(setting);
             }
         }
     }

@@ -27,6 +27,20 @@ export function setLocale(next: string): void {
   }
 }
 
+/**
+ * The supported locale for a device identifier (`pt_PT`, `es_AR`, `en_US`), English otherwise. Mirrors
+ * `detect_device_locale` in `dcl_engine/src/app/locale.rs`: change both together.
+ */
+export function localeFromDevice(
+  identifier: string | null | undefined,
+): Locale {
+  const language = (identifier ?? '').split(/[-_]/)[0];
+  if (language === 'pt') {
+    return 'pt_BR';
+  }
+  return language === 'es' ? 'es' : 'en';
+}
+
 export function subscribeLocale(listener: () => void): () => void {
   listeners.add(listener);
   return () => listeners.delete(listener);

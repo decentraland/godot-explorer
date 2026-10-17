@@ -5,7 +5,11 @@ pub mod transform_and_parent;
 
 use std::hash::Hash;
 
-use godot::{global::PropertyHint, meta::PropertyHintInfo, prelude::*};
+use godot::{
+    meta::{conv::ByValue, shape::GodotShape, FromGodot, ToGodot},
+    prelude::*,
+    register::property::SimpleVar,
+};
 
 #[derive(PartialEq, Eq, Hash, PartialOrd, Ord, Debug, Clone, Copy, Default)]
 pub struct SceneEntityId {
@@ -15,26 +19,29 @@ pub struct SceneEntityId {
 
 impl GodotConvert for SceneEntityId {
     type Via = i32;
+
+    fn godot_shape() -> GodotShape {
+        GodotShape::of_builtin::<i32>()
+    }
 }
 
-impl Var for SceneEntityId {
-    fn get_property(&self) -> Self::Via {
+impl ToGodot for SceneEntityId {
+    type Pass = ByValue;
+
+    fn to_godot(&self) -> i32 {
         self.as_i32()
     }
+}
 
-    fn set_property(&mut self, value: Self::Via) {
-        *self = Self::from_i32(value);
+impl FromGodot for SceneEntityId {
+    fn try_from_godot(via: i32) -> Result<Self, godot::meta::error::ConvertError> {
+        Ok(Self::from_i32(via))
     }
 }
 
-impl Export for SceneEntityId {
-    fn export_hint() -> PropertyHintInfo {
-        PropertyHintInfo {
-            hint: PropertyHint::NONE,
-            hint_string: "Entity ID in the owner scene".into(),
-        }
-    }
-}
+impl SimpleVar for SceneEntityId {}
+
+impl Export for SceneEntityId {}
 
 impl SceneEntityId {
     pub fn new(number: u16, version: u16) -> Self {

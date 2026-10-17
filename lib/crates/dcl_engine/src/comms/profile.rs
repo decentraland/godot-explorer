@@ -44,30 +44,12 @@ pub struct AvatarColor {
     pub color: AvatarColor3,
 }
 
-impl From<&AvatarColor> for godot::prelude::Color {
-    fn from(val: &AvatarColor) -> Self {
-        godot::prelude::Color::from_rgb(val.color.r, val.color.g, val.color.b)
-    }
-}
-
 impl From<&AvatarColor> for Color3 {
     fn from(val: &AvatarColor) -> Self {
         Color3 {
             r: val.color.r,
             g: val.color.g,
             b: val.color.b,
-        }
-    }
-}
-
-impl From<&godot::prelude::Color> for AvatarColor {
-    fn from(val: &godot::prelude::Color) -> Self {
-        AvatarColor {
-            color: AvatarColor3 {
-                r: val.r,
-                g: val.g,
-                b: val.b,
-            },
         }
     }
 }

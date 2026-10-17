@@ -192,7 +192,7 @@ impl DclIosPlugin {
             .unwrap_or_else(|| GString::from(""));
 
         // Return dictionary with "data" key to match Android API
-        dict.set("data", url);
+        dict.set("data", &url);
         dict
     }
 

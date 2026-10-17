@@ -308,14 +308,13 @@ pub fn update_particle_system(
             });
 
             let waiting_texture = if let Some(hash) = &texture_hash {
-                content_provider.call_deferred(
-                    "fetch_texture_by_hash",
-                    &[
-                        hash.to_godot().to_variant(),
-                        DclContentMappingAndUrl::from_ref(scene.content_mapping.clone())
-                            .to_variant(),
-                    ],
+                let (hash, mapping) = (
+                    hash.to_godot(),
+                    DclContentMappingAndUrl::from_ref(scene.content_mapping.clone()),
                 );
+                content_provider.run_deferred(move |provider| {
+                    provider.fetch_texture_by_hash(hash, mapping);
+                });
                 true
             } else {
                 false
@@ -414,14 +413,13 @@ pub fn update_particle_system(
 
             // Re-fetch the texture (hash was resolved on the first apply).
             let waiting_texture = if let Some(hash) = &texture_hash {
-                content_provider.call_deferred(
-                    "fetch_texture_by_hash",
-                    &[
-                        hash.to_godot().to_variant(),
-                        DclContentMappingAndUrl::from_ref(scene.content_mapping.clone())
-                            .to_variant(),
-                    ],
+                let (hash, mapping) = (
+                    hash.to_godot(),
+                    DclContentMappingAndUrl::from_ref(scene.content_mapping.clone()),
                 );
+                content_provider.run_deferred(move |provider| {
+                    provider.fetch_texture_by_hash(hash, mapping);
+                });
                 true
             } else {
                 false
@@ -1065,8 +1063,7 @@ fn apply_sprite_sheet(
 fn build_draw_mesh(value: &PbParticleSystem, material: &Gd<StandardMaterial3D>) -> Gd<Mesh> {
     let billboard = value.billboard.unwrap_or(true);
 
-    if !billboard && value.initial_rotation.is_some() {
-        let q = value.initial_rotation.as_ref().unwrap();
+    if let (false, Some(q)) = (billboard, value.initial_rotation.as_ref()) {
         let rotation = Basis::from_quaternion(dcl_quat_to_godot(q.x, q.y, q.z, q.w));
 
         let corners = [

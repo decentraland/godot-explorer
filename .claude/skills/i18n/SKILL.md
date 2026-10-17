@@ -160,8 +160,6 @@ python3 tools/i18n/format_csv.py --check         # plural naming, named-field pa
 python3 tools/i18n/extract_strings.py --check    # every UI string keyed; no key on a mode-2 node
 python3 -m unittest discover -s tools/i18n -p 'test_*.py'
 python3 tools/i18n/format_csv.py --record-sources # after editing translations
-gdformat godot/ && gdlint godot/
-cargo run -- check-gdscript                      # TranslationKey misuse is a parse error
 cargo run -- test-gdscript                      # headless suites, TranslationKey among them
 ```
 

@@ -86,8 +86,10 @@ mod tests {
 
     #[test]
     fn ids_never_collide_with_zero_after_wrapping() {
-        let mut pending = PendingRequests::<()>::default();
-        pending.next_id = u32::MAX;
+        let mut pending = PendingRequests::<()> {
+            next_id: u32::MAX,
+            ..Default::default()
+        };
         let last = pending.submit(());
         let wrapped = pending.submit(());
         assert_eq!(last, u32::MAX);

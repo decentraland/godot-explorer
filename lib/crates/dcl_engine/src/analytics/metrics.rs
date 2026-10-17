@@ -124,8 +124,11 @@ impl INode for Metrics {
         timer.set_one_shot(false);
         timer.set_autostart(true);
 
-        let callable = self.base().callable("timer_timeout");
-        timer.connect("timeout", &callable);
+        let this = self.to_gd();
+        timer
+            .signals()
+            .timeout()
+            .connect_other(&this, |this: &mut Self| this.timer_timeout());
 
         self.base_mut().add_child(&timer.clone().upcast::<Node>());
         self.flush_timer = Some(timer);
@@ -155,8 +158,12 @@ impl INode for Metrics {
         // Firebase event (including SDK auto-events like session_start / screen_view) carries
         // both — that's the Firebase → Segment pivot, no separate anchor event needed.
         if matches!(self.mobile_platform, Some(MobilePlatform::Android)) {
-            let callable = self.base().callable("_on_firebase_app_instance_id_ready");
-            DclAndroidPlugin::connect_firebase_app_instance_id_ready(&callable);
+            let this = self.to_gd();
+            DclAndroidPlugin::connect_firebase_app_instance_id_ready(&plugin_callback(
+                "firebase_app_instance_id_ready",
+                &this,
+                |this, id| this._on_firebase_app_instance_id_ready(id),
+            ));
 
             let cached = DclAndroidPlugin::get_firebase_app_instance_id();
             if !cached.to_string().is_empty() {
@@ -172,10 +179,17 @@ impl INode for Metrics {
             // Push registration. Same race as above — the plugin asks FCM for the token in
             // `onGodotSetupCompleted`, before this `ready()` — so read the cached value back
             // after connecting. `push_identify_sent_token` makes the double delivery a no-op.
-            let ready_cb = self.base().callable("_on_fcm_token_ready");
-            DclAndroidPlugin::connect_fcm_token_ready(&ready_cb);
-            let refreshed_cb = self.base().callable("_on_fcm_token_refreshed");
-            DclAndroidPlugin::connect_fcm_token_refreshed(&refreshed_cb);
+            let this = self.to_gd();
+            DclAndroidPlugin::connect_fcm_token_ready(&plugin_callback(
+                "fcm_token_ready",
+                &this,
+                |this, token| this._on_fcm_token_ready(token),
+            ));
+            DclAndroidPlugin::connect_fcm_token_refreshed(&plugin_callback(
+                "fcm_token_refreshed",
+                &this,
+                |this, token| this._on_fcm_token_refreshed(token),
+            ));
 
             let cached_token = DclAndroidPlugin::get_fcm_token();
             if !cached_token.to_string().is_empty() {
@@ -186,8 +200,12 @@ impl INode for Metrics {
         // Same race on iOS: push_service.mm asks UIKit for the token from the plugin's module
         // init, well before this `ready()`, so read the cached value back after connecting.
         if matches!(self.mobile_platform, Some(MobilePlatform::Ios)) {
-            let ready_cb = self.base().callable("_on_apns_token_ready");
-            DclIosPlugin::connect_apns_token_ready(&ready_cb);
+            let this = self.to_gd();
+            DclIosPlugin::connect_apns_token_ready(&plugin_callback(
+                "apns_token_ready",
+                &this,
+                |this, token| this._on_apns_token_ready(token),
+            ));
 
             let cached_token = DclIosPlugin::get_apns_token();
             if !cached_token.to_string().is_empty() {
@@ -1236,10 +1254,10 @@ impl Metrics {
                 let opt_wearables = content_provider_bind.get_optimized_wearable_count();
                 let rt_wearables = content_provider_bind.get_runtime_wearable_count();
 
-                metrics.optimized_scene_count = Some(opt_scenes);
-                metrics.runtime_scene_count = Some(rt_scenes);
-                metrics.optimized_wearable_count = Some(opt_wearables);
-                metrics.runtime_wearable_count = Some(rt_wearables);
+                metrics.optimized_scene_count = Some(opt_scenes as u64);
+                metrics.runtime_scene_count = Some(rt_scenes as u64);
+                metrics.optimized_wearable_count = Some(opt_wearables as u64);
+                metrics.runtime_wearable_count = Some(rt_wearables as u64);
 
                 let total_scenes = opt_scenes + rt_scenes;
                 metrics.optimized_scene_pct = if total_scenes > 0 {
@@ -1322,4 +1340,20 @@ fn graphics_api_version(rendering: &Gd<RenderingServer>) -> Option<String> {
         _ => return Some(version),
     };
     Some(format!("{api} {version}"))
+}
+
+/// A callable for a signal of a native plugin (not a class of this crate, so connected by name)
+/// that forwards its one string argument to a typed handler of `this`.
+fn plugin_callback(
+    name: &'static str,
+    this: &Gd<Metrics>,
+    handler: fn(&mut Metrics, GString),
+) -> Callable {
+    let mut this = this.clone();
+    Callable::from_fn(name, move |args| {
+        if let Some(value) = args.first().and_then(|v| v.try_to::<GString>().ok()) {
+            handler(&mut this.bind_mut(), value);
+        }
+        Variant::nil()
+    })
 }

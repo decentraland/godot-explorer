@@ -20,6 +20,7 @@ pub static DEALLOCATION_COUNT: AtomicUsize = AtomicUsize::new(0);
 
 pub struct TrackingAllocator;
 
+// SAFETY: every call forwards to `System` with the caller's layout/pointer unchanged; the counters are atomics.
 unsafe impl GlobalAlloc for TrackingAllocator {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
         let ret = System.alloc(layout);
@@ -64,6 +65,7 @@ pub struct MemoryDebugger {
     print_interval: f64,
 
     #[export]
+    #[var(pub)]
     scene_manager_path: Option<Gd<Node>>,
 }
 
@@ -173,9 +175,8 @@ impl MemoryDebugger {
         let performance = Performance::singleton();
 
         // Memory metrics (in MiB)
-        let static_memory = performance.get_monitor(Monitor::MEMORY_STATIC) as f64 / 1_048_576.0;
-        let static_memory_max =
-            performance.get_monitor(Monitor::MEMORY_STATIC_MAX) as f64 / 1_048_576.0;
+        let static_memory = performance.get_monitor(Monitor::MEMORY_STATIC) / 1_048_576.0;
+        let static_memory_max = performance.get_monitor(Monitor::MEMORY_STATIC_MAX) / 1_048_576.0;
 
         godot_print!("┌─ Godot Memory ─────────────────────────────────────────────┐");
         godot_print!("│  Static Memory:     {:.2} MiB", static_memory);
@@ -187,12 +188,9 @@ impl MemoryDebugger {
         let performance = Performance::singleton();
 
         // GPU memory metrics (in MiB)
-        let video_mem =
-            performance.get_monitor(Monitor::RENDER_VIDEO_MEM_USED) as f64 / 1_048_576.0;
-        let texture_mem =
-            performance.get_monitor(Monitor::RENDER_TEXTURE_MEM_USED) as f64 / 1_048_576.0;
-        let buffer_mem =
-            performance.get_monitor(Monitor::RENDER_BUFFER_MEM_USED) as f64 / 1_048_576.0;
+        let video_mem = performance.get_monitor(Monitor::RENDER_VIDEO_MEM_USED) / 1_048_576.0;
+        let texture_mem = performance.get_monitor(Monitor::RENDER_TEXTURE_MEM_USED) / 1_048_576.0;
+        let buffer_mem = performance.get_monitor(Monitor::RENDER_BUFFER_MEM_USED) / 1_048_576.0;
 
         godot_print!("┌─ GPU Memory ───────────────────────────────────────────────┐");
         godot_print!("│  Video RAM:         {:.2} MiB", video_mem);
@@ -326,14 +324,14 @@ impl MemoryDebugger {
     #[func]
     pub fn get_godot_memory_mb(&self) -> f64 {
         let performance = Performance::singleton();
-        performance.get_monitor(Monitor::MEMORY_STATIC) as f64 / 1_048_576.0
+        performance.get_monitor(Monitor::MEMORY_STATIC) / 1_048_576.0
     }
 
     /// Get peak Godot memory usage in MiB
     #[func]
     pub fn get_godot_memory_peak_mb(&self) -> f64 {
         let performance = Performance::singleton();
-        performance.get_monitor(Monitor::MEMORY_STATIC_MAX) as f64 / 1_048_576.0
+        performance.get_monitor(Monitor::MEMORY_STATIC_MAX) / 1_048_576.0
     }
 
     /// Get total object count
@@ -354,21 +352,21 @@ impl MemoryDebugger {
     #[func]
     pub fn get_video_mem_mb(&self) -> f64 {
         let performance = Performance::singleton();
-        performance.get_monitor(Monitor::RENDER_VIDEO_MEM_USED) as f64 / 1_048_576.0
+        performance.get_monitor(Monitor::RENDER_VIDEO_MEM_USED) / 1_048_576.0
     }
 
     /// Get texture memory usage in MiB
     #[func]
     pub fn get_texture_mem_mb(&self) -> f64 {
         let performance = Performance::singleton();
-        performance.get_monitor(Monitor::RENDER_TEXTURE_MEM_USED) as f64 / 1_048_576.0
+        performance.get_monitor(Monitor::RENDER_TEXTURE_MEM_USED) / 1_048_576.0
     }
 
     /// Get buffer memory usage in MiB
     #[func]
     pub fn get_buffer_mem_mb(&self) -> f64 {
         let performance = Performance::singleton();
-        performance.get_monitor(Monitor::RENDER_BUFFER_MEM_USED) as f64 / 1_048_576.0
+        performance.get_monitor(Monitor::RENDER_BUFFER_MEM_USED) / 1_048_576.0
     }
 
     /// Get current Rust heap memory usage in MiB (live tracking)
@@ -531,14 +529,12 @@ impl MemoryDebugger {
         let performance = Performance::singleton();
 
         // Get component memory usage
-        let video_mem_mb =
-            performance.get_monitor(Monitor::RENDER_VIDEO_MEM_USED) as f64 / 1_048_576.0;
+        let video_mem_mb = performance.get_monitor(Monitor::RENDER_VIDEO_MEM_USED) / 1_048_576.0;
         let texture_mem_mb =
-            performance.get_monitor(Monitor::RENDER_TEXTURE_MEM_USED) as f64 / 1_048_576.0;
-        let buffer_mem_mb =
-            performance.get_monitor(Monitor::RENDER_BUFFER_MEM_USED) as f64 / 1_048_576.0;
+            performance.get_monitor(Monitor::RENDER_TEXTURE_MEM_USED) / 1_048_576.0;
+        let buffer_mem_mb = performance.get_monitor(Monitor::RENDER_BUFFER_MEM_USED) / 1_048_576.0;
         let other_gpu_mb = (video_mem_mb - texture_mem_mb - buffer_mem_mb).max(0.0);
-        let static_mem_mb = performance.get_monitor(Monitor::MEMORY_STATIC) as f64 / 1_048_576.0;
+        let static_mem_mb = performance.get_monitor(Monitor::MEMORY_STATIC) / 1_048_576.0;
 
         // Rust heap memory
         let rust_heap_mb = {

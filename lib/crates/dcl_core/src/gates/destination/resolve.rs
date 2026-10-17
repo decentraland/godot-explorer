@@ -28,6 +28,42 @@ pub const PREVIEW_DEADLINE: Duration = Duration::from_secs(3);
 const ACCESS_SHARED_SECRET: &str = "shared-secret";
 const ACCESS_ALLOW_LIST: &str = "allow-list";
 
+/// The verdict plus what the resolve already read, so the engine commits the realm without
+/// asking the same servers again.
+#[derive(Clone, Debug)]
+pub struct Resolution {
+    pub resolved: ResolvedDestination,
+    /// The realm's `/about`, when it was reached.
+    pub about: Option<Value>,
+    /// A world's `/scenes` listing, when it was read.
+    pub listing: Option<Value>,
+}
+
+impl Resolution {
+    fn of(resolved: ResolvedDestination) -> Self {
+        Self {
+            resolved,
+            about: None,
+            listing: None,
+        }
+    }
+
+    /// A resolve that never produced an answer.
+    pub fn timed_out() -> Self {
+        Self::of(invalid_with(ResolveFailure::Timeout))
+    }
+
+    fn with_about(mut self, about: &Value) -> Self {
+        self.about = Some(about.clone());
+        self
+    }
+
+    fn with_listing(mut self, listing: &Value) -> Self {
+        self.listing = Some(listing.clone());
+        self
+    }
+}
+
 /// Where the intent lands.
 #[derive(Clone, Debug)]
 struct Target {
@@ -234,17 +270,37 @@ pub async fn resolve(
     input: &str,
     secret: Option<&str>,
 ) -> ResolvedDestination {
-    let invalid = || {
-        let target = Target {
-            kind: DestinationKind::CustomRealm,
-            realm: String::new(),
-            parcel: None,
-            world_name: String::new(),
-        };
-        failed(&target, ResolveFailure::InvalidInput)
-    };
-    let Some(target) = parse_input(input).and_then(|intent| classify(&intent)) else {
+    let Some(intent) = parse_input(input) else {
         return invalid();
+    };
+    resolve_intent(fetch, address, &intent, secret)
+        .await
+        .resolved
+}
+
+fn invalid() -> ResolvedDestination {
+    invalid_with(ResolveFailure::InvalidInput)
+}
+
+fn invalid_with(failure: ResolveFailure) -> ResolvedDestination {
+    let target = Target {
+        kind: DestinationKind::CustomRealm,
+        realm: String::new(),
+        parcel: None,
+        world_name: String::new(),
+    };
+    failed(&target, failure)
+}
+
+/// Resolves an already-parsed intent within its deadline, keeping what it read.
+pub async fn resolve_intent(
+    fetch: &dyn Fetch,
+    address: &str,
+    intent: &Intent,
+    secret: Option<&str>,
+) -> Resolution {
+    let Some(target) = classify(intent) else {
+        return Resolution::of(invalid());
     };
     let budget = if target.kind == DestinationKind::Preview {
         PREVIEW_DEADLINE
@@ -257,15 +313,15 @@ pub async fn resolve(
         secret,
     };
     match tokio::time::timeout(budget, resolver.run(&target)).await {
-        Ok(resolved) => resolved,
-        Err(_) => failed(&target, ResolveFailure::Timeout),
+        Ok(resolution) => resolution,
+        Err(_) => Resolution::of(failed(&target, ResolveFailure::Timeout)),
     }
 }
 
 impl Resolver<'_> {
     /// Two lookup strategies, not four kinds: a catalyst is asked for the scene at a pointer, a
     /// world and a preview name their scenes themselves.
-    async fn run(&self, target: &Target) -> ResolvedDestination {
+    async fn run(&self, target: &Target) -> Resolution {
         match target.kind {
             DestinationKind::World => self.world(target).await,
             DestinationKind::Preview => self.preview(target).await,
@@ -292,13 +348,13 @@ impl Resolver<'_> {
         Some(rules::scene_info(entity, content_base_url))
     }
 
-    async fn catalyst(&self, target: &Target) -> ResolvedDestination {
+    async fn catalyst(&self, target: &Target) -> Resolution {
         let about = match self.about(target).await {
             Some(about) if realm::about_problem(&about).is_none() => about,
-            _ => return failed(target, ResolveFailure::FetchFailed),
+            _ => return Resolution::of(failed(target, ResolveFailure::FetchFailed)),
         };
         let Some(parcel) = target.parcel else {
-            return ready(target, None);
+            return Resolution::of(ready(target, None)).with_about(&about);
         };
         let content_url = realm::ensure_ends_with_slash(content_public_url(&about));
         let found = self.scene_at(&content_url, parcel).await;
@@ -307,20 +363,20 @@ impl Resolver<'_> {
             let id = found.as_ref().map_or("", |s| s.id.as_str());
             if let Some(reason) = genesis_failure(parcel, bounds.min_bounds, bounds.max_bounds, id)
             {
-                return failed(target, reason);
+                return Resolution::of(failed(target, reason)).with_about(&about);
             }
         }
-        ready(target, found.as_ref())
+        Resolution::of(ready(target, found.as_ref())).with_about(&about)
     }
 
-    async fn world(&self, target: &Target) -> ResolvedDestination {
+    async fn world(&self, target: &Target) -> Resolution {
         // No status code survives the rejection, so an /about that does not come back is
         // reported as not found: the dominant cause, and the copy is the same anyway.
         let Some(about) = self.about(target).await else {
-            return failed(target, ResolveFailure::WorldNotFound);
+            return Resolution::of(failed(target, ResolveFailure::WorldNotFound));
         };
         if realm::about_problem(&about).is_some() {
-            return failed(target, ResolveFailure::FetchFailed);
+            return Resolution::of(failed(target, ResolveFailure::FetchFailed));
         }
         let name = &target.world_name;
         let base = realm::dcl_world_url(name);
@@ -330,10 +386,14 @@ impl Resolver<'_> {
             .await
             .unwrap_or_else(|_| json!({}));
         match access_of(&permissions, self.address) {
-            AccessVerdict::NotAllowed => return refused(target, AccessVerdict::NotAllowed),
+            AccessVerdict::NotAllowed => {
+                return Resolution::of(refused(target, AccessVerdict::NotAllowed))
+                    .with_about(&about)
+            }
             AccessVerdict::NeedsPassword => {
                 let Some(secret) = self.secret.filter(|s| !s.is_empty()) else {
-                    return refused(target, AccessVerdict::NeedsPassword);
+                    return Resolution::of(refused(target, AccessVerdict::NeedsPassword))
+                        .with_about(&about);
                 };
                 if let Some(answer) = self.verify_secret(target, &about, secret).await {
                     return answer;
@@ -356,11 +416,20 @@ impl Resolver<'_> {
                 Some(at_parcel) => entity = at_parcel.clone(),
                 // Or the player walks into empty space inside a world that loaded fine. An
                 // unreadable listing lets them through rather than blocking entry.
-                None if !index.is_empty() => return failed(target, ResolveFailure::ParcelEmpty),
+                None if !index.is_empty() => {
+                    return Resolution::of(failed(target, ResolveFailure::ParcelEmpty))
+                        .with_about(&about)
+                        .with_listing(&listing)
+                }
                 None => {}
             }
         }
-        ready(target, Some(&rules::scene_info(&entity, &worlds_base)))
+        Resolution::of(ready(
+            target,
+            Some(&rules::scene_info(&entity, &worlds_base)),
+        ))
+        .with_about(&about)
+        .with_listing(&listing)
     }
 
     /// The comms handshake is the only place a secret can be checked: `/permissions` strips it
@@ -370,30 +439,34 @@ impl Resolver<'_> {
         target: &Target,
         about: &Value,
         secret: &str,
-    ) -> Option<ResolvedDestination> {
+    ) -> Option<Resolution> {
         let url = rules::comms_handshake_url(about);
         // Nowhere to prove the secret is not the same answer as proven: letting it through would
         // enter on any password and fail later, at the real connect.
         if url.is_empty() {
-            return Some(failed(target, ResolveFailure::FetchFailed));
+            return Some(
+                Resolution::of(failed(target, ResolveFailure::FetchFailed)).with_about(about),
+            );
         }
         let metadata =
             rules::handshake_metadata(&realm::normalize_realm_url(&target.realm), secret);
         match self.fetch.signed_post(&url, &metadata).await {
             Ok(()) => None,
-            Err(SignedFetchError::NoIdentity) => Some(failed(target, ResolveFailure::FetchFailed)),
+            Err(SignedFetchError::NoIdentity) => {
+                Some(Resolution::of(failed(target, ResolveFailure::FetchFailed)).with_about(about))
+            }
             Err(SignedFetchError::Rejected(message)) if rules::is_rate_limited(&message) => {
-                Some(failed(target, ResolveFailure::RateLimited))
+                Some(Resolution::of(failed(target, ResolveFailure::RateLimited)).with_about(about))
             }
-            Err(SignedFetchError::Rejected(_)) => {
-                Some(refused(target, AccessVerdict::NeedsPassword))
-            }
+            Err(SignedFetchError::Rejected(_)) => Some(
+                Resolution::of(refused(target, AccessVerdict::NeedsPassword)).with_about(about),
+            ),
         }
     }
 
-    async fn preview(&self, target: &Target) -> ResolvedDestination {
+    async fn preview(&self, target: &Target) -> Resolution {
         let Some(about) = self.about(target).await else {
-            return failed(target, ResolveFailure::PreviewUnreachable);
+            return Resolution::of(failed(target, ResolveFailure::PreviewUnreachable));
         };
         // A local preview serves its own content, so the pointer lookup works on it like any
         // catalyst. Its /about lists `localSceneParcels` and leaves `scenesUrn` empty, which is
@@ -402,12 +475,12 @@ impl Resolver<'_> {
             if realm::about_problem(&about).is_none() {
                 let content_url = realm::ensure_ends_with_slash(content_public_url(&about));
                 if let Some(found) = self.scene_at(&content_url, parcel).await {
-                    return ready(target, Some(&found));
+                    return Resolution::of(ready(target, Some(&found))).with_about(&about);
                 }
             }
         }
         let scene = self.urn_scene(&about).await;
-        ready(target, scene.as_ref())
+        Resolution::of(ready(target, scene.as_ref())).with_about(&about)
     }
 
     /// For a realm that advertises scene urns instead of serving pointers. One that will not

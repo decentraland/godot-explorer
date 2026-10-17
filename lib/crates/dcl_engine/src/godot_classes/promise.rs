@@ -1,5 +1,7 @@
 use godot::prelude::*;
 
+use crate::engine::local_task::defer_from_any_thread;
+
 #[derive(GodotClass)]
 #[class(init, base=Object)]
 pub struct PromiseError {
@@ -10,7 +12,7 @@ pub struct PromiseError {
 #[godot_api]
 impl PromiseError {
     #[func]
-    fn get_error(&self) -> GString {
+    pub fn get_error(&self) -> GString {
         self.error_description.clone()
     }
 }
@@ -35,7 +37,7 @@ pub struct Promise {
 #[godot_api]
 impl Promise {
     #[signal]
-    fn on_resolved();
+    pub fn on_resolved();
 
     #[func]
     pub fn resolve(&mut self) {
@@ -43,8 +45,14 @@ impl Promise {
             return;
         }
         self.resolved = true;
-        self.base_mut()
-            .call_deferred("emit_signal", &["on_resolved".to_variant()]);
+        // Settled from content threads too: the signal goes out on the main thread, where the
+        // promise is looked up again by its id.
+        let id = self.base().instance_id();
+        defer_from_any_thread(&[], move |_| {
+            if let Ok(promise) = Gd::<Promise>::try_from_instance_id(id) {
+                promise.signals().on_resolved().emit();
+            }
+        });
     }
 
     #[func]

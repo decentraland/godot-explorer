@@ -5,100 +5,100 @@ use crate::deep_link;
 #[derive(GodotClass)]
 #[class(base=RefCounted)]
 pub struct DclParseDeepLink {
-    #[var]
-    location: Vector2i,
+    #[var(pub)]
+    pub location: Vector2i,
 
-    #[var]
-    realm: GString,
+    #[var(pub)]
+    pub realm: GString,
 
     /// Preview URL for hot reloading (e.g., http://192.168.0.55:8000)
     /// When set, skips lobby and enables preview mode with WebSocket hot reload
-    #[var]
-    preview: GString,
+    #[var(pub)]
+    pub preview: GString,
 
     /// Dynamic scene loading mode (deep link param: dynamic-scene-loading=true)
     /// When true, uses continuous scene loading/unloading without terrain generation.
     /// Works for any realm including Genesis City.
-    #[var]
+    #[var(pub)]
     dynamic_scene_loading: bool,
 
-    #[var]
-    params: VarDictionary,
+    #[var(pub)]
+    pub params: VarDictionary,
 
     /// The signin identity ID from deep link `decentraland://open?signin=${identityId}`
-    #[var]
+    #[var(pub)]
     signin_identity_id: GString,
 
     /// The environment parameter from deep link `decentraland://open?dclenv=zone`
     /// Valid values: "org", "zone", "today"
-    #[var]
+    #[var(pub)]
     dclenv: GString,
 
     /// True if this is a WalletConnect callback that should be ignored
-    #[var]
+    #[var(pub)]
     is_walletconnect_callback: bool,
 
     /// Numbered profile slot for identity storage (e.g., "2" uses account_2/guest_profile_2)
-    #[var]
+    #[var(pub)]
     saved_profile: GString,
 
     /// Enable the multiplayer debug panel from deep link (multiplayer_debug=true;
     /// legacy alias: livekit_debug=true)
-    #[var]
+    #[var(pub)]
     multiplayer_debug: bool,
 
     /// The URL path component (e.g., "/jump", "/events", "/places", "/mobile")
-    #[var]
+    #[var(pub)]
     path: GString,
 
     /// The destination `path` names, collapsed to one name ("jump", "events",
     /// "places", "open", "mobile"). Route on this, not on `path`: the website
     /// nests its landing pages under /jump/<section>. See deep_link::section_for.
-    #[var]
+    #[var(pub)]
     section: GString,
 
     /// Dev/testing: short-circuit profile deploys (deep link param: disable-profile-deploy=true)
-    #[var]
+    #[var(pub)]
     disable_profile_deploy: bool,
 
     /// Dev/testing: URNs to inject into the backpack as fake-owned wearables
     /// (deep link param: fake-owned-wearables=urn1,urn2)
 
-    #[var]
+    #[var(pub)]
     fake_owned_wearables: PackedStringArray,
 
     /// Scene Inspector target: empty=off, "true"=auto, "ws://host:port"=custom target
-    #[var]
-    scene_inspector: GString,
+    #[var(pub)]
+    pub scene_inspector: GString,
 
     /// Whether to write JSONL Scene Inspector files to disk
-    #[var]
-    scene_inspector_file: bool,
+    #[var(pub)]
+    pub scene_inspector_file: bool,
 
     /// Simulate low-spec iPhone warnings from deep link (low_spec_warning=true)
-    #[var]
+    #[var(pub)]
     low_spec_warning: bool,
 
     /// Force the "device no longer supported" modal (end_of_device_support_warning=true, #2936)
-    #[var]
+    #[var(pub)]
     end_of_device_support_warning: bool,
 
     /// Force the "below minimum spec" modal (below_minspec_warning=true, #2935)
-    #[var]
+    #[var(pub)]
     below_minspec_warning: bool,
 
     /// Genesis Plaza profiling benchmark trigger (gp-benchmark=true).
     /// Mobile alternative to the desktop `--gp-benchmark` CLI flag.
-    #[var]
+    #[var(pub)]
     gp_benchmark: bool,
 
     /// Show transparent safe-area debug overlay (deep link param: safemargindebug=true)
-    #[var]
+    #[var(pub)]
     safe_margin_debug: bool,
 
     /// Force-enable the Scene Stats / limits overlay outside preview
     /// (deep link param: scene-stats=true). Never shown in production builds.
-    #[var]
+    #[var(pub)]
     scene_stats: bool,
 }
 
@@ -142,7 +142,7 @@ impl DclParseDeepLink {
     fn from_result(r: deep_link::DeepLinkResult) -> Self {
         let mut params = VarDictionary::new();
         for (k, v) in &r.params {
-            let _ = params.insert(k.to_variant(), v.to_variant());
+            let _ = params.insert(&k.to_variant(), &v.to_variant());
         }
 
         DclParseDeepLink {
