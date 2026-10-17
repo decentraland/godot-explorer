@@ -195,7 +195,7 @@ impl DclTestingTools {
                     -test.parcel.y as f32 * 16.0 - 8.0,
                 ));
             }
-        } else if test.timed_out() {
+        } else if (test.seen && test.tests_timed_out()) || (!test.seen && test.timed_out()) {
             godot_error!(
                 "Scene test timeout after {} seconds ({}, {})",
                 test.elapsed_secs(),
