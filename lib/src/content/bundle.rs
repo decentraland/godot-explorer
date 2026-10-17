@@ -112,14 +112,18 @@ pub async fn extract_bundle(
     Ok(report)
 }
 
-/// Stream one entry to `{dest}.tmp` and rename it into place; returns the size.
-/// `.tmp` is appended (not `with_extension`) so it cannot collide with the
-/// `X.opt.tmp` a concurrent `download_file` of the same hash would write.
-async fn extract_one(zip_path: &str, name: &str, dest: &str) -> Result<u64, String> {
+/// Stream one entry to a unique `{dest}.{n}.tmp` and rename it into place; returns the size.
+/// Two requests for the same hash can extract concurrently: whichever finishes first wins
+/// and the other finds `dest` in place (the zip may already be gone by then).
+pub(super) async fn extract_one(zip_path: &str, name: &str, dest: &str) -> Result<u64, String> {
+    static EXTRACT_SEQ: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
     let zip_path = zip_path.to_string();
     let name = name.to_string();
     let dest = dest.to_string();
     tokio::task::spawn_blocking(move || -> Result<u64, String> {
+        if let Ok(meta) = std::fs::metadata(&dest) {
+            return Ok(meta.len());
+        }
         let file =
             std::fs::File::open(&zip_path).map_err(|e| format!("open {}: {}", zip_path, e))?;
         let mut archive =
@@ -127,24 +131,27 @@ async fn extract_one(zip_path: &str, name: &str, dest: &str) -> Result<u64, Stri
         let mut entry = archive
             .by_name(&name)
             .map_err(|e| format!("entry {}: {}", name, e))?;
-        let tmp = format!("{}.tmp", dest);
+        let seq = EXTRACT_SEQ.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        let tmp = format!("{}.{}.tmp", dest, seq);
         let mut out = std::fs::File::create(&tmp).map_err(|e| format!("create {}: {}", tmp, e))?;
         let size = std::io::copy(&mut entry, &mut out).map_err(|e| {
             let _ = std::fs::remove_file(&tmp);
             format!("write {}: {}", tmp, e)
         })?;
         drop(out);
-        std::fs::rename(&tmp, &dest).map_err(|e| {
+        if let Err(e) = std::fs::rename(&tmp, &dest) {
             let _ = std::fs::remove_file(&tmp);
-            format!("rename {} -> {}: {}", tmp, dest, e)
-        })?;
+            if std::fs::metadata(&dest).is_err() {
+                return Err(format!("rename {} -> {}: {}", tmp, dest, e));
+            }
+        }
         Ok(size)
     })
     .await
     .map_err(|e| format!("extraction task failed: {}", e))?
 }
 
-async fn delete_zip(provider: &Arc<ResourceProvider>, zip_name: &str, zip_path: &str) {
+pub(super) async fn delete_zip(provider: &Arc<ResourceProvider>, zip_name: &str, zip_path: &str) {
     if provider.delete_file_by_hash(zip_name).await.is_none() {
         // Not tracked (adopted before `initialize`, or never registered) —
         // remove it from disk anyway.

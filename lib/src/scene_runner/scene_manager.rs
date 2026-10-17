@@ -4233,6 +4233,9 @@ impl INode for SceneManager {
         self.frame_ctx = None;
         self.frame_apply_spent_us = 0;
 
+        let camera = self.base().get_viewport().and_then(|x| x.get_camera_3d());
+        crate::godot_classes::scene_animation_throttle::tick(camera.as_ref(), delta);
+
         // Scene time advances with rendered frames for every scene, kicked or not:
         // the accumulated delta ships with the scene's next reply as onUpdate(dt).
         for scene in self.scenes.values_mut() {
