@@ -291,6 +291,18 @@ pub fn log_lifecycle_event(
     delta_time: Option<f64>,
     error: Option<String>,
 ) {
+    log_lifecycle_event_timed(scene_id, event, tick, delta_time, error, None)
+}
+
+/// `log_lifecycle_event` with the tick's measured JS duration (`OnUpdateEnd`).
+pub fn log_lifecycle_event_timed(
+    scene_id: i32,
+    event: SceneLifecycleEvent,
+    tick: Option<u32>,
+    delta_time: Option<f64>,
+    error: Option<String>,
+    duration_us: Option<u64>,
+) {
     if matches!(
         event,
         SceneLifecycleEvent::OnUpdate | SceneLifecycleEvent::OnUpdateEnd
@@ -309,6 +321,7 @@ pub fn log_lifecycle_event(
             error,
             title: None,
             base_parcel: None,
+            duration_us,
         };
         try_send_entry(&sender, SceneInspectorEntry::SceneLifecycle(entry));
     }
@@ -326,6 +339,7 @@ pub fn log_scene_init_event(scene_id: i32, title: Option<String>, base_parcel: O
             error: None,
             title,
             base_parcel,
+            duration_us: None,
         };
         try_send_entry(&sender, SceneInspectorEntry::SceneLifecycle(entry));
     }
