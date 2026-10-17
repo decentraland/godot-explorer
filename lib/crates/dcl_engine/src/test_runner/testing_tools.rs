@@ -7,7 +7,9 @@ use godot::classes::{Camera3D, DirAccess, FileAccess, Image, Node, Node3D, Rende
 use godot::prelude::*;
 
 use super::image_compare::{rgb_difference, rgb_similarity};
-use super::scene_plan::{parse_parcels, summarize, SceneReport, SceneTest, SCENE_TIMEOUT};
+use super::scene_plan::{
+    parse_parcels, summarize, SceneReport, SceneTest, SCENE_TESTS_TIMEOUT, SCENE_TIMEOUT,
+};
 use super::snapshot_files::{snapshot_file_name, SnapshotFolders};
 use crate::engine::local_task::{await_all, defer, next_frame, sleep, spawn_local};
 use crate::fetcher::globals;
@@ -149,7 +151,9 @@ impl DclTestingTools {
         let scene_id = globals::scene_fetcher()
             .bind()
             .get_parcel_scene_id(parcel.x, parcel.y);
-        if scene_id == -1 {
+        // The player goes to every scene: one that is already loaded may only run its tests
+        // with the player on its parcel.
+        if scene_id == -1 || !self.plan[index].teleported {
             self.wait_for_scene(index);
             return;
         }
@@ -168,12 +172,12 @@ impl DclTestingTools {
         if !test.seen {
             test.seen = true;
             test.reset_timeout();
-        } else if test.timed_out() {
+        } else if test.tests_timed_out() {
             godot_error!(
                 "Scene {scene_id} on ({}, {}) reported no test result in {} seconds",
                 test.parcel.x,
                 test.parcel.y,
-                SCENE_TIMEOUT.as_secs()
+                SCENE_TESTS_TIMEOUT.as_secs()
             );
             test.finished = true;
         }

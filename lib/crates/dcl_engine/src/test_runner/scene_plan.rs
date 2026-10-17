@@ -7,6 +7,10 @@ use godot::prelude::*;
 /// How long a scene gets to load and to finish its tests before the run gives up on it.
 pub const SCENE_TIMEOUT: Duration = Duration::from_secs(15);
 
+/// How long a scene that is loaded gets to report its tests: a scene with several snapshot tests
+/// needs about ten seconds each.
+pub const SCENE_TESTS_TIMEOUT: Duration = Duration::from_secs(180);
+
 /// What a finished scene reported.
 #[derive(Clone, Debug, Default)]
 pub struct SceneReport {
@@ -57,6 +61,10 @@ impl SceneTest {
 
     pub fn timed_out(&self) -> bool {
         self.started.elapsed() > SCENE_TIMEOUT
+    }
+
+    pub fn tests_timed_out(&self) -> bool {
+        self.started.elapsed() > SCENE_TESTS_TIMEOUT
     }
 
     pub fn elapsed_secs(&self) -> f32 {

@@ -611,8 +611,10 @@ impl SceneFetcher {
             content_base_url = city_loader_url;
         }
         // Floating islands load the realm's single scene; only the offline test/renderer modes
-        // walk city pointers.
-        let load_city_pointers = !self.is_using_floating_islands();
+        // walk city pointers. A scene-test run loads the realm's own scenes only: the catalyst
+        // behind its `about` may hold other scenes on the test parcels.
+        let load_city_pointers =
+            !self.is_using_floating_islands() && !globals::cli().bind().scene_test_mode;
         self.coordinator.bind_mut().config(
             gs(&format!("{content_base_url}entities/active")),
             content_base_url.as_str().into(),
