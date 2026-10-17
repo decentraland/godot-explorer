@@ -23,8 +23,8 @@ Engine (phase 5)
   boot. Run each once: `--asset-renderer --use-test-input`, the GP benchmark deeplink, `debug-hub` +
   `unified.sh state|teleport|screenshot`.
 - [ ] **Creator preview** (`-- --preview` against the SDK example scenes) after the 5.6 fetcher port.
-- [ ] **Idle → World → Idle → World** on a phone, including nodes released on exit.
-- [ ] **`--features use_memory_debugger`** build (bootstrap has cfg branches).
+- [x] **Idle → World → Idle → World** on the Moto (17 Oct, build `c0ea5d3`, branch editor): Genesis (static memory 397 MB) → Back → Leave → Discover (220 MB, 0 scenes) → Jump in → Genesis again (403 MB); no growth across the cycle, no panic, "call failed" or "freed" in logcat.
+- [x] **`--features use_memory_debugger`** build: it did not compile (28 errors from the gdext 0.5 move, in `benchmark_report.rs` and `memory_debugger.rs`); fixed, clippy `-D warnings` passes with the feature. Not run on a device.
 - [x] Device, Moto G60, build of the final tree (16 Oct): avatar preview → name → Genesis (~30 fps) → emote wheel opens, joypad buttons render, camera swipe turns the view, chat panel opens; no panic, "already bound" or "Scene error" in logcat.
 - [x] Moto, later builds (16 Oct, `7199c95` and the two-autoload build): joystick walks the avatar, Back → Leave dialog → Discover → Jump in again re-enters Genesis, the pointer tooltip ("Talk") shows on an NPC; no panic or "Method not found" in logcat. fps 17–30 in a crowded plaza.
 - [x] Moto: selecting a slice of the emote wheel plays the emote (the avatar raises an arm, the wheel closes), no panic. fps was 10–13 in a crowded plaza at that moment.
@@ -34,7 +34,7 @@ Engine (phase 5)
 - [x] Moto, build `d1ca7fb` (fresh install, guest, Genesis, teleport to 12,12 over the debug hub): the empty-parcel land around a scene renders its props (trees, rocks, plants, red grass), 52–60 fps, no panic, "call failed" or "freed" in logcat. A URL video (mp4) played through ExoPlayer in the same session (backend initialised, `READY`, GPU surface 854x480, released on leaving). HLS and LiveKit streams were not run.
 - [ ] On the name screen the avatar renders small in a large hole (the rect is right, the framing is not): same symptom as the client snapshot framing, so it is likely the engine-side preview framing.
 - [x] The `dcl_swift_lib.gdextension` boot error is gone on Android: the preset's `exclude_filter` removes it (0 hits in the logcat of build `d1ca7fb`).
-- [ ] fps / memory in Genesis against the phase-2 baseline. The Moto crash family (Mali / low RAM, see
+- [ ] fps / memory in Genesis against the phase-2 baseline. Measured on the Moto, build `c0ea5d3`: Genesis 18 fps, 397–403 MB static memory; 12,12 (empty parcel with a TextShape scene): 235 MB. No phase-2 number is recorded in the plan to compare with. The Moto crash family (Mali / low RAM, see
   memory `qa-android-teleport-crash`) was not re-measured.
 
 Known engine bugs and leftovers
@@ -60,7 +60,7 @@ iOS: **never built.** Every iOS-affecting change in phases 3–5 is unverified a
 ## Fork API pin (5.0)
 
 - [x] `decentraland/godotengine` #29 (`spike/ios-host-embedding`, commit `333404e`): `process_templates.yml` dumps `extension_api.json` and `gdextension_interface.h` with the Linux editor and uploads them with the editors. Verified: the PR's CI run published `https://godot-engine-releases.dclexplorer.com/branches/spike-ios-host-embedding/editors/extension_api.json` (4.6.2.stable.gh, 6.7 MB), and it carries `Label3D::set_bbcode_enabled`, `set_bold_font`, `set_outline_size_float`.
-- [x] Explorer side (user decision, 17 Oct: `GODOT_USE_BRANCH = Some("spike/ios-host-embedding")` for the whole RN refactor, back to the pinned SHA when #29 merges in phase 7): `install` downloads `extension_api.json` into `.bin/godot/`, the `godot` crate has `api-custom-json`, `lib/.cargo/config.toml` points `GDRUST_GODOT_API_JSON` at it, and `text_shape/node.rs` / `dcl_rich_ui_text.rs` call the fork methods typed (the `has_method` probes and four allowlist entries are gone). Verified: clippy, 511 unit tests. Not run: `--itest` and the device with the branch editor.
+- [x] Explorer side (user decision, 17 Oct: `GODOT_USE_BRANCH = Some("spike/ios-host-embedding")` for the whole RN refactor, back to the pinned SHA when #29 merges in phase 7): `install` downloads `extension_api.json` into `.bin/godot/`, the `godot` crate has `api-custom-json`, `lib/.cargo/config.toml` points `GDRUST_GODOT_API_JSON` at it, and `text_shape/node.rs` / `dcl_rich_ui_text.rs` call the fork methods typed (the `has_method` probes and four allowlist entries are gone). Verified: clippy, 511 unit tests. Also run with the branch editor (`4.6.2.stable.gh.333404e8e`): `--itest` 25 passed, 0 failed; Moto: boot, avatar, Genesis, a scene's 3D TextShape renders through the typed fork calls, teleport to 12,12 shows the props, no panic in logcat.
 - Avatar snapshots: no offline wearable source for now, moved to phase 8 (user decision).
 - Lights, video (HLS, LiveKit), creator preview: moved to team polish (user decision).
 - iOS: tested by the user on another machine.
