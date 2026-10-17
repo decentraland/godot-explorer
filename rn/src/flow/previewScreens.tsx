@@ -8,8 +8,12 @@ import { useAvatar } from '../backpack/useAvatar';
 import { t } from '../i18n';
 import { u } from '../ds/scale';
 
-/** Stage + the single Godot avatar window, with a spinner behind it until the avatar arrives. */
-export function PreviewArea() {
+/**
+ * Stage + the single Godot avatar window, with a spinner behind it until the avatar arrives. `inset`
+ * leaves room for a full-screen screen's title and buttons; a screen that sizes the area itself
+ * turns it off.
+ */
+export function PreviewArea({ inset = true }: { inset?: boolean }) {
   const avatar = useAvatar();
   return (
     <View style={styles.area}>
@@ -22,7 +26,7 @@ export function PreviewArea() {
           </AppText>
         </View>
       )}
-      <AvatarHole style={styles.hole} />
+      <AvatarHole style={inset ? styles.hole : styles.fill} />
     </View>
   );
 }

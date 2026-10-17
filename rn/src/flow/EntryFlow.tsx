@@ -276,7 +276,7 @@ export function EntryFlow({
 function PreviewFill() {
   return (
     <View style={styles.previewFill}>
-      <PreviewArea />
+      <PreviewArea inset={false} />
     </View>
   );
 }
