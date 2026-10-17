@@ -48,7 +48,8 @@ Engine (phase 5)
 RN (phase 4 and earlier, still open)
 - [x] The name screen's avatar hole kept a small rect: fixed in RN (see above), verified on the Moto.
 - [ ] RN crashes on `begin_sign_in` while already `SignedIn`. **Polish stage (RN, not phase 5).**
-- [ ] Push notifications, reminders, error modals, settings relaunch, es / pt_BR on a phone. (Joystick movement is verified, see the Moto lines above.) **Polish stage (RN, not phase 5).**
+- [ ] Push notifications, reminders, error modals, settings relaunch on a phone. **Polish stage (RN, not phase 5).** (Joystick movement is verified, see the Moto lines above.)
+- [x] es / pt_BR follow the device (Moto set to pt-BR, 17 Oct): the shell showed English because `getAll` dropped the empty locale ("follow the device") and filled the English default, so the engine's rule never reached RN; `coreApi.getAll` now falls back to the device locale (`localeFromDevice`, same mapping as the engine, every `pt` to `pt_BR`). Verified: Discover reads "Explorar" and the friends row "Amigos". **Translation gap, not code:** the entry-flow screens (terms, account, avatar, name, welcome) have no es / pt_BR strings at all (`i18n/pt_BR/flow.ts` is empty), so they stay English; a translator's task for the polish stage.
 - [ ] OTP / Google / Gmail logins, native wallets and friends (moved to the polish stage).
 
 iOS: **never built.** Every iOS-affecting change in phases 3–5 is unverified and needs the user's hands
