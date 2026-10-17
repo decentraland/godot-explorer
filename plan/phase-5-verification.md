@@ -57,6 +57,11 @@ RN (phase 4 and earlier, still open)
 iOS: **never built.** Every iOS-affecting change in phases 3–5 is unverified and needs the user's hands
 (Xcode, Metal toolchain, Firebase iOS files, the `ios_host_release.a` template).
 
+## Fork API pin (5.0)
+
+- [x] `decentraland/godotengine` #29 (`spike/ios-host-embedding`, commit `333404e`): `process_templates.yml` dumps `extension_api.json` and `gdextension_interface.h` with the Linux editor and uploads them with the editors (`branches/<branch>/editors/`, or the SHA path on `4.6.2`). Unverified until that CI run finishes.
+- [ ] Explorer side, after the file exists in R2: `xtask install` downloads it, an `api-custom-json` feature of `godot` and `GDRUST_GODOT_API_JSON` in `.cargo/config.toml`, then the by-name fork calls (`set_bbcode_enabled`, RichTextLabel alignment) become typed.
+
 ## Dev features removed (not ported, on purpose)
 
 `--spawn-avatars`, `--emote-test`, the GDScript test scenes and `godot/examples`, the safe-margin overlay,
