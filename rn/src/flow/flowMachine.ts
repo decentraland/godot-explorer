@@ -5,6 +5,8 @@ export type Step =
   | 'account'
   | 'sign_in'
   | 'auth_wait'
+  | 'email_entry'
+  | 'email_code'
   | 'guest_wait'
   | 'welcome_back'
   | 'avatar_create'
@@ -19,17 +21,20 @@ export type FlowState = {
   step: Step;
   guest: boolean;
   provider: Provider | null;
+  email: string;
   name: string;
   error: string | null;
 };
 
 export type FlowAction =
-  | { type: 'booted' }
+  | { type: 'booted'; next?: 'terms' | 'account' }
+  | { type: 'recovered'; hasProfile: boolean; name: string }
   | { type: 'acceptTerms' }
   | { type: 'playAsGuest' }
   | { type: 'guestReady' }
   | { type: 'chooseSignIn' }
   | { type: 'chooseProvider'; provider: Provider }
+  | { type: 'emailSent'; email: string }
   | { type: 'authSucceeded'; hasProfile: boolean; name: string }
   | { type: 'authFailed'; message: string }
   | { type: 'customizeAvatar' }
@@ -42,6 +47,7 @@ export const initialFlow: FlowState = {
   step: 'splash',
   guest: false,
   provider: null,
+  email: '',
   name: '',
   error: null,
 };
@@ -60,7 +66,17 @@ const go = (
 export function reduceFlow(state: FlowState, action: FlowAction): FlowState {
   switch (action.type) {
     case 'booted':
-      return state.step === 'splash' ? go(state, 'terms') : state;
+      return state.step === 'splash'
+        ? go(state, action.next ?? 'terms')
+        : state;
+    case 'recovered':
+      // A restored account that already has a name goes straight into the app, as the lobby did.
+      if (state.step !== 'splash') {
+        return state;
+      }
+      return action.hasProfile
+        ? go(state, 'done', { name: action.name })
+        : go(state, 'avatar_create');
     case 'acceptTerms':
       return go(state, 'account');
     case 'playAsGuest':
@@ -70,16 +86,22 @@ export function reduceFlow(state: FlowState, action: FlowAction): FlowState {
     case 'chooseSignIn':
       return go(state, 'sign_in', { guest: false });
     case 'chooseProvider':
-      return go(state, 'auth_wait', { provider: action.provider });
+      return action.provider === 'email'
+        ? go(state, 'email_entry', { provider: action.provider })
+        : go(state, 'auth_wait', { provider: action.provider });
+    case 'emailSent':
+      return state.step === 'email_entry'
+        ? go(state, 'email_code', { email: action.email })
+        : state;
     case 'authSucceeded':
-      if (state.step !== 'auth_wait') {
+      if (state.step !== 'auth_wait' && state.step !== 'email_code') {
         return state;
       }
       return action.hasProfile
         ? go(state, 'welcome_back', { name: action.name })
         : go(state, 'avatar_create');
     case 'authFailed':
-      return state.step === 'auth_wait'
+      return state.step === 'auth_wait' || state.step === 'email_entry'
         ? go(state, 'sign_in', { error: action.message })
         : state;
     case 'customizeAvatar':
@@ -103,7 +125,10 @@ function back(state: FlowState): FlowState {
     case 'sign_in':
       return go(state, 'account');
     case 'auth_wait':
+    case 'email_entry':
       return go(state, 'sign_in');
+    case 'email_code':
+      return go(state, 'email_entry');
     case 'guest_wait':
       return go(state, 'account', { guest: false });
     case 'avatar_create':

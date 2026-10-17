@@ -37,10 +37,9 @@ extends Node
 ## Consumed by ReviewDebugPanel (dev builds only); nothing in the shipping path listens.
 signal debug_event(kind: String, text: String)
 
-# The four trigger ids, reported verbatim in the `review_prompted` metric. They are emitted by
+# The three trigger ids, reported verbatim in the `review_prompted` metric. They are emitted by
 # the hook, never inferred here, so the analytics split tells us which trigger carries the
 # feature (a trigger at ~0% is a broken hook, not a rare action).
-const TRIGGER_FRIEND_ADDED := "friend_added"
 const TRIGGER_PLACE_FAVORITED := "place_favorited"
 const TRIGGER_WEARABLE_CLAIMED := "wearable_claimed"
 const TRIGGER_PLACE_UPVOTED := "place_upvoted"
@@ -48,7 +47,6 @@ const TRIGGER_PLACE_UPVOTED := "place_upvoted"
 # Plain-English names for the QA panel and its messages. The wire ids above are what analytics
 # sees and must never change; these are only ever shown to a tester.
 const TRIGGER_LABELS := {
-	TRIGGER_FRIEND_ADDED: "Added a friend",
 	TRIGGER_PLACE_FAVORITED: "Favorited a place",
 	TRIGGER_WEARABLE_CLAIMED: "Claimed a wearable",
 	TRIGGER_PLACE_UPVOTED: "Liked a place",
@@ -117,13 +115,6 @@ func _ready() -> void:
 	Global.loading_started.connect(_on_loading_started)
 	Global.loading_finished.connect(_on_loading_finished)
 
-	# Trigger 1 — friends. Sent requests are relayed locally by Global (the service doesn't
-	# stream our own actions); accepts come off the service signal, which covers both our accept
-	# and the server-pushed acceptance of a request we sent.
-	Global.friendship_request_sent.connect(_on_friendship_request_sent)
-	if Global.social_service != null:
-		Global.social_service.friendship_request_accepted.connect(_on_friendship_request_accepted)
-
 	# Trigger 3 — the wearable CLAIM NOTIFICATION, not the marketplace: a claim reaches far more
 	# users than a purchase, and hooking the notification needs no new marketplace event.
 	NotificationsManager.notification_queued.connect(_on_notification_queued)
@@ -141,7 +132,7 @@ func _ready() -> void:
 	_maybe_prewarm()
 
 
-## The single ReviewPromptTrigger entry point. All four triggers are equal — no ranking, no
+## The single ReviewPromptTrigger entry point. All triggers are equal — no ranking, no
 ## priority — and each passes its own trigger_id, which is what the metric reports.
 func on_trigger(trigger_id: String) -> void:
 	if _firing:
@@ -404,14 +395,6 @@ func _on_iap_started(_product_id: String) -> void:
 
 func _on_iap_settled(_product_id: String, _extra = null) -> void:
 	_iap_in_flight = false
-
-
-func _on_friendship_request_sent(_address: String) -> void:
-	on_trigger(TRIGGER_FRIEND_ADDED)
-
-
-func _on_friendship_request_accepted(_address: String) -> void:
-	on_trigger(TRIGGER_FRIEND_ADDED)
 
 
 func _on_notification_queued(notification: Dictionary) -> void:

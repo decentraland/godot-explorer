@@ -1,8 +1,6 @@
-import { godotAvailable } from '../GodotBridge';
-import { bridgeHudApi, HudApi } from './hudApi';
-import { simulatedHudApi } from './simulator';
+import { coreHudApi, HudApi } from './hudApi';
 
-let active: HudApi = godotAvailable ? bridgeHudApi : simulatedHudApi;
+let active: HudApi = coreHudApi;
 
 export const getHudApi = (): HudApi => active;
 

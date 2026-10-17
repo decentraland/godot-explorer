@@ -142,3 +142,97 @@ fn the_emulator_sink_accepts_links_and_nfts_without_a_ui(_ctx: &TestContext) {
     assert_eq!(receiver.try_recv(), Ok(Ok(())));
     engine().bind_mut().set_emulator_mode(false);
 }
+
+#[godot::test::itest]
+fn every_control_maps_to_a_kind_with_typed_args(_ctx: &TestContext) {
+    use super::core_link::control_payload;
+    use dcl_core::app::{CameraFocus, ColorTarget, Control, HudInsets, Parcel};
+
+    let (kind, args) = control_payload(&Control::Teleport {
+        parcel: Parcel::new(3, -4),
+    });
+    assert_eq!(kind, "teleport");
+    assert_eq!(args.get("x").map(|v| v.to::<i32>()), Some(3));
+    assert_eq!(args.get("y").map(|v| v.to::<i32>()), Some(-4));
+
+    let (kind, args) = control_payload(&Control::SetHudInsets {
+        insets: HudInsets {
+            top: 1.0,
+            right: 2.0,
+            bottom: 3.0,
+            left: 4.0,
+        },
+    });
+    assert_eq!(kind, "set_hud_insets");
+    assert_eq!(args.get("left").map(|v| v.to::<f32>()), Some(4.0));
+
+    let (kind, args) = control_payload(&Control::FocusCamera {
+        focus: CameraFocus::Hands,
+    });
+    assert_eq!(
+        (kind, args.get("focus").map(|v| v.to::<String>())),
+        ("focus_camera", Some("hands".to_string()))
+    );
+
+    let (kind, args) = control_payload(&Control::SetColor {
+        target: ColorTarget::Eyes,
+        color: "#112233".to_string(),
+    });
+    assert_eq!(kind, "set_color");
+    assert_eq!(
+        args.get("target").map(|v| v.to::<String>()),
+        Some("eyes".to_string())
+    );
+    assert_eq!(
+        args.get("color").map(|v| v.to::<String>()),
+        Some("#112233".to_string())
+    );
+
+    let (kind, args) = control_payload(&Control::SetEmoteSlot {
+        slot: 7,
+        urn: "wave".to_string(),
+    });
+    assert_eq!(
+        (kind, args.get("slot").map(|v| v.to::<i32>())),
+        ("set_emote_slot", Some(7))
+    );
+
+    let kinds: Vec<&str> = [
+        Control::SendChat {
+            text: String::new(),
+        },
+        Control::Emote { urn: String::new() },
+        Control::SetChatWidth { width: 1.0 },
+        Control::ChatOpen { open: true },
+        Control::HideUi { hidden: true },
+        Control::Equip { urn: String::new() },
+        Control::Unequip { urn: String::new() },
+        Control::SetBodyShape { urn: String::new() },
+        Control::PlayPreviewEmote { urn: String::new() },
+        Control::RandomizeAvatar,
+        Control::SetPreviewUrl { url: String::new() },
+        Control::SetName {
+            name: String::new(),
+        },
+    ]
+    .iter()
+    .map(|c| control_payload(c).0)
+    .collect();
+    assert_eq!(
+        kinds,
+        [
+            "send_chat",
+            "emote",
+            "set_chat_width",
+            "chat_open",
+            "hide_ui",
+            "equip",
+            "unequip",
+            "set_body_shape",
+            "play_preview_emote",
+            "randomize_avatar",
+            "set_preview_url",
+            "set_name"
+        ]
+    );
+}

@@ -1,4 +1,4 @@
-/** Bridge events and commands the world HUD needs beyond the ones in `events.ts` / `GodotBridge.ts`. */
+/** What the world HUD hears from the core, shaped for its reducers. */
 
 export type LoadingProgress = {
   loaded: number;
@@ -7,13 +7,6 @@ export type LoadingProgress = {
   /** 0..100 */
   percent: number;
 };
-
-/** `loading_progress` follows `loading{started}`; `failed` is `realm_change_failed`. */
-export type LoadingEvent =
-  | { type: 'loading'; data: { state: 'started' | 'finished' | 'failed' } }
-  | { type: 'loading_progress'; data: LoadingProgress };
-
-export type Bounds = [x: number, y: number, width: number, height: number];
 
 export type ChatProfile = {
   address: string;
@@ -29,7 +22,7 @@ export type ChatProfile = {
   face?: string;
 };
 
-/** `chat` with the sender already resolved by Godot; `profile` is absent until wave 3 wires it. */
+/** `chat` with the sender already resolved by the engine; `profile` is absent for system lines. */
 export type ChatEvent = {
   type: 'chat';
   data: {
@@ -40,33 +33,13 @@ export type ChatEvent = {
   };
 };
 
-export type HudBridgeEvent =
-  | LoadingEvent
+export type HudEvent =
   | ChatEvent
-  | {
-      type: 'hud_state';
-      data: { joypadVisible: boolean; joypadBounds: Bounds | null };
-    }
+  | { type: 'loading_progress'; data: LoadingProgress }
   | { type: 'unread_chat'; data: { count: number } }
   | { type: 'open_backpack'; data: { emotes: boolean } };
 
-export type HudCommand =
-  | {
-      type: 'set_hud_insets';
-      left: number;
-      top: number;
-      right: number;
-      bottom: number;
-    }
-  | { type: 'set_chat_width'; px: number }
-  | { type: 'chat_open'; open: boolean }
-  | { type: 'hide_ui'; hidden: boolean }
-  | { type: 'send_chat'; text: string }
-  | { type: 'emote'; urn: string }
-  | { type: 'teleport'; x: number; y: number }
-  | { type: 'enter_world'; x: number; y: number; realm: string };
-
-/** A line in the chat model: `system` lines come from Godot with BBCode in `message`. */
+/** A line in the chat model: `system` lines come from the engine with BBCode in `message`. */
 export type ChatLine = {
   id: string;
   address: string;

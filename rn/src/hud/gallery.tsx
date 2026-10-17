@@ -1,13 +1,12 @@
 import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { registerPreview } from '../gallery/registry';
-import { godotAvailable } from '../GodotBridge';
 import { GodotPlaceholder } from '../godot/GodotPlaceholder';
 import { LoadingCover, CoverPlace } from '../world/LoadingCover';
 import { LoadingPhase, TIPS } from '../world/loadingModel';
 import type { Tip } from '../world/loadingModel';
 import { Hud } from './Hud';
-import { HudApi, bridgeHudApi } from './hudApi';
+import { HudApi, coreHudApi } from './hudApi';
 import { HudUiState, initialHud } from './hudState';
 import type { ChatLine, ChatProfile } from './types';
 
@@ -55,7 +54,7 @@ const FIVE_LINES: ChatLine[] = [
 /** A frozen engine: replays `lines` once and answers profile lookups from `known`. */
 function staticApi(lines: ChatLine[], known: ChatProfile[]): HudApi {
   return {
-    ...bridgeHudApi,
+    ...coreHudApi,
     subscribe(listener) {
       lines.forEach(l =>
         listener({
@@ -71,6 +70,7 @@ function staticApi(lines: ChatLine[], known: ChatProfile[]): HudApi {
       return noop;
     },
     send: noop,
+    enterWorld: noop,
     resolveProfile: async address =>
       known.find(p => p.address === address) ?? CLARA,
     ownProfile: async () => ME,
@@ -145,12 +145,7 @@ registerPreview(
 function World({ children }: { children: ReactNode }) {
   return (
     <View style={styles.fill}>
-      {!godotAvailable && (
-        <GodotPlaceholder
-          label="World (Godot)"
-          style={StyleSheet.absoluteFill}
-        />
-      )}
+      <GodotPlaceholder label="World (Godot)" style={StyleSheet.absoluteFill} />
       {children}
     </View>
   );

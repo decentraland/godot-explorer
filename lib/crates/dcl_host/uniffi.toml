@@ -1,0 +1,6 @@
+[bindings.kotlin]
+package_name = "org.decentraland.core.host"
+cdylib_name = "dclgodot"
+
+[bindings.swift]
+module_name = "DclHostFfi"

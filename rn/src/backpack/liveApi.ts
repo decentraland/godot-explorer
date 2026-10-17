@@ -1,10 +1,10 @@
 import { Linking } from 'react-native';
-import type { GodotCommand } from '../GodotBridge';
-import { ensureEngine, send, useEngine } from '../engine';
+import { core } from '../core';
 import type { BackpackApi, Catalog } from './api';
 import { fetchWearables } from './catalog';
 import { DEFAULT_EMOTES, fetchEmoteThumbnails } from './emotes';
-import { MARKETPLACE_URL } from './platformPolicy';
+import { marketplaceUrl } from './platformPolicy';
+import { useAvatar } from './useAvatar';
 
 let cached: Promise<Catalog> | null = null;
 
@@ -21,15 +21,12 @@ function loadOnce(): Promise<Catalog> {
   return cached;
 }
 
-/** Talks to the catalyst and, through the bridge, to Godot. */
+/** Reads the catalyst and drives the avatar through the core. */
 export const liveApi: BackpackApi = {
-  loadCatalog: () => {
-    ensureEngine();
-    return loadOnce();
-  },
-  send: command => send(command as GodotCommand),
-  useAvatar: () => useEngine().avatar,
+  loadCatalog: loadOnce,
+  send: command => core().control(command),
+  useAvatar,
   openMarketplace: () => {
-    Linking.openURL(MARKETPLACE_URL).catch(() => {});
+    Linking.openURL(marketplaceUrl()).catch(() => {});
   },
 };

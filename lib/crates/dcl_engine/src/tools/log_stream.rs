@@ -90,15 +90,8 @@ impl Default for LogHubLayer {
     }
 }
 
-impl<S> tracing_subscriber::Layer<S> for LogHubLayer
-where
-    S: tracing::Subscriber + for<'a> tracing_subscriber::registry::LookupSpan<'a>,
-{
-    fn on_event(
-        &self,
-        event: &tracing::Event<'_>,
-        _ctx: tracing_subscriber::layer::Context<'_, S>,
-    ) {
+impl dcl_core::logging::EventSink for LogHubLayer {
+    fn on_event(&self, event: &tracing::Event<'_>) {
         let metadata = event.metadata();
         let level = *metadata.level();
         let target = metadata.target();

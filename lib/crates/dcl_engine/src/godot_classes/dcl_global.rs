@@ -36,133 +36,44 @@ const JOYPAD_INPUT_WINDOW: std::time::Duration = std::time::Duration::from_milli
 use super::{
     dcl_cli::DclCli, dcl_config::DclConfig,
     dcl_dynamic_graphics_manager::DclDynamicGraphicsManager, dcl_realm::DclRealm,
-    dcl_social_blacklist::DclSocialBlacklist, dcl_social_service::DclSocialService,
-    dcl_tokio_rpc::DclTokioRpc, portables::DclPortableExperienceController,
+    dcl_social_blacklist::DclSocialBlacklist, dcl_tokio_rpc::DclTokioRpc,
+    portables::DclPortableExperienceController,
 };
 
-#[cfg(target_os = "android")]
-mod android {
-    use crate::tools::godot_logger::{
-        create_reload_filter, should_pipe_to_godot, GodotTracingLayer,
-    };
-    use tracing_subscriber::fmt::format::FmtSpan;
-    use tracing_subscriber::prelude::*;
-    use tracing_subscriber::{self, registry};
-
-    pub fn init_logger() {
-        let pipe_to_godot = should_pipe_to_godot();
-        let filter_layer = create_reload_filter("info");
-
-        if pipe_to_godot {
-            registry().with(filter_layer).with(GodotTracingLayer).init();
-        } else {
-            let android_layer = paranoid_android::layer(env!("CARGO_PKG_NAME"))
-                .with_span_events(FmtSpan::CLOSE)
-                .with_thread_names(true)
-                .with_ansi(false);
-            registry().with(filter_layer).with(android_layer).init();
-        }
+/// Plugs the engine's sinks into the core's logger. On the platforms where Godot's output already
+/// reaches the system log (and unless `--no-pipe-logging`), the core's platform sink goes quiet.
+fn attach_engine_logging() {
+    use crate::tools::godot_logger::{should_pipe_to_godot, GodotTracingLayer};
+    let pipe_to_godot = should_pipe_to_godot();
+    let mut sinks: Vec<Box<dyn dcl_core::logging::EventSink>> = Vec::new();
+    if pipe_to_godot {
+        sinks.push(Box::new(GodotTracingLayer));
     }
+    // Godot's console output never reaches stdout on iOS, so all Rust levels go to the log hub.
+    #[cfg(target_os = "ios")]
+    sinks.push(Box::new(crate::tools::log_stream::LogHubLayer::new()));
+    dcl_core::logging::attach_engine_sinks(sinks, pipe_to_godot);
+    crate::tools::godot_logger::apply_cmdline_log_filter();
 }
 
-#[cfg(target_os = "ios")]
-mod ios {
-    use crate::tools::godot_logger::{
-        create_reload_filter, should_pipe_to_godot, GodotTracingLayer, MessageVisitor,
+/// The core is installed by the host on phones; on desktop, and until the hosts do it, the engine
+/// installs it here with Godot's `user://`. Either way the data dir must be Godot's (risks R-6).
+fn ensure_core() -> &'static Core {
+    let user_dir = PathBuf::from(Os::singleton().get_user_data_dir().to_string());
+    let core = match Core::try_get() {
+        Some(core) => core,
+        None => Core::install(CoreConfig {
+            data_dir: user_dir.clone(),
+            platform: Platform::current(),
+        }),
     };
-    use tracing_subscriber::prelude::*;
-    use tracing_subscriber::registry;
-
-    /// A tracing layer that uses the `oslog` crate to write to Apple's Unified Logging.
-    /// Unlike `tracing-oslog`, the `oslog` crate uses `%{public}s` in its C wrapper,
-    /// so messages are fully visible in Console.app instead of showing `<private>`.
-    struct IosOsLogLayer {
-        logger: oslog::OsLog,
-    }
-
-    impl<S: tracing::Subscriber> tracing_subscriber::layer::Layer<S> for IosOsLogLayer {
-        fn on_event(
-            &self,
-            event: &tracing::Event<'_>,
-            _ctx: tracing_subscriber::layer::Context<'_, S>,
-        ) {
-            let metadata = event.metadata();
-            let level = metadata.level();
-            let target = metadata.target();
-            let file = metadata.file().unwrap_or("unknown");
-            let line = metadata.line().unwrap_or(0);
-
-            let mut visitor = MessageVisitor::default();
-            event.record(&mut visitor);
-
-            let formatted = format!(
-                "[{}] [{}] {} ({}:{})",
-                level, target, visitor.message, file, line
-            );
-
-            let oslog_level = match *level {
-                tracing::Level::ERROR | tracing::Level::WARN => oslog::Level::Error,
-                tracing::Level::INFO => oslog::Level::Info,
-                tracing::Level::DEBUG | tracing::Level::TRACE => oslog::Level::Debug,
-            };
-            self.logger.with_level(oslog_level, &formatted);
-        }
-    }
-
-    pub fn init_logger() {
-        let pipe_to_godot = should_pipe_to_godot();
-        let filter_layer = create_reload_filter("info");
-        // Feed all Rust log levels (incl. WARN/ERROR) into the log-stream hub
-        // directly — Godot's console output never reaches stdout on iOS, and the
-        // custom Godot logger only sees `print`/`log_message`, not errors.
-        let hub_layer = crate::tools::log_stream::LogHubLayer::new();
-
-        if pipe_to_godot {
-            registry()
-                .with(filter_layer)
-                .with(GodotTracingLayer)
-                .with(hub_layer)
-                .init();
-        } else {
-            let oslog_layer = IosOsLogLayer {
-                logger: oslog::OsLog::new(env!("CARGO_PKG_NAME"), "default"),
-            };
-            registry()
-                .with(filter_layer)
-                .with(oslog_layer)
-                .with(hub_layer)
-                .init();
-        }
-    }
-}
-
-#[cfg(not(any(target_os = "android", target_os = "ios")))]
-mod desktop {
-    use crate::tools::godot_logger::{
-        create_reload_filter, should_pipe_to_godot, GodotTracingLayer,
-    };
-    use tracing_subscriber::prelude::*;
-    use tracing_subscriber::registry;
-
-    pub fn init_logger() {
-        let pipe_to_godot = should_pipe_to_godot();
-        let filter_layer = create_reload_filter("warn");
-
-        if pipe_to_godot {
-            registry()
-                .with(filter_layer)
-                .with(GodotTracingLayer)
-                .try_init()
-                .ok();
-        } else {
-            let fmt_layer = tracing_subscriber::fmt::layer();
-            registry()
-                .with(filter_layer)
-                .with(fmt_layer)
-                .try_init()
-                .ok();
-        }
-    }
+    debug_assert_eq!(Core::installs(), 1, "one core per process");
+    debug_assert_eq!(
+        std::fs::canonicalize(core.data_dir()).ok(),
+        std::fs::canonicalize(&user_dir).ok(),
+        "the core data dir must be Godot's user://"
+    );
+    core
 }
 
 #[derive(GodotClass)]
@@ -232,9 +143,6 @@ pub struct DclGlobal {
 
     #[var]
     pub social_blacklist: Gd<DclSocialBlacklist>,
-
-    #[var]
-    pub social_service: Gd<DclSocialService>,
 
     #[cfg(feature = "use_memory_debugger")]
     #[var]
@@ -314,21 +222,13 @@ impl INode for DclGlobal {
         #[cfg(feature = "use_deno")]
         crate::dcl::js::init_runtime();
 
-        #[cfg(target_os = "android")]
-        android::init_logger();
-
-        #[cfg(target_os = "ios")]
-        ios::init_logger();
-
-        #[cfg(not(any(target_os = "android", target_os = "ios")))]
-        desktop::init_logger();
+        let core = ensure_core();
+        attach_engine_logging();
 
         tracing::info!(
             "DclGlobal init invoked version={}",
             env!("GODOT_EXPLORER_VERSION")
         );
-
-        log_panics::init();
 
         // Scene Inspector is initialized lazily when the first scene with
         // --scene-inspector enabled is spawned (see scene_thread in dcl/js/mod.rs).
@@ -343,7 +243,6 @@ impl INode for DclGlobal {
             crate::tools::scene_inspector::SceneInspectorDispatcher,
         > = crate::tools::scene_inspector::SceneInspectorDispatcher::new_alloc();
         let mut social_blacklist: Gd<DclSocialBlacklist> = DclSocialBlacklist::new_alloc();
-        let mut social_service: Gd<DclSocialService> = DclSocialService::new_alloc();
 
         #[cfg(feature = "use_memory_debugger")]
         let mut memory_debugger: Gd<MemoryDebugger> = MemoryDebugger::new_alloc();
@@ -379,10 +278,6 @@ impl INode for DclGlobal {
             crate::tools::scene_inspector::set_early_log_capture(true);
         }
 
-        let core = Core::install(CoreConfig {
-            data_dir: PathBuf::from(Os::singleton().get_user_data_dir().to_string()),
-            platform: Platform::current(),
-        });
         crate::utils::clock::spawn_background_sync(core.handle());
 
         scene_runner.set_name("scene_runner");
@@ -403,7 +298,6 @@ impl INode for DclGlobal {
             scene_inspector_dispatcher.bind().get_sender(),
         );
         social_blacklist.set_name("social_blacklist");
-        social_service.set_name("social_service");
 
         #[cfg(feature = "use_memory_debugger")]
         memory_debugger.set_name("memory_debugger");
@@ -479,7 +373,6 @@ impl INode for DclGlobal {
             network_inspector,
             scene_inspector_dispatcher,
             social_blacklist,
-            social_service,
 
             #[cfg(feature = "use_memory_debugger")]
             memory_debugger,

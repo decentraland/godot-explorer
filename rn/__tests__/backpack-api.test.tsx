@@ -5,16 +5,13 @@ import { HsvSliders } from '../src/ds';
 import { act, create } from 'react-test-renderer';
 import { ColorEditor } from '../src/backpack/ColorEditor';
 import { getBackpackApi, setBackpackApi } from '../src/backpack/api';
+import { setCoreForTests } from '../src/core';
+import type { CoreApi } from '../src/core';
+import { createMockCore } from '../src/core/mock';
+import { CameraFocus, Control } from '../src/core/native';
 import { createMockApi } from '../src/backpack/mockApi';
 import { liveApi } from '../src/backpack/liveApi';
 import { LANDSCAPE, PORTRAIT } from '../src/backpack/gallerySpecs';
-
-const mockSend = jest.fn();
-jest.mock('../src/engine', () => ({
-  ensureEngine: jest.fn(),
-  send: (command: unknown) => mockSend(command),
-  useEngine: () => ({ avatar: null }),
-}));
 
 describe('api registry', () => {
   it('swaps the active api', () => {
@@ -27,14 +24,17 @@ describe('api registry', () => {
 });
 
 describe('liveApi', () => {
-  afterEach(() => jest.restoreAllMocks());
+  afterEach(() => {
+    jest.restoreAllMocks();
+    setCoreForTests(undefined);
+  });
 
-  it('forwards commands to the engine, avatar-less until Godot reports', () => {
-    liveApi.send({ type: 'focus_camera', target: 'head' });
-    expect(mockSend).toHaveBeenCalledWith({
-      type: 'focus_camera',
-      target: 'head',
-    });
+  it('forwards commands to the core', () => {
+    const control = jest.fn();
+    setCoreForTests({ ...createMockCore(), control } as CoreApi);
+    const command = new Control.FocusCamera({ focus: CameraFocus.Head });
+    liveApi.send(command);
+    expect(control).toHaveBeenCalledWith(command);
   });
 
   it('rejects when the catalog cannot load and retries afterwards', async () => {

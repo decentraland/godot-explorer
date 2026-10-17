@@ -78,9 +78,12 @@ Godot boots after the host created its view (D-42).
 ## Engine modes
 
 - **Idle**: no realm. Transparent viewport, optional avatar preview in a rect the shell hands to the
-  core. What the current host calls avatar-only.
+  core. Only preview rendering, avatar assembly and its content loading are initialized; world
+  services remain absent. What the current host calls avatar-only.
 - **World**: a realm and parcel loaded, opaque full-screen surface, scene UI, joystick, gamepad,
-  camera. The HUD is RN above it; RN wins the hit test; the safe-area strips are reserved for RN.
+  camera. Scene runner, realm/scene fetch, SDK runtime, world comms connections and world player
+  initialize on entry and release their resources on exit; core transport state survives. The HUD
+  is RN above it; RN wins the hit test; the safe-area strips are reserved for RN.
 
 Both modes are driven by core state, never by shell commands. The backpack is the single place where
 the engine surface is transparent and sits above RN content. No other screen is designed around it.

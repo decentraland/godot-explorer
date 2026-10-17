@@ -4,12 +4,12 @@ import {
   Image,
   KeyboardAvoidingView,
   Linking,
-  Platform,
   Pressable,
   StyleSheet,
   TextInput,
   View,
 } from 'react-native';
+import { core } from '../core';
 import { AppText, colors, PrimaryButton, radii } from '../ds';
 import { FlowFrame } from './FlowFrame';
 import { isValidName, Provider } from './flowMachine';
@@ -17,8 +17,6 @@ import { I18nKey, t } from '../i18n';
 import { u } from '../ds/scale';
 
 const logo = require('../assets/logo.png');
-
-const TERMS_URL = 'https://decentraland.org/terms';
 
 export function SplashScreen({ onDone }: { onDone: () => void }) {
   useEffect(() => {
@@ -47,7 +45,7 @@ export function TermsScreen({ onAccept }: { onAccept: () => void }) {
         </AppText>
         <Pressable
           accessibilityRole="link"
-          onPress={() => Linking.openURL(TERMS_URL)}
+          onPress={() => Linking.openURL(core().urls().termsOfService)}
           hitSlop={8}
         >
           <AppText variant="button" style={styles.link}>
@@ -206,11 +204,12 @@ export function NamingScreen({
   const [name, setName] = useState(initial);
   const valid = isValidName(name);
   return (
-    <KeyboardAvoidingView
-      style={styles.fill}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <FlowFrame onBack={onBack}>
+    <FlowFrame onBack={onBack}>
+      <KeyboardAvoidingView
+        style={styles.fill}
+        behavior="padding"
+        keyboardVerticalOffset={u(48)}
+      >
         <AppText variant="heading" style={styles.titleLeft}>
           {t('FLOW_NAME_TITLE')}
         </AppText>
@@ -236,8 +235,129 @@ export function NamingScreen({
           disabled={!valid}
           onPress={() => onSubmit(name.trim())}
         />
-      </FlowFrame>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </FlowFrame>
+  );
+}
+
+/** One text field and a button: the email address, then the code it was sent. */
+function TextStep({
+  title,
+  body,
+  placeholder,
+  action,
+  error,
+  initial = '',
+  keyboardType,
+  maxLength,
+  busy,
+  valid,
+  onSubmit,
+  onBack,
+}: {
+  title: string;
+  body: string;
+  placeholder: string;
+  action: string;
+  error: string | null;
+  initial?: string;
+  keyboardType: 'email-address' | 'number-pad';
+  maxLength?: number;
+  busy: boolean;
+  valid: (value: string) => boolean;
+  onSubmit: (value: string) => void;
+  onBack: () => void;
+}) {
+  const [value, setValue] = useState(initial);
+  return (
+    <FlowFrame onBack={onBack}>
+      <KeyboardAvoidingView
+        style={styles.fill}
+        behavior="padding"
+        keyboardVerticalOffset={u(48)}
+      >
+        <View style={styles.center}>
+          <AppText variant="heading" style={styles.title}>
+            {title}
+          </AppText>
+          <AppText variant="body" style={styles.copy}>
+            {body}
+          </AppText>
+          {error ? (
+            <AppText variant="caption" style={styles.error}>
+              {error}
+            </AppText>
+          ) : null}
+        </View>
+        <TextInput
+          value={value}
+          onChangeText={setValue}
+          placeholder={placeholder}
+          placeholderTextColor={colors.silver}
+          autoCapitalize="none"
+          autoCorrect={false}
+          autoFocus
+          keyboardType={keyboardType}
+          maxLength={maxLength}
+          editable={!busy}
+          style={[styles.input, styles.inputGap]}
+        />
+        <PrimaryButton
+          label={action}
+          disabled={busy || !valid(value)}
+          onPress={() => onSubmit(value.trim())}
+        />
+      </KeyboardAvoidingView>
+    </FlowFrame>
+  );
+}
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+export const isValidEmail = (email: string) => EMAIL_PATTERN.test(email.trim());
+const CODE_PATTERN = /^\d{4,8}$/;
+export const isValidCode = (code: string) => CODE_PATTERN.test(code.trim());
+
+export function EmailScreen(props: {
+  initial: string;
+  error: string | null;
+  busy: boolean;
+  onSubmit: (email: string) => void;
+  onBack: () => void;
+}) {
+  return (
+    <TextStep
+      {...props}
+      title={t('FLOW_EMAIL_TITLE')}
+      body={t('FLOW_EMAIL_BODY')}
+      placeholder={t('FLOW_EMAIL_PLACEHOLDER')}
+      action={t('FLOW_EMAIL_SEND')}
+      keyboardType="email-address"
+      valid={isValidEmail}
+    />
+  );
+}
+
+export function CodeScreen({
+  email,
+  ...props
+}: {
+  email: string;
+  error: string | null;
+  busy: boolean;
+  onSubmit: (code: string) => void;
+  onBack: () => void;
+}) {
+  return (
+    <TextStep
+      {...props}
+      title={t('FLOW_CODE_TITLE')}
+      body={t('FLOW_CODE_BODY', { email })}
+      placeholder={t('FLOW_CODE_PLACEHOLDER')}
+      action={t('FLOW_CODE_VERIFY')}
+      keyboardType="number-pad"
+      maxLength={8}
+      valid={isValidCode}
+    />
   );
 }
 
@@ -279,5 +399,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.white30,
   },
+  inputGap: { marginBottom: u(16) },
   hint: { marginTop: u(8), marginBottom: u(16), textAlign: 'center' },
 });

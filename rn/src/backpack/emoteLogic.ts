@@ -1,4 +1,4 @@
-import type { BackpackCommand } from './api';
+import { Control } from '../core/native';
 import { Emote, emoteIdOf } from './emotes';
 
 export type EmoteStrip = 'unequip' | 'check' | 'equip' | null;
@@ -27,7 +27,7 @@ export function emoteStrip(
 }
 
 export type EmoteTap = {
-  commands: BackpackCommand[];
+  commands: Control[];
   /** Candidate waiting for a second tap, or null. */
   pending: string | null;
   /** Slot to select afterwards, set when the emote was equipped. */
@@ -45,22 +45,22 @@ export function tapEmote(
   const index = slotOfEmote(slots, emote.id);
   if (strip === 'unequip') {
     return {
-      commands: [{ type: 'set_emote_slot', slot: index, urn: '' }],
+      commands: [new Control.SetEmoteSlot({ slot: index, urn: '' })],
       pending: null,
       equippedSlot: null,
     };
   }
   if (strip === 'equip') {
     const slot = selected ?? Math.max(0, slots.indexOf(''));
-    const commands: BackpackCommand[] = [];
+    const commands: Control[] = [];
     if (index !== -1 && index !== slot) {
-      commands.push({ type: 'set_emote_slot', slot: index, urn: '' });
+      commands.push(new Control.SetEmoteSlot({ slot: index, urn: '' }));
     }
-    commands.push({ type: 'set_emote_slot', slot, urn: emote.urn });
+    commands.push(new Control.SetEmoteSlot({ slot, urn: emote.urn }));
     return { commands, pending: null, equippedSlot: slot };
   }
   return {
-    commands: [{ type: 'play_emote', urn: emote.urn }],
+    commands: [new Control.PlayPreviewEmote({ urn: emote.urn })],
     pending: emote.id,
     equippedSlot: null,
   };

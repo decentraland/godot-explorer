@@ -100,7 +100,8 @@ pub fn build_android(format: &str, release: bool, with_godot: bool) -> anyhow::R
         })
         .current_dir(rn_path("android"));
     if !with_godot {
-        gradle.arg("-PdclNoGodot=true");
+        // The flag is for Gradle; autolinking runs the RN CLI, which only sees the environment.
+        gradle.arg("-PdclNoGodot=true").env("DCL_NO_GODOT", "1");
     }
     if aab {
         gradle.env("DCL_ANDROID_UNSIGNED", "1");

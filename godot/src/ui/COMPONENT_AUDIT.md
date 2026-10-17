@@ -31,8 +31,6 @@ Every path is relative to `godot/src/ui/`. Old paths describe where each file li
 
 | File | New path | Old path | Description |
 | --- | --- | --- | --- |
-| `login.tscn` | `pages/auth/` | `components/auth/` | Wallet / email sign-in screen |
-| `lobby.tscn` | `pages/auth/` | `components/auth/` | Pre-world lobby screen |
 | `backpack.tscn` | `pages/backpack/` | `components/backpack/` | Backpack root (responsive) |
 | `backpack_portrait.tscn` | `pages/backpack/` | `components/backpack/` | Mobile portrait layout |
 | `backpack_landscape.tscn` | `pages/backpack/` | `components/backpack/` | Mobile landscape / desktop layout |

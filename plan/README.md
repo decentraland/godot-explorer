@@ -44,6 +44,7 @@ and no item carries an estimate.
 
 | File | What it holds |
 |---|---|
+| [00-why.md](00-why.md) | Why: the placement rule, pros and cons, why a native UI, why React Native and not Flutter or another, what happens if memory misses |
 | [01-today.md](01-today.md) | Inventory on 13 Oct 2026: the numbers and the coupling edges the plan has to cut |
 | [02-target.md](02-target.md) | The end state: crates, one core per process, who starts what, engine modes, what `godot/` becomes |
 | [03-engine-api.md](03-engine-api.md) | Core ↔ engine contract, and the by-name calls and node paths it replaces |

@@ -4,21 +4,29 @@
   "private": true,
   "scripts": {
     "android": "react-native run-android --main-activity com.godot.game.GodotAppLauncher",
-    "android:no-godot": "react-native run-android --main-activity com.godot.game.GodotAppLauncher --extra-params -PdclNoGodot=true",
+    "android:no-godot": "DCL_NO_GODOT=1 react-native run-android --main-activity com.godot.game.GodotAppLauncher --extra-params -PdclNoGodot=true",
     "ios": "react-native run-ios",
     "expo": "expo start",
     "lint": "eslint .",
     "start": "react-native start",
     "test": "jest",
-    "gallery:ids": "GALLERY_WRITE_IDS=1 jest gallery-coverage"
+    "gallery:ids": "GALLERY_WRITE_IDS=1 jest gallery-coverage",
+    "ubrn:generate": "node ./scripts/ubrn-generate.mjs"
   },
   "dependencies": {
+    "@react-native-clipboard/clipboard": "^1.16.3",
     "@react-native/new-app-screen": "0.86.3",
+    "@sentry/react-native": "^8.30.0",
+    "@ubjs/core": "0.31.0-6",
+    "dcl-core": "file:./modules/dcl-core",
     "expo": "~57.0.27",
     "react": "19.2.3",
     "react-native": "0.86.3",
+    "react-native-inappbrowser-reborn": "^3.7.1",
+    "react-native-orientation-locker": "^1.7.0",
     "react-native-safe-area-context": "~5.7.0",
-    "react-native-svg": "^15.15.5"
+    "react-native-svg": "^15.15.5",
+    "uniffi-bindgen-react-native": "0.31.0-6"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

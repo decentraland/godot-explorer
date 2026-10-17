@@ -1,5 +1,5 @@
 import { Rarity } from '../ds';
-import { CONTENTS_URL, ENTITIES_URL } from './catalog';
+import { contentsUrl, entitiesUrl } from './catalog';
 
 export const BASE_EMOTE_PREFIX = 'urn:decentraland:off-chain:base-emotes:';
 export const EMOTE_SLOTS = 10;
@@ -65,7 +65,7 @@ export function withThumbnails(emotes: Emote[], entities: unknown): Emote[] {
     const file = entity?.metadata?.thumbnail;
     const hash = entity?.content?.find(entry => entry.file === file)?.hash;
     if (hash && entity.pointers?.[0]) {
-      byPointer.set(entity.pointers[0].toLowerCase(), CONTENTS_URL + hash);
+      byPointer.set(entity.pointers[0].toLowerCase(), contentsUrl() + hash);
     }
   }
   return emotes.map(emote => ({
@@ -77,7 +77,7 @@ export function withThumbnails(emotes: Emote[], entities: unknown): Emote[] {
 export async function fetchEmoteThumbnails(
   fetchImpl: typeof fetch = fetch,
 ): Promise<Emote[]> {
-  const response = await fetchImpl(ENTITIES_URL, {
+  const response = await fetchImpl(entitiesUrl(), {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ pointers: DEFAULT_EMOTES.map(emote => emote.urn) }),

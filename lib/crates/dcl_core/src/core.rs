@@ -1,14 +1,22 @@
 use std::{
     future::Future,
     path::{Path, PathBuf},
-    sync::OnceLock,
+    sync::{
+        atomic::{AtomicUsize, Ordering},
+        Arc, OnceLock,
+    },
 };
 
+use crate::app::{App, AppEvents};
+use crate::hub::{Hub, LiveBackend};
+use crate::session::identity::Session;
 use tokio::runtime::{Builder, Handle, Runtime};
 
 static CORE: OnceLock<Core> = OnceLock::new();
+static INSTALLS: AtomicUsize = AtomicUsize::new(0);
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "ffi", derive(uniffi::Enum))]
 pub enum Platform {
     Android,
     Ios,
@@ -25,7 +33,7 @@ impl Platform {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct CoreConfig {
     pub data_dir: PathBuf,
     pub platform: Platform,
@@ -35,19 +43,44 @@ pub struct CoreConfig {
 pub struct Core {
     config: CoreConfig,
     runtime: Runtime,
+    hub: Hub,
 }
 
 impl Core {
-    /// Installs the core once; a second call keeps the first and returns it.
+    /// Installs the core once, with the process logger and panic hook. A second call returns the
+    /// first core; in debug builds it must pass the same config, since a different one means two
+    /// parts of the process disagree about who owns the core.
     pub fn install(config: CoreConfig) -> &'static Core {
-        CORE.get_or_init(|| {
+        INSTALLS.fetch_add(1, Ordering::Relaxed);
+        let mut first = false;
+        let core = CORE.get_or_init(|| {
+            first = true;
+            crate::logging::init(config.platform);
             let runtime = Builder::new_multi_thread()
                 .enable_all()
                 .thread_name("dcl-core-tokio")
                 .build()
                 .expect("failed to build the core tokio runtime");
-            Core { config, runtime }
-        })
+            Core {
+                hub: Hub::new(&config.data_dir, Arc::new(LiveBackend)),
+                config: config.clone(),
+                runtime,
+            }
+        });
+        if first {
+            crate::lifecycle::wire(core);
+        }
+        debug_assert_eq!(
+            core.config, config,
+            "Core::install called again with a different config"
+        );
+        core
+    }
+
+    /// How many times `install` was called; the host and the engine share one core, so each
+    /// process-level caller counts once and the engine asserts it did not create a second.
+    pub fn installs() -> usize {
+        INSTALLS.load(Ordering::Relaxed)
     }
 
     /// Panics before `install`; use `try_get` where the core may not exist yet.
@@ -75,8 +108,66 @@ impl Core {
         &self.config
     }
 
-    /// Spawns on the core runtime. Without an installed core (unit tests, early boot) it runs the
-    /// future on a short-lived thread with its own runtime instead of dropping it.
+    /// The account hub: app state, session, saved account and the sign-in flows.
+    pub fn hub(&self) -> &Hub {
+        &self.hub
+    }
+
+    /// Runs `f` on the app state machine, one caller at a time. `f` must not call back into the
+    /// core's app, and the registered listeners run inside it.
+    pub fn with_app<R>(&self, f: impl FnOnce(&mut App) -> R) -> R {
+        self.hub.with_app(f)
+    }
+
+    /// Runs `f` on the account state of the running app: the wallet, its ephemeral auth chain and
+    /// the sign-in bookkeeping.
+    pub fn with_session<R>(&self, f: impl FnOnce(&mut Session) -> R) -> R {
+        self.hub.with_session(f)
+    }
+
+    /// Registers a receiver of the app's events (the shell and the host each add one); the id
+    /// removes it.
+    pub fn add_app_listener(&self, listener: Arc<dyn AppEvents>) -> u64 {
+        self.hub.events().add_listener(listener)
+    }
+
+    pub fn remove_app_listener(&self, id: u64) {
+        self.hub.events().remove_listener(id);
+    }
+
+    /// Sends `state` to every listener without changing the app (used to exercise the callback
+    /// path under load).
+    pub fn broadcast_state(&self, state: &crate::app::State) {
+        self.hub.events().state_changed(state);
+    }
+
+    /// Routes a deep link: finishes a browser sign-in it carries and returns the rest for the
+    /// shell (navigation, settings, analytics).
+    pub fn handle_deep_link(
+        &'static self,
+        url: &str,
+        start: crate::deep_link_route::StartKind,
+    ) -> crate::deep_link_route::Routed {
+        let outcome = self.hub.route_deep_link(url, start, self.config.platform);
+        if let Some(identity_id) = outcome.complete_sign_in {
+            let hub = &self.hub;
+            self.handle().spawn(async move {
+                if let Err(e) = hub.complete_browser(identity_id).await {
+                    tracing::warn!("deep link sign-in: {e}");
+                }
+            });
+        }
+        outcome.routed
+    }
+
+    /// Sends an `avatar_preview_mode` event to every listener (exercises the host callback path).
+    pub fn broadcast_avatar_preview_mode(&self, on: bool) {
+        self.hub.events().avatar_preview_mode(on);
+    }
+
+    /// Spawns on the core runtime. Without an installed core it fails in debug builds; release
+    /// builds and `dcl_core`'s own tests run the future on a short-lived thread with its own
+    /// runtime instead of dropping it.
     pub fn spawn<F>(future: F)
     where
         F: Future + Send + 'static,
@@ -86,6 +177,9 @@ impl Core {
             core.handle().spawn(future);
             return;
         }
+        #[cfg(all(debug_assertions, not(test)))]
+        panic!("Core::spawn called before Core::install");
+        #[allow(unreachable_code)]
         std::thread::spawn(move || match Runtime::new() {
             Ok(runtime) => {
                 runtime.block_on(future);
@@ -127,10 +221,17 @@ mod tests {
         assert_eq!(rx.recv().unwrap(), "core");
         assert!(std::ptr::eq(core, Core::get()));
 
-        let again = Core::install(CoreConfig {
-            data_dir: PathBuf::from("/other"),
-            platform: Platform::Android,
-        });
-        assert!(std::ptr::eq(core, again));
+        let same = Core::install(core.config().clone());
+        assert!(std::ptr::eq(core, same));
+        assert_eq!(Core::installs(), 2);
+
+        #[cfg(debug_assertions)]
+        assert!(std::panic::catch_unwind(|| {
+            Core::install(CoreConfig {
+                data_dir: PathBuf::from("/other"),
+                platform: Platform::Android,
+            })
+        })
+        .is_err());
     }
 }

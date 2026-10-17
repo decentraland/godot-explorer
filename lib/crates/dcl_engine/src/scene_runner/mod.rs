@@ -6,6 +6,7 @@ pub mod loading_funnel;
 pub mod loading_session;
 pub mod object_pool;
 pub mod pool_manager;
+mod report_tags;
 mod rpc_calls;
 pub mod scene;
 pub mod scene_cache;

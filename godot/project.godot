@@ -26,7 +26,6 @@ compatibility/default_parent_skeleton_in_mesh_instance_3d=true
 config/name="Decentraland"
 config/description="Decentraland Explorer powered by Decentraland DAO"
 run/main_scene="res://src/dcl_root.tscn"
-run/main_loop_type="ProjectMainLoop"
 config/features=PackedStringArray("4.6")
 boot_splash/bg_color=Color(0.411765, 0.121569, 0.662745, 1)
 boot_splash/stretch_mode=0
@@ -57,7 +56,7 @@ DevLocalhostRelay="*res://src/tool/dev_localhost_relay.gd"
 GltfLoadingCoordinator="*res://src/decentraland_components/gltf_loading_coordinator.gd"
 LightSourceManager="*res://src/decentraland_components/light_source_manager.gd"
 TouchFeedback="*res://src/ui/touch_feedback/touch_feedback_overlay.gd"
-RnBridge="*res://src/rn_bridge/rn_bridge.gd"
+EngineHost="*res://src/engine_host/engine_host.gd"
 
 [debug]
 
@@ -271,14 +270,6 @@ environment/defaults/default_clear_color=Color(0.411765, 0.121569, 0.662745, 1)
 lights_and_shadows/positional_shadow/atlas_size=2048
 lights_and_shadows/positional_shadow/atlas_quadrant_3_subdiv=3
 environment/screen_space_reflection/roughness_quality=0
-
-[sentry]
-
-options/auto_init=false
-options/dsn="https://03559fa545b3fa2bc9e876a41d6aab2f@o4510187684298752.ingest.us.sentry.io/4510187688361984"
-options/debug_printing=0
-options/diagnostic_level=4
-schema_version=4
 
 [shader_globals]
 

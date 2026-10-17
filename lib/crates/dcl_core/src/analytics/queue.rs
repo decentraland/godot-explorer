@@ -20,9 +20,9 @@ use crate::{
     Core,
 };
 
-const SEGMENT_EVENT_SIZE_LIMIT_BYTES: usize = 32000;
-const SEGMENT_BATCH_SIZE_LIMIT_BYTES: usize = 500000;
-const SEGMENT_BATCH_URL: &str = "https://api.segment.io/v1/batch";
+pub(super) const SEGMENT_EVENT_SIZE_LIMIT_BYTES: usize = 32000;
+pub(super) const SEGMENT_BATCH_SIZE_LIMIT_BYTES: usize = 500000;
+pub(super) const SEGMENT_BATCH_URL: &str = "https://api.segment.io/v1/batch";
 
 // Upper bound on how many failed-send events we hold for retry. Bounds memory during a long
 // outage; once exceeded we drop the oldest (they're the most likely to be stale) and log it.

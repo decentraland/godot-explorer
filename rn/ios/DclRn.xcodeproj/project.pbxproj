@@ -13,8 +13,8 @@
 		761780ED2CA45674006654EE /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761780EC2CA45674006654EE /* AppDelegate.swift */; };
 		81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
 		901965FF053094AC7A39AB80 /* GodotHost.mm in Sources */ = {isa = PBXBuildFile; fileRef = EB034757B9B4089C67208C23 /* GodotHost.mm */; };
-		B1624A9821E7314A7BDFB206 /* GodotBridge.mm in Sources */ = {isa = PBXBuildFile; fileRef = DAD2B9B59E9DA72FDDCDA4EF /* GodotBridge.mm */; };
 		CF4AC92B45BA16F33C282D42 /* GodotPlugins.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B130CF31BC32915856EA596D /* GodotPlugins.cpp */; };
+		E5A1C0DE0000000000000001 /* DclHostFfi.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5A1C0DE0000000000000002 /* DclHostFfi.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -32,10 +32,9 @@
 		C14D9ED545C133E2755A7A5D /* DclRn-Bridging-Header.h */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; name = "DclRn-Bridging-Header.h"; path = "DclRn/DclRn-Bridging-Header.h"; sourceTree = "<group>"; };
 		D6026AACDCA53C24DB4A23A5 /* Project.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = Project.xcconfig; path = DclRn/Project.xcconfig; sourceTree = "<group>"; };
 		D9F324566D06728E0D0EC335 /* GodotHost.h */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; name = GodotHost.h; path = DclRn/GodotHost.h; sourceTree = "<group>"; };
-		DAD2B9B59E9DA72FDDCDA4EF /* GodotBridge.mm */ = {isa = PBXFileReference; includeInIndex = 1; name = GodotBridge.mm; path = DclRn/GodotBridge.mm; sourceTree = "<group>"; };
 		EB034757B9B4089C67208C23 /* GodotHost.mm */ = {isa = PBXFileReference; includeInIndex = 1; name = GodotHost.mm; path = DclRn/GodotHost.mm; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
-		FB7DD130351CC2AB4DA1796C /* GodotBridge.h */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; name = GodotBridge.h; path = DclRn/GodotBridge.h; sourceTree = "<group>"; };
+		E5A1C0DE0000000000000002 /* DclHostFfi.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DclHostFfi.swift; path = DclRn/Generated/DclHostFfi.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -55,14 +54,13 @@
 			children = (
 				13B07FB51A68108700A75B9A /* Images.xcassets */,
 				761780EC2CA45674006654EE /* AppDelegate.swift */,
+				E5A1C0DE0000000000000002 /* DclHostFfi.swift */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */,
 				13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */,
 				EB034757B9B4089C67208C23 /* GodotHost.mm */,
-				DAD2B9B59E9DA72FDDCDA4EF /* GodotBridge.mm */,
 				B130CF31BC32915856EA596D /* GodotPlugins.cpp */,
 				D9F324566D06728E0D0EC335 /* GodotHost.h */,
-				FB7DD130351CC2AB4DA1796C /* GodotBridge.h */,
 				C14D9ED545C133E2755A7A5D /* DclRn-Bridging-Header.h */,
 				D6026AACDCA53C24DB4A23A5 /* Project.xcconfig */,
 				5489799229C439B17508BD91 /* DclRn.entitlements */,
@@ -286,8 +284,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				761780ED2CA45674006654EE /* AppDelegate.swift in Sources */,
+				E5A1C0DE0000000000000001 /* DclHostFfi.swift in Sources */,
 				901965FF053094AC7A39AB80 /* GodotHost.mm in Sources */,
-				B1624A9821E7314A7BDFB206 /* GodotBridge.mm in Sources */,
 				CF4AC92B45BA16F33C282D42 /* GodotPlugins.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

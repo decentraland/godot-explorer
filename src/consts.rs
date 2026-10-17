@@ -1,13 +1,7 @@
 pub const GODOT_PROJECT_FOLDER: &str = "./godot/";
-pub const GODOT_SENTRY_ADDON_FOLDER: &str = "./godot/addons/sentry";
 pub const BIN_FOLDER: &str = "./.bin/";
 pub const RUST_LIB_PROJECT_FOLDER: &str = "./lib/";
 pub const EXPORTS_FOLDER: &str = "./exports/";
-
-/// sentry-godot addon release. Bump both together: the installer replaces
-/// `godot/addons/sentry` whenever its `.version` marker differs from this.
-pub const SENTRY_ADDON_VERSION: &str = "2.1.1";
-pub const SENTRY_ADDON_URL: &str = "https://github.com/getsentry/sentry-godot/releases/download/2.1.1/sentry-godot-2.1.1+d288ad9.zip";
 
 pub const PROTOC_BASE_URL: &str =
     "https://github.com/protocolbuffers/protobuf/releases/download/v23.2/protoc-23.2-";

@@ -17,6 +17,26 @@ describe('entry flow', () => {
     );
   });
 
+  it('skips the terms the player already accepted', () => {
+    expect(run([{ type: 'booted', next: 'account' }]).step).toBe('account');
+  });
+
+  it('a restored account with a name goes straight in, one without builds an avatar', () => {
+    const named = run([{ type: 'recovered', hasProfile: true, name: 'Ana' }]);
+    expect(named.step).toBe('done');
+    expect(named.name).toBe('Ana');
+    expect(run([{ type: 'recovered', hasProfile: false, name: '' }]).step).toBe(
+      'avatar_create',
+    );
+    expect(
+      reduceFlow(run([{ type: 'booted' }]), {
+        type: 'recovered',
+        hasProfile: true,
+        name: 'x',
+      }).step,
+    ).toBe('terms');
+  });
+
   it('guest path skips naming and ends in the ftue', () => {
     const state = run([
       { type: 'booted' },
@@ -75,6 +95,41 @@ describe('entry flow', () => {
         name: 'x',
       }).step,
     ).toBe('sign_in');
+  });
+
+  it('email goes through the address, then the code, then succeeds', () => {
+    const entry = run([
+      { type: 'chooseSignIn' },
+      { type: 'chooseProvider', provider: 'email' },
+    ]);
+    expect(entry.step).toBe('email_entry');
+    const code = reduceFlow(entry, { type: 'emailSent', email: 'a@b.co' });
+    expect(code.step).toBe('email_code');
+    expect(code.email).toBe('a@b.co');
+    const done = reduceFlow(code, {
+      type: 'authSucceeded',
+      hasProfile: true,
+      name: 'Ana',
+    });
+    expect(done.step).toBe('welcome_back');
+  });
+
+  it('back from the code returns to the address, and a late code result is ignored', () => {
+    const code = run([
+      { type: 'chooseSignIn' },
+      { type: 'chooseProvider', provider: 'email' },
+      { type: 'emailSent', email: 'a@b.co' },
+    ]);
+    const entry = reduceFlow(code, { type: 'back' });
+    expect(entry.step).toBe('email_entry');
+    expect(reduceFlow(entry, { type: 'back' }).step).toBe('sign_in');
+    expect(
+      reduceFlow(entry, { type: 'authSucceeded', hasProfile: false, name: '' })
+        .step,
+    ).toBe('email_entry');
+    expect(
+      reduceFlow(initialFlow, { type: 'emailSent', email: 'x@y.zz' }).step,
+    ).toBe('splash');
   });
 
   it('back walks up the tree and never mutates', () => {

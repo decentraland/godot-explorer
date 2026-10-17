@@ -459,7 +459,6 @@ fn main() -> io::Result<()> {
     //     every time a new component is added; blanket-derive avoids that.
     let mut prost_config = prost_build::Config::new();
     prost_config.type_attribute(".", "#[derive(serde::Serialize)]");
-    prost_config.service_generator(Box::new(dcl_rpc::codegen::RPCServiceGenerator::new()));
     // Emit the descriptor set so build_quant can read the Pulse quantization
     // field options (the .proto stays the single source of truth for the wire ABI).
     let descriptor_path = Path::new(&env::var("OUT_DIR").unwrap()).join("proto_descriptor_set.bin");
@@ -799,7 +798,7 @@ fn set_godot_explorer_version() {
     // Here the build number goes into the numeric `+build` metadata slot (build number
     // is globally monotonic per commit, so `release.build:>=N` == "this build or newer").
     // The commit hash and environment are intentionally dropped — they're already carried
-    // by Sentry `dist` and `environment` respectively (see project_main_loop.gd init).
+    // by Sentry `dist` and `environment` respectively.
     // When no build number is allocated (local/fork builds) the bare `{version}` is still
     // valid semver.
     let sentry_release = match build_segment.strip_prefix('.') {

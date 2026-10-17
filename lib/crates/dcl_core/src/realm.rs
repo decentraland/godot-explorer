@@ -72,7 +72,7 @@ fn is_ip_address(authority_and_path: &str) -> bool {
 }
 
 /// Percent-encodes everything but the RFC 3986 unreserved characters, like Godot's `uri_encode`.
-fn uri_encode(text: &str) -> String {
+pub(crate) fn uri_encode(text: &str) -> String {
     let mut out = String::with_capacity(text.len());
     for byte in text.bytes() {
         match byte {

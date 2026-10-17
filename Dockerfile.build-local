@@ -1,7 +1,7 @@
 # Local godot-explorer build for the consumer-processor asset-server pipeline.
 #
 # Strategy: reuse the prod image (quay.io/decentraland/godot-explorer:next) as
-# the runtime base — it has Godot + .pck + sentry + crashpad already wired.
+# the runtime base — it has Godot + .pck already wired.
 # We only rebuild libdclgodot.so from this branch and swap it in. The bench's
 # Rust optimizations (cheap-pbr at GLTF import, meshopt LOD chain via
 # apply_pre_generate_mesh_simplification) live entirely in libdclgodot.so,

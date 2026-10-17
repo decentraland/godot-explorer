@@ -1,6 +1,4 @@
-import { godotAvailable } from '../GodotBridge';
-import { createBridgeSettingsApi } from './bridgeApi';
-import { createMockApi } from './mockApi';
+import { createCoreSettingsApi } from './coreApi';
 import type {
   AccountInfo,
   SettingKey,
@@ -30,7 +28,8 @@ export interface SettingsApi {
   /** Starts the guest-to-email upgrade flow (OTP, owned by the engine). */
   startEmailUpgrade(): Promise<void>;
   signOut(): Promise<void>;
-  deleteAccount(): Promise<{ ok: boolean; error?: string }>;
+  /** `deleted`: a guest was removed from the device; otherwise the server got a deletion request. */
+  deleteAccount(): Promise<{ ok: boolean; deleted?: boolean; error?: string }>;
   openBugReport(): Promise<void>;
   openReportContent(): Promise<void>;
   devAction(action: DevAction): Promise<void>;
@@ -44,10 +43,10 @@ export function setSettingsApi(api: SettingsApi | null): void {
   active = api;
 }
 
-/** The registered implementation, else the bridge with the engine and an in-memory mock without. */
+/** The registered implementation, else the core's (the native binding, or its mock without the engine). */
 export function getSettingsApi(): SettingsApi {
   if (!active) {
-    active = godotAvailable ? createBridgeSettingsApi() : createMockApi();
+    active = createCoreSettingsApi();
   }
   return active;
 }

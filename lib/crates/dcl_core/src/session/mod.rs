@@ -1,3 +1,4 @@
+pub mod account_codec;
 pub mod auth_identity;
 pub mod decentraland_auth_server;
 pub mod device_anchor;

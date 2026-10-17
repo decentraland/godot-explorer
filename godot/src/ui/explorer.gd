@@ -1,15 +1,9 @@
 class_name Explorer
 extends Node
 
-# Friendship/connectivity subscribe retry policy: bounded exponential backoff
-# 5s, 10s, 20s, 40s, 60s, 60s — caps at ~3min total before giving up.
 ## Where a profile with no realm history boots. A dev realm, not genesis: this only
 ## happens on a fresh install that has never joined anywhere.
 const FALLBACK_BOOT_REALM := "https://sdk-team-cdn.decentraland.org/ipfs/goerli-plaza-main-latest"
-
-const _SUBSCRIBE_RETRY_MAX_ATTEMPTS: int = 6
-const _SUBSCRIBE_RETRY_BASE_DELAY: float = 5.0
-const _SUBSCRIBE_RETRY_MAX_DELAY: float = 60.0
 
 const _MULTIPLAYER_DEBUG_PANEL_SCENE := preload(
 	"res://src/ui/components/organisms/multiplayer_debug/multiplayer_debug_panel.tscn"
@@ -42,11 +36,6 @@ var _last_outlined_avatar: Avatar = null
 var _last_outlined_entity: Node3D = null
 var _is_loading: bool = true  # Start as loading
 var _ban_check_generation: int = 0
-var _subscription_reconnecting: bool = false  # Debounce for subscription_dropped
-var _resubscribe_timer: Timer = null
-## True between social-service init and player logout. Gates retry loops so they
-## exit cleanly when the session ends mid-await instead of re-subscribing after sign-out.
-var _session_active: bool = false
 
 ## Children of %UI hidden while "hide explorer UI" is on; restored when toggled off.
 var _ui_children_hidden_for_hud_mode: Array[CanvasItem] = []
@@ -76,7 +65,6 @@ var _debug_panel_from_settings: bool = false
 @onready var chat_panel = %ChatPanel
 
 @onready var notifications_panel: PanelContainer = %NotificationsPanel
-@onready var friends_panel: PanelContainer = %FriendsPanel
 @onready var discover_panel: DiscoverPanel = %DiscoverPanel
 @onready var label_version = %Label_Version
 @onready var label_fps = %Label_FPS
@@ -169,7 +157,6 @@ func _ready():
 	Global.on_menu_open.connect(_on_menu_open)
 	Global.on_menu_close.connect(_on_menu_close)
 
-	Global.open_friends_panel.connect(_show_friends_panel)
 	Global.open_discover_panel.connect(_show_discover_panel)
 	discover_panel.share_requested.connect(_share_place)
 	# Settings is a fullscreen menu screen (like Backpack): the navbar button emits
@@ -186,9 +173,6 @@ func _ready():
 
 	# Connect to NotificationsManager queue signals
 	NotificationsManager.notification_queued.connect(_on_notification_queued)
-
-	# Connect to notification clicks to handle friend request notifications
-	Global.notification_clicked.connect(_on_notification_clicked)
 
 	# Connect on open backpack (from the navbar button or the emote wheel)
 	Global.open_backpack.connect(_on_backpack_open)
@@ -207,7 +191,6 @@ func _ready():
 
 	# Keep the full-screen dismiss catcher in sync with what's open.
 	notifications_panel.visibility_changed.connect(_refresh_hud_dismiss)
-	friends_panel.visibility_changed.connect(_refresh_hud_dismiss)
 	discover_panel.visibility_changed.connect(_refresh_hud_dismiss)
 	chat_panel.chat.visibility_changed.connect(_refresh_hud_dismiss)
 
@@ -363,10 +346,6 @@ func _ready():
 	# Apply current state once at startup (in case something toggled early).
 	_apply_hide_ui_to_avatar_nicks(_session_hide_player_names)
 
-	# Initialize social service for non-guest accounts
-	if not Global.player_identity.is_guest:
-		_async_initialize_social_service()
-
 	var profile := Global.player_identity.get_profile_or_null()
 	if profile != null:
 		Global.player_identity.profile_changed.emit(profile)
@@ -494,15 +473,6 @@ func _on_player_logout():
 ## by Global.sign_out() BEFORE it kills scenes / clears realm / changes orientation,
 ## so none of those re-emit into this about-to-be-freed Explorer. Idempotent.
 func prepare_for_logout() -> void:
-	# Drain any in-flight subscription retry loops on their next check.
-	_session_active = false
-	_subscription_reconnecting = false
-
-	if _resubscribe_timer != null:
-		_resubscribe_timer.stop()
-		_resubscribe_timer.queue_free()
-		_resubscribe_timer = null
-
 	_disconnect_persistent_signals()
 
 
@@ -526,10 +496,6 @@ func _disconnect_persistent_signals() -> void:
 		_safe_disconnect(profile_changed, Global.avatars.update_primary_player_profile)
 		_safe_disconnect(Global.avatars.avatar_added, _on_avatar_added_apply_hide_ui)
 
-	if Global.social_service != null:
-		_safe_disconnect(Global.social_service.block_update_received, _on_block_update_received)
-		_safe_disconnect(Global.social_service.subscription_dropped, _async_on_subscription_dropped)
-
 
 func _safe_disconnect(sig: Signal, callable: Callable) -> void:
 	if sig.is_connected(callable):
@@ -540,165 +506,6 @@ func _on_player_profile_changed(_profile: DclUserProfile) -> void:
 	# Start notifications polling when authenticated
 	print("[Explorer] Player profile changed - starting notifications polling")
 	NotificationsManager.start_polling()
-
-
-func _async_initialize_social_service() -> void:
-	# Initialize the social service with player identity
-	Global.social_service.initialize_from_player_identity(Global.player_identity)
-
-	# Connect to block update signal for real-time sync
-	if not Global.social_service.block_update_received.is_connected(_on_block_update_received):
-		Global.social_service.block_update_received.connect(_on_block_update_received)
-
-	# Guests have no wallet identity and no friend graph — skip the entire
-	# friendship/connectivity flow (subscriptions, retries, and the proactive timer).
-	if Global.player_identity.is_guest:
-		return
-
-	# Connect subscription_dropped for auto-reconnect
-	if not Global.social_service.subscription_dropped.is_connected(_async_on_subscription_dropped):
-		Global.social_service.subscription_dropped.connect(_async_on_subscription_dropped)
-
-	_session_active = true
-
-	# Fetch blocked users from server and initialize local cache (fire-and-forget)
-	_async_fetch_blocking_status()
-
-	# Subscribe to block updates for real-time sync across devices
-	Global.social_service.subscribe_to_block_updates()
-
-	# Subscribe to friendship and connectivity updates persistently
-	_async_subscribe_to_friendship_updates(true)
-	_async_subscribe_to_connectivity_updates()
-
-	# Start proactive re-subscribe timer (every 30s)
-	if _resubscribe_timer == null:
-		_resubscribe_timer = Timer.new()
-		_resubscribe_timer.wait_time = 30.0
-		_resubscribe_timer.autostart = true
-		_resubscribe_timer.timeout.connect(_async_proactive_resubscribe)
-		add_child(_resubscribe_timer)
-
-
-func _async_fetch_blocking_status() -> void:
-	var promise = Global.social_service.get_blocking_status()
-	await PromiseUtils.async_awaiter(promise)
-
-	if promise.is_rejected():
-		printerr("Failed to get blocking status: ", PromiseUtils.get_error_message(promise))
-		return
-
-	var data = promise.get_data()
-	if data is Dictionary:
-		var blocked_users: Array = data.get("blocked_users", [])
-		Global.social_blacklist.init_from_blocking_status(blocked_users)
-
-
-func _on_block_update_received(address: String, is_blocked: bool) -> void:
-	if is_blocked:
-		Global.social_blacklist.add_blocked(address)
-	else:
-		Global.social_blacklist.remove_blocked(address)
-
-
-## Subscribe to friendship updates with bounded exponential backoff.
-## `initial_load`: on success, true triggers a full friends fetch; false a diff refresh
-## (used by reconnect-after-drop, which already has data on screen).
-func _async_subscribe_to_friendship_updates(initial_load: bool) -> void:
-	var attempt: int = 0
-	while _session_active:
-		var promise = Global.social_service.subscribe_to_updates()
-		await PromiseUtils.async_awaiter(promise)
-		if not _session_active:
-			return
-
-		if not promise.is_rejected():
-			friends_panel.set_streaming_subscription_failed(false)
-			if initial_load:
-				friends_panel.async_initial_friends_load()
-			else:
-				friends_panel.async_refresh_friends()
-			return
-
-		attempt += 1
-		push_error(
-			(
-				"[FriendsPanel.SubscriptionState] friendship subscribe rejected (attempt %d/%d): %s"
-				% [attempt, _SUBSCRIBE_RETRY_MAX_ATTEMPTS, PromiseUtils.get_error_message(promise)]
-			)
-		)
-		friends_panel.set_streaming_subscription_failed(true)
-
-		if attempt >= _SUBSCRIBE_RETRY_MAX_ATTEMPTS:
-			return
-
-		var delay: float = min(
-			_SUBSCRIBE_RETRY_BASE_DELAY * pow(2.0, attempt - 1), _SUBSCRIBE_RETRY_MAX_DELAY
-		)
-		await get_tree().create_timer(delay).timeout
-
-
-func _async_subscribe_to_connectivity_updates() -> void:
-	var attempt: int = 0
-	while _session_active:
-		var promise = Global.social_service.subscribe_to_connectivity_updates()
-		await PromiseUtils.async_awaiter(promise)
-		if not _session_active:
-			return
-
-		if not promise.is_rejected():
-			return
-
-		attempt += 1
-		push_error(
-			(
-				"[FriendsPanel.SubscriptionState] connectivity subscribe rejected (attempt %d/%d): %s"
-				% [attempt, _SUBSCRIBE_RETRY_MAX_ATTEMPTS, PromiseUtils.get_error_message(promise)]
-			)
-		)
-
-		if attempt >= _SUBSCRIBE_RETRY_MAX_ATTEMPTS:
-			return
-
-		var delay: float = min(
-			_SUBSCRIBE_RETRY_BASE_DELAY * pow(2.0, attempt - 1), _SUBSCRIBE_RETRY_MAX_DELAY
-		)
-		await get_tree().create_timer(delay).timeout
-
-
-func _async_proactive_resubscribe() -> void:
-	if not _session_active:
-		return
-	# Re-subscribe silently (cancels old subscription, creates new one)
-	var promise = Global.social_service.subscribe_to_updates()
-	await PromiseUtils.async_awaiter(promise)
-	if not _session_active:
-		return
-	if promise.is_rejected():
-		return  # Silent failure — subscription_dropped will handle recovery
-	# Diff-based refresh (no full rebuild)
-	friends_panel.async_refresh_friends()
-
-	# Also re-subscribe connectivity
-	Global.social_service.subscribe_to_connectivity_updates()
-	Global.social_service.subscribe_to_block_updates()
-
-
-func _async_on_subscription_dropped() -> void:
-	if not _session_active:
-		return
-	# Debounce: multiple streams may drop at once when connection dies
-	if _subscription_reconnecting:
-		return
-	_subscription_reconnecting = true
-	print("[FriendsPanel.SubscriptionState] subscription dropped — reconnecting in 2s")
-	await get_tree().create_timer(2.0).timeout
-	_subscription_reconnecting = false
-	if not _session_active:
-		return
-	Global.social_service.subscribe_to_block_updates()
-	_async_subscribe_to_friendship_updates(false)
-	_async_subscribe_to_connectivity_updates()
 
 
 func _on_scene_console_message(scene_id: int, level: int, timestamp: float, text: String) -> void:
@@ -1065,7 +872,7 @@ func _update_preview_hud() -> void:
 
 ## True while a navbar side panel (or the dropdown) is open — the bottom-left slot hides then.
 func _any_left_panel_open() -> bool:
-	return friends_panel.visible or notifications_panel.visible or discover_panel.visible
+	return notifications_panel.visible or discover_panel.visible
 
 
 func _bottom_left_slot_blocked() -> bool:
@@ -1297,7 +1104,6 @@ func _on_control_menu_open_profile() -> void:
 func _on_global_open_own_profile() -> void:
 	if Global.is_orientation_portrait():
 		return
-	friends_panel.hide_panel()
 	notifications_panel.hide_panel()
 	discover_panel.hide_panel()
 	navbar.collapse()
@@ -1316,21 +1122,6 @@ func _get_viewport_scale_factors() -> Vector2:
 	var x_factor: float = viewport_size.x / window_size.x
 	var y_factor: float = viewport_size.y / window_size.y
 	return Vector2(x_factor, y_factor)
-
-
-func _show_friends_panel() -> void:
-	if friends_panel.visible:
-		# Re-tapping the already-selected category collapses the navbar, like tapping outside.
-		navbar.collapse()
-		return
-	joypad.hide()
-	friends_panel.show_panel_on_friends_tab()
-	notifications_panel.hide_panel()
-	discover_panel.hide_panel()
-	_refresh_hud_dismiss()
-	Global.explorer_release_focus()
-	if Global.is_mobile():
-		release_mouse()
 
 
 func _close_left_panel(panel: PanelContainer) -> void:
@@ -1358,7 +1149,6 @@ func _show_notifications_panel() -> void:
 		return
 	joypad.hide()
 	notifications_panel.show_panel()
-	friends_panel.hide_panel()
 	discover_panel.hide_panel()
 	_refresh_hud_dismiss()
 	Global.explorer_release_focus()
@@ -1371,7 +1161,6 @@ func _show_discover_panel() -> void:
 		navbar.collapse()
 		return
 	joypad.hide()
-	friends_panel.hide_panel()
 	notifications_panel.hide_panel()
 	discover_panel.show_panel()
 	_refresh_hud_dismiss()
@@ -1560,28 +1349,6 @@ func _update_version_label() -> void:
 	label_version.set_text(version_text)
 
 
-func _on_notification_clicked(notification_d: Dictionary) -> void:
-	var notif_type = notification_d.get("type", "")
-	if ["social_service_friendship_request", "social_service_friendship_accepted"].has(notif_type):
-		if not friends_panel.visible:
-			if notif_type == "social_service_friendship_request":
-				friends_panel.show_panel_on_requests_tab()
-			else:
-				friends_panel.show_panel_on_friends_tab()
-			navbar.open_navbar_silently()
-			navbar.set_button_pressed(navbar.BUTTON.FRIENDS)
-			if notifications_panel.visible:
-				notifications_panel.hide_panel()
-			_refresh_hud_dismiss()
-			# Release focus to prevent camera rotation while panel is open
-			Global.explorer_release_focus()
-			if Global.is_mobile():
-				release_mouse()
-			joypad.hide()
-			# Keep the bottom-left slot hidden while the navbar friends panel is open.
-			_hide_bottom_left_hud()
-
-
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_APPLICATION_FOCUS_IN:
 		# Clear badge when app comes to foreground
@@ -1659,7 +1426,6 @@ func _on_backpack_open(_on_emotes := false) -> void:
 
 func _close_all_panels():
 	control_menu.async_close()
-	_close_left_panel(friends_panel)
 	_close_left_panel(notifications_panel)
 	_close_left_panel(discover_panel)
 	_on_menu_closed()
@@ -1684,7 +1450,6 @@ func _on_discover_open():
 func _enter_menu_screen():
 	navbar.collapse()
 	_show_joypad()
-	_close_left_panel(friends_panel)
 	_close_left_panel(notifications_panel)
 	_close_left_panel(discover_panel)
 	_on_menu_closed()
@@ -1696,7 +1461,6 @@ func _on_menu_open():
 	# Fires for ANY menu screen becoming visible, so a screen never shows with the navbar left
 	# open behind it, regardless of how it was entered (e.g. Discover's Report Bug).
 	navbar.collapse()
-	_close_left_panel(friends_panel)
 	_close_left_panel(notifications_panel)
 	_close_left_panel(discover_panel)
 	_on_menu_closed()

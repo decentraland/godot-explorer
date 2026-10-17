@@ -9,7 +9,7 @@ use std::{
 use dcl_core::Core;
 use futures_util::future::try_join_all;
 use godot::{
-    classes::{AudioStream, Material, Mesh, Os, ResourceLoader, Texture2D},
+    classes::{AudioStream, Material, Mesh, ResourceLoader, Texture2D},
     obj::Singleton,
     prelude::*,
 };
@@ -321,7 +321,7 @@ fn resolved_optimized_base_url() -> String {
 /// await in the calling async block.
 fn load_baked_texture_entry(godot_path: &str, original_size: Option<ImageSize>) -> Option<Variant> {
     // A bad file traps inside Godot's loader (GODOT-EXPLORER-302), so the path has
-    // to be on the Sentry scope before the call, not after it.
+    // to be in the report tags before the call, not after it.
     crash_context::set_loading_resource(godot_path);
     let loaded = ResourceLoader::singleton().load(&GString::from(godot_path));
     crash_context::clear_loading_resource();
@@ -363,7 +363,10 @@ fn load_baked_texture_entry(godot_path: &str, original_size: Option<ImageSize>) 
 #[godot_api]
 impl INode for ContentProvider {
     fn init(base: Base<Node>) -> Self {
-        let content_folder = Arc::new(format!("{}/content/", Os::singleton().get_user_data_dir()));
+        let content_folder = Arc::new(format!(
+            "{}/content/",
+            dcl_core::Core::get().data_dir().display()
+        ));
 
         #[cfg(feature = "use_resource_tracking")]
         let resource_download_tracking = Arc::new(ResourceDownloadTracking::new());

@@ -13,7 +13,12 @@ import { t } from '../i18n';
 import { shortenAddress } from './format';
 import type { SettingsModel } from './useSettings';
 
-type DialogKind = 'signOut' | 'delete' | 'deleteFailed' | null;
+type DialogKind =
+  | 'signOut'
+  | 'delete'
+  | 'deleteFailed'
+  | 'deleteRequested'
+  | null;
 
 const DELETE_LINK = '#FF5F77';
 
@@ -62,8 +67,10 @@ export function AccountSection({
   const deleteAccount = async () => {
     setDialog(null);
     const result = await api.deleteAccount();
-    if (result.ok) {
+    if (result.ok && result.deleted) {
       onSignedOut?.();
+    } else if (result.ok) {
+      setDialog('deleteRequested');
     } else {
       setDialog('deleteFailed');
     }
@@ -150,6 +157,13 @@ export function AccountSection({
             },
           },
         ]}
+      />
+      <Dialog
+        visible={dialog === 'deleteRequested'}
+        title={t('SETTINGS_DELETE_REQUESTED_TITLE')}
+        body={t('SETTINGS_DELETE_REQUESTED_BODY')}
+        onRequestClose={() => setDialog(null)}
+        buttons={[{ label: t('SETTINGS_OK'), onPress: () => setDialog(null) }]}
       />
       <Dialog
         visible={dialog === 'deleteFailed'}

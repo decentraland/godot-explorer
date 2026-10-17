@@ -1,36 +1,28 @@
 import { ReactElement } from 'react';
 import { act, create, ReactTestRenderer } from 'react-test-renderer';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { setCoreForTests } from '../src/core';
+import { resetCoreEventsForTests } from '../src/core/events';
+import { createMockCore } from '../src/core/mock';
+import { createMockBus } from '../src/core/mock/emitter';
+import { Control, State } from '../src/core/native';
 import { ChatRow } from '../src/hud/ChatRow';
 import { CoachMarks } from '../src/hud/CoachMarks';
 import { Hud } from '../src/hud/Hud';
-import { sendCommand, subscribe } from '../src/GodotBridge';
 import { setHudApi } from '../src/hud/activeApi';
-import { HudApi, bridgeHudApi, fallbackProfile } from '../src/hud/hudApi';
+import { HudApi, coreHudApi } from '../src/hud/hudApi';
 import {
   emitIntent,
   onIntent,
   setMenuOpen,
   setUiHidden,
 } from '../src/hud/hudSignals';
-import { MOCK_PROFILES, startSimulation } from '../src/hud/simulator';
+import { MOCK_PROFILES } from '../src/hud/mockProfiles';
 import { setHudStorage, createMemoryStorage } from '../src/hud/coachMarks';
 import { LoadingCover } from '../src/world/LoadingCover';
 import { WorldScreen } from '../src/world/WorldScreen';
 import { TIPS } from '../src/world/loadingModel';
-import type { HudBridgeEvent } from '../src/hud/types';
-
-jest.mock('../src/GodotBridge', () => ({
-  sendCommand: jest.fn(),
-  startEngine: jest.fn(),
-  setOrientation: jest.fn(),
-  subscribe: jest.fn(() => () => {}),
-  godotAvailable: false,
-}));
-
-jest.mock('../src/bridge/request', () => ({
-  request: jest.fn(() => Promise.reject(new Error('no mock handler'))),
-}));
+import type { HudEvent } from '../src/hud/types';
 
 const metrics = {
   frame: { x: 0, y: 0, width: 800, height: 360 },
@@ -70,21 +62,22 @@ afterEach(() => {
 
 type Sent = Parameters<HudApi['send']>[0];
 
-function fakeApi(events: HudBridgeEvent[] = []): {
+function fakeApi(events: HudEvent[] = []): {
   api: HudApi;
   sent: Sent[];
-  emit: (e: HudBridgeEvent) => void;
+  emit: (e: HudEvent) => void;
 } {
   const sent: Sent[] = [];
-  const listeners = new Set<(e: HudBridgeEvent) => void>();
+  const listeners = new Set<(e: HudEvent) => void>();
   const api: HudApi = {
-    ...bridgeHudApi,
+    ...coreHudApi,
     subscribe(listener) {
       listeners.add(listener);
       events.forEach(listener);
       return () => listeners.delete(listener);
     },
     send: command => sent.push(command),
+    enterWorld: noop,
     ownProfile: async () => MOCK_PROFILES[0],
     resolveProfile: async address =>
       MOCK_PROFILES.find(p => p.address === address) ?? MOCK_PROFILES[1],
@@ -96,7 +89,7 @@ function fakeApi(events: HudBridgeEvent[] = []): {
 const chat = (
   message: string,
   address = MOCK_PROFILES[1].address,
-): HudBridgeEvent => ({
+): HudEvent => ({
   type: 'chat',
   data: { address, message, timestamp: 1 },
 });
@@ -277,8 +270,8 @@ describe('Hud', () => {
     const input = tree.root.findByProps({ placeholder: 'Write a message...' });
     act(() => input.props.onChangeText('hola'));
     act(() => input.props.onSubmitEditing());
-    expect(sent).toContainEqual({ type: 'send_chat', text: 'hola' });
-    expect(sent).toContainEqual({ type: 'chat_open', open: true });
+    expect(sent).toContainEqual(new Control.SendChat({ text: 'hola' }));
+    expect(sent).toContainEqual(new Control.ChatOpen({ open: true }));
     act(() => input.props.onChangeText('/help'));
     act(() => input.props.onSubmitEditing());
     expect(text(tree)).not.toContain('Nearby');
@@ -335,10 +328,12 @@ describe('Hud', () => {
     act(() => coord.props.onPress());
     expect(text(tree)).toContain('Teleport to 10,20?');
     act(() => pressText(tree, 'JUMP IN'));
-    expect(sent).toContainEqual({ type: 'teleport', x: 10, y: 20 });
+    expect(sent).toContainEqual(
+      new Control.Teleport({ parcel: { x: 10, y: 20 } }),
+    );
   });
 
-  it('opens the Backpack emotes when Godot reports the wheel Edit button', async () => {
+  it('opens the Backpack emotes when the engine reports the wheel Edit button', async () => {
     const { api, emit } = fakeApi();
     const heard: unknown[] = [];
     const off = onIntent(i => heard.push(i));
@@ -365,7 +360,7 @@ describe('Hud', () => {
     expect(
       tree.root.findAllByProps({ accessibilityLabel: 'Chat' }),
     ).toHaveLength(0);
-    expect(sent).toContainEqual({ type: 'hide_ui', hidden: true });
+    expect(sent).toContainEqual(new Control.HideUi({ hidden: true }));
     act(() =>
       tree.root
         .findByProps({ accessibilityLabel: 'Show interface' })
@@ -382,11 +377,11 @@ describe('Hud', () => {
     emitIntent({ type: 'edit_emotes' });
   });
 
-  it('reports insets to Godot', async () => {
+  it('reports insets to the engine', async () => {
     const { api, sent } = fakeApi();
     mount(<Hud api={api} welcome={false} initialCoach={null} />);
     await act(async () => {});
-    expect(sent.find(c => c.type === 'set_hud_insets')).toBeDefined();
+    expect(sent.find(c => c.tag === 'SetHudInsets')).toBeDefined();
   });
 
   it('runs the coach marks once and remembers they were seen', async () => {
@@ -441,54 +436,6 @@ describe('pieces', () => {
   });
 });
 
-describe('simulator', () => {
-  it('ramps loading progress to 100% and plays the chat script', () => {
-    jest.useFakeTimers();
-    const events: HudBridgeEvent[] = [];
-    const stop = startSimulation(
-      e => events.push(e),
-      () => 1,
-    );
-    act(() => {
-      jest.advanceTimersByTime(20_000);
-    });
-    const progresses = events.filter(e => e.type === 'loading_progress');
-    expect(progresses).toHaveLength(8);
-    expect((progresses[7] as { data: { percent: number } }).data.percent).toBe(
-      100,
-    );
-    expect(events.filter(e => e.type === 'chat')).toHaveLength(4);
-    stop();
-    jest.useRealTimers();
-  });
-});
-
-describe('bridgeHudApi', () => {
-  it('forwards only HUD events and sends commands through the bridge', () => {
-    let deliver: (event: unknown) => void = () => {};
-    (subscribe as jest.Mock).mockImplementationOnce(listener => {
-      deliver = listener;
-      return () => {};
-    });
-    const heard: string[] = [];
-    bridgeHudApi.subscribe(event => heard.push(event.type));
-    deliver({ type: 'state', data: {} });
-    deliver({ type: 'loading_progress', data: progress });
-    deliver({ type: 'unread_chat', data: { count: 2 } });
-    expect(heard).toEqual(['loading_progress', 'unread_chat']);
-    bridgeHudApi.send({ type: 'hide_ui', hidden: true });
-    expect(sendCommand).toHaveBeenCalledWith({ type: 'hide_ui', hidden: true });
-  });
-
-  it('falls back to a short address identity until profiles are resolved', async () => {
-    const profile = await bridgeHudApi.resolveProfile('0xabcdef1234');
-    expect(profile).toEqual(fallbackProfile('0xabcdef1234'));
-    expect(profile).toMatchObject({ name: '0xabcd', tag: '#1234', own: false });
-    expect((await bridgeHudApi.ownProfile()).own).toBe(true);
-    expect(await bridgeHudApi.nearby()).toEqual([]);
-  });
-});
-
 describe('WorldScreen', () => {
   const place = {
     id: 'p',
@@ -503,13 +450,35 @@ describe('WorldScreen', () => {
     y: 0,
   };
 
+  const loading = new State.Loading({
+    destination: { realm: undefined, parcel: { x: 0, y: 0 } },
+    progress: 0,
+  });
+  const bus = createMockBus(loading);
+
+  beforeEach(() => {
+    bus.setState(loading);
+    resetCoreEventsForTests();
+    setCoreForTests({
+      ...createMockCore(),
+      state: bus.state,
+      addListener: bus.add,
+      removeListener: bus.remove,
+    });
+  });
+  afterEach(() => {
+    setHudApi(coreHudApi);
+    setCoreForTests(undefined);
+    resetCoreEventsForTests();
+  });
+
   it('shows the loading cover first', () => {
     const tree = mount(<WorldScreen place={place} onLeave={noop} />);
     expect(text(tree)).toContain('Genesis Plaza');
     expect(text(tree)).toContain('resources at');
   });
 
-  it('follows loading events: progress, failure and the HUD once finished', async () => {
+  it('follows the core: progress while loading, the HUD once in the world', async () => {
     const { api, emit } = fakeApi();
     setHudApi(api);
     const tree = mount(<WorldScreen place={place} onLeave={noop} />);
@@ -521,13 +490,13 @@ describe('WorldScreen', () => {
     );
     expect(text(tree)).toContain('412/584 resources at 3.20 mb/s');
     expect(text(tree)).toContain('71%');
-    await act(async () => emit({ type: 'loading', data: { state: 'failed' } }));
-    expect(text(tree)).toContain('TRY AGAIN');
-    await act(async () => pressText(tree, 'TRY AGAIN'));
-    expect(text(tree)).not.toContain('TRY AGAIN');
+    expect(
+      tree.root.findAllByProps({ accessibilityLabel: 'Chat' }),
+    ).toHaveLength(0);
     await act(async () =>
-      emit({ type: 'loading', data: { state: 'finished' } }),
+      bus.setState(new State.InWorld({ realm: 'r', parcel: { x: 0, y: 0 } })),
     );
+    await act(async () => {});
     expect(
       tree.root.findAllByProps({ accessibilityLabel: 'Chat' }).length,
     ).toBeGreaterThan(0);
@@ -542,7 +511,7 @@ describe('WorldScreen', () => {
       jest.advanceTimersByTime(90_000);
     });
     expect(text(tree)).toContain('START ANYWAY');
-    act(() => pressText(tree, 'START ANYWAY'));
+    await act(async () => pressText(tree, 'START ANYWAY'));
     jest.useRealTimers();
   });
 });

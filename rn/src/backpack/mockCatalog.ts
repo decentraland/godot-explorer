@@ -1,5 +1,5 @@
 import type { Rarity } from '../ds';
-import { AvatarState } from '../events';
+import type { AvatarState } from '../core/native';
 import type { Catalog } from './api';
 import { BASE_PREFIX, FEMALE, MALE, Wearable } from './catalog';
 import { DEFAULT_EMOTES, Emote } from './emotes';
@@ -153,7 +153,7 @@ const idOf = (name: string) =>
   MOCK_WEARABLES.find(item => item.name === name)?.id ?? '';
 
 export const MOCK_AVATAR: AvatarState = {
-  body_shape: MALE,
+  bodyShape: MALE,
   wearables: [
     'hoodie',
     'pants',

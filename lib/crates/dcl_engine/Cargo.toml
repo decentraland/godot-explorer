@@ -8,6 +8,7 @@ publish = false
 crate-type = ["cdylib"]
 
 [dependencies]
+dcl_host = { path = "../dcl_host", optional = true }
 dcl_core = { path = "../dcl_core" }
 godot = { version = "0.4.5", features = ["experimental-threads", "serde"] }
 meshopt = "0.6"
@@ -44,7 +45,6 @@ anyhow = "1.0.70"
 tracing = "0.1"
 tracing-subscriber = "0.3"
 poll-promise = "0.2.0"
-log-panics = { version = "2", features = ["with-backtrace"]}
 
 v8 = { version = "0.106.0", optional = true }
 deno_core = { version = "0.308.0", optional = true }
@@ -57,10 +57,6 @@ num = "0.4"
 http = "0.2.9"
 bytes = "1.4.0"
 url = "2.5"
-
-# Pinned to a commit (not a branch) so CI builds are immutable — a moved branch must not
-# change what runs alongside the signing/ASC secrets. Bump deliberately when needed.
-dcl-rpc = { git = "https://github.com/decentraland/rpc-rust", rev = "aa2302d6918e2d1c7f2e298aa972d8a6bba6c389", features=["client", "websockets", "codegen", "server", "tungstenite-rustls"] }
 
 tokio-tungstenite = "0.20.1"
 futures-util = "0.3.30"
@@ -113,11 +109,13 @@ oslog = "0.2"
 libc = "0.2"
 
 [features]
-default = ["use_livekit", "use_deno", "use_pulse"]
+default = ["use_livekit", "use_deno", "use_pulse", "ffi"]
 use_livekit = ["dep:livekit", "dep:webrtc-sys-build"]
 # Compiled in by default (pure-Rust dep, keeps CI/mobile builds from bitrotting);
 # runtime activation is opt-in via --pulse / --pulse-server / PULSE_SERVER.
 use_pulse = ["dep:rusty_enet", "dcl_core/use_pulse"]
+# The typed FFI exported from this library for the RN shell and the native hosts.
+ffi = ["dcl_core/ffi", "dep:dcl_host"]
 use_deno = ["dep:deno_core", "dep:v8"]
 use_resource_tracking = []
 use_voice_chat = []
@@ -138,6 +136,3 @@ prost-build = "0.11.8"
 # 0.11.x pairs with prost 0.11 (same pairing bevy-explorer uses).
 prost-reflect = "0.11"
 chrono = "0.4.31"
-# Pinned to a commit (not a branch) so CI builds are immutable — a moved branch must not
-# change what runs alongside the signing/ASC secrets. Bump deliberately when needed.
-dcl-rpc = { git = "https://github.com/decentraland/rpc-rust", rev = "aa2302d6918e2d1c7f2e298aa972d8a6bba6c389", features=["client", "websockets", "codegen", "server", "tungstenite-rustls"] }

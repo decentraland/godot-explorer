@@ -2,6 +2,9 @@ import { ReactElement } from 'react';
 import { BackHandler, Dimensions } from 'react-native';
 import { act, create, ReactTestInstance } from 'react-test-renderer';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { setCoreForTests } from '../src/core';
+import { createMockCore } from '../src/core/mock';
+import type { CoreApi } from '../src/core';
 import { LinkRow, OutlinedButton } from '../src/ds';
 import { en } from '../src/i18n/en';
 import { createMockApi, MockSeed } from '../src/settings/mockApi';
@@ -17,7 +20,22 @@ const metrics = {
 type Tree = ReturnType<typeof create>;
 const mounted: Tree[] = [];
 
+beforeEach(() => {
+  const urls = {
+    help: 'https://decentraland.org/help',
+    privacyPolicy: 'https://decentraland.org/privacy/',
+    contentPolicy: 'https://decentraland.org/content/',
+    termsOfService: 'https://decentraland.org/terms/',
+    devRealms: ['main', 'https://realm.test'],
+  };
+  setCoreForTests({
+    ...createMockCore(),
+    urls: () => urls,
+  } as unknown as CoreApi);
+});
+
 afterEach(() => {
+  setCoreForTests(undefined);
   mounted.splice(0).forEach(t => act(() => t.unmount()));
 });
 

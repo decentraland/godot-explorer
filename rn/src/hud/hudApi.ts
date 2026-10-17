@@ -1,30 +1,26 @@
-import { sendCommand, subscribe } from '../GodotBridge';
-import type { GodotCommand } from '../GodotBridge';
-import { request } from '../bridge/request';
-import type { Friend, ProfileData } from '../bridge/methods';
+import { core } from '../core';
+import { onCoreEvents } from '../core/events';
+import type {
+  ChatLine,
+  Control,
+  Destination,
+  LoadingDetail,
+} from '../core/native';
 import { nameColor } from './chatModel';
-import type { ChatProfile, HudBridgeEvent, HudCommand } from './types';
+import type { ChatProfile, HudEvent, LoadingProgress } from './types';
 
-/** What the world HUD needs from the engine; profiles come from the req/res bridge. */
+/** What the world HUD needs from the core. */
 export interface HudApi {
-  subscribe(listener: (event: HudBridgeEvent) => void): () => void;
-  send(command: HudCommand): void;
+  subscribe(listener: (event: HudEvent) => void): () => void;
+  send(command: Control): void;
+  enterWorld(destination: Destination): void;
   resolveProfile(address: string): Promise<ChatProfile>;
   ownProfile(): Promise<ChatProfile>;
   /** Avatars near the player, for mention autocomplete. */
   nearby(): Promise<ChatProfile[]>;
 }
 
-const HUD_EVENTS = new Set([
-  'loading',
-  'loading_progress',
-  'chat',
-  'hud_state',
-  'unread_chat',
-  'open_backpack',
-]);
-
-/** Placeholder identity until Godot sends names: short address, last four hex as the tag. */
+/** Placeholder identity until the core knows the name: short address, last four hex as the tag. */
 export function fallbackProfile(address: string): ChatProfile {
   const tag = `#${address.slice(-4)}`;
   return {
@@ -37,46 +33,39 @@ export function fallbackProfile(address: string): ChatProfile {
   };
 }
 
-type ProfileLike = Pick<Friend, 'address' | 'name' | 'has_claimed_name'> & {
-  profile_picture_url?: string;
+type ProfileLike = {
+  address: string;
+  name: string;
+  hasClaimedName: boolean;
+  profilePictureUrl: string;
 };
 
 function toChatProfile(data: ProfileLike, own = false): ChatProfile {
-  const claimed = Boolean(data.has_claimed_name);
-  const tag = claimed ? '' : `#${data.address.slice(-4)}`;
+  const tag = data.hasClaimedName ? '' : `#${data.address.slice(-4)}`;
   return {
     address: data.address,
     name: data.name,
     tag,
-    claimed,
+    claimed: data.hasClaimedName,
     color: nameColor(`${data.name}${tag}`),
     own,
-    ...(data.profile_picture_url ? { face: data.profile_picture_url } : {}),
+    ...(data.profilePictureUrl ? { face: data.profilePictureUrl } : {}),
   };
 }
 
-/** Godot's profile when the engine answers, the short-address placeholder otherwise. */
+/** The core's profile when it answers, the short-address placeholder otherwise. */
 function lookup(
   address: string | undefined,
   own: boolean,
 ): Promise<ChatProfile> {
-  return request('profile.get', address ? { address } : undefined)
-    .then(data => toChatProfile(data as ProfileData & ProfileLike, own))
-    .catch(() => ({
-      ...fallbackProfile(address ?? '0x0000000'),
-      own,
-    }));
+  return core()
+    .profile(address)
+    .then(profile => toChatProfile(profile, own))
+    .catch(() => ({ ...fallbackProfile(address ?? '0x0000000'), own }));
 }
 
-type RawChat = {
-  address: string;
-  message: string;
-  timestamp: number;
-  profile?: Omit<ProfileLike, 'address'>;
-};
-
-/** Godot's chat line carries a profile without the address; key it by the sender. */
-function chatWithProfile({ profile, ...line }: RawChat): HudBridgeEvent {
+/** The engine's chat line carries a profile without the address; key it by the sender. */
+function chatEvent({ profile, ...line }: ChatLine): HudEvent {
   return {
     type: 'chat',
     data: {
@@ -88,26 +77,27 @@ function chatWithProfile({ profile, ...line }: RawChat): HudBridgeEvent {
   };
 }
 
-export const bridgeHudApi: HudApi = {
-  subscribe(listener) {
-    return subscribe(event => {
-      if (!HUD_EVENTS.has(event.type)) {
-        return;
-      }
-      listener(
-        event.type === 'chat'
-          ? chatWithProfile(event.data as RawChat)
-          : (event as unknown as HudBridgeEvent),
-      );
-    });
-  },
-  send(command) {
-    sendCommand(command as unknown as GodotCommand);
-  },
+const progressOf = (detail: LoadingDetail): LoadingProgress => ({
+  loaded: Number(detail.loaded),
+  total: Number(detail.total),
+  mbps: detail.mbps,
+  percent: detail.percent,
+});
+
+export const coreHudApi: HudApi = {
+  subscribe: listener =>
+    onCoreEvents({
+      chat: line => listener(chatEvent(line)),
+      unreadChat: count => listener({ type: 'unread_chat', data: { count } }),
+      loadingDetail: detail =>
+        listener({ type: 'loading_progress', data: progressOf(detail) }),
+      openBackpack: emotes =>
+        listener({ type: 'open_backpack', data: { emotes } }),
+    }),
+  send: command => core().control(command),
+  enterWorld: destination => core().enterWorld(destination),
   resolveProfile: address => lookup(address, false),
   ownProfile: () => lookup(undefined, true),
-  nearby: () =>
-    request('friends.nearby')
-      .then(({ users }) => users.map(user => toChatProfile(user)))
-      .catch(() => []),
+  // The core has no nearby list; suggestions come back with friends in TypeScript (phase 6.9).
+  nearby: async () => [],
 };

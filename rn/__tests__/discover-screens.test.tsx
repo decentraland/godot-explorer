@@ -14,18 +14,8 @@ import { PLACES } from '../src/discover/mockData';
 import { StoryScreen } from '../src/discover/StoryScreen';
 import { getPreview } from '../src/gallery/registry';
 import '../src/discover/gallery';
-
-jest.mock('../src/engine', () => ({
-  ...jest.requireActual('../src/engine'),
-  ensureEngine: jest.fn(),
-  send: jest.fn(),
-}));
-jest.mock('../src/GodotBridge', () => ({
-  sendCommand: jest.fn(),
-  startEngine: jest.fn(),
-  setOrientation: jest.fn(),
-  subscribe: jest.fn(() => () => {}),
-}));
+import { setCoreForTests } from '../src/core';
+import { createMockCore } from '../src/core/mock';
 
 const metrics = {
   frame: { x: 0, y: 0, width: 360, height: 800 },
@@ -64,6 +54,9 @@ beforeEach(() => {
   jest.useFakeTimers();
 });
 afterEach(() => jest.useRealTimers());
+
+beforeEach(() => setCoreForTests(createMockCore({ signedIn: true })));
+afterEach(() => setCoreForTests(undefined));
 
 describe('every Discover preview renders', () => {
   const ids = Object.values(ID).filter(id => getPreview(id));

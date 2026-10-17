@@ -1,3 +1,4 @@
+import { CameraFocus } from '../core/native';
 import { ReactNode } from 'react';
 import {
   ScrollView,
@@ -75,7 +76,7 @@ export function ProfileSheet({
       <ProfileBackdrop variant={backdrop} />
       {snap !== 'full' && avatarVisible && (
         <AvatarHole
-          focus="head"
+          focus={CameraFocus.Head}
           style={[styles.hole, { height: holeHeight }]}
         />
       )}

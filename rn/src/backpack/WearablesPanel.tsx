@@ -1,6 +1,6 @@
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { ItemCard, Pill, SlotTile, Tabs, layout } from '../ds';
-import { AvatarState } from '../events';
+import type { AvatarState } from '../core/native';
 import { t } from '../i18n';
 import type { I18nKey } from '../i18n';
 import { Wearable } from './catalog';
@@ -19,7 +19,7 @@ import {
 } from './selection';
 import { SwatchStrip } from './SwatchStrip';
 import {
-  bridgeTarget,
+  colorKey,
   ColorTarget,
   PALETTES,
   SLOTS,
@@ -67,8 +67,8 @@ export function WearablesPanel(props: WearablesPanelProps) {
     slot?.color ??
     (pills && slot?.key === 'shape' ? ('skin' as ColorTarget) : undefined);
   const showSwatches = !pills || !catalog || items.length > 0;
-  const palette = color ? PALETTES[bridgeTarget(color)] : [];
-  const value = color && avatar ? avatar[bridgeTarget(color)] : '';
+  const palette = color ? PALETTES[colorKey(color)] : [];
+  const value = color && avatar ? avatar[colorKey(color)] : '';
 
   const header = (
     <View>

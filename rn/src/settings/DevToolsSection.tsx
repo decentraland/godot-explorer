@@ -10,7 +10,7 @@ import {
   u,
 } from '../ds';
 import { t } from '../i18n';
-import { DEV_REALMS } from './links';
+import { devRealms } from './links';
 import { Group, SectionCaption, ToggleRow } from './rows';
 import type { SettingsModel } from './useSettings';
 
@@ -41,7 +41,7 @@ export function DevToolsSection({ m }: { m: SettingsModel }) {
           label={t('SETTINGS_REALM')}
           placeholder={t('SETTINGS_SELECT_ONE')}
           value={values.realm || null}
-          options={DEV_REALMS.map(r => ({ value: r, label: r }))}
+          options={devRealms().map(r => ({ value: r, label: r }))}
           onChange={v => set('realm', v)}
         />
         <View style={styles.urlRow}>

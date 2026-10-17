@@ -12,14 +12,9 @@
 [ext_resource type="FontFile" uid="uid://di6yadh02vrla" path="res://assets/themes/fonts/inter/Inter-Regular.ttf" id="10_odsw2"]
 [ext_resource type="PackedScene" uid="uid://o5vt3nrlfw3j" path="res://src/ui/components/atoms/buttons/custom_button/custom_button.tscn" id="12_7xla3"]
 [ext_resource type="Theme" uid="uid://bn7q4ap7m5gdu" path="res://assets/themes/dcl_theme.tres" id="12_dja5r"]
-[ext_resource type="Texture2D" uid="uid://byaritt3jr72o" path="res://assets/ui/friend-icon.svg" id="13_pa1ft"]
 [ext_resource type="Texture2D" uid="uid://b31mnquvn8hus" path="res://assets/ui/block.svg" id="13_quy3q"]
-[ext_resource type="Texture2D" uid="uid://6nj4qi6iey2o" path="res://assets/ui/pending-icon.svg" id="14_7xla3"]
-[ext_resource type="Texture2D" uid="uid://bu0ha8dwtwdcl" path="res://assets/ui/unfriend.svg" id="14_ur8se"]
 [ext_resource type="Texture2D" uid="uid://db3wvj8amhgv4" path="res://assets/ui/cancel-request-icon.svg" id="15_pa1ft"]
-[ext_resource type="Texture2D" uid="uid://b4tgkud7pa3en" path="res://assets/ui/add-friend-icon.svg" id="16_aoppn"]
 [ext_resource type="Texture2D" uid="uid://cqjwja1mdqpus" path="res://assets/ui/menu-icon.svg" id="18_7xla3"]
-[ext_resource type="PackedScene" uid="uid://7u7y8c3bnf1i" path="res://src/ui/components/organisms/social/mutual_friends.tscn" id="18_61jmm"]
 [ext_resource type="FontFile" uid="uid://b1jo174eyscej" path="res://assets/themes/fonts/inter/inter_600.ttf" id="18_fhbaj"]
 [ext_resource type="Texture2D" uid="uid://71yn28q2vqlq" path="res://assets/ui/copy-icon.svg" id="19_awuqu"]
 [ext_resource type="Texture2D" uid="uid://ce0tola1380xu" path="res://assets/themes/icons/close.svg" id="19_qferq"]
@@ -307,12 +302,6 @@ preview_margin_right = 20
 custom_minimum_size = Vector2(100, 40)
 layout_mode = 2
 
-[node name="MutualFriends" parent="MarginContainer2/HBoxContainer_Data/Control_landscape_avatar/VBoxContainer" unique_id=826336159 instance=ExtResource("18_61jmm")]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(100, 40)
-layout_mode = 2
-theme_override_constants/margin_bottom = 0
-
 [node name="VSeparator" type="VSeparator" parent="MarginContainer2/HBoxContainer_Data" unique_id=1251501615]
 layout_mode = 2
 theme_override_constants/separation = 20
@@ -409,46 +398,6 @@ custom_icon = ExtResource("9_ybu4s")
 custom_icon_pressed = ExtResource("9_ybu4s")
 custom_text = "PROFILE_EDIT_PROFILE_CAPS"
 
-[node name="Button_Friend" parent="MarginContainer2/HBoxContainer_Data/VBoxContainer_info/MarginContainer/ProfileHeader/HBoxContainer3/HBoxContainer2" unique_id=1094644081 instance=ExtResource("12_7xla3")]
-unique_name_in_owner = true
-visible = false
-custom_minimum_size = Vector2(168, 60)
-layout_mode = 2
-theme_type_variation = &"SecondaryLittle"
-custom_icon = ExtResource("13_pa1ft")
-custom_icon_pressed = ExtResource("13_pa1ft")
-custom_text = "PROFILE_FRIEND"
-
-[node name="Button_Pending" parent="MarginContainer2/HBoxContainer_Data/VBoxContainer_info/MarginContainer/ProfileHeader/HBoxContainer3/HBoxContainer2" unique_id=952246903 instance=ExtResource("12_7xla3")]
-unique_name_in_owner = true
-visible = false
-custom_minimum_size = Vector2(190, 60)
-layout_mode = 2
-theme_type_variation = &"SecondaryLittle"
-custom_icon = ExtResource("14_7xla3")
-custom_icon_pressed = ExtResource("14_7xla3")
-custom_text = "PROFILE_PENDING"
-
-[node name="Button_CancelRequest" parent="MarginContainer2/HBoxContainer_Data/VBoxContainer_info/MarginContainer/ProfileHeader/HBoxContainer3/HBoxContainer2" unique_id=2129687283 instance=ExtResource("12_7xla3")]
-unique_name_in_owner = true
-visible = false
-custom_minimum_size = Vector2(301, 60)
-layout_mode = 2
-theme_type_variation = &"SecondaryLittle"
-theme_override_styles/normal = SubResource("StyleBoxFlat_7xla3")
-theme_override_styles/normal_mirrored = SubResource("StyleBoxFlat_7xla3")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_pa1ft")
-theme_override_styles/pressed_mirrored = SubResource("StyleBoxFlat_pa1ft")
-theme_override_styles/hover = SubResource("StyleBoxFlat_pa1ft")
-theme_override_styles/hover_mirrored = SubResource("StyleBoxFlat_pa1ft")
-theme_override_styles/hover_pressed = SubResource("StyleBoxFlat_pa1ft")
-theme_override_styles/hover_pressed_mirrored = SubResource("StyleBoxFlat_pa1ft")
-theme_override_styles/disabled = SubResource("StyleBoxFlat_aoppn")
-theme_override_styles/focus = SubResource("StyleBoxFlat_pa1ft")
-custom_icon = ExtResource("15_pa1ft")
-custom_icon_pressed = ExtResource("15_pa1ft")
-custom_text = "PROFILE_CANCEL_REQUEST"
-
 [node name="Button_Blocked" parent="MarginContainer2/HBoxContainer_Data/VBoxContainer_info/MarginContainer/ProfileHeader/HBoxContainer3/HBoxContainer2" unique_id=1628868722 instance=ExtResource("12_7xla3")]
 unique_name_in_owner = true
 visible = false
@@ -468,16 +417,6 @@ theme_override_styles/focus = SubResource("StyleBoxFlat_pa1ft")
 custom_icon = ExtResource("15_pa1ft")
 custom_icon_pressed = ExtResource("15_pa1ft")
 custom_text = "COMMON_BLOCKED"
-
-[node name="Button_AddFriend" parent="MarginContainer2/HBoxContainer_Data/VBoxContainer_info/MarginContainer/ProfileHeader/HBoxContainer3/HBoxContainer2" unique_id=1444914885 instance=ExtResource("12_7xla3")]
-unique_name_in_owner = true
-visible = false
-custom_minimum_size = Vector2(227, 60)
-layout_mode = 2
-theme_type_variation = &"ButtonLittle"
-custom_icon = ExtResource("16_aoppn")
-custom_icon_pressed = ExtResource("16_aoppn")
-custom_text = "PROFILE_ADD_FRIEND"
 
 [node name="Button_Menu" type="Button" parent="MarginContainer2/HBoxContainer_Data/VBoxContainer_info/MarginContainer/ProfileHeader/HBoxContainer3/HBoxContainer2" unique_id=339281591]
 unique_name_in_owner = true
@@ -988,20 +927,6 @@ theme = ExtResource("12_dja5r")
 theme_type_variation = &"ProfileMenuButtonRed"
 text = "PROFILE_UNBLOCK"
 icon = ExtResource("13_quy3q")
-alignment = 0
-expand_icon = true
-
-[node name="Button_Unfriend" type="Button" parent="Menu/HBoxContainer/VBoxContainer/PanelContainer_Menu/MarginContainer/VBoxContainer" unique_id=1991471728]
-unique_name_in_owner = true
-modulate = Color(0.796243, 0.796243, 0.796243, 1)
-custom_minimum_size = Vector2(298, 64)
-layout_mode = 2
-size_flags_vertical = 4
-focus_mode = 0
-theme = ExtResource("12_dja5r")
-theme_type_variation = &"ProfileMenuButton"
-text = "PROFILE_UNFRIEND"
-icon = ExtResource("14_ur8se")
 alignment = 0
 expand_icon = true
 

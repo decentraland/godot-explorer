@@ -7,8 +7,8 @@ import {
   StyleProp,
 } from 'react-native';
 import { colors, RadialFill } from '../ds';
-import type { CameraTarget } from '../GodotBridge';
-import { send } from '../engine';
+import { core } from '../core';
+import { CameraFocus, Control } from '../core/native';
 
 const REPORT_INTERVAL_MS = 50;
 
@@ -48,7 +48,7 @@ export function StageBackground({ bottom = 0 }: { bottom?: number }) {
 }
 
 /**
- * Transparent window Godot draws the 3D avatar into. The rectangle is reported to Godot in device
+ * Transparent window the engine draws the 3D avatar into. The rectangle is reported to the core in device
  * pixels whenever it changes (sheet drag, rotation); closes the preview when it unmounts.
  */
 export function AvatarHole({
@@ -58,7 +58,7 @@ export function AvatarHole({
 }: {
   style?: StyleProp<ViewStyle>;
   /** Camera framing applied once the preview exists. */
-  focus?: CameraTarget;
+  focus?: CameraFocus;
   children?: ReactNode;
 }) {
   const ref = useRef<ComponentRef<typeof View>>(null);
@@ -73,11 +73,15 @@ export function AvatarHole({
       }
       const scale = PixelRatio.get();
       const first = !opened.current;
-      const type = first ? 'backpack_open' : 'backpack_place';
       opened.current = true;
-      send({ type, x: x * scale, y: y * scale, w: w * scale, h: h * scale });
-      if (first && focus) {
-        send({ type: 'focus_camera', target: focus });
+      core().showAvatarPreview({
+        x: x * scale,
+        y: y * scale,
+        width: w * scale,
+        height: h * scale,
+      });
+      if (first && focus !== undefined) {
+        core().control(new Control.FocusCamera({ focus }));
       }
     });
   }, [focus]);
@@ -98,7 +102,10 @@ export function AvatarHole({
       if (timer.current) {
         clearTimeout(timer.current);
       }
-      send({ type: 'backpack_close' });
+      // Entering a world already closes the preview; closing it again is an invalid call.
+      if (core().state().tag === 'AvatarPreview') {
+        core().hideAvatarPreview();
+      }
     },
     [],
   );

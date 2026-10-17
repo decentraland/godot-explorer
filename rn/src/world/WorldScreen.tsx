@@ -1,10 +1,11 @@
 import { useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Place } from '../discover/api';
-import { send, useEngine } from '../engine';
-import { setOrientation } from '../GodotBridge';
+import { useCoreState } from '../core/useCoreState';
+import { setOrientation } from '../platform/orientation';
 import { getHudApi } from '../hud/activeApi';
 import { Hud } from '../hud/Hud';
+import { enterPlace } from './enterPlace';
 import { LoadingCover } from './LoadingCover';
 import { useLoading } from './useLoading';
 
@@ -19,8 +20,8 @@ export function WorldScreen({
   place: Place;
   onLeave: () => void;
 }) {
-  const { hud } = useEngine();
-  const { state, dispatch } = useLoading(getHudApi(), hud.phase === 'playing');
+  const playing = useCoreState().tag === 'InWorld';
+  const { state, dispatch } = useLoading(getHudApi(), playing);
 
   useEffect(() => {
     setOrientation('landscape');
@@ -29,7 +30,7 @@ export function WorldScreen({
 
   const reload = () => {
     dispatch({ type: 'restart' });
-    send({ type: 'enter_world', x: place.x, y: place.y, realm: place.realm });
+    enterPlace(place);
   };
 
   return (

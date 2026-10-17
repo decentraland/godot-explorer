@@ -1,14 +1,14 @@
 import {
   DiscoverEvent,
-  EVENTS_API,
-  FEATURED_URL,
+  eventsApi,
+  featuredUrl,
   getJson,
-  LIVE_EVENTS_URL,
+  liveEventsUrl,
   parseEvents,
   parsePlaces,
   Place,
-  PLACES_API,
-  UPCOMING_EVENTS_URL,
+  placesApi,
+  upcomingEventsUrl,
 } from './api';
 import { recallEvent, recallFriend, recallPlace, remember } from './catalog';
 import { normalizeKeyword, parseCoordinates } from './search';
@@ -30,7 +30,7 @@ const toggle = (set: Set<string>, id: string, on: boolean) => {
   }
 };
 
-const placesUrl = (query: string) => `${PLACES_API}?${query}&limit=${PAGE}`;
+const placesUrl = (query: string) => `${placesApi()}?${query}&limit=${PAGE}`;
 
 /**
  * Public places/events services. Friends, favorites, own places, votes and reminders need a signed
@@ -62,7 +62,7 @@ export function createPublicApi(
 
   return {
     banners: async () =>
-      (await places(FEATURED_URL)).map(place => ({
+      (await places(featuredUrl())).map(place => ({
         id: place.id,
         image: place.image,
         title: place.title,
@@ -72,8 +72,8 @@ export function createPublicApi(
     friends: async () => [],
     events: async () => {
       const lists = await Promise.allSettled([
-        events(LIVE_EVENTS_URL),
-        events(UPCOMING_EVENTS_URL),
+        events(liveEventsUrl()),
+        events(upcomingEventsUrl()),
       ]);
       if (lists.every(list => list.status === 'rejected')) {
         throw new Error('events unavailable');
@@ -116,7 +116,7 @@ export function createPublicApi(
           : places(placesUrl(`search=${term}&order_by=most_active&order=desc`)),
         coords
           ? []
-          : events(`${EVENTS_API}?search=${term}&limit=10`).catch(() => []),
+          : events(`${eventsApi()}?search=${term}&limit=10`).catch(() => []),
       ]);
       const seen = new Set(featured.map(p => p.id));
       return {
@@ -130,7 +130,7 @@ export function createPublicApi(
       const coords = parseCoordinates(query);
       const url = coords
         ? placesUrl(`positions=${coords.x},${coords.y}`)
-        : `${PLACES_API}?search=${encodeURIComponent(
+        : `${placesApi()}?search=${encodeURIComponent(
             normalizeKeyword(query),
           )}&limit=${SUGGESTIONS}`;
       const found = await places(url);
@@ -143,7 +143,7 @@ export function createPublicApi(
     placeDetail: async id => {
       const place =
         recallPlace(id) ??
-        (await places(`${PLACES_API}/${encodeURIComponent(id)}`))[0];
+        (await places(`${placesApi()}/${encodeURIComponent(id)}`))[0];
       if (!place) {
         throw new Error(`place ${id} not found`);
       }
@@ -157,7 +157,7 @@ export function createPublicApi(
     eventDetail: async id => {
       const event =
         recallEvent(id) ??
-        (await events(`${EVENTS_API}/${encodeURIComponent(id)}`))[0];
+        (await events(`${eventsApi()}/${encodeURIComponent(id)}`))[0];
       if (!event) {
         throw new Error(`event ${id} not found`);
       }

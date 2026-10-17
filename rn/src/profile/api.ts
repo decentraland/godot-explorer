@@ -1,5 +1,4 @@
-import { godotAvailable } from '../GodotBridge';
-import { createBridgeProfileApi } from './bridgeApi';
+import { createCoreProfileApi } from './coreApi';
 import { MOCK_NAMES, MOCK_PROFILE } from './mockData';
 import type { Profile, ProfileDeployPayload } from './types';
 
@@ -9,7 +8,6 @@ export interface ProfileApi {
   /** Claimed (minted) names of the account. */
   getNames(): Promise<string[]>;
   deployProfile(patch: ProfileDeployPayload): Promise<Profile>;
-  /** Bridge command `copy_to_clipboard {text}` (Godot `DisplayServer.clipboard_set`). */
   copyText(text: string): void;
 }
 
@@ -47,7 +45,7 @@ export function createMockApi(options: MockApiOptions = {}): ProfileApi & {
 
 export const mockApi = createMockApi();
 
-let active: ProfileApi = godotAvailable ? createBridgeProfileApi() : mockApi;
+let active: ProfileApi = createCoreProfileApi();
 
 export const getProfileApi = (): ProfileApi => active;
 

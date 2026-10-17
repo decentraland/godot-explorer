@@ -21,7 +21,7 @@ extends RefCounted
 ##
 ## `is_alive()` is rule 2 plus telemetry. Swallowing the stale reference silently would fix
 ## the crash and hide how often the race actually fires, so every guarded site reports the
-## first hit of the session to Sentry and Segment — enough to size the problem per build and
+## first hit of the session to Segment — enough to size the problem per build and
 ## per device, capped so a device that reopens a modal in a loop cannot flood either.
 
 ## Hits reported per site per session. The counter in `_hits` keeps rising past this;
@@ -56,10 +56,6 @@ static func _report_stale(site: String) -> void:
 
 	var message := "NodeGuard: %s resumed on a freed node — skipped" % site
 	push_warning(message)
-
-	# Telemetry is off in asset-server / CI builds, where SentrySDK was never initialized.
-	if not DclGlobal.is_telemetry_disabled():
-		SentrySDK.capture_message(message, SentrySDK.LEVEL_ERROR)
 
 	# Segment carries the same hit so the rate can be tracked per release alongside the
 	# store crash rate, which is the number this guard is meant to move.

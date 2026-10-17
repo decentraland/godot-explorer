@@ -4,7 +4,7 @@ signal close_only_panels
 signal navbar_opened
 signal navbar_closed
 
-enum BUTTON { DISCOVER, FRIENDS, NOTIFICATIONS, BACKPACK, SETTINGS }
+enum BUTTON { DISCOVER, NOTIFICATIONS, BACKPACK, SETTINGS }
 
 # Open/close timeline tuning. The navbar dropdown fades its alpha in; the side-panel surface
 # grows from the navbar edge to its full width (scale.x 0 -> 1), leading with the fade.
@@ -13,7 +13,7 @@ const GROW_TIME: float = 0.16
 const GROW_DELAY: float = 0.04
 const CLOSE_TIME: float = 0.1
 
-# Navbar buttons ordered to match Control_Selection1..6 (top to bottom); filled in _ready.
+# Navbar buttons ordered to match Control_Selection1..5 (top to bottom); filled in _ready.
 var _selection_buttons: Array[BaseButton] = []
 # The side-panel surface (VBoxContainer_LeftPanels) injected by explorer via set_reveal_surface.
 # The navbar owns its reveal/collapse so the fade and the grow stay on one timeline. It is not a
@@ -22,7 +22,6 @@ var _reveal_surface: Control = null
 var _open_tween: Tween = null
 
 @onready var v_box_container_buttons: VBoxContainer = %VBoxContainer_Buttons
-@onready var static_button_friends: TextureButton = %StaticButton_Friends
 @onready var static_button_notifications: TextureButton = %StaticButton_Notifications
 @onready var button: Button = %Button
 @onready var portrait_button_profile: TextureButton = %Portrait_Button_Profile
@@ -44,17 +43,15 @@ var _open_tween: Tween = null
 	%Control_Selection3,
 	%Control_Selection4,
 	%Control_Selection5,
-	%Control_Selection6,
 ]
 
 
 func _ready() -> void:
 	var btn_group = ButtonGroup.new()
 	btn_group.allow_unpress = false
-	# Ordered to match Control_Selection1..6 in VBoxContainer_Selection (top to bottom).
+	# Ordered to match Control_Selection1..5 in VBoxContainer_Selection (top to bottom).
 	_selection_buttons = [
 		static_button_discover,
-		static_button_friends,
 		static_button_notifications,
 		static_button_backpack,
 		static_button_settings,
@@ -197,8 +194,6 @@ func set_button_pressed(button_to_press: BUTTON) -> void:
 	match button_to_press:
 		BUTTON.DISCOVER:
 			static_button_discover.button_pressed = true
-		BUTTON.FRIENDS:
-			static_button_friends.button_pressed = true
 		BUTTON.NOTIFICATIONS:
 			static_button_notifications.button_pressed = true
 		BUTTON.BACKPACK:

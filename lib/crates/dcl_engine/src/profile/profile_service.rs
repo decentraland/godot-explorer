@@ -60,6 +60,7 @@ impl ProfileService {
     #[func]
     pub fn set_deploy_disabled(disabled: bool) {
         DEPLOY_DISABLED.store(disabled, Ordering::Relaxed);
+        dcl_core::profile::global().set_deploy_disabled(disabled);
         if disabled {
             tracing::warn!("profile > deploys DISABLED (local-only profile updates)");
         }

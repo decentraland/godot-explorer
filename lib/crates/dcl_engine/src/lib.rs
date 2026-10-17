@@ -6,6 +6,10 @@
 
 use godot::prelude::*;
 
+// Linked for its exported FFI symbols (the Kotlin and Swift host bindings).
+#[cfg(feature = "ffi")]
+extern crate dcl_host as _;
+
 pub use dcl_core::USER_AGENT;
 
 // Use the tracking allocator to monitor Rust heap usage in real-time when memory debugging is enabled
@@ -34,7 +38,6 @@ pub mod notifications;
 pub mod profile;
 pub mod realm;
 pub mod scene_runner;
-pub use dcl_core::social;
 pub mod test_runner;
 pub mod tools;
 pub use dcl_core::urls;

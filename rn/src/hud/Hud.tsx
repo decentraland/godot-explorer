@@ -9,6 +9,8 @@ import {
 import { Linking, PixelRatio, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { HudCircleButton, u } from '../ds';
+import { Control } from '../core/native';
+import { worldRealm } from '../discover/api';
 import { t } from '../i18n';
 import { useMenuUnread } from '../menu/useMenuUnread';
 import { getHudApi } from './activeApi';
@@ -38,8 +40,6 @@ import { ROW_LIFETIME_MS } from './notifications';
 import type { ChatProfile } from './types';
 import { fullName, useChatFeed } from './useChatFeed';
 import { useNotificationRows } from './useNotificationRows';
-
-const WORLDS = 'https://worlds-content-server.decentraland.org/world';
 
 /** The RN part of the in-world HUD; joystick and gamepad stay native and untouched under it. */
 export function Hud({
@@ -116,19 +116,22 @@ export function Hud({
 
   const ratio = PixelRatio.get();
   useEffect(() => {
-    api.send({
-      type: 'set_hud_insets',
-      left: Math.round(ins.left * ratio),
-      top: Math.round(ins.top * ratio),
-      right: Math.round(ins.right * ratio),
-      bottom: Math.round(ins.bottom * ratio),
-    });
+    api.send(
+      new Control.SetHudInsets({
+        insets: {
+          left: Math.round(ins.left * ratio),
+          top: Math.round(ins.top * ratio),
+          right: Math.round(ins.right * ratio),
+          bottom: Math.round(ins.bottom * ratio),
+        },
+      }),
+    );
   }, [api, ins.left, ins.top, ins.right, ins.bottom, ratio]);
   useEffect(() => {
-    api.send({ type: 'chat_open', open: ui.chat === 'writing' });
+    api.send(new Control.ChatOpen({ open: ui.chat === 'writing' }));
   }, [api, ui.chat]);
   useEffect(() => {
-    api.send({ type: 'hide_ui', hidden: ui.hidden });
+    api.send(new Control.HideUi({ hidden: ui.hidden }));
   }, [api, ui.hidden]);
 
   const ctx = useMemo(
@@ -171,14 +174,9 @@ export function Hud({
     }
     if (segment.kind === 'coord') {
       const [x, y] = value.split(',').map(Number);
-      api.send({ type: 'teleport', x, y });
+      api.send(new Control.Teleport({ parcel: { x, y } }));
     } else {
-      api.send({
-        type: 'enter_world',
-        x: 0,
-        y: 0,
-        realm: `${WORLDS}/${value}`,
-      });
+      api.enterWorld({ realm: worldRealm(value), parcel: { x: 0, y: 0 } });
     }
     setChat('closed');
   };
@@ -256,7 +254,7 @@ export function Hud({
             left={ins.left}
             bottom={ins.bottom}
             onMode={setChat}
-            onSend={text => api.send({ type: 'send_chat', text })}
+            onSend={text => api.send(new Control.SendChat({ text }))}
             onLink={onLink}
           />
         </>

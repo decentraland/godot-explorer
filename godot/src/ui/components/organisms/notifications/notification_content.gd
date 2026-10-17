@@ -8,7 +8,7 @@ extends Control
 ## The image area holds three pre-built, mutually-exclusive nodes (added in the scene, styled from
 ## the node) and this script only toggles which one is visible and feeds it data — so we never
 ## manipulate corners/borders at runtime:
-##   - ProfilePictureFriend (round avatar, reused from social_item) for friend notifications
+##   - ProfilePictureFriend (round avatar) for friend notifications
 ##   - EventImage (rounded thumbnail, #E8B9FF outline) for events and any other type
 ##   - ItemImage (rounded thumbnail, rarity-coloured outline) for received items/rewards
 

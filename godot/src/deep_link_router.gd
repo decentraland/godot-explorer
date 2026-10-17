@@ -63,19 +63,16 @@ func process_deep_link(url: String, start_kind: String = "warm") -> void:
 	# again on a device whose native anchor survives reinstall.
 	Global._capture_debug_guest_rotate(Global.deep_link_obj)
 
-	# Before any routing decision: the token has to survive whichever branch below consumes
-	# the deeplink (#2670).
-	Global._capture_campaign_token(Global.deep_link_obj)
-
-	# Push attribution. Deliberately a separate param from the ads campaign token `c=`: that
-	# one is captured sticky, first-write-wins, and persisted as the install's attribution, so
-	# routing a push through it would burn the user's install attribution slot on a
-	# re-engagement tap.
-	_track_push_open_if_any(start_kind)
-
-	# Same funnel, same reason: this is where every deep link lands, so it is the only place
-	# that can tell an `App Opened` whether a link brought the user in.
-	SessionTracker.notify_deep_link(Global.deep_link_obj.params)
+	# With the host driving the app the core routes the link: the campaign token, push
+	# attribution, navigation and sign-in resume. Only the settings the engine owns stay here.
+	if not Global.engine.is_host_driven():
+		# Before any routing decision: the token has to survive whichever branch below consumes
+		# the deeplink (#2670).
+		Global._capture_campaign_token(Global.deep_link_obj)
+		# Push attribution. Deliberately a separate param from the ads campaign token `c=`.
+		_track_push_open_if_any(start_kind)
+		# Same funnel, same reason: this is where every deep link lands.
+		SessionTracker.notify_deep_link(Global.deep_link_obj.params)
 
 	# `skip-gltf` toggle has to be set BEFORE any scene's GLTF_CONTAINER
 	# component dirty-set is processed by `update_gltf_container`. The
@@ -123,6 +120,9 @@ func process_deep_link(url: String, start_kind: String = "warm") -> void:
 
 	if Global.deep_link_obj.safe_margin_debug:
 		Global.set_safe_margin_debug_enable(true)
+
+	if Global.engine.is_host_driven():
+		return
 
 	# Review-prompt QA harness (#2739). Untyped param, non-production only.
 	if Global.review_prompt_coordinator != null:

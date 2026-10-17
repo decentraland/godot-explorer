@@ -81,6 +81,14 @@ without a written safety comment. Porting on the old API would mean porting twic
   `Engine`; `Global` facade deleted; `GltfLoadingCoordinator`, `LightSourceManager`,
   `EmptyParcelProps`, `DebugWs`, `DevLocalhostRelay` autoloads ported or dropped;
   `thread_safety.gd` → Rust.
+  - [ ] **Idle/World service boundary**. Make the minimal preview path from 3.11 an explicit
+    lifecycle in `Engine`: Idle creates only preview rendering, avatar assembly and content loading
+    needed for the current profile. Create the scene runner, realm/scene fetcher, SDK runtime,
+    world comms connections and world player on `enter_world`, under a world-owned root. On
+    `exit_world`, release those nodes and their render resources; keep the core session, transport
+    state and reusable avatar data. A second `enter_world` must work in the same process. Show the
+    normal loading state while the first world initializes, and avoid eager world-service creation
+    elsewhere in the Rust bootstrap.
 - [ ] **5.8 Debug tooling and benchmarks**. The debug hub (`tool/debug_server`) keeps its
   WebSocket but offers typed commands (teleport, screenshot, state dump, log filter) instead of
   GDScript `eval`; `gp_benchmark_runner.gd` (1,175) → Rust so `benchmark.yml` keeps running;
@@ -123,6 +131,8 @@ without a written safety comment. Porting on the old API would mean porting twic
 - Genesis Plaza on both phones after 5.2, 5.3 and 5.5: fps and memory within the phase-2 baseline.
 - After 5.5, a scene with a URL video, an HLS stream and a LiveKit stream on both phones, including
   background and foreground.
+- After 5.7, verify Idle → first World → Idle → second World on both phones, including avatar preview
+  before and after a world and release of world-owned nodes on exit.
 
 ## Depends on / unblocks
 

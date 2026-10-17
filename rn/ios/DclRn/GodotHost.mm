@@ -1,7 +1,5 @@
 #import "GodotHost.h"
 
-#import "GodotBridge.h"
-
 #import <objc/message.h>
 #import <objc/runtime.h>
 
@@ -34,6 +32,17 @@ static BOOL isReactBackground(UIView *view, UIView *reactRoot) {
 
 @implementation DclHostView
 
+- (void)setGodotOnTop:(BOOL)onTop {
+	if (!self.godotView) {
+		return;
+	}
+	if (onTop) {
+		[self bringSubviewToFront:self.godotView];
+	} else {
+		[self sendSubviewToBack:self.godotView];
+	}
+}
+
 - (void)layoutSubviews {
 	[super layoutSubviews];
 	self.godotView.frame = self.bounds;
@@ -64,24 +73,28 @@ static BOOL isReactBackground(UIView *view, UIView *reactRoot) {
 - (void)viewDidLoad {
 	[super viewDidLoad];
 	DclHostView *host = (DclHostView *)self.view;
-
-#if DCL_WITH_GODOT
-	Class godotViewControllerClass = NSClassFromString(@"GDTViewController");
-	if (godotViewControllerClass) {
-		UIViewController *godot = [[godotViewControllerClass alloc] init];
-		[self addChildViewController:godot];
-		[host addSubview:godot.view];
-		[godot didMoveToParentViewController:self];
-		host.godotView = godot.view;
-	} else {
-		NSLog(@"[DclGodotHost] GDTViewController missing (libgodot not linked with -ObjC?)");
-	}
-#endif
-
 	self.reactView.backgroundColor = UIColor.clearColor;
 	[host addSubview:self.reactView];
 	host.reactView = self.reactView;
 }
+
+#if DCL_WITH_GODOT
+/// Adds Godot's view controller under the React Native view. Only after `godot_host_init`.
+- (void)attachGodotView {
+	DclHostView *host = (DclHostView *)self.view;
+	Class godotViewControllerClass = NSClassFromString(@"GDTViewController");
+	if (!godotViewControllerClass) {
+		NSLog(@"[DclGodotHost] GDTViewController missing (libgodot not linked with -ObjC?)");
+		return;
+	}
+	UIViewController *godot = [[godotViewControllerClass alloc] init];
+	[self addChildViewController:godot];
+	[host insertSubview:godot.view belowSubview:self.reactView];
+	[godot didMoveToParentViewController:self];
+	host.godotView = godot.view;
+	[host setNeedsLayout];
+}
+#endif
 
 - (UIInterfaceOrientationMask)supportedInterfaceOrientations {
 	return UIInterfaceOrientationMaskLandscape;
@@ -97,6 +110,9 @@ static BOOL isReactBackground(UIView *view, UIView *reactRoot) {
 
 @end
 
+// The host view controller, for starting the engine's view and reordering the surfaces later.
+static __weak DclHostViewController *sController = nil;
+
 #if DCL_WITH_GODOT
 // Engine arguments: the host's defaults, then the exporter's debug command line (scene inspector,
 // remote debug) shipped as godot_cmdline.txt, then the arguments the process was launched with.
@@ -104,7 +120,7 @@ static NSArray<NSString *> *engineArguments(void) {
 	NSArray<NSString *> *launch = NSProcessInfo.processInfo.arguments;
 	NSMutableArray<NSString *> *args = [NSMutableArray arrayWithArray:@[
 		launch.firstObject,
-		@"--rn-host", @"--rn-avatar-only",
+		@"--force-mobile", @"--no-pulse",
 	]];
 	NSString *cmdlinePath = [NSBundle.mainBundle pathForResource:@"godot_cmdline" ofType:@"txt"];
 	NSString *cmdline = cmdlinePath ? [NSString stringWithContentsOfFile:cmdlinePath encoding:NSUTF8StringEncoding error:nil] : nil;
@@ -117,7 +133,13 @@ static NSArray<NSString *> *engineArguments(void) {
 	return args;
 }
 
-static void startEngine(void) {
+static BOOL sEngineStarted = NO;
+
+static void startEngineNow(void) {
+	if (sEngineStarted) {
+		return;
+	}
+	sEngineStarted = YES;
 	NSArray<NSString *> *args = engineArguments();
 	const char **argv = (const char **)calloc(args.count, sizeof(char *));
 	for (NSUInteger i = 0; i < args.count; i++) {
@@ -130,7 +152,7 @@ static void startEngine(void) {
 		NSLog(@"[DclGodotHost] godot_host_init failed: %d", err);
 		return;
 	}
-	[GodotBridge bindEngineEvents];
+	[sController attachGodotView];
 
 	NSNotificationCenter *center = NSNotificationCenter.defaultCenter;
 	[center addObserverForName:UIApplicationDidBecomeActiveNotification object:nil queue:nil usingBlock:^(NSNotification *) { godot_host_focus_in(); }];
@@ -164,9 +186,20 @@ static NSArray *pluginServices(void) {
 	DclHostViewController *controller = [DclHostViewController new];
 	controller.reactView = reactView;
 #if DCL_WITH_GODOT
-	startEngine();
+	sController = controller;
 #endif
 	return controller;
+}
+
++ (void)startEngine {
+#if DCL_WITH_GODOT
+	startEngineNow();
+#endif
+}
+
++ (void)setGodotOnTop:(BOOL)onTop {
+	DclHostViewController *controller = sController;
+	[(DclHostView *)controller.view setGodotOnTop:onTop];
 }
 
 + (void)forwardLaunchOptions:(NSDictionary<UIApplicationLaunchOptionsKey, id> *)launchOptions {

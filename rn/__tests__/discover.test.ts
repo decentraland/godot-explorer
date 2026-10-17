@@ -1,4 +1,4 @@
-import { MAIN_REALM, parseEvents, parsePlaces } from '../src/discover/api';
+import { mainRealm, parseEvents, parsePlaces } from '../src/discover/api';
 import {
   formatRate,
   formatUsers,
@@ -41,7 +41,7 @@ describe('parsePlaces', () => {
       likeRate: null,
       users: 0,
     });
-    expect(places[0]).toMatchObject({ realm: MAIN_REALM, x: -3, y: -2 });
+    expect(places[0]).toMatchObject({ realm: mainRealm(), x: -3, y: -2 });
     expect(places[1].realm).toBe(
       'https://worlds-content-server.decentraland.org/world/me.dcl.eth',
     );
@@ -76,7 +76,7 @@ describe('parseEvents', () => {
       location: '5,-6',
       users: 4,
       likeRate: null,
-      realm: MAIN_REALM,
+      realm: mainRealm(),
       x: 5,
       y: -6,
     });

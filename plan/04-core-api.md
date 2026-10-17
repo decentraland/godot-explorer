@@ -38,7 +38,7 @@ state is the only thing the shell renders from; the HUD's `booting|loading|playi
 | URLs | `urls() -> Urls` (places, events, catalyst, lambdas, marketplace, help, terms, …), `environment()` | hardcoded hosts in `rn/src`, `DclUrls` |
 | Avatar | `show_avatar_preview(rect_px)`, `hide_avatar_preview()`, `set_preview_focus(target)`, `equip(urn) -> AvatarChange`, `unequip(urn)`, `set_body_shape(urn)`, `set_color(target, rgba)`, `set_emote_slot(slot, urn)`, `randomize_avatar()`, `play_emote(urn)`, `catalog(query)`, `base_emotes()`, `deploy_profile(Profile)` | `backpack_*`, `equip`, `rn_backpack.gd`, `wearables.gd` rules, `backpack/*.ts` copies, `profile.deploy` |
 | Chat | `send_chat(text)`, `on_chat_message` (event), `unread_count()`, `mark_chat_read()` | `send_chat`, `chat`, `unread_chat` |
-| Friends | `friends()`, `friend_requests()`, `nearby()`, `send_request`, `accept`, `reject`, `cancel`, `block`, `unblock`, `on_friends_changed` | `friends.*` |
+| Friends | none: removed from the core (D-43); RN/TypeScript in 6.9 | `friends.*` |
 | Notifications | `notifications(page)`, `mark_read(ids)`, `set_push_token(token)`, `on_notification` (event) | `notifications.*`, `notifications_manager.gd` |
 | Places, events (signed part) | `favorite(place_id, bool)`, `vote(place_id, up)`, `set_event_reminder(id, bool)` | `places.*`, `fetch.signed` |
 | Settings | `settings()`, `set_setting(key, value)`, `cache_size()`, `clear_cache()`, `version()`, `on_settings_changed` | `settings.*`, `config_data.gd` |

@@ -19,8 +19,6 @@ mkdir -p "$DEST/libs" "$DEST/jniLibs/arm64-v8a"
 
 cp "$GODOT_LIBS/godot-lib.template_$BUILD.aar" "$DEST/libs/"
 cp "$GODOT_LIBS/arm64-v8a/deps/libwebrtc.jar" "$DEST/libs/"
-# The Sentry GDExtension needs its Android plugin (singleton SentryAndroidGodotPlugin) or it crashes.
-cp "$ROOT/godot/addons/sentry/bin/android/sentry_android_godot_plugin.$BUILD.aar" "$DEST/libs/"
 # DclAndroidPlugin (push, deeplinks, ExoPlayer, Reown, ...); its Maven deps are in app/godot.gradle.
 cp "$ROOT/godot/addons/dcl-godot-android/bin/$BUILD/dcl-godot-android-$BUILD.aar" "$DEST/libs/"
 
@@ -28,8 +26,7 @@ cp "$ROOT/godot/addons/dcl-godot-android/bin/$BUILD/dcl-godot-android-$BUILD.aar
 # libgodot_android.so is inside the AAR, so it is not copied here.
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
-unzip -q "$APK" 'lib/arm64-v8a/libdclgodot.so' 'lib/arm64-v8a/libsentry*.so' \
-  'lib/arm64-v8a/libc++_shared.so' -d "$TMP"
+unzip -q "$APK" 'lib/arm64-v8a/libdclgodot.so' 'lib/arm64-v8a/libc++_shared.so' -d "$TMP"
 cp "$TMP"/lib/arm64-v8a/*.so "$DEST/jniLibs/arm64-v8a/"
 # Prefer the unstripped copies Godot's Gradle build keeps: AGP strips them for the APK and puts
 # their symbols in the AAB (Play Console symbolication), as the engine's own template does.

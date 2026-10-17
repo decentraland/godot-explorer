@@ -7,16 +7,12 @@ signal loading_finished
 signal change_parcel(new_parcel: Vector2i)
 signal open_profile_by_avatar(avatar: DclAvatar)
 signal open_profile_by_address(address: String)
-# Emitted locally when WE send a friend request (the social service doesn't stream our own
-# actions), so the friends panel can add it to the SENT list live.
-signal friendship_request_sent(address: String)
 signal on_chat_message(address: String, message: String, timestamp: float)
 signal change_virtual_keyboard(height: int)
 signal notification_clicked(notification: Dictionary)
 signal notification_received(notification: Dictionary)
 signal open_chat
 signal close_chat
-signal open_friends_panel
 signal open_notifications_panel
 signal open_settings
 signal open_settings_panel
@@ -30,7 +26,6 @@ signal open_profile_editor
 signal open_navbar_silently
 signal close_menu
 signal close_navbar
-signal friends_request_size_changed(size: int)
 signal close_combo
 signal delete_account
 signal upgrade_to_otp
@@ -54,17 +49,6 @@ signal chat_write_mode_changed(is_writing: bool)
 signal device_support_status_resolved
 
 enum CameraMode { FIRST_PERSON = 0, THIRD_PERSON = 1, CINEMATIC = 2 }
-
-enum FriendshipStatus {
-	UNKNOWN = -1,
-	REQUEST_SENT = 0,
-	REQUEST_RECEIVED = 1,
-	CANCELED = 2,
-	ACCEPTED = 3,
-	REJECTED = 4,
-	DELETED = 5,
-	NONE = 7
-}
 
 # Only for debugging purpose, Godot editor doesn't include a custom param debugging
 const FORCE_TEST = false
@@ -157,10 +141,6 @@ var chat_notifications_width: int = 0
 # first_move_in_world detection). Instantiated after `metrics` is created.
 var analytics_controller: AnalyticsController = null
 
-# Seeds Sentry user / context / tags from realm / scene_fetcher /
-# player_identity / comms signals. Instantiated alongside scene_fetcher.
-var sentry_seeder: SentrySeeder = null
-
 # Platform attestation orchestrator (App Attest / Play Integrity → mobile-bff session
 # token). Owns its own EULA-gated dispatch and the FSM that runs attestation cycles —
 # see attestation_service.gd. Other code obtains a token via
@@ -212,7 +192,7 @@ var _gltf_load_timeout_coalescer: Node = null
 # Guards sign_out() against re-entrancy. comms.disconnect(true) emits the
 # player_identity.logout signal deferred, which can route back into sign_out() a
 # frame later; without this the whole teardown + scene swap would run twice.
-# Cleared in lobby._ready once we're back on a clean screen.
+# Cleared at the end of sign_out, once the session is gone.
 var _signing_out: bool = false
 
 # Guards return_to_discover() against re-entrancy (e.g. a double tap on the Dev
@@ -677,7 +657,7 @@ func _dcl_swift_lib_smoke_test() -> void:
 
 
 ## Check if first launch benchmark should run (mobile only, first launch or dev builds)
-## This is called by lobby.gd AFTER the loading screen is visible to avoid blocking UI.
+## This is called by the engine host once the engine is up, to avoid blocking the first frames.
 ## Skipped in bench mode: HardwareBenchmark calls viewport_set_measure_render_time and
 ## can clobber the gp_benchmark_runner's measurement state mid-bench.
 func should_run_first_launch_benchmark() -> bool:
@@ -686,7 +666,7 @@ func should_run_first_launch_benchmark() -> bool:
 	return is_mobile() and (not get_config().first_launch_completed or DclGlobal.is_dev())
 
 
-## Run the first launch benchmark. Called by lobby.gd after loading screen is visible.
+## Run the first launch benchmark. Called by the engine host once the engine is up.
 func run_first_launch_benchmark() -> void:
 	if _hardware_benchmark != null:
 		return  # Already running
@@ -911,7 +891,7 @@ func sign_out() -> void:
 	if explorer != null:
 		explorer.prepare_for_logout()
 
-	# 2. Stop session pollers and tear down the social gRPC streams.
+	# 2. Stop session pollers.
 	NotificationsManager.stop_polling()
 	# Wipe the previous account's in-memory notification history so it can't leak
 	# into the next session's panel/bell badge (issue #2104).
@@ -925,13 +905,6 @@ func sign_out() -> void:
 	# after the swap, panicking the #[var] getter. It restarts on the next login.
 	if analytics_controller != null:
 		analytics_controller.cancel_first_move_poll()
-	social_service.unsubscribe_from_updates()
-	social_service.unsubscribe_from_connectivity_updates()
-	social_service.unsubscribe_from_block_updates()
-	# Drop the gRPC manager so the signed-out session doesn't keep streams open
-	# under the old identity. Next login's initialize_from_player_identity will
-	# recreate it.
-	social_service.disconnect()
 	social_blacklist.clear_blocked()
 	social_blacklist.clear_muted()
 
@@ -979,21 +952,18 @@ func sign_out() -> void:
 	#    (GODOT-EXPLORER-1DY). The orphan is freed by the next recreate_base_ui().
 	scene_runner.detach_base_ui()
 
-	# 9. Swap to a fresh lobby on the next frame, after the current signal/await
-	#    stack fully unwinds (sign_out may have been reached via the deferred
-	#    logout signal). lobby._ready clears _signing_out.
-	get_tree().change_scene_to_file.call_deferred("res://src/ui/pages/auth/lobby.tscn")
+	_signing_out = false
 
 
 ## Soft sign-out used by the Dev Tools "RETURN TO DISCOVER" button. Leaves the
 ## current world and drops the user back on the standalone Discover menu WHILE
 ## staying signed in: it tears down the live Explorer, every running DCL scene,
 ## comms world rooms and realm / scene-fetcher state, but deliberately KEEPS the
-## player identity, the persisted session, the social gRPC streams and the
+## player identity, the persisted session and the
 ## notification polling intact.
 ##
 ## This mirrors the world-teardown half of [sign_out]; the two intentionally
-## differ — sign_out additionally drops the social streams, wipes the
+## differ — sign_out additionally wipes the
 ## session/identity and returns to the sign-in lobby. When adding a new
 ## world/scene subsystem to tear down, update BOTH paths.
 func return_to_discover() -> void:
@@ -1032,9 +1002,9 @@ func return_to_discover() -> void:
 	comms.disconnect(false)
 
 	# NOTE: unlike sign_out we deliberately DO NOT stop NotificationsManager
-	# polling, drop the social gRPC streams, clear the blacklist, or wipe the
+	# polling, clear the blacklist, or wipe the
 	# persisted session — the session stays alive and the Discover screen's
-	# friends/notifications keep working.
+	# notifications keep working.
 
 	# Discover/menu is portrait-only; reset orientation so returning from a
 	# landscape in-world screen (settings) doesn't strand the user in landscape.
@@ -1199,7 +1169,7 @@ func set_orientation_landscape():
 	# swap, stranding the lobby/login in landscape (issue #2508).
 	if _signing_out or _returning_to_discover:
 		return
-	if cli.rn_host:
+	if engine.is_host_driven():
 		_follow_host_orientation()
 		return
 	# Set orientation BEFORE changing window size so listeners get correct value
@@ -1236,7 +1206,7 @@ func is_orientation_portrait() -> bool:
 
 
 func set_orientation_portrait():
-	if cli.rn_host:
+	if engine.is_host_driven():
 		_follow_host_orientation()
 		return
 	# Set orientation BEFORE changing window size so listeners get correct value

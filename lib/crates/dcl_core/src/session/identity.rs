@@ -106,6 +106,11 @@ impl Session {
         })
     }
 
+    /// A throwaway local wallet (dev builds): it has no server account to delete.
+    pub fn is_disposable_guest(&self) -> bool {
+        matches!(self.wallet, Some(CurrentWallet::Local { .. }))
+    }
+
     /// Restores a saved account. `None` when the saved chain has expired or the key is unusable.
     pub fn recover(&mut self, account: RecoverableAccount) -> Option<SessionEvent> {
         if account.ephemeral_auth_chain.expired() {

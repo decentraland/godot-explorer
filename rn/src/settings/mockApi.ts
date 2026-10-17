@@ -68,7 +68,7 @@ export function createMockApi(seed: MockSeed = {}): MockSettingsApi {
     },
     deleteAccount: async () => {
       calls.push('deleteAccount');
-      return { ok: true };
+      return { ok: true, deleted: true };
     },
     openBugReport: async () => {
       calls.push('bugReport');

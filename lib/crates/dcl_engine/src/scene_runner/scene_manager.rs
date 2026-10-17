@@ -256,8 +256,7 @@ impl SceneManager {
 
     /// Emitted right after `scene_crashed` for every abnormal scene exit, parcel
     /// or global: JS thread panic, runtime error, or a thread that ended without
-    /// a kill signal. Carries what Sentry needs to file the death as its own
-    /// issue while the definition is still in hand (consumed by SentrySeeder).
+    /// a kill signal. Carries the scene identity while the definition is still in hand.
     /// `reason` is single-line and bounded (see `crash_reason_summary`).
     #[signal]
     fn scene_crash_report(
@@ -2270,6 +2269,12 @@ impl SceneManager {
     }
 
     fn emit_scene_crash_report(&mut self, report: SceneCrashReport) {
+        super::report_tags::report_crash(
+            &report.entity_id,
+            &report.title,
+            (report.base_parcel.x, report.base_parcel.y),
+            &report.reason,
+        );
         self.base_mut().emit_signal(
             "scene_crash_report",
             &[
@@ -2742,6 +2747,21 @@ impl SceneManager {
 
         self.last_current_parcel_scene_id = self.current_parcel_scene_id;
 
+        let current = self.scenes.get(&self.current_parcel_scene_id).map(|scene| {
+            let definition = &scene.scene_entity_definition;
+            let base = definition.scene_meta_scene.scene.base;
+            (
+                definition.id.clone(),
+                definition.get_title(),
+                (base.x, base.y),
+            )
+        });
+        super::report_tags::tag_current_scene(
+            current
+                .as_ref()
+                .map(|(urn, title, parcel)| (urn.as_str(), title.as_str(), *parcel)),
+        );
+
         let scene_id = Variant::from(self.current_parcel_scene_id.0);
         self.base_mut()
             .emit_signal("on_change_scene_id", &[scene_id]);
@@ -3005,7 +3025,7 @@ impl SceneManager {
 
     /// Headroom before the OS kills the process, in MB, as computed by the
     /// background memory monitor. -1 on desktop (monitor not running) and
-    /// before its first sample. Read by SentrySeeder for the `memory` context.
+    /// before its first sample.
     #[func]
     fn get_available_memory_mb(&self) -> i32 {
         crate::tools::memory_monitor::available_memory_mb()

@@ -737,11 +737,10 @@ func save_to_settings_file():
 		for key in settings_file.get_section_keys("session"):
 			new_settings_file.set_value("session", key, settings_file.get_value("session", key))
 
-	# When session is ephemeral (guest/preview), the saved session stays untouched on disk.
+	# The account is the core's: only the guest look is saved from here, and not for an
+	# ephemeral session (guest/preview), which leaves the saved session untouched on disk.
 	if not session_is_ephemeral:
-		DclSessionStore.save_slot(
-			_get_profile_suffix(), var_to_str(self.session_account), var_to_str(self.guest_profile)
-		)
+		DclSessionStore.save_guest_profile(_get_profile_suffix(), var_to_str(self.guest_profile))
 	new_settings_file.set_value("user", "last_parcel_position", self.last_parcel_position)
 	new_settings_file.set_value("user", "last_realm_joined", self.last_realm_joined)
 	new_settings_file.set_value("user", "last_places_by_wallet", self.last_places_by_wallet)
