@@ -128,9 +128,19 @@ cd ../rn && npx tsc --noEmit && npm run lint && npm test        # when rn/ or th
 cd .. && python3 tools/i18n/format_csv.py --check && python3 tools/i18n/extract_strings.py --check
 ```
 
-Several sessions on one machine: share one cargo target (`CARGO_TARGET_DIR` pointing at the main
-checkout's `lib/target`) instead of a fresh one per worktree; a worktree's `rn/node_modules` can be
-a symlink to the main checkout's.
+Bindings: `npm run ubrn:generate` formats the generated C++ with `clang-format` when it is on the
+PATH; without it the whole file reflows. Commit only a formatted regeneration.
+
+Several sessions on one machine (worktrees):
+
+- A fresh worktree lacks untracked build inputs: `.bin/godot/extension_api.json`, `.bin/protoc`
+  and `lib/crates/dcl_engine/src/dcl/components/proto`. Symlink them from the main checkout and
+  never commit the links.
+- Sharing one cargo target (`CARGO_TARGET_DIR` at the main checkout's `lib/target`) saves disk, but
+  cargo can reuse another worktree's build of a workspace crate: `touch` the crates' `src/lib.rs`
+  before testing, and check your new tests actually ran.
+- Don't symlink the whole `rn/node_modules`: `dcl-core` resolves to the other checkout's bindings.
+  Link the packages one by one and point `dcl-core` at this worktree's `rn/modules/dcl-core`.
 
 ## 6. Commit shape
 
