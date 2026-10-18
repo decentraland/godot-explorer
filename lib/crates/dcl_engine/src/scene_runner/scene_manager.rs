@@ -3638,7 +3638,7 @@ impl SceneManager {
     /// measured from the kick. -1 = one frame at the effective fps (default),
     /// 0 = never wait. Ignored in scene-test mode, which never waits.
     #[func]
-    fn set_frame_sync_tick_budget_ms(&mut self, value: f32) {
+    pub fn set_frame_sync_tick_budget_ms(&mut self, value: f32) {
         if self.frame_sync_wait_forced_off {
             tracing::info!(
                 "frame sync: tick budget {value} ms ignored, scene tests run without the wait"
@@ -3656,7 +3656,7 @@ impl SceneManager {
     /// stats panel, the debug hub and the benchmark. Times in ms, counters as
     /// ints, `missed_pct` over the last 120 rendered frames. Empty when unknown.
     #[func]
-    fn get_scene_tick_stats(&self, scene_id: i32) -> VarDictionary {
+    pub fn get_scene_tick_stats(&self, scene_id: i32) -> VarDictionary {
         let mut dict = VarDictionary::new();
         let Some(scene) = self.scenes.get(&SceneId(scene_id)) else {
             return dict;
@@ -3705,7 +3705,7 @@ impl SceneManager {
 
     /// Whole-runner frame-sync counters since the last reset.
     #[func]
-    fn get_frame_sync_stats(&self) -> VarDictionary {
+    pub fn get_frame_sync_stats(&self) -> VarDictionary {
         let mut dict = VarDictionary::new();
         let stats = &self.frame_sync_stats;
         dict.set(
@@ -3730,7 +3730,7 @@ impl SceneManager {
 
     /// Benchmark: clear the frame-sync accumulators at the start of a sampling window.
     #[func]
-    fn reset_frame_sync_metrics(&mut self) {
+    pub fn reset_frame_sync_metrics(&mut self) {
         let foreground = std::mem::take(&mut self.frame_sync_stats.foreground);
         self.frame_sync_stats = FrameSyncStats {
             foreground,
@@ -3743,7 +3743,7 @@ impl SceneManager {
     /// separate from `drain_state_timing` so the blocking wait is never
     /// attributed to an apply state.
     #[func]
-    fn drain_frame_sync_metrics(&mut self) -> GString {
+    pub fn drain_frame_sync_metrics(&mut self) -> GString {
         let wait_us = FRAME_SYNC_WAIT_US.load(Ordering::Relaxed);
         let stats = &self.frame_sync_stats;
         let parcel = self.scenes.get(&self.current_parcel_scene_id);

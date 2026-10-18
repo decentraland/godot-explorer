@@ -394,8 +394,8 @@ impl INode for DclGlobal {
         }
 
         set_scene_log_enabled(preview_mode || testing_scene_mode || developer_mode);
-        // Creator-facing frame-sync warnings: preview sessions only; explorer.gd
-        // refines this with the scene-stats availability once the HUD exists.
+        // Creator-facing frame-sync warnings: preview sessions, or a `scene-stats` deeplink
+        // (deep_link.rs).
         set_scene_perf_warnings_enabled(preview_mode);
 
         let is_mobile = Os::singleton().has_feature("mobile") || force_mobile;

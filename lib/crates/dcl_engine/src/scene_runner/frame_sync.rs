@@ -29,8 +29,8 @@ use godot::prelude::*;
 use super::scene_manager::SceneManager;
 
 /// `_process` priority of the scene manager (the kick). Runs after the camera
-/// scripts (`camera_collision_clamp.gd` = -20, `dcl_global_camera_controller.gd`
-/// = -10) so the reply carries this frame's final camera pose, and before every
+/// nodes (`CameraCollisionClamp` = -20, `DclGlobalCameraController` = -10) so the
+/// reply carries this frame's final camera pose, and before every
 /// priority-0 node so JS overlaps the rest of the main thread's frame work.
 pub const SCENE_MANAGER_KICK_PROCESS_PRIORITY: i32 = -5;
 /// `_process` priority of the collector: after every other node.
