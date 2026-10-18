@@ -2,10 +2,12 @@
 //! are `impl DclAvatar` blocks split by concern in the submodules here.
 
 pub mod anchors;
+pub mod assembly;
 pub mod build;
 pub mod emote;
 pub mod emote_load;
 pub mod glider;
+pub mod gpu_ready_gate;
 pub mod lifecycle;
 pub mod lod;
 pub mod nametag;

@@ -25,6 +25,7 @@ use godot::classes::{FileAccess, PackedScene, ResourceLoader, Time};
 use godot::prelude::*;
 
 use crate::content::content_mapping::DclContentMappingAndUrl;
+use crate::engine::frame_budget;
 use crate::engine::local_task::{await_promise, next_frame, spawn_local};
 use crate::fetcher::globals;
 use crate::godot_classes::dcl_gltf_container::DclGltfContainer;
@@ -458,6 +459,11 @@ fn ensure_load_pump() {
 
 async fn run_load_pump() {
     while with(|c| !c.load_queue.is_empty()) {
+        // Off the loading screen the pump is one frame-budget step that batches while time is
+        // left; priority, so scene models never queue behind remote avatar builds.
+        if !frame_budget::loading() {
+            frame_budget::acquire(None, true).await;
+        }
         let frame_start = now_usec();
         let mut realized: Vec<(Group, Vec<Gd<DclGltfContainer>>)> = Vec::new();
 
@@ -468,6 +474,9 @@ async fn run_load_pump() {
                 realized.push((group, batch));
             }
             if now_usec().saturating_sub(frame_start) >= LOAD_PUMP_BUDGET_USEC {
+                break;
+            }
+            if !frame_budget::loading() && !frame_budget::has_time() {
                 break;
             }
         }

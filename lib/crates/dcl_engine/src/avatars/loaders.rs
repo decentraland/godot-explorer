@@ -1,5 +1,6 @@
 //! Promise-based loading of wearable and emote scenes through the content provider.
-//! Loaded scene paths are `res://` for optimized assets and `user://` for runtime-processed ones.
+//! Loaded scene paths are `res://` for mounted packs, otherwise scenes in the content cache folder
+//! (extracted optimized `.mobile.scn` or runtime-processed ones).
 
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -10,12 +11,14 @@ use godot::classes::{FileAccess, PackedScene, ResourceLoader};
 use godot::global::Error;
 use godot::prelude::*;
 
+use crate::avatars::avatar::assembly::budget_step;
 use crate::avatars::item::DclItemEntityDefinition;
 use crate::avatars::wearables;
 use crate::content::content_mapping::DclContentMappingAndUrl;
 use crate::content::gltf::emote::DclEmoteGltf;
 use crate::engine::local_task::{await_all, await_promise, next_frame};
 use crate::fetcher::globals;
+use crate::godot_classes::dcl_avatar::DclAvatar;
 use crate::godot_classes::promise::Promise;
 
 /// Threaded `PackedScene` load, polled each frame so the main thread never blocks.
@@ -136,8 +139,13 @@ impl WearableLoader {
         await_all(texture_promises).await;
     }
 
-    /// A fresh instance of the loaded wearable scene.
-    pub async fn get_wearable_node(&self, file_hash: &str) -> Option<Gd<Node3D>> {
+    /// A fresh instance of the loaded wearable scene; the instantiate waits for a frame-budget
+    /// turn of `avatar`.
+    pub async fn get_wearable_node(
+        &self,
+        file_hash: &str,
+        avatar: &Gd<DclAvatar>,
+    ) -> Option<Gd<Node3D>> {
         let known = self.completed.borrow().get(file_hash).cloned();
         let path = match known {
             Some(path) => path,
@@ -151,6 +159,7 @@ impl WearableLoader {
             return None;
         }
         let scene = load_packed_scene("WearableLoader", &path).await?;
+        budget_step(avatar).await;
         scene
             .instantiate()
             .and_then(|n| n.try_cast::<Node3D>().ok())
@@ -240,12 +249,13 @@ impl EmoteLoader {
 
     /// The emote's animations out of its cached scene. With `file_name` and `mapping`, an
     /// optimized bake that kept the prop animation but lost the prop geometry is re-processed
-    /// from the original GLB at runtime.
+    /// from the original GLB at runtime. The extraction waits for a frame-budget turn of `avatar`.
     pub async fn get_emote_gltf(
         &self,
         file_hash: &str,
         file_name: &str,
         mapping: Option<&Gd<DclContentMappingAndUrl>>,
+        avatar: &Gd<DclAvatar>,
     ) -> Option<Gd<DclEmoteGltf>> {
         let known = self.completed.borrow().get(file_hash).cloned();
         let path = match known {
@@ -259,7 +269,7 @@ impl EmoteLoader {
             godot_error!("EmoteLoader: no scene_path for hash {file_hash}");
             return None;
         }
-        let emote = self.extract(&path, file_hash).await;
+        let emote = self.extract(&path, file_hash, avatar).await;
 
         let lost_prop = emote.as_ref().is_some_and(|e| {
             let e = e.bind();
@@ -267,7 +277,7 @@ impl EmoteLoader {
         });
         if let (true, true, Some(mapping), false) = (
             lost_prop,
-            path.starts_with("res://"),
+            is_optimized_bake(&path),
             mapping,
             file_name.is_empty(),
         ) {
@@ -277,8 +287,8 @@ impl EmoteLoader {
             let runtime_path = self
                 .load_from_mapping(file_hash, file_name, mapping, true)
                 .await;
-            if !runtime_path.is_empty() && !runtime_path.starts_with("res://") {
-                if let Some(healed) = self.extract(&runtime_path, file_hash).await {
+            if !runtime_path.is_empty() && !is_optimized_bake(&runtime_path) {
+                if let Some(healed) = self.extract(&runtime_path, file_hash, avatar).await {
                     return Some(healed);
                 }
             }
@@ -286,12 +296,24 @@ impl EmoteLoader {
         emote
     }
 
-    async fn extract(&self, scene_path: &str, file_hash: &str) -> Option<Gd<DclEmoteGltf>> {
+    async fn extract(
+        &self,
+        scene_path: &str,
+        file_hash: &str,
+        avatar: &Gd<DclAvatar>,
+    ) -> Option<Gd<DclEmoteGltf>> {
         let scene = load_packed_scene("EmoteLoader", scene_path).await?;
+        // The caller merges and adds the clip right after, so the turn covers both.
+        budget_step(avatar).await;
         globals::content_provider()
             .bind()
             .extract_emote_from_scene(scene, file_hash.into())
     }
+}
+
+/// Optimized bakes arrive mounted (`res://`) or extracted from their zip (`*.mobile.scn`).
+fn is_optimized_bake(path: &str) -> bool {
+    path.starts_with("res://") || path.ends_with(".mobile.scn")
 }
 
 /// Downloads the entity of an emote urn (the definition, not the glTF).

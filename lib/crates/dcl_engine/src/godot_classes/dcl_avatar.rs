@@ -424,10 +424,6 @@ impl INode3D for DclAvatar {
         self.life_process(delta);
     }
 
-    fn physics_process(&mut self, _delta: f64) {
-        self.life_physics_process();
-    }
-
     fn input(&mut self, event: Gd<InputEvent>) {
         self.life_input(event);
     }

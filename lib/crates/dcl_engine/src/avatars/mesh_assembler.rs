@@ -36,6 +36,10 @@ pub struct MeshAssembler {
     /// the only way to keep the bone count bounded across outfit and body-shape changes.
     free_bones: Vec<i32>,
     stale_counter: u32,
+    /// The build in progress: a newer one supersedes it (latest wins).
+    pub(crate) build_id: u64,
+    /// Bumped by every GPU-ready gate start and cancel; a stale gate stops at its next frame.
+    pub(crate) gate_generation: u64,
 }
 
 impl MeshAssembler {
@@ -45,6 +49,8 @@ impl MeshAssembler {
             active_extra_bones: Vec::new(),
             free_bones: Vec::new(),
             stale_counter: 0,
+            build_id: 0,
+            gate_generation: 0,
         }
     }
 

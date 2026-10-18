@@ -34,6 +34,8 @@ const EXTERNAL: &[&str] = &[
     "can_make_payments",
     "current_environment",
     "debugBlockUiThread",
+    // engine fork RenderingServer (decentraland/godotengine#27), probed in engine/engine_fork.rs
+    "enable_async_shader_compilation",
     "finish_transaction",
     "getDeviceAnchorId",
     "get_apns_token",
@@ -42,6 +44,8 @@ const EXTERNAL: &[&str] = &[
     "get_mobile_device_info",
     "get_mobile_metrics",
     "has_notification_permission",
+    // engine fork RenderingServer (decentraland/godotengine#27), probed in engine/engine_fork.rs
+    "instance_geometry_is_draw_ready",
     "load_products",
     "open_auth_url",
     "open_safari_auth_url",

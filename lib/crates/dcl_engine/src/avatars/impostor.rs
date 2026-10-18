@@ -10,8 +10,9 @@ pub const MID_ANIM_ADVANCE_EVERY_N_FRAMES: u32 = 3;
 
 /// The pool is a flat 40 meshes on every graphics profile: the profile changes quality only.
 pub const POOL_SIZE: usize = 40;
-/// Closest avatars that animate every frame; the rest of the pool is throttled.
-pub const FULL_RATE_CAP: usize = 8;
+/// Closest avatars that animate every frame (at mobile frame rates each full-rate tree is
+/// costly); the rest of the pool is throttled.
+pub const FULL_RATE_CAP: usize = 4;
 
 /// Level of detail of an avatar; the numbers are the ones scenes and the shell saw before.
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
@@ -63,15 +64,25 @@ mod tests {
 
     #[test]
     fn everyone_keeps_the_mesh_under_the_pool() {
-        for cap in ranks(5, 8, 4) {
-            assert_eq!(cap, (LodState::Full, false));
+        for (rank, cap) in ranks(5, 8, 4).into_iter().enumerate() {
+            let lod = if rank < FULL_RATE_CAP {
+                LodState::Full
+            } else {
+                LodState::Mid
+            };
+            assert_eq!(cap, (lod, false));
         }
     }
 
     #[test]
     fn mesh_ends_at_the_pool_boundary() {
         let caps = ranks(10, 8, 4);
-        assert!(caps[..8].iter().all(|c| *c == (LodState::Full, false)));
+        assert!(caps[..FULL_RATE_CAP]
+            .iter()
+            .all(|c| *c == (LodState::Full, false)));
+        assert!(caps[FULL_RATE_CAP..8]
+            .iter()
+            .all(|c| *c == (LodState::Mid, false)));
         assert_eq!(caps[8], (LodState::Far, false));
         assert_eq!(caps[9], (LodState::Far, false));
     }

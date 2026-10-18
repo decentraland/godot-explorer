@@ -2,6 +2,7 @@
 //! application, music, snapshots, logging checks, chat commands, ...).
 
 pub mod analytics_controller;
+pub mod async_shaders;
 pub mod audio_settings;
 pub mod chat_handler;
 pub mod deep_link;

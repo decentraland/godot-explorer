@@ -304,11 +304,6 @@ impl DclAvatar {
         self.update_glider_prop();
     }
 
-    pub(crate) fn life_physics_process(&mut self) {
-        // The occlusion raycast must run here: the direct space state crashes from an idle frame.
-        self.nameplate_update_occlusion();
-    }
-
     pub(crate) fn life_input(&mut self, event: Gd<InputEvent>) {
         if !event.is_action_pressed("ia_pointer") {
             return;

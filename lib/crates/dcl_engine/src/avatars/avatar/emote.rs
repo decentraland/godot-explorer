@@ -73,6 +73,14 @@ pub struct EmoteNodes {
     pub library: Gd<AnimationLibrary>,
 }
 
+/// An emote to play: id or urn, mask (-1 full body, 0 upper body) and owning scene (-1 none).
+#[derive(Clone)]
+pub struct EmoteRequest {
+    pub urn: String,
+    pub mask: i64,
+    pub scene_id: i32,
+}
+
 #[derive(Default)]
 pub struct EmoteState {
     pub loader: EmoteLoader,
@@ -98,12 +106,18 @@ pub struct EmoteState {
     pub masked_filter_paths: Vec<NodePath>,
 
     pub is_modifying: bool,
-    pub queued_urn: String,
+    /// A play that arrived while the library was being modified.
+    pub queued_play: Option<EmoteRequest>,
     pub last_emote_time: f64,
     pub grace_until: f64,
     pub is_loading: bool,
     /// Bumped by `stop_emote`: a load that finished after a stop must not start playing.
     pub stop_generation: u64,
+    /// Bumped by every play request: a load that finishes after a newer request does not play
+    /// (latest wins).
+    pub play_seq: u64,
+    /// The newest request that needs loading while another load is in flight, with its seq.
+    pub next_load: Option<(EmoteRequest, u64)>,
     pub prop_armature_names: Vec<String>,
     pub deferred_retry_count: u32,
 }
@@ -265,6 +279,7 @@ impl DclAvatar {
         self.emote.playing_mixed = false;
         self.emote.playing_loop = false;
         self.emote.stop_generation += 1;
+        self.emote.next_load = None;
     }
 
     /// The emote still mid-playback (urn, mask), cleared so nothing reports it twice. Used by the
@@ -310,7 +325,11 @@ impl DclAvatar {
             return;
         }
         if self.emote.is_modifying {
-            self.emote.queued_urn = id.to_string();
+            self.emote.queued_play = Some(EmoteRequest {
+                urn: id.to_string(),
+                mask,
+                scene_id: owner_scene_id,
+            });
             return;
         }
         if let Some(nodes) = self.nodes.as_mut() {

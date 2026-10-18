@@ -1030,11 +1030,13 @@ impl Player {
         let scene_pending_impulses = runner.bind_mut().consume_pending_impulses();
         let external_acceleration = scene_external_force / CHARACTER_MASS;
 
-        // Keep the top-level avatar co-located with the player (picks up teleports and
-        // external position changes, and makes the look_at below use the right origin).
+        // Keep the top-level avatar co-located with the player (picks up teleports and external
+        // position changes); each write re-propagates the whole avatar subtree.
         let player_position = self.base().get_global_position();
         if let Some(avatar) = &mut self.avatar {
-            avatar.set_global_position(player_position);
+            if avatar.get_global_position() != player_position {
+                avatar.set_global_position(player_position);
+            }
         }
 
         let mut velocity = self.base().get_velocity();
@@ -1354,12 +1356,15 @@ impl Player {
             velocity.x = move_toward(velocity.x, target_x, accel * dt);
             velocity.z = move_toward(velocity.z, target_z, accel * dt);
 
-            let look_target =
-                rig::normalized_or_zero(self.current_direction) + self.base().get_position();
-            if let Some(avatar) = &mut self.avatar {
-                avatar.look_at(look_target);
-                let rotation = avatar.get_rotation();
-                avatar.set_rotation(Vector3::new(0.0, rotation.y, 0.0));
+            // Yaw-only look_at, as one write and only when it changed.
+            let direction = self.current_direction;
+            if direction.x != 0.0 || direction.z != 0.0 {
+                let yaw_only = Vector3::new(0.0, (-direction.x).atan2(-direction.z), 0.0);
+                if let Some(avatar) = &mut self.avatar {
+                    if !(avatar.get_rotation() - yaw_only).is_zero_approx() {
+                        avatar.set_rotation(yaw_only);
+                    }
+                }
             }
         } else if on_floor {
             // StopTimeSec=0: the grounded stop is INSTANT in Unity (degenerate SmoothDamp), and
@@ -1513,7 +1518,9 @@ impl Player {
         self.base_mut().set_position(position);
         let final_position = self.base().get_global_position();
         if let Some(avatar) = &mut self.avatar {
-            avatar.set_global_position(final_position);
+            if avatar.get_global_position() != final_position {
+                avatar.set_global_position(final_position);
+            }
         }
 
         // Restore the locomotion-only XZ; external_velocity carries its own state and is
