@@ -71,9 +71,9 @@ struct Packet {
     anim: AnimState,
 }
 
-/// Animation flags consumed by avatar.gd's AnimationTree conditions. One per
-/// buffered packet, so a rendered segment never mixes one packet's rise/fall
-/// with another's air pose or gait speed.
+/// Animation flags consumed by the AnimationTree conditions (avatars/avatar/locomotion.rs).
+/// One per buffered packet, so a rendered segment never mixes one packet's rise/fall with
+/// another's air pose or gait speed.
 #[derive(Default, Clone, Copy)]
 struct AnimState {
     walk: bool,
@@ -268,22 +268,21 @@ pub struct DclAvatar {
     pub(crate) is_grounded: bool,
 
     // #2856: horizontal speed (m/s, EMA-smoothed for remotes) feeding the
-    // continuous gait blend in avatar.gd. Local player writes it from
-    // player.gd instead.
+    // continuous gait blend. The local player writes it from player/body.rs.
     #[export]
-    movement_speed: f32,
+    pub(crate) movement_speed: f32,
 
     // Head sync (Unity HeadSync): the sender's head turn in degrees, in its own
     // frame, plus whether it is aiming at all. The wire writes these for
     // remotes; the local player never reads them (it aims from its own camera).
     #[export]
-    head_ik_yaw: f32,
+    pub(crate) head_ik_yaw: f32,
     #[export]
-    head_ik_pitch: f32,
+    pub(crate) head_ik_pitch: f32,
     #[export]
-    head_ik_yaw_enabled: bool,
+    pub(crate) head_ik_yaw_enabled: bool,
     #[export]
-    head_ik_pitch_enabled: bool,
+    pub(crate) head_ik_pitch_enabled: bool,
 
     // Last transform written by this class; unchanged frames skip the write and
     // its subtree propagation. Remote avatars are only moved from here.
